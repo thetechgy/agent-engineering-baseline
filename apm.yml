@@ -1,0 +1,26 @@
+name: agent-engineering-baseline
+version: 1.0.0
+description: Shared APM configuration for Codex CLI and GitHub Copilot CLI
+targets:
+  - codex
+  - copilot
+
+dependencies:
+  apm:
+    - github/awesome-copilot/instructions/a11y.instructions.md#main
+    - github/awesome-copilot/instructions/agent-safety.instructions.md#main
+    - github/awesome-copilot/instructions/ansible.instructions.md#main
+    - github/awesome-copilot/instructions/powershell.instructions.md#main
+    - thetechgy/fact/.github/instructions/powershell-pester-6.instructions.md#main
+    - github/awesome-copilot/skills/dependabot#main
+    - github/awesome-copilot/skills/git-commit#main
+    - github/awesome-copilot/skills/github-actions-hardening#main
+    - merill/msgraph/skills/msgraph#main
+  mcp:
+    - microsoftdocs/mcp
+    - name: io.github.github/github-mcp-server
+      transport: http
+      bearer_token_env_var: GITHUB_TOKEN
+
+includes: auto
+scripts: {}
