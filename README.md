@@ -47,6 +47,9 @@ recognized by GitHub Copilot CLI.
 
 Commit `apm.yml`, `apm.lock.yaml`, the deployed files, and generated
 `AGENTS.md`. Do not commit `apm_modules/`; it is a reproducible package cache.
+The deployed `.agents/skills/msgraph/` directory is also ignored: it contains
+roughly 110 MB of platform binaries and index databases that `apm install`
+regenerates locally, so it stays out of version control.
 
 ## Install globally
 
