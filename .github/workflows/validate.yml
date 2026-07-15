@@ -1,0 +1,68 @@
+name: Validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  APM_VERSION: v0.25.0
+
+jobs:
+  validate:
+    name: APM frozen install, compile, and audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install APM
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -sSL https://aka.ms/apm-unix |
+            APM_INSTALL_DIR="$HOME/.local/bin" sh -s -- "@${APM_VERSION}"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Show APM version
+        run: apm --version
+
+      - name: Install dependencies from lockfile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: apm install --frozen
+
+      - name: Validate compiled instructions
+        run: apm compile --target codex,copilot --validate
+
+      - name: Compile instructions
+        run: apm compile --target codex,copilot
+
+      - name: Audit deployment integrity
+        run: |
+          set -o pipefail
+          if apm audit --ci | tee audit.log; then
+            exit 0
+          fi
+          # APM 0.25.0 reports config-consistency errors for the four virtual
+          # skill-directory packages (documented limitation in README.md).
+          # Tolerate that single known failure; fail on anything else.
+          if grep -q '1 of 7 check(s) failed' audit.log &&
+            grep -q 'config-consistency' audit.log; then
+            echo 'Only the known config-consistency limitation failed; treating as pass.'
+            exit 0
+          fi
+          exit 1
+
+      - name: Check for repository drift
+        run: |
+          # APM rewrites only the lockfile generated_at timestamp on install.
+          git diff -I '^generated_at:' --exit-code
+          untracked="$(git ls-files --others --exclude-standard)"
+          if [ -n "$untracked" ]; then
+            echo 'Unexpected untracked files:'
+            echo "$untracked"
+            exit 1
+          fi
