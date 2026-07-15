@@ -9,7 +9,8 @@ permissions:
   contents: read
 
 env:
-  APM_VERSION: v0.25.0
+  APM_VERSION: '0.25.0'
+  APM_SHA256: 7a4281ef915e9609f8841eced19285bf2dcf702862302171f7e893c30e1b3244
 
 jobs:
   validate:
@@ -18,13 +19,20 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Install APM
         run: |
-          mkdir -p "$HOME/.local/bin"
-          curl -sSL https://aka.ms/apm-unix |
-            APM_INSTALL_DIR="$HOME/.local/bin" sh -s -- "@${APM_VERSION}"
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          archive="$RUNNER_TEMP/apm.tar.gz"
+          install_dir="$RUNNER_TEMP/apm"
+          curl --fail --location --silent --show-error \
+            --output "$archive" \
+            "https://github.com/microsoft/apm/releases/download/v${APM_VERSION}/apm-linux-x86_64.tar.gz"
+          echo "${APM_SHA256}  ${archive}" | sha256sum --check -
+          mkdir -p "$install_dir"
+          tar -xzf "$archive" -C "$install_dir" --strip-components=1
+          echo "$install_dir" >> "$GITHUB_PATH"
 
       - name: Show APM version
         run: apm --version
@@ -42,22 +50,47 @@ jobs:
 
       - name: Audit deployment integrity
         run: |
-          set -o pipefail
-          if apm audit --ci | tee audit.log; then
+          if apm audit --ci --format json --output audit.json; then
             exit 0
           fi
           # APM 0.25.0 reports config-consistency errors for the four virtual
           # skill-directory packages (documented limitation in README.md).
-          # Tolerate that single known failure; fail on anything else.
-          if grep -q '1 of 7 check(s) failed' audit.log &&
-            grep -q 'config-consistency' audit.log; then
-            echo 'Only the known config-consistency limitation failed; treating as pass.'
-            exit 0
-          fi
-          exit 1
+          # Accept the failure only when it is exactly that known case.
+          python3 - <<'PY'
+          import json
+          import sys
+
+          known = {
+              'github/awesome-copilot/skills/dependabot',
+              'github/awesome-copilot/skills/git-commit',
+              'github/awesome-copilot/skills/github-actions-hardening',
+              'merill/msgraph/skills/msgraph',
+          }
+          audit = json.load(open('audit.json'))
+          failed = [c for c in audit['checks'] if not c['passed']]
+          if len(failed) != 1 or failed[0]['name'] != 'config-consistency':
+              sys.exit('Unexpected audit failures: '
+                       + ', '.join(c['name'] for c in failed))
+          details = failed[0].get('details', [])
+          if len(details) != len(known):
+              sys.exit(f'Expected {len(known)} config-consistency details, '
+                       f'got {len(details)}: {details}')
+          seen = set()
+          for detail in details:
+              package, _, rest = detail.partition(':')
+              if package not in known or 'package manifest not found' not in rest:
+                  sys.exit('Unexpected config-consistency detail: ' + detail)
+              seen.add(package)
+          if seen != known:
+              sys.exit('Details do not cover the four known packages: '
+                       + ', '.join(sorted(seen)))
+          print('Only the known APM 0.25.0 config-consistency limitation '
+                'failed; treating as pass.')
+          PY
 
       - name: Check for repository drift
         run: |
+          rm -f audit.json
           # APM rewrites only the lockfile generated_at timestamp on install.
           git diff -I '^generated_at:' --exit-code
           untracked="$(git ls-files --others --exclude-standard)"
