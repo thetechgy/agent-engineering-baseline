@@ -1,6 +1,6 @@
 ---
-applyTo: '**'
-description: 'Comprehensive web accessibility standards based on WCAG 2.2 AA, with 38+ anti-patterns, legal enforcement context (EAA, ADA Title II), WAI-ARIA patterns, and framework-specific fixes for modern web frameworks and libraries.'
+name: a11y
+description: Review, create, test, or remediate web accessibility against WCAG 2.2 AA. Use for semantic HTML, ARIA, keyboard and focus behavior, accessible forms, contrast, responsive reflow, media alternatives, or accessibility work in React, Next.js, Angular, or Vue.
 ---
 
 # Accessibility Standards
@@ -692,6 +692,7 @@ Sanitize and validate HTML for heading hierarchy, alt text, and ARIA structure b
 ## Accessibility Checklist (POUR)
 
 ### Perceivable
+
 - [ ] All images have appropriate alt text (descriptive or empty for decorative)
 - [ ] Videos have synchronized captions
 - [ ] Page uses semantic landmarks: `<header>`, `<nav>`, `<main>`, `<footer>`
@@ -704,6 +705,7 @@ Sanitize and validate HTML for heading hierarchy, alt text, and ARIA structure b
 - [ ] Text resizable to 200% without loss of content
 
 ### Operable
+
 - [ ] All functionality accessible via keyboard
 - [ ] No keyboard traps (Escape closes overlays)
 - [ ] Skip link provided as first focusable element
@@ -716,6 +718,7 @@ Sanitize and validate HTML for heading hierarchy, alt text, and ARIA structure b
 - [ ] No content flashes more than 3 times per second
 
 ### Understandable
+
 - [ ] All form inputs have associated `<label>` or `aria-label`
 - [ ] Error messages linked to inputs via `aria-describedby`
 - [ ] Required fields indicated with `required` or `aria-required`
@@ -723,6 +726,7 @@ Sanitize and validate HTML for heading hierarchy, alt text, and ARIA structure b
 - [ ] No unexpected context changes on focus or input
 
 ### Robust
+
 - [ ] All interactive elements have accessible name, role, and state
 - [ ] ARIA roles have required properties
 - [ ] No `aria-hidden="true"` on focusable elements

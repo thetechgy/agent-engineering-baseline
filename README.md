@@ -4,7 +4,7 @@ This repository uses
 [Microsoft Agent Package Manager (APM)](https://microsoft.github.io/apm/)
 to deploy shared instructions, skills, and Model Context Protocol (MCP)
 servers for Codex CLI and GitHub Copilot tooling. The configuration and
-commands below were validated with APM 0.25.0.
+commands below were validated with APM 0.28.0.
 
 ## Prerequisites
 
@@ -37,13 +37,26 @@ apm compile --target codex,copilot --validate
 apm compile --target codex,copilot
 ```
 
-APM deploys the individual instructions to `.github/instructions/`, the shared
-skills to `.agents/skills/`, Codex MCP configuration to `.codex/config.toml`,
-and VS Code-compatible MCP configuration to `.vscode/mcp.json`. When GitHub
-Copilot CLI is installed and visible on `PATH`, the same installation also
-merges the MCP servers into the current user's `~/.copilot/mcp-config.json`.
-Compilation generates the root `AGENTS.md` consumed by Codex and also
-recognized by GitHub Copilot CLI.
+APM deploys the small shared instruction core to `.github/instructions/`, the
+task-specific skills to `.agents/skills/`, Codex MCP configuration to
+`.codex/config.toml`, and VS Code-compatible MCP configuration to
+`.vscode/mcp.json`. When GitHub Copilot CLI is installed and visible on `PATH`,
+the same installation also merges the MCP servers into the current user's
+`~/.copilot/mcp-config.json`. Compilation generates the root `AGENTS.md`
+consumed by Codex and also recognized by GitHub Copilot CLI.
+
+The editable local sources are under `.apm/`:
+
+- `instructions/personal.instructions.md` contains only cross-project planning,
+  branch, publication, security, and preservation boundaries.
+- `skills/a11y/`, `skills/agent-safety/`, `skills/ansible/`, and
+  `skills/powershell-module-engineering/` hold specialist guidance that loads
+  only when the task matches each skill description.
+
+The PowerShell skill determines the repository's declared Pester version
+before applying test guidance. FACT Pester 6 work routes to FACT's canonical
+`.github/instructions/powershell-pester-6.instructions.md`; this package does
+not maintain a second copy of that contract.
 
 Commit `apm.yml`, `apm.lock.yaml`, the deployed files, and generated
 `AGENTS.md`. Do not commit `apm_modules/`; it is a reproducible package cache.
@@ -51,14 +64,20 @@ Commit `apm.yml`, `apm.lock.yaml`, the deployed files, and generated
 ## Install globally
 
 Use APM's user scope when the same baseline should be available in every
-repository. APM 0.25.0 reads global dependency state from `~/.apm/`, so copy
+repository. APM 0.28.0 reads global dependency state from `~/.apm/`, so copy
 the repository's reviewed manifest and lockfile there before installing:
 
 ```sh
 mkdir -p ~/.apm
 cp apm.yml ~/.apm/apm.yml
 cp apm.lock.yaml ~/.apm/apm.lock.yaml
+mkdir -p ~/.apm/.apm
+cp -R .apm/. ~/.apm/.apm/
 apm install --global --frozen
+for skill in a11y agent-safety ansible powershell-module-engineering; do
+  mkdir -p ~/.agents/skills/"$skill"
+  cp ~/.apm/.apm/skills/"$skill"/SKILL.md ~/.agents/skills/"$skill/SKILL.md"
+done
 (cd ~/.apm && apm compile --target codex --single-agents \
   --output ~/.codex/AGENTS.md --dry-run)
 (cd ~/.apm && apm compile --target copilot --single-agents \
@@ -75,7 +94,14 @@ PowerShell equivalent:
 New-Item -ItemType Directory -Force -Path "$HOME/.apm" | Out-Null
 Copy-Item -LiteralPath './apm.yml' -Destination "$HOME/.apm/apm.yml" -Force
 Copy-Item -LiteralPath './apm.lock.yaml' -Destination "$HOME/.apm/apm.lock.yaml" -Force
+New-Item -ItemType Directory -Force -Path "$HOME/.apm/.apm" | Out-Null
+Copy-Item -Path './.apm/*' -Destination "$HOME/.apm/.apm" -Recurse -Force
 apm install --global --frozen
+foreach ($skillName in @('a11y', 'agent-safety', 'ansible', 'powershell-module-engineering')) {
+    $skillDestination = "$HOME/.agents/skills/$skillName"
+    New-Item -ItemType Directory -Force -Path $skillDestination | Out-Null
+    Copy-Item -LiteralPath "$HOME/.apm/.apm/skills/$skillName/SKILL.md" -Destination $skillDestination -Force
+}
 Push-Location -LiteralPath "$HOME/.apm"
 try {
     apm compile --target codex --single-agents --output "$HOME/.codex/AGENTS.md" --dry-run
@@ -88,37 +114,39 @@ finally {
 }
 ```
 
-Copy both files together so the global installation cannot mix a newer
-manifest with an older lockfile. `--frozen` refuses to re-resolve dependencies
+Copy the manifest, lockfile, and `.apm/` sources together so the global
+installation cannot mix versions. `--frozen` refuses to re-resolve dependencies
 and deploys the exact commits already reviewed in this repository. The
-installation stores package content under `~/.apm/`, deploys shared skills
-under `~/.agents/skills/`, configures supported user-scope MCP clients, and
-generates GitHub Copilot CLI's native user-scope instruction file. APM 0.25.0
-only includes some virtual instruction-file packages in that generated Copilot
-file, so the explicit compiler command above replaces it with the complete
-five-package context.
+installation stores dependency package content under `~/.apm/`, deploys
+dependency skills under `~/.agents/skills/`, and configures supported
+user-scope MCP clients. APM 0.28.0 deliberately skips root-local `.apm/`
+primitives during a global install, so the explicit copy step deploys the four
+reviewed local skill sources already synchronized into `~/.apm/.apm/`. The
+compiler commands ensure that both CLIs receive the same small personal
+instruction core; specialist skill bodies remain on demand.
 
-APM 0.25.0's `compile --global` does not discover the virtual instruction-file
-packages used by this baseline. Run the normal APM compiler against the global
-package state as shown above to generate both user-scope instruction files.
-They remain APM-generated files; the explicit targets, single-file mode, and
-output paths are the version-specific workaround. Re-evaluate it when updating
-APM.
+Use the normal APM compiler against the global package state as shown above to
+generate both user-scope instruction files. They remain APM-generated files;
+the explicit targets, single-file mode, and output paths make the destinations
+reviewable and deterministic. Re-evaluate this APM 0.28.0 workflow when
+updating the CLI.
 
-APM 0.25.0 also has no global audit mode. Run `apm audit --ci` in this
+APM 0.28.0 has no global audit mode. Run `apm audit --ci` in this
 repository against the committed project deployment; running it from
 `~/.apm/` incorrectly checks project-relative `.github/` and `.agents/` paths
 instead of their user-scope destinations.
 
-APM does not overwrite a hand-authored user-scope instruction file. Before the
-first global compilation, move any existing `~/.codex/AGENTS.md`,
-`~/.copilot/AGENTS.md`, or `~/.copilot/copilot-instructions.md` to inactive,
-timestamped backup names after reviewing them. Do not edit the new generated
-files directly; change the package sources and compile again instead.
+APM does not overwrite a hand-authored user-scope instruction file. Before a
+global rollout, create one timestamped backup directory containing the active
+`~/.apm/apm.yml`, `~/.apm/apm.lock.yaml`, `~/.codex/AGENTS.md`,
+`~/.codex/config.toml`, `~/.copilot/copilot-instructions.md`,
+`~/.copilot/mcp-config.json`, `~/.apm/config.json`, any skill being retired,
+and any existing skill that the deployment replaces. Do not edit the new
+generated instruction files directly; change the package sources and compile
+again instead.
 
-The generated Codex instruction file is larger than Codex's default project
-documentation budget. Preserve all other user configuration and add this
-top-level setting to `~/.codex/config.toml`:
+This package does not manage Codex's project-documentation ceiling. Preserve an
+existing top-level setting such as the following when deploying:
 
 ```toml
 project_doc_max_bytes = 131072
@@ -128,10 +156,24 @@ Start new Codex and Copilot sessions after changing user-scope instructions or
 configuration. Credentials are still user-managed: provide `GITHUB_TOKEN` at
 runtime and never store its value in this repository or generated files.
 
-Global instructions are loaded for every repository. This improves fidelity
-and avoids missed skill activation, but increases context usage and exposes
-unrelated tasks to domain-specific guidance. The 128 KiB ceiling can also be
-reached when a repository has unusually large or deeply nested instructions.
+APM 0.28.0's Codex MCP adapter can return an already-configured error when a
+frozen global install is repeated with the same self-defined
+`github-mcp-server` entry. Before a repeat global install, verify that the
+existing entry matches the reviewed endpoint and backup, remove only that
+APM-owned entry with `codex mcp remove github-mcp-server`, and let the frozen
+installation recreate it. Do not use `--force` for this workaround because it
+also broadens file-collision and security-finding behavior.
+
+Global instructions are loaded for every repository, so keep the personal core
+small. Domain manuals belong in discoverable skills and should not be added to
+the compiled user instruction files. The 128 KiB ceiling may still be needed
+for repositories with unusually large or deeply nested project instructions.
+
+Microsoft Learn MCP ownership is intentionally outside this package. Codex
+keeps the descriptive user-level `microsoft-learn` server with its restricted
+tool allowlist, while GitHub Copilot receives `microsoft-learn` from the
+installed Microsoft Docs plugin. Do not add a second generic `mcp` registration
+for the same endpoint.
 
 ## Validate
 
@@ -142,17 +184,11 @@ apm install --frozen
 apm audit --ci
 ```
 
-Running the installation and compilation commands again leaves the deployed
-configuration unchanged. APM 0.25.0 still rewrites only the lockfile's
-`generated_at` value on each installation, including `--frozen`, so a raw
-repository diff contains that timestamp-only change.
-
-APM 0.25.0 currently reports `config-consistency` errors for the four requested
-virtual skill-directory packages because it looks for an `apm.yml` inside each
-upstream `SKILL.md` directory. Installation, frozen installation, compilation,
-and drift replay still succeed, and the audit reports no repository drift. Do
-not add placeholder manifests to the managed skill directories; retain the
-upstream package roots and review this limitation when updating APM.
+The generated primitives and compiled instructions are byte-stable on replay.
+APM 0.28.0 may rewrite the lockfile's `generated_at` value on installation,
+including `--frozen`; compare content separately from that documented
+timestamp. The Codex MCP adapter limitation above means the complete install
+command is not exit-code idempotent until its managed entry is reconciled.
 
 ## Update
 
@@ -176,7 +212,13 @@ lockfile and replay the user-scope installation:
 ```sh
 cp apm.yml ~/.apm/apm.yml
 cp apm.lock.yaml ~/.apm/apm.lock.yaml
+mkdir -p ~/.apm/.apm
+cp -R .apm/. ~/.apm/.apm/
 apm install --global --frozen
+for skill in a11y agent-safety ansible powershell-module-engineering; do
+  mkdir -p ~/.agents/skills/"$skill"
+  cp ~/.apm/.apm/skills/"$skill"/SKILL.md ~/.agents/skills/"$skill/SKILL.md"
+done
 (cd ~/.apm && apm compile --target codex --single-agents \
   --output ~/.codex/AGENTS.md)
 (cd ~/.apm && apm compile --target copilot --single-agents \
@@ -188,12 +230,20 @@ resolve changes in the user-scope copy before they were reviewed and committed
 here. Global updates affect every repository, so keep dependency resolution
 and diff review in this repository.
 
+## Rollback
+
+To roll back a user deployment, restore the timestamped backup copies of the
+APM manifest and lockfile, instruction files, Codex/Copilot MCP configuration,
+and any retired skill. Then run the frozen global installation and compile both
+user instruction files from the restored `~/.apm` state. Start new Codex and
+Copilot sessions after either deployment or rollback.
+
 ## Authentication and current limitations
 
-No credentials are stored in this repository. Microsoft Learn MCP uses its
-public remote endpoint. The GitHub MCP server uses the registry's remote HTTP
-transport. Codex reads its bearer token at runtime from `GITHUB_TOKEN`; project
-MCP configuration becomes active after the repository is trusted in Codex.
+No credentials are stored in this repository. The GitHub MCP server uses the
+registry's remote HTTP transport. Codex reads its bearer token at runtime from
+`GITHUB_TOKEN`; project MCP configuration becomes active after the repository
+is trusted in Codex.
 
 For private GitHub dependency resolution, APM can use
 `GITHUB_COPILOT_PAT`, `GITHUB_TOKEN`, `GITHUB_APM_PAT`, or
@@ -203,8 +253,5 @@ reference rather than writing its value. GitHub Copilot CLI configuration is
 user-scoped and generated for each user by `apm install`; it is not committed
 to this repository.
 
-The requested Awesome Copilot plugin source cannot currently be installed by
-APM 0.25.0. The supplied `.github` directory is not a valid virtual package
-root, while the parent plugin package and marketplace entry fail validation
-because their manifest refers to agent and skill paths outside the isolated
-plugin directory. The plugin is therefore not included or manually copied.
+After deployment, verify skill and MCP discovery in fresh sessions. Existing
+sessions retain their startup context and are not valid acceptance evidence.

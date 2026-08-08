@@ -1,65 +1,9 @@
 lockfile_version: '1'
-generated_at: '2026-07-14T04:37:28.355976+00:00'
-apm_version: 0.25.0
+generated_at: '2026-08-08T17:38:49.028145+00:00'
+apm_version: 0.28.0
 dependencies:
 - repo_url: github/awesome-copilot
-  name: awesome-copilot-a11y
-  host: github.com
-  resolved_commit: e353a8cfb8124d44905fc73214d873cea4a0ba3b
-  resolved_ref: main
-  version: 1.0.0
-  virtual_path: instructions/a11y.instructions.md
-  is_virtual: true
-  package_type: apm_package
-  deployed_files:
-  - .github/instructions/a11y.instructions.md
-  deployed_file_hashes:
-    .github/instructions/a11y.instructions.md: sha256:d85d6df4945f3816e5775915ab1eb051f289626e4ea85ba3ac9aa4eff6aa402c
-  content_hash: sha256:2e970f4604b399633102e34e66f8c97bea5b1290302be8369c91bc8afee0a8ce
-- repo_url: github/awesome-copilot
-  name: awesome-copilot-agent-safety
-  host: github.com
-  resolved_commit: e353a8cfb8124d44905fc73214d873cea4a0ba3b
-  resolved_ref: main
-  version: 1.0.0
-  virtual_path: instructions/agent-safety.instructions.md
-  is_virtual: true
-  package_type: apm_package
-  deployed_files:
-  - .github/instructions/agent-safety.instructions.md
-  deployed_file_hashes:
-    .github/instructions/agent-safety.instructions.md: sha256:f32c666ffae1777a57475bce56fc49f01cc76cdd2fea82ff2b9d976fad0b8a8b
-  content_hash: sha256:4bbc09505433818b0bee5fe3463393f7b5096b2fe4505c7fc8bcf7e333336e7a
-- repo_url: github/awesome-copilot
-  name: awesome-copilot-ansible
-  host: github.com
-  resolved_commit: e353a8cfb8124d44905fc73214d873cea4a0ba3b
-  resolved_ref: main
-  version: 1.0.0
-  virtual_path: instructions/ansible.instructions.md
-  is_virtual: true
-  package_type: apm_package
-  deployed_files:
-  - .github/instructions/ansible.instructions.md
-  deployed_file_hashes:
-    .github/instructions/ansible.instructions.md: sha256:2bacffb876f3557e01322197d8d89ddac8fec0e7e9d737f7251dcb09a001fb05
-  content_hash: sha256:be852b2777d20e80a9b87a52dfff11cb5ad34eba1789363fe9f416bc9b8ecf42
-- repo_url: github/awesome-copilot
-  name: awesome-copilot-powershell
-  host: github.com
-  resolved_commit: e353a8cfb8124d44905fc73214d873cea4a0ba3b
-  resolved_ref: main
-  version: 1.0.0
-  virtual_path: instructions/powershell.instructions.md
-  is_virtual: true
-  package_type: apm_package
-  deployed_files:
-  - .github/instructions/powershell.instructions.md
-  deployed_file_hashes:
-    .github/instructions/powershell.instructions.md: sha256:a8916a8aa82260b68dcc73bd659226795f6018ee2746da86ed4d27a4d5dfc1ef
-  content_hash: sha256:cd8445fba8fa4bc31c8c8da719fcd2d5f74d0768f5416fc3dd0adfcd10c2ba64
-- repo_url: github/awesome-copilot
-  name: awesome-copilot
+  name: dependabot
   host: github.com
   resolved_commit: e353a8cfb8124d44905fc73214d873cea4a0ba3b
   resolved_ref: main
@@ -80,7 +24,7 @@ dependencies:
     .agents/skills/dependabot/references/pr-commands.md: sha256:471a786456c798364d13c0da554c12c712c581986b7f4a1de95d8b3638fd21cb
   content_hash: sha256:fae18b0bdde8dfbb5d18c4e2945d899ea2d1445a3c4ad507abd363b7e22306fa
 - repo_url: github/awesome-copilot
-  name: awesome-copilot
+  name: git-commit
   host: github.com
   resolved_commit: e353a8cfb8124d44905fc73214d873cea4a0ba3b
   resolved_ref: main
@@ -95,7 +39,7 @@ dependencies:
     .agents/skills/git-commit/SKILL.md: sha256:554d1a3c6d95f15bc1170160659ecdc9a9958b64f377f3988941b672c249b13f
   content_hash: sha256:2607fc60629b82b257136dd2a7a373f0a4466c0b49df7746d845d59313c99b21
 - repo_url: github/awesome-copilot
-  name: awesome-copilot
+  name: github-actions-hardening
   host: github.com
   resolved_commit: e353a8cfb8124d44905fc73214d873cea4a0ba3b
   resolved_ref: main
@@ -182,23 +126,81 @@ dependencies:
     .agents/skills/msgraph/scripts/run.ps1: sha256:208a0323c85c94c8b8f23d974a92fb37dab77c44de5638fb3e7688e00d761cbb
     .agents/skills/msgraph/scripts/run.sh: sha256:ef3545fee5e2f2654cedf32ed543ba2e496109c1eb90ea6f915fd9bcf4abd51b
   content_hash: sha256:dafc9b29ab3044b1ce6066fef4e2d0a94ebc2043da63a76eb4d6c9b424acb710
-- repo_url: thetechgy/fact
-  name: fact-powershell-pester-6
-  host: github.com
-  resolved_commit: 31facef928be722fba666ea80dfcaef15c8ac2dc
-  resolved_ref: main
-  version: 1.0.0
-  virtual_path: .github/instructions/powershell-pester-6.instructions.md
-  is_virtual: true
-  package_type: apm_package
-  deployed_files:
-  - .github/instructions/powershell-pester-6.instructions.md
-  deployed_file_hashes:
-    .github/instructions/powershell-pester-6.instructions.md: sha256:33a1781afd5d9a011738a860960cdad6ad2e633a8dc87e97d746ccaa2d2e79a5
-  content_hash: sha256:69b17b31ce4029d6d953e295c6daea2acbc25fd4059422d71f991762c9144d79
 deployments:
 - kind: project-relative
   target: agents
+  value: .agents/skills/a11y
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: null
+- kind: project-relative
+  target: agents
+  value: .agents/skills/a11y/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:df6cef730e7c82d1b81fe2f3922446357c65104d5eb8db3eba533cd3b1b031ad
+- kind: project-relative
+  target: agents
+  value: .agents/skills/agent-safety
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: null
+- kind: project-relative
+  target: agents
+  value: .agents/skills/agent-safety/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:afe27d314bc8f07073ce951ebf4db7e6eada372878d4edd9e8f14b8f5d22ae29
+- kind: project-relative
+  target: agents
+  value: .agents/skills/ansible
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: null
+- kind: project-relative
+  target: agents
+  value: .agents/skills/ansible/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:da721fc826ff776875bae5c61424d3e77cd122c171f7a7b80eb0dd125a7af9f4
+- kind: project-relative
+  target: agents
+  value: .agents/skills/powershell-module-engineering
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: null
+- kind: project-relative
+  target: agents
+  value: .agents/skills/powershell-module-engineering/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:397eaaacb7820495f8dc57da949232219b022e8caaa309e93773a8155d55cff0
+- kind: project-relative
+  target: codex
   value: .agents/skills/dependabot
   runtime: null
   scope: project
@@ -207,7 +209,7 @@ deployments:
   active_owner: github/awesome-copilot/skills/dependabot
   content_hash: null
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/dependabot/SKILL.md
   runtime: null
   scope: project
@@ -216,7 +218,7 @@ deployments:
   active_owner: github/awesome-copilot/skills/dependabot
   content_hash: sha256:2b5f3af7d8a5555d330d4d72ba9ad6140e85215d006dd9d7a92ee0dae76bbf82
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/dependabot/references/dependabot-yml-reference.md
   runtime: null
   scope: project
@@ -225,7 +227,7 @@ deployments:
   active_owner: github/awesome-copilot/skills/dependabot
   content_hash: sha256:c3b101d7e200a215211c9e23157ddfb1c051e437815b4d5a3d9bc13e504d6ed6
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/dependabot/references/example-configs.md
   runtime: null
   scope: project
@@ -234,7 +236,7 @@ deployments:
   active_owner: github/awesome-copilot/skills/dependabot
   content_hash: sha256:35375699cfbaa372b68a232a2704f88a190e1267f937e1f1921e8d83c97485ca
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/dependabot/references/pr-commands.md
   runtime: null
   scope: project
@@ -243,7 +245,7 @@ deployments:
   active_owner: github/awesome-copilot/skills/dependabot
   content_hash: sha256:471a786456c798364d13c0da554c12c712c581986b7f4a1de95d8b3638fd21cb
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/git-commit
   runtime: null
   scope: project
@@ -252,7 +254,7 @@ deployments:
   active_owner: github/awesome-copilot/skills/git-commit
   content_hash: null
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/git-commit/SKILL.md
   runtime: null
   scope: project
@@ -261,7 +263,7 @@ deployments:
   active_owner: github/awesome-copilot/skills/git-commit
   content_hash: sha256:554d1a3c6d95f15bc1170160659ecdc9a9958b64f377f3988941b672c249b13f
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/github-actions-hardening
   runtime: null
   scope: project
@@ -270,7 +272,7 @@ deployments:
   active_owner: github/awesome-copilot/skills/github-actions-hardening
   content_hash: null
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/github-actions-hardening/SKILL.md
   runtime: null
   scope: project
@@ -279,7 +281,7 @@ deployments:
   active_owner: github/awesome-copilot/skills/github-actions-hardening
   content_hash: sha256:31a8e7483d978e6267941edefebbe42aaa946bb3d43c9095aa3db343d4a8ff06
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/github-actions-hardening/references/injection.md
   runtime: null
   scope: project
@@ -288,7 +290,7 @@ deployments:
   active_owner: github/awesome-copilot/skills/github-actions-hardening
   content_hash: sha256:ebd6ef8d39ba6f1cd3dc13051e6ed4163d1d2ba36518cf0f7393836a211e58ff
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/github-actions-hardening/references/permissions-and-tokens.md
   runtime: null
   scope: project
@@ -297,7 +299,7 @@ deployments:
   active_owner: github/awesome-copilot/skills/github-actions-hardening
   content_hash: sha256:7272d00b20cf99c6fcbf34346f76730907c00701aef44bb9cfb7ab3eecac336b
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/github-actions-hardening/references/report-format.md
   runtime: null
   scope: project
@@ -306,7 +308,7 @@ deployments:
   active_owner: github/awesome-copilot/skills/github-actions-hardening
   content_hash: sha256:3ecd2442e173bc001f858747873349be7c6c77050470b87ae516647908b1e86e
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/github-actions-hardening/references/supply-chain.md
   runtime: null
   scope: project
@@ -315,7 +317,7 @@ deployments:
   active_owner: github/awesome-copilot/skills/github-actions-hardening
   content_hash: sha256:f66f613dbd732ce87c1e76b88208efde8feae3ffe5a3ab405cde4ce3df66f605
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/github-actions-hardening/references/triggers-and-privilege.md
   runtime: null
   scope: project
@@ -324,7 +326,7 @@ deployments:
   active_owner: github/awesome-copilot/skills/github-actions-hardening
   content_hash: sha256:465f3f76517e9f5374a73e30f46cb47e1fe62ce9fd81f782808a3abbb2df2756
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/msgraph
   runtime: null
   scope: project
@@ -333,7 +335,7 @@ deployments:
   active_owner: merill/msgraph/skills/msgraph
   content_hash: null
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/msgraph/CONTRIBUTING.md
   runtime: null
   scope: project
@@ -342,7 +344,7 @@ deployments:
   active_owner: merill/msgraph/skills/msgraph
   content_hash: sha256:60dc9074eedcb06cb29845a4ab6d41866f357be6b8d810e8c84408788e2babf0
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/msgraph/SKILL.md
   runtime: null
   scope: project
@@ -351,7 +353,7 @@ deployments:
   active_owner: merill/msgraph/skills/msgraph
   content_hash: sha256:b4763f6ae89a4e2843ca5bfe15fddf49f5924e20054ff5d7fb7e43a2df3df67e
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/msgraph/references/REFERENCE.md
   runtime: null
   scope: project
@@ -360,7 +362,7 @@ deployments:
   active_owner: merill/msgraph/skills/msgraph
   content_hash: sha256:61639bb509391df6e65762355c87ef53c98f544d04e4455fd17f571c6732b5d7
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/msgraph/references/api-docs-index.db
   runtime: null
   scope: project
@@ -369,7 +371,7 @@ deployments:
   active_owner: merill/msgraph/skills/msgraph
   content_hash: sha256:921e361b2f7f379489a61ff11217e9ddeea22d9dbefa32a9dca0ec22ad73689e
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/msgraph/references/api-docs-index.json
   runtime: null
   scope: project
@@ -378,7 +380,7 @@ deployments:
   active_owner: merill/msgraph/skills/msgraph
   content_hash: sha256:e7096cb2d447b8ae4adf234e0bcc2cfacf78dc1e041a62e239d50bae1f9a1a14
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/msgraph/references/docs/advanced-queries.md
   runtime: null
   scope: project
@@ -387,7 +389,7 @@ deployments:
   active_owner: merill/msgraph/skills/msgraph
   content_hash: sha256:89ac64478ca6539412ce66d5f6ac2f76f3c88ff709c8bee7c81da0d79017345e
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/msgraph/references/docs/authentication.md
   runtime: null
   scope: project
@@ -396,7 +398,7 @@ deployments:
   active_owner: merill/msgraph/skills/msgraph
   content_hash: sha256:dae0fca55119fd89a9b719705d5263aa4705215c1de57d0bf33627d30c9d7c42
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/msgraph/references/docs/batching.md
   runtime: null
   scope: project
@@ -405,7 +407,7 @@ deployments:
   active_owner: merill/msgraph/skills/msgraph
   content_hash: sha256:f5132b3027554ededc2ba6b116a47187df4c408be5ddbb273ff7653352e60e3b
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/msgraph/references/docs/best-practices.md
   runtime: null
   scope: project
@@ -414,7 +416,7 @@ deployments:
   active_owner: merill/msgraph/skills/msgraph
   content_hash: sha256:7f853ecd97d70b59abdd5ff37af2086ee236ac612959c2d0f2c60c0df149cded
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/msgraph/references/docs/errors.md
   runtime: null
   scope: project
@@ -423,7 +425,7 @@ deployments:
   active_owner: merill/msgraph/skills/msgraph
   content_hash: sha256:2c297ff319457b717c4d38948444e3586960d4669ad65fc4e38f7d36138a0d8b
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/msgraph/references/docs/paging.md
   runtime: null
   scope: project
@@ -432,7 +434,7 @@ deployments:
   active_owner: merill/msgraph/skills/msgraph
   content_hash: sha256:f1b76a08cde517b495023098385b63fdf921eb3dc5e374b4f285e71786feb716
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/msgraph/references/docs/query-parameters.md
   runtime: null
   scope: project
@@ -441,7 +443,7 @@ deployments:
   active_owner: merill/msgraph/skills/msgraph
   content_hash: sha256:f20ddb64c70f3b94c224882cb57bfc1541df6b2bb74532a5e16cb83ca94b6cd3
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/msgraph/references/docs/throttling.md
   runtime: null
   scope: project
@@ -450,7 +452,7 @@ deployments:
   active_owner: merill/msgraph/skills/msgraph
   content_hash: sha256:cb6db141e600f3c433c80e8f21a6840b1ed83237d7c73f2b0144de37225b0a85
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/msgraph/references/graph-api-index.db
   runtime: null
   scope: project
@@ -459,7 +461,7 @@ deployments:
   active_owner: merill/msgraph/skills/msgraph
   content_hash: sha256:948d80875efafd0d8a26ac630a359d6160b3bbf907a32bd14d14df12132d0456
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/msgraph/references/graph-api-index.json
   runtime: null
   scope: project
@@ -468,7 +470,7 @@ deployments:
   active_owner: merill/msgraph/skills/msgraph
   content_hash: sha256:608d1d50b90cb0285eee650b81eb988806d66d2bff8a70a82d0738fdec616f9e
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/msgraph/references/samples-index.db
   runtime: null
   scope: project
@@ -477,7 +479,7 @@ deployments:
   active_owner: merill/msgraph/skills/msgraph
   content_hash: sha256:17843a1afe4a3479e6372192d93c2872ba5ad68451637183fda075968f3a29ca
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/msgraph/references/samples-index.json
   runtime: null
   scope: project
@@ -486,7 +488,7 @@ deployments:
   active_owner: merill/msgraph/skills/msgraph
   content_hash: sha256:f1381125e3b3da5f7b400c34fffd1b8167a6815d6f5b4bc9c3ee448287d99366
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/msgraph/scripts/bin/msgraph_darwin_amd64
   runtime: null
   scope: project
@@ -495,7 +497,7 @@ deployments:
   active_owner: merill/msgraph/skills/msgraph
   content_hash: sha256:9114a140380c1bf67569b4bc99c61c3581a9633e1ddcdf65e428b5f797ea2fb0
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/msgraph/scripts/bin/msgraph_darwin_arm64
   runtime: null
   scope: project
@@ -504,7 +506,7 @@ deployments:
   active_owner: merill/msgraph/skills/msgraph
   content_hash: sha256:3a92b70f8d3790e82664c2acea7bf8fa75e6d907c85f896098a98c1533e3e8bc
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/msgraph/scripts/bin/msgraph_linux_amd64
   runtime: null
   scope: project
@@ -513,7 +515,7 @@ deployments:
   active_owner: merill/msgraph/skills/msgraph
   content_hash: sha256:170b65df956470a7476ccc16c84e3bcc43ae43d739901535532bb4bea795e2f6
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/msgraph/scripts/bin/msgraph_linux_arm64
   runtime: null
   scope: project
@@ -522,7 +524,7 @@ deployments:
   active_owner: merill/msgraph/skills/msgraph
   content_hash: sha256:1ea9093931ef137ab32262857f9ce4f5f828bd9306a6297fc36fb5626803fcba
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/msgraph/scripts/bin/msgraph_windows_amd64.exe
   runtime: null
   scope: project
@@ -531,7 +533,7 @@ deployments:
   active_owner: merill/msgraph/skills/msgraph
   content_hash: sha256:101f8a4ae443a189128d0aa3c773baa8c15c99f5d93dd0933e5cc99dc3edf29c
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/msgraph/scripts/bin/msgraph_windows_arm64.exe
   runtime: null
   scope: project
@@ -540,7 +542,7 @@ deployments:
   active_owner: merill/msgraph/skills/msgraph
   content_hash: sha256:f3c8fb32e9e03537781f274860e21438d6f9ce16cddae64eedfd608743184230
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/msgraph/scripts/run.ps1
   runtime: null
   scope: project
@@ -549,7 +551,7 @@ deployments:
   active_owner: merill/msgraph/skills/msgraph
   content_hash: sha256:208a0323c85c94c8b8f23d974a92fb37dab77c44de5638fb3e7688e00d761cbb
 - kind: project-relative
-  target: agents
+  target: codex
   value: .agents/skills/msgraph/scripts/run.sh
   runtime: null
   scope: project
@@ -559,49 +561,13 @@ deployments:
   content_hash: sha256:ef3545fee5e2f2654cedf32ed543ba2e496109c1eb90ea6f915fd9bcf4abd51b
 - kind: project-relative
   target: copilot
-  value: .github/instructions/a11y.instructions.md
+  value: .github/instructions/personal.instructions.md
   runtime: null
   scope: project
   owners:
-  - github/awesome-copilot/instructions/a11y.instructions.md
-  active_owner: github/awesome-copilot/instructions/a11y.instructions.md
-  content_hash: sha256:d85d6df4945f3816e5775915ab1eb051f289626e4ea85ba3ac9aa4eff6aa402c
-- kind: project-relative
-  target: copilot
-  value: .github/instructions/agent-safety.instructions.md
-  runtime: null
-  scope: project
-  owners:
-  - github/awesome-copilot/instructions/agent-safety.instructions.md
-  active_owner: github/awesome-copilot/instructions/agent-safety.instructions.md
-  content_hash: sha256:f32c666ffae1777a57475bce56fc49f01cc76cdd2fea82ff2b9d976fad0b8a8b
-- kind: project-relative
-  target: copilot
-  value: .github/instructions/ansible.instructions.md
-  runtime: null
-  scope: project
-  owners:
-  - github/awesome-copilot/instructions/ansible.instructions.md
-  active_owner: github/awesome-copilot/instructions/ansible.instructions.md
-  content_hash: sha256:2bacffb876f3557e01322197d8d89ddac8fec0e7e9d737f7251dcb09a001fb05
-- kind: project-relative
-  target: copilot
-  value: .github/instructions/powershell-pester-6.instructions.md
-  runtime: null
-  scope: project
-  owners:
-  - thetechgy/fact/.github/instructions/powershell-pester-6.instructions.md
-  active_owner: thetechgy/fact/.github/instructions/powershell-pester-6.instructions.md
-  content_hash: sha256:33a1781afd5d9a011738a860960cdad6ad2e633a8dc87e97d746ccaa2d2e79a5
-- kind: project-relative
-  target: copilot
-  value: .github/instructions/powershell.instructions.md
-  runtime: null
-  scope: project
-  owners:
-  - github/awesome-copilot/instructions/powershell.instructions.md
-  active_owner: github/awesome-copilot/instructions/powershell.instructions.md
-  content_hash: sha256:a8916a8aa82260b68dcc73bd659226795f6018ee2746da86ed4d27a4d5dfc1ef
+  - .
+  active_owner: .
+  content_hash: sha256:c1e91af2e4096e88b8295dfcd32944e04768bee3b0bd0de3eb64ae3c6ed5dab4
 - kind: uri
   target: mcp
   value: io.github.github/github-mcp-server
@@ -613,43 +579,7 @@ deployments:
   content_hash: null
 - kind: uri
   target: mcp
-  value: microsoftdocs/mcp
-  runtime: codex
-  scope: project
-  owners:
-  - .
-  active_owner: .
-  content_hash: null
-- kind: uri
-  target: mcp
   value: io.github.github/github-mcp-server
-  runtime: copilot
-  scope: project
-  owners:
-  - .
-  active_owner: .
-  content_hash: null
-- kind: uri
-  target: mcp
-  value: microsoftdocs/mcp
-  runtime: copilot
-  scope: project
-  owners:
-  - .
-  active_owner: .
-  content_hash: null
-- kind: uri
-  target: mcp
-  value: io.github.github/github-mcp-server
-  runtime: vscode
-  scope: project
-  owners:
-  - .
-  active_owner: .
-  content_hash: null
-- kind: uri
-  target: mcp
-  value: microsoftdocs/mcp
   runtime: vscode
   scope: project
   owners:
@@ -658,21 +588,29 @@ deployments:
   content_hash: null
 mcp_servers:
 - io.github.github/github-mcp-server
-- microsoftdocs/mcp
 mcp_configs:
   io.github.github/github-mcp-server:
     name: io.github.github/github-mcp-server
     transport: http
     bearer_token_env_var: GITHUB_TOKEN
-  microsoftdocs/mcp:
-    name: microsoftdocs/mcp
 mcp_target_servers:
   codex:
   - io.github.github/github-mcp-server
-  - microsoftdocs/mcp
-  copilot:
-  - io.github.github/github-mcp-server
-  - microsoftdocs/mcp
   vscode:
   - io.github.github/github-mcp-server
-  - microsoftdocs/mcp
+local_deployed_files:
+- .agents/skills/a11y
+- .agents/skills/a11y/SKILL.md
+- .agents/skills/agent-safety
+- .agents/skills/agent-safety/SKILL.md
+- .agents/skills/ansible
+- .agents/skills/ansible/SKILL.md
+- .agents/skills/powershell-module-engineering
+- .agents/skills/powershell-module-engineering/SKILL.md
+- .github/instructions/personal.instructions.md
+local_deployed_file_hashes:
+  .agents/skills/a11y/SKILL.md: sha256:df6cef730e7c82d1b81fe2f3922446357c65104d5eb8db3eba533cd3b1b031ad
+  .agents/skills/agent-safety/SKILL.md: sha256:afe27d314bc8f07073ce951ebf4db7e6eada372878d4edd9e8f14b8f5d22ae29
+  .agents/skills/ansible/SKILL.md: sha256:da721fc826ff776875bae5c61424d3e77cd122c171f7a7b80eb0dd125a7af9f4
+  .agents/skills/powershell-module-engineering/SKILL.md: sha256:397eaaacb7820495f8dc57da949232219b022e8caaa309e93773a8155d55cff0
+  .github/instructions/personal.instructions.md: sha256:c1e91af2e4096e88b8295dfcd32944e04768bee3b0bd0de3eb64ae3c6ed5dab4
