@@ -1,10 +1,5 @@
 {
   "servers": {
-    "microsoftdocs/mcp": {
-      "type": "http",
-      "url": "https://learn.microsoft.com/api/mcp",
-      "headers": {}
-    },
     "io.github.github/github-mcp-server": {
       "type": "http",
       "url": "https://api.githubcopilot.com/mcp/",
