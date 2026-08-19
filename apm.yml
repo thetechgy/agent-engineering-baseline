@@ -12,6 +12,7 @@ dependencies:
     - github/awesome-copilot/skills/git-commit#main
     - github/awesome-copilot/skills/github-actions-hardening#main
     - merill/msgraph/skills/msgraph#main
+    - addyosmani/agent-skills/skills/code-simplification#main
   mcp:
     - name: io.github.github/github-mcp-server
       transport: http

@@ -1,7 +1,22 @@
 lockfile_version: '1'
-generated_at: '2026-08-08T17:38:49.028145+00:00'
+generated_at: '2026-08-19T02:21:12.507586+00:00'
 apm_version: 0.28.0
 dependencies:
+- repo_url: addyosmani/agent-skills
+  name: code-simplification
+  host: github.com
+  resolved_commit: df1edb2e05487d0aa6d93c747141e0aed1187f25
+  resolved_ref: main
+  version: unknown
+  virtual_path: skills/code-simplification
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/code-simplification
+  - .agents/skills/code-simplification/SKILL.md
+  deployed_file_hashes:
+    .agents/skills/code-simplification/SKILL.md: sha256:f0c5ed754057eb0c1e027e2587f59de816651feb5e837242296c43ea21cf621d
+  content_hash: sha256:7973e746e8e2ea5004d520da970c15a106824b8d6be1bcff48908aec021f3677
 - repo_url: github/awesome-copilot
   name: dependabot
   host: github.com
@@ -199,6 +214,24 @@ deployments:
   - .
   active_owner: .
   content_hash: sha256:397eaaacb7820495f8dc57da949232219b022e8caaa309e93773a8155d55cff0
+- kind: project-relative
+  target: codex
+  value: .agents/skills/code-simplification
+  runtime: null
+  scope: project
+  owners:
+  - addyosmani/agent-skills/skills/code-simplification
+  active_owner: addyosmani/agent-skills/skills/code-simplification
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/code-simplification/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - addyosmani/agent-skills/skills/code-simplification
+  active_owner: addyosmani/agent-skills/skills/code-simplification
+  content_hash: sha256:f0c5ed754057eb0c1e027e2587f59de816651feb5e837242296c43ea21cf621d
 - kind: project-relative
   target: codex
   value: .agents/skills/dependabot
