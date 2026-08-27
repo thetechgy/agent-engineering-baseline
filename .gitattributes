@@ -1,0 +1,9 @@
+# Upstream bodies are preserved byte-for-byte, including reviewed whitespace.
+/.apm/skills/a11y/SKILL.md -whitespace
+/.apm/skills/agent-safety/SKILL.md -whitespace
+/.apm/skills/ansible/SKILL.md -whitespace
+/.apm/skills/powershell-module-engineering/SKILL.md -whitespace
+/.agents/skills/a11y/SKILL.md -whitespace
+/.agents/skills/agent-safety/SKILL.md -whitespace
+/.agents/skills/ansible/SKILL.md -whitespace
+/.agents/skills/powershell-module-engineering/SKILL.md -whitespace

@@ -1,371 +1,103 @@
 #!/usr/bin/env bash
-
 set -euo pipefail
 
 repo_root=$(CDPATH='' cd -- "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
 bootstrap="$repo_root/scripts/bootstrap-global.sh"
-test_root=$(mktemp -d "${TMPDIR:-/tmp}/bootstrap-global-tests.XXXXXX")
+test_root=$(mktemp -d "${TMPDIR:-/tmp}/native-apm-bootstrap.XXXXXX")
 trap 'rm -rf -- "$test_root"' EXIT HUP INT TERM
 
-managed_skills=(
-    a11y
-    agent-safety
-    ansible
-    powershell-module-engineering
-    code-simplification
-    dependabot
-    git-commit
-    github-actions-hardening
-    msgraph
-)
+fail() { printf 'not ok - %s\n' "$*" >&2; exit 1; }
 
-fail() {
-    printf 'not ok - %s\n' "$*" >&2
-    exit 1
-}
-
-assert_file_contains() {
-    local path=$1
-    local expected=$2
-
-    grep -F "$expected" "$path" >/dev/null || fail "$path does not contain: $expected"
-}
-
-assert_same_file() {
-    cmp -s "$1" "$2" || fail "files differ: $1 and $2"
-}
-
-assert_same_tree() {
-    diff -qr "$1" "$2" >/dev/null || fail "directories differ: $1 and $2"
-}
-
-write_default_mcp_state() {
-    local home=$1
-
-    mkdir -p "$home/.codex"
-    cat > "$home/.fake-github-mcp.json" <<'JSON'
-{
-  "name": "github-mcp-server",
-  "enabled": true,
-  "disabled_reason": null,
-  "transport": {
-    "type": "streamable_http",
-    "url": "https://api.githubcopilot.com/mcp/",
-    "bearer_token_env_var": "GITHUB_TOKEN",
-    "http_headers": null,
-    "env_http_headers": null,
-    "http_headers_helper": null
-  },
-  "enabled_tools": null,
-  "disabled_tools": null,
-  "startup_timeout_sec": null,
-  "tool_timeout_sec": null
-}
-JSON
-    cat >> "$home/.codex/config.toml" <<'TOML'
-[mcp_servers.github-mcp-server]
-url = "https://api.githubcopilot.com/mcp/"
-bearer_token_env_var = "GITHUB_TOKEN"
-TOML
-}
-
-write_fake_tools() {
-    local bin_dir=$1
-
-    mkdir -p "$bin_dir"
-    cat > "$bin_dir/codex" <<'EOF'
+make_apm() {
+    local version=$1
+    mkdir -p "$case_bin"
+    cat > "$case_bin/apm" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
-printf 'codex %s\n' "$*" >> "$HOME/.fake-command.log"
-state="$HOME/.fake-github-mcp.json"
-case "${1-} ${2-}" in
-    'mcp get')
-        if [ -f "$state" ]; then
-            cat "$state"
-        else
-            printf "Error: No MCP server named 'github-mcp-server' found.\n" >&2
-            exit 1
-        fi
-        ;;
-    'mcp remove')
-        [ "${FAKE_CODEX_FAIL_REMOVE-}" != 1 ] || exit 31
-        rm -f "$state"
-        config="$HOME/.codex/config.toml"
-        if [ -f "$config" ]; then
-            awk '
-                /^\[mcp_servers\.github-mcp-server\]$/ { skipping = 1; next }
-                skipping && /^\[/ { skipping = 0 }
-                !skipping { print }
-            ' "$config" > "$config.tmp"
-            mv "$config.tmp" "$config"
-        fi
-        ;;
-    *)
-        exit 32
-        ;;
-esac
+printf 'apm %s\n' "\$*" >> "\$TEST_COMMAND_LOG"
+if [ "\${1-}" = --version ]; then printf 'APM $version\n'; exit 0; fi
+if [ "\${1-}" = install ] || [ "\${1-}" = compile ]; then exit 0; fi
+exit 40
 EOF
-
-    cat > "$bin_dir/apm" <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-printf 'apm %s\n' "$*" >> "$HOME/.fake-command.log"
-
-if [ "${1-}" = install ]; then
-    [ "${FAKE_APM_FAIL_STAGE-}" != install ] || exit 41
-    for skill in code-simplification dependabot git-commit github-actions-hardening msgraph; do
-        mkdir -p "$HOME/.agents/skills/$skill"
-        printf 'installed %s\n' "$skill" > "$HOME/.agents/skills/$skill/SKILL.md"
-    done
-    mkdir -p "$HOME/.apm/apm_modules/fake"
-    printf 'installed\n' > "$HOME/.apm/apm_modules/fake/state"
-    printf '{"installed":true}\n' > "$HOME/.apm/config.json"
-    mkdir -p "$HOME/.codex" "$HOME/.copilot"
-    cat > "$HOME/.fake-github-mcp.json" <<'JSON'
-{
-  "name": "github-mcp-server",
-  "enabled": true,
-  "disabled_reason": null,
-  "transport": {
-    "type": "streamable_http",
-    "url": "https://api.githubcopilot.com/mcp/",
-    "bearer_token_env_var": "GITHUB_TOKEN",
-    "http_headers": null,
-    "env_http_headers": null,
-    "http_headers_helper": null
-  },
-  "enabled_tools": null,
-  "disabled_tools": null,
-  "startup_timeout_sec": null,
-  "tool_timeout_sec": null
+    chmod +x "$case_bin/apm"
 }
-JSON
-    cat >> "$HOME/.codex/config.toml" <<'TOML'
-[mcp_servers.github-mcp-server]
-url = "https://api.githubcopilot.com/mcp/"
-bearer_token_env_var = "GITHUB_TOKEN"
-TOML
-    printf '{"servers":{"github-mcp-server":{"url":"https://api.githubcopilot.com/mcp/"}}}\n' \
-        > "$HOME/.copilot/mcp-config.json"
-    exit 0
-fi
 
-if [ "${1-}" = compile ]; then
-    target=''
-    output=''
-    dry_run=false
-    shift
-    while [ "$#" -gt 0 ]; do
-        case "$1" in
-            --target)
-                target=$2
-                shift 2
-                ;;
-            --output)
-                output=$2
-                shift 2
-                ;;
-            --dry-run)
-                dry_run=true
-                shift
-                ;;
-            *)
-                shift
-                ;;
-        esac
-    done
-    stage="compile-write-$target"
-    [ "$dry_run" = false ] || stage="compile-dry-$target"
-    [ "${FAKE_APM_FAIL_STAGE-}" != "$stage" ] || exit 42
-    if [ "$dry_run" = false ]; then
-        mkdir -p "$(dirname "$output")"
-        printf '# AGENTS.md\n<!-- Generated by APM CLI from .apm/ primitives -->\n%s\n' "$target" > "$output"
-    fi
-    exit 0
-fi
-
-if [ "${1-}" = --version ]; then
-    printf 'APM 0.28.0\n'
-    exit 0
-fi
-
-exit 43
+make_codex_absent() {
+    cat > "$case_bin/codex" <<'EOF'
+#!/usr/bin/env bash
+printf "No MCP server named 'github-mcp-server' found.\n" >&2
+exit 1
 EOF
-    chmod +x "$bin_dir/apm" "$bin_dir/codex"
+    chmod +x "$case_bin/codex"
 }
 
 new_case() {
-    case_name=$1
-    case_root="$test_root/$case_name"
-    case_home="$case_root/home"
+    case_root="$test_root/$1"
     case_bin="$case_root/bin"
-    mkdir -p "$case_home" "$case_bin"
-    write_fake_tools "$case_bin"
+    case_home="$case_root/home"
+    command_log="$case_root/commands.log"
+    mkdir -p "$case_bin" "$case_home"
+    : > "$command_log"
 }
 
-run_bootstrap() {
-    HOME="$case_home" PATH="$case_bin:$PATH" "$bootstrap" "$@"
+run_case() {
+    HOME="$case_home" TEST_COMMAND_LOG="$command_log" PATH="$case_bin:/usr/bin:/bin" "$bootstrap" "$@"
 }
 
-seed_old_state() {
-    mkdir -p \
-        "$case_home/.apm/.apm/skills/old" \
-        "$case_home/.apm/apm_modules/old" \
-        "$case_home/.codex" \
-        "$case_home/.copilot" \
-        "$case_home/.agents/skills"
-    printf 'old manifest\n' > "$case_home/.apm/apm.yml"
-    printf 'old lock\n' > "$case_home/.apm/apm.lock.yaml"
-    printf 'old source\n' > "$case_home/.apm/.apm/skills/old/value"
-    printf 'old module\n' > "$case_home/.apm/apm_modules/old/value"
-    printf 'old config\n' > "$case_home/.apm/config.json"
-    printf '# old codex\n' > "$case_home/.codex/AGENTS.md"
-    printf 'project_doc_max_bytes = 77777\n\n' > "$case_home/.codex/config.toml"
-    printf 'old copilot mcp\n' > "$case_home/.copilot/mcp-config.json"
-    printf 'untouched copilot agents\n' > "$case_home/.copilot/AGENTS.md"
-    for skill in "${managed_skills[@]}"; do
-        [ "$skill" != msgraph ] || continue
-        mkdir -p "$case_home/.agents/skills/$skill"
-        printf 'old %s\n' "$skill" > "$case_home/.agents/skills/$skill/value"
-    done
-    write_default_mcp_state "$case_home"
-}
+new_case missing
+missing_output=$(run_case --dry-run)
+grep -F 'APM CLI action: install' <<< "$missing_output" >/dev/null || fail 'missing APM action'
+[ ! -s "$command_log" ] || fail 'missing dry run executed a native command'
 
-save_seed_state() {
-    expected_root="$case_root/expected"
-    mkdir -p "$expected_root"
-    for relative_path in \
-        .apm/apm.yml .apm/apm.lock.yaml .apm/.apm .apm/apm_modules .apm/config.json \
-        .codex/AGENTS.md .codex/config.toml .copilot/copilot-instructions.md \
-        .copilot/mcp-config.json; do
-        if [ -e "$case_home/$relative_path" ]; then
-            mkdir -p "$expected_root/$(dirname "$relative_path")"
-            cp -a "$case_home/$relative_path" "$expected_root/$relative_path"
-        else
-            mkdir -p "$expected_root/absent/$(dirname "$relative_path")"
-            : > "$expected_root/absent/$relative_path"
-        fi
-    done
-    for skill in "${managed_skills[@]}"; do
-        relative_path=".agents/skills/$skill"
-        if [ -e "$case_home/$relative_path" ]; then
-            mkdir -p "$expected_root/.agents/skills"
-            cp -a "$case_home/$relative_path" "$expected_root/$relative_path"
-        else
-            mkdir -p "$expected_root/absent/.agents/skills"
-            : > "$expected_root/absent/$relative_path"
-        fi
-    done
-}
+new_case older
+make_apm 0.27.0
+make_codex_absent
+older_output=$(run_case --dry-run)
+grep -F 'APM CLI action: upgrade' <<< "$older_output" >/dev/null || fail 'older APM action'
+! grep -F 'apm install' "$command_log" >/dev/null || fail 'older dry run deployed'
 
-assert_seed_state_restored() {
-    local relative_path
+new_case matching
+make_apm 0.28.0
+make_codex_absent
+run_case >/dev/null
+grep -F 'apm install --global --frozen' "$command_log" >/dev/null || fail 'native global install'
+grep -F 'apm compile --global --dry-run' "$command_log" >/dev/null || fail 'native compile preview'
+run_case >/dev/null
+[ "$(grep -c 'apm install --global --frozen' "$command_log")" -eq 2 ] || fail 'idempotent rerun'
 
-    for relative_path in \
-        .apm/apm.yml .apm/apm.lock.yaml .apm/.apm .apm/apm_modules .apm/config.json \
-        .codex/AGENTS.md .codex/config.toml .copilot/copilot-instructions.md \
-        .copilot/mcp-config.json; do
-        if [ -e "$expected_root/absent/$relative_path" ]; then
-            [ ! -e "$case_home/$relative_path" ] || fail "rollback did not remove $relative_path"
-        elif [ -d "$expected_root/$relative_path" ]; then
-            assert_same_tree "$expected_root/$relative_path" "$case_home/$relative_path"
-        else
-            assert_same_file "$expected_root/$relative_path" "$case_home/$relative_path"
-        fi
-    done
-    for skill in "${managed_skills[@]}"; do
-        relative_path=".agents/skills/$skill"
-        if [ -e "$expected_root/absent/$relative_path" ]; then
-            [ ! -e "$case_home/$relative_path" ] || fail "rollback did not remove $relative_path"
-        else
-            assert_same_tree "$expected_root/$relative_path" "$case_home/$relative_path"
-        fi
-    done
-}
+new_case newer
+make_apm 0.29.0
+make_codex_absent
+if run_case > "$case_root/out" 2> "$case_root/err"; then fail 'newer APM was accepted'; fi
+grep -F 'newer than reviewed baseline' "$case_root/err" >/dev/null || fail 'newer APM diagnostic'
+! grep -F 'apm install' "$command_log" >/dev/null || fail 'newer APM deployed'
 
-new_case fresh
-mkdir -p "$case_home/.codex" "$case_home/.copilot" "$case_home/private"
-printf 'project_doc_max_bytes = 90001\n\n[features]\nexample = true\n' > "$case_home/.codex/config.toml"
-printf 'do not touch\n' > "$case_home/.copilot/AGENTS.md"
-printf 'private\n' > "$case_home/private/keep.txt"
-fresh_output=$(run_bootstrap)
-assert_file_contains "$case_home/.codex/AGENTS.md" '<!-- Generated by APM CLI from .apm/ primitives -->'
-assert_file_contains "$case_home/.copilot/copilot-instructions.md" '<!-- Generated by APM CLI from .apm/ primitives -->'
-assert_file_contains "$case_home/.codex/config.toml" 'project_doc_max_bytes = 90001'
-assert_same_file "$repo_root/apm.yml" "$case_home/.apm/apm.yml"
-assert_same_tree "$repo_root/.apm" "$case_home/.apm/.apm"
-for skill in "${managed_skills[@]}"; do
-    [ -d "$case_home/.agents/skills/$skill" ] || fail "fresh install omitted $skill"
+new_case download_failure
+make_apm 0.27.0
+make_codex_absent
+cat > "$case_bin/curl" <<'EOF'
+#!/usr/bin/env bash
+exit 55
+EOF
+chmod +x "$case_bin/curl"
+if run_case > "$case_root/out" 2> "$case_root/err"; then fail 'download failure was ignored'; fi
+! grep -F 'apm install' "$command_log" >/dev/null || fail 'download failure deployed'
+
+new_case checksum_failure
+make_apm 0.27.0
+make_codex_absent
+cat > "$case_bin/curl" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+while [ "$#" -gt 0 ]; do
+    if [ "$1" = --output ]; then printf 'tampered\n' > "$2"; exit 0; fi
+    shift
 done
-assert_file_contains "$case_home/.copilot/AGENTS.md" 'do not touch'
-assert_file_contains "$case_home/private/keep.txt" 'private'
-backup_dir=$(printf '%s\n' "$fresh_output" | sed -n 's/^Rollback snapshot retained at: //p')
-[ -d "$backup_dir" ] || fail 'fresh install did not retain a snapshot'
-[ "$(wc -l < "$backup_dir/inventory.tsv")" -eq 18 ] || fail 'snapshot inventory is incomplete'
-assert_file_contains "$backup_dir/originally-absent.txt" '.agents/skills/msgraph'
-printf 'ok - fresh install, fidelity, inventory, absent paths, and unmanaged files\n'
+exit 56
+EOF
+chmod +x "$case_bin/curl"
+if run_case > "$case_root/out" 2> "$case_root/err"; then fail 'checksum failure was ignored'; fi
+grep -F 'does not match apm-cli.lock.yml' "$case_root/err" >/dev/null || fail 'checksum diagnostic'
+! grep -F 'apm install' "$command_log" >/dev/null || fail 'checksum failure deployed'
 
-run_bootstrap >/dev/null
-[ "$(find "$case_home/.apm/backups/agent-engineering-baseline" -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 2 ] ||
-    fail 'idempotent rerun did not retain a second snapshot'
-[ "$(grep -c '^\[mcp_servers.github-mcp-server\]$' "$case_home/.codex/config.toml")" -eq 1 ] ||
-    fail 'exact MCP recycling produced duplicate Codex entries'
-assert_file_contains "$case_home/.fake-command.log" 'codex mcp remove github-mcp-server'
-printf 'ok - exact-match MCP recycling and idempotent rerun\n'
-
-new_case customized
-mkdir -p "$case_home/.codex"
-printf 'sentinel\n' > "$case_home/.codex/config.toml"
-write_default_mcp_state "$case_home"
-sed -i 's#https://api.githubcopilot.com/mcp/#https://custom.example.invalid/mcp/#' "$case_home/.fake-github-mcp.json"
-if run_bootstrap > "$case_root/out" 2> "$case_root/err"; then
-    fail 'customized MCP entry was accepted'
-fi
-assert_file_contains "$case_root/err" 'is customized; refusing to replace it'
-[ ! -d "$case_home/.apm/backups" ] || fail 'customized MCP rejection mutated the profile'
-assert_file_contains "$case_home/.codex/config.toml" 'sentinel'
-printf 'ok - customized MCP rejection before mutation\n'
-
-new_case dry_run
-if ! run_bootstrap --dry-run > "$case_root/out" 2> "$case_root/err"; then
-    cat "$case_root/err" >&2
-    fail 'Bash dry run failed'
-fi
-assert_file_contains "$case_root/out" 'no user-profile files were changed'
-[ ! -e "$case_home/.apm" ] || fail 'dry run created global APM state'
-! grep -F 'apm install' "$case_home/.fake-command.log" >/dev/null || fail 'dry run invoked APM install'
-printf 'ok - Bash dry run\n'
-
-new_case symlink
-mkdir -p "$case_home/.codex"
-printf 'outside\n' > "$case_root/outside"
-ln -s "$case_root/outside" "$case_home/.codex/AGENTS.md"
-if run_bootstrap > "$case_root/out" 2> "$case_root/err"; then
-    fail 'symbolic-link target was accepted'
-fi
-assert_file_contains "$case_root/err" 'symbolic-link target'
-assert_file_contains "$case_root/outside" 'outside'
-[ ! -d "$case_home/.apm/backups" ] || fail 'symlink rejection mutated the profile'
-printf 'ok - symbolic-link rejection\n'
-
-for failure_stage in codex-remove install compile-dry-codex compile-dry-copilot compile-write-codex compile-write-copilot; do
-    new_case "rollback-$failure_stage"
-    seed_old_state
-    save_seed_state
-    if [ "$failure_stage" = codex-remove ]; then
-        export FAKE_CODEX_FAIL_REMOVE=1
-        unset FAKE_APM_FAIL_STAGE || true
-    else
-        unset FAKE_CODEX_FAIL_REMOVE || true
-        export FAKE_APM_FAIL_STAGE=$failure_stage
-    fi
-    if run_bootstrap > "$case_root/out" 2> "$case_root/err"; then
-        fail "native-stage failure was ignored: $failure_stage"
-    fi
-    unset FAKE_CODEX_FAIL_REMOVE FAKE_APM_FAIL_STAGE || true
-    assert_file_contains "$case_root/err" 'Rollback completed successfully'
-    assert_seed_state_restored
-done
-printf 'ok - complete rollback at every native-command stage\n'
-
-printf 'All Bash bootstrap behavior tests passed.\n'
+printf '%s\n' 'All native Bash bootstrap behavior tests passed.'

@@ -1,5 +1,9 @@
 exclude = [
     ".agents/skills/**",
+    ".apm/skills/a11y/SKILL.md",
+    ".apm/skills/agent-safety/SKILL.md",
+    ".apm/skills/ansible/SKILL.md",
+    ".apm/skills/powershell-module-engineering/SKILL.md",
     "apm_modules/**",
 ]
 include = ["**/*.md"]
@@ -14,4 +18,3 @@ tables = false
 [per-file-ignores]
 "AGENTS.md" = ["MD025", "MD065"]
 ".apm/skills/**/*.md" = ["MD013"]
-".apm/skills/a11y/SKILL.md" = ["MD013", "MD028"]
