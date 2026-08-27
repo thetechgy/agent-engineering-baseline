@@ -1,0 +1,64 @@
+name: Validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  APM_VERSION: '0.28.0'
+  APM_SHA256: 7edab3baba96658a20120fc8f3012e3223da7924937a8cbf169bf9805853b8d7
+
+jobs:
+  validate:
+    name: APM frozen install, compile, and audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install APM
+        run: |
+          archive="$RUNNER_TEMP/apm.tar.gz"
+          install_dir="$RUNNER_TEMP/apm"
+          curl --fail --location --silent --show-error \
+            --output "$archive" \
+            "https://github.com/microsoft/apm/releases/download/v${APM_VERSION}/apm-linux-x86_64.tar.gz"
+          echo "${APM_SHA256}  ${archive}" | sha256sum --check -
+          mkdir -p "$install_dir"
+          tar -xzf "$archive" -C "$install_dir" --strip-components=1
+          echo "$install_dir" >> "$GITHUB_PATH"
+
+      - name: Show APM version
+        run: apm --version
+
+      - name: Install dependencies from lockfile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: apm install --frozen
+
+      - name: Validate compiled instructions
+        run: apm compile --target codex,copilot --validate
+
+      - name: Compile instructions
+        run: apm compile --target codex,copilot
+
+      - name: Audit deployment integrity
+        run: apm audit --ci
+
+      - name: Check for repository drift
+        run: |
+          # APM rewrites only the lockfile generated_at timestamp on install.
+          git diff --exit-code -- . ':(exclude)apm.lock.yaml'
+          git diff -I '^generated_at:' --exit-code -- apm.lock.yaml
+          untracked="$(git ls-files --others --exclude-standard)"
+          if [ -n "$untracked" ]; then
+            echo 'Unexpected untracked files:'
+            echo "$untracked"
+            exit 1
+          fi

@@ -1,3 +1,6 @@
-
 # APM dependencies
 apm_modules/
+
+# Deployed msgraph skill payloads (~110MB of binaries and index databases);
+# regenerated locally by `apm install`
+/.agents/skills/msgraph/
