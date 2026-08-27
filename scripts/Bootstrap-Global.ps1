@@ -107,8 +107,8 @@ function Test-PathWithoutReparsePoint {
     }
 
     if ($Recurse.IsPresent) {
-        $linkedItem = Get-ChildItem -LiteralPath $Path -Force -Recurse |
-            Where-Object { Test-ReparsePoint -Item $_ } |
+        $linkedItem = Get-ChildItem -LiteralPath $Path -Force -Recurse `
+            -Attributes ReparsePoint -ErrorAction Stop |
             Select-Object -First 1
         return ($null -eq $linkedItem)
     }
@@ -440,6 +440,20 @@ function Restore-GlobalSnapshot {
     }
 }
 
+function Get-ExplicitConfirmParameter {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [System.Collections.IDictionary]$BoundParameters
+    )
+
+    $result = @{}
+    if ($BoundParameters.Contains('Confirm')) {
+        $result['Confirm'] = [bool]$BoundParameters['Confirm']
+    }
+    return $result
+}
+
 function Invoke-GlobalBootstrap {
     [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
     param(
@@ -516,13 +530,16 @@ function Invoke-GlobalBootstrap {
     $mcpErrorPath = Join-Path $preflightDirectory 'github-mcp.err'
     $mcpRecycle = $false
     try {
+        $savedErrorActionPreference = $ErrorActionPreference
         $savedWhatIfPreference = $WhatIfPreference
         try {
+            $ErrorActionPreference = 'Continue'
             $WhatIfPreference = $false
             & $codexCommand.Source mcp get $script:GithubMcpName --json 1> $mcpJsonPath 2> $mcpErrorPath
             $mcpExitCode = $LASTEXITCODE
         }
         finally {
+            $ErrorActionPreference = $savedErrorActionPreference
             $WhatIfPreference = $savedWhatIfPreference
         }
         if ($mcpExitCode -eq 0) {
@@ -739,12 +756,10 @@ if ($MyInvocation.InvocationName -ne '.') {
         HomePath = $homePath
         RepositoryRoot = $repositoryRoot
         WhatIf = [bool]$WhatIfPreference
-        Confirm = if ($PSBoundParameters.ContainsKey('Confirm')) {
-            [bool]$PSBoundParameters['Confirm']
-        }
-        else {
-            $false
-        }
+    }
+    $explicitConfirmParameter = Get-ExplicitConfirmParameter -BoundParameters $PSBoundParameters
+    foreach ($key in $explicitConfirmParameter.Keys) {
+        $invokeParameters[$key] = $explicitConfirmParameter[$key]
     }
     Invoke-GlobalBootstrap @invokeParameters
 }

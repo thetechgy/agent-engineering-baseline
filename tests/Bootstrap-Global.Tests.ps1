@@ -235,6 +235,16 @@ Describe 'Bootstrap-Global interface and helpers' {
         Test-DefaultGithubMcpConfiguration -Configuration $custom | Should-BeFalse
     }
 
+    It 'forwards Confirm only when it is explicitly bound' {
+        $omitted = Get-ExplicitConfirmParameter -BoundParameters @{}
+        $enabled = Get-ExplicitConfirmParameter -BoundParameters @{ Confirm = $true }
+        $disabled = Get-ExplicitConfirmParameter -BoundParameters @{ Confirm = $false }
+
+        $omitted.Contains('Confirm') | Should-BeFalse
+        $enabled['Confirm'] | Should-BeTrue
+        $disabled['Confirm'] | Should-BeFalse
+    }
+
     It 'recognizes the generated marker only near the start of a regular file' {
         $generatedPath = Join-Path $TestDrive 'generated.md'
         $lateMarkerPath = Join-Path $TestDrive 'late-marker.md'
@@ -245,6 +255,26 @@ Describe 'Bootstrap-Global interface and helpers' {
 
         Test-ApmGeneratedFile -Path $generatedPath | Should-BeTrue
         Test-ApmGeneratedFile -Path $lateMarkerPath | Should-BeFalse
+    }
+
+    It 'detects a nested reparse point during recursive validation' {
+        $treePath = Join-Path $TestDrive 'recursive-tree'
+        $targetPath = Join-Path $TestDrive 'recursive-target'
+        $linkPath = Join-Path $treePath 'linked'
+        $null = New-Item -ItemType Directory -Path $treePath -Force
+        $null = New-Item -ItemType Directory -Path $targetPath -Force
+        Set-Content -LiteralPath (Join-Path $treePath 'regular.txt') -Value 'regular'
+
+        Test-PathWithoutReparsePoint -Path $treePath -PathType Directory -Recurse |
+            Should-BeTrue
+        if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) {
+            & cmd.exe /d /c "mklink /J `"$linkPath`" `"$targetPath`"" | Out-Null
+        }
+        else {
+            $null = New-Item -ItemType SymbolicLink -Path $linkPath -Target $targetPath
+        }
+        Test-PathWithoutReparsePoint -Path $treePath -PathType Directory -Recurse |
+            Should-BeFalse
     }
 }
 
