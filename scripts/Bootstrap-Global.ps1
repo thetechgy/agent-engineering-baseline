@@ -155,17 +155,21 @@ function Test-ApmGeneratedFile {
         return $false
     }
 
-    $lineNumber = 0
-    foreach ($line in [System.IO.File]::ReadLines($Path)) {
-        $lineNumber++
-        if ($line -ceq $script:GeneratedMarker) {
-            return $true
+    $reader = [System.IO.File]::OpenText($Path)
+    try {
+        $lineNumber = 0
+        while (-not $reader.EndOfStream -and $lineNumber -lt 6) {
+            $line = $reader.ReadLine()
+            $lineNumber++
+            if ($line -ceq $script:GeneratedMarker) {
+                return $true
+            }
         }
-        if ($lineNumber -ge 6) {
-            break
-        }
+        return $false
     }
-    return $false
+    finally {
+        $reader.Dispose()
+    }
 }
 
 function Get-ProjectDocSetting {
@@ -179,13 +183,20 @@ function Get-ProjectDocSetting {
         return
     }
 
-    foreach ($line in [System.IO.File]::ReadLines($Path)) {
-        if ($line -match '^\s*\[') {
-            break
+    $reader = [System.IO.File]::OpenText($Path)
+    try {
+        while (-not $reader.EndOfStream) {
+            $line = $reader.ReadLine()
+            if ($line -match '^\s*\[') {
+                break
+            }
+            if ($line -match '^\s*project_doc_max_bytes\s*=') {
+                Write-Output $line
+            }
         }
-        if ($line -match '^\s*project_doc_max_bytes\s*=') {
-            Write-Output $line
-        }
+    }
+    finally {
+        $reader.Dispose()
     }
 }
 
