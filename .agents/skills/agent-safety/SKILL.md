@@ -1,6 +1,6 @@
 ---
-description: 'Guidelines for building safe, governed AI agent systems. Apply when writing code that uses agent frameworks, tool-calling LLMs, or multi-agent orchestration to ensure proper safety boundaries, policy enforcement, and auditability.'
-applyTo: '**'
+name: agent-safety
+description: Design, implement, or review safety and governance for AI agents, tool-calling LLM applications, or multi-agent systems. Use for authorization policies, tool allowlists, human approval, content filtering, least privilege, audit trails, and delegate trust boundaries.
 ---
 
 # Agent Safety & Governance
@@ -44,6 +44,7 @@ applyTo: '**'
 ## Code Patterns
 
 When writing agent tool functions:
+
 ```python
 # Good: Governed tool with explicit policy
 @govern(policy)
@@ -56,6 +57,7 @@ async def search(query: str) -> str:
 ```
 
 When defining policies:
+
 ```yaml
 # Good: Explicit allowlist, content filters, rate limit
 name: my-agent
@@ -69,6 +71,7 @@ allowed_tools: ["*"]
 ```
 
 When composing multi-agent policies:
+
 ```python
 # Good: Most-restrictive-wins composition
 final_policy = compose_policies(org_policy, team_policy, agent_policy)
