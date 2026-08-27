@@ -54,7 +54,8 @@ jobs:
       - name: Check for repository drift
         run: |
           # APM rewrites only the lockfile generated_at timestamp on install.
-          git diff -I '^generated_at:' --exit-code
+          git diff --exit-code -- . ':(exclude)apm.lock.yaml'
+          git diff -I '^generated_at:' --exit-code -- apm.lock.yaml
           untracked="$(git ls-files --others --exclude-standard)"
           if [ -n "$untracked" ]; then
             echo 'Unexpected untracked files:'
