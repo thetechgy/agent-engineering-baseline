@@ -343,8 +343,10 @@ Describe 'Bootstrap-Global behavior' {
         Invoke-GlobalBootstrap -HomePath $script:CaseHome -RepositoryRoot $script:RepositoryRoot -Confirm:$false
         Invoke-GlobalBootstrap -HomePath $script:CaseHome -RepositoryRoot $script:RepositoryRoot -Confirm:$false
 
-        $config = Get-Content -LiteralPath (Join-Path $script:CaseHome '.codex/config.toml') -Raw
-        ([regex]::Matches($config, '(?m)^\[mcp_servers\.github-mcp-server\]$')).Count | Should-Be 1
+        $configPath = Join-Path $script:CaseHome '.codex/config.toml'
+        @([System.IO.File]::ReadAllLines($configPath) | Where-Object {
+                $_ -ceq '[mcp_servers.github-mcp-server]'
+            }).Count | Should-Be 1
         Get-Content -LiteralPath (Join-Path $script:CaseHome '.fake-command.log') -Raw |
             Should-MatchString 'codex mcp remove github-mcp-server'
         @(Get-ChildItem -LiteralPath (
