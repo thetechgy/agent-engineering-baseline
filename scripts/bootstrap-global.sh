@@ -44,26 +44,29 @@ compare_versions() {
 
 verify_github_mcp() {
     command -v codex >/dev/null 2>&1 || return 0
-    local state_file error_file
-    state_file=$(mktemp "${TMPDIR:-/tmp}/apm-mcp-state.XXXXXX")
-    error_file=$(mktemp "${TMPDIR:-/tmp}/apm-mcp-error.XXXXXX")
-    if codex mcp get "$GITHUB_MCP_NAME" --json > "$state_file" 2> "$error_file"; then
-        command -v jq >/dev/null 2>&1 || die "jq is required to validate the existing '$GITHUB_MCP_NAME' entry."
-        jq -e --arg name "$GITHUB_MCP_NAME" --arg url "$GITHUB_MCP_URL" '
-            . == {
-              name: $name, enabled: true, disabled_reason: null,
-              transport: {type: "streamable_http", url: $url,
-                bearer_token_env_var: "GITHUB_TOKEN", http_headers: null,
-                env_http_headers: null, http_headers_helper: null},
-              enabled_tools: null, disabled_tools: null,
-              startup_timeout_sec: null, tool_timeout_sec: null
-            }
-        ' "$state_file" >/dev/null ||
-            die "Existing Codex MCP entry '$GITHUB_MCP_NAME' is customized; refusing to replace it."
-    elif ! grep -F "No MCP server named '$GITHUB_MCP_NAME' found." "$error_file" >/dev/null; then
-        die "Unable to inspect the existing Codex MCP entry '$GITHUB_MCP_NAME'."
-    fi
-    rm -f -- "$state_file" "$error_file"
+    (
+        local state_file='' error_file=''
+        trap 'rm -f -- "${state_file:-}" "${error_file:-}"' EXIT
+
+        state_file=$(mktemp "${TMPDIR:-/tmp}/apm-mcp-state.XXXXXX")
+        error_file=$(mktemp "${TMPDIR:-/tmp}/apm-mcp-error.XXXXXX")
+        if codex mcp get "$GITHUB_MCP_NAME" --json > "$state_file" 2> "$error_file"; then
+            command -v jq >/dev/null 2>&1 || die "jq is required to validate the existing '$GITHUB_MCP_NAME' entry."
+            jq -e --arg name "$GITHUB_MCP_NAME" --arg url "$GITHUB_MCP_URL" '
+                . == {
+                  name: $name, enabled: true, disabled_reason: null,
+                  transport: {type: "streamable_http", url: $url,
+                    bearer_token_env_var: "GITHUB_TOKEN", http_headers: null,
+                    env_http_headers: null, http_headers_helper: null},
+                  enabled_tools: null, disabled_tools: null,
+                  startup_timeout_sec: null, tool_timeout_sec: null
+                }
+            ' "$state_file" >/dev/null ||
+                die "Existing Codex MCP entry '$GITHUB_MCP_NAME' is customized; refusing to replace it."
+        elif ! grep -F "No MCP server named '$GITHUB_MCP_NAME' found." "$error_file" >/dev/null; then
+            die "Unable to inspect the existing Codex MCP entry '$GITHUB_MCP_NAME'."
+        fi
+    )
 }
 
 dry_run=false

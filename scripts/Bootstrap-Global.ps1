@@ -116,8 +116,14 @@ function Assert-CompatibleGithubMcp {
     $codex = Get-Command -Name codex -CommandType Application -ErrorAction SilentlyContinue |
         Select-Object -First 1
     if ($null -eq $codex) { return }
-    $output = & $codex.Source mcp get $script:GithubMcpName --json 2>&1
-    if ($LASTEXITCODE -eq 0) {
+    $previousErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $output = & $codex.Source mcp get $script:GithubMcpName --json 2>&1
+        $exitCode = $LASTEXITCODE
+    }
+    finally { $ErrorActionPreference = $previousErrorActionPreference }
+    if ($exitCode -eq 0) {
         $configuration = ($output -join "`n") | ConvertFrom-Json
         if (-not (Test-DefaultGithubMcpConfiguration -Configuration $configuration)) {
             throw "Existing Codex MCP entry '$($script:GithubMcpName)' is customized; refusing to replace it."

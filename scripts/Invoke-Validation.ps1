@@ -44,14 +44,17 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'ShellCheck failed.' }
     & rumdl check .
     if ($LASTEXITCODE -ne 0) { throw 'Markdown linting failed.' }
-    & git diff --check
-    if ($LASTEXITCODE -ne 0) { throw 'git diff --check failed.' }
 
-    $projectMarker = [string]::Concat([char]70, [char]65, [char]67, [char]84)
-    $projectReferences = & git grep -n $projectMarker -- .
-    if ($LASTEXITCODE -eq 0 -or $projectReferences) {
+    $projectMarker = -join ([char[]](70, 65, 67, 84))
+    $projectReferences = @(& git grep -n $projectMarker -- .)
+    $grepExitCode = $LASTEXITCODE
+    if ($grepExitCode -gt 1) { throw "git grep failed with exit code $grepExitCode." }
+    if ($grepExitCode -eq 0 -or $projectReferences.Count -gt 0) {
         $projectReferences | Write-Output
         throw 'Tracked content contains a project-specific reference.'
     }
+
+    & git diff --check
+    if ($LASTEXITCODE -ne 0) { throw 'git diff --check failed.' }
 }
 finally { Pop-Location }

@@ -31,17 +31,28 @@ EOF
     chmod +x "$case_bin/codex"
 }
 
+make_codex_customized() {
+    cat > "$case_bin/codex" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' '{"name":"github-mcp-server","enabled":true,"disabled_reason":null,"transport":{"type":"streamable_http","url":"https://custom.example.invalid/","bearer_token_env_var":"GITHUB_TOKEN","http_headers":null,"env_http_headers":null,"http_headers_helper":null},"enabled_tools":null,"disabled_tools":null,"startup_timeout_sec":null,"tool_timeout_sec":null}'
+exit 0
+EOF
+    chmod +x "$case_bin/codex"
+}
+
 new_case() {
     case_root="$test_root/$1"
     case_bin="$case_root/bin"
     case_home="$case_root/home"
+    case_tmp="$case_root/tmp"
     command_log="$case_root/commands.log"
-    mkdir -p "$case_bin" "$case_home"
+    mkdir -p "$case_bin" "$case_home" "$case_tmp"
     : > "$command_log"
 }
 
 run_case() {
-    HOME="$case_home" TEST_COMMAND_LOG="$command_log" PATH="$case_bin:/usr/bin:/bin" "$bootstrap" "$@"
+    HOME="$case_home" TMPDIR="$case_tmp" TEST_COMMAND_LOG="$command_log" \
+        PATH="$case_bin:/usr/bin:/bin" "$bootstrap" "$@"
 }
 
 new_case missing
@@ -71,6 +82,13 @@ make_codex_absent
 if run_case > "$case_root/out" 2> "$case_root/err"; then fail 'newer APM was accepted'; fi
 grep -F 'newer than reviewed baseline' "$case_root/err" >/dev/null || fail 'newer APM diagnostic'
 ! grep -F 'apm install' "$command_log" >/dev/null || fail 'newer APM deployed'
+
+new_case customized_mcp
+make_apm 0.28.0
+make_codex_customized
+if run_case --dry-run > "$case_root/out" 2> "$case_root/err"; then fail 'customized MCP was accepted'; fi
+grep -F 'is customized; refusing to replace it' "$case_root/err" >/dev/null || fail 'customized MCP diagnostic'
+if compgen -G "$case_tmp/apm-mcp-*" >/dev/null; then fail 'MCP inspection temporary files leaked'; fi
 
 new_case download_failure
 make_apm 0.27.0

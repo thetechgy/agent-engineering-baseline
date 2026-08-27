@@ -193,7 +193,7 @@ Describe 'Pinned source transformation' {
 
     It 'keeps the local Pester 6 guidance project agnostic' {
         $path = Join-Path $script:RepositoryRoot '.apm/skills/powershell-pester-6/SKILL.md'
-        $projectMarker = [string]::Concat([char]70, [char]65, [char]67, [char]84)
+        $projectMarker = -join ([char[]](70, 65, 67, 84))
         (Get-Content $path -Raw).Contains($projectMarker) | Should-BeFalse
     }
 }
@@ -208,8 +208,8 @@ Describe 'Repository invariants' {
 
     It 'records installer, archive, and executable hashes' {
         $lock = Get-Content (Join-Path $script:RepositoryRoot 'apm-cli.lock.yml') -Raw
-        ([regex]::Matches($lock, '(?m)^\s+sha256:\s+[0-9a-f]{64}$')).Count | Should-Be 5
-        ([regex]::Matches($lock, '(?m)^\s+executable_sha256:\s+[0-9a-f]{64}$')).Count | Should-Be 3
+        ([regex]::Matches($lock, '(?m)^\s+sha256:\s+[0-9a-f]{64}\r?$')).Count | Should-Be 5
+        ([regex]::Matches($lock, '(?m)^\s+executable_sha256:\s+[0-9a-f]{64}\r?$')).Count | Should-Be 3
         Get-ApmLockValue -Content $lock `
             -Pattern '(?m)^  windows:\s*\r?\n    url:[^\r\n]+\r?\n    sha256:\s*([^\r\n]+)' `
             -Description 'Windows installer hash' |
