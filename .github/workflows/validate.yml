@@ -9,8 +9,8 @@ permissions:
   contents: read
 
 env:
-  APM_VERSION: '0.25.0'
-  APM_SHA256: 7a4281ef915e9609f8841eced19285bf2dcf702862302171f7e893c30e1b3244
+  APM_VERSION: '0.28.0'
+  APM_SHA256: 7edab3baba96658a20120fc8f3012e3223da7924937a8cbf169bf9805853b8d7
 
 jobs:
   validate:
@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -49,48 +49,10 @@ jobs:
         run: apm compile --target codex,copilot
 
       - name: Audit deployment integrity
-        run: |
-          if apm audit --ci --format json --output audit.json; then
-            exit 0
-          fi
-          # APM 0.25.0 reports config-consistency errors for the four virtual
-          # skill-directory packages (documented limitation in README.md).
-          # Accept the failure only when it is exactly that known case.
-          python3 - <<'PY'
-          import json
-          import sys
-
-          known = {
-              'github/awesome-copilot/skills/dependabot',
-              'github/awesome-copilot/skills/git-commit',
-              'github/awesome-copilot/skills/github-actions-hardening',
-              'merill/msgraph/skills/msgraph',
-          }
-          audit = json.load(open('audit.json'))
-          failed = [c for c in audit['checks'] if not c['passed']]
-          if len(failed) != 1 or failed[0]['name'] != 'config-consistency':
-              sys.exit('Unexpected audit failures: '
-                       + ', '.join(c['name'] for c in failed))
-          details = failed[0].get('details', [])
-          if len(details) != len(known):
-              sys.exit(f'Expected {len(known)} config-consistency details, '
-                       f'got {len(details)}: {details}')
-          seen = set()
-          for detail in details:
-              package, _, rest = detail.partition(':')
-              if package not in known or 'package manifest not found' not in rest:
-                  sys.exit('Unexpected config-consistency detail: ' + detail)
-              seen.add(package)
-          if seen != known:
-              sys.exit('Details do not cover the four known packages: '
-                       + ', '.join(sorted(seen)))
-          print('Only the known APM 0.25.0 config-consistency limitation '
-                'failed; treating as pass.')
-          PY
+        run: apm audit --ci
 
       - name: Check for repository drift
         run: |
-          rm -f audit.json
           # APM rewrites only the lockfile generated_at timestamp on install.
           git diff -I '^generated_at:' --exit-code
           untracked="$(git ls-files --others --exclude-standard)"
