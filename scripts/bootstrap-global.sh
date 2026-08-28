@@ -40,7 +40,9 @@ esac
 script_dir=$(CDPATH='' cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)
 repo_root=$(CDPATH='' cd -- "$script_dir/.." && pwd -P)
 version_file="$repo_root/.apm-version"
+checksums_file="$repo_root/.apm-installer-checksums"
 [ -f "$version_file" ] || die "Missing APM version pin: $version_file"
+[ -f "$checksums_file" ] || die "Missing APM installer checksums: $checksums_file"
 [ -f "$repo_root/apm.yml" ] || die "Missing APM manifest: $repo_root/apm.yml"
 [ -f "$repo_root/apm.lock.yaml" ] || die "Missing APM dependency lock: $repo_root/apm.lock.yaml"
 
@@ -70,10 +72,17 @@ fi
 
 if [ "$action" != none ]; then
     command -v curl >/dev/null 2>&1 || die 'curl is required to install the pinned APM CLI.'
+    command -v sha256sum >/dev/null 2>&1 || die 'sha256sum is required to verify the pinned APM installer.'
+    expected_hash=$(awk '$2 == "install.sh" { print $1; exit }' "$checksums_file")
+    printf '%s\n' "$expected_hash" | grep -Eq '^[0-9a-f]{64}$' ||
+        die "The pinned install.sh checksum is not a SHA256 hex digest: $expected_hash"
     installer_path=$(mktemp "${TMPDIR:-/tmp}/apm-install.XXXXXX")
     trap 'rm -f -- "$installer_path"' EXIT HUP INT TERM
     curl --fail --location --silent --show-error --output "$installer_path" \
         "https://raw.githubusercontent.com/microsoft/apm/v$approved_version/install.sh"
+    actual_hash=$(sha256sum "$installer_path" | awk '{ print $1 }')
+    [ "$actual_hash" = "$expected_hash" ] ||
+        die 'Downloaded install.sh does not match the pinned SHA256 checksum; refusing to execute it.'
     VERSION="v$approved_version" sh "$installer_path"
     rm -f -- "$installer_path"
     trap - EXIT HUP INT TERM

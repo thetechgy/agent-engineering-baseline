@@ -2,10 +2,11 @@
 set -euo pipefail
 
 repo_root=$(CDPATH='' cd -- "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
-bootstrap="$repo_root/scripts/bootstrap-global.sh"
+real_bootstrap="$repo_root/scripts/bootstrap-global.sh"
 approved_version=$(head -n 1 "$repo_root/.apm-version" | tr -d '[:space:]')
 older_version='0.0.1'
 newer_version='999.999.999'
+placeholder_hash=$(printf '0%.0s' $(seq 64))
 test_root=$(mktemp -d "${TMPDIR:-/tmp}/apm-bootstrap-tests.XXXXXX")
 trap 'rm -rf -- "$test_root"' EXIT HUP INT TERM
 
@@ -34,9 +35,24 @@ new_case() {
     case_bin="$case_root/bin"
     case_home="$case_root/home"
     case_tmp="$case_root/tmp"
+    case_repo="$case_root/repo"
     command_log="$case_root/commands.log"
-    mkdir -p "$case_bin" "$case_home" "$case_tmp"
+    mkdir -p "$case_bin" "$case_home" "$case_tmp" "$case_repo/scripts"
     : > "$command_log"
+    # Stage a repository copy so each case controls its own pins without
+    # depending on the checksums committed for the real upstream installer.
+    cp "$real_bootstrap" "$case_repo/scripts/bootstrap-global.sh"
+    printf '%s\n' "$approved_version" > "$case_repo/.apm-version"
+    : > "$case_repo/apm.yml"
+    : > "$case_repo/apm.lock.yaml"
+    printf '%s  install.sh\n%s  install.ps1\n' "$placeholder_hash" "$placeholder_hash" \
+        > "$case_repo/.apm-installer-checksums"
+    bootstrap="$case_repo/scripts/bootstrap-global.sh"
+}
+
+pin_installer_checksum() {
+    printf '%s  install.sh\n' "$(sha256sum "$1" | awk '{ print $1 }')" \
+        > "$case_repo/.apm-installer-checksums"
 }
 
 run_case() {
@@ -89,6 +105,7 @@ mkdir -p "\$HOME/.local/bin"
 cp '$case_root/fake-apm' "\$HOME/.local/bin/apm"
 chmod +x "\$HOME/.local/bin/apm"
 EOF
+pin_installer_checksum "$case_root/installer.sh"
 cat > "$case_bin/curl" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
@@ -102,5 +119,28 @@ chmod +x "$case_bin/curl"
 run_case >/dev/null
 grep -F 'apm install --global --frozen' "$command_log" >/dev/null || fail 'fresh install did not deploy'
 grep -F 'apm compile --global' "$command_log" >/dev/null || fail 'fresh install did not compile'
+
+new_case tampered_installer
+# The delivered installer does not match the pinned checksum; the bootstrap
+# must fail closed without executing it or deploying anything.
+make_apm "$older_version"
+cat > "$case_root/installer.sh" <<EOF
+#!/bin/sh
+: > '$case_root/installer-executed'
+EOF
+cat > "$case_bin/curl" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+while [ "\$#" -gt 0 ]; do
+    if [ "\$1" = --output ]; then cp '$case_root/installer.sh' "\$2"; exit 0; fi
+    shift
+done
+exit 56
+EOF
+chmod +x "$case_bin/curl"
+if run_case > "$case_root/out" 2> "$case_root/err"; then fail 'tampered installer was accepted'; fi
+grep -F 'does not match the pinned SHA256 checksum' "$case_root/err" >/dev/null || fail 'tampered installer diagnostic'
+[ ! -e "$case_root/installer-executed" ] || fail 'tampered installer was executed'
+! grep -F 'apm install' "$command_log" >/dev/null || fail 'tampered installer deployed'
 
 printf '%s\n' 'All native Bash bootstrap behavior tests passed.'

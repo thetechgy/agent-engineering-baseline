@@ -17,6 +17,9 @@ and a lockfile work together:
   reproduces the same files byte-for-byte on any machine.
 - `.apm-version` pins the APM CLI release consumed by the bootstrap scripts
   and CI.
+- `.apm-installer-checksums` pins SHA256 digests for the upstream
+  `install.sh` and `install.ps1` scripts, so bootstrap and CI verify the
+  installer bytes before executing them.
 - Compiled outputs (`AGENTS.md`, `.agents/skills/`, `.github/instructions/`,
   `.codex/config.toml`, `.vscode/mcp.json`) are committed so drift stays
   reviewable; CI requires clean regeneration.
@@ -64,7 +67,9 @@ Bootstrap reads `.apm-version` and behaves as follows:
 
 Installation uses the official installer from the pinned release tag with an
 explicit `VERSION`; the official Windows installer validates the matching
-release checksum sidecar. After the CLI preflight, the wrapper delegates to
+release checksum sidecar. The downloaded installer script itself is verified
+against the SHA256 digest pinned in `.apm-installer-checksums` and is never
+executed on a mismatch. After the CLI preflight, the wrapper delegates to
 native commands:
 
 ```sh
@@ -114,7 +119,8 @@ project-agnostic content assertion.
 ## Scheduled reviewed updates
 
 `.github/workflows/update-baseline.yml` runs weekly and on manual dispatch.
-It refreshes `.apm-version` to the latest stable APM release, re-resolves the
+It refreshes `.apm-version` to the latest stable APM release, re-pins the
+matching installer checksums in `.apm-installer-checksums`, re-resolves the
 branch-ref dependencies with native `apm update --yes`, regenerates compiled
 outputs, runs the full validation suite, and creates or updates one
 `automation/apm-baseline-update` pull request.

@@ -61,6 +61,30 @@ Describe 'APM CLI bootstrap decision' {
     }
 }
 
+Describe 'Installer checksum pinning' {
+    It 'extracts the pinned checksum for a named installer' {
+        $path = Join-Path $TestDrive 'checksums'
+        Set-Content -LiteralPath $path -Value @(
+            ('a' * 64) + '  install.sh'
+            ('b' * 64) + '  install.ps1'
+        )
+        Get-PinnedInstallerChecksum -ChecksumPath $path -FileName 'install.ps1' |
+            Should-Be ('b' * 64)
+    }
+
+    It 'fails closed when the installer entry is missing' {
+        $path = Join-Path $TestDrive 'checksums-missing'
+        Set-Content -LiteralPath $path -Value (('a' * 64) + '  install.sh')
+        { Get-PinnedInstallerChecksum -ChecksumPath $path -FileName 'install.ps1' } |
+            Should-Throw -ExceptionMessage '*No pinned SHA256 checksum*'
+    }
+
+    It 'fails closed when the checksum file is absent' {
+        { Get-PinnedInstallerChecksum -ChecksumPath (Join-Path $TestDrive 'absent') -FileName 'install.ps1' } |
+            Should-Throw -ExceptionMessage '*Missing APM installer checksums*'
+    }
+}
+
 Describe 'Native PowerShell bootstrap behavior' {
     BeforeEach {
         $script:OriginalPath = $env:PATH
@@ -109,6 +133,14 @@ Describe 'Native PowerShell bootstrap behavior' {
             Should-Throw -ExceptionMessage '*download failed*'
         (Get-Content -LiteralPath $env:TEST_COMMAND_LOG -Raw).Trim() | Should-Be ''
     }
+
+    It 'refuses a downloaded installer that fails checksum verification' {
+        $env:FAKE_APM_VERSION = '0.0.1'
+        Mock Invoke-WebRequest { Set-Content -LiteralPath $OutFile -Value 'tampered installer' }
+        { Invoke-GlobalBootstrap -RepositoryRoot $script:RepositoryRoot -Confirm:$false } |
+            Should-Throw -ExceptionMessage '*does not match the pinned SHA256 checksum*'
+        (Get-Content -LiteralPath $env:TEST_COMMAND_LOG -Raw).Trim() | Should-Be ''
+    }
 }
 
 Describe 'Repository invariants' {
@@ -118,6 +150,22 @@ Describe 'Repository invariants' {
 
     It 'commits the APM dependency lockfile' {
         Test-Path (Join-Path $script:RepositoryRoot 'apm.lock.yaml') | Should-BeTrue
+    }
+
+    It 'pins SHA256 checksums for both APM installer scripts' {
+        $lines = @(Get-Content (Join-Path $script:RepositoryRoot '.apm-installer-checksums'))
+        foreach ($name in @('install.sh', 'install.ps1')) {
+            $pattern = '^[0-9a-f]{64}  ' + [regex]::Escape($name) + '$'
+            @($lines | Where-Object { $_ -cmatch $pattern }).Count | Should-Be 1
+        }
+    }
+
+    It 'verifies the installer checksum before executing it in workflows' {
+        foreach ($workflow in @('validate.yml', 'update-baseline.yml')) {
+            $content = Get-Content (Join-Path $script:RepositoryRoot ".github/workflows/$workflow") -Raw
+            $content | Should-MatchString 'sha256sum --check --strict'
+            $content.Contains('install.sh" |') | Should-BeFalse
+        }
     }
 
     It 'declares an explicit ref for every APM dependency' {

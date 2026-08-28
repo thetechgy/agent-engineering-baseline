@@ -5,8 +5,10 @@ Installs and deploys the repository-pinned global APM baseline.
 .DESCRIPTION
 Installs or upgrades APM to the version pinned in .apm-version using the
 official installer (which validates the release checksum sidecar for pinned
-versions), rejects a newer unpinned CLI, and delegates deployment to native
-APM global install and compile commands.
+versions), verifies the downloaded installer script against the SHA256
+digest pinned in .apm-installer-checksums before executing it, rejects a
+newer unpinned CLI, and delegates deployment to native APM global install
+and compile commands.
 
 .EXAMPLE
 ./scripts/Bootstrap-Global.ps1
@@ -40,6 +42,24 @@ function Get-ApmBootstrapAction {
     if ($InstalledVersion -gt $ApprovedVersion) { return 'Stop' }
     if ($InstalledVersion -lt $ApprovedVersion) { return 'Upgrade' }
     return 'None'
+}
+
+function Get-PinnedInstallerChecksum {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$ChecksumPath,
+        [Parameter(Mandatory)][string]$FileName
+    )
+
+    if (-not (Test-Path -LiteralPath $ChecksumPath -PathType Leaf)) {
+        throw "Missing APM installer checksums: $ChecksumPath"
+    }
+    $pattern = '^\s*([0-9a-fA-F]{64})\s+\*?' + [regex]::Escape($FileName) + '\s*$'
+    foreach ($line in @(Get-Content -LiteralPath $ChecksumPath)) {
+        $match = [regex]::Match($line, $pattern)
+        if ($match.Success) { return $match.Groups[1].Value }
+    }
+    throw "No pinned SHA256 checksum for $FileName in $ChecksumPath"
 }
 
 function Invoke-NativeCommand {
@@ -121,6 +141,8 @@ function Invoke-GlobalBootstrap {
     }
 
     if ($action -ne 'None') {
+        $expectedHash = Get-PinnedInstallerChecksum `
+            -ChecksumPath (Join-Path $RepositoryRoot '.apm-installer-checksums') -FileName 'install.ps1'
         $installerUrl = "https://raw.githubusercontent.com/microsoft/apm/v$approvedVersion/install.ps1"
         $installerPath = Join-Path ([IO.Path]::GetTempPath()) ("apm-install-{0}.ps1" -f [Guid]::NewGuid().ToString('N'))
         $previousSecurityProtocol = [Net.ServicePointManager]::SecurityProtocol
@@ -129,6 +151,10 @@ function Invoke-GlobalBootstrap {
             [Net.ServicePointManager]::SecurityProtocol = $previousSecurityProtocol -bor
                 [Net.SecurityProtocolType]::Tls12
             Invoke-WebRequest -Uri $installerUrl -OutFile $installerPath -UseBasicParsing
+            $actualHash = (Get-FileHash -LiteralPath $installerPath -Algorithm SHA256).Hash
+            if ($actualHash -ne $expectedHash) {
+                throw 'Downloaded install.ps1 does not match the pinned SHA256 checksum; refusing to execute it.'
+            }
             $env:VERSION = "v$approvedVersion"
             & $installerPath
         }

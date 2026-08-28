@@ -33,14 +33,22 @@ jobs:
           latest="${latest#v}"
           printf '%s\n' "$latest" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'
           printf '%s\n' "$latest" > .apm-version
+          for installer in install.sh install.ps1; do
+            curl --fail --location --silent --show-error --output "$RUNNER_TEMP/$installer" \
+              "https://raw.githubusercontent.com/microsoft/apm/v$latest/$installer"
+          done
+          (cd "$RUNNER_TEMP" && sha256sum install.sh install.ps1) > .apm-installer-checksums
 
       - name: Install pinned APM CLI
         shell: bash
         run: |
           version="$(head -n 1 .apm-version | tr -d '[:space:]')"
-          curl --fail --location --silent --show-error \
-            "https://raw.githubusercontent.com/microsoft/apm/v$version/install.sh" |
-            VERSION="v$version" sh
+          installer="$RUNNER_TEMP/apm-install.sh"
+          curl --fail --location --silent --show-error --output "$installer" \
+            "https://raw.githubusercontent.com/microsoft/apm/v$version/install.sh"
+          expected="$(awk '$2 == "install.sh" { print $1; exit }' .apm-installer-checksums)"
+          printf '%s  %s\n' "$expected" "$installer" | sha256sum --check --strict -
+          VERSION="v$version" sh "$installer"
           if ! command -v apm >/dev/null 2>&1; then
             # The installer may target a directory missing from this shell's PATH.
             for candidate in "$HOME/.local/bin" /usr/local/bin; do
