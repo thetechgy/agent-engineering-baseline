@@ -396,7 +396,7 @@ fi
 
 copilot_mcp_remove=false
 if [ -f "$copilot_dir/mcp-config.json" ] &&
-    grep -F '"github-mcp-server"' "$copilot_dir/mcp-config.json" >/dev/null; then
+    grep -F "\"$GITHUB_MCP_NAME\"" "$copilot_dir/mcp-config.json" >/dev/null; then
     require_command jq
     if ! verify_default_copilot_github_mcp "$copilot_dir/mcp-config.json"; then
         die "Existing Copilot MCP entry '$GITHUB_MCP_NAME' is customized; refusing to remove it."

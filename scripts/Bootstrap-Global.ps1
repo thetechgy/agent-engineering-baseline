@@ -685,7 +685,8 @@ function Invoke-GlobalBootstrap {
         $copilotMcpRemove = $false
         if ([System.IO.File]::Exists($copilotConfigPath)) {
             $copilotConfigText = [System.IO.File]::ReadAllText($copilotConfigPath)
-            if ($copilotConfigText.IndexOf('"github-mcp-server"', [StringComparison]::Ordinal) -ge 0) {
+            $quotedGithubMcpName = '"{0}"' -f $script:GithubMcpName
+            if ($copilotConfigText.IndexOf($quotedGithubMcpName, [StringComparison]::Ordinal) -ge 0) {
                 $copilotConfiguration = $copilotConfigText | ConvertFrom-Json
                 $mcpServersProperty = $copilotConfiguration.PSObject.Properties['mcpServers']
                 $githubProperty = if ($null -eq $mcpServersProperty) {
