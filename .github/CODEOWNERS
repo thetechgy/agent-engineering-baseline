@@ -1,0 +1,7 @@
+# This repository is a globally deployed agent-engineering trust boundary.
+# Require owner review for every current and future file.
+* @thetechgy
+
+# Keep GitHub automation, governance, and this ownership policy under explicit
+# owner review.
+/.github/ @thetechgy
