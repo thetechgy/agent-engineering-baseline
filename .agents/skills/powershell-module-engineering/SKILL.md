@@ -1,33 +1,14 @@
 ---
 name: powershell-module-engineering
-description: Plan, implement, refactor, test, debug, validate, or security-review PowerShell scripts and modules. Use for Pester, PSScriptAnalyzer, module manifests, public or private functions, cross-edition compatibility, secure automation, approved PowerShell plans, or failing PowerShell tests.
+description: 'Plan, implement, refactor, test, debug, validate, or security-review PowerShell scripts and modules. Use for Pester, PSScriptAnalyzer, module manifests, public or private functions, cross-edition compatibility, secure automation, approved PowerShell plans, or failing PowerShell tests.'
 ---
 
-# PowerShell Module Engineering
-
-## Establish the repository contract
-
-- Read the nearest `AGENTS.md`, module manifest, analyzer settings, validation wrapper, and smallest relevant tests before editing.
-- Determine the repository's declared PowerShell editions and versions. Preserve Windows PowerShell 5.1 compatibility when declared; do not infer a newer runtime from the local shell.
-- Determine the declared Pester version from manifests, dependency files, validation scripts, CI workflows, and explicit imports before authoring or changing tests.
-- If the repository declares Pester 6, use its canonical Pester 6 instructions when present. In FACT, read `.github/instructions/powershell-pester-6.instructions.md` completely before changing `*.Tests.ps1`; do not use Pester 5 guidance there.
-- If the repository declares Pester 5, remain on Pester 5 unless the task explicitly requests a coherent migration.
-- Check the current diff and preserve unrelated work, generated artifacts, private output, and repository trust boundaries.
-
-## Validation selection
-
-- Run the smallest focused checks that exercise the change while iterating.
-- Follow the repository's documented readiness profile rather than assuming an unqualified validation wrapper is routine. When FACT explicitly delegates broad testing to CI, run focused regressions and applicable hygiene, then report Fast, Full, and Windows PowerShell coverage as CI-owned.
-- Run broader or complete validation when the repository requires it, the requester asks for it, the change is release-critical, or a broad-only failure is being diagnosed.
-- Treat PSScriptAnalyzer compatibility checks as static evidence, not an actual Windows PowerShell 5.1 run.
-- Report exact commands, results, skipped checks, and compatibility limitations.
-
-## PowerShell Cmdlet Development Guidelines
+# PowerShell Cmdlet Development Guidelines
 
 This guide provides PowerShell-specific instructions to help GitHub Copilot generate idiomatic,
 safe, and maintainable scripts. It aligns with Microsoft’s PowerShell cmdlet development guidelines.
 
-### Naming Conventions
+## Naming Conventions
 
 - **Verb-Noun Format:**
   - Use approved PowerShell verbs (Get-Verb)
@@ -53,7 +34,7 @@ safe, and maintainable scripts. It aligns with Microsoft’s PowerShell cmdlet d
   - Document any custom aliases
   - Use full parameter names
 
-#### Example - Naming Conventions
+### Example - Naming Conventions
 
 ```powershell
 function Get-UserProfile {
@@ -76,7 +57,7 @@ function Get-UserProfile {
 }
 ```
 
-### Parameter Design
+## Parameter Design
 
 - **Standard Parameters:**
   - Use common parameter names (`Path`, `Name`, `Force`)
@@ -104,7 +85,7 @@ function Get-UserProfile {
   - Test presence with `.IsPresent`
   - Using `$true`/`$false` in parameter attributes (e.g., `Mandatory = $true`) is acceptable
 
-#### Example - Parameter Design
+### Example - Parameter Design
 
 ```powershell
 function Set-ResourceConfiguration {
@@ -139,7 +120,7 @@ function Set-ResourceConfiguration {
 }
 ```
 
-### Pipeline and Output
+## Pipeline and Output
 
 - **Pipeline Input:**
   - Use `ValueFromPipeline` for direct object input
@@ -165,7 +146,7 @@ function Set-ResourceConfiguration {
   - Return modified/created object with `-PassThru`
   - Use verbose/warning for status updates
 
-#### Example - Pipeline and Output
+### Example - Pipeline and Output
 
 ```powershell
 function Update-ResourceStatus {
@@ -210,7 +191,7 @@ function Update-ResourceStatus {
 }
 ```
 
-### Error Handling and Safety
+## Error Handling and Safety
 
 - **ShouldProcess Implementation:**
   - Use `[CmdletBinding(SupportsShouldProcess = $true)]`
@@ -241,7 +222,7 @@ function Update-ResourceStatus {
   - Support automation scenarios
   - Document all required inputs
 
-#### Example - Error Handling and Safety
+### Example - Error Handling and Safety
 
 ```powershell
 function Remove-CacheFiles {
@@ -253,7 +234,7 @@ function Remove-CacheFiles {
 
     try {
         $files = Get-ChildItem -Path $Path -Filter "*.cache" -ErrorAction Stop
-
+        
         # Demonstrates WhatIf support
         if ($PSCmdlet.ShouldProcess($Path, 'Remove cache files')) {
             $files | Remove-Item -Force -ErrorAction Stop
@@ -271,7 +252,7 @@ function Remove-CacheFiles {
 }
 ```
 
-### Documentation and Style
+## Documentation and Style
 
 - **Comment-Based Help:** Include comment-based help for any public-facing function or cmdlet. Inside the function, add a `<# ... #>` help comment with at least:
   - `.SYNOPSIS` Brief description
@@ -304,7 +285,7 @@ function Remove-CacheFiles {
 
 ---
 
-### Full Example: End-to-End Cmdlet Pattern
+## Full Example: End-to-End Cmdlet Pattern
 
 ```powershell
 function Remove-UserAccount {
@@ -344,7 +325,7 @@ function Remove-UserAccount {
                 # This prompt is bypassed when -Force is specified
                 if ($Force -or $PSCmdlet.ShouldContinue("Are you sure you want to remove '$Username'?", "Confirm Removal")) {
                     Write-Verbose "Removing user account: $Username"
-
+                    
                     # Main operation
                     Remove-ADUser -Identity $Username -ErrorAction Stop
                     Write-Warning "User account '$Username' has been removed"

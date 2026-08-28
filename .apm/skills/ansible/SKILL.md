@@ -1,6 +1,6 @@
 ---
 name: ansible
-description: Create, review, debug, or validate Ansible playbooks, roles, inventories, variables, handlers, or YAML automation. Use for idempotency, FQCN usage, privilege boundaries, Ansible Vault, ansible-lint, syntax checks, or check-mode workflows.
+description: 'Create, review, debug, or validate Ansible playbooks, roles, inventories, variables, handlers, or YAML automation. Use for idempotency, FQCN usage, privilege boundaries, Ansible Vault, ansible-lint, syntax checks, or check-mode workflows.'
 ---
 
 # Ansible Conventions and Best Practices
@@ -80,7 +80,7 @@ description: Create, review, debug, or validate Ansible playbooks, roles, invent
 - Use `ansible-playbook --syntax-check` to check for syntax errors
 - Use `ansible-playbook --check --diff` to perform a dry-run of playbook execution
 
-<!--
+<!-- 
 These guidelines were based on, or copied from, the following sources:
 
 - [Ansible Documentation - Tips and Tricks](https://docs.ansible.com/ansible/latest/tips_tricks/index.html)

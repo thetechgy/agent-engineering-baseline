@@ -1,453 +1,225 @@
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
-    'PSUseShouldProcessForStateChangingFunctions',
-    '',
-    Justification = 'These helpers mutate only isolated Pester TestDrive profiles.',
-    Scope = 'Function',
-    Target = 'New-FakeToolDirectory'
-)]
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
-    'PSUseShouldProcessForStateChangingFunctions',
-    '',
-    Justification = 'These helpers mutate only isolated Pester TestDrive profiles.',
-    Scope = 'Function',
-    Target = 'Set-DefaultMcpState'
+    'PSUseDeclaredVarsMoreThanAssignments',
+    'actionCases',
+    Justification = 'Pester consumes this discovery-time value through -ForEach.'
 )]
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
     'PSUseDeclaredVarsMoreThanAssignments',
-    'nativeFailureStages',
-    Justification = 'Pester consumes this discovery-time variable through -ForEach.'
+    'updateCases',
+    Justification = 'Pester consumes this discovery-time value through -ForEach.'
 )]
 param()
 
 BeforeDiscovery {
-    $nativeFailureStages = @(
-        'codex-remove'
-        'install'
-        'compile-dry-codex'
-        'compile-dry-copilot'
-        'compile-write-codex'
-        'compile-write-copilot'
+    $actionCases = @(
+        @{ Installed = $null; Approved = [version]'0.28.0'; Expected = 'Install' }
+        @{ Installed = [version]'0.27.0'; Approved = [version]'0.28.0'; Expected = 'Upgrade' }
+        @{ Installed = [version]'0.28.0'; Approved = [version]'0.28.0'; Expected = 'None' }
+        @{ Installed = [version]'0.29.0'; Approved = [version]'0.28.0'; Expected = 'Stop' }
+    )
+    $updateCases = @(
+        @{ CurrentCli = '1.0.0'; CandidateCli = '1.0.0'; Current = @('a'); Candidate = @('a'); Expected = 'NoChange' }
+        @{ CurrentCli = '1.0.0'; CandidateCli = '1.1.0'; Current = @('a'); Candidate = @('a'); Expected = 'ApmOnly' }
+        @{ CurrentCli = '1.0.0'; CandidateCli = '1.0.0'; Current = @('a'); Candidate = @('b'); Expected = 'SkillsOnly' }
+        @{ CurrentCli = '1.0.0'; CandidateCli = '1.1.0'; Current = @('a'); Candidate = @('b'); Expected = 'Combined' }
     )
 }
 
 BeforeAll {
     $script:RepositoryRoot = Split-Path -Parent $PSScriptRoot
-    $script:BootstrapPath = Join-Path $script:RepositoryRoot 'scripts/Bootstrap-Global.ps1'
-    $script:FakeToolPath = Join-Path $PSScriptRoot 'fixtures/Fake-BootstrapTool.ps1'
-    $script:ManagedSkills = @(
-        'a11y'
-        'agent-safety'
-        'ansible'
-        'powershell-module-engineering'
-        'code-simplification'
-        'dependabot'
-        'git-commit'
-        'github-actions-hardening'
-        'msgraph'
-    )
-    $script:DefaultMcpJson = @'
-{
-  "name": "github-mcp-server",
-  "enabled": true,
-  "disabled_reason": null,
-  "transport": {
-    "type": "streamable_http",
-    "url": "https://api.githubcopilot.com/mcp/",
-    "bearer_token_env_var": "GITHUB_TOKEN",
-    "http_headers": null,
-    "env_http_headers": null,
-    "http_headers_helper": null
-  },
-  "enabled_tools": null,
-  "disabled_tools": null,
-  "startup_timeout_sec": null,
-  "tool_timeout_sec": null
-}
-'@
+    . (Join-Path $script:RepositoryRoot 'scripts/Bootstrap-Global.ps1')
+    . (Join-Path $script:RepositoryRoot 'scripts/Update-Baseline.ps1')
 
-    . $script:BootstrapPath
-
-    function New-FakeToolDirectory {
-        [CmdletBinding()]
-        param(
-            [Parameter(Mandatory)]
-            [string]$Path
-        )
+    function Initialize-FakeApmCommand {
+        param([Parameter(Mandatory)][string]$Path)
 
         $null = New-Item -ItemType Directory -Path $Path -Force
-        $currentExecutable = [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
         if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) {
-            foreach ($toolName in @('apm', 'codex')) {
-                $wrapperPath = Join-Path $Path "$toolName.cmd"
-                $wrapper = @(
-                    '@echo off'
-                    ('"{0}" -NoLogo -NoProfile -File "{1}" {2} %*' -f `
-                        $currentExecutable, $script:FakeToolPath, $toolName)
-                )
-                Set-Content -LiteralPath $wrapperPath -Value $wrapper -Encoding Ascii
-            }
+            Set-Content -LiteralPath (Join-Path $Path 'apm.cmd') -Encoding Ascii -Value @(
+                '@echo off'
+                'if "%1"=="--version" (echo APM %FAKE_APM_VERSION%& exit /b 0)'
+                'echo apm %*>>"%TEST_COMMAND_LOG%"'
+                'exit /b 0'
+            )
+            Set-Content -LiteralPath (Join-Path $Path 'codex.cmd') -Encoding Ascii -Value @(
+                '@echo off'
+                'echo No MCP server named ''github-mcp-server'' found. 1>&2'
+                'exit /b 1'
+            )
         }
         else {
-            $singleQuote = [string][char]39
-            $shellQuoteEscape = [string]::Concat([char]39, [char]92, [char]39, [char]39)
-            $quotedExecutable = $currentExecutable.Replace($singleQuote, $shellQuoteEscape)
-            $quotedToolPath = $script:FakeToolPath.Replace($singleQuote, $shellQuoteEscape)
-            foreach ($toolName in @('apm', 'codex')) {
-                $wrapperPath = Join-Path $Path $toolName
-                $wrapper = @(
-                    '#!/usr/bin/env sh'
-                    "exec '$quotedExecutable' -NoLogo -NoProfile -File '$quotedToolPath' $toolName `"`$@`""
-                )
-                Set-Content -LiteralPath $wrapperPath -Value $wrapper -Encoding UTF8
-                & chmod +x $wrapperPath
-            }
+            Set-Content -LiteralPath (Join-Path $Path 'apm') -Encoding UTF8 -Value @(
+                '#!/usr/bin/env sh'
+                'if [ "${1-}" = --version ]; then printf "APM %s\n" "$FAKE_APM_VERSION"; exit 0; fi'
+                'printf "apm %s\n" "$*" >> "$TEST_COMMAND_LOG"'
+                'exit 0'
+            )
+            Set-Content -LiteralPath (Join-Path $Path 'codex') -Encoding UTF8 -Value @(
+                '#!/usr/bin/env sh'
+                'printf "No MCP server named ''github-mcp-server'' found.\n" >&2'
+                'exit 1'
+            )
+            & chmod +x (Join-Path $Path 'apm') (Join-Path $Path 'codex')
         }
-    }
-
-    function Set-DefaultMcpState {
-        [CmdletBinding()]
-        param(
-            [Parameter(Mandatory)]
-            [string]$HomePath
-        )
-
-        $codexDirectory = Join-Path $HomePath '.codex'
-        $null = New-Item -ItemType Directory -Path $codexDirectory -Force
-        Set-Content -LiteralPath (Join-Path $HomePath '.fake-github-mcp.json') `
-            -Value $script:DefaultMcpJson -Encoding UTF8
-        Add-Content -LiteralPath (Join-Path $codexDirectory 'config.toml') -Value @(
-            '[mcp_servers.github-mcp-server]'
-            'url = "https://api.githubcopilot.com/mcp/"'
-            'bearer_token_env_var = "GITHUB_TOKEN"'
-        )
-    }
-
-    function Initialize-OldProfile {
-        [CmdletBinding()]
-        param(
-            [Parameter(Mandatory)]
-            [string]$HomePath
-        )
-
-        foreach ($path in @(
-                '.apm/.apm/skills/old'
-                '.apm/apm_modules/old'
-                '.codex'
-                '.copilot'
-                '.agents/skills'
-            )) {
-            $null = New-Item -ItemType Directory -Path (Join-Path $HomePath $path) -Force
-        }
-        Set-Content -LiteralPath (Join-Path $HomePath '.apm/apm.yml') -Value 'old manifest'
-        Set-Content -LiteralPath (Join-Path $HomePath '.apm/apm.lock.yaml') -Value 'old lock'
-        Set-Content -LiteralPath (Join-Path $HomePath '.apm/.apm/skills/old/value') -Value 'old source'
-        Set-Content -LiteralPath (Join-Path $HomePath '.apm/apm_modules/old/value') -Value 'old module'
-        Set-Content -LiteralPath (Join-Path $HomePath '.apm/config.json') -Value 'old config'
-        Set-Content -LiteralPath (Join-Path $HomePath '.codex/AGENTS.md') -Value '# old codex'
-        Set-Content -LiteralPath (Join-Path $HomePath '.codex/config.toml') `
-            -Value @('project_doc_max_bytes = 77777', '')
-        Set-Content -LiteralPath (Join-Path $HomePath '.copilot/mcp-config.json') -Value 'old copilot mcp'
-        Set-Content -LiteralPath (Join-Path $HomePath '.copilot/AGENTS.md') `
-            -Value 'untouched copilot agents'
-        foreach ($skillName in $script:ManagedSkills) {
-            if ($skillName -ceq 'msgraph') {
-                continue
-            }
-            $skillPath = Join-Path $HomePath ".agents/skills/$skillName"
-            $null = New-Item -ItemType Directory -Path $skillPath -Force
-            Set-Content -LiteralPath (Join-Path $skillPath 'value') -Value "old $skillName"
-        }
-        Set-DefaultMcpState -HomePath $HomePath
-    }
-
-    function Get-ProfileFingerprint {
-        [CmdletBinding()]
-        param(
-            [Parameter(Mandatory)]
-            [string]$HomePath
-        )
-
-        $relativePaths = @(
-            '.apm/apm.yml'
-            '.apm/apm.lock.yaml'
-            '.apm/.apm'
-            '.apm/apm_modules'
-            '.apm/config.json'
-            '.codex/AGENTS.md'
-            '.codex/config.toml'
-            '.copilot/copilot-instructions.md'
-            '.copilot/mcp-config.json'
-        )
-        foreach ($skillName in $script:ManagedSkills) {
-            $relativePaths += ".agents/skills/$skillName"
-        }
-
-        $fingerprint = [ordered]@{}
-        foreach ($relativePath in $relativePaths) {
-            $path = Join-Path $HomePath $relativePath
-            if (-not (Test-Path -LiteralPath $path)) {
-                $fingerprint[$relativePath] = '<absent>'
-            }
-            elseif (Test-Path -LiteralPath $path -PathType Container) {
-                $fingerprint[$relativePath] = @(Get-DirectoryInventory -Path $path) -join "`n"
-            }
-            else {
-                $fingerprint[$relativePath] = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash
-            }
-        }
-        return $fingerprint
-    }
-
-    function Compare-ProfileFingerprint {
-        [CmdletBinding()]
-        param(
-            [Parameter(Mandatory)]
-            [System.Collections.IDictionary]$Reference,
-
-            [Parameter(Mandatory)]
-            [System.Collections.IDictionary]$Difference
-        )
-
-        foreach ($key in $Reference.Keys) {
-            if ($Reference[$key] -cne $Difference[$key]) {
-                return $false
-            }
-        }
-        return $true
     }
 }
 
-Describe 'Bootstrap-Global interface and helpers' {
-    It 'retains ShouldProcess parameters and removes Update' {
-        $command = Get-Command -Name $script:BootstrapPath
-
-        Should-HaveParameter -Actual $command -ParameterName 'WhatIf' -Type ([switch])
-        Should-HaveParameter -Actual $command -ParameterName 'Confirm' -Type ([switch])
-        $command.Parameters.ContainsKey('Update') | Should-BeFalse
+Describe 'APM CLI bootstrap decision' {
+    It 'selects <Expected> for installed <Installed>' -ForEach $actionCases {
+        Get-ApmBootstrapAction -InstalledVersion $Installed -ApprovedVersion $Approved |
+            Should-Be $Expected
     }
 
-    It 'accepts only the exact default GitHub MCP configuration' {
-        $default = $script:DefaultMcpJson | ConvertFrom-Json
-        $custom = $script:DefaultMcpJson | ConvertFrom-Json
-        $custom.transport.url = 'https://custom.example.invalid/mcp/'
+    It 'parses standard APM version output' {
+        ConvertTo-ApmVersion -Text 'Agent Package Manager (APM) CLI version 0.28.0 (e041462)' |
+            Should-Be ([version]'0.28.0')
+    }
 
-        Test-DefaultGithubMcpConfiguration -Configuration $default | Should-BeTrue
+    It 'fails closed for malformed version output' {
+        { ConvertTo-ApmVersion -Text 'unknown' } | Should-Throw -ExceptionMessage '*Unable to parse*'
+    }
+}
+
+Describe 'GitHub MCP ownership boundary' {
+    BeforeAll {
+        $script:DefaultMcp = @'
+{
+  "name": "github-mcp-server", "enabled": true, "disabled_reason": null,
+  "transport": {"type": "streamable_http", "url": "https://api.githubcopilot.com/mcp/",
+    "bearer_token_env_var": "GITHUB_TOKEN", "http_headers": null,
+    "env_http_headers": null, "http_headers_helper": null},
+  "enabled_tools": null, "disabled_tools": null,
+  "startup_timeout_sec": null, "tool_timeout_sec": null
+}
+
+'@ | ConvertFrom-Json
+    }
+
+    It 'accepts the complete APM-owned entry' {
+        Test-DefaultGithubMcpConfiguration -Configuration $script:DefaultMcp | Should-BeTrue
+    }
+
+    It 'rejects a customized entry' {
+        $custom = $script:DefaultMcp | ConvertTo-Json -Depth 5 | ConvertFrom-Json
+        $custom.transport.url = 'https://custom.example.invalid/'
         Test-DefaultGithubMcpConfiguration -Configuration $custom | Should-BeFalse
     }
-
-    It 'forwards Confirm only when it is explicitly bound' {
-        $omitted = Get-ExplicitConfirmParameter -BoundParameters @{}
-        $enabled = Get-ExplicitConfirmParameter -BoundParameters @{ Confirm = $true }
-        $disabled = Get-ExplicitConfirmParameter -BoundParameters @{ Confirm = $false }
-
-        $omitted.Contains('Confirm') | Should-BeFalse
-        $enabled['Confirm'] | Should-BeTrue
-        $disabled['Confirm'] | Should-BeFalse
-    }
-
-    It 'recognizes the generated marker only near the start of a regular file' {
-        $generatedPath = Join-Path $TestDrive 'generated.md'
-        $lateMarkerPath = Join-Path $TestDrive 'late-marker.md'
-        @('# AGENTS.md', '<!-- Generated by APM CLI from .apm/ primitives -->') |
-            Set-Content -LiteralPath $generatedPath
-        @('# 1', '# 2', '# 3', '# 4', '# 5', '# 6', '<!-- Generated by APM CLI from .apm/ primitives -->') |
-            Set-Content -LiteralPath $lateMarkerPath
-
-        Test-ApmGeneratedFile -Path $generatedPath | Should-BeTrue
-        Test-ApmGeneratedFile -Path $lateMarkerPath | Should-BeFalse
-    }
-
-    It 'releases files after bounded header reads' {
-        $configPath = Join-Path $TestDrive 'config.toml'
-        $generatedPath = Join-Path $TestDrive 'generated-release.md'
-        Set-Content -LiteralPath $configPath -Value @(
-            'project_doc_max_bytes = 90001'
-            '[features]'
-            'example = true'
-        )
-        Set-Content -LiteralPath $generatedPath -Value @(
-            '# AGENTS.md'
-            '<!-- Generated by APM CLI from .apm/ primitives -->'
-        )
-
-        @(Get-ProjectDocSetting -Path $configPath).Count | Should-Be 1
-        Test-ApmGeneratedFile -Path $generatedPath | Should-BeTrue
-        foreach ($path in @($configPath, $generatedPath)) {
-            $stream = [System.IO.File]::Open(
-                $path,
-                [System.IO.FileMode]::Open,
-                [System.IO.FileAccess]::ReadWrite,
-                [System.IO.FileShare]::None
-            )
-            $stream.Dispose()
-        }
-    }
-
-    It 'detects a nested reparse point during recursive validation' {
-        $treePath = Join-Path $TestDrive 'recursive-tree'
-        $targetPath = Join-Path $TestDrive 'recursive-target'
-        $linkPath = Join-Path $treePath 'linked'
-        $null = New-Item -ItemType Directory -Path $treePath -Force
-        $null = New-Item -ItemType Directory -Path $targetPath -Force
-        Set-Content -LiteralPath (Join-Path $treePath 'regular.txt') -Value 'regular'
-
-        Test-PathWithoutReparsePoint -Path $treePath -PathType Directory -Recurse |
-            Should-BeTrue
-        if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) {
-            & cmd.exe /d /c "mklink /J `"$linkPath`" `"$targetPath`"" | Out-Null
-        }
-        else {
-            $null = New-Item -ItemType SymbolicLink -Path $linkPath -Target $targetPath
-        }
-        Test-PathWithoutReparsePoint -Path $treePath -PathType Directory -Recurse |
-            Should-BeFalse
-    }
 }
 
-Describe 'Bootstrap-Global behavior' {
+Describe 'Native PowerShell bootstrap behavior' {
     BeforeEach {
-        $script:CaseRoot = Join-Path $TestDrive ([Guid]::NewGuid().ToString('N'))
-        $script:CaseHome = Join-Path $script:CaseRoot 'home'
-        $script:CaseBin = Join-Path $script:CaseRoot 'bin'
-        $null = New-Item -ItemType Directory -Path $script:CaseHome -Force
-        New-FakeToolDirectory -Path $script:CaseBin
         $script:OriginalPath = $env:PATH
-        $script:OriginalFakeHome = $env:FAKE_HOME
-        $script:OriginalApmFailure = $env:FAKE_APM_FAIL_STAGE
-        $script:OriginalCodexFailure = $env:FAKE_CODEX_FAIL_REMOVE
-        $pathSeparator = [System.IO.Path]::PathSeparator
-        $env:PATH = "$($script:CaseBin)$pathSeparator$($env:PATH)"
-        $env:FAKE_HOME = $script:CaseHome
-        $env:FAKE_APM_FAIL_STAGE = $null
-        $env:FAKE_CODEX_FAIL_REMOVE = $null
+        $script:OriginalVersion = $env:FAKE_APM_VERSION
+        $script:OriginalLog = $env:TEST_COMMAND_LOG
+        $script:FakeBin = Join-Path $TestDrive ([Guid]::NewGuid().ToString('N'))
+        Initialize-FakeApmCommand -Path $script:FakeBin
+        $env:PATH = "$($script:FakeBin)$([IO.Path]::PathSeparator)$($env:PATH)"
+        $env:TEST_COMMAND_LOG = Join-Path $TestDrive 'commands.log'
+        Set-Content -LiteralPath $env:TEST_COMMAND_LOG -Value ''
     }
 
     AfterEach {
         $env:PATH = $script:OriginalPath
-        $env:FAKE_HOME = $script:OriginalFakeHome
-        $env:FAKE_APM_FAIL_STAGE = $script:OriginalApmFailure
-        $env:FAKE_CODEX_FAIL_REMOVE = $script:OriginalCodexFailure
+        $env:FAKE_APM_VERSION = $script:OriginalVersion
+        $env:TEST_COMMAND_LOG = $script:OriginalLog
     }
 
-    It 'performs a fresh frozen install with a complete snapshot and source fidelity' {
-        $null = New-Item -ItemType Directory -Path (Join-Path $script:CaseHome '.codex') -Force
-        $null = New-Item -ItemType Directory -Path (Join-Path $script:CaseHome '.copilot') -Force
-        $null = New-Item -ItemType Directory -Path (Join-Path $script:CaseHome 'private') -Force
-        Set-Content -LiteralPath (Join-Path $script:CaseHome '.codex/config.toml') `
-            -Value @('project_doc_max_bytes = 90001', '', '[features]', 'example = true')
-        Set-Content -LiteralPath (Join-Path $script:CaseHome '.copilot/AGENTS.md') -Value 'do not touch'
-        Set-Content -LiteralPath (Join-Path $script:CaseHome 'private/keep.txt') -Value 'private'
+    It 'uses native global install and compile for a matching CLI' {
+        $env:FAKE_APM_VERSION = '0.28.0'
+        Invoke-GlobalBootstrap -RepositoryRoot $script:RepositoryRoot -Confirm:$false
+        $log = Get-Content -LiteralPath $env:TEST_COMMAND_LOG -Raw
+        $log | Should-MatchString 'apm install --global --frozen'
+        $log | Should-MatchString 'apm compile --global --dry-run'
+        $log | Should-MatchString 'apm compile --global'
+    }
 
-        Invoke-GlobalBootstrap -HomePath $script:CaseHome -RepositoryRoot $script:RepositoryRoot -Confirm:$false
+    It 'does not mutate during an older-version dry run' {
+        $env:FAKE_APM_VERSION = '0.27.0'
+        $output = @(Invoke-GlobalBootstrap -RepositoryRoot $script:RepositoryRoot -WhatIf -Confirm:$false 6>&1) -join "`n"
+        $output | Should-MatchString 'CLI action: Upgrade'
+        (Get-Content -LiteralPath $env:TEST_COMMAND_LOG -Raw).Trim() | Should-Be ''
+    }
 
-        Test-ApmGeneratedFile -Path (Join-Path $script:CaseHome '.codex/AGENTS.md') | Should-BeTrue
-        Test-ApmGeneratedFile -Path (Join-Path $script:CaseHome '.copilot/copilot-instructions.md') | Should-BeTrue
-        Get-Content -LiteralPath (Join-Path $script:CaseHome '.codex/config.toml') -Raw |
-            Should-MatchString 'project_doc_max_bytes = 90001'
-        Get-Content -LiteralPath (Join-Path $script:CaseHome '.copilot/AGENTS.md') -Raw |
-            Should-MatchString 'do not touch'
-        Get-Content -LiteralPath (Join-Path $script:CaseHome 'private/keep.txt') -Raw |
-            Should-MatchString 'private'
-        Test-DirectoryContentEqual -ReferencePath (Join-Path $script:RepositoryRoot '.apm') `
-            -DifferencePath (Join-Path $script:CaseHome '.apm/.apm') | Should-BeTrue
-        foreach ($skillName in $script:ManagedSkills) {
-            Test-Path -LiteralPath (Join-Path $script:CaseHome ".agents/skills/$skillName") -PathType Container |
-                Should-BeTrue
+    It 'stops before deployment for a newer CLI' {
+        $env:FAKE_APM_VERSION = '0.29.0'
+        { Invoke-GlobalBootstrap -RepositoryRoot $script:RepositoryRoot -Confirm:$false } |
+            Should-Throw -ExceptionMessage '*newer than reviewed baseline*'
+        (Get-Content -LiteralPath $env:TEST_COMMAND_LOG -Raw).Trim() | Should-Be ''
+    }
+
+    It 'fails before deployment when the installer download fails' {
+        $env:FAKE_APM_VERSION = '0.27.0'
+        Mock Invoke-WebRequest { throw 'download failed' }
+        { Invoke-GlobalBootstrap -RepositoryRoot $script:RepositoryRoot -Confirm:$false } |
+            Should-Throw -ExceptionMessage '*download failed*'
+        (Get-Content -LiteralPath $env:TEST_COMMAND_LOG -Raw).Trim() | Should-Be ''
+    }
+
+    It 'fails before deployment when the installer checksum differs' {
+        $env:FAKE_APM_VERSION = '0.27.0'
+        Mock Invoke-WebRequest { Set-Content -LiteralPath $OutFile -Value 'tampered' }
+        { Invoke-GlobalBootstrap -RepositoryRoot $script:RepositoryRoot -Confirm:$false } |
+            Should-Throw -ExceptionMessage '*does not match apm-cli.lock.yml*'
+        (Get-Content -LiteralPath $env:TEST_COMMAND_LOG -Raw).Trim() | Should-Be ''
+    }
+}
+
+Describe 'Scheduled update classification' {
+    It 'classifies <Expected>' -ForEach $updateCases {
+        Get-BaselineChangeKind -CurrentCliVersion $CurrentCli -CandidateCliVersion $CandidateCli `
+            -CurrentCommits $Current -CandidateCommits $Candidate | Should-Be $Expected
+    }
+
+    It 'updates an existing PR only after candidate validation' {
+        $workflow = Get-Content (Join-Path $script:RepositoryRoot '.github/workflows/update-baseline.yml') -Raw
+        $workflow | Should-MatchString 'gh pr list --head'
+        $workflow | Should-MatchString 'if \[ -n "\$pr_number" \]'
+        $workflow.IndexOf('Validate candidate update') |
+            Should-BeLessThan $workflow.IndexOf('Create or update review pull request')
+    }
+}
+
+Describe 'Pinned source transformation' {
+    It 'declares only APM frontmatter on every mirrored skill' {
+        $manifest = Get-Content (Join-Path $script:RepositoryRoot 'upstream-sources.json') -Raw |
+            ConvertFrom-Json
+        foreach ($source in $manifest.sources) {
+            $output = Get-Content (Join-Path $script:RepositoryRoot $source.output) -Raw
+            $output | Should-MatchString "name: $($source.name)"
+            $output | Should-MatchString ([regex]::Escape($source.description))
+            $output | Should-NotMatchString 'applyTo:'
         }
-        $snapshot = @(Get-ChildItem -LiteralPath (
-                Join-Path $script:CaseHome '.apm/backups/agent-engineering-baseline'
-            ) -Directory)[0]
-        @([System.IO.File]::ReadAllLines((Join-Path $snapshot.FullName 'inventory.tsv'))).Count |
-            Should-Be 18
-        Get-Content -LiteralPath (Join-Path $snapshot.FullName 'originally-absent.txt') -Raw |
-            Should-MatchString '.agents/skills/msgraph'
-        Get-Content -LiteralPath (Join-Path $script:CaseHome '.fake-command.log') -Raw |
-            Should-MatchString 'apm install --global --frozen'
     }
 
-    It 'recycles an exact MCP entry and is idempotent on rerun' {
-        Invoke-GlobalBootstrap -HomePath $script:CaseHome -RepositoryRoot $script:RepositoryRoot -Confirm:$false
-        Invoke-GlobalBootstrap -HomePath $script:CaseHome -RepositoryRoot $script:RepositoryRoot -Confirm:$false
+    It 'keeps the local Pester 6 guidance project agnostic' {
+        $path = Join-Path $script:RepositoryRoot '.apm/skills/powershell-pester-6/SKILL.md'
+        $projectMarker = -join ([char[]](70, 65, 67, 84))
+        (Get-Content $path -Raw).Contains($projectMarker) | Should-BeFalse
+    }
+}
 
-        $configPath = Join-Path $script:CaseHome '.codex/config.toml'
-        @([System.IO.File]::ReadAllLines($configPath) | Where-Object {
-                $_ -ceq '[mcp_servers.github-mcp-server]'
-            }).Count | Should-Be 1
-        Get-Content -LiteralPath (Join-Path $script:CaseHome '.fake-command.log') -Raw |
-            Should-MatchString 'codex mcp remove github-mcp-server'
-        @(Get-ChildItem -LiteralPath (
-                Join-Path $script:CaseHome '.apm/backups/agent-engineering-baseline'
-            ) -Directory).Count | Should-Be 2
+Describe 'Repository invariants' {
+    It 'uses full commit SHAs for every APM dependency' {
+        $manifest = Get-Content (Join-Path $script:RepositoryRoot 'apm.yml')
+        $references = @($manifest | Where-Object { $_ -match '^\s+-\s+[^#]+#(.+)$' })
+        $references.Count | Should-Be 5
+        foreach ($reference in $references) { $reference | Should-MatchString '#[0-9a-f]{40}$' }
     }
 
-    It 'rejects a customized MCP entry before mutation' {
-        $null = New-Item -ItemType Directory -Path (Join-Path $script:CaseHome '.codex') -Force
-        Set-Content -LiteralPath (Join-Path $script:CaseHome '.codex/config.toml') -Value 'sentinel'
-        Set-DefaultMcpState -HomePath $script:CaseHome
-        $customJson = $script:DefaultMcpJson.Replace(
-            'https://api.githubcopilot.com/mcp/',
-            'https://custom.example.invalid/mcp/'
-        )
-        Set-Content -LiteralPath (Join-Path $script:CaseHome '.fake-github-mcp.json') `
-            -Value $customJson -Encoding UTF8
-
-        {
-            Invoke-GlobalBootstrap -HomePath $script:CaseHome -RepositoryRoot $script:RepositoryRoot -Confirm:$false
-        } | Should-Throw -ExceptionMessage '*is customized; refusing to replace it*'
-
-        Test-Path -LiteralPath (Join-Path $script:CaseHome '.apm/backups') | Should-BeFalse
-        Get-Content -LiteralPath (Join-Path $script:CaseHome '.codex/config.toml') -Raw |
-            Should-MatchString 'sentinel'
+    It 'records installer, archive, and executable hashes' {
+        $lock = Get-Content (Join-Path $script:RepositoryRoot 'apm-cli.lock.yml') -Raw
+        ([regex]::Matches($lock, '(?m)^\s+sha256:\s+[0-9a-f]{64}\r?$')).Count | Should-Be 5
+        ([regex]::Matches($lock, '(?m)^\s+executable_sha256:\s+[0-9a-f]{64}\r?$')).Count | Should-Be 3
+        Get-ApmLockValue -Content $lock `
+            -Pattern '(?m)^  windows:\s*\r?\n    url:[^\r\n]+\r?\n    sha256:\s*([^\r\n]+)' `
+            -Description 'Windows installer hash' |
+            Should-Be '859e63f2a3a342d2d4d4aac57cf6e81a006f3ceb80e2b90f9a031d45b4fd432b'
     }
 
-    It 'honors WhatIf without changing the profile' {
-        Invoke-GlobalBootstrap -HomePath $script:CaseHome -RepositoryRoot $script:RepositoryRoot -WhatIf
-
-        Test-Path -LiteralPath (Join-Path $script:CaseHome '.apm') | Should-BeFalse
-        Get-Content -LiteralPath (Join-Path $script:CaseHome '.fake-command.log') -Raw |
-            Should-NotMatchString 'apm install'
-    }
-
-    It 'rejects a reparse-point target before mutation' {
-        $outsidePath = Join-Path $script:CaseRoot 'outside'
-        $null = New-Item -ItemType Directory -Path $outsidePath -Force
-        Set-Content -LiteralPath (Join-Path $outsidePath 'sentinel') -Value 'outside'
-        $codexPath = Join-Path $script:CaseHome '.codex'
-
-        if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) {
-            & cmd.exe /d /c "mklink /J `"$codexPath`" `"$outsidePath`"" | Out-Null
-        }
-        else {
-            $null = New-Item -ItemType SymbolicLink -Path $codexPath -Target $outsidePath
-        }
-
-        {
-            Invoke-GlobalBootstrap -HomePath $script:CaseHome -RepositoryRoot $script:RepositoryRoot -Confirm:$false
-        } | Should-Throw -ExceptionMessage '*reparse point*'
-
-        Get-Content -LiteralPath (Join-Path $outsidePath 'sentinel') -Raw | Should-MatchString 'outside'
-        Test-Path -LiteralPath (Join-Path $script:CaseHome '.apm/backups') | Should-BeFalse
-    }
-
-    It 'restores the complete snapshot after <_> fails' -ForEach $nativeFailureStages {
-        Initialize-OldProfile -HomePath $script:CaseHome
-        $expected = Get-ProfileFingerprint -HomePath $script:CaseHome
-        if ($_ -ceq 'codex-remove') {
-            $env:FAKE_CODEX_FAIL_REMOVE = '1'
-        }
-        else {
-            $env:FAKE_APM_FAIL_STAGE = $_
-        }
-
-        {
-            Invoke-GlobalBootstrap -HomePath $script:CaseHome -RepositoryRoot $script:RepositoryRoot -Confirm:$false
-        } | Should-Throw
-
-        $actual = Get-ProfileFingerprint -HomePath $script:CaseHome
-        Compare-ProfileFingerprint -Reference $expected -Difference $actual | Should-BeTrue
-        $snapshotBase = Join-Path $script:CaseHome '.apm/backups/agent-engineering-baseline'
-        Test-Path -LiteralPath $snapshotBase -PathType Container | Should-BeTrue
-        Get-Content -LiteralPath (Join-Path $script:CaseHome '.copilot/AGENTS.md') -Raw |
-            Should-MatchString 'untouched copilot agents'
+    It 'pins every GitHub Action to a full commit SHA' {
+        $workflowLines = Get-Content (Join-Path $script:RepositoryRoot '.github/workflows/*.yml')
+        $usesLines = @($workflowLines | Where-Object { $_ -match '^\s+(?:-\s+)?uses:' })
+        $usesLines.Count | Should-BeGreaterThan 0
+        foreach ($line in $usesLines) { $line | Should-MatchString '@[0-9a-f]{40}(\s|$)' }
     }
 }

@@ -1,12 +1,12 @@
 lockfile_version: '1'
-generated_at: '2026-08-19T02:21:12.507586+00:00'
+generated_at: '2026-08-27T22:49:44.730165+00:00'
 apm_version: 0.28.0
 dependencies:
 - repo_url: addyosmani/agent-skills
   name: code-simplification
   host: github.com
   resolved_commit: df1edb2e05487d0aa6d93c747141e0aed1187f25
-  resolved_ref: main
+  resolved_ref: df1edb2e05487d0aa6d93c747141e0aed1187f25
   version: unknown
   virtual_path: skills/code-simplification
   is_virtual: true
@@ -21,7 +21,7 @@ dependencies:
   name: dependabot
   host: github.com
   resolved_commit: e353a8cfb8124d44905fc73214d873cea4a0ba3b
-  resolved_ref: main
+  resolved_ref: e353a8cfb8124d44905fc73214d873cea4a0ba3b
   version: unknown
   virtual_path: skills/dependabot
   is_virtual: true
@@ -42,7 +42,7 @@ dependencies:
   name: git-commit
   host: github.com
   resolved_commit: e353a8cfb8124d44905fc73214d873cea4a0ba3b
-  resolved_ref: main
+  resolved_ref: e353a8cfb8124d44905fc73214d873cea4a0ba3b
   version: unknown
   virtual_path: skills/git-commit
   is_virtual: true
@@ -57,7 +57,7 @@ dependencies:
   name: github-actions-hardening
   host: github.com
   resolved_commit: e353a8cfb8124d44905fc73214d873cea4a0ba3b
-  resolved_ref: main
+  resolved_ref: e353a8cfb8124d44905fc73214d873cea4a0ba3b
   version: unknown
   virtual_path: skills/github-actions-hardening
   is_virtual: true
@@ -82,7 +82,7 @@ dependencies:
   name: msgraph
   host: github.com
   resolved_commit: 87a9b3708c2c0bbe20e0785ec448d795906aaa87
-  resolved_ref: main
+  resolved_ref: 87a9b3708c2c0bbe20e0785ec448d795906aaa87
   version: unknown
   virtual_path: skills/msgraph
   is_virtual: true
@@ -159,7 +159,7 @@ deployments:
   owners:
   - .
   active_owner: .
-  content_hash: sha256:df6cef730e7c82d1b81fe2f3922446357c65104d5eb8db3eba533cd3b1b031ad
+  content_hash: sha256:96d578e9646cd80ff6e1bedb26069222ad37b473960f3c0cc069716484b22553
 - kind: project-relative
   target: agents
   value: .agents/skills/agent-safety
@@ -177,7 +177,7 @@ deployments:
   owners:
   - .
   active_owner: .
-  content_hash: sha256:afe27d314bc8f07073ce951ebf4db7e6eada372878d4edd9e8f14b8f5d22ae29
+  content_hash: sha256:2dc7898d11fb55a1a042d46e6e60800d0f948253c5216efa3e470e8914cc84ab
 - kind: project-relative
   target: agents
   value: .agents/skills/ansible
@@ -195,7 +195,7 @@ deployments:
   owners:
   - .
   active_owner: .
-  content_hash: sha256:da721fc826ff776875bae5c61424d3e77cd122c171f7a7b80eb0dd125a7af9f4
+  content_hash: sha256:a79531195a9bdf942b301edf1588c8814ceb976557f4f0cb79bd9aa79e59d52e
 - kind: project-relative
   target: agents
   value: .agents/skills/powershell-module-engineering
@@ -213,7 +213,25 @@ deployments:
   owners:
   - .
   active_owner: .
-  content_hash: sha256:397eaaacb7820495f8dc57da949232219b022e8caaa309e93773a8155d55cff0
+  content_hash: sha256:801cecfd42aeb32f3fd6083d9af08f44c8a5ca48202761533c072a10c06060c9
+- kind: project-relative
+  target: agents
+  value: .agents/skills/powershell-pester-6
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: null
+- kind: project-relative
+  target: agents
+  value: .agents/skills/powershell-pester-6/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:279824abf07feb466fd5deaab79fc872609d5674502bcfa51b31f2909874efab
 - kind: project-relative
   target: codex
   value: .agents/skills/code-simplification
@@ -640,10 +658,13 @@ local_deployed_files:
 - .agents/skills/ansible/SKILL.md
 - .agents/skills/powershell-module-engineering
 - .agents/skills/powershell-module-engineering/SKILL.md
+- .agents/skills/powershell-pester-6
+- .agents/skills/powershell-pester-6/SKILL.md
 - .github/instructions/personal.instructions.md
 local_deployed_file_hashes:
-  .agents/skills/a11y/SKILL.md: sha256:df6cef730e7c82d1b81fe2f3922446357c65104d5eb8db3eba533cd3b1b031ad
-  .agents/skills/agent-safety/SKILL.md: sha256:afe27d314bc8f07073ce951ebf4db7e6eada372878d4edd9e8f14b8f5d22ae29
-  .agents/skills/ansible/SKILL.md: sha256:da721fc826ff776875bae5c61424d3e77cd122c171f7a7b80eb0dd125a7af9f4
-  .agents/skills/powershell-module-engineering/SKILL.md: sha256:397eaaacb7820495f8dc57da949232219b022e8caaa309e93773a8155d55cff0
+  .agents/skills/a11y/SKILL.md: sha256:96d578e9646cd80ff6e1bedb26069222ad37b473960f3c0cc069716484b22553
+  .agents/skills/agent-safety/SKILL.md: sha256:2dc7898d11fb55a1a042d46e6e60800d0f948253c5216efa3e470e8914cc84ab
+  .agents/skills/ansible/SKILL.md: sha256:a79531195a9bdf942b301edf1588c8814ceb976557f4f0cb79bd9aa79e59d52e
+  .agents/skills/powershell-module-engineering/SKILL.md: sha256:801cecfd42aeb32f3fd6083d9af08f44c8a5ca48202761533c072a10c06060c9
+  .agents/skills/powershell-pester-6/SKILL.md: sha256:279824abf07feb466fd5deaab79fc872609d5674502bcfa51b31f2909874efab
   .github/instructions/personal.instructions.md: sha256:c1e91af2e4096e88b8295dfcd32944e04768bee3b0bd0de3eb64ae3c6ed5dab4
