@@ -70,7 +70,7 @@ Describe 'APM review boundary' {
         $result = & $script:ValidationPath -RepositoryRoot $fixtureRoot
 
         $result | Should-Be (
-            'APM review boundary passed: 3 deployed files, 2 approved artifacts, 1 pinned programs.'
+            'APM review boundary passed: 3 deployed files, 2 approved artifacts, 1 pinned program.'
         )
     }
 

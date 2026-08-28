@@ -101,6 +101,8 @@ jobs:
           # Ignored outputs remain unstaged, so the review-boundary check can
           # distinguish them from files that the candidate patch will include.
           git add --all
+          git diff --cached --check
+          if ($LASTEXITCODE -ne 0) { throw 'git diff --cached --check failed.' }
           ./scripts/Invoke-Validation.ps1
 
       - name: Create candidate patch

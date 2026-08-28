@@ -291,7 +291,13 @@ foreach ($program in $approvedPrograms) {
     }
 }
 
+$deployedFileNoun = if ($deployments.Count -eq 1) { 'file' } else { 'files' }
+$approvedArtifactNoun = if ($approvedArtifacts.Count -eq 1) { 'artifact' } else { 'artifacts' }
+$pinnedProgramNoun = if ($approvedPrograms.Count -eq 1) { 'program' } else { 'programs' }
+
 Write-Output (
-    'APM review boundary passed: {0} deployed files, {1} approved artifacts, {2} pinned programs.' -f `
-        $deployments.Count, $approvedArtifacts.Count, $approvedPrograms.Count
+    'APM review boundary passed: {0} deployed {1}, {2} approved {3}, {4} pinned {5}.' -f `
+        $deployments.Count, $deployedFileNoun,
+        $approvedArtifacts.Count, $approvedArtifactNoun,
+        $approvedPrograms.Count, $pinnedProgramNoun
 )
