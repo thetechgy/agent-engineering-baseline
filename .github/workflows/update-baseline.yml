@@ -1,4 +1,4 @@
-name: Update reviewed APM baseline
+name: Update APM baseline
 
 on:
   schedule:
@@ -8,7 +8,7 @@ on:
 permissions: {}
 
 concurrency:
-  group: update-reviewed-apm-baseline
+  group: update-apm-baseline
   cancel-in-progress: false
 
 jobs:
@@ -24,52 +24,73 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install PowerShell validation tools
-        shell: pwsh
+      - name: Refresh APM CLI version pin
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-          Install-Module Pester -RequiredVersion 6.1.0 -Scope CurrentUser -Force
-          Install-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -Scope CurrentUser -Force
+          latest="$(gh api repos/microsoft/apm/releases/latest --jq '.tag_name')"
+          latest="${latest#v}"
+          printf '%s\n' "$latest" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'
+          printf '%s\n' "$latest" > .apm-version
+          for installer in install.sh install.ps1; do
+            curl --fail --location --silent --show-error --output "$RUNNER_TEMP/$installer" \
+              "https://raw.githubusercontent.com/microsoft/apm/v$latest/$installer"
+          done
+          (cd "$RUNNER_TEMP" && sha256sum install.sh install.ps1) > .apm-installer-checksums
 
-      - name: Install Markdown linter
-        run: pipx install rumdl==0.2.34
+      - name: Install pinned APM CLI
+        shell: bash
+        run: |
+          version="$(head -n 1 .apm-version | tr -d '[:space:]')"
+          installer="$RUNNER_TEMP/apm-install.sh"
+          curl --fail --location --silent --show-error --output "$installer" \
+            "https://raw.githubusercontent.com/microsoft/apm/v$version/install.sh"
+          expected="$(awk '$2 == "install.sh" { print $1; exit }' .apm-installer-checksums)"
+          printf '%s  %s\n' "$expected" "$installer" | sha256sum --check --strict -
+          VERSION="v$version" sh "$installer"
+          if ! command -v apm >/dev/null 2>&1; then
+            # The installer may target a directory missing from this shell's PATH.
+            for candidate in "$HOME/.local/bin" /usr/local/bin; do
+              if [ -x "$candidate/apm" ]; then
+                PATH="$candidate:$PATH"
+                break
+              fi
+            done
+          fi
+          if ! command -v apm >/dev/null 2>&1; then
+            echo 'apm is not on PATH after installation.' >&2
+            exit 1
+          fi
+          dirname "$(command -v apm)" >> "$GITHUB_PATH"
+          apm --version
 
-      - name: Refresh reviewed inputs and generated outputs
-        shell: pwsh
+      - name: Update APM dependencies
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./scripts/Update-Baseline.ps1
-
-      - name: Install refreshed APM CLI
         run: |
-          version="$(awk '$1 == "version:" { print $2; exit }' apm-cli.lock.yml)"
-          tag="$(awk '$1 == "tag:" { print $2; exit }' apm-cli.lock.yml)"
-          archive_name="$(awk '
-            $0 == "  linux-x86_64:" { found=1; next }
-            found && $1 == "name:" { print $2; exit }
-          ' apm-cli.lock.yml)"
-          archive_hash="$(awk '
-            $0 == "  linux-x86_64:" { found=1; next }
-            found && $1 == "sha256:" { print $2; exit }
-          ' apm-cli.lock.yml)"
-          archive="$RUNNER_TEMP/$archive_name"
-          install_dir="$RUNNER_TEMP/apm-$version"
-          curl --fail --location --silent --show-error --output "$archive" \
-            "https://github.com/microsoft/apm/releases/download/$tag/$archive_name"
-          echo "$archive_hash  $archive" | sha256sum --check -
-          mkdir -p "$install_dir"
-          tar -xzf "$archive" -C "$install_dir" --strip-components=1
-          echo "$install_dir" >> "$GITHUB_PATH"
+          apm update --yes
+          apm compile --target codex,copilot --validate
+          apm compile --target codex,copilot
 
       - name: Detect changes
         id: changes
         run: |
           if [ -z "$(git status --porcelain)" ]; then
             echo 'changed=false' >> "$GITHUB_OUTPUT"
-            echo 'No reviewed APM baseline update is available.'
+            echo 'No APM baseline update is available.'
           else
             echo 'changed=true' >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Install validation tools
+        if: steps.changes.outputs.changed == 'true'
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module Pester -RequiredVersion 6.1.0 -Scope CurrentUser -Force
+          Install-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -Scope CurrentUser -Force
+          pipx install rumdl==0.2.34
 
       - name: Validate candidate update
         if: steps.changes.outputs.changed == 'true'
@@ -88,7 +109,7 @@ jobs:
         if: steps.changes.outputs.changed == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: reviewed-apm-baseline-patch
+          name: apm-baseline-patch
           path: ${{ runner.temp }}/baseline.patch
           if-no-files-found: error
           retention-days: 1
@@ -110,7 +131,7 @@ jobs:
       - name: Download candidate patch
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: reviewed-apm-baseline-patch
+          name: apm-baseline-patch
           path: ${{ runner.temp }}
 
       - name: Apply data-only candidate patch
@@ -127,19 +148,19 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git fetch origin "refs/heads/$branch:refs/remotes/origin/$branch" || true
           git switch -C "$branch"
-          git commit -m 'chore(apm): refresh reviewed baseline'
+          git commit -m 'chore(apm): refresh baseline'
           gh auth setup-git
           git push --force-with-lease origin "$branch"
           pr_number="$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')"
           body_file="$RUNNER_TEMP/apm-update-pr.md"
-          approved_version="$(awk '$1 == "version:" { print $2; exit }' apm-cli.lock.yml)"
+          pinned_version="$(head -n 1 .apm-version | tr -d '[:space:]')"
           printf '%s\n' \
             '## Summary' \
             '' \
-            "- reviewed APM CLI candidate: $approved_version" \
-            '- refreshes the reviewed APM CLI lock and exact upstream path commits' \
-            '- regenerates provenance, mirrored skills, dependency lock, and APM outputs' \
-            '- runs the full repository validation suite before publication' \
+            "- APM CLI candidate: $pinned_version" \
+            '- refreshes the APM CLI version pin via the official installer' \
+            '- re-resolves branch-ref dependencies with `apm update` and rewrites the lockfile' \
+            '- regenerates compiled outputs and runs the full repository validation suite' \
             '' \
             '## Changed files' \
             '' \
@@ -150,8 +171,8 @@ jobs:
             '' \
             'This pull request is intentionally review-only and will not auto-merge.' >> "$body_file"
           if [ -n "$pr_number" ]; then
-            gh pr edit "$pr_number" --title 'chore(apm): refresh reviewed baseline' --body-file "$body_file"
+            gh pr edit "$pr_number" --title 'chore(apm): refresh baseline' --body-file "$body_file"
           else
             gh pr create --base main --head "$branch" \
-              --title 'chore(apm): refresh reviewed baseline' --body-file "$body_file"
+              --title 'chore(apm): refresh baseline' --body-file "$body_file"
           fi
