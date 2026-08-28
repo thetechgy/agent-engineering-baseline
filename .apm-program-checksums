@@ -1,0 +1,7 @@
+# SHA256 fingerprints for approved compiled programs deployed outside Git.
+9114a140380c1bf67569b4bc99c61c3581a9633e1ddcdf65e428b5f797ea2fb0  .agents/skills/msgraph/scripts/bin/msgraph_darwin_amd64
+3a92b70f8d3790e82664c2acea7bf8fa75e6d907c85f896098a98c1533e3e8bc  .agents/skills/msgraph/scripts/bin/msgraph_darwin_arm64
+170b65df956470a7476ccc16c84e3bcc43ae43d739901535532bb4bea795e2f6  .agents/skills/msgraph/scripts/bin/msgraph_linux_amd64
+1ea9093931ef137ab32262857f9ce4f5f828bd9306a6297fc36fb5626803fcba  .agents/skills/msgraph/scripts/bin/msgraph_linux_arm64
+101f8a4ae443a189128d0aa3c773baa8c15c99f5d93dd0933e5cc99dc3edf29c  .agents/skills/msgraph/scripts/bin/msgraph_windows_amd64.exe
+f3c8fb32e9e03537781f274860e21438d6f9ce16cddae64eedfd608743184230  .agents/skills/msgraph/scripts/bin/msgraph_windows_arm64.exe

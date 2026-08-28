@@ -22,7 +22,10 @@ and a lockfile work together:
   installer bytes before executing them.
 - Compiled outputs (`AGENTS.md`, `.agents/skills/`, and
   `.github/instructions/`) are committed so drift stays reviewable; CI
-  requires clean regeneration.
+  requires clean regeneration. The only exceptions are the exact generated
+  data and compiled-program paths in `.apm-approved-artifacts`. Program bytes
+  must also match the reviewed SHA256 fingerprints in
+  `.apm-program-checksums`.
 
 ## Local content
 
@@ -39,7 +42,8 @@ and a lockfile work together:
   the source of truth here by choice.
 
 Installed `.agents/skills/` outputs are generated artifacts; never edit them
-in place.
+in place. Their readable instructions, references, and launcher scripts stay
+committed even when a skill also ships large generated data or programs.
 
 ## Global bootstrap
 
@@ -132,8 +136,11 @@ pwsh -NoLogo -NoProfile -File ./scripts/Invoke-Validation.ps1
 
 The validation workflow also exercises Pester on PowerShell 7 and Windows
 PowerShell 5.1, PSScriptAnalyzer, ShellCheck, Markdown linting, frozen APM
-installation/compile/audit/package checks, clean-regeneration drift, and the
-project-agnostic content assertion.
+installation/compile/audit/package checks, clean-regeneration drift, the
+project-agnostic content assertion, and the APM review boundary. The boundary
+requires every file deployment in `apm.lock.yaml` to be tracked or named as an
+approved ignored artifact, rejects stale exceptions, and verifies every
+approved program fingerprint against both the lockfile and deployed bytes.
 
 ## Scheduled reviewed updates
 
@@ -147,6 +154,10 @@ outputs, runs the full validation suite, and creates or updates one
 The update PR is never auto-merged. Review the lockfile diff, regenerated
 outputs, and CI results before merging. GitHub Actions dependencies remain
 pinned to full commit SHAs and are updated separately by Dependabot.
+If an update changes a compiled program, validation stops until its provenance
+has been reviewed and the corresponding fingerprint is deliberately updated
+in `.apm-program-checksums`. New ignored artifacts likewise require an explicit
+`.apm-approved-artifacts` entry.
 
 To run the same refresh locally:
 

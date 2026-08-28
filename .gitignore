@@ -1,9 +1,11 @@
 # APM dependencies
 apm_modules/
 
-# Deployed msgraph skill payloads (~110MB of binaries and index databases);
-# regenerated locally by `apm install`
-/.agents/skills/msgraph/
+# Large generated msgraph payloads; exact approved paths are recorded in
+# .apm-approved-artifacts and executable hashes in .apm-program-checksums.
+/.agents/skills/msgraph/references/*-index.db
+/.agents/skills/msgraph/references/*-index.json
+/.agents/skills/msgraph/scripts/bin/
 
 # Markdown lint cache
 .rumdl_cache/

@@ -3,3 +3,6 @@
 /.apm/skills/powershell-module-engineering/SKILL.md -whitespace
 /.agents/skills/ansible/SKILL.md -whitespace
 /.agents/skills/powershell-module-engineering/SKILL.md -whitespace
+/.agents/skills/msgraph/references/docs/errors.md -whitespace
+/.agents/skills/msgraph/references/docs/query-parameters.md -whitespace
+/.agents/skills/msgraph/references/docs/throttling.md -whitespace

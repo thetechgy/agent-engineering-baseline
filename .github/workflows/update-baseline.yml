@@ -97,7 +97,11 @@ jobs:
         shell: pwsh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./scripts/Invoke-Validation.ps1
+        run: |
+          # Ignored outputs remain unstaged, so the review-boundary check can
+          # distinguish them from files that the candidate patch will include.
+          git add --all
+          ./scripts/Invoke-Validation.ps1
 
       - name: Create candidate patch
         if: steps.changes.outputs.changed == 'true'
