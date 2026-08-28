@@ -100,6 +100,16 @@ Describe 'APM review boundary' {
             Should-Throw -ExceptionMessage "*payload/stale.db*not an APM file deployment*"
     }
 
+    It 'rejects an approved artifact that is not ignored' {
+        $gitignorePath = Join-Path $fixtureRoot '.gitignore'
+        $remainingRules = @([System.IO.File]::ReadAllLines($gitignorePath) |
+                Where-Object { $_ -cne '/payload/index.db' })
+        Set-Content -LiteralPath $gitignorePath -Value $remainingRules
+
+        { & $script:ValidationPath -RepositoryRoot $fixtureRoot } |
+            Should-Throw -ExceptionMessage "*payload/index.db*must be explicitly ignored*"
+    }
+
     It 'rejects a file disguised as a directory deployment' {
         $lockfile = Join-Path $fixtureRoot 'apm.lock.yaml'
         $content = [System.IO.File]::ReadAllText($lockfile).Replace(

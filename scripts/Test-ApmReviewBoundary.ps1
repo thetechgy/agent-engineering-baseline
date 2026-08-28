@@ -177,8 +177,22 @@ function Test-GitPathTracked {
         [string]$Path
     )
 
-    $null = & git -C $Root ls-files --error-unmatch -- $Path 2>$null
-    return $LASTEXITCODE -eq 0
+    $trackedPaths = @()
+    $gitExitCode = $null
+    $savedErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $trackedPaths = @(& git -C $Root ls-files -- $Path 2>$null)
+        $gitExitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $savedErrorActionPreference
+    }
+
+    if ($null -eq $gitExitCode -or $gitExitCode -ne 0) {
+        throw "git ls-files failed for '$Path' with exit code '$gitExitCode'."
+    }
+    return @($trackedPaths | Where-Object { $_ -ceq $Path }).Count -eq 1
 }
 
 function Test-GitPathIgnored {
@@ -191,8 +205,20 @@ function Test-GitPathIgnored {
         [string]$Path
     )
 
-    $null = & git -C $Root check-ignore --quiet -- $Path 2>$null
-    return $LASTEXITCODE -eq 0
+    $gitExitCode = $null
+    $savedErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $null = & git -C $Root check-ignore --quiet -- $Path 2>$null
+        $gitExitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $savedErrorActionPreference
+    }
+
+    if ($gitExitCode -eq 0) { return $true }
+    if ($gitExitCode -eq 1) { return $false }
+    throw "git check-ignore failed for '$Path' with exit code '$gitExitCode'."
 }
 
 $resolvedRoot = (Resolve-Path -LiteralPath $RepositoryRoot).Path
