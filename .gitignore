@@ -1,9 +1,20 @@
 # APM dependencies
 apm_modules/
 
-# Deployed msgraph skill payloads (~110MB of binaries and index databases);
-# regenerated locally by `apm install`
-/.agents/skills/msgraph/
+# Large generated msgraph data and programs; keep every exception exact so
+# future skill outputs remain visible for review.
+/.agents/skills/msgraph/references/api-docs-index.db
+/.agents/skills/msgraph/references/api-docs-index.json
+/.agents/skills/msgraph/references/graph-api-index.db
+/.agents/skills/msgraph/references/graph-api-index.json
+/.agents/skills/msgraph/references/samples-index.db
+/.agents/skills/msgraph/references/samples-index.json
+/.agents/skills/msgraph/scripts/bin/msgraph_darwin_amd64
+/.agents/skills/msgraph/scripts/bin/msgraph_darwin_arm64
+/.agents/skills/msgraph/scripts/bin/msgraph_linux_amd64
+/.agents/skills/msgraph/scripts/bin/msgraph_linux_arm64
+/.agents/skills/msgraph/scripts/bin/msgraph_windows_amd64.exe
+/.agents/skills/msgraph/scripts/bin/msgraph_windows_arm64.exe
 
 # Markdown lint cache
 .rumdl_cache/

@@ -20,9 +20,11 @@ and a lockfile work together:
 - `.apm-installer-checksums` pins SHA256 digests for the upstream
   `install.sh` and `install.ps1` scripts, so bootstrap and CI verify the
   installer bytes before executing them.
-- Compiled outputs (`AGENTS.md`, `.agents/skills/`, and
-  `.github/instructions/`) are committed so drift stays reviewable; CI
-  requires clean regeneration.
+- Readable APM outputs (`AGENTS.md`, `.agents/skills/`, and
+  `.github/instructions/`) are committed review artifacts; CI requires clean
+  regeneration. The only exceptions are the 12 exact `msgraph` generated-data
+  and program paths in `.gitignore`. Their content integrity remains enforced
+  by `apm.lock.yaml` and `apm audit --ci`.
 
 ## Local content
 
@@ -39,7 +41,8 @@ and a lockfile work together:
   the source of truth here by choice.
 
 Installed `.agents/skills/` outputs are generated artifacts; never edit them
-in place.
+in place. Their readable instructions, references, and launcher scripts stay
+committed even when a skill also ships large generated data or programs.
 
 ## Global bootstrap
 
@@ -132,8 +135,8 @@ pwsh -NoLogo -NoProfile -File ./scripts/Invoke-Validation.ps1
 
 The validation workflow also exercises Pester on PowerShell 7 and Windows
 PowerShell 5.1, PSScriptAnalyzer, ShellCheck, Markdown linting, frozen APM
-installation/compile/audit/package checks, clean-regeneration drift, and the
-project-agnostic content assertion.
+installation/compile/audit/package checks, clean-regeneration drift,
+repository hygiene, and the project-agnostic content assertion.
 
 ## Scheduled reviewed updates
 
@@ -147,6 +150,10 @@ outputs, runs the full validation suite, and creates or updates one
 The update PR is never auto-merged. Review the lockfile diff, regenerated
 outputs, and CI results before merging. GitHub Actions dependencies remain
 pinned to full commit SHAs and are updated separately by Dependabot.
+Before accepting an update, manually review the pinned upstream commit and any
+changed binary hashes. The hashes recorded by APM provide integrity evidence;
+they do not prove that a program is benign. New generated output paths are not
+implicitly ignored and therefore enter the normal Git review patch.
 
 To run the same refresh locally:
 
