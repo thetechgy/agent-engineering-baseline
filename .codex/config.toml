@@ -1,4 +1,0 @@
-[mcp_servers.github-mcp-server]
-url = "https://api.githubcopilot.com/mcp/"
-id = ""
-bearer_token_env_var = "GITHUB_TOKEN"
