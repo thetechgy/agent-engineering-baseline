@@ -25,6 +25,20 @@ jobs:
           curl --fail --location --silent --show-error \
             "https://raw.githubusercontent.com/microsoft/apm/v$version/install.sh" |
             VERSION="v$version" sh
+          if ! command -v apm >/dev/null 2>&1; then
+            # The installer may target a directory missing from this shell's PATH.
+            for candidate in "$HOME/.local/bin" /usr/local/bin; do
+              if [ -x "$candidate/apm" ]; then
+                PATH="$candidate:$PATH"
+                break
+              fi
+            done
+          fi
+          if ! command -v apm >/dev/null 2>&1; then
+            echo 'apm is not on PATH after installation.' >&2
+            exit 1
+          fi
+          dirname "$(command -v apm)" >> "$GITHUB_PATH"
           apm --version
 
       - name: Install validation tools
