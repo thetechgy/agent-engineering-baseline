@@ -9,11 +9,11 @@ targets:
 
 dependencies:
   apm:
-    - github/awesome-copilot/skills/dependabot#e353a8cfb8124d44905fc73214d873cea4a0ba3b
-    - github/awesome-copilot/skills/git-commit#e353a8cfb8124d44905fc73214d873cea4a0ba3b
-    - github/awesome-copilot/skills/github-actions-hardening#e353a8cfb8124d44905fc73214d873cea4a0ba3b
-    - merill/msgraph/skills/msgraph#87a9b3708c2c0bbe20e0785ec448d795906aaa87
-    - addyosmani/agent-skills/skills/code-simplification#df1edb2e05487d0aa6d93c747141e0aed1187f25
+    - github/awesome-copilot/skills/dependabot#main
+    - github/awesome-copilot/skills/git-commit#main
+    - github/awesome-copilot/skills/github-actions-hardening#main
+    - merill/msgraph/skills/msgraph#main
+    - addyosmani/agent-skills/skills/code-simplification#main
   mcp:
     - name: io.github.github/github-mcp-server
       transport: http
@@ -26,4 +26,3 @@ includes:
   - .apm/skills/ansible/
   - .apm/skills/powershell-pester-6/
   - .apm/skills/powershell-module-engineering/
-scripts: {}

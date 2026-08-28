@@ -18,25 +18,14 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install locked APM CLI
+      - name: Install pinned APM CLI
+        shell: bash
         run: |
-          tag="$(awk '$1 == "tag:" { print $2; exit }' apm-cli.lock.yml)"
-          archive_name="$(awk '
-            $0 == "  linux-x86_64:" { found=1; next }
-            found && $1 == "name:" { print $2; exit }
-          ' apm-cli.lock.yml)"
-          archive_hash="$(awk '
-            $0 == "  linux-x86_64:" { found=1; next }
-            found && $1 == "sha256:" { print $2; exit }
-          ' apm-cli.lock.yml)"
-          archive="$RUNNER_TEMP/$archive_name"
-          install_dir="$RUNNER_TEMP/apm"
-          curl --fail --location --silent --show-error --output "$archive" \
-            "https://github.com/microsoft/apm/releases/download/$tag/$archive_name"
-          echo "$archive_hash  $archive" | sha256sum --check -
-          mkdir -p "$install_dir"
-          tar -xzf "$archive" -C "$install_dir" --strip-components=1
-          echo "$install_dir" >> "$GITHUB_PATH"
+          version="$(head -n 1 .apm-version | tr -d '[:space:]')"
+          curl --fail --location --silent --show-error \
+            "https://raw.githubusercontent.com/microsoft/apm/v$version/install.sh" |
+            VERSION="v$version" sh
+          apm --version
 
       - name: Install validation tools
         shell: pwsh
@@ -79,30 +68,6 @@ jobs:
           Install-Module Pester -RequiredVersion 6.1.0 -Scope CurrentUser -Force
           Install-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -Scope CurrentUser -Force
 
-      - name: Run Pester
+      - name: Run Pester and PSScriptAnalyzer
         shell: powershell
-        run: |
-          Import-Module Pester -RequiredVersion 6.1.0 -Force
-          $configuration = New-PesterConfiguration
-          $configuration.Run.Path = './tests/Bootstrap-Global.Tests.ps1'
-          $configuration.Run.PassThru = $true
-          $configuration.Run.Throw = $false
-          $configuration.Should.DisableV5 = $true
-          $configuration.Output.Verbosity = 'Detailed'
-          $result = Invoke-Pester -Configuration $configuration
-          if ($result.FailedCount -gt 0) {
-              throw "Pester reported $($result.FailedCount) failed test(s)."
-          }
-
-      - name: Run PSScriptAnalyzer
-        shell: powershell
-        run: |
-          Import-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -Force
-          $results = @()
-          foreach ($path in @(Get-ChildItem ./scripts, ./tests -Filter '*.ps1' -File -Recurse)) {
-              $results += @(Invoke-ScriptAnalyzer -Path $path.FullName -Severity Warning,Error)
-          }
-          $results | Format-Table RuleName, Severity, ScriptName, Line, Message -Wrap
-          if ($results.Count -gt 0) {
-              throw "PSScriptAnalyzer reported $($results.Count) finding(s)."
-          }
+        run: ./scripts/Invoke-Validation.ps1 -Suite Pester
