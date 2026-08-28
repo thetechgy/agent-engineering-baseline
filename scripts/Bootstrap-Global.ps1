@@ -614,6 +614,7 @@ function Invoke-GlobalBootstrap {
     $codexDirectory = Join-Path -Path $HomePath -ChildPath '.codex'
     $copilotDirectory = Join-Path -Path $HomePath -ChildPath '.copilot'
     $agentsDirectory = Join-Path -Path $HomePath -ChildPath '.agents'
+    $backupBase = Join-Path -Path $globalApmDirectory -ChildPath "backups/$($script:BackupNamespace)"
     $managedTargets = @(
         @{ Path = $globalApmDirectory; Type = 'Directory'; Recurse = $false }
         @{ Path = $codexDirectory; Type = 'Directory'; Recurse = $false }
@@ -621,6 +622,7 @@ function Invoke-GlobalBootstrap {
         @{ Path = $agentsDirectory; Type = 'Directory'; Recurse = $false }
         @{ Path = (Join-Path $agentsDirectory 'skills'); Type = 'Directory'; Recurse = $false }
         @{ Path = (Join-Path $globalApmDirectory 'backups'); Type = 'Directory'; Recurse = $false }
+        @{ Path = $backupBase; Type = 'Directory'; Recurse = $false }
         @{ Path = (Join-Path $globalApmDirectory 'apm.yml'); Type = 'File'; Recurse = $false }
         @{ Path = (Join-Path $globalApmDirectory 'apm.lock.yaml'); Type = 'File'; Recurse = $false }
         @{ Path = (Join-Path $globalApmDirectory '.apm'); Type = 'Directory'; Recurse = $true }
@@ -765,8 +767,10 @@ function Invoke-GlobalBootstrap {
             throw 'Required command is not available on PATH: apm'
         }
 
+        $null = New-Item -ItemType Directory -Path $backupBase -Force
+        Assert-PathWithoutReparsePoint -Path $backupBase -PathType Directory `
+            -Description 'Backup namespace'
         $timestamp = [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssZ')
-        $backupBase = Join-Path -Path $globalApmDirectory -ChildPath "backups/$($script:BackupNamespace)"
         $backupDirectory = Join-Path -Path $backupBase -ChildPath $timestamp
         $counter = 0
         while (Test-Path -LiteralPath $backupDirectory) {

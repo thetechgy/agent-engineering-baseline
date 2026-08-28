@@ -569,6 +569,30 @@ Describe 'Bootstrap-Global behavior' {
         Test-Path -LiteralPath (Join-Path $script:CaseHome '.apm/backups') | Should-BeFalse
     }
 
+    It 'rejects a reparse-point backup namespace before mutation' {
+        $outsidePath = Join-Path $script:CaseRoot 'outside-backups'
+        $null = New-Item -ItemType Directory -Path $outsidePath -Force
+        Set-Content -LiteralPath (Join-Path $outsidePath 'sentinel') -Value 'outside'
+        $backupRoot = Join-Path $script:CaseHome '.apm/backups'
+        $null = New-Item -ItemType Directory -Path $backupRoot -Force
+        $backupNamespace = Join-Path $backupRoot 'agent-engineering-baseline'
+
+        if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) {
+            & cmd.exe /d /c "mklink /J `"$backupNamespace`" `"$outsidePath`"" | Out-Null
+        }
+        else {
+            $null = New-Item -ItemType SymbolicLink -Path $backupNamespace -Target $outsidePath
+        }
+
+        {
+            Invoke-GlobalBootstrap -HomePath $script:CaseHome -RepositoryRoot $script:RepositoryRoot -Confirm:$false
+        } | Should-Throw -ExceptionMessage '*reparse point*'
+
+        Get-Content -LiteralPath (Join-Path $outsidePath 'sentinel') -Raw |
+            Should-MatchString 'outside'
+        @(Get-ChildItem -LiteralPath $outsidePath -Force).Count | Should-Be 1
+    }
+
     It 'restores the complete snapshot after <_> fails' -ForEach $nativeFailureStages {
         Initialize-OldProfile -HomePath $script:CaseHome
         $expected = Get-ProfileFingerprint -HomePath $script:CaseHome

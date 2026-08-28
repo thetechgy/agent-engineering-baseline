@@ -406,6 +406,19 @@ assert_file_contains "$case_root/outside" 'outside'
 [ ! -d "$case_home/.apm/backups" ] || fail 'symlink rejection mutated the profile'
 printf 'ok - symbolic-link rejection\n'
 
+new_case backup-namespace-symlink
+mkdir -p "$case_home/.apm/backups" "$case_root/outside"
+printf 'outside\n' > "$case_root/outside/sentinel"
+ln -s "$case_root/outside" "$case_home/.apm/backups/agent-engineering-baseline"
+if run_bootstrap > "$case_root/out" 2> "$case_root/err"; then
+    fail 'symbolic-link backup namespace was accepted'
+fi
+assert_file_contains "$case_root/err" 'symbolic-link target'
+assert_file_contains "$case_root/outside/sentinel" 'outside'
+[ "$(find "$case_root/outside" -mindepth 1 -maxdepth 1 | wc -l)" -eq 1 ] ||
+    fail 'backup namespace rejection wrote outside the profile boundary'
+printf 'ok - symbolic-link backup namespace rejection\n'
+
 for failure_stage in codex-remove install compile-dry-codex compile-dry-copilot compile-write-codex compile-write-copilot; do
     new_case "rollback-$failure_stage"
     seed_old_state

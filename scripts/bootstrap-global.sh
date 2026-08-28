@@ -355,6 +355,7 @@ global_apm_dir="$home_path/.apm"
 codex_dir="$home_path/.codex"
 copilot_dir="$home_path/.copilot"
 agents_dir="$home_path/.agents"
+backup_base="$global_apm_dir/backups/$BACKUP_NAMESPACE"
 
 assert_safe_existing_target "$global_apm_dir" directory
 assert_safe_existing_target "$codex_dir" directory
@@ -362,6 +363,7 @@ assert_safe_existing_target "$copilot_dir" directory
 assert_safe_existing_target "$agents_dir" directory
 assert_safe_existing_target "$agents_dir/skills" directory
 assert_safe_existing_target "$global_apm_dir/backups" directory
+assert_safe_existing_target "$backup_base" directory
 assert_safe_existing_target "$global_apm_dir/apm.yml" file
 assert_safe_existing_target "$global_apm_dir/apm.lock.yaml" file
 assert_safe_existing_target "$global_apm_dir/.apm" tree
@@ -456,8 +458,9 @@ fi
 
 require_command apm
 
+mkdir -p "$backup_base"
+assert_safe_existing_target "$backup_base" directory
 timestamp=$(date -u '+%Y%m%dT%H%M%SZ')
-backup_base="$global_apm_dir/backups/$BACKUP_NAMESPACE"
 backup_dir="$backup_base/$timestamp"
 counter=0
 while [ -e "$backup_dir" ] || [ -L "$backup_dir" ]; do
