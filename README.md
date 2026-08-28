@@ -2,16 +2,16 @@
 
 This MIT-licensed repository is a shared, project-agnostic configuration for
 [Microsoft Agent Package Manager (APM)](https://microsoft.github.io/apm/).
-It deploys reviewed instructions, skills, and the official hosted GitHub MCP
-server to Codex and GitHub Copilot tooling.
+It deploys reviewed instructions and skills to Codex and GitHub Copilot
+tooling.
 
 ## How it is pinned
 
 The repository uses APM's native dependency model, the same way `package.json`
 and a lockfile work together:
 
-- `apm.yml` declares intent: branch-ref dependencies (`#main`), local `.apm/`
-  content, and the GitHub MCP server.
+- `apm.yml` declares intent: branch-ref dependencies (`#main`) and local
+  `.apm/` content.
 - `apm.lock.yaml` is the pinning authority. It records the exact resolved
   commit and a content hash for every dependency, so `apm install --frozen`
   reproduces the same files byte-for-byte on any machine.
@@ -20,9 +20,9 @@ and a lockfile work together:
 - `.apm-installer-checksums` pins SHA256 digests for the upstream
   `install.sh` and `install.ps1` scripts, so bootstrap and CI verify the
   installer bytes before executing them.
-- Compiled outputs (`AGENTS.md`, `.agents/skills/`, `.github/instructions/`,
-  `.codex/config.toml`, `.vscode/mcp.json`) are committed so drift stays
-  reviewable; CI requires clean regeneration.
+- Compiled outputs (`AGENTS.md`, `.agents/skills/`, and
+  `.github/instructions/`) are committed so drift stays reviewable; CI
+  requires clean regeneration.
 
 ## Local content
 
@@ -69,14 +69,7 @@ Installation uses the official installer from the pinned release tag with an
 explicit `VERSION`; the official Windows installer validates the matching
 release checksum sidecar. The downloaded installer script itself is verified
 against the SHA256 digest pinned in `.apm-installer-checksums` and is never
-executed on a mismatch. After the CLI preflight, the wrapper delegates to
-native commands:
-
-```sh
-apm install --global --frozen
-apm compile --global --dry-run
-apm compile --global
-```
+executed on a mismatch.
 
 Preview without downloads or changes:
 
@@ -88,9 +81,35 @@ Preview without downloads or changes:
 ./scripts/Bootstrap-Global.ps1 -WhatIf
 ```
 
-APM owns its mutable user-scope modules, caches, compiled instructions, and
-the official GitHub MCP entry. Provide `GITHUB_TOKEN` only at runtime; no
-credential value belongs in this repository or generated configuration.
+After preflight, each implementation:
+
+1. Rejects linked or reparse-point repository sources and managed user-profile
+   destinations.
+2. Snapshots the existing manifest, lockfile, local sources, package cache,
+   APM configuration, generated instructions, Codex and Copilot MCP
+   configuration, and all ten managed skill directories under
+   `~/.apm/backups/agent-engineering-baseline/<UTC timestamp>/`.
+3. Stages and verifies the repository's `apm.yml`, `apm.lock.yaml`, and `.apm/`
+   sources before replacing their user-scope copies.
+4. Removes an old GitHub MCP entry only when its complete Codex or Copilot
+   configuration exactly matches the previously reviewed default. Any
+   customization fails closed before profile mutation.
+5. Runs `apm install --global --frozen`, deploys the five reviewed local
+   skills, previews both instruction compilations, writes them only after both
+   previews pass, and verifies the resulting manifest, lockfile, sources,
+   skills, generated markers, and preserved Codex settings.
+
+Any failure after profile mutation starts restores the complete snapshot.
+Successful snapshots are retained for manual rollback. The Bash implementation
+requires `jq` only when it finds a legacy GitHub MCP entry to verify or remove.
+PowerShell retains `-WhatIf` and `-Confirm` support and remains compatible with
+Windows PowerShell 5.1 and PowerShell 7.
+
+The bootstrap does not manage Codex's top-level `project_doc_max_bytes` or
+`~/.copilot/AGENTS.md`. This baseline intentionally does not install a GitHub
+MCP server; use the machine's existing `gh` CLI and authentication for GitHub
+operations. No credential value belongs in this repository or generated
+configuration. Start new Codex and Copilot sessions after deployment.
 
 ## Repository install and validation
 

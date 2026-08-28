@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-08-28T02:09:36.504053+00:00'
+generated_at: '2026-08-28T03:52:51.447430+00:00'
 apm_version: 0.28.0
 dependencies:
 - repo_url: addyosmani/agent-skills
@@ -619,36 +619,6 @@ deployments:
   - .
   active_owner: .
   content_hash: sha256:c1e91af2e4096e88b8295dfcd32944e04768bee3b0bd0de3eb64ae3c6ed5dab4
-- kind: uri
-  target: mcp
-  value: io.github.github/github-mcp-server
-  runtime: codex
-  scope: project
-  owners:
-  - .
-  active_owner: .
-  content_hash: null
-- kind: uri
-  target: mcp
-  value: io.github.github/github-mcp-server
-  runtime: vscode
-  scope: project
-  owners:
-  - .
-  active_owner: .
-  content_hash: null
-mcp_servers:
-- io.github.github/github-mcp-server
-mcp_configs:
-  io.github.github/github-mcp-server:
-    name: io.github.github/github-mcp-server
-    transport: http
-    bearer_token_env_var: GITHUB_TOKEN
-mcp_target_servers:
-  codex:
-  - io.github.github/github-mcp-server
-  vscode:
-  - io.github.github/github-mcp-server
 local_deployed_files:
 - .agents/skills/a11y
 - .agents/skills/a11y/SKILL.md

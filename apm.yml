@@ -14,10 +14,6 @@ dependencies:
     - github/awesome-copilot/skills/github-actions-hardening#main
     - merill/msgraph/skills/msgraph#main
     - addyosmani/agent-skills/skills/code-simplification#main
-  mcp:
-    - name: io.github.github/github-mcp-server
-      transport: http
-      bearer_token_env_var: GITHUB_TOKEN
 
 includes:
   - .apm/instructions/personal.instructions.md
