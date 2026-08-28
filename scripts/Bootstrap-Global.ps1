@@ -670,6 +670,13 @@ function Invoke-GlobalBootstrap {
             }
             $codexMcpRemove = $true
         }
+        else {
+            $mcpError = Get-Content -LiteralPath $mcpErrorPath -Raw
+            $expectedError = "No MCP server named '$($script:GithubMcpName)' found."
+            if ($mcpError.IndexOf($expectedError, [StringComparison]::Ordinal) -lt 0) {
+                throw "Unable to inspect the existing Codex MCP entry '$($script:GithubMcpName)'."
+            }
+        }
 
         $copilotConfigPath = Join-Path $copilotDirectory 'mcp-config.json'
         $cleanedCopilotConfigPath = Join-Path $preflightDirectory 'copilot-mcp-config.json'
@@ -697,13 +704,6 @@ function Invoke-GlobalBootstrap {
                     $utf8NoBom
                 )
                 $copilotMcpRemove = $true
-            }
-        }
-        else {
-            $mcpError = Get-Content -LiteralPath $mcpErrorPath -Raw
-            $expectedError = "No MCP server named '$($script:GithubMcpName)' found."
-            if ($mcpError.IndexOf($expectedError, [StringComparison]::Ordinal) -lt 0) {
-                throw "Unable to inspect the existing Codex MCP entry '$($script:GithubMcpName)'."
             }
         }
 

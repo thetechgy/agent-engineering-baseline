@@ -47,6 +47,10 @@ if ($Tool -ceq 'codex') {
     if ($ToolArgument.Count -ge 2 -and
         $ToolArgument[0] -ceq 'mcp' -and
         $ToolArgument[1] -ceq 'get') {
+        if ($env:FAKE_CODEX_FAIL_GET -ceq '1') {
+            [Console]::Error.WriteLine('Error: unable to inspect Codex MCP configuration.')
+            exit 30
+        }
         if (Test-Path -LiteralPath $statePath -PathType Leaf) {
             Get-Content -LiteralPath $statePath -Raw
             exit 0

@@ -363,12 +363,14 @@ Describe 'Bootstrap-Global behavior' {
         $script:OriginalFakeHome = $env:FAKE_HOME
         $script:OriginalFakeApmVersion = $env:FAKE_APM_VERSION
         $script:OriginalApmFailure = $env:FAKE_APM_FAIL_STAGE
+        $script:OriginalCodexGetFailure = $env:FAKE_CODEX_FAIL_GET
         $script:OriginalCodexFailure = $env:FAKE_CODEX_FAIL_REMOVE
         $pathSeparator = [System.IO.Path]::PathSeparator
         $env:PATH = "$($script:CaseBin)$pathSeparator$($env:PATH)"
         $env:FAKE_HOME = $script:CaseHome
         $env:FAKE_APM_VERSION = $script:PinnedVersion
         $env:FAKE_APM_FAIL_STAGE = $null
+        $env:FAKE_CODEX_FAIL_GET = $null
         $env:FAKE_CODEX_FAIL_REMOVE = $null
     }
 
@@ -377,6 +379,7 @@ Describe 'Bootstrap-Global behavior' {
         $env:FAKE_HOME = $script:OriginalFakeHome
         $env:FAKE_APM_VERSION = $script:OriginalFakeApmVersion
         $env:FAKE_APM_FAIL_STAGE = $script:OriginalApmFailure
+        $env:FAKE_CODEX_FAIL_GET = $script:OriginalCodexGetFailure
         $env:FAKE_CODEX_FAIL_REMOVE = $script:OriginalCodexFailure
     }
 
@@ -435,6 +438,32 @@ Describe 'Bootstrap-Global behavior' {
         @(Get-ChildItem -LiteralPath (
                 Join-Path $script:CaseHome '.apm/backups/agent-engineering-baseline'
             ) -Directory).Count | Should-Be 2
+    }
+
+    It 'removes an exact Codex MCP entry when Copilot configuration is absent' {
+        Set-DefaultMcpState -HomePath $script:CaseHome
+        Remove-Item -LiteralPath (Join-Path $script:CaseHome '.copilot/mcp-config.json') -Force
+
+        Invoke-GlobalBootstrap -HomePath $script:CaseHome -RepositoryRoot $script:RepositoryRoot -Confirm:$false
+
+        Test-Path -LiteralPath (Join-Path $script:CaseHome '.fake-github-mcp.json') |
+            Should-BeFalse
+        Get-Content -LiteralPath (Join-Path $script:CaseHome '.fake-command.log') -Raw |
+            Should-MatchString 'codex mcp remove github-mcp-server'
+    }
+
+    It 'fails before mutation when Codex MCP inspection returns an unexpected error' {
+        Set-DefaultMcpState -HomePath $script:CaseHome
+        $env:FAKE_CODEX_FAIL_GET = '1'
+
+        {
+            Invoke-GlobalBootstrap -HomePath $script:CaseHome `
+                -RepositoryRoot $script:RepositoryRoot -Confirm:$false
+        } | Should-Throw -ExceptionMessage '*Unable to inspect the existing Codex MCP entry*'
+
+        Test-Path -LiteralPath (Join-Path $script:CaseHome '.apm/backups') | Should-BeFalse
+        Test-Path -LiteralPath (Join-Path $script:CaseHome '.fake-github-mcp.json') |
+            Should-BeTrue
     }
 
     It 'rejects a customized MCP entry before mutation' {
