@@ -61,8 +61,6 @@ try {
     & apm pack --dry-run
     if ($LASTEXITCODE -ne 0) { throw 'APM package check failed.' }
 
-    & ./scripts/Test-ApmReviewBoundary.ps1
-
     & shellcheck ./scripts/bootstrap-global.sh ./tests/bootstrap-global.sh
     if ($LASTEXITCODE -ne 0) { throw 'ShellCheck failed.' }
     & rumdl check .

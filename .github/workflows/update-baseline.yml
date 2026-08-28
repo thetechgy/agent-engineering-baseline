@@ -98,8 +98,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Ignored outputs remain unstaged, so the review-boundary check can
-          # distinguish them from files that the candidate patch will include.
+          # Stage every non-ignored candidate output before validation so new
+          # files cannot remain outside the review patch.
           git add --all
           git diff --cached --check
           if ($LASTEXITCODE -ne 0) { throw 'git diff --cached --check failed.' }
@@ -167,6 +167,10 @@ jobs:
             '- refreshes the APM CLI version pin via the official installer' \
             '- re-resolves branch-ref dependencies with `apm update` and rewrites the lockfile' \
             '- regenerates compiled outputs and runs the full repository validation suite' \
+            '' \
+            '## Required review' \
+            '' \
+            'Review the pinned upstream commit and every changed binary hash before merging. Binary hashes provide integrity evidence; they do not prove benign behavior.' \
             '' \
             '## Changed files' \
             '' \
