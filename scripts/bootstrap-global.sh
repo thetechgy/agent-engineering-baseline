@@ -415,7 +415,7 @@ copilot_mcp_remove=false
 if [ -f "$copilot_dir/mcp-config.json" ]; then
     require_command jq
     if ! verify_copilot_mcp_inspectable "$copilot_dir/mcp-config.json"; then
-        die 'Unable to parse or semantically inspect the existing Copilot MCP configuration.'
+        die "Unable to parse or semantically inspect the existing Copilot MCP configuration: $copilot_dir/mcp-config.json"
     fi
     if copilot_has_github_mcp "$copilot_dir/mcp-config.json"; then
         if ! verify_default_copilot_github_mcp "$copilot_dir/mcp-config.json"; then
@@ -552,7 +552,7 @@ fi
 if [ -f "$copilot_dir/mcp-config.json" ]; then
     require_command jq
     if ! verify_copilot_mcp_inspectable "$copilot_dir/mcp-config.json"; then
-        die 'Unable to verify the Copilot MCP configuration after deployment.'
+        die "Unable to verify the Copilot MCP configuration after deployment: $copilot_dir/mcp-config.json"
     fi
     if copilot_has_github_mcp "$copilot_dir/mcp-config.json"; then
         die "GitHub MCP entry '$GITHUB_MCP_NAME' remains in Copilot after deployment."

@@ -153,6 +153,9 @@ if [ "${1-}" = install ]; then
 }
 JSON
     fi
+    if [ "${FAKE_APM_WRITE_UNINSPECTABLE_COPILOT_MCP-}" = 1 ]; then
+        printf '{"mcpServers":[]}\n' > "$HOME/.copilot/mcp-config.json"
+    fi
     exit 0
 fi
 
@@ -413,6 +416,7 @@ if run_bootstrap > "$case_root/out" 2> "$case_root/err"; then
     fail 'malformed Copilot MCP configuration was accepted'
 fi
 assert_file_contains "$case_root/err" 'parse or semantically inspect'
+assert_file_contains "$case_root/err" "$case_home/.copilot/mcp-config.json"
 assert_same_file "$case_root/original.json" "$case_home/.copilot/mcp-config.json"
 [ ! -d "$case_home/.apm/backups" ] || fail 'malformed Copilot rejection mutated the profile'
 printf 'ok - malformed Copilot MCP configuration rejection before mutation\n'
@@ -425,6 +429,7 @@ if run_bootstrap > "$case_root/out" 2> "$case_root/err"; then
     fail 'semantically uninspectable Copilot MCP configuration was accepted'
 fi
 assert_file_contains "$case_root/err" 'parse or semantically inspect'
+assert_file_contains "$case_root/err" "$case_home/.copilot/mcp-config.json"
 assert_same_file "$case_root/original.json" "$case_home/.copilot/mcp-config.json"
 [ ! -d "$case_home/.apm/backups" ] || fail 'uninspectable Copilot rejection mutated the profile'
 printf 'ok - semantically uninspectable Copilot MCP configuration rejection before mutation\n'
@@ -443,6 +448,22 @@ assert_file_contains "$case_root/err" 'remains in Copilot after deployment'
 assert_file_contains "$case_root/err" 'Rollback completed successfully'
 assert_seed_state_restored
 printf 'ok - post-install escaped Copilot MCP reintroduction triggers complete rollback\n'
+
+new_case uninspectable-post-install-copilot
+seed_old_state
+printf '{"mcpServers":{"other-server":{"type":"stdio","command":"keep-me"}}}\n' \
+    > "$case_home/.copilot/mcp-config.json"
+save_seed_state
+export FAKE_APM_WRITE_UNINSPECTABLE_COPILOT_MCP=1
+if run_bootstrap > "$case_root/out" 2> "$case_root/err"; then
+    fail 'APM post-install uninspectable Copilot MCP configuration was accepted'
+fi
+unset FAKE_APM_WRITE_UNINSPECTABLE_COPILOT_MCP
+assert_file_contains "$case_root/err" 'Unable to verify the Copilot MCP configuration after deployment'
+assert_file_contains "$case_root/err" "$case_home/.copilot/mcp-config.json"
+assert_file_contains "$case_root/err" 'Rollback completed successfully'
+assert_seed_state_restored
+printf 'ok - post-install uninspectable Copilot MCP configuration reports its path and rolls back\n'
 
 new_case dry_run
 if ! run_bootstrap --dry-run > "$case_root/out" 2> "$case_root/err"; then
