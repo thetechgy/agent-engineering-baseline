@@ -68,6 +68,63 @@ compare_versions() {
     printf '%s\n' 0
 }
 
+get_pinned_checksum() {
+    local name=$1
+    local checksum
+
+    checksum=$(awk -v name="$name" '$2 == name { print $1 }' "$checksums_file")
+    [ "$(printf '%s\n' "$checksum" | wc -l)" -eq 1 ] ||
+        die "Expected exactly one pinned checksum for $name."
+    printf '%s\n' "$checksum" | grep -Eq '^[0-9a-f]{64}$' ||
+        die "The pinned checksum for $name is not a lowercase SHA256 hex digest: $checksum"
+    printf '%s\n' "$checksum"
+}
+
+verify_sha256() {
+    local path=$1
+    local name=$2
+    local expected_hash actual_hash
+
+    expected_hash=$(get_pinned_checksum "$name")
+    actual_hash=$(sha256sum "$path" | awk '{ print $1 }')
+    [ "$actual_hash" = "$expected_hash" ] ||
+        die "$name does not match the pinned SHA256 checksum; refusing to execute downloaded code."
+}
+
+verify_pinned_apm_executable() {
+    local executable_path=$1
+    local resolved_path
+
+    resolved_path=$(readlink -f -- "$executable_path") ||
+        die "Unable to resolve the installed APM executable: $executable_path"
+    assert_regular_file "$resolved_path" 'Installed APM executable'
+    [ -x "$resolved_path" ] || die "Installed APM executable is not executable: $resolved_path"
+    verify_sha256 "$resolved_path" "$archive_member"
+    printf '%s\n' "$resolved_path"
+}
+
+run_apm() {
+    verify_sha256 "$apm_executable" "$archive_member"
+    "$apm_executable" "$@"
+}
+
+verify_tar_layout() {
+    local archive_path=$1
+    local expected_root=$2
+    local expected_member=$3
+
+    tar -tzf "$archive_path" | awk -v root="$expected_root" -v member="$expected_member" '
+        BEGIN { valid = 1; member_count = 0 }
+        {
+            path = $0
+            if (path == member) { member_count++ }
+            if (path != root && index(path, root "/") != 1) { valid = 0 }
+            if (path ~ /^\// || path ~ /(^|\/)\.\.($|\/)/) { valid = 0 }
+        }
+        END { exit(valid && member_count == 1 ? 0 : 1) }
+    ' || die "Downloaded archive has an unexpected or unsafe layout: $archive_path"
+}
+
 assert_regular_file() {
     local path=$1
     local label=$2
@@ -285,8 +342,8 @@ on_exit() {
     if [ -n "${preflight_temp-}" ] && [ -d "$preflight_temp" ]; then
         rm -rf -- "$preflight_temp"
     fi
-    if [ -n "${installer_path-}" ] && [ -f "$installer_path" ]; then
-        rm -f -- "$installer_path"
+    if [ -n "${cli_temp-}" ] && [ -d "$cli_temp" ]; then
+        rm -rf -- "$cli_temp"
     fi
 
     if [ "$exit_code" -ne 0 ] && [ "${mutation_started-false}" = true ]; then
@@ -320,7 +377,7 @@ while [ "$#" -gt 0 ]; do
     shift
 done
 
-for command_name in awk chmod cmp cp date diff dirname find grep head mkdir mktemp mv rm sed sh tr; do
+for command_name in awk chmod cmp cp date diff dirname find grep head mkdir mktemp mv readlink rm sed sh tar tr uname wc; do
     require_command "$command_name"
 done
 
@@ -330,7 +387,7 @@ manifest_path="$repo_root/apm.yml"
 lockfile_path="$repo_root/apm.lock.yaml"
 source_apm_path="$repo_root/.apm"
 version_file="$repo_root/.apm-version"
-checksums_file="$repo_root/.apm-installer-checksums"
+checksums_file="$repo_root/.apm-checksums"
 home_path=${HOME:?HOME must be set.}
 
 [ ! -L "$home_path" ] || die "HOME must not be a symbolic link: $home_path"
@@ -338,7 +395,7 @@ home_path=${HOME:?HOME must be set.}
 assert_regular_file "$manifest_path" 'Repository APM manifest'
 assert_regular_file "$lockfile_path" 'Repository APM lockfile'
 assert_regular_file "$version_file" 'Repository APM version pin'
-assert_regular_file "$checksums_file" 'Repository APM installer checksums'
+assert_regular_file "$checksums_file" 'Repository APM checksums'
 assert_directory_without_links "$source_apm_path" 'Repository local APM source'
 
 for skill_name in "${LOCAL_SKILLS[@]}"; do
@@ -350,6 +407,22 @@ done
 approved_version=$(head -n 1 "$version_file" | tr -d '[:space:]')
 printf '%s\n' "$approved_version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' ||
     die "The APM version pin is not a plain X.Y.Z version: $approved_version"
+
+[ "$(uname -s)" = Linux ] || die 'This bootstrap supports Linux; use Bootstrap-Global.ps1 on Windows.'
+case "$(uname -m)" in
+    x86_64)
+        platform_arch=x86_64
+        ;;
+    arm64|aarch64)
+        platform_arch=arm64
+        ;;
+    *)
+        die "Unsupported Linux architecture: $(uname -m)"
+        ;;
+esac
+archive_name="apm-linux-$platform_arch.tar.gz"
+archive_root="apm-linux-$platform_arch"
+archive_member="$archive_root/apm"
 
 apm_action=install
 installed_version=''
@@ -446,23 +519,34 @@ fi
 if [ "$apm_action" != none ]; then
     require_command curl
     require_command sha256sum
-    expected_hash=$(awk '$2 == "install.sh" { print $1; exit }' "$checksums_file")
-    printf '%s\n' "$expected_hash" | grep -Eq '^[0-9a-f]{64}$' ||
-        die "The pinned install.sh checksum is not a SHA256 hex digest: $expected_hash"
-    installer_path=$(mktemp "${TMPDIR:-/tmp}/apm-install.XXXXXX")
+    cli_temp=$(mktemp -d "${TMPDIR:-/tmp}/apm-install.XXXXXX")
+    installer_path="$cli_temp/install.sh"
+    archive_path="$cli_temp/$archive_name"
     curl --fail --location --silent --show-error --output "$installer_path" \
         "https://raw.githubusercontent.com/microsoft/apm/v$approved_version/install.sh"
-    actual_hash=$(sha256sum "$installer_path" | awk '{ print $1 }')
-    [ "$actual_hash" = "$expected_hash" ] || {
-        rm -f -- "$installer_path"
-        die 'Downloaded install.sh does not match the pinned SHA256 checksum; refusing to execute it.'
-    }
-    VERSION="v$approved_version" sh "$installer_path"
-    rm -f -- "$installer_path"
-    installer_path=''
+    curl --fail --location --silent --show-error --output "$archive_path" \
+        "https://github.com/microsoft/apm/releases/download/v$approved_version/$archive_name"
+    verify_sha256 "$installer_path" 'install.sh'
+    verify_sha256 "$archive_path" "$archive_name"
+    verify_tar_layout "$archive_path" "$archive_root" "$archive_member"
+    archive_check_dir="$cli_temp/archive-check"
+    mkdir "$archive_check_dir"
+    tar -xzf "$archive_path" -C "$archive_check_dir"
+    assert_directory_without_links "$archive_check_dir/$archive_root" 'Downloaded APM bundle'
+    assert_regular_file "$archive_check_dir/$archive_member" 'Downloaded APM executable'
+    verify_sha256 "$archive_check_dir/$archive_member" "$archive_member"
+    mirror_tag_dir="$cli_temp/mirror/v$approved_version"
+    mkdir -p "$mirror_tag_dir"
+    cp -- "$archive_path" "$mirror_tag_dir/$archive_name"
+    verify_sha256 "$mirror_tag_dir/$archive_name" "$archive_name"
+    VERSION="v$approved_version" \
+        APM_RELEASE_BASE_URL="file://$cli_temp/mirror" \
+        APM_NO_DIRECT_FALLBACK=1 \
+        sh "$installer_path"
     hash -r
     if ! command -v apm >/dev/null 2>&1; then
-        for candidate in "$home_path/.local/bin" /usr/local/bin; do
+        for candidate in "${APM_INSTALL_DIR-}" "$home_path/.local/bin" /usr/local/bin; do
+            [ -n "$candidate" ] || continue
             if [ -x "$candidate/apm" ]; then
                 PATH="$candidate:$PATH"
                 export PATH
@@ -472,12 +556,19 @@ if [ "$apm_action" != none ]; then
         hash -r
     fi
     require_command apm
-    verified_version=$(normalize_version "$(apm --version)")
+    apm_executable=$(verify_pinned_apm_executable "$(command -v apm)")
+    verified_version=$(normalize_version "$(run_apm --version)")
     [ "$verified_version" = "$approved_version" ] ||
         die "APM installation completed but version $approved_version is not active."
+    rm -rf -- "$cli_temp"
+    cli_temp=''
 fi
 
 require_command apm
+require_command sha256sum
+if [ -z "${apm_executable-}" ]; then
+    apm_executable=$(verify_pinned_apm_executable "$(command -v apm)")
+fi
 
 mkdir -p "$backup_base"
 assert_safe_existing_target "$backup_base" directory
@@ -540,7 +631,7 @@ if [ "$copilot_mcp_remove" = true ]; then
     remove_copilot_github_mcp "$copilot_dir/mcp-config.json"
 fi
 
-apm install --global --frozen
+run_apm install --global --frozen
 
 if codex mcp get "$GITHUB_MCP_NAME" --json > "$preflight_temp/github-mcp.after.json" \
     2> "$preflight_temp/github-mcp.after.err"; then
@@ -565,10 +656,10 @@ done
 
 (
     cd "$global_apm_dir"
-    apm compile --target codex --single-agents --output "$codex_dir/AGENTS.md" --dry-run
-    apm compile --target copilot --single-agents --output "$copilot_dir/copilot-instructions.md" --dry-run
-    apm compile --target codex --single-agents --output "$codex_dir/AGENTS.md"
-    apm compile --target copilot --single-agents --output "$copilot_dir/copilot-instructions.md"
+    run_apm compile --target codex --single-agents --output "$codex_dir/AGENTS.md" --dry-run
+    run_apm compile --target copilot --single-agents --output "$copilot_dir/copilot-instructions.md" --dry-run
+    run_apm compile --target codex --single-agents --output "$codex_dir/AGENTS.md"
+    run_apm compile --target copilot --single-agents --output "$copilot_dir/copilot-instructions.md"
 )
 
 cmp -s "$manifest_path" "$global_apm_dir/apm.yml" || die 'Deployed APM manifest differs from the reviewed source.'

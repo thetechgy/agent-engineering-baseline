@@ -343,7 +343,7 @@ function Get-ApmBootstrapAction {
     return 'None'
 }
 
-function Get-PinnedInstallerChecksum {
+function Get-PinnedChecksum {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][string]$ChecksumPath,
@@ -351,33 +351,419 @@ function Get-PinnedInstallerChecksum {
     )
 
     if (-not (Test-Path -LiteralPath $ChecksumPath -PathType Leaf)) {
-        throw "Missing APM installer checksums: $ChecksumPath"
+        throw "Missing APM checksums: $ChecksumPath"
     }
-    $pattern = '^\s*([0-9a-fA-F]{64})\s+\*?' + [regex]::Escape($FileName) + '\s*$'
+    $pattern = '^([0-9a-f]{64})  ' + [regex]::Escape($FileName) + '$'
+    $checksumMatches = @()
     foreach ($line in @([System.IO.File]::ReadAllLines($ChecksumPath))) {
         $match = [regex]::Match($line, $pattern)
-        if ($match.Success) { return $match.Groups[1].Value }
+        if ($match.Success) { $checksumMatches += $match.Groups[1].Value }
     }
-    throw "No pinned SHA256 checksum for $FileName in $ChecksumPath"
+    if ($checksumMatches.Count -ne 1) {
+        throw "Expected exactly one lowercase SHA256 checksum for $FileName in $ChecksumPath"
+    }
+    return $checksumMatches[0]
 }
 
-function Update-ProcessPath {
-    [CmdletBinding(SupportsShouldProcess = $true)]
-    param()
+function Assert-PinnedFileChecksum {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][string]$ChecksumPath,
+        [Parameter(Mandatory)][string]$FileName
+    )
 
-    if (-not $PSCmdlet.ShouldProcess('process PATH', 'Merge machine and user PATH entries')) { return }
-    $separator = [IO.Path]::PathSeparator
-    $current = @($env:PATH -split [regex]::Escape($separator))
-    foreach ($scope in @('Machine', 'User')) {
-        $scoped = [Environment]::GetEnvironmentVariable('Path', $scope)
-        if ([string]::IsNullOrWhiteSpace($scoped)) { continue }
-        foreach ($entry in @($scoped -split [regex]::Escape($separator))) {
-            if (-not [string]::IsNullOrWhiteSpace($entry) -and $current -notcontains $entry) {
-                $env:PATH = "$($env:PATH)$separator$entry"
-                $current += $entry
-            }
+    Assert-PathWithoutReparsePoint -Path $Path -PathType File -Description $FileName
+    $expectedHash = Get-PinnedChecksum -ChecksumPath $ChecksumPath -FileName $FileName
+    $actualHash = (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($actualHash -cne $expectedHash) {
+        throw "$FileName does not match the pinned SHA256 checksum; refusing to execute downloaded code."
+    }
+}
+
+function Get-ApmWindowsLayout {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][version]$Version
+    )
+
+    if (-not [string]::IsNullOrWhiteSpace($env:APM_INSTALL_DIR)) {
+        $binDirectory = [System.IO.Path]::GetFullPath($env:APM_INSTALL_DIR.Trim().TrimEnd('\', '/'))
+        $installRoot = Split-Path -Parent $binDirectory
+        if ([string]::IsNullOrWhiteSpace($installRoot)) { $installRoot = $binDirectory }
+    }
+    else {
+        if ([string]::IsNullOrWhiteSpace($env:LOCALAPPDATA)) {
+            throw 'LOCALAPPDATA must be set when APM_INSTALL_DIR is not specified.'
+        }
+        $installRoot = Join-Path $env:LOCALAPPDATA 'Programs/apm'
+        $binDirectory = Join-Path $installRoot 'bin'
+    }
+    $releaseTag = "v$Version"
+    $releasesDirectory = Join-Path $installRoot 'releases'
+    $releaseDirectory = Join-Path $releasesDirectory $releaseTag
+    $currentDirectory = Join-Path $installRoot 'current'
+    return [PSCustomObject]@{
+        InstallRoot = $installRoot
+        BinDirectory = $binDirectory
+        ReleasesDirectory = $releasesDirectory
+        ReleaseDirectory = $releaseDirectory
+        CurrentDirectory = $currentDirectory
+        CurrentExecutable = Join-Path $currentDirectory 'apm.exe'
+        ShimPath = Join-Path $binDirectory 'apm.cmd'
+    }
+}
+
+function Test-PathWithinDirectory {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][string]$Directory
+    )
+
+    $fullPath = [System.IO.Path]::GetFullPath($Path).TrimEnd('\', '/')
+    $fullDirectory = [System.IO.Path]::GetFullPath($Directory).TrimEnd('\', '/')
+    $prefix = $fullDirectory + [System.IO.Path]::DirectorySeparatorChar
+    return $fullPath.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)
+}
+
+function Get-ReparseTargetPath {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][System.IO.FileSystemInfo]$Item
+    )
+
+    $targets = @($Item.Target)
+    if ($targets.Count -ne 1 -or [string]::IsNullOrWhiteSpace([string]$targets[0])) {
+        throw "Unable to inspect reparse target: $($Item.FullName)"
+    }
+    $target = [string]$targets[0]
+    if ($target.StartsWith('\??\')) { $target = $target.Substring(4) }
+    if ($target.StartsWith('\\?\')) { $target = $target.Substring(4) }
+    if (-not [System.IO.Path]::IsPathRooted($target)) {
+        $target = Join-Path (Split-Path -Parent $Item.FullName) $target
+    }
+    return [System.IO.Path]::GetFullPath($target)
+}
+
+function Assert-PathAncestorsWithoutReparsePoint {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][string]$Description
+    )
+
+    $currentPath = [System.IO.Path]::GetFullPath($Path)
+    if (-not (Test-Path -LiteralPath $currentPath)) {
+        $currentPath = Split-Path -Parent $currentPath
+    }
+    while (-not [string]::IsNullOrWhiteSpace($currentPath)) {
+        $item = Get-Item -LiteralPath $currentPath -Force -ErrorAction SilentlyContinue
+        if ($null -ne $item -and (Test-ReparsePoint -Item $item)) {
+            throw "$Description has a reparse-point ancestor: $currentPath"
+        }
+        $parentPath = Split-Path -Parent $currentPath
+        if ([string]::IsNullOrWhiteSpace($parentPath) -or $parentPath -ceq $currentPath) {
+            break
+        }
+        $currentPath = $parentPath
+    }
+}
+
+function Assert-ApmWindowsLayoutSafe {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][object]$Layout
+    )
+
+    foreach ($directory in @($Layout.InstallRoot, $Layout.BinDirectory, $Layout.ReleasesDirectory)) {
+        Assert-PathAncestorsWithoutReparsePoint -Path $directory -Description 'APM CLI layout'
+        Assert-PathWithoutReparsePoint -Path $directory -PathType Directory -AllowMissing `
+            -Description 'APM CLI layout directory'
+    }
+    Assert-PathAncestorsWithoutReparsePoint -Path $Layout.ReleaseDirectory `
+        -Description 'APM release directory'
+    Assert-PathWithoutReparsePoint -Path $Layout.ReleaseDirectory -PathType Directory `
+        -AllowMissing -Recurse -Description 'APM release directory'
+    Assert-PathAncestorsWithoutReparsePoint -Path (Split-Path -Parent $Layout.ShimPath) `
+        -Description 'APM command shim'
+    Assert-PathWithoutReparsePoint -Path $Layout.ShimPath -PathType File -AllowMissing `
+        -Description 'APM command shim'
+
+    $currentItem = Get-Item -LiteralPath $Layout.CurrentDirectory -Force -ErrorAction SilentlyContinue
+    if ($null -ne $currentItem) {
+        if (-not $currentItem.PSIsContainer -or -not (Test-ReparsePoint -Item $currentItem)) {
+            throw "Refusing to replace unsafe APM current path: $($Layout.CurrentDirectory)"
+        }
+        $targetPath = Get-ReparseTargetPath -Item $currentItem
+        if (-not (Test-PathWithinDirectory -Path $targetPath -Directory $Layout.ReleasesDirectory)) {
+            throw "APM current junction points outside the releases directory: $targetPath"
+        }
+        Assert-PathWithoutReparsePoint -Path $targetPath -PathType Directory -Recurse `
+            -Description 'APM current release target'
+    }
+}
+
+function Remove-ApmJunction {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Low')]
+    param([Parameter(Mandatory)][string]$Path)
+
+    $item = Get-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
+    if ($null -eq $item) { return }
+    if (-not $item.PSIsContainer -or -not (Test-ReparsePoint -Item $item)) {
+        throw "Refusing to remove non-junction APM path: $Path"
+    }
+    if ($PSCmdlet.ShouldProcess($Path, 'Remove APM junction')) {
+        [System.IO.Directory]::Delete($Path)
+    }
+}
+
+function ConvertTo-ApmCommandShimContent {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$ExecutablePath
+    )
+
+    $shimTarget = $null
+    $localAppData = $env:LOCALAPPDATA
+    if (-not [string]::IsNullOrWhiteSpace($localAppData)) {
+        $localAppData = [System.IO.Path]::GetFullPath($localAppData).TrimEnd('\', '/')
+        $prefix = $localAppData + [System.IO.Path]::DirectorySeparatorChar
+        if ($ExecutablePath.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) {
+            $relativePath = $ExecutablePath.Substring($localAppData.Length).TrimStart('\', '/')
+            $shimTarget = '%LOCALAPPDATA%\' + ($relativePath -replace '%', '%%')
         }
     }
+    if ($null -eq $shimTarget) {
+        $shimTarget = $ExecutablePath -replace '%', '%%'
+    }
+    return "@echo off`r`nREM Generated by the reviewed APM bootstrap -- do not hand-edit.`r`n`"$shimTarget`" %*`r`n"
+}
+
+function Set-ApmUserPath {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Low')]
+    param(
+        [Parameter(Mandatory)][string]$CurrentDirectory,
+        [Parameter(Mandatory)][string]$BinDirectory
+    )
+
+    $separator = [System.IO.Path]::PathSeparator
+    $userEntries = @([Environment]::GetEnvironmentVariable('Path', 'User') -split [regex]::Escape($separator))
+    $processEntries = @($env:PATH -split [regex]::Escape($separator))
+    $preferred = @($CurrentDirectory, $BinDirectory)
+    $newUserEntries = @($preferred)
+    foreach ($entry in $userEntries) {
+        if (-not [string]::IsNullOrWhiteSpace($entry) -and $preferred -notcontains $entry) {
+            $newUserEntries += $entry
+        }
+    }
+    $newProcessEntries = @($preferred)
+    foreach ($entry in $processEntries) {
+        if (-not [string]::IsNullOrWhiteSpace($entry) -and $preferred -notcontains $entry) {
+            $newProcessEntries += $entry
+        }
+    }
+    if ($PSCmdlet.ShouldProcess('user and process PATH', 'Add APM command directories')) {
+        [Environment]::SetEnvironmentVariable('Path', ($newUserEntries -join $separator), 'User')
+        $env:PATH = $newProcessEntries -join $separator
+    }
+}
+
+function Install-PinnedApmWindows {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][version]$Version,
+        [Parameter(Mandatory)][string]$ChecksumPath
+    )
+
+    $assetName = 'apm-windows-x86_64.zip'
+    $memberName = 'apm-windows-x86_64/apm.exe'
+    $layout = Get-ApmWindowsLayout -Version $Version
+    Assert-ApmWindowsLayoutSafe -Layout $layout
+
+    $tempDirectory = Join-Path ([System.IO.Path]::GetTempPath()) `
+        ('apm-secure-install-{0}' -f [Guid]::NewGuid().ToString('N'))
+    $archivePath = Join-Path $tempDirectory $assetName
+    $extractDirectory = Join-Path $tempDirectory 'extract'
+    $packageDirectory = Join-Path $extractDirectory 'apm-windows-x86_64'
+    $stagingDirectory = "$($layout.ReleaseDirectory).new-$([Guid]::NewGuid().ToString('N'))"
+    $oldReleaseDirectory = $null
+    $newCurrentDirectory = "$($layout.CurrentDirectory).new-$([Guid]::NewGuid().ToString('N'))"
+    $oldCurrentDirectory = $null
+    $stagedShimPath = "$($layout.ShimPath).new-$([Guid]::NewGuid().ToString('N'))"
+    $oldShimPath = $null
+    $createdDirectories = @()
+    $releasePromoted = $false
+    $currentPromoted = $false
+    $shimPromoted = $false
+    $previousUserPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+    $previousProcessPath = $env:PATH
+    $pathUpdated = $false
+
+    try {
+        Assert-PathAncestorsWithoutReparsePoint -Path $tempDirectory `
+            -Description 'Private APM staging directory'
+        $null = New-Item -ItemType Directory -Path $tempDirectory
+        $null = New-Item -ItemType Directory -Path $extractDirectory
+        Assert-PathWithoutReparsePoint -Path $tempDirectory -PathType Directory -Recurse `
+            -Description 'Private APM staging directory'
+
+        $previousSecurityProtocol = [Net.ServicePointManager]::SecurityProtocol
+        try {
+            [Net.ServicePointManager]::SecurityProtocol = $previousSecurityProtocol -bor `
+                [Net.SecurityProtocolType]::Tls12
+            $downloadUrl = "https://github.com/microsoft/apm/releases/download/v$Version/$assetName"
+            Invoke-WebRequest -Uri $downloadUrl -OutFile $archivePath -UseBasicParsing
+        }
+        finally {
+            [Net.ServicePointManager]::SecurityProtocol = $previousSecurityProtocol
+        }
+        Assert-PinnedFileChecksum -Path $archivePath -ChecksumPath $ChecksumPath -FileName $assetName
+        Expand-Archive -LiteralPath $archivePath -DestinationPath $extractDirectory -Force
+
+        $topLevelItems = @(Get-ChildItem -LiteralPath $extractDirectory -Force)
+        if ($topLevelItems.Count -ne 1 -or $topLevelItems[0].Name -cne 'apm-windows-x86_64' -or
+            -not $topLevelItems[0].PSIsContainer) {
+            throw 'Downloaded APM ZIP has an unexpected package layout.'
+        }
+        Assert-PathWithoutReparsePoint -Path $packageDirectory -PathType Directory -Recurse `
+            -Description 'Downloaded APM bundle'
+        $downloadedExecutable = Join-Path $packageDirectory 'apm.exe'
+        Assert-PinnedFileChecksum -Path $downloadedExecutable -ChecksumPath $ChecksumPath `
+            -FileName $memberName
+
+        foreach ($directory in @(
+                $layout.InstallRoot,
+                $layout.BinDirectory,
+                $layout.ReleasesDirectory
+            )) {
+            if (-not [System.IO.Directory]::Exists($directory)) {
+                $null = New-Item -ItemType Directory -Path $directory
+                $createdDirectories += $directory
+            }
+        }
+        Assert-ApmWindowsLayoutSafe -Layout $layout
+        Move-Item -LiteralPath $packageDirectory -Destination $stagingDirectory
+
+        if ([System.IO.Directory]::Exists($layout.ReleaseDirectory)) {
+            $oldReleaseDirectory = "$($layout.ReleaseDirectory).old-$([Guid]::NewGuid().ToString('N'))"
+            Move-Item -LiteralPath $layout.ReleaseDirectory -Destination $oldReleaseDirectory
+        }
+        Move-Item -LiteralPath $stagingDirectory -Destination $layout.ReleaseDirectory
+        $releasePromoted = $true
+
+        $null = New-Item -ItemType Junction -Path $newCurrentDirectory `
+            -Target $layout.ReleaseDirectory
+        $currentItem = Get-Item -LiteralPath $layout.CurrentDirectory -Force -ErrorAction SilentlyContinue
+        if ($null -ne $currentItem) {
+            $oldCurrentDirectory = "$($layout.CurrentDirectory).old-$([Guid]::NewGuid().ToString('N'))"
+            Move-Item -LiteralPath $layout.CurrentDirectory -Destination $oldCurrentDirectory
+        }
+        Move-Item -LiteralPath $newCurrentDirectory -Destination $layout.CurrentDirectory
+        $currentPromoted = $true
+
+        if ([System.IO.File]::Exists($layout.ShimPath)) {
+            $oldShimPath = "$($layout.ShimPath).old-$([Guid]::NewGuid().ToString('N'))"
+            Move-Item -LiteralPath $layout.ShimPath -Destination $oldShimPath
+        }
+        $shimContent = ConvertTo-ApmCommandShimContent -ExecutablePath (
+            Join-Path $layout.ReleaseDirectory 'apm.exe'
+        )
+        Set-Content -LiteralPath $stagedShimPath -Value $shimContent -Encoding Ascii -NoNewline
+        Move-Item -LiteralPath $stagedShimPath -Destination $layout.ShimPath
+        $shimPromoted = $true
+
+        Assert-PinnedFileChecksum -Path $layout.CurrentExecutable -ChecksumPath $ChecksumPath `
+            -FileName $memberName
+        $activeVersion = ConvertTo-ApmVersion -Text (
+            (& $layout.CurrentExecutable --version 2>&1) -join "`n"
+        )
+        if ($LASTEXITCODE -ne 0) {
+            throw "Promoted APM executable failed with exit code $LASTEXITCODE."
+        }
+        if ($activeVersion -ne $Version) {
+            throw "APM installation completed but version $Version is not active."
+        }
+
+        $pathUpdated = $true
+        Set-ApmUserPath -CurrentDirectory $layout.CurrentDirectory -BinDirectory $layout.BinDirectory `
+            -Confirm:$false
+
+        if ($null -ne $oldShimPath -and [System.IO.File]::Exists($oldShimPath)) {
+            Remove-Item -LiteralPath $oldShimPath -Force -ErrorAction SilentlyContinue
+        }
+        if ($null -ne $oldCurrentDirectory) {
+            try { Remove-ApmJunction -Path $oldCurrentDirectory -Confirm:$false }
+            catch { Write-Verbose "Retained prior APM junction for manual cleanup: $oldCurrentDirectory" }
+        }
+        if ($null -ne $oldReleaseDirectory -and [System.IO.Directory]::Exists($oldReleaseDirectory)) {
+            Remove-Item -LiteralPath $oldReleaseDirectory -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        return $layout.CurrentExecutable
+    }
+    catch {
+        $installationError = $_
+        try {
+            if ($pathUpdated) {
+                [Environment]::SetEnvironmentVariable('Path', $previousUserPath, 'User')
+                $env:PATH = $previousProcessPath
+            }
+            if ($shimPromoted -and [System.IO.File]::Exists($layout.ShimPath)) {
+                Remove-Item -LiteralPath $layout.ShimPath -Force
+            }
+            if ($null -ne $oldShimPath -and [System.IO.File]::Exists($oldShimPath)) {
+                Move-Item -LiteralPath $oldShimPath -Destination $layout.ShimPath
+            }
+            if ($currentPromoted) {
+                Remove-ApmJunction -Path $layout.CurrentDirectory -Confirm:$false
+            }
+            if ($null -ne (Get-Item -LiteralPath $newCurrentDirectory -Force -ErrorAction SilentlyContinue)) {
+                Remove-ApmJunction -Path $newCurrentDirectory -Confirm:$false
+            }
+            if ($null -ne $oldCurrentDirectory -and
+                $null -ne (Get-Item -LiteralPath $oldCurrentDirectory -Force -ErrorAction SilentlyContinue)) {
+                Move-Item -LiteralPath $oldCurrentDirectory -Destination $layout.CurrentDirectory
+            }
+            if ($releasePromoted -and [System.IO.Directory]::Exists($layout.ReleaseDirectory)) {
+                Remove-Item -LiteralPath $layout.ReleaseDirectory -Recurse -Force
+            }
+            if ($null -ne $oldReleaseDirectory -and [System.IO.Directory]::Exists($oldReleaseDirectory)) {
+                Move-Item -LiteralPath $oldReleaseDirectory -Destination $layout.ReleaseDirectory
+            }
+            foreach ($path in @($stagedShimPath, $stagingDirectory)) {
+                if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Recurse -Force }
+            }
+            for ($index = $createdDirectories.Count - 1; $index -ge 0; $index--) {
+                if ([System.IO.Directory]::Exists($createdDirectories[$index])) {
+                    [System.IO.Directory]::Delete($createdDirectories[$index], $false)
+                }
+            }
+        }
+        catch {
+            throw "APM CLI installation failed and its prior layout could not be fully restored: $installationError; rollback: $_"
+        }
+        throw $installationError
+    }
+    finally {
+        if ([System.IO.Directory]::Exists($tempDirectory)) {
+            Remove-Item -LiteralPath $tempDirectory -Recurse -Force
+        }
+    }
+}
+
+function Invoke-PinnedApmCommand {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$Executable,
+        [Parameter(Mandatory)][string]$ChecksumPath,
+        [Parameter(Mandatory)][string[]]$ArgumentList,
+        [Parameter()][string]$WorkingDirectory
+    )
+
+    Assert-PinnedFileChecksum -Path $Executable -ChecksumPath $ChecksumPath `
+        -FileName 'apm-windows-x86_64/apm.exe'
+    Invoke-ExternalCommand -Executable $Executable -ArgumentList $ArgumentList `
+        -WorkingDirectory $WorkingDirectory
 }
 
 function Invoke-ExternalCommand {
@@ -624,13 +1010,13 @@ function Invoke-GlobalBootstrap {
     $lockfilePath = Join-Path -Path $RepositoryRoot -ChildPath 'apm.lock.yaml'
     $sourceApmPath = Join-Path -Path $RepositoryRoot -ChildPath '.apm'
     $versionPath = Join-Path -Path $RepositoryRoot -ChildPath '.apm-version'
-    $checksumPath = Join-Path -Path $RepositoryRoot -ChildPath '.apm-installer-checksums'
+    $checksumPath = Join-Path -Path $RepositoryRoot -ChildPath '.apm-checksums'
     Assert-PathWithoutReparsePoint -Path $HomePath -PathType Directory -Description 'HOME'
     Assert-PathWithoutReparsePoint -Path $manifestPath -PathType File -Description 'Repository APM manifest'
     Assert-PathWithoutReparsePoint -Path $lockfilePath -PathType File -Description 'Repository APM lockfile'
     Assert-PathWithoutReparsePoint -Path $versionPath -PathType File -Description 'Repository APM version pin'
     Assert-PathWithoutReparsePoint -Path $checksumPath -PathType File `
-        -Description 'Repository APM installer checksums'
+        -Description 'Repository APM checksums'
     Assert-PathWithoutReparsePoint -Path $sourceApmPath -PathType Directory -Recurse `
         -Description 'Repository local APM source'
     foreach ($skillName in $script:LocalSkills) {
@@ -777,38 +1163,22 @@ function Invoke-GlobalBootstrap {
         }
 
         if ($apmAction -ne 'None') {
-            $expectedHash = Get-PinnedInstallerChecksum -ChecksumPath $checksumPath -FileName 'install.ps1'
-            $installerUrl = "https://raw.githubusercontent.com/microsoft/apm/v$approvedVersion/install.ps1"
-            $installerPath = Join-Path ([IO.Path]::GetTempPath()) (
-                'apm-install-{0}.ps1' -f [Guid]::NewGuid().ToString('N')
-            )
-            $previousSecurityProtocol = [Net.ServicePointManager]::SecurityProtocol
-            $previousVersion = $env:VERSION
-            try {
-                [Net.ServicePointManager]::SecurityProtocol = $previousSecurityProtocol -bor
-                    [Net.SecurityProtocolType]::Tls12
-                Invoke-WebRequest -Uri $installerUrl -OutFile $installerPath -UseBasicParsing
-                $actualHash = (Get-FileHash -LiteralPath $installerPath -Algorithm SHA256).Hash
-                if ($actualHash -ne $expectedHash) {
-                    throw 'Downloaded install.ps1 does not match the pinned SHA256 checksum; refusing to execute it.'
-                }
-                $env:VERSION = "v$approvedVersion"
-                & $installerPath
-            }
-            finally {
-                $env:VERSION = $previousVersion
-                [Net.ServicePointManager]::SecurityProtocol = $previousSecurityProtocol
-                Remove-Item -LiteralPath $installerPath -Force -ErrorAction SilentlyContinue
-            }
-            Update-ProcessPath
-            $apmCommand = @(Get-Command -Name apm -CommandType Application -ErrorAction Stop)[0]
-            $activeVersion = ConvertTo-ApmVersion -Text ((& $apmCommand.Source --version 2>&1) -join "`n")
-            if ($activeVersion -ne $approvedVersion) {
-                throw "APM installation completed but version $approvedVersion is not active."
-            }
+            $apmExecutable = Install-PinnedApmWindows -Version $approvedVersion `
+                -ChecksumPath $checksumPath
         }
-        if ($null -eq $apmCommand) {
-            throw 'Required command is not available on PATH: apm'
+        else {
+            if ($null -eq $apmCommand) {
+                throw 'Required command is not available on PATH: apm'
+            }
+            $layout = Get-ApmWindowsLayout -Version $approvedVersion
+            if ([System.IO.File]::Exists($layout.CurrentExecutable)) {
+                $apmExecutable = $layout.CurrentExecutable
+            }
+            else {
+                $apmExecutable = $apmCommand.Source
+            }
+            Assert-PinnedFileChecksum -Path $apmExecutable -ChecksumPath $checksumPath `
+                -FileName 'apm-windows-x86_64/apm.exe'
         }
 
         $null = New-Item -ItemType Directory -Path $backupBase -Force
@@ -890,7 +1260,7 @@ function Invoke-GlobalBootstrap {
                     -Confirm:$false
             }
 
-            Invoke-ExternalCommand -Executable $apmCommand.Source `
+            Invoke-PinnedApmCommand -Executable $apmExecutable -ChecksumPath $checksumPath `
                 -ArgumentList @('install', '--global', '--frozen')
 
             $savedErrorActionPreference = $ErrorActionPreference
@@ -930,22 +1300,26 @@ function Invoke-GlobalBootstrap {
                     -Destination (Join-Path $agentsDirectory "skills/$skillName") -Confirm:$false
             }
 
-            Invoke-ExternalCommand -Executable $apmCommand.Source -WorkingDirectory $globalApmDirectory `
+            Invoke-PinnedApmCommand -Executable $apmExecutable -ChecksumPath $checksumPath `
+                -WorkingDirectory $globalApmDirectory `
                 -ArgumentList @(
                     'compile', '--target', 'codex', '--single-agents',
                     '--output', (Join-Path $codexDirectory 'AGENTS.md'), '--dry-run'
                 )
-            Invoke-ExternalCommand -Executable $apmCommand.Source -WorkingDirectory $globalApmDirectory `
+            Invoke-PinnedApmCommand -Executable $apmExecutable -ChecksumPath $checksumPath `
+                -WorkingDirectory $globalApmDirectory `
                 -ArgumentList @(
                     'compile', '--target', 'copilot', '--single-agents',
                     '--output', (Join-Path $copilotDirectory 'copilot-instructions.md'), '--dry-run'
                 )
-            Invoke-ExternalCommand -Executable $apmCommand.Source -WorkingDirectory $globalApmDirectory `
+            Invoke-PinnedApmCommand -Executable $apmExecutable -ChecksumPath $checksumPath `
+                -WorkingDirectory $globalApmDirectory `
                 -ArgumentList @(
                     'compile', '--target', 'codex', '--single-agents',
                     '--output', (Join-Path $codexDirectory 'AGENTS.md')
                 )
-            Invoke-ExternalCommand -Executable $apmCommand.Source -WorkingDirectory $globalApmDirectory `
+            Invoke-PinnedApmCommand -Executable $apmExecutable -ChecksumPath $checksumPath `
+                -WorkingDirectory $globalApmDirectory `
                 -ArgumentList @(
                     'compile', '--target', 'copilot', '--single-agents',
                     '--output', (Join-Path $copilotDirectory 'copilot-instructions.md')

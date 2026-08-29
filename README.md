@@ -17,9 +17,9 @@ and a lockfile work together:
   reproduces the same files byte-for-byte on any machine.
 - `.apm-version` pins the APM CLI release consumed by the bootstrap scripts
   and CI.
-- `.apm-installer-checksums` pins SHA256 digests for the upstream
-  `install.sh` and `install.ps1` scripts, so bootstrap and CI verify the
-  installer bytes before executing them.
+- `.apm-checksums` pins SHA256 digests for the upstream Linux installer, every
+  supported release archive, and each archive's executable member. Bootstrap
+  and CI authenticate downloaded CLI code before it can execute.
 - Readable APM outputs (`AGENTS.md`, `.agents/skills/`, and
   `.github/instructions/`) are committed review artifacts; CI requires clean
   regeneration. The only exceptions are the 12 exact `msgraph` generated-data
@@ -68,11 +68,21 @@ Bootstrap reads `.apm-version` and behaves as follows:
 - newer CLI: stop before deployment rather than downgrade or run unreviewed
   behavior.
 
-Installation uses the official installer from the pinned release tag with an
-explicit `VERSION`; the official Windows installer validates the matching
-release checksum sidecar. The downloaded installer script itself is verified
-against the SHA256 digest pinned in `.apm-installer-checksums` and is never
-executed on a mismatch.
+On Linux, bootstrap verifies the pinned `install.sh`, the architecture-specific
+archive, and its `apm` member. It then exposes only that verified archive through
+a private local mirror and runs the official installer with an explicit
+`VERSION`, `APM_RELEASE_BASE_URL=file://...`, and
+`APM_NO_DIRECT_FALLBACK=1`. The promoted executable is rehashed before the
+wrapper invokes native APM deployment commands.
+
+On Windows, bootstrap deliberately does not run upstream `install.ps1`, because
+that script launches `apm.exe` before returning. A narrow adapter downloads and
+verifies the x86_64 ZIP, verifies `apm.exe` before promotion, and maintains the
+upstream `releases/<tag>`, `current` junction, and `bin/apm.cmd` layout. It honors
+`APM_INSTALL_DIR`, rejects unsafe reparse targets, restores the prior CLI layout
+if promotion fails, and rehashes the promoted executable before its first
+`--version` call. Neither platform uses sidecar, pip, or unpinned direct
+fallbacks.
 
 Preview without downloads or changes:
 
@@ -86,8 +96,8 @@ Preview without downloads or changes:
 
 After preflight, each implementation:
 
-1. Rejects linked or reparse-point repository sources and managed user-profile
-   destinations.
+1. Authenticates any required CLI download and rejects linked or reparse-point
+   repository sources and managed user-profile destinations.
 2. Snapshots the existing manifest, lockfile, local sources, package cache,
    APM configuration, generated instructions, Codex and Copilot MCP
    configuration, and all ten managed skill directories under
@@ -142,18 +152,22 @@ repository hygiene, and the project-agnostic content assertion.
 ## Scheduled reviewed updates
 
 `.github/workflows/update-baseline.yml` runs weekly and on manual dispatch.
-It refreshes `.apm-version` to the latest stable APM release, re-pins the
-matching installer checksums in `.apm-installer-checksums`, re-resolves the
-branch-ref dependencies with native `apm update --yes`, regenerates compiled
-outputs, runs the full validation suite, and creates or updates one
-`automation/apm-baseline-update` pull request.
+It refreshes `.apm-version` to the latest stable APM release, downloads all
+supported release archives, re-pins the installer/archive/executable hashes in
+`.apm-checksums`, re-resolves the branch-ref dependencies with native
+`apm update --yes`, regenerates compiled outputs, runs the full validation
+suite, and creates or updates one `automation/apm-baseline-update` pull request.
+The workflow performs those update operations with the already reviewed CLI;
+it does not execute a newly downloaded candidate release before its hashes are
+reviewed and merged.
 
 The update PR is never auto-merged. Review the lockfile diff, regenerated
 outputs, and CI results before merging. GitHub Actions dependencies remain
 pinned to full commit SHAs and are updated separately by Dependabot.
-Before accepting an update, manually review the pinned upstream commit and any
-changed binary hashes. The hashes recorded by APM provide integrity evidence;
-they do not prove that a program is benign. New generated output paths are not
+Before accepting an update, manually review the pinned upstream commit and every
+changed installer, archive, and executable hash. The update pull request is the
+human review boundary for new hashes. Hashes provide integrity evidence; they do
+not prove that a program is benign. New generated output paths are not
 implicitly ignored and therefore enter the normal Git review patch.
 
 To run the same refresh locally:
