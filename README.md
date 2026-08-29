@@ -96,36 +96,38 @@ Preview without downloads or changes:
 ./scripts/Bootstrap-Global.ps1 -WhatIf
 ```
 
+Linux prerequisites are Bash and the standard GNU utilities used by the
+wrapper; `curl` is needed only when the pinned APM CLI must be installed.
+Windows requires Windows PowerShell 5.1 or PowerShell 7. Codex and Copilot CLIs
+are not bootstrap prerequisites, and the Bash wrapper does not require `jq`.
+
 After preflight, each implementation:
 
 1. Authenticates any required CLI download and rejects linked or reparse-point
    repository sources and managed user-profile destinations.
 2. Snapshots the existing manifest, lockfile, local sources, package cache,
-   APM configuration, generated instructions, Codex and Copilot MCP
-   configuration, and all ten managed skill directories under
-   `~/.apm/backups/agent-engineering-baseline/<UTC timestamp>/`.
+   APM configuration, both generated instruction files, and all ten managed
+   skill directories under
+   `~/.apm/backups/agent-engineering-baseline/<UTC timestamp>/`. The inventory
+   contains 17 managed paths.
 3. Stages and verifies the repository's `apm.yml`, `apm.lock.yaml`, and `.apm/`
    sources before replacing their user-scope copies.
-4. Removes an old GitHub MCP entry only when its complete Codex or Copilot
-   configuration exactly matches the previously reviewed default. Any
-   customization fails closed before profile mutation.
-5. Runs `apm install --global --frozen`, deploys the five reviewed local
+4. Runs `apm install --global --frozen`, deploys the five reviewed local
    skills, previews both instruction compilations, writes them only after both
    previews pass, and verifies the resulting manifest, lockfile, sources,
-   skills, generated markers, and preserved Codex settings.
+   skills, and generated markers.
 
-Any failure after profile mutation starts restores the complete snapshot.
-Successful snapshots are retained for manual rollback. The Bash implementation
-requires `jq` whenever an existing Copilot `mcp-config.json` must be inspected
-or whenever that file exists after installation.
-PowerShell retains `-WhatIf` and `-Confirm` support and remains compatible with
-Windows PowerShell 5.1 and PowerShell 7.
+Any failure after profile mutation starts restores every path the bootstrap
+manages. Successful snapshots are retained for manual rollback. PowerShell
+retains `-WhatIf` and `-Confirm` support and remains compatible with Windows
+PowerShell 5.1 and PowerShell 7.
 
-The bootstrap does not manage Codex's top-level `project_doc_max_bytes` or
-`~/.copilot/AGENTS.md`. This baseline intentionally does not install a GitHub
-MCP server; use the machine's existing `gh` CLI and authentication for GitHub
-operations. No credential value belongs in this repository or generated
-configuration. Start new Codex and Copilot sessions after deployment.
+The bootstrap owns only the APM files, generated instructions, and skill paths
+listed above. It does not inspect, modify, snapshot, or restore Codex or Copilot
+configuration files, and it leaves `~/.copilot/AGENTS.md` user-owned. Users are
+responsible for their own tool integrations and authentication. No credential
+value belongs in this repository or generated configuration. Start new Codex
+and Copilot sessions after deployment.
 
 ## Repository install and validation
 
