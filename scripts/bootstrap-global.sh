@@ -72,9 +72,15 @@ get_pinned_checksum() {
     local name=$1
     local checksum
 
-    checksum=$(awk -v name="$name" '$2 == name { print $1 }' "$checksums_file")
-    [ "$(printf '%s\n' "$checksum" | wc -l)" -eq 1 ] ||
-        die "Expected exactly one pinned checksum for $name."
+    checksum=$(
+        awk -v name="$name" '
+            $2 == name { checksum = $1; count++ }
+            END {
+                if (count != 1) exit 1
+                print checksum
+            }
+        ' "$checksums_file"
+    ) || die "Expected exactly one pinned checksum for $name."
     printf '%s\n' "$checksum" | grep -Eq '^[0-9a-f]{64}$' ||
         die "The pinned checksum for $name is not a lowercase SHA256 hex digest: $checksum"
     printf '%s\n' "$checksum"

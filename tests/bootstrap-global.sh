@@ -267,12 +267,19 @@ new_case() {
 }
 
 run_bootstrap() {
+    run_bootstrap_script "$bootstrap" "$@"
+}
+
+run_bootstrap_script() {
+    local bootstrap_path=$1
+    local pinned_installer_hash pinned_archive_hash
+    shift
     pinned_installer_hash=$(awk '$2 == "install.sh" { print $1 }' "$repo_root/.apm-checksums")
     pinned_archive_hash=$(awk '$2 == "apm-linux-x86_64.tar.gz" { print $1 }' "$repo_root/.apm-checksums")
     HOME="$case_home" PATH="$case_bin:/usr/bin:/bin" REAL_SHA256SUM="$real_sha256sum" \
         FAKE_PINNED_INSTALLER_HASH="$pinned_installer_hash" \
         FAKE_PINNED_ARCHIVE_HASH="$pinned_archive_hash" \
-        FAKE_PINNED_APM_HASH="$pinned_linux_executable_hash" "$bootstrap" "$@"
+        FAKE_PINNED_APM_HASH="$pinned_linux_executable_hash" "$bootstrap_path" "$@"
 }
 
 prepare_secure_download_fixtures() {
@@ -643,6 +650,26 @@ unset FAKE_APM_VERSION FAKE_SHA256_MODE
 assert_file_contains "$case_root/err" 'does not match the pinned SHA256 checksum'
 [ ! -d "$case_home/.apm/backups" ] || fail 'tampered installer mutated the profile'
 printf 'ok - tampered installer rejection before mutation\n'
+
+new_case missing-checksum-entry
+prepare_secure_download_fixtures
+export FAKE_APM_VERSION=0.0.1
+case_repository="$case_root/repository"
+mkdir -p "$case_repository/scripts"
+cp "$bootstrap" "$case_repository/scripts/bootstrap-global.sh"
+cp "$repo_root/apm.yml" "$repo_root/apm.lock.yaml" "$repo_root/.apm-version" "$case_repository/"
+cp -R "$repo_root/.apm" "$case_repository/.apm"
+awk '$2 != "install.sh"' "$repo_root/.apm-checksums" > "$case_repository/.apm-checksums"
+if run_bootstrap_script "$case_repository/scripts/bootstrap-global.sh" \
+    > "$case_root/out" 2> "$case_root/err"; then
+    fail 'missing checksum entry was accepted'
+fi
+unset FAKE_APM_VERSION
+assert_file_contains "$case_root/err" 'Expected exactly one pinned checksum for install.sh'
+[ ! -e "$case_root/installer-executed" ] || fail 'installer ran without a pinned checksum'
+[ ! -e "$case_root/downloaded-executed" ] || fail 'downloaded executable ran without a pinned checksum'
+[ ! -d "$case_home/.apm/backups" ] || fail 'missing checksum entry changed profile state'
+printf 'ok - missing checksum entry rejection before execution or profile mutation\n'
 
 new_case secure-cli-install
 prepare_secure_download_fixtures
