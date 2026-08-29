@@ -134,6 +134,12 @@ if ($ToolArgument.Count -gt 0 -and $ToolArgument[0] -ceq 'install') {
         Set-Content -LiteralPath (Join-Path $copilotDirectory 'mcp-config.json') `
             -Value $copilotJson -Encoding UTF8
     }
+    if ($env:FAKE_APM_WRITE_UNINSPECTABLE_COPILOT_MCP -ceq '1') {
+        $copilotDirectory = Join-Path $homePath '.copilot'
+        $null = New-Item -ItemType Directory -Path $copilotDirectory -Force
+        Set-Content -LiteralPath (Join-Path $copilotDirectory 'mcp-config.json') `
+            -Value '{"mcpServers":[]}' -Encoding UTF8
+    }
     exit 0
 }
 

@@ -364,6 +364,7 @@ Describe 'Bootstrap-Global behavior' {
         $script:OriginalFakeApmVersion = $env:FAKE_APM_VERSION
         $script:OriginalApmFailure = $env:FAKE_APM_FAIL_STAGE
         $script:OriginalApmReintroduce = $env:FAKE_APM_REINTRODUCE_COPILOT_MCP
+        $script:OriginalApmWriteUninspectable = $env:FAKE_APM_WRITE_UNINSPECTABLE_COPILOT_MCP
         $script:OriginalCodexGetFailure = $env:FAKE_CODEX_FAIL_GET
         $script:OriginalCodexFailure = $env:FAKE_CODEX_FAIL_REMOVE
         $pathSeparator = [System.IO.Path]::PathSeparator
@@ -372,6 +373,7 @@ Describe 'Bootstrap-Global behavior' {
         $env:FAKE_APM_VERSION = $script:PinnedVersion
         $env:FAKE_APM_FAIL_STAGE = $null
         $env:FAKE_APM_REINTRODUCE_COPILOT_MCP = $null
+        $env:FAKE_APM_WRITE_UNINSPECTABLE_COPILOT_MCP = $null
         $env:FAKE_CODEX_FAIL_GET = $null
         $env:FAKE_CODEX_FAIL_REMOVE = $null
     }
@@ -382,6 +384,7 @@ Describe 'Bootstrap-Global behavior' {
         $env:FAKE_APM_VERSION = $script:OriginalFakeApmVersion
         $env:FAKE_APM_FAIL_STAGE = $script:OriginalApmFailure
         $env:FAKE_APM_REINTRODUCE_COPILOT_MCP = $script:OriginalApmReintroduce
+        $env:FAKE_APM_WRITE_UNINSPECTABLE_COPILOT_MCP = $script:OriginalApmWriteUninspectable
         $env:FAKE_CODEX_FAIL_GET = $script:OriginalCodexGetFailure
         $env:FAKE_CODEX_FAIL_REMOVE = $script:OriginalCodexFailure
     }
@@ -623,6 +626,25 @@ Describe 'Bootstrap-Global behavior' {
             Invoke-GlobalBootstrap -HomePath $script:CaseHome `
                 -RepositoryRoot $script:RepositoryRoot -Confirm:$false
         } | Should-Throw -ExceptionMessage '*remains in Copilot after deployment*'
+
+        $actual = Get-ProfileFingerprint -HomePath $script:CaseHome
+        Compare-ProfileFingerprint -Reference $expected -Difference $actual | Should-BeTrue
+    }
+
+    It 'rolls back when APM writes uninspectable Copilot JSON after preflight' {
+        Initialize-OldProfile -HomePath $script:CaseHome
+        $configPath = Join-Path $script:CaseHome '.copilot/mcp-config.json'
+        [System.IO.File]::WriteAllText(
+            $configPath,
+            '{"mcpServers":{"other-server":{"type":"stdio","command":"keep-me"}}}'
+        )
+        $expected = Get-ProfileFingerprint -HomePath $script:CaseHome
+        $env:FAKE_APM_WRITE_UNINSPECTABLE_COPILOT_MCP = '1'
+
+        {
+            Invoke-GlobalBootstrap -HomePath $script:CaseHome `
+                -RepositoryRoot $script:RepositoryRoot -Confirm:$false
+        } | Should-Throw -ExceptionMessage '*parse or semantically inspect the Copilot MCP configuration*'
 
         $actual = Get-ProfileFingerprint -HomePath $script:CaseHome
         Compare-ProfileFingerprint -Reference $expected -Difference $actual | Should-BeTrue
