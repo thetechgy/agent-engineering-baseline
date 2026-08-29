@@ -1015,6 +1015,24 @@ Describe 'Repository invariants' {
         foreach ($line in $usesLines) { $line | Should-MatchString '@[0-9a-f]{40}(\s|$)' }
     }
 
+    It 'selects reviewed Linux CLI artifacts by runner architecture in every install workflow' {
+        $expectedSnippets = @(
+            'case "$(uname -m)" in'
+            "x86_64) platform_arch='x86_64' ;;"
+            "arm64|aarch64) platform_arch='arm64' ;;"
+            "*) echo 'Unsupported Linux architecture.' >&2; exit 1 ;;"
+            'archive="apm-linux-$platform_arch.tar.gz"'
+            'archive_root="apm-linux-$platform_arch"'
+        )
+        foreach ($workflowName in @('update-baseline.yml', 'validate.yml')) {
+            $workflowPath = Join-Path $script:RepositoryRoot ".github/workflows/$workflowName"
+            $workflow = [System.IO.File]::ReadAllText($workflowPath)
+            foreach ($snippet in $expectedSnippets) {
+                $workflow.Contains($snippet) | Should-BeTrue
+            }
+        }
+    }
+
     It 'keeps the local Pester 6 guidance project agnostic' {
         $path = Join-Path $script:RepositoryRoot '.apm/skills/powershell-pester-6/SKILL.md'
         $projectMarker = -join ([char[]](70, 65, 67, 84))

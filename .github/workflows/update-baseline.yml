@@ -28,8 +28,13 @@ jobs:
         shell: bash
         run: |
           version="$(head -n 1 .apm-version | tr -d '[:space:]')"
-          archive='apm-linux-x86_64.tar.gz'
-          archive_root='apm-linux-x86_64'
+          case "$(uname -m)" in
+            x86_64) platform_arch='x86_64' ;;
+            arm64|aarch64) platform_arch='arm64' ;;
+            *) echo 'Unsupported Linux architecture.' >&2; exit 1 ;;
+          esac
+          archive="apm-linux-$platform_arch.tar.gz"
+          archive_root="apm-linux-$platform_arch"
           member="$archive_root/apm"
           secure_root="$RUNNER_TEMP/apm-secure-install"
           mkdir -p "$secure_root/extract" "$secure_root/mirror/v$version"
