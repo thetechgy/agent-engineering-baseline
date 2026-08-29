@@ -6,13 +6,6 @@
     Target = 'New-FakeToolDirectory'
 )]
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
-    'PSUseShouldProcessForStateChangingFunctions',
-    '',
-    Justification = 'These helpers mutate only isolated Pester TestDrive profiles.',
-    Scope = 'Function',
-    Target = 'Set-DefaultMcpState'
-)]
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
     'PSUseDeclaredVarsMoreThanAssignments',
     'nativeFailureStages',
     Justification = 'Pester consumes this discovery-time variable through -ForEach.'
@@ -26,7 +19,6 @@ param()
 
 BeforeDiscovery {
     $nativeFailureStages = @(
-        'codex-remove'
         'install'
         'compile-dry-codex'
         'compile-dry-copilot'
@@ -55,40 +47,6 @@ BeforeAll {
         'github-actions-hardening'
         'msgraph'
     )
-    $script:DefaultMcpJson = @'
-{
-  "name": "github-mcp-server",
-  "enabled": true,
-  "disabled_reason": null,
-  "transport": {
-    "type": "streamable_http",
-    "url": "https://api.githubcopilot.com/mcp/",
-    "bearer_token_env_var": "GITHUB_TOKEN",
-    "http_headers": null,
-    "env_http_headers": null,
-    "http_headers_helper": null
-  },
-  "enabled_tools": null,
-  "disabled_tools": null,
-  "startup_timeout_sec": null,
-  "tool_timeout_sec": null
-}
-'@
-    $script:DefaultCopilotMcpJson = @'
-{
-  "mcpServers": {
-    "github-mcp-server": {
-      "type": "http",
-      "url": "https://api.githubcopilot.com/mcp/",
-      "tools": ["*"],
-      "id": "",
-      "headers": {},
-      "bearer_token_env_var": "GITHUB_TOKEN"
-    }
-  }
-}
-'@
-
     . $script:BootstrapPath
 
     function New-FakeToolDirectory {
@@ -101,53 +59,27 @@ BeforeAll {
         $null = New-Item -ItemType Directory -Path $Path -Force
         $currentExecutable = [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
         if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) {
-            foreach ($toolName in @('apm', 'codex')) {
-                $wrapperPath = Join-Path $Path "$toolName.cmd"
-                $wrapper = @(
-                    '@echo off'
-                    ('"{0}" -NoLogo -NoProfile -File "{1}" {2} %*' -f `
-                        $currentExecutable, $script:FakeToolPath, $toolName)
-                )
-                Set-Content -LiteralPath $wrapperPath -Value $wrapper -Encoding Ascii
-            }
+            $wrapperPath = Join-Path $Path 'apm.cmd'
+            $wrapper = @(
+                '@echo off'
+                ('"{0}" -NoLogo -NoProfile -File "{1}" apm %*' -f `
+                    $currentExecutable, $script:FakeToolPath)
+            )
+            Set-Content -LiteralPath $wrapperPath -Value $wrapper -Encoding Ascii
         }
         else {
             $singleQuote = [string][char]39
             $shellQuoteEscape = [string]::Concat([char]39, [char]92, [char]39, [char]39)
             $quotedExecutable = $currentExecutable.Replace($singleQuote, $shellQuoteEscape)
             $quotedToolPath = $script:FakeToolPath.Replace($singleQuote, $shellQuoteEscape)
-            foreach ($toolName in @('apm', 'codex')) {
-                $wrapperPath = Join-Path $Path $toolName
-                $wrapper = @(
-                    '#!/usr/bin/env sh'
-                    "exec '$quotedExecutable' -NoLogo -NoProfile -File '$quotedToolPath' $toolName `"`$@`""
-                )
-                Set-Content -LiteralPath $wrapperPath -Value $wrapper -Encoding UTF8
-                & chmod +x $wrapperPath
-            }
+            $wrapperPath = Join-Path $Path 'apm'
+            $wrapper = @(
+                '#!/usr/bin/env sh'
+                "exec '$quotedExecutable' -NoLogo -NoProfile -File '$quotedToolPath' apm `"`$@`""
+            )
+            Set-Content -LiteralPath $wrapperPath -Value $wrapper -Encoding UTF8
+            & chmod +x $wrapperPath
         }
-    }
-
-    function Set-DefaultMcpState {
-        [CmdletBinding()]
-        param(
-            [Parameter(Mandatory)]
-            [string]$HomePath
-        )
-
-        $codexDirectory = Join-Path $HomePath '.codex'
-        $null = New-Item -ItemType Directory -Path $codexDirectory -Force
-        Set-Content -LiteralPath (Join-Path $HomePath '.fake-github-mcp.json') `
-            -Value $script:DefaultMcpJson -Encoding UTF8
-        Add-Content -LiteralPath (Join-Path $codexDirectory 'config.toml') -Value @(
-            '[mcp_servers.github-mcp-server]'
-            'url = "https://api.githubcopilot.com/mcp/"'
-            'bearer_token_env_var = "GITHUB_TOKEN"'
-        )
-        $copilotDirectory = Join-Path $HomePath '.copilot'
-        $null = New-Item -ItemType Directory -Path $copilotDirectory -Force
-        Set-Content -LiteralPath (Join-Path $copilotDirectory 'mcp-config.json') `
-            -Value $script:DefaultCopilotMcpJson -Encoding UTF8
     }
 
     function Initialize-OldProfile {
@@ -184,7 +116,6 @@ BeforeAll {
             $null = New-Item -ItemType Directory -Path $skillPath -Force
             Set-Content -LiteralPath (Join-Path $skillPath 'value') -Value "old $skillName"
         }
-        Set-DefaultMcpState -HomePath $HomePath
     }
 
     function Get-ProfileFingerprint {
@@ -201,9 +132,7 @@ BeforeAll {
             '.apm/apm_modules'
             '.apm/config.json'
             '.codex/AGENTS.md'
-            '.codex/config.toml'
             '.copilot/copilot-instructions.md'
-            '.copilot/mcp-config.json'
         )
         foreach ($skillName in $script:ManagedSkills) {
             $relativePaths += ".agents/skills/$skillName"
@@ -251,21 +180,6 @@ Describe 'Bootstrap-Global interface and helpers' {
         Should-HaveParameter -Actual $command -ParameterName 'WhatIf' -Type ([switch])
         Should-HaveParameter -Actual $command -ParameterName 'Confirm' -Type ([switch])
         $command.Parameters.ContainsKey('Update') | Should-BeFalse
-    }
-
-    It 'accepts only the exact default GitHub MCP configuration' {
-        $default = $script:DefaultMcpJson | ConvertFrom-Json
-        $custom = $script:DefaultMcpJson | ConvertFrom-Json
-        $custom.transport.url = 'https://custom.example.invalid/mcp/'
-
-        Test-DefaultGithubMcpConfiguration -Configuration $default | Should-BeTrue
-        Test-DefaultGithubMcpConfiguration -Configuration $custom | Should-BeFalse
-
-        $defaultCopilot = ($script:DefaultCopilotMcpJson | ConvertFrom-Json).mcpServers.'github-mcp-server'
-        $customCopilot = ($script:DefaultCopilotMcpJson | ConvertFrom-Json).mcpServers.'github-mcp-server'
-        $customCopilot.url = 'https://custom.example.invalid/mcp/'
-        Test-DefaultCopilotGithubMcpConfiguration -Configuration $defaultCopilot | Should-BeTrue
-        Test-DefaultCopilotGithubMcpConfiguration -Configuration $customCopilot | Should-BeFalse
     }
 
     It 'extracts a strict pinned checksum' {
@@ -356,29 +270,20 @@ Describe 'Bootstrap-Global interface and helpers' {
     }
 
     It 'releases files after bounded header reads' {
-        $configPath = Join-Path $TestDrive 'config.toml'
         $generatedPath = Join-Path $TestDrive 'generated-release.md'
-        Set-Content -LiteralPath $configPath -Value @(
-            'project_doc_max_bytes = 90001'
-            '[features]'
-            'example = true'
-        )
         Set-Content -LiteralPath $generatedPath -Value @(
             '# AGENTS.md'
             '<!-- Generated by APM CLI from .apm/ primitives -->'
         )
 
-        @(Get-ProjectDocSetting -Path $configPath).Count | Should-Be 1
         Test-ApmGeneratedFile -Path $generatedPath | Should-BeTrue
-        foreach ($path in @($configPath, $generatedPath)) {
-            $stream = [System.IO.File]::Open(
-                $path,
-                [System.IO.FileMode]::Open,
-                [System.IO.FileAccess]::ReadWrite,
-                [System.IO.FileShare]::None
-            )
-            $stream.Dispose()
-        }
+        $stream = [System.IO.File]::Open(
+            $generatedPath,
+            [System.IO.FileMode]::Open,
+            [System.IO.FileAccess]::ReadWrite,
+            [System.IO.FileShare]::None
+        )
+        $stream.Dispose()
     }
 
     It 'detects a nested reparse point during recursive validation' {
@@ -413,10 +318,6 @@ Describe 'Bootstrap-Global behavior' {
         $script:OriginalFakeHome = $env:FAKE_HOME
         $script:OriginalFakeApmVersion = $env:FAKE_APM_VERSION
         $script:OriginalApmFailure = $env:FAKE_APM_FAIL_STAGE
-        $script:OriginalApmReintroduce = $env:FAKE_APM_REINTRODUCE_COPILOT_MCP
-        $script:OriginalApmWriteUninspectable = $env:FAKE_APM_WRITE_UNINSPECTABLE_COPILOT_MCP
-        $script:OriginalCodexGetFailure = $env:FAKE_CODEX_FAIL_GET
-        $script:OriginalCodexFailure = $env:FAKE_CODEX_FAIL_REMOVE
         $script:OriginalLocalAppData = $env:LOCALAPPDATA
         $script:OriginalApmInstallDirectory = $env:APM_INSTALL_DIR
         $pathSeparator = [System.IO.Path]::PathSeparator
@@ -424,10 +325,6 @@ Describe 'Bootstrap-Global behavior' {
         $env:FAKE_HOME = $script:CaseHome
         $env:FAKE_APM_VERSION = $script:PinnedVersion
         $env:FAKE_APM_FAIL_STAGE = $null
-        $env:FAKE_APM_REINTRODUCE_COPILOT_MCP = $null
-        $env:FAKE_APM_WRITE_UNINSPECTABLE_COPILOT_MCP = $null
-        $env:FAKE_CODEX_FAIL_GET = $null
-        $env:FAKE_CODEX_FAIL_REMOVE = $null
         $env:LOCALAPPDATA = Join-Path $script:CaseRoot 'local-app-data'
         $env:APM_INSTALL_DIR = $null
         Mock Assert-PinnedFileChecksum {
@@ -447,15 +344,11 @@ Describe 'Bootstrap-Global behavior' {
         $env:FAKE_HOME = $script:OriginalFakeHome
         $env:FAKE_APM_VERSION = $script:OriginalFakeApmVersion
         $env:FAKE_APM_FAIL_STAGE = $script:OriginalApmFailure
-        $env:FAKE_APM_REINTRODUCE_COPILOT_MCP = $script:OriginalApmReintroduce
-        $env:FAKE_APM_WRITE_UNINSPECTABLE_COPILOT_MCP = $script:OriginalApmWriteUninspectable
-        $env:FAKE_CODEX_FAIL_GET = $script:OriginalCodexGetFailure
-        $env:FAKE_CODEX_FAIL_REMOVE = $script:OriginalCodexFailure
         $env:LOCALAPPDATA = $script:OriginalLocalAppData
         $env:APM_INSTALL_DIR = $script:OriginalApmInstallDirectory
     }
 
-    It 'performs a fresh frozen install with a complete snapshot and source fidelity' {
+    It 'performs a fresh frozen install without Codex tooling and preserves user configuration' {
         $null = New-Item -ItemType Directory -Path (Join-Path $script:CaseHome '.codex') -Force
         $null = New-Item -ItemType Directory -Path (Join-Path $script:CaseHome '.copilot') -Force
         $null = New-Item -ItemType Directory -Path (Join-Path $script:CaseHome 'private') -Force
@@ -463,15 +356,23 @@ Describe 'Bootstrap-Global behavior' {
             -Value @('project_doc_max_bytes = 90001', '', '[features]', 'example = true')
         Set-Content -LiteralPath (Join-Path $script:CaseHome '.copilot/AGENTS.md') -Value 'do not touch'
         Set-Content -LiteralPath (Join-Path $script:CaseHome 'private/keep.txt') -Value 'private'
+        $codexConfigHash = (Get-FileHash `
+                -LiteralPath (Join-Path $script:CaseHome '.codex/config.toml') `
+                -Algorithm SHA256).Hash
+        $copilotConfigHash = (Get-FileHash `
+                -LiteralPath (Join-Path $script:CaseHome '.copilot/AGENTS.md') `
+                -Algorithm SHA256).Hash
+
+        @(Get-ChildItem -LiteralPath $script:CaseBin -Filter 'codex*').Count | Should-Be 0
 
         Invoke-GlobalBootstrap -HomePath $script:CaseHome -RepositoryRoot $script:RepositoryRoot -Confirm:$false
 
         Test-ApmGeneratedFile -Path (Join-Path $script:CaseHome '.codex/AGENTS.md') | Should-BeTrue
         Test-ApmGeneratedFile -Path (Join-Path $script:CaseHome '.copilot/copilot-instructions.md') | Should-BeTrue
-        Get-Content -LiteralPath (Join-Path $script:CaseHome '.codex/config.toml') -Raw |
-            Should-MatchString 'project_doc_max_bytes = 90001'
-        Get-Content -LiteralPath (Join-Path $script:CaseHome '.copilot/AGENTS.md') -Raw |
-            Should-MatchString 'do not touch'
+        (Get-FileHash -LiteralPath (Join-Path $script:CaseHome '.codex/config.toml') `
+                -Algorithm SHA256).Hash | Should-Be $codexConfigHash
+        (Get-FileHash -LiteralPath (Join-Path $script:CaseHome '.copilot/AGENTS.md') `
+                -Algorithm SHA256).Hash | Should-Be $copilotConfigHash
         Get-Content -LiteralPath (Join-Path $script:CaseHome 'private/keep.txt') -Raw |
             Should-MatchString 'private'
         Test-DirectoryContentEqual -ReferencePath (Join-Path $script:RepositoryRoot '.apm') `
@@ -484,236 +385,38 @@ Describe 'Bootstrap-Global behavior' {
                 Join-Path $script:CaseHome '.apm/backups/agent-engineering-baseline'
             ) -Directory)[0]
         @([System.IO.File]::ReadAllLines((Join-Path $snapshot.FullName 'inventory.tsv'))).Count |
-            Should-Be 19
+            Should-Be 17
         Get-Content -LiteralPath (Join-Path $snapshot.FullName 'originally-absent.txt') -Raw |
             Should-MatchString '.agents/skills/msgraph'
         Get-Content -LiteralPath (Join-Path $script:CaseHome '.fake-command.log') -Raw |
             Should-MatchString 'apm install --global --frozen'
-    }
-
-    It 'removes exact MCP entries and is idempotent on rerun' {
-        Invoke-GlobalBootstrap -HomePath $script:CaseHome -RepositoryRoot $script:RepositoryRoot -Confirm:$false
-        Set-DefaultMcpState -HomePath $script:CaseHome
-        Invoke-GlobalBootstrap -HomePath $script:CaseHome -RepositoryRoot $script:RepositoryRoot -Confirm:$false
-
-        $configPath = Join-Path $script:CaseHome '.codex/config.toml'
-        @([System.IO.File]::ReadAllLines($configPath) | Where-Object {
-                $_ -ceq '[mcp_servers.github-mcp-server]'
-            }).Count | Should-Be 0
-        $copilotConfig = Get-Content -LiteralPath (
-            Join-Path $script:CaseHome '.copilot/mcp-config.json'
-        ) -Raw | ConvertFrom-Json
-        ($null -eq $copilotConfig.mcpServers.PSObject.Properties['github-mcp-server']) |
-            Should-BeTrue
         Get-Content -LiteralPath (Join-Path $script:CaseHome '.fake-command.log') -Raw |
-            Should-MatchString 'codex mcp remove github-mcp-server'
-        @(Get-ChildItem -LiteralPath (
-                Join-Path $script:CaseHome '.apm/backups/agent-engineering-baseline'
-            ) -Directory).Count | Should-Be 2
+            Should-NotMatchString '^codex '
     }
 
-    It 'removes an exact Codex MCP entry when Copilot configuration is absent' {
-        Set-DefaultMcpState -HomePath $script:CaseHome
-        Remove-Item -LiteralPath (Join-Path $script:CaseHome '.copilot/mcp-config.json') -Force
-
-        Invoke-GlobalBootstrap -HomePath $script:CaseHome -RepositoryRoot $script:RepositoryRoot -Confirm:$false
-
-        Test-Path -LiteralPath (Join-Path $script:CaseHome '.fake-github-mcp.json') |
-            Should-BeFalse
-        Get-Content -LiteralPath (Join-Path $script:CaseHome '.fake-command.log') -Raw |
-            Should-MatchString 'codex mcp remove github-mcp-server'
-    }
-
-    It 'fails before mutation when Codex MCP inspection returns an unexpected error' {
-        Set-DefaultMcpState -HomePath $script:CaseHome
-        $env:FAKE_CODEX_FAIL_GET = '1'
-
-        {
-            Invoke-GlobalBootstrap -HomePath $script:CaseHome `
-                -RepositoryRoot $script:RepositoryRoot -Confirm:$false
-        } | Should-Throw -ExceptionMessage '*Unable to inspect the existing Codex MCP entry*'
-
-        Test-Path -LiteralPath (Join-Path $script:CaseHome '.apm/backups') | Should-BeFalse
-        Test-Path -LiteralPath (Join-Path $script:CaseHome '.fake-github-mcp.json') |
-            Should-BeTrue
-    }
-
-    It 'rejects a customized MCP entry before mutation' {
+    It 'preserves existing user configuration byte-for-byte across repeat installs' {
         $null = New-Item -ItemType Directory -Path (Join-Path $script:CaseHome '.codex') -Force
-        Set-Content -LiteralPath (Join-Path $script:CaseHome '.codex/config.toml') -Value 'sentinel'
-        Set-DefaultMcpState -HomePath $script:CaseHome
-        $customJson = $script:DefaultMcpJson.Replace(
-            'https://api.githubcopilot.com/mcp/',
-            'https://custom.example.invalid/mcp/'
+        $null = New-Item -ItemType Directory -Path (Join-Path $script:CaseHome '.copilot') -Force
+        $codexConfigPath = Join-Path $script:CaseHome '.codex/config.toml'
+        $copilotConfigPath = Join-Path $script:CaseHome '.copilot/AGENTS.md'
+        [System.IO.File]::WriteAllText(
+            $codexConfigPath,
+            "project_doc_max_bytes = 90001`n`n[features]`nexample = true`n"
         )
-        Set-Content -LiteralPath (Join-Path $script:CaseHome '.fake-github-mcp.json') `
-            -Value $customJson -Encoding UTF8
-
-        {
-            Invoke-GlobalBootstrap -HomePath $script:CaseHome -RepositoryRoot $script:RepositoryRoot -Confirm:$false
-        } | Should-Throw -ExceptionMessage '*is customized; refusing to replace it*'
-
-        Test-Path -LiteralPath (Join-Path $script:CaseHome '.apm/backups') | Should-BeFalse
-        Get-Content -LiteralPath (Join-Path $script:CaseHome '.codex/config.toml') -Raw |
-            Should-MatchString 'sentinel'
-    }
-
-    It 'rejects a customized Copilot MCP entry before mutation' {
-        $copilotDirectory = Join-Path $script:CaseHome '.copilot'
-        $null = New-Item -ItemType Directory -Path $copilotDirectory -Force
-        $customJson = $script:DefaultCopilotMcpJson.Replace(
-            'https://api.githubcopilot.com/mcp/',
-            'https://custom.example.invalid/mcp/'
-        )
-        Set-Content -LiteralPath (Join-Path $copilotDirectory 'mcp-config.json') `
-            -Value $customJson -Encoding UTF8
-
-        {
-            Invoke-GlobalBootstrap -HomePath $script:CaseHome `
-                -RepositoryRoot $script:RepositoryRoot -Confirm:$false
-        } | Should-Throw -ExceptionMessage '*Copilot MCP entry*customized*'
-
-        Test-Path -LiteralPath (Join-Path $script:CaseHome '.apm/backups') | Should-BeFalse
-    }
-
-    It 'rejects an escaped customized Copilot MCP key before mutation' {
-        $copilotDirectory = Join-Path $script:CaseHome '.copilot'
-        $configPath = Join-Path $copilotDirectory 'mcp-config.json'
-        $null = New-Item -ItemType Directory -Path $copilotDirectory -Force
-        $customJson = $script:DefaultCopilotMcpJson.Replace(
-            '"github-mcp-server"',
-            '"github-\u006dcp-server"'
-        )
-        $customJson = $customJson.Replace(
-            'https://api.githubcopilot.com/mcp/',
-            'https://custom.example.invalid/mcp/'
-        )
-        Set-Content -LiteralPath $configPath -Value $customJson -Encoding UTF8
-        $originalHash = (Get-FileHash -LiteralPath $configPath -Algorithm SHA256).Hash
-
-        {
-            Invoke-GlobalBootstrap -HomePath $script:CaseHome `
-                -RepositoryRoot $script:RepositoryRoot -Confirm:$false
-        } | Should-Throw -ExceptionMessage '*Copilot MCP entry*customized*'
-
-        (Get-FileHash -LiteralPath $configPath -Algorithm SHA256).Hash | Should-Be $originalHash
-        Test-Path -LiteralPath (Join-Path $script:CaseHome '.apm/backups') | Should-BeFalse
-    }
-
-    It 'removes an escaped exact-default Copilot MCP key and preserves unrelated servers' {
-        $copilotDirectory = Join-Path $script:CaseHome '.copilot'
-        $configPath = Join-Path $copilotDirectory 'mcp-config.json'
-        $null = New-Item -ItemType Directory -Path $copilotDirectory -Force
-        $configJson = @'
-{
-  "mcpServers": {
-    "github-\u006dcp-server": {
-      "type": "http",
-      "url": "https://api.githubcopilot.com/mcp/",
-      "tools": ["*"],
-      "id": "",
-      "headers": {},
-      "bearer_token_env_var": "GITHUB_TOKEN"
-    },
-    "other-server": {
-      "type": "stdio",
-      "command": "keep-me"
-    }
-  },
-  "inputs": [
-    { "id": "keep-input" }
-  ]
-}
-'@
-        Set-Content -LiteralPath $configPath -Value $configJson -Encoding UTF8
+        [System.IO.File]::WriteAllText($copilotConfigPath, '{"theme":"user-owned"}')
+        $codexHash = (Get-FileHash -LiteralPath $codexConfigPath -Algorithm SHA256).Hash
+        $copilotHash = (Get-FileHash -LiteralPath $copilotConfigPath -Algorithm SHA256).Hash
 
         Invoke-GlobalBootstrap -HomePath $script:CaseHome `
             -RepositoryRoot $script:RepositoryRoot -Confirm:$false
+        Invoke-GlobalBootstrap -HomePath $script:CaseHome `
+            -RepositoryRoot $script:RepositoryRoot -Confirm:$false
 
-        $configuration = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
-        $servers = (Get-CaseSensitiveJsonProperty `
-                -InputObject $configuration -Name 'mcpServers').Value
-        $null -eq (Get-CaseSensitiveJsonProperty `
-                -InputObject $servers -Name 'github-mcp-server') | Should-BeTrue
-        (Get-CaseSensitiveJsonProperty -InputObject $servers -Name 'other-server').Value.command |
-            Should-Be 'keep-me'
-        $configuration.inputs[0].id | Should-Be 'keep-input'
-    }
-
-    It 'leaves unrelated and case-variant Copilot MCP keys byte-for-byte unchanged' {
-        $copilotDirectory = Join-Path $script:CaseHome '.copilot'
-        $configPath = Join-Path $copilotDirectory 'mcp-config.json'
-        $null = New-Item -ItemType Directory -Path $copilotDirectory -Force
-        $configJsonValues = @(
-            '{"mcpServers":{"GitHub-Mcp-Server":{"type":"stdio","command":"keep-case"},"other-server":{"type":"stdio","command":"keep-other"}}}'
-            '{"McpServers":{"github-mcp-server":{"type":"stdio","command":"keep-container-case"}}}'
-        )
-        foreach ($configJson in $configJsonValues) {
-            [System.IO.File]::WriteAllText($configPath, $configJson)
-            $originalHash = (Get-FileHash -LiteralPath $configPath -Algorithm SHA256).Hash
-
-            Invoke-GlobalBootstrap -HomePath $script:CaseHome `
-                -RepositoryRoot $script:RepositoryRoot -Confirm:$false
-
-            (Get-FileHash -LiteralPath $configPath -Algorithm SHA256).Hash | Should-Be $originalHash
-        }
-    }
-
-    It 'rejects malformed or semantically uninspectable Copilot JSON before mutation' {
-        $copilotDirectory = Join-Path $script:CaseHome '.copilot'
-        $configPath = Join-Path $copilotDirectory 'mcp-config.json'
-        $null = New-Item -ItemType Directory -Path $copilotDirectory -Force
-
-        foreach ($configJson in @('{"mcpServers":', '{"mcpServers":[]}')) {
-            [System.IO.File]::WriteAllText($configPath, $configJson)
-            $originalHash = (Get-FileHash -LiteralPath $configPath -Algorithm SHA256).Hash
-
-            {
-                Invoke-GlobalBootstrap -HomePath $script:CaseHome `
-                    -RepositoryRoot $script:RepositoryRoot -Confirm:$false
-            } | Should-Throw -ExceptionMessage '*parse or semantically inspect*'
-
-            (Get-FileHash -LiteralPath $configPath -Algorithm SHA256).Hash | Should-Be $originalHash
-            Test-Path -LiteralPath (Join-Path $script:CaseHome '.apm/backups') | Should-BeFalse
-        }
-    }
-
-    It 'rolls back when APM reintroduces an escaped Copilot MCP key after preflight' {
-        Initialize-OldProfile -HomePath $script:CaseHome
-        $configPath = Join-Path $script:CaseHome '.copilot/mcp-config.json'
-        [System.IO.File]::WriteAllText(
-            $configPath,
-            '{"mcpServers":{"other-server":{"type":"stdio","command":"keep-me"}}}'
-        )
-        $expected = Get-ProfileFingerprint -HomePath $script:CaseHome
-        $env:FAKE_APM_REINTRODUCE_COPILOT_MCP = '1'
-
-        {
-            Invoke-GlobalBootstrap -HomePath $script:CaseHome `
-                -RepositoryRoot $script:RepositoryRoot -Confirm:$false
-        } | Should-Throw -ExceptionMessage '*remains in Copilot after deployment*'
-
-        $actual = Get-ProfileFingerprint -HomePath $script:CaseHome
-        Compare-ProfileFingerprint -Reference $expected -Difference $actual | Should-BeTrue
-    }
-
-    It 'rolls back when APM writes uninspectable Copilot JSON after preflight' {
-        Initialize-OldProfile -HomePath $script:CaseHome
-        $configPath = Join-Path $script:CaseHome '.copilot/mcp-config.json'
-        [System.IO.File]::WriteAllText(
-            $configPath,
-            '{"mcpServers":{"other-server":{"type":"stdio","command":"keep-me"}}}'
-        )
-        $expected = Get-ProfileFingerprint -HomePath $script:CaseHome
-        $env:FAKE_APM_WRITE_UNINSPECTABLE_COPILOT_MCP = '1'
-
-        {
-            Invoke-GlobalBootstrap -HomePath $script:CaseHome `
-                -RepositoryRoot $script:RepositoryRoot -Confirm:$false
-        } | Should-Throw -ExceptionMessage '*parse or semantically inspect the Copilot MCP configuration*'
-
-        $actual = Get-ProfileFingerprint -HomePath $script:CaseHome
-        Compare-ProfileFingerprint -Reference $expected -Difference $actual | Should-BeTrue
+        (Get-FileHash -LiteralPath $codexConfigPath -Algorithm SHA256).Hash | Should-Be $codexHash
+        (Get-FileHash -LiteralPath $copilotConfigPath -Algorithm SHA256).Hash | Should-Be $copilotHash
+        @(Get-ChildItem -LiteralPath (
+                Join-Path $script:CaseHome '.apm/backups/agent-engineering-baseline'
+            ) -Directory).Count | Should-Be 2
     }
 
     It 'honors WhatIf without changing the profile' {
@@ -753,10 +456,8 @@ Describe 'Bootstrap-Global behavior' {
     }
 
     It 'fails before profile mutation when the installer download fails' {
-        $codexCommand = Microsoft.PowerShell.Core\Get-Command -Name codex -CommandType Application
         Mock Get-Command {
             if ($Name -ceq 'apm') { return $null }
-            if ($Name -ceq 'codex') { return $codexCommand }
             throw "Unexpected command lookup in test: $Name"
         }
         Mock Invoke-WebRequest { throw 'download failed' }
@@ -770,10 +471,8 @@ Describe 'Bootstrap-Global behavior' {
     }
 
     It 'refuses a tampered installer before profile mutation' {
-        $codexCommand = Microsoft.PowerShell.Core\Get-Command -Name codex -CommandType Application
         Mock Get-Command {
             if ($Name -ceq 'apm') { return $null }
-            if ($Name -ceq 'codex') { return $codexCommand }
             throw "Unexpected command lookup in test: $Name"
         }
         Mock Invoke-WebRequest { Set-Content -LiteralPath $OutFile -Value 'tampered installer' }
@@ -834,12 +533,7 @@ Describe 'Bootstrap-Global behavior' {
     It 'restores the complete snapshot after <_> fails' -ForEach $nativeFailureStages {
         Initialize-OldProfile -HomePath $script:CaseHome
         $expected = Get-ProfileFingerprint -HomePath $script:CaseHome
-        if ($_ -ceq 'codex-remove') {
-            $env:FAKE_CODEX_FAIL_REMOVE = '1'
-        }
-        else {
-            $env:FAKE_APM_FAIL_STAGE = $_
-        }
+        $env:FAKE_APM_FAIL_STAGE = $_
 
         {
             Invoke-GlobalBootstrap -HomePath $script:CaseHome -RepositoryRoot $script:RepositoryRoot -Confirm:$false
@@ -996,22 +690,6 @@ Describe 'Repository invariants' {
         }
         @($lines | ForEach-Object { ($_ -split '  ', 2)[1] } | Sort-Object -Unique).Count |
             Should-Be $expectedNames.Count
-    }
-
-    It 'commits a lockfile with no GitHub MCP dependency' {
-        $lockfilePath = Join-Path $script:RepositoryRoot 'apm.lock.yaml'
-        Test-Path -LiteralPath $lockfilePath -PathType Leaf | Should-BeTrue
-        [System.IO.File]::ReadAllText($lockfilePath) |
-            Should-NotMatchString 'io\.github\.github/github-mcp-server'
-    }
-
-    It 'keeps the project manifest and generated artifacts free of the GitHub MCP' {
-        [System.IO.File]::ReadAllText((Join-Path $script:RepositoryRoot 'apm.yml')) |
-            Should-NotMatchString 'github-mcp-server'
-        Test-Path -LiteralPath (Join-Path $script:RepositoryRoot '.codex/config.toml') |
-            Should-BeFalse
-        Test-Path -LiteralPath (Join-Path $script:RepositoryRoot '.vscode/mcp.json') |
-            Should-BeFalse
     }
 
     It 'declares an explicit ref for every APM dependency' {

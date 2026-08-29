@@ -41,89 +41,11 @@ assert_same_tree() {
     diff -qr "$1" "$2" >/dev/null || fail "directories differ: $1 and $2"
 }
 
-write_default_mcp_state() {
-    local home=$1
-
-    mkdir -p "$home/.codex"
-    cat > "$home/.fake-github-mcp.json" <<'JSON'
-{
-  "name": "github-mcp-server",
-  "enabled": true,
-  "disabled_reason": null,
-  "transport": {
-    "type": "streamable_http",
-    "url": "https://api.githubcopilot.com/mcp/",
-    "bearer_token_env_var": "GITHUB_TOKEN",
-    "http_headers": null,
-    "env_http_headers": null,
-    "http_headers_helper": null
-  },
-  "enabled_tools": null,
-  "disabled_tools": null,
-  "startup_timeout_sec": null,
-  "tool_timeout_sec": null
-}
-JSON
-    cat >> "$home/.codex/config.toml" <<'TOML'
-[mcp_servers.github-mcp-server]
-url = "https://api.githubcopilot.com/mcp/"
-bearer_token_env_var = "GITHUB_TOKEN"
-TOML
-    mkdir -p "$home/.copilot"
-    cat > "$home/.copilot/mcp-config.json" <<'JSON'
-{
-  "mcpServers": {
-    "github-mcp-server": {
-      "type": "http",
-      "url": "https://api.githubcopilot.com/mcp/",
-      "tools": ["*"],
-      "id": "",
-      "headers": {},
-      "bearer_token_env_var": "GITHUB_TOKEN"
-    }
-  }
-}
-JSON
-}
-
 write_fake_tools() {
     local bin_dir=$1
 
     mkdir -p "$bin_dir"
-    cat > "$bin_dir/codex" <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-printf 'codex %s\n' "$*" >> "$HOME/.fake-command.log"
-state="$HOME/.fake-github-mcp.json"
-case "${1-} ${2-}" in
-    'mcp get')
-        if [ -f "$state" ]; then
-            cat "$state"
-        else
-            printf "Error: No MCP server named 'github-mcp-server' found.\n" >&2
-            exit 1
-        fi
-        ;;
-    'mcp remove')
-        [ "${FAKE_CODEX_FAIL_REMOVE-}" != 1 ] || exit 31
-        rm -f "$state"
-        config="$HOME/.codex/config.toml"
-        if [ -f "$config" ]; then
-            awk '
-                /^\[mcp_servers\.github-mcp-server\]$/ { skipping = 1; next }
-                skipping && /^\[/ { skipping = 0 }
-                !skipping { print }
-            ' "$config" > "$config.tmp"
-            mv "$config.tmp" "$config"
-        fi
-        ;;
-    *)
-        exit 32
-        ;;
-esac
-EOF
-
-cat > "$bin_dir/apm" <<'EOF'
+    cat > "$bin_dir/apm" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 printf 'apm %s\n' "$*" >> "$HOME/.fake-command.log"
@@ -141,25 +63,6 @@ if [ "${1-}" = install ]; then
     printf 'installed\n' > "$HOME/.apm/apm_modules/fake/state"
     printf '{"installed":true}\n' > "$HOME/.apm/config.json"
     mkdir -p "$HOME/.codex" "$HOME/.copilot"
-    if [ "${FAKE_APM_REINTRODUCE_COPILOT_MCP-}" = 1 ]; then
-        cat > "$HOME/.copilot/mcp-config.json" <<'JSON'
-{
-  "mcpServers": {
-    "github-\u006dcp-server": {
-      "type": "http",
-      "url": "https://api.githubcopilot.com/mcp/",
-      "tools": ["*"],
-      "id": "",
-      "headers": {},
-      "bearer_token_env_var": "GITHUB_TOKEN"
-    }
-  }
-}
-JSON
-    fi
-    if [ "${FAKE_APM_WRITE_UNINSPECTABLE_COPILOT_MCP-}" = 1 ]; then
-        printf '{"mcpServers":[]}\n' > "$HOME/.copilot/mcp-config.json"
-    fi
     exit 0
 fi
 
@@ -264,7 +167,7 @@ if [ "$#" -eq 1 ]; then
 fi
 exec "${REAL_SHA256SUM:?}" "$@"
 EOF
-    chmod +x "$bin_dir/apm" "$bin_dir/codex" "$bin_dir/sha256sum" "$bin_dir/uname"
+    chmod +x "$bin_dir/apm" "$bin_dir/sha256sum" "$bin_dir/uname"
 }
 
 new_case() {
@@ -379,7 +282,6 @@ seed_old_state() {
         mkdir -p "$case_home/.agents/skills/$skill"
         printf 'old %s\n' "$skill" > "$case_home/.agents/skills/$skill/value"
     done
-    write_default_mcp_state "$case_home"
 }
 
 save_seed_state() {
@@ -388,7 +290,7 @@ save_seed_state() {
     for relative_path in \
         .apm/apm.yml .apm/apm.lock.yaml .apm/.apm .apm/apm_modules .apm/config.json \
         .codex/AGENTS.md .codex/config.toml .copilot/copilot-instructions.md \
-        .copilot/mcp-config.json; do
+        .copilot/AGENTS.md; do
         if [ -e "$case_home/$relative_path" ]; then
             mkdir -p "$expected_root/$(dirname "$relative_path")"
             cp -a "$case_home/$relative_path" "$expected_root/$relative_path"
@@ -415,7 +317,7 @@ assert_seed_state_restored() {
     for relative_path in \
         .apm/apm.yml .apm/apm.lock.yaml .apm/.apm .apm/apm_modules .apm/config.json \
         .codex/AGENTS.md .codex/config.toml .copilot/copilot-instructions.md \
-        .copilot/mcp-config.json; do
+        .copilot/AGENTS.md; do
         if [ -e "$expected_root/absent/$relative_path" ]; then
             [ ! -e "$case_home/$relative_path" ] || fail "rollback did not remove $relative_path"
         elif [ -d "$expected_root/$relative_path" ]; then
@@ -439,174 +341,34 @@ mkdir -p "$case_home/.codex" "$case_home/.copilot" "$case_home/private"
 printf 'project_doc_max_bytes = 90001\n\n[features]\nexample = true\n' > "$case_home/.codex/config.toml"
 printf 'do not touch\n' > "$case_home/.copilot/AGENTS.md"
 printf 'private\n' > "$case_home/private/keep.txt"
+cp "$case_home/.codex/config.toml" "$case_root/original-codex-config.toml"
+cp "$case_home/.copilot/AGENTS.md" "$case_root/original-copilot-agents.md"
+[ ! -e "$case_bin/codex" ] || fail 'fresh fixture unexpectedly provides Codex tooling'
 fresh_output=$(run_bootstrap)
 assert_file_contains "$case_home/.codex/AGENTS.md" '<!-- Generated by APM CLI from .apm/ primitives -->'
 assert_file_contains "$case_home/.copilot/copilot-instructions.md" '<!-- Generated by APM CLI from .apm/ primitives -->'
-assert_file_contains "$case_home/.codex/config.toml" 'project_doc_max_bytes = 90001'
+assert_same_file "$case_root/original-codex-config.toml" "$case_home/.codex/config.toml"
 assert_same_file "$repo_root/apm.yml" "$case_home/.apm/apm.yml"
 assert_same_tree "$repo_root/.apm" "$case_home/.apm/.apm"
 for skill in "${managed_skills[@]}"; do
     [ -d "$case_home/.agents/skills/$skill" ] || fail "fresh install omitted $skill"
 done
-assert_file_contains "$case_home/.copilot/AGENTS.md" 'do not touch'
+assert_same_file "$case_root/original-copilot-agents.md" "$case_home/.copilot/AGENTS.md"
 assert_file_contains "$case_home/private/keep.txt" 'private'
 backup_dir=$(printf '%s\n' "$fresh_output" | sed -n 's/^Rollback snapshot retained at: //p')
 [ -d "$backup_dir" ] || fail 'fresh install did not retain a snapshot'
-[ "$(wc -l < "$backup_dir/inventory.tsv")" -eq 19 ] || fail 'snapshot inventory is incomplete'
+[ "$(wc -l < "$backup_dir/inventory.tsv")" -eq 17 ] || fail 'snapshot inventory is incomplete'
 assert_file_contains "$backup_dir/originally-absent.txt" '.agents/skills/msgraph'
-printf 'ok - fresh install, fidelity, inventory, absent paths, and unmanaged files\n'
+printf 'ok - fresh install without Codex tooling, fidelity, 17-path inventory, and unmanaged files\n'
 
-write_default_mcp_state "$case_home"
 run_bootstrap >/dev/null
 [ "$(find "$case_home/.apm/backups/agent-engineering-baseline" -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 2 ] ||
     fail 'idempotent rerun did not retain a second snapshot'
-[ "$(grep -c '^\[mcp_servers.github-mcp-server\]$' "$case_home/.codex/config.toml" || true)" -eq 0 ] ||
-    fail 'legacy Codex MCP entry was not removed'
-! grep -F '"github-mcp-server"' "$case_home/.copilot/mcp-config.json" >/dev/null ||
-    fail 'legacy Copilot MCP entry was not removed'
-assert_file_contains "$case_home/.fake-command.log" 'codex mcp remove github-mcp-server'
-printf 'ok - exact-match MCP removal and idempotent rerun\n'
-
-new_case customized
-mkdir -p "$case_home/.codex"
-printf 'sentinel\n' > "$case_home/.codex/config.toml"
-write_default_mcp_state "$case_home"
-sed -i 's#https://api.githubcopilot.com/mcp/#https://custom.example.invalid/mcp/#' "$case_home/.fake-github-mcp.json"
-if run_bootstrap > "$case_root/out" 2> "$case_root/err"; then
-    fail 'customized MCP entry was accepted'
-fi
-assert_file_contains "$case_root/err" 'is customized; refusing to replace it'
-[ ! -d "$case_home/.apm/backups" ] || fail 'customized MCP rejection mutated the profile'
-assert_file_contains "$case_home/.codex/config.toml" 'sentinel'
-printf 'ok - customized MCP rejection before mutation\n'
-
-new_case customized-copilot
-mkdir -p "$case_home/.copilot"
-printf '{"mcpServers":{"github-mcp-server":{"type":"http","url":"https://custom.example.invalid/mcp/"}}}\n' \
-    > "$case_home/.copilot/mcp-config.json"
-if run_bootstrap > "$case_root/out" 2> "$case_root/err"; then
-    fail 'customized Copilot MCP entry was accepted'
-fi
-assert_file_contains "$case_root/err" 'Copilot MCP entry'
-[ ! -d "$case_home/.apm/backups" ] || fail 'customized Copilot MCP rejection mutated the profile'
-printf 'ok - customized Copilot MCP rejection before mutation\n'
-
-new_case escaped-customized-copilot
-mkdir -p "$case_home/.copilot"
-cat > "$case_home/.copilot/mcp-config.json" <<'JSON'
-{"mcpServers":{"github-\u006dcp-server":{"type":"http","url":"https://custom.example.invalid/mcp/"}}}
-JSON
-cp "$case_home/.copilot/mcp-config.json" "$case_root/original.json"
-if run_bootstrap > "$case_root/out" 2> "$case_root/err"; then
-    fail 'escaped customized Copilot MCP entry was accepted'
-fi
-assert_file_contains "$case_root/err" 'Copilot MCP entry'
-assert_same_file "$case_root/original.json" "$case_home/.copilot/mcp-config.json"
-[ ! -d "$case_home/.apm/backups" ] || fail 'escaped customized Copilot rejection mutated the profile'
-printf 'ok - escaped customized Copilot MCP rejection before mutation\n'
-
-new_case escaped-default-copilot
-mkdir -p "$case_home/.copilot"
-cat > "$case_home/.copilot/mcp-config.json" <<'JSON'
-{
-  "mcpServers": {
-    "github-\u006dcp-server": {
-      "type": "http",
-      "url": "https://api.githubcopilot.com/mcp/",
-      "tools": ["*"],
-      "id": "",
-      "headers": {},
-      "bearer_token_env_var": "GITHUB_TOKEN"
-    },
-    "other-server": {
-      "type": "stdio",
-      "command": "keep-me"
-    }
-  },
-  "inputs": [
-    { "id": "keep-input" }
-  ]
-}
-JSON
-run_bootstrap >/dev/null
-jq -e --arg name 'github-mcp-server' '.mcpServers | has($name) | not' \
-    "$case_home/.copilot/mcp-config.json" >/dev/null || fail 'escaped exact-default key was not removed'
-jq -e '.mcpServers["other-server"].command == "keep-me" and .inputs[0].id == "keep-input"' \
-    "$case_home/.copilot/mcp-config.json" >/dev/null || fail 'unrelated Copilot configuration changed'
-printf 'ok - escaped exact-default Copilot MCP removal preserves unrelated configuration\n'
-
-new_case case-variant-copilot
-mkdir -p "$case_home/.copilot"
-cat > "$case_home/.copilot/mcp-config.json" <<'JSON'
-{"mcpServers":{"GitHub-Mcp-Server":{"type":"stdio","command":"keep-case"},"other-server":{"type":"stdio","command":"keep-other"}}}
-JSON
-cp "$case_home/.copilot/mcp-config.json" "$case_root/original.json"
-run_bootstrap >/dev/null
-assert_same_file "$case_root/original.json" "$case_home/.copilot/mcp-config.json"
-cat > "$case_home/.copilot/mcp-config.json" <<'JSON'
-{"McpServers":{"github-mcp-server":{"type":"stdio","command":"keep-container-case"}}}
-JSON
-cp "$case_home/.copilot/mcp-config.json" "$case_root/original-container-case.json"
-run_bootstrap >/dev/null
-assert_same_file "$case_root/original-container-case.json" "$case_home/.copilot/mcp-config.json"
-printf 'ok - unrelated and case-variant Copilot MCP keys remain byte-for-byte unchanged\n'
-
-new_case malformed-copilot
-mkdir -p "$case_home/.copilot"
-printf '{"mcpServers":' > "$case_home/.copilot/mcp-config.json"
-cp "$case_home/.copilot/mcp-config.json" "$case_root/original.json"
-if run_bootstrap > "$case_root/out" 2> "$case_root/err"; then
-    fail 'malformed Copilot MCP configuration was accepted'
-fi
-assert_file_contains "$case_root/err" 'parse or semantically inspect'
-assert_file_contains "$case_root/err" "$case_home/.copilot/mcp-config.json"
-assert_same_file "$case_root/original.json" "$case_home/.copilot/mcp-config.json"
-[ ! -d "$case_home/.apm/backups" ] || fail 'malformed Copilot rejection mutated the profile'
-printf 'ok - malformed Copilot MCP configuration rejection before mutation\n'
-
-new_case uninspectable-copilot
-mkdir -p "$case_home/.copilot"
-printf '{"mcpServers":[]}\n' > "$case_home/.copilot/mcp-config.json"
-cp "$case_home/.copilot/mcp-config.json" "$case_root/original.json"
-if run_bootstrap > "$case_root/out" 2> "$case_root/err"; then
-    fail 'semantically uninspectable Copilot MCP configuration was accepted'
-fi
-assert_file_contains "$case_root/err" 'parse or semantically inspect'
-assert_file_contains "$case_root/err" "$case_home/.copilot/mcp-config.json"
-assert_same_file "$case_root/original.json" "$case_home/.copilot/mcp-config.json"
-[ ! -d "$case_home/.apm/backups" ] || fail 'uninspectable Copilot rejection mutated the profile'
-printf 'ok - semantically uninspectable Copilot MCP configuration rejection before mutation\n'
-
-new_case reintroduced-copilot
-seed_old_state
-printf '{"mcpServers":{"other-server":{"type":"stdio","command":"keep-me"}}}\n' \
-    > "$case_home/.copilot/mcp-config.json"
-save_seed_state
-export FAKE_APM_REINTRODUCE_COPILOT_MCP=1
-if run_bootstrap > "$case_root/out" 2> "$case_root/err"; then
-    fail 'APM reintroduced Copilot MCP entry was accepted'
-fi
-unset FAKE_APM_REINTRODUCE_COPILOT_MCP
-assert_file_contains "$case_root/err" 'remains in Copilot after deployment'
-assert_file_contains "$case_root/err" 'Rollback completed successfully'
-assert_seed_state_restored
-printf 'ok - post-install escaped Copilot MCP reintroduction triggers complete rollback\n'
-
-new_case uninspectable-post-install-copilot
-seed_old_state
-printf '{"mcpServers":{"other-server":{"type":"stdio","command":"keep-me"}}}\n' \
-    > "$case_home/.copilot/mcp-config.json"
-save_seed_state
-export FAKE_APM_WRITE_UNINSPECTABLE_COPILOT_MCP=1
-if run_bootstrap > "$case_root/out" 2> "$case_root/err"; then
-    fail 'APM post-install uninspectable Copilot MCP configuration was accepted'
-fi
-unset FAKE_APM_WRITE_UNINSPECTABLE_COPILOT_MCP
-assert_file_contains "$case_root/err" 'Unable to verify the Copilot MCP configuration after deployment'
-assert_file_contains "$case_root/err" "$case_home/.copilot/mcp-config.json"
-assert_file_contains "$case_root/err" 'Rollback completed successfully'
-assert_seed_state_restored
-printf 'ok - post-install uninspectable Copilot MCP configuration reports its path and rolls back\n'
+assert_same_file "$case_root/original-codex-config.toml" "$case_home/.codex/config.toml"
+assert_same_file "$case_root/original-copilot-agents.md" "$case_home/.copilot/AGENTS.md"
+! grep -E '^codex ' "$case_home/.fake-command.log" >/dev/null ||
+    fail 'bootstrap invoked Codex tooling'
+printf 'ok - idempotent rerun preserves user configuration byte-for-byte\n'
 
 new_case dry_run
 if ! run_bootstrap --dry-run > "$case_root/out" 2> "$case_root/err"; then
@@ -817,21 +579,15 @@ assert_file_contains "$case_root/outside/sentinel" 'outside'
     fail 'backup namespace rejection wrote outside the profile boundary'
 printf 'ok - symbolic-link backup namespace rejection\n'
 
-for failure_stage in codex-remove install compile-dry-codex compile-dry-copilot compile-write-codex compile-write-copilot; do
+for failure_stage in install compile-dry-codex compile-dry-copilot compile-write-codex compile-write-copilot; do
     new_case "rollback-$failure_stage"
     seed_old_state
     save_seed_state
-    if [ "$failure_stage" = codex-remove ]; then
-        export FAKE_CODEX_FAIL_REMOVE=1
-        unset FAKE_APM_FAIL_STAGE || true
-    else
-        unset FAKE_CODEX_FAIL_REMOVE || true
-        export FAKE_APM_FAIL_STAGE=$failure_stage
-    fi
+    export FAKE_APM_FAIL_STAGE=$failure_stage
     if run_bootstrap > "$case_root/out" 2> "$case_root/err"; then
         fail "native-stage failure was ignored: $failure_stage"
     fi
-    unset FAKE_CODEX_FAIL_REMOVE FAKE_APM_FAIL_STAGE || true
+    unset FAKE_APM_FAIL_STAGE || true
     assert_file_contains "$case_root/err" 'Rollback completed successfully'
     assert_seed_state_restored
 done
