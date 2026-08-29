@@ -274,6 +274,53 @@ function Test-DefaultCopilotGithubMcpConfiguration {
     )
 }
 
+function Get-CaseSensitiveJsonProperty {
+    [CmdletBinding()]
+    param(
+        [Parameter()]
+        [AllowNull()]
+        [object]$InputObject,
+
+        [Parameter(Mandatory)]
+        [string]$Name
+    )
+
+    if ($null -eq $InputObject) {
+        return
+    }
+    foreach ($property in $InputObject.PSObject.Properties) {
+        if ($property.Name -ceq $Name) {
+            return $property
+        }
+    }
+}
+
+function Read-CopilotMcpConfiguration {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$Path
+    )
+
+    try {
+        $configuration = [System.IO.File]::ReadAllText($Path) |
+            ConvertFrom-Json -ErrorAction Stop
+    }
+    catch {
+        throw "Unable to parse or semantically inspect the Copilot MCP configuration: $Path"
+    }
+
+    if ($configuration -isnot [PSCustomObject]) {
+        throw "Unable to parse or semantically inspect the Copilot MCP configuration: $Path"
+    }
+    $mcpServersProperty = Get-CaseSensitiveJsonProperty -InputObject $configuration -Name 'mcpServers'
+    if ($null -ne $mcpServersProperty -and $mcpServersProperty.Value -isnot [PSCustomObject]) {
+        throw "Unable to parse or semantically inspect the Copilot MCP configuration: $Path"
+    }
+
+    return $configuration
+}
+
 function ConvertTo-ApmVersion {
     [CmdletBinding()]
     param([Parameter(Mandatory)][string]$Text)
@@ -684,29 +731,25 @@ function Invoke-GlobalBootstrap {
         $cleanedCopilotConfigPath = Join-Path $preflightDirectory 'copilot-mcp-config.json'
         $copilotMcpRemove = $false
         if ([System.IO.File]::Exists($copilotConfigPath)) {
-            $copilotConfigText = [System.IO.File]::ReadAllText($copilotConfigPath)
-            $quotedGithubMcpName = '"{0}"' -f $script:GithubMcpName
-            if ($copilotConfigText.IndexOf($quotedGithubMcpName, [StringComparison]::Ordinal) -ge 0) {
-                $copilotConfiguration = $copilotConfigText | ConvertFrom-Json
-                $mcpServersProperty = $copilotConfiguration.PSObject.Properties['mcpServers']
-                $githubProperty = if ($null -eq $mcpServersProperty) {
-                    $null
+            $copilotConfiguration = Read-CopilotMcpConfiguration -Path $copilotConfigPath
+            $mcpServersProperty = Get-CaseSensitiveJsonProperty `
+                -InputObject $copilotConfiguration -Name 'mcpServers'
+            if ($null -ne $mcpServersProperty) {
+                $githubProperty = Get-CaseSensitiveJsonProperty `
+                    -InputObject $mcpServersProperty.Value -Name $script:GithubMcpName
+                if ($null -ne $githubProperty) {
+                    if (-not (Test-DefaultCopilotGithubMcpConfiguration -Configuration $githubProperty.Value)) {
+                        throw "Existing Copilot MCP entry '$($script:GithubMcpName)' is customized; refusing to remove it."
+                    }
+                    $mcpServersProperty.Value.PSObject.Properties.Remove($githubProperty.Name)
+                    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+                    [System.IO.File]::WriteAllText(
+                        $cleanedCopilotConfigPath,
+                        (($copilotConfiguration | ConvertTo-Json -Depth 100) + "`n"),
+                        $utf8NoBom
+                    )
+                    $copilotMcpRemove = $true
                 }
-                else {
-                    $mcpServersProperty.Value.PSObject.Properties[$script:GithubMcpName]
-                }
-                if ($null -eq $githubProperty -or
-                    -not (Test-DefaultCopilotGithubMcpConfiguration -Configuration $githubProperty.Value)) {
-                    throw "Existing Copilot MCP entry '$($script:GithubMcpName)' is customized; refusing to remove it."
-                }
-                $mcpServersProperty.Value.PSObject.Properties.Remove($script:GithubMcpName)
-                $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-                [System.IO.File]::WriteAllText(
-                    $cleanedCopilotConfigPath,
-                    (($copilotConfiguration | ConvertTo-Json -Depth 100) + "`n"),
-                    $utf8NoBom
-                )
-                $copilotMcpRemove = $true
             }
         }
 
@@ -870,10 +913,14 @@ function Invoke-GlobalBootstrap {
             if ($mcpAfterError.IndexOf($expectedAfterError, [StringComparison]::Ordinal) -lt 0) {
                 throw "Unable to verify removal of the Codex MCP entry '$($script:GithubMcpName)'."
             }
-            if ($copilotMcpRemove) {
-                $copilotAfter = [System.IO.File]::ReadAllText($copilotConfigPath) | ConvertFrom-Json
-                $serversAfter = $copilotAfter.PSObject.Properties['mcpServers'].Value
-                if ($null -ne $serversAfter.PSObject.Properties[$script:GithubMcpName]) {
+            if ([System.IO.File]::Exists($copilotConfigPath)) {
+                $copilotAfter = Read-CopilotMcpConfiguration -Path $copilotConfigPath
+                $serversPropertyAfter = Get-CaseSensitiveJsonProperty `
+                    -InputObject $copilotAfter -Name 'mcpServers'
+                if ($null -ne $serversPropertyAfter -and $null -ne (
+                        Get-CaseSensitiveJsonProperty -InputObject $serversPropertyAfter.Value `
+                            -Name $script:GithubMcpName
+                    )) {
                     throw "GitHub MCP entry '$($script:GithubMcpName)' remains in Copilot after deployment."
                 }
             }

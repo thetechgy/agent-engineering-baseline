@@ -104,7 +104,8 @@ After preflight, each implementation:
 
 Any failure after profile mutation starts restores the complete snapshot.
 Successful snapshots are retained for manual rollback. The Bash implementation
-requires `jq` only when it finds a legacy GitHub MCP entry to verify or remove.
+requires `jq` whenever an existing Copilot `mcp-config.json` must be inspected
+or whenever that file exists after installation.
 PowerShell retains `-WhatIf` and `-Confirm` support and remains compatible with
 Windows PowerShell 5.1 and PowerShell 7.
 

@@ -114,6 +114,32 @@ if ($ToolArgument.Count -gt 0 -and $ToolArgument[0] -ceq 'install') {
     $null = New-Item -ItemType Directory -Path $modulePath -Force
     Set-Content -LiteralPath (Join-Path $modulePath 'state') -Value 'installed'
     Set-Content -LiteralPath (Join-Path $homePath '.apm/config.json') -Value '{"installed":true}'
+    if ($env:FAKE_APM_REINTRODUCE_COPILOT_MCP -ceq '1') {
+        $copilotDirectory = Join-Path $homePath '.copilot'
+        $null = New-Item -ItemType Directory -Path $copilotDirectory -Force
+        $copilotJson = @'
+{
+  "mcpServers": {
+    "github-\u006dcp-server": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "tools": ["*"],
+      "id": "",
+      "headers": {},
+      "bearer_token_env_var": "GITHUB_TOKEN"
+    }
+  }
+}
+'@
+        Set-Content -LiteralPath (Join-Path $copilotDirectory 'mcp-config.json') `
+            -Value $copilotJson -Encoding UTF8
+    }
+    if ($env:FAKE_APM_WRITE_UNINSPECTABLE_COPILOT_MCP -ceq '1') {
+        $copilotDirectory = Join-Path $homePath '.copilot'
+        $null = New-Item -ItemType Directory -Path $copilotDirectory -Force
+        Set-Content -LiteralPath (Join-Path $copilotDirectory 'mcp-config.json') `
+            -Value '{"mcpServers":[]}' -Encoding UTF8
+    }
     exit 0
 }
 
