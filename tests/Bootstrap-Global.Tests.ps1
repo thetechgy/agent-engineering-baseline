@@ -268,17 +268,6 @@ Describe 'Bootstrap-Global interface and helpers' {
         Test-DefaultCopilotGithubMcpConfiguration -Configuration $customCopilot | Should-BeFalse
     }
 
-    It 'selects the expected pinned CLI action' {
-        Get-ApmBootstrapAction -InstalledVersion $null -ApprovedVersion ([version]'1.2.3') |
-            Should-Be 'Install'
-        Get-ApmBootstrapAction -InstalledVersion ([version]'1.2.2') `
-            -ApprovedVersion ([version]'1.2.3') | Should-Be 'Upgrade'
-        Get-ApmBootstrapAction -InstalledVersion ([version]'1.2.3') `
-            -ApprovedVersion ([version]'1.2.3') | Should-Be 'None'
-        Get-ApmBootstrapAction -InstalledVersion ([version]'1.2.4') `
-            -ApprovedVersion ([version]'1.2.3') | Should-Be 'Stop'
-    }
-
     It 'extracts a strict pinned checksum' {
         $checksumPath = Join-Path $TestDrive 'checksums'
         Set-Content -LiteralPath $checksumPath -Value @(
@@ -335,20 +324,13 @@ Describe 'Bootstrap-Global interface and helpers' {
         }
     }
 
-    It 'keeps LOCALAPPDATA literal in the generated Windows command shim' {
-        $previousLocalAppData = $env:LOCALAPPDATA
-        try {
-            $env:LOCALAPPDATA = Join-Path $TestDrive 'local-app-data'
-            $executablePath = Join-Path $env:LOCALAPPDATA 'apm/releases/v1.2.3/apm.exe'
+    It 'keeps the generated Windows command shim location-relative and ASCII-only' {
+        $shim = ConvertTo-ApmCommandShimContent
 
-            $shim = ConvertTo-ApmCommandShimContent -ExecutablePath $executablePath
-
-            $shim | Should-MatchString '%LOCALAPPDATA%\\apm'
-            $shim | Should-NotMatchString ([regex]::Escape($env:LOCALAPPDATA))
-        }
-        finally {
-            $env:LOCALAPPDATA = $previousLocalAppData
-        }
+        $shim | Should-MatchString '%~dp0\.\.\\current\\apm\.exe'
+        [System.Text.Encoding]::ASCII.GetString(
+            [System.Text.Encoding]::ASCII.GetBytes($shim)
+        ) | Should-Be $shim
     }
 
     It 'forwards Confirm only when it is explicitly bound' {
@@ -735,7 +717,6 @@ Describe 'Bootstrap-Global behavior' {
     }
 
     It 'honors WhatIf without changing the profile' {
-        $env:FAKE_APM_VERSION = '0.0.1'
         Invoke-GlobalBootstrap -HomePath $script:CaseHome -RepositoryRoot $script:RepositoryRoot -WhatIf
 
         Test-Path -LiteralPath (Join-Path $script:CaseHome '.apm') | Should-BeFalse
@@ -743,19 +724,41 @@ Describe 'Bootstrap-Global behavior' {
             Should-NotMatchString 'apm install'
     }
 
-    It 'stops before profile mutation for a newer CLI' {
+    It 'rejects an unverified existing CLI before execution or profile mutation' {
+        Mock Assert-PinnedFileChecksum {
+            throw 'Installed APM executable does not match the pinned SHA256 checksum.'
+        }
+
+        {
+            Invoke-GlobalBootstrap -HomePath $script:CaseHome `
+                -RepositoryRoot $script:RepositoryRoot -Confirm:$false
+        } | Should-Throw -ExceptionMessage '*does not match the pinned SHA256 checksum*'
+
+        $commandLogPath = Join-Path $script:CaseHome '.fake-command.log'
+        if (Test-Path -LiteralPath $commandLogPath -PathType Leaf) {
+            Get-Content -LiteralPath $commandLogPath -Raw | Should-NotMatchString 'apm --version'
+        }
+        Test-Path -LiteralPath (Join-Path $script:CaseHome '.apm/backups') | Should-BeFalse
+    }
+
+    It 'rejects a verified CLI that reports a different version before profile mutation' {
         $env:FAKE_APM_VERSION = '999.999.999'
 
         {
             Invoke-GlobalBootstrap -HomePath $script:CaseHome `
                 -RepositoryRoot $script:RepositoryRoot -Confirm:$false
-        } | Should-Throw -ExceptionMessage '*newer than pinned baseline*'
+        } | Should-Throw -ExceptionMessage '*matches the reviewed digest but reports version 999.999.999*'
 
         Test-Path -LiteralPath (Join-Path $script:CaseHome '.apm/backups') | Should-BeFalse
     }
 
     It 'fails before profile mutation when the installer download fails' {
-        $env:FAKE_APM_VERSION = '0.0.1'
+        $codexCommand = Microsoft.PowerShell.Core\Get-Command -Name codex -CommandType Application
+        Mock Get-Command {
+            if ($Name -ceq 'apm') { return $null }
+            if ($Name -ceq 'codex') { return $codexCommand }
+            throw "Unexpected command lookup in test: $Name"
+        }
         Mock Invoke-WebRequest { throw 'download failed' }
 
         {
@@ -767,7 +770,12 @@ Describe 'Bootstrap-Global behavior' {
     }
 
     It 'refuses a tampered installer before profile mutation' {
-        $env:FAKE_APM_VERSION = '0.0.1'
+        $codexCommand = Microsoft.PowerShell.Core\Get-Command -Name codex -CommandType Application
+        Mock Get-Command {
+            if ($Name -ceq 'apm') { return $null }
+            if ($Name -ceq 'codex') { return $codexCommand }
+            throw "Unexpected command lookup in test: $Name"
+        }
         Mock Invoke-WebRequest { Set-Content -LiteralPath $OutFile -Value 'tampered installer' }
 
         {
@@ -848,7 +856,8 @@ Describe 'Bootstrap-Global behavior' {
 
 Describe 'Windows secure APM promotion' -Skip:(-not $isWindowsPlatform) {
     BeforeEach {
-        $script:WindowsInstallRoot = Join-Path $TestDrive ([Guid]::NewGuid().ToString('N'))
+        $unicodeDirectoryName = 'install-' + [char]0x00E9 + '-' + [Guid]::NewGuid().ToString('N')
+        $script:WindowsInstallRoot = Join-Path $TestDrive $unicodeDirectoryName
         $script:WindowsBin = Join-Path $script:WindowsInstallRoot 'bin'
         $script:PreviousWindowsInstallDirectory = $env:APM_INSTALL_DIR
         $env:APM_INSTALL_DIR = $script:WindowsBin
@@ -911,6 +920,9 @@ public static class $typeName {
         Test-Path -LiteralPath $script:WindowsLayout.ShimPath -PathType Leaf | Should-BeTrue
         Assert-PinnedFileChecksum -Path $executable -ChecksumPath $script:WindowsChecksumPath `
             -FileName 'apm-windows-x86_64/apm.exe'
+        $shimVersion = (& $script:WindowsLayout.ShimPath --version 2>&1) -join "`n"
+        $LASTEXITCODE | Should-Be 0
+        $shimVersion | Should-MatchString 'APM 9\.8\.7'
     }
 
     It 'rejects a current junction that targets outside the release root' {

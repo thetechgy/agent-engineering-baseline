@@ -63,26 +63,28 @@ Windows (Windows PowerShell 5.1 or PowerShell 7):
 Bootstrap reads `.apm-version` and behaves as follows:
 
 - missing CLI: install the pinned version;
-- older CLI: upgrade to the pinned version;
-- matching CLI: leave it unchanged;
-- newer CLI: stop before deployment rather than downgrade or run unreviewed
-  behavior.
+- CLI with the reviewed executable digest and pinned reported version: leave it
+  unchanged;
+- any other existing CLI: stop before executing it or changing profile state.
+  Remove or replace that unverified executable before rerunning bootstrap; the
+  bootstrap never silently downgrades it.
 
 On Linux, bootstrap verifies the pinned `install.sh`, the architecture-specific
 archive, and its `apm` member. It then exposes only that verified archive through
 a private local mirror and runs the official installer with an explicit
 `VERSION`, `APM_RELEASE_BASE_URL=file://...`, and
 `APM_NO_DIRECT_FALLBACK=1`. The promoted executable is rehashed before the
-wrapper invokes native APM deployment commands.
+wrapper invokes native APM deployment commands. An existing executable is
+likewise rehashed before its first `--version` call.
 
 On Windows, bootstrap deliberately does not run upstream `install.ps1`, because
 that script launches `apm.exe` before returning. A narrow adapter downloads and
 verifies the x86_64 ZIP, verifies `apm.exe` before promotion, and maintains the
 upstream `releases/<tag>`, `current` junction, and `bin/apm.cmd` layout. It honors
 `APM_INSTALL_DIR`, rejects unsafe reparse targets, restores the prior CLI layout
-if promotion fails, and rehashes the promoted executable before its first
-`--version` call. Neither platform uses sidecar, pip, or unpinned direct
-fallbacks.
+if promotion fails, writes an ASCII-only location-relative command shim, and
+rehashes the promoted or existing executable before its first `--version` call.
+Neither platform uses sidecar, pip, or unpinned direct fallbacks.
 
 Preview without downloads or changes:
 

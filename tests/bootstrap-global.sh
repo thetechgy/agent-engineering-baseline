@@ -248,7 +248,8 @@ if [ "$#" -eq 1 ]; then
             fi
             ;;
         "$self_dir/apm")
-            if [ "${FAKE_SHA256_MODE-}" != postinstall-mismatch ] || [ ! -f "$self_dir/apm.pinned" ]; then
+            if [ "${FAKE_SHA256_MODE-}" != existing-mismatch ] &&
+                { [ "${FAKE_SHA256_MODE-}" != postinstall-mismatch ] || [ ! -f "$self_dir/apm.pinned" ]; }; then
                 printf '%s  %s\n' "${FAKE_PINNED_APM_HASH:?}" "$1"
                 exit 0
             fi
@@ -617,26 +618,32 @@ assert_file_contains "$case_root/out" 'no user-profile files were changed'
 ! grep -F 'apm install' "$case_home/.fake-command.log" >/dev/null || fail 'dry run invoked APM install'
 printf 'ok - Bash dry run\n'
 
-new_case older-dry-run
-export FAKE_APM_VERSION=0.0.1
-run_bootstrap --dry-run > "$case_root/out"
-unset FAKE_APM_VERSION
-assert_file_contains "$case_root/out" 'APM CLI action: upgrade'
-[ ! -e "$case_home/.apm" ] || fail 'older-version dry run mutated the profile'
-printf 'ok - older CLI dry run\n'
+new_case unverified-existing-cli
+export FAKE_SHA256_MODE=existing-mismatch
+if run_bootstrap --dry-run > "$case_root/out" 2> "$case_root/err"; then
+    fail 'unverified existing APM CLI was accepted'
+fi
+unset FAKE_SHA256_MODE
+assert_file_contains "$case_root/err" 'does not match the pinned SHA256 checksum'
+if [ -f "$case_home/.fake-command.log" ]; then
+    ! grep -F 'apm --version' "$case_home/.fake-command.log" >/dev/null ||
+        fail 'unverified existing APM CLI executed before checksum rejection'
+fi
+[ ! -d "$case_home/.apm/backups" ] || fail 'unverified CLI rejection mutated the profile'
+printf 'ok - unverified existing CLI rejection before execution or mutation\n'
 
-new_case newer
+new_case verified-version-mismatch
 export FAKE_APM_VERSION=999.999.999
 if run_bootstrap > "$case_root/out" 2> "$case_root/err"; then
-    fail 'newer APM CLI was accepted'
+    fail 'verified APM CLI with an unexpected version was accepted'
 fi
 unset FAKE_APM_VERSION
-assert_file_contains "$case_root/err" 'newer than pinned baseline'
-[ ! -d "$case_home/.apm/backups" ] || fail 'newer CLI rejection mutated the profile'
-printf 'ok - newer CLI rejection before mutation\n'
+assert_file_contains "$case_root/err" 'matches the reviewed digest but reports version 999.999.999'
+[ ! -d "$case_home/.apm/backups" ] || fail 'version mismatch rejection mutated the profile'
+printf 'ok - verified CLI version mismatch rejection before mutation\n'
 
 new_case download-failure
-export FAKE_APM_VERSION=0.0.1
+rm "$case_bin/apm"
 cat > "$case_bin/curl" <<'EOF'
 #!/usr/bin/env bash
 exit 55
@@ -645,12 +652,12 @@ chmod +x "$case_bin/curl"
 if run_bootstrap > "$case_root/out" 2> "$case_root/err"; then
     fail 'installer download failure was ignored'
 fi
-unset FAKE_APM_VERSION
 [ ! -d "$case_home/.apm/backups" ] || fail 'download failure mutated the profile'
 printf 'ok - installer download failure before mutation\n'
 
 new_case tampered-installer
-export FAKE_APM_VERSION=0.0.1 FAKE_SHA256_MODE=installer-mismatch
+rm "$case_bin/apm"
+export FAKE_SHA256_MODE=installer-mismatch
 cat > "$case_bin/curl" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -667,14 +674,14 @@ chmod +x "$case_bin/curl"
 if run_bootstrap > "$case_root/out" 2> "$case_root/err"; then
     fail 'tampered installer was accepted'
 fi
-unset FAKE_APM_VERSION FAKE_SHA256_MODE
+unset FAKE_SHA256_MODE
 assert_file_contains "$case_root/err" 'does not match the pinned SHA256 checksum'
 [ ! -d "$case_home/.apm/backups" ] || fail 'tampered installer mutated the profile'
 printf 'ok - tampered installer rejection before mutation\n'
 
 new_case missing-checksum-entry
 prepare_secure_download_fixtures
-export FAKE_APM_VERSION=0.0.1
+rm "$case_bin/apm"
 case_repository="$case_root/repository"
 mkdir -p "$case_repository/scripts"
 cp "$bootstrap" "$case_repository/scripts/bootstrap-global.sh"
@@ -685,7 +692,6 @@ if run_bootstrap_script "$case_repository/scripts/bootstrap-global.sh" \
     > "$case_root/out" 2> "$case_root/err"; then
     fail 'missing checksum entry was accepted'
 fi
-unset FAKE_APM_VERSION
 assert_file_contains "$case_root/err" 'Expected exactly one pinned checksum for install.sh'
 [ ! -e "$case_root/installer-executed" ] || fail 'installer ran without a pinned checksum'
 [ ! -e "$case_root/downloaded-executed" ] || fail 'downloaded executable ran without a pinned checksum'
@@ -719,26 +725,14 @@ assert_file_contains "$case_root/sha256.log" 'archive-check/apm-linux-arm64/apm'
 [ -f "$case_root/downloaded-executed" ] || fail 'verified arm64 executable did not execute'
 printf 'ok - arm64 CLI archive and member selection through the private local mirror\n'
 
-new_case secure-cli-upgrade
-prepare_secure_download_fixtures
-export FAKE_APM_VERSION=0.0.1
-if ! run_bootstrap > "$case_root/out" 2> "$case_root/err"; then
-    cat "$case_root/err" >&2
-    fail 'verified CLI upgrade failed'
-fi
-unset FAKE_APM_VERSION
-[ -f "$case_root/installer-executed" ] || fail 'verified upgrade installer did not execute'
-[ -f "$case_root/downloaded-executed" ] || fail 'verified upgraded executable did not execute'
-assert_file_contains "$case_root/out" 'Global APM configuration is ready.'
-printf 'ok - verified older CLI upgrade through the private local mirror\n'
-
 new_case installer-checksum-failure
 prepare_secure_download_fixtures
-export FAKE_APM_VERSION=0.0.1 FAKE_SHA256_MODE=installer-mismatch
+rm "$case_bin/apm"
+export FAKE_SHA256_MODE=installer-mismatch
 if run_bootstrap > "$case_root/out" 2> "$case_root/err"; then
     fail 'installer checksum failure was accepted'
 fi
-unset FAKE_APM_VERSION FAKE_SHA256_MODE
+unset FAKE_SHA256_MODE
 [ ! -e "$case_root/installer-executed" ] || fail 'bad installer executed'
 [ ! -e "$case_root/downloaded-executed" ] || fail 'downloaded executable ran after installer failure'
 [ ! -d "$case_home/.apm/backups" ] || fail 'installer checksum failure changed profile state'
@@ -746,11 +740,12 @@ printf 'ok - installer checksum failure before downloaded execution or profile m
 
 new_case archive-checksum-failure
 prepare_secure_download_fixtures
-export FAKE_APM_VERSION=0.0.1 FAKE_SHA256_MODE=archive-mismatch
+rm "$case_bin/apm"
+export FAKE_SHA256_MODE=archive-mismatch
 if run_bootstrap > "$case_root/out" 2> "$case_root/err"; then
     fail 'archive checksum failure was accepted'
 fi
-unset FAKE_APM_VERSION FAKE_SHA256_MODE
+unset FAKE_SHA256_MODE
 [ ! -e "$case_root/installer-executed" ] || fail 'installer ran after archive checksum failure'
 [ ! -e "$case_root/downloaded-executed" ] || fail 'downloaded executable ran after archive checksum failure'
 [ ! -d "$case_home/.apm/backups" ] || fail 'archive checksum failure changed profile state'
@@ -758,14 +753,13 @@ printf 'ok - archive checksum failure before downloaded execution or profile mut
 
 new_case archive-layout-failure
 prepare_secure_download_fixtures
+rm "$case_bin/apm"
 mkdir -p "$case_root/bad-layout"
 printf 'bad layout\n' > "$case_root/bad-layout/apm"
 tar -czf "$FAKE_ARCHIVE_FIXTURE" -C "$case_root" bad-layout
-export FAKE_APM_VERSION=0.0.1
 if run_bootstrap > "$case_root/out" 2> "$case_root/err"; then
     fail 'unsafe archive layout was accepted'
 fi
-unset FAKE_APM_VERSION
 [ ! -e "$case_root/installer-executed" ] || fail 'installer ran after archive layout failure'
 [ ! -e "$case_root/downloaded-executed" ] || fail 'downloaded executable ran after layout failure'
 [ ! -d "$case_home/.apm/backups" ] || fail 'archive layout failure changed profile state'
@@ -773,11 +767,12 @@ printf 'ok - archive layout failure before downloaded execution or profile mutat
 
 new_case executable-checksum-failure
 prepare_secure_download_fixtures
-export FAKE_APM_VERSION=0.0.1 FAKE_SHA256_MODE=member-mismatch
+rm "$case_bin/apm"
+export FAKE_SHA256_MODE=member-mismatch
 if run_bootstrap > "$case_root/out" 2> "$case_root/err"; then
     fail 'executable member checksum failure was accepted'
 fi
-unset FAKE_APM_VERSION FAKE_SHA256_MODE
+unset FAKE_SHA256_MODE
 [ ! -e "$case_root/installer-executed" ] || fail 'installer ran after executable checksum failure'
 [ ! -e "$case_root/downloaded-executed" ] || fail 'downloaded executable ran after member checksum failure'
 [ ! -d "$case_home/.apm/backups" ] || fail 'member checksum failure changed profile state'
@@ -785,11 +780,12 @@ printf 'ok - executable member checksum failure before execution or profile muta
 
 new_case postinstall-executable-checksum-failure
 prepare_secure_download_fixtures
-export FAKE_APM_VERSION=0.0.1 FAKE_SHA256_MODE=postinstall-mismatch
+rm "$case_bin/apm"
+export FAKE_SHA256_MODE=postinstall-mismatch
 if run_bootstrap > "$case_root/out" 2> "$case_root/err"; then
     fail 'post-install executable checksum failure was accepted'
 fi
-unset FAKE_APM_VERSION FAKE_SHA256_MODE
+unset FAKE_SHA256_MODE
 [ -f "$case_root/installer-executed" ] || fail 'verified installer did not execute'
 [ "$(wc -l < "$case_root/downloaded-executed")" -eq 1 ] ||
     fail 'wrapper invoked the promoted executable after its checksum changed'

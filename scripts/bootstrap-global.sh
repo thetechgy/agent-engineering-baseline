@@ -56,18 +56,6 @@ normalize_version() {
     printf '%s\n' "$1" | sed -nE 's/.*[^0-9]([0-9]+\.[0-9]+\.[0-9]+).*/\1/p'
 }
 
-compare_versions() {
-    local left=$1 right=$2 pair
-    local left_major left_minor left_patch right_major right_minor right_patch
-    IFS=. read -r left_major left_minor left_patch <<< "$left"
-    IFS=. read -r right_major right_minor right_patch <<< "$right"
-    for pair in "$left_major:$right_major" "$left_minor:$right_minor" "$left_patch:$right_patch"; do
-        if [ "${pair%%:*}" -lt "${pair#*:}" ]; then printf '%s\n' -1; return; fi
-        if [ "${pair%%:*}" -gt "${pair#*:}" ]; then printf '%s\n' 1; return; fi
-    done
-    printf '%s\n' 0
-}
-
 get_pinned_checksum() {
     local name=$1
     local checksum
@@ -433,16 +421,12 @@ archive_member="$archive_root/apm"
 apm_action=install
 installed_version=''
 if command -v apm >/dev/null 2>&1; then
-    installed_version=$(normalize_version "$(apm --version)")
-    [ -n "$installed_version" ] || die 'Unable to parse the installed APM version.'
-    comparison=$(compare_versions "$installed_version" "$approved_version")
-    if [ "$comparison" -gt 0 ]; then
-        die "Installed APM $installed_version is newer than pinned baseline $approved_version; deployment stopped."
-    elif [ "$comparison" -eq 0 ]; then
-        apm_action=none
-    else
-        apm_action=upgrade
-    fi
+    require_command sha256sum
+    apm_executable=$(verify_pinned_apm_executable "$(command -v apm)")
+    installed_version=$(normalize_version "$(run_apm --version)")
+    [ "$installed_version" = "$approved_version" ] ||
+        die "Installed APM executable matches the reviewed digest but reports version ${installed_version:-unknown}; expected $approved_version."
+    apm_action=none
 fi
 
 require_command codex
