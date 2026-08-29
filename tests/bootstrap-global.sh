@@ -5,7 +5,6 @@ set -euo pipefail
 repo_root=$(CDPATH='' cd -- "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
 bootstrap="$repo_root/scripts/bootstrap-global.sh"
 real_sha256sum=$(command -v sha256sum)
-pinned_linux_executable_hash=$(awk '$2 == "apm-linux-x86_64/apm" { print $1 }' "$repo_root/.apm-checksums")
 test_root=$(mktemp -d "${TMPDIR:-/tmp}/bootstrap-global-tests.XXXXXX")
 trap 'rm -rf -- "$test_root"' EXIT HUP INT TERM
 
@@ -210,12 +209,25 @@ fi
 exit 43
 EOF
 
+    cat > "$bin_dir/uname" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+case "${1-}" in
+    -s) printf 'Linux\n' ;;
+    -m) printf '%s\n' "${FAKE_UNAME_MACHINE:-x86_64}" ;;
+    *) exit 90 ;;
+esac
+EOF
+
     cat > "$bin_dir/sha256sum" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 self_dir=$(CDPATH='' cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)
 if [ "$#" -eq 1 ]; then
     resolved=$(readlink -f -- "$1")
+    if [ -n "${FAKE_SHA256_LOG-}" ]; then
+        printf '%s\n' "$resolved" >> "$FAKE_SHA256_LOG"
+    fi
     case "$resolved" in
         */install.sh)
             if [ "${FAKE_SHA256_MODE-}" != installer-mismatch ]; then
@@ -223,13 +235,13 @@ if [ "$#" -eq 1 ]; then
                 exit 0
             fi
             ;;
-        */apm-linux-x86_64.tar.gz)
+        */apm-linux-*.tar.gz)
             if [ "${FAKE_SHA256_MODE-}" != archive-mismatch ]; then
                 printf '%s  %s\n' "${FAKE_PINNED_ARCHIVE_HASH:?}" "$1"
                 exit 0
             fi
             ;;
-        */archive-check/apm-linux-x86_64/apm)
+        */archive-check/apm-linux-*/apm)
             if [ "${FAKE_SHA256_MODE-}" != member-mismatch ]; then
                 printf '%s  %s\n' "${FAKE_PINNED_APM_HASH:?}" "$1"
                 exit 0
@@ -251,14 +263,14 @@ if [ "$#" -eq 1 ]; then
 fi
 exec "${REAL_SHA256SUM:?}" "$@"
 EOF
-    chmod +x "$bin_dir/apm" "$bin_dir/codex" "$bin_dir/sha256sum"
+    chmod +x "$bin_dir/apm" "$bin_dir/codex" "$bin_dir/sha256sum" "$bin_dir/uname"
 }
 
 new_case() {
     case_name=$1
     unset APM_INSTALL_DIR FAKE_ARCHIVE_FIXTURE FAKE_DOWNLOADED_EXECUTION_SENTINEL \
         FAKE_INSTALLER_EXECUTION_SENTINEL FAKE_INSTALLER_FIXTURE FAKE_INSTALL_TARGET \
-        FAKE_SHA256_MODE || true
+        FAKE_PLATFORM_ARCH FAKE_SHA256_LOG FAKE_SHA256_MODE FAKE_UNAME_MACHINE || true
     case_root="$test_root/$case_name"
     case_home="$case_root/home"
     case_bin="$case_root/bin"
@@ -272,24 +284,31 @@ run_bootstrap() {
 
 run_bootstrap_script() {
     local bootstrap_path=$1
-    local pinned_installer_hash pinned_archive_hash
+    local platform_arch=x86_64 pinned_installer_hash pinned_archive_hash pinned_executable_hash
     shift
+    case "${FAKE_UNAME_MACHINE:-x86_64}" in
+        arm64|aarch64) platform_arch=arm64 ;;
+    esac
     pinned_installer_hash=$(awk '$2 == "install.sh" { print $1 }' "$repo_root/.apm-checksums")
-    pinned_archive_hash=$(awk '$2 == "apm-linux-x86_64.tar.gz" { print $1 }' "$repo_root/.apm-checksums")
+    pinned_archive_hash=$(awk -v name="apm-linux-$platform_arch.tar.gz" \
+        '$2 == name { print $1 }' "$repo_root/.apm-checksums")
+    pinned_executable_hash=$(awk -v name="apm-linux-$platform_arch/apm" \
+        '$2 == name { print $1 }' "$repo_root/.apm-checksums")
     HOME="$case_home" PATH="$case_bin:/usr/bin:/bin" REAL_SHA256SUM="$real_sha256sum" \
         FAKE_PINNED_INSTALLER_HASH="$pinned_installer_hash" \
         FAKE_PINNED_ARCHIVE_HASH="$pinned_archive_hash" \
-        FAKE_PINNED_APM_HASH="$pinned_linux_executable_hash" "$bootstrap_path" "$@"
+        FAKE_PINNED_APM_HASH="$pinned_executable_hash" "$bootstrap_path" "$@"
 }
 
 prepare_secure_download_fixtures() {
+    local platform_arch=${1:-x86_64}
     fixture_root="$case_root/download-fixtures"
-    fixture_bundle="$fixture_root/apm-linux-x86_64"
+    fixture_bundle="$fixture_root/apm-linux-$platform_arch"
     mkdir -p "$fixture_bundle"
     cp "$case_bin/apm" "$fixture_bundle/apm"
     chmod +x "$fixture_bundle/apm"
-    fixture_archive="$fixture_root/apm-linux-x86_64.tar.gz"
-    tar -czf "$fixture_archive" -C "$fixture_root" apm-linux-x86_64
+    fixture_archive="$fixture_root/apm-linux-$platform_arch.tar.gz"
+    tar -czf "$fixture_archive" -C "$fixture_root" "apm-linux-$platform_arch"
     fixture_installer="$fixture_root/install.sh"
     cat > "$fixture_installer" <<'EOF'
 #!/usr/bin/env sh
@@ -301,9 +320,10 @@ printf 'installer-executed\n' >> "${FAKE_INSTALLER_EXECUTION_SENTINEL:?}"
 mirror=${APM_RELEASE_BASE_URL#file://}
 temporary=${TMPDIR:-/tmp}/fake-apm-installer-$$
 mkdir -p "$temporary"
-tar -xzf "$mirror/$VERSION/apm-linux-x86_64.tar.gz" -C "$temporary"
+archive_root="apm-linux-${FAKE_PLATFORM_ARCH:-x86_64}"
+tar -xzf "$mirror/$VERSION/$archive_root.tar.gz" -C "$temporary"
 mkdir -p "${APM_INSTALL_DIR:?}"
-cp "$temporary/apm-linux-x86_64/apm" "$APM_INSTALL_DIR/apm"
+cp "$temporary/$archive_root/apm" "$APM_INSTALL_DIR/apm"
 chmod +x "$APM_INSTALL_DIR/apm"
 printf '%s\n' "${VERSION#v}" > "$APM_INSTALL_DIR/apm.pinned"
 "$APM_INSTALL_DIR/apm" --version >/dev/null
@@ -324,13 +344,14 @@ while [ "$#" -gt 0 ]; do
 done
 case "$url" in
     */install.sh) cp "${FAKE_INSTALLER_FIXTURE:?}" "$output" ;;
-    */apm-linux-x86_64.tar.gz) cp "${FAKE_ARCHIVE_FIXTURE:?}" "$output" ;;
+    */apm-linux-*.tar.gz) cp "${FAKE_ARCHIVE_FIXTURE:?}" "$output" ;;
     *) exit 84 ;;
 esac
 EOF
     chmod +x "$case_bin/curl"
     export FAKE_INSTALLER_FIXTURE="$fixture_installer"
     export FAKE_ARCHIVE_FIXTURE="$fixture_archive"
+    export FAKE_PLATFORM_ARCH="$platform_arch"
     export FAKE_INSTALLER_EXECUTION_SENTINEL="$case_root/installer-executed"
     export FAKE_DOWNLOADED_EXECUTION_SENTINEL="$case_root/downloaded-executed"
     export APM_INSTALL_DIR="$case_bin"
@@ -683,6 +704,20 @@ fi
 assert_file_contains "$case_home/.fake-command.log" 'apm install --global --frozen'
 assert_file_contains "$case_root/out" 'Global APM configuration is ready.'
 printf 'ok - verified fresh CLI promotion through the private local mirror\n'
+
+new_case arm64-secure-cli-install
+export FAKE_UNAME_MACHINE=aarch64 FAKE_SHA256_LOG="$case_root/sha256.log"
+prepare_secure_download_fixtures arm64
+rm "$case_bin/apm"
+if ! run_bootstrap > "$case_root/out" 2> "$case_root/err"; then
+    cat "$case_root/err" >&2
+    fail 'verified arm64 local-mirror installation failed'
+fi
+assert_file_contains "$case_root/sha256.log" 'apm-linux-arm64.tar.gz'
+assert_file_contains "$case_root/sha256.log" 'archive-check/apm-linux-arm64/apm'
+[ -f "$case_root/installer-executed" ] || fail 'verified arm64 installer did not execute'
+[ -f "$case_root/downloaded-executed" ] || fail 'verified arm64 executable did not execute'
+printf 'ok - arm64 CLI archive and member selection through the private local mirror\n'
 
 new_case secure-cli-upgrade
 prepare_secure_download_fixtures

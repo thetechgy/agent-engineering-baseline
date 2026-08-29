@@ -1033,6 +1033,21 @@ Describe 'Repository invariants' {
         }
     }
 
+    It 'fails workflow checksum lookup when pin cardinality is not exactly one' {
+        $expectedSnippets = @(
+            '$2 == name { checksum = $1; count++ }'
+            'if (count != 1) exit 1'
+            'printf ''Expected exactly one pinned checksum for %s.\n'' "$name" >&2'
+        )
+        foreach ($workflowName in @('update-baseline.yml', 'validate.yml')) {
+            $workflowPath = Join-Path $script:RepositoryRoot ".github/workflows/$workflowName"
+            $workflow = [System.IO.File]::ReadAllText($workflowPath)
+            foreach ($snippet in $expectedSnippets) {
+                $workflow.Contains($snippet) | Should-BeTrue
+            }
+        }
+    }
+
     It 'keeps the local Pester 6 guidance project agnostic' {
         $path = Join-Path $script:RepositoryRoot '.apm/skills/powershell-pester-6/SKILL.md'
         $projectMarker = -join ([char[]](70, 65, 67, 84))

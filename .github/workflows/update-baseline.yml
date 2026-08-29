@@ -43,10 +43,21 @@ jobs:
           curl --fail --location --silent --show-error --output "$secure_root/$archive" \
             "https://github.com/microsoft/apm/releases/download/v$version/$archive"
           verify_checksum() {
-            expected="$(awk -v name="$2" '$2 == name { print $1 }' .apm-checksums)"
-            [ "$(printf '%s\n' "$expected" | wc -l)" -eq 1 ]
+            local path=$1 name=$2 expected
+            expected="$(
+              awk -v name="$name" '
+                $2 == name { checksum = $1; count++ }
+                END {
+                  if (count != 1) exit 1
+                  print checksum
+                }
+              ' .apm-checksums
+            )" || {
+              printf 'Expected exactly one pinned checksum for %s.\n' "$name" >&2
+              return 1
+            }
             printf '%s\n' "$expected" | grep -Eq '^[0-9a-f]{64}$'
-            printf '%s  %s\n' "$expected" "$1" | sha256sum --check --strict -
+            printf '%s  %s\n' "$expected" "$path" | sha256sum --check --strict -
           }
           verify_checksum "$secure_root/install.sh" install.sh
           verify_checksum "$secure_root/$archive" "$archive"
