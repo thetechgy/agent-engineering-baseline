@@ -178,6 +178,23 @@ verify_default_copilot_github_mcp() {
     ' "$json_path" >/dev/null
 }
 
+verify_copilot_mcp_inspectable() {
+    local json_path=$1
+
+    jq -e '
+        type == "object" and
+        ((has("mcpServers") | not) or (.mcpServers | type == "object"))
+    ' "$json_path" >/dev/null
+}
+
+copilot_has_github_mcp() {
+    local json_path=$1
+
+    jq -e --arg name "$GITHUB_MCP_NAME" '
+        has("mcpServers") and (.mcpServers | has($name))
+    ' "$json_path" >/dev/null
+}
+
 remove_copilot_github_mcp() {
     local config_path=$1
     local staged_path
@@ -395,13 +412,17 @@ else
 fi
 
 copilot_mcp_remove=false
-if [ -f "$copilot_dir/mcp-config.json" ] &&
-    grep -F "\"$GITHUB_MCP_NAME\"" "$copilot_dir/mcp-config.json" >/dev/null; then
+if [ -f "$copilot_dir/mcp-config.json" ]; then
     require_command jq
-    if ! verify_default_copilot_github_mcp "$copilot_dir/mcp-config.json"; then
-        die "Existing Copilot MCP entry '$GITHUB_MCP_NAME' is customized; refusing to remove it."
+    if ! verify_copilot_mcp_inspectable "$copilot_dir/mcp-config.json"; then
+        die 'Unable to parse or semantically inspect the existing Copilot MCP configuration.'
     fi
-    copilot_mcp_remove=true
+    if copilot_has_github_mcp "$copilot_dir/mcp-config.json"; then
+        if ! verify_default_copilot_github_mcp "$copilot_dir/mcp-config.json"; then
+            die "Existing Copilot MCP entry '$GITHUB_MCP_NAME' is customized; refusing to remove it."
+        fi
+        copilot_mcp_remove=true
+    fi
 fi
 
 extract_project_doc_setting "$codex_dir/config.toml" "$preflight_temp/project-doc-setting.before"
@@ -528,10 +549,14 @@ elif ! grep -F "No MCP server named '$GITHUB_MCP_NAME' found." \
     "$preflight_temp/github-mcp.after.err" >/dev/null; then
     die "Unable to verify removal of the Codex MCP entry '$GITHUB_MCP_NAME'."
 fi
-if [ "$copilot_mcp_remove" = true ] && [ -f "$copilot_dir/mcp-config.json" ] &&
-    jq -e --arg name "$GITHUB_MCP_NAME" '.mcpServers | has($name)' \
-        "$copilot_dir/mcp-config.json" >/dev/null; then
-    die "GitHub MCP entry '$GITHUB_MCP_NAME' remains in Copilot after deployment."
+if [ -f "$copilot_dir/mcp-config.json" ]; then
+    require_command jq
+    if ! verify_copilot_mcp_inspectable "$copilot_dir/mcp-config.json"; then
+        die 'Unable to verify the Copilot MCP configuration after deployment.'
+    fi
+    if copilot_has_github_mcp "$copilot_dir/mcp-config.json"; then
+        die "GitHub MCP entry '$GITHUB_MCP_NAME' remains in Copilot after deployment."
+    fi
 fi
 
 for skill_name in "${LOCAL_SKILLS[@]}"; do

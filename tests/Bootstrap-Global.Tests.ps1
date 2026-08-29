@@ -363,6 +363,7 @@ Describe 'Bootstrap-Global behavior' {
         $script:OriginalFakeHome = $env:FAKE_HOME
         $script:OriginalFakeApmVersion = $env:FAKE_APM_VERSION
         $script:OriginalApmFailure = $env:FAKE_APM_FAIL_STAGE
+        $script:OriginalApmReintroduce = $env:FAKE_APM_REINTRODUCE_COPILOT_MCP
         $script:OriginalCodexGetFailure = $env:FAKE_CODEX_FAIL_GET
         $script:OriginalCodexFailure = $env:FAKE_CODEX_FAIL_REMOVE
         $pathSeparator = [System.IO.Path]::PathSeparator
@@ -370,6 +371,7 @@ Describe 'Bootstrap-Global behavior' {
         $env:FAKE_HOME = $script:CaseHome
         $env:FAKE_APM_VERSION = $script:PinnedVersion
         $env:FAKE_APM_FAIL_STAGE = $null
+        $env:FAKE_APM_REINTRODUCE_COPILOT_MCP = $null
         $env:FAKE_CODEX_FAIL_GET = $null
         $env:FAKE_CODEX_FAIL_REMOVE = $null
     }
@@ -379,6 +381,7 @@ Describe 'Bootstrap-Global behavior' {
         $env:FAKE_HOME = $script:OriginalFakeHome
         $env:FAKE_APM_VERSION = $script:OriginalFakeApmVersion
         $env:FAKE_APM_FAIL_STAGE = $script:OriginalApmFailure
+        $env:FAKE_APM_REINTRODUCE_COPILOT_MCP = $script:OriginalApmReintroduce
         $env:FAKE_CODEX_FAIL_GET = $script:OriginalCodexGetFailure
         $env:FAKE_CODEX_FAIL_REMOVE = $script:OriginalCodexFailure
     }
@@ -502,6 +505,127 @@ Describe 'Bootstrap-Global behavior' {
         } | Should-Throw -ExceptionMessage '*Copilot MCP entry*customized*'
 
         Test-Path -LiteralPath (Join-Path $script:CaseHome '.apm/backups') | Should-BeFalse
+    }
+
+    It 'rejects an escaped customized Copilot MCP key before mutation' {
+        $copilotDirectory = Join-Path $script:CaseHome '.copilot'
+        $configPath = Join-Path $copilotDirectory 'mcp-config.json'
+        $null = New-Item -ItemType Directory -Path $copilotDirectory -Force
+        $customJson = $script:DefaultCopilotMcpJson.Replace(
+            '"github-mcp-server"',
+            '"github-\u006dcp-server"'
+        )
+        $customJson = $customJson.Replace(
+            'https://api.githubcopilot.com/mcp/',
+            'https://custom.example.invalid/mcp/'
+        )
+        Set-Content -LiteralPath $configPath -Value $customJson -Encoding UTF8
+        $originalHash = (Get-FileHash -LiteralPath $configPath -Algorithm SHA256).Hash
+
+        {
+            Invoke-GlobalBootstrap -HomePath $script:CaseHome `
+                -RepositoryRoot $script:RepositoryRoot -Confirm:$false
+        } | Should-Throw -ExceptionMessage '*Copilot MCP entry*customized*'
+
+        (Get-FileHash -LiteralPath $configPath -Algorithm SHA256).Hash | Should-Be $originalHash
+        Test-Path -LiteralPath (Join-Path $script:CaseHome '.apm/backups') | Should-BeFalse
+    }
+
+    It 'removes an escaped exact-default Copilot MCP key and preserves unrelated servers' {
+        $copilotDirectory = Join-Path $script:CaseHome '.copilot'
+        $configPath = Join-Path $copilotDirectory 'mcp-config.json'
+        $null = New-Item -ItemType Directory -Path $copilotDirectory -Force
+        $configJson = @'
+{
+  "mcpServers": {
+    "github-\u006dcp-server": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "tools": ["*"],
+      "id": "",
+      "headers": {},
+      "bearer_token_env_var": "GITHUB_TOKEN"
+    },
+    "other-server": {
+      "type": "stdio",
+      "command": "keep-me"
+    }
+  },
+  "inputs": [
+    { "id": "keep-input" }
+  ]
+}
+'@
+        Set-Content -LiteralPath $configPath -Value $configJson -Encoding UTF8
+
+        Invoke-GlobalBootstrap -HomePath $script:CaseHome `
+            -RepositoryRoot $script:RepositoryRoot -Confirm:$false
+
+        $configuration = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
+        $servers = (Get-CaseSensitiveJsonProperty `
+                -InputObject $configuration -Name 'mcpServers').Value
+        $null -eq (Get-CaseSensitiveJsonProperty `
+                -InputObject $servers -Name 'github-mcp-server') | Should-BeTrue
+        (Get-CaseSensitiveJsonProperty -InputObject $servers -Name 'other-server').Value.command |
+            Should-Be 'keep-me'
+        $configuration.inputs[0].id | Should-Be 'keep-input'
+    }
+
+    It 'leaves unrelated and case-variant Copilot MCP keys byte-for-byte unchanged' {
+        $copilotDirectory = Join-Path $script:CaseHome '.copilot'
+        $configPath = Join-Path $copilotDirectory 'mcp-config.json'
+        $null = New-Item -ItemType Directory -Path $copilotDirectory -Force
+        $configJsonValues = @(
+            '{"mcpServers":{"GitHub-Mcp-Server":{"type":"stdio","command":"keep-case"},"other-server":{"type":"stdio","command":"keep-other"}}}'
+            '{"McpServers":{"github-mcp-server":{"type":"stdio","command":"keep-container-case"}}}'
+        )
+        foreach ($configJson in $configJsonValues) {
+            [System.IO.File]::WriteAllText($configPath, $configJson)
+            $originalHash = (Get-FileHash -LiteralPath $configPath -Algorithm SHA256).Hash
+
+            Invoke-GlobalBootstrap -HomePath $script:CaseHome `
+                -RepositoryRoot $script:RepositoryRoot -Confirm:$false
+
+            (Get-FileHash -LiteralPath $configPath -Algorithm SHA256).Hash | Should-Be $originalHash
+        }
+    }
+
+    It 'rejects malformed or semantically uninspectable Copilot JSON before mutation' {
+        $copilotDirectory = Join-Path $script:CaseHome '.copilot'
+        $configPath = Join-Path $copilotDirectory 'mcp-config.json'
+        $null = New-Item -ItemType Directory -Path $copilotDirectory -Force
+
+        foreach ($configJson in @('{"mcpServers":', '{"mcpServers":[]}')) {
+            [System.IO.File]::WriteAllText($configPath, $configJson)
+            $originalHash = (Get-FileHash -LiteralPath $configPath -Algorithm SHA256).Hash
+
+            {
+                Invoke-GlobalBootstrap -HomePath $script:CaseHome `
+                    -RepositoryRoot $script:RepositoryRoot -Confirm:$false
+            } | Should-Throw -ExceptionMessage '*parse or semantically inspect*'
+
+            (Get-FileHash -LiteralPath $configPath -Algorithm SHA256).Hash | Should-Be $originalHash
+            Test-Path -LiteralPath (Join-Path $script:CaseHome '.apm/backups') | Should-BeFalse
+        }
+    }
+
+    It 'rolls back when APM reintroduces an escaped Copilot MCP key after preflight' {
+        Initialize-OldProfile -HomePath $script:CaseHome
+        $configPath = Join-Path $script:CaseHome '.copilot/mcp-config.json'
+        [System.IO.File]::WriteAllText(
+            $configPath,
+            '{"mcpServers":{"other-server":{"type":"stdio","command":"keep-me"}}}'
+        )
+        $expected = Get-ProfileFingerprint -HomePath $script:CaseHome
+        $env:FAKE_APM_REINTRODUCE_COPILOT_MCP = '1'
+
+        {
+            Invoke-GlobalBootstrap -HomePath $script:CaseHome `
+                -RepositoryRoot $script:RepositoryRoot -Confirm:$false
+        } | Should-Throw -ExceptionMessage '*remains in Copilot after deployment*'
+
+        $actual = Get-ProfileFingerprint -HomePath $script:CaseHome
+        Compare-ProfileFingerprint -Reference $expected -Difference $actual | Should-BeTrue
     }
 
     It 'honors WhatIf without changing the profile' {
