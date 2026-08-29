@@ -54,6 +54,7 @@ jobs:
               if ($0 ~ /^\// || $0 ~ /(^|\/)\.\.($|\/)/) valid = 0
             }
             END { exit(valid && count == 1 ? 0 : 1) }
+          '
           tar -xzf "$archive_path" -C "$secure_root/extract"
           [ -z "$(find "$secure_root/extract/$archive_root" -type l -print -quit)" ]
           verify_checksum "$secure_root/extract/$member" "$member"

@@ -53,6 +53,7 @@ jobs:
               if ($0 ~ /^\// || $0 ~ /(^|\/)\.\.($|\/)/) valid = 0
             }
             END { exit(valid && count == 1 ? 0 : 1) }
+          '
           tar -xzf "$secure_root/$archive" -C "$secure_root/extract"
           [ -z "$(find "$secure_root/extract/$archive_root" -type l -print -quit)" ]
           verify_checksum "$secure_root/extract/$member" "$member"
@@ -98,6 +99,7 @@ jobs:
                 if ($0 ~ /^\// || $0 ~ /(^|\/)\.\.($|\/)/) valid = 0
               }
               END { exit(valid && count == 1 ? 0 : 1) }
+            '
             extract_root="$candidate_root/extract-$platform_arch"
             mkdir "$extract_root"
             tar -xzf "$candidate_root/$archive" -C "$extract_root"
@@ -112,6 +114,7 @@ jobs:
               if ($0 ~ /^\// || $0 ~ /(^|\/)\.\.($|\/)/) valid = 0
             }
             END { exit(valid && count == 1 ? 0 : 1) }
+          '
           windows_extract="$candidate_root/extract-windows"
           mkdir "$windows_extract"
           unzip -q "$candidate_root/apm-windows-x86_64.zip" -d "$windows_extract"
