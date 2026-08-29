@@ -24,6 +24,65 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Install reviewed APM CLI
+        shell: bash
+        run: |
+          version="$(head -n 1 .apm-version | tr -d '[:space:]')"
+          case "$(uname -m)" in
+            x86_64) platform_arch='x86_64' ;;
+            arm64|aarch64) platform_arch='arm64' ;;
+            *) echo 'Unsupported Linux architecture.' >&2; exit 1 ;;
+          esac
+          archive="apm-linux-$platform_arch.tar.gz"
+          archive_root="apm-linux-$platform_arch"
+          member="$archive_root/apm"
+          secure_root="$RUNNER_TEMP/apm-secure-install"
+          mkdir -p "$secure_root/extract" "$secure_root/mirror/v$version"
+          curl --fail --location --silent --show-error --output "$secure_root/install.sh" \
+            "https://raw.githubusercontent.com/microsoft/apm/v$version/install.sh"
+          curl --fail --location --silent --show-error --output "$secure_root/$archive" \
+            "https://github.com/microsoft/apm/releases/download/v$version/$archive"
+          verify_checksum() {
+            local path=$1 name=$2 expected
+            expected="$(
+              awk -v name="$name" '
+                $2 == name { checksum = $1; count++ }
+                END {
+                  if (count != 1) exit 1
+                  print checksum
+                }
+              ' .apm-checksums
+            )" || {
+              printf 'Expected exactly one pinned checksum for %s.\n' "$name" >&2
+              return 1
+            }
+            printf '%s\n' "$expected" | grep -Eq '^[0-9a-f]{64}$'
+            printf '%s  %s\n' "$expected" "$path" | sha256sum --check --strict -
+          }
+          verify_checksum "$secure_root/install.sh" install.sh
+          verify_checksum "$secure_root/$archive" "$archive"
+          tar -tzf "$secure_root/$archive" | awk -v root="$archive_root" -v member="$member" '
+            BEGIN { valid = 1; count = 0 }
+            {
+              if ($0 == member) count++
+              if ($0 != root && index($0, root "/") != 1) valid = 0
+              if ($0 ~ /^\// || $0 ~ /(^|\/)\.\.($|\/)/) valid = 0
+            }
+            END { exit(valid && count == 1 ? 0 : 1) }
+          '
+          tar -xzf "$secure_root/$archive" -C "$secure_root/extract"
+          [ -z "$(find "$secure_root/extract/$archive_root" -type l -print -quit)" ]
+          verify_checksum "$secure_root/extract/$member" "$member"
+          cp "$secure_root/$archive" "$secure_root/mirror/v$version/$archive"
+          verify_checksum "$secure_root/mirror/v$version/$archive" "$archive"
+          APM_INSTALL_DIR="$RUNNER_TEMP/apm-bin" \
+            APM_RELEASE_BASE_URL="file://$secure_root/mirror" \
+            APM_NO_DIRECT_FALLBACK=1 VERSION="v$version" sh "$secure_root/install.sh"
+          installed="$RUNNER_TEMP/lib/apm/apm"
+          verify_checksum "$installed" "$member"
+          "$installed" --version
+          dirname "$installed" >> "$GITHUB_PATH"
+
       - name: Refresh APM CLI version pin
         shell: bash
         env:
@@ -33,37 +92,65 @@ jobs:
           latest="${latest#v}"
           printf '%s\n' "$latest" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'
           printf '%s\n' "$latest" > .apm-version
-          for installer in install.sh install.ps1; do
-            curl --fail --location --silent --show-error --output "$RUNNER_TEMP/$installer" \
-              "https://raw.githubusercontent.com/microsoft/apm/v$latest/$installer"
+          candidate_root="$RUNNER_TEMP/apm-candidate"
+          mkdir -p "$candidate_root"
+          curl --fail --location --silent --show-error --output "$candidate_root/install.sh" \
+            "https://raw.githubusercontent.com/microsoft/apm/v$latest/install.sh"
+          for archive in \
+            apm-linux-arm64.tar.gz \
+            apm-linux-x86_64.tar.gz \
+            apm-windows-x86_64.zip; do
+            curl --fail --location --silent --show-error --output "$candidate_root/$archive" \
+              "https://github.com/microsoft/apm/releases/download/v$latest/$archive"
           done
-          (cd "$RUNNER_TEMP" && sha256sum install.sh install.ps1) > .apm-installer-checksums
-
-      - name: Install pinned APM CLI
-        shell: bash
-        run: |
-          version="$(head -n 1 .apm-version | tr -d '[:space:]')"
-          installer="$RUNNER_TEMP/apm-install.sh"
-          curl --fail --location --silent --show-error --output "$installer" \
-            "https://raw.githubusercontent.com/microsoft/apm/v$version/install.sh"
-          expected="$(awk '$2 == "install.sh" { print $1; exit }' .apm-installer-checksums)"
-          printf '%s  %s\n' "$expected" "$installer" | sha256sum --check --strict -
-          VERSION="v$version" sh "$installer"
-          if ! command -v apm >/dev/null 2>&1; then
-            # The installer may target a directory missing from this shell's PATH.
-            for candidate in "$HOME/.local/bin" /usr/local/bin; do
-              if [ -x "$candidate/apm" ]; then
-                PATH="$candidate:$PATH"
-                break
-              fi
-            done
-          fi
-          if ! command -v apm >/dev/null 2>&1; then
-            echo 'apm is not on PATH after installation.' >&2
-            exit 1
-          fi
-          dirname "$(command -v apm)" >> "$GITHUB_PATH"
-          apm --version
+          for platform_arch in arm64 x86_64; do
+            archive="apm-linux-$platform_arch.tar.gz"
+            archive_root="apm-linux-$platform_arch"
+            member="$archive_root/apm"
+            tar -tzf "$candidate_root/$archive" | awk -v root="$archive_root" -v member="$member" '
+              BEGIN { valid = 1; count = 0 }
+              {
+                if ($0 == member) count++
+                if ($0 != root && index($0, root "/") != 1) valid = 0
+                if ($0 ~ /^\// || $0 ~ /(^|\/)\.\.($|\/)/) valid = 0
+              }
+              END { exit(valid && count == 1 ? 0 : 1) }
+            '
+            extract_root="$candidate_root/extract-$platform_arch"
+            mkdir "$extract_root"
+            tar -xzf "$candidate_root/$archive" -C "$extract_root"
+            [ -z "$(find "$extract_root/$archive_root" -type l -print -quit)" ]
+            [ -f "$extract_root/$member" ]
+          done
+          unzip -Z1 "$candidate_root/apm-windows-x86_64.zip" | awk '
+            BEGIN { valid = 1; count = 0; root = "apm-windows-x86_64"; member = root "/apm.exe" }
+            {
+              if ($0 == member) count++
+              if ($0 != root "/" && index($0, root "/") != 1) valid = 0
+              if ($0 ~ /^\// || $0 ~ /(^|\/)\.\.($|\/)/) valid = 0
+            }
+            END { exit(valid && count == 1 ? 0 : 1) }
+          '
+          windows_extract="$candidate_root/extract-windows"
+          mkdir "$windows_extract"
+          unzip -q "$candidate_root/apm-windows-x86_64.zip" -d "$windows_extract"
+          [ -z "$(find "$windows_extract/apm-windows-x86_64" -type l -print -quit)" ]
+          [ -f "$windows_extract/apm-windows-x86_64/apm.exe" ]
+          {
+            printf '%s  install.sh\n' "$(sha256sum "$candidate_root/install.sh" | awk '{ print $1 }')"
+            printf '%s  apm-linux-arm64.tar.gz\n' \
+              "$(sha256sum "$candidate_root/apm-linux-arm64.tar.gz" | awk '{ print $1 }')"
+            printf '%s  apm-linux-arm64/apm\n' \
+              "$(sha256sum "$candidate_root/extract-arm64/apm-linux-arm64/apm" | awk '{ print $1 }')"
+            printf '%s  apm-linux-x86_64.tar.gz\n' \
+              "$(sha256sum "$candidate_root/apm-linux-x86_64.tar.gz" | awk '{ print $1 }')"
+            printf '%s  apm-linux-x86_64/apm\n' \
+              "$(sha256sum "$candidate_root/extract-x86_64/apm-linux-x86_64/apm" | awk '{ print $1 }')"
+            printf '%s  apm-windows-x86_64.zip\n' \
+              "$(sha256sum "$candidate_root/apm-windows-x86_64.zip" | awk '{ print $1 }')"
+            printf '%s  apm-windows-x86_64/apm.exe\n' \
+              "$(sha256sum "$windows_extract/apm-windows-x86_64/apm.exe" | awk '{ print $1 }')"
+          } > .apm-checksums
 
       - name: Update APM dependencies
         env:
@@ -164,13 +251,13 @@ jobs:
             '## Summary' \
             '' \
             "- APM CLI candidate: $pinned_version" \
-            '- refreshes the APM CLI version pin via the official installer' \
+            '- refreshes the APM CLI version pin and reviewed installer/archive/executable hashes' \
             '- re-resolves branch-ref dependencies with `apm update` and rewrites the lockfile' \
             '- regenerates compiled outputs and runs the full repository validation suite' \
             '' \
             '## Required review' \
             '' \
-            'Review the pinned upstream commit and every changed binary hash before merging. Binary hashes provide integrity evidence; they do not prove benign behavior.' \
+            'Review the pinned upstream commit and every changed installer, archive, and executable hash before merging. Hashes provide integrity evidence; they do not prove benign behavior.' \
             '' \
             '## Changed files' \
             '' \
