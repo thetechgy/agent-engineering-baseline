@@ -1,260 +1,451 @@
 <#
 .SYNOPSIS
-No-network Pester tests for scripts/Bootstrap-Baseline.ps1.
+Offline Pester tests for the verified Windows APM bundle bootstrap.
 
 .DESCRIPTION
-Each case copies the bootstrap into a sandbox (private pin file, PATH that
-exposes only a stub apm executable, mocked installer download) and asserts
-exactly which native APM commands the bootstrap runs. Compatible with
-PowerShell 7 and Windows PowerShell 5.1.
+Metadata and source-contract tests run on every platform. Windows-only cases
+create genuine ZIP archives and a small compiled fixture executable, then
+exercise Windows PowerShell 5.1 download, verification, promotion, rollback,
+PATH, shim, and native deployment behavior.
 #>
 
-BeforeAll {
-    $script:repoRoot = Split-Path -Parent $PSScriptRoot
-    $script:onWindows = [System.IO.Path]::DirectorySeparatorChar -eq '\'
+BeforeDiscovery {
+    $script:IsWindowsPlatform = $env:OS -ceq 'Windows_NT'
+}
 
-    function New-BootstrapSandbox {
+BeforeAll {
+    $script:RepositoryRoot = Split-Path -Parent $PSScriptRoot
+    $script:BootstrapSource = Join-Path $script:RepositoryRoot 'scripts/Bootstrap-Baseline.ps1'
+    $script:IsWindowsPlatform = $env:OS -ceq 'Windows_NT'
+
+    function New-TestRepository {
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
             'PSUseShouldProcessForStateChangingFunctions', '',
-            Justification = 'Creates throwaway test fixtures only.')]
+            Justification = 'Creates throwaway test fixtures only.'
+        )]
         [CmdletBinding()]
         param([string]$Pin = '0.29.0')
 
-        $root = Join-Path ([IO.Path]::GetTempPath()) "bootstrap-pester-$([Guid]::NewGuid().ToString('N'))"
-        New-Item -ItemType Directory -Path (Join-Path $root 'scripts') -Force | Out-Null
-        New-Item -ItemType Directory -Path (Join-Path $root 'bin') -Force | Out-Null
-        Copy-Item -LiteralPath (Join-Path $script:repoRoot 'scripts/Bootstrap-Baseline.ps1') `
-            -Destination (Join-Path $root 'scripts/Bootstrap-Baseline.ps1')
-        if ($Pin) {
-            Set-Content -LiteralPath (Join-Path $root '.apm-version') -Value $Pin
-        }
+        $root = Join-Path $TestDrive ([Guid]::NewGuid().ToString('N'))
+        $scripts = Join-Path $root 'scripts'
+        New-Item -ItemType Directory -Path $scripts -Force | Out-Null
+        Copy-Item -LiteralPath $script:BootstrapSource -Destination (
+            Join-Path $scripts 'Bootstrap-Baseline.ps1'
+        )
+        [IO.File]::WriteAllText(
+            (Join-Path $root '.apm-version'),
+            $Pin + [Environment]::NewLine
+        )
+        [IO.File]::WriteAllLines(
+            (Join-Path $root '.apm-checksums'),
+            [IO.File]::ReadAllLines((Join-Path $script:RepositoryRoot '.apm-checksums')),
+            [Text.Encoding]::ASCII
+        )
         [pscustomobject]@{
             Root      = $root
-            Script    = Join-Path $root 'scripts/Bootstrap-Baseline.ps1'
-            BinDir    = Join-Path $root 'bin'
-            CallLog   = Join-Path $root 'calls.log'
-            StateFile = Join-Path $root 'apm-version'
+            Script    = Join-Path $scripts 'Bootstrap-Baseline.ps1'
+            Checksums = Join-Path $root '.apm-checksums'
+            PinFile   = Join-Path $root '.apm-version'
         }
     }
 
-    # Writes a stub apm executable that records invocations (and $env:VERSION)
-    # to the sandbox call log, reports the version in the sandbox state file,
-    # and optionally upgrades or fails on self-update.
-    function New-ApmStub {
+    function Set-TestChecksum {
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
             'PSUseShouldProcessForStateChangingFunctions', '',
-            Justification = 'Creates throwaway test fixtures only.')]
+            Justification = 'Updates throwaway test metadata only.'
+        )]
         [CmdletBinding()]
         param(
-            [Parameter(Mandatory)]$Sandbox,
-            [Parameter(Mandatory)][string]$Version,
-            [string]$VersionAfterSelfUpdate,
-            [switch]$SelfUpdateFails
+            [Parameter(Mandatory)]$Repository,
+            [Parameter(Mandatory)][string]$Name,
+            [Parameter(Mandatory)][string]$Digest
         )
 
-        Set-Content -LiteralPath $Sandbox.StateFile -Value $Version
-        $after = if ($VersionAfterSelfUpdate) { $VersionAfterSelfUpdate } else { '' }
-        if ($script:onWindows) {
-            $lines = @(
-                '@echo off'
-                "echo apm %* >> `"$($Sandbox.CallLog)`""
-                "echo VERSION_ENV=%VERSION% >> `"$($Sandbox.CallLog)`""
-                'if "%1"=="--version" ('
-                "  for /f `"usebackq delims=`" %%v in (`"$($Sandbox.StateFile)`") do echo Agent Package Manager (APM) CLI version %%v (test)"
-                ')'
-                'if "%1"=="self-update" ('
-                $(if ($SelfUpdateFails) { '  exit /b 1' }
-                    elseif ($after) { "  echo $after> `"$($Sandbox.StateFile)`"" }
-                    else { '  rem no-op' })
-                ')'
-                'exit /b 0'
-            )
-            Set-Content -LiteralPath (Join-Path $Sandbox.BinDir 'apm.cmd') -Value ($lines -join "`r`n")
+        $lines = foreach ($line in [IO.File]::ReadAllLines($Repository.Checksums)) {
+            if ($line.EndsWith("  $Name", [StringComparison]::Ordinal)) {
+                "$Digest  $Name"
+            }
+            else { $line }
+        }
+        [IO.File]::WriteAllLines($Repository.Checksums, $lines, [Text.Encoding]::ASCII)
+    }
+
+    function New-FixtureExecutable {
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+            'PSUseShouldProcessForStateChangingFunctions', '',
+            Justification = 'Compiles a throwaway test executable only.'
+        )]
+        [CmdletBinding()]
+        param(
+            [Parameter(Mandatory)][string]$Path,
+            [Parameter(Mandatory)][string]$Version
+        )
+
+        $className = 'Fixture' + [Guid]::NewGuid().ToString('N')
+        $source = @"
+using System;
+using System.IO;
+public static class $className
+{
+    public static int Main(string[] args)
+    {
+        string log = Environment.GetEnvironmentVariable("APM_TEST_CALL_LOG");
+        if (!String.IsNullOrEmpty(log))
+        {
+            File.AppendAllText(log, Environment.CommandLine + Environment.NewLine);
+        }
+        if (args.Length == 1 && args[0] == "--version")
+        {
+            Console.WriteLine("Agent Package Manager (APM) CLI version $Version (fixture)");
+        }
+        return 0;
+    }
+}
+"@
+        Add-Type -TypeDefinition $source -Language CSharp -OutputAssembly $Path -OutputType ConsoleApplication
+    }
+
+    function New-ZipFixture {
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+            'PSUseShouldProcessForStateChangingFunctions', '',
+            Justification = 'Creates throwaway ZIP fixtures only.'
+        )]
+        [CmdletBinding()]
+        param(
+            [Parameter(Mandatory)]$Repository,
+            [string]$Version = '0.29.0',
+            [switch]$OmitInternal,
+            [switch]$WrongRoot,
+            [switch]$DuplicateExecutable,
+            [switch]$Traversal,
+            [switch]$LinkedEntry,
+            [switch]$CorruptArchive
+        )
+
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        $fixtureRoot = Join-Path $Repository.Root ('fixture-' + [Guid]::NewGuid().ToString('N'))
+        $expectedRoot = 'apm-windows-x86_64'
+        $archiveRoot = if ($WrongRoot) { 'wrong-root' } else { $expectedRoot }
+        $bundleRoot = Join-Path $fixtureRoot $archiveRoot
+        $internalRoot = Join-Path $bundleRoot '_internal'
+        New-Item -ItemType Directory -Path $internalRoot -Force | Out-Null
+        if (-not $OmitInternal) {
+            [IO.File]::WriteAllText((Join-Path $internalRoot 'catalog.json'), 'fixture index')
+        }
+        $executablePath = Join-Path $bundleRoot 'apm.exe'
+        New-FixtureExecutable -Path $executablePath -Version $Version
+        $archivePath = Join-Path $Repository.Root 'apm-windows-x86_64.zip'
+
+        if ($CorruptArchive) {
+            [IO.File]::WriteAllText($archivePath, 'not a ZIP archive')
         }
         else {
-            $lines = @(
-                '#!/usr/bin/env bash'
-                "log='$($Sandbox.CallLog)'"
-                "state='$($Sandbox.StateFile)'"
-                'printf ''apm %s\n'' "$*" >> "$log"'
-                'printf ''VERSION_ENV=%s\n'' "${VERSION:-}" >> "$log"'
-                'case "$1" in'
-                '    --version)'
-                '        printf ''Agent Package Manager (APM) CLI version %s (test)\n'' "$(cat "$state")" ;;'
-                '    self-update)'
-                $(if ($SelfUpdateFails) { '        exit 1 ;;' }
-                    elseif ($after) { "        printf '%s\n' '$after' > `"`$state`" ;;" }
-                    else { '        : ;;' })
-                'esac'
-                'exit 0'
+            $stream = [IO.File]::Open($archivePath, [IO.FileMode]::Create)
+            $archive = New-Object IO.Compression.ZipArchive(
+                $stream,
+                [IO.Compression.ZipArchiveMode]::Create,
+                $false
             )
-            $stubPath = Join-Path $Sandbox.BinDir 'apm'
-            Set-Content -LiteralPath $stubPath -Value ($lines -join "`n")
-            & chmod +x $stubPath
-        }
-    }
-
-    function Invoke-Bootstrap {
-        param(
-            [Parameter(Mandatory)]$Sandbox,
-            [hashtable]$Parameters = @{},
-            [switch]$IncludeStubPath
-        )
-
-        $previousPath = $env:PATH
-        $systemPath = if ($script:onWindows) { $env:SystemRoot + ';' + $env:SystemRoot + '\System32' }
-        else { '/usr/bin:/bin' }
-        try {
-            $env:PATH = if ($IncludeStubPath) {
-                $Sandbox.BinDir + [IO.Path]::PathSeparator + $systemPath
+            try {
+                foreach ($file in Get-ChildItem -LiteralPath $bundleRoot -File -Recurse) {
+                    $relative = $file.FullName.Substring($fixtureRoot.Length + 1).Replace('\', '/')
+                    [IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+                        $archive,
+                        $file.FullName,
+                        $relative,
+                        [IO.Compression.CompressionLevel]::Optimal
+                    ) | Out-Null
+                }
+                if ($DuplicateExecutable) {
+                    [IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+                        $archive,
+                        $executablePath,
+                        "$archiveRoot/apm.exe",
+                        [IO.Compression.CompressionLevel]::Optimal
+                    ) | Out-Null
+                }
+                if ($Traversal) {
+                    $entry = $archive.CreateEntry('../escape')
+                    $writer = New-Object IO.StreamWriter($entry.Open())
+                    try { $writer.Write('escape') } finally { $writer.Dispose() }
+                }
+                if ($LinkedEntry) {
+                    $entry = $archive.CreateEntry("$archiveRoot/_internal/link")
+                    $entry.ExternalAttributes = -1610612736
+                }
             }
-            else { $systemPath }
-            & $Sandbox.Script @Parameters 2>&1 | Out-String
+            finally {
+                $archive.Dispose()
+                $stream.Dispose()
+            }
         }
-        finally {
-            $env:PATH = $previousPath
-        }
-    }
 
-    function Get-CallLog {
-        param([Parameter(Mandatory)]$Sandbox)
-        if (Test-Path -LiteralPath $Sandbox.CallLog) {
-            (Get-Content -LiteralPath $Sandbox.CallLog) -join "`n"
+        Set-TestChecksum -Repository $Repository -Name 'apm-windows-x86_64.zip' -Digest (
+            (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+        )
+        Set-TestChecksum -Repository $Repository -Name 'apm-windows-x86_64/apm.exe' -Digest (
+            (Get-FileHash -LiteralPath $executablePath -Algorithm SHA256).Hash.ToLowerInvariant()
+        )
+        [pscustomobject]@{
+            Archive    = $archivePath
+            Executable = $executablePath
         }
-        else { '' }
     }
 }
 
-AfterAll {
-    Get-ChildItem -LiteralPath ([IO.Path]::GetTempPath()) -Filter 'bootstrap-pester-*' -Directory -ErrorAction SilentlyContinue |
-        Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-}
+Describe 'Bootstrap-Baseline local metadata and preview' {
+    It 'validates reviewed metadata without mutation under WhatIf' {
+        $repository = New-TestRepository
+        $temporaryBefore = @(Get-ChildItem -LiteralPath ([IO.Path]::GetTempPath()) -Filter 'apm-bootstrap-*')
+        Mock Invoke-WebRequest { throw 'preview attempted network access' }
 
-Describe 'Bootstrap-Baseline pin handling' {
-    It 'fails on an invalid pin' {
-        $sandbox = New-BootstrapSandbox -Pin 'not-a-version'
-        New-ApmStub -Sandbox $sandbox -Version '0.29.0'
-        { Invoke-Bootstrap -Sandbox $sandbox -IncludeStubPath } |
-            Should-Throw -ExceptionMessage '*must contain a semantic version*'
+        $output = & $repository.Script -WhatIf 6>&1
+
+        "$output" | Should-MatchString 'Local pin/checksum metadata is valid'
+        Should-NotInvoke Invoke-WebRequest -Scope It
+        $temporaryAfter = @(Get-ChildItem -LiteralPath ([IO.Path]::GetTempPath()) -Filter 'apm-bootstrap-*')
+        $temporaryAfter.Count | Should-Be $temporaryBefore.Count
     }
 
-    It 'fails when the pin file is missing' {
-        $sandbox = New-BootstrapSandbox -Pin $null
-        New-ApmStub -Sandbox $sandbox -Version '0.29.0'
-        { Invoke-Bootstrap -Sandbox $sandbox -IncludeStubPath } |
-            Should-Throw -ExceptionMessage '*.apm-version not found*'
+    It 'accepts full prerelease metadata during preview' {
+        $repository = New-TestRepository -Pin '0.30.0rc2'
+        & $repository.Script -WhatIf
+    }
+
+    It 'rejects malformed or missing version metadata' {
+        foreach ($value in @('not-a-version', '0.29.0.1', "0.29.0$([Environment]::NewLine)0.30.0")) {
+            $repository = New-TestRepository
+            [IO.File]::WriteAllText($repository.PinFile, $value + [Environment]::NewLine)
+            { & $repository.Script -WhatIf } | Should-Throw -ExceptionMessage '*.apm-version*'
+        }
+        $repository = New-TestRepository
+        [IO.File]::Delete($repository.PinFile)
+        { & $repository.Script -WhatIf } | Should-Throw -ExceptionMessage '*.apm-version*'
+    }
+
+    It 'rejects missing duplicate malformed and extra checksum entries' {
+        $repository = New-TestRepository
+        [IO.File]::Delete($repository.Checksums)
+        { & $repository.Script -WhatIf } | Should-Throw -ExceptionMessage '*.apm-checksums*'
+
+        $repository = New-TestRepository
+        $lines = @([IO.File]::ReadAllLines($repository.Checksums))
+        $lines[9] = $lines[0]
+        [IO.File]::WriteAllLines($repository.Checksums, $lines)
+        { & $repository.Script -WhatIf } | Should-Throw
+
+        $repository = New-TestRepository
+        $lines = @([IO.File]::ReadAllLines($repository.Checksums))
+        $lines[0] = 'NOT-A-DIGEST  apm-darwin-arm64.tar.gz'
+        [IO.File]::WriteAllLines($repository.Checksums, $lines)
+        { & $repository.Script -WhatIf } | Should-Throw -ExceptionMessage '*malformed*'
+
+        $repository = New-TestRepository
+        [IO.File]::AppendAllText($repository.Checksums, ('0' * 64) + '  unexpected' + [Environment]::NewLine)
+        { & $repository.Script -WhatIf } | Should-Throw -ExceptionMessage '*exactly ten*'
     }
 }
 
-Describe 'Bootstrap-Baseline CLI provisioning' {
-    It 'downloads and runs the pinned installer when the CLI is missing' {
-        $sandbox = New-BootstrapSandbox
-        $installerLog = Join-Path $sandbox.Root 'installer.log'
+Describe 'Bootstrap-Baseline Windows security contracts' {
+    BeforeAll {
+        $script:BootstrapText = Get-Content -LiteralPath $script:BootstrapSource -Raw
+    }
+
+    It 'uses the required download, TLS, archive, mutex, junction, and ASCII primitives' {
+        $script:BootstrapText | Should-MatchString 'Invoke-WebRequest -Uri \$Uri -OutFile \$OutFile -UseBasicParsing'
+        $script:BootstrapText | Should-MatchString 'SecurityProtocol = \$previousProtocol'
+        $script:BootstrapText | Should-MatchString 'Expand-Archive -LiteralPath'
+        $script:BootstrapText | Should-MatchString 'Threading\.Mutex'
+        $script:BootstrapText | Should-MatchString '\[IO\.Directory\]::Delete\(\$Path, \$false\)'
+        $script:BootstrapText | Should-MatchString '\[Text\.Encoding\]::ASCII'
+        $script:BootstrapText | Should-MatchString '"%~dp0\.\.\\current\\apm\.exe" %\*'
+    }
+
+    It 'contains no ambient execution, installer, self-update, or Authenticode fallback' {
+        $script:BootstrapText | Should-NotMatchString '&\s+apm\b'
+        $script:BootstrapText | Should-NotMatchString 'install\.ps1'
+        $script:BootstrapText | Should-NotMatchString 'self-update'
+        $script:BootstrapText | Should-NotMatchString 'Authenticode'
+    }
+}
+
+Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWindowsPlatform) {
+    BeforeEach {
+        $script:TestRepository = New-TestRepository
+        $script:Fixture = New-ZipFixture -Repository $script:TestRepository
+        $script:InstallRoot = Join-Path $TestDrive (
+            'install-' + [char]0x00E9 + '-' + [Guid]::NewGuid().ToString('N')
+        )
+        $script:CallLog = Join-Path $TestDrive ('calls-' + [Guid]::NewGuid().ToString('N') + '.log')
+        $script:OldProcessPath = $env:PATH
+        $script:OldUserPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+        $env:APM_INSTALL_DIR = $script:InstallRoot
+        $env:APM_RELEASE_BASE_URL = 'https://mirror.example.invalid/apm'
+        $env:APM_TEST_CALL_LOG = $script:CallLog
+        $env:PROCESSOR_ARCHITECTURE = 'AMD64'
+        Remove-Item Env:PROCESSOR_ARCHITEW6432 -ErrorAction SilentlyContinue
+        Remove-Item Env:APM_NO_DIRECT_FALLBACK -ErrorAction SilentlyContinue
+        Remove-Item Env:BASELINE_PACKAGE_REF -ErrorAction SilentlyContinue
+        $script:RequestedUri = $null
+        $script:TlsDuringDownload = $false
         Mock Invoke-WebRequest {
-            Set-Content -LiteralPath $OutFile -Value (
-                "Set-Content -LiteralPath '$installerLog' -Value (`"uri=$Uri version=`" + `$env:VERSION)"
+            $script:RequestedUri = $Uri
+            $script:TlsDuringDownload = [bool](
+                [Net.ServicePointManager]::SecurityProtocol -band [Net.SecurityProtocolType]::Tls12
             )
+            Copy-Item -LiteralPath $script:Fixture.Archive -Destination $OutFile
         }
-        # The stub installer installs nothing, so the bootstrap must fail its
-        # post-install check with actionable guidance.
-        { Invoke-Bootstrap -Sandbox $sandbox } |
-            Should-Throw -ExceptionMessage '*not runnable from this session*'
-        Should-Invoke Invoke-WebRequest -Times 1 -Exactly -Scope It -ParameterFilter {
-            $Uri -eq 'https://raw.githubusercontent.com/microsoft/apm/v0.29.0/install.ps1'
-        }
-        Get-Content -LiteralPath $installerLog |
-            Should-Be 'uri=https://raw.githubusercontent.com/microsoft/apm/v0.29.0/install.ps1 version=v0.29.0'
     }
 
-    It 'does not download anything under -WhatIf when the CLI is missing' {
-        $sandbox = New-BootstrapSandbox
-        Mock Invoke-WebRequest { throw 'network access attempted' }
-        Invoke-Bootstrap -Sandbox $sandbox -Parameters @{ WhatIf = $true }
+    AfterEach {
+        $env:PATH = $script:OldProcessPath
+        [Environment]::SetEnvironmentVariable('Path', $script:OldUserPath, 'User')
+        foreach ($name in @(
+                'APM_INSTALL_DIR',
+                'APM_RELEASE_BASE_URL',
+                'APM_TEST_CALL_LOG',
+                'APM_NO_DIRECT_FALLBACK',
+                'BASELINE_PACKAGE_REF'
+            )) {
+            Remove-Item -Path "Env:$name" -ErrorAction SilentlyContinue
+        }
+        Remove-Item Function:global:apm -ErrorAction SilentlyContinue
+    }
+
+    It 'persists the complete verified bundle and native Windows layout in a Unicode path' {
+        $beforeTls = [Net.ServicePointManager]::SecurityProtocol
+
+        & $script:TestRepository.Script -CliOnly -Confirm:$false
+
+        $release = Join-Path $script:InstallRoot 'releases\v0.29.0'
+        Test-Path -LiteralPath (Join-Path $release '_internal\catalog.json') | Should-BeTrue
+        Get-Content -LiteralPath (Join-Path $release '.apm-installed') -Raw |
+            Should-MatchString 'v0.29.0'
+        $current = Get-Item -LiteralPath (Join-Path $script:InstallRoot 'current') -Force
+        [bool]($current.Attributes -band [IO.FileAttributes]::ReparsePoint) | Should-BeTrue
+        $shim = Join-Path $script:InstallRoot 'bin\apm.cmd'
+        [IO.File]::ReadAllText($shim) | Should-MatchString '"%~dp0\.\.\\current\\apm\.exe" %\*'
+        @([IO.File]::ReadAllBytes($shim) | Where-Object { $_ -gt 127 }).Count | Should-Be 0
+        $script:RequestedUri | Should-Be 'https://mirror.example.invalid/apm/v0.29.0/apm-windows-x86_64.zip'
+        $script:TlsDuringDownload | Should-BeTrue
+        [Net.ServicePointManager]::SecurityProtocol | Should-Be $beforeTls
+        Should-Invoke Invoke-WebRequest -Times 1 -Exactly -Scope It -ParameterFilter {
+            $UseBasicParsing -and $Uri -eq $script:RequestedUri
+        }
+    }
+
+    It 'uses only staged and promoted absolute executables, never an ambient function' {
+        $script:AmbientExecuted = $false
+        function global:apm { $script:AmbientExecuted = $true }
+
+        & $script:TestRepository.Script -CliOnly -Confirm:$false 3>&1 | Out-Null
+
+        $script:AmbientExecuted | Should-BeFalse
+        Get-Content -LiteralPath $script:CallLog -Raw | Should-MatchString 'apm-bootstrap-'
+        Get-Content -LiteralPath $script:CallLog -Raw | Should-MatchString '\\current\\apm\.exe'
+    }
+
+    It 'uses trust-bin and explicit targets for native deployment' {
+        & $script:TestRepository.Script -Scope Repo -Confirm:$false
+        $calls = Get-Content -LiteralPath $script:CallLog -Raw
+        $calls | Should-MatchString 'install --target codex,copilot --trust-bin https://github.com/thetechgy/agent-engineering-baseline\.git#main'
+        $calls | Should-MatchString 'compile --target codex,copilot'
+
+        Remove-Item -LiteralPath $script:CallLog -ErrorAction SilentlyContinue
+        & $script:TestRepository.Script -Scope Global -Confirm:$false
+        $calls = Get-Content -LiteralPath $script:CallLog -Raw
+        $calls | Should-MatchString 'install --global --trust-bin https://github.com/thetechgy/agent-engineering-baseline\.git#main'
+        $calls | Should-MatchString 'compile --global'
+    }
+
+    It 'honors a literal package reference override' {
+        $env:BASELINE_PACKAGE_REF = 'https://example.invalid/reviewed.git#release'
+        & $script:TestRepository.Script -Scope Repo -Confirm:$false
+        Get-Content -LiteralPath $script:CallLog -Raw |
+            Should-MatchString 'https://example\.invalid/reviewed\.git#release'
+    }
+
+    It 'fails closed when direct fallback is disabled without a mirror' {
+        Remove-Item Env:APM_RELEASE_BASE_URL
+        $env:APM_NO_DIRECT_FALLBACK = 'yes'
+        { & $script:TestRepository.Script -CliOnly -Confirm:$false } |
+            Should-Throw -ExceptionMessage '*no APM_RELEASE_BASE_URL*'
         Should-NotInvoke Invoke-WebRequest -Scope It
     }
 
-    It 'upgrades an older CLI via pinned apm self-update' {
-        $sandbox = New-BootstrapSandbox
-        New-ApmStub -Sandbox $sandbox -Version '0.28.0' -VersionAfterSelfUpdate '0.29.0'
-        Invoke-Bootstrap -Sandbox $sandbox -IncludeStubPath
-        $log = Get-CallLog -Sandbox $sandbox
-        $log | Should-MatchString 'apm\s+self-update'
-        $log | Should-MatchString 'VERSION_ENV=v0\.29\.0'
+    It 'does not retry a failed authoritative mirror against the public release' {
+        Mock Invoke-WebRequest { throw 'mirror unavailable' }
+        { & $script:TestRepository.Script -CliOnly -Confirm:$false } |
+            Should-Throw -ExceptionMessage '*mirror unavailable*'
+        Should-Invoke Invoke-WebRequest -Times 1 -Exactly -Scope It -ParameterFilter {
+            $Uri -like 'https://mirror.example.invalid/*'
+        }
     }
 
-    It 'surfaces a self-update failure with remediation guidance' {
-        $sandbox = New-BootstrapSandbox
-        New-ApmStub -Sandbox $sandbox -Version '0.28.0' -SelfUpdateFails
-        { Invoke-Bootstrap -Sandbox $sandbox -IncludeStubPath } |
-            Should-Throw -ExceptionMessage '*apm self-update failed*'
+    It 'rejects corrupt archives and executable digest mismatches before execution' {
+        $script:Fixture = New-ZipFixture -Repository $script:TestRepository -CorruptArchive
+        { & $script:TestRepository.Script -CliOnly -Confirm:$false } | Should-Throw
+        Test-Path -LiteralPath $script:CallLog | Should-BeFalse
+
+        $script:TestRepository = New-TestRepository
+        $script:Fixture = New-ZipFixture -Repository $script:TestRepository
+        Set-TestChecksum -Repository $script:TestRepository -Name 'apm-windows-x86_64/apm.exe' -Digest ('0' * 64)
+        { & $script:TestRepository.Script -CliOnly -Confirm:$false } |
+            Should-Throw -ExceptionMessage '*reviewed SHA256*'
+        Test-Path -LiteralPath $script:CallLog | Should-BeFalse
     }
 
-    It 'fails when the CLI version still mismatches after upgrade' {
-        $sandbox = New-BootstrapSandbox
-        New-ApmStub -Sandbox $sandbox -Version '0.28.0'
-        { Invoke-Bootstrap -Sandbox $sandbox -IncludeStubPath } |
-            Should-Throw -ExceptionMessage '*expected v0.29.0*'
+    It 'rejects missing internal, wrong-root, traversal, duplicate, and linked ZIP entries' {
+        $cases = @(
+            @{ OmitInternal = $true }
+            @{ WrongRoot = $true }
+            @{ Traversal = $true }
+            @{ DuplicateExecutable = $true }
+            @{ LinkedEntry = $true }
+        )
+        foreach ($case in $cases) {
+            $script:TestRepository = New-TestRepository
+            $script:Fixture = New-ZipFixture -Repository $script:TestRepository @case
+            { & $script:TestRepository.Script -CliOnly -Confirm:$false } | Should-Throw
+        }
     }
 
-    It 'is a no-op when the CLI already matches the pin' {
-        $sandbox = New-BootstrapSandbox
-        New-ApmStub -Sandbox $sandbox -Version '0.29.0'
-        Invoke-Bootstrap -Sandbox $sandbox -IncludeStubPath
-        $log = Get-CallLog -Sandbox $sandbox
-        $log | Should-NotMatchString 'self-update'
-        $log | Should-MatchString 'apm\s+install\s+--global'
+    It 'preserves full prerelease versions' {
+        $script:TestRepository = New-TestRepository -Pin '0.30.0rc2'
+        $script:Fixture = New-ZipFixture -Repository $script:TestRepository -Version '0.30.0rc2'
+
+        & $script:TestRepository.Script -CliOnly -Confirm:$false
+
+        Get-Content -LiteralPath (
+            Join-Path $script:InstallRoot 'releases\v0.30.0rc2\.apm-installed'
+        ) -Raw | Should-MatchString 'v0.30.0rc2'
     }
 
-    It 'warns and continues when the CLI is newer than the pin' {
-        $sandbox = New-BootstrapSandbox
-        New-ApmStub -Sandbox $sandbox -Version '0.30.0'
-        $output = Invoke-Bootstrap -Sandbox $sandbox -IncludeStubPath 3>&1
-        "$output" | Should-MatchString 'newer than the pinned'
-        (Get-CallLog -Sandbox $sandbox) | Should-MatchString 'apm\s+install\s+--global'
-    }
-}
+    It 'rejects an unsafe installation-root reparse point' {
+        $outside = Join-Path $TestDrive ('outside-' + [Guid]::NewGuid().ToString('N'))
+        New-Item -ItemType Directory -Path $outside | Out-Null
+        New-Item -ItemType Junction -Path $script:InstallRoot -Target $outside | Out-Null
 
-Describe 'Bootstrap-Baseline deployment modes' {
-    It 'installs globally and compiles root contexts by default' {
-        $sandbox = New-BootstrapSandbox
-        New-ApmStub -Sandbox $sandbox -Version '0.29.0'
-        Invoke-Bootstrap -Sandbox $sandbox -IncludeStubPath
-        $log = Get-CallLog -Sandbox $sandbox
-        $log | Should-MatchString 'apm\s+install\s+--global\s+thetechgy/agent-engineering-baseline#main'
-        $log | Should-MatchString 'apm\s+compile\s+--global'
+        { & $script:TestRepository.Script -CliOnly -Confirm:$false } |
+            Should-Throw -ExceptionMessage '*reparse point*'
     }
 
-    It 'installs into the current project in Repo scope' {
-        $sandbox = New-BootstrapSandbox
-        New-ApmStub -Sandbox $sandbox -Version '0.29.0'
-        Invoke-Bootstrap -Sandbox $sandbox -IncludeStubPath -Parameters @{ Scope = 'Repo' }
-        $log = Get-CallLog -Sandbox $sandbox
-        $log | Should-MatchString 'apm\s+install\s+--target\s+codex,copilot\s+thetechgy/agent-engineering-baseline#main'
-        $log | Should-NotMatchString 'install\s+--global'
-        $log | Should-MatchString 'apm\s+compile'
-        $log | Should-NotMatchString 'compile\s+--global'
-    }
-
-    It 'honors the BASELINE_PACKAGE_REF override' {
-        $sandbox = New-BootstrapSandbox
-        New-ApmStub -Sandbox $sandbox -Version '0.29.0'
-        $env:BASELINE_PACKAGE_REF = 'local/pkg'
+    It 'rolls back the prior release and junction when shim promotion fails' {
+        & $script:TestRepository.Script -CliOnly -Confirm:$false
+        $release = Join-Path $script:InstallRoot 'releases\v0.29.0'
+        [IO.File]::WriteAllText((Join-Path $release '_internal\old-state'), 'old')
+        $shim = Join-Path $script:InstallRoot 'bin\apm.cmd'
+        (Get-Item -LiteralPath $shim).IsReadOnly = $true
         try {
-            Invoke-Bootstrap -Sandbox $sandbox -IncludeStubPath
+            { & $script:TestRepository.Script -CliOnly -Confirm:$false } | Should-Throw
         }
         finally {
-            Remove-Item Env:BASELINE_PACKAGE_REF -ErrorAction SilentlyContinue
+            (Get-Item -LiteralPath $shim).IsReadOnly = $false
         }
-        (Get-CallLog -Sandbox $sandbox) | Should-MatchString 'apm\s+install\s+--global\s+local/pkg'
-    }
 
-    It 'makes no APM calls that mutate state under -WhatIf' {
-        $sandbox = New-BootstrapSandbox
-        New-ApmStub -Sandbox $sandbox -Version '0.28.0' -VersionAfterSelfUpdate '0.29.0'
-        Invoke-Bootstrap -Sandbox $sandbox -IncludeStubPath -Parameters @{ WhatIf = $true }
-        $log = Get-CallLog -Sandbox $sandbox
-        $log | Should-NotMatchString 'self-update'
-        $log | Should-NotMatchString 'apm\s+install'
-        $log | Should-NotMatchString 'apm\s+compile'
+        Test-Path -LiteralPath (Join-Path $release '_internal\old-state') | Should-BeTrue
+        $current = Get-Item -LiteralPath (Join-Path $script:InstallRoot 'current') -Force
+        [bool]($current.Attributes -band [IO.FileAttributes]::ReparsePoint) | Should-BeTrue
+        [IO.File]::ReadAllText($shim) | Should-MatchString '"%~dp0\.\.\\current\\apm\.exe" %\*'
     }
 }

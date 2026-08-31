@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-08-30T23:17:30.800040+00:00'
+generated_at: '2026-08-31T02:23:26.503611+00:00'
 apm_version: 0.29.0
 dependencies:
 - repo_url: addyosmani/agent-skills
@@ -106,6 +106,12 @@ dependencies:
   - .agents/skills/msgraph/references/graph-api-index.json
   - .agents/skills/msgraph/references/samples-index.db
   - .agents/skills/msgraph/references/samples-index.json
+  - .agents/skills/msgraph/scripts/bin/msgraph_darwin_amd64
+  - .agents/skills/msgraph/scripts/bin/msgraph_darwin_arm64
+  - .agents/skills/msgraph/scripts/bin/msgraph_linux_amd64
+  - .agents/skills/msgraph/scripts/bin/msgraph_linux_arm64
+  - .agents/skills/msgraph/scripts/bin/msgraph_windows_amd64.exe
+  - .agents/skills/msgraph/scripts/bin/msgraph_windows_arm64.exe
   - .agents/skills/msgraph/scripts/run.ps1
   - .agents/skills/msgraph/scripts/run.sh
   deployed_file_hashes:
@@ -126,6 +132,12 @@ dependencies:
     .agents/skills/msgraph/references/graph-api-index.json: sha256:41d93c788104f40c01011c78335c2adfde30b4cff268fc4292fb71f5241a85bf
     .agents/skills/msgraph/references/samples-index.db: sha256:17843a1afe4a3479e6372192d93c2872ba5ad68451637183fda075968f3a29ca
     .agents/skills/msgraph/references/samples-index.json: sha256:fb0da55c746fbfaca5f6f2066dcbee5b06f74a212970c457800cab8bb422d20b
+    .agents/skills/msgraph/scripts/bin/msgraph_darwin_amd64: sha256:9114a140380c1bf67569b4bc99c61c3581a9633e1ddcdf65e428b5f797ea2fb0
+    .agents/skills/msgraph/scripts/bin/msgraph_darwin_arm64: sha256:3a92b70f8d3790e82664c2acea7bf8fa75e6d907c85f896098a98c1533e3e8bc
+    .agents/skills/msgraph/scripts/bin/msgraph_linux_amd64: sha256:170b65df956470a7476ccc16c84e3bcc43ae43d739901535532bb4bea795e2f6
+    .agents/skills/msgraph/scripts/bin/msgraph_linux_arm64: sha256:1ea9093931ef137ab32262857f9ce4f5f828bd9306a6297fc36fb5626803fcba
+    .agents/skills/msgraph/scripts/bin/msgraph_windows_amd64.exe: sha256:101f8a4ae443a189128d0aa3c773baa8c15c99f5d93dd0933e5cc99dc3edf29c
+    .agents/skills/msgraph/scripts/bin/msgraph_windows_arm64.exe: sha256:f3c8fb32e9e03537781f274860e21438d6f9ce16cddae64eedfd608743184230
     .agents/skills/msgraph/scripts/run.ps1: sha256:208a0323c85c94c8b8f23d974a92fb37dab77c44de5638fb3e7688e00d761cbb
     .agents/skills/msgraph/scripts/run.sh: sha256:ef3545fee5e2f2654cedf32ed543ba2e496109c1eb90ea6f915fd9bcf4abd51b
   content_hash: sha256:8ed71bf25cbe8809da3cb71b4a6d529f8748271e9725c43d9f47a5061879a7b4
@@ -528,6 +540,60 @@ deployments:
   content_hash: sha256:fb0da55c746fbfaca5f6f2066dcbee5b06f74a212970c457800cab8bb422d20b
 - kind: project-relative
   target: codex
+  value: .agents/skills/msgraph/scripts/bin/msgraph_darwin_amd64
+  runtime: null
+  scope: project
+  owners:
+  - merill/msgraph/skills/msgraph
+  active_owner: merill/msgraph/skills/msgraph
+  content_hash: sha256:9114a140380c1bf67569b4bc99c61c3581a9633e1ddcdf65e428b5f797ea2fb0
+- kind: project-relative
+  target: codex
+  value: .agents/skills/msgraph/scripts/bin/msgraph_darwin_arm64
+  runtime: null
+  scope: project
+  owners:
+  - merill/msgraph/skills/msgraph
+  active_owner: merill/msgraph/skills/msgraph
+  content_hash: sha256:3a92b70f8d3790e82664c2acea7bf8fa75e6d907c85f896098a98c1533e3e8bc
+- kind: project-relative
+  target: codex
+  value: .agents/skills/msgraph/scripts/bin/msgraph_linux_amd64
+  runtime: null
+  scope: project
+  owners:
+  - merill/msgraph/skills/msgraph
+  active_owner: merill/msgraph/skills/msgraph
+  content_hash: sha256:170b65df956470a7476ccc16c84e3bcc43ae43d739901535532bb4bea795e2f6
+- kind: project-relative
+  target: codex
+  value: .agents/skills/msgraph/scripts/bin/msgraph_linux_arm64
+  runtime: null
+  scope: project
+  owners:
+  - merill/msgraph/skills/msgraph
+  active_owner: merill/msgraph/skills/msgraph
+  content_hash: sha256:1ea9093931ef137ab32262857f9ce4f5f828bd9306a6297fc36fb5626803fcba
+- kind: project-relative
+  target: codex
+  value: .agents/skills/msgraph/scripts/bin/msgraph_windows_amd64.exe
+  runtime: null
+  scope: project
+  owners:
+  - merill/msgraph/skills/msgraph
+  active_owner: merill/msgraph/skills/msgraph
+  content_hash: sha256:101f8a4ae443a189128d0aa3c773baa8c15c99f5d93dd0933e5cc99dc3edf29c
+- kind: project-relative
+  target: codex
+  value: .agents/skills/msgraph/scripts/bin/msgraph_windows_arm64.exe
+  runtime: null
+  scope: project
+  owners:
+  - merill/msgraph/skills/msgraph
+  active_owner: merill/msgraph/skills/msgraph
+  content_hash: sha256:f3c8fb32e9e03537781f274860e21438d6f9ce16cddae64eedfd608743184230
+- kind: project-relative
+  target: codex
   value: .agents/skills/msgraph/scripts/run.ps1
   runtime: null
   scope: project
@@ -552,7 +618,7 @@ deployments:
   owners:
   - .
   active_owner: .
-  content_hash: sha256:c1e91af2e4096e88b8295dfcd32944e04768bee3b0bd0de3eb64ae3c6ed5dab4
+  content_hash: sha256:0c6768cb8e5af568a1a0fcd6a3becd8ba8e72742684aa0d44d8c8bd0c5d05890
 local_deployed_files:
 - .agents/skills/a11y
 - .agents/skills/a11y/SKILL.md
@@ -571,4 +637,4 @@ local_deployed_file_hashes:
   .agents/skills/ansible/SKILL.md: sha256:a79531195a9bdf942b301edf1588c8814ceb976557f4f0cb79bd9aa79e59d52e
   .agents/skills/powershell-module-engineering/SKILL.md: sha256:801cecfd42aeb32f3fd6083d9af08f44c8a5ca48202761533c072a10c06060c9
   .agents/skills/powershell-pester-6/SKILL.md: sha256:279824abf07feb466fd5deaab79fc872609d5674502bcfa51b31f2909874efab
-  .github/instructions/personal.instructions.md: sha256:c1e91af2e4096e88b8295dfcd32944e04768bee3b0bd0de3eb64ae3c6ed5dab4
+  .github/instructions/personal.instructions.md: sha256:0c6768cb8e5af568a1a0fcd6a3becd8ba8e72742684aa0d44d8c8bd0c5d05890

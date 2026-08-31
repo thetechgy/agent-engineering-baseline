@@ -21,19 +21,8 @@ jobs:
       - name: Install pinned APM CLI
         shell: bash
         run: |
-          version="$(head -n 1 .apm-version | tr -d '[:space:]')"
-          printf '%s\n' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'
-          installer="$RUNNER_TEMP/apm-install.sh"
-          curl --fail --location --silent --show-error --proto '=https' --tlsv1.2 \
-            --output "$installer" \
-            "https://raw.githubusercontent.com/microsoft/apm/v$version/install.sh"
-          VERSION="v$version" APM_INSTALL_DIR="$RUNNER_TEMP/apm-bin" sh "$installer"
-          installed="$("$RUNNER_TEMP/apm-bin/apm" --version | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' | head -n 1)"
-          if [ "$installed" != "$version" ]; then
-            printf 'Installed APM CLI v%s does not match the pinned v%s.\n' "$installed" "$version" >&2
-            exit 1
-          fi
-          echo "$RUNNER_TEMP/apm-bin" >> "$GITHUB_PATH"
+          APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" ./scripts/bootstrap.sh --cli-only
+          echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/lib/apm/apm" >> "$GITHUB_ENV"
 
       - name: Install validation tools
         shell: pwsh
@@ -45,8 +34,6 @@ jobs:
 
       - name: Run full validation
         shell: pwsh
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./scripts/Invoke-Validation.ps1
 
       - name: Require clean regeneration
@@ -59,6 +46,19 @@ jobs:
             echo "$untracked"
             exit 1
           fi
+
+  macos:
+    name: Bash fixtures (macOS)
+    runs-on: macos-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run Bash fixture suite
+        shell: bash
+        run: ./tests/bootstrap.sh
 
   windows-powershell:
     name: Pester and analyzer (Windows PowerShell 5.1)

@@ -22,36 +22,122 @@ jobs:
       - name: Check out main
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: main
           persist-credentials: false
 
-      - name: Refresh CLI pin and install candidate
+      - name: Acquire currently reviewed APM CLI
+        shell: bash
+        run: |
+          APM_INSTALL_DIR="$RUNNER_TEMP/apm-reviewed/bin" ./scripts/bootstrap.sh --cli-only
+          echo "APM_EXECUTABLE=$RUNNER_TEMP/apm-reviewed/lib/apm/apm" >> "$GITHUB_ENV"
+
+      - name: Discover latest APM release
+        id: release
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          latest="$(gh api repos/microsoft/apm/releases/latest --jq '.tag_name')"
-          latest="${latest#v}"
-          printf '%s\n' "$latest" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'
-          printf '%s\n' "$latest" > .apm-version
-          installer="$RUNNER_TEMP/apm-install.sh"
-          curl --fail --location --silent --show-error --proto '=https' --tlsv1.2 \
-            --output "$installer" \
-            "https://raw.githubusercontent.com/microsoft/apm/v$latest/install.sh"
-          VERSION="v$latest" APM_INSTALL_DIR="$RUNNER_TEMP/apm-bin" sh "$installer"
-          installed="$("$RUNNER_TEMP/apm-bin/apm" --version | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' | head -n 1)"
-          if [ "$installed" != "$latest" ]; then
-            printf 'Installed APM CLI v%s does not match the candidate v%s.\n' "$installed" "$latest" >&2
-            exit 1
-          fi
-          echo "$RUNNER_TEMP/apm-bin" >> "$GITHUB_PATH"
+          latest="$(gh api repos/microsoft/apm/releases/latest --jq '.tag_name' | sed 's/^v//')"
+          printf '%s\n' "$latest" |
+            grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(a[0-9]+|b[0-9]+|rc[0-9]+)?$'
+          echo "version=$latest" >> "$GITHUB_OUTPUT"
 
-      - name: Update APM dependencies
+      - name: Authenticate candidate release metadata without execution
+        shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CANDIDATE_VERSION: ${{ steps.release.outputs.version }}
         run: |
-          apm update --yes
-          apm compile --target codex,copilot --validate
-          apm compile --target codex,copilot
+          set -euo pipefail
+          candidate_root="$RUNNER_TEMP/apm-candidate"
+          mkdir -p "$candidate_root"
+
+          validate_tar() {
+            local asset=$1 root=$2 executable=$3 archive="$candidate_root/$asset"
+            local extract="$candidate_root/extract-$root"
+            tar -tzf "$archive" > "$candidate_root/$root.list"
+            tar -tvzf "$archive" > "$candidate_root/$root.verbose"
+            awk -v root="$root" -v executable="$executable" '
+              BEGIN { valid = 1; executable_count = 0; internal_count = 0 }
+              {
+                path = $0
+                if (path == executable) executable_count++
+                if (path != root && path != root "/" && index(path, root "/") != 1) valid = 0
+                if (path ~ /^\// || path ~ /(^|\/)\.\.($|\/)/) valid = 0
+                if (index(path, root "/_internal/") == 1 && path !~ /\/$/) internal_count++
+              }
+              END { exit(valid && executable_count == 1 && internal_count > 0 ? 0 : 1) }
+            ' "$candidate_root/$root.list"
+            awk 'substr($0, 1, 1) != "-" && substr($0, 1, 1) != "d" { exit 1 }' \
+              "$candidate_root/$root.verbose"
+            mkdir "$extract"
+            tar -xzf "$archive" -C "$extract"
+            [ -z "$(find "$extract/$root" -type l -print -quit)" ]
+            [ -z "$(find "$extract/$root" ! -type d ! -type f -print -quit)" ]
+            [ -f "$extract/$executable" ]
+          }
+
+          for platform in \
+            darwin-arm64 \
+            darwin-x86_64 \
+            linux-arm64 \
+            linux-x86_64; do
+            asset="apm-$platform.tar.gz"
+            curl --fail --location --silent --show-error --proto '=https' --tlsv1.2 \
+              --output "$candidate_root/$asset" \
+              "https://github.com/microsoft/apm/releases/download/v$CANDIDATE_VERSION/$asset"
+            validate_tar "$asset" "apm-$platform" "apm-$platform/apm"
+          done
+
+          windows_asset='apm-windows-x86_64.zip'
+          windows_root='apm-windows-x86_64'
+          curl --fail --location --silent --show-error --proto '=https' --tlsv1.2 \
+            --output "$candidate_root/$windows_asset" \
+            "https://github.com/microsoft/apm/releases/download/v$CANDIDATE_VERSION/$windows_asset"
+          unzip -Z1 "$candidate_root/$windows_asset" > "$candidate_root/$windows_root.list"
+          awk -v root="$windows_root" '
+            BEGIN { valid = 1; executable_count = 0; internal_count = 0 }
+            {
+              path = $0
+              gsub(/\\/, "/", path)
+              key = tolower(path)
+              if (seen[key]++) valid = 0
+              if (path == root "/apm.exe") executable_count++
+              if (path != root && path != root "/" && index(path, root "/") != 1) valid = 0
+              if (path ~ /^\// || path ~ /^[A-Za-z]:/ || path ~ /(^|\/)\.\.($|\/)/) valid = 0
+              if (index(path, root "/_internal/") == 1 && path !~ /\/$/) internal_count++
+            }
+            END { exit(valid && executable_count == 1 && internal_count > 0 ? 0 : 1) }
+          ' "$candidate_root/$windows_root.list"
+          zipinfo -l "$candidate_root/$windows_asset" |
+            awk '$1 ~ /^[dl-]/ && substr($1, 1, 1) != "-" && substr($1, 1, 1) != "d" { exit 1 }'
+          windows_extract="$candidate_root/extract-$windows_root"
+          mkdir "$windows_extract"
+          unzip -q "$candidate_root/$windows_asset" -d "$windows_extract"
+          [ -z "$(find "$windows_extract/$windows_root" -type l -print -quit)" ]
+          [ -z "$(find "$windows_extract/$windows_root" ! -type d ! -type f -print -quit)" ]
+          [ -f "$windows_extract/$windows_root/apm.exe" ]
+
+          printf '%s\n' "$CANDIDATE_VERSION" > .apm-version
+          {
+            for platform in darwin-arm64 darwin-x86_64 linux-arm64 linux-x86_64; do
+              asset="apm-$platform.tar.gz"
+              root="apm-$platform"
+              printf '%s  %s\n' "$(sha256sum "$candidate_root/$asset" | awk '{ print $1 }')" "$asset"
+              printf '%s  %s/apm\n' \
+                "$(sha256sum "$candidate_root/extract-$root/$root/apm" | awk '{ print $1 }')" "$root"
+            done
+            printf '%s  %s\n' \
+              "$(sha256sum "$candidate_root/$windows_asset" | awk '{ print $1 }')" "$windows_asset"
+            printf '%s  %s/apm.exe\n' \
+              "$(sha256sum "$windows_extract/$windows_root/apm.exe" | awk '{ print $1 }')" "$windows_root"
+          } > .apm-checksums
+
+      - name: Update APM dependencies with reviewed CLI
+        run: |
+          "$APM_EXECUTABLE" update --yes
+          "$APM_EXECUTABLE" install --frozen --trust-bin
+          "$APM_EXECUTABLE" compile --target codex,copilot --validate
+          "$APM_EXECUTABLE" compile --target codex,copilot
 
       - name: Detect changes
         id: changes
@@ -72,14 +158,10 @@ jobs:
           Install-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -Scope CurrentUser -Force
           pipx install rumdl==0.2.34
 
-      - name: Validate candidate update
+      - name: Validate candidate update with reviewed CLI
         if: steps.changes.outputs.changed == 'true'
         shell: pwsh
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Stage every non-ignored candidate output before validation so new
-          # files cannot remain outside the review patch.
           git add --all
           git diff --cached --check
           if ($LASTEXITCODE -ne 0) { throw 'git diff --cached --check failed.' }
@@ -111,6 +193,7 @@ jobs:
       - name: Check out main
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: main
           fetch-depth: 0
           persist-credentials: false
 
@@ -144,20 +227,20 @@ jobs:
             '## Summary' \
             '' \
             "- APM CLI candidate: $pinned_version" \
-            '- bumps the `.apm-version` CLI pin to the latest upstream release' \
-            '- re-resolves branch-ref dependencies with `apm update` and rewrites the lockfile' \
-            '- regenerates compiled outputs and validates everything with the candidate CLI' \
+            '- refreshes the CLI pin and reviewed hashes for all five release bundles and executables' \
+            '- re-resolves branch-ref dependencies and regenerates compiled outputs with the previously reviewed CLI' \
+            '- never executes the candidate CLI in this privileged update workflow' \
             '' \
             '## Required review' \
             '' \
-            'Review the upstream release notes for the candidate CLI version and the resolved dependency commits in `apm.lock.yaml` before merging.' \
+            'Review the upstream release, all ten replacement digests, dependency commits, and generated output diff before merging.' \
             '' \
             '## Changed files' \
             '' \
-            '```text' > "$body_file"
+            '~~~text' > "$body_file"
           git show --stat --format= >> "$body_file"
           printf '%s\n' \
-            '```' \
+            '~~~' \
             '' \
             'This pull request is intentionally review-only and will not auto-merge.' >> "$body_file"
           if [ -n "$pr_number" ]; then
