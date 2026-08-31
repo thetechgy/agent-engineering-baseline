@@ -608,8 +608,8 @@ if (-not $CliOnly) {
         Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata compile --global
     }
     else {
-        Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata install --target codex,copilot --trust-bin $packageRef
-        Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata compile --target codex,copilot
+        Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata install --target 'codex,copilot' --trust-bin $packageRef
+        Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata compile --target 'codex,copilot'
     }
 }
 Write-Information -MessageData "Done; reviewed CLI: $($installation.Executable)" -InformationAction Continue
