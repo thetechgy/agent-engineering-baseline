@@ -216,7 +216,21 @@ download_archive() {
 }
 
 assert_safe_directory() {
-    local path=$1 label=$2
+    local path=$1 label=$2 current=$1
+    case "$current" in
+        /*) ;;
+        *) die "$label is not an absolute directory path: $path" ;;
+    esac
+    while [ "$current" != / ]; do
+        case "$current" in
+            */) current=${current%/}; continue ;;
+        esac
+        if [ -L "$current" ]; then
+            die "$label has a symlinked path component: $current"
+        fi
+        current=${current%/*}
+        [ -n "$current" ] || current=/
+    done
     if [ -e "$path" ] || [ -L "$path" ]; then
         if [ ! -d "$path" ] || [ -L "$path" ]; then
             die "$label is not a safe directory: $path"

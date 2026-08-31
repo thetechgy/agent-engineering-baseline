@@ -6,6 +6,7 @@ REPO_ROOT="$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 readonly REPO_ROOT
 readonly SOURCE_BOOTSTRAP="$REPO_ROOT/scripts/bootstrap.sh"
 TEST_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/baseline-bootstrap-tests.XXXXXX")
+TEST_ROOT=$(CDPATH='' cd -- "$TEST_ROOT" && pwd -P)
 readonly TEST_ROOT
 trap 'rm -rf -- "$TEST_ROOT"' EXIT HUP INT TERM
 
@@ -397,6 +398,16 @@ printf 'unrelated command\n' > "$CASE_INSTALL/apm"
 run_case --cli-only
 record_result 'unrelated command is not overwritten' failure
 assert_true 'unrelated command content is preserved' file_has "$CASE_INSTALL/apm" 'unrelated command'
+
+new_case symlinked-ancestor
+make_fixture Linux x86_64
+mkdir -p "$CASE_ROOT/physical-root/nested"
+ln -s "$CASE_ROOT/physical-root" "$CASE_ROOT/linked-root"
+CASE_INSTALL_DIR="$CASE_ROOT/linked-root/nested/bin"
+run_case --cli-only
+record_result 'symlinked install ancestor is rejected' failure
+assert_true 'symlinked ancestor target is not mutated' \
+    test ! -e "$CASE_ROOT/physical-root/nested/lib"
 
 new_case rollback
 make_fixture Linux x86_64
