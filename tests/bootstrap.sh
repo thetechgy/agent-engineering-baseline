@@ -327,6 +327,18 @@ run_case --cli-only
 record_result 'executable digest mismatch is rejected before execution' failure
 assert_true 'digest-mismatched executable never executes' test ! -s "$CALL_LOG"
 
+new_case missing-reported-version
+make_fixture Linux x86_64
+printf '#!/usr/bin/env bash\nexit 0\n' > "$BUNDLE_ROOT/apm"
+chmod +x "$BUNDLE_ROOT/apm"
+tar -czf "$MIRROR_ROOT/v0.29.0/$ARCHIVE_NAME" -C "$FIXTURE_ROOT" "$ARCHIVE_ROOT"
+replace_checksum "$ARCHIVE_ROOT/apm" "$(digest "$BUNDLE_ROOT/apm")"
+replace_checksum "$ARCHIVE_NAME" "$(digest "$MIRROR_ROOT/v0.29.0/$ARCHIVE_NAME")"
+run_case --cli-only
+record_result 'executable without a full version is rejected' failure
+assert_true 'missing version uses the reviewed diagnostic' \
+    out_has 'did not report a full version'
+
 new_case missing-internal
 make_fixture Linux x86_64
 rm -rf "$BUNDLE_ROOT/_internal"

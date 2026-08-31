@@ -185,7 +185,8 @@ reported_version() {
         die 'the staged APM executable failed its version postcondition.'
     fi
     version=$(printf '%s\n' "$banner" |
-        grep -Eo '[0-9]+\.[0-9]+\.[0-9]+(a[0-9]+|b[0-9]+|rc[0-9]+)?' | head -n 1)
+        grep -Eo '[0-9]+\.[0-9]+\.[0-9]+(a[0-9]+|b[0-9]+|rc[0-9]+)?' |
+        head -n 1 || true)
     [ -n "$version" ] || die 'the staged APM executable did not report a full version.'
     printf '%s\n' "$version"
 }
