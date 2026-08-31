@@ -22,62 +22,18 @@ jobs:
         shell: bash
         run: |
           version="$(head -n 1 .apm-version | tr -d '[:space:]')"
-          case "$(uname -m)" in
-            x86_64) platform_arch='x86_64' ;;
-            arm64|aarch64) platform_arch='arm64' ;;
-            *) echo 'Unsupported Linux architecture.' >&2; exit 1 ;;
-          esac
-          archive="apm-linux-$platform_arch.tar.gz"
-          archive_root="apm-linux-$platform_arch"
-          member="$archive_root/apm"
-          secure_root="$RUNNER_TEMP/apm-secure-install"
-          installer="$secure_root/install.sh"
-          archive_path="$secure_root/$archive"
-          mkdir -p "$secure_root/extract" "$secure_root/mirror/v$version"
-          curl --fail --location --silent --show-error --output "$installer" \
+          printf '%s\n' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'
+          installer="$RUNNER_TEMP/apm-install.sh"
+          curl --fail --location --silent --show-error --proto '=https' --tlsv1.2 \
+            --output "$installer" \
             "https://raw.githubusercontent.com/microsoft/apm/v$version/install.sh"
-          curl --fail --location --silent --show-error --output "$archive_path" \
-            "https://github.com/microsoft/apm/releases/download/v$version/$archive"
-          verify_checksum() {
-            local path=$1 name=$2 expected
-            expected="$(
-              awk -v name="$name" '
-                $2 == name { checksum = $1; count++ }
-                END {
-                  if (count != 1) exit 1
-                  print checksum
-                }
-              ' .apm-checksums
-            )" || {
-              printf 'Expected exactly one pinned checksum for %s.\n' "$name" >&2
-              return 1
-            }
-            printf '%s\n' "$expected" | grep -Eq '^[0-9a-f]{64}$'
-            printf '%s  %s\n' "$expected" "$path" | sha256sum --check --strict -
-          }
-          verify_checksum "$installer" install.sh
-          verify_checksum "$archive_path" "$archive"
-          tar -tzf "$archive_path" | awk -v root="$archive_root" -v member="$member" '
-            BEGIN { valid = 1; count = 0 }
-            {
-              if ($0 == member) count++
-              if ($0 != root && index($0, root "/") != 1) valid = 0
-              if ($0 ~ /^\// || $0 ~ /(^|\/)\.\.($|\/)/) valid = 0
-            }
-            END { exit(valid && count == 1 ? 0 : 1) }
-          '
-          tar -xzf "$archive_path" -C "$secure_root/extract"
-          [ -z "$(find "$secure_root/extract/$archive_root" -type l -print -quit)" ]
-          verify_checksum "$secure_root/extract/$member" "$member"
-          cp "$archive_path" "$secure_root/mirror/v$version/$archive"
-          verify_checksum "$secure_root/mirror/v$version/$archive" "$archive"
-          APM_INSTALL_DIR="$RUNNER_TEMP/apm-bin" \
-            APM_RELEASE_BASE_URL="file://$secure_root/mirror" \
-            APM_NO_DIRECT_FALLBACK=1 VERSION="v$version" sh "$installer"
-          installed="$RUNNER_TEMP/lib/apm/apm"
-          verify_checksum "$installed" "$member"
-          "$installed" --version
-          dirname "$installed" >> "$GITHUB_PATH"
+          VERSION="v$version" APM_INSTALL_DIR="$RUNNER_TEMP/apm-bin" sh "$installer"
+          installed="$("$RUNNER_TEMP/apm-bin/apm" --version | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' | head -n 1)"
+          if [ "$installed" != "$version" ]; then
+            printf 'Installed APM CLI v%s does not match the pinned v%s.\n' "$installed" "$version" >&2
+            exit 1
+          fi
+          echo "$RUNNER_TEMP/apm-bin" >> "$GITHUB_PATH"
 
       - name: Install validation tools
         shell: pwsh

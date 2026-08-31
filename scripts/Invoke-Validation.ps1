@@ -47,7 +47,7 @@ try {
 
     if ($Suite -ceq 'Pester') { return }
 
-    & ./tests/bootstrap-global.sh
+    & ./tests/bootstrap.sh
     if ($LASTEXITCODE -ne 0) { throw 'Bash bootstrap tests failed.' }
 
     & apm install --frozen
@@ -61,7 +61,7 @@ try {
     & apm pack --dry-run
     if ($LASTEXITCODE -ne 0) { throw 'APM package check failed.' }
 
-    & shellcheck ./scripts/bootstrap-global.sh ./tests/bootstrap-global.sh
+    & shellcheck ./scripts/bootstrap.sh ./tests/bootstrap.sh
     if ($LASTEXITCODE -ne 0) { throw 'ShellCheck failed.' }
     & rumdl check .
     if ($LASTEXITCODE -ne 0) { throw 'Markdown linting failed.' }

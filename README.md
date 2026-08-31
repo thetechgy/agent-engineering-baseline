@@ -3,7 +3,9 @@
 This MIT-licensed repository is a shared, project-agnostic configuration for
 [Microsoft Agent Package Manager (APM)](https://microsoft.github.io/apm/).
 It deploys reviewed instructions and skills to Codex and GitHub Copilot
-tooling.
+tooling using native APM commands only: the bootstrap scripts are thin
+wrappers around the official installer, `apm self-update`, `apm install`,
+and `apm compile`.
 
 ## How it is pinned
 
@@ -16,15 +18,15 @@ and a lockfile work together:
   commit and a content hash for every dependency, so `apm install --frozen`
   reproduces the same files byte-for-byte on any machine.
 - `.apm-version` pins the APM CLI release consumed by the bootstrap scripts
-  and CI.
-- `.apm-checksums` pins SHA256 digests for the upstream Linux installer, every
-  supported release archive, and each archive's executable member. Bootstrap
-  and CI authenticate downloaded CLI code before it can execute.
+  and CI. Installs use the official upstream installer at that pinned tag
+  over TLS, and every consumer asserts `apm --version` matches the pin
+  afterwards. On Windows, upstream `install.ps1` additionally verifies the
+  release's `.sha256` sidecar for pinned versions.
 - Readable APM outputs (`AGENTS.md`, `.agents/skills/`, and
   `.github/instructions/`) are committed review artifacts; CI requires clean
-  regeneration. The only exceptions are the 12 exact `msgraph` generated-data
-  and program paths in `.gitignore`. Their content integrity remains enforced
-  by `apm.lock.yaml` and `apm audit --ci`.
+  regeneration. The only exceptions are the six exact `msgraph`
+  generated-data paths in `.gitignore`. Their content integrity remains
+  enforced by `apm.lock.yaml` and `apm audit --ci`.
 
 ## Local content
 
@@ -41,93 +43,81 @@ and a lockfile work together:
   the source of truth here by choice.
 
 Installed `.agents/skills/` outputs are generated artifacts; never edit them
-in place. Their readable instructions, references, and launcher scripts stay
-committed even when a skill also ships large generated data or programs.
+in place.
 
-## Global bootstrap
+## Bootstrap
 
 Run the wrapper for the current platform from the repository root.
 
-Linux:
+Linux/macOS:
 
 ```sh
-./scripts/bootstrap-global.sh
+./scripts/bootstrap.sh            # global (machine-wide), the default
+./scripts/bootstrap.sh --repo     # into the project at the current directory
+./scripts/bootstrap.sh --dry-run  # preview without changing anything
 ```
 
 Windows (Windows PowerShell 5.1 or PowerShell 7):
 
 ```powershell
-./scripts/Bootstrap-Global.ps1
+./scripts/Bootstrap-Baseline.ps1                 # global (machine-wide)
+./scripts/Bootstrap-Baseline.ps1 -Scope Repo     # into the current project
+./scripts/Bootstrap-Baseline.ps1 -WhatIf         # preview
 ```
 
-Bootstrap reads `.apm-version` and behaves as follows:
+Both wrappers read `.apm-version` and ensure the pinned CLI natively:
 
-- missing CLI: install the pinned version;
-- CLI with the reviewed executable digest and pinned reported version: leave it
-  unchanged;
-- any other existing CLI: stop before executing it or changing profile state.
-  Remove or replace that unverified executable before rerunning bootstrap; the
-  bootstrap never silently downgrades it.
+- missing CLI: download the official installer at the pinned tag and run it
+  with `VERSION=v<pin>` (Linux installs to `~/.local/bin` by default;
+  override with `APM_INSTALL_DIR`);
+- older CLI: upgrade in place with `VERSION=v<pin> apm self-update`;
+- matching CLI: no-op;
+- newer CLI: warn and continue (CI still enforces the exact pin).
 
-On Linux, bootstrap verifies the pinned `install.sh`, the architecture-specific
-archive, and its `apm` member. It then exposes only that verified archive through
-a private local mirror and runs the official installer with an explicit
-`VERSION`, `APM_RELEASE_BASE_URL=file://...`, and
-`APM_NO_DIRECT_FALLBACK=1`. The promoted executable is rehashed before the
-wrapper invokes native APM deployment commands. An existing executable is
-likewise rehashed before its first `--version` call.
+If `apm self-update` fails (for example the CLI was installed via pip or
+another package manager, or self-update is disabled by policy), the bootstrap
+stops with remediation guidance instead of working around it.
 
-On Windows, bootstrap deliberately does not run upstream `install.ps1`, because
-that script launches `apm.exe` before returning. A narrow adapter downloads and
-verifies the x86_64 ZIP, verifies `apm.exe` before promotion, and maintains the
-upstream `releases/<tag>`, `current` junction, and `bin/apm.cmd` layout. It honors
-`APM_INSTALL_DIR`, rejects unsafe reparse targets, restores the prior CLI layout
-if promotion fails, writes an ASCII-only location-relative command shim, and
-rehashes the promoted or existing executable before its first `--version` call.
-Neither platform uses sidecar, pip, or unpinned direct fallbacks.
+Deployment is fully native:
 
-Preview without downloads or changes:
+- **Global** runs `apm install --global
+  thetechgy/agent-engineering-baseline#main` followed by
+  `apm compile --global`. APM deploys skills to `~/.agents/skills/` for both
+  CLIs and writes Copilot's user-scope instructions to
+  `~/.copilot/copilot-instructions.md`. Because this package's instruction is
+  scoped (`applyTo: '**'`), `apm compile --global` currently writes no
+  `~/.codex/AGENTS.md` root context — upstream folds only `applyTo`-less
+  instructions into user root contexts. Codex picks the instructions up
+  per-project from each repository's committed `AGENTS.md` instead.
+- **Repo** runs `apm install --target codex,copilot
+  thetechgy/agent-engineering-baseline#main` and `apm compile` from the
+  current directory. APM 0.29 requires an explicit target for projects
+  without harness markers or a `targets:` manifest entry; the install
+  persists `targets: [codex, copilot]` into the project's `apm.yml`, so
+  later bare `apm compile` runs keep working. This intentionally modifies
+  that project: it creates or updates its `apm.yml`, `apm.lock.yaml`,
+  `apm_modules/` (gitignored by APM), and compiled outputs.
+
+Removal and refresh are native too: `apm uninstall --global
+agent-engineering-baseline` removes deployed files, and `apm update --global`
+re-resolves branch-ref dependencies. Compiled root-context files are
+regenerated by the next `apm compile --global`, not removed by uninstall.
+
+### Migrating from the pre-native bootstrap
+
+Older versions of this repository compiled
+`~/.copilot/copilot-instructions.md` and `~/.codex/AGENTS.md` directly. Those
+files lack the markers native APM writes, so `apm install --global` treats
+them as user-authored and skips them with a collision warning. One-time
+cleanup before the first native bootstrap:
 
 ```sh
-./scripts/bootstrap-global.sh --dry-run
+rm -f ~/.copilot/copilot-instructions.md ~/.codex/AGENTS.md ~/.copilot/AGENTS.md
 ```
 
-```powershell
-./scripts/Bootstrap-Global.ps1 -WhatIf
-```
-
-Linux prerequisites are Bash and the standard GNU utilities used by the
-wrapper; `curl` is needed only when the pinned APM CLI must be installed.
-Windows requires Windows PowerShell 5.1 or PowerShell 7. Codex and Copilot CLIs
-are not bootstrap prerequisites, and the Bash wrapper does not require `jq`.
-
-After preflight, each implementation:
-
-1. Authenticates any required CLI download and rejects linked or reparse-point
-   repository sources and managed user-profile destinations.
-2. Snapshots the existing manifest, lockfile, local sources, package cache,
-   APM configuration, both generated instruction files, and all ten managed
-   skill directories under
-   `~/.apm/backups/agent-engineering-baseline/<UTC timestamp>/`. The inventory
-   contains 17 managed paths.
-3. Stages and verifies the repository's `apm.yml`, `apm.lock.yaml`, and `.apm/`
-   sources before replacing their user-scope copies.
-4. Runs `apm install --global --frozen`, deploys the five reviewed local
-   skills, previews both instruction compilations, writes them only after both
-   previews pass, and verifies the resulting manifest, lockfile, sources,
-   skills, and generated markers.
-
-Any failure after profile mutation starts restores every path the bootstrap
-manages. Successful snapshots are retained for manual rollback. PowerShell
-retains `-WhatIf` and `-Confirm` support and remains compatible with Windows
-PowerShell 5.1 and PowerShell 7.
-
-The bootstrap owns only the APM files, generated instructions, and skill paths
-listed above. It does not inspect, modify, snapshot, or restore Codex or Copilot
-configuration files, and it leaves `~/.copilot/AGENTS.md` user-owned. Users are
-responsible for their own tool integrations and authentication. No credential
-value belongs in this repository or generated configuration. Start new Codex
-and Copilot sessions after deployment.
+Snapshots the old bootstrap kept under
+`~/.apm/backups/agent-engineering-baseline/` can be deleted whenever you no
+longer need them.
 
 ## Repository install and validation
 
@@ -141,37 +131,33 @@ apm audit --ci
 apm pack --dry-run
 ```
 
-Run the platform behavior tests plus normal hygiene:
+Run the bootstrap behavior tests plus normal hygiene:
 
 ```sh
-./tests/bootstrap-global.sh
+./tests/bootstrap.sh
 pwsh -NoLogo -NoProfile -File ./scripts/Invoke-Validation.ps1
 ```
 
 The validation workflow also exercises Pester on PowerShell 7 and Windows
 PowerShell 5.1, PSScriptAnalyzer, ShellCheck, Markdown linting, frozen APM
 installation/compile/audit/package checks, clean-regeneration drift,
-repository hygiene, and the project-agnostic content assertion.
+repository hygiene, and the project-agnostic content assertion. CI installs
+the pinned CLI with the official installer and fails if the installed
+`apm --version` does not equal `.apm-version`.
 
 ## Scheduled reviewed updates
 
 `.github/workflows/update-baseline.yml` runs weekly and on manual dispatch.
-It refreshes `.apm-version` to the latest stable APM release, downloads all
-supported release archives, re-pins the installer/archive/executable hashes in
-`.apm-checksums`, re-resolves the branch-ref dependencies with native
+It bumps `.apm-version` to the latest stable APM release, installs that
+candidate CLI, re-resolves the branch-ref dependencies with native
 `apm update --yes`, regenerates compiled outputs, runs the full validation
-suite, and creates or updates one `automation/apm-baseline-update` pull request.
-The workflow performs those update operations with the already reviewed CLI;
-it does not execute a newly downloaded candidate release before its hashes are
-reviewed and merged.
+suite with the candidate CLI, and creates or updates one
+`automation/apm-baseline-update` pull request.
 
-The update PR is never auto-merged. Review the lockfile diff, regenerated
-outputs, and CI results before merging. GitHub Actions dependencies remain
-pinned to full commit SHAs and are updated separately by Dependabot.
-Before accepting an update, manually review the pinned upstream commit and every
-changed installer, archive, and executable hash. The update pull request is the
-human review boundary for new hashes. Hashes provide integrity evidence; they do
-not prove that a program is benign. New generated output paths are not
+The update PR is never auto-merged. Review the upstream release notes for the
+candidate CLI version, the lockfile diff, regenerated outputs, and CI results
+before merging. GitHub Actions dependencies remain pinned to full commit SHAs
+and are updated separately by Dependabot. New generated output paths are not
 implicitly ignored and therefore enter the normal Git review patch.
 
 To run the same refresh locally:
