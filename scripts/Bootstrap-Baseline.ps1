@@ -162,11 +162,21 @@ function Assert-PlainTree {
     )
 
     Assert-SafeDirectory -Path $Path -Label $Label -RequireExisting
-    $reparseItem = Get-ChildItem -LiteralPath $Path -Force -Recurse |
-        Where-Object { $_.Attributes -band [IO.FileAttributes]::ReparsePoint } |
-        Select-Object -First 1
-    if ($reparseItem) {
-        throw "$Label contains a reparse point: $($reparseItem.FullName)"
+    $pendingDirectories = New-Object System.Collections.Stack
+    $pendingDirectories.Push($Path)
+    while ($pendingDirectories.Count -gt 0) {
+        $directory = [string]$pendingDirectories.Pop()
+        foreach ($item in @(Get-ChildItem -LiteralPath $directory -Force -ErrorAction Stop)) {
+            if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+                throw "$Label contains a reparse point: $($item.FullName)"
+            }
+            if ($item.PSIsContainer) {
+                $pendingDirectories.Push($item.FullName)
+            }
+            elseif (-not ($item -is [IO.FileInfo])) {
+                throw "$Label contains an unsupported entry type: $($item.FullName)"
+            }
+        }
     }
 }
 

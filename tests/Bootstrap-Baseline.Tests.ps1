@@ -261,6 +261,8 @@ Describe 'Bootstrap-Baseline Windows security contracts' {
         $script:BootstrapText | Should-MatchString 'Threading\.Mutex'
         $script:BootstrapText | Should-MatchString '\[IO\.Directory\]::Delete\(\$Path, \$false\)'
         $script:BootstrapText | Should-MatchString '\[Text\.Encoding\]::ASCII'
+        $script:BootstrapText | Should-MatchString 'New-Object System\.Collections\.Stack'
+        $script:BootstrapText | Should-NotMatchString 'Get-ChildItem[^\r\n]+-Recurse'
         $script:BootstrapText | Should-MatchString '"%~dp0\.\.\\current\\apm\.exe" %\*'
         $script:BootstrapText |
             Should-MatchString '\$shimItem\.Attributes -band \[IO\.FileAttributes\]::ReparsePoint'
@@ -451,6 +453,22 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
 
         { & $script:TestRepository.Script -CliOnly -Confirm:$false } |
             Should-Throw -ExceptionMessage '*reparse point*'
+    }
+
+    It 'rejects a nested reparse point before descending into it' {
+        $release = Join-Path $script:InstallRoot 'releases\v0.29.0'
+        $target = Join-Path $TestDrive ('outside-' + [Guid]::NewGuid().ToString('N'))
+        New-Item -ItemType Directory -Path $release, $target -Force | Out-Null
+        [IO.File]::WriteAllText(
+            (Join-Path $release '.apm-installed'),
+            "v0.29.0$([Environment]::NewLine)",
+            [Text.Encoding]::ASCII
+        )
+        New-Item -ItemType Junction -Path (Join-Path $release '_internal') -Target $target |
+            Out-Null
+
+        { & $script:TestRepository.Script -CliOnly -Confirm:$false } |
+            Should-Throw -ExceptionMessage '*contains a reparse point*'
     }
 
     It 'rolls back the prior release and junction when shim promotion fails' {
