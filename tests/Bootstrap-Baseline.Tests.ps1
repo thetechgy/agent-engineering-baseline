@@ -122,6 +122,7 @@ public static class $className
             [switch]$CorruptArchive
         )
 
+        Add-Type -AssemblyName System.IO.Compression
         Add-Type -AssemblyName System.IO.Compression.FileSystem
         $fixtureRoot = Join-Path $Repository.Root ('fixture-' + [Guid]::NewGuid().ToString('N'))
         $expectedRoot = 'apm-windows-x86_64'
@@ -271,14 +272,14 @@ Describe 'Bootstrap-Baseline Windows security contracts' {
 
 Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWindowsPlatform) {
     BeforeEach {
+        $script:OldProcessPath = $env:PATH
+        $script:OldUserPath = [Environment]::GetEnvironmentVariable('Path', 'User')
         $script:TestRepository = New-TestRepository
         $script:Fixture = New-ZipFixture -Repository $script:TestRepository
         $script:InstallRoot = Join-Path $TestDrive (
             'install-' + [char]0x00E9 + '-' + [Guid]::NewGuid().ToString('N')
         )
         $script:CallLog = Join-Path $TestDrive ('calls-' + [Guid]::NewGuid().ToString('N') + '.log')
-        $script:OldProcessPath = $env:PATH
-        $script:OldUserPath = [Environment]::GetEnvironmentVariable('Path', 'User')
         $env:APM_INSTALL_DIR = $script:InstallRoot
         $env:APM_RELEASE_BASE_URL = 'https://mirror.example.invalid/apm'
         $env:APM_TEST_CALL_LOG = $script:CallLog
