@@ -1,6 +1,5 @@
 ---
 description: Shared cross-project engineering boundaries for Codex and GitHub Copilot CLI
-applyTo: '**'
 ---
 
 # Personal engineering instructions
