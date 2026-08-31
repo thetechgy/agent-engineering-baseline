@@ -2,7 +2,13 @@
 # Acquire the reviewed APM CLI bundle, then deploy the baseline with native APM.
 set -euo pipefail
 
-SCRIPT_DIR="$(CDPATH='' cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd -P)"
+SCRIPT_SOURCE=${BASH_SOURCE[0]:-$0}
+case "$SCRIPT_SOURCE" in
+    /*|./*|../*) ;;
+    *) SCRIPT_SOURCE="./$SCRIPT_SOURCE" ;;
+esac
+readonly SCRIPT_SOURCE
+SCRIPT_DIR="$(CDPATH='' cd "$(dirname "$SCRIPT_SOURCE")" && pwd -P)"
 readonly SCRIPT_DIR
 REPOSITORY_ROOT="$(CDPATH='' cd "$SCRIPT_DIR/.." && pwd -P)"
 readonly REPOSITORY_ROOT
@@ -39,7 +45,10 @@ die() { printf 'bootstrap: error: %s\n' "$*" >&2; exit 1; }
 
 cleanup() {
     if [ -n "$TEMP_ROOT" ] && [ -d "$TEMP_ROOT" ]; then
-        rm -rf "$TEMP_ROOT"
+        case "$TEMP_ROOT" in
+            /*) rm -rf "$TEMP_ROOT" ;;
+            *) log "warning: refusing to clean non-absolute staging path: $TEMP_ROOT" ;;
+        esac
     fi
 }
 trap cleanup EXIT HUP INT TERM
@@ -279,6 +288,7 @@ promote_bundle() {
 }
 
 acquire_cli() {
+    local temp_parent=${TMPDIR:-/tmp}
     require_command awk
     require_command curl
     require_command find
@@ -290,7 +300,13 @@ acquire_cli() {
     select_platform
     require_command "$HASH_COMMAND"
 
-    TEMP_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/apm-bootstrap.XXXXXX")
+    case "$temp_parent" in
+        /*|./*|../*) ;;
+        *) temp_parent="./$temp_parent" ;;
+    esac
+    temp_parent=$(CDPATH='' cd "$temp_parent" && pwd -P) ||
+        die "temporary directory is unavailable: ${TMPDIR:-/tmp}"
+    TEMP_ROOT=$(mktemp -d "$temp_parent/apm-bootstrap.XXXXXX")
     local archive_path="$TEMP_ROOT/$ARCHIVE_NAME" extract_root="$TEMP_ROOT/extract"
     mkdir "$extract_root"
     download_archive "$archive_path"

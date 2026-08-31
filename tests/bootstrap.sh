@@ -59,6 +59,10 @@ assert_true 'mirror redirects are limited to reviewed protocols' \
     file_has "$SOURCE_BOOTSTRAP" "proto-redir '=https,file'"
 assert_true 'public redirects remain HTTPS-only' \
     file_has "$SOURCE_BOOTSTRAP" "proto-redir '=https'"
+assert_true 'dash-leading script paths are normalized portably' \
+    file_has "$SOURCE_BOOTSTRAP" "SCRIPT_SOURCE=\"./\$SCRIPT_SOURCE\""
+assert_true 'cleanup refuses non-absolute staging paths' \
+    file_has "$SOURCE_BOOTSTRAP" 'refusing to clean non-absolute staging path'
 
 new_case() {
     local name=$1
