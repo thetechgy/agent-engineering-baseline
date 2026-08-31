@@ -378,6 +378,11 @@ main() {
 
     INSTALL_DIR=${APM_INSTALL_DIR:-${HOME:?HOME must be set}/.local/bin}
     case "$INSTALL_DIR" in
+        \~) INSTALL_DIR=${HOME:?HOME must be set} ;;
+        \~/*) INSTALL_DIR="${HOME:?HOME must be set}/${INSTALL_DIR#\~/}" ;;
+        \~*) die 'APM_INSTALL_DIR supports only the current-user ~ prefix.' ;;
+    esac
+    case "$INSTALL_DIR" in
         /*) ;;
         *) INSTALL_DIR="$PWD/$INSTALL_DIR" ;;
     esac

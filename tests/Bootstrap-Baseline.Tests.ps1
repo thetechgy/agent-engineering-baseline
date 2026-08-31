@@ -16,6 +16,7 @@ BeforeDiscovery {
 BeforeAll {
     $script:RepositoryRoot = Split-Path -Parent $PSScriptRoot
     $script:BootstrapSource = Join-Path $script:RepositoryRoot 'scripts/Bootstrap-Baseline.ps1'
+    $script:ValidationSource = Join-Path $script:RepositoryRoot 'scripts/Invoke-Validation.ps1'
     $script:IsWindowsPlatform = $env:OS -ceq 'Windows_NT'
 
     function New-TestRepository {
@@ -250,6 +251,7 @@ Describe 'Bootstrap-Baseline local metadata and preview' {
 Describe 'Bootstrap-Baseline Windows security contracts' {
     BeforeAll {
         $script:BootstrapText = Get-Content -LiteralPath $script:BootstrapSource -Raw
+        $script:ValidationText = Get-Content -LiteralPath $script:ValidationSource -Raw
     }
 
     It 'uses the required download, TLS, archive, mutex, junction, and ASCII primitives' {
@@ -269,6 +271,12 @@ Describe 'Bootstrap-Baseline Windows security contracts' {
         $script:BootstrapText | Should-NotMatchString 'install\.ps1'
         $script:BootstrapText | Should-NotMatchString 'self-update'
         $script:BootstrapText | Should-NotMatchString 'Authenticode'
+    }
+
+    It 'supports util-linux and BSD pseudo-terminal audit forms' {
+        $script:ValidationText | Should-MatchString "-q -e -c 'exit 0' /dev/null"
+        $script:ValidationText | Should-MatchString '-q /dev/null sh -c'
+        $script:ValidationText | Should-MatchString 'APM_AUDIT_STATUS'
     }
 }
 

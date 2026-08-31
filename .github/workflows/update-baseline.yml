@@ -38,9 +38,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           latest="$(gh api repos/microsoft/apm/releases/latest --jq '.tag_name' | sed 's/^v//')"
+          [ "$(printf '%s\n' "$latest" | awk 'END { print NR }')" -eq 1 ]
           printf '%s\n' "$latest" |
             grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(a[0-9]+|b[0-9]+|rc[0-9]+)?$'
-          echo "version=$latest" >> "$GITHUB_OUTPUT"
+          printf '%s\n' 'version<<APM_VERSION_EOF' "$latest" 'APM_VERSION_EOF' >> "$GITHUB_OUTPUT"
 
       - name: Authenticate candidate release metadata without execution
         shell: bash

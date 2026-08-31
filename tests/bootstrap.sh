@@ -66,6 +66,7 @@ assert_true 'cleanup refuses non-absolute staging paths' \
 
 new_case() {
     local name=$1
+    unset CASE_INSTALL_DIR CASE_NO_FALLBACK CASE_PACKAGE_REF CASE_RELEASE_BASE
     CASE_ROOT="$TEST_ROOT/$name"
     CASE_HOME="$CASE_ROOT/home"
     CASE_REPO="$CASE_ROOT/repo"
@@ -168,13 +169,14 @@ EOF
 
 run_case() {
     local release_base=${CASE_RELEASE_BASE-"file://$MIRROR_ROOT"}
+    local install_dir=${CASE_INSTALL_DIR-$CASE_INSTALL}
     set +e
     OUTPUT=$(
         env -i \
             HOME="$CASE_HOME" \
             PATH="$CASE_BIN:/usr/bin:/bin" \
             TMPDIR="$CASE_TMP" \
-            APM_INSTALL_DIR="$CASE_INSTALL" \
+            APM_INSTALL_DIR="$install_dir" \
             APM_RELEASE_BASE_URL="$release_base" \
             APM_NO_DIRECT_FALLBACK="${CASE_NO_FALLBACK-}" \
             BASELINE_PACKAGE_REF="${CASE_PACKAGE_REF-}" \
@@ -248,6 +250,16 @@ EOF
     assert_true "$platform_os/$platform_arch creates the managed symlink" test -L "$CASE_INSTALL/apm"
     assert_true "$platform_os/$platform_arch never runs ambient APM" test ! -e "$AMBIENT_SENTINEL"
 done
+
+new_case tilde-install-dir
+make_fixture Linux x86_64
+# The literal tilde is the behavior under test.
+# shellcheck disable=SC2088
+CASE_INSTALL_DIR='~/.reviewed/bin'
+run_case --cli-only
+record_result 'tilde install directory expands to HOME' success
+assert_true 'tilde install directory uses the current user home' \
+    test -L "$CASE_HOME/.reviewed/bin/apm"
 
 new_case global-deploy
 make_fixture Linux x86_64
