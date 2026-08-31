@@ -41,7 +41,8 @@ jobs:
           [ "$(printf '%s\n' "$latest" | awk 'END { print NR }')" -eq 1 ]
           printf '%s\n' "$latest" |
             grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(a[0-9]+|b[0-9]+|rc[0-9]+)?$'
-          printf '%s\n' 'version<<APM_VERSION_EOF' "$latest" 'APM_VERSION_EOF' >> "$GITHUB_OUTPUT"
+          # Cardinality and the strict allowlist above make this output injection-safe.
+          printf 'version=%s\n' "$latest" >> "$GITHUB_OUTPUT"
 
       - name: Authenticate candidate release metadata without execution
         shell: bash
