@@ -82,7 +82,7 @@ jobs:
             linux-arm64 \
             linux-x86_64; do
             asset="apm-$platform.tar.gz"
-            curl --fail --location --silent --show-error --proto '=https' --tlsv1.2 \
+            curl --fail --location --silent --show-error --proto '=https' --proto-redir '=https' --tlsv1.2 \
               --output "$candidate_root/$asset" \
               "https://github.com/microsoft/apm/releases/download/v$CANDIDATE_VERSION/$asset"
             validate_tar "$asset" "apm-$platform" "apm-$platform/apm"
@@ -90,7 +90,7 @@ jobs:
 
           windows_asset='apm-windows-x86_64.zip'
           windows_root='apm-windows-x86_64'
-          curl --fail --location --silent --show-error --proto '=https' --tlsv1.2 \
+          curl --fail --location --silent --show-error --proto '=https' --proto-redir '=https' --tlsv1.2 \
             --output "$candidate_root/$windows_asset" \
             "https://github.com/microsoft/apm/releases/download/v$CANDIDATE_VERSION/$windows_asset"
           unzip -Z1 "$candidate_root/$windows_asset" > "$candidate_root/$windows_root.list"
@@ -109,7 +109,8 @@ jobs:
             END { exit(valid && executable_count == 1 && internal_count > 0 ? 0 : 1) }
           ' "$candidate_root/$windows_root.list"
           zipinfo -l "$candidate_root/$windows_asset" |
-            awk '$1 ~ /^[dl-]/ && substr($1, 1, 1) != "-" && substr($1, 1, 1) != "d" { exit 1 }'
+            awk 'length($1) == 10 && $2 ~ /^[0-9]+\.[0-9]+$/ &&
+              substr($1, 1, 1) != "-" && substr($1, 1, 1) != "d" { exit 1 }'
           windows_extract="$candidate_root/extract-$windows_root"
           mkdir "$windows_extract"
           unzip -q "$candidate_root/$windows_asset" -d "$windows_extract"

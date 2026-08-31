@@ -55,6 +55,11 @@ out_has() { printf '%s\n' "$OUTPUT" | grep -Fq "$1"; }
 # shellcheck disable=SC2317
 file_has() { grep -Fq "$2" "$1"; }
 
+assert_true 'mirror redirects are limited to reviewed protocols' \
+    file_has "$SOURCE_BOOTSTRAP" "proto-redir '=https,file'"
+assert_true 'public redirects remain HTTPS-only' \
+    file_has "$SOURCE_BOOTSTRAP" "proto-redir '=https'"
+
 new_case() {
     local name=$1
     CASE_ROOT="$TEST_ROOT/$name"

@@ -197,9 +197,11 @@ download_archive() {
     fi
     log "downloading $ARCHIVE_NAME"
     if [ -n "$base" ]; then
-        curl --fail --location --silent --show-error --proto '=https,file' --output "$destination" "$url"
+        curl --fail --location --silent --show-error --proto '=https,file' \
+            --proto-redir '=https,file' --output "$destination" "$url"
     else
-        curl --fail --location --silent --show-error --proto '=https' --tlsv1.2 --output "$destination" "$url"
+        curl --fail --location --silent --show-error --proto '=https' \
+            --proto-redir '=https' --tlsv1.2 --output "$destination" "$url"
     fi
 }
 

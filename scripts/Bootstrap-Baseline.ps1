@@ -409,7 +409,10 @@ function Install-ReviewedBundle {
     $hadShim = $null -ne $shimItem
     $oldShimBytes = $null
     $oldShimAttributes = $null
-    if ($hadShim -and -not $shimItem.PSIsContainer) {
+    if ($hadShim -and ($shimItem.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+        throw "Refusing to overwrite a reparse-point APM shim: $shimPath"
+    }
+    elseif ($hadShim -and -not $shimItem.PSIsContainer) {
         if ([IO.File]::ReadAllText($shimPath) -cne $shimContent) {
             throw "Refusing to overwrite an unrelated APM shim: $shimPath"
         }

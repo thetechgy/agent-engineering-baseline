@@ -260,6 +260,8 @@ Describe 'Bootstrap-Baseline Windows security contracts' {
         $script:BootstrapText | Should-MatchString '\[IO\.Directory\]::Delete\(\$Path, \$false\)'
         $script:BootstrapText | Should-MatchString '\[Text\.Encoding\]::ASCII'
         $script:BootstrapText | Should-MatchString '"%~dp0\.\.\\current\\apm\.exe" %\*'
+        $script:BootstrapText |
+            Should-MatchString '\$shimItem\.Attributes -band \[IO\.FileAttributes\]::ReparsePoint'
     }
 
     It 'contains no ambient execution, installer, self-update, or Authenticode fallback' {
