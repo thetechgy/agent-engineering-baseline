@@ -276,6 +276,7 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         $script:OldUserPath = [Environment]::GetEnvironmentVariable('Path', 'User')
         $script:TestRepository = New-TestRepository
         $script:Fixture = New-ZipFixture -Repository $script:TestRepository
+        $env:APM_TEST_FIXTURE_ARCHIVE = $script:Fixture.Archive
         $script:InstallRoot = Join-Path $TestDrive (
             'install-' + [char]0x00E9 + '-' + [Guid]::NewGuid().ToString('N')
         )
@@ -287,14 +288,14 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         Remove-Item Env:PROCESSOR_ARCHITEW6432 -ErrorAction SilentlyContinue
         Remove-Item Env:APM_NO_DIRECT_FALLBACK -ErrorAction SilentlyContinue
         Remove-Item Env:BASELINE_PACKAGE_REF -ErrorAction SilentlyContinue
-        $script:RequestedUri = $null
-        $script:TlsDuringDownload = $false
+        Remove-Item Env:APM_TEST_REQUESTED_URI -ErrorAction SilentlyContinue
+        Remove-Item Env:APM_TEST_TLS_DURING_DOWNLOAD -ErrorAction SilentlyContinue
         Mock Invoke-WebRequest {
-            $script:RequestedUri = $Uri
-            $script:TlsDuringDownload = [bool](
+            $env:APM_TEST_REQUESTED_URI = $Uri
+            $env:APM_TEST_TLS_DURING_DOWNLOAD = [string][bool](
                 [Net.ServicePointManager]::SecurityProtocol -band [Net.SecurityProtocolType]::Tls12
             )
-            Copy-Item -LiteralPath $script:Fixture.Archive -Destination $OutFile
+            Copy-Item -LiteralPath $env:APM_TEST_FIXTURE_ARCHIVE -Destination $OutFile
         }
     }
 
@@ -305,6 +306,9 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
                 'APM_INSTALL_DIR',
                 'APM_RELEASE_BASE_URL',
                 'APM_TEST_CALL_LOG',
+                'APM_TEST_FIXTURE_ARCHIVE',
+                'APM_TEST_REQUESTED_URI',
+                'APM_TEST_TLS_DURING_DOWNLOAD',
                 'APM_NO_DIRECT_FALLBACK',
                 'BASELINE_PACKAGE_REF'
             )) {
@@ -327,11 +331,13 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         $shim = Join-Path $script:InstallRoot 'bin\apm.cmd'
         [IO.File]::ReadAllText($shim) | Should-MatchString '"%~dp0\.\.\\current\\apm\.exe" %\*'
         @([IO.File]::ReadAllBytes($shim) | Where-Object { $_ -gt 127 }).Count | Should-Be 0
-        $script:RequestedUri | Should-Be 'https://mirror.example.invalid/apm/v0.29.0/apm-windows-x86_64.zip'
-        $script:TlsDuringDownload | Should-BeTrue
+        $env:APM_TEST_REQUESTED_URI |
+            Should-Be 'https://mirror.example.invalid/apm/v0.29.0/apm-windows-x86_64.zip'
+        $env:APM_TEST_TLS_DURING_DOWNLOAD | Should-Be 'True'
         [Net.ServicePointManager]::SecurityProtocol | Should-Be $beforeTls
         Should-Invoke Invoke-WebRequest -Times 1 -Exactly -Scope It -ParameterFilter {
-            $UseBasicParsing -and $Uri -eq $script:RequestedUri
+            $UseBasicParsing -and
+                $Uri -eq 'https://mirror.example.invalid/apm/v0.29.0/apm-windows-x86_64.zip'
         }
     }
 
@@ -385,11 +391,13 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
 
     It 'rejects corrupt archives and executable digest mismatches before execution' {
         $script:Fixture = New-ZipFixture -Repository $script:TestRepository -CorruptArchive
+        $env:APM_TEST_FIXTURE_ARCHIVE = $script:Fixture.Archive
         { & $script:TestRepository.Script -CliOnly -Confirm:$false } | Should-Throw
         Test-Path -LiteralPath $script:CallLog | Should-BeFalse
 
         $script:TestRepository = New-TestRepository
         $script:Fixture = New-ZipFixture -Repository $script:TestRepository
+        $env:APM_TEST_FIXTURE_ARCHIVE = $script:Fixture.Archive
         Set-TestChecksum -Repository $script:TestRepository -Name 'apm-windows-x86_64/apm.exe' -Digest ('0' * 64)
         { & $script:TestRepository.Script -CliOnly -Confirm:$false } |
             Should-Throw -ExceptionMessage '*reviewed SHA256*'
@@ -407,6 +415,7 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         foreach ($case in $cases) {
             $script:TestRepository = New-TestRepository
             $script:Fixture = New-ZipFixture -Repository $script:TestRepository @case
+            $env:APM_TEST_FIXTURE_ARCHIVE = $script:Fixture.Archive
             { & $script:TestRepository.Script -CliOnly -Confirm:$false } | Should-Throw
         }
     }
@@ -414,6 +423,7 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
     It 'preserves full prerelease versions' {
         $script:TestRepository = New-TestRepository -Pin '0.30.0rc2'
         $script:Fixture = New-ZipFixture -Repository $script:TestRepository -Version '0.30.0rc2'
+        $env:APM_TEST_FIXTURE_ARCHIVE = $script:Fixture.Archive
 
         & $script:TestRepository.Script -CliOnly -Confirm:$false
 
