@@ -355,13 +355,23 @@ function Install-ReviewedBundle {
     if ([string]::IsNullOrWhiteSpace($localAppData)) {
         throw 'LOCALAPPDATA could not be determined.'
     }
-    $installRoot = if ($env:APM_INSTALL_DIR) { $env:APM_INSTALL_DIR }
-    else { Join-Path $localAppData 'Programs\apm' }
-    $installRoot = [IO.Path]::GetFullPath($installRoot)
+    $defaultInstallRoot = Join-Path $localAppData 'Programs\apm'
+    if ($env:APM_INSTALL_DIR) {
+        $rawBinPath = $env:APM_INSTALL_DIR.Trim().TrimEnd('\', '/')
+        if ([string]::IsNullOrWhiteSpace($rawBinPath)) {
+            throw 'APM_INSTALL_DIR must identify the APM bin directory.'
+        }
+        $binPath = [IO.Path]::GetFullPath($rawBinPath)
+        $installRoot = Split-Path -Parent $binPath
+        if ([string]::IsNullOrWhiteSpace($installRoot)) { $installRoot = $binPath }
+    }
+    else {
+        $installRoot = [IO.Path]::GetFullPath($defaultInstallRoot)
+        $binPath = Join-Path $installRoot 'bin'
+    }
     $releasesPath = Join-Path $installRoot 'releases'
     $releasePath = Join-Path $releasesPath "v$($Metadata.Pin)"
     $currentPath = Join-Path $installRoot 'current'
-    $binPath = Join-Path $installRoot 'bin'
     $shimPath = Join-Path $binPath 'apm.cmd'
     $shimLines = @('@echo off', '"%~dp0..\current\apm.exe" %*')
     $shimContent = ($shimLines -join [Environment]::NewLine) + [Environment]::NewLine

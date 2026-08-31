@@ -90,8 +90,9 @@ owned full bundle under the sibling `lib/apm` directory. Linux uses
 `sha256sum`; macOS uses `shasum -a 256`. An existing unrelated command or
 unowned bundle is not overwritten.
 
-On Windows, the default root is
-`%LOCALAPPDATA%\Programs\apm` (override it with `APM_INSTALL_DIR`). The
+On Windows, the default root is `%LOCALAPPDATA%\Programs\apm`.
+`APM_INSTALL_DIR`, when set, identifies the `bin`/shim directory just as it
+does in APM's native installer; the installation root is its parent. The
 complete bundle lives in `releases\v<pin>`, `current` is a validated junction,
 and the ASCII `bin\apm.cmd` shim is location-relative:
 

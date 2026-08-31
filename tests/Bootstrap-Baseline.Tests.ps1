@@ -291,7 +291,7 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
             'install-' + [char]0x00E9 + '-' + [Guid]::NewGuid().ToString('N')
         )
         $script:CallLog = Join-Path $TestDrive ('calls-' + [Guid]::NewGuid().ToString('N') + '.log')
-        $env:APM_INSTALL_DIR = $script:InstallRoot
+        $env:APM_INSTALL_DIR = Join-Path $script:InstallRoot 'bin'
         $env:APM_RELEASE_BASE_URL = 'https://mirror.example.invalid/apm'
         $env:APM_TEST_CALL_LOG = $script:CallLog
         $env:PROCESSOR_ARCHITECTURE = 'AMD64'
@@ -333,6 +333,8 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         & $script:TestRepository.Script -CliOnly -Confirm:$false
 
         $release = Join-Path $script:InstallRoot 'releases\v0.29.0'
+        $env:APM_INSTALL_DIR | Should-Be (Join-Path $script:InstallRoot 'bin')
+        Test-Path -LiteralPath (Join-Path $env:APM_INSTALL_DIR 'apm.cmd') | Should-BeTrue
         Test-Path -LiteralPath (Join-Path $release '_internal\catalog.json') | Should-BeTrue
         Get-Content -LiteralPath (Join-Path $release '.apm-installed') -Raw |
             Should-MatchString 'v0.29.0'
