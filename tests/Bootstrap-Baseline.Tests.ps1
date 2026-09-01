@@ -375,7 +375,7 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         Remove-Item -LiteralPath $script:CallLog -ErrorAction SilentlyContinue
         & $script:TestRepository.Script -Scope Global -Confirm:$false
         $calls = Get-Content -LiteralPath $script:CallLog -Raw
-        $calls | Should-MatchString 'install --global --trust-bin https://github.com/thetechgy/agent-engineering-baseline\.git#main'
+        $calls | Should-MatchString 'install --global --target codex,copilot --trust-bin https://github.com/thetechgy/agent-engineering-baseline\.git#main'
         $calls | Should-MatchString 'compile --global'
     }
 

@@ -355,7 +355,7 @@ deploy_baseline() {
     case "$MODE" in
         global)
             log "installing $package_ref at user scope"
-            run_apm install --global --trust-bin "$package_ref"
+            run_apm install --global --target codex,copilot --trust-bin "$package_ref"
             run_apm compile --global
             ;;
         repo)
