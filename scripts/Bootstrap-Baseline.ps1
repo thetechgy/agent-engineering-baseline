@@ -627,7 +627,7 @@ if (-not $CliOnly) {
     $packageRef = if ($env:BASELINE_PACKAGE_REF) { $env:BASELINE_PACKAGE_REF }
     else { $defaultPackageRef }
     if ($Scope -ceq 'Global') {
-        Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata install --global --trust-bin $packageRef
+        Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata install --global --target 'codex,copilot' --trust-bin $packageRef
         Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata compile --global
     }
     else {

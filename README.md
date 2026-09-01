@@ -113,15 +113,19 @@ The default reference is the direct Git URL
 default-registry shorthand routing. Override it with
 `BASELINE_PACKAGE_REF` when a different reviewed source is required.
 
-- Global mode runs `apm install --global --trust-bin <ref>` and then
+- Global mode runs
+  `apm install --global --target codex,copilot --trust-bin <ref>` and then
   `apm compile --global`.
 - Repository mode runs
   `apm install --target codex,copilot --trust-bin <ref>` and then
   `apm compile --target codex,copilot`.
 
-Repository mode intentionally updates that project's manifest, lockfile,
-package cache, and compiled outputs. Explicit targets are always supplied so
-an existing manifest cannot silently narrow compilation.
+Scope and target selection are independent. Global mode deploys user-scoped
+Codex and Copilot primitives for use across repositories; repository mode
+deploys the same targets into the current project. Both install modes supply
+explicit targets so saved APM configuration or auto-detection cannot redirect
+the baseline. Repository mode intentionally updates that project's manifest,
+lockfile, package cache, and compiled outputs.
 
 Global compilation is intentionally broad native APM behavior: it writes root
 contexts for roughly eleven supported harnesses and cannot be narrowed with
