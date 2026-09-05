@@ -14,6 +14,14 @@ dependencies:
     - github/awesome-copilot/skills/github-actions-hardening#main
     - merill/msgraph/skills/msgraph#main
     - addyosmani/agent-skills/skills/code-simplification#main
+  mcp:
+    - name: microsoftdocs/mcp
+      tools: &microsoft_learn_tools
+        - microsoft_docs_search
+        - microsoft_docs_fetch
+        - microsoft_code_sample_search
+      # APM 0.29 does not translate tools to Codex's native allowlist key.
+      enabled_tools: *microsoft_learn_tools
 
 includes:
   - .apm/instructions/personal.instructions.md

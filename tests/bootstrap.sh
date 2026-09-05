@@ -266,16 +266,16 @@ new_case global-deploy
 make_fixture Linux x86_64
 run_case
 record_result 'global deployment succeeds' success
-assert_true 'global install pins targets, trusts package launchers, and uses full URL ref' \
-    file_has "$CALL_LOG" 'install --global --target codex,copilot --trust-bin https://github.com/thetechgy/agent-engineering-baseline.git#main'
+assert_true 'global install pins targets, trusts launchers and MCP, and uses full URL ref' \
+    file_has "$CALL_LOG" 'install --global --target codex,copilot --trust-bin --trust-transitive-mcp https://github.com/thetechgy/agent-engineering-baseline.git#main'
 assert_true 'global compilation is native' file_has "$CALL_LOG" 'compile --global'
 
 new_case repo-deploy
 make_fixture Linux x86_64
 run_case --repo
 record_result 'repository deployment succeeds' success
-assert_true 'repo install always passes targets and trust-bin' \
-    file_has "$CALL_LOG" 'install --target codex,copilot --trust-bin https://github.com/thetechgy/agent-engineering-baseline.git#main'
+assert_true 'repo install always passes targets and launcher/MCP trust' \
+    file_has "$CALL_LOG" 'install --target codex,copilot --trust-bin --trust-transitive-mcp https://github.com/thetechgy/agent-engineering-baseline.git#main'
 assert_true 'repo compile always passes targets' file_has "$CALL_LOG" 'compile --target codex,copilot'
 
 new_case package-override
