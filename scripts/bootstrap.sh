@@ -355,12 +355,12 @@ deploy_baseline() {
     case "$MODE" in
         global)
             log "installing $package_ref at user scope"
-            run_apm install --global --target codex,copilot --trust-bin "$package_ref"
+            run_apm install --global --target codex,copilot --trust-bin --trust-transitive-mcp "$package_ref"
             run_apm compile --global
             ;;
         repo)
             log "installing $package_ref into $PWD"
-            run_apm install --target codex,copilot --trust-bin "$package_ref"
+            run_apm install --target codex,copilot --trust-bin --trust-transitive-mcp "$package_ref"
             run_apm compile --target codex,copilot
             ;;
     esac

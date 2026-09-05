@@ -366,16 +366,16 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         Get-Content -LiteralPath $script:CallLog -Raw | Should-MatchString '\\current\\apm\.exe'
     }
 
-    It 'uses trust-bin and explicit targets for native deployment' {
+    It 'uses launcher and transitive MCP trust with explicit targets for native deployment' {
         & $script:TestRepository.Script -Scope Repo -Confirm:$false
         $calls = Get-Content -LiteralPath $script:CallLog -Raw
-        $calls | Should-MatchString 'install --target codex,copilot --trust-bin https://github.com/thetechgy/agent-engineering-baseline\.git#main'
+        $calls | Should-MatchString 'install --target codex,copilot --trust-bin --trust-transitive-mcp https://github.com/thetechgy/agent-engineering-baseline\.git#main'
         $calls | Should-MatchString 'compile --target codex,copilot'
 
         Remove-Item -LiteralPath $script:CallLog -ErrorAction SilentlyContinue
         & $script:TestRepository.Script -Scope Global -Confirm:$false
         $calls = Get-Content -LiteralPath $script:CallLog -Raw
-        $calls | Should-MatchString 'install --global --target codex,copilot --trust-bin https://github.com/thetechgy/agent-engineering-baseline\.git#main'
+        $calls | Should-MatchString 'install --global --target codex,copilot --trust-bin --trust-transitive-mcp https://github.com/thetechgy/agent-engineering-baseline\.git#main'
         $calls | Should-MatchString 'compile --global'
     }
 
