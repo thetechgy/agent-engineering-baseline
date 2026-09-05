@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-09-05T17:50:43.256410+00:00'
+generated_at: '2026-09-05T20:12:13.830659+00:00'
 apm_version: 0.29.0
 dependencies:
 - repo_url: addyosmani/agent-skills
@@ -621,7 +621,7 @@ deployments:
   content_hash: sha256:0c6768cb8e5af568a1a0fcd6a3becd8ba8e72742684aa0d44d8c8bd0c5d05890
 - kind: uri
   target: mcp
-  value: microsoftdocs/mcp
+  value: microsoft-learn
   runtime: codex
   scope: project
   owners:
@@ -630,7 +630,7 @@ deployments:
   content_hash: null
 - kind: uri
   target: mcp
-  value: microsoftdocs/mcp
+  value: microsoft-learn
   runtime: copilot
   scope: project
   owners:
@@ -638,20 +638,23 @@ deployments:
   active_owner: .
   content_hash: null
 mcp_servers:
-- microsoftdocs/mcp
+- microsoft-learn
 mcp_configs:
-  microsoftdocs/mcp:
-    name: microsoftdocs/mcp
+  microsoft-learn:
+    name: microsoft-learn
+    transport: http
+    registry: false
     tools: &id001
     - microsoft_docs_search
     - microsoft_docs_fetch
     - microsoft_code_sample_search
+    url: https://learn.microsoft.com/api/mcp
     enabled_tools: *id001
 mcp_target_servers:
   codex:
-  - microsoftdocs/mcp
+  - microsoft-learn
   copilot:
-  - microsoftdocs/mcp
+  - microsoft-learn
 local_deployed_files:
 - .agents/skills/a11y
 - .agents/skills/a11y/SKILL.md

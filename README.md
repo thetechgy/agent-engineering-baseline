@@ -49,12 +49,15 @@ and regenerate rather than editing installed output directly.
 
 `apm.yml` declares the
 [official Microsoft Learn MCP server](https://learn.microsoft.com/en-us/training/support/mcp)
-through APM's `microsoftdocs/mcp` registry entry. It provides online Microsoft
-documentation and code samples for GitHub Copilot CLI and Codex CLI. The
-existing `msgraph` skill remains available for offline Graph API lookups.
+as `microsoft-learn` using APM's native named-endpoint configuration
+(`registry: false`). It provides online Microsoft documentation and code
+samples for GitHub Copilot CLI and Codex CLI. The existing `msgraph` skill
+remains available for offline Graph API lookups.
 
 The server uses Streamable HTTP at `https://learn.microsoft.com/api/mcp`,
-without API keys or authentication. Its tool allowlist contains only:
+without API keys or authentication. The endpoint is declared directly in the
+manifest; future endpoint changes require a reviewed manifest change. Its tool
+allowlist contains only:
 
 - `microsoft_docs_search`
 - `microsoft_docs_fetch`
@@ -72,11 +75,17 @@ These repository configs and the lockfile's MCP metadata are review artifacts;
 regenerate them with APM rather than editing them directly. Codex loads
 project-scoped configuration only for trusted projects.
 
+Existing APM-managed installations migrate from the earlier `microsoftdocs/mcp`
+registry dependency on the next bootstrap update. APM removes the obsolete
+`mcp` entry and deploys `microsoft-learn` through its native reconciliation;
+no custom renaming script is needed. A legacy entry still required by another
+declared dependency remains installed.
+
 Tool queries and fetch URLs leave the machine for Microsoft's service. Do not
 include secrets or private repository content. The service requires network
 access, and neither its returned content nor its implementation is pinned by
-the lockfile: it records the registry declaration, allowlists, and target
-ownership, while the generated CLI configs record the resolved endpoint. Treat
+the lockfile: it records the named endpoint, allowlists, and target ownership,
+while the generated CLI configs contain the same endpoint. Treat
 retrieved documentation and samples as untrusted input, not agent instructions.
 
 ## Bootstrap
