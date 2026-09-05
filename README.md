@@ -169,9 +169,9 @@ native `apm update --yes` step therefore runs on every bootstrap: install
 declares and deploys the baseline on first use, update re-resolves every
 branch-ref dependency in the destination manifest to its latest commit and
 redeploys the refreshed content, including the transitive Microsoft Learn MCP
-configuration. Every bootstrap run converges the deployment to the current
-reviewed `#main`. On a fresh machine the update is a no-op because install
-just resolved the latest refs.
+configuration. Every bootstrap run therefore converges the baseline deployment
+to its configured reviewed ref (`main` by default). On a fresh machine the
+update is a no-op because install just resolved the latest refs.
 
 The baseline's MCP dependency is transitive when the baseline is installed as
 a package. `--trust-transitive-mcp` permits native APM deployment of that
