@@ -13,8 +13,8 @@ BeforeAll {
 
 Describe 'Microsoft Learn generated MCP configuration' {
     It 'configures only the official unauthenticated remote server for Copilot CLI' {
-        @($script:LearnCopilot.mcpServers.PSObject.Properties.Name) | Should-BeCollection @('mcp')
-        $server = $script:LearnCopilot.mcpServers.mcp
+        @($script:LearnCopilot.mcpServers.PSObject.Properties.Name) | Should-BeCollection @('microsoft-learn')
+        $server = $script:LearnCopilot.mcpServers.'microsoft-learn'
         $server.url | Should-Be 'https://learn.microsoft.com/api/mcp'
         $server.type | Should-Be 'http'
         @($server.PSObject.Properties.Name) |
@@ -22,14 +22,14 @@ Describe 'Microsoft Learn generated MCP configuration' {
     }
 
     It 'exposes exactly the reviewed tools through Copilot native and passthrough lists' {
-        $script:LearnCopilot.mcpServers.mcp.tools | Should-BeCollection $script:LearnExpectedTools
-        $script:LearnCopilot.mcpServers.mcp.enabled_tools | Should-BeCollection $script:LearnExpectedTools
+        $script:LearnCopilot.mcpServers.'microsoft-learn'.tools | Should-BeCollection $script:LearnExpectedTools
+        $script:LearnCopilot.mcpServers.'microsoft-learn'.enabled_tools | Should-BeCollection $script:LearnExpectedTools
     }
 
     It 'configures only the official unauthenticated remote server for Codex CLI' {
         $tables = @([regex]::Matches($script:LearnCodex, '(?m)^\[([^\r\n]+)\]\r?$') |
             ForEach-Object { $_.Groups[1].Value })
-        $tables | Should-BeCollection @('mcp_servers.mcp')
+        $tables | Should-BeCollection @('mcp_servers.microsoft-learn')
         $script:LearnCodex | Should-MatchString '(?m)^url = "https://learn\.microsoft\.com/api/mcp"\r?$'
         $keys = @([regex]::Matches($script:LearnCodex, '(?m)^([a-z_]+)\s*=') |
             ForEach-Object { $_.Groups[1].Value })
@@ -46,10 +46,17 @@ Describe 'Microsoft Learn generated MCP configuration' {
         Should-BeCollection -Actual $allowlistTools -Expected $script:LearnExpectedTools
     }
 
-    It 'records the Microsoft Learn registry dependency in the native lockfile' {
+    It 'records the named Microsoft Learn endpoint in the native lockfile' {
         $servers = [regex]::Match($script:LearnLockfile, '(?ms)^mcp_servers:\r?\n(.*?)(?=^[a-z_]+:|\z)')
         $servers.Success | Should-BeTrue
-        $servers.Groups[1].Value.Trim() | Should-Be '- microsoftdocs/mcp'
+        $servers.Groups[1].Value.Trim() | Should-Be '- microsoft-learn'
+        $configs = [regex]::Match($script:LearnLockfile, '(?ms)^mcp_configs:\r?\n(.*?)(?=^[a-z_]+:|\z)')
+        $configs.Success | Should-BeTrue
+        $configs.Groups[1].Value | Should-MatchString '(?m)^  microsoft-learn:\r?$'
+        $configs.Groups[1].Value | Should-MatchString '(?m)^    name: microsoft-learn\r?$'
+        $configs.Groups[1].Value | Should-MatchString '(?m)^    registry: false\r?$'
+        $configs.Groups[1].Value | Should-MatchString '(?m)^    transport: http\r?$'
+        $configs.Groups[1].Value | Should-MatchString '(?m)^    url: https://learn\.microsoft\.com/api/mcp\r?$'
     }
 
     It 'restricts locked MCP target ownership to Codex CLI and Copilot CLI' {
@@ -60,6 +67,6 @@ Describe 'Microsoft Learn generated MCP configuration' {
         $names | Should-BeCollection @('codex', 'copilot')
         $servers = @([regex]::Matches($targets.Groups[1].Value, '(?m)^  - ([^\r\n]+)\r?$') |
             ForEach-Object { $_.Groups[1].Value })
-        $servers | Should-BeCollection @('microsoftdocs/mcp', 'microsoftdocs/mcp')
+        $servers | Should-BeCollection @('microsoft-learn', 'microsoft-learn')
     }
 }

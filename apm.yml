@@ -15,7 +15,10 @@ dependencies:
     - merill/msgraph/skills/msgraph#main
     - addyosmani/agent-skills/skills/code-simplification#main
   mcp:
-    - name: microsoftdocs/mcp
+    - name: microsoft-learn
+      registry: false
+      transport: http
+      url: https://learn.microsoft.com/api/mcp
       tools: &microsoft_learn_tools
         - microsoft_docs_search
         - microsoft_docs_fetch

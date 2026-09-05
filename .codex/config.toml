@@ -1,4 +1,4 @@
-[mcp_servers.mcp]
+[mcp_servers.microsoft-learn]
 url = "https://learn.microsoft.com/api/mcp"
 id = ""
 enabled_tools = ["microsoft_docs_search", "microsoft_docs_fetch", "microsoft_code_sample_search"]
