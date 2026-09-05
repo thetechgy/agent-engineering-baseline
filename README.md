@@ -151,6 +151,7 @@ Global mode:
 
 ```sh
 apm install --global --target codex,copilot --trust-bin --trust-transitive-mcp <ref>
+apm update --global --yes --target codex,copilot
 apm compile --global
 ```
 
@@ -158,8 +159,19 @@ Repository mode:
 
 ```sh
 apm install --target codex,copilot --trust-bin --trust-transitive-mcp <ref>
+apm update --yes --target codex,copilot
 apm compile --target codex,copilot
 ```
+
+Native `apm install` honors existing lockfile resolutions for branch refs, so
+by itself a re-run would keep deploying the previously locked commit. The
+native `apm update --yes` step therefore runs on every bootstrap: install
+declares and deploys the baseline on first use, update re-resolves every
+branch-ref dependency in the destination manifest to its latest commit and
+redeploys the refreshed content, including the transitive Microsoft Learn MCP
+configuration. Every bootstrap run converges the deployment to the current
+reviewed `#main`. On a fresh machine the update is a no-op because install
+just resolved the latest refs.
 
 The baseline's MCP dependency is transitive when the baseline is installed as
 a package. `--trust-transitive-mcp` permits native APM deployment of that
@@ -172,10 +184,13 @@ and omit `--trust-transitive-mcp`.
 
 Scope and target selection are independent. Global mode deploys user-scoped
 Codex and Copilot primitives for use across repositories; repository mode
-deploys the same targets into the current project. Both install modes supply
-explicit targets so saved APM configuration or auto-detection cannot redirect
-the baseline. Repository mode intentionally updates that project's manifest,
-lockfile, package cache, and compiled outputs.
+deploys the same targets into the current project. Install, update, and
+repository compile all supply explicit targets so saved APM configuration or
+auto-detection cannot redirect the baseline. Repository mode intentionally
+updates that project's manifest, lockfile, package cache, and compiled
+outputs. The update step refreshes every branch-ref dependency declared in
+the destination manifest, not only the baseline; review that manifest before
+running bootstrap if it declares other dependencies.
 
 Global compilation is intentionally broad native APM behavior: it writes root
 contexts for roughly eleven supported harnesses and cannot be narrowed with
