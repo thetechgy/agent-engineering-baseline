@@ -370,12 +370,14 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         & $script:TestRepository.Script -Scope Repo -Confirm:$false
         $calls = Get-Content -LiteralPath $script:CallLog -Raw
         $calls | Should-MatchString 'install --target codex,copilot --trust-bin --trust-transitive-mcp https://github.com/thetechgy/agent-engineering-baseline\.git#main'
+        $calls | Should-MatchString 'update --yes --target codex,copilot'
         $calls | Should-MatchString 'compile --target codex,copilot'
 
         Remove-Item -LiteralPath $script:CallLog -ErrorAction SilentlyContinue
         & $script:TestRepository.Script -Scope Global -Confirm:$false
         $calls = Get-Content -LiteralPath $script:CallLog -Raw
         $calls | Should-MatchString 'install --global --target codex,copilot --trust-bin --trust-transitive-mcp https://github.com/thetechgy/agent-engineering-baseline\.git#main'
+        $calls | Should-MatchString 'update --global --yes --target codex,copilot'
         $calls | Should-MatchString 'compile --global'
     }
 

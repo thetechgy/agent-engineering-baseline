@@ -628,10 +628,12 @@ if (-not $CliOnly) {
     else { $defaultPackageRef }
     if ($Scope -ceq 'Global') {
         Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata install --global --target 'codex,copilot' --trust-bin --trust-transitive-mcp $packageRef
+        Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata update --global --yes --target 'codex,copilot'
         Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata compile --global
     }
     else {
         Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata install --target 'codex,copilot' --trust-bin --trust-transitive-mcp $packageRef
+        Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata update --yes --target 'codex,copilot'
         Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata compile --target 'codex,copilot'
     }
 }
