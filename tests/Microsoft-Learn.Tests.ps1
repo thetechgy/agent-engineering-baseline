@@ -40,8 +40,10 @@ Describe 'Microsoft Learn generated MCP configuration' {
         # APM's generated string-only TOML array also uses valid JSON syntax.
         $allowlist = [regex]::Match($script:LearnCodex, '(?m)^enabled_tools = (\[[^\r\n]*\])\r?$')
         $allowlist.Success | Should-BeTrue
-        ConvertFrom-Json -InputObject $allowlist.Groups[1].Value -ErrorAction Stop |
-            Should-BeCollection $script:LearnExpectedTools
+        # Pass -Actual: Windows PowerShell 5.1 ConvertFrom-Json emits the array as
+        # one pipeline object, which Should-BeCollection would treat as one item.
+        $allowlistTools = ConvertFrom-Json -InputObject $allowlist.Groups[1].Value -ErrorAction Stop
+        Should-BeCollection -Actual $allowlistTools -Expected $script:LearnExpectedTools
     }
 
     It 'records the Microsoft Learn registry dependency in the native lockfile' {
