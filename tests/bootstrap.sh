@@ -270,6 +270,8 @@ assert_true 'global install pins targets, trusts launchers and MCP, and uses ful
     file_has "$CALL_LOG" 'install --global --target codex,copilot --trust-bin --trust-transitive-mcp https://github.com/thetechgy/agent-engineering-baseline.git#main'
 assert_true 'global rerun refreshes locked refs natively' \
     file_has "$CALL_LOG" 'update --global --yes --target codex,copilot'
+assert_true 'global refresh log covers all user-scope branch-ref dependencies' \
+    out_has 'refreshing all user-scope branch-ref dependencies to their latest commits'
 assert_true 'global compilation is native' file_has "$CALL_LOG" 'compile --global'
 
 new_case repo-deploy
@@ -280,6 +282,8 @@ assert_true 'repo install always passes targets and launcher/MCP trust' \
     file_has "$CALL_LOG" 'install --target codex,copilot --trust-bin --trust-transitive-mcp https://github.com/thetechgy/agent-engineering-baseline.git#main'
 assert_true 'repo re-runs refresh locked refs natively' \
     file_has "$CALL_LOG" 'update --yes --target codex,copilot'
+assert_true 'repo refresh log covers all repository branch-ref dependencies' \
+    out_has 'refreshing all repository branch-ref dependencies to their latest commits'
 assert_true 'repo compile always passes targets' file_has "$CALL_LOG" 'compile --target codex,copilot'
 
 new_case package-override
