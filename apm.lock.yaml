@@ -249,7 +249,7 @@ deployments:
   owners:
   - .
   active_owner: .
-  content_hash: sha256:96b06186cb31e8818ecf22c1aedce7a235a4c74f4d9cc091e0f9f79df6975f09
+  content_hash: sha256:9da8bb708c14453616a43d2a9527484f6fa4ddc1d06c2339ddecadeeb9f54b5f
 - kind: project-relative
   target: agents
   value: .agents/skills/podman/evals/files/vendor-compose.yaml
@@ -825,7 +825,7 @@ local_deployed_file_hashes:
   .agents/skills/podman/MAINTENANCE.md: sha256:93f772d47f661cc721a211257f4a2aecabcc53ed77f0d4b16b754944128586c9
   .agents/skills/podman/SKILL.md: sha256:625107071889166612f64ac52920be2b9455f671e4ce1f805835f7fee14ef274
   .agents/skills/podman/evals/evals.json: sha256:7327df9ba1d8419c5f5adad70f3cc95229234642b10bb9e57035ed748b51acb5
-  .agents/skills/podman/evals/files/postgres.container: sha256:96b06186cb31e8818ecf22c1aedce7a235a4c74f4d9cc091e0f9f79df6975f09
+  .agents/skills/podman/evals/files/postgres.container: sha256:9da8bb708c14453616a43d2a9527484f6fa4ddc1d06c2339ddecadeeb9f54b5f
   .agents/skills/podman/evals/files/vendor-compose.yaml: sha256:556bbb1725687e8c904b512bf139572f81f48ebc3f5136a807d34d6029fa4952
   .agents/skills/podman/evals/files/vendor-web/Containerfile: sha256:6321f83752722606c731c9ae3dc4498133a6c647a3518939209395802002ba00
   .agents/skills/podman/references/compose-migration.md: sha256:fce55e0ec0a56608d714f273afdbdc44017d0a4ebed73b61291cd0fdebbf434a
