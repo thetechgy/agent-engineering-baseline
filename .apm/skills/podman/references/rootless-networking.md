@@ -26,8 +26,9 @@ user where the application supports it.
 
 ## User namespaces
 
-Current rootless Podman supports user-namespace modes including `auto` and
-`keep-id`. Do not use outdated advice that `--userns=auto` is rootful-only.
+Current rootless Podman supports user-namespace modes including `auto`,
+`keep-id`, and rootless-only `nomap`. Do not use outdated advice that
+`--userns=auto` is rootful-only.
 
 Do not force a non-default `UserNS=` mode merely because it sounds more secure.
 Choose it to solve a concrete identity/ownership/isolation problem:
@@ -35,11 +36,23 @@ Choose it to solve a concrete identity/ownership/isolation problem:
 - default mapping is often simplest for service containers;
 - `keep-id` is useful when host-user identity must map predictably into the
   container;
+- `nomap` excludes the host user's UID/GID from the container mapping, reducing
+  direct access to files owned by that host identity at the cost of ownership
+  friction for shared or bind-mounted storage;
 - `auto` creates a distinct automatically allocated mapping but can complicate
-  volume ownership and consumes subordinate-ID ranges.
+  volume ownership and consumes subordinate-ID ranges. Like `nomap`, it does
+  not map the caller's UID into the container.
 
-Test persistent-volume ownership and backup/restore behavior with the selected
-mapping before standardizing it.
+`auto` requires sufficient unused `/etc/subuid` and `/etc/subgid` range for the
+invoking identity. Current Podman documents that `keep-id` consumes all of that
+user's subordinate IDs and `nomap` all except the user's own ID. For a given
+rootless Podman identity, `auto` therefore cannot allocate while that user's
+`nomap` containers exist or while that user's `keep-id` containers consume the
+range without an appropriate size limit. This conflict is per Unix identity;
+one user's containers do not block another user's allocation.
+
+For every selected mode, test persistent-volume ownership and a restore path
+before standardizing it.
 
 ## Current rootless network stack
 
@@ -55,8 +68,11 @@ Do not introduce CNI or `slirp4netns` into a new Podman 6 design.
 ## Explicit bridge networks
 
 Use named bridge networks to express communication boundaries. Current Podman 6
-bridge networks default to strict isolation from other bridge networks. Keep
-that default unless cross-network traffic is a deliberate requirement.
+bridge networks default to `isolate=strict`, which blocks traffic to and from
+all other bridge networks. `isolate=true` isolates the network except for
+traffic toward other non-isolated networks; `isolate=false` restores the
+pre-Podman-6 open behavior. Keep `strict` unless cross-network traffic is a
+deliberate requirement.
 
 If a service needs both ingress and a private backend, attaching it to both
 networks is clearer than disabling isolation globally.
@@ -69,11 +85,19 @@ or `keycloak` instead of depending on implicit naming.
 For a database or other backend used only by containers on a named network, do
 not publish its port to the host merely to make it discoverable.
 
+Bridge isolation does not eliminate separately published host ports. Treat
+`PublishPort=` as an independent exposure path and restrict it deliberately.
+
 ## Host networking
 
 Avoid `Network=host` as a convenience fix. It removes the network namespace and
 changes the container's visibility into and binding authority over host
 networking. Require a concrete technical need and document it.
+
+Host-dependent discovery such as mDNS/SSDP can be a legitimate exception when
+the application's actual protocol requirements cannot be met through a
+deliberately scoped bridge design. Document and test the resulting exposure
+rather than generalizing the exception to unrelated workloads.
 
 ## Port publishing and low ports
 
@@ -101,12 +125,15 @@ Current Podman normally uses `rootlessport` for published ports on rootless
 bridge networks; it is a userspace proxy and does not preserve the original
 client source IP.
 
-Current Podman also has a pasta/Pesto rootless bridge forwarder option that can
-preserve client source IP, but the relevant configuration has been
-version-sensitive/experimental. Before using it for security policy, rate
-limiting, audit attribution, or proxy access controls:
+As of Podman 6.1, the pasta/Pesto rootless bridge forwarder is experimental. It
+is selected with `rootless_port_forwarder="pasta"` in the `[network]` table of
+`containers.conf` and can preserve client source IP where `rootlessport` cannot.
+Before using it for security policy, rate limiting, audit attribution, or proxy
+access controls:
 
-1. verify support in the target Podman/containers-common version;
+1. verify the target Podman, container-libs `common`, and passt/pesto versions
+   (on Fedora-family hosts, common configuration is shipped by the
+   `containers-common` package, and passt must provide the `pesto` binary);
 2. verify IPv4 and IPv6 behavior;
 3. test the actual address observed by the reverse proxy/application;
 4. document the dependency rather than assuming the default preserves it.

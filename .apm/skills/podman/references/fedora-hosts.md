@@ -45,6 +45,11 @@ If persistent services run under a dedicated rootless account:
 - keep persistent data paths/volumes compatible with reprovisioning and backup;
 - avoid ad-hoc edits under the service user's home as the authoritative config.
 
+Administrator ownership provides source-file integrity and change control; it
+does not constrain a compromised service identity's normal Podman or user
+systemd authority. If that threat is in scope, use a stronger host-level
+account/SELinux boundary rather than treating `/etc` ownership as enforcement.
+
 ## Docker coexistence
 
 If the host standard is Podman, avoid accidentally activating a Docker daemon
@@ -73,7 +78,10 @@ Use current upstream sources:
 
 - Podman: `https://github.com/podman-container-tools/podman`
 - Fedora CoreOS docs: `https://github.com/coreos/fedora-coreos-docs`
-- Butane: `https://github.com/coreos/butane`
+- Butane: `https://github.com/coreos/ignition/tree/main/butane`
+
+The former standalone `coreos/butane` repository is archived; current
+development lives under `coreos/ignition/butane`.
 
 Prefer the documentation/specification matching the actual FCOS stream and
 Butane version being deployed.

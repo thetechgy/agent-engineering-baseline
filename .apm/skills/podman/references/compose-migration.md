@@ -18,6 +18,13 @@ actual provider and version in use. If a repository intentionally pins a
 provider through `PODMAN_COMPOSE_PROVIDER` or `containers.conf`, preserve that
 policy.
 
+Treat third-party Compose files and referenced Containerfiles as untrusted
+deployment code. Review them before any `podman compose`, build, or pull that
+would execute their intent. At minimum inspect host bind mounts, privileged
+mode, capabilities, devices, host networking, published ports, secret handling,
+build contexts/instructions, image references, and lifecycle hooks. Discovery
+and migration analysis do not require executing vendor content.
+
 ## When Compose is appropriate
 
 Use Compose when:

@@ -4,7 +4,7 @@ description: Plan, implement, review, migrate, harden, or troubleshoot current P
 license: MIT
 compatibility: Current supported Podman on Linux. Long-running service guidance assumes systemd with Quadlet. Network access is optional but recommended when version-sensitive behavior must be verified against upstream Podman source.
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # Podman
@@ -59,7 +59,7 @@ For persistent services on a systemd Linux host:
 - Prefer **rootless Podman**. Use rootful Podman only for a demonstrated
   requirement that cannot be satisfied safely rootless; document that reason.
 - Prefer **Quadlet** as the declarative service definition and systemd as the
-  lifecycle supervisor. `podman generate systemd` is deprecated.
+  lifecycle supervisor.
 - Keep the desired state in version control. For Git-managed production-like
   deployments, prefer fully qualified, digest-pinned image references unless an
   intentional auto-update strategy requires a mutable tag.
@@ -101,6 +101,9 @@ Determine, from available evidence:
 Do not overwrite a repository's established conventions with this skill's
 fallback defaults.
 
+Read `references/fedora-hosts.md` when the target is Fedora/Fedora CoreOS or
+Butane/Ignition provisioning is involved.
+
 ### 2. Choose the operational primitive
 
 Use this order for new long-running services:
@@ -131,6 +134,9 @@ namespace.
 
 Read `references/rootless-networking.md` for rootless IDs, user namespaces,
 ports, DNS, bridge isolation, source-IP behavior, and multi-network design.
+
+Read `references/reverse-proxy.md` when a reverse proxy, ingress, or
+socket-based discovery is part of the task.
 
 ### 4. Apply workload hardening deliberately
 
@@ -183,9 +189,13 @@ user asked for execution rather than planning/review.
 - **Generated Quadlet services are transient.** Do not `systemctl enable` the
   generated service. Put the intended enablement in the Quadlet `[Install]`
   section (for example `WantedBy=default.target` for a rootless user service).
-- **Rootless Quadlets have administrator-controlled search paths.** Current
-  Podman recognizes `/etc/containers/systemd/users/<UID>/` and
-  `/etc/containers/systemd/users/` in addition to the user's own config path.
+- **Rootless Quadlets use a recursive, ordered search tree.** Current Podman
+  searches user-controlled runtime/config paths before administrator and
+  distribution paths, and suppresses later files with the same basename.
+  Avoid duplicate Quadlet filenames unless intentional shadowing is understood
+  and tested. Administrator-owned files provide change control, not an
+  enforcement boundary against compromise of the host service identity; read
+  `references/quadlet-systemd.md` for the full paths and trust boundary.
 - **`podman quadlet install` and admin-managed rootless policy are different
   workflows.** A rootless `podman quadlet install` uses the rootless user's
   config location; use configuration management/root-owned files for
@@ -202,8 +212,9 @@ user asked for execution rather than planning/review.
   the container to the networks it is meant to use.
 - **Rootless bridge port forwarding normally uses `rootlessport`.** It does not
   preserve the original client source IP. Current Podman has a pasta/Pesto
-  forwarder option that can preserve it, but it is version-sensitive and may be
-  experimental; verify before making it a security dependency.
+  forwarder option that can preserve it; at Podman 6.1 it is experimental.
+  Verify the target components and observed IPv4/IPv6 behavior before making
+  it a security dependency.
 - **Rootless low ports are a host policy question.** Do not switch an otherwise
   rootless stack to rootful merely to bind 80/443. Consider the ingress layer,
   explicit redirection, or a deliberate `ip_unprivileged_port_start` policy.
