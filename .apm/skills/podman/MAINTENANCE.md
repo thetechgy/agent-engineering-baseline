@@ -22,7 +22,7 @@ Do not preserve a community rule that conflicts with Podman source/tests.
 
 ## Current verified baseline
 
-The 1.0.0 skill was reviewed against Podman 6.1.1 / the `v6.1` source branch on
+The 1.1.0 skill was reviewed against Podman 6.1.1 / the `v6.1` source branch on
 2026-09-05.
 
 Important 6.x assumptions captured by the skill include:
@@ -49,17 +49,26 @@ When a new Podman stable minor/major becomes the target:
       renamed, removed, or changed keys/defaults.
 - [ ] Review `rootless.md`, network/publish option docs, and Netavark-related
       behavior for rootless forwarding and source-IP changes.
+- [ ] Where a rule depends on a companion project, recheck that project's
+      matching behavior rather than maintaining a blanket version matrix:
+      Netavark/Aardvark for network isolation and DNS; container-libs `common`
+      for `containers.conf` keys; passt/pesto for source-IP forwarding; and
+      Butane/Ignition for FCOS provisioning. Use Podman's release notes to
+      identify required companion-version changes.
 - [ ] Review `cmd/podman/compose.go` for provider-selection/environment changes.
 - [ ] Review `podman-system-service(1)` and API code/docs for trust-boundary
       changes.
 - [ ] Recheck Quadlet search paths, `podman quadlet install/list/print/rm`, and
       generated-service enablement behavior.
 - [ ] Recheck secret drivers and secret mount/env behavior.
+- [ ] Re-verify the canonical Podman repository URL before updating source
+      anchors.
 - [ ] Remove rules that became obsolete instead of retaining historical forks.
 - [ ] Update the `SKILL.md` verified-baseline sentence.
 - [ ] Increment `metadata.version` for meaningful skill behavior changes.
-- [ ] Run the cases in `EVALS.md` in both GitHub Copilot CLI and Codex after APM
-      compile/deployment.
+- [ ] Run `evals/evals.json` with and without the skill in both GitHub Copilot
+      CLI and Codex after APM deployment. Keep timing, grading, benchmark, and
+      other run artifacts in a sibling workspace outside the skill directory.
 - [ ] Add a new eval whenever a real agent mistake reveals a missing gotcha.
 
 ## Skill-design checks

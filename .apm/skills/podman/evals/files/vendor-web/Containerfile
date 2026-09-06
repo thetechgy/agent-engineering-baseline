@@ -1,0 +1,8 @@
+FROM docker.io/library/node:latest
+
+USER root
+WORKDIR /app
+COPY . .
+RUN npm install
+
+CMD ["npm", "start"]

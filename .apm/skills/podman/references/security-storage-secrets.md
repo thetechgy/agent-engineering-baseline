@@ -95,6 +95,39 @@ Backups are part of persistence design. Before declaring a service complete,
 identify which volumes/bind-mounted paths contain authoritative state and how
 they are backed up and restored.
 
+Do not assume copying files from a live stateful application's data directory
+produces a consistent backup. Use an application-aware backup mechanism, or a
+snapshot whose atomicity and consistency properties satisfy the application's
+documented requirements. Test the restore, including file ownership under the
+service's selected user-namespace mapping, before declaring persistence
+complete.
+
+## Device access
+
+Prefer `AddDevice=` with the specific device node for hardware access. Do not
+use `--privileged` merely to solve device access; broader privilege needs its
+own documented justification.
+
+Rootless device access bind-mounts the host device with host permissions and
+its SELinux label intact. The service user therefore needs DAC access to the
+node. When supplementary device-group membership is required,
+`GroupAdd=keep-groups` can retain it with the `crun` runtime; verify runtime
+support rather than assuming portability.
+
+For DRI-based GPU workloads, current upstream `container-selinux` enables the
+narrow `container_use_dri_devices` boolean by default. Verify the installed
+policy and value with:
+
+```bash
+getsebool container_use_dri_devices
+```
+
+Also inspect the actual device labels before changing policy. DRI-based
+Intel/AMD acceleration often needs no SELinux boolean change; NVIDIA and other
+device stacks may use different nodes, labels, or policy. Treat the broad
+host-wide `container_use_devices` boolean as a deliberate fallback, never the
+first fix.
+
 ## Secrets
 
 Do not store plaintext secrets in Quadlet files, Compose files, container image
@@ -167,6 +200,11 @@ Therefore:
 - do not grant it to a reverse proxy or monitoring agent merely for discovery;
 - if an integration truly requires it, minimize the owning user's host
   privileges and explicitly document the accepted trust boundary.
+
+Same-user local administration tools such as Cockpit are a distinct design from
+mounting the socket into an ordinary workload. Evaluate their authority in the
+host-account trust model rather than using them to justify general socket
+exposure.
 
 ## Upstream anchors
 
