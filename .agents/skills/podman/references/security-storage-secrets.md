@@ -6,7 +6,7 @@ involved.
 
 ## Security model
 
-Treat the workload image as potentially compromiseable. Rootless Podman limits
+Treat the workload image as potentially compromisable. Rootless Podman limits
 the host privilege available after an escape, but the container still shares the
 host kernel and the rootless service account may own valuable persistent data.
 Use multiple independent controls rather than treating rootless mode as the only
