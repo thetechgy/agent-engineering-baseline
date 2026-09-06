@@ -258,7 +258,7 @@ deployments:
   owners:
   - .
   active_owner: .
-  content_hash: sha256:556bbb1725687e8c904b512bf139572f81f48ebc3f5136a807d34d6029fa4952
+  content_hash: sha256:1f36c57615a4efa9bc6c1de9e7088d2dd82040cb14ec74b00c910c75f5ea26f7
 - kind: project-relative
   target: agents
   value: .agents/skills/podman/evals/files/vendor-web/Containerfile
@@ -267,7 +267,7 @@ deployments:
   owners:
   - .
   active_owner: .
-  content_hash: sha256:6321f83752722606c731c9ae3dc4498133a6c647a3518939209395802002ba00
+  content_hash: sha256:486aa74e34330bc0122d85c4f3719f3bf66c405ffe7fcd0a2969bec6d5c21a2d
 - kind: project-relative
   target: agents
   value: .agents/skills/podman/references/compose-migration.md
@@ -826,8 +826,8 @@ local_deployed_file_hashes:
   .agents/skills/podman/SKILL.md: sha256:625107071889166612f64ac52920be2b9455f671e4ce1f805835f7fee14ef274
   .agents/skills/podman/evals/evals.json: sha256:7327df9ba1d8419c5f5adad70f3cc95229234642b10bb9e57035ed748b51acb5
   .agents/skills/podman/evals/files/postgres.container: sha256:9da8bb708c14453616a43d2a9527484f6fa4ddc1d06c2339ddecadeeb9f54b5f
-  .agents/skills/podman/evals/files/vendor-compose.yaml: sha256:556bbb1725687e8c904b512bf139572f81f48ebc3f5136a807d34d6029fa4952
-  .agents/skills/podman/evals/files/vendor-web/Containerfile: sha256:6321f83752722606c731c9ae3dc4498133a6c647a3518939209395802002ba00
+  .agents/skills/podman/evals/files/vendor-compose.yaml: sha256:1f36c57615a4efa9bc6c1de9e7088d2dd82040cb14ec74b00c910c75f5ea26f7
+  .agents/skills/podman/evals/files/vendor-web/Containerfile: sha256:486aa74e34330bc0122d85c4f3719f3bf66c405ffe7fcd0a2969bec6d5c21a2d
   .agents/skills/podman/references/compose-migration.md: sha256:fce55e0ec0a56608d714f273afdbdc44017d0a4ebed73b61291cd0fdebbf434a
   .agents/skills/podman/references/fedora-hosts.md: sha256:adb6f7a2a07f2067036354cb57bb69e694d423f20bd578e09db6a5a799859168
   .agents/skills/podman/references/quadlet-systemd.md: sha256:55a300354c77b6e59b5876b1b3a6b7e00f9525a21c9160fa5b3200a3a8128f23
