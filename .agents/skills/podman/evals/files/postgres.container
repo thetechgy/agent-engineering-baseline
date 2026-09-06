@@ -1,0 +1,21 @@
+[Unit]
+Description=PostgreSQL evaluation fixture
+
+[Container]
+Image=docker.io/library/postgres@sha256:EXAMPLE
+Network=backend.network
+PublishPort=5432:5432
+Volume=postgres-data.volume:/var/lib/postgresql/data:Z
+Environment=POSTGRES_PASSWORD=example-plaintext-secret
+HealthCmd=pg_isready -U postgres
+Notify=healthy
+UserNS=auto
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target
+
+# Proposed backup: copy /var/lib/containers/storage/volumes/postgres-data
+# while the database is running.
