@@ -23,7 +23,7 @@ dependencies:
         - microsoft_docs_search
         - microsoft_docs_fetch
         - microsoft_code_sample_search
-      # APM 0.29 does not translate tools to Codex's native allowlist key.
+      # Supply Codex's native allowlist key through APM's passthrough support.
       enabled_tools: *microsoft_learn_tools
 
 includes:

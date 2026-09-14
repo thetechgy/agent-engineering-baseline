@@ -74,7 +74,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'APM compile validation failed.' }
     & $apmExecutable compile --target codex,copilot
     if ($LASTEXITCODE -ne 0) { throw 'APM compilation failed.' }
-    # APM 0.29 audit replay exposes no --trust-bin option and treats a
+    # The pinned APM CLI's audit replay exposes no --trust-bin option and treats a
     # non-TTY replay as untrusted even after a frozen --trust-bin install.
     # Run the unchanged native audit in a pseudo-terminal so its scratch
     # replay includes the reviewed launcher set. Do not replace this with
