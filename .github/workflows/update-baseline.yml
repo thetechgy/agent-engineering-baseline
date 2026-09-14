@@ -238,6 +238,8 @@ jobs:
             '' \
             'Review the upstream release, all ten replacement digests, dependency commits, and generated output diff before merging.' \
             '' \
+            'After reviewing the candidate changes, select **Approve workflows to run** in this pull request to start candidate CLI validation. Require all validation checks to pass before merging.' \
+            '' \
             '## Changed files' \
             '' \
             '~~~text' > "$body_file"

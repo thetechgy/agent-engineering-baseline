@@ -80,7 +80,8 @@ new_case() {
     AMBIENT_SENTINEL="$CASE_ROOT/ambient-executed"
     mkdir -p "$CASE_HOME" "$CASE_REPO/scripts" "$CASE_BIN" "$CASE_TMP" "$CASE_INSTALL"
     cp "$SOURCE_BOOTSTRAP" "$CASE_REPO/scripts/bootstrap.sh"
-    cp "$REPO_ROOT/.apm-version" "$CASE_REPO/.apm-version"
+    # Match the synthetic archives, independently of the production release pin.
+    printf '0.29.0\n' > "$CASE_REPO/.apm-version"
     cp "$REPO_ROOT/.apm-checksums" "$CASE_REPO/.apm-checksums"
     : > "$CALL_LOG"
     : > "$HASH_LOG"
@@ -321,6 +322,7 @@ make_fixture Linux x86_64
 CASE_RELEASE_BASE='https://user:secret@example.invalid/apm'
 run_case --cli-only
 record_result 'credentialed mirror URL is rejected' failure
+assert_true 'credentialed mirror rejection is diagnosed' out_has 'must not contain credentials'
 
 new_case corrupt-archive
 make_fixture Linux x86_64
@@ -328,12 +330,15 @@ printf 'not a tar archive\n' > "$MIRROR_ROOT/v0.29.0/$ARCHIVE_NAME"
 replace_checksum "$ARCHIVE_NAME" "$(digest "$MIRROR_ROOT/v0.29.0/$ARCHIVE_NAME")"
 run_case --cli-only
 record_result 'digest-valid corrupt archive is rejected' failure
+assert_true 'corrupt archive reaches layout inspection' out_has "unable to list $ARCHIVE_NAME"
 
 new_case corrupt-executable
 make_fixture Linux x86_64
 replace_checksum "$ARCHIVE_ROOT/apm" '0000000000000000000000000000000000000000000000000000000000000000'
 run_case --cli-only
 record_result 'executable digest mismatch is rejected before execution' failure
+assert_true 'executable checksum rejection is diagnosed' \
+    out_has "$ARCHIVE_ROOT/apm does not match its reviewed SHA256 digest"
 assert_true 'digest-mismatched executable never executes' test ! -s "$CALL_LOG"
 
 new_case missing-reported-version
@@ -355,6 +360,7 @@ tar -czf "$MIRROR_ROOT/v0.29.0/$ARCHIVE_NAME" -C "$FIXTURE_ROOT" "$ARCHIVE_ROOT"
 replace_checksum "$ARCHIVE_NAME" "$(digest "$MIRROR_ROOT/v0.29.0/$ARCHIVE_NAME")"
 run_case --cli-only
 record_result 'bundle without _internal is rejected' failure
+assert_true 'missing internal tree reaches layout validation' out_has 'missing _internal tree'
 
 new_case wrong-root
 make_fixture Linux x86_64
@@ -363,6 +369,7 @@ tar -czf "$MIRROR_ROOT/v0.29.0/$ARCHIVE_NAME" -C "$FIXTURE_ROOT" wrong-root
 replace_checksum "$ARCHIVE_NAME" "$(digest "$MIRROR_ROOT/v0.29.0/$ARCHIVE_NAME")"
 run_case --cli-only
 record_result 'archive with wrong root is rejected' failure
+assert_true 'wrong root reaches layout validation' out_has 'unexpected root'
 
 new_case linked-entry
 make_fixture Linux x86_64
@@ -371,6 +378,7 @@ tar -czf "$MIRROR_ROOT/v0.29.0/$ARCHIVE_NAME" -C "$FIXTURE_ROOT" "$ARCHIVE_ROOT"
 replace_checksum "$ARCHIVE_NAME" "$(digest "$MIRROR_ROOT/v0.29.0/$ARCHIVE_NAME")"
 run_case --cli-only
 record_result 'archive link is rejected before extraction' failure
+assert_true 'archive link reaches entry type validation' out_has 'contains a link or unsupported entry type'
 
 new_case duplicate-executable
 make_fixture Linux x86_64
@@ -379,6 +387,7 @@ tar -czf "$MIRROR_ROOT/v0.29.0/$ARCHIVE_NAME" -C "$FIXTURE_ROOT" \
 replace_checksum "$ARCHIVE_NAME" "$(digest "$MIRROR_ROOT/v0.29.0/$ARCHIVE_NAME")"
 run_case --cli-only
 record_result 'duplicate executable member is rejected' failure
+assert_true 'duplicate executable reaches layout validation' out_has 'executable count'
 
 if tar --help 2>&1 | grep -q -- '--transform'; then
     new_case traversal
@@ -388,6 +397,7 @@ if tar --help 2>&1 | grep -q -- '--transform'; then
     replace_checksum "$ARCHIVE_NAME" "$(digest "$MIRROR_ROOT/v0.29.0/$ARCHIVE_NAME")"
     run_case --cli-only
     record_result 'traversing archive name is rejected' failure
+    assert_true 'traversal reaches layout validation' out_has 'unexpected root, traversal'
 fi
 
 printf '# ownership and rollback\n'
@@ -397,6 +407,7 @@ mkdir -p "$CASE_ROOT/install/lib/apm"
 printf 'unrelated\n' > "$CASE_ROOT/install/lib/apm/keep"
 run_case --cli-only
 record_result 'unowned bundle target is not overwritten' failure
+assert_true 'unowned bundle reaches ownership validation' out_has 'refusing to replace an unowned APM bundle'
 assert_true 'unowned bundle content is preserved' file_has "$CASE_ROOT/install/lib/apm/keep" 'unrelated'
 
 new_case unrelated-command
@@ -405,6 +416,7 @@ rm -rf "$CASE_ROOT/install/lib/apm"
 printf 'unrelated command\n' > "$CASE_INSTALL/apm"
 run_case --cli-only
 record_result 'unrelated command is not overwritten' failure
+assert_true 'unrelated command reaches ownership validation' out_has 'refusing to overwrite unrelated APM command'
 assert_true 'unrelated command content is preserved' file_has "$CASE_INSTALL/apm" 'unrelated command'
 
 new_case symlinked-ancestor
@@ -414,6 +426,7 @@ ln -s "$CASE_ROOT/physical-root" "$CASE_ROOT/linked-root"
 CASE_INSTALL_DIR="$CASE_ROOT/linked-root/nested/bin"
 run_case --cli-only
 record_result 'symlinked install ancestor is rejected' failure
+assert_true 'symlinked ancestor reaches path validation' out_has 'has a symlinked path component'
 assert_true 'symlinked ancestor target is not mutated' \
     test ! -e "$CASE_ROOT/physical-root/nested/lib"
 
@@ -437,6 +450,9 @@ EOF
 chmod +x "$CASE_BIN/ln"
 run_case --cli-only
 record_result 'promotion failure is surfaced' failure
+assert_true 'rollback reaches the injected promotion failure' test -f "$CASE_ROOT/ln-failed-once"
+assert_true 'promotion failure reports rollback' \
+    out_has 'APM bundle promotion failed; the prior managed installation was restored'
 assert_true 'promotion rollback restores old bundle' file_has "$CASE_ROOT/install/lib/apm/_internal/old" 'old bundle'
 assert_true 'promotion rollback restores managed symlink' test -L "$CASE_INSTALL/apm"
 

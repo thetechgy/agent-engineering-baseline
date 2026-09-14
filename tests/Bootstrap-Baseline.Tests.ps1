@@ -7,6 +7,8 @@ Metadata and source-contract tests run on every platform. Windows-only cases
 create genuine ZIP archives and a small compiled fixture executable, then
 exercise Windows PowerShell 5.1 download, verification, promotion, rollback,
 PATH, shim, and native deployment behavior.
+Unix-only cases run the Bash suite with candidate repository pins to ensure
+synthetic fixtures stay independent of production release updates.
 #>
 
 BeforeDiscovery {
@@ -192,6 +194,30 @@ public static class $className
             Archive    = $archivePath
             Executable = $executablePath
         }
+    }
+}
+
+Describe 'Bash fixture independence from candidate release pins' -Skip:$script:IsWindowsPlatform {
+    It 'passes the offline suite with repository pin <Pin>' -ForEach @(
+        @{ Pin = '0.29.1' }
+        @{ Pin = '0.30.0' }
+        @{ Pin = '0.30.0rc2' }
+    ) {
+        $root = Join-Path $TestDrive ('bash-' + $Pin)
+        foreach ($relativePath in @('scripts/bootstrap.sh', 'tests/bootstrap.sh', '.apm-checksums')) {
+            $destination = Join-Path $root $relativePath
+            New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force | Out-Null
+            Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot $relativePath) -Destination $destination
+        }
+        $pinPath = Join-Path $root '.apm-version'
+        [IO.File]::WriteAllText($pinPath, $Pin + "`n", [Text.Encoding]::ASCII)
+
+        $output = & bash (Join-Path $root 'tests/bootstrap.sh') 2>&1
+        $exitCode = $LASTEXITCODE
+
+        $exitCode | Should-Be 0 -Because ($output -join [Environment]::NewLine)
+        ($output -join "`n") | Should-MatchString '(?m)^[1-9][0-9]* cases, 0 failures$'
+        [IO.File]::ReadAllText($pinPath) | Should-Be ($Pin + "`n")
     }
 }
 

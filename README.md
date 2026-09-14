@@ -271,3 +271,14 @@ place the candidate CLI runs after its hashes are part of the reviewed patch.
 
 Update pull requests never auto-merge. Review the upstream release, all ten
 digests, resolved dependency commits, generated outputs, and CI results.
+
+In repository **Settings > Actions > General**, enable **Allow GitHub Actions
+to create and approve pull requests**. Keep default workflow permissions
+read-only; the publish job requests only the write permissions it needs.
+The workflow creates review requests and does not submit approving reviews.
+
+Pull requests created or updated with `GITHUB_TOKEN` require a maintainer with
+write access to select **Approve workflows to run** in the pull request before
+candidate validation starts. Review the candidate changes before approving
+execution, then require all validation checks to pass before merging. See
+[GitHub's token-triggered workflow behavior](https://docs.github.com/en/actions/concepts/security/github_token).
