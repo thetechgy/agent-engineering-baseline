@@ -1,6 +1,6 @@
 lockfile_version: '1'
-generated_at: '2026-09-14T20:02:09.682529+00:00'
-apm_version: 0.29.0
+generated_at: '2026-09-14T20:27:00.546755+00:00'
+apm_version: 0.30.0
 dependencies:
 - repo_url: addyosmani/agent-skills
   name: code-simplification
@@ -142,96 +142,6 @@ dependencies:
     .agents/skills/msgraph/scripts/run.sh: sha256:ef3545fee5e2f2654cedf32ed543ba2e496109c1eb90ea6f915fd9bcf4abd51b
   content_hash: sha256:7d179a864745798bf5e1516a114bc618f3f9ec458708ecbc5c1f5bceeb043d5b
 deployments:
-- kind: project-relative
-  target: agents
-  value: .agents/skills/a11y
-  runtime: null
-  scope: project
-  owners:
-  - .
-  active_owner: .
-  content_hash: null
-- kind: project-relative
-  target: agents
-  value: .agents/skills/a11y/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - .
-  active_owner: .
-  content_hash: sha256:96d578e9646cd80ff6e1bedb26069222ad37b473960f3c0cc069716484b22553
-- kind: project-relative
-  target: agents
-  value: .agents/skills/agent-safety
-  runtime: null
-  scope: project
-  owners:
-  - .
-  active_owner: .
-  content_hash: null
-- kind: project-relative
-  target: agents
-  value: .agents/skills/agent-safety/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - .
-  active_owner: .
-  content_hash: sha256:2dc7898d11fb55a1a042d46e6e60800d0f948253c5216efa3e470e8914cc84ab
-- kind: project-relative
-  target: agents
-  value: .agents/skills/ansible
-  runtime: null
-  scope: project
-  owners:
-  - .
-  active_owner: .
-  content_hash: null
-- kind: project-relative
-  target: agents
-  value: .agents/skills/ansible/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - .
-  active_owner: .
-  content_hash: sha256:a79531195a9bdf942b301edf1588c8814ceb976557f4f0cb79bd9aa79e59d52e
-- kind: project-relative
-  target: agents
-  value: .agents/skills/powershell-module-engineering
-  runtime: null
-  scope: project
-  owners:
-  - .
-  active_owner: .
-  content_hash: null
-- kind: project-relative
-  target: agents
-  value: .agents/skills/powershell-module-engineering/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - .
-  active_owner: .
-  content_hash: sha256:801cecfd42aeb32f3fd6083d9af08f44c8a5ca48202761533c072a10c06060c9
-- kind: project-relative
-  target: agents
-  value: .agents/skills/powershell-pester-6
-  runtime: null
-  scope: project
-  owners:
-  - .
-  active_owner: .
-  content_hash: null
-- kind: project-relative
-  target: agents
-  value: .agents/skills/powershell-pester-6/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - .
-  active_owner: .
-  content_hash: sha256:279824abf07feb466fd5deaab79fc872609d5674502bcfa51b31f2909874efab
 - kind: project-relative
   target: codex
   value: .agents/skills/code-simplification
@@ -619,6 +529,96 @@ deployments:
   - .
   active_owner: .
   content_hash: sha256:0c6768cb8e5af568a1a0fcd6a3becd8ba8e72742684aa0d44d8c8bd0c5d05890
+- kind: project-relative
+  target: legacy
+  value: .agents/skills/a11y
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: null
+- kind: project-relative
+  target: legacy
+  value: .agents/skills/a11y/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:96d578e9646cd80ff6e1bedb26069222ad37b473960f3c0cc069716484b22553
+- kind: project-relative
+  target: legacy
+  value: .agents/skills/agent-safety
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: null
+- kind: project-relative
+  target: legacy
+  value: .agents/skills/agent-safety/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:2dc7898d11fb55a1a042d46e6e60800d0f948253c5216efa3e470e8914cc84ab
+- kind: project-relative
+  target: legacy
+  value: .agents/skills/ansible
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: null
+- kind: project-relative
+  target: legacy
+  value: .agents/skills/ansible/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:a79531195a9bdf942b301edf1588c8814ceb976557f4f0cb79bd9aa79e59d52e
+- kind: project-relative
+  target: legacy
+  value: .agents/skills/powershell-module-engineering
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: null
+- kind: project-relative
+  target: legacy
+  value: .agents/skills/powershell-module-engineering/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:801cecfd42aeb32f3fd6083d9af08f44c8a5ca48202761533c072a10c06060c9
+- kind: project-relative
+  target: legacy
+  value: .agents/skills/powershell-pester-6
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: null
+- kind: project-relative
+  target: legacy
+  value: .agents/skills/powershell-pester-6/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:279824abf07feb466fd5deaab79fc872609d5674502bcfa51b31f2909874efab
 - kind: uri
   target: mcp
   value: microsoft-learn
