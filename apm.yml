@@ -31,5 +31,6 @@ includes:
   - .apm/skills/a11y/
   - .apm/skills/agent-safety/
   - .apm/skills/ansible/
+  - .apm/skills/podman/
   - .apm/skills/powershell-pester-6/
   - .apm/skills/powershell-module-engineering/

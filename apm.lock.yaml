@@ -198,6 +198,141 @@ deployments:
   content_hash: sha256:a79531195a9bdf942b301edf1588c8814ceb976557f4f0cb79bd9aa79e59d52e
 - kind: project-relative
   target: agents
+  value: .agents/skills/podman
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: null
+- kind: project-relative
+  target: agents
+  value: .agents/skills/podman/EVALS.md
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:96088308ed8df85d9f369263de4ec02fefdb7f59fbccc2b4629991be7266e581
+- kind: project-relative
+  target: agents
+  value: .agents/skills/podman/MAINTENANCE.md
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:93f772d47f661cc721a211257f4a2aecabcc53ed77f0d4b16b754944128586c9
+- kind: project-relative
+  target: agents
+  value: .agents/skills/podman/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:625107071889166612f64ac52920be2b9455f671e4ce1f805835f7fee14ef274
+- kind: project-relative
+  target: agents
+  value: .agents/skills/podman/evals/evals.json
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:7327df9ba1d8419c5f5adad70f3cc95229234642b10bb9e57035ed748b51acb5
+- kind: project-relative
+  target: agents
+  value: .agents/skills/podman/evals/files/postgres.container
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:9da8bb708c14453616a43d2a9527484f6fa4ddc1d06c2339ddecadeeb9f54b5f
+- kind: project-relative
+  target: agents
+  value: .agents/skills/podman/evals/files/vendor-compose.yaml
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:1f36c57615a4efa9bc6c1de9e7088d2dd82040cb14ec74b00c910c75f5ea26f7
+- kind: project-relative
+  target: agents
+  value: .agents/skills/podman/evals/files/vendor-web/Containerfile
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:486aa74e34330bc0122d85c4f3719f3bf66c405ffe7fcd0a2969bec6d5c21a2d
+- kind: project-relative
+  target: agents
+  value: .agents/skills/podman/references/compose-migration.md
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:fce55e0ec0a56608d714f273afdbdc44017d0a4ebed73b61291cd0fdebbf434a
+- kind: project-relative
+  target: agents
+  value: .agents/skills/podman/references/fedora-hosts.md
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:adb6f7a2a07f2067036354cb57bb69e694d423f20bd578e09db6a5a799859168
+- kind: project-relative
+  target: agents
+  value: .agents/skills/podman/references/quadlet-systemd.md
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:55a300354c77b6e59b5876b1b3a6b7e00f9525a21c9160fa5b3200a3a8128f23
+- kind: project-relative
+  target: agents
+  value: .agents/skills/podman/references/reverse-proxy.md
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:6a8d789b72d821e3fed320ca84325086d5a42ced25912a4b52ea760a306111ff
+- kind: project-relative
+  target: agents
+  value: .agents/skills/podman/references/rootless-networking.md
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:a5fc3f33815caa196d5f8d6cb090136bcccc88fb95dedb921c99bd0b3cf6b524
+- kind: project-relative
+  target: agents
+  value: .agents/skills/podman/references/security-storage-secrets.md
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:37e1fae3de6f4b7ae1ea3ccc2b0b84d7fd854ea2730a51f0e3b3b1bc9b2e1068
+- kind: project-relative
+  target: agents
+  value: .agents/skills/podman/references/validation.md
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:465321094bc936d8a9e187bd3b4daa1ab271b93242a2c07fe88c58db6bd4bdd5
+- kind: project-relative
+  target: agents
   value: .agents/skills/powershell-module-engineering
   runtime: null
   scope: project
@@ -662,6 +797,21 @@ local_deployed_files:
 - .agents/skills/agent-safety/SKILL.md
 - .agents/skills/ansible
 - .agents/skills/ansible/SKILL.md
+- .agents/skills/podman
+- .agents/skills/podman/EVALS.md
+- .agents/skills/podman/MAINTENANCE.md
+- .agents/skills/podman/SKILL.md
+- .agents/skills/podman/evals/evals.json
+- .agents/skills/podman/evals/files/postgres.container
+- .agents/skills/podman/evals/files/vendor-compose.yaml
+- .agents/skills/podman/evals/files/vendor-web/Containerfile
+- .agents/skills/podman/references/compose-migration.md
+- .agents/skills/podman/references/fedora-hosts.md
+- .agents/skills/podman/references/quadlet-systemd.md
+- .agents/skills/podman/references/reverse-proxy.md
+- .agents/skills/podman/references/rootless-networking.md
+- .agents/skills/podman/references/security-storage-secrets.md
+- .agents/skills/podman/references/validation.md
 - .agents/skills/powershell-module-engineering
 - .agents/skills/powershell-module-engineering/SKILL.md
 - .agents/skills/powershell-pester-6
@@ -671,6 +821,20 @@ local_deployed_file_hashes:
   .agents/skills/a11y/SKILL.md: sha256:96d578e9646cd80ff6e1bedb26069222ad37b473960f3c0cc069716484b22553
   .agents/skills/agent-safety/SKILL.md: sha256:2dc7898d11fb55a1a042d46e6e60800d0f948253c5216efa3e470e8914cc84ab
   .agents/skills/ansible/SKILL.md: sha256:a79531195a9bdf942b301edf1588c8814ceb976557f4f0cb79bd9aa79e59d52e
+  .agents/skills/podman/EVALS.md: sha256:96088308ed8df85d9f369263de4ec02fefdb7f59fbccc2b4629991be7266e581
+  .agents/skills/podman/MAINTENANCE.md: sha256:93f772d47f661cc721a211257f4a2aecabcc53ed77f0d4b16b754944128586c9
+  .agents/skills/podman/SKILL.md: sha256:625107071889166612f64ac52920be2b9455f671e4ce1f805835f7fee14ef274
+  .agents/skills/podman/evals/evals.json: sha256:7327df9ba1d8419c5f5adad70f3cc95229234642b10bb9e57035ed748b51acb5
+  .agents/skills/podman/evals/files/postgres.container: sha256:9da8bb708c14453616a43d2a9527484f6fa4ddc1d06c2339ddecadeeb9f54b5f
+  .agents/skills/podman/evals/files/vendor-compose.yaml: sha256:1f36c57615a4efa9bc6c1de9e7088d2dd82040cb14ec74b00c910c75f5ea26f7
+  .agents/skills/podman/evals/files/vendor-web/Containerfile: sha256:486aa74e34330bc0122d85c4f3719f3bf66c405ffe7fcd0a2969bec6d5c21a2d
+  .agents/skills/podman/references/compose-migration.md: sha256:fce55e0ec0a56608d714f273afdbdc44017d0a4ebed73b61291cd0fdebbf434a
+  .agents/skills/podman/references/fedora-hosts.md: sha256:adb6f7a2a07f2067036354cb57bb69e694d423f20bd578e09db6a5a799859168
+  .agents/skills/podman/references/quadlet-systemd.md: sha256:55a300354c77b6e59b5876b1b3a6b7e00f9525a21c9160fa5b3200a3a8128f23
+  .agents/skills/podman/references/reverse-proxy.md: sha256:6a8d789b72d821e3fed320ca84325086d5a42ced25912a4b52ea760a306111ff
+  .agents/skills/podman/references/rootless-networking.md: sha256:a5fc3f33815caa196d5f8d6cb090136bcccc88fb95dedb921c99bd0b3cf6b524
+  .agents/skills/podman/references/security-storage-secrets.md: sha256:37e1fae3de6f4b7ae1ea3ccc2b0b84d7fd854ea2730a51f0e3b3b1bc9b2e1068
+  .agents/skills/podman/references/validation.md: sha256:465321094bc936d8a9e187bd3b4daa1ab271b93242a2c07fe88c58db6bd4bdd5
   .agents/skills/powershell-module-engineering/SKILL.md: sha256:801cecfd42aeb32f3fd6083d9af08f44c8a5ca48202761533c072a10c06060c9
   .agents/skills/powershell-pester-6/SKILL.md: sha256:279824abf07feb466fd5deaab79fc872609d5674502bcfa51b31f2909874efab
   .github/instructions/personal.instructions.md: sha256:0c6768cb8e5af568a1a0fcd6a3becd8ba8e72742684aa0d44d8c8bd0c5d05890
