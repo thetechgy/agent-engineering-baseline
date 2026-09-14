@@ -63,9 +63,9 @@ allowlist contains only:
 - `microsoft_docs_fetch`
 - `microsoft_code_sample_search`
 
-APM 0.29 applies `tools` to Copilot but does not translate it to Codex's
-`enabled_tools`. The manifest uses APM's native passthrough support and a YAML
-alias to supply the same list to both. APM also passes `enabled_tools` through
+The manifest explicitly supplies Copilot's `tools` and Codex's `enabled_tools`
+using APM's native passthrough support and a YAML alias to keep both lists
+identical. APM also passes `enabled_tools` through
 to Copilot, where `tools` is the operative setting. New tools require a
 reviewed manifest change; the list does not auto-expand.
 
@@ -248,8 +248,8 @@ regeneration, audit, pack dry-run, an offline `msgraph openapi-search` launcher
 and index smoke test, repository hygiene, and `git diff --check`. CI adds a
 macOS Bash lane and Windows PowerShell 5.1 fixture execution.
 
-APM 0.29 does not expose `--trust-bin` on `audit` and skips bin deployment in
-its non-TTY scratch replay. Validation therefore runs the unchanged
+The pinned APM CLI does not expose `--trust-bin` on `audit` and skips bin
+deployment in its non-TTY scratch replay. Validation therefore runs the unchanged
 `apm audit --ci` command in a local pseudo-terminal so its full drift check
 includes the launcher set installed with `--trust-bin`; it does not use
 `--no-drift`.
