@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # CI-only tools. Nothing is installed into an APM source or deployment tree.
 set -euo pipefail
+umask 077
 
 kind=${1:?usage: setup-skillevaluator.sh quality|benchmark}
 case "$kind" in quality|benchmark) ;; *) exit 2 ;; esac
@@ -10,6 +11,7 @@ case "$(realpath -m "$tool_root")/" in
   "$(realpath "$GITHUB_WORKSPACE")/"*) echo 'Tools must be outside the checkout.' >&2; exit 1 ;;
 esac
 mkdir -p "$tool_root/bin" "$tool_root/dependencies"
+chmod 700 "$tool_root"
 test "$(uv --version | awk '{print $2}')" = '0.12.17'
 export UV_CACHE_DIR="$tool_root/uv-cache"
 export UV_PYTHON_INSTALL_DIR="$tool_root/python"
