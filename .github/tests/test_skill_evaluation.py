@@ -628,10 +628,15 @@ class UpstreamTests(unittest.TestCase):
             state = StartupDiagnosticProcess("state")
             logs = StartupDiagnosticProcess("logs")
             with patch.object(asyncio, "create_subprocess_exec", new_callable=AsyncMock,
-                              side_effect=[StartupProcess(), state, logs]), self.assertRaises(RuntimeError) as failure:
+                              side_effect=[StartupProcess(), state, logs]) as create_subprocess, \
+                    self.assertRaises(RuntimeError) as failure:
                 asyncio.run(startup._run_docker_compose_command(["up", "--detach", "--wait"]))
             self.assertNotIn(secret, str(failure.exception))
             self.assertIn("[REDACTED]", str(failure.exception))
+            self.assertEqual(
+                [call.kwargs["stderr"] for call in create_subprocess.call_args_list],
+                [asyncio.subprocess.STDOUT] * 3,
+            )
             self.assertFalse(state.communicated)
             self.assertFalse(logs.communicated)
             self.assertTrue(state.waited)
