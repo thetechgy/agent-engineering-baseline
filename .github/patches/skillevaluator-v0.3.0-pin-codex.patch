@@ -39,7 +39,7 @@ diff --git a/src/skillevaluator/tier3/harbor/secure_docker_environment.py b/src/
 +_STARTUP_DIAGNOSTIC_READ_CHUNK_BYTES = 8192
 +_STARTUP_TRUNCATION_MARKER = " ... [truncated] ... "
  _MAIN_CONTAINER_STOP_TIMEOUT_SECONDS = 8
-@@ -116,1 +125,97 @@ def _signal_process_tree(process: asyncio.subprocess.Process, value: signal.Signals) -> None:
+@@ -116,1 +125,111 @@ def _signal_process_tree(process: asyncio.subprocess.Process, value: signal.Signals) -> None:
 +async def _bounded_compose_output(
 +    process: asyncio.subprocess.Process,
 +    *,
@@ -53,18 +53,28 @@ diff --git a/src/skillevaluator/tier3/harbor/secure_docker_environment.py b/src/
 +        raise ValueError("Compose diagnostic byte limit must exceed the truncation marker")
 +    if process.stdout is None:
 +        raise RuntimeError("Compose diagnostic process has no stdout stream")
-+    secret_bytes = sorted(
-+        {
-+            value.encode()
-+            for value in secret_values
-+            if value and len(value) >= _MIN_EXACT_SECRET_LENGTH
-+        },
-+        key=len,
-+        reverse=True,
-+    )
 +    tail_limit = limit - len(marker)
++    bounded_secrets: set[bytes] = set()
++    oversized_secret_min_bytes: int | None = None
++    for value in secret_values:
++        if not value or len(value) < _MIN_EXACT_SECRET_LENGTH:
++            continue
++        # Do not copy secrets too large for the tail into cross-chunk state.
++        if len(value) > tail_limit:
++            secret_size = len(value)
++        else:
++            encoded = value.encode()
++            if len(encoded) <= tail_limit:
++                bounded_secrets.add(encoded)
++                continue
++            secret_size = len(encoded)
++        if oversized_secret_min_bytes is None:
++            oversized_secret_min_bytes = secret_size
++        else:
++            oversized_secret_min_bytes = min(oversized_secret_min_bytes, secret_size)
++    secret_bytes = sorted(bounded_secrets, key=len, reverse=True)
 +    overlap = max((len(value) - 1 for value in secret_bytes), default=0)
-+    retained_limit = tail_limit + overlap
++    retained_limit = tail_limit + min(overlap, tail_limit)
 +    tail = bytearray()
 +    total_bytes = 0
 +    while chunk := await process.stdout.read(_STARTUP_DIAGNOSTIC_READ_CHUNK_BYTES):
@@ -80,6 +90,10 @@ diff --git a/src/skillevaluator/tier3/harbor/secure_docker_environment.py b/src/
 +
 +    raw_tail = bytes(tail)
 +    truncated = total_bytes > tail_limit
++    # If a full oversized secret could have appeared, suppress the tail conservatively.
++    if oversized_secret_min_bytes is not None and total_bytes >= oversized_secret_min_bytes:
++        placeholder = redaction if len(redaction) <= tail_limit else b""
++        return marker + placeholder, b""
 +    boundary = len(raw_tail) - tail_limit if truncated else 0
 +    visible_tail = raw_tail[boundary:]
 +    crossing_suffix = 0

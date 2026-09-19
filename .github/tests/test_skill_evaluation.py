@@ -504,8 +504,9 @@ class UpstreamTests(unittest.TestCase):
             exec(compile(ast.Module(body=secure_nodes, type_ignores=[]), str(secure_docker_target), "exec"),
                  secure_namespace)
 
-            secret = "sk-proj-" + "diagnostic-only-" * 3
+            secret = "sk-proj-diagnostic-only"
             secret_bytes = secret.encode()
+            secret_split = len(secret_bytes) // 2
             diagnostic_limit = 64
             diagnostic_marker = b" ... [truncated] ... "
             terminal_failure = b" terminal Docker build failure"
@@ -560,12 +561,8 @@ class UpstreamTests(unittest.TestCase):
                     return next(self.chunks)
 
             class BoundedOutputProcess:
-                def __init__(self):
-                    self.stdout = OutputReader([
-                        b"x" * 10000 + secret_bytes[:29],
-                        secret_bytes[29:] + terminal_failure,
-                        b"",
-                    ])
+                def __init__(self, chunks):
+                    self.stdout = OutputReader([*chunks, b""])
                     self.communicated = False
                     self.waited = False
 
@@ -576,7 +573,10 @@ class UpstreamTests(unittest.TestCase):
                 async def wait(self):
                     self.waited = True
 
-            process = BoundedOutputProcess()
+            process = BoundedOutputProcess([
+                b"x" * 10000 + secret_bytes[:secret_split],
+                secret_bytes[secret_split:] + terminal_failure,
+            ])
             bounded_stdout, bounded_stderr = asyncio.run(secure_namespace["_compose_communication"](
                 process,
                 stdin_bytes=None,
@@ -593,6 +593,38 @@ class UpstreamTests(unittest.TestCase):
             self.assertFalse(process.communicated)
             self.assertTrue(process.waited)
             self.assertEqual(process.stdout.read_sizes, [8192, 8192, 8192])
+
+            class OversizedSecret(str):
+                def encode(self, *_args, **_kwargs):
+                    raise AssertionError("oversized secrets must not be copied into diagnostic state")
+
+            oversized_length = diagnostic_limit * 4
+            oversized_secret = OversizedSecret("s" * oversized_length)
+            short_process = BoundedOutputProcess([terminal_failure])
+            short_stdout, _ = asyncio.run(secure_namespace["_compose_communication"](
+                short_process,
+                stdin_bytes=None,
+                output_tail_bytes=diagnostic_limit,
+                secret_values={oversized_secret},
+            ))
+            self.assertEqual(short_stdout, terminal_failure)
+            self.assertTrue(short_process.waited)
+
+            oversized_process = BoundedOutputProcess([
+                b"x" * 10000 + b"s" * (oversized_length // 2),
+                b"s" * (oversized_length // 2) + terminal_failure,
+            ])
+            oversized_stdout, _ = asyncio.run(secure_namespace["_compose_communication"](
+                oversized_process,
+                stdin_bytes=None,
+                output_tail_bytes=diagnostic_limit,
+                secret_values={oversized_secret},
+            ))
+            self.assertEqual(oversized_stdout, diagnostic_marker + b"[REDACTED]")
+            self.assertLessEqual(len(oversized_stdout), diagnostic_limit)
+            self.assertFalse(oversized_process.communicated)
+            self.assertTrue(oversized_process.waited)
+            self.assertEqual(oversized_process.stdout.read_sizes, [8192, 8192, 8192])
 
             class StartupProcess:
                 def __init__(self):
