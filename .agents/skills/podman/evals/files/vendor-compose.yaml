@@ -1,0 +1,24 @@
+# Evaluation fixture for the podman skill. Intentionally contains
+# non-production choices for review-scenario testing. Do not use as a
+# deployment template.
+
+services:
+  web:
+    build: ./vendor-web
+    ports:
+      - "0.0.0.0:8080:8080"
+    volumes:
+      - /srv/vendor/config:/app/config
+    depends_on:
+      - db
+  db:
+    image: docker.io/library/postgres:18
+    environment:
+      POSTGRES_PASSWORD: example-plaintext-secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+volumes:
+  db-data: {}

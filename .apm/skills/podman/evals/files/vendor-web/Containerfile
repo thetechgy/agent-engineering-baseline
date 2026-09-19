@@ -1,0 +1,12 @@
+# Evaluation fixture for the podman skill. Intentionally contains
+# non-production choices for review-scenario testing. Do not use as a
+# deployment template.
+
+FROM docker.io/library/node:latest
+
+USER root
+WORKDIR /app
+COPY . .
+RUN npm install
+
+CMD ["npm", "start"]
