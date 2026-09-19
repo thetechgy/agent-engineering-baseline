@@ -9,6 +9,7 @@ import math
 import os
 from pathlib import Path
 import re
+import stat
 import sys
 
 
@@ -67,11 +68,42 @@ def outputs(**values):
             stream.write(f"{key}={value}\n")
 
 
+def regular_tree(root, *, excluded_dirs=()):
+    """Inspect every entry without following links or hiding traversal errors."""
+    require(root.resolve() == root.absolute() and stat.S_ISDIR(root.lstat().st_mode),
+            "Expected a real directory with no linked path components")
+    pending = [root]
+    files = []
+    while pending:
+        with os.scandir(pending.pop()) as entries:
+            for entry in entries:
+                if entry.name in excluded_dirs:
+                    continue  # Never inspect or publish excluded runtime directories.
+                mode = entry.stat(follow_symlinks=False).st_mode
+                require(stat.S_ISDIR(mode) or stat.S_ISREG(mode),
+                        f"Linked or special input: {Path(entry.path).relative_to(root)}")
+                if stat.S_ISDIR(mode):
+                    pending.append(Path(entry.path))
+                else:
+                    files.append(Path(entry.path))
+    return files
+
+
+def catalog_preflight(workspace):
+    regular_tree(workspace / ".apm/skills")
+    names = sorted(path.parent.name for path in (workspace / ".apm/skills").glob("*/SKILL.md"))
+    require(bool(names), "No local skills found")
+    for name in names:
+        local_skill(workspace, name)
+    return names
+
+
 def local_skill(workspace, name, *, dataset=False):
     require(bool(re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", name)) and len(name) <= 64,
             "skill must be a local skill name, not a path")
     path = workspace / ".apm/skills" / name
-    require(path.resolve() == path.absolute(), "Linked skill paths are not allowed")
+    require(path.exists(), "Selected local skill does not exist")
+    regular_tree(path)
     require((path / "SKILL.md").is_file() and not (path / "SKILL.md").is_symlink(),
             "Selected local skill has no authored SKILL.md")
     if dataset:
@@ -83,14 +115,11 @@ def local_skill(workspace, name, *, dataset=False):
 
 def catalog_report(workspace, root):
     """Only ordinary, fully reported native findings may be advisory."""
-    names = sorted(path.parent.name for path in (workspace / ".apm/skills").glob("*/SKILL.md"))
-    require(bool(names), "No local skills found")
-    for name in names:
-        local_skill(workspace, name)
+    names = catalog_preflight(workspace)
     data = read_json(root / "reports/catalog-summary.json")
     entries = data["skills"]
     require(sorted(item["name"] for item in entries) == names, "Incomplete catalog report")
-    require(data["total"] == len(names), "Incorrect catalog cardinality")
+    require(type(data["total"]) is int and data["total"] == len(names), "Incorrect catalog cardinality")
     exit_code = int((root / "catalog.exit").read_text())
     errors = []
     lines = ["## Skill quality (findings are advisory)", "",
@@ -117,10 +146,16 @@ def catalog_report(workspace, root):
                     "Inconsistent catalog/per-skill result")
             require(report["skills"][0]["name"] == name and len(report["skills"]) == 1,
                     "Report skill identity mismatch")
-            require(report["total_validators"] == len(report["results"]) > 0, "Missing validator evidence")
+            require(type(report["total_validators"]) is int
+                    and report["total_validators"] == len(report["results"]) > 0, "Missing validator evidence")
             require(all(row.get("status") in ("passed", "failed", "incomplete", "skipped")
                         for row in report["results"]), "Unknown validator status")
             require(isinstance(report["incomplete_scans"], list), "Missing evidence status")
+            require(all(isinstance(name, str) and name for name in report["incomplete_scans"]),
+                    "Invalid incomplete scanner names")
+            expected_status = "incomplete" if report["incomplete_scans"] else (
+                "passed" if report["overall_passed"] else "failed")
+            require(status == expected_status, "Inconsistent native status/pass/evidence")
             counts = [report["severity_counts"][severity] for severity in ("critical", "high", "medium", "low")]
             require(all(type(count) is int and count >= 0 for count in counts), "Invalid finding counts")
             findings = " / ".join(str(count) for count in counts)
@@ -132,9 +167,11 @@ def catalog_report(workspace, root):
                         "Missing human-readable report")
         except (ValueError, KeyError, TypeError, IndexError, OSError) as error:
             errors.append(f"{name}: {error}")
-        if (workspace / ".apm/skills" / name / "evals/evals.json").exists():
+        dataset = workspace / ".apm/skills" / name / "evals/evals.json"
+        if dataset.exists() or dataset.is_symlink():
             strict = "failed"
             try:
+                local_skill(workspace, name, dataset=True)
                 require(int((root / "datasets" / f"{name}.exit").read_text()) == 0,
                         "Strict eval dataset validation failed")
                 checks = read_json(root / "datasets" / f"{name}.json")
@@ -144,7 +181,8 @@ def catalog_report(workspace, root):
             except (ValueError, KeyError, TypeError, OSError) as error:
                 errors.append(f"{name}: {error}")
         lines.append(f"| {name} | {html.escape(str(status))} | {findings} | {strict} |")
-    require(data["failed"] == sum(not item["passed"] for item in entries), "Incorrect failure count")
+    require(type(data["failed"]) is int and data["failed"] == sum(not item["passed"] for item in entries),
+            "Incorrect failure count")
     if (exit_code == 0) != (data["failed"] == 0):
         errors.append("Catalog exit status disagrees with its reports")
     lines += ["", "See the skill-quality artifact for full JSON, Markdown, HTML, and dataset reports."]
@@ -285,9 +323,77 @@ def publish_metrics(workspace, root, name):
     outputs(history_dir=f"benchmarks/{name}/{policy_id}")
 
 
+def benchmark_artifacts(workspace, root, name, destination):
+    """Stage only native report contracts, using upstream credential redaction."""
+    from skillevaluator.utils.redaction import redact_sensitive_data, redact_sensitive_text
+
+    local_skill(workspace, name, dataset=True)
+    root = root.absolute()
+    destination = destination.absolute()
+    for path in (root, destination):
+        require(path.resolve() == path and not path.is_relative_to(workspace),
+                "Benchmark artifacts must use real paths outside the checkout")
+    require(not destination.is_relative_to(root) and not root.is_relative_to(destination),
+            "Artifact staging must be separate from raw results")
+    files = regular_tree(root, excluded_dirs={"_harbor-jobs", "_harbor-tasks"})
+    metadata = {"versions.json", "dataset-validation.json", "provenance.json",
+                "docker-version.json", "docker-images.jsonl"}
+    # Reviewed v0.3.0 report/collector contract, restricted to this workflow's Codex agent.
+    root_reports = {"result.json", "run_config.json", "dataset_snapshot.json", "report.html",
+                    "attempt_policy.json", "comparison.json"}
+    agent_reports = {"lift.json", "custom_lift.json", "pass_at_k_lift.json",
+                     "security_attribution.json", "findings.json"}
+    trial_reports = {"result.json", "config.json", "exception.txt", "trial.log", "trajectory.json",
+                     "codex.txt", "reward.json", "failure.json", "artifact_manifest.json"}
+
+    def allowed(relative):
+        parts = relative.parts
+        if any(part.startswith(".") for part in parts):
+            return False
+        if len(parts) == 1:
+            return parts[0] in metadata
+        if len(parts) == 2 and parts[0] == "dependencies":
+            return parts[1] in {"evaluator.json", "semgrep.json", "skillspector.json"}
+        if len(parts) < 4 or parts[:2] != ("results", name):
+            return False
+        # Native external layout: results/<skill>/<run>/codex/<arm>/trials/<trial>/...
+        tail = parts[3:]
+        if len(tail) == 1:
+            return tail[0] in root_reports
+        if tail[0] != "codex":
+            return False
+        if len(tail) == 2:
+            return tail[1] in agent_reports
+        if tail[1] not in {"with-skill", "without-skill"}:
+            return False
+        return (len(tail) == 3 and tail[2] == "summary.json") or (
+            len(tail) == 5 and tail[2] == "trials" and tail[4] in trial_reports)
+
+    destination.mkdir(parents=True, exist_ok=False)
+    copied = 0
+    for source in sorted(files):
+        relative = source.relative_to(root)
+        if not allowed(relative):
+            continue
+        # Recheck the final input immediately before reading; raw results stay untouched.
+        require(not source.is_symlink() and source.resolve() == source, "Linked publication input")
+        if source.suffix == ".json":
+            value = redact_sensitive_data(read_json(source, limit=64 * 1024 * 1024))
+            write_json(destination / relative, value)
+        else:
+            text = redact_sensitive_text(source.read_text(encoding="utf-8"))
+            target = destination / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(text, encoding="utf-8")
+        copied += 1
+    require(copied > 0, "No publishable benchmark reports")
+    summary([f"Staged {copied} allowlisted files with upstream redaction; raw runtime directories are excluded."])
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
+    commands.add_parser("preflight")
     select = commands.add_parser("select")
     select.add_argument("skill")
     select.add_argument("mode", choices=MODES)
@@ -301,15 +407,23 @@ def main():
     publish = commands.add_parser("publish")
     publish.add_argument("root", type=Path)
     publish.add_argument("skill")
+    artifacts = commands.add_parser("artifacts")
+    artifacts.add_argument("root", type=Path)
+    artifacts.add_argument("skill")
+    artifacts.add_argument("destination", type=Path)
     args = parser.parse_args()
     workspace = Path(os.environ["GITHUB_WORKSPACE"]).resolve()
-    if args.command == "select":
+    if args.command == "preflight":
+        catalog_preflight(workspace)
+    elif args.command == "select":
         local_skill(workspace, args.skill, dataset=True)
         outputs(skill=args.skill, attempts=MODES[args.mode])
     elif args.command == "catalog":
         catalog_report(workspace, args.root)
     elif args.command == "benchmark":
         benchmark_report(workspace, args.root, args.skill, args.mode, args.destination)
+    elif args.command == "artifacts":
+        benchmark_artifacts(workspace, args.root, args.skill, args.destination)
     else:
         publish_metrics(workspace, args.root, args.skill)
 

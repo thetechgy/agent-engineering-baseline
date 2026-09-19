@@ -29,6 +29,9 @@ jobs:
       contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 180
+    environment:
+      name: skill-benchmark
+      deployment: false
     env:
       PYTHONDONTWRITEBYTECODE: '1'
       BENCHMARK_SKILL: ${{ inputs.skill }}
@@ -39,11 +42,14 @@ jobs:
       - name: Check out dispatched revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
 
       - name: Validate selection and clean checkout
         id: selection
         run: |
+          [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           test -z "$(git status --porcelain=v1 --untracked-files=all --ignored)"
           python3 .github/scripts/skill_reports.py select "$BENCHMARK_SKILL" "$BENCHMARK_MODE"
 
@@ -60,6 +66,7 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/skill-benchmark"
           cp "$RUNNER_TEMP/skill-evaluation-tools/versions.json" "$RUNNER_TEMP/skill-benchmark/versions.json"
+          cp -r "$RUNNER_TEMP/skill-evaluation-tools/dependencies" "$RUNNER_TEMP/skill-benchmark/dependencies"
           "$SKILL_EVALUATOR_PYTHON" -m unittest discover -s .github/tests -v
           skillevaluator tier3 validate "$GITHUB_WORKSPACE/.apm/skills/$BENCHMARK_SKILL" --strict --json \
             > "$RUNNER_TEMP/skill-benchmark/dataset-validation.json"
@@ -76,7 +83,7 @@ jobs:
           ATTEMPTS: ${{ steps.selection.outputs.attempts }}
         run: |
           if [ -z "$OPENAI_API_KEY" ]; then
-            echo '::error::Add the OPENAI_API_KEY Actions secret before running a paid skill benchmark.'
+            echo '::error::Add OPENAI_API_KEY to the protected skill-benchmark environment before running a paid benchmark.'
             exit 1
           fi
           cd "$RUNNER_TEMP/skill-benchmark"
@@ -96,26 +103,27 @@ jobs:
           "$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_reports.py benchmark \
             "$RUNNER_TEMP/skill-benchmark" "$BENCHMARK_SKILL" "$BENCHMARK_MODE" "$RUNNER_TEMP/skill-metrics"
 
+      - name: Stage allowlisted reports with upstream redaction
+        id: artifacts
+        if: always() && env.SKILL_EVALUATOR_PYTHON != '' && steps.selection.outcome == 'success'
+        run: |
+          "$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_reports.py artifacts \
+            "$RUNNER_TEMP/skill-benchmark" "$BENCHMARK_SKILL" "$RUNNER_TEMP/skill-benchmark-artifact"
+
       - name: Verify evaluator left the checkout unchanged
         if: always()
         run: |
           git diff --exit-code
           test -z "$(git status --porcelain=v1 --untracked-files=all --ignored)"
 
-      - name: Upload complete collected benchmark results
-        if: always()
+      - name: Upload collected benchmark reports and diagnostics
+        if: always() && steps.artifacts.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: skill-benchmark-${{ github.run_id }}-${{ github.run_attempt }}
-          # Native collected diagnostics are redacted. Transient Harbor execution
-          # directories can survive a failed run and are not publication artifacts.
-          path: |
-            ${{ runner.temp }}/skill-benchmark/
-            !${{ runner.temp }}/skill-benchmark/**/_harbor-jobs/**
-            !${{ runner.temp }}/skill-benchmark/**/_harbor-tasks/**
+          path: ${{ runner.temp }}/skill-benchmark-artifact/
           if-no-files-found: error
           retention-days: 30
-          include-hidden-files: true
 
       - name: Upload sanitized standard metrics
         if: success() && inputs.mode == 'standard'

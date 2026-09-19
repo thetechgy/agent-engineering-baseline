@@ -89,6 +89,72 @@ class ReportTests(unittest.TestCase):
     def test_complete_findings_are_advisory(self):
         reports.catalog_report(self.workspace, self.catalog())
 
+    def test_nested_links_and_special_files_fail_before_evaluation(self):
+        fixture = self.skill / "evals/files/input.txt"
+        fixture.parent.mkdir()
+        outside = self.root / "external.txt"
+        outside.write_text("sentinel must never be read")
+        for target in (outside, self.skill / "SKILL.md", self.root / "missing", fixture.parent):
+            fixture.symlink_to(target)
+            for operation in (lambda: reports.local_skill(self.workspace, "podman", dataset=True),
+                              lambda: reports.catalog_preflight(self.workspace)):
+                with self.subTest(target=target), self.assertRaises(ValueError):
+                    operation()
+            fixture.unlink()
+        os.mkfifo(fixture)
+        with self.assertRaises(ValueError):
+            reports.catalog_preflight(self.workspace)
+        fixture.unlink()
+        with patch.object(reports.os, "scandir", side_effect=PermissionError("unreadable directory")):
+            with self.assertRaises(PermissionError):
+                reports.catalog_preflight(self.workspace)
+
+    def test_catalog_rejects_linked_datasets_and_uncatalogued_directories(self):
+        dataset = self.skill / "evals/evals.json"
+        dataset.unlink()
+        dataset.symlink_to(self.root / "missing-dataset")
+        with self.assertRaises(ValueError):
+            reports.catalog_preflight(self.workspace)
+        dataset.unlink()
+        (self.skill.parent / "unlisted").symlink_to(self.root, target_is_directory=True)
+        with self.assertRaises(ValueError):
+            reports.catalog_preflight(self.workspace)
+
+    def test_catalog_counts_require_exact_nonnegative_integers(self):
+        root = self.catalog()
+        for filename, field in (("catalog-summary.json", "total"), ("catalog-summary.json", "failed"),
+                                ("podman/skillevaluator-output-20260919000000.json", "total_validators")):
+            path = root / "reports" / filename
+            original = reports.read_json(path)
+            for value in (True, False, 1.0, 1.5, -1, "1", 2):
+                reports.write_json(path, {**original, field: value})
+                with self.subTest(field=field, value=value), self.assertRaises(ValueError):
+                    reports.catalog_report(self.workspace, root)
+            reports.write_json(path, original)
+
+    def test_native_status_follows_pass_and_incomplete_evidence(self):
+        root = self.catalog()
+        path = root / "reports/podman/skillevaluator-output-20260919000000.json"
+        catalog_path = root / "reports/catalog-summary.json"
+        report = reports.read_json(path)
+        catalog = reports.read_json(catalog_path)
+        for passed in (True, False):
+            catalog["skills"][0].update(passed=passed, reason="" if passed else "validation failed")
+            catalog["failed"] = int(not passed)
+            reports.write_json(catalog_path, catalog)
+            (root / "catalog.exit").write_text("0" if passed else "1")
+            for incomplete in ([], ["skillspector"]):
+                expected = "incomplete" if incomplete else "passed" if passed else "failed"
+                for status in ("passed", "failed", "incomplete"):
+                    reports.write_json(path, {**report, "overall_passed": passed,
+                        "overall_status": status, "incomplete_scans": incomplete})
+                    with self.subTest(passed=passed, incomplete=incomplete, status=status):
+                        if status == expected:
+                            reports.catalog_report(self.workspace, root)
+                        else:
+                            with self.assertRaises(ValueError):
+                                reports.catalog_report(self.workspace, root)
+
     def test_catalog_runtime_exit_one_is_not_advisory(self):
         root = self.catalog()
         path = root / "reports/catalog-summary.json"
@@ -251,6 +317,53 @@ class ReportTests(unittest.TestCase):
         self.assertIn("n_input_tokens | 100 | 1 / 1", text)
         self.assertIn("cost_usd | unknown | 0 / 1", text)
 
+    def test_artifact_staging_allowlist_and_native_redaction(self):
+        root, run, data = self.benchmark("standard")
+        destination = self.root / "publication"
+        sentinel = "sk-proj-" + "synthetic-review-only-" * 3
+        trial = run / "codex/with-skill/trials/case-1"
+        reports.write_json(trial / "result.json", {"output": sentinel, "OPENAI_API_KEY": sentinel})
+        (run / "report.html").write_text(f"<p>{sentinel}</p>")
+        reports.write_json(root / "dependencies/evaluator.json", [{"name": "harbor", "version": "0.13.2"}])
+        unexpected = [root / ".env", root / "unexpected.json", run / "unknown.txt",
+                      run / "_harbor-jobs/job/result.json", trial / "auth.json"]
+        for path in unexpected:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(sentinel)
+        reports.benchmark_artifacts(self.workspace, root, "podman", destination)
+        for path in unexpected:
+            self.assertFalse((destination / path.relative_to(root)).exists())
+        self.assertTrue((destination / "dependencies/evaluator.json").is_file())
+        for path in (trial / "result.json", run / "report.html"):
+            self.assertNotIn(sentinel, (destination / path.relative_to(root)).read_text())
+            self.assertIn(sentinel, path.read_text())  # No mutation of raw evidence.
+        self.assertEqual(reports.read_json(run / "result.json"), data)
+
+    def test_artifact_staging_rejects_links_and_checkout_destinations(self):
+        root, run, _ = self.benchmark("standard")
+        for linked in (run / "report.html", run / "linked-dir"):
+            if linked.exists():
+                linked.unlink()
+            linked.symlink_to(self.root / "missing")
+            with self.assertRaises(ValueError):
+                reports.benchmark_artifacts(self.workspace, root, "podman", self.root / "publication")
+            self.assertFalse((self.root / "publication").exists())
+            linked.unlink()
+        with self.assertRaises(ValueError):
+            reports.benchmark_artifacts(self.workspace, root, "podman", self.workspace / "publication")
+        with self.assertRaises(ValueError):
+            reports.benchmark_artifacts(self.workspace, root, "podman", root / "publication")
+
+    def test_failed_runs_retain_allowlisted_diagnostics(self):
+        root, run, _ = self.benchmark("standard")
+        (run / "result.json").unlink()
+        (run / "report.html").unlink()
+        reports.write_json(run / "codex/without-skill/trials/case-1/failure.json",
+                           {"status": "unscored", "error": "native runtime failure"})
+        destination = self.root / "publication"
+        reports.benchmark_artifacts(self.workspace, root, "podman", destination)
+        self.assertTrue((destination / (run / "codex/without-skill/trials/case-1/failure.json").relative_to(root)).is_file())
+
 
 class UpstreamTests(unittest.TestCase):
     def test_podman_native_negative_control_and_strict_validation(self):
@@ -259,7 +372,7 @@ class UpstreamTests(unittest.TestCase):
         from skillevaluator.tier3.dataset_utils import load_dataset_entries
         from skillevaluator.tier3.harbor.report_data import summarize_dataset_entries
         from skillevaluator.tier3.harbor.templates.eval import resolve_should_trigger, score_skill_execution
-        skill = REPO / ".apm/skills/podman"
+        skill = reports.local_skill(REPO, "podman", dataset=True)
         entries = load_dataset_entries(skill / "evals/evals.json")
         case = next(case for case in entries if case["id"] == 8)
         self.assertIsNone(case["expected_skill"])
@@ -309,6 +422,10 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(set(workflow.get("on", workflow.get(True))), {"workflow_dispatch"})
         jobs = workflow["jobs"]
         self.assertEqual(jobs["evaluate"]["permissions"], {"contents": "read"})
+        self.assertEqual(jobs["evaluate"]["environment"], {"name": "skill-benchmark", "deployment": False})
+        self.assertEqual(jobs["evaluate"]["steps"][0]["with"]["ref"], "${{ github.sha }}")
+        selection = next(step for step in jobs["evaluate"]["steps"] if step.get("id") == "selection")
+        self.assertIn('test "$(git rev-parse HEAD)" = "$GITHUB_SHA"', selection["run"])
         self.assertEqual(jobs["publish-history"]["permissions"], {"contents": "write"})
         for name in ("publish-history", "deploy-pages"):
             self.assertIn("github.ref == 'refs/heads/main'", jobs[name]["if"])
@@ -319,6 +436,17 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(len(secret_steps), 1)
         self.assertIn("--results-dir", secret_steps[0]["run"])
         self.assertNotIn("--skip-baseline", secret_steps[0]["run"])
+        publication = next(step for step in jobs["evaluate"]["steps"]
+                           if step.get("with", {}).get("name", "").startswith("skill-benchmark-"))
+        self.assertEqual(publication["with"]["path"], "${{ runner.temp }}/skill-benchmark-artifact/")
+        self.assertIn("steps.artifacts.outcome == 'success'", publication["if"])
+        self.assertFalse(publication["with"].get("include-hidden-files", False))
+        quality = yaml.safe_load((REPO / ".github/workflows/validate.yml").read_text())["jobs"]["skill-quality"]
+        preflight = next(index for index, step in enumerate(quality["steps"])
+                         if "skill_reports.py preflight" in step.get("run", ""))
+        setup = next(index for index, step in enumerate(quality["steps"])
+                     if "setup-skillevaluator.sh" in step.get("run", ""))
+        self.assertLess(preflight, setup)
         checkout = jobs["deploy-pages"]["steps"][0]
         self.assertEqual(checkout["with"]["ref"], "${{ needs.publish-history.outputs.history_sha }}")
         for filename in ("benchmark-skills.yml", "validate.yml"):

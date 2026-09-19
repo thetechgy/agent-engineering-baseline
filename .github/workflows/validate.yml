@@ -24,7 +24,9 @@ jobs:
           persist-credentials: false
 
       - name: Require an initially clean checkout
-        run: test -z "$(git status --porcelain=v1 --untracked-files=all --ignored)"
+        run: |
+          test -z "$(git status --porcelain=v1 --untracked-files=all --ignored)"
+          python3 .github/scripts/skill_reports.py preflight
 
       - name: Set up pinned uv
         uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
@@ -48,6 +50,7 @@ jobs:
           report_root="$RUNNER_TEMP/skill-quality"
           mkdir -p "$report_root/reports" "$report_root/datasets"
           cp "$RUNNER_TEMP/skill-evaluation-tools/versions.json" "$report_root/versions.json"
+          cp -r "$RUNNER_TEMP/skill-evaluation-tools/dependencies" "$report_root/dependencies"
           cd "$report_root"
           status=0
           skillevaluator validate "$GITHUB_WORKSPACE/.apm/skills" \
@@ -55,6 +58,10 @@ jobs:
             -r json,markdown,html -o "$report_root/reports" || status=$?
           printf '%s\n' "$status" > "$report_root/catalog.exit"
           for dataset in "$GITHUB_WORKSPACE"/.apm/skills/*/evals/evals.json; do
+            if [ -L "$dataset" ]; then
+              echo '::error::Linked evaluation dataset is not allowed.'
+              exit 1
+            fi
             [ -f "$dataset" ] || continue
             skill_dir="$(dirname "$(dirname "$dataset")")"
             skill="$(basename "$skill_dir")"
