@@ -21,6 +21,11 @@ BeforeAll {
     $script:ValidationSource = Join-Path $script:RepositoryRoot 'scripts/Invoke-Validation.ps1'
     $script:IsWindowsPlatform = $env:OS -ceq 'Windows_NT'
 
+    $script:OriginalCopyItem = Get-Command Copy-Item -CommandType Cmdlet
+    $script:OriginalMoveItem = Get-Command Move-Item -CommandType Cmdlet
+    $script:OriginalNewItem = Get-Command New-Item -CommandType Cmdlet
+    $script:OriginalGetFileHash = Get-Command Get-FileHash
+
     function New-TestRepository {
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
             'PSUseShouldProcessForStateChangingFunctions', '',
@@ -523,6 +528,11 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         if ($Prior -eq 'existing') {
             & $script:TestRepository.Script -CliOnly -Confirm:$false
             [IO.File]::WriteAllText((Join-Path $release '_internal\old-state'), 'old')
+            # The active release may differ from the same-version release being replaced.
+            $priorCurrentTarget = Join-Path $script:InstallRoot 'releases\v0.28.0'
+            Copy-Item -LiteralPath $release -Destination $priorCurrentTarget -Recurse
+            [IO.Directory]::Delete($current, $false)
+            New-Item -ItemType Junction -Path $current -Target $priorCurrentTarget | Out-Null
         }
         $processPath = $env:PATH
         $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
@@ -533,7 +543,7 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
                 $script:FaultHit = $true
                 throw 'injected staging failure'
             }
-            Microsoft.PowerShell.Management\Copy-Item @PSBoundParameters
+            & $script:OriginalCopyItem @PesterBoundParameters
         }
         Mock Move-Item {
             if (-not $script:FaultHit -and (
@@ -542,30 +552,31 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
                 $script:FaultHit = $true
                 throw 'injected rename failure'
             }
-            Microsoft.PowerShell.Management\Move-Item @PSBoundParameters
+            & $script:OriginalMoveItem @PesterBoundParameters
         }
         Mock New-Item {
             if ($script:PromotionFault -eq 'junction' -and $ItemType -eq 'Junction' -and -not $script:FaultHit) {
                 $script:FaultHit = $true
                 throw 'injected junction failure'
             }
-            Microsoft.PowerShell.Management\New-Item @PSBoundParameters
+            & $script:OriginalNewItem @PesterBoundParameters
         }
         Mock Get-FileHash {
             if ($script:PromotionFault -eq 'checksum' -and $LiteralPath -like '*\current\apm.exe') {
                 $script:FaultHit = $true
                 return [pscustomobject]@{ Hash = ('0' * 64) }
             }
-            Microsoft.PowerShell.Utility\Get-FileHash @PSBoundParameters
+            & $script:OriginalGetFileHash @PesterBoundParameters
         }
         $env:APM_TEST_PROMOTION_FAULT = $Fault
-        { & $script:TestRepository.Script -CliOnly -Confirm:$false } | Should-Throw
+        $failure = { & $script:TestRepository.Script -CliOnly -Confirm:$false } | Should-Throw -PassThru
         if ($Fault -in @('execution', 'version')) {
             Get-Content -LiteralPath $script:CallLog -Raw | Should-MatchString '\\current\\apm\.exe'
         }
-        else { $script:FaultHit | Should-BeTrue }
+        else { $script:FaultHit | Should-BeTrue -Because $failure.Exception.Message }
         if ($Prior -eq 'existing') {
             Test-Path -LiteralPath (Join-Path $release '_internal\old-state') | Should-BeTrue
+            @((Get-Item -LiteralPath $current -Force).Target)[0] | Should-Be $priorCurrentTarget
             & $shim --version | Should-MatchString '0\.29\.0'
             $LASTEXITCODE | Should-Be 0
         }

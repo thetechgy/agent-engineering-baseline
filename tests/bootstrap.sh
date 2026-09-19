@@ -528,5 +528,24 @@ EOF
     done
 done
 
+new_case committed-backup-cleanup
+make_fixture Linux x86_64
+run_case --cli-only
+record_result 'backup cleanup fixture installs prior bundle' success
+real_rm=$(command -v rm)
+cat > "$CASE_BIN/rm" <<EOF
+#!/usr/bin/env bash
+case "\$*" in
+    *'/.apm-rollback-'*) exit 73 ;;
+esac
+exec '$real_rm' "\$@"
+EOF
+chmod +x "$CASE_BIN/rm"
+run_case --cli-only
+record_result 'backup cleanup failure leaves a successful committed install' success
+assert_true 'backup cleanup failure is diagnosed' out_has 'backup cleanup failed'
+assert_true 'verified command remains usable after backup cleanup failure' \
+    file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
+
 printf '\n%d cases, %d failures\n' "$CASES" "$FAILURES"
 exit "$((FAILURES > 0 ? 1 : 0))"

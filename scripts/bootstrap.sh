@@ -323,7 +323,9 @@ promote_bundle() (
         die "the promoted APM CLI does not report the pinned v$PIN."
     # Verification commits the replacement; backup cleanup cannot trigger rollback.
     trap - EXIT HUP INT TERM
-    [ ! -d "$backup_path" ] || rm -rf "$backup_path"
+    if [ -d "$backup_path" ]; then
+        rm -rf "$backup_path" || log 'warning: verified APM installation is usable; backup cleanup failed.'
+    fi
 )
 
 acquire_cli() {
