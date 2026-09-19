@@ -299,11 +299,12 @@ skill name with an authored dataset (initially `podman`), and a mode:
 | `confirmation` | 3 | 60 | Diagnostic only |
 
 Both modes retain the without-skill baseline and use native Codex evaluation
-in Docker, with concurrency 2 and a three-hour evaluation timeout. Codex and
-the evaluator/judge explicitly use **OpenAI GPT-5.6 Sol**. Native runtime smoke
-tests and judging add calls beyond the task-trial counts. Runs consume OpenAI
-API usage; neither mode runs automatically on pushes, PRs, or a schedule.
-Only one benchmark workflow runs at a time.
+in Docker, with concurrency 2, a 600-second per-trial agent timeout, and a
+three-hour workflow-job limit. Codex and the evaluator/judge explicitly use
+**OpenAI GPT-5.6 Sol**. Native runtime smoke tests and judging add calls beyond
+the task-trial counts. Runs consume OpenAI API usage; neither mode runs
+automatically on pushes, PRs, or a schedule. Only one benchmark workflow runs
+at a time.
 
 The Evaluate job waits for approval through the protected `skill-benchmark`
 environment. Review the dispatched commit SHA, workflow, skill, dataset, and

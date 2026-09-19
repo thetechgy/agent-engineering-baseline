@@ -100,7 +100,7 @@ jobs:
             --agents codex --agent-model codex=gpt-5.6-sol --env-mode docker \
             --skill-workspace-mode isolated --grading-mode default \
             --n-attempts "$ATTEMPTS" --no-stop-on-pass --n-concurrent 2 --max-agents 1 \
-            --agent-runtime-preflight --progress plain \
+            --agent-runtime-preflight --timeout-multiplier 2 --progress plain \
             --results-dir "$SKILLEVALUATOR_RESULTS_DIR" \
             --evaluated-source-repository "$GITHUB_REPOSITORY" --evaluated-source-revision "$GITHUB_SHA"
 
