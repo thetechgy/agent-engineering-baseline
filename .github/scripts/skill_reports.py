@@ -24,6 +24,7 @@ POLICY = {
     "environment": "docker",
     "grading": "default",
     "concurrency": 2,
+    "timeout_multiplier": 2.0,
     "standard_attempts": 1,
     "baseline": True,
     "stop_on_pass": False,
@@ -69,7 +70,7 @@ def outputs(**values):
             stream.write(f"{key}={value}\n")
 
 
-def regular_tree(root, *, excluded_dirs=()):
+def regular_tree(root, *, excluded_dirs=(), excluded_links=()):
     """Inspect every entry without following links or hiding traversal errors."""
     require(root.resolve() == root.absolute() and stat.S_ISDIR(root.lstat().st_mode),
             "Expected a real directory with no linked path components")
@@ -80,9 +81,13 @@ def regular_tree(root, *, excluded_dirs=()):
             for entry in entries:
                 if entry.name in excluded_dirs:
                     continue  # Never inspect or publish excluded runtime directories.
+                relative = Path(entry.path).relative_to(root)
                 mode = entry.stat(follow_symlinks=False).st_mode
+                if relative in excluded_links:
+                    require(stat.S_ISLNK(mode), f"Expected linked input: {relative}")
+                    continue  # Recognized generated link; never inspect its target.
                 require(stat.S_ISDIR(mode) or stat.S_ISREG(mode),
-                        f"Linked or special input: {Path(entry.path).relative_to(root)}")
+                        f"Linked or special input: {relative}")
                 if stat.S_ISDIR(mode):
                     pending.append(Path(entry.path))
                 else:
@@ -267,6 +272,7 @@ def benchmark_report(workspace, root, name, mode, destination):
     harbor = config["harbor"]
     require(harbor["environment"]["value"] == "docker" and harbor["n_attempts"] == MODES[mode]
             and harbor["n_concurrent"] == 2 and harbor["stop_on_pass"] is False, "Attempt/runtime policy mismatch")
+    require(harbor["timeout_multiplier"] == POLICY["timeout_multiplier"], "Timeout policy mismatch")
     require(config["grading"]["mode"] == "default", "Grading policy mismatch")
     revision = os.environ["GITHUB_SHA"]
     require(evaluated_source_revision(config["evaluated_source"]) == revision, "Evaluated source mismatch")
@@ -341,7 +347,11 @@ def benchmark_artifacts(workspace, root, name, destination):
                 "Benchmark artifacts must use real paths outside the checkout")
     require(not destination.is_relative_to(root) and not root.is_relative_to(destination),
             "Artifact staging must be separate from raw results")
-    files = regular_tree(root, excluded_dirs={"_harbor-jobs", "_harbor-tasks"})
+    files = regular_tree(
+        root,
+        excluded_dirs={"_harbor-jobs", "_harbor-tasks"},
+        excluded_links={Path("results") / name / "latest"},
+    )
     metadata = {"versions.json", "dataset-validation.json", "provenance.json",
                 "docker-version.json", "docker-images.jsonl"}
     # Reviewed v0.3.0 report/collector contract, restricted to this workflow's Codex agent.

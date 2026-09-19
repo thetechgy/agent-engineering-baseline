@@ -252,7 +252,8 @@ class ReportTests(unittest.TestCase):
                 "provider": {"name": "openai", "model": reports.POLICY["model"]},
                 "judge": {"model": reports.POLICY["model"], "provider": "openai", "override_applied": True},
                 "harbor": {"environment": {"value": "docker", "source": "cli"}, "n_attempts": reports.MODES[mode],
-                           "n_concurrent": 2, "stop_on_pass": False, "timeout_multiplier": 1.0,
+                           "n_concurrent": 2, "stop_on_pass": False,
+                           "timeout_multiplier": reports.POLICY["timeout_multiplier"],
                            "base_image_mode": "reuse", "jobs_retained": False},
                 "agents": {"codex": {"agent": "codex", "model": reports.POLICY["model"], "source": "cli"}},
                 "grading": {"mode": "default"}, "evaluated_source": {"commit": SHA}},
@@ -305,6 +306,20 @@ class ReportTests(unittest.TestCase):
         data = reports.read_json(self.root / "metrics/metrics.json")
         self.assertEqual(data["metrics"][0]["value"], -0.1)
         self.assertEqual(data["metrics"][3]["name"], "Discoverability")
+        self.assertEqual(data["policy"]["timeout_multiplier"], 2.0)
+
+    def test_missing_or_wrong_timeout_policy_prevents_history(self):
+        root, run, data = self.benchmark("standard")
+        harbor = data["run_config"]["harbor"]
+        for timeout in (None, 1.0):
+            if timeout is None:
+                harbor.pop("timeout_multiplier", None)
+            else:
+                harbor["timeout_multiplier"] = timeout
+            reports.write_json(run / "result.json", data)
+            with self.subTest(timeout=timeout), self.assertRaises((KeyError, ValueError)):
+                reports.benchmark_report(self.workspace, root, "podman", "standard", self.root / "metrics")
+            self.assertFalse((self.root / "metrics").exists())
 
     def test_wrong_python_runtime_prevents_history(self):
         root, _, _ = self.benchmark("standard")
@@ -349,10 +364,13 @@ class ReportTests(unittest.TestCase):
         for path in unexpected:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(sentinel)
+        latest = root / "results/podman/latest"
+        latest.symlink_to(run.name)
         reports.benchmark_artifacts(self.workspace, root, "podman", destination)
         for path in unexpected:
             self.assertFalse((destination / path.relative_to(root)).exists())
         self.assertTrue((destination / "dependencies/evaluator.json").is_file())
+        self.assertFalse((destination / latest.relative_to(root)).exists())
         for path in (trial / "result.json", run / "report.html"):
             self.assertNotIn(sentinel, (destination / path.relative_to(root)).read_text())
             self.assertIn(sentinel, path.read_text())  # No mutation of raw evidence.
@@ -372,6 +390,12 @@ class ReportTests(unittest.TestCase):
                 reports.benchmark_artifacts(self.workspace, root, "podman", self.root / "publication")
             self.assertFalse((self.root / "publication").exists())
             linked.unlink()
+        latest = root / "results/podman/latest"
+        latest.write_text("unexpected collision")
+        with self.assertRaises(ValueError):
+            reports.benchmark_artifacts(self.workspace, root, "podman", self.root / "publication")
+        self.assertFalse((self.root / "publication").exists())
+        latest.unlink()
         with self.assertRaises(ValueError):
             reports.benchmark_artifacts(self.workspace, root, "podman", self.workspace / "publication")
         with self.assertRaises(ValueError):
@@ -383,6 +407,7 @@ class ReportTests(unittest.TestCase):
         (run / "report.html").unlink()
         reports.write_json(run / "codex/without-skill/trials/case-1/failure.json",
                            {"status": "unscored", "error": "native runtime failure"})
+        (root / "results/podman/latest").symlink_to(run.name)
         destination = self.root / "publication"
         reports.benchmark_artifacts(self.workspace, root, "podman", destination)
         self.assertTrue((destination / (run / "codex/without-skill/trials/case-1/failure.json").relative_to(root)).is_file())
@@ -738,6 +763,7 @@ class WorkflowTests(unittest.TestCase):
         secret_steps = [step for step in jobs["evaluate"]["steps"] if "OPENAI_API_KEY" in step.get("env", {})]
         self.assertEqual(len(secret_steps), 1)
         self.assertIn("--results-dir", secret_steps[0]["run"])
+        self.assertIn(f"--timeout-multiplier {reports.POLICY['timeout_multiplier']:g}", secret_steps[0]["run"])
         self.assertNotIn("--skip-baseline", secret_steps[0]["run"])
         publication = next(step for step in jobs["evaluate"]["steps"]
                            if step.get("with", {}).get("name", "").startswith("skill-benchmark-"))
