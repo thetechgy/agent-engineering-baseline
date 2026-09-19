@@ -512,13 +512,24 @@ function Install-ReviewedBundle {
                 }
             }
             catch { Write-Warning -Message "Unable to remove the replacement junction during rollback: $_" }
+            $releaseRestored = $false
             if ($releasePromoted) {
-                Remove-Item -LiteralPath $releasePath -Recurse -Force -ErrorAction SilentlyContinue
+                try { Remove-Item -LiteralPath $releasePath -Recurse -Force -ErrorAction Stop }
+                catch { Write-Warning -Message "Incomplete APM rollback: unable to remove replacement release: $_" }
             }
             if ($releaseBackedUp) {
-                Move-Item -LiteralPath $backupPath -Destination $releasePath -ErrorAction SilentlyContinue
+                try {
+                    if (Test-Path -LiteralPath $releasePath) {
+                        throw 'The replacement release still exists.'
+                    }
+                    Move-Item -LiteralPath $backupPath -Destination $releasePath -ErrorAction Stop
+                    $releaseRestored = $true
+                }
+                catch { Write-Warning -Message "Incomplete APM rollback: prior release retained at ${backupPath}: $_" }
             }
-            if ($currentRemoved -and -not (Test-Path -LiteralPath $currentPath)) {
+            # Never reconnect current to an unverified same-version replacement.
+            $canRestoreCurrent = -not $releaseBackedUp -or $releaseRestored -or ($currentRemoved -and $oldCurrentTarget -ine $releasePath)
+            if ($currentRemoved -and $canRestoreCurrent -and -not (Test-Path -LiteralPath $currentPath)) {
                 try {
                     New-ApmJunction -Path $currentPath -Target $oldCurrentTarget -Confirm:$false
                 }

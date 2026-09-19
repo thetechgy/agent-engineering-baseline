@@ -324,6 +324,7 @@ Describe 'Bootstrap-Baseline Windows security contracts' {
 
 Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWindowsPlatform) {
     BeforeEach {
+        Remove-Item Env:APM_TEST_PROMOTION_FAULT -ErrorAction SilentlyContinue
         $script:OldProcessPath = $env:PATH
         $script:OldUserPath = [Environment]::GetEnvironmentVariable('Path', 'User')
         $script:TestRepository = New-TestRepository
@@ -569,11 +570,21 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
             & $script:OriginalGetFileHash @PesterBoundParameters
         }
         $env:APM_TEST_PROMOTION_FAULT = $Fault
-        $failure = { & $script:TestRepository.Script -CliOnly -Confirm:$false } | Should-Throw -PassThru
+        $expectedError = switch ($Fault) {
+            'copy' { '*injected staging failure*' }
+            'backup' { '*injected rename failure*' }
+            'rename' { '*injected rename failure*' }
+            'junction' { '*injected junction failure*' }
+            'checksum' { '*reviewed SHA256*' }
+            'execution' { '*failed its version postcondition*' }
+            'version' { '*does not report pinned*' }
+        }
+        { & $script:TestRepository.Script -CliOnly -Confirm:$false } |
+            Should-Throw -ExceptionMessage $expectedError
         if ($Fault -in @('execution', 'version')) {
             Get-Content -LiteralPath $script:CallLog -Raw | Should-MatchString '\\current\\apm\.exe'
         }
-        else { $script:FaultHit | Should-BeTrue -Because $failure.Exception.Message }
+        else { $script:FaultHit | Should-BeTrue }
         if ($Prior -eq 'existing') {
             Test-Path -LiteralPath (Join-Path $release '_internal\old-state') | Should-BeTrue
             @((Get-Item -LiteralPath $current -Force).Target)[0] | Should-Be $priorCurrentTarget
@@ -589,6 +600,33 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         [Environment]::GetEnvironmentVariable('Path', 'User') | Should-Be $userPath
         @(Get-ChildItem -LiteralPath (Join-Path $script:InstallRoot 'releases') -Force |
             Where-Object { $_.Name -match '^\.(stage|rollback)-' }).Count | Should-Be 0
+    }
+
+    It 'retains the backup and reports an incomplete rollback if removal is blocked' {
+        & $script:TestRepository.Script -CliOnly -Confirm:$false
+        $release = Join-Path $script:InstallRoot 'releases\v0.29.0'
+        [IO.File]::WriteAllText((Join-Path $release '_internal\old-state'), 'old')
+        $script:OriginalRemoveItem = Get-Command Remove-Item -CommandType Cmdlet
+        Mock Remove-Item {
+            if ($LiteralPath -like '*\releases\v0.29.0' -and $Recurse) {
+                throw 'injected locked replacement'
+            }
+            & $script:OriginalRemoveItem @PesterBoundParameters
+        }
+        Mock Get-FileHash {
+            if ($LiteralPath -like '*\current\apm.exe') { return [pscustomobject]@{ Hash = ('0' * 64) } }
+            & $script:OriginalGetFileHash @PesterBoundParameters
+        }
+        $script:RollbackWarnings = @()
+        Mock Write-Warning { $script:RollbackWarnings += $Message }
+        { & $script:TestRepository.Script -CliOnly -Confirm:$false } |
+            Should-Throw -ExceptionMessage '*reviewed SHA256*'
+        ($script:RollbackWarnings -join ' ') | Should-MatchString 'Incomplete APM rollback'
+        $backups = @(Get-ChildItem -LiteralPath (Join-Path $script:InstallRoot 'releases') -Directory -Force |
+            Where-Object { $_.Name -like '.rollback-*' })
+        $backups.Count | Should-Be 1
+        Test-Path -LiteralPath (Join-Path $backups[0].FullName '_internal\old-state') | Should-BeTrue
+        Test-Path -LiteralPath (Join-Path $script:InstallRoot 'current') | Should-BeFalse
     }
 
     It 'rolls back the prior release and junction when shim promotion fails' {
