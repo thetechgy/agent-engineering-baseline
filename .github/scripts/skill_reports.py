@@ -246,11 +246,60 @@ def validate_benchmark_versions(versions):
             "Installed evaluator/runtime version mismatch")
 
 
+def recover_benchmark(workspace, root, name, mode, outcome):
+    """Collect retained trials with the pinned native collector; never certify a run."""
+    from skillevaluator.tier3.dataset_utils import load_dataset_entries
+    from skillevaluator.tier3.harbor.collector import collect_harbor_results
+
+    skill = local_skill(workspace, name, dataset=True)
+    require(outcome in {"success", "failure", "cancelled", "skipped"}, "Invalid evaluation outcome")
+    root = root.absolute()
+    require(root.resolve() == root and not root.is_relative_to(workspace),
+            "Recovery must use a real directory outside the checkout")
+    root.mkdir(parents=True, exist_ok=True)
+    regular_tree(root, excluded_dirs={"_harbor-jobs", "_harbor-tasks"},
+                 excluded_links={Path("results") / name / "latest"})
+    if outcome == "success":
+        return  # Successful native collection/reporting remains authoritative.
+
+    # This existing allowlisted metadata file also covers interruptions before a run exists.
+    write_json(root / "provenance.json", {
+        "schema_version": 1, "status": "incomplete", "evaluation_outcome": outcome,
+        "diagnostic_only": True,
+    })
+    summary([f"## {name}: incomplete benchmark", "",
+             f"Evaluation outcome: {outcome}. Recovered diagnostics cannot enter benchmark history."])
+    results = root / "results" / name
+    if not results.is_dir():
+        return
+    cases = len(load_dataset_entries(skill / "evals/evals.json"))
+    for run in sorted(results.iterdir()):
+        if run.name == "latest":
+            continue
+        require(run.is_dir() and not run.is_symlink(), "Unexpected native run entry")
+        jobs = run / "_harbor-jobs"
+        if (run / "result.json").exists() or not jobs.exists():
+            continue  # Preserve reports already produced by native collection.
+        require(jobs.is_dir() and not jobs.is_symlink(), "Linked or invalid retained jobs directory")
+        collected = collect_harbor_results(
+            skill_name=name, agents=["codex"], output_dir=run, jobs_dir=jobs,
+            n_attempts=MODES[mode], stop_on_pass=False, expected_cases=cases,
+            expected_trials=cases * MODES[mode], env_mode="docker",
+            agent_models={"codex": {"model": POLICY["model"], "source": "cli"}},
+        )
+        # Native diagnostics may include completed trials but are never a completed evaluation.
+        write_json(run / "result.json", {**collected, "skill_name": name,
+                   "report_status": "incomplete", "diagnostic_only": True})
+
+
 def benchmark_report(workspace, root, name, mode, destination):
     # These native APIs validate run identity/completeness; never imported by the publisher.
     from skillevaluator.evaluation import EvaluationService
     from skillevaluator.source_identity import evaluated_source_revision
 
+    if (root / "provenance.json").exists():
+        require(read_json(root / "provenance.json").get("status") != "incomplete",
+                "Incomplete benchmark recovery cannot produce history metrics")
     skill = local_skill(workspace, name, dataset=True)
     service = EvaluationService()
     run = service.discover_latest_results(skill, root / "results")
@@ -420,6 +469,11 @@ def main():
     benchmark.add_argument("skill")
     benchmark.add_argument("mode", choices=MODES)
     benchmark.add_argument("destination", type=Path)
+    recover = commands.add_parser("recover")
+    recover.add_argument("root", type=Path)
+    recover.add_argument("skill")
+    recover.add_argument("mode", choices=MODES)
+    recover.add_argument("outcome", choices=("success", "failure", "cancelled", "skipped"))
     publish = commands.add_parser("publish")
     publish.add_argument("root", type=Path)
     publish.add_argument("skill")
@@ -438,6 +492,8 @@ def main():
         catalog_report(workspace, args.root)
     elif args.command == "benchmark":
         benchmark_report(workspace, args.root, args.skill, args.mode, args.destination)
+    elif args.command == "recover":
+        recover_benchmark(workspace, args.root, args.skill, args.mode, args.outcome)
     elif args.command == "artifacts":
         benchmark_artifacts(workspace, args.root, args.skill, args.destination)
     else:

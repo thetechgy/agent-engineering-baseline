@@ -10,6 +10,9 @@ import io
 import json
 import os
 import re
+import signal
+import sys
+import time
 from pathlib import Path
 import subprocess
 import tempfile
@@ -37,7 +40,7 @@ class ReportTests(unittest.TestCase):
         self.skill = self.workspace / ".apm/skills/podman"
         self.skill.mkdir(parents=True)
         (self.skill / "SKILL.md").write_text("---\nname: podman\n---\n")
-        reports.write_json(self.skill / "evals/evals.json", {"evals": [{"id": 1}]})
+        reports.write_json(self.skill / "evals/evals.json", {"skill_name": "podman", "evals": [{"id": 1, "prompt": "Harmless fixture", "expected_output": "Done"}]})
         patch_file = self.workspace / reports.PATCH
         patch_file.parent.mkdir(parents=True)
         patch_file.write_bytes((REPO / reports.PATCH).read_bytes())
@@ -412,6 +415,94 @@ class ReportTests(unittest.TestCase):
         reports.benchmark_artifacts(self.workspace, root, "podman", destination)
         self.assertTrue((destination / (run / "codex/without-skill/trials/case-1/failure.json").relative_to(root)).is_file())
 
+    def test_interrupted_trial_survives_native_retention_collection_and_redaction(self):
+        root = self.root / "interrupted"
+        run = root / "results/podman/interrupted-run"
+        sentinel = "sk-proj-" + "synthetic-interruption-only-" * 3
+        # Exercise the evaluator's real interruption cleanup in a harmless child process.
+        # Only workload execution is replaced; native retention and collection run unchanged.
+        code = r"""
+import json
+from pathlib import Path
+import sys
+import time
+from unittest.mock import patch
+from skillevaluator.tier3.harbor import runner
+from skillevaluator.tier3.harbor.progress import ProgressEvent
+run = Path(sys.argv[1])
+secret = sys.argv[2]
+def harmless_trial(**kwargs):
+    trial = run / '_harbor-jobs/podman-codex-with/case-1'
+    trial.mkdir(parents=True)
+    (trial / 'result.json').write_text(json.dumps({'task_name': 'case-1', 'finished_at': '2026-01-01T00:00:00Z'}))
+    (trial / 'trial.log').write_text('completed harmless trial ' + secret)
+    (trial / 'auth.json').write_text(secret)
+    kwargs['progress_reporter'].emit(ProgressEvent(stage='with-skill-tasks', state='running', output_dir=str(run)))
+    (run / 'ready').touch()
+    while True:
+        time.sleep(1)
+try:
+    with patch.object(runner, '_run_harbor_eval_impl', harmless_trial):
+        runner.run_harbor_eval(keep_harbor_jobs=True)
+except KeyboardInterrupt:
+    sys.exit(130)
+"""
+        process = subprocess.Popen([sys.executable, "-c", code, str(run), sentinel],
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+        try:
+            deadline = time.monotonic() + 20
+            while not (run / "ready").exists() and process.poll() is None and time.monotonic() < deadline:
+                time.sleep(0.02)
+            if not (run / "ready").exists():
+                process.kill()
+                _, stderr = process.communicate()
+                self.fail("Harmless trial did not finish before interruption: " + stderr)
+            process.send_signal(signal.SIGINT)
+            _, stderr = process.communicate(timeout=10)
+            self.assertEqual(process.returncode, 130, stderr)
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.communicate()
+        raw_trial = run / "_harbor-jobs/podman-codex-with/case-1"
+        self.assertIn(sentinel, (raw_trial / "trial.log").read_text())
+        reports.recover_benchmark(self.workspace, root, "podman", "standard", "cancelled")
+        destination = self.root / "publication"
+        reports.benchmark_artifacts(self.workspace, root, "podman", destination)
+        trial = destination / run.relative_to(root) / "codex/with-skill/trials/case-1"
+        self.assertIn("completed harmless trial", (trial / "trial.log").read_text())
+        self.assertNotIn(sentinel, (trial / "trial.log").read_text())
+        self.assertFalse((trial / "auth.json").exists())
+        self.assertFalse(any(path.name.startswith("_harbor-") for path in destination.rglob("*")))
+        result = reports.read_json(destination / run.relative_to(root) / "result.json")
+        self.assertEqual(result["report_status"], "incomplete")
+        self.assertEqual(reports.read_json(destination / "provenance.json")["status"], "incomplete")
+        with self.assertRaisesRegex(ValueError, "cannot produce history"):
+            reports.benchmark_report(self.workspace, root, "podman", "standard", self.root / "metrics")
+        self.assertFalse((self.root / "metrics/metrics.json").exists())
+        with self.assertRaises(ValueError):
+            reports.validate_metrics(reports.read_json(root / "provenance.json"), self.workspace, "podman", SHA)
+
+    def test_recovery_marks_early_failures_and_preserves_native_reports(self):
+        early = self.root / "early"
+        reports.recover_benchmark(self.workspace, early, "podman", "standard", "skipped")
+        self.assertEqual(reports.read_json(early / "provenance.json")["status"], "incomplete")
+        root, run, data = self.benchmark("standard")
+        reports.recover_benchmark(self.workspace, root, "podman", "standard", "success")
+        self.assertEqual(reports.read_json(run / "result.json"), data)
+        self.assertFalse((root / "provenance.json").exists())
+        reports.recover_benchmark(self.workspace, root, "podman", "standard", "failure")
+        self.assertEqual(reports.read_json(run / "result.json"), data)
+        with self.assertRaisesRegex(ValueError, "cannot produce history"):
+            reports.benchmark_report(self.workspace, root, "podman", "standard", self.root / "metrics")
+
+    def test_recovery_rejects_linked_job_roots(self):
+        root, run, _ = self.benchmark("standard")
+        (run / "result.json").unlink()
+        (run / "_harbor-jobs").symlink_to(self.root, target_is_directory=True)
+        with self.assertRaisesRegex(ValueError, "retained jobs"):
+            reports.recover_benchmark(self.workspace, root, "podman", "standard", "failure")
+
 
 class UpstreamTests(unittest.TestCase):
     def test_podman_native_negative_control_and_strict_validation(self):
@@ -720,6 +811,23 @@ class UpstreamTests(unittest.TestCase):
 
 
 class WorkflowTests(unittest.TestCase):
+    def test_interruption_recovery_has_budget_and_no_secret_or_raw_upload(self):
+        job = yaml.safe_load((REPO / ".github/workflows/benchmark-skills.yml").read_text())["jobs"]["evaluate"]
+        steps = job["steps"]
+        evaluation = next(step for step in steps if step.get("id") == "evaluation")
+        recovery = next(step for step in steps if "skill_reports.py recover" in step.get("run", ""))
+        staging = next(step for step in steps if step.get("id") == "artifacts")
+        self.assertIn("--harbor-keep-jobs", evaluation["run"])
+        self.assertIn("timeout --signal=INT --kill-after=30s 140m", evaluation["run"])
+        self.assertLessEqual(evaluation["timeout-minutes"] + recovery["timeout-minutes"] + 25,
+                             job["timeout-minutes"])
+        self.assertIn("always()", recovery["if"])
+        self.assertEqual(recovery["env"], {"EVALUATION_OUTCOME": "${{ steps.evaluation.outcome }}"})
+        self.assertLess(steps.index(evaluation), steps.index(recovery))
+        self.assertLess(steps.index(recovery), steps.index(staging))
+        metrics = next(step for step in steps if step.get("with", {}).get("name") == "skill-metrics")
+        self.assertIn("success()", metrics["if"])
+
     def test_setup_private_tool_root_for_provenance_key(self):
         setup = (REPO / ".github/scripts/setup-skillevaluator.sh").read_text()
         self.assertIn("umask 077", setup)
