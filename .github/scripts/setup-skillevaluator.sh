@@ -83,6 +83,9 @@ versions = {
     "harbor": importlib.metadata.version("harbor"),
     "evaluator_revision": "ac0a04905100acdafc6c95829311a9739c340ff6",
 }
+if sys.argv[2] == "benchmark":
+    versions["docker_compose"] = subprocess.check_output(
+        ["docker", "compose", "version", "--short"], text=True).strip()
 if sys.argv[2] == "quality":
     versions["scanners"] = {name: next(package["version"] for package in
         json.loads((root / "dependencies" / f"{name}.json").read_text()) if package["name"] == name)
