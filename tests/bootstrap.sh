@@ -456,5 +456,77 @@ assert_true 'promotion failure reports rollback' \
 assert_true 'promotion rollback restores old bundle' file_has "$CASE_ROOT/install/lib/apm/_internal/old" 'old bundle'
 assert_true 'promotion rollback restores managed symlink' test -L "$CASE_INSTALL/apm"
 
+# Fail each transaction boundary once, so rollback uses real working commands.
+for prior in existing fresh; do
+    for fault in copy backup rename link checksum execution version; do
+        [ "$prior/$fault" != fresh/backup ] || continue
+        new_case "transaction-$prior-$fault"
+        make_fixture Linux x86_64
+        if [ "$prior" = existing ]; then
+            mkdir -p "$CASE_ROOT/install/lib/apm/_internal"
+            printf 'v0.28.0\n' > "$CASE_ROOT/install/lib/apm/.apm-installed"
+            printf 'old bundle\n' > "$CASE_ROOT/install/lib/apm/_internal/old"
+            printf '#!/bin/sh\nprintf "old executable\\n"\n' > "$CASE_ROOT/install/lib/apm/apm"
+            chmod +x "$CASE_ROOT/install/lib/apm/apm"
+            ln -s "$CASE_ROOT/install/lib/apm/apm" "$CASE_INSTALL/apm"
+        fi
+        case "$fault" in
+            copy) command_name='cp'; pattern='*/.apm-stage-*' ;;
+            backup) command_name='mv'; pattern='*/.apm-rollback-*' ;;
+            rename) command_name='mv'; pattern='*/.apm-stage-*' ;;
+            link) command_name='ln'; pattern='*' ;;
+            checksum) command_name='sha256sum'; pattern="$CASE_ROOT/install/lib/apm/apm" ;;
+            execution|version)
+                # The same reviewed bytes succeed in extraction but fail after promotion.
+                cat > "$BUNDLE_ROOT/apm" <<EOF
+#!/usr/bin/env bash
+case "\$0" in
+    */install/lib/apm/apm)
+        : > '$CASE_ROOT/fault-hit'
+        [ '$fault' != execution ] || exit 73
+        printf 'APM version 9.9.9\n'
+        exit 0
+        ;;
+esac
+printf 'APM version 0.29.0\n'
+EOF
+                tar -czf "$MIRROR_ROOT/v0.29.0/$ARCHIVE_NAME" -C "$FIXTURE_ROOT" "$ARCHIVE_ROOT"
+                replace_checksum "$ARCHIVE_ROOT/apm" "$(digest "$BUNDLE_ROOT/apm")"
+                replace_checksum "$ARCHIVE_NAME" "$(digest "$MIRROR_ROOT/v0.29.0/$ARCHIVE_NAME")"
+                ;;
+        esac
+        if [ "$fault" != execution ] && [ "$fault" != version ]; then
+            real_command=$(command -v "$command_name")
+            cat > "$CASE_BIN/$command_name" <<EOF
+#!/usr/bin/env bash
+for argument in "\$@"; do
+    case "\$argument" in
+        $pattern)
+            if [ ! -f '$CASE_ROOT/fault-hit' ]; then
+                : > '$CASE_ROOT/fault-hit'
+                exit 73
+            fi
+            ;;
+    esac
+done
+exec '$real_command' "\$@"
+EOF
+            chmod +x "$CASE_BIN/$command_name"
+        fi
+        run_case --cli-only
+        record_result "$prior $fault failure is surfaced" failure
+        assert_true "$prior $fault injection was reached" test -f "$CASE_ROOT/fault-hit"
+        if [ "$prior" = existing ]; then
+            assert_true "$fault preserves prior release" file_has "$CASE_ROOT/install/lib/apm/_internal/old" 'old bundle'
+            assert_true "$fault preserves usable command" file_has <("$CASE_INSTALL/apm") 'old executable'
+        else
+            assert_true "$fault leaves no committed release" test ! -e "$CASE_ROOT/install/lib/apm"
+            assert_true "$fault leaves no command link" test ! -L "$CASE_INSTALL/apm"
+        fi
+        assert_true "$prior $fault cleans staging and rollback paths" \
+            test -z "$(find "$CASE_ROOT/install/lib" \( -name '.apm-stage-*' -o -name '.apm-rollback-*' \) -print -quit)"
+    done
+done
+
 printf '\n%d cases, %d failures\n' "$CASES" "$FAILURES"
 exit "$((FAILURES > 0 ? 1 : 0))"

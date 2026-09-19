@@ -238,9 +238,10 @@ assert_safe_directory() {
     fi
 }
 
-promote_bundle() {
+promote_bundle() (
     local source_bundle=$1 install_parent bundle_parent bundle_path link_path
-    local stage_path backup_path old_link_target='' had_bundle=false had_link=false failed=false
+    local stage_path backup_path old_link_target='' had_bundle=false had_link=false
+    local backed_up=false promoted=false link_removed=false link_created=false
     install_parent=$(dirname "$INSTALL_DIR")
     bundle_parent="$install_parent/lib"
     bundle_path="$bundle_parent/apm"
@@ -272,6 +273,31 @@ promote_bundle() {
         die 'a stale APM promotion path already exists.'
     fi
 
+    # Roll back only completed mutations, including failures in final verification.
+    # Invoked by the EXIT trap.
+    # shellcheck disable=SC2317
+    rollback_promotion() {
+        local status=$? rollback_failed=false
+        trap - EXIT HUP INT TERM
+        if [ "$status" -ne 0 ]; then
+            if [ "$link_created" = true ]; then rm -f "$link_path" || rollback_failed=true; fi
+            if [ "$promoted" = true ]; then rm -rf "$bundle_path" || rollback_failed=true; fi
+            if [ "$backed_up" = true ]; then mv "$backup_path" "$bundle_path" || rollback_failed=true; fi
+            if [ "$link_removed" = true ]; then
+                ln -s "$old_link_target" "$link_path" || rollback_failed=true
+            fi
+            if [ "$rollback_failed" = true ]; then
+                log "warning: APM rollback was incomplete; preserve $backup_path for recovery."
+            else
+                log 'APM bundle promotion failed; the prior managed installation was restored.'
+            fi
+        fi
+        rm -rf "$stage_path"
+        exit "$status"
+    }
+    trap rollback_promotion EXIT
+    trap 'exit 1' HUP INT TERM
+
     mkdir "$stage_path"
     cp -R "$source_bundle/." "$stage_path/"
     chmod +x "$stage_path/apm"
@@ -279,28 +305,26 @@ promote_bundle() {
     assert_plain_tree "$stage_path" 'Staged persistent APM bundle'
     verify_file "$stage_path/apm" "$EXECUTABLE_MEMBER"
 
-    if [ "$had_bundle" = true ] && ! mv "$bundle_path" "$backup_path"; then failed=true; fi
-    if [ "$failed" = false ] && ! mv "$stage_path" "$bundle_path"; then failed=true; fi
-    if [ "$failed" = false ] && [ "$had_link" = true ] && ! rm "$link_path"; then failed=true; fi
-    if [ "$failed" = false ] && ! ln -s "$bundle_path/apm" "$link_path"; then failed=true; fi
-
-    if [ "$failed" = true ]; then
-        [ ! -L "$link_path" ] || rm -f "$link_path"
-        if [ -d "$bundle_path" ] && { [ "$had_bundle" = false ] || [ -d "$backup_path" ]; }; then
-            rm -rf "$bundle_path"
-        fi
-        if [ -d "$backup_path" ]; then mv "$backup_path" "$bundle_path" || true; fi
-        if [ "$had_link" = true ] && [ ! -e "$link_path" ] && [ ! -L "$link_path" ]; then
-            ln -s "$old_link_target" "$link_path" || true
-        fi
-        die 'APM bundle promotion failed; the prior managed installation was restored.'
+    if [ "$had_bundle" = true ]; then
+        mv "$bundle_path" "$backup_path"
+        backed_up=true
     fi
-    [ ! -d "$backup_path" ] || rm -rf "$backup_path"
-    PROMOTED_APM="$bundle_path/apm"
+    mv "$stage_path" "$bundle_path"
+    promoted=true
+    if [ "$had_link" = true ]; then
+        rm "$link_path"
+        link_removed=true
+    fi
+    ln -s "$bundle_path/apm" "$link_path"
+    link_created=true
+
     verify_file "$PROMOTED_APM" "$EXECUTABLE_MEMBER"
     [ "$(reported_version "$PROMOTED_APM")" = "$PIN" ] ||
         die "the promoted APM CLI does not report the pinned v$PIN."
-}
+    # Verification commits the replacement; backup cleanup cannot trigger rollback.
+    trap - EXIT HUP INT TERM
+    [ ! -d "$backup_path" ] || rm -rf "$backup_path"
+)
 
 acquire_cli() {
     local temp_parent=${TMPDIR:-/tmp}
@@ -334,6 +358,7 @@ acquire_cli() {
     chmod +x "$extract_root/$EXECUTABLE_MEMBER"
     [ "$(reported_version "$extract_root/$EXECUTABLE_MEMBER")" = "$PIN" ] ||
         die "the staged APM CLI does not report the pinned v$PIN."
+    PROMOTED_APM="$(dirname "$INSTALL_DIR")/lib/apm/apm"
     promote_bundle "$extract_root/$ARCHIVE_ROOT"
 }
 

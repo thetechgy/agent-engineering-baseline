@@ -99,6 +99,15 @@ public static class $className
         }
         if (args.Length == 1 && args[0] == "--version")
         {
+            string fault = Environment.GetEnvironmentVariable("APM_TEST_PROMOTION_FAULT");
+            string executable = Environment.GetCommandLineArgs()[0];
+            string directory = Path.GetDirectoryName(executable);
+            if (directory.EndsWith("current", StringComparison.OrdinalIgnoreCase) &&
+                !File.Exists(Path.Combine(directory, "_internal", "old-state")))
+            {
+                if (fault == "execution") { return 73; }
+                if (fault == "version") { Console.WriteLine("APM version 9.9.9"); return 0; }
+            }
             Console.WriteLine("Agent Package Manager (APM) CLI version $Version (fixture)");
         }
         return 0;
@@ -344,6 +353,7 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
                 'APM_INSTALL_DIR',
                 'APM_RELEASE_BASE_URL',
                 'APM_TEST_CALL_LOG',
+                'APM_TEST_PROMOTION_FAULT',
                 'APM_TEST_FIXTURE_ARCHIVE',
                 'APM_TEST_REQUESTED_URI',
                 'APM_TEST_TLS_DURING_DOWNLOAD',
@@ -497,6 +507,77 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
 
         { & $script:TestRepository.Script -CliOnly -Confirm:$false } |
             Should-Throw -ExceptionMessage '*contains a reparse point*'
+    }
+
+    It 'keeps <Prior> installation consistent after <Fault> failure' -ForEach @(
+        foreach ($prior in @('existing', 'fresh')) {
+            foreach ($fault in @('copy', 'backup', 'rename', 'junction', 'checksum', 'execution', 'version')) {
+                if ($prior -eq 'fresh' -and $fault -eq 'backup') { continue }
+                @{ Prior = $prior; Fault = $fault }
+            }
+        }
+    ) {
+        $release = Join-Path $script:InstallRoot 'releases\v0.29.0'
+        $current = Join-Path $script:InstallRoot 'current'
+        $shim = Join-Path $env:APM_INSTALL_DIR 'apm.cmd'
+        if ($Prior -eq 'existing') {
+            & $script:TestRepository.Script -CliOnly -Confirm:$false
+            [IO.File]::WriteAllText((Join-Path $release '_internal\old-state'), 'old')
+        }
+        $processPath = $env:PATH
+        $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+        $script:FaultHit = $false
+        $script:PromotionFault = $Fault
+        Mock Copy-Item {
+            if ($script:PromotionFault -eq 'copy' -and $Destination -like '*\.stage-*') {
+                $script:FaultHit = $true
+                throw 'injected staging failure'
+            }
+            Microsoft.PowerShell.Management\Copy-Item @PSBoundParameters
+        }
+        Mock Move-Item {
+            if (-not $script:FaultHit -and (
+                    ($script:PromotionFault -eq 'backup' -and $Destination -like '*\.rollback-*') -or
+                    ($script:PromotionFault -eq 'rename' -and $LiteralPath -like '*\.stage-*'))) {
+                $script:FaultHit = $true
+                throw 'injected rename failure'
+            }
+            Microsoft.PowerShell.Management\Move-Item @PSBoundParameters
+        }
+        Mock New-Item {
+            if ($script:PromotionFault -eq 'junction' -and $ItemType -eq 'Junction' -and -not $script:FaultHit) {
+                $script:FaultHit = $true
+                throw 'injected junction failure'
+            }
+            Microsoft.PowerShell.Management\New-Item @PSBoundParameters
+        }
+        Mock Get-FileHash {
+            if ($script:PromotionFault -eq 'checksum' -and $LiteralPath -like '*\current\apm.exe') {
+                $script:FaultHit = $true
+                return [pscustomobject]@{ Hash = ('0' * 64) }
+            }
+            Microsoft.PowerShell.Utility\Get-FileHash @PSBoundParameters
+        }
+        $env:APM_TEST_PROMOTION_FAULT = $Fault
+        { & $script:TestRepository.Script -CliOnly -Confirm:$false } | Should-Throw
+        if ($Fault -in @('execution', 'version')) {
+            Get-Content -LiteralPath $script:CallLog -Raw | Should-MatchString '\\current\\apm\.exe'
+        }
+        else { $script:FaultHit | Should-BeTrue }
+        if ($Prior -eq 'existing') {
+            Test-Path -LiteralPath (Join-Path $release '_internal\old-state') | Should-BeTrue
+            & $shim --version | Should-MatchString '0\.29\.0'
+            $LASTEXITCODE | Should-Be 0
+        }
+        else {
+            Test-Path -LiteralPath $release | Should-BeFalse
+            Test-Path -LiteralPath $current | Should-BeFalse
+            Test-Path -LiteralPath $shim | Should-BeFalse
+        }
+        $env:PATH | Should-Be $processPath
+        [Environment]::GetEnvironmentVariable('Path', 'User') | Should-Be $userPath
+        @(Get-ChildItem -LiteralPath (Join-Path $script:InstallRoot 'releases') -Force |
+            Where-Object { $_.Name -match '^\.(stage|rollback)-' }).Count | Should-Be 0
     }
 
     It 'rolls back the prior release and junction when shim promotion fails' {
