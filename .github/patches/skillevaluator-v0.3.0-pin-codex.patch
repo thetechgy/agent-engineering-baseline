@@ -24,31 +24,78 @@ diff --git a/src/skillevaluator/tier3/harbor/runtime_preflight.py b/src/skilleva
 diff --git a/src/skillevaluator/tier3/harbor/secure_docker_environment.py b/src/skillevaluator/tier3/harbor/secure_docker_environment.py
 --- a/src/skillevaluator/tier3/harbor/secure_docker_environment.py
 +++ b/src/skillevaluator/tier3/harbor/secure_docker_environment.py
-@@ -48,1 +48,5 @@ _COMPOSE_CANCEL_SECONDS = 0.1
+@@ -39,2 +39,6 @@ _ENV_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+ _ENV_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
++_SECRET_ENV_NAME_RE = re.compile(
++    r"(TOKEN|KEY|SECRET|PASSWORD|CREDENTIAL|AUTH)",
++    re.IGNORECASE,
++)
+ _NVIDIA_BUILD_FILE_SENTINEL = "skillevaluator-file-backed-nvidia-key"
+@@ -44,5 +48,10 @@ _MIN_EXACT_SECRET_LENGTH = 8
+ _MIN_EXACT_SECRET_LENGTH = 8
+ _COMPOSE_TERMINATE_SECONDS = 5.0
+ _COMPOSE_KILL_SECONDS = 5.0
+ _COMPOSE_CANCEL_SECONDS = 0.1
 +_STARTUP_DIAGNOSTIC_TIMEOUT_SECONDS = 8
-+_STARTUP_STATE_MAX_CHARS = 2048
-+_STARTUP_LOG_MAX_CHARS = 4096
++_STARTUP_STATE_MAX_BYTES = 2048
++_STARTUP_LOG_MAX_BYTES = 4096
++_STARTUP_DIAGNOSTIC_READ_CHUNK_BYTES = 8192
 +_STARTUP_TRUNCATION_MARKER = " ... [truncated] ... "
  _MAIN_CONTAINER_STOP_TIMEOUT_SECONDS = 8
-@@ -116,1 +120,17 @@ def _signal_process_tree(process: asyncio.subprocess.Process, value: signal.Signals) -> None:
-+def _bounded_startup_diagnostic(value: str | None, limit: int) -> str:
-+    """Return the diagnostic tail without allowing Compose output to dominate a failure."""
-+    text = " ".join(value.split()) if value else ""
-+    if not text:
-+        return "(no output)"
-+    if len(text) <= limit:
-+        return text
-+    return f"{_STARTUP_TRUNCATION_MARKER}{text[-(limit - len(_STARTUP_TRUNCATION_MARKER)):]}"
+@@ -116,1 +125,52 @@ def _signal_process_tree(process: asyncio.subprocess.Process, value: signal.Signals) -> None:
++async def _bounded_compose_output(
++    process: asyncio.subprocess.Process,
++    *,
++    limit: int,
++) -> tuple[bytes, bytes]:
++    """Drain Compose output while retaining only a bounded terminal tail."""
++    marker = _STARTUP_TRUNCATION_MARKER.encode()
++    if limit <= len(marker):
++        raise ValueError("Compose diagnostic byte limit must exceed the truncation marker")
++    if process.stdout is None:
++        raise RuntimeError("Compose diagnostic process has no stdout stream")
++    tail_limit = limit - len(marker)
++    tail = bytearray()
++    truncated = False
++    while chunk := await process.stdout.read(_STARTUP_DIAGNOSTIC_READ_CHUNK_BYTES):
++        if len(chunk) >= tail_limit:
++            tail[:] = chunk[-tail_limit:]
++            truncated = True
++            continue
++        overflow = len(tail) + len(chunk) - tail_limit
++        if overflow > 0:
++            del tail[:overflow]
++            truncated = True
++        tail.extend(chunk)
++    await process.wait()
++    return (marker if truncated else b"") + bytes(tail), b""
 +
 +
-+def _format_startup_diagnostic(label: str, result: ExecResult, limit: int) -> str:
-+    """Describe one redacted Compose diagnostic command."""
++async def _compose_communication(
++    process: asyncio.subprocess.Process,
++    *,
++    stdin_bytes: bytes | None,
++    output_tail_bytes: int | None,
++) -> tuple[bytes, bytes]:
++    """Choose regular Compose collection or bounded diagnostic collection."""
++    if output_tail_bytes is None:
++        if stdin_bytes is not None:
++            return await process.communicate(stdin_bytes)
++        return await process.communicate()
++    if stdin_bytes is not None:
++        raise ValueError("Bounded Compose diagnostics do not accept stdin")
++    return await _bounded_compose_output(process, limit=output_tail_bytes)
++
++
++def _format_startup_diagnostic(label: str, result: ExecResult) -> str:
++    """Describe one redacted, byte-bounded Compose diagnostic command."""
 +    text = result.stdout if result.stdout else result.stderr
-+    return f"{label} (exit {result.return_code}): {_bounded_startup_diagnostic(text, limit)}"
++    detail = " ".join(text.split()) if text else "(no output)"
++    return f"{label} (exit {result.return_code}): {detail}"
 +
 +
  def _signal_process_tree(process: asyncio.subprocess.Process, value: signal.Signals) -> None:
-@@ -252,1 +272,28 @@ class SkillEvaluatorDockerEnvironment(DockerEnvironment):
+@@ -252,1 +312,29 @@ class SkillEvaluatorDockerEnvironment(DockerEnvironment):
 +    async def _startup_failure_diagnostics(
 +        self,
 +        *,
@@ -58,8 +105,8 @@ diff --git a/src/skillevaluator/tier3/harbor/secure_docker_environment.py b/src/
 +        """Collect bounded, redacted state before a failed Compose startup is cleaned up."""
 +        diagnostics: list[str] = []
 +        commands = (
-+            ("service state", ["ps", "--all", "--format", "json"], _STARTUP_STATE_MAX_CHARS),
-+            ("service logs", ["logs", "--no-color", "--tail", "100"], _STARTUP_LOG_MAX_CHARS),
++            ("service state", ["ps", "--all", "--format", "json"], _STARTUP_STATE_MAX_BYTES),
++            ("service logs", ["logs", "--no-color", "--tail", "100"], _STARTUP_LOG_MAX_BYTES),
 +        )
 +        for label, command, limit in commands:
 +            try:
@@ -69,15 +116,75 @@ diff --git a/src/skillevaluator/tier3/harbor/secure_docker_environment.py b/src/
 +                    timeout_sec=_STARTUP_DIAGNOSTIC_TIMEOUT_SECONDS,
 +                    env_overrides=env_overrides,
 +                    redact_values=secret_values,
++                    output_tail_bytes=limit,
 +                )
 +            except (OSError, RuntimeError):
 +                diagnostics.append(f"{label}: unavailable")
 +                continue
-+            diagnostics.append(_format_startup_diagnostic(label, result, limit))
++            diagnostics.append(_format_startup_diagnostic(label, result))
 +        return " | ".join(diagnostics)
 +
      async def exec(
-@@ -392,2 +439,9 @@ class SkillEvaluatorDockerEnvironment(DockerEnvironment):
+@@ -285,12 +373,13 @@ class SkillEvaluatorDockerEnvironment(DockerEnvironment):
+         check: bool = True,
+         timeout_sec: int | None = None,
+         *,
+         env_overrides: Mapping[str, str] | None = None,
+         stdin_bytes: bytes | None = None,
+         redact_values: set[str] | None = None,
++        output_tail_bytes: int | None = None,
+         stop_main_on_interrupt: bool = False,
+     ) -> ExecResult:
+         """Run compose with sensitive values only in child env or stdin."""
+         full_command = [
+             "docker",
+             "compose",
+@@ -306,6 +395,15 @@ class SkillEvaluatorDockerEnvironment(DockerEnvironment):
+         process_environment = self._compose_env_vars(include_os_env=True)
+         process_environment.update(env_overrides or {})
+         secret_values = {
+-            value for value in (env_overrides or {}).values() if value and len(value) >= _MIN_EXACT_SECRET_LENGTH
++            value
++            for name, value in process_environment.items()
++            if _SECRET_ENV_NAME_RE.search(name) and value and len(value) >= _MIN_EXACT_SECRET_LENGTH
+         }
++        secret_values.update(
++            {
++                value
++                for value in (env_overrides or {}).values()
++                if value and len(value) >= _MIN_EXACT_SECRET_LENGTH
++            }
++        )
+         secret_values.update(redact_values or set())
+@@ -321,13 +419,17 @@ class SkillEvaluatorDockerEnvironment(DockerEnvironment):
+         )
+         try:
+             process = await asyncio.shield(creation)
+         except asyncio.CancelledError:
+             process = await _await_task_uninterruptibly(creation, preserve_cancellation=False)
+             communication = asyncio.create_task(
+-                process.communicate(stdin_bytes) if stdin_bytes is not None else process.communicate()
++                _compose_communication(
++                    process,
++                    stdin_bytes=stdin_bytes,
++                    output_tail_bytes=output_tail_bytes,
++                )
+             )
+             cleanup = asyncio.create_task(
+                 self._contain_main_and_reap_compose(
+                     process,
+                     communication,
+                     stop_main_on_interrupt=stop_main_on_interrupt,
+@@ -344,3 +446,7 @@ class SkillEvaluatorDockerEnvironment(DockerEnvironment):
+         communication = asyncio.create_task(
+-            process.communicate(stdin_bytes) if stdin_bytes is not None else process.communicate()
++            _compose_communication(
++                process,
++                stdin_bytes=stdin_bytes,
++                output_tail_bytes=output_tail_bytes,
++            )
+         )
+@@ -392,2 +498,9 @@ class SkillEvaluatorDockerEnvironment(DockerEnvironment):
          if check and result.return_code != 0:
 +            startup_diagnostics = ""
 +            if command and command[0] == "up" and "--wait" in command:
@@ -87,7 +194,7 @@ diff --git a/src/skillevaluator/tier3/harbor/secure_docker_environment.py b/src/
 +                )
 +            diagnostic_suffix = f" Startup diagnostics: {startup_diagnostics}." if startup_diagnostics else ""
              raise RuntimeError(
-@@ -395,3 +449,3 @@ class SkillEvaluatorDockerEnvironment(DockerEnvironment):
+@@ -395,3 +508,3 @@ class SkillEvaluatorDockerEnvironment(DockerEnvironment):
                  f"Command: {' '.join(full_command)}. Return code: {result.return_code}. "
 -                f"Stdout: {result.stdout}. Stderr: {result.stderr}."
 +                f"Stdout: {result.stdout}. Stderr: {result.stderr}.{diagnostic_suffix}"

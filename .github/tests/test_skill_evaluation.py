@@ -9,6 +9,7 @@ import inspect
 import io
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import tempfile
@@ -464,19 +465,41 @@ class UpstreamTests(unittest.TestCase):
                                 and node.name == "SkillEvaluatorDockerEnvironment")
             diagnostics = next(node for node in secure_class.body if isinstance(node, ast.AsyncFunctionDef)
                                and node.name == "_startup_failure_diagnostics")
+            run_compose = next(node for node in secure_class.body if isinstance(node, ast.AsyncFunctionDef)
+                               and node.name == "_run_docker_compose_command")
             format_diagnostic = next(node for node in secure_tree.body if isinstance(node, ast.FunctionDef)
                                      and node.name == "_format_startup_diagnostic")
-            bounded_diagnostic = next(node for node in secure_tree.body if isinstance(node, ast.FunctionDef)
-                                      and node.name == "_bounded_startup_diagnostic")
-            secure_namespace = {"ExecResult": object, "Mapping": Mapping}
+            bounded_output = next(node for node in secure_tree.body if isinstance(node, ast.AsyncFunctionDef)
+                                  and node.name == "_bounded_compose_output")
+            compose_communication = next(node for node in secure_tree.body if isinstance(node, ast.AsyncFunctionDef)
+                                         and node.name == "_compose_communication")
+            redact = next(node for node in secure_tree.body if isinstance(node, ast.FunctionDef)
+                          and node.name == "_redact")
+            redact_result = next(node for node in secure_tree.body if isinstance(node, ast.FunctionDef)
+                                 and node.name == "_redact_result")
+            secure_namespace = {
+                "ExecResult": secure_docker_environment.ExecResult,
+                "Mapping": Mapping,
+                "asyncio": asyncio,
+                "os": os,
+                "re": re,
+                "_sanitize_docker_compose_project_name": lambda value: value,
+            }
             secure_nodes = [
+                assignment("_MIN_EXACT_SECRET_LENGTH"),
+                assignment("_SECRET_ENV_NAME_RE"),
                 assignment("_STARTUP_DIAGNOSTIC_TIMEOUT_SECONDS"),
-                assignment("_STARTUP_STATE_MAX_CHARS"),
-                assignment("_STARTUP_LOG_MAX_CHARS"),
+                assignment("_STARTUP_STATE_MAX_BYTES"),
+                assignment("_STARTUP_LOG_MAX_BYTES"),
+                assignment("_STARTUP_DIAGNOSTIC_READ_CHUNK_BYTES"),
                 assignment("_STARTUP_TRUNCATION_MARKER"),
-                bounded_diagnostic,
+                redact,
+                redact_result,
+                bounded_output,
+                compose_communication,
                 format_diagnostic,
                 diagnostics,
+                run_compose,
             ]
             exec(compile(ast.Module(body=secure_nodes, type_ignores=[]), str(secure_docker_target), "exec"),
                  secure_namespace)
@@ -489,7 +512,7 @@ class UpstreamTests(unittest.TestCase):
                     self.responses = iter((
                         SimpleNamespace(stdout='[{"State":"exited","ExitCode":1,"Error":"[REDACTED]"}]',
                                         stderr=None, return_code=0),
-                        SimpleNamespace(stdout=("x" * 5000) + " codex exited with status 1 [REDACTED]",
+                        SimpleNamespace(stdout=" ... [truncated] ... codex exited with status 1 [REDACTED]",
                                         stderr=None, return_code=0),
                     ))
 
@@ -517,6 +540,102 @@ class UpstreamTests(unittest.TestCase):
                 self.assertEqual(kwargs["timeout_sec"], 8)
                 self.assertEqual(kwargs["env_overrides"], {"OPENAI_API_KEY": secret})
                 self.assertEqual(kwargs["redact_values"], {secret})
+            self.assertEqual(
+                [kwargs["output_tail_bytes"] for _, kwargs in compose.calls],
+                [2048, 4096],
+            )
+
+            class OutputReader:
+                def __init__(self, chunks):
+                    self.chunks = iter(chunks)
+                    self.read_sizes = []
+
+                async def read(self, size):
+                    self.read_sizes.append(size)
+                    return next(self.chunks)
+
+            class BoundedOutputProcess:
+                def __init__(self):
+                    self.stdout = OutputReader([
+                        b"x" * 10000,
+                        b" terminal Docker build failure",
+                        b"",
+                    ])
+                    self.communicated = False
+                    self.waited = False
+
+                async def communicate(self, *_):
+                    self.communicated = True
+                    raise AssertionError("bounded diagnostics must not use communicate()")
+
+                async def wait(self):
+                    self.waited = True
+
+            process = BoundedOutputProcess()
+            bounded_stdout, bounded_stderr = asyncio.run(secure_namespace["_compose_communication"](
+                process,
+                stdin_bytes=None,
+                output_tail_bytes=64,
+            ))
+            self.assertEqual(bounded_stderr, b"")
+            self.assertLessEqual(len(bounded_stdout), 64)
+            self.assertTrue(bounded_stdout.startswith(b" ... [truncated] ... "))
+            self.assertTrue(bounded_stdout.endswith(b"terminal Docker build failure"))
+            self.assertFalse(process.communicated)
+            self.assertTrue(process.waited)
+            self.assertEqual(process.stdout.read_sizes, [8192, 8192, 8192])
+
+            class StartupProcess:
+                def __init__(self):
+                    self.returncode = 1
+
+                async def communicate(self):
+                    return f"startup failure {secret}".encode(), b""
+
+            class StartupDiagnosticProcess:
+                def __init__(self, label):
+                    self.returncode = 0
+                    self.stdout = OutputReader([
+                        f"{label} emitted {secret}".encode(),
+                        b"",
+                    ])
+                    self.communicated = False
+                    self.waited = False
+
+                async def communicate(self, *_):
+                    self.communicated = True
+                    raise AssertionError("bounded startup diagnostics must not use communicate()")
+
+                async def wait(self):
+                    self.waited = True
+
+            class StartupCompose:
+                _run_docker_compose_command = secure_namespace["_run_docker_compose_command"]
+                _startup_failure_diagnostics = secure_namespace["_startup_failure_diagnostics"]
+
+                def __init__(self):
+                    self.session_id = "diagnostic-test"
+                    self.environment_dir = root
+                    self.environment_name = "diagnostic-test"
+                    self._docker_compose_paths = []
+
+                def _compose_env_vars(self, *, include_os_env):
+                    if not include_os_env:
+                        raise AssertionError("expected inherited Compose environment")
+                    return {"OPENAI_API_KEY": secret}
+
+            startup = StartupCompose()
+            state = StartupDiagnosticProcess("state")
+            logs = StartupDiagnosticProcess("logs")
+            with patch.object(asyncio, "create_subprocess_exec", new_callable=AsyncMock,
+                              side_effect=[StartupProcess(), state, logs]), self.assertRaises(RuntimeError) as failure:
+                asyncio.run(startup._run_docker_compose_command(["up", "--detach", "--wait"]))
+            self.assertNotIn(secret, str(failure.exception))
+            self.assertIn("[REDACTED]", str(failure.exception))
+            self.assertFalse(state.communicated)
+            self.assertFalse(logs.communicated)
+            self.assertTrue(state.waited)
+            self.assertTrue(logs.waited)
 
 
 class WorkflowTests(unittest.TestCase):
