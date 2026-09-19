@@ -277,16 +277,25 @@ artifact (14 days) for JSON, Markdown, HTML, and strict dataset reports before
 changing existing skill content to address the baseline.
 
 In **Settings > Actions > General > Actions permissions**, retain the selected
-actions policy and full-SHA pinning requirement, and allow these reviewed refs:
+actions policy and full-SHA pinning requirement. Allow GitHub-owned actions and
+these exact reviewed external refs:
+
+<!-- external-action-requirements:start -->
 
 ```text
 astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
 benchmark-action/github-action-benchmark@4322e5726e6334590d251fc4f92bec0efafc45dc
+docker/setup-compose-action@54042514f505b273907334ae2b9cdbb9a0213c1a
 ```
 
-The first is required for validation and benchmarking; the second is required
-for durable benchmark history. Without these entries, GitHub rejects the
-workflow before starting jobs. No broader third-party action access is needed.
+<!-- external-action-requirements:end -->
+
+`astral-sh/setup-uv` is required for validation and benchmarking;
+`benchmark-action/github-action-benchmark` publishes durable history;
+`docker/setup-compose-action` installs the benchmark's pinned Compose runtime.
+Without these entries, GitHub rejects the workflow before starting jobs. No
+broader third-party action access is needed. CI checks this list against every
+workflow's external action references; live repository settings must also match.
 
 ### Manual behavioral benchmarks
 
