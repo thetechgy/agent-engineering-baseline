@@ -16,6 +16,7 @@ import sys
 POLICY = {
     "evaluator_revision": "ac0a04905100acdafc6c95829311a9739c340ff6",
     "harbor": "0.13.2",
+    "docker_compose": "5.0.2",
     "codex": "0.155.1",
     "python": "3.13",
     "model": "gpt-5.6-sol",
@@ -233,6 +234,13 @@ def usage_summary(run):
     return lines
 
 
+def validate_benchmark_versions(versions):
+    require(versions["python"].startswith("3.13.") and versions["skillevaluator"] == "0.3.0"
+            and versions["harbor"] == POLICY["harbor"]
+            and versions.get("docker_compose") == POLICY["docker_compose"],
+            "Installed evaluator/runtime version mismatch")
+
+
 def benchmark_report(workspace, root, name, mode, destination):
     # These native APIs validate run identity/completeness; never imported by the publisher.
     from skillevaluator.evaluation import EvaluationService
@@ -248,9 +256,7 @@ def benchmark_report(workspace, root, name, mode, destination):
             "Incomplete or failed native benchmark")
     require((run / "report.html").is_file() and not (run / "report.html").is_symlink(),
             "Missing native HTML benchmark report")
-    versions = read_json(root / "versions.json")
-    require(versions["python"].startswith("3.13.") and versions["skillevaluator"] == "0.3.0"
-            and versions["harbor"] == POLICY["harbor"], "Installed evaluator/runtime version mismatch")
+    validate_benchmark_versions(read_json(root / "versions.json"))
     require(result["skill_name"] == name, "Result skill mismatch")
     config = result["run_config"]
     agent = result["agents"]["codex"]
