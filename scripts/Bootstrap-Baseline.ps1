@@ -533,7 +533,7 @@ function Install-ReviewedBundle {
                 try {
                     New-ApmJunction -Path $currentPath -Target $oldCurrentTarget -Confirm:$false
                 }
-                catch { Write-Warning -Message "Unable to restore the prior current junction: $_" }
+                catch { Write-Warning -Message "Incomplete APM rollback: unable to restore the prior current junction; inspect $oldCurrentTarget for recovery: $_" }
             }
             try {
                 if ($shimWriteStarted -and $hadShim) {

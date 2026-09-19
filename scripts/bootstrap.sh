@@ -293,7 +293,7 @@ promote_bundle() (
                 ln -s "$old_link_target" "$link_path" || rollback_failed=true
             fi
             if [ "$rollback_failed" = true ]; then
-                log "warning: APM rollback was incomplete; any remaining backup is at $backup_path."
+                log "warning: APM rollback was incomplete; inspect $bundle_path and $backup_path for recovery."
             else
                 log 'APM bundle promotion failed; the prior managed installation was restored.'
             fi

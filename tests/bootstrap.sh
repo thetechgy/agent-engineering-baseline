@@ -549,8 +549,8 @@ assert_true 'verified command remains usable after backup cleanup failure' \
 
 # A second failure during rollback must preserve the backup and disconnect the command.
 for prior in existing dangling; do
-    for rollback_fault in remove restore; do
-        [ "$prior/$rollback_fault" != dangling/restore ] || continue
+    for rollback_fault in remove restore link; do
+        if [ "$prior" = dangling ] && [ "$rollback_fault" != remove ]; then continue; fi
         new_case "rollback-$prior-$rollback_fault"
         make_fixture Linux x86_64
         if [ "$prior" = existing ]; then
@@ -572,13 +572,21 @@ EOF
             real_command=$(command -v rm)
             command_name='rm'
             pattern="$CASE_ROOT/install/lib/apm"
-        else
+        elif [ "$rollback_fault" = restore ]; then
             real_command=$(command -v mv)
             command_name='mv'
             pattern='*/.apm-rollback-*'
+        else
+            real_command=$(command -v ln)
+            command_name='ln'
+            pattern='unused'
         fi
         cat > "$CASE_BIN/$command_name" <<EOF
 #!/usr/bin/env bash
+if [ '$rollback_fault' = link ]; then
+    [ ! -f '$CASE_ROOT/link-created' ] || exit 73
+    : > '$CASE_ROOT/link-created'
+fi
 case "\${2-}" in
     $pattern)
         # rm receives -rf then path; mv restoration receives backup as first argument.
@@ -593,7 +601,12 @@ EOF
         record_result "$prior rollback $rollback_fault failure is surfaced" failure
         assert_true "$prior rollback $rollback_fault is explicitly incomplete" out_has 'rollback was incomplete'
         assert_true "$prior rollback $rollback_fault leaves command disconnected" test ! -L "$CASE_INSTALL/apm"
-        if [ "$prior" = existing ]; then
+        if [ "$rollback_fault" = link ]; then
+            assert_true 'blocked rollback link preserves old release at its original path' \
+                file_has "$CASE_ROOT/install/lib/apm/_internal/old" 'prior release'
+            assert_true 'restored prior executable remains directly usable' \
+                file_has <("$CASE_ROOT/install/lib/apm/apm" --version) '0.29.0'
+        elif [ "$prior" = existing ]; then
             backup=$(find "$CASE_ROOT/install/lib" -maxdepth 1 -type d -name '.apm-rollback-*' -print -quit)
             assert_true "$rollback_fault failure preserves backup outside replacement" file_has "$backup/_internal/old" 'prior release'
         fi

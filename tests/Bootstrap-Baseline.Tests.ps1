@@ -641,6 +641,35 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         Test-Path -LiteralPath (Join-Path $script:InstallRoot 'current') | Should-BeFalse
     }
 
+    It 'keeps the restored release usable when rollback junction creation is blocked' {
+        & $script:TestRepository.Script -CliOnly -Confirm:$false
+        $release = Join-Path $script:InstallRoot 'releases\v0.29.0'
+        [IO.File]::WriteAllText((Join-Path $release '_internal\old-state'), 'old')
+        $junctionState = [pscustomobject]@{ Calls = 0 }
+        Mock New-Item {
+            if ($ItemType -eq 'Junction') {
+                $junctionState.Calls++
+                if ($junctionState.Calls -eq 2) { throw 'injected rollback junction failure' }
+            }
+            & $OriginalNewItem @PesterBoundParameters
+        }
+        Mock Get-FileHash {
+            if ($LiteralPath -like '*\current\apm.exe') { return [pscustomobject]@{ Hash = ('0' * 64) } }
+            & $OriginalGetFileHash @PesterBoundParameters
+        }
+        $rollbackWarnings = New-Object Collections.Generic.List[string]
+        Mock Write-Warning { $rollbackWarnings.Add($Message) }
+        { & $script:TestRepository.Script -CliOnly -Confirm:$false } |
+            Should-Throw -ExceptionMessage '*reviewed SHA256*'
+        $junctionState.Calls | Should-Be 2
+        ($rollbackWarnings -join ' ') | Should-MatchString 'Incomplete APM rollback'
+        ($rollbackWarnings -join ' ') | Should-MatchString ([regex]::Escape($release))
+        Test-Path -LiteralPath (Join-Path $release '_internal\old-state') | Should-BeTrue
+        Test-Path -LiteralPath (Join-Path $script:InstallRoot 'current') | Should-BeFalse
+        & (Join-Path $release 'apm.exe') --version | Should-MatchString '0\.29\.0'
+        $LASTEXITCODE | Should-Be 0
+    }
+
     It 'rolls back the prior release and junction when shim promotion fails' {
         & $script:TestRepository.Script -CliOnly -Confirm:$false
         $release = Join-Path $script:InstallRoot 'releases\v0.29.0'
