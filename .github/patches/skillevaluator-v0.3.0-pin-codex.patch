@@ -1,22 +1,15 @@
 diff --git a/src/skillevaluator/tier3/harbor/runner.py b/src/skillevaluator/tier3/harbor/runner.py
 --- a/src/skillevaluator/tier3/harbor/runner.py
 +++ b/src/skillevaluator/tier3/harbor/runner.py
-@@ -442,6 +442,8 @@
-             command.extend(["--agent-import-path", agent_import_path])
-         else:
+@@ -444,2 +444,4 @@ def build_harbor_run_command(
              command.extend(["-a", agent])
 +            if agent == "codex":
 +                command.extend(["--ak", "version=0.155.1"])
          command.extend(["--environment-import-path", SECURE_DOCKER_ENV_IMPORT_PATH])
-     else:
-         command.extend(["-a", agent, "--env", env_mode])
 diff --git a/src/skillevaluator/tier3/harbor/runtime_preflight.py b/src/skillevaluator/tier3/harbor/runtime_preflight.py
 --- a/src/skillevaluator/tier3/harbor/runtime_preflight.py
 +++ b/src/skillevaluator/tier3/harbor/runtime_preflight.py
-@@ -833,7 +833,12 @@ def _first_trial_exception_detail(job_dir: Path) -> str:
-             parts = [
-                 part.strip() for part in (exception_type, exception_message) if isinstance(part, str) and part.strip()
-             ]
+@@ -839,4 +839,9 @@ def _first_trial_exception_detail(job_dir: Path) -> str:
              if parts:
 -                detail = " | ".join(" ".join(part.split()) for part in parts)
 -                return f"{result_path.parent.name}: {detail}"[:1500]
@@ -28,3 +21,74 @@ diff --git a/src/skillevaluator/tier3/harbor/runtime_preflight.py b/src/skilleva
 +                    detail = f"{detail[:head_length]}{marker}{detail[-tail_length:]}"
 +                return detail
      return ""
+diff --git a/src/skillevaluator/tier3/harbor/secure_docker_environment.py b/src/skillevaluator/tier3/harbor/secure_docker_environment.py
+--- a/src/skillevaluator/tier3/harbor/secure_docker_environment.py
++++ b/src/skillevaluator/tier3/harbor/secure_docker_environment.py
+@@ -48,1 +48,5 @@ _COMPOSE_CANCEL_SECONDS = 0.1
++_STARTUP_DIAGNOSTIC_TIMEOUT_SECONDS = 8
++_STARTUP_STATE_MAX_CHARS = 2048
++_STARTUP_LOG_MAX_CHARS = 4096
++_STARTUP_TRUNCATION_MARKER = " ... [truncated] ... "
+ _MAIN_CONTAINER_STOP_TIMEOUT_SECONDS = 8
+@@ -116,1 +120,17 @@ def _signal_process_tree(process: asyncio.subprocess.Process, value: signal.Signals) -> None:
++def _bounded_startup_diagnostic(value: str | None, limit: int) -> str:
++    """Return the diagnostic tail without allowing Compose output to dominate a failure."""
++    text = " ".join(value.split()) if value else ""
++    if not text:
++        return "(no output)"
++    if len(text) <= limit:
++        return text
++    return f"{_STARTUP_TRUNCATION_MARKER}{text[-(limit - len(_STARTUP_TRUNCATION_MARKER)):]}"
++
++
++def _format_startup_diagnostic(label: str, result: ExecResult, limit: int) -> str:
++    """Describe one redacted Compose diagnostic command."""
++    text = result.stdout if result.stdout else result.stderr
++    return f"{label} (exit {result.return_code}): {_bounded_startup_diagnostic(text, limit)}"
++
++
+ def _signal_process_tree(process: asyncio.subprocess.Process, value: signal.Signals) -> None:
+@@ -252,1 +272,28 @@ class SkillEvaluatorDockerEnvironment(DockerEnvironment):
++    async def _startup_failure_diagnostics(
++        self,
++        *,
++        env_overrides: Mapping[str, str] | None,
++        secret_values: set[str],
++    ) -> str:
++        """Collect bounded, redacted state before a failed Compose startup is cleaned up."""
++        diagnostics: list[str] = []
++        commands = (
++            ("service state", ["ps", "--all", "--format", "json"], _STARTUP_STATE_MAX_CHARS),
++            ("service logs", ["logs", "--no-color", "--tail", "100"], _STARTUP_LOG_MAX_CHARS),
++        )
++        for label, command, limit in commands:
++            try:
++                result = await self._run_docker_compose_command(
++                    command,
++                    check=False,
++                    timeout_sec=_STARTUP_DIAGNOSTIC_TIMEOUT_SECONDS,
++                    env_overrides=env_overrides,
++                    redact_values=secret_values,
++                )
++            except (OSError, RuntimeError):
++                diagnostics.append(f"{label}: unavailable")
++                continue
++            diagnostics.append(_format_startup_diagnostic(label, result, limit))
++        return " | ".join(diagnostics)
++
+     async def exec(
+@@ -392,2 +439,9 @@ class SkillEvaluatorDockerEnvironment(DockerEnvironment):
+         if check and result.return_code != 0:
++            startup_diagnostics = ""
++            if command and command[0] == "up" and "--wait" in command:
++                startup_diagnostics = await self._startup_failure_diagnostics(
++                    env_overrides=env_overrides,
++                    secret_values=secret_values,
++                )
++            diagnostic_suffix = f" Startup diagnostics: {startup_diagnostics}." if startup_diagnostics else ""
+             raise RuntimeError(
+@@ -395,3 +449,3 @@ class SkillEvaluatorDockerEnvironment(DockerEnvironment):
+                 f"Command: {' '.join(full_command)}. Return code: {result.return_code}. "
+-                f"Stdout: {result.stdout}. Stderr: {result.stderr}."
++                f"Stdout: {result.stdout}. Stderr: {result.stderr}.{diagnostic_suffix}"
+             )

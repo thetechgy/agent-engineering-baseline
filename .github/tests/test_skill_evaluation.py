@@ -12,6 +12,8 @@ import os
 from pathlib import Path
 import subprocess
 import tempfile
+from collections.abc import Mapping
+from types import SimpleNamespace
 import unittest
 from unittest.mock import AsyncMock, patch
 
@@ -323,7 +325,8 @@ class ReportTests(unittest.TestCase):
         sentinel = "sk-proj-" + "synthetic-review-only-" * 3
         diagnostic_marker = " ... [truncated] ... "
         data["execution_errors"] = [
-            f"preflight head {sentinel}{diagnostic_marker}terminal Docker build failure"
+            f"preflight head {sentinel}{diagnostic_marker}"
+            f"Startup diagnostics: service logs (exit 0): terminal Docker build failure"
         ]
         reports.write_json(run / "result.json", data)
         trial = run / "codex/with-skill/trials/case-1"
@@ -393,20 +396,24 @@ class UpstreamTests(unittest.TestCase):
         self.assertEqual(result.exit_code, 0, result.output)
 
     def test_pinned_evaluator_patch_preserves_codex_version_and_preflight_error_tail(self):
-        from skillevaluator.tier3.harbor import runner, runtime_preflight
+        from skillevaluator.tier3.harbor import runner, runtime_preflight, secure_docker_environment
         from harbor.agents.installed.codex import Codex
         runner_source = Path(inspect.getfile(runner)).read_text()
         preflight_source = Path(inspect.getfile(runtime_preflight)).read_text()
+        secure_docker_source = Path(inspect.getfile(secure_docker_environment)).read_text()
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             runner_target = root / "src/skillevaluator/tier3/harbor/runner.py"
             preflight_target = root / "src/skillevaluator/tier3/harbor/runtime_preflight.py"
+            secure_docker_target = root / "src/skillevaluator/tier3/harbor/secure_docker_environment.py"
             runner_target.parent.mkdir(parents=True)
             runner_target.write_text(runner_source)
             preflight_target.write_text(preflight_source)
+            secure_docker_target.write_text(secure_docker_source)
             # Benchmark setup is already patched; quality setup is the pristine source.
             if ('command.extend(["--ak", "version=0.155.1"])' not in runner_source
-                    or 'marker = " ... [truncated] ... "' not in preflight_source):
+                    or 'marker = " ... [truncated] ... "' not in preflight_source
+                    or 'def _startup_failure_diagnostics' not in secure_docker_source):
                 subprocess.run(["git", "apply", "--check", str(REPO / reports.PATCH)], cwd=root, check=True)
                 subprocess.run(["git", "apply", str(REPO / reports.PATCH)], cwd=root, check=True)
             runner_tree = ast.parse(runner_target.read_text())
@@ -446,6 +453,70 @@ class UpstreamTests(unittest.TestCase):
             self.assertTrue(detail.startswith("trial-1: RuntimeError | preflight head"))
             self.assertIn(" ... [truncated] ... ", detail)
             self.assertTrue(detail.endswith(terminal_error))
+
+            secure_tree = ast.parse(secure_docker_target.read_text())
+
+            def assignment(name):
+                return next(node for node in secure_tree.body if isinstance(node, ast.Assign)
+                            and any(isinstance(target, ast.Name) and target.id == name for target in node.targets))
+
+            secure_class = next(node for node in secure_tree.body if isinstance(node, ast.ClassDef)
+                                and node.name == "SkillEvaluatorDockerEnvironment")
+            diagnostics = next(node for node in secure_class.body if isinstance(node, ast.AsyncFunctionDef)
+                               and node.name == "_startup_failure_diagnostics")
+            format_diagnostic = next(node for node in secure_tree.body if isinstance(node, ast.FunctionDef)
+                                     and node.name == "_format_startup_diagnostic")
+            bounded_diagnostic = next(node for node in secure_tree.body if isinstance(node, ast.FunctionDef)
+                                      and node.name == "_bounded_startup_diagnostic")
+            secure_namespace = {"ExecResult": object, "Mapping": Mapping}
+            secure_nodes = [
+                assignment("_STARTUP_DIAGNOSTIC_TIMEOUT_SECONDS"),
+                assignment("_STARTUP_STATE_MAX_CHARS"),
+                assignment("_STARTUP_LOG_MAX_CHARS"),
+                assignment("_STARTUP_TRUNCATION_MARKER"),
+                bounded_diagnostic,
+                format_diagnostic,
+                diagnostics,
+            ]
+            exec(compile(ast.Module(body=secure_nodes, type_ignores=[]), str(secure_docker_target), "exec"),
+                 secure_namespace)
+
+            secret = "sk-proj-" + "diagnostic-only-" * 3
+
+            class ComposeDiagnostics:
+                def __init__(self):
+                    self.calls = []
+                    self.responses = iter((
+                        SimpleNamespace(stdout='[{"State":"exited","ExitCode":1,"Error":"[REDACTED]"}]',
+                                        stderr=None, return_code=0),
+                        SimpleNamespace(stdout=("x" * 5000) + " codex exited with status 1 [REDACTED]",
+                                        stderr=None, return_code=0),
+                    ))
+
+                async def _run_docker_compose_command(self, command, **kwargs):
+                    self.calls.append((command, kwargs))
+                    return next(self.responses)
+
+            compose = ComposeDiagnostics()
+            diagnostic = asyncio.run(secure_namespace["_startup_failure_diagnostics"](
+                compose,
+                env_overrides={"OPENAI_API_KEY": secret},
+                secret_values={secret},
+            ))
+            self.assertIn("service state (exit 0)", diagnostic)
+            self.assertIn("service logs (exit 0)", diagnostic)
+            self.assertIn("codex exited with status 1 [REDACTED]", diagnostic)
+            self.assertIn(" ... [truncated] ... ", diagnostic)
+            self.assertNotIn(secret, diagnostic)
+            self.assertEqual([command for command, _ in compose.calls], [
+                ["ps", "--all", "--format", "json"],
+                ["logs", "--no-color", "--tail", "100"],
+            ])
+            for _, kwargs in compose.calls:
+                self.assertFalse(kwargs["check"])
+                self.assertEqual(kwargs["timeout_sec"], 8)
+                self.assertEqual(kwargs["env_overrides"], {"OPENAI_API_KEY": secret})
+                self.assertEqual(kwargs["redact_values"], {secret})
 
 
 class WorkflowTests(unittest.TestCase):
