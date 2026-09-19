@@ -720,30 +720,6 @@ class UpstreamTests(unittest.TestCase):
 
 
 class WorkflowTests(unittest.TestCase):
-    def test_documented_external_action_requirements_match_all_workflows(self):
-        required = set()
-        for path in sorted((REPO / ".github/workflows").glob("*.y*ml")):
-            pending = [yaml.safe_load(path.read_text())]
-            while pending:
-                node = pending.pop()
-                if isinstance(node, list):
-                    pending.extend(node)
-                elif isinstance(node, dict):
-                    pending.extend(node.values())
-                    action = node.get("uses", "")
-                    if action and not action.startswith(("./", "actions/", "github/")):
-                        self.assertRegex(action, r"^[^@]+@[0-9a-f]{40}$", path.name)
-                        required.add(action)
-        readme = (REPO / "README.md").read_text()
-        section = readme.split("<!-- external-action-requirements:start -->", 1)[1].split(
-            "<!-- external-action-requirements:end -->", 1)[0]
-        documented = re.search(r"```text\n(.*?)\n```", section, re.DOTALL).group(1).splitlines()
-        self.assertTrue(required)
-        for action in documented:
-            self.assertRegex(action, r"^[^@*]+@[0-9a-f]{40}$")
-        self.assertEqual(len(documented), len(set(documented)), "Duplicate documented action")
-        self.assertEqual(set(documented), required)
-
     def test_setup_private_tool_root_for_provenance_key(self):
         setup = (REPO / ".github/scripts/setup-skillevaluator.sh").read_text()
         self.assertIn("umask 077", setup)
@@ -810,6 +786,30 @@ class WorkflowTests(unittest.TestCase):
                         self.assertRegex(step["uses"], r"@[0-9a-f]{40}$")
                     if step.get("uses", "").startswith("actions/checkout@"):
                         self.assertIs(step["with"]["persist-credentials"], False)
+
+    def test_documented_external_action_requirements_match_all_workflows(self):
+        required = set()
+        for path in sorted((REPO / ".github/workflows").glob("*.y*ml")):
+            pending = [yaml.safe_load(path.read_text())]
+            while pending:
+                node = pending.pop()
+                if isinstance(node, list):
+                    pending.extend(node)
+                elif isinstance(node, dict):
+                    pending.extend(node.values())
+                    action = node.get("uses", "")
+                    if action and not action.startswith(("./", "actions/", "github/")):
+                        self.assertRegex(action, r"^[^@]+@[0-9a-f]{40}$", path.name)
+                        required.add(action)
+        readme = (REPO / "README.md").read_text()
+        section = readme.split("<!-- external-action-requirements:start -->", 1)[1].split(
+            "<!-- external-action-requirements:end -->", 1)[0]
+        documented = re.search(r"```text\n(.*?)\n```", section, re.DOTALL).group(1).splitlines()
+        self.assertTrue(required)
+        for action in documented:
+            self.assertRegex(action, r"^[^@*]+@[0-9a-f]{40}$")
+        self.assertEqual(len(documented), len(set(documented)), "Duplicate documented action")
+        self.assertEqual(set(documented), required)
 
     def test_git_guard_detects_ignored_untracked_and_tracked_mutations(self):
         with tempfile.TemporaryDirectory() as directory:
