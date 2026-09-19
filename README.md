@@ -37,8 +37,8 @@ the privileged update workflow.
 
 - `instructions/personal.instructions.md` provides shared engineering
   boundaries.
-- `skills/a11y`, `skills/agent-safety`, `skills/ansible`, `skills/podman`,
-  and `skills/powershell-module-engineering` are maintained local adaptations.
+- `skills/a11y`, `agent-safety`, `ansible`, `podman`, and
+  `powershell-module-engineering` are maintained local adaptations.
 - `skills/powershell-pester-6` is locally authored and remains the selected
   source of truth.
 
