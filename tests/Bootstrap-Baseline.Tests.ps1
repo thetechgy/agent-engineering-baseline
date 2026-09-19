@@ -392,19 +392,25 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         Get-Content -LiteralPath $script:CallLog -Raw | Should-MatchString '\\current\\apm\.exe'
     }
 
-    It 'uses launcher and transitive MCP trust with explicit targets for native deployment' {
-        & $script:TestRepository.Script -Scope Repo -Confirm:$false
-        $calls = Get-Content -LiteralPath $script:CallLog -Raw
-        $calls | Should-MatchString 'install --target codex,copilot --trust-bin --trust-transitive-mcp https://github.com/thetechgy/agent-engineering-baseline\.git#main'
-        $calls | Should-MatchString 'update --yes --target codex,copilot'
-        $calls | Should-MatchString 'compile --target codex,copilot'
-
-        Remove-Item -LiteralPath $script:CallLog -ErrorAction SilentlyContinue
-        & $script:TestRepository.Script -Scope Global -Confirm:$false
-        $calls = Get-Content -LiteralPath $script:CallLog -Raw
-        $calls | Should-MatchString 'install --global --target codex,copilot --trust-bin --trust-transitive-mcp https://github.com/thetechgy/agent-engineering-baseline\.git#main'
-        $calls | Should-MatchString 'update --global --yes --target codex,copilot'
-        $calls | Should-MatchString 'compile --global'
+    It 'selects only the intended native workflow for -Scope <ScopeValue>' -ForEach @(
+        @{ ScopeValue = 'Repo'; GlobalScope = $false }
+        @{ ScopeValue = 'repo'; GlobalScope = $false }
+        @{ ScopeValue = 'REPO'; GlobalScope = $false }
+        @{ ScopeValue = 'Global'; GlobalScope = $true }
+        @{ ScopeValue = 'global'; GlobalScope = $true }
+        @{ ScopeValue = 'GLOBAL'; GlobalScope = $true }
+    ) {
+        & $script:TestRepository.Script -Scope $ScopeValue -Confirm:$false
+        $calls = @(Get-Content -LiteralPath $script:CallLog | Where-Object { $_ -notmatch '--version' })
+        $calls.Count | Should-Be 3
+        $globalOption = if ($GlobalScope) { ' --global' } else { '' }
+        $calls[0] | Should-MatchString (
+            ' install' + $globalOption + ' --target codex,copilot --trust-bin --trust-transitive-mcp ' +
+            'https://github.com/thetechgy/agent-engineering-baseline\.git#main$'
+        )
+        $calls[1] | Should-MatchString (' update' + $globalOption + ' --yes --target codex,copilot$')
+        $compileOptions = if ($GlobalScope) { ' --global' } else { ' --target codex,copilot' }
+        $calls[2] | Should-MatchString (' compile' + $compileOptions + '$')
     }
 
     It 'honors a literal package reference override' {
