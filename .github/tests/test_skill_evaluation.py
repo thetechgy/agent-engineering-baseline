@@ -416,6 +416,15 @@ class UpstreamTests(unittest.TestCase):
 
 
 class WorkflowTests(unittest.TestCase):
+    def test_setup_private_tool_root_for_provenance_key(self):
+        setup = (REPO / ".github/scripts/setup-skillevaluator.sh").read_text()
+        self.assertIn("umask 077", setup)
+        self.assertLess(
+            setup.index("umask 077"),
+            setup.index('mkdir -p "$tool_root/bin" "$tool_root/dependencies"'),
+        )
+        self.assertIn('chmod 700 "$tool_root"', setup)
+
     def test_permissions_pins_and_exact_history_handoff(self):
         workflow = yaml.safe_load((REPO / ".github/workflows/benchmark-skills.yml").read_text())
         # PyYAML 1.1 parses the bare YAML key `on` as True.
