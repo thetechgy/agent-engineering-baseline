@@ -21,10 +21,10 @@ BeforeAll {
     $script:ValidationSource = Join-Path $script:RepositoryRoot 'scripts/Invoke-Validation.ps1'
     $script:IsWindowsPlatform = $env:OS -ceq 'Windows_NT'
 
-    $script:OriginalCopyItem = Get-Command Copy-Item -CommandType Cmdlet
-    $script:OriginalMoveItem = Get-Command Move-Item -CommandType Cmdlet
-    $script:OriginalNewItem = Get-Command New-Item -CommandType Cmdlet
-    $script:OriginalGetFileHash = Get-Command Get-FileHash
+    $OriginalCopyItem = Get-Command Copy-Item -CommandType Cmdlet
+    $OriginalMoveItem = Get-Command Move-Item -CommandType Cmdlet
+    $OriginalNewItem = Get-Command New-Item -CommandType Cmdlet
+    $OriginalGetFileHash = Get-Command Get-FileHash
 
     function New-TestRepository {
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
@@ -537,37 +537,36 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         }
         $processPath = $env:PATH
         $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
-        $script:FaultHit = $false
-        $script:PromotionFault = $Fault
+        $faultState = [pscustomobject]@{ Name = $Fault; Hit = $false }
         Mock Copy-Item {
-            if ($script:PromotionFault -eq 'copy' -and $Destination -like '*\.stage-*') {
-                $script:FaultHit = $true
+            if ($faultState.Name -eq 'copy' -and $Destination -like '*\.stage-*') {
+                $faultState.Hit = $true
                 throw 'injected staging failure'
             }
-            & $script:OriginalCopyItem @PesterBoundParameters
+            & $OriginalCopyItem @PesterBoundParameters
         }
         Mock Move-Item {
-            if (-not $script:FaultHit -and (
-                    ($script:PromotionFault -eq 'backup' -and $Destination -like '*\.rollback-*') -or
-                    ($script:PromotionFault -eq 'rename' -and $LiteralPath -like '*\.stage-*'))) {
-                $script:FaultHit = $true
+            if (-not $faultState.Hit -and (
+                    ($faultState.Name -eq 'backup' -and $Destination -like '*\.rollback-*') -or
+                    ($faultState.Name -eq 'rename' -and $LiteralPath -like '*\.stage-*'))) {
+                $faultState.Hit = $true
                 throw 'injected rename failure'
             }
-            & $script:OriginalMoveItem @PesterBoundParameters
+            & $OriginalMoveItem @PesterBoundParameters
         }
         Mock New-Item {
-            if ($script:PromotionFault -eq 'junction' -and $ItemType -eq 'Junction' -and -not $script:FaultHit) {
-                $script:FaultHit = $true
+            if ($faultState.Name -eq 'junction' -and $ItemType -eq 'Junction' -and -not $faultState.Hit) {
+                $faultState.Hit = $true
                 throw 'injected junction failure'
             }
-            & $script:OriginalNewItem @PesterBoundParameters
+            & $OriginalNewItem @PesterBoundParameters
         }
         Mock Get-FileHash {
-            if ($script:PromotionFault -eq 'checksum' -and $LiteralPath -like '*\current\apm.exe') {
-                $script:FaultHit = $true
+            if ($faultState.Name -eq 'checksum' -and $LiteralPath -like '*\current\apm.exe') {
+                $faultState.Hit = $true
                 return [pscustomobject]@{ Hash = ('0' * 64) }
             }
-            & $script:OriginalGetFileHash @PesterBoundParameters
+            & $OriginalGetFileHash @PesterBoundParameters
         }
         $env:APM_TEST_PROMOTION_FAULT = $Fault
         $expectedError = switch ($Fault) {
@@ -584,7 +583,7 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         if ($Fault -in @('execution', 'version')) {
             Get-Content -LiteralPath $script:CallLog -Raw | Should-MatchString '\\current\\apm\.exe'
         }
-        else { $script:FaultHit | Should-BeTrue }
+        else { $faultState.Hit | Should-BeTrue }
         if ($Prior -eq 'existing') {
             Test-Path -LiteralPath (Join-Path $release '_internal\old-state') | Should-BeTrue
             @((Get-Item -LiteralPath $current -Force).Target)[0] | Should-Be $priorCurrentTarget
@@ -606,22 +605,22 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         & $script:TestRepository.Script -CliOnly -Confirm:$false
         $release = Join-Path $script:InstallRoot 'releases\v0.29.0'
         [IO.File]::WriteAllText((Join-Path $release '_internal\old-state'), 'old')
-        $script:OriginalRemoveItem = Get-Command Remove-Item -CommandType Cmdlet
+        $OriginalRemoveItem = Get-Command Remove-Item -CommandType Cmdlet
         Mock Remove-Item {
             if ($LiteralPath -like '*\releases\v0.29.0' -and $Recurse) {
                 throw 'injected locked replacement'
             }
-            & $script:OriginalRemoveItem @PesterBoundParameters
+            & $OriginalRemoveItem @PesterBoundParameters
         }
         Mock Get-FileHash {
             if ($LiteralPath -like '*\current\apm.exe') { return [pscustomobject]@{ Hash = ('0' * 64) } }
-            & $script:OriginalGetFileHash @PesterBoundParameters
+            & $OriginalGetFileHash @PesterBoundParameters
         }
-        $script:RollbackWarnings = @()
-        Mock Write-Warning { $script:RollbackWarnings += $Message }
+        $rollbackWarnings = New-Object Collections.Generic.List[string]
+        Mock Write-Warning { $rollbackWarnings.Add($Message) }
         { & $script:TestRepository.Script -CliOnly -Confirm:$false } |
             Should-Throw -ExceptionMessage '*reviewed SHA256*'
-        ($script:RollbackWarnings -join ' ') | Should-MatchString 'Incomplete APM rollback'
+        ($rollbackWarnings -join ' ') | Should-MatchString 'Incomplete APM rollback'
         $backups = @(Get-ChildItem -LiteralPath (Join-Path $script:InstallRoot 'releases') -Directory -Force |
             Where-Object { $_.Name -like '.rollback-*' })
         $backups.Count | Should-Be 1
