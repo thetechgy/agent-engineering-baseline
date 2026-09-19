@@ -18,3 +18,7 @@ apm_modules/
 
 # Markdown lint cache
 .rumdl_cache/
+
+# Evaluation is external; these entries only guard accidental local defaults.
+/.apm/skills/**/evals/results/
+/.agents/skills/**/evals/results/

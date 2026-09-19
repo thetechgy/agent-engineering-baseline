@@ -22,7 +22,7 @@ The repository uses APM's native dependency model, like a manifest and lockfile:
 - `.apm-checksums` contains exactly ten reviewed SHA-256 digests: the five
   supported release archives and the executable inside each archive.
 - Readable compiled outputs are committed review artifacts and CI requires a
-  clean mechanical regeneration. The only ignored outputs are the six large
+  clean mechanical regeneration. The only ignored APM outputs are the six large
   `msgraph` indexes and six platform binaries named exactly in `.gitignore`;
   the lockfile and `apm audit --ci` retain their integrity contract.
 
@@ -253,6 +253,147 @@ deployment in its non-TTY scratch replay. Validation therefore runs the unchange
 `apm audit --ci` command in a local pseudo-terminal so its full drift check
 includes the launcher set installed with `--trust-bin`; it does not use
 `--no-drift`.
+
+## Skill evaluation
+
+[NVIDIA SkillEvaluator](https://github.com/NVIDIA/SkillEvaluator/tree/ac0a04905100acdafc6c95829311a9739c340ff6)
+is a separate, read-only consumer of authored `.apm/skills/` content. APM remains
+the sole producer of `.agents/skills/` and the deployment authority for Codex
+and GitHub Copilot. Evaluation is not an APM dependency or installation step.
+
+The independent **Skill quality** job in `Validate` runs deterministic Tier 1
+checks with the public/external profile and all required security scanners.
+It uses pinned SkillEvaluator v0.3.0 and uv-managed Python 3.13, disables LLM
+checks and Tier 2, and invokes native strict validation for every authored
+`evals/evals.json`. Deliberately flawed evaluation fixtures remain test inputs
+under the evaluator's native scan exclusions.
+Before evaluation, the authored input tree must contain only real directories
+and regular files; symlinks and special files fail the preflight.
+
+Skill findings and incomplete baseline evidence are initially **advisory**.
+Broken setup/runtime, missing or malformed reports, invalid eval datasets, and
+checkout mutations fail the job. Review the job summary and the `skill-quality`
+artifact (14 days) for JSON, Markdown, HTML, and strict dataset reports before
+changing existing skill content to address the baseline.
+
+In **Settings > Actions > General > Actions permissions**, retain the selected
+actions policy and full-SHA pinning requirement, and allow these reviewed refs:
+
+```text
+astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
+benchmark-action/github-action-benchmark@4322e5726e6334590d251fc4f92bec0efafc45dc
+```
+
+The first is required for validation and benchmarking; the second is required
+for durable benchmark history. Without these entries, GitHub rejects the
+workflow before starting jobs. No broader third-party action access is needed.
+
+### Manual behavioral benchmarks
+
+In **Actions > Benchmark skills > Run workflow**, select a branch, a local
+skill name with an authored dataset (initially `podman`), and a mode:
+
+| Mode | Attempts per case in each arm | Podman task trials | Durable history |
+| --- | --- | --- | --- |
+| `standard` | 1 | 20 | Successful main dispatches only |
+| `confirmation` | 3 | 60 | Diagnostic only |
+
+Both modes retain the without-skill baseline and use native Codex evaluation
+in Docker, with concurrency 2 and a three-hour evaluation timeout. Codex and
+the evaluator/judge explicitly use **OpenAI GPT-5.6 Sol**. Native runtime smoke
+tests and judging add calls beyond the task-trial counts. Runs consume OpenAI
+API usage; neither mode runs automatically on pushes, PRs, or a schedule.
+Only one benchmark workflow runs at a time.
+
+The Evaluate job waits for approval through the protected `skill-benchmark`
+environment. Review the dispatched commit SHA, workflow, skill, dataset, and
+fixtures before approving. Reviewed feature branches are supported. The job
+checks out that exact SHA and validates inputs before using the credential.
+Environment approval does not make malicious prompts safe: native Codex can
+access its API credential inside the container.
+
+Both modes and feature-branch runs produce job summaries and native collected
+results as `skill-benchmark-<run>-<attempt>` artifacts, retained for 30 days.
+Native token counts and any available `cost_usd` appear in the summary. These
+are reported subtotals, may include Harbor's cost estimates, and are not a
+complete API bill; missing usage remains unknown. Publication stages only known
+native reports, dataset snapshots, provenance, and collected diagnostics, using
+upstream redaction helpers. Transient Harbor execution directories, hidden
+files, credentials, links, and unexpected files are excluded. Redaction is
+best-effort and cannot prevent deliberate encoded secret disclosure; review is
+the trust boundary. Treat downloaded prompts and agent outputs as untrusted.
+
+Successful **standard** runs explicitly dispatched against `main` additionally
+append Skill Lift, Effectiveness, Correctness, and Discoverability to
+[github-action-benchmark](https://github.com/benchmark-action/github-action-benchmark/tree/4322e5726e6334590d251fc4f92bec0efafc45dc)
+history on `gh-pages`. Security and efficiency remain in complete results.
+Each skill and benchmark policy has a separate series; dataset digests and
+source revisions identify each point. The Pages deployment summary links the
+series at `<Pages URL>/<skill>/<policy-id>/`. Confirmation runs never publish.
+
+Evaluation has read-only repository permission; only its live step receives
+the OpenAI secret. A separate publisher receives only allowlisted numeric
+metrics and has repository-write permission. A third job deploys the exact
+published history commit through native Pages Actions. Neither publishing job
+receives the inference credential or executes the evaluator, Codex, or skills.
+
+All outputs live under the runner's temporary directory, and CI explicitly
+requires an unchanged checkout, including ignored files. Ignore rules for
+accidental `evals/results/` directories are defense in depth, not isolation.
+Do not save reports or `BENCHMARK.md` into either APM-managed skill tree.
+
+### One-time benchmark setup
+
+1. In **Settings > Environments**, create `skill-benchmark` with a required
+   trusted maintainer reviewer. Allow reviewed feature branches as well as main;
+   do not restrict this environment to main. Leave **Prevent self-review** off
+   for a single-maintainer repository. Independent approval can be enabled when
+   additional trusted maintainers are available. The workflow sets
+   `deployment: false`, so required-reviewer and secret gating apply without
+   creating deployment records; do not add incompatible custom deployment
+   protection apps.
+2. Add **environment secret** `OPENAI_API_KEY` to `skill-benchmark`, with access
+   to `gpt-5.6-sol`. Remove any repository-level secret with that name so another
+   workflow cannot access that copy without environment approval. GitHub cannot
+   reveal an existing secret for migration: re-enter it from your secure source
+   or create a replacement. Only approve reviewed workflow and skill revisions.
+3. Initialize an empty `gh-pages` branch once. From a disposable clone, create
+   an orphan branch, remove its inherited tracked files, make an empty initial
+   commit, and push only that branch. No raw results belong on this branch.
+4. In **Settings > Pages > Build and deployment > Source**, select
+   **GitHub Actions**. Keep default Actions token permissions read-only; the
+   workflow requests its required publishing permissions explicitly.
+5. In **Settings > Environments > github-pages**, restrict deployment branches
+   to `main`. The workflow dispatch ref remains main even though the static
+   content is checked out at the published history commit.
+
+The reviewed tool pins and the small Codex compatibility patch are CI-owned
+under `.github/`. The patch passes Codex 0.155.1 through Harbor's native version
+argument only for Docker Codex execution; tests reject patch drift. Evaluator
+Python is pinned to 3.13 and its full resolved version is recorded. Harbor's
+native container base, Node patch version, and verifier runtime dependencies
+remain upstream-managed; consider runtime drift when comparing results.
+No custom grading or model fallback policy is introduced. Copilot deployment
+compatibility continues through APM; live behavioral evaluation uses Codex.
+
+SkillSpector reuses its reviewed upstream frozen lock in a separate environment;
+Semgrep uses uv's isolated tool installation with CI-owned version constraints.
+Artifacts record scanner versions and resolved Python dependency inventories.
+To deliberately update Semgrep's constraints with uv 0.12.17, run:
+
+```bash
+uv pip compile --python-version 3.13 --python-platform x86_64-unknown-linux-gnu \
+  .github/requirements/semgrep.in --output-file .github/requirements/semgrep.txt \
+  --no-header --no-annotate
+```
+
+Review the resulting dependency changes and rerun deterministic validation.
+These are Python runtime dependency constraints, not recursive OS/build-tool
+locks; no automatic dependency update mechanism is added.
+
+Tier 2 remains available through upstream's on-demand commands. Recurring
+overlap analysis, Copilot adapters, PR comments, SARIF, and cost charts are
+outside this initial integration.
 
 ## Scheduled reviewed updates
 

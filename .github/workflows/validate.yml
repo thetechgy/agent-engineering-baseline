@@ -9,6 +9,88 @@ permissions:
   contents: read
 
 jobs:
+  skill-quality:
+    name: Skill quality (advisory findings)
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Require an initially clean checkout
+        run: |
+          test -z "$(git status --porcelain=v1 --untracked-files=all --ignored)"
+          python3 .github/scripts/skill_reports.py preflight
+
+      - name: Set up pinned uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: '0.12.17'
+          enable-cache: false
+
+      - name: Install evaluator and security scanners with Python 3.13
+        run: bash .github/scripts/setup-skillevaluator.sh quality
+
+      - name: Test CI contracts without inference
+        run: |
+          shellcheck .github/scripts/setup-skillevaluator.sh
+          "$SKILL_EVALUATOR_PYTHON" -m unittest discover -s .github/tests -v
+
+      - name: Collect native skill and dataset reports
+        env:
+          SKILLEVALUATOR_RESULTS_DIR: ${{ runner.temp }}/skill-quality/results
+        run: |
+          set -euo pipefail
+          report_root="$RUNNER_TEMP/skill-quality"
+          mkdir -p "$report_root/reports" "$report_root/datasets"
+          cp "$RUNNER_TEMP/skill-evaluation-tools/versions.json" "$report_root/versions.json"
+          cp -r "$RUNNER_TEMP/skill-evaluation-tools/dependencies" "$report_root/dependencies"
+          cd "$report_root"
+          status=0
+          skillevaluator validate "$GITHUB_WORKSPACE/.apm/skills" \
+            --external --tiers 1 --no-llm --no-dedup --continue-on-failure \
+            -r json,markdown,html -o "$report_root/reports" || status=$?
+          printf '%s\n' "$status" > "$report_root/catalog.exit"
+          for dataset in "$GITHUB_WORKSPACE"/.apm/skills/*/evals/evals.json; do
+            if [ -L "$dataset" ]; then
+              echo '::error::Linked evaluation dataset is not allowed.'
+              exit 1
+            fi
+            [ -f "$dataset" ] || continue
+            skill_dir="$(dirname "$(dirname "$dataset")")"
+            skill="$(basename "$skill_dir")"
+            status=0
+            skillevaluator tier3 validate "$skill_dir" --strict --json \
+              > "$report_root/datasets/$skill.json" \
+              2> "$report_root/datasets/$skill.stderr" || status=$?
+            printf '%s\n' "$status" > "$report_root/datasets/$skill.exit"
+          done
+
+      - name: Summarize findings and enforce infrastructure contracts
+        if: always()
+        run: python3 .github/scripts/skill_reports.py catalog "$RUNNER_TEMP/skill-quality"
+
+      - name: Verify evaluator left the checkout unchanged
+        if: always()
+        run: |
+          git diff --exit-code
+          test -z "$(git status --porcelain=v1 --untracked-files=all --ignored)"
+
+      - name: Upload skill quality reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: skill-quality
+          path: ${{ runner.temp }}/skill-quality/
+          if-no-files-found: error
+          retention-days: 14
+
   linux:
     name: Full validation (PowerShell 7 and Bash)
     runs-on: ubuntu-latest

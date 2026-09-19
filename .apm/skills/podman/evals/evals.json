@@ -87,6 +87,8 @@
     },
     {
       "id": 8,
+      "expected_skill": null,
+      "should_trigger": false,
       "prompt": "Review this Docker Swarm stack and tune Docker daemon.json.",
       "expected_output": "The Podman skill does not dominate a Docker-only request unless the user explicitly asks to migrate it to Podman.",
       "assertions": [
