@@ -505,6 +505,11 @@ class UpstreamTests(unittest.TestCase):
                  secure_namespace)
 
             secret = "sk-proj-" + "diagnostic-only-" * 3
+            secret_bytes = secret.encode()
+            diagnostic_limit = 64
+            diagnostic_marker = b" ... [truncated] ... "
+            terminal_failure = b" terminal Docker build failure"
+            exposed_secret_bytes = diagnostic_limit - len(diagnostic_marker) - len(terminal_failure)
 
             class ComposeDiagnostics:
                 def __init__(self):
@@ -557,8 +562,8 @@ class UpstreamTests(unittest.TestCase):
             class BoundedOutputProcess:
                 def __init__(self):
                     self.stdout = OutputReader([
-                        b"x" * 10000,
-                        b" terminal Docker build failure",
+                        b"x" * 10000 + secret_bytes[:29],
+                        secret_bytes[29:] + terminal_failure,
                         b"",
                     ])
                     self.communicated = False
@@ -575,12 +580,16 @@ class UpstreamTests(unittest.TestCase):
             bounded_stdout, bounded_stderr = asyncio.run(secure_namespace["_compose_communication"](
                 process,
                 stdin_bytes=None,
-                output_tail_bytes=64,
+                output_tail_bytes=diagnostic_limit,
+                secret_values={secret},
             ))
             self.assertEqual(bounded_stderr, b"")
-            self.assertLessEqual(len(bounded_stdout), 64)
-            self.assertTrue(bounded_stdout.startswith(b" ... [truncated] ... "))
+            self.assertLessEqual(len(bounded_stdout), diagnostic_limit)
+            self.assertTrue(bounded_stdout.startswith(diagnostic_marker))
             self.assertTrue(bounded_stdout.endswith(b"terminal Docker build failure"))
+            self.assertIn(b"[REDACTED]", bounded_stdout)
+            self.assertNotIn(secret_bytes, bounded_stdout)
+            self.assertNotIn(secret_bytes[-exposed_secret_bytes:], bounded_stdout)
             self.assertFalse(process.communicated)
             self.assertTrue(process.waited)
             self.assertEqual(process.stdout.read_sizes, [8192, 8192, 8192])
