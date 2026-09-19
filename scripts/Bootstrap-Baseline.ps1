@@ -471,16 +471,17 @@ function Install-ReviewedBundle {
         Assert-PlainTree -Path $stagePath -Label 'Staged persistent APM bundle'
         Assert-ReviewedFile -Path (Join-Path $stagePath 'apm.exe') -Name $ExecutableMember -Metadata $Metadata
 
+        if ($hadCurrent) {
+            Remove-ValidatedJunction -Path $currentPath -Confirm:$false
+            $currentRemoved = $true
+        }
+
         if ($hadRelease) {
             Move-Item -LiteralPath $releasePath -Destination $backupPath
             $releaseBackedUp = $true
         }
         Move-Item -LiteralPath $stagePath -Destination $releasePath
         $releasePromoted = $true
-        if ($hadCurrent) {
-            Remove-ValidatedJunction -Path $currentPath -Confirm:$false
-            $currentRemoved = $true
-        }
         New-ApmJunction -Path $currentPath -Target $releasePath -Confirm:$false
         $currentCreated = $true
         $shimWriteStarted = $true
@@ -528,7 +529,11 @@ function Install-ReviewedBundle {
                 catch { Write-Warning -Message "Incomplete APM rollback: prior release retained at ${backupPath}: $_" }
             }
             # Never reconnect current to an unverified same-version replacement.
-            $canRestoreCurrent = $releaseRestored -or ($currentRemoved -and $oldCurrentTarget -ine $releasePath)
+            $canRestoreCurrent = $false
+            if ($currentRemoved) {
+                $releaseUnchanged = $hadRelease -and -not $releaseBackedUp -and -not $releasePromoted
+                $canRestoreCurrent = $releaseRestored -or $releaseUnchanged -or $oldCurrentTarget -ine $releasePath
+            }
             if ($currentRemoved -and $canRestoreCurrent -and -not (Test-Path -LiteralPath $currentPath)) {
                 try {
                     New-ApmJunction -Path $currentPath -Target $oldCurrentTarget -Confirm:$false

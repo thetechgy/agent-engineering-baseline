@@ -670,6 +670,22 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         $LASTEXITCODE | Should-Be 0
     }
 
+    It 'restores current to the unchanged release when the backup rename fails' {
+        & $script:TestRepository.Script -CliOnly -Confirm:$false
+        $release = Join-Path $script:InstallRoot 'releases\v0.29.0'
+        [IO.File]::WriteAllText((Join-Path $release '_internal\old-state'), 'old')
+        Mock Move-Item {
+            if ($Destination -like '*\.rollback-*') { throw 'injected backup failure' }
+            & $OriginalMoveItem @PesterBoundParameters
+        }
+        { & $script:TestRepository.Script -CliOnly -Confirm:$false } |
+            Should-Throw -ExceptionMessage '*injected backup failure*'
+        Test-Path -LiteralPath (Join-Path $release '_internal\old-state') | Should-BeTrue
+        @((Get-Item -LiteralPath (Join-Path $script:InstallRoot 'current') -Force).Target)[0] | Should-Be $release
+        & (Join-Path $script:InstallRoot 'bin\apm.cmd') --version | Should-MatchString '0\.29\.0'
+        $LASTEXITCODE | Should-Be 0
+    }
+
     It 'rolls back the prior release and junction when shim promotion fails' {
         & $script:TestRepository.Script -CliOnly -Confirm:$false
         $release = Join-Path $script:InstallRoot 'releases\v0.29.0'

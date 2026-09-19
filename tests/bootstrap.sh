@@ -613,5 +613,28 @@ EOF
     done
 done
 
+new_case blocked-old-link-removal
+make_fixture Linux x86_64
+run_case --cli-only
+record_result 'blocked old-link fixture installs prior release' success
+printf 'prior release\n' > "$CASE_ROOT/install/lib/apm/_internal/old"
+real_rm=$(command -v rm)
+cat > "$CASE_BIN/rm" <<EOF
+#!/usr/bin/env bash
+for path in "\$@"; do
+    case "\$path" in '$CASE_INSTALL/apm'|'$CASE_ROOT/install/lib/apm') exit 73 ;; esac
+done
+exec '$real_rm' "\$@"
+EOF
+chmod +x "$CASE_BIN/rm"
+run_case --cli-only
+record_result 'blocked old-link removal aborts installation' failure
+assert_true 'old-link removal failure leaves prior release untouched' \
+    file_has "$CASE_ROOT/install/lib/apm/_internal/old" 'prior release'
+assert_true 'old-link removal failure leaves prior command usable' \
+    file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
+assert_true 'old-link removal failure never backs up or replaces the release' \
+    test -z "$(find "$CASE_ROOT/install/lib" -name '.apm-rollback-*' -print -quit)"
+
 printf '\n%d cases, %d failures\n' "$CASES" "$FAILURES"
 exit "$((FAILURES > 0 ? 1 : 0))"

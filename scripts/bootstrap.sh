@@ -311,16 +311,17 @@ promote_bundle() (
     assert_plain_tree "$stage_path" 'Staged persistent APM bundle'
     verify_file "$stage_path/apm" "$EXECUTABLE_MEMBER"
 
+    if [ "$had_link" = true ]; then
+        rm "$link_path"
+        link_removed=true
+    fi
+
     if [ "$had_bundle" = true ]; then
         mv "$bundle_path" "$backup_path"
         backed_up=true
     fi
     mv "$stage_path" "$bundle_path"
     promoted=true
-    if [ "$had_link" = true ]; then
-        rm "$link_path"
-        link_removed=true
-    fi
     ln -s "$bundle_path/apm" "$link_path"
     link_created=true
 
