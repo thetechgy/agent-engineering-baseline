@@ -274,6 +274,18 @@ checkout mutations fail the job. Review the job summary and the `skill-quality`
 artifact (14 days) for JSON, Markdown, HTML, and strict dataset reports before
 changing existing skill content to address the baseline.
 
+In **Settings > Actions > General > Actions permissions**, retain the selected
+actions policy and full-SHA pinning requirement, and allow these reviewed refs:
+
+```text
+astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
+benchmark-action/github-action-benchmark@4322e5726e6334590d251fc4f92bec0efafc45dc
+```
+
+The first is required for validation and benchmarking; the second is required
+for durable benchmark history. Without these entries, GitHub rejects the
+workflow before starting jobs. No broader third-party action access is needed.
+
 ### Manual behavioral benchmarks
 
 In **Actions > Benchmark skills > Run workflow**, select a branch, a local
