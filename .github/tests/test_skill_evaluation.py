@@ -321,6 +321,11 @@ class ReportTests(unittest.TestCase):
         root, run, data = self.benchmark("standard")
         destination = self.root / "publication"
         sentinel = "sk-proj-" + "synthetic-review-only-" * 3
+        diagnostic_marker = " ... [truncated] ... "
+        data["execution_errors"] = [
+            f"preflight head {sentinel}{diagnostic_marker}terminal Docker build failure"
+        ]
+        reports.write_json(run / "result.json", data)
         trial = run / "codex/with-skill/trials/case-1"
         reports.write_json(trial / "result.json", {"output": sentinel, "OPENAI_API_KEY": sentinel})
         (run / "report.html").write_text(f"<p>{sentinel}</p>")
@@ -337,6 +342,10 @@ class ReportTests(unittest.TestCase):
         for path in (trial / "result.json", run / "report.html"):
             self.assertNotIn(sentinel, (destination / path.relative_to(root)).read_text())
             self.assertIn(sentinel, path.read_text())  # No mutation of raw evidence.
+        staged_result = (destination / (run / "result.json").relative_to(root)).read_text()
+        self.assertIn(diagnostic_marker, staged_result)
+        self.assertIn("terminal Docker build failure", staged_result)
+        self.assertNotIn(sentinel, staged_result)
         self.assertEqual(reports.read_json(run / "result.json"), data)
 
     def test_artifact_staging_rejects_links_and_checkout_destinations(self):
@@ -383,23 +392,28 @@ class UpstreamTests(unittest.TestCase):
         result = CliRunner().invoke(cli, ["tier3", "validate", str(skill), "--strict", "--json"])
         self.assertEqual(result.exit_code, 0, result.output)
 
-    def test_codex_patch_uses_native_version_only_for_docker_codex(self):
-        from skillevaluator.tier3.harbor import runner
+    def test_pinned_evaluator_patch_preserves_codex_version_and_preflight_error_tail(self):
+        from skillevaluator.tier3.harbor import runner, runtime_preflight
         from harbor.agents.installed.codex import Codex
-        source = Path(inspect.getfile(runner)).read_text()
+        runner_source = Path(inspect.getfile(runner)).read_text()
+        preflight_source = Path(inspect.getfile(runtime_preflight)).read_text()
         with tempfile.TemporaryDirectory() as directory:
-            target = Path(directory) / "src/skillevaluator/tier3/harbor/runner.py"
-            target.parent.mkdir(parents=True)
-            target.write_text(source)
+            root = Path(directory)
+            runner_target = root / "src/skillevaluator/tier3/harbor/runner.py"
+            preflight_target = root / "src/skillevaluator/tier3/harbor/runtime_preflight.py"
+            runner_target.parent.mkdir(parents=True)
+            runner_target.write_text(runner_source)
+            preflight_target.write_text(preflight_source)
             # Benchmark setup is already patched; quality setup is the pristine source.
-            if 'command.extend(["--ak", "version=0.155.1"])' not in source:
-                subprocess.run(["git", "apply", "--check", str(REPO / reports.PATCH)], cwd=directory, check=True)
-                subprocess.run(["git", "apply", str(REPO / reports.PATCH)], cwd=directory, check=True)
-            tree = ast.parse(target.read_text())
-            function = next(node for node in tree.body if isinstance(node, ast.FunctionDef)
+            if ('command.extend(["--ak", "version=0.155.1"])' not in runner_source
+                    or 'marker = " ... [truncated] ... "' not in preflight_source):
+                subprocess.run(["git", "apply", "--check", str(REPO / reports.PATCH)], cwd=root, check=True)
+                subprocess.run(["git", "apply", str(REPO / reports.PATCH)], cwd=root, check=True)
+            runner_tree = ast.parse(runner_target.read_text())
+            function = next(node for node in runner_tree.body if isinstance(node, ast.FunctionDef)
                             and node.name == "build_harbor_run_command")
             namespace = vars(runner).copy()
-            exec(compile(ast.Module(body=[function], type_ignores=[]), str(target), "exec"), namespace)
+            exec(compile(ast.Module(body=[function], type_ignores=[]), str(runner_target), "exec"), namespace)
             build = namespace["build_harbor_run_command"]
             common = {"dataset_path": "unused", "job_name": "keyless-test"}
             command = build(agent="codex", env_mode="docker", **common)
@@ -413,6 +427,25 @@ class UpstreamTests(unittest.TestCase):
                 install_command = execute.call_args.kwargs["command"]
             self.assertIn("npm install -g @openai/codex@0.155.1", install_command)
             self.assertNotIn("@latest", install_command)
+
+            preflight_tree = ast.parse(preflight_target.read_text())
+            formatter = next(node for node in preflight_tree.body if isinstance(node, ast.FunctionDef)
+                             and node.name == "_first_trial_exception_detail")
+            namespace = vars(runtime_preflight).copy()
+            exec(compile(ast.Module(body=[formatter], type_ignores=[]), str(preflight_target), "exec"), namespace)
+            job = root / "job"
+            trial = job / "trial-1"
+            trial.mkdir(parents=True)
+            terminal_error = "terminal Docker build failure"
+            reports.write_json(trial / "result.json", {"exception_info": {
+                "exception_type": "RuntimeError",
+                "exception_message": "preflight head " + ("x" * 1600) + terminal_error,
+            }})
+            detail = namespace["_first_trial_exception_detail"](job)
+            self.assertLessEqual(len(detail), 1500)
+            self.assertTrue(detail.startswith("trial-1: RuntimeError | preflight head"))
+            self.assertIn(" ... [truncated] ... ", detail)
+            self.assertTrue(detail.endswith(terminal_error))
 
 
 class WorkflowTests(unittest.TestCase):

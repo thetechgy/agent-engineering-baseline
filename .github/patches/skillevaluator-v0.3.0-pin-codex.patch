@@ -1,3 +1,4 @@
+diff --git a/src/skillevaluator/tier3/harbor/runner.py b/src/skillevaluator/tier3/harbor/runner.py
 --- a/src/skillevaluator/tier3/harbor/runner.py
 +++ b/src/skillevaluator/tier3/harbor/runner.py
 @@ -442,6 +442,8 @@
@@ -9,3 +10,21 @@
          command.extend(["--environment-import-path", SECURE_DOCKER_ENV_IMPORT_PATH])
      else:
          command.extend(["-a", agent, "--env", env_mode])
+diff --git a/src/skillevaluator/tier3/harbor/runtime_preflight.py b/src/skillevaluator/tier3/harbor/runtime_preflight.py
+--- a/src/skillevaluator/tier3/harbor/runtime_preflight.py
++++ b/src/skillevaluator/tier3/harbor/runtime_preflight.py
+@@ -833,7 +833,12 @@ def _first_trial_exception_detail(job_dir: Path) -> str:
+             parts = [
+                 part.strip() for part in (exception_type, exception_message) if isinstance(part, str) and part.strip()
+             ]
+             if parts:
+-                detail = " | ".join(" ".join(part.split()) for part in parts)
+-                return f"{result_path.parent.name}: {detail}"[:1500]
++                detail = f"{result_path.parent.name}: " + " | ".join(" ".join(part.split()) for part in parts)
++                if len(detail) > 1500:
++                    marker = " ... [truncated] ... "
++                    head_length = (1500 - len(marker)) // 2
++                    tail_length = 1500 - len(marker) - head_length
++                    detail = f"{detail[:head_length]}{marker}{detail[-tail_length:]}"
++                return detail
+     return ""
