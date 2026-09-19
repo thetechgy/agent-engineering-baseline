@@ -1,0 +1,11 @@
+--- a/src/skillevaluator/tier3/harbor/runner.py
++++ b/src/skillevaluator/tier3/harbor/runner.py
+@@ -442,6 +442,8 @@
+             command.extend(["--agent-import-path", agent_import_path])
+         else:
+             command.extend(["-a", agent])
++            if agent == "codex":
++                command.extend(["--ak", "version=0.155.1"])
+         command.extend(["--environment-import-path", SECURE_DOCKER_ENV_IMPORT_PATH])
+     else:
+         command.extend(["-a", agent, "--env", env_mode])

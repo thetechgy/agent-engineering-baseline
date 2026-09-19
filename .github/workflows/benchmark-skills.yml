@@ -1,0 +1,233 @@
+name: Benchmark skills
+
+on:
+  workflow_dispatch:
+    inputs:
+      skill:
+        description: Local authored skill with evals/evals.json
+        required: true
+        default: podman
+        type: string
+      mode:
+        description: Standard history run or diagnostic confirmation
+        required: true
+        default: standard
+        type: choice
+        options:
+          - standard
+          - confirmation
+
+permissions: {}
+
+concurrency:
+  group: benchmark-skills
+  cancel-in-progress: false
+
+jobs:
+  evaluate:
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      BENCHMARK_SKILL: ${{ inputs.skill }}
+      BENCHMARK_MODE: ${{ inputs.mode }}
+    outputs:
+      skill: ${{ steps.selection.outputs.skill }}
+    steps:
+      - name: Check out dispatched revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate selection and clean checkout
+        id: selection
+        run: |
+          test -z "$(git status --porcelain=v1 --untracked-files=all --ignored)"
+          python3 .github/scripts/skill_reports.py select "$BENCHMARK_SKILL" "$BENCHMARK_MODE"
+
+      - name: Set up pinned uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: '0.12.17'
+          enable-cache: false
+
+      - name: Install evaluator with Python 3.13 and pinned Codex integration
+        run: bash .github/scripts/setup-skillevaluator.sh benchmark
+
+      - name: Validate dataset and runtime before inference
+        run: |
+          mkdir -p "$RUNNER_TEMP/skill-benchmark"
+          cp "$RUNNER_TEMP/skill-evaluation-tools/versions.json" "$RUNNER_TEMP/skill-benchmark/versions.json"
+          "$SKILL_EVALUATOR_PYTHON" -m unittest discover -s .github/tests -v
+          skillevaluator tier3 validate "$GITHUB_WORKSPACE/.apm/skills/$BENCHMARK_SKILL" --strict --json \
+            > "$RUNNER_TEMP/skill-benchmark/dataset-validation.json"
+          docker info > /dev/null
+
+      - name: Run native with-skill and without-skill evaluation
+        env:
+          SKILLEVALUATOR_RESULTS_DIR: ${{ runner.temp }}/skill-benchmark/results
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SKILL_EVAL_LLM_PROVIDER: openai
+          SKILL_EVAL_LLM_MODEL: gpt-5.6-sol
+          SKILL_EVAL_JUDGE_MODEL: gpt-5.6-sol
+          LLM_JUDGE_MODEL: gpt-5.6-sol
+          ATTEMPTS: ${{ steps.selection.outputs.attempts }}
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo '::error::Add the OPENAI_API_KEY Actions secret before running a paid skill benchmark.'
+            exit 1
+          fi
+          cd "$RUNNER_TEMP/skill-benchmark"
+          skillevaluator tier3 evaluate "$GITHUB_WORKSPACE/.apm/skills/$BENCHMARK_SKILL" \
+            --agents codex --agent-model codex=gpt-5.6-sol --env-mode docker \
+            --skill-workspace-mode isolated --grading-mode default \
+            --n-attempts "$ATTEMPTS" --no-stop-on-pass --n-concurrent 2 --max-agents 1 \
+            --agent-runtime-preflight --progress plain \
+            --results-dir "$SKILLEVALUATOR_RESULTS_DIR" \
+            --evaluated-source-repository "$GITHUB_REPOSITORY" --evaluated-source-revision "$GITHUB_SHA"
+
+      - name: Summarize native results and prepare standard metrics
+        if: always() && env.SKILL_EVALUATOR_PYTHON != '' && steps.selection.outcome == 'success'
+        run: |
+          docker version --format '{{json .Server}}' > "$RUNNER_TEMP/skill-benchmark/docker-version.json"
+          docker image ls --digests --no-trunc --format '{{json .}}' > "$RUNNER_TEMP/skill-benchmark/docker-images.jsonl"
+          "$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_reports.py benchmark \
+            "$RUNNER_TEMP/skill-benchmark" "$BENCHMARK_SKILL" "$BENCHMARK_MODE" "$RUNNER_TEMP/skill-metrics"
+
+      - name: Verify evaluator left the checkout unchanged
+        if: always()
+        run: |
+          git diff --exit-code
+          test -z "$(git status --porcelain=v1 --untracked-files=all --ignored)"
+
+      - name: Upload complete collected benchmark results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: skill-benchmark-${{ github.run_id }}-${{ github.run_attempt }}
+          # Native collected diagnostics are redacted. Transient Harbor execution
+          # directories can survive a failed run and are not publication artifacts.
+          path: |
+            ${{ runner.temp }}/skill-benchmark/
+            !${{ runner.temp }}/skill-benchmark/**/_harbor-jobs/**
+            !${{ runner.temp }}/skill-benchmark/**/_harbor-tasks/**
+          if-no-files-found: error
+          retention-days: 30
+          include-hidden-files: true
+
+      - name: Upload sanitized standard metrics
+        if: success() && inputs.mode == 'standard'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: skill-metrics
+          path: ${{ runner.temp }}/skill-metrics/metrics.json
+          if-no-files-found: error
+          retention-days: 30
+
+  publish-history:
+    needs: evaluate
+    if: >-
+      github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' &&
+      inputs.mode == 'standard' && needs.evaluate.result == 'success'
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      history_sha: ${{ steps.commit.outputs.history_sha }}
+      history_dir: ${{ steps.metrics.outputs.history_dir }}
+    steps:
+      - name: Check out trusted dispatched main revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Download data-only metrics from this run
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: skill-metrics
+          path: ${{ runner.temp }}/skill-metrics
+
+      - name: Validate metric allowlist and canonical series
+        id: metrics
+        env:
+          BENCHMARK_SKILL: ${{ needs.evaluate.outputs.skill }}
+          BENCHMARK_MODE: ${{ inputs.mode }}
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python3 .github/scripts/skill_reports.py publish "$RUNNER_TEMP/skill-metrics" "$BENCHMARK_SKILL"
+
+      - name: Append standard result to durable history
+        uses: benchmark-action/github-action-benchmark@4322e5726e6334590d251fc4f92bec0efafc45dc # v1.22.2
+        with:
+          name: Agent skill benchmark (standard)
+          tool: customBiggerIsBetter
+          output-file-path: ${{ runner.temp }}/skill-metrics/benchmark.json
+          benchmark-data-dir-path: ${{ steps.metrics.outputs.history_dir }}
+          gh-pages-branch: gh-pages
+          ref: ${{ github.sha }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: true
+          comment-always: false
+          comment-on-alert: false
+          fail-on-alert: false
+          summary-always: true
+
+      - name: Capture and verify the exact published history commit
+        id: commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          history_sha="$(git rev-parse refs/heads/gh-pages)"
+          remote_sha="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/gh-pages" --jq '.object.sha')"
+          [[ "$history_sha" =~ ^[0-9a-f]{40}$ ]]
+          test "$history_sha" = "$remote_sha"
+          printf 'history_sha=%s\n' "$history_sha" >> "$GITHUB_OUTPUT"
+
+  deploy-pages:
+    needs: publish-history
+    if: >-
+      github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' &&
+      inputs.mode == 'standard' && needs.publish-history.result == 'success'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out exactly the published history commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.publish-history.outputs.history_sha }}
+          persist-credentials: false
+
+      - name: Require static history without links
+        run: |
+          test -d benchmarks
+          test -z "$(find benchmarks ! -type d ! -type f -print -quit)"
+
+      - name: Configure Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      - name: Upload static history
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: benchmarks
+
+      - name: Deploy exact history artifact
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
+      - name: Link canonical history
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+          HISTORY_DIR: ${{ needs.publish-history.outputs.history_dir }}
+        run: |
+          printf '[Standard benchmark history](%s/%s/)\n' \
+            "${PAGE_URL%/}" "${HISTORY_DIR#benchmarks/}" >> "$GITHUB_STEP_SUMMARY"

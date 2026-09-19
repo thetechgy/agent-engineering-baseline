@@ -1,0 +1,350 @@
+"""Keyless tests for CI trust boundaries and the pinned upstream integration."""
+
+import ast
+import asyncio
+import contextlib
+import hashlib
+import importlib.util
+import inspect
+import io
+import json
+import os
+from pathlib import Path
+import subprocess
+import tempfile
+import unittest
+from unittest.mock import AsyncMock, patch
+
+import yaml
+
+
+REPO = Path(__file__).resolve().parents[2]
+spec = importlib.util.spec_from_file_location("skill_reports", REPO / ".github/scripts/skill_reports.py")
+reports = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(reports)
+SHA = "a" * 40
+
+
+class ReportTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.workspace = self.root / "workspace"
+        self.skill = self.workspace / ".apm/skills/podman"
+        self.skill.mkdir(parents=True)
+        (self.skill / "SKILL.md").write_text("---\nname: podman\n---\n")
+        reports.write_json(self.skill / "evals/evals.json", {"evals": [{"id": 1}]})
+        patch_file = self.workspace / reports.PATCH
+        patch_file.parent.mkdir(parents=True)
+        patch_file.write_bytes((REPO / reports.PATCH).read_bytes())
+        self.output = self.root / "github-output"
+        self.env = patch.dict(os.environ, {"GITHUB_OUTPUT": str(self.output), "GITHUB_SHA": SHA,
+            "GITHUB_STEP_SUMMARY": str(self.root / "summary"),
+            "SKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE": str(self.root / "state/provenance.key")})
+        self.env.start()
+        self.addCleanup(self.env.stop)
+        self.stdout = contextlib.redirect_stdout(io.StringIO())
+        self.stdout.__enter__()
+        self.addCleanup(self.stdout.__exit__, None, None, None)
+
+    def metrics(self):
+        return {
+            "schema_version": 1, "skill": "podman", "mode": "standard", "revision": SHA,
+            "policy": reports.POLICY.copy(), "dataset_digest": "sha256:" + "b" * 64,
+            "patch_sha256": hashlib.sha256((REPO / reports.PATCH).read_bytes()).hexdigest(),
+            "metrics": [{"name": name, "unit": "score", "value": -0.1 if name == "Skill Lift" else 0.8}
+                        for name in reports.METRICS],
+        }
+
+    def catalog(self):
+        root = self.root / "quality"
+        root.mkdir()
+        (root / "catalog.exit").write_text("1\n")
+        filename = "skillevaluator-output-20260919000000.json"
+        reports.write_json(root / "reports/catalog-summary.json", {
+            "total": 1, "failed": 1, "skills": [{"name": "podman", "passed": False,
+                "reason": "validation failed", "json_report": filename}],
+        })
+        report = root / "reports/podman" / filename
+        reports.write_json(report, {"overall_status": "incomplete", "overall_passed": False,
+            "skills": [{"name": "podman"}], "total_validators": 1,
+            "severity_counts": {"critical": 0, "high": 1, "medium": 0, "low": 0},
+            "results": [{"status": "incomplete"}], "incomplete_scans": ["skillspector"]})
+        for extension in (".html", ".md"):
+            report.with_suffix(extension).write_text("Native report")
+        reports.write_json(root / "datasets/podman.json", [{"status": "ok"}])
+        (root / "datasets/podman.exit").write_text("0\n")
+        return root
+
+    def test_skill_selection_rejects_paths_and_symlinks(self):
+        for name in ("../podman", "/podman", "podman\nother", "Podman", "missing"):
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                reports.local_skill(self.workspace, name, dataset=True)
+        (self.skill.parent / "linked").symlink_to(self.skill, target_is_directory=True)
+        with self.assertRaises(ValueError):
+            reports.local_skill(self.workspace, "linked", dataset=True)
+        self.assertEqual(reports.local_skill(self.workspace, "podman", dataset=True), self.skill)
+
+    def test_complete_findings_are_advisory(self):
+        reports.catalog_report(self.workspace, self.catalog())
+
+    def test_catalog_runtime_exit_one_is_not_advisory(self):
+        root = self.catalog()
+        path = root / "reports/catalog-summary.json"
+        data = reports.read_json(path)
+        data["skills"][0]["reason"] = "unexpected error: simulated failure"
+        reports.write_json(path, data)
+        with self.assertRaises(ValueError):
+            reports.catalog_report(self.workspace, root)
+
+    def test_configuration_and_runtime_exit_codes_fail(self):
+        root = self.catalog()
+        for exit_code in (2, 3):
+            (root / "catalog.exit").write_text(str(exit_code))
+            with self.subTest(exit_code=exit_code), self.assertRaises(ValueError):
+                reports.catalog_report(self.workspace, root)
+
+    def test_all_strict_dataset_failures_are_collected(self):
+        root = self.catalog()
+        second = self.skill.parent / "second"
+        second.mkdir()
+        (second / "SKILL.md").write_text("---\nname: second\n---\n")
+        reports.write_json(second / "evals/evals.json", {"evals": [{"id": 2}]})
+        data = reports.read_json(root / "reports/catalog-summary.json")
+        data.update(total=2, failed=2)
+        data["skills"].append({**data["skills"][0], "name": "second"})
+        reports.write_json(root / "reports/catalog-summary.json", data)
+        for name in ("podman", "second"):
+            (root / "datasets" / f"{name}.exit").write_text("1\n")
+        with self.assertRaises(ValueError):
+            reports.catalog_report(self.workspace, root)
+        text = (self.root / "summary").read_text()
+        for name in ("podman", "second"):
+            self.assertIn(f"{name}: Strict eval dataset validation failed", text)
+
+    def test_missing_reports_and_strict_failures_are_hard_failures(self):
+        root = self.catalog()
+        (root / "reports/podman/skillevaluator-output-20260919000000.json").unlink()
+        (root / "datasets/podman.exit").write_text("1\n")
+        with self.assertRaises(ValueError):
+            reports.catalog_report(self.workspace, root)
+        summary = (self.root / "summary").read_text()
+        self.assertIn("Missing or linked JSON", summary)
+        self.assertIn("Strict eval dataset validation failed", summary)
+
+    def test_invalid_numeric_and_extra_artifact_fields_are_rejected(self):
+        for value in (float("nan"), float("inf"), True, "0.8", 2):
+            data = self.metrics()
+            data["metrics"][0]["value"] = value
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                reports.validate_metrics(data, self.workspace, "podman", SHA)
+        data = self.metrics()
+        data["arbitrary_payload"] = "not permitted"
+        with self.assertRaises(ValueError):
+            reports.validate_metrics(data, self.workspace, "podman", SHA)
+
+    def test_only_main_standard_dispatch_can_publish(self):
+        directory = self.root / "metrics"
+        reports.write_json(directory / "metrics.json", self.metrics())
+        for event, ref, mode in (("push", "refs/heads/main", "standard"),
+                                 ("workflow_dispatch", "refs/heads/feature", "standard"),
+                                 ("workflow_dispatch", "refs/heads/main", "confirmation")):
+            with patch.dict(os.environ, {"GITHUB_EVENT_NAME": event, "GITHUB_REF": ref, "BENCHMARK_MODE": mode}):
+                with self.assertRaises(ValueError):
+                    reports.publish_metrics(self.workspace, directory, "podman")
+        with patch.dict(os.environ, {"GITHUB_EVENT_NAME": "workflow_dispatch", "GITHUB_REF": "refs/heads/main",
+                                    "BENCHMARK_MODE": "standard"}):
+            reports.publish_metrics(self.workspace, directory, "podman")
+        data = reports.read_json(directory / "benchmark.json")
+        self.assertEqual(len(data), 4)
+        self.assertEqual(data[0]["value"], -0.1)
+        self.assertRegex(self.output.read_text(), r"^history_dir=benchmarks/podman/[0-9a-f]{16}\n$")
+
+    def test_confirmation_artifact_cannot_masquerade_as_standard(self):
+        data = self.metrics()
+        data["mode"] = "confirmation"
+        with self.assertRaises(ValueError):
+            reports.validate_metrics(data, self.workspace, "podman", SHA)
+
+    def benchmark(self, mode):
+        from skillevaluator.tier3.output_provenance import mark_generated_output_root
+        root = self.root / "benchmark"
+        run = root / "results/podman/20260919_000000_111_aaaaaaaaaaaa"
+        cases = 10
+        attempts = cases * reports.MODES[mode]
+        condition = {"execution_status": "succeeded", "execution_errors": [],
+                     "expected_attempts": attempts, "scored_attempts": attempts}
+        data = {
+            "skill_name": "podman", "execution_status": "succeeded", "execution_errors": [],
+            "report_status": "complete", "dataset_summary": {"total_tasks": cases},
+            "dataset_digest": "sha256:" + "b" * 64,
+            "run_config": {"config_file": "none", "task_source": "evals_json",
+                "provider": {"name": "openai", "model": reports.POLICY["model"]},
+                "judge": {"model": reports.POLICY["model"], "provider": "openai", "override_applied": True},
+                "harbor": {"environment": {"value": "docker", "source": "cli"}, "n_attempts": reports.MODES[mode],
+                           "n_concurrent": 2, "stop_on_pass": False, "timeout_multiplier": 1.0,
+                           "base_image_mode": "reuse", "jobs_retained": False},
+                "agents": {"codex": {"agent": "codex", "model": reports.POLICY["model"], "source": "cli"}},
+                "grading": {"mode": "default"}, "evaluated_source": {"commit": SHA}},
+            "agents": {"codex": {"model": reports.POLICY["model"],
+                "model_source": "cli", "model_resolution": {"model": reports.POLICY["model"], "source": "cli"},
+                "with_skill": {"overall": 0.8}, "without_skill": {"overall": 0.9},
+                "custom_with_skill": {}, "custom_without_skill": {}, "dimensions_without_skill": {},
+                "custom_lift": {}, "security_attribution": {},
+                "pass_at_k": {"with_skill": {}, "without_skill": {}, "lift": {}},
+                "agent_runtime_failures": {"with_skill": [], "without_skill": []},
+                "trial_failures": {"with_skill": [], "without_skill": []},
+                "job_failures": {"with_skill": "", "without_skill": ""},
+                "execution_status": "succeeded", "execution_errors": [],
+                "expected_attempts": attempts * 2, "scored_attempts": attempts * 2,
+                "num_trials_with": attempts, "num_trials_without": attempts, "output_dir": str(run / "codex"),
+                "conditions": {"with_skill": condition.copy(), "without_skill": condition.copy()},
+                "lift": {"overall": {"delta": -0.1}}, "dimensions_with_skill": {
+                    name: {"score": 0.8} for name in ("effectiveness", "correctness", "discoverability")}}},
+        }
+        data.update(run_id=run.name, run_dir=str(run), result_path=str(run / "result.json"), duration_seconds=1.0,
+                    attempt_policy={"max_attempts": reports.MODES[mode], "pass_threshold": 0.5,
+                                    "stop_on_pass": False, "score_definition": "native fixture"})
+        run.mkdir(parents=True)
+        mark_generated_output_root(run)
+        reports.write_json(run / "run_config.json", data["run_config"])
+        reports.write_json(run / "result.json", data)
+        (run / "report.html").write_text("Native HTML fixture")
+        reports.write_json(root / "versions.json", {"python": "3.13.15", "skillevaluator": "0.3.0", "harbor": "0.13.2"})
+        return root, run, data
+
+    def test_confirmation_gets_summary_and_provenance_but_no_history_artifact(self):
+        root, run, _ = self.benchmark("confirmation")
+        reports.benchmark_report(self.workspace, root, "podman", "confirmation", self.root / "metrics")
+        self.assertTrue((root / "provenance.json").exists())
+        self.assertFalse((self.root / "metrics").exists())
+        self.assertIn("60 task trials", (self.root / "summary").read_text())
+
+    def test_partial_baseline_prevents_standard_history(self):
+        root, run, data = self.benchmark("standard")
+        data["agents"]["codex"]["conditions"]["without_skill"]["scored_attempts"] -= 1
+        reports.write_json(run / "result.json", data)
+        with self.assertRaises(ValueError):
+            reports.benchmark_report(self.workspace, root, "podman", "standard", self.root / "metrics")
+        self.assertFalse((self.root / "metrics").exists())
+
+    def test_native_result_discovery_and_standard_metric_extraction(self):
+        root, _, _ = self.benchmark("standard")
+        reports.benchmark_report(self.workspace, root, "podman", "standard", self.root / "metrics")
+        data = reports.read_json(self.root / "metrics/metrics.json")
+        self.assertEqual(data["metrics"][0]["value"], -0.1)
+        self.assertEqual(data["metrics"][3]["name"], "Discoverability")
+
+    def test_wrong_python_runtime_prevents_history(self):
+        root, _, _ = self.benchmark("standard")
+        reports.write_json(root / "versions.json", {"python": "3.14.0", "skillevaluator": "0.3.0", "harbor": "0.13.2"})
+        with self.assertRaises(ValueError):
+            reports.benchmark_report(self.workspace, root, "podman", "standard", self.root / "metrics")
+
+    def test_native_usage_unknown_and_duplicate_trial_handling(self):
+        for name in ("trial", "duplicate"):
+            reports.write_json(self.root / "codex/with-skill/trials" / name / "result.json", {
+                "id": "same-physical-trial", "agent_result": {
+                    "n_input_tokens": 100, "n_cache_tokens": 20, "n_output_tokens": 30, "cost_usd": None}})
+        text = "\n".join(reports.usage_summary(self.root))
+        self.assertIn("n_input_tokens | 100 | 1 / 1", text)
+        self.assertIn("cost_usd | unknown | 0 / 1", text)
+
+
+class UpstreamTests(unittest.TestCase):
+    def test_podman_native_negative_control_and_strict_validation(self):
+        from click.testing import CliRunner
+        from skillevaluator.cli import cli
+        from skillevaluator.tier3.dataset_utils import load_dataset_entries
+        from skillevaluator.tier3.harbor.report_data import summarize_dataset_entries
+        from skillevaluator.tier3.harbor.templates.eval import resolve_should_trigger, score_skill_execution
+        skill = REPO / ".apm/skills/podman"
+        entries = load_dataset_entries(skill / "evals/evals.json")
+        case = next(case for case in entries if case["id"] == 8)
+        self.assertIsNone(case["expected_skill"])
+        self.assertFalse(resolve_should_trigger(case))
+        self.assertEqual(summarize_dataset_entries(entries)["negative_tasks"], 1)
+        self.assertEqual(score_skill_execution([], None, should_trigger=False,
+                         evaluated_skill="podman", require_evaluated_skill=True)["score"], 1)
+        result = CliRunner().invoke(cli, ["tier3", "validate", str(skill), "--strict", "--json"])
+        self.assertEqual(result.exit_code, 0, result.output)
+
+    def test_codex_patch_uses_native_version_only_for_docker_codex(self):
+        from skillevaluator.tier3.harbor import runner
+        from harbor.agents.installed.codex import Codex
+        source = Path(inspect.getfile(runner)).read_text()
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "src/skillevaluator/tier3/harbor/runner.py"
+            target.parent.mkdir(parents=True)
+            target.write_text(source)
+            # Benchmark setup is already patched; quality setup is the pristine source.
+            if 'command.extend(["--ak", "version=0.155.1"])' not in source:
+                subprocess.run(["git", "apply", "--check", str(REPO / reports.PATCH)], cwd=directory, check=True)
+                subprocess.run(["git", "apply", str(REPO / reports.PATCH)], cwd=directory, check=True)
+            tree = ast.parse(target.read_text())
+            function = next(node for node in tree.body if isinstance(node, ast.FunctionDef)
+                            and node.name == "build_harbor_run_command")
+            namespace = vars(runner).copy()
+            exec(compile(ast.Module(body=[function], type_ignores=[]), str(target), "exec"), namespace)
+            build = namespace["build_harbor_run_command"]
+            common = {"dataset_path": "unused", "job_name": "keyless-test"}
+            command = build(agent="codex", env_mode="docker", **common)
+            self.assertEqual(command[command.index("--ak") + 1], "version=0.155.1")
+            for agent, environment in (("claude-code", "docker"), ("codex", "local"), ("codex", "daytona")):
+                self.assertNotIn("--ak", build(agent=agent, env_mode=environment, **common))
+            codex = Codex(logs_dir=Path(directory) / "logs", model_name=reports.POLICY["model"], version="0.155.1")
+            with patch.object(codex, "exec_as_root", new_callable=AsyncMock), \
+                    patch.object(codex, "exec_as_agent", new_callable=AsyncMock) as execute:
+                asyncio.run(codex.install(object()))
+                install_command = execute.call_args.kwargs["command"]
+            self.assertIn("npm install -g @openai/codex@0.155.1", install_command)
+            self.assertNotIn("@latest", install_command)
+
+
+class WorkflowTests(unittest.TestCase):
+    def test_permissions_pins_and_exact_history_handoff(self):
+        workflow = yaml.safe_load((REPO / ".github/workflows/benchmark-skills.yml").read_text())
+        # PyYAML 1.1 parses the bare YAML key `on` as True.
+        self.assertEqual(set(workflow.get("on", workflow.get(True))), {"workflow_dispatch"})
+        jobs = workflow["jobs"]
+        self.assertEqual(jobs["evaluate"]["permissions"], {"contents": "read"})
+        self.assertEqual(jobs["publish-history"]["permissions"], {"contents": "write"})
+        for name in ("publish-history", "deploy-pages"):
+            self.assertIn("github.ref == 'refs/heads/main'", jobs[name]["if"])
+            self.assertIn("inputs.mode == 'standard'", jobs[name]["if"])
+            self.assertNotIn("OPENAI_API_KEY", json.dumps(jobs[name]))
+            self.assertNotIn("setup-skillevaluator", json.dumps(jobs[name]))
+        secret_steps = [step for step in jobs["evaluate"]["steps"] if "OPENAI_API_KEY" in step.get("env", {})]
+        self.assertEqual(len(secret_steps), 1)
+        self.assertIn("--results-dir", secret_steps[0]["run"])
+        self.assertNotIn("--skip-baseline", secret_steps[0]["run"])
+        checkout = jobs["deploy-pages"]["steps"][0]
+        self.assertEqual(checkout["with"]["ref"], "${{ needs.publish-history.outputs.history_sha }}")
+        for filename in ("benchmark-skills.yml", "validate.yml"):
+            data = yaml.safe_load((REPO / ".github/workflows" / filename).read_text())
+            for job in data["jobs"].values():
+                for step in job["steps"]:
+                    if "uses" in step:
+                        self.assertRegex(step["uses"], r"@[0-9a-f]{40}$")
+                    if step.get("uses", "").startswith("actions/checkout@"):
+                        self.assertIs(step["with"]["persist-credentials"], False)
+
+    def test_git_guard_detects_ignored_untracked_and_tracked_mutations(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(["git", "init", "--quiet"], cwd=root, check=True)
+            (root / ".gitignore").write_text("results/\n")
+            subprocess.run(["git", "add", ".gitignore"], cwd=root, check=True)
+            # A temporary index baseline avoids committing anything, even in this fixture.
+            for path in (root / "results/report.json", root / "unexpected.txt", root / ".gitignore"):
+                path.parent.mkdir(exist_ok=True)
+                path.write_text("results/\n# changed\n" if path.name == ".gitignore" else "changed\n")
+            output = subprocess.check_output(["git", "status", "--porcelain=v1", "--untracked-files=all", "--ignored"], cwd=root).decode()
+            self.assertIn("AM .gitignore", output)
+            self.assertIn("?? unexpected.txt", output)
+            self.assertIn("!! results/", output)
+
+
+if __name__ == "__main__":
+    unittest.main()
