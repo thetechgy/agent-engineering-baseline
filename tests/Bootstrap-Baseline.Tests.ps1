@@ -21,10 +21,10 @@ BeforeAll {
     $script:ValidationSource = Join-Path $script:RepositoryRoot 'scripts/Invoke-Validation.ps1'
     $script:IsWindowsPlatform = $env:OS -ceq 'Windows_NT'
 
-    $OriginalCopyItem = Get-Command Copy-Item -CommandType Cmdlet
-    $OriginalMoveItem = Get-Command Move-Item -CommandType Cmdlet
-    $OriginalNewItem = Get-Command New-Item -CommandType Cmdlet
-    $OriginalGetFileHash = Get-Command Get-FileHash
+    $script:OriginalCopyItem = Get-Command Copy-Item -CommandType Cmdlet
+    $script:OriginalMoveItem = Get-Command Move-Item -CommandType Cmdlet
+    $script:OriginalNewItem = Get-Command New-Item -CommandType Cmdlet
+    $script:OriginalGetFileHash = Get-Command Get-FileHash
 
     function New-TestRepository {
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
