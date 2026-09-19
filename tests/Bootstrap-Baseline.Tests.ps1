@@ -601,10 +601,20 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
             Where-Object { $_.Name -match '^\.(stage|rollback)-' }).Count | Should-Be 0
     }
 
-    It 'retains the backup and reports an incomplete rollback if removal is blocked' {
-        & $script:TestRepository.Script -CliOnly -Confirm:$false
+    It 'keeps current disconnected for a <Prior> installation if rollback removal is blocked' -ForEach @(
+        @{ Prior = 'existing' }
+        @{ Prior = 'dangling' }
+    ) {
         $release = Join-Path $script:InstallRoot 'releases\v0.29.0'
-        [IO.File]::WriteAllText((Join-Path $release '_internal\old-state'), 'old')
+        if ($Prior -eq 'existing') {
+            & $script:TestRepository.Script -CliOnly -Confirm:$false
+            [IO.File]::WriteAllText((Join-Path $release '_internal\old-state'), 'old')
+        }
+        else {
+            New-Item -ItemType Directory -Path $release -Force | Out-Null
+            New-Item -ItemType Junction -Path (Join-Path $script:InstallRoot 'current') -Target $release | Out-Null
+            [IO.Directory]::Delete($release, $false)
+        }
         $OriginalRemoveItem = Get-Command Remove-Item -CommandType Cmdlet
         Mock Remove-Item {
             if ($LiteralPath -like '*\releases\v0.29.0' -and $Recurse) {
@@ -623,8 +633,11 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         ($rollbackWarnings -join ' ') | Should-MatchString 'Incomplete APM rollback'
         $backups = @(Get-ChildItem -LiteralPath (Join-Path $script:InstallRoot 'releases') -Directory -Force |
             Where-Object { $_.Name -like '.rollback-*' })
-        $backups.Count | Should-Be 1
-        Test-Path -LiteralPath (Join-Path $backups[0].FullName '_internal\old-state') | Should-BeTrue
+        if ($Prior -eq 'existing') {
+            $backups.Count | Should-Be 1
+            Test-Path -LiteralPath (Join-Path $backups[0].FullName '_internal\old-state') | Should-BeTrue
+        }
+        else { $backups.Count | Should-Be 0 }
         Test-Path -LiteralPath (Join-Path $script:InstallRoot 'current') | Should-BeFalse
     }
 

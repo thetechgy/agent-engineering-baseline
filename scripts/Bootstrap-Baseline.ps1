@@ -528,7 +528,7 @@ function Install-ReviewedBundle {
                 catch { Write-Warning -Message "Incomplete APM rollback: prior release retained at ${backupPath}: $_" }
             }
             # Never reconnect current to an unverified same-version replacement.
-            $canRestoreCurrent = -not $releaseBackedUp -or $releaseRestored -or ($currentRemoved -and $oldCurrentTarget -ine $releasePath)
+            $canRestoreCurrent = $releaseRestored -or ($currentRemoved -and $oldCurrentTarget -ine $releasePath)
             if ($currentRemoved -and $canRestoreCurrent -and -not (Test-Path -LiteralPath $currentPath)) {
                 try {
                     New-ApmJunction -Path $currentPath -Target $oldCurrentTarget -Confirm:$false

@@ -547,5 +547,58 @@ assert_true 'backup cleanup failure is diagnosed' out_has 'backup cleanup failed
 assert_true 'verified command remains usable after backup cleanup failure' \
     file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
 
+# A second failure during rollback must preserve the backup and disconnect the command.
+for prior in existing dangling; do
+    for rollback_fault in remove restore; do
+        [ "$prior/$rollback_fault" != dangling/restore ] || continue
+        new_case "rollback-$prior-$rollback_fault"
+        make_fixture Linux x86_64
+        if [ "$prior" = existing ]; then
+            run_case --cli-only
+            record_result "$rollback_fault rollback fixture installs prior bundle" success
+            printf 'prior release\n' > "$CASE_ROOT/install/lib/apm/_internal/old"
+        else
+            ln -s "$CASE_ROOT/install/lib/apm/apm" "$CASE_INSTALL/apm"
+        fi
+        cat > "$BUNDLE_ROOT/apm" <<EOF
+#!/usr/bin/env bash
+case "\$0" in */install/lib/apm/apm) exit 73 ;; esac
+printf 'APM version 0.29.0\n'
+EOF
+        tar -czf "$MIRROR_ROOT/v0.29.0/$ARCHIVE_NAME" -C "$FIXTURE_ROOT" "$ARCHIVE_ROOT"
+        replace_checksum "$ARCHIVE_ROOT/apm" "$(digest "$BUNDLE_ROOT/apm")"
+        replace_checksum "$ARCHIVE_NAME" "$(digest "$MIRROR_ROOT/v0.29.0/$ARCHIVE_NAME")"
+        if [ "$rollback_fault" = remove ]; then
+            real_command=$(command -v rm)
+            command_name='rm'
+            pattern="$CASE_ROOT/install/lib/apm"
+        else
+            real_command=$(command -v mv)
+            command_name='mv'
+            pattern='*/.apm-rollback-*'
+        fi
+        cat > "$CASE_BIN/$command_name" <<EOF
+#!/usr/bin/env bash
+case "\${2-}" in
+    $pattern)
+        # rm receives -rf then path; mv restoration receives backup as first argument.
+        [ '$rollback_fault' != remove ] || exit 73
+        ;;
+esac
+case "\${1-}" in $pattern) [ '$rollback_fault' != restore ] || exit 73 ;; esac
+exec '$real_command' "\$@"
+EOF
+        chmod +x "$CASE_BIN/$command_name"
+        run_case --cli-only
+        record_result "$prior rollback $rollback_fault failure is surfaced" failure
+        assert_true "$prior rollback $rollback_fault is explicitly incomplete" out_has 'rollback was incomplete'
+        assert_true "$prior rollback $rollback_fault leaves command disconnected" test ! -L "$CASE_INSTALL/apm"
+        if [ "$prior" = existing ]; then
+            backup=$(find "$CASE_ROOT/install/lib" -maxdepth 1 -type d -name '.apm-rollback-*' -print -quit)
+            assert_true "$rollback_fault failure preserves backup outside replacement" file_has "$backup/_internal/old" 'prior release'
+        fi
+    done
+done
+
 printf '\n%d cases, %d failures\n' "$CASES" "$FAILURES"
 exit "$((FAILURES > 0 ? 1 : 0))"

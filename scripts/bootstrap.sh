@@ -282,12 +282,18 @@ promote_bundle() (
         if [ "$status" -ne 0 ]; then
             if [ "$link_created" = true ]; then rm -f "$link_path" || rollback_failed=true; fi
             if [ "$promoted" = true ]; then rm -rf "$bundle_path" || rollback_failed=true; fi
-            if [ "$backed_up" = true ]; then mv "$backup_path" "$bundle_path" || rollback_failed=true; fi
-            if [ "$link_removed" = true ]; then
+            if [ "$backed_up" = true ]; then
+                if [ -e "$bundle_path" ] || [ -L "$bundle_path" ]; then
+                    rollback_failed=true
+                else
+                    mv "$backup_path" "$bundle_path" || rollback_failed=true
+                fi
+            fi
+            if [ "$link_removed" = true ] && [ "$rollback_failed" = false ]; then
                 ln -s "$old_link_target" "$link_path" || rollback_failed=true
             fi
             if [ "$rollback_failed" = true ]; then
-                log "warning: APM rollback was incomplete; preserve $backup_path for recovery."
+                log "warning: APM rollback was incomplete; any remaining backup is at $backup_path."
             else
                 log 'APM bundle promotion failed; the prior managed installation was restored.'
             fi
