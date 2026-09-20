@@ -670,6 +670,60 @@ assert_true 'old-link removal failure never backs up or replaces the release' \
     test -z "$(find "$CASE_ROOT/install/lib" -name '.apm-rollback-*' -print -quit)"
 
 printf '# installation serialization\n'
+for prior in existing fresh; do
+    for mutation in unlink backup promote link; do
+        case "$prior/$mutation" in fresh/unlink|fresh/backup) continue ;; esac
+        new_case "signal-after-$prior-$mutation"
+        make_fixture Linux x86_64
+        if [ "$prior" = existing ]; then
+            run_case --cli-only
+            record_result "$mutation signal fixture installs prior bundle" success
+            printf 'prior release\n' > "$CASE_ROOT/install/lib/apm/_internal/old"
+        fi
+        real_mkdir=$(command -v mkdir)
+        cat > "$CASE_BIN/mkdir" <<EOF
+#!/usr/bin/env bash
+if [ "\${1-}" = -p ]; then printf '%s\n' "\$PPID" > '$CASE_ROOT/transaction-pid'; fi
+exec '$real_mkdir' "\$@"
+EOF
+        case "$mutation" in
+            unlink) command_name='rm'; pattern="$CASE_INSTALL/apm" ;;
+            backup) command_name='mv'; pattern='*/.apm-rollback-*' ;;
+            promote) command_name='mv'; pattern='*/.apm-stage-*' ;;
+            link) command_name='ln'; pattern="$CASE_INSTALL/apm" ;;
+        esac
+        real_command=$(command -v "$command_name")
+        cat > "$CASE_BIN/$command_name" <<EOF
+#!/usr/bin/env bash
+'$real_command' "\$@" || exit \$?
+for path in "\$@"; do
+    case "\$path" in
+        $pattern)
+            if [ ! -f '$CASE_ROOT/mutation-signal' ]; then
+                : > '$CASE_ROOT/mutation-signal'
+                kill -TERM "\$(cat '$CASE_ROOT/transaction-pid')"
+            fi
+            ;;
+    esac
+done
+EOF
+        chmod +x "$CASE_BIN/mkdir" "$CASE_BIN/$command_name"
+        run_case --cli-only
+        record_result "$prior interruption after $mutation is surfaced" failure
+        assert_true "$prior $mutation signal follows a successful mutation" test -f "$CASE_ROOT/mutation-signal"
+        assert_true "$prior $mutation signal releases the lock" test ! -e "$CASE_ROOT/install/lib/.apm-install.lock"
+        if [ "$prior" = existing ]; then
+            assert_true "$mutation signal restores the prior release" file_has "$CASE_ROOT/install/lib/apm/_internal/old" 'prior release'
+            assert_true "$mutation signal restores a usable command" file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
+        else
+            assert_true "$mutation signal leaves no committed fresh release" test ! -e "$CASE_ROOT/install/lib/apm"
+            assert_true "$mutation signal leaves no fresh command link" test ! -L "$CASE_INSTALL/apm"
+        fi
+        assert_true "$prior $mutation signal cleans transaction paths" \
+            test -z "$(find "$CASE_ROOT/install/lib" \( -name '.apm-stage-*' -o -name '.apm-rollback-*' \) -print -quit)"
+    done
+done
+
 new_case signal-during-rollback
 make_fixture Linux x86_64
 run_case --cli-only
@@ -818,6 +872,30 @@ EOF
     assert_true "$owner_outcome cleans transaction paths" \
         test -z "$(find "$CASE_ROOT/install/lib" \( -name '.apm-stage-*' -o -name '.apm-rollback-*' \) -print -quit)"
 done
+
+new_case lock-owner-releases-during-acquisition
+make_fixture Linux x86_64
+real_mkdir=$(command -v mkdir)
+cat > "$CASE_BIN/mkdir" <<EOF
+#!/usr/bin/env bash
+case "\$*" in
+    *'/.apm-install.lock')
+        if [ ! -f '$CASE_ROOT/owner-released' ]; then
+            # Simulate EEXIST with the owner gone by the time mkdir returns.
+            : > '$CASE_ROOT/owner-released'
+            exit 1
+        fi
+        ;;
+esac
+exec '$real_mkdir' "\$@"
+EOF
+printf '#!/bin/sh\nexit 0\n' > "$CASE_BIN/sleep"
+chmod +x "$CASE_BIN/mkdir" "$CASE_BIN/sleep"
+run_case --cli-only
+record_result 'acquisition retries when the other owner has just released its lock' success
+assert_true 'owner release race is reached' test -f "$CASE_ROOT/owner-released"
+assert_true 'owner release race leaves a usable command' file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
+assert_true 'owner release race leaves no owned lock' test ! -e "$CASE_ROOT/install/lib/.apm-install.lock"
 
 for lock_kind in busy file symlink; do
     new_case "lock-$lock_kind"

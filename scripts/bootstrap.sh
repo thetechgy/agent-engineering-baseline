@@ -242,7 +242,7 @@ promote_bundle() (
     local source_bundle=$1 install_parent bundle_parent bundle_path link_path actual_version
     local stage_path backup_path old_link_target='' had_bundle=false had_link=false
     local backed_up=false promoted=false link_removed=false link_created=false
-    local lock_path lock_acquired=false lock_interrupted=false lock_wait=0 promotion_complete=false
+    local lock_path lock_acquired=false interrupted=false lock_wait=0 promotion_complete=false
     install_parent=$(dirname "$INSTALL_DIR")
     bundle_parent="$install_parent/lib"
     bundle_path="$bundle_parent/apm"
@@ -268,20 +268,20 @@ promote_bundle() (
     trap release_install_lock EXIT
     # Record signals until mkdir's result is known, so a just-created lock is
     # still released if interruption arrives before ownership is recorded.
-    trap 'lock_interrupted=true' HUP INT TERM
+    trap 'interrupted=true' HUP INT TERM
     while ! (trap '' HUP INT TERM; umask 077; mkdir "$lock_path") 2>/dev/null; do
-        [ "$lock_interrupted" = false ] || exit 1
-        if [ -L "$lock_path" ] || [ ! -d "$lock_path" ]; then
+        [ "$interrupted" = false ] || exit 1
+        # The owner may release its directory between our failed mkdir and this check.
+        if [ -L "$lock_path" ] || { [ -e "$lock_path" ] && [ ! -d "$lock_path" ]; }; then
             die "unable to acquire a safe APM installation lock: $lock_path"
         fi
         [ "$lock_wait" -lt 120 ] ||
-            die "timed out waiting for the APM installation lock: $lock_path; inspect it before manually removing a stale lock."
+            die "timed out waiting for the APM installation lock: $lock_path; check directory permissions and inspect it before manually removing a stale lock."
         sleep 1
         lock_wait=$((lock_wait + 1))
     done
     lock_acquired=true
-    trap 'exit 1' HUP INT TERM
-    [ "$lock_interrupted" = false ] || exit 1
+    [ "$interrupted" = false ] || exit 1
 
     if [ -e "$bundle_path" ] || [ -L "$bundle_path" ]; then
         assert_plain_tree "$bundle_path" 'Existing managed APM bundle'
@@ -334,7 +334,14 @@ promote_bundle() (
         exit "$status"
     }
     trap rollback_promotion EXIT
-    trap 'exit 1' HUP INT TERM
+
+    # Keep each atomic shared-path operation uninterruptible in its worker.
+    # The transaction queues signals, records completion, then checks the queue.
+    run_promotion_step() (
+        trap - EXIT
+        trap '' HUP INT TERM
+        "$@"
+    )
 
     mkdir "$stage_path"
     cp -R "$source_bundle/." "$stage_path/"
@@ -342,26 +349,33 @@ promote_bundle() (
     printf 'v%s\n' "$PIN" > "$stage_path/.apm-installed"
     assert_plain_tree "$stage_path" 'Staged persistent APM bundle'
     verify_file "$stage_path/apm" "$EXECUTABLE_MEMBER"
+    [ "$interrupted" = false ] || exit 1
 
     if [ "$had_link" = true ]; then
-        rm "$link_path"
+        run_promotion_step rm "$link_path"
         link_removed=true
+        [ "$interrupted" = false ] || exit 1
     fi
 
     if [ "$had_bundle" = true ]; then
-        mv "$bundle_path" "$backup_path"
+        run_promotion_step mv "$bundle_path" "$backup_path"
         backed_up=true
+        [ "$interrupted" = false ] || exit 1
     fi
-    mv "$stage_path" "$bundle_path"
+    run_promotion_step mv "$stage_path" "$bundle_path"
     promoted=true
+    [ "$interrupted" = false ] || exit 1
     # Do not expose a replacement command until its installed bytes execute correctly.
     verify_file "$PROMOTED_APM" "$EXECUTABLE_MEMBER"
     actual_version=$(reported_version "$PROMOTED_APM")
     [ "$actual_version" = "$PIN" ] ||
         die "the promoted APM CLI does not report the pinned v$PIN."
-    ln -s "$bundle_path/apm" "$link_path"
+    [ "$interrupted" = false ] || exit 1
+    run_promotion_step ln -s "$bundle_path/apm" "$link_path"
     link_created=true
     # Activation commits the verified replacement; cleanup cannot trigger rollback.
+    trap '' HUP INT TERM
+    [ "$interrupted" = false ] || exit 1
     promotion_complete=true
     if [ -d "$backup_path" ]; then
         rm -rf "$backup_path" || log 'warning: verified APM installation is usable; backup cleanup failed.'
