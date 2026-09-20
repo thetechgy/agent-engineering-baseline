@@ -429,9 +429,9 @@ Harbor's native `--ak version=` argument only for Docker Codex execution; it
 adds no other behavior, and tests reject any patch that touches another file,
 adds a second hunk, or removes upstream lines. Because the benchmark policy
 identifier includes the patch digest, changing the patch starts a new history
-series. Evaluator
-Python is pinned to 3.13 and its full resolved version is recorded. Harbor's
-native container base, Node patch version, and verifier runtime dependencies
+series. The evaluator's Python runtime is pinned to 3.13 and its full resolved
+version is recorded. Harbor's native container base, Node patch version, and
+verifier runtime dependencies
 remain upstream-managed; consider runtime drift when comparing results.
 No custom grading or model fallback policy is introduced. Copilot deployment
 compatibility continues through APM; live behavioral evaluation uses Codex.
