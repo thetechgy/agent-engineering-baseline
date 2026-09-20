@@ -701,6 +701,23 @@ assert_true 'staging signal preserves a usable command' file_has <("$CASE_INSTAL
 assert_true 'staging signal cleans the staged generation' \
     test -z "$(find "$CASE_ROOT/install/lib/apm/releases" -name '.stage-*' -print -quit)"
 
+new_case signal-during-lock-acquire
+make_fixture Linux x86_64
+real_mkdir=$(command -v mkdir)
+cat > "$CASE_BIN/mkdir" <<EOF
+#!/usr/bin/env bash
+'$real_mkdir' "\$@" || exit \$?
+case "\$*" in
+    *'/lib/apm/.lock') : > '$CASE_ROOT/lock-acquire-signal'; kill -TERM "\$PPID" ;;
+esac
+EOF
+chmod +x "$CASE_BIN/mkdir"
+run_case --cli-only
+record_result 'interruption between lock creation and ownership record is discarded' success
+assert_true 'lock acquire signal was sent' test -f "$CASE_ROOT/lock-acquire-signal"
+assert_true 'lock acquire signal leaves no stale lock' test ! -e "$CASE_ROOT/install/lib/apm/.lock"
+assert_true 'lock acquire signal leaves the install usable' file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
+
 new_case signal-during-lock-release
 make_fixture Linux x86_64
 real_rmdir=$(command -v rmdir)

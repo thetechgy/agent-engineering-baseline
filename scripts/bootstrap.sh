@@ -301,10 +301,17 @@ promote_bundle() {
 
     # mkdir is atomic on Linux and macOS. Never wait or steal: a second bootstrap
     # fails immediately with a diagnostic naming the lock it would need.
-    if ! (umask 077; mkdir "$LOCK_PATH") 2>/dev/null; then
+    # Interrupts are ignored across the create-and-record pair (mkdir inherits
+    # the disposition) so an interruption cannot leave a lock nobody records
+    # owning; the window is one syscall, and the normal handler returns after.
+    trap '' HUP INT TERM
+    if mkdir -m 0700 "$LOCK_PATH" 2>/dev/null; then
+        LOCK_ACQUIRED=true
+    fi
+    trap 'exit 130' HUP INT TERM
+    if [ "$LOCK_ACQUIRED" != true ]; then
         die "another bootstrap owns $LOCK_PATH; wait for it to finish, or remove that directory if no bootstrap is running."
     fi
-    LOCK_ACQUIRED=true
 
     if [ -e "$link_path" ] || [ -L "$link_path" ]; then
         [ -L "$link_path" ] || die "refusing to overwrite unrelated APM command: $link_path"

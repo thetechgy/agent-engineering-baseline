@@ -327,6 +327,15 @@ function Get-MutexName {
 }
 
 
+function Test-LegacyCurrentEntry {
+    # Test-Path follows reparse points and reports a dangling junction as absent;
+    # Get-Item -Force sees the link itself so its target is still validated.
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param([Parameter(Mandatory)][string]$Path)
+    return $null -ne (Get-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue)
+}
+
 function Test-LegacyCurrentJunction {
     # True only for a directory junction whose target lies inside the releases
     # directory, the sole form the previous bootstrap layout ever created.
@@ -423,7 +432,7 @@ function Install-ReviewedBundle {
             if ($shimText -notmatch $managedShimPattern) {
                 throw "Refusing to overwrite an unrelated APM shim: $shimPath"
             }
-            if ($shimText -like '*\current\apm.exe*' -and (Test-Path -LiteralPath $legacyCurrentPath) -and
+            if ($shimText -like '*\current\apm.exe*' -and (Test-LegacyCurrentEntry -Path $legacyCurrentPath) -and
                 -not (Test-LegacyCurrentJunction -Path $legacyCurrentPath -ReleasesPath $releasesPath)) {
                 throw "Refusing to overwrite an APM shim whose legacy current link is not a junction into ${releasesPath}: $shimPath"
             }
@@ -489,7 +498,7 @@ function Install-ReviewedBundle {
             }
             catch { Write-Warning -Message "Unable to remove a superseded APM release at $($entry.FullName): $_" }
         }
-        if (Test-Path -LiteralPath $legacyCurrentPath) {
+        if (Test-LegacyCurrentEntry -Path $legacyCurrentPath) {
             if (Test-LegacyCurrentJunction -Path $legacyCurrentPath -ReleasesPath $releasesPath) {
                 # Deleting a junction non-recursively removes only the link itself.
                 try { [IO.Directory]::Delete($legacyCurrentPath, $false) }

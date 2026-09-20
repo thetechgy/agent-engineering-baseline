@@ -657,6 +657,24 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         (Get-ReleaseEntry -InstallRoot $script:InstallRoot).Count | Should-Be 0
     }
 
+    It 'refuses a legacy current shim whose dangling junction pointed outside releases' {
+        $outside = Join-Path $TestDrive ('outside-' + [Guid]::NewGuid().ToString('N'))
+        $current = Join-Path $script:InstallRoot 'current'
+        $shim = Join-Path $script:InstallRoot 'bin\apm.cmd'
+        New-Item -ItemType Directory -Path $outside, (Split-Path -Parent $shim) -Force | Out-Null
+        New-Item -ItemType Junction -Path $current -Target $outside | Out-Null
+        Remove-Item -LiteralPath $outside -Force
+        $content = "@echo off`r`n`"%~dp0..\current\apm.exe`" %*`r`n"
+        [IO.File]::WriteAllText($shim, $content, [Text.Encoding]::ASCII)
+
+        { & $script:TestRepository.Script -CliOnly -Confirm:$false } |
+            Should-Throw -ExceptionMessage '*legacy current link is not a junction into*'
+
+        [IO.File]::ReadAllText($shim) | Should-Be $content
+        [bool]((Get-Item -LiteralPath $current -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) | Should-BeTrue
+        (Get-ReleaseEntry -InstallRoot $script:InstallRoot).Count | Should-Be 0
+    }
+
     It 'leaves a plain current directory in place with a warning' {
         & $script:TestRepository.Script -CliOnly -Confirm:$false
         $current = Join-Path $script:InstallRoot 'current'
