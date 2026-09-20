@@ -54,6 +54,8 @@ assert_true() {
 # shellcheck disable=SC2317
 out_has() { printf '%s\n' "$OUTPUT" | grep -Fq "$1"; }
 # shellcheck disable=SC2317
+out_lacks() { ! out_has "$1"; }
+# shellcheck disable=SC2317
 file_has() { grep -Fq "$2" "$1"; }
 
 assert_true 'mirror redirects are limited to reviewed protocols' \
@@ -353,6 +355,18 @@ run_case --cli-only
 record_result 'executable without a full version is rejected' failure
 assert_true 'missing version uses the reviewed diagnostic' \
     out_has 'did not report a full version'
+assert_true 'missing staged version is not misreported as a mismatch' out_lacks 'does not report the pinned'
+
+new_case staged-execution-failure
+make_fixture Linux x86_64
+printf '#!/bin/sh\nexit 73\n' > "$BUNDLE_ROOT/apm"
+tar -czf "$MIRROR_ROOT/v0.29.0/$ARCHIVE_NAME" -C "$FIXTURE_ROOT" "$ARCHIVE_ROOT"
+replace_checksum "$ARCHIVE_ROOT/apm" "$(digest "$BUNDLE_ROOT/apm")"
+replace_checksum "$ARCHIVE_NAME" "$(digest "$MIRROR_ROOT/v0.29.0/$ARCHIVE_NAME")"
+run_case --cli-only
+record_result 'staged execution failure is surfaced' failure
+assert_true 'staged execution failure uses a phase-neutral diagnostic' out_has 'the APM executable failed its version postcondition'
+assert_true 'staged execution failure is not misreported as a mismatch' out_lacks 'does not report the pinned'
 
 new_case missing-internal
 make_fixture Linux x86_64
@@ -532,6 +546,7 @@ EOF
         case "$fault" in
             execution|banner)
                 assert_true "$prior $fault uses a phase-neutral version diagnostic" out_has 'the APM executable'
+                assert_true "$prior $fault is not misreported as a mismatch" out_lacks 'does not report the pinned'
                 ;;
         esac
         if [ "$prior" = existing ]; then
@@ -655,6 +670,36 @@ assert_true 'old-link removal failure never backs up or replaces the release' \
     test -z "$(find "$CASE_ROOT/install/lib" -name '.apm-rollback-*' -print -quit)"
 
 printf '# installation serialization\n'
+new_case signal-during-rollback
+make_fixture Linux x86_64
+run_case --cli-only
+record_result 'rollback signal fixture installs prior bundle' success
+printf 'prior release\n' > "$CASE_ROOT/install/lib/apm/_internal/old"
+real_ln=$(command -v ln)
+real_mv=$(command -v mv)
+cat > "$CASE_BIN/ln" <<EOF
+#!/usr/bin/env bash
+if [ ! -f '$CASE_ROOT/link-failed' ]; then : > '$CASE_ROOT/link-failed'; exit 73; fi
+exec '$real_ln' "\$@"
+EOF
+cat > "$CASE_BIN/mv" <<EOF
+#!/usr/bin/env bash
+case "\${1-}" in
+    */.apm-rollback-*)
+        : > '$CASE_ROOT/rollback-signal'
+        kill -TERM "\$PPID"
+        ;;
+esac
+exec '$real_mv' "\$@"
+EOF
+chmod +x "$CASE_BIN/ln" "$CASE_BIN/mv"
+run_case --cli-only
+record_result 'original activation failure is surfaced after rollback signal' failure
+assert_true 'signal is injected during backup restoration' test -f "$CASE_ROOT/rollback-signal"
+assert_true 'rollback signal still releases the lock' test ! -e "$CASE_ROOT/install/lib/.apm-install.lock"
+assert_true 'rollback signal still restores the original release' file_has "$CASE_ROOT/install/lib/apm/_internal/old" 'prior release'
+assert_true 'rollback signal still restores a usable command' file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
+
 new_case lock-acquisition-signal
 make_fixture Linux x86_64
 run_case --cli-only

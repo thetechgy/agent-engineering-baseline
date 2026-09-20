@@ -239,7 +239,7 @@ assert_safe_directory() {
 }
 
 promote_bundle() (
-    local source_bundle=$1 install_parent bundle_parent bundle_path link_path
+    local source_bundle=$1 install_parent bundle_parent bundle_path link_path actual_version
     local stage_path backup_path old_link_target='' had_bundle=false had_link=false
     local backed_up=false promoted=false link_removed=false link_created=false
     local lock_path lock_acquired=false lock_interrupted=false lock_wait=0 promotion_complete=false
@@ -307,7 +307,9 @@ promote_bundle() (
     # shellcheck disable=SC2317
     rollback_promotion() {
         local status=$? rollback_failed=false
-        trap - EXIT HUP INT TERM
+        trap - EXIT
+        # Finish recovery and release the owned lock even if another signal arrives.
+        trap '' HUP INT TERM
         if [ "$status" -ne 0 ] && [ "$promotion_complete" = false ]; then
             if [ "$link_created" = true ]; then rm -f "$link_path" || rollback_failed=true; fi
             if [ "$promoted" = true ]; then rm -rf "$bundle_path" || rollback_failed=true; fi
@@ -354,7 +356,8 @@ promote_bundle() (
     promoted=true
     # Do not expose a replacement command until its installed bytes execute correctly.
     verify_file "$PROMOTED_APM" "$EXECUTABLE_MEMBER"
-    [ "$(reported_version "$PROMOTED_APM")" = "$PIN" ] ||
+    actual_version=$(reported_version "$PROMOTED_APM")
+    [ "$actual_version" = "$PIN" ] ||
         die "the promoted APM CLI does not report the pinned v$PIN."
     ln -s "$bundle_path/apm" "$link_path"
     link_created=true
@@ -385,7 +388,7 @@ acquire_cli() {
     temp_parent=$(CDPATH='' cd "$temp_parent" && pwd -P) ||
         die "temporary directory is unavailable: ${TMPDIR:-/tmp}"
     TEMP_ROOT=$(mktemp -d "$temp_parent/apm-bootstrap.XXXXXX")
-    local archive_path="$TEMP_ROOT/$ARCHIVE_NAME" extract_root="$TEMP_ROOT/extract"
+    local archive_path="$TEMP_ROOT/$ARCHIVE_NAME" extract_root="$TEMP_ROOT/extract" actual_version
     mkdir "$extract_root"
     download_archive "$archive_path"
     verify_file "$archive_path" "$ARCHIVE_NAME"
@@ -395,7 +398,8 @@ acquire_cli() {
     [ -d "$extract_root/$ARCHIVE_ROOT/_internal" ] || die 'the extracted APM bundle is missing _internal.'
     verify_file "$extract_root/$EXECUTABLE_MEMBER" "$EXECUTABLE_MEMBER"
     chmod +x "$extract_root/$EXECUTABLE_MEMBER"
-    [ "$(reported_version "$extract_root/$EXECUTABLE_MEMBER")" = "$PIN" ] ||
+    actual_version=$(reported_version "$extract_root/$EXECUTABLE_MEMBER")
+    [ "$actual_version" = "$PIN" ] ||
         die "the staged APM CLI does not report the pinned v$PIN."
     PROMOTED_APM="$(dirname "$INSTALL_DIR")/lib/apm/apm"
     promote_bundle "$extract_root/$ARCHIVE_ROOT"
