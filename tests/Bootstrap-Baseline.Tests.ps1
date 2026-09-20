@@ -99,7 +99,11 @@ public static class $className
         string log = Environment.GetEnvironmentVariable("APM_TEST_CALL_LOG");
         if (!String.IsNullOrEmpty(log))
         {
-            File.AppendAllText(log, Environment.CommandLine + Environment.NewLine);
+            string pinned = Environment.GetEnvironmentVariable("VERSION");
+            File.AppendAllText(
+                log,
+                Environment.CommandLine + " VERSION=" + (String.IsNullOrEmpty(pinned) ? "unset" : pinned) + Environment.NewLine
+            );
         }
         string mutexName = Environment.GetEnvironmentVariable("APM_TEST_MUTEX_NAME");
         if (!String.IsNullOrEmpty(mutexName) && args.Length > 0 && args[0] == "install")
@@ -337,7 +341,7 @@ Describe 'Bootstrap-Baseline Windows security contracts' {
     It 'contains no ambient execution, installer, self-update, or Authenticode fallback' {
         $script:BootstrapText | Should-NotMatchString '&\s+apm\b'
         $script:BootstrapText | Should-NotMatchString 'install\.ps1'
-        $script:BootstrapText | Should-NotMatchString 'self-update'
+        $script:BootstrapText | Should-NotMatchString 'apm[^\r\n]*\bself-update\b'
         $script:BootstrapText | Should-NotMatchString 'Authenticode'
     }
 
@@ -481,13 +485,16 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         $release = Get-ActiveRelease -InstallRoot $script:InstallRoot
         foreach ($call in $calls) { $call | Should-MatchString ([regex]::Escape("$release\apm.exe")) }
         $globalOption = if ($GlobalScope) { ' --global' } else { '' }
+        # APM reads VERSION as its pinned release and skips the self-update nudge.
+        $pinned = ' VERSION=0\.29\.0$'
         $calls[0] | Should-MatchString (
             ' install' + $globalOption + ' --target codex,copilot --trust-bin --trust-transitive-mcp ' +
-            'https://github.com/thetechgy/agent-engineering-baseline\.git#main$'
+            'https://github.com/thetechgy/agent-engineering-baseline\.git#main' + $pinned
         )
-        $calls[1] | Should-MatchString (' update' + $globalOption + ' --yes --target codex,copilot$')
+        $calls[1] | Should-MatchString (' update' + $globalOption + ' --yes --target codex,copilot' + $pinned)
         $compileOptions = if ($GlobalScope) { ' --global' } else { ' --target codex,copilot' }
-        $calls[2] | Should-MatchString (' compile' + $compileOptions + '$')
+        $calls[2] | Should-MatchString (' compile' + $compileOptions + $pinned)
+        $env:VERSION | Should-BeFalsy
     }
 
     It 'honors a literal package reference override' {

@@ -681,7 +681,16 @@ function Invoke-ReviewedApm {
     )
 
     Assert-ReviewedFile -Path $Executable -Name 'apm-windows-x86_64/apm.exe' -Metadata $Metadata
-    & $Executable @ArgumentList
+    # APM treats VERSION as its pinned release: it skips the latest-release
+    # lookup and the self-update notice, which would contradict the pin.
+    $previousVersion = $env:VERSION
+    try {
+        $env:VERSION = $Metadata.Pin
+        & $Executable @ArgumentList
+    }
+    finally {
+        $env:VERSION = $previousVersion
+    }
     if ($LASTEXITCODE -ne 0) {
         throw ('APM command failed with exit code ' + $LASTEXITCODE + ': ' + ($ArgumentList -join ' '))
     }

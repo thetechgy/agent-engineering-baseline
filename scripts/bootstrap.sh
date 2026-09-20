@@ -219,11 +219,14 @@ download_archive() {
         url="https://github.com/microsoft/apm/releases/download/v$PIN/$ARCHIVE_NAME"
     fi
     log "downloading $ARCHIVE_NAME"
+    # Interactive runs get a progress bar; logs stay quiet apart from errors.
+    local -a verbosity=(--silent --show-error)
+    [ -t 2 ] && verbosity=(--progress-bar)
     if [ -n "$base" ]; then
-        curl --fail --location --silent --show-error --proto '=https,file' \
+        curl --fail --location "${verbosity[@]}" --proto '=https,file' \
             --proto-redir '=https,file' --output "$destination" "$url"
     else
-        curl --fail --location --silent --show-error --proto '=https' \
+        curl --fail --location "${verbosity[@]}" --proto '=https' \
             --proto-redir '=https' --tlsv1.2 --output "$destination" "$url"
     fi
 }
@@ -460,7 +463,9 @@ warn_if_shadowed() {
 
 run_apm() {
     verify_file "$PROMOTED_APM" "$EXECUTABLE_MEMBER"
-    "$PROMOTED_APM" "$@"
+    # APM treats VERSION as its pinned release: it skips the latest-release
+    # lookup and the self-update notice, which would contradict the pin.
+    VERSION="$PIN" "$PROMOTED_APM" "$@"
 }
 
 deploy_baseline() {

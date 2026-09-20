@@ -159,7 +159,7 @@ make_fixture() {
     printf 'fixture index\n' > "$BUNDLE_ROOT/_internal/indexes/catalog.json"
     cat > "$BUNDLE_ROOT/apm" <<EOF
 #!/usr/bin/env bash
-printf '%s\n' "\$0 \$*" >> '$CALL_LOG'
+printf '%s VERSION=%s\n' "\$0 \$*" "\${VERSION-unset}" >> '$CALL_LOG'
 if [ "\${1-}" = '--version' ]; then
     printf 'Agent Package Manager (APM) CLI version %s (fixture)\n' '$version'
 fi
@@ -281,6 +281,10 @@ assert_true 'global rerun refreshes locked refs natively' \
 assert_true 'global refresh log covers all user-scope branch-ref dependencies' \
     out_has 'refreshing all user-scope branch-ref dependencies to their latest commits'
 assert_true 'global compilation is native' file_has "$CALL_LOG" 'compile --global'
+assert_true 'deployment commands pin VERSION so APM skips its self-update nudge' \
+    test "$(grep -Ec ' (install|update|compile) .*VERSION=0\.29\.0$' "$CALL_LOG")" -eq 3
+assert_true 'no deployment command runs without the pinned VERSION' \
+    test "$(grep -Ec ' (install|update|compile) .*VERSION=unset$' "$CALL_LOG")" -eq 0
 
 new_case repo-deploy
 make_fixture Linux x86_64

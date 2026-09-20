@@ -273,10 +273,12 @@ Native output written by each mode:
 The two Copilot context files carry the same instruction body under different
 generated headers; that duplication is native Copilot target behavior. Expected
 native diagnostics during a bootstrap are the `enabled_tools` passthrough
-warning described above, the unscoped-instruction warning for the universal
-instruction, and APM's own `A new version of APM is available … Run apm
-self-update` notice. Ignore the self-update notice: this repository pins the
-CLI, and `apm self-update` would replace the reviewed executable with an
+warning described above and the unscoped-instruction warning for the universal
+instruction. Bootstrap runs each APM command with `VERSION=<pin>`, APM's
+native air-gap setting, so APM performs no latest-release lookup and prints no
+`A new version of APM is available … Run apm self-update` notice. If you run
+the reviewed CLI yourself and see that notice, ignore it: this repository pins
+the CLI, and `apm self-update` would replace the reviewed executable with an
 unreviewed one.
 
 ## Repository validation
