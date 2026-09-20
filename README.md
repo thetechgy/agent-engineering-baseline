@@ -176,7 +176,9 @@ moving the installation tree requires running the bootstrap again. Linux uses
 regular file, or a link that does not name a generation executable or the
 legacy `lib/apm/apm` bundle (including any `.` or `..` path component, or a
 generation directory or executable that is itself a symlink) is not
-overwritten. The fail-fast lock is the directory
+overwritten. A managed-looking link is replaced only when its target is
+missing or its bundle carries the installer's `.apm-installed` marker as a
+regular file; a link to an unmarked bundle is refused with both paths named. The fail-fast lock is the directory
 `lib/apm/.lock`, held until the run exits so the native APM deployment always
 runs from a generation no concurrent bootstrap can supersede; normal exit and
 handled signals remove it, and after a forced kill the diagnostic names it so
@@ -199,7 +201,10 @@ until the native deployment finishes, reparse points are rejected before any
 tree is deleted, TLS 1.2 is enabled temporarily
 and restored, and the legacy `current` junction is recognized only when its
 target is a reparse-free path inside `releases` and is then removed without
-following it. `bin` is prepended to the current process and User PATH; a User PATH
+following it. The same rule as on Linux applies to the shim: it is replaced
+only when the release it runs is missing or carries the `.apm-installed`
+marker as a regular file, and a release reached through a reparse point is
+refused. `bin` is prepended to the current process and User PATH; a User PATH
 failure after activation is a warning. Both wrappers warn if another PATH
 command may still shadow the reviewed location in new shells.
 

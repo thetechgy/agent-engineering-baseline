@@ -534,6 +534,60 @@ assert_true 'unmanaged generation symlink reaches ownership validation' out_has 
 assert_true 'unmanaged generation symlink is preserved' \
     test "$(readlink "$CASE_INSTALL/apm")" = "$CASE_ROOT/install/lib/apm/releases/v0.28.0-unmarked/apm"
 
+new_case unowned-legacy-bundle
+make_fixture Linux x86_64
+mkdir -p "$CASE_ROOT/install/lib/apm/_internal"
+printf 'user bundle\n' > "$CASE_ROOT/install/lib/apm/_internal/keep"
+printf '#!/bin/sh\nexit 0\n' > "$CASE_ROOT/install/lib/apm/apm"
+chmod +x "$CASE_ROOT/install/lib/apm/apm"
+ln -s "$CASE_ROOT/install/lib/apm/apm" "$CASE_INSTALL/apm"
+run_case --cli-only
+record_result 'symlink to an unmarked legacy bundle is not overwritten' failure
+assert_true 'unowned legacy bundle is diagnosed with the command and its target' \
+    out_has "refusing to overwrite an APM symlink to an unowned bundle: $CASE_INSTALL/apm -> $CASE_ROOT/install/lib/apm/apm"
+assert_true 'unowned legacy symlink is preserved' test "$(readlink "$CASE_INSTALL/apm")" = "$CASE_ROOT/install/lib/apm/apm"
+assert_true 'unowned legacy executable is preserved' test -x "$CASE_ROOT/install/lib/apm/apm"
+assert_true 'unowned legacy tree is preserved' file_has "$CASE_ROOT/install/lib/apm/_internal/keep" 'user bundle'
+assert_true 'unowned legacy bundle blocks generation creation' \
+    test -z "$(find "$CASE_ROOT/install/lib/apm/releases" -mindepth 1 -maxdepth 1 2>/dev/null)"
+
+new_case unowned-generation-target
+make_fixture Linux x86_64
+unowned_release="$CASE_ROOT/install/lib/apm/releases/v0.28.0-20260101T000000Z-4242"
+mkdir -p "$unowned_release"
+printf '#!/bin/sh\nexit 0\n' > "$unowned_release/apm"
+chmod +x "$unowned_release/apm"
+ln -s "$unowned_release/apm" "$CASE_INSTALL/apm"
+run_case --cli-only
+record_result 'symlink to an unmarked generation-named directory is not overwritten' failure
+assert_true 'unowned generation target is diagnosed' \
+    out_has "refusing to overwrite an APM symlink to an unowned bundle: $CASE_INSTALL/apm -> $unowned_release/apm"
+assert_true 'unowned generation symlink is preserved' test "$(readlink "$CASE_INSTALL/apm")" = "$unowned_release/apm"
+assert_true 'unowned generation executable is preserved' test -x "$unowned_release/apm"
+
+new_case symlinked-marker-target
+make_fixture Linux x86_64
+marked_release="$CASE_ROOT/install/lib/apm/releases/v0.28.0-20260101T000000Z-4242"
+mkdir -p "$marked_release"
+printf 'v0.28.0\n' > "$CASE_ROOT/elsewhere-marker"
+ln -s "$CASE_ROOT/elsewhere-marker" "$marked_release/.apm-installed"
+printf '#!/bin/sh\nexit 0\n' > "$marked_release/apm"
+chmod +x "$marked_release/apm"
+ln -s "$marked_release/apm" "$CASE_INSTALL/apm"
+run_case --cli-only
+record_result 'symlink to a bundle whose marker is a symlink is not overwritten' failure
+assert_true 'symlinked marker is diagnosed as unowned' out_has 'refusing to overwrite an APM symlink to an unowned bundle'
+assert_true 'symlinked marker bundle is preserved' test -L "$marked_release/.apm-installed" -a -x "$marked_release/apm"
+
+new_case dangling-legacy-symlink
+make_fixture Linux x86_64
+mkdir -p "$CASE_ROOT/install/lib/apm"
+ln -s "$CASE_ROOT/install/lib/apm/apm" "$CASE_INSTALL/apm"
+run_case --cli-only
+record_result 'dangling symlink to a removed legacy bundle is repaired' success
+assert_true 'dangling legacy symlink is replaced' test -d "$(active_release)"
+assert_true 'repaired legacy command is usable' file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
+
 new_case dangling-generation-symlink
 make_fixture Linux x86_64
 mkdir -p "$CASE_ROOT/install/lib/apm/releases"

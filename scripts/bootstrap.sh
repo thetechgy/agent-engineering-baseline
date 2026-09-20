@@ -296,7 +296,7 @@ remove_unactivated_release() {
 # atomically replacing the bin/apm symlink. The previously active generation
 # keeps working until that single rename, so no backup or rollback is needed.
 promote_bundle() {
-    local source_bundle=$1 install_parent releases_path link_path link_target generation_name generation
+    local source_bundle=$1 install_parent releases_path link_path link_target bundle_dir generation_name generation
     local stage_path release_dir link_stage entry actual_version
     install_parent=$(dirname "$INSTALL_DIR")
     LIB_ROOT="$install_parent/lib/apm"
@@ -352,6 +352,12 @@ promote_bundle() {
             die "refusing to overwrite an APM symlink whose target resolves through another symlink: $link_path"
         fi
         [ ! -d "$link_path" ] || die "refusing to overwrite an APM symlink that resolves to a directory: $link_path"
+        # An existing target is replaced only when its bundle carries the marker
+        # this installer writes; a missing target (dangling link) stays repairable.
+        bundle_dir=${link_target%/apm}
+        if [ -e "$link_target" ] && { [ ! -f "$bundle_dir/.apm-installed" ] || [ -L "$bundle_dir/.apm-installed" ]; }; then
+            die "refusing to overwrite an APM symlink to an unowned bundle: $link_path -> $link_target"
+        fi
     fi
     LINK_PATH=$link_path
 

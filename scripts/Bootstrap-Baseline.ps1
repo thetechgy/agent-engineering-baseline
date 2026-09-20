@@ -336,29 +336,33 @@ function Test-LegacyCurrentEntry {
     return $null -ne (Get-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue)
 }
 
-function Test-LegacyCurrentJunction {
-    # True only for a directory junction whose target lies inside the releases
-    # directory, the sole form the previous bootstrap layout ever created.
+function Test-OwnedBundle {
+    # True when the bundle directory carries the installer's ownership marker as
+    # a regular file; a missing marker or a reparse point means the bundle is
+    # not this installer's to replace or remove.
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param([Parameter(Mandatory)][string]$Path)
+    $marker = Get-Item -LiteralPath (Join-Path $Path '.apm-installed') -Force -ErrorAction SilentlyContinue
+    return [bool]($marker -and -not $marker.PSIsContainer -and
+        -not ($marker.Attributes -band [IO.FileAttributes]::ReparsePoint))
+}
+
+function Test-PlainReleasePath {
+    # True when every existing component of a release directory below releases,
+    # and the executable the shim runs, is a plain entry, so the path cannot
+    # resolve outside the tree through a nested reparse point. A missing
+    # component ends the walk: a dangling reference inside releases stays
+    # repairable.
     [CmdletBinding()]
     [OutputType([bool])]
     param(
         [Parameter(Mandatory)][string]$Path,
         [Parameter(Mandatory)][string]$ReleasesPath
     )
-    $item = Get-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
-    if (-not $item) { return $false }
-    if (-not ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) { return $false }
-    if (-not ($item.Attributes -band [IO.FileAttributes]::Directory)) { return $false }
-    $target = [string](@($item.Target) | Select-Object -First 1)
-    if (-not $target) { return $false }
-    $target = $target -replace '^\\\\\?\\', '' -replace '^\\\?\?\\', ''
     $prefix = [IO.Path]::GetFullPath($ReleasesPath).TrimEnd('\') + '\'
-    $target = [IO.Path]::GetFullPath([string]$target)
+    $target = [IO.Path]::GetFullPath($Path)
     if (-not $target.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) { return $false }
-    # GetFullPath only normalizes text. Every existing component below releases,
-    # and the executable the shim runs, must be a plain entry so the link cannot
-    # resolve outside the tree through a nested reparse point. A missing
-    # component ends the walk: a dangling link inside releases stays repairable.
     $current = $prefix.TrimEnd('\')
     $components = @($target.Substring($prefix.Length) -split '\\' | Where-Object { $_ }) + @('apm.exe')
     foreach ($component in $components) {
@@ -370,6 +374,38 @@ function Test-LegacyCurrentJunction {
         if (-not $entry.PSIsContainer) { return $false }
     }
     return $true
+}
+
+function Get-LegacyCurrentTarget {
+    # The normalized target of the legacy current junction when it is a directory
+    # junction whose reparse-free target lies inside releases, the sole form the
+    # previous bootstrap layout ever created; otherwise $null.
+    [CmdletBinding()]
+    [OutputType([string])]
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][string]$ReleasesPath
+    )
+    $item = Get-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
+    if (-not $item) { return $null }
+    if (-not ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) { return $null }
+    if (-not ($item.Attributes -band [IO.FileAttributes]::Directory)) { return $null }
+    $target = [string](@($item.Target) | Select-Object -First 1)
+    if (-not $target) { return $null }
+    $target = $target -replace '^\\\\\?\\', '' -replace '^\\\?\?\\', ''
+    $target = [IO.Path]::GetFullPath([string]$target)
+    if (Test-PlainReleasePath -Path $target -ReleasesPath $ReleasesPath) { return $target }
+    return $null
+}
+
+function Test-LegacyCurrentJunction {
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][string]$ReleasesPath
+    )
+    return $null -ne (Get-LegacyCurrentTarget -Path $Path -ReleasesPath $ReleasesPath)
 }
 
 function Install-ReviewedBundle {
@@ -444,13 +480,30 @@ function Install-ReviewedBundle {
             if ($shimItem.PSIsContainer) {
                 throw "Refusing to overwrite a non-file APM shim: $shimPath"
             }
-            $shimText = [IO.File]::ReadAllText($shimPath)
-            if ($shimText -notmatch $managedShimPattern) {
+            $shimMatch = [regex]::Match([IO.File]::ReadAllText($shimPath), $managedShimPattern)
+            if (-not $shimMatch.Success) {
                 throw "Refusing to overwrite an unrelated APM shim: $shimPath"
             }
-            if ($shimText -like '*\current\apm.exe*' -and (Test-LegacyCurrentEntry -Path $legacyCurrentPath) -and
-                -not (Test-LegacyCurrentJunction -Path $legacyCurrentPath -ReleasesPath $releasesPath)) {
-                throw "Refusing to overwrite an APM shim whose legacy current link is not a junction into ${releasesPath}: $shimPath"
+            # The shim is replaced only when the release it runs is missing
+            # (repairable) or carries this installer's ownership marker.
+            $shimRelease = $null
+            if ($shimMatch.Groups[1].Value -eq 'current') {
+                if (Test-LegacyCurrentEntry -Path $legacyCurrentPath) {
+                    $shimRelease = Get-LegacyCurrentTarget -Path $legacyCurrentPath -ReleasesPath $releasesPath
+                    if (-not $shimRelease) {
+                        throw "Refusing to overwrite an APM shim whose legacy current link is not a junction into ${releasesPath}: $shimPath"
+                    }
+                }
+            }
+            else {
+                $shimRelease = Join-Path $installRoot $shimMatch.Groups[1].Value
+                if (-not (Test-PlainReleasePath -Path $shimRelease -ReleasesPath $releasesPath)) {
+                    throw "Refusing to overwrite an APM shim whose release resolves through a reparse point: $shimPath -> $shimRelease"
+                }
+            }
+            if ($shimRelease -and (Get-Item -LiteralPath (Join-Path $shimRelease 'apm.exe') -Force -ErrorAction SilentlyContinue) -and
+                -not (Test-OwnedBundle -Path $shimRelease)) {
+                throw "Refusing to overwrite an APM shim that runs an unowned release: $shimPath -> $shimRelease"
             }
         }
         foreach ($path in @($stagePath, $releasePath, $shimStagePath)) {
@@ -506,9 +559,8 @@ function Install-ReviewedBundle {
         # reparse point can never redirect deletion.
         foreach ($entry in @(Get-ChildItem -LiteralPath $releasesPath -Force)) {
             if ($entry.FullName -ieq $releasePath) { continue }
-            $marker = Get-Item -LiteralPath (Join-Path $entry.FullName '.apm-installed') -Force -ErrorAction SilentlyContinue
             $owned = $entry.PSIsContainer -and -not ($entry.Attributes -band [IO.FileAttributes]::ReparsePoint) -and
-                $marker -and -not $marker.PSIsContainer -and -not ($marker.Attributes -band [IO.FileAttributes]::ReparsePoint)
+                (Test-OwnedBundle -Path $entry.FullName)
             if (-not $owned) {
                 Write-Warning -Message "Leaving an unrecognized entry in the APM releases directory: $($entry.FullName)"
                 continue

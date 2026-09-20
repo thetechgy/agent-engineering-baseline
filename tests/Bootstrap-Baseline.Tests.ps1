@@ -580,6 +580,73 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         (Get-ReleaseEntry -InstallRoot $script:InstallRoot).Count | Should-Be 0
     }
 
+    It 'refuses a legacy current shim whose release lacks the ownership marker' {
+        $release = Join-Path $script:InstallRoot 'releases\v0.28.0'
+        $current = Join-Path $script:InstallRoot 'current'
+        $shim = Join-Path $script:InstallRoot 'bin\apm.cmd'
+        New-Item -ItemType Directory -Path $release, (Split-Path -Parent $shim) -Force | Out-Null
+        [IO.File]::WriteAllText((Join-Path $release 'apm.exe'), 'user executable')
+        New-Item -ItemType Junction -Path $current -Target $release | Out-Null
+        $content = "@echo off`r`n`"%~dp0..\current\apm.exe`" %*`r`n"
+        [IO.File]::WriteAllText($shim, $content, [Text.Encoding]::ASCII)
+
+        { & $script:TestRepository.Script -CliOnly -Confirm:$false } |
+            Should-Throw -ExceptionMessage "*runs an unowned release: $shim -> *"
+
+        [IO.File]::ReadAllText($shim) | Should-Be $content
+        [bool]((Get-Item -LiteralPath $current -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) | Should-BeTrue
+        [IO.File]::ReadAllText((Join-Path $release 'apm.exe')) | Should-Be 'user executable'
+        (Get-ReleaseEntry -InstallRoot $script:InstallRoot).Count | Should-Be 1
+    }
+
+    It 'refuses a generation shim whose release lacks the ownership marker' {
+        $release = Join-Path $script:InstallRoot 'releases\v0.28.0-20260101T000000Z-4242abcd'
+        $shim = Join-Path $script:InstallRoot 'bin\apm.cmd'
+        New-Item -ItemType Directory -Path $release, (Split-Path -Parent $shim) -Force | Out-Null
+        [IO.File]::WriteAllText((Join-Path $release 'apm.exe'), 'user executable')
+        $content = "@echo off`r`n`"%~dp0..\releases\v0.28.0-20260101T000000Z-4242abcd\apm.exe`" %*`r`n"
+        [IO.File]::WriteAllText($shim, $content, [Text.Encoding]::ASCII)
+
+        { & $script:TestRepository.Script -CliOnly -Confirm:$false } |
+            Should-Throw -ExceptionMessage "*runs an unowned release: $shim -> $release"
+
+        [IO.File]::ReadAllText($shim) | Should-Be $content
+        [IO.File]::ReadAllText((Join-Path $release 'apm.exe')) | Should-Be 'user executable'
+        (Get-ReleaseEntry -InstallRoot $script:InstallRoot).Count | Should-Be 1
+    }
+
+    It 'refuses a generation shim whose release is a junction' {
+        $outside = Join-Path $TestDrive ('outside-' + [Guid]::NewGuid().ToString('N'))
+        $release = Join-Path $script:InstallRoot 'releases\v0.28.0-20260101T000000Z-4242abcd'
+        $shim = Join-Path $script:InstallRoot 'bin\apm.cmd'
+        New-Item -ItemType Directory -Path $outside, (Split-Path -Parent $release), (Split-Path -Parent $shim) -Force | Out-Null
+        [IO.File]::WriteAllText((Join-Path $outside '.apm-installed'), "v0.28.0`r`n", [Text.Encoding]::ASCII)
+        [IO.File]::WriteAllText((Join-Path $outside 'apm.exe'), 'outside content')
+        New-Item -ItemType Junction -Path $release -Target $outside | Out-Null
+        $content = "@echo off`r`n`"%~dp0..\releases\v0.28.0-20260101T000000Z-4242abcd\apm.exe`" %*`r`n"
+        [IO.File]::WriteAllText($shim, $content, [Text.Encoding]::ASCII)
+
+        { & $script:TestRepository.Script -CliOnly -Confirm:$false } |
+            Should-Throw -ExceptionMessage '*resolves through a reparse point*'
+
+        [IO.File]::ReadAllText($shim) | Should-Be $content
+        [IO.File]::ReadAllText((Join-Path $outside 'apm.exe')) | Should-Be 'outside content'
+    }
+
+    It 'repairs a shim whose referenced generation is missing' {
+        $shim = Join-Path $script:InstallRoot 'bin\apm.cmd'
+        New-Item -ItemType Directory -Path (Split-Path -Parent $shim) -Force | Out-Null
+        $content = "@echo off`r`n`"%~dp0..\releases\v0.28.0-20260101T000000Z-4242abcd\apm.exe`" %*`r`n"
+        [IO.File]::WriteAllText($shim, $content, [Text.Encoding]::ASCII)
+
+        & $script:TestRepository.Script -CliOnly -Confirm:$false
+
+        [IO.File]::ReadAllText($shim) | Should-NotBe $content
+        (Get-ReleaseEntry -InstallRoot $script:InstallRoot).Count | Should-Be 1
+        & $shim --version | Should-MatchString '0\.29\.0'
+        $LASTEXITCODE | Should-Be 0
+    }
+
     It 'refuses to overwrite a managed-looking shim whose generation escapes releases' {
         $shim = Join-Path $env:APM_INSTALL_DIR 'apm.cmd'
         New-Item -ItemType Directory -Path $env:APM_INSTALL_DIR -Force | Out-Null
