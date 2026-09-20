@@ -331,6 +331,11 @@ promote_bundle() {
                 ;;
             *) die "refusing to overwrite an unrelated APM symlink: $link_path" ;;
         esac
+        # The generation directory and its executable must be real entries; a
+        # missing target (dangling link) stays repairable.
+        if [ -L "$link_target" ] || [ -L "${link_target%/apm}" ]; then
+            die "refusing to overwrite an APM symlink whose target resolves through another symlink: $link_path"
+        fi
         [ ! -d "$link_path" ] || die "refusing to overwrite an APM symlink that resolves to a directory: $link_path"
     fi
     LINK_PATH=$link_path
@@ -347,9 +352,11 @@ promote_bundle() {
     # so a pre-existing path found above is never removed by the EXIT cleanup.
     STAGE_PATH=$stage_path
     mkdir "$STAGE_PATH"
+    # The ownership marker is written first so every directory this installer
+    # creates under releases is recognizable to later cleanup.
+    printf 'v%s\n' "$PIN" > "$STAGE_PATH/.apm-installed"
     cp -R "$source_bundle/." "$STAGE_PATH/"
     chmod +x "$STAGE_PATH/apm"
-    printf 'v%s\n' "$PIN" > "$STAGE_PATH/.apm-installed"
     assert_plain_tree "$STAGE_PATH" 'Staged persistent APM bundle'
     # Verify the bytes that will be activated, from the path they will keep.
     verify_file "$STAGE_PATH/apm" "$EXECUTABLE_MEMBER"
@@ -369,21 +376,16 @@ promote_bundle() {
     RELEASE_PATH=''
 
     # Best-effort cleanup of superseded generations and the legacy single-bundle layout.
-    # Only installer-owned entries are removed: abandoned stages and directories
-    # carrying the ownership marker every generation writes. Anything else is
-    # left in place with a warning.
+    # Only installer-owned entries are removed: plain directories (abandoned
+    # stages or generations) carrying the ownership marker this installer
+    # writes first. Anything else is left in place with a warning.
     for entry in "$releases_path"/* "$releases_path"/.stage-*; do
         { [ -e "$entry" ] || [ -L "$entry" ]; } || continue
         [ "$entry" != "$release_dir" ] || continue
-        case "$entry" in
-            "$releases_path"/.stage-*) ;;
-            *)
-                if [ -L "$entry" ] || [ ! -d "$entry" ] || [ ! -f "$entry/.apm-installed" ] || [ -L "$entry/.apm-installed" ]; then
-                    log "warning: leaving an unrecognized entry in the APM releases directory: $entry"
-                    continue
-                fi
-                ;;
-        esac
+        if [ -L "$entry" ] || [ ! -d "$entry" ] || [ ! -f "$entry/.apm-installed" ] || [ -L "$entry/.apm-installed" ]; then
+            log "warning: leaving an unrecognized entry in the APM releases directory: $entry"
+            continue
+        fi
         rm -rf "$entry" || log "warning: unable to remove a superseded APM release: $entry"
     done
     if [ -f "$LIB_ROOT/.apm-installed" ] && [ ! -L "$LIB_ROOT/.apm-installed" ]; then

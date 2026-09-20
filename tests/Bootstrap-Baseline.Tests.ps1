@@ -675,6 +675,53 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         (Get-ReleaseEntry -InstallRoot $script:InstallRoot).Count | Should-Be 0
     }
 
+    It 'refuses a legacy current shim whose junction traverses a nested junction' {
+        $outside = Join-Path $TestDrive ('outside-' + [Guid]::NewGuid().ToString('N'))
+        $releases = Join-Path $script:InstallRoot 'releases'
+        $nested = Join-Path $releases 'link'
+        $current = Join-Path $script:InstallRoot 'current'
+        $shim = Join-Path $script:InstallRoot 'bin\apm.cmd'
+        New-Item -ItemType Directory -Path (Join-Path $outside 'sub'), $releases, (Split-Path -Parent $shim) -Force | Out-Null
+        [IO.File]::WriteAllText((Join-Path $outside 'sub\apm.exe'), 'outside content')
+        New-Item -ItemType Junction -Path $nested -Target $outside | Out-Null
+        New-Item -ItemType Junction -Path $current -Target (Join-Path $nested 'sub') | Out-Null
+        # The stored target must be the textual path under releases, or the
+        # fixture would exercise the plain outside-releases rejection instead.
+        [string](@((Get-Item -LiteralPath $current -Force).Target) | Select-Object -First 1) |
+            Should-MatchString ([regex]::Escape($nested) + '\\sub$')
+        $content = "@echo off`r`n`"%~dp0..\current\apm.exe`" %*`r`n"
+        [IO.File]::WriteAllText($shim, $content, [Text.Encoding]::ASCII)
+
+        { & $script:TestRepository.Script -CliOnly -Confirm:$false } |
+            Should-Throw -ExceptionMessage '*legacy current link is not a junction into*'
+
+        [IO.File]::ReadAllText($shim) | Should-Be $content
+        Test-Path -LiteralPath $current | Should-BeTrue
+        Test-Path -LiteralPath $nested | Should-BeTrue
+        [IO.File]::ReadAllText((Join-Path $outside 'sub\apm.exe')) | Should-Be 'outside content'
+        @(Get-ReleaseEntry -InstallRoot $script:InstallRoot | Where-Object { $_.Name -ne 'link' }).Count | Should-Be 0
+    }
+
+    It 'leaves an unmarked stage directory in place and removes a marked abandoned stage' {
+        & $script:TestRepository.Script -CliOnly -Confirm:$false
+        $releases = Join-Path $script:InstallRoot 'releases'
+        $unmarked = Join-Path $releases '.stage-notes'
+        $marked = Join-Path $releases '.stage-v0.28.0-20260101T000000Z-00000001'
+        New-Item -ItemType Directory -Path $unmarked, $marked -Force | Out-Null
+        [IO.File]::WriteAllText((Join-Path $unmarked 'keep'), 'user notes')
+        [IO.File]::WriteAllText((Join-Path $marked '.apm-installed'), "v0.28.0`r`n", [Text.Encoding]::ASCII)
+        $warnings = New-Object Collections.Generic.List[string]
+        Mock Write-Warning { $warnings.Add($Message) }
+
+        & $script:TestRepository.Script -CliOnly -Confirm:$false
+
+        ($warnings -join ' ') | Should-MatchString ([regex]::Escape($unmarked))
+        [IO.File]::ReadAllText((Join-Path $unmarked 'keep')) | Should-Be 'user notes'
+        Test-Path -LiteralPath $marked | Should-BeFalse
+        & (Join-Path $script:InstallRoot 'bin\apm.cmd') --version | Should-MatchString '0\.29\.0'
+        $LASTEXITCODE | Should-Be 0
+    }
+
     It 'leaves a plain current directory in place with a warning' {
         & $script:TestRepository.Script -CliOnly -Confirm:$false
         $current = Join-Path $script:InstallRoot 'current'

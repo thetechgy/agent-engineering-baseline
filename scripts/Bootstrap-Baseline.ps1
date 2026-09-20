@@ -353,7 +353,23 @@ function Test-LegacyCurrentJunction {
     if (-not $target) { return $false }
     $target = $target -replace '^\\\\\?\\', '' -replace '^\\\?\?\\', ''
     $prefix = [IO.Path]::GetFullPath($ReleasesPath).TrimEnd('\') + '\'
-    return [IO.Path]::GetFullPath([string]$target).StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)
+    $target = [IO.Path]::GetFullPath([string]$target)
+    if (-not $target.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) { return $false }
+    # GetFullPath only normalizes text. Every existing component below releases,
+    # and the executable the shim runs, must be a plain entry so the link cannot
+    # resolve outside the tree through a nested reparse point. A missing
+    # component ends the walk: a dangling link inside releases stays repairable.
+    $current = $prefix.TrimEnd('\')
+    $components = @($target.Substring($prefix.Length) -split '\\' | Where-Object { $_ }) + @('apm.exe')
+    foreach ($component in $components) {
+        $current = Join-Path $current $component
+        $entry = Get-Item -LiteralPath $current -Force -ErrorAction SilentlyContinue
+        if (-not $entry) { return $true }
+        if ($entry.Attributes -band [IO.FileAttributes]::ReparsePoint) { return $false }
+        if ($component -eq 'apm.exe') { return -not $entry.PSIsContainer }
+        if (-not $entry.PSIsContainer) { return $false }
+    }
+    return $true
 }
 
 function Install-ReviewedBundle {
@@ -445,14 +461,16 @@ function Install-ReviewedBundle {
 
         $ownedPaths.Add($stagePath)
         New-Item -ItemType Directory -Path $stagePath | Out-Null
-        Get-ChildItem -LiteralPath $SourceBundle -Force | ForEach-Object {
-            Copy-Item -LiteralPath $_.FullName -Destination $stagePath -Recurse -Force
-        }
+        # The ownership marker is written first so every directory this installer
+        # creates under releases is recognizable to later cleanup.
         [IO.File]::WriteAllText(
             (Join-Path $stagePath '.apm-installed'),
             "v$($Metadata.Pin)$([Environment]::NewLine)",
             [Text.Encoding]::ASCII
         )
+        Get-ChildItem -LiteralPath $SourceBundle -Force | ForEach-Object {
+            Copy-Item -LiteralPath $_.FullName -Destination $stagePath -Recurse -Force
+        }
         Assert-PlainTree -Path $stagePath -Label 'Staged persistent APM bundle'
         # Verify the bytes that will be activated, from the tree they will keep.
         $stagedExecutable = Join-Path $stagePath 'apm.exe'
@@ -478,16 +496,15 @@ function Install-ReviewedBundle {
         $activated = $true
 
         # Best-effort cleanup of superseded generations and the legacy current junction.
-        # Only installer-owned entries are removed: abandoned stages and directories
-        # carrying the ownership marker every generation writes; anything else is left
-        # with a warning. Only plain trees are removed, so a reparse point can never
-        # redirect deletion.
+        # Only installer-owned entries are removed: plain directories (abandoned stages
+        # or generations) carrying the ownership marker this installer writes first;
+        # anything else is left with a warning. Only plain trees are removed, so a
+        # reparse point can never redirect deletion.
         foreach ($entry in @(Get-ChildItem -LiteralPath $releasesPath -Force)) {
             if ($entry.FullName -ieq $releasePath) { continue }
             $marker = Get-Item -LiteralPath (Join-Path $entry.FullName '.apm-installed') -Force -ErrorAction SilentlyContinue
-            $owned = $entry.PSIsContainer -and -not ($entry.Attributes -band [IO.FileAttributes]::ReparsePoint) -and (
-                $entry.Name -like '.stage-*' -or
-                ($marker -and -not $marker.PSIsContainer -and -not ($marker.Attributes -band [IO.FileAttributes]::ReparsePoint)))
+            $owned = $entry.PSIsContainer -and -not ($entry.Attributes -band [IO.FileAttributes]::ReparsePoint) -and
+                $marker -and -not $marker.PSIsContainer -and -not ($marker.Attributes -band [IO.FileAttributes]::ReparsePoint)
             if (-not $owned) {
                 Write-Warning -Message "Leaving an unrecognized entry in the APM releases directory: $($entry.FullName)"
                 continue

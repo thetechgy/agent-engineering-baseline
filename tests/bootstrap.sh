@@ -543,6 +543,45 @@ record_result 'dangling symlink to a removed generation is repaired' success
 assert_true 'dangling generation symlink is replaced' test -d "$(active_release)"
 assert_true 'repaired command is usable' file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
 
+new_case unmarked-stage-entry
+make_fixture Linux x86_64
+mkdir -p "$CASE_ROOT/install/lib/apm/releases/.stage-notes" \
+    "$CASE_ROOT/install/lib/apm/releases/.stage-v0.28.0-20260101T000000Z-1"
+printf 'user notes\n' > "$CASE_ROOT/install/lib/apm/releases/.stage-notes/keep"
+printf 'v0.28.0\n' > "$CASE_ROOT/install/lib/apm/releases/.stage-v0.28.0-20260101T000000Z-1/.apm-installed"
+run_case --cli-only
+record_result 'unmarked stage-like directory survives cleanup' success
+assert_true 'unmarked stage-like directory is named in a warning' \
+    out_has "warning: leaving an unrecognized entry in the APM releases directory: $CASE_ROOT/install/lib/apm/releases/.stage-notes"
+assert_true 'unmarked stage-like directory is preserved' file_has "$CASE_ROOT/install/lib/apm/releases/.stage-notes/keep" 'user notes'
+assert_true 'marked abandoned stage is removed' test ! -e "$CASE_ROOT/install/lib/apm/releases/.stage-v0.28.0-20260101T000000Z-1"
+assert_true 'unmarked stage case leaves the install usable' file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
+
+new_case nested-symlink-generation
+make_fixture Linux x86_64
+mkdir -p "$CASE_ROOT/install/lib/apm/releases" "$CASE_ROOT/outside"
+printf '#!/bin/sh\nexit 0\n' > "$CASE_ROOT/outside/apm"
+ln -s "$CASE_ROOT/outside" "$CASE_ROOT/install/lib/apm/releases/v0.29.0-20260101T000000Z-4242"
+ln -s "$CASE_ROOT/install/lib/apm/releases/v0.29.0-20260101T000000Z-4242/apm" "$CASE_INSTALL/apm"
+run_case --cli-only
+record_result 'well-formed symlink through a symlinked generation directory is not overwritten' failure
+assert_true 'symlinked generation directory is diagnosed' out_has 'refusing to overwrite an APM symlink whose target resolves through another symlink'
+assert_true 'symlinked generation directory link is preserved' \
+    test "$(readlink "$CASE_INSTALL/apm")" = "$CASE_ROOT/install/lib/apm/releases/v0.29.0-20260101T000000Z-4242/apm"
+assert_true 'symlinked generation directory target is preserved' test -f "$CASE_ROOT/outside/apm"
+
+new_case symlinked-generation-executable
+make_fixture Linux x86_64
+mkdir -p "$CASE_ROOT/install/lib/apm/releases/v0.29.0-20260101T000000Z-4242" "$CASE_ROOT/outside"
+printf '#!/bin/sh\nexit 0\n' > "$CASE_ROOT/outside/apm"
+ln -s "$CASE_ROOT/outside/apm" "$CASE_ROOT/install/lib/apm/releases/v0.29.0-20260101T000000Z-4242/apm"
+ln -s "$CASE_ROOT/install/lib/apm/releases/v0.29.0-20260101T000000Z-4242/apm" "$CASE_INSTALL/apm"
+run_case --cli-only
+record_result 'well-formed symlink to a symlinked generation executable is not overwritten' failure
+assert_true 'symlinked generation executable is diagnosed' out_has 'refusing to overwrite an APM symlink whose target resolves through another symlink'
+assert_true 'symlinked generation executable link is preserved' \
+    test "$(readlink "$CASE_INSTALL/apm")" = "$CASE_ROOT/install/lib/apm/releases/v0.29.0-20260101T000000Z-4242/apm"
+
 new_case foreign-releases-entries
 make_fixture Linux x86_64
 run_case --cli-only

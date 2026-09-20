@@ -158,11 +158,12 @@ a backup or rollback. If a run fails before activation, its stage is removed
 and the prior installation is untouched. A generation the command already
 references is never removed, even if the run is interrupted right after
 activation. After activation, superseded generations and legacy layouts are
-removed best effort with a warning on failure; only entries the installer
-created (abandoned stages and directories carrying its `.apm-installed`
-marker) are candidates, and anything else under `releases` is left in place
-with a warning. A second bootstrap targeting the same installation root fails
-immediately instead of waiting.
+removed best effort with a warning on failure. The installer writes its
+`.apm-installed` marker into every stage before anything else, and only plain
+directories under `releases` carrying that marker as a regular file are
+removal candidates; anything else, including an unmarked `.stage-*` directory,
+is left in place with a warning. A second bootstrap targeting the same
+installation root fails immediately instead of waiting.
 
 On Linux and macOS, `${APM_INSTALL_DIR:-$HOME/.local/bin}/apm` is a symlink to
 the absolute path of `<root>/lib/apm/releases/v<pin>-<timestamp>-<pid>/apm`,
@@ -170,7 +171,8 @@ and activation renames a new symlink over it. Because the target is absolute,
 moving the installation tree requires running the bootstrap again. Linux uses
 `sha256sum`; macOS uses `shasum -a 256`. An existing unrelated command, a
 regular file, or a link that does not name a generation executable or the
-legacy `lib/apm/apm` bundle (including any `.` or `..` path component) is not
+legacy `lib/apm/apm` bundle (including any `.` or `..` path component, or a
+generation directory or executable that is itself a symlink) is not
 overwritten. The fail-fast lock is the directory
 `lib/apm/.lock`; normal exit and handled signals remove it, and after a forced
 kill the diagnostic names it so you can confirm no bootstrap is running and
@@ -189,8 +191,9 @@ generation lives in `releases\v<pin>-<timestamp>-<id>`, and the ASCII
 Activation writes the new shim beside the old one and replaces it atomically
 with `File.Replace`. A named mutex is tried once without waiting, reparse
 points are rejected before any tree is deleted, TLS 1.2 is enabled temporarily
-and restored, and the legacy `current` junction is removed without following
-it. `bin` is prepended to the current process and User PATH; a User PATH
+and restored, and the legacy `current` junction is recognized only when its
+target is a reparse-free path inside `releases` and is then removed without
+following it. `bin` is prepended to the current process and User PATH; a User PATH
 failure after activation is a warning. Both wrappers warn if another PATH
 command may still shadow the reviewed location in new shells.
 
