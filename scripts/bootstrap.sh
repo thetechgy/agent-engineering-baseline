@@ -242,7 +242,7 @@ promote_bundle() (
     local source_bundle=$1 install_parent bundle_parent bundle_path link_path
     local stage_path backup_path old_link_target='' had_bundle=false had_link=false
     local backed_up=false promoted=false link_removed=false link_created=false
-    local lock_path lock_acquired=false lock_wait=0 promotion_complete=false
+    local lock_path lock_acquired=false lock_interrupted=false lock_wait=0 promotion_complete=false
     install_parent=$(dirname "$INSTALL_DIR")
     bundle_parent="$install_parent/lib"
     bundle_path="$bundle_parent/apm"
@@ -266,8 +266,11 @@ promote_bundle() (
         fi
     }
     trap release_install_lock EXIT
-    trap 'exit 1' HUP INT TERM
-    while ! (umask 077; mkdir "$lock_path") 2>/dev/null; do
+    # Record signals until mkdir's result is known, so a just-created lock is
+    # still released if interruption arrives before ownership is recorded.
+    trap 'lock_interrupted=true' HUP INT TERM
+    while ! (trap '' HUP INT TERM; umask 077; mkdir "$lock_path") 2>/dev/null; do
+        [ "$lock_interrupted" = false ] || exit 1
         if [ -L "$lock_path" ] || [ ! -d "$lock_path" ]; then
             die "unable to acquire a safe APM installation lock: $lock_path"
         fi
@@ -277,6 +280,8 @@ promote_bundle() (
         lock_wait=$((lock_wait + 1))
     done
     lock_acquired=true
+    trap 'exit 1' HUP INT TERM
+    [ "$lock_interrupted" = false ] || exit 1
 
     if [ -e "$bundle_path" ] || [ -L "$bundle_path" ]; then
         assert_plain_tree "$bundle_path" 'Existing managed APM bundle'

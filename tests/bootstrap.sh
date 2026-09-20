@@ -655,6 +655,26 @@ assert_true 'old-link removal failure never backs up or replaces the release' \
     test -z "$(find "$CASE_ROOT/install/lib" -name '.apm-rollback-*' -print -quit)"
 
 printf '# installation serialization\n'
+new_case lock-acquisition-signal
+make_fixture Linux x86_64
+run_case --cli-only
+record_result 'acquisition signal fixture installs prior bundle' success
+printf 'prior release\n' > "$CASE_ROOT/install/lib/apm/_internal/old"
+real_mkdir=$(command -v mkdir)
+cat > "$CASE_BIN/mkdir" <<EOF
+#!/usr/bin/env bash
+'$real_mkdir' "\$@" || exit \$?
+case "\$*" in
+    *'/.apm-install.lock') kill -TERM "\$PPID" ;;
+esac
+EOF
+chmod +x "$CASE_BIN/mkdir"
+run_case --cli-only
+record_result 'signal immediately after lock creation aborts installation' failure
+assert_true 'acquisition signal releases the newly created lock' test ! -e "$CASE_ROOT/install/lib/.apm-install.lock"
+assert_true 'acquisition signal preserves the original release' file_has "$CASE_ROOT/install/lib/apm/_internal/old" 'prior release'
+assert_true 'acquisition signal preserves a usable command' file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
+
 # File barriers make the ordering deterministic; polling only bounds fixture failures.
 # Invoked indirectly by assert_true.
 # shellcheck disable=SC2317

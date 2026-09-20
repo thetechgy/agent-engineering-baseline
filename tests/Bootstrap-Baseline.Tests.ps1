@@ -798,4 +798,32 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         [bool]($current.Attributes -band [IO.FileAttributes]::ReparsePoint) | Should-BeTrue
         [IO.File]::ReadAllText($shim) | Should-MatchString '"%~dp0\.\.\\current\\apm\.exe" %\*'
     }
+
+    It 'keeps the verified installation committed when backup cleanup fails' {
+        & $script:TestRepository.Script -CliOnly -Confirm:$false
+        $release = Join-Path $script:InstallRoot 'releases\v0.29.0'
+        $current = Join-Path $script:InstallRoot 'current'
+        [IO.File]::WriteAllText((Join-Path $release '_internal\old-state'), 'old')
+        $script:OriginalRemoveItem = Get-Command Remove-Item -CommandType Cmdlet
+        Mock Remove-Item {
+            if ($LiteralPath -like '*\.rollback-*') {
+                Write-Error -Message 'injected backup cleanup failure' -ErrorAction Continue
+                return
+            }
+            & $script:OriginalRemoveItem @PesterBoundParameters
+        }
+        $output = @(& $script:TestRepository.Script -CliOnly -Confirm:$false 2>&1)
+        ($output -join ' ') | Should-MatchString 'injected backup cleanup failure'
+        Should-Invoke Remove-Item -Times 1 -Exactly -Scope It -ParameterFilter {
+            $LiteralPath -like '*\.rollback-*' -and $ErrorAction -eq 'Continue'
+        }
+        @((Get-Item -LiteralPath $current -Force).Target)[0] | Should-Be $release
+        Test-Path -LiteralPath (Join-Path $release '_internal\old-state') | Should-BeFalse
+        $backups = @(Get-ChildItem -LiteralPath (Join-Path $script:InstallRoot 'releases') -Directory -Force |
+            Where-Object { $_.Name -like '.rollback-*' })
+        $backups.Count | Should-Be 1
+        Test-Path -LiteralPath (Join-Path $backups[0].FullName '_internal\old-state') | Should-BeTrue
+        & (Join-Path $script:InstallRoot 'bin\apm.cmd') --version | Should-MatchString '0\.29\.0'
+        $LASTEXITCODE | Should-Be 0
+    }
 }
