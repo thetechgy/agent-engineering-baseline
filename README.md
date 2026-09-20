@@ -278,7 +278,7 @@ The gate covers Pester (including both CLI MCP allowlists and endpoint checks),
 PSScriptAnalyzer, Bash fixture archives, ShellCheck,
 Markdown linting, frozen trusted-bin installation, compile validation and clean
 regeneration, audit, pack dry-run, an offline `msgraph openapi-search` launcher
-and index smoke test, repository hygiene, and `git diff --check`. CI adds a
+and index smoke test, and `git diff --check`. CI adds a
 macOS Bash lane and Windows PowerShell 5.1 fixture execution.
 
 The pinned APM CLI does not expose `--trust-bin` on `audit` and skips bin

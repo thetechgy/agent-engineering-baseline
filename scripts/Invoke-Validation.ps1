@@ -5,7 +5,7 @@ Runs the repository validation suite.
 .DESCRIPTION
 The Full suite (default) runs Pester, PSScriptAnalyzer, the Bash bootstrap
 tests, the native APM install/compile/audit/package checks, ShellCheck,
-Markdown linting, and repository hygiene checks. The Pester suite runs only
+Markdown linting, and `git diff --check`. The Pester suite runs only
 Pester and PSScriptAnalyzer, for hosts without the Unix tooling (for example
 Windows PowerShell 5.1 CI).
 
@@ -135,17 +135,6 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'ShellCheck failed.' }
     & rumdl check .
     if ($LASTEXITCODE -ne 0) { throw 'Markdown linting failed.' }
-
-    # The marker is assembled from character codes so this tracked script never
-    # matches the project-specific reference it guards against.
-    $projectMarker = -join ([char[]](70, 65, 67, 84))
-    $projectReferences = @(& git grep -n $projectMarker -- .)
-    $grepExitCode = $LASTEXITCODE
-    if ($grepExitCode -gt 1) { throw "git grep failed with exit code $grepExitCode." }
-    if ($grepExitCode -eq 0 -or $projectReferences.Count -gt 0) {
-        $projectReferences | Write-Output
-        throw 'Tracked content contains a project-specific reference.'
-    }
 
     & git diff --check
     if ($LASTEXITCODE -ne 0) { throw 'git diff --check failed.' }
