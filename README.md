@@ -133,6 +133,14 @@ owned full bundle under the sibling `lib/apm` directory. Linux uses
 `sha256sum`; macOS uses `shasum -a 256`. An existing unrelated command or
 unowned bundle is not overwritten.
 
+Linux and macOS promotion holds an atomic directory lock at
+`lib/.apm-install.lock` beside the bundle, waiting up to two minutes for another
+installer. Normal exit and handled signals release the lock. If a process is
+forcibly terminated, confirm that no installer is running and inspect the
+release and rollback paths before manually removing its stale lock directory.
+Both wrappers verify the executable at its promoted release path before
+publishing the command link.
+
 On Windows, the default root is `%LOCALAPPDATA%\Programs\apm`.
 `APM_INSTALL_DIR`, when set, identifies the `bin`/shim directory just as it
 does in APM's native installer; the installation root is its parent. The
