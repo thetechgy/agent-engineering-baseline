@@ -10,6 +10,9 @@ import io
 import json
 import os
 import re
+import signal
+import sys
+import time
 from pathlib import Path
 import subprocess
 import tempfile
@@ -28,6 +31,22 @@ spec.loader.exec_module(reports)
 SHA = "a" * 40
 
 
+def _external_action_references(workflow):
+    references = set()
+    for job in workflow["jobs"].values():
+        action = job.get("uses", "")
+        if action:
+            references.add(action)
+        for step in job.get("steps", ()):
+            action = step.get("uses", "")
+            if action:
+                references.add(action)
+    return {
+        action for action in references
+        if not action.startswith(("./", "$/", "actions/", "github/"))
+    }
+
+
 class ReportTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -37,7 +56,7 @@ class ReportTests(unittest.TestCase):
         self.skill = self.workspace / ".apm/skills/podman"
         self.skill.mkdir(parents=True)
         (self.skill / "SKILL.md").write_text("---\nname: podman\n---\n")
-        reports.write_json(self.skill / "evals/evals.json", {"evals": [{"id": 1}]})
+        reports.write_json(self.skill / "evals/evals.json", {"skill_name": "podman", "evals": [{"id": 1, "prompt": "Harmless fixture", "expected_output": "Done"}]})
         patch_file = self.workspace / reports.PATCH
         patch_file.parent.mkdir(parents=True)
         patch_file.write_bytes((REPO / reports.PATCH).read_bytes())
@@ -412,8 +431,195 @@ class ReportTests(unittest.TestCase):
         reports.benchmark_artifacts(self.workspace, root, "podman", destination)
         self.assertTrue((destination / (run / "codex/without-skill/trials/case-1/failure.json").relative_to(root)).is_file())
 
+    def test_interrupted_trial_survives_native_retention_collection_and_redaction(self):
+        root = self.root / "interrupted"
+        run = root / "results/podman/interrupted-run"
+        sentinel = "sk-proj-" + "synthetic-interruption-only-" * 3
+        # Exercise the evaluator's real interruption cleanup in a harmless child process.
+        # Only workload execution is replaced; native retention and collection run unchanged.
+        code = r"""
+import json
+from pathlib import Path
+import sys
+import time
+from unittest.mock import patch
+from skillevaluator.tier3.harbor import runner
+from skillevaluator.tier3.harbor.progress import ProgressEvent
+run = Path(sys.argv[1])
+secret = sys.argv[2]
+def harmless_trial(**kwargs):
+    trial_name = 'skillevaluator-1__attempt001'
+    for condition in ('with', 'without'):
+        job = run / f'_harbor-jobs/podman-codex-{condition}'
+        trial = job / trial_name
+        verifier = trial / 'verifier'
+        verifier.mkdir(parents=True)
+        (trial / 'result.json').write_text(json.dumps({
+            'task_name': 'nvidia/skillevaluator-1', 'trial_name': trial_name,
+            'finished_at': '2026-01-01T00:00:00Z',
+        }))
+        (verifier / 'reward.json').write_text(json.dumps({
+            'entry_id': 'skillevaluator-1', 'metric_set': 'skill_evaluator_default_v1',
+            'effectiveness': 0.8, 'correctness': 0.8, 'discoverability': 0.8,
+            'security': 1.0, 'skill_execution': 1.0, 'skill_efficiency': 1.0,
+            'accuracy': 0.8, 'goal_accuracy': 0.8, 'behavior_check': 0.8, 'overall': 0.8,
+        }))
+        (job / 'result.json').write_text(json.dumps({
+            'n_total_trials': 1,
+            'stats': {
+                'n_completed_trials': 1, 'n_errored_trials': 0, 'n_running_trials': 0,
+                'n_pending_trials': 0, 'n_cancelled_trials': 0, 'n_retries': 0,
+                'evals': {'agent__model___harbor-tasks': {
+                    'n_trials': 1, 'n_errors': 0,
+                    'reward_stats': {'reward': {'0.8': [trial_name]}},
+                }},
+            },
+        }))
+    trial = run / '_harbor-jobs/podman-codex-with' / trial_name
+    (trial / 'trial.log').write_text('completed harmless trial ' + secret)
+    (trial / 'auth.json').write_text(secret)
+    kwargs['progress_reporter'].emit(ProgressEvent(stage='with-skill-tasks', state='running', output_dir=str(run)))
+    (run / 'ready').touch()
+    while True:
+        time.sleep(1)
+try:
+    with patch.object(runner, '_run_harbor_eval_impl', harmless_trial):
+        runner.run_harbor_eval(keep_harbor_jobs=True)
+except KeyboardInterrupt:
+    sys.exit(130)
+"""
+        process = subprocess.Popen([sys.executable, "-c", code, str(run), sentinel],
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+        try:
+            deadline = time.monotonic() + 20
+            while not (run / "ready").exists() and process.poll() is None and time.monotonic() < deadline:
+                time.sleep(0.02)
+            if not (run / "ready").exists():
+                process.kill()
+                _, stderr = process.communicate()
+                self.fail("Harmless trial did not finish before interruption: " + stderr)
+            process.send_signal(signal.SIGINT)
+            _, stderr = process.communicate(timeout=10)
+            self.assertEqual(process.returncode, 130, stderr)
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.communicate()
+        raw_trial = run / "_harbor-jobs/podman-codex-with/skillevaluator-1__attempt001"
+        self.assertIn(sentinel, (raw_trial / "trial.log").read_text())
+        (run / "result.json").write_text("{", encoding="utf-8")
+        reports.recover_benchmark(self.workspace, root, "podman", "standard", "cancelled")
+        destination = self.root / "publication"
+        reports.benchmark_artifacts(self.workspace, root, "podman", destination)
+        trial = destination / run.relative_to(root) / "codex/with-skill/trials/skillevaluator-1__attempt001"
+        self.assertIn("completed harmless trial", (trial / "trial.log").read_text())
+        self.assertNotIn(sentinel, (trial / "trial.log").read_text())
+        self.assertFalse((trial / "auth.json").exists())
+        self.assertFalse(any(path.name.startswith("_harbor-") for path in destination.rglob("*")))
+        result = reports.read_json(destination / run.relative_to(root) / "result.json")
+        self.assertEqual(result["report_status"], "incomplete")
+        for condition in ("with_skill", "without_skill"):
+            cases = result["agents"]["codex"]["pass_at_k"][condition]["cases"]
+            self.assertEqual(set(cases), {"1"})
+        self.assertEqual(reports.read_json(destination / "provenance.json")["status"], "incomplete")
+        with self.assertRaisesRegex(ValueError, "cannot produce history"):
+            reports.benchmark_report(self.workspace, root, "podman", "standard", self.root / "metrics")
+        self.assertFalse((self.root / "metrics/metrics.json").exists())
+        with self.assertRaises(ValueError):
+            reports.validate_metrics(reports.read_json(root / "provenance.json"), self.workspace, "podman", SHA)
+
+    def test_recovery_marks_early_failures_and_preserves_native_reports(self):
+        early = self.root / "early"
+        reports.recover_benchmark(self.workspace, early, "podman", "standard", "skipped")
+        self.assertEqual(reports.read_json(early / "provenance.json")["status"], "incomplete")
+        root, run, data = self.benchmark("standard")
+        reports.recover_benchmark(self.workspace, root, "podman", "standard", "success")
+        self.assertEqual(reports.read_json(run / "result.json"), data)
+        self.assertFalse((root / "provenance.json").exists())
+        reports.recover_benchmark(self.workspace, root, "podman", "standard", "failure")
+        self.assertEqual(reports.read_json(run / "result.json"), data)
+        with self.assertRaisesRegex(ValueError, "cannot produce history"):
+            reports.benchmark_report(self.workspace, root, "podman", "standard", self.root / "metrics")
+
+    def test_recovery_rejects_result_json_directories(self):
+        root, run, _ = self.benchmark("standard")
+        result = run / "result.json"
+        (run / "_harbor-jobs").mkdir()
+        result.unlink()
+        result.mkdir()
+        with self.assertRaisesRegex(ValueError, "Missing or linked JSON report: result.json"):
+            reports.recover_benchmark(self.workspace, root, "podman", "standard", "failure")
+
+    def test_recovery_rejects_linked_job_roots(self):
+        root, run, _ = self.benchmark("standard")
+        (run / "result.json").unlink()
+        (run / "_harbor-jobs").symlink_to(self.root, target_is_directory=True)
+        with self.assertRaisesRegex(ValueError, "excluded runtime directory"):
+            reports.recover_benchmark(self.workspace, root, "podman", "standard", "failure")
+
+    def test_regular_tree_rejects_linked_excluded_runtime_directories(self):
+        for name in ("_harbor-jobs", "_harbor-tasks"):
+            root = self.root / name.removeprefix("_")
+            root.mkdir()
+            (root / name).symlink_to(self.root, target_is_directory=True)
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError, "excluded runtime directory"):
+                reports.regular_tree(root, excluded_dirs={"_harbor-jobs", "_harbor-tasks"})
+
+    def test_regular_tree_rejects_windows_reparse_runtime_directories(self):
+        root = self.root / "reparse"
+        root.mkdir()
+        metadata = SimpleNamespace(
+            st_mode=reports.stat.S_IFDIR,
+            st_file_attributes=getattr(reports.stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400),
+        )
+
+        def entry_stat(*, follow_symlinks):
+            self.assertFalse(follow_symlinks)
+            return metadata
+
+        entry = SimpleNamespace(
+            name="_harbor-jobs",
+            path=str(root / "_harbor-jobs"),
+            stat=entry_stat,
+        )
+        with patch.object(reports.os, "scandir", return_value=contextlib.nullcontext([entry])), \
+                self.assertRaisesRegex(ValueError, "excluded runtime directory"):
+            reports.regular_tree(root, excluded_dirs={"_harbor-jobs", "_harbor-tasks"})
+
+    def test_recovery_cli_dispatches_all_arguments(self):
+        root = self.root / "recovery"
+        arguments = ["skill_reports.py", "recover", str(root), "podman", "confirmation", "cancelled"]
+        with patch.dict(os.environ, {"GITHUB_WORKSPACE": str(self.workspace)}), \
+                patch.object(sys, "argv", arguments), \
+                patch.object(reports, "recover_benchmark") as recover:
+            reports.main()
+        recover.assert_called_once_with(
+            self.workspace.resolve(), root, "podman", "confirmation", "cancelled")
+
 
 class UpstreamTests(unittest.TestCase):
+    def test_pinned_cli_forwards_native_retention(self):
+        from click.testing import CliRunner
+        from skillevaluator.cli import cli
+        from skillevaluator.tier3 import commands
+
+        captured = {}
+
+        def evaluate(skill_path, **kwargs):
+            captured["skill_path"] = skill_path
+            captured.update(kwargs)
+            return {"execution_status": "succeeded", "execution_errors": []}
+
+        skill = REPO / ".apm/skills/podman"
+        with patch.object(commands, "evaluate", side_effect=evaluate):
+            result = CliRunner().invoke(cli, [
+                "tier3", "evaluate", str(skill), "--agents", "codex", "--env-mode", "docker",
+                "--harbor-keep-jobs", "--progress", "off",
+            ])
+        self.assertEqual(result.exit_code, 0, result.output)
+        self.assertEqual(captured["skill_path"], skill)
+        self.assertIs(captured["harbor_keep_jobs"], True)
+
     def test_podman_native_negative_control_and_strict_validation(self):
         from click.testing import CliRunner
         from skillevaluator.cli import cli
@@ -720,6 +926,34 @@ class UpstreamTests(unittest.TestCase):
 
 
 class WorkflowTests(unittest.TestCase):
+    def test_interruption_recovery_has_budget_and_no_secret_or_raw_upload(self):
+        job = yaml.safe_load((REPO / ".github/workflows/benchmark-skills.yml").read_text())["jobs"]["evaluate"]
+        steps = job["steps"]
+        budget = next(step for step in steps if step.get("id") == "budget")
+        evaluation = next(step for step in steps if step.get("id") == "evaluation")
+        recovery = next(step for step in steps if "skill_reports.py recover" in step.get("run", ""))
+        staging = next(step for step in steps if step.get("id") == "artifacts")
+        self.assertIn("--harbor-keep-jobs", evaluation["run"])
+        self.assertEqual(budget["timeout-minutes"], 1)
+        self.assertIn("+ 9600", budget["run"])
+        self.assertEqual(evaluation["env"]["EVALUATION_DEADLINE_EPOCH"],
+                         "${{ steps.budget.outputs.deadline_epoch }}")
+        self.assertIn('[[ "$EVALUATION_DEADLINE_EPOCH" =~ ^[0-9]+$ ]]', evaluation["run"])
+        self.assertIn("EVALUATION_DEADLINE_EPOCH - $(date +%s) - 30", evaluation["run"])
+        self.assertIn("evaluation_seconds=8400", evaluation["run"])
+        self.assertIn('timeout --signal=INT --kill-after=30s "${evaluation_seconds}s"', evaluation["run"])
+        self.assertGreaterEqual(job["timeout-minutes"] - 160, recovery["timeout-minutes"] + 15)
+        self.assertIn("always()", recovery["if"])
+        self.assertEqual(recovery["env"], {"EVALUATION_OUTCOME": "${{ steps.evaluation.outcome }}"})
+        self.assertIs(steps[0], budget)
+        pre_evaluation = steps[:steps.index(evaluation)]
+        self.assertTrue(all(step.get("timeout-minutes", 0) > 0 for step in pre_evaluation))
+        self.assertLessEqual(sum(step["timeout-minutes"] for step in pre_evaluation), 40)
+        self.assertLess(steps.index(evaluation), steps.index(recovery))
+        self.assertLess(steps.index(recovery), steps.index(staging))
+        metrics = next(step for step in steps if step.get("with", {}).get("name") == "skill-metrics")
+        self.assertIn("success()", metrics["if"])
+
     def test_setup_private_tool_root_for_provenance_key(self):
         setup = (REPO / ".github/scripts/setup-skillevaluator.sh").read_text()
         self.assertIn("umask 077", setup)
@@ -737,7 +971,9 @@ class WorkflowTests(unittest.TestCase):
         jobs = workflow["jobs"]
         self.assertEqual(jobs["evaluate"]["permissions"], {"contents": "read"})
         self.assertEqual(jobs["evaluate"]["environment"], {"name": "skill-benchmark", "deployment": False})
-        self.assertEqual(jobs["evaluate"]["steps"][0]["with"]["ref"], "${{ github.sha }}")
+        checkout = next(step for step in jobs["evaluate"]["steps"]
+                        if step.get("uses", "").startswith("actions/checkout@"))
+        self.assertEqual(checkout["with"]["ref"], "${{ github.sha }}")
         selection = next(step for step in jobs["evaluate"]["steps"] if step.get("id") == "selection")
         self.assertIn('test "$(git rev-parse HEAD)" = "$GITHUB_SHA"', selection["run"])
         compose = next(step for step in jobs["evaluate"]["steps"]
@@ -786,6 +1022,57 @@ class WorkflowTests(unittest.TestCase):
                         self.assertRegex(step["uses"], r"@[0-9a-f]{40}$")
                     if step.get("uses", "").startswith("actions/checkout@"):
                         self.assertIs(step["with"]["persist-credentials"], False)
+
+    def test_external_action_reference_discovery_uses_schema_positions(self):
+        external_action = f"example/action@{SHA}"
+        external_workflow = f"example/automation/.github/workflows/reusable.yml@{SHA}"
+        workflow = {
+            "env": {"uses": "ignored-workflow-environment"},
+            "jobs": {
+                "external-workflow": {
+                    "uses": external_workflow,
+                    "with": {"uses": "ignored-workflow-input"},
+                },
+                "steps": {
+                    "runs-on": "ubuntu-latest",
+                    "env": {"uses": "ignored-job-environment"},
+                    "steps": [
+                        {
+                            "uses": external_action,
+                            "with": {"uses": "ignored-action-input"},
+                        },
+                        {"uses": f"actions/checkout@{SHA}"},
+                        {"uses": "./.github/actions/local"},
+                    ],
+                },
+                "local-workflow": {"uses": "./.github/workflows/local.yml"},
+                "root-local-workflow": {"uses": "$/.github/workflows/local.yml"},
+                "github-workflow": {
+                    "uses": f"github/example/.github/workflows/reusable.yml@{SHA}",
+                },
+            },
+        }
+        self.assertEqual(
+            _external_action_references(workflow),
+            {external_action, external_workflow},
+        )
+
+    def test_documented_external_action_requirements_match_all_workflows(self):
+        required = set()
+        for path in sorted((REPO / ".github/workflows").glob("*.y*ml")):
+            actions = _external_action_references(yaml.safe_load(path.read_text()))
+            for action in actions:
+                self.assertRegex(action, r"^[^@]+@[0-9a-f]{40}$", path.name)
+            required.update(actions)
+        readme = (REPO / "README.md").read_text()
+        section = readme.split("<!-- external-action-requirements:start -->", 1)[1].split(
+            "<!-- external-action-requirements:end -->", 1)[0]
+        documented = re.search(r"```text\n(.*?)\n```", section, re.DOTALL).group(1).splitlines()
+        self.assertTrue(required)
+        for action in documented:
+            self.assertRegex(action, r"^[^@*]+@[0-9a-f]{40}$")
+        self.assertEqual(len(documented), len(set(documented)), "Duplicate documented action")
+        self.assertEqual(set(documented), required)
 
     def test_git_guard_detects_ignored_untracked_and_tracked_mutations(self):
         with tempfile.TemporaryDirectory() as directory:

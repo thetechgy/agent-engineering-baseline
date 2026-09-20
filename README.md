@@ -144,6 +144,14 @@ owned full bundle under the sibling `lib/apm` directory. Linux uses
 `sha256sum`; macOS uses `shasum -a 256`. An existing unrelated command or
 unowned bundle is not overwritten.
 
+Linux and macOS promotion holds an atomic directory lock at
+`lib/.apm-install.lock` beside the bundle, waiting up to two minutes for another
+installer. Normal exit and handled signals release the lock. If a process is
+forcibly terminated, confirm that no installer is running and inspect the
+release and rollback paths before manually removing its stale lock directory.
+Both wrappers verify the executable at its promoted release path before
+publishing the command link.
+
 On Windows, the default root is `%LOCALAPPDATA%\Programs\apm`.
 `APM_INSTALL_DIR`, when set, identifies the `bin`/shim directory just as it
 does in APM's native installer; the installation root is its parent. The
@@ -289,16 +297,25 @@ artifact (14 days) for JSON, Markdown, HTML, and strict dataset reports before
 changing existing skill content to address the baseline.
 
 In **Settings > Actions > General > Actions permissions**, retain the selected
-actions policy and full-SHA pinning requirement, and allow these reviewed refs:
+actions policy and full-SHA pinning requirement. Allow GitHub-owned actions and
+these exact reviewed external refs:
+
+<!-- external-action-requirements:start -->
 
 ```text
 astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
 benchmark-action/github-action-benchmark@4322e5726e6334590d251fc4f92bec0efafc45dc
+docker/setup-compose-action@54042514f505b273907334ae2b9cdbb9a0213c1a
 ```
 
-The first is required for validation and benchmarking; the second is required
-for durable benchmark history. Without these entries, GitHub rejects the
-workflow before starting jobs. No broader third-party action access is needed.
+<!-- external-action-requirements:end -->
+
+`astral-sh/setup-uv` is required for validation and benchmarking;
+`benchmark-action/github-action-benchmark` publishes durable history;
+`docker/setup-compose-action` installs the benchmark's pinned Compose runtime.
+Without these entries, GitHub rejects the workflow before starting jobs. No
+broader third-party action access is needed. CI checks this list against every
+workflow's external action references; live repository settings must also match.
 
 ### Manual behavioral benchmarks
 
@@ -335,6 +352,15 @@ upstream redaction helpers. Transient Harbor execution directories, hidden
 files, credentials, links, and unexpected files are excluded. Redaction is
 best-effort and cannot prevent deliberate encoded secret disclosure; review is
 the trust boundary. Treat downloaded prompts and agent outputs as untrusted.
+
+Evaluation is capped at 140 minutes and shortens when setup consumes part of
+the 160-minute window established by the job's first step. This reserves about
+20 minutes of the 180-minute job for recovery, redaction, and upload. Native
+Harbor retention keeps completed trials available to the native collector
+after interruption;
+raw execution directories stay on the runner. Recovered runs are explicitly
+incomplete and cannot publish history. Recovery and upload require a live
+runner; runner loss or forced cancellation can prevent them.
 
 Successful **standard** runs explicitly dispatched against `main` additionally
 append Skill Lift, Effectiveness, Correctness, and Discoverability to
