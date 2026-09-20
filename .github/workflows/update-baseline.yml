@@ -18,6 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       changed: ${{ steps.changes.outputs.changed }}
+      version: ${{ steps.release.outputs.version }}
+      published_at: ${{ steps.release.outputs.published_at }}
     steps:
       - name: Check out main
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -37,14 +39,21 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          latest="$(gh api repos/microsoft/apm/releases/latest --jq '.tag_name' | sed 's/^v//')"
-          [ "$(printf '%s\n' "$latest" | awk 'END { print NR }')" -eq 1 ]
+          set -euo pipefail
+          release="$(gh api repos/microsoft/apm/releases/latest --jq '[.tag_name, .published_at] | join(" ")')"
+          [ "$(printf '%s\n' "$release" | awk 'END { print NR }')" -eq 1 ]
+          latest="${release%% *}"
+          latest="${latest#v}"
+          published_at="${release#* }"
           printf '%s\n' "$latest" |
             grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(a[0-9]+|b[0-9]+|rc[0-9]+)?$'
-          # Cardinality and the strict allowlist above make this output injection-safe.
+          printf '%s\n' "$published_at" |
+            grep -Eq '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$'
+          # Cardinality and the strict allowlists above make these outputs injection-safe.
           printf 'version=%s\n' "$latest" >> "$GITHUB_OUTPUT"
+          printf 'published_at=%s\n' "$published_at" >> "$GITHUB_OUTPUT"
 
-      - name: Authenticate candidate release metadata without execution
+      - name: Inspect candidate release archives without execution
         shell: bash
         env:
           CANDIDATE_VERSION: ${{ steps.release.outputs.version }}
@@ -52,6 +61,23 @@ jobs:
           set -euo pipefail
           candidate_root="$RUNNER_TEMP/apm-candidate"
           mkdir -p "$candidate_root"
+
+          # The upstream .sha256 sidecar is served from the same release, so
+          # agreement only proves the asset was not altered in transit or
+          # replaced without its sidecar. Reviewers still confirm the digests.
+          fetch_asset() {
+            local asset=$1
+            for name in "$asset" "$asset.sha256"; do
+              curl --fail --location --silent --show-error --proto '=https' --proto-redir '=https' --tlsv1.2 \
+                --output "$candidate_root/$name" \
+                "https://github.com/microsoft/apm/releases/download/v$CANDIDATE_VERSION/$name"
+            done
+            local expected actual
+            expected="$(awk 'NR == 1 { print tolower($1) }' "$candidate_root/$asset.sha256")"
+            actual="$(sha256sum "$candidate_root/$asset" | awk '{ print $1 }')"
+            printf '%s\n' "$expected" | grep -Eq '^[0-9a-f]{64}$'
+            [ "$expected" = "$actual" ] || { echo "::error::$asset does not match its upstream .sha256 sidecar"; exit 1; }
+          }
 
           validate_tar() {
             local asset=$1 root=$2 executable=$3 archive="$candidate_root/$asset"
@@ -84,17 +110,13 @@ jobs:
             linux-arm64 \
             linux-x86_64; do
             asset="apm-$platform.tar.gz"
-            curl --fail --location --silent --show-error --proto '=https' --proto-redir '=https' --tlsv1.2 \
-              --output "$candidate_root/$asset" \
-              "https://github.com/microsoft/apm/releases/download/v$CANDIDATE_VERSION/$asset"
+            fetch_asset "$asset"
             validate_tar "$asset" "apm-$platform" "apm-$platform/apm"
           done
 
           windows_asset='apm-windows-x86_64.zip'
           windows_root='apm-windows-x86_64'
-          curl --fail --location --silent --show-error --proto '=https' --proto-redir '=https' --tlsv1.2 \
-            --output "$candidate_root/$windows_asset" \
-            "https://github.com/microsoft/apm/releases/download/v$CANDIDATE_VERSION/$windows_asset"
+          fetch_asset "$windows_asset"
           unzip -Z1 "$candidate_root/$windows_asset" > "$candidate_root/$windows_root.list"
           awk -v root="$windows_root" '
             BEGIN { valid = 1; executable_count = 0; internal_count = 0 }
@@ -152,6 +174,31 @@ jobs:
             echo 'changed=true' >> "$GITHUB_OUTPUT"
           fi
 
+      # The patch is captured before any validation step so that nothing
+      # executed from freshly resolved upstream skill content can add files
+      # to what the privileged publish job commits. Only data the reviewed
+      # CLI regenerates natively may appear in the candidate.
+      - name: Create candidate patch from allowlisted paths only
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          git add --all
+          git diff --cached --check
+          unexpected="$(git diff --cached --name-only | grep -Evx \
+            -e '\.apm-version' \
+            -e '\.apm-checksums' \
+            -e 'apm\.lock\.yaml' \
+            -e 'AGENTS\.md' \
+            -e '\.github/copilot-instructions\.md' \
+            -e '\.github/mcp\.json' \
+            -e '\.codex/config\.toml' \
+            -e '\.agents/skills/[^/]+/.+' || true)"
+          if [ -n "$unexpected" ]; then
+            printf '::error::Candidate touches paths outside the reviewed regeneration allowlist:\n%s\n' "$unexpected"
+            exit 1
+          fi
+          git diff --cached --binary > "$RUNNER_TEMP/baseline.patch"
+
       - name: Install validation tools
         if: steps.changes.outputs.changed == 'true'
         shell: pwsh
@@ -164,17 +211,7 @@ jobs:
       - name: Validate candidate update with reviewed CLI
         if: steps.changes.outputs.changed == 'true'
         shell: pwsh
-        run: |
-          git add --all
-          git diff --cached --check
-          if ($LASTEXITCODE -ne 0) { throw 'git diff --cached --check failed.' }
-          ./scripts/Invoke-Validation.ps1
-
-      - name: Create candidate patch
-        if: steps.changes.outputs.changed == 'true'
-        run: |
-          git add --all
-          git diff --cached --binary > "$RUNNER_TEMP/baseline.patch"
+        run: ./scripts/Invoke-Validation.ps1
 
       - name: Upload candidate patch
         if: steps.changes.outputs.changed == 'true'
@@ -214,7 +251,10 @@ jobs:
       - name: Create or update review pull request
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CANDIDATE_VERSION: ${{ needs.generate.outputs.version }}
+          CANDIDATE_PUBLISHED_AT: ${{ needs.generate.outputs.published_at }}
         run: |
+          set -euo pipefail
           branch='automation/apm-baseline-update'
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
@@ -223,16 +263,35 @@ jobs:
           git commit -m 'chore(apm): refresh baseline'
           gh auth setup-git
           git push --force-with-lease origin "$branch"
-          pr_number="$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')"
+          # `--head` matches the branch name in any fork, so a fork pull request
+          # named like the automation branch could otherwise be selected and
+          # rewritten with this trusted body. Accept only this repository's own
+          # branch authored by the Actions bot, and fail closed on ambiguity.
+          candidates="$(gh pr list --base main --head "$branch" --state open \
+            --json number,headRepositoryOwner,author,isCrossRepository |
+            jq -c --arg owner "$GITHUB_REPOSITORY_OWNER" \
+              '[.[] | select(.isCrossRepository == false
+                             and .headRepositoryOwner.login == $owner
+                             and .author.is_bot == true
+                             and (.author.login | test("^(app/)?github-actions$")))]')"
+          candidate_count="$(printf '%s' "$candidates" | jq 'length')"
+          if [ "$candidate_count" -gt 1 ]; then
+            echo "::error::Multiple open automation pull requests match $branch; resolve manually."
+            exit 1
+          fi
+          pr_number="$(printf '%s' "$candidates" | jq -r '.[0].number // empty')"
           body_file="$RUNNER_TEMP/apm-update-pr.md"
           pinned_version="$(head -n 1 .apm-version | tr -d '[:space:]')"
+          [ "$pinned_version" = "$CANDIDATE_VERSION" ]
           printf '%s\n' \
             '## Summary' \
             '' \
-            "- APM CLI candidate: $pinned_version" \
-            '- refreshes the CLI pin and reviewed hashes for all five release bundles and executables' \
+            "- APM CLI candidate: $pinned_version (upstream release published $CANDIDATE_PUBLISHED_AT)" \
+            "- release page: https://github.com/microsoft/apm/releases/tag/v$pinned_version" \
+            '- refreshes the CLI pin and reviewed hashes for all five release bundles and executables; every archive matched its upstream `.sha256` sidecar at generation time' \
             '- re-resolves branch-ref dependencies and regenerates compiled outputs with the previously reviewed CLI' \
             '- never executes the candidate CLI in this privileged update workflow' \
+            '- contains only allowlisted regenerated paths; validation ran after this patch was captured' \
             '' \
             '## Required review' \
             '' \

@@ -452,18 +452,29 @@ outside this initial integration.
 `.github/workflows/update-baseline.yml` runs weekly and on manual dispatch. Its
 generate job checks out `main`, acquires the currently reviewed CLI, uses a
 token only for the isolated latest-release metadata query, and downloads all
-five candidate archives without credentials. It validates every archive layout
-and computes the ten replacement hashes without executing candidate code.
+five candidate archives without credentials. Each archive must match its
+upstream `.sha256` sidecar before the job inspects the archive layout and
+computes the ten replacement hashes without executing candidate code.
 
 The previously reviewed CLI performs dependency update, frozen trusted-bin
-installation, compilation, validation, audit, and packing. A separate
-write-capable job checks out `main`, applies the review patch only after
+installation, and compilation. The job then captures the review patch and
+rejects any change outside the regeneration allowlist (`.apm-version`,
+`.apm-checksums`, `apm.lock.yaml`, the compiled root contexts and MCP
+configs, and `.agents/skills/`). Only after the patch exists does the job run
+validation and audit, so branch-ref dependency content that is executed
+during validation can no longer influence what gets published. A separate
+write-capable job checks out `main`, applies the patch only after
 `git apply --check`, and opens or updates a pull request without executing
-patched content. Ordinary unprivileged pull-request validation is the first
-place the candidate CLI runs after its hashes are part of the reviewed patch.
+patched content. That job selects only an open pull request whose head branch
+lives in this repository and was authored by the Actions bot, so a fork branch
+using the automation branch name cannot receive the trusted update body.
+Ordinary unprivileged pull-request validation is the first place the
+candidate CLI runs after its hashes are part of the reviewed patch.
 
-Update pull requests never auto-merge. Review the upstream release, all ten
-digests, resolved dependency commits, generated outputs, and CI results.
+Update pull requests never auto-merge. The pull request body names the
+candidate release, its upstream publication date, and the release page.
+Review the upstream release, all ten digests, resolved dependency commits,
+generated outputs, and CI results.
 
 In repository **Settings > Actions > General**, enable **Allow GitHub Actions
 to create and approve pull requests**. Keep default workflow permissions

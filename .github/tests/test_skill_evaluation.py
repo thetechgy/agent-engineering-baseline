@@ -1057,6 +1057,34 @@ class WorkflowTests(unittest.TestCase):
             {external_action, external_workflow},
         )
 
+    def test_update_workflow_captures_patch_before_validation_and_guards_pr_selection(self):
+        workflow = yaml.safe_load((REPO / ".github/workflows/update-baseline.yml").read_text())
+        generate = workflow["jobs"]["generate"]["steps"]
+        names = [step.get("name", "") for step in generate]
+        capture_index = next(i for i, step in enumerate(generate) if "baseline.patch" in step.get("run", ""))
+        validate_index = next(i for i, step in enumerate(generate) if "Invoke-Validation.ps1" in step.get("run", ""))
+        self.assertLess(
+            capture_index,
+            validate_index,
+            "the candidate patch must be captured before validation runs untrusted branch-ref content",
+        )
+        capture = generate[capture_index]["run"]
+        for tracked_output in (r"\.apm-checksums", r"apm\.lock\.yaml", r"AGENTS\.md", r"\.codex/config\.toml"):
+            self.assertIn(tracked_output, capture)
+        self.assertIn("grep -Evx", capture)
+        inspect = next(step for step in generate if ".sha256" in step.get("run", ""))
+        self.assertIn("sha256sum", inspect["run"])
+        self.assertNotIn("Install", inspect.get("name", ""))
+        self.assertIn("Discover", " ".join(names))
+
+        publish = workflow["jobs"]["publish"]["steps"]
+        create = next(step for step in publish if "gh pr create" in step.get("run", ""))["run"]
+        self.assertNotIn("--jq '.[0].number", create)
+        self.assertIn("--base main", create)
+        for guard in ("isCrossRepository == false", "headRepositoryOwner.login == $owner", "author.is_bot == true"):
+            self.assertIn(guard, create)
+        self.assertIn("-gt 1", create)
+
     def test_documented_external_action_requirements_match_all_workflows(self):
         required = set()
         for path in sorted((REPO / ".github/workflows").glob("*.y*ml")):
