@@ -491,7 +491,7 @@ except KeyboardInterrupt:
                 process.communicate()
         raw_trial = run / "_harbor-jobs/podman-codex-with/skillevaluator-1__attempt001"
         self.assertIn(sentinel, (raw_trial / "trial.log").read_text())
-        reports.write_json(run / "result.json", {})  # A partial report must not suppress recovery.
+        (run / "result.json").write_text("{", encoding="utf-8")
         reports.recover_benchmark(self.workspace, root, "podman", "standard", "cancelled")
         destination = self.root / "publication"
         reports.benchmark_artifacts(self.workspace, root, "podman", destination)
@@ -548,6 +548,27 @@ except KeyboardInterrupt:
             (root / name).symlink_to(self.root, target_is_directory=True)
             with self.subTest(name=name), self.assertRaisesRegex(ValueError, "excluded runtime directory"):
                 reports.regular_tree(root, excluded_dirs={"_harbor-jobs", "_harbor-tasks"})
+
+    def test_regular_tree_rejects_windows_reparse_runtime_directories(self):
+        root = self.root / "reparse"
+        root.mkdir()
+        metadata = SimpleNamespace(
+            st_mode=reports.stat.S_IFDIR,
+            st_file_attributes=getattr(reports.stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400),
+        )
+
+        def entry_stat(*, follow_symlinks):
+            self.assertFalse(follow_symlinks)
+            return metadata
+
+        entry = SimpleNamespace(
+            name="_harbor-jobs",
+            path=str(root / "_harbor-jobs"),
+            stat=entry_stat,
+        )
+        with patch.object(reports.os, "scandir", return_value=contextlib.nullcontext([entry])), \
+                self.assertRaisesRegex(ValueError, "excluded runtime directory"):
+            reports.regular_tree(root, excluded_dirs={"_harbor-jobs", "_harbor-tasks"})
 
     def test_recovery_cli_dispatches_all_arguments(self):
         root = self.root / "recovery"

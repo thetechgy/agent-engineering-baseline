@@ -291,7 +291,8 @@ def recover_benchmark(workspace, root, name, mode, outcome):
         jobs = run / "_harbor-jobs"
         result = run / "result.json"
         if result.exists():
-            read_json(result)
+            require(result.is_file() and not result.is_symlink(),
+                    f"Missing or linked JSON report: {result.name}")
             if run_directory_sort_key(run, require_completed_result=True) is not None:
                 continue  # Preserve complete reports already produced by native collection.
         if not jobs.exists():
