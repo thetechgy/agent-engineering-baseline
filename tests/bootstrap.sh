@@ -52,7 +52,7 @@ assert_true() {
 
 # Invoked indirectly by assert_true.
 # shellcheck disable=SC2317
-out_has() { printf '%s\n' "$OUTPUT" | grep -Fq "$1"; }
+out_has() { printf '%s\n' "$OUTPUT" | grep -Fq -- "$1"; }
 # shellcheck disable=SC2317
 out_lacks() { ! out_has "$1"; }
 # shellcheck disable=SC2317
@@ -61,15 +61,6 @@ file_has() { grep -Fq -- "$2" "$1"; }
 file_lacks() { ! file_has "$1" "$2"; }
 # The generation directory currently activated through the managed symlink.
 active_release() { dirname "$(readlink "$CASE_INSTALL/apm")"; }
-
-assert_true 'mirror redirects are limited to reviewed protocols' \
-    file_has "$SOURCE_BOOTSTRAP" "proto-redir '=https,file'"
-assert_true 'public redirects remain HTTPS-only' \
-    file_has "$SOURCE_BOOTSTRAP" "proto-redir '=https'"
-assert_true 'dash-leading script paths are normalized portably' \
-    file_has "$SOURCE_BOOTSTRAP" "SCRIPT_SOURCE=\"./\$SCRIPT_SOURCE\""
-assert_true 'cleanup refuses non-absolute staging paths' \
-    file_has "$SOURCE_BOOTSTRAP" 'refusing to clean non-absolute staging path'
 
 new_case() {
     local name=$1
@@ -173,6 +164,29 @@ EOF
     replace_checksum "$ARCHIVE_NAME" "$(digest "$MIRROR_ROOT/v$version/$ARCHIVE_NAME")"
     write_uname_stub "$os" "$arch"
     write_hash_stubs
+}
+
+# Record every curl invocation, then serve the fixture archive offline so the
+# public download path can be exercised without network access.
+write_curl_stub() {
+    local real_curl
+    real_curl=$(command -v curl)
+    CURL_LOG="$CASE_ROOT/curl-calls.log"
+    : > "$CURL_LOG"
+    cat > "$CASE_BIN/curl" <<STUB
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >> '$CURL_LOG'
+case " \$* " in
+    *' https://github.com/microsoft/apm/releases/download/'*)
+        while [ \$# -gt 0 ]; do
+            if [ "\$1" = '--output' ]; then cp '$MIRROR_ROOT/v0.29.0/$ARCHIVE_NAME' "\$2"; exit 0; fi
+            shift
+        done
+        exit 3 ;;
+    *) exec '$real_curl' "\$@" ;;
+esac
+STUB
+    chmod +x "$CASE_BIN/curl"
 }
 
 run_case() {
@@ -351,6 +365,54 @@ run_case --cli-only
 record_result 'shadowed PATH does not block verified acquisition' success
 assert_true 'shadowing warning names the ambient command' out_has "$CASE_BIN/apm will still shadow"
 assert_true 'shadowed ambient command is never executed' test ! -e "$AMBIENT_SENTINEL"
+
+printf '# download transport and invocation portability\n'
+new_case mirror-transport
+make_fixture Linux x86_64
+write_curl_stub
+run_case --cli-only
+record_result 'mirror download succeeds through the recorded transport' success
+assert_true 'mirror download allows only HTTPS and file protocols' \
+    file_has "$CURL_LOG" "--proto =https,file --proto-redir =https,file"
+assert_true 'mirror download fails closed on HTTP errors' file_has "$CURL_LOG" '--fail --location'
+assert_true 'mirror download is quiet outside a terminal' file_has "$CURL_LOG" '--silent --show-error'
+
+new_case public-transport
+make_fixture Linux x86_64
+write_curl_stub
+CASE_RELEASE_BASE=''
+run_case --cli-only
+record_result 'public download succeeds through the recorded transport' success
+assert_true 'public download targets the pinned official release asset' \
+    file_has "$CURL_LOG" "https://github.com/microsoft/apm/releases/download/v0.29.0/$ARCHIVE_NAME"
+assert_true 'public download and redirects remain HTTPS-only with TLS 1.2' \
+    file_has "$CURL_LOG" '--proto =https --proto-redir =https --tlsv1.2'
+assert_true 'public download is a single request' test "$(wc -l < "$CURL_LOG")" -eq 1
+
+new_case dash-leading-invocation
+make_fixture Linux x86_64
+cp "$CASE_REPO/scripts/bootstrap.sh" "$CASE_REPO/scripts/-bootstrap.sh"
+set +e
+OUTPUT=$(cd "$CASE_REPO/scripts" && env -i HOME="$CASE_HOME" PATH="$CASE_BIN:/usr/bin:/bin" \
+    TMPDIR="$CASE_TMP" bash -- -bootstrap.sh --dry-run 2>&1)
+STATUS=$?
+set -e
+record_result 'dash-leading relative script path resolves its repository' success
+assert_true 'dash-leading invocation reads the sibling pin' out_has 'v0.29.0'
+
+new_case relative-tmpdir
+make_fixture Linux x86_64
+set +e
+OUTPUT=$(cd "$CASE_ROOT" && env -i HOME="$CASE_HOME" PATH="$CASE_BIN:/usr/bin:/bin" TMPDIR=tmp \
+    APM_INSTALL_DIR="$CASE_INSTALL" APM_RELEASE_BASE_URL="file://$MIRROR_ROOT" \
+    bash "$CASE_REPO/scripts/bootstrap.sh" --cli-only 2>&1)
+STATUS=$?
+set -e
+record_result 'relative TMPDIR is resolved before staging' success
+assert_true 'relative TMPDIR staging is cleaned up' \
+    test -z "$(find "$CASE_TMP" -mindepth 1 -maxdepth 1 -name 'apm-bootstrap.*')"
+assert_true 'relative TMPDIR never triggers the non-absolute cleanup guard' \
+    out_lacks 'refusing to clean non-absolute staging path'
 
 printf '# archive and mirror failures\n'
 new_case no-mirror
