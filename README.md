@@ -332,6 +332,15 @@ files, credentials, links, and unexpected files are excluded. Redaction is
 best-effort and cannot prevent deliberate encoded secret disclosure; review is
 the trust boundary. Treat downloaded prompts and agent outputs as untrusted.
 
+Evaluation is capped at 140 minutes and shortens when setup consumes part of
+the 160-minute window established by the job's first step. This reserves about
+20 minutes of the 180-minute job for recovery, redaction, and upload. Native
+Harbor retention keeps completed trials available to the native collector
+after interruption;
+raw execution directories stay on the runner. Recovered runs are explicitly
+incomplete and cannot publish history. Recovery and upload require a live
+runner; runner loss or forced cancellation can prevent them.
+
 Successful **standard** runs explicitly dispatched against `main` additionally
 append Skill Lift, Effectiveness, Correctness, and Discoverability to
 [github-action-benchmark](https://github.com/benchmark-action/github-action-benchmark/tree/4322e5726e6334590d251fc4f92bec0efafc45dc)
