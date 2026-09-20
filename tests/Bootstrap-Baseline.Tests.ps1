@@ -233,27 +233,27 @@ public static class $className
     }
 }
 
-Describe 'Bash fixture independence from candidate release pins' -Skip:$script:IsWindowsPlatform {
-    It 'passes the offline suite with repository pin <Pin>' -ForEach @(
-        @{ Pin = '0.29.1' }
-        @{ Pin = '0.30.0' }
-        @{ Pin = '0.30.0rc2' }
-    ) {
-        $root = Join-Path $TestDrive ('bash-' + $Pin)
+Describe 'Bash fixture independence from the repository release pin' -Skip:$script:IsWindowsPlatform {
+    It 'passes the offline suite under a deliberately different outer pin' {
+        # One rerun under a pin the repository does not use catches fixtures
+        # that read the real .apm-version; prerelease formatting is covered
+        # inside the Bash suite itself.
+        $pin = '9.99.0rc1'
+        $root = Join-Path $TestDrive 'bash-outer-pin'
         foreach ($relativePath in @('scripts/bootstrap.sh', 'tests/bootstrap.sh', '.apm-checksums')) {
             $destination = Join-Path $root $relativePath
             New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force | Out-Null
             Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot $relativePath) -Destination $destination
         }
         $pinPath = Join-Path $root '.apm-version'
-        [IO.File]::WriteAllText($pinPath, $Pin + "`n", [Text.Encoding]::ASCII)
+        [IO.File]::WriteAllText($pinPath, $pin + "`n", [Text.Encoding]::ASCII)
 
         $output = & bash (Join-Path $root 'tests/bootstrap.sh') 2>&1
         $exitCode = $LASTEXITCODE
 
         $exitCode | Should-Be 0 -Because ($output -join [Environment]::NewLine)
         ($output -join "`n") | Should-MatchString '(?m)^[1-9][0-9]* cases, 0 failures$'
-        [IO.File]::ReadAllText($pinPath) | Should-Be ($Pin + "`n")
+        [IO.File]::ReadAllText($pinPath) | Should-Be ($pin + "`n")
     }
 }
 
