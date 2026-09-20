@@ -491,6 +491,7 @@ except KeyboardInterrupt:
                 process.communicate()
         raw_trial = run / "_harbor-jobs/podman-codex-with/skillevaluator-1__attempt001"
         self.assertIn(sentinel, (raw_trial / "trial.log").read_text())
+        reports.write_json(run / "result.json", {})  # A partial report must not suppress recovery.
         reports.recover_benchmark(self.workspace, root, "podman", "standard", "cancelled")
         destination = self.root / "publication"
         reports.benchmark_artifacts(self.workspace, root, "podman", destination)
@@ -524,7 +525,7 @@ except KeyboardInterrupt:
         with self.assertRaisesRegex(ValueError, "cannot produce history"):
             reports.benchmark_report(self.workspace, root, "podman", "standard", self.root / "metrics")
 
-    def test_recovery_rejects_malformed_native_reports(self):
+    def test_recovery_rejects_result_json_directories(self):
         root, run, _ = self.benchmark("standard")
         result = run / "result.json"
         (run / "_harbor-jobs").mkdir()

@@ -258,6 +258,7 @@ def recover_benchmark(workspace, root, name, mode, outcome):
     from skillevaluator.tier3.case_ids import validate_case_ids
     from skillevaluator.tier3.dataset_utils import load_dataset_entries
     from skillevaluator.tier3.harbor.collector import collect_harbor_results
+    from skillevaluator.tier3.results_location import run_directory_sort_key
 
     skill = local_skill(workspace, name, dataset=True)
     require(outcome in {"success", "failure", "cancelled", "skipped"}, "Invalid evaluation outcome")
@@ -291,7 +292,8 @@ def recover_benchmark(workspace, root, name, mode, outcome):
         result = run / "result.json"
         if result.exists():
             read_json(result)
-            continue  # Preserve valid reports already produced by native collection.
+            if run_directory_sort_key(run, require_completed_result=True) is not None:
+                continue  # Preserve complete reports already produced by native collection.
         if not jobs.exists():
             continue  # No retained diagnostics are available for native collection.
         require(jobs.is_dir() and not jobs.is_symlink(), "Linked or invalid retained jobs directory")
