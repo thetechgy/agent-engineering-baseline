@@ -31,7 +31,7 @@ jobs:
         shell: bash
         run: |
           APM_INSTALL_DIR="$RUNNER_TEMP/apm-reviewed/bin" ./scripts/bootstrap.sh --cli-only
-          echo "APM_EXECUTABLE=$RUNNER_TEMP/apm-reviewed/lib/apm/apm" >> "$GITHUB_ENV"
+          echo "APM_EXECUTABLE=$RUNNER_TEMP/apm-reviewed/bin/apm" >> "$GITHUB_ENV"
 
       - name: Discover latest APM release
         id: release

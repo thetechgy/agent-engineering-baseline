@@ -144,41 +144,69 @@ The acquisition sequence is fail closed:
    reparse, unsupported, or incomplete onedir layouts.
 5. Extract the complete bundle, authenticate its executable, and execute that
    staged absolute path only for the exact full-version postcondition.
-6. Transactionally promote the complete bundle, including `_internal` and
-   `.apm-installed`, reauthenticate it, and invoke APM only by absolute path.
+6. Stage the complete bundle, including `_internal` and `.apm-installed`, as
+   a new release generation, reauthenticate the staged executable, check its
+   exact version, and only then activate it and invoke APM by absolute path.
 
 Set `APM_NO_DIRECT_FALLBACK=1` to require a configured mirror. Preview never
 downloads, creates a temporary directory, stages, extracts, executes, installs,
-changes PATH, or creates a junction or symlink.
+changes PATH, or creates a symlink.
 
-On Linux and macOS, `${APM_INSTALL_DIR:-$HOME/.local/bin}/apm` links to the
-owned full bundle under the sibling `lib/apm` directory. Linux uses
-`sha256sum`; macOS uses `shasum -a 256`. An existing unrelated command or
-unowned bundle is not overwritten.
+Every run installs a fresh generation and activates it in one atomic step, so
+the previously active generation stays usable until that step and nothing needs
+a backup or rollback. If a run fails before activation, its stage is removed
+and the prior installation is untouched. A generation the command already
+references is never removed, even if the run is interrupted right after
+activation. After activation, superseded generations and legacy layouts are
+removed best effort with a warning on failure. The installer writes its
+`.apm-installed` marker into every stage before anything else, and only plain
+directories under `releases` carrying that marker as a regular file are
+removal candidates; anything else, including an unmarked `.stage-*` directory,
+is left in place with a warning. A second bootstrap targeting the same
+installation root fails immediately instead of waiting. These checks address
+pre-existing state and the user's own files; they do not defend against another
+process writing into the installation root while a bootstrap runs, because such
+a process could replace the command directly at any time.
 
-Linux and macOS promotion holds an atomic directory lock at
-`lib/.apm-install.lock` beside the bundle, waiting up to two minutes for another
-installer. Normal exit and handled signals release the lock. If a process is
-forcibly terminated, confirm that no installer is running and inspect the
-release and rollback paths before manually removing its stale lock directory.
-Both wrappers verify the executable at its promoted release path before
-publishing the command link.
+On Linux and macOS, `${APM_INSTALL_DIR:-$HOME/.local/bin}/apm` is a symlink to
+the absolute path of `<root>/lib/apm/releases/v<pin>-<timestamp>-<pid>/apm`,
+and activation renames a new symlink over it. Because the target is absolute,
+moving the installation tree requires running the bootstrap again. Linux uses
+`sha256sum`; macOS uses `shasum -a 256`. An existing unrelated command, a
+regular file, or a link that does not name a generation executable or the
+legacy `lib/apm/apm` bundle (including any `.` or `..` path component, or a
+generation directory or executable that is itself a symlink) is not
+overwritten. A managed-looking link is replaced only when its target is
+missing or its bundle carries the installer's `.apm-installed` marker as a
+regular file; a link to an unmarked bundle is refused with both paths named. The fail-fast lock is the directory
+`lib/apm/.lock`, held until the run exits so the native APM deployment always
+runs from a generation no concurrent bootstrap can supersede; normal exit and
+handled signals remove it, and after a forced kill the diagnostic names it so
+you can confirm no bootstrap is running and remove it. A regular file or link
+at that path is reported as unrelated rather than as another bootstrap.
 
 On Windows, the default root is `%LOCALAPPDATA%\Programs\apm`.
 `APM_INSTALL_DIR`, when set, identifies the `bin`/shim directory just as it
-does in APM's native installer; the installation root is its parent. The
-complete bundle lives in `releases\v<pin>`, `current` is a validated junction,
-and the ASCII `bin\apm.cmd` shim is location-relative:
+does in APM's native installer; the installation root is its parent. Each
+generation lives in `releases\v<pin>-<timestamp>-<id>`, and the ASCII
+`bin\apm.cmd` shim is location-relative:
 
 ```bat
-"%~dp0..\current\apm.exe" %*
+"%~dp0..\releases\v<pin>-<timestamp>-<id>\apm.exe" %*
 ```
 
-Windows promotion uses a named mutex, sibling staging, rollback, reparse-point
-rejection, temporary TLS 1.2 enablement with restoration, and a PowerShell
-5.1-safe junction deletion. `current` and `bin` are prepended to the current
-process and User PATH. Both wrappers warn if another PATH command may still
-shadow the reviewed location in new shells.
+Activation writes the new shim beside the old one and replaces it atomically
+with `File.Replace`. A named mutex is tried once without waiting and held
+until the native deployment finishes, reparse points are rejected before any
+tree is deleted, TLS 1.2 is enabled temporarily
+and restored, and the legacy `current` junction is recognized only when its
+target is a reparse-free path inside `releases` and is then removed without
+following it. The same rule as on Linux applies to the shim: it is replaced
+only when the release it runs is missing or carries the `.apm-installed`
+marker as a regular file, and a release reached through a reparse point is
+refused. `bin` is prepended to the current process and User PATH; a User PATH
+failure after activation is a warning. Both wrappers warn if another PATH
+command may still shadow the reviewed location in new shells.
 
 ## Native deployment behavior
 
@@ -253,11 +281,12 @@ unreviewed one.
 
 ## Repository validation
 
-Use the reviewed absolute APM executable that bootstrap reported as
-`done; reviewed CLI: <path>` and reproduce the deployment:
+Use the reviewed APM command that bootstrap reported as
+`done; reviewed CLI: <command> -> <release executable>` and reproduce the
+deployment:
 
 ```sh
-APM="$HOME/.local/lib/apm/apm"   # the path bootstrap printed
+APM="$HOME/.local/bin/apm"       # the command path bootstrap printed
 "$APM" install --frozen --trust-bin
 "$APM" compile --target codex,copilot --validate
 "$APM" compile --target codex,copilot

@@ -5,9 +5,10 @@ Acquires the reviewed APM CLI bundle and deploys the baseline with native APM.
 .DESCRIPTION
 Downloads a fresh pinned Windows x86_64 release archive, verifies the tracked
 archive and executable digests, rejects unsafe ZIP entries, executes only the
-staged absolute executable, and transactionally promotes the complete onedir
-bundle into APM's releases/current/bin layout. Native APM then owns package
-installation, executable trust, compilation, update, audit, and packing.
+staged absolute executable, installs the complete onedir bundle as a new
+generation under releases\, and activates it by atomically replacing the
+bin\apm.cmd shim. Native APM then owns package installation, executable
+trust, compilation, update, audit, and packing.
 
 .PARAMETER Scope
 Global installs at user scope. Repo installs into the current repository.
@@ -292,21 +293,6 @@ function Get-ApmReportedVersion {
     $Matches[1]
 }
 
-function Remove-ValidatedJunction {
-    [CmdletBinding(SupportsShouldProcess = $true)]
-    param([Parameter(Mandatory)][string]$Path)
-
-    $item = Get-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
-    if (-not $item) { return }
-    if (-not ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or
-        -not ($item.Attributes -band [IO.FileAttributes]::Directory)) {
-        throw "Refusing to remove a non-junction path: $Path"
-    }
-    if ($PSCmdlet.ShouldProcess($Path, 'Remove validated junction')) {
-        [IO.Directory]::Delete($Path, $false)
-    }
-}
-
 function Add-PathEntry {
     [CmdletBinding()]
     param(
@@ -340,16 +326,86 @@ function Get-MutexName {
     }
 }
 
-function New-ApmJunction {
-    [CmdletBinding(SupportsShouldProcess = $true)]
+
+function Test-LegacyCurrentEntry {
+    # Test-Path follows reparse points and reports a dangling junction as absent;
+    # Get-Item -Force sees the link itself so its target is still validated.
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param([Parameter(Mandatory)][string]$Path)
+    return $null -ne (Get-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue)
+}
+
+function Test-OwnedBundle {
+    # True when the bundle directory carries the installer's ownership marker as
+    # a regular file; a missing marker or a reparse point means the bundle is
+    # not this installer's to replace or remove.
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param([Parameter(Mandatory)][string]$Path)
+    $marker = Get-Item -LiteralPath (Join-Path $Path '.apm-installed') -Force -ErrorAction SilentlyContinue
+    return [bool]($marker -and -not $marker.PSIsContainer -and
+        -not ($marker.Attributes -band [IO.FileAttributes]::ReparsePoint))
+}
+
+function Test-PlainReleasePath {
+    # True when every existing component of a release directory below releases,
+    # and the executable the shim runs, is a plain entry, so the path cannot
+    # resolve outside the tree through a nested reparse point. A missing
+    # component ends the walk: a dangling reference inside releases stays
+    # repairable.
+    [CmdletBinding()]
+    [OutputType([bool])]
     param(
         [Parameter(Mandatory)][string]$Path,
-        [Parameter(Mandatory)][string]$Target
+        [Parameter(Mandatory)][string]$ReleasesPath
     )
-
-    if ($PSCmdlet.ShouldProcess($Path, "Create junction to $Target")) {
-        New-Item -ItemType Junction -Path $Path -Target $Target -ErrorAction Stop | Out-Null
+    $prefix = [IO.Path]::GetFullPath($ReleasesPath).TrimEnd('\') + '\'
+    $target = [IO.Path]::GetFullPath($Path)
+    if (-not $target.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) { return $false }
+    $current = $prefix.TrimEnd('\')
+    $components = @($target.Substring($prefix.Length) -split '\\' | Where-Object { $_ }) + @('apm.exe')
+    foreach ($component in $components) {
+        $current = Join-Path $current $component
+        $entry = Get-Item -LiteralPath $current -Force -ErrorAction SilentlyContinue
+        if (-not $entry) { return $true }
+        if ($entry.Attributes -band [IO.FileAttributes]::ReparsePoint) { return $false }
+        if ($component -eq 'apm.exe') { return -not $entry.PSIsContainer }
+        if (-not $entry.PSIsContainer) { return $false }
     }
+    return $true
+}
+
+function Get-LegacyCurrentTarget {
+    # The normalized target of the legacy current junction when it is a directory
+    # junction whose reparse-free target lies inside releases, the sole form the
+    # previous bootstrap layout ever created; otherwise $null.
+    [CmdletBinding()]
+    [OutputType([string])]
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][string]$ReleasesPath
+    )
+    $item = Get-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
+    if (-not $item) { return $null }
+    if (-not ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) { return $null }
+    if (-not ($item.Attributes -band [IO.FileAttributes]::Directory)) { return $null }
+    $target = [string](@($item.Target) | Select-Object -First 1)
+    if (-not $target) { return $null }
+    $target = $target -replace '^\\\\\?\\', '' -replace '^\\\?\?\\', ''
+    $target = [IO.Path]::GetFullPath([string]$target)
+    if (Test-PlainReleasePath -Path $target -ReleasesPath $ReleasesPath) { return $target }
+    return $null
+}
+
+function Test-LegacyCurrentJunction {
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][string]$ReleasesPath
+    )
+    return $null -ne (Get-LegacyCurrentTarget -Path $Path -ReleasesPath $ReleasesPath)
 }
 
 function Install-ReviewedBundle {
@@ -380,210 +436,193 @@ function Install-ReviewedBundle {
         $binPath = Join-Path $installRoot 'bin'
     }
     $releasesPath = Join-Path $installRoot 'releases'
-    $releasePath = Join-Path $releasesPath "v$($Metadata.Pin)"
-    $currentPath = Join-Path $installRoot 'current'
+    # Each run installs a fresh generation and activates it by atomically
+    # replacing the shim, so the prior generation stays usable until that
+    # single step and no backup or rollback is needed.
+    $generation = "v$($Metadata.Pin)-$([DateTime]::UtcNow.ToString('yyyyMMddTHHmmssZ'))-$([Guid]::NewGuid().ToString('N').Substring(0, 8))"
+    $stagePath = Join-Path $releasesPath ".stage-$generation"
+    $releasePath = Join-Path $releasesPath $generation
     $shimPath = Join-Path $binPath 'apm.cmd'
-    $shimLines = @('@echo off', '"%~dp0..\current\apm.exe" %*')
+    $shimStagePath = Join-Path $binPath ".apm-$generation.cmd"
+    $shimLines = @('@echo off', "`"%~dp0..\releases\$generation\apm.exe`" %*")
     $shimContent = ($shimLines -join [Environment]::NewLine) + [Environment]::NewLine
-    $stagePath = Join-Path $releasesPath ".stage-$([Guid]::NewGuid().ToString('N'))"
-    $backupPath = Join-Path $releasesPath ".rollback-$([Guid]::NewGuid().ToString('N'))"
+    # Only the legacy junction or a generation named by this installer's grammar is
+    # managed; a traversal component such as `..` could point anywhere.
+    $generationPattern = 'v\d+\.\d+\.\d+(?:a\d+|b\d+|rc\d+)?-\d{8}T\d{6}Z-[0-9a-f]{8}'
+    $managedShimPattern = "^@echo off\r?\n`"%~dp0\.\.\\(current|releases\\$generationPattern)\\apm\.exe`" %\*\r?\n`$"
+
+    $legacyCurrentPath = Join-Path $installRoot 'current'
 
     $mutex = New-Object Threading.Mutex($false, (Get-MutexName -InstallRoot $installRoot))
     $mutexAcquired = $false
-    $promotionComplete = $false
-    $releaseBackedUp = $false
-    $releasePromoted = $false
-    $currentRemoved = $false
-    $currentCreated = $false
-    $shimWriteStarted = $false
-    $pathUpdateStarted = $false
+    $activated = $false
+    $handedOff = $false
+    # Paths become cleanup-owned only once this run has created them.
+    $ownedPaths = New-Object Collections.Generic.List[string]
     try {
-        try { $mutexAcquired = $mutex.WaitOne([TimeSpan]::FromMinutes(2)) }
+        # Never wait or steal: a second bootstrap fails immediately with a diagnostic.
+        try { $mutexAcquired = $mutex.WaitOne(0) }
         catch [Threading.AbandonedMutexException] { $mutexAcquired = $true }
-        if (-not $mutexAcquired) { throw 'Timed out waiting for the APM installation mutex.' }
+        if (-not $mutexAcquired) {
+            throw "Another bootstrap is installing into $installRoot; wait for it to finish and retry."
+        }
 
-        $oldProcessPath = $env:PATH
-        $oldUserPath = [Environment]::GetEnvironmentVariable('Path', 'User')
         Assert-SafeDirectory -Path $installRoot -Label 'APM installation root'
         Assert-SafeDirectory -Path $releasesPath -Label 'APM releases directory'
         Assert-SafeDirectory -Path $binPath -Label 'APM bin directory'
         New-Item -ItemType Directory -Path $releasesPath, $binPath -Force | Out-Null
 
-        $releaseItem = Get-Item -LiteralPath $releasePath -Force -ErrorAction SilentlyContinue
-        $hadRelease = $null -ne $releaseItem
-        if ($hadRelease) {
-            Assert-PlainTree -Path $releasePath -Label 'Existing managed APM release'
-            $markerPath = Join-Path $releasePath '.apm-installed'
-            if (-not (Test-Path -LiteralPath $markerPath -PathType Leaf) -or
-                ((Get-Item -LiteralPath $markerPath -Force).Attributes -band
-                    [IO.FileAttributes]::ReparsePoint)) {
-                throw "Refusing to replace an unowned APM release: $releasePath"
-            }
-        }
-
-        $currentItem = Get-Item -LiteralPath $currentPath -Force -ErrorAction SilentlyContinue
-        $hadCurrent = $null -ne $currentItem
-        $oldCurrentTarget = $null
-        if ($hadCurrent) {
-            if (-not ($currentItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -or
-                -not ($currentItem.Attributes -band [IO.FileAttributes]::Directory)) {
-                throw "Refusing to replace non-junction current path: $currentPath"
-            }
-            $oldCurrentTarget = $currentItem.Target
-            if ($oldCurrentTarget -is [array]) { $oldCurrentTarget = $oldCurrentTarget[0] }
-            if (-not [IO.Path]::IsPathRooted($oldCurrentTarget)) {
-                $oldCurrentTarget = Join-Path $installRoot $oldCurrentTarget
-            }
-            $oldCurrentTarget = [IO.Path]::GetFullPath($oldCurrentTarget)
-            $releasePrefix = [IO.Path]::GetFullPath($releasesPath).TrimEnd('\') + '\'
-            if (-not $oldCurrentTarget.StartsWith($releasePrefix, [StringComparison]::OrdinalIgnoreCase)) {
-                throw "The current junction points outside releases: $oldCurrentTarget"
-            }
-        }
-
         $shimItem = Get-Item -LiteralPath $shimPath -Force -ErrorAction SilentlyContinue
-        $hadShim = $null -ne $shimItem
-        $oldShimBytes = $null
-        $oldShimAttributes = $null
-        if ($hadShim -and ($shimItem.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
-            throw "Refusing to overwrite a reparse-point APM shim: $shimPath"
-        }
-        elseif ($hadShim -and -not $shimItem.PSIsContainer) {
-            if ([IO.File]::ReadAllText($shimPath) -cne $shimContent) {
+        if ($shimItem) {
+            if ($shimItem.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+                throw "Refusing to overwrite a reparse-point APM shim: $shimPath"
+            }
+            if ($shimItem.PSIsContainer) {
+                throw "Refusing to overwrite a non-file APM shim: $shimPath"
+            }
+            $shimMatch = [regex]::Match([IO.File]::ReadAllText($shimPath), $managedShimPattern)
+            if (-not $shimMatch.Success) {
                 throw "Refusing to overwrite an unrelated APM shim: $shimPath"
             }
-            $oldShimBytes = [IO.File]::ReadAllBytes($shimPath)
-            $oldShimAttributes = $shimItem.Attributes
+            # The shim is replaced only when the release it runs is missing
+            # (repairable) or carries this installer's ownership marker.
+            $shimRelease = $null
+            if ($shimMatch.Groups[1].Value -eq 'current') {
+                if (Test-LegacyCurrentEntry -Path $legacyCurrentPath) {
+                    $shimRelease = Get-LegacyCurrentTarget -Path $legacyCurrentPath -ReleasesPath $releasesPath
+                    if (-not $shimRelease) {
+                        throw "Refusing to overwrite an APM shim whose legacy current link is not a junction into ${releasesPath}: $shimPath"
+                    }
+                }
+            }
+            else {
+                $shimRelease = Join-Path $installRoot $shimMatch.Groups[1].Value
+                if (-not (Test-PlainReleasePath -Path $shimRelease -ReleasesPath $releasesPath)) {
+                    throw "Refusing to overwrite an APM shim whose release resolves through a reparse point: $shimPath -> $shimRelease"
+                }
+            }
+            if ($shimRelease -and (Get-Item -LiteralPath (Join-Path $shimRelease 'apm.exe') -Force -ErrorAction SilentlyContinue) -and
+                -not (Test-OwnedBundle -Path $shimRelease)) {
+                throw "Refusing to overwrite an APM shim that runs an unowned release: $shimPath -> $shimRelease"
+            }
         }
-        elseif ($hadShim) {
-            throw "Refusing to overwrite a non-file APM shim: $shimPath"
+        foreach ($path in @($stagePath, $releasePath, $shimStagePath)) {
+            # Get-Item -Force also sees a dangling reparse point, which Test-Path
+            # would report as absent and a later write could follow.
+            if (Get-Item -LiteralPath $path -Force -ErrorAction SilentlyContinue) {
+                throw "An APM release generation path already exists: $path"
+            }
         }
 
+        # Each path becomes cleanup-owned only once this run has created it, so a
+        # path that appeared in between and made the create fail is never removed.
         New-Item -ItemType Directory -Path $stagePath | Out-Null
-        Get-ChildItem -LiteralPath $SourceBundle -Force | ForEach-Object {
-            Copy-Item -LiteralPath $_.FullName -Destination $stagePath -Recurse -Force
-        }
+        $ownedPaths.Add($stagePath)
+        # The ownership marker is written first so every directory this installer
+        # creates under releases is recognizable to later cleanup.
         [IO.File]::WriteAllText(
             (Join-Path $stagePath '.apm-installed'),
             "v$($Metadata.Pin)$([Environment]::NewLine)",
             [Text.Encoding]::ASCII
         )
+        Get-ChildItem -LiteralPath $SourceBundle -Force | ForEach-Object {
+            Copy-Item -LiteralPath $_.FullName -Destination $stagePath -Recurse -Force
+        }
         Assert-PlainTree -Path $stagePath -Label 'Staged persistent APM bundle'
-        Assert-ReviewedFile -Path (Join-Path $stagePath 'apm.exe') -Name $ExecutableMember -Metadata $Metadata
-
-        if ($hadCurrent) {
-            Remove-ValidatedJunction -Path $currentPath -Confirm:$false
-            $currentRemoved = $true
+        # Verify the bytes that will be activated, from the tree they will keep.
+        $stagedExecutable = Join-Path $stagePath 'apm.exe'
+        Assert-ReviewedFile -Path $stagedExecutable -Name $ExecutableMember -Metadata $Metadata
+        if ((Get-ApmReportedVersion -Executable $stagedExecutable) -cne $Metadata.Pin) {
+            throw "The installed APM CLI does not report pinned v$($Metadata.Pin)."
         }
 
-        if ($hadRelease) {
-            Move-Item -LiteralPath $releasePath -Destination $backupPath
-            $releaseBackedUp = $true
-        }
         Move-Item -LiteralPath $stagePath -Destination $releasePath
-        $releasePromoted = $true
-        # Verify the installed release before exposing it through current or the shim.
+        $ownedPaths.Add($releasePath)
         $promotedExecutable = Join-Path $releasePath 'apm.exe'
-        Assert-ReviewedFile -Path $promotedExecutable -Name $ExecutableMember -Metadata $Metadata
-        if ((Get-ApmReportedVersion -Executable $promotedExecutable) -cne $Metadata.Pin) {
-            throw "The promoted APM CLI does not report pinned v$($Metadata.Pin)."
+        [IO.File]::WriteAllText($shimStagePath, $shimContent, [Text.Encoding]::ASCII)
+        $ownedPaths.Add($shimStagePath)
+        if (Test-Path -LiteralPath $shimPath) {
+            # NTFS replaces the destination atomically; the shim never disappears.
+            # NullString keeps the no-backup argument null under Windows PowerShell 5.1,
+            # which otherwise binds $null to an empty (illegal) path.
+            [IO.File]::Replace($shimStagePath, $shimPath, [NullString]::Value)
         }
-        New-ApmJunction -Path $currentPath -Target $releasePath -Confirm:$false
-        $currentCreated = $true
-        $shimWriteStarted = $true
-        [IO.File]::WriteAllText($shimPath, $shimContent, [Text.Encoding]::ASCII)
-        $promotedExecutable = Join-Path $currentPath 'apm.exe'
+        else {
+            [IO.File]::Move($shimStagePath, $shimPath)
+        }
+        $activated = $true
 
-        $newPath = Add-PathEntry -PathValue $oldProcessPath -Entry @($currentPath, $binPath)
-        $newUserPath = Add-PathEntry -PathValue $oldUserPath -Entry @($currentPath, $binPath)
-        $pathUpdateStarted = $true
-        $env:PATH = $newPath
-        [Environment]::SetEnvironmentVariable('Path', $newUserPath, 'User')
-        $promotionComplete = $true
+        # Best-effort cleanup of superseded generations and the legacy current junction.
+        # Only installer-owned entries are removed: plain directories (abandoned stages
+        # or generations) carrying the ownership marker this installer writes first;
+        # anything else is left with a warning. Only plain trees are removed, so a
+        # reparse point can never redirect deletion.
+        foreach ($entry in @(Get-ChildItem -LiteralPath $releasesPath -Force)) {
+            if ($entry.FullName -ieq $releasePath) { continue }
+            $owned = $entry.PSIsContainer -and -not ($entry.Attributes -band [IO.FileAttributes]::ReparsePoint) -and
+                (Test-OwnedBundle -Path $entry.FullName)
+            if (-not $owned) {
+                Write-Warning -Message "Leaving an unrecognized entry in the APM releases directory: $($entry.FullName)"
+                continue
+            }
+            try {
+                Assert-PlainTree -Path $entry.FullName -Label 'Superseded APM release'
+                Remove-Item -LiteralPath $entry.FullName -Recurse -Force -ErrorAction Stop
+            }
+            catch { Write-Warning -Message "Unable to remove a superseded APM release at $($entry.FullName): $_" }
+        }
+        if (Test-LegacyCurrentEntry -Path $legacyCurrentPath) {
+            if (Test-LegacyCurrentJunction -Path $legacyCurrentPath -ReleasesPath $releasesPath) {
+                # Deleting a junction non-recursively removes only the link itself.
+                try { [IO.Directory]::Delete($legacyCurrentPath, $false) }
+                catch { Write-Warning -Message "Unable to remove the legacy APM current junction at ${legacyCurrentPath}: $_" }
+            }
+            else {
+                Write-Warning -Message "Leaving an unrecognized entry beside the APM releases directory: $legacyCurrentPath"
+            }
+        }
+
+        $env:PATH = Add-PathEntry -PathValue $env:PATH -Entry @($binPath)
+        try {
+            $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+            [Environment]::SetEnvironmentVariable('Path', (Add-PathEntry -PathValue $userPath -Entry @($binPath)), 'User')
+        }
+        catch { Write-Warning -Message "The reviewed CLI is installed, but the user PATH could not be updated; add $binPath manually: $_" }
+        $handedOff = $true
     }
     finally {
-        if (-not $promotionComplete -and $mutexAcquired) {
-            if ($pathUpdateStarted) {
-                $env:PATH = $oldProcessPath
-                try { [Environment]::SetEnvironmentVariable('Path', $oldUserPath, 'User') }
-                catch { Write-Warning -Message "Unable to restore User PATH during rollback: $_" }
-            }
-            try {
-                if ($currentCreated) {
-                    Remove-ValidatedJunction -Path $currentPath -Confirm:$false
-                }
-            }
-            catch { Write-Warning -Message "Incomplete APM rollback: unable to remove the verified replacement junction at ${currentPath}: $_" }
-            $releaseRestored = $false
-            if ($releasePromoted) {
-                try { Remove-Item -LiteralPath $releasePath -Recurse -Force -ErrorAction Stop }
-                catch { Write-Warning -Message "Incomplete APM rollback: unable to remove replacement release: $_" }
-            }
-            if ($releaseBackedUp) {
+        # A generation the shim already references is live, even if the run was
+        # interrupted between the atomic replacement and the flag assignment.
+        if (-not $activated -and (Test-Path -LiteralPath $shimPath)) {
+            try { $activated = [IO.File]::ReadAllText($shimPath) -ceq $shimContent } catch { $activated = $false }
+        }
+        if (-not $activated) {
+            # Like the post-activation cleanup, never delete through a reparse point.
+            foreach ($path in $ownedPaths) {
+                $entry = Get-Item -LiteralPath $path -Force -ErrorAction SilentlyContinue
+                if (-not $entry) { continue }
                 try {
-                    if (Test-Path -LiteralPath $releasePath) {
-                        throw 'The replacement release still exists.'
-                    }
-                    Move-Item -LiteralPath $backupPath -Destination $releasePath -ErrorAction Stop
-                    $releaseRestored = $true
+                    if ($entry.PSIsContainer) { Assert-PlainTree -Path $path -Label 'Abandoned APM stage' }
+                    elseif ($entry.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'it is a reparse point' }
+                    Remove-Item -LiteralPath $path -Recurse -Force -ErrorAction Stop
                 }
-                catch { Write-Warning -Message "Incomplete APM rollback: prior release retained at ${backupPath}: $_" }
+                catch { Write-Warning -Message "Leaving an abandoned APM stage at ${path}: $_" }
             }
-            # Never reconnect current to an unverified same-version replacement.
-            $canRestoreCurrent = $false
-            if ($currentRemoved) {
-                $releaseUnchanged = $hadRelease -and -not $releaseBackedUp -and -not $releasePromoted
-                $canRestoreCurrent = $releaseRestored -or $releaseUnchanged -or $oldCurrentTarget -ine $releasePath
-            }
-            if ($currentRemoved -and $canRestoreCurrent) {
-                try {
-                    # Inspect the junction itself, including a dangling replacement.
-                    $remainingCurrent = Get-Item -LiteralPath $currentPath -Force -ErrorAction SilentlyContinue
-                    if ($remainingCurrent) {
-                        $remainingTarget = @($remainingCurrent.Target)[0]
-                        if (-not [IO.Path]::IsPathRooted($remainingTarget)) {
-                            $remainingTarget = Join-Path $installRoot $remainingTarget
-                        }
-                        if ([IO.Path]::GetFullPath($remainingTarget) -ine $oldCurrentTarget) {
-                            Remove-ValidatedJunction -Path $currentPath -Confirm:$false
-                            $remainingCurrent = $null
-                        }
-                    }
-                    if (-not $remainingCurrent) {
-                        New-ApmJunction -Path $currentPath -Target $oldCurrentTarget -Confirm:$false
-                    }
-                }
-                catch { Write-Warning -Message "Incomplete APM rollback: unable to restore the prior current junction; inspect $oldCurrentTarget for recovery: $_" }
-            }
-            try {
-                if ($shimWriteStarted -and $hadShim) {
-                    if (Test-Path -LiteralPath $shimPath -PathType Leaf) {
-                        [IO.File]::SetAttributes($shimPath, [IO.FileAttributes]::Normal)
-                    }
-                    [IO.File]::WriteAllBytes($shimPath, $oldShimBytes)
-                    [IO.File]::SetAttributes($shimPath, $oldShimAttributes)
-                }
-                elseif ($shimWriteStarted -and (Test-Path -LiteralPath $shimPath)) {
-                    Remove-Item -LiteralPath $shimPath -Force
-                }
-            }
-            catch { Write-Warning -Message "Unable to restore the prior APM shim: $_" }
         }
-        if (Test-Path -LiteralPath $stagePath) {
-            Remove-Item -LiteralPath $stagePath -Recurse -Force -ErrorAction SilentlyContinue
+        # On success the caller holds the lock across the native handoff so a
+        # concurrent bootstrap cannot supersede and remove this generation while
+        # APM is still running from it.
+        if (-not $handedOff) {
+            if ($mutexAcquired) { $mutex.ReleaseMutex() }
+            $mutex.Dispose()
         }
-        if ($promotionComplete -and (Test-Path -LiteralPath $backupPath)) {
-            Remove-Item -LiteralPath $backupPath -Recurse -Force -ErrorAction Continue
-        }
-        if ($mutexAcquired) { $mutex.ReleaseMutex() }
-        $mutex.Dispose()
     }
 
     [pscustomobject]@{
         Executable = $promotedExecutable
         Shim       = $shimPath
-        Current    = $currentPath
         Bin        = $binPath
+        Lock       = $mutex
     }
 }
 
@@ -661,30 +700,35 @@ if (-not $PSCmdlet.ShouldProcess("APM CLI v$($metadata.Pin)", 'Acquire and promo
     return
 }
 $installation = Get-ReviewedApm -Metadata $metadata
+try {
+    $env:PATH = $originalProcessPath
+    $ambient = Get-Command -Name apm -ErrorAction SilentlyContinue | Select-Object -First 1
+    $env:PATH = Add-PathEntry -PathValue $originalProcessPath -Entry @($installation.Bin)
+    if ($ambient) {
+        $ambientPath = if ($ambient.PSObject.Properties['Path']) { $ambient.Path } else { $ambient.Name }
+        if ($ambientPath -and $ambientPath -ine $installation.Shim -and
+            $ambientPath -ine $installation.Executable) {
+            Write-Warning "$ambientPath may still shadow $($installation.Shim) in new shells until PATH is reordered."
+        }
+    }
 
-$env:PATH = $originalProcessPath
-$ambient = Get-Command -Name apm -ErrorAction SilentlyContinue | Select-Object -First 1
-$env:PATH = Add-PathEntry -PathValue $originalProcessPath -Entry @($installation.Current, $installation.Bin)
-if ($ambient) {
-    $ambientPath = if ($ambient.PSObject.Properties['Path']) { $ambient.Path } else { $ambient.Name }
-    if ($ambientPath -and $ambientPath -ine $installation.Shim -and
-        $ambientPath -ine $installation.Executable) {
-        Write-Warning "$ambientPath may still shadow $($installation.Shim) in new shells until PATH is reordered."
+    if (-not $CliOnly) {
+        $packageRef = if ($env:BASELINE_PACKAGE_REF) { $env:BASELINE_PACKAGE_REF }
+        else { $defaultPackageRef }
+        if ($Scope -eq 'Global') {
+            Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata install --global --target 'codex,copilot' --trust-bin --trust-transitive-mcp $packageRef
+            Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata update --global --yes --target 'codex,copilot'
+            Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata compile --global
+        }
+        else {
+            Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata install --target 'codex,copilot' --trust-bin --trust-transitive-mcp $packageRef
+            Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata update --yes --target 'codex,copilot'
+            Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata compile --target 'codex,copilot'
+        }
     }
+    Write-Information -MessageData "Done; reviewed CLI: $($installation.Shim) -> $($installation.Executable)" -InformationAction Continue
 }
-
-if (-not $CliOnly) {
-    $packageRef = if ($env:BASELINE_PACKAGE_REF) { $env:BASELINE_PACKAGE_REF }
-    else { $defaultPackageRef }
-    if ($Scope -eq 'Global') {
-        Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata install --global --target 'codex,copilot' --trust-bin --trust-transitive-mcp $packageRef
-        Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata update --global --yes --target 'codex,copilot'
-        Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata compile --global
-    }
-    else {
-        Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata install --target 'codex,copilot' --trust-bin --trust-transitive-mcp $packageRef
-        Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata update --yes --target 'codex,copilot'
-        Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata compile --target 'codex,copilot'
-    }
+finally {
+    $installation.Lock.ReleaseMutex()
+    $installation.Lock.Dispose()
 }
-Write-Information -MessageData "Done; reviewed CLI: $($installation.Executable)" -InformationAction Continue

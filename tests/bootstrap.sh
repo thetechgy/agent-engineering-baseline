@@ -57,6 +57,8 @@ out_has() { printf '%s\n' "$OUTPUT" | grep -Fq "$1"; }
 out_lacks() { ! out_has "$1"; }
 # shellcheck disable=SC2317
 file_has() { grep -Fq "$2" "$1"; }
+# The generation directory currently activated through the managed symlink.
+active_release() { dirname "$(readlink "$CASE_INSTALL/apm")"; }
 
 assert_true 'mirror redirects are limited to reviewed protocols' \
     file_has "$SOURCE_BOOTSTRAP" "proto-redir '=https,file'"
@@ -250,8 +252,10 @@ EOF
     record_result "$platform_os/$platform_arch complete bundle acquisition succeeds" success
     assert_true "$platform_os/$platform_arch selects $ARCHIVE_NAME" out_has "$ARCHIVE_NAME"
     assert_true "$platform_os/$platform_arch uses $platform_hash" file_has "$HASH_LOG" "$platform_hash"
-    assert_true "$platform_os/$platform_arch persists _internal" test -f "$CASE_ROOT/install/lib/apm/_internal/indexes/catalog.json"
-    assert_true "$platform_os/$platform_arch writes ownership marker" file_has "$CASE_ROOT/install/lib/apm/.apm-installed" 'v0.29.0'
+    assert_true "$platform_os/$platform_arch persists _internal" test -f "$(active_release)/_internal/indexes/catalog.json"
+    assert_true "$platform_os/$platform_arch writes ownership marker" file_has "$(active_release)/.apm-installed" 'v0.29.0'
+    assert_true "$platform_os/$platform_arch installs a versioned generation" test -d "$CASE_ROOT/install/lib/apm/releases/v0.29.0-"*
+    assert_true "$platform_os/$platform_arch reports the activated command and generation" out_has "done; reviewed CLI: $CASE_INSTALL/apm -> $(active_release)/apm"
     assert_true "$platform_os/$platform_arch creates the managed symlink" test -L "$CASE_INSTALL/apm"
     assert_true "$platform_os/$platform_arch never runs ambient APM" test ! -e "$AMBIENT_SENTINEL"
 done
@@ -302,7 +306,8 @@ printf '0.30.0rc2\n' > "$CASE_REPO/.apm-version"
 make_fixture Linux x86_64 0.30.0rc2
 run_case --cli-only
 record_result 'full prerelease version is preserved' success
-assert_true 'prerelease marker is exact' file_has "$CASE_ROOT/install/lib/apm/.apm-installed" 'v0.30.0rc2'
+assert_true 'prerelease marker is exact' file_has "$(active_release)/.apm-installed" 'v0.30.0rc2'
+assert_true 'prerelease generation name keeps the full version' test -d "$CASE_ROOT/install/lib/apm/releases/v0.30.0rc2-"*
 
 new_case shadowed-path
 make_fixture Linux x86_64
@@ -415,24 +420,32 @@ if tar --help 2>&1 | grep -q -- '--transform'; then
     assert_true 'traversal reaches layout validation' out_has 'unexpected root, traversal'
 fi
 
-printf '# ownership and rollback\n'
-new_case unowned-bundle
+printf '# ownership, generations, and failure isolation\n'
+new_case unrelated-library-content
 make_fixture Linux x86_64
 mkdir -p "$CASE_ROOT/install/lib/apm"
 printf 'unrelated\n' > "$CASE_ROOT/install/lib/apm/keep"
 run_case --cli-only
-record_result 'unowned bundle target is not overwritten' failure
-assert_true 'unowned bundle reaches ownership validation' out_has 'refusing to replace an unowned APM bundle'
-assert_true 'unowned bundle content is preserved' file_has "$CASE_ROOT/install/lib/apm/keep" 'unrelated'
+record_result 'unrelated library content does not block installation' success
+assert_true 'unrelated library content is preserved' file_has "$CASE_ROOT/install/lib/apm/keep" 'unrelated'
 
 new_case unrelated-command
 make_fixture Linux x86_64
-rm -rf "$CASE_ROOT/install/lib/apm"
 printf 'unrelated command\n' > "$CASE_INSTALL/apm"
 run_case --cli-only
 record_result 'unrelated command is not overwritten' failure
 assert_true 'unrelated command reaches ownership validation' out_has 'refusing to overwrite unrelated APM command'
 assert_true 'unrelated command content is preserved' file_has "$CASE_INSTALL/apm" 'unrelated command'
+assert_true 'unrelated command failure leaves no generation behind' \
+    test -z "$(find "$CASE_ROOT/install/lib/apm/releases" -mindepth 1 -print -quit 2>/dev/null)"
+
+new_case unrelated-symlink
+make_fixture Linux x86_64
+ln -s /usr/bin/env "$CASE_INSTALL/apm"
+run_case --cli-only
+record_result 'unrelated symlink is not overwritten' failure
+assert_true 'unrelated symlink reaches ownership validation' out_has 'refusing to overwrite an unrelated APM symlink'
+assert_true 'unrelated symlink is preserved' test "$(readlink "$CASE_INSTALL/apm")" = /usr/bin/env
 
 new_case symlinked-ancestor
 make_fixture Linux x86_64
@@ -445,7 +458,23 @@ assert_true 'symlinked ancestor reaches path validation' out_has 'has a symlinke
 assert_true 'symlinked ancestor target is not mutated' \
     test ! -e "$CASE_ROOT/physical-root/nested/lib"
 
-new_case rollback
+new_case supersede
+make_fixture Linux x86_64
+run_case --cli-only
+record_result 'first generation installs' success
+first_release=$(active_release)
+printf 'first generation\n' > "$first_release/_internal/generation"
+sleep 1
+run_case --cli-only
+record_result 'second run installs a new generation' success
+assert_true 'second run activates a different generation' test "$(active_release)" != "$first_release"
+assert_true 'superseded generation is removed' test ! -e "$first_release"
+assert_true 'exactly one generation remains' \
+    test "$(find "$CASE_ROOT/install/lib/apm/releases" -mindepth 1 -maxdepth 1 | wc -l | tr -d ' ')" -eq 1
+assert_true 'activated command is usable after supersession' file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
+assert_true 'supersession releases the lock' test ! -e "$CASE_ROOT/install/lib/apm/.lock"
+
+new_case legacy-layout
 make_fixture Linux x86_64
 mkdir -p "$CASE_ROOT/install/lib/apm/_internal"
 printf 'v0.28.0\n' > "$CASE_ROOT/install/lib/apm/.apm-installed"
@@ -453,52 +482,257 @@ printf 'old bundle\n' > "$CASE_ROOT/install/lib/apm/_internal/old"
 printf '#!/bin/sh\nexit 0\n' > "$CASE_ROOT/install/lib/apm/apm"
 chmod +x "$CASE_ROOT/install/lib/apm/apm"
 ln -s "$CASE_ROOT/install/lib/apm/apm" "$CASE_INSTALL/apm"
-real_ln=$(command -v ln)
-cat > "$CASE_BIN/ln" <<EOF
-#!/usr/bin/env bash
-if [ ! -f '$CASE_ROOT/ln-failed-once' ]; then
-    : > '$CASE_ROOT/ln-failed-once'
-    exit 73
-fi
-exec '$real_ln' "\$@"
-EOF
-chmod +x "$CASE_BIN/ln"
 run_case --cli-only
-record_result 'promotion failure is surfaced' failure
-assert_true 'rollback reaches the injected promotion failure' test -f "$CASE_ROOT/ln-failed-once"
-assert_true 'promotion failure reports rollback' \
-    out_has 'APM bundle promotion failed; the prior managed installation was restored'
-assert_true 'promotion rollback restores old bundle' file_has "$CASE_ROOT/install/lib/apm/_internal/old" 'old bundle'
-assert_true 'promotion rollback restores managed symlink' test -L "$CASE_INSTALL/apm"
+record_result 'legacy single-bundle layout is replaced' success
+assert_true 'legacy layout activates a generation' test -d "$(active_release)"
+assert_true 'legacy bundle executable is removed' test ! -e "$CASE_ROOT/install/lib/apm/apm"
+assert_true 'legacy bundle tree is removed' test ! -e "$CASE_ROOT/install/lib/apm/_internal"
+assert_true 'legacy ownership marker is removed' test ! -e "$CASE_ROOT/install/lib/apm/.apm-installed"
 
-# Fail each transaction boundary once, so rollback uses real working commands.
+new_case superseded-cleanup-failure
+make_fixture Linux x86_64
+run_case --cli-only
+record_result 'cleanup failure fixture installs prior generation' success
+first_release=$(active_release)
+sleep 1
+real_rm=$(command -v rm)
+cat > "$CASE_BIN/rm" <<EOF
+#!/usr/bin/env bash
+for path in "\$@"; do
+    case "\$path" in '$first_release') exit 73 ;; esac
+done
+exec '$real_rm' "\$@"
+EOF
+chmod +x "$CASE_BIN/rm"
+run_case --cli-only
+record_result 'superseded generation cleanup failure leaves a successful install' success
+assert_true 'superseded cleanup failure is diagnosed' out_has 'unable to remove a superseded APM release'
+assert_true 'new generation is active despite cleanup failure' test "$(active_release)" != "$first_release"
+assert_true 'command is usable despite cleanup failure' file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
+assert_true 'cleanup failure still releases the lock' test ! -e "$CASE_ROOT/install/lib/apm/.lock"
+
+new_case traversal-symlink
+make_fixture Linux x86_64
+mkdir -p "$CASE_ROOT/install/lib/apm/releases" "$CASE_ROOT/elsewhere"
+printf 'unrelated command\n' > "$CASE_ROOT/elsewhere/apm"
+ln -s "$CASE_ROOT/install/lib/apm/releases/../../../elsewhere/apm" "$CASE_INSTALL/apm"
+run_case --cli-only
+record_result 'symlink with a traversal component is not overwritten' failure
+assert_true 'traversal symlink reaches ownership validation' out_has 'refusing to overwrite an unrelated APM symlink'
+assert_true 'traversal symlink is preserved' \
+    test "$(readlink "$CASE_INSTALL/apm")" = "$CASE_ROOT/install/lib/apm/releases/../../../elsewhere/apm"
+assert_true 'traversal symlink target is untouched' file_has "$CASE_ROOT/elsewhere/apm" 'unrelated command'
+
+new_case unmanaged-generation-symlink
+make_fixture Linux x86_64
+mkdir -p "$CASE_ROOT/install/lib/apm/releases/v0.28.0-unmarked"
+printf '#!/bin/sh\nexit 0\n' > "$CASE_ROOT/install/lib/apm/releases/v0.28.0-unmarked/apm"
+ln -s "$CASE_ROOT/install/lib/apm/releases/v0.28.0-unmarked/apm" "$CASE_INSTALL/apm"
+run_case --cli-only
+record_result 'symlink into a directory outside the generation grammar is not overwritten' failure
+assert_true 'unmanaged generation symlink reaches ownership validation' out_has 'refusing to overwrite an unrelated APM symlink'
+assert_true 'unmanaged generation symlink is preserved' \
+    test "$(readlink "$CASE_INSTALL/apm")" = "$CASE_ROOT/install/lib/apm/releases/v0.28.0-unmarked/apm"
+
+new_case unowned-legacy-bundle
+make_fixture Linux x86_64
+mkdir -p "$CASE_ROOT/install/lib/apm/_internal"
+printf 'user bundle\n' > "$CASE_ROOT/install/lib/apm/_internal/keep"
+printf '#!/bin/sh\nexit 0\n' > "$CASE_ROOT/install/lib/apm/apm"
+chmod +x "$CASE_ROOT/install/lib/apm/apm"
+ln -s "$CASE_ROOT/install/lib/apm/apm" "$CASE_INSTALL/apm"
+run_case --cli-only
+record_result 'symlink to an unmarked legacy bundle is not overwritten' failure
+assert_true 'unowned legacy bundle is diagnosed with the command and its target' \
+    out_has "refusing to overwrite an APM symlink to an unowned bundle: $CASE_INSTALL/apm -> $CASE_ROOT/install/lib/apm/apm"
+assert_true 'unowned legacy symlink is preserved' test "$(readlink "$CASE_INSTALL/apm")" = "$CASE_ROOT/install/lib/apm/apm"
+assert_true 'unowned legacy executable is preserved' test -x "$CASE_ROOT/install/lib/apm/apm"
+assert_true 'unowned legacy tree is preserved' file_has "$CASE_ROOT/install/lib/apm/_internal/keep" 'user bundle'
+assert_true 'unowned legacy bundle blocks generation creation' \
+    test -z "$(find "$CASE_ROOT/install/lib/apm/releases" -mindepth 1 -maxdepth 1 2>/dev/null)"
+
+new_case unowned-generation-target
+make_fixture Linux x86_64
+unowned_release="$CASE_ROOT/install/lib/apm/releases/v0.28.0-20260101T000000Z-4242"
+mkdir -p "$unowned_release"
+printf '#!/bin/sh\nexit 0\n' > "$unowned_release/apm"
+chmod +x "$unowned_release/apm"
+ln -s "$unowned_release/apm" "$CASE_INSTALL/apm"
+run_case --cli-only
+record_result 'symlink to an unmarked generation-named directory is not overwritten' failure
+assert_true 'unowned generation target is diagnosed' \
+    out_has "refusing to overwrite an APM symlink to an unowned bundle: $CASE_INSTALL/apm -> $unowned_release/apm"
+assert_true 'unowned generation symlink is preserved' test "$(readlink "$CASE_INSTALL/apm")" = "$unowned_release/apm"
+assert_true 'unowned generation executable is preserved' test -x "$unowned_release/apm"
+
+new_case symlinked-marker-target
+make_fixture Linux x86_64
+marked_release="$CASE_ROOT/install/lib/apm/releases/v0.28.0-20260101T000000Z-4242"
+mkdir -p "$marked_release"
+printf 'v0.28.0\n' > "$CASE_ROOT/elsewhere-marker"
+ln -s "$CASE_ROOT/elsewhere-marker" "$marked_release/.apm-installed"
+printf '#!/bin/sh\nexit 0\n' > "$marked_release/apm"
+chmod +x "$marked_release/apm"
+ln -s "$marked_release/apm" "$CASE_INSTALL/apm"
+run_case --cli-only
+record_result 'symlink to a bundle whose marker is a symlink is not overwritten' failure
+assert_true 'symlinked marker is diagnosed as unowned' out_has 'refusing to overwrite an APM symlink to an unowned bundle'
+assert_true 'symlinked marker bundle is preserved' test -L "$marked_release/.apm-installed" -a -x "$marked_release/apm"
+
+new_case dangling-legacy-symlink
+make_fixture Linux x86_64
+mkdir -p "$CASE_ROOT/install/lib/apm"
+ln -s "$CASE_ROOT/install/lib/apm/apm" "$CASE_INSTALL/apm"
+run_case --cli-only
+record_result 'dangling symlink to a removed legacy bundle is repaired' success
+assert_true 'dangling legacy symlink is replaced' test -d "$(active_release)"
+assert_true 'repaired legacy command is usable' file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
+
+new_case dangling-generation-symlink
+make_fixture Linux x86_64
+mkdir -p "$CASE_ROOT/install/lib/apm/releases"
+ln -s "$CASE_ROOT/install/lib/apm/releases/v0.28.0-20260101T000000Z-4242/apm" "$CASE_INSTALL/apm"
+run_case --cli-only
+record_result 'dangling symlink to a removed generation is repaired' success
+assert_true 'dangling generation symlink is replaced' test -d "$(active_release)"
+assert_true 'repaired command is usable' file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
+
+new_case unmarked-stage-entry
+make_fixture Linux x86_64
+mkdir -p "$CASE_ROOT/install/lib/apm/releases/.stage-notes" \
+    "$CASE_ROOT/install/lib/apm/releases/.stage-v0.28.0-20260101T000000Z-1"
+printf 'user notes\n' > "$CASE_ROOT/install/lib/apm/releases/.stage-notes/keep"
+printf 'v0.28.0\n' > "$CASE_ROOT/install/lib/apm/releases/.stage-v0.28.0-20260101T000000Z-1/.apm-installed"
+run_case --cli-only
+record_result 'unmarked stage-like directory survives cleanup' success
+assert_true 'unmarked stage-like directory is named in a warning' \
+    out_has "warning: leaving an unrecognized entry in the APM releases directory: $CASE_ROOT/install/lib/apm/releases/.stage-notes"
+assert_true 'unmarked stage-like directory is preserved' file_has "$CASE_ROOT/install/lib/apm/releases/.stage-notes/keep" 'user notes'
+assert_true 'marked abandoned stage is removed' test ! -e "$CASE_ROOT/install/lib/apm/releases/.stage-v0.28.0-20260101T000000Z-1"
+assert_true 'unmarked stage case leaves the install usable' file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
+
+new_case nested-symlink-generation
+make_fixture Linux x86_64
+mkdir -p "$CASE_ROOT/install/lib/apm/releases" "$CASE_ROOT/outside"
+printf '#!/bin/sh\nexit 0\n' > "$CASE_ROOT/outside/apm"
+ln -s "$CASE_ROOT/outside" "$CASE_ROOT/install/lib/apm/releases/v0.29.0-20260101T000000Z-4242"
+ln -s "$CASE_ROOT/install/lib/apm/releases/v0.29.0-20260101T000000Z-4242/apm" "$CASE_INSTALL/apm"
+run_case --cli-only
+record_result 'well-formed symlink through a symlinked generation directory is not overwritten' failure
+assert_true 'symlinked generation directory is diagnosed' out_has 'refusing to overwrite an APM symlink whose target resolves through another symlink'
+assert_true 'symlinked generation directory link is preserved' \
+    test "$(readlink "$CASE_INSTALL/apm")" = "$CASE_ROOT/install/lib/apm/releases/v0.29.0-20260101T000000Z-4242/apm"
+assert_true 'symlinked generation directory target is preserved' test -f "$CASE_ROOT/outside/apm"
+
+new_case symlinked-generation-executable
+make_fixture Linux x86_64
+mkdir -p "$CASE_ROOT/install/lib/apm/releases/v0.29.0-20260101T000000Z-4242" "$CASE_ROOT/outside"
+printf '#!/bin/sh\nexit 0\n' > "$CASE_ROOT/outside/apm"
+ln -s "$CASE_ROOT/outside/apm" "$CASE_ROOT/install/lib/apm/releases/v0.29.0-20260101T000000Z-4242/apm"
+ln -s "$CASE_ROOT/install/lib/apm/releases/v0.29.0-20260101T000000Z-4242/apm" "$CASE_INSTALL/apm"
+run_case --cli-only
+record_result 'well-formed symlink to a symlinked generation executable is not overwritten' failure
+assert_true 'symlinked generation executable is diagnosed' out_has 'refusing to overwrite an APM symlink whose target resolves through another symlink'
+assert_true 'symlinked generation executable link is preserved' \
+    test "$(readlink "$CASE_INSTALL/apm")" = "$CASE_ROOT/install/lib/apm/releases/v0.29.0-20260101T000000Z-4242/apm"
+
+new_case foreign-stage-collision
+make_fixture Linux x86_64
+real_mkdir=$(command -v mkdir)
+# Another process creates the stage path first; this run's mkdir then fails.
+cat > "$CASE_BIN/mkdir" <<EOF
+#!/usr/bin/env bash
+for argument in "\$@"; do
+    case "\$argument" in
+        */.stage-*)
+            '$real_mkdir' "\$argument"
+            printf 'foreign\n' > "\$argument/keep"
+            printf '%s\n' "\$argument" > '$CASE_ROOT/collided-stage'
+            exit 1
+            ;;
+    esac
+done
+exec '$real_mkdir' "\$@"
+EOF
+chmod +x "$CASE_BIN/mkdir"
+run_case --cli-only
+record_result 'stage collision after preflight is surfaced' failure
+assert_true 'stage collision is reached' test -f "$CASE_ROOT/collided-stage"
+assert_true 'stage collision is diagnosed' out_has 'unable to create'
+assert_true 'colliding stage created by another process is preserved' \
+    file_has "$(cat "$CASE_ROOT/collided-stage")/keep" 'foreign'
+assert_true 'stage collision releases the lock' test ! -e "$CASE_ROOT/install/lib/apm/.lock"
+
+new_case foreign-releases-entries
+make_fixture Linux x86_64
+run_case --cli-only
+record_result 'foreign entries fixture installs prior generation' success
+first_release=$(active_release)
+mkdir "$CASE_ROOT/install/lib/apm/releases/notes"
+printf 'user notes\n' > "$CASE_ROOT/install/lib/apm/releases/notes/todo"
+printf 'user file\n' > "$CASE_ROOT/install/lib/apm/releases/README.txt"
+mkdir "$CASE_ROOT/install/lib/apm/releases/v0.28.0-unmarked"
+sleep 1
+run_case --cli-only
+record_result 'foreign entries do not block supersession' success
+assert_true 'foreign entries are diagnosed' out_has 'leaving an unrecognized entry in the APM releases directory'
+assert_true 'foreign directory is preserved' file_has "$CASE_ROOT/install/lib/apm/releases/notes/todo" 'user notes'
+assert_true 'foreign file is preserved' file_has "$CASE_ROOT/install/lib/apm/releases/README.txt" 'user file'
+assert_true 'unmarked release-like directory is preserved' test -d "$CASE_ROOT/install/lib/apm/releases/v0.28.0-unmarked"
+assert_true 'marked superseded generation is still removed' test ! -e "$first_release"
+assert_true 'command is usable beside foreign entries' file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
+
+new_case signal-after-activation
+make_fixture Linux x86_64
+run_case --cli-only
+record_result 'activation signal fixture installs prior generation' success
+prior_release=$(active_release)
+sleep 1
+real_mv=$(command -v mv)
+cat > "$CASE_BIN/mv" <<EOF
+#!/usr/bin/env bash
+'$real_mv' "\$@" || exit \$?
+for argument in "\$@"; do
+    case "\$argument" in */.apm-v0.29.0-*) : > '$CASE_ROOT/activation-signal'; kill -TERM "\$PPID" ;; esac
+done
+EOF
+chmod +x "$CASE_BIN/mv"
+run_case --cli-only
+record_result 'interruption after activation exits by signal' failure
+assert_true 'activation signal follows the link rename' test -f "$CASE_ROOT/activation-signal"
+assert_true 'activation signal exits 130' test "$STATUS" -eq 130
+assert_true 'activation signal keeps the new generation active' test "$(active_release)" != "$prior_release"
+assert_true 'activated generation survives the interrupted cleanup' test -x "$(active_release)/apm"
+assert_true 'activated command is usable after interruption' file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
+assert_true 'activation signal releases the lock' test ! -e "$CASE_ROOT/install/lib/apm/.lock"
+assert_true 'activation signal leaves no stage behind' \
+    test -z "$(find "$CASE_ROOT/install/lib/apm/releases" -name '.stage-*' -print -quit)"
+
+# Fail each step once. The active generation must be untouched by any failure
+# before the single activating rename, and nothing partial may remain.
 for prior in existing fresh; do
-    for fault in copy backup rename link checksum execution version banner; do
-        [ "$prior/$fault" != fresh/backup ] || continue
-        new_case "transaction-$prior-$fault"
+    for fault in copy checksum execution version banner rename link; do
+        new_case "isolation-$prior-$fault"
         make_fixture Linux x86_64
+        prior_release=''
         if [ "$prior" = existing ]; then
-            mkdir -p "$CASE_ROOT/install/lib/apm/_internal"
-            printf 'v0.28.0\n' > "$CASE_ROOT/install/lib/apm/.apm-installed"
-            printf 'old bundle\n' > "$CASE_ROOT/install/lib/apm/_internal/old"
-            printf '#!/bin/sh\nprintf "old executable\\n"\n' > "$CASE_ROOT/install/lib/apm/apm"
-            chmod +x "$CASE_ROOT/install/lib/apm/apm"
-            ln -s "$CASE_ROOT/install/lib/apm/apm" "$CASE_INSTALL/apm"
+            run_case --cli-only
+            record_result "$prior $fault fixture installs prior generation" success
+            prior_release=$(active_release)
+            printf 'prior release\n' > "$prior_release/_internal/old"
+            sleep 1
         fi
         case "$fault" in
-            copy) command_name='cp'; pattern='*/.apm-stage-*' ;;
-            backup) command_name='mv'; pattern='*/.apm-rollback-*' ;;
-            rename) command_name='mv'; pattern='*/.apm-stage-*' ;;
-            link) command_name='ln'; pattern='*' ;;
-            checksum) command_name='sha256sum'; pattern="$CASE_ROOT/install/lib/apm/apm" ;;
+            copy) command_name='cp'; pattern='*/.stage-*' ;;
+            rename) command_name='mv'; pattern='*/.stage-*' ;;
+            link) command_name='ln'; pattern='*/.apm-v0.29.0-*' ;;
+            checksum) command_name='sha256sum'; pattern='*/.stage-*/apm' ;;
             execution|version|banner)
-                # The same reviewed bytes succeed in extraction but fail after promotion.
                 cat > "$BUNDLE_ROOT/apm" <<EOF
 #!/usr/bin/env bash
 case "\$0" in
-    */install/lib/apm/apm)
+    */.stage-*/apm)
         : > '$CASE_ROOT/fault-hit'
-        if [ -L '$CASE_INSTALL/apm' ]; then : > '$CASE_ROOT/published-before-verification'; fi
         [ '$fault' != execution ] || exit 73
         if [ '$fault' = banner ]; then printf 'no version\n'; exit 0; fi
         printf 'APM version 9.9.9\n'
@@ -512,18 +746,16 @@ EOF
                 replace_checksum "$ARCHIVE_NAME" "$(digest "$MIRROR_ROOT/v0.29.0/$ARCHIVE_NAME")"
                 ;;
         esac
-        if [ "$fault" != execution ] && [ "$fault" != version ] && [ "$fault" != banner ]; then
-            real_command=$(command -v "$command_name")
-            cat > "$CASE_BIN/$command_name" <<EOF
+        case "$fault" in
+            copy|rename|link|checksum)
+                real_command=$(command -v "$command_name")
+                cat > "$CASE_BIN/$command_name" <<EOF
 #!/usr/bin/env bash
 for argument in "\$@"; do
     case "\$argument" in
         $pattern)
             if [ ! -f '$CASE_ROOT/fault-hit' ]; then
                 : > '$CASE_ROOT/fault-hit'
-                if [ '$fault' = checksum ] && [ -L '$CASE_INSTALL/apm' ]; then
-                    : > '$CASE_ROOT/published-before-verification'
-                fi
                 exit 73
             fi
             ;;
@@ -531,251 +763,99 @@ for argument in "\$@"; do
 done
 exec '$real_command' "\$@"
 EOF
-            chmod +x "$CASE_BIN/$command_name"
-        fi
+                chmod +x "$CASE_BIN/$command_name"
+                ;;
+        esac
         run_case --cli-only
         record_result "$prior $fault failure is surfaced" failure
         assert_true "$prior $fault injection was reached" test -f "$CASE_ROOT/fault-hit"
-        assert_true "$prior $fault releases the installation lock" test ! -e "$CASE_ROOT/install/lib/.apm-install.lock"
-        case "$fault" in
-            checksum|execution|version|banner)
-                assert_true "$prior $fault never publishes an unverified command" \
-                    test ! -e "$CASE_ROOT/published-before-verification"
-                ;;
-        esac
+        assert_true "$prior $fault releases the installation lock" test ! -e "$CASE_ROOT/install/lib/apm/.lock"
         case "$fault" in
             execution|banner)
                 assert_true "$prior $fault uses a phase-neutral version diagnostic" out_has 'the APM executable'
                 assert_true "$prior $fault is not misreported as a mismatch" out_lacks 'does not report the pinned'
                 ;;
+            version)
+                assert_true "$prior $fault reports the pin mismatch" out_has 'does not report the pinned v0.29.0'
+                ;;
         esac
         if [ "$prior" = existing ]; then
-            assert_true "$fault preserves prior release" file_has "$CASE_ROOT/install/lib/apm/_internal/old" 'old bundle'
-            assert_true "$fault preserves usable command" file_has <("$CASE_INSTALL/apm") 'old executable'
+            assert_true "$fault keeps the prior generation active" test "$(active_release)" = "$prior_release"
+            assert_true "$fault preserves prior generation content" file_has "$prior_release/_internal/old" 'prior release'
+            assert_true "$fault preserves usable command" file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
+            assert_true "$fault leaves exactly one generation" \
+                test "$(find "$CASE_ROOT/install/lib/apm/releases" -mindepth 1 -maxdepth 1 | wc -l | tr -d ' ')" -eq 1
         else
-            assert_true "$fault leaves no committed release" test ! -e "$CASE_ROOT/install/lib/apm"
-            assert_true "$fault leaves no command link" test ! -L "$CASE_INSTALL/apm"
+            assert_true "$fault leaves no generation" \
+                test -z "$(find "$CASE_ROOT/install/lib/apm/releases" -mindepth 1 -print -quit)"
+            assert_true "$fault leaves no command link" test ! -e "$CASE_INSTALL/apm" -a ! -L "$CASE_INSTALL/apm"
         fi
-        assert_true "$prior $fault cleans staging and rollback paths" \
-            test -z "$(find "$CASE_ROOT/install/lib" \( -name '.apm-stage-*' -o -name '.apm-rollback-*' \) -print -quit)"
+        assert_true "$prior $fault leaves no staged link" \
+            test -z "$(find "$CASE_INSTALL" -name '.apm-*' -print -quit)"
     done
 done
 
-new_case committed-backup-cleanup
+printf '# interruption and serialization\n'
+new_case signal-during-staging
 make_fixture Linux x86_64
 run_case --cli-only
-record_result 'backup cleanup fixture installs prior bundle' success
-real_rm=$(command -v rm)
-cat > "$CASE_BIN/rm" <<EOF
+record_result 'staging signal fixture installs prior generation' success
+prior_release=$(active_release)
+printf 'prior release\n' > "$prior_release/_internal/old"
+sleep 1
+real_cp=$(command -v cp)
+cat > "$CASE_BIN/cp" <<EOF
 #!/usr/bin/env bash
-case "\$*" in
-    *'/.apm-rollback-'*) exit 73 ;;
-esac
-exec '$real_rm' "\$@"
-EOF
-chmod +x "$CASE_BIN/rm"
-run_case --cli-only
-record_result 'backup cleanup failure leaves a successful committed install' success
-assert_true 'backup cleanup failure is diagnosed' out_has 'backup cleanup failed'
-assert_true 'verified command remains usable after backup cleanup failure' \
-    file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
-
-# A second failure during rollback must preserve the backup and disconnect the command.
-for prior in existing dangling; do
-    for rollback_fault in remove restore link; do
-        if [ "$prior" = dangling ] && [ "$rollback_fault" != remove ]; then continue; fi
-        new_case "rollback-$prior-$rollback_fault"
-        make_fixture Linux x86_64
-        if [ "$prior" = existing ]; then
-            run_case --cli-only
-            record_result "$rollback_fault rollback fixture installs prior bundle" success
-            printf 'prior release\n' > "$CASE_ROOT/install/lib/apm/_internal/old"
-        else
-            ln -s "$CASE_ROOT/install/lib/apm/apm" "$CASE_INSTALL/apm"
-        fi
-        cat > "$BUNDLE_ROOT/apm" <<EOF
-#!/usr/bin/env bash
-case "\$0" in */install/lib/apm/apm) exit 73 ;; esac
-printf 'APM version 0.29.0\n'
-EOF
-        tar -czf "$MIRROR_ROOT/v0.29.0/$ARCHIVE_NAME" -C "$FIXTURE_ROOT" "$ARCHIVE_ROOT"
-        replace_checksum "$ARCHIVE_ROOT/apm" "$(digest "$BUNDLE_ROOT/apm")"
-        replace_checksum "$ARCHIVE_NAME" "$(digest "$MIRROR_ROOT/v0.29.0/$ARCHIVE_NAME")"
-        if [ "$rollback_fault" = remove ]; then
-            real_command=$(command -v rm)
-            command_name='rm'
-            pattern="$CASE_ROOT/install/lib/apm"
-        elif [ "$rollback_fault" = restore ]; then
-            real_command=$(command -v mv)
-            command_name='mv'
-            pattern='*/.apm-rollback-*'
-        else
-            real_command=$(command -v ln)
-            command_name='ln'
-            pattern='unused'
-        fi
-        cat > "$CASE_BIN/$command_name" <<EOF
-#!/usr/bin/env bash
-if [ '$rollback_fault' = link ]; then
-    # Verification fails before publication, so this is the restoration attempt.
-    exit 73
-fi
-case "\${2-}" in
-    $pattern)
-        # rm receives -rf then path; mv restoration receives backup as first argument.
-        [ '$rollback_fault' != remove ] || exit 73
-        ;;
-esac
-case "\${1-}" in $pattern) [ '$rollback_fault' != restore ] || exit 73 ;; esac
-exec '$real_command' "\$@"
-EOF
-        chmod +x "$CASE_BIN/$command_name"
-        run_case --cli-only
-        record_result "$prior rollback $rollback_fault failure is surfaced" failure
-        assert_true "$prior rollback $rollback_fault is explicitly incomplete" out_has 'rollback was incomplete'
-        assert_true "$prior rollback $rollback_fault leaves command disconnected" test ! -L "$CASE_INSTALL/apm"
-        if [ "$rollback_fault" = link ]; then
-            assert_true 'blocked rollback link preserves old release at its original path' \
-                file_has "$CASE_ROOT/install/lib/apm/_internal/old" 'prior release'
-            assert_true 'restored prior executable remains directly usable' \
-                file_has <("$CASE_ROOT/install/lib/apm/apm" --version) '0.29.0'
-        elif [ "$prior" = existing ]; then
-            backup=$(find "$CASE_ROOT/install/lib" -maxdepth 1 -type d -name '.apm-rollback-*' -print -quit)
-            assert_true "$rollback_fault failure preserves backup outside replacement" file_has "$backup/_internal/old" 'prior release'
-        fi
-    done
+'$real_cp' "\$@" || exit \$?
+for argument in "\$@"; do
+    case "\$argument" in */.stage-*/) : > '$CASE_ROOT/staging-signal'; kill -TERM "\$PPID" ;; esac
 done
+EOF
+chmod +x "$CASE_BIN/cp"
+run_case --cli-only
+record_result 'interruption during staging aborts installation' failure
+assert_true 'staging signal follows a completed copy' test -f "$CASE_ROOT/staging-signal"
+assert_true 'staging signal releases the lock' test ! -e "$CASE_ROOT/install/lib/apm/.lock"
+assert_true 'staging signal keeps the prior generation active' test "$(active_release)" = "$prior_release"
+assert_true 'staging signal preserves a usable command' file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
+assert_true 'staging signal cleans the staged generation' \
+    test -z "$(find "$CASE_ROOT/install/lib/apm/releases" -name '.stage-*' -print -quit)"
 
-new_case blocked-old-link-removal
+new_case signal-during-lock-acquire
 make_fixture Linux x86_64
-run_case --cli-only
-record_result 'blocked old-link fixture installs prior release' success
-printf 'prior release\n' > "$CASE_ROOT/install/lib/apm/_internal/old"
-real_rm=$(command -v rm)
-cat > "$CASE_BIN/rm" <<EOF
-#!/usr/bin/env bash
-for path in "\$@"; do
-    case "\$path" in '$CASE_INSTALL/apm'|'$CASE_ROOT/install/lib/apm') exit 73 ;; esac
-done
-exec '$real_rm' "\$@"
-EOF
-chmod +x "$CASE_BIN/rm"
-run_case --cli-only
-record_result 'blocked old-link removal aborts installation' failure
-assert_true 'old-link removal failure leaves prior release untouched' \
-    file_has "$CASE_ROOT/install/lib/apm/_internal/old" 'prior release'
-assert_true 'old-link removal failure leaves prior command usable' \
-    file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
-assert_true 'old-link removal failure never backs up or replaces the release' \
-    test -z "$(find "$CASE_ROOT/install/lib" -name '.apm-rollback-*' -print -quit)"
-
-printf '# installation serialization\n'
-for prior in existing fresh; do
-    for mutation in unlink backup promote link; do
-        case "$prior/$mutation" in fresh/unlink|fresh/backup) continue ;; esac
-        new_case "signal-after-$prior-$mutation"
-        make_fixture Linux x86_64
-        if [ "$prior" = existing ]; then
-            run_case --cli-only
-            record_result "$mutation signal fixture installs prior bundle" success
-            printf 'prior release\n' > "$CASE_ROOT/install/lib/apm/_internal/old"
-        fi
-        real_mkdir=$(command -v mkdir)
-        cat > "$CASE_BIN/mkdir" <<EOF
-#!/usr/bin/env bash
-if [ "\${1-}" = -p ]; then printf '%s\n' "\$PPID" > '$CASE_ROOT/transaction-pid'; fi
-exec '$real_mkdir' "\$@"
-EOF
-        case "$mutation" in
-            unlink) command_name='rm'; pattern="$CASE_INSTALL/apm" ;;
-            backup) command_name='mv'; pattern='*/.apm-rollback-*' ;;
-            promote) command_name='mv'; pattern='*/.apm-stage-*' ;;
-            link) command_name='ln'; pattern="$CASE_INSTALL/apm" ;;
-        esac
-        real_command=$(command -v "$command_name")
-        cat > "$CASE_BIN/$command_name" <<EOF
-#!/usr/bin/env bash
-'$real_command' "\$@" || exit \$?
-for path in "\$@"; do
-    case "\$path" in
-        $pattern)
-            if [ ! -f '$CASE_ROOT/mutation-signal' ]; then
-                : > '$CASE_ROOT/mutation-signal'
-                kill -TERM "\$(cat '$CASE_ROOT/transaction-pid')"
-            fi
-            ;;
-    esac
-done
-EOF
-        chmod +x "$CASE_BIN/mkdir" "$CASE_BIN/$command_name"
-        run_case --cli-only
-        record_result "$prior interruption after $mutation is surfaced" failure
-        assert_true "$prior $mutation signal follows a successful mutation" test -f "$CASE_ROOT/mutation-signal"
-        assert_true "$prior $mutation signal releases the lock" test ! -e "$CASE_ROOT/install/lib/.apm-install.lock"
-        if [ "$prior" = existing ]; then
-            assert_true "$mutation signal restores the prior release" file_has "$CASE_ROOT/install/lib/apm/_internal/old" 'prior release'
-            assert_true "$mutation signal restores a usable command" file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
-        else
-            assert_true "$mutation signal leaves no committed fresh release" test ! -e "$CASE_ROOT/install/lib/apm"
-            assert_true "$mutation signal leaves no fresh command link" test ! -L "$CASE_INSTALL/apm"
-        fi
-        assert_true "$prior $mutation signal cleans transaction paths" \
-            test -z "$(find "$CASE_ROOT/install/lib" \( -name '.apm-stage-*' -o -name '.apm-rollback-*' \) -print -quit)"
-    done
-done
-
-new_case signal-during-rollback
-make_fixture Linux x86_64
-run_case --cli-only
-record_result 'rollback signal fixture installs prior bundle' success
-printf 'prior release\n' > "$CASE_ROOT/install/lib/apm/_internal/old"
-real_ln=$(command -v ln)
-real_mv=$(command -v mv)
-cat > "$CASE_BIN/ln" <<EOF
-#!/usr/bin/env bash
-if [ ! -f '$CASE_ROOT/link-failed' ]; then : > '$CASE_ROOT/link-failed'; exit 73; fi
-exec '$real_ln' "\$@"
-EOF
-cat > "$CASE_BIN/mv" <<EOF
-#!/usr/bin/env bash
-case "\${1-}" in
-    */.apm-rollback-*)
-        : > '$CASE_ROOT/rollback-signal'
-        kill -TERM "\$PPID"
-        ;;
-esac
-exec '$real_mv' "\$@"
-EOF
-chmod +x "$CASE_BIN/ln" "$CASE_BIN/mv"
-run_case --cli-only
-record_result 'original activation failure is surfaced after rollback signal' failure
-assert_true 'signal is injected during backup restoration' test -f "$CASE_ROOT/rollback-signal"
-assert_true 'rollback signal still releases the lock' test ! -e "$CASE_ROOT/install/lib/.apm-install.lock"
-assert_true 'rollback signal still restores the original release' file_has "$CASE_ROOT/install/lib/apm/_internal/old" 'prior release'
-assert_true 'rollback signal still restores a usable command' file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
-
-new_case lock-acquisition-signal
-make_fixture Linux x86_64
-run_case --cli-only
-record_result 'acquisition signal fixture installs prior bundle' success
-printf 'prior release\n' > "$CASE_ROOT/install/lib/apm/_internal/old"
 real_mkdir=$(command -v mkdir)
 cat > "$CASE_BIN/mkdir" <<EOF
 #!/usr/bin/env bash
-# The initial -p runs directly under the transaction shell. Its acquisition
-# subshell may retain another process on older Bash, so do not signal that worker.
-if [ "\${1-}" = -p ]; then printf '%s\n' "\$PPID" > '$CASE_ROOT/transaction-pid'; fi
 '$real_mkdir' "\$@" || exit \$?
 case "\$*" in
-    *'/.apm-install.lock') kill -TERM "\$(cat '$CASE_ROOT/transaction-pid')" ;;
+    *'/lib/apm/.lock') : > '$CASE_ROOT/lock-acquire-signal'; kill -TERM "\$PPID" ;;
 esac
 EOF
 chmod +x "$CASE_BIN/mkdir"
 run_case --cli-only
-record_result 'signal immediately after lock creation aborts installation' failure
-assert_true 'acquisition signal releases the newly created lock' test ! -e "$CASE_ROOT/install/lib/.apm-install.lock"
-assert_true 'acquisition signal preserves the original release' file_has "$CASE_ROOT/install/lib/apm/_internal/old" 'prior release'
-assert_true 'acquisition signal preserves a usable command' file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
+record_result 'interruption between lock creation and ownership record is discarded' success
+assert_true 'lock acquire signal was sent' test -f "$CASE_ROOT/lock-acquire-signal"
+assert_true 'lock acquire signal leaves no stale lock' test ! -e "$CASE_ROOT/install/lib/apm/.lock"
+assert_true 'lock acquire signal leaves the install usable' file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
+
+new_case signal-during-lock-release
+make_fixture Linux x86_64
+real_rmdir=$(command -v rmdir)
+cat > "$CASE_BIN/rmdir" <<EOF
+#!/usr/bin/env bash
+'$real_rmdir' "\$@" || exit \$?
+[ ! -f '$CASE_ROOT/lock-release-signal' ] || exit 0
+# Another bootstrap takes the lock immediately, then the signal lands.
+mkdir "\$1"
+: > '$CASE_ROOT/lock-release-signal'
+kill -TERM "\$PPID"
+EOF
+chmod +x "$CASE_BIN/rmdir"
+run_case --cli-only
+record_result 'interruption during lock release exits by signal' failure
+assert_true 'lock release signal follows the removal' test -f "$CASE_ROOT/lock-release-signal"
+assert_true 'lock release signal does not remove the next owner lock' test -d "$CASE_ROOT/install/lib/apm/.lock"
+assert_true 'lock release signal leaves the new generation active' file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
 
 # File barriers make the ordering deterministic; polling only bounds fixture failures.
 # Invoked indirectly by assert_true.
@@ -789,123 +869,91 @@ wait_for_file() {
     test -f "$path"
 }
 
-for owner_outcome in success rollback signal; do
-    new_case "lock-handoff-$owner_outcome"
-    make_fixture Linux x86_64
-    run_case --cli-only
-    record_result "$owner_outcome handoff installs prior bundle" success
-    cat > "$BUNDLE_ROOT/apm" <<EOF
+new_case concurrent-bootstrap
+make_fixture Linux x86_64
+real_cp=$(command -v cp)
+real_sleep=$(command -v sleep)
+cat > "$CASE_BIN/cp" <<EOF
 #!/usr/bin/env bash
-case "\$0" in
-    */install/lib/apm/apm)
-        if [ '$owner_outcome' = success ] && [ "\${APM_TEST_ACTOR-}" = second ]; then exit 73; fi
-        if [ '$owner_outcome' = rollback ] && [ "\${APM_TEST_ACTOR-}" = first ]; then exit 73; fi
-        ;;
-esac
-printf 'APM version 0.29.0\n'
-EOF
-    tar -czf "$MIRROR_ROOT/v0.29.0/$ARCHIVE_NAME" -C "$FIXTURE_ROOT" "$ARCHIVE_ROOT"
-    replace_checksum "$ARCHIVE_ROOT/apm" "$(digest "$BUNDLE_ROOT/apm")"
-    replace_checksum "$ARCHIVE_NAME" "$(digest "$MIRROR_ROOT/v0.29.0/$ARCHIVE_NAME")"
-    real_cp=$(command -v cp)
-    real_sleep=$(command -v sleep)
-    cat > "$CASE_BIN/cp" <<EOF
-#!/usr/bin/env bash
-for destination in "\$@"; do
-    case "\$destination" in
-        */.apm-stage-*/)
-            if [ "\${APM_TEST_ACTOR-}" = first ]; then
-                printf '%s\n' "\$PPID" > '$CASE_ROOT/owner-pid'
-                while [ ! -f '$CASE_ROOT/release-owner' ]; do '$real_sleep' 0.05; done
-            fi
-            '$real_cp' "\$@" || exit \$?
-            printf '%s\n' "\${APM_TEST_ACTOR-}" > "\$destination/_internal/generation"
-            : > '$CASE_ROOT/'"\${APM_TEST_ACTOR-}"'-copied'
-            exit 0
+for argument in "\$@"; do
+    case "\$argument" in
+        */.stage-*/)
+            : > '$CASE_ROOT/owner-staging'
+            while [ ! -f '$CASE_ROOT/release-owner' ]; do '$real_sleep' 0.05; done
             ;;
     esac
 done
 exec '$real_cp' "\$@"
 EOF
-    cat > "$CASE_BIN/sleep" <<EOF
-#!/usr/bin/env bash
-if [ "\${APM_TEST_ACTOR-}" = second ]; then : > '$CASE_ROOT/contender-waiting'; fi
-exec '$real_sleep' 0.05
-EOF
-    chmod +x "$CASE_BIN/cp" "$CASE_BIN/sleep"
-    (
-        CASE_ACTOR=first
-        run_case --cli-only
-        printf '%s\n' "$STATUS" > "$CASE_ROOT/first-status"
-        printf '%s\n' "$OUTPUT" > "$CASE_ROOT/first-output"
-    ) &
-    first_pid=$!
-    assert_true "$owner_outcome owner holds the transaction" wait_for_file "$CASE_ROOT/owner-pid"
-    (
-        CASE_ACTOR=second
-        run_case --cli-only
-        printf '%s\n' "$STATUS" > "$CASE_ROOT/second-status"
-        printf '%s\n' "$OUTPUT" > "$CASE_ROOT/second-output"
-    ) &
-    second_pid=$!
-    assert_true "$owner_outcome contender waits for the owner" wait_for_file "$CASE_ROOT/contender-waiting"
-    assert_true "$owner_outcome contender cannot stage while the lock is held" test ! -f "$CASE_ROOT/second-copied"
-    if [ "$owner_outcome" = signal ]; then
-        kill -TERM "$(cat "$CASE_ROOT/owner-pid")"
-    fi
-    : > "$CASE_ROOT/release-owner"
-    wait "$first_pid"
-    wait "$second_pid"
-    if [ "$owner_outcome" = success ]; then
-        assert_true 'first installation succeeds before contender rollback' file_has "$CASE_ROOT/first-status" '0'
-        assert_true 'contender failure is surfaced' test "$(cat "$CASE_ROOT/second-status")" -ne 0
-        assert_true 'contender rollback restores the newly committed owner bundle' \
-            file_has "$CASE_ROOT/install/lib/apm/_internal/generation" first
-    else
-        assert_true "$owner_outcome owner failure is surfaced" test "$(cat "$CASE_ROOT/first-status")" -ne 0
-        assert_true "$owner_outcome contender succeeds after recovery" file_has "$CASE_ROOT/second-status" '0'
-        assert_true "$owner_outcome contender commits its own bundle" \
-            file_has "$CASE_ROOT/install/lib/apm/_internal/generation" second
-    fi
-    assert_true "$owner_outcome leaves a usable command" file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
-    assert_true "$owner_outcome releases the lock" test ! -e "$CASE_ROOT/install/lib/.apm-install.lock"
-    assert_true "$owner_outcome cleans transaction paths" \
-        test -z "$(find "$CASE_ROOT/install/lib" \( -name '.apm-stage-*' -o -name '.apm-rollback-*' \) -print -quit)"
-done
+chmod +x "$CASE_BIN/cp"
+(
+    CASE_ACTOR=first
+    run_case --cli-only
+    printf '%s\n' "$STATUS" > "$CASE_ROOT/first-status"
+    printf '%s\n' "$OUTPUT" > "$CASE_ROOT/first-output"
+) &
+first_pid=$!
+assert_true 'owner holds the lock while staging' wait_for_file "$CASE_ROOT/owner-staging"
+CASE_ACTOR=second
+run_case --cli-only
+record_result 'contender fails fast while the lock is held' failure
+assert_true 'contender names the lock it needs' out_has "another bootstrap owns $CASE_ROOT/install/lib/apm/.lock"
+assert_true 'contender does not remove the owner lock' test -d "$CASE_ROOT/install/lib/apm/.lock"
+: > "$CASE_ROOT/release-owner"
+wait "$first_pid"
+assert_true 'owner completes after the contender fails' file_has "$CASE_ROOT/first-status" '0'
+assert_true 'owner leaves a usable command' file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
+assert_true 'owner releases the lock' test ! -e "$CASE_ROOT/install/lib/apm/.lock"
 
-new_case lock-owner-releases-during-acquisition
+new_case concurrent-deployment
 make_fixture Linux x86_64
-real_mkdir=$(command -v mkdir)
-cat > "$CASE_BIN/mkdir" <<EOF
+real_sleep=$(command -v sleep)
+# The fixture CLI blocks during the native handoff so a contender can run then.
+cat > "$BUNDLE_ROOT/apm" <<EOF
 #!/usr/bin/env bash
-case "\$*" in
-    *'/.apm-install.lock')
-        if [ ! -f '$CASE_ROOT/owner-released' ]; then
-            # Simulate EEXIST with the owner gone by the time mkdir returns.
-            : > '$CASE_ROOT/owner-released'
-            exit 1
-        fi
+printf '%s\n' "\$0 \$*" >> '$CALL_LOG'
+case "\${1-}" in
+    --version) printf 'Agent Package Manager (APM) CLI version 0.29.0 (fixture)\n' ;;
+    install)
+        : > '$CASE_ROOT/owner-deploying'
+        while [ ! -f '$CASE_ROOT/release-owner' ]; do '$real_sleep' 0.05; done
         ;;
 esac
-exec '$real_mkdir' "\$@"
+exit 0
 EOF
-printf '#!/bin/sh\nexit 0\n' > "$CASE_BIN/sleep"
-chmod +x "$CASE_BIN/mkdir" "$CASE_BIN/sleep"
+tar -czf "$MIRROR_ROOT/v0.29.0/$ARCHIVE_NAME" -C "$FIXTURE_ROOT" "$ARCHIVE_ROOT"
+replace_checksum "$ARCHIVE_ROOT/apm" "$(digest "$BUNDLE_ROOT/apm")"
+replace_checksum "$ARCHIVE_NAME" "$(digest "$MIRROR_ROOT/v0.29.0/$ARCHIVE_NAME")"
+(
+    CASE_ACTOR=first
+    run_case --repo
+    printf '%s\n' "$STATUS" > "$CASE_ROOT/first-status"
+) &
+first_pid=$!
+assert_true 'owner reaches the native handoff' wait_for_file "$CASE_ROOT/owner-deploying"
+owner_release=$(active_release)
+CASE_ACTOR=second
 run_case --cli-only
-record_result 'acquisition retries when the other owner has just released its lock' success
-assert_true 'owner release race is reached' test -f "$CASE_ROOT/owner-released"
-assert_true 'owner release race leaves a usable command' file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
-assert_true 'owner release race leaves no owned lock' test ! -e "$CASE_ROOT/install/lib/.apm-install.lock"
+record_result 'contender fails fast during the native handoff' failure
+assert_true 'contender is told the lock is held' out_has "another bootstrap owns $CASE_ROOT/install/lib/apm/.lock"
+assert_true 'contender leaves the owner generation active' test "$(active_release)" = "$owner_release"
+assert_true 'contender leaves the owner generation intact' test -d "$owner_release/_internal"
+: > "$CASE_ROOT/release-owner"
+wait "$first_pid"
+assert_true 'owner completes its deployment' file_has "$CASE_ROOT/first-status" '0'
+assert_true 'owner runs every native step from its generation' file_has "$CALL_LOG" 'compile --target codex,copilot'
+assert_true 'owner releases the lock after the handoff' test ! -e "$CASE_ROOT/install/lib/apm/.lock"
 
-for lock_kind in busy file symlink; do
+for lock_kind in directory file symlink; do
     new_case "lock-$lock_kind"
     make_fixture Linux x86_64
     run_case --cli-only
-    record_result "$lock_kind lock fixture installs prior bundle" success
-    printf 'prior release\n' > "$CASE_ROOT/install/lib/apm/_internal/old"
-    lock_path="$CASE_ROOT/install/lib/.apm-install.lock"
+    record_result "$lock_kind lock fixture installs prior generation" success
+    prior_release=$(active_release)
+    printf 'prior release\n' > "$prior_release/_internal/old"
+    lock_path="$CASE_ROOT/install/lib/apm/.lock"
     case "$lock_kind" in
-        busy) mkdir "$lock_path" ;;
+        directory) mkdir "$lock_path" ;;
         file) printf 'unrelated\n' > "$lock_path" ;;
         symlink)
             mkdir "$CASE_ROOT/lock-target"
@@ -919,15 +967,15 @@ EOF
     chmod +x "$CASE_BIN/sleep"
     run_case --cli-only
     record_result "$lock_kind lock blocks installation" failure
-    if [ "$lock_kind" = busy ]; then
-        assert_true 'busy lock waits for 120 one-second intervals' test "$(wc -l < "$CASE_ROOT/waits" | tr -d ' ')" -eq 120
-        assert_true 'busy lock timeout identifies manual recovery' out_has 'manually removing a stale lock'
+    assert_true "$lock_kind lock is rejected without waiting" test ! -f "$CASE_ROOT/waits"
+    if [ "$lock_kind" = directory ]; then
+        assert_true 'directory lock diagnostic names the lock and manual recovery' out_has "another bootstrap owns $lock_path; wait for it to finish, or remove that directory if no bootstrap is running"
     else
-        assert_true "$lock_kind lock is rejected without waiting" test ! -f "$CASE_ROOT/waits"
-        assert_true "$lock_kind lock uses a safe-lock diagnostic" out_has 'unable to acquire a safe APM installation lock'
+        assert_true "$lock_kind lock is diagnosed as unrelated" out_has "refusing to use an unrelated entry as the APM installation lock: $lock_path"
+        assert_true "$lock_kind lock is not misreported as another bootstrap" out_lacks 'another bootstrap owns'
     fi
-    assert_true "$lock_kind lock is not removed by a non-owner" test -e "$lock_path"
-    assert_true "$lock_kind lock preserves original release" file_has "$CASE_ROOT/install/lib/apm/_internal/old" 'prior release'
+    assert_true "$lock_kind lock is not removed by a non-owner" test -e "$lock_path" -o -L "$lock_path"
+    assert_true "$lock_kind lock preserves the active generation" test "$(active_release)" = "$prior_release"
     assert_true "$lock_kind lock preserves usable command" file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
 done
 
