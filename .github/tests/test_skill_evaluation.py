@@ -31,6 +31,22 @@ spec.loader.exec_module(reports)
 SHA = "a" * 40
 
 
+def _external_action_references(workflow):
+    references = set()
+    for job in workflow["jobs"].values():
+        action = job.get("uses", "")
+        if action:
+            references.add(action)
+        for step in job.get("steps", ()):
+            action = step.get("uses", "")
+            if action:
+                references.add(action)
+    return {
+        action for action in references
+        if not action.startswith(("./", "$/", "actions/", "github/"))
+    }
+
+
 class ReportTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -1007,20 +1023,47 @@ class WorkflowTests(unittest.TestCase):
                     if step.get("uses", "").startswith("actions/checkout@"):
                         self.assertIs(step["with"]["persist-credentials"], False)
 
+    def test_external_action_reference_discovery_uses_schema_positions(self):
+        external_action = f"example/action@{SHA}"
+        external_workflow = f"example/automation/.github/workflows/reusable.yml@{SHA}"
+        workflow = {
+            "env": {"uses": "ignored-workflow-environment"},
+            "jobs": {
+                "external-workflow": {
+                    "uses": external_workflow,
+                    "with": {"uses": "ignored-workflow-input"},
+                },
+                "steps": {
+                    "runs-on": "ubuntu-latest",
+                    "env": {"uses": "ignored-job-environment"},
+                    "steps": [
+                        {
+                            "uses": external_action,
+                            "with": {"uses": "ignored-action-input"},
+                        },
+                        {"uses": f"actions/checkout@{SHA}"},
+                        {"uses": "./.github/actions/local"},
+                    ],
+                },
+                "local-workflow": {"uses": "./.github/workflows/local.yml"},
+                "root-local-workflow": {"uses": "$/.github/workflows/local.yml"},
+                "github-workflow": {
+                    "uses": f"github/example/.github/workflows/reusable.yml@{SHA}",
+                },
+            },
+        }
+        self.assertEqual(
+            _external_action_references(workflow),
+            {external_action, external_workflow},
+        )
+
     def test_documented_external_action_requirements_match_all_workflows(self):
         required = set()
         for path in sorted((REPO / ".github/workflows").glob("*.y*ml")):
-            pending = [yaml.safe_load(path.read_text())]
-            while pending:
-                node = pending.pop()
-                if isinstance(node, list):
-                    pending.extend(node)
-                elif isinstance(node, dict):
-                    pending.extend(node.values())
-                    action = node.get("uses", "")
-                    if action and not action.startswith(("./", "actions/", "github/")):
-                        self.assertRegex(action, r"^[^@]+@[0-9a-f]{40}$", path.name)
-                        required.add(action)
+            actions = _external_action_references(yaml.safe_load(path.read_text()))
+            for action in actions:
+                self.assertRegex(action, r"^[^@]+@[0-9a-f]{40}$", path.name)
+            required.update(actions)
         readme = (REPO / "README.md").read_text()
         section = readme.split("<!-- external-action-requirements:start -->", 1)[1].split(
             "<!-- external-action-requirements:end -->", 1)[0]
