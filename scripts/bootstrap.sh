@@ -182,12 +182,12 @@ assert_plain_tree() {
 reported_version() {
     local executable=$1 banner version
     if ! banner=$("$executable" --version 2>&1); then
-        die 'the staged APM executable failed its version postcondition.'
+        die 'the APM executable failed its version postcondition.'
     fi
     version=$(printf '%s\n' "$banner" |
         grep -Eo '[0-9]+\.[0-9]+\.[0-9]+(a[0-9]+|b[0-9]+|rc[0-9]+)?' |
         head -n 1 || true)
-    [ -n "$version" ] || die 'the staged APM executable did not report a full version.'
+    [ -n "$version" ] || die 'the APM executable did not report a full version.'
     printf '%s\n' "$version"
 }
 
@@ -242,17 +242,41 @@ promote_bundle() (
     local source_bundle=$1 install_parent bundle_parent bundle_path link_path
     local stage_path backup_path old_link_target='' had_bundle=false had_link=false
     local backed_up=false promoted=false link_removed=false link_created=false
+    local lock_path lock_acquired=false lock_wait=0 promotion_complete=false
     install_parent=$(dirname "$INSTALL_DIR")
     bundle_parent="$install_parent/lib"
     bundle_path="$bundle_parent/apm"
     link_path="$INSTALL_DIR/apm"
     stage_path="$bundle_parent/.apm-stage-$$"
     backup_path="$bundle_parent/.apm-rollback-$$"
+    lock_path="$bundle_parent/.apm-install.lock"
 
     assert_safe_directory "$install_parent" 'APM installation parent'
     assert_safe_directory "$INSTALL_DIR" 'APM shim directory'
     assert_safe_directory "$bundle_parent" 'APM bundle parent'
     mkdir -p "$INSTALL_DIR" "$bundle_parent"
+
+    # Own the shared bundle transaction before inspecting its previous state.
+    # mkdir is atomic and available on both Linux and macOS; never steal a lock.
+    # Invoked by EXIT traps, including failures before promotion begins.
+    # shellcheck disable=SC2317
+    release_install_lock() {
+        if [ "$lock_acquired" = true ]; then
+            rmdir "$lock_path" || log "warning: unable to release APM installation lock: $lock_path"
+        fi
+    }
+    trap release_install_lock EXIT
+    trap 'exit 1' HUP INT TERM
+    while ! (umask 077; mkdir "$lock_path") 2>/dev/null; do
+        if [ -L "$lock_path" ] || [ ! -d "$lock_path" ]; then
+            die "unable to acquire a safe APM installation lock: $lock_path"
+        fi
+        [ "$lock_wait" -lt 120 ] ||
+            die "timed out waiting for the APM installation lock: $lock_path; inspect it before manually removing a stale lock."
+        sleep 1
+        lock_wait=$((lock_wait + 1))
+    done
+    lock_acquired=true
 
     if [ -e "$bundle_path" ] || [ -L "$bundle_path" ]; then
         assert_plain_tree "$bundle_path" 'Existing managed APM bundle'
@@ -279,7 +303,7 @@ promote_bundle() (
     rollback_promotion() {
         local status=$? rollback_failed=false
         trap - EXIT HUP INT TERM
-        if [ "$status" -ne 0 ]; then
+        if [ "$status" -ne 0 ] && [ "$promotion_complete" = false ]; then
             if [ "$link_created" = true ]; then rm -f "$link_path" || rollback_failed=true; fi
             if [ "$promoted" = true ]; then rm -rf "$bundle_path" || rollback_failed=true; fi
             if [ "$backed_up" = true ]; then
@@ -298,7 +322,8 @@ promote_bundle() (
                 log 'APM bundle promotion failed; the prior managed installation was restored.'
             fi
         fi
-        rm -rf "$stage_path"
+        rm -rf "$stage_path" || log "warning: unable to clean APM staging path: $stage_path"
+        release_install_lock
         exit "$status"
     }
     trap rollback_promotion EXIT
@@ -322,14 +347,14 @@ promote_bundle() (
     fi
     mv "$stage_path" "$bundle_path"
     promoted=true
-    ln -s "$bundle_path/apm" "$link_path"
-    link_created=true
-
+    # Do not expose a replacement command until its installed bytes execute correctly.
     verify_file "$PROMOTED_APM" "$EXECUTABLE_MEMBER"
     [ "$(reported_version "$PROMOTED_APM")" = "$PIN" ] ||
         die "the promoted APM CLI does not report the pinned v$PIN."
-    # Verification commits the replacement; backup cleanup cannot trigger rollback.
-    trap - EXIT HUP INT TERM
+    ln -s "$bundle_path/apm" "$link_path"
+    link_created=true
+    # Activation commits the verified replacement; cleanup cannot trigger rollback.
+    promotion_complete=true
     if [ -d "$backup_path" ]; then
         rm -rf "$backup_path" || log 'warning: verified APM installation is usable; backup cleanup failed.'
     fi

@@ -284,10 +284,10 @@ function Get-ApmReportedVersion {
 
     $banner = & $Executable --version 2>&1
     if ($LASTEXITCODE -ne 0) {
-        throw 'The staged APM executable failed its version postcondition.'
+        throw 'The APM executable failed its version postcondition.'
     }
     if ("$banner" -notmatch '([0-9]+\.[0-9]+\.[0-9]+(?:a[0-9]+|b[0-9]+|rc[0-9]+)?)') {
-        throw 'The staged APM executable did not report a full version.'
+        throw 'The APM executable did not report a full version.'
     }
     $Matches[1]
 }
@@ -482,16 +482,17 @@ function Install-ReviewedBundle {
         }
         Move-Item -LiteralPath $stagePath -Destination $releasePath
         $releasePromoted = $true
-        New-ApmJunction -Path $currentPath -Target $releasePath -Confirm:$false
-        $currentCreated = $true
-        $shimWriteStarted = $true
-        [IO.File]::WriteAllText($shimPath, $shimContent, [Text.Encoding]::ASCII)
-
-        $promotedExecutable = Join-Path $currentPath 'apm.exe'
+        # Verify the installed release before exposing it through current or the shim.
+        $promotedExecutable = Join-Path $releasePath 'apm.exe'
         Assert-ReviewedFile -Path $promotedExecutable -Name $ExecutableMember -Metadata $Metadata
         if ((Get-ApmReportedVersion -Executable $promotedExecutable) -cne $Metadata.Pin) {
             throw "The promoted APM CLI does not report pinned v$($Metadata.Pin)."
         }
+        New-ApmJunction -Path $currentPath -Target $releasePath -Confirm:$false
+        $currentCreated = $true
+        $shimWriteStarted = $true
+        [IO.File]::WriteAllText($shimPath, $shimContent, [Text.Encoding]::ASCII)
+        $promotedExecutable = Join-Path $currentPath 'apm.exe'
 
         $newPath = Add-PathEntry -PathValue $oldProcessPath -Entry @($currentPath, $binPath)
         $newUserPath = Add-PathEntry -PathValue $oldUserPath -Entry @($currentPath, $binPath)
@@ -512,7 +513,7 @@ function Install-ReviewedBundle {
                     Remove-ValidatedJunction -Path $currentPath -Confirm:$false
                 }
             }
-            catch { Write-Warning -Message "Unable to remove the replacement junction during rollback: $_" }
+            catch { Write-Warning -Message "Incomplete APM rollback: unable to remove the verified replacement junction at ${currentPath}: $_" }
             $releaseRestored = $false
             if ($releasePromoted) {
                 try { Remove-Item -LiteralPath $releasePath -Recurse -Force -ErrorAction Stop }
@@ -534,9 +535,23 @@ function Install-ReviewedBundle {
                 $releaseUnchanged = $hadRelease -and -not $releaseBackedUp -and -not $releasePromoted
                 $canRestoreCurrent = $releaseRestored -or $releaseUnchanged -or $oldCurrentTarget -ine $releasePath
             }
-            if ($currentRemoved -and $canRestoreCurrent -and -not (Test-Path -LiteralPath $currentPath)) {
+            if ($currentRemoved -and $canRestoreCurrent) {
                 try {
-                    New-ApmJunction -Path $currentPath -Target $oldCurrentTarget -Confirm:$false
+                    # Inspect the junction itself, including a dangling replacement.
+                    $remainingCurrent = Get-Item -LiteralPath $currentPath -Force -ErrorAction SilentlyContinue
+                    if ($remainingCurrent) {
+                        $remainingTarget = @($remainingCurrent.Target)[0]
+                        if (-not [IO.Path]::IsPathRooted($remainingTarget)) {
+                            $remainingTarget = Join-Path $installRoot $remainingTarget
+                        }
+                        if ([IO.Path]::GetFullPath($remainingTarget) -ine $oldCurrentTarget) {
+                            Remove-ValidatedJunction -Path $currentPath -Confirm:$false
+                            $remainingCurrent = $null
+                        }
+                    }
+                    if (-not $remainingCurrent) {
+                        New-ApmJunction -Path $currentPath -Target $oldCurrentTarget -Confirm:$false
+                    }
                 }
                 catch { Write-Warning -Message "Incomplete APM rollback: unable to restore the prior current junction; inspect $oldCurrentTarget for recovery: $_" }
             }
