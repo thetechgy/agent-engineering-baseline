@@ -804,13 +804,13 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         $release = Join-Path $script:InstallRoot 'releases\v0.29.0'
         $current = Join-Path $script:InstallRoot 'current'
         [IO.File]::WriteAllText((Join-Path $release '_internal\old-state'), 'old')
-        $script:OriginalRemoveItem = Get-Command Remove-Item -CommandType Cmdlet
+        $OriginalRemoveItem = Get-Command Remove-Item -CommandType Cmdlet
         Mock Remove-Item {
             if ($LiteralPath -like '*\.rollback-*') {
                 Write-Error -Message 'injected backup cleanup failure' -ErrorAction Continue
                 return
             }
-            & $script:OriginalRemoveItem @PesterBoundParameters
+            & $OriginalRemoveItem @PesterBoundParameters
         }
         $output = @(& $script:TestRepository.Script -CliOnly -Confirm:$false 2>&1)
         ($output -join ' ') | Should-MatchString 'injected backup cleanup failure'
