@@ -284,10 +284,10 @@ function Get-ApmReportedVersion {
 
     $banner = & $Executable --version 2>&1
     if ($LASTEXITCODE -ne 0) {
-        throw 'The staged APM executable failed its version postcondition.'
+        throw 'The APM executable failed its version postcondition.'
     }
     if ("$banner" -notmatch '([0-9]+\.[0-9]+\.[0-9]+(?:a[0-9]+|b[0-9]+|rc[0-9]+)?)') {
-        throw 'The staged APM executable did not report a full version.'
+        throw 'The APM executable did not report a full version.'
     }
     $Matches[1]
 }
@@ -388,70 +388,76 @@ function Install-ReviewedBundle {
     $stagePath = Join-Path $releasesPath ".stage-$([Guid]::NewGuid().ToString('N'))"
     $backupPath = Join-Path $releasesPath ".rollback-$([Guid]::NewGuid().ToString('N'))"
 
-    Assert-SafeDirectory -Path $installRoot -Label 'APM installation root'
-    Assert-SafeDirectory -Path $releasesPath -Label 'APM releases directory'
-    Assert-SafeDirectory -Path $binPath -Label 'APM bin directory'
-    New-Item -ItemType Directory -Path $releasesPath, $binPath -Force | Out-Null
-
-    $releaseItem = Get-Item -LiteralPath $releasePath -Force -ErrorAction SilentlyContinue
-    $hadRelease = $null -ne $releaseItem
-    if ($hadRelease) {
-        Assert-PlainTree -Path $releasePath -Label 'Existing managed APM release'
-        $markerPath = Join-Path $releasePath '.apm-installed'
-        if (-not (Test-Path -LiteralPath $markerPath -PathType Leaf) -or
-            ((Get-Item -LiteralPath $markerPath -Force).Attributes -band
-                [IO.FileAttributes]::ReparsePoint)) {
-            throw "Refusing to replace an unowned APM release: $releasePath"
-        }
-    }
-
-    $currentItem = Get-Item -LiteralPath $currentPath -Force -ErrorAction SilentlyContinue
-    $hadCurrent = $null -ne $currentItem
-    $oldCurrentTarget = $null
-    if ($hadCurrent) {
-        if (-not ($currentItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -or
-            -not ($currentItem.Attributes -band [IO.FileAttributes]::Directory)) {
-            throw "Refusing to replace non-junction current path: $currentPath"
-        }
-        $oldCurrentTarget = $currentItem.Target
-        if ($oldCurrentTarget -is [array]) { $oldCurrentTarget = $oldCurrentTarget[0] }
-        if (-not [IO.Path]::IsPathRooted($oldCurrentTarget)) {
-            $oldCurrentTarget = Join-Path $installRoot $oldCurrentTarget
-        }
-        $oldCurrentTarget = [IO.Path]::GetFullPath($oldCurrentTarget)
-        $releasePrefix = [IO.Path]::GetFullPath($releasesPath).TrimEnd('\') + '\'
-        if (-not $oldCurrentTarget.StartsWith($releasePrefix, [StringComparison]::OrdinalIgnoreCase)) {
-            throw "The current junction points outside releases: $oldCurrentTarget"
-        }
-    }
-
-    $shimItem = Get-Item -LiteralPath $shimPath -Force -ErrorAction SilentlyContinue
-    $hadShim = $null -ne $shimItem
-    $oldShimBytes = $null
-    $oldShimAttributes = $null
-    if ($hadShim -and ($shimItem.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
-        throw "Refusing to overwrite a reparse-point APM shim: $shimPath"
-    }
-    elseif ($hadShim -and -not $shimItem.PSIsContainer) {
-        if ([IO.File]::ReadAllText($shimPath) -cne $shimContent) {
-            throw "Refusing to overwrite an unrelated APM shim: $shimPath"
-        }
-        $oldShimBytes = [IO.File]::ReadAllBytes($shimPath)
-        $oldShimAttributes = $shimItem.Attributes
-    }
-    elseif ($hadShim) {
-        throw "Refusing to overwrite a non-file APM shim: $shimPath"
-    }
-
     $mutex = New-Object Threading.Mutex($false, (Get-MutexName -InstallRoot $installRoot))
     $mutexAcquired = $false
     $promotionComplete = $false
-    $oldProcessPath = $env:PATH
-    $oldUserPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+    $releaseBackedUp = $false
+    $releasePromoted = $false
+    $currentRemoved = $false
+    $currentCreated = $false
+    $shimWriteStarted = $false
+    $pathUpdateStarted = $false
     try {
         try { $mutexAcquired = $mutex.WaitOne([TimeSpan]::FromMinutes(2)) }
         catch [Threading.AbandonedMutexException] { $mutexAcquired = $true }
         if (-not $mutexAcquired) { throw 'Timed out waiting for the APM installation mutex.' }
+
+        $oldProcessPath = $env:PATH
+        $oldUserPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+        Assert-SafeDirectory -Path $installRoot -Label 'APM installation root'
+        Assert-SafeDirectory -Path $releasesPath -Label 'APM releases directory'
+        Assert-SafeDirectory -Path $binPath -Label 'APM bin directory'
+        New-Item -ItemType Directory -Path $releasesPath, $binPath -Force | Out-Null
+
+        $releaseItem = Get-Item -LiteralPath $releasePath -Force -ErrorAction SilentlyContinue
+        $hadRelease = $null -ne $releaseItem
+        if ($hadRelease) {
+            Assert-PlainTree -Path $releasePath -Label 'Existing managed APM release'
+            $markerPath = Join-Path $releasePath '.apm-installed'
+            if (-not (Test-Path -LiteralPath $markerPath -PathType Leaf) -or
+                ((Get-Item -LiteralPath $markerPath -Force).Attributes -band
+                    [IO.FileAttributes]::ReparsePoint)) {
+                throw "Refusing to replace an unowned APM release: $releasePath"
+            }
+        }
+
+        $currentItem = Get-Item -LiteralPath $currentPath -Force -ErrorAction SilentlyContinue
+        $hadCurrent = $null -ne $currentItem
+        $oldCurrentTarget = $null
+        if ($hadCurrent) {
+            if (-not ($currentItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -or
+                -not ($currentItem.Attributes -band [IO.FileAttributes]::Directory)) {
+                throw "Refusing to replace non-junction current path: $currentPath"
+            }
+            $oldCurrentTarget = $currentItem.Target
+            if ($oldCurrentTarget -is [array]) { $oldCurrentTarget = $oldCurrentTarget[0] }
+            if (-not [IO.Path]::IsPathRooted($oldCurrentTarget)) {
+                $oldCurrentTarget = Join-Path $installRoot $oldCurrentTarget
+            }
+            $oldCurrentTarget = [IO.Path]::GetFullPath($oldCurrentTarget)
+            $releasePrefix = [IO.Path]::GetFullPath($releasesPath).TrimEnd('\') + '\'
+            if (-not $oldCurrentTarget.StartsWith($releasePrefix, [StringComparison]::OrdinalIgnoreCase)) {
+                throw "The current junction points outside releases: $oldCurrentTarget"
+            }
+        }
+
+        $shimItem = Get-Item -LiteralPath $shimPath -Force -ErrorAction SilentlyContinue
+        $hadShim = $null -ne $shimItem
+        $oldShimBytes = $null
+        $oldShimAttributes = $null
+        if ($hadShim -and ($shimItem.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+            throw "Refusing to overwrite a reparse-point APM shim: $shimPath"
+        }
+        elseif ($hadShim -and -not $shimItem.PSIsContainer) {
+            if ([IO.File]::ReadAllText($shimPath) -cne $shimContent) {
+                throw "Refusing to overwrite an unrelated APM shim: $shimPath"
+            }
+            $oldShimBytes = [IO.File]::ReadAllBytes($shimPath)
+            $oldShimAttributes = $shimItem.Attributes
+        }
+        elseif ($hadShim) {
+            throw "Refusing to overwrite a non-file APM shim: $shimPath"
+        }
 
         New-Item -ItemType Directory -Path $stagePath | Out-Null
         Get-ChildItem -LiteralPath $SourceBundle -Force | ForEach-Object {
@@ -465,50 +471,99 @@ function Install-ReviewedBundle {
         Assert-PlainTree -Path $stagePath -Label 'Staged persistent APM bundle'
         Assert-ReviewedFile -Path (Join-Path $stagePath 'apm.exe') -Name $ExecutableMember -Metadata $Metadata
 
-        if ($hadRelease) { Move-Item -LiteralPath $releasePath -Destination $backupPath }
+        if ($hadCurrent) {
+            Remove-ValidatedJunction -Path $currentPath -Confirm:$false
+            $currentRemoved = $true
+        }
+
+        if ($hadRelease) {
+            Move-Item -LiteralPath $releasePath -Destination $backupPath
+            $releaseBackedUp = $true
+        }
         Move-Item -LiteralPath $stagePath -Destination $releasePath
-        if ($hadCurrent) { Remove-ValidatedJunction -Path $currentPath -Confirm:$false }
+        $releasePromoted = $true
+        # Verify the installed release before exposing it through current or the shim.
+        $promotedExecutable = Join-Path $releasePath 'apm.exe'
+        Assert-ReviewedFile -Path $promotedExecutable -Name $ExecutableMember -Metadata $Metadata
+        if ((Get-ApmReportedVersion -Executable $promotedExecutable) -cne $Metadata.Pin) {
+            throw "The promoted APM CLI does not report pinned v$($Metadata.Pin)."
+        }
         New-ApmJunction -Path $currentPath -Target $releasePath -Confirm:$false
+        $currentCreated = $true
+        $shimWriteStarted = $true
         [IO.File]::WriteAllText($shimPath, $shimContent, [Text.Encoding]::ASCII)
+        $promotedExecutable = Join-Path $currentPath 'apm.exe'
 
         $newPath = Add-PathEntry -PathValue $oldProcessPath -Entry @($currentPath, $binPath)
         $newUserPath = Add-PathEntry -PathValue $oldUserPath -Entry @($currentPath, $binPath)
+        $pathUpdateStarted = $true
         $env:PATH = $newPath
         [Environment]::SetEnvironmentVariable('Path', $newUserPath, 'User')
         $promotionComplete = $true
     }
     finally {
         if (-not $promotionComplete -and $mutexAcquired) {
-            $env:PATH = $oldProcessPath
-            try { [Environment]::SetEnvironmentVariable('Path', $oldUserPath, 'User') }
-            catch { Write-Warning -Message "Unable to restore User PATH during rollback: $_" }
+            if ($pathUpdateStarted) {
+                $env:PATH = $oldProcessPath
+                try { [Environment]::SetEnvironmentVariable('Path', $oldUserPath, 'User') }
+                catch { Write-Warning -Message "Unable to restore User PATH during rollback: $_" }
+            }
             try {
-                if (Test-Path -LiteralPath $currentPath) {
+                if ($currentCreated) {
                     Remove-ValidatedJunction -Path $currentPath -Confirm:$false
                 }
             }
-            catch { Write-Warning -Message "Unable to remove the replacement junction during rollback: $_" }
-            if (Test-Path -LiteralPath $releasePath) {
-                Remove-Item -LiteralPath $releasePath -Recurse -Force -ErrorAction SilentlyContinue
+            catch { Write-Warning -Message "Incomplete APM rollback: unable to remove the verified replacement junction at ${currentPath}: $_" }
+            $releaseRestored = $false
+            if ($releasePromoted) {
+                try { Remove-Item -LiteralPath $releasePath -Recurse -Force -ErrorAction Stop }
+                catch { Write-Warning -Message "Incomplete APM rollback: unable to remove replacement release: $_" }
             }
-            if (Test-Path -LiteralPath $backupPath) {
-                Move-Item -LiteralPath $backupPath -Destination $releasePath -ErrorAction SilentlyContinue
-            }
-            if ($hadCurrent -and $oldCurrentTarget -and -not (Test-Path -LiteralPath $currentPath)) {
+            if ($releaseBackedUp) {
                 try {
-                    New-ApmJunction -Path $currentPath -Target $oldCurrentTarget -Confirm:$false
+                    if (Test-Path -LiteralPath $releasePath) {
+                        throw 'The replacement release still exists.'
+                    }
+                    Move-Item -LiteralPath $backupPath -Destination $releasePath -ErrorAction Stop
+                    $releaseRestored = $true
                 }
-                catch { Write-Warning -Message "Unable to restore the prior current junction: $_" }
+                catch { Write-Warning -Message "Incomplete APM rollback: prior release retained at ${backupPath}: $_" }
+            }
+            # Never reconnect current to an unverified same-version replacement.
+            $canRestoreCurrent = $false
+            if ($currentRemoved) {
+                $releaseUnchanged = $hadRelease -and -not $releaseBackedUp -and -not $releasePromoted
+                $canRestoreCurrent = $releaseRestored -or $releaseUnchanged -or $oldCurrentTarget -ine $releasePath
+            }
+            if ($currentRemoved -and $canRestoreCurrent) {
+                try {
+                    # Inspect the junction itself, including a dangling replacement.
+                    $remainingCurrent = Get-Item -LiteralPath $currentPath -Force -ErrorAction SilentlyContinue
+                    if ($remainingCurrent) {
+                        $remainingTarget = @($remainingCurrent.Target)[0]
+                        if (-not [IO.Path]::IsPathRooted($remainingTarget)) {
+                            $remainingTarget = Join-Path $installRoot $remainingTarget
+                        }
+                        if ([IO.Path]::GetFullPath($remainingTarget) -ine $oldCurrentTarget) {
+                            Remove-ValidatedJunction -Path $currentPath -Confirm:$false
+                            $remainingCurrent = $null
+                        }
+                    }
+                    if (-not $remainingCurrent) {
+                        New-ApmJunction -Path $currentPath -Target $oldCurrentTarget -Confirm:$false
+                    }
+                }
+                catch { Write-Warning -Message "Incomplete APM rollback: unable to restore the prior current junction; inspect $oldCurrentTarget for recovery: $_" }
             }
             try {
-                if ($hadShim) {
+                if ($shimWriteStarted -and $hadShim) {
                     if (Test-Path -LiteralPath $shimPath -PathType Leaf) {
                         [IO.File]::SetAttributes($shimPath, [IO.FileAttributes]::Normal)
                     }
                     [IO.File]::WriteAllBytes($shimPath, $oldShimBytes)
                     [IO.File]::SetAttributes($shimPath, $oldShimAttributes)
                 }
-                elseif (Test-Path -LiteralPath $shimPath) {
+                elseif ($shimWriteStarted -and (Test-Path -LiteralPath $shimPath)) {
                     Remove-Item -LiteralPath $shimPath -Force
                 }
             }
@@ -518,17 +573,12 @@ function Install-ReviewedBundle {
             Remove-Item -LiteralPath $stagePath -Recurse -Force -ErrorAction SilentlyContinue
         }
         if ($promotionComplete -and (Test-Path -LiteralPath $backupPath)) {
-            Remove-Item -LiteralPath $backupPath -Recurse -Force
+            Remove-Item -LiteralPath $backupPath -Recurse -Force -ErrorAction Continue
         }
         if ($mutexAcquired) { $mutex.ReleaseMutex() }
         $mutex.Dispose()
     }
 
-    $promotedExecutable = Join-Path $currentPath 'apm.exe'
-    Assert-ReviewedFile -Path $promotedExecutable -Name $ExecutableMember -Metadata $Metadata
-    if ((Get-ApmReportedVersion -Executable $promotedExecutable) -cne $Metadata.Pin) {
-        throw "The promoted APM CLI does not report pinned v$($Metadata.Pin)."
-    }
     [pscustomobject]@{
         Executable = $promotedExecutable
         Shim       = $shimPath

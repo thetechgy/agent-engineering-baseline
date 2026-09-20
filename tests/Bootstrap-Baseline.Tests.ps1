@@ -21,6 +21,11 @@ BeforeAll {
     $script:ValidationSource = Join-Path $script:RepositoryRoot 'scripts/Invoke-Validation.ps1'
     $script:IsWindowsPlatform = $env:OS -ceq 'Windows_NT'
 
+    $script:OriginalCopyItem = Get-Command Copy-Item -CommandType Cmdlet
+    $script:OriginalMoveItem = Get-Command Move-Item -CommandType Cmdlet
+    $script:OriginalNewItem = Get-Command New-Item -CommandType Cmdlet
+    $script:OriginalGetFileHash = Get-Command Get-FileHash
+
     function New-TestRepository {
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
             'PSUseShouldProcessForStateChangingFunctions', '',
@@ -99,6 +104,20 @@ public static class $className
         }
         if (args.Length == 1 && args[0] == "--version")
         {
+            string fault = Environment.GetEnvironmentVariable("APM_TEST_PROMOTION_FAULT");
+            string executable = Environment.GetCommandLineArgs()[0];
+            string directory = Path.GetDirectoryName(executable);
+            if (fault == "staged-execution") { return 73; }
+            if (fault == "staged-banner") { Console.WriteLine("No version"); return 0; }
+            if (directory.EndsWith(Path.Combine("releases", "v$Version"), StringComparison.OrdinalIgnoreCase) &&
+                !File.Exists(Path.Combine(directory, "_internal", "old-state")))
+            {
+                string current = Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(directory)), "current");
+                if (Directory.Exists(current)) { File.WriteAllText(log + ".published", "unverified"); }
+                if (fault == "execution") { return 73; }
+                if (fault == "version") { Console.WriteLine("APM version 9.9.9"); return 0; }
+                if (fault == "banner") { Console.WriteLine("No version"); return 0; }
+            }
             Console.WriteLine("Agent Package Manager (APM) CLI version $Version (fixture)");
         }
         return 0;
@@ -310,6 +329,7 @@ Describe 'Bootstrap-Baseline Windows security contracts' {
 
 Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWindowsPlatform) {
     BeforeEach {
+        Remove-Item Env:APM_TEST_PROMOTION_FAULT -ErrorAction SilentlyContinue
         $script:OldProcessPath = $env:PATH
         $script:OldUserPath = [Environment]::GetEnvironmentVariable('Path', 'User')
         $script:TestRepository = New-TestRepository
@@ -344,6 +364,7 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
                 'APM_INSTALL_DIR',
                 'APM_RELEASE_BASE_URL',
                 'APM_TEST_CALL_LOG',
+                'APM_TEST_PROMOTION_FAULT',
                 'APM_TEST_FIXTURE_ARCHIVE',
                 'APM_TEST_REQUESTED_URI',
                 'APM_TEST_TLS_DURING_DOWNLOAD',
@@ -389,7 +410,7 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
 
         $script:AmbientExecuted | Should-BeFalse
         Get-Content -LiteralPath $script:CallLog -Raw | Should-MatchString 'apm-bootstrap-'
-        Get-Content -LiteralPath $script:CallLog -Raw | Should-MatchString '\\current\\apm\.exe'
+        Get-Content -LiteralPath $script:CallLog -Raw | Should-MatchString '\\releases\\v0\.29\.0\\apm\.exe'
     }
 
     It 'selects only the intended native workflow for -Scope <ScopeValue>' -ForEach @(
@@ -505,6 +526,266 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
             Should-Throw -ExceptionMessage '*contains a reparse point*'
     }
 
+    It 'keeps <Prior> installation consistent after <Fault> failure' -ForEach @(
+        foreach ($prior in @('existing', 'fresh')) {
+            foreach ($fault in @('copy', 'backup', 'rename', 'junction', 'checksum', 'execution', 'version', 'banner')) {
+                if ($prior -eq 'fresh' -and $fault -eq 'backup') { continue }
+                @{ Prior = $prior; Fault = $fault }
+            }
+        }
+    ) {
+        $release = Join-Path $script:InstallRoot 'releases\v0.29.0'
+        $current = Join-Path $script:InstallRoot 'current'
+        $shim = Join-Path $env:APM_INSTALL_DIR 'apm.cmd'
+        if ($Prior -eq 'existing') {
+            & $script:TestRepository.Script -CliOnly -Confirm:$false
+            [IO.File]::WriteAllText((Join-Path $release '_internal\old-state'), 'old')
+            # The active release may differ from the same-version release being replaced.
+            $priorCurrentTarget = Join-Path $script:InstallRoot 'releases\v0.28.0'
+            Copy-Item -LiteralPath $release -Destination $priorCurrentTarget -Recurse
+            [IO.Directory]::Delete($current, $false)
+            New-Item -ItemType Junction -Path $current -Target $priorCurrentTarget | Out-Null
+        }
+        $processPath = $env:PATH
+        $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+        $faultState = [pscustomobject]@{ Name = $Fault; Hit = $false }
+        Mock Copy-Item {
+            if ($faultState.Name -eq 'copy' -and $Destination -like '*\.stage-*') {
+                $faultState.Hit = $true
+                throw 'injected staging failure'
+            }
+            & $OriginalCopyItem @PesterBoundParameters
+        }
+        Mock Move-Item {
+            if (-not $faultState.Hit -and (
+                    ($faultState.Name -eq 'backup' -and $Destination -like '*\.rollback-*') -or
+                    ($faultState.Name -eq 'rename' -and $LiteralPath -like '*\.stage-*'))) {
+                $faultState.Hit = $true
+                throw 'injected rename failure'
+            }
+            & $OriginalMoveItem @PesterBoundParameters
+        }
+        Mock New-Item {
+            if ($faultState.Name -eq 'junction' -and $ItemType -eq 'Junction' -and -not $faultState.Hit) {
+                $faultState.Hit = $true
+                throw 'injected junction failure'
+            }
+            & $OriginalNewItem @PesterBoundParameters
+        }
+        Mock Get-FileHash {
+            if ($faultState.Name -eq 'checksum' -and $LiteralPath -like '*\releases\v0.29.0\apm.exe') {
+                $faultState.Hit = $true
+                Test-Path -LiteralPath $current | Should-BeFalse
+                return [pscustomobject]@{ Hash = ('0' * 64) }
+            }
+            & $OriginalGetFileHash @PesterBoundParameters
+        }
+        $env:APM_TEST_PROMOTION_FAULT = $Fault
+        $expectedError = switch ($Fault) {
+            'copy' { '*injected staging failure*' }
+            'backup' { '*injected rename failure*' }
+            'rename' { '*injected rename failure*' }
+            'junction' { '*injected junction failure*' }
+            'checksum' { '*reviewed SHA256*' }
+            'execution' { '*The APM executable failed its version postcondition*' }
+            'version' { '*does not report pinned*' }
+            'banner' { '*The APM executable did not report a full version*' }
+        }
+        { & $script:TestRepository.Script -CliOnly -Confirm:$false } |
+            Should-Throw -ExceptionMessage $expectedError
+        if ($Fault -in @('execution', 'version', 'banner')) {
+            Get-Content -LiteralPath $script:CallLog -Raw | Should-MatchString '\\releases\\v0\.29\.0\\apm\.exe'
+            Test-Path -LiteralPath ($script:CallLog + '.published') | Should-BeFalse
+        }
+        else { $faultState.Hit | Should-BeTrue }
+        if ($Prior -eq 'existing') {
+            Test-Path -LiteralPath (Join-Path $release '_internal\old-state') | Should-BeTrue
+            @((Get-Item -LiteralPath $current -Force).Target)[0] | Should-Be $priorCurrentTarget
+            & $shim --version | Should-MatchString '0\.29\.0'
+            $LASTEXITCODE | Should-Be 0
+        }
+        else {
+            Test-Path -LiteralPath $release | Should-BeFalse
+            Test-Path -LiteralPath $current | Should-BeFalse
+            Test-Path -LiteralPath $shim | Should-BeFalse
+        }
+        $env:PATH | Should-Be $processPath
+        [Environment]::GetEnvironmentVariable('Path', 'User') | Should-Be $userPath
+        @(Get-ChildItem -LiteralPath (Join-Path $script:InstallRoot 'releases') -Force |
+            Where-Object { $_.Name -match '^\.(stage|rollback)-' }).Count | Should-Be 0
+    }
+
+    It 'keeps current disconnected for a <Prior> installation if rollback removal is blocked' -ForEach @(
+        @{ Prior = 'existing' }
+        @{ Prior = 'dangling' }
+        @{ Prior = 'fresh' }
+    ) {
+        $release = Join-Path $script:InstallRoot 'releases\v0.29.0'
+        if ($Prior -eq 'existing') {
+            & $script:TestRepository.Script -CliOnly -Confirm:$false
+            [IO.File]::WriteAllText((Join-Path $release '_internal\old-state'), 'old')
+        }
+        elseif ($Prior -eq 'dangling') {
+            New-Item -ItemType Directory -Path $release -Force | Out-Null
+            New-Item -ItemType Junction -Path (Join-Path $script:InstallRoot 'current') -Target $release | Out-Null
+            [IO.Directory]::Delete($release, $false)
+        }
+        $OriginalRemoveItem = Get-Command Remove-Item -CommandType Cmdlet
+        Mock Remove-Item {
+            if ($LiteralPath -like '*\releases\v0.29.0' -and $Recurse) {
+                throw 'injected locked replacement'
+            }
+            & $OriginalRemoveItem @PesterBoundParameters
+        }
+        Mock Get-FileHash {
+            if ($LiteralPath -like '*\releases\v0.29.0\apm.exe') { return [pscustomobject]@{ Hash = ('0' * 64) } }
+            & $OriginalGetFileHash @PesterBoundParameters
+        }
+        $rollbackWarnings = New-Object Collections.Generic.List[string]
+        Mock Write-Warning { $rollbackWarnings.Add($Message) }
+        { & $script:TestRepository.Script -CliOnly -Confirm:$false } |
+            Should-Throw -ExceptionMessage '*reviewed SHA256*'
+        ($rollbackWarnings -join ' ') | Should-MatchString 'Incomplete APM rollback'
+        $backups = @(Get-ChildItem -LiteralPath (Join-Path $script:InstallRoot 'releases') -Directory -Force |
+            Where-Object { $_.Name -like '.rollback-*' })
+        if ($Prior -eq 'existing') {
+            $backups.Count | Should-Be 1
+            Test-Path -LiteralPath (Join-Path $backups[0].FullName '_internal\old-state') | Should-BeTrue
+        }
+        else { $backups.Count | Should-Be 0 }
+        Test-Path -LiteralPath (Join-Path $script:InstallRoot 'current') | Should-BeFalse
+    }
+
+    It 'uses phase-neutral diagnostics for <Fault> before promotion' -ForEach @(
+        @{ Fault = 'staged-execution'; Message = '*The APM executable failed its version postcondition*' }
+        @{ Fault = 'staged-banner'; Message = '*The APM executable did not report a full version*' }
+    ) {
+        $env:APM_TEST_PROMOTION_FAULT = $Fault
+        { & $script:TestRepository.Script -CliOnly -Confirm:$false } | Should-Throw -ExceptionMessage $Message
+        Test-Path -LiteralPath (Join-Path $script:InstallRoot 'current') | Should-BeFalse
+    }
+
+    It 'leaves the original release untouched when removing current is blocked' {
+        & $script:TestRepository.Script -CliOnly -Confirm:$false
+        $release = Join-Path $script:InstallRoot 'releases\v0.29.0'
+        [IO.File]::WriteAllText((Join-Path $release '_internal\old-state'), 'old')
+        # Load the functions without acquisition, then inject at the junction boundary.
+        . $script:TestRepository.Script -WhatIf
+        Mock Remove-ValidatedJunction { throw 'injected blocked original junction' }
+        Mock Move-Item { throw 'The release must not move while current is connected.' }
+        { Get-ReviewedApm -Metadata (Read-ReviewedConfig) } |
+            Should-Throw -ExceptionMessage '*injected blocked original junction*'
+        Should-NotInvoke Move-Item -Scope It
+        Test-Path -LiteralPath (Join-Path $release '_internal\old-state') | Should-BeTrue
+        @((Get-Item -LiteralPath (Join-Path $script:InstallRoot 'current') -Force).Target)[0] | Should-Be $release
+        & (Join-Path $script:InstallRoot 'bin\apm.cmd') --version | Should-MatchString '0\.29\.0'
+        $LASTEXITCODE | Should-Be 0
+    }
+
+    It 'handles <Failure> replacement-junction removal after verification' -ForEach @(
+        @{ Failure = 'transient' }
+        @{ Failure = 'persistent' }
+    ) {
+        & $script:TestRepository.Script -CliOnly -Confirm:$false
+        $release = Join-Path $script:InstallRoot 'releases\v0.29.0'
+        $current = Join-Path $script:InstallRoot 'current'
+        $shim = Join-Path $script:InstallRoot 'bin\apm.cmd'
+        [IO.File]::WriteAllText((Join-Path $release '_internal\old-state'), 'old')
+        $priorTarget = Join-Path $script:InstallRoot 'releases\v0.28.0'
+        Copy-Item -LiteralPath $release -Destination $priorTarget -Recurse
+        [IO.Directory]::Delete($current, $false)
+        New-Item -ItemType Junction -Path $current -Target $priorTarget | Out-Null
+        . $script:TestRepository.Script -WhatIf
+        $script:OriginalRemoveJunction = (Get-Command Remove-ValidatedJunction).ScriptBlock
+        $script:OriginalRemoveItem = Get-Command Remove-Item -CommandType Cmdlet
+        $junctionState = [pscustomobject]@{ Calls = 0; Failure = $Failure }
+        Mock Remove-ValidatedJunction {
+            $junctionState.Calls++
+            if ($junctionState.Calls -eq 2 -or
+                ($junctionState.Calls -gt 2 -and $junctionState.Failure -eq 'persistent')) {
+                throw 'injected blocked replacement junction'
+            }
+            & $script:OriginalRemoveJunction @PesterBoundParameters
+        }
+        Mock Remove-Item {
+            if ($junctionState.Failure -eq 'persistent' -and $LiteralPath -eq $release -and $Recurse) {
+                throw 'injected blocked replacement release'
+            }
+            & $script:OriginalRemoveItem @PesterBoundParameters
+        }
+        $rollbackWarnings = New-Object Collections.Generic.List[string]
+        Mock Write-Warning { $rollbackWarnings.Add($Message) }
+        (Get-Item -LiteralPath $shim).IsReadOnly = $true
+        try {
+            { Get-ReviewedApm -Metadata (Read-ReviewedConfig) } | Should-Throw
+        }
+        finally { (Get-Item -LiteralPath $shim).IsReadOnly = $false }
+
+        $junctionState.Calls | Should-Be 3
+        ($rollbackWarnings -join ' ') | Should-MatchString 'Incomplete APM rollback'
+        Test-Path -LiteralPath ($script:CallLog + '.published') | Should-BeFalse
+        if ($Failure -eq 'transient') {
+            @((Get-Item -LiteralPath $current -Force).Target)[0] | Should-Be $priorTarget
+            Test-Path -LiteralPath (Join-Path $release '_internal\old-state') | Should-BeTrue
+        }
+        else {
+            ($rollbackWarnings -join ' ') | Should-MatchString 'unable to restore the prior current junction'
+            @((Get-Item -LiteralPath $current -Force).Target)[0] | Should-Be $release
+            $backups = @(Get-ChildItem -LiteralPath (Join-Path $script:InstallRoot 'releases') -Directory -Force |
+                Where-Object { $_.Name -like '.rollback-*' })
+            $backups.Count | Should-Be 1
+            Test-Path -LiteralPath (Join-Path $backups[0].FullName '_internal\old-state') | Should-BeTrue
+            Assert-ReviewedFile -Path (Join-Path $current 'apm.exe') -Name 'apm-windows-x86_64/apm.exe' -Metadata (Read-ReviewedConfig)
+        }
+        & $shim --version | Should-MatchString '0\.29\.0'
+        $LASTEXITCODE | Should-Be 0
+    }
+
+    It 'keeps the restored release usable when rollback junction creation is blocked' {
+        & $script:TestRepository.Script -CliOnly -Confirm:$false
+        $release = Join-Path $script:InstallRoot 'releases\v0.29.0'
+        [IO.File]::WriteAllText((Join-Path $release '_internal\old-state'), 'old')
+        $junctionState = [pscustomobject]@{ Calls = 0 }
+        Mock New-Item {
+            if ($ItemType -eq 'Junction') {
+                $junctionState.Calls++
+                throw 'injected rollback junction failure'
+            }
+            & $OriginalNewItem @PesterBoundParameters
+        }
+        Mock Get-FileHash {
+            if ($LiteralPath -like '*\releases\v0.29.0\apm.exe') { return [pscustomobject]@{ Hash = ('0' * 64) } }
+            & $OriginalGetFileHash @PesterBoundParameters
+        }
+        $rollbackWarnings = New-Object Collections.Generic.List[string]
+        Mock Write-Warning { $rollbackWarnings.Add($Message) }
+        { & $script:TestRepository.Script -CliOnly -Confirm:$false } |
+            Should-Throw -ExceptionMessage '*reviewed SHA256*'
+        $junctionState.Calls | Should-Be 1
+        ($rollbackWarnings -join ' ') | Should-MatchString 'Incomplete APM rollback'
+        ($rollbackWarnings -join ' ') | Should-MatchString ([regex]::Escape($release))
+        Test-Path -LiteralPath (Join-Path $release '_internal\old-state') | Should-BeTrue
+        Test-Path -LiteralPath (Join-Path $script:InstallRoot 'current') | Should-BeFalse
+        & (Join-Path $release 'apm.exe') --version | Should-MatchString '0\.29\.0'
+        $LASTEXITCODE | Should-Be 0
+    }
+
+    It 'restores current to the unchanged release when the backup rename fails' {
+        & $script:TestRepository.Script -CliOnly -Confirm:$false
+        $release = Join-Path $script:InstallRoot 'releases\v0.29.0'
+        [IO.File]::WriteAllText((Join-Path $release '_internal\old-state'), 'old')
+        Mock Move-Item {
+            if ($Destination -like '*\.rollback-*') { throw 'injected backup failure' }
+            & $OriginalMoveItem @PesterBoundParameters
+        }
+        { & $script:TestRepository.Script -CliOnly -Confirm:$false } |
+            Should-Throw -ExceptionMessage '*injected backup failure*'
+        Test-Path -LiteralPath (Join-Path $release '_internal\old-state') | Should-BeTrue
+        @((Get-Item -LiteralPath (Join-Path $script:InstallRoot 'current') -Force).Target)[0] | Should-Be $release
+        & (Join-Path $script:InstallRoot 'bin\apm.cmd') --version | Should-MatchString '0\.29\.0'
+        $LASTEXITCODE | Should-Be 0
+    }
+
     It 'rolls back the prior release and junction when shim promotion fails' {
         & $script:TestRepository.Script -CliOnly -Confirm:$false
         $release = Join-Path $script:InstallRoot 'releases\v0.29.0'
@@ -522,5 +803,33 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         $current = Get-Item -LiteralPath (Join-Path $script:InstallRoot 'current') -Force
         [bool]($current.Attributes -band [IO.FileAttributes]::ReparsePoint) | Should-BeTrue
         [IO.File]::ReadAllText($shim) | Should-MatchString '"%~dp0\.\.\\current\\apm\.exe" %\*'
+    }
+
+    It 'keeps the verified installation committed when backup cleanup fails' {
+        & $script:TestRepository.Script -CliOnly -Confirm:$false
+        $release = Join-Path $script:InstallRoot 'releases\v0.29.0'
+        $current = Join-Path $script:InstallRoot 'current'
+        [IO.File]::WriteAllText((Join-Path $release '_internal\old-state'), 'old')
+        $OriginalRemoveItem = Get-Command Remove-Item -CommandType Cmdlet
+        Mock Remove-Item {
+            if ($LiteralPath -like '*\.rollback-*') {
+                Write-Error -Message 'injected backup cleanup failure' -ErrorAction Continue
+                return
+            }
+            & $OriginalRemoveItem @PesterBoundParameters
+        }
+        $output = @(& $script:TestRepository.Script -CliOnly -Confirm:$false 2>&1)
+        ($output -join ' ') | Should-MatchString 'injected backup cleanup failure'
+        Should-Invoke Remove-Item -Times 1 -Exactly -Scope It -ParameterFilter {
+            $LiteralPath -like '*\.rollback-*' -and $ErrorAction -eq 'Continue'
+        }
+        @((Get-Item -LiteralPath $current -Force).Target)[0] | Should-Be $release
+        Test-Path -LiteralPath (Join-Path $release '_internal\old-state') | Should-BeFalse
+        $backups = @(Get-ChildItem -LiteralPath (Join-Path $script:InstallRoot 'releases') -Directory -Force |
+            Where-Object { $_.Name -like '.rollback-*' })
+        $backups.Count | Should-Be 1
+        Test-Path -LiteralPath (Join-Path $backups[0].FullName '_internal\old-state') | Should-BeTrue
+        & (Join-Path $script:InstallRoot 'bin\apm.cmd') --version | Should-MatchString '0\.29\.0'
+        $LASTEXITCODE | Should-Be 0
     }
 }
