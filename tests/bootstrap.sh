@@ -582,6 +582,33 @@ assert_true 'symlinked generation executable is diagnosed' out_has 'refusing to 
 assert_true 'symlinked generation executable link is preserved' \
     test "$(readlink "$CASE_INSTALL/apm")" = "$CASE_ROOT/install/lib/apm/releases/v0.29.0-20260101T000000Z-4242/apm"
 
+new_case foreign-stage-collision
+make_fixture Linux x86_64
+real_mkdir=$(command -v mkdir)
+# Another process creates the stage path first; this run's mkdir then fails.
+cat > "$CASE_BIN/mkdir" <<EOF
+#!/usr/bin/env bash
+for argument in "\$@"; do
+    case "\$argument" in
+        */.stage-*)
+            '$real_mkdir' "\$argument"
+            printf 'foreign\n' > "\$argument/keep"
+            printf '%s\n' "\$argument" > '$CASE_ROOT/collided-stage'
+            exit 1
+            ;;
+    esac
+done
+exec '$real_mkdir' "\$@"
+EOF
+chmod +x "$CASE_BIN/mkdir"
+run_case --cli-only
+record_result 'stage collision after preflight is surfaced' failure
+assert_true 'stage collision is reached' test -f "$CASE_ROOT/collided-stage"
+assert_true 'stage collision is diagnosed' out_has 'unable to create'
+assert_true 'colliding stage created by another process is preserved' \
+    file_has "$(cat "$CASE_ROOT/collided-stage")/keep" 'foreign'
+assert_true 'stage collision releases the lock' test ! -e "$CASE_ROOT/install/lib/apm/.lock"
+
 new_case foreign-releases-entries
 make_fixture Linux x86_64
 run_case --cli-only

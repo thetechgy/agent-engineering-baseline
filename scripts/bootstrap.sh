@@ -251,6 +251,18 @@ assert_safe_directory() {
     fi
 }
 
+create_owned() {
+    # Create a path and record it for cleanup as one uninterruptible step: a
+    # signal cannot separate the two, and a failed create never claims a path
+    # this run did not make. Usage: create_owned VARIABLE PATH COMMAND...
+    local variable=$1 path=$2
+    shift 2
+    trap '' HUP INT TERM
+    if "$@"; then printf -v "$variable" '%s' "$path"; fi
+    trap 'exit 130' HUP INT TERM
+    [ -n "${!variable}" ] || die "unable to create $path"
+}
+
 release_install_lock() {
     [ "$LOCK_ACQUIRED" = true ] || return 0
     # Drop ownership before removing the directory: a signal landing between the
@@ -348,10 +360,9 @@ promote_bundle() {
         die "an APM release generation path already exists: $release_dir"
     fi
 
-    # Each path becomes cleanup-owned only once this run is about to create it,
-    # so a pre-existing path found above is never removed by the EXIT cleanup.
-    STAGE_PATH=$stage_path
-    mkdir "$STAGE_PATH"
+    # Each path becomes cleanup-owned only once this run has created it, so a
+    # pre-existing path is never removed by the EXIT cleanup.
+    create_owned STAGE_PATH "$stage_path" mkdir "$stage_path"
     # The ownership marker is written first so every directory this installer
     # creates under releases is recognizable to later cleanup.
     printf 'v%s\n' "$PIN" > "$STAGE_PATH/.apm-installed"
@@ -364,12 +375,10 @@ promote_bundle() {
     [ "$actual_version" = "$PIN" ] ||
         die "the installed APM CLI does not report the pinned v$PIN."
 
-    RELEASE_PATH=$release_dir
-    mv "$STAGE_PATH" "$release_dir"
+    create_owned RELEASE_PATH "$release_dir" mv "$STAGE_PATH" "$release_dir"
     STAGE_PATH=''
     PROMOTED_APM="$release_dir/apm"
-    LINK_STAGE=$link_stage
-    ln -s "$PROMOTED_APM" "$LINK_STAGE"
+    create_owned LINK_STAGE "$link_stage" ln -s "$PROMOTED_APM" "$link_stage"
     # Renaming a symlink over the existing symlink is a single atomic step.
     mv -f "$LINK_STAGE" "$link_path"
     LINK_STAGE=''

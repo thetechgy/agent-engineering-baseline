@@ -722,6 +722,27 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         $LASTEXITCODE | Should-Be 0
     }
 
+    It 'preserves a stage path another process created between preflight and creation' {
+        $OriginalNewItem = Get-Command New-Item -CommandType Cmdlet
+        $collision = [pscustomobject]@{ Path = $null }
+        Mock New-Item {
+            if ($ItemType -eq 'Directory' -and $Path -like '*\releases\.stage-*') {
+                & $OriginalNewItem @PesterBoundParameters | Out-Null
+                [IO.File]::WriteAllText((Join-Path $Path 'keep'), 'foreign')
+                $collision.Path = $Path
+                throw 'injected stage collision'
+            }
+            & $OriginalNewItem @PesterBoundParameters
+        }
+
+        { & $script:TestRepository.Script -CliOnly -Confirm:$false } |
+            Should-Throw -ExceptionMessage '*injected stage collision*'
+
+        $collision.Path | Should-NotBeNull
+        [IO.File]::ReadAllText((Join-Path $collision.Path 'keep')) | Should-Be 'foreign'
+        Test-Path -LiteralPath (Join-Path $env:APM_INSTALL_DIR 'apm.cmd') | Should-BeFalse
+    }
+
     It 'leaves a plain current directory in place with a warning' {
         & $script:TestRepository.Script -CliOnly -Confirm:$false
         $current = Join-Path $script:InstallRoot 'current'

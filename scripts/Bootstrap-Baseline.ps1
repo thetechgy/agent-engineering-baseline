@@ -420,8 +420,7 @@ function Install-ReviewedBundle {
     $mutex = New-Object Threading.Mutex($false, (Get-MutexName -InstallRoot $installRoot))
     $mutexAcquired = $false
     $activated = $false
-    # Paths become cleanup-owned only once this run is about to create them, so a
-    # pre-existing path found by the collision check is never removed.
+    # Paths become cleanup-owned only once this run has created them.
     $ownedPaths = New-Object Collections.Generic.List[string]
     try {
         # Never wait or steal: a second bootstrap fails immediately with a diagnostic.
@@ -454,13 +453,17 @@ function Install-ReviewedBundle {
             }
         }
         foreach ($path in @($stagePath, $releasePath, $shimStagePath)) {
-            if (Test-Path -LiteralPath $path) {
+            # Get-Item -Force also sees a dangling reparse point, which Test-Path
+            # would report as absent and a later write could follow.
+            if (Get-Item -LiteralPath $path -Force -ErrorAction SilentlyContinue) {
                 throw "An APM release generation path already exists: $path"
             }
         }
 
-        $ownedPaths.Add($stagePath)
+        # Each path becomes cleanup-owned only once this run has created it, so a
+        # path that appeared in between and made the create fail is never removed.
         New-Item -ItemType Directory -Path $stagePath | Out-Null
+        $ownedPaths.Add($stagePath)
         # The ownership marker is written first so every directory this installer
         # creates under releases is recognizable to later cleanup.
         [IO.File]::WriteAllText(
@@ -479,11 +482,11 @@ function Install-ReviewedBundle {
             throw "The installed APM CLI does not report pinned v$($Metadata.Pin)."
         }
 
-        $ownedPaths.Add($releasePath)
         Move-Item -LiteralPath $stagePath -Destination $releasePath
+        $ownedPaths.Add($releasePath)
         $promotedExecutable = Join-Path $releasePath 'apm.exe'
-        $ownedPaths.Add($shimStagePath)
         [IO.File]::WriteAllText($shimStagePath, $shimContent, [Text.Encoding]::ASCII)
+        $ownedPaths.Add($shimStagePath)
         if (Test-Path -LiteralPath $shimPath) {
             # NTFS replaces the destination atomically; the shim never disappears.
             # NullString keeps the no-backup argument null under Windows PowerShell 5.1,
