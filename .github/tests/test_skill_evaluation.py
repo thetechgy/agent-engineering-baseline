@@ -793,6 +793,35 @@ class WorkflowTests(unittest.TestCase):
         metrics = next(step for step in steps if step.get("with", {}).get("name") == "skill-metrics")
         self.assertIn("success()", metrics["if"])
 
+    def test_python_tooling_is_hash_locked(self):
+        for lock in ("semgrep", "rumdl"):
+            pins = [line.split("==")[0] for line in (REPO / f".github/requirements/{lock}.in").read_text().splitlines()
+                    if line and not line.startswith("#")]
+            self.assertIn(lock, pins)
+            # One block per requirement: a `name==version \` header followed by indented hash lines.
+            blocks = re.split(r"\n(?=\S)", (REPO / f".github/requirements/{lock}.txt").read_text().strip())
+            names = []
+            for block in blocks:
+                header, *hashes = block.split(" \\\n")
+                self.assertRegex(header, r"^[A-Za-z0-9_.-]+==[^ ]+$", block)
+                self.assertTrue(hashes, f"{header} has no hashes")
+                for entry in hashes:
+                    self.assertRegex(entry, r"^    --hash=sha256:[0-9a-f]{64}$")
+                names.append(header.split("==")[0].lower())
+            for pin in pins:
+                self.assertIn(pin.lower(), names)
+        setup = (REPO / ".github/scripts/setup-skillevaluator.sh").read_text()
+        self.assertIn("uv pip sync --quiet --python \"$tool_root/semgrep/bin/python\" --require-hashes", setup)
+        self.assertNotIn("uv tool install", setup)
+        for workflow in (REPO / ".github/workflows").glob("*.yml"):
+            for job in yaml.safe_load(workflow.read_text())["jobs"].values():
+                for step in job.get("steps", []):
+                    run = step.get("run", "")
+                    self.assertNotIn("pipx", run, workflow.name)
+                    if "pip install" in run:
+                        self.assertIn("--require-hashes", run, workflow.name)
+                        self.assertIn("--only-binary :all:", run, workflow.name)
+
     def test_setup_private_tool_root_for_provenance_key(self):
         setup = (REPO / ".github/scripts/setup-skillevaluator.sh").read_text()
         self.assertIn("umask 077", setup)

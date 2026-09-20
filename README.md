@@ -470,20 +470,26 @@ Startup diagnostics and secret redaction come from upstream SkillEvaluator
 plus the Actions secret mask and the report upload allowlist, not from
 repository patches.
 
-SkillSpector reuses its reviewed upstream frozen lock in a separate environment;
-Semgrep uses uv's isolated tool installation with CI-owned version constraints.
+SkillSpector reuses its reviewed upstream frozen lock in a separate environment.
+Semgrep is installed into its own environment with `uv pip sync
+--require-hashes` from `.github/requirements/semgrep.txt`, and the Markdown
+linter used by the validation and update workflows is installed with `pip
+install --require-hashes` from `.github/requirements/rumdl.txt`, so every
+Python artifact must match a reviewed SHA-256 rather than only a version.
 Artifacts record scanner versions and resolved Python dependency inventories.
-To deliberately update Semgrep's constraints with uv 0.12.17, run:
+To deliberately update either lock with uv 0.12.17, run (substituting `rumdl`
+for the linter):
 
 ```bash
 uv pip compile --python-version 3.13 --python-platform x86_64-unknown-linux-gnu \
   .github/requirements/semgrep.in --output-file .github/requirements/semgrep.txt \
-  --no-header --no-annotate
+  --no-header --no-annotate --generate-hashes
 ```
 
 Review the resulting dependency changes and rerun deterministic validation.
-These are Python runtime dependency constraints, not recursive OS/build-tool
-locks; no automatic dependency update mechanism is added.
+These are Python runtime dependency locks, not recursive OS/build-tool locks;
+no automatic dependency update mechanism is added. PowerShell Gallery modules
+(Pester, PSScriptAnalyzer) have no native hash pin and remain version-pinned.
 
 Tier 2 remains available through upstream's on-demand commands. Recurring
 overlap analysis, Copilot adapters, PR comments, SARIF, and cost charts are
