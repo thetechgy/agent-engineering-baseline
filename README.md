@@ -422,14 +422,22 @@ Do not save reports or `BENCHMARK.md` into either APM-managed skill tree.
    to `main`. The workflow dispatch ref remains main even though the static
    content is checked out at the published history commit.
 
-The reviewed tool pins and the small Codex compatibility patch are CI-owned
-under `.github/`. The patch passes Codex 0.155.1 through Harbor's native version
-argument only for Docker Codex execution; tests reject patch drift. Evaluator
-Python is pinned to 3.13 and its full resolved version is recorded. Harbor's
-native container base, Node patch version, and verifier runtime dependencies
+The reviewed tool pins and the Codex compatibility patch are CI-owned under
+`.github/`. The patch is a single hunk in
+`src/skillevaluator/tier3/harbor/runner.py` that passes Codex 0.155.1 through
+Harbor's native `--ak version=` argument only for Docker Codex execution; it
+adds no other behavior, and tests reject any patch that touches another file,
+adds a second hunk, or removes upstream lines. Because the benchmark policy
+identifier includes the patch digest, changing the patch starts a new history
+series. The evaluator's Python runtime is pinned to 3.13 and its full resolved
+version is recorded. Harbor's native container base, Node patch version, and
+verifier runtime dependencies
 remain upstream-managed; consider runtime drift when comparing results.
 No custom grading or model fallback policy is introduced. Copilot deployment
 compatibility continues through APM; live behavioral evaluation uses Codex.
+Startup diagnostics and secret redaction come from upstream SkillEvaluator
+plus the Actions secret mask and the report upload allowlist, not from
+repository patches.
 
 SkillSpector reuses its reviewed upstream frozen lock in a separate environment;
 Semgrep uses uv's isolated tool installation with CI-owned version constraints.
