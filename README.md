@@ -133,6 +133,14 @@ owned full bundle under the sibling `lib/apm` directory. Linux uses
 `sha256sum`; macOS uses `shasum -a 256`. An existing unrelated command or
 unowned bundle is not overwritten.
 
+Linux and macOS promotion holds an atomic directory lock at
+`lib/.apm-install.lock` beside the bundle, waiting up to two minutes for another
+installer. Normal exit and handled signals release the lock. If a process is
+forcibly terminated, confirm that no installer is running and inspect the
+release and rollback paths before manually removing its stale lock directory.
+Both wrappers verify the executable at its promoted release path before
+publishing the command link.
+
 On Windows, the default root is `%LOCALAPPDATA%\Programs\apm`.
 `APM_INSTALL_DIR`, when set, identifies the `bin`/shim directory just as it
 does in APM's native installer; the installation root is its parent. The
@@ -332,6 +340,15 @@ upstream redaction helpers. Transient Harbor execution directories, hidden
 files, credentials, links, and unexpected files are excluded. Redaction is
 best-effort and cannot prevent deliberate encoded secret disclosure; review is
 the trust boundary. Treat downloaded prompts and agent outputs as untrusted.
+
+Evaluation is capped at 140 minutes and shortens when setup consumes part of
+the 160-minute window established by the job's first step. This reserves about
+20 minutes of the 180-minute job for recovery, redaction, and upload. Native
+Harbor retention keeps completed trials available to the native collector
+after interruption;
+raw execution directories stay on the runner. Recovered runs are explicitly
+incomplete and cannot publish history. Recovery and upload require a live
+runner; runner loss or forced cancellation can prevent them.
 
 Successful **standard** runs explicitly dispatched against `main` additionally
 append Skill Lift, Effectiveness, Correctness, and Discoverability to

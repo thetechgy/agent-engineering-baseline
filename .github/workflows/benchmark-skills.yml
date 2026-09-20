@@ -39,14 +39,21 @@ jobs:
     outputs:
       skill: ${{ steps.selection.outputs.skill }}
     steps:
+      - name: Establish evaluation deadline
+        id: budget
+        timeout-minutes: 1
+        run: printf 'deadline_epoch=%s\n' "$(( $(date +%s) + 9600 ))" >> "$GITHUB_OUTPUT"
+
       - name: Check out dispatched revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        timeout-minutes: 5
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
 
       - name: Validate selection and clean checkout
         id: selection
+        timeout-minutes: 2
         run: |
           [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
@@ -55,23 +62,28 @@ jobs:
 
       - name: Set up pinned Docker Compose
         uses: docker/setup-compose-action@54042514f505b273907334ae2b9cdbb9a0213c1a # v2.4.0
+        timeout-minutes: 5
         with:
           version: v5.0.2
           cache-binary: false
 
       - name: Verify pinned Docker Compose
+        timeout-minutes: 1
         run: test "$(docker compose version --short)" = '5.0.2'
 
       - name: Set up pinned uv
         uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        timeout-minutes: 5
         with:
           version: '0.12.17'
           enable-cache: false
 
       - name: Install evaluator with Python 3.13 and pinned Codex integration
+        timeout-minutes: 15
         run: bash .github/scripts/setup-skillevaluator.sh benchmark
 
       - name: Validate dataset and runtime before inference
+        timeout-minutes: 5
         run: |
           mkdir -p "$RUNNER_TEMP/skill-benchmark"
           cp "$RUNNER_TEMP/skill-evaluation-tools/versions.json" "$RUNNER_TEMP/skill-benchmark/versions.json"
@@ -82,6 +94,8 @@ jobs:
           docker info > /dev/null
 
       - name: Run native with-skill and without-skill evaluation
+        id: evaluation
+        timeout-minutes: 145
         env:
           SKILLEVALUATOR_RESULTS_DIR: ${{ runner.temp }}/skill-benchmark/results
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -90,19 +104,39 @@ jobs:
           SKILL_EVAL_JUDGE_MODEL: gpt-5.6-sol
           LLM_JUDGE_MODEL: gpt-5.6-sol
           ATTEMPTS: ${{ steps.selection.outputs.attempts }}
+          EVALUATION_DEADLINE_EPOCH: ${{ steps.budget.outputs.deadline_epoch }}
         run: |
           if [ -z "$OPENAI_API_KEY" ]; then
             echo '::error::Add OPENAI_API_KEY to the protected skill-benchmark environment before running a paid benchmark.'
             exit 1
           fi
+          [[ "$EVALUATION_DEADLINE_EPOCH" =~ ^[0-9]+$ ]]
+          evaluation_seconds=$(( EVALUATION_DEADLINE_EPOCH - $(date +%s) - 30 ))
+          if (( evaluation_seconds <= 0 )); then
+            echo '::error::Benchmark setup exhausted the evaluation deadline.'
+            exit 1
+          fi
+          if (( evaluation_seconds > 8400 )); then
+            evaluation_seconds=8400
+          fi
           cd "$RUNNER_TEMP/skill-benchmark"
-          skillevaluator tier3 evaluate "$GITHUB_WORKSPACE/.apm/skills/$BENCHMARK_SKILL" \
+          # Stop by the deadline, including forced-termination grace, to preserve recovery time.
+          timeout --signal=INT --kill-after=30s "${evaluation_seconds}s" skillevaluator tier3 evaluate "$GITHUB_WORKSPACE/.apm/skills/$BENCHMARK_SKILL" \
             --agents codex --agent-model codex=gpt-5.6-sol --env-mode docker \
             --skill-workspace-mode isolated --grading-mode default \
             --n-attempts "$ATTEMPTS" --no-stop-on-pass --n-concurrent 2 --max-agents 1 \
-            --agent-runtime-preflight --timeout-multiplier 2 --progress plain \
+            --agent-runtime-preflight --timeout-multiplier 2 --progress plain --harbor-keep-jobs \
             --results-dir "$SKILLEVALUATOR_RESULTS_DIR" \
             --evaluated-source-repository "$GITHUB_REPOSITORY" --evaluated-source-revision "$GITHUB_SHA"
+
+      - name: Recover interrupted native diagnostics
+        if: always() && env.SKILL_EVALUATOR_PYTHON != '' && steps.selection.outcome == 'success'
+        timeout-minutes: 5
+        env:
+          EVALUATION_OUTCOME: ${{ steps.evaluation.outcome }}
+        run: |
+          "$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_reports.py recover \
+            "$RUNNER_TEMP/skill-benchmark" "$BENCHMARK_SKILL" "$BENCHMARK_MODE" "$EVALUATION_OUTCOME"
 
       - name: Summarize native results and prepare standard metrics
         if: always() && env.SKILL_EVALUATOR_PYTHON != '' && steps.selection.outcome == 'success'
