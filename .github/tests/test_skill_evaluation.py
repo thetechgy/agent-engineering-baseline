@@ -432,9 +432,34 @@ from skillevaluator.tier3.harbor.progress import ProgressEvent
 run = Path(sys.argv[1])
 secret = sys.argv[2]
 def harmless_trial(**kwargs):
-    trial = run / '_harbor-jobs/podman-codex-with/case-1'
-    trial.mkdir(parents=True)
-    (trial / 'result.json').write_text(json.dumps({'task_name': 'case-1', 'finished_at': '2026-01-01T00:00:00Z'}))
+    trial_name = 'skillevaluator-1__attempt001'
+    for condition in ('with', 'without'):
+        job = run / f'_harbor-jobs/podman-codex-{condition}'
+        trial = job / trial_name
+        verifier = trial / 'verifier'
+        verifier.mkdir(parents=True)
+        (trial / 'result.json').write_text(json.dumps({
+            'task_name': 'nvidia/skillevaluator-1', 'trial_name': trial_name,
+            'finished_at': '2026-01-01T00:00:00Z',
+        }))
+        (verifier / 'reward.json').write_text(json.dumps({
+            'entry_id': 'skillevaluator-1', 'metric_set': 'skill_evaluator_default_v1',
+            'effectiveness': 0.8, 'correctness': 0.8, 'discoverability': 0.8,
+            'security': 1.0, 'skill_execution': 1.0, 'skill_efficiency': 1.0,
+            'accuracy': 0.8, 'goal_accuracy': 0.8, 'behavior_check': 0.8, 'overall': 0.8,
+        }))
+        (job / 'result.json').write_text(json.dumps({
+            'n_total_trials': 1,
+            'stats': {
+                'n_completed_trials': 1, 'n_errored_trials': 0, 'n_running_trials': 0,
+                'n_pending_trials': 0, 'n_cancelled_trials': 0, 'n_retries': 0,
+                'evals': {'agent__model___harbor-tasks': {
+                    'n_trials': 1, 'n_errors': 0,
+                    'reward_stats': {'reward': {'0.8': [trial_name]}},
+                }},
+            },
+        }))
+    trial = run / '_harbor-jobs/podman-codex-with' / trial_name
     (trial / 'trial.log').write_text('completed harmless trial ' + secret)
     (trial / 'auth.json').write_text(secret)
     kwargs['progress_reporter'].emit(ProgressEvent(stage='with-skill-tasks', state='running', output_dir=str(run)))
@@ -464,18 +489,21 @@ except KeyboardInterrupt:
             if process.poll() is None:
                 process.kill()
                 process.communicate()
-        raw_trial = run / "_harbor-jobs/podman-codex-with/case-1"
+        raw_trial = run / "_harbor-jobs/podman-codex-with/skillevaluator-1__attempt001"
         self.assertIn(sentinel, (raw_trial / "trial.log").read_text())
         reports.recover_benchmark(self.workspace, root, "podman", "standard", "cancelled")
         destination = self.root / "publication"
         reports.benchmark_artifacts(self.workspace, root, "podman", destination)
-        trial = destination / run.relative_to(root) / "codex/with-skill/trials/case-1"
+        trial = destination / run.relative_to(root) / "codex/with-skill/trials/skillevaluator-1__attempt001"
         self.assertIn("completed harmless trial", (trial / "trial.log").read_text())
         self.assertNotIn(sentinel, (trial / "trial.log").read_text())
         self.assertFalse((trial / "auth.json").exists())
         self.assertFalse(any(path.name.startswith("_harbor-") for path in destination.rglob("*")))
         result = reports.read_json(destination / run.relative_to(root) / "result.json")
         self.assertEqual(result["report_status"], "incomplete")
+        for condition in ("with_skill", "without_skill"):
+            cases = result["agents"]["codex"]["pass_at_k"][condition]["cases"]
+            self.assertEqual(set(cases), {"1"})
         self.assertEqual(reports.read_json(destination / "provenance.json")["status"], "incomplete")
         with self.assertRaisesRegex(ValueError, "cannot produce history"):
             reports.benchmark_report(self.workspace, root, "podman", "standard", self.root / "metrics")
@@ -523,6 +551,28 @@ except KeyboardInterrupt:
 
 
 class UpstreamTests(unittest.TestCase):
+    def test_pinned_cli_forwards_native_retention(self):
+        from click.testing import CliRunner
+        from skillevaluator.cli import cli
+        from skillevaluator.tier3 import commands
+
+        captured = {}
+
+        def evaluate(skill_path, **kwargs):
+            captured["skill_path"] = skill_path
+            captured.update(kwargs)
+            return {"execution_status": "succeeded", "execution_errors": []}
+
+        skill = REPO / ".apm/skills/podman"
+        with patch.object(commands, "evaluate", side_effect=evaluate):
+            result = CliRunner().invoke(cli, [
+                "tier3", "evaluate", str(skill), "--agents", "codex", "--env-mode", "docker",
+                "--harbor-keep-jobs", "--progress", "off",
+            ])
+        self.assertEqual(result.exit_code, 0, result.output)
+        self.assertEqual(captured["skill_path"], skill)
+        self.assertIs(captured["harbor_keep_jobs"], True)
+
     def test_podman_native_negative_control_and_strict_validation(self):
         from click.testing import CliRunner
         from skillevaluator.cli import cli

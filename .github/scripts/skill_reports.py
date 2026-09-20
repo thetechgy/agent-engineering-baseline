@@ -255,6 +255,7 @@ def validate_benchmark_versions(versions):
 
 def recover_benchmark(workspace, root, name, mode, outcome):
     """Collect retained trials with the pinned native collector; never certify a run."""
+    from skillevaluator.tier3.case_ids import validate_case_ids
     from skillevaluator.tier3.dataset_utils import load_dataset_entries
     from skillevaluator.tier3.harbor.collector import collect_harbor_results
 
@@ -279,7 +280,9 @@ def recover_benchmark(workspace, root, name, mode, outcome):
     results = root / "results" / name
     if not results.is_dir():
         return
-    cases = len(load_dataset_entries(skill / "evals/evals.json"))
+    entries = load_dataset_entries(skill / "evals/evals.json")
+    case_ids = validate_case_ids(entry.get("id") for entry in entries)
+    cases = len(case_ids)
     for run in sorted(results.iterdir()):
         if run.name == "latest":
             continue
@@ -291,6 +294,7 @@ def recover_benchmark(workspace, root, name, mode, outcome):
         collected = collect_harbor_results(
             skill_name=name, agents=["codex"], output_dir=run, jobs_dir=jobs,
             n_attempts=MODES[mode], stop_on_pass=False, expected_cases=cases,
+            expected_case_ids=case_ids,
             expected_trials=cases * MODES[mode], env_mode="docker",
             agent_models={"codex": {"model": POLICY["model"], "source": "cli"}},
         )
