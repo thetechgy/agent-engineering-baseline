@@ -755,6 +755,7 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
                 $swapped.Path = $Destination
                 throw 'injected staging failure'
             }
+            & $OriginalCopyItem @PesterBoundParameters
         }
         $warnings = New-Object Collections.Generic.List[string]
         Mock Write-Warning { $warnings.Add($Message) }
