@@ -663,9 +663,12 @@ printf 'prior release\n' > "$CASE_ROOT/install/lib/apm/_internal/old"
 real_mkdir=$(command -v mkdir)
 cat > "$CASE_BIN/mkdir" <<EOF
 #!/usr/bin/env bash
+# The initial -p runs directly under the transaction shell. Its acquisition
+# subshell may retain another process on older Bash, so do not signal that worker.
+if [ "\${1-}" = -p ]; then printf '%s\n' "\$PPID" > '$CASE_ROOT/transaction-pid'; fi
 '$real_mkdir' "\$@" || exit \$?
 case "\$*" in
-    *'/.apm-install.lock') kill -TERM "\$PPID" ;;
+    *'/.apm-install.lock') kill -TERM "\$(cat '$CASE_ROOT/transaction-pid')" ;;
 esac
 EOF
 chmod +x "$CASE_BIN/mkdir"
