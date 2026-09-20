@@ -25,6 +25,7 @@ LOCK_PATH=''
 LOCK_ACQUIRED=false
 STAGE_PATH=''
 LINK_STAGE=''
+LINK_PATH=''
 RELEASE_PATH=''
 PROMOTED_APM=''
 ORIGINAL_PATH=$PATH
@@ -257,6 +258,12 @@ release_install_lock() {
 
 remove_unactivated_release() {
     local path
+    # A generation the managed link already references is live, even if a
+    # signal interrupted the run before the tracking variables were reset.
+    if [ -n "$RELEASE_PATH" ] && [ -n "$LINK_PATH" ] && [ -L "$LINK_PATH" ] &&
+        [ "$(readlink "$LINK_PATH")" = "$RELEASE_PATH/apm" ]; then
+        RELEASE_PATH=''
+    fi
     for path in "$STAGE_PATH" "$LINK_STAGE" "$RELEASE_PATH"; do
         [ -n "$path" ] || continue
         case "$path" in /*) ;; *) continue ;; esac
@@ -273,7 +280,7 @@ remove_unactivated_release() {
 # atomically replacing the bin/apm symlink. The previously active generation
 # keeps working until that single rename, so no backup or rollback is needed.
 promote_bundle() {
-    local source_bundle=$1 install_parent releases_path link_path generation release_dir entry actual_version
+    local source_bundle=$1 install_parent releases_path link_path link_target generation release_dir entry actual_version
     install_parent=$(dirname "$INSTALL_DIR")
     LIB_ROOT="$install_parent/lib/apm"
     releases_path="$LIB_ROOT/releases"
@@ -296,12 +303,19 @@ promote_bundle() {
 
     if [ -e "$link_path" ] || [ -L "$link_path" ]; then
         [ -L "$link_path" ] || die "refusing to overwrite unrelated APM command: $link_path"
-        case "$(readlink "$link_path")" in
-            "$LIB_ROOT"/*) ;;
+        link_target=$(readlink "$link_path")
+        # Only a generation executable or the legacy bundle executable under
+        # lib/apm is managed; a traversal component could point anywhere.
+        case "/$link_target/" in
+            */./*|*/../*) die "refusing to overwrite an unrelated APM symlink: $link_path" ;;
+        esac
+        case "$link_target" in
+            "$releases_path"/v*/apm|"$LIB_ROOT"/apm) ;;
             *) die "refusing to overwrite an unrelated APM symlink: $link_path" ;;
         esac
         [ ! -d "$link_path" ] || die "refusing to overwrite an APM symlink that resolves to a directory: $link_path"
     fi
+    LINK_PATH=$link_path
 
     STAGE_PATH="$releases_path/.stage-$generation"
     RELEASE_PATH="$releases_path/$generation"
@@ -333,9 +347,21 @@ promote_bundle() {
     RELEASE_PATH=''
 
     # Best-effort cleanup of superseded generations and the legacy single-bundle layout.
+    # Only installer-owned entries are removed: abandoned stages and directories
+    # carrying the ownership marker every generation writes. Anything else is
+    # left in place with a warning.
     for entry in "$releases_path"/* "$releases_path"/.stage-*; do
         { [ -e "$entry" ] || [ -L "$entry" ]; } || continue
         [ "$entry" != "$release_dir" ] || continue
+        case "$entry" in
+            "$releases_path"/.stage-*) ;;
+            *)
+                if [ -L "$entry" ] || [ ! -d "$entry" ] || [ ! -f "$entry/.apm-installed" ] || [ -L "$entry/.apm-installed" ]; then
+                    log "warning: leaving an unrecognized entry in the APM releases directory: $entry"
+                    continue
+                fi
+                ;;
+        esac
         rm -rf "$entry" || log "warning: unable to remove a superseded APM release: $entry"
     done
     if [ -f "$LIB_ROOT/.apm-installed" ] && [ ! -L "$LIB_ROOT/.apm-installed" ]; then

@@ -566,6 +566,43 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         (Get-ReleaseEntry -InstallRoot $script:InstallRoot).Count | Should-Be 0
     }
 
+    It 'refuses to overwrite a managed-looking shim whose generation escapes releases' {
+        $shim = Join-Path $env:APM_INSTALL_DIR 'apm.cmd'
+        New-Item -ItemType Directory -Path $env:APM_INSTALL_DIR -Force | Out-Null
+        $content = "@echo off`r`n`"%~dp0..\releases\..\apm.exe`" %*`r`n"
+        [IO.File]::WriteAllText($shim, $content, [Text.Encoding]::ASCII)
+
+        { & $script:TestRepository.Script -CliOnly -Confirm:$false } |
+            Should-Throw -ExceptionMessage '*unrelated APM shim*'
+
+        [IO.File]::ReadAllText($shim) | Should-Be $content
+        (Get-ReleaseEntry -InstallRoot $script:InstallRoot).Count | Should-Be 0
+    }
+
+    It 'leaves entries it did not create under releases and still removes the superseded generation' {
+        & $script:TestRepository.Script -CliOnly -Confirm:$false
+        $first = Get-ActiveRelease -InstallRoot $script:InstallRoot
+        $releases = Join-Path $script:InstallRoot 'releases'
+        $notes = Join-Path $releases 'notes'
+        $unmarked = Join-Path $releases 'v0.28.0-unmarked'
+        New-Item -ItemType Directory -Path $notes, $unmarked -Force | Out-Null
+        [IO.File]::WriteAllText((Join-Path $notes 'todo'), 'user notes')
+        [IO.File]::WriteAllText((Join-Path $releases 'README.txt'), 'user file')
+        $warnings = New-Object Collections.Generic.List[string]
+        Mock Write-Warning { $warnings.Add($Message) }
+
+        & $script:TestRepository.Script -CliOnly -Confirm:$false
+
+        ($warnings -join ' ') | Should-MatchString 'Leaving an unrecognized entry in the APM releases directory'
+        [IO.File]::ReadAllText((Join-Path $notes 'todo')) | Should-Be 'user notes'
+        [IO.File]::ReadAllText((Join-Path $releases 'README.txt')) | Should-Be 'user file'
+        Test-Path -LiteralPath $unmarked | Should-BeTrue
+        Test-Path -LiteralPath $first | Should-BeFalse
+        Get-ActiveRelease -InstallRoot $script:InstallRoot | Should-NotBe $first
+        & (Join-Path $script:InstallRoot 'bin\apm.cmd') --version | Should-MatchString '0\.29\.0'
+        $LASTEXITCODE | Should-Be 0
+    }
+
     It 'replaces the previous generation and removes it after activation' {
         & $script:TestRepository.Script -CliOnly -Confirm:$false
         $first = Get-ActiveRelease -InstallRoot $script:InstallRoot
@@ -605,6 +642,7 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         $target = Join-Path $TestDrive ('outside-' + [Guid]::NewGuid().ToString('N'))
         $stale = Join-Path $script:InstallRoot 'releases\v0.28.0-stale'
         New-Item -ItemType Directory -Path $stale, $target -Force | Out-Null
+        [IO.File]::WriteAllText((Join-Path $stale '.apm-installed'), "v0.28.0`r`n", [Text.Encoding]::ASCII)
         [IO.File]::WriteAllText((Join-Path $target 'keep'), 'outside content')
         New-Item -ItemType Junction -Path (Join-Path $stale '_internal') -Target $target | Out-Null
         $warnings = New-Object Collections.Generic.List[string]

@@ -511,6 +511,63 @@ assert_true 'new generation is active despite cleanup failure' test "$(active_re
 assert_true 'command is usable despite cleanup failure' file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
 assert_true 'cleanup failure still releases the lock' test ! -e "$CASE_ROOT/install/lib/apm/.lock"
 
+new_case traversal-symlink
+make_fixture Linux x86_64
+mkdir -p "$CASE_ROOT/install/lib/apm/releases" "$CASE_ROOT/elsewhere"
+printf 'unrelated command\n' > "$CASE_ROOT/elsewhere/apm"
+ln -s "$CASE_ROOT/install/lib/apm/releases/../../../elsewhere/apm" "$CASE_INSTALL/apm"
+run_case --cli-only
+record_result 'symlink with a traversal component is not overwritten' failure
+assert_true 'traversal symlink reaches ownership validation' out_has 'refusing to overwrite an unrelated APM symlink'
+assert_true 'traversal symlink is preserved' \
+    test "$(readlink "$CASE_INSTALL/apm")" = "$CASE_ROOT/install/lib/apm/releases/../../../elsewhere/apm"
+assert_true 'traversal symlink target is untouched' file_has "$CASE_ROOT/elsewhere/apm" 'unrelated command'
+
+new_case foreign-releases-entries
+make_fixture Linux x86_64
+run_case --cli-only
+record_result 'foreign entries fixture installs prior generation' success
+first_release=$(active_release)
+mkdir "$CASE_ROOT/install/lib/apm/releases/notes"
+printf 'user notes\n' > "$CASE_ROOT/install/lib/apm/releases/notes/todo"
+printf 'user file\n' > "$CASE_ROOT/install/lib/apm/releases/README.txt"
+mkdir "$CASE_ROOT/install/lib/apm/releases/v0.28.0-unmarked"
+sleep 1
+run_case --cli-only
+record_result 'foreign entries do not block supersession' success
+assert_true 'foreign entries are diagnosed' out_has 'leaving an unrecognized entry in the APM releases directory'
+assert_true 'foreign directory is preserved' file_has "$CASE_ROOT/install/lib/apm/releases/notes/todo" 'user notes'
+assert_true 'foreign file is preserved' file_has "$CASE_ROOT/install/lib/apm/releases/README.txt" 'user file'
+assert_true 'unmarked release-like directory is preserved' test -d "$CASE_ROOT/install/lib/apm/releases/v0.28.0-unmarked"
+assert_true 'marked superseded generation is still removed' test ! -e "$first_release"
+assert_true 'command is usable beside foreign entries' file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
+
+new_case signal-after-activation
+make_fixture Linux x86_64
+run_case --cli-only
+record_result 'activation signal fixture installs prior generation' success
+prior_release=$(active_release)
+sleep 1
+real_mv=$(command -v mv)
+cat > "$CASE_BIN/mv" <<EOF
+#!/usr/bin/env bash
+'$real_mv' "\$@" || exit \$?
+for argument in "\$@"; do
+    case "\$argument" in */.apm-v0.29.0-*) : > '$CASE_ROOT/activation-signal'; kill -TERM "\$PPID" ;; esac
+done
+EOF
+chmod +x "$CASE_BIN/mv"
+run_case --cli-only
+record_result 'interruption after activation exits by signal' failure
+assert_true 'activation signal follows the link rename' test -f "$CASE_ROOT/activation-signal"
+assert_true 'activation signal exits 130' test "$STATUS" -eq 130
+assert_true 'activation signal keeps the new generation active' test "$(active_release)" != "$prior_release"
+assert_true 'activated generation survives the interrupted cleanup' test -x "$(active_release)/apm"
+assert_true 'activated command is usable after interruption' file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
+assert_true 'activation signal releases the lock' test ! -e "$CASE_ROOT/install/lib/apm/.lock"
+assert_true 'activation signal leaves no stage behind' \
+    test -z "$(find "$CASE_ROOT/install/lib/apm/releases" -name '.stage-*' -print -quit)"
+
 # Fail each step once. The active generation must be untouched by any failure
 # before the single activating rename, and nothing partial may remain.
 for prior in existing fresh; do

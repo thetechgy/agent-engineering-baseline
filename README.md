@@ -155,16 +155,23 @@ changes PATH, or creates a symlink.
 Every run installs a fresh generation and activates it in one atomic step, so
 the previously active generation stays usable until that step and nothing needs
 a backup or rollback. If a run fails before activation, its stage is removed
-and the prior installation is untouched. After activation, superseded
-generations and legacy layouts are removed best effort with a warning on
-failure. A second bootstrap targeting the same installation root fails
+and the prior installation is untouched. A generation the command already
+references is never removed, even if the run is interrupted right after
+activation. After activation, superseded generations and legacy layouts are
+removed best effort with a warning on failure; only entries the installer
+created (abandoned stages and directories carrying its `.apm-installed`
+marker) are candidates, and anything else under `releases` is left in place
+with a warning. A second bootstrap targeting the same installation root fails
 immediately instead of waiting.
 
 On Linux and macOS, `${APM_INSTALL_DIR:-$HOME/.local/bin}/apm` is a symlink to
-`../lib/apm/releases/v<pin>-<timestamp>-<pid>/apm`, and activation renames a
-new symlink over it. Linux uses `sha256sum`; macOS uses `shasum -a 256`. An
-existing unrelated command, a regular file, or a link outside the sibling
-`lib/apm` directory is not overwritten. The fail-fast lock is the directory
+the absolute path of `<root>/lib/apm/releases/v<pin>-<timestamp>-<pid>/apm`,
+and activation renames a new symlink over it. Because the target is absolute,
+moving the installation tree requires running the bootstrap again. Linux uses
+`sha256sum`; macOS uses `shasum -a 256`. An existing unrelated command, a
+regular file, or a link that does not name a generation executable or the
+legacy `lib/apm/apm` bundle (including any `.` or `..` path component) is not
+overwritten. The fail-fast lock is the directory
 `lib/apm/.lock`; normal exit and handled signals remove it, and after a forced
 kill the diagnostic names it so you can confirm no bootstrap is running and
 remove it.

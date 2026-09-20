@@ -364,7 +364,10 @@ function Install-ReviewedBundle {
     $shimStagePath = Join-Path $binPath ".apm-$generation.cmd"
     $shimLines = @('@echo off', "`"%~dp0..\releases\$generation\apm.exe`" %*")
     $shimContent = ($shimLines -join [Environment]::NewLine) + [Environment]::NewLine
-    $managedShimPattern = '^@echo off\r?\n"%~dp0\.\.\\(current|releases\\[^"\\]+)\\apm\.exe" %\*\r?\n$'
+    # Only the legacy junction or a generation named by this installer's grammar is
+    # managed; a traversal component such as `..` could point anywhere.
+    $generationPattern = 'v\d+\.\d+\.\d+(?:a\d+|b\d+|rc\d+)?-\d{8}T\d{6}Z-[0-9a-f]{8}'
+    $managedShimPattern = "^@echo off\r?\n`"%~dp0\.\.\\(current|releases\\$generationPattern)\\apm\.exe`" %\*\r?\n`$"
 
     $mutex = New-Object Threading.Mutex($false, (Get-MutexName -InstallRoot $installRoot))
     $mutexAcquired = $false
@@ -432,14 +435,22 @@ function Install-ReviewedBundle {
         $activated = $true
 
         # Best-effort cleanup of superseded generations and the legacy current junction.
-        # Only plain trees are removed, so a reparse point can never redirect deletion.
+        # Only installer-owned entries are removed: abandoned stages and directories
+        # carrying the ownership marker every generation writes; anything else is left
+        # with a warning. Only plain trees are removed, so a reparse point can never
+        # redirect deletion.
         foreach ($entry in @(Get-ChildItem -LiteralPath $releasesPath -Force)) {
             if ($entry.FullName -ieq $releasePath) { continue }
+            $marker = Get-Item -LiteralPath (Join-Path $entry.FullName '.apm-installed') -Force -ErrorAction SilentlyContinue
+            $owned = $entry.PSIsContainer -and -not ($entry.Attributes -band [IO.FileAttributes]::ReparsePoint) -and (
+                $entry.Name -like '.stage-*' -or
+                ($marker -and -not $marker.PSIsContainer -and -not ($marker.Attributes -band [IO.FileAttributes]::ReparsePoint)))
+            if (-not $owned) {
+                Write-Warning -Message "Leaving an unrecognized entry in the APM releases directory: $($entry.FullName)"
+                continue
+            }
             try {
-                if ($entry.PSIsContainer) { Assert-PlainTree -Path $entry.FullName -Label 'Superseded APM release' }
-                elseif ($entry.Attributes -band [IO.FileAttributes]::ReparsePoint) {
-                    throw 'Superseded APM release entry is a reparse point.'
-                }
+                Assert-PlainTree -Path $entry.FullName -Label 'Superseded APM release'
                 Remove-Item -LiteralPath $entry.FullName -Recurse -Force -ErrorAction Stop
             }
             catch { Write-Warning -Message "Unable to remove a superseded APM release at $($entry.FullName): $_" }
@@ -459,6 +470,11 @@ function Install-ReviewedBundle {
         catch { Write-Warning -Message "The reviewed CLI is installed, but the user PATH could not be updated; add $binPath manually: $_" }
     }
     finally {
+        # A generation the shim already references is live, even if the run was
+        # interrupted between the atomic replacement and the flag assignment.
+        if (-not $activated -and (Test-Path -LiteralPath $shimPath)) {
+            try { $activated = [IO.File]::ReadAllText($shimPath) -ceq $shimContent } catch { $activated = $false }
+        }
         if (-not $activated) {
             foreach ($path in @($shimStagePath, $stagePath, $releasePath)) {
                 if (Test-Path -LiteralPath $path) {
