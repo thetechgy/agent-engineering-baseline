@@ -2,8 +2,8 @@
 
 This MIT-licensed repository is a shared, project-agnostic configuration for
 [Microsoft Agent Package Manager (APM)](https://microsoft.github.io/apm/).
-It deploys shared instructions and skills to Codex, GitHub Copilot, and the
-other harnesses supported by APM's native global compiler.
+It deploys shared instructions and skills to Codex CLI and GitHub Copilot CLI
+through APM's native install, update, and compile commands.
 
 The bootstrap has one deliberately custom security boundary: acquiring and
 promoting a trusted APM CLI. Package installation, executable trust, dependency
@@ -32,12 +32,28 @@ reviewed dependency snapshot; native frozen installation and audit check that
 snapshot in this checkout. Hashes establish integrity against the recorded
 values, not whether the content is benign.
 
-A consumer installation uses native APM resolution and its own destination
-lockfile. Installing a fixed baseline commit does not force its transitive
-branch dependencies to match this repository's lockfile: a fresh installation
-can resolve newer upstream commits. The wrappers then run native `apm update`
-to refresh branch references in the destination. Review that destination's
-resolved content and lockfile when assessing what was actually deployed.
+### What the review boundary does and does not cover
+
+The committed pins govern exactly one thing: which APM CLI executes on the
+consumer's machine. They do not pin skill content.
+
+- `apm.yml` tracks five third-party skills at their upstream `main` branch.
+- Bootstrap runs native `apm install --trust-bin --trust-transitive-mcp` and
+  then `apm update --yes`, so every run resolves those branch refs to their
+  *current* upstream commits and trusts any launcher binaries and transitive
+  MCP servers they declare. The `msgraph` skill, for example, ships a prebuilt
+  launcher that `--trust-bin` authorizes.
+- A consumer installation uses native APM resolution and its own destination
+  lockfile. This repository's `apm.lock.yaml` is a reviewed snapshot of one
+  checkout; it is never what a consumer installs from. Installing a fixed
+  baseline commit therefore does not force transitive dependencies to match
+  this lockfile.
+
+Treat an upstream skill compromise as code execution on every consumer at its
+next bootstrap. Review the destination's resolved content and lockfile when
+assessing what was actually deployed. If deterministic skill content is
+required, pin the dependencies to commits in the destination manifest and use
+native APM directly instead of the wrappers.
 
 A CLI update first enters a review-only pull request as hashes and generated
 output. The candidate CLI is not executed by the privileged update workflow.
@@ -76,8 +92,10 @@ allowlist contains only:
 
 The manifest explicitly supplies Copilot's `tools` and Codex's `enabled_tools`
 using APM's native passthrough support and a YAML alias to keep both lists
-identical. APM also passes `enabled_tools` through
-to Copilot, where `tools` is the operative setting. New tools require a
+identical. The pinned APM does not derive `enabled_tools` from `tools`, so
+the passthrough is required; APM reports it once per dependency resolution as
+`[!] MCP dependency 'microsoft-learn': unknown key(s) preserved in extra:
+enabled_tools`. That warning is expected native output. New tools require a
 reviewed manifest change; the list does not auto-expand.
 
 APM generates `.github/mcp.json` and `.codex/config.toml` for repository
@@ -85,12 +103,6 @@ installs, or the user-scoped Copilot and Codex MCP configs for global installs.
 These repository configs and the lockfile's MCP metadata are review artifacts;
 regenerate them with APM rather than editing them directly. Codex loads
 project-scoped configuration only for trusted projects.
-
-Existing APM-managed installations migrate from the earlier `microsoftdocs/mcp`
-registry dependency on the next bootstrap update. APM removes the obsolete
-`mcp` entry and deploys `microsoft-learn` through its native reconciliation;
-no custom renaming script is needed. A legacy entry still required by another
-declared dependency remains installed.
 
 Tool queries and fetch URLs leave the machine for Microsoft's service. Do not
 include secrets or private repository content. The service requires network
@@ -215,51 +227,52 @@ Scope and target selection are independent. Global mode deploys user-scoped
 Codex and Copilot primitives for use across repositories; repository mode
 deploys the same targets into the current project. Install, update, and
 repository compile all supply explicit targets so saved APM configuration or
-auto-detection cannot redirect the baseline. Repository mode intentionally
-updates that project's manifest, lockfile, package cache, and compiled
-outputs. The update step refreshes every branch-ref dependency declared in
-the destination manifest, not only the baseline; review that manifest before
-running bootstrap if it declares other dependencies.
+auto-detection cannot redirect the baseline; global install persists
+`codex,copilot` in `~/.apm/apm.yml`, so `apm compile --global` writes only
+those two root contexts rather than every harness APM supports. Repository
+mode intentionally updates that project's manifest, lockfile, package cache,
+and compiled outputs. The update step refreshes every branch-ref dependency
+declared in the destination manifest, not only the baseline; review that
+manifest before running bootstrap if it declares other dependencies.
 
-Global compilation is intentionally broad native APM behavior: it writes root
-contexts for roughly eleven supported harnesses and cannot be narrowed with
-`--target` in global mode. It also writes this universal instruction into both
-Copilot global context files. The duplicate Copilot context and unscoped
-instruction warning are accepted native outputs.
+Native output written by each mode:
 
-### Migrating from the earlier custom deployment
+| Mode | Manifest, lockfile, config | Root contexts | MCP configuration | Skills |
+|---|---|---|---|---|
+| Global | `~/.apm/apm.yml`, `~/.apm/apm.lock.yaml`, `~/.apm/config.json` | `~/.codex/AGENTS.md`, `~/.copilot/AGENTS.md`, `~/.copilot/copilot-instructions.md` | `~/.codex/config.toml`, `~/.copilot/mcp-config.json` | `~/.agents/skills/*` |
+| Repository | `./apm.yml`, `./apm.lock.yaml`, `./apm_modules/` | `./AGENTS.md`, `./.github/copilot-instructions.md` | `./.codex/config.toml`, `./.github/mcp.json` | `./.agents/skills/*` |
 
-Older repository versions directly generated two files without native APM
-ownership markers. If those exact legacy generated files remain, remove them
-once before the first native bootstrap:
-
-```sh
-rm -f ~/.copilot/copilot-instructions.md ~/.codex/AGENTS.md
-```
-
-Do not remove `~/.copilot/AGENTS.md`; user-authored global files remain
-protected by APM's collision behavior. Old snapshots under
-`~/.apm/backups/agent-engineering-baseline/` may be retained or removed by the
-user after migration.
+The two Copilot context files carry the same instruction body under different
+generated headers; that duplication is native Copilot target behavior. Expected
+native diagnostics during a bootstrap are the `enabled_tools` passthrough
+warning described above, the unscoped-instruction warning for the universal
+instruction, and APM's own `A new version of APM is available … Run apm
+self-update` notice. Ignore the self-update notice: this repository pins the
+CLI, and `apm self-update` would replace the reviewed executable with an
+unreviewed one.
 
 ## Repository validation
 
-Use the reviewed absolute APM executable and reproduce the deployment:
+Use the reviewed absolute APM executable that bootstrap reported as
+`done; reviewed CLI: <path>` and reproduce the deployment:
 
 ```sh
-apm install --frozen --trust-bin
-apm compile --target codex,copilot --validate
-apm compile --target codex,copilot
-apm audit --ci
-apm pack --dry-run
+APM="$HOME/.local/lib/apm/apm"   # the path bootstrap printed
+"$APM" install --frozen --trust-bin
+"$APM" compile --target codex,copilot --validate
+"$APM" compile --target codex,copilot
+"$APM" audit --ci
+"$APM" pack --dry-run
 ```
 
-Run the complete local gate:
+Run the complete local gate, which includes the Bash fixture suite:
 
 ```sh
-./tests/bootstrap.sh
 pwsh -NoLogo -NoProfile -File ./scripts/Invoke-Validation.ps1
 ```
+
+For the fast loop, `./tests/bootstrap.sh` runs the Bash fixtures alone and
+`./scripts/Invoke-Validation.ps1 -Suite Pester` runs Pester and the analyzer.
 
 The gate covers Pester (including both CLI MCP allowlists and endpoint checks),
 PSScriptAnalyzer, Bash fixture archives, ShellCheck,
