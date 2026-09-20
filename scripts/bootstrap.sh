@@ -322,7 +322,10 @@ promote_bundle() {
     fi
     trap 'exit 130' HUP INT TERM
     if [ "$LOCK_ACQUIRED" != true ]; then
-        die "another bootstrap owns $LOCK_PATH; wait for it to finish, or remove that directory if no bootstrap is running."
+        if [ -d "$LOCK_PATH" ] && [ ! -L "$LOCK_PATH" ]; then
+            die "another bootstrap owns $LOCK_PATH; wait for it to finish, or remove that directory if no bootstrap is running."
+        fi
+        die "refusing to use an unrelated entry as the APM installation lock: $LOCK_PATH"
     fi
 
     if [ -e "$link_path" ] || [ -L "$link_path" ]; then
@@ -401,7 +404,8 @@ promote_bundle() {
         rm -rf "$LIB_ROOT/apm" "$LIB_ROOT/_internal" "$LIB_ROOT/.apm-installed" ||
             log "warning: unable to remove the legacy APM bundle under $LIB_ROOT"
     fi
-    release_install_lock
+    # The lock is held until exit so a concurrent bootstrap cannot supersede and
+    # remove this generation while native APM is still running from it.
 }
 
 acquire_cli() {

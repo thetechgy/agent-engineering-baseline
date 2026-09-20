@@ -101,6 +101,19 @@ public static class $className
         {
             File.AppendAllText(log, Environment.CommandLine + Environment.NewLine);
         }
+        string mutexName = Environment.GetEnvironmentVariable("APM_TEST_MUTEX_NAME");
+        if (!String.IsNullOrEmpty(mutexName) && args.Length > 0 && args[0] == "install")
+        {
+            // Report whether the bootstrap still holds its installation mutex during the handoff.
+            using (System.Threading.Mutex mutex = new System.Threading.Mutex(false, mutexName))
+            {
+                bool acquired = false;
+                try { acquired = mutex.WaitOne(0); }
+                catch (System.Threading.AbandonedMutexException) { acquired = true; }
+                File.WriteAllText(log + ".mutex", acquired ? "free" : "held");
+                if (acquired) { mutex.ReleaseMutex(); }
+            }
+        }
         if (args.Length == 1 && args[0] == "--version")
         {
             string fault = Environment.GetEnvironmentVariable("APM_TEST_PROMOTION_FAULT");
@@ -397,6 +410,7 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
                 'APM_RELEASE_BASE_URL',
                 'APM_TEST_CALL_LOG',
                 'APM_TEST_PROMOTION_FAULT',
+                'APM_TEST_MUTEX_NAME',
                 'APM_TEST_FIXTURE_ARCHIVE',
                 'APM_TEST_REQUESTED_URI',
                 'APM_TEST_TLS_DURING_DOWNLOAD',
@@ -910,6 +924,24 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         { & $script:TestRepository.Script -CliOnly -Confirm:$false } | Should-Throw -ExceptionMessage $Message
         (Get-ReleaseEntry -InstallRoot $script:InstallRoot).Count | Should-Be 0
         Test-Path -LiteralPath (Join-Path $script:InstallRoot 'bin\apm.cmd') | Should-BeFalse
+    }
+
+    It 'holds the installation mutex across the native handoff and releases it afterwards' {
+        $installRoot = [IO.Path]::GetFullPath((Split-Path -Parent $env:APM_INSTALL_DIR))
+        $env:APM_TEST_MUTEX_NAME = & {
+            . $script:TestRepository.Script -WhatIf 6> $null
+            Get-MutexName -InstallRoot $installRoot
+        }
+
+        & $script:TestRepository.Script -Scope Repo -Confirm:$false
+
+        Get-Content -LiteralPath ($script:CallLog + '.mutex') -Raw | Should-Be 'held'
+        $mutex = New-Object Threading.Mutex($false, $env:APM_TEST_MUTEX_NAME)
+        try {
+            $mutex.WaitOne(0) | Should-BeTrue
+            $mutex.ReleaseMutex()
+        }
+        finally { $mutex.Dispose() }
     }
 
     It 'fails fast while another bootstrap holds the installation mutex' {

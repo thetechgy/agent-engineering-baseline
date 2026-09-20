@@ -420,6 +420,7 @@ function Install-ReviewedBundle {
     $mutex = New-Object Threading.Mutex($false, (Get-MutexName -InstallRoot $installRoot))
     $mutexAcquired = $false
     $activated = $false
+    $handedOff = $false
     # Paths become cleanup-owned only once this run has created them.
     $ownedPaths = New-Object Collections.Generic.List[string]
     try {
@@ -535,6 +536,7 @@ function Install-ReviewedBundle {
             [Environment]::SetEnvironmentVariable('Path', (Add-PathEntry -PathValue $userPath -Entry @($binPath)), 'User')
         }
         catch { Write-Warning -Message "The reviewed CLI is installed, but the user PATH could not be updated; add $binPath manually: $_" }
+        $handedOff = $true
     }
     finally {
         # A generation the shim already references is live, even if the run was
@@ -555,14 +557,20 @@ function Install-ReviewedBundle {
                 catch { Write-Warning -Message "Leaving an abandoned APM stage at ${path}: $_" }
             }
         }
-        if ($mutexAcquired) { $mutex.ReleaseMutex() }
-        $mutex.Dispose()
+        # On success the caller holds the lock across the native handoff so a
+        # concurrent bootstrap cannot supersede and remove this generation while
+        # APM is still running from it.
+        if (-not $handedOff) {
+            if ($mutexAcquired) { $mutex.ReleaseMutex() }
+            $mutex.Dispose()
+        }
     }
 
     [pscustomobject]@{
         Executable = $promotedExecutable
         Shim       = $shimPath
         Bin        = $binPath
+        Lock       = $mutex
     }
 }
 
@@ -640,30 +648,35 @@ if (-not $PSCmdlet.ShouldProcess("APM CLI v$($metadata.Pin)", 'Acquire and promo
     return
 }
 $installation = Get-ReviewedApm -Metadata $metadata
+try {
+    $env:PATH = $originalProcessPath
+    $ambient = Get-Command -Name apm -ErrorAction SilentlyContinue | Select-Object -First 1
+    $env:PATH = Add-PathEntry -PathValue $originalProcessPath -Entry @($installation.Bin)
+    if ($ambient) {
+        $ambientPath = if ($ambient.PSObject.Properties['Path']) { $ambient.Path } else { $ambient.Name }
+        if ($ambientPath -and $ambientPath -ine $installation.Shim -and
+            $ambientPath -ine $installation.Executable) {
+            Write-Warning "$ambientPath may still shadow $($installation.Shim) in new shells until PATH is reordered."
+        }
+    }
 
-$env:PATH = $originalProcessPath
-$ambient = Get-Command -Name apm -ErrorAction SilentlyContinue | Select-Object -First 1
-$env:PATH = Add-PathEntry -PathValue $originalProcessPath -Entry @($installation.Bin)
-if ($ambient) {
-    $ambientPath = if ($ambient.PSObject.Properties['Path']) { $ambient.Path } else { $ambient.Name }
-    if ($ambientPath -and $ambientPath -ine $installation.Shim -and
-        $ambientPath -ine $installation.Executable) {
-        Write-Warning "$ambientPath may still shadow $($installation.Shim) in new shells until PATH is reordered."
+    if (-not $CliOnly) {
+        $packageRef = if ($env:BASELINE_PACKAGE_REF) { $env:BASELINE_PACKAGE_REF }
+        else { $defaultPackageRef }
+        if ($Scope -eq 'Global') {
+            Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata install --global --target 'codex,copilot' --trust-bin --trust-transitive-mcp $packageRef
+            Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata update --global --yes --target 'codex,copilot'
+            Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata compile --global
+        }
+        else {
+            Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata install --target 'codex,copilot' --trust-bin --trust-transitive-mcp $packageRef
+            Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata update --yes --target 'codex,copilot'
+            Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata compile --target 'codex,copilot'
+        }
     }
+    Write-Information -MessageData "Done; reviewed CLI: $($installation.Shim) -> $($installation.Executable)" -InformationAction Continue
 }
-
-if (-not $CliOnly) {
-    $packageRef = if ($env:BASELINE_PACKAGE_REF) { $env:BASELINE_PACKAGE_REF }
-    else { $defaultPackageRef }
-    if ($Scope -eq 'Global') {
-        Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata install --global --target 'codex,copilot' --trust-bin --trust-transitive-mcp $packageRef
-        Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata update --global --yes --target 'codex,copilot'
-        Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata compile --global
-    }
-    else {
-        Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata install --target 'codex,copilot' --trust-bin --trust-transitive-mcp $packageRef
-        Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata update --yes --target 'codex,copilot'
-        Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata compile --target 'codex,copilot'
-    }
+finally {
+    $installation.Lock.ReleaseMutex()
+    $installation.Lock.Dispose()
 }
-Write-Information -MessageData "Done; reviewed CLI: $($installation.Shim) -> $($installation.Executable)" -InformationAction Continue

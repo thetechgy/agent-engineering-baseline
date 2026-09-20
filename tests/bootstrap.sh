@@ -851,6 +851,45 @@ assert_true 'owner completes after the contender fails' file_has "$CASE_ROOT/fir
 assert_true 'owner leaves a usable command' file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
 assert_true 'owner releases the lock' test ! -e "$CASE_ROOT/install/lib/apm/.lock"
 
+new_case concurrent-deployment
+make_fixture Linux x86_64
+real_sleep=$(command -v sleep)
+# The fixture CLI blocks during the native handoff so a contender can run then.
+cat > "$BUNDLE_ROOT/apm" <<EOF
+#!/usr/bin/env bash
+printf '%s\n' "\$0 \$*" >> '$CALL_LOG'
+case "\${1-}" in
+    --version) printf 'Agent Package Manager (APM) CLI version 0.29.0 (fixture)\n' ;;
+    install)
+        : > '$CASE_ROOT/owner-deploying'
+        while [ ! -f '$CASE_ROOT/release-owner' ]; do '$real_sleep' 0.05; done
+        ;;
+esac
+exit 0
+EOF
+tar -czf "$MIRROR_ROOT/v0.29.0/$ARCHIVE_NAME" -C "$FIXTURE_ROOT" "$ARCHIVE_ROOT"
+replace_checksum "$ARCHIVE_ROOT/apm" "$(digest "$BUNDLE_ROOT/apm")"
+replace_checksum "$ARCHIVE_NAME" "$(digest "$MIRROR_ROOT/v0.29.0/$ARCHIVE_NAME")"
+(
+    CASE_ACTOR=first
+    run_case --repo
+    printf '%s\n' "$STATUS" > "$CASE_ROOT/first-status"
+) &
+first_pid=$!
+assert_true 'owner reaches the native handoff' wait_for_file "$CASE_ROOT/owner-deploying"
+owner_release=$(active_release)
+CASE_ACTOR=second
+run_case --cli-only
+record_result 'contender fails fast during the native handoff' failure
+assert_true 'contender is told the lock is held' out_has "another bootstrap owns $CASE_ROOT/install/lib/apm/.lock"
+assert_true 'contender leaves the owner generation active' test "$(active_release)" = "$owner_release"
+assert_true 'contender leaves the owner generation intact' test -d "$owner_release/_internal"
+: > "$CASE_ROOT/release-owner"
+wait "$first_pid"
+assert_true 'owner completes its deployment' file_has "$CASE_ROOT/first-status" '0'
+assert_true 'owner runs every native step from its generation' file_has "$CALL_LOG" 'compile --target codex,copilot'
+assert_true 'owner releases the lock after the handoff' test ! -e "$CASE_ROOT/install/lib/apm/.lock"
+
 for lock_kind in directory file symlink; do
     new_case "lock-$lock_kind"
     make_fixture Linux x86_64
@@ -875,7 +914,12 @@ EOF
     run_case --cli-only
     record_result "$lock_kind lock blocks installation" failure
     assert_true "$lock_kind lock is rejected without waiting" test ! -f "$CASE_ROOT/waits"
-    assert_true "$lock_kind lock diagnostic names the lock and manual recovery" out_has 'remove that directory if no bootstrap is running'
+    if [ "$lock_kind" = directory ]; then
+        assert_true 'directory lock diagnostic names the lock and manual recovery' out_has "another bootstrap owns $lock_path; wait for it to finish, or remove that directory if no bootstrap is running"
+    else
+        assert_true "$lock_kind lock is diagnosed as unrelated" out_has "refusing to use an unrelated entry as the APM installation lock: $lock_path"
+        assert_true "$lock_kind lock is not misreported as another bootstrap" out_lacks 'another bootstrap owns'
+    fi
     assert_true "$lock_kind lock is not removed by a non-owner" test -e "$lock_path" -o -L "$lock_path"
     assert_true "$lock_kind lock preserves the active generation" test "$(active_release)" = "$prior_release"
     assert_true "$lock_kind lock preserves usable command" file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
