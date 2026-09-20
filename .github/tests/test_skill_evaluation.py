@@ -500,8 +500,26 @@ except KeyboardInterrupt:
         root, run, _ = self.benchmark("standard")
         (run / "result.json").unlink()
         (run / "_harbor-jobs").symlink_to(self.root, target_is_directory=True)
-        with self.assertRaisesRegex(ValueError, "retained jobs"):
+        with self.assertRaisesRegex(ValueError, "excluded runtime directory"):
             reports.recover_benchmark(self.workspace, root, "podman", "standard", "failure")
+
+    def test_regular_tree_rejects_linked_excluded_runtime_directories(self):
+        for name in ("_harbor-jobs", "_harbor-tasks"):
+            root = self.root / name.removeprefix("_")
+            root.mkdir()
+            (root / name).symlink_to(self.root, target_is_directory=True)
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError, "excluded runtime directory"):
+                reports.regular_tree(root, excluded_dirs={"_harbor-jobs", "_harbor-tasks"})
+
+    def test_recovery_cli_dispatches_all_arguments(self):
+        root = self.root / "recovery"
+        arguments = ["skill_reports.py", "recover", str(root), "podman", "confirmation", "cancelled"]
+        with patch.dict(os.environ, {"GITHUB_WORKSPACE": str(self.workspace)}), \
+                patch.object(sys, "argv", arguments), \
+                patch.object(reports, "recover_benchmark") as recover:
+            reports.main()
+        recover.assert_called_once_with(
+            self.workspace.resolve(), root, "podman", "confirmation", "cancelled")
 
 
 class UpstreamTests(unittest.TestCase):
@@ -814,15 +832,23 @@ class WorkflowTests(unittest.TestCase):
     def test_interruption_recovery_has_budget_and_no_secret_or_raw_upload(self):
         job = yaml.safe_load((REPO / ".github/workflows/benchmark-skills.yml").read_text())["jobs"]["evaluate"]
         steps = job["steps"]
+        budget = next(step for step in steps if step.get("id") == "budget")
         evaluation = next(step for step in steps if step.get("id") == "evaluation")
         recovery = next(step for step in steps if "skill_reports.py recover" in step.get("run", ""))
         staging = next(step for step in steps if step.get("id") == "artifacts")
         self.assertIn("--harbor-keep-jobs", evaluation["run"])
-        self.assertIn("timeout --signal=INT --kill-after=30s 140m", evaluation["run"])
-        self.assertLessEqual(evaluation["timeout-minutes"] + recovery["timeout-minutes"] + 25,
-                             job["timeout-minutes"])
+        self.assertEqual(budget["timeout-minutes"], 1)
+        self.assertIn("+ 9600", budget["run"])
+        self.assertEqual(evaluation["env"]["EVALUATION_DEADLINE_EPOCH"],
+                         "${{ steps.budget.outputs.deadline_epoch }}")
+        self.assertIn('[[ "$EVALUATION_DEADLINE_EPOCH" =~ ^[0-9]+$ ]]', evaluation["run"])
+        self.assertIn("EVALUATION_DEADLINE_EPOCH - $(date +%s) - 30", evaluation["run"])
+        self.assertIn("evaluation_seconds=8400", evaluation["run"])
+        self.assertIn('timeout --signal=INT --kill-after=30s "${evaluation_seconds}s"', evaluation["run"])
+        self.assertGreaterEqual(job["timeout-minutes"] - 160, recovery["timeout-minutes"] + 15)
         self.assertIn("always()", recovery["if"])
         self.assertEqual(recovery["env"], {"EVALUATION_OUTCOME": "${{ steps.evaluation.outcome }}"})
+        self.assertLess(steps.index(budget), steps.index(evaluation))
         self.assertLess(steps.index(evaluation), steps.index(recovery))
         self.assertLess(steps.index(recovery), steps.index(staging))
         metrics = next(step for step in steps if step.get("with", {}).get("name") == "skill-metrics")

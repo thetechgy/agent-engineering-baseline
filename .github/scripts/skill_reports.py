@@ -79,14 +79,21 @@ def regular_tree(root, *, excluded_dirs=(), excluded_links=()):
     while pending:
         with os.scandir(pending.pop()) as entries:
             for entry in entries:
-                if entry.name in excluded_dirs:
-                    continue  # Never inspect or publish excluded runtime directories.
                 relative = Path(entry.path).relative_to(root)
-                mode = entry.stat(follow_symlinks=False).st_mode
+                metadata = entry.stat(follow_symlinks=False)
+                mode = metadata.st_mode
+                link_or_reparse = stat.S_ISLNK(mode) or bool(
+                    getattr(metadata, "st_file_attributes", 0)
+                    & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+                )
+                if entry.name in excluded_dirs:
+                    require(stat.S_ISDIR(mode) and not link_or_reparse,
+                            f"Linked or invalid excluded runtime directory: {relative}")
+                    continue  # Never inspect or publish excluded runtime directories.
                 if relative in excluded_links:
-                    require(stat.S_ISLNK(mode), f"Expected linked input: {relative}")
+                    require(link_or_reparse, f"Expected linked input: {relative}")
                     continue  # Recognized generated link; never inspect its target.
-                require(stat.S_ISDIR(mode) or stat.S_ISREG(mode),
+                require(not link_or_reparse and (stat.S_ISDIR(mode) or stat.S_ISREG(mode)),
                         f"Linked or special input: {relative}")
                 if stat.S_ISDIR(mode):
                     pending.append(Path(entry.path))
