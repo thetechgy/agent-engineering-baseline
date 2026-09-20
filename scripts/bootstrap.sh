@@ -20,6 +20,13 @@ MODE='global'
 DRY_RUN=false
 CLI_ONLY=false
 TEMP_ROOT=''
+LIB_ROOT=''
+LOCK_PATH=''
+LOCK_ACQUIRED=false
+STAGE_PATH=''
+LINK_STAGE=''
+RELEASE_PATH=''
+PROMOTED_APM=''
 ORIGINAL_PATH=$PATH
 
 usage() {
@@ -50,8 +57,11 @@ cleanup() {
             *) log "warning: refusing to clean non-absolute staging path: $TEMP_ROOT" ;;
         esac
     fi
+    remove_unactivated_release
+    release_install_lock
 }
-trap cleanup EXIT HUP INT TERM
+trap cleanup EXIT
+trap 'exit 130' HUP INT TERM
 
 require_command() {
     command -v "$1" >/dev/null 2>&1 || die "required command is unavailable: $1"
@@ -238,149 +248,102 @@ assert_safe_directory() {
     fi
 }
 
-promote_bundle() (
-    local source_bundle=$1 install_parent bundle_parent bundle_path link_path actual_version
-    local stage_path backup_path old_link_target='' had_bundle=false had_link=false
-    local backed_up=false promoted=false link_removed=false link_created=false
-    local lock_path lock_acquired=false interrupted=false lock_wait=0 promotion_complete=false
+release_install_lock() {
+    if [ "$LOCK_ACQUIRED" = true ] && [ -d "$LOCK_PATH" ]; then
+        rmdir "$LOCK_PATH" || log "warning: unable to release the APM installation lock: $LOCK_PATH"
+    fi
+    LOCK_ACQUIRED=false
+}
+
+remove_unactivated_release() {
+    local path
+    for path in "$STAGE_PATH" "$LINK_STAGE" "$RELEASE_PATH"; do
+        [ -n "$path" ] || continue
+        case "$path" in /*) ;; *) continue ;; esac
+        if [ -e "$path" ] || [ -L "$path" ]; then
+            rm -rf "$path" || log "warning: unable to clean an unactivated APM release path: $path"
+        fi
+    done
+    STAGE_PATH=''
+    LINK_STAGE=''
+    RELEASE_PATH=''
+}
+
+# Each run installs into a fresh generation directory and activates it by
+# atomically replacing the bin/apm symlink. The previously active generation
+# keeps working until that single rename, so no backup or rollback is needed.
+promote_bundle() {
+    local source_bundle=$1 install_parent releases_path link_path generation release_dir entry actual_version
     install_parent=$(dirname "$INSTALL_DIR")
-    bundle_parent="$install_parent/lib"
-    bundle_path="$bundle_parent/apm"
+    LIB_ROOT="$install_parent/lib/apm"
+    releases_path="$LIB_ROOT/releases"
     link_path="$INSTALL_DIR/apm"
-    stage_path="$bundle_parent/.apm-stage-$$"
-    backup_path="$bundle_parent/.apm-rollback-$$"
-    lock_path="$bundle_parent/.apm-install.lock"
+    LOCK_PATH="$LIB_ROOT/.lock"
+    generation="v$PIN-$(date -u +%Y%m%dT%H%M%SZ)-$$"
 
     assert_safe_directory "$install_parent" 'APM installation parent'
     assert_safe_directory "$INSTALL_DIR" 'APM shim directory'
-    assert_safe_directory "$bundle_parent" 'APM bundle parent'
-    mkdir -p "$INSTALL_DIR" "$bundle_parent"
+    assert_safe_directory "$LIB_ROOT" 'APM library directory'
+    assert_safe_directory "$releases_path" 'APM releases directory'
+    mkdir -p "$INSTALL_DIR" "$releases_path"
 
-    # Own the shared bundle transaction before inspecting its previous state.
-    # mkdir is atomic and available on both Linux and macOS; never steal a lock.
-    # Invoked by EXIT traps, including failures before promotion begins.
-    # shellcheck disable=SC2317
-    release_install_lock() {
-        if [ "$lock_acquired" = true ]; then
-            rmdir "$lock_path" || log "warning: unable to release APM installation lock: $lock_path"
-        fi
-    }
-    trap release_install_lock EXIT
-    # Record signals until mkdir's result is known, so a just-created lock is
-    # still released if interruption arrives before ownership is recorded.
-    trap 'interrupted=true' HUP INT TERM
-    while ! (trap '' HUP INT TERM; umask 077; mkdir "$lock_path") 2>/dev/null; do
-        [ "$interrupted" = false ] || exit 1
-        # The owner may release its directory between our failed mkdir and this check.
-        if [ -L "$lock_path" ] || { [ -e "$lock_path" ] && [ ! -d "$lock_path" ]; }; then
-            die "unable to acquire a safe APM installation lock: $lock_path"
-        fi
-        [ "$lock_wait" -lt 120 ] ||
-            die "timed out waiting for the APM installation lock: $lock_path; check directory permissions and inspect it before manually removing a stale lock."
-        sleep 1
-        lock_wait=$((lock_wait + 1))
-    done
-    lock_acquired=true
-    [ "$interrupted" = false ] || exit 1
-
-    if [ -e "$bundle_path" ] || [ -L "$bundle_path" ]; then
-        assert_plain_tree "$bundle_path" 'Existing managed APM bundle'
-        if [ ! -f "$bundle_path/.apm-installed" ] || [ -L "$bundle_path/.apm-installed" ]; then
-            die "refusing to replace an unowned APM bundle: $bundle_path"
-        fi
-        had_bundle=true
+    # mkdir is atomic on Linux and macOS. Never wait or steal: a second bootstrap
+    # fails immediately with a diagnostic naming the lock it would need.
+    if ! (umask 077; mkdir "$LOCK_PATH") 2>/dev/null; then
+        die "another bootstrap owns $LOCK_PATH; wait for it to finish, or remove that directory if no bootstrap is running."
     fi
+    LOCK_ACQUIRED=true
+
     if [ -e "$link_path" ] || [ -L "$link_path" ]; then
         [ -L "$link_path" ] || die "refusing to overwrite unrelated APM command: $link_path"
-        old_link_target=$(readlink "$link_path")
-        [ "$old_link_target" = "$bundle_path/apm" ] ||
-            die "refusing to overwrite an unrelated APM symlink: $link_path"
-        had_link=true
-    fi
-    if [ -e "$stage_path" ] || [ -L "$stage_path" ] ||
-        [ -e "$backup_path" ] || [ -L "$backup_path" ]; then
-        die 'a stale APM promotion path already exists.'
+        case "$(readlink "$link_path")" in
+            "$LIB_ROOT"/*) ;;
+            *) die "refusing to overwrite an unrelated APM symlink: $link_path" ;;
+        esac
+        [ ! -d "$link_path" ] || die "refusing to overwrite an APM symlink that resolves to a directory: $link_path"
     fi
 
-    # Roll back only completed mutations, including failures in final verification.
-    # Invoked by the EXIT trap.
-    # shellcheck disable=SC2317
-    rollback_promotion() {
-        local status=$? rollback_failed=false
-        trap - EXIT
-        # Finish recovery and release the owned lock even if another signal arrives.
-        trap '' HUP INT TERM
-        if [ "$status" -ne 0 ] && [ "$promotion_complete" = false ]; then
-            if [ "$link_created" = true ]; then rm -f "$link_path" || rollback_failed=true; fi
-            if [ "$promoted" = true ]; then rm -rf "$bundle_path" || rollback_failed=true; fi
-            if [ "$backed_up" = true ]; then
-                if [ -e "$bundle_path" ] || [ -L "$bundle_path" ]; then
-                    rollback_failed=true
-                else
-                    mv "$backup_path" "$bundle_path" || rollback_failed=true
-                fi
-            fi
-            if [ "$link_removed" = true ] && [ "$rollback_failed" = false ]; then
-                ln -s "$old_link_target" "$link_path" || rollback_failed=true
-            fi
-            if [ "$rollback_failed" = true ]; then
-                log "warning: APM rollback was incomplete; inspect $bundle_path and $backup_path for recovery."
-            else
-                log 'APM bundle promotion failed; the prior managed installation was restored.'
-            fi
-        fi
-        rm -rf "$stage_path" || log "warning: unable to clean APM staging path: $stage_path"
-        release_install_lock
-        exit "$status"
-    }
-    trap rollback_promotion EXIT
-
-    # Keep each atomic shared-path operation uninterruptible in its worker.
-    # The transaction queues signals, records completion, then checks the queue.
-    run_promotion_step() (
-        trap - EXIT
-        trap '' HUP INT TERM
-        "$@"
-    )
-
-    mkdir "$stage_path"
-    cp -R "$source_bundle/." "$stage_path/"
-    chmod +x "$stage_path/apm"
-    printf 'v%s\n' "$PIN" > "$stage_path/.apm-installed"
-    assert_plain_tree "$stage_path" 'Staged persistent APM bundle'
-    verify_file "$stage_path/apm" "$EXECUTABLE_MEMBER"
-    [ "$interrupted" = false ] || exit 1
-
-    if [ "$had_link" = true ]; then
-        run_promotion_step rm "$link_path"
-        link_removed=true
-        [ "$interrupted" = false ] || exit 1
+    STAGE_PATH="$releases_path/.stage-$generation"
+    RELEASE_PATH="$releases_path/$generation"
+    LINK_STAGE="$INSTALL_DIR/.apm-$generation"
+    if [ -e "$STAGE_PATH" ] || [ -L "$STAGE_PATH" ] || [ -e "$RELEASE_PATH" ] || [ -L "$RELEASE_PATH" ] ||
+        [ -e "$LINK_STAGE" ] || [ -L "$LINK_STAGE" ]; then
+        die "an APM release generation path already exists: $RELEASE_PATH"
     fi
 
-    if [ "$had_bundle" = true ]; then
-        run_promotion_step mv "$bundle_path" "$backup_path"
-        backed_up=true
-        [ "$interrupted" = false ] || exit 1
-    fi
-    run_promotion_step mv "$stage_path" "$bundle_path"
-    promoted=true
-    [ "$interrupted" = false ] || exit 1
-    # Do not expose a replacement command until its installed bytes execute correctly.
-    verify_file "$PROMOTED_APM" "$EXECUTABLE_MEMBER"
-    actual_version=$(reported_version "$PROMOTED_APM")
+    mkdir "$STAGE_PATH"
+    cp -R "$source_bundle/." "$STAGE_PATH/"
+    chmod +x "$STAGE_PATH/apm"
+    printf 'v%s\n' "$PIN" > "$STAGE_PATH/.apm-installed"
+    assert_plain_tree "$STAGE_PATH" 'Staged persistent APM bundle'
+    # Verify the bytes that will be activated, from the path they will keep.
+    verify_file "$STAGE_PATH/apm" "$EXECUTABLE_MEMBER"
+    actual_version=$(reported_version "$STAGE_PATH/apm")
     [ "$actual_version" = "$PIN" ] ||
-        die "the promoted APM CLI does not report the pinned v$PIN."
-    [ "$interrupted" = false ] || exit 1
-    run_promotion_step ln -s "$bundle_path/apm" "$link_path"
-    link_created=true
-    # Activation commits the verified replacement; cleanup cannot trigger rollback.
-    trap '' HUP INT TERM
-    [ "$interrupted" = false ] || exit 1
-    promotion_complete=true
-    if [ -d "$backup_path" ]; then
-        rm -rf "$backup_path" || log 'warning: verified APM installation is usable; backup cleanup failed.'
+        die "the installed APM CLI does not report the pinned v$PIN."
+
+    release_dir=$RELEASE_PATH
+    mv "$STAGE_PATH" "$release_dir"
+    STAGE_PATH=''
+    PROMOTED_APM="$release_dir/apm"
+    ln -s "$PROMOTED_APM" "$LINK_STAGE"
+    # Renaming a symlink over the existing symlink is a single atomic step.
+    mv -f "$LINK_STAGE" "$link_path"
+    LINK_STAGE=''
+    RELEASE_PATH=''
+
+    # Best-effort cleanup of superseded generations and the legacy single-bundle layout.
+    for entry in "$releases_path"/* "$releases_path"/.stage-*; do
+        { [ -e "$entry" ] || [ -L "$entry" ]; } || continue
+        [ "$entry" != "$release_dir" ] || continue
+        rm -rf "$entry" || log "warning: unable to remove a superseded APM release: $entry"
+    done
+    if [ -f "$LIB_ROOT/.apm-installed" ] && [ ! -L "$LIB_ROOT/.apm-installed" ]; then
+        rm -rf "$LIB_ROOT/apm" "$LIB_ROOT/_internal" "$LIB_ROOT/.apm-installed" ||
+            log "warning: unable to remove the legacy APM bundle under $LIB_ROOT"
     fi
-)
+    release_install_lock
+}
 
 acquire_cli() {
     local temp_parent=${TMPDIR:-/tmp}
@@ -415,7 +378,6 @@ acquire_cli() {
     actual_version=$(reported_version "$extract_root/$EXECUTABLE_MEMBER")
     [ "$actual_version" = "$PIN" ] ||
         die "the staged APM CLI does not report the pinned v$PIN."
-    PROMOTED_APM="$(dirname "$INSTALL_DIR")/lib/apm/apm"
     promote_bundle "$extract_root/$ARCHIVE_ROOT"
 }
 
@@ -492,7 +454,7 @@ main() {
     export PATH
     warn_if_shadowed
     if [ "$CLI_ONLY" = false ]; then deploy_baseline; fi
-    log "done; reviewed CLI: $PROMOTED_APM"
+    log "done; reviewed CLI: $INSTALL_DIR/apm -> $PROMOTED_APM"
 }
 
 main "$@"

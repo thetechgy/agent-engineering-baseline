@@ -104,7 +104,7 @@ jobs:
         shell: bash
         run: |
           APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" ./scripts/bootstrap.sh --cli-only
-          echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/lib/apm/apm" >> "$GITHUB_ENV"
+          echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
 
       - name: Install validation tools
         shell: pwsh
