@@ -267,6 +267,9 @@ jobs:
           # named like the automation branch could otherwise be selected and
           # rewritten with this trusted body. Accept only this repository's own
           # branch authored by the Actions bot, and fail closed on ambiguity.
+          # `gh --json author` renders the Actions app as `app/github-actions`
+          # (verified against this repository's automation PRs), not the REST
+          # `github-actions[bot]` form; the bare login covers older gh builds.
           candidates="$(gh pr list --base main --head "$branch" --state open \
             --json number,headRepositoryOwner,author,isCrossRepository |
             jq -c --arg owner "$GITHUB_REPOSITORY_OWNER" \
