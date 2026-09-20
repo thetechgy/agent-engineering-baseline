@@ -13,6 +13,8 @@ readonly SCRIPT_DIR
 REPOSITORY_ROOT="$(CDPATH='' cd "$SCRIPT_DIR/.." && pwd -P)"
 readonly REPOSITORY_ROOT
 readonly PIN_FILE="$REPOSITORY_ROOT/.apm-version"
+# Names this installer gives release generations: v<pin>-<UTC timestamp>-<pid>.
+readonly GENERATION_PATTERN='v[0-9]+\.[0-9]+\.[0-9]+(a[0-9]+|b[0-9]+|rc[0-9]+)?-[0-9]{8}T[0-9]{6}Z-[0-9]+'
 readonly CHECKSUMS_FILE="$REPOSITORY_ROOT/.apm-checksums"
 readonly DEFAULT_PACKAGE_REF='https://github.com/thetechgy/agent-engineering-baseline.git#main'
 
@@ -250,10 +252,12 @@ assert_safe_directory() {
 }
 
 release_install_lock() {
-    if [ "$LOCK_ACQUIRED" = true ] && [ -d "$LOCK_PATH" ]; then
-        rmdir "$LOCK_PATH" || log "warning: unable to release the APM installation lock: $LOCK_PATH"
-    fi
+    [ "$LOCK_ACQUIRED" = true ] || return 0
+    # Drop ownership before removing the directory: a signal landing between the
+    # two steps then leaves a stale lock (diagnosed on the next run) instead of
+    # letting the EXIT cleanup remove a lock a newer bootstrap already owns.
     LOCK_ACQUIRED=false
+    rmdir "$LOCK_PATH" || log "warning: unable to release the APM installation lock: $LOCK_PATH"
 }
 
 remove_unactivated_release() {
@@ -280,7 +284,8 @@ remove_unactivated_release() {
 # atomically replacing the bin/apm symlink. The previously active generation
 # keeps working until that single rename, so no backup or rollback is needed.
 promote_bundle() {
-    local source_bundle=$1 install_parent releases_path link_path link_target generation release_dir entry actual_version
+    local source_bundle=$1 install_parent releases_path link_path link_target generation_name generation
+    local stage_path release_dir link_stage entry actual_version
     install_parent=$(dirname "$INSTALL_DIR")
     LIB_ROOT="$install_parent/lib/apm"
     releases_path="$LIB_ROOT/releases"
@@ -310,21 +315,30 @@ promote_bundle() {
             */./*|*/../*) die "refusing to overwrite an unrelated APM symlink: $link_path" ;;
         esac
         case "$link_target" in
-            "$releases_path"/v*/apm|"$LIB_ROOT"/apm) ;;
+            "$LIB_ROOT"/apm) ;;
+            "$releases_path"/*/apm)
+                generation_name=${link_target#"$releases_path"/}
+                generation_name=${generation_name%/apm}
+                printf '%s\n' "$generation_name" | grep -Eq "^$GENERATION_PATTERN\$" ||
+                    die "refusing to overwrite an unrelated APM symlink: $link_path"
+                ;;
             *) die "refusing to overwrite an unrelated APM symlink: $link_path" ;;
         esac
         [ ! -d "$link_path" ] || die "refusing to overwrite an APM symlink that resolves to a directory: $link_path"
     fi
     LINK_PATH=$link_path
 
-    STAGE_PATH="$releases_path/.stage-$generation"
-    RELEASE_PATH="$releases_path/$generation"
-    LINK_STAGE="$INSTALL_DIR/.apm-$generation"
-    if [ -e "$STAGE_PATH" ] || [ -L "$STAGE_PATH" ] || [ -e "$RELEASE_PATH" ] || [ -L "$RELEASE_PATH" ] ||
-        [ -e "$LINK_STAGE" ] || [ -L "$LINK_STAGE" ]; then
-        die "an APM release generation path already exists: $RELEASE_PATH"
+    stage_path="$releases_path/.stage-$generation"
+    release_dir="$releases_path/$generation"
+    link_stage="$INSTALL_DIR/.apm-$generation"
+    if [ -e "$stage_path" ] || [ -L "$stage_path" ] || [ -e "$release_dir" ] || [ -L "$release_dir" ] ||
+        [ -e "$link_stage" ] || [ -L "$link_stage" ]; then
+        die "an APM release generation path already exists: $release_dir"
     fi
 
+    # Each path becomes cleanup-owned only once this run is about to create it,
+    # so a pre-existing path found above is never removed by the EXIT cleanup.
+    STAGE_PATH=$stage_path
     mkdir "$STAGE_PATH"
     cp -R "$source_bundle/." "$STAGE_PATH/"
     chmod +x "$STAGE_PATH/apm"
@@ -336,10 +350,11 @@ promote_bundle() {
     [ "$actual_version" = "$PIN" ] ||
         die "the installed APM CLI does not report the pinned v$PIN."
 
-    release_dir=$RELEASE_PATH
+    RELEASE_PATH=$release_dir
     mv "$STAGE_PATH" "$release_dir"
     STAGE_PATH=''
     PROMOTED_APM="$release_dir/apm"
+    LINK_STAGE=$link_stage
     ln -s "$PROMOTED_APM" "$LINK_STAGE"
     # Renaming a symlink over the existing symlink is a single atomic step.
     mv -f "$LINK_STAGE" "$link_path"

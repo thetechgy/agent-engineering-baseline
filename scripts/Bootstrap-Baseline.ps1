@@ -326,6 +326,27 @@ function Get-MutexName {
     }
 }
 
+
+function Test-LegacyCurrentJunction {
+    # True only for a directory junction whose target lies inside the releases
+    # directory, the sole form the previous bootstrap layout ever created.
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][string]$ReleasesPath
+    )
+    $item = Get-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
+    if (-not $item) { return $false }
+    if (-not ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) { return $false }
+    if (-not ($item.Attributes -band [IO.FileAttributes]::Directory)) { return $false }
+    $target = [string](@($item.Target) | Select-Object -First 1)
+    if (-not $target) { return $false }
+    $target = $target -replace '^\\\\\?\\', '' -replace '^\\\?\?\\', ''
+    $prefix = [IO.Path]::GetFullPath($ReleasesPath).TrimEnd('\') + '\'
+    return [IO.Path]::GetFullPath([string]$target).StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)
+}
+
 function Install-ReviewedBundle {
     [CmdletBinding()]
     param(
@@ -369,9 +390,14 @@ function Install-ReviewedBundle {
     $generationPattern = 'v\d+\.\d+\.\d+(?:a\d+|b\d+|rc\d+)?-\d{8}T\d{6}Z-[0-9a-f]{8}'
     $managedShimPattern = "^@echo off\r?\n`"%~dp0\.\.\\(current|releases\\$generationPattern)\\apm\.exe`" %\*\r?\n`$"
 
+    $legacyCurrentPath = Join-Path $installRoot 'current'
+
     $mutex = New-Object Threading.Mutex($false, (Get-MutexName -InstallRoot $installRoot))
     $mutexAcquired = $false
     $activated = $false
+    # Paths become cleanup-owned only once this run is about to create them, so a
+    # pre-existing path found by the collision check is never removed.
+    $ownedPaths = New-Object Collections.Generic.List[string]
     try {
         # Never wait or steal: a second bootstrap fails immediately with a diagnostic.
         try { $mutexAcquired = $mutex.WaitOne(0) }
@@ -393,8 +419,13 @@ function Install-ReviewedBundle {
             if ($shimItem.PSIsContainer) {
                 throw "Refusing to overwrite a non-file APM shim: $shimPath"
             }
-            if ([IO.File]::ReadAllText($shimPath) -notmatch $managedShimPattern) {
+            $shimText = [IO.File]::ReadAllText($shimPath)
+            if ($shimText -notmatch $managedShimPattern) {
                 throw "Refusing to overwrite an unrelated APM shim: $shimPath"
+            }
+            if ($shimText -like '*\current\apm.exe*' -and (Test-Path -LiteralPath $legacyCurrentPath) -and
+                -not (Test-LegacyCurrentJunction -Path $legacyCurrentPath -ReleasesPath $releasesPath)) {
+                throw "Refusing to overwrite an APM shim whose legacy current link is not a junction into ${releasesPath}: $shimPath"
             }
         }
         foreach ($path in @($stagePath, $releasePath, $shimStagePath)) {
@@ -403,6 +434,7 @@ function Install-ReviewedBundle {
             }
         }
 
+        $ownedPaths.Add($stagePath)
         New-Item -ItemType Directory -Path $stagePath | Out-Null
         Get-ChildItem -LiteralPath $SourceBundle -Force | ForEach-Object {
             Copy-Item -LiteralPath $_.FullName -Destination $stagePath -Recurse -Force
@@ -420,8 +452,10 @@ function Install-ReviewedBundle {
             throw "The installed APM CLI does not report pinned v$($Metadata.Pin)."
         }
 
+        $ownedPaths.Add($releasePath)
         Move-Item -LiteralPath $stagePath -Destination $releasePath
         $promotedExecutable = Join-Path $releasePath 'apm.exe'
+        $ownedPaths.Add($shimStagePath)
         [IO.File]::WriteAllText($shimStagePath, $shimContent, [Text.Encoding]::ASCII)
         if (Test-Path -LiteralPath $shimPath) {
             # NTFS replaces the destination atomically; the shim never disappears.
@@ -455,11 +489,15 @@ function Install-ReviewedBundle {
             }
             catch { Write-Warning -Message "Unable to remove a superseded APM release at $($entry.FullName): $_" }
         }
-        $legacyCurrent = Get-Item -LiteralPath (Join-Path $installRoot 'current') -Force -ErrorAction SilentlyContinue
-        if ($legacyCurrent -and ($legacyCurrent.Attributes -band [IO.FileAttributes]::ReparsePoint) -and
-            ($legacyCurrent.Attributes -band [IO.FileAttributes]::Directory)) {
-            try { [IO.Directory]::Delete($legacyCurrent.FullName, $false) }
-            catch { Write-Warning -Message "Unable to remove the legacy APM current junction at $($legacyCurrent.FullName): $_" }
+        if (Test-Path -LiteralPath $legacyCurrentPath) {
+            if (Test-LegacyCurrentJunction -Path $legacyCurrentPath -ReleasesPath $releasesPath) {
+                # Deleting a junction non-recursively removes only the link itself.
+                try { [IO.Directory]::Delete($legacyCurrentPath, $false) }
+                catch { Write-Warning -Message "Unable to remove the legacy APM current junction at ${legacyCurrentPath}: $_" }
+            }
+            else {
+                Write-Warning -Message "Leaving an unrecognized entry beside the APM releases directory: $legacyCurrentPath"
+            }
         }
 
         $env:PATH = Add-PathEntry -PathValue $env:PATH -Entry @($binPath)
@@ -476,7 +514,7 @@ function Install-ReviewedBundle {
             try { $activated = [IO.File]::ReadAllText($shimPath) -ceq $shimContent } catch { $activated = $false }
         }
         if (-not $activated) {
-            foreach ($path in @($shimStagePath, $stagePath, $releasePath)) {
+            foreach ($path in $ownedPaths) {
                 if (Test-Path -LiteralPath $path) {
                     Remove-Item -LiteralPath $path -Recurse -Force -ErrorAction SilentlyContinue
                 }

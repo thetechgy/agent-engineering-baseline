@@ -310,7 +310,7 @@ Describe 'Bootstrap-Baseline Windows security contracts' {
         $script:BootstrapText | Should-MatchString 'Threading\.Mutex'
         $script:BootstrapText | Should-MatchString '\$mutex\.WaitOne\(0\)'
         $script:BootstrapText | Should-MatchString '\[IO\.File\]::Replace\(\$shimStagePath, \$shimPath, \[NullString\]::Value\)'
-        $script:BootstrapText | Should-MatchString '\[IO\.Directory\]::Delete\(\$legacyCurrent\.FullName, \$false\)'
+        $script:BootstrapText | Should-MatchString '\[IO\.Directory\]::Delete\(\$legacyCurrentPath, \$false\)'
         $script:BootstrapText | Should-MatchString '\[Text\.Encoding\]::ASCII'
         $script:BootstrapText | Should-MatchString 'New-Object System\.Collections\.Stack'
         $script:BootstrapText | Should-NotMatchString 'Get-ChildItem[^\r\n]+-Recurse'
@@ -635,6 +635,41 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         Test-Path -LiteralPath $legacyRelease | Should-BeFalse
         (Get-ReleaseEntry -InstallRoot $script:InstallRoot).Count | Should-Be 1
         & $shim --version | Should-MatchString '0\.29\.0'
+        $LASTEXITCODE | Should-Be 0
+    }
+
+    It 'refuses a legacy current shim whose junction points outside releases' {
+        $outside = Join-Path $TestDrive ('outside-' + [Guid]::NewGuid().ToString('N'))
+        $current = Join-Path $script:InstallRoot 'current'
+        $shim = Join-Path $script:InstallRoot 'bin\apm.cmd'
+        New-Item -ItemType Directory -Path $outside, (Split-Path -Parent $shim) -Force | Out-Null
+        [IO.File]::WriteAllText((Join-Path $outside 'keep'), 'outside content')
+        New-Item -ItemType Junction -Path $current -Target $outside | Out-Null
+        $content = "@echo off`r`n`"%~dp0..\current\apm.exe`" %*`r`n"
+        [IO.File]::WriteAllText($shim, $content, [Text.Encoding]::ASCII)
+
+        { & $script:TestRepository.Script -CliOnly -Confirm:$false } |
+            Should-Throw -ExceptionMessage '*legacy current link is not a junction into*'
+
+        [IO.File]::ReadAllText($shim) | Should-Be $content
+        Test-Path -LiteralPath $current | Should-BeTrue
+        Test-Path -LiteralPath (Join-Path $outside 'keep') | Should-BeTrue
+        (Get-ReleaseEntry -InstallRoot $script:InstallRoot).Count | Should-Be 0
+    }
+
+    It 'leaves a plain current directory in place with a warning' {
+        & $script:TestRepository.Script -CliOnly -Confirm:$false
+        $current = Join-Path $script:InstallRoot 'current'
+        New-Item -ItemType Directory -Path $current -Force | Out-Null
+        [IO.File]::WriteAllText((Join-Path $current 'keep'), 'user content')
+        $warnings = New-Object Collections.Generic.List[string]
+        Mock Write-Warning { $warnings.Add($Message) }
+
+        & $script:TestRepository.Script -CliOnly -Confirm:$false
+
+        ($warnings -join ' ') | Should-MatchString 'Leaving an unrecognized entry beside the APM releases directory'
+        [IO.File]::ReadAllText((Join-Path $current 'keep')) | Should-Be 'user content'
+        & (Join-Path $script:InstallRoot 'bin\apm.cmd') --version | Should-MatchString '0\.29\.0'
         $LASTEXITCODE | Should-Be 0
     }
 

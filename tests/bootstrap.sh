@@ -523,6 +523,26 @@ assert_true 'traversal symlink is preserved' \
     test "$(readlink "$CASE_INSTALL/apm")" = "$CASE_ROOT/install/lib/apm/releases/../../../elsewhere/apm"
 assert_true 'traversal symlink target is untouched' file_has "$CASE_ROOT/elsewhere/apm" 'unrelated command'
 
+new_case unmanaged-generation-symlink
+make_fixture Linux x86_64
+mkdir -p "$CASE_ROOT/install/lib/apm/releases/v0.28.0-unmarked"
+printf '#!/bin/sh\nexit 0\n' > "$CASE_ROOT/install/lib/apm/releases/v0.28.0-unmarked/apm"
+ln -s "$CASE_ROOT/install/lib/apm/releases/v0.28.0-unmarked/apm" "$CASE_INSTALL/apm"
+run_case --cli-only
+record_result 'symlink into a directory outside the generation grammar is not overwritten' failure
+assert_true 'unmanaged generation symlink reaches ownership validation' out_has 'refusing to overwrite an unrelated APM symlink'
+assert_true 'unmanaged generation symlink is preserved' \
+    test "$(readlink "$CASE_INSTALL/apm")" = "$CASE_ROOT/install/lib/apm/releases/v0.28.0-unmarked/apm"
+
+new_case dangling-generation-symlink
+make_fixture Linux x86_64
+mkdir -p "$CASE_ROOT/install/lib/apm/releases"
+ln -s "$CASE_ROOT/install/lib/apm/releases/v0.28.0-20260101T000000Z-4242/apm" "$CASE_INSTALL/apm"
+run_case --cli-only
+record_result 'dangling symlink to a removed generation is repaired' success
+assert_true 'dangling generation symlink is replaced' test -d "$(active_release)"
+assert_true 'repaired command is usable' file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
+
 new_case foreign-releases-entries
 make_fixture Linux x86_64
 run_case --cli-only
@@ -680,6 +700,25 @@ assert_true 'staging signal keeps the prior generation active' test "$(active_re
 assert_true 'staging signal preserves a usable command' file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
 assert_true 'staging signal cleans the staged generation' \
     test -z "$(find "$CASE_ROOT/install/lib/apm/releases" -name '.stage-*' -print -quit)"
+
+new_case signal-during-lock-release
+make_fixture Linux x86_64
+real_rmdir=$(command -v rmdir)
+cat > "$CASE_BIN/rmdir" <<EOF
+#!/usr/bin/env bash
+'$real_rmdir' "\$@" || exit \$?
+[ ! -f '$CASE_ROOT/lock-release-signal' ] || exit 0
+# Another bootstrap takes the lock immediately, then the signal lands.
+mkdir "\$1"
+: > '$CASE_ROOT/lock-release-signal'
+kill -TERM "\$PPID"
+EOF
+chmod +x "$CASE_BIN/rmdir"
+run_case --cli-only
+record_result 'interruption during lock release exits by signal' failure
+assert_true 'lock release signal follows the removal' test -f "$CASE_ROOT/lock-release-signal"
+assert_true 'lock release signal does not remove the next owner lock' test -d "$CASE_ROOT/install/lib/apm/.lock"
+assert_true 'lock release signal leaves the new generation active' file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
 
 # File barriers make the ordering deterministic; polling only bounds fixture failures.
 # Invoked indirectly by assert_true.
