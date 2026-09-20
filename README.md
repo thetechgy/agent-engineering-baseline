@@ -279,7 +279,10 @@ PSScriptAnalyzer, Bash fixture archives, ShellCheck,
 Markdown linting, frozen trusted-bin installation, compile validation and clean
 regeneration, audit, pack dry-run, an offline `msgraph openapi-search` launcher
 and index smoke test, and `git diff --check`. CI adds a
-macOS Bash lane and Windows PowerShell 5.1 fixture execution.
+macOS Bash lane and a Windows PowerShell 5.1 lane; both run their fixture
+suites and then acquire the reviewed CLI with the real installer (`--cli-only`
+and `-CliOnly` under both Windows PowerShell 5.1 and PowerShell 7) and verify
+the installed executable reports the pinned version.
 
 The pinned APM CLI does not expose `--trust-bin` on `audit` and skips bin
 deployment in its non-TTY scratch replay. Validation therefore runs the unchanged

@@ -142,6 +142,19 @@ jobs:
         shell: bash
         run: ./tests/bootstrap.sh
 
+      - name: Acquire the reviewed CLI with the real installer
+        shell: bash
+        run: |
+          set -euo pipefail
+          APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" ./scripts/bootstrap.sh --cli-only
+          expected="$(head -n 1 .apm-version | tr -d '[:space:]')"
+          reported="$("$RUNNER_TEMP/apm/bin/apm" --version)"
+          echo "$reported"
+          case "$reported" in
+            *"$expected"*) ;;
+            *) echo "::error::Installed CLI reported '$reported', expected version $expected"; exit 1 ;;
+          esac
+
   windows-powershell:
     name: Pester and analyzer (Windows PowerShell 5.1)
     runs-on: windows-latest
@@ -161,3 +174,31 @@ jobs:
       - name: Run Pester and PSScriptAnalyzer
         shell: powershell
         run: ./scripts/Invoke-Validation.ps1 -Suite Pester
+
+      - name: Acquire the reviewed CLI with the real installer (Windows PowerShell 5.1)
+        shell: powershell
+        env:
+          APM_INSTALL_DIR: ${{ runner.temp }}\apm-ps51\bin
+        run: |
+          $ErrorActionPreference = 'Stop'
+          ./scripts/Bootstrap-Baseline.ps1 -CliOnly
+          $expected = (Get-Content -LiteralPath .apm-version -TotalCount 1).Trim()
+          $reported = (& (Join-Path $env:APM_INSTALL_DIR 'apm.cmd') --version) -join ' '
+          Write-Host $reported
+          if ($LASTEXITCODE -ne 0 -or $reported -notlike "*$expected*") {
+            throw "Installed CLI reported '$reported', expected version $expected"
+          }
+
+      - name: Acquire the reviewed CLI with the real installer (PowerShell 7)
+        shell: pwsh
+        env:
+          APM_INSTALL_DIR: ${{ runner.temp }}\apm-pwsh\bin
+        run: |
+          $ErrorActionPreference = 'Stop'
+          ./scripts/Bootstrap-Baseline.ps1 -CliOnly
+          $expected = (Get-Content -LiteralPath .apm-version -TotalCount 1).Trim()
+          $reported = (& (Join-Path $env:APM_INSTALL_DIR 'apm.cmd') --version) -join ' '
+          Write-Host $reported
+          if ($LASTEXITCODE -ne 0 -or $reported -notlike "*$expected*") {
+            throw "Installed CLI reported '$reported', expected version $expected"
+          }
