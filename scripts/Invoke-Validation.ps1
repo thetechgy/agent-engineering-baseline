@@ -51,7 +51,7 @@ try {
         throw "PSScriptAnalyzer reported $($analyzerResults.Count) finding(s)."
     }
 
-    if ($Suite -ceq 'Pester') { return }
+    if ($Suite -eq 'Pester') { return }
 
     & ./tests/bootstrap.sh
     if ($LASTEXITCODE -ne 0) { throw 'Bash bootstrap tests failed.' }
