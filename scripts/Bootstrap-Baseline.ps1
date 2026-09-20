@@ -422,7 +422,9 @@ function Install-ReviewedBundle {
         [IO.File]::WriteAllText($shimStagePath, $shimContent, [Text.Encoding]::ASCII)
         if (Test-Path -LiteralPath $shimPath) {
             # NTFS replaces the destination atomically; the shim never disappears.
-            [IO.File]::Replace($shimStagePath, $shimPath, $null)
+            # NullString keeps the no-backup argument null under Windows PowerShell 5.1,
+            # which otherwise binds $null to an empty (illegal) path.
+            [IO.File]::Replace($shimStagePath, $shimPath, [NullString]::Value)
         }
         else {
             [IO.File]::Move($shimStagePath, $shimPath)

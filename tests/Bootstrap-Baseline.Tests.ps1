@@ -309,7 +309,7 @@ Describe 'Bootstrap-Baseline Windows security contracts' {
         $script:BootstrapText | Should-MatchString 'Expand-Archive -LiteralPath'
         $script:BootstrapText | Should-MatchString 'Threading\.Mutex'
         $script:BootstrapText | Should-MatchString '\$mutex\.WaitOne\(0\)'
-        $script:BootstrapText | Should-MatchString '\[IO\.File\]::Replace\(\$shimStagePath, \$shimPath, \$null\)'
+        $script:BootstrapText | Should-MatchString '\[IO\.File\]::Replace\(\$shimStagePath, \$shimPath, \[NullString\]::Value\)'
         $script:BootstrapText | Should-MatchString '\[IO\.Directory\]::Delete\(\$legacyCurrent\.FullName, \$false\)'
         $script:BootstrapText | Should-MatchString '\[Text\.Encoding\]::ASCII'
         $script:BootstrapText | Should-MatchString 'New-Object System\.Collections\.Stack'
@@ -352,9 +352,11 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
             [CmdletBinding()]
             param([Parameter(Mandatory)][string]$InstallRoot)
 
+            # The unary comma returns the array itself so .Count is defined for zero
+            # or one entry under Windows PowerShell 5.1.
             $releases = Join-Path $InstallRoot 'releases'
-            if (-not (Test-Path -LiteralPath $releases)) { return @() }
-            @(Get-ChildItem -LiteralPath $releases -Force)
+            if (-not (Test-Path -LiteralPath $releases)) { return ,@() }
+            ,@(Get-ChildItem -LiteralPath $releases -Force)
         }
     }
 
@@ -425,9 +427,9 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         & $shim --version | Should-MatchString '0\.29\.0'
         $LASTEXITCODE | Should-Be 0
         "$output" | Should-MatchString ([regex]::Escape("Done; reviewed CLI: $shim -> $release\apm.exe"))
-        $env:PATH.Split(';') | Should-Contain (Join-Path $script:InstallRoot 'bin')
-        [Environment]::GetEnvironmentVariable('Path', 'User').Split(';') |
-            Should-Contain (Join-Path $script:InstallRoot 'bin')
+        $binPath = Join-Path $script:InstallRoot 'bin'
+        @($env:PATH.Split(';')) -contains $binPath | Should-BeTrue
+        @([Environment]::GetEnvironmentVariable('Path', 'User').Split(';')) -contains $binPath | Should-BeTrue
         $env:APM_TEST_REQUESTED_URI |
             Should-Be 'https://mirror.example.invalid/apm/v0.29.0/apm-windows-x86_64.zip'
         $env:APM_TEST_TLS_DURING_DOWNLOAD | Should-Be 'True'
@@ -445,7 +447,7 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         & $script:TestRepository.Script -CliOnly -Confirm:$false 3>&1 | Out-Null
 
         $script:AmbientExecuted | Should-BeFalse
-        $calls = @(Get-Content -LiteralPath $script:CallLog)
+        $calls = @(Get-Content -LiteralPath $script:CallLog -Encoding UTF8)
         $calls.Count | Should-Be 2
         $calls[0] | Should-MatchString 'apm-bootstrap-'
         $calls[1] | Should-MatchString '\\releases\\\.stage-v0\.29\.0-[^\\]+\\apm\.exe'
@@ -460,7 +462,7 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         @{ ScopeValue = 'GLOBAL'; GlobalScope = $true }
     ) {
         & $script:TestRepository.Script -Scope $ScopeValue -Confirm:$false
-        $calls = @(Get-Content -LiteralPath $script:CallLog | Where-Object { $_ -notmatch '--version' })
+        $calls = @(Get-Content -LiteralPath $script:CallLog -Encoding UTF8 | Where-Object { $_ -notmatch '--version' })
         $calls.Count | Should-Be 3
         $release = Get-ActiveRelease -InstallRoot $script:InstallRoot
         foreach ($call in $calls) { $call | Should-MatchString ([regex]::Escape("$release\apm.exe")) }
@@ -477,7 +479,7 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
     It 'honors a literal package reference override' {
         $env:BASELINE_PACKAGE_REF = 'https://example.invalid/reviewed.git#release'
         & $script:TestRepository.Script -Scope Repo -Confirm:$false
-        Get-Content -LiteralPath $script:CallLog -Raw |
+        Get-Content -LiteralPath $script:CallLog -Encoding UTF8 -Raw |
             Should-MatchString 'https://example\.invalid/reviewed\.git#release'
     }
 
@@ -694,7 +696,7 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
             if ($Fault -eq 'shim') { (Get-Item -LiteralPath $shim).IsReadOnly = $false }
         }
         if ($Fault -in @('execution', 'version', 'banner')) {
-            Get-Content -LiteralPath $script:CallLog -Raw | Should-MatchString '\\releases\\\.stage-v0\.29\.0-'
+            Get-Content -LiteralPath $script:CallLog -Encoding UTF8 -Raw | Should-MatchString '\\releases\\\.stage-v0\.29\.0-'
         }
         elseif ($Fault -ne 'shim') { $faultState.Hit | Should-BeTrue }
         Test-Path -LiteralPath ($script:CallLog + '.published') | Should-BeFalse
@@ -734,14 +736,32 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
             . $script:TestRepository.Script -WhatIf 6> $null
             Get-MutexName -InstallRoot $installRoot
         }
-        $owner = New-Object Threading.Mutex($true, $mutexName)
+        # Mutex ownership is per thread, so a second runspace thread must hold it;
+        # the events hand off acquisition and release deterministically.
+        $acquired = New-Object Threading.ManualResetEvent($false)
+        $releaseRequested = New-Object Threading.ManualResetEvent($false)
+        $holder = [PowerShell]::Create()
+        $null = $holder.AddScript({
+            param($Name, $Acquired, $ReleaseRequested)
+            $mutex = New-Object Threading.Mutex($false, $Name)
+            $null = $mutex.WaitOne()
+            $null = $Acquired.Set()
+            $null = $ReleaseRequested.WaitOne()
+            $mutex.ReleaseMutex()
+            $mutex.Dispose()
+        }).AddArgument($mutexName).AddArgument($acquired).AddArgument($releaseRequested)
+        $pending = $holder.BeginInvoke()
         try {
+            $acquired.WaitOne(10000) | Should-BeTrue
             { & $script:TestRepository.Script -CliOnly -Confirm:$false } |
                 Should-Throw -ExceptionMessage '*Another bootstrap is installing*'
         }
         finally {
-            $owner.ReleaseMutex()
-            $owner.Dispose()
+            $null = $releaseRequested.Set()
+            $null = $holder.EndInvoke($pending)
+            $holder.Dispose()
+            $acquired.Dispose()
+            $releaseRequested.Dispose()
         }
         (Get-ActiveRelease -InstallRoot $script:InstallRoot) | Should-Be $priorRelease
         (Get-ReleaseEntry -InstallRoot $script:InstallRoot).Count | Should-Be 1
