@@ -2,7 +2,7 @@
 
 This MIT-licensed repository is a shared, project-agnostic configuration for
 [Microsoft Agent Package Manager (APM)](https://microsoft.github.io/apm/).
-It deploys reviewed instructions and skills to Codex, GitHub Copilot, and the
+It deploys shared instructions and skills to Codex, GitHub Copilot, and the
 other harnesses supported by APM's native global compiler.
 
 The bootstrap has one deliberately custom security boundary: acquiring and
@@ -16,8 +16,8 @@ The repository uses APM's native dependency model, like a manifest and lockfile:
 
 - `apm.yml` declares branch-ref dependencies and reviewed local `.apm/`
   content.
-- `apm.lock.yaml` records the exact resolved commit, deployed files, platform
-  launchers, and content hashes for every dependency.
+- `apm.lock.yaml` records this checkout's resolved dependency snapshot: exact
+  commits, deployed files, platform launchers, and content hashes.
 - `.apm-version` pins the complete APM release version.
 - `.apm-checksums` contains exactly ten reviewed SHA-256 digests: the five
   supported release archives and the executable inside each archive.
@@ -26,10 +26,21 @@ The repository uses APM's native dependency model, like a manifest and lockfile:
   `msgraph` indexes and six platform binaries named exactly in `.gitignore`;
   the lockfile and `apm audit --ci` retain their integrity contract.
 
-Hashes prove that consumers received the reviewed bytes; they do not prove
-that those bytes are benign. A CLI update first enters a review-only pull
-request as hashes and generated output. The candidate CLI is not executed by
-the privileged update workflow.
+The bootstrap verifies the downloaded CLI archive and executable against the
+committed hashes. This repository's lockfile and generated outputs describe its
+reviewed dependency snapshot; native frozen installation and audit check that
+snapshot in this checkout. Hashes establish integrity against the recorded
+values, not whether the content is benign.
+
+A consumer installation uses native APM resolution and its own destination
+lockfile. Installing a fixed baseline commit does not force its transitive
+branch dependencies to match this repository's lockfile: a fresh installation
+can resolve newer upstream commits. The wrappers then run native `apm update`
+to refresh branch references in the destination. Review that destination's
+resolved content and lockfile when assessing what was actually deployed.
+
+A CLI update first enters a review-only pull request as hashes and generated
+output. The candidate CLI is not executed by the privileged update workflow.
 
 ## Local content
 
@@ -186,9 +197,10 @@ native `apm update --yes` step therefore runs on every bootstrap: install
 declares and deploys the baseline on first use, update re-resolves every
 branch-ref dependency in the destination manifest to its latest commit and
 redeploys the refreshed content, including the transitive Microsoft Learn MCP
-configuration. Every bootstrap run therefore converges the baseline deployment
-to its configured reviewed ref (`main` by default). On a fresh machine the
-update is a no-op because install just resolved the latest refs.
+configuration. Every bootstrap run therefore refreshes the baseline deployment
+from its configured ref (`main` by default) and resolves upstream dependencies
+natively. On a fresh machine, install resolves current branch refs; update
+refreshes them again if they have advanced.
 
 The baseline's MCP dependency is transitive when the baseline is installed as
 a package. `--trust-transitive-mcp` permits native APM deployment of that
