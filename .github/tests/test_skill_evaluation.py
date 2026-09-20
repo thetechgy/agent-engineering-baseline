@@ -524,6 +524,15 @@ except KeyboardInterrupt:
         with self.assertRaisesRegex(ValueError, "cannot produce history"):
             reports.benchmark_report(self.workspace, root, "podman", "standard", self.root / "metrics")
 
+    def test_recovery_rejects_malformed_native_reports(self):
+        root, run, _ = self.benchmark("standard")
+        result = run / "result.json"
+        (run / "_harbor-jobs").mkdir()
+        result.unlink()
+        result.mkdir()
+        with self.assertRaisesRegex(ValueError, "Missing or linked JSON report: result.json"):
+            reports.recover_benchmark(self.workspace, root, "podman", "standard", "failure")
+
     def test_recovery_rejects_linked_job_roots(self):
         root, run, _ = self.benchmark("standard")
         (run / "result.json").unlink()

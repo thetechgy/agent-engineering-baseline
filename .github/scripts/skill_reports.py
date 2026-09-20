@@ -288,8 +288,12 @@ def recover_benchmark(workspace, root, name, mode, outcome):
             continue
         require(run.is_dir() and not run.is_symlink(), "Unexpected native run entry")
         jobs = run / "_harbor-jobs"
-        if (run / "result.json").exists() or not jobs.exists():
-            continue  # Preserve reports already produced by native collection.
+        result = run / "result.json"
+        if result.exists():
+            read_json(result)
+            continue  # Preserve valid reports already produced by native collection.
+        if not jobs.exists():
+            continue  # No retained diagnostics are available for native collection.
         require(jobs.is_dir() and not jobs.is_symlink(), "Linked or invalid retained jobs directory")
         collected = collect_harbor_results(
             skill_name=name, agents=["codex"], output_dir=run, jobs_dir=jobs,
