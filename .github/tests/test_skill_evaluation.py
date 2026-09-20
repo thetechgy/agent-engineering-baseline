@@ -848,7 +848,10 @@ class WorkflowTests(unittest.TestCase):
         self.assertGreaterEqual(job["timeout-minutes"] - 160, recovery["timeout-minutes"] + 15)
         self.assertIn("always()", recovery["if"])
         self.assertEqual(recovery["env"], {"EVALUATION_OUTCOME": "${{ steps.evaluation.outcome }}"})
-        self.assertLess(steps.index(budget), steps.index(evaluation))
+        self.assertIs(steps[0], budget)
+        pre_evaluation = steps[:steps.index(evaluation)]
+        self.assertTrue(all(step.get("timeout-minutes", 0) > 0 for step in pre_evaluation))
+        self.assertLessEqual(sum(step["timeout-minutes"] for step in pre_evaluation), 40)
         self.assertLess(steps.index(evaluation), steps.index(recovery))
         self.assertLess(steps.index(recovery), steps.index(staging))
         metrics = next(step for step in steps if step.get("with", {}).get("name") == "skill-metrics")
@@ -871,7 +874,9 @@ class WorkflowTests(unittest.TestCase):
         jobs = workflow["jobs"]
         self.assertEqual(jobs["evaluate"]["permissions"], {"contents": "read"})
         self.assertEqual(jobs["evaluate"]["environment"], {"name": "skill-benchmark", "deployment": False})
-        self.assertEqual(jobs["evaluate"]["steps"][0]["with"]["ref"], "${{ github.sha }}")
+        checkout = next(step for step in jobs["evaluate"]["steps"]
+                        if step.get("uses", "").startswith("actions/checkout@"))
+        self.assertEqual(checkout["with"]["ref"], "${{ github.sha }}")
         selection = next(step for step in jobs["evaluate"]["steps"] if step.get("id") == "selection")
         self.assertIn('test "$(git rev-parse HEAD)" = "$GITHUB_SHA"', selection["run"])
         compose = next(step for step in jobs["evaluate"]["steps"]

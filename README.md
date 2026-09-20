@@ -333,9 +333,10 @@ best-effort and cannot prevent deliberate encoded secret disclosure; review is
 the trust boundary. Treat downloaded prompts and agent outputs as untrusted.
 
 Evaluation is capped at 140 minutes and shortens when setup consumes part of
-its 160-minute near-job-start window. This reserves about 20 minutes of the
-180-minute job for recovery, redaction, and upload. Native Harbor retention
-keeps completed trials available to the native collector after interruption;
+the 160-minute window established by the job's first step. This reserves about
+20 minutes of the 180-minute job for recovery, redaction, and upload. Native
+Harbor retention keeps completed trials available to the native collector
+after interruption;
 raw execution directories stay on the runner. Recovered runs are explicitly
 incomplete and cannot publish history. Recovery and upload require a live
 runner; runner loss or forced cancellation can prevent them.

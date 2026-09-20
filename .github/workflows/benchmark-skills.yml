@@ -39,19 +39,21 @@ jobs:
     outputs:
       skill: ${{ steps.selection.outputs.skill }}
     steps:
-      - name: Check out dispatched revision
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.sha }}
-          persist-credentials: false
-
       - name: Establish evaluation deadline
         id: budget
         timeout-minutes: 1
         run: printf 'deadline_epoch=%s\n' "$(( $(date +%s) + 9600 ))" >> "$GITHUB_OUTPUT"
 
+      - name: Check out dispatched revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        timeout-minutes: 5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
       - name: Validate selection and clean checkout
         id: selection
+        timeout-minutes: 2
         run: |
           [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
@@ -60,15 +62,18 @@ jobs:
 
       - name: Set up pinned Docker Compose
         uses: docker/setup-compose-action@54042514f505b273907334ae2b9cdbb9a0213c1a # v2.4.0
+        timeout-minutes: 5
         with:
           version: v5.0.2
           cache-binary: false
 
       - name: Verify pinned Docker Compose
+        timeout-minutes: 1
         run: test "$(docker compose version --short)" = '5.0.2'
 
       - name: Set up pinned uv
         uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        timeout-minutes: 5
         with:
           version: '0.12.17'
           enable-cache: false
