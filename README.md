@@ -163,7 +163,10 @@ removed best effort with a warning on failure. The installer writes its
 directories under `releases` carrying that marker as a regular file are
 removal candidates; anything else, including an unmarked `.stage-*` directory,
 is left in place with a warning. A second bootstrap targeting the same
-installation root fails immediately instead of waiting.
+installation root fails immediately instead of waiting. These checks address
+pre-existing state and the user's own files; they do not defend against another
+process writing into the installation root while a bootstrap runs, because such
+a process could replace the command directly at any time.
 
 On Linux and macOS, `${APM_INSTALL_DIR:-$HOME/.local/bin}/apm` is a symlink to
 the absolute path of `<root>/lib/apm/releases/v<pin>-<timestamp>-<pid>/apm`,

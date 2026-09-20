@@ -743,6 +743,31 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         Test-Path -LiteralPath (Join-Path $env:APM_INSTALL_DIR 'apm.cmd') | Should-BeFalse
     }
 
+    It 'does not delete through a reparse point that replaced an abandoned stage' {
+        $outside = Join-Path $TestDrive ('outside-' + [Guid]::NewGuid().ToString('N'))
+        New-Item -ItemType Directory -Path $outside -Force | Out-Null
+        [IO.File]::WriteAllText((Join-Path $outside 'keep'), 'outside content')
+        $swapped = [pscustomobject]@{ Path = $null }
+        Mock Copy-Item {
+            if ($Destination -like '*\releases\.stage-*' -and -not $swapped.Path) {
+                Remove-Item -LiteralPath $Destination -Recurse -Force
+                New-Item -ItemType Junction -Path $Destination -Target $outside | Out-Null
+                $swapped.Path = $Destination
+                throw 'injected staging failure'
+            }
+        }
+        $warnings = New-Object Collections.Generic.List[string]
+        Mock Write-Warning { $warnings.Add($Message) }
+
+        { & $script:TestRepository.Script -CliOnly -Confirm:$false } |
+            Should-Throw -ExceptionMessage '*injected staging failure*'
+
+        $swapped.Path | Should-NotBeNull
+        ($warnings -join ' ') | Should-MatchString 'Leaving an abandoned APM stage'
+        [IO.File]::ReadAllText((Join-Path $outside 'keep')) | Should-Be 'outside content'
+        Test-Path -LiteralPath (Join-Path $env:APM_INSTALL_DIR 'apm.cmd') | Should-BeFalse
+    }
+
     It 'leaves a plain current directory in place with a warning' {
         & $script:TestRepository.Script -CliOnly -Confirm:$false
         $current = Join-Path $script:InstallRoot 'current'

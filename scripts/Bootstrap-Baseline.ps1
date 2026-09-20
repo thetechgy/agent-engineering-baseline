@@ -543,10 +543,16 @@ function Install-ReviewedBundle {
             try { $activated = [IO.File]::ReadAllText($shimPath) -ceq $shimContent } catch { $activated = $false }
         }
         if (-not $activated) {
+            # Like the post-activation cleanup, never delete through a reparse point.
             foreach ($path in $ownedPaths) {
-                if (Test-Path -LiteralPath $path) {
-                    Remove-Item -LiteralPath $path -Recurse -Force -ErrorAction SilentlyContinue
+                $entry = Get-Item -LiteralPath $path -Force -ErrorAction SilentlyContinue
+                if (-not $entry) { continue }
+                try {
+                    if ($entry.PSIsContainer) { Assert-PlainTree -Path $path -Label 'Abandoned APM stage' }
+                    elseif ($entry.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'it is a reparse point' }
+                    Remove-Item -LiteralPath $path -Recurse -Force -ErrorAction Stop
                 }
+                catch { Write-Warning -Message "Leaving an abandoned APM stage at ${path}: $_" }
             }
         }
         if ($mutexAcquired) { $mutex.ReleaseMutex() }
