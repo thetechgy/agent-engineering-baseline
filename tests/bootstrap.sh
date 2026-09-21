@@ -56,7 +56,9 @@ out_has() { printf '%s\n' "$OUTPUT" | grep -Fq "$1"; }
 # shellcheck disable=SC2317
 out_lacks() { ! out_has "$1"; }
 # shellcheck disable=SC2317
-file_has() { grep -Fq "$2" "$1"; }
+file_has() { grep -Fq -- "$2" "$1"; }
+# shellcheck disable=SC2317
+file_lacks() { ! file_has "$1" "$2"; }
 # The generation directory currently activated through the managed symlink.
 active_release() { dirname "$(readlink "$CASE_INSTALL/apm")"; }
 
@@ -190,6 +192,36 @@ run_case() {
             bash "$CASE_REPO/scripts/bootstrap.sh" "$@" 2>&1
     )
     STATUS=$?
+    set -e
+}
+
+# Run the bootstrap with a pseudo-terminal on stderr through script(1), the
+# same dependency Invoke-Validation.ps1 uses for the native audit. The exit
+# status travels through a file because BSD script does not propagate it.
+run_tty_case() {
+    local runner="$CASE_ROOT/tty-run.sh" status_file="$CASE_ROOT/tty-status"
+    cat > "$runner" <<EOF
+#!/usr/bin/env bash
+env -i \\
+    HOME='$CASE_HOME' \\
+    PATH='$CASE_BIN:/usr/bin:/bin' \\
+    TMPDIR='$CASE_TMP' \\
+    APM_INSTALL_DIR='$CASE_INSTALL' \\
+    APM_RELEASE_BASE_URL='file://$MIRROR_ROOT' \\
+    bash '$CASE_REPO/scripts/bootstrap.sh' $*
+printf '%s\\n' "\$?" > '$status_file'
+EOF
+    set +e
+    if ! command -v script >/dev/null 2>&1; then
+        OUTPUT='script(1) is required to exercise the interactive download path'
+        STATUS=127
+    elif script -q -e -c 'exit 0' /dev/null </dev/null >/dev/null 2>&1; then
+        OUTPUT=$(script -q -e -c "bash '$runner'" /dev/null </dev/null 2>&1)
+        STATUS=$(cat "$status_file" 2>/dev/null || printf '126')
+    else
+        OUTPUT=$(script -q /dev/null bash "$runner" </dev/null 2>&1)
+        STATUS=$(cat "$status_file" 2>/dev/null || printf '126')
+    fi
     set -e
 }
 
@@ -335,6 +367,26 @@ CASE_RELEASE_BASE='https://user:secret@example.invalid/apm'
 run_case --cli-only
 record_result 'credentialed mirror URL is rejected' failure
 assert_true 'credentialed mirror rejection is diagnosed' out_has 'must not contain credentials'
+
+new_case tty-progress
+make_fixture Linux x86_64
+real_curl=$(command -v curl)
+cat > "$CASE_BIN/curl" <<EOF
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >> '$CASE_ROOT/curl-args'
+exec '$real_curl' "\$@"
+EOF
+chmod +x "$CASE_BIN/curl"
+run_case --cli-only
+record_result 'captured download completes' success
+assert_true 'captured download stays quiet apart from errors' file_has "$CASE_ROOT/curl-args" '--silent --show-error'
+assert_true 'captured download draws no progress bar' file_lacks "$CASE_ROOT/curl-args" '--progress-bar'
+: > "$CASE_ROOT/curl-args"
+run_tty_case --cli-only
+record_result 'interactive download completes' success
+assert_true 'interactive download draws a progress bar' file_has "$CASE_ROOT/curl-args" '--progress-bar'
+assert_true 'interactive download is not silenced' file_lacks "$CASE_ROOT/curl-args" '--silent'
+assert_true 'interactive run activates a usable command' file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
 
 new_case corrupt-archive
 make_fixture Linux x86_64

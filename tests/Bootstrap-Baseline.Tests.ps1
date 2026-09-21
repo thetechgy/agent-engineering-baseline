@@ -318,6 +318,11 @@ Describe 'Bootstrap-Baseline Windows security contracts' {
     BeforeAll {
         $script:BootstrapText = Get-Content -LiteralPath $script:BootstrapSource -Raw
         $script:ValidationText = Get-Content -LiteralPath $script:ValidationSource -Raw
+        # Source with block comments and full-line comments removed, so the
+        # "never present" contracts inspect code rather than prose. Trailing
+        # comments stay because '#' also appears inside string literals.
+        $script:BootstrapCode = [regex]::Replace($script:BootstrapText, '(?s)<#.*?#>', '')
+        $script:BootstrapCode = [regex]::Replace($script:BootstrapCode, '(?m)^[ \t]*#[^\r\n]*', '')
     }
 
     It 'uses the required download, TLS, archive, mutex, atomic replacement, and ASCII primitives' {
@@ -339,10 +344,10 @@ Describe 'Bootstrap-Baseline Windows security contracts' {
     }
 
     It 'contains no ambient execution, installer, self-update, or Authenticode fallback' {
-        $script:BootstrapText | Should-NotMatchString '&\s+apm\b'
-        $script:BootstrapText | Should-NotMatchString 'install\.ps1'
-        $script:BootstrapText | Should-NotMatchString 'apm[^\r\n]*\bself-update\b'
-        $script:BootstrapText | Should-NotMatchString 'Authenticode'
+        $script:BootstrapCode | Should-NotMatchString '&\s+apm\b'
+        $script:BootstrapCode | Should-NotMatchString 'install\.ps1'
+        $script:BootstrapCode | Should-NotMatchString 'self-update'
+        $script:BootstrapCode | Should-NotMatchString 'Authenticode'
     }
 
     It 'supports util-linux and BSD pseudo-terminal audit forms' {
