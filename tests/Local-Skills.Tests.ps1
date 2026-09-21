@@ -10,14 +10,14 @@ BeforeAll {
 Describe 'Local skill APM integration' {
     It 'explicitly enumerates every local skill source directory' {
         # Read the top-level `includes` sequence without depending on exact
-        # indentation, quoting, or trailing-slash style.
+        # indentation (items may start at column 0), quoting, or trailing-slash style.
         $includes = New-Object System.Collections.Generic.List[string]
         $inIncludes = $false
         foreach ($line in ($script:Manifest -split '\r?\n')) {
             if ($line -match '^includes:\s*(#.*)?$') { $inIncludes = $true; continue }
             if (-not $inIncludes) { continue }
             if ($line -match '^\s*$' -or $line -match '^\s*#') { continue }
-            if ($line -notmatch '^\s') { break }
+            if ($line -notmatch '^\s' -and $line -notmatch '^-\s') { break }
             if ($line -match '^\s*-\s*["'']?([^"''#\s]+)["'']?\s*(#.*)?$') { $includes.Add($Matches[1]) }
         }
         $includes.Count | Should-BeGreaterThan 0

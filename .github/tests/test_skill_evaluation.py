@@ -712,10 +712,11 @@ class WorkflowTests(unittest.TestCase):
             self.assertEqual(completed.returncode, 0, completed.stderr)
             deadline = int(re.fullmatch(r"deadline_epoch=(\d+)\n", output.read_text()).group(1))
             budget_seconds = deadline - started
-            # The whole evaluation budget plus recovery and staging fits inside the job.
-            self.assertGreaterEqual(budget_seconds, 3600)
-            self.assertGreaterEqual(job["timeout-minutes"] * 60,
-                                    budget_seconds + (recovery["timeout-minutes"] + 15) * 60)
+            # The budget is the job minus recovery and a fixed staging reserve; the
+            # observed value may only exceed it by the clock drift between the two reads.
+            intended_budget = (job["timeout-minutes"] - recovery["timeout-minutes"] - 15) * 60
+            self.assertEqual(intended_budget, 9600)
+            self.assertTrue(intended_budget <= budget_seconds <= intended_budget + 10, budget_seconds)
             self.assertGreaterEqual(evaluation["timeout-minutes"] * 60, budget_seconds - 30 * 60)
 
             bin_dir = root / "bin"
@@ -742,22 +743,26 @@ class WorkflowTests(unittest.TestCase):
                 "OPENAI_API_KEY": "placeholder-for-test",
             }
 
-            # Plenty of time left: the run is still capped below the deadline.
-            now = int(time.time())
-            completed = self._run_step(evaluation, {**env, "EVALUATION_DEADLINE_EPOCH": str(now + 20000)}, root)
+            # The real budget output leaves plenty of time: the run is still capped below the deadline.
+            completed = self._run_step(evaluation, {**env, "EVALUATION_DEADLINE_EPOCH": str(deadline)}, root)
             self.assertEqual(completed.returncode, 0, completed.stderr)
             args = timeout_log.read_text().splitlines()
             self.assertEqual(args[:3], ["--signal=INT", "--kill-after=30s", "8400s"])
-            command = args[3:]
-            self.assertEqual(command[:3], ["skillevaluator", "tier3", "evaluate"])
-            self.assertEqual(command[3], str(REPO / ".apm/skills/ansible"))
-            for option in ("--harbor-keep-jobs", "--agent-runtime-preflight", "--no-stop-on-pass"):
-                self.assertIn(option, command)
-            self.assertEqual(command[command.index("--n-attempts") + 1], "3")
-            self.assertEqual(command[command.index("--results-dir") + 1], env["SKILLEVALUATOR_RESULTS_DIR"])
-            self.assertEqual(command[command.index("--timeout-multiplier") + 1],
-                             f"{reports.POLICY['timeout_multiplier']:g}")
-            self.assertNotIn("--skip-baseline", command)
+            policy = reports.POLICY
+            self.assertFalse(policy["stop_on_pass"])
+            self.assertTrue(policy["baseline"])
+            self.assertEqual(args[3:], [
+                "skillevaluator", "tier3", "evaluate", str(REPO / ".apm/skills/ansible"),
+                "--agents", "codex", "--agent-model", f"codex={policy['model']}",
+                "--env-mode", policy["environment"],
+                "--skill-workspace-mode", "isolated", "--grading-mode", policy["grading"],
+                "--n-attempts", "3", "--no-stop-on-pass",
+                "--n-concurrent", str(policy["concurrency"]), "--max-agents", "1",
+                "--agent-runtime-preflight", "--timeout-multiplier", f"{policy['timeout_multiplier']:g}",
+                "--progress", "plain", "--harbor-keep-jobs",
+                "--results-dir", env["SKILLEVALUATOR_RESULTS_DIR"],
+                "--evaluated-source-repository", "owner/repo", "--evaluated-source-revision", "0" * 40,
+            ])
 
             # Little time left: the run gets what remains minus termination grace.
             now = int(time.time())
