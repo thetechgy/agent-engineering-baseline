@@ -206,7 +206,16 @@ jobs:
           Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
           Install-Module Pester -RequiredVersion 6.1.0 -Scope CurrentUser -Force
           Install-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -Scope CurrentUser -Force
-          pipx install rumdl==0.2.34
+
+      - name: Install hash-locked Markdown linter
+        if: steps.changes.outputs.changed == 'true'
+        shell: bash
+        run: |
+          python3 -m venv "$RUNNER_TEMP/rumdl"
+          "$RUNNER_TEMP/rumdl/bin/pip" install --quiet --require-hashes --only-binary :all: \
+            --requirement .github/requirements/rumdl.txt
+          "$RUNNER_TEMP/rumdl/bin/rumdl" --version
+          echo "$RUNNER_TEMP/rumdl/bin" >> "$GITHUB_PATH"
 
       - name: Validate candidate update with reviewed CLI
         if: steps.changes.outputs.changed == 'true'

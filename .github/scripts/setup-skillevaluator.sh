@@ -15,8 +15,6 @@ chmod 700 "$tool_root"
 test "$(uv --version | awk '{print $2}')" = '0.12.17'
 export UV_CACHE_DIR="$tool_root/uv-cache"
 export UV_PYTHON_INSTALL_DIR="$tool_root/python"
-export UV_TOOL_DIR="$tool_root/uv-tools"
-export UV_TOOL_BIN_DIR="$tool_root/bin"
 export XDG_CACHE_HOME="$tool_root/cache"
 export XDG_STATE_HOME="$tool_root/state"
 
@@ -39,8 +37,11 @@ evaluator_bin="$tool_root/evaluator/.venv/bin"
 git -C "$tool_root/evaluator" diff --exit-code -- uv.lock pyproject.toml
 
 if [ "$kind" = quality ]; then
-  uv tool install --python 3.13 --managed-python 'semgrep==1.177.0' \
-    --constraints "$GITHUB_WORKSPACE/.github/requirements/semgrep.txt"
+  # Every Semgrep artifact must match a reviewed hash; nothing is resolved at run time.
+  uv venv --quiet --python 3.13 --managed-python "$tool_root/semgrep"
+  uv pip sync --quiet --python "$tool_root/semgrep/bin/python" --require-hashes \
+    "$GITHUB_WORKSPACE/.github/requirements/semgrep.txt"
+  ln -s "$tool_root/semgrep/bin/semgrep" "$tool_root/bin/semgrep"
   skillspector_revision=69dcdfb74487d361ba4c811d088cfdea2ff3a9dc # v2.11.2
   git init --quiet "$tool_root/skillspector"
   git -C "$tool_root/skillspector" fetch --quiet --depth=1 \
@@ -62,7 +63,7 @@ if [ "$kind" = quality ]; then
   "$tool_root/bin/gitleaks" version
   "$evaluator_bin/bandit" --version
   "$evaluator_bin/pip-audit" --version
-  uv pip list --python "$UV_TOOL_DIR/semgrep/bin/python" --format json > "$tool_root/dependencies/semgrep.json"
+  uv pip list --python "$tool_root/semgrep/bin/python" --format json > "$tool_root/dependencies/semgrep.json"
   uv pip list --python "$tool_root/skillspector/.venv/bin/python" --format json > "$tool_root/dependencies/skillspector.json"
 fi
 uv pip list --python "$evaluator_bin/python" --format json > "$tool_root/dependencies/evaluator.json"

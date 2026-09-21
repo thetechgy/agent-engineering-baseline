@@ -28,6 +28,37 @@ spec = importlib.util.spec_from_file_location("skill_reports", REPO / ".github/s
 reports = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(reports)
 SHA = "a" * 40
+# Every Python install command in CI must be hash-verified or lock-frozen; ad-hoc
+# installers that resolve at run time are forbidden. Applied to each logical
+# command line of every workflow `run:` body and every `.github/scripts/*.sh`.
+INSTALL_POLICY = (
+    (re.compile(r'\b(pip3?|python3? -m pip)"?\s+install\b'), ("--require-hashes", "--only-binary :all:")),
+    (re.compile(r"\buv pip (install|sync)\b"), ("--require-hashes",)),
+    (re.compile(r"\buv sync\b"), ("--frozen",)),
+)
+FORBIDDEN_INSTALLERS = re.compile(r"\b(pipx|uvx|uv tool install)\b")
+
+
+def _workflow_files():
+    # Actions loads both extensions, so every workflow-wide policy must scan both.
+    return sorted((REPO / ".github/workflows").glob("*.y*ml"))
+
+
+def _command_sources():
+    for workflow in _workflow_files():
+        for name, job in yaml.safe_load(workflow.read_text())["jobs"].items():
+            for step in job.get("steps", []):
+                if "run" in step:
+                    yield f"{workflow.name}:{name}", step["run"]
+    for script in sorted((REPO / ".github/scripts").glob("*.sh")):
+        yield script.name, script.read_text()
+
+
+def _command_lines(text):
+    # Join shell continuations regardless of the whitespace around the escaped newline.
+    for line in re.sub(r"[ \t]*\\\n[ \t]*", " ", text).splitlines():
+        if line.strip() and not line.lstrip().startswith("#"):
+            yield line
 
 
 def _external_action_references(workflow):
@@ -793,6 +824,48 @@ class WorkflowTests(unittest.TestCase):
         metrics = next(step for step in steps if step.get("with", {}).get("name") == "skill-metrics")
         self.assertIn("success()", metrics["if"])
 
+    def test_python_tooling_is_hash_locked(self):
+        for lock in ("semgrep", "rumdl"):
+            pins = {}
+            for line in (REPO / f".github/requirements/{lock}.in").read_text().splitlines():
+                if line and not line.startswith("#"):
+                    self.assertRegex(line, r"^[A-Za-z0-9_.-]+==[^ ]+$", line)
+                    name, version = line.split("==")
+                    pins[name.lower()] = version
+            self.assertIn(lock, pins)
+            # One block per requirement: a `name==version \` header followed by indented hash lines.
+            blocks = re.split(r"\n(?=\S)", (REPO / f".github/requirements/{lock}.txt").read_text().strip())
+            locked = {}
+            for block in blocks:
+                header, *hashes = block.split(" \\\n")
+                self.assertRegex(header, r"^[A-Za-z0-9_.-]+==[^ ]+$", block)
+                self.assertTrue(hashes, f"{header} has no hashes")
+                for entry in hashes:
+                    self.assertRegex(entry, r"^    --hash=sha256:[0-9a-f]{64}$")
+                name, version = header.split("==")
+                locked[name.lower()] = version
+            # The source pin must be what the lock actually installs, not merely present by name.
+            for name, version in pins.items():
+                self.assertEqual(locked.get(name), version, f"{lock}.in pins {name}=={version}")
+        # Both locks are consumed by the commands the policy below verifies.
+        sources = list(_command_sources())
+        self.assertIn('"$GITHUB_WORKSPACE/.github/requirements/semgrep.txt"',
+                      next(text for source, text in sources if source == "setup-skillevaluator.sh"))
+        self.assertEqual(
+            sum("--requirement .github/requirements/rumdl.txt" in text for _, text in sources), 2)
+        matched = 0
+        for source, text in sources:
+            for line in _command_lines(text):
+                self.assertNotRegex(line, FORBIDDEN_INSTALLERS, source)
+                for pattern, flags in INSTALL_POLICY:
+                    if pattern.search(line):
+                        matched += 1
+                        for flag in flags:
+                            self.assertIn(flag, line, f"{source}: {line.strip()}")
+        # Sanity check that the patterns still match the known install commands:
+        # pip (rumdl x2), uv pip sync (Semgrep), uv sync (SkillEvaluator, SkillSpector).
+        self.assertGreaterEqual(matched, 5)
+
     def test_setup_private_tool_root_for_provenance_key(self):
         setup = (REPO / ".github/scripts/setup-skillevaluator.sh").read_text()
         self.assertIn("umask 077", setup)
@@ -924,7 +997,7 @@ class WorkflowTests(unittest.TestCase):
 
     def test_documented_external_action_requirements_match_all_workflows(self):
         required = set()
-        for path in sorted((REPO / ".github/workflows").glob("*.y*ml")):
+        for path in _workflow_files():
             actions = _external_action_references(yaml.safe_load(path.read_text()))
             for action in actions:
                 self.assertRegex(action, r"^[^@]+@[0-9a-f]{40}$", path.name)

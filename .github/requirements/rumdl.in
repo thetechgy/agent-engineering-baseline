@@ -1,0 +1,2 @@
+# Compile with uv 0.12.17 for Linux x86_64 / Python 3.13; see README.
+rumdl==0.2.34
