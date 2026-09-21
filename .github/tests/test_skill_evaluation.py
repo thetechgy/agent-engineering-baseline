@@ -28,6 +28,12 @@ spec = importlib.util.spec_from_file_location("skill_reports", REPO / ".github/s
 reports = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(reports)
 SHA = "a" * 40
+# Actions loads both extensions, so every workflow-wide policy must scan both.
+PIP_INSTALL = re.compile(r'\b(pip3?|python3? -m pip)"?\s+install\b')
+
+
+def _workflow_files():
+    return sorted((REPO / ".github/workflows").glob("*.y*ml"))
 
 
 def _external_action_references(workflow):
@@ -813,12 +819,12 @@ class WorkflowTests(unittest.TestCase):
         setup = (REPO / ".github/scripts/setup-skillevaluator.sh").read_text()
         self.assertIn("uv pip sync --quiet --python \"$tool_root/semgrep/bin/python\" --require-hashes", setup)
         self.assertNotIn("uv tool install", setup)
-        for workflow in (REPO / ".github/workflows").glob("*.yml"):
+        for workflow in _workflow_files():
             for job in yaml.safe_load(workflow.read_text())["jobs"].values():
                 for step in job.get("steps", []):
                     run = step.get("run", "")
                     self.assertNotIn("pipx", run, workflow.name)
-                    if "pip install" in run:
+                    if PIP_INSTALL.search(run):
                         self.assertIn("--require-hashes", run, workflow.name)
                         self.assertIn("--only-binary :all:", run, workflow.name)
 
@@ -953,7 +959,7 @@ class WorkflowTests(unittest.TestCase):
 
     def test_documented_external_action_requirements_match_all_workflows(self):
         required = set()
-        for path in sorted((REPO / ".github/workflows").glob("*.y*ml")):
+        for path in _workflow_files():
             actions = _external_action_references(yaml.safe_load(path.read_text()))
             for action in actions:
                 self.assertRegex(action, r"^[^@]+@[0-9a-f]{40}$", path.name)

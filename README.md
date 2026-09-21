@@ -477,8 +477,8 @@ linter used by the validation and update workflows is installed with `pip
 install --require-hashes` from `.github/requirements/rumdl.txt`, so every
 Python artifact must match a reviewed SHA-256 rather than only a version.
 Artifacts record scanner versions and resolved Python dependency inventories.
-To deliberately update either lock with uv 0.12.17, run (substituting `rumdl`
-for the linter):
+To deliberately update either lock with uv 0.12.17, run the following (for
+the linter lock, replace `semgrep` with `rumdl` in both file paths):
 
 ```bash
 uv pip compile --python-version 3.13 --python-platform x86_64-unknown-linux-gnu \
