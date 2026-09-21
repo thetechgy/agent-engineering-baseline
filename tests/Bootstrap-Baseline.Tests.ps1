@@ -386,6 +386,8 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         Remove-Item Env:APM_TEST_PROMOTION_FAULT -ErrorAction SilentlyContinue
         $script:OldProcessPath = $env:PATH
         $script:OldUserPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+        $script:OldVersion = $env:VERSION
+        Remove-Item Env:VERSION -ErrorAction SilentlyContinue
         $script:TestRepository = New-TestRepository
         $script:Fixture = New-ZipFixture -Repository $script:TestRepository
         $env:APM_TEST_FIXTURE_ARCHIVE = $script:Fixture.Archive
@@ -414,6 +416,7 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
     AfterEach {
         $env:PATH = $script:OldProcessPath
         [Environment]::SetEnvironmentVariable('Path', $script:OldUserPath, 'User')
+        $env:VERSION = $script:OldVersion
         foreach ($name in @(
                 'APM_INSTALL_DIR',
                 'APM_RELEASE_BASE_URL',
@@ -500,6 +503,15 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         $compileOptions = if ($GlobalScope) { ' --global' } else { ' --target codex,copilot' }
         $calls[2] | Should-MatchString (' compile' + $compileOptions + $pinned)
         $env:VERSION | Should-BeFalsy
+    }
+
+    It 'restores a caller-provided VERSION after pinning the native commands' {
+        $env:VERSION = 'caller-sentinel'
+        & $script:TestRepository.Script -Scope Repo -Confirm:$false
+        $calls = @(Get-Content -LiteralPath $script:CallLog -Encoding UTF8 | Where-Object { $_ -notmatch '--version' })
+        $calls.Count | Should-Be 3
+        foreach ($call in $calls) { $call | Should-MatchString ' VERSION=0\.29\.0$' }
+        $env:VERSION | Should-Be 'caller-sentinel'
     }
 
     It 'honors a literal package reference override' {
