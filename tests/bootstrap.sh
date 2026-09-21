@@ -177,7 +177,7 @@ write_curl_stub() {
     cat > "$CASE_BIN/curl" <<STUB
 #!/usr/bin/env bash
 printf '%s\n' "\$*" >> '$CURL_LOG'
-printf '%s\n' "\$@" > "$CURL_LOG.\$(wc -l < '$CURL_LOG')"
+printf '%s\n' "\$@" > "$CURL_LOG.\$(( \$(wc -l < '$CURL_LOG') ))"
 case " \$* " in
     *' https://github.com/microsoft/apm/releases/download/'*)
         while [ \$# -gt 0 ]; do
