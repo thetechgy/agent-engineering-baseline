@@ -57,8 +57,6 @@ out_has() { printf '%s\n' "$OUTPUT" | grep -Fq -- "$1"; }
 out_lacks() { ! out_has "$1"; }
 # shellcheck disable=SC2317
 file_has() { grep -Fq -- "$2" "$1"; }
-# shellcheck disable=SC2317
-file_lacks() { ! file_has "$1" "$2"; }
 # The generation directory currently activated through the managed symlink.
 active_release() { dirname "$(readlink "$CASE_INSTALL/apm")"; }
 
@@ -173,9 +171,13 @@ write_curl_stub() {
     real_curl=$(command -v curl)
     CURL_LOG="$CASE_ROOT/curl-calls.log"
     : > "$CURL_LOG"
+    # One summary line per call plus a full argv record; only the pinned public
+    # asset (served from the fixture mirror) and file:// URLs are answered, so an
+    # unexpected invocation fails instead of reaching the network.
     cat > "$CASE_BIN/curl" <<STUB
 #!/usr/bin/env bash
 printf '%s\n' "\$*" >> '$CURL_LOG'
+printf '%s\n' "\$@" > "$CURL_LOG.\$(wc -l < '$CURL_LOG')"
 case " \$* " in
     *' https://github.com/microsoft/apm/releases/download/'*)
         while [ \$# -gt 0 ]; do
@@ -183,11 +185,35 @@ case " \$* " in
             shift
         done
         exit 3 ;;
-    *) exec '$real_curl' "\$@" ;;
+    *' file://'*) exec '$real_curl' "\$@" ;;
+    *) exit 3 ;;
 esac
 STUB
     chmod +x "$CASE_BIN/curl"
 }
+
+# Compare the recorded curl argv of call N against an exact option set, order
+# independent. Options that take a value are paired with it; the single
+# --output destination and the trailing URL are checked separately.
+# shellcheck disable=SC2317
+curl_options_are() {
+    local call=$1
+    shift
+    local -a actual=()
+    local arg outputs=0
+    while IFS= read -r arg; do
+        case "$arg" in
+            --proto|--proto-redir) IFS= read -r value; actual+=("$arg $value") ;;
+            --output) IFS= read -r value; outputs=$((outputs + 1)) ;;
+            *://*) ;;
+            *) actual+=("$arg") ;;
+        esac
+    done < "$CURL_LOG.$call"
+    [ "$outputs" -eq 1 ] &&
+        [ "$(printf '%s\n' "${actual[@]}" | sort)" = "$(printf '%s\n' "$@" | sort)" ]
+}
+# shellcheck disable=SC2317
+curl_url_is() { [ "$(tail -n 1 "$CURL_LOG.$1")" = "$2" ]; }
 
 run_case() {
     local release_base=${CASE_RELEASE_BASE-"file://$MIRROR_ROOT"}
@@ -372,10 +398,11 @@ make_fixture Linux x86_64
 write_curl_stub
 run_case --cli-only
 record_result 'mirror download succeeds through the recorded transport' success
-assert_true 'mirror download allows only HTTPS and file protocols' \
-    file_has "$CURL_LOG" "--proto =https,file --proto-redir =https,file"
-assert_true 'mirror download fails closed on HTTP errors' file_has "$CURL_LOG" '--fail --location'
-assert_true 'mirror download is quiet outside a terminal' file_has "$CURL_LOG" '--silent --show-error'
+assert_true 'mirror download is a single request' test "$(wc -l < "$CURL_LOG")" -eq 1
+assert_true 'mirror download targets the pinned asset on the configured mirror' \
+    curl_url_is 1 "file://$MIRROR_ROOT/v0.29.0/$ARCHIVE_NAME"
+assert_true 'mirror download uses exactly the reviewed options and only HTTPS and file protocols' \
+    curl_options_are 1 --fail --location --silent --show-error '--proto =https,file' '--proto-redir =https,file'
 
 new_case public-transport
 make_fixture Linux x86_64
@@ -383,11 +410,22 @@ write_curl_stub
 CASE_RELEASE_BASE=''
 run_case --cli-only
 record_result 'public download succeeds through the recorded transport' success
-assert_true 'public download targets the pinned official release asset' \
-    file_has "$CURL_LOG" "https://github.com/microsoft/apm/releases/download/v0.29.0/$ARCHIVE_NAME"
-assert_true 'public download and redirects remain HTTPS-only with TLS 1.2' \
-    file_has "$CURL_LOG" '--proto =https --proto-redir =https --tlsv1.2'
 assert_true 'public download is a single request' test "$(wc -l < "$CURL_LOG")" -eq 1
+assert_true 'public download targets the pinned official release asset' \
+    curl_url_is 1 "https://github.com/microsoft/apm/releases/download/v0.29.0/$ARCHIVE_NAME"
+assert_true 'public download uses exactly the reviewed options with HTTPS-only redirects and TLS 1.2' \
+    curl_options_are 1 --fail --location --silent --show-error '--proto =https' '--proto-redir =https' --tlsv1.2
+
+new_case failed-mirror
+make_fixture Linux x86_64
+write_curl_stub
+CASE_RELEASE_BASE='https://mirror.example.invalid/apm'
+run_case --cli-only
+record_result 'a failed authoritative mirror is not retried against the public release' failure
+assert_true 'failed mirror download is a single request' test "$(wc -l < "$CURL_LOG")" -eq 1
+assert_true 'failed mirror request targets only the configured mirror' \
+    curl_url_is 1 "https://mirror.example.invalid/apm/v0.29.0/$ARCHIVE_NAME"
+assert_true 'failed mirror leaves no command behind' test ! -e "$CASE_INSTALL/apm"
 
 new_case dash-leading-invocation
 make_fixture Linux x86_64
@@ -432,22 +470,12 @@ assert_true 'credentialed mirror rejection is diagnosed' out_has 'must not conta
 
 new_case tty-progress
 make_fixture Linux x86_64
-real_curl=$(command -v curl)
-cat > "$CASE_BIN/curl" <<EOF
-#!/usr/bin/env bash
-printf '%s\n' "\$*" >> '$CASE_ROOT/curl-args'
-exec '$real_curl' "\$@"
-EOF
-chmod +x "$CASE_BIN/curl"
-run_case --cli-only
-record_result 'captured download completes' success
-assert_true 'captured download stays quiet apart from errors' file_has "$CASE_ROOT/curl-args" '--silent --show-error'
-assert_true 'captured download draws no progress bar' file_lacks "$CASE_ROOT/curl-args" '--progress-bar'
-: > "$CASE_ROOT/curl-args"
+write_curl_stub
 run_tty_case --cli-only
 record_result 'interactive download completes' success
-assert_true 'interactive download draws a progress bar' file_has "$CASE_ROOT/curl-args" '--progress-bar'
-assert_true 'interactive download is not silenced' file_lacks "$CASE_ROOT/curl-args" '--silent'
+assert_true 'interactive download is a single request' test "$(wc -l < "$CURL_LOG")" -eq 1
+assert_true 'interactive download swaps quiet output for a progress bar' \
+    curl_options_are 1 --fail --location --progress-bar '--proto =https,file' '--proto-redir =https,file'
 assert_true 'interactive run activates a usable command' file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
 
 new_case corrupt-archive
