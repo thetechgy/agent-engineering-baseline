@@ -55,7 +55,8 @@ def _command_sources():
 
 
 def _command_lines(text):
-    for line in text.replace(" \\\n", " ").splitlines():
+    # Join shell continuations regardless of the whitespace around the escaped newline.
+    for line in re.sub(r"[ \t]*\\\n[ \t]*", " ", text).splitlines():
         if line.strip() and not line.lstrip().startswith("#"):
             yield line
 
