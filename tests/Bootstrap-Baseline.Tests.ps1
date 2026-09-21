@@ -99,7 +99,11 @@ public static class $className
         string log = Environment.GetEnvironmentVariable("APM_TEST_CALL_LOG");
         if (!String.IsNullOrEmpty(log))
         {
-            File.AppendAllText(log, Environment.CommandLine + Environment.NewLine);
+            string pinned = Environment.GetEnvironmentVariable("VERSION");
+            File.AppendAllText(
+                log,
+                Environment.CommandLine + " VERSION=" + (String.IsNullOrEmpty(pinned) ? "unset" : pinned) + Environment.NewLine
+            );
         }
         string mutexName = Environment.GetEnvironmentVariable("APM_TEST_MUTEX_NAME");
         if (!String.IsNullOrEmpty(mutexName) && args.Length > 0 && args[0] == "install")
@@ -314,6 +318,11 @@ Describe 'Bootstrap-Baseline Windows security contracts' {
     BeforeAll {
         $script:BootstrapText = Get-Content -LiteralPath $script:BootstrapSource -Raw
         $script:ValidationText = Get-Content -LiteralPath $script:ValidationSource -Raw
+        # Source with block comments and full-line comments removed, so the
+        # "never present" contracts inspect code rather than prose. Trailing
+        # comments stay because '#' also appears inside string literals.
+        $script:BootstrapCode = [regex]::Replace($script:BootstrapText, '(?s)<#.*?#>', '')
+        $script:BootstrapCode = [regex]::Replace($script:BootstrapCode, '(?m)^[ \t]*#[^\r\n]*', '')
     }
 
     It 'uses the required download, TLS, archive, mutex, atomic replacement, and ASCII primitives' {
@@ -335,10 +344,10 @@ Describe 'Bootstrap-Baseline Windows security contracts' {
     }
 
     It 'contains no ambient execution, installer, self-update, or Authenticode fallback' {
-        $script:BootstrapText | Should-NotMatchString '&\s+apm\b'
-        $script:BootstrapText | Should-NotMatchString 'install\.ps1'
-        $script:BootstrapText | Should-NotMatchString 'self-update'
-        $script:BootstrapText | Should-NotMatchString 'Authenticode'
+        $script:BootstrapCode | Should-NotMatchString '&\s+apm\b'
+        $script:BootstrapCode | Should-NotMatchString 'install\.ps1'
+        $script:BootstrapCode | Should-NotMatchString 'self-update'
+        $script:BootstrapCode | Should-NotMatchString 'Authenticode'
     }
 
     It 'supports util-linux and BSD pseudo-terminal audit forms' {
@@ -377,6 +386,8 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         Remove-Item Env:APM_TEST_PROMOTION_FAULT -ErrorAction SilentlyContinue
         $script:OldProcessPath = $env:PATH
         $script:OldUserPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+        $script:OldVersion = $env:VERSION
+        Remove-Item Env:VERSION -ErrorAction SilentlyContinue
         $script:TestRepository = New-TestRepository
         $script:Fixture = New-ZipFixture -Repository $script:TestRepository
         $env:APM_TEST_FIXTURE_ARCHIVE = $script:Fixture.Archive
@@ -405,6 +416,7 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
     AfterEach {
         $env:PATH = $script:OldProcessPath
         [Environment]::SetEnvironmentVariable('Path', $script:OldUserPath, 'User')
+        $env:VERSION = $script:OldVersion
         foreach ($name in @(
                 'APM_INSTALL_DIR',
                 'APM_RELEASE_BASE_URL',
@@ -481,13 +493,25 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         $release = Get-ActiveRelease -InstallRoot $script:InstallRoot
         foreach ($call in $calls) { $call | Should-MatchString ([regex]::Escape("$release\apm.exe")) }
         $globalOption = if ($GlobalScope) { ' --global' } else { '' }
+        # APM reads VERSION as its pinned release and skips the self-update nudge.
+        $pinned = ' VERSION=0\.29\.0$'
         $calls[0] | Should-MatchString (
             ' install' + $globalOption + ' --target codex,copilot --trust-bin --trust-transitive-mcp ' +
-            'https://github.com/thetechgy/agent-engineering-baseline\.git#main$'
+            'https://github.com/thetechgy/agent-engineering-baseline\.git#main' + $pinned
         )
-        $calls[1] | Should-MatchString (' update' + $globalOption + ' --yes --target codex,copilot$')
+        $calls[1] | Should-MatchString (' update' + $globalOption + ' --yes --target codex,copilot' + $pinned)
         $compileOptions = if ($GlobalScope) { ' --global' } else { ' --target codex,copilot' }
-        $calls[2] | Should-MatchString (' compile' + $compileOptions + '$')
+        $calls[2] | Should-MatchString (' compile' + $compileOptions + $pinned)
+        $env:VERSION | Should-BeFalsy
+    }
+
+    It 'restores a caller-provided VERSION after pinning the native commands' {
+        $env:VERSION = 'caller-sentinel'
+        & $script:TestRepository.Script -Scope Repo -Confirm:$false
+        $calls = @(Get-Content -LiteralPath $script:CallLog -Encoding UTF8 | Where-Object { $_ -notmatch '--version' })
+        $calls.Count | Should-Be 3
+        foreach ($call in $calls) { $call | Should-MatchString ' VERSION=0\.29\.0$' }
+        $env:VERSION | Should-Be 'caller-sentinel'
     }
 
     It 'honors a literal package reference override' {
