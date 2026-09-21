@@ -801,21 +801,27 @@ class WorkflowTests(unittest.TestCase):
 
     def test_python_tooling_is_hash_locked(self):
         for lock in ("semgrep", "rumdl"):
-            pins = [line.split("==")[0] for line in (REPO / f".github/requirements/{lock}.in").read_text().splitlines()
-                    if line and not line.startswith("#")]
+            pins = {}
+            for line in (REPO / f".github/requirements/{lock}.in").read_text().splitlines():
+                if line and not line.startswith("#"):
+                    self.assertRegex(line, r"^[A-Za-z0-9_.-]+==[^ ]+$", line)
+                    name, version = line.split("==")
+                    pins[name.lower()] = version
             self.assertIn(lock, pins)
             # One block per requirement: a `name==version \` header followed by indented hash lines.
             blocks = re.split(r"\n(?=\S)", (REPO / f".github/requirements/{lock}.txt").read_text().strip())
-            names = []
+            locked = {}
             for block in blocks:
                 header, *hashes = block.split(" \\\n")
                 self.assertRegex(header, r"^[A-Za-z0-9_.-]+==[^ ]+$", block)
                 self.assertTrue(hashes, f"{header} has no hashes")
                 for entry in hashes:
                     self.assertRegex(entry, r"^    --hash=sha256:[0-9a-f]{64}$")
-                names.append(header.split("==")[0].lower())
-            for pin in pins:
-                self.assertIn(pin.lower(), names)
+                name, version = header.split("==")
+                locked[name.lower()] = version
+            # The source pin must be what the lock actually installs, not merely present by name.
+            for name, version in pins.items():
+                self.assertEqual(locked.get(name), version, f"{lock}.in pins {name}=={version}")
         setup = (REPO / ".github/scripts/setup-skillevaluator.sh").read_text()
         self.assertIn("uv pip sync --quiet --python \"$tool_root/semgrep/bin/python\" --require-hashes", setup)
         self.assertNotIn("uv tool install", setup)
