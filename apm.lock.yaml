@@ -1,11 +1,11 @@
 lockfile_version: '1'
-generated_at: '2026-09-19T01:33:09.789575+00:00'
+generated_at: '2026-09-21T09:36:26.421651+00:00'
 apm_version: 0.30.0
 dependencies:
 - repo_url: addyosmani/agent-skills
   name: code-simplification
   host: github.com
-  resolved_commit: be4e44a9fbc5e8df0beaefadbb28bd22ee61cc39
+  resolved_commit: dc27a9c2e13721158157632de61b4106c6c2a2a1
   resolved_ref: main
   version: unknown
   virtual_path: skills/code-simplification
@@ -20,7 +20,7 @@ dependencies:
 - repo_url: github/awesome-copilot
   name: dependabot
   host: github.com
-  resolved_commit: 1899b18da3fa5183652f86165917d553cba1850a
+  resolved_commit: ad4c196b933c5ca7f82a5ba78969ddcd2603ba80
   resolved_ref: main
   version: unknown
   virtual_path: skills/dependabot
@@ -41,7 +41,7 @@ dependencies:
 - repo_url: github/awesome-copilot
   name: git-commit
   host: github.com
-  resolved_commit: 1899b18da3fa5183652f86165917d553cba1850a
+  resolved_commit: ad4c196b933c5ca7f82a5ba78969ddcd2603ba80
   resolved_ref: main
   version: unknown
   virtual_path: skills/git-commit
@@ -56,7 +56,7 @@ dependencies:
 - repo_url: github/awesome-copilot
   name: github-actions-hardening
   host: github.com
-  resolved_commit: 1899b18da3fa5183652f86165917d553cba1850a
+  resolved_commit: ad4c196b933c5ca7f82a5ba78969ddcd2603ba80
   resolved_ref: main
   version: unknown
   virtual_path: skills/github-actions-hardening
@@ -81,7 +81,7 @@ dependencies:
 - repo_url: merill/msgraph
   name: msgraph
   host: github.com
-  resolved_commit: a47d0c37b8e89da5db607e582c25b381499501b2
+  resolved_commit: b39b1820d70cfbf488fac6c2f7c9b24004ba6ac1
   resolved_ref: main
   version: unknown
   virtual_path: skills/msgraph
@@ -119,7 +119,7 @@ dependencies:
     .agents/skills/msgraph/SKILL.md: sha256:b4763f6ae89a4e2843ca5bfe15fddf49f5924e20054ff5d7fb7e43a2df3df67e
     .agents/skills/msgraph/references/REFERENCE.md: sha256:61639bb509391df6e65762355c87ef53c98f544d04e4455fd17f571c6732b5d7
     .agents/skills/msgraph/references/api-docs-index.db: sha256:cff5397f029abd0b57fc0b885d8c448fec3d3aeea8459a09de96ad7fa91615d0
-    .agents/skills/msgraph/references/api-docs-index.json: sha256:b636b3e9721f55be63bd15688af89bcfd7b5ca9f3eff5e1e809b54382e5c94d4
+    .agents/skills/msgraph/references/api-docs-index.json: sha256:627ec400d083f329c38ad7f95d63a0a9cfd98f718b0114c27d4555a484602f06
     .agents/skills/msgraph/references/docs/advanced-queries.md: sha256:89ac64478ca6539412ce66d5f6ac2f76f3c88ff709c8bee7c81da0d79017345e
     .agents/skills/msgraph/references/docs/authentication.md: sha256:dae0fca55119fd89a9b719705d5263aa4705215c1de57d0bf33627d30c9d7c42
     .agents/skills/msgraph/references/docs/batching.md: sha256:f5132b3027554ededc2ba6b116a47187df4c408be5ddbb273ff7653352e60e3b
@@ -128,10 +128,10 @@ dependencies:
     .agents/skills/msgraph/references/docs/paging.md: sha256:f1b76a08cde517b495023098385b63fdf921eb3dc5e374b4f285e71786feb716
     .agents/skills/msgraph/references/docs/query-parameters.md: sha256:f20ddb64c70f3b94c224882cb57bfc1541df6b2bb74532a5e16cb83ca94b6cd3
     .agents/skills/msgraph/references/docs/throttling.md: sha256:cb6db141e600f3c433c80e8f21a6840b1ed83237d7c73f2b0144de37225b0a85
-    .agents/skills/msgraph/references/graph-api-index.db: sha256:e89b3dca9522822a468af434d783184c6aa21e1040b3363b79a6e7635b585cd5
-    .agents/skills/msgraph/references/graph-api-index.json: sha256:4e95df147974f7af3a97570d59e659f0f664f7a39d2367d63d6ef2214736f242
+    .agents/skills/msgraph/references/graph-api-index.db: sha256:600493c403d5661169bd3a72f13591c1516da1f7b8a95e404af6de50f2ef29e4
+    .agents/skills/msgraph/references/graph-api-index.json: sha256:e2045e0b72a5c9c6a5a448e8b2122431b8c8cddf7a8557c73b6446492fe1a2a8
     .agents/skills/msgraph/references/samples-index.db: sha256:17843a1afe4a3479e6372192d93c2872ba5ad68451637183fda075968f3a29ca
-    .agents/skills/msgraph/references/samples-index.json: sha256:7c6b041475f3066833ba81ff6a014fdbc30ffab8d4bc2dbe44ef5541810670cf
+    .agents/skills/msgraph/references/samples-index.json: sha256:9770e71f2ea364411c9d15ac3094f3886b56de9b10274f5958f24378fec07204
     .agents/skills/msgraph/scripts/bin/msgraph_darwin_amd64: sha256:9114a140380c1bf67569b4bc99c61c3581a9633e1ddcdf65e428b5f797ea2fb0
     .agents/skills/msgraph/scripts/bin/msgraph_darwin_arm64: sha256:3a92b70f8d3790e82664c2acea7bf8fa75e6d907c85f896098a98c1533e3e8bc
     .agents/skills/msgraph/scripts/bin/msgraph_linux_amd64: sha256:170b65df956470a7476ccc16c84e3bcc43ae43d739901535532bb4bea795e2f6
@@ -140,7 +140,7 @@ dependencies:
     .agents/skills/msgraph/scripts/bin/msgraph_windows_arm64.exe: sha256:f3c8fb32e9e03537781f274860e21438d6f9ce16cddae64eedfd608743184230
     .agents/skills/msgraph/scripts/run.ps1: sha256:208a0323c85c94c8b8f23d974a92fb37dab77c44de5638fb3e7688e00d761cbb
     .agents/skills/msgraph/scripts/run.sh: sha256:ef3545fee5e2f2654cedf32ed543ba2e496109c1eb90ea6f915fd9bcf4abd51b
-  content_hash: sha256:7d179a864745798bf5e1516a114bc618f3f9ec458708ecbc5c1f5bceeb043d5b
+  content_hash: sha256:42b522af0edc21b4f3ccc0972d94a4aeab6a4f34443210b5317b6b4aa9d3e365
 deployments:
 - kind: project-relative
   target: codex
@@ -339,7 +339,7 @@ deployments:
   owners:
   - merill/msgraph/skills/msgraph
   active_owner: merill/msgraph/skills/msgraph
-  content_hash: sha256:b636b3e9721f55be63bd15688af89bcfd7b5ca9f3eff5e1e809b54382e5c94d4
+  content_hash: sha256:627ec400d083f329c38ad7f95d63a0a9cfd98f718b0114c27d4555a484602f06
 - kind: project-relative
   target: codex
   value: .agents/skills/msgraph/references/docs/advanced-queries.md
@@ -420,7 +420,7 @@ deployments:
   owners:
   - merill/msgraph/skills/msgraph
   active_owner: merill/msgraph/skills/msgraph
-  content_hash: sha256:e89b3dca9522822a468af434d783184c6aa21e1040b3363b79a6e7635b585cd5
+  content_hash: sha256:600493c403d5661169bd3a72f13591c1516da1f7b8a95e404af6de50f2ef29e4
 - kind: project-relative
   target: codex
   value: .agents/skills/msgraph/references/graph-api-index.json
@@ -429,7 +429,7 @@ deployments:
   owners:
   - merill/msgraph/skills/msgraph
   active_owner: merill/msgraph/skills/msgraph
-  content_hash: sha256:4e95df147974f7af3a97570d59e659f0f664f7a39d2367d63d6ef2214736f242
+  content_hash: sha256:e2045e0b72a5c9c6a5a448e8b2122431b8c8cddf7a8557c73b6446492fe1a2a8
 - kind: project-relative
   target: codex
   value: .agents/skills/msgraph/references/samples-index.db
@@ -447,7 +447,7 @@ deployments:
   owners:
   - merill/msgraph/skills/msgraph
   active_owner: merill/msgraph/skills/msgraph
-  content_hash: sha256:7c6b041475f3066833ba81ff6a014fdbc30ffab8d4bc2dbe44ef5541810670cf
+  content_hash: sha256:9770e71f2ea364411c9d15ac3094f3886b56de9b10274f5958f24378fec07204
 - kind: project-relative
   target: codex
   value: .agents/skills/msgraph/scripts/bin/msgraph_darwin_amd64
