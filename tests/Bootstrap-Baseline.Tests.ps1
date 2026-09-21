@@ -316,6 +316,8 @@ Describe 'Bootstrap-Baseline local metadata and preview' {
 
 Describe 'Bootstrap-Baseline Windows security contracts' {
     BeforeAll {
+        # Layout, mutex, TLS, ASCII, and reparse behavior are exercised by the Windows
+        # fixtures; these contracts only forbid code paths that no fixture should reach.
         $script:BootstrapText = Get-Content -LiteralPath $script:BootstrapSource -Raw
         $script:ValidationText = Get-Content -LiteralPath $script:ValidationSource -Raw
         # Source with block comments and full-line comments removed, so the
@@ -325,29 +327,19 @@ Describe 'Bootstrap-Baseline Windows security contracts' {
         $script:BootstrapCode = [regex]::Replace($script:BootstrapCode, '(?m)^[ \t]*#[^\r\n]*', '')
     }
 
-    It 'uses the required download, TLS, archive, mutex, atomic replacement, and ASCII primitives' {
-        $script:BootstrapText | Should-MatchString 'Invoke-WebRequest -Uri \$Uri -OutFile \$OutFile -UseBasicParsing'
-        $script:BootstrapText | Should-MatchString 'SecurityProtocol = \$previousProtocol'
-        $script:BootstrapText | Should-MatchString 'Expand-Archive -LiteralPath'
-        $script:BootstrapText | Should-MatchString 'Threading\.Mutex'
-        $script:BootstrapText | Should-MatchString '\$mutex\.WaitOne\(0\)'
-        $script:BootstrapText | Should-MatchString '\[IO\.File\]::Replace\(\$shimStagePath, \$shimPath, \[NullString\]::Value\)'
-        $script:BootstrapText | Should-MatchString '\[IO\.Directory\]::Delete\(\$legacyCurrentPath, \$false\)'
-        $script:BootstrapText | Should-MatchString '\[Text\.Encoding\]::ASCII'
-        $script:BootstrapText | Should-MatchString 'New-Object System\.Collections\.Stack'
-        $script:BootstrapText | Should-NotMatchString 'Get-ChildItem[^\r\n]+-Recurse'
-        $script:BootstrapText | Should-MatchString '"%~dp0\.\.\\releases\\\$generation\\apm\.exe`" %\*'
-        $script:BootstrapText |
-            Should-MatchString '\$shimItem\.Attributes -band \[IO\.FileAttributes\]::ReparsePoint'
-        $script:BootstrapText | Should-NotMatchString 'New-Item -ItemType Junction'
-        $script:BootstrapText | Should-NotMatchString 'Move-Item -LiteralPath \$releasePath'
-    }
-
     It 'contains no ambient execution, installer, self-update, or Authenticode fallback' {
         $script:BootstrapCode | Should-NotMatchString '&\s+apm\b'
         $script:BootstrapCode | Should-NotMatchString 'install\.ps1'
         $script:BootstrapCode | Should-NotMatchString 'self-update'
         $script:BootstrapCode | Should-NotMatchString 'Authenticode'
+    }
+
+    It 'never enumerates recursively, creates junctions, or moves the live release path' {
+        # Recursive enumeration would follow reparse points; junctions and a moved
+        # release directory would reintroduce non-atomic activation.
+        $script:BootstrapCode | Should-NotMatchString 'Get-ChildItem[^\r\n]+-Recurse'
+        $script:BootstrapCode | Should-NotMatchString 'New-Item -ItemType Junction'
+        $script:BootstrapCode | Should-NotMatchString 'Move-Item -LiteralPath \$releasePath'
     }
 
     It 'supports util-linux and BSD pseudo-terminal audit forms' {
@@ -590,6 +582,19 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
 
         { & $script:TestRepository.Script -CliOnly -Confirm:$false } |
             Should-Throw -ExceptionMessage '*reparse point*'
+    }
+
+    It 'refuses to replace a reparse-point apm.cmd without following it' {
+        $outside = Join-Path $TestDrive ('outside-' + [Guid]::NewGuid().ToString('N'))
+        New-Item -ItemType Directory -Path $outside, $env:APM_INSTALL_DIR -Force | Out-Null
+        [IO.File]::WriteAllText((Join-Path $outside 'keep'), 'outside content')
+        New-Item -ItemType Junction -Path (Join-Path $env:APM_INSTALL_DIR 'apm.cmd') -Target $outside | Out-Null
+
+        { & $script:TestRepository.Script -CliOnly -Confirm:$false } |
+            Should-Throw -ExceptionMessage '*reparse-point APM shim*'
+
+        Test-Path -LiteralPath (Join-Path $outside 'keep') | Should-BeTrue
+        (Get-ReleaseEntry -InstallRoot $script:InstallRoot).Count | Should-Be 0
     }
 
     It 'refuses to overwrite an unrelated apm.cmd' {

@@ -682,26 +682,109 @@ class UpstreamTests(unittest.TestCase):
 
 
 class WorkflowTests(unittest.TestCase):
-    def test_interruption_recovery_has_budget_and_no_secret_or_raw_upload(self):
+    @staticmethod
+    def _run_step(step, env, cwd):
+        """Execute a workflow step's shell body the way the runner does."""
+        base = {"PATH": env.pop("PATH", os.environ["PATH"]), "HOME": str(cwd)}
+        return subprocess.run(
+            ["bash", "--noprofile", "--norc", "-eo", "pipefail", "-c", step["run"]],
+            cwd=cwd, env={**base, **env}, capture_output=True, text=True, timeout=60,
+        )
+
+    def test_evaluation_budget_bounds_the_native_run_and_preserves_recovery_time(self):
         job = yaml.safe_load((REPO / ".github/workflows/benchmark-skills.yml").read_text())["jobs"]["evaluate"]
         steps = job["steps"]
         budget = next(step for step in steps if step.get("id") == "budget")
         evaluation = next(step for step in steps if step.get("id") == "evaluation")
         recovery = next(step for step in steps if "skill_reports.py recover" in step.get("run", ""))
         staging = next(step for step in steps if step.get("id") == "artifacts")
-        self.assertIn("--harbor-keep-jobs", evaluation["run"])
+        self.assertIs(steps[0], budget)
         self.assertEqual(budget["timeout-minutes"], 1)
-        self.assertIn("+ 9600", budget["run"])
         self.assertEqual(evaluation["env"]["EVALUATION_DEADLINE_EPOCH"],
                          "${{ steps.budget.outputs.deadline_epoch }}")
-        self.assertIn('[[ "$EVALUATION_DEADLINE_EPOCH" =~ ^[0-9]+$ ]]', evaluation["run"])
-        self.assertIn("EVALUATION_DEADLINE_EPOCH - $(date +%s) - 30", evaluation["run"])
-        self.assertIn("evaluation_seconds=8400", evaluation["run"])
-        self.assertIn('timeout --signal=INT --kill-after=30s "${evaluation_seconds}s"', evaluation["run"])
-        self.assertGreaterEqual(job["timeout-minutes"] - 160, recovery["timeout-minutes"] + 15)
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            output = root / "github_output"
+            output.touch()
+            started = int(time.time())
+            completed = self._run_step(budget, {"GITHUB_OUTPUT": str(output)}, root)
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            deadline = int(re.fullmatch(r"deadline_epoch=(\d+)\n", output.read_text()).group(1))
+            budget_seconds = deadline - started
+            # The budget is the job minus recovery and a fixed staging reserve; the
+            # observed value may only exceed it by the clock drift between the two reads.
+            intended_budget = (job["timeout-minutes"] - recovery["timeout-minutes"] - 15) * 60
+            self.assertEqual(intended_budget, 9600)
+            self.assertTrue(intended_budget <= budget_seconds <= intended_budget + 10, budget_seconds)
+            self.assertGreaterEqual(evaluation["timeout-minutes"] * 60, budget_seconds - 30 * 60)
+
+            bin_dir = root / "bin"
+            bin_dir.mkdir()
+            timeout_log = root / "timeout.log"
+            (bin_dir / "timeout").write_text(
+                "#!/usr/bin/env bash\nprintf '%s\\n' \"$@\" > \"$TIMEOUT_LOG\"\n"
+            )
+            (bin_dir / "timeout").chmod(0o700)
+            (bin_dir / "skillevaluator").write_text("#!/usr/bin/env bash\nexit 97\n")
+            (bin_dir / "skillevaluator").chmod(0o700)
+            runner_temp = root / "runner"
+            (runner_temp / "skill-benchmark").mkdir(parents=True)
+            env = {
+                "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
+                "TIMEOUT_LOG": str(timeout_log),
+                "RUNNER_TEMP": str(runner_temp),
+                "GITHUB_WORKSPACE": str(REPO),
+                "GITHUB_REPOSITORY": "owner/repo",
+                "GITHUB_SHA": "0" * 40,
+                "BENCHMARK_SKILL": "ansible",
+                "ATTEMPTS": "3",
+                "SKILLEVALUATOR_RESULTS_DIR": str(runner_temp / "skill-benchmark/results"),
+                "OPENAI_API_KEY": "placeholder-for-test",
+            }
+
+            # The real budget output leaves plenty of time: the run is still capped below the deadline.
+            completed = self._run_step(evaluation, {**env, "EVALUATION_DEADLINE_EPOCH": str(deadline)}, root)
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            args = timeout_log.read_text().splitlines()
+            self.assertEqual(args[:3], ["--signal=INT", "--kill-after=30s", "8400s"])
+            policy = reports.POLICY
+            self.assertFalse(policy["stop_on_pass"])
+            self.assertTrue(policy["baseline"])
+            self.assertEqual(args[3:], [
+                "skillevaluator", "tier3", "evaluate", str(REPO / ".apm/skills/ansible"),
+                "--agents", "codex", "--agent-model", f"codex={policy['model']}",
+                "--env-mode", policy["environment"],
+                "--skill-workspace-mode", "isolated", "--grading-mode", policy["grading"],
+                "--n-attempts", "3", "--no-stop-on-pass",
+                "--n-concurrent", str(policy["concurrency"]), "--max-agents", "1",
+                "--agent-runtime-preflight", "--timeout-multiplier", f"{policy['timeout_multiplier']:g}",
+                "--progress", "plain", "--harbor-keep-jobs",
+                "--results-dir", env["SKILLEVALUATOR_RESULTS_DIR"],
+                "--evaluated-source-repository", "owner/repo", "--evaluated-source-revision", "0" * 40,
+            ])
+
+            # Little time left: the run gets what remains minus termination grace.
+            now = int(time.time())
+            completed = self._run_step(evaluation, {**env, "EVALUATION_DEADLINE_EPOCH": str(now + 600)}, root)
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            remaining = int(timeout_log.read_text().splitlines()[2].rstrip("s"))
+            self.assertTrue(560 <= remaining <= 570, remaining)
+
+            # Exhausted deadline and missing secret both fail before any native run.
+            timeout_log.unlink()
+            completed = self._run_step(evaluation, {**env, "EVALUATION_DEADLINE_EPOCH": str(now - 1)}, root)
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("::error::Benchmark setup exhausted the evaluation deadline.", completed.stdout)
+            completed = self._run_step(
+                evaluation, {**env, "OPENAI_API_KEY": "", "EVALUATION_DEADLINE_EPOCH": str(now + 600)}, root
+            )
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("::error::Add OPENAI_API_KEY", completed.stdout)
+            self.assertFalse(timeout_log.exists())
+
         self.assertIn("always()", recovery["if"])
         self.assertEqual(recovery["env"], {"EVALUATION_OUTCOME": "${{ steps.evaluation.outcome }}"})
-        self.assertIs(steps[0], budget)
         pre_evaluation = steps[:steps.index(evaluation)]
         self.assertTrue(all(step.get("timeout-minutes", 0) > 0 for step in pre_evaluation))
         self.assertLessEqual(sum(step["timeout-minutes"] for step in pre_evaluation), 40)
@@ -754,9 +837,7 @@ class WorkflowTests(unittest.TestCase):
             self.assertNotIn("setup-skillevaluator", json.dumps(jobs[name]))
         secret_steps = [step for step in jobs["evaluate"]["steps"] if "OPENAI_API_KEY" in step.get("env", {})]
         self.assertEqual(len(secret_steps), 1)
-        self.assertIn("--results-dir", secret_steps[0]["run"])
-        self.assertIn(f"--timeout-multiplier {reports.POLICY['timeout_multiplier']:g}", secret_steps[0]["run"])
-        self.assertNotIn("--skip-baseline", secret_steps[0]["run"])
+        self.assertIs(secret_steps[0], next(step for step in jobs["evaluate"]["steps"] if step.get("id") == "evaluation"))
         publication = next(step for step in jobs["evaluate"]["steps"]
                            if step.get("with", {}).get("name", "").startswith("skill-benchmark-"))
         self.assertEqual(publication["with"]["path"], "${{ runner.temp }}/skill-benchmark-artifact/")
