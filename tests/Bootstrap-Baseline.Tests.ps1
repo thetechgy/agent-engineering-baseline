@@ -334,6 +334,14 @@ Describe 'Bootstrap-Baseline Windows security contracts' {
         $script:BootstrapCode | Should-NotMatchString 'Authenticode'
     }
 
+    It 'never enumerates recursively, creates junctions, or moves the live release path' {
+        # Recursive enumeration would follow reparse points; junctions and a moved
+        # release directory would reintroduce non-atomic activation.
+        $script:BootstrapCode | Should-NotMatchString 'Get-ChildItem[^\r\n]+-Recurse'
+        $script:BootstrapCode | Should-NotMatchString 'New-Item -ItemType Junction'
+        $script:BootstrapCode | Should-NotMatchString 'Move-Item -LiteralPath \$releasePath'
+    }
+
     It 'supports util-linux and BSD pseudo-terminal audit forms' {
         $script:ValidationText | Should-MatchString "-q -e -c 'exit 0' /dev/null"
         $script:ValidationText | Should-MatchString '-q /dev/null sh -c'

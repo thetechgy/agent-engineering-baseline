@@ -193,23 +193,24 @@ STUB
 }
 
 # Compare the recorded curl argv of call N against an exact option set, order
-# independent. Options that take a value are paired with it; the single
-# --output destination and the trailing URL are checked separately.
+# independent. Options that take a value are paired with it; exactly one
+# --output destination and exactly one URL are required, and the URL's
+# value is checked separately.
 # shellcheck disable=SC2317
 curl_options_are() {
     local call=$1
     shift
     local -a actual=()
-    local arg outputs=0
+    local arg outputs=0 urls=0
     while IFS= read -r arg; do
         case "$arg" in
             --proto|--proto-redir) IFS= read -r value; actual+=("$arg $value") ;;
             --output) IFS= read -r value; outputs=$((outputs + 1)) ;;
-            *://*) ;;
+            *://*) urls=$((urls + 1)) ;;
             *) actual+=("$arg") ;;
         esac
     done < "$CURL_LOG.$call"
-    [ "$outputs" -eq 1 ] &&
+    [ "$outputs" -eq 1 ] && [ "$urls" -eq 1 ] &&
         [ "$(printf '%s\n' "${actual[@]}" | sort)" = "$(printf '%s\n' "$@" | sort)" ]
 }
 # shellcheck disable=SC2317
