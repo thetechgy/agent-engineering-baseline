@@ -28,12 +28,36 @@ spec = importlib.util.spec_from_file_location("skill_reports", REPO / ".github/s
 reports = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(reports)
 SHA = "a" * 40
-# Actions loads both extensions, so every workflow-wide policy must scan both.
-PIP_INSTALL = re.compile(r'\b(pip3?|python3? -m pip)"?\s+install\b')
+# Every Python install command in CI must be hash-verified or lock-frozen; ad-hoc
+# installers that resolve at run time are forbidden. Applied to each logical
+# command line of every workflow `run:` body and every `.github/scripts/*.sh`.
+INSTALL_POLICY = (
+    (re.compile(r'\b(pip3?|python3? -m pip)"?\s+install\b'), ("--require-hashes", "--only-binary :all:")),
+    (re.compile(r"\buv pip (install|sync)\b"), ("--require-hashes",)),
+    (re.compile(r"\buv sync\b"), ("--frozen",)),
+)
+FORBIDDEN_INSTALLERS = re.compile(r"\b(pipx|uvx|uv tool install)\b")
 
 
 def _workflow_files():
+    # Actions loads both extensions, so every workflow-wide policy must scan both.
     return sorted((REPO / ".github/workflows").glob("*.y*ml"))
+
+
+def _command_sources():
+    for workflow in _workflow_files():
+        for name, job in yaml.safe_load(workflow.read_text())["jobs"].items():
+            for step in job.get("steps", []):
+                if "run" in step:
+                    yield f"{workflow.name}:{name}", step["run"]
+    for script in sorted((REPO / ".github/scripts").glob("*.sh")):
+        yield script.name, script.read_text()
+
+
+def _command_lines(text):
+    for line in text.replace(" \\\n", " ").splitlines():
+        if line.strip() and not line.lstrip().startswith("#"):
+            yield line
 
 
 def _external_action_references(workflow):
@@ -822,17 +846,24 @@ class WorkflowTests(unittest.TestCase):
             # The source pin must be what the lock actually installs, not merely present by name.
             for name, version in pins.items():
                 self.assertEqual(locked.get(name), version, f"{lock}.in pins {name}=={version}")
-        setup = (REPO / ".github/scripts/setup-skillevaluator.sh").read_text()
-        self.assertIn("uv pip sync --quiet --python \"$tool_root/semgrep/bin/python\" --require-hashes", setup)
-        self.assertNotIn("uv tool install", setup)
-        for workflow in _workflow_files():
-            for job in yaml.safe_load(workflow.read_text())["jobs"].values():
-                for step in job.get("steps", []):
-                    run = step.get("run", "")
-                    self.assertNotIn("pipx", run, workflow.name)
-                    if PIP_INSTALL.search(run):
-                        self.assertIn("--require-hashes", run, workflow.name)
-                        self.assertIn("--only-binary :all:", run, workflow.name)
+        # Both locks are consumed by the commands the policy below verifies.
+        sources = list(_command_sources())
+        self.assertIn('"$GITHUB_WORKSPACE/.github/requirements/semgrep.txt"',
+                      next(text for source, text in sources if source == "setup-skillevaluator.sh"))
+        self.assertEqual(
+            sum("--requirement .github/requirements/rumdl.txt" in text for _, text in sources), 2)
+        matched = 0
+        for source, text in sources:
+            for line in _command_lines(text):
+                self.assertNotRegex(line, FORBIDDEN_INSTALLERS, source)
+                for pattern, flags in INSTALL_POLICY:
+                    if pattern.search(line):
+                        matched += 1
+                        for flag in flags:
+                            self.assertIn(flag, line, f"{source}: {line.strip()}")
+        # Sanity check that the patterns still match the known install commands:
+        # pip (rumdl x2), uv pip sync (Semgrep), uv sync (SkillEvaluator, SkillSpector).
+        self.assertGreaterEqual(matched, 5)
 
     def test_setup_private_tool_root_for_provenance_key(self):
         setup = (REPO / ".github/scripts/setup-skillevaluator.sh").read_text()

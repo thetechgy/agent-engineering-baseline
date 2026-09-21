@@ -476,6 +476,11 @@ Semgrep is installed into its own environment with `uv pip sync
 linter used by the validation and update workflows is installed with `pip
 install --require-hashes` from `.github/requirements/rumdl.txt`, so every
 Python artifact must match a reviewed SHA-256 rather than only a version.
+A workflow test enforces that policy on every install command in the
+workflows and `.github/scripts`: `pip install` needs `--require-hashes
+--only-binary :all:`, `uv pip install`/`uv pip sync` need `--require-hashes`,
+`uv sync` needs `--frozen`, and `pipx`, `uvx`, and `uv tool install` are
+rejected.
 Artifacts record scanner versions and resolved Python dependency inventories.
 To deliberately update either lock with uv 0.12.17, run the following (for
 the linter lock, replace `semgrep` with `rumdl` in both file paths):
