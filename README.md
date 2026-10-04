@@ -37,7 +37,7 @@ values, not whether the content is benign.
 The committed pins govern exactly one thing: which APM CLI executes on the
 consumer's machine. They do not pin skill content.
 
-- `apm.yml` tracks five third-party skills at their upstream `main` branch.
+- `apm.yml` tracks six third-party skills at their upstream `main` branch.
 - Bootstrap runs native `apm install --trust-bin --trust-transitive-mcp` and
   then `apm update --yes`, so every run resolves those branch refs to their
   *current* upstream commits and trusts any launcher binaries and transitive
@@ -110,6 +110,38 @@ access, and neither its returned content nor its implementation is pinned by
 the lockfile: it records the named endpoint, allowlists, and target ownership,
 while the generated CLI configs contain the same endpoint. Treat
 retrieved documentation and samples as untrusted input, not agent instructions.
+
+### Microsoft API verification skill
+
+The upstream
+[`microsoft-code-reference` skill](https://github.com/github/awesome-copilot/tree/main/skills/microsoft-code-reference)
+helps verify Microsoft API/package names, overloads, signatures, and working
+examples. It uses the existing Learn MCP server and its three-tool allowlist;
+it adds no server, credential, subscription, or runtime dependency. Learn MCP
+is free and unauthenticated; ordinary model usage follows the user's existing
+agent plan and billing.
+
+APM installs the complete upstream directory through
+`github/awesome-copilot/skills/microsoft-code-reference#main` into shared
+`.agents/skills/` for both CLIs. The skill remains upstream-managed, without
+a local replacement or patches. Native `apm.lock.yaml` records the resolved
+commit and content hashes for this reviewed checkout; consumer bootstrap
+refreshes `#main` as described above, rather than freezing consumers to that
+snapshot.
+
+Shared instructions require matching guidance to the actual SDK/library version
+and hosting model, using only nonsensitive public query context, and treating
+returned material as untrusted. If Learn access is unavailable, use an
+already-authorized documentation path or report the limitation. The upstream
+skill's optional `mslearn` fallback does not authorize downloading, installing,
+or executing `npx @microsoft/learn-cli`, a global npm installation, or another
+additional executable. Those actions require explicit authorization under the
+existing policy. These instructions guide agent behavior; native sandbox and
+approval controls remain the enforcement boundaries.
+
+The upstream [MIT license](https://github.com/github/awesome-copilot/blob/main/LICENSE)
+notice is preserved in the shared instruction source and its native APM outputs,
+since a directory-level skill import does not include the repository-root license.
 
 ## Bootstrap
 
