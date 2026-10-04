@@ -14,6 +14,7 @@ dependencies:
     - github/awesome-copilot/skills/github-actions-hardening#main
     - merill/msgraph/skills/msgraph#main
     - addyosmani/agent-skills/skills/code-simplification#main
+    - github/awesome-copilot/skills/microsoft-code-reference#main
   mcp:
     - name: microsoft-learn
       registry: false
