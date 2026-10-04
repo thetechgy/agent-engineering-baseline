@@ -382,7 +382,7 @@ these exact reviewed external refs:
 <!-- external-action-requirements:start -->
 
 ```text
-astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
+astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
 benchmark-action/github-action-benchmark@4322e5726e6334590d251fc4f92bec0efafc45dc
 docker/setup-compose-action@54042514f505b273907334ae2b9cdbb9a0213c1a
 ```
