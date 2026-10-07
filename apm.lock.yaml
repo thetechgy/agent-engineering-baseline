@@ -561,7 +561,7 @@ deployments:
   owners:
   - .
   active_owner: .
-  content_hash: sha256:87ebaf111321df1d69036fc4826af4f2572a3f5c09a6cb0662c5b9539cc9d3e0
+  content_hash: sha256:c7938b6dfdbbd96190693c4508e8dec7df4bfa83a5597fa5165c0634dde4df2c
 - kind: project-relative
   target: legacy
   value: .agents/skills/a11y
@@ -870,4 +870,4 @@ local_deployed_file_hashes:
   .agents/skills/podman/references/validation.md: sha256:465321094bc936d8a9e187bd3b4daa1ab271b93242a2c07fe88c58db6bd4bdd5
   .agents/skills/powershell-module-engineering/SKILL.md: sha256:801cecfd42aeb32f3fd6083d9af08f44c8a5ca48202761533c072a10c06060c9
   .agents/skills/powershell-pester-6/SKILL.md: sha256:279824abf07feb466fd5deaab79fc872609d5674502bcfa51b31f2909874efab
-  .github/instructions/personal.instructions.md: sha256:87ebaf111321df1d69036fc4826af4f2572a3f5c09a6cb0662c5b9539cc9d3e0
+  .github/instructions/personal.instructions.md: sha256:c7938b6dfdbbd96190693c4508e8dec7df4bfa83a5597fa5165c0634dde4df2c

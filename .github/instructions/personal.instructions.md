@@ -30,6 +30,16 @@ description: Shared cross-project engineering boundaries for Codex and GitHub Co
   passing-after evidence when practical. Mocks, resets, test counts, and green CI
   do not establish unexercised guarantees. Distinguish verified behavior from
   assumptions and unavailable runtime evidence.
+- When awaiting CI or other long-running checks, avoid repeatedly querying or
+  interpreting unchanged status. Prefer bounded native observation when
+  available; investigate meaningful changes or failures and treat interrupted
+  or timed-out observations as inconclusive. Before reporting CI success, verify
+  every required check against the current revision.
+- Before declaring implementation complete, reconcile the final diff and
+  retained artifacts with the authorized scope; remove unnecessary additions
+  without disturbing unrelated work. If PR publication or updates are
+  authorized, ensure its description matches the delivered changes, verification
+  performed, and known limitations.
 - Follow repository-specific instructions and contracts when they are more
   specific than this personal baseline.
 - Before applying Microsoft documentation or samples, resolve the repository's
