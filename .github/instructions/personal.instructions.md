@@ -23,6 +23,13 @@ description: Shared cross-project engineering boundaries for Codex and GitHub Co
   scope-expanding actions.
 - Prefer small reversible changes, focused validation during iteration, and
   explicit reporting of checks not run or delegated to CI.
+- For consequential behavior or integration changes, identify the observable
+  contract and affected producers, consumers, failure/retry paths, and supported
+  runtimes. Verify the riskiest boundary through the production entry point or a
+  representative pinned fixture; for reproducible defects, prefer failing-before/
+  passing-after evidence when practical. Mocks, resets, test counts, and green CI
+  do not establish unexercised guarantees. Distinguish verified behavior from
+  assumptions and unavailable runtime evidence.
 - Follow repository-specific instructions and contracts when they are more
   specific than this personal baseline.
 - Before applying Microsoft documentation or samples, resolve the repository's
