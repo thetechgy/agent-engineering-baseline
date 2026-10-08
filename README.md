@@ -316,6 +316,13 @@ $apmCommand = "$env:LOCALAPPDATA\Programs\apm\bin\apm.cmd"
 & $apmCommand pack --dry-run
 ```
 
+**Audit caveat:** The pinned APM release can report false drift when you run
+`apm audit --ci` without a terminal, even after `install --frozen --trust-bin`.
+Its scratch replay doesn't retain launcher trust in that mode. For noninteractive
+full validation on Linux/macOS, use `Invoke-Validation.ps1` below; it runs the
+same audit in a pseudo-terminal with drift checking enabled. Don't bypass this
+with `--no-drift`.
+
 Bash uses the same arguments with `"$apm_command"`, after setting
 `apm_command="$HOME/.local/bin/apm"` to the reported path.
 For comparison, bootstrap's user-scope sequence is:
