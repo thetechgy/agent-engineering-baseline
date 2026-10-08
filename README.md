@@ -7,153 +7,157 @@
 
 ## Purpose
 
-This is the AI setup I use with Codex CLI and GitHub Copilot CLI for professional
-and personal work, including my homelab. I'm a systems engineer working in
-infrastructure, with substantial PowerShell scripting and module development
-alongside identity and messaging work. This repository gives me a portable,
-version-controlled way to maintain that setup. Others are welcome to use it.
+I use this repo to maintain the instructions and skills I use with Codex CLI and GitHub Copilot CLI, both at work and for personal projects like my homelab. I'm a systems engineer working mostly in infrastructure and security, with a lot of PowerShell scripting and module development.
 
-Most guidance is collected or adapted from other sources; I've also started
-writing custom skills. **Skills** are task-specific instructions, references,
-and examples for the work I do:
+I wanted one place to manage that setup instead of maintaining it separately for each CLI. Projects can still have their own instructions. If you do similar work, feel free to use this as a starting point and adapt it.
 
-- **Automation and module development:** PowerShell modules, Pester 6 tests, and
-  clearer scripts.
-- **Infrastructure management:** Ansible and Podman.
-- **Security and review:** agent safety, CI workflow security, dependency updates,
-  accessibility, and Git change preparation.
-- **Documentation and API lookup:** Microsoft code references and offline Graph
-  API searches.
+A **skill** is a set of instructions and references for a particular kind of work. Mine cover:
 
-Browse the [deployed collection](.agents/skills/) or
-[locally maintained sources](.apm/skills/) for individual skills. Local adaptations
-and custom skills remain my responsibility; imported skills remain upstream-owned.
+- **PowerShell:** module development, Pester 6 testing, and simplifying code.
+- **Infrastructure:** Ansible and Podman.
+- **Security and Git:** agent safety, GitHub Actions hardening, dependency updates, accessibility, and commits.
+- **Microsoft documentation:** API references and offline Graph lookups.
 
-The [shared instructions](.apm/instructions/personal.instructions.md) require the
-agent to inspect the environment, keep changes scoped, preserve unrelated work,
-and report validation evidence. Commits, publication, and remote changes need
-explicit authorization. Project instructions add requirements for your environment.
+Most skills are imported or adapted from other projects; the Pester 6 skill is one I wrote. Browse the [installed skills](.agents/skills/) or [locally maintained sources](.apm/skills/) to see what's included.
+
+The [shared instructions](.apm/instructions/personal.instructions.md) tell agents to inspect the repo, keep changes focused, preserve unrelated work, and report what they actually verified. Commits, pushes, and other remote changes require approval. Project instructions can add more specific requirements.
 
 ## How it works
 
-[Microsoft Agent Package Manager (APM)](https://microsoft.github.io/apm/) installs
-this baseline and generates configuration for both agent CLIs.
-[apm.yml](apm.yml) selects the skills, instructions, and documentation connection.
-Microsoft Learn supplies official documentation through a **Model Context Protocol
-(MCP)** connection.
-See the [APM command reference](https://microsoft.github.io/apm/reference/) for commands.
+[Microsoft Agent Package Manager (APM)](https://microsoft.github.io/apm/) handles installation and generates the configuration for both CLIs. The [manifest](apm.yml) lists the skills, shared instructions, and Microsoft Learn connection. See the [APM command reference](https://microsoft.github.io/apm/reference/) for its native commands.
 
-GitHub Actions provides **continuous integration (CI)**: automated checks on pull
-requests and pushes to `main`, covering scripts, generated configuration, and skill
-quality. Installation tests cover Linux, macOS, and Windows.
-[Validation reports](https://github.com/thetechgy/agent-engineering-baseline/actions/workflows/validate.yml)
-show results. Paid behavioral evaluations run separately with approval.
+Microsoft Learn uses **Model Context Protocol (MCP)** to let agents search official Microsoft documentation. There's also an offline Microsoft Graph reference skill.
 
-The [weekly update workflow](.github/workflows/update-baseline.yml), also available
-manually, proposes tooling and skill updates through a pull request (PR). Updates
-require review and never auto-merge. See [Security and safety](#security-and-safety)
-for the separate repository and consumer update boundaries.
+The bootstrap scripts verify and install a pinned APM CLI. That's different from pinning the skills: some follow upstream branches and can change when you install. See [Security and safety](#security-and-safety) before running the scripts.
+
+GitHub Actions checks PRs and pushes to `main`, including scripts, generated files, skill quality, and installation tests on Windows, Linux, and macOS. [Validation results](https://github.com/thetechgy/agent-engineering-baseline/actions/workflows/validate.yml) are public. Paid behavioral evaluations require separate approval. A [weekly update workflow](.github/workflows/update-baseline.yml) proposes changes through PRs; nothing auto-merges.
+
+## Get started
+
+The wrappers support Windows x86_64 with PowerShell 5.1 or 7, and Linux/macOS x86_64 or arm64 with Bash. Install your agent CLI separately. You'll need network access to releases/dependencies or a mirror. Bash needs `curl`, `tar`, and `sha256sum` (Linux) or `shasum` (macOS).
+
+**Before installing:** Default bootstrap trusts bundled executables and transitive MCP servers and refreshes branch-based dependencies, including ones already in the destination. Review the [security details](#security-and-safety). User scope changes your shared agent configuration; project scope changes the current project.
+
+From the baseline checkout, on Windows:
+
+```powershell
+./scripts/Bootstrap-Baseline.ps1 -WhatIf # preview: local metadata only
+./scripts/Bootstrap-Baseline.ps1         # user scope, the default
+./scripts/Bootstrap-Baseline.ps1 -Scope Repo
+```
+
+On Linux or macOS:
+
+```sh
+./scripts/bootstrap.sh --dry-run  # preview: local metadata only
+./scripts/bootstrap.sh            # user scope, the default
+./scripts/bootstrap.sh --repo
+```
+
+Project scope uses your **current directory**, not the script's directory. To install into another project, run the wrapper from there:
+
+```powershell
+Set-Location C:\work\target-project
+& C:\work\agent-engineering-baseline\scripts\Bootstrap-Baseline.ps1 -Scope Repo
+```
+
+```sh
+cd /path/to/target-project
+/path/to/agent-engineering-baseline/scripts/bootstrap.sh --repo
+```
+
+The wrapper uses the APM pins from its own checkout but installs `https://github.com/thetechgy/agent-engineering-baseline.git#main` by default. Set `BASELINE_PACKAGE_REF` to install a different reviewed revision; local edits to the wrapper's checkout aren't automatically installed.
+
+Both scopes configure both CLIs. Codex only loads project configuration for trusted projects. APM writes these files:
+
+| Scope | APM state | Instructions | MCP configuration | Skills |
+| --- | --- | --- | --- | --- |
+| User | `~/.apm/apm.yml`, `~/.apm/apm.lock.yaml`, `~/.apm/config.json` | `~/.codex/AGENTS.md`, `~/.copilot/AGENTS.md`, `~/.copilot/copilot-instructions.md` | `~/.codex/config.toml`, `~/.copilot/mcp-config.json` | `~/.agents/skills/*` |
+| Project | `./apm.yml`, `./apm.lock.yaml`, `./apm_modules/` | `./AGENTS.md`, `./.github/copilot-instructions.md` | `./.codex/config.toml`, `./.github/mcp.json` | `./.agents/skills/*` |
+
+### Example: maintain a PowerShell module
+
+For a routine change, I might ask:
+
+> This module accepts an empty server name and fails later with an unclear error.
+> Review the code, project instructions, and supported PowerShell versions.
+> Fix the validation on a new branch without changing valid calls or unrelated
+> code. Use the PowerShell module and Pester 6 skills, test empty and valid input,
+> and run the relevant checks. Tell me what changed, what passed, and what you
+> couldn't verify. Don't commit or push.
+
+For Microsoft APIs, match examples to the project's SDK version and hosting model. Verify deployment behavior and recovery separately; an agent's answer isn't evidence that infrastructure works.
+
+### Options and troubleshooting
+
+| Variable | Effect |
+| --- | --- |
+| `APM_INSTALL_DIR` | CLI command directory; defaults to `~/.local/bin` on Linux/macOS and `%LOCALAPPDATA%\Programs\apm\bin` on Windows. Windows uses its parent as the installation root. |
+| `APM_RELEASE_BASE_URL` | Authoritative HTTPS or file mirror; downloads use no credentials and never retry against the public source. |
+| `APM_NO_DIRECT_FALLBACK=1` | Requires a configured mirror. |
+| `BASELINE_PACKAGE_REF` | Overrides the installed baseline reference. |
+
+`--cli-only` or `-CliOnly` installs just the reviewed APM CLI. Preview (`--dry-run` or `-WhatIf`) checks local metadata without downloading, executing, or changing anything.
+
+On Linux/macOS, rerun bootstrap after moving the installation tree because its
+command link uses an absolute path. After a forced kill, confirm bootstrap has
+stopped before removing the diagnostic's `lib/apm/.lock`. Windows uses relative
+`bin\apm.cmd`, a named mutex, temporary TLS 1.2, and process/User PATH updates.
+User PATH failure is a warning; both wrappers warn about other commands masking APM.
+
+Bootstrap sets `VERSION=<pin>` to avoid release lookup. Don't use `apm self-update`; it replaces the reviewed CLI. An unscoped-instructions warning and this MCP warning are expected:
+
+```text
+[!] MCP dependency 'microsoft-learn': unknown key(s) preserved in extra: enabled_tools
+```
+
+See the [PowerShell](scripts/Bootstrap-Baseline.ps1) and
+[Bash](scripts/bootstrap.sh) wrappers for diagnostics.
 
 ## Security and safety
 
+I treat agent tooling like other dependencies: review updates, check what gets installed, and limit what it can access. The checks here help, but don't replace approvals or reviewing code from other projects.
+
 ### Prompt injection and operating boundaries
 
-Prompt injection is an explicit design consideration here: files, tool results,
-documentation, or evaluation inputs may contain instructions to redirect an agent,
-obtain secrets, or trigger unauthorized actions. The
-[shared rules](.apm/instructions/personal.instructions.md) treat that content as
-untrusted; documentation cannot override repository rules or user authorization.
+Files, tool results, documentation, and test inputs can contain instructions that try to redirect an agent, expose secrets, or trigger actions you didn't approve. The [shared rules](.apm/instructions/personal.instructions.md) tell agents to treat these sources as untrusted. They can't override your instructions or authorization.
 
-The implementation limits documentation tools, separates CI permissions, and
-keeps publication apart from evaluation. These controls reduce access; they do
-not make malicious skills or prompts safe. Review skills and requested actions,
-keep secrets out of prompts, and retain sandbox and approval controls.
-Instructions alone do not enforce permissions.
+Rules in a prompt aren't enforcement. Keep sandboxing and approval controls enabled, limit access to credentials, and review actions that affect code, infrastructure, or remote systems.
 
 ### Reviewed upstream changes and installation trust
 
-**This repository does not automatically adopt every upstream skill change.** Its
-[lockfile](apm.lock.yaml) records specific revisions, files, launchers, and hashes.
-Upstream refreshes and generated changes reach `main` through a review PR so I can
-inspect them before accepting them into the recorded baseline. This review boundary
-is a deliberate safety choice. Ignored Graph indexes and binaries retain lockfile
-and audit checks.
+**The repo and your installation have different update boundaries.**
 
-**Default bootstrap is different:** it installs into your destination, then
-refreshes **all dependencies that follow a branch**, including unrelated packages.
-The manifest follows upstream `main` for six imported skills. The destination's
-manifest and lockfile govern that install, not this checkout's lockfile. Choosing
-a fixed baseline commit alone does not freeze upstream skills.
+- **This repo:** [`apm.lock.yaml`](apm.lock.yaml) records the reviewed dependency revisions, files, launchers, and hashes. Updates to `main` need a PR and review; they don't auto-merge. Ignored Graph indexes and binaries still have lockfile and audit checks.
+- **Your installation:** default bootstrap also refreshes **all branch-tracking dependencies in the destination**, including unrelated packages. Six imported skills follow upstream `main`. Your destination manifest and lockfile govern the result, not this repo's lockfile. Even a fixed baseline commit doesn't freeze the skills.
 
-Review the destination manifest, resolved skills, and source overrides. Bootstrap's
-`--trust-bin` authorizes bundled executables, including `msgraph`;
-`--trust-transitive-mcp` trusts MCP servers across **the entire dependency graph**,
-not just Microsoft Learn. A compromised upstream skill can lead to code execution
-on the next bootstrap.
+Review the destination's manifest, resolved skills, and source overrides. `--trust-bin` authorizes bundled executables, including `msgraph`. `--trust-transitive-mcp` trusts MCP servers across the **whole dependency graph**, not just Microsoft Learn. A compromised upstream skill could execute code on your next bootstrap.
 
-For fixed skill content, use immutable commit references in the destination manifest
-and native APM commands without branch updates. To narrow MCP trust, declare the
-reviewed server directly in that manifest and omit `--trust-transitive-mcp`.
+For fixed skill content, use immutable commit references in the destination manifest and native APM commands without branch updates. To limit MCP trust, declare the reviewed server directly and omit `--trust-transitive-mcp`.
 
 ### Verified tooling and reviewed refreshes
 
-The wrappers use the release in [.apm-version](.apm-version) and ten reviewed
-SHA-256 hashes in [.apm-checksums](.apm-checksums), covering five archives and their
-executables. Downloads use no credentials. Bootstrap verifies the complete bundle,
-rejects unsafe/incomplete layouts, checks its version, and invokes the reviewed
-executable by absolute path. Hashes verify integrity, not safety.
+The wrappers never rely on an existing `apm` from PATH. They use the release in [`.apm-version`](.apm-version) and ten reviewed SHA-256 hashes in [`.apm-checksums`](.apm-checksums), covering five archives and their executables. Downloads use no credentials. Bootstrap rejects unsafe or incomplete bundles, checks the executable and version, and runs it by absolute path. Matching hashes prove integrity against the reviewed values, **not** that the code is safe.
 
-The previous installation stays usable until activation; cleanup warns on failure.
-Ownership and path checks protect unrelated files, unmarked
-bundles, links, and Windows reparse points. Concurrent runs against the same root
-fail immediately; another process able to rewrite that root is outside these protections.
+The previous installation stays available until the new one is activated. Cleanup checks ownership and paths, avoids unmarked directories, links, and Windows reparse points, and rejects concurrent runs. Another process with write access to the installation root is outside these protections.
 
-Refreshes use the previously reviewed CLI. Candidate archives must match upstream
-checksums and pass layout checks before new hashes are calculated, **without
-executing the candidate CLI**. A patch restricted to approved generated paths is
-captured before validation. A separate write-capable job applies it and opens or
-updates this repository's Actions-bot PR without executing changed content.
-Ordinary PR validation first executes the candidate CLI.
-
-Review the release, publication date, upstream release page, all ten hashes,
-dependency revisions, generated changes, and CI results before merging.
+The update workflow uses the previously reviewed CLI. It checks new archives against upstream hashes and inspects their layouts **without running the candidate**. Generated changes are restricted to approved paths; a separate job opens the PR without executing changed content. Normal PR validation runs the candidate CLI. Before merging, review the release and date, all hashes, dependency changes, generated files, and CI.
 
 ### Documentation access and privacy
 
-The [Microsoft Learn MCP server](https://learn.microsoft.com/en-us/training/support/mcp)
-at `https://learn.microsoft.com/api/mcp` is free and unauthenticated; model usage
-follows your agent plan and billing. Both CLIs are limited to
-`microsoft_docs_search`, `microsoft_docs_fetch`, and `microsoft_code_sample_search`.
-Endpoint or tool changes require manifest review; the list does not auto-expand.
+The [Microsoft Learn MCP server](https://learn.microsoft.com/en-us/training/support/mcp) at `https://learn.microsoft.com/api/mcp` is free and unauthenticated; model usage still follows your agent plan. Both CLIs can use only `microsoft_docs_search`, `microsoft_docs_fetch`, and `microsoft_code_sample_search`. Endpoint and tool changes need manifest review.
 
-Queries and fetch URLs leave the machine. Send only public API names and minimal
-nonsensitive context, never secrets or private source. The lockfile records the
-connection and allowed tools, not the remote service or its content. Treat results
-as untrusted reference material.
+Queries and fetch URLs leave your machine. Use only public API names and minimal nonsensitive context, **never** secrets or private source. The lockfile pins the connection and tool list, not the remote service or its results. Treat results as untrusted reference material, and match examples to the installed SDK and hosting model.
 
-Match documentation and samples to the installed SDK/library version and hosting
-model. If Learn is unavailable, use an already authorized documentation path or
-report the limitation. Installing or executing fallback tools, including
-`npx @microsoft/learn-cli` or global npm installs, requires explicit authorization.
-The upstream MIT notice remains in shared instructions and generated outputs.
+If Learn isn't available, use an already authorized source or report the limitation. Running fallback tools such as `npx @microsoft/learn-cli` or a global npm install requires approval. The upstream MIT notice is retained in shared instructions and generated outputs.
 
 ### CI permissions, credentials, and dependency checks
 
-Validation jobs have read-only repository access and retain no checkout credentials.
-Actions use fixed commit identifiers (SHAs); Python dependencies use reviewed
-hashes or frozen locks. PowerShell Gallery modules remain version-pinned without
-native hash pins.
+Validation uses read-only repository access without retained checkout credentials. GitHub Actions are pinned to commit SHAs; Python dependencies use hashed or frozen locks. PowerShell Gallery modules have version pins but no native hash pins.
 
-Paid evaluation requires approval through `skill-benchmark`; only the live step
-receives the inference key. Separate history/Pages jobs receive no inference
-credential and execute no skills; history accepts only approved numeric metrics.
-Reports and temporary tools stay outside the checkout, including ignored paths.
-Never put reports or `BENCHMARK.md` in either APM-managed skill collection.
+Paid evaluation requires approval through `skill-benchmark`, and only the live step receives the API key. History and Pages jobs don't get it or execute skills; history accepts only approved numeric metrics. Reports and temporary tools stay outside the checkout. Don't put reports or `BENCHMARK.md` in either APM-managed skill collection.
 
-Codex can access its API key inside the evaluation container. Before approval,
-review the revision, workflow, skill, cases, and inputs. Uploads exclude credentials
-and unexpected files; redaction is best effort and cannot prevent encoded secret
-disclosure. Treat inputs and outputs as untrusted.
+Codex can access its key inside the evaluation container. Review the branch, workflow, skill, cases, and inputs before approval. Upload filtering and redaction are best effort; they cannot guarantee secrets won't leak, including in encoded output. Treat all evaluation inputs and outputs as untrusted.
 
 <!-- rumdl-disable MD033 -->
 <details>
@@ -199,116 +203,15 @@ not every underlying OS or build tool.
 </details>
 <!-- rumdl-enable MD033 -->
 
-## Get started
-
-Supported releases are Linux/macOS on x86_64 or arm64 and Windows x86_64.
-Use Bash on Linux/macOS, or Windows PowerShell 5.1 or PowerShell 7 on Windows.
-Configure your agent CLI separately. Have a reviewed checkout and network access
-to releases/dependencies or mirrors. Bash needs `curl`, `tar`, and `sha256sum`
-(Linux) or `shasum` (macOS).
-
-**Before installing:** read [Security and safety](#security-and-safety), especially
-the destination-wide branch updates and trust permissions. Default user scope
-changes shared user configuration; project scope changes the project's APM files
-and agent configuration.
-
-From the baseline checkout, Windows:
-
-```powershell
-./scripts/Bootstrap-Baseline.ps1 -WhatIf # preview: local metadata only
-./scripts/Bootstrap-Baseline.ps1         # user scope, the default
-./scripts/Bootstrap-Baseline.ps1 -Scope Repo
-```
-
-Linux and macOS:
-
-```sh
-./scripts/bootstrap.sh --dry-run  # preview: local metadata only
-./scripts/bootstrap.sh            # user scope, the default
-./scripts/bootstrap.sh --repo
-```
-
-Project scope uses the **current working directory**. To install into another
-project, stay there and invoke the wrapper from a separate checkout:
-
-```powershell
-Set-Location C:\work\target-project
-& C:\work\agent-engineering-baseline\scripts\Bootstrap-Baseline.ps1 -Scope Repo
-```
-
-```sh
-cd /path/to/target-project
-/path/to/agent-engineering-baseline/scripts/bootstrap.sh --repo
-```
-
-The wrapper uses its checkout's CLI pins but installs
-`https://github.com/thetechgy/agent-engineering-baseline.git#main` by default.
-Set `BASELINE_PACKAGE_REF` for another reviewed source; running a local wrapper
-does not automatically install local edits.
-
-Both scopes configure both CLIs. Codex loads project configuration only for
-trusted projects. APM writes:
-
-| Scope | APM state | Instructions | MCP configuration | Skills |
-| --- | --- | --- | --- | --- |
-| User | `~/.apm/apm.yml`, `~/.apm/apm.lock.yaml`, `~/.apm/config.json` | `~/.codex/AGENTS.md`, `~/.copilot/AGENTS.md`, `~/.copilot/copilot-instructions.md` | `~/.codex/config.toml`, `~/.copilot/mcp-config.json` | `~/.agents/skills/*` |
-| Project | `./apm.yml`, `./apm.lock.yaml`, `./apm_modules/` | `./AGENTS.md`, `./.github/copilot-instructions.md` | `./.codex/config.toml`, `./.github/mcp.json` | `./.agents/skills/*` |
-
-### Example: maintain a PowerShell module
-
-Give your agent a concrete maintenance request:
-
-> This module accepts an empty server name and fails later with an unclear error.
-> Inspect the module, project instructions, and supported PowerShell versions.
-> On a dedicated branch, fix parameter validation without changing valid calls or
-> unrelated work. Use the PowerShell module and Pester 6 guidance, test empty input
-> and valid calls, and run the relevant checks. Match any Microsoft API guidance to
-> the installed library and hosting model. Report the changes, test evidence, and
-> checks unavailable here. Do not commit or publish.
-
-Verify the actual command and supported runtimes, or the deployed infrastructure
-and recovery paths. Your project owns validation and deployment approval.
-
-### Installation settings and recovery
-
-| Variable | Effect |
-| --- | --- |
-| `APM_INSTALL_DIR` | CLI command directory; defaults to `~/.local/bin` on Linux/macOS and `%LOCALAPPDATA%\Programs\apm\bin` on Windows. Windows uses its parent as the installation root. |
-| `APM_RELEASE_BASE_URL` | Authoritative HTTPS or file mirror; downloads use no credentials and never retry against the public source. |
-| `APM_NO_DIRECT_FALLBACK=1` | Requires a configured mirror. |
-| `BASELINE_PACKAGE_REF` | Overrides the installed baseline reference. |
-
-`--cli-only` or `-CliOnly` installs the reviewed CLI without deploying the baseline.
-Preview downloads and executes nothing and changes no files or PATH.
-
-On Linux/macOS, rerun bootstrap after moving the installation tree because its
-command link uses an absolute path. After a forced kill, confirm bootstrap has
-stopped before removing the diagnostic's `lib/apm/.lock`. Windows uses relative
-`bin\apm.cmd`, a named mutex, temporary TLS 1.2, and process/User PATH updates.
-User PATH failure is a warning; both wrappers warn about other commands masking APM.
-
-Bootstrap sets `VERSION=<pin>` to suppress release lookup. Ignore `apm self-update`:
-it replaces the reviewed CLI. Unscoped-instruction and this configuration warning
-are expected:
-
-```text
-[!] MCP dependency 'microsoft-learn': unknown key(s) preserved in extra: enabled_tools
-```
-
-See the [PowerShell](scripts/Bootstrap-Baseline.ps1) and
-[Bash](scripts/bootstrap.sh) wrappers for diagnostics.
-
 ## Maintaining the baseline
 
-Edit `.apm/` sources or `apm.yml`, then regenerate through APM. Never hand-edit
-installed `.agents/skills/`, generated instructions, MCP configuration, or lock
-metadata. Consult the [PowerShell module](.apm/skills/powershell-module-engineering/SKILL.md),
-[Pester 6](.apm/skills/powershell-pester-6/SKILL.md), and
-[Podman maintenance](.apm/skills/podman/MAINTENANCE.md) guidance for focused changes.
+If you're only installing this setup, you can skip this section. To maintain the collection, change `.apm/` sources or `apm.yml` and regenerate with APM. Don't edit installed `.agents/skills/`, generated instructions, MCP config, or lock metadata directly.
+
+For skill-specific conventions, see [PowerShell module engineering](.apm/skills/powershell-module-engineering/SKILL.md), [Pester 6](.apm/skills/powershell-pester-6/SKILL.md), and [Podman maintenance](.apm/skills/podman/MAINTENANCE.md).
 
 ### Regenerate and validate
 
-To reproduce this checkout's recorded setup, use the command path printed by bootstrap:
+To reproduce the reviewed checkout, use the command path reported by bootstrap:
 
 ```powershell
 $apmCommand = "$env:LOCALAPPDATA\Programs\apm\bin\apm.cmd"
@@ -344,43 +247,17 @@ Graph smoke checks, and diff hygiene. CI also covers Windows PowerShell 5.1 and 
 
 ### Evaluate authored skills
 
-Evaluation checks skill content and asks whether guidance improves responses to
-real work. This repository uses
-[pinned NVIDIA SkillEvaluator v0.3.0](https://github.com/NVIDIA/SkillEvaluator/blob/ac0a04905100acdafc6c95829311a9739c340ff6/README.md)
-as a read-only consumer of `.apm/skills/`, separate from installation.
+A skill can look useful without improving results. I use [NVIDIA SkillEvaluator v0.3.0](https://github.com/NVIDIA/SkillEvaluator/blob/ac0a04905100acdafc6c95829311a9739c340ff6/README.md) to evaluate locally maintained skills in `.apm/skills/`, separately from installation.
 
-Automated **Skill quality** checks require security scanners and valid case data;
-LLM checks and Tier 2 are disabled. Ordinary findings and explicitly reported
-incomplete scanner evidence are advisory. Broken setup/runtime, invalid datasets,
-missing or malformed reports, and checkout changes fail the job. Review summaries
-and the 14-day `skill-quality` artifact; a setup failure supplies no behavioral evidence.
+Automated **Skill quality** checks cover security scanners and test-case data; LLM checks and Tier 2 are disabled. Findings and incomplete scanner evidence are advisory. Broken setup, invalid cases, missing reports, and checkout changes fail the job. See the job summary and 14-day `skill-quality` artifact; a setup failure isn't behavioral evidence.
 
-Paid comparisons use [authored Podman cases](.apm/skills/podman/evals/evals.json):
-realistic requests, expected behavior, concrete assertions, and representative
-inputs. Run the same request in clean contexts **with and without the skill**,
-then grade assertions using output evidence. **Skill Lift** is the overall score
-difference: positive means improvement over the baseline; negative means worse
-results. Reports also cover task completion (Effectiveness), answer accuracy
-(Correctness), skill activation (Discoverability), safety (Security), and efficient
-tool/skill use (Efficiency).
+For paid behavioral tests, I've started with [Podman cases](.apm/skills/podman/evals/evals.json) that describe realistic work and measurable expectations. I run each request in clean contexts **with and without the skill** and compare outputs against assertions. **Skill Lift** is the score difference: positive means the skill helped on those cases; negative means it hurt. Reports also cover task completion (Effectiveness), accuracy (Correctness), activation (Discoverability), safety (Security), and tool use (Efficiency).
 
-Read scores alongside outputs to identify useful guidance and regressions without
-guaranteeing correctness. Refine cases after mistakes and remove assertions that
-pass equally without the skill. Follow the
-[Podman evaluation guidance](.apm/skills/podman/EVALS.md); store local results in a
-sibling workspace outside the skill collection.
+I look at the actual outputs, not just the score. Assertions that pass equally without the skill aren't useful measures of its value. See [Podman evaluation guidance](.apm/skills/podman/EVALS.md) and keep local results in a sibling workspace outside the skill collection.
 
-[Behavioral runs and reports](https://github.com/thetechgy/agent-engineering-baseline/actions/workflows/benchmark-skills.yml)
-provide evidence and provenance. The
-[historical Podman charts](https://thetechgy.github.io/agent-engineering-baseline/podman/bcf6348b71caddcb/)
-use a different policy from this checkout; consider recorded policy and runtime
-changes when comparing results.
+[Behavioral runs and reports](https://github.com/thetechgy/agent-engineering-baseline/actions/workflows/benchmark-skills.yml) include the underlying evidence. The [historical Podman charts](https://thetechgy.github.io/agent-engineering-baseline/podman/bcf6348b71caddcb/) used a different policy, so account for policy and runtime changes when comparing them.
 
-Current cases cover **Podman**, and automated behavioral runs use **Codex**.
-Broader skills and Copilot behavior need separate evidence; portability checks
-should compare both CLIs. A successful model response does not prove infrastructure
-correctness: verify deployment, readiness, exposure, backup, and recovery in the
-target environment.
+For now, the cases cover **Podman** and automated runs use **Codex**. They don't establish performance for other skills or Copilot. An agent's result also doesn't prove infrastructure is working; verify deployment, readiness, exposure, backups, and recovery in the target environment.
 
 <!-- rumdl-disable MD033 -->
 <details>
