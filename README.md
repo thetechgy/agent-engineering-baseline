@@ -130,7 +130,7 @@ that infrastructure works.
 | Variable | Effect |
 | --- | --- |
 | `APM_INSTALL_DIR` | CLI command directory; defaults to `~/.local/bin` on Linux/macOS and `%LOCALAPPDATA%\Programs\apm\bin` on Windows. Windows uses its parent as the installation root. |
-| `APM_RELEASE_BASE_URL` | Authoritative HTTPS or file mirror; downloads use no credentials and never retry against the public source. |
+| `APM_RELEASE_BASE_URL` | Authoritative HTTPS mirror on all platforms; `file://` mirrors work on Linux/macOS only. Downloads use no credentials and never retry against the public source. |
 | `APM_NO_DIRECT_FALLBACK=1` | Requires a configured mirror. |
 | `BASELINE_PACKAGE_REF` | Overrides the installed baseline reference. |
 
@@ -328,16 +328,25 @@ apm compile --global
 
 Project scope omits `--global` and compiles with `--target codex,copilot`.
 
-Run the [complete local checks](scripts/Invoke-Validation.ps1) from PowerShell:
+On Linux or macOS, run the [full validation suite](scripts/Invoke-Validation.ps1) with
+PowerShell 7 and the required Unix tools and validation dependencies installed:
 
 ```powershell
 ./scripts/Invoke-Validation.ps1
 ```
 
-From Bash: `pwsh -NoLogo -NoProfile -File ./scripts/Invoke-Validation.ps1`.
-Use `-Suite Pester` for Pester/analyzer or `./tests/bootstrap.sh` for Bash fixtures.
+From Bash, use `pwsh -NoLogo -NoProfile -File ./scripts/Invoke-Validation.ps1`.
 Full validation includes linting, regeneration, audit, packing, MCP contracts,
-Graph smoke checks, and diff hygiene. CI also covers Windows PowerShell 5.1 and 7.
+Graph smoke checks, and diff hygiene.
+
+On Windows, run the Pester and PSScriptAnalyzer suite in PowerShell 5.1 or 7:
+
+```powershell
+./scripts/Invoke-Validation.ps1 -Suite Pester
+```
+
+For Bash fixtures alone on Linux/macOS, run `./tests/bootstrap.sh`. CI runs
+the full suite on Linux, Pester/analyzer on Windows, and Bash fixtures on macOS.
 
 ### Evaluate authored skills
 
