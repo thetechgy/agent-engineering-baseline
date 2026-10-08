@@ -1,383 +1,259 @@
 # Agent engineering baseline
 
-This MIT-licensed repository is a shared, project-agnostic configuration for
-[Microsoft Agent Package Manager (APM)](https://microsoft.github.io/apm/).
-It deploys shared instructions and skills to Codex CLI and GitHub Copilot CLI
-through APM's native install, update, and compile commands.
+[![Validate CI](https://github.com/thetechgy/agent-engineering-baseline/actions/workflows/validate.yml/badge.svg?branch=main)](https://github.com/thetechgy/agent-engineering-baseline/actions/workflows/validate.yml)
+[![Dependabot](https://img.shields.io/badge/Dependabot-enabled-025e8c?logo=dependabot)](.github/dependabot.yml)
+[![Bootstrap shells: PowerShell 5.1 / 7 and Bash](https://img.shields.io/badge/Bootstrap_shells-PowerShell_5.1_%2F_7_%7C_Bash-5391FE?logo=powershell&logoColor=white)](#get-started)
+[![License: MIT](https://img.shields.io/badge/License-MIT-2E7D32)](LICENSE)
 
-The bootstrap has one deliberately custom security boundary: acquiring and
-promoting a trusted APM CLI. Package installation, executable trust, dependency
-resolution, updates, compilation, audit, and packing remain native APM
-operations.
+## Purpose
 
-## Pinning and review boundary
+I use this repo to maintain the instructions and skills I use with Codex CLI and GitHub
+Copilot CLI, both at work and for personal projects like my homelab. I'm a systems
+engineer working mostly in infrastructure and security, with a lot of PowerShell
+scripting and module development.
 
-The repository uses APM's native dependency model, like a manifest and lockfile:
+I wanted one place to manage that setup instead of maintaining it separately for each
+CLI. Projects can still have their own instructions. If you do similar work, feel free
+to use this as a starting point and adapt it.
 
-- `apm.yml` declares branch-ref dependencies and reviewed local `.apm/`
-  content.
-- `apm.lock.yaml` records this checkout's resolved dependency snapshot: exact
-  commits, deployed files, platform launchers, and content hashes.
-- `.apm-version` pins the complete APM release version.
-- `.apm-checksums` contains exactly ten reviewed SHA-256 digests: the five
-  supported release archives and the executable inside each archive.
-- Readable compiled outputs are committed review artifacts and CI requires a
-  clean mechanical regeneration. The only ignored APM outputs are the six large
-  `msgraph` indexes and six platform binaries named exactly in `.gitignore`;
-  the lockfile and `apm audit --ci` retain their integrity contract.
+A **skill** is a set of instructions and references for a particular kind of work. Mine
+cover:
 
-The bootstrap verifies the downloaded CLI archive and executable against the
-committed hashes. This repository's lockfile and generated outputs describe its
-reviewed dependency snapshot; native frozen installation and audit check that
-snapshot in this checkout. Hashes establish integrity against the recorded
-values, not whether the content is benign.
+- **PowerShell:** module development, Pester 6 testing, and simplifying code.
+- **Infrastructure:** Ansible and Podman.
+- **Security and Git:** agent safety, GitHub Actions hardening, dependency updates,
+  accessibility, and commits.
+- **Microsoft documentation:** API references and offline Graph lookups.
 
-### What the review boundary does and does not cover
+Most skills are imported or adapted from other projects; the Pester 6 skill is one I
+wrote. Browse the [installed skills](.agents/skills/) or
+[locally maintained sources](.apm/skills/) to see what's included.
 
-The committed pins govern exactly one thing: which APM CLI executes on the
-consumer's machine. They do not pin skill content.
+The [shared instructions](.apm/instructions/personal.instructions.md) tell agents to
+inspect the repo, keep changes focused, preserve unrelated work, and report what they
+actually verified. Commits, pushes, and other remote changes require approval. Project
+instructions can add more specific requirements.
 
-- `apm.yml` tracks six third-party skills at their upstream `main` branch.
-- Bootstrap runs native `apm install --trust-bin --trust-transitive-mcp` and
-  then `apm update --yes`, so every run resolves those branch refs to their
-  *current* upstream commits and trusts any launcher binaries and transitive
-  MCP servers they declare. The `msgraph` skill, for example, ships a prebuilt
-  launcher that `--trust-bin` authorizes.
-- A consumer installation uses native APM resolution and its own destination
-  lockfile. This repository's `apm.lock.yaml` is a reviewed snapshot of one
-  checkout; it is never what a consumer installs from. Installing a fixed
-  baseline commit therefore does not force transitive dependencies to match
-  this lockfile.
+## How it works
 
-Treat an upstream skill compromise as code execution on every consumer at its
-next bootstrap. Review the destination's resolved content and lockfile when
-assessing what was actually deployed. If deterministic skill content is
-required, pin the dependencies to commits in the destination manifest and use
-native APM directly instead of the wrappers.
+[Microsoft Agent Package Manager (APM)](https://microsoft.github.io/apm/) handles
+installation and generates the configuration for both CLIs. The [manifest](apm.yml)
+lists the skills, shared instructions, and Microsoft Learn connection. See the
+[APM command reference](https://microsoft.github.io/apm/reference/) for its native
+commands.
 
-A CLI update first enters a review-only pull request as hashes and generated
-output. The candidate CLI is not executed by the privileged update workflow.
+Microsoft Learn uses **Model Context Protocol (MCP)** to let agents search official
+Microsoft documentation. There's also an offline Microsoft Graph reference skill.
 
-## Local content
+The bootstrap scripts verify and install a pinned APM CLI. That's different from pinning
+the skills: some follow upstream branches and can change when you install. See
+[Security and safety](#security-and-safety) before running the scripts.
 
-`.apm/` contains the reviewed local sources:
+GitHub Actions checks PRs and pushes to `main`, including scripts, generated files,
+skill quality, and installation tests on Windows, Linux, and macOS.
+[Validation results](https://github.com/thetechgy/agent-engineering-baseline/actions/workflows/validate.yml)
+are public. Paid behavioral evaluations require separate approval. A
+[weekly update workflow](.github/workflows/update-baseline.yml) proposes changes through
+PRs; nothing auto-merges.
 
-- `instructions/personal.instructions.md` provides shared engineering
-  boundaries.
-- `skills/a11y`, `agent-safety`, `ansible`, `podman`, and
-  `powershell-module-engineering` are maintained local adaptations.
-- `skills/powershell-pester-6` is locally authored and remains the selected
-  source of truth.
+## Get started
 
-Installed `.agents/skills/` content is generated; edit its source or dependency
-and regenerate rather than editing installed output directly.
+The wrappers support Windows x86_64 with PowerShell 5.1 or 7, and Linux/macOS x86_64 or
+arm64 with Bash. Install your agent CLI separately. You'll need network access to
+releases/dependencies or a mirror. Bash needs `curl`, `tar`, and `sha256sum` (Linux) or
+`shasum` (macOS).
 
-## Microsoft Learn documentation
+**Before installing:** Default bootstrap trusts bundled executables and transitive MCP
+servers and refreshes branch-based dependencies, including ones already in the
+destination. Review the [security details](#security-and-safety). User scope changes
+your shared agent configuration; project scope changes the current project.
 
-`apm.yml` declares the
-[official Microsoft Learn MCP server](https://learn.microsoft.com/en-us/training/support/mcp)
-as `microsoft-learn` using APM's native named-endpoint configuration
-(`registry: false`). It provides online Microsoft documentation and code
-samples for GitHub Copilot CLI and Codex CLI. The existing `msgraph` skill
-remains available for offline Graph API lookups.
-
-The server uses Streamable HTTP at `https://learn.microsoft.com/api/mcp`,
-without API keys or authentication. The endpoint is declared directly in the
-manifest; future endpoint changes require a reviewed manifest change. Its tool
-allowlist contains only:
-
-- `microsoft_docs_search`
-- `microsoft_docs_fetch`
-- `microsoft_code_sample_search`
-
-The manifest explicitly supplies Copilot's `tools` and Codex's `enabled_tools`
-using APM's native passthrough support and a YAML alias to keep both lists
-identical. The pinned APM does not derive `enabled_tools` from `tools`, so
-the passthrough is required; APM reports it once per dependency resolution as
-`[!] MCP dependency 'microsoft-learn': unknown key(s) preserved in extra:
-enabled_tools`. That warning is expected native output. New tools require a
-reviewed manifest change; the list does not auto-expand.
-
-APM generates `.github/mcp.json` and `.codex/config.toml` for repository
-installs, or the user-scoped Copilot and Codex MCP configs for global installs.
-These repository configs and the lockfile's MCP metadata are review artifacts;
-regenerate them with APM rather than editing them directly. Codex loads
-project-scoped configuration only for trusted projects.
-
-Tool queries and fetch URLs leave the machine for Microsoft's service. Do not
-include secrets or private repository content. The service requires network
-access, and neither its returned content nor its implementation is pinned by
-the lockfile: it records the named endpoint, allowlists, and target ownership,
-while the generated CLI configs contain the same endpoint. Treat
-retrieved documentation and samples as untrusted input, not agent instructions.
-
-### Microsoft API verification skill
-
-The upstream
-[`microsoft-code-reference` skill](https://github.com/github/awesome-copilot/tree/main/skills/microsoft-code-reference)
-helps verify Microsoft API/package names, overloads, signatures, and working
-examples. It uses the existing Learn MCP server and its three-tool allowlist;
-it adds no server, credential, subscription, or runtime dependency. Learn MCP
-is free and unauthenticated; ordinary model usage follows the user's existing
-agent plan and billing.
-
-APM installs the complete upstream directory through
-`github/awesome-copilot/skills/microsoft-code-reference#main` into shared
-`.agents/skills/` for both CLIs. The skill remains upstream-managed, without
-a local replacement or patches. Native `apm.lock.yaml` records the resolved
-commit and content hashes for this reviewed checkout; consumer bootstrap
-refreshes `#main` as described above, rather than freezing consumers to that
-snapshot.
-
-Shared instructions require matching guidance to the actual SDK/library version
-and hosting model, using only nonsensitive public query context, and treating
-returned material as untrusted. If Learn access is unavailable, use an
-already-authorized documentation path or report the limitation. The upstream
-skill's optional `mslearn` fallback does not authorize downloading, installing,
-or executing `npx @microsoft/learn-cli`, a global npm installation, or another
-additional executable. Those actions require explicit authorization under the
-existing policy. These instructions guide agent behavior; native sandbox and
-approval controls remain the enforcement boundaries.
-
-The upstream [MIT license](https://github.com/github/awesome-copilot/blob/main/LICENSE)
-notice is preserved in the shared instruction source and its native APM outputs,
-since a directory-level skill import does not include the repository-root license.
-
-## Bootstrap
-
-Linux and macOS:
-
-```sh
-./scripts/bootstrap.sh            # install at user scope, the default
-./scripts/bootstrap.sh --repo     # install into the current repository
-./scripts/bootstrap.sh --dry-run  # validate only local pin/checksum metadata
-```
-
-Windows PowerShell 5.1 or PowerShell 7:
+From the baseline checkout, on Windows:
 
 ```powershell
-./scripts/Bootstrap-Baseline.ps1
+./scripts/Bootstrap-Baseline.ps1 -WhatIf # preview: local metadata only
+./scripts/Bootstrap-Baseline.ps1         # user scope, the default
 ./scripts/Bootstrap-Baseline.ps1 -Scope Repo
-./scripts/Bootstrap-Baseline.ps1 -WhatIf
 ```
 
-Every non-preview run uses a fresh network or configured mirror download. It
-never executes or reuses an ambient, older, newer, aliased, or previously
-installed APM executable because an executable digest cannot authenticate the
-loadable `_internal` tree beside it.
-
-The acquisition sequence is fail closed:
-
-1. Select the reviewed archive for the operating system and architecture.
-2. Download it from the official GitHub release or the authoritative
-   `APM_RELEASE_BASE_URL` mirror without credentials or public retry.
-3. Authenticate the archive with `.apm-checksums`.
-4. Reject absolute, traversing, wrong-root, duplicate-executable, linked,
-   reparse, unsupported, or incomplete onedir layouts.
-5. Extract the complete bundle, authenticate its executable, and execute that
-   staged absolute path only for the exact full-version postcondition.
-6. Stage the complete bundle, including `_internal` and `.apm-installed`, as
-   a new release generation, reauthenticate the staged executable, check its
-   exact version, and only then activate it and invoke APM by absolute path.
-
-Set `APM_NO_DIRECT_FALLBACK=1` to require a configured mirror. Preview never
-downloads, creates a temporary directory, stages, extracts, executes, installs,
-changes PATH, or creates a symlink.
-
-Every run installs a fresh generation and activates it in one atomic step, so
-the previously active generation stays usable until that step and nothing needs
-a backup or rollback. If a run fails before activation, its stage is removed
-and the prior installation is untouched. A generation the command already
-references is never removed, even if the run is interrupted right after
-activation. After activation, superseded generations and legacy layouts are
-removed best effort with a warning on failure. The installer writes its
-`.apm-installed` marker into every stage before anything else, and only plain
-directories under `releases` carrying that marker as a regular file are
-removal candidates; anything else, including an unmarked `.stage-*` directory,
-is left in place with a warning. A second bootstrap targeting the same
-installation root fails immediately instead of waiting. These checks address
-pre-existing state and the user's own files; they do not defend against another
-process writing into the installation root while a bootstrap runs, because such
-a process could replace the command directly at any time.
-
-On Linux and macOS, `${APM_INSTALL_DIR:-$HOME/.local/bin}/apm` is a symlink to
-the absolute path of `<root>/lib/apm/releases/v<pin>-<timestamp>-<pid>/apm`,
-and activation renames a new symlink over it. Because the target is absolute,
-moving the installation tree requires running the bootstrap again. Linux uses
-`sha256sum`; macOS uses `shasum -a 256`. An existing unrelated command, a
-regular file, or a link that does not name a generation executable or the
-legacy `lib/apm/apm` bundle (including any `.` or `..` path component, or a
-generation directory or executable that is itself a symlink) is not
-overwritten. A managed-looking link is replaced only when its target is
-missing or its bundle carries the installer's `.apm-installed` marker as a
-regular file; a link to an unmarked bundle is refused with both paths named. The fail-fast lock is the directory
-`lib/apm/.lock`, held until the run exits so the native APM deployment always
-runs from a generation no concurrent bootstrap can supersede; normal exit and
-handled signals remove it, and after a forced kill the diagnostic names it so
-you can confirm no bootstrap is running and remove it. A regular file or link
-at that path is reported as unrelated rather than as another bootstrap.
-
-On Windows, the default root is `%LOCALAPPDATA%\Programs\apm`.
-`APM_INSTALL_DIR`, when set, identifies the `bin`/shim directory just as it
-does in APM's native installer; the installation root is its parent. Each
-generation lives in `releases\v<pin>-<timestamp>-<id>`, and the ASCII
-`bin\apm.cmd` shim is location-relative:
-
-```bat
-"%~dp0..\releases\v<pin>-<timestamp>-<id>\apm.exe" %*
-```
-
-Activation writes the new shim beside the old one and replaces it atomically
-with `File.Replace`. A named mutex is tried once without waiting and held
-until the native deployment finishes, reparse points are rejected before any
-tree is deleted, TLS 1.2 is enabled temporarily
-and restored, and the legacy `current` junction is recognized only when its
-target is a reparse-free path inside `releases` and is then removed without
-following it. The same rule as on Linux applies to the shim: it is replaced
-only when the release it runs is missing or carries the `.apm-installed`
-marker as a regular file, and a release reached through a reparse point is
-refused. `bin` is prepended to the current process and User PATH; a User PATH
-failure after activation is a warning. Both wrappers warn if another PATH
-command may still shadow the reviewed location in new shells.
-
-## Native deployment behavior
-
-The default reference is the direct Git URL
-`https://github.com/thetechgy/agent-engineering-baseline.git#main`, avoiding
-default-registry shorthand routing. Override it with
-`BASELINE_PACKAGE_REF` when a different reviewed source is required.
-
-Global mode:
+On Linux or macOS:
 
 ```sh
-apm install --global --target codex,copilot --trust-bin --trust-transitive-mcp <ref>
-apm update --global --yes --target codex,copilot
-apm compile --global
+./scripts/bootstrap.sh --dry-run  # preview: local metadata only
+./scripts/bootstrap.sh            # user scope, the default
+./scripts/bootstrap.sh --repo
 ```
 
-Repository mode:
+Project scope uses your **current directory**, not the script's directory. To install
+into another project, run the wrapper from there:
+
+```powershell
+Set-Location C:\work\target-project
+& C:\work\agent-engineering-baseline\scripts\Bootstrap-Baseline.ps1 -Scope Repo
+```
 
 ```sh
-apm install --target codex,copilot --trust-bin --trust-transitive-mcp <ref>
-apm update --yes --target codex,copilot
-apm compile --target codex,copilot
+cd /path/to/target-project
+/path/to/agent-engineering-baseline/scripts/bootstrap.sh --repo
 ```
 
-Native `apm install` honors existing lockfile resolutions for branch refs, so
-by itself a re-run would keep deploying the previously locked commit. The
-native `apm update --yes` step therefore runs on every bootstrap: install
-declares and deploys the baseline on first use, update re-resolves every
-branch-ref dependency in the destination manifest to its latest commit and
-redeploys the refreshed content, including the transitive Microsoft Learn MCP
-configuration. Every bootstrap run therefore refreshes the baseline deployment
-from its configured ref (`main` by default) and resolves upstream dependencies
-natively. On a fresh machine, install resolves current branch refs; update
-refreshes them again if they have advanced.
+The wrapper uses the APM pins from its own checkout but installs
+`https://github.com/thetechgy/agent-engineering-baseline.git#main` by default. Set
+`BASELINE_PACKAGE_REF` to install a different reviewed revision; local edits to the
+wrapper's checkout aren't automatically installed.
 
-The baseline's MCP dependency is transitive when the baseline is installed as
-a package. `--trust-transitive-mcp` permits native APM deployment of that
-reviewed dependency. This flag trusts transitive MCP dependencies across the
-entire install graph, not just Microsoft Learn. Review any other packages
-already in the destination manifest and any `BASELINE_PACKAGE_REF` override
-before running bootstrap. For narrower trust, use native APM directly,
-redeclare the reviewed MCP dependency in the destination's top-level manifest,
-and omit `--trust-transitive-mcp`.
+Both scopes configure both CLIs. Codex only loads project configuration for trusted
+projects. APM writes these files:
 
-Scope and target selection are independent. Global mode deploys user-scoped
-Codex and Copilot primitives for use across repositories; repository mode
-deploys the same targets into the current project. Install, update, and
-repository compile all supply explicit targets so saved APM configuration or
-auto-detection cannot redirect the baseline; global install persists
-`codex,copilot` in `~/.apm/apm.yml`, so `apm compile --global` writes only
-those two root contexts rather than every harness APM supports. Repository
-mode intentionally updates that project's manifest, lockfile, package cache,
-and compiled outputs. The update step refreshes every branch-ref dependency
-declared in the destination manifest, not only the baseline; review that
-manifest before running bootstrap if it declares other dependencies.
+| Scope | APM state | Instructions | MCP configuration | Skills |
+| --- | --- | --- | --- | --- |
+| User | `~/.apm/apm.yml`, `~/.apm/apm.lock.yaml`, `~/.apm/config.json` | `~/.codex/AGENTS.md`, `~/.copilot/AGENTS.md`, `~/.copilot/copilot-instructions.md` | `~/.codex/config.toml`, `~/.copilot/mcp-config.json` | `~/.agents/skills/*` |
+| Project | `./apm.yml`, `./apm.lock.yaml`, `./apm_modules/` | `./AGENTS.md`, `./.github/copilot-instructions.md` | `./.codex/config.toml`, `./.github/mcp.json` | `./.agents/skills/*` |
 
-Native output written by each mode:
+### Example: maintain a PowerShell module
 
-| Mode | Manifest, lockfile, config | Root contexts | MCP configuration | Skills |
-|---|---|---|---|---|
-| Global | `~/.apm/apm.yml`, `~/.apm/apm.lock.yaml`, `~/.apm/config.json` | `~/.codex/AGENTS.md`, `~/.copilot/AGENTS.md`, `~/.copilot/copilot-instructions.md` | `~/.codex/config.toml`, `~/.copilot/mcp-config.json` | `~/.agents/skills/*` |
-| Repository | `./apm.yml`, `./apm.lock.yaml`, `./apm_modules/` | `./AGENTS.md`, `./.github/copilot-instructions.md` | `./.codex/config.toml`, `./.github/mcp.json` | `./.agents/skills/*` |
+For a routine change, I might ask:
 
-The two Copilot context files carry the same instruction body under different
-generated headers; that duplication is native Copilot target behavior. Expected
-native diagnostics during a bootstrap are the `enabled_tools` passthrough
-warning described above and the unscoped-instruction warning for the universal
-instruction. Bootstrap runs each APM command with `VERSION=<pin>`, APM's
-native air-gap setting, so APM performs no latest-release lookup and prints no
-`A new version of APM is available … Run apm self-update` notice. If you run
-the reviewed CLI yourself and see that notice, ignore it: this repository pins
-the CLI, and `apm self-update` would replace the reviewed executable with an
-unreviewed one.
+> This module accepts an empty server name and fails later with an unclear error.
+> Review the code, project instructions, and supported PowerShell versions.
+> Fix the validation on a new branch without changing valid calls or unrelated
+> code. Use the PowerShell module and Pester 6 skills, test empty and valid input,
+> and run the relevant checks. Tell me what changed, what passed, and what you
+> couldn't verify. Don't commit or push.
 
-## Repository validation
+For Microsoft APIs, match examples to the project's SDK version and hosting model.
+Verify deployment behavior and recovery separately; an agent's answer isn't evidence
+that infrastructure works.
 
-Use the reviewed APM command that bootstrap reported as
-`done; reviewed CLI: <command> -> <release executable>` and reproduce the
-deployment:
+### Options and troubleshooting
 
-```sh
-APM="$HOME/.local/bin/apm"       # the command path bootstrap printed
-"$APM" install --frozen --trust-bin
-"$APM" compile --target codex,copilot --validate
-"$APM" compile --target codex,copilot
-"$APM" audit --ci
-"$APM" pack --dry-run
+| Variable | Effect |
+| --- | --- |
+| `APM_INSTALL_DIR` | CLI command directory; defaults to `~/.local/bin` on Linux/macOS and `%LOCALAPPDATA%\Programs\apm\bin` on Windows. Windows uses its parent as the installation root. |
+| `APM_RELEASE_BASE_URL` | Authoritative HTTPS mirror on all platforms; `file://` mirrors work on Linux/macOS only. Downloads use no credentials and never retry against the public source. |
+| `APM_NO_DIRECT_FALLBACK=1` | Requires a configured mirror. |
+| `BASELINE_PACKAGE_REF` | Overrides the installed baseline reference. |
+
+`--cli-only` or `-CliOnly` installs just the reviewed APM CLI. Preview (`--dry-run` or
+`-WhatIf`) checks local metadata without downloading, executing, or changing anything.
+
+On Linux/macOS, rerun bootstrap after moving the installation tree because its
+command link uses an absolute path. After a forced kill, confirm bootstrap has
+stopped before removing the diagnostic's `lib/apm/.lock`. Windows uses relative
+`bin\apm.cmd`, a named mutex, temporary TLS 1.2, and process/User PATH updates.
+User PATH failure is a warning; both wrappers warn about other commands masking APM.
+
+Bootstrap sets `VERSION=<pin>` to avoid release lookup. Don't use `apm self-update`; it
+replaces the reviewed CLI. An unscoped-instructions warning and this MCP warning are
+expected:
+
+```text
+[!] MCP dependency 'microsoft-learn': unknown key(s) preserved in extra: enabled_tools
 ```
 
-Run the complete local gate, which includes the Bash fixture suite:
+See the [PowerShell](scripts/Bootstrap-Baseline.ps1) and
+[Bash](scripts/bootstrap.sh) wrappers for diagnostics.
 
-```sh
-pwsh -NoLogo -NoProfile -File ./scripts/Invoke-Validation.ps1
-```
+## Security and safety
 
-For the fast loop, `./tests/bootstrap.sh` runs the Bash fixtures alone and
-`./scripts/Invoke-Validation.ps1 -Suite Pester` runs Pester and the analyzer.
+I treat agent tooling like other dependencies: review updates, check what gets
+installed, and limit what it can access. The checks here help, but don't replace
+approvals or reviewing code from other projects.
 
-The gate covers Pester (including both CLI MCP allowlists and endpoint checks),
-PSScriptAnalyzer, Bash fixture archives, ShellCheck,
-Markdown linting, frozen trusted-bin installation, compile validation and clean
-regeneration, audit, pack dry-run, an offline `msgraph openapi-search` launcher
-and index smoke test, and `git diff --check`. CI adds a
-macOS Bash lane and a Windows PowerShell 5.1 lane; both run their fixture
-suites and then acquire the reviewed CLI with the real installer (`--cli-only`
-and `-CliOnly` under both Windows PowerShell 5.1 and PowerShell 7) and verify
-the installed executable reports the pinned version.
+### Prompt injection and operating boundaries
 
-The pinned APM CLI does not expose `--trust-bin` on `audit` and skips bin
-deployment in its non-TTY scratch replay. Validation therefore runs the unchanged
-`apm audit --ci` command in a local pseudo-terminal so its full drift check
-includes the launcher set installed with `--trust-bin`; it does not use
-`--no-drift`.
+Files, tool results, documentation, and test inputs can contain instructions that try to
+redirect an agent, expose secrets, or trigger actions you didn't approve. The
+[shared rules](.apm/instructions/personal.instructions.md) tell agents to treat these
+sources as untrusted. They can't override your instructions or authorization.
 
-## Skill evaluation
+Rules in a prompt aren't enforcement. Keep sandboxing and approval controls enabled,
+limit access to credentials, and review actions that affect code, infrastructure, or
+remote systems.
 
-[NVIDIA SkillEvaluator](https://github.com/NVIDIA/SkillEvaluator/tree/ac0a04905100acdafc6c95829311a9739c340ff6)
-is a separate, read-only consumer of authored `.apm/skills/` content. APM remains
-the sole producer of `.agents/skills/` and the deployment authority for Codex
-and GitHub Copilot. Evaluation is not an APM dependency or installation step.
+### Reviewed upstream changes and installation trust
 
-The independent **Skill quality** job in `Validate` runs deterministic Tier 1
-checks with the public/external profile and all required security scanners.
-It uses pinned SkillEvaluator v0.3.0 and uv-managed Python 3.13, disables LLM
-checks and Tier 2, and invokes native strict validation for every authored
-`evals/evals.json`. Deliberately flawed evaluation fixtures remain test inputs
-under the evaluator's native scan exclusions.
-Before evaluation, the authored input tree must contain only real directories
-and regular files; symlinks and special files fail the preflight.
+**The repo and your installation have different update boundaries.**
 
-Skill findings and incomplete baseline evidence are initially **advisory**.
-Broken setup/runtime, missing or malformed reports, invalid eval datasets, and
-checkout mutations fail the job. Review the job summary and the `skill-quality`
-artifact (14 days) for JSON, Markdown, HTML, and strict dataset reports before
-changing existing skill content to address the baseline.
+- **This repo:** [`apm.lock.yaml`](apm.lock.yaml) records the reviewed dependency
+  revisions, files, launchers, and hashes. Updates to `main` need a PR and review; they
+  don't auto-merge. Ignored Graph indexes and binaries still have lockfile and audit
+  checks.
+- **Your installation:** default bootstrap also refreshes **all branch-tracking
+  dependencies in the destination**, including unrelated packages. Six imported skills
+  follow upstream `main`. Your destination manifest and lockfile govern the result, not
+  this repo's lockfile. Even a fixed baseline commit doesn't freeze the skills.
 
-In **Settings > Actions > General > Actions permissions**, retain the selected
-actions policy and full-SHA pinning requirement. Allow GitHub-owned actions and
-these exact reviewed external refs:
+Review the destination's manifest, resolved skills, and source overrides. `--trust-bin`
+authorizes bundled executables, including `msgraph`. `--trust-transitive-mcp` trusts MCP
+servers across the **whole dependency graph**, not just Microsoft Learn. A compromised
+upstream skill could execute code on your next bootstrap.
+
+For fixed skill content, use immutable commit references in the destination manifest and
+native APM commands without branch updates. To limit MCP trust, declare the reviewed
+server directly and omit `--trust-transitive-mcp`.
+
+### Verified tooling and reviewed refreshes
+
+The wrappers never rely on an existing `apm` from PATH. They use the release in
+[`.apm-version`](.apm-version) and ten reviewed SHA-256 hashes in
+[`.apm-checksums`](.apm-checksums), covering five archives and their executables.
+Downloads use no credentials. Bootstrap rejects unsafe or incomplete bundles, checks the
+executable and version, and runs it by absolute path. Matching hashes prove integrity
+against the reviewed values, **not** that the code is safe.
+
+The previous installation stays available until the new one is activated. Cleanup checks
+ownership and paths, avoids unmarked directories, links, and Windows reparse points, and
+rejects concurrent runs. Another process with write access to the installation root is
+outside these protections.
+
+The update workflow uses the previously reviewed CLI. It checks new archives against
+upstream hashes and inspects their layouts **without running the candidate**. Generated
+changes are restricted to approved paths; a separate job opens the PR without executing
+changed content. Normal PR validation runs the candidate CLI. Before merging, review the
+release and date, all hashes, dependency changes, generated files, and CI.
+
+### Documentation access and privacy
+
+The [Microsoft Learn MCP server](https://learn.microsoft.com/en-us/training/support/mcp)
+at `https://learn.microsoft.com/api/mcp` is free and unauthenticated; model usage still
+follows your agent plan. Both CLIs can use only `microsoft_docs_search`,
+`microsoft_docs_fetch`, and `microsoft_code_sample_search`. Endpoint and tool changes
+need manifest review.
+
+Queries and fetch URLs leave your machine. Use only public API names and minimal
+nonsensitive context, **never** secrets or private source. The lockfile pins the
+connection and tool list, not the remote service or its results. Treat results as
+untrusted reference material, and match examples to the installed SDK and hosting model.
+
+If Learn isn't available, use an already authorized source or report the limitation.
+Running fallback tools such as `npx @microsoft/learn-cli` or a global npm install
+requires approval. The upstream MIT notice is retained in shared instructions and
+generated outputs.
+
+### CI permissions, credentials, and dependency checks
+
+Validation uses read-only repository access without retained checkout credentials.
+GitHub Actions are pinned to commit SHAs; Python dependencies use hashed or frozen
+locks. PowerShell Gallery modules have version pins but no native hash pins.
+
+Paid evaluation requires approval through `skill-benchmark`, and only the live step
+receives the API key. History and Pages jobs don't get it or execute skills; history
+accepts only approved numeric metrics. Reports and temporary tools stay outside the
+checkout. Don't put reports or `BENCHMARK.md` in either APM-managed skill collection.
+
+Codex can access its key inside the evaluation container. Review the branch, workflow,
+skill, cases, and inputs before approval. Upload filtering and redaction are best
+effort; they cannot guarantee secrets won't leak, including in encoded output. Treat all
+evaluation inputs and outputs as untrusted.
+
+<!-- rumdl-disable MD033 -->
+<details>
+<summary>Repository CI settings and Python lock maintenance</summary>
+
+In **Settings > Actions > General**, keep default permissions read-only and retain
+selected-action and full-SHA requirements. Allow GitHub-owned actions and these
+exact external references:
 
 <!-- external-action-requirements:start -->
 
@@ -389,133 +265,19 @@ docker/setup-compose-action@54042514f505b273907334ae2b9cdbb9a0213c1a
 
 <!-- external-action-requirements:end -->
 
-`astral-sh/setup-uv` is required for validation and benchmarking;
-`benchmark-action/github-action-benchmark` publishes durable history;
-`docker/setup-compose-action` installs the benchmark's pinned Compose runtime.
-Without these entries, GitHub rejects the workflow before starting jobs. No
-broader third-party action access is needed. CI checks this list against every
-workflow's external action references; live repository settings must also match.
+Missing entries prevent jobs from starting. CI checks that this list matches the
+workflows; keep live repository settings synchronized.
 
-### Manual behavioral benchmarks
+Enable **Allow GitHub Actions to create and approve pull requests** for update PRs.
+The workflow never submits an approving review. For token-created PRs, a maintainer
+with write access must select **Approve workflows to run** after reviewing the
+candidate, then require all validation checks before merging. See
+[GitHub's token-triggered workflow behavior](https://docs.github.com/en/actions/concepts/security/github_token).
 
-In **Actions > Benchmark skills > Run workflow**, select a branch, a local
-skill name with an authored dataset (initially `podman`), and a mode:
-
-| Mode | Attempts per case in each arm | Podman task trials | Durable history |
-| --- | --- | --- | --- |
-| `standard` | 1 | 20 | Successful main dispatches only |
-| `confirmation` | 3 | 60 | Diagnostic only |
-
-Both modes retain the without-skill baseline and use native Codex evaluation
-in Docker, with concurrency 2, a 600-second per-trial agent timeout, and a
-three-hour workflow-job limit. Codex and the evaluator/judge explicitly use
-**OpenAI GPT-5.6 Sol**. Native runtime smoke tests and judging add calls beyond
-the task-trial counts. Runs consume OpenAI API usage; neither mode runs
-automatically on pushes, PRs, or a schedule. Only one benchmark workflow runs
-at a time.
-
-The Evaluate job waits for approval through the protected `skill-benchmark`
-environment. Review the dispatched commit SHA, workflow, skill, dataset, and
-fixtures before approving. Reviewed feature branches are supported. The job
-checks out that exact SHA and validates inputs before using the credential.
-Environment approval does not make malicious prompts safe: native Codex can
-access its API credential inside the container.
-
-Both modes and feature-branch runs produce job summaries and native collected
-results as `skill-benchmark-<run>-<attempt>` artifacts, retained for 30 days.
-Native token counts and any available `cost_usd` appear in the summary. These
-are reported subtotals, may include Harbor's cost estimates, and are not a
-complete API bill; missing usage remains unknown. Publication stages only known
-native reports, dataset snapshots, provenance, and collected diagnostics, using
-upstream redaction helpers. Transient Harbor execution directories, hidden
-files, credentials, links, and unexpected files are excluded. Redaction is
-best-effort and cannot prevent deliberate encoded secret disclosure; review is
-the trust boundary. Treat downloaded prompts and agent outputs as untrusted.
-
-Evaluation is capped at 140 minutes and shortens when setup consumes part of
-the 160-minute window established by the job's first step. This reserves about
-20 minutes of the 180-minute job for recovery, redaction, and upload. Native
-Harbor retention keeps completed trials available to the native collector
-after interruption;
-raw execution directories stay on the runner. Recovered runs are explicitly
-incomplete and cannot publish history. Recovery and upload require a live
-runner; runner loss or forced cancellation can prevent them.
-
-Successful **standard** runs explicitly dispatched against `main` additionally
-append Skill Lift, Effectiveness, Correctness, and Discoverability to
-[github-action-benchmark](https://github.com/benchmark-action/github-action-benchmark/tree/4322e5726e6334590d251fc4f92bec0efafc45dc)
-history on `gh-pages`. Security and efficiency remain in complete results.
-Each skill and benchmark policy has a separate series; dataset digests and
-source revisions identify each point. The Pages deployment summary links the
-series at `<Pages URL>/<skill>/<policy-id>/`. Confirmation runs never publish.
-
-Evaluation has read-only repository permission; only its live step receives
-the OpenAI secret. A separate publisher receives only allowlisted numeric
-metrics and has repository-write permission. A third job deploys the exact
-published history commit through native Pages Actions. Neither publishing job
-receives the inference credential or executes the evaluator, Codex, or skills.
-
-All outputs live under the runner's temporary directory, and CI explicitly
-requires an unchanged checkout, including ignored files. Ignore rules for
-accidental `evals/results/` directories are defense in depth, not isolation.
-Do not save reports or `BENCHMARK.md` into either APM-managed skill tree.
-
-### One-time benchmark setup
-
-1. In **Settings > Environments**, create `skill-benchmark` with a required
-   trusted maintainer reviewer. Allow reviewed feature branches as well as main;
-   do not restrict this environment to main. Leave **Prevent self-review** off
-   for a single-maintainer repository. Independent approval can be enabled when
-   additional trusted maintainers are available. The workflow sets
-   `deployment: false`, so required-reviewer and secret gating apply without
-   creating deployment records; do not add incompatible custom deployment
-   protection apps.
-2. Add **environment secret** `OPENAI_API_KEY` to `skill-benchmark`, with access
-   to `gpt-5.6-sol`. Remove any repository-level secret with that name so another
-   workflow cannot access that copy without environment approval. GitHub cannot
-   reveal an existing secret for migration: re-enter it from your secure source
-   or create a replacement. Only approve reviewed workflow and skill revisions.
-3. Initialize an empty `gh-pages` branch once. From a disposable clone, create
-   an orphan branch, remove its inherited tracked files, make an empty initial
-   commit, and push only that branch. No raw results belong on this branch.
-4. In **Settings > Pages > Build and deployment > Source**, select
-   **GitHub Actions**. Keep default Actions token permissions read-only; the
-   workflow requests its required publishing permissions explicitly.
-5. In **Settings > Environments > github-pages**, restrict deployment branches
-   to `main`. The workflow dispatch ref remains main even though the static
-   content is checked out at the published history commit.
-
-The reviewed tool pins and the Codex compatibility patch are CI-owned under
-`.github/`. The patch is a single hunk in
-`src/skillevaluator/tier3/harbor/runner.py` that passes Codex 0.155.1 through
-Harbor's native `--ak version=` argument only for Docker Codex execution; it
-adds no other behavior, and tests reject any patch that touches another file,
-adds a second hunk, or removes upstream lines. Because the benchmark policy
-identifier includes the patch digest, changing the patch starts a new history
-series. The evaluator's Python runtime is pinned to 3.13 and its full resolved
-version is recorded. Harbor's native container base, Node patch version, and
-verifier runtime dependencies
-remain upstream-managed; consider runtime drift when comparing results.
-No custom grading or model fallback policy is introduced. Copilot deployment
-compatibility continues through APM; live behavioral evaluation uses Codex.
-Startup diagnostics and secret redaction come from upstream SkillEvaluator
-plus the Actions secret mask and the report upload allowlist, not from
-repository patches.
-
-SkillSpector reuses its reviewed upstream frozen lock in a separate environment.
-Semgrep is installed into its own environment with `uv pip sync
---require-hashes` from `.github/requirements/semgrep.txt`, and the Markdown
-linter used by the validation and update workflows is installed with `pip
-install --require-hashes` from `.github/requirements/rumdl.txt`, so every
-Python artifact must match a reviewed SHA-256 rather than only a version.
-A workflow test enforces that policy on every install command in the
-workflows and `.github/scripts`: `pip install` needs `--require-hashes
---only-binary :all:`, `uv pip install`/`uv pip sync` need `--require-hashes`,
-`uv sync` needs `--frozen`, and `pipx`, `uvx`, and `uv tool install` are
-rejected.
-Artifacts record scanner versions and resolved Python dependency inventories.
-To deliberately update either lock with uv 0.12.17, run the following (for
-the linter lock, replace `semgrep` with `rumdl` in both file paths):
+SkillSpector uses its upstream frozen lock; Semgrep and rumdl use reviewed hashed
+locks in [.github/requirements](.github/requirements). CI rejects unverified Python
+installers and records tool versions and dependency inventories. To refresh with
+uv 0.12.17, replace `semgrep` with `rumdl` in both paths for the linter:
 
 ```bash
 uv pip compile --python-version 3.13 --python-platform x86_64-unknown-linux-gnu \
@@ -523,51 +285,152 @@ uv pip compile --python-version 3.13 --python-platform x86_64-unknown-linux-gnu 
   --no-header --no-annotate --generate-hashes
 ```
 
-Review the resulting dependency changes and rerun deterministic validation.
-These are Python runtime dependency locks, not recursive OS/build-tool locks;
-no automatic dependency update mechanism is added. PowerShell Gallery modules
-(Pester, PSScriptAnalyzer) have no native hash pin and remain version-pinned.
+Review dependency changes and rerun validation. These locks cover Python artifacts,
+not every underlying OS or build tool.
 
-Tier 2 remains available through upstream's on-demand commands. Recurring
-overlap analysis, Copilot adapters, PR comments, SARIF, and cost charts are
-outside this initial integration.
+</details>
+<!-- rumdl-enable MD033 -->
 
-## Scheduled reviewed updates
+## Maintaining the baseline
 
-`.github/workflows/update-baseline.yml` runs weekly and on manual dispatch. Its
-generate job checks out `main`, acquires the currently reviewed CLI, uses a
-token only for the isolated latest-release metadata query, and downloads all
-five candidate archives without credentials. Each archive must match its
-upstream `.sha256` sidecar before the job inspects the archive layout and
-computes the ten replacement hashes without executing candidate code.
+If you're only installing this setup, you can skip this section. To maintain the
+collection, change `.apm/` sources or `apm.yml` and regenerate with APM. Don't edit
+installed `.agents/skills/`, generated instructions, MCP config, or lock metadata
+directly.
 
-The previously reviewed CLI performs dependency update, frozen trusted-bin
-installation, and compilation. The job then captures the review patch and
-rejects any change outside the regeneration allowlist (`.apm-version`,
-`.apm-checksums`, `apm.lock.yaml`, the compiled root contexts and MCP
-configs, and `.agents/skills/`). Only after the patch exists does the job run
-validation and audit, so branch-ref dependency content that is executed
-during validation can no longer influence what gets published. A separate
-write-capable job checks out `main`, applies the patch only after
-`git apply --check`, and opens or updates a pull request without executing
-patched content. That job selects only an open pull request whose head branch
-lives in this repository and was authored by the Actions bot, so a fork branch
-using the automation branch name cannot receive the trusted update body.
-Ordinary unprivileged pull-request validation is the first place the
-candidate CLI runs after its hashes are part of the reviewed patch.
+For skill-specific conventions, see
+[PowerShell module engineering](.apm/skills/powershell-module-engineering/SKILL.md),
+[Pester 6](.apm/skills/powershell-pester-6/SKILL.md), and
+[Podman maintenance](.apm/skills/podman/MAINTENANCE.md).
 
-Update pull requests never auto-merge. The pull request body names the
-candidate release, its upstream publication date, and the release page.
-Review the upstream release, all ten digests, resolved dependency commits,
-generated outputs, and CI results.
+### Regenerate and validate
 
-In repository **Settings > Actions > General**, enable **Allow GitHub Actions
-to create and approve pull requests**. Keep default workflow permissions
-read-only; the publish job requests only the write permissions it needs.
-The workflow creates review requests and does not submit approving reviews.
+To reproduce the reviewed checkout, use the command path reported by bootstrap:
 
-Pull requests created or updated with `GITHUB_TOKEN` require a maintainer with
-write access to select **Approve workflows to run** in the pull request before
-candidate validation starts. Review the candidate changes before approving
-execution, then require all validation checks to pass before merging. See
-[GitHub's token-triggered workflow behavior](https://docs.github.com/en/actions/concepts/security/github_token).
+```powershell
+$apmCommand = "$env:LOCALAPPDATA\Programs\apm\bin\apm.cmd"
+& $apmCommand install --frozen --trust-bin
+& $apmCommand compile --target codex,copilot --validate
+& $apmCommand compile --target codex,copilot
+& $apmCommand audit --ci
+& $apmCommand pack --dry-run
+```
+
+**Audit caveat:** The pinned APM release can report false drift when you run
+`apm audit --ci` without a terminal, even after `install --frozen --trust-bin`.
+Its scratch replay doesn't retain launcher trust in that mode. For noninteractive
+full validation on Linux/macOS, use `Invoke-Validation.ps1` below; it runs the
+same audit in a pseudo-terminal with drift checking enabled. Don't bypass this
+with `--no-drift`.
+
+Bash uses the same arguments with `"$apm_command"`, after setting
+`apm_command="$HOME/.local/bin/apm"` to the reported path.
+For comparison, bootstrap's user-scope sequence is:
+
+```text
+apm install --global --target codex,copilot --trust-bin --trust-transitive-mcp <ref>
+apm update --global --yes --target codex,copilot
+apm compile --global
+```
+
+Project scope omits `--global` and compiles with `--target codex,copilot`.
+
+On Linux or macOS, run the [full validation suite](scripts/Invoke-Validation.ps1) with
+PowerShell 7 and the required Unix tools and validation dependencies installed:
+
+```powershell
+./scripts/Invoke-Validation.ps1
+```
+
+From Bash, use `pwsh -NoLogo -NoProfile -File ./scripts/Invoke-Validation.ps1`.
+Full validation includes linting, regeneration, audit, packing, MCP contracts,
+Graph smoke checks, and diff hygiene.
+
+On Windows, run the Pester and PSScriptAnalyzer suite in PowerShell 5.1 or 7:
+
+```powershell
+./scripts/Invoke-Validation.ps1 -Suite Pester
+```
+
+For Bash fixtures alone on Linux/macOS, run `./tests/bootstrap.sh`. CI runs
+the full suite on Linux, Pester/analyzer on Windows, and Bash fixtures on macOS.
+
+### Evaluate authored skills
+
+A skill can look useful without improving results. I use NVIDIA's
+[SkillEvaluator](https://github.com/NVIDIA/SkillEvaluator/blob/ac0a04905100acdafc6c95829311a9739c340ff6/README.md)
+(pinned at v0.3.0) to evaluate locally maintained skills in `.apm/skills/`, separately
+from installation.
+
+Automated **Skill quality** checks cover security scanners and test-case data; LLM
+checks and Tier 2 are disabled. Findings and incomplete scanner evidence are advisory.
+Broken setup, invalid cases, missing reports, and checkout changes fail the job. See the
+job summary and 14-day `skill-quality` artifact; a setup failure isn't behavioral
+evidence.
+
+For paid behavioral tests, I've started with
+[Podman cases](.apm/skills/podman/evals/evals.json) that describe realistic work and
+measurable expectations. I run each request in clean contexts **with and without the
+skill** and compare outputs against assertions. **Skill Lift** is the score difference:
+positive means the skill helped on those cases; negative means it hurt. Reports also
+cover task completion (Effectiveness), accuracy (Correctness), activation
+(Discoverability), safety (Security), and tool use (Efficiency).
+
+I look at the actual outputs, not just the score. Assertions that pass equally without
+the skill aren't useful measures of its value. See
+[Podman evaluation guidance](.apm/skills/podman/EVALS.md) and keep local results in a
+sibling workspace outside the skill collection.
+
+[Benchmark reports](https://github.com/thetechgy/agent-engineering-baseline/actions/workflows/benchmark-skills.yml)
+include the underlying evidence. The
+[historical Podman charts](https://thetechgy.github.io/agent-engineering-baseline/podman/bcf6348b71caddcb/)
+used a different policy, so account for policy and runtime changes when comparing them.
+
+For now, the cases cover **Podman** and automated runs use **Codex**. They don't
+establish performance for other skills or Copilot. An agent's result also doesn't prove
+infrastructure is working; verify deployment, readiness, exposure, backups, and recovery
+in the target environment.
+
+<!-- rumdl-disable MD033 -->
+<details>
+<summary>Manual behavioral-run setup and operation</summary>
+
+The [benchmark workflow](.github/workflows/benchmark-skills.yml) uses paid OpenAI
+API calls, one run at a time. Setup:
+
+1. Create environment `skill-benchmark` with a trusted maintainer reviewer and
+   reviewed feature branches allowed alongside main. For one maintainer, leave
+   **Prevent self-review** off. The job uses `deployment: false`; avoid incompatible
+   deployment protection apps.
+2. Add environment secret `OPENAI_API_KEY` with `gpt-5.6-sol` access. Remove any
+   repository-level copy to preserve approval gating; re-enter it securely or replace
+   it.
+3. Initialize an empty `gh-pages` branch from a disposable clone with an orphan
+   branch and empty initial commit; push only that branch, never raw results.
+4. Set **Pages > Build and deployment > Source** to **GitHub Actions**, keep default
+   permissions read-only, and restrict `github-pages` to `main`.
+
+Dispatch **Actions > Benchmark skills > Run workflow** with a reviewed branch and
+dataset such as `podman`. `standard` makes one attempt per case per comparison
+(20 Podman trials); diagnostic-only `confirmation` makes three (60 trials).
+Codex runs in Docker; agent and judge use GPT-5.6 Sol. Smoke tests/judging add calls.
+Follow the
+[security review requirements](#ci-permissions-credentials-and-dependency-checks)
+before approval.
+
+Review summaries and 30-day `skill-benchmark-<run>-<attempt>` artifacts. Costs and
+usage are subtotals; missing usage is unknown. Time limits reserve recovery/upload
+time. Recovered runs are incomplete and cannot publish; runner loss or cancellation
+can prevent recovery. Raw execution directories stay on the runner.
+
+Only successful standard runs on main publish Skill Lift, Effectiveness,
+Correctness, and Discoverability to separate skill/policy histories on `gh-pages`;
+Security and Efficiency remain in complete reports. Source revisions and dataset
+hashes identify points, and Pages deploys the exact history commit.
+
+CI pins the evaluator/runtime and its Codex compatibility patch; policy changes
+start a new history series. Recorded versions help track runtime drift: some
+container, Node, and verifier dependencies remain upstream-managed.
+
+</details>
+<!-- rumdl-enable MD033 -->
