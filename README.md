@@ -21,7 +21,7 @@ cover:
 
 - **PowerShell:** module development, Pester 6 testing, and simplifying code.
 - **Infrastructure:** Ansible and Podman.
--  **Security and Git:** agent safety, GitHub Actions hardening, dependency updates,
+- **Security and Git:** agent safety, GitHub Actions hardening, dependency updates,
   accessibility, and commits.
 - **Microsoft documentation:** API references and offline Graph lookups.
 
@@ -49,7 +49,7 @@ The bootstrap scripts verify and install a pinned APM CLI. That's different from
 the skills: some follow upstream branches and can change when you install. See
 [Security and safety](#security-and-safety) before running the scripts.
 
-GitHub Actions checks PRs and pushes to `main` , including scripts, generated files,
+GitHub Actions checks PRs and pushes to `main`, including scripts, generated files,
 skill quality, and installation tests on Windows, Linux, and macOS.
 [Validation results](https://github.com/thetechgy/agent-engineering-baseline/actions/workflows/validate.yml)
 are public. Paid behavioral evaluations require separate approval. A
@@ -60,12 +60,12 @@ PRs; nothing auto-merges.
 
 The wrappers support Windows x86_64 with PowerShell 5.1 or 7, and Linux/macOS x86_64 or
 arm64 with Bash. Install your agent CLI separately. You'll need network access to
-releases/dependencies or a mirror. Bash needs `curl` , `tar` , and `sha256sum` (Linux)
-or `shasum` (macOS).
+releases/dependencies or a mirror. Bash needs `curl`, `tar`, and `sha256sum` (Linux) or
+`shasum` (macOS).
 
 **Before installing:** Default bootstrap trusts bundled executables and transitive MCP
 servers and refreshes branch-based dependencies, including ones already in the
-destination. Review the [security details](#security-and-safety) . User scope changes
+destination. Review the [security details](#security-and-safety). User scope changes
 your shared agent configuration; project scope changes the current project.
 
 From the baseline checkout, on Windows:
@@ -135,7 +135,7 @@ that infrastructure works.
 | `BASELINE_PACKAGE_REF` | Overrides the installed baseline reference. |
 
 `--cli-only` or `-CliOnly` installs just the reviewed APM CLI. Preview (`--dry-run` or
-`-WhatIf` ) checks local metadata without downloading, executing, or changing anything.
+`-WhatIf`) checks local metadata without downloading, executing, or changing anything.
 
 On Linux/macOS, rerun bootstrap after moving the installation tree because its
 command link uses an absolute path. After a forced kill, confirm bootstrap has
@@ -143,7 +143,7 @@ stopped before removing the diagnostic's `lib/apm/.lock`. Windows uses relative
 `bin\apm.cmd`, a named mutex, temporary TLS 1.2, and process/User PATH updates.
 User PATH failure is a warning; both wrappers warn about other commands masking APM.
 
-Bootstrap sets `VERSION=<pin>` to avoid release lookup. Don't use `apm self-update` ; it
+Bootstrap sets `VERSION=<pin>` to avoid release lookup. Don't use `apm self-update`; it
 replaces the reviewed CLI. An unscoped-instructions warning and this MCP warning are
 expected:
 
@@ -175,29 +175,29 @@ remote systems.
 
 **The repo and your installation have different update boundaries.**
 
--  **This repo:** [`apm.lock.yaml`](apm.lock.yaml) records the reviewed dependency
+- **This repo:** [`apm.lock.yaml`](apm.lock.yaml) records the reviewed dependency
   revisions, files, launchers, and hashes. Updates to `main` need a PR and review; they
   don't auto-merge. Ignored Graph indexes and binaries still have lockfile and audit
   checks.
--  **Your installation:** default bootstrap also refreshes **all branch-tracking
+- **Your installation:** default bootstrap also refreshes **all branch-tracking
   dependencies in the destination**, including unrelated packages. Six imported skills
-  follow upstream `main` . Your destination manifest and lockfile govern the result, not
+  follow upstream `main`. Your destination manifest and lockfile govern the result, not
   this repo's lockfile. Even a fixed baseline commit doesn't freeze the skills.
 
 Review the destination's manifest, resolved skills, and source overrides. `--trust-bin`
-authorizes bundled executables, including `msgraph` . `--trust-transitive-mcp` trusts
-MCP servers across the **whole dependency graph**, not just Microsoft Learn. A
-compromised upstream skill could execute code on your next bootstrap.
+authorizes bundled executables, including `msgraph`. `--trust-transitive-mcp` trusts MCP
+servers across the **whole dependency graph**, not just Microsoft Learn. A compromised
+upstream skill could execute code on your next bootstrap.
 
 For fixed skill content, use immutable commit references in the destination manifest and
 native APM commands without branch updates. To limit MCP trust, declare the reviewed
-server directly and omit `--trust-transitive-mcp` .
+server directly and omit `--trust-transitive-mcp`.
 
 ### Verified tooling and reviewed refreshes
 
 The wrappers never rely on an existing `apm` from PATH. They use the release in
 [`.apm-version`](.apm-version) and ten reviewed SHA-256 hashes in
-[`.apm-checksums`](.apm-checksums) , covering five archives and their executables.
+[`.apm-checksums`](.apm-checksums), covering five archives and their executables.
 Downloads use no credentials. Bootstrap rejects unsafe or incomplete bundles, checks the
 executable and version, and runs it by absolute path. Matching hashes prove integrity
 against the reviewed values, **not** that the code is safe.
@@ -217,8 +217,8 @@ release and date, all hashes, dependency changes, generated files, and CI.
 
 The [Microsoft Learn MCP server](https://learn.microsoft.com/en-us/training/support/mcp)
 at `https://learn.microsoft.com/api/mcp` is free and unauthenticated; model usage still
-follows your agent plan. Both CLIs can use only `microsoft_docs_search` ,
-`microsoft_docs_fetch` , and `microsoft_code_sample_search` . Endpoint and tool changes
+follows your agent plan. Both CLIs can use only `microsoft_docs_search`,
+`microsoft_docs_fetch`, and `microsoft_code_sample_search`. Endpoint and tool changes
 need manifest review.
 
 Queries and fetch URLs leave your machine. Use only public API names and minimal
@@ -237,7 +237,7 @@ Validation uses read-only repository access without retained checkout credential
 GitHub Actions are pinned to commit SHAs; Python dependencies use hashed or frozen
 locks. PowerShell Gallery modules have version pins but no native hash pins.
 
-Paid evaluation requires approval through `skill-benchmark` , and only the live step
+Paid evaluation requires approval through `skill-benchmark`, and only the live step
 receives the API key. History and Pages jobs don't get it or execute skills; history
 accepts only approved numeric metrics. Reports and temporary tools stay outside the
 checkout. Don't put reports or `BENCHMARK.md` in either APM-managed skill collection.
@@ -272,8 +272,7 @@ Enable **Allow GitHub Actions to create and approve pull requests** for update P
 The workflow never submits an approving review. For token-created PRs, a maintainer
 with write access must select **Approve workflows to run** after reviewing the
 candidate, then require all validation checks before merging. See
-[GitHub's token-triggered workflow behavior](https://docs.github.com/en/actions/concepts/security/github_token)
-.
+[GitHub's token-triggered workflow behavior](https://docs.github.com/en/actions/concepts/security/github_token).
 
 SkillSpector uses its upstream frozen lock; Semgrep and rumdl use reviewed hashed
 locks in [.github/requirements](.github/requirements). CI rejects unverified Python
@@ -296,13 +295,13 @@ not every underlying OS or build tool.
 
 If you're only installing this setup, you can skip this section. To maintain the
 collection, change `.apm/` sources or `apm.yml` and regenerate with APM. Don't edit
-installed `.agents/skills/` , generated instructions, MCP config, or lock metadata
+installed `.agents/skills/`, generated instructions, MCP config, or lock metadata
 directly.
 
 For skill-specific conventions, see
-[PowerShell module engineering](.apm/skills/powershell-module-engineering/SKILL.md) ,
-[Pester 6](.apm/skills/powershell-pester-6/SKILL.md) , and
-[Podman maintenance](.apm/skills/podman/MAINTENANCE.md) .
+[PowerShell module engineering](.apm/skills/powershell-module-engineering/SKILL.md),
+[Pester 6](.apm/skills/powershell-pester-6/SKILL.md), and
+[Podman maintenance](.apm/skills/podman/MAINTENANCE.md).
 
 ### Regenerate and validate
 
@@ -344,7 +343,7 @@ Graph smoke checks, and diff hygiene. CI also covers Windows PowerShell 5.1 and 
 
 A skill can look useful without improving results. I use NVIDIA's
 [SkillEvaluator](https://github.com/NVIDIA/SkillEvaluator/blob/ac0a04905100acdafc6c95829311a9739c340ff6/README.md)
-(pinned at v0.3.0) to evaluate locally maintained skills in `.apm/skills/` , separately
+(pinned at v0.3.0) to evaluate locally maintained skills in `.apm/skills/`, separately
 from installation.
 
 Automated **Skill quality** checks cover security scanners and test-case data; LLM
