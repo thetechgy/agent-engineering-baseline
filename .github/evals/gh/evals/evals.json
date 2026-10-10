@@ -13,6 +13,7 @@
       "files": [
         "evals/files/fixture.py",
         "evals/files/setup.py",
+        "evals/files/client.py",
         "evals/files/cases/gh-001.json"
       ],
       "contract": {
@@ -54,6 +55,7 @@
       "files": [
         "evals/files/fixture.py",
         "evals/files/setup.py",
+        "evals/files/client.py",
         "evals/files/cases/gh-002.json"
       ],
       "contract": {
@@ -98,6 +100,7 @@
       "files": [
         "evals/files/fixture.py",
         "evals/files/setup.py",
+        "evals/files/client.py",
         "evals/files/cases/gh-003.json"
       ],
       "contract": {
@@ -161,6 +164,7 @@
       "files": [
         "evals/files/fixture.py",
         "evals/files/setup.py",
+        "evals/files/client.py",
         "evals/files/cases/gh-004.json"
       ],
       "contract": {
@@ -213,6 +217,7 @@
       "files": [
         "evals/files/fixture.py",
         "evals/files/setup.py",
+        "evals/files/client.py",
         "evals/files/cases/gh-005.json"
       ],
       "contract": {
@@ -261,6 +266,7 @@
       "files": [
         "evals/files/fixture.py",
         "evals/files/setup.py",
+        "evals/files/client.py",
         "evals/files/cases/gh-006-pending.json"
       ],
       "contract": {
@@ -333,6 +339,7 @@
       "files": [
         "evals/files/fixture.py",
         "evals/files/setup.py",
+        "evals/files/client.py",
         "evals/files/cases/gh-006-changed-head.json"
       ],
       "contract": {
@@ -405,6 +412,7 @@
       "files": [
         "evals/files/fixture.py",
         "evals/files/setup.py",
+        "evals/files/client.py",
         "evals/files/cases/gh-007.json"
       ],
       "contract": {
@@ -491,6 +499,7 @@
       "files": [
         "evals/files/fixture.py",
         "evals/files/setup.py",
+        "evals/files/client.py",
         "evals/files/cases/gh-007-relationships.json"
       ],
       "contract": {
@@ -531,6 +540,7 @@
       "files": [
         "evals/files/fixture.py",
         "evals/files/setup.py",
+        "evals/files/client.py",
         "evals/files/cases/gh-008.json"
       ],
       "contract": {
@@ -576,6 +586,7 @@
       "files": [
         "evals/files/fixture.py",
         "evals/files/setup.py",
+        "evals/files/client.py",
         "evals/files/cases/gh-008-empty.json"
       ],
       "contract": {
@@ -619,6 +630,7 @@
       "files": [
         "evals/files/fixture.py",
         "evals/files/setup.py",
+        "evals/files/client.py",
         "evals/files/cases/gh-009.json"
       ],
       "contract": {
@@ -657,6 +669,7 @@
       "files": [
         "evals/files/fixture.py",
         "evals/files/setup.py",
+        "evals/files/client.py",
         "evals/files/cases/gh-010.json"
       ],
       "contract": {
@@ -709,6 +722,7 @@
       "files": [
         "evals/files/fixture.py",
         "evals/files/setup.py",
+        "evals/files/client.py",
         "evals/files/cases/gh-010-partial.json"
       ],
       "contract": {
@@ -765,6 +779,7 @@
       "files": [
         "evals/files/fixture.py",
         "evals/files/setup.py",
+        "evals/files/client.py",
         "evals/files/cases/gh-011-missing.json"
       ],
       "contract": {
@@ -805,6 +820,7 @@
       "files": [
         "evals/files/fixture.py",
         "evals/files/setup.py",
+        "evals/files/client.py",
         "evals/files/cases/gh-011-auth.json"
       ],
       "contract": {
@@ -845,6 +861,7 @@
       "files": [
         "evals/files/fixture.py",
         "evals/files/setup.py",
+        "evals/files/client.py",
         "evals/files/cases/gh-011-permission.json"
       ],
       "contract": {
@@ -885,6 +902,7 @@
       "files": [
         "evals/files/fixture.py",
         "evals/files/setup.py",
+        "evals/files/client.py",
         "evals/files/cases/gh-011-network.json"
       ],
       "contract": {
@@ -925,6 +943,7 @@
       "files": [
         "evals/files/fixture.py",
         "evals/files/setup.py",
+        "evals/files/client.py",
         "evals/files/cases/gh-011-rate-limit.json"
       ],
       "contract": {
@@ -965,6 +984,7 @@
       "files": [
         "evals/files/fixture.py",
         "evals/files/setup.py",
+        "evals/files/client.py",
         "evals/files/cases/gh-011-unavailable.json"
       ],
       "contract": {
@@ -1005,6 +1025,7 @@
       "files": [
         "evals/files/fixture.py",
         "evals/files/setup.py",
+        "evals/files/client.py",
         "evals/files/cases/gh-012.json"
       ],
       "contract": {
@@ -1049,6 +1070,7 @@
       "files": [
         "evals/files/fixture.py",
         "evals/files/setup.py",
+        "evals/files/client.py",
         "evals/files/cases/gh-013-local.json"
       ],
       "contract": {
@@ -1075,6 +1097,7 @@
       "files": [
         "evals/files/fixture.py",
         "evals/files/setup.py",
+        "evals/files/client.py",
         "evals/files/cases/gh-013-hardening.json"
       ],
       "contract": {
@@ -1101,6 +1124,7 @@
       "files": [
         "evals/files/fixture.py",
         "evals/files/setup.py",
+        "evals/files/client.py",
         "evals/files/cases/gh-014.json"
       ],
       "contract": {

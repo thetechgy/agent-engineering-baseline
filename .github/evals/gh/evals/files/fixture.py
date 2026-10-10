@@ -2,14 +2,13 @@
 """Offline gh command model. Never imports a network client or forwards commands."""
 
 import hashlib
-import fcntl
 import json
-import os
 from pathlib import Path
 import re
 import stat
 import subprocess
 import sys
+import socketserver
 
 ALIASES = {
     "-R": "--repo",
@@ -244,45 +243,39 @@ def read_regular(path):
     return path.read_text()
 
 
-def main():
-    root = Path(os.environ.get("GH_FIXTURE_ROOT", "/workspace/.gh-fixture"))
+def serve(root, socket_path):
     case = json.loads(read_regular(root / "case.json"))
     audit = root / "audit.jsonl"
-    read_regular(audit)
-    descriptor = os.open(audit, os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK)
-    if not stat.S_ISREG(os.fstat(descriptor).st_mode):
-        os.close(descriptor)
-        raise ValueError("special audit input")
-    lock = os.fdopen(descriptor, "r+")
-    fcntl.flock(lock, fcntl.LOCK_EX)
-    history = [json.loads(line) for line in read_regular(audit).splitlines()]
-    argv = sys.argv[1:]
-    body = None
-    try:
-        _, options = parse(argv)
-        if "--body-file" in options:
-            body = read_regular(Path(options["--body-file"][-1]).absolute())
-        elif "--body" in options:
-            body = options["--body"][-1]
-    except (ValueError, OSError):
-        pass
-    result = dispatch(case, argv, history, body)
-    row = {
-        **result,
-        "argv": argv,
-        "body": body,
-        "sequence": len(history),
-        "previous": digest(history[-1]) if history else digest(case),
-    }
-    with audit.open("a") as stream:
-        stream.write(json.dumps(row, sort_keys=True) + "\n")
-    lock.close()
-    print(result["stdout"], end="\n" if result["stdout"] else "")
-    print(result["stderr"], file=sys.stderr, end="\n" if result["stderr"] else "")
-    # A receipt binds the completed tool observation to this audited transition.
-    print("GH_FIXTURE_RECEIPT=" + digest(row), file=sys.stderr)
-    return result["exit_code"]
+
+    class Handler(socketserver.StreamRequestHandler):
+        def handle(self):
+            self.connection.settimeout(5)
+            try:
+                request = json.loads(self.rfile.readline(65537))
+                argv, body = request["argv"], request["body"]
+                if (not isinstance(argv, list) or len(argv) > 100
+                    or not all(isinstance(arg, str) for arg in argv)
+                    or (body is not None and not isinstance(body, str))):
+                    raise ValueError("invalid broker request")
+                history = [json.loads(line) for line in read_regular(audit).splitlines()]
+                result = dispatch(case, argv, history, body)
+                row = {
+                    **result, "argv": argv, "body": body, "sequence": len(history),
+                    "previous": digest(history[-1]) if history else digest(case),
+                }
+                with audit.open("a") as stream:
+                    stream.write(json.dumps(row, sort_keys=True) + "\n")
+                self.wfile.write(json.dumps({**result, "receipt": digest(row)}).encode() + b"\n")
+            except (OSError, ValueError, KeyError, TypeError):
+                self.wfile.write(b'{"error":"invalid broker request"}\n')
+
+    # A single-threaded server serializes transitions and owns the only audit writer.
+    with socketserver.UnixStreamServer(str(socket_path), Handler) as server:
+        socket_path.chmod(0o666)
+        server.serve_forever()
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    if len(sys.argv) != 4 or sys.argv[1] != "--serve":
+        sys.exit("private broker invocation required")
+    serve(Path(sys.argv[2]), Path(sys.argv[3]))

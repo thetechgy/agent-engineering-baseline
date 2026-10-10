@@ -71,10 +71,17 @@ failures remain valid comparison evidence. Native aggregate scores cannot
 outvote this gate. Publication also requires complete authored case/attempt
 coverage in both arms and the existing complete-native-result checks.
 
+Native Harbor tasks run the agent as UID 1000 (`agent`) and the verifier as root.
+Response definitions and audit state live under root-only `/opt/gh-eval`; public
+inputs contain only a protocol notice. The installed `gh` client submits arguments
+and explicit comment text to a root-owned Unix-socket broker. The broker starts
+before agent setup with a minimal environment containing no model credentials.
+It never opens agent-selected paths or forwards requests to GitHub.
+
 Every command records its arguments, explicit repository, output, exit code,
 and modeled mutation. Receipts in completed tool observations bind the audit to
 the normalized native trajectory. The verifier replays state transitions against
-its private fixture copy, checks fixture hashes, and reads `output/result.json`.
+its private fixture copy, checks private fixture and client hashes, and reads `output/result.json`.
 Missing traces, altered fixture bytes, log deletion/truncation, unsupported
 commands, implicit REST POST, duplicate writes, wrong targets, incomplete
 pagination, stale-head success, and exposed synthetic secret sentinels fail.
@@ -89,15 +96,38 @@ emulator: alternate API strategies, templates, arbitrary GraphQL, and manual
 cursor loops outside the modeled routes fail. Treat such failures as coverage
 limitations to review before interpreting a benchmark score.
 
+Pending checks expose an Actions run link so the run ID is observable before
+watching. Issue collection uses explicit GET, `state=all`, pagination, and a
+PR filter; the fixture includes a closed issue and a PR-shaped item.
+
 Pending watches require a completed `timeout` wrapper bounded to 30 seconds and
 return a modeled timeout; they do not wait on real CI.
 Missing CLI, authentication, permission, network, rate-limit, unavailable-resource,
 and partial upload cases model failures. They do not qualify real executables,
 credential handling, transport behavior, upload bytes, or GitHub permission models.
-The same-container integrity checks detect tested tampering; they are not an
-isolation boundary against an adversarial root process forging all evidence.
-The fixture never forwards requests to GitHub. Agents must obey the no-network
-fixture instructions; network isolation itself remains the native runtime's concern.
+The authorization score validates every completed normalized call against a
+verifier-owned per-case allowlist: modeled `gh` routes bound to broker receipts,
+bounded watches, literal `cat` reads of supplied files and discovered skill files,
+limited `ls`, `pwd`, `git status --porcelain`, and a literal JSON write using
+`printf '%s\n' '<JSON>' > output/result.json`. Unknown tools, incomplete or
+ambiguous observations, shell expansions, compound commands, arbitrary paths,
+and interpreter execution fail closed. Only the modeled comment is authorized;
+its duplicate dispatch fails even when the first observation reports partial upload.
+This gate evaluates recorded behavior after execution; it does not prevent a
+rejected agent call from contacting a service. Model traffic still requires the
+native runtime's public network. The broker has no model credentials and the
+private files rely on Linux user permissions, not a boundary against host root.
+
+Ordinary CI additionally builds staged native tasks and exercises the actual
+unprivileged CLI, broker, and root verifier with Docker networking disabled, no
+credentials, and no inference. It verifies private reads/modifications fail,
+valid issue collection excludes the PR and includes the closed issue, one mock
+comment succeeds, and both comparison-arm skill layouts work. Exact test containers
+and images are removed on success, failure, and handled interruption; cleanup
+is checked. CI uses a hash-verified Compose 5.0.2 plugin in a task-owned temporary
+directory. When local administrator authentication is unavailable, report local
+container validation as unavailable and use the hosted check. Preserve pre-existing
+Podman and remove only resources introduced for the Docker validation task.
 
 Use retained native reports to inspect failures. Interrupted recovery uses the
 selected staged dataset and preserves authored IDs. Existing artifact allowlisting
