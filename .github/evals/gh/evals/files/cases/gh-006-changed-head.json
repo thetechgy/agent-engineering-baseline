@@ -1,0 +1,91 @@
+{
+  "id": "gh-006-changed-head",
+  "routes": [
+    {
+      "id": "head",
+      "match": {
+        "pos": [
+          "pr",
+          "view",
+          "17"
+        ],
+        "options": {
+          "--repo": [
+            "fixture-org/widget"
+          ],
+          "--json": [
+            "headRefOid"
+          ]
+        },
+        "repo": "fixture-org/widget"
+      },
+      "responses": [
+        {
+          "stdout": "{\"headRefOid\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+        },
+        {
+          "stdout": "{\"headRefOid\": \"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"}"
+        }
+      ]
+    },
+    {
+      "id": "checks",
+      "match": {
+        "pos": [
+          "pr",
+          "checks",
+          "17"
+        ],
+        "options": {
+          "--repo": [
+            "fixture-org/widget"
+          ],
+          "--json": [
+            "name,bucket,link"
+          ]
+        },
+        "repo": "fixture-org/widget"
+      },
+      "responses": [
+        {
+          "stdout": "[{\"name\": \"test\", \"bucket\": \"pending\", \"link\": \"https://github.com/fixture-org/widget/actions/runs/71\"}]",
+          "exit_code": 8
+        }
+      ]
+    },
+    {
+      "id": "watch",
+      "match": {
+        "pos": [
+          "run",
+          "watch",
+          "71"
+        ],
+        "options": {
+          "--repo": [
+            "fixture-org/widget"
+          ],
+          "--exit-status": [
+            true
+          ],
+          "--interval": [
+            "10"
+          ]
+        },
+        "repo": "fixture-org/widget"
+      },
+      "responses": [
+        {
+          "stdout": "observation timed out; checks remain pending",
+          "exit_code": 124
+        }
+      ]
+    }
+  ],
+  "files": {},
+  "help": {
+    "pr view": "Display the title, body, and other information about a pull request.\n\nWithout an argument, the pull request that belongs to the current branch\nis displayed.\n\nWith `--web` flag, open the pull request in a web browser instead.\n\nFor more information about output formatting flags, see `gh help formatting`.\n\nUSAGE\n  gh pr view [<number> | <url> | <branch>] [flags]\n\nFLAGS\n  -c, --comments          View pull request comments\n  -q, --jq expression     Filter JSON output using a jq expression\n      --json fields       Output JSON with the specified fields\n  -t, --template string   Format JSON output using a Go template; see \"gh help formatting\"\n  -w, --web               Open a pull request in the browser\n\nINHERITED FLAGS\n      --help                     Show help for command\n  -R, --repo [HOST/]OWNER/REPO   Select another repository using the [HOST/]OWNER/REPO format\n\nJSON FIELDS\n  additions, assignees, author, autoMergeRequest, baseRefName, baseRefOid, body,\n  changedFiles, closed, closedAt, closingIssuesReferences, comments, commits,\n  createdAt, deletions, files, fullDatabaseId, headRefName, headRefOid,\n  headRepository, headRepositoryOwner, id, isCrossRepository, isDraft, labels,\n  latestReviews, maintainerCanModify, mergeCommit, mergeStateStatus, mergeable,\n  mergedAt, mergedBy, milestone, number, potentialMergeCommit, projectCards,\n  projectItems, reactionGroups, reviewDecision, reviewRequests, reviews, state,\n  statusCheckRollup, title, updatedAt, url\n\nLEARN MORE\n  Use `gh <command> <subcommand> --help` for more information about a command.\n  Read the manual at https://cli.github.com/manual\n  Learn about exit codes using `gh help exit-codes`\n  Learn about accessibility experiences using `gh help accessibility`\n\n",
+    "pr checks": "Show CI status for a single pull request.\n\nWithout an argument, the pull request that belongs to the current branch\nis selected.\n\nWhen the `--json` flag is used, it includes a `bucket` field, which categorizes\nthe `state` field into `pass`, `fail`, `pending`, `skipping`, or `cancel`.\n\nAdditional exit codes:\n\t8: Checks pending\n\nFor more information about output formatting flags, see `gh help formatting`.\n\nUSAGE\n  gh pr checks [<number> | <url> | <branch>] [flags]\n\nFLAGS\n      --fail-fast         Exit watch mode on first check failure\n  -i, --interval int      Refresh interval in seconds in watch mode (default 10)\n  -q, --jq expression     Filter JSON output using a jq expression\n      --json fields       Output JSON with the specified fields\n      --required          Only show checks that are required\n  -t, --template string   Format JSON output using a Go template; see \"gh help formatting\"\n      --watch             Watch checks until they finish\n  -w, --web               Open the web browser to show details about checks\n\nINHERITED FLAGS\n      --help                     Show help for command\n  -R, --repo [HOST/]OWNER/REPO   Select another repository using the [HOST/]OWNER/REPO format\n\nJSON FIELDS\n  bucket, completedAt, description, event, link, name, startedAt, state, workflow\n\nLEARN MORE\n  Use `gh <command> <subcommand> --help` for more information about a command.\n  Read the manual at https://cli.github.com/manual\n  Learn about exit codes using `gh help exit-codes`\n  Learn about accessibility experiences using `gh help accessibility`\n\n",
+    "run watch": "Watch a run until it completes, showing its progress.\n\nBy default, all steps are displayed. The `--compact` option can be used to only\nshow the relevant/failed steps.\n\nThis command does not support authenticating via fine grained PATs\nas it is not currently possible to create a PAT with the `checks:read` permission.\n\n\nUSAGE\n  gh run watch <run-id> [flags]\n\nFLAGS\n      --compact        Show only relevant/failed steps\n      --exit-status    Exit with non-zero status if run fails\n  -i, --interval int   Refresh interval in seconds (default 3)\n\nINHERITED FLAGS\n      --help                     Show help for command\n  -R, --repo [HOST/]OWNER/REPO   Select another repository using the [HOST/]OWNER/REPO format\n\nEXAMPLES\n  # Watch a run until it's done\n  $ gh run watch\n  \n  # Watch a run in compact mode\n  $ gh run watch --compact\n  \n  # Run some other command when the run is finished\n  $ gh run watch && notify-send 'run is done!'\n\nLEARN MORE\n  Use `gh <command> <subcommand> --help` for more information about a command.\n  Read the manual at https://cli.github.com/manual\n  Learn about exit codes using `gh help exit-codes`\n  Learn about accessibility experiences using `gh help accessibility`\n\n"
+  }
+}

@@ -1,0 +1,135 @@
+{
+  "id": "gh-007",
+  "routes": [
+    {
+      "id": "issues",
+      "match": {
+        "pos": [
+          "api",
+          "repos/fixture-org/widget/issues"
+        ],
+        "options": {
+          "--paginate": [
+            true
+          ],
+          "--slurp": [
+            true
+          ],
+          "--method": [
+            "GET"
+          ],
+          "--field": [
+            "state=all"
+          ]
+        },
+        "repo": "fixture-org/widget"
+      },
+      "responses": [
+        {
+          "stdout": "[[{\"number\": 1, \"state\": \"open\"}, {\"number\": 2, \"state\": \"open\"}, {\"number\": 3, \"state\": \"open\"}, {\"number\": 4, \"state\": \"open\"}, {\"number\": 5, \"state\": \"open\"}, {\"number\": 6, \"state\": \"open\"}, {\"number\": 7, \"state\": \"open\"}, {\"number\": 8, \"state\": \"open\"}, {\"number\": 9, \"state\": \"open\"}, {\"number\": 10, \"state\": \"open\"}, {\"number\": 11, \"state\": \"open\"}, {\"number\": 12, \"state\": \"open\"}, {\"number\": 13, \"state\": \"open\"}, {\"number\": 14, \"state\": \"open\"}, {\"number\": 15, \"state\": \"open\"}, {\"number\": 16, \"state\": \"open\"}, {\"number\": 17, \"state\": \"open\"}, {\"number\": 18, \"state\": \"open\"}, {\"number\": 19, \"state\": \"open\"}, {\"number\": 20, \"state\": \"open\"}, {\"number\": 21, \"state\": \"open\"}, {\"number\": 22, \"state\": \"open\"}, {\"number\": 23, \"state\": \"open\"}, {\"number\": 24, \"state\": \"open\"}, {\"number\": 25, \"state\": \"open\"}, {\"number\": 26, \"state\": \"open\"}, {\"number\": 27, \"state\": \"open\"}, {\"number\": 28, \"state\": \"open\"}, {\"number\": 29, \"state\": \"open\"}, {\"number\": 30, \"state\": \"open\"}], [{\"number\": 31, \"state\": \"closed\"}, {\"number\": 32, \"state\": \"open\", \"pull_request\": {\"url\": \"https://api.github.com/repos/fixture-org/widget/pulls/32\"}}]]"
+        }
+      ]
+    },
+    {
+      "id": "total",
+      "match": {
+        "pos": [
+          "api",
+          "graphql"
+        ],
+        "options": {},
+        "repo": "fixture-org/widget",
+        "query": [
+          "totalCount",
+          "issues"
+        ],
+        "fields": {
+          "owner": "fixture-org",
+          "name": "widget"
+        },
+        "allow": [
+          "--raw-field",
+          "--field"
+        ]
+      },
+      "responses": [
+        {
+          "stdout": "{\"data\": {\"repository\": {\"issues\": {\"totalCount\": 31}}}}"
+        }
+      ]
+    },
+    {
+      "id": "issues-first-page",
+      "match": {
+        "pos": [
+          "api",
+          "repos/fixture-org/widget/issues"
+        ],
+        "options": {
+          "--slurp": [
+            true
+          ]
+        },
+        "repo": "fixture-org/widget"
+      },
+      "responses": [
+        {
+          "stdout": "[[{\"number\": 1}, {\"number\": 2}, {\"number\": 3}, {\"number\": 4}, {\"number\": 5}, {\"number\": 6}, {\"number\": 7}, {\"number\": 8}, {\"number\": 9}, {\"number\": 10}, {\"number\": 11}, {\"number\": 12}, {\"number\": 13}, {\"number\": 14}, {\"number\": 15}, {\"number\": 16}, {\"number\": 17}, {\"number\": 18}, {\"number\": 19}, {\"number\": 20}, {\"number\": 21}, {\"number\": 22}, {\"number\": 23}, {\"number\": 24}, {\"number\": 25}, {\"number\": 26}, {\"number\": 27}, {\"number\": 28}, {\"number\": 29}, {\"number\": 30}]]"
+        }
+      ]
+    },
+    {
+      "id": "list-cap",
+      "match": {
+        "pos": [
+          "issue",
+          "list"
+        ],
+        "repo": "fixture-org/widget",
+        "options": {
+          "--repo": [
+            "fixture-org/widget"
+          ],
+          "--json": [
+            "number"
+          ]
+        }
+      },
+      "responses": [
+        {
+          "stdout": "[{\"number\": 1}, {\"number\": 2}, {\"number\": 3}, {\"number\": 4}, {\"number\": 5}, {\"number\": 6}, {\"number\": 7}, {\"number\": 8}, {\"number\": 9}, {\"number\": 10}, {\"number\": 11}, {\"number\": 12}, {\"number\": 13}, {\"number\": 14}, {\"number\": 15}, {\"number\": 16}, {\"number\": 17}, {\"number\": 18}, {\"number\": 19}, {\"number\": 20}, {\"number\": 21}, {\"number\": 22}, {\"number\": 23}, {\"number\": 24}, {\"number\": 25}, {\"number\": 26}, {\"number\": 27}, {\"number\": 28}, {\"number\": 29}, {\"number\": 30}]"
+        }
+      ]
+    },
+    {
+      "id": "issues",
+      "match": {
+        "pos": [
+          "issue",
+          "list"
+        ],
+        "repo": "fixture-org/widget",
+        "options": {
+          "--repo": [
+            "fixture-org/widget"
+          ],
+          "--json": [
+            "number"
+          ],
+          "--limit": [
+            "100"
+          ]
+        }
+      },
+      "responses": [
+        {
+          "stdout": "[{\"number\": 1}, {\"number\": 2}, {\"number\": 3}, {\"number\": 4}, {\"number\": 5}, {\"number\": 6}, {\"number\": 7}, {\"number\": 8}, {\"number\": 9}, {\"number\": 10}, {\"number\": 11}, {\"number\": 12}, {\"number\": 13}, {\"number\": 14}, {\"number\": 15}, {\"number\": 16}, {\"number\": 17}, {\"number\": 18}, {\"number\": 19}, {\"number\": 20}, {\"number\": 21}, {\"number\": 22}, {\"number\": 23}, {\"number\": 24}, {\"number\": 25}, {\"number\": 26}, {\"number\": 27}, {\"number\": 28}, {\"number\": 29}, {\"number\": 30}, {\"number\": 31}]"
+        }
+      ]
+    }
+  ],
+  "files": {},
+  "help": {
+    "api": "Makes an authenticated HTTP request to the GitHub API and prints the response.\n\nThe endpoint argument should either be a path of a GitHub API v3 endpoint, or\n`graphql` to access the GitHub API v4.\n\nPlaceholder values `{owner}`, `{repo}`, and `{branch}` in the endpoint\nargument will get replaced with values from the repository of the current\ndirectory or the repository specified in the `GH_REPO` environment variable.\nNote that in some shells, for example PowerShell, you may need to enclose\nany value that contains `{...}` in quotes to prevent the shell from\napplying special meaning to curly braces.\n\nThe `-p/--preview` flag enables opting into previews, which are feature-flagged,\nexperimental API endpoints or behaviors. The API expects opt-in via the `Accept`\nheader with format `application/vnd.github.<preview-name>-preview+json` and this\ncommand facilitates that via `--preview <preview-name>`. To send a request for\nthe corsair and scarlet witch previews, you could use `-p corsair,scarlet-witch`\nor `--preview corsair --preview scarlet-witch`.\n\nThe default HTTP request method is `GET` normally and `POST` if any parameters\nwere added. Override the method with `--method`.\n\nPass one or more `-f/--raw-field` values in `key=value` format to add static string\nparameters to the request payload. To add non-string or placeholder-determined values, see\n`-F/--field` below. Note that adding request parameters will automatically switch the\nrequest method to `POST`. To send the parameters as a `GET` query string instead, use\n`--method GET`.\n\nThe `-F/--field` flag has magic type conversion based on the format of the value:\n\n- literal values `true`, `false`, `null`, and integer numbers get converted to\n  appropriate JSON types;\n- placeholder values `{owner}`, `{repo}`, and `{branch}` get populated with values\n  from the repository of the current directory;\n- if the value starts with `@`, the rest of the value is interpreted as a\n  filename to read the value from. Pass `-` to read from standard input.\n\nFor GraphQL requests, all fields other than `query` and `operationName` are\ninterpreted as GraphQL variables.\n\nTo pass nested parameters in the request payload, use `key[subkey]=value` syntax when\ndeclaring fields. To pass nested values as arrays, declare multiple fields with the\nsyntax `key[]=value1`, `key[]=value2`. To pass an empty array, use `key[]` without a\nvalue.\n\nTo pass pre-constructed JSON or payloads in other formats, a request body may be read\nfrom file specified by `--input`. Use `-` to read from standard input. When passing the\nrequest body this way, any parameters specified via field flags are added to the query\nstring of the endpoint URL.\n\nIn `--paginate` mode, all pages of results will sequentially be requested until\nthere are no more pages of results. For GraphQL requests, this requires that the\noriginal query accepts an `$endCursor: String` variable and that it fetches the\n`pageInfo{ hasNextPage, endCursor }` set of fields from a collection. Each page is a separate\nJSON array or object. Pass `--slurp` to wrap all pages of JSON arrays or objects\ninto an outer JSON array.\n\nFor more information about output formatting flags, see `gh help formatting`.\n\nUSAGE\n  gh api <endpoint> [flags]\n\nFLAGS\n      --allow-escape-sequences   Allow printing terminal escape sequences\n      --cache duration           Cache the response, e.g. \"3600s\", \"60m\", \"1h\"\n  -F, --field key=value          Add a typed parameter in key=value format (use \"@<path>\" or \"@-\" to read value from file or stdin)\n  -H, --header key:value         Add a HTTP request header in key:value format\n      --hostname string          The GitHub hostname for the request (default \"github.com\")\n  -i, --include                  Include HTTP response status line and headers in the output\n      --input file               The file to use as body for the HTTP request (use \"-\" to read from standard input)\n  -q, --jq string                Query to select values from the response using jq syntax\n  -X, --method string            The HTTP method for the request (default \"GET\")\n      --paginate                 Make additional HTTP requests to fetch all pages of results\n  -p, --preview strings          Opt into GitHub API previews (names should omit '-preview')\n  -f, --raw-field key=value      Add a string parameter in key=value format\n      --silent                   Do not print the response body\n      --slurp                    Use with \"--paginate\" to return an array of all pages of either JSON arrays or objects\n  -t, --template string          Format JSON output using a Go template; see \"gh help formatting\"\n      --verbose                  Include full HTTP request and response in the output\n\nINHERITED FLAGS\n  --help   Show help for command\n\nEXAMPLES\n  # List releases in the current repository\n  $ gh api repos/{owner}/{repo}/releases\n  \n  # Post an issue comment\n  $ gh api repos/{owner}/{repo}/issues/123/comments -f body='Hi from CLI'\n  \n  # Post nested parameter read from a file\n  $ gh api gists -F 'files[myfile.txt][content]=@myfile.txt'\n  \n  # Add parameters to a GET request\n  $ gh api -X GET search/issues -f q='repo:cli/cli is:open remote'\n  \n  # Use a JSON file as request body\n  $ gh api repos/{owner}/{repo}/rulesets --input file.json\n  \n  # Set a custom HTTP header\n  $ gh api -H 'Accept: application/vnd.github.v3.raw+json' ...\n  \n  # Opt into GitHub API previews\n  $ gh api --preview baptiste,nebula ...\n  \n  # Print only specific fields from the response\n  $ gh api repos/{owner}/{repo}/issues --jq '.[].title'\n  \n  # Use a template for the output\n  $ gh api repos/{owner}/{repo}/issues --template \\\n    '{{range .}}{{.title}} ({{.labels | pluck \"name\" | join \", \" | color \"yellow\"}}){{\"\\n\"}}{{end}}'\n  \n  # Update allowed values of the \"environment\" custom property in a deeply nested array\n  $ gh api -X PATCH /orgs/{org}/properties/schema \\\n     -F 'properties[][property_name]=environment' \\\n     -F 'properties[][default_value]=production' \\\n     -F 'properties[][allowed_values][]=staging' \\\n     -F 'properties[][allowed_values][]=production'\n  \n  # List releases with GraphQL\n  $ gh api graphql -F owner='{owner}' -F name='{repo}' -f query='\n    query($name: String!, $owner: String!) {\n      repository(owner: $owner, name: $name) {\n        releases(last: 3) {\n          nodes { tagName }\n        }\n      }\n    }\n  '\n  \n  # List all repositories for a user\n  $ gh api graphql --paginate -f query='\n    query($endCursor: String) {\n      viewer {\n        repositories(first: 100, after: $endCursor) {\n          nodes { nameWithOwner }\n          pageInfo {\n            hasNextPage\n            endCursor\n          }\n        }\n      }\n    }\n  '\n  \n  # Get the percentage of forks for the current user\n  $ gh api graphql --paginate --slurp -f query='\n    query($endCursor: String) {\n      viewer {\n        repositories(first: 100, after: $endCursor) {\n          nodes { isFork }\n          pageInfo {\n            hasNextPage\n            endCursor\n          }\n        }\n      }\n    }\n  ' | jq 'def count(e): reduce e as $_ (0;.+1);\n  [.[].data.viewer.repositories.nodes[]] as $r | count(select($r[].isFork))/count($r[])'\n\nENVIRONMENT VARIABLES\n  GH_TOKEN, GITHUB_TOKEN (in order of precedence): an authentication token for\n  `github.com` API requests.\n  \n  GH_ENTERPRISE_TOKEN, GITHUB_ENTERPRISE_TOKEN (in order of precedence): an\n  authentication token for API requests to GitHub Enterprise.\n  \n  GH_HOST: make the request to a GitHub host other than `github.com`.\n\nLEARN MORE\n  Use `gh <command> <subcommand> --help` for more information about a command.\n  Read the manual at https://cli.github.com/manual\n  Learn about exit codes using `gh help exit-codes`\n  Learn about accessibility experiences using `gh help accessibility`\n\n"
+  }
+}

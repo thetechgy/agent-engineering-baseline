@@ -1,0 +1,37 @@
+{
+  "id": "gh-008-empty",
+  "routes": [
+    {
+      "id": "search",
+      "match": {
+        "pos": [
+          "search",
+          "prs",
+          "repo:fixture-org/widget",
+          "repo:fixture-org/other",
+          "is:open"
+        ],
+        "options": {
+          "--json": [
+            "number,repository"
+          ],
+          "--limit": [
+            "100"
+          ],
+          "--author": [
+            "fixture-missing"
+          ]
+        }
+      },
+      "responses": [
+        {
+          "stdout": "[]"
+        }
+      ]
+    }
+  ],
+  "files": {},
+  "help": {
+    "search prs": "Search for pull requests on GitHub.\n\nThe command supports constructing queries using the GitHub search syntax,\nusing the parameter and qualifier flags, or a combination of the two.\n\nGitHub search syntax is documented at:\n<https://docs.github.com/search-github/searching-on-github/searching-issues-and-pull-requests>\n\nOn supported GitHub hosts, advanced issue search syntax can be used in the\n`--search` query. Advanced search syntax, like boolean operators `OR`/`AND`,\nand parentheses for nesting, must be passed as separate arguments, rather\nthan within a quoted multi-word string. This syntax is not supported with\n`--web`. For more information about advanced issue search, see:\n<https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/filtering-and-searching-issues-and-pull-requests#building-advanced-filters-for-issues>\n\nFor more information on handling search queries containing a hyphen, run `gh search --help`.\n\nFor more information about output formatting flags, see `gh help formatting`.\n\nUSAGE\n  gh search prs [<query>] [flags]\n\nFLAGS\n      --app string              Filter by GitHub App author\n      --archived                Filter based on the repository archived state {true|false}\n      --assignee string         Filter by assignee\n      --author string           Filter by author (use --app to filter by a GitHub App)\n  -B, --base string             Filter on base branch name\n      --checks string           Filter based on status of the checks: {pending|success|failure}\n      --closed date             Filter on closed at date\n      --commenter user          Filter based on comments by user\n      --comments number         Filter on number of comments\n      --created date            Filter based on created at date\n      --draft                   Filter based on draft state\n  -H, --head string             Filter on head branch name\n      --interactions number     Filter on number of reactions and comments\n      --involves user           Filter based on involvement of user\n  -q, --jq expression           Filter JSON output using a jq expression\n      --json fields             Output JSON with the specified fields\n      --label strings           Filter on label\n      --language string         Filter based on the coding language\n  -L, --limit int               Maximum number of results to fetch (default 30)\n      --locked                  Filter on locked conversation status\n      --match strings           Restrict search to specific field of issue: {title|body|comments}\n      --mentions user           Filter based on user mentions\n      --merged                  Filter based on merged state\n      --merged-at date          Filter on merged at date\n      --milestone title         Filter by milestone title\n      --no-assignee             Filter on missing assignee\n      --no-label                Filter on missing label\n      --no-milestone            Filter on missing milestone\n      --no-project              Filter on missing project\n      --order string            Order of results returned, ignored unless '--sort' flag is specified: {asc|desc} (default \"desc\")\n      --owner strings           Filter on repository owner\n      --project owner/number    Filter on project board owner/number\n      --reactions number        Filter on number of reactions\n  -R, --repo OWNER/REPO         Filter on repository, in OWNER/REPO format\n      --review string           Filter based on review status: {none|required|approved|changes_requested}\n      --review-requested user   Filter on user or team requested to review\n      --reviewed-by user        Filter on user who reviewed\n      --sort string             Sort fetched results: {comments|reactions|reactions-+1|reactions--1|reactions-smile|reactions-thinking_face|reactions-heart|reactions-tada|interactions|created|updated} (default \"best-match\")\n      --state string            Filter based on state: {open|closed}\n      --team-mentions string    Filter based on team mentions\n  -t, --template string         Format JSON output using a Go template; see \"gh help formatting\"\n      --updated date            Filter on last updated at date\n      --visibility strings      Filter based on repository visibility: {public|private|internal}\n  -w, --web                     Open the search query in the web browser\n\nINHERITED FLAGS\n  --help   Show help for command\n\nJSON FIELDS\n  assignees, author, authorAssociation, body, closedAt, commentsCount, createdAt,\n  id, isDraft, isLocked, isPullRequest, labels, number, repository, state, title,\n  updatedAt, url\n\nEXAMPLES\n  # Search pull requests matching set of keywords \"fix\" and \"bug\"\n  $ gh search prs fix bug\n  \n  # Search draft pull requests in cli repository\n  $ gh search prs --repo=cli/cli --draft\n  \n  # Search pull requests using raw search qualifiers as separate arguments\n  $ gh search prs is:merged author:monalisa\n  \n  # Search open pull requests requesting your review\n  $ gh search prs --review-requested=@me --state=open\n  \n  # Search merged pull requests assigned to yourself\n  $ gh search prs --assignee=@me --merged\n  \n  # Search pull requests with numerous reactions\n  $ gh search prs --reactions=\">100\"\n  \n  # Search pull requests without label \"bug\"\n  $ gh search prs -- -label:bug\n  \n  # Search pull requests only from un-archived repositories (default is all repositories)\n  $ gh search prs --owner github --archived=false\n\nLEARN MORE\n  Use `gh <command> <subcommand> --help` for more information about a command.\n  Read the manual at https://cli.github.com/manual\n  Learn about exit codes using `gh help exit-codes`\n  Learn about accessibility experiences using `gh help accessibility`\n\n"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "id": "gh-013-hardening",
+  "routes": [],
+  "files": {
+    "workflow.txt": "on: issues\njobs:\n  example:\n    steps:\n      - run: echo \"${{ github.event.issue.title }}\"\n"
+  },
+  "help": {}
+}
