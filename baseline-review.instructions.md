@@ -9,10 +9,12 @@ applyTo: "**"
 
 ### Artifact provenance and generated outputs
 
-- Flag changes to installed upstream skills, generated instructions, MCP configs,
-  or lock metadata without a corresponding source change and pinned APM
-  regeneration. Preserve upstream bytes, attribution, dependency pins, and the
-  manifest's explicit publication boundary.
+- Flag direct edits to installed upstream skills, generated instructions, MCP
+  configs, or lock metadata. Require source changes or an authorized dependency
+  refresh followed by pinned APM regeneration; the weekly update workflow is a
+  valid refresh path. Preserve reviewed upstream bytes, attribution, and the
+  manifest's explicit publication boundary; change pins only through an
+  authorized refresh.
 - Keep these repository review rules outside published `.apm/` instructions and
   package contents; downstream baseline consumers must not inherit them.
 

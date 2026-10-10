@@ -302,8 +302,9 @@ directly.
 Repository review guidance lives in
 [`baseline-review.instructions.md`](baseline-review.instructions.md). Pinned APM
 0.33.0 discovers this root source during local compilation and generates it into
-Codex and Copilot instructions. Keep it outside `.apm/` and leave the manifest's
-explicit `includes` unchanged so downstream installs and packages exclude it.
+the shared `AGENTS.md`; the separate Copilot instruction files stay unchanged.
+Keep this source outside `.apm/` and leave the manifest's explicit `includes`
+unchanged so downstream instructions and packages exclude these review rules.
 
 For skill-specific conventions, see
 [PowerShell module engineering](.apm/skills/powershell-module-engineering/SKILL.md),
