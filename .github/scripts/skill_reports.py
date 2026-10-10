@@ -12,6 +12,8 @@ import re
 import stat
 import sys
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 
 POLICY = {
     "evaluator_revision": "ac0a04905100acdafc6c95829311a9739c340ff6",
@@ -37,6 +39,17 @@ METRICS = {
 }
 MODES = {"standard": POLICY["standard_attempts"], "confirmation": 3}
 PATCH = ".github/patches/skillevaluator-v0.3.0-pin-codex.patch"
+GH_TASK_BUILD = {
+    "base_image": "python:3.12-slim-trixie@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1",
+    "apt_snapshot": "20261010T000000Z",
+    "apt_packages": {
+        "git": "1:2.47.3-0+deb13u1",
+        "jq": "1.7.1-6+deb13u4",
+        "nodejs": "20.19.2+dfsg-1+deb13u3",
+        "npm": "9.2.0~ds1-3",
+        "ca-certificates": "20250419",
+    },
+}
 
 
 def require(condition, message):
@@ -126,6 +139,33 @@ def local_skill(workspace, name, *, dataset=False):
     return path
 
 
+def benchmark_skill(workspace, name, root=None):
+    """Only gh has an explicit repository overlay; other skills keep local ownership."""
+    if name != "gh":
+        return local_skill(workspace, name, dataset=True)
+    import gh_evaluations as gh
+    gh.dataset(workspace)
+    regular_tree(workspace / gh.DEPLOYED)
+    if root is not None:
+        gh.verify_skill(workspace)
+        gh.verify_competing(workspace)
+    if root is not None and (root / "bundle/gh").exists():
+        staged = root / "bundle/gh"
+        regular_tree(staged)
+        require((staged / "SKILL.md").read_bytes() == (workspace / gh.DEPLOYED / "SKILL.md").read_bytes(),
+                "Staged upstream skill drift")
+        return staged
+    return workspace / gh.OVERLAY
+
+
+def benchmark_policy(name):
+    return {**POLICY, "grading": "default_plus_custom", "upstream_revision":
+            "ec5b512045db67e5a2a4ff4a1b02660b2fb24390", "deterministic_gate": 2, "workspace_mode": "group",
+            "fixture_boundary": "root-broker-unprivileged-agent-v1", "authorization_policy": "per-case-allowlist-v1",
+            "task_source": "native_harbor", "task_build": GH_TASK_BUILD,
+            "competing_revision": "143a3d976b3c1603cc8932984d5e1f28501cb5fc"} if name == "gh" else POLICY
+
+
 def catalog_report(workspace, root):
     """Only ordinary, fully reported native findings may be advisory."""
     names = catalog_preflight(workspace)
@@ -184,7 +224,7 @@ def catalog_report(workspace, root):
         if dataset.exists() or dataset.is_symlink():
             strict = "failed"
             try:
-                local_skill(workspace, name, dataset=True)
+                benchmark_skill(workspace, name)
                 require(int((root / "datasets" / f"{name}.exit").read_text()) == 0,
                         "Strict eval dataset validation failed")
                 checks = read_json(root / "datasets" / f"{name}.json")
@@ -260,7 +300,7 @@ def recover_benchmark(workspace, root, name, mode, outcome):
     from skillevaluator.tier3.harbor.collector import collect_harbor_results
     from skillevaluator.tier3.results_location import run_directory_sort_key
 
-    skill = local_skill(workspace, name, dataset=True)
+    skill = benchmark_skill(workspace, name, root)
     require(outcome in {"success", "failure", "cancelled", "skipped"}, "Invalid evaluation outcome")
     root = root.absolute()
     require(root.resolve() == root and not root.is_relative_to(workspace),
@@ -318,7 +358,7 @@ def benchmark_report(workspace, root, name, mode, destination):
     if (root / "provenance.json").exists():
         require(read_json(root / "provenance.json").get("status") != "incomplete",
                 "Incomplete benchmark recovery cannot produce history metrics")
-    skill = local_skill(workspace, name, dataset=True)
+    skill = benchmark_skill(workspace, name, root)
     service = EvaluationService()
     run = service.discover_latest_results(skill, root / "results")
     require(run is not None and run.is_relative_to((root / "results").resolve()),
@@ -340,7 +380,7 @@ def benchmark_report(workspace, root, name, mode, destination):
     require(harbor["environment"]["value"] == "docker" and harbor["n_attempts"] == MODES[mode]
             and harbor["n_concurrent"] == 2 and harbor["stop_on_pass"] is False, "Attempt/runtime policy mismatch")
     require(harbor["timeout_multiplier"] == POLICY["timeout_multiplier"], "Timeout policy mismatch")
-    require(config["grading"]["mode"] == "default", "Grading policy mismatch")
+    require(config["grading"]["mode"] == benchmark_policy(name)["grading"], "Grading policy mismatch")
     revision = os.environ["GITHUB_SHA"]
     require(evaluated_source_revision(config["evaluated_source"]) == revision, "Evaluated source mismatch")
     cases = result["dataset_summary"]["total_tasks"]
@@ -350,10 +390,20 @@ def benchmark_report(workspace, root, name, mode, destination):
         require(condition["execution_status"] == "succeeded" and not condition["execution_errors"]
                 and condition["scored_attempts"] == condition["expected_attempts"] == cases * MODES[mode],
                 "Incomplete with-skill/baseline coverage")
+    if name == "gh":
+        import gh_evaluations as gh
+        expected_ids = [entry["id"] for entry in gh.dataset(workspace)]
+        require(cases == len(expected_ids), "Diagnostic subset cannot publish benchmark history")
+        if (root / "selection.json").exists():
+            selection = read_json(root / "selection.json")
+            require(selection["case_ids"] == expected_ids and (mode != "standard" or not selection["diagnostic_only"]),
+                    "Diagnostic selection cannot publish benchmark history")
+        deterministic = gh.deterministic_gate(run, expected_ids, MODES[mode])
+        write_json(root / "deterministic.json", {"trials": deterministic})
     rows = metric_rows(agent)
     provenance = {
         "schema_version": 1, "skill": name, "mode": mode, "revision": revision,
-        "policy": POLICY, "patch_sha256": hashlib.sha256((workspace / PATCH).read_bytes()).hexdigest(),
+        "policy": benchmark_policy(name), "patch_sha256": hashlib.sha256((workspace / PATCH).read_bytes()).hexdigest(),
         "dataset_digest": result["dataset_digest"], "metrics": rows,
     }
     # Reuse the exact same allowlist contract on both sides of the artifact boundary.
@@ -365,6 +415,9 @@ def benchmark_report(workspace, root, name, mode, destination):
     lines += ["", f"Dataset: `{provenance['dataset_digest']}`", f"Source: `{revision}`",
               "", "Confirmation runs are diagnostic; only successful standard runs dispatched on main publish history."]
     lines += usage_summary(run)
+    if name == "gh":
+        lines += ["", "Mandatory deterministic with-skill gate: passed for every trial. "
+                  "Baseline failures remain comparison evidence; separate scores are in deterministic.json."]
     summary(lines)
     if mode == "standard":
         write_json(destination / "metrics.json", provenance)
@@ -375,9 +428,9 @@ def validate_metrics(data, workspace, name, revision, *, mode="standard"):
                           "dataset_digest", "metrics"}, "Unexpected history artifact fields")
     require(data["schema_version"] == 1 and data["skill"] == name and data["mode"] == mode,
             "History identity/mode mismatch")
-    local_skill(workspace, name, dataset=True)
+    benchmark_skill(workspace, name)
     require(bool(re.fullmatch(r"[0-9a-f]{40}", revision)) and data["revision"] == revision, "Revision mismatch")
-    require(data["policy"] == POLICY, "Benchmark policy mismatch")
+    require(data["policy"] == benchmark_policy(name), "Benchmark policy mismatch")
     require(data["patch_sha256"] == hashlib.sha256((workspace / PATCH).read_bytes()).hexdigest(), "Patch mismatch")
     require(bool(re.fullmatch(r"sha256:[0-9a-f]{64}", data["dataset_digest"])), "Invalid dataset digest")
     rows = data["metrics"]
@@ -396,7 +449,7 @@ def publish_metrics(workspace, root, name):
             and os.environ.get("BENCHMARK_MODE") == "standard", "History requires a main standard dispatch")
     data = read_json(root / "metrics.json", limit=16384)
     validate_metrics(data, workspace, name, os.environ["GITHUB_SHA"])
-    policy_id = hashlib.sha256(json.dumps([POLICY, data["patch_sha256"]], sort_keys=True).encode()).hexdigest()[:16]
+    policy_id = hashlib.sha256(json.dumps([benchmark_policy(name), data["patch_sha256"]], sort_keys=True).encode()).hexdigest()[:16]
     rows = [{**row, "extra": f"Dataset {data['dataset_digest']}; policy {policy_id}"} for row in data["metrics"]]
     write_json(root / "benchmark.json", rows)
     outputs(history_dir=f"benchmarks/{name}/{policy_id}")
@@ -406,7 +459,7 @@ def benchmark_artifacts(workspace, root, name, destination):
     """Stage only native report contracts, using upstream credential redaction."""
     from skillevaluator.utils.redaction import redact_sensitive_data, redact_sensitive_text
 
-    local_skill(workspace, name, dataset=True)
+    benchmark_skill(workspace, name)
     root = root.absolute()
     destination = destination.absolute()
     for path in (root, destination):
@@ -421,6 +474,8 @@ def benchmark_artifacts(workspace, root, name, destination):
     )
     metadata = {"versions.json", "dataset-validation.json", "provenance.json",
                 "docker-version.json", "docker-images.jsonl"}
+    if name == "gh":
+        metadata.update({"deterministic.json", "selection.json"})
     # Reviewed v0.3.0 report/collector contract, restricted to this workflow's Codex agent.
     root_reports = {"result.json", "run_config.json", "dataset_snapshot.json", "report.html",
                     "attempt_policy.json", "comparison.json"}
@@ -462,9 +517,17 @@ def benchmark_artifacts(workspace, root, name, destination):
         require(not source.is_symlink() and source.resolve() == source, "Linked publication input")
         if source.suffix == ".json":
             value = redact_sensitive_data(read_json(source, limit=64 * 1024 * 1024))
+            if name == "gh":
+                from gh_evaluations import redact_publication
+                value = redact_publication(value)
             write_json(destination / relative, value)
         else:
+            if name == "gh":
+                require(source.stat().st_size <= 64 * 1024 * 1024, "Oversized gh diagnostic")
             text = redact_sensitive_text(source.read_text(encoding="utf-8"))
+            if name == "gh":
+                from gh_evaluations import redact_publication
+                text = redact_publication(text)
             target = destination / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(text, encoding="utf-8")
@@ -504,7 +567,7 @@ def main():
     if args.command == "preflight":
         catalog_preflight(workspace)
     elif args.command == "select":
-        local_skill(workspace, args.skill, dataset=True)
+        benchmark_skill(workspace, args.skill)
         outputs(skill=args.skill, attempts=MODES[args.mode])
     elif args.command == "catalog":
         catalog_report(workspace, args.root)
