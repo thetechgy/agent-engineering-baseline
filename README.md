@@ -299,6 +299,13 @@ collection, change `.apm/` sources or `apm.yml` and regenerate with APM. Don't e
 installed `.agents/skills/`, generated instructions, MCP config, or lock metadata
 directly.
 
+Repository review guidance lives in
+[`baseline-review.instructions.md`](baseline-review.instructions.md). Pinned APM
+0.33.0 discovers this root source during local compilation and generates it into
+the shared `AGENTS.md`; the separate Copilot instruction files stay unchanged.
+Keep this source outside `.apm/` and leave the manifest's explicit `includes`
+unchanged so downstream instructions and packages exclude these review rules.
+
 For skill-specific conventions, see
 [PowerShell module engineering](.apm/skills/powershell-module-engineering/SKILL.md),
 [Pester 6](.apm/skills/powershell-pester-6/SKILL.md), and
