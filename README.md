@@ -22,7 +22,7 @@ cover:
 - **PowerShell:** module development, Pester 6 testing, and simplifying code.
 - **Infrastructure:** Ansible and Podman.
 - **Security and Git:** agent safety, GitHub Actions hardening, dependency updates,
-  accessibility, and commits.
+  accessibility, commits, and GitHub CLI usage.
 - **Microsoft documentation:** API references and offline Graph lookups.
 
 Most skills are imported or adapted from other projects; the Pester 6 skill is one I
@@ -180,9 +180,10 @@ remote systems.
   don't auto-merge. Ignored Graph indexes and binaries still have lockfile and audit
   checks.
 - **Your installation:** default bootstrap also refreshes **all branch-tracking
-  dependencies in the destination**, including unrelated packages. Six imported skills
-  follow upstream `main`. Your destination manifest and lockfile govern the result, not
-  this repo's lockfile. Even a fixed baseline commit doesn't freeze the skills.
+  dependencies in the destination**, including unrelated packages. Seven imported skills
+  follow upstream branches (`main` or `trunk`). Your destination manifest and lockfile
+  govern the result, not this repo's lockfile. Even a fixed baseline commit doesn't
+  freeze the skills.
 
 Review the destination's manifest, resolved skills, and source overrides. `--trust-bin`
 authorizes bundled executables, including `msgraph`. `--trust-transitive-mcp` trusts MCP
