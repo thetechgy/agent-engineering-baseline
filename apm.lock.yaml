@@ -1,6 +1,6 @@
 lockfile_version: '1'
-generated_at: '2026-10-07T21:49:08.699399+00:00'
-apm_version: 0.31.0
+generated_at: '2026-10-10T15:30:18.059135+00:00'
+apm_version: 0.33.0
 dependencies:
 - repo_url: addyosmani/agent-skills
   name: code-simplification
@@ -17,6 +17,21 @@ dependencies:
   deployed_file_hashes:
     .agents/skills/code-simplification/SKILL.md: sha256:f0c5ed754057eb0c1e027e2587f59de816651feb5e837242296c43ea21cf621d
   content_hash: sha256:7973e746e8e2ea5004d520da970c15a106824b8d6be1bcff48908aec021f3677
+- repo_url: cli/cli
+  name: gh
+  host: github.com
+  resolved_commit: ec5b512045db67e5a2a4ff4a1b02660b2fb24390
+  resolved_ref: trunk
+  version: unknown
+  virtual_path: skills/gh
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/gh
+  - .agents/skills/gh/SKILL.md
+  deployed_file_hashes:
+    .agents/skills/gh/SKILL.md: sha256:8be0aef75646008f64f89c59813ea301e7758aeb180ddb72f93dbf89ebab4f22
+  content_hash: sha256:ff23d50fee0f42708ffaf56686c7a34a2f8b7e1247f04d47033095ba33863418
 - repo_url: github/awesome-copilot
   name: dependabot
   host: github.com
@@ -220,6 +235,24 @@ deployments:
   - github/awesome-copilot/skills/dependabot
   active_owner: github/awesome-copilot/skills/dependabot
   content_hash: sha256:471a786456c798364d13c0da554c12c712c581986b7f4a1de95d8b3638fd21cb
+- kind: project-relative
+  target: codex
+  value: .agents/skills/gh
+  runtime: null
+  scope: project
+  owners:
+  - cli/cli/skills/gh
+  active_owner: cli/cli/skills/gh
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/gh/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - cli/cli/skills/gh
+  active_owner: cli/cli/skills/gh
+  content_hash: sha256:8be0aef75646008f64f89c59813ea301e7758aeb180ddb72f93dbf89ebab4f22
 - kind: project-relative
   target: codex
   value: .agents/skills/git-commit
@@ -561,7 +594,7 @@ deployments:
   owners:
   - .
   active_owner: .
-  content_hash: sha256:c7938b6dfdbbd96190693c4508e8dec7df4bfa83a5597fa5165c0634dde4df2c
+  content_hash: sha256:552568936e9b5d240eab54906e4f00be34557a8d60de980eaa7514c38bfd488a
 - kind: project-relative
   target: legacy
   value: .agents/skills/a11y
@@ -870,4 +903,4 @@ local_deployed_file_hashes:
   .agents/skills/podman/references/validation.md: sha256:465321094bc936d8a9e187bd3b4daa1ab271b93242a2c07fe88c58db6bd4bdd5
   .agents/skills/powershell-module-engineering/SKILL.md: sha256:801cecfd42aeb32f3fd6083d9af08f44c8a5ca48202761533c072a10c06060c9
   .agents/skills/powershell-pester-6/SKILL.md: sha256:279824abf07feb466fd5deaab79fc872609d5674502bcfa51b31f2909874efab
-  .github/instructions/personal.instructions.md: sha256:c7938b6dfdbbd96190693c4508e8dec7df4bfa83a5597fa5165c0634dde4df2c
+  .github/instructions/personal.instructions.md: sha256:552568936e9b5d240eab54906e4f00be34557a8d60de980eaa7514c38bfd488a

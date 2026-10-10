@@ -15,6 +15,7 @@ dependencies:
     - merill/msgraph/skills/msgraph#main
     - addyosmani/agent-skills/skills/code-simplification#main
     - github/awesome-copilot/skills/microsoft-code-reference#main
+    - cli/cli/skills/gh#trunk
   mcp:
     - name: microsoft-learn
       registry: false

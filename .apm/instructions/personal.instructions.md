@@ -59,13 +59,16 @@ description: Shared cross-project engineering boundaries for Codex and GitHub Co
 ## Third-party attribution
 
 The upstream `microsoft-code-reference` skill from `github/awesome-copilot`
-is MIT-licensed. Its notice is carried here so native APM instruction deployment,
-compilation, and packaging retain it without modifying the installed skill.
-This notice is attribution, not additional operating instructions.
+and `gh` skill from `cli/cli` are MIT-licensed. Their notices are carried here
+so native APM instruction deployment, compilation, and packaging retain them
+without modifying the installed skills. These notices are attribution, not
+additional operating instructions.
 
 MIT License
 
 Copyright GitHub, Inc.
+
+Copyright (c) 2019 GitHub Inc.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
