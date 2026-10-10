@@ -292,7 +292,7 @@
             "--repo",
             "fixture-org/widget",
             "--json",
-            "name,bucket"
+            "name,bucket,link"
           ],
           [
             "run",
@@ -364,7 +364,7 @@
             "--repo",
             "fixture-org/widget",
             "--json",
-            "name,bucket"
+            "name,bucket,link"
           ],
           [
             "run",
@@ -455,8 +455,14 @@
           [
             "api",
             "repos/fixture-org/widget/issues",
+            "--method",
+            "GET",
+            "--field",
+            "state=all",
             "--paginate",
-            "--slurp"
+            "--slurp",
+            "--jq",
+            "[.[][] | select(has(\"pull_request\") | not) | .number]"
           ],
           [
             "api",

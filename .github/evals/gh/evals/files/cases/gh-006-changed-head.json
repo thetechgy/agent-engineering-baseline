@@ -41,14 +41,14 @@
             "fixture-org/widget"
           ],
           "--json": [
-            "name,bucket"
+            "name,bucket,link"
           ]
         },
         "repo": "fixture-org/widget"
       },
       "responses": [
         {
-          "stdout": "[{\"name\": \"test\", \"bucket\": \"pending\"}]",
+          "stdout": "[{\"name\": \"test\", \"bucket\": \"pending\", \"link\": \"https://github.com/fixture-org/widget/actions/runs/71\"}]",
           "exit_code": 8
         }
       ]

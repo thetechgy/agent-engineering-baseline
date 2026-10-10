@@ -132,6 +132,29 @@ class GhOfflineTests(unittest.TestCase):
         entry["contract"]["good_commands"].pop()
         self.assertEqual(gh.replay_case(entry)["custom_metrics"]["gh_gate"], 0)
 
+    def test_watch_run_is_discovered_from_checks_observation(self):
+        for identity in ("gh-006-pending", "gh-006-changed-head"):
+            entry = gh.dataset(selected=[identity])[0]
+            case = reports.read_json(gh.ROOT / gh.OVERLAY / entry["files"][-1])
+            command = entry["contract"]["good_commands"][1]
+            self.assertIn("link", command[command.index("--json") + 1].split(","))
+            response = next(r for r in case["routes"] if r["match"]["pos"][:2] == ["pr", "checks"])["responses"][0]
+            links = [check["link"] for check in json.loads(response["stdout"])]
+            self.assertTrue(any("/actions/runs/71" in link for link in links))
+
+    def test_issue_collection_models_all_states_and_filters_pull_requests(self):
+        entry = gh.dataset(selected=["gh-007"])[0]
+        command = entry["contract"]["good_commands"][0]
+        self.assertEqual(command[command.index("--method") + 1], "GET")
+        self.assertIn("state=all", command)
+        self.assertIn("--paginate", command)
+        self.assertIn("pull_request", command[command.index("--jq") + 1])
+        case = reports.read_json(gh.ROOT / gh.OVERLAY / entry["files"][-1])
+        items = [item for page in json.loads(case["routes"][0]["responses"][0]["stdout"]) for item in page]
+        self.assertTrue(any(item.get("state") == "closed" for item in items))
+        self.assertTrue(any("pull_request" in item for item in items))
+        self.assertEqual(gh.replay_case(entry)["custom_metrics"]["gh_gate"], 1)
+
     def test_preinstall_selection_needs_only_python_standard_library(self):
         result = subprocess.run(
             [
