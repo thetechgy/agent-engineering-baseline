@@ -382,13 +382,19 @@ the skill aren't useful measures of its value. See
 [Podman evaluation guidance](.apm/skills/podman/EVALS.md) and keep local results in a
 sibling workspace outside the skill collection.
 
+The repository-owned [GitHub CLI evaluation suite](.github/evals/gh/EVALS.md)
+adds 24 fixture cases and deterministic grading around the unchanged upstream
+`gh` skill. Its credential-free replay runs in ordinary CI; native paid runs use
+`skill=gh` in the same protected manual workflow. Replay, model-backed results,
+and optional live read-only checks are reported separately.
+
 [Benchmark reports](https://github.com/thetechgy/agent-engineering-baseline/actions/workflows/benchmark-skills.yml)
 include the underlying evidence. The
 [historical Podman charts](https://thetechgy.github.io/agent-engineering-baseline/podman/bcf6348b71caddcb/)
 used a different policy, so account for policy and runtime changes when comparing them.
 
-For now, the cases cover **Podman** and automated runs use **Codex**. They don't
-establish performance for other skills or Copilot. An agent's result also doesn't prove
+The cases cover **Podman** and **gh**, and automated runs use **Codex**. Harness
+checks alone do not establish model performance or portability to Copilot. An agent's result also doesn't prove
 infrastructure is working; verify deployment, readiness, exposure, backups, and recovery
 in the target environment.
 

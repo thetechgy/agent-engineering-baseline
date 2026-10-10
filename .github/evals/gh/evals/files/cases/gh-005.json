@@ -1,0 +1,57 @@
+{
+  "id": "gh-005",
+  "routes": [
+    {
+      "id": "runs",
+      "match": {
+        "pos": [
+          "run",
+          "list"
+        ],
+        "options": {
+          "--repo": [
+            "fixture-org/widget"
+          ],
+          "--json": [
+            "databaseId,headSha,workflowName,conclusion"
+          ]
+        },
+        "repo": "fixture-org/widget"
+      },
+      "responses": [
+        {
+          "stdout": "[{\"databaseId\": 71, \"headSha\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\", \"workflowName\": \"Benchmark skills\", \"conclusion\": \"failure\"}, {\"databaseId\": 72, \"headSha\": \"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\", \"workflowName\": \"Validate\", \"conclusion\": \"success\"}]"
+        }
+      ]
+    },
+    {
+      "id": "log",
+      "match": {
+        "pos": [
+          "run",
+          "view",
+          "71"
+        ],
+        "options": {
+          "--repo": [
+            "fixture-org/widget"
+          ],
+          "--log-failed": [
+            true
+          ]
+        },
+        "repo": "fixture-org/widget"
+      },
+      "responses": [
+        {
+          "stdout": "runtime preflight\tFAIL\tDocker agent startup failed"
+        }
+      ]
+    }
+  ],
+  "files": {},
+  "help": {
+    "run list": "List recent workflow runs.\n\nNote that providing the `workflow_name` to the `-w` flag will not fetch disabled workflows.\nAlso pass the `-a` flag to fetch disabled workflow runs using the `workflow_name` and the `-w` flag.\n\nRuns created by organization and enterprise ruleset workflows will not display a workflow name due to GitHub API limitations.\n\nTo see runs associated with a pull request, users should run `gh pr checks`.\n\nFor more information about output formatting flags, see `gh help formatting`.\n\nUSAGE\n  gh run list [flags]\n\nALIASES\n  gh run ls\n\nFLAGS\n  -a, --all               Include disabled workflows\n  -b, --branch string     Filter runs by branch\n  -c, --commit SHA        Filter runs by the SHA of the commit\n      --created date      Filter runs by the date it was created\n  -e, --event event       Filter runs by which event triggered the run\n  -q, --jq expression     Filter JSON output using a jq expression\n      --json fields       Output JSON with the specified fields\n  -L, --limit int         Maximum number of runs to fetch (default 20)\n  -s, --status string     Filter runs by status: {queued|completed|in_progress|requested|waiting|pending|action_required|cancelled|failure|neutral|skipped|stale|startup_failure|success|timed_out}\n  -t, --template string   Format JSON output using a Go template; see \"gh help formatting\"\n  -u, --user string       Filter runs by user who triggered the run\n  -w, --workflow string   Filter runs by workflow\n\nINHERITED FLAGS\n      --help                     Show help for command\n  -R, --repo [HOST/]OWNER/REPO   Select another repository using the [HOST/]OWNER/REPO format\n\nJSON FIELDS\n  attempt, conclusion, createdAt, databaseId, displayTitle, event, headBranch,\n  headSha, name, number, startedAt, status, updatedAt, url, workflowDatabaseId,\n  workflowName\n\nLEARN MORE\n  Use `gh <command> <subcommand> --help` for more information about a command.\n  Read the manual at https://cli.github.com/manual\n  Learn about exit codes using `gh help exit-codes`\n  Learn about accessibility experiences using `gh help accessibility`\n\n",
+    "run view": "View a summary of a workflow run.\n\nDue to platform limitations, `gh` may not always be able to associate jobs with their\ncorresponding logs when using the primary method of fetching logs in zip format.\n\nIn such cases, `gh` will attempt to fetch logs for each job individually via the API.\nThis fallback is slower and more resource-intensive. If more than 25 job logs are missing,\nthe operation will fail with an error.\n\nAdditionally, due to similar platform constraints, some log lines may not be\nassociated with a specific step within a job. In these cases, the step name will\nappear as `UNKNOWN STEP` in the log output.\n\nFor more information about output formatting flags, see `gh help formatting`.\n\nUSAGE\n  gh run view [<run-id>] [flags]\n\nFLAGS\n  -a, --attempt uint      The attempt number of the workflow run\n      --exit-status       Exit with non-zero status if run failed\n  -j, --job string        View a specific job ID from a run\n  -q, --jq expression     Filter JSON output using a jq expression\n      --json fields       Output JSON with the specified fields\n      --log               View full log for either a run or specific job\n      --log-failed        View the log for any failed steps in a run or specific job\n  -t, --template string   Format JSON output using a Go template; see \"gh help formatting\"\n  -v, --verbose           Show job steps\n  -w, --web               Open run in the browser\n\nINHERITED FLAGS\n      --help                     Show help for command\n  -R, --repo [HOST/]OWNER/REPO   Select another repository using the [HOST/]OWNER/REPO format\n\nJSON FIELDS\n  attempt, conclusion, createdAt, databaseId, displayTitle, event, headBranch,\n  headSha, jobs, name, number, startedAt, status, updatedAt, url,\n  workflowDatabaseId, workflowName\n\nEXAMPLES\n  # Interactively select a run to view, optionally selecting a single job\n  $ gh run view\n  \n  # View a specific run\n  $ gh run view 12345\n  \n  # View a specific run with specific attempt number\n  $ gh run view 12345 --attempt 3\n  \n  # View a specific job within a run\n  $ gh run view --job 456789\n  \n  # View the full log for a specific job\n  $ gh run view --log --job 456789\n  \n  # Exit non-zero if a run failed\n  $ gh run view 0451 --exit-status && echo \"run pending or passed\"\n\nLEARN MORE\n  Use `gh <command> <subcommand> --help` for more information about a command.\n  Read the manual at https://cli.github.com/manual\n  Learn about exit codes using `gh help exit-codes`\n  Learn about accessibility experiences using `gh help accessibility`\n\n"
+  }
+}

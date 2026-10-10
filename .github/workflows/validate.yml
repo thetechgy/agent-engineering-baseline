@@ -41,6 +41,10 @@ jobs:
         run: |
           shellcheck .github/scripts/setup-skillevaluator.sh
           "$SKILL_EVALUATOR_PYTHON" -m unittest discover -s .github/tests -v
+          "$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_evaluations.py validate gh
+          "$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_evaluations.py replay gh
+          "$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_evaluations.py stage gh "$RUNNER_TEMP/gh-eval-bundle/gh"
+          skillevaluator tier3 validate "$RUNNER_TEMP/gh-eval-bundle/gh" --strict --json
 
       - name: Collect native skill and dataset reports
         env:

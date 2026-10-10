@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       skill:
-        description: Local authored skill with evals/evals.json
+        description: Authored skill or verified gh evaluation overlay
         required: true
         default: podman
         type: string
@@ -89,7 +89,12 @@ jobs:
           cp "$RUNNER_TEMP/skill-evaluation-tools/versions.json" "$RUNNER_TEMP/skill-benchmark/versions.json"
           cp -r "$RUNNER_TEMP/skill-evaluation-tools/dependencies" "$RUNNER_TEMP/skill-benchmark/dependencies"
           "$SKILL_EVALUATOR_PYTHON" -m unittest discover -s .github/tests -v
-          skillevaluator tier3 validate "$GITHUB_WORKSPACE/.apm/skills/$BENCHMARK_SKILL" --strict --json \
+          skill_dir="$GITHUB_WORKSPACE/.apm/skills/$BENCHMARK_SKILL"
+          if [ "$BENCHMARK_SKILL" = gh ]; then
+            skill_dir="$RUNNER_TEMP/skill-benchmark/bundle/gh"
+            "$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_evaluations.py stage gh "$skill_dir"
+          fi
+          skillevaluator tier3 validate "$skill_dir" --strict --json \
             > "$RUNNER_TEMP/skill-benchmark/dataset-validation.json"
           docker info > /dev/null
 
@@ -119,11 +124,19 @@ jobs:
           if (( evaluation_seconds > 8400 )); then
             evaluation_seconds=8400
           fi
+          skill_dir="$GITHUB_WORKSPACE/.apm/skills/$BENCHMARK_SKILL"
+          grading_mode=default
+          workspace_mode=isolated
+          if [ "$BENCHMARK_SKILL" = gh ]; then
+            skill_dir="$RUNNER_TEMP/skill-benchmark/bundle/gh"
+            grading_mode=default_plus_custom
+            workspace_mode=group
+          fi
           cd "$RUNNER_TEMP/skill-benchmark"
           # Stop by the deadline, including forced-termination grace, to preserve recovery time.
-          timeout --signal=INT --kill-after=30s "${evaluation_seconds}s" skillevaluator tier3 evaluate "$GITHUB_WORKSPACE/.apm/skills/$BENCHMARK_SKILL" \
+          timeout --signal=INT --kill-after=30s "${evaluation_seconds}s" skillevaluator tier3 evaluate "$skill_dir" \
             --agents codex --agent-model codex=gpt-5.6-sol --env-mode docker \
-            --skill-workspace-mode isolated --grading-mode default \
+            --skill-workspace-mode "$workspace_mode" --grading-mode "$grading_mode" \
             --n-attempts "$ATTEMPTS" --no-stop-on-pass --n-concurrent 2 --max-agents 1 \
             --agent-runtime-preflight --timeout-multiplier 2 --progress plain --harbor-keep-jobs \
             --results-dir "$SKILLEVALUATOR_RESULTS_DIR" \

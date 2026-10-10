@@ -1,0 +1,8 @@
+{
+  "id": "gh-013-local",
+  "routes": [],
+  "files": {
+    "local.txt": "untracked fixture"
+  },
+  "help": {}
+}
