@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-10-10T21:45:33.690217+00:00'
+generated_at: '2026-10-10T22:02:40.994163+00:00'
 apm_version: 0.33.0
 dependencies:
 - repo_url: addyosmani/agent-skills
@@ -594,7 +594,7 @@ deployments:
   owners:
   - .
   active_owner: .
-  content_hash: sha256:2154475ddb5b52dbbb4d0b82d34e4c84de7c0b89c769653b8fda1a25edcd32ec
+  content_hash: sha256:6bee5bb117bf796efe4f5b1873e6f9d11d0f3d698525d0c4fd2e20b17fb955e8
 - kind: project-relative
   target: legacy
   value: .agents/skills/a11y
@@ -903,4 +903,4 @@ local_deployed_file_hashes:
   .agents/skills/podman/references/validation.md: sha256:465321094bc936d8a9e187bd3b4daa1ab271b93242a2c07fe88c58db6bd4bdd5
   .agents/skills/powershell-module-engineering/SKILL.md: sha256:801cecfd42aeb32f3fd6083d9af08f44c8a5ca48202761533c072a10c06060c9
   .agents/skills/powershell-pester-6/SKILL.md: sha256:279824abf07feb466fd5deaab79fc872609d5674502bcfa51b31f2909874efab
-  .github/instructions/personal.instructions.md: sha256:2154475ddb5b52dbbb4d0b82d34e4c84de7c0b89c769653b8fda1a25edcd32ec
+  .github/instructions/personal.instructions.md: sha256:6bee5bb117bf796efe4f5b1873e6f9d11d0f3d698525d0c4fd2e20b17fb955e8
