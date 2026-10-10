@@ -30,6 +30,45 @@ The upstream CLI skill and captured CLI help are MIT-licensed, copyright GitHub,
 Inc. The repository's `AGENTS.md` carries the applicable MIT notice. No upstream
 skill source is edited by this suite.
 
+## Task build inputs
+
+The reviewed Docker Official Image is
+`python:3.12-slim-trixie@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1`.
+The digest identifies the official `library/python` image index, keeping the
+selected platform's base layers fixed. See the [official image source](https://github.com/docker-library/python)
+and [Docker's digest-pinning guidance](https://docs.docker.com/build/building/best-practices/#pin-base-image-versions).
+
+Debian inputs come exclusively from the fixed `20261010T000000Z` snapshots:
+[Debian trixie](https://snapshot.debian.org/archive/debian/20261010T000000Z/dists/trixie/)
+and [Debian-security trixie-security](https://snapshot.debian.org/archive/debian-security/20261010T000000Z/dists/trixie-security/),
+component `main`. Inherited sources and package indexes are removed before update;
+there is no live-repository fallback. Each source uses the image's Debian archive
+keyring. Only these sources disable `Valid-Until` checking, as described by
+[Debian snapshot](https://snapshot.debian.org/); signature verification remains
+enabled and an apt update error fails the build.
+
+| Direct package | Reviewed snapshot version |
+| --- | --- |
+| git | `1:2.47.3-0+deb13u1` |
+| jq | `1.7.1-6+deb13u4` |
+| nodejs | `20.19.2+dfsg-1+deb13u3` |
+| npm | `9.2.0~ds1-3` |
+| ca-certificates | `20250419` |
+
+The base image, snapshot timestamp, and direct package versions share one
+definition in `skill_reports.py` and are included in the `gh` benchmark policy
+identity. Transitive apt dependencies resolve only against the fixed snapshots.
+The pinned native adapter regression checks the resulting Dockerfile in both
+arms; credential-free hosted Docker validation checks installed versions and
+snapshot-only sources in the built images, alongside the broker and verifier.
+
+This freezes base-image and Debian inputs, not the complete runtime supply chain.
+The upstream adapter separately adds verifier Python and Python package installs;
+Codex setup has separate pip/npm installation paths. Those paths remain outside
+this correction, even with the existing evaluator/Codex version pins. Passing
+container checks do not qualify paid model runs or authenticate every runtime
+dependency.
+
 ## Historical evidence
 
 | Source | Sanitized original request | Environment and observed result | Event locations |

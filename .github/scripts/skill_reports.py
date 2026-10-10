@@ -39,6 +39,17 @@ METRICS = {
 }
 MODES = {"standard": POLICY["standard_attempts"], "confirmation": 3}
 PATCH = ".github/patches/skillevaluator-v0.3.0-pin-codex.patch"
+GH_TASK_BUILD = {
+    "base_image": "python:3.12-slim-trixie@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1",
+    "apt_snapshot": "20261010T000000Z",
+    "apt_packages": {
+        "git": "1:2.47.3-0+deb13u1",
+        "jq": "1.7.1-6+deb13u4",
+        "nodejs": "20.19.2+dfsg-1+deb13u3",
+        "npm": "9.2.0~ds1-3",
+        "ca-certificates": "20250419",
+    },
+}
 
 
 def require(condition, message):
@@ -151,7 +162,7 @@ def benchmark_policy(name):
     return {**POLICY, "grading": "default_plus_custom", "upstream_revision":
             "ec5b512045db67e5a2a4ff4a1b02660b2fb24390", "deterministic_gate": 2, "workspace_mode": "group",
             "fixture_boundary": "root-broker-unprivileged-agent-v1", "authorization_policy": "per-case-allowlist-v1",
-            "task_source": "native_harbor",
+            "task_source": "native_harbor", "task_build": GH_TASK_BUILD,
             "competing_revision": "143a3d976b3c1603cc8932984d5e1f28501cb5fc"} if name == "gh" else POLICY
 
 

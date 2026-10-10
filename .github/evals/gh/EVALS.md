@@ -135,6 +135,34 @@ and upstream redaction, supplemented for GitHub tokens, exclude raw Harbor jobs,
 staged bundles, and unrelated files; `deterministic.json` contains only case IDs and numeric results. Unknown or
 incomplete evidence stays incomplete. Never upload raw session transcripts.
 
+## Updating task build pins
+
+Both native comparison arms use the digest-pinned Python image and signed Debian
+snapshots listed in [provenance](PROVENANCE.md#task-build-inputs). CI checks the
+installed direct package versions and verifies that only the fixed snapshot
+sources remain. The image, snapshot, and package versions form part of the `gh`
+benchmark policy identity, so changed inputs produce a separate history identity.
+
+Update pins manually in a reviewed change:
+
+1. Verify a replacement digest against the official `library/python` registry
+   metadata and inspect its Debian suite and supported platform manifests.
+2. Select fixed Debian and Debian-security snapshot timestamps for that suite.
+   Verify the signed repository metadata and available package versions. Keep
+   signature checking enabled; scope expiration exceptions to the fixed sources.
+3. Update `GH_TASK_BUILD` in `skill_reports.py`, the independent expected pins in
+   the native adapter regression, and this provenance ledger together. If the
+   suite changes, update the snapshot source construction and regression too.
+4. Run the pinned suite, dataset validation/replay, strict native validation,
+   lint, and preflight. Obtain current-revision credential-free Docker evidence
+   for both arms and cleanup before qualifying the change. No paid benchmark is
+   required to update or validate these pins.
+
+Pins do not automatically receive security updates. Review replacements when
+upstream security fixes require them. The adapter's separate verifier Python and
+pip dependencies and Codex's pip/npm install paths remain qualification limits;
+these task pins do not freeze the entire runtime supply chain.
+
 ## Optional live read-only check
 
 Choose a public repository explicitly:

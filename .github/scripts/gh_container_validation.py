@@ -51,6 +51,22 @@ def validate():
                         "--tag", name, str(task / "environment"))
                     run("docker", "run", "--detach", "--name", name, "--network", "none",
                         "--label", "gh-eval-validation=" + prefix, name, "sleep", "600")
+                    installed = run("docker", "exec", "--user", "root", name,
+                        "dpkg-query", "--show", "--showformat=${Package}\t${Version}\t${Status}\n",
+                        *gh.reports.GH_TASK_BUILD["apt_packages"]).stdout
+                    expected = {
+                        (package, version, "install ok installed")
+                        for package, version in gh.reports.GH_TASK_BUILD["apt_packages"].items()
+                    }
+                    if {tuple(line.split("\t")) for line in installed.splitlines()} != expected:
+                        raise ValueError("installed task package versions differ from reviewed pins")
+                    # Check the resulting image, including any adapter-added build steps.
+                    sources = run("docker", "exec", "--user", "root", name,
+                        "cat", "/etc/apt/sources.list").stdout
+                    if sources != "\n".join(gh.APT_SOURCES) + "\n":
+                        raise ValueError("apt sources differ from signed fixed snapshots")
+                    run("docker", "exec", "--user", "root", name, "python3", "-I", "-c",
+                        "from pathlib import Path; assert not list(Path('/etc/apt/sources.list.d').iterdir())")
                     run("docker", "exec", "--user", "root", name,
                         "python3", "-I", "/opt/gh-eval/setup.py", "--start")
                     run("docker", "cp", str(task / "tests"), name + ":/tests")
@@ -118,7 +134,7 @@ for p in pathlib.Path('/proc').glob('*/cmdline'):
                         raise ValueError("authorized calls rejected")
                     tested += 1
             print(json.dumps({"evidence": "credential-free native Docker boundary", "containers_passed": tested,
-                "model_trials": 0, "network": "none"}))
+                "model_trials": 0, "network": "none", "task_build": gh.reports.GH_TASK_BUILD}))
     finally:
         for name in reversed(resources):
             run("docker", "rm", "--force", name, check=False)

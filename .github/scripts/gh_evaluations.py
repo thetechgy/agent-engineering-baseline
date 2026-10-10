@@ -27,6 +27,11 @@ UPSTREAM = "ec5b512045db67e5a2a4ff4a1b02660b2fb24390"
 SMOKE = ("gh-002", "gh-005", "gh-008", "gh-010")
 SETUP = "python3 -I /opt/gh-eval/setup.py --start"
 COMPETING = "github-actions-hardening"
+APT_SOURCES = [
+    "deb [check-valid-until=no signed-by=/usr/share/keyrings/debian-archive-keyring.gpg] "
+    f"https://snapshot.debian.org/archive/{archive}/{reports.GH_TASK_BUILD['apt_snapshot']}/ {suite} main"
+    for archive, suite in (("debian", "trixie"), ("debian-security", "trixie-security"))
+]
 
 
 def module(path, name):
@@ -225,6 +230,10 @@ def stage(workspace, destination, selected=None):
 
 def native_tasks(destination, entries, workspace):
     """Supported BYOT source, leaving skill discovery and grading to the pinned adapter."""
+    packages = shlex.join([
+        f"{package}={version}" for package, version in reports.GH_TASK_BUILD["apt_packages"].items()
+    ])
+    sources = shlex.join(APT_SOURCES)
     for original in entries:
         task = destination / "evals/harbor" / original["id"]
         env = task / "environment"
@@ -237,9 +246,12 @@ def native_tasks(destination, entries, workspace):
         (env / "input").mkdir()
         (env / "input/README.txt").write_text("Public gh fixture transport. Use gh to obtain observations.\n")
         (env / "Dockerfile").write_text(
-            "FROM python:3.12-slim\n"
-            "RUN apt-get update && apt-get install -y --no-install-recommends git jq nodejs npm "
-            "ca-certificates && rm -rf /var/lib/apt/lists/*\n"
+            f"FROM {reports.GH_TASK_BUILD['base_image']}\n"
+            "RUN rm -f /etc/apt/sources.list.d/* && rm -rf /var/lib/apt/lists/* "
+            f"&& printf '%s\\n' {sources} > /etc/apt/sources.list "
+            "&& apt-get update --error-on=any "
+            f"&& apt-get install -y --no-install-recommends {packages} "
+            "&& rm -rf /var/lib/apt/lists/*\n"
             "RUN useradd --create-home --uid 1000 agent && mkdir -p /workspace /opt/gh-eval "
             "&& chmod 700 /opt/gh-eval\n"
             "COPY private /opt/gh-eval/source\n"

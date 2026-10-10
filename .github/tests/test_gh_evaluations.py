@@ -315,6 +315,48 @@ class GhOfflineTests(unittest.TestCase):
     "pinned SkillEvaluator environment unavailable",
 )
 class GhNativeTests(unittest.TestCase):
+    def test_native_adapter_preserves_pinned_build_inputs_in_both_arms(self):
+        from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks
+
+        image = "python:3.12-slim-trixie@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1"
+        packages = {
+            "git": "1:2.47.3-0+deb13u1",
+            "jq": "1.7.1-6+deb13u4",
+            "nodejs": "20.19.2+dfsg-1+deb13u3",
+            "npm": "9.2.0~ds1-3",
+            "ca-certificates": "20250419",
+        }
+        snapshot = "20261010T000000Z"
+        with tempfile.TemporaryDirectory(prefix="gh-build-pins-") as temporary:
+            root = Path(temporary)
+            skill = gh.stage(gh.ROOT, root / "bundle/gh", ["gh-001"])
+            for with_skill in (True, False):
+                with self.subTest(with_skill=with_skill):
+                    task = stage_native_harbor_tasks(
+                        skill, root / str(with_skill), with_skill=with_skill,
+                        grading_mode="default_plus_custom", workspace_mode="group",
+                        workspace_skill_paths=[skill.parent / gh.COMPETING],
+                    )[0]
+                    dockerfile = (task / "environment/Dockerfile").read_text()
+                    self.assertEqual(dockerfile.splitlines()[0], "FROM " + image)
+                    for archive, suite in (("debian", "trixie"), ("debian-security", "trixie-security")):
+                        self.assertIn(
+                            "deb [check-valid-until=no signed-by=/usr/share/keyrings/debian-archive-keyring.gpg] "
+                            f"https://snapshot.debian.org/archive/{archive}/{snapshot}/ {suite} main",
+                            dockerfile,
+                        )
+                    self.assertIn("rm -f /etc/apt/sources.list.d/*", dockerfile)
+                    self.assertIn("> /etc/apt/sources.list", dockerfile)
+                    self.assertIn("apt-get update --error-on=any", dockerfile)
+                    for package, version in packages.items():
+                        self.assertIn(package + "=" + version, dockerfile)
+                    for forbidden in ("deb.debian.org", "security.debian.org", "trixie-updates",
+                                      "trusted=yes", "--allow-unauthenticated", "Acquire::Check-Valid-Until"):
+                        self.assertNotIn(forbidden, dockerfile)
+        self.assertEqual(reports.benchmark_policy("gh")["task_build"], {
+            "base_image": image, "apt_snapshot": snapshot, "apt_packages": packages,
+        })
+
     def test_native_task_generation_both_arms_and_hidden_verifier_contract(self):
         from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks
 
