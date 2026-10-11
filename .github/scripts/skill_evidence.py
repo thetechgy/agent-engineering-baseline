@@ -188,14 +188,17 @@ def safe_path(path, *, directory=False, missing=False, directory_identities=None
         if current != path or directory:
             require(stat.S_ISDIR(info.st_mode), 'Non-directory component')
             if directory_identities is not None:
-                directory_identities[current] = (info.st_dev, info.st_ino)
+                observed = (info.st_dev, info.st_ino)
+                require(current not in directory_identities or directory_identities[current] == observed,
+                        'Input directory changed')
+                directory_identities[current] = observed
         else:
             require(stat.S_ISREG(info.st_mode) and info.st_nlink == 1, 'Special or hard-linked input')
     return path
 
 
-def safe_tree(path, *, max_entries=MAX_INPUT_ENTRIES, max_files=None):
-    path = safe_path(path, directory=True)
+def safe_tree(path, *, max_entries=MAX_INPUT_ENTRIES, max_files=None, directory_identities=None):
+    path = safe_path(path, directory=True, directory_identities=directory_identities)
     pending = [path]
     files = []
     seen = 0
@@ -205,7 +208,7 @@ def safe_tree(path, *, max_entries=MAX_INPUT_ENTRIES, max_files=None):
                 seen += 1
                 require(seen <= max_entries, 'Input tree entry limit')
                 directory = stat.S_ISDIR(entry.stat(follow_symlinks=False).st_mode)
-                member = safe_path(entry.path, directory=directory)
+                member = safe_path(entry.path, directory=directory, directory_identities=directory_identities)
                 if directory:
                     pending.append(member)
                 else:
@@ -223,8 +226,9 @@ class ReadBudget:
         self.remaining -= size
 
 
-def read_bytes(path, limit=JSON_LIMIT, *, budget=None):
-    directory_identities = {}
+def read_bytes(path, limit=JSON_LIMIT, *, budget=None, directory_identities=None):
+    if directory_identities is None:
+        directory_identities = {}
     path = safe_path(path, directory_identities=directory_identities)
     require(SECURE_DIRECTORY_OUTPUT, 'Secure directory input unsupported')
     # O_NONBLOCK avoids hanging if a file is replaced by a FIFO between checks.
@@ -267,8 +271,8 @@ def read_json(path):
     return parse_json(read_bytes(path))
 
 
-def read_json_and_digest(path, *, budget=None):
-    raw = read_bytes(path, budget=budget)
+def read_json_and_digest(path, *, budget=None, directory_identities=None):
+    raw = read_bytes(path, budget=budget, directory_identities=directory_identities)
     return parse_json(raw), digest_bytes(raw)
 
 
@@ -876,6 +880,10 @@ def validate_reference(value):
             token(item)
     # Availability can change without changing the reference's stable identity.
     require(value['id'] == identity({k: value[k] for k in ('artifact_id', 'member', 'locator', 'digest')}), 'Reference identity mismatch')
+    if any(artifact == value['artifact_id'] for artifact, _ in REVIEWED_REFERENCE_EXPIRY):
+        require(value['provenance'] == 'reviewed_extract'
+                and (value['artifact_id'], value['artifact_digest']) in REVIEWED_REFERENCE_EXPIRY,
+                'Unrecognized reviewed reference identity')
     if value['provenance'] == 'reviewed_extract':
         require(identity({k: value[k] for k in ('artifact_id', 'artifact_digest', 'member', 'locator', 'digest')})
                 in REVIEWED_REFERENCE_IDENTITIES, 'Unrecognized reviewed reference identity')
@@ -1291,11 +1299,11 @@ def project(data, *, static_bundle=None):
     return out
 
 
-def load_extract(root, *, budget=None, _observed_at=None):
+def load_extract(root, *, budget=None, _observed_at=None, directory_identities=None):
     path = root / 'extract-manifest.json'
     if not path.exists():
         return None
-    raw = read_bytes(path, budget=budget)
+    raw = read_bytes(path, budget=budget, directory_identities=directory_identities)
     require(digest_bytes(raw) in REVIEWED_EXTRACT_MANIFESTS, 'Unrecognized reviewed extract manifest')
     value = parse_json(raw)
     closed(value, ('schema_version', 'artifact_id', 'archive_digest', 'origin', 'members'))
@@ -1418,16 +1426,17 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     from skillevaluator.tier3.harbor import report_data as native_reports
     from skillevaluator.evaluation import EvaluationService
     from skillevaluator.tier3.case_ids import validate_case_id
-    safe_tree(root); skill_id(name)
+    directory_identities = {}
+    safe_tree(root, directory_identities=directory_identities); skill_id(name)
     run = select_run(root, name, selected)
     budget = ReadBudget()
     observed_at = utc_now()
-    extract = load_extract(root, budget=budget, _observed_at=observed_at)
+    extract = load_extract(root, budget=budget, _observed_at=observed_at, directory_identities=directory_identities)
     artifact = extract['artifact_id'] if extract else run.name
     member_digests = {}
     def read_member(path, *, native_snapshot=False):
         require(path not in member_digests, 'Duplicate behavioral member read')
-        raw = read_bytes(path, budget=budget)
+        raw = read_bytes(path, budget=budget, directory_identities=directory_identities)
         if native_snapshot:
             require(len(raw) <= native_reports._MAX_JSON_BYTES, 'Native snapshot byte limit')
         value = parse_json(raw)
@@ -1784,9 +1793,10 @@ def static_required_gate(scan, *, blocking_only=False):
 
 
 def normalize_static(root, name, workspace=ROOT):
-    safe_tree(root); skill_id(name)
+    directory_identities = {}
+    safe_tree(root, directory_identities=directory_identities); skill_id(name)
     budget = ReadBudget()
-    catalog_path = root / 'reports/catalog-summary.json'; catalog, catalog_digest = read_json_and_digest(catalog_path, budget=budget)
+    catalog_path = root / 'reports/catalog-summary.json'; catalog, catalog_digest = read_json_and_digest(catalog_path, budget=budget, directory_identities=directory_identities)
     require(type(catalog) is dict, 'Static catalog object required')
     require(type(catalog['skills']) is list and catalog['total'] == len(catalog['skills']), 'Catalog cardinality mismatch')
     names = [row['name'] for row in catalog['skills']]
@@ -1798,7 +1808,7 @@ def normalize_static(root, name, workspace=ROOT):
     require(row.get('reason', '') == ('' if row['passed'] else 'validation failed'), 'Catalog infrastructure failure')
     filename = row['json_report']
     require(type(filename) is str and bool(re.fullmatch(r'skillevaluator-output-[0-9]{14}\.json', filename)), 'Unsafe static report member')
-    report_path = root / 'reports' / name / filename; native, report_digest = read_json_and_digest(report_path, budget=budget)
+    report_path = root / 'reports' / name / filename; native, report_digest = read_json_and_digest(report_path, budget=budget, directory_identities=directory_identities)
     require(type(native) is dict and type(native.get('results')) is list
             and len(native['results']) <= 100, 'Invalid bounded static report')
     require(len(native['skills']) == 1 and native['skills'][0]['name'] == name, 'Static identity mismatch')
@@ -1897,7 +1907,7 @@ def normalize_static(root, name, workspace=ROOT):
     data['availability'] = {'status': 'incomplete' if limitations else 'complete',
                             'reasons': sorted(limitations), 'provenance': 'runtime_recorded'}
     if (root / 'versions.json').exists():
-        versions, versions_digest = read_json_and_digest(root / 'versions.json', budget=budget)
+        versions, versions_digest = read_json_and_digest(root / 'versions.json', budget=budget, directory_identities=directory_identities)
         validate_runtime_versions(versions)
         data['policy'] = make_policy({'evaluator_revision': versions.get('evaluator_revision')}, provenance='runtime_recorded')
         data['references'].append(reference_from_digest(root, root / 'versions.json', 'skill-quality', versions_digest))

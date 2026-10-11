@@ -484,6 +484,10 @@ marker key; unrelated generated directories and other selector callers retain
 their existing behavior.
 File/object size is charged before content capture, and unexpected file growth
 is charged before parsing; per-file and historical-object limits remain 8 MiB.
+Static and behavioral normalization retain the directory device/inode identities
+collected during the initial bounded tree scan. Every later member read must
+descend from those same directories; replacing a scanned bundle or ancestor
+rejects before content capture rather than establishing a new read baseline.
 Historical tree listings use unbuffered streaming reads limited by the remaining
 budget and their independent bound. At most one extra byte distinguishes EOF
 from excess; rejection terminates Git before parsing or blob capture.
@@ -496,8 +500,12 @@ after its recorded UTC expiration, normalization marks its original references
 `expired` and adds `reference_expired`, keeping the report incomplete. It samples
 time once for each normalization, preserving native measurements and stable
 reference identities. Trusted expiry metadata is keyed by the approved artifact
-ID and archive digest and checked against the pinned manifest. Shared internal
-and public validation recheck that deadline; standalone projection samples UTC
+ID and archive digest and checked against the pinned manifest. Validation
+recognizes reserved reviewed artifact IDs independently of serialized
+provenance; they must retain their approved archive digest, reviewed provenance
+and complete member identity. Clearing those fields cannot disable expiry or
+the reviewed payload checks. Ordinary runtime artifacts retain their own rules.
+Shared internal and public validation recheck that deadline; standalone projection samples UTC
 once and reuses it for both checks. A record serialized before expiry must
 explicitly mark every reviewed reference `expired`, retain `reference_expired`,
 and report supporting-evidence availability as `incomplete` when projected at

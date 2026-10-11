@@ -1488,7 +1488,7 @@ class EvidenceTests(unittest.TestCase):
                 self.assertEqual([r['id'] for r in public['references']], [r['id'] for r in public_before['references']])
                 for change, message in (('available', 'Reviewed reference must be expired'),
                                         ('unavailable', 'Reviewed reference must be expired'),
-                                        ('provenance', 'Reviewed reference must be expired'),
+                                        ('provenance', 'Unrecognized reviewed reference identity'),
                                         ('reason', 'Missing reference limitation'),
                                         ('complete', 'Missing reference limitation')):
                     bad = copy.deepcopy(expired)
@@ -2566,6 +2566,65 @@ class EvidenceTests(unittest.TestCase):
                                         'locator': ['verifier_result', 'rewards'] if '/trials/' in row['member']
                                         and row['member'].endswith('/result.json') else []}) for row in manifest['members']}
         self.assertEqual(identities, evidence.REVIEWED_REFERENCE_IDENTITIES)
+
+    def test_reviewed_identity_cannot_be_stripped_to_bypass_expiry(self):
+        base = self.data()
+        deadline = datetime.fromisoformat(next(iter(evidence.REVIEWED_REFERENCE_EXPIRY.values())))
+        for archive, provenance, mutate in itertools.product((False, True), (False, True), (False, True)):
+            if not archive and not provenance: continue
+            with self.subTest(archive=archive, provenance=provenance, mutate=mutate):
+                data = copy.deepcopy(base); ids = [r['id'] for r in data['references']]
+                if archive:
+                    for ref in data['references']: ref['artifact_digest'] = None
+                if provenance:
+                    data['availability']['provenance'] = 'runtime_recorded'
+                    for ref in data['references']: ref['provenance'] = 'runtime_recorded'
+                if mutate:
+                    data['metrics'][0]['value'] += 0.0001
+                    obs = data['observations'][0]; obs['score'] = obs['scores']['overall'] = obs['score'] + 0.0001
+                self.assertEqual([r['id'] for r in data['references']], ids)
+                with patch.object(evidence, 'utc_now', return_value=deadline):
+                    with self.assertRaises(ValueError): evidence.validate_evidence(data)
+                    with self.assertRaises(ValueError): evidence.project(data)
+                    public = copy.deepcopy(data)
+                    for obs in public['observations']:
+                        for key in ('native_id', 'native_trial', 'native_task'): obs.pop(key)
+                    with self.assertRaises(ValueError): evidence.validate_public(public)
+                path = self.root / 'stripped-evidence.json'; write(path, data)
+                before = self.snapshot(self.root); output = self.root / 'stripped-output'
+                with patch.object(evidence, 'utc_now', return_value=deadline), redirect_stdout(StringIO()):
+                    with self.assertRaises(ValueError):
+                        evidence.main(['project', '--input', str(path), '--output', str(output)])
+                self.assertFalse(output.exists()); self.assertEqual(self.snapshot(self.root), before)
+
+        with patch.object(evidence, 'utc_now', return_value=deadline):
+            ordinary = evidence.normalize_behavioral(self.native(), 'podman')
+            evidence.project(ordinary)
+            self.assertTrue(all(ref['availability'] == 'available' for ref in ordinary['references']))
+
+    def test_normalization_retains_scanned_bundle_identity(self):
+        for kind in ('static', 'behavioral'):
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as temp:
+                parent = Path(temp); root = parent / 'input'; retained = parent / 'retained'
+                source = FIXTURES / ('static-synthetic' if kind == 'static' else 'podman-native')
+                shutil.copytree(source, root)
+                before = self.snapshot(root); scan = evidence.safe_tree; swapped = False
+                def replacing(path, *args, **kwargs):
+                    nonlocal swapped
+                    files = scan(path, *args, **kwargs)
+                    if Path(path) == root and not swapped:
+                        swapped = True; root.rename(retained); shutil.copytree(retained, root)
+                    return files
+                output = parent / 'output'
+                with patch.object(evidence, 'safe_tree', side_effect=replacing), \
+                        patch.object(evidence, 'parse_json', wraps=evidence.parse_json) as parse, \
+                        redirect_stdout(StringIO()):
+                    with self.assertRaisesRegex(ValueError, 'Input directory changed'):
+                        evidence.main(['normalize', '--kind', kind, '--skill', 'podman',
+                                       '--input', str(root), '--output', str(output)])
+                self.assertTrue(swapped)
+                parse.assert_not_called(); self.assertFalse(output.exists())
+                self.assertEqual(self.snapshot(root), before); self.assertEqual(self.snapshot(retained), before)
 
     def test_reviewed_reference_locators_match_approved_reference_identity(self):
         base = self.data()
