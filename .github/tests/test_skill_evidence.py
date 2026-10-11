@@ -2161,6 +2161,35 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual({evidence.identity(obs) for obs in public['observations']},
                          evidence.REVIEWED_OBSERVATION_PAYLOADS)
 
+    def test_reviewed_metrics_bind_approved_values(self):
+        base = self.data()
+        for index, metric in enumerate(base['metrics']):
+            with self.subTest(metric=metric['name']):
+                data = copy.deepcopy(base); data['metrics'][index]['value'] = 0.99
+                self.assert_project_rejects(data, 'Unrecognized reviewed metric value')
+        self.assertEqual({row['name']: row['value'] for row in base['metrics']}, evidence.REVIEWED_METRIC_VALUES)
+        data = copy.deepcopy(base); data['metrics'] = data['metrics'][:1]
+        data['availability'].update(status='incomplete', reasons=sorted(set(data['availability']['reasons']) | {'coverage_missing'}))
+        self.assertEqual(evidence.project(data)['metrics'], base['metrics'][:1])
+
+    def test_ordinary_input_directory_replacement_rejects_validated_identity(self):
+        root = self.root / 'ordinary-input'; shutil.copytree(FIXTURES / 'static-synthetic', root)
+        before = self.snapshot(root); outside = self.root / 'ordinary-outside'; shutil.copytree(root, outside)
+        versions = evidence.read_json(outside / 'versions.json'); versions.pop('fixture'); write(outside / 'versions.json', versions)
+        target = root / 'versions.json'; retained = self.root / 'ordinary-retained'; safe = evidence.safe_path; replaced = False
+        validations = 0
+        def validated(path, **kwargs):
+            nonlocal replaced, validations
+            result = safe(path, **kwargs)
+            if result == target: validations += 1
+            if result == target and not replaced and validations == 2:
+                root.rename(retained); outside.rename(root); replaced = True
+            return result
+        with patch.object(evidence, 'safe_path', side_effect=validated):
+            with self.assertRaisesRegex(ValueError, 'Input directory changed'):
+                evidence.normalize_static(root, 'podman')
+        self.assertTrue(replaced); self.assertEqual(self.snapshot(retained), before)
+
     def test_historical_listing_applies_remaining_budget_during_capture(self):
         repo = self.repo(); authored = repo / '.apm/skills/alpha'
         for index in range(10): (authored / f'member-{index}.md').write_text('Synthetic')

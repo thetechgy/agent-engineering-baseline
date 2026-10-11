@@ -114,6 +114,8 @@ REVIEWED_OBSERVATION_PAYLOADS = frozenset({
 })
 OBSERVATION_FIELDS = ('id', 'arm', 'case_id', 'attempt', 'score', 'scores', 'rubric_pass',
                       'deterministic_gate', 'deterministic_scores', 'references')
+REVIEWED_METRIC_VALUES = {'Skill Lift': 0.1207, 'Effectiveness': 0.7730,
+                         'Correctness': 0.9600, 'Discoverability': 0.6937}
 PROVENANCE = ('runtime_recorded', 'configured', 'reconstructed_from_declared_revision',
               'reviewed_extract', 'synthetic', 'unknown')
 REASONS = ('results_not_supplied', 'coverage_missing', 'execution_incomplete', 'case_details_missing',
@@ -154,7 +156,7 @@ def depth(value, limit, level=0, seen=None):
         require(math.isfinite(value), 'Nonfinite JSON number')
 
 
-def safe_path(path, *, directory=False, missing=False):
+def safe_path(path, *, directory=False, missing=False, directory_identities=None):
     path = Path(path).absolute()
     require('..' not in path.parts, 'Parent traversal')
     current = Path(path.anchor)
@@ -169,6 +171,8 @@ def safe_path(path, *, directory=False, missing=False):
                 & getattr(stat, 'FILE_ATTRIBUTE_REPARSE_POINT', 0x400)), 'Linked/reparse input')
         if current != path or directory:
             require(stat.S_ISDIR(info.st_mode), 'Non-directory component')
+            if directory_identities is not None:
+                directory_identities[current] = (info.st_dev, info.st_ino)
         else:
             require(stat.S_ISREG(info.st_mode) and info.st_nlink == 1, 'Special or hard-linked input')
     return path
@@ -204,10 +208,11 @@ class ReadBudget:
 
 
 def read_bytes(path, limit=JSON_LIMIT, *, budget=None):
-    path = safe_path(path)
+    directory_identities = {}
+    path = safe_path(path, directory_identities=directory_identities)
     require(SECURE_DIRECTORY_OUTPUT, 'Secure directory input unsupported')
     # O_NONBLOCK avoids hanging if a file is replaced by a FIFO between checks.
-    parent_fd = open_directory(path.parent)
+    parent_fd = open_directory(path.parent, directory_identities)
     try:
         fd = os.open(path.name, os.O_RDONLY | os.O_NOFOLLOW | getattr(os, 'O_NONBLOCK', 0), dir_fd=parent_fd)
     finally:
@@ -1096,6 +1101,9 @@ def validate_evidence(data, *, public=False):
         if any(refs_by_id[ref]['provenance'] == 'reviewed_extract' for ref in obs['references']):
             require(identity({key: obs[key] for key in OBSERVATION_FIELDS}) in REVIEWED_OBSERVATION_PAYLOADS,
                     'Unrecognized reviewed observation payload')
+    if data['kind'] == 'behavioral' and any(ref['provenance'] == 'reviewed_extract' for ref in references):
+        require(all(REVIEWED_METRIC_VALUES.get(row['name']) == row['value'] for row in data['metrics']),
+                'Unrecognized reviewed metric value')
     depth(data, 12 if public else 32)
     if public:
         require(len(encoded(data)) <= PUBLIC_LIMIT, 'Public report size exceeded')
@@ -1701,14 +1709,19 @@ def normalize_static(root, name, workspace=ROOT):
     return data
 
 
-def open_directory(path):
+def open_directory(path, identities=None):
     """Anchor each directory component without following replacement links."""
     flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
     fd = os.open(path.anchor, flags)
     try:
+        current = Path(path.anchor)
         for part in path.parts[1:]:
+            current /= part
             child = os.open(part, flags, dir_fd=fd)
             os.close(fd); fd = child
+            if identities is not None:
+                info = os.fstat(fd)
+                require(identities.get(current) == (info.st_dev, info.st_ino), 'Input directory changed')
         return fd
     except BaseException:
         os.close(fd)

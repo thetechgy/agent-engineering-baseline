@@ -47,6 +47,9 @@ Windows output support is not established.
 Input files use the same no-follow ancestor traversal and open the final member
 relative to its parent descriptor. Replacing an ancestor cannot redirect input
 bytes outside the validated tree; unsupported descriptor platforms reject reads.
+Reopened ancestor descriptors must also match the device/inode identities recorded
+during path validation. An ordinary directory replacement rejects before reading
+its member bytes, while an already anchored descriptor continues to its original.
 Standalone commands disable bytecode writes before importing repository helpers,
 so running without `PYTHONDONTWRITEBYTECODE` does not create checkout caches.
 
@@ -398,6 +401,9 @@ match one of the 20 identities derived from the pinned extract. Changing private
 trial identities and recomputing observation IDs cannot relabel retained scores,
 cases or references. These payload identities remain stable after expiry; they
 bind the reviewed extract, without attesting that its original execution occurred.
+Retained reviewed headline metrics must match the four approved name/value pairs.
+Incomplete evidence can omit measurements, but cannot replace a retained aggregate
+with another in-range value while keeping reviewed references.
 Reviewed-extract members are indexed once after manifest validation, so trial,
 reward, and summary references do not rescan the member list.
 Each normalization shares a 64 MiB byte budget across consumed native JSON,
