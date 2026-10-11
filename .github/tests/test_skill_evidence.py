@@ -112,6 +112,51 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual(len(gh['suite']['case_ids']), 24)
         self.assertEqual(gh['measurement']['status'], 'unavailable')
 
+    def test_inventory_skill_limit_precedes_processing(self):
+        root = self.root / 'catalog'
+        for index in range(1000): self.local(root, 's-' + str(index))
+        self.assertEqual(len(evidence.inventory(root)['skills']), 1000)
+        for kind in ('local', 'overlay'):
+            with self.subTest(kind=kind):
+                if kind == 'local': extra = self.local(root, 'excess')
+                else:
+                    extra = root / '.github/evals/excess'
+                    self.dataset(extra, 'excess')
+                with patch.object(evidence, 'validate_skill_metadata') as metadata, \
+                        patch.object(evidence, 'skill_content') as hashing, \
+                        patch.object(evidence, 'git_revision') as revision:
+                    with self.assertRaisesRegex(ValueError, 'Inventory limit'):
+                        evidence.inventory(root)
+                    self.assertEqual((metadata.call_count, hashing.call_count, revision.call_count), (0, 0, 0))
+                shutil.rmtree(extra)
+
+    def test_yaml_alias_graph_has_bounded_depth_work(self):
+        checkout = self.root / 'checkout'; self.local(checkout, 'alpha')
+        scripts = checkout / '.github/scripts'; scripts.mkdir(parents=True)
+        for name in ('skill_evidence.py', 'skill_reports.py'):
+            shutil.copyfile(REPO / '.github/scripts' / name, scripts / name)
+        lock = checkout / 'apm.lock.yaml'
+        text = 'dependencies: []\ndeployments: []\na0: &a0 [0]\n'
+        text += ''.join(f'a{i}: &a{i} [*a{i-1}, *a{i-1}]\n' for i in range(1, 31))
+        lock.write_text(text)
+        output = self.root / 'alias-output'
+        result = subprocess.run([sys.executable, str(scripts / 'skill_evidence.py'),
+                                 'inventory', '--output', str(output)],
+                                env={**os.environ, 'PYTHONDONTWRITEBYTECODE': '1'},
+                                capture_output=True, text=True, timeout=5)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(lock.read_text(), text)
+        with patch.object(evidence, 'require', wraps=evidence.require) as checks:
+            value = evidence.read_yaml(lock)
+            self.assertLess(checks.call_count, 4000)
+        self.assertIs(value['a30'][0], value['a30'][1])
+        for unsafe in ('cycle: &cycle [*cycle]\n', 'number: .nan\n'):
+            lock.write_text(unsafe)
+            with self.assertRaises(ValueError): evidence.read_yaml(lock)
+        shared = [0]; nested = shared
+        for _ in range(32): nested = [nested]
+        with self.assertRaises(ValueError): evidence.depth({'short': shared, 'deep': nested}, 32)
+
     def test_future_source_and_suite(self):
         root = self.repo(); self.local(root, 'future', True)
         rows = evidence.inventory(root)['skills']
@@ -676,6 +721,32 @@ class EvidenceTests(unittest.TestCase):
         result.pop('dataset_digest_algorithm'); write(path, result)
         data = evidence.normalize_behavioral(root, 'podman')
         self.assertEqual(data['dataset']['staged_algorithm'], 'skill-evaluator-dataset-snapshot/1')
+
+    def test_native_rubric_threshold_matches_attempt_policy(self):
+        root = self.native(); run = next((root / 'results/podman').iterdir())
+        path = run / 'attempt_policy.json'; policy = evidence.read_json(path)
+        policy['pass_threshold'] = 0.9; write(path, policy)
+        with self.assertRaisesRegex(ValueError, 'Rubric attempt-policy threshold mismatch'):
+            evidence.normalize_behavioral(root, 'podman')
+        self.assert_native_cli_rejects(root)
+        data = self.data(); data['policy']['attempts']['pass_threshold'] = 0.9
+        data['policy']['id'] = evidence.identity({k: data['policy'][k] for k in
+            ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')})
+        self.assert_project_rejects(data, 'Rubric attempt-policy threshold mismatch')
+
+    def test_shared_rubric_threshold_known_unknown_combinations(self):
+        for policy_threshold, rubric_threshold in itertools.product((None, 0.5, 0.9), repeat=2):
+            with self.subTest(policy=policy_threshold, rubric=rubric_threshold):
+                data = evidence.read_json(FIXTURES / 'gh-no-model.json')
+                data['policy']['attempts']['pass_threshold'] = policy_threshold
+                data['policy']['id'] = evidence.identity({k: data['policy'][k] for k in
+                    ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')})
+                for arm in data['arms']: arm['rubric']['threshold'] = rubric_threshold
+                if policy_threshold is None or rubric_threshold is None or policy_threshold == rubric_threshold:
+                    evidence.project(data)
+                else:
+                    with self.assertRaisesRegex(ValueError, 'Rubric attempt-policy threshold mismatch'):
+                        evidence.project(data)
 
     def test_runtime_observations_against_supplied_policy(self):
         config_changes = (

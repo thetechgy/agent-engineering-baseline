@@ -126,6 +126,11 @@ Normalization bundles and catalog/overlay trees allow at most 100,000 entries;
 authored skill trees allow 2,000 entries and 1,000 files. Entries include
 directories and unused or later-excluded files, so empty directories and unused
 members cannot bypass the traversal cap. Exceeding a cap rejects the contract.
+The discovered local/overlay skill-name union is limited to 1,000 before any
+per-skill metadata parsing, content hashing, or revision query. YAML aliases
+retain shared objects; depth validation remembers each container's deepest
+visited level so work is bounded by input nodes and the depth limit rather than
+the number of alias paths. Cycles and over-depth paths still reject.
 
 ## Identity, provenance and coverage
 
@@ -242,6 +247,9 @@ and deterministic scores are checked independently; no averages or new scores
 are computed. Skill Lift remains the native difference and Discoverability the
 native skill-execution rubric. Static findings and production success remain
 separate from both.
+Known arm rubric thresholds must agree with the canonical attempt-policy
+threshold in shared normalized/public validation. A missing value remains null;
+the validator does not fill either carrier from the other.
 
 Reason codes are `results_not_supplied`, `coverage_missing`,
 `execution_incomplete`, `case_details_missing`, `metadata_missing`,

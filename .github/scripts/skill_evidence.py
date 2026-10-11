@@ -54,14 +54,18 @@ def identity(value):
                                    ensure_ascii=True, allow_nan=False).encode())
 
 
-def depth(value, limit, level=0):
+def depth(value, limit, level=0, seen=None):
     require(level <= limit, 'JSON depth exceeded')
-    if isinstance(value, dict):
-        for child in value.values():
-            depth(child, limit, level + 1)
-    elif isinstance(value, list):
-        for child in value:
-            depth(child, limit, level + 1)
+    if isinstance(value, (dict, list)):
+        seen = {} if seen is None else seen
+        # YAML aliases preserve shared containers. Revisit only at a deeper
+        # level, bounding work by the depth limit rather than alias paths.
+        marker = id(value)
+        if seen.get(marker, -1) >= level:
+            return
+        seen[marker] = level
+        for child in value.values() if isinstance(value, dict) else value:
+            depth(child, limit, level + 1, seen)
     elif type(value) is float:
         require(math.isfinite(value), 'Nonfinite JSON number')
 
@@ -461,8 +465,10 @@ def inventory(workspace=ROOT):
     if overlays.exists():
         safe_tree(overlays)
         overlay_names = [p.parent.parent.name for p in overlays.glob('*/evals/evals.*')]
+    discovered = sorted(set(names + overlay_names))
+    require(len(discovered) <= MAX_CASES, 'Inventory limit')
     rows = []
-    for name in sorted(set(names + overlay_names)):
+    for name in discovered:
         skill_id(name)
         owners = [d for d in closed_dependencies if d.get('name') == name]
         require(len(owners) <= 1 and not (name in names and owners), 'Conflicting active source owners')
@@ -770,6 +776,9 @@ def validate_evidence(data, *, public=False):
         rubric = arm['rubric']; closed(rubric, ('passed_cases', 'total_cases', 'threshold'))
         optional(rubric['passed_cases'], lambda v: count(v, MAX_CASES)); optional(rubric['total_cases'], lambda v: count(v, MAX_CASES))
         optional(rubric['threshold'], number)
+        policy_threshold = data['policy']['attempts']['pass_threshold']
+        if rubric['threshold'] is not None and policy_threshold is not None:
+            require(rubric['threshold'] == policy_threshold, 'Rubric attempt-policy threshold mismatch')
         if rubric['total_cases'] is not None:
             require(rubric['total_cases'] == len(ids) and rubric['passed_cases'] is not None
                     and rubric['passed_cases'] <= rubric['total_cases'], 'Rubric denominator mismatch')
