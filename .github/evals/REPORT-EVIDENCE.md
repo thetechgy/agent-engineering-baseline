@@ -300,7 +300,12 @@ native skill-execution rubric. Static findings and production success remain
 separate from both.
 Known arm rubric thresholds must agree with the canonical attempt-policy
 threshold in shared normalized/public validation. A missing value remains null;
-the validator does not fill either carrier from the other.
+the validator does not fill either carrier from the other. For validation only,
+it uses the arm threshold when known, otherwise the known policy threshold.
+This effective threshold checks required scored outcomes for complete case
+details and checks every supplied outcome against its score, including partial
+case details. Zero is a known threshold; equality passes. Only when both
+carriers are unknown does validation leave the score/outcome relationship unknown.
 
 Reason codes are `results_not_supplied`, `coverage_missing`,
 `execution_incomplete`, `case_details_missing`, `metadata_missing`,
@@ -471,7 +476,18 @@ The approved manifest records no durable retention of original members. At or
 after its recorded UTC expiration, normalization marks its original references
 `expired` and adds `reference_expired`, keeping the report incomplete. It samples
 time once for each normalization, preserving native measurements and stable
-reference identities. Retained reduced extract bytes do not establish continued
+reference identities. Trusted expiry metadata is keyed by the approved artifact
+ID and archive digest and checked against the pinned manifest. Shared internal
+and public validation recheck that deadline; standalone projection samples UTC
+once and reuses it for both checks. A record serialized before expiry must
+explicitly mark every reviewed reference `expired`, retain `reference_expired`,
+and report supporting-evidence availability as `incomplete` when projected at
+or after the deadline. Contradictory records reject before output allocation;
+projection does not silently rewrite them. Incomplete supporting-evidence
+availability does not invalidate a completed evaluation: execution status,
+historical scores, trial coverage, rubric counts, and identities remain unchanged.
+Analysis sufficiency is outside this contract.
+Retained reduced extract bytes do not establish continued
 availability of the original members. An external retention service or override
 is outside this contract.
 

@@ -36,6 +36,13 @@ SECURE_DIRECTORY_OUTPUT = (all(fn in os.supports_dir_fd for fn in (os.open, os.m
 REVIEWED_EXTRACT_MANIFESTS = frozenset({
     'sha256:4f8ab06638a37c970dfd5a97f057da8505a0b57767a332b41d4e0c2c8e8066ea',
 })
+# Original-artifact deadlines from the pinned manifest. Serialized availability
+# is not evidence of durable retention and cannot override these deadlines.
+REVIEWED_REFERENCE_EXPIRY = {
+    ('github-artifact-10590172928',
+     'sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca'):
+        '2026-10-19T19:11:15Z',
+}
 require = reports.require
 # Metadata identities from the exact reviewed manifest above, independently
 # checked against its pinned bytes by the fixture contract. No execution attestation.
@@ -848,7 +855,8 @@ def behavioral_identity_missing(data):
                data['policy']['attempts']['maximum']))
 
 
-def validate_evidence(data, *, public=False):
+def validate_evidence(data, *, public=False, _observed_at=None):
+    observed_at = _observed_at
     if type(data) is _StaticEvidence:
         data = dict(data)
     fields = ('schema_version', 'kind', 'source', 'run_id', 'dataset', 'policy', 'arms', 'metrics',
@@ -880,6 +888,14 @@ def validate_evidence(data, *, public=False):
     for ref in references:
         validate_reference(ref); require(ref['id'] not in ref_ids, 'Duplicate reference'); ref_ids.add(ref['id'])
         refs_by_id[ref['id']] = ref
+        deadline = REVIEWED_REFERENCE_EXPIRY.get((ref['artifact_id'], ref['artifact_digest']))
+        if ref['provenance'] == 'reviewed_extract':
+            require(deadline is not None, 'Missing reviewed reference expiration')
+        if deadline is not None:
+            if observed_at is None:
+                observed_at = utc_now()
+            if observed_at >= datetime.fromisoformat(deadline):
+                require(ref['availability'] == 'expired', 'Reviewed reference must be expired')
         if ref['availability'] != 'available':
             reason = 'reference_expired' if ref['availability'] == 'expired' else 'reference_unavailable'
             require(availability['status'] == 'incomplete' and reason in availability['reasons'], 'Missing reference limitation')
@@ -990,6 +1006,7 @@ def validate_evidence(data, *, public=False):
         policy_threshold = data['policy']['attempts']['pass_threshold']
         if rubric['threshold'] is not None and policy_threshold is not None:
             require(rubric['threshold'] == policy_threshold, 'Rubric attempt-policy threshold mismatch')
+        threshold = rubric['threshold'] if rubric['threshold'] is not None else policy_threshold
         require((rubric['passed_cases'] is None) == (rubric['total_cases'] is None),
                 'Missing rubric aggregate pair')
         if rubric['total_cases'] is not None:
@@ -998,12 +1015,12 @@ def validate_evidence(data, *, public=False):
             if cov['case_details'] == 'complete':
                 passes = {o['case_id'] for o in recorded if o['rubric_pass'] is True}
                 require(len(passes) == rubric['passed_cases'], 'Rubric count mismatch')
-        if rubric['threshold'] is not None:
+        if threshold is not None:
             if cov['case_details'] == 'complete':
                 require(all(o['score'] is None or o['rubric_pass'] is not None for o in recorded),
                         'Missing scored rubric outcome')
             require(all(o['rubric_pass'] is None or o['score'] is not None
-                        and o['rubric_pass'] == (o['score'] >= rubric['threshold']) for o in recorded),
+                        and o['rubric_pass'] == (o['score'] >= threshold) for o in recorded),
                     'Contradictory native rubric pass')
         if arm['execution_status'] == 'succeeded':
             require(arm['execution_error_count'] == 0, 'Succeeded arm has errors')
@@ -1192,7 +1209,8 @@ class _StaticEvidence(dict):
 
 
 def project(data, *, static_bundle=None):
-    validate_evidence(data)
+    observed_at = utc_now()
+    validate_evidence(data, _observed_at=observed_at)
     if data['kind'] == 'static' and data['availability']['status'] != 'unavailable':
         if type(data) is _StaticEvidence:
             witness = data
@@ -1207,11 +1225,11 @@ def project(data, *, static_bundle=None):
     out['observations'] = [{key: copy.deepcopy(obs[key]) for key in
         OBSERVATION_FIELDS}
         for obs in data['observations']]
-    validate_evidence(out, public=True)
+    validate_evidence(out, public=True, _observed_at=observed_at)
     return out
 
 
-def load_extract(root, *, budget=None):
+def load_extract(root, *, budget=None, _observed_at=None):
     path = root / 'extract-manifest.json'
     if not path.exists():
         return None
@@ -1226,6 +1244,8 @@ def load_extract(root, *, budget=None):
         token(value['origin'][key])
     require(bool(re.fullmatch(r'[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z', value['origin']['expires_at'])), 'Invalid recorded expiration')
     require(value['artifact_id'] == 'github-artifact-' + value['origin']['artifact_id'], 'Extract artifact identity mismatch')
+    require(REVIEWED_REFERENCE_EXPIRY.get((value['artifact_id'], value['archive_digest']))
+            == value['origin']['expires_at'], 'Reviewed reference expiration mismatch')
     require(type(value['members']) is list and len(value['members']) <= MAX_REFERENCES, 'Extract limit')
     names = []
     for row in value['members']:
@@ -1236,7 +1256,8 @@ def load_extract(root, *, budget=None):
     # One time observation for the whole normalization. No durable-original
     # retention is recorded by the supported manifest, so expiry is fail-closed.
     deadline = datetime.fromisoformat(value['origin']['expires_at'])
-    value['_reference_availability'] = 'expired' if utc_now() >= deadline else 'available'
+    observed_at = utc_now() if _observed_at is None else _observed_at
+    value['_reference_availability'] = 'expired' if observed_at >= deadline else 'available'
     return value
 
 
@@ -1338,7 +1359,8 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     safe_tree(root); skill_id(name)
     run = select_run(root, name, selected)
     budget = ReadBudget()
-    extract = load_extract(root, budget=budget)
+    observed_at = utc_now()
+    extract = load_extract(root, budget=budget, _observed_at=observed_at)
     artifact = extract['artifact_id'] if extract else run.name
     member_digests = {}
     def read_member(path, *, native_snapshot=False):
@@ -1649,7 +1671,7 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     data['observations'].sort(key=lambda o: (o['arm'], o['case_id'], o['attempt'] or 0, o['id']))
     data['availability'] = {'status': 'incomplete' if limitations else 'complete',
                             'reasons': sorted(limitations), 'provenance': 'reviewed_extract' if extract else 'runtime_recorded'}
-    validate_evidence(data)
+    validate_evidence(data, _observed_at=observed_at)
     return data
 
 

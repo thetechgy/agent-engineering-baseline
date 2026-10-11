@@ -1,7 +1,7 @@
 """Offline inventory, pinned native ingestion, and public-boundary regressions."""
 
 import copy
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import hashlib
 import json
 import itertools
@@ -1275,6 +1275,79 @@ class EvidenceTests(unittest.TestCase):
         self.assertTrue(all(r['availability'] == 'available' for r in data['references']))
         self.assertNotIn('reference_expired', data['availability']['reasons'])
 
+    def test_serialized_reviewed_expiry_rechecked_before_cli_allocation(self):
+        base = self.data()
+        public = evidence.project(base)
+        deadline = datetime.fromisoformat(evidence.read_json(
+            FIXTURES / 'podman-native/extract-manifest.json')['origin']['expires_at'])
+        path = self.root / 'evidence.json'; write(path, base)
+        output = self.root / 'rejected-expiry'
+        before = self.snapshot(self.root)
+        for now in (deadline, deadline + timedelta(seconds=1)):
+            with self.subTest(now=now), patch.object(evidence, 'utc_now', return_value=now):
+                with self.assertRaisesRegex(ValueError, 'Reviewed reference must be expired'), redirect_stdout(StringIO()):
+                    evidence.main(['project', '--input', str(path), '--output', str(output)])
+                self.assertFalse(output.exists())
+                self.assertEqual(self.snapshot(self.root), before)
+                with self.assertRaisesRegex(ValueError, 'Reviewed reference must be expired'):
+                    evidence.validate_evidence(base)
+                with self.assertRaisesRegex(ValueError, 'Reviewed reference must be expired'):
+                    evidence.validate_public(public)
+
+    def test_reviewed_projection_expiry_boundaries_and_limitations(self):
+        base = self.data()
+        deadline = datetime.fromisoformat(evidence.read_json(
+            FIXTURES / 'podman-native/extract-manifest.json')['origin']['expires_at'])
+        public_before = evidence.project(base)
+        with patch.object(evidence, 'utc_now', side_effect=[deadline - timedelta(seconds=1), deadline]) as clock:
+            self.assertEqual(evidence.project(base), public_before)
+            self.assertEqual(clock.call_count, 1)  # Internal and public checks share one observation.
+        expired = copy.deepcopy(base)
+        for ref in expired['references']: ref['availability'] = 'expired'
+        expired['availability'].update(status='incomplete', reasons=sorted(
+            set(base['availability']['reasons']) | {'reference_expired'}))
+        for now in (deadline, deadline + timedelta(seconds=1)):
+            with self.subTest(now=now), patch.object(evidence, 'utc_now', return_value=now):
+                public = evidence.project(expired)
+                evidence.validate_evidence(expired); evidence.validate_public(public)
+                for key in ('metrics', 'observations', 'arms', 'run_id', 'policy', 'dataset', 'source'):
+                    self.assertEqual(public[key], public_before[key])
+                self.assertEqual([r['id'] for r in public['references']], [r['id'] for r in public_before['references']])
+                for change, message in (('available', 'Reviewed reference must be expired'),
+                                        ('unavailable', 'Reviewed reference must be expired'),
+                                        ('provenance', 'Reviewed reference must be expired'),
+                                        ('reason', 'Missing reference limitation'),
+                                        ('complete', 'Missing reference limitation')):
+                    bad = copy.deepcopy(expired)
+                    if change in ('available', 'unavailable'):
+                        bad['references'][0]['availability'] = change
+                    elif change == 'provenance':
+                        for ref in bad['references']:
+                            ref.update(provenance='runtime_recorded', availability='available')
+                        bad['availability']['provenance'] = 'runtime_recorded'
+                    elif change == 'reason':
+                        bad['availability']['reasons'] = ['metadata_missing']
+                    else:
+                        bad['availability'].update(status='complete', reasons=[])
+                    with self.subTest(change=change):
+                        with self.assertRaisesRegex(ValueError, message): evidence.validate_evidence(bad)
+                        bad_public = copy.deepcopy(bad)
+                        for obs in bad_public['observations']:
+                            for key in ('native_id', 'native_trial', 'native_task'): obs.pop(key)
+                        with self.assertRaisesRegex(ValueError, message): evidence.validate_public(bad_public)
+                        path = self.root / 'expired.json'; write(path, bad)
+                        before = self.snapshot(self.root); output = self.root / 'rejected-expiry'
+                        with self.assertRaisesRegex(ValueError, message), redirect_stdout(StringIO()):
+                            evidence.main(['project', '--input', str(path), '--output', str(output)])
+                        self.assertFalse(output.exists()); self.assertEqual(self.snapshot(self.root), before)
+                path = self.root / 'expired.json'; write(path, expired)
+                output = self.root / ('accepted-' + str(now.second))
+                before = path.read_bytes()
+                with redirect_stdout(StringIO()):
+                    evidence.main(['project', '--input', str(path), '--output', str(output)])
+                self.assertEqual(evidence.read_json(output / 'public-report.json'), public)
+                self.assertEqual(path.read_bytes(), before)
+
     def test_retained_member_verification(self):
         root = self.native(); path = root / 'versions.json'
         ref = evidence.reference(root, path, 'fixture', ('skillevaluator',))
@@ -1493,12 +1566,77 @@ class EvidenceTests(unittest.TestCase):
                 evidence.project(data)
         data = self.data(); self.synthetic_skill_references(data, 'podman'); data['observations'][0]['rubric_pass'] = None
         data['arms'][0]['rubric'].update(threshold=None, passed_cases=9)
+        data['policy']['attempts']['pass_threshold'] = None
+        data['policy']['id'] = evidence.identity({k: data['policy'][k] for k in
+                                                ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')})
         evidence.project(data)  # Unknown thresholds do not invent an outcome.
         data = self.data(); self.synthetic_skill_references(data, 'podman'); data['observations'][0]['rubric_pass'] = None
         data['arms'][0]['coverage']['case_details'] = 'partial'
         data['availability'].update(status='incomplete', reasons=sorted(set(
             data['availability']['reasons']) | {'case_details_missing'}))
         evidence.project(data)  # Partial case details remain explicitly incomplete.
+
+    def test_policy_only_threshold_bypass_rejected_by_cli(self):
+        data = self.data(); self.synthetic_skill_references(data, 'podman')
+        for arm in data['arms']: arm['rubric'].update(threshold=None, passed_cases=0)
+        for obs in data['observations']: obs['rubric_pass'] = None
+        path = self.root / 'policy-only.json'; write(path, data)
+        before = self.snapshot(self.root); output = self.root / 'rejected-policy'
+        result = subprocess.run([sys.executable, str(REPO / '.github/scripts/skill_evidence.py'),
+                                 'project', '--input', str(path), '--output', str(output)],
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertEqual(result.stderr, 'Evidence contract rejected (ValueError)\n')
+        self.assertFalse(output.exists()); self.assertEqual(self.snapshot(self.root), before)
+        self.assert_project_rejects(data, 'Missing scored rubric outcome')
+
+    def test_effective_threshold_outcomes_and_unchanged_carriers(self):
+        for policy, arm_threshold, arm_name, score in itertools.product(
+                (None, 0.0, 0.5), (None, 0.0, 0.5), ('with_skill', 'without_skill'), (0.0, 0.5, 0.75)):
+            with self.subTest(policy=policy, threshold=arm_threshold, arm=arm_name, score=score):
+                data = self.data(); self.synthetic_skill_references(data, 'podman')
+                data['policy']['attempts']['pass_threshold'] = policy
+                data['policy']['id'] = evidence.identity({k: data['policy'][k] for k in
+                    ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')})
+                effective = arm_threshold if arm_threshold is not None else policy
+                for arm in data['arms']: arm['rubric']['threshold'] = arm_threshold
+                selected = next(arm for arm in data['arms'] if arm['name'] == arm_name)
+                row = next(obs for obs in data['observations'] if obs['arm'] == arm_name)
+                row['score'] = row['scores']['overall'] = score
+                for obs in data['observations']:
+                    obs['rubric_pass'] = obs['score'] >= effective if effective is not None else None
+                for arm in data['arms']:
+                    arm['rubric']['passed_cases'] = len({obs['case_id'] for obs in data['observations']
+                                                       if obs['arm'] == arm['name'] and obs['rubric_pass'] is True})
+                if policy is not None and arm_threshold is not None and policy != arm_threshold:
+                    with self.assertRaisesRegex(ValueError, 'Rubric attempt-policy threshold mismatch'):
+                        evidence.project(data)
+                    continue
+                public = evidence.project(data)
+                self.assertEqual(public['policy'], data['policy']); self.assertEqual(public['arms'], data['arms'])
+                evidence.validate_evidence(data); evidence.validate_public(public)
+                if effective is None: continue
+                def rejects(message):
+                    with self.assertRaisesRegex(ValueError, message): evidence.validate_evidence(data)
+                    with self.assertRaisesRegex(ValueError, message): evidence.project(data)
+                    public = copy.deepcopy(data)
+                    for obs in public['observations']:
+                        for key in ('native_id', 'native_trial', 'native_task'): obs.pop(key)
+                    with self.assertRaisesRegex(ValueError, message): evidence.validate_public(public)
+                row['rubric_pass'] = not (score >= effective)
+                selected['rubric']['passed_cases'] = len({obs['case_id'] for obs in data['observations']
+                                                         if obs['arm'] == arm_name and obs['rubric_pass'] is True})
+                rejects('Contradictory native rubric pass')
+                row['rubric_pass'] = None
+                selected['rubric']['passed_cases'] = len({obs['case_id'] for obs in data['observations']
+                                                         if obs['arm'] == arm_name and obs['rubric_pass'] is True})
+                rejects('Missing scored rubric outcome')
+                selected['coverage']['case_details'] = 'partial'
+                data['availability'].update(status='incomplete', reasons=sorted(
+                    set(data['availability']['reasons']) | {'case_details_missing'}))
+                evidence.project(data)  # Missing partial details do not invent outcomes.
+                row['rubric_pass'] = not (score >= effective)
+                rejects('Contradictory native rubric pass')
 
     def test_rubric_aggregates_require_numerator_and_denominator_together(self):
         for arm, status, passes in itertools.product(('with_skill', 'without_skill'),
@@ -2166,6 +2304,8 @@ class EvidenceTests(unittest.TestCase):
         manifest_path = FIXTURES / 'podman-native/extract-manifest.json'
         self.assertIn(evidence.digest_bytes(manifest_path.read_bytes()), evidence.REVIEWED_EXTRACT_MANIFESTS)
         manifest = evidence.read_json(manifest_path)
+        self.assertEqual(evidence.REVIEWED_REFERENCE_EXPIRY,
+                         {(manifest['artifact_id'], manifest['archive_digest']): manifest['origin']['expires_at']})
         identities = {evidence.identity({'artifact_id': manifest['artifact_id'], 'artifact_digest': manifest['archive_digest'],
                                         'member': row['member'], 'digest': row['original_digest'],
                                         'locator': ['verifier_result', 'rewards'] if '/trials/' in row['member']
@@ -3121,9 +3261,9 @@ class EvidenceTests(unittest.TestCase):
                 return super().__getitem__(key)
         reference = evidence.reference_from_digest; validate = evidence.validate_evidence
         def counted(*args, **kwargs): return CountingReference(reference(*args, **kwargs))
-        def plain_validation(data):
+        def plain_validation(data, **kwargs):
             data['references'] = [dict(row) for row in data['references']]
-            return validate(data)
+            return validate(data, **kwargs)
         with patch.object(evidence, 'reference_from_digest', side_effect=counted), \
                 patch.object(evidence, 'validate_evidence', side_effect=plain_validation):
             actual = evidence.normalize_behavioral(root, 'podman')
