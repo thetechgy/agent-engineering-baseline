@@ -279,7 +279,16 @@ def source(name, owner='unknown', repo=None, rev=None, path=None, contents=None,
 def offline_git(workspace, *args, text=False, max_entries=None):
     # Missing promisor objects stay unknown; replacement refs cannot alter exact evidence.
     command = ['git', '-C', str(workspace), *args]
-    env = {**os.environ, 'GIT_NO_LAZY_FETCH': '1', 'GIT_NO_REPLACE_OBJECTS': '1'}
+    # Git's repository-local environment (rev-parse --local-env-vars), plus
+    # discovery/namespace selectors, must not redirect the requested checkout.
+    selectors = {'GIT_ALTERNATE_OBJECT_DIRECTORIES', 'GIT_CONFIG', 'GIT_CONFIG_PARAMETERS',
+                 'GIT_CONFIG_COUNT', 'GIT_OBJECT_DIRECTORY', 'GIT_DIR', 'GIT_WORK_TREE',
+                 'GIT_IMPLICIT_WORK_TREE', 'GIT_GRAFT_FILE', 'GIT_INDEX_FILE', 'GIT_REPLACE_REF_BASE',
+                 'GIT_PREFIX', 'GIT_SHALLOW_FILE', 'GIT_COMMON_DIR', 'GIT_NAMESPACE',
+                 'GIT_CEILING_DIRECTORIES', 'GIT_DISCOVERY_ACROSS_FILESYSTEM'}
+    env = {key: value for key, value in os.environ.items()
+           if key not in selectors and not key.startswith(('GIT_CONFIG_KEY_', 'GIT_CONFIG_VALUE_'))}
+    env.update(GIT_NO_LAZY_FETCH='1', GIT_NO_REPLACE_OBJECTS='1')
     if max_entries is None:
         return subprocess.run(command, capture_output=True, text=text, env=env)
     require(not text, 'Binary tree listing required')
@@ -1146,6 +1155,26 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     return data
 
 
+def static_required_gate(scan):
+    """Match the pinned reporter's blocking and advisory-skip semantics."""
+    boolean(scan['passed'])
+    enum(scan['status'], ('passed', 'failed', 'incomplete', 'skipped'))
+    gating = scan.get('gating')
+    require(gating is None or type(gating) is dict, 'Invalid static gating')
+    if gating is not None:
+        boolean(gating.get('blocking', True))
+    tier3 = scan.get('tier3', {})
+    provenance = tier3.get('provenance', {}) if type(tier3) is dict else {}
+    advisory_skip = (scan['validator'] == 'AGENT_EVAL'
+                     and not (gating is not None and gating.get('blocking', False))
+                     and type(provenance) is dict and provenance.get('advisory') is True
+                     and provenance.get('reason') == 'skipped')
+    expected = ('skipped' if advisory_skip else 'incomplete' if scan.get('incomplete_scans')
+                else 'passed' if scan['passed'] else 'failed')
+    require(scan['status'] == expected, 'Static validator status contradiction')
+    return scan['passed'] or (not gating.get('blocking', True) if gating is not None else advisory_skip)
+
+
 def normalize_static(root, name, workspace=ROOT):
     safe_tree(root); skill_id(name)
     catalog_path = root / 'reports/catalog-summary.json'; catalog, catalog_digest = read_json_and_digest(catalog_path)
@@ -1184,6 +1213,9 @@ def normalize_static(root, name, workspace=ROOT):
         for scanner in extra_scanners:
             token(scanner)
         require(set(extra_scanners) <= set(native['incomplete_scans']), 'Inconsistent incomplete scanner identity')
+    gates = [static_required_gate(scan) for scan in native['results']]
+    require(native['overall_passed'] == all(gates),
+            'Static required gate contradiction')
     detailed = dict.fromkeys(severity, 0)
     for scan in native['results']:
         scan_counts = dict.fromkeys(severity, 0)

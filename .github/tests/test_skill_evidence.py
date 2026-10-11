@@ -296,6 +296,53 @@ class EvidenceTests(unittest.TestCase):
                 self.assertFalse(any(event.get('event') == 'child_start' and 'fetch' in event.get('argv', [])
                                      for event in events))
 
+    def test_git_reads_ignore_inherited_repository_selectors(self):
+        native = self.native()
+        def git(repo, *args):
+            return subprocess.run(['git', '-C', str(repo), *args], check=True,
+                                  capture_output=True, text=True).stdout.strip()
+        repos = []
+        for name in ('requested', 'foreign'):
+            repo = self.root / name; repo.mkdir()
+            authored = self.local(repo, 'podman', True)
+            with (authored / 'SKILL.md').open('a') as stream: stream.write(name)
+            git(repo, 'init', '-q'); git(repo, 'add', '.apm')
+            git(repo, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+                'commit', '-qm', name)
+            repos.append(repo)
+        repo, foreign = repos
+        rev = git(repo, 'rev-parse', 'HEAD')
+        linked = self.root / 'linked'
+        git(repo, 'worktree', 'add', '--detach', str(linked), rev)
+        self.mutate(native, '/run_config.json', lambda d: d['evaluated_source'].update(commit=rev))
+        self.mutate(native, '/result.json', lambda d: d['run_config']['evaluated_source'].update(commit=rev))
+        self.mutate(native, '/provenance.json', lambda d: d.update(revision=rev))
+        settings = [
+            {'GIT_DIR': str(foreign / '.git')},
+            {'GIT_COMMON_DIR': str(foreign / '.git')},
+            {'GIT_OBJECT_DIRECTORY': str(foreign / '.git/objects')},
+            {'GIT_WORK_TREE': str(foreign), 'GIT_INDEX_FILE': str(foreign / '.git/index')},
+            {'GIT_SHALLOW_FILE': str(self.root / 'absent-shallow'), 'GIT_GRAFT_FILE': str(self.root / 'absent-grafts')},
+            {'GIT_CONFIG_COUNT': '1', 'GIT_CONFIG_KEY_0': 'core.worktree', 'GIT_CONFIG_VALUE_0': str(foreign)},
+        ]
+        trace = self.root / 'selectors-trace.jsonl'
+        for checkout, setting in itertools.product((repo, linked), settings):
+            with self.subTest(linked=checkout == linked, selectors=list(setting)), \
+                    patch.dict(os.environ, {**setting, 'GIT_NO_LAZY_FETCH': '0', 'GIT_TRACE2_EVENT': str(trace)}):
+                self.assertEqual(evidence.git_revision(checkout), rev)
+                inventory = evidence.inventory(checkout)
+                self.assertEqual(inventory['skills'][0]['source']['revision'], rev)
+                data = evidence.normalize_behavioral(native, 'podman', workspace=checkout)
+                current = evidence.skill_content(checkout / '.apm/skills/podman')
+                self.assertEqual(data['source']['content']['digest'], current['digest'])
+                self.assertEqual(data['source']['content']['manifest'], current['manifest'])
+                self.assertEqual(data['dataset']['authored_digest'], evidence.digest_bytes(
+                    (checkout / '.apm/skills/podman/evals/evals.json').read_bytes()))
+                evidence.project(data)
+        events = [json.loads(line) for line in trace.read_text().splitlines()]
+        self.assertFalse(any(event.get('event') == 'child_start' and 'fetch' in event.get('argv', [])
+                             for event in events))
+
     def test_historical_tree_entry_limit_precedes_blob_reads(self):
         for entries in (1000, 1001):
             with self.subTest(entries=entries), tempfile.TemporaryDirectory() as temp:
@@ -774,6 +821,51 @@ class EvidenceTests(unittest.TestCase):
         data['availability'].update(status='complete', reasons=[])
         with self.assertRaises(ValueError): evidence.project(data)
 
+    def test_static_aggregate_matches_pinned_required_gate_outcomes(self):
+        # JSONReporter.render_all / reporting.base at the supported evaluator pin:
+        # explicit nonblocking results and advisory AGENT_EVAL skips permit a pass.
+        cases = [
+            ('SECRETS', True, 'passed', {}, True),
+            ('SECRETS', False, 'failed', {}, False),
+            ('SECRETS', False, 'failed', {'gating': {'blocking': True}}, False),
+            ('SECRETS', False, 'failed', {'gating': {'blocking': False}}, True),
+            ('AGENT_EVAL', False, 'skipped', {'tier3': {'provenance': {'advisory': True, 'reason': 'skipped'}}}, True),
+            ('AGENT_EVAL', False, 'failed', {'gating': {'blocking': True},
+                'tier3': {'provenance': {'advisory': True, 'reason': 'skipped'}}}, False),
+            ('SECRETS', False, 'incomplete', {}, False),
+        ]
+        for validator, passed, status, extra, gate in cases:
+            for overall in (False, True):
+                with self.subTest(validator=validator, status=status, extra=extra, overall=overall), \
+                        tempfile.TemporaryDirectory() as temp:
+                    root = Path(temp) / 'static'; shutil.copytree(FIXTURES / 'static-synthetic', root)
+                    path = next((root / 'reports/podman').glob('*.json')); native = evidence.read_json(path)
+                    scan = native['results'][0]
+                    scan.update(validator=validator, passed=passed, status=status, **extra)
+                    scan['incomplete_scans'] = ['gitleaks'] if status == 'incomplete' else []
+                    native.update(overall_passed=overall, incomplete_scans=scan['incomplete_scans'],
+                                  overall_status='incomplete' if status == 'incomplete' else 'passed' if overall else 'failed')
+                    write(path, native)
+                    self.mutate(root, '/catalog-summary.json', lambda d: (
+                        d.update(failed=0 if overall else 1), d['skills'][0].update(
+                            passed=overall, reason='' if overall else 'validation failed')))
+                    if overall == gate:
+                        data = evidence.normalize_static(root, 'podman'); evidence.project(data)
+                        self.assertEqual(data['scans'][1]['status'], status)
+                    else:
+                        with self.assertRaisesRegex(ValueError, 'Static required gate contradiction'):
+                            evidence.normalize_static(root, 'podman')
+        root = self.root / 'contradictory-status'; shutil.copytree(FIXTURES / 'static-synthetic', root)
+        path = next((root / 'reports/podman').glob('*.json')); native = evidence.read_json(path)
+        second = copy.deepcopy(native['results'][0])
+        second.update(validator='SECOND', passed=True, status='failed', incomplete_scans=[], findings=[])
+        second['summary']['high_count'] = 0
+        native['results'].append(second); native['total_validators'] = 2
+        write(path, native)
+        # A first failing gate must not skip consistency checks on later results.
+        with self.assertRaisesRegex(ValueError, 'Static validator status contradiction'):
+            evidence.normalize_static(root, 'podman')
+
     def test_static_detailed_severity_counts_do_not_exceed_totals(self):
         for level, total, reported in itertools.product(('critical', 'high', 'medium', 'low'),
                                                         (0, 1, 2), (None, 0, 1, 2)):
@@ -801,7 +893,7 @@ class EvidenceTests(unittest.TestCase):
         root = self.root / 'balanced'; shutil.copytree(FIXTURES / 'static-synthetic', root)
         path = next((root / 'reports/podman').glob('*.json')); native = evidence.read_json(path)
         scan = native['results'][0]; scan['summary']['high_count'] = 0
-        second = copy.deepcopy(scan); second.update(validator='SECOND', findings=[], incomplete_scans=[])
+        second = copy.deepcopy(scan); second.update(validator='SECOND', status='failed', findings=[], incomplete_scans=[])
         second['summary']['high_count'] = 1
         native['results'] = [scan, second]; native['total_validators'] = 2
         write(path, native)

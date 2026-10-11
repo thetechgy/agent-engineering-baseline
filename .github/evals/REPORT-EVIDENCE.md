@@ -147,6 +147,9 @@ partial-clone trees and blobs cannot trigger demand fetching. It also sets
 `GIT_NO_REPLACE_OBJECTS=1` so local commit, tree, or blob replacement refs cannot
 substitute different bytes for a declared revision, as described in the
 [Git replacement-ref documentation](https://git-scm.com/docs/git-replace).
+Inherited repository-local Git environment variables and discovery/namespace
+selectors are cleared before dispatch, so reads select the requested checkout,
+including linked worktrees, rather than another repository or object store.
 Historical skill members and authored datasets share the current-file 8 MiB byte limit. Object
 size is checked before capturing content: exactly 8 MiB is accepted, larger
 objects cause contract rejection, and missing objects retain null digests and
@@ -160,6 +163,12 @@ cap, including members later excluded by the authored-tree boundary. Exceeding
 either cap terminates the Git process and rejects the contract before parsing
 the complete listing or reading any blobs. A listing at the entry limit is
 accepted; missing trees remain unknown.
+
+Static aggregate pass/fail must agree with every validator's required-gate
+outcome under the pinned reporter semantics. Explicit nonblocking validators
+and advisory `AGENT_EVAL` skips can permit an aggregate pass; a failed blocking
+validator cannot. Validator status must agree with its pass, incomplete-scan,
+and advisory-skip observations.
 
 Policy IDs hash recorded fields, patch digest, metric set, judge and attempt
 policy. Recorded published policy IDs are preserved separately and never replaced
