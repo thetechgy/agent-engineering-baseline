@@ -362,6 +362,13 @@ Behavioral evidence cannot carry static scan or finding claims; those claims
 must pass the static normalization contract.
 Reviewed-extract members are indexed once after manifest validation, so trial,
 reward, and summary references do not rescan the member list.
+Each normalization shares a 64 MiB byte budget across consumed native JSON,
+reviewed manifests, historical source listings/blobs, and authored datasets.
+File/object size is charged before content capture, and unexpected file growth
+is charged before parsing; per-file and historical-object limits remain 8 MiB.
+Incomplete recovery provenance may omit identity carriers, but every supplied
+schema version, skill, and benchmark mode must match the supported contract
+before optional policy, revision, metric, and digest fields are retained.
 
 The approved manifest records no durable retention of original members. At or
 after its recorded UTC expiration, normalization marks its original references

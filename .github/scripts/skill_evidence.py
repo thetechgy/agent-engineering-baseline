@@ -22,6 +22,7 @@ import skill_reports as reports
 
 ROOT = Path(__file__).resolve().parents[2]
 JSON_LIMIT = 8 * 1024 * 1024
+NORMALIZATION_LIMIT = 64 * 1024 * 1024
 PUBLIC_LIMIT = 1024 * 1024
 MAX_CASES = 1000
 MAX_TRIALS = 10000
@@ -113,7 +114,16 @@ def safe_tree(path, *, max_entries=MAX_INPUT_ENTRIES, max_files=None):
     return files
 
 
-def read_bytes(path, limit=JSON_LIMIT):
+class ReadBudget:
+    def __init__(self):
+        self.remaining = NORMALIZATION_LIMIT
+
+    def consume(self, size):
+        require(0 <= size <= self.remaining, 'Normalization byte limit')
+        self.remaining -= size
+
+
+def read_bytes(path, limit=JSON_LIMIT, *, budget=None):
     path = safe_path(path)
     # O_NONBLOCK avoids hanging if a file is replaced by a FIFO between checks.
     fd = os.open(path, os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0) | getattr(os, 'O_NONBLOCK', 0))
@@ -121,8 +131,12 @@ def read_bytes(path, limit=JSON_LIMIT):
         info = os.fstat(stream.fileno())
         require(stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and info.st_size <= limit,
                 'Special, hard-linked or oversized input')
-        value = stream.read(limit + 1)
+        if budget is not None:
+            budget.consume(info.st_size)
+        value = stream.read(min(limit, info.st_size + budget.remaining) + 1 if budget is not None else limit + 1)
     require(len(value) <= limit, 'Oversized input')
+    if budget is not None:
+        budget.consume(max(0, len(value) - info.st_size))
     return value
 
 
@@ -147,8 +161,8 @@ def read_json(path):
     return parse_json(read_bytes(path))
 
 
-def read_json_and_digest(path):
-    raw = read_bytes(path)
+def read_json_and_digest(path, *, budget=None):
+    raw = read_bytes(path, budget=budget)
     return parse_json(raw), digest_bytes(raw)
 
 
@@ -348,7 +362,7 @@ def historical_commit(workspace, rev):
     return True
 
 
-def historical_blob(workspace, spec):
+def historical_blob(workspace, spec, *, budget=None):
     """Bound exact local object bytes before capturing content; missing stays unknown."""
     if ':' in spec:
         rev, member = spec.split(':', 1)
@@ -362,15 +376,20 @@ def historical_blob(workspace, spec):
     size = offline_git(workspace, 'cat-file', '-s', spec, text=True)
     if size.returncode:
         return None
-    require(0 <= int(size.stdout.strip()) <= JSON_LIMIT, 'Oversized historical blob')
+    size = int(size.stdout.strip())
+    require(0 <= size <= JSON_LIMIT, 'Oversized historical blob')
+    if budget is not None:
+        budget.consume(size)
     blob = offline_git(workspace, 'cat-file', 'blob', spec)
     if blob.returncode:
         return None
     require(len(blob.stdout) <= JSON_LIMIT, 'Oversized historical blob')
+    if budget is not None:
+        budget.consume(max(0, len(blob.stdout) - size))
     return blob.stdout
 
 
-def historical_content(workspace, rev, source_path):
+def historical_content(workspace, rev, source_path, *, budget=None):
     """Read exact local Git blobs only. Never checkout or contact a remote."""
     relative(source_path)
     if not historical_commit(workspace, rev):
@@ -378,6 +397,8 @@ def historical_content(workspace, rev, source_path):
     listing = offline_git(workspace, 'ls-tree', '-rz', rev, '--', source_path, max_entries=MAX_SOURCE_MEMBERS)
     if listing.returncode:
         return content()
+    if budget is not None:
+        budget.consume(len(listing.stdout))
     rows = listing.stdout.split(b'\0')
     filenames = [row.split(b'\t', 1)[1].decode() for row in rows if row]
     if not filenames:
@@ -406,7 +427,7 @@ def historical_content(workspace, rev, source_path):
                             for manifest in ('SKILL.md', 'skill.md')) for i, p in enumerate(parts))
         if any(p in ('results', '__pycache__', '.git') for p in parts) or nested_evals:
             continue
-        blob = historical_blob(workspace, oid)
+        blob = historical_blob(workspace, oid, budget=budget)
         if blob is None:
             return content()
         records.append({'member': name, 'digest': digest_bytes(blob)})
@@ -968,11 +989,11 @@ def project(data):
     return out
 
 
-def load_extract(root):
+def load_extract(root, *, budget=None):
     path = root / 'extract-manifest.json'
     if not path.exists():
         return None
-    raw = read_bytes(path)
+    raw = read_bytes(path, budget=budget)
     require(digest_bytes(raw) in REVIEWED_EXTRACT_MANIFESTS, 'Unrecognized reviewed extract manifest')
     value = parse_json(raw)
     closed(value, ('schema_version', 'artifact_id', 'archive_digest', 'origin', 'members'))
@@ -1075,12 +1096,13 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     from skillevaluator.tier3.case_ids import validate_case_id
     safe_tree(root); skill_id(name)
     run = select_run(root, name, selected)
-    extract = load_extract(root)
+    budget = ReadBudget()
+    extract = load_extract(root, budget=budget)
     artifact = extract['artifact_id'] if extract else run.name
     member_digests = {}
     def read_member(path, *, native_snapshot=False):
         require(path not in member_digests, 'Duplicate behavioral member read')
-        raw = read_bytes(path)
+        raw = read_bytes(path, budget=budget)
         if native_snapshot:
             require(len(raw) <= native_reports._MAX_JSON_BYTES, 'Native snapshot byte limit')
         value = parse_json(raw)
@@ -1119,9 +1141,13 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     if recovery:
         require(result['report_status'] == 'incomplete' or result.get('diagnostic_only') is True,
                 'Contradictory recovery status')
-    elif provenance:
-        require(provenance.get('schema_version') == 1 and provenance.get('skill') == name, 'Provenance identity mismatch')
-        require(provenance.get('mode') in ('standard', 'confirmation'), 'Unknown benchmark mode')
+    if provenance:
+        require((recovery and 'schema_version' not in provenance or
+                 type(provenance.get('schema_version')) is int and provenance['schema_version'] == 1)
+                and (recovery and 'skill' not in provenance or provenance.get('skill') == name),
+                'Provenance identity mismatch')
+        require(recovery and 'mode' not in provenance or provenance.get('mode') in ('standard', 'confirmation'),
+                'Unknown benchmark mode')
     if has_provenance:
         ref(provenance_path)
     versions = {}
@@ -1164,7 +1190,7 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     src_path = 'skills/' + name if historical_owner == 'upstream' else '.apm/skills/' + name
     src_repo = 'cli/cli' if historical_owner == 'upstream' and name == 'gh' else repo
     src_rev = provenance.get('policy', {}).get('upstream_revision') if historical_owner == 'upstream' else rev
-    src_contents = historical_content(workspace, src_rev, src_path) if src_rev and historical_owner == 'local' else content()
+    src_contents = historical_content(workspace, src_rev, src_path, budget=budget) if src_rev and historical_owner == 'local' else content()
     src = source(name, historical_owner if src_repo and src_rev else 'unknown', src_repo, src_rev, src_path, src_contents)
     if src_contents['digest'] is None:
         limitations.add('source_unavailable')
@@ -1199,7 +1225,7 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     # Authored-file identity is reconstructed only from exact objects, independently of staged entries.
     if rev:
         ds_path = '.github/evals/' + name + '/evals/evals.json' if historical_owner == 'upstream' else src_path + '/evals/evals.json'
-        blob = historical_blob(workspace, rev + ':' + ds_path)
+        blob = historical_blob(workspace, rev + ':' + ds_path, budget=budget)
         if blob is not None:
             data['dataset']['authored_digest'] = digest_bytes(blob)
             data['dataset']['authored_provenance'] = 'reconstructed_from_declared_revision'
@@ -1407,7 +1433,8 @@ def static_required_gate(scan):
 
 def normalize_static(root, name, workspace=ROOT):
     safe_tree(root); skill_id(name)
-    catalog_path = root / 'reports/catalog-summary.json'; catalog, catalog_digest = read_json_and_digest(catalog_path)
+    budget = ReadBudget()
+    catalog_path = root / 'reports/catalog-summary.json'; catalog, catalog_digest = read_json_and_digest(catalog_path, budget=budget)
     require(type(catalog) is dict, 'Static catalog object required')
     require(type(catalog['skills']) is list and catalog['total'] == len(catalog['skills']), 'Catalog cardinality mismatch')
     names = [row['name'] for row in catalog['skills']]
@@ -1419,7 +1446,7 @@ def normalize_static(root, name, workspace=ROOT):
     require(row.get('reason', '') == ('' if row['passed'] else 'validation failed'), 'Catalog infrastructure failure')
     filename = row['json_report']
     require(type(filename) is str and bool(re.fullmatch(r'skillevaluator-output-[0-9]{14}\.json', filename)), 'Unsafe static report member')
-    report_path = root / 'reports' / name / filename; native, report_digest = read_json_and_digest(report_path)
+    report_path = root / 'reports' / name / filename; native, report_digest = read_json_and_digest(report_path, budget=budget)
     require(type(native) is dict and type(native.get('results')) is list
             and len(native['results']) <= 100, 'Invalid bounded static report')
     require(len(native['skills']) == 1 and native['skills'][0]['name'] == name, 'Static identity mismatch')
@@ -1475,7 +1502,7 @@ def normalize_static(root, name, workspace=ROOT):
         optional(repo, repository); optional(rev, revision)
         path = '.apm/skills/' + name
         data['source'] = source(name, 'local' if repo and rev else 'unknown', repo, rev, path,
-                                historical_content(workspace, rev, path) if rev else content())
+                                historical_content(workspace, rev, path, budget=budget) if rev else content())
     def report_reference(locator=()):
         return reference_from_digest(root, report_path, 'skill-quality', report_digest, locator)
     refs = [reference_from_digest(root, catalog_path, 'skill-quality', catalog_digest), report_reference()]

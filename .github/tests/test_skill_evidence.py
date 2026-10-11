@@ -1708,6 +1708,89 @@ class EvidenceTests(unittest.TestCase):
         data = evidence.normalize_behavioral(root, 'podman')
         self.assertEqual(data['availability']['status'], 'incomplete')
 
+    def test_recovery_provenance_reconciles_supplied_identities(self):
+        root = self.native(); run = next((root / 'results/podman').iterdir())
+        result = evidence.read_json(run / 'result.json')
+        result.update(report_status='incomplete', diagnostic_only=True); write(run / 'result.json', result)
+        path = root / 'provenance.json'; original = evidence.read_json(path); original['status'] = 'incomplete'
+        for key, invalid in (('skill', 'another-skill'), ('schema_version', 2),
+                             ('schema_version', True), ('schema_version', '1'), ('mode', 'unsupported')):
+            with self.subTest(key=key, invalid=invalid):
+                value = copy.deepcopy(original); value[key] = invalid; write(path, value)
+                with self.assertRaisesRegex(ValueError, 'Provenance identity mismatch|Unknown benchmark mode'):
+                    evidence.normalize_behavioral(root, 'podman')
+                before = self.snapshot(root); output = self.root / 'rejected-output'
+                cli = subprocess.run([sys.executable, str(REPO / '.github/scripts/skill_evidence.py'),
+                    'normalize', '--kind', 'behavioral', '--skill', 'podman', '--input', str(root),
+                    '--output', str(output)], capture_output=True, text=True)
+                self.assertEqual(cli.returncode, 1); self.assertFalse(output.exists())
+                self.assertEqual(cli.stderr, 'Evidence contract rejected (ValueError)\n')
+                self.assertEqual(self.snapshot(root), before)
+        write(path, original)
+        valid = evidence.normalize_behavioral(root, 'podman')
+        self.assertIn('execution_incomplete', valid['availability']['reasons'])
+        self.assertEqual(valid['metrics'], self.data()['metrics'])
+
+    def test_normalization_aggregate_byte_budget_precedes_parsing(self):
+        root = self.native(); read = evidence.read_bytes; consumed = []
+        def counted(path, *args, **kwargs):
+            raw = read(path, *args, **kwargs); consumed.append(len(raw)); return raw
+        with patch.object(evidence, 'read_bytes', side_effect=counted):
+            baseline = evidence.normalize_behavioral(root, 'podman', workspace=self.root)
+        total = sum(consumed)
+        with patch.object(evidence, 'NORMALIZATION_LIMIT', total, create=True):
+            self.assertEqual(evidence.encoded(evidence.normalize_behavioral(root, 'podman', workspace=self.root)),
+                             evidence.encoded(baseline))
+        parsed = []; parse = evidence.parse_json
+        def parsed_buffer(raw):
+            parsed.append(len(raw)); return parse(raw)
+        with patch.object(evidence, 'NORMALIZATION_LIMIT', total - 1, create=True), \
+                patch.object(evidence, 'parse_json', side_effect=parsed_buffer):
+            with self.assertRaisesRegex(ValueError, 'Normalization byte limit'):
+                evidence.normalize_behavioral(root, 'podman', workspace=self.root)
+        self.assertLessEqual(sum(parsed), total - 1)
+        # Actual CLI inputs stay below the per-file limit while exceeding the aggregate limit.
+        for path in sorted(root.glob('results/*/*/codex/*/trials/*/result.json'))[:10]:
+            value = evidence.read_json(path); value['synthetic_padding'] = 'x' * (7 * 1024 * 1024)
+            write(path, value); self.assertLess(path.stat().st_size, evidence.JSON_LIMIT)
+        before = self.snapshot(root); output = self.root / 'rejected-output'
+        parsed.clear()
+        with patch.object(evidence, 'parse_json', side_effect=parsed_buffer):
+            with self.assertRaisesRegex(ValueError, 'Normalization byte limit'):
+                evidence.normalize_behavioral(root, 'podman', workspace=self.root)
+        self.assertLessEqual(sum(parsed), evidence.NORMALIZATION_LIMIT)
+        cli = subprocess.run([sys.executable, str(REPO / '.github/scripts/skill_evidence.py'),
+            'normalize', '--kind', 'behavioral', '--skill', 'podman', '--input', str(root),
+            '--output', str(output)], capture_output=True, text=True)
+        self.assertEqual(cli.returncode, 1); self.assertFalse(output.exists())
+        self.assertEqual(cli.stderr, 'Evidence contract rejected (ValueError)\n')
+        self.assertEqual(self.snapshot(root), before)
+
+    def test_historical_blob_shares_normalization_budget_before_capture(self):
+        repo = self.repo(); path = repo / '.apm/skills/alpha/SKILL.md'
+        def git(*args):
+            return subprocess.run(['git', '-C', str(repo), *args], check=True,
+                                  capture_output=True, text=True).stdout.strip()
+        git('init', '-q'); git('add', '.apm')
+        git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+            'commit', '-qm', 'Budget fixture')
+        spec = git('rev-parse', 'HEAD') + ':.apm/skills/alpha/SKILL.md'
+        for remaining in (path.stat().st_size, path.stat().st_size - 1):
+            with self.subTest(remaining=remaining):
+                budget = evidence.ReadBudget(); budget.remaining = remaining
+                trace = self.root / f'budget-{remaining}.jsonl'
+                with git_trace(trace):
+                    if remaining == path.stat().st_size:
+                        self.assertEqual(evidence.historical_blob(repo, spec, budget=budget), path.read_bytes())
+                        self.assertEqual(budget.remaining, 0)
+                    else:
+                        with self.assertRaisesRegex(ValueError, 'Normalization byte limit'):
+                            evidence.historical_blob(repo, spec, budget=budget)
+                commands = [e['argv'] for e in map(json.loads, trace.read_text().splitlines())
+                            if e.get('event') == 'start']
+                self.assertEqual(any('cat-file' in argv and 'blob' in argv for argv in commands),
+                                 remaining == path.stat().st_size)
+
     def test_missing_historical_metadata(self):
         root = self.native(); (root/'provenance.json').unlink(); (root/'versions.json').unlink()
         data = evidence.normalize_behavioral(root, 'podman')
@@ -1953,8 +2036,8 @@ class EvidenceTests(unittest.TestCase):
         for target in members:
             with self.subTest(member=target.relative_to(root)):
                 original = target.read_bytes(); calls = []
-                def replace_after_read(path):
-                    raw = read(path); calls.append(path)
+                def replace_after_read(path, *args, **kwargs):
+                    raw = read(path, *args, **kwargs); calls.append(path)
                     if path == target:
                         value = json.loads(raw); value['replaced_after_read'] = True; write(path, value)
                     return raw
@@ -2390,8 +2473,8 @@ class EvidenceTests(unittest.TestCase):
                     visits += 1
                     yield row
         load = evidence.load_extract
-        def counted_load(directory):
-            extract = load(directory)
+        def counted_load(directory, **kwargs):
+            extract = load(directory, **kwargs)
             extract['members'] = CountingMembers(extract['members'])
             return extract
         with patch.object(evidence, 'REVIEWED_EXTRACT_MANIFESTS', frozenset({evidence.digest_bytes(path.read_bytes())})), \
