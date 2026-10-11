@@ -37,6 +37,8 @@ directory outside the checkout and input bundle. The first nonempty `TMPDIR`,
 settings (including linked, missing, or non-directory parents) are rejected
 without falling back to another location or leaving an output directory behind.
 Explicit `--output` placement does not depend on temporary settings.
+Standalone commands disable bytecode writes before importing repository helpers,
+so running without `PYTHONDONTWRITEBYTECODE` does not create checkout caches.
 
 Behavioral input uses `results/<skill>/<run>/result.json` with native companions.
 If several run directories exist, supply `--run <recorded-run-id>`. There is no
@@ -113,7 +115,10 @@ absolute local paths, and arbitrary metadata containers have no public fields.
 Static findings with absolute native file locations keep a null member and a
 structured native reference; that location is never opened. Limits are 8 MiB per
 consumed JSON file, native depth 32, public depth 12, public serialized size 1 MiB,
-1,000 cases, and 10,000 trial observations. Exceeding any limit fails without
+1,000 cases, 10,000 trial observations, and 20,100 references (two members per
+trial plus shared metadata). Reference IDs are tracked incrementally while
+normalizing behavioral input. The public serialized-size limit remains independent
+of these input cardinality limits. Exceeding any limit fails without
 truncation or partial publication. Duplicate JSON keys, cross-platform case-ID
 collisions, invalid denominators, linked/reparse/hard-linked or special inputs,
 escaping references, and dangling observation references are rejected.

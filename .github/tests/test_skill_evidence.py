@@ -1912,6 +1912,97 @@ class EvidenceTests(unittest.TestCase):
         return {p.relative_to(root).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest() if p.is_file() else None
                 for p in root.rglob('*')}
 
+    def test_behavioral_reference_budget_supports_reward_companions(self):
+        from skillevaluator.tier3.harbor import report_data as native_reports
+        from skillevaluator.tier3.harbor.collector import _pass_summary
+        root = self.native(); run = next((root / 'results/podman').iterdir())
+        entries = [{'id': str(i), 'question': 'Synthetic question', 'ground_truth': 'Synthetic answer',
+                    'expected_skill': 'podman', 'skill_workspace_mode': 'isolated'} for i in range(1, 1001)]
+        snapshot = native_reports.build_dataset_snapshot(entries, evaluator_version='0.3.0')
+        write(run / 'dataset_snapshot.json', snapshot)
+        config = evidence.read_json(run / 'run_config.json'); config['harbor']['n_attempts'] = 3
+        write(run / 'run_config.json', config)
+        result = evidence.read_json(run / 'result.json'); result['run_config'] = config
+        for key in ('dataset_digest', 'dataset_digest_algorithm', 'dataset_summary'): result[key] = snapshot[key]
+        policy = evidence.read_json(run / 'attempt_policy.json'); policy['max_attempts'] = 3
+        write(run / 'attempt_policy.json', policy)
+        provenance = evidence.read_json(root / 'provenance.json')
+        provenance.update(mode='confirmation', dataset_digest=snapshot['dataset_digest'])
+        write(root / 'provenance.json', provenance)
+        for arm in ('with_skill', 'without_skill'):
+            base = run / 'codex' / arm.replace('_', '-')
+            summary = evidence.read_json(base / 'summary.json')
+            templates = {}
+            for case, row in summary['pass_at_k']['cases'].items():
+                trial = base / 'trials' / row['attempts'][0]['trial']
+                templates[case] = (evidence.read_json(trial / 'result.json'), evidence.read_json(trial / 'reward.json'))
+            shutil.rmtree(base / 'trials')
+            rewards = []
+            for case in range(1, 1001):
+                for attempt in range(1, 4):
+                    native, reward = copy.deepcopy(templates[str((case - 1) % 10 + 1)])
+                    trial = f'{case}__fixture-attempt{attempt}'
+                    native.update(id=f'{arm}-{case}-{attempt}', trial_name=trial,
+                                  task_name=f'nvidia/skillevaluator-{case}')
+                    reward.update(entry_id=str(case), trial_id=trial)
+                    write(base / 'trials' / trial / 'result.json', native)
+                    write(base / 'trials' / trial / 'reward.json', reward)
+                    rewards.append({**reward, '_trial_name': trial})
+            summary.update(expected_attempts=3000, scored_attempts=3000, num_trials=3000)
+            summary['pass_at_k'] = _pass_summary(rewards, n_attempts=3, pass_threshold=policy['pass_threshold'],
+                                               expected_cases=1000, expected_case_ids=[str(i) for i in range(1, 1001)])
+            write(base / 'summary.json', summary)
+            result['agents']['codex']['conditions'][arm].update(expected_attempts=3000, scored_attempts=3000)
+            result['agents']['codex']['pass_at_k'][arm] = summary['pass_at_k']
+        write(run / 'result.json', result)
+        data = evidence.normalize_behavioral(root, 'podman')
+        self.assertEqual(len(data['observations']), 6000)
+        self.assertGreater(len(data['references']), 12000)
+        self.assertEqual(len({row['id'] for row in data['references']}), len(data['references']))
+        self.assertEqual(data['metrics'], self.data()['metrics'])
+        with self.assertRaisesRegex(ValueError, 'Public report size'):
+            evidence.project(data)
+
+    def test_behavioral_reference_id_lookup_work_is_linear(self):
+        root = self.native(); baseline = evidence.normalize_behavioral(root, 'podman')
+        lookups = 0
+        class CountingReference(dict):
+            def __getitem__(self, key):
+                nonlocal lookups
+                if key == 'id': lookups += 1
+                return super().__getitem__(key)
+        reference = evidence.reference_from_digest; validate = evidence.validate_evidence
+        def counted(*args, **kwargs): return CountingReference(reference(*args, **kwargs))
+        def plain_validation(data):
+            data['references'] = [dict(row) for row in data['references']]
+            return validate(data)
+        with patch.object(evidence, 'reference_from_digest', side_effect=counted), \
+                patch.object(evidence, 'validate_evidence', side_effect=plain_validation):
+            actual = evidence.normalize_behavioral(root, 'podman')
+        self.assertEqual(evidence.encoded(actual), evidence.encoded(baseline))
+        self.assertLessEqual(lookups, 8 * len(actual['references']))
+
+    def test_standalone_cli_disables_repository_bytecode_writes(self):
+        checkout = self.repo(); scripts = checkout / '.github/scripts'; scripts.mkdir(parents=True)
+        for name in ('skill_evidence.py', 'skill_reports.py', 'gh_evaluations.py'):
+            shutil.copyfile(REPO / '.github/scripts' / name, scripts / name)
+        inputs = checkout / 'fixtures'; shutil.copytree(FIXTURES, inputs)
+        commands = [['inventory'], ['normalize', '--kind', 'behavioral', '--skill', 'podman',
+                    '--input', str(inputs / 'podman-native')], ['normalize', '--kind', 'static',
+                    '--skill', 'podman', '--input', str(inputs / 'static-synthetic')],
+                    ['project', '--input', str(inputs / 'gh-no-model.json')]]
+        env = {k: v for k, v in os.environ.items() if k not in ('PYTHONDONTWRITEBYTECODE', 'PYTHONPYCACHEPREFIX')}
+        before = self.snapshot(checkout)
+        for index, command in enumerate(commands):
+            with self.subTest(command=command[0], index=index):
+                output = self.root / f'cli-output-{index}'
+                result = subprocess.run([sys.executable, str(scripts / 'skill_evidence.py'), *command,
+                                         '--output', str(output)], env=env, capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(self.snapshot(checkout), before)
+                self.assertTrue(output.is_dir())
+                self.assertFalse(any(checkout.rglob('__pycache__')))
+
     def test_cli_rejects_temporary_parent_inside_input_without_mutation(self):
         root = self.native()
         before = self.snapshot(root)

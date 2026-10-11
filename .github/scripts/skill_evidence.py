@@ -15,6 +15,8 @@ import subprocess
 import sys
 import tempfile
 
+# Standalone commands must not mutate the checkout while importing local helpers.
+sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import skill_reports as reports
 
@@ -23,6 +25,7 @@ JSON_LIMIT = 8 * 1024 * 1024
 PUBLIC_LIMIT = 1024 * 1024
 MAX_CASES = 1000
 MAX_TRIALS = 10000
+MAX_REFERENCES = 2 * MAX_TRIALS + 100
 MAX_SOURCE_MEMBERS = 1000
 MAX_INPUT_ENTRIES = 100000
 # Reviewed Podman extract-manifest.json bytes; additional identities require review.
@@ -730,7 +733,7 @@ def validate_evidence(data, *, public=False):
     for reason in availability['reasons']:
         enum(reason, REASONS)
     require((availability['status'] == 'complete') == (not availability['reasons']), 'Contradictory availability')
-    references = data['references']; require(type(references) is list and len(references) <= MAX_TRIALS + 100, 'Reference limit')
+    references = data['references']; require(type(references) is list and len(references) <= MAX_REFERENCES, 'Reference limit')
     ref_ids = set()
     for ref in references:
         validate_reference(ref); require(ref['id'] not in ref_ids, 'Duplicate reference'); ref_ids.add(ref['id'])
@@ -1048,11 +1051,12 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     require(type(config) is dict, 'Native configuration object required')
     if has_config and 'run_config' in result:
         require(config == result['run_config'], 'Conflicting native configuration')
-    refs = []
+    refs = []; ref_ids = set()
     def ref(path, locator=()):
         row = reference_from_digest(root, path, artifact, member_digests[path], locator, extract)
-        if row['id'] not in {r['id'] for r in refs}:
+        if row['id'] not in ref_ids:
             refs.append(row)
+            ref_ids.add(row['id'])
         return row['id']
     ref(result_path)
     if has_config:
