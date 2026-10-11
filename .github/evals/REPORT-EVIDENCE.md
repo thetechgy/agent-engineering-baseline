@@ -117,6 +117,9 @@ consumed JSON file, native depth 32, public depth 12, public serialized size 1 M
 truncation or partial publication. Duplicate JSON keys, cross-platform case-ID
 collisions, invalid denominators, linked/reparse/hard-linked or special inputs,
 escaping references, and dangling observation references are rejected.
+The trial-member budget is shared across both arms and checked before reading
+any trial result or reward. Malformed front-matter YAML produces the same bounded
+CLI rejection as other invalid metadata, without parser tracebacks or local paths.
 
 Input trees are checked during traversal, before materializing all paths.
 Normalization bundles and catalog/overlay trees allow at most 100,000 entries;
@@ -137,7 +140,8 @@ Reordering inputs does not regenerate identities.
 Canonical structured hashing uses UTF-8 JSON with sorted object keys, compact
 separators, ASCII escaping, and no nonfinite values, prefixed `sha256:`. Source
 content hashes a sorted relative-file/SHA-256 manifest under the pinned
-agent-visible staging boundary. The pinned runtime ignore helper excludes
+agent-visible staging boundary. A non-null content digest must identify the
+regular root `SKILL.md`, including through standalone projection. The pinned runtime ignore helper excludes
 skill-owned `evals` and generated/cache/Git inputs. Historical reconstruction
 reads exact local Git blobs with the equivalent authored-tree boundary; it is
 `reconstructed_from_declared_revision`, never runtime-attested. Missing Git
@@ -193,8 +197,9 @@ corresponding known runtime/configuration observations: evaluator, Harbor,
 Compose, Python, model/provider, grading, environment, concurrency, timeout, and
 stop-on-pass. Python observations must match at the policy's declared precision
 (for example, `3.13` matches `3.13.15`). Native configuration and attempt-policy
-maximum/stop-on-pass values must also agree when both are known. Absent metadata
-remains unknown; compatible historical values are preserved rather than replaced
+maximum/stop-on-pass values must also agree when both are known. Shared
+normalized/public validation reconciles known policy-field and attempt-policy
+stop-on-pass values too. Absent metadata remains unknown; compatible historical values are preserved rather than replaced
 with current defaults. Judge identity remains separate from the evaluated model.
 Known benchmark modes must agree with known attempt maxima: standard uses one
 attempt and confirmation uses three, matching the pinned producer. Every known
@@ -221,7 +226,9 @@ unavailable. Each known recorded or scored count is bounded independently by a
 known expected count. Scored cannot exceed recorded when both are known;
 unscored must equal their difference, and stays null if either input is unknown.
 These rules apply to internal and public validation. Unknown observations remain
-null. Recovery status, native execution checks and coverage prevent incomplete evidence promotion; unavailable references
+null. Complete behavioral evidence requires a nonempty canonical case cohort,
+matching the benchmark producer's positive task count. Recovery status, native
+execution checks and coverage prevent incomplete evidence promotion; unavailable references
 also prevent a complete projection. Completeness describes evidence coverage,
 not task success or publication eligibility. Failed rubrics, low scores and
 failed with-skill deterministic gates remain valid observations. Rubric counts

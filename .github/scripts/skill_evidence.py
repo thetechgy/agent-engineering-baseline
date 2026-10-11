@@ -248,6 +248,7 @@ def validate_content(value):
     require(names == sorted(set(names)), 'Ambiguous content manifest')
     require(len({n.casefold() for n in names}) == len(names), 'Content member case collision')
     if value['digest'] is not None:
+        require('SKILL.md' in names, 'Skill content missing root SKILL.md')
         require(value['digest'] == identity(value['manifest']), 'Content manifest mismatch')
     else:
         require(not names and value['provenance'] == 'unknown', 'Unknown content has manifest')
@@ -428,11 +429,14 @@ def validate_skill_metadata(authored, name):
     require(text.startswith('---\n') and '\n---' in text[4:], 'Missing skill metadata')
     # Front matter is bounded and duplicate-key ambiguity must not choose an owner.
     front = text.split('---', 2)[1]
-    pairs = metadata_yaml.compose(front)
+    try:
+        pairs = metadata_yaml.compose(front)
+        metadata = metadata_yaml.safe_load(front)
+    except (metadata_yaml.YAMLError, RecursionError) as exc:
+        raise ValueError('Invalid skill metadata') from exc
     require(pairs is not None and isinstance(pairs, metadata_yaml.MappingNode), 'Invalid skill metadata')
     keys = [key.value for key, _ in pairs.value]
     require(len(keys) == len(set(keys)), 'Ambiguous skill metadata')
-    metadata = metadata_yaml.safe_load(front)
     require(type(metadata) is dict and metadata.get('name') == name
             and type(metadata.get('description')) is str and metadata['description'].strip(), 'Invalid skill metadata')
     from skillevaluator.models.skill import SkillFrontmatter
@@ -579,6 +583,8 @@ def validate_policy(value):
             and fields['standard_attempts'] is not None:
         require(fields['standard_attempts'] == value['attempts']['maximum'], 'Standard attempt policy mismatch')
     optional(value['attempts']['stop_on_pass'], boolean); optional(value['attempts']['pass_threshold'], number)
+    if fields['stop_on_pass'] is not None and value['attempts']['stop_on_pass'] is not None:
+        require(fields['stop_on_pass'] == value['attempts']['stop_on_pass'], 'Stop-on-pass policy mismatch')
     canonical = {key: value[key] for key in ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')}
     require(value['id'] == (identity(canonical) if value['provenance'] != 'unknown' else None), 'Policy identity mismatch')
 
@@ -837,6 +843,7 @@ def validate_evidence(data, *, public=False):
     elif data['kind'] == 'behavioral':
         require(sorted(arm_names) == ['with_skill', 'without_skill'], 'Missing comparison arms')
         if availability['status'] == 'complete':
+            require(bool(ids), 'Empty complete cohort')
             require(len(data['metrics']) == 4 and data['run_id'] is not None, 'Incomplete metrics')
             require(data['source']['content']['digest'] is not None and ds['staged_digest'] is not None
                     and data['policy']['fields']['evaluator_revision'] is not None
@@ -1116,6 +1123,9 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
         require(provenance['metrics'] == data['metrics'], 'Provenance metrics disagreement')
     if provenance.get('dataset_digest') is not None:
         require(provenance['dataset_digest'] == data['dataset']['staged_digest'], 'Provenance dataset disagreement')
+    trials_by_arm = {arm: sorted((run / 'codex' / arm.replace('_', '-') / 'trials').glob('*/result.json'))
+                     for arm in ('with_skill', 'without_skill')}
+    require(sum(len(paths) for paths in trials_by_arm.values()) <= MAX_TRIALS, 'Trial input limit')
     for arm in ('with_skill', 'without_skill'):
         arm_dir = run / 'codex' / arm.replace('_', '-')
         native_condition = agent['conditions'][arm]
@@ -1144,11 +1154,8 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
                 require(trial not in lookup, 'Duplicate summary trial')
                 lookup[trial] = (case, attempt)
         observed = []
-        trial_root = arm_dir / 'trials'
-        if trial_root.exists():
-            trial_paths = sorted(trial_root.glob('*/result.json'))
-            require(len(trial_paths) <= MAX_TRIALS, 'Trial input limit')
-            for path in trial_paths:
+        if trials_by_arm[arm]:
+            for path in trials_by_arm[arm]:
                 trial_result = read_member(path)
                 trial = trial_result['trial_name']; token(trial)
                 require(trial == path.parent.name, 'Trial directory identity mismatch')

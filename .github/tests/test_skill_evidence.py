@@ -1025,6 +1025,107 @@ class EvidenceTests(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         evidence.validate_policy(policy)
 
+    def assert_project_rejects(self, data, message):
+        with self.assertRaisesRegex(ValueError, message): evidence.validate_evidence(data)
+        public = copy.deepcopy(data)
+        for obs in public['observations']:
+            for key in ('native_id', 'native_trial', 'native_task'): obs.pop(key)
+        with self.assertRaisesRegex(ValueError, message): evidence.validate_public(public)
+        path = self.root / 'invalid.json'; write(path, data)
+        before = path.read_bytes(); output = self.root / 'rejected-output'
+        result = subprocess.run([sys.executable, str(REPO / '.github/scripts/skill_evidence.py'),
+                                 'project', '--input', str(path), '--output', str(output)],
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stderr, 'Evidence contract rejected (ValueError)\n')
+        self.assertFalse(output.exists())
+        self.assertEqual(path.read_bytes(), before)
+
+    def test_exact_content_requires_root_manifest(self):
+        for manifest in ([], [{'member': 'references/only.md', 'digest': evidence.digest_bytes(b'Synthetic')}]):
+            with self.subTest(manifest=manifest):
+                data = self.data()
+                data['source']['content'] = evidence.content(manifest, 'reconstructed_from_declared_revision')
+                self.assert_project_rejects(data, 'Skill content missing root SKILL.md')
+        evidence.validate_content(evidence.content())
+        evidence.validate_content(evidence.content([
+            {'member': 'SKILL.md', 'digest': evidence.digest_bytes(b'Synthetic')}], 'configured'))
+
+    def test_complete_behavioral_requires_nonempty_cohort(self):
+        data = self.data()
+        data['source']['content'] = evidence.content([
+            {'member': 'SKILL.md', 'digest': evidence.digest_bytes(b'Synthetic')}], 'configured')
+        data['dataset'].update(case_ids=[], case_cohort_digest=evidence.identity([]))
+        data['observations'] = []
+        for arm in data['arms']:
+            arm['coverage'].update(expected_cases=0, expected_attempts=0, recorded_attempts=0,
+                                   scored_attempts=0, unscored_attempts=0, case_details='complete')
+            arm['rubric'].update(passed_cases=0, total_cases=0)
+        data['availability'].update(status='complete', reasons=[])
+        self.assert_project_rejects(data, 'Empty complete cohort')
+        data['availability'].update(status='incomplete', reasons=['coverage_missing'])
+        evidence.project(data)
+
+    def test_shared_stop_on_pass_policy_consistency(self):
+        for field, attempt in itertools.product((None, False, True), repeat=2):
+            with self.subTest(field=field, attempt=attempt):
+                data = self.data()
+                data['policy']['fields']['stop_on_pass'] = field
+                data['policy']['attempts']['stop_on_pass'] = attempt
+                data['policy']['id'] = evidence.identity({k: data['policy'][k] for k in
+                    ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')})
+                if field is None or attempt is None or field == attempt:
+                    evidence.project(data)
+                else:
+                    self.assert_project_rejects(data, 'Stop-on-pass policy mismatch')
+
+    def test_inventory_cli_rejects_malformed_frontmatter_without_traceback(self):
+        checkout = self.root / 'checkout'
+        authored = self.local(checkout, 'alpha')
+        scripts = checkout / '.github/scripts'; scripts.mkdir(parents=True)
+        for name in ('skill_evidence.py', 'skill_reports.py'):
+            shutil.copyfile(REPO / '.github/scripts' / name, scripts / name)
+        for front in ('name: alpha\ndescription: [', 'name: alpha\ndescription: "unterminated'):
+            with self.subTest(front=front):
+                (authored / 'SKILL.md').write_text('---\n' + front + '\n---\n')
+                before = {p.relative_to(checkout): p.read_bytes() for p in checkout.rglob('*') if p.is_file()}
+                output = self.root / 'rejected-output'
+                env = {**os.environ, 'PYTHONDONTWRITEBYTECODE': '1'}
+                result = subprocess.run([sys.executable, str(scripts / 'skill_evidence.py'),
+                                         'inventory', '--output', str(output)], env=env,
+                                        capture_output=True, text=True)
+                self.assertEqual(result.returncode, 1)
+                self.assertEqual(result.stderr, 'Evidence contract rejected (ValueError)\n')
+                self.assertFalse(output.exists())
+                self.assertEqual(before, {p.relative_to(checkout): p.read_bytes() for p in checkout.rglob('*') if p.is_file()})
+
+    def test_trial_member_cap_is_shared_before_any_trial_read(self):
+        root = self.native()
+        run = next((root / 'results/podman').iterdir())
+        with patch.object(evidence, 'MAX_TRIALS', 20):
+            self.assertEqual(len(evidence.normalize_behavioral(root, 'podman')['observations']), 20)
+        for arm in ('with-skill', 'without-skill'):
+            trials = run / 'codex' / arm / 'trials'
+            for index in range(5990):
+                member = trials / ('extra-' + str(index)) / 'result.json'
+                member.parent.mkdir(); member.write_bytes(b'')
+        read = evidence.read_bytes
+        def no_trials(path, *args, **kwargs):
+            self.assertNotIn('trials', Path(path).parts, 'Trial member read before aggregate cap')
+            return read(path, *args, **kwargs)
+        with patch.object(evidence, 'read_bytes', side_effect=no_trials):
+            with self.assertRaisesRegex(ValueError, 'Trial input limit'):
+                evidence.normalize_behavioral(root, 'podman')
+        paths = sorted(p.relative_to(root) for p in root.rglob('*'))
+        output = self.root / 'rejected-output'
+        result = subprocess.run([sys.executable, str(REPO / '.github/scripts/skill_evidence.py'),
+                                 'normalize', '--kind', 'behavioral', '--skill', 'podman',
+                                 '--input', str(root), '--output', str(output)], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stderr, 'Evidence contract rejected (ValueError)\n')
+        self.assertFalse(output.exists())
+        self.assertEqual(paths, sorted(p.relative_to(root) for p in root.rglob('*')))
+
     def test_zero_attempt_maximum_cannot_publish_complete_evidence(self):
         data = self.data()
         data['source']['content'] = evidence.content([
