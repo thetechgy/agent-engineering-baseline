@@ -1328,17 +1328,20 @@ def behavioral_claim_identity(data):
 
 class _BehavioralEvidence(dict):
     """Transient witness for ordinary runtime observations and headline metrics."""
-    __slots__ = ('_claim_digest',)
+    __slots__ = ('_claim_digest', '_required_reasons')
 
-    def __init__(self, data, claim_digest):
+    def __init__(self, data, claim_digest, *, required_reasons=None):
         super().__init__(data)
         object.__setattr__(self, '_claim_digest', claim_digest)
+        object.__setattr__(self, '_required_reasons', tuple(data['availability']['reasons']
+                           if required_reasons is None else required_reasons))
 
     def __setattr__(self, name, value):
         raise AttributeError('Immutable native witness')
 
     def __deepcopy__(self, memo):
-        result = _BehavioralEvidence(copy.deepcopy(dict(self), memo), self._claim_digest)
+        result = _BehavioralEvidence(copy.deepcopy(dict(self), memo), self._claim_digest,
+                                     required_reasons=self._required_reasons)
         memo[id(self)] = result
         return result
 
@@ -1370,6 +1373,8 @@ def project(data, *, static_bundle=None, behavioral_bundle=None):
             require(type(witness) is _BehavioralEvidence, 'Native behavioral provenance mismatch')
         require(behavioral_claim_identity(data) == witness._claim_digest,
                 'Behavioral claims differ from retained native evidence')
+        require(set(witness._required_reasons) <= set(data['availability']['reasons']),
+                'Native behavioral limitations removed')
     # Every object is rebuilt from fixed fields. A native report is never accepted.
     out = {key: copy.deepcopy(data[key]) for key in ('schema_version', 'kind', 'source', 'run_id', 'dataset',
            'policy', 'arms', 'metrics', 'scans', 'findings', 'references', 'availability')}

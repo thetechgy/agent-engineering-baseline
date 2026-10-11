@@ -212,6 +212,9 @@ IDs and provenance to synthetic or unknown cannot disable authentication. Refere
 availability can be conservatively downgraded without relabeling native claims.
 The witness binds availability provenance independently of conservative status
 and reason changes. Reviewed reference pins require reviewed availability provenance.
+The witness also retains the native required reasons. Projection may add
+conservative limitations but cannot remove recorded ones, including global
+diagnostic-only execution limitations that are independent of successful arms.
 Reviewed extracts retain their independent pinned identity/payload checks;
 unavailable records retain their existing rules. Synthetic measured records
 require a native normalization witness too; synthetic provenance alone does not

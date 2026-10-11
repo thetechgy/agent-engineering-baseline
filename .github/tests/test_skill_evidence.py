@@ -2547,6 +2547,31 @@ class EvidenceTests(unittest.TestCase):
                     evidence.main(['project', '--input', str(path), '--output', str(output)])
                 self.assertFalse(output.exists()); self.assertEqual(self.snapshot(root), before)
 
+    def test_behavioral_witness_preserves_native_required_limitations(self):
+        root = self.native(); result = next(root.glob('results/podman/*/result.json'))
+        raw = evidence.read_json(result); raw['diagnostic_only'] = True; write(result, raw)
+        native = evidence.normalize_behavioral(root, 'podman')
+        self.assertNotIn('_required_reasons', evidence.encoded(native).decode())
+        with self.assertRaises(AttributeError): native._required_reasons = ()
+        self.assertIn('execution_incomplete', evidence.project(native)['availability']['reasons'])
+        forged = copy.deepcopy(native); forged['availability']['reasons'].remove('execution_incomplete')
+        forged['availability']['status'] = 'incomplete' if forged['availability']['reasons'] else 'complete'
+        evidence.validate_evidence(forged)
+        for data in (forged, copy.deepcopy(forged)):
+            with self.assertRaisesRegex(ValueError, 'Native behavioral limitations removed'): evidence.project(data)
+        plain = json.loads(evidence.encoded(forged))
+        with self.assertRaisesRegex(ValueError, 'Native behavioral limitations removed'):
+            evidence.project(plain, behavioral_bundle=root)
+        path = root / 'evidence.json'; write(path, plain); before = self.snapshot(root)
+        output = self.root / 'rejected-diagnostic-promotion'
+        with self.assertRaises(ValueError), redirect_stdout(StringIO()):
+            evidence.main(['project', '--input', str(path), '--output', str(output)])
+        self.assertFalse(output.exists()); self.assertEqual(self.snapshot(root), before)
+        conservative = copy.deepcopy(native)
+        conservative['references'][0]['availability'] = 'unavailable'
+        conservative['availability']['reasons'] = sorted(set(conservative['availability']['reasons']) | {'reference_unavailable'})
+        self.assertIn('execution_incomplete', evidence.project(conservative)['availability']['reasons'])
+
     def test_reviewed_availability_provenance_binds_pinned_references(self):
         native = self.data()
         for provenance in ('synthetic', 'configured', 'unknown'):
