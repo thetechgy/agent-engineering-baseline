@@ -120,7 +120,9 @@ class EvidenceTests(unittest.TestCase):
                 def git(*args):
                     return subprocess.run(['git', '-C', str(root), *args], check=True, capture_output=True,
                                           text=True, timeout=30).stdout.strip()
-                git('init', '-q'); git('add', '.apm')
+                git('init', '-q')
+                git('config', 'remote.origin.url', 'https://github.com/thetechgy/agent-engineering-baseline.git')
+                git('add', '.apm')
                 git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'Fixture')
                 if change in ('unstaged', 'staged', 'committed'):
                     (authored / 'README.md').write_text('Changed fixture')
@@ -145,7 +147,9 @@ class EvidenceTests(unittest.TestCase):
         (authored / 'README.md').write_text('Committed fixture')
         def git(*args):
             subprocess.run(['git', '-C', str(root), *args], check=True, capture_output=True, timeout=30)
-        git('init', '-q'); git('add', '.apm')
+        git('init', '-q')
+        git('config', 'remote.origin.url', 'https://github.com/thetechgy/agent-engineering-baseline.git')
+        git('add', '.apm')
         git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'Fixture')
         budget = evidence.ReadBudget(); before = self.snapshot(root)
         with patch.object(evidence, 'ReadBudget', return_value=budget) as budgets:
@@ -709,7 +713,7 @@ class EvidenceTests(unittest.TestCase):
         static = self.root / 'static-partial'; shutil.copytree(FIXTURES / 'static-synthetic', static)
         static_path = next((static / 'reports/podman').glob('*.json'))
         static_report = evidence.read_json(static_path)
-        static_report['evaluated_source'] = {'repository': 'example/fixture', 'commit': rev}
+        static_report['evaluated_source'] = {'repository': 'thetechgy/agent-engineering-baseline', 'commit': rev}
         write(static_path, static_report)
         for kind, oid in (('blob:none', blob), ('tree:0', tree)):
             with self.subTest(filter=kind):
@@ -721,6 +725,7 @@ class EvidenceTests(unittest.TestCase):
                 absent = subprocess.run(['git', '-C', str(clone), 'cat-file', '-e', oid],
                                         env={**os.environ, 'GIT_NO_LAZY_FETCH': '1'}, capture_output=True)
                 self.assertNotEqual(absent.returncode, 0)
+                git(clone, 'config', 'remote.origin.url', 'https://github.com/thetechgy/agent-engineering-baseline.git')
                 trace = self.root / (clone.name + '-trace.jsonl')
                 with patch.dict(os.environ, {'GIT_NO_LAZY_FETCH': '0'}), git_trace(trace):
                     self.assertEqual(evidence.git_revision(clone), rev)
@@ -756,7 +761,9 @@ class EvidenceTests(unittest.TestCase):
                 def git(*args):
                     return subprocess.run(['git', '-C', str(repo), *args], check=True,
                                           capture_output=True, text=True).stdout.strip()
-                git('init', '-q'); git('add', '.apm')
+                git('init', '-q')
+                git('config', 'remote.origin.url', 'https://github.com/thetechgy/agent-engineering-baseline.git')
+                git('add', '.apm')
                 git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
                     'commit', '-qm', 'Synthetic bounded source')
                 rev = git('rev-parse', 'HEAD')
@@ -803,6 +810,7 @@ class EvidenceTests(unittest.TestCase):
                         'commit', '-qm', 'Synthetic replacement fixture')
                     return git('rev-parse', 'HEAD')
                 git('init', '-q')
+                git('config', 'remote.origin.url', 'https://github.com/thetechgy/agent-engineering-baseline.git')
                 rev = commit()
                 skill_bytes = (authored / 'SKILL.md').read_bytes()
                 dataset_bytes = (authored / 'evals/evals.json').read_bytes()
@@ -844,7 +852,9 @@ class EvidenceTests(unittest.TestCase):
             repo = self.root / name; repo.mkdir()
             authored = self.local(repo, 'podman', True)
             with (authored / 'SKILL.md').open('a') as stream: stream.write(name)
-            git(repo, 'init', '-q'); git(repo, 'add', '.apm')
+            git(repo, 'init', '-q')
+            git(repo, 'config', 'remote.origin.url', 'https://github.com/thetechgy/agent-engineering-baseline.git')
+            git(repo, 'add', '.apm')
             git(repo, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
                 'commit', '-qm', name)
             repos.append(repo)
@@ -886,7 +896,9 @@ class EvidenceTests(unittest.TestCase):
         def git(*args):
             return subprocess.run(['git', '-C', str(repo), *args], check=True,
                                   capture_output=True, text=True).stdout.strip()
-        git('init', '-q'); git('add', '.apm')
+        git('init', '-q')
+        git('config', 'remote.origin.url', 'https://github.com/thetechgy/agent-engineering-baseline.git')
+        git('add', '.apm')
         git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'Trace fixture')
         rev = git('rev-parse', 'HEAD'); native = self.native()
         self.mutate(native, '/run_config.json', lambda d: d['evaluated_source'].update(commit=rev))
@@ -946,14 +958,16 @@ class EvidenceTests(unittest.TestCase):
                 def git(*args):
                     return subprocess.run(['git', '-C', str(repo), *args], check=True,
                                           capture_output=True, text=True).stdout.strip()
-                git('init', '-q'); git('add', '.apm')
+                git('init', '-q')
+                git('config', 'remote.origin.url', 'https://github.com/thetechgy/agent-engineering-baseline.git')
+                git('add', '.apm')
                 git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
                     'commit', '-qm', 'Historical root fixture')
                 rev = git('rev-parse', 'HEAD')
                 self.mutate(behavioral, '/run_config.json', lambda d: d['evaluated_source'].update(commit=rev))
                 self.mutate(behavioral, '/result.json', lambda d: d['run_config']['evaluated_source'].update(commit=rev))
                 self.mutate(behavioral, '/provenance.json', lambda d: d.update(revision=rev))
-                static_report['evaluated_source'] = {'repository': 'example/fixture', 'commit': rev}
+                static_report['evaluated_source'] = {'repository': 'thetechgy/agent-engineering-baseline', 'commit': rev}
                 write(static_path, static_report)
                 trace = self.root / (kind + '-root-trace.jsonl')
                 with patch.dict(os.environ, {'GIT_NO_LAZY_FETCH': '0'}), git_trace(trace):
@@ -980,7 +994,9 @@ class EvidenceTests(unittest.TestCase):
         def git(*args):
             return subprocess.run(['git', '-C', str(repo), *args], check=True,
                                   capture_output=True, text=True).stdout.strip()
-        git('init', '-q'); git('add', '.apm')
+        git('init', '-q')
+        git('config', 'remote.origin.url', 'https://github.com/thetechgy/agent-engineering-baseline.git')
+        git('add', '.apm')
         git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'Object type fixture')
         commit = git('rev-parse', 'HEAD')
         git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'tag', '-a', 'fixture', '-m', 'Annotated fixture')
@@ -997,7 +1013,7 @@ class EvidenceTests(unittest.TestCase):
                 provenance['revision'] = rev
                 write(run / 'run_config.json', config); write(run / 'result.json', result)
                 write(native / 'provenance.json', provenance)
-                report['evaluated_source'] = {'repository': 'example/fixture', 'commit': rev}; write(static_path, report)
+                report['evaluated_source'] = {'repository': 'thetechgy/agent-engineering-baseline', 'commit': rev}; write(static_path, report)
                 trace = self.root / (rev + '.jsonl')
                 with patch.dict(os.environ, {'GIT_NO_LAZY_FETCH': '0'}), git_trace(trace):
                     with self.assertRaisesRegex(ValueError, 'Historical revision must be a commit'):
@@ -1031,7 +1047,9 @@ class EvidenceTests(unittest.TestCase):
                 def git(*args):
                     return subprocess.run(['git', '-C', str(repo), *args], check=True,
                                           capture_output=True, text=True).stdout.strip()
-                git('init', '-q'); git('add', '.apm')
+                git('init', '-q')
+                git('config', 'remote.origin.url', 'https://github.com/thetechgy/agent-engineering-baseline.git')
+                git('add', '.apm')
                 git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
                     'commit', '-qm', 'Synthetic tree boundary')
                 rev = git('rev-parse', 'HEAD')
@@ -1058,6 +1076,7 @@ class EvidenceTests(unittest.TestCase):
             return subprocess.run(['git', '-C', str(repo), *args], input=input, check=True,
                                   capture_output=True).stdout.strip()
         git('init', '-q')
+        git('config', 'remote.origin.url', 'https://github.com/thetechgy/agent-engineering-baseline.git')
         blob = git('hash-object', '-w', '--stdin', input=b'Synthetic member')
         # Git plumbing can represent names too long for the local filesystem.
         tree = git('mktree', '-z', input=b'100644 blob ' + blob + b'\t' + b'a' * evidence.JSON_LIMIT + b'\0')
@@ -2461,7 +2480,9 @@ class EvidenceTests(unittest.TestCase):
         def git(*args):
             return subprocess.run(['git', '-C', str(repo), *args], check=True,
                                   capture_output=True, text=True).stdout.strip()
-        git('init', '-q'); git('add', '.apm')
+        git('init', '-q')
+        git('config', 'remote.origin.url', 'https://github.com/thetechgy/agent-engineering-baseline.git')
+        git('add', '.apm')
         git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
             'commit', '-qm', 'Budget fixture')
         spec = git('rev-parse', 'HEAD') + ':.apm/skills/alpha/SKILL.md'
@@ -3415,7 +3436,9 @@ class EvidenceTests(unittest.TestCase):
         def git(*args):
             return subprocess.run(['git', '-C', str(repo), *args], check=True,
                                   capture_output=True, text=True).stdout.strip()
-        git('init', '-q'); git('add', '.apm')
+        git('init', '-q')
+        git('config', 'remote.origin.url', 'https://github.com/thetechgy/agent-engineering-baseline.git')
+        git('add', '.apm')
         git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
             'commit', '-qm', 'Listing budget fixture')
         rev = git('rev-parse', 'HEAD')
@@ -3543,11 +3566,13 @@ class EvidenceTests(unittest.TestCase):
         def git(*args):
             return subprocess.run(['git', '-C', str(repo), *args], check=True,
                                   capture_output=True, text=True).stdout.strip()
-        git('init', '-q'); git('add', '.apm')
+        git('init', '-q')
+        git('config', 'remote.origin.url', 'https://github.com/thetechgy/agent-engineering-baseline.git')
+        git('add', '.apm')
         git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'Static source fixture')
         rev = git('rev-parse', 'HEAD')
-        for declared, complete in ((None, False), ({'repository': 'example/fixture', 'commit': 'f'*40}, False),
-                                   ({'repository': 'example/fixture', 'commit': rev}, True)):
+        for declared, complete in ((None, False), ({'repository': 'thetechgy/agent-engineering-baseline', 'commit': 'f'*40}, False),
+                                   ({'repository': 'thetechgy/agent-engineering-baseline', 'commit': rev}, True)):
             with self.subTest(declared=declared):
                 native['evaluated_source'] = declared; write(path, native)
                 data = evidence.normalize_static(root, 'podman', workspace=repo)
@@ -4268,6 +4293,224 @@ class EvidenceTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             evidence.write_outputs(values, workspace / 'new', workspace=workspace)
         self.assertEqual(self.snapshot(workspace), before)
+
+
+    def repository_fixture(self):
+        repo = self.repo(); self.local(repo, 'podman', True)
+        def git(*args):
+            return subprocess.run(['git', '-C', str(repo), *args], check=True,
+                                  capture_output=True, text=True).stdout.strip()
+        git('init', '-q'); git('add', '.apm')
+        git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'Source fixture')
+        git('remote', 'add', 'origin', 'https://github.com/thetechgy/agent-engineering-baseline.git')
+        return repo, git
+
+    def test_workspace_origin_association_across_readers(self):
+        repo, git = self.repository_fixture(); rev = git('rev-parse', 'HEAD')
+        native = self.native()
+        static = self.root / 'static'; shutil.copytree(FIXTURES / 'static-synthetic', static)
+        path = next((static / 'reports/podman').glob('*.json'))
+        report = evidence.read_json(path)
+        def declare(name):
+            declaration = {'repository': name, 'commit': rev}
+            self.mutate(native, '/run_config.json', lambda d: d.update(evaluated_source=declaration))
+            self.mutate(native, '/result.json', lambda d: d['run_config'].update(evaluated_source=declaration))
+            self.mutate(native, '/provenance.json', lambda d: d.update(revision=rev))
+            report['evaluated_source'] = declaration; write(path, report)
+        for origin in ('https://github.com/Example/Fixture.git', 'git@github.com:example/fixture.git',
+                       'ssh://git@github.com/example/fixture', 'https://github.com/example/fixture'):
+            with self.subTest(origin=origin):
+                git('remote', 'set-url', 'origin', origin); declare('EXAMPLE/Fixture')
+                before = self.snapshot(repo)
+                inv = evidence.inventory(repo)
+                self.assertTrue(all(row['source']['repository'] == 'example/fixture' for row in inv['skills']))
+                data = evidence.normalize_behavioral(native, 'podman', workspace=repo)
+                scan = evidence.normalize_static(static, 'podman', workspace=repo)
+                for value in (data, scan):
+                    self.assertEqual(value['source']['repository'], 'example/fixture')
+                    self.assertIsNotNone(value['source']['content']['digest'])
+                    evidence.project(value)
+                self.assertIsNotNone(data['dataset']['authored_digest'])
+                self.assertEqual(self.snapshot(repo), before)
+                declare('microsoft/vscode')
+                with patch.object(evidence, 'historical_content') as contents, patch.object(evidence, 'historical_blob') as blob:
+                    for kind in ('behavioral', 'static'):
+                        output = self.root / 'conflicting-output'
+                        original = getattr(evidence, 'normalize_' + kind)
+                        with patch.object(evidence, 'normalize_' + kind,
+                                side_effect=lambda *a, fn=original: fn(*a, workspace=repo)):
+                            with self.assertRaisesRegex(ValueError, 'repository conflicts'):
+                                evidence.main(['normalize', '--kind', kind, '--skill', 'podman',
+                                               '--input', str(native if kind == 'behavioral' else static), '--output', str(output)])
+                        self.assertFalse(output.exists())
+                    contents.assert_not_called(); blob.assert_not_called()
+        declare(None)
+        for value in (evidence.normalize_behavioral(native, 'podman', workspace=repo),
+                      evidence.normalize_static(static, 'podman', workspace=repo)):
+            self.assertIsNone(value['source']['repository'])
+            self.assertIsNone(value['source']['content']['digest'])
+            self.assertIn('source_unavailable', value['availability']['reasons'])
+        declare('example/fixture')
+        linked = self.root / 'linked'; git('worktree', 'add', '--detach', str(linked), rev)
+        self.assertEqual(evidence.inventory(linked)['skills'][0]['source']['repository'], 'example/fixture')
+        self.assertEqual(evidence.normalize_behavioral(native, 'podman', workspace=linked)['source']['revision'], rev)
+        self.assertEqual(evidence.normalize_static(static, 'podman', workspace=linked)['source']['revision'], rev)
+        for origin in (None, 'file:///tmp/repository', 'https://example.invalid/example/fixture',
+                       'https://user:password@github.com/example/fixture', 'https://github.com/example/fixture?query'):
+            with self.subTest(missing_or_unsupported=origin):
+                git('config', '--unset-all', 'remote.origin.url')
+                if origin is not None: git('config', 'remote.origin.url', origin)
+                with patch.object(evidence, 'historical_content') as contents, patch.object(evidence, 'historical_blob') as blob:
+                    inv = evidence.inventory(repo)
+                    self.assertIsNone(inv['skills'][0]['source']['repository'])
+                    self.assertIsNone(inv['skills'][0]['source']['revision'])
+                    data = evidence.normalize_behavioral(native, 'podman', workspace=repo)
+                    scan = evidence.normalize_static(static, 'podman', workspace=repo)
+                    for value in (data, scan):
+                        self.assertIsNone(value['source']['repository'])
+                        self.assertIsNone(value['source']['revision'])
+                        self.assertIsNone(value['source']['content']['digest'])
+                        self.assertIn('source_unavailable', value['availability']['reasons'])
+                        evidence.project(value)
+                    self.assertIsNone(data['dataset']['authored_digest'])
+                    contents.assert_not_called(); blob.assert_not_called()
+                if origin is None: git('config', 'remote.origin.url', 'placeholder')
+
+    def test_reviewed_source_unknown_without_workspace_association(self):
+        data = evidence.normalize_behavioral(FIXTURES / 'podman-native', 'podman', workspace=self.root)
+        self.assertEqual(data['source'], evidence.source('podman', path='.apm/skills/podman'))
+        self.assertIsNone(data['dataset']['authored_digest'])
+        self.assertIn('source_unavailable', data['availability']['reasons'])
+        self.assertEqual(evidence.project(data)['metrics'], self.data()['metrics'])
+        for key, value in (('skill_id', 'other'), ('repository', 'microsoft/vscode'), ('revision', 'a' * 40)):
+            changed = copy.deepcopy(data); changed['source'][key] = value
+            with self.assertRaises(ValueError): evidence.project(changed)
+
+    def test_native_failure_carriers_reconcile_scores_and_execution(self):
+        root = self.native(); run = next((root / 'results/podman').iterdir())
+        baseline = evidence.normalize_behavioral(root, 'podman')
+        carriers = ('reward', 'trial', 'exception', 'verifier', 'nested_reward',
+                    'step', 'step_exception', 'step_verifier', 'step_reward', 'step_incomplete')
+        for arm, carrier in itertools.product(('with_skill', 'without_skill'), carriers):
+            with self.subTest(arm=arm, carrier=carrier):
+                path = next((run / 'codex' / arm.replace('_', '-') / 'trials').glob('*/result.json'))
+                reward_path = path.parent / 'reward.json'
+                result_path = run / 'result.json'
+                summary_path = run / 'codex' / arm.replace('_', '-') / 'summary.json'
+                originals = {p: evidence.read_json(p) for p in (path, reward_path, result_path, summary_path)}
+                record = copy.deepcopy(originals[path]); reward = copy.deepcopy(originals[reward_path])
+                if carrier.startswith('step'):
+                    step = {'step_name': 'fixture', 'verifier_result': copy.deepcopy(record['verifier_result'])}
+                    record['step_results'] = [step]
+                    target = step if carrier in ('step', 'step_exception') else step['verifier_result'] if carrier == 'step_verifier' else step['verifier_result']['rewards']
+                    if carrier == 'step_exception': target['exception_info'] = {}
+                    elif carrier == 'step_incomplete': target.pop('accuracy')
+                    else: target['evaluation_status'] = 'FaIlEd'
+                elif carrier == 'exception': record['exception_info'] = {'exception_message': 'PRIVATE-DIAGNOSTIC'}
+                else:
+                    target = {'reward': reward, 'trial': record, 'verifier': record['verifier_result'],
+                              'nested_reward': record['verifier_result']['rewards']}[carrier]
+                    target['evaluation_status'] = 'ERROR'
+                    target['evaluation_errors'] = ['PRIVATE-DIAGNOSTIC']
+                write(path, record); write(reward_path, reward)
+                before = self.snapshot(root); output = self.root / 'failure-output'
+                with self.assertRaisesRegex(ValueError, 'Native failure contradicts'):
+                    evidence.normalize_behavioral(root, 'podman')
+                with self.assertRaisesRegex(ValueError, 'Native failure contradicts'):
+                    evidence.project(dict(baseline), behavioral_bundle=root)
+                cli = subprocess.run([sys.executable, str(REPO / '.github/scripts/skill_evidence.py'),
+                    'normalize', '--kind', 'behavioral', '--skill', 'podman', '--input', str(root),
+                    '--output', str(output)], capture_output=True, text=True)
+                self.assertEqual(cli.returncode, 1); self.assertFalse(output.exists())
+                self.assertEqual(cli.stderr, 'Evidence contract rejected (ValueError)\n')
+                self.assertEqual(self.snapshot(root), before)
+                # Preserve the failed carrier while making its authoritative scores unscored.
+                for key in evidence.SCORE_FIELDS:
+                    record['verifier_result']['rewards'].pop(key, None); reward.pop(key, None)
+                write(path, record); write(reward_path, reward)
+                summary = copy.deepcopy(originals[summary_path]); result = copy.deepcopy(originals[result_path])
+                attempt = summary['pass_at_k']['cases'][reward['entry_id']]['attempts'][0]
+                summary['pass_at_k']['passed_cases'] -= bool(attempt['passed'])
+                attempt.update(score=None, passed=None)
+                summary.update(scored_attempts=9, execution_status='incomplete')
+                result['report_status'] = 'incomplete'
+                result['agents']['codex']['conditions'][arm].update(scored_attempts=9, execution_status='incomplete')
+                result['agents']['codex']['pass_at_k'][arm] = copy.deepcopy(summary['pass_at_k'])
+                write(summary_path, summary); write(result_path, result)
+                data = evidence.normalize_behavioral(root, 'podman')
+                public = evidence.project(dict(data), behavioral_bundle=root)
+                self.assertIn('execution_incomplete', public['availability']['reasons'])
+                self.assertNotIn('PRIVATE-DIAGNOSTIC', evidence.encoded(public).decode())
+                stripped = copy.deepcopy(dict(data)); stripped['availability']['reasons'].remove('execution_incomplete')
+                with self.assertRaises(ValueError): evidence.project(stripped, behavioral_bundle=root)
+                for p, value in originals.items(): write(p, value)
+        self.assertEqual(evidence.encoded(baseline), evidence.encoded(evidence.normalize_behavioral(root, 'podman')))
+
+    def test_snapshot_markers_and_shared_read_budget(self):
+        from skillevaluator.tier3 import output_provenance
+        path = self.local(self.root, 'alpha')
+        (path / 'README.md').write_text('Additional captured member')
+        src = evidence.source('alpha', contents=evidence.skill_content(path))
+        for kind in ('file', 'directory'):
+            marker = path / output_provenance.GENERATED_OUTPUT_MARKER
+            if kind == 'file': marker.write_text('{}')
+            else: marker.mkdir()
+            with patch.object(output_provenance, '_load_existing_key') as key, \
+                    patch.object(evidence, 'skill_projection_files') as selector:
+                with self.assertRaisesRegex(ValueError, 'Generated output'):
+                    evidence.verify_source_snapshot(path, src)
+                key.assert_not_called(); selector.assert_not_called()
+            if kind == 'file': marker.unlink()
+            else: marker.rmdir()
+        consumed = sum(p.stat().st_size for p in path.iterdir())
+        with patch.object(evidence, 'NORMALIZATION_LIMIT', consumed): evidence.verify_source_snapshot(path, src)
+        with patch.object(evidence, 'NORMALIZATION_LIMIT', consumed - 1):
+            with self.assertRaisesRegex(ValueError, 'Normalization byte limit'):
+                evidence.verify_source_snapshot(path, src)
+
+    def test_retrieval_rechecks_trusted_expiry_before_member_access(self):
+        data = self.data(); ref = data['references'][0]
+        deadline = datetime.fromisoformat(evidence.REVIEWED_REFERENCE_EXPIRY[(ref['artifact_id'], ref['artifact_digest'])])
+        for delta in (-1, 0, 1):
+            with self.subTest(delta=delta), patch.object(evidence, 'utc_now', return_value=deadline + timedelta(microseconds=delta)), \
+                    patch.object(evidence, 'read_bytes', wraps=evidence.read_bytes) as reader:
+                if delta < 0:
+                    # The reviewed extract is not the retained original member.
+                    with self.assertRaisesRegex(ValueError, 'member digest mismatch'):
+                        evidence.verify_reference(FIXTURES / 'podman-native', ref)
+                    self.assertEqual(reader.call_count, 1)
+                else:
+                    with self.assertRaisesRegex(ValueError, 'expired'):
+                        evidence.verify_reference(FIXTURES / 'podman-native', ref)
+                    reader.assert_not_called()
+
+    def test_oversized_numbers_are_bounded_cli_rejections(self):
+        root = self.native(); run = next((root / 'results/podman').iterdir())
+        path = run / 'result.json'; original = evidence.read_json(path)
+        for kind in ('metric', 'summary', 'constituent', 'project'):
+            with self.subTest(kind=kind):
+                result = copy.deepcopy(original)
+                trial_path = next((run / 'codex/with-skill/trials').glob('*/result.json'))
+                trial = evidence.read_json(trial_path)
+                if kind == 'metric': result['agents']['codex']['lift']['overall']['delta'] = 10 ** 400
+                elif kind == 'summary':
+                    next(iter(result['agents']['codex']['pass_at_k']['with_skill']['cases'].values()))['attempts'][0]['score'] = 10 ** 400
+                elif kind == 'constituent':
+                    step = copy.deepcopy(trial['verifier_result']); step['rewards']['accuracy'] = 10 ** 400
+                    write(trial_path, {**trial, 'step_results': [{'step_name': 'fixture', 'verifier_result': step}]})
+                write(path, result)
+                args = ['normalize', '--kind', 'behavioral', '--skill', 'podman', '--input', str(root)]
+                if kind == 'project':
+                    data = self.data(); data['metrics'][0]['value'] = 10 ** 400
+                    input_path = self.root / 'huge.json'; write(input_path, data)
+                    args = ['project', '--input', str(input_path)]
+                output = self.root / ('oversized-output-' + kind); before = self.snapshot(root)
+                cli = subprocess.run([sys.executable, str(REPO / '.github/scripts/skill_evidence.py'), *args,
+                                      '--output', str(output)], capture_output=True, text=True)
+                self.assertEqual(cli.returncode, 1); self.assertFalse(output.exists())
+                self.assertRegex(cli.stderr, r'^Evidence contract rejected \((ValueError|OverflowError)\)\n$')
+                self.assertEqual(self.snapshot(root), before)
+                write(path, original); write(trial_path, trial)
 
 
 if __name__ == '__main__':

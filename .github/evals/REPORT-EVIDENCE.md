@@ -37,7 +37,9 @@ including directories beside `evidence.json` and beneath native report members.
 Normalization already produces a verified public report, so moving its output
 does not require copying private native reports into the output directory.
 Inputs remain unchanged. CLI contract errors return exit status 1 without echoing
-native diagnostic content.
+native diagnostic content. Oversized integer observations are range-checked
+without converting them to floats; native numeric overflow also becomes a bounded
+contract rejection before output allocation.
 
 Before creating temporary output, the selected parent must be an ordinary
 directory outside the checkout and input bundle. The first nonempty `TMPDIR`,
@@ -140,6 +142,23 @@ Dirty, staged, untracked or deleted visible members leave the revision unknown;
 unrelated workspace edits do not invalidate a matching scoped manifest. Missing
 objects remain unknown without lazy fetch. These listing/blob reads share the
 inventory operation budget and existing historical bounds.
+
+Local repository association comes from one bounded offline read of the trusted
+workspace's literal Git `remote.origin.url`, including linked worktrees. GitHub
+HTTPS, SCP-style SSH and `ssh://git@github.com/` origins normalize to lowercase
+`owner/repository`, with an optional `.git` suffix. Includes, global configuration
+and URL rewrites do not establish identity. Conflicting native repository
+declarations reject before source or authored-dataset reconstruction. Missing
+declarations or missing/unsupported origins leave normalized local repository,
+revision and reconstructed content unknown, retaining `source_unavailable`.
+Inventory can still describe captured configured bytes without repository or
+revision attribution. Upstream deployment identities continue to use their lock
+records. Local Git configuration establishes repository association, not remote
+execution attestation or proof that a commit was published by that repository.
+Reviewed extracts may likewise retain only the exact unknown-source record when
+workspace association is unavailable; their existing reference, observation,
+metric and execution pins still apply. That downgrade cannot introduce a new
+repository, revision or content claim.
 
 An upstream-to-local conversion keeps the logical ID, removes active upstream
 ownership, and changes APM sources through normal pinned regeneration. Historical
@@ -254,6 +273,14 @@ exceed known recorded, scored or expected coverage, per-case policy caps or the
 10,000-trial operation cap shared across both arms. Complete case details require
 every supplied attempt to match a retained trial. Partial retained trials may
 leave validated summary attempts unmatched; absent counts remain unknown.
+
+Structured native failures are reconciled before accepting a trial: reward,
+trial, verifier and nested-reward `evaluation_status`, trial exceptions, and
+constituent-step failures use the pinned evaluator's data-only semantics. The
+constituent helper receives captured JSON only; no filesystem collector runs.
+Failures contradicting retained scores or a successful arm reject. Consistent
+unscored failures remain incomplete with `execution_incomplete`, including
+through standalone projection, and diagnostic prose has no public fields.
 
 Canonical structured hashing uses UTF-8 JSON with sorted object keys, compact
 separators, ASCII escaping, and no nonfinite values, prefixed `sha256:`. Source
@@ -550,8 +577,9 @@ around presence decisions and before publication; transiently hidden lock files,
 overlay roots or overlay parents cannot be accepted as an absent baseline.
 Inventory rejects generated-output markers anywhere in inventoried source trees
 before the pinned visibility selector can authenticate them or access a private
-marker key; unrelated generated directories and other selector callers retain
-their existing behavior.
+marker key. Standalone source-snapshot verification applies that same early
+marker rejection and the shared 64 MiB operation budget, alongside per-file and
+tree limits; unrelated generated directories retain their existing behavior.
 File/object size is charged before content capture, and unexpected file growth
 is charged before parsing; per-file and historical-object limits remain 8 MiB.
 Static and behavioral normalization retain the directory device/inode identities
@@ -580,8 +608,10 @@ once and reuses it for both checks. A record serialized before expiry must
 explicitly mark every reviewed reference `expired`, retain `reference_expired`,
 and report supporting-evidence availability as `incomplete` when projected at
 or after the deadline. Contradictory records reject before output allocation;
-projection does not silently rewrite them. Incomplete supporting-evidence
-availability does not invalidate a completed evaluation: execution status,
+projection does not silently rewrite them. Reference retrieval also rechecks
+the trusted deadline before opening member bytes; serialized `available` cannot
+authorize a read at or after expiration. Incomplete supporting-evidence availability
+does not invalidate a completed evaluation: execution status,
 historical scores, trial coverage, rubric counts, and identities remain unchanged.
 Analysis sufficiency is outside this contract.
 Retained reduced extract bytes do not establish continued

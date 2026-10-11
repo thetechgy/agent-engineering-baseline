@@ -400,7 +400,8 @@ def repository(value):
 
 
 def number(value, low=0, high=1):
-    require(type(value) in (int, float) and math.isfinite(value) and low <= value <= high,
+    require(type(value) in (int, float) and low <= value <= high
+            and (type(value) is int or math.isfinite(value)),
             'Invalid numeric observation')
 
 
@@ -475,10 +476,10 @@ def skill_content(path, *, reader=None, directory_identities=None, directory_sta
     members = {} if file_states is None else file_states
     files = safe_tree(path, max_entries=2 * MAX_SOURCE_MEMBERS, max_files=MAX_SOURCE_MEMBERS,
                       directory_identities=directories, directory_states=states, file_states=members)
-    if reader is not None:
-        reject_source_markers(path, files, directories)
-    else:
-        reader = lambda member: read_bytes(member, directory_identities=directories, directory_states=states, file_states=members)
+    reject_source_markers(path, files, directories)
+    if reader is None:
+        budget = ReadBudget()
+        reader = lambda member: read_bytes(member, budget=budget, directory_identities=directories, directory_states=states, file_states=members)
     safe_path(path, directory=True, directory_identities=directories)
     result = content([{'member': p.relative_to(path).as_posix(), 'digest': digest_bytes(reader(p))}
                      for p in skill_projection_files(path, files, directory_identities=directories, directory_states=states)], 'configured')
@@ -553,6 +554,32 @@ def offline_git(workspace, *args, text=False, max_entries=None, budget=None):
 def git_revision(workspace):
     result = offline_git(workspace, 'rev-parse', 'HEAD', text=True)
     return result.stdout.strip() if result.returncode == 0 else None
+
+
+def workspace_repository(workspace, *, budget=None):
+    """Associate local objects with a canonical origin, without remote attestation."""
+    result = offline_git(workspace, 'config', '--local', '--no-includes', '--null',
+                         '--get-all', 'remote.origin.url', max_entries=1, budget=budget)
+    if result.returncode:
+        return None
+    raw = result.stdout
+    require(len(raw) <= 4096, 'Repository identity limit')
+    # Read the literal common-repository config (also for linked worktrees),
+    # without inherited config, includes, URL rewrites, credentials or fetching.
+    match = re.fullmatch(rb'(?:https://github\.com/|ssh://git@github\.com/|git@github\.com:)'
+                         rb'([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+?)(?:\.git)?\x00', raw, re.IGNORECASE)
+    if match is None:
+        return None
+    repo = match[1].decode('ascii').lower()
+    return repo if all(part not in ('.', '..') for part in repo.split('/')) else None
+
+
+def associated_repository(workspace, declared, *, budget):
+    optional(declared, repository)
+    actual = workspace_repository(workspace, budget=budget)
+    require(actual is None or declared is None or actual == declared.lower(),
+            'Declared repository conflicts with workspace origin')
+    return actual if declared is not None else None
 
 
 def historical_commit(workspace, rev):
@@ -751,6 +778,7 @@ def inventory(workspace=ROOT):
     workspace = safe_path(workspace, directory=True, directory_identities=directories)
     budget = ReadBudget()
     captured = {}
+    repo = workspace_repository(workspace, budget=budget)
     def reader(path):
         path = safe_path(path, directory_identities=directories)
         if path not in captured:
@@ -824,10 +852,10 @@ def inventory(workspace=ROOT):
             source_path = authored.relative_to(workspace).as_posix()
             configured = skill_content(authored, reader=reader, directory_identities=directories,
                                        directory_states=states, file_states=members)
-            rev = git_revision(workspace)
+            rev = git_revision(workspace) if repo else None
             if rev is not None and historical_content(workspace, rev, source_path, budget=budget)['digest'] != configured['digest']:
                 rev = None
-            src = source(name, 'local', 'thetechgy/agent-engineering-baseline', rev, source_path, configured)
+            src = source(name, 'local', repo, rev, source_path, configured)
             deployment = None
         else:
             require(len(owners) == 1, 'Overlay has no unique skill owner')
@@ -1024,6 +1052,13 @@ def reference(root, path, artifact, locator=(), extract=None):
     return reference_from_digest(root, path, artifact, digest_bytes(read_bytes(path)), locator, extract)
 
 
+def reference_expired(record, observed_at):
+    deadline = REVIEWED_REFERENCE_EXPIRY.get((record['artifact_id'], record['artifact_digest']))
+    if record['provenance'] == 'reviewed_extract':
+        require(deadline is not None, 'Missing reviewed reference expiration')
+    return deadline is not None and observed_at >= datetime.fromisoformat(deadline)
+
+
 def reference_from_digest(root, path, artifact, raw_digest, locator=(), extract=None):
     sha(raw_digest)
     member = path.relative_to(root).as_posix()
@@ -1089,14 +1124,10 @@ def validate_evidence(data, *, public=False, _observed_at=None):
     for ref in references:
         validate_reference(ref); require(ref['id'] not in ref_ids, 'Duplicate reference'); ref_ids.add(ref['id'])
         refs_by_id[ref['id']] = ref
-        deadline = REVIEWED_REFERENCE_EXPIRY.get((ref['artifact_id'], ref['artifact_digest']))
-        if ref['provenance'] == 'reviewed_extract':
-            require(deadline is not None, 'Missing reviewed reference expiration')
-        if deadline is not None:
-            if observed_at is None:
-                observed_at = utc_now()
-            if observed_at >= datetime.fromisoformat(deadline):
-                require(ref['availability'] == 'expired', 'Reviewed reference must be expired')
+        if observed_at is None:
+            observed_at = utc_now()
+        if reference_expired(ref, observed_at):
+            require(ref['availability'] == 'expired', 'Reviewed reference must be expired')
         if ref['availability'] != 'available':
             reason = 'reference_expired' if ref['availability'] == 'expired' else 'reference_unavailable'
             require(availability['status'] == 'incomplete' and reason in availability['reasons'], 'Missing reference limitation')
@@ -1335,7 +1366,12 @@ def validate_evidence(data, *, public=False, _observed_at=None):
         require(availability['provenance'] == 'reviewed_extract', 'Reviewed availability provenance mismatch')
         require(all(REVIEWED_METRIC_VALUES.get(row['name']) == row['value'] for row in data['metrics']),
                 'Unrecognized reviewed metric value')
-        require(identity(data['source']) in REVIEWED_SOURCE_IDENTITIES, 'Unrecognized reviewed source identity')
+        # A missing workspace association may only remove attribution. The
+        # reviewed payload/reference/execution pins still authenticate the run;
+        # this exact unknown source cannot claim a repository or local bytes.
+        require(identity(data['source']) in REVIEWED_SOURCE_IDENTITIES
+                or data['source'] == source('podman', path='.apm/skills/podman'),
+                'Unrecognized reviewed source identity')
         require(identity({key: data[key] for key in ('run_id', 'dataset', 'policy', 'arms')})
                 in REVIEWED_EXECUTION_CONTRACTS, 'Unrecognized reviewed execution contract')
     if data['kind'] == 'static' and aggregate is not None:
@@ -1562,6 +1598,17 @@ def summary_error_count(summary):
     return errors + bool(job_failure) + len(trial_failures)
 
 
+def native_trial_failed(trial, reward):
+    """Inspect captured structured carriers only; never run the native collector."""
+    from skillevaluator.tier3.harbor.collector import _constituent_default_reward_failure
+    try:
+        constituent_failure = bool(_constituent_default_reward_failure(trial))
+    except OverflowError:
+        raise ValueError('Invalid native numeric observation') from None
+    return (constituent_failure or trial.get('exception_info') is not None
+            or str((reward or {}).get('evaluation_status') or '').casefold() in ('error', 'failed'))
+
+
 def reconcile_policy(fields, versions, config, agent, attempt_policy):
     """Reject supplied identities that contradict known runtime/configuration values."""
     fields = policy_fields(fields)
@@ -1708,10 +1755,14 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
         ids = sorted(case_ids(list(result['agents']['codex'].get('pass_at_k', {}).get('with_skill', {}).get('cases', {}))))
         snapshot = None; limitations.add('metadata_missing')
     declared = config.get('evaluated_source', {})
+    require(type(declared) is dict, 'Invalid recorded behavioral source')
     repo = declared.get('repository'); rev = declared.get('commit')
     optional(repo, repository); optional(rev, revision)
     if provenance.get('revision') is not None:
         require(provenance['revision'] == rev, 'Declared revision mismatch')
+    repo = associated_repository(workspace, repo, budget=budget)
+    if repo is None:
+        rev = None
     historical_owner = 'upstream' if provenance.get('policy', {}).get('upstream_revision') else 'local'
     src_path = 'skills/' + name if historical_owner == 'upstream' else '.apm/skills/' + name
     src_repo = 'cli/cli' if historical_owner == 'upstream' and name == 'gh' else repo
@@ -1767,7 +1818,10 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
                 if key in carrier:
                     require(type(carrier[key]) is int and carrier[key] == sum(values), 'Conflicting aggregate coverage')
     if all(k in agent for k in ('lift', 'dimensions_with_skill')):
-        data['metrics'] = reports.metric_rows(agent)
+        try:
+            data['metrics'] = reports.metric_rows(agent)
+        except OverflowError:
+            raise ValueError('Invalid native numeric observation') from None
     else:
         limitations.add('coverage_missing')
     if provenance.get('metrics') is not None:
@@ -1892,6 +1946,12 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
                 overall = verifier.get('overall')
                 require(overall == attempt.get('score'), 'Native trial/summary score mismatch')
                 scores = {k: verifier.get(k) for k in SCORE_FIELDS}
+                if native_trial_failed(trial_result, reward):
+                    require(all(value is None for value in scores.values()) and attempt.get('passed') is None,
+                            'Native failure contradicts retained scores')
+                    require(native_condition.get('execution_status') != 'succeeded',
+                            'Native failure contradicts successful execution')
+                    limitations.add('execution_incomplete')
                 if reward is not None:
                     for key in SCORE_FIELDS:
                         if key in reward:
@@ -2071,6 +2131,9 @@ def normalize_static(root, name, workspace=ROOT):
         require(type(declared) is dict, 'Invalid recorded static source')
         repo = declared.get('repository'); rev = declared.get('commit')
         optional(repo, repository); optional(rev, revision)
+        repo = associated_repository(workspace, repo, budget=budget)
+        if repo is None:
+            rev = None
         path = '.apm/skills/' + name
         data['source'] = source(name, 'local' if repo and rev else 'unknown', repo, rev, path,
                                 historical_content(workspace, rev, path, budget=budget) if rev else content())
@@ -2258,6 +2321,7 @@ def verify_reference(bundle, record):
     """Verify retained original bytes and resolve a structured locator, without execution."""
     validate_reference(record)
     require(record['availability'] == 'available', 'Reference unavailable or expired')
+    require(not reference_expired(record, utc_now()), 'Reference unavailable or expired')
     safe_path(bundle, directory=True)
     path = bundle / record['member']
     raw = read_bytes(path)
@@ -2311,7 +2375,7 @@ def main(argv=None):
 if __name__ == '__main__':
     try:
         main()
-    except (ValueError, KeyError, TypeError, AttributeError, IndexError, OSError) as exc:
+    except (ValueError, KeyError, TypeError, AttributeError, IndexError, OSError, OverflowError) as exc:
         # Native exception strings can contain prose or paths. Keep CLI errors bounded.
         print('Evidence contract rejected (' + type(exc).__name__ + ')', file=sys.stderr)
         sys.exit(1)
