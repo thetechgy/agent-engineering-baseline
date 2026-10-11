@@ -1669,6 +1669,45 @@ class EvidenceTests(unittest.TestCase):
         self.assertIn('metadata_missing', data['availability']['reasons'])
         self.assertIsNone(data['policy']['fields']['evaluator_revision'])
 
+    def test_known_staged_digest_requires_algorithm(self):
+        data = self.data()
+        data['source']['content'] = evidence.content([
+            {'member': 'SKILL.md', 'digest': evidence.digest_bytes(b'Synthetic')}], 'configured')
+        data['availability'].update(status='complete', reasons=[])
+        data['dataset']['staged_algorithm'] = None
+        self.assert_project_rejects(data, 'Missing staged digest algorithm')
+        data['dataset']['staged_algorithm'] = 'skill-evaluator-dataset-snapshot/1'; evidence.project(data)
+        data['dataset'].update(staged_digest=None, staged_algorithm=None, staged_provenance='unknown')
+        data['availability'].update(status='incomplete', reasons=['metadata_missing'])
+        self.assertIsNone(evidence.project(data)['dataset']['staged_digest'])
+
+    def test_partial_behavioral_metrics_retain_coverage_limitation(self):
+        for size in range(4):
+            with self.subTest(size=size):
+                data = self.data(); data['source']['content'] = evidence.content()
+                data['metrics'] = data['metrics'][:size]
+                data['availability'].update(status='incomplete', reasons=['source_unavailable'])
+                self.assert_project_rejects(data, 'Missing metric coverage limitation')
+                data['availability']['reasons'].append('coverage_missing')
+                self.assertEqual(len(evidence.project(data)['metrics']), size)
+        root = self.native(); run = next((root / 'results/podman').iterdir())
+        result = evidence.read_json(run / 'result.json'); result['agents']['codex'].pop('lift')
+        write(run / 'result.json', result)
+        provenance = evidence.read_json(root / 'provenance.json'); provenance.pop('metrics', None)
+        write(root / 'provenance.json', provenance)
+        data = evidence.normalize_behavioral(root, 'podman')
+        self.assertEqual(data['metrics'], [])
+        self.assertIn('coverage_missing', evidence.project(data)['availability']['reasons'])
+
+    def test_unavailable_evidence_retains_results_limitation(self):
+        for kind in ('behavioral', 'static'):
+            with self.subTest(kind=kind):
+                data = evidence.read_json(FIXTURES / 'gh-no-model.json') if kind == 'behavioral' else evidence.evidence('alpha', 'static')
+                data['availability']['reasons'] = ['metadata_missing']
+                self.assert_project_rejects(data, 'Unavailable evidence missing results limitation')
+                data['availability']['reasons'].append('results_not_supplied')
+                self.assertIn('results_not_supplied', evidence.project(data)['availability']['reasons'])
+
     def test_shared_projection_enforces_supported_evaluator_revision(self):
         for kind in ('behavioral', 'static'):
             with self.subTest(kind=kind):

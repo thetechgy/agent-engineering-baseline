@@ -738,6 +738,8 @@ def validate_evidence(data, *, public=False):
     enum(ds['authored_provenance'], PROVENANCE); enum(ds['staged_provenance'], PROVENANCE)
     require((ds['authored_digest'] is None) == (ds['authored_provenance'] == 'unknown'), 'Authored provenance mismatch')
     require((ds['staged_digest'] is None) == (ds['staged_provenance'] == 'unknown'), 'Staged provenance mismatch')
+    require(ds['staged_digest'] is None or ds['staged_algorithm'] == 'skill-evaluator-dataset-snapshot/1',
+            'Missing staged digest algorithm')
     ids = case_ids(ds['case_ids']); require(ds['case_cohort_digest'] == identity(sorted(ids)), 'Cohort mismatch')
     validate_policy(data['policy'])
     availability = data['availability']; closed(availability, ('status', 'reasons', 'provenance'))
@@ -918,11 +920,15 @@ def validate_evidence(data, *, public=False):
                 if known and all(value is not None for value in known):
                     require(sum(known) == total, 'Contradictory static finding counts')
     if availability['status'] == 'unavailable':
+        require('results_not_supplied' in availability['reasons'], 'Unavailable evidence missing results limitation')
         require(not data['observations'] and not data['metrics'] and not data['scans'] and not data['findings'], 'Unavailable evidence has observations')
         for arm in data['arms']:
             require(all(arm['coverage'][k] is None for k in ('recorded_attempts', 'scored_attempts', 'unscored_attempts')), 'Invented observed count')
     elif data['kind'] == 'behavioral':
         require(sorted(arm_names) == ['with_skill', 'without_skill'], 'Missing comparison arms')
+        if len(data['metrics']) < 4:
+            require(availability['status'] == 'incomplete' and 'coverage_missing' in availability['reasons'],
+                    'Missing metric coverage limitation')
         if data['source']['content']['digest'] is None:
             require(availability['status'] == 'incomplete' and 'source_unavailable' in availability['reasons'],
                     'Behavioral source unavailable')

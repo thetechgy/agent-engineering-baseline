@@ -351,6 +351,10 @@ Shared policy validation accepts only the supported evaluator revision when
 known. Deterministic custom grading is supported only for `gh`, with all eight
 dimensions present and binary; ordinary continuous native scores are preserved.
 Absent custom grades remain null, and a recorded failed binary gate remains zero.
+Known staged digests require the supported snapshot algorithm. Reduced behavioral
+metric sets independently retain `coverage_missing`; their retained values stay
+unchanged. Unavailable behavioral and static evidence retains
+`results_not_supplied`, including when other limitations are also recorded.
 
 The approved manifest records no durable retention of original members. At or
 after its recorded UTC expiration, normalization marks its original references
