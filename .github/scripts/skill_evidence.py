@@ -753,6 +753,9 @@ def validate_evidence(data, *, public=False):
         closed(obs, obs_fields if public else obs_fields + ('native_id', 'native_trial', 'native_task'))
         sha(obs['id']); enum(obs['arm'], ('with_skill', 'without_skill')); require(obs['case_id'] in ids, 'Unknown case')
         optional(obs['attempt'], lambda v: count(v, 100)); require(obs['attempt'] is None or obs['attempt'] >= 1, 'Invalid attempt index')
+        if obs['attempt'] is None:
+            require(availability['status'] == 'incomplete' and 'metadata_missing' in availability['reasons'],
+                    'Missing attempt metadata limitation')
         optional(obs['score'], number); optional(obs['rubric_pass'], boolean)
         optional(obs['deterministic_gate'], number)
         closed(obs['scores'], SCORE_FIELDS)
@@ -1199,6 +1202,7 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     trials_by_arm = {arm: sorted((run / 'codex' / arm.replace('_', '-') / 'trials').glob('*/result.json'))
                      for arm in ('with_skill', 'without_skill')}
     require(sum(len(paths) for paths in trials_by_arm.values()) <= MAX_TRIALS, 'Trial input limit')
+    known_cases = set(ids)
     models = [value for value in (policy['fields']['model'], agent.get('model'),
               config.get('provider', {}).get('model'), config.get('agents', {}).get('codex', {}).get('model'))
               if value is not None]
@@ -1267,9 +1271,10 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
                         require(len(metric_sets) == 1, 'Reward identity mismatch')
                 matched = lookup.get(trial)
                 from skillevaluator.tier3.harbor.collector import _entry_id_from_harbor_result, _attempt_ordinal, _canonical_case_id
-                case = validate_case_id(reward['entry_id']) if reward is not None else matched[0] if matched else validate_case_id(
-                    _canonical_case_id(_entry_id_from_harbor_result(trial_result), set(ids)))
-                require(case in ids and (matched is None or case == matched[0]), 'Trial case identity mismatch')
+                task_case = validate_case_id(_canonical_case_id(_entry_id_from_harbor_result(trial_result), known_cases))
+                case = validate_case_id(reward['entry_id']) if reward is not None else matched[0] if matched else task_case
+                require(task_case == case and task_case in known_cases, 'Trial task case identity mismatch')
+                require(case in known_cases and (matched is None or case == matched[0]), 'Trial case identity mismatch')
                 # Attempt index must be runtime recorded. A missing index never comes from directory order.
                 attempt = matched[1] if matched else {'attempt': _attempt_ordinal({'_trial_name': trial}), 'score': None, 'passed': None}
                 if attempt['attempt'] is None:

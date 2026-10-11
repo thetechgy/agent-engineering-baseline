@@ -775,6 +775,32 @@ class EvidenceTests(unittest.TestCase):
                 if declared is None or observed is None or declared == observed: evidence.project(data)
                 else: self.assert_project_rejects(data, 'Task source policy mismatch')
 
+    def test_trial_task_case_matches_reward_and_summary(self):
+        root = self.native(); run = next((root / 'results/podman').iterdir())
+        for arm, known_case, has_reward in itertools.product(('with-skill', 'without-skill'), (True, False), (True, False)):
+            with self.subTest(arm=arm, known_case=known_case, reward=has_reward):
+                path = next((run / 'codex' / arm / 'trials').glob('*/result.json'))
+                original = evidence.read_json(path); reward_path = path.parent / 'reward.json'
+                reward_bytes = reward_path.read_bytes(); case = evidence.parse_json(reward_bytes)['entry_id']
+                changed = copy.deepcopy(original)
+                changed['task_name'] = 'nvidia/skillevaluator-' + ('2' if case == '1' else '1') if known_case else 'nvidia/skillevaluator-999'
+                write(path, changed)
+                if not has_reward: reward_path.unlink()
+                with self.assertRaisesRegex(ValueError, 'Trial task case identity mismatch'):
+                    evidence.normalize_behavioral(root, 'podman')
+                before = self.snapshot(root); output = self.root / f'rejected-task-{arm}-{known_case}-{has_reward}'
+                result = subprocess.run([sys.executable, str(REPO / '.github/scripts/skill_evidence.py'), 'normalize',
+                                         '--kind', 'behavioral', '--skill', 'podman', '--input', str(root),
+                                         '--output', str(output)], capture_output=True, text=True)
+                self.assertEqual(result.returncode, 1); self.assertFalse(output.exists()); self.assertEqual(self.snapshot(root), before)
+                write(path, original); reward_path.write_bytes(reward_bytes)
+        baseline = evidence.normalize_behavioral(root, 'podman')
+        for path in run.glob('codex/*/trials/*/result.json'):
+            native = evidence.read_json(path); native['task_name'] += '-attempt1'; write(path, native)
+        suffixed = evidence.normalize_behavioral(root, 'podman')
+        self.assertEqual(suffixed['metrics'], baseline['metrics'])
+        self.assertEqual([row['id'] for row in suffixed['observations']], [row['id'] for row in baseline['observations']])
+
     def test_reward_identity_matches_native_run(self):
         root = self.native(); run = next((root / 'results/podman').iterdir())
         for arm, key, replacement in itertools.product(('with-skill', 'without-skill'),
@@ -1416,6 +1442,21 @@ class EvidenceTests(unittest.TestCase):
         data['availability']['reasons'].append('source_unavailable')
         self.assertIn('source_unavailable', evidence.project(data)['availability']['reasons'])
         evidence.project(evidence.read_json(FIXTURES / 'gh-no-model.json'))
+
+    def test_projection_retains_unknown_attempt_metadata(self):
+        for arm in ('with_skill', 'without_skill'):
+            with self.subTest(arm=arm):
+                data = self.data(); row = next(row for row in data['observations'] if row['arm'] == arm)
+                row['attempt'] = None
+                row['id'] = evidence.observation_id(data['run_id'], row['arm'], row['case_id'], row['native_id'],
+                                                     row['native_trial'], row['attempt'])
+                data['source']['content'] = evidence.content()
+                data['availability'].update(status='incomplete', reasons=['source_unavailable'])
+                self.assert_project_rejects(data, 'Missing attempt metadata limitation')
+                data['availability']['reasons'].append('metadata_missing')
+                public = evidence.project(data)
+                self.assertIn('metadata_missing', public['availability']['reasons'])
+                self.assertIsNone(next(item for item in public['observations'] if item['id'] == row['id'])['attempt'])
 
     def test_reviewed_extract_member_budget_matches_trial_companions(self):
         root = self.root / 'extract-budget'; root.mkdir()

@@ -338,6 +338,10 @@ Known task-source policy and runtime/arm values must agree. Retained reward
 companions must agree with known Codex, model, and metric-set identities; absent
 reward identity fields remain unknown. Identity tracking is incremental across
 trials, without changing native scores or observation IDs.
+Trial-result task identities are canonicalized with the pinned collector and
+must agree with the retained reward and summary case. Generated task prefixes
+and attempt suffixes retain the collector's case mapping. Null observation
+attempt ordinals remain null and require `metadata_missing` during projection.
 
 The approved manifest records no durable retention of original members. At or
 after its recorded UTC expiration, normalization marks its original references
