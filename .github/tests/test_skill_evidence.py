@@ -2033,8 +2033,26 @@ class EvidenceTests(unittest.TestCase):
         self.assertIn(evidence.digest_bytes(manifest_path.read_bytes()), evidence.REVIEWED_EXTRACT_MANIFESTS)
         manifest = evidence.read_json(manifest_path)
         identities = {evidence.identity({'artifact_id': manifest['artifact_id'], 'artifact_digest': manifest['archive_digest'],
-                                        'member': row['member'], 'digest': row['original_digest']}) for row in manifest['members']}
+                                        'member': row['member'], 'digest': row['original_digest'],
+                                        'locator': ['verifier_result', 'rewards'] if '/trials/' in row['member']
+                                        and row['member'].endswith('/result.json') else []}) for row in manifest['members']}
         self.assertEqual(identities, evidence.REVIEWED_REFERENCE_IDENTITIES)
+
+    def test_reviewed_reference_locators_match_approved_reference_identity(self):
+        base = self.data()
+        trial = next(ref for ref in base['references'] if '/trials/' in ref['member'] and ref['member'].endswith('/result.json'))
+        for locator in ([], ['task_name'], ['verifier_result'], ['verifier_result', 'rewards', 'overall']):
+            with self.subTest(locator=locator):
+                # These are valid locators in the retained extract, but not its approved reference location.
+                retained = evidence.read_json(FIXTURES / 'podman-native' / trial['member'])
+                for component in locator: retained = retained[component]
+                data = copy.deepcopy(base); changed = next(ref for ref in data['references'] if ref['id'] == trial['id'])
+                changed['locator'] = locator
+                changed['id'] = evidence.identity({k: changed[k] for k in ('artifact_id', 'member', 'locator', 'digest')})
+                for row in data['observations']:
+                    row['references'] = [changed['id'] if ref == trial['id'] else ref for ref in row['references']]
+                self.assert_project_rejects(data, 'Unrecognized reviewed reference identity')
+        self.assertEqual(evidence.project(base)['references'], base['references'])
 
     def test_historical_listing_applies_remaining_budget_during_capture(self):
         repo = self.repo(); authored = repo / '.apm/skills/alpha'

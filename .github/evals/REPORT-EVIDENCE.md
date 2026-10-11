@@ -339,6 +339,9 @@ metadata identity against pins derived from that approved manifest. An arbitrary
 provenance label, archive hash, member, or original digest cannot grant reviewed
 status; reviewed report availability requires reviewed references. This checks
 declared reviewed identity, not independent execution authenticity or retention.
+The pins include the complete structured locator emitted for each approved
+member. A different valid location in that member cannot substitute for the
+reviewed reference even if its reference ID is recomputed.
 For observed behavioral evidence, every nonsucceeded arm retains the
 `execution_incomplete` limitation even when other limitations already make the
 record incomplete. Configured arms without observed execution remain unavailable.
