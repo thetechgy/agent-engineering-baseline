@@ -1,0 +1,7 @@
+{
+  "docker_compose": "5.0.2",
+  "evaluator_revision": "ac0a04905100acdafc6c95829311a9739c340ff6",
+  "harbor": "0.13.2",
+  "python": "3.13.15",
+  "skillevaluator": "0.3.0"
+}

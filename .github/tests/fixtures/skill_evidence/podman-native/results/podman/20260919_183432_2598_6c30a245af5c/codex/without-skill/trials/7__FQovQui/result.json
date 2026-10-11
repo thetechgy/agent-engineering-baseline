@@ -1,0 +1,17 @@
+{
+  "exception_info": null,
+  "id": "184c5e7d-9fb1-4722-a31e-6e3fc002e51f",
+  "task_name": "nvidia/skillevaluator-7",
+  "trial_name": "7__FQovQui",
+  "verifier_result": {
+    "rewards": {
+      "accuracy": 1.0,
+      "behavior_check": 1.0,
+      "goal_accuracy": 0.9,
+      "overall": 0.7542,
+      "security": 0.5,
+      "skill_efficiency": 0.5,
+      "skill_execution": 0.625
+    }
+  }
+}

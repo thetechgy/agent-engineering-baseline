@@ -1,0 +1,16 @@
+{
+  "accuracy": 1.0,
+  "agent": "codex",
+  "behavior_check": 0.75,
+  "entry_id": "3",
+  "goal_accuracy": 0.3,
+  "has_skill": false,
+  "metric_set": "skill-evaluator-default-v2",
+  "model": "gpt-5.6-sol",
+  "model_source": "CLI",
+  "overall": 0.675,
+  "security": 1.0,
+  "skill_efficiency": 0.5,
+  "skill_execution": 0.5,
+  "trial_id": "3__q5YZDzK"
+}

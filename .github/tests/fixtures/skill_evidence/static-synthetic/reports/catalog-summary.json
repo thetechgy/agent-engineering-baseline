@@ -1,0 +1,12 @@
+{
+  "failed": 1,
+  "skills": [
+    {
+      "json_report": "skillevaluator-output-20261010000000.json",
+      "name": "podman",
+      "passed": false,
+      "reason": "validation failed"
+    }
+  ],
+  "total": 1
+}

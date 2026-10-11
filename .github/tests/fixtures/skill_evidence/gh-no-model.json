@@ -1,0 +1,278 @@
+{
+  "arms": [
+    {
+      "condition": {
+        "build_digest": "sha256:3303be0cb15729444fb385c9988ca8eef7334cea360080c251c062f4aa8c969a",
+        "competing_skills": [
+          {
+            "content": {
+              "algorithm": "sha256-relative-file-manifest-v1",
+              "digest": "sha256:08711a80aea013a4f7057a1ddc07728e5e12a9e57d2a5f259fc17d7a7c977d83",
+              "manifest": [
+                {
+                  "digest": "sha256:31a8e7483d978e6267941edefebbe42aaa946bb3d43c9095aa3db343d4a8ff06",
+                  "member": "SKILL.md"
+                },
+                {
+                  "digest": "sha256:ebd6ef8d39ba6f1cd3dc13051e6ed4163d1d2ba36518cf0f7393836a211e58ff",
+                  "member": "references/injection.md"
+                },
+                {
+                  "digest": "sha256:7272d00b20cf99c6fcbf34346f76730907c00701aef44bb9cfb7ab3eecac336b",
+                  "member": "references/permissions-and-tokens.md"
+                },
+                {
+                  "digest": "sha256:3ecd2442e173bc001f858747873349be7c6c77050470b87ae516647908b1e86e",
+                  "member": "references/report-format.md"
+                },
+                {
+                  "digest": "sha256:f66f613dbd732ce87c1e76b88208efde8feae3ffe5a3ab405cde4ce3df66f605",
+                  "member": "references/supply-chain.md"
+                },
+                {
+                  "digest": "sha256:465f3f76517e9f5374a73e30f46cb47e1fe62ce9fd81f782808a3abbb2df2756",
+                  "member": "references/triggers-and-privilege.md"
+                }
+              ],
+              "provenance": "configured",
+              "scope": "pinned-agent-visible"
+            },
+            "lineage": null,
+            "owner": "upstream",
+            "repository": "github/awesome-copilot",
+            "revision": "143a3d976b3c1603cc8932984d5e1f28501cb5fc",
+            "skill_id": "github-actions-hardening",
+            "source_path": "skills/github-actions-hardening"
+          }
+        ],
+        "execution": {
+          "authorization_policy": "per-case-allowlist-v1",
+          "base_image_mode": null,
+          "environment": "docker",
+          "fixture_boundary": "root-broker-unprivileged-agent-v1",
+          "task_source": "native_harbor"
+        },
+        "fixture_digest": null,
+        "id": "sha256:0b60259acf6d51c6ceb8f191831edab88190b55de0c51f46550441ea0f5f8e4e",
+        "instruction_digest": null,
+        "provenance": "configured",
+        "target_present": true,
+        "workspace_mode": "group"
+      },
+      "coverage": {
+        "case_details": "unavailable",
+        "expected_attempts": 24,
+        "expected_cases": 24,
+        "recorded_attempts": null,
+        "scored_attempts": null,
+        "unscored_attempts": null
+      },
+      "execution_error_count": 0,
+      "execution_status": "unknown",
+      "name": "with_skill",
+      "rubric": {
+        "passed_cases": null,
+        "threshold": null,
+        "total_cases": null
+      }
+    },
+    {
+      "condition": {
+        "build_digest": "sha256:3303be0cb15729444fb385c9988ca8eef7334cea360080c251c062f4aa8c969a",
+        "competing_skills": [
+          {
+            "content": {
+              "algorithm": "sha256-relative-file-manifest-v1",
+              "digest": "sha256:08711a80aea013a4f7057a1ddc07728e5e12a9e57d2a5f259fc17d7a7c977d83",
+              "manifest": [
+                {
+                  "digest": "sha256:31a8e7483d978e6267941edefebbe42aaa946bb3d43c9095aa3db343d4a8ff06",
+                  "member": "SKILL.md"
+                },
+                {
+                  "digest": "sha256:ebd6ef8d39ba6f1cd3dc13051e6ed4163d1d2ba36518cf0f7393836a211e58ff",
+                  "member": "references/injection.md"
+                },
+                {
+                  "digest": "sha256:7272d00b20cf99c6fcbf34346f76730907c00701aef44bb9cfb7ab3eecac336b",
+                  "member": "references/permissions-and-tokens.md"
+                },
+                {
+                  "digest": "sha256:3ecd2442e173bc001f858747873349be7c6c77050470b87ae516647908b1e86e",
+                  "member": "references/report-format.md"
+                },
+                {
+                  "digest": "sha256:f66f613dbd732ce87c1e76b88208efde8feae3ffe5a3ab405cde4ce3df66f605",
+                  "member": "references/supply-chain.md"
+                },
+                {
+                  "digest": "sha256:465f3f76517e9f5374a73e30f46cb47e1fe62ce9fd81f782808a3abbb2df2756",
+                  "member": "references/triggers-and-privilege.md"
+                }
+              ],
+              "provenance": "configured",
+              "scope": "pinned-agent-visible"
+            },
+            "lineage": null,
+            "owner": "upstream",
+            "repository": "github/awesome-copilot",
+            "revision": "143a3d976b3c1603cc8932984d5e1f28501cb5fc",
+            "skill_id": "github-actions-hardening",
+            "source_path": "skills/github-actions-hardening"
+          }
+        ],
+        "execution": {
+          "authorization_policy": "per-case-allowlist-v1",
+          "base_image_mode": null,
+          "environment": "docker",
+          "fixture_boundary": "root-broker-unprivileged-agent-v1",
+          "task_source": "native_harbor"
+        },
+        "fixture_digest": null,
+        "id": "sha256:aff002dad4d89914aec4b146cd11cd50cd1ce4f17ab0f7e42b5cd2ef125cdc2c",
+        "instruction_digest": null,
+        "provenance": "configured",
+        "target_present": false,
+        "workspace_mode": "group"
+      },
+      "coverage": {
+        "case_details": "unavailable",
+        "expected_attempts": 24,
+        "expected_cases": 24,
+        "recorded_attempts": null,
+        "scored_attempts": null,
+        "unscored_attempts": null
+      },
+      "execution_error_count": 0,
+      "execution_status": "unknown",
+      "name": "without_skill",
+      "rubric": {
+        "passed_cases": null,
+        "threshold": null,
+        "total_cases": null
+      }
+    }
+  ],
+  "availability": {
+    "provenance": "unknown",
+    "reasons": [
+      "results_not_supplied"
+    ],
+    "status": "unavailable"
+  },
+  "dataset": {
+    "authored_digest": "sha256:fcf8a7e4b87e67d9d6cd132db5a4532b87c6a46a0e1d6a7f16c97a532010d9ab",
+    "authored_provenance": "configured",
+    "case_cohort_digest": "sha256:6db0686e092a18de30bce557cd011359cb503b388de7d4ec786fff7de3166af7",
+    "case_ids": [
+      "gh-001",
+      "gh-002",
+      "gh-003",
+      "gh-004",
+      "gh-005",
+      "gh-006-changed-head",
+      "gh-006-pending",
+      "gh-007",
+      "gh-007-relationships",
+      "gh-008",
+      "gh-008-empty",
+      "gh-009",
+      "gh-010",
+      "gh-010-partial",
+      "gh-011-auth",
+      "gh-011-missing",
+      "gh-011-network",
+      "gh-011-permission",
+      "gh-011-rate-limit",
+      "gh-011-unavailable",
+      "gh-012",
+      "gh-013-hardening",
+      "gh-013-local",
+      "gh-014"
+    ],
+    "owner": "overlay",
+    "staged_algorithm": null,
+    "staged_digest": null,
+    "staged_provenance": "unknown"
+  },
+  "findings": [],
+  "kind": "behavioral",
+  "metrics": [],
+  "observations": [],
+  "policy": {
+    "attempts": {
+      "maximum": 1,
+      "mode": "standard",
+      "pass_threshold": 0.5,
+      "stop_on_pass": false
+    },
+    "fields": {
+      "authorization_policy": "per-case-allowlist-v1",
+      "baseline": true,
+      "codex": "0.155.1",
+      "competing_revision": "143a3d976b3c1603cc8932984d5e1f28501cb5fc",
+      "concurrency": 2,
+      "deterministic_gate": 2,
+      "docker_compose": "5.0.2",
+      "environment": "docker",
+      "evaluator_revision": "ac0a04905100acdafc6c95829311a9739c340ff6",
+      "fixture_boundary": "root-broker-unprivileged-agent-v1",
+      "grading": "default_plus_custom",
+      "harbor": "0.13.2",
+      "model": "gpt-5.6-sol",
+      "provider": "openai",
+      "python": "3.13",
+      "standard_attempts": 1,
+      "stop_on_pass": false,
+      "task_build": {
+        "apt_packages": {
+          "ca-certificates": "20250419",
+          "git": "1:2.47.3-0+deb13u1",
+          "jq": "1.7.1-6+deb13u4",
+          "nodejs": "20.19.2+dfsg-1+deb13u3",
+          "npm": "9.2.0~ds1-3"
+        },
+        "apt_snapshot": "20261010T000000Z",
+        "base_image": "python:3.12-slim-trixie@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1"
+      },
+      "task_source": "native_harbor",
+      "timeout_multiplier": 2.0,
+      "upstream_revision": "ec5b512045db67e5a2a4ff4a1b02660b2fb24390",
+      "workspace_mode": "group"
+    },
+    "id": "sha256:7bed4ff84854c77535dec59ec36b59d4e537cfdd17ef97e1ed328b65982bed8d",
+    "judge": {
+      "enabled": null,
+      "model": null,
+      "provider": null
+    },
+    "metric_set": null,
+    "patch_digest": null,
+    "provenance": "configured",
+    "published_id": null
+  },
+  "references": [],
+  "run_id": null,
+  "scans": [],
+  "schema_version": 1,
+  "source": {
+    "content": {
+      "algorithm": "sha256-relative-file-manifest-v1",
+      "digest": "sha256:6517f333dcea06832103c2b96a9ad9a1f40d3b081ac99053477e4477e02a24b8",
+      "manifest": [
+        {
+          "digest": "sha256:8be0aef75646008f64f89c59813ea301e7758aeb180ddb72f93dbf89ebab4f22",
+          "member": "SKILL.md"
+        }
+      ],
+      "provenance": "configured",
+      "scope": "pinned-agent-visible"
+    },
+    "lineage": null,
+    "owner": "upstream",
+    "repository": "cli/cli",
+    "revision": "ec5b512045db67e5a2a4ff4a1b02660b2fb24390",
+    "skill_id": "gh",
+    "source_path": "skills/gh"
+  }
+}
