@@ -268,12 +268,16 @@ def content(manifest=(), provenance='unknown'):
             'provenance': provenance, 'manifest': manifest}
 
 
-def skill_content(path):
+def skill_projection_files(path, files):
     from skillevaluator.tier3.harbor.adapter import _runtime_skill_copy_ignore, _runtime_projection_path_is_ignored
-    files = safe_tree(path, max_entries=2 * MAX_SOURCE_MEMBERS, max_files=MAX_SOURCE_MEMBERS)
     ignore = _runtime_skill_copy_ignore(path)
+    return [p for p in files if not _runtime_projection_path_is_ignored(p, path, ignore)]
+
+
+def skill_content(path):
+    files = safe_tree(path, max_entries=2 * MAX_SOURCE_MEMBERS, max_files=MAX_SOURCE_MEMBERS)
     return content([{'member': p.relative_to(path).as_posix(), 'digest': digest_bytes(read_bytes(p))}
-                    for p in files if not _runtime_projection_path_is_ignored(p, path, ignore)], 'configured')
+                    for p in skill_projection_files(path, files)], 'configured')
 
 
 def validate_source(value):
@@ -519,6 +523,7 @@ def inventory(workspace=ROOT):
             authored = workspace / '.agents/skills' / name
             files = safe_tree(authored, max_entries=2 * MAX_SOURCE_MEMBERS, max_files=MAX_SOURCE_MEMBERS)
             validate_skill_metadata(authored, name)
+            visible = skill_projection_files(authored, files)
             actual = {p.relative_to(workspace).as_posix(): digest_bytes(read_bytes(p)) for p in files}
             require(actual == owner['deployed_file_hashes'], 'Deployment content drift')
             for member, digest in actual.items():
@@ -531,7 +536,8 @@ def inventory(workspace=ROOT):
                 import gh_evaluations as gh
                 gh.verify_skill(workspace); gh.verify_competing(workspace); gh.dataset(workspace)
             src = source(name, 'upstream', owner['repo_url'], owner['resolved_commit'], owner['virtual_path'],
-                         skill_content(authored))
+                         content([{'member': p.relative_to(authored).as_posix(),
+                                   'digest': actual[p.relative_to(workspace).as_posix()]} for p in visible], 'configured'))
             deployment = '.agents/skills/' + name
         dataset_roots = [overlays / name / 'evals']
         if name in names:
@@ -779,6 +785,10 @@ def validate_evidence(data, *, public=False):
         closed(arm, ('name', 'condition', 'coverage', 'execution_status', 'execution_error_count', 'rubric'))
         enum(arm['name'], ('with_skill', 'without_skill')); arm_names.append(arm['name']); validate_condition(arm['condition'])
         require(arm['condition']['target_present'] == (arm['name'] == 'with_skill'), 'Arm target mismatch')
+        declared_tasks = data['policy']['fields']['task_source']
+        observed_tasks = arm['condition']['execution']['task_source']
+        require(declared_tasks is None or observed_tasks is None or declared_tasks == observed_tasks,
+                'Task source policy mismatch')
         enum(arm['execution_status'], ('succeeded', 'failed', 'incomplete', 'unknown'))
         count(arm['execution_error_count'])
         cov = arm['coverage']; closed(cov, ('expected_cases', 'expected_attempts', 'recorded_attempts', 'scored_attempts', 'unscored_attempts', 'case_details'))
@@ -1003,6 +1013,7 @@ def reconcile_policy(fields, versions, config, agent, attempt_policy):
         'environment': [harbor.get('environment', {}).get('value')],
         'concurrency': [harbor.get('n_concurrent')],
         'timeout_multiplier': [harbor.get('timeout_multiplier')],
+        'task_source': [config.get('task_source')],
         'stop_on_pass': [harbor.get('stop_on_pass'), attempt_policy.get('stop_on_pass')],
     })
     for key, values in observations.items():
@@ -1193,7 +1204,13 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
               if value is not None]
     for model in models:
         token(model)
-    require(len(set(models)) <= 1, 'Native model identity mismatch')
+    models = set(models)
+    require(len(models) <= 1, 'Native model identity mismatch')
+    metric_sets = set()
+    for value in (policy['metric_set'], result.get('metric_set')):
+        if value is not None:
+            require(value == 'skill-evaluator-default-v2', 'Native metric-set identity mismatch')
+            metric_sets.add(value)
     for arm in ('with_skill', 'without_skill'):
         arm_dir = run / 'codex' / arm.replace('_', '-')
         native_condition = agent['conditions'][arm]
@@ -1212,8 +1229,8 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
         if summary.get('agent') is not None:
             require(summary['agent'] == 'codex', 'Native agent identity mismatch')
         if summary.get('model') is not None:
-            token(summary['model']); models.append(summary['model'])
-            require(len(set(models)) == 1, 'Native model identity mismatch')
+            token(summary['model']); models.add(summary['model'])
+            require(len(models) == 1, 'Native model identity mismatch')
         aggregate_pass = (agent.get('pass_at_k') or {}).get(arm)
         if aggregate_pass is not None:
             require(aggregate_pass == summary.get('pass_at_k'), 'Conflicting native pass data')
@@ -1238,6 +1255,16 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
                 native_id = trial_result['id']; token(native_id)
                 reward_path = path.parent / 'reward.json'
                 reward = read_member(reward_path) if reward_path.exists() else None
+                if reward is not None:
+                    require(type(reward) is dict, 'Reward object required')
+                    require(reward.get('agent') is None or reward['agent'] == 'codex', 'Reward identity mismatch')
+                    if reward.get('model') is not None:
+                        token(reward['model']); models.add(reward['model'])
+                        require(len(models) == 1, 'Reward identity mismatch')
+                    if reward.get('metric_set') is not None:
+                        require(reward['metric_set'] == 'skill-evaluator-default-v2', 'Reward identity mismatch')
+                        metric_sets.add(reward['metric_set'])
+                        require(len(metric_sets) == 1, 'Reward identity mismatch')
                 matched = lookup.get(trial)
                 from skillevaluator.tier3.harbor.collector import _entry_id_from_harbor_result, _attempt_ordinal, _canonical_case_id
                 case = validate_case_id(reward['entry_id']) if reward is not None else matched[0] if matched else validate_case_id(

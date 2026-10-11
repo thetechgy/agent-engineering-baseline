@@ -112,6 +112,37 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual(len(gh['suite']['case_ids']), 24)
         self.assertEqual(gh['measurement']['status'], 'unavailable')
 
+    def test_imported_manifest_reuses_lock_validated_bytes(self):
+        root = self.repo(); lock = self.imported(root)
+        authored = root / '.agents/skills/beta'
+        (authored / 'README.md').write_text('Reviewed content')
+        for member in ('evals/evals.json', 'nested/SKILL.md', 'nested/evals/evals.json', 'results/output.json'):
+            path = authored / member; path.parent.mkdir(parents=True, exist_ok=True); path.write_text('Fixture')
+        owner = lock['dependencies'][0]; ownership = owner['repo_url'] + '/' + owner['virtual_path']
+        owner['deployed_file_hashes'] = {p.relative_to(root).as_posix(): evidence.digest_bytes(p.read_bytes())
+                                       for p in authored.rglob('*') if p.is_file()}
+        lock['deployments'] = [{'value': member, 'target': 'codex', 'active_owner': ownership,
+                               'owners': [ownership], 'content_hash': digest}
+                              for member, digest in owner['deployed_file_hashes'].items()]
+        (root / 'apm.lock.yaml').write_text(yaml.safe_dump(lock))
+        baseline = next(row for row in evidence.inventory(root)['skills'] if row['source']['skill_id'] == 'beta')
+        self.assertEqual([row['member'] for row in baseline['source']['content']['manifest']],
+                         ['README.md', 'SKILL.md', 'nested/SKILL.md'])
+        original_require = evidence.require; checked = 0
+        def replace_after_lock(condition, message):
+            nonlocal checked
+            original_require(condition, message)
+            if message == 'Ambiguous deployment ownership':
+                checked += 1
+                if checked == len(owner['deployed_file_hashes']):
+                    authored.rename(self.root / 'reviewed-tree')
+                    shutil.copytree(self.root / 'reviewed-tree', authored)
+                    (authored / 'README.md').write_text('Replacement content')
+        with patch.object(evidence, 'require', side_effect=replace_after_lock):
+            actual = next(row for row in evidence.inventory(root)['skills'] if row['source']['skill_id'] == 'beta')
+        self.assertEqual(checked, len(owner['deployed_file_hashes']))
+        self.assertEqual(actual, baseline)
+
     def test_inventory_skill_limit_precedes_processing(self):
         root = self.root / 'catalog'
         for index in range(1000): self.local(root, 's-' + str(index))
@@ -718,6 +749,57 @@ class EvidenceTests(unittest.TestCase):
                         with self.assertRaises(ValueError):
                             validate(data)
 
+    def test_task_source_policy_matches_native_and_projected_conditions(self):
+        root = self.native(); run = next((root / 'results/podman').iterdir())
+        config = evidence.read_json(run / 'run_config.json'); config['task_source'] = 'runtime_tasks'
+        write(run / 'run_config.json', config)
+        result = evidence.read_json(run / 'result.json'); result['run_config'] = config; write(run / 'result.json', result)
+        provenance = evidence.read_json(root / 'provenance.json'); provenance['policy']['task_source'] = 'declared_tasks'
+        write(root / 'provenance.json', provenance)
+        with self.assertRaisesRegex(ValueError, 'Runtime/policy disagreement'):
+            evidence.normalize_behavioral(root, 'podman')
+        output = self.root / 'rejected-task-source'; before = self.snapshot(root)
+        result = subprocess.run([sys.executable, str(REPO / '.github/scripts/skill_evidence.py'), 'normalize',
+                                 '--kind', 'behavioral', '--skill', 'podman', '--input', str(root),
+                                 '--output', str(output)], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 1); self.assertFalse(output.exists()); self.assertEqual(self.snapshot(root), before)
+        for declared, observed in itertools.product((None, 'native_harbor', 'other_tasks'), repeat=2):
+            with self.subTest(declared=declared, observed=observed):
+                data = evidence.read_json(FIXTURES / 'gh-no-model.json')
+                data['policy']['fields']['task_source'] = declared
+                data['policy']['id'] = evidence.identity({k: data['policy'][k] for k in
+                    ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')})
+                for arm in data['arms']:
+                    arm['condition']['execution']['task_source'] = observed
+                    arm['condition']['id'] = evidence.identity({k: v for k, v in arm['condition'].items() if k != 'id'})
+                if declared is None or observed is None or declared == observed: evidence.project(data)
+                else: self.assert_project_rejects(data, 'Task source policy mismatch')
+
+    def test_reward_identity_matches_native_run(self):
+        root = self.native(); run = next((root / 'results/podman').iterdir())
+        for arm, key, replacement in itertools.product(('with-skill', 'without-skill'),
+                ('agent', 'model', 'metric_set'), ('different_identity',)):
+            with self.subTest(arm=arm, key=key):
+                path = next((run / 'codex' / arm / 'trials').glob('*/reward.json'))
+                original = evidence.read_json(path); changed = copy.deepcopy(original); changed[key] = replacement
+                write(path, changed)
+                with self.assertRaisesRegex(ValueError, 'Reward identity mismatch'):
+                    evidence.normalize_behavioral(root, 'podman')
+                before = self.snapshot(root); output = self.root / f'rejected-{arm}-{key}'
+                result = subprocess.run([sys.executable, str(REPO / '.github/scripts/skill_evidence.py'), 'normalize',
+                                         '--kind', 'behavioral', '--skill', 'podman', '--input', str(root),
+                                         '--output', str(output)], capture_output=True, text=True)
+                self.assertEqual(result.returncode, 1); self.assertFalse(output.exists()); self.assertEqual(self.snapshot(root), before)
+                write(path, original)
+        baseline = evidence.normalize_behavioral(root, 'podman')
+        for path in run.glob('codex/*/trials/*/reward.json'):
+            reward = evidence.read_json(path)
+            for key in ('agent', 'model', 'metric_set'): reward.pop(key, None)
+            write(path, reward)
+        missing = evidence.normalize_behavioral(root, 'podman')
+        self.assertEqual(missing['metrics'], baseline['metrics'])
+        self.assertEqual([row['id'] for row in missing['observations']], [row['id'] for row in baseline['observations']])
+
     def test_policy_runtime_contradictions(self):
         conflicts = {'evaluator_revision': 'b' * 40, 'harbor': '0.12.0', 'docker_compose': '4.0.0',
                      'python': '3.12', 'model': 'other-model', 'provider': 'other-provider',
@@ -928,6 +1010,9 @@ class EvidenceTests(unittest.TestCase):
         for summary_path in run.rglob('summary.json'):
             summary = evidence.read_json(summary_path); summary['model'] = 'historical-model'
             write(summary_path, summary)
+        for reward_path in run.glob('codex/*/trials/*/reward.json'):
+            reward = evidence.read_json(reward_path); reward['model'] = 'historical-model'
+            write(reward_path, reward)
         data = evidence.normalize_behavioral(root, 'podman')
         self.assertEqual(data['policy']['fields']['harbor'], '0.12.0')
         self.assertEqual(data['policy']['fields']['model'], 'historical-model')

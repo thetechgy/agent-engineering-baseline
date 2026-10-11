@@ -66,6 +66,9 @@ and suite ownership. A local source and a same-ID overlay are compatible. Two
 active source owners, competing dataset files/formats, missing owners, ambiguous
 APM deployment records, and deployment hash drift fail closed. Imported sources
 must match a unique lock dependency and its Codex deployment owner/hash records.
+Their published source manifests reuse the lock-validated digests and the pinned
+runtime visibility selection captured before validation, without rereading the
+deployment after its hashes have been accepted.
 The existing `gh` and competing-skill checks additionally enforce their reviewed
 pins. All trees and fixture references are checked before native strict dataset
 validation; source front matter must identify the local skill correctly.
@@ -331,6 +334,10 @@ Incomplete behavioral records also retain `coverage_missing` for unknown or
 short recorded/scored coverage, `case_details_missing` for partial or unavailable
 details, and `source_unavailable` when exact source content is absent. An unrelated
 limitation cannot hide these known gaps during standalone projection.
+Known task-source policy and runtime/arm values must agree. Retained reward
+companions must agree with known Codex, model, and metric-set identities; absent
+reward identity fields remain unknown. Identity tracking is incremental across
+trials, without changing native scores or observation IDs.
 
 The approved manifest records no durable retention of original members. At or
 after its recorded UTC expiration, normalization marks its original references
