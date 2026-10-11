@@ -61,6 +61,11 @@ relative to the parent descriptor, and creates flat output files relative to the
 new directory descriptor. Replaced paths cannot redirect writes into the checkout
 or input bundle within that ownership boundary; changed destination identity
 rejects publication. Unsupported platforms reject before directory creation.
+If output member creation, writing or flushing fails after validating the new
+directory, publication removes only its created members through the retained
+descriptor and removes the destination only while its original identity matches.
+Ordinary failures leave no partial temporary output and allow an explicit-path
+retry; cleanup never follows or removes a replacement destination.
 This path is verified on Linux; Windows output support is not established.
 Input files use the same no-follow ancestor traversal and open the final member
 relative to its parent descriptor. Replacing an ancestor cannot redirect input

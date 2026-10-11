@@ -2134,12 +2134,15 @@ def write_outputs(values, destination=None, workspace=ROOT, input_path=None):
         created = os.stat(destination.name, dir_fd=parent_fd, follow_symlinks=False)
         require(stat.S_ISDIR(created.st_mode), 'Output directory changed')
         directory_fd = os.open(destination.name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent_fd)
+        owned = False
+        members = []
         try:
             original = os.fstat(directory_fd)
             require((original.st_dev, original.st_ino) == (created.st_dev, created.st_ino)
                     and (original.st_dev, original.st_ino) not in forbidden_directories
                     and original.st_uid == os.geteuid()
                     and not original.st_mode & 0o077 and not os.listdir(directory_fd), 'Output directory changed')
+            owned = True
             def unchanged():
                 current = destination.lstat()
                 require(stat.S_ISDIR(current.st_mode) and (current.st_dev, current.st_ino) ==
@@ -2148,9 +2151,27 @@ def write_outputs(values, destination=None, workspace=ROOT, input_path=None):
             for name, payload in payloads.items():
                 fd = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
                              mode=0o600, dir_fd=directory_fd)
-                with os.fdopen(fd, 'wb') as stream:
+                members.append(name)
+                try:
+                    stream = os.fdopen(fd, 'wb')
+                except BaseException:
+                    os.close(fd)
+                    raise
+                with stream:
                     stream.write(payload)
                 unchanged()
+        except BaseException:
+            if owned:
+                # Remove only members created here, through the retained descriptor.
+                for name in members:
+                    try:
+                        os.unlink(name, dir_fd=directory_fd)
+                    except FileNotFoundError:
+                        pass
+                current = os.stat(destination.name, dir_fd=parent_fd, follow_symlinks=False)
+                if stat.S_ISDIR(current.st_mode) and (current.st_dev, current.st_ino) == (original.st_dev, original.st_ino):
+                    os.rmdir(destination.name, dir_fd=parent_fd)
+            raise
         finally:
             os.close(directory_fd)
     finally:

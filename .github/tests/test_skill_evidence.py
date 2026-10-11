@@ -3745,6 +3745,54 @@ class EvidenceTests(unittest.TestCase):
                 self.assertEqual(self.snapshot(bundle), before_input)
                 self.assertEqual(self.snapshot(workspace), before_workspace)
 
+    def test_failed_normalization_publication_cleans_outputs_and_allows_retry(self):
+        for temporary, failure in itertools.product((False, True), ('open', 'write', 'flush')):
+            with self.subTest(temporary=temporary, failure=failure), tempfile.TemporaryDirectory() as temp:
+                parent = Path(temp); root = parent / 'native'
+                shutil.copytree(FIXTURES / 'static-synthetic', root)
+                output_parent = parent / 'outputs'; output_parent.mkdir(mode=0o700)
+                destination = output_parent / 'explicit'; before = self.snapshot(root)
+                args = ['normalize', '--kind', 'static', '--skill', 'podman', '--input', str(root)]
+                if not temporary: args += ['--output', str(destination)]
+                opened = os.open; fdopen = os.fdopen; output_fds = set(); attempted = []
+                def failing_open(path, flags, *args, **kwargs):
+                    if flags & os.O_CREAT:
+                        attempted.append(str(path))
+                        if str(path) == 'public-report.json' and failure == 'open':
+                            raise OSError('Synthetic output open failure')
+                    fd = opened(path, flags, *args, **kwargs)
+                    if flags & os.O_CREAT and str(path) == 'public-report.json': output_fds.add(fd)
+                    return fd
+                class FailingStream:
+                    def __init__(self, stream): self.stream = stream
+                    def __enter__(self): return self
+                    def write(self, payload):
+                        if failure == 'write':
+                            self.stream.write(payload[:8]); raise OSError('Synthetic output write failure')
+                        return self.stream.write(payload)
+                    def __exit__(self, *args):
+                        try:
+                            if failure == 'flush':
+                                self.stream.flush(); raise OSError('Synthetic output flush failure')
+                        finally: self.stream.close()
+                        return False
+                def failing_stream(fd, *args, **kwargs):
+                    stream = fdopen(fd, *args, **kwargs)
+                    return FailingStream(stream) if fd in output_fds else stream
+                with patch.dict(os.environ, {'TMPDIR': str(output_parent)}), \
+                        patch.object(os, 'open', side_effect=failing_open), \
+                        patch.object(os, 'fdopen', side_effect=failing_stream), \
+                        self.assertRaisesRegex(OSError, 'Synthetic output'), redirect_stdout(StringIO()):
+                    evidence.main(args)
+                self.assertEqual(attempted, ['evidence.json', 'public-report.json'])
+                self.assertEqual(list(output_parent.iterdir()), []); self.assertEqual(self.snapshot(root), before)
+                stdout = StringIO()
+                with patch.dict(os.environ, {'TMPDIR': str(output_parent)}), redirect_stdout(stdout): evidence.main(args)
+                output = Path(stdout.getvalue().strip())
+                self.assertEqual({p.name for p in output.iterdir()}, {'evidence.json', 'public-report.json'})
+                for path in output.iterdir(): self.assertEqual(path.read_bytes(), evidence.encoded(evidence.read_json(path)))
+                self.assertEqual(self.snapshot(root), before)
+
     def test_relocatable_output_parents_reject_before_writes(self):
         for temporary, component in itertools.product((False, True), ('parent', 'ancestor')):
             with self.subTest(temporary=temporary, component=component), tempfile.TemporaryDirectory() as temp:
