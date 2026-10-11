@@ -272,9 +272,9 @@ def source(name, owner='unknown', repo=None, rev=None, path=None, contents=None,
 
 
 def offline_git(workspace, *args, text=False, max_entries=None):
-    # Override the caller's setting: missing promisor objects are unknown evidence.
+    # Missing promisor objects stay unknown; replacement refs cannot alter exact evidence.
     command = ['git', '-C', str(workspace), *args]
-    env = {**os.environ, 'GIT_NO_LAZY_FETCH': '1'}
+    env = {**os.environ, 'GIT_NO_LAZY_FETCH': '1', 'GIT_NO_REPLACE_OBJECTS': '1'}
     if max_entries is None:
         return subprocess.run(command, capture_output=True, text=text, env=env)
     require(not text, 'Binary tree listing required')

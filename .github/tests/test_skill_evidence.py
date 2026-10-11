@@ -250,6 +250,52 @@ class EvidenceTests(unittest.TestCase):
                 self.assertFalse(any(event.get('event') == 'child_start' and 'fetch' in event.get('argv', [])
                                      for event in events))
 
+    def test_historical_reads_ignore_replacement_refs(self):
+        root = self.native()
+        for kind in ('commit', 'tree', 'blob'):
+            with self.subTest(replacement=kind), tempfile.TemporaryDirectory() as temp:
+                repo = Path(temp)
+                authored = self.local(repo, 'podman', True)
+                def git(*args):
+                    return subprocess.run(['git', '-C', str(repo), *args], check=True,
+                                          capture_output=True, text=True).stdout.strip()
+                def commit():
+                    git('add', '.apm')
+                    git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+                        'commit', '-qm', 'Synthetic replacement fixture')
+                    return git('rev-parse', 'HEAD')
+                git('init', '-q')
+                rev = commit()
+                skill_bytes = (authored / 'SKILL.md').read_bytes()
+                dataset_bytes = (authored / 'evals/evals.json').read_bytes()
+                specs = ['HEAD', 'HEAD:.apm/skills/podman', 'HEAD:.apm/skills/podman/SKILL.md',
+                         'HEAD:.apm/skills/podman/evals/evals.json']
+                original = [git('rev-parse', spec) for spec in specs]
+                (authored / 'SKILL.md').write_text('Synthetic replacement source')
+                write(authored / 'evals/evals.json', {'skill_name': 'podman', 'evals': []})
+                replacement_rev = commit()
+                replacement = [git('rev-parse', spec) for spec in specs]
+                indexes = (0,) if kind == 'commit' else (1,) if kind == 'tree' else (2, 3)
+                for index in indexes:
+                    git('replace', original[index], replacement[index])
+                self.mutate(root, '/run_config.json', lambda d: d['evaluated_source'].update(commit=rev))
+                self.mutate(root, '/result.json', lambda d: d['run_config']['evaluated_source'].update(commit=rev))
+                self.mutate(root, '/provenance.json', lambda d: d.update(revision=rev))
+                trace = repo / 'trace.jsonl'
+                with patch.dict(os.environ, {'GIT_NO_LAZY_FETCH': '0', 'GIT_TRACE2_EVENT': str(trace)}):
+                    os.environ.pop('GIT_NO_REPLACE_OBJECTS', None)
+                    self.assertEqual(evidence.git_revision(repo), replacement_rev)
+                    contents = evidence.historical_content(repo, rev, '.apm/skills/podman')
+                    self.assertEqual(contents['manifest'], [{'member': 'SKILL.md', 'digest': evidence.digest_bytes(skill_bytes)}])
+                    data = evidence.normalize_behavioral(root, 'podman', workspace=repo)
+                self.assertEqual(data['source']['revision'], rev)
+                self.assertEqual(data['source']['content'], contents)
+                self.assertEqual(data['dataset']['authored_digest'], evidence.digest_bytes(dataset_bytes))
+                evidence.project(data)
+                events = [json.loads(line) for line in trace.read_text().splitlines()]
+                self.assertFalse(any(event.get('event') == 'child_start' and 'fetch' in event.get('argv', [])
+                                     for event in events))
+
     def test_historical_tree_entry_limit_precedes_blob_reads(self):
         for entries in (1000, 1001):
             with self.subTest(entries=entries), tempfile.TemporaryDirectory() as temp:

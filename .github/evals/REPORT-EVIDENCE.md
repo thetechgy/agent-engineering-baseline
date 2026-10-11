@@ -143,8 +143,11 @@ reads exact local Git blobs with the equivalent authored-tree boundary; it is
 `reconstructed_from_declared_revision`, never runtime-attested. Missing Git
 objects remain unknown, without checkout or network fallback. Every Git read
 sets `GIT_NO_LAZY_FETCH=1`, overriding an inherited lazy-fetch setting so missing
-partial-clone trees and blobs cannot trigger demand fetching. Historical skill
-members and authored datasets share the current-file 8 MiB byte limit. Object
+partial-clone trees and blobs cannot trigger demand fetching. It also sets
+`GIT_NO_REPLACE_OBJECTS=1` so local commit, tree, or blob replacement refs cannot
+substitute different bytes for a declared revision, as described in the
+[Git replacement-ref documentation](https://git-scm.com/docs/git-replace).
+Historical skill members and authored datasets share the current-file 8 MiB byte limit. Object
 size is checked before capturing content: exactly 8 MiB is accepted, larger
 objects cause contract rejection, and missing objects retain null digests and
 unknown provenance. An authored dataset hash identifies exact file bytes; the
