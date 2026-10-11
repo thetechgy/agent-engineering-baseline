@@ -1450,7 +1450,8 @@ class EvidenceTests(unittest.TestCase):
         evidence.project(data)  # Unknown thresholds do not invent an outcome.
         data = self.data(); data['observations'][0]['rubric_pass'] = None
         data['arms'][0]['coverage']['case_details'] = 'partial'
-        data['availability'].update(status='incomplete', reasons=['case_details_missing'])
+        data['availability'].update(status='incomplete', reasons=sorted(set(
+            data['availability']['reasons']) | {'case_details_missing'}))
         evidence.project(data)  # Partial case details remain explicitly incomplete.
 
     def test_behavioral_evidence_rejects_static_scan_claims(self):
@@ -2370,6 +2371,39 @@ class EvidenceTests(unittest.TestCase):
             actual = evidence.normalize_behavioral(root, 'podman')
         self.assertEqual(evidence.encoded(actual), evidence.encoded(baseline))
         self.assertLessEqual(lookups, 8 * len(actual['references']))
+
+    def test_reviewed_extract_reference_lookup_avoids_manifest_rescans(self):
+        root = self.root / 'large-extract'
+        shutil.copytree(FIXTURES / 'podman-native', root)
+        baseline = evidence.normalize_behavioral(root, 'podman')
+        path = root / 'extract-manifest.json'; manifest = evidence.read_json(path)
+        padding = evidence.MAX_REFERENCES - len(manifest['members'])
+        manifest['members'] = [{'member': f'padding/member-{i}.json',
+                               'original_digest': evidence.digest_bytes(b'original'),
+                               'extract_digest': evidence.digest_bytes(b'extract')} for i in range(padding)] + manifest['members']
+        write(path, manifest)
+        visits = 0
+        class CountingMembers(list):
+            def __iter__(self):
+                nonlocal visits
+                for row in super().__iter__():
+                    visits += 1
+                    yield row
+        load = evidence.load_extract
+        def counted_load(directory):
+            extract = load(directory)
+            extract['members'] = CountingMembers(extract['members'])
+            return extract
+        with patch.object(evidence, 'REVIEWED_EXTRACT_MANIFESTS', frozenset({evidence.digest_bytes(path.read_bytes())})), \
+                patch.object(evidence, 'load_extract', side_effect=counted_load):
+            actual = evidence.normalize_behavioral(root, 'podman')
+            self.assertEqual(evidence.encoded(actual), evidence.encoded(baseline))
+            self.assertLessEqual(visits, evidence.MAX_REFERENCES)
+            extract = load(root)
+            for member, digest in (('missing.json', evidence.digest_bytes(b'missing')),
+                                   (manifest['members'][-1]['member'], evidence.digest_bytes(b'wrong'))):
+                with self.assertRaisesRegex(ValueError, 'Reviewed extract mismatch'):
+                    evidence.reference_from_digest(root, root / member, extract['artifact_id'], digest, extract=extract)
 
     def test_standalone_cli_disables_repository_bytecode_writes(self):
         checkout = self.repo(); scripts = checkout / '.github/scripts'; scripts.mkdir(parents=True)

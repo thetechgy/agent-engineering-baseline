@@ -360,6 +360,8 @@ scored observation; null outcomes cannot reduce the retained passed-case count.
 Unknown thresholds and explicitly partial case details remain unknown.
 Behavioral evidence cannot carry static scan or finding claims; those claims
 must pass the static normalization contract.
+Reviewed-extract members are indexed once after manifest validation, so trial,
+reward, and summary references do not rescan the member list.
 
 The approved manifest records no durable retention of original members. At or
 after its recorded UTC expiration, normalization marks its original references

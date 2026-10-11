@@ -697,7 +697,7 @@ def reference_from_digest(root, path, artifact, raw_digest, locator=(), extract=
     member = path.relative_to(root).as_posix()
     value = {'artifact_id': artifact, 'member': member, 'locator': list(locator), 'digest': raw_digest}
     if extract is not None:
-        member_record = next((row for row in extract['members'] if row['member'] == member), None)
+        member_record = extract['_members_by_name'].get(member)
         require(member_record is not None and member_record['extract_digest'] == raw_digest, 'Reviewed extract mismatch')
         value['digest'] = member_record['original_digest']
     return {'id': identity(value), **value, 'artifact_digest': extract['archive_digest'] if extract else None,
@@ -989,6 +989,7 @@ def load_extract(root):
         closed(row, ('member', 'original_digest', 'extract_digest'))
         relative(row['member']); sha(row['original_digest']); sha(row['extract_digest']); names.append(row['member'])
     require(len(names) == len(set(names)), 'Duplicate extract member')
+    value['_members_by_name'] = {row['member']: row for row in value['members']}
     # One time observation for the whole normalization. No durable-original
     # retention is recorded by the supported manifest, so expiry is fail-closed.
     deadline = datetime.fromisoformat(value['origin']['expires_at'])
