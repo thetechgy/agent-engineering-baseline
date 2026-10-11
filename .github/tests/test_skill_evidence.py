@@ -1462,7 +1462,7 @@ class EvidenceTests(unittest.TestCase):
         for arm, status, errors in itertools.product(('with_skill', 'without_skill'),
                                                      ('failed', 'incomplete', 'unknown'), (0, 1)):
             with self.subTest(arm=arm, status=status, errors=errors):
-                data = self.data()
+                data = self.data(); self.synthetic_skill_references(data, 'podman')
                 selected = next(row for row in data['arms'] if row['name'] == arm)
                 selected.update(execution_status=status, execution_error_count=errors)
                 data['availability'].update(status='incomplete', reasons=['metadata_missing', 'source_unavailable'])
@@ -1543,7 +1543,7 @@ class EvidenceTests(unittest.TestCase):
         for arm, key, value in itertools.product(('with_skill', 'without_skill'),
                 ('recorded_attempts', 'scored_attempts'), (None, 9)):
             with self.subTest(arm=arm, key=key, value=value):
-                data = self.data(); selected = next(row for row in data['arms'] if row['name'] == arm)
+                data = self.data(); self.synthetic_skill_references(data, 'podman'); selected = next(row for row in data['arms'] if row['name'] == arm)
                 cov = selected['coverage']; cov[key] = value
                 if key == 'recorded_attempts' and value is not None: cov['scored_attempts'] = value
                 cov.update(unscored_attempts=cov['recorded_attempts'] - cov['scored_attempts']
@@ -1561,7 +1561,7 @@ class EvidenceTests(unittest.TestCase):
     def test_projection_preserves_missing_behavioral_case_details(self):
         for arm, details in itertools.product(('with_skill', 'without_skill'), ('partial', 'unavailable')):
             with self.subTest(arm=arm, details=details):
-                data = self.data(); selected = next(row for row in data['arms'] if row['name'] == arm)
+                data = self.data(); self.synthetic_skill_references(data, 'podman'); selected = next(row for row in data['arms'] if row['name'] == arm)
                 selected['coverage']['case_details'] = details
                 data['availability'].update(status='incomplete', reasons=['metadata_missing', 'source_unavailable'])
                 self.assert_project_rejects(data, 'Missing case detail limitation')
@@ -1653,7 +1653,7 @@ class EvidenceTests(unittest.TestCase):
     def test_shared_stop_on_pass_policy_consistency(self):
         for field, attempt in itertools.product((None, False, True), repeat=2):
             with self.subTest(field=field, attempt=attempt):
-                data = self.data()
+                data = self.data(); self.synthetic_skill_references(data, 'podman')
                 data['policy']['fields']['stop_on_pass'] = field
                 data['policy']['attempts']['stop_on_pass'] = attempt
                 data['policy']['id'] = evidence.identity({k: data['policy'][k] for k in
@@ -2191,6 +2191,47 @@ class EvidenceTests(unittest.TestCase):
         self.assertIsNone(evidence.project(unknown)['source']['content']['digest'])
         self.assertIn(evidence.identity(base['source']), evidence.REVIEWED_SOURCE_IDENTITIES)
         self.assertIn(evidence.identity(unknown['source']), evidence.REVIEWED_SOURCE_IDENTITIES)
+
+    def test_reviewed_execution_contract_binds_metadata_carriers(self):
+        base = self.data()
+        for changed in ('model', 'staged_digest', 'authored_digest', 'instruction_digest', 'build_digest'):
+            with self.subTest(changed=changed):
+                data = copy.deepcopy(base)
+                if changed == 'model':
+                    data['policy']['fields']['model'] = 'different-model'
+                    data['policy']['id'] = evidence.identity({key: data['policy'][key] for key in
+                        ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')})
+                elif changed in ('staged_digest', 'authored_digest'):
+                    data['dataset'][changed] = evidence.digest_bytes(b'Synthetic other dataset')
+                    if changed == 'authored_digest': data['dataset']['authored_provenance'] = 'reconstructed_from_declared_revision'
+                else:
+                    for arm in data['arms']:
+                        arm['condition'][changed] = evidence.digest_bytes(b'Synthetic other contract')
+                        arm['condition']['id'] = evidence.identity({key: value for key, value in arm['condition'].items() if key != 'id'})
+                self.assert_project_rejects(data, 'Unrecognized reviewed execution contract')
+        known = {key: base[key] for key in ('run_id', 'dataset', 'policy', 'arms')}
+        self.assertIn(evidence.identity(known), evidence.REVIEWED_EXECUTION_CONTRACTS)
+        unknown = copy.deepcopy(base); unknown['dataset'].update(authored_digest=None, authored_provenance='unknown')
+        self.assertEqual(evidence.project(unknown)['metrics'], base['metrics'])
+        unavailable = evidence.normalize_behavioral(FIXTURES / 'podman-native', 'podman', workspace=self.root)
+        self.assertIsNone(unavailable['source']['content']['digest'])
+        self.assertIsNone(unavailable['dataset']['authored_digest'])
+        self.assertEqual(evidence.project(unavailable)['metrics'], base['metrics'])
+
+    def test_static_references_bind_declared_skill(self):
+        base = evidence.normalize_static(FIXTURES / 'static-synthetic', 'podman')
+        data = copy.deepcopy(base); data['source']['skill_id'] = 'gh'
+        self.assert_project_rejects(data, 'Static reference skill mismatch')
+        data = copy.deepcopy(base); replacements = {}
+        for ref in data['references']:
+            if ref['member'].startswith('reports/podman/'):
+                old = ref['id']; ref['member'] = ref['member'].replace('reports/podman/', 'reports/gh/', 1)
+                ref['id'] = evidence.identity({key: ref[key] for key in ('artifact_id', 'member', 'locator', 'digest')})
+                replacements[old] = ref['id']
+        for scan in data['scans']: scan['references'] = [replacements.get(ref, ref) for ref in scan['references']]
+        for finding in data['findings']: finding['reference'] = replacements.get(finding['reference'], finding['reference'])
+        self.assert_project_rejects(data, 'Static reference skill mismatch')
+        self.assertEqual(evidence.project(base)['scans'], base['scans'])
 
     def test_static_projection_reconciles_aggregate_required_gates(self):
         base = evidence.normalize_static(FIXTURES / 'static-synthetic', 'podman')

@@ -120,6 +120,10 @@ REVIEWED_SOURCE_IDENTITIES = frozenset({
     'sha256:88d1d5eda32819451938ae64f404d2c694aa628039d9045302e627c48107a3b8',
     'sha256:f54436458de3447e2ef95a75db3ea1a4cb59c527515127e633043350629895c7',
 })  # Exact historical content, or the same declared identity with unavailable content.
+REVIEWED_EXECUTION_CONTRACTS = frozenset({
+    'sha256:bffae00bec7b34fcdae64794f39d477b48b0b86adc673d221cf113178ba54c35',
+    'sha256:5b1f9b4daa3af1222579cea0bc1055dc1e31d4f8ef2cb96d6ea2993e5a65bf1f',
+})  # The pinned run/dataset/policy/arms, with exact or unavailable authored bytes.
 PROVENANCE = ('runtime_recorded', 'configured', 'reconstructed_from_declared_revision',
               'reviewed_extract', 'synthetic', 'unknown')
 REASONS = ('results_not_supplied', 'coverage_missing', 'execution_incomplete', 'case_details_missing',
@@ -1111,7 +1115,17 @@ def validate_evidence(data, *, public=False):
         require(all(REVIEWED_METRIC_VALUES.get(row['name']) == row['value'] for row in data['metrics']),
                 'Unrecognized reviewed metric value')
         require(identity(data['source']) in REVIEWED_SOURCE_IDENTITIES, 'Unrecognized reviewed source identity')
+        require(identity({key: data[key] for key in ('run_id', 'dataset', 'policy', 'arms')})
+                in REVIEWED_EXECUTION_CONTRACTS, 'Unrecognized reviewed execution contract')
     if data['kind'] == 'static' and aggregate is not None:
+        report_pattern = r'reports/' + re.escape(data['source']['skill_id']) + r'/skillevaluator-output-[0-9]{14}\.json'
+        report_refs = {ref['id'] for ref in references if re.fullmatch(report_pattern, ref['member'])}
+        require(all(ref['id'] in report_refs or ref['member'] in ('reports/catalog-summary.json', 'versions.json')
+                    for ref in references), 'Static reference skill mismatch')
+        require(bool(report_refs) and all(ref in report_refs for ref in aggregate['references'])
+                and all(ref in report_refs for scan in validators for ref in scan['references'])
+                and all(finding['reference'] in report_refs for finding in data['findings']),
+                'Static reference skill mismatch')
         require(aggregate['passed'] == all(scan['passed'] is True or not scan.get('blocking', True)
                                          for scan in validators), 'Static aggregate gate contradiction')
         expected = ('incomplete' if any(scan['status'] == 'incomplete' for scan in validators)

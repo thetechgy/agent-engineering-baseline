@@ -410,11 +410,17 @@ with another in-range value while keeping reviewed references.
 Reviewed source identities bind the repository, revision, owner, path, lineage
 and complete content manifest. The exact approved historical identity can retain
 unknown content when local objects are missing, with its source limitation.
+Reviewed execution identities also bind the run, dataset, policy and complete arm
+contracts. Missing authored dataset bytes retain the approved run contract with
+unknown authored provenance; other relabeling rejects before projection.
 Static normalization records an optional Boolean `blocking` on scan records;
 legacy records without it default to blocking. Underlying scanner diagnostics
 remain nonblocking when their parent validator already supplies the gate.
 Projection reconciles aggregate pass and status with those retained gate decisions,
 including nonblocking failures and advisory skips, while retaining native pass fields.
+Static report members must belong to the declared skill's `reports/<skill>/` path.
+Aggregate, scanner and finding references use that report; catalog/version members
+remain run-level references and cannot substitute for a skill's scanner evidence.
 Reviewed-extract members are indexed once after manifest validation, so trial,
 reward, and summary references do not rescan the member list.
 Each normalization shares a 64 MiB byte budget across consumed native JSON,
