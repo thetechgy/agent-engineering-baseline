@@ -1740,6 +1740,33 @@ class EvidenceTests(unittest.TestCase):
         data['availability'] = {'status':'complete', 'reasons':[], 'provenance':'runtime_recorded'}
         with self.assertRaises(ValueError): evidence.project(data)
 
+    def test_orphan_native_rewards_cannot_claim_complete_details(self):
+        for arm, reward_shape in itertools.product(('with_skill', 'without_skill'), ('valid', 'contradictory', 'malformed')):
+            with self.subTest(arm=arm, reward=reward_shape), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp) / 'native'; shutil.copytree(FIXTURES / 'podman-native', root)
+                (root / 'extract-manifest.json').unlink(); run = next((root / 'results/podman').iterdir())
+                trials = run / 'codex' / arm.replace('_', '-') / 'trials'
+                reward = evidence.read_json(next(trials.glob('*/reward.json')))
+                reward.update(trial_id='orphan-trial', overall=0)
+                if reward_shape == 'contradictory': reward.update(entry_id='unknown-case', model='different-model')
+                if reward_shape == 'malformed': reward = ['unparsed orphan']
+                write(trials / 'orphan-trial/reward.json', reward)
+                before = self.snapshot(root); output = Path(temp) / 'partial-output'; stdout = StringIO()
+                with redirect_stdout(stdout):
+                    evidence.main(['normalize', '--kind', 'behavioral', '--skill', 'podman', '--input', str(root),
+                                   '--output', str(output)])
+                data = evidence.read_json(output / 'evidence.json'); public = evidence.read_json(output / 'public-report.json')
+                for carrier in (data, public):
+                    self.assertEqual(next(a for a in carrier['arms'] if a['name'] == arm)['coverage']['case_details'], 'partial')
+                    self.assertIn('case_details_missing', carrier['availability']['reasons'])
+                    self.assertEqual(len(carrier['observations']), 20)
+                normalized = evidence.normalize_behavioral(root, 'podman')
+                normalized['availability']['reasons'].remove('case_details_missing')
+                with self.assertRaises(ValueError): evidence.project(normalized)
+                with patch.object(evidence, 'MAX_TRIALS', 20), self.assertRaisesRegex(ValueError, 'Trial input limit'):
+                    evidence.normalize_behavioral(root, 'podman')
+                self.assertEqual(self.snapshot(root), before)
+
     def test_missing_summary_never_invents_zero_trials(self):
         root = self.native(); next(root.rglob('summary.json')).unlink()
         data = evidence.normalize_behavioral(root, 'podman')

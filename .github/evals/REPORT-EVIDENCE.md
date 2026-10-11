@@ -384,6 +384,11 @@ Trial references locate recorded verifier rewards when present. For incomplete
 trials without that structure, they locate the recorded verifier result (which
 may be null), or the trial object when the verifier field is absent. These trial
 references identify an existing value; absent scores remain null.
+Discovery also accounts for retained reward members without a trial result.
+They consume the shared trial-directory cap and keep that arm's case details
+partial or unavailable with `case_details_missing`; an orphan reward cannot
+establish a scored observation or be silently ignored in complete details.
+Its payload is not parsed or promoted without a corresponding trial result.
 
 Static detailed findings may be partial, but their counts by critical/high/medium/low
 severity cannot exceed corresponding known scanner counts or aggregate totals.

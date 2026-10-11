@@ -1777,7 +1777,11 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     trials_by_arm = {arm: sorted(path for path in scanned_entries if path.name == 'result.json'
                                 and path.parent.parent == run / 'codex' / arm.replace('_', '-') / 'trials')
                     for arm in ('with_skill', 'without_skill')}
-    require(sum(len(paths) for paths in trials_by_arm.values()) <= MAX_TRIALS, 'Trial input limit')
+    orphan_rewards = {arm: {path.parent for path in scanned_entries if path.name == 'reward.json'
+                            and path.parent.parent == run / 'codex' / arm.replace('_', '-') / 'trials'}
+                      - {path.parent for path in trials_by_arm[arm]} for arm in trials_by_arm}
+    require(sum(len(trials_by_arm[arm]) + len(orphan_rewards[arm]) for arm in trials_by_arm) <= MAX_TRIALS,
+            'Trial input limit')
     known_cases = set(ids)
     models = [value for value in (policy['fields']['model'], agent.get('model'),
               config.get('provider', {}).get('model'), config.get('agents', {}).get('codex', {}).get('model'))
@@ -1918,6 +1922,8 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
             require(type(cardinality) is int and cardinality == recorded, 'Conflicting aggregate trial count')
         details = 'complete' if len(observed) == recorded else 'partial' if observed else 'unavailable'
         require(details != 'complete' or not lookup, 'Unmatched summary attempts')
+        if orphan_rewards[arm]:
+            details = 'partial' if observed else 'unavailable'
         if details != 'complete':
             limitations.add('case_details_missing')
         if scored != native_condition.get('expected_attempts') or recorded != native_condition.get('expected_attempts'):
