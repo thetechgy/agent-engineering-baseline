@@ -31,7 +31,7 @@ MAX_REFERENCES = 2 * MAX_TRIALS + 100
 MAX_SOURCE_MEMBERS = 1000
 MAX_INPUT_ENTRIES = 100000
 SECURE_DIRECTORY_OUTPUT = (all(fn in os.supports_dir_fd for fn in (os.open, os.mkdir))
-                           and hasattr(os, 'O_DIRECTORY') and hasattr(os, 'O_NOFOLLOW'))
+                           and all(hasattr(os, name) for name in ('O_DIRECTORY', 'O_NOFOLLOW', 'geteuid')))
 # Reviewed Podman extract-manifest.json bytes; additional identities require review.
 REVIEWED_EXTRACT_MANIFESTS = frozenset({
     'sha256:4f8ab06638a37c970dfd5a97f057da8505a0b57767a332b41d4e0c2c8e8066ea',
@@ -1801,11 +1801,17 @@ def normalize_static(root, name, workspace=ROOT):
     return _StaticEvidence(data, static_claim_identity(data, blocking_defaults), blocking_defaults)
 
 
-def open_directory(path, identities=None, changed_message='Input directory changed'):
+def open_directory(path, identities=None, changed_message='Input directory changed', trusted_output=False):
     """Anchor each directory component without following replacement links."""
     flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
     fd = os.open(path.anchor, flags)
+    def validate_owner():
+        if trusted_output:
+            info = os.fstat(fd)
+            require(info.st_uid in (0, os.geteuid())
+                    and (not info.st_mode & 0o022 or info.st_mode & stat.S_ISVTX), 'Untrusted output parent')
     try:
+        validate_owner()
         current = Path(path.anchor)
         for part in path.parts[1:]:
             current /= part
@@ -1814,6 +1820,7 @@ def open_directory(path, identities=None, changed_message='Input directory chang
             if identities is not None:
                 info = os.fstat(fd)
                 require(identities.get(current) == (info.st_dev, info.st_ino), changed_message)
+            validate_owner()
         return fd
     except BaseException:
         os.close(fd)
@@ -1852,7 +1859,7 @@ def write_outputs(values, destination=None, workspace=ROOT, input_path=None):
         if boundary is not None and boundary.exists():
             info = boundary.lstat()
             if stat.S_ISDIR(info.st_mode): forbidden_directories.add((info.st_dev, info.st_ino))
-    parent_fd = open_directory(parent, parent_identities, 'Output parent directory changed')
+    parent_fd = open_directory(parent, parent_identities, 'Output parent directory changed', True)
     try:
         if destination is None:
             for _ in range(100):
@@ -1872,6 +1879,7 @@ def write_outputs(values, destination=None, workspace=ROOT, input_path=None):
             original = os.fstat(directory_fd)
             require((original.st_dev, original.st_ino) == (created.st_dev, created.st_ino)
                     and (original.st_dev, original.st_ino) not in forbidden_directories
+                    and original.st_uid == os.geteuid()
                     and not original.st_mode & 0o077 and not os.listdir(directory_fd), 'Output directory changed')
             def unchanged():
                 current = destination.lstat()

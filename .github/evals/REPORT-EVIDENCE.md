@@ -46,12 +46,22 @@ settings (including linked, missing, or non-directory parents) are rejected
 without falling back to another location or leaving an output directory behind.
 Explicit `--output` placement does not depend on temporary settings.
 Output requires directory-descriptor support and no-follow directory opens.
+Every output ancestor, including the selected parent, must be owned by root
+or the effective caller UID. Group/other-writable components require the sticky
+bit; shared writable components without it reject before directory allocation.
+Ownership and permissions are checked on the opened ancestor descriptors.
+Together with caller-owned private output directories, this prevents another
+unprivileged UID from relocating an ancestor or destination during publication
+under the [Linux rename permission rules](https://man7.org/linux/man-pages/man2/rename.2.html).
+The effective caller UID and privileged processes are trusted: a process with
+those authorities can relocate owned directories and is outside this isolation
+boundary. Unmapped or foreign ownership rejects rather than assuming trust.
 It anchors every parent component, creates temporary or explicit directories
 relative to the parent descriptor, and creates flat output files relative to the
 new directory descriptor. Replaced paths cannot redirect writes into the checkout
-or input bundle; changed destination identity rejects publication. Unsupported
-platforms reject before directory creation. This path is verified on Linux;
-Windows output support is not established.
+or input bundle within that ownership boundary; changed destination identity
+rejects publication. Unsupported platforms reject before directory creation.
+This path is verified on Linux; Windows output support is not established.
 Input files use the same no-follow ancestor traversal and open the final member
 relative to its parent descriptor. Replacing an ancestor cannot redirect input
 bytes outside the validated tree; unsupported descriptor platforms reject reads.

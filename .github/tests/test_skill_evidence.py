@@ -2952,6 +2952,31 @@ class EvidenceTests(unittest.TestCase):
                 self.assertEqual(self.snapshot(bundle), before_input)
                 self.assertEqual(self.snapshot(workspace), before_workspace)
 
+    def test_relocatable_output_parents_reject_before_writes(self):
+        for temporary, component in itertools.product((False, True), ('parent', 'ancestor')):
+            with self.subTest(temporary=temporary, component=component), tempfile.TemporaryDirectory() as temp:
+                base = Path(temp); parent = base / 'parent'; parent.mkdir(mode=0o700)
+                bundle = base / 'input'; bundle.mkdir(); write(bundle / 'member.json', {'fixture': 'original'})
+                (parent if component == 'parent' else base).chmod(0o777)
+                destination = parent / 'output'; before = self.snapshot(bundle); opened = os.open
+                attempted = False
+                def relocated(path, flags, *args, **kwargs):
+                    nonlocal attempted
+                    if flags & os.O_CREAT:
+                        attempted = True
+                        if component == 'parent':
+                            next(parent.iterdir()).rename(bundle / 'moved-output')
+                        else:
+                            parent.rename(bundle / 'moved-parent')
+                    return opened(path, flags, *args, **kwargs)
+                with patch.object(os, 'open', side_effect=relocated), patch.dict(os.environ, {'TMPDIR': str(parent)}):
+                    with self.assertRaises((ValueError, OSError)):
+                        evidence.write_outputs({'evidence.json': {'synthetic': True}}, None if temporary else destination,
+                                               input_path=bundle)
+                self.assertEqual(self.snapshot(bundle), before)
+                self.assertFalse(attempted)
+                self.assertEqual(list(parent.iterdir()), [])
+
     def test_output_parent_replacement_cannot_redirect_directory_creation(self):
         for temporary in (False, True):
             with self.subTest(temporary=temporary), tempfile.TemporaryDirectory() as temp:
