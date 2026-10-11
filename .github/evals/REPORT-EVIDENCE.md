@@ -50,6 +50,9 @@ bytes outside the validated tree; unsupported descriptor platforms reject reads.
 Reopened ancestor descriptors must also match the device/inode identities recorded
 during path validation. An ordinary directory replacement rejects before reading
 its member bytes, while an already anchored descriptor continues to its original.
+Temporary and explicit output parents use the same validated ancestor identities
+before directory creation. Replacing an ordinary parent with the input directory
+rejects before output allocation, preserving the input's entries and bytes.
 Standalone commands disable bytecode writes before importing repository helpers,
 so running without `PYTHONDONTWRITEBYTECODE` does not create checkout caches.
 

@@ -2190,6 +2190,27 @@ class EvidenceTests(unittest.TestCase):
                 evidence.normalize_static(root, 'podman')
         self.assertTrue(replaced); self.assertEqual(self.snapshot(retained), before)
 
+    def test_ordinary_output_parent_replacement_does_not_mutate_input(self):
+        for temporary in (False, True):
+            with self.subTest(temporary=temporary), tempfile.TemporaryDirectory() as temp:
+                base = Path(temp); parent = base / 'parent'; parent.mkdir()
+                bundle = base / 'input'; bundle.mkdir(); write(bundle / 'member.json', {'fixture': 'original'})
+                before = self.snapshot(bundle); retained = base / 'retained'; opened = evidence.open_directory
+                replaced = False
+                def replaced_parent(path, *args):
+                    nonlocal replaced
+                    if path == parent and not replaced:
+                        parent.rename(retained); bundle.rename(parent); replaced = True
+                    return opened(path, *args)
+                with patch.object(evidence, 'open_directory', side_effect=replaced_parent), \
+                        patch.dict(os.environ, {'TMPDIR': str(parent)}):
+                    with self.assertRaisesRegex(ValueError, 'Output parent directory changed'):
+                        evidence.write_outputs({'evidence.json': {}}, None if temporary else parent / 'output',
+                                               workspace=base / 'checkout', input_path=bundle)
+                self.assertTrue(replaced)
+                self.assertEqual(self.snapshot(parent), before)
+                self.assertEqual(list(retained.iterdir()), [])
+
     def test_historical_listing_applies_remaining_budget_during_capture(self):
         repo = self.repo(); authored = repo / '.apm/skills/alpha'
         for index in range(10): (authored / f'member-{index}.md').write_text('Synthetic')

@@ -1709,7 +1709,7 @@ def normalize_static(root, name, workspace=ROOT):
     return data
 
 
-def open_directory(path, identities=None):
+def open_directory(path, identities=None, changed_message='Input directory changed'):
     """Anchor each directory component without following replacement links."""
     flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
     fd = os.open(path.anchor, flags)
@@ -1721,7 +1721,7 @@ def open_directory(path, identities=None):
             os.close(fd); fd = child
             if identities is not None:
                 info = os.fstat(fd)
-                require(identities.get(current) == (info.st_dev, info.st_ino), 'Input directory changed')
+                require(identities.get(current) == (info.st_dev, info.st_ino), changed_message)
         return fd
     except BaseException:
         os.close(fd)
@@ -1737,23 +1737,25 @@ def write_outputs(values, destination=None, workspace=ROOT, input_path=None):
     workspace = Path(workspace).absolute()
     if input_path is not None:
         input_path = Path(input_path).absolute()
+    parent_identities = {}
     if destination is None:
         # Validate explicit settings without tempfile's probing/fallback writes.
         parent = next((os.environ[key] for key in ('TMPDIR', 'TEMP', 'TMP') if os.environ.get(key)), None)
-        parent = safe_path(parent if parent is not None else tempfile.gettempdir(), directory=True)
+        parent = safe_path(parent if parent is not None else tempfile.gettempdir(), directory=True,
+                           directory_identities=parent_identities)
         require(not parent.is_relative_to(workspace), 'Output must be outside checkout')
         if input_path is not None:
             require(not parent.is_relative_to(input_path), 'Output overlaps input')
     else:
         destination = Path(destination).absolute()
-        parent = safe_path(destination.parent, directory=True)
+        parent = safe_path(destination.parent, directory=True, directory_identities=parent_identities)
         require(not os.path.lexists(destination), 'Output directory must be new')
     if destination is not None:
         safe_path(destination, directory=True, missing=True)
         require(not destination.is_relative_to(workspace) and destination != workspace, 'Output must be outside checkout')
         if input_path is not None:
             require(not destination.is_relative_to(input_path) and not input_path.is_relative_to(destination), 'Output overlaps input')
-    parent_fd = open_directory(parent)
+    parent_fd = open_directory(parent, parent_identities, 'Output parent directory changed')
     try:
         if destination is None:
             for _ in range(100):
