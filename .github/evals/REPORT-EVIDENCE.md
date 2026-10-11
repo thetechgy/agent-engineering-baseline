@@ -41,7 +41,10 @@ Human-readable reports are never read. A static scan has no behavioral metrics.
 ## Inventory and ownership
 
 Discovery uses `.apm/skills/*/SKILL.md` and
-`.github/evals/*/evals/evals.json`, without a skill-name list. At the reviewed
+`.github/evals/*/evals/evals.*`, without a skill-name list. Discovery checks
+local and overlay `evals.*` candidates before declaring a suite absent. Only a
+single canonical `evals.json` is supported; unsupported-only and mixed formats
+are rejected, including imported overlays without canonical JSON. At the reviewed
 base there are six authored skill sources, the imported `gh` target, and two
 behavioral suites: Podman and the repository-owned `gh` overlay. Other imported
 skills are resolved as needed for overlay ownership or competing-skill evidence;
@@ -125,14 +128,25 @@ agent-visible staging boundary. The pinned runtime ignore helper excludes
 skill-owned `evals` and generated/cache/Git inputs. Historical reconstruction
 reads exact local Git blobs with the equivalent authored-tree boundary; it is
 `reconstructed_from_declared_revision`, never runtime-attested. Missing Git
-objects remain unknown, without checkout or network fallback. An authored dataset
+objects remain unknown, without checkout or network fallback. Every Git read
+sets `GIT_NO_LAZY_FETCH=1`, overriding an inherited lazy-fetch setting so missing
+partial-clone trees and blobs cannot trigger demand fetching. An authored dataset
 hash identifies exact file bytes; the native staged digest identifies enriched
 entries and retains `skill-evaluator-dataset-snapshot/1`. The case cohort hash
 identifies sorted canonical IDs. None of these digests substitutes for another.
 
 Policy IDs hash recorded fields, patch digest, metric set, judge and attempt
 policy. Recorded published policy IDs are preserved separately and never replaced
-by today's policy. Arm condition IDs hash their structured fields: provenance,
+by today's policy. Behavioral and static readers reject a supplied evaluator
+revision outside the supported pin. Supplied policy fields must agree with
+corresponding known runtime/configuration observations: evaluator, Harbor,
+Compose, Python, model/provider, grading, environment, concurrency, timeout, and
+stop-on-pass. Python observations must match at the policy's declared precision
+(for example, `3.13` matches `3.13.15`). Native configuration and attempt-policy
+maximum/stop-on-pass values must also agree when both are known. Absent metadata
+remains unknown; compatible historical values are preserved rather than replaced
+with current defaults. Judge identity remains separate from the evaluated model.
+Arm condition IDs hash their structured fields: provenance,
 target presence, workspace mode, independently identified competing skills,
 instruction/build/fixture digests, and execution conditions. A changed competitor,
 instruction, build, fixture or execution condition can change a condition or
@@ -147,8 +161,11 @@ when the required objects or retained snapshots are available.
 
 Coverage keeps expected cases and attempts separate from recorded, scored and
 unscored attempts. Case-detail coverage is independently complete, partial or
-unavailable. Unknown observations remain null. Recovery status, native execution
-checks and coverage prevent incomplete evidence promotion; unavailable references
+unavailable. Each known recorded or scored count is bounded independently by a
+known expected count. Scored cannot exceed recorded when both are known;
+unscored must equal their difference, and stays null if either input is unknown.
+These rules apply to internal and public validation. Unknown observations remain
+null. Recovery status, native execution checks and coverage prevent incomplete evidence promotion; unavailable references
 also prevent a complete projection. Completeness describes evidence coverage,
 not task success or publication eligibility. Failed rubrics, low scores and
 failed with-skill deterministic gates remain valid observations. Rubric counts

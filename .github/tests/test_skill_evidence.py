@@ -3,6 +3,7 @@
 import copy
 import hashlib
 import json
+import itertools
 import os
 from pathlib import Path
 import shutil
@@ -10,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import yaml
 
@@ -120,6 +122,234 @@ class EvidenceTests(unittest.TestCase):
         write(path / 'evals/evals.jsonl', {})
         with self.assertRaises(ValueError):
             evidence.inventory(root)
+
+    def test_dataset_format_discovery(self):
+        for owner, formats in itertools.product(
+                ('local', 'local_overlay', 'imported_overlay'),
+                ((), ('json',), ('jsonl',), ('yaml',), ('json', 'jsonl'), ('jsonl', 'yaml'))):
+            with self.subTest(owner=owner, formats=formats), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                authored = self.local(root, 'alpha')
+                if owner == 'imported_overlay':
+                    self.imported(root)
+                    name = 'beta'
+                    suite_root = root / '.github/evals/beta'
+                    (suite_root / 'evals/evals.json').unlink()
+                else:
+                    name = 'alpha'
+                    suite_root = authored if owner == 'local' else root / '.github/evals/alpha'
+                for extension in formats:
+                    if extension == 'json':
+                        self.dataset(suite_root, name)
+                    else:
+                        write(suite_root / ('evals/evals.' + extension), {})
+                if formats not in ((), ('json',)):
+                    with self.assertRaises(ValueError):
+                        evidence.inventory(root)
+                else:
+                    rows = evidence.inventory(root)['skills']
+                    row = next((row for row in rows if row['source']['skill_id'] == name), None)
+                    if owner == 'imported_overlay' and not formats:
+                        self.assertIsNone(row)  # No overlay dataset means no imported target.
+                    else:
+                        self.assertEqual(row['behavioral_status'], 'configured' if formats else 'not_configured')
+                        if formats:
+                            self.assertEqual(row['suite']['owner'], 'local' if owner == 'local' else 'overlay')
+
+    def test_partial_clones_never_fetch_missing_objects(self):
+        def git(root, *args):
+            return subprocess.run(['git', '-C', str(root), *args], check=True,
+                                  capture_output=True, text=True, timeout=30).stdout.strip()
+        origin = self.root / 'origin'
+        origin.mkdir()
+        self.local(origin, 'podman', True)
+        git(origin, 'init', '-q')
+        git(origin, 'add', '.apm')
+        git(origin, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+            'commit', '-qm', 'Synthetic source')
+        rev = git(origin, 'rev-parse', 'HEAD')
+        blob = git(origin, 'rev-parse', 'HEAD:.apm/skills/podman/SKILL.md')
+        tree = git(origin, 'rev-parse', 'HEAD^{tree}')
+        root = self.native()
+        self.mutate(root, '/run_config.json', lambda d: d['evaluated_source'].update(commit=rev))
+        result_path = next((root / 'results/podman').glob('*/result.json'))
+        result = evidence.read_json(result_path)
+        result['run_config']['evaluated_source']['commit'] = rev
+        write(result_path, result)
+        self.mutate(root, '/provenance.json', lambda d: d.update(revision=rev))
+        for kind, oid in (('blob:none', blob), ('tree:0', tree)):
+            with self.subTest(filter=kind):
+                clone = self.root / kind.replace(':', '-')
+                subprocess.run(['git', 'clone', '--no-checkout', '--filter=' + kind,
+                                '--upload-pack=git -c uploadpack.allowFilter=true upload-pack',
+                                origin.as_uri(), str(clone)], check=True, capture_output=True, timeout=30)
+                self.assertTrue(list((clone / '.git/objects/pack').glob('*.promisor')))
+                absent = subprocess.run(['git', '-C', str(clone), 'cat-file', '-e', oid],
+                                        env={**os.environ, 'GIT_NO_LAZY_FETCH': '1'}, capture_output=True)
+                self.assertNotEqual(absent.returncode, 0)
+                trace = self.root / (clone.name + '-trace.jsonl')
+                with patch.dict(os.environ, {'GIT_NO_LAZY_FETCH': '0', 'GIT_TRACE2_EVENT': str(trace)}):
+                    self.assertEqual(evidence.git_revision(clone), rev)
+                    contents = evidence.historical_content(clone, rev, '.apm/skills/podman')
+                    data = evidence.normalize_behavioral(root, 'podman', workspace=clone)
+                events = [json.loads(line) for line in trace.read_text().splitlines()]
+                fetches = [event for event in events if event.get('event') == 'child_start'
+                           and 'fetch' in event.get('argv', [])]
+                self.assertEqual(fetches, [], 'Production object reads must not invoke fetch')
+                self.assertIsNone(contents['digest'])
+                self.assertEqual(contents['provenance'], 'unknown')
+                self.assertIsNone(data['source']['content']['digest'])
+                self.assertIsNone(data['dataset']['authored_digest'])
+                self.assertEqual(data['dataset']['authored_provenance'], 'unknown')
+                self.assertIn('source_unavailable', data['availability']['reasons'])
+                self.assertEqual(len(data['observations']), 20)
+                evidence.project(data)
+
+    def test_coverage_unknown_and_known_count_combinations(self):
+        base = evidence.read_json(FIXTURES / 'gh-no-model.json')
+        base['availability'].update(status='incomplete', reasons=['coverage_missing'])
+        base['policy']['attempts']['maximum'] = None
+        base['policy']['id'] = evidence.identity({k: base['policy'][k] for k in
+                                                ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')})
+        for public in (False, True):
+            data = evidence.project(base) if public else copy.deepcopy(base)
+            validate = evidence.validate_public if public else evidence.validate_evidence
+            for expected, recorded, scored, unscored in itertools.product(
+                    (None, 0, 10), (None, 0, 5, 10, 11), (None, 0, 5, 10, 11), (None, 0, 5, 10, 11)):
+                valid = ((expected is None or all(v is None or v <= expected for v in (recorded, scored)))
+                         and (unscored is None if recorded is None or scored is None
+                              else scored <= recorded and unscored == recorded - scored))
+                data['arms'][0]['coverage'].update(expected_attempts=expected, recorded_attempts=recorded,
+                                                 scored_attempts=scored, unscored_attempts=unscored)
+                with self.subTest(public=public, counts=(expected, recorded, scored, unscored)):
+                    if valid:
+                        validate(data)
+                    else:
+                        with self.assertRaises(ValueError):
+                            validate(data)
+
+    def test_policy_runtime_contradictions(self):
+        conflicts = {'evaluator_revision': 'b' * 40, 'harbor': '0.12.0', 'docker_compose': '4.0.0',
+                     'python': '3.12', 'model': 'other-model', 'provider': 'other-provider',
+                     'grading': 'default_plus_custom', 'environment': 'other-environment',
+                     'concurrency': 3, 'timeout_multiplier': 3.0, 'stop_on_pass': True}
+        for field, value in conflicts.items():
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp) / 'native'
+                shutil.copytree(FIXTURES / 'podman-native', root)
+                (root / 'extract-manifest.json').unlink()
+                self.mutate(root, '/provenance.json', lambda d: d['policy'].update({field: value}))
+                with self.assertRaises(ValueError):
+                    evidence.normalize_behavioral(root, 'podman')
+
+    def test_runtime_observations_against_supplied_policy(self):
+        config_changes = (
+            ('provider', 'model', 'other-model'), ('provider', 'name', 'other-provider'),
+            ('grading', 'mode', 'default_plus_custom'), ('harbor', 'n_concurrent', 3),
+            ('harbor', 'timeout_multiplier', 3.0), ('harbor', 'stop_on_pass', True),
+        )
+        for section, key, value in config_changes:
+            with self.subTest(section=section, key=key), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp) / 'native'
+                shutil.copytree(FIXTURES / 'podman-native', root)
+                (root / 'extract-manifest.json').unlink()
+                run = next((root / 'results/podman').iterdir())
+                config = evidence.read_json(run / 'run_config.json')
+                config[section][key] = value
+                write(run / 'run_config.json', config)
+                result = evidence.read_json(run / 'result.json')
+                result['run_config'] = config
+                write(run / 'result.json', result)
+                with self.assertRaises(ValueError):
+                    evidence.normalize_behavioral(root, 'podman')
+        root = self.native()
+        self.mutate(root, '/versions.json', lambda d: d.update(evaluator_revision='b' * 40))
+        with self.assertRaises(ValueError):
+            evidence.normalize_behavioral(root, 'podman')
+        self.mutate(root, '/versions.json', lambda d: d.update(evaluator_revision=evidence.reports.POLICY['evaluator_revision']))
+        result = next((root / 'results/podman').glob('*/result.json'))
+        self.mutate(root, '/' + result.parent.name + '/result.json',
+                    lambda d: d['agents']['codex'].update(model='other-model'))
+        with self.assertRaises(ValueError):
+            evidence.normalize_behavioral(root, 'podman')
+
+    def test_missing_runtime_metadata_and_attempt_fallback(self):
+        root = self.native()
+        self.mutate(root, '/versions.json', lambda d: d.clear())
+        data = evidence.normalize_behavioral(root, 'podman')
+        self.assertIn('metadata_missing', data['availability']['reasons'])
+        self.assertEqual(data['policy']['fields']['python'], '3.13')  # Preserve declared policy.
+        run = next((root / 'results/podman').iterdir())
+        config = evidence.read_json(run / 'run_config.json')
+        for key in ('n_attempts', 'stop_on_pass', 'n_concurrent', 'environment'):
+            config['harbor'].pop(key)
+        config.pop('provider')
+        config.pop('grading')
+        write(run / 'run_config.json', config)
+        result = evidence.read_json(run / 'result.json')
+        result['run_config'] = config
+        write(run / 'result.json', result)
+        data = evidence.normalize_behavioral(root, 'podman')
+        self.assertEqual(data['policy']['attempts']['maximum'], 1)
+        self.assertIs(data['policy']['attempts']['stop_on_pass'], False)
+        evidence.project(data)
+        (root / 'provenance.json').unlink()
+        self.mutate(root, '/attempt_policy.json', lambda d: d.update(stop_on_pass=True))
+        config['harbor']['stop_on_pass'] = False
+        write(run / 'run_config.json', config)
+        result['run_config'] = config
+        write(run / 'result.json', result)
+        with self.assertRaises(ValueError):
+            evidence.normalize_behavioral(root, 'podman')  # Native disagreement also fails without policy.
+        static = self.root / 'static'
+        shutil.copytree(FIXTURES / 'static-synthetic', static)
+        self.mutate(static, '/versions.json', lambda d: d.pop('evaluator_revision'))
+        data = evidence.normalize_static(static, 'podman')
+        self.assertIsNone(data['policy']['fields']['evaluator_revision'])
+        evidence.project(data)
+
+    def test_native_stop_on_pass_disagreement(self):
+        root = self.native()
+        self.mutate(root, '/attempt_policy.json', lambda d: d.update(stop_on_pass=True))
+        with self.assertRaises(ValueError):
+            evidence.normalize_behavioral(root, 'podman')
+
+    def test_static_evaluator_revision(self):
+        root = self.root / 'static'
+        shutil.copytree(FIXTURES / 'static-synthetic', root)
+        self.mutate(root, '/versions.json', lambda d: d.update(evaluator_revision='b' * 40))
+        with self.assertRaises(ValueError):
+            evidence.normalize_static(root, 'podman')
+
+    def test_compatible_python_precision_and_historical_policy(self):
+        root = self.native()
+        for python in ('3', '3.13', '3.13.15'):
+            with self.subTest(python=python):
+                self.mutate(root, '/provenance.json', lambda d: d['policy'].update(python=python))
+                data = evidence.normalize_behavioral(root, 'podman')
+                self.assertEqual(data['policy']['fields']['python'], python)
+                evidence.project(data)
+        self.mutate(root, '/provenance.json', lambda d: d['policy'].update(timeout_multiplier=2))
+        evidence.project(evidence.normalize_behavioral(root, 'podman'))
+        self.mutate(root, '/provenance.json', lambda d: d['policy'].update(python='3.13.14'))
+        with self.assertRaises(ValueError):
+            evidence.normalize_behavioral(root, 'podman')
+        self.mutate(root, '/versions.json', lambda d: d.update(harbor='0.12.0', docker_compose='4.0.0'))
+        self.mutate(root, '/provenance.json', lambda d: d['policy'].update(
+            harbor='0.12.0', docker_compose='4.0.0', python='3.13', model='historical-model'))
+        run = next((root / 'results/podman').iterdir())
+        config = evidence.read_json(run / 'run_config.json')
+        config['provider']['model'] = config['agents']['codex']['model'] = 'historical-model'
+        write(run / 'run_config.json', config)
+        result = evidence.read_json(run / 'result.json')
+        result['run_config'] = config
+        result['agents']['codex']['model'] = 'historical-model'
+        write(run / 'result.json', result)
+        data = evidence.normalize_behavioral(root, 'podman')
+        self.assertEqual(data['policy']['fields']['harbor'], '0.12.0')
+        self.assertEqual(data['policy']['fields']['model'], 'historical-model')
+        self.assertEqual(data['policy']['judge']['model'], 'gpt-5.6-sol')
+        evidence.project(data)
 
     def test_ambiguous_owner_and_deployment_drift(self):
         for mutation in ('owner', 'hash', 'deployment', 'revision'):

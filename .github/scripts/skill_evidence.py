@@ -252,16 +252,21 @@ def source(name, owner='unknown', repo=None, rev=None, path=None, contents=None,
             'source_path': path, 'lineage': lineage, 'content': contents or content()}
 
 
+def offline_git(workspace, *args, text=False):
+    # Override the caller's setting: missing promisor objects are unknown evidence.
+    return subprocess.run(['git', '-C', str(workspace), *args], capture_output=True, text=text,
+                          env={**os.environ, 'GIT_NO_LAZY_FETCH': '1'})
+
+
 def git_revision(workspace):
-    result = subprocess.run(['git', '-C', str(workspace), 'rev-parse', 'HEAD'], capture_output=True, text=True)
+    result = offline_git(workspace, 'rev-parse', 'HEAD', text=True)
     return result.stdout.strip() if result.returncode == 0 else None
 
 
 def historical_content(workspace, rev, source_path):
     """Read exact local Git blobs only. Never checkout or contact a remote."""
     revision(rev); relative(source_path)
-    listing = subprocess.run(['git', '-C', str(workspace), 'ls-tree', '-rz', rev, '--', source_path],
-                             capture_output=True)
+    listing = offline_git(workspace, 'ls-tree', '-rz', rev, '--', source_path)
     if listing.returncode:
         return content()
     tree_names = [row.split(b'\t', 1)[1].decode().removeprefix(source_path + '/') for row in listing.stdout.split(b'\0') if row]
@@ -282,7 +287,7 @@ def historical_content(workspace, rev, source_path):
                             for manifest in ('SKILL.md', 'skill.md')) for i, p in enumerate(parts))
         if any(p in ('results', '__pycache__', '.git') for p in parts) or nested_evals:
             continue
-        blob = subprocess.run(['git', '-C', str(workspace), 'cat-file', 'blob', oid.decode()], capture_output=True)
+        blob = offline_git(workspace, 'cat-file', 'blob', oid.decode())
         if blob.returncode:
             return content()
         records.append({'member': name, 'digest': digest_bytes(blob.stdout)})
@@ -296,7 +301,7 @@ def strict_dataset(path, name):
     from skillevaluator.tier3.evals_spec import validate_skillevaluators
     safe_tree(path.parent.parent)
     alternatives = list(path.parent.glob('evals.*'))
-    require(alternatives == [path] or set(alternatives) == {path}, 'Ambiguous authored dataset formats')
+    require(path.name == 'evals.json' and set(alternatives) == {path}, 'Ambiguous authored dataset formats')
     data = read_json(path)
     require(type(data) is dict, 'Dataset object required')
     require(type(data.get('evals')) is list and len(data['evals']) <= MAX_CASES, 'Dataset case limit')
@@ -349,7 +354,7 @@ def inventory(workspace=ROOT):
     overlay_names = []
     if overlays.exists():
         safe_tree(overlays)
-        overlay_names = [p.parent.parent.name for p in overlays.glob('*/evals/evals.json')]
+        overlay_names = [p.parent.parent.name for p in overlays.glob('*/evals/evals.*')]
     rows = []
     for name in sorted(set(names + overlay_names)):
         skill_id(name)
@@ -382,10 +387,10 @@ def inventory(workspace=ROOT):
             src = source(name, 'upstream', owner['repo_url'], owner['resolved_commit'], owner['virtual_path'],
                          skill_content(authored))
             deployment = '.agents/skills/' + name
-        candidates = [overlays / name / 'evals/evals.json']
+        dataset_roots = [overlays / name / 'evals']
         if name in names:
-            candidates.append(authored / 'evals/evals.json')
-        datasets = [p for p in candidates if p.exists()]
+            dataset_roots.append(authored / 'evals')
+        datasets = [p for directory in dataset_roots for p in directory.glob('evals.*')]
         require(len(datasets) <= 1, 'Competing dataset sources')
         suite = strict_dataset(datasets[0], name) if datasets else None
         if suite:
@@ -621,9 +626,14 @@ def validate_evidence(data, *, public=False):
         for key in ('expected_attempts', 'recorded_attempts', 'scored_attempts', 'unscored_attempts'):
             optional(cov[key], count)
         enum(cov['case_details'], ('complete', 'partial', 'unavailable'))
+        if cov['expected_attempts'] is not None:
+            require(all(cov[key] is None or cov[key] <= cov['expected_attempts']
+                        for key in ('recorded_attempts', 'scored_attempts')), 'Excess native trials')
         if cov['scored_attempts'] is not None and cov['recorded_attempts'] is not None:
             require(cov['scored_attempts'] <= cov['recorded_attempts']
                     and cov['unscored_attempts'] == cov['recorded_attempts'] - cov['scored_attempts'], 'Invalid coverage counts')
+        else:
+            require(cov['unscored_attempts'] is None, 'Invented unscored count')
         attempts = data['policy']['attempts']['maximum']
         if attempts is not None and cov['expected_attempts'] is not None:
             require(cov['expected_attempts'] == len(ids) * attempts, 'Expected attempt mismatch')
@@ -632,8 +642,6 @@ def validate_evidence(data, *, public=False):
             require(len(recorded) <= cov['recorded_attempts'], 'Details exceed recorded trials')
         if cov['scored_attempts'] is not None:
             require(sum(o['score'] is not None for o in recorded) <= cov['scored_attempts'], 'Details exceed scored trials')
-        if cov['recorded_attempts'] is not None and cov['expected_attempts'] is not None:
-            require(cov['recorded_attempts'] <= cov['expected_attempts'], 'Excess native trials')
         if cov['case_details'] == 'complete':
             require(len(recorded) == cov['recorded_attempts']
                     and sum(o['score'] is not None for o in recorded) == cov['scored_attempts'], 'Case detail coverage mismatch')
@@ -763,6 +771,59 @@ def select_run(root, name, selected):
     return candidates[0]
 
 
+def validate_runtime_versions(versions):
+    require(type(versions) is dict, 'Native versions object required')
+    if versions.get('skillevaluator') is not None:
+        require(versions['skillevaluator'] == '0.3.0', 'Unsupported native evaluator')
+    if versions.get('evaluator_revision') is not None:
+        require(versions['evaluator_revision'] == reports.POLICY['evaluator_revision'], 'Unsupported native evaluator')
+
+
+def reconcile_policy(fields, versions, config, agent, attempt_policy):
+    """Reject supplied identities that contradict known runtime/configuration values."""
+    fields = policy_fields(fields)
+    if fields['evaluator_revision'] is not None:
+        require(fields['evaluator_revision'] == reports.POLICY['evaluator_revision'], 'Unsupported native evaluator')
+    harbor = config.get('harbor', {})
+    observations = {key: [versions.get(key)] for key in
+                    ('evaluator_revision', 'harbor', 'docker_compose', 'python')}
+    observations.update({
+        'model': [config.get('provider', {}).get('model'), config.get('agents', {}).get('codex', {}).get('model'),
+                  agent.get('model')],
+        'provider': [config.get('provider', {}).get('name')],
+        'grading': [config.get('grading', {}).get('mode')],
+        'environment': [harbor.get('environment', {}).get('value')],
+        'concurrency': [harbor.get('n_concurrent')],
+        'timeout_multiplier': [harbor.get('timeout_multiplier')],
+        'stop_on_pass': [harbor.get('stop_on_pass'), attempt_policy.get('stop_on_pass')],
+    })
+    for key, values in observations.items():
+        declared = fields[key]
+        if declared is None:
+            continue
+        for observed in values:
+            if observed is None:
+                continue
+            if key == 'python':
+                require(type(declared) is str and type(observed) is str
+                        and re.fullmatch(r'[0-9]+(?:\.[0-9]+){0,2}', declared)
+                        and re.fullmatch(r'[0-9]+(?:\.[0-9]+){0,2}', observed), 'Invalid Python version')
+                expected = tuple(map(int, declared.split('.')))
+                actual = tuple(map(int, observed.split('.')))
+                require(actual[:len(expected)] == expected, 'Runtime/policy disagreement')
+            else:
+                if key == 'timeout_multiplier':
+                    number(observed, 0.01, 100)
+                else:
+                    require(type(declared) is type(observed), 'Runtime/policy disagreement')
+                require(declared == observed, 'Runtime/policy disagreement')
+    for key in ('max_attempts', 'stop_on_pass'):
+        config_key = 'n_attempts' if key == 'max_attempts' else key
+        if harbor.get(config_key) is not None and attempt_policy.get(key) is not None:
+            require(type(harbor[config_key]) is type(attempt_policy[key])
+                    and harbor[config_key] == attempt_policy[key], 'Attempt policy disagreement')
+
+
 def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     from skillevaluator.tier3.harbor.report_data import load_dataset_snapshot
     from skillevaluator.evaluation import EvaluationService
@@ -802,12 +863,12 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
         require(provenance.get('mode') in ('standard', 'confirmation'), 'Unknown benchmark mode')
     if provenance_path.exists():
         ref(provenance_path)
+    versions = {}
     if (root / 'versions.json').exists():
         versions = read_json(root / 'versions.json')
-        require(versions.get('skillevaluator') == '0.3.0'
-                and versions.get('evaluator_revision') == reports.POLICY['evaluator_revision'], 'Unsupported native evaluator')
+        validate_runtime_versions(versions)
         ref(root / 'versions.json')
-    else:
+    if any(versions.get(key) is None for key in ('skillevaluator', 'evaluator_revision')):
         limitations.add('metadata_missing')
     snapshot_path = run / 'dataset_snapshot.json'
     if snapshot_path.exists():
@@ -844,13 +905,17 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     if attempt_path.exists():
         ref(attempt_path)
     harbor = config.get('harbor', {})
-    maximum = harbor.get('n_attempts', attempt_policy.get('max_attempts'))
+    maximum = harbor.get('n_attempts')
+    if maximum is None:
+        maximum = attempt_policy.get('max_attempts')
     optional(maximum, lambda v: count(v, 100))
     require(maximum is None or maximum > 0, 'Zero attempts')
-    if 'max_attempts' in attempt_policy and maximum is not None:
-        require(attempt_policy['max_attempts'] == maximum, 'Attempt policy disagreement')
+    reconcile_policy(provenance.get('policy', {}), versions, config, result['agents']['codex'], attempt_policy)
+    stop_on_pass = harbor.get('stop_on_pass')
+    if stop_on_pass is None:
+        stop_on_pass = attempt_policy.get('stop_on_pass')
     attempts = {'mode': provenance.get('mode', 'unknown'), 'maximum': maximum,
-                'stop_on_pass': harbor.get('stop_on_pass'), 'pass_threshold': attempt_policy.get('pass_threshold')}
+                'stop_on_pass': stop_on_pass, 'pass_threshold': attempt_policy.get('pass_threshold')}
     judge = config.get('judge', {})
     policy = make_policy(provenance.get('policy'), 'sha256:' + provenance['patch_sha256'] if provenance.get('patch_sha256') else None,
                          result.get('metric_set'), {k: judge.get(k) for k in ('model', 'provider', 'enabled')},
@@ -865,7 +930,7 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     # Authored-file identity is reconstructed only from exact objects, independently of staged entries.
     if rev:
         ds_path = '.github/evals/' + name + '/evals/evals.json' if historical_owner == 'upstream' else src_path + '/evals/evals.json'
-        blob = subprocess.run(['git', '-C', str(workspace), 'show', rev + ':' + ds_path], capture_output=True)
+        blob = offline_git(workspace, 'show', rev + ':' + ds_path)
         if blob.returncode == 0:
             data['dataset']['authored_digest'] = digest_bytes(blob.stdout)
             data['dataset']['authored_provenance'] = 'reconstructed_from_declared_revision'
@@ -1089,8 +1154,7 @@ def normalize_static(root, name, workspace=ROOT):
                             'reasons': ['scan_incomplete'] if incomplete else [], 'provenance': 'runtime_recorded'}
     if (root / 'versions.json').exists():
         versions = read_json(root / 'versions.json')
-        require(versions.get('skillevaluator') == '0.3.0', 'Unsupported static evaluator')
-        optional(versions.get('evaluator_revision'), revision)
+        validate_runtime_versions(versions)
         data['policy'] = make_policy({'evaluator_revision': versions.get('evaluator_revision')}, provenance='runtime_recorded')
         data['references'].append(reference(root, root / 'versions.json', 'skill-quality'))
         if versions.get('fixture') == 'synthetic':
