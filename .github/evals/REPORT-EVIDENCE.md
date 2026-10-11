@@ -146,6 +146,12 @@ native staged digest identifies enriched entries and retains
 `skill-evaluator-dataset-snapshot/1`. The case cohort hash
 identifies sorted canonical IDs. None of these digests substitutes for another.
 
+Historical tree listings are streamed with an 8 MiB byte cap and a 1,000-entry
+cap, including members later excluded by the authored-tree boundary. Exceeding
+either cap terminates the Git process and rejects the contract before parsing
+the complete listing or reading any blobs. A listing at the entry limit is
+accepted; missing trees remain unknown.
+
 Policy IDs hash recorded fields, patch digest, metric set, judge and attempt
 policy. Recorded published policy IDs are preserved separately and never replaced
 by today's policy. Behavioral and static readers reject a supplied evaluator
@@ -191,6 +197,10 @@ Reason codes are `results_not_supplied`, `coverage_missing`,
 `reference_expired`, and `scan_incomplete`. Known limitations must remain in the
 record. Reference availability can change to `unavailable` or `expired` without
 changing its stable identity; the enclosing report must then remain incomplete.
+Trial references locate recorded verifier rewards when present. For incomplete
+trials without that structure, they locate the recorded verifier result (which
+may be null), or the trial object when the verifier field is absent. These trial
+references identify an existing value; absent scores remain null.
 
 ## Reviewed fixtures and retention
 

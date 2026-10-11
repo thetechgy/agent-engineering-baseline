@@ -250,6 +250,55 @@ class EvidenceTests(unittest.TestCase):
                 self.assertFalse(any(event.get('event') == 'child_start' and 'fetch' in event.get('argv', [])
                                      for event in events))
 
+    def test_historical_tree_entry_limit_precedes_blob_reads(self):
+        for entries in (1000, 1001):
+            with self.subTest(entries=entries), tempfile.TemporaryDirectory() as temp:
+                repo = Path(temp)
+                authored = self.local(repo, 'podman')
+                for index in range(entries - 1):
+                    (authored / (str(index) + '.md')).write_text('Synthetic member')
+                def git(*args):
+                    return subprocess.run(['git', '-C', str(repo), *args], check=True,
+                                          capture_output=True, text=True).stdout.strip()
+                git('init', '-q'); git('add', '.apm')
+                git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+                    'commit', '-qm', 'Synthetic tree boundary')
+                rev = git('rev-parse', 'HEAD')
+                trace = repo / 'trace.jsonl'
+                with patch.dict(os.environ, {'GIT_NO_LAZY_FETCH': '0', 'GIT_TRACE2_EVENT': str(trace)}):
+                    if entries > 1000:
+                        with self.assertRaisesRegex(ValueError, 'Historical tree listing limit'):
+                            evidence.historical_content(repo, rev, '.apm/skills/podman')
+                    else:
+                        contents = evidence.historical_content(repo, rev, '.apm/skills/podman')
+                        self.assertEqual(len(contents['manifest']), entries)
+                        evidence.validate_content(contents)
+                events = [json.loads(line) for line in trace.read_text().splitlines()]
+                reads = [event for event in events if event.get('event') == 'start'
+                         and 'cat-file' in event.get('argv', [])]
+                self.assertEqual(len(reads), 0 if entries > 1000 else 2 * entries)
+                self.assertFalse(any(event.get('event') == 'child_start' and 'fetch' in event.get('argv', [])
+                                     for event in events))
+
+    def test_historical_tree_byte_limit_precedes_parsing(self):
+        repo = self.repo()
+        def git(*args, input=None):
+            return subprocess.run(['git', '-C', str(repo), *args], input=input, check=True,
+                                  capture_output=True).stdout.strip()
+        git('init', '-q')
+        blob = git('hash-object', '-w', '--stdin', input=b'Synthetic member')
+        # Git plumbing can represent names too long for the local filesystem.
+        tree = git('mktree', '-z', input=b'100644 blob ' + blob + b'\t' + b'a' * evidence.JSON_LIMIT + b'\0')
+        root_tree = git('mktree', '-z', input=b'040000 tree ' + tree + b'\tpodman\0')
+        rev = git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+                  'commit-tree', root_tree.decode(), '-m', 'Synthetic listing byte boundary').decode()
+        trace = repo / 'trace.jsonl'
+        with patch.dict(os.environ, {'GIT_NO_LAZY_FETCH': '0', 'GIT_TRACE2_EVENT': str(trace)}):
+            with self.assertRaisesRegex(ValueError, 'Historical tree listing limit'):
+                evidence.historical_content(repo, rev, 'podman')
+        events = [json.loads(line) for line in trace.read_text().splitlines()]
+        self.assertFalse(any(event.get('event') == 'start' and 'cat-file' in event.get('argv', []) for event in events))
+
     def test_coverage_unknown_and_known_count_combinations(self):
         base = evidence.read_json(FIXTURES / 'gh-no-model.json')
         base['availability'].update(status='incomplete', reasons=['coverage_missing'])
@@ -563,12 +612,22 @@ class EvidenceTests(unittest.TestCase):
         result.update(report_status='incomplete', execution_status='incomplete')
         result['agents']['codex']['conditions']['with_skill'].update(scored_attempts=9, execution_status='incomplete')
         write(result_path, result)
-        data = evidence.normalize_behavioral(root, 'podman')
-        obs = next(o for o in data['observations'] if o['native_trial'] == trial)
-        self.assertIsNone(obs['score']); self.assertEqual(obs['native_id'], record['id'])
-        self.assertEqual(data['arms'][0]['coverage']['unscored_attempts'], 1)
-        self.assertEqual(data['availability']['status'], 'incomplete')
-        evidence.project(data)
+        for state in ('missing', None, {}, {'rewards': None}, {'rewards': {}}):
+            with self.subTest(verifier=state):
+                if state == 'missing':
+                    record.pop('verifier_result', None)
+                else:
+                    record['verifier_result'] = state
+                write(path, record)
+                data = evidence.normalize_behavioral(root, 'podman')
+                obs = next(o for o in data['observations'] if o['native_trial'] == trial)
+                self.assertIsNone(obs['score']); self.assertEqual(obs['native_id'], record['id'])
+                self.assertEqual(data['arms'][0]['coverage']['unscored_attempts'], 1)
+                self.assertEqual(data['availability']['status'], 'incomplete')
+                for carrier in (data, evidence.project(data)):
+                    for ref in carrier['references']:
+                        if ref['availability'] == 'available':
+                            evidence.verify_reference(root, ref)
 
     def test_confirmation_native_attempts(self):
         root = self.native(); run = next((root/'results/podman').iterdir())

@@ -22,6 +22,7 @@ JSON_LIMIT = 8 * 1024 * 1024
 PUBLIC_LIMIT = 1024 * 1024
 MAX_CASES = 1000
 MAX_TRIALS = 10000
+MAX_SOURCE_MEMBERS = 1000
 require = reports.require
 PROVENANCE = ('runtime_recorded', 'configured', 'reconstructed_from_declared_revision',
               'reviewed_extract', 'synthetic', 'unknown')
@@ -207,7 +208,7 @@ def validate_content(value):
     enum(value['algorithm'], ('sha256-relative-file-manifest-v1',))
     enum(value['scope'], ('pinned-agent-visible',))
     enum(value['provenance'], PROVENANCE)
-    require(type(value['manifest']) is list and len(value['manifest']) <= 1000, 'Manifest limit')
+    require(type(value['manifest']) is list and len(value['manifest']) <= MAX_SOURCE_MEMBERS, 'Manifest limit')
     names = []
     for row in value['manifest']:
         closed(row, ('member', 'digest'))
@@ -252,10 +253,29 @@ def source(name, owner='unknown', repo=None, rev=None, path=None, contents=None,
             'source_path': path, 'lineage': lineage, 'content': contents or content()}
 
 
-def offline_git(workspace, *args, text=False):
+def offline_git(workspace, *args, text=False, max_entries=None):
     # Override the caller's setting: missing promisor objects are unknown evidence.
-    return subprocess.run(['git', '-C', str(workspace), *args], capture_output=True, text=text,
-                          env={**os.environ, 'GIT_NO_LAZY_FETCH': '1'})
+    command = ['git', '-C', str(workspace), *args]
+    env = {**os.environ, 'GIT_NO_LAZY_FETCH': '1'}
+    if max_entries is None:
+        return subprocess.run(command, capture_output=True, text=text, env=env)
+    require(not text, 'Binary tree listing required')
+    # Bound the NUL-delimited listing while reading, before parsing or blob reads.
+    # Discard diagnostics so a blocked stderr pipe cannot stall the bounded read.
+    with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=env) as process:
+        output = bytearray()
+        entries = 0
+        try:
+            while chunk := process.stdout.read(4096):
+                entries += chunk.count(b'\0')
+                require(entries <= max_entries and len(output) + len(chunk) <= JSON_LIMIT,
+                        'Historical tree listing limit')
+                output.extend(chunk)
+            returncode = process.wait()
+        finally:
+            if process.poll() is None:
+                process.kill()
+    return subprocess.CompletedProcess(command, returncode, bytes(output), b'')
 
 
 def git_revision(workspace):
@@ -279,12 +299,13 @@ def historical_blob(workspace, spec):
 def historical_content(workspace, rev, source_path):
     """Read exact local Git blobs only. Never checkout or contact a remote."""
     revision(rev); relative(source_path)
-    listing = offline_git(workspace, 'ls-tree', '-rz', rev, '--', source_path)
+    listing = offline_git(workspace, 'ls-tree', '-rz', rev, '--', source_path, max_entries=MAX_SOURCE_MEMBERS)
     if listing.returncode:
         return content()
-    tree_names = [row.split(b'\t', 1)[1].decode().removeprefix(source_path + '/') for row in listing.stdout.split(b'\0') if row]
+    rows = listing.stdout.split(b'\0')
+    tree_names = {row.split(b'\t', 1)[1].decode().removeprefix(source_path + '/') for row in rows if row}
     records = []
-    for row in listing.stdout.split(b'\0'):
+    for row in rows:
         if not row:
             continue
         header, filename = row.split(b'\t', 1)
@@ -1030,7 +1051,12 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
                 if deterministic:
                     require(all(type(v) in (int, float) and v in (0, 1) for v in deterministic.values()), 'Invalid deterministic observation')
                     require(deterministic['gh_gate'] == float(all(v == 1 for k, v in deterministic.items() if k != 'gh_gate')), 'Gate consistency')
-                obs_refs = [ref(path, ('verifier_result', 'rewards')), summary_ref]
+                locator = ()
+                if 'verifier_result' in trial_result:
+                    locator = ('verifier_result',)
+                    if type(trial_result['verifier_result']) is dict and 'rewards' in trial_result['verifier_result']:
+                        locator += ('rewards',)
+                obs_refs = [ref(path, locator), summary_ref]
                 if reward is not None:
                     obs_refs.append(ref(reward_path))
                 obs = {'id': observation_id(run.name, arm, case, native_id, trial, attempt['attempt']),
