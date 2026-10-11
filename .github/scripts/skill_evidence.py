@@ -772,15 +772,35 @@ def validate_evidence(data, *, public=False):
         require(type(scan['references']) is list and set(scan['references']) <= ref_ids, 'Dangling scan reference')
         if availability['status'] == 'complete':
             require(scan['status'] not in ('incomplete', 'skipped'), 'Incomplete scan promotion')
+    require(len(scanner_ids) == len(set(scanner_ids)), 'Duplicate scanner')
+    severity_fields = ('critical', 'high', 'medium', 'low')
+    detailed = {scanner: dict.fromkeys(severity_fields, 0) for scanner in scanner_ids}
     require(type(data['findings']) is list and len(data['findings']) <= MAX_TRIALS, 'Finding limit')
     for finding in data['findings']:
         closed(finding, ('scanner', 'severity', 'check', 'member', 'line', 'reference'))
         require(finding['scanner'] in scanner_ids, 'Unknown finding scanner')
         enum(finding['severity'], ('critical', 'high', 'medium', 'low', 'info'))
+        if finding['severity'] in severity_fields:
+            detailed[finding['scanner']][finding['severity']] += 1
         optional(finding['check'], token); optional(finding['member'], relative)
         optional(finding['line'], lambda v: count(v, 10000000))
         require(finding['reference'] in ref_ids, 'Dangling finding reference')
-    require(len(scanner_ids) == len(set(scanner_ids)), 'Duplicate scanner')
+    for scan in data['scans']:
+        for level, total in detailed[scan['scanner']].items():
+            reported = scan['severity_counts'][level]
+            require(reported is None or total <= reported, 'Detailed findings exceed scanner total')
+    aggregate = next((scan for scan in data['scans'] if scan['scanner'] == 'catalog-total'), None)
+    if aggregate is not None:
+        validators = [scan for scan in data['scans'] if scan is not aggregate]
+        for level, total in aggregate['severity_counts'].items():
+            if total is not None:
+                require(sum(counts[level] for counts in detailed.values()) <= total,
+                        'Detailed findings exceed aggregate total')
+                known = [scan['severity_counts'][level] for scan in validators]
+                require(sum(value for value in known if value is not None) <= total,
+                        'Scanner totals exceed aggregate total')
+                if known and all(value is not None for value in known):
+                    require(sum(known) == total, 'Contradictory static finding counts')
     if availability['status'] == 'unavailable':
         require(not data['observations'] and not data['metrics'] and not data['scans'] and not data['findings'], 'Unavailable evidence has observations')
         for arm in data['arms']:
@@ -925,7 +945,9 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     artifact = extract['artifact_id'] if extract else run.name
     result_path = run / 'result.json'; result = read_json(result_path)
     require(type(result) is dict, 'Native report object required')
-    require(result.get('skill_name') == name and set(result['agents']) == {'codex'}, 'Native identity/agent mismatch')
+    require(result.get('skill_name') == name and type(result.get('agents')) is dict
+            and set(result['agents']) == {'codex'} and type(result['agents']['codex']) is dict,
+            'Native identity/agent mismatch')
     require(result.get('report_status') in ('complete', 'incomplete'), 'Unknown native envelope')
     config_path = run / 'run_config.json'
     config = read_json(config_path) if config_path.exists() else result.get('run_config', {})
@@ -1398,7 +1420,7 @@ def main(argv=None):
 if __name__ == '__main__':
     try:
         main()
-    except (ValueError, KeyError, TypeError, IndexError, OSError) as exc:
+    except (ValueError, KeyError, TypeError, AttributeError, IndexError, OSError) as exc:
         # Native exception strings can contain prose or paths. Keep CLI errors bounded.
         print('Evidence contract rejected (' + type(exc).__name__ + ')', file=sys.stderr)
         sys.exit(1)

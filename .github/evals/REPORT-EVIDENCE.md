@@ -225,11 +225,17 @@ references identify an existing value; absent scores remain null.
 
 Static detailed findings may be partial, but their counts by critical/high/medium/low
 severity cannot exceed corresponding known scanner counts or aggregate totals.
+The shared normalized/public validator enforces these bounds on standalone
+projection too, including known scanner totals versus the aggregate. Unknown
+counts do not supply an invented equality constraint.
 Known per-scanner summary counts are retained in normalized and public scans;
 absent scanner counts remain null. Informational findings retain their
 severity without inventing a native total. The 10,000-finding cap is checked
 before constructing references. Static catalog, report, and version members are
 each read, parsed, and hashed once; all locators reuse that exact byte digest.
+Behavioral ingestion requires the native `codex` agent value to be an object
+before dereferencing it. Malformed native object access at the CLI boundary
+produces a bounded contract rejection without a traceback or local paths.
 
 ## Reviewed fixtures and retention
 

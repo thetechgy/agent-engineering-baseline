@@ -880,6 +880,70 @@ class EvidenceTests(unittest.TestCase):
         data['availability'].update(status='complete', reasons=[])
         with self.assertRaises(ValueError): evidence.project(data)
 
+    def test_projection_reconciles_known_severity_counts(self):
+        base = evidence.normalize_static(FIXTURES / 'static-synthetic', 'podman')
+        for level, scanner_count, aggregate_count in itertools.product(
+                ('critical', 'high', 'medium', 'low'), (None, 0, 1), (None, 0, 1)):
+            with self.subTest(level=level, scanner=scanner_count, aggregate=aggregate_count):
+                data = copy.deepcopy(base)
+                data['findings'][0]['severity'] = level
+                for scan, total in zip(data['scans'][:2], (aggregate_count, scanner_count)):
+                    scan['severity_counts'] = dict.fromkeys(scan['severity_counts'], 0)
+                    scan['severity_counts'][level] = total
+                if scanner_count != 0 and aggregate_count != 0:
+                    evidence.project(data); evidence.validate_public(data)
+                else:
+                    with self.assertRaises(ValueError): evidence.project(data)
+                    with self.assertRaises(ValueError): evidence.validate_public(data)
+        invalid = copy.deepcopy(base)
+        for scan in invalid['scans'][:2]: scan['severity_counts']['high'] = 0
+        path = self.root / 'normalized.json'; write(path, invalid)
+        output = self.root / 'rejected-projection'
+        result = subprocess.run([sys.executable, str(REPO / '.github/scripts/skill_evidence.py'),
+                                 'project', '--input', str(path), '--output', str(output)],
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertEqual(result.stderr, 'Evidence contract rejected (ValueError)\n')
+        self.assertFalse(output.exists())
+        # Reported scanner totals must also fit the aggregate, even with partial details.
+        totals = copy.deepcopy(base); totals['findings'] = []
+        totals['scans'][1]['severity_counts']['high'] = 2
+        with self.assertRaises(ValueError): evidence.project(totals)
+        totals['scans'] = totals['scans'][:2]
+        totals['scans'][1]['severity_counts']['high'] = 0
+        with self.assertRaises(ValueError): evidence.project(totals)
+        totals['scans'][1]['severity_counts']['high'] = None
+        evidence.project(totals)  # Unknown counts do not invent a sum equality.
+
+    def test_cli_rejects_nonobject_codex_agent_without_traceback(self):
+        root = self.native(); path = next(root.glob('results/podman/*/result.json'))
+        original = evidence.read_json(path)
+        for malformed in (None, True, 42, 3.5, 'malformed', [], ['malformed']):
+            with self.subTest(malformed=malformed):
+                native = copy.deepcopy(original); native['agents']['codex'] = malformed; write(path, native)
+                before = self.snapshot(root); output = self.root / 'rejected-agent'
+                result = subprocess.run([sys.executable, str(REPO / '.github/scripts/skill_evidence.py'),
+                                         'normalize', '--kind', 'behavioral', '--skill', 'podman',
+                                         '--input', str(root), '--output', str(output)],
+                                        capture_output=True, text=True)
+                self.assertEqual(result.returncode, 1)
+                self.assertEqual(result.stderr, 'Evidence contract rejected (ValueError)\n')
+                self.assertFalse(output.exists()); self.assertEqual(self.snapshot(root), before)
+                with self.assertRaisesRegex(ValueError, 'Native identity/agent mismatch'):
+                    evidence.normalize_behavioral(root, 'podman')
+        # Other malformed nested native objects must also keep CLI diagnostics bounded.
+        native = copy.deepcopy(original)
+        config_path = path.parent / 'run_config.json'; config = evidence.read_json(config_path)
+        config['harbor'] = 'malformed'; native['run_config'] = config
+        write(path, native); write(config_path, config)
+        result = subprocess.run([sys.executable, str(REPO / '.github/scripts/skill_evidence.py'),
+                                 'normalize', '--kind', 'behavioral', '--skill', 'podman', '--input', str(root)],
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn('Evidence contract rejected', result.stderr)
+        self.assertNotIn('Traceback', result.stderr)
+        self.assertNotIn(str(REPO), result.stderr); self.assertNotIn(str(root), result.stderr)
+
     def test_static_preserves_known_per_scanner_counts(self):
         root = self.root / 'static-counts'; shutil.copytree(FIXTURES / 'static-synthetic', root)
         path = next((root / 'reports/podman').glob('*.json')); native = evidence.read_json(path)
@@ -1089,9 +1153,13 @@ class EvidenceTests(unittest.TestCase):
 
     def test_json_limits_duplicate_keys_and_depth(self):
         path = self.root/'input.json'
-        for value in ('{"a":1,"a":2}', '{"x":NaN}', '['*34+'0'+']'*34):
+        for value in ('{"a":1,"a":2}', '{"x":NaN}', '['*34+'0'+']'*34, '['*2000+'0'+']'*2000):
             path.write_text(value)
             with self.assertRaises(ValueError): evidence.read_json(path)
+        result = subprocess.run([sys.executable, str(REPO / '.github/scripts/skill_evidence.py'),
+                                 'project', '--input', str(path)], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stderr, 'Evidence contract rejected (ValueError)\n')
         path.write_bytes(b' '* (evidence.JSON_LIMIT+1))
         with self.assertRaises(ValueError): evidence.read_json(path)
         data = self.data(); data['observations'] *= 501
