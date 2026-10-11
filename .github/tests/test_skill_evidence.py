@@ -2027,6 +2027,39 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1); self.assertFalse(output.exists())
         self.assertEqual(self.snapshot(root), before)
 
+    def test_static_projection_cli_protects_retained_bundle(self):
+        for placement in ('explicit-root', 'explicit-nested', 'relative-root', 'temporary-root', 'temporary-nested'):
+            with self.subTest(placement=placement):
+                root = self.root / placement
+                shutil.copytree(FIXTURES / 'static-synthetic', root)
+                write(root / 'evidence.json', evidence.normalize_static(root, 'podman'))
+                before = self.snapshot(root)
+                command = [sys.executable, str(REPO / '.github/scripts/skill_evidence.py'),
+                           'project', '--input', str(root / 'evidence.json')]
+                env = {**os.environ, 'TMPDIR': str(self.root)}
+                if placement.startswith('temporary'):
+                    env['TMPDIR'] = str(root / 'reports' if placement.endswith('nested') else root)
+                else:
+                    output = root / 'reports/podman/published' if placement.endswith('nested') else root / 'published'
+                    command.extend(['--output', str(output)])
+                    if placement == 'relative-root':
+                        command[command.index('--input') + 1] = f'{root.name}/evidence.json'
+                        command[-1] = f'{root.name}/published'
+                result = subprocess.run(command, cwd=self.root, env=env, capture_output=True, text=True)
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertIn('Evidence contract rejected', result.stderr)
+                self.assertEqual(self.snapshot(root), before)
+
+        # External temporary output still publishes the same verified projection.
+        result = subprocess.run([sys.executable, str(REPO / '.github/scripts/skill_evidence.py'),
+            'project', '--input', str(root / 'evidence.json')],
+            env={**os.environ, 'TMPDIR': str(self.root)}, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        output = Path(result.stdout.strip())
+        self.assertEqual(evidence.read_json(output / 'public-report.json'),
+                         evidence.project(evidence.normalize_static(root, 'podman')))
+        self.assertEqual(self.snapshot(root), before)
+
     def test_static_native_contract_and_diagnostic_exclusion(self):
         data = evidence.normalize_static(FIXTURES/'static-synthetic', 'podman')
         self.assertEqual(data['availability']['status'], 'incomplete')

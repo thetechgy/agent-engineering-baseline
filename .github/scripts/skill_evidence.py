@@ -1930,15 +1930,19 @@ def main(argv=None):
     norm.add_argument('--run'); norm.add_argument('--output', type=Path)
     proj = commands.add_parser('project'); proj.add_argument('--input', required=True, type=Path); proj.add_argument('--output', type=Path)
     args = parser.parse_args(argv)
+    input_path = getattr(args, 'input', None)
     if args.command == 'inventory':
         values = {'inventory.json': inventory()}
     elif args.command == 'project':
-        values = {'public-report.json': project(read_json(args.input), static_bundle=args.input.parent)}
+        data = read_json(args.input)
+        values = {'public-report.json': project(data, static_bundle=args.input.parent)}
+        if data['kind'] == 'static':
+            input_path = args.input.parent
     else:
         require(args.kind == 'behavioral' or args.run is None, '--run applies to behavioral evidence')
         data = normalize_behavioral(args.input.absolute(), args.skill, args.run) if args.kind == 'behavioral' else normalize_static(args.input.absolute(), args.skill)
         values = {'evidence.json': data, 'public-report.json': project(data)}
-    output = write_outputs(values, args.output, input_path=getattr(args, 'input', None))
+    output = write_outputs(values, args.output, input_path=input_path)
     print(output)
 
 

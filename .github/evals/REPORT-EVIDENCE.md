@@ -31,6 +31,9 @@ are rejected. Validation and deterministic serialization precede output creation
 For standalone static projection, retain the original static bundle and place
 `evidence.json` at its root; `project --input` reads native members relative to
 that file's parent. A serialized static record without its native bundle rejects.
+Static projection protects that entire parent bundle from output creation:
+explicit destinations and temporary parents inside it reject before allocation,
+including directories beside `evidence.json` and beneath native report members.
 Normalization already produces a verified public report, so moving its output
 does not require copying private native reports into the output directory.
 Inputs remain unchanged. CLI contract errors return exit status 1 without echoing
