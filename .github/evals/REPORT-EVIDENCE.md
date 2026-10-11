@@ -421,6 +421,13 @@ including nonblocking failures and advisory skips, while retaining native pass f
 Static report members must belong to the declared skill's `reports/<skill>/` path.
 Aggregate, scanner and finding references use that report; catalog/version members
 remain run-level references and cannot substitute for a skill's scanner evidence.
+Static claims retain ordered native validator/finding positions: aggregate and
+underlying diagnostics reference the whole report, validators use `results/<index>`,
+and findings use their validator's `results/<index>/findings/<index>` locator.
+References from another position in the same report cannot substitute for a claim.
+Output creation captures the post-creation directory identity before opening it,
+then compares the opened descriptor and requires a private, empty directory that
+does not reuse a previously identified checkout/input root before publishing files.
 Reviewed-extract members are indexed once after manifest validation, so trial,
 reward, and summary references do not rescan the member list.
 Each normalization shares a 64 MiB byte budget across consumed native JSON,

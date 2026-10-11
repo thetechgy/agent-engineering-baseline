@@ -1126,6 +1126,24 @@ def validate_evidence(data, *, public=False):
                 and all(ref in report_refs for scan in validators for ref in scan['references'])
                 and all(finding['reference'] in report_refs for finding in data['findings']),
                 'Static reference skill mismatch')
+        report_keys = {(refs_by_id[ref]['artifact_id'], refs_by_id[ref]['member'], refs_by_id[ref]['digest']) for ref in report_refs}
+        require(len(report_keys) == 1 and all(refs_by_id[ref]['locator'] == [] for ref in aggregate['references']),
+                'Static claim locator mismatch')
+        positions = {}; index = 0
+        for scan in validators:
+            diagnostic = (scan['status'] in ('incomplete', 'skipped') and scan['passed'] is None
+                          and all(value is None for value in scan['severity_counts'].values())
+                          and all(refs_by_id[ref]['locator'] == [] for ref in scan['references']))
+            locator = [] if diagnostic else ['results', index]
+            require(all(refs_by_id[ref]['locator'] == locator for ref in scan['references']), 'Static claim locator mismatch')
+            if not diagnostic:
+                positions[scan['scanner']] = index; index += 1
+        finding_indices = dict.fromkeys(positions, 0)
+        for finding in data['findings']:
+            scanner = finding['scanner']
+            require(scanner in positions and refs_by_id[finding['reference']]['locator'] ==
+                    ['results', positions[scanner], 'findings', finding_indices[scanner]], 'Static claim locator mismatch')
+            finding_indices[scanner] += 1
         require(aggregate['passed'] == all(scan['passed'] is True or not scan.get('blocking', True)
                                          for scan in validators), 'Static aggregate gate contradiction')
         expected = ('incomplete' if any(scan['status'] == 'incomplete' for scan in validators)
@@ -1784,6 +1802,11 @@ def write_outputs(values, destination=None, workspace=ROOT, input_path=None):
         require(not destination.is_relative_to(workspace) and destination != workspace, 'Output must be outside checkout')
         if input_path is not None:
             require(not destination.is_relative_to(input_path) and not input_path.is_relative_to(destination), 'Output overlaps input')
+    forbidden_directories = set()
+    for boundary in (workspace, input_path):
+        if boundary is not None and boundary.exists():
+            info = boundary.lstat()
+            if stat.S_ISDIR(info.st_mode): forbidden_directories.add((info.st_dev, info.st_ino))
     parent_fd = open_directory(parent, parent_identities, 'Output parent directory changed')
     try:
         if destination is None:
@@ -1797,9 +1820,14 @@ def write_outputs(values, destination=None, workspace=ROOT, input_path=None):
             require(destination is not None, 'Temporary output collision limit')
         else:
             os.mkdir(destination.name, mode=0o700, dir_fd=parent_fd)
+        created = os.stat(destination.name, dir_fd=parent_fd, follow_symlinks=False)
+        require(stat.S_ISDIR(created.st_mode), 'Output directory changed')
         directory_fd = os.open(destination.name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent_fd)
         try:
             original = os.fstat(directory_fd)
+            require((original.st_dev, original.st_ino) == (created.st_dev, created.st_ino)
+                    and (original.st_dev, original.st_ino) not in forbidden_directories
+                    and not original.st_mode & 0o077 and not os.listdir(directory_fd), 'Output directory changed')
             def unchanged():
                 current = destination.lstat()
                 require(stat.S_ISDIR(current.st_mode) and (current.st_dev, current.st_ino) ==

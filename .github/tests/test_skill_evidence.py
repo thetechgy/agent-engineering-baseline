@@ -2004,6 +2004,7 @@ class EvidenceTests(unittest.TestCase):
 
     def test_complete_static_scans_require_references(self):
         base = evidence.normalize_static(FIXTURES / 'static-synthetic', 'podman')
+        base['scans'] = base['scans'][:2]  # A passing fixture omits the underlying unavailable diagnostic.
         base['source']['content'] = evidence.content([
             {'member': 'SKILL.md', 'digest': evidence.digest_bytes(b'Synthetic')}], 'configured')
         base['availability'].update(status='complete', reasons=[])
@@ -2023,6 +2024,7 @@ class EvidenceTests(unittest.TestCase):
             with self.subTest(status=status):
                 data = evidence.normalize_static(FIXTURES / 'static-synthetic', 'podman')
                 if status == 'complete':
+                    data['scans'] = data['scans'][:2]
                     data['source']['content'] = evidence.content([
                         {'member': 'SKILL.md', 'digest': evidence.digest_bytes(b'Synthetic')}], 'configured')
                     data['availability'].update(status='complete', reasons=[])
@@ -2045,6 +2047,7 @@ class EvidenceTests(unittest.TestCase):
             with self.subTest(status=status, levels=levels):
                 data = evidence.normalize_static(FIXTURES / 'static-synthetic', 'podman')
                 if status == 'complete':
+                    data['scans'] = data['scans'][:2]
                     data['source']['content'] = evidence.content([
                         {'member': 'SKILL.md', 'digest': evidence.digest_bytes(b'Synthetic')}], 'configured')
                     data['availability'].update(status='complete', reasons=[]); data['findings'] = []
@@ -2233,6 +2236,51 @@ class EvidenceTests(unittest.TestCase):
         self.assert_project_rejects(data, 'Static reference skill mismatch')
         self.assertEqual(evidence.project(base)['scans'], base['scans'])
 
+    def test_static_claim_references_bind_structured_positions(self):
+        root = self.root / 'static-positions'; shutil.copytree(FIXTURES / 'static-synthetic', root)
+        path = next((root / 'reports/podman').glob('*.json')); native = evidence.read_json(path)
+        second = copy.deepcopy(native['results'][0]); second['validator'] = 'SECOND'
+        native['results'].append(second); native['total_validators'] = 2; native['severity_counts']['high'] = 2
+        write(path, native); base = evidence.normalize_static(root, 'podman')
+        for changed in ('scan', 'finding', 'aggregate', 'finding-to-scan'):
+            with self.subTest(changed=changed):
+                data = copy.deepcopy(base)
+                if changed == 'scan': data['scans'][1]['references'] = data['scans'][2]['references'][:]
+                elif changed == 'finding': data['findings'][0]['reference'] = data['findings'][1]['reference']
+                elif changed == 'aggregate': data['scans'][0]['references'] = data['scans'][1]['references'][:]
+                else: data['findings'][0]['reference'] = data['scans'][1]['references'][0]
+                self.assert_project_rejects(data, 'Static claim locator mismatch')
+        self.assertEqual(evidence.project(base)['scans'], base['scans'])
+
+    def test_created_output_replacement_does_not_mutate_input(self):
+        for temporary, stage, empty in itertools.product((False, True), ('created', 'directory_open'), (False, True)):
+            with self.subTest(temporary=temporary, stage=stage, empty=empty), tempfile.TemporaryDirectory() as temp:
+                base = Path(temp); parent = base / 'parent'; parent.mkdir()
+                bundle = base / 'input'; bundle.mkdir(mode=0o700)
+                if not empty: write(bundle / 'member.json', {'fixture': 'original'})
+                before = self.snapshot(bundle); created = None; replaced = False
+                mkdir = os.mkdir; opened = os.open
+                def replace(name):
+                    nonlocal replaced
+                    (parent / name).rename(base / 'retained-output'); bundle.rename(parent / name); replaced = True
+                def create(name, *args, **kwargs):
+                    nonlocal created
+                    result = mkdir(name, *args, **kwargs)
+                    if kwargs.get('dir_fd') is not None:
+                        created = str(name)
+                        if stage == 'created': replace(created)
+                    return result
+                def directory_open(name, flags, *args, **kwargs):
+                    if stage == 'directory_open' and str(name) == created and flags & os.O_DIRECTORY: replace(created)
+                    return opened(name, flags, *args, **kwargs)
+                with patch.object(os, 'mkdir', side_effect=create), patch.object(os, 'open', side_effect=directory_open), \
+                        patch.dict(os.environ, {'TMPDIR': str(parent)}):
+                    with self.assertRaisesRegex(ValueError, 'Output directory changed'):
+                        evidence.write_outputs({'evidence.json': {}}, None if temporary else parent / 'output',
+                                               workspace=base / 'checkout', input_path=bundle)
+                self.assertTrue(replaced); self.assertEqual(self.snapshot(parent / created), before)
+                self.assertEqual(list((base / 'retained-output').iterdir()), [])
+
     def test_static_projection_reconciles_aggregate_required_gates(self):
         base = evidence.normalize_static(FIXTURES / 'static-synthetic', 'podman')
         for complete in (False, True):
@@ -2340,6 +2388,7 @@ class EvidenceTests(unittest.TestCase):
         for status in ('incomplete', 'skipped'):
             with self.subTest(status=status):
                 data = evidence.normalize_static(FIXTURES / 'static-synthetic', 'podman')
+                data['scans'] = data['scans'][:2]
                 for scan in data['scans']: scan.update(status='passed', passed=True)
                 data['scans'][1].update(status=status, passed=None)
                 data['scans'][0].update(status='incomplete' if status == 'incomplete' else 'failed', passed=False)
