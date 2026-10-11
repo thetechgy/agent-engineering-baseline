@@ -373,6 +373,70 @@ class EvidenceTests(unittest.TestCase):
                         evidence.inventory(root)
                 pathname_scan.assert_not_called(); selector.assert_not_called()
 
+    def test_inventory_reads_retain_scanned_source_directories(self):
+        from skillevaluator.tier3.harbor import adapter
+        from skillevaluator.tier3 import output_provenance
+        for imported, marked, nested in itertools.product((False, True), (False, True), (False, True)):
+            with self.subTest(imported=imported, marked=marked, nested=nested), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp); authored = self.local(root, 'alpha')
+                if imported:
+                    self.imported(root); authored = root / '.agents/skills/beta'
+                target = authored / 'references' if nested else authored
+                if nested: target.mkdir(); (target / 'original.md').write_text('scanned source')
+                retained = root / 'retained'; scan = evidence.safe_tree; inventory = evidence.inventory
+                output = root / 'rejected-output'; snapshots = []
+                def replaced(path, **kwargs):
+                    files = scan(path, **kwargs)
+                    if path == authored and not retained.exists():
+                        target.rename(retained); shutil.copytree(retained, target)
+                        extra = output_provenance.GENERATED_OUTPUT_MARKER if marked else 'extra.md'
+                        (target / extra).write_text('unscanned source')
+                        snapshots.append(self.snapshot(root))
+                    return files
+                with patch.object(evidence, 'safe_tree', side_effect=replaced), \
+                        patch.object(evidence, 'inventory', side_effect=lambda: inventory(root)), \
+                        patch.object(adapter, '_runtime_skill_copy_ignore', return_value=lambda *_: set()) as selector, \
+                        patch.object(adapter, 'is_generated_output_root') as authenticate, \
+                        patch.object(output_provenance, '_load_existing_key') as key:
+                    with self.assertRaisesRegex(ValueError, 'Input directory changed'), redirect_stdout(StringIO()):
+                        evidence.main(['inventory', '--output', str(output)])
+                authenticate.assert_not_called(); key.assert_not_called()
+                if not imported: selector.assert_not_called()
+                self.assertFalse(output.exists()); self.assertEqual(self.snapshot(root), snapshots[0])
+
+    def test_inventory_reads_retain_auxiliary_directory_identities(self):
+        targets = ('.github/evals', '.agents/skills/github-actions-hardening',
+                   '.apm/skills/alpha/evals/environment')
+        for relative, empty in itertools.product(targets, (False, True)):
+            with self.subTest(target=relative, empty=empty), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp); authored = self.local(root, 'alpha', True)
+                environment = authored / 'evals/environment'; environment.mkdir()
+                (environment / 'Dockerfile').write_text('FROM scratch\n')
+                for member in ('.agents/skills/gh', '.agents/skills/github-actions-hardening', '.github/evals/gh'):
+                    shutil.copytree(REPO / member, root / member)
+                shutil.copyfile(REPO / 'apm.lock.yaml', root / 'apm.lock.yaml')
+                target = root / relative; retained = root / 'retained'; scan = evidence.safe_tree
+                read = evidence.read_bytes
+                def replace():
+                    if not retained.exists():
+                        target.rename(retained)
+                        if empty: target.mkdir()
+                        else: shutil.copytree(retained, target)
+                        (target / 'extra.md').write_text('unscanned input')
+                def scanned(path, **kwargs):
+                    files = scan(path, **kwargs)
+                    if path == target: replace()
+                    return files
+                def captured(path, *args, **kwargs):
+                    raw = read(path, *args, **kwargs)
+                    if relative.endswith('/environment') and path == authored / 'evals/evals.json': replace()
+                    return raw
+                with patch.object(evidence, 'safe_tree', side_effect=scanned), \
+                        patch.object(evidence, 'read_bytes', side_effect=captured):
+                    with self.assertRaisesRegex(ValueError, 'Input directory changed'):
+                        evidence.inventory(root)
+                self.assertTrue(retained.exists())
+
     def test_inventory_budget_rejects_before_capture_and_growth_validation(self):
         from skillevaluator.tier3 import evals_spec
         root = self.repo(); authored = root / '.apm/skills/alpha'; self.dataset(authored, 'alpha')
@@ -922,7 +986,9 @@ class EvidenceTests(unittest.TestCase):
         base['policy']['id'] = evidence.identity({k: base['policy'][k] for k in
                                                 ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')})
         for public in (False, True):
-            data = evidence.project(base) if public else copy.deepcopy(base)
+            # No observations/private identity fields: the same shape exercises
+            # both validators without authenticating invented coverage as a run.
+            data = copy.deepcopy(base)
             validate = evidence.validate_public if public else evidence.validate_evidence
             for expected, recorded, scored, unscored in itertools.product(
                     (None, 0, 10), (None, 0, 5, 10, 11), (None, 0, 5, 10, 11), (None, 0, 5, 10, 11)):
@@ -954,7 +1020,7 @@ class EvidenceTests(unittest.TestCase):
                         target = arm['condition'] if key == 'workspace_mode' else arm['condition']['execution']
                         target[key] = observed if arm['name'] == selected else declared
                         arm['condition']['id'] = evidence.identity({k: v for k, v in arm['condition'].items() if k != 'id'})
-                    if declared is None or observed is None or declared == observed: evidence.project(data)
+                    if declared is None or observed is None or declared == observed: self.project_grading_fixture(data)
                     else: self.assert_project_rejects(data, 'Arm condition policy mismatch')
 
     def test_task_source_policy_matches_native_and_projected_conditions(self):
@@ -1799,7 +1865,7 @@ class EvidenceTests(unittest.TestCase):
         data['availability'].update(status='complete', reasons=[])
         self.assert_project_rejects(data, 'Empty complete cohort')
         data['availability'].update(status='incomplete', reasons=['coverage_missing'])
-        evidence.project(data)
+        self.project_grading_fixture(data)
 
     def test_projection_preserves_known_execution_limitations(self):
         for arm, status, errors in itertools.product(('with_skill', 'without_skill'),
@@ -1811,9 +1877,9 @@ class EvidenceTests(unittest.TestCase):
                 data['availability'].update(status='incomplete', reasons=['metadata_missing', 'source_unavailable'])
                 self.assert_project_rejects(data, 'Missing execution limitation')
                 data['availability']['reasons'].append('execution_incomplete')
-                self.assertIn('execution_incomplete', evidence.project(data)['availability']['reasons'])
+                self.assertIn('execution_incomplete', self.project_grading_fixture(data)['availability']['reasons'])
         # Configured arms with no observed execution do not invent a failed run.
-        evidence.project(evidence.read_json(FIXTURES / 'gh-no-model.json'))
+        self.project_grading_fixture(evidence.read_json(FIXTURES / 'gh-no-model.json'))
 
     def test_complete_case_details_require_known_rubric_outcomes(self):
         for arm, status, score in itertools.product(('with_skill', 'without_skill'),
@@ -1833,18 +1899,18 @@ class EvidenceTests(unittest.TestCase):
                 row['rubric_pass'] = score >= selected['rubric']['threshold']
                 selected['rubric']['passed_cases'] = len({item['case_id'] for item in data['observations']
                                                           if item['arm'] == arm and item['rubric_pass'] is True})
-                evidence.project(data)
+                self.project_grading_fixture(data)
         data = self.data(); self.synthetic_skill_references(data, 'podman'); data['observations'][0]['rubric_pass'] = None
         data['arms'][0]['rubric'].update(threshold=None, passed_cases=9)
         data['policy']['attempts']['pass_threshold'] = None
         data['policy']['id'] = evidence.identity({k: data['policy'][k] for k in
                                                 ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')})
-        evidence.project(data)  # Unknown thresholds do not invent an outcome.
+        self.project_grading_fixture(data)  # Unknown thresholds do not invent an outcome.
         data = self.data(); self.synthetic_skill_references(data, 'podman'); data['observations'][0]['rubric_pass'] = None
         data['arms'][0]['coverage']['case_details'] = 'partial'
         data['availability'].update(status='incomplete', reasons=sorted(set(
             data['availability']['reasons']) | {'case_details_missing'}))
-        evidence.project(data)  # Partial case details remain explicitly incomplete.
+        self.project_grading_fixture(data)  # Partial case details remain explicitly incomplete.
 
     def test_policy_only_threshold_bypass_rejected_by_cli(self):
         data = self.data(); self.synthetic_skill_references(data, 'podman')
@@ -1880,15 +1946,15 @@ class EvidenceTests(unittest.TestCase):
                                                        if obs['arm'] == arm['name'] and obs['rubric_pass'] is True})
                 if policy is not None and arm_threshold is not None and policy != arm_threshold:
                     with self.assertRaisesRegex(ValueError, 'Rubric attempt-policy threshold mismatch'):
-                        evidence.project(data)
+                        self.project_grading_fixture(data)
                     continue
-                public = evidence.project(data)
+                public = self.project_grading_fixture(data)
                 self.assertEqual(public['policy'], data['policy']); self.assertEqual(public['arms'], data['arms'])
                 evidence.validate_evidence(data); evidence.validate_public(public)
                 if effective is None: continue
                 def rejects(message):
                     with self.assertRaisesRegex(ValueError, message): evidence.validate_evidence(data)
-                    with self.assertRaisesRegex(ValueError, message): evidence.project(data)
+                    with self.assertRaisesRegex(ValueError, message): self.project_grading_fixture(data)
                     public = copy.deepcopy(data)
                     for obs in public['observations']:
                         for key in ('native_id', 'native_trial', 'native_task'): obs.pop(key)
@@ -1904,7 +1970,7 @@ class EvidenceTests(unittest.TestCase):
                 selected['coverage']['case_details'] = 'partial'
                 data['availability'].update(status='incomplete', reasons=sorted(
                     set(data['availability']['reasons']) | {'case_details_missing'}))
-                evidence.project(data)  # Missing partial details do not invent outcomes.
+                self.project_grading_fixture(data)  # Missing partial details do not invent outcomes.
                 row['rubric_pass'] = not (score >= effective)
                 rejects('Contradictory native rubric pass')
 
@@ -1921,11 +1987,11 @@ class EvidenceTests(unittest.TestCase):
                 rubric.update(passed_cases=passes, total_cases=None)
                 self.assert_project_rejects(data, 'Missing rubric aggregate pair')
                 rubric.update(passed_cases=None)
-                evidence.project(data)  # Both unknown aggregates stay null.
+                self.project_grading_fixture(data)  # Both unknown aggregates stay null.
                 rubric.update(total_cases=10)
                 self.assert_project_rejects(data, 'Missing rubric aggregate pair')
                 rubric.update(original)
-                evidence.project(data)
+                self.project_grading_fixture(data)
                 rubric['passed_cases'] = 1
                 self.assert_project_rejects(data, 'Rubric count mismatch')
 
@@ -1945,7 +2011,7 @@ class EvidenceTests(unittest.TestCase):
                                          'member': None, 'line': None, 'reference': ref}]
                 self.assert_project_rejects(data, 'Behavioral report implies static scans')
                 data['scans'] = []; data['findings'] = []
-                evidence.project(data)
+                self.project_grading_fixture(data)
 
     def test_projection_preserves_missing_behavioral_coverage(self):
         for arm, key, value in itertools.product(('with_skill', 'without_skill'),
@@ -1964,7 +2030,7 @@ class EvidenceTests(unittest.TestCase):
                                                                        'case_details_missing'])
                 self.assert_project_rejects(data, 'Missing coverage limitation')
                 data['availability']['reasons'].append('coverage_missing')
-                self.assertIn('coverage_missing', evidence.project(data)['availability']['reasons'])
+                self.assertIn('coverage_missing', self.project_grading_fixture(data)['availability']['reasons'])
 
     def test_projection_preserves_missing_behavioral_case_details(self):
         for arm, details in itertools.product(('with_skill', 'without_skill'), ('partial', 'unavailable')):
@@ -1974,7 +2040,7 @@ class EvidenceTests(unittest.TestCase):
                 data['availability'].update(status='incomplete', reasons=['metadata_missing', 'source_unavailable'])
                 self.assert_project_rejects(data, 'Missing case detail limitation')
                 data['availability']['reasons'].append('case_details_missing')
-                self.assertIn('case_details_missing', evidence.project(data)['availability']['reasons'])
+                self.assertIn('case_details_missing', self.project_grading_fixture(data)['availability']['reasons'])
 
     def test_projection_preserves_unavailable_behavioral_source(self):
         data = self.data(); data['source']['content'] = evidence.content()
@@ -2003,7 +2069,7 @@ class EvidenceTests(unittest.TestCase):
                     ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')})
                 self.assert_project_rejects(data, 'Missing behavioral identity limitation')
                 data['availability']['reasons'].append('metadata_missing')
-                self.assertIn('metadata_missing', evidence.project(data)['availability']['reasons'])
+                self.assertIn('metadata_missing', self.project_grading_fixture(data)['availability']['reasons'])
         root = self.native(); run = next((root / 'results/podman').iterdir())
         paths = [root / 'provenance.json', run / 'result.json', run / 'run_config.json',
                  run / 'attempt_policy.json', run / 'dataset_snapshot.json']
@@ -2023,7 +2089,7 @@ class EvidenceTests(unittest.TestCase):
                 else: provenance.pop('patch_sha256', None)
                 write(root / 'provenance.json', provenance)
                 data = evidence.normalize_behavioral(root, 'podman')
-                self.assertIn('metadata_missing', data['availability']['reasons']); evidence.project(data)
+                self.assertIn('metadata_missing', data['availability']['reasons']); self.project_grading_fixture(data)
                 for path, raw in original.items(): path.write_bytes(raw)
 
     def test_projection_retains_unknown_attempt_metadata(self):
@@ -2038,7 +2104,7 @@ class EvidenceTests(unittest.TestCase):
                 data['availability'].update(status='incomplete', reasons=['source_unavailable'])
                 self.assert_project_rejects(data, 'Missing attempt metadata limitation')
                 data['availability']['reasons'].append('metadata_missing')
-                public = evidence.project(data)
+                public = self.project_grading_fixture(data)
                 self.assertIn('metadata_missing', public['availability']['reasons'])
                 self.assertIsNone(next(item for item in public['observations'] if item['id'] == row['id'])['attempt'])
 
@@ -2067,7 +2133,7 @@ class EvidenceTests(unittest.TestCase):
                 data['policy']['id'] = evidence.identity({k: data['policy'][k] for k in
                     ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')})
                 if field is None or attempt is None or field == attempt:
-                    evidence.project(data)
+                    self.project_grading_fixture(data)
                 else:
                     self.assert_project_rejects(data, 'Stop-on-pass policy mismatch')
 
@@ -2298,10 +2364,10 @@ class EvidenceTests(unittest.TestCase):
         data['availability'].update(status='complete', reasons=[])
         data['dataset']['staged_algorithm'] = None
         self.assert_project_rejects(data, 'Missing staged digest algorithm')
-        data['dataset']['staged_algorithm'] = 'skill-evaluator-dataset-snapshot/1'; evidence.project(data)
+        data['dataset']['staged_algorithm'] = 'skill-evaluator-dataset-snapshot/1'; self.project_grading_fixture(data)
         data['dataset'].update(staged_digest=None, staged_algorithm=None, staged_provenance='unknown')
         data['availability'].update(status='incomplete', reasons=['metadata_missing'])
-        self.assertIsNone(evidence.project(data)['dataset']['staged_digest'])
+        self.assertIsNone(self.project_grading_fixture(data)['dataset']['staged_digest'])
 
     def test_partial_behavioral_metrics_retain_coverage_limitation(self):
         for size in range(4):
@@ -2346,7 +2412,7 @@ class EvidenceTests(unittest.TestCase):
                 data['policy']['fields']['evaluator_revision'] = evidence.reports.POLICY['evaluator_revision']
                 data['policy']['id'] = evidence.identity({k: data['policy'][k] for k in
                     ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')})
-                evidence.project(data)
+                self.project_grading_fixture(data)
                 data['policy']['fields']['evaluator_revision'] = None
                 data['policy']['id'] = evidence.identity({k: data['policy'][k] for k in
                     ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')})
@@ -2375,16 +2441,16 @@ class EvidenceTests(unittest.TestCase):
         for gate in (0, 1, 0.0, 1.0):
             data = copy.deepcopy(base); row = data['observations'][0]
             row['deterministic_scores']['authorization'] = row['deterministic_scores']['gate'] = row['deterministic_gate'] = gate
-            self.assertEqual(evidence.project(data)['observations'][0]['deterministic_gate'], gate)
-        evidence.project(self.data())
-        evidence.project(evidence.read_json(FIXTURES / 'gh-no-model.json'))
+            self.assertEqual(self.project_grading_fixture(data)['observations'][0]['deterministic_gate'], gate)
+        self.project_grading_fixture(self.data())
+        self.project_grading_fixture(evidence.read_json(FIXTURES / 'gh-no-model.json'))
 
     def test_failed_gate_preserved(self):
         data = self.data(); self.synthetic_skill_references(data, 'gh'); obs = data['observations'][0]
         obs['deterministic_gate'] = 0
         obs['deterministic_scores'] = {k:0 if k in ('authorization','gate') else 1 for k in evidence.GATE_FIELDS}
-        self.assertEqual(evidence.project(data)['observations'][0]['score'], obs['score'])
-        self.assertEqual(evidence.project(data)['observations'][0]['deterministic_gate'], 0)
+        self.assertEqual(self.project_grading_fixture(data)['observations'][0]['score'], obs['score'])
+        self.assertEqual(self.project_grading_fixture(data)['observations'][0]['deterministic_gate'], 0)
 
     def synthetic_skill_references(self, data, name):
         # Grading-only fixtures need coherent synthetic identities, not reassigned approved bytes.
@@ -2397,6 +2463,14 @@ class EvidenceTests(unittest.TestCase):
             replacements[old] = ref['id']
         for obs in data['observations']:
             obs['references'] = [replacements[ref] for ref in obs['references']]
+
+    def project_grading_fixture(self, data):
+        # These trusted in-memory controls exercise grading/shape rules only.
+        # Serialized runtime authentication is tested through project/main below.
+        if data['kind'] == 'behavioral' and data['references'] \
+                and all(ref['provenance'] == 'synthetic' for ref in data['references']):
+            data = evidence._BehavioralEvidence(data, evidence.behavioral_claim_identity(data))
+        return evidence.project(data)
 
     def test_behavioral_runtime_projection_binds_native_claims(self):
         root = self.native(); data = evidence.normalize_behavioral(root, 'podman')
@@ -2438,6 +2512,26 @@ class EvidenceTests(unittest.TestCase):
         with self.assertRaises(ValueError), redirect_stdout(StringIO()):
             evidence.main(['project', '--input', str(root / 'evidence.json'), '--output', str(self.root / 'missing-native')])
         self.assertFalse((self.root / 'missing-native').exists())
+
+    def test_relabeling_behavioral_claims_cannot_remove_native_authentication(self):
+        root = self.native(); data = json.loads(evidence.encoded(evidence.normalize_behavioral(root, 'podman')))
+        data['availability']['provenance'] = 'synthetic'; replacements = {}
+        for ref in data['references']:
+            old = ref['id']; ref.update(artifact_id='relabeled-native', provenance='synthetic')
+            ref['id'] = evidence.identity({k: ref[k] for k in ('artifact_id', 'member', 'locator', 'digest')})
+            replacements[old] = ref['id']
+        for obs in data['observations']: obs['references'] = [replacements[ref] for ref in obs['references']]
+        obs = data['observations'][0]
+        obs['score'] = obs['scores']['overall'] = obs['score'] + 0.0001
+        data['metrics'][0]['value'] += 0.0001
+        evidence.validate_evidence(data)
+        with self.assertRaisesRegex(ValueError, 'Retained native behavioral bundle required'): evidence.project(data)
+        with self.assertRaisesRegex(ValueError, 'Behavioral claims differ'): evidence.project(data, behavioral_bundle=root)
+        path = root / 'evidence.json'; write(path, data); before = self.snapshot(root)
+        output = self.root / 'rejected-relabeling'
+        with self.assertRaises(ValueError), redirect_stdout(StringIO()):
+            evidence.main(['project', '--input', str(path), '--output', str(output)])
+        self.assertFalse(output.exists()); self.assertEqual(self.snapshot(root), before)
 
     def test_tree_scan_enumerates_validated_directory_descriptors(self):
         root = self.root / 'scanned'; root.mkdir(); (root / 'original.json').write_text('{}')

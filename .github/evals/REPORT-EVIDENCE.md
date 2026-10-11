@@ -68,6 +68,12 @@ bytes outside the validated tree; unsupported descriptor platforms reject reads.
 Reopened ancestor descriptors must also match the device/inode identities recorded
 during path validation. An ordinary directory replacement rejects before reading
 its member bytes, while an already anchored descriptor continues to its original.
+Inventory shares the captured directory identities across catalog, overlay,
+deployed and competing source scans, metadata, datasets and optional native-file
+checks. Its cached reader checks those identities even when reusing captured bytes.
+Dataset discovery and optional-file selection use the captured entries, so an
+empty replacement cannot silently remove validation inputs. Source directory
+identities are checked before invoking the runtime visibility selector.
 Temporary and explicit output parents use the same validated ancestor identities
 before directory creation. Replacing an ordinary parent with the input directory
 rejects before output allocation, preserving the input's entries and bytes.
@@ -195,15 +201,16 @@ Reordering inputs does not regenerate identities.
 Ordinary runtime behavioral normalization carries a transient immutable witness
 for its source, run, dataset, policy, arms, observations, headline metrics and
 references. Projection checks
-those claims against the witness. Standalone `runtime_recorded` behavioral
+those claims against the witness. Standalone measured behavioral
 projection requires the retained native bundle beside `evidence.json` and
 renormalizes the selected recorded run before accepting its claims. Altering a
-score on the same side of the rubric threshold still rejects. Stable native
-artifact/run identities keep these checks active even if provenance labels are
-cleared. Reference
+score on the same side of the rubric threshold still rejects. Changing artifact
+IDs and provenance to synthetic or unknown cannot disable authentication. Reference
 availability can be conservatively downgraded without relabeling native claims.
 Reviewed extracts retain their independent pinned identity/payload checks;
-explicit synthetic fixtures and unavailable records retain their existing rules.
+unavailable records retain their existing rules. Synthetic measured records
+require a native normalization witness too; synthetic provenance alone does not
+authenticate their scores or metrics.
 The witness is private in-memory state and adds no serialized fields or CLI flags.
 
 Supplied summary attempts are validated before indexing: case rows and attempt

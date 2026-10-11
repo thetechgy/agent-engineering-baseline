@@ -401,22 +401,27 @@ def content(manifest=(), provenance='unknown'):
             'provenance': provenance, 'manifest': manifest}
 
 
-def skill_projection_files(path, files):
+def skill_projection_files(path, files, *, directory_identities=None):
     from skillevaluator.tier3.harbor.adapter import _runtime_skill_copy_ignore, _runtime_projection_path_is_ignored
+    if directory_identities is not None:
+        for directory in directory_identities:
+            if directory.is_relative_to(path):
+                safe_path(directory, directory=True, directory_identities=directory_identities)
     ignore = _runtime_skill_copy_ignore(path)
     return [p for p in files if not _runtime_projection_path_is_ignored(p, path, ignore)]
 
 
-def skill_content(path, *, reader=None):
-    directories = {}
+def skill_content(path, *, reader=None, directory_identities=None):
+    directories = {} if directory_identities is None else directory_identities
     files = safe_tree(path, max_entries=2 * MAX_SOURCE_MEMBERS, max_files=MAX_SOURCE_MEMBERS,
                       directory_identities=directories)
     if reader is not None:
         reject_source_markers(path, files, directories)
     else:
-        reader = read_bytes
+        reader = lambda member: read_bytes(member, directory_identities=directories)
+    safe_path(path, directory=True, directory_identities=directories)
     return content([{'member': p.relative_to(path).as_posix(), 'digest': digest_bytes(reader(p))}
-                    for p in skill_projection_files(path, files)], 'configured')
+                    for p in skill_projection_files(path, files, directory_identities=directories)], 'configured')
 
 
 def reject_source_markers(path, files, directories):
@@ -600,14 +605,16 @@ class CapturedInput:
         return self.reader(self.path).decode(encoding, errors)
 
 
-def strict_dataset(path, name, *, reader=None):
+def strict_dataset(path, name, *, reader=None, directory_identities=None):
     from skillevaluator.tier3.dataset_utils import normalize_dataset_entries
     from skillevaluator.tier3 import evals_spec as native_spec
-    safe_tree(path.parent.parent)
-    alternatives = list(path.parent.glob('evals.*'))
+    directories = {} if directory_identities is None else directory_identities
+    files = safe_tree(path.parent.parent, directory_identities=directories)
+    tree_entries = set(files) | set(directories)
+    alternatives = [member for member in tree_entries if member.parent == path.parent and member.name.startswith('evals.')]
     require(path.name == 'evals.json' and set(alternatives) == {path}, 'Ambiguous authored dataset formats')
     if reader is None:
-        reader = read_bytes
+        reader = lambda member: read_bytes(member, directory_identities=directories)
     captured = {}
     def optional_reader(member):
         if member not in captured:
@@ -632,7 +639,7 @@ def strict_dataset(path, name, *, reader=None):
                 or '<subdirs>' in spec.rel_path or spec.kind == 'dir':
             continue
         target = path.parent.parent / spec.rel_path
-        if target.exists():
+        if target in tree_entries:
             # Capture before invoking validators that may catch parse/read errors.
             optional_reader(target)
             native_spec._run_file_checks(CapturedInput(target, optional_reader), spec, checks)
@@ -642,7 +649,7 @@ def strict_dataset(path, name, *, reader=None):
         for member in entry.get('files', []):
             relative(member)
             require(member.startswith('evals/files/'), 'Input outside evaluator fixture boundary')
-            safe_path(path.parent.parent / member)
+            safe_path(path.parent.parent / member, directory_identities=directories)
     return {'owner': 'unknown',
             'path': None, 'authored_digest': digest_bytes(raw),
             'case_ids': sorted(ids), 'status': 'configured'}
@@ -671,15 +678,18 @@ def validate_skill_metadata(authored, name, *, reader=None):
 
 
 def inventory(workspace=ROOT):
-    workspace = safe_path(workspace, directory=True)
+    directories = {}
+    workspace = safe_path(workspace, directory=True, directory_identities=directories)
     budget = ReadBudget()
     captured = {}
     def reader(path):
+        path = safe_path(path, directory_identities=directories)
         if path not in captured:
-            captured[path] = read_bytes(path, budget=budget)
+            captured[path] = read_bytes(path, budget=budget, directory_identities=directories)
         return captured[path]
     catalog = workspace / '.apm/skills'
-    files = safe_tree(catalog)
+    files = safe_tree(catalog, directory_identities=directories)
+    dataset_entries = set(files) | set(directories)
     names = sorted(p.parent.name for p in files if p.name == 'SKILL.md' and p.parent.parent == catalog)
     require(bool(names), 'No local skills found')
     lock_path = workspace / 'apm.lock.yaml'
@@ -703,8 +713,13 @@ def inventory(workspace=ROOT):
     overlays = workspace / '.github/evals'
     overlay_names = []
     if overlays.exists():
-        safe_tree(overlays)
-        overlay_names = [p.parent.parent.name for p in overlays.glob('*/evals/evals.*')]
+        overlay_files = safe_tree(overlays, directory_identities=directories)
+        safe_path(overlays, directory=True, directory_identities=directories)
+        overlay_entries = set(overlay_files) | set(directories)
+        dataset_entries.update(overlay_entries)
+        overlay_names = [p.parent.parent.name for p in overlay_entries
+                         if p.name.startswith('evals.') and p.parent.name == 'evals'
+                         and p.parent.parent.parent == overlays]
     discovered = sorted(set(names + overlay_names))
     require(len(discovered) <= MAX_CASES, 'Inventory limit')
     rows = []
@@ -716,19 +731,19 @@ def inventory(workspace=ROOT):
             authored = catalog / name
             validate_skill_metadata(authored, name, reader=reader)
             src = source(name, 'local', 'thetechgy/agent-engineering-baseline', git_revision(workspace),
-                         authored.relative_to(workspace).as_posix(), skill_content(authored, reader=reader))
+                         authored.relative_to(workspace).as_posix(),
+                         skill_content(authored, reader=reader, directory_identities=directories))
             deployment = None
         else:
             require(len(owners) == 1, 'Overlay has no unique skill owner')
             owner = owners[0]
             repository(owner['repo_url']); revision(owner['resolved_commit']); relative(owner['virtual_path'])
             authored = workspace / '.agents/skills' / name
-            directories = {}
             files = safe_tree(authored, max_entries=2 * MAX_SOURCE_MEMBERS, max_files=MAX_SOURCE_MEMBERS,
                               directory_identities=directories)
             reject_source_markers(authored, files, directories)
             validate_skill_metadata(authored, name, reader=reader)
-            visible = skill_projection_files(authored, files)
+            visible = skill_projection_files(authored, files, directory_identities=directories)
             actual = {p.relative_to(workspace).as_posix(): digest_bytes(reader(p)) for p in files}
             require(actual == owner['deployed_file_hashes'], 'Deployment content drift')
             for member, digest in actual.items():
@@ -739,6 +754,11 @@ def inventory(workspace=ROOT):
                         'Ambiguous deployment ownership')
             if name == 'gh':
                 import gh_evaluations as gh
+                competing = workspace / '.agents/skills' / gh.COMPETING
+                competing_files = safe_tree(competing, max_entries=2 * MAX_SOURCE_MEMBERS,
+                                            max_files=MAX_SOURCE_MEMBERS, directory_identities=directories)
+                reject_source_markers(competing, competing_files, directories)
+                safe_path(competing, directory=True, directory_identities=directories)
                 gh.verify_skill(workspace, read_bytes=reader)
                 gh.verify_competing(workspace, read_bytes=reader)
                 gh.dataset(workspace, read_bytes=reader)
@@ -749,9 +769,9 @@ def inventory(workspace=ROOT):
         dataset_roots = [overlays / name / 'evals']
         if name in names:
             dataset_roots.append(authored / 'evals')
-        datasets = [p for directory in dataset_roots for p in directory.glob('evals.*')]
+        datasets = [p for p in dataset_entries if p.parent in dataset_roots and p.name.startswith('evals.')]
         require(len(datasets) <= 1, 'Competing dataset sources')
-        suite = strict_dataset(datasets[0], name, reader=reader) if datasets else None
+        suite = strict_dataset(datasets[0], name, reader=reader, directory_identities=directories) if datasets else None
         if suite:
             suite['owner'] = 'overlay' if datasets[0].is_relative_to(overlays) else 'local'
             suite['path'] = datasets[0].relative_to(workspace).as_posix()
@@ -1321,6 +1341,13 @@ class _BehavioralEvidence(dict):
         return result
 
 
+def behavioral_claims_need_witness(data):
+    # Every measured behavioral record needs authenticated claims. Reviewed
+    # references are independently bound to the pinned payload allowlists.
+    return (data['kind'] == 'behavioral' and data['availability']['status'] != 'unavailable'
+            and not (data['references'] and all(ref['provenance'] == 'reviewed_extract' for ref in data['references'])))
+
+
 def project(data, *, static_bundle=None, behavioral_bundle=None):
     observed_at = utc_now()
     validate_evidence(data, _observed_at=observed_at)
@@ -1332,10 +1359,7 @@ def project(data, *, static_bundle=None, behavioral_bundle=None):
             witness = normalize_static(Path(static_bundle), data['source']['skill_id'])
         require(static_claim_identity(data, witness._blocking_defaults) == witness._claim_digest,
                 'Static claims differ from retained native evidence')
-    native_behavior = (type(data) is _BehavioralEvidence
-                       or data['availability']['provenance'] == 'runtime_recorded'
-                       or any(ref['artifact_id'] == data['run_id'] for ref in data['references']))
-    if data['kind'] == 'behavioral' and native_behavior and data['availability']['status'] != 'unavailable':
+    if behavioral_claims_need_witness(data):
         if type(data) is _BehavioralEvidence:
             witness = data
         else:
@@ -2118,7 +2142,7 @@ def main(argv=None):
     elif args.command == 'project':
         data = read_json(args.input)
         values = {'public-report.json': project(data, static_bundle=args.input.parent, behavioral_bundle=args.input.parent)}
-        if data['kind'] == 'static' or data['availability']['provenance'] == 'runtime_recorded':
+        if data['kind'] == 'static' or behavioral_claims_need_witness(data):
             input_path = args.input.parent
     else:
         require(args.kind == 'behavioral' or args.run is None, '--run applies to behavioral evidence')
