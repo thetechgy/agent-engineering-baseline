@@ -183,6 +183,11 @@ class EvidenceTests(unittest.TestCase):
         result['run_config']['evaluated_source']['commit'] = rev
         write(result_path, result)
         self.mutate(root, '/provenance.json', lambda d: d.update(revision=rev))
+        static = self.root / 'static-partial'; shutil.copytree(FIXTURES / 'static-synthetic', static)
+        static_path = next((static / 'reports/podman').glob('*.json'))
+        static_report = evidence.read_json(static_path)
+        static_report['evaluated_source'] = {'repository': 'example/fixture', 'commit': rev}
+        write(static_path, static_report)
         for kind, oid in (('blob:none', blob), ('tree:0', tree)):
             with self.subTest(filter=kind):
                 clone = self.root / kind.replace(':', '-')
@@ -198,6 +203,7 @@ class EvidenceTests(unittest.TestCase):
                     self.assertEqual(evidence.git_revision(clone), rev)
                     contents = evidence.historical_content(clone, rev, '.apm/skills/podman')
                     data = evidence.normalize_behavioral(root, 'podman', workspace=clone)
+                    scan = evidence.normalize_static(static, 'podman', workspace=clone)
                 events = [json.loads(line) for line in trace.read_text().splitlines()]
                 fetches = [event for event in events if event.get('event') == 'child_start'
                            and 'fetch' in event.get('argv', [])]
@@ -205,6 +211,9 @@ class EvidenceTests(unittest.TestCase):
                 self.assertIsNone(contents['digest'])
                 self.assertEqual(contents['provenance'], 'unknown')
                 self.assertIsNone(data['source']['content']['digest'])
+                self.assertIsNone(scan['source']['content']['digest'])
+                self.assertEqual(scan['availability']['status'], 'incomplete')
+                self.assertIn('source_unavailable', scan['availability']['reasons'])
                 self.assertIsNone(data['dataset']['authored_digest'])
                 self.assertEqual(data['dataset']['authored_provenance'], 'unknown')
                 self.assertIn('source_unavailable', data['availability']['reasons'])
@@ -943,6 +952,85 @@ class EvidenceTests(unittest.TestCase):
         self.assertIn('Evidence contract rejected', result.stderr)
         self.assertNotIn('Traceback', result.stderr)
         self.assertNotIn(str(REPO), result.stderr); self.assertNotIn(str(root), result.stderr)
+
+    def test_static_completeness_requires_exact_source(self):
+        root = self.root / 'static-source'; shutil.copytree(FIXTURES / 'static-synthetic', root)
+        path = next((root / 'reports/podman').glob('*.json')); native = evidence.read_json(path)
+        native.update(overall_passed=True, overall_status='passed', incomplete_scans=[],
+                      severity_counts=dict.fromkeys(native['severity_counts'], 0))
+        scan = native['results'][0]
+        scan.update(passed=True, status='passed', incomplete_scans=[], findings=[])
+        for level in native['severity_counts']: scan['summary'][level + '_count'] = 0
+        self.mutate(root, '/catalog-summary.json', lambda d: (
+            d.update(failed=0), d['skills'][0].update(passed=True, reason='')))
+        repo = self.root / 'source-repo'; repo.mkdir(); self.local(repo, 'podman')
+        def git(*args):
+            return subprocess.run(['git', '-C', str(repo), *args], check=True,
+                                  capture_output=True, text=True).stdout.strip()
+        git('init', '-q'); git('add', '.apm')
+        git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'Static source fixture')
+        rev = git('rev-parse', 'HEAD')
+        for declared, complete in ((None, False), ({'repository': 'example/fixture', 'commit': 'f'*40}, False),
+                                   ({'repository': 'example/fixture', 'commit': rev}, True)):
+            with self.subTest(declared=declared):
+                native['evaluated_source'] = declared; write(path, native)
+                data = evidence.normalize_static(root, 'podman', workspace=repo)
+                self.assertEqual(data['availability']['status'], 'complete' if complete else 'incomplete')
+                self.assertEqual('source_unavailable' in data['availability']['reasons'], not complete)
+                evidence.project(data)
+                if not complete:
+                    data['availability'].update(status='complete', reasons=[])
+                    with self.assertRaises(ValueError): evidence.project(data)
+                    with self.assertRaises(ValueError): evidence.validate_public(data)
+
+    def test_behavioral_references_hash_each_parsed_buffer_once(self):
+        root = self.native(); run = next((root / 'results/podman').iterdir())
+        members = [run / 'result.json', run / 'run_config.json', root / 'provenance.json', root / 'versions.json',
+                   run / 'dataset_snapshot.json', run / 'attempt_policy.json',
+                   next(run.glob('codex/*/summary.json')), next(run.glob('codex/*/trials/*/result.json')),
+                   next(run.glob('codex/*/trials/*/reward.json'))]
+        read = evidence.read_bytes
+        baseline = evidence.normalize_behavioral(root, 'podman')
+        for target in members:
+            with self.subTest(member=target.relative_to(root)):
+                original = target.read_bytes(); calls = []
+                def replace_after_read(path):
+                    raw = read(path); calls.append(path)
+                    if path == target:
+                        value = json.loads(raw); value['replaced_after_read'] = True; write(path, value)
+                    return raw
+                try:
+                    with patch.object(evidence, 'read_bytes', side_effect=replace_after_read):
+                        data = evidence.normalize_behavioral(root, 'podman')
+                    self.assertEqual(evidence.encoded(data), evidence.encoded(baseline))
+                    self.assertEqual(calls.count(target), 1)
+                    refs = [r for r in data['references'] if r['member'] == target.relative_to(root).as_posix()]
+                    self.assertTrue(refs)
+                    self.assertTrue(all(r['digest'] == evidence.digest_bytes(original) for r in refs))
+                    evidence.project(data)
+                finally:
+                    target.write_bytes(original)
+
+    def test_snapshot_buffer_preserves_pinned_validation(self):
+        from skillevaluator.tier3.harbor import report_data as native
+        root = self.native(); run = next((root / 'results/podman').iterdir()); path = run / 'dataset_snapshot.json'
+        raw = path.read_bytes()
+        for size in (native._MAX_JSON_BYTES, native._MAX_JSON_BYTES + 1):
+            with self.subTest(size=size):
+                path.write_bytes(raw + b' ' * (size - len(raw)))
+                accepted = native.load_dataset_snapshot(run) is not None
+                self.assertEqual(accepted, size == native._MAX_JSON_BYTES)
+                if accepted:
+                    data = evidence.normalize_behavioral(root, 'podman')
+                    ref = next(r for r in data['references'] if r['member'].endswith('/dataset_snapshot.json'))
+                    self.assertEqual(ref['digest'], evidence.digest_bytes(path.read_bytes()))
+                else:
+                    with self.assertRaises(ValueError): evidence.normalize_behavioral(root, 'podman')
+        snapshot = json.loads(raw); snapshot['extra_nodes'] = [0] * native._MAX_JSON_NODES
+        write(path, snapshot)
+        self.assertIsNone(native.load_dataset_snapshot(run))
+        with patch.object(native, 'build_dataset_snapshot', side_effect=AssertionError('Node bound must precede snapshot building')):
+            with self.assertRaises(ValueError): evidence.normalize_behavioral(root, 'podman')
 
     def test_static_preserves_known_per_scanner_counts(self):
         root = self.root / 'static-counts'; shutil.copytree(FIXTURES / 'static-synthetic', root)

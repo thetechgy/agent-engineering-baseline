@@ -816,6 +816,9 @@ def validate_evidence(data, *, public=False):
     if data['kind'] == 'static':
         require(not data['arms'] and not data['metrics'] and not data['observations'], 'Static report implies behavior')
         require(availability['status'] == 'unavailable' or bool(data['scans']), 'Static evidence missing scans')
+        if availability['status'] != 'unavailable' and data['source']['content']['digest'] is None:
+            require(availability['status'] == 'incomplete' and 'source_unavailable' in availability['reasons'],
+                    'Static source unavailable')
     if availability['status'] == 'complete':
         require(all(r['availability'] == 'available' for r in references), 'Unavailable reference promotion')
     depth(data, 12 if public else 32)
@@ -936,36 +939,49 @@ def reconcile_policy(fields, versions, config, agent, attempt_policy):
 
 
 def normalize_behavioral(root, name, selected=None, workspace=ROOT):
-    from skillevaluator.tier3.harbor.report_data import load_dataset_snapshot
+    from skillevaluator.tier3.harbor import report_data as native_reports
     from skillevaluator.evaluation import EvaluationService
     from skillevaluator.tier3.case_ids import validate_case_id
     safe_tree(root); skill_id(name)
     run = select_run(root, name, selected)
     extract = load_extract(root)
     artifact = extract['artifact_id'] if extract else run.name
-    result_path = run / 'result.json'; result = read_json(result_path)
+    member_digests = {}
+    def read_member(path, *, native_snapshot=False):
+        require(path not in member_digests, 'Duplicate behavioral member read')
+        raw = read_bytes(path)
+        if native_snapshot:
+            require(len(raw) <= native_reports._MAX_JSON_BYTES, 'Native snapshot byte limit')
+        value = parse_json(raw)
+        if native_snapshot:
+            native_reports._validate_json_tree(value)
+        member_digests[path] = digest_bytes(raw)
+        return value
+    result_path = run / 'result.json'; result = read_member(result_path)
     require(type(result) is dict, 'Native report object required')
     require(result.get('skill_name') == name and type(result.get('agents')) is dict
             and set(result['agents']) == {'codex'} and type(result['agents']['codex']) is dict,
             'Native identity/agent mismatch')
     require(result.get('report_status') in ('complete', 'incomplete'), 'Unknown native envelope')
     config_path = run / 'run_config.json'
-    config = read_json(config_path) if config_path.exists() else result.get('run_config', {})
+    has_config = config_path.exists()
+    config = read_member(config_path) if has_config else result.get('run_config', {})
     require(type(config) is dict, 'Native configuration object required')
-    if config_path.exists() and 'run_config' in result:
+    if has_config and 'run_config' in result:
         require(config == result['run_config'], 'Conflicting native configuration')
     refs = []
     def ref(path, locator=()):
-        row = reference(root, path, artifact, locator, extract)
+        row = reference_from_digest(root, path, artifact, member_digests[path], locator, extract)
         if row['id'] not in {r['id'] for r in refs}:
             refs.append(row)
         return row['id']
     ref(result_path)
-    if config_path.exists():
+    if has_config:
         ref(config_path)
     limitations = set()
     provenance_path = root / 'provenance.json'
-    provenance = read_json(provenance_path) if provenance_path.exists() else {}
+    has_provenance = provenance_path.exists()
+    provenance = read_member(provenance_path) if has_provenance else {}
     require(type(provenance) is dict, 'Native provenance object required')
     recovery = provenance.get('status') == 'incomplete'
     if recovery:
@@ -974,22 +990,26 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     elif provenance:
         require(provenance.get('schema_version') == 1 and provenance.get('skill') == name, 'Provenance identity mismatch')
         require(provenance.get('mode') in ('standard', 'confirmation'), 'Unknown benchmark mode')
-    if provenance_path.exists():
+    if has_provenance:
         ref(provenance_path)
     versions = {}
     if (root / 'versions.json').exists():
-        versions = read_json(root / 'versions.json')
+        versions = read_member(root / 'versions.json')
         validate_runtime_versions(versions)
         ref(root / 'versions.json')
     if any(versions.get(key) is None for key in ('skillevaluator', 'evaluator_revision')):
         limitations.add('metadata_missing')
     snapshot_path = run / 'dataset_snapshot.json'
     if snapshot_path.exists():
-        raw_snapshot = read_json(snapshot_path)
-        require(type(raw_snapshot) is dict, 'Native snapshot object required')
-        require(type(raw_snapshot.get('dataset')) is list and len(raw_snapshot['dataset']) <= MAX_CASES, 'Snapshot case limit')
-        snapshot = load_dataset_snapshot(run)
-        require(snapshot is not None and snapshot == raw_snapshot and snapshot['evaluator_version'] == '0.3.0', 'Invalid native snapshot')
+        snapshot = read_member(snapshot_path, native_snapshot=True)
+        require(type(snapshot) is dict, 'Native snapshot object required')
+        require(type(snapshot.get('dataset')) is list and len(snapshot['dataset']) <= MAX_CASES, 'Snapshot case limit')
+        require(snapshot.get('evaluator_version') == '0.3.0', 'Invalid native snapshot')
+        # Match load_dataset_snapshot's pinned canonical checks on this buffer,
+        # preserving its byte/node bounds without reopening the input member.
+        expected = native_reports.build_dataset_snapshot(
+            [entry for entry in snapshot['dataset'] if type(entry) is dict], evaluator_version='0.3.0')
+        require(all(snapshot.get(key) == value for key, value in expected.items()), 'Invalid native snapshot')
         ids = sorted(case_ids([validate_case_id(e['id']) for e in snapshot['dataset']]))
         require(result.get('dataset_digest') == snapshot['dataset_digest']
                 and result.get('dataset_summary') == snapshot['dataset_summary'], 'Snapshot/result mismatch')
@@ -1014,8 +1034,9 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     if src_contents['digest'] is None:
         limitations.add('source_unavailable')
     attempt_path = run / 'attempt_policy.json'
-    attempt_policy = read_json(attempt_path) if attempt_path.exists() else {}
-    if attempt_path.exists():
+    has_attempt = attempt_path.exists()
+    attempt_policy = read_member(attempt_path) if has_attempt else {}
+    if has_attempt:
         ref(attempt_path)
     harbor = config.get('harbor', {})
     maximum = harbor.get('n_attempts')
@@ -1071,7 +1092,7 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
         native_condition = agent['conditions'][arm]
         summary_path = arm_dir / 'summary.json'
         if summary_path.exists():
-            summary = read_json(summary_path)
+            summary = read_member(summary_path)
             summary_ref = ref(summary_path)
         else:
             # Retain run-recorded identities/counts where available, without
@@ -1099,12 +1120,12 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
             trial_paths = sorted(trial_root.glob('*/result.json'))
             require(len(trial_paths) <= MAX_TRIALS, 'Trial input limit')
             for path in trial_paths:
-                trial_result = read_json(path)
+                trial_result = read_member(path)
                 trial = trial_result['trial_name']; token(trial)
                 require(trial == path.parent.name, 'Trial directory identity mismatch')
                 native_id = trial_result['id']; token(native_id)
                 reward_path = path.parent / 'reward.json'
-                reward = read_json(reward_path) if reward_path.exists() else None
+                reward = read_member(reward_path) if reward_path.exists() else None
                 matched = lookup.get(trial)
                 from skillevaluator.tier3.harbor.collector import _entry_id_from_harbor_result, _attempt_ordinal, _canonical_case_id
                 case = validate_case_id(reward['entry_id']) if reward is not None else matched[0] if matched else validate_case_id(
@@ -1321,8 +1342,11 @@ def normalize_static(root, name, workspace=ROOT):
     require(set(native['incomplete_scans']) == recorded_incomplete, 'Inconsistent incomplete scanner identity')
     incomplete = any(s['status'] in ('incomplete', 'skipped') for s in data['scans'])
     data['references'] = refs
-    data['availability'] = {'status': 'incomplete' if incomplete else 'complete',
-                            'reasons': ['scan_incomplete'] if incomplete else [], 'provenance': 'runtime_recorded'}
+    limitations = {'scan_incomplete'} if incomplete else set()
+    if data['source']['content']['digest'] is None:
+        limitations.add('source_unavailable')
+    data['availability'] = {'status': 'incomplete' if limitations else 'complete',
+                            'reasons': sorted(limitations), 'provenance': 'runtime_recorded'}
     if (root / 'versions.json').exists():
         versions, versions_digest = read_json_and_digest(root / 'versions.json')
         validate_runtime_versions(versions)

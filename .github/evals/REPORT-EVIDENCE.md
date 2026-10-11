@@ -233,9 +233,17 @@ absent scanner counts remain null. Informational findings retain their
 severity without inventing a native total. The 10,000-finding cap is checked
 before constructing references. Static catalog, report, and version members are
 each read, parsed, and hashed once; all locators reuse that exact byte digest.
+Behavioral members also retain the digest of each parsed buffer, including run
+reports, configuration, provenance, versions, snapshots, attempt policy,
+summaries, trials, and rewards. Reference construction never reopens them. The
+snapshot adapter applies the pinned loader's byte/node limits and canonical
+builder checks to the captured buffer; it does not retain every parsed member.
 Behavioral ingestion requires the native `codex` agent value to be an object
 before dereferencing it. Malformed native object access at the CLI boundary
 produces a bounded contract rejection without a traceback or local paths.
+Static reports without declared or locally reconstructable exact source bytes
+remain incomplete with `source_unavailable`, even when all validators finished.
+The shared validator also prevents standalone projection from promoting them.
 
 ## Reviewed fixtures and retention
 
