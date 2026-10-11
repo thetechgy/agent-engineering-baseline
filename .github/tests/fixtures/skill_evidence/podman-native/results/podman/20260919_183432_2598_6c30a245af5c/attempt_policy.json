@@ -1,0 +1,5 @@
+{
+  "max_attempts": 1,
+  "pass_threshold": 0.5,
+  "stop_on_pass": false
+}

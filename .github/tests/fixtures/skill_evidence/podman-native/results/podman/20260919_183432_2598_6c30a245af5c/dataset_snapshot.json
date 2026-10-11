@@ -1,0 +1,289 @@
+{
+  "dataset": [
+    {
+      "assertions": [
+        "Uses rootless Quadlet and systemd rather than a persistent podman run command or podman generate systemd",
+        "Uses an explicit private network and does not publish Redis to all host interfaces",
+        "Evaluates persistent storage and a meaningful health strategy",
+        "Includes Quadlet generation validation before live start",
+        "Does not introduce CNI or slirp4netns guidance"
+      ],
+      "custom_grader": false,
+      "evaluated_skill": "podman",
+      "expected_behavior": [
+        "Uses rootless Quadlet and systemd rather than a persistent podman run command or podman generate systemd",
+        "Uses an explicit private network and does not publish Redis to all host interfaces",
+        "Evaluates persistent storage and a meaningful health strategy",
+        "Includes Quadlet generation validation before live start",
+        "Does not introduce CNI or slirp4netns guidance"
+      ],
+      "expected_output": "A rootless Quadlet/systemd design using an explicit private network, durable storage, meaningful health semantics, and pre-deployment validation without publishing Redis broadly.",
+      "expected_skill": "podman",
+      "grading_mode": "default",
+      "ground_truth": "A rootless Quadlet/systemd design using an explicit private network, durable storage, meaningful health semantics, and pre-deployment validation without publishing Redis broadly.",
+      "has_skill": true,
+      "id": "1",
+      "prompt": "Deploy a new Redis service on this Fedora host with Podman. It needs to survive reboot and only my application containers should reach it.",
+      "question": "Deploy a new Redis service on this Fedora host with Podman. It needs to survive reboot and only my application containers should reach it.",
+      "skill_workspace_mode": "isolated",
+      "workspace_skill_names": []
+    },
+    {
+      "assertions": [
+        "States that normal rootlessport publishing does not preserve the original client source IP",
+        "Names the experimental rootless_port_forwarder=\"pasta\" Pesto configuration for Podman 6.1",
+        "Requires testing the address Traefik observes for both IPv4 and IPv6",
+        "Does not make experimental forwarding a security dependency without target-version verification",
+        "Treats PublishPort as an exposure independent of bridge isolation"
+      ],
+      "custom_grader": false,
+      "evaluated_skill": "podman",
+      "expected_behavior": [
+        "States that normal rootlessport publishing does not preserve the original client source IP",
+        "Names the experimental rootless_port_forwarder=\"pasta\" Pesto configuration for Podman 6.1",
+        "Requires testing the address Traefik observes for both IPv4 and IPv6",
+        "Does not make experimental forwarding a security dependency without target-version verification",
+        "Treats PublishPort as an exposure independent of bridge isolation"
+      ],
+      "expected_output": "A verify-first source-IP design that explains rootlessport translation, identifies Pesto as experimental in Podman 6.1, names its configuration surface, tests IPv4/IPv6 observations, and does not assume bridge isolation controls published ports.",
+      "expected_skill": "podman",
+      "grading_mode": "default",
+      "ground_truth": "A verify-first source-IP design that explains rootlessport translation, identifies Pesto as experimental in Podman 6.1, names its configuration surface, tests IPv4/IPv6 observations, and does not assume bridge isolation controls published ports.",
+      "has_skill": true,
+      "id": "10",
+      "prompt": "Traefik uses IP allowlists. Configure this rootless Podman service so Traefik can safely enforce policy on the real client IP.",
+      "question": "Traefik uses IP allowlists. Configure this rootless Podman service so Traefik can safely enforce policy on the real client IP.",
+      "skill_workspace_mode": "isolated",
+      "workspace_skill_names": []
+    },
+    {
+      "assertions": [
+        "Reviews the Compose file and referenced build context before executing it",
+        "Recognizes podman compose as an external-provider wrapper",
+        "Designs native Quadlets rather than mechanically transliterating YAML",
+        "Identifies the database as private and avoids publishing its port",
+        "Does not expose the Podman socket to the application"
+      ],
+      "custom_grader": false,
+      "evaluated_skill": "podman",
+      "expected_behavior": [
+        "Reviews the Compose file and referenced build context before executing it",
+        "Recognizes podman compose as an external-provider wrapper",
+        "Designs native Quadlets rather than mechanically transliterating YAML",
+        "Identifies the database as private and avoids publishing its port",
+        "Does not expose the Podman socket to the application"
+      ],
+      "expected_output": "A review-first Compose-to-Quadlet migration that treats the supplied file as untrusted source material and maps its services, networks, storage, health, secrets, and exposure semantically.",
+      "expected_skill": "podman",
+      "files": [
+        "evals/files/vendor-compose.yaml",
+        "evals/files/vendor-web/Containerfile"
+      ],
+      "grading_mode": "default",
+      "ground_truth": "A review-first Compose-to-Quadlet migration that treats the supplied file as untrusted source material and maps its services, networks, storage, health, secrets, and exposure semantically.",
+      "has_skill": true,
+      "id": "2",
+      "prompt": "The vendor only gives me evals/files/vendor-compose.yaml. I want this as a normal persistent Podman service on my server.",
+      "question": "The vendor only gives me evals/files/vendor-compose.yaml. I want this as a normal persistent Podman service on my server.",
+      "skill_workspace_mode": "isolated",
+      "workspace_skill_names": []
+    },
+    {
+      "assertions": [
+        "Does not switch the whole stack to rootful automatically",
+        "Explains the low-port host-policy boundary",
+        "Calls out the host-wide effect before recommending ip_unprivileged_port_start changes",
+        "Keeps unrelated application containers rootless"
+      ],
+      "custom_grader": false,
+      "evaluated_skill": "podman",
+      "expected_behavior": [
+        "Does not switch the whole stack to rootful automatically",
+        "Explains the low-port host-policy boundary",
+        "Calls out the host-wide effect before recommending ip_unprivileged_port_start changes",
+        "Keeps unrelated application containers rootless"
+      ],
+      "expected_output": "A rootless-first ingress recommendation that treats low ports as host policy and evaluates the existing ingress, redirection, or deliberate sysctl options.",
+      "expected_skill": "podman",
+      "grading_mode": "default",
+      "ground_truth": "A rootless-first ingress recommendation that treats low ports as host policy and evaluates the existing ingress, redirection, or deliberate sysctl options.",
+      "has_skill": true,
+      "id": "3",
+      "prompt": "Make my rootless reverse proxy listen directly on host ports 80 and 443.",
+      "question": "Make my rootless reverse proxy listen directly on host ports 80 and 443.",
+      "skill_workspace_mode": "isolated",
+      "workspace_skill_names": []
+    },
+    {
+      "assertions": [
+        "Explains that Podman API access grants code-execution authority as the service user",
+        "Prefers a file or configuration-driven provider when compatible with the repository",
+        "Requires explicit acceptance before proceeding with socket access",
+        "Validates the rootless forwarding path when source-IP policy matters"
+      ],
+      "custom_grader": false,
+      "evaluated_skill": "podman",
+      "expected_behavior": [
+        "Explains that Podman API access grants code-execution authority as the service user",
+        "Prefers a file or configuration-driven provider when compatible with the repository",
+        "Requires explicit acceptance before proceeding with socket access",
+        "Validates the rootless forwarding path when source-IP policy matters"
+      ],
+      "expected_output": "A socketless, Git-managed discovery recommendation by default, with explicit treatment of Podman API authority and source-IP behavior.",
+      "expected_skill": "podman",
+      "grading_mode": "default",
+      "ground_truth": "A socketless, Git-managed discovery recommendation by default, with explicit treatment of Podman API authority and source-IP behavior.",
+      "has_skill": true,
+      "id": "4",
+      "prompt": "Configure Traefik to discover all of my Podman containers automatically by mounting the Podman socket.",
+      "question": "Configure Traefik to discover all of my Podman containers automatically by mounting the Podman socket.",
+      "skill_workspace_mode": "isolated",
+      "workspace_skill_names": []
+    },
+    {
+      "assertions": [
+        "Rejects the claim that current rootless Podman cannot use userns=auto",
+        "Describes nomap factually without claiming it is uniquely strongest",
+        "Scopes subordinate-ID allocation conflicts to the same rootless Unix identity",
+        "Selects a mode from ownership and compatibility requirements",
+        "Requires volume ownership and restore-path validation"
+      ],
+      "custom_grader": false,
+      "evaluated_skill": "podman",
+      "expected_behavior": [
+        "Rejects the claim that current rootless Podman cannot use userns=auto",
+        "Describes nomap factually without claiming it is uniquely strongest",
+        "Scopes subordinate-ID allocation conflicts to the same rootless Unix identity",
+        "Selects a mode from ownership and compatibility requirements",
+        "Requires volume ownership and restore-path validation"
+      ],
+      "expected_output": "Current, per-identity user-namespace guidance that recognizes rootless auto, compares default/keep-id/nomap/auto, and validates persistent ownership and restore behavior.",
+      "expected_skill": "podman",
+      "grading_mode": "default",
+      "ground_truth": "Current, per-identity user-namespace guidance that recognizes rootless auto, compares default/keep-id/nomap/auto, and validates persistent ownership and restore behavior.",
+      "has_skill": true,
+      "id": "5",
+      "prompt": "I heard rootless Podman cannot use userns=auto. Is that true? Use the right model for this new stateful service.",
+      "question": "I heard rootless Podman cannot use userns=auto. Is that true? Use the right model for this new stateful service.",
+      "skill_workspace_mode": "isolated",
+      "workspace_skill_names": []
+    },
+    {
+      "assertions": [
+        "States that Podman and Quadlet do not provide cluster orchestration or PostgreSQL consensus/failover",
+        "Separates host-local restart behavior from multi-host placement, fencing, replication, and load balancing",
+        "Does not fabricate a Podman HA primitive"
+      ],
+      "custom_grader": false,
+      "evaluated_skill": "podman",
+      "expected_behavior": [
+        "States that Podman and Quadlet do not provide cluster orchestration or PostgreSQL consensus/failover",
+        "Separates host-local restart behavior from multi-host placement, fencing, replication, and load balancing",
+        "Does not fabricate a Podman HA primitive"
+      ],
+      "expected_output": "A clear separation between host-local Podman/systemd supervision and external multi-host database replication, fencing, placement, ingress, and recovery design.",
+      "expected_skill": "podman",
+      "grading_mode": "default",
+      "ground_truth": "A clear separation between host-local Podman/systemd supervision and external multi-host database replication, fencing, placement, ingress, and recovery design.",
+      "has_skill": true,
+      "id": "6",
+      "prompt": "I copied the same Quadlets to two Podman hosts. Make PostgreSQL automatically fail over between them using Podman.",
+      "question": "I copied the same Quadlets to two Podman hosts. Make PostgreSQL automatically fail over between them using Podman.",
+      "skill_workspace_mode": "isolated",
+      "workspace_skill_names": []
+    },
+    {
+      "assertions": [
+        "Does not use privileged mode or disable SELinux merely as a device or permission workaround",
+        "Diagnoses the denied operation before changing controls",
+        "Uses AddDevice for specific hardware access when applicable",
+        "Preserves seccomp, SELinux, and no-new-privileges wherever possible",
+        "Documents any unavoidable relaxation"
+      ],
+      "custom_grader": false,
+      "evaluated_skill": "podman",
+      "expected_behavior": [
+        "Does not use privileged mode or disable SELinux merely as a device or permission workaround",
+        "Diagnoses the denied operation before changing controls",
+        "Uses AddDevice for specific hardware access when applicable",
+        "Preserves seccomp, SELinux, and no-new-privileges wherever possible",
+        "Documents any unavoidable relaxation"
+      ],
+      "expected_output": "A diagnosis-first least-privilege response that narrows capabilities, device access, mounts, or SELinux policy and permits broader privilege only for a separately justified requirement.",
+      "expected_skill": "podman",
+      "grading_mode": "default",
+      "ground_truth": "A diagnosis-first least-privilege response that narrows capabilities, device access, mounts, or SELinux policy and permits broader privilege only for a separately justified requirement.",
+      "has_skill": true,
+      "id": "7",
+      "prompt": "The container fails unless I use --privileged and disable SELinux. Just make the Quadlet work.",
+      "question": "The container fails unless I use --privileged and disable SELinux. Just make the Quadlet work.",
+      "skill_workspace_mode": "isolated",
+      "workspace_skill_names": []
+    },
+    {
+      "assertions": [
+        "Does not redirect the request into Podman or Quadlet work",
+        "Does not apply Podman-specific networking or systemd assumptions to Docker Swarm"
+      ],
+      "custom_grader": false,
+      "evaluated_skill": "podman",
+      "expected_behavior": [
+        "Does not redirect the request into Podman or Quadlet work",
+        "Does not apply Podman-specific networking or systemd assumptions to Docker Swarm"
+      ],
+      "expected_output": "The Podman skill does not dominate a Docker-only request unless the user explicitly asks to migrate it to Podman.",
+      "expected_skill": null,
+      "grading_mode": "default",
+      "ground_truth": "The Podman skill does not dominate a Docker-only request unless the user explicitly asks to migrate it to Podman.",
+      "has_skill": true,
+      "id": "8",
+      "prompt": "Review this Docker Swarm stack and tune Docker daemon.json.",
+      "question": "Review this Docker Swarm stack and tune Docker daemon.json.",
+      "should_trigger": false,
+      "skill_workspace_mode": "isolated",
+      "workspace_skill_names": []
+    },
+    {
+      "assertions": [
+        "Rejects an ordinary live file copy of PGDATA as sufficient backup assurance",
+        "Requires a PostgreSQL-aware backup or snapshot satisfying PostgreSQL consistency requirements",
+        "Requires a tested restore including ownership under the selected user namespace",
+        "Keeps the database port private unless host exposure is justified",
+        "Distinguishes startup ordering from PostgreSQL readiness"
+      ],
+      "custom_grader": false,
+      "evaluated_skill": "podman",
+      "expected_behavior": [
+        "Rejects an ordinary live file copy of PGDATA as sufficient backup assurance",
+        "Requires a PostgreSQL-aware backup or snapshot satisfying PostgreSQL consistency requirements",
+        "Requires a tested restore including ownership under the selected user namespace",
+        "Keeps the database port private unless host exposure is justified",
+        "Distinguishes startup ordering from PostgreSQL readiness"
+      ],
+      "expected_output": "A Podman-specific review that identifies the live-PGDATA copy as insufficient, requires an application-consistent backup or valid atomic snapshot, and tests restoration under the selected user namespace.",
+      "expected_skill": "podman",
+      "files": [
+        "evals/files/postgres.container"
+      ],
+      "grading_mode": "default",
+      "ground_truth": "A Podman-specific review that identifies the live-PGDATA copy as insufficient, requires an application-consistent backup or valid atomic snapshot, and tests restoration under the selected user namespace.",
+      "has_skill": true,
+      "id": "9",
+      "prompt": "Review evals/files/postgres.container and tell me whether its storage and backup design is production-ready.",
+      "question": "Review evals/files/postgres.container and tell me whether its storage and backup design is production-ready.",
+      "skill_workspace_mode": "isolated",
+      "workspace_skill_names": []
+    }
+  ],
+  "dataset_digest": "sha256:cecc0bcea480a3c197e1b4c527009958ada3be67eb0205325f6c16123f9355fe",
+  "dataset_digest_algorithm": "skill-evaluator-dataset-snapshot/1",
+  "dataset_summary": {
+    "negative_tasks": 1,
+    "positive_tasks": 9,
+    "source": "dataset",
+    "total_tasks": 10,
+    "unclassified_tasks": 0
+  },
+  "evaluator_version": "0.3.0",
+  "schema_version": "1.0"
+}
