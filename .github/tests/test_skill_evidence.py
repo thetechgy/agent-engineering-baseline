@@ -1958,6 +1958,27 @@ class EvidenceTests(unittest.TestCase):
                 data['availability'].update(status='incomplete', reasons=['reference_unavailable'])
                 evidence.project(data)
 
+    def test_observed_static_evidence_requires_catalog_aggregate(self):
+        for status in ('complete', 'incomplete'):
+            with self.subTest(status=status):
+                data = evidence.normalize_static(FIXTURES / 'static-synthetic', 'podman')
+                if status == 'complete':
+                    data['source']['content'] = evidence.content([
+                        {'member': 'SKILL.md', 'digest': evidence.digest_bytes(b'Synthetic')}], 'configured')
+                    data['availability'].update(status='complete', reasons=[])
+                    data['findings'] = []
+                    for scan in data['scans']:
+                        scan.update(status='passed', passed=True,
+                                    severity_counts=dict.fromkeys(scan['severity_counts'], 0))
+                evidence.project(data)
+                aggregate = next(scan for scan in data['scans'] if scan['scanner'] == 'catalog-total')
+                data['scans'].remove(aggregate)
+                self.assert_project_rejects(data, 'Static evidence missing aggregate scan')
+                data['scans'].append(aggregate); evidence.project(data)
+                data['scans'].append(copy.deepcopy(aggregate))
+                self.assert_project_rejects(data, 'Duplicate scanner')
+        evidence.project(evidence.evidence('podman', 'static'))
+
     def test_static_projection_retains_known_scan_limitations(self):
         for status in ('incomplete', 'skipped'):
             with self.subTest(status=status):

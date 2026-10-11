@@ -968,6 +968,8 @@ def validate_evidence(data, *, public=False):
     if data['kind'] == 'static':
         require(not data['arms'] and not data['metrics'] and not data['observations'], 'Static report implies behavior')
         require(availability['status'] == 'unavailable' or bool(data['scans']), 'Static evidence missing scans')
+        require(availability['status'] == 'unavailable' or aggregate is not None,
+                'Static evidence missing aggregate scan')
         if availability['status'] != 'unavailable' and data['source']['content']['digest'] is None:
             require(availability['status'] == 'incomplete' and 'source_unavailable' in availability['reasons'],
                     'Static source unavailable')

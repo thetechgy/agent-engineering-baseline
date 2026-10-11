@@ -362,6 +362,8 @@ counts are reconciled against complete case observations. Both may remain null.
 Unknown thresholds and explicitly partial case details remain unknown.
 Behavioral evidence cannot carry static scan or finding claims; those claims
 must pass the static normalization contract.
+Non-unavailable static records retain exactly one `catalog-total` scan carrying
+the native overall status and severity totals; projection cannot drop that row.
 Reviewed-extract members are indexed once after manifest validation, so trial,
 reward, and summary references do not rescan the member list.
 Each normalization shares a 64 MiB byte budget across consumed native JSON,
