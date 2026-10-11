@@ -1013,17 +1013,76 @@ class EvidenceTests(unittest.TestCase):
             evidence.normalize_behavioral(root, 'podman')
 
     def test_policy_mode_attempt_consistency(self):
-        for mode, maximum in itertools.product(('standard', 'confirmation', 'unknown'), (None, 1, 2, 3)):
+        for mode, maximum in itertools.product(('standard', 'confirmation', 'unknown'), (None, 0, 1, 2, 3)):
             with self.subTest(mode=mode, maximum=maximum):
                 policy = evidence.make_policy(attempts={'mode': mode, 'maximum': maximum,
                                                        'stop_on_pass': None, 'pass_threshold': None},
                                               provenance='runtime_recorded')
-                valid = maximum is None or mode == 'unknown' or maximum == evidence.reports.MODES[mode]
+                valid = maximum is None or maximum > 0 and (mode == 'unknown' or maximum == evidence.reports.MODES[mode])
                 if valid:
                     evidence.validate_policy(policy)
                 else:
-                    with self.assertRaisesRegex(ValueError, 'Benchmark mode attempt count mismatch'):
+                    with self.assertRaises(ValueError):
                         evidence.validate_policy(policy)
+
+    def test_zero_attempt_maximum_cannot_publish_complete_evidence(self):
+        data = self.data()
+        data['source']['content'] = evidence.content([
+            {'member': 'SKILL.md', 'digest': evidence.digest_bytes(b'Synthetic source')}],
+            'reconstructed_from_declared_revision')
+        data['availability'].update(status='complete', reasons=[])
+        data['observations'] = []
+        data['policy']['attempts'].update(mode='unknown', maximum=0)
+        data['policy']['id'] = evidence.identity({k: data['policy'][k] for k in
+                                                ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')})
+        for arm in data['arms']:
+            arm['coverage'].update(expected_attempts=0, recorded_attempts=0, scored_attempts=0,
+                                   unscored_attempts=0, case_details='complete')
+            arm['rubric']['passed_cases'] = 0
+        with self.assertRaisesRegex(ValueError, 'Zero attempts'):
+            evidence.validate_evidence(data)
+        public = copy.deepcopy(data)
+        with self.assertRaisesRegex(ValueError, 'Zero attempts'):
+            evidence.validate_public(public)
+        path = self.root / 'zero.json'; write(path, data)
+        before = path.read_bytes(); output = self.root / 'output'
+        result = subprocess.run([sys.executable, str(REPO / '.github/scripts/skill_evidence.py'),
+                                 'project', '--input', str(path), '--output', str(output)],
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stderr, 'Evidence contract rejected (ValueError)\n')
+        self.assertFalse(output.exists())
+        self.assertEqual(path.read_bytes(), before)
+
+    def test_standard_attempt_field_matches_active_standard_maximum(self):
+        for mode, maximum, standard in itertools.product(
+                ('standard', 'confirmation', 'unknown'), (None, 1, 3), (None, 1, 3)):
+            with self.subTest(mode=mode, maximum=maximum, standard=standard):
+                policy = evidence.make_policy(fields={'standard_attempts': standard},
+                                              attempts={'mode': mode, 'maximum': maximum,
+                                                        'stop_on_pass': None, 'pass_threshold': None},
+                                              provenance='runtime_recorded')
+                valid = ((maximum is None or mode == 'unknown' or maximum == evidence.reports.MODES[mode])
+                         and (mode != 'standard' or maximum is None or standard is None or standard == maximum))
+                if valid:
+                    evidence.validate_policy(policy)
+                else:
+                    with self.assertRaises(ValueError): evidence.validate_policy(policy)
+
+    def test_native_standard_attempt_field_contradiction_rejected(self):
+        root = self.native()
+        self.mutate(root, '/provenance.json', lambda d: d['policy'].update(standard_attempts=3))
+        with self.assertRaisesRegex(ValueError, 'Standard attempt policy mismatch'):
+            evidence.normalize_behavioral(root, 'podman')
+        before = {p.relative_to(root): p.read_bytes() for p in root.rglob('*') if p.is_file()}
+        output = self.root / 'output'
+        result = subprocess.run([sys.executable, str(REPO / '.github/scripts/skill_evidence.py'),
+                                 'normalize', '--kind', 'behavioral', '--skill', 'podman',
+                                 '--input', str(root), '--output', str(output)], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stderr, 'Evidence contract rejected (ValueError)\n')
+        self.assertFalse(output.exists())
+        self.assertEqual(before, {p.relative_to(root): p.read_bytes() for p in root.rglob('*') if p.is_file()})
 
     def test_contradictory_recovery_rejected(self):
         root = self.native(); write(root / 'provenance.json', {'schema_version':1,'status':'incomplete','diagnostic_only':True})

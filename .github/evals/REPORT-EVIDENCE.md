@@ -197,7 +197,10 @@ maximum/stop-on-pass values must also agree when both are known. Absent metadata
 remains unknown; compatible historical values are preserved rather than replaced
 with current defaults. Judge identity remains separate from the evaluated model.
 Known benchmark modes must agree with known attempt maxima: standard uses one
-attempt and confirmation uses three, matching the pinned producer. Unknown mode
+attempt and confirmation uses three, matching the pinned producer. Every known
+maximum must be positive, including standalone projection. In active standard
+mode, a supplied `standard_attempts` field must agree with the known maximum;
+confirmation keeps this separate historical standard-mode setting. Unknown mode
 or maximum stays unknown; it is not filled from current defaults.
 Arm condition IDs hash their structured fields: provenance,
 target presence, workspace mode, independently identified competing skills,

@@ -571,9 +571,13 @@ def validate_policy(value):
     closed(value['attempts'], ('mode', 'maximum', 'stop_on_pass', 'pass_threshold'))
     enum(value['attempts']['mode'], ('standard', 'confirmation', 'unknown'))
     optional(value['attempts']['maximum'], lambda v: count(v, 100))
+    require(value['attempts']['maximum'] is None or value['attempts']['maximum'] > 0, 'Zero attempts')
     if value['attempts']['mode'] in reports.MODES and value['attempts']['maximum'] is not None:
         require(value['attempts']['maximum'] == reports.MODES[value['attempts']['mode']],
                 'Benchmark mode attempt count mismatch')
+    if value['attempts']['mode'] == 'standard' and value['attempts']['maximum'] is not None \
+            and fields['standard_attempts'] is not None:
+        require(fields['standard_attempts'] == value['attempts']['maximum'], 'Standard attempt policy mismatch')
     optional(value['attempts']['stop_on_pass'], boolean); optional(value['attempts']['pass_threshold'], number)
     canonical = {key: value[key] for key in ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')}
     require(value['id'] == (identity(canonical) if value['provenance'] != 'unknown' else None), 'Policy identity mismatch')
