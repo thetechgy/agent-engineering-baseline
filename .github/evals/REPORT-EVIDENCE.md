@@ -364,6 +364,7 @@ Reviewed-extract members are indexed once after manifest validation, so trial,
 reward, and summary references do not rescan the member list.
 Each normalization shares a 64 MiB byte budget across consumed native JSON,
 reviewed manifests, historical source listings/blobs, and authored datasets.
+This includes the optional static `versions.json` member.
 File/object size is charged before content capture, and unexpected file growth
 is charged before parsing; per-file and historical-object limits remain 8 MiB.
 Incomplete recovery provenance may omit identity carriers, but every supplied

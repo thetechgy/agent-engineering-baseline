@@ -1791,6 +1791,23 @@ class EvidenceTests(unittest.TestCase):
                 self.assertEqual(any('cat-file' in argv and 'blob' in argv for argv in commands),
                                  remaining == path.stat().st_size)
 
+    def test_static_versions_share_aggregate_budget_before_parsing(self):
+        root = self.root / 'static-budget'; shutil.copytree(FIXTURES / 'static-synthetic', root)
+        total = sum(path.stat().st_size for path in root.rglob('*.json'))
+        baseline = evidence.normalize_static(root, 'podman')
+        with patch.object(evidence, 'NORMALIZATION_LIMIT', total):
+            self.assertEqual(evidence.encoded(evidence.normalize_static(root, 'podman')), evidence.encoded(baseline))
+        before = self.snapshot(root); output = self.root / 'rejected-output'
+        for entry in ('api', 'cli'):
+            with self.subTest(entry=entry), patch.object(evidence, 'NORMALIZATION_LIMIT', total - 1), \
+                    patch.object(evidence, 'parse_json', wraps=evidence.parse_json) as parse:
+                with self.assertRaisesRegex(ValueError, 'Normalization byte limit'):
+                    if entry == 'api': evidence.normalize_static(root, 'podman')
+                    else: evidence.main(['normalize', '--kind', 'static', '--skill', 'podman',
+                                         '--input', str(root), '--output', str(output)])
+                self.assertEqual(parse.call_count, 2, 'Versions parsed after byte budget exhausted')
+                self.assertFalse(output.exists()); self.assertEqual(self.snapshot(root), before)
+
     def test_missing_historical_metadata(self):
         root = self.native(); (root/'provenance.json').unlink(); (root/'versions.json').unlink()
         data = evidence.normalize_behavioral(root, 'podman')

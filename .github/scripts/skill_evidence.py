@@ -1544,7 +1544,7 @@ def normalize_static(root, name, workspace=ROOT):
     data['availability'] = {'status': 'incomplete' if limitations else 'complete',
                             'reasons': sorted(limitations), 'provenance': 'runtime_recorded'}
     if (root / 'versions.json').exists():
-        versions, versions_digest = read_json_and_digest(root / 'versions.json')
+        versions, versions_digest = read_json_and_digest(root / 'versions.json', budget=budget)
         validate_runtime_versions(versions)
         data['policy'] = make_policy({'evaluator_revision': versions.get('evaluator_revision')}, provenance='runtime_recorded')
         data['references'].append(reference_from_digest(root, root / 'versions.json', 'skill-quality', versions_digest))
