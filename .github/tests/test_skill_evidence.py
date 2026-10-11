@@ -1404,6 +1404,88 @@ class EvidenceTests(unittest.TestCase):
         shutil.copytree(path.parent, path.parent.with_name('duplicate'))
         with self.assertRaises(ValueError): evidence.normalize_behavioral(root, 'podman')
 
+    def test_summary_attempt_entries_reconcile_before_publication(self):
+        for arm, mutation in itertools.product(('with_skill', 'without_skill'),
+                ('extra', 'orphan', 'duplicate', 'excess', 'entry', 'row', 'list',
+                 'trial', 'score', 'passed', 'ordinal', 'zero', 'bool')):
+            with self.subTest(arm=arm, mutation=mutation), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp) / 'native'; shutil.copytree(FIXTURES / 'podman-native', root)
+                (root / 'extract-manifest.json').unlink()
+                run = next((root / 'results/podman').iterdir())
+                path = run / 'codex' / arm.replace('_', '-') / 'summary.json'
+                summary = evidence.read_json(path); cases = summary['pass_at_k']['cases']
+                row = cases['1']; attempt = row['attempts'][0]
+                if mutation == 'extra': row['attempts'].append({**attempt, 'trial': 'orphan', 'attempt': 2})
+                elif mutation == 'orphan': attempt['trial'] = 'orphan'
+                elif mutation == 'duplicate': cases['2']['attempts'][0]['trial'] = attempt['trial']
+                elif mutation == 'excess': row['attempts'] *= evidence.MAX_TRIALS + 1
+                elif mutation == 'entry': row['attempts'][0] = []
+                elif mutation == 'row': cases['1'] = []
+                elif mutation == 'list': row['attempts'] = {}
+                elif mutation == 'trial': attempt['trial'] = 1
+                elif mutation == 'score': attempt['score'] = '0.7'
+                elif mutation == 'passed': attempt['passed'] = 1
+                elif mutation == 'ordinal': attempt['attempt'] = 2
+                elif mutation == 'zero': attempt['attempt'] = 0
+                elif mutation == 'bool': attempt['attempt'] = True
+                write(path, summary)
+                result_path = run / 'result.json'; result = evidence.read_json(result_path)
+                result['agents']['codex']['pass_at_k'][arm] = copy.deepcopy(summary['pass_at_k'])
+                if mutation == 'extra':
+                    # Allow the second ordinal so the aggregate count is the rejecting boundary.
+                    config_path = run / 'run_config.json'; config = evidence.read_json(config_path)
+                    config['harbor']['n_attempts'] = 3; write(config_path, config)
+                    result['run_config'] = config
+                    policy_path = run / 'attempt_policy.json'; policy = evidence.read_json(policy_path)
+                    policy['max_attempts'] = 3; write(policy_path, policy)
+                    provenance = evidence.read_json(root / 'provenance.json')
+                    provenance['mode'] = 'confirmation'; write(root / 'provenance.json', provenance)
+                    for variant in ('with_skill', 'without_skill'):
+                        result['agents']['codex']['conditions'][variant]['expected_attempts'] = 30
+                        member = run / 'codex' / variant.replace('_', '-') / 'summary.json'
+                        value = evidence.read_json(member); value['expected_attempts'] = 30; write(member, value)
+                write(result_path, result)
+                before = self.snapshot(root); output = self.root / ('summary-rejected-' + arm + '-' + mutation)
+                with self.assertRaises(ValueError):
+                    data = evidence.normalize_behavioral(root, 'podman')
+                    evidence.write_outputs({'public.json': evidence.project(data)}, output, workspace=REPO, input_path=root)
+                self.assertFalse(output.exists()); self.assertEqual(self.snapshot(root), before)
+
+    def test_summary_attempts_accept_partial_retained_trials(self):
+        root = self.native()
+        for arm in ('with_skill', 'without_skill'):
+            path = next(root.glob('results/*/*/codex/' + arm.replace('_', '-') + '/trials/*/result.json'))
+            shutil.rmtree(path.parent)
+        before = self.snapshot(root)
+        data = evidence.normalize_behavioral(root, 'podman')
+        self.assertEqual([a['coverage']['case_details'] for a in data['arms']], ['partial', 'partial'])
+        self.assertEqual(len(data['observations']), 18)
+        evidence.project(data); self.assertEqual(self.snapshot(root), before)
+
+    def test_summary_unscored_orphan_cannot_claim_complete_details(self):
+        for arm in ('with_skill', 'without_skill'):
+            with self.subTest(arm=arm), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp) / 'native'; shutil.copytree(FIXTURES / 'podman-native', root)
+                (root / 'extract-manifest.json').unlink()
+                run = next((root / 'results/podman').iterdir())
+                base = run / 'codex' / arm.replace('_', '-')
+                path = next((base / 'trials').glob('*/result.json'))
+                record = evidence.read_json(path); trial = record['trial_name']
+                reward = evidence.read_json(path.parent / 'reward.json'); case = reward['entry_id']
+                record['verifier_result'] = None; write(path, record); (path.parent / 'reward.json').unlink()
+                summary_path = base / 'summary.json'; summary = evidence.read_json(summary_path)
+                summary['pass_at_k']['cases'][case]['attempts'][0].update(trial='orphan', score=None, passed=None)
+                summary.update(scored_attempts=9, execution_status='incomplete')
+                summary['pass_at_k']['passed_cases'] -= int(reward['overall'] >= summary['pass_at_k']['pass_threshold'])
+                write(summary_path, summary)
+                result_path = run / 'result.json'; result = evidence.read_json(result_path)
+                result.update(report_status='incomplete', execution_status='incomplete')
+                result['agents']['codex']['conditions'][arm].update(scored_attempts=9, execution_status='incomplete')
+                result['agents']['codex']['pass_at_k'][arm] = copy.deepcopy(summary['pass_at_k'])
+                write(result_path, result)
+                with self.assertRaisesRegex(ValueError, 'Unmatched summary attempts'):
+                    evidence.normalize_behavioral(root, 'podman')
+
     def test_unscored_native_trial_keeps_identity(self):
         root = self.native(); run = next((root/'results/podman').iterdir())
         path = next((run/'codex/with-skill/trials').glob('*/result.json'))

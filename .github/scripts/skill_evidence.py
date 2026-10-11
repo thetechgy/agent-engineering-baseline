@@ -1527,6 +1527,7 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
         if value is not None:
             require(value == 'skill-evaluator-default-v2', 'Native metric-set identity mismatch')
             metric_sets.add(value)
+    summary_attempts = 0
     for arm in ('with_skill', 'without_skill'):
         arm_dir = run / 'codex' / arm.replace('_', '-')
         native_condition = agent['conditions'][arm]
@@ -1554,13 +1555,38 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
             require(summary[key] == native_condition[key], 'Conflicting native coverage')
         condition_errors = native_error_count(native_condition)
         require(summary_error_count(summary) == condition_errors, 'Conflicting native error count')
-        pass_data = summary.get('pass_at_k') or {}
-        native_cases = pass_data.get('cases') or {}
+        recorded = summary.get('num_trials'); scored = native_condition.get('scored_attempts')
+        optional(recorded, count); optional(scored, count)
+        pass_data = summary.get('pass_at_k')
+        require(pass_data is None or type(pass_data) is dict, 'Invalid summary pass data')
+        pass_data = pass_data or {}
+        native_cases = pass_data.get('cases')
+        require(native_cases is None or type(native_cases) is dict, 'Invalid summary cases')
+        native_cases = native_cases or {}
         require(set(native_cases) <= set(ids), 'Unknown summary case identity')
         lookup = {}
+        summary_scored = 0
         for case, case_row in native_cases.items():
-            for attempt in case_row.get('attempts', []):
-                trial = attempt['trial']; token(trial)
+            require(type(case_row) is dict, 'Invalid summary case')
+            entries = case_row.get('attempts', [])
+            require(type(entries) is list and len(entries) <= (maximum or MAX_TRIALS), 'Summary attempt limit')
+            ordinals = set()
+            for attempt in entries:
+                summary_attempts += 1
+                require(summary_attempts <= MAX_TRIALS, 'Summary attempt limit')
+                require(type(attempt) is dict, 'Invalid summary attempt')
+                trial = attempt.get('trial'); token(trial)
+                ordinal = attempt.get('attempt')
+                optional(ordinal, lambda v: count(v, maximum or 100))
+                require(ordinal is None or ordinal >= 1 and ordinal not in ordinals, 'Invalid summary ordinal')
+                if ordinal is not None:
+                    ordinals.add(ordinal)
+                optional(attempt.get('score'), number); optional(attempt.get('passed'), boolean)
+                summary_scored += attempt.get('score') is not None
+                require(recorded is None or len(lookup) < recorded, 'Summary attempts exceed recorded trials')
+                require(scored is None or summary_scored <= scored, 'Summary attempts exceed scored trials')
+                expected = native_condition.get('expected_attempts')
+                require(expected is None or len(lookup) < expected, 'Summary attempt limit')
                 require(trial not in lookup, 'Duplicate summary trial')
                 lookup[trial] = (case, attempt)
         observed = []
@@ -1582,14 +1608,14 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
                         require(reward['metric_set'] == 'skill-evaluator-default-v2', 'Reward identity mismatch')
                         metric_sets.add(reward['metric_set'])
                         require(len(metric_sets) == 1, 'Reward identity mismatch')
-                matched = lookup.get(trial)
+                matched = lookup.pop(trial, None)
                 from skillevaluator.tier3.harbor.collector import _entry_id_from_harbor_result, _attempt_ordinal, _canonical_case_id
                 task_case = validate_case_id(_canonical_case_id(_entry_id_from_harbor_result(trial_result), known_cases))
                 case = validate_case_id(reward['entry_id']) if reward is not None else matched[0] if matched else task_case
                 require(task_case == case and task_case in known_cases, 'Trial task case identity mismatch')
                 require(case in known_cases and (matched is None or case == matched[0]), 'Trial case identity mismatch')
                 # Attempt index must be runtime recorded. A missing index never comes from directory order.
-                attempt = matched[1] if matched else {'attempt': _attempt_ordinal({'_trial_name': trial}), 'score': None, 'passed': None}
+                attempt = {'attempt': None, 'score': None, 'passed': None, **matched[1]} if matched else {'attempt': _attempt_ordinal({'_trial_name': trial}), 'score': None, 'passed': None}
                 if attempt['attempt'] is None:
                     limitations.add('metadata_missing')
                 if reward is not None:
@@ -1623,12 +1649,11 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
                        'deterministic_gate': deterministic.get('gh_gate'),
                        'deterministic_scores': {k: deterministic.get('gh_' + k) for k in GATE_FIELDS}, 'references': obs_refs}
                 observed.append(obs)
-        recorded = summary.get('num_trials'); scored = native_condition.get('scored_attempts')
-        optional(recorded, count); optional(scored, count)
         cardinality = agent.get('num_trials_with' if arm == 'with_skill' else 'num_trials_without')
         if cardinality is not None:
             require(type(cardinality) is int and cardinality == recorded, 'Conflicting aggregate trial count')
         details = 'complete' if len(observed) == recorded else 'partial' if observed else 'unavailable'
+        require(details != 'complete' or not lookup, 'Unmatched summary attempts')
         if details != 'complete':
             limitations.add('case_details_missing')
         if scored != native_condition.get('expected_attempts') or recorded != native_condition.get('expected_attempts'):

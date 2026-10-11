@@ -189,6 +189,15 @@ stays null with a metadata limitation. Public observation IDs are SHA-256 of the
 canonical JSON array `[run_id, arm, case_id, native_id, native_trial, attempt]`.
 Reordering inputs does not regenerate identities.
 
+Supplied summary attempts are validated before indexing: case rows and attempt
+lists must have the native types, trial identities must be unique, supplied
+ordinals must be positive, unique per case and within the attempt policy, and
+scores/outcomes must have their bounded numeric/Boolean types. Counts cannot
+exceed known recorded, scored or expected coverage, per-case policy caps or the
+10,000-trial operation cap shared across both arms. Complete case details require
+every supplied attempt to match a retained trial. Partial retained trials may
+leave validated summary attempts unmatched; absent counts remain unknown.
+
 Canonical structured hashing uses UTF-8 JSON with sorted object keys, compact
 separators, ASCII escaping, and no nonfinite values, prefixed `sha256:`. Source
 content hashes a sorted relative-file/SHA-256 manifest under the pinned
