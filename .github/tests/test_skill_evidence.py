@@ -12,7 +12,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import contextmanager, redirect_stdout
 from io import StringIO
 from unittest.mock import patch
 
@@ -28,6 +28,23 @@ FIXTURES = Path(__file__).parent / 'fixtures/skill_evidence'
 def write(path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(evidence.encoded(data))
+
+
+@contextmanager
+def git_trace(path):
+    """Explicit fixture instrumentation after the production environment boundary."""
+    popen = subprocess.Popen
+    def traced(command, *args, **kwargs):
+        if command[0] == 'git' and kwargs.get('env') is not None:
+            env = kwargs['env']
+            assert env['GIT_NO_LAZY_FETCH'] == env['GIT_NO_REPLACE_OBJECTS'] == '1'
+            assert all(value == '0' for key, value in env.items() if key.startswith('GIT_TRACE'))
+            kwargs['env'] = {**env, 'GIT_TRACE2_EVENT': str(path),
+                             'GIT_TRACE2_ENV_VARS': 'GIT_NO_LAZY_FETCH,GIT_NO_REPLACE_OBJECTS',
+                             'GIT_TRACE2_CONFIG_PARAMS': ''}
+        return popen(command, *args, **kwargs)
+    with patch.object(subprocess, 'Popen', side_effect=traced):
+        yield
 
 
 class EvidenceTests(unittest.TestCase):
@@ -199,7 +216,7 @@ class EvidenceTests(unittest.TestCase):
                                         env={**os.environ, 'GIT_NO_LAZY_FETCH': '1'}, capture_output=True)
                 self.assertNotEqual(absent.returncode, 0)
                 trace = self.root / (clone.name + '-trace.jsonl')
-                with patch.dict(os.environ, {'GIT_NO_LAZY_FETCH': '0', 'GIT_TRACE2_EVENT': str(trace)}):
+                with patch.dict(os.environ, {'GIT_NO_LAZY_FETCH': '0'}), git_trace(trace):
                     self.assertEqual(evidence.git_revision(clone), rev)
                     contents = evidence.historical_content(clone, rev, '.apm/skills/podman')
                     data = evidence.normalize_behavioral(root, 'podman', workspace=clone)
@@ -242,7 +259,7 @@ class EvidenceTests(unittest.TestCase):
                 self.mutate(root, '/result.json', lambda d: d['run_config']['evaluated_source'].update(commit=rev))
                 self.mutate(root, '/provenance.json', lambda d: d.update(revision=rev))
                 trace = repo / 'trace.jsonl'
-                with patch.dict(os.environ, {'GIT_NO_LAZY_FETCH': '0', 'GIT_TRACE2_EVENT': str(trace)}):
+                with patch.dict(os.environ, {'GIT_NO_LAZY_FETCH': '0'}), git_trace(trace):
                     if size > evidence.JSON_LIMIT:
                         with self.assertRaisesRegex(ValueError, 'Oversized historical blob'):
                             evidence.normalize_behavioral(root, 'podman', workspace=repo)
@@ -297,7 +314,7 @@ class EvidenceTests(unittest.TestCase):
                 self.mutate(root, '/result.json', lambda d: d['run_config']['evaluated_source'].update(commit=rev))
                 self.mutate(root, '/provenance.json', lambda d: d.update(revision=rev))
                 trace = repo / 'trace.jsonl'
-                with patch.dict(os.environ, {'GIT_NO_LAZY_FETCH': '0', 'GIT_TRACE2_EVENT': str(trace)}):
+                with patch.dict(os.environ, {'GIT_NO_LAZY_FETCH': '0'}), git_trace(trace):
                     os.environ.pop('GIT_NO_REPLACE_OBJECTS', None)
                     self.assertEqual(evidence.git_revision(repo), replacement_rev)
                     contents = evidence.historical_content(repo, rev, '.apm/skills/podman')
@@ -343,7 +360,7 @@ class EvidenceTests(unittest.TestCase):
         trace = self.root / 'selectors-trace.jsonl'
         for checkout, setting in itertools.product((repo, linked), settings):
             with self.subTest(linked=checkout == linked, selectors=list(setting)), \
-                    patch.dict(os.environ, {**setting, 'GIT_NO_LAZY_FETCH': '0', 'GIT_TRACE2_EVENT': str(trace)}):
+                    patch.dict(os.environ, {**setting, 'GIT_NO_LAZY_FETCH': '0'}), git_trace(trace):
                 self.assertEqual(evidence.git_revision(checkout), rev)
                 inventory = evidence.inventory(checkout)
                 self.assertEqual(inventory['skills'][0]['source']['revision'], rev)
@@ -357,6 +374,51 @@ class EvidenceTests(unittest.TestCase):
         events = [json.loads(line) for line in trace.read_text().splitlines()]
         self.assertFalse(any(event.get('event') == 'child_start' and 'fetch' in event.get('argv', [])
                              for event in events))
+
+    def test_git_trace_destinations_do_not_mutate_inputs(self):
+        repo = self.root / 'trace-repo'; repo.mkdir(); self.local(repo, 'podman', True)
+        def git(*args):
+            return subprocess.run(['git', '-C', str(repo), *args], check=True,
+                                  capture_output=True, text=True).stdout.strip()
+        git('init', '-q'); git('add', '.apm')
+        git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'Trace fixture')
+        rev = git('rev-parse', 'HEAD'); native = self.native()
+        self.mutate(native, '/run_config.json', lambda d: d['evaluated_source'].update(commit=rev))
+        self.mutate(native, '/result.json', lambda d: d['run_config']['evaluated_source'].update(commit=rev))
+        self.mutate(native, '/provenance.json', lambda d: d.update(revision=rev))
+        targets = (repo / 'trace.log', native / 'trace.log', self.root / 'external-trace.log')
+        keys = ('GIT_TRACE', 'GIT_TRACE_SETUP', 'GIT_TRACE_PERFORMANCE', 'GIT_TRACE_REFS',
+                'GIT_TRACE2', 'GIT_TRACE2_PERF', 'GIT_TRACE2_EVENT')
+        for target, key in itertools.product(targets, keys):
+            with self.subTest(destination=target.parent.name, key=key):
+                target.write_text('Retained marker\n'); before_repo = self.snapshot(repo); before_input = self.snapshot(native)
+                with patch.dict(os.environ, {key: str(target)}):
+                    self.assertEqual(evidence.git_revision(repo), rev)
+                    evidence.inventory(repo)
+                    evidence.normalize_behavioral(native, 'podman', workspace=repo)
+                self.assertEqual(target.read_text(), 'Retained marker\n')
+                self.assertEqual(self.snapshot(repo), before_repo); self.assertEqual(self.snapshot(native), before_input)
+        # Clearing environment targets must not fall back to global Trace2 configuration.
+        config = self.root / 'trace-config'
+        config.write_text('[trace2]\n' + ''.join(f'\t{key}Target = {targets[1]}\n' for key in ('normal', 'perf', 'event')))
+        before = self.snapshot(native)
+        with patch.dict(os.environ, {'GIT_CONFIG_GLOBAL': str(config), 'GIT_CONFIG_NOSYSTEM': '1'}):
+            evidence.git_revision(repo); evidence.normalize_behavioral(native, 'podman', workspace=repo)
+        self.assertEqual(self.snapshot(native), before)
+        output = self.root / 'trace-cli-output'
+        result = subprocess.run([sys.executable, str(REPO / '.github/scripts/skill_evidence.py'),
+                                 'normalize', '--kind', 'behavioral', '--skill', 'podman',
+                                 '--input', str(native), '--output', str(output)],
+                                env={**os.environ, 'GIT_TRACE2_EVENT': str(targets[1])}, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.snapshot(native), before)
+        evidence.validate_public(evidence.read_json(output / 'public-report.json'))
+        missing = native / 'never-create.trace'
+        with patch.dict(os.environ, {'GIT_TRACE2_EVENT': str(missing)}): evidence.git_revision(repo)
+        self.assertFalse(missing.exists())
+        before = self.snapshot(native)
+        with patch.dict(os.environ, {'GIT_TRACE2_EVENT': str(native)}): evidence.git_revision(repo)
+        self.assertEqual(self.snapshot(native), before)  # Directory targets must not create per-process traces.
 
     def test_historical_source_requires_skill_directory_and_manifest(self):
         behavioral = self.native()
@@ -388,7 +450,7 @@ class EvidenceTests(unittest.TestCase):
                 static_report['evaluated_source'] = {'repository': 'example/fixture', 'commit': rev}
                 write(static_path, static_report)
                 trace = self.root / (kind + '-root-trace.jsonl')
-                with patch.dict(os.environ, {'GIT_NO_LAZY_FETCH': '0', 'GIT_TRACE2_EVENT': str(trace)}):
+                with patch.dict(os.environ, {'GIT_NO_LAZY_FETCH': '0'}), git_trace(trace):
                     if kind != 'valid':
                         with self.assertRaises(ValueError): evidence.historical_content(repo, rev, '.apm/skills/podman')
                         with self.assertRaises(ValueError): evidence.normalize_behavioral(behavioral, 'podman', workspace=repo)
@@ -421,7 +483,7 @@ class EvidenceTests(unittest.TestCase):
                     'commit', '-qm', 'Synthetic tree boundary')
                 rev = git('rev-parse', 'HEAD')
                 trace = repo / 'trace.jsonl'
-                with patch.dict(os.environ, {'GIT_NO_LAZY_FETCH': '0', 'GIT_TRACE2_EVENT': str(trace)}):
+                with patch.dict(os.environ, {'GIT_NO_LAZY_FETCH': '0'}), git_trace(trace):
                     if entries > 1000:
                         with self.assertRaisesRegex(ValueError, 'Historical tree listing limit'):
                             evidence.historical_content(repo, rev, '.apm/skills/podman')
@@ -449,7 +511,7 @@ class EvidenceTests(unittest.TestCase):
         rev = git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
                   'commit-tree', root_tree.decode(), '-m', 'Synthetic listing byte boundary').decode()
         trace = repo / 'trace.jsonl'
-        with patch.dict(os.environ, {'GIT_NO_LAZY_FETCH': '0', 'GIT_TRACE2_EVENT': str(trace)}):
+        with patch.dict(os.environ, {'GIT_NO_LAZY_FETCH': '0'}), git_trace(trace):
             with self.assertRaisesRegex(ValueError, 'Historical tree listing limit'):
                 evidence.historical_content(repo, rev, 'podman')
         events = [json.loads(line) for line in trace.read_text().splitlines()]

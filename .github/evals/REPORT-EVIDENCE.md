@@ -150,6 +150,13 @@ substitute different bytes for a declared revision, as described in the
 Inherited repository-local Git environment variables and discovery/namespace
 selectors are cleared before dispatch, so reads select the requested checkout,
 including linked worktrees, rather than another repository or object store.
+Inherited `GIT_TRACE*` destinations are removed and all Trace2 targets are
+explicitly disabled, including fallback targets from global/system config.
+Read-only Git calls therefore cannot append diagnostic files into the checkout,
+input bundle, or another caller-selected destination. Tests enable native traces
+only through explicit fixture instrumentation after this environment boundary;
+production provides no trace-output override. See the
+[Git Trace2 target documentation](https://git-scm.com/docs/api-trace2/).
 Historical skill members and authored datasets share the current-file 8 MiB byte limit. Object
 size is checked before capturing content: exactly 8 MiB is accepted, larger
 objects cause contract rejection, and missing objects retain null digests and
