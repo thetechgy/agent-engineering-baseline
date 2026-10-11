@@ -936,6 +936,52 @@ class EvidenceTests(unittest.TestCase):
             ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')})
         self.assert_project_rejects(data, 'Rubric attempt-policy threshold mismatch')
 
+    def test_native_execution_error_arrays_and_cardinality(self):
+        root = self.native(); run = next((root / 'results/podman').iterdir())
+        result_path = run / 'result.json'; result_original = evidence.read_json(result_path)
+        for arm in ('with_skill', 'without_skill'):
+            summary_path = run / 'codex' / arm.replace('_', '-') / 'summary.json'
+            summary_original = evidence.read_json(summary_path)
+            for errors in ('failed', {'error': 'failed'}, None, True, [False], [{}], [1]):
+                with self.subTest(arm=arm, errors=errors):
+                    result = copy.deepcopy(result_original); result['report_status'] = 'incomplete'
+                    result['agents']['codex']['conditions'][arm].update(execution_status='failed', execution_errors=errors)
+                    summary = copy.deepcopy(summary_original); summary.update(execution_status='failed', execution_errors=errors)
+                    write(result_path, result); write(summary_path, summary)
+                    with self.assertRaisesRegex(ValueError, 'Invalid native execution errors'):
+                        evidence.normalize_behavioral(root, 'podman')
+                    before = self.snapshot(root); output = self.root / 'rejected-output'
+                    cli = subprocess.run([sys.executable, str(REPO / '.github/scripts/skill_evidence.py'),
+                        'normalize', '--kind', 'behavioral', '--skill', 'podman', '--input', str(root),
+                        '--output', str(output)], capture_output=True, text=True)
+                    self.assertEqual(cli.returncode, 1); self.assertFalse(output.exists())
+                    self.assertEqual(cli.stderr, 'Evidence contract rejected (ValueError)\n')
+                    self.assertEqual(self.snapshot(root), before)
+            result = copy.deepcopy(result_original); result['report_status'] = 'incomplete'
+            result['agents']['codex']['conditions'][arm].update(execution_status='failed', execution_errors=['first', 'second'])
+            summary = copy.deepcopy(summary_original); summary.update(execution_status='failed', execution_errors=['first'])
+            write(result_path, result); write(summary_path, summary)
+            with self.assertRaisesRegex(ValueError, 'Conflicting native error count'):
+                evidence.normalize_behavioral(root, 'podman')
+            # The actual pinned loader appends job/trial failures to the arm's summary errors.
+            summary.update(job_failure='Synthetic job failure',
+                trial_failures=[{'trial': 'fixture', 'reason': 'Synthetic failure'}])
+            write(summary_path, summary)
+            from skillevaluator.tier3.harbor.report_data import load_agent_data
+            loader_root = self.root / 'loader'
+            for variant in ('with_skill', 'without_skill'):
+                loader_summary = evidence.read_json(run / 'codex' / variant.replace('_', '-') / 'summary.json')
+                # Reviewed extracts omit scores; the production loader requires their carrier.
+                loader_summary['scores'] = {}
+                write(loader_root / 'codex' / variant.replace('_', '-') / 'summary.json', loader_summary)
+            native_errors = load_agent_data(loader_root)['codex']['conditions'][arm]['execution_errors']
+            self.assertEqual(len(native_errors), 3)
+            result['agents']['codex']['conditions'][arm]['execution_errors'] = native_errors; write(result_path, result)
+            data = evidence.normalize_behavioral(root, 'podman')
+            self.assertEqual(next(row for row in data['arms'] if row['name'] == arm)['execution_error_count'], 3)
+            self.assertEqual(data['metrics'], self.data()['metrics'])
+            write(result_path, result_original); write(summary_path, summary_original)
+
     def test_shared_rubric_threshold_known_unknown_combinations(self):
         for policy_threshold, rubric_threshold in itertools.product((None, 0.5, 0.9), repeat=2):
             with self.subTest(policy=policy_threshold, rubric=rubric_threshold):
@@ -2609,6 +2655,56 @@ class EvidenceTests(unittest.TestCase):
                         evidence.write_outputs({'evidence.json': {}}, None if temporary else parent / 'output',
                                                input_path=bundle)
                 self.assertTrue(replaced); self.assertEqual(self.snapshot(bundle), before)
+
+    def test_input_parent_replacement_does_not_redirect_reads(self):
+        for stage in ('validated', 'file_open'):
+            with self.subTest(stage=stage), tempfile.TemporaryDirectory() as temp:
+                base = Path(temp); parent = base / 'input'; parent.mkdir()
+                outside = base / 'outside'; outside.mkdir()
+                target = parent / 'member.json'; write(target, {'value': 'inside'})
+                write(outside / 'member.json', {'value': 'outside'})
+                retained = base / 'retained'; replaced = False
+                safe = evidence.safe_path; opened = os.open
+                def replace():
+                    nonlocal replaced
+                    if not replaced:
+                        parent.rename(retained); parent.symlink_to(outside, target_is_directory=True); replaced = True
+                def validated(path, **kwargs):
+                    result = safe(path, **kwargs)
+                    if stage == 'validated' and result == target: replace()
+                    return result
+                def file_open(path, flags, *args, **kwargs):
+                    if stage == 'file_open' and not flags & os.O_DIRECTORY: replace()
+                    return opened(path, flags, *args, **kwargs)
+                with patch.object(evidence, 'safe_path', side_effect=validated), patch.object(os, 'open', side_effect=file_open):
+                    if stage == 'validated':
+                        with self.assertRaises((ValueError, OSError)): evidence.read_json(target)
+                    else:
+                        self.assertEqual(evidence.read_json(target), {'value': 'inside'})
+                self.assertTrue(replaced)
+
+    def test_static_normalization_uses_anchored_input_bytes(self):
+        root = self.root / 'static-anchored'; shutil.copytree(FIXTURES / 'static-synthetic', root)
+        baseline = evidence.normalize_static(root, 'podman'); before = self.snapshot(root)
+        outside = self.root / 'outside-static'; shutil.copytree(root, outside)
+        versions = evidence.read_json(outside / 'versions.json'); versions.pop('fixture')
+        write(outside / 'versions.json', versions)
+        target = root / 'versions.json'; retained = self.root / 'retained-static'; opened = os.open; replaced = False
+        def file_open(path, flags, *args, **kwargs):
+            nonlocal replaced
+            swap = not replaced and not flags & os.O_DIRECTORY and (Path(path) == target or str(path) == target.name)
+            if swap:
+                root.rename(retained); root.symlink_to(outside, target_is_directory=True); replaced = True
+            try:
+                return opened(path, flags, *args, **kwargs)
+            finally:
+                if swap:
+                    root.unlink(); retained.rename(root)
+        with patch.object(os, 'open', side_effect=file_open):
+            actual = evidence.normalize_static(root, 'podman')
+        self.assertTrue(replaced)
+        self.assertEqual(evidence.encoded(actual), evidence.encoded(baseline))
+        self.assertEqual(self.snapshot(root), before)
 
     def test_output_names_and_descriptor_support_fail_before_creation(self):
         for name in ('../escape.json', '/escape.json', 'nested/output.json'):

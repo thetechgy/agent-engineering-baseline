@@ -44,6 +44,9 @@ new directory descriptor. Replaced paths cannot redirect writes into the checkou
 or input bundle; changed destination identity rejects publication. Unsupported
 platforms reject before directory creation. This path is verified on Linux;
 Windows output support is not established.
+Input files use the same no-follow ancestor traversal and open the final member
+relative to its parent descriptor. Replacing an ancestor cannot redirect input
+bytes outside the validated tree; unsupported descriptor platforms reject reads.
 Standalone commands disable bytecode writes before importing repository helpers,
 so running without `PYTHONDONTWRITEBYTECODE` does not create checkout caches.
 
@@ -382,6 +385,9 @@ the native overall status and severity totals; projection cannot drop that row.
 All four aggregate severity totals remain known integers, including zero.
 The aggregate retains its native Boolean pass result even while incomplete.
 Its status is the native overall passed, failed, or incomplete status.
+Native execution-error carriers are bounded arrays of strings. Arm counts agree
+with summary cardinality plus the pinned loader's job/trial-failure additions;
+raw prose remains private, and matching nonempty flags do not establish counts.
 Reviewed-extract members are indexed once after manifest validation, so trial,
 reward, and summary references do not rescan the member list.
 Each normalization shares a 64 MiB byte budget across consumed native JSON,

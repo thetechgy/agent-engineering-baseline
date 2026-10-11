@@ -180,8 +180,13 @@ class ReadBudget:
 
 def read_bytes(path, limit=JSON_LIMIT, *, budget=None):
     path = safe_path(path)
+    require(SECURE_DIRECTORY_OUTPUT, 'Secure directory input unsupported')
     # O_NONBLOCK avoids hanging if a file is replaced by a FIFO between checks.
-    fd = os.open(path, os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0) | getattr(os, 'O_NONBLOCK', 0))
+    parent_fd = open_directory(path.parent)
+    try:
+        fd = os.open(path.name, os.O_RDONLY | os.O_NOFOLLOW | getattr(os, 'O_NONBLOCK', 0), dir_fd=parent_fd)
+    finally:
+        os.close(parent_fd)
     with os.fdopen(fd, 'rb') as stream:
         info = os.fstat(stream.fileno())
         require(stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and info.st_size <= limit,
@@ -1115,6 +1120,25 @@ def validate_runtime_versions(versions):
         require(versions['evaluator_revision'] == reports.POLICY['evaluator_revision'], 'Unsupported native evaluator')
 
 
+def native_error_count(record):
+    errors = record.get('execution_errors', [])
+    require(type(errors) is list and len(errors) <= MAX_TRIALS
+            and all(type(error) is str for error in errors), 'Invalid native execution errors')
+    return len(errors)
+
+
+def summary_error_count(summary):
+    errors = native_error_count(summary)
+    job_failure = summary.get('job_failure')
+    require(job_failure is None or type(job_failure) is str, 'Invalid native job failure')
+    trial_failures = summary.get('trial_failures', [])
+    require(type(trial_failures) is list and len(trial_failures) <= MAX_TRIALS
+            and all(type(failure) is dict for failure in trial_failures), 'Invalid native trial failures')
+    # The pinned load_agent_data appends job failure and each trial failure to
+    # condition errors; raw summary and reported arm arrays need not have equal lengths.
+    return errors + bool(job_failure) + len(trial_failures)
+
+
 def reconcile_policy(fields, versions, config, agent, attempt_policy):
     """Reject supplied identities that contradict known runtime/configuration values."""
     fields = policy_fields(fields)
@@ -1360,7 +1384,8 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
             require(aggregate_pass == summary.get('pass_at_k'), 'Conflicting native pass data')
         for key in ('execution_status', 'expected_attempts', 'scored_attempts'):
             require(summary[key] == native_condition[key], 'Conflicting native coverage')
-        require(bool(summary.get('execution_errors')) == bool(native_condition.get('execution_errors')), 'Conflicting native errors')
+        condition_errors = native_error_count(native_condition)
+        require(summary_error_count(summary) == condition_errors, 'Conflicting native error count')
         pass_data = summary.get('pass_at_k') or {}
         native_cases = pass_data.get('cases') or {}
         require(set(native_cases) <= set(ids), 'Unknown summary case identity')
@@ -1440,7 +1465,7 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
             limitations.add('case_details_missing')
         if scored != native_condition.get('expected_attempts') or recorded != native_condition.get('expected_attempts'):
             limitations.add('coverage_missing')
-        if native_condition.get('execution_status') != 'succeeded' or native_condition.get('execution_errors'):
+        if native_condition.get('execution_status') != 'succeeded' or condition_errors:
             limitations.add('execution_incomplete')
         workspace_modes = {e.get('skill_workspace_mode') for e in snapshot['dataset']} if snapshot else set()
         workspace_mode = next(iter(workspace_modes)) if len(workspace_modes) == 1 else None
@@ -1462,7 +1487,7 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
                          'recorded_attempts': recorded, 'scored_attempts': scored,
                          'unscored_attempts': recorded - scored if recorded is not None and scored is not None else None,
                          'case_details': details}, 'execution_status': native_condition.get('execution_status', 'unknown'),
-            'execution_error_count': len(native_condition.get('execution_errors') or []),
+            'execution_error_count': condition_errors,
             'rubric': {'passed_cases': pass_data.get('passed_cases'), 'total_cases': pass_data.get('total_cases'),
                        'threshold': pass_data.get('pass_threshold')}})
         data['observations'].extend(observed)
