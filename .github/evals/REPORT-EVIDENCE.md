@@ -132,8 +132,11 @@ must match a unique lock dependency and its Codex deployment owner/hash records.
 Their published source manifests reuse the lock-validated digests and the pinned
 runtime visibility selection captured before validation, without rereading the
 deployment after its hashes have been accepted.
-The existing `gh` and competing-skill checks additionally enforce their reviewed
-pins. All trees and fixture references are checked before native strict dataset
+Inventory enforces the existing `gh` and competing-skill pins and dataset
+contracts against its captured files. It does not invoke the helpers' unbounded
+tree enumerators; replacement directories cannot cause a second traversal before
+the retained identity/state checks reject them. The standalone `gh` helper APIs
+retain their existing behavior. All trees and fixture references are checked before native strict dataset
 validation; source front matter must identify the local skill correctly.
 
 Local inventory retains a repository revision only when bounded offline Git
@@ -159,6 +162,11 @@ Reviewed extracts may likewise retain only the exact unknown-source record when
 workspace association is unavailable; their existing reference, observation,
 metric and execution pins still apply. That downgrade cannot introduce a new
 repository, revision or content claim.
+Recorded upstream ownership is accepted only for `gh` at its reviewed upstream
+revision; its competing skill also requires the reviewed competing revision.
+An arbitrary upstream revision or an upstream carrier on a local skill
+rejects before constructing the source record, including during native replay
+for standalone projection.
 
 An upstream-to-local conversion keeps the logical ID, removes active upstream
 ownership, and changes APM sources through normal pinned regeneration. Historical
@@ -569,8 +577,8 @@ This includes the optional static `versions.json` member.
 Inventory independently shares the same 64 MiB operation budget across source
 hashing, front matter, lock metadata, datasets, competing skills and native
 optional-file checks. Each member is captured once and reused for hashing and
-validation, including the delegated `gh` checks. Their optional keyword-only
-`read_bytes` hook preserves existing behavior for callers that omit it.
+validation, including the captured `gh` checks. Standalone `gh` helpers retain
+their optional keyword-only `read_bytes` hooks and existing default callers.
 Optional ownership metadata and overlay presence use no-follow stat relative to
 anchored parent descriptors. The parent directory state is retained and checked
 around presence decisions and before publication; transiently hidden lock files,

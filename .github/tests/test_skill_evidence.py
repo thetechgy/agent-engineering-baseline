@@ -4513,5 +4513,75 @@ class EvidenceTests(unittest.TestCase):
                 write(path, original); write(trial_path, trial)
 
 
+    def test_inventory_gh_checks_never_reenumerate_captured_trees(self):
+        with patch.object(evidence.reports, 'regular_tree', side_effect=AssertionError('Unbounded re-enumeration')) as walker:
+            value = evidence.inventory(REPO)
+            self.assertIn('gh', [row['source']['skill_id'] for row in value['skills']])
+            walker.assert_not_called()
+
+    def test_inventory_gh_replacements_reject_without_unbounded_walk(self):
+        import gh_evaluations as gh
+        for target_name in ('.agents/skills/gh', '.agents/skills/' + gh.COMPETING, '.github/evals/gh'):
+            with self.subTest(target=target_name), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp) / 'workspace'; self.local(root, 'alpha')
+                for member in ('.agents/skills/gh', '.agents/skills/' + gh.COMPETING, '.github/evals/gh'):
+                    shutil.copytree(REPO / member, root / member)
+                shutil.copyfile(REPO / 'apm.lock.yaml', root / 'apm.lock.yaml')
+                original = evidence.safe_tree; swapped = False
+                def scanned(path, **kwargs):
+                    nonlocal swapped
+                    files = original(path, **kwargs)
+                    if Path(path) == root / '.agents/skills' / gh.COMPETING and not swapped:
+                        swapped = True
+                        target = root / target_name; target.rename(Path(temp) / 'retained')
+                        target.mkdir(); (target / 'unexpected').mkdir()
+                    return files
+                with patch.object(evidence, 'safe_tree', side_effect=scanned), \
+                        patch.object(evidence.reports, 'regular_tree', side_effect=AssertionError('Unbounded re-enumeration')) as walker:
+                    with self.assertRaisesRegex(ValueError, 'Input directory'):
+                        evidence.inventory(root)
+                    walker.assert_not_called()
+                self.assertTrue(swapped)
+
+    def test_native_upstream_attribution_requires_reviewed_skill_identity(self):
+        import gh_evaluations as gh
+        for name, field in itertools.product(('podman', 'gh'), ('upstream_revision', 'competing_revision')):
+            with self.subTest(skill=name, field=field):
+                root = self.native()
+                if name == 'gh':
+                    (root / 'results/podman').rename(root / 'results/gh')
+                    self.mutate(root, '/result.json', lambda d: d.update(skill_name='gh'))
+                    self.mutate(root, '/provenance.json', lambda d: d.update(skill='gh'))
+                provenance_path = root / 'provenance.json'; original = evidence.read_json(provenance_path)
+                baseline = evidence.normalize_behavioral(root, name)
+                approved = evidence.reports.benchmark_policy('gh')[field]
+                for revision in ('f' * 40, approved):
+                    with self.subTest(revision=revision):
+                        provenance = copy.deepcopy(original); provenance['policy'][field] = revision
+                        write(provenance_path, provenance)
+                        if name == 'gh' and revision == approved:
+                            data = evidence.normalize_behavioral(root, name)
+                            if field == 'upstream_revision':
+                                self.assertEqual(data['source']['owner'], 'upstream')
+                                self.assertEqual(data['source']['repository'], 'cli/cli')
+                                self.assertEqual(data['source']['revision'], gh.UPSTREAM)
+                            else:
+                                self.assertEqual(data['arms'][0]['condition']['competing_skills'][0]['revision'], approved)
+                            evidence.project(dict(data), behavioral_bundle=root)
+                        else:
+                            output = self.root / 'upstream-rejected'
+                            before = self.snapshot(root)
+                            with self.assertRaisesRegex(ValueError, 'Unreviewed upstream attribution'):
+                                evidence.normalize_behavioral(root, name)
+                            with self.assertRaisesRegex(ValueError, 'Unreviewed upstream attribution'):
+                                evidence.project(dict(baseline), behavioral_bundle=root)
+                            with self.assertRaisesRegex(ValueError, 'Unreviewed upstream attribution'):
+                                evidence.main(['normalize', '--kind', 'behavioral', '--skill', name,
+                                               '--input', str(root), '--output', str(output)])
+                            self.assertFalse(output.exists())
+                            self.assertEqual(self.snapshot(root), before)
+                shutil.rmtree(root)
+
+
 if __name__ == '__main__':
     unittest.main()

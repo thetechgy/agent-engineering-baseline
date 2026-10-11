@@ -771,6 +771,34 @@ def validate_skill_metadata(authored, name, *, reader=None):
     SkillFrontmatter(**metadata)
 
 
+def validate_captured_gh(workspace, owner, actual, owners, competing_files, entries, reader):
+    """Apply gh-specific contracts to the bounded inventory, without tree rescans."""
+    import gh_evaluations as gh
+    require(owner['repo_url'] == 'cli/cli' and owner['virtual_path'] == 'skills/gh'
+            and owner['resolved_commit'] == gh.UPSTREAM, 'Unreviewed gh upstream ownership or revision')
+    require(set(actual) == {(gh.DEPLOYED / 'SKILL.md').as_posix()}, 'Unreviewed upstream gh file set')
+    competing = owners.get(gh.COMPETING, [])
+    require(len(competing) == 1 and competing[0]['repo_url'] == 'github/awesome-copilot'
+            and competing[0]['resolved_commit'] == reports.benchmark_policy('gh')['competing_revision'],
+            'Unreviewed competing skill identity')
+    require({p.relative_to(workspace).as_posix(): digest_bytes(reader(p)) for p in competing_files}
+            == competing[0]['deployed_file_hashes'], 'Competing skill hash mismatch')
+    overlay = workspace / gh.OVERLAY
+    data = parse_json(reader(overlay / 'evals/evals.json'))
+    require(type(data) is dict and data.get('skill_name') == 'gh'
+            and type(data.get('evals')) is list and 0 < len(data['evals']) <= MAX_CASES, 'Invalid gh dataset')
+    ids = [entry['id'] for entry in data['evals']]
+    require(all(type(value) is str and re.fullmatch(r'gh-\d{3}(?:-[a-z-]+)?', value) for value in ids)
+            and len(ids) == len(set(ids)), 'Invalid or duplicate gh case IDs')
+    for entry in data['evals']:
+        require(entry['contract']['evidence_classification'] in
+                ('synthetic', 'documentation', 'observed-plus-synthetic'), 'Missing provenance classification')
+        require(entry['expected_skill'] in ('gh', None), 'Invalid activation contract')
+        for member in entry['files']:
+            relative(member)
+            require(member.startswith('evals/files/') and overlay / member in entries, 'Missing or escaping fixture input')
+
+
 def inventory(workspace=ROOT):
     directories = {}
     states = {}
@@ -882,9 +910,8 @@ def inventory(workspace=ROOT):
                                             max_files=MAX_SOURCE_MEMBERS, directory_identities=directories, directory_states=states, file_states=members)
                 reject_source_markers(competing, competing_files, directories)
                 safe_path(competing, directory=True, directory_identities=directories)
-                gh.verify_skill(workspace, read_bytes=reader)
-                gh.verify_competing(workspace, read_bytes=reader)
-                gh.dataset(workspace, read_bytes=reader)
+                validate_captured_gh(workspace, owner, actual, owners_by_name, competing_files,
+                                     set(overlay_files), reader)
             src = source(name, 'upstream', owner['repo_url'], owner['resolved_commit'], owner['virtual_path'],
                          content([{'member': p.relative_to(authored).as_posix(),
                                    'digest': actual[p.relative_to(workspace).as_posix()]} for p in visible], 'configured'))
@@ -1763,10 +1790,15 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     repo = associated_repository(workspace, repo, budget=budget)
     if repo is None:
         rev = None
-    historical_owner = 'upstream' if provenance.get('policy', {}).get('upstream_revision') else 'local'
+    upstream = provenance.get('policy', {}).get('upstream_revision')
+    for key in ('upstream_revision', 'competing_revision'):
+        recorded = provenance.get('policy', {}).get(key)
+        require(recorded is None or name == 'gh' and recorded == reports.benchmark_policy('gh')[key],
+                'Unreviewed upstream attribution')
+    historical_owner = 'upstream' if upstream is not None else 'local'
     src_path = 'skills/' + name if historical_owner == 'upstream' else '.apm/skills/' + name
     src_repo = 'cli/cli' if historical_owner == 'upstream' and name == 'gh' else repo
-    src_rev = provenance.get('policy', {}).get('upstream_revision') if historical_owner == 'upstream' else rev
+    src_rev = upstream if historical_owner == 'upstream' else rev
     src_contents = historical_content(workspace, src_rev, src_path, budget=budget) if src_rev and historical_owner == 'local' else content()
     src = source(name, historical_owner if src_repo and src_rev else 'unknown', src_repo, src_rev, src_path, src_contents)
     if src_contents['digest'] is None:
