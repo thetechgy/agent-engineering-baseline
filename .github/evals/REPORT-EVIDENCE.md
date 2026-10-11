@@ -225,7 +225,8 @@ references identify an existing value; absent scores remain null.
 
 Static detailed findings may be partial, but their counts by critical/high/medium/low
 severity cannot exceed corresponding known scanner counts or aggregate totals.
-Unknown scanner counts remain unknown; informational findings retain their
+Known per-scanner summary counts are retained in normalized and public scans;
+absent scanner counts remain null. Informational findings retain their
 severity without inventing a native total. The 10,000-finding cap is checked
 before constructing references. Static catalog, report, and version members are
 each read, parsed, and hashed once; all locators reuse that exact byte digest.
@@ -245,6 +246,21 @@ native staged bytes/meaning needed to validate the native snapshot digest; their
 prompts never enter normalized or public output. References identify original
 members and original structured locators, rather than claiming extract hashes
 are hashes of original full reports.
+
+Reviewed-extract provenance requires an exact manifest SHA-256 in the reader's
+reviewed allowlist. A copied approved fixture is accepted, but a self-authored
+manifest or coordinated member/manifest edits cannot grant reviewed provenance
+or replace original digests. Adding an approved extract requires reviewing its
+manifest identity in the source; ordinary native bundles without a manifest
+retain runtime-recorded provenance.
+
+The approved manifest records no durable retention of original members. At or
+after its recorded UTC expiration, normalization marks its original references
+`expired` and adds `reference_expired`, keeping the report incomplete. It samples
+time once for each normalization, preserving native measurements and stable
+reference identities. Retained reduced extract bytes do not establish continued
+availability of the original members. An external retention service or override
+is outside this contract.
 
 The fixture retains metrics `0.1207`, `0.7730`, `0.9600`, `0.6937`, ten paired
 case IDs, 20 scored attempts, 10/10 versus 8/10 native rubric counts, case-2 scores

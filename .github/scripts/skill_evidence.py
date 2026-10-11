@@ -3,6 +3,7 @@
 
 import argparse
 import copy
+from datetime import datetime, timezone
 import hashlib
 import json
 import math
@@ -24,6 +25,10 @@ MAX_CASES = 1000
 MAX_TRIALS = 10000
 MAX_SOURCE_MEMBERS = 1000
 MAX_INPUT_ENTRIES = 100000
+# Reviewed Podman extract-manifest.json bytes; additional identities require review.
+REVIEWED_EXTRACT_MANIFESTS = frozenset({
+    'sha256:4f8ab06638a37c970dfd5a97f057da8505a0b57767a332b41d4e0c2c8e8066ea',
+})
 require = reports.require
 PROVENANCE = ('runtime_recorded', 'configured', 'reconstructed_from_declared_revision',
               'reviewed_extract', 'synthetic', 'unknown')
@@ -38,6 +43,10 @@ def encoded(value):
 
 def digest_bytes(value):
     return 'sha256:' + hashlib.sha256(value).hexdigest()
+
+
+def utc_now():
+    return datetime.now(timezone.utc)
 
 
 def identity(value):
@@ -609,7 +618,8 @@ def reference_from_digest(root, path, artifact, raw_digest, locator=(), extract=
         require(member_record is not None and member_record['extract_digest'] == raw_digest, 'Reviewed extract mismatch')
         value['digest'] = member_record['original_digest']
     return {'id': identity(value), **value, 'artifact_digest': extract['archive_digest'] if extract else None,
-            'provenance': 'reviewed_extract' if extract else 'runtime_recorded', 'availability': 'available'}
+            'provenance': 'reviewed_extract' if extract else 'runtime_recorded',
+            'availability': extract['_reference_availability'] if extract else 'available'}
 
 
 def evidence(name, kind, cases=(), src=None, policy=None):
@@ -810,7 +820,9 @@ def load_extract(root):
     path = root / 'extract-manifest.json'
     if not path.exists():
         return None
-    value = read_json(path)
+    raw = read_bytes(path)
+    require(digest_bytes(raw) in REVIEWED_EXTRACT_MANIFESTS, 'Unrecognized reviewed extract manifest')
+    value = parse_json(raw)
     closed(value, ('schema_version', 'artifact_id', 'archive_digest', 'origin', 'members'))
     require(value['schema_version'] == 1, 'Extract version'); token(value['artifact_id']); sha(value['archive_digest'])
     closed(value['origin'], ('repository', 'run_id', 'artifact_id', 'artifact_name', 'expires_at'))
@@ -825,6 +837,10 @@ def load_extract(root):
         closed(row, ('member', 'original_digest', 'extract_digest'))
         relative(row['member']); sha(row['original_digest']); sha(row['extract_digest']); names.append(row['member'])
     require(len(names) == len(set(names)), 'Duplicate extract member')
+    # One time observation for the whole normalization. No durable-original
+    # retention is recorded by the supported manifest, so expiry is fail-closed.
+    deadline = datetime.fromisoformat(value['origin']['expires_at'])
+    value['_reference_availability'] = 'expired' if utc_now() >= deadline else 'available'
     return value
 
 
@@ -1148,6 +1164,8 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     if not config.get('evaluated_source'):
         limitations.add('metadata_missing')
     data['references'] = sorted(refs, key=lambda r: r['id'])
+    if any(row['availability'] == 'expired' for row in refs):
+        limitations.add('reference_expired')
     data['observations'].sort(key=lambda o: (o['arm'], o['case_id'], o['attempt'] or 0, o['id']))
     data['availability'] = {'status': 'incomplete' if limitations else 'complete',
                             'reasons': sorted(limitations), 'provenance': 'reviewed_extract' if extract else 'runtime_recorded'}
@@ -1258,7 +1276,8 @@ def normalize_static(root, name, workspace=ROOT):
         enum(scan['status'], ('passed', 'failed', 'incomplete', 'skipped'))
         scan_ref = report_reference(('results', index)); refs.append(scan_ref)
         data['scans'].append({'scanner': scanner, 'status': scan['status'], 'passed': scan.get('passed'),
-            'severity_counts': {k: None for k in ('critical', 'high', 'medium', 'low')}, 'references': [scan_ref['id']]})
+            'severity_counts': {k: scan.get('summary', {}).get(k + '_count')
+                                for k in ('critical', 'high', 'medium', 'low')}, 'references': [scan_ref['id']]})
     recorded_incomplete = set()
     for index, scan in enumerate(native['results']):
         for scanner in scan.get('incomplete_scans', []):

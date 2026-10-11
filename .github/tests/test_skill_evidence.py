@@ -1,6 +1,7 @@
 """Offline inventory, pinned native ingestion, and public-boundary regressions."""
 
 import copy
+from datetime import datetime, timezone
 import hashlib
 import json
 import itertools
@@ -11,6 +12,8 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from unittest.mock import patch
 
 import yaml
@@ -32,6 +35,9 @@ class EvidenceTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
+        # Replay the reviewed fixture before expiry; boundary tests advance this clock explicitly.
+        clock = patch.object(evidence, 'utc_now', return_value=datetime(2026, 10, 10, tzinfo=timezone.utc))
+        clock.start(); self.addCleanup(clock.stop)
 
     def native(self):
         target = self.root / 'native'
@@ -648,6 +654,59 @@ class EvidenceTests(unittest.TestCase):
         evidence.project(data)
         with self.assertRaises(ValueError): evidence.verify_reference(self.root, data['references'][0])
 
+    def test_reviewed_extract_requires_pinned_manifest_identity(self):
+        root = self.root / 'forged'; shutil.copytree(FIXTURES / 'podman-native', root)
+        manifest_path = root / 'extract-manifest.json'; manifest = evidence.read_json(manifest_path)
+        result_path = next(root.glob('results/podman/*/result.json'))
+        native = evidence.read_json(result_path); native['untrusted_claim'] = 'self-reviewed replacement'
+        write(result_path, native)
+        member = result_path.relative_to(root).as_posix()
+        row = next(row for row in manifest['members'] if row['member'] == member)
+        row.update(extract_digest=evidence.digest_bytes(result_path.read_bytes()), original_digest='sha256:' + 'a'*64)
+        write(manifest_path, manifest)
+        output = self.root / 'rejected'; before = self.snapshot(root)
+        result = subprocess.run([sys.executable, str(REPO / '.github/scripts/skill_evidence.py'),
+                                 'normalize', '--kind', 'behavioral', '--skill', 'podman',
+                                 '--input', str(root), '--output', str(output)], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn('Evidence contract rejected', result.stderr)
+        self.assertFalse(output.exists()); self.assertEqual(self.snapshot(root), before)
+        with self.assertRaisesRegex(ValueError, 'Unrecognized reviewed extract manifest'):
+            evidence.normalize_behavioral(root, 'podman')
+        copied = self.root / 'recognized'; shutil.copytree(FIXTURES / 'podman-native', copied)
+        self.assertEqual(evidence.encoded(evidence.normalize_behavioral(copied, 'podman')), evidence.encoded(self.data()))
+
+    def test_reviewed_extract_expiration_boundary_and_cli(self):
+        root = FIXTURES / 'podman-native'
+        deadline = datetime.fromisoformat(evidence.read_json(root / 'extract-manifest.json')['origin']['expires_at'])
+        before = self.data()
+        for now, expired in ((deadline.replace(second=deadline.second-1), False),
+                             (deadline, True), (deadline.replace(second=deadline.second+1), True)):
+            with self.subTest(now=now), patch.object(evidence, 'utc_now', return_value=now):
+                data = evidence.normalize_behavioral(root, 'podman')
+                self.assertTrue(all(r['availability'] == ('expired' if expired else 'available') for r in data['references']))
+                self.assertEqual('reference_expired' in data['availability']['reasons'], expired)
+                if expired: self.assertEqual(data['availability']['status'], 'incomplete')
+                for key in ('metrics', 'observations', 'arms'):
+                    self.assertEqual(data[key], before[key])
+                self.assertEqual([(r['id'], r['digest']) for r in data['references']],
+                                 [(r['id'], r['digest']) for r in before['references']])
+                evidence.project(data)
+        output = self.root / 'expired-output'; snapshot = self.snapshot(root)
+        with patch.object(evidence, 'utc_now', return_value=deadline), redirect_stdout(StringIO()):
+            evidence.main(['normalize', '--kind', 'behavioral', '--skill', 'podman',
+                           '--input', str(root), '--output', str(output)])
+        public = evidence.read_json(output / 'public-report.json'); evidence.validate_public(public)
+        self.assertIn('reference_expired', public['availability']['reasons'])
+        self.assertEqual(self.snapshot(root), snapshot)
+        with self.assertRaisesRegex(ValueError, 'unavailable or expired'):
+            evidence.verify_reference(root, public['references'][0])
+        ordinary = self.native()
+        with patch.object(evidence, 'utc_now', return_value=deadline):
+            data = evidence.normalize_behavioral(ordinary, 'podman')
+        self.assertTrue(all(r['availability'] == 'available' for r in data['references']))
+        self.assertNotIn('reference_expired', data['availability']['reasons'])
+
     def test_retained_member_verification(self):
         root = self.native(); path = root / 'versions.json'
         ref = evidence.reference(root, path, 'fixture', ('skillevaluator',))
@@ -820,6 +879,22 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual(data['metrics'], [])
         data['availability'].update(status='complete', reasons=[])
         with self.assertRaises(ValueError): evidence.project(data)
+
+    def test_static_preserves_known_per_scanner_counts(self):
+        root = self.root / 'static-counts'; shutil.copytree(FIXTURES / 'static-synthetic', root)
+        path = next((root / 'reports/podman').glob('*.json')); native = evidence.read_json(path)
+        levels = tuple(native['severity_counts'])
+        for missing in (None, *levels):
+            with self.subTest(missing=missing):
+                report = copy.deepcopy(native)
+                if missing: report['results'][0]['summary'].pop(missing + '_count')
+                write(path, report)
+                data = evidence.normalize_static(root, 'podman')
+                known = {k: report['results'][0]['summary'].get(k + '_count') for k in levels}
+                self.assertEqual(data['scans'][1]['severity_counts'], known)
+                self.assertEqual(evidence.project(data)['scans'][1]['severity_counts'], known)
+                self.assertEqual(data['scans'][0]['severity_counts'], native['severity_counts'])
+                self.assertTrue(all(v is None for v in data['scans'][2]['severity_counts'].values()))
 
     def test_static_aggregate_matches_pinned_required_gate_outcomes(self):
         # JSONReporter.render_all / reporting.base at the supported evaluator pin:
