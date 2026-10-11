@@ -821,9 +821,13 @@ def inventory(workspace=ROOT):
         if name in names:
             authored = catalog / name
             validate_skill_metadata(authored, name, reader=reader)
-            src = source(name, 'local', 'thetechgy/agent-engineering-baseline', git_revision(workspace),
-                         authored.relative_to(workspace).as_posix(),
-                         skill_content(authored, reader=reader, directory_identities=directories, directory_states=states, file_states=members))
+            source_path = authored.relative_to(workspace).as_posix()
+            configured = skill_content(authored, reader=reader, directory_identities=directories,
+                                       directory_states=states, file_states=members)
+            rev = git_revision(workspace)
+            if rev is not None and historical_content(workspace, rev, source_path, budget=budget)['digest'] != configured['digest']:
+                rev = None
+            src = source(name, 'local', 'thetechgy/agent-engineering-baseline', rev, source_path, configured)
             deployment = None
         else:
             require(len(owners) == 1, 'Overlay has no unique skill owner')

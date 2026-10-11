@@ -126,12 +126,20 @@ and suite ownership. A local source and a same-ID overlay are compatible. Two
 active source owners, competing dataset files/formats, missing owners, ambiguous
 APM deployment records, and deployment hash drift fail closed. Imported sources
 must match a unique lock dependency and its Codex deployment owner/hash records.
+
 Their published source manifests reuse the lock-validated digests and the pinned
 runtime visibility selection captured before validation, without rereading the
 deployment after its hashes have been accepted.
 The existing `gh` and competing-skill checks additionally enforce their reviewed
 pins. All trees and fixture references are checked before native strict dataset
 validation; source front matter must identify the local skill correctly.
+
+Local inventory retains a repository revision only when bounded offline Git
+objects at that revision reproduce its captured agent-visible content manifest.
+Dirty, staged, untracked or deleted visible members leave the revision unknown;
+unrelated workspace edits do not invalidate a matching scoped manifest. Missing
+objects remain unknown without lazy fetch. These listing/blob reads share the
+inventory operation budget and existing historical bounds.
 
 An upstream-to-local conversion keeps the logical ID, removes active upstream
 ownership, and changes APM sources through normal pinned regeneration. Historical

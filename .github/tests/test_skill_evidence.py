@@ -112,6 +112,56 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual(len(gh['suite']['case_ids']), 24)
         self.assertEqual(gh['measurement']['status'], 'unavailable')
 
+    def test_inventory_local_revision_matches_committed_manifest(self):
+        for change in ('clean', 'unstaged', 'staged', 'untracked', 'deleted', 'unrelated', 'committed'):
+            with self.subTest(change=change), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp) / 'checkout'; authored = self.local(root, 'alpha')
+                (authored / 'README.md').write_text('Committed fixture')
+                def git(*args):
+                    return subprocess.run(['git', '-C', str(root), *args], check=True, capture_output=True,
+                                          text=True, timeout=30).stdout.strip()
+                git('init', '-q'); git('add', '.apm')
+                git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'Fixture')
+                if change in ('unstaged', 'staged', 'committed'):
+                    (authored / 'README.md').write_text('Changed fixture')
+                    if change != 'unstaged': git('add', '.apm')
+                    if change == 'committed':
+                        git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'Updated fixture')
+                elif change == 'untracked': (authored / 'extra.md').write_text('Untracked fixture')
+                elif change == 'deleted': (authored / 'README.md').unlink()
+                elif change == 'unrelated': (root / 'unrelated.txt').write_text('Unrelated work')
+                expected = git('rev-parse', 'HEAD') if change in ('clean', 'unrelated', 'committed') else None
+                before = self.snapshot(root); stdout = StringIO(); inventory = evidence.inventory
+                output = Path(temp) / 'output'
+                with patch.object(evidence, 'inventory', side_effect=lambda: inventory(root)), redirect_stdout(stdout):
+                    evidence.main(['inventory', '--output', str(output)])
+                value = evidence.read_json(output / 'inventory.json')
+                self.assertEqual(value['skills'][0]['source']['revision'], expected)
+                self.assertEqual(evidence.encoded(inventory(root)), evidence.encoded(value))
+                self.assertEqual(self.snapshot(root), before)
+
+    def test_inventory_revision_comparison_shares_read_budget(self):
+        root = self.repo(); authored = root / '.apm/skills/alpha'
+        (authored / 'README.md').write_text('Committed fixture')
+        def git(*args):
+            subprocess.run(['git', '-C', str(root), *args], check=True, capture_output=True, timeout=30)
+        git('init', '-q'); git('add', '.apm')
+        git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'Fixture')
+        budget = evidence.ReadBudget(); before = self.snapshot(root)
+        with patch.object(evidence, 'ReadBudget', return_value=budget) as budgets:
+            baseline = evidence.inventory(root)
+        self.assertEqual(budgets.call_count, 1)
+        consumed = evidence.NORMALIZATION_LIMIT - budget.remaining
+        self.assertGreater(consumed, sum(p.stat().st_size for p in authored.iterdir()))
+        with patch.object(evidence, 'NORMALIZATION_LIMIT', consumed):
+            self.assertEqual(evidence.encoded(evidence.inventory(root)), evidence.encoded(baseline))
+        output = self.root / 'rejected-revision-budget'; inventory = evidence.inventory
+        with patch.object(evidence, 'NORMALIZATION_LIMIT', consumed - 1), \
+                patch.object(evidence, 'inventory', side_effect=lambda: inventory(root)), \
+                self.assertRaisesRegex(ValueError, 'Normalization byte limit'), redirect_stdout(StringIO()):
+            evidence.main(['inventory', '--output', str(output)])
+        self.assertFalse(output.exists()); self.assertEqual(self.snapshot(root), before)
+
     def test_imported_manifest_rejects_changed_lock_validated_member(self):
         root = self.repo(); lock = self.imported(root)
         authored = root / '.agents/skills/beta'
@@ -270,14 +320,16 @@ class EvidenceTests(unittest.TestCase):
     def test_inventory_gh_delegated_reads_share_budget_and_default_behavior(self):
         import gh_evaluations as gh
         reads = {}; read = evidence.read_bytes
+        budget = evidence.ReadBudget()
         def counted(path, *args, **kwargs):
             raw = read(path, *args, **kwargs)
             reads[path] = reads.get(path, 0) + 1
             return raw
-        with patch.object(evidence, 'read_bytes', side_effect=counted):
+        with patch.object(evidence, 'read_bytes', side_effect=counted), patch.object(evidence, 'ReadBudget', return_value=budget):
             baseline = evidence.inventory(REPO)
         self.assertTrue(all(n == 1 for n in reads.values()))
-        total = sum(p.stat().st_size for p in reads)
+        total = evidence.NORMALIZATION_LIMIT - budget.remaining
+        self.assertGreater(total, sum(p.stat().st_size for p in reads))
         with patch.object(evidence, 'NORMALIZATION_LIMIT', total):
             self.assertEqual(evidence.encoded(evidence.inventory(REPO)), evidence.encoded(baseline))
         for helper in (gh.verify_skill, gh.verify_competing, gh.dataset):
