@@ -342,6 +342,11 @@ Trial-result task identities are canonicalized with the pinned collector and
 must agree with the retained reward and summary case. Generated task prefixes
 and attempt suffixes retain the collector's case mapping. Null observation
 attempt ordinals remain null and require `metadata_missing` during projection.
+Every directly overlapping known policy/arm field must agree: environment,
+task source, authorization policy, fixture boundary, and workspace mode.
+Unknown values remain unknown. Missing run identity, staged digest, evaluator
+revision, patch digest, or attempt maximum independently retains
+`metadata_missing`; normalization and projection use the same identity check.
 
 The approved manifest records no durable retention of original members. At or
 after its recorded UTC expiration, normalization marks its original references

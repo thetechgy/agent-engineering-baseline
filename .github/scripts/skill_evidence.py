@@ -716,6 +716,12 @@ def observation_id(run, arm, case, native_id, trial, attempt):
     return identity([run, arm, case, native_id, trial, attempt])
 
 
+def behavioral_identity_missing(data):
+    return any(value is None for value in (data['run_id'], data['dataset']['staged_digest'],
+               data['policy']['fields']['evaluator_revision'], data['policy']['patch_digest'],
+               data['policy']['attempts']['maximum']))
+
+
 def validate_evidence(data, *, public=False):
     fields = ('schema_version', 'kind', 'source', 'run_id', 'dataset', 'policy', 'arms', 'metrics',
               'observations', 'scans', 'findings', 'references', 'availability')
@@ -788,10 +794,11 @@ def validate_evidence(data, *, public=False):
         closed(arm, ('name', 'condition', 'coverage', 'execution_status', 'execution_error_count', 'rubric'))
         enum(arm['name'], ('with_skill', 'without_skill')); arm_names.append(arm['name']); validate_condition(arm['condition'])
         require(arm['condition']['target_present'] == (arm['name'] == 'with_skill'), 'Arm target mismatch')
-        declared_tasks = data['policy']['fields']['task_source']
-        observed_tasks = arm['condition']['execution']['task_source']
-        require(declared_tasks is None or observed_tasks is None or declared_tasks == observed_tasks,
-                'Task source policy mismatch')
+        for key in ('environment', 'task_source', 'authorization_policy', 'fixture_boundary', 'workspace_mode'):
+            declared = data['policy']['fields'][key]
+            observed = arm['condition'][key] if key == 'workspace_mode' else arm['condition']['execution'][key]
+            require(declared is None or observed is None or declared == observed,
+                    'Task source policy mismatch' if key == 'task_source' else 'Arm condition policy mismatch')
         enum(arm['execution_status'], ('succeeded', 'failed', 'incomplete', 'unknown'))
         count(arm['execution_error_count'])
         cov = arm['coverage']; closed(cov, ('expected_cases', 'expected_attempts', 'recorded_attempts', 'scored_attempts', 'unscored_attempts', 'case_details'))
@@ -913,13 +920,12 @@ def validate_evidence(data, *, public=False):
         if data['source']['content']['digest'] is None:
             require(availability['status'] == 'incomplete' and 'source_unavailable' in availability['reasons'],
                     'Behavioral source unavailable')
+        if behavioral_identity_missing(data):
+            require(availability['status'] == 'incomplete' and 'metadata_missing' in availability['reasons'],
+                    'Missing behavioral identity limitation')
         if availability['status'] == 'complete':
             require(bool(ids), 'Empty complete cohort')
-            require(len(data['metrics']) == 4 and data['run_id'] is not None, 'Incomplete metrics')
-            require(data['source']['content']['digest'] is not None and ds['staged_digest'] is not None
-                    and data['policy']['fields']['evaluator_revision'] is not None
-                    and data['policy']['patch_digest'] is not None
-                    and data['policy']['attempts']['maximum'] is not None, 'Missing identity metadata')
+            require(len(data['metrics']) == 4, 'Incomplete metrics')
     if data['kind'] == 'static':
         require(not data['arms'] and not data['metrics'] and not data['observations'], 'Static report implies behavior')
         require(availability['status'] == 'unavailable' or bool(data['scans']), 'Static evidence missing scans')
@@ -1349,6 +1355,8 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     if EvaluationService.failure_reason(result) is not None or recovery or result['report_status'] != 'complete' or result.get('diagnostic_only'):
         limitations.add('execution_incomplete')
     if not config.get('evaluated_source'):
+        limitations.add('metadata_missing')
+    if behavioral_identity_missing(data):
         limitations.add('metadata_missing')
     data['references'] = sorted(refs, key=lambda r: r['id'])
     if any(row['availability'] == 'expired' for row in refs):

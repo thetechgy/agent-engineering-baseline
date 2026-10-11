@@ -728,7 +728,8 @@ class EvidenceTests(unittest.TestCase):
     def test_coverage_unknown_and_known_count_combinations(self):
         base = evidence.read_json(FIXTURES / 'gh-no-model.json')
         base['availability'].update(status='incomplete', reasons=['coverage_missing', 'execution_incomplete',
-                                                                'case_details_missing', 'source_unavailable'])
+                                                                'case_details_missing', 'source_unavailable',
+                                                                'metadata_missing'])
         base['policy']['attempts']['maximum'] = None
         base['policy']['id'] = evidence.identity({k: base['policy'][k] for k in
                                                 ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')})
@@ -748,6 +749,25 @@ class EvidenceTests(unittest.TestCase):
                     else:
                         with self.assertRaises(ValueError):
                             validate(data)
+
+    def test_all_overlapping_policy_and_arm_fields_agree(self):
+        base = self.data()
+        base['source']['content'] = evidence.content([
+            {'member': 'SKILL.md', 'digest': evidence.digest_bytes(b'Synthetic')}], 'configured')
+        base['availability'].update(status='complete', reasons=[])
+        for key in ('environment', 'authorization_policy', 'fixture_boundary', 'workspace_mode'):
+            values = (None, 'isolated', 'group') if key == 'workspace_mode' else (None, 'first', 'second')
+            for selected, declared, observed in itertools.product(('with_skill', 'without_skill'), values, values):
+                with self.subTest(key=key, arm=selected, declared=declared, observed=observed):
+                    data = copy.deepcopy(base); data['policy']['fields'][key] = declared
+                    data['policy']['id'] = evidence.identity({k: data['policy'][k] for k in
+                        ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')})
+                    for arm in data['arms']:
+                        target = arm['condition'] if key == 'workspace_mode' else arm['condition']['execution']
+                        target[key] = observed if arm['name'] == selected else declared
+                        arm['condition']['id'] = evidence.identity({k: v for k, v in arm['condition'].items() if k != 'id'})
+                    if declared is None or observed is None or declared == observed: evidence.project(data)
+                    else: self.assert_project_rejects(data, 'Arm condition policy mismatch')
 
     def test_task_source_policy_matches_native_and_projected_conditions(self):
         root = self.native(); run = next((root / 'results/podman').iterdir())
@@ -1442,6 +1462,48 @@ class EvidenceTests(unittest.TestCase):
         data['availability']['reasons'].append('source_unavailable')
         self.assertIn('source_unavailable', evidence.project(data)['availability']['reasons'])
         evidence.project(evidence.read_json(FIXTURES / 'gh-no-model.json'))
+
+    def test_missing_behavioral_identities_retain_metadata_limitation(self):
+        for missing in ('maximum', 'staged_digest', 'evaluator_revision', 'patch_digest', 'run_id'):
+            with self.subTest(missing=missing):
+                data = self.data(); data['source']['content'] = evidence.content()
+                data['availability'].update(status='incomplete', reasons=['source_unavailable'])
+                if missing == 'maximum': data['policy']['attempts']['maximum'] = None
+                elif missing == 'staged_digest':
+                    data['dataset'].update(staged_digest=None, staged_algorithm=None, staged_provenance='unknown')
+                elif missing == 'evaluator_revision': data['policy']['fields']['evaluator_revision'] = None
+                elif missing == 'patch_digest': data['policy']['patch_digest'] = None
+                else:
+                    data['run_id'] = None
+                    for row in data['observations']:
+                        row['id'] = evidence.observation_id(None, row['arm'], row['case_id'], row['native_id'],
+                                                           row['native_trial'], row['attempt'])
+                data['policy']['id'] = evidence.identity({k: data['policy'][k] for k in
+                    ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')})
+                self.assert_project_rejects(data, 'Missing behavioral identity limitation')
+                data['availability']['reasons'].append('metadata_missing')
+                self.assertIn('metadata_missing', evidence.project(data)['availability']['reasons'])
+        root = self.native(); run = next((root / 'results/podman').iterdir())
+        paths = [root / 'provenance.json', run / 'result.json', run / 'run_config.json',
+                 run / 'attempt_policy.json', run / 'dataset_snapshot.json']
+        original = {path: path.read_bytes() for path in paths}
+        for missing in ('maximum', 'staged_digest', 'evaluator_revision', 'patch_digest'):
+            with self.subTest(native_missing=missing):
+                provenance = evidence.read_json(root / 'provenance.json')
+                if missing == 'maximum':
+                    config = evidence.read_json(run / 'run_config.json'); config['harbor']['n_attempts'] = None
+                    write(run / 'run_config.json', config)
+                    result = evidence.read_json(run / 'result.json'); result['run_config'] = config; write(run / 'result.json', result)
+                    attempts = evidence.read_json(run / 'attempt_policy.json'); attempts['max_attempts'] = None
+                    write(run / 'attempt_policy.json', attempts)
+                elif missing == 'staged_digest':
+                    (run / 'dataset_snapshot.json').unlink(); provenance.pop('dataset_digest', None)
+                elif missing == 'evaluator_revision': provenance['policy'].pop('evaluator_revision', None)
+                else: provenance.pop('patch_sha256', None)
+                write(root / 'provenance.json', provenance)
+                data = evidence.normalize_behavioral(root, 'podman')
+                self.assertIn('metadata_missing', data['availability']['reasons']); evidence.project(data)
+                for path, raw in original.items(): path.write_bytes(raw)
 
     def test_projection_retains_unknown_attempt_metadata(self):
         for arm in ('with_skill', 'without_skill'):
