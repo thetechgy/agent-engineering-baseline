@@ -205,6 +205,51 @@ class EvidenceTests(unittest.TestCase):
                 self.assertEqual(len(data['observations']), 20)
                 evidence.project(data)
 
+    def test_historical_blob_size_boundaries(self):
+        root = self.native()
+        for member, size in itertools.product(('SKILL.md', 'evals/evals.json'),
+                                              (evidence.JSON_LIMIT, evidence.JSON_LIMIT + 1)):
+            with self.subTest(member=member, size=size), tempfile.TemporaryDirectory() as temp:
+                repo = Path(temp)
+                authored = self.local(repo, 'podman', True)
+                path = authored / member
+                payload = path.read_bytes()
+                path.write_bytes(payload + b' ' * (size - len(payload)))
+                def git(*args):
+                    return subprocess.run(['git', '-C', str(repo), *args], check=True,
+                                          capture_output=True, text=True).stdout.strip()
+                git('init', '-q'); git('add', '.apm')
+                git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+                    'commit', '-qm', 'Synthetic bounded source')
+                rev = git('rev-parse', 'HEAD')
+                oid = git('rev-parse', 'HEAD:' + path.relative_to(repo).as_posix())
+                self.mutate(root, '/run_config.json', lambda d: d['evaluated_source'].update(commit=rev))
+                self.mutate(root, '/result.json', lambda d: d['run_config']['evaluated_source'].update(commit=rev))
+                self.mutate(root, '/provenance.json', lambda d: d.update(revision=rev))
+                trace = repo / 'trace.jsonl'
+                with patch.dict(os.environ, {'GIT_NO_LAZY_FETCH': '0', 'GIT_TRACE2_EVENT': str(trace)}):
+                    if size > evidence.JSON_LIMIT:
+                        with self.assertRaisesRegex(ValueError, 'Oversized historical blob'):
+                            evidence.normalize_behavioral(root, 'podman', workspace=repo)
+                    else:
+                        data = evidence.normalize_behavioral(root, 'podman', workspace=repo)
+                        if member == 'SKILL.md':
+                            self.assertEqual(data['source']['content']['manifest'],
+                                             [{'member': member, 'digest': evidence.digest_bytes(path.read_bytes())}])
+                        else:
+                            self.assertEqual(data['dataset']['authored_digest'], evidence.digest_bytes(path.read_bytes()))
+                            self.assertEqual(data['dataset']['authored_provenance'], 'reconstructed_from_declared_revision')
+                        evidence.project(data)
+                events = [json.loads(line) for line in trace.read_text().splitlines()]
+                commands = [event['argv'] for event in events if event.get('event') == 'start']
+                spec = oid if member == 'SKILL.md' else rev + ':' + path.relative_to(repo).as_posix()
+                self.assertTrue(any(argv[-3:] == ['cat-file', '-s', spec] for argv in commands))
+                reads = [argv for argv in commands if argv[-3:] == ['cat-file', 'blob', spec]]
+                self.assertEqual(len(reads), 0 if size > evidence.JSON_LIMIT else 1)
+                self.assertFalse(any('show' in argv for argv in commands))
+                self.assertFalse(any(event.get('event') == 'child_start' and 'fetch' in event.get('argv', [])
+                                     for event in events))
+
     def test_coverage_unknown_and_known_count_combinations(self):
         base = evidence.read_json(FIXTURES / 'gh-no-model.json')
         base['availability'].update(status='incomplete', reasons=['coverage_missing'])
@@ -730,6 +775,58 @@ class EvidenceTests(unittest.TestCase):
         with self.assertRaises(ValueError): evidence.write_outputs(values, alias/'new')
         destination = self.root/'new'; evidence.write_outputs(values, destination)
         with self.assertRaises(ValueError): evidence.write_outputs(values, destination)
+
+    def snapshot(self, root):
+        return {p.relative_to(root).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest() if p.is_file() else None
+                for p in root.rglob('*')}
+
+    def test_cli_rejects_temporary_parent_inside_input_without_mutation(self):
+        root = self.native()
+        before = self.snapshot(root)
+        result = subprocess.run([sys.executable, str(REPO / '.github/scripts/skill_evidence.py'),
+                                 'normalize', '--kind', 'behavioral', '--skill', 'podman', '--input', str(root)],
+                                env={**os.environ, 'TMPDIR': str(root)}, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn('Evidence contract rejected', result.stderr)
+        self.assertEqual(self.snapshot(root), before)
+
+    def test_rejects_temporary_parent_inside_checkout_without_mutation(self):
+        workspace = self.repo()
+        before = self.snapshot(workspace)
+        with patch.dict(os.environ, {'TMPDIR': str(workspace)}), patch.object(evidence.tempfile, 'tempdir', None):
+            with self.assertRaisesRegex(ValueError, 'outside checkout'):
+                evidence.write_outputs({'evidence.json': {}}, workspace=workspace)
+        self.assertEqual(self.snapshot(workspace), before)
+
+    def test_unsafe_temporary_parents_do_not_fall_back(self):
+        parent = self.root / 'parent'; parent.mkdir()
+        alias = self.root / 'alias'; alias.symlink_to(parent, target_is_directory=True)
+        file = self.root / 'file'; file.write_text('fixture')
+        for candidate in (alias, self.root / 'missing', file):
+            with self.subTest(parent=candidate), patch.dict(os.environ, {'TMPDIR': str(candidate)}), \
+                    patch.object(evidence.tempfile, 'tempdir', None):
+                before = self.snapshot(parent)
+                with self.assertRaises(ValueError), patch.object(evidence.tempfile, 'mkdtemp') as create:
+                    evidence.write_outputs({'evidence.json': {}})
+                create.assert_not_called()
+                self.assertEqual(self.snapshot(parent), before)
+
+    def test_valid_temporary_parent_and_explicit_output(self):
+        parent = self.root / 'parent'; parent.mkdir()
+        workspace = self.repo()
+        values = {'evidence.json': {'schema_version': 1}}
+        with patch.dict(os.environ, {'TMPDIR': str(parent)}), patch.object(evidence.tempfile, 'tempdir', None):
+            output = evidence.write_outputs(values, workspace=workspace)
+        self.assertEqual(output.parent, parent)
+        self.assertEqual((output / 'evidence.json').read_bytes(), evidence.encoded(values['evidence.json']))
+        # An explicit destination does not depend on temporary settings.
+        with patch.dict(os.environ, {'TMPDIR': str(workspace)}):
+            explicit = evidence.write_outputs(values, self.root / 'explicit', workspace=workspace)
+        self.assertEqual((explicit / 'evidence.json').read_bytes(), (output / 'evidence.json').read_bytes())
+        before = self.snapshot(workspace)
+        with self.assertRaises(ValueError):
+            evidence.write_outputs(values, workspace / 'new', workspace=workspace)
+        self.assertEqual(self.snapshot(workspace), before)
 
 
 if __name__ == '__main__':

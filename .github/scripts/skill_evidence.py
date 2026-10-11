@@ -263,6 +263,19 @@ def git_revision(workspace):
     return result.stdout.strip() if result.returncode == 0 else None
 
 
+def historical_blob(workspace, spec):
+    """Bound exact local object bytes before capturing content; missing stays unknown."""
+    size = offline_git(workspace, 'cat-file', '-s', spec, text=True)
+    if size.returncode:
+        return None
+    require(0 <= int(size.stdout.strip()) <= JSON_LIMIT, 'Oversized historical blob')
+    blob = offline_git(workspace, 'cat-file', 'blob', spec)
+    if blob.returncode:
+        return None
+    require(len(blob.stdout) <= JSON_LIMIT, 'Oversized historical blob')
+    return blob.stdout
+
+
 def historical_content(workspace, rev, source_path):
     """Read exact local Git blobs only. Never checkout or contact a remote."""
     revision(rev); relative(source_path)
@@ -287,10 +300,10 @@ def historical_content(workspace, rev, source_path):
                             for manifest in ('SKILL.md', 'skill.md')) for i, p in enumerate(parts))
         if any(p in ('results', '__pycache__', '.git') for p in parts) or nested_evals:
             continue
-        blob = offline_git(workspace, 'cat-file', 'blob', oid.decode())
-        if blob.returncode:
+        blob = historical_blob(workspace, oid.decode())
+        if blob is None:
             return content()
-        records.append({'member': name, 'digest': digest_bytes(blob.stdout)})
+        records.append({'member': name, 'digest': digest_bytes(blob)})
     if not records:
         return content()
     return content(records, 'reconstructed_from_declared_revision')
@@ -930,9 +943,9 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     # Authored-file identity is reconstructed only from exact objects, independently of staged entries.
     if rev:
         ds_path = '.github/evals/' + name + '/evals/evals.json' if historical_owner == 'upstream' else src_path + '/evals/evals.json'
-        blob = offline_git(workspace, 'show', rev + ':' + ds_path)
-        if blob.returncode == 0:
-            data['dataset']['authored_digest'] = digest_bytes(blob.stdout)
+        blob = historical_blob(workspace, rev + ':' + ds_path)
+        if blob is not None:
+            data['dataset']['authored_digest'] = digest_bytes(blob)
             data['dataset']['authored_provenance'] = 'reconstructed_from_declared_revision'
     agent = result['agents']['codex']
     native_conditions = agent['conditions']
@@ -1168,8 +1181,17 @@ def normalize_static(root, name, workspace=ROOT):
 def write_outputs(values, destination=None, workspace=ROOT, input_path=None):
     # Finish validation/serialization before reserving an output directory.
     payloads = {name: encoded(value) for name, value in values.items()}
+    workspace = Path(workspace).absolute()
+    if input_path is not None:
+        input_path = Path(input_path).absolute()
     if destination is None:
-        destination = Path(tempfile.mkdtemp(prefix='skill-evidence-'))
+        # Validate explicit settings without tempfile's probing/fallback writes.
+        parent = next((os.environ[key] for key in ('TMPDIR', 'TEMP', 'TMP') if os.environ.get(key)), None)
+        parent = safe_path(parent if parent is not None else tempfile.gettempdir(), directory=True)
+        require(not parent.is_relative_to(workspace), 'Output must be outside checkout')
+        if input_path is not None:
+            require(not parent.is_relative_to(input_path), 'Output overlaps input')
+        destination = Path(tempfile.mkdtemp(prefix='skill-evidence-', dir=parent))
     else:
         destination = Path(destination).absolute()
         safe_path(destination.parent, directory=True)
@@ -1177,7 +1199,6 @@ def write_outputs(values, destination=None, workspace=ROOT, input_path=None):
     safe_path(destination, directory=True, missing=True)
     require(not destination.is_relative_to(workspace) and destination != workspace, 'Output must be outside checkout')
     if input_path is not None:
-        input_path = Path(input_path).absolute()
         require(not destination.is_relative_to(input_path) and not input_path.is_relative_to(destination), 'Output overlaps input')
     if not destination.exists():
         destination.mkdir(mode=0o700)

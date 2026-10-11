@@ -31,6 +31,13 @@ are rejected. Validation and deterministic serialization precede output creation
 Inputs remain unchanged. CLI contract errors return exit status 1 without echoing
 native diagnostic content.
 
+Before creating temporary output, the selected parent must be an ordinary
+directory outside the checkout and input bundle. The first nonempty `TMPDIR`,
+`TEMP`, or `TMP` setting takes precedence over the platform default. Unsafe
+settings (including linked, missing, or non-directory parents) are rejected
+without falling back to another location or leaving an output directory behind.
+Explicit `--output` placement does not depend on temporary settings.
+
 Behavioral input uses `results/<skill>/<run>/result.json` with native companions.
 If several run directories exist, supply `--run <recorded-run-id>`. There is no
 chronological selection, `latest` resolution, recovery, or missing-data fetch.
@@ -130,9 +137,13 @@ reads exact local Git blobs with the equivalent authored-tree boundary; it is
 `reconstructed_from_declared_revision`, never runtime-attested. Missing Git
 objects remain unknown, without checkout or network fallback. Every Git read
 sets `GIT_NO_LAZY_FETCH=1`, overriding an inherited lazy-fetch setting so missing
-partial-clone trees and blobs cannot trigger demand fetching. An authored dataset
-hash identifies exact file bytes; the native staged digest identifies enriched
-entries and retains `skill-evaluator-dataset-snapshot/1`. The case cohort hash
+partial-clone trees and blobs cannot trigger demand fetching. Historical skill
+members and authored datasets share the current-file 8 MiB byte limit. Object
+size is checked before capturing content: exactly 8 MiB is accepted, larger
+objects cause contract rejection, and missing objects retain null digests and
+unknown provenance. An authored dataset hash identifies exact file bytes; the
+native staged digest identifies enriched entries and retains
+`skill-evaluator-dataset-snapshot/1`. The case cohort hash
 identifies sorted canonical IDs. None of these digests substitutes for another.
 
 Policy IDs hash recorded fields, patch digest, metric set, judge and attempt
