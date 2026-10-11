@@ -88,6 +88,12 @@ source selection and final validation. Same-inode entry changes reject, includin
 hidden/restored members and restored modification times. This guard relies on
 filesystem change metadata and is verified with real renames on Linux; it does
 not claim an atomic filesystem snapshot or isolation from privileged writers.
+Scanned regular members also retain device/inode, size and modification/change
+metadata. Reads check this state before and after capture; cached inventory bytes
+are revalidated without recapture, and every scanned member is checked again
+before publication. In-place edits and restores reject even when modification
+times are restored. Optional consumed members outside scanned source trees use
+the same state map. These checks retain the same filesystem metadata limits.
 Temporary and explicit output parents use the same validated ancestor identities
 before directory creation. Replacing an ordinary parent with the input directory
 rejects before output allocation, preserving the input's entries and bytes.

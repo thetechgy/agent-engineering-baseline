@@ -201,6 +201,27 @@ def directory_state(info):
     return info.st_mtime_ns, info.st_ctime_ns
 
 
+def file_state(info):
+    return info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns
+
+
+def verify_file_states(states, directories, directory_states, paths=None):
+    fd = None
+    parent = None
+    try:
+        for path in states if paths is None else paths:
+            if path.parent != parent:
+                if fd is not None:
+                    os.close(fd); fd = None
+                fd = open_directory(path.parent, directories, directory_states=directory_states)
+                parent = path.parent
+            info = os.stat(path.name, dir_fd=fd, follow_symlinks=False)
+            require(stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and file_state(info) == states[path],
+                    'Input member changed')
+    finally:
+        if fd is not None: os.close(fd)
+
+
 def verify_directory_states(states, identities, paths=None):
     paths = states if paths is None else paths
     for path in paths:
@@ -208,11 +229,13 @@ def verify_directory_states(states, identities, paths=None):
         os.close(fd)
 
 
-def safe_tree(path, *, max_entries=MAX_INPUT_ENTRIES, max_files=None, directory_identities=None, directory_states=None):
+def safe_tree(path, *, max_entries=MAX_INPUT_ENTRIES, max_files=None, directory_identities=None, directory_states=None, file_states=None):
     if directory_identities is None:
         directory_identities = {}
     if directory_states is None:
         directory_states = {}
+    if file_states is None:
+        file_states = {}
     path = safe_path(path, directory=True, directory_identities=directory_identities)
     pending = [path]
     files = []
@@ -231,17 +254,22 @@ def safe_tree(path, *, max_entries=MAX_INPUT_ENTRIES, max_files=None, directory_
                 for entry in entries:
                     seen += 1
                     require(seen <= max_entries, 'Input tree entry limit')
-                    directory = stat.S_ISDIR(entry.stat(follow_symlinks=False).st_mode)
+                    info = entry.stat(follow_symlinks=False)
+                    directory = stat.S_ISDIR(info.st_mode)
                     member = safe_path(current / entry.name, directory=directory, directory_identities=directory_identities)
                     if directory:
                         pending.append(member)
                     else:
                         require(max_files is None or len(files) < max_files, 'Input tree entry limit')
+                        observed_file = file_state(info)
+                        require(member not in file_states or file_states[member] == observed_file, 'Input member changed')
+                        file_states[member] = observed_file
                         files.append(member)
             require(directory_state(os.fstat(fd)) == directory_states[current], 'Input directory entries changed')
         finally:
             os.close(fd)
     verify_directory_states(directory_states, directory_identities, scanned)
+    verify_file_states(file_states, directory_identities, directory_states, files)
     return files
 
 
@@ -254,7 +282,7 @@ class ReadBudget:
         self.remaining -= size
 
 
-def read_bytes(path, limit=JSON_LIMIT, *, budget=None, directory_identities=None, directory_states=None):
+def read_bytes(path, limit=JSON_LIMIT, *, budget=None, directory_identities=None, directory_states=None, file_states=None):
     if directory_identities is None:
         directory_identities = {}
     path = safe_path(path, directory_identities=directory_identities)
@@ -269,9 +297,15 @@ def read_bytes(path, limit=JSON_LIMIT, *, budget=None, directory_identities=None
         info = os.fstat(stream.fileno())
         require(stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and info.st_size <= limit,
                 'Special, hard-linked or oversized input')
+        if file_states is not None:
+            observed = file_state(info)
+            require(path not in file_states or file_states[path] == observed, 'Input member changed')
+            file_states[path] = observed
         if budget is not None:
             budget.consume(info.st_size)
         value = stream.read(min(limit, info.st_size + budget.remaining) + 1 if budget is not None else limit + 1)
+        if file_states is not None:
+            require(file_state(os.fstat(stream.fileno())) == observed, 'Input member changed')
     require(len(value) <= limit, 'Oversized input')
     if budget is not None:
         budget.consume(max(0, len(value) - info.st_size))
@@ -299,8 +333,8 @@ def read_json(path):
     return parse_json(read_bytes(path))
 
 
-def read_json_and_digest(path, *, budget=None, directory_identities=None, directory_states=None):
-    raw = read_bytes(path, budget=budget, directory_identities=directory_identities, directory_states=directory_states)
+def read_json_and_digest(path, *, budget=None, directory_identities=None, directory_states=None, file_states=None):
+    raw = read_bytes(path, budget=budget, directory_identities=directory_identities, directory_states=directory_states, file_states=file_states)
     return parse_json(raw), digest_bytes(raw)
 
 
@@ -435,18 +469,21 @@ def skill_projection_files(path, files, *, directory_identities=None, directory_
     return [p for p in files if not _runtime_projection_path_is_ignored(p, path, ignore)]
 
 
-def skill_content(path, *, reader=None, directory_identities=None, directory_states=None):
+def skill_content(path, *, reader=None, directory_identities=None, directory_states=None, file_states=None):
     directories = {} if directory_identities is None else directory_identities
     states = {} if directory_states is None else directory_states
+    members = {} if file_states is None else file_states
     files = safe_tree(path, max_entries=2 * MAX_SOURCE_MEMBERS, max_files=MAX_SOURCE_MEMBERS,
-                      directory_identities=directories, directory_states=states)
+                      directory_identities=directories, directory_states=states, file_states=members)
     if reader is not None:
         reject_source_markers(path, files, directories)
     else:
-        reader = lambda member: read_bytes(member, directory_identities=directories, directory_states=states)
+        reader = lambda member: read_bytes(member, directory_identities=directories, directory_states=states, file_states=members)
     safe_path(path, directory=True, directory_identities=directories)
-    return content([{'member': p.relative_to(path).as_posix(), 'digest': digest_bytes(reader(p))}
-                    for p in skill_projection_files(path, files, directory_identities=directories, directory_states=states)], 'configured')
+    result = content([{'member': p.relative_to(path).as_posix(), 'digest': digest_bytes(reader(p))}
+                     for p in skill_projection_files(path, files, directory_identities=directories, directory_states=states)], 'configured')
+    verify_file_states(members, directories, states, files)
+    return result
 
 
 def reject_source_markers(path, files, directories):
@@ -630,17 +667,18 @@ class CapturedInput:
         return self.reader(self.path).decode(encoding, errors)
 
 
-def strict_dataset(path, name, *, reader=None, directory_identities=None, directory_states=None):
+def strict_dataset(path, name, *, reader=None, directory_identities=None, directory_states=None, file_states=None):
     from skillevaluator.tier3.dataset_utils import normalize_dataset_entries
     from skillevaluator.tier3 import evals_spec as native_spec
     directories = {} if directory_identities is None else directory_identities
     states = {} if directory_states is None else directory_states
-    files = safe_tree(path.parent.parent, directory_identities=directories, directory_states=states)
+    members = {} if file_states is None else file_states
+    files = safe_tree(path.parent.parent, directory_identities=directories, directory_states=states, file_states=members)
     tree_entries = set(files) | set(directories)
     alternatives = [member for member in tree_entries if member.parent == path.parent and member.name.startswith('evals.')]
     require(path.name == 'evals.json' and set(alternatives) == {path}, 'Ambiguous authored dataset formats')
     if reader is None:
-        reader = lambda member: read_bytes(member, directory_identities=directories, directory_states=states)
+        reader = lambda member: read_bytes(member, directory_identities=directories, directory_states=states, file_states=members)
     captured = {}
     def optional_reader(member):
         if member not in captured:
@@ -678,6 +716,7 @@ def strict_dataset(path, name, *, reader=None, directory_identities=None, direct
             safe_path(path.parent.parent / member, directory_identities=directories)
     verify_directory_states(states, directories,
                             (directory for directory in states if directory.is_relative_to(path.parent.parent)))
+    verify_file_states(members, directories, states, files)
     return {'owner': 'unknown',
             'path': None, 'authored_digest': digest_bytes(raw),
             'case_ids': sorted(ids), 'status': 'configured'}
@@ -708,16 +747,16 @@ def validate_skill_metadata(authored, name, *, reader=None):
 def inventory(workspace=ROOT):
     directories = {}
     states = {}
+    members = {}
     workspace = safe_path(workspace, directory=True, directory_identities=directories)
     budget = ReadBudget()
     captured = {}
     def reader(path):
         path = safe_path(path, directory_identities=directories)
         if path not in captured:
-            captured[path] = read_bytes(path, budget=budget, directory_identities=directories, directory_states=states)
+            captured[path] = read_bytes(path, budget=budget, directory_identities=directories, directory_states=states, file_states=members)
         else:
-            fd = open_directory(path.parent, directories, directory_states=states)
-            os.close(fd)
+            verify_file_states(members, directories, states, [path])
         return captured[path]
     def present(path):
         safe_path(path.parent, directory=True, directory_identities=directories)
@@ -727,7 +766,11 @@ def inventory(workspace=ROOT):
             states.setdefault(path.parent, observed)
             require(states[path.parent] == observed, 'Input directory entries changed')
             try:
-                os.stat(path.name, dir_fd=fd, follow_symlinks=False)
+                info = os.stat(path.name, dir_fd=fd, follow_symlinks=False)
+                if stat.S_ISREG(info.st_mode):
+                    observed_file = file_state(info)
+                    require(path not in members or members[path] == observed_file, 'Input member changed')
+                    members[path] = observed_file
                 return True
             except FileNotFoundError:
                 return False
@@ -736,7 +779,7 @@ def inventory(workspace=ROOT):
         finally:
             os.close(fd)
     catalog = workspace / '.apm/skills'
-    files = safe_tree(catalog, directory_identities=directories, directory_states=states)
+    files = safe_tree(catalog, directory_identities=directories, directory_states=states, file_states=members)
     dataset_entries = set(files) | set(directories)
     names = sorted(p.parent.name for p in files if p.name == 'SKILL.md' and p.parent.parent == catalog)
     require(bool(names), 'No local skills found')
@@ -761,7 +804,7 @@ def inventory(workspace=ROOT):
     overlays = workspace / '.github/evals'
     overlay_names = []
     if present(overlays.parent) and present(overlays):
-        overlay_files = safe_tree(overlays, directory_identities=directories, directory_states=states)
+        overlay_files = safe_tree(overlays, directory_identities=directories, directory_states=states, file_states=members)
         safe_path(overlays, directory=True, directory_identities=directories)
         overlay_entries = set(overlay_files) | set(directories)
         dataset_entries.update(overlay_entries)
@@ -780,7 +823,7 @@ def inventory(workspace=ROOT):
             validate_skill_metadata(authored, name, reader=reader)
             src = source(name, 'local', 'thetechgy/agent-engineering-baseline', git_revision(workspace),
                          authored.relative_to(workspace).as_posix(),
-                         skill_content(authored, reader=reader, directory_identities=directories, directory_states=states))
+                         skill_content(authored, reader=reader, directory_identities=directories, directory_states=states, file_states=members))
             deployment = None
         else:
             require(len(owners) == 1, 'Overlay has no unique skill owner')
@@ -788,7 +831,7 @@ def inventory(workspace=ROOT):
             repository(owner['repo_url']); revision(owner['resolved_commit']); relative(owner['virtual_path'])
             authored = workspace / '.agents/skills' / name
             files = safe_tree(authored, max_entries=2 * MAX_SOURCE_MEMBERS, max_files=MAX_SOURCE_MEMBERS,
-                              directory_identities=directories, directory_states=states)
+                              directory_identities=directories, directory_states=states, file_states=members)
             reject_source_markers(authored, files, directories)
             validate_skill_metadata(authored, name, reader=reader)
             visible = skill_projection_files(authored, files, directory_identities=directories, directory_states=states)
@@ -804,7 +847,7 @@ def inventory(workspace=ROOT):
                 import gh_evaluations as gh
                 competing = workspace / '.agents/skills' / gh.COMPETING
                 competing_files = safe_tree(competing, max_entries=2 * MAX_SOURCE_MEMBERS,
-                                            max_files=MAX_SOURCE_MEMBERS, directory_identities=directories, directory_states=states)
+                                            max_files=MAX_SOURCE_MEMBERS, directory_identities=directories, directory_states=states, file_states=members)
                 reject_source_markers(competing, competing_files, directories)
                 safe_path(competing, directory=True, directory_identities=directories)
                 gh.verify_skill(workspace, read_bytes=reader)
@@ -820,7 +863,7 @@ def inventory(workspace=ROOT):
         datasets = [p for p in dataset_entries if p.parent in dataset_roots and p.name.startswith('evals.')]
         require(len(datasets) <= 1, 'Competing dataset sources')
         suite = strict_dataset(datasets[0], name, reader=reader, directory_identities=directories,
-                               directory_states=states) if datasets else None
+                               directory_states=states, file_states=members) if datasets else None
         if suite:
             suite['owner'] = 'overlay' if datasets[0].is_relative_to(overlays) else 'local'
             suite['path'] = datasets[0].relative_to(workspace).as_posix()
@@ -829,6 +872,7 @@ def inventory(workspace=ROOT):
                      'measurement': {'status': 'unavailable', 'reasons': ['results_not_supplied']}})
     result = {'schema_version': 1, 'kind': 'inventory', 'skills': rows}
     verify_directory_states(states, directories)
+    verify_file_states(members, directories, states)
     validate_inventory(result)
     return result
 
@@ -1435,12 +1479,12 @@ def project(data, *, static_bundle=None, behavioral_bundle=None):
     return out
 
 
-def load_extract(root, *, budget=None, _observed_at=None, directory_identities=None, entries=None, directory_states=None):
+def load_extract(root, *, budget=None, _observed_at=None, directory_identities=None, entries=None, directory_states=None, file_states=None):
     path = root / 'extract-manifest.json'
     present = path in entries if entries is not None else path.exists()
     if not present:
         return None
-    raw = read_bytes(path, budget=budget, directory_identities=directory_identities, directory_states=directory_states)
+    raw = read_bytes(path, budget=budget, directory_identities=directory_identities, directory_states=directory_states, file_states=file_states)
     require(digest_bytes(raw) in REVIEWED_EXTRACT_MANIFESTS, 'Unrecognized reviewed extract manifest')
     value = parse_json(raw)
     closed(value, ('schema_version', 'artifact_id', 'archive_digest', 'origin', 'members'))
@@ -1566,20 +1610,21 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     from skillevaluator.tier3.case_ids import validate_case_id
     directory_identities = {}
     directory_states = {}
+    file_states = {}
     root = safe_path(root, directory=True, directory_identities=directory_identities)
-    files = safe_tree(root, directory_identities=directory_identities, directory_states=directory_states); skill_id(name)
+    files = safe_tree(root, directory_identities=directory_identities, directory_states=directory_states, file_states=file_states); skill_id(name)
     scanned_entries = set(files) | set(directory_identities)
     run = select_run(root, name, selected, entries=scanned_entries, directory_identities=directory_identities)
     budget = ReadBudget()
     observed_at = utc_now()
     extract = load_extract(root, budget=budget, _observed_at=observed_at,
-                           directory_identities=directory_identities, entries=scanned_entries, directory_states=directory_states)
+                           directory_identities=directory_identities, entries=scanned_entries, directory_states=directory_states, file_states=file_states)
     artifact = extract['artifact_id'] if extract else run.name
     member_digests = {}
     def read_member(path, *, native_snapshot=False):
         require(path in scanned_entries, 'Unscanned behavioral member')
         require(path not in member_digests, 'Duplicate behavioral member read')
-        raw = read_bytes(path, budget=budget, directory_identities=directory_identities, directory_states=directory_states)
+        raw = read_bytes(path, budget=budget, directory_identities=directory_identities, directory_states=directory_states, file_states=file_states)
         if native_snapshot:
             require(len(raw) <= native_reports._MAX_JSON_BYTES, 'Native snapshot byte limit')
         value = parse_json(raw)
@@ -1912,6 +1957,7 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     data['availability'] = {'status': 'incomplete' if limitations else 'complete',
                             'reasons': sorted(limitations), 'provenance': 'reviewed_extract' if extract else 'runtime_recorded'}
     verify_directory_states(directory_states, directory_identities)
+    verify_file_states(file_states, directory_identities, directory_states)
     validate_evidence(data, _observed_at=observed_at)
     return data if extract else _BehavioralEvidence(data, behavioral_claim_identity(data))
 
@@ -1940,12 +1986,13 @@ def static_required_gate(scan, *, blocking_only=False):
 def normalize_static(root, name, workspace=ROOT):
     directory_identities = {}
     directory_states = {}
+    file_states = {}
     root = safe_path(root, directory=True, directory_identities=directory_identities)
-    scanned_entries = set(safe_tree(root, directory_identities=directory_identities, directory_states=directory_states)); skill_id(name)
+    scanned_entries = set(safe_tree(root, directory_identities=directory_identities, directory_states=directory_states, file_states=file_states)); skill_id(name)
     budget = ReadBudget()
     catalog_path = root / 'reports/catalog-summary.json'
     require(catalog_path in scanned_entries, 'Unscanned static member')
-    catalog, catalog_digest = read_json_and_digest(catalog_path, budget=budget, directory_identities=directory_identities, directory_states=directory_states)
+    catalog, catalog_digest = read_json_and_digest(catalog_path, budget=budget, directory_identities=directory_identities, directory_states=directory_states, file_states=file_states)
     require(type(catalog) is dict, 'Static catalog object required')
     require(type(catalog['skills']) is list and catalog['total'] == len(catalog['skills']), 'Catalog cardinality mismatch')
     names = [row['name'] for row in catalog['skills']]
@@ -1959,7 +2006,7 @@ def normalize_static(root, name, workspace=ROOT):
     require(type(filename) is str and bool(re.fullmatch(r'skillevaluator-output-[0-9]{14}\.json', filename)), 'Unsafe static report member')
     report_path = root / 'reports' / name / filename
     require(report_path in scanned_entries, 'Unscanned static member')
-    native, report_digest = read_json_and_digest(report_path, budget=budget, directory_identities=directory_identities, directory_states=directory_states)
+    native, report_digest = read_json_and_digest(report_path, budget=budget, directory_identities=directory_identities, directory_states=directory_states, file_states=file_states)
     require(type(native) is dict and type(native.get('results')) is list
             and len(native['results']) <= 100, 'Invalid bounded static report')
     require(len(native['skills']) == 1 and native['skills'][0]['name'] == name, 'Static identity mismatch')
@@ -2058,7 +2105,7 @@ def normalize_static(root, name, workspace=ROOT):
     data['availability'] = {'status': 'incomplete' if limitations else 'complete',
                             'reasons': sorted(limitations), 'provenance': 'runtime_recorded'}
     if root / 'versions.json' in scanned_entries:
-        versions, versions_digest = read_json_and_digest(root / 'versions.json', budget=budget, directory_identities=directory_identities, directory_states=directory_states)
+        versions, versions_digest = read_json_and_digest(root / 'versions.json', budget=budget, directory_identities=directory_identities, directory_states=directory_states, file_states=file_states)
         validate_runtime_versions(versions)
         data['policy'] = make_policy({'evaluator_revision': versions.get('evaluator_revision')}, provenance='runtime_recorded')
         data['references'].append(reference_from_digest(root, root / 'versions.json', 'skill-quality', versions_digest))
@@ -2067,6 +2114,7 @@ def normalize_static(root, name, workspace=ROOT):
             for record in data['references']:
                 record['provenance'] = 'synthetic'
     verify_directory_states(directory_states, directory_identities)
+    verify_file_states(file_states, directory_identities, directory_states)
     validate_evidence(data)
     blocking_defaults = tuple((scan['scanner'], scan['blocking']) for scan in data['scans'])
     return _StaticEvidence(data, static_claim_identity(data, blocking_defaults), blocking_defaults)

@@ -112,7 +112,7 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual(len(gh['suite']['case_ids']), 24)
         self.assertEqual(gh['measurement']['status'], 'unavailable')
 
-    def test_imported_manifest_reuses_lock_validated_bytes(self):
+    def test_imported_manifest_rejects_changed_lock_validated_member(self):
         root = self.repo(); lock = self.imported(root)
         authored = root / '.agents/skills/beta'
         (authored / 'README.md').write_text('Reviewed content')
@@ -137,9 +137,8 @@ class EvidenceTests(unittest.TestCase):
                 if checked == len(owner['deployed_file_hashes']):
                     (authored / 'README.md').write_text('Replacement content')
         with patch.object(evidence, 'require', side_effect=replace_after_lock):
-            actual = next(row for row in evidence.inventory(root)['skills'] if row['source']['skill_id'] == 'beta')
+            with self.assertRaisesRegex(ValueError, 'Input member changed'): evidence.inventory(root)
         self.assertEqual(checked, len(owner['deployed_file_hashes']))
-        self.assertEqual(actual, baseline)
 
     def test_inventory_skill_limit_precedes_processing(self):
         root = self.root / 'catalog'
@@ -217,7 +216,7 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual(rows[0]['behavioral_status'], 'not_configured')
         self.assertEqual(rows[1]['suite']['case_ids'], ['1'])
 
-    def test_inventory_dataset_uses_one_validated_buffer(self):
+    def test_inventory_dataset_rejects_changed_captured_buffer(self):
         for captured_valid in (True, False):
             with self.subTest(captured_valid=captured_valid), tempfile.TemporaryDirectory() as temp:
                 root = Path(temp); authored = self.local(root, 'alpha', True)
@@ -239,9 +238,7 @@ class EvidenceTests(unittest.TestCase):
                     return raw
                 with patch.object(evidence, 'read_bytes', side_effect=replacing):
                     if captured_valid:
-                        suite = evidence.inventory(root)['skills'][0]['suite']
-                        self.assertEqual(suite['case_ids'], ['1'])
-                        self.assertEqual(suite['authored_digest'], evidence.digest_bytes(captured))
+                        with self.assertRaisesRegex(ValueError, 'Input member changed'): evidence.inventory(root)
                     else:
                         with self.assertRaises(ValueError):
                             evidence.inventory(root)
@@ -311,14 +308,20 @@ class EvidenceTests(unittest.TestCase):
                 root = Path(temp); authored = self.local(root, 'alpha', True)
                 path = authored / 'evals' / member; path.parent.mkdir(exist_ok=True)
                 path.write_text(text); raw = path.read_bytes(); read = evidence.read_bytes; reads = []
-                def replaced(target, *args, **kwargs):
+                def captured(target, *args, **kwargs):
                     result = read(target, *args, **kwargs)
                     if target == path:
-                        reads.append(result); path.write_text('invalid syntax !')
+                        reads.append(result)
                     return result
-                with patch.object(evidence, 'read_bytes', side_effect=replaced):
+                with patch.object(evidence, 'read_bytes', side_effect=captured):
                     evidence.inventory(root)
                 self.assertEqual(reads, [raw])
+                def replaced(target, *args, **kwargs):
+                    result = read(target, *args, **kwargs)
+                    if target == path: path.write_text('invalid syntax !')
+                    return result
+                with patch.object(evidence, 'read_bytes', side_effect=replaced), \
+                        self.assertRaisesRegex(ValueError, 'Input member changed'): evidence.inventory(root)
                 path.write_text(text)
                 def exhausted(target, *args, **kwargs):
                     if target == path: kwargs['budget'].remaining = 0
@@ -455,7 +458,8 @@ class EvidenceTests(unittest.TestCase):
                 def changed_size(fd):
                     info = fstat(fd)
                     if growth and info.st_ino == target_info.st_ino and info.st_dev == target_info.st_dev:
-                        fields = {k: getattr(info, k) for k in ('st_mode', 'st_nlink', 'st_size', 'st_ino', 'st_dev', 'st_uid', 'st_gid')}
+                        fields = {k: getattr(info, k) for k in ('st_mode', 'st_nlink', 'st_size', 'st_ino', 'st_dev', 'st_uid', 'st_gid',
+                                                              'st_mtime_ns', 'st_ctime_ns')}
                         fields['st_size'] -= 1
                         from types import SimpleNamespace
                         return SimpleNamespace(**fields)
@@ -467,9 +471,9 @@ class EvidenceTests(unittest.TestCase):
                         patch.object(evidence.os, 'fstat', side_effect=changed_size), \
                         patch.object(evidence, 'read_bytes', side_effect=exhausted), \
                         patch.object(evals_spec, '_run_file_checks') as validate:
-                    with self.assertRaisesRegex(ValueError, 'Normalization byte limit'):
+                    with self.assertRaisesRegex(ValueError, 'Input member changed' if growth else 'Normalization byte limit'):
                         evidence.inventory(root)
-                self.assertEqual(streams[-1].reads, int(growth)); validate.assert_not_called()
+                self.assertEqual(streams[-1].reads, 0); validate.assert_not_called()
         self.assertEqual(self.snapshot(root), before)
 
     def test_inventory_per_file_limit_precedes_capture(self):
@@ -2733,6 +2737,60 @@ class EvidenceTests(unittest.TestCase):
                     evidence.main([*args, '--output', str(output)])
                 self.assertFalse(output.exists()); self.assertEqual(self.snapshot(root), snapshots[0])
 
+    def test_member_state_rejects_transient_in_place_edits(self):
+        for operation, stage in itertools.product(('static', 'behavioral', 'inventory'), ('before', 'during', 'after')):
+            with self.subTest(operation=operation, stage=stage), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp) / 'input'; output = Path(temp) / 'rejected-member-change'
+                if operation == 'inventory':
+                    target = self.local(root, 'alpha') / 'SKILL.md'
+                    changed = target.read_bytes().replace(b'Synthetic fixture', b'Transient fixture')
+                    args = ['inventory']
+                else:
+                    shutil.copytree(FIXTURES / ('static-synthetic' if operation == 'static' else 'podman-native'), root)
+                    if operation == 'static':
+                        target = root / 'versions.json'; value = evidence.read_json(target); value.pop('fixture')
+                    else:
+                        (root / 'extract-manifest.json').unlink()
+                        target = next(root.glob('results/podman/*/result.json'))
+                        value = evidence.read_json(target); value['report_status'] = 'diagnostic_only'
+                    changed = evidence.encoded(value)
+                    args = ['normalize', '--kind', operation, '--skill', 'podman', '--input', str(root)]
+                original = target.read_bytes(); state = target.stat(); before = self.snapshot(root)
+                read = evidence.read_bytes; inventory = evidence.inventory; attempted = False
+                def restored(path, *args, **kwargs):
+                    nonlocal attempted
+                    if path != target or stage == 'during': return read(path, *args, **kwargs)
+                    attempted = True
+                    if stage == 'after': raw = read(path, *args, **kwargs)
+                    target.write_bytes(changed)
+                    try:
+                        if stage == 'before': raw = read(path, *args, **kwargs)
+                    finally:
+                        target.write_bytes(original); os.utime(target, ns=(state.st_atime_ns, state.st_mtime_ns))
+                    return raw
+                fdopen = os.fdopen
+                class EditingRead:
+                    def __init__(self, stream): self.stream = stream
+                    def __enter__(self): return self
+                    def __exit__(self, *args): return self.stream.__exit__(*args)
+                    def fileno(self): return self.stream.fileno()
+                    def read(self, *args):
+                        nonlocal attempted
+                        attempted = True; target.write_bytes(changed)
+                        try: return self.stream.read(*args)
+                        finally:
+                            target.write_bytes(original); os.utime(target, ns=(state.st_atime_ns, state.st_mtime_ns))
+                def edited_stream(fd, *args, **kwargs):
+                    stream = fdopen(fd, *args, **kwargs)
+                    return EditingRead(stream) if stage == 'during' and (os.fstat(fd).st_dev, os.fstat(fd).st_ino) \
+                        == (state.st_dev, state.st_ino) else stream
+                with patch.object(evidence, 'read_bytes', side_effect=restored), \
+                        patch.object(os, 'fdopen', side_effect=edited_stream), \
+                        patch.object(evidence, 'inventory', side_effect=lambda: inventory(root)), \
+                        self.assertRaisesRegex(ValueError, 'Input member changed'), redirect_stdout(StringIO()):
+                    evidence.main([*args, '--output', str(output)])
+                self.assertTrue(attempted); self.assertFalse(output.exists()); self.assertEqual(self.snapshot(root), before)
+
     def test_behavioral_trials_use_captured_scan_entries(self):
         root = self.native(); trials = next(root.glob('results/podman/*/codex/with-skill/trials'))
         original = next(trials.glob('*/result.json')); extra = trials / 'hidden-extra'; extra.mkdir()
@@ -3428,27 +3486,18 @@ class EvidenceTests(unittest.TestCase):
                    run / 'dataset_snapshot.json', run / 'attempt_policy.json',
                    next(run.glob('codex/*/summary.json')), next(run.glob('codex/*/trials/*/result.json')),
                    next(run.glob('codex/*/trials/*/reward.json'))]
-        read = evidence.read_bytes
-        baseline = evidence.normalize_behavioral(root, 'podman')
+        with patch.object(evidence, 'read_bytes', wraps=evidence.read_bytes) as read, \
+                patch.object(evidence, 'digest_bytes', wraps=evidence.digest_bytes) as digest:
+            data = evidence.normalize_behavioral(root, 'podman')
         for target in members:
             with self.subTest(member=target.relative_to(root)):
-                original = target.read_bytes(); calls = []
-                def replace_after_read(path, *args, **kwargs):
-                    raw = read(path, *args, **kwargs); calls.append(path)
-                    if path == target:
-                        value = json.loads(raw); value['replaced_after_read'] = True; write(path, value)
-                    return raw
-                try:
-                    with patch.object(evidence, 'read_bytes', side_effect=replace_after_read):
-                        data = evidence.normalize_behavioral(root, 'podman')
-                    self.assertEqual(evidence.encoded(data), evidence.encoded(baseline))
-                    self.assertEqual(calls.count(target), 1)
-                    refs = [r for r in data['references'] if r['member'] == target.relative_to(root).as_posix()]
-                    self.assertTrue(refs)
-                    self.assertTrue(all(r['digest'] == evidence.digest_bytes(original) for r in refs))
-                    evidence.project(data)
-                finally:
-                    target.write_bytes(original)
+                original = target.read_bytes()
+                self.assertEqual(sum(call.args[0] == target for call in read.call_args_list), 1)
+                self.assertEqual(sum(call.args[0] == original for call in digest.call_args_list), 1)
+                refs = [r for r in data['references'] if r['member'] == target.relative_to(root).as_posix()]
+                self.assertTrue(refs)
+                self.assertTrue(all(r['digest'] == evidence.digest_bytes(original) for r in refs))
+        evidence.project(data)
 
     def test_snapshot_buffer_preserves_pinned_validation(self):
         from skillevaluator.tier3.harbor import report_data as native
