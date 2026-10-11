@@ -198,22 +198,29 @@ def safe_path(path, *, directory=False, missing=False, directory_identities=None
 
 
 def safe_tree(path, *, max_entries=MAX_INPUT_ENTRIES, max_files=None, directory_identities=None):
+    if directory_identities is None:
+        directory_identities = {}
     path = safe_path(path, directory=True, directory_identities=directory_identities)
     pending = [path]
     files = []
     seen = 0
     while pending:
-        with os.scandir(pending.pop()) as entries:
-            for entry in entries:
-                seen += 1
-                require(seen <= max_entries, 'Input tree entry limit')
-                directory = stat.S_ISDIR(entry.stat(follow_symlinks=False).st_mode)
-                member = safe_path(entry.path, directory=directory, directory_identities=directory_identities)
-                if directory:
-                    pending.append(member)
-                else:
-                    require(max_files is None or len(files) < max_files, 'Input tree entry limit')
-                    files.append(member)
+        current = pending.pop()
+        fd = open_directory(current, directory_identities)
+        try:
+            with os.scandir(fd) as entries:
+                for entry in entries:
+                    seen += 1
+                    require(seen <= max_entries, 'Input tree entry limit')
+                    directory = stat.S_ISDIR(entry.stat(follow_symlinks=False).st_mode)
+                    member = safe_path(current / entry.name, directory=directory, directory_identities=directory_identities)
+                    if directory:
+                        pending.append(member)
+                    else:
+                        require(max_files is None or len(files) < max_files, 'Input tree entry limit')
+                        files.append(member)
+        finally:
+            os.close(fd)
     return files
 
 
@@ -401,18 +408,22 @@ def skill_projection_files(path, files):
 
 
 def skill_content(path, *, reader=None):
-    files = safe_tree(path, max_entries=2 * MAX_SOURCE_MEMBERS, max_files=MAX_SOURCE_MEMBERS)
+    directories = {}
+    files = safe_tree(path, max_entries=2 * MAX_SOURCE_MEMBERS, max_files=MAX_SOURCE_MEMBERS,
+                      directory_identities=directories)
     if reader is not None:
-        reject_source_markers(path)
+        reject_source_markers(path, files, directories)
     else:
         reader = read_bytes
     return content([{'member': p.relative_to(path).as_posix(), 'digest': digest_bytes(reader(p))}
                     for p in skill_projection_files(path, files)], 'configured')
 
 
-def reject_source_markers(path):
+def reject_source_markers(path, files, directories):
     from skillevaluator.tier3.output_provenance import GENERATED_OUTPUT_MARKER
-    require(not any(path.rglob(GENERATED_OUTPUT_MARKER)), 'Generated output inside inventory source')
+    marked = (any(p.name == GENERATED_OUTPUT_MARKER for p in files)
+              or any(p.name == GENERATED_OUTPUT_MARKER and p.is_relative_to(Path(path).absolute()) for p in directories))
+    require(not marked, 'Generated output inside inventory source')
 
 
 def validate_source(value):
@@ -712,8 +723,10 @@ def inventory(workspace=ROOT):
             owner = owners[0]
             repository(owner['repo_url']); revision(owner['resolved_commit']); relative(owner['virtual_path'])
             authored = workspace / '.agents/skills' / name
-            files = safe_tree(authored, max_entries=2 * MAX_SOURCE_MEMBERS, max_files=MAX_SOURCE_MEMBERS)
-            reject_source_markers(authored)
+            directories = {}
+            files = safe_tree(authored, max_entries=2 * MAX_SOURCE_MEMBERS, max_files=MAX_SOURCE_MEMBERS,
+                              directory_identities=directories)
+            reject_source_markers(authored, files, directories)
             validate_skill_metadata(authored, name, reader=reader)
             visible = skill_projection_files(authored, files)
             actual = {p.relative_to(workspace).as_posix(): digest_bytes(reader(p)) for p in files}
@@ -927,7 +940,7 @@ def behavioral_identity_missing(data):
 
 def validate_evidence(data, *, public=False, _observed_at=None):
     observed_at = _observed_at
-    if type(data) is _StaticEvidence:
+    if type(data) in (_StaticEvidence, _BehavioralEvidence):
         data = dict(data)
     fields = ('schema_version', 'kind', 'source', 'run_id', 'dataset', 'policy', 'arms', 'metrics',
               'observations', 'scans', 'findings', 'references', 'availability')
@@ -1278,7 +1291,37 @@ class _StaticEvidence(dict):
         return result
 
 
-def project(data, *, static_bundle=None):
+def behavioral_claim_identity(data):
+    claims = {key: copy.deepcopy(data[key]) for key in
+              ('source', 'run_id', 'dataset', 'policy', 'arms', 'observations', 'metrics', 'references')}
+    for obs in claims['observations']:
+        obs['references'].sort()
+    claims['observations'].sort(key=lambda obs: obs['id'])
+    claims['metrics'].sort(key=lambda row: row['name'])
+    for ref in claims['references']:
+        ref.pop('availability')
+    claims['references'].sort(key=lambda ref: ref['id'])
+    return identity(claims)
+
+
+class _BehavioralEvidence(dict):
+    """Transient witness for ordinary runtime observations and headline metrics."""
+    __slots__ = ('_claim_digest',)
+
+    def __init__(self, data, claim_digest):
+        super().__init__(data)
+        object.__setattr__(self, '_claim_digest', claim_digest)
+
+    def __setattr__(self, name, value):
+        raise AttributeError('Immutable native witness')
+
+    def __deepcopy__(self, memo):
+        result = _BehavioralEvidence(copy.deepcopy(dict(self), memo), self._claim_digest)
+        memo[id(self)] = result
+        return result
+
+
+def project(data, *, static_bundle=None, behavioral_bundle=None):
     observed_at = utc_now()
     validate_evidence(data, _observed_at=observed_at)
     if data['kind'] == 'static' and data['availability']['status'] != 'unavailable':
@@ -1289,6 +1332,18 @@ def project(data, *, static_bundle=None):
             witness = normalize_static(Path(static_bundle), data['source']['skill_id'])
         require(static_claim_identity(data, witness._blocking_defaults) == witness._claim_digest,
                 'Static claims differ from retained native evidence')
+    native_behavior = (type(data) is _BehavioralEvidence
+                       or data['availability']['provenance'] == 'runtime_recorded'
+                       or any(ref['artifact_id'] == data['run_id'] for ref in data['references']))
+    if data['kind'] == 'behavioral' and native_behavior and data['availability']['status'] != 'unavailable':
+        if type(data) is _BehavioralEvidence:
+            witness = data
+        else:
+            require(behavioral_bundle is not None, 'Retained native behavioral bundle required')
+            witness = normalize_behavioral(Path(behavioral_bundle), data['source']['skill_id'], data['run_id'])
+            require(type(witness) is _BehavioralEvidence, 'Native behavioral provenance mismatch')
+        require(behavioral_claim_identity(data) == witness._claim_digest,
+                'Behavioral claims differ from retained native evidence')
     # Every object is rebuilt from fixed fields. A native report is never accepted.
     out = {key: copy.deepcopy(data[key]) for key in ('schema_version', 'kind', 'source', 'run_id', 'dataset',
            'policy', 'arms', 'metrics', 'scans', 'findings', 'references', 'availability')}
@@ -1768,7 +1823,7 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     data['availability'] = {'status': 'incomplete' if limitations else 'complete',
                             'reasons': sorted(limitations), 'provenance': 'reviewed_extract' if extract else 'runtime_recorded'}
     validate_evidence(data, _observed_at=observed_at)
-    return data
+    return data if extract else _BehavioralEvidence(data, behavioral_claim_identity(data))
 
 
 def static_required_gate(scan, *, blocking_only=False):
@@ -2062,8 +2117,8 @@ def main(argv=None):
         values = {'inventory.json': inventory()}
     elif args.command == 'project':
         data = read_json(args.input)
-        values = {'public-report.json': project(data, static_bundle=args.input.parent)}
-        if data['kind'] == 'static':
+        values = {'public-report.json': project(data, static_bundle=args.input.parent, behavioral_bundle=args.input.parent)}
+        if data['kind'] == 'static' or data['availability']['provenance'] == 'runtime_recorded':
             input_path = args.input.parent
     else:
         require(args.kind == 'behavioral' or args.run is None, '--run applies to behavioral evidence')

@@ -358,6 +358,21 @@ class EvidenceTests(unittest.TestCase):
                 unrelated = root / 'generated'; unrelated.mkdir(); (unrelated / marker).write_text('unrelated')
                 evidence.inventory(root)
 
+    def test_inventory_marker_guard_uses_captured_tree_entries(self):
+        from skillevaluator.tier3.harbor import adapter
+        from skillevaluator.tier3.output_provenance import GENERATED_OUTPUT_MARKER
+        for directory in (False, True):
+            with self.subTest(directory=directory), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp); authored = self.local(root, 'alpha')
+                marker = authored / GENERATED_OUTPUT_MARKER
+                if directory: marker.mkdir()
+                else: marker.write_text('untrusted marker')
+                with patch.object(Path, 'rglob', return_value=iter(())) as pathname_scan, \
+                        patch.object(adapter, '_runtime_skill_copy_ignore') as selector:
+                    with self.assertRaisesRegex(ValueError, 'Generated output inside inventory source'):
+                        evidence.inventory(root)
+                pathname_scan.assert_not_called(); selector.assert_not_called()
+
     def test_inventory_budget_rejects_before_capture_and_growth_validation(self):
         from skillevaluator.tier3 import evals_spec
         root = self.repo(); authored = root / '.apm/skills/alpha'; self.dataset(authored, 'alpha')
@@ -2382,6 +2397,63 @@ class EvidenceTests(unittest.TestCase):
             replacements[old] = ref['id']
         for obs in data['observations']:
             obs['references'] = [replacements[ref] for ref in obs['references']]
+
+    def test_behavioral_runtime_projection_binds_native_claims(self):
+        root = self.native(); data = evidence.normalize_behavioral(root, 'podman')
+        original = evidence.project(data)
+        self.assertNotIn('_claim_digest', evidence.encoded(data).decode())
+        with self.assertRaises(AttributeError): data._claim_digest = 'forged'
+        plain = json.loads(evidence.encoded(data))
+        with self.assertRaisesRegex(ValueError, 'Retained native behavioral bundle required'):
+            evidence.project(plain)
+        self.assertEqual(evidence.project(plain, behavioral_bundle=root), original)
+        for field in ('score', 'metric', 'model', 'unknown-provenance'):
+            with self.subTest(field=field):
+                forged = copy.deepcopy(data)
+                if field in ('score', 'unknown-provenance'):
+                    obs = forged['observations'][0]
+                    obs['score'] = obs['scores']['overall'] = obs['score'] + 0.0001
+                    if field == 'unknown-provenance':
+                        forged['availability']['provenance'] = 'unknown'
+                        for ref in forged['references']: ref['provenance'] = 'unknown'
+                elif field == 'metric': forged['metrics'][0]['value'] += 0.0001
+                else:
+                    forged['policy']['fields']['model'] = 'tampered-model'
+                    forged['policy']['id'] = evidence.identity({k: forged['policy'][k] for k in
+                        ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')})
+                evidence.validate_evidence(forged)
+                with self.assertRaises(ValueError): evidence.project(forged)
+                path = root / 'evidence.json'; write(path, forged); before = self.snapshot(root)
+                output = self.root / ('forged-behavior-' + field)
+                with self.assertRaises(ValueError), redirect_stdout(StringIO()):
+                    evidence.main(['project', '--input', str(path), '--output', str(output)])
+                self.assertFalse(output.exists()); self.assertEqual(self.snapshot(root), before)
+        write(root / 'evidence.json', data)
+        before = self.snapshot(root); output = self.root / 'valid-behavior'
+        with redirect_stdout(StringIO()):
+            evidence.main(['project', '--input', str(root / 'evidence.json'), '--output', str(output)])
+        self.assertEqual(evidence.read_json(output / 'public-report.json'), original)
+        self.assertEqual(self.snapshot(root), before)
+        for path in root.glob('results/*/*/codex/*/trials/*/result.json'): path.unlink()
+        with self.assertRaises(ValueError), redirect_stdout(StringIO()):
+            evidence.main(['project', '--input', str(root / 'evidence.json'), '--output', str(self.root / 'missing-native')])
+        self.assertFalse((self.root / 'missing-native').exists())
+
+    def test_tree_scan_enumerates_validated_directory_descriptors(self):
+        root = self.root / 'scanned'; root.mkdir(); (root / 'original.json').write_text('{}')
+        subset = self.root / 'subset'; subset.mkdir(); retained = self.root / 'retained'
+        before = self.snapshot(root); scan = evidence.os.scandir; swapped = False
+        def replacing(path):
+            nonlocal swapped
+            if not swapped:
+                swapped = True; root.rename(retained); subset.rename(root)
+                try: entries = scan(path)
+                finally: root.rename(subset); retained.rename(root)
+                return entries
+            return scan(path)
+        with patch.object(evidence.os, 'scandir', side_effect=replacing):
+            self.assertEqual(evidence.safe_tree(root), [root / 'original.json'])
+        self.assertTrue(swapped); self.assertEqual(self.snapshot(root), before)
 
     def test_static_projection_binds_claims_to_retained_native_bytes(self):
         root = self.root / 'retained-static'

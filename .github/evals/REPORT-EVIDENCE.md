@@ -169,6 +169,9 @@ Normalization bundles and catalog/overlay trees allow at most 100,000 entries;
 authored skill trees allow 2,000 entries and 1,000 files. Entries include
 directories and unused or later-excluded files, so empty directories and unused
 members cannot bypass the traversal cap. Exceeding a cap rejects the contract.
+Each scanned directory is opened through validated ancestor descriptors and its
+device/inode identity is checked before descriptor-based enumeration. Temporarily
+substituting an empty or subset directory cannot hide the original entries.
 The discovered local/overlay skill-name union is limited to 1,000 before any
 per-skill metadata parsing, content hashing, or revision query. YAML aliases
 retain shared objects; depth validation remembers each container's deepest
@@ -188,6 +191,20 @@ native trial identity and any explicit native attempt label; an absent ordinal
 stays null with a metadata limitation. Public observation IDs are SHA-256 of the
 canonical JSON array `[run_id, arm, case_id, native_id, native_trial, attempt]`.
 Reordering inputs does not regenerate identities.
+
+Ordinary runtime behavioral normalization carries a transient immutable witness
+for its source, run, dataset, policy, arms, observations, headline metrics and
+references. Projection checks
+those claims against the witness. Standalone `runtime_recorded` behavioral
+projection requires the retained native bundle beside `evidence.json` and
+renormalizes the selected recorded run before accepting its claims. Altering a
+score on the same side of the rubric threshold still rejects. Stable native
+artifact/run identities keep these checks active even if provenance labels are
+cleared. Reference
+availability can be conservatively downgraded without relabeling native claims.
+Reviewed extracts retain their independent pinned identity/payload checks;
+explicit synthetic fixtures and unavailable records retain their existing rules.
+The witness is private in-memory state and adds no serialized fields or CLI flags.
 
 Supplied summary attempts are validated before indexing: case rows and attempt
 lists must have the native types, trial identities must be unique, supplied
