@@ -696,7 +696,8 @@ class EvidenceTests(unittest.TestCase):
 
     def test_coverage_unknown_and_known_count_combinations(self):
         base = evidence.read_json(FIXTURES / 'gh-no-model.json')
-        base['availability'].update(status='incomplete', reasons=['coverage_missing', 'execution_incomplete'])
+        base['availability'].update(status='incomplete', reasons=['coverage_missing', 'execution_incomplete',
+                                                                'case_details_missing', 'source_unavailable'])
         base['policy']['attempts']['maximum'] = None
         base['policy']['id'] = evidence.identity({k: base['policy'][k] for k in
                                                 ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')})
@@ -1039,7 +1040,8 @@ class EvidenceTests(unittest.TestCase):
     def test_expired_references_cannot_promote(self):
         data = self.data(); data['references'][0]['availability'] = 'expired'
         with self.assertRaises(ValueError): evidence.project(data)
-        data['availability'].update(status='incomplete', reasons=['reference_expired'])
+        data['availability'].update(status='incomplete',
+                                    reasons=sorted(set(data['availability']['reasons']) | {'reference_expired'}))
         evidence.project(data)
         with self.assertRaises(ValueError): evidence.verify_reference(self.root, data['references'][0])
 
@@ -1291,6 +1293,43 @@ class EvidenceTests(unittest.TestCase):
                 data['availability']['reasons'].append('execution_incomplete')
                 self.assertIn('execution_incomplete', evidence.project(data)['availability']['reasons'])
         # Configured arms with no observed execution do not invent a failed run.
+        evidence.project(evidence.read_json(FIXTURES / 'gh-no-model.json'))
+
+    def test_projection_preserves_missing_behavioral_coverage(self):
+        for arm, key, value in itertools.product(('with_skill', 'without_skill'),
+                ('recorded_attempts', 'scored_attempts'), (None, 9)):
+            with self.subTest(arm=arm, key=key, value=value):
+                data = self.data(); selected = next(row for row in data['arms'] if row['name'] == arm)
+                cov = selected['coverage']; cov[key] = value
+                if key == 'recorded_attempts' and value is not None: cov['scored_attempts'] = value
+                cov.update(unscored_attempts=cov['recorded_attempts'] - cov['scored_attempts']
+                           if cov['recorded_attempts'] is not None and cov['scored_attempts'] is not None else None,
+                           case_details='partial')
+                if value == 9:
+                    last = next(row for row in reversed(data['observations']) if row['arm'] == arm)
+                    data['observations'].remove(last)
+                data['availability'].update(status='incomplete', reasons=['metadata_missing', 'source_unavailable',
+                                                                       'case_details_missing'])
+                self.assert_project_rejects(data, 'Missing coverage limitation')
+                data['availability']['reasons'].append('coverage_missing')
+                self.assertIn('coverage_missing', evidence.project(data)['availability']['reasons'])
+
+    def test_projection_preserves_missing_behavioral_case_details(self):
+        for arm, details in itertools.product(('with_skill', 'without_skill'), ('partial', 'unavailable')):
+            with self.subTest(arm=arm, details=details):
+                data = self.data(); selected = next(row for row in data['arms'] if row['name'] == arm)
+                selected['coverage']['case_details'] = details
+                data['availability'].update(status='incomplete', reasons=['metadata_missing', 'source_unavailable'])
+                self.assert_project_rejects(data, 'Missing case detail limitation')
+                data['availability']['reasons'].append('case_details_missing')
+                self.assertIn('case_details_missing', evidence.project(data)['availability']['reasons'])
+
+    def test_projection_preserves_unavailable_behavioral_source(self):
+        data = self.data(); data['source']['content'] = evidence.content()
+        data['availability'].update(status='incomplete', reasons=['metadata_missing'])
+        self.assert_project_rejects(data, 'Behavioral source unavailable')
+        data['availability']['reasons'].append('source_unavailable')
+        self.assertIn('source_unavailable', evidence.project(data)['availability']['reasons'])
         evidence.project(evidence.read_json(FIXTURES / 'gh-no-model.json'))
 
     def test_reviewed_extract_member_budget_matches_trial_companions(self):

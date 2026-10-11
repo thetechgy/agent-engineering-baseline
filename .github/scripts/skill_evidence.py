@@ -828,6 +828,12 @@ def validate_evidence(data, *, public=False):
         elif availability['status'] != 'unavailable':
             require(availability['status'] == 'incomplete' and 'execution_incomplete' in availability['reasons'],
                     'Missing execution limitation')
+        if availability['status'] == 'incomplete':
+            if cov['recorded_attempts'] != cov['expected_attempts'] \
+                    or cov['scored_attempts'] != cov['expected_attempts']:
+                require('coverage_missing' in availability['reasons'], 'Missing coverage limitation')
+            if cov['case_details'] != 'complete':
+                require('case_details_missing' in availability['reasons'], 'Missing case detail limitation')
         if availability['status'] == 'complete':
             require(arm['execution_status'] == 'succeeded' and cov['scored_attempts'] == cov['expected_attempts']
                     and cov['recorded_attempts'] == cov['expected_attempts'] and cov['case_details'] == 'complete', 'Incomplete evidence promotion')
@@ -891,6 +897,9 @@ def validate_evidence(data, *, public=False):
             require(all(arm['coverage'][k] is None for k in ('recorded_attempts', 'scored_attempts', 'unscored_attempts')), 'Invented observed count')
     elif data['kind'] == 'behavioral':
         require(sorted(arm_names) == ['with_skill', 'without_skill'], 'Missing comparison arms')
+        if data['source']['content']['digest'] is None:
+            require(availability['status'] == 'incomplete' and 'source_unavailable' in availability['reasons'],
+                    'Behavioral source unavailable')
         if availability['status'] == 'complete':
             require(bool(ids), 'Empty complete cohort')
             require(len(data['metrics']) == 4 and data['run_id'] is not None, 'Incomplete metrics')

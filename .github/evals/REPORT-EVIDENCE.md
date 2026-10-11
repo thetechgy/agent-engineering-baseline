@@ -327,6 +327,10 @@ retain runtime-recorded provenance.
 For observed behavioral evidence, every nonsucceeded arm retains the
 `execution_incomplete` limitation even when other limitations already make the
 record incomplete. Configured arms without observed execution remain unavailable.
+Incomplete behavioral records also retain `coverage_missing` for unknown or
+short recorded/scored coverage, `case_details_missing` for partial or unavailable
+details, and `source_unavailable` when exact source content is absent. An unrelated
+limitation cannot hide these known gaps during standalone projection.
 
 The approved manifest records no durable retention of original members. At or
 after its recorded UTC expiration, normalization marks its original references
