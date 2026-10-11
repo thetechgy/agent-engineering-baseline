@@ -774,6 +774,76 @@ class EvidenceTests(unittest.TestCase):
         data['availability'].update(status='complete', reasons=[])
         with self.assertRaises(ValueError): evidence.project(data)
 
+    def test_static_detailed_severity_counts_do_not_exceed_totals(self):
+        for level, total, reported in itertools.product(('critical', 'high', 'medium', 'low'),
+                                                        (0, 1, 2), (None, 0, 1, 2)):
+            with self.subTest(level=level, total=total, reported=reported), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp) / 'static'; shutil.copytree(FIXTURES / 'static-synthetic', root)
+                path = next((root / 'reports/podman').glob('*.json'))
+                native = evidence.read_json(path)
+                native['severity_counts'] = dict.fromkeys(native['severity_counts'], 0)
+                native['severity_counts'][level] = total
+                scan = native['results'][0]
+                scan['findings'][0]['severity'] = level
+                for key in native['severity_counts']:
+                    scan['summary'][key + '_count'] = 0
+                if reported is None:
+                    scan['summary'].pop(level + '_count')
+                else:
+                    scan['summary'][level + '_count'] = reported
+                write(path, native)
+                valid = total >= 1 and (reported is None or reported == total and reported >= 1)
+                if valid:
+                    evidence.project(evidence.normalize_static(root, 'podman'))
+                else:
+                    with self.assertRaises(ValueError): evidence.normalize_static(root, 'podman')
+        # Balanced aggregate totals must still reject a deficient individual scanner.
+        root = self.root / 'balanced'; shutil.copytree(FIXTURES / 'static-synthetic', root)
+        path = next((root / 'reports/podman').glob('*.json')); native = evidence.read_json(path)
+        scan = native['results'][0]; scan['summary']['high_count'] = 0
+        second = copy.deepcopy(scan); second.update(validator='SECOND', findings=[], incomplete_scans=[])
+        second['summary']['high_count'] = 1
+        native['results'] = [scan, second]; native['total_validators'] = 2
+        write(path, native)
+        with self.assertRaisesRegex(ValueError, 'Detailed findings exceed scanner total'):
+            evidence.normalize_static(root, 'podman')
+
+    def test_static_finding_limit_precedes_reference_creation(self):
+        root = self.root / 'static'; shutil.copytree(FIXTURES / 'static-synthetic', root)
+        path = next((root / 'reports/podman').glob('*.json'))
+        native = evidence.read_json(path)
+        finding = {**native['results'][0]['findings'][0], 'severity': 'info'}
+        native['results'][0]['findings'] = [finding] * (evidence.MAX_TRIALS + 1)
+        write(path, native)
+        def unexpected(*args, **kwargs):
+            raise AssertionError('Reference construction preceded finding limit')
+        with patch.object(evidence, 'reference', side_effect=unexpected), \
+                patch.object(evidence, 'reference_from_digest', side_effect=unexpected, create=True):
+            with self.assertRaisesRegex(ValueError, 'Finding limit'):
+                evidence.normalize_static(root, 'podman')
+
+    def test_static_report_is_read_and_hashed_once(self):
+        root = self.root / 'static'; shutil.copytree(FIXTURES / 'static-synthetic', root)
+        path = next((root / 'reports/podman').glob('*.json'))
+        native = evidence.read_json(path)
+        native['results'][0]['findings'] *= 100
+        native['results'][0]['summary']['high_count'] = native['severity_counts']['high'] = 100
+        write(path, native); raw = path.read_bytes()
+        with patch.object(evidence, 'read_bytes', wraps=evidence.read_bytes) as read, \
+                patch.object(evidence, 'digest_bytes', wraps=evidence.digest_bytes) as digest:
+            data = evidence.normalize_static(root, 'podman')
+        self.assertEqual(sum(call.args[0] == path for call in read.call_args_list), 1)
+        self.assertEqual(sum(call.args[0] == raw for call in digest.call_args_list), 1)
+        self.assertEqual(len(data['findings']), 100)
+        evidence.project(data)
+        for ref in data['references']:
+            evidence.verify_reference(root, ref)
+        native['results'][0]['findings'] = [{**f, 'severity': 'info'} for f in native['results'][0]['findings']]
+        write(path, native)
+        informational = evidence.normalize_static(root, 'podman')
+        self.assertTrue(all(f['severity'] == 'info' for f in informational['findings']))
+        evidence.project(informational)
+
     def test_unknown_keys_rejected_at_every_object(self):
         # Mutate every nested object, including records within arrays.
         base = self.data()

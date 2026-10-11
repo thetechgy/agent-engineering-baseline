@@ -131,6 +131,11 @@ def read_json(path):
     return parse_json(read_bytes(path))
 
 
+def read_json_and_digest(path):
+    raw = read_bytes(path)
+    return parse_json(raw), digest_bytes(raw)
+
+
 def read_yaml(path):
     import yaml
     class UniqueLoader(yaml.SafeLoader):
@@ -583,8 +588,12 @@ def validate_reference(value):
 
 
 def reference(root, path, artifact, locator=(), extract=None):
+    return reference_from_digest(root, path, artifact, digest_bytes(read_bytes(path)), locator, extract)
+
+
+def reference_from_digest(root, path, artifact, raw_digest, locator=(), extract=None):
+    sha(raw_digest)
     member = path.relative_to(root).as_posix()
-    raw_digest = digest_bytes(read_bytes(path))
     value = {'artifact_id': artifact, 'member': member, 'locator': list(locator), 'digest': raw_digest}
     if extract is not None:
         member_record = next((row for row in extract['members'] if row['member'] == member), None)
@@ -1139,7 +1148,7 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
 
 def normalize_static(root, name, workspace=ROOT):
     safe_tree(root); skill_id(name)
-    catalog_path = root / 'reports/catalog-summary.json'; catalog = read_json(catalog_path)
+    catalog_path = root / 'reports/catalog-summary.json'; catalog, catalog_digest = read_json_and_digest(catalog_path)
     require(type(catalog) is dict, 'Static catalog object required')
     require(type(catalog['skills']) is list and catalog['total'] == len(catalog['skills']), 'Catalog cardinality mismatch')
     names = [row['name'] for row in catalog['skills']]
@@ -1151,7 +1160,7 @@ def normalize_static(root, name, workspace=ROOT):
     require(row.get('reason', '') == ('' if row['passed'] else 'validation failed'), 'Catalog infrastructure failure')
     filename = row['json_report']
     require(type(filename) is str and bool(re.fullmatch(r'skillevaluator-output-[0-9]{14}\.json', filename)), 'Unsafe static report member')
-    report_path = root / 'reports' / name / filename; native = read_json(report_path)
+    report_path = root / 'reports' / name / filename; native, report_digest = read_json_and_digest(report_path)
     require(type(native) is dict and type(native.get('results')) is list
             and len(native['results']) <= 100, 'Invalid bounded static report')
     require(len(native['skills']) == 1 and native['skills'][0]['name'] == name, 'Static identity mismatch')
@@ -1162,6 +1171,40 @@ def normalize_static(root, name, workspace=ROOT):
         token(scanner)
     expected = 'incomplete' if native['incomplete_scans'] else 'passed' if row['passed'] else 'failed'
     require(native['overall_status'] == expected and native['total_validators'] == len(native['results']) > 0, 'Static status contradiction')
+    severity = native['severity_counts']; closed(severity, ('critical', 'high', 'medium', 'low'))
+    for val in severity.values():
+        count(val)
+    finding_count = 0
+    for scan in native['results']:
+        require(type(scan) is dict and type(scan.get('findings', [])) is list, 'Invalid static findings')
+        finding_count += len(scan.get('findings', []))
+        require(finding_count <= MAX_TRIALS, 'Finding limit')
+        extra_scanners = scan.get('incomplete_scans', [])
+        require(type(extra_scanners) is list and len(extra_scanners) <= 100, 'Scanner limit')
+        for scanner in extra_scanners:
+            token(scanner)
+        require(set(extra_scanners) <= set(native['incomplete_scans']), 'Inconsistent incomplete scanner identity')
+    detailed = dict.fromkeys(severity, 0)
+    for scan in native['results']:
+        scan_counts = dict.fromkeys(severity, 0)
+        summary = scan.get('summary', {})
+        require(type(summary) is dict, 'Invalid scanner summary')
+        for finding in scan.get('findings', []):
+            require(type(finding) is dict, 'Invalid static finding')
+            enum(finding['severity'], (*severity, 'info'))
+            if finding['severity'] in severity:
+                scan_counts[finding['severity']] += 1
+                detailed[finding['severity']] += 1
+        for level, total in scan_counts.items():
+            reported = summary.get(level + '_count')
+            optional(reported, count)
+            require(reported is None or total <= reported, 'Detailed findings exceed scanner total')
+    for level, total in detailed.items():
+        require(total <= severity[level], 'Detailed findings exceed aggregate total')
+    for level, total in severity.items():
+        counts = [scan.get('summary', {}).get(level + '_count') for scan in native['results']]
+        if all(value is not None for value in counts):
+            require(sum(counts) == total, 'Contradictory static finding counts')
     data = evidence(name, 'static')
     declared = native.get('evaluated_source')
     if declared is not None:
@@ -1171,16 +1214,9 @@ def normalize_static(root, name, workspace=ROOT):
         path = '.apm/skills/' + name
         data['source'] = source(name, 'local' if repo and rev else 'unknown', repo, rev, path,
                                 historical_content(workspace, rev, path) if rev else content())
-    refs = [reference(root, catalog_path, 'skill-quality'), reference(root, report_path, 'skill-quality')]
-    severity = native['severity_counts']; closed(severity, ('critical', 'high', 'medium', 'low'))
-    for val in severity.values():
-        count(val)
-    for level, total in severity.items():
-        counts = [scan.get('summary', {}).get(level + '_count') for scan in native['results']]
-        if all(value is not None for value in counts):
-            for value in counts:
-                count(value)
-            require(sum(counts) == total, 'Contradictory static finding counts')
+    def report_reference(locator=()):
+        return reference_from_digest(root, report_path, 'skill-quality', report_digest, locator)
+    refs = [reference_from_digest(root, catalog_path, 'skill-quality', catalog_digest), report_reference()]
     # Aggregate native counts remain their own observation; scanner counts are
     # not invented when the pinned report does not supply them.
     data['scans'] = [{'scanner': 'catalog-total', 'status': native['overall_status'], 'passed': native['overall_passed'],
@@ -1188,7 +1224,7 @@ def normalize_static(root, name, workspace=ROOT):
     for index, scan in enumerate(native['results']):
         scanner = scan['validator']; token(scanner)
         enum(scan['status'], ('passed', 'failed', 'incomplete', 'skipped'))
-        scan_ref = reference(root, report_path, 'skill-quality', ('results', index)); refs.append(scan_ref)
+        scan_ref = report_reference(('results', index)); refs.append(scan_ref)
         data['scans'].append({'scanner': scanner, 'status': scan['status'], 'passed': scan.get('passed'),
             'severity_counts': {k: None for k in ('critical', 'high', 'medium', 'low')}, 'references': [scan_ref['id']]})
     recorded_incomplete = set()
@@ -1199,7 +1235,7 @@ def normalize_static(root, name, workspace=ROOT):
                 data['scans'].append({'scanner': scanner, 'status': 'incomplete', 'passed': None,
                     'severity_counts': {k: None for k in ('critical', 'high', 'medium', 'low')}, 'references': [refs[1]['id']]})
         for finding_index, finding in enumerate(scan.get('findings', [])):
-            finding_ref = reference(root, report_path, 'skill-quality', ('results', index, 'findings', finding_index))
+            finding_ref = report_reference(('results', index, 'findings', finding_index))
             refs.append(finding_ref)
             member = finding.get('file_path')
             try:
@@ -1215,10 +1251,10 @@ def normalize_static(root, name, workspace=ROOT):
     data['availability'] = {'status': 'incomplete' if incomplete else 'complete',
                             'reasons': ['scan_incomplete'] if incomplete else [], 'provenance': 'runtime_recorded'}
     if (root / 'versions.json').exists():
-        versions = read_json(root / 'versions.json')
+        versions, versions_digest = read_json_and_digest(root / 'versions.json')
         validate_runtime_versions(versions)
         data['policy'] = make_policy({'evaluator_revision': versions.get('evaluator_revision')}, provenance='runtime_recorded')
-        data['references'].append(reference(root, root / 'versions.json', 'skill-quality'))
+        data['references'].append(reference_from_digest(root, root / 'versions.json', 'skill-quality', versions_digest))
         if versions.get('fixture') == 'synthetic':
             data['availability']['provenance'] = 'synthetic'
             for record in data['references']:

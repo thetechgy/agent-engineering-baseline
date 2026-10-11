@@ -214,6 +214,13 @@ trials without that structure, they locate the recorded verifier result (which
 may be null), or the trial object when the verifier field is absent. These trial
 references identify an existing value; absent scores remain null.
 
+Static detailed findings may be partial, but their counts by critical/high/medium/low
+severity cannot exceed corresponding known scanner counts or aggregate totals.
+Unknown scanner counts remain unknown; informational findings retain their
+severity without inventing a native total. The 10,000-finding cap is checked
+before constructing references. Static catalog, report, and version members are
+each read, parsed, and hashed once; all locators reuse that exact byte digest.
+
 ## Reviewed fixtures and retention
 
 `fixtures/skill_evidence/podman-native` is a bounded extract of the retained
