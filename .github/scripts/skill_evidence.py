@@ -848,6 +848,9 @@ def validate_evidence(data, *, public=False):
                 passes = {o['case_id'] for o in recorded if o['rubric_pass'] is True}
                 require(len(passes) == rubric['passed_cases'], 'Rubric count mismatch')
         if rubric['threshold'] is not None:
+            if cov['case_details'] == 'complete':
+                require(all(o['score'] is None or o['rubric_pass'] is not None for o in recorded),
+                        'Missing scored rubric outcome')
             require(all(o['rubric_pass'] is None or o['score'] is not None
                         and o['rubric_pass'] == (o['score'] >= rubric['threshold']) for o in recorded),
                     'Contradictory native rubric pass')
@@ -925,6 +928,7 @@ def validate_evidence(data, *, public=False):
         for arm in data['arms']:
             require(all(arm['coverage'][k] is None for k in ('recorded_attempts', 'scored_attempts', 'unscored_attempts')), 'Invented observed count')
     elif data['kind'] == 'behavioral':
+        require(not data['scans'] and not data['findings'], 'Behavioral report implies static scans')
         require(sorted(arm_names) == ['with_skill', 'without_skill'], 'Missing comparison arms')
         if len(data['metrics']) < 4:
             require(availability['status'] == 'incomplete' and 'coverage_missing' in availability['reasons'],

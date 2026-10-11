@@ -1426,6 +1426,51 @@ class EvidenceTests(unittest.TestCase):
         # Configured arms with no observed execution do not invent a failed run.
         evidence.project(evidence.read_json(FIXTURES / 'gh-no-model.json'))
 
+    def test_complete_case_details_require_known_rubric_outcomes(self):
+        for arm, status, score in itertools.product(('with_skill', 'without_skill'),
+                                                    ('complete', 'incomplete'), (0.25, 0.75)):
+            with self.subTest(arm=arm, status=status, score=score):
+                data = self.data()
+                data['source']['content'] = evidence.content([
+                    {'member': 'SKILL.md', 'digest': evidence.digest_bytes(b'Synthetic')}], 'configured')
+                data['availability'].update(status=status, reasons=[] if status == 'complete' else ['metadata_missing'])
+                row = next(row for row in data['observations'] if row['arm'] == arm)
+                row['score'] = row['scores']['overall'] = score
+                row['rubric_pass'] = None
+                selected = next(item for item in data['arms'] if item['name'] == arm)
+                selected['rubric']['passed_cases'] = len({item['case_id'] for item in data['observations']
+                                                          if item['arm'] == arm and item['rubric_pass'] is True})
+                self.assert_project_rejects(data, 'Missing scored rubric outcome')
+                row['rubric_pass'] = score >= selected['rubric']['threshold']
+                selected['rubric']['passed_cases'] = len({item['case_id'] for item in data['observations']
+                                                          if item['arm'] == arm and item['rubric_pass'] is True})
+                evidence.project(data)
+        data = self.data(); data['observations'][0]['rubric_pass'] = None
+        data['arms'][0]['rubric'].update(threshold=None, passed_cases=9)
+        evidence.project(data)  # Unknown thresholds do not invent an outcome.
+        data = self.data(); data['observations'][0]['rubric_pass'] = None
+        data['arms'][0]['coverage']['case_details'] = 'partial'
+        data['availability'].update(status='incomplete', reasons=['case_details_missing'])
+        evidence.project(data)  # Partial case details remain explicitly incomplete.
+
+    def test_behavioral_evidence_rejects_static_scan_claims(self):
+        for status, finding in itertools.product(('complete', 'incomplete'), (False, True)):
+            with self.subTest(status=status, finding=finding):
+                data = self.data()
+                data['source']['content'] = evidence.content([
+                    {'member': 'SKILL.md', 'digest': evidence.digest_bytes(b'Synthetic')}], 'configured')
+                data['availability'].update(status=status, reasons=[] if status == 'complete' else ['metadata_missing'])
+                ref = data['observations'][0]['references'][0]
+                data['scans'] = [{'scanner': 'fabricated', 'status': 'passed', 'passed': True,
+                                 'severity_counts': dict.fromkeys(('critical', 'high', 'medium', 'low'), 0),
+                                 'references': [ref]}]
+                if finding:
+                    data['findings'] = [{'scanner': 'fabricated', 'severity': 'info', 'check': None,
+                                         'member': None, 'line': None, 'reference': ref}]
+                self.assert_project_rejects(data, 'Behavioral report implies static scans')
+                data['scans'] = []; data['findings'] = []
+                evidence.project(data)
+
     def test_projection_preserves_missing_behavioral_coverage(self):
         for arm, key, value in itertools.product(('with_skill', 'without_skill'),
                 ('recorded_attempts', 'scored_attempts'), (None, 9)):

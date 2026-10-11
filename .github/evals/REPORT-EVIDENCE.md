@@ -355,6 +355,11 @@ Known staged digests require the supported snapshot algorithm. Reduced behaviora
 metric sets independently retain `coverage_missing`; their retained values stay
 unchanged. Unavailable behavioral and static evidence retains
 `results_not_supplied`, including when other limitations are also recorded.
+Complete case details with a known rubric threshold require an outcome for every
+scored observation; null outcomes cannot reduce the retained passed-case count.
+Unknown thresholds and explicitly partial case details remain unknown.
+Behavioral evidence cannot carry static scan or finding claims; those claims
+must pass the static normalization contract.
 
 The approved manifest records no durable retention of original members. At or
 after its recorded UTC expiration, normalization marks its original references
