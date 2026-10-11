@@ -130,6 +130,30 @@ class EvidenceTests(unittest.TestCase):
                     self.assertEqual((metadata.call_count, hashing.call_count, revision.call_count), (0, 0, 0))
                 shutil.rmtree(extra)
 
+    def test_lock_record_limits_and_alias_duplicates(self):
+        root = self.repo()
+        for key, limit in (('dependencies', evidence.MAX_CASES), ('deployments', evidence.MAX_INPUT_ENTRIES)):
+            for size in (limit, limit + 1):
+                with self.subTest(key=key, size=size):
+                    lock = {'dependencies': [], 'deployments': []}
+                    lock[key] = [{}] * size
+                    (root / 'apm.lock.yaml').write_text(yaml.safe_dump(lock))
+                    if size == limit:
+                        self.assertEqual(len(evidence.inventory(root)['skills']), 1)
+                    else:
+                        with patch.object(evidence, 'validate_skill_metadata') as metadata, \
+                                patch.object(evidence, 'skill_content') as hashing, \
+                                patch.object(evidence, 'git_revision') as revision:
+                            with self.assertRaisesRegex(ValueError, 'Ownership record limit'):
+                                evidence.inventory(root)
+                            self.assertEqual((metadata.call_count, hashing.call_count, revision.call_count), (0, 0, 0))
+        for key in ('dependencies', 'deployments'):
+            with self.subTest(duplicate_alias=key), tempfile.TemporaryDirectory() as temp:
+                checkout = Path(temp); self.local(checkout, 'alpha'); lock = self.imported(checkout)
+                lock[key].append(lock[key][0])  # An alias remains a second ownership record.
+                (checkout / 'apm.lock.yaml').write_text(yaml.safe_dump(lock))
+                with self.assertRaises(ValueError): evidence.inventory(checkout)
+
     def test_yaml_alias_graph_has_bounded_depth_work(self):
         checkout = self.root / 'checkout'; self.local(checkout, 'alpha')
         scripts = checkout / '.github/scripts'; scripts.mkdir(parents=True)
@@ -569,8 +593,55 @@ class EvidenceTests(unittest.TestCase):
                             evidence.project(data)
                 events = [json.loads(line) for line in trace.read_text().splitlines()]
                 if kind != 'valid':
-                    self.assertFalse(any(e.get('event') == 'start' and 'cat-file' in e.get('argv', []) for e in events))
+                    self.assertFalse(any(e.get('event') == 'start' and 'cat-file' in e.get('argv', [])
+                                         and any(arg in e['argv'] for arg in ('-s', 'blob')) for e in events))
                 self.assertFalse(any(e.get('event') == 'child_start' and 'fetch' in e.get('argv', []) for e in events))
+
+    def test_historical_revisions_require_exact_commit_objects(self):
+        repo = self.root / 'object-types'; repo.mkdir(); authored = self.local(repo, 'podman', True)
+        def git(*args):
+            return subprocess.run(['git', '-C', str(repo), *args], check=True,
+                                  capture_output=True, text=True).stdout.strip()
+        git('init', '-q'); git('add', '.apm')
+        git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'Object type fixture')
+        commit = git('rev-parse', 'HEAD')
+        git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'tag', '-a', 'fixture', '-m', 'Annotated fixture')
+        objects = (git('rev-parse', 'HEAD^{tree}'), git('rev-parse', 'HEAD:.apm/skills/podman/SKILL.md'),
+                   git('rev-parse', 'fixture'))
+        native = self.native(); run = next((native / 'results/podman').iterdir())
+        config = evidence.read_json(run / 'run_config.json'); result = evidence.read_json(run / 'result.json')
+        provenance = evidence.read_json(native / 'provenance.json')
+        static = self.root / 'static-types'; shutil.copytree(FIXTURES / 'static-synthetic', static)
+        static_path = next((static / 'reports/podman').glob('*.json')); report = evidence.read_json(static_path)
+        for rev in objects:
+            with self.subTest(revision=rev):
+                config['evaluated_source']['commit'] = rev; result['run_config'] = config
+                provenance['revision'] = rev
+                write(run / 'run_config.json', config); write(run / 'result.json', result)
+                write(native / 'provenance.json', provenance)
+                report['evaluated_source'] = {'repository': 'example/fixture', 'commit': rev}; write(static_path, report)
+                trace = self.root / (rev + '.jsonl')
+                with patch.dict(os.environ, {'GIT_NO_LAZY_FETCH': '0'}), git_trace(trace):
+                    with self.assertRaisesRegex(ValueError, 'Historical revision must be a commit'):
+                        evidence.historical_content(repo, rev, '.apm/skills/podman')
+                    with self.assertRaisesRegex(ValueError, 'Historical revision must be a commit'):
+                        evidence.historical_blob(repo, rev + ':.apm/skills/podman/evals/evals.json')
+                    with self.assertRaisesRegex(ValueError, 'Historical revision must be a commit'):
+                        evidence.normalize_behavioral(native, 'podman', workspace=repo)
+                    with self.assertRaisesRegex(ValueError, 'Historical revision must be a commit'):
+                        evidence.normalize_static(static, 'podman', workspace=repo)
+                events = [json.loads(line) for line in trace.read_text().splitlines()]
+                commands = [e['argv'] for e in events if e.get('event') == 'start']
+                self.assertFalse(any('ls-tree' in argv or 'blob' in argv for argv in commands))
+                self.assertFalse(any(e.get('event') == 'child_start' and 'fetch' in e.get('argv', []) for e in events))
+        self.assertEqual(evidence.historical_content(repo, commit, '.apm/skills/podman')['digest'],
+                         evidence.skill_content(authored)['digest'])
+        dataset = authored / 'evals/evals.json'; dataset.unlink(); dataset.mkdir()
+        (dataset / 'member.json').write_text('{}')
+        git('add', '.apm'); git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+                              'commit', '-qm', 'Directory at dataset path')
+        with self.assertRaisesRegex(ValueError, 'Historical member must be a blob'):
+            evidence.historical_blob(repo, git('rev-parse', 'HEAD') + ':.apm/skills/podman/evals/evals.json')
 
     def test_historical_tree_entry_limit_precedes_blob_reads(self):
         for entries in (1000, 1001):
@@ -597,7 +668,8 @@ class EvidenceTests(unittest.TestCase):
                         evidence.validate_content(contents)
                 events = [json.loads(line) for line in trace.read_text().splitlines()]
                 reads = [event for event in events if event.get('event') == 'start'
-                         and 'cat-file' in event.get('argv', [])]
+                         and 'cat-file' in event.get('argv', [])
+                         and any(arg in event['argv'] for arg in ('-s', 'blob'))]
                 self.assertEqual(len(reads), 0 if entries > 1000 else 2 * entries)
                 self.assertFalse(any(event.get('event') == 'child_start' and 'fetch' in event.get('argv', [])
                                      for event in events))
@@ -619,7 +691,8 @@ class EvidenceTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'Historical tree listing limit'):
                 evidence.historical_content(repo, rev, 'podman')
         events = [json.loads(line) for line in trace.read_text().splitlines()]
-        self.assertFalse(any(event.get('event') == 'start' and 'cat-file' in event.get('argv', []) for event in events))
+        self.assertFalse(any(event.get('event') == 'start' and 'cat-file' in event.get('argv', [])
+                             and any(arg in event['argv'] for arg in ('-s', 'blob')) for event in events))
 
     def test_coverage_unknown_and_known_count_combinations(self):
         base = evidence.read_json(FIXTURES / 'gh-no-model.json')
@@ -1357,6 +1430,33 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual(data['metrics'], [])
         data['availability'].update(status='complete', reasons=[])
         with self.assertRaises(ValueError): evidence.project(data)
+
+    def test_complete_static_scans_require_references(self):
+        base = evidence.normalize_static(FIXTURES / 'static-synthetic', 'podman')
+        base['source']['content'] = evidence.content([
+            {'member': 'SKILL.md', 'digest': evidence.digest_bytes(b'Synthetic')}], 'configured')
+        base['availability'].update(status='complete', reasons=[])
+        base['findings'] = []
+        for scan in base['scans']:
+            scan.update(status='passed', passed=True, severity_counts=dict.fromkeys(scan['severity_counts'], 0))
+        evidence.project(base)
+        for index in range(len(base['scans'])):
+            with self.subTest(scan=index):
+                data = copy.deepcopy(base); data['scans'][index]['references'] = []
+                self.assert_project_rejects(data, 'Complete scan missing reference')
+                data['availability'].update(status='incomplete', reasons=['reference_unavailable'])
+                evidence.project(data)
+
+    def test_static_projection_retains_known_scan_limitations(self):
+        for status in ('incomplete', 'skipped'):
+            with self.subTest(status=status):
+                data = evidence.normalize_static(FIXTURES / 'static-synthetic', 'podman')
+                for scan in data['scans']: scan.update(status='passed', passed=True)
+                data['scans'][1].update(status=status, passed=None)
+                data['availability']['reasons'].remove('scan_incomplete')
+                self.assert_project_rejects(data, 'Missing scan limitation')
+                data['availability']['reasons'].append('scan_incomplete')
+                self.assertIn('scan_incomplete', evidence.project(data)['availability']['reasons'])
 
     def test_projection_reconciles_known_severity_counts(self):
         base = evidence.normalize_static(FIXTURES / 'static-synthetic', 'podman')

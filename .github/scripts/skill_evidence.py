@@ -332,8 +332,26 @@ def git_revision(workspace):
     return result.stdout.strip() if result.returncode == 0 else None
 
 
+def historical_commit(workspace, rev):
+    revision(rev)
+    kind = offline_git(workspace, 'cat-file', '-t', rev, text=True)
+    if kind.returncode:
+        return False
+    require(kind.stdout.strip() == 'commit', 'Historical revision must be a commit')
+    return True
+
+
 def historical_blob(workspace, spec):
     """Bound exact local object bytes before capturing content; missing stays unknown."""
+    if ':' in spec:
+        rev, member = spec.split(':', 1)
+        relative(member)
+        if not historical_commit(workspace, rev):
+            return None
+    kind = offline_git(workspace, 'cat-file', '-t', spec, text=True)
+    if kind.returncode:
+        return None
+    require(kind.stdout.strip() == 'blob', 'Historical member must be a blob')
     size = offline_git(workspace, 'cat-file', '-s', spec, text=True)
     if size.returncode:
         return None
@@ -347,7 +365,9 @@ def historical_blob(workspace, spec):
 
 def historical_content(workspace, rev, source_path):
     """Read exact local Git blobs only. Never checkout or contact a remote."""
-    revision(rev); relative(source_path)
+    relative(source_path)
+    if not historical_commit(workspace, rev):
+        return content()
     listing = offline_git(workspace, 'ls-tree', '-rz', rev, '--', source_path, max_entries=MAX_SOURCE_MEMBERS)
     if listing.returncode:
         return content()
@@ -459,7 +479,18 @@ def inventory(workspace=ROOT):
             and type(lock.get('deployments')) is list, 'Invalid ownership metadata')
     closed_dependencies = lock.get('dependencies', [])
     deployments = lock.get('deployments', [])
-    require(all(type(item) is dict for item in closed_dependencies + deployments), 'Invalid ownership records')
+    require(len(closed_dependencies) <= MAX_CASES and len(deployments) <= MAX_INPUT_ENTRIES,
+            'Ownership record limit')
+    require(all(type(item) is dict for records in (closed_dependencies, deployments) for item in records),
+            'Invalid ownership records')
+    owners_by_name = {}
+    for owner in closed_dependencies:
+        if type(owner.get('name')) is str:
+            owners_by_name.setdefault(owner['name'], []).append(owner)
+    deployments_by_member = {}
+    for deployment in deployments:
+        if deployment.get('target') == 'codex' and type(deployment.get('value')) is str:
+            deployments_by_member.setdefault(deployment['value'], []).append(deployment)
     overlays = workspace / '.github/evals'
     overlay_names = []
     if overlays.exists():
@@ -470,7 +501,7 @@ def inventory(workspace=ROOT):
     rows = []
     for name in discovered:
         skill_id(name)
-        owners = [d for d in closed_dependencies if d.get('name') == name]
+        owners = owners_by_name.get(name, [])
         require(len(owners) <= 1 and not (name in names and owners), 'Conflicting active source owners')
         if name in names:
             authored = catalog / name
@@ -488,7 +519,7 @@ def inventory(workspace=ROOT):
             actual = {p.relative_to(workspace).as_posix(): digest_bytes(read_bytes(p)) for p in files}
             require(actual == owner['deployed_file_hashes'], 'Deployment content drift')
             for member, digest in actual.items():
-                matches = [d for d in deployments if d.get('value') == member and d.get('target') == 'codex']
+                matches = deployments_by_member.get(member, [])
                 ownership = owner['repo_url'] + '/' + owner['virtual_path']
                 require(len(matches) == 1 and matches[0]['active_owner'] == ownership
                         and matches[0]['owners'] == [ownership] and matches[0]['content_hash'] == digest,
@@ -814,8 +845,11 @@ def validate_evidence(data, *, public=False):
         for val in scan['severity_counts'].values():
             optional(val, count)
         require(type(scan['references']) is list and set(scan['references']) <= ref_ids, 'Dangling scan reference')
+        if scan['status'] in ('incomplete', 'skipped'):
+            require('scan_incomplete' in availability['reasons'], 'Missing scan limitation')
         if availability['status'] == 'complete':
             require(scan['status'] not in ('incomplete', 'skipped'), 'Incomplete scan promotion')
+            require(bool(scan['references']), 'Complete scan missing reference')
     require(len(scanner_ids) == len(set(scanner_ids)), 'Duplicate scanner')
     severity_fields = ('critical', 'high', 'medium', 'low')
     detailed = {scanner: dict.fromkeys(severity_fields, 0) for scanner in scanner_ids}

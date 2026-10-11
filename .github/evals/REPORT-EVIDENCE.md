@@ -131,6 +131,10 @@ per-skill metadata parsing, content hashing, or revision query. YAML aliases
 retain shared objects; depth validation remembers each container's deepest
 visited level so work is bounded by input nodes and the depth limit rather than
 the number of alias paths. Cycles and over-depth paths still reject.
+Lock metadata allows at most 1,000 dependency and 100,000 deployment records,
+checked before record validation or ownership joins. Name/member indexes avoid
+repeated whole-list searches; duplicate records, including aliases, remain
+ambiguous rather than being deduplicated.
 
 ## Identity, provenance and coverage
 
@@ -167,6 +171,10 @@ only through explicit fixture instrumentation after this environment boundary;
 production provides no trace-output override. See the
 [Git Trace2 target documentation](https://git-scm.com/docs/api-trace2/).
 Historical skill members and authored datasets share the current-file 8 MiB byte limit. Object
+types are checked offline: a supplied revision must itself be a commit, and
+historical file members must be blobs. Tree, blob, or annotated-tag IDs cannot
+stand in for a commit, and existing non-blob dataset paths reject. Missing exact
+objects still retain unknown provenance without fetching. Object
 size is checked before capturing content: exactly 8 MiB is accepted, larger
 objects cause contract rejection, and missing objects retain null digests and
 unknown provenance. An authored dataset hash identifies exact file bytes; the
@@ -272,6 +280,10 @@ absent scanner counts remain null. Informational findings retain their
 severity without inventing a native total. The 10,000-finding cap is checked
 before constructing references. Static catalog, report, and version members are
 each read, parsed, and hashed once; all locators reuse that exact byte digest.
+Every scan in complete static evidence must identify an available retained
+reference. An incomplete or skipped scan requires `scan_incomplete` in the
+shared normalized/public reasons even when another limitation already makes the
+report incomplete.
 Behavioral members also retain the digest of each parsed buffer, including run
 reports, configuration, provenance, versions, snapshots, attempt policy,
 summaries, trials, and rewards. Reference construction never reopens them. The
