@@ -393,6 +393,11 @@ must belong to its skill, recorded run, arm and native trial. Its trial-result
 reference is required; reward and summary references retain their corresponding
 member and locator boundaries. Another valid retained reference cannot substitute
 for the observation's originating bytes.
+For reviewed-extract references, the complete public observation payload must
+match one of the 20 identities derived from the pinned extract. Changing private
+trial identities and recomputing observation IDs cannot relabel retained scores,
+cases or references. These payload identities remain stable after expiry; they
+bind the reviewed extract, without attesting that its original execution occurred.
 Reviewed-extract members are indexed once after manifest validation, so trial,
 reward, and summary references do not rescan the member list.
 Each normalization shares a 64 MiB byte budget across consumed native JSON,

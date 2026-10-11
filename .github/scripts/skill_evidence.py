@@ -89,6 +89,31 @@ REVIEWED_REFERENCE_IDENTITIES = frozenset({
     'sha256:f7b8fb2ef9ccc51564ccdd639094df45a7368ced6bd433c5bd2eb52536401b59',
     'sha256:fd8fe9abe5696b157aae40a758ae66e8f38d539687bc1dec5da587ec6911f688',
 })
+# Public observation payloads derived from the pinned reviewed extract above.
+REVIEWED_OBSERVATION_PAYLOADS = frozenset({
+    'sha256:02bf5965fc7878010a2b55be6601cf56cd51a539666023b7292eb09f7d25d6e6',
+    'sha256:12671ef8618d82bb05f39d2ad71c0a7c41e42efa5b523805ed90242dc518d050',
+    'sha256:16f016601d3a4851399616b4b71e2065c7cf13b435b3ce233171a662f67b400d',
+    'sha256:1d8545b95ec03a8e37e87831b285c3a6952b1a4130fd0b9a70c104e3772a7881',
+    'sha256:328b62bf137c5a36a61f22065bc612d6b4bc660929f32f4dcf9e8eea7190c381',
+    'sha256:439c9872f362e2ef2785ff0d2eb299601b6d0b39a5f87275c16b4d9162194fa9',
+    'sha256:6b9f38446da22ecba2d5997565a15ed01e4484e7f234ef12e8b04e2ec4f4454e',
+    'sha256:7c7024b7eb902ad097e7dadbf2f7ffb4a22ddb6bef747109180b4db18262ade9',
+    'sha256:822155b1b1581748f7c5360265bbaeb6940d47d5678044f692d9bc1a471396e8',
+    'sha256:827cf7600e3314a80bf1ce9b781b8f4b5733f640f5f22c5ac922ceca89d87228',
+    'sha256:898d8e1fa9ecc58b10d1a60e9493270c8a5cbe2e08e634a5ac4842eb22c9f300',
+    'sha256:8ccc3fb74f4cf4214df58ba3ae8b5ce3829b53500645d3238f74eadeeb6a526f',
+    'sha256:8cdfe410cfba748438064130b4d4ebad9cd1c11d48c0976ebc14c0e6418d9152',
+    'sha256:93bb29af57d0a5510a413dfcff0c9b15472c6513b3876535bb9d86b4d2471fc1',
+    'sha256:c4b01a4f7e0703c1a34a4edc02f1ac3ccb9bac4927a72c209e40c7f07a24c059',
+    'sha256:cbde5e2ec3cfc413810f1a0b8846652acf7a0a77ed6fa8130291d1081f1b1519',
+    'sha256:d446609db87a11e86dfa18a9f7c3fc0eb6e89f8785f563abab348b77073bfd8f',
+    'sha256:e8dade88e6e3abb701dd896394f44f0805e048aacc1354f721393008e320dc47',
+    'sha256:fe93aaa7437debe16ad1d3c09acb37d672b35ce72d18cfffc9b12ffe0430a27e',
+    'sha256:ffea68958116554cfacd0c9eb5f5b292d2f552ae6b3bcfa5232268f0d0f59fdd',
+})
+OBSERVATION_FIELDS = ('id', 'arm', 'case_id', 'attempt', 'score', 'scores', 'rubric_pass',
+                      'deterministic_gate', 'deterministic_scores', 'references')
 PROVENANCE = ('runtime_recorded', 'configured', 'reconstructed_from_declared_revision',
               'reviewed_extract', 'synthetic', 'unknown')
 REASONS = ('results_not_supplied', 'coverage_missing', 'execution_incomplete', 'case_details_missing',
@@ -849,7 +874,7 @@ def validate_evidence(data, *, public=False):
     require(type(data['observations']) is list and len(data['observations']) <= MAX_TRIALS, 'Trial limit exceeded')
     seen = set(); native_ids = set(); observation_ids = set()
     for obs in data['observations']:
-        obs_fields = ('id', 'arm', 'case_id', 'attempt', 'score', 'scores', 'rubric_pass', 'deterministic_gate', 'deterministic_scores', 'references')
+        obs_fields = OBSERVATION_FIELDS
         closed(obs, obs_fields if public else obs_fields + ('native_id', 'native_trial', 'native_task'))
         sha(obs['id']); enum(obs['arm'], ('with_skill', 'without_skill')); require(obs['case_id'] in ids, 'Unknown case')
         optional(obs['attempt'], lambda v: count(v, 100)); require(obs['attempt'] is None or obs['attempt'] >= 1, 'Invalid attempt index')
@@ -1067,6 +1092,10 @@ def validate_evidence(data, *, public=False):
                     'Static source unavailable')
     if availability['status'] == 'complete':
         require(all(r['availability'] == 'available' for r in references), 'Unavailable reference promotion')
+    for obs in data['observations']:
+        if any(refs_by_id[ref]['provenance'] == 'reviewed_extract' for ref in obs['references']):
+            require(identity({key: obs[key] for key in OBSERVATION_FIELDS}) in REVIEWED_OBSERVATION_PAYLOADS,
+                    'Unrecognized reviewed observation payload')
     depth(data, 12 if public else 32)
     if public:
         require(len(encoded(data)) <= PUBLIC_LIMIT, 'Public report size exceeded')
@@ -1079,7 +1108,7 @@ def project(data):
     out = {key: copy.deepcopy(data[key]) for key in ('schema_version', 'kind', 'source', 'run_id', 'dataset',
            'policy', 'arms', 'metrics', 'scans', 'findings', 'references', 'availability')}
     out['observations'] = [{key: copy.deepcopy(obs[key]) for key in
-        ('id', 'arm', 'case_id', 'attempt', 'score', 'scores', 'rubric_pass', 'deterministic_gate', 'deterministic_scores', 'references')}
+        OBSERVATION_FIELDS}
         for obs in data['observations']]
     validate_evidence(out, public=True)
     return out

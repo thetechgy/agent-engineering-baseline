@@ -1476,7 +1476,7 @@ class EvidenceTests(unittest.TestCase):
         for arm, status, score in itertools.product(('with_skill', 'without_skill'),
                                                     ('complete', 'incomplete'), (0.25, 0.75)):
             with self.subTest(arm=arm, status=status, score=score):
-                data = self.data()
+                data = self.data(); self.synthetic_skill_references(data, 'podman')
                 data['source']['content'] = evidence.content([
                     {'member': 'SKILL.md', 'digest': evidence.digest_bytes(b'Synthetic')}], 'configured')
                 data['availability'].update(status=status, reasons=[] if status == 'complete' else ['metadata_missing'])
@@ -1491,10 +1491,10 @@ class EvidenceTests(unittest.TestCase):
                 selected['rubric']['passed_cases'] = len({item['case_id'] for item in data['observations']
                                                           if item['arm'] == arm and item['rubric_pass'] is True})
                 evidence.project(data)
-        data = self.data(); data['observations'][0]['rubric_pass'] = None
+        data = self.data(); self.synthetic_skill_references(data, 'podman'); data['observations'][0]['rubric_pass'] = None
         data['arms'][0]['rubric'].update(threshold=None, passed_cases=9)
         evidence.project(data)  # Unknown thresholds do not invent an outcome.
-        data = self.data(); data['observations'][0]['rubric_pass'] = None
+        data = self.data(); self.synthetic_skill_references(data, 'podman'); data['observations'][0]['rubric_pass'] = None
         data['arms'][0]['coverage']['case_details'] = 'partial'
         data['availability'].update(status='incomplete', reasons=sorted(set(
             data['availability']['reasons']) | {'case_details_missing'}))
@@ -1579,7 +1579,7 @@ class EvidenceTests(unittest.TestCase):
     def test_missing_behavioral_identities_retain_metadata_limitation(self):
         for missing in ('maximum', 'staged_digest', 'evaluator_revision', 'patch_digest', 'run_id'):
             with self.subTest(missing=missing):
-                data = self.data(); data['source']['content'] = evidence.content()
+                data = self.data(); self.synthetic_skill_references(data, 'podman'); data['source']['content'] = evidence.content()
                 data['availability'].update(status='incomplete', reasons=['source_unavailable'])
                 if missing == 'maximum': data['policy']['attempts']['maximum'] = None
                 elif missing == 'staged_digest':
@@ -1621,7 +1621,8 @@ class EvidenceTests(unittest.TestCase):
     def test_projection_retains_unknown_attempt_metadata(self):
         for arm in ('with_skill', 'without_skill'):
             with self.subTest(arm=arm):
-                data = self.data(); row = next(row for row in data['observations'] if row['arm'] == arm)
+                data = self.data(); self.synthetic_skill_references(data, 'podman')
+                row = next(row for row in data['observations'] if row['arm'] == arm)
                 row['attempt'] = None
                 row['id'] = evidence.observation_id(data['run_id'], row['arm'], row['case_id'], row['native_id'],
                                                      row['native_trial'], row['attempt'])
@@ -2136,6 +2137,29 @@ class EvidenceTests(unittest.TestCase):
                     self.assertEqual(result.returncode, 1); self.assertFalse(output.exists())
                     self.assertEqual(path.read_bytes(), before)
         self.assertEqual(evidence.project(base)['references'], base['references'])
+
+    def test_reviewed_observations_bind_immutable_payload(self):
+        base = self.data()
+        public = evidence.project(base)
+        for mutation in ('swap', 'score'):
+            with self.subTest(mutation=mutation):
+                data = copy.deepcopy(base); first, second = data['observations'][:2]
+                self.assertEqual(first['arm'], second['arm'])
+                if mutation == 'swap':
+                    for key in ('native_trial', 'native_id', 'native_task', 'references'):
+                        first[key], second[key] = second[key], first[key]
+                    for obs in (first, second):
+                        obs['id'] = evidence.observation_id(data['run_id'], obs['arm'], obs['case_id'],
+                            obs['native_id'], obs['native_trial'], obs['attempt'])
+                else: first['score'] = first['scores']['overall'] = 0.99
+                self.assert_project_rejects(data, 'Unrecognized reviewed observation payload')
+        expired = copy.deepcopy(base)
+        for ref in expired['references']: ref['availability'] = 'expired'
+        expired['availability']['status'] = 'incomplete'
+        expired['availability']['reasons'].append('reference_expired')
+        self.assertEqual(evidence.project(expired)['observations'], public['observations'])
+        self.assertEqual({evidence.identity(obs) for obs in public['observations']},
+                         evidence.REVIEWED_OBSERVATION_PAYLOADS)
 
     def test_historical_listing_applies_remaining_budget_during_capture(self):
         repo = self.repo(); authored = repo / '.apm/skills/alpha'
