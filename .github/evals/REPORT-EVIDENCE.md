@@ -147,7 +147,13 @@ objects remain unknown without lazy fetch. These listing/blob reads share the
 inventory operation budget and existing historical bounds.
 
 Local repository association comes from one bounded offline read of the trusted
-workspace's literal Git `remote.origin.url`, including linked worktrees. GitHub
+workspace's literal Git `remote.origin.url`, including linked worktrees. The
+common config and any `.git`/`commondir` pointer files use the same anchored
+reader, file/directory identity and change-state checks as other inputs. Git
+parses only captured config bytes, with includes disabled. Inventory and both
+normalizers reverify those metadata states before returning evidence, rejecting
+transient edits or replacements even when original bytes and modification times
+are restored. Config and pointer reads share the operation byte budget. GitHub
 HTTPS, SCP-style SSH and `ssh://git@github.com/` origins normalize to lowercase
 `owner/repository`, with an optional `.git` suffix. Includes, global configuration
 and URL rewrites do not establish identity. Conflicting native repository

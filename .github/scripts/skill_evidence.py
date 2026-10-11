@@ -276,10 +276,16 @@ def safe_tree(path, *, max_entries=MAX_INPUT_ENTRIES, max_files=None, directory_
 class ReadBudget:
     def __init__(self):
         self.remaining = NORMALIZATION_LIMIT
+        self.repository_inputs = []
 
     def consume(self, size):
         require(0 <= size <= self.remaining, 'Normalization byte limit')
         self.remaining -= size
+
+    def verify_repository(self):
+        for directories, states, members in self.repository_inputs:
+            verify_directory_states(states, directories)
+            verify_file_states(members, directories, states)
 
 
 def read_bytes(path, limit=JSON_LIMIT, *, budget=None, directory_identities=None, directory_states=None, file_states=None):
@@ -511,9 +517,7 @@ def source(name, owner='unknown', repo=None, rev=None, path=None, contents=None,
             'source_path': path, 'lineage': lineage, 'content': contents or content()}
 
 
-def offline_git(workspace, *args, text=False, max_entries=None, budget=None):
-    # Missing promisor objects stay unknown; replacement refs cannot alter exact evidence.
-    command = ['git', '-C', str(workspace), *args]
+def offline_git_environment():
     # Git's repository-local environment (rev-parse --local-env-vars), plus
     # discovery/namespace selectors, must not redirect the requested checkout.
     selectors = {'GIT_ALTERNATE_OBJECT_DIRECTORIES', 'GIT_CONFIG', 'GIT_CONFIG_PARAMETERS',
@@ -527,6 +531,13 @@ def offline_git(workspace, *args, text=False, max_entries=None, budget=None):
     # targets rather than allowing an unset environment to fall back to them.
     env.update(GIT_NO_LAZY_FETCH='1', GIT_NO_REPLACE_OBJECTS='1',
                GIT_TRACE='0', GIT_TRACE2='0', GIT_TRACE2_PERF='0', GIT_TRACE2_EVENT='0')
+    return env
+
+
+def offline_git(workspace, *args, text=False, max_entries=None, budget=None):
+    # Missing promisor objects stay unknown; replacement refs cannot alter exact evidence.
+    command = ['git', '-C', str(workspace), *args]
+    env = offline_git_environment()
     if max_entries is None:
         return subprocess.run(command, capture_output=True, text=text, env=env)
     require(not text, 'Binary tree listing required')
@@ -558,12 +569,62 @@ def git_revision(workspace):
 
 def workspace_repository(workspace, *, budget=None):
     """Associate local objects with a canonical origin, without remote attestation."""
-    result = offline_git(workspace, 'config', '--local', '--no-includes', '--null',
-                         '--get-all', 'remote.origin.url', max_entries=1, budget=budget)
+    budget = ReadBudget() if budget is None else budget
+    directories = {}; states = {}; members = {}
+    workspace = safe_path(workspace, directory=True, directory_identities=directories)
+    def inspect(path, *, track_parent=True):
+        safe_path(path.parent, directory=True, directory_identities=directories)
+        fd = open_directory(path.parent, directories, directory_states=states)
+        try:
+            if track_parent:
+                states.setdefault(path.parent, directory_state(os.fstat(fd)))
+            try:
+                info = os.stat(path.name, dir_fd=fd, follow_symlinks=False)
+            except FileNotFoundError:
+                return None
+            require(stat.S_ISREG(info.st_mode) or stat.S_ISDIR(info.st_mode), 'Unsafe Git metadata')
+            if stat.S_ISREG(info.st_mode):
+                members[path] = file_state(info)
+            else:
+                directories[path] = (info.st_dev, info.st_ino)
+                states[path] = directory_state(info)
+            return info
+        finally:
+            os.close(fd)
+    def captured(path, limit=JSON_LIMIT):
+        return read_bytes(path, limit=limit, budget=budget, directory_identities=directories,
+                          directory_states=states, file_states=members)
+    def pointer(parent, raw):
+        text = raw.decode('utf-8').removesuffix('\n')
+        require(text and '\n' not in text and '\0' not in text, 'Invalid Git metadata pointer')
+        return Path(os.path.abspath(parent / text))
+    gitdir = workspace / '.git'
+    info = inspect(gitdir, track_parent=False)
+    if info is None:
+        return None
+    if stat.S_ISREG(info.st_mode):
+        raw = captured(gitdir, 4096)
+        require(raw.startswith(b'gitdir: '), 'Invalid Git metadata pointer')
+        gitdir = pointer(workspace, raw[len(b'gitdir: '):])
+    common = gitdir
+    common_pointer = gitdir / 'commondir'
+    if inspect(common_pointer) is not None:
+        common = pointer(gitdir, captured(common_pointer, 4096))
+    config = common / 'config'
+    if inspect(config) is None:
+        return None
+    raw_config = captured(config)
+    budget.repository_inputs.append((directories, states, members))
+    # Git parses only the captured buffer. Includes and ambient repository
+    # configuration cannot substitute another origin after the bounded read.
+    result = subprocess.run(['git', 'config', '--file', '-', '--no-includes', '--null',
+                             '--get-all', 'remote.origin.url'], input=raw_config,
+                            capture_output=True, env=offline_git_environment())
+    budget.verify_repository()
     if result.returncode:
         return None
     raw = result.stdout
-    require(len(raw) <= 4096, 'Repository identity limit')
+    require(len(raw) <= 4096 and raw.count(b'\0') <= 1, 'Repository identity limit')
     # Read the literal common-repository config (also for linked worktrees),
     # without inherited config, includes, URL rewrites, credentials or fetching.
     match = re.fullmatch(rb'(?:https://github\.com/|ssh://git@github\.com/|git@github\.com:)'
@@ -930,6 +991,7 @@ def inventory(workspace=ROOT):
                      'behavioral_status': 'configured' if suite else 'not_configured',
                      'measurement': {'status': 'unavailable', 'reasons': ['results_not_supplied']}})
     result = {'schema_version': 1, 'kind': 'inventory', 'skills': rows}
+    budget.verify_repository()
     verify_directory_states(states, directories)
     verify_file_states(members, directories, states)
     validate_inventory(result)
@@ -2058,6 +2120,7 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     data['observations'].sort(key=lambda o: (o['arm'], o['case_id'], o['attempt'] or 0, o['id']))
     data['availability'] = {'status': 'incomplete' if limitations else 'complete',
                             'reasons': sorted(limitations), 'provenance': 'reviewed_extract' if extract else 'runtime_recorded'}
+    budget.verify_repository()
     verify_directory_states(directory_states, directory_identities)
     verify_file_states(file_states, directory_identities, directory_states)
     validate_evidence(data, _observed_at=observed_at)
@@ -2218,6 +2281,7 @@ def normalize_static(root, name, workspace=ROOT):
             data['availability']['provenance'] = 'synthetic'
             for record in data['references']:
                 record['provenance'] = 'synthetic'
+    budget.verify_repository()
     verify_directory_states(directory_states, directory_identities)
     verify_file_states(file_states, directory_identities, directory_states)
     validate_evidence(data)

@@ -4583,5 +4583,82 @@ class EvidenceTests(unittest.TestCase):
                 shutil.rmtree(root)
 
 
+    def test_origin_parser_uses_captured_config_and_rejects_transient_replacement(self):
+        repo, git = self.repository_fixture(); config = repo / '.git/config'
+        expected = 'thetechgy/agent-engineering-baseline'
+        for replacement in (False, True):
+            with self.subTest(replacement=replacement):
+                original = config.read_bytes(); info = config.stat(); retained = self.root / 'retained-config'
+                forged = original.replace(expected.encode(), b'forged/repo')
+                popen = subprocess.Popen; invoked = False
+                def swapped(command, *args, **kwargs):
+                    nonlocal invoked
+                    if command[0] != 'git' or 'config' not in command:
+                        return popen(command, *args, **kwargs)
+                    invoked = True
+                    if replacement: config.rename(retained)
+                    config.write_bytes(forged)
+                    process = popen(command, *args, **kwargs); wait = process.wait; restored = False
+                    def restore(*a, **kw):
+                        nonlocal restored
+                        result = wait(*a, **kw)
+                        if not restored:
+                            if replacement:
+                                config.unlink(); retained.rename(config)
+                            else: config.write_bytes(original)
+                            os.utime(config, ns=(info.st_atime_ns, info.st_mtime_ns))
+                            restored = True
+                        return result
+                    process.wait = restore
+                    return process
+                with patch.object(subprocess, 'Popen', side_effect=swapped):
+                    with self.assertRaisesRegex(ValueError, 'Input (directory|member)'):
+                        evidence.workspace_repository(repo)
+                self.assertTrue(invoked)
+                self.assertEqual(config.read_bytes(), original)
+                self.assertEqual(evidence.workspace_repository(repo), expected)
+        budget = evidence.ReadBudget(); evidence.workspace_repository(repo, budget=budget)
+        consumed = evidence.NORMALIZATION_LIMIT - budget.remaining
+        self.assertEqual(consumed, config.stat().st_size)
+        with patch.object(evidence, 'NORMALIZATION_LIMIT', consumed):
+            self.assertEqual(evidence.workspace_repository(repo), expected)
+        with patch.object(evidence, 'NORMALIZATION_LIMIT', consumed - 1):
+            with self.assertRaisesRegex(ValueError, 'Normalization byte limit'):
+                evidence.workspace_repository(repo)
+
+    def test_origin_metadata_revalidated_at_all_publication_boundaries(self):
+        repo, git = self.repository_fixture()
+        linked = self.root / 'linked'; git('worktree', 'add', '--detach', str(linked), 'HEAD')
+        gitdir = Path((linked / '.git').read_text().strip().removeprefix('gitdir: '))
+        native = self.native(); static = self.root / 'static'; shutil.copytree(FIXTURES / 'static-synthetic', static)
+        report_path = next((static / 'reports/podman').glob('*.json'))
+        report = evidence.read_json(report_path)
+        report['evaluated_source'] = {'repository': 'thetechgy/agent-engineering-baseline', 'commit': git('rev-parse', 'HEAD')}
+        write(report_path, report)
+        targets = ((repo, repo / '.git/config'), (linked, linked / '.git'), (linked, gitdir / 'commondir'))
+        resolver = evidence.workspace_repository
+        for kind, (workspace, target) in itertools.product(('inventory', 'behavioral', 'static'), targets):
+            with self.subTest(kind=kind, metadata=target.name):
+                raw = target.read_bytes(); info = target.stat(); changed = False
+                def transient(path, **kwargs):
+                    nonlocal changed
+                    value = resolver(path, **kwargs)
+                    target.write_bytes(raw + b'\n'); target.write_bytes(raw)
+                    os.utime(target, ns=(info.st_atime_ns, info.st_mtime_ns)); changed = True
+                    return value
+                output = self.root / 'metadata-rejected'
+                name = 'inventory' if kind == 'inventory' else 'normalize_' + kind
+                operation = getattr(evidence, name)
+                invoke = (lambda: operation(workspace)) if kind == 'inventory' else (lambda *a: operation(*a, workspace=workspace))
+                args = ['inventory'] if kind == 'inventory' else ['normalize', '--kind', kind, '--skill', 'podman',
+                                                               '--input', str(native if kind == 'behavioral' else static)]
+                with patch.object(evidence, 'workspace_repository', side_effect=transient), \
+                        patch.object(evidence, name, side_effect=invoke), patch.object(evidence, 'write_outputs') as publish:
+                    with self.assertRaisesRegex(ValueError, 'Input member changed'):
+                        evidence.main([*args, '--output', str(output)])
+                    publish.assert_not_called()
+                self.assertTrue(changed); self.assertFalse(output.exists()); self.assertEqual(target.read_bytes(), raw)
+
+
 if __name__ == '__main__':
     unittest.main()
