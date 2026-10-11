@@ -201,6 +201,12 @@ maximum/stop-on-pass values must also agree when both are known. Shared
 normalized/public validation reconciles known policy-field and attempt-policy
 stop-on-pass values too. Absent metadata remains unknown; compatible historical values are preserved rather than replaced
 with current defaults. Judge identity remains separate from the evaluated model.
+Known result/configuration/policy model identities and per-arm summary models
+must agree even if the provenance model field is absent. A recorded summary
+agent must be `codex`. Recorded aggregate per-arm pass data must match the
+corresponding summary before its outcomes are consumed; absent carriers remain
+absent. A supplied result digest algorithm must agree with the validated native
+snapshot algorithm, alongside the digest and dataset summary.
 Known benchmark modes must agree with known attempt maxima: standard uses one
 attempt and confirmation uses three, matching the pinned producer. Every known
 maximum must be positive, including standalone projection. In active standard

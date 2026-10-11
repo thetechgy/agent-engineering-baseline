@@ -1049,6 +1049,9 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
         ids = sorted(case_ids([validate_case_id(e['id']) for e in snapshot['dataset']]))
         require(result.get('dataset_digest') == snapshot['dataset_digest']
                 and result.get('dataset_summary') == snapshot['dataset_summary'], 'Snapshot/result mismatch')
+        if result.get('dataset_digest_algorithm') is not None:
+            require(result['dataset_digest_algorithm'] == snapshot['dataset_digest_algorithm'],
+                    'Snapshot/result algorithm mismatch')
         if result.get('dataset_snapshot') is not None:
             require(result['dataset_snapshot'] == snapshot, 'Embedded snapshot mismatch')
         ref(snapshot_path)
@@ -1126,6 +1129,12 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     trials_by_arm = {arm: sorted((run / 'codex' / arm.replace('_', '-') / 'trials').glob('*/result.json'))
                      for arm in ('with_skill', 'without_skill')}
     require(sum(len(paths) for paths in trials_by_arm.values()) <= MAX_TRIALS, 'Trial input limit')
+    models = [value for value in (policy['fields']['model'], agent.get('model'),
+              config.get('provider', {}).get('model'), config.get('agents', {}).get('codex', {}).get('model'))
+              if value is not None]
+    for model in models:
+        token(model)
+    require(len(set(models)) <= 1, 'Native model identity mismatch')
     for arm in ('with_skill', 'without_skill'):
         arm_dir = run / 'codex' / arm.replace('_', '-')
         native_condition = agent['conditions'][arm]
@@ -1141,6 +1150,14 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
                        'pass_at_k': (agent.get('pass_at_k') or {}).get(arm)}
             summary_ref = ref(result_path, ('agents', 'codex'))
             limitations.add('metadata_missing')
+        if summary.get('agent') is not None:
+            require(summary['agent'] == 'codex', 'Native agent identity mismatch')
+        if summary.get('model') is not None:
+            token(summary['model']); models.append(summary['model'])
+            require(len(set(models)) == 1, 'Native model identity mismatch')
+        aggregate_pass = (agent.get('pass_at_k') or {}).get(arm)
+        if aggregate_pass is not None:
+            require(aggregate_pass == summary.get('pass_at_k'), 'Conflicting native pass data')
         for key in ('execution_status', 'expected_attempts', 'scored_attempts'):
             require(summary[key] == native_condition[key], 'Conflicting native coverage')
         require(bool(summary.get('execution_errors')) == bool(native_condition.get('execution_errors')), 'Conflicting native errors')

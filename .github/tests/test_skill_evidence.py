@@ -613,6 +613,70 @@ class EvidenceTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     evidence.normalize_behavioral(root, 'podman')
 
+    def assert_native_cli_rejects(self, root):
+        before = {p.relative_to(root): p.read_bytes() for p in root.rglob('*') if p.is_file()}
+        output = root.parent / 'rejected-output'
+        result = subprocess.run([sys.executable, str(REPO / '.github/scripts/skill_evidence.py'),
+                                 'normalize', '--kind', 'behavioral', '--skill', 'podman',
+                                 '--input', str(root), '--output', str(output)], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stderr, 'Evidence contract rejected (ValueError)\n')
+        self.assertFalse(output.exists())
+        self.assertEqual(before, {p.relative_to(root): p.read_bytes() for p in root.rglob('*') if p.is_file()})
+
+    def test_native_summary_agent_and_model_identity(self):
+        for arm, field, declared in itertools.product(
+                ('with-skill', 'without-skill'), ('agent', 'model'), (True, False)):
+            with self.subTest(arm=arm, field=field, declared=declared), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp) / 'native'; shutil.copytree(FIXTURES / 'podman-native', root)
+                (root / 'extract-manifest.json').unlink()
+                run = next((root / 'results/podman').iterdir())
+                summary_path = run / 'codex' / arm / 'summary.json'
+                summary = evidence.read_json(summary_path)
+                summary[field] = 'different-identity'; write(summary_path, summary)
+                if not declared:
+                    self.mutate(root, '/provenance.json', lambda d: d['policy'].pop('model'))
+                with self.assertRaisesRegex(ValueError, 'Native .* identity mismatch'):
+                    evidence.normalize_behavioral(root, 'podman')
+                self.assert_native_cli_rejects(root)
+        root = self.native()
+        for summary_path in root.rglob('summary.json'):
+            summary = evidence.read_json(summary_path)
+            summary.pop('model'); summary.pop('agent'); write(summary_path, summary)
+        data = evidence.normalize_behavioral(root, 'podman')
+        self.assertEqual(len(data['observations']), 20)
+        self.assertEqual(data['policy']['fields']['model'], 'gpt-5.6-sol')
+
+    def test_native_aggregate_and_summary_pass_data_agree(self):
+        for arm, field in itertools.product(('with_skill', 'without_skill'), ('passed_cases', 'rate', 'k', 'case_score')):
+            with self.subTest(arm=arm, field=field), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp) / 'native'; shutil.copytree(FIXTURES / 'podman-native', root)
+                (root / 'extract-manifest.json').unlink()
+                run = next((root / 'results/podman').iterdir())
+                path = run / 'result.json'; result = evidence.read_json(path)
+                carrier = result['agents']['codex']['pass_at_k'][arm]
+                if field == 'case_score': next(iter(carrier['cases'].values()))['attempts'][0]['score'] = 0
+                else: carrier[field] = 0
+                write(path, result)
+                with self.assertRaisesRegex(ValueError, 'Conflicting native pass data'):
+                    evidence.normalize_behavioral(root, 'podman')
+                self.assert_native_cli_rejects(root)
+        root = self.native(); run = next((root / 'results/podman').iterdir())
+        path = run / 'result.json'; result = evidence.read_json(path)
+        result['agents']['codex'].pop('pass_at_k'); write(path, result)
+        self.assertEqual(len(evidence.normalize_behavioral(root, 'podman')['observations']), 20)
+
+    def test_native_dataset_digest_algorithm_agrees(self):
+        root = self.native(); run = next((root / 'results/podman').iterdir())
+        path = run / 'result.json'; result = evidence.read_json(path)
+        result['dataset_digest_algorithm'] = 'different-algorithm'; write(path, result)
+        with self.assertRaisesRegex(ValueError, 'Snapshot/result algorithm mismatch'):
+            evidence.normalize_behavioral(root, 'podman')
+        self.assert_native_cli_rejects(root)
+        result.pop('dataset_digest_algorithm'); write(path, result)
+        data = evidence.normalize_behavioral(root, 'podman')
+        self.assertEqual(data['dataset']['staged_algorithm'], 'skill-evaluator-dataset-snapshot/1')
+
     def test_runtime_observations_against_supplied_policy(self):
         config_changes = (
             ('provider', 'model', 'other-model'), ('provider', 'name', 'other-provider'),
@@ -716,6 +780,9 @@ class EvidenceTests(unittest.TestCase):
         result['run_config'] = config
         result['agents']['codex']['model'] = 'historical-model'
         write(run / 'result.json', result)
+        for summary_path in run.rglob('summary.json'):
+            summary = evidence.read_json(summary_path); summary['model'] = 'historical-model'
+            write(summary_path, summary)
         data = evidence.normalize_behavioral(root, 'podman')
         self.assertEqual(data['policy']['fields']['harbor'], '0.12.0')
         self.assertEqual(data['policy']['fields']['model'], 'historical-model')
@@ -957,6 +1024,7 @@ class EvidenceTests(unittest.TestCase):
         result_path = run/'result.json'; result = evidence.read_json(result_path)
         result.update(report_status='incomplete', execution_status='incomplete')
         result['agents']['codex']['conditions']['with_skill'].update(scored_attempts=9, execution_status='incomplete')
+        result['agents']['codex']['pass_at_k']['with_skill'] = copy.deepcopy(summary['pass_at_k'])
         write(result_path, result)
         for state in ('missing', None, {}, {'rewards': None}, {'rewards': {}}):
             with self.subTest(verifier=state):
@@ -999,6 +1067,7 @@ class EvidenceTests(unittest.TestCase):
                     write(target/'reward.json', reward)
                     row['attempts'].append({**original, 'attempt':ordinal, 'trial':new_trial})
             write(summary_path, summary)
+            result['agents']['codex']['pass_at_k'][arm] = copy.deepcopy(summary['pass_at_k'])
         write(result_path, result)
         attempts = evidence.read_json(run/'attempt_policy.json'); attempts['max_attempts'] = 3
         write(run/'attempt_policy.json', attempts)
