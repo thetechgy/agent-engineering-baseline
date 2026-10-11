@@ -836,9 +836,10 @@ def validate_evidence(data, *, public=False):
         enum(reason, REASONS)
     require((availability['status'] == 'complete') == (not availability['reasons']), 'Contradictory availability')
     references = data['references']; require(type(references) is list and len(references) <= MAX_REFERENCES, 'Reference limit')
-    ref_ids = set()
+    ref_ids = set(); refs_by_id = {}
     for ref in references:
         validate_reference(ref); require(ref['id'] not in ref_ids, 'Duplicate reference'); ref_ids.add(ref['id'])
+        refs_by_id[ref['id']] = ref
         if ref['availability'] != 'available':
             reason = 'reference_expired' if ref['availability'] == 'expired' else 'reference_unavailable'
             require(availability['status'] == 'incomplete' and reason in availability['reasons'], 'Missing reference limitation')
@@ -885,6 +886,25 @@ def validate_evidence(data, *, public=False):
                                               obs['native_trial'], obs['attempt']), 'Observation identity mismatch')
         require(type(obs['references']) is list and 1 <= len(obs['references']) <= 10
                 and set(obs['references']) <= ref_ids, 'Dangling observation reference')
+        if not public:
+            trial_result_found = False
+            for ref_id in obs['references']:
+                ref = refs_by_id[ref_id]; parts = ref['member'].split('/')
+                require(len(parts) >= 4 and parts[:2] == ['results', data['source']['skill_id']]
+                        and (data['run_id'] is None or parts[2] == data['run_id']),
+                        'Observation reference origin mismatch')
+                if parts[3:] == ['result.json'] and ref['locator'] == ['agents', 'codex']:
+                    require('metadata_missing' in availability['reasons'], 'Observation reference origin mismatch')
+                    continue  # Existing partial-evidence fallback when the arm summary is absent.
+                require(parts[3:5] == ['codex', obs['arm'].replace('_', '-')],
+                        'Observation reference origin mismatch')
+                tail = parts[5:]
+                trial_result = tail == ['trials', obs['native_trial'], 'result.json']
+                require(trial_result and ref['locator'] in ([], ['verifier_result'], ['verifier_result', 'rewards'])
+                        or tail in (['trials', obs['native_trial'], 'reward.json'], ['summary.json'])
+                        and ref['locator'] == [], 'Observation reference origin mismatch')
+                trial_result_found |= trial_result
+            require(trial_result_found, 'Observation reference origin mismatch')
     require(type(data['arms']) is list and len(data['arms']) <= 2, 'Invalid arms')
     arm_names = []
     for arm in data['arms']:

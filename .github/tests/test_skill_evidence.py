@@ -1950,7 +1950,7 @@ class EvidenceTests(unittest.TestCase):
         row['deterministic_scores'] = dict.fromkeys(evidence.GATE_FIELDS, 1)
         with self.subTest(skill='podman'):
             self.assert_project_rejects(base, 'Unsupported custom grading contract')
-        base['source']['skill_id'] = 'gh'
+        self.synthetic_skill_references(base, 'gh')
         for key in evidence.GATE_FIELDS:
             if key == 'gate': continue
             with self.subTest(fractional=key):
@@ -1970,11 +1970,23 @@ class EvidenceTests(unittest.TestCase):
         evidence.project(evidence.read_json(FIXTURES / 'gh-no-model.json'))
 
     def test_failed_gate_preserved(self):
-        data = self.data(); data['source']['skill_id'] = 'gh'; obs = data['observations'][0]
+        data = self.data(); self.synthetic_skill_references(data, 'gh'); obs = data['observations'][0]
         obs['deterministic_gate'] = 0
         obs['deterministic_scores'] = {k:0 if k in ('authorization','gate') else 1 for k in evidence.GATE_FIELDS}
         self.assertEqual(evidence.project(data)['observations'][0]['score'], obs['score'])
         self.assertEqual(evidence.project(data)['observations'][0]['deterministic_gate'], 0)
+
+    def synthetic_skill_references(self, data, name):
+        # Grading-only fixtures need coherent synthetic identities, not reassigned approved bytes.
+        prior = data['source']['skill_id']; data['source']['skill_id'] = name
+        data['availability']['provenance'] = 'synthetic'; replacements = {}
+        for ref in data['references']:
+            old = ref['id']; ref['member'] = ref['member'].replace('results/' + prior + '/', 'results/' + name + '/', 1)
+            ref.update(artifact_id='synthetic-grading', artifact_digest=None, provenance='synthetic')
+            ref['id'] = evidence.identity({k: ref[k] for k in ('artifact_id', 'member', 'locator', 'digest')})
+            replacements[old] = ref['id']
+        for obs in data['observations']:
+            obs['references'] = [replacements[ref] for ref in obs['references']]
 
     def test_static_native_contract_and_diagnostic_exclusion(self):
         data = evidence.normalize_static(FIXTURES/'static-synthetic', 'podman')
@@ -2098,6 +2110,31 @@ class EvidenceTests(unittest.TestCase):
                 for row in data['observations']:
                     row['references'] = [changed['id'] if ref == trial['id'] else ref for ref in row['references']]
                 self.assert_project_rejects(data, 'Unrecognized reviewed reference identity')
+        self.assertEqual(evidence.project(base)['references'], base['references'])
+
+    def test_observation_references_bind_native_trial_and_arm(self):
+        base = self.data(); receiver = base['observations'][0]
+        refs = {ref['id']: ref for ref in base['references']}
+        for boundary in ('case', 'arm'):
+            donor = next(obs for obs in base['observations'] if
+                (obs['arm'] == receiver['arm'] and obs['case_id'] != receiver['case_id'] if boundary == 'case'
+                 else obs['arm'] != receiver['arm'] and obs['case_id'] == receiver['case_id']))
+            for role in ('all', 'result.json', 'reward.json', 'summary.json'):
+                if role == 'summary.json' and boundary == 'case': continue
+                with self.subTest(boundary=boundary, role=role):
+                    data = copy.deepcopy(base); target = data['observations'][0]
+                    if role == 'all': target['references'] = donor['references'][:]
+                    else:
+                        replacement = next(ref for ref in donor['references'] if refs[ref]['member'].endswith('/' + role))
+                        target['references'] = [replacement if refs[ref]['member'].endswith('/' + role) else ref
+                                                for ref in target['references']]
+                    with self.assertRaisesRegex(ValueError, 'Observation reference origin mismatch'): evidence.project(data)
+                    path = self.root / 'reassigned.json'; write(path, data); before = path.read_bytes()
+                    output = self.root / 'rejected-output'
+                    result = subprocess.run([sys.executable, str(REPO / '.github/scripts/skill_evidence.py'),
+                        'project', '--input', str(path), '--output', str(output)], capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 1); self.assertFalse(output.exists())
+                    self.assertEqual(path.read_bytes(), before)
         self.assertEqual(evidence.project(base)['references'], base['references'])
 
     def test_historical_listing_applies_remaining_budget_during_capture(self):

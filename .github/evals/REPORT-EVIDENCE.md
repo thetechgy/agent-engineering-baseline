@@ -388,6 +388,11 @@ Its status is the native overall passed, failed, or incomplete status.
 Native execution-error carriers are bounded arrays of strings. Arm counts agree
 with summary cardinality plus the pinned loader's job/trial-failure additions;
 raw prose remains private, and matching nonempty flags do not establish counts.
+Before projection removes private native identities, each observation's references
+must belong to its skill, recorded run, arm and native trial. Its trial-result
+reference is required; reward and summary references retain their corresponding
+member and locator boundaries. Another valid retained reference cannot substitute
+for the observation's originating bytes.
 Reviewed-extract members are indexed once after manifest validation, so trial,
 reward, and summary references do not rescan the member list.
 Each normalization shares a 64 MiB byte budget across consumed native JSON,
