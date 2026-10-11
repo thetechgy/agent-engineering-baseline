@@ -1979,6 +1979,67 @@ class EvidenceTests(unittest.TestCase):
                 self.assert_project_rejects(data, 'Duplicate scanner')
         evidence.project(evidence.evidence('podman', 'static'))
 
+    def test_static_aggregate_requires_known_severity_totals(self):
+        for status, levels in itertools.product(('complete', 'incomplete'),
+                [('critical',), ('high',), ('medium',), ('low',), ('critical', 'high', 'medium', 'low')]):
+            with self.subTest(status=status, levels=levels):
+                data = evidence.normalize_static(FIXTURES / 'static-synthetic', 'podman')
+                if status == 'complete':
+                    data['source']['content'] = evidence.content([
+                        {'member': 'SKILL.md', 'digest': evidence.digest_bytes(b'Synthetic')}], 'configured')
+                    data['availability'].update(status='complete', reasons=[]); data['findings'] = []
+                    for scan in data['scans']:
+                        scan.update(status='passed', passed=True,
+                                    severity_counts=dict.fromkeys(scan['severity_counts'], 0))
+                aggregate = next(scan for scan in data['scans'] if scan['scanner'] == 'catalog-total')
+                counts = copy.deepcopy(aggregate['severity_counts'])
+                for level in levels: aggregate['severity_counts'][level] = None
+                self.assert_project_rejects(data, 'Unknown static aggregate totals')
+                aggregate['severity_counts'] = counts
+                self.assertEqual(evidence.project(data)['scans'][0]['severity_counts'], counts)
+
+    def test_historical_listing_applies_remaining_budget_during_capture(self):
+        repo = self.repo(); authored = repo / '.apm/skills/alpha'
+        for index in range(10): (authored / f'member-{index}.md').write_text('Synthetic')
+        def git(*args):
+            return subprocess.run(['git', '-C', str(repo), *args], check=True,
+                                  capture_output=True, text=True).stdout.strip()
+        git('init', '-q'); git('add', '.apm')
+        git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+            'commit', '-qm', 'Listing budget fixture')
+        rev = git('rev-parse', 'HEAD')
+        listing = evidence.offline_git(repo, 'ls-tree', '-rz', rev, '--', '.apm/skills/alpha', max_entries=1000)
+        total = len(listing.stdout) + sum(path.stat().st_size for path in authored.iterdir())
+        baseline = evidence.historical_content(repo, rev, '.apm/skills/alpha')
+        for remaining in (37, total):
+            with self.subTest(remaining=remaining):
+                budget = evidence.ReadBudget(); budget.remaining = remaining
+                captured = []; processes = []; trace = self.root / f'listing-budget-{remaining}.jsonl'
+                with git_trace(trace):
+                    popen = subprocess.Popen
+                    def tracked(*args, **kwargs):
+                        process = popen(*args, **kwargs)
+                        if 'ls-tree' in args[0]:
+                            processes.append(process); stream = process.stdout
+                            class CountingPipe:
+                                def read(self, size):
+                                    raw = stream.read(size); captured.append(len(raw)); return raw
+                                def __getattr__(self, name): return getattr(stream, name)
+                            process.stdout = CountingPipe()
+                        return process
+                    with patch.object(subprocess, 'Popen', side_effect=tracked):
+                        if remaining == total:
+                            self.assertEqual(evidence.historical_content(repo, rev, '.apm/skills/alpha', budget=budget), baseline)
+                            self.assertEqual(budget.remaining, 0)
+                        else:
+                            with self.assertRaisesRegex(ValueError, 'Normalization byte limit'):
+                                evidence.historical_content(repo, rev, '.apm/skills/alpha', budget=budget)
+                self.assertTrue(processes); self.assertTrue(all(p.poll() is not None for p in processes))
+                self.assertLessEqual(sum(captured), remaining + 1)  # One byte distinguishes EOF from excess.
+                if remaining != total:
+                    commands = [e['argv'] for e in map(json.loads, trace.read_text().splitlines()) if e.get('event') == 'start']
+                    self.assertFalse(any('cat-file' in argv and 'blob' in argv for argv in commands))
+
     def test_static_projection_retains_known_scan_limitations(self):
         for status in ('incomplete', 'skipped'):
             with self.subTest(status=status):
@@ -2000,7 +2061,8 @@ class EvidenceTests(unittest.TestCase):
                 for scan, total in zip(data['scans'][:2], (aggregate_count, scanner_count)):
                     scan['severity_counts'] = dict.fromkeys(scan['severity_counts'], 0)
                     scan['severity_counts'][level] = total
-                if scanner_count != 0 and aggregate_count != 0:
+                # Native aggregate totals are always known; per-scanner totals may be unknown.
+                if scanner_count != 0 and aggregate_count == 1:
                     evidence.project(data); evidence.validate_public(data)
                 else:
                     with self.assertRaises(ValueError): evidence.project(data)

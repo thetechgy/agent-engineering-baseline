@@ -311,7 +311,7 @@ def source(name, owner='unknown', repo=None, rev=None, path=None, contents=None,
             'source_path': path, 'lineage': lineage, 'content': contents or content()}
 
 
-def offline_git(workspace, *args, text=False, max_entries=None):
+def offline_git(workspace, *args, text=False, max_entries=None, budget=None):
     # Missing promisor objects stay unknown; replacement refs cannot alter exact evidence.
     command = ['git', '-C', str(workspace), *args]
     # Git's repository-local environment (rev-parse --local-env-vars), plus
@@ -332,14 +332,17 @@ def offline_git(workspace, *args, text=False, max_entries=None):
     require(not text, 'Binary tree listing required')
     # Bound the NUL-delimited listing while reading, before parsing or blob reads.
     # Discard diagnostics so a blocked stderr pipe cannot stall the bounded read.
-    with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=env) as process:
+    byte_limit = min(JSON_LIMIT, budget.remaining) if budget is not None else JSON_LIMIT
+    with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=env, bufsize=0) as process:
         output = bytearray()
         entries = 0
         try:
-            while chunk := process.stdout.read(4096):
+            while chunk := process.stdout.read(min(4096, byte_limit - len(output) + 1)):
                 entries += chunk.count(b'\0')
                 require(entries <= max_entries and len(output) + len(chunk) <= JSON_LIMIT,
                         'Historical tree listing limit')
+                if budget is not None:
+                    budget.consume(len(chunk))
                 output.extend(chunk)
             returncode = process.wait()
         finally:
@@ -394,11 +397,10 @@ def historical_content(workspace, rev, source_path, *, budget=None):
     relative(source_path)
     if not historical_commit(workspace, rev):
         return content()
-    listing = offline_git(workspace, 'ls-tree', '-rz', rev, '--', source_path, max_entries=MAX_SOURCE_MEMBERS)
+    listing = offline_git(workspace, 'ls-tree', '-rz', rev, '--', source_path,
+                          max_entries=MAX_SOURCE_MEMBERS, budget=budget)
     if listing.returncode:
         return content()
-    if budget is not None:
-        budget.consume(len(listing.stdout))
     rows = listing.stdout.split(b'\0')
     filenames = [row.split(b'\t', 1)[1].decode() for row in rows if row]
     if not filenames:
@@ -935,6 +937,8 @@ def validate_evidence(data, *, public=False):
             require(reported is None or total <= reported, 'Detailed findings exceed scanner total')
     aggregate = next((scan for scan in data['scans'] if scan['scanner'] == 'catalog-total'), None)
     if aggregate is not None:
+        require(all(total is not None for total in aggregate['severity_counts'].values()),
+                'Unknown static aggregate totals')
         validators = [scan for scan in data['scans'] if scan is not aggregate]
         for level, total in aggregate['severity_counts'].items():
             if total is not None:
