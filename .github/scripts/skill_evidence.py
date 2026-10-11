@@ -23,6 +23,7 @@ PUBLIC_LIMIT = 1024 * 1024
 MAX_CASES = 1000
 MAX_TRIALS = 10000
 MAX_SOURCE_MEMBERS = 1000
+MAX_INPUT_ENTRIES = 100000
 require = reports.require
 PROVENANCE = ('runtime_recorded', 'configured', 'reconstructed_from_declared_revision',
               'reviewed_extract', 'synthetic', 'unknown')
@@ -76,11 +77,23 @@ def safe_path(path, *, directory=False, missing=False):
     return path
 
 
-def safe_tree(path):
+def safe_tree(path, *, max_entries=MAX_INPUT_ENTRIES, max_files=None):
     path = safe_path(path, directory=True)
-    files = reports.regular_tree(path)
-    for member in files:
-        safe_path(member)
+    pending = [path]
+    files = []
+    seen = 0
+    while pending:
+        with os.scandir(pending.pop()) as entries:
+            for entry in entries:
+                seen += 1
+                require(seen <= max_entries, 'Input tree entry limit')
+                directory = stat.S_ISDIR(entry.stat(follow_symlinks=False).st_mode)
+                member = safe_path(entry.path, directory=directory)
+                if directory:
+                    pending.append(member)
+                else:
+                    require(max_files is None or len(files) < max_files, 'Input tree entry limit')
+                    files.append(member)
     return files
 
 
@@ -97,7 +110,8 @@ def read_bytes(path, limit=JSON_LIMIT):
     return value
 
 
-def read_json(path):
+def parse_json(raw):
+    require(type(raw) is bytes and len(raw) <= JSON_LIMIT, 'Invalid bounded JSON')
     def pairs(items):
         result = {}
         for key, value in items:
@@ -105,12 +119,16 @@ def read_json(path):
             result[key] = value
         return result
     try:
-        value = json.loads(read_bytes(path), object_pairs_hook=pairs,
+        value = json.loads(raw, object_pairs_hook=pairs,
                            parse_constant=lambda _: require(False, 'Nonfinite JSON number'))
         depth(value, 32)
         return value
     except (RecursionError, UnicodeError, json.JSONDecodeError) as exc:
         raise ValueError('Invalid bounded JSON') from exc
+
+
+def read_json(path):
+    return parse_json(read_bytes(path))
 
 
 def read_yaml(path):
@@ -230,7 +248,7 @@ def content(manifest=(), provenance='unknown'):
 
 def skill_content(path):
     from skillevaluator.tier3.harbor.adapter import _runtime_skill_copy_ignore, _runtime_projection_path_is_ignored
-    files = safe_tree(path)
+    files = safe_tree(path, max_entries=2 * MAX_SOURCE_MEMBERS, max_files=MAX_SOURCE_MEMBERS)
     ignore = _runtime_skill_copy_ignore(path)
     return content([{'member': p.relative_to(path).as_posix(), 'digest': digest_bytes(read_bytes(p))}
                     for p in files if not _runtime_projection_path_is_ignored(p, path, ignore)], 'configured')
@@ -375,8 +393,10 @@ def validate_skill_metadata(authored, name):
 
 def inventory(workspace=ROOT):
     workspace = safe_path(workspace, directory=True)
-    names = reports.catalog_preflight(workspace)
-    safe_tree(workspace / '.apm/skills')
+    catalog = workspace / '.apm/skills'
+    files = safe_tree(catalog)
+    names = sorted(p.parent.name for p in files if p.name == 'SKILL.md' and p.parent.parent == catalog)
+    require(bool(names), 'No local skills found')
     lock_path = workspace / 'apm.lock.yaml'
     lock = read_yaml(lock_path) if lock_path.exists() else {'dependencies': [], 'deployments': []}
     require(type(lock) is dict and type(lock.get('dependencies')) is list
@@ -395,7 +415,7 @@ def inventory(workspace=ROOT):
         owners = [d for d in closed_dependencies if d.get('name') == name]
         require(len(owners) <= 1 and not (name in names and owners), 'Conflicting active source owners')
         if name in names:
-            authored = reports.local_skill(workspace, name)
+            authored = catalog / name
             validate_skill_metadata(authored, name)
             src = source(name, 'local', 'thetechgy/agent-engineering-baseline', git_revision(workspace),
                          authored.relative_to(workspace).as_posix(), skill_content(authored))
@@ -405,7 +425,7 @@ def inventory(workspace=ROOT):
             owner = owners[0]
             repository(owner['repo_url']); revision(owner['resolved_commit']); relative(owner['virtual_path'])
             authored = workspace / '.agents/skills' / name
-            files = safe_tree(authored)
+            files = safe_tree(authored, max_entries=2 * MAX_SOURCE_MEMBERS, max_files=MAX_SOURCE_MEMBERS)
             validate_skill_metadata(authored, name)
             actual = {p.relative_to(workspace).as_posix(): digest_bytes(read_bytes(p)) for p in files}
             require(actual == owner['deployed_file_hashes'], 'Deployment content drift')
@@ -503,6 +523,9 @@ def validate_policy(value):
     closed(value['attempts'], ('mode', 'maximum', 'stop_on_pass', 'pass_threshold'))
     enum(value['attempts']['mode'], ('standard', 'confirmation', 'unknown'))
     optional(value['attempts']['maximum'], lambda v: count(v, 100))
+    if value['attempts']['mode'] in reports.MODES and value['attempts']['maximum'] is not None:
+        require(value['attempts']['maximum'] == reports.MODES[value['attempts']['mode']],
+                'Benchmark mode attempt count mismatch')
     optional(value['attempts']['stop_on_pass'], boolean); optional(value['attempts']['pass_threshold'], number)
     canonical = {key: value[key] for key in ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')}
     require(value['id'] == (identity(canonical) if value['provenance'] != 'unknown' else None), 'Policy identity mismatch')
@@ -1241,8 +1264,9 @@ def verify_reference(bundle, record):
     require(record['availability'] == 'available', 'Reference unavailable or expired')
     safe_path(bundle, directory=True)
     path = bundle / record['member']
-    require(digest_bytes(read_bytes(path)) == record['digest'], 'Evidence member digest mismatch')
-    value = read_json(path)
+    raw = read_bytes(path)
+    require(digest_bytes(raw) == record['digest'], 'Evidence member digest mismatch')
+    value = parse_json(raw)
     for component in record['locator']:
         if type(component) is int:
             require(type(value) is list and component < len(value), 'Invalid structured locator')

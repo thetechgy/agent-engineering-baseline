@@ -118,6 +118,12 @@ truncation or partial publication. Duplicate JSON keys, cross-platform case-ID
 collisions, invalid denominators, linked/reparse/hard-linked or special inputs,
 escaping references, and dangling observation references are rejected.
 
+Input trees are checked during traversal, before materializing all paths.
+Normalization bundles and catalog/overlay trees allow at most 100,000 entries;
+authored skill trees allow 2,000 entries and 1,000 files. Entries include
+directories and unused or later-excluded files, so empty directories and unused
+members cannot bypass the traversal cap. Exceeding a cap rejects the contract.
+
 ## Identity, provenance and coverage
 
 Canonical IDs come from the pinned case-ID validator. Pairing uses canonical case
@@ -163,6 +169,9 @@ stop-on-pass. Python observations must match at the policy's declared precision
 maximum/stop-on-pass values must also agree when both are known. Absent metadata
 remains unknown; compatible historical values are preserved rather than replaced
 with current defaults. Judge identity remains separate from the evaluated model.
+Known benchmark modes must agree with known attempt maxima: standard uses one
+attempt and confirmation uses three, matching the pinned producer. Unknown mode
+or maximum stays unknown; it is not filled from current defaults.
 Arm condition IDs hash their structured fields: provenance,
 target presence, workspace mode, independently identified competing skills,
 instruction/build/fixture digests, and execution conditions. A changed competitor,
@@ -241,8 +250,9 @@ A later analyst retrieves evidence as follows:
    directory. No artifact path or script is executed.
 3. Verify original member SHA-256 and the structured locator before reading
    evidence. The module's `verify_reference(bundle, record)` verifies both against
-   an already safely extracted original bundle. Reviewed extracts also verify
-   their own member hashes before normalization. They cannot supply discarded
+   an already safely extracted original bundle, parsing the same bounded bytes
+   that passed digest verification rather than reopening the member. Reviewed
+   extracts also verify their own member hashes before normalization. They cannot supply discarded
    raw prose or authenticate an unavailable original archive.
 4. Obtain exact skill content through the recorded repository/revision/source
    path or an externally retained source snapshot. Verify ownership and the

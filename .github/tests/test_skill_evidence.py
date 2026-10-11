@@ -564,6 +564,22 @@ class EvidenceTests(unittest.TestCase):
         path.write_text('{}')
         with self.assertRaises(ValueError): evidence.verify_reference(root, ref)
 
+    def test_reference_parses_the_verified_bytes(self):
+        path = self.root / 'record.json'
+        write(path, {'value': 'verified'})
+        ref = evidence.reference(self.root, path, 'fixture', ('value',))
+        read = evidence.read_bytes
+        calls = []
+        def replace_after_read(member, *args, **kwargs):
+            raw = read(member, *args, **kwargs)
+            calls.append(member)
+            write(path, {'value': 'replacement'})
+            return raw
+        with patch.object(evidence, 'read_bytes', side_effect=replace_after_read):
+            self.assertEqual(evidence.verify_reference(self.root, ref), 'verified')
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(evidence.read_json(path)['value'], 'replacement')
+
     def test_exact_source_and_staging_boundary(self):
         root = self.repo(); path = self.local(root, 'alpha', True)
         (path / 'references').mkdir(); (path / 'references/a.md').write_text('Synthetic source')
@@ -662,6 +678,22 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual({o['attempt'] for o in data['observations']}, {1,2,3})
         self.assertEqual(data['policy']['attempts']['mode'], 'confirmation')
         evidence.project(data)
+        prov['mode'] = 'standard'; write(root / 'provenance.json', prov)
+        with self.assertRaisesRegex(ValueError, 'Benchmark mode attempt count mismatch'):
+            evidence.normalize_behavioral(root, 'podman')
+
+    def test_policy_mode_attempt_consistency(self):
+        for mode, maximum in itertools.product(('standard', 'confirmation', 'unknown'), (None, 1, 2, 3)):
+            with self.subTest(mode=mode, maximum=maximum):
+                policy = evidence.make_policy(attempts={'mode': mode, 'maximum': maximum,
+                                                       'stop_on_pass': None, 'pass_threshold': None},
+                                              provenance='runtime_recorded')
+                valid = maximum is None or mode == 'unknown' or maximum == evidence.reports.MODES[mode]
+                if valid:
+                    evidence.validate_policy(policy)
+                else:
+                    with self.assertRaisesRegex(ValueError, 'Benchmark mode attempt count mismatch'):
+                        evidence.validate_policy(policy)
 
     def test_contradictory_recovery_rejected(self):
         root = self.native(); write(root / 'provenance.json', {'schema_version':1,'status':'incomplete','diagnostic_only':True})
@@ -800,6 +832,39 @@ class EvidenceTests(unittest.TestCase):
         with self.assertRaises(ValueError): evidence.normalize_behavioral(alias, 'podman')
         p = root/'versions.json'; os.link(p, self.root/'hardlinked')
         with self.assertRaises(ValueError): evidence.normalize_behavioral(root, 'podman')
+
+    def test_authored_tree_entry_limit_includes_empty_directories(self):
+        root = self.repo(); authored = root / '.apm/skills/alpha'
+        for index in range(1999):
+            (authored / str(index)).mkdir()
+        self.assertIsNotNone(evidence.skill_content(authored)['digest'])
+        (authored / 'excess').mkdir()
+        with self.assertRaisesRegex(ValueError, 'Input tree entry limit'):
+            evidence.skill_content(authored)
+        authored = self.local(self.root / 'file-repo', 'beta')
+        for index in range(999):
+            (authored / (str(index) + '.txt')).touch()
+        self.assertEqual(len(evidence.skill_content(authored)['manifest']), 1000)
+        (authored / 'excess.txt').touch()
+        with patch.object(evidence, 'read_bytes') as read:
+            with self.assertRaisesRegex(ValueError, 'Input tree entry limit'):
+                evidence.skill_content(authored)
+            read.assert_not_called()
+
+    def test_normalize_cli_rejects_excessive_unused_input_entries(self):
+        root = self.root / 'static'
+        shutil.copytree(FIXTURES / 'static-synthetic', root)
+        unused = root / 'unused'; unused.mkdir()
+        for index in range(100000):
+            (unused / str(index)).touch()
+        result = subprocess.run([sys.executable, str(REPO / '.github/scripts/skill_evidence.py'),
+                                 'normalize', '--kind', 'static', '--skill', 'podman', '--input', str(root)],
+                                capture_output=True, text=True)
+        if result.returncode == 0:
+            self.addCleanup(shutil.rmtree, Path(result.stdout.strip()))
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn('Evidence contract rejected', result.stderr)
+        self.assertEqual(result.stdout, '')
 
     def test_ambiguous_run_requires_selection(self):
         root = self.native(); base = root/'results/podman'; run = next(base.iterdir())
