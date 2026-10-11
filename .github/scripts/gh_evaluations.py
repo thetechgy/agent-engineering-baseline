@@ -41,14 +41,14 @@ def module(path, name):
     return value
 
 
-def verify_skill(workspace):
+def verify_skill(workspace, *, read_bytes=None):
     import yaml
 
     lock = workspace / "apm.lock.yaml"
     reports.require(
         lock.resolve() == lock.absolute() and lock.is_file(), "Unsafe APM lockfile"
     )
-    data = yaml.safe_load(lock.read_text())
+    data = yaml.safe_load(read_bytes(lock) if read_bytes is not None else lock.read_text())
     matches = [item for item in data["dependencies"] if item.get("name") == "gh"]
     reports.require(len(matches) == 1, "Ambiguous gh dependency")
     owner = matches[0]
@@ -64,7 +64,7 @@ def verify_skill(workspace):
     )
     actual = {
         str(path.relative_to(workspace)): "sha256:"
-        + hashlib.sha256(path.read_bytes()).hexdigest()
+        + hashlib.sha256(read_bytes(path) if read_bytes is not None else path.read_bytes()).hexdigest()
         for path in files
     }
     reports.require(
@@ -89,10 +89,11 @@ def verify_skill(workspace):
     return workspace / DEPLOYED
 
 
-def verify_competing(workspace):
+def verify_competing(workspace, *, read_bytes=None):
     import yaml
 
-    data = yaml.safe_load((workspace / "apm.lock.yaml").read_text())
+    lock = workspace / "apm.lock.yaml"
+    data = yaml.safe_load(read_bytes(lock) if read_bytes is not None else lock.read_text())
     owners = [item for item in data["dependencies"] if item["name"] == COMPETING]
     reports.require(
         len(owners) == 1
@@ -103,7 +104,7 @@ def verify_competing(workspace):
     source = workspace / ".agents/skills" / COMPETING
     actual = {
         str(p.relative_to(workspace)): "sha256:"
-        + hashlib.sha256(p.read_bytes()).hexdigest()
+        + hashlib.sha256(read_bytes(p) if read_bytes is not None else p.read_bytes()).hexdigest()
         for p in reports.regular_tree(source)
     }
     reports.require(
@@ -112,13 +113,14 @@ def verify_competing(workspace):
     return source
 
 
-def dataset(workspace=ROOT, selected=None):
+def dataset(workspace=ROOT, selected=None, *, read_bytes=None):
     files = reports.regular_tree(workspace / OVERLAY)
     reports.require(
         all(path.stat().st_nlink == 1 for path in files),
         "Hard-linked evaluation overlay",
     )
-    data = reports.read_json(workspace / OVERLAY / "evals/evals.json")
+    path = workspace / OVERLAY / "evals/evals.json"
+    data = json.loads(read_bytes(path)) if read_bytes is not None else reports.read_json(path)
     reports.require(
         data["skill_name"] == "gh" and bool(data["evals"]), "Invalid gh dataset"
     )

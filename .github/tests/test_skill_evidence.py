@@ -249,6 +249,179 @@ class EvidenceTests(unittest.TestCase):
                             evidence.inventory(root)
                 self.assertEqual(reads, [captured])
 
+    def test_inventory_shared_budget_and_single_capture(self):
+        for imported in (False, True):
+            with self.subTest(imported=imported), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp); self.local(root, 'alpha', True)
+                if imported: self.imported(root)
+                else: self.local(root, 'beta', True)
+                reads = {}; read = evidence.read_bytes
+                def counted(path, *args, **kwargs):
+                    raw = read(path, *args, **kwargs)
+                    reads[path] = reads.get(path, 0) + 1
+                    return raw
+                before = self.snapshot(root)
+                with patch.object(evidence, 'read_bytes', side_effect=counted):
+                    baseline = evidence.inventory(root)
+                self.assertTrue(all(n == 1 for n in reads.values()))
+                total = sum(p.stat().st_size for p in reads)
+                with patch.object(evidence, 'NORMALIZATION_LIMIT', total):
+                    self.assertEqual(evidence.encoded(evidence.inventory(root)), evidence.encoded(baseline))
+                with patch.object(evidence, 'NORMALIZATION_LIMIT', total - 1):
+                    with self.assertRaisesRegex(ValueError, 'Normalization byte limit'):
+                        evidence.inventory(root)
+                self.assertEqual(self.snapshot(root), before)
+
+    def test_inventory_gh_delegated_reads_share_budget_and_default_behavior(self):
+        import gh_evaluations as gh
+        reads = {}; read = evidence.read_bytes
+        def counted(path, *args, **kwargs):
+            raw = read(path, *args, **kwargs)
+            reads[path] = reads.get(path, 0) + 1
+            return raw
+        with patch.object(evidence, 'read_bytes', side_effect=counted):
+            baseline = evidence.inventory(REPO)
+        self.assertTrue(all(n == 1 for n in reads.values()))
+        total = sum(p.stat().st_size for p in reads)
+        with patch.object(evidence, 'NORMALIZATION_LIMIT', total):
+            self.assertEqual(evidence.encoded(evidence.inventory(REPO)), evidence.encoded(baseline))
+        for helper in (gh.verify_skill, gh.verify_competing, gh.dataset):
+            self.assertEqual(helper(REPO), helper(REPO, read_bytes=evidence.read_bytes))
+        targets = (REPO / 'apm.lock.yaml', REPO / '.agents/skills/gh/SKILL.md',
+                   REPO / '.agents/skills/github-actions-hardening/SKILL.md',
+                   REPO / '.github/evals/gh/evals/evals.json')
+        for target in targets:
+            with self.subTest(target=target.relative_to(REPO)):
+                attempts = []
+                def exhausted(path, *args, **kwargs):
+                    if path == target:
+                        kwargs['budget'].remaining = 0
+                        attempts.append(path)
+                    return read(path, *args, **kwargs)
+                with patch.object(evidence, 'read_bytes', side_effect=exhausted):
+                    with self.assertRaisesRegex(ValueError, 'Normalization byte limit'):
+                        evidence.inventory(REPO)
+                self.assertEqual(attempts, [target])
+
+    def test_inventory_native_optional_files_use_captured_bytes(self):
+        contents = {'grader.py': '# reward.json\n', 'grader.sh': '# reward.txt\n',
+                    'config.yml': 'schema_version: 1\n',
+                    'environment/Dockerfile': 'FROM scratch\n',
+                    'environment/mcp_servers.toml': 'mcp_servers = []\n'}
+        for member, text in contents.items():
+            with self.subTest(member=member), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp); authored = self.local(root, 'alpha', True)
+                path = authored / 'evals' / member; path.parent.mkdir(exist_ok=True)
+                path.write_text(text); raw = path.read_bytes(); read = evidence.read_bytes; reads = []
+                def replaced(target, *args, **kwargs):
+                    result = read(target, *args, **kwargs)
+                    if target == path:
+                        reads.append(result); path.write_text('invalid syntax !')
+                    return result
+                with patch.object(evidence, 'read_bytes', side_effect=replaced):
+                    evidence.inventory(root)
+                self.assertEqual(reads, [raw])
+                path.write_text(text)
+                def exhausted(target, *args, **kwargs):
+                    if target == path: kwargs['budget'].remaining = 0
+                    return read(target, *args, **kwargs)
+                from skillevaluator.tier3 import evals_spec
+                with patch.object(evidence, 'read_bytes', side_effect=exhausted), \
+                        patch.object(evals_spec, '_run_file_checks') as validate:
+                    with self.assertRaisesRegex(ValueError, 'Normalization byte limit'):
+                        evidence.inventory(root)
+                validate.assert_not_called()
+
+    def test_inventory_source_markers_reject_before_authentication(self):
+        from skillevaluator.tier3.harbor import adapter
+        from skillevaluator.tier3 import output_provenance
+        marker = output_provenance.GENERATED_OUTPUT_MARKER
+        for imported, directory in itertools.product((False, True), (False, True)):
+            with self.subTest(imported=imported, directory=directory), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp); authored = self.local(root, 'alpha', True)
+                if imported:
+                    self.imported(root); authored = root / '.agents/skills/beta'
+                marked = authored / 'nested'; marked.mkdir()
+                target = marked / marker
+                if directory: target.mkdir()
+                else: target.write_text('untrusted marker')
+                before = self.snapshot(root)
+                with patch.object(adapter, '_runtime_skill_copy_ignore') as selector, \
+                        patch.object(adapter, 'is_generated_output_root') as authenticate, \
+                        patch.object(output_provenance, '_load_existing_key') as key:
+                    with self.assertRaisesRegex(ValueError, 'Generated output inside inventory source'):
+                        evidence.inventory(root)
+                authenticate.assert_not_called(); key.assert_not_called()
+                if not imported: selector.assert_not_called()
+                self.assertEqual(self.snapshot(root), before)
+                shutil.rmtree(marked)
+                unrelated = root / 'generated'; unrelated.mkdir(); (unrelated / marker).write_text('unrelated')
+                evidence.inventory(root)
+
+    def test_inventory_budget_rejects_before_capture_and_growth_validation(self):
+        from skillevaluator.tier3 import evals_spec
+        root = self.repo(); authored = root / '.apm/skills/alpha'; self.dataset(authored, 'alpha')
+        path = authored / 'evals/grader.py'; path.write_text('# reward.json\n')
+        before = self.snapshot(root); fdopen = evidence.os.fdopen; streams = []
+        class Stream:
+            def __init__(self, stream): self.stream = stream; self.reads = 0
+            def __enter__(self): return self
+            def __exit__(self, *args): self.stream.close()
+            def fileno(self): return self.stream.fileno()
+            def read(self, size): self.reads += 1; return self.stream.read(size)
+        def tracked(*args, **kwargs):
+            stream = Stream(fdopen(*args, **kwargs)); streams.append(stream); return stream
+        read = evidence.read_bytes
+        for growth in (False, True):
+            with self.subTest(growth=growth):
+                streams.clear(); fstat = evidence.os.fstat; target_info = path.stat()
+                def changed_size(fd):
+                    info = fstat(fd)
+                    if growth and info.st_ino == target_info.st_ino and info.st_dev == target_info.st_dev:
+                        fields = {k: getattr(info, k) for k in ('st_mode', 'st_nlink', 'st_size', 'st_ino', 'st_dev', 'st_uid', 'st_gid')}
+                        fields['st_size'] -= 1
+                        from types import SimpleNamespace
+                        return SimpleNamespace(**fields)
+                    return info
+                def exhausted(target, *args, **kwargs):
+                    if target == path: kwargs['budget'].remaining = path.stat().st_size - 1
+                    return read(target, *args, **kwargs)
+                with patch.object(evidence.os, 'fdopen', side_effect=tracked), \
+                        patch.object(evidence.os, 'fstat', side_effect=changed_size), \
+                        patch.object(evidence, 'read_bytes', side_effect=exhausted), \
+                        patch.object(evals_spec, '_run_file_checks') as validate:
+                    with self.assertRaisesRegex(ValueError, 'Normalization byte limit'):
+                        evidence.inventory(root)
+                self.assertEqual(streams[-1].reads, int(growth)); validate.assert_not_called()
+        self.assertEqual(self.snapshot(root), before)
+
+    def test_inventory_per_file_limit_precedes_capture(self):
+        root = self.repo(); path = root / '.apm/skills/alpha/README.md'
+        with path.open('wb') as stream: stream.truncate(evidence.JSON_LIMIT + 1)
+        with self.assertRaisesRegex(ValueError, 'oversized input'):
+            evidence.inventory(root)
+
+    def test_inventory_cli_rejects_real_aggregate_without_allocating_output(self):
+        root = self.root / 'large-inventory'; alpha = self.local(root, 'alpha'); beta = self.local(root, 'beta')
+        metadata_bytes = sum((p / 'SKILL.md').stat().st_size for p in (alpha, beta))
+        for index in range(8):
+            path = (alpha if index < 4 else beta) / f'file-{index}.bin'
+            size = evidence.JSON_LIMIT - metadata_bytes if index == 7 else evidence.JSON_LIMIT
+            with path.open('wb') as stream: stream.truncate(size)
+        self.assertEqual(sum(p.stat().st_size for p in root.glob('.apm/skills/*/*')), evidence.NORMALIZATION_LIMIT)
+        baseline = evidence.inventory(root)
+        self.assertEqual(evidence.encoded(evidence.inventory(root)), evidence.encoded(baseline))
+        with path.open('ab') as stream: stream.write(b'x')
+        scripts = root / '.github/scripts'; scripts.mkdir(parents=True)
+        for name in ('skill_evidence.py', 'skill_reports.py'):
+            shutil.copyfile(REPO / '.github/scripts' / name, scripts / name)
+        before = self.snapshot(root); output = self.root / 'inventory-rejected'
+        cli = subprocess.run([sys.executable, str(scripts / 'skill_evidence.py'), 'inventory',
+                              '--output', str(output)], capture_output=True, text=True)
+        self.assertEqual(cli.returncode, 1); self.assertFalse(output.exists())
+        self.assertEqual(cli.stderr, 'Evidence contract rejected (ValueError)\n')
+        self.assertEqual(self.snapshot(root), before)
+
     def test_inventory_dataset_matches_pinned_strict_checks(self):
         from skillevaluator.tier3.evals_spec import validate_skillevaluators
         for kind in ('valid', 'empty', 'missing_prompt', 'missing_expected', 'duplicate_id',

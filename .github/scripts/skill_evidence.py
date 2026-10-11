@@ -15,6 +15,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+from types import SimpleNamespace
 
 # Standalone commands must not mutate the checkout while importing local helpers.
 sys.dont_write_bytecode = True
@@ -271,8 +272,10 @@ def read_json_and_digest(path, *, budget=None):
     return parse_json(raw), digest_bytes(raw)
 
 
-def read_yaml(path):
+def read_yaml(path, *, reader=None):
     import yaml
+    if reader is None:
+        reader = read_bytes
     class UniqueLoader(yaml.SafeLoader):
         pass
     def mapping(loader, node):
@@ -284,7 +287,7 @@ def read_yaml(path):
         return result
     UniqueLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, mapping)
     try:
-        value = yaml.load(read_bytes(path), Loader=UniqueLoader)
+        value = yaml.load(reader(path), Loader=UniqueLoader)
         depth(value, 32)
         return value
     except (yaml.YAMLError, RecursionError) as exc:
@@ -393,10 +396,19 @@ def skill_projection_files(path, files):
     return [p for p in files if not _runtime_projection_path_is_ignored(p, path, ignore)]
 
 
-def skill_content(path):
+def skill_content(path, *, reader=None):
     files = safe_tree(path, max_entries=2 * MAX_SOURCE_MEMBERS, max_files=MAX_SOURCE_MEMBERS)
-    return content([{'member': p.relative_to(path).as_posix(), 'digest': digest_bytes(read_bytes(p))}
+    if reader is not None:
+        reject_source_markers(path)
+    else:
+        reader = read_bytes
+    return content([{'member': p.relative_to(path).as_posix(), 'digest': digest_bytes(reader(p))}
                     for p in skill_projection_files(path, files)], 'configured')
+
+
+def reject_source_markers(path):
+    from skillevaluator.tier3.output_provenance import GENERATED_OUTPUT_MARKER
+    require(not any(path.rglob(GENERATED_OUTPUT_MARKER)), 'Generated output inside inventory source')
 
 
 def validate_source(value):
@@ -543,13 +555,50 @@ def historical_content(workspace, rev, source_path, *, budget=None):
     return content(records, 'reconstructed_from_declared_revision')
 
 
-def strict_dataset(path, name):
+class CapturedInput:
+    """Read-only path surface used by the pinned optional-file validators."""
+    def __init__(self, path, reader):
+        self.path = path
+        self.reader = reader
+
+    def __str__(self):
+        return str(self.path)
+
+    def __truediv__(self, member):
+        return CapturedInput(self.path / member, self.reader)
+
+    @property
+    def parent(self):
+        return CapturedInput(self.path.parent, self.reader)
+
+    @property
+    def suffix(self):
+        return self.path.suffix
+
+    def exists(self):
+        return self.path.exists()
+
+    def stat(self):
+        return SimpleNamespace(st_size=len(self.reader(self.path)))
+
+    def read_text(self, encoding='utf-8', errors='strict'):
+        return self.reader(self.path).decode(encoding, errors)
+
+
+def strict_dataset(path, name, *, reader=None):
     from skillevaluator.tier3.dataset_utils import normalize_dataset_entries
     from skillevaluator.tier3 import evals_spec as native_spec
     safe_tree(path.parent.parent)
     alternatives = list(path.parent.glob('evals.*'))
     require(path.name == 'evals.json' and set(alternatives) == {path}, 'Ambiguous authored dataset formats')
-    raw = read_bytes(path)
+    if reader is None:
+        reader = read_bytes
+    captured = {}
+    def optional_reader(member):
+        if member not in captured:
+            captured[member] = reader(member)
+        return captured[member]
+    raw = optional_reader(path)
     data = parse_json(raw)
     require(type(data) is dict, 'Dataset object required')
     require(type(data.get('evals')) is list and len(data['evals']) <= MAX_CASES, 'Dataset case limit')
@@ -569,7 +618,9 @@ def strict_dataset(path, name):
             continue
         target = path.parent.parent / spec.rel_path
         if target.exists():
-            native_spec._run_file_checks(target, spec, checks)
+            # Capture before invoking validators that may catch parse/read errors.
+            optional_reader(target)
+            native_spec._run_file_checks(CapturedInput(target, optional_reader), spec, checks)
     native_spec._check_unrecognised(path.parent.parent, checks)
     require(all(row.status == 'ok' for row in checks), 'Strict dataset contract failed')
     for entry in entries:
@@ -582,9 +633,11 @@ def strict_dataset(path, name):
             'case_ids': sorted(ids), 'status': 'configured'}
 
 
-def validate_skill_metadata(authored, name):
+def validate_skill_metadata(authored, name, *, reader=None):
     import yaml as metadata_yaml
-    text = read_bytes(authored / 'SKILL.md').decode()
+    if reader is None:
+        reader = read_bytes
+    text = reader(authored / 'SKILL.md').decode()
     require(text.startswith('---\n') and '\n---' in text[4:], 'Missing skill metadata')
     # Front matter is bounded and duplicate-key ambiguity must not choose an owner.
     front = text.split('---', 2)[1]
@@ -604,12 +657,18 @@ def validate_skill_metadata(authored, name):
 
 def inventory(workspace=ROOT):
     workspace = safe_path(workspace, directory=True)
+    budget = ReadBudget()
+    captured = {}
+    def reader(path):
+        if path not in captured:
+            captured[path] = read_bytes(path, budget=budget)
+        return captured[path]
     catalog = workspace / '.apm/skills'
     files = safe_tree(catalog)
     names = sorted(p.parent.name for p in files if p.name == 'SKILL.md' and p.parent.parent == catalog)
     require(bool(names), 'No local skills found')
     lock_path = workspace / 'apm.lock.yaml'
-    lock = read_yaml(lock_path) if lock_path.exists() else {'dependencies': [], 'deployments': []}
+    lock = read_yaml(lock_path, reader=reader) if lock_path.exists() else {'dependencies': [], 'deployments': []}
     require(type(lock) is dict and type(lock.get('dependencies')) is list
             and type(lock.get('deployments')) is list, 'Invalid ownership metadata')
     closed_dependencies = lock.get('dependencies', [])
@@ -640,9 +699,9 @@ def inventory(workspace=ROOT):
         require(len(owners) <= 1 and not (name in names and owners), 'Conflicting active source owners')
         if name in names:
             authored = catalog / name
-            validate_skill_metadata(authored, name)
+            validate_skill_metadata(authored, name, reader=reader)
             src = source(name, 'local', 'thetechgy/agent-engineering-baseline', git_revision(workspace),
-                         authored.relative_to(workspace).as_posix(), skill_content(authored))
+                         authored.relative_to(workspace).as_posix(), skill_content(authored, reader=reader))
             deployment = None
         else:
             require(len(owners) == 1, 'Overlay has no unique skill owner')
@@ -650,9 +709,10 @@ def inventory(workspace=ROOT):
             repository(owner['repo_url']); revision(owner['resolved_commit']); relative(owner['virtual_path'])
             authored = workspace / '.agents/skills' / name
             files = safe_tree(authored, max_entries=2 * MAX_SOURCE_MEMBERS, max_files=MAX_SOURCE_MEMBERS)
-            validate_skill_metadata(authored, name)
+            reject_source_markers(authored)
+            validate_skill_metadata(authored, name, reader=reader)
             visible = skill_projection_files(authored, files)
-            actual = {p.relative_to(workspace).as_posix(): digest_bytes(read_bytes(p)) for p in files}
+            actual = {p.relative_to(workspace).as_posix(): digest_bytes(reader(p)) for p in files}
             require(actual == owner['deployed_file_hashes'], 'Deployment content drift')
             for member, digest in actual.items():
                 matches = deployments_by_member.get(member, [])
@@ -662,7 +722,9 @@ def inventory(workspace=ROOT):
                         'Ambiguous deployment ownership')
             if name == 'gh':
                 import gh_evaluations as gh
-                gh.verify_skill(workspace); gh.verify_competing(workspace); gh.dataset(workspace)
+                gh.verify_skill(workspace, read_bytes=reader)
+                gh.verify_competing(workspace, read_bytes=reader)
+                gh.dataset(workspace, read_bytes=reader)
             src = source(name, 'upstream', owner['repo_url'], owner['resolved_commit'], owner['virtual_path'],
                          content([{'member': p.relative_to(authored).as_posix(),
                                    'digest': actual[p.relative_to(workspace).as_posix()]} for p in visible], 'configured'))
@@ -672,7 +734,7 @@ def inventory(workspace=ROOT):
             dataset_roots.append(authored / 'evals')
         datasets = [p for directory in dataset_roots for p in directory.glob('evals.*')]
         require(len(datasets) <= 1, 'Competing dataset sources')
-        suite = strict_dataset(datasets[0], name) if datasets else None
+        suite = strict_dataset(datasets[0], name, reader=reader) if datasets else None
         if suite:
             suite['owner'] = 'overlay' if datasets[0].is_relative_to(overlays) else 'local'
             suite['path'] = datasets[0].relative_to(workspace).as_posix()

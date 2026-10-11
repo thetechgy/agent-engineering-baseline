@@ -232,8 +232,9 @@ objects cause contract rejection, and missing objects retain null digests and
 unknown provenance. An authored dataset hash identifies exact file bytes; the
 inventory derives that hash, canonical case IDs, and strict dataset validation
 from one bounded buffer. Its pinned agentskills required-field checks apply to
-that buffer; pinned optional-file checks remain separate and cannot reopen the
-dataset to validate replacement bytes. The
+that buffer. Pinned optional-file validators receive a local read-only path
+adapter backed by captured bytes, including config, grader, Dockerfile and MCP
+checks; they cannot reopen inputs to validate replacement bytes. The
 native staged digest identifies enriched entries and retains
 `skill-evaluator-dataset-snapshot/1`. The case cohort hash
 identifies sorted canonical IDs. None of these digests substitutes for another.
@@ -472,6 +473,15 @@ reward, and summary references do not rescan the member list.
 Each normalization shares a 64 MiB byte budget across consumed native JSON,
 reviewed manifests, historical source listings/blobs, and authored datasets.
 This includes the optional static `versions.json` member.
+Inventory independently shares the same 64 MiB operation budget across source
+hashing, front matter, lock metadata, datasets, competing skills and native
+optional-file checks. Each member is captured once and reused for hashing and
+validation, including the delegated `gh` checks. Their optional keyword-only
+`read_bytes` hook preserves existing behavior for callers that omit it.
+Inventory rejects generated-output markers anywhere in inventoried source trees
+before the pinned visibility selector can authenticate them or access a private
+marker key; unrelated generated directories and other selector callers retain
+their existing behavior.
 File/object size is charged before content capture, and unexpected file growth
 is charged before parsing; per-file and historical-object limits remain 8 MiB.
 Historical tree listings use unbuffered streaming reads limited by the remaining
