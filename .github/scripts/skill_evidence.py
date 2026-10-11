@@ -385,27 +385,40 @@ def historical_content(workspace, rev, source_path):
 
 def strict_dataset(path, name):
     from skillevaluator.tier3.dataset_utils import normalize_dataset_entries
-    from skillevaluator.tier3.evals_spec import validate_skillevaluators
+    from skillevaluator.tier3 import evals_spec as native_spec
     safe_tree(path.parent.parent)
     alternatives = list(path.parent.glob('evals.*'))
     require(path.name == 'evals.json' and set(alternatives) == {path}, 'Ambiguous authored dataset formats')
-    data = read_json(path)
+    raw = read_bytes(path)
+    data = parse_json(raw)
     require(type(data) is dict, 'Dataset object required')
     require(type(data.get('evals')) is list and len(data['evals']) <= MAX_CASES, 'Dataset case limit')
     require(type(data) is dict and data.get('skill_name') == name, 'Dataset skill mismatch')
-    checks = validate_skillevaluators(path.parent.parent)
-    require(checks and all(row.status == 'ok' for row in checks), 'Strict dataset contract failed')
     entries = normalize_dataset_entries(data)
+    # The pinned path-based validator reopens the dataset. Apply its agentskills
+    # checks to this buffer, retaining its optional-file checks separately.
+    require(entries and all(native_spec.AGENTSKILLS_REQUIRED_FIELDS <= entry.keys() for entry in entries),
+            'Strict dataset contract failed')
     from skillevaluator.tier3.case_ids import validate_case_ids
     ids = validate_case_ids(entry['id'] for entry in entries)
     case_ids(ids)
+    checks = []
+    for spec in native_spec.EVALS_SPEC:
+        if spec.rel_path == 'evals/evals.json' or spec.scope == native_spec.Scope.OUTPUT \
+                or '<subdirs>' in spec.rel_path or spec.kind == 'dir':
+            continue
+        target = path.parent.parent / spec.rel_path
+        if target.exists():
+            native_spec._run_file_checks(target, spec, checks)
+    native_spec._check_unrecognised(path.parent.parent, checks)
+    require(all(row.status == 'ok' for row in checks), 'Strict dataset contract failed')
     for entry in entries:
         for member in entry.get('files', []):
             relative(member)
             require(member.startswith('evals/files/'), 'Input outside evaluator fixture boundary')
             safe_path(path.parent.parent / member)
     return {'owner': 'unknown',
-            'path': None, 'authored_digest': digest_bytes(read_bytes(path)),
+            'path': None, 'authored_digest': digest_bytes(raw),
             'case_ids': sorted(ids), 'status': 'configured'}
 
 

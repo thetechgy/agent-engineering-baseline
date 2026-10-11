@@ -119,6 +119,65 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual(rows[0]['behavioral_status'], 'not_configured')
         self.assertEqual(rows[1]['suite']['case_ids'], ['1'])
 
+    def test_inventory_dataset_uses_one_validated_buffer(self):
+        for captured_valid in (True, False):
+            with self.subTest(captured_valid=captured_valid), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp); authored = self.local(root, 'alpha', True)
+                path = authored / 'evals/evals.json'
+                original = evidence.read_json(path)
+                replacement = copy.deepcopy(original)
+                replacement['evals'][0]['id'] = 2
+                if not captured_valid:
+                    del original['evals'][0]['expected_output']
+                write(path, original)
+                captured = path.read_bytes()
+                read = evidence.read_bytes
+                reads = []
+                def replacing(member, *args, **kwargs):
+                    raw = read(member, *args, **kwargs)
+                    if Path(member) == path:
+                        reads.append(raw)
+                        write(path, replacement)
+                    return raw
+                with patch.object(evidence, 'read_bytes', side_effect=replacing):
+                    if captured_valid:
+                        suite = evidence.inventory(root)['skills'][0]['suite']
+                        self.assertEqual(suite['case_ids'], ['1'])
+                        self.assertEqual(suite['authored_digest'], evidence.digest_bytes(captured))
+                    else:
+                        with self.assertRaises(ValueError):
+                            evidence.inventory(root)
+                self.assertEqual(reads, [captured])
+
+    def test_inventory_dataset_matches_pinned_strict_checks(self):
+        from skillevaluator.tier3.evals_spec import validate_skillevaluators
+        for kind in ('valid', 'empty', 'missing_prompt', 'missing_expected', 'duplicate_id',
+                     'invalid_id', 'unknown_file', 'bad_dockerfile', 'bad_config', 'bad_grader'):
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as temp:
+                authored = self.local(Path(temp), 'alpha', True)
+                path = authored / 'evals/evals.json'
+                data = evidence.read_json(path)
+                if kind == 'empty': data['evals'] = []
+                elif kind == 'missing_prompt': del data['evals'][0]['prompt']
+                elif kind == 'missing_expected': del data['evals'][0]['expected_output']
+                elif kind == 'duplicate_id': data['evals'].append(copy.deepcopy(data['evals'][0]))
+                elif kind == 'invalid_id': data['evals'][0]['id'] = '../escape'
+                elif kind == 'unknown_file': (path.parent / 'unknown.txt').write_text('fixture')
+                elif kind == 'bad_dockerfile':
+                    (path.parent / 'environment').mkdir()
+                    (path.parent / 'environment/Dockerfile').write_text('RUN invalid')
+                elif kind == 'bad_config': (path.parent / 'config.yml').write_text('schema_version: 999')
+                elif kind == 'bad_grader': (path.parent / 'grader.py').write_text('invalid syntax !')
+                write(path, data)
+                expected = all(check.status == 'ok' for check in validate_skillevaluators(authored))
+                try:
+                    suite = evidence.strict_dataset(path, 'alpha')
+                    accepted = True
+                    self.assertEqual(suite['authored_digest'], evidence.digest_bytes(path.read_bytes()))
+                except ValueError:
+                    accepted = False
+                self.assertEqual(accepted, expected)
+
     def test_imported_owner_and_local_replacement(self):
         root = self.repo(); self.imported(root)
         before = next(r for r in evidence.inventory(root)['skills'] if r['source']['skill_id'] == 'beta')

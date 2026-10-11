@@ -161,6 +161,10 @@ Historical skill members and authored datasets share the current-file 8 MiB byte
 size is checked before capturing content: exactly 8 MiB is accepted, larger
 objects cause contract rejection, and missing objects retain null digests and
 unknown provenance. An authored dataset hash identifies exact file bytes; the
+inventory derives that hash, canonical case IDs, and strict dataset validation
+from one bounded buffer. Its pinned agentskills required-field checks apply to
+that buffer; pinned optional-file checks remain separate and cannot reopen the
+dataset to validate replacement bytes. The
 native staged digest identifies enriched entries and retains
 `skill-evaluator-dataset-snapshot/1`. The case cohort hash
 identifies sorted canonical IDs. None of these digests substitutes for another.
