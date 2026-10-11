@@ -450,6 +450,10 @@ revision, patch digest, or attempt maximum independently retains
 Shared policy validation accepts only the supported evaluator revision when
 known. Deterministic custom grading is supported only for `gh`, with all eight
 dimensions present and binary; ordinary continuous native scores are preserved.
+Retained reward score fields must agree with verifier values, including absent
+verifier fields. A non-null reward score cannot be attached to an observation
+whose corresponding verifier score is null or missing. Trials with no reward
+and missing verifier scores retain their unscored identity and limitations.
 Absent custom grades remain null, and a recorded failed binary gate remains zero.
 Known staged digests require the supported snapshot algorithm. Reduced behavioral
 metric sets independently retain `coverage_missing`; their retained values stay
@@ -521,6 +525,10 @@ hashing, front matter, lock metadata, datasets, competing skills and native
 optional-file checks. Each member is captured once and reused for hashing and
 validation, including the delegated `gh` checks. Their optional keyword-only
 `read_bytes` hook preserves existing behavior for callers that omit it.
+Optional ownership metadata and overlay presence use no-follow stat relative to
+anchored parent descriptors. The parent directory state is retained and checked
+around presence decisions and before publication; transiently hidden lock files,
+overlay roots or overlay parents cannot be accepted as an absent baseline.
 Inventory rejects generated-output markers anywhere in inventoried source trees
 before the pinned visibility selector can authenticate them or access a private
 marker key; unrelated generated directories and other selector callers retain

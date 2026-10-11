@@ -719,13 +719,29 @@ def inventory(workspace=ROOT):
             fd = open_directory(path.parent, directories, directory_states=states)
             os.close(fd)
         return captured[path]
+    def present(path):
+        safe_path(path.parent, directory=True, directory_identities=directories)
+        fd = open_directory(path.parent, directories, directory_states=states)
+        try:
+            observed = directory_state(os.fstat(fd))
+            states.setdefault(path.parent, observed)
+            require(states[path.parent] == observed, 'Input directory entries changed')
+            try:
+                os.stat(path.name, dir_fd=fd, follow_symlinks=False)
+                return True
+            except FileNotFoundError:
+                return False
+            finally:
+                require(directory_state(os.fstat(fd)) == observed, 'Input directory entries changed')
+        finally:
+            os.close(fd)
     catalog = workspace / '.apm/skills'
     files = safe_tree(catalog, directory_identities=directories, directory_states=states)
     dataset_entries = set(files) | set(directories)
     names = sorted(p.parent.name for p in files if p.name == 'SKILL.md' and p.parent.parent == catalog)
     require(bool(names), 'No local skills found')
     lock_path = workspace / 'apm.lock.yaml'
-    lock = read_yaml(lock_path, reader=reader) if lock_path.exists() else {'dependencies': [], 'deployments': []}
+    lock = read_yaml(lock_path, reader=reader) if present(lock_path) else {'dependencies': [], 'deployments': []}
     require(type(lock) is dict and type(lock.get('dependencies')) is list
             and type(lock.get('deployments')) is list, 'Invalid ownership metadata')
     closed_dependencies = lock.get('dependencies', [])
@@ -744,7 +760,7 @@ def inventory(workspace=ROOT):
             deployments_by_member.setdefault(deployment['value'], []).append(deployment)
     overlays = workspace / '.github/evals'
     overlay_names = []
-    if overlays.exists():
+    if present(overlays.parent) and present(overlays):
         overlay_files = safe_tree(overlays, directory_identities=directories, directory_states=states)
         safe_path(overlays, directory=True, directory_identities=directories)
         overlay_entries = set(overlay_files) | set(directories)
@@ -1825,8 +1841,8 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
                 scores = {k: verifier.get(k) for k in SCORE_FIELDS}
                 if reward is not None:
                     for key in SCORE_FIELDS:
-                        if key in reward and key in verifier:
-                            require(reward[key] == verifier[key], 'Reward score mismatch')
+                        if key in reward:
+                            require(reward[key] == verifier.get(key), 'Reward score mismatch')
                 deterministic = (reward or {}).get('custom_metrics', {})
                 allowed = {'gh_' + k for k in ('evidence', 'activation', 'commands', 'task', 'recovery', 'authorization', 'efficiency', 'gate')}
                 require(not deterministic or name == 'gh' and set(deterministic) == allowed, 'Unsupported custom grading contract')

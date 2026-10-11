@@ -555,6 +555,47 @@ class EvidenceTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             evidence.inventory(root)
 
+    def test_inventory_overlay_discovery_rejects_transient_absence(self):
+        for member in ('.github', '.github/evals'):
+            with self.subTest(member=member), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp); self.local(root, 'alpha'); self.imported(root)
+                target = root / member; hidden = self.root / 'hidden-overlay'; before = self.snapshot(root)
+                exists = Path.exists; changed = False
+                def absent(path):
+                    nonlocal changed
+                    if path == root / '.github/evals':
+                        target.rename(hidden); changed = True
+                        try: return exists(path)
+                        finally: hidden.rename(target)
+                    return exists(path)
+                with patch.object(Path, 'exists', absent):
+                    try:
+                        rows = evidence.inventory(root)['skills']
+                    except ValueError:
+                        self.assertTrue(changed)
+                    else:
+                        self.assertEqual({row['source']['skill_id'] for row in rows}, {'alpha', 'beta'})
+                self.assertEqual(self.snapshot(root), before)
+
+    def test_inventory_optional_presence_retains_parent_state(self):
+        for member in ('.github', '.github/evals', 'apm.lock.yaml'):
+            with self.subTest(member=member), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp); self.local(root, 'alpha'); self.imported(root)
+                target = root / member; hidden = self.root / 'hidden-optional'; before = self.snapshot(root)
+                checked = os.stat; changed = False
+                def absent(path, *args, **kwargs):
+                    nonlocal changed
+                    fd = kwargs.get('dir_fd')
+                    if not changed and str(path) == target.name and fd is not None \
+                            and (os.fstat(fd).st_dev, os.fstat(fd).st_ino) == (target.parent.stat().st_dev, target.parent.stat().st_ino):
+                        target.rename(hidden); changed = True
+                        try: return checked(path, *args, **kwargs)
+                        finally: hidden.rename(target)
+                    return checked(path, *args, **kwargs)
+                with patch.object(os, 'stat', side_effect=absent), self.assertRaisesRegex(ValueError, 'Input directory entries changed'):
+                    evidence.inventory(root)
+                self.assertTrue(changed); self.assertEqual(self.snapshot(root), before)
+
     def test_dataset_format_discovery(self):
         for owner, formats in itertools.product(
                 ('local', 'local_overlay', 'imported_overlay'),
@@ -1737,6 +1778,32 @@ class EvidenceTests(unittest.TestCase):
                 write(result_path, result)
                 with self.assertRaisesRegex(ValueError, 'Unmatched summary attempts'):
                     evidence.normalize_behavioral(root, 'podman')
+
+    def test_reward_scores_require_retained_verifier_values(self):
+        for arm, state in itertools.product(('with_skill', 'without_skill'), ('missing', None, {}, {'rewards': None}, {'rewards': {}})):
+            with self.subTest(arm=arm, verifier=state), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp) / 'native'; shutil.copytree(FIXTURES / 'podman-native', root)
+                (root / 'extract-manifest.json').unlink(); run = next((root / 'results/podman').iterdir())
+                arm_dir = run / 'codex' / arm.replace('_', '-')
+                path = next((arm_dir / 'trials').glob('*/result.json')); record = evidence.read_json(path)
+                reward = evidence.read_json(path.parent / 'reward.json'); case = reward['entry_id']
+                if state == 'missing': record.pop('verifier_result', None)
+                else: record['verifier_result'] = state
+                write(path, record)
+                summary_path = arm_dir / 'summary.json'; summary = evidence.read_json(summary_path)
+                summary['pass_at_k']['cases'][case]['attempts'][0].update(score=None, passed=None)
+                summary.update(scored_attempts=9, execution_status='incomplete')
+                summary['pass_at_k']['passed_cases'] -= int(reward['overall'] >= summary['pass_at_k']['pass_threshold'])
+                write(summary_path, summary)
+                result_path = run / 'result.json'; result = evidence.read_json(result_path)
+                result.update(report_status='incomplete', execution_status='incomplete')
+                result['agents']['codex']['conditions'][arm].update(scored_attempts=9, execution_status='incomplete')
+                result['agents']['codex']['pass_at_k'][arm] = copy.deepcopy(summary['pass_at_k']); write(result_path, result)
+                before = self.snapshot(root); output = Path(temp) / 'rejected-reward'
+                with self.assertRaisesRegex(ValueError, 'Reward score mismatch'), redirect_stdout(StringIO()):
+                    evidence.main(['normalize', '--kind', 'behavioral', '--skill', 'podman', '--input', str(root),
+                                   '--output', str(output)])
+                self.assertFalse(output.exists()); self.assertEqual(self.snapshot(root), before)
 
     def test_unscored_native_trial_keeps_identity(self):
         root = self.native(); run = next((root/'results/podman').iterdir())
@@ -3695,7 +3762,8 @@ class EvidenceTests(unittest.TestCase):
                     ['project','--input',str(FIXTURES/'gh-no-model.json')]]
         for command in commands:
             result = subprocess.run([sys.executable,str(REPO/'.github/scripts/skill_evidence.py'),*command], capture_output=True,text=True)
-            self.assertEqual(result.returncode, 0, result.stderr)
+            label = command[0] + (' ' + command[2] if command[0] == 'normalize' else '')
+            self.assertEqual(result.returncode, 0, label + ': ' + result.stderr)
             output = Path(result.stdout.strip()); self.addCleanup(shutil.rmtree, output)
             self.assertFalse(output.is_relative_to(REPO)); self.assertTrue(output.is_dir())
             for p in output.glob('*.json'):
