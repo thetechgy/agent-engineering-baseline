@@ -849,6 +849,8 @@ def behavioral_identity_missing(data):
 
 
 def validate_evidence(data, *, public=False):
+    if type(data) is _StaticEvidence:
+        data = dict(data)
     fields = ('schema_version', 'kind', 'source', 'run_id', 'dataset', 'policy', 'arms', 'metrics',
               'observations', 'scans', 'findings', 'references', 'availability')
     closed(data, fields)
@@ -1155,8 +1157,50 @@ def validate_evidence(data, *, public=False):
     return data
 
 
-def project(data):
+def static_claim_identity(data, blocking_defaults):
+    claims = {key: copy.deepcopy(data[key]) for key in
+              ('source', 'run_id', 'dataset', 'policy', 'arms', 'metrics', 'scans', 'findings', 'references')}
+    claims['provenance'] = data['availability']['provenance']
+    defaults = dict(blocking_defaults)
+    for scan in claims['scans']:
+        scan.setdefault('blocking', defaults.get(scan['scanner'], True))
+        scan['references'].sort()
+    claims['scans'].sort(key=lambda scan: scan['scanner'])
+    claims['findings'].sort(key=lambda finding: finding['reference'])
+    for ref in claims['references']:
+        ref.pop('availability')  # Conservative availability changes do not relabel native claims.
+    claims['references'].sort(key=lambda ref: ref['id'])
+    return identity(claims)
+
+
+class _StaticEvidence(dict):
+    """A data-only record with a transient witness from captured native bytes."""
+    __slots__ = ('_claim_digest', '_blocking_defaults')
+
+    def __init__(self, data, claim_digest, blocking_defaults):
+        super().__init__(data)
+        object.__setattr__(self, '_claim_digest', claim_digest)
+        object.__setattr__(self, '_blocking_defaults', blocking_defaults)
+
+    def __setattr__(self, name, value):
+        raise AttributeError('Immutable native witness')
+
+    def __deepcopy__(self, memo):
+        result = _StaticEvidence(copy.deepcopy(dict(self), memo), self._claim_digest, self._blocking_defaults)
+        memo[id(self)] = result
+        return result
+
+
+def project(data, *, static_bundle=None):
     validate_evidence(data)
+    if data['kind'] == 'static' and data['availability']['status'] != 'unavailable':
+        if type(data) is _StaticEvidence:
+            witness = data
+        else:
+            require(static_bundle is not None, 'Retained native static bundle required')
+            witness = normalize_static(Path(static_bundle), data['source']['skill_id'])
+        require(static_claim_identity(data, witness._blocking_defaults) == witness._claim_digest,
+                'Static claims differ from retained native evidence')
     # Every object is rebuilt from fixed fields. A native report is never accepted.
     out = {key: copy.deepcopy(data[key]) for key in ('schema_version', 'kind', 'source', 'run_id', 'dataset',
            'policy', 'arms', 'metrics', 'scans', 'findings', 'references', 'availability')}
@@ -1753,7 +1797,8 @@ def normalize_static(root, name, workspace=ROOT):
             for record in data['references']:
                 record['provenance'] = 'synthetic'
     validate_evidence(data)
-    return data
+    blocking_defaults = tuple((scan['scanner'], scan['blocking']) for scan in data['scans'])
+    return _StaticEvidence(data, static_claim_identity(data, blocking_defaults), blocking_defaults)
 
 
 def open_directory(path, identities=None, changed_message='Input directory changed'):
@@ -1888,7 +1933,7 @@ def main(argv=None):
     if args.command == 'inventory':
         values = {'inventory.json': inventory()}
     elif args.command == 'project':
-        values = {'public-report.json': project(read_json(args.input))}
+        values = {'public-report.json': project(read_json(args.input), static_bundle=args.input.parent)}
     else:
         require(args.kind == 'behavioral' or args.run is None, '--run applies to behavioral evidence')
         data = normalize_behavioral(args.input.absolute(), args.skill, args.run) if args.kind == 'behavioral' else normalize_static(args.input.absolute(), args.skill)

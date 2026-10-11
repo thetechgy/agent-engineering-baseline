@@ -28,6 +28,11 @@ writes `inventory.json`; normalization writes `evidence.json` and
 a new ordinary directory with an existing ordinary parent outside the checkout.
 Existing destinations, input/output overlap, linked components, and overwrites
 are rejected. Validation and deterministic serialization precede output creation.
+For standalone static projection, retain the original static bundle and place
+`evidence.json` at its root; `project --input` reads native members relative to
+that file's parent. A serialized static record without its native bundle rejects.
+Normalization already produces a verified public report, so moving its output
+does not require copying private native reports into the output directory.
 Inputs remain unchanged. CLI contract errors return exit status 1 without echoing
 native diagnostic content.
 
@@ -418,6 +423,13 @@ legacy records without it default to blocking. Underlying scanner diagnostics
 remain nonblocking when their parent validator already supplies the gate.
 Projection reconciles aggregate pass and status with those retained gate decisions,
 including nonblocking failures and advisory skips, while retaining native pass fields.
+Static normalization keeps an immutable transient witness of its sanitized
+claims, excluded from serialized records. Projection checks claims against that
+witness, or renormalizes the retained bundle for a serialized input. Changed
+blocking flags, pass values, counts, positions, or source metadata reject even
+when the record is internally consistent. Structural schema validation alone
+does not authenticate native claims. This binds captured bytes without attesting
+original execution or retaining raw diagnostic prose in the public report.
 Static report members must belong to the declared skill's `reports/<skill>/` path.
 Aggregate, scanner and finding references use that report; catalog/version members
 remain run-level references and cannot substitute for a skill's scanner evidence.

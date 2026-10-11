@@ -1944,7 +1944,7 @@ class EvidenceTests(unittest.TestCase):
                     ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')})
                 data['availability'].update(status='incomplete', reasons=sorted(
                     set(data['availability']['reasons']) | {'metadata_missing'}))
-                self.assertIsNone(evidence.project(data)['policy']['fields']['evaluator_revision'])
+                self.assertIsNone(evidence.validate_evidence(data)['policy']['fields']['evaluator_revision'])
 
     def test_shared_deterministic_grading_is_binary_and_gh_only(self):
         base = self.data(); row = base['observations'][0]
@@ -1990,6 +1990,43 @@ class EvidenceTests(unittest.TestCase):
         for obs in data['observations']:
             obs['references'] = [replacements[ref] for ref in obs['references']]
 
+    def test_static_projection_binds_claims_to_retained_native_bytes(self):
+        root = self.root / 'retained-static'
+        shutil.copytree(FIXTURES / 'static-synthetic', root)
+        data = evidence.normalize_static(root, 'podman')
+        original = evidence.project(data)
+        self.assertNotIn('_claim_digest', evidence.encoded(data).decode())
+        forged = copy.deepcopy(data)
+        forged['scans'][1]['blocking'] = False
+        forged['scans'][0]['passed'] = True
+        # A self-consistent shape alone cannot authenticate the native gate.
+        evidence.validate_evidence(forged); evidence.validate_public(forged)
+        with self.assertRaisesRegex(ValueError, 'Static claims differ'):
+            evidence.project(forged)
+        with self.assertRaises(AttributeError): data._claim_digest = 'forged'
+        plain = json.loads(evidence.encoded(data))
+        with self.assertRaisesRegex(ValueError, 'Retained native static bundle required'):
+            evidence.project(plain)
+        self.assertEqual(evidence.project(plain, static_bundle=root), original)
+        for case, record in (('original', data), ('forged', forged)):
+            with self.subTest(case=case):
+                path = root / 'evidence.json'; write(path, record)
+                before = self.snapshot(root); output = self.root / case
+                result = subprocess.run([sys.executable, str(REPO / '.github/scripts/skill_evidence.py'),
+                    'project', '--input', str(path), '--output', str(output)], capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0 if case == 'original' else 1, result.stderr)
+                self.assertEqual(self.snapshot(root), before)
+                self.assertEqual(output.exists(), case == 'original')
+                if case == 'original':
+                    self.assertEqual(evidence.read_json(output / 'public-report.json'), original)
+        write(root / 'evidence.json', data)
+        next((root / 'reports/podman').glob('*.json')).unlink()
+        before = self.snapshot(root); output = self.root / 'missing'
+        result = subprocess.run([sys.executable, str(REPO / '.github/scripts/skill_evidence.py'),
+            'project', '--input', str(root / 'evidence.json'), '--output', str(output)], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 1); self.assertFalse(output.exists())
+        self.assertEqual(self.snapshot(root), before)
+
     def test_static_native_contract_and_diagnostic_exclusion(self):
         data = evidence.normalize_static(FIXTURES/'static-synthetic', 'podman')
         self.assertEqual(data['availability']['status'], 'incomplete')
@@ -2011,13 +2048,13 @@ class EvidenceTests(unittest.TestCase):
         base['findings'] = []
         for scan in base['scans']:
             scan.update(status='passed', passed=True, severity_counts=dict.fromkeys(scan['severity_counts'], 0))
-        evidence.project(base)
+        evidence.validate_evidence(base)
         for index in range(len(base['scans'])):
             with self.subTest(scan=index):
                 data = copy.deepcopy(base); data['scans'][index]['references'] = []
                 self.assert_project_rejects(data, 'Complete scan missing reference')
                 data['availability'].update(status='incomplete', reasons=['reference_unavailable'])
-                evidence.project(data)
+                evidence.validate_evidence(data)
 
     def test_observed_static_evidence_requires_catalog_aggregate(self):
         for status in ('complete', 'incomplete'):
@@ -2032,11 +2069,11 @@ class EvidenceTests(unittest.TestCase):
                     for scan in data['scans']:
                         scan.update(status='passed', passed=True,
                                     severity_counts=dict.fromkeys(scan['severity_counts'], 0))
-                evidence.project(data)
+                evidence.validate_evidence(data)
                 aggregate = next(scan for scan in data['scans'] if scan['scanner'] == 'catalog-total')
                 data['scans'].remove(aggregate)
                 self.assert_project_rejects(data, 'Static evidence missing aggregate scan')
-                data['scans'].append(aggregate); evidence.project(data)
+                data['scans'].append(aggregate); evidence.validate_evidence(data)
                 data['scans'].append(copy.deepcopy(aggregate))
                 self.assert_project_rejects(data, 'Duplicate scanner')
         evidence.project(evidence.evidence('podman', 'static'))
@@ -2059,7 +2096,7 @@ class EvidenceTests(unittest.TestCase):
                 for level in levels: aggregate['severity_counts'][level] = None
                 self.assert_project_rejects(data, 'Unknown static aggregate totals')
                 aggregate['severity_counts'] = counts
-                self.assertEqual(evidence.project(data)['scans'][0]['severity_counts'], counts)
+                self.assertEqual(evidence.validate_evidence(data)['scans'][0]['severity_counts'], counts)
 
     def test_static_aggregate_retains_native_pass_boolean(self):
         data = evidence.normalize_static(FIXTURES / 'static-synthetic', 'podman')
@@ -2069,7 +2106,7 @@ class EvidenceTests(unittest.TestCase):
         for passed in (True, False):
             aggregate['passed'] = passed
             data['scans'][1]['blocking'] = not passed
-            self.assertEqual(evidence.project(data)['scans'][0]['passed'], passed)
+            self.assertEqual(evidence.validate_evidence(data)['scans'][0]['passed'], passed)
         aggregate['status'] = 'skipped'
         self.assert_project_rejects(data, 'Invalid enum')  # Native overall status is never skipped.
 
@@ -2395,7 +2432,7 @@ class EvidenceTests(unittest.TestCase):
                 data['availability']['reasons'].remove('scan_incomplete')
                 self.assert_project_rejects(data, 'Missing scan limitation')
                 data['availability']['reasons'].append('scan_incomplete')
-                self.assertIn('scan_incomplete', evidence.project(data)['availability']['reasons'])
+                self.assertIn('scan_incomplete', evidence.validate_evidence(data)['availability']['reasons'])
 
     def test_projection_reconciles_known_severity_counts(self):
         base = evidence.normalize_static(FIXTURES / 'static-synthetic', 'podman')
@@ -2409,7 +2446,7 @@ class EvidenceTests(unittest.TestCase):
                     scan['severity_counts'][level] = total
                 # Native aggregate totals are always known; per-scanner totals may be unknown.
                 if scanner_count != 0 and aggregate_count == 1:
-                    evidence.project(data); evidence.validate_public(data)
+                    evidence.validate_evidence(data); evidence.validate_public(data)
                 else:
                     with self.assertRaises(ValueError): evidence.project(data)
                     with self.assertRaises(ValueError): evidence.validate_public(data)
@@ -2431,7 +2468,7 @@ class EvidenceTests(unittest.TestCase):
         totals['scans'][1]['severity_counts']['high'] = 0
         with self.assertRaises(ValueError): evidence.project(totals)
         totals['scans'][1]['severity_counts']['high'] = None
-        evidence.project(totals)  # Unknown counts do not invent a sum equality.
+        evidence.validate_evidence(totals)  # Unknown counts do not invent a sum equality.
 
     def test_cli_rejects_nonobject_codex_agent_without_traceback(self):
         root = self.native(); path = next(root.glob('results/podman/*/result.json'))
