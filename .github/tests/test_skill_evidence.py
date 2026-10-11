@@ -2533,6 +2533,85 @@ class EvidenceTests(unittest.TestCase):
             evidence.main(['project', '--input', str(path), '--output', str(output)])
         self.assertFalse(output.exists()); self.assertEqual(self.snapshot(root), before)
 
+    def test_behavioral_witness_binds_availability_provenance(self):
+        root = self.native(); native = evidence.normalize_behavioral(root, 'podman')
+        for provenance in ('synthetic', 'configured', 'unknown'):
+            with self.subTest(provenance=provenance):
+                forged = json.loads(evidence.encoded(native)); forged['availability']['provenance'] = provenance
+                evidence.validate_evidence(forged)
+                with self.assertRaisesRegex(ValueError, 'Behavioral claims differ'):
+                    evidence.project(forged, behavioral_bundle=root)
+                path = root / 'evidence.json'; write(path, forged); before = self.snapshot(root)
+                output = self.root / ('rejected-provenance-' + provenance)
+                with self.assertRaises(ValueError), redirect_stdout(StringIO()):
+                    evidence.main(['project', '--input', str(path), '--output', str(output)])
+                self.assertFalse(output.exists()); self.assertEqual(self.snapshot(root), before)
+
+    def test_reviewed_availability_provenance_binds_pinned_references(self):
+        native = self.data()
+        for provenance in ('synthetic', 'configured', 'unknown'):
+            with self.subTest(provenance=provenance):
+                forged = copy.deepcopy(native); forged['availability']['provenance'] = provenance
+                self.assert_project_rejects(forged, 'Reviewed availability provenance mismatch')
+
+    def test_normalization_optional_members_use_captured_entries(self):
+        for kind in ('behavioral', 'static'):
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp) / 'native'
+                shutil.copytree(FIXTURES / ('podman-native' if kind == 'behavioral' else 'static-synthetic'), root)
+                if kind == 'behavioral': (root / 'extract-manifest.json').unlink()
+                versions = root / 'versions.json'; data = evidence.read_json(versions)
+                data['skillevaluator'] = '0.9.0'; write(versions, data)
+                exists = Path.exists; hidden = []
+                def absent(path):
+                    if path == versions: hidden.append(True); return False
+                    return exists(path)
+                before = self.snapshot(root); output = Path(temp) / 'rejected-hidden-versions'
+                with patch.object(Path, 'exists', absent), self.assertRaisesRegex(ValueError, 'Unsupported native evaluator'), \
+                        redirect_stdout(StringIO()):
+                    evidence.main(['normalize', '--kind', kind, '--skill', 'podman', '--input', str(root),
+                                   '--output', str(output)])
+                self.assertFalse(hidden); self.assertFalse(output.exists()); self.assertEqual(self.snapshot(root), before)
+
+    def test_behavioral_trials_use_captured_scan_entries(self):
+        root = self.native(); trials = next(root.glob('results/podman/*/codex/with-skill/trials'))
+        original = next(trials.glob('*/result.json')); extra = trials / 'hidden-extra'; extra.mkdir()
+        data = evidence.read_json(original); data.update(trial_name=extra.name, id='extra-native-id')
+        write(extra / 'result.json', data)
+        retained = self.root / 'temporarily-hidden'; glob = Path.glob; hidden = []
+        def subset(path, pattern, *args, **kwargs):
+            if path == trials and pattern == '*/result.json':
+                extra.rename(retained)
+                try: members = list(glob(path, pattern, *args, **kwargs))
+                finally: retained.rename(extra)
+                hidden.append(True)
+                return iter(members)
+            return glob(path, pattern, *args, **kwargs)
+        before = self.snapshot(root); output = self.root / 'rejected-subset'
+        with patch.object(Path, 'glob', subset), self.assertRaisesRegex(ValueError, 'Native trial/summary score mismatch'), \
+                redirect_stdout(StringIO()):
+            evidence.main(['normalize', '--kind', 'behavioral', '--skill', 'podman', '--input', str(root),
+                           '--output', str(output)])
+        self.assertFalse(hidden); self.assertFalse(output.exists()); self.assertEqual(self.snapshot(root), before)
+
+    def test_behavioral_run_selection_uses_captured_entries(self):
+        root = self.native(); base = root / 'results/podman'; original = next(base.iterdir())
+        second = base / 'other-recorded-run'; shutil.copytree(original, second)
+        retained = self.root / 'temporarily-hidden-run'; iterdir = Path.iterdir; hidden = []
+        def subset(path):
+            if path == base:
+                second.rename(retained)
+                try: members = list(iterdir(path))
+                finally: retained.rename(second)
+                hidden.append(True); return iter(members)
+            return iterdir(path)
+        before = self.snapshot(root); output = self.root / 'rejected-hidden-run'
+        with patch.object(Path, 'iterdir', subset), self.assertRaisesRegex(ValueError, 'Explicit --run required'), \
+                redirect_stdout(StringIO()):
+            evidence.main(['normalize', '--kind', 'behavioral', '--skill', 'podman', '--input', str(root),
+                           '--output', str(output)])
+        self.assertFalse(hidden); self.assertFalse(output.exists()); self.assertEqual(self.snapshot(root), before)
+
     def test_tree_scan_enumerates_validated_directory_descriptors(self):
         root = self.root / 'scanned'; root.mkdir(); (root / 'original.json').write_text('{}')
         subset = self.root / 'subset'; subset.mkdir(); retained = self.root / 'retained'

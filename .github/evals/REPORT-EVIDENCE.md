@@ -74,6 +74,9 @@ checks. Its cached reader checks those identities even when reusing captured byt
 Dataset discovery and optional-file selection use the captured entries, so an
 empty replacement cannot silently remove validation inputs. Source directory
 identities are checked before invoking the runtime visibility selector.
+Native run/trial discovery, reviewed manifests and optional metadata also use
+the initial bounded scan entries. A transient pathname subset cannot hide a
+contradictory trial or optional member; every consumed member must be scanned.
 Temporary and explicit output parents use the same validated ancestor identities
 before directory creation. Replacing an ordinary parent with the input directory
 rejects before output allocation, preserving the input's entries and bytes.
@@ -207,6 +210,8 @@ renormalizes the selected recorded run before accepting its claims. Altering a
 score on the same side of the rubric threshold still rejects. Changing artifact
 IDs and provenance to synthetic or unknown cannot disable authentication. Reference
 availability can be conservatively downgraded without relabeling native claims.
+The witness binds availability provenance independently of conservative status
+and reason changes. Reviewed reference pins require reviewed availability provenance.
 Reviewed extracts retain their independent pinned identity/payload checks;
 unavailable records retain their existing rules. Synthetic measured records
 require a native normalization witness too; synthetic provenance alone does not

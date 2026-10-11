@@ -1234,6 +1234,7 @@ def validate_evidence(data, *, public=False, _observed_at=None):
             require(identity({key: obs[key] for key in OBSERVATION_FIELDS}) in REVIEWED_OBSERVATION_PAYLOADS,
                     'Unrecognized reviewed observation payload')
     if data['kind'] == 'behavioral' and any(ref['provenance'] == 'reviewed_extract' for ref in references):
+        require(availability['provenance'] == 'reviewed_extract', 'Reviewed availability provenance mismatch')
         require(all(REVIEWED_METRIC_VALUES.get(row['name']) == row['value'] for row in data['metrics']),
                 'Unrecognized reviewed metric value')
         require(identity(data['source']) in REVIEWED_SOURCE_IDENTITIES, 'Unrecognized reviewed source identity')
@@ -1314,6 +1315,7 @@ class _StaticEvidence(dict):
 def behavioral_claim_identity(data):
     claims = {key: copy.deepcopy(data[key]) for key in
               ('source', 'run_id', 'dataset', 'policy', 'arms', 'observations', 'metrics', 'references')}
+    claims['provenance'] = data['availability']['provenance']
     for obs in claims['observations']:
         obs['references'].sort()
     claims['observations'].sort(key=lambda obs: obs['id'])
@@ -1378,9 +1380,10 @@ def project(data, *, static_bundle=None, behavioral_bundle=None):
     return out
 
 
-def load_extract(root, *, budget=None, _observed_at=None, directory_identities=None):
+def load_extract(root, *, budget=None, _observed_at=None, directory_identities=None, entries=None):
     path = root / 'extract-manifest.json'
-    if not path.exists():
+    present = path in entries if entries is not None else path.exists()
+    if not present:
         return None
     raw = read_bytes(path, budget=budget, directory_identities=directory_identities)
     require(digest_bytes(raw) in REVIEWED_EXTRACT_MANIFESTS, 'Unrecognized reviewed extract manifest')
@@ -1410,15 +1413,16 @@ def load_extract(root, *, budget=None, _observed_at=None, directory_identities=N
     return value
 
 
-def select_run(root, name, selected):
+def select_run(root, name, selected, *, entries=None, directory_identities=None):
     base = root / 'results' / name
-    safe_path(base, directory=True)
+    safe_path(base, directory=True, directory_identities=directory_identities)
     candidates = []
-    for path in base.iterdir():
+    children = sorted(p for p in entries if p.parent == base) if entries is not None else base.iterdir()
+    for path in children:
         # An alias is never selected or followed; all links are rejected by safe_tree.
         if path.name == 'latest':
             continue
-        safe_path(path, directory=True); token(path.name); candidates.append(path)
+        safe_path(path, directory=True, directory_identities=directory_identities); token(path.name); candidates.append(path)
     if selected:
         token(selected)
         matches = [p for p in candidates if p.name == selected]
@@ -1506,14 +1510,18 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     from skillevaluator.evaluation import EvaluationService
     from skillevaluator.tier3.case_ids import validate_case_id
     directory_identities = {}
-    safe_tree(root, directory_identities=directory_identities); skill_id(name)
-    run = select_run(root, name, selected)
+    root = safe_path(root, directory=True, directory_identities=directory_identities)
+    files = safe_tree(root, directory_identities=directory_identities); skill_id(name)
+    scanned_entries = set(files) | set(directory_identities)
+    run = select_run(root, name, selected, entries=scanned_entries, directory_identities=directory_identities)
     budget = ReadBudget()
     observed_at = utc_now()
-    extract = load_extract(root, budget=budget, _observed_at=observed_at, directory_identities=directory_identities)
+    extract = load_extract(root, budget=budget, _observed_at=observed_at,
+                           directory_identities=directory_identities, entries=scanned_entries)
     artifact = extract['artifact_id'] if extract else run.name
     member_digests = {}
     def read_member(path, *, native_snapshot=False):
+        require(path in scanned_entries, 'Unscanned behavioral member')
         require(path not in member_digests, 'Duplicate behavioral member read')
         raw = read_bytes(path, budget=budget, directory_identities=directory_identities)
         if native_snapshot:
@@ -1530,7 +1538,7 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
             'Native identity/agent mismatch')
     require(result.get('report_status') in ('complete', 'incomplete'), 'Unknown native envelope')
     config_path = run / 'run_config.json'
-    has_config = config_path.exists()
+    has_config = config_path in scanned_entries
     config = read_member(config_path) if has_config else result.get('run_config', {})
     require(type(config) is dict, 'Native configuration object required')
     if has_config and 'run_config' in result:
@@ -1547,7 +1555,7 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
         ref(config_path)
     limitations = set()
     provenance_path = root / 'provenance.json'
-    has_provenance = provenance_path.exists()
+    has_provenance = provenance_path in scanned_entries
     provenance = read_member(provenance_path) if has_provenance else {}
     require(type(provenance) is dict, 'Native provenance object required')
     recovery = provenance.get('status') == 'incomplete'
@@ -1564,14 +1572,14 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     if has_provenance:
         ref(provenance_path)
     versions = {}
-    if (root / 'versions.json').exists():
+    if root / 'versions.json' in scanned_entries:
         versions = read_member(root / 'versions.json')
         validate_runtime_versions(versions)
         ref(root / 'versions.json')
     if any(versions.get(key) is None for key in ('skillevaluator', 'evaluator_revision')):
         limitations.add('metadata_missing')
     snapshot_path = run / 'dataset_snapshot.json'
-    if snapshot_path.exists():
+    if snapshot_path in scanned_entries:
         snapshot = read_member(snapshot_path, native_snapshot=True)
         require(type(snapshot) is dict, 'Native snapshot object required')
         require(type(snapshot.get('dataset')) is list and len(snapshot['dataset']) <= MAX_CASES, 'Snapshot case limit')
@@ -1608,7 +1616,7 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     if src_contents['digest'] is None:
         limitations.add('source_unavailable')
     attempt_path = run / 'attempt_policy.json'
-    has_attempt = attempt_path.exists()
+    has_attempt = attempt_path in scanned_entries
     attempt_policy = read_member(attempt_path) if has_attempt else {}
     if has_attempt:
         ref(attempt_path)
@@ -1661,8 +1669,9 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
         require(provenance['metrics'] == data['metrics'], 'Provenance metrics disagreement')
     if provenance.get('dataset_digest') is not None:
         require(provenance['dataset_digest'] == data['dataset']['staged_digest'], 'Provenance dataset disagreement')
-    trials_by_arm = {arm: sorted((run / 'codex' / arm.replace('_', '-') / 'trials').glob('*/result.json'))
-                     for arm in ('with_skill', 'without_skill')}
+    trials_by_arm = {arm: sorted(path for path in scanned_entries if path.name == 'result.json'
+                                and path.parent.parent == run / 'codex' / arm.replace('_', '-') / 'trials')
+                    for arm in ('with_skill', 'without_skill')}
     require(sum(len(paths) for paths in trials_by_arm.values()) <= MAX_TRIALS, 'Trial input limit')
     known_cases = set(ids)
     models = [value for value in (policy['fields']['model'], agent.get('model'),
@@ -1682,7 +1691,7 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
         arm_dir = run / 'codex' / arm.replace('_', '-')
         native_condition = agent['conditions'][arm]
         summary_path = arm_dir / 'summary.json'
-        if summary_path.exists():
+        if summary_path in scanned_entries:
             summary = read_member(summary_path)
             summary_ref = ref(summary_path)
         else:
@@ -1747,7 +1756,7 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
                 require(trial == path.parent.name, 'Trial directory identity mismatch')
                 native_id = trial_result['id']; token(native_id)
                 reward_path = path.parent / 'reward.json'
-                reward = read_member(reward_path) if reward_path.exists() else None
+                reward = read_member(reward_path) if reward_path in scanned_entries else None
                 if reward is not None:
                     require(type(reward) is dict, 'Reward object required')
                     require(reward.get('agent') is None or reward['agent'] == 'codex', 'Reward identity mismatch')
@@ -1873,9 +1882,12 @@ def static_required_gate(scan, *, blocking_only=False):
 
 def normalize_static(root, name, workspace=ROOT):
     directory_identities = {}
-    safe_tree(root, directory_identities=directory_identities); skill_id(name)
+    root = safe_path(root, directory=True, directory_identities=directory_identities)
+    scanned_entries = set(safe_tree(root, directory_identities=directory_identities)); skill_id(name)
     budget = ReadBudget()
-    catalog_path = root / 'reports/catalog-summary.json'; catalog, catalog_digest = read_json_and_digest(catalog_path, budget=budget, directory_identities=directory_identities)
+    catalog_path = root / 'reports/catalog-summary.json'
+    require(catalog_path in scanned_entries, 'Unscanned static member')
+    catalog, catalog_digest = read_json_and_digest(catalog_path, budget=budget, directory_identities=directory_identities)
     require(type(catalog) is dict, 'Static catalog object required')
     require(type(catalog['skills']) is list and catalog['total'] == len(catalog['skills']), 'Catalog cardinality mismatch')
     names = [row['name'] for row in catalog['skills']]
@@ -1887,7 +1899,9 @@ def normalize_static(root, name, workspace=ROOT):
     require(row.get('reason', '') == ('' if row['passed'] else 'validation failed'), 'Catalog infrastructure failure')
     filename = row['json_report']
     require(type(filename) is str and bool(re.fullmatch(r'skillevaluator-output-[0-9]{14}\.json', filename)), 'Unsafe static report member')
-    report_path = root / 'reports' / name / filename; native, report_digest = read_json_and_digest(report_path, budget=budget, directory_identities=directory_identities)
+    report_path = root / 'reports' / name / filename
+    require(report_path in scanned_entries, 'Unscanned static member')
+    native, report_digest = read_json_and_digest(report_path, budget=budget, directory_identities=directory_identities)
     require(type(native) is dict and type(native.get('results')) is list
             and len(native['results']) <= 100, 'Invalid bounded static report')
     require(len(native['skills']) == 1 and native['skills'][0]['name'] == name, 'Static identity mismatch')
@@ -1985,7 +1999,7 @@ def normalize_static(root, name, workspace=ROOT):
         limitations.add('source_unavailable')
     data['availability'] = {'status': 'incomplete' if limitations else 'complete',
                             'reasons': sorted(limitations), 'provenance': 'runtime_recorded'}
-    if (root / 'versions.json').exists():
+    if root / 'versions.json' in scanned_entries:
         versions, versions_digest = read_json_and_digest(root / 'versions.json', budget=budget, directory_identities=directory_identities)
         validate_runtime_versions(versions)
         data['policy'] = make_policy({'evaluator_revision': versions.get('evaluator_revision')}, provenance='runtime_recorded')
