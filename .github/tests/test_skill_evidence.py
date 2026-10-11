@@ -1669,8 +1669,56 @@ class EvidenceTests(unittest.TestCase):
         self.assertIn('metadata_missing', data['availability']['reasons'])
         self.assertIsNone(data['policy']['fields']['evaluator_revision'])
 
+    def test_shared_projection_enforces_supported_evaluator_revision(self):
+        for kind in ('behavioral', 'static'):
+            with self.subTest(kind=kind):
+                data = self.data() if kind == 'behavioral' else evidence.normalize_static(FIXTURES / 'static-synthetic', 'podman')
+                if kind == 'behavioral':
+                    data['source']['content'] = evidence.content([
+                        {'member': 'SKILL.md', 'digest': evidence.digest_bytes(b'Synthetic')}], 'configured')
+                    data['availability'].update(status='complete', reasons=[])
+                data['policy']['fields']['evaluator_revision'] = 'f' * 40
+                data['policy']['id'] = evidence.identity({k: data['policy'][k] for k in
+                    ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')})
+                self.assert_project_rejects(data, 'Unsupported native evaluator')
+                data['policy']['fields']['evaluator_revision'] = evidence.reports.POLICY['evaluator_revision']
+                data['policy']['id'] = evidence.identity({k: data['policy'][k] for k in
+                    ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')})
+                evidence.project(data)
+                data['policy']['fields']['evaluator_revision'] = None
+                data['policy']['id'] = evidence.identity({k: data['policy'][k] for k in
+                    ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')})
+                data['availability'].update(status='incomplete', reasons=sorted(
+                    set(data['availability']['reasons']) | {'metadata_missing'}))
+                self.assertIsNone(evidence.project(data)['policy']['fields']['evaluator_revision'])
+
+    def test_shared_deterministic_grading_is_binary_and_gh_only(self):
+        base = self.data(); row = base['observations'][0]
+        row['deterministic_gate'] = 1
+        row['deterministic_scores'] = dict.fromkeys(evidence.GATE_FIELDS, 1)
+        with self.subTest(skill='podman'):
+            self.assert_project_rejects(base, 'Unsupported custom grading contract')
+        base['source']['skill_id'] = 'gh'
+        for key in evidence.GATE_FIELDS:
+            if key == 'gate': continue
+            with self.subTest(fractional=key):
+                data = copy.deepcopy(base); row = data['observations'][0]
+                row['deterministic_scores'][key] = 0.5
+                row['deterministic_scores']['gate'] = row['deterministic_gate'] = 0
+                self.assert_project_rejects(data, 'Invalid deterministic observation')
+        partial = copy.deepcopy(base); row = partial['observations'][0]
+        row['deterministic_gate'] = None; row['deterministic_scores'] = dict.fromkeys(evidence.GATE_FIELDS)
+        row['deterministic_scores']['commands'] = 1
+        self.assert_project_rejects(partial, 'Invalid deterministic observation')
+        for gate in (0, 1, 0.0, 1.0):
+            data = copy.deepcopy(base); row = data['observations'][0]
+            row['deterministic_scores']['authorization'] = row['deterministic_scores']['gate'] = row['deterministic_gate'] = gate
+            self.assertEqual(evidence.project(data)['observations'][0]['deterministic_gate'], gate)
+        evidence.project(self.data())
+        evidence.project(evidence.read_json(FIXTURES / 'gh-no-model.json'))
+
     def test_failed_gate_preserved(self):
-        data = self.data(); obs = data['observations'][0]
+        data = self.data(); data['source']['skill_id'] = 'gh'; obs = data['observations'][0]
         obs['deterministic_gate'] = 0
         obs['deterministic_scores'] = {k:0 if k in ('authorization','gate') else 1 for k in evidence.GATE_FIELDS}
         self.assertEqual(evidence.project(data)['observations'][0]['score'], obs['score'])

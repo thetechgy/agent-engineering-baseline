@@ -616,6 +616,8 @@ def validate_policy(value):
             validate_build(val)
         else:
             token(val)
+    if fields['evaluator_revision'] is not None:
+        require(fields['evaluator_revision'] == reports.POLICY['evaluator_revision'], 'Unsupported native evaluator')
     judge = value['judge']; closed(judge, ('model', 'provider', 'enabled'))
     optional(judge['model'], token); optional(judge['provider'], token); optional(judge['enabled'], boolean)
     closed(value['attempts'], ('mode', 'maximum', 'stop_on_pass', 'pass_threshold'))
@@ -774,6 +776,10 @@ def validate_evidence(data, *, public=False):
         for val in obs['deterministic_scores'].values():
             optional(val, lambda v: number(v, 0, 1))
         gates = obs['deterministic_scores']
+        if any(value is not None for value in gates.values()):
+            require(data['source']['skill_id'] == 'gh', 'Unsupported custom grading contract')
+            require(all(value is not None and value in (0, 1) for value in gates.values()),
+                    'Invalid deterministic observation')
         require((gates['gate'] is None) == (obs['deterministic_gate'] is None), 'Missing gate detail')
         if gates['gate'] is not None:
             require(all(v is not None for v in gates.values()) and gates['gate'] == obs['deterministic_gate']

@@ -347,6 +347,10 @@ task source, authorization policy, fixture boundary, and workspace mode.
 Unknown values remain unknown. Missing run identity, staged digest, evaluator
 revision, patch digest, or attempt maximum independently retains
 `metadata_missing`; normalization and projection use the same identity check.
+Shared policy validation accepts only the supported evaluator revision when
+known. Deterministic custom grading is supported only for `gh`, with all eight
+dimensions present and binary; ordinary continuous native scores are preserved.
+Absent custom grades remain null, and a recorded failed binary gate remains zero.
 
 The approved manifest records no durable retention of original members. At or
 after its recorded UTC expiration, normalization marks its original references
