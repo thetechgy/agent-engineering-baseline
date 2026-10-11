@@ -358,6 +358,54 @@ class EvidenceTests(unittest.TestCase):
         self.assertFalse(any(event.get('event') == 'child_start' and 'fetch' in event.get('argv', [])
                              for event in events))
 
+    def test_historical_source_requires_skill_directory_and_manifest(self):
+        behavioral = self.native()
+        static = self.root / 'static-root'; shutil.copytree(FIXTURES / 'static-synthetic', static)
+        static_path = next((static / 'reports/podman').glob('*.json'))
+        static_report = evidence.read_json(static_path)
+        for kind in ('blob', 'no_manifest', 'manifest_directory', 'manifest_symlink', 'valid'):
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as temp:
+                repo = Path(temp); authored = repo / '.apm/skills/podman'
+                authored.parent.mkdir(parents=True)
+                if kind == 'blob': authored.write_text('Not a skill directory')
+                else:
+                    authored.mkdir()
+                    (authored / 'README.md').write_text('Synthetic source')
+                    if kind == 'manifest_directory':
+                        (authored / 'SKILL.md').mkdir(); (authored / 'SKILL.md/file').write_text('Not a manifest')
+                    elif kind == 'manifest_symlink': (authored / 'SKILL.md').symlink_to('README.md')
+                    elif kind == 'valid': (authored / 'SKILL.md').write_text('Synthetic authored skill')
+                def git(*args):
+                    return subprocess.run(['git', '-C', str(repo), *args], check=True,
+                                          capture_output=True, text=True).stdout.strip()
+                git('init', '-q'); git('add', '.apm')
+                git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+                    'commit', '-qm', 'Historical root fixture')
+                rev = git('rev-parse', 'HEAD')
+                self.mutate(behavioral, '/run_config.json', lambda d: d['evaluated_source'].update(commit=rev))
+                self.mutate(behavioral, '/result.json', lambda d: d['run_config']['evaluated_source'].update(commit=rev))
+                self.mutate(behavioral, '/provenance.json', lambda d: d.update(revision=rev))
+                static_report['evaluated_source'] = {'repository': 'example/fixture', 'commit': rev}
+                write(static_path, static_report)
+                trace = self.root / (kind + '-root-trace.jsonl')
+                with patch.dict(os.environ, {'GIT_NO_LAZY_FETCH': '0', 'GIT_TRACE2_EVENT': str(trace)}):
+                    if kind != 'valid':
+                        with self.assertRaises(ValueError): evidence.historical_content(repo, rev, '.apm/skills/podman')
+                        with self.assertRaises(ValueError): evidence.normalize_behavioral(behavioral, 'podman', workspace=repo)
+                        with self.assertRaises(ValueError): evidence.normalize_static(static, 'podman', workspace=repo)
+                    else:
+                        expected = evidence.skill_content(authored)
+                        for data in (evidence.normalize_behavioral(behavioral, 'podman', workspace=repo),
+                                     evidence.normalize_static(static, 'podman', workspace=repo)):
+                            self.assertEqual(data['source']['content']['digest'], expected['digest'])
+                            self.assertEqual(data['source']['content']['manifest'], expected['manifest'])
+                            evidence.verify_source_snapshot(authored, data['source'])
+                            evidence.project(data)
+                events = [json.loads(line) for line in trace.read_text().splitlines()]
+                if kind != 'valid':
+                    self.assertFalse(any(e.get('event') == 'start' and 'cat-file' in e.get('argv', []) for e in events))
+                self.assertFalse(any(e.get('event') == 'child_start' and 'fetch' in e.get('argv', []) for e in events))
+
     def test_historical_tree_entry_limit_precedes_blob_reads(self):
         for entries in (1000, 1001):
             with self.subTest(entries=entries), tempfile.TemporaryDirectory() as temp:

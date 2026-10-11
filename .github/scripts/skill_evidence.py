@@ -344,8 +344,14 @@ def historical_content(workspace, rev, source_path):
     if listing.returncode:
         return content()
     rows = listing.stdout.split(b'\0')
-    tree_names = {row.split(b'\t', 1)[1].decode().removeprefix(source_path + '/') for row in rows if row}
-    records = []
+    filenames = [row.split(b'\t', 1)[1].decode() for row in rows if row]
+    if not filenames:
+        return content()
+    prefix = source_path + '/'
+    require(all(filename.startswith(prefix) for filename in filenames), 'Historical source must be a directory')
+    tree_names = {filename[len(prefix):] for filename in filenames}
+    require('SKILL.md' in tree_names, 'Historical skill root missing SKILL.md')
+    members = []
     for row in rows:
         if not row:
             continue
@@ -353,8 +359,11 @@ def historical_content(workspace, rev, source_path):
         mode, kind, oid = header.split()
         require(mode == b'100644' or mode == b'100755', 'Unsafe historical source tree')
         require(kind == b'blob', 'Special historical source')
-        name = filename.decode().removeprefix(source_path + '/')
+        name = filename.decode()[len(prefix):]
         relative(name)
+        members.append((name, oid.decode()))
+    records = []
+    for name, oid in members:
         # Same root/nested skill eval boundary as the pinned runtime; generated
         # outputs are never accepted as historical authored source.
         parts = Path(name).parts
@@ -362,7 +371,7 @@ def historical_content(workspace, rev, source_path):
                             for manifest in ('SKILL.md', 'skill.md')) for i, p in enumerate(parts))
         if any(p in ('results', '__pycache__', '.git') for p in parts) or nested_evals:
             continue
-        blob = historical_blob(workspace, oid.decode())
+        blob = historical_blob(workspace, oid)
         if blob is None:
             return content()
         records.append({'member': name, 'digest': digest_bytes(blob)})

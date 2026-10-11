@@ -163,6 +163,10 @@ cap, including members later excluded by the authored-tree boundary. Exceeding
 either cap terminates the Git process and rejects the contract before parsing
 the complete listing or reading any blobs. A listing at the entry limit is
 accepted; missing trees remain unknown.
+Nonempty historical skill listings must contain only members beneath the
+declared directory and a regular root `SKILL.md`. A blob at the declared root,
+a tree without that manifest, or a linked/special manifest is rejected before
+reading source blobs; none can establish exact skill-source availability.
 
 Static aggregate pass/fail must agree with every validator's required-gate
 outcome under the pinned reporter semantics. Explicit nonblocking validators
