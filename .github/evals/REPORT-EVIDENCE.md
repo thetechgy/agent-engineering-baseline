@@ -407,6 +407,14 @@ bind the reviewed extract, without attesting that its original execution occurre
 Retained reviewed headline metrics must match the four approved name/value pairs.
 Incomplete evidence can omit measurements, but cannot replace a retained aggregate
 with another in-range value while keeping reviewed references.
+Reviewed source identities bind the repository, revision, owner, path, lineage
+and complete content manifest. The exact approved historical identity can retain
+unknown content when local objects are missing, with its source limitation.
+Static normalization records an optional Boolean `blocking` on scan records;
+legacy records without it default to blocking. Underlying scanner diagnostics
+remain nonblocking when their parent validator already supplies the gate.
+Projection reconciles aggregate pass and status with those retained gate decisions,
+including nonblocking failures and advisory skips, while retaining native pass fields.
 Reviewed-extract members are indexed once after manifest validation, so trial,
 reward, and summary references do not rescan the member list.
 Each normalization shares a 64 MiB byte budget across consumed native JSON,

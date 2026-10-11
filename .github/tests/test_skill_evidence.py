@@ -751,7 +751,7 @@ class EvidenceTests(unittest.TestCase):
                             validate(data)
 
     def test_all_overlapping_policy_and_arm_fields_agree(self):
-        base = self.data()
+        base = self.data(); self.synthetic_skill_references(base, 'podman')
         base['source']['content'] = evidence.content([
             {'member': 'SKILL.md', 'digest': evidence.digest_bytes(b'Synthetic')}], 'configured')
         base['availability'].update(status='complete', reasons=[])
@@ -1444,7 +1444,7 @@ class EvidenceTests(unittest.TestCase):
             {'member': 'SKILL.md', 'digest': evidence.digest_bytes(b'Synthetic')}], 'configured'))
 
     def test_complete_behavioral_requires_nonempty_cohort(self):
-        data = self.data()
+        data = self.data(); self.synthetic_skill_references(data, 'podman')
         data['source']['content'] = evidence.content([
             {'member': 'SKILL.md', 'digest': evidence.digest_bytes(b'Synthetic')}], 'configured')
         data['dataset'].update(case_ids=[], case_cohort_digest=evidence.identity([]))
@@ -1504,7 +1504,7 @@ class EvidenceTests(unittest.TestCase):
         for arm, status, passes in itertools.product(('with_skill', 'without_skill'),
                                                      ('complete', 'incomplete'), (0, 8, 10, 1000)):
             with self.subTest(arm=arm, status=status, passes=passes):
-                data = self.data()
+                data = self.data(); self.synthetic_skill_references(data, 'podman')
                 data['source']['content'] = evidence.content([
                     {'member': 'SKILL.md', 'digest': evidence.digest_bytes(b'Synthetic')}], 'configured')
                 data['availability'].update(status=status, reasons=[] if status == 'complete' else ['metadata_missing'])
@@ -1524,7 +1524,7 @@ class EvidenceTests(unittest.TestCase):
     def test_behavioral_evidence_rejects_static_scan_claims(self):
         for status, finding in itertools.product(('complete', 'incomplete'), (False, True)):
             with self.subTest(status=status, finding=finding):
-                data = self.data()
+                data = self.data(); self.synthetic_skill_references(data, 'podman')
                 data['source']['content'] = evidence.content([
                     {'member': 'SKILL.md', 'digest': evidence.digest_bytes(b'Synthetic')}], 'configured')
                 data['availability'].update(status=status, reasons=[] if status == 'complete' else ['metadata_missing'])
@@ -1884,7 +1884,7 @@ class EvidenceTests(unittest.TestCase):
         self.assertIsNone(data['policy']['fields']['evaluator_revision'])
 
     def test_known_staged_digest_requires_algorithm(self):
-        data = self.data()
+        data = self.data(); self.synthetic_skill_references(data, 'podman')
         data['source']['content'] = evidence.content([
             {'member': 'SKILL.md', 'digest': evidence.digest_bytes(b'Synthetic')}], 'configured')
         data['availability'].update(status='complete', reasons=[])
@@ -1927,6 +1927,7 @@ class EvidenceTests(unittest.TestCase):
             with self.subTest(kind=kind):
                 data = self.data() if kind == 'behavioral' else evidence.normalize_static(FIXTURES / 'static-synthetic', 'podman')
                 if kind == 'behavioral':
+                    self.synthetic_skill_references(data, 'podman')
                     data['source']['content'] = evidence.content([
                         {'member': 'SKILL.md', 'digest': evidence.digest_bytes(b'Synthetic')}], 'configured')
                     data['availability'].update(status='complete', reasons=[])
@@ -2064,6 +2065,7 @@ class EvidenceTests(unittest.TestCase):
         self.assert_project_rejects(data, 'Missing static aggregate pass result')
         for passed in (True, False):
             aggregate['passed'] = passed
+            data['scans'][1]['blocking'] = not passed
             self.assertEqual(evidence.project(data)['scans'][0]['passed'], passed)
         aggregate['status'] = 'skipped'
         self.assert_project_rejects(data, 'Invalid enum')  # Native overall status is never skipped.
@@ -2172,6 +2174,46 @@ class EvidenceTests(unittest.TestCase):
         data['availability'].update(status='incomplete', reasons=sorted(set(data['availability']['reasons']) | {'coverage_missing'}))
         self.assertEqual(evidence.project(data)['metrics'], base['metrics'][:1])
 
+    def test_reviewed_source_binds_complete_approved_identity(self):
+        base = self.data()
+        for changed in ('repository', 'revision', 'content', 'owner', 'source_path', 'lineage'):
+            with self.subTest(changed=changed):
+                data = copy.deepcopy(base)
+                values = {'repository': 'example/other', 'revision': 'a' * 40, 'owner': 'upstream',
+                          'source_path': 'skills/other', 'lineage': {'repository': 'example/other', 'revision': 'a' * 40,
+                          'source_path': 'skills/other'}, 'content': evidence.content([
+                          {'member': 'SKILL.md', 'digest': evidence.digest_bytes(b'Synthetic other source')}],
+                          'reconstructed_from_declared_revision')}
+                data['source'][changed] = values[changed]
+                self.assert_project_rejects(data, 'Unrecognized reviewed source identity')
+        unknown = copy.deepcopy(base); unknown['source']['content'] = evidence.content()
+        unknown['availability'].update(status='incomplete', reasons=sorted(set(unknown['availability']['reasons']) | {'source_unavailable'}))
+        self.assertIsNone(evidence.project(unknown)['source']['content']['digest'])
+        self.assertIn(evidence.identity(base['source']), evidence.REVIEWED_SOURCE_IDENTITIES)
+        self.assertIn(evidence.identity(unknown['source']), evidence.REVIEWED_SOURCE_IDENTITIES)
+
+    def test_static_projection_reconciles_aggregate_required_gates(self):
+        base = evidence.normalize_static(FIXTURES / 'static-synthetic', 'podman')
+        for complete in (False, True):
+            with self.subTest(complete=complete):
+                data = copy.deepcopy(base)
+                if complete:
+                    data['source']['content'] = evidence.content([
+                        {'member': 'SKILL.md', 'digest': evidence.digest_bytes(b'Synthetic')}], 'configured')
+                    data['availability'].update(status='complete', reasons=[])
+                    data['scans'] = data['scans'][:2]
+                    for scan in data['scans']: scan.update(status='failed', passed=False)
+                aggregate = data['scans'][0]; aggregate.update(status='passed', passed=True)
+                self.assert_project_rejects(data, 'Static aggregate gate contradiction')
+        status = copy.deepcopy(base); status['scans'][0]['status'] = 'failed'
+        self.assert_project_rejects(status, 'Static aggregate status contradiction')
+        legacy = copy.deepcopy(base)
+        for scan in legacy['scans']: scan.pop('blocking')
+        self.assertEqual(evidence.project(legacy)['scans'], legacy['scans'])
+        for invalid in (None, 1, 'false'):
+            data = copy.deepcopy(base); data['scans'][1]['blocking'] = invalid
+            self.assert_project_rejects(data, 'Invalid boolean')
+
     def test_ordinary_input_directory_replacement_rejects_validated_identity(self):
         root = self.root / 'ordinary-input'; shutil.copytree(FIXTURES / 'static-synthetic', root)
         before = self.snapshot(root); outside = self.root / 'ordinary-outside'; shutil.copytree(root, outside)
@@ -2259,6 +2301,7 @@ class EvidenceTests(unittest.TestCase):
                 data = evidence.normalize_static(FIXTURES / 'static-synthetic', 'podman')
                 for scan in data['scans']: scan.update(status='passed', passed=True)
                 data['scans'][1].update(status=status, passed=None)
+                data['scans'][0].update(status='incomplete' if status == 'incomplete' else 'failed', passed=False)
                 data['availability']['reasons'].remove('scan_incomplete')
                 self.assert_project_rejects(data, 'Missing scan limitation')
                 data['availability']['reasons'].append('scan_incomplete')

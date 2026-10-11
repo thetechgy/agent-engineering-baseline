@@ -116,6 +116,10 @@ OBSERVATION_FIELDS = ('id', 'arm', 'case_id', 'attempt', 'score', 'scores', 'rub
                       'deterministic_gate', 'deterministic_scores', 'references')
 REVIEWED_METRIC_VALUES = {'Skill Lift': 0.1207, 'Effectiveness': 0.7730,
                          'Correctness': 0.9600, 'Discoverability': 0.6937}
+REVIEWED_SOURCE_IDENTITIES = frozenset({
+    'sha256:88d1d5eda32819451938ae64f404d2c694aa628039d9045302e627c48107a3b8',
+    'sha256:f54436458de3447e2ef95a75db3ea1a4cb59c527515127e633043350629895c7',
+})  # Exact historical content, or the same declared identity with unavailable content.
 PROVENANCE = ('runtime_recorded', 'configured', 'reconstructed_from_declared_revision',
               'reviewed_extract', 'synthetic', 'unknown')
 REASONS = ('results_not_supplied', 'coverage_missing', 'execution_incomplete', 'case_details_missing',
@@ -1020,7 +1024,9 @@ def validate_evidence(data, *, public=False):
     require(type(data['scans']) is list and len(data['scans']) <= 100, 'Scan limit')
     scanner_ids = []
     for scan in data['scans']:
-        closed(scan, ('scanner', 'status', 'passed', 'severity_counts', 'references'))
+        scan_fields = ('scanner', 'status', 'passed', 'severity_counts', 'references')
+        closed(scan, scan_fields + ('blocking',) if 'blocking' in scan else scan_fields)
+        boolean(scan.get('blocking', True))
         token(scan['scanner']); scanner_ids.append(scan['scanner']); enum(scan['status'], ('passed', 'failed', 'incomplete', 'skipped'))
         optional(scan['passed'], boolean)
         if scan['status'] in ('passed', 'failed'):
@@ -1104,6 +1110,13 @@ def validate_evidence(data, *, public=False):
     if data['kind'] == 'behavioral' and any(ref['provenance'] == 'reviewed_extract' for ref in references):
         require(all(REVIEWED_METRIC_VALUES.get(row['name']) == row['value'] for row in data['metrics']),
                 'Unrecognized reviewed metric value')
+        require(identity(data['source']) in REVIEWED_SOURCE_IDENTITIES, 'Unrecognized reviewed source identity')
+    if data['kind'] == 'static' and aggregate is not None:
+        require(aggregate['passed'] == all(scan['passed'] is True or not scan.get('blocking', True)
+                                         for scan in validators), 'Static aggregate gate contradiction')
+        expected = ('incomplete' if any(scan['status'] == 'incomplete' for scan in validators)
+                    else 'passed' if aggregate['passed'] else 'failed')
+        require(aggregate['status'] == expected, 'Static aggregate status contradiction')
     depth(data, 12 if public else 32)
     if public:
         require(len(encoded(data)) <= PUBLIC_LIMIT, 'Public report size exceeded')
@@ -1564,7 +1577,7 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     return data
 
 
-def static_required_gate(scan):
+def static_required_gate(scan, *, blocking_only=False):
     """Match the pinned reporter's blocking and advisory-skip semantics."""
     boolean(scan['passed'])
     enum(scan['status'], ('passed', 'failed', 'incomplete', 'skipped'))
@@ -1581,7 +1594,8 @@ def static_required_gate(scan):
     expected = ('skipped' if advisory_skip else 'incomplete' if scan.get('incomplete_scans')
                 else 'passed' if scan['passed'] else 'failed')
     require(scan['status'] == expected, 'Static validator status contradiction')
-    return scan['passed'] or (not gating.get('blocking', True) if gating is not None else advisory_skip)
+    blocking = gating.get('blocking', True) if gating is not None else not advisory_skip
+    return blocking if blocking_only else scan['passed'] or not blocking
 
 
 def normalize_static(root, name, workspace=ROOT):
@@ -1623,7 +1637,8 @@ def normalize_static(root, name, workspace=ROOT):
         for scanner in extra_scanners:
             token(scanner)
         require(set(extra_scanners) <= set(native['incomplete_scans']), 'Inconsistent incomplete scanner identity')
-    gates = [static_required_gate(scan) for scan in native['results']]
+    blocking = [static_required_gate(scan, blocking_only=True) for scan in native['results']]
+    gates = [scan['passed'] or not required for scan, required in zip(native['results'], blocking)]
     require(native['overall_passed'] == all(gates),
             'Static required gate contradiction')
     detailed = dict.fromkeys(severity, 0)
@@ -1662,12 +1677,12 @@ def normalize_static(root, name, workspace=ROOT):
     # Aggregate native counts remain their own observation; scanner counts are
     # not invented when the pinned report does not supply them.
     data['scans'] = [{'scanner': 'catalog-total', 'status': native['overall_status'], 'passed': native['overall_passed'],
-                      'severity_counts': severity, 'references': [refs[1]['id']]}]
+                      'blocking': True, 'severity_counts': severity, 'references': [refs[1]['id']]}]
     for index, scan in enumerate(native['results']):
         scanner = scan['validator']; token(scanner)
         enum(scan['status'], ('passed', 'failed', 'incomplete', 'skipped'))
         scan_ref = report_reference(('results', index)); refs.append(scan_ref)
-        data['scans'].append({'scanner': scanner, 'status': scan['status'], 'passed': scan.get('passed'),
+        data['scans'].append({'scanner': scanner, 'status': scan['status'], 'passed': scan.get('passed'), 'blocking': blocking[index],
             'severity_counts': {k: scan.get('summary', {}).get(k + '_count')
                                 for k in ('critical', 'high', 'medium', 'low')}, 'references': [scan_ref['id']]})
     recorded_incomplete = set()
@@ -1676,7 +1691,7 @@ def normalize_static(root, name, workspace=ROOT):
             token(scanner); recorded_incomplete.add(scanner)
             if scanner not in {s['scanner'] for s in data['scans']}:
                 data['scans'].append({'scanner': scanner, 'status': 'incomplete', 'passed': None,
-                    'severity_counts': {k: None for k in ('critical', 'high', 'medium', 'low')}, 'references': [refs[1]['id']]})
+                    'blocking': False, 'severity_counts': {k: None for k in ('critical', 'high', 'medium', 'low')}, 'references': [refs[1]['id']]})
         for finding_index, finding in enumerate(scan.get('findings', [])):
             finding_ref = report_reference(('results', index, 'findings', finding_index))
             refs.append(finding_ref)
