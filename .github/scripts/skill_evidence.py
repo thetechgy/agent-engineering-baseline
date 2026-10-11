@@ -862,6 +862,8 @@ def validate_evidence(data, *, public=False):
         policy_threshold = data['policy']['attempts']['pass_threshold']
         if rubric['threshold'] is not None and policy_threshold is not None:
             require(rubric['threshold'] == policy_threshold, 'Rubric attempt-policy threshold mismatch')
+        require((rubric['passed_cases'] is None) == (rubric['total_cases'] is None),
+                'Missing rubric aggregate pair')
         if rubric['total_cases'] is not None:
             require(rubric['total_cases'] == len(ids) and rubric['passed_cases'] is not None
                     and rubric['passed_cases'] <= rubric['total_cases'], 'Rubric denominator mismatch')

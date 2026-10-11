@@ -1454,6 +1454,27 @@ class EvidenceTests(unittest.TestCase):
             data['availability']['reasons']) | {'case_details_missing'}))
         evidence.project(data)  # Partial case details remain explicitly incomplete.
 
+    def test_rubric_aggregates_require_numerator_and_denominator_together(self):
+        for arm, status, passes in itertools.product(('with_skill', 'without_skill'),
+                                                     ('complete', 'incomplete'), (0, 8, 10, 1000)):
+            with self.subTest(arm=arm, status=status, passes=passes):
+                data = self.data()
+                data['source']['content'] = evidence.content([
+                    {'member': 'SKILL.md', 'digest': evidence.digest_bytes(b'Synthetic')}], 'configured')
+                data['availability'].update(status=status, reasons=[] if status == 'complete' else ['metadata_missing'])
+                rubric = next(row for row in data['arms'] if row['name'] == arm)['rubric']
+                original = copy.deepcopy(rubric)
+                rubric.update(passed_cases=passes, total_cases=None)
+                self.assert_project_rejects(data, 'Missing rubric aggregate pair')
+                rubric.update(passed_cases=None)
+                evidence.project(data)  # Both unknown aggregates stay null.
+                rubric.update(total_cases=10)
+                self.assert_project_rejects(data, 'Missing rubric aggregate pair')
+                rubric.update(original)
+                evidence.project(data)
+                rubric['passed_cases'] = 1
+                self.assert_project_rejects(data, 'Rubric count mismatch')
+
     def test_behavioral_evidence_rejects_static_scan_claims(self):
         for status, finding in itertools.product(('complete', 'incomplete'), (False, True)):
             with self.subTest(status=status, finding=finding):
