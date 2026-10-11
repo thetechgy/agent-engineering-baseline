@@ -135,8 +135,6 @@ class EvidenceTests(unittest.TestCase):
             if message == 'Ambiguous deployment ownership':
                 checked += 1
                 if checked == len(owner['deployed_file_hashes']):
-                    authored.rename(self.root / 'reviewed-tree')
-                    shutil.copytree(self.root / 'reviewed-tree', authored)
                     (authored / 'README.md').write_text('Replacement content')
         with patch.object(evidence, 'require', side_effect=replace_after_lock):
             actual = next(row for row in evidence.inventory(root)['skills'] if row['source']['skill_id'] == 'beta')
@@ -398,7 +396,7 @@ class EvidenceTests(unittest.TestCase):
                         patch.object(adapter, '_runtime_skill_copy_ignore', return_value=lambda *_: set()) as selector, \
                         patch.object(adapter, 'is_generated_output_root') as authenticate, \
                         patch.object(output_provenance, '_load_existing_key') as key:
-                    with self.assertRaisesRegex(ValueError, 'Input directory changed'), redirect_stdout(StringIO()):
+                    with self.assertRaisesRegex(ValueError, 'Input directory (?:entries )?changed'), redirect_stdout(StringIO()):
                         evidence.main(['inventory', '--output', str(output)])
                 authenticate.assert_not_called(); key.assert_not_called()
                 if not imported: selector.assert_not_called()
@@ -2598,6 +2596,76 @@ class EvidenceTests(unittest.TestCase):
                                    '--output', str(output)])
                 self.assertFalse(hidden); self.assertFalse(output.exists()); self.assertEqual(self.snapshot(root), before)
 
+    @contextmanager
+    def hide_member_during_scan(self, member):
+        scan = os.scandir; parent = member.parent; state = parent.stat(); hidden = parent.parent / 'hidden-scan-member'
+        class CapturedEntries:
+            def __init__(self, entries): self.entries = entries
+            def __enter__(self): return iter(self.entries)
+            def __exit__(self, *_): return False
+        def subset(path):
+            if type(path) is int and (os.fstat(path).st_dev, os.fstat(path).st_ino) == (state.st_dev, state.st_ino):
+                member.rename(hidden)
+                try:
+                    with scan(path) as entries: captured = list(entries)
+                finally:
+                    hidden.rename(member)
+                    os.utime(parent, ns=(state.st_atime_ns, state.st_mtime_ns))
+                return CapturedEntries(captured)
+            return scan(path)
+        with patch.object(os, 'scandir', subset): yield
+
+    def test_native_scan_rejects_transient_hidden_metadata(self):
+        for kind in ('behavioral', 'static'):
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp) / 'native'
+                shutil.copytree(FIXTURES / ('podman-native' if kind == 'behavioral' else 'static-synthetic'), root)
+                if kind == 'behavioral': (root / 'extract-manifest.json').unlink()
+                before = self.snapshot(root); output = Path(temp) / 'rejected-hidden-scan'
+                with self.hide_member_during_scan(root / 'versions.json'), \
+                        self.assertRaisesRegex(ValueError, 'Input directory entries changed'), redirect_stdout(StringIO()):
+                    evidence.main(['normalize', '--kind', kind, '--skill', 'podman', '--input', str(root),
+                                   '--output', str(output)])
+                self.assertFalse(output.exists()); self.assertEqual(self.snapshot(root), before)
+
+    def test_inventory_scan_rejects_transient_hidden_marker(self):
+        from skillevaluator.tier3.harbor import adapter
+        from skillevaluator.tier3 import output_provenance
+        root = self.repo(); authored = root / '.apm/skills/alpha'
+        marker = authored / output_provenance.GENERATED_OUTPUT_MARKER; marker.write_text('hidden marker')
+        before = self.snapshot(root)
+        with self.hide_member_during_scan(marker), \
+                patch.object(adapter, '_runtime_skill_copy_ignore', return_value=lambda *_: set()) as selector, \
+                patch.object(adapter, 'is_generated_output_root') as authenticate, \
+                patch.object(output_provenance, '_load_existing_key') as key:
+            with self.assertRaisesRegex(ValueError, 'Input directory entries changed'): evidence.inventory(root)
+        selector.assert_not_called(); authenticate.assert_not_called(); key.assert_not_called()
+        self.assertEqual(self.snapshot(root), before)
+
+    def test_scan_state_rejects_changes_after_last_capture(self):
+        for operation in ('static', 'inventory'):
+            with self.subTest(operation=operation), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp) / 'input'; output = Path(temp) / 'rejected-late-change'
+                if operation == 'static':
+                    shutil.copytree(FIXTURES / 'static-synthetic', root)
+                    target = root / 'versions.json'; changed_tree = root
+                    args = ['normalize', '--kind', 'static', '--skill', 'podman', '--input', str(root)]
+                else:
+                    changed_tree = self.local(root, 'alpha', True)
+                    target = changed_tree / 'evals/evals.json'; args = ['inventory']
+                read = evidence.read_bytes; inventory = evidence.inventory; snapshots = []
+                def changed(path, *args, **kwargs):
+                    raw = read(path, *args, **kwargs)
+                    if path == target:
+                        (changed_tree / 'late-unscanned.txt').write_text('late namespace change')
+                        snapshots.append(self.snapshot(root))
+                    return raw
+                with patch.object(evidence, 'read_bytes', side_effect=changed), \
+                        patch.object(evidence, 'inventory', side_effect=lambda: inventory(root)), \
+                        self.assertRaisesRegex(ValueError, 'Input directory entries changed'), redirect_stdout(StringIO()):
+                    evidence.main([*args, '--output', str(output)])
+                self.assertFalse(output.exists()); self.assertEqual(self.snapshot(root), snapshots[0])
+
     def test_behavioral_trials_use_captured_scan_entries(self):
         root = self.native(); trials = next(root.glob('results/podman/*/codex/with-skill/trials'))
         original = next(trials.glob('*/result.json')); extra = trials / 'hidden-extra'; extra.mkdir()
@@ -2650,7 +2718,8 @@ class EvidenceTests(unittest.TestCase):
                 return entries
             return scan(path)
         with patch.object(evidence.os, 'scandir', side_effect=replacing):
-            self.assertEqual(evidence.safe_tree(root), [root / 'original.json'])
+            with self.assertRaisesRegex(ValueError, 'Input directory entries changed'):
+                evidence.safe_tree(root)
         self.assertTrue(swapped); self.assertEqual(self.snapshot(root), before)
 
     def test_static_projection_binds_claims_to_retained_native_bytes(self):
@@ -3748,7 +3817,7 @@ class EvidenceTests(unittest.TestCase):
 
     def test_static_normalization_uses_anchored_input_bytes(self):
         root = self.root / 'static-anchored'; shutil.copytree(FIXTURES / 'static-synthetic', root)
-        baseline = evidence.normalize_static(root, 'podman'); before = self.snapshot(root)
+        before = self.snapshot(root)
         outside = self.root / 'outside-static'; shutil.copytree(root, outside)
         versions = evidence.read_json(outside / 'versions.json'); versions.pop('fixture')
         write(outside / 'versions.json', versions)
@@ -3764,9 +3833,9 @@ class EvidenceTests(unittest.TestCase):
                 if swap:
                     root.unlink(); retained.rename(root)
         with patch.object(os, 'open', side_effect=file_open):
-            actual = evidence.normalize_static(root, 'podman')
+            with self.assertRaisesRegex(ValueError, 'Input directory entries changed'):
+                evidence.normalize_static(root, 'podman')
         self.assertTrue(replaced)
-        self.assertEqual(evidence.encoded(actual), evidence.encoded(baseline))
         self.assertEqual(self.snapshot(root), before)
 
     def test_output_names_and_descriptor_support_fail_before_creation(self):

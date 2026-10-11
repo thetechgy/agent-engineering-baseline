@@ -77,6 +77,12 @@ identities are checked before invoking the runtime visibility selector.
 Native run/trial discovery, reviewed manifests and optional metadata also use
 the initial bounded scan entries. A transient pathname subset cannot hide a
 contradictory trial or optional member; every consumed member must be scanned.
+Scans check directory modification/change metadata on the opened descriptor
+before and after enumeration and retain it through member reads, cached reuse,
+source selection and final validation. Same-inode entry changes reject, including
+hidden/restored members and restored modification times. This guard relies on
+filesystem change metadata and is verified with real renames on Linux; it does
+not claim an atomic filesystem snapshot or isolation from privileged writers.
 Temporary and explicit output parents use the same validated ancestor identities
 before directory creation. Replacing an ordinary parent with the input directory
 rejects before output allocation, preserving the input's entries and bytes.
