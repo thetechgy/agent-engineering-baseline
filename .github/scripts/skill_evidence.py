@@ -825,6 +825,9 @@ def validate_evidence(data, *, public=False):
                     'Contradictory native rubric pass')
         if arm['execution_status'] == 'succeeded':
             require(arm['execution_error_count'] == 0, 'Succeeded arm has errors')
+        elif availability['status'] != 'unavailable':
+            require(availability['status'] == 'incomplete' and 'execution_incomplete' in availability['reasons'],
+                    'Missing execution limitation')
         if availability['status'] == 'complete':
             require(arm['execution_status'] == 'succeeded' and cov['scored_attempts'] == cov['expected_attempts']
                     and cov['recorded_attempts'] == cov['expected_attempts'] and cov['case_details'] == 'complete', 'Incomplete evidence promotion')
@@ -936,7 +939,7 @@ def load_extract(root):
         token(value['origin'][key])
     require(bool(re.fullmatch(r'[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z', value['origin']['expires_at'])), 'Invalid recorded expiration')
     require(value['artifact_id'] == 'github-artifact-' + value['origin']['artifact_id'], 'Extract artifact identity mismatch')
-    require(type(value['members']) is list and len(value['members']) <= MAX_TRIALS + 100, 'Extract limit')
+    require(type(value['members']) is list and len(value['members']) <= MAX_REFERENCES, 'Extract limit')
     names = []
     for row in value['members']:
         closed(row, ('member', 'original_digest', 'extract_digest'))

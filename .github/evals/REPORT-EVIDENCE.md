@@ -117,7 +117,8 @@ structured native reference; that location is never opened. Limits are 8 MiB per
 consumed JSON file, native depth 32, public depth 12, public serialized size 1 MiB,
 1,000 cases, 10,000 trial observations, and 20,100 references (two members per
 trial plus shared metadata). Reference IDs are tracked incrementally while
-normalizing behavioral input. The public serialized-size limit remains independent
+normalizing behavioral input. Reviewed-extract manifests share this member budget.
+The public serialized-size limit remains independent
 of these input cardinality limits. Exceeding any limit fails without
 truncation or partial publication. Duplicate JSON keys, cross-platform case-ID
 collisions, invalid denominators, linked/reparse/hard-linked or special inputs,
@@ -323,6 +324,9 @@ manifest or coordinated member/manifest edits cannot grant reviewed provenance
 or replace original digests. Adding an approved extract requires reviewing its
 manifest identity in the source; ordinary native bundles without a manifest
 retain runtime-recorded provenance.
+For observed behavioral evidence, every nonsucceeded arm retains the
+`execution_incomplete` limitation even when other limitations already make the
+record incomplete. Configured arms without observed execution remain unavailable.
 
 The approved manifest records no durable retention of original members. At or
 after its recorded UTC expiration, normalization marks its original references

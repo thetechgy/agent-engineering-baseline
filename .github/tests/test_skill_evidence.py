@@ -696,7 +696,7 @@ class EvidenceTests(unittest.TestCase):
 
     def test_coverage_unknown_and_known_count_combinations(self):
         base = evidence.read_json(FIXTURES / 'gh-no-model.json')
-        base['availability'].update(status='incomplete', reasons=['coverage_missing'])
+        base['availability'].update(status='incomplete', reasons=['coverage_missing', 'execution_incomplete'])
         base['policy']['attempts']['maximum'] = None
         base['policy']['id'] = evidence.identity({k: base['policy'][k] for k in
                                                 ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')})
@@ -1278,6 +1278,36 @@ class EvidenceTests(unittest.TestCase):
         self.assert_project_rejects(data, 'Empty complete cohort')
         data['availability'].update(status='incomplete', reasons=['coverage_missing'])
         evidence.project(data)
+
+    def test_projection_preserves_known_execution_limitations(self):
+        for arm, status, errors in itertools.product(('with_skill', 'without_skill'),
+                                                     ('failed', 'incomplete', 'unknown'), (0, 1)):
+            with self.subTest(arm=arm, status=status, errors=errors):
+                data = self.data()
+                selected = next(row for row in data['arms'] if row['name'] == arm)
+                selected.update(execution_status=status, execution_error_count=errors)
+                data['availability'].update(status='incomplete', reasons=['metadata_missing', 'source_unavailable'])
+                self.assert_project_rejects(data, 'Missing execution limitation')
+                data['availability']['reasons'].append('execution_incomplete')
+                self.assertIn('execution_incomplete', evidence.project(data)['availability']['reasons'])
+        # Configured arms with no observed execution do not invent a failed run.
+        evidence.project(evidence.read_json(FIXTURES / 'gh-no-model.json'))
+
+    def test_reviewed_extract_member_budget_matches_trial_companions(self):
+        root = self.root / 'extract-budget'; root.mkdir()
+        manifest = evidence.read_json(FIXTURES / 'podman-native/extract-manifest.json')
+        for size in (20100, 20101):
+            with self.subTest(size=size):
+                manifest['members'] = [{'member': f'trials/member-{i}.json',
+                                        'original_digest': evidence.digest_bytes(b'original'),
+                                        'extract_digest': evidence.digest_bytes(b'extract')} for i in range(size)]
+                path = root / 'extract-manifest.json'; write(path, manifest)
+                approved = frozenset({evidence.digest_bytes(path.read_bytes())})
+                with patch.object(evidence, 'REVIEWED_EXTRACT_MANIFESTS', approved):
+                    if size == 20100:
+                        self.assertEqual(len(evidence.load_extract(root)['members']), size)
+                    else:
+                        with self.assertRaisesRegex(ValueError, 'Extract limit'): evidence.load_extract(root)
 
     def test_shared_stop_on_pass_policy_consistency(self):
         for field, attempt in itertools.product((None, False, True), repeat=2):
