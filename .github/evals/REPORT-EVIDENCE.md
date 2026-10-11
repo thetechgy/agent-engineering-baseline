@@ -37,6 +37,13 @@ directory outside the checkout and input bundle. The first nonempty `TMPDIR`,
 settings (including linked, missing, or non-directory parents) are rejected
 without falling back to another location or leaving an output directory behind.
 Explicit `--output` placement does not depend on temporary settings.
+Output requires directory-descriptor support and no-follow directory opens.
+It anchors every parent component, creates temporary or explicit directories
+relative to the parent descriptor, and creates flat output files relative to the
+new directory descriptor. Replaced paths cannot redirect writes into the checkout
+or input bundle; changed destination identity rejects publication. Unsupported
+platforms reject before directory creation. This path is verified on Linux;
+Windows output support is not established.
 Standalone commands disable bytecode writes before importing repository helpers,
 so running without `PYTHONDONTWRITEBYTECODE` does not create checkout caches.
 
@@ -327,6 +334,11 @@ manifest or coordinated member/manifest edits cannot grant reviewed provenance
 or replace original digests. Adding an approved extract requires reviewing its
 manifest identity in the source; ordinary native bundles without a manifest
 retain runtime-recorded provenance.
+Standalone projection also matches each reviewed reference's archive/member
+metadata identity against pins derived from that approved manifest. An arbitrary
+provenance label, archive hash, member, or original digest cannot grant reviewed
+status; reviewed report availability requires reviewed references. This checks
+declared reviewed identity, not independent execution authenticity or retention.
 For observed behavioral evidence, every nonsucceeded arm retains the
 `execution_incomplete` limitation even when other limitations already make the
 record incomplete. Configured arms without observed execution remain unavailable.
@@ -365,6 +377,8 @@ must pass the static normalization contract.
 Non-unavailable static records retain exactly one `catalog-total` scan carrying
 the native overall status and severity totals; projection cannot drop that row.
 All four aggregate severity totals remain known integers, including zero.
+The aggregate retains its native Boolean pass result even while incomplete.
+Its status is the native overall passed, failed, or incomplete status.
 Reviewed-extract members are indexed once after manifest validation, so trial,
 reward, and summary references do not rescan the member list.
 Each normalization shares a 64 MiB byte budget across consumed native JSON,

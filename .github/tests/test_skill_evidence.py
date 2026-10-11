@@ -1998,6 +1998,44 @@ class EvidenceTests(unittest.TestCase):
                 aggregate['severity_counts'] = counts
                 self.assertEqual(evidence.project(data)['scans'][0]['severity_counts'], counts)
 
+    def test_static_aggregate_retains_native_pass_boolean(self):
+        data = evidence.normalize_static(FIXTURES / 'static-synthetic', 'podman')
+        aggregate = next(scan for scan in data['scans'] if scan['scanner'] == 'catalog-total')
+        aggregate.update(status='incomplete', passed=None)
+        self.assert_project_rejects(data, 'Missing static aggregate pass result')
+        for passed in (True, False):
+            aggregate['passed'] = passed
+            self.assertEqual(evidence.project(data)['scans'][0]['passed'], passed)
+        aggregate['status'] = 'skipped'
+        self.assert_project_rejects(data, 'Invalid enum')  # Native overall status is never skipped.
+
+    def test_reviewed_reference_provenance_matches_pinned_member_identity(self):
+        root = self.native(); ordinary = evidence.normalize_behavioral(root, 'podman')
+        for archive in (None, 'sha256:' + 'a' * 64):
+            with self.subTest(archive=archive):
+                data = copy.deepcopy(ordinary)
+                data['references'][0].update(provenance='reviewed_extract', artifact_digest=archive)
+                self.assert_project_rejects(data, 'Unrecognized reviewed reference identity')
+        claimed = copy.deepcopy(ordinary); claimed['availability']['provenance'] = 'reviewed_extract'
+        self.assert_project_rejects(claimed, 'Reviewed availability missing reviewed references')
+        approved = self.data(); ref = approved['references'][0]
+        for key, value in (('artifact_id', 'another-artifact'), ('artifact_digest', 'sha256:' + 'a' * 64),
+                           ('member', 'another.json'), ('digest', 'sha256:' + 'b' * 64)):
+            with self.subTest(key=key):
+                data = copy.deepcopy(approved); changed = data['references'][0]; old_id = changed['id']
+                changed[key] = value
+                changed['id'] = evidence.identity({k: changed[k] for k in ('artifact_id', 'member', 'locator', 'digest')})
+                for observation in data['observations']:
+                    observation['references'] = [changed['id'] if item == old_id else item for item in observation['references']]
+                self.assert_project_rejects(data, 'Unrecognized reviewed reference identity')
+        evidence.project(approved)
+        manifest_path = FIXTURES / 'podman-native/extract-manifest.json'
+        self.assertIn(evidence.digest_bytes(manifest_path.read_bytes()), evidence.REVIEWED_EXTRACT_MANIFESTS)
+        manifest = evidence.read_json(manifest_path)
+        identities = {evidence.identity({'artifact_id': manifest['artifact_id'], 'artifact_digest': manifest['archive_digest'],
+                                        'member': row['member'], 'digest': row['original_digest']}) for row in manifest['members']}
+        self.assertEqual(identities, evidence.REVIEWED_REFERENCE_IDENTITIES)
+
     def test_historical_listing_applies_remaining_budget_during_capture(self):
         repo = self.repo(); authored = repo / '.apm/skills/alpha'
         for index in range(10): (authored / f'member-{index}.md').write_text('Synthetic')
@@ -2358,7 +2396,8 @@ class EvidenceTests(unittest.TestCase):
     def test_actual_public_serialized_limit(self):
         data = evidence.read_json(FIXTURES/'gh-no-model.json')
         prototype = self.data()['references'][0]
-        for index in range(2500):
+        prototype.update(provenance='synthetic', artifact_id='synthetic-public-limit', artifact_digest=None)
+        for index in range(3500):
             ref = copy.deepcopy(prototype); ref['member'] = 'members/' + str(index) + '.json'
             ref['id'] = evidence.identity({k:ref[k] for k in ('artifact_id','member','locator','digest')})
             data['references'].append(ref)
@@ -2501,6 +2540,68 @@ class EvidenceTests(unittest.TestCase):
         with self.assertRaises(ValueError): evidence.write_outputs(values, alias/'new')
         destination = self.root/'new'; evidence.write_outputs(values, destination)
         with self.assertRaises(ValueError): evidence.write_outputs(values, destination)
+
+    def test_output_directory_replacement_cannot_redirect_writes(self):
+        for stage in ('created', 'file_open'):
+            with self.subTest(stage=stage), tempfile.TemporaryDirectory() as temp:
+                parent = Path(temp); workspace = parent / 'checkout'; workspace.mkdir()
+                bundle = parent / 'input'; bundle.mkdir(); (bundle / 'marker').write_text('Retained')
+                destination = parent / 'output'; retained = parent / 'renamed-output'
+                before_input = self.snapshot(bundle); before_workspace = self.snapshot(workspace)
+                replaced = False
+                def replace():
+                    nonlocal replaced
+                    if not replaced:
+                        destination.rename(retained); destination.symlink_to(bundle, target_is_directory=True)
+                        replaced = True
+                mkdir = os.mkdir; open_file = Path.open; open_fd = os.open
+                def created(path, *args, **kwargs):
+                    result = mkdir(path, *args, **kwargs)
+                    if stage == 'created' and (Path(path) == destination or str(path) == destination.name): replace()
+                    return result
+                def opened_path(path, *args, **kwargs):
+                    if stage == 'file_open' and path.parent == destination: replace()
+                    return open_file(path, *args, **kwargs)
+                def opened_fd(path, flags, *args, **kwargs):
+                    if stage == 'file_open' and flags & os.O_CREAT: replace()
+                    return open_fd(path, flags, *args, **kwargs)
+                with patch.object(os, 'mkdir', side_effect=created), patch.object(Path, 'open', opened_path), \
+                        patch.object(os, 'open', side_effect=opened_fd):
+                    with self.assertRaises((ValueError, OSError)):
+                        evidence.write_outputs({'evidence.json': {'synthetic': True}}, destination,
+                                               workspace=workspace, input_path=bundle)
+                self.assertTrue(replaced)
+                self.assertEqual(self.snapshot(bundle), before_input)
+                self.assertEqual(self.snapshot(workspace), before_workspace)
+
+    def test_output_parent_replacement_cannot_redirect_directory_creation(self):
+        for temporary in (False, True):
+            with self.subTest(temporary=temporary), tempfile.TemporaryDirectory() as temp:
+                base = Path(temp); parent = base / 'parent'; parent.mkdir()
+                bundle = base / 'input'; bundle.mkdir(); (bundle / 'marker').write_text('Retained')
+                retained = base / 'retained-parent'; before = self.snapshot(bundle); replaced = False
+                mkdir = os.mkdir
+                def replace_parent(path, *args, **kwargs):
+                    nonlocal replaced
+                    if not replaced:
+                        parent.rename(retained); parent.symlink_to(bundle, target_is_directory=True); replaced = True
+                    return mkdir(path, *args, **kwargs)
+                with patch.object(os, 'mkdir', side_effect=replace_parent), patch.dict(os.environ, {'TMPDIR': str(parent)}):
+                    with self.assertRaises((ValueError, OSError)):
+                        evidence.write_outputs({'evidence.json': {}}, None if temporary else parent / 'output',
+                                               input_path=bundle)
+                self.assertTrue(replaced); self.assertEqual(self.snapshot(bundle), before)
+
+    def test_output_names_and_descriptor_support_fail_before_creation(self):
+        for name in ('../escape.json', '/escape.json', 'nested/output.json'):
+            with self.subTest(name=name):
+                destination = self.root / 'rejected-output'
+                with self.assertRaises(ValueError): evidence.write_outputs({name: {}}, destination)
+                self.assertFalse(destination.exists())
+        with patch.object(evidence, 'SECURE_DIRECTORY_OUTPUT', False):
+            with self.assertRaisesRegex(ValueError, 'Secure directory output unsupported'):
+                evidence.write_outputs({'evidence.json': {}}, self.root / 'unsupported')
+        self.assertFalse((self.root / 'unsupported').exists())
 
     def snapshot(self, root):
         return {p.relative_to(root).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest() if p.is_file() else None

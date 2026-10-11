@@ -10,6 +10,7 @@ import math
 import os
 from pathlib import Path, PurePosixPath
 import re
+import secrets
 import stat
 import subprocess
 import sys
@@ -29,11 +30,65 @@ MAX_TRIALS = 10000
 MAX_REFERENCES = 2 * MAX_TRIALS + 100
 MAX_SOURCE_MEMBERS = 1000
 MAX_INPUT_ENTRIES = 100000
+SECURE_DIRECTORY_OUTPUT = (all(fn in os.supports_dir_fd for fn in (os.open, os.mkdir))
+                           and hasattr(os, 'O_DIRECTORY') and hasattr(os, 'O_NOFOLLOW'))
 # Reviewed Podman extract-manifest.json bytes; additional identities require review.
 REVIEWED_EXTRACT_MANIFESTS = frozenset({
     'sha256:4f8ab06638a37c970dfd5a97f057da8505a0b57767a332b41d4e0c2c8e8066ea',
 })
 require = reports.require
+# Metadata identities from the exact reviewed manifest above, independently
+# checked against its pinned bytes by the fixture contract. No execution attestation.
+REVIEWED_REFERENCE_IDENTITIES = frozenset({
+    'sha256:05246ba582d9a92103fb0d86179be17dff7bc63128fb00aac9fb479758d474e6',
+    'sha256:05e0c986be84786bae62c516246bd2f558a1206244a491b294c8a288841baa22',
+    'sha256:0b2a5b82830e566e688dc0f85ceae6072b94c3c2804e611679d411a528ba09ff',
+    'sha256:103dcda6ce7a26a590597c612e74eb258d96dd05182716c0b67fd93a936b68e5',
+    'sha256:18af0634e41b9bda7fc27342928ab4fe38146890cd78ccf200089d39a84c3641',
+    'sha256:213304c9a8c592b3a9e8f714a50aa86f6b74012efc5f2dc8203c43bbc47911a8',
+    'sha256:261bb811f07fd7a0b52af5546b212894a4ee7221a57dd606aa5c082db4158095',
+    'sha256:29f3029cc1a5b2bbf8d013340355e5f72d9176368e76cdbec08758ee15c7369f',
+    'sha256:2a345795501a3a8c797448cbbc0908c79e623157574a07b6b49d5c042f711914',
+    'sha256:315223b9a5ae970f4484e9ecd5f5c5cbe557b474f7f9d658306bb4d21a736798',
+    'sha256:38dd3b5137c578a2348d31e2498ba29edb40b7fc82dc98857796035b9d401043',
+    'sha256:40e5cd09bf33b60d53425fddcdcff6fd1bec6ea3f85f0fbd6eec568edaad60f9',
+    'sha256:43a2b65b0c296ec5fb3d5def1199bf9d26ebecc89b8f9c528393cff2ac2ebcd9',
+    'sha256:4709e876c44ed793fc20f627643fd161faaafb886f029e9a963132de14a35720',
+    'sha256:495a4ade33b56177630fccad2f425fb468e2e5629051c0446173ee8f0e1c2585',
+    'sha256:4ee02eed653d1ce3e3eccdbbe32e1f100f4ee1cccc62673f064cffecd02059b5',
+    'sha256:54596c033ce5143bc5f67e331426c279893f6f7cde4121d56b479cd3f32a530c',
+    'sha256:55bf0500ac4d6dcd0b1436400e8dd0420f635ab3063a71851130c298992e5d19',
+    'sha256:55f8514645bca3d987619f910f4a33c934b2179c186fef89f8d3f0ea188420a1',
+    'sha256:633ea43ebeaef3f318534b417836138062735c3b5f9fc3484a145448b2202de6',
+    'sha256:6abf9222a591e492aa3742905597ac2d4cd799b73deb087071e59117b12de759',
+    'sha256:6fe9bfdbab418bcfe6f5df0491374d8abd5e3f35ece35649c83e6a1362e68991',
+    'sha256:725acb869e0680525e27dea2c80860a2f29f9713ff786526896d0246f081f211',
+    'sha256:73c397ee3b512e481ddcd024b360d3ab71159d5fe02c08dcb8368fb2fe260af8',
+    'sha256:79d5282edcc1f5ea24de59963b3654ad6371954992a9a5e3012495417c4cc050',
+    'sha256:88c7a9ab660b84e6c655a5106532674e0066a8da7c522a52c59fae94a20964ea',
+    'sha256:8c9e7053c64e840b6a97c04397272fba9e52ba5f7ce0b04e0878bc3f2dd55819',
+    'sha256:8ff351a8437f87647171c06752f8c64f3e320bef21dd519b4dc053b7ae111a74',
+    'sha256:97428ed0dd4c846e31a18581164aa475cea1966df2297c11db0dc1b9f6c6af29',
+    'sha256:a0a04cac552a8460df4d5db69c65d75ecad8298044bede9d097588c8fe303670',
+    'sha256:a809dcc33f62a9c2939a01a0f2896d56d647fce641faa944c8e9237929e7d959',
+    'sha256:b01aab65f8d3df963045a82c938e6bc89060882407089da6829220b65ce8b5bc',
+    'sha256:b8e76ae1d929bba0e3c767a3ab0399b49b9e90c14d54ff05d87d4fe187348763',
+    'sha256:c4ea1e2c712bbcd9d524f82bd677afbb82edb4c1fa8fac3f7e14d69a947ab6fb',
+    'sha256:c710b964fd19cb644898ade17568ce6c9ec074d943473b1cafbf874f02bf4330',
+    'sha256:ccd7331da246e2281959c58f184f643daf4f58f73cc2e5ee3c79f588c051feec',
+    'sha256:cfb63cbcb0c1f8ec3817e23e23ec58f3cfc28fb7e3edabf2c5db9010e98aadfd',
+    'sha256:d2550b876a3f6e8bbec00fe7d6dcc61f507bd455142ef46dcddd51f71faeee3a',
+    'sha256:d645bb1aa7f937498c2a2c466af2da61a277f7be5fbc6923ae0eaadb9db49c7e',
+    'sha256:de1106eba13354c9b35bfb49deda016471055582ecc0e5880264259da7612362',
+    'sha256:e5044f9fa52382da2a644708df37eed8ad6f94ec648922e5e8ef91d1f98525be',
+    'sha256:e886d07eb2e707071794492ef50eab85c4afc09416ed8be3a37d1597acc68b6c',
+    'sha256:edd4ea57fa7acb20b21e034ce842340d06750d3b39f6f5138b8c4a810d8a60af',
+    'sha256:f02d31d452ddf17774bcfccb1246e8643927fa727272890784dbf56ccf625bff',
+    'sha256:f58f0b04a681278db1522d71fee70f8be6b5b152e38c76bf6f81eae9cec03052',
+    'sha256:f826fefa8636dade9e2fbc3922510844c7506e4829414fdec090f596a190d287',
+    'sha256:fdb9a3f8277bba48e849b9620b95e9bc6c47dafc62a31eb5fe2e886c2aa65974',
+    'sha256:feb96ea563b603d81251b3aebbe862f3e20f738a62adf03dd2b3d046c9575d10',
+})
 PROVENANCE = ('runtime_recorded', 'configured', 'reconstructed_from_declared_revision',
               'reviewed_extract', 'synthetic', 'unknown')
 REASONS = ('results_not_supplied', 'coverage_missing', 'execution_incomplete', 'case_details_missing',
@@ -709,6 +764,9 @@ def validate_reference(value):
             token(item)
     # Availability can change without changing the reference's stable identity.
     require(value['id'] == identity({k: value[k] for k in ('artifact_id', 'member', 'locator', 'digest')}), 'Reference identity mismatch')
+    if value['provenance'] == 'reviewed_extract':
+        require(identity({k: value[k] for k in ('artifact_id', 'artifact_digest', 'member', 'digest')})
+                in REVIEWED_REFERENCE_IDENTITIES, 'Unrecognized reviewed reference identity')
 
 
 def reference(root, path, artifact, locator=(), extract=None):
@@ -779,6 +837,9 @@ def validate_evidence(data, *, public=False):
         if ref['availability'] != 'available':
             reason = 'reference_expired' if ref['availability'] == 'expired' else 'reference_unavailable'
             require(availability['status'] == 'incomplete' and reason in availability['reasons'], 'Missing reference limitation')
+    if availability['provenance'] == 'reviewed_extract':
+        require(bool(references) and all(ref['provenance'] == 'reviewed_extract' for ref in references),
+                'Reviewed availability missing reviewed references')
     require(type(data['observations']) is list and len(data['observations']) <= MAX_TRIALS, 'Trial limit exceeded')
     seen = set(); native_ids = set(); observation_ids = set()
     for obs in data['observations']:
@@ -937,6 +998,8 @@ def validate_evidence(data, *, public=False):
             require(reported is None or total <= reported, 'Detailed findings exceed scanner total')
     aggregate = next((scan for scan in data['scans'] if scan['scanner'] == 'catalog-total'), None)
     if aggregate is not None:
+        enum(aggregate['status'], ('passed', 'failed', 'incomplete'))
+        require(type(aggregate['passed']) is bool, 'Missing static aggregate pass result')
         require(all(total is not None for total in aggregate['severity_counts'].values()),
                 'Unknown static aggregate totals')
         validators = [scan for scan in data['scans'] if scan is not aggregate]
@@ -1564,8 +1627,25 @@ def normalize_static(root, name, workspace=ROOT):
     return data
 
 
+def open_directory(path):
+    """Anchor each directory component without following replacement links."""
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    fd = os.open(path.anchor, flags)
+    try:
+        for part in path.parts[1:]:
+            child = os.open(part, flags, dir_fd=fd)
+            os.close(fd); fd = child
+        return fd
+    except BaseException:
+        os.close(fd)
+        raise
+
+
 def write_outputs(values, destination=None, workspace=ROOT, input_path=None):
     # Finish validation/serialization before reserving an output directory.
+    require(SECURE_DIRECTORY_OUTPUT, 'Secure directory output unsupported')
+    for name in values:
+        relative(name); require('/' not in name, 'Nested output member')
     payloads = {name: encoded(value) for name, value in values.items()}
     workspace = Path(workspace).absolute()
     if input_path is not None:
@@ -1577,20 +1657,46 @@ def write_outputs(values, destination=None, workspace=ROOT, input_path=None):
         require(not parent.is_relative_to(workspace), 'Output must be outside checkout')
         if input_path is not None:
             require(not parent.is_relative_to(input_path), 'Output overlaps input')
-        destination = Path(tempfile.mkdtemp(prefix='skill-evidence-', dir=parent))
     else:
         destination = Path(destination).absolute()
-        safe_path(destination.parent, directory=True)
+        parent = safe_path(destination.parent, directory=True)
         require(not os.path.lexists(destination), 'Output directory must be new')
-    safe_path(destination, directory=True, missing=True)
-    require(not destination.is_relative_to(workspace) and destination != workspace, 'Output must be outside checkout')
-    if input_path is not None:
-        require(not destination.is_relative_to(input_path) and not input_path.is_relative_to(destination), 'Output overlaps input')
-    if not destination.exists():
-        destination.mkdir(mode=0o700)
-    for name, payload in payloads.items():
-        with (destination / name).open('xb') as stream:
-            stream.write(payload)
+    if destination is not None:
+        safe_path(destination, directory=True, missing=True)
+        require(not destination.is_relative_to(workspace) and destination != workspace, 'Output must be outside checkout')
+        if input_path is not None:
+            require(not destination.is_relative_to(input_path) and not input_path.is_relative_to(destination), 'Output overlaps input')
+    parent_fd = open_directory(parent)
+    try:
+        if destination is None:
+            for _ in range(100):
+                destination = parent / ('skill-evidence-' + secrets.token_hex(8))
+                try:
+                    os.mkdir(destination.name, mode=0o700, dir_fd=parent_fd)
+                    break
+                except FileExistsError:
+                    destination = None
+            require(destination is not None, 'Temporary output collision limit')
+        else:
+            os.mkdir(destination.name, mode=0o700, dir_fd=parent_fd)
+        directory_fd = os.open(destination.name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent_fd)
+        try:
+            original = os.fstat(directory_fd)
+            def unchanged():
+                current = destination.lstat()
+                require(stat.S_ISDIR(current.st_mode) and (current.st_dev, current.st_ino) ==
+                        (original.st_dev, original.st_ino), 'Output directory changed')
+            unchanged()
+            for name, payload in payloads.items():
+                fd = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                             mode=0o600, dir_fd=directory_fd)
+                with os.fdopen(fd, 'wb') as stream:
+                    stream.write(payload)
+                unchanged()
+        finally:
+            os.close(directory_fd)
+    finally:
+        os.close(parent_fd)
     return destination
 
 
