@@ -277,6 +277,7 @@ class ReadBudget:
     def __init__(self):
         self.remaining = NORMALIZATION_LIMIT
         self.repository_inputs = []
+        self.repository_locations = {}
 
     def consume(self, size):
         require(0 <= size <= self.remaining, 'Normalization byte limit')
@@ -618,6 +619,7 @@ def workspace_repository(workspace, *, budget=None):
     if inspect(config) is None:
         return None
     raw_config = captured(config)
+    budget.repository_locations[workspace] = (gitdir, common)
     # Git parses only the captured buffer. Includes and ambient repository
     # configuration cannot substitute another origin after the bounded read.
     result = subprocess.run(['git', 'config', '--file', '-', '--no-includes', '--null',
@@ -636,6 +638,41 @@ def workspace_repository(workspace, *, budget=None):
         return None
     repo = match[1].decode('ascii').lower()
     return repo if all(part not in ('.', '..') for part in repo.split('/')) else None
+
+
+def inventory_revision(workspace, budget):
+    """Anchor native Git reference storage before resolving the inventory HEAD."""
+    directories = {}; states = {}; members = {}
+    budget.repository_inputs.append((directories, states, members))
+    for root in dict.fromkeys(budget.repository_locations[workspace]):
+        safe_path(root, directory=True, directory_identities=directories)
+        fd = open_directory(root, directories, directory_states=states)
+        try:
+            states.setdefault(root, directory_state(os.fstat(fd)))
+            for name in ('HEAD', 'packed-refs', 'refs', 'reftable'):
+                path = root / name
+                try:
+                    info = os.stat(name, dir_fd=fd, follow_symlinks=False)
+                except FileNotFoundError:
+                    continue  # The retained parent state also guards absent storage.
+                if stat.S_ISDIR(info.st_mode):
+                    require(name in ('refs', 'reftable'), 'Unsafe Git reference storage')
+                    files = safe_tree(path, directory_identities=directories,
+                                      directory_states=states, file_states=members)
+                else:
+                    require(stat.S_ISREG(info.st_mode) and name in ('HEAD', 'packed-refs'),
+                            'Unsafe Git reference storage')
+                    members[path] = file_state(info); files = [path]
+                require(len(directories) + len(members) <= MAX_INPUT_ENTRIES, 'Git reference entry limit')
+                for member in files:
+                    read_bytes(member, budget=budget, directory_identities=directories,
+                               directory_states=states, file_states=members)
+        finally:
+            os.close(fd)
+    budget.verify_repository()
+    rev = git_revision(workspace)
+    budget.verify_repository()
+    return rev
 
 
 def associated_repository(workspace, declared, *, budget):
@@ -874,6 +911,7 @@ def inventory(workspace=ROOT):
     budget = ReadBudget()
     captured = {}
     repo = workspace_repository(workspace, budget=budget)
+    head_revision = inventory_revision(workspace, budget) if repo else None
     def reader(path):
         path = safe_path(path, directory_identities=directories)
         if path not in captured:
@@ -947,7 +985,7 @@ def inventory(workspace=ROOT):
             source_path = authored.relative_to(workspace).as_posix()
             configured = skill_content(authored, reader=reader, directory_identities=directories,
                                        directory_states=states, file_states=members)
-            rev = git_revision(workspace) if repo else None
+            rev = head_revision
             if rev is not None and historical_content(workspace, rev, source_path, budget=budget)['digest'] != configured['digest']:
                 rev = None
             src = source(name, 'local', repo, rev, source_path, configured)

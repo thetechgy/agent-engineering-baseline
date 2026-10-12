@@ -4660,6 +4660,73 @@ class EvidenceTests(unittest.TestCase):
                 self.assertTrue(changed); self.assertFalse(output.exists()); self.assertEqual(target.read_bytes(), raw)
 
 
+    def test_inventory_rejects_transient_revision_metadata_changes(self):
+        for kind, stage in itertools.product(('head', 'loose', 'packed', 'linked-head', 'linked-loose'), ('lookup', 'publication')):
+            with self.subTest(kind=kind, stage=stage), tempfile.TemporaryDirectory() as temp, patch.object(self, 'root', Path(temp)):
+                repo, git = self.repository_fixture(); rev = git('rev-parse', 'HEAD')
+                branch = git('symbolic-ref', 'HEAD')
+                git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '--allow-empty', '-qm', 'Same source')
+                alternate = git('rev-parse', 'HEAD'); git('update-ref', 'HEAD', rev)
+                workspace = repo
+                if kind.startswith('linked'):
+                    workspace = self.root / 'linked'
+                    git('worktree', 'add', '--detach', str(workspace), rev)
+                    gitdir = Path((workspace / '.git').read_text().strip().removeprefix('gitdir: '))
+                    if kind == 'linked-loose': (gitdir / 'HEAD').write_text('ref: ' + branch + '\n')
+                if kind == 'head':
+                    git('checkout', '--detach', rev); target = repo / '.git/HEAD'
+                elif kind == 'linked-head': target = gitdir / 'HEAD'
+                elif kind == 'packed':
+                    git('pack-refs', '--all', '--prune'); target = repo / '.git/packed-refs'
+                else: target = repo / '.git' / branch
+                raw = target.read_bytes(); info = target.stat(); changed = False
+                name = 'git_revision' if stage == 'lookup' else 'historical_content'
+                original = getattr(evidence, name)
+                def transient(*args, **kwargs):
+                    nonlocal changed
+                    target.write_bytes(raw.replace(rev.encode(), alternate.encode())); changed = True
+                    try: return original(*args, **kwargs)
+                    finally:
+                        target.write_bytes(raw); os.utime(target, ns=(info.st_atime_ns, info.st_mtime_ns))
+                operation = evidence.inventory; output = self.root / 'revision-rejected'
+                with patch.object(evidence, name, side_effect=transient), \
+                        patch.object(evidence, 'inventory', side_effect=lambda: operation(workspace)), \
+                        patch.object(evidence, 'write_outputs') as publish:
+                    with self.assertRaisesRegex(ValueError, 'Input (directory|member)'):
+                        evidence.main(['inventory', '--output', str(output)])
+                    publish.assert_not_called()
+                self.assertTrue(changed); self.assertFalse(output.exists()); self.assertEqual(target.read_bytes(), raw)
+                self.assertEqual(evidence.inventory(workspace)['skills'][0]['source']['revision'], rev)
+
+    def test_inventory_reference_capture_limits_and_absent_storage(self):
+        repo, git = self.repository_fixture(); rev = git('rev-parse', 'HEAD')
+        budget = evidence.ReadBudget(); evidence.workspace_repository(repo, budget=budget)
+        self.assertEqual(evidence.inventory_revision(repo, budget), rev)
+        consumed = evidence.NORMALIZATION_LIMIT - budget.remaining
+        expected = sum(path.stat().st_size for path in (repo / '.git/config', repo / '.git/HEAD',
+                                                        repo / '.git' / git('symbolic-ref', 'HEAD')))
+        self.assertEqual(consumed, expected)
+        for limit in (consumed, consumed - 1):
+            with self.subTest(limit=limit), patch.object(evidence, 'NORMALIZATION_LIMIT', limit):
+                budget = evidence.ReadBudget(); evidence.workspace_repository(repo, budget=budget)
+                if limit == consumed: self.assertEqual(evidence.inventory_revision(repo, budget), rev)
+                else:
+                    with self.assertRaisesRegex(ValueError, 'Normalization byte limit'):
+                        evidence.inventory_revision(repo, budget)
+        budget = evidence.ReadBudget(); evidence.workspace_repository(repo, budget=budget)
+        with patch.object(evidence, 'MAX_INPUT_ENTRIES', 1):
+            with self.assertRaisesRegex(ValueError, 'Git reference entry limit'):
+                evidence.inventory_revision(repo, budget)
+        original = evidence.git_revision; packed = repo / '.git/packed-refs'
+        def transient(path):
+            packed.write_text('# transient reference storage\n'); packed.unlink()
+            return original(path)
+        with patch.object(evidence, 'git_revision', side_effect=transient):
+            with self.assertRaisesRegex(ValueError, 'Input directory'):
+                evidence.inventory(repo)
+        git('update-ref', '-d', 'HEAD')
+        self.assertIsNone(evidence.inventory(repo)['skills'][0]['source']['revision'])
+
     def test_missing_origin_metadata_is_anchored_and_rechecked(self):
         repo, git = self.repository_fixture()
         linked = self.root / 'linked'; git('worktree', 'add', '--detach', str(linked), 'HEAD')

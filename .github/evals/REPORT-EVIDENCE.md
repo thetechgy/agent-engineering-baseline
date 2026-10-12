@@ -164,7 +164,12 @@ declarations reject before source or authored-dataset reconstruction. Missing
 declarations or missing/unsupported origins leave normalized local repository,
 revision and reconstructed content unknown, retaining `source_unavailable`.
 Inventory can still describe captured configured bytes without repository or
-revision attribution. Upstream deployment identities continue to use their lock
+revision attribution. Inventory resolves `HEAD` once, after bounded captures of
+`HEAD`, loose refs, packed refs and reference-table storage in the common and
+linked-worktree Git directories. Their file/directory states, including absent
+storage, are verified around native Git resolution and before publication.
+Reference captures share the operation byte budget and tree/member limits;
+an unborn branch retains an unknown revision. Upstream deployment identities continue to use their lock
 records. Local Git configuration establishes repository association, not remote
 execution attestation or proof that a commit was published by that repository.
 Reviewed extracts may likewise retain only the exact unknown-source record when
