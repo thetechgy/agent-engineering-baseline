@@ -1377,7 +1377,7 @@ separates grader opinions, analyst interpretations and observed behavior. Unsupp
 external assertions belong in an explicit unverified list. The renderer escapes
 model prose into inert text and never embeds raw context or prompts. Decoded
 report strings, including nested values, apply the existing credential,
-private-profile-path and contact-data checks before serialization and reject
+private profile path and contact-data checks before serialization and reject
 terminal/control characters;
 tabs and ordinary line endings remain permitted. Rendering normalizes all line
 separators (including CR, CRLF and Unicode separators) to spaces, so prose cannot
@@ -1387,6 +1387,10 @@ Semantic truth, causal relevance, instruction-defect attribution and worthwhile
 scope cannot
 be established by structural validity, carrier checks or citation integrity.
 Every report remains a model-generated judgment requiring human review.
+Private profile detection includes Unix user and root homes, macOS user/root
+homes, and standard/legacy Windows profile paths. Windows matching ignores
+profile-directory case and accepts forward, backward or repeated separators.
+Ordinary system paths and similarly named public references remain permitted.
 
 ### Offline verification and usefulness qualification
 

@@ -199,7 +199,7 @@ class ReviewTests(unittest.TestCase):
 
     def control(
         self, *, source=True, support=True, kind="agent_behavior", name="podman", excerpt=False,
-        arm="with_skill", empty_source=False, empty_behavior=False
+        arm="with_skill", empty_source=False, empty_behavior=False, agent_output=None
     ):
         record = synthetic(name=name)
         snapshot = self.root / "source"
@@ -212,9 +212,9 @@ class ReviewTests(unittest.TestCase):
             manifest.append({"member": "empty.txt", "digest": evidence.digest_bytes(b"")})
         record["source"]["content"] = evidence.content(manifest, "synthetic")
         raw_trial = (FIXTURES / "trial.json").read_bytes()
-        if empty_behavior:
+        if empty_behavior or agent_output is not None:
             trial = evidence.parse_json(raw_trial)
-            trial["agent_output"] = ""
+            trial["agent_output"] = "" if empty_behavior else agent_output
             raw_trial = evidence.encoded(trial)
         position = 0 if arm == "with_skill" else 1
         ref = record["references"][position]
@@ -745,6 +745,52 @@ class ReviewTests(unittest.TestCase):
             review.validate_judgment(value, context)
         with self.assertRaisesRegex(ValueError, "Sensitive evidence text"):
             review.render_review({"judgment": value, "provenance": {}})
+
+    def test_standard_private_profile_variants_reject_before_context_or_reports(self):
+        context = self.control()
+        profiles = (
+            r"C:\users\SyntheticUser\private",
+            "c:/uSeRs/SyntheticUser/private",
+            r"C:\\Users\\SyntheticUser\\private",
+            r"C:\Documents and Settings\SyntheticUser\private",
+            "/root/private", "/root", "/var/root/private", "/private/var/root/private",
+            "/var/Root/private", "/private/var/ROOT/private", "file:///root/private",
+            "/home/synthetic/private", "/users/synthetic/private",
+        )
+        for path in profiles:
+            with self.subTest(path=path):
+                with self.assertRaisesRegex(ValueError, "Sensitive evidence text"):
+                    review.checked_text(path.encode())
+                value = judgment(context)
+                value["assessment"]["interpretation"] = path
+                with self.assertRaisesRegex(ValueError, "Sensitive evidence text"):
+                    review.validate_judgment(value, context)
+        for path in (
+            "/etc/containers/containers.conf", "references/rootless-networking.md", "/srv/root-data",
+            "references/root/usage.md", "public-org/root", "https://example.test/root",
+        ):
+            with self.subTest(safe=path):
+                self.assertEqual(review.checked_text(path), path)
+                value = judgment(context)
+                value["assessment"]["interpretation"] = path
+                review.validate_judgment(value, context)
+        raw = (self.root / "source/SKILL.md").read_bytes() + b"\n/root/private\n"
+        (self.root / "source/SKILL.md").write_bytes(raw)
+        record = copy.deepcopy(context.value["records"][context.value["selected_record_id"]])
+        record["source"]["content"] = evidence.content(
+            [{"member": "SKILL.md", "digest": evidence.digest_bytes(raw)}], "synthetic"
+        )
+        bundle, saved, rid = self.bundle(record, "private-source")
+        with self.assertRaisesRegex(ValueError, "Sensitive evidence text"):
+            review.prepare([bundle], saved, "podman", rid, source=self.root / "source")
+        with tempfile.TemporaryDirectory() as folder:
+            self.root = Path(folder)
+            with self.assertRaisesRegex(ValueError, "Sensitive evidence text"):
+                self.control(agent_output=r"C:\users\SyntheticUser\private")
+        with tempfile.TemporaryDirectory() as folder:
+            self.root = Path(folder)
+            public_root = self.control(name="root")
+            review.validate_judgment(judgment(public_root), public_root)
 
     def test_injection_is_inert_sensitive_output_and_input_reject(self):
         context = self.control()

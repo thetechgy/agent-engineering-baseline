@@ -289,7 +289,12 @@ def checked_text(raw):
     evidence.reports.public_strings(text)
     # Reject private paths/contact data not covered by the evaluator credential scanner.
     require(
-        not re.search(r"(?:/home/|/Users/|[A-Za-z]:\\Users\\|[\w.+-]+@[\w.-]+\.[A-Za-z]{2,})", text),
+        not re.search(
+            r"(?:(?<![\w.-])(?:/home/|(?i:/Users/)|"
+            r"(?i:/(?:root|(?:private/)?var/root))(?![\w.-]))|"
+            r"[A-Za-z]:[\\/]+(?i:Users|Documents and Settings)[\\/]+|"
+            r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,})", text
+        ),
         "Sensitive evidence text",
     )
     return text
