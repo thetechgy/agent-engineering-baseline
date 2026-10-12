@@ -230,7 +230,7 @@ def verify_directory_states(states, identities, paths=None):
         os.close(fd)
 
 
-def safe_tree(path, *, max_entries=MAX_INPUT_ENTRIES, max_files=None, directory_identities=None, directory_states=None, file_states=None):
+def safe_tree(path, *, max_entries=MAX_INPUT_ENTRIES, max_files=None, directory_identities=None, directory_states=None, file_states=None, native_layout_skill=None):
     if directory_identities is None:
         directory_identities = {}
     if directory_states is None:
@@ -257,6 +257,17 @@ def safe_tree(path, *, max_entries=MAX_INPUT_ENTRIES, max_files=None, directory_
                     require(seen <= max_entries, 'Input tree entry limit')
                     info = entry.stat(follow_symlinks=False)
                     directory = stat.S_ISDIR(info.st_mode)
+                    parts = (current / entry.name).relative_to(path).parts
+                    linked = stat.S_ISLNK(info.st_mode) or bool(getattr(info, 'st_file_attributes', 0)
+                        & getattr(stat, 'FILE_ATTRIBUTE_REPARSE_POINT', 0x400))
+                    if native_layout_skill is not None and parts == ('results', native_layout_skill, 'latest'):
+                        require(linked, 'Expected native latest alias')
+                        continue  # Never resolve or inspect the generated alias.
+                    if (native_layout_skill is not None and len(parts) == 4
+                            and parts[:2] == ('results', native_layout_skill)
+                            and parts[2] != 'latest' and parts[3] in ('_harbor-jobs', '_harbor-tasks')):
+                        require(directory and not linked, 'Invalid native runtime directory')
+                        continue  # Ordinary per-run runtime contents are not evidence inputs.
                     member = safe_path(current / entry.name, directory=directory, directory_identities=directory_identities)
                     if directory:
                         pending.append(member)
@@ -2124,7 +2135,7 @@ def reconcile_policy(fields, versions, config, agent, attempt_policy):
                     and harbor[config_key] == attempt_policy[key], 'Attempt policy disagreement')
 
 
-def normalize_behavioral(root, name, selected=None, workspace=ROOT):
+def normalize_behavioral(root, name, selected=None, workspace=ROOT, *, native_layout=False):
     from skillevaluator.tier3.harbor import report_data as native_reports
     from skillevaluator.evaluation import EvaluationService
     from skillevaluator.tier3.case_ids import validate_case_id
@@ -2132,7 +2143,9 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     directory_states = {}
     file_states = {}
     root = safe_path(root, directory=True, directory_identities=directory_identities)
-    files = safe_tree(root, directory_identities=directory_identities, directory_states=directory_states, file_states=file_states); skill_id(name)
+    skill_id(name)
+    files = safe_tree(root, directory_identities=directory_identities, directory_states=directory_states,
+                      file_states=file_states, native_layout_skill=name if native_layout else None)
     scanned_entries = set(files) | set(directory_identities)
     run = select_run(root, name, selected, entries=scanned_entries, directory_identities=directory_identities)
     budget = ReadBudget()
@@ -2550,6 +2563,25 @@ def static_required_gate(scan, *, blocking_only=False):
     return blocking if blocking_only else scan['passed'] or not blocking
 
 
+def static_scanner(value):
+    """Map exact pinned reporter titles into the existing schema-v1 token domain."""
+    titles = {
+        'Schema & Repository Governance': 'SCHEMA',
+        'Semantic Version Validation': 'VERSION',
+        'Security Scan': 'SECURITY',
+        'PII Scan': 'PII',
+        'License Compliance': 'LICENSE',
+        'Code Risk Analysis': 'CODE_RISK',
+        'Secrets Detection': 'SECRETS',
+        'Code Integrity & Hygiene': 'HYGIENE',
+        'Unicode Smuggling Detection': 'UNICODE',
+    }
+    require(type(value) is str, 'Invalid scanner identity')
+    value = titles.get(value, value)
+    token(value)
+    return value
+
+
 def normalize_static(root, name, workspace=ROOT):
     directory_identities = {}
     directory_states = {}
@@ -2642,7 +2674,7 @@ def normalize_static(root, name, workspace=ROOT):
     data['scans'] = [{'scanner': 'catalog-total', 'status': native['overall_status'], 'passed': native['overall_passed'],
                       'blocking': True, 'severity_counts': severity, 'references': [refs[1]['id']]}]
     for index, scan in enumerate(native['results']):
-        scanner = scan['validator']; token(scanner)
+        scanner = static_scanner(scan['validator'])
         enum(scan['status'], ('passed', 'failed', 'incomplete', 'skipped'))
         scan_ref = report_reference(('results', index)); refs.append(scan_ref)
         data['scans'].append({'scanner': scanner, 'status': scan['status'], 'passed': scan.get('passed'), 'blocking': blocking[index],
@@ -2664,7 +2696,7 @@ def normalize_static(root, name, workspace=ROOT):
             except ValueError:
                 member = None  # Never publish an artifact-supplied absolute path.
             check = finding.get('check_name') or None
-            data['findings'].append({'scanner': scan['validator'], 'severity': finding['severity'],
+            data['findings'].append({'scanner': static_scanner(scan['validator']), 'severity': finding['severity'],
                 'check': check, 'member': member, 'line': finding.get('line_number'), 'reference': finding_ref['id']})
     require(set(native['incomplete_scans']) == recorded_incomplete, 'Inconsistent incomplete scanner identity')
     incomplete = any(s['status'] in ('incomplete', 'skipped') for s in data['scans'])
@@ -2889,6 +2921,7 @@ def main(argv=None):
     norm = commands.add_parser('normalize'); norm.add_argument('--kind', required=True, choices=('behavioral', 'static'))
     norm.add_argument('--skill', required=True); norm.add_argument('--input', required=True, type=Path)
     norm.add_argument('--run'); norm.add_argument('--output', type=Path)
+    norm.add_argument('--native-layout', action='store_true')
     proj = commands.add_parser('project'); proj.add_argument('--input', required=True, type=Path); proj.add_argument('--output', type=Path)
     args = parser.parse_args(argv)
     input_path = getattr(args, 'input', None)
@@ -2904,7 +2937,12 @@ def main(argv=None):
             input_path = args.input.parent
     else:
         require(args.kind == 'behavioral' or args.run is None, '--run applies to behavioral evidence')
-        data = normalize_behavioral(args.input.absolute(), args.skill, args.run) if args.kind == 'behavioral' else normalize_static(args.input.absolute(), args.skill)
+        require(args.kind == 'behavioral' or not args.native_layout, '--native-layout applies to behavioral evidence')
+        if args.kind == 'behavioral':
+            options = {'native_layout': True} if args.native_layout else {}
+            data = normalize_behavioral(args.input.absolute(), args.skill, args.run, **options)
+        else:
+            data = normalize_static(args.input.absolute(), args.skill)
         values = {'evidence.json': data, 'public-report.json': project(data)}
     output = write_outputs(values, args.output, input_path=input_path)
     print(output)

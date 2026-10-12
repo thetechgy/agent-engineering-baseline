@@ -136,6 +136,115 @@ Linked aliases are rejected. Static input uses `reports/catalog-summary.json`
 and its selected `reports/<skill>/skillevaluator-output-<timestamp>.json`.
 Human-readable reports are never read. A static scan has no behavioral metrics.
 
+## CI public artifact handoff
+
+`skill_reports.py` adds a reporting-only handoff using the same pinned Python
+environment. It discovers inventory once, normalizes the original native JSON,
+projects it in memory, and validates each public record immediately before
+staging. Inventory and reports also undergo credential-pattern detection on
+string values using the pinned text redactor. A match rejects the bundle without
+echoing the value; key-based diagnostic redaction never rewrites scores,
+authorization fields, or authenticated identities in this path.
+Exact display titles emitted by the pinned static reporter map to schema-v1
+scanner identifiers (`SCHEMA`, `VERSION`, `SECURITY`, `PII`, `LICENSE`,
+`CODE_RISK`, `SECRETS`, `HYGIENE`, `UNICODE`). Existing token identifiers pass
+through unchanged; unrecognized free-text titles reject. Scan and finding
+references still bind their original native report positions and bytes.
+
+Representative offline commands, run from the checkout with the existing
+evaluator environment, are:
+
+```bash
+export GITHUB_WORKSPACE="$(pwd)"
+public_parent="$(mktemp -d /tmp/skill-public.XXXXXXXX)"
+
+# Native quality collection must cover every discovered local authored skill.
+"$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_reports.py public-quality \
+  /tmp/skill-quality "$public_parent/quality"
+
+# Replay the reviewed ten-case, twenty-attempt Podman extract without inference.
+"$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_reports.py public-benchmark \
+  .github/tests/fixtures/skill_evidence/podman-native podman standard \
+  "$public_parent/podman"
+
+# Select explicitly when an ordinary native bundle contains multiple runs.
+"$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_reports.py public-benchmark \
+  /tmp/skill-benchmark podman confirmation "$public_parent/confirmation" \
+  --run NATIVE_RUN_ID
+```
+
+Each destination must be new, with an existing trusted ordinary parent outside
+the checkout and native input tree. The resulting bundles contain exactly:
+
+```text
+quality/
+  inventory/inventory.json
+  skills/<discovered-local-skill>/static/public-report.json
+
+podman/
+  inventory/inventory.json
+  skills/podman/behavioral/20260919_183432_2598_6c30a245af5c/public-report.json
+```
+
+The inventory includes imported overlays separately from local sources and
+generated deployment copies. Configured but unmeasured `gh` retains its 24-case
+suite and unavailable measurement; the Podman example creates no `gh`
+measurement. Quality catalog membership must exactly equal the discovered local
+skill set. Missing, extra, or duplicate members reject the entire bundle with an
+explicit unavailable summary. Per-skill failures after earlier successful
+records remove owned staging. No `evidence.json`, native reports, raw logs,
+trajectories, grader prose, or other files enter these bundles. Captured input
+guards and the exact expected file set are checked before reporting readiness.
+
+Behavioral reporting opts into the ordinary native layout. Standalone
+`normalize --kind behavioral --native-layout` exposes the same option; the
+default reader remains strict. The opt-in excludes only
+`results/<selected-skill>/latest` when it is an alias and ordinary
+`results/<selected-skill>/<run>/_harbor-jobs` and `_harbor-tasks` directories.
+It never resolves the alias or traverses excluded contents. Linked runtime
+directory roots and unsafe consumed members still reject. One canonical run can
+be selected automatically; multiple runs require `--run`, with no chronology or
+`latest` fallback. Missing results produce a bounded unavailable summary and
+no fabricated public record. Known mode/attempt metadata must agree with the
+requested standard or confirmation mode; missing metadata remains unknown.
+
+The quality workflow records its actual checked-out repository and revision
+through the pinned evaluator's source-provenance flags during collection. After
+catalog handling it generates public reports, including valid incomplete scans.
+Reporting errors fail the quality job; the existing diagnostic upload remains
+unconditional. The public artifact is named
+`skill-public-quality-<workflow-run>-<attempt>` and retained for 14 days.
+
+The benchmark workflow generates public reports after the existing diagnostic
+and standard-metric uploads, including supported recovered incomplete runs.
+Generation and upload each have a three-minute timeout and are advisory.
+Upload is gated on generation's original `outcome == 'success'`, so a failed
+step's successful advisory conclusion cannot publish partial output. Failures
+or skipped reporting generate a warning and summary status; reporting errors
+preserve native history eligibility. Native evaluation failures remain blocking.
+The artifact is named
+`skill-public-benchmark-<skill>-<mode>-<workflow-run>-<attempt>` and retained for
+30 days. Uploads allowlist only the inventory and corresponding skill report
+paths shown above. Hard cancellation or runner loss can prevent final steps
+and cleanup from executing.
+
+Incomplete evidence remains publishable when it satisfies schema v1. Low native
+scores and failed rubric cases retain their measurements; missing scanner,
+identity, coverage, source, or execution evidence retains its limitation reasons.
+Contradictory or unsafe input cannot become a ready public bundle. Native
+evaluation, recovery, diagnostics, policy/runtime pins, four numeric history
+metrics, history gates, approvals, and Pages publishing retain their existing
+behavior.
+
+Downstream analysis can pair public and diagnostic artifacts by the workflow
+run and attempt in their names, then use the report's native run, source,
+dataset, policy, observation, and reference identities. Public reference hashes
+describe original native members; redacted diagnostic bytes can differ. Verify
+original bytes and exact source revisions using the retrieval contract below,
+and preserve explicit unavailable or expired evidence. This handoff does not
+retain original qualitative evidence durably, run analysis or inference, create
+recommendations, or supply a report UI or new history service.
+
 ## Inventory and ownership
 
 Discovery uses `.apm/skills/*/SKILL.md` and
@@ -758,9 +867,10 @@ A later analyst retrieves evidence as follows:
 Normalization neither copies raw evidence into public output nor deletes it.
 Before later artifact cleanup, retain needed trial evidence and exact source
 content outside the checkout/public report, or mark references unavailable. The
-later artifact-hardening change must settle durable retention before cleanup and
-publication. This change supplies a manifest and retrieval contract, not an
+durable retention of qualitative evidence remains a later design concern; this
+public handoff does not claim to retain it or recover unavailable bytes. This
+change supplies a manifest and retrieval contract, not an
 archive service, retention operation, analyst, analysis, comparisons,
 recommendations, reporting UI, or raw-evidence publication. Evaluator/scoring
-semantics, paid invocation, workflows, artifact uploads/retention, managed skills,
-published metrics, and `gh-pages` remain unchanged.
+semantics, paid invocation, native diagnostic uploads/retention, managed skills,
+published metrics, and `gh-pages` remain unchanged by the public artifact handoff.
