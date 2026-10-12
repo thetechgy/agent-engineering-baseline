@@ -66,6 +66,14 @@ class EvidenceTests(unittest.TestCase):
     def data(self):
         return evidence.normalize_behavioral(FIXTURES / 'podman-native', 'podman')
 
+    def unscore_case(self, summary, case):
+        payload = summary['pass_at_k']; row = payload['cases'][case]
+        was_passed = row['passed']
+        row['attempts'][0].update(score=None, passed=None)
+        row.update(passed=False, first_pass_attempt=None, best_score=None)
+        payload['passed_cases'] -= was_passed; payload['failed_cases'] += was_passed
+        payload['rate'] = round(payload['passed_cases'] / payload['total_cases'], 4)
+
     def repo(self):
         root = self.root / 'repo'
         root.mkdir()
@@ -1846,6 +1854,92 @@ class EvidenceTests(unittest.TestCase):
                     evidence.write_outputs({'public.json': evidence.project(data)}, output, workspace=REPO, input_path=root)
                 self.assertFalse(output.exists()); self.assertEqual(self.snapshot(root), before)
 
+    def test_headline_metrics_reconcile_native_components_without_provenance(self):
+        root = self.native(); run = next((root / 'results/podman').iterdir()); path = run / 'result.json'
+        self.mutate(root, '/provenance.json', lambda d: d.pop('metrics', None))
+        original = evidence.read_json(path); baseline = evidence.normalize_behavioral(root, 'podman')
+        mutations = [(('lift', 'overall', 'delta'), -0.5), (('lift', 'overall', 'with_skill'), 0.1),
+            (('lift', 'overall', 'without_skill'), 0.1), (('lift', 'accuracy', 'delta'), 0.9),
+            (('lift', 'accuracy', 'direction'), 'down'), (('lift', 'accuracy', 'with_skill'), 0.1),
+            (('with_skill',), {'accuracy': 0.1}), (('without_skill',), {'accuracy': 0.1}),
+            (('dimensions_with_skill', 'correctness', 'score'), 0.1),
+            (('dimensions_with_skill', 'effectiveness', 'score'), 0.1),
+            (('dimensions_with_skill', 'discoverability', 'score'), 0.1),
+            (('dimensions_with_skill', 'correctness', 'sources'), {'accuracy': 0.5})]
+        for fields, value in mutations:
+            with self.subTest(fields=fields):
+                result = copy.deepcopy(original); carrier = result['agents']['codex']
+                for field in fields[:-1]: carrier = carrier[field]
+                carrier[fields[-1]] = value; write(path, result); before = self.snapshot(root)
+                with self.assertRaisesRegex(ValueError, 'Native metric'):
+                    evidence.normalize_behavioral(root, 'podman')
+                with self.assertRaisesRegex(ValueError, 'Native metric'):
+                    evidence.project(dict(baseline), behavioral_bundle=root)
+                with patch.object(evidence, 'write_outputs') as publish:
+                    with self.assertRaises(ValueError):
+                        evidence.main(['normalize', '--kind', 'behavioral', '--skill', 'podman', '--input', str(root)])
+                    publish.assert_not_called()
+                self.assertEqual(self.snapshot(root), before)
+        write(path, original)
+        self.assertEqual(evidence.encoded(baseline), evidence.encoded(evidence.normalize_behavioral(root, 'podman')))
+        original['agents']['codex']['lift'] = {'overall': original['agents']['codex']['lift']['overall']}
+        write(path, original)
+        partial = evidence.normalize_behavioral(root, 'podman')
+        self.assertIn('coverage_missing', evidence.project(dict(partial), behavioral_bundle=root)['availability']['reasons'])
+
+    def test_metric_reconciliation_preserves_native_rounding(self):
+        from skillevaluator.tier3.harbor.collector import _compute_lift
+        from skillevaluator.tier3.harbor.metrics import DEFAULT_METRICS, dimension_scores
+        with_scores = dict.fromkeys(DEFAULT_METRICS, 0.7)
+        without_scores = dict.fromkeys(DEFAULT_METRICS, 0.6); without_scores['accuracy'] = 0.6003
+        lift = _compute_lift(with_scores, without_scores); overall = lift['overall']
+        self.assertNotEqual(overall['delta'], round(overall['with_skill'] - overall['without_skill'], 4))
+        agent = {'with_skill': with_scores, 'without_skill': without_scores, 'lift': lift,
+                 'dimensions_with_skill': dimension_scores(with_scores),
+                 'dimensions_without_skill': dimension_scores(without_scores)}
+        self.assertTrue(evidence.validate_native_metrics(agent))
+        partial = copy.deepcopy(agent); partial.pop('with_skill'); partial.pop('without_skill')
+        partial['lift'].pop('security')
+        self.assertFalse(evidence.validate_native_metrics(partial))
+        agent['lift'] = {'overall': lift['overall']}; agent.pop('with_skill'); agent.pop('without_skill')
+        self.assertFalse(evidence.validate_native_metrics(agent))
+        agent['lift']['overall']['delta'] = 0.5
+        with self.assertRaisesRegex(ValueError, 'Native metric'):
+            evidence.validate_native_metrics(agent)
+
+    def test_summary_case_rollups_reconcile_in_both_arms_and_projection(self):
+        root = self.native(); run = next((root / 'results/podman').iterdir())
+        baseline = evidence.normalize_behavioral(root, 'podman')
+        originals = {p: evidence.read_json(p) for p in (run / 'result.json',
+            run / 'codex/with-skill/summary.json', run / 'codex/without-skill/summary.json')}
+        mutations = [('passed', False), ('passed', 1), ('best_score', 0), ('attempts_used', 0),
+                     ('attempts_used', True), ('first_pass_attempt', None), ('attempts_skipped', 1),
+                     ('attempts_missing', 1), ('aggregate_attempts_used', 0), ('aggregate_failed_cases', 1),
+                     ('aggregate_rate', 0), ('aggregate_avg_attempts_used', 0),
+                     ('aggregate_max_attempts_possible', 0), ('aggregate_k', 2), ('aggregate_stop_on_pass', True)]
+        for arm, (field, value) in itertools.product(('with_skill', 'without_skill'), mutations):
+            with self.subTest(arm=arm, field=field, value=value):
+                path = run / 'codex' / arm.replace('_', '-') / 'summary.json'; result_path = run / 'result.json'
+                original = originals[path]; result_original = originals[result_path]
+                summary = copy.deepcopy(original); result = copy.deepcopy(result_original)
+                carrier = summary['pass_at_k'] if field.startswith('aggregate_') else next(
+                    row for row in summary['pass_at_k']['cases'].values() if row['passed'])
+                carrier[field.removeprefix('aggregate_')] = value
+                result['agents']['codex']['pass_at_k'][arm] = copy.deepcopy(summary['pass_at_k'])
+                write(path, summary); write(result_path, result); before = self.snapshot(root)
+                with self.assertRaisesRegex(ValueError, 'Summary .*rollup'):
+                    evidence.normalize_behavioral(root, 'podman')
+                with self.assertRaisesRegex(ValueError, 'Summary .*rollup'):
+                    evidence.project(dict(baseline), behavioral_bundle=root)
+                with patch.object(evidence, 'write_outputs') as publish:
+                    with self.assertRaises(ValueError):
+                        evidence.main(['normalize', '--kind', 'behavioral', '--skill', 'podman', '--input', str(root)])
+                    publish.assert_not_called()
+                self.assertEqual(self.snapshot(root), before)
+                write(path, original); write(result_path, result_original)
+        for path, original in originals.items(): write(path, original)
+        self.assertEqual(evidence.encoded(baseline), evidence.encoded(evidence.normalize_behavioral(root, 'podman')))
+
     def test_summary_attempts_accept_partial_retained_trials(self):
         root = self.native()
         for arm in ('with_skill', 'without_skill'):
@@ -1856,6 +1950,27 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual([a['coverage']['case_details'] for a in data['arms']], ['partial', 'partial'])
         self.assertEqual(len(data['observations']), 18)
         evidence.project(data); self.assertEqual(self.snapshot(root), before)
+
+    def test_partial_summary_rollups_still_bound_aggregate_passes(self):
+        for arm in ('with_skill', 'without_skill'):
+            with self.subTest(arm=arm), tempfile.TemporaryDirectory() as temp, patch.object(self, 'root', Path(temp)):
+                root = self.native(); run = next((root / 'results/podman').iterdir())
+                base = run / 'codex' / arm.replace('_', '-'); path = base / 'summary.json'
+                summary = evidence.read_json(path); payload = summary['pass_at_k']
+                removed = payload['cases'].pop('2')
+                for attempt in removed['attempts']: shutil.rmtree(base / 'trials' / attempt['trial'])
+                result_path = run / 'result.json'; result = evidence.read_json(result_path)
+                result['agents']['codex']['pass_at_k'][arm] = copy.deepcopy(payload)
+                write(path, summary); write(result_path, result)
+                baseline = evidence.normalize_behavioral(root, 'podman')
+                self.assertEqual(next(a for a in baseline['arms'] if a['name'] == arm)['coverage']['case_details'], 'partial')
+                payload.update(passed_cases=0, failed_cases=payload['total_cases'], rate=0.0)
+                result['agents']['codex']['pass_at_k'][arm] = copy.deepcopy(payload)
+                write(path, summary); write(result_path, result)
+                with self.assertRaisesRegex(ValueError, 'Summary aggregate rollup'):
+                    evidence.normalize_behavioral(root, 'podman')
+                with self.assertRaisesRegex(ValueError, 'Summary aggregate rollup'):
+                    evidence.project(dict(baseline), behavioral_bundle=root)
 
     def test_summary_unscored_orphan_cannot_claim_complete_details(self):
         for arm in ('with_skill', 'without_skill'):
@@ -1869,9 +1984,9 @@ class EvidenceTests(unittest.TestCase):
                 reward = evidence.read_json(path.parent / 'reward.json'); case = reward['entry_id']
                 record['verifier_result'] = None; write(path, record); (path.parent / 'reward.json').unlink()
                 summary_path = base / 'summary.json'; summary = evidence.read_json(summary_path)
-                summary['pass_at_k']['cases'][case]['attempts'][0].update(trial='orphan', score=None, passed=None)
+                self.unscore_case(summary, case)
+                summary['pass_at_k']['cases'][case]['attempts'][0]['trial'] = 'orphan'
                 summary.update(scored_attempts=9, execution_status='incomplete')
-                summary['pass_at_k']['passed_cases'] -= int(reward['overall'] >= summary['pass_at_k']['pass_threshold'])
                 write(summary_path, summary)
                 result_path = run / 'result.json'; result = evidence.read_json(result_path)
                 result.update(report_status='incomplete', execution_status='incomplete')
@@ -1893,9 +2008,8 @@ class EvidenceTests(unittest.TestCase):
                 else: record['verifier_result'] = state
                 write(path, record)
                 summary_path = arm_dir / 'summary.json'; summary = evidence.read_json(summary_path)
-                summary['pass_at_k']['cases'][case]['attempts'][0].update(score=None, passed=None)
+                self.unscore_case(summary, case)
                 summary.update(scored_attempts=9, execution_status='incomplete')
-                summary['pass_at_k']['passed_cases'] -= int(reward['overall'] >= summary['pass_at_k']['pass_threshold'])
                 write(summary_path, summary)
                 result_path = run / 'result.json'; result = evidence.read_json(result_path)
                 result.update(report_status='incomplete', execution_status='incomplete')
@@ -1915,10 +2029,8 @@ class EvidenceTests(unittest.TestCase):
         record['verifier_result'] = None; record['exception_info'] = {'diagnostic': 'discarded'}
         write(path, record); (path.parent/'reward.json').unlink()
         summary_path = run/'codex/with-skill/summary.json'; summary = evidence.read_json(summary_path)
-        prior = summary['pass_at_k']['cases'][case]['attempts'][0]
-        prior.update(score=None, passed=None)
+        self.unscore_case(summary, case)
         summary['scored_attempts'] = 9; summary['execution_status'] = 'incomplete'
-        summary['pass_at_k']['passed_cases'] -= 1
         write(summary_path, summary)
         result_path = run/'result.json'; result = evidence.read_json(result_path)
         result.update(report_status='incomplete', execution_status='incomplete')
@@ -1953,7 +2065,7 @@ class EvidenceTests(unittest.TestCase):
             base = run/'codex'/arm.replace('_','-')
             summary_path = base/'summary.json'; summary = evidence.read_json(summary_path)
             summary.update(expected_attempts=30, scored_attempts=30, num_trials=30)
-            summary['pass_at_k']['k'] = 3
+            summary['pass_at_k'].update(k=3, attempts_used=30, max_attempts_possible=30, avg_attempts_used=3.0)
             for case, row in summary['pass_at_k']['cases'].items():
                 original = row['attempts'][0]; original_trial = base/'trials'/original['trial']
                 for ordinal in (2,3):
@@ -1965,6 +2077,7 @@ class EvidenceTests(unittest.TestCase):
                     reward = evidence.read_json(target/'reward.json'); reward['trial_id'] = new_trial
                     write(target/'reward.json', reward)
                     row['attempts'].append({**original, 'attempt':ordinal, 'trial':new_trial})
+                row['attempts_used'] = 3
             write(summary_path, summary)
             result['agents']['codex']['pass_at_k'][arm] = copy.deepcopy(summary['pass_at_k'])
         write(result_path, result)
@@ -4429,9 +4542,7 @@ class EvidenceTests(unittest.TestCase):
                     record['verifier_result']['rewards'].pop(key, None); reward.pop(key, None)
                 write(path, record); write(reward_path, reward)
                 summary = copy.deepcopy(originals[summary_path]); result = copy.deepcopy(originals[result_path])
-                attempt = summary['pass_at_k']['cases'][reward['entry_id']]['attempts'][0]
-                summary['pass_at_k']['passed_cases'] -= bool(attempt['passed'])
-                attempt.update(score=None, passed=None)
+                self.unscore_case(summary, reward['entry_id'])
                 summary.update(scored_attempts=9, execution_status='incomplete')
                 result['report_status'] = 'incomplete'
                 result['agents']['codex']['conditions'][arm].update(scored_attempts=9, execution_status='incomplete')

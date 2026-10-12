@@ -1730,6 +1730,131 @@ def native_error_count(record):
     return len(errors)
 
 
+def validate_native_metrics(agent):
+    """Check native report arithmetic using the pinned producer's pure helpers."""
+    from skillevaluator.tier3.harbor.collector import _compute_lift
+    from skillevaluator.tier3.harbor.metrics import DEFAULT_METRICS, dimension_scores
+    lift = agent['lift']; require(type(lift) is dict, 'Invalid native metric components')
+    scores = {}
+    for arm in ('with_skill', 'without_skill'):
+        supplied = agent.get(arm, {})
+        require(type(supplied) is dict, 'Invalid native metric components')
+        scores[arm] = {key: supplied[key] for key in DEFAULT_METRICS if key in supplied}
+        for value in scores[arm].values(): number(value)
+        for key in DEFAULT_METRICS:
+            if key not in lift: continue
+            row = lift[key]; require(type(row) is dict, 'Invalid native metric components')
+            if arm in row:
+                number(row[arm])
+                require(key not in scores[arm] or scores[arm][key] == row[arm], 'Native metric component disagreement')
+                scores[arm][key] = row[arm]
+    expected = _compute_lift(scores['with_skill'], scores['without_skill'])
+    if not all(set(DEFAULT_METRICS) <= set(values) for values in scores.values()):
+        expected.pop('overall', None)  # This adapter requires the v2 metric set.
+    for key, row in lift.items():
+        if key not in (*DEFAULT_METRICS, 'overall'): continue
+        require(type(row) is dict, 'Invalid native metric components')
+        for field in ('with_skill', 'without_skill', 'delta'):
+            if field in row: number(row[field], -1 if field == 'delta' else 0)
+        if key in expected:
+            for field, value in row.items():
+                if field in expected[key]:
+                    require(value == expected[key][field], 'Native metric component disagreement')
+    complete = 'overall' in expected
+    if not complete and type(lift.get('overall')) is dict:
+        row = lift['overall']
+        if all(key in row for key in ('with_skill', 'without_skill', 'delta')):
+            # Overall component means and their difference are rounded separately.
+            require(abs(row['delta'] - round(row['with_skill'] - row['without_skill'], 4)) <= 0.0001000000001,
+                    'Native metric component disagreement')
+    for arm in ('with_skill', 'without_skill'):
+        supplied = agent.get('dimensions_' + arm, {})
+        require(type(supplied) is dict, 'Invalid native metric dimensions')
+        dimensions = dimension_scores(scores[arm])
+        for key, row in supplied.items():
+            require(type(row) is dict, 'Invalid native metric dimensions')
+            if key in dimensions:
+                if 'score' in row:
+                    number(row['score'])
+                    require(row['score'] == dimensions[key]['score'], 'Native metric dimension disagreement')
+                if 'sources' in row:
+                    require(type(row['sources']) is dict, 'Invalid native metric dimensions')
+                    for value in row['sources'].values(): number(value)
+                    require(row['sources'] == dimensions[key]['sources'], 'Native metric dimension disagreement')
+            elif arm == 'with_skill' and key in ('effectiveness', 'correctness', 'discoverability'):
+                complete = False
+    return complete
+
+
+def validate_summary_rollups(payload, cases, ids, maximum, stop_on_pass):
+    """Reconcile retained collector rollups without collecting filesystem data."""
+    def match(record, key, expected):
+        if key in record:
+            value = record[key]
+            numeric = key in ('best_score', 'rate', 'avg_attempts_used') and expected is not None
+            require(type(value) in (int, float) if numeric else type(value) is type(expected),
+                    'Summary case/aggregate rollup type mismatch')
+            require(value == expected, 'Summary case/aggregate rollup mismatch')
+    k = payload.get('k', maximum)
+    if k is not None:
+        require(type(k) is int and 1 <= k <= 100, 'Summary aggregate rollup attempt limit')
+        if maximum is not None: match(payload, 'k', maximum)
+    stop = payload.get('stop_on_pass', stop_on_pass)
+    if stop is not None:
+        require(type(stop) is bool, 'Summary aggregate rollup stop policy')
+        if stop_on_pass is not None: match(payload, 'stop_on_pass', stop_on_pass)
+    passed_cases = 0; attempts_used = 0
+    threshold = payload.get('pass_threshold')
+    optional(threshold, number)
+    for row in cases.values():
+        attempts = row.get('attempts', [])
+        if threshold is not None:
+            for attempt in attempts:
+                if attempt.get('score') is not None and attempt.get('passed') is not None:
+                    match(attempt, 'passed', attempt['score'] >= threshold)
+        passing = [i for i, attempt in enumerate(attempts, 1) if attempt.get('passed') is True]
+        scores = [attempt['score'] for attempt in attempts if attempt.get('score') is not None]
+        passed = bool(passing); used = len(attempts)
+        match(row, 'passed', passed)
+        match(row, 'first_pass_attempt', passing[0] if passing else None)
+        match(row, 'best_score', max(scores) if scores else None)
+        match(row, 'attempts_used', used)
+        for key in ('attempts_skipped', 'attempts_missing'):
+            if key in row:
+                require(type(row[key]) is int and 0 <= row[key] <= MAX_TRIALS, 'Summary case rollup attempt bounds')
+        if k is not None and all(key in row for key in ('attempts_skipped', 'attempts_missing')):
+            require(row['attempts_skipped'] + row['attempts_missing'] == max(0, k - used),
+                    'Summary case rollup missing attempts')
+        if k is not None and stop is not None:
+            unscored = max(0, k - used)
+            skipped = unscored if stop and passed else 0
+            match(row, 'attempts_skipped', skipped)
+            match(row, 'attempts_missing', 0 if skipped else unscored)
+        passed_cases += passed; attempts_used += used
+    total = len(ids)
+    if payload:
+        match(payload, 'total_cases', total)
+        match(payload, 'extra_cases', [])
+        if k is not None: match(payload, 'max_attempts_possible', total * k)
+    recorded_passes = payload.get('passed_cases')
+    if recorded_passes is not None:
+        require(type(recorded_passes) is int and passed_cases <= recorded_passes <= passed_cases + total - len(cases),
+                'Summary aggregate rollup case bounds')
+        match(payload, 'failed_cases', total - recorded_passes)
+        match(payload, 'rate', round(recorded_passes / total, 4) if total else 0.0)
+    recorded_attempts = payload.get('attempts_used')
+    if recorded_attempts is not None:
+        require(type(recorded_attempts) is int and attempts_used <= recorded_attempts <= MAX_TRIALS,
+                'Summary aggregate rollup attempt bounds')
+        match(payload, 'avg_attempts_used', round(recorded_attempts / total, 4) if total else 0.0)
+    if set(cases) == set(ids):
+        match(payload, 'passed_cases', passed_cases)
+        match(payload, 'failed_cases', total - passed_cases)
+        match(payload, 'attempts_used', attempts_used)
+        match(payload, 'rate', round(passed_cases / total, 4) if total else 0.0)
+        match(payload, 'avg_attempts_used', round(attempts_used / total, 4) if total else 0.0)
+
+
 def summary_error_count(summary):
     errors = native_error_count(summary)
     job_failure = summary.get('job_failure')
@@ -1967,6 +2092,7 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
                 if key in carrier:
                     require(type(carrier[key]) is int and carrier[key] == sum(values), 'Conflicting aggregate coverage')
     if all(k in agent for k in ('lift', 'dimensions_with_skill')):
+        if not validate_native_metrics(agent): limitations.add('coverage_missing')
         try:
             data['metrics'] = reports.metric_rows(agent)
         except OverflowError:
@@ -2060,6 +2186,7 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
                 require(expected is None or len(lookup) < expected, 'Summary attempt limit')
                 require(trial not in lookup, 'Duplicate summary trial')
                 lookup[trial] = (case, attempt)
+        validate_summary_rollups(pass_data, native_cases, ids, maximum, stop_on_pass)
         observed = []
         if trials_by_arm[arm]:
             for path in trials_by_arm[arm]:

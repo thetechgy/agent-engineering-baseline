@@ -301,6 +301,20 @@ exceed known recorded, scored or expected coverage, per-case policy caps or the
 10,000-trial operation cap shared across both arms. Complete case details require
 every supplied attempt to match a retained trial. Partial retained trials may
 leave validated summary attempts unmatched; absent counts remain unknown.
+Supplied case rollups must agree with their attempts: pass outcome, first passing
+attempt, best score, attempts used, skipped and missing counts follow the pinned
+collector's semantics. Known aggregate case/attempt totals, rates and policy
+fields are reconciled too. Partial case summaries still bound aggregate passes
+and attempts; missing detail cannot excuse contradictory rollups. These checks
+also run when standalone projection replays a retained native bundle.
+
+Headline metrics must agree with their retained native components even without
+optional provenance metrics. The pinned data-only lift and dimension helpers
+validate component deltas/directions, overall means and delta, dimension scores
+and declared weights. Overall means and their difference are rounded separately;
+validation preserves that producer behavior. Missing v2 components retain
+`coverage_missing`; available rounded overall components still bound the delta
+to their rounding uncertainty. Validation does not replace native scores.
 
 Structured native failures are reconciled before accepting a trial: reward,
 trial, verifier and nested-reward `evaluation_status`, trial exceptions, and
