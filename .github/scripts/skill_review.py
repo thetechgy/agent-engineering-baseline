@@ -691,8 +691,8 @@ def check_citations(citations, context):
             start = citation.start_line - row["start_line"]
             end = citation.end_line - row["start_line"] + 1
             text = "\n".join(row["text"].splitlines()[start:end])
-            if kind == "qualitative" and row["kind"] == "agent_behavior":
-                require(bool(text.strip()), "Behavior citation has no content")
+            if kind == "qualitative":
+                require(bool(text.strip()), "Qualitative citation has no content")
             if citation.claim == "absence":
                 require(
                     kind == "source" and context.value["source_context"]["coverage"] == "complete",

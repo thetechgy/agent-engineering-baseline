@@ -404,7 +404,7 @@ class ReviewTests(unittest.TestCase):
                 for citations in (value["assessment"]["citations"], value["recommendations"][0]["citations"]):
                     cited = next(row for row in citations if row["evidence_type"] == "agent_behavior")
                     cited.update(start_line=1, end_line=1, quote=None)
-                with self.assertRaisesRegex(ValueError, "Behavior citation has no content"):
+                with self.assertRaisesRegex(ValueError, "Qualitative citation has no content"):
                     review.validate_judgment(value, context)
                 calls, run = self.invoke(context, value)
                 with self.assertRaisesRegex(ValueError, "Inference rejected"):
@@ -416,6 +416,43 @@ class ReviewTests(unittest.TestCase):
                         cited = next(row for row in citations if row["evidence_type"] == "agent_behavior")
                         cited.update(start_line=2, end_line=2, quote=None)
                     review.validate_judgment(valid, context)
+
+    def test_blank_evaluator_spans_cannot_support_sufficient_eval_changes(self):
+        self.control(kind="evaluator_judgment")
+        descriptor = evidence.read_json(self.root / "support/support.json")
+        descriptor["items"][0].update(locator=["grader", "feedback"], start_line=1, end_line=1)
+        record = evidence.read_json(Path(self.args[1]) / "public-report.json")
+        ref = record["references"][0]
+        old = ref["id"]
+        member = self.root / "support" / ref["member"]
+        trial = evidence.read_json(member)
+        trial["grader"]["feedback"] = " \nActual grader feedback."
+        write(member, trial)
+        ref["digest"] = evidence.digest_bytes(member.read_bytes())
+        ref["id"] = evidence.identity({key: ref[key] for key in ("artifact_id", "member", "locator", "digest")})
+        record["observations"][0]["references"] = [ref["id"] if key == old else key
+                                                     for key in record["observations"][0]["references"]]
+        bundle, saved, rid = self.bundle(record, "blank-grader")
+        for item in descriptor["items"]:
+            item.update(record_id=rid, reference_id=ref["id"])
+        write(self.root / "support/support.json", descriptor)
+        context = review.prepare([bundle], saved, "podman", rid, self.root / "source", self.root / "support")
+        review.validate_judgment(judgment(context), context)
+        for category in ("improve_eval", "fix_grader_or_harness"):
+            value = judgment(context, category=category)
+            rec = value["recommendations"][0]
+            rec["sufficiency"]["conclusion"] = "sufficient"
+            rec["citations"].append(citation(context, "evaluator_judgment"))
+            with self.assertRaisesRegex(ValueError, "Qualitative citation has no content"):
+                review.validate_judgment(value, context)
+        descriptor["items"][0].update(start_line=2, end_line=2)
+        write(self.root / "support/support.json", descriptor)
+        nonblank = review.prepare([bundle], saved, "podman", rid, self.root / "source", self.root / "support")
+        value = judgment(nonblank, category="improve_eval")
+        rec = value["recommendations"][0]
+        rec["sufficiency"]["conclusion"] = "sufficient"
+        rec["citations"].append(citation(nonblank, "evaluator_judgment"))
+        review.validate_judgment(value, nonblank)
 
     def test_empty_ranges_reject_nonempty_content_and_invalid_empty_selection(self):
         for empty, start, end in (
