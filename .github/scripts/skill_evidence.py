@@ -696,6 +696,9 @@ def historical_content(workspace, rev, source_path, *, budget=None):
     require(all(filename.startswith(prefix) for filename in filenames), 'Historical source must be a directory')
     tree_names = {filename[len(prefix):] for filename in filenames}
     require('SKILL.md' in tree_names, 'Historical skill root missing SKILL.md')
+    from skillevaluator.tier3.output_provenance import GENERATED_OUTPUT_MARKER
+    require(not any(GENERATED_OUTPUT_MARKER in PurePosixPath(name).parts for name in tree_names),
+            'Generated output inside historical source')
     members = []
     for row in rows:
         if not row:

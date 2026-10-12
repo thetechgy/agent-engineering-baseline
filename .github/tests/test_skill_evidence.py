@@ -4660,5 +4660,38 @@ class EvidenceTests(unittest.TestCase):
                 self.assertTrue(changed); self.assertFalse(output.exists()); self.assertEqual(target.read_bytes(), raw)
 
 
+    def test_historical_generated_markers_reject_before_blob_reads(self):
+        from skillevaluator.tier3 import output_provenance
+        marker = output_provenance.GENERATED_OUTPUT_MARKER
+        for member in (marker, 'nested/' + marker + '/payload.json', 'results/' + marker, 'evals/' + marker):
+            with self.subTest(member=member), tempfile.TemporaryDirectory() as temp, patch.object(self, 'root', Path(temp)):
+                repo, git = self.repository_fixture()
+                path = repo / '.apm/skills/podman' / member; path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text('{}'); git('add', '.apm')
+                git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'Generated marker fixture')
+                rev = git('rev-parse', 'HEAD'); native = self.native()
+                self.mutate(native, '/run_config.json', lambda d: d['evaluated_source'].update(commit=rev))
+                self.mutate(native, '/result.json', lambda d: d['run_config']['evaluated_source'].update(commit=rev))
+                self.mutate(native, '/provenance.json', lambda d: d.update(revision=rev))
+                static = self.root / 'static'; shutil.copytree(FIXTURES / 'static-synthetic', static)
+                static_path = next((static / 'reports/podman').glob('*.json')); report = evidence.read_json(static_path)
+                report['evaluated_source'] = {'repository': 'thetechgy/agent-engineering-baseline', 'commit': rev}
+                write(static_path, report)
+                before = self.snapshot(repo)
+                with patch.object(evidence, 'historical_blob', wraps=evidence.historical_blob) as blobs, \
+                        patch.object(output_provenance, '_load_existing_key') as key:
+                    with self.assertRaisesRegex(ValueError, 'Generated output'):
+                        evidence.historical_content(repo, rev, '.apm/skills/podman')
+                    for kind, root in (('behavioral', native), ('static', static)):
+                        original = getattr(evidence, 'normalize_' + kind)
+                        with patch.object(evidence, 'normalize_' + kind, side_effect=lambda *a, fn=original: fn(*a, workspace=repo)), \
+                                patch.object(evidence, 'write_outputs') as publish:
+                            with self.assertRaisesRegex(ValueError, 'Generated output'):
+                                evidence.main(['normalize', '--kind', kind, '--skill', 'podman', '--input', str(root)])
+                            publish.assert_not_called()
+                    blobs.assert_not_called(); key.assert_not_called()
+                self.assertEqual(self.snapshot(repo), before)
+
+
 if __name__ == '__main__':
     unittest.main()

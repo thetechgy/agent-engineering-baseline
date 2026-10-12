@@ -303,8 +303,11 @@ agent-visible staging boundary. A non-null content digest must identify the
 regular root `SKILL.md`, including through standalone projection. The pinned runtime ignore helper excludes
 skill-owned `evals` and generated/cache/Git inputs. Historical reconstruction
 reads exact local Git blobs with the equivalent authored-tree boundary; it is
-`reconstructed_from_declared_revision`, never runtime-attested. Missing Git
-objects remain unknown, without checkout or network fallback. Every Git read
+`reconstructed_from_declared_revision`, never runtime-attested. Historical trees
+reject generated-output markers before
+any blob capture, including nested marker directories and markers under ignored
+`results` or `evals` paths, matching current-source rejection without key access.
+Missing Git objects remain unknown, without checkout or network fallback. Every Git read
 sets `GIT_NO_LAZY_FETCH=1`, overriding an inherited lazy-fetch setting so missing
 partial-clone trees and blobs cannot trigger demand fetching. It also sets
 `GIT_NO_REPLACE_OBJECTS=1` so local commit, tree, or blob replacement refs cannot
