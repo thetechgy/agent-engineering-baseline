@@ -148,6 +148,12 @@ inventory operation budget and existing historical bounds.
 
 Local repository association comes from one bounded offline read of the trusted
 workspace's literal Git `remote.origin.url`, including linked worktrees. The
+regular `.git` pointer must have a reciprocal `gitdir` back-pointer to this
+workspace and reside under the common repository's `worktrees` directory before
+any common-repository config is read. A direct `.git` directory cannot redirect
+through an unrelated `commondir`. Unrelated or unsupported
+Git-directory pointers leave attribution unknown without reading that config.
+The back-pointer uses the same bounded capture and final state checks. The
 common config and any `.git`/`commondir` pointer files use the same anchored
 reader, file/directory identity and change-state checks as other inputs. Git
 parses only captured config bytes, with includes disabled. Inventory and both

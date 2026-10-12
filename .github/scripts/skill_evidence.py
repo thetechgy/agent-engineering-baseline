@@ -607,14 +607,25 @@ def workspace_repository(workspace, *, budget=None):
     info = inspect(gitdir, track_parent=False)
     if info is None:
         return None
-    if stat.S_ISREG(info.st_mode):
+    linked = stat.S_ISREG(info.st_mode)
+    if linked:
         raw = captured(gitdir, 4096)
         require(raw.startswith(b'gitdir: '), 'Invalid Git metadata pointer')
         gitdir = pointer(workspace, raw[len(b'gitdir: '):])
+        back_pointer = gitdir / 'gitdir'
+        if inspect(back_pointer) is None:
+            return None
+        associated = pointer(gitdir, captured(back_pointer, 4096)) == workspace / '.git'
+        budget.verify_repository()
+        if not associated:
+            return None
     common = gitdir
     common_pointer = gitdir / 'commondir'
     if inspect(common_pointer) is not None:
         common = pointer(gitdir, captured(common_pointer, 4096))
+    if (linked and (common == gitdir or gitdir.parent != common / 'worktrees')) or (not linked and common != gitdir):
+        budget.verify_repository()
+        return None
     config = common / 'config'
     if inspect(config) is None:
         return None

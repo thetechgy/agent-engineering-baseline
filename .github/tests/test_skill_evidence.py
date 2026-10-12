@@ -4635,7 +4635,8 @@ class EvidenceTests(unittest.TestCase):
         report = evidence.read_json(report_path)
         report['evaluated_source'] = {'repository': 'thetechgy/agent-engineering-baseline', 'commit': git('rev-parse', 'HEAD')}
         write(report_path, report)
-        targets = ((repo, repo / '.git/config'), (linked, linked / '.git'), (linked, gitdir / 'commondir'))
+        targets = ((repo, repo / '.git/config'), (linked, linked / '.git'),
+                   (linked, gitdir / 'gitdir'), (linked, gitdir / 'commondir'))
         resolver = evidence.workspace_repository
         for kind, (workspace, target) in itertools.product(('inventory', 'behavioral', 'static'), targets):
             with self.subTest(kind=kind, metadata=target.name):
@@ -4659,6 +4660,46 @@ class EvidenceTests(unittest.TestCase):
                     publish.assert_not_called()
                 self.assertTrue(changed); self.assertFalse(output.exists()); self.assertEqual(target.read_bytes(), raw)
 
+
+    def test_unrelated_git_directory_pointers_leave_attribution_unknown(self):
+        repo, git = self.repository_fixture()
+        git('remote', 'set-url', 'origin', 'https://github.com/unrelated-owner/unrelated-repo.git')
+        linked = self.root / 'linked'; git('worktree', 'add', '--detach', str(linked), 'HEAD')
+        gitdir = Path((linked / '.git').read_text().strip().removeprefix('gitdir: '))
+        workspace = self.root / 'unrelated'; self.local(workspace, 'podman', True)
+        native = self.native(); static = self.root / 'static'; shutil.copytree(FIXTURES / 'static-synthetic', static)
+        declaration = {'repository': 'unrelated-owner/unrelated-repo', 'commit': git('rev-parse', 'HEAD')}
+        self.mutate(native, '/run_config.json', lambda d: d.update(evaluated_source=declaration))
+        self.mutate(native, '/result.json', lambda d: d['run_config'].update(evaluated_source=declaration))
+        self.mutate(native, '/provenance.json', lambda d: d.update(revision=declaration['commit']))
+        path = next((static / 'reports/podman').glob('*.json')); report = evidence.read_json(path)
+        report['evaluated_source'] = declaration; write(path, report)
+        original = evidence.read_bytes; before = self.snapshot(repo)
+        def guarded(path, **kwargs):
+            self.assertNotEqual(path, repo / '.git/config', 'Unrelated config must not be read')
+            return original(path, **kwargs)
+        fabricated = self.root / 'fabricated'; fabricated.mkdir()
+        (fabricated / 'gitdir').write_text(str(workspace / '.git') + '\n')
+        (fabricated / 'commondir').write_text(str(repo / '.git') + '\n')
+        for target in (repo / '.git', gitdir, fabricated, None):
+            with self.subTest(target=target.name if target else 'direct-commondir'):
+                if target:
+                    (workspace / '.git').write_text('gitdir: ' + str(target) + '\n')
+                else:
+                    (workspace / '.git').unlink(); (workspace / '.git').mkdir()
+                    (workspace / '.git/commondir').write_text(str(repo / '.git') + '\n')
+                with patch.object(evidence, 'read_bytes', side_effect=guarded), \
+                        patch.object(evidence, 'historical_content') as contents, patch.object(evidence, 'historical_blob') as blobs:
+                    self.assertIsNone(evidence.workspace_repository(workspace))
+                    values = (evidence.inventory(workspace)['skills'][0],
+                              evidence.normalize_behavioral(native, 'podman', workspace=workspace),
+                              evidence.normalize_static(static, 'podman', workspace=workspace))
+                    for value in values:
+                        self.assertIsNone(value['source']['repository']); self.assertIsNone(value['source']['revision'])
+                        self.assertNotIn(b'unrelated-owner', evidence.encoded(value))
+                    contents.assert_not_called(); blobs.assert_not_called()
+        self.assertEqual(self.snapshot(repo), before)
+        self.assertEqual(evidence.workspace_repository(linked), 'unrelated-owner/unrelated-repo')
 
     def test_inventory_rejects_transient_revision_metadata_changes(self):
         for kind, stage in itertools.product(('head', 'loose', 'packed', 'linked-head', 'linked-loose'), ('lookup', 'publication')):
@@ -4732,7 +4773,8 @@ class EvidenceTests(unittest.TestCase):
         linked = self.root / 'linked'; git('worktree', 'add', '--detach', str(linked), 'HEAD')
         gitdir = Path((linked / '.git').read_text().strip().removeprefix('gitdir: '))
         targets = ((repo, repo / '.git'), (repo, repo / '.git/config'),
-                   (linked, linked / '.git'), (linked, gitdir / 'commondir'), (linked, repo / '.git/config'))
+                   (linked, linked / '.git'), (linked, gitdir / 'gitdir'),
+                   (linked, gitdir / 'commondir'), (linked, repo / '.git/config'))
         original_stat = os.stat
         for workspace, target in targets:
             with self.subTest(workspace=workspace.name, target=target.name):
