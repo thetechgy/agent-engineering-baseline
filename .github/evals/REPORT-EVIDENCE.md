@@ -1260,6 +1260,10 @@ positive line ranges. Empty qualitative values use the same representation,
 including when their optional range is omitted, and retain original provenance
 and completeness. Empty ranges have no citable lines and cannot supply observed
 behavior or ground a specific skill modification.
+Behavioral citations also require non-whitespace content in the cited span,
+including when no quotation is supplied. A blank line within otherwise useful
+retained output cannot establish observed behavior; the retained member and its
+provenance remain available for investigation.
 
 ### Optional qualitative support
 

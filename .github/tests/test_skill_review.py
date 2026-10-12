@@ -394,6 +394,29 @@ class ReviewTests(unittest.TestCase):
         retained = next(item for item in report["provenance"]["support_provenance"] if item["id"] == row["id"])
         self.assertEqual((retained["start_line"], retained["end_line"]), (0, 0))
 
+    def test_blank_behavior_spans_cannot_support_skill_changes(self):
+        for output in ("\n", " \t", "\u00a0\u3000", "\nActual observed behavior."):
+            with self.subTest(output=repr(output)), tempfile.TemporaryDirectory() as folder:
+                self.root = Path(folder)
+                context = self.control(agent_output=output)
+                review.validate_judgment(judgment(context), context)
+                value = judgment(context, category="modify_skill")
+                for citations in (value["assessment"]["citations"], value["recommendations"][0]["citations"]):
+                    cited = next(row for row in citations if row["evidence_type"] == "agent_behavior")
+                    cited.update(start_line=1, end_line=1, quote=None)
+                with self.assertRaisesRegex(ValueError, "Behavior citation has no content"):
+                    review.validate_judgment(value, context)
+                calls, run = self.invoke(context, value)
+                with self.assertRaisesRegex(ValueError, "Inference rejected"):
+                    asyncio.run(run())
+                self.assertEqual(len(calls), 2)
+                if output.endswith("behavior."):
+                    valid = judgment(context, category="modify_skill")
+                    for citations in (valid["assessment"]["citations"], valid["recommendations"][0]["citations"]):
+                        cited = next(row for row in citations if row["evidence_type"] == "agent_behavior")
+                        cited.update(start_line=2, end_line=2, quote=None)
+                    review.validate_judgment(valid, context)
+
     def test_empty_ranges_reject_nonempty_content_and_invalid_empty_selection(self):
         for empty, start, end in (
             (False, 0, 0),
