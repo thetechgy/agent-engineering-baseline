@@ -153,7 +153,10 @@ reader, file/directory identity and change-state checks as other inputs. Git
 parses only captured config bytes, with includes disabled. Inventory and both
 normalizers reverify those metadata states before returning evidence, rejecting
 transient edits or replacements even when original bytes and modification times
-are restored. Config and pointer reads share the operation byte budget. GitHub
+are restored. Missing metadata retains the parent directory state captured before
+lookup, checked immediately and before publication, so transient absence cannot
+silently downgrade attribution. Stable absence remains unknown. Config and
+pointer reads share the operation byte budget. GitHub
 HTTPS, SCP-style SSH and `ssh://git@github.com/` origins normalize to lowercase
 `owner/repository`, with an optional `.git` suffix. Includes, global configuration
 and URL rewrites do not establish identity. Conflicting native repository

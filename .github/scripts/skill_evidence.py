@@ -572,15 +572,19 @@ def workspace_repository(workspace, *, budget=None):
     budget = ReadBudget() if budget is None else budget
     directories = {}; states = {}; members = {}
     workspace = safe_path(workspace, directory=True, directory_identities=directories)
+    budget.repository_inputs.append((directories, states, members))
     def inspect(path, *, track_parent=True):
         safe_path(path.parent, directory=True, directory_identities=directories)
         fd = open_directory(path.parent, directories, directory_states=states)
         try:
+            parent_state = directory_state(os.fstat(fd))
             if track_parent:
-                states.setdefault(path.parent, directory_state(os.fstat(fd)))
+                states.setdefault(path.parent, parent_state)
             try:
                 info = os.stat(path.name, dir_fd=fd, follow_symlinks=False)
             except FileNotFoundError:
+                states.setdefault(path.parent, parent_state)
+                budget.verify_repository()
                 return None
             require(stat.S_ISREG(info.st_mode) or stat.S_ISDIR(info.st_mode), 'Unsafe Git metadata')
             if stat.S_ISREG(info.st_mode):
@@ -614,7 +618,6 @@ def workspace_repository(workspace, *, budget=None):
     if inspect(config) is None:
         return None
     raw_config = captured(config)
-    budget.repository_inputs.append((directories, states, members))
     # Git parses only the captured buffer. Includes and ambient repository
     # configuration cannot substitute another origin after the bounded read.
     result = subprocess.run(['git', 'config', '--file', '-', '--no-includes', '--null',

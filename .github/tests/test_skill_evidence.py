@@ -4660,6 +4660,67 @@ class EvidenceTests(unittest.TestCase):
                 self.assertTrue(changed); self.assertFalse(output.exists()); self.assertEqual(target.read_bytes(), raw)
 
 
+    def test_missing_origin_metadata_is_anchored_and_rechecked(self):
+        repo, git = self.repository_fixture()
+        linked = self.root / 'linked'; git('worktree', 'add', '--detach', str(linked), 'HEAD')
+        gitdir = Path((linked / '.git').read_text().strip().removeprefix('gitdir: '))
+        targets = ((repo, repo / '.git'), (repo, repo / '.git/config'),
+                   (linked, linked / '.git'), (linked, gitdir / 'commondir'), (linked, repo / '.git/config'))
+        original_stat = os.stat
+        for workspace, target in targets:
+            with self.subTest(workspace=workspace.name, target=target.name):
+                parent = target.parent.stat(); retained = self.root / 'absent-metadata'; hidden = False
+                def transient(path, *args, **kwargs):
+                    nonlocal hidden
+                    fd = kwargs.get('dir_fd')
+                    if not hidden and path == target.name and fd is not None:
+                        info = os.fstat(fd)
+                        if (info.st_dev, info.st_ino) == (parent.st_dev, parent.st_ino):
+                            hidden = True; target.rename(retained)
+                            try: return original_stat(path, *args, **kwargs)
+                            finally: retained.rename(target)
+                    return original_stat(path, *args, **kwargs)
+                with patch.object(os, 'stat', side_effect=transient):
+                    with self.assertRaisesRegex(ValueError, 'Input directory'):
+                        evidence.workspace_repository(workspace)
+                self.assertTrue(hidden)
+                self.assertEqual(evidence.workspace_repository(workspace), 'thetechgy/agent-engineering-baseline')
+
+    def test_absent_origin_metadata_revalidated_before_publication(self):
+        repo, git = self.repository_fixture()
+        native = self.native(); static = self.root / 'static'; shutil.copytree(FIXTURES / 'static-synthetic', static)
+        report_path = next((static / 'reports/podman').glob('*.json')); report = evidence.read_json(report_path)
+        report['evaluated_source'] = {'repository': 'thetechgy/agent-engineering-baseline', 'commit': git('rev-parse', 'HEAD')}
+        write(report_path, report)
+        resolver = evidence.workspace_repository
+        for kind, target in itertools.product(('inventory', 'behavioral', 'static'), (repo / '.git', repo / '.git/config')):
+            with self.subTest(kind=kind, target=target.name):
+                retained = self.root / 'absent-metadata'; restored = False
+                target.rename(retained)
+                try:
+                    budget = evidence.ReadBudget()
+                    self.assertIsNone(resolver(repo, budget=budget))
+                    budget.verify_repository()  # Stable absence is valid unknown attribution.
+                    def restore(path, **kwargs):
+                        nonlocal restored
+                        value = resolver(path, **kwargs)
+                        retained.rename(target); restored = True
+                        return value
+                    name = 'inventory' if kind == 'inventory' else 'normalize_' + kind
+                    operation = getattr(evidence, name)
+                    invoke = (lambda: operation(repo)) if kind == 'inventory' else (lambda *a: operation(*a, workspace=repo))
+                    args = ['inventory'] if kind == 'inventory' else ['normalize', '--kind', kind, '--skill', 'podman',
+                                                                   '--input', str(native if kind == 'behavioral' else static)]
+                    output = self.root / 'absence-rejected'
+                    with patch.object(evidence, 'workspace_repository', side_effect=restore), \
+                            patch.object(evidence, name, side_effect=invoke), patch.object(evidence, 'write_outputs') as publish:
+                        with self.assertRaisesRegex(ValueError, 'Input directory'):
+                            evidence.main([*args, '--output', str(output)])
+                        publish.assert_not_called()
+                    self.assertTrue(restored); self.assertFalse(output.exists())
+                finally:
+                    if not restored: retained.rename(target)
+
     def test_historical_generated_markers_reject_before_blob_reads(self):
         from skillevaluator.tier3 import output_provenance
         marker = output_provenance.GENERATED_OUTPUT_MARKER
