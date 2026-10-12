@@ -299,7 +299,8 @@ class ReadBudget:
             yield
         finally:
             self.repository_depth -= 1
-            if outer: self.verify_repository()
+        # A failed read cannot publish; retain its original bounded rejection.
+        if outer: self.verify_repository()
 
 
 def read_bytes(path, limit=JSON_LIMIT, *, budget=None, directory_identities=None, directory_states=None, file_states=None):
@@ -1054,65 +1055,66 @@ def inventory(workspace=ROOT):
     require(len(discovered) <= MAX_CASES, 'Inventory limit')
     head_revision = inventory_revision(workspace, budget) if repo else None
     rows = []
-    for name in discovered:
-        skill_id(name)
-        owners = owners_by_name.get(name, [])
-        require(len(owners) <= 1 and not (name in names and owners), 'Conflicting active source owners')
-        if name in names:
-            authored = catalog / name
-            validate_skill_metadata(authored, name, reader=reader)
-            source_path = authored.relative_to(workspace).as_posix()
-            configured = skill_content(authored, reader=reader, directory_identities=directories,
-                                       directory_states=states, file_states=members)
-            rev = head_revision
-            if rev is not None and historical_content(workspace, rev, source_path, budget=budget)['digest'] != configured['digest']:
-                rev = None
-            src = source(name, 'local', repo, rev, source_path, configured)
-            deployment = None
-        else:
-            require(len(owners) == 1, 'Overlay has no unique skill owner')
-            owner = owners[0]
-            repository(owner['repo_url']); revision(owner['resolved_commit']); relative(owner['virtual_path'])
-            authored = workspace / '.agents/skills' / name
-            files = safe_tree(authored, max_entries=2 * MAX_SOURCE_MEMBERS, max_files=MAX_SOURCE_MEMBERS,
-                              directory_identities=directories, directory_states=states, file_states=members)
-            reject_source_markers(authored, files, directories)
-            validate_skill_metadata(authored, name, reader=reader)
-            visible = skill_projection_files(authored, files, directory_identities=directories, directory_states=states)
-            actual = {p.relative_to(workspace).as_posix(): digest_bytes(reader(p)) for p in files}
-            require(actual == owner['deployed_file_hashes'], 'Deployment content drift')
-            for member, digest in actual.items():
-                matches = deployments_by_member.get(member, [])
-                ownership = owner['repo_url'] + '/' + owner['virtual_path']
-                require(len(matches) == 1 and matches[0]['active_owner'] == ownership
-                        and matches[0]['owners'] == [ownership] and matches[0]['content_hash'] == digest,
-                        'Ambiguous deployment ownership')
-            if name == 'gh':
-                import gh_evaluations as gh
-                competing = workspace / '.agents/skills' / gh.COMPETING
-                competing_files = safe_tree(competing, max_entries=2 * MAX_SOURCE_MEMBERS,
-                                            max_files=MAX_SOURCE_MEMBERS, directory_identities=directories, directory_states=states, file_states=members)
-                reject_source_markers(competing, competing_files, directories)
-                safe_path(competing, directory=True, directory_identities=directories)
-                validate_captured_gh(workspace, owner, actual, owners_by_name, competing_files,
-                                     set(overlay_files), reader)
-            src = source(name, 'upstream', owner['repo_url'], owner['resolved_commit'], owner['virtual_path'],
-                         content([{'member': p.relative_to(authored).as_posix(),
-                                   'digest': actual[p.relative_to(workspace).as_posix()]} for p in visible], 'configured'))
-            deployment = '.agents/skills/' + name
-        dataset_roots = [overlays / name / 'evals']
-        if name in names:
-            dataset_roots.append(authored / 'evals')
-        datasets = [p for p in dataset_entries if p.parent in dataset_roots and p.name.startswith('evals.')]
-        require(len(datasets) <= 1, 'Competing dataset sources')
-        suite = strict_dataset(datasets[0], name, reader=reader, directory_identities=directories,
-                               directory_states=states, file_states=members) if datasets else None
-        if suite:
-            suite['owner'] = 'overlay' if datasets[0].is_relative_to(overlays) else 'local'
-            suite['path'] = datasets[0].relative_to(workspace).as_posix()
-        rows.append({'source': src, 'deployment': deployment, 'suite': suite,
-                     'behavioral_status': 'configured' if suite else 'not_configured',
-                     'measurement': {'status': 'unavailable', 'reasons': ['results_not_supplied']}})
+    with budget.repository_operation():
+        for name in discovered:
+            skill_id(name)
+            owners = owners_by_name.get(name, [])
+            require(len(owners) <= 1 and not (name in names and owners), 'Conflicting active source owners')
+            if name in names:
+                authored = catalog / name
+                validate_skill_metadata(authored, name, reader=reader)
+                source_path = authored.relative_to(workspace).as_posix()
+                configured = skill_content(authored, reader=reader, directory_identities=directories,
+                                           directory_states=states, file_states=members)
+                rev = head_revision
+                if rev is not None and historical_content(workspace, rev, source_path, budget=budget)['digest'] != configured['digest']:
+                    rev = None
+                src = source(name, 'local', repo, rev, source_path, configured)
+                deployment = None
+            else:
+                require(len(owners) == 1, 'Overlay has no unique skill owner')
+                owner = owners[0]
+                repository(owner['repo_url']); revision(owner['resolved_commit']); relative(owner['virtual_path'])
+                authored = workspace / '.agents/skills' / name
+                files = safe_tree(authored, max_entries=2 * MAX_SOURCE_MEMBERS, max_files=MAX_SOURCE_MEMBERS,
+                                  directory_identities=directories, directory_states=states, file_states=members)
+                reject_source_markers(authored, files, directories)
+                validate_skill_metadata(authored, name, reader=reader)
+                visible = skill_projection_files(authored, files, directory_identities=directories, directory_states=states)
+                actual = {p.relative_to(workspace).as_posix(): digest_bytes(reader(p)) for p in files}
+                require(actual == owner['deployed_file_hashes'], 'Deployment content drift')
+                for member, digest in actual.items():
+                    matches = deployments_by_member.get(member, [])
+                    ownership = owner['repo_url'] + '/' + owner['virtual_path']
+                    require(len(matches) == 1 and matches[0]['active_owner'] == ownership
+                            and matches[0]['owners'] == [ownership] and matches[0]['content_hash'] == digest,
+                            'Ambiguous deployment ownership')
+                if name == 'gh':
+                    import gh_evaluations as gh
+                    competing = workspace / '.agents/skills' / gh.COMPETING
+                    competing_files = safe_tree(competing, max_entries=2 * MAX_SOURCE_MEMBERS,
+                                                max_files=MAX_SOURCE_MEMBERS, directory_identities=directories, directory_states=states, file_states=members)
+                    reject_source_markers(competing, competing_files, directories)
+                    safe_path(competing, directory=True, directory_identities=directories)
+                    validate_captured_gh(workspace, owner, actual, owners_by_name, competing_files,
+                                         set(overlay_files), reader)
+                src = source(name, 'upstream', owner['repo_url'], owner['resolved_commit'], owner['virtual_path'],
+                             content([{'member': p.relative_to(authored).as_posix(),
+                                       'digest': actual[p.relative_to(workspace).as_posix()]} for p in visible], 'configured'))
+                deployment = '.agents/skills/' + name
+            dataset_roots = [overlays / name / 'evals']
+            if name in names:
+                dataset_roots.append(authored / 'evals')
+            datasets = [p for p in dataset_entries if p.parent in dataset_roots and p.name.startswith('evals.')]
+            require(len(datasets) <= 1, 'Competing dataset sources')
+            suite = strict_dataset(datasets[0], name, reader=reader, directory_identities=directories,
+                                   directory_states=states, file_states=members) if datasets else None
+            if suite:
+                suite['owner'] = 'overlay' if datasets[0].is_relative_to(overlays) else 'local'
+                suite['path'] = datasets[0].relative_to(workspace).as_posix()
+            rows.append({'source': src, 'deployment': deployment, 'suite': suite,
+                         'behavioral_status': 'configured' if suite else 'not_configured',
+                         'measurement': {'status': 'unavailable', 'reasons': ['results_not_supplied']}})
     result = {'schema_version': 1, 'kind': 'inventory', 'skills': rows}
     budget.verify_repository()
     verify_directory_states(states, directories)

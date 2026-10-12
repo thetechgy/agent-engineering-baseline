@@ -360,6 +360,8 @@ lists or directory substitutions, including linked-worktree reads. Standalone
 Git retrieval and inventory use the same checks and operation byte budget.
 Nested Git subprocesses share their enclosing retrieval's before/after state
 checks, keeping full-store revalidation work independent of source-member count.
+Inventory encloses all skill reconstructions in one such operation, so full-store
+revalidation is also independent of skill count and completes before publication.
 Inherited `GIT_TRACE*` destinations are removed and all Trace2 targets are
 explicitly disabled, including fallback targets from global/system config.
 Read-only Git calls therefore cannot append diagnostic files into the checkout,

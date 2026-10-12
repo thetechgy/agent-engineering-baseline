@@ -5215,6 +5215,50 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual(len(contents['manifest']), 21)
         self.assertLessEqual(visits, 10 * count)
 
+    def test_inventory_bounds_object_store_revalidation_across_skills(self):
+        repo, git = self.repository_fixture()
+        for index in range(20): self.local(repo, f'skill-{index}')
+        git('add', '.apm'); git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'Many skills')
+        rev = git('rev-parse', 'HEAD'); before = self.snapshot(repo)
+        objects = repo / '.git/objects'; count = len([p for p in objects.rglob('*') if p.is_file()])
+        verify = evidence.verify_file_states; visits = 0
+        def counted(states, *args, **kwargs):
+            nonlocal visits
+            visits += sum(path.is_relative_to(objects) for path in states)
+            return verify(states, *args, **kwargs)
+        operation = evidence.inventory; output = self.root / 'many-skills-output'
+        with patch.object(evidence, 'verify_file_states', side_effect=counted), \
+                patch.object(evidence, 'inventory', side_effect=lambda: operation(repo)), redirect_stdout(StringIO()):
+            evidence.main(['inventory', '--output', str(output)])
+        value = evidence.read_json(output / 'inventory.json')
+        self.assertEqual(len(value['skills']), 22)
+        self.assertTrue(all(row['source']['revision'] == rev for row in value['skills']))
+        self.assertEqual(self.snapshot(repo), before)
+        self.assertLessEqual(visits, 16 * count)
+
+    def test_inventory_batch_rejects_transient_object_changes_before_publication(self):
+        repo, git = self.repository_fixture()
+        oid = git('rev-parse', 'HEAD:.apm/skills/podman/SKILL.md')
+        path = repo / '.git/objects' / oid[:2] / oid[2:]; path.chmod(0o600)
+        raw = path.read_bytes(); metadata = path.stat(); before = self.snapshot(repo)
+        original = evidence.historical_content; calls = 0
+        def transient(*args, **kwargs):
+            nonlocal calls
+            value = original(*args, **kwargs); calls += 1
+            if calls == 1:
+                path.write_bytes(raw + b'transient'); path.write_bytes(raw)
+                os.utime(path, ns=(metadata.st_atime_ns, metadata.st_mtime_ns))
+            return value
+        operation = evidence.inventory; output = self.root / 'batch-rejected'
+        with patch.object(evidence, 'historical_content', side_effect=transient), \
+                patch.object(evidence, 'inventory', side_effect=lambda: operation(repo)), \
+                patch.object(evidence, 'write_outputs') as publish:
+            with self.assertRaisesRegex(ValueError, 'Input member changed'):
+                evidence.main(['inventory', '--output', str(output)])
+            publish.assert_not_called()
+        self.assertGreaterEqual(calls, 1); self.assertFalse(output.exists())
+        self.assertEqual(self.snapshot(repo), before)
+
     def test_historical_blob_growth_is_bounded_during_capture(self):
         import zlib
         repo, git = self.repository_fixture()
