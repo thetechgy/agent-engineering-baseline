@@ -344,8 +344,10 @@ def read_bytes(path, limit=JSON_LIMIT, *, budget=None, directory_identities=None
     return value
 
 
-def parse_json(raw):
-    require(type(raw) is bytes and len(raw) <= JSON_LIMIT, 'Invalid bounded JSON')
+def parse_json(raw, *, limit=None):
+    limit = JSON_LIMIT if limit is None else limit
+    require(type(limit) is int and limit > 0, 'Invalid JSON limit')
+    require(type(raw) is bytes and len(raw) <= limit, 'Invalid bounded JSON')
     def pairs(items):
         result = {}
         for key, value in items:
@@ -2768,17 +2770,24 @@ def open_directory(path, identities=None, changed_message='Input directory chang
         raise
 
 
-def write_outputs(values, destination=None, workspace=ROOT, input_path=None):
+def write_outputs(values, destination=None, workspace=ROOT, input_path=None, *,
+                  rendered=None, input_paths=(), input_guards=()):
     # Finish validation/serialization before reserving an output directory.
     require(SECURE_DIRECTORY_OUTPUT, 'Secure directory output unsupported')
-    for name in values:
+    rendered = {} if rendered is None else rendered
+    require(type(rendered) is dict and all(type(value) is bytes for value in rendered.values()),
+            'Invalid rendered output')
+    require(not set(values) & set(rendered), 'Duplicate output member')
+    for name in (*values, *rendered):
         relative(name); require('/' not in name, 'Nested output member')
     payloads = {name: encoded(value) for name, value in values.items()}
-    guards = tuple(dict.fromkeys(guard for value in values.values() for guard in record_guards(value)))
+    payloads.update(rendered)
+    guards = tuple(dict.fromkeys((*input_guards,
+        *(guard for value in values.values() for guard in record_guards(value)))))
     for guard in guards: guard()
     workspace = Path(workspace).absolute()
-    if input_path is not None:
-        input_path = Path(input_path).absolute()
+    boundaries = tuple(dict.fromkeys(Path(path).absolute() for path in
+        (*input_paths, *((input_path,) if input_path is not None else ()))))
     parent_identities = {}
     if destination is None:
         # Validate explicit settings without tempfile's probing/fallback writes.
@@ -2786,8 +2795,8 @@ def write_outputs(values, destination=None, workspace=ROOT, input_path=None):
         parent = safe_path(parent if parent is not None else tempfile.gettempdir(), directory=True,
                            directory_identities=parent_identities)
         require(not parent.is_relative_to(workspace), 'Output must be outside checkout')
-        if input_path is not None:
-            require(not parent.is_relative_to(input_path), 'Output overlaps input')
+        for boundary in boundaries:
+            require(not parent.is_relative_to(boundary), 'Output overlaps input')
     else:
         destination = Path(destination).absolute()
         parent = safe_path(destination.parent, directory=True, directory_identities=parent_identities)
@@ -2795,10 +2804,11 @@ def write_outputs(values, destination=None, workspace=ROOT, input_path=None):
     if destination is not None:
         safe_path(destination, directory=True, missing=True)
         require(not destination.is_relative_to(workspace) and destination != workspace, 'Output must be outside checkout')
-        if input_path is not None:
-            require(not destination.is_relative_to(input_path) and not input_path.is_relative_to(destination), 'Output overlaps input')
+        for boundary in boundaries:
+            require(not destination.is_relative_to(boundary) and not boundary.is_relative_to(destination),
+                    'Output overlaps input')
     forbidden_directories = set()
-    for boundary in (workspace, input_path):
+    for boundary in (workspace, *boundaries):
         if boundary is not None and boundary.exists():
             info = boundary.lstat()
             if stat.S_ISDIR(info.st_mode): forbidden_directories.add((info.st_dev, info.st_ino))
