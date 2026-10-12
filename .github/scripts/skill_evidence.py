@@ -2582,6 +2582,19 @@ def static_scanner(value):
     return value
 
 
+def static_check(scanner, value):
+    """Retain the rule ID from the pinned SECURITY pattern-label formatter."""
+    if value is None:
+        return None
+    require(type(value) is str, 'Invalid static check identity')
+    if scanner == 'SECURITY':
+        match = re.fullmatch(r'[\x21-\x7e][\x20-\x7e]* \(([A-Za-z0-9][A-Za-z0-9._+~:-]{0,127})\)', value)
+        if match:
+            value = match[1]
+    token(value)
+    return value
+
+
 def normalize_static(root, name, workspace=ROOT):
     directory_identities = {}
     directory_states = {}
@@ -2695,8 +2708,9 @@ def normalize_static(root, name, workspace=ROOT):
                 relative(member)
             except ValueError:
                 member = None  # Never publish an artifact-supplied absolute path.
-            check = finding.get('check_name') or None
-            data['findings'].append({'scanner': static_scanner(scan['validator']), 'severity': finding['severity'],
+            scanner = static_scanner(scan['validator'])
+            check = static_check(scanner, finding.get('check_name') or None)
+            data['findings'].append({'scanner': scanner, 'severity': finding['severity'],
                 'check': check, 'member': member, 'line': finding.get('line_number'), 'reference': finding_ref['id']})
     require(set(native['incomplete_scans']) == recorded_incomplete, 'Inconsistent incomplete scanner identity')
     incomplete = any(s['status'] in ('incomplete', 'skipped') for s in data['scans'])

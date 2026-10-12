@@ -1,12 +1,14 @@
 """Offline integration of native inputs with the public artifact handoff."""
 
 import copy
+import hashlib
 from contextlib import redirect_stdout
 from datetime import datetime, timezone
 from io import StringIO
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -138,6 +140,49 @@ class PublicReportsTests(unittest.TestCase):
             with self.assertRaises(ValueError), redirect_stdout(StringIO()):
                 reports.public_quality(self.workspace, native, out)
             self.assertFalse(out.exists())
+
+    def test_security_labels_public_quality_cli_preserves_rules_and_native_references(self):
+        native = self.static(('podman',)); path = next((native / 'reports/podman').glob('*.json'))
+        value = evidence.read_json(path); scan = value['results'][0]; scan['validator'] = 'Security Scan'
+        labels = ['Hidden Instructions (P2)', 'Self-Modification (RA1)', 'Session Persistence (RA2)',
+                  'Unrestricted Tool Access (EA1)', 'Privileged Container / Container Escape (PE5)', 'synthetic_rule']
+        scan['findings'] = [dict(scan['findings'][0], check_name=label) for label in labels]
+        scan['summary'].update(high_count=len(labels), errors=len(labels))
+        value['severity_counts']['high'] = len(labels); value['total_errors'] = len(labels)
+        write(path, value); original = path.read_bytes(); out = self.root / 'public'
+        result = subprocess.run([sys.executable, str(REPO / '.github/scripts/skill_reports.py'),
+            'public-quality', str(native), str(out)], env={**os.environ, 'GITHUB_WORKSPACE': str(self.workspace)},
+            capture_output=True, text=True, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        public = evidence.read_json(out / self.bundle(out)[1])
+        self.assertEqual([f['check'] for f in public['findings']], ['P2', 'RA1', 'RA2', 'EA1', 'PE5', 'synthetic_rule'])
+        self.assertEqual(public['availability']['status'], 'incomplete')
+        self.assertEqual(public['scans'][0]['severity_counts'], value['severity_counts'])
+        self.assertEqual(public['scans'][0]['status'], value['overall_status'])
+        self.assertFalse(public['scans'][0]['passed'])
+        references = {ref['id']: ref for ref in public['references']}
+        for index, finding in enumerate(public['findings']):
+            ref = references[finding['reference']]
+            self.assertEqual(ref['digest'], 'sha256:' + hashlib.sha256(original).hexdigest())
+            self.assertEqual(ref['locator'], ['results', 0, 'findings', index])
+        self.assertEqual(path.read_bytes(), original)
+        self.assertNotIn('Hidden Instructions', json.dumps(public))
+
+    def test_malformed_security_labels_reject_and_cleanup_public_quality(self):
+        native = self.static(('podman',)); path = next((native / 'reports/podman').glob('*.json'))
+        value = evidence.read_json(path); value['results'][0]['validator'] = 'Security Scan'
+        for label in ('Unidentified prose', 'Hidden Instructions (?)', 'Hidden Instructions (../P2)',
+                      'Hidden Instructions (P2) trailing', 'Hidden\nInstructions (P2)',
+                      'Hidden\x00Instructions (P2)', 'Hidden Instructions (' + 'P' * 129 + ')'):
+            with self.subTest(label=label):
+                value['results'][0]['findings'][0]['check_name'] = label; write(path, value)
+                out = self.root / 'rejected'
+                with self.assertRaises(ValueError): reports.public_quality(self.workspace, native, out)
+                self.assertFalse(out.exists())
+        value['results'][0]['validator'] = 'SECRETS'
+        value['results'][0]['findings'][0]['check_name'] = 'Hidden Instructions (P2)'; write(path, value)
+        with self.assertRaises(ValueError): reports.public_quality(self.workspace, native, self.root / 'rejected')
+        self.assertFalse((self.root / 'rejected').exists())
 
     def test_failure_after_first_static_report_cleans_owned_staging(self):
         native = self.static(); next((native / 'reports/zeta').glob('*.json')).write_text('{')
@@ -425,7 +470,7 @@ class PublicWorkflowTests(unittest.TestCase):
         evaluation = next(step for step in steps if step.get('id') == 'evaluation')
         self.assertFalse(evaluation.get('continue-on-error', False))
         reporting = [step for step in steps if step.get('id', '').startswith('public-') or step['name'] == 'Report public evidence handoff status']
-        self.assertEqual(len(reporting), 3); self.assertTrue(all(step['continue-on-error'] for step in reporting))
+        self.assertEqual(len(reporting), 4); self.assertTrue(all(step['continue-on-error'] for step in reporting))
         history = workflow['jobs']['publish-history']
         self.assertIn("needs.evaluate.result == 'success'", history['if'])
         self.assertNotIn('public-', history['if'])
@@ -436,15 +481,70 @@ class PublicWorkflowTests(unittest.TestCase):
         self.assertNotIn('steps.evaluation.outcome', generation['if'])
         self.assertNotIn('success()', generation['if'])
 
+    def test_public_uploads_require_integrity_after_generation_and_native_integrity(self):
+        quality, benchmark = self.workflows()
+        for workflow, job, command in ((quality, 'skill-quality', 'public-quality'),
+                                        (benchmark, 'evaluate', 'public-benchmark')):
+            steps = workflow['jobs'][job]['steps']
+            by_id = {step['id']: step for step in steps if 'id' in step}
+            generation = by_id[command]; integrity = by_id[command + '-integrity']
+            upload = next(step for step in steps if step.get('with', {}).get('name', '').startswith('skill-' + command + '-'))
+            self.assertLess(steps.index(generation), steps.index(integrity))
+            self.assertLess(steps.index(integrity), steps.index(upload))
+            self.assertTrue(integrity['if'].startswith('always()'))
+            required = [command, command + '-integrity']
+            if command == 'public-benchmark':
+                required.append('checkout-integrity')
+                native_integrity = by_id['checkout-integrity']
+                self.assertFalse(native_integrity.get('continue-on-error', False))
+                self.assertLess(steps.index(native_integrity), steps.index(generation))
+                self.assertTrue(integrity['continue-on-error']); self.assertEqual(integrity['timeout-minutes'], 1)
+            else:
+                self.assertFalse(integrity.get('continue-on-error', False))
+            # Restrict the actual YAML expression to the complete conjunction; no alternate bypass.
+            self.assertEqual(upload['if'], 'always() && ' + ' && '.join(
+                f"steps.{name}.outcome == 'success'" for name in required))
+            conditions = re.findall(r"steps\.([\w-]+)\.outcome == 'success'", upload['if'])
+            for failed in required:
+                for outcome in ('failure', 'skipped', 'cancelled', ''):
+                    outcomes = dict.fromkeys(required, 'success'); outcomes[failed] = outcome
+                    self.assertFalse(all(outcomes[name] == 'success' for name in conditions))
+
+    def test_integrity_shell_detects_tracked_staged_untracked_and_ignored_changes(self):
+        quality, benchmark = self.workflows()
+        checks = [step for workflow, job in ((quality, 'skill-quality'), (benchmark, 'evaluate'))
+                  for step in workflow['jobs'][job]['steps']
+                  if step.get('id') in ('checkout-integrity', 'public-quality-integrity', 'public-benchmark-integrity')]
+        self.assertEqual(len(checks), 3)
+        for check in checks:
+            for mutation in ('clean', 'tracked', 'staged', 'untracked', 'ignored'):
+                with self.subTest(check=check['id'], mutation=mutation), tempfile.TemporaryDirectory() as temp:
+                    checkout = Path(temp)
+                    def git(*args):
+                        return subprocess.run(['git', *args], cwd=checkout, capture_output=True, text=True,
+                                              check=True, timeout=10)
+                    git('init', '--quiet'); (checkout / 'SKILL.md').write_text('original\n')
+                    (checkout / '.gitignore').write_text('ignored\n'); git('add', '.')
+                    git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '--quiet', '-m', 'fixture')
+                    if mutation in ('tracked', 'staged'):
+                        (checkout / 'SKILL.md').write_text('changed\n')
+                        if mutation == 'staged': git('add', 'SKILL.md')
+                    if mutation in ('untracked', 'ignored'): (checkout / mutation).write_text('changed\n')
+                    result = subprocess.run(['bash', '-e', '-c', check['run']], cwd=checkout,
+                                            capture_output=True, text=True, timeout=10)
+                    self.assertEqual(result.returncode == 0, mutation == 'clean')
+
     def test_status_shell_warns_on_generation_or_upload_failure(self):
         _, workflow = self.workflows()
         status = next(step for step in workflow['jobs']['evaluate']['steps'] if step['name'] == 'Report public evidence handoff status')
         with tempfile.TemporaryDirectory() as temp:
-            for generation, upload in (('success', 'success'), ('failure', 'skipped'), ('success', 'failure'), ('skipped', 'skipped')):
+            for generation, integrity, upload in (('success', 'success', 'success'), ('failure', 'skipped', 'skipped'),
+                                                 ('success', 'success', 'failure'), ('skipped', 'skipped', 'skipped'),
+                                                 ('success', 'failure', 'skipped'), ('success', 'skipped', 'skipped')):
                 summary = Path(temp) / 'summary'; summary.write_text('')
                 result = subprocess.run(['bash', '-e', '-c', status['run']], env={**os.environ,
                     'GITHUB_STEP_SUMMARY': str(summary), 'PUBLIC_GENERATION_OUTCOME': generation,
-                    'PUBLIC_UPLOAD_OUTCOME': upload}, capture_output=True, text=True, timeout=10)
+                    'PUBLIC_INTEGRITY_OUTCOME': integrity, 'PUBLIC_UPLOAD_OUTCOME': upload}, capture_output=True, text=True, timeout=10)
                 self.assertEqual(result.returncode, 0)
                 if (generation, upload) == ('success', 'success'):
                     self.assertIn('uploaded', summary.read_text()); self.assertNotIn('::warning::', result.stdout)

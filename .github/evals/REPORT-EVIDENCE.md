@@ -150,6 +150,12 @@ scanner identifiers (`SCHEMA`, `VERSION`, `SECURITY`, `PII`, `LICENSE`,
 `CODE_RISK`, `SECRETS`, `HYGIENE`, `UNICODE`). Existing token identifiers pass
 through unchanged; unrecognized free-text titles reject. Scan and finding
 references still bind their original native report positions and bytes.
+SECURITY findings formatted by the pinned evaluator as `pattern (rule-id)`
+publish only the validated rule identifier, for example `P2` from
+`Hidden Instructions (P2)`. Existing token check names remain unchanged;
+malformed identifiers, control characters, and other free-text check names
+reject. The display label remains available through the original native
+finding reference rather than becoming public prose.
 
 Representative offline commands, run from the checkout with the existing
 evaluator environment, are:
@@ -212,14 +218,19 @@ The quality workflow records its actual checked-out repository and revision
 through the pinned evaluator's source-provenance flags during collection. After
 catalog handling it generates public reports, including valid incomplete scans.
 Reporting errors fail the quality job; the existing diagnostic upload remains
-unconditional. The public artifact is named
+unconditional. After generation, checkout integrity must pass before public
+upload; a failed or skipped integrity check prevents publication even when
+generation succeeded. The public artifact is named
 `skill-public-quality-<workflow-run>-<attempt>` and retained for 14 days.
 
 The benchmark workflow generates public reports after the existing diagnostic
 and standard-metric uploads, including supported recovered incomplete runs.
 Generation and upload each have a three-minute timeout and are advisory.
-Upload is gated on generation's original `outcome == 'success'`, so a failed
-step's successful advisory conclusion cannot publish partial output. Failures
+An advisory one-minute checkout-integrity check follows public generation.
+Upload requires successful outcomes from generation, this final check, and
+the existing blocking native checkout-integrity check. Gates use original
+`outcome` values, so a failed step's successful advisory conclusion cannot
+publish partial or changed-source output. Failures
 or skipped reporting generate a warning and summary status; reporting errors
 preserve native history eligibility. Native evaluation failures remain blocking.
 The artifact is named
