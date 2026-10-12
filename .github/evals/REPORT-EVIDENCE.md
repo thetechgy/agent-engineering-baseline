@@ -1306,8 +1306,10 @@ satisfy the qualitative-support gate merely through its descriptor label.
 
 Kinds are `agent_behavior`, `evaluator_judgment`, `native_suggestion`, and
 `analyst_interpretation`. Suggestions require a suggestions/recommendations/
-improvements locator. Suggestions and interpretations may have a null observation
-for run-level support. Their presence does not establish observed behavior.
+improvements locator and reject behavior carriers, including agent-generated
+suggestions nested beneath agent output. Genuine grader suggestion paths remain
+supported. Suggestions and interpretations may have a null observation for
+run-level support. Their presence does not establish observed behavior.
 A judgment object with a score must agree with its bound native observation;
 contradictory score carriers reject. Other contradiction claims remain semantic
 judgments for human review, never reconciled by silently choosing a grader.
@@ -1382,7 +1384,8 @@ A specific skill change requires verified source citations for every proposed
 member and trial-bound with-skill behavior. Numeric regressions and evaluator
 opinions alone cannot meet that gate. Evaluation/grader changes marked sufficient
 require qualitative behavior or evaluator evidence; absent support restricts them
-to investigation. Investigation explicitly declares investigation-only sufficiency.
+to investigation. Top-level investigation assessments and investigation
+recommendations explicitly declare investigation-only sufficiency.
 Skill validation plans must compare current skill, candidate skill and no-skill
 baseline, retaining previously passing cases and mandatory safety gates, plus
 negative controls and fresh realistic cases. These plans propose validation;

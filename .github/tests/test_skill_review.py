@@ -489,6 +489,7 @@ class ReviewTests(unittest.TestCase):
         value = judgment(context, category="modify_skill")
         inconsistent = copy.deepcopy(value)
         inconsistent["assessment"]["disposition"] = "investigate"
+        inconsistent["assessment"]["sufficiency"]["conclusion"] = "investigation_only"
         with self.assertRaisesRegex(ValueError, "contradicts assessment"):
             review.validate_judgment(inconsistent, context)
         value["recommendations"][0]["validation"]["negative_controls"] = False
@@ -1142,6 +1143,36 @@ class ReviewTests(unittest.TestCase):
             rec["citations"].append(citation(context, "evaluator_judgment"))
             rec["sufficiency"]["conclusion"] = "sufficient"
             review.validate_judgment(value, context)
+
+    def test_investigation_assessment_cannot_claim_sufficient_evidence(self):
+        context = self.control()
+        value = judgment(context, category="investigate")
+        value["assessment"]["sufficiency"]["conclusion"] = "sufficient"
+        with self.assertRaisesRegex(ValueError, "Investigation assessment overclaims sufficiency"):
+            review.validate_judgment(value, context)
+        calls, run = self.invoke(context, value)
+        with self.assertRaisesRegex(ValueError, "Inference rejected"):
+            asyncio.run(run())
+        self.assertEqual(len(calls), 2)
+        _, run = self.invoke(context, judgment(context, category="investigate"))
+        report = asyncio.run(run())
+        report["judgment"]["assessment"]["sufficiency"]["conclusion"] = "sufficient"
+        with self.assertRaisesRegex(ValueError, "Investigation assessment overclaims sufficiency"):
+            review.validate_review(report, context)
+
+    def test_native_suggestions_cannot_use_behavior_carriers(self):
+        self.control(agent_output={"suggestions": ["An agent-proposed change."]})
+        descriptor = evidence.read_json(self.root / "support/support.json")
+        descriptor["items"] = [{**descriptor["items"][1], "locator": ["agent_output", "suggestions", 0]}]
+        write(self.root / "support/support.json", descriptor)
+        with self.assertRaisesRegex(ValueError, "Suggestion locator required"):
+            review.prepare([Path(self.args[1])], Path(self.args[3]), "podman", self.args[7],
+                           self.root / "source", self.root / "support")
+        descriptor["items"][0]["locator"] = ["suggestions", 0]
+        write(self.root / "support/support.json", descriptor)
+        genuine = review.prepare([Path(self.args[1])], Path(self.args[3]), "podman", self.args[7],
+                                 self.root / "source", self.root / "support")
+        review.validate_judgment(judgment(genuine), genuine)
 
     def test_returned_model_must_match_requested_model(self):
         context = self.control()

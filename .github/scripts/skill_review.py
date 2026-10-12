@@ -539,7 +539,8 @@ def support_context(root, records, capture):
             )
         if item["kind"] == "native_suggestion":
             require(
-                any(key in locator for key in SUGGESTION_CARRIERS),
+                any(key in locator for key in SUGGESTION_CARRIERS)
+                and not any(key in locator for key in BEHAVIOR_CARRIERS),
                 "Suggestion locator required",
             )
         if item["kind"] == "evaluator_judgment":
@@ -739,6 +740,11 @@ def validate_judgment(value, context):
         context,
         action=judgment.assessment.disposition == "skill_change",
     )
+    if judgment.assessment.disposition == "investigate":
+        require(
+            judgment.assessment.sufficiency.conclusion == "investigation_only",
+            "Investigation assessment overclaims sufficiency",
+        )
     expected = {row["id"] for row in context.value["qualitative"] if row["kind"] == "native_suggestion"}
     actual = [row.evidence_id for row in judgment.native_suggestions]
     require(set(actual) == expected and len(actual) == len(expected), "Native suggestion coverage mismatch")
