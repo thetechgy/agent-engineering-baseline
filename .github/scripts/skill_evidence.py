@@ -2682,11 +2682,15 @@ def write_outputs(values, destination=None, workspace=ROOT, input_path=None):
         else:
             os.mkdir(destination.name, mode=0o700, dir_fd=parent_fd)
         created = os.stat(destination.name, dir_fd=parent_fd, follow_symlinks=False)
-        require(stat.S_ISDIR(created.st_mode), 'Output directory changed')
-        directory_fd = os.open(destination.name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent_fd)
+        reserved = (stat.S_ISDIR(created.st_mode)
+                    and (created.st_dev, created.st_ino) not in forbidden_directories
+                    and created.st_uid == os.geteuid() and not created.st_mode & 0o077)
+        directory_fd = None
         owned = False
         members = []
         try:
+            require(reserved, 'Output directory changed')
+            directory_fd = os.open(destination.name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent_fd)
             original = os.fstat(directory_fd)
             require((original.st_dev, original.st_ino) == (created.st_dev, created.st_ino)
                     and (original.st_dev, original.st_ino) not in forbidden_directories
@@ -2718,12 +2722,18 @@ def write_outputs(values, destination=None, workspace=ROOT, input_path=None):
                         os.unlink(name, dir_fd=directory_fd)
                     except FileNotFoundError:
                         pass
-                current = os.stat(destination.name, dir_fd=parent_fd, follow_symlinks=False)
-                if stat.S_ISDIR(current.st_mode) and (current.st_dev, current.st_ino) == (original.st_dev, original.st_ino):
-                    os.rmdir(destination.name, dir_fd=parent_fd)
+            if reserved:
+                # Descriptor acquisition/validation can fail before owned is set.
+                # The anchored parent still identifies the empty reservation.
+                try:
+                    current = os.stat(destination.name, dir_fd=parent_fd, follow_symlinks=False)
+                    if stat.S_ISDIR(current.st_mode) and (current.st_dev, current.st_ino) == (created.st_dev, created.st_ino):
+                        os.rmdir(destination.name, dir_fd=parent_fd)
+                except OSError:
+                    pass  # Preserve the rejection if removed, replaced or no longer empty.
             raise
         finally:
-            os.close(directory_fd)
+            if directory_fd is not None: os.close(directory_fd)
     finally:
         os.close(parent_fd)
     return destination

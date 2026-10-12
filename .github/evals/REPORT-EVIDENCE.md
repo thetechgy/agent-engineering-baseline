@@ -67,7 +67,10 @@ If output member creation, writing or flushing fails after validating the new
 directory, publication removes only its created members through the retained
 descriptor and removes the destination only while its original identity matches.
 Ordinary failures leave no partial temporary output and allow an explicit-path
-retry; cleanup never follows or removes a replacement destination.
+retry; cleanup never follows or removes a replacement destination. If opening
+or validating the new directory descriptor fails, cleanup uses the retained
+parent descriptor and captured directory identity to remove the still-empty
+reservation. A missing or replaced destination preserves the original rejection.
 This path is verified on Linux; Windows output support is not established.
 Input files use the same no-follow ancestor traversal and open the final member
 relative to its parent descriptor. Replacing an ancestor cannot redirect input

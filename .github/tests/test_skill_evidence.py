@@ -4153,7 +4153,7 @@ class EvidenceTests(unittest.TestCase):
                 self.assertEqual(self.snapshot(workspace), before_workspace)
 
     def test_failed_normalization_publication_cleans_outputs_and_allows_retry(self):
-        for temporary, failure in itertools.product((False, True), ('open', 'write', 'flush')):
+        for temporary, failure in itertools.product((False, True), ('directory_open', 'directory_stat', 'directory_list', 'open', 'write', 'flush')):
             with self.subTest(temporary=temporary, failure=failure), tempfile.TemporaryDirectory() as temp:
                 parent = Path(temp); root = parent / 'native'
                 shutil.copytree(FIXTURES / 'static-synthetic', root)
@@ -4161,15 +4161,28 @@ class EvidenceTests(unittest.TestCase):
                 destination = output_parent / 'explicit'; before = self.snapshot(root)
                 args = ['normalize', '--kind', 'static', '--skill', 'podman', '--input', str(root)]
                 if not temporary: args += ['--output', str(destination)]
-                opened = os.open; fdopen = os.fdopen; output_fds = set(); attempted = []
+                opened = os.open; fdopen = os.fdopen; fstat = os.fstat; listdir = os.listdir
+                output_fds = set(); directory_fds = set(); attempted = []
                 def failing_open(path, flags, *args, **kwargs):
+                    output_directory = flags & os.O_DIRECTORY and (str(path) == 'explicit' or str(path).startswith('skill-evidence-'))
+                    if output_directory and failure == 'directory_open':
+                        raise OSError(24, 'Synthetic output directory descriptor limit')
                     if flags & os.O_CREAT:
                         attempted.append(str(path))
                         if str(path) == 'public-report.json' and failure == 'open':
                             raise OSError('Synthetic output open failure')
                     fd = opened(path, flags, *args, **kwargs)
+                    if output_directory: directory_fds.add(fd)
                     if flags & os.O_CREAT and str(path) == 'public-report.json': output_fds.add(fd)
                     return fd
+                def failing_stat(fd):
+                    if fd in directory_fds and failure == 'directory_stat':
+                        raise OSError('Synthetic output directory stat failure')
+                    return fstat(fd)
+                def failing_list(path):
+                    if isinstance(path, int) and path in directory_fds and failure == 'directory_list':
+                        raise OSError(24, 'Synthetic output directory listing descriptor limit')
+                    return listdir(path)
                 class FailingStream:
                     def __init__(self, stream): self.stream = stream
                     def __enter__(self): return self
@@ -4189,9 +4202,11 @@ class EvidenceTests(unittest.TestCase):
                 with patch.dict(os.environ, {'TMPDIR': str(output_parent)}), \
                         patch.object(os, 'open', side_effect=failing_open), \
                         patch.object(os, 'fdopen', side_effect=failing_stream), \
+                        patch.object(os, 'fstat', side_effect=failing_stat), \
+                        patch.object(os, 'listdir', side_effect=failing_list), \
                         self.assertRaisesRegex(OSError, 'Synthetic output'), redirect_stdout(StringIO()):
                     evidence.main(args)
-                self.assertEqual(attempted, ['evidence.json', 'public-report.json'])
+                self.assertEqual(attempted, [] if failure.startswith('directory_') else ['evidence.json', 'public-report.json'])
                 self.assertEqual(list(output_parent.iterdir()), []); self.assertEqual(self.snapshot(root), before)
                 stdout = StringIO()
                 with patch.dict(os.environ, {'TMPDIR': str(output_parent)}), redirect_stdout(stdout): evidence.main(args)
@@ -4199,6 +4214,27 @@ class EvidenceTests(unittest.TestCase):
                 self.assertEqual({p.name for p in output.iterdir()}, {'evidence.json', 'public-report.json'})
                 for path in output.iterdir(): self.assertEqual(path.read_bytes(), evidence.encoded(evidence.read_json(path)))
                 self.assertEqual(self.snapshot(root), before)
+
+    def test_output_descriptor_failure_preserves_replacement_directories(self):
+        for temporary, replacement in itertools.product((False, True), ('directory', 'symlink', 'removed')):
+            with self.subTest(temporary=temporary, replacement=replacement), tempfile.TemporaryDirectory() as temp:
+                parent = Path(temp); retained = parent / 'retained'; target = parent / 'target'; target.mkdir(mode=0o700)
+                destination = parent / 'explicit'; opened = os.open; replaced = False
+                def failing_open(path, flags, *args, **kwargs):
+                    nonlocal replaced, destination
+                    if flags & os.O_DIRECTORY and (str(path) == 'explicit' or str(path).startswith('skill-evidence-')):
+                        destination = parent / str(path); destination.rename(retained); replaced = True
+                        if replacement == 'directory': target.rename(destination)
+                        elif replacement == 'symlink': destination.symlink_to(target, target_is_directory=True)
+                        raise OSError(24, 'Synthetic descriptor limit')
+                    return opened(path, flags, *args, **kwargs)
+                with patch.object(os, 'open', side_effect=failing_open), patch.dict(os.environ, {'TMPDIR': str(parent)}):
+                    with self.assertRaisesRegex(OSError, 'Synthetic descriptor limit'):
+                        evidence.write_outputs({'evidence.json': {}}, None if temporary else destination)
+                self.assertTrue(replaced); self.assertEqual(list(retained.iterdir()), [])
+                if replacement == 'directory': self.assertTrue(destination.is_dir()); self.assertEqual(list(destination.iterdir()), [])
+                elif replacement == 'symlink': self.assertTrue(destination.is_symlink()); self.assertEqual(list(target.iterdir()), [])
+                else: self.assertFalse(destination.exists())
 
     def test_relocatable_output_parents_reject_before_writes(self):
         for temporary, component in itertools.product((False, True), ('parent', 'ancestor')):
