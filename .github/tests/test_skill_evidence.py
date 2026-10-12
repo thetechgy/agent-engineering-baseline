@@ -5636,5 +5636,40 @@ class EvidenceTests(unittest.TestCase):
                 self.assertEqual(self.snapshot(repo), before)
 
 
+class RenderedOutputTests(unittest.TestCase):
+    """The analysis writer extension preserves JSON callers and publication isolation."""
+
+    def test_rendered_bytes_and_multiple_input_boundaries(self):
+        with tempfile.TemporaryDirectory() as temp:
+            parent = Path(temp); workspace = parent / 'checkout'; workspace.mkdir()
+            roots = (parent / 'first', parent / 'second')
+            for root in roots: root.mkdir()
+            for root in roots:
+                with self.assertRaisesRegex(ValueError, 'Output overlaps input'):
+                    evidence.write_outputs({}, root / 'out', workspace, input_paths=roots,
+                                           rendered={'summary.md': b'# Fixed summary\n'})
+                with patch.dict(os.environ, {'TMPDIR': str(root)}), self.assertRaisesRegex(ValueError, 'Output overlaps input'):
+                    evidence.write_outputs({}, workspace=workspace, input_paths=roots)
+            output = parent / 'out'; calls = []
+            evidence.write_outputs({'analysis.json': {'schema_version': 1}}, output, workspace,
+                                   input_paths=roots, input_guards=(lambda: calls.append('checked'),),
+                                   rendered={'summary.md': b'# Fixed summary\n'})
+            self.assertEqual(calls, ['checked', 'checked'])
+            self.assertEqual((output / 'analysis.json').read_bytes(), evidence.encoded({'schema_version': 1}))
+            self.assertEqual((output / 'summary.md').read_bytes(), b'# Fixed summary\n')
+            self.assertEqual(output.stat().st_mode & 0o777, 0o700)
+            self.assertTrue(all(member.stat().st_mode & 0o777 == 0o600 for member in output.iterdir()))
+
+    def test_invalid_rendered_members_reject_before_reservation(self):
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp) / 'out'
+            for values, rendered in (({}, {'summary.md': 'not bytes'}),
+                                     ({'same.json': {}}, {'same.json': b'overlap'}),
+                                     ({}, {'nested/summary.md': b'unsafe'})):
+                with self.assertRaises(ValueError):
+                    evidence.write_outputs(values, output, rendered=rendered)
+                self.assertFalse(output.exists())
+
+
 if __name__ == '__main__':
     unittest.main()

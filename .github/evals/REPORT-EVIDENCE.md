@@ -880,8 +880,249 @@ Before later artifact cleanup, retain needed trial evidence and exact source
 content outside the checkout/public report, or mark references unavailable. The
 durable retention of qualitative evidence remains a later design concern; this
 public handoff does not claim to retain it or recover unavailable bytes. This
-change supplies a manifest and retrieval contract, not an
-archive service, retention operation, analyst, analysis, comparisons,
-recommendations, reporting UI, or raw-evidence publication. Evaluator/scoring
+public handoff supplies a manifest and retrieval contract. The bounded offline
+analyzer below consumes those records separately. Archive services, retention
+operations, expert diagnosis, skill recommendations, reporting UI, and raw-evidence
+publication remain outside these contracts. Evaluator/scoring
 semantics, paid invocation, native diagnostic uploads/retention, managed skills,
 published metrics, and `gh-pages` remain unchanged by the public artifact handoff.
+
+## Bounded offline analysis (issue #58)
+
+`skill_analysis.py` consumes the validated public bundles produced above. It
+reads data only: no history lookup, “latest” selection, network, inference,
+graders, scanners, subprocesses, skill edits, or publication. Public schema v1,
+native scoring, APM artifacts, workflows, artifact handoff, and history publishing
+remain unchanged. Use the existing pinned evaluator Python; no dependency is added.
+
+```bash
+"$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_analysis.py \
+  --input /tmp/public-quality \
+  --input /tmp/public-benchmark \
+  --output /tmp/new-analysis
+```
+
+Every input root must contain an inventory. Accepted layouts are:
+
+- Public artifact bundle: `inventory/inventory.json` and zero or more
+  `skills/<skill>/static/public-report.json` or
+  `skills/<skill>/behavioral/<run>/public-report.json` members.
+- Flat single-record bundle: `inventory.json` and an optional `public-report.json`.
+  This permits combining a separately produced inventory and public projection.
+  Do not include private `evidence.json` or native reports in this directory.
+
+Other files, unexpected empty directories, filename/record skill, kind or run
+mismatches, missing inventories, and reports without an accompanying inventory
+skill reject. Inventory revision/content/suite snapshots are configuration
+context; an accompanying historical report may name different revisions or
+conditions. No “current” or “latest” snapshot is selected. Distinct snapshots are
+retained separately. Identical semantic records deduplicate across roots without
+increasing trial or run counts. Conflicting records for a behavioral skill/run or
+an original static artifact/member reject, including inconsistent measurements
+or support claims. Unmeasured records without a run remain configuration evidence.
+
+The analyzer permits at most 32 supplied roots, 128 unique public reports,
+1,000 distinct skills and 100,000 aggregate scanned entries, including directories.
+Overlapping roots reject; repeated identical roots collapse after the supplied-root
+limit check. All captured bytes share the existing 64 MiB operation budget and
+8 MiB per-member read bound. Existing public-record bounds also apply, including
+1 MiB per public report, 1,000 cases, 10,000 observations, and reference/scan limits.
+Malformed, unsafe, credential-pattern-bearing, conflicting, and oversized inputs
+reject without truncation. Supplied roots and their members remain read-only.
+
+The CLI prints a new directory containing exactly `analysis.json` and `summary.md`.
+Omitting `--output` uses a private temporary directory. Existing secure writer
+rules protect every input root, the checkout, ancestor ownership, no-follow reads
+and writes, private permissions, new destinations, and cleanup. Capture guards
+are checked before allocation and after both streams close. JSON output is capped
+at 64 MiB and Markdown at 1 MiB; exceeding either rejects before publication.
+Contract failures return exit status 1 with a fixed message that excludes input
+content and paths. Unsupported descriptor platforms reject; Linux publication
+is tested. This does not establish Windows output support.
+
+### Analysis schema and identity
+
+The analysis schema is independently versioned (`schema_version: 1`), with method
+`bounded-descriptive-skill-analysis/1`. It is a closed projection, validated by
+exact canonical recomputation from the captured public record index. Unknown or
+extra fields at any level, changed values, or dangling links reject. Top-level
+fields are:
+
+| Field | Contract |
+| --- | --- |
+| `schema_version`, `method_version` | Analysis schema and calculation/template method identities, independent of public schema v1. |
+| `input_provenance` | Sorted manifests of relative artifact members, exact raw-byte SHA-256, and semantic `record_id`. Each manifest's ID hashes its members. Duplicate identical manifests collapse. |
+| `record_index` | One compact row per semantic record: `id`, `kind`, `skill`, `run_id`. Inventory rows have null skill/run. |
+| `skills` | Sorted skill rows containing separate `configurations`, `static_results`, `behavioral_results`, `comparison_status`, and bounded `comparisons`. |
+| `comparison_scope` | Eligible, maximum, and performed pair counts and explicit scope limitations. |
+| `findings` | Stable, typed evidence-backed findings, ordered by semantic ID. |
+
+Configuration context identifies source owner/origin/revision/lineage, content
+digest/provenance and configured suite digest/owner/path/case count, linked to
+inventory record IDs. It omits source manifests and case lists already supplied
+by the original records. Static results retain scanner status, blocking decisions,
+native severity counts and detailed findings separately; aggregate, scanner and
+detailed counts are never added together. Behavioral results retain native metrics,
+policy fields, attempt mode/maximum/stopping/threshold, model/judge/runtime, dataset
+identities, arm conditions, execution/error counts, expected/recorded/scored/unscored
+coverage, rubric counts and availability limitations. Competing source manifests
+are reduced to identity/context fields. Full records, source manifests, prompts,
+raw prose and unused reference tables are not embedded.
+
+Case rows retain canonical `case_id`, arm means, contributing observation IDs,
+reference IDs, with-minus-without differences, and explicit unavailable reasons.
+Derived quantities have decimal `value`, four-place `display`, and pre-display
+`direction` (`positive`, `negative`, `zero`). Decimal calculations use 400-digit
+intermediate precision and round-half-even display, preserving even the smallest
+validated float contribution beside a score of 1 through the bounded attempt
+means. This is descriptive arithmetic, not a change to evaluator scoring.
+
+Findings have `id`, `kind`, `skill`, `record_ids`, `case_ids`, `observation_ids`,
+`reference_ids`, `observed`, `uncertainty`, `importance`, and `next_step`. Kind and
+observed quantities come from fixed producers: case/run regressions, failed
+behavioral gates or blocking static checks, incomplete execution/scans, unavailable
+support, configured-unmeasured skills, and comparison limitations. Importance is
+`mandatory`, `investigate`, or `context`. Fixed next-step codes are
+`inspect_original_case_evidence`, `inspect_original_run_evidence`,
+`inspect_gate_evidence`, `inspect_original_scanner_evidence`,
+`complete_execution_and_reproject`, `complete_scans_and_reproject`,
+`retain_or_reacquire_exact_evidence`, `supply_model_backed_public_report`,
+`verify_benchmark_identities`, `supply_two_intended_runs`, and
+`supply_at_most_16_skill_pairs`. These are investigation/validation actions, not
+claims about causes or skill-edit recommendations. Links resolve through the
+retained public records; observations/references from different records are
+qualified by those record links.
+
+Raw provenance hashes cover exact captured bytes. All analytical record,
+configuration, pair and finding IDs use the existing canonical JSON identity
+function over validated values or analytical subjects. Raw hashes never select
+comparisons or influence analytical ordering or findings. Absolute input paths
+and generated timestamps are omitted. Input/discovery reordering is byte-identical.
+Harmless JSON whitespace/object-key reordering changes only raw provenance in
+`analysis.json`; semantic IDs, analytical sections, findings and `summary.md` stay
+unchanged. Arrays retain their public-record semantics.
+
+### Within-run interpretation
+
+The four native metrics retain their published names and values exactly:
+Skill Lift is a difference on the evaluator score scale; Effectiveness,
+Correctness and Discoverability are native rubric dimensions. None is reconstructed
+from trial scores. In the retained Podman example, native Skill Lift is `+0.1207`,
+while the arithmetic mean of published case differences is `0.12075`.
+
+Single-attempt cases require known, scored observations in both arms. Repeated
+cases compare descriptive arm means only when every planned ordinal is present
+and scored, and stopping is known nonadaptive. Missing scores/attempts, unknown
+maxima, and repeated adaptive or unknown stopping make the comparison unavailable.
+No experimental pairing of trials is inferred. A complete case in a partial run
+can remain descriptively comparable, with that run's limitations retained.
+Negative differences are identified before display rounding, so `-0.0000` can
+still denote a small observed regression. Rubric case passes and mandatory
+binary gates remain separate. Failed gates list component names and observation
+IDs prominently; missing gate evidence stays unknown. A rubric pass cannot mask
+a recorded gate failure. Static checks/scanner gaps are separate from performance.
+
+The historical fixture produces native `+0.1207`, 10/10 versus 8/10 rubric case
+passes, 10 matched cases, and 20 scored trials. Case 2 regresses by `-0.0346` and
+case 7 by `-0.0134` (with-minus-without). `gh` is configured with 24 cases and has
+no supplied model-backed measurement. These are supplied-evidence statements,
+not absence claims about the repository's entire history.
+
+Reference expiry or unavailable source support does not erase valid completed
+numeric observations. Stale reviewed-reference availability claims reject under
+existing public validation. Refresh such public projections using the existing
+native-to-public normalization/projection path, preserving scores and execution
+coverage while declaring expired/unavailable support. The analyzer does not
+rewrite or fetch stale evidence.
+
+### Bounded cross-run comparisons
+
+For each logical skill, exactly two distinct measured runs yield one pair.
+Fewer than two yield `insufficient_run_evidence`; more than two yield
+`comparison_limit_exceeded`, with no pairs enumerated and a request to supply
+the intended two runs. Configured-but-unmeasured records do not count as runs.
+If more than 16 skills otherwise have eligible pairs, **none** of the cross-run
+comparisons are computed. Individual analyses still succeed, and an invocation
+finding plus per-skill `invocation_comparison_limit_exceeded` statuses explain the
+limit. No arbitrary subset, chronology, trend, or historical “latest” is inferred.
+
+The CLI builds case/condition indexes once per report. Each accepted
+pair compares bounded condition fields and joins at most 1,000 canonical case IDs:
+at most 16 condition comparisons and 16,000 joined cases per invocation. Construction
+inside the validation boundary avoids a second comparison pass in the CLI.
+Independent validation of a saved result performs its own bounded calculation
+from captured originals.
+Endpoints sort by semantic record ID, and all numerical cross-run differences are
+explicitly **right-minus-left**, never labeled chronological improvement.
+
+| Classification | Interpretation |
+| --- | --- |
+| `directly_comparable` | Known compatible source origin/recorded lineage; complete numeric execution and ordinal coverage; matching dataset/cohort, supported scoring/evaluator/patch, model/judge, runtime, attempts, baseline, competitors, instructions, build, fixture and applicable conditions. Descriptive native and case differences are shown. |
+| `exploratory` | Essential scoring/dataset identities match, but unknown supplementary conditions or incomplete execution prevent controlled comparison. Individual results are shown side by side; cross-run numerical differences and improvement/trend verdicts are suppressed. |
+| `incompatible_or_unknown` | Essential identity is missing or conflicting, or a known material benchmark condition differs. Preserve individual results and explain unsupported comparison. |
+
+Essential fields include known run identity, authored/staged/cohort dataset
+digests and algorithm, evaluator revision, patch digest, metric set, grading,
+model/provider, attempt mode/maximum/stopping/threshold and judge enablement.
+Judge model/provider are required when enabled or unknown; a known disabled judge
+does not require inapplicable model/provider. Unsupported evaluator revisions
+reject before classification. Known condition differences are incompatible;
+missing supplementary conditions are exploratory. Target content/revision and
+`upstream_revision` may intentionally change and are not benchmark identities.
+Known source origins compare owner/repository/source path; ownership conversions
+require recorded lineage naming an exact original revision, or a shared recorded
+lineage. Names alone are insufficient. Unknown target content restricts direct
+comparison. Reference availability/expiry is not a benchmark condition.
+
+Default grading outside the `gh` suite compares native runtime/policy fields and both arms' workspace,
+competitors, instruction/build/fixture digests, environment, base-image mode and
+rubric threshold. Default grading does not require absent `gh` broker,
+authorization, task-build or competing-revision fields; additional supplied
+conditions are still compared. The `gh` suite and non-default grading require the custom grading
+identity and applicable deterministic-gate, fixture-boundary, authorization,
+task-source/build and competing-revision conditions. Public schema v1 has **no
+dedicated custom-grader content identity**, so custom grading, including `gh`,
+cannot currently qualify as direct. A grading label, target revision, or patch
+hash cannot substitute for that missing identity. Current producer gaps will
+legitimately restrict direct comparisons. Direct classification describes
+compatibility of recorded conditions; it does not prove causality or repeatability.
+
+### Independent validation and downstream evidence
+
+To validate a saved analysis, capture the exact original public bundles again:
+
+```python
+import json
+from pathlib import Path
+import skill_analysis  # .github/scripts on sys.path; pinned evaluator environment
+
+captured = skill_analysis.capture_inputs([Path('/tmp/public-quality'),
+                                         Path('/tmp/public-benchmark')])
+# Apply the documented 64 MiB analysis-file bound before this bounded read.
+with Path('/tmp/new-analysis/analysis.json').open('rb') as stream:
+    raw = stream.read(skill_analysis.JSON_LIMIT + 1)
+assert len(raw) <= skill_analysis.JSON_LIMIT
+result = json.loads(raw)
+skill_analysis.validate_analysis(result, captured)
+assert Path('/tmp/new-analysis/summary.md').read_bytes() == skill_analysis.render_summary(result)
+```
+
+`validate_analysis(result, validated_records)` revalidates public records and
+semantic IDs, verifies closed provenance/index membership, and recomputes the
+entire closed projection against those originals. It checks native values/types,
+arithmetic, denominators, gates, links, comparison selection/classification and
+findings.
+Passing `None` as the result constructs the authoritative validated projection;
+the CLI uses this mode to compute each pair once. For a saved result, always pass
+that result to request independent recomputation.
+
+Formatting-altered bundles retain semantic analyses but cannot validate
+an old raw provenance manifest as byte-identical input. An analysis alone does
+not carry enough data for independent semantic validation: retain or reacquire
+the exact public bundles named by its manifests. For qualitative expert analysis,
+also obtain the appropriate original trials/scanner evidence, exact target and
+competing source content, and recorded benchmark conditions, following the
+retrieval/digest/locator/source checks above. Never replace original evidence with
+today's source or another trial. Unavailable, expired, unretained or reconstructed
+support remains explicit. The summary is a fixed template from validated analysis,
+not expert causal diagnosis or a readiness assessment.
