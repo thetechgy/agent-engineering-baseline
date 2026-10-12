@@ -167,6 +167,7 @@ jobs:
             "$RUNNER_TEMP/skill-benchmark" "$BENCHMARK_SKILL" "$RUNNER_TEMP/skill-benchmark-artifact"
 
       - name: Verify evaluator left the checkout unchanged
+        id: checkout-integrity
         if: always()
         run: |
           git diff --exit-code
@@ -189,6 +190,54 @@ jobs:
           path: ${{ runner.temp }}/skill-metrics/metrics.json
           if-no-files-found: error
           retention-days: 30
+
+      - name: Generate validated public benchmark evidence
+        id: public-benchmark
+        if: always() && env.SKILL_EVALUATOR_PYTHON != '' && steps.selection.outcome == 'success'
+        timeout-minutes: 3
+        continue-on-error: true
+        run: |
+          "$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_reports.py public-benchmark \
+            "$RUNNER_TEMP/skill-benchmark" "$BENCHMARK_SKILL" "$BENCHMARK_MODE" "$RUNNER_TEMP/skill-public-benchmark"
+
+      - name: Verify public reporting left the checkout unchanged
+        id: public-benchmark-integrity
+        if: always() && steps.public-benchmark.outcome == 'success'
+        timeout-minutes: 1
+        continue-on-error: true
+        run: |
+          git diff --exit-code
+          test -z "$(git status --porcelain=v1 --untracked-files=all --ignored)"
+
+      - name: Upload validated public benchmark evidence
+        id: public-benchmark-upload
+        if: always() && steps.public-benchmark.outcome == 'success' && steps.public-benchmark-integrity.outcome == 'success' && steps.checkout-integrity.outcome == 'success'
+        timeout-minutes: 3
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: skill-public-benchmark-${{ steps.selection.outputs.skill }}-${{ inputs.mode }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/skill-public-benchmark/inventory/inventory.json
+            ${{ runner.temp }}/skill-public-benchmark/skills/*/behavioral/*/public-report.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Report public evidence handoff status
+        if: always()
+        timeout-minutes: 1
+        continue-on-error: true
+        env:
+          PUBLIC_GENERATION_OUTCOME: ${{ steps.public-benchmark.outcome }}
+          PUBLIC_INTEGRITY_OUTCOME: ${{ steps.public-benchmark-integrity.outcome }}
+          PUBLIC_UPLOAD_OUTCOME: ${{ steps.public-benchmark-upload.outcome }}
+        run: |
+          if [ "$PUBLIC_GENERATION_OUTCOME" = success ] && [ "$PUBLIC_INTEGRITY_OUTCOME" = success ] && [ "$PUBLIC_UPLOAD_OUTCOME" = success ]; then
+            echo 'Public benchmark evidence uploaded.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo '::warning::Public benchmark evidence unavailable; inspect the reporting step. Native history eligibility is unchanged.'
+            echo 'Public benchmark evidence unavailable (generation, integrity verification, or upload did not succeed).' >> "$GITHUB_STEP_SUMMARY"
+          fi
 
   publish-history:
     needs: evaluate

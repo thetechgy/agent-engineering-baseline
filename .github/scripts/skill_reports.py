@@ -9,6 +9,7 @@ import math
 import os
 from pathlib import Path
 import re
+import shutil
 import stat
 import sys
 
@@ -536,6 +537,123 @@ def benchmark_artifacts(workspace, root, name, destination):
     summary([f"Staged {copied} allowlisted files with upstream redaction; raw runtime directories are excluded."])
 
 
+def public_strings(value):
+    """Detect credential patterns without changing authenticated claims or keys."""
+    from skillevaluator.utils.redaction import redact_sensitive_text
+
+    if isinstance(value, str):
+        require(redact_sensitive_text(value) == value, "Credential pattern in public value")
+    elif isinstance(value, dict):
+        for item in value.values():
+            public_strings(item)
+    elif isinstance(value, list):
+        for item in value:
+            public_strings(item)
+
+
+def stage_public(workspace, root, destination, records):
+    """Reserve a private bundle; expose readiness only after exact-set validation."""
+    import skill_evidence as evidence
+
+    destination = Path(destination).absolute()
+    root = Path(root).absolute()
+    # The secure writer checks parents, ownership, freshness and input boundaries.
+    evidence.write_outputs({}, destination, workspace, root)
+    owned = destination.lstat()
+    expected = set()
+    guards = []
+    try:
+        for relative, value in records:
+            evidence.relative(relative)
+            require(relative not in expected, "Duplicate public member")
+            member = Path(relative)
+            if member.name == "inventory.json":
+                require(relative == "inventory/inventory.json", "Unexpected inventory member")
+            else:
+                name = value["source"]["skill_id"]
+                tail = "static" if value["kind"] == "static" else "behavioral/" + value["run_id"]
+                require(relative == f"skills/{name}/{tail}/public-report.json", "Unexpected public member")
+            parent = destination
+            for part in member.parent.parent.parts:
+                parent /= part
+                if not parent.exists():
+                    evidence.write_outputs({}, parent, workspace, root)
+                evidence.safe_path(parent, directory=True)
+            # Validate immediately before staging, even though projection validated too.
+            if member.name == "inventory.json":
+                evidence.validate_inventory(value)
+            else:
+                evidence.validate_public(value)
+            public_strings(value)
+            evidence.write_outputs({member.name: value}, destination / member.parent, workspace, root)
+            guards.extend(evidence.record_guards(value))
+            expected.add(relative)
+        actual = {path.relative_to(destination).as_posix() for path in evidence.safe_tree(destination)}
+        require(actual == expected and bool(expected), "Public bundle file set mismatch")
+        # Recheck every captured input after the last report has been written.
+        for guard in dict.fromkeys(guards):
+            guard()
+    except BaseException:
+        current = destination.lstat()
+        if (current.st_dev, current.st_ino) == (owned.st_dev, owned.st_ino):
+            # CPython's descriptor-based rmtree never follows replacement symlinks.
+            require(shutil.rmtree.avoids_symlink_attacks, "Secure staging cleanup unsupported")
+            shutil.rmtree(destination)
+        raise
+    return len(expected)
+
+
+def public_quality(workspace, root, destination):
+    import skill_evidence as evidence
+
+    inv = evidence.inventory(workspace)
+    names = sorted(row["source"]["skill_id"] for row in inv["skills"]
+                   if row["source"]["owner"] == "local")
+    # Capture catalog membership using the same bounded no-follow reader.
+    directories = {}; states = {}; members = {}
+    catalog = evidence.parse_json(evidence.read_bytes(Path(root) / "reports/catalog-summary.json",
+        directory_identities=directories, directory_states=states, file_states=members))
+    catalog_guard = evidence.input_guard(directories, states, members)
+    require(type(catalog) is dict and type(catalog.get("skills")) is list,
+            "Invalid public quality catalog")
+    actual = [row["name"] for row in catalog["skills"]]
+    if sorted(actual) != names:
+        summary(["Public quality unavailable: catalog does not exactly cover discovered local skills."])
+        raise ValueError("Public quality catalog membership mismatch")
+
+    def records():
+        yield "inventory/inventory.json", inv
+        for name in names:
+            data = evidence.normalize_static(Path(root), name, workspace)
+            yield f"skills/{name}/static/public-report.json", evidence.project(data)
+        for guard in evidence.record_guards(inv):
+            guard()
+        catalog_guard()
+
+    count = stage_public(workspace, root, destination, records())
+    summary([f"Public quality ready: {count - 1} validated skill reports and inventory."])
+
+
+def public_benchmark(workspace, root, name, mode, destination, selected=None):
+    import skill_evidence as evidence
+
+    evidence.skill_id(name)
+    require(mode in MODES, "Unsupported public benchmark mode")
+    inv = evidence.inventory(workspace)
+    require(any(row["source"]["skill_id"] == name and row["suite"] is not None for row in inv["skills"]),
+            "Selected public benchmark has no configured suite")
+    data = evidence.normalize_behavioral(Path(root), name, selected, workspace, native_layout=True)
+    attempts = data["policy"]["attempts"]
+    require(attempts["mode"] in (mode, "unknown") and attempts["maximum"] in (None, MODES[mode]),
+            "Public benchmark mode mismatch")
+    public = evidence.project(data)
+    count = stage_public(workspace, root, destination, [
+        ("inventory/inventory.json", inv),
+        (f"skills/{name}/behavioral/{public['run_id']}/public-report.json", public),
+    ])
+    summary([f"Public benchmark ready: {count - 1} validated report; evidence {public['availability']['status']}."])
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -562,9 +680,28 @@ def main():
     artifacts.add_argument("root", type=Path)
     artifacts.add_argument("skill")
     artifacts.add_argument("destination", type=Path)
+    quality = commands.add_parser("public-quality")
+    quality.add_argument("root", type=Path)
+    quality.add_argument("destination", type=Path)
+    public = commands.add_parser("public-benchmark")
+    public.add_argument("root", type=Path)
+    public.add_argument("skill")
+    public.add_argument("mode", choices=MODES)
+    public.add_argument("destination", type=Path)
+    public.add_argument("--run")
     args = parser.parse_args()
     workspace = Path(os.environ["GITHUB_WORKSPACE"]).resolve()
-    if args.command == "preflight":
+    if args.command in {"public-quality", "public-benchmark"}:
+        try:
+            if args.command == "public-quality":
+                public_quality(workspace, args.root, args.destination)
+            else:
+                public_benchmark(workspace, args.root, args.skill, args.mode, args.destination, args.run)
+        except (ValueError, KeyError, TypeError, AttributeError, IndexError, OSError, OverflowError):
+            # Native exceptions may contain credentials or arbitrary prose. Never echo them.
+            summary(["Public evidence unavailable: input or publication contract rejected; no bundle is ready."])
+            return 1
+    elif args.command == "preflight":
         catalog_preflight(workspace)
     elif args.command == "select":
         benchmark_skill(workspace, args.skill)
@@ -579,11 +716,12 @@ def main():
         benchmark_artifacts(workspace, args.root, args.skill, args.destination)
     else:
         publish_metrics(workspace, args.root, args.skill)
+    return 0
 
 
 if __name__ == "__main__":
     try:
-        main()
+        sys.exit(main())
     except (ValueError, KeyError, TypeError, IndexError, OSError) as error:
         summary(["## Skill evaluation infrastructure failure", "", html.escape(str(error))])
         sys.exit(1)

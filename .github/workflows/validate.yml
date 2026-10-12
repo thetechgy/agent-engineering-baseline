@@ -79,6 +79,8 @@ jobs:
           status=0
           skillevaluator validate "$GITHUB_WORKSPACE/.apm/skills" \
             --external --tiers 1 --no-llm --no-dedup --continue-on-failure \
+            --evaluated-source-repository "$GITHUB_REPOSITORY" \
+            --evaluated-source-revision "$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)" \
             -r json,markdown,html -o "$report_root/reports" || status=$?
           printf '%s\n' "$status" > "$report_root/catalog.exit"
           for dataset in "$GITHUB_WORKSPACE"/.apm/skills/*/evals/evals.json; do
@@ -100,11 +102,32 @@ jobs:
         if: always()
         run: python3 .github/scripts/skill_reports.py catalog "$RUNNER_TEMP/skill-quality"
 
+      - name: Generate validated public quality evidence
+        id: public-quality
+        if: always() && env.SKILL_EVALUATOR_PYTHON != ''
+        timeout-minutes: 3
+        run: |
+          "$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_reports.py public-quality \
+            "$RUNNER_TEMP/skill-quality" "$RUNNER_TEMP/skill-public-quality"
+
       - name: Verify evaluator left the checkout unchanged
+        id: public-quality-integrity
         if: always()
         run: |
           git diff --exit-code
           test -z "$(git status --porcelain=v1 --untracked-files=all --ignored)"
+
+      - name: Upload validated public quality evidence
+        if: always() && steps.public-quality.outcome == 'success' && steps.public-quality-integrity.outcome == 'success'
+        timeout-minutes: 3
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: skill-public-quality-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/skill-public-quality/inventory/inventory.json
+            ${{ runner.temp }}/skill-public-quality/skills/*/static/public-report.json
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Upload skill quality reports
         if: always()
