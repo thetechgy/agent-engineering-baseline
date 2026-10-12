@@ -38,6 +38,7 @@ scoring conditions, comparison limitations, identities, availability, and owners
 Numeric regressions and evaluator opinions alone do not identify instruction defects.
 Specific skill edits require exact source grounding and observed agent behavior that
 supports the proposed instruction change. Do not claim omitted guidance is absent.
+Empty source or support members with a 0/0 range have no citable lines.
 Distinguish behavior, grader judgments, analyst interpretations, and derived excerpts.
 Expired public references stay expired; retained local support has separate identity.
 Give a top-level assessment even with zero recommendations: tested benefit/harm,
@@ -332,14 +333,18 @@ def source_context(src, root, selection, capture):
             chosen[row["member"]] = row
     else:
         chosen = {
-            member: {"member": member, "start_line": 1, "end_line": len(checked_text(raw).splitlines())}
+            member: {"member": member, "start_line": 1 if raw else 0, "end_line": len(checked_text(raw).splitlines())}
             for member, raw in available.items()
         }
     members = []
     for member, row in sorted(chosen.items()):
         lines = checked_text(available[member]).splitlines()
         start, end = row["start_line"], row["end_line"]
-        require(type(start) is int and type(end) is int and 1 <= start <= end <= len(lines), "Invalid source lines")
+        require(
+            type(start) is int and type(end) is int
+            and (1 <= start <= end <= len(lines) if lines else start == end == 0),
+            "Invalid source lines",
+        )
         text = "\n".join(lines[start - 1 : end])
         members.append(
             {
@@ -352,7 +357,7 @@ def source_context(src, root, selection, capture):
                 "text": text,
                 "excerpt_digest": evidence.digest_bytes(text.encode()),
                 "transformation": "utf8-splitlines-join-lf",
-                "complete": start == 1 and end == len(lines),
+                "complete": start == (1 if lines else 0) and end == len(lines),
             }
         )
     complete = set(chosen) == set(declared) and all(row["complete"] for row in members)
@@ -529,10 +534,14 @@ def support_context(root, records, capture):
         lines = text.splitlines()
         start, end = item["start_line"], item["end_line"]
         if start is None and end is None:
-            start, end = 1, len(lines)
-        require(type(start) is int and type(end) is int and 1 <= start <= end <= len(lines), "Support excerpt lines")
+            start, end = 1 if lines else 0, len(lines)
+        require(
+            type(start) is int and type(end) is int
+            and (1 <= start <= end <= len(lines) if lines else start == end == 0),
+            "Support excerpt lines",
+        )
         excerpt = "\n".join(lines[start - 1 : end])
-        derived = start != 1 or end != len(lines) or item["representation"] != "original"
+        derived = start != (1 if lines else 0) or end != len(lines) or item["representation"] != "original"
         row = {
             **item,
             "run_id": record["run_id"],
@@ -647,6 +656,7 @@ def check_citations(citations, context):
             require(
                 type(citation.start_line) is int
                 and type(citation.end_line) is int
+                and citation.start_line >= 1
                 and row["start_line"] <= citation.start_line <= citation.end_line <= row["end_line"],
                 "Citation lines unavailable",
             )
@@ -747,8 +757,11 @@ def validate_judgment(value, context):
             all(rec.category in ("no_change", "investigate") for rec in judgment.recommendations),
             "Assessment contradicts actions",
         )
-    if any(rec.category == "modify_skill" for rec in judgment.recommendations):
-        require(judgment.assessment.disposition == "skill_change", "Skill action contradicts assessment")
+    require(
+        (judgment.assessment.disposition == "skill_change")
+        == any(rec.category == "modify_skill" for rec in judgment.recommendations),
+        "Skill action contradicts assessment",
+    )
     return judgment.model_dump()
 
 

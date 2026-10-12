@@ -1244,6 +1244,14 @@ partial coverage cannot establish that omitted guidance is absent. Source origin
 revision, ownership and identity remain independent of coverage. Recommendations
 about upstream skills do not authorize edits to installed upstream bytes.
 
+Verified empty source members retain their original and empty-excerpt digests,
+zero total lines, and a `0/0` range. They count as complete member coverage.
+Explicit selections accept `0/0` only for empty content; nonempty content requires
+positive line ranges. Empty qualitative values use the same representation,
+including when their optional range is omitted, and retain original provenance
+and completeness. Empty ranges have no citable lines and cannot supply observed
+behavior or ground a specific skill modification.
+
 ### Optional qualitative support
 
 `--support` names a private retained directory with `support.json` and original
@@ -1337,6 +1345,9 @@ binding, not a cryptographic attestation that a model call actually occurred.
 A top-level assessment is mandatory even when the recommendation list is empty.
 It explains tested benefit, tested harm, interpretation, uncertainty, disposition
 (`skill_change`, `investigate`, `no_change`), citations and sufficiency. Every
+`skill_change` assessment must include at least one `modify_skill` recommendation,
+and every `modify_skill` recommendation requires a `skill_change` assessment.
+Zero recommendations remain valid for `investigate` and `no_change`. Every
 supplied native suggestion receives exactly one assessment: `already_covered`,
 `potentially_ineffective`, `warranted`, `contradicted` or `unsupported`. Already
 covered requires source citations; warranted/contradicted requires observed support.

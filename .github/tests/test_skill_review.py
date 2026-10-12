@@ -198,17 +198,24 @@ class ReviewTests(unittest.TestCase):
         return root, file, evidence.identity(record)
 
     def control(
-        self, *, source=True, support=True, kind="agent_behavior", name="podman", excerpt=False, arm="with_skill"
+        self, *, source=True, support=True, kind="agent_behavior", name="podman", excerpt=False,
+        arm="with_skill", empty_source=False, empty_behavior=False
     ):
         record = synthetic(name=name)
         snapshot = self.root / "source"
         snapshot.mkdir()
         raw = (FIXTURES / "SKILL.md").read_bytes()
         (snapshot / "SKILL.md").write_bytes(raw)
-        record["source"]["content"] = evidence.content(
-            [{"member": "SKILL.md", "digest": evidence.digest_bytes(raw)}], "synthetic"
-        )
+        manifest = [{"member": "SKILL.md", "digest": evidence.digest_bytes(raw)}]
+        if empty_source:
+            (snapshot / "empty.txt").write_bytes(b"")
+            manifest.append({"member": "empty.txt", "digest": evidence.digest_bytes(b"")})
+        record["source"]["content"] = evidence.content(manifest, "synthetic")
         raw_trial = (FIXTURES / "trial.json").read_bytes()
+        if empty_behavior:
+            trial = evidence.parse_json(raw_trial)
+            trial["agent_output"] = ""
+            raw_trial = evidence.encoded(trial)
         position = 0 if arm == "with_skill" else 1
         ref = record["references"][position]
         old = ref["id"]
@@ -303,6 +310,138 @@ class ReviewTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             review.validate_judgment(value, context)
 
+    def test_empty_source_preserves_complete_coverage_and_cli_validation(self):
+        context = self.control(empty_source=True)
+        source = context.value["source_context"]
+        self.assertEqual(source["coverage"], "complete")
+        self.assertEqual(source["omitted_members"], [])
+        member = next(row for row in source["members"] if row["member"] == "empty.txt")
+        self.assertEqual((member["start_line"], member["end_line"], member["total_lines"]), (0, 0, 0))
+        self.assertEqual(member["text"], "")
+        self.assertTrue(member["complete"])
+        self.assertEqual(member["original_digest"], evidence.digest_bytes(b""))
+        self.assertEqual(member["excerpt_digest"], evidence.digest_bytes(b""))
+        evidence.verify_source_snapshot(self.root / "source", context.value["source"])
+        selection = self.root / "selection.json"
+        write(
+            selection,
+            {"members": [{key: row[key] for key in ("member", "start_line", "end_line")} for row in source["members"]]},
+        )
+        with redirect_stdout(StringIO()):
+            prepared = review.main(["prepare", *self.args, "--source-selection", str(selection)])
+        self.addCleanup(lambda: __import__("shutil").rmtree(prepared))
+        self.assertEqual(evidence.read_json(prepared / "review-context.json"), context.value)
+        _, run = self.invoke(context)
+        report = asyncio.run(run())
+        destination = evidence.write_outputs(
+            {"skill-review.json": report},
+            input_paths=context.roots,
+            input_guards=context.guards,
+            rendered={"skill-review.md": review.render_review(report)},
+        )
+        self.addCleanup(lambda: __import__("shutil").rmtree(destination))
+        with redirect_stdout(StringIO()):
+            review.main(
+                [
+                    "validate",
+                    *self.args,
+                    "--review",
+                    str(destination / "skill-review.json"),
+                ]
+            )
+        for claim in ("positive", "absence"):
+            cited = citation(context, "source", claim=claim)
+            cited.update(
+                evidence_id=member["id"],
+                source_path="empty.txt",
+                start_line=0,
+                end_line=0,
+            )
+            with self.assertRaisesRegex(ValueError, "Citation lines unavailable"):
+                review.check_citations([review.Citation.model_validate(cited)], context)
+
+    def test_empty_support_preserves_provenance_without_behavioral_support(self):
+        context = self.control(empty_behavior=True)
+        row = next(row for row in context.value["qualitative"] if row["kind"] == "agent_behavior")
+        self.assertEqual((row["start_line"], row["end_line"], row["text"]), (0, 0, ""))
+        self.assertEqual(row["excerpt_digest"], evidence.digest_bytes(b""))
+        self.assertEqual(row["original_digest"], row["retained_digest"])
+        self.assertEqual(row["completeness"], "complete_located_value_only")
+        self.assertFalse(row["derived"])
+        review.validate_judgment(judgment(context), context)
+        descriptor = evidence.read_json(self.root / "support/support.json")
+        descriptor["items"][0].update(start_line=0, end_line=0)
+        write(self.root / "support/support.json", descriptor)
+        explicit = review.prepare(
+            [Path(self.args[1])],
+            Path(self.args[3]),
+            "podman",
+            self.args[7],
+            self.root / "source",
+            self.root / "support",
+        )
+        self.assertEqual(explicit.value, context.value)
+        for start, end, quote in ((0, 0, None), (0, 0, ""), (1, 1, None)):
+            cited = citation(explicit, "agent_behavior")
+            cited.update(start_line=start, end_line=end, quote=quote)
+            with self.assertRaisesRegex(ValueError, "Citation lines unavailable"):
+                review.check_citations([review.Citation.model_validate(cited)], explicit)
+        with self.assertRaisesRegex(ValueError, "Citation lines unavailable"):
+            review.validate_judgment(judgment(explicit, category="modify_skill"), explicit)
+        _, run = self.invoke(explicit)
+        report = asyncio.run(run())
+        review.validate_review(report, explicit)
+        retained = next(item for item in report["provenance"]["support_provenance"] if item["id"] == row["id"])
+        self.assertEqual((retained["start_line"], retained["end_line"]), (0, 0))
+
+    def test_empty_ranges_reject_nonempty_content_and_invalid_empty_selection(self):
+        for empty, start, end in (
+            (False, 0, 0),
+            (True, 1, 1),
+            (True, 0, 1),
+            (True, -1, 0),
+            (True, False, 0),
+        ):
+            with (
+                self.subTest(empty=empty, start=start, end=end),
+                tempfile.TemporaryDirectory() as folder,
+            ):
+                self.root = Path(folder)
+                self.control(empty_source=empty, empty_behavior=empty)
+                selection = self.root / "selection.json"
+                write(
+                    selection,
+                    {
+                        "members": [
+                            {
+                                "member": "empty.txt" if empty else "SKILL.md",
+                                "start_line": start,
+                                "end_line": end,
+                            }
+                        ]
+                    },
+                )
+                with self.assertRaisesRegex(ValueError, "Invalid source lines"):
+                    review.prepare(
+                        [Path(self.args[1])],
+                        Path(self.args[3]),
+                        "podman",
+                        self.args[7],
+                        self.root / "source",
+                        selection=selection,
+                    )
+                descriptor = evidence.read_json(self.root / "support/support.json")
+                descriptor["items"][0].update(start_line=start, end_line=end)
+                write(self.root / "support/support.json", descriptor)
+                with self.assertRaisesRegex(ValueError, "Support excerpt lines"):
+                    review.prepare(
+                        [Path(self.args[1])],
+                        Path(self.args[3]),
+                        "podman",
+                        self.args[7],
+                        support=self.root / "support",
+                    )
+
     def test_numeric_evidence_and_grader_opinion_do_not_support_skill_edit(self):
         for kind in ("agent_behavior", "evaluator_judgment"):
             with self.subTest(kind=kind), tempfile.TemporaryDirectory() as folder:
@@ -339,6 +478,64 @@ class ReviewTests(unittest.TestCase):
             review.validate_judgment(judgment(context, category="modify_skill"), context)
         value = judgment(context, category="investigate")
         review.validate_judgment(value, context)
+
+    def test_skill_change_requires_modification_in_generated_and_saved_reports(self):
+        context = self.control()
+        for category in (
+            None,
+            "investigate",
+            "improve_eval",
+            "fix_grader_or_harness",
+            "no_change",
+        ):
+            with self.subTest(category=category):
+                value = judgment(context, category="modify_skill")
+                value["recommendations"] = (
+                    [] if category is None else judgment(context, category=category)["recommendations"]
+                )
+                with self.assertRaisesRegex(ValueError, "Skill action contradicts assessment"):
+                    review.validate_judgment(value, context)
+        value = judgment(context, category="modify_skill")
+        value["recommendations"] = []
+        calls = []
+
+        def handler(request):
+            calls.append(request)
+            return httpx.Response(
+                200,
+                json={"object": "response.input_tokens", "input_tokens": 1000}
+                if request.url.path.endswith("/input_tokens") else response_body(value),
+            )
+
+        def client(**kwargs):
+            kwargs["http_client"] = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+            return AsyncOpenAI(**kwargs)
+
+        rejected = self.root / "rejected"
+        with patch("openai.AsyncOpenAI", side_effect=client):
+            with self.assertRaisesRegex(ValueError, "Inference rejected"):
+                review.main(["review", *self.args, "--model", CONFIG["model"], "--authorize-inference",
+                             "--output", str(rejected)])
+        self.assertEqual(len(calls), 2)
+        self.assertFalse(rejected.exists())
+        _, run = self.invoke(context, judgment(context, category="modify_skill"))
+        report = asyncio.run(run())
+        report["judgment"]["recommendations"] = []
+        destination = evidence.write_outputs(
+            {"skill-review.json": report},
+            input_paths=context.roots,
+            rendered={"skill-review.md": review.render_review(report)},
+        )
+        self.addCleanup(lambda: __import__("shutil").rmtree(destination))
+        with self.assertRaisesRegex(ValueError, "Skill action contradicts assessment"):
+            review.main(
+                [
+                    "validate",
+                    *self.args,
+                    "--review",
+                    str(destination / "skill-review.json"),
+                ]
+            )
 
     def test_partial_source_selection_and_absence_claims(self):
         context = self.control()
