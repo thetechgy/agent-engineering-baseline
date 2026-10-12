@@ -1,0 +1,17 @@
+{
+  "exception_info": null,
+  "id": "ce82a39c-4b27-4e41-aed4-b82ba0cd412c",
+  "task_name": "nvidia/skillevaluator-9",
+  "trial_name": "9__memQq9V",
+  "verifier_result": {
+    "rewards": {
+      "accuracy": 1.0,
+      "behavior_check": 0.6,
+      "goal_accuracy": 0.95,
+      "overall": 0.907,
+      "security": 1.0,
+      "skill_efficiency": 0.9546,
+      "skill_execution": 0.9375
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "exception_info": null,
+  "id": "e79a60dd-d197-4366-bd2d-e648e5777c82",
+  "task_name": "nvidia/skillevaluator-1",
+  "trial_name": "1__3kgdcaC",
+  "verifier_result": {
+    "rewards": {
+      "accuracy": 0.8,
+      "behavior_check": 0.4,
+      "goal_accuracy": 0.2,
+      "overall": 0.3722,
+      "security": 0.0,
+      "skill_efficiency": 0.3333,
+      "skill_execution": 0.5
+    }
+  }
+}

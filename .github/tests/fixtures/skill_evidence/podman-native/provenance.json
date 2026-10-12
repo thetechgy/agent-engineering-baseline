@@ -1,0 +1,46 @@
+{
+  "dataset_digest": "sha256:cecc0bcea480a3c197e1b4c527009958ada3be67eb0205325f6c16123f9355fe",
+  "metrics": [
+    {
+      "name": "Skill Lift",
+      "unit": "score",
+      "value": 0.1207
+    },
+    {
+      "name": "Effectiveness",
+      "unit": "score",
+      "value": 0.773
+    },
+    {
+      "name": "Correctness",
+      "unit": "score",
+      "value": 0.96
+    },
+    {
+      "name": "Discoverability",
+      "unit": "score",
+      "value": 0.6937
+    }
+  ],
+  "mode": "standard",
+  "patch_sha256": "d48af476c19f06d94297e2e143f4643c74580abbcd631a599fe7b296244f3962",
+  "policy": {
+    "baseline": true,
+    "codex": "0.155.1",
+    "concurrency": 2,
+    "docker_compose": "5.0.2",
+    "environment": "docker",
+    "evaluator_revision": "ac0a04905100acdafc6c95829311a9739c340ff6",
+    "grading": "default",
+    "harbor": "0.13.2",
+    "model": "gpt-5.6-sol",
+    "provider": "openai",
+    "python": "3.13",
+    "standard_attempts": 1,
+    "stop_on_pass": false,
+    "timeout_multiplier": 2.0
+  },
+  "revision": "bb3048b4ad6b6bb0c0b747cc6a4a7608d6e4f5fe",
+  "schema_version": 1,
+  "skill": "podman"
+}

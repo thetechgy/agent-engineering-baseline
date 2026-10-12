@@ -1,0 +1,565 @@
+{
+  "agents": {
+    "codex": {
+      "conditions": {
+        "with_skill": {
+          "execution_errors": [],
+          "execution_status": "succeeded",
+          "expected_attempts": 10,
+          "scored_attempts": 10
+        },
+        "without_skill": {
+          "execution_errors": [],
+          "execution_status": "succeeded",
+          "expected_attempts": 10,
+          "scored_attempts": 10
+        }
+      },
+      "dimensions_with_skill": {
+        "correctness": {
+          "score": 0.96,
+          "sources": {
+            "accuracy": 1.0
+          }
+        },
+        "discoverability": {
+          "score": 0.6937,
+          "sources": {
+            "skill_execution": 1.0
+          }
+        },
+        "effectiveness": {
+          "score": 0.773,
+          "sources": {
+            "behavior_check": 0.5,
+            "goal_accuracy": 0.5
+          }
+        },
+        "efficiency": {
+          "score": 0.6955,
+          "sources": {
+            "skill_efficiency": 1.0
+          }
+        },
+        "security": {
+          "score": 0.6,
+          "sources": {
+            "security": 1.0
+          }
+        }
+      },
+      "lift": {
+        "accuracy": {
+          "delta": 0.12,
+          "direction": "up",
+          "with_skill": 0.96,
+          "without_skill": 0.84
+        },
+        "behavior_check": {
+          "delta": 0.1833,
+          "direction": "up",
+          "with_skill": 0.825,
+          "without_skill": 0.6417
+        },
+        "goal_accuracy": {
+          "delta": 0.084,
+          "direction": "up",
+          "with_skill": 0.721,
+          "without_skill": 0.637
+        },
+        "overall": {
+          "delta": 0.1207,
+          "with_skill": 0.7492,
+          "without_skill": 0.6285
+        },
+        "security": {
+          "delta": 0.05,
+          "direction": "up",
+          "with_skill": 0.6,
+          "without_skill": 0.55
+        },
+        "skill_efficiency": {
+          "delta": 0.1622,
+          "direction": "up",
+          "with_skill": 0.6955,
+          "without_skill": 0.5333
+        },
+        "skill_execution": {
+          "delta": 0.125,
+          "direction": "up",
+          "with_skill": 0.6937,
+          "without_skill": 0.5687
+        }
+      },
+      "model": "gpt-5.6-sol",
+      "pass_at_k": {
+        "lift": {
+          "count_derived_delta": 0.2,
+          "delta": 0.2,
+          "paired_comparison": {
+            "both_pass": 8,
+            "discordant_cases": 2,
+            "mcnemar_exact": {
+              "method": "two_sided_exact_binomial",
+              "minimum_attainable_p_value": 0.5,
+              "minimum_attainable_p_value_exact": "1/2",
+              "minimum_attainable_p_value_exact_omitted": false,
+              "minimum_attainable_p_value_numeric_underflow": false,
+              "minimum_attainable_p_value_text": "0.5",
+              "null_hypothesis": "equal marginal pass probabilities",
+              "p_value": 0.5,
+              "p_value_exact": "1/2",
+              "p_value_exact_omitted": false,
+              "p_value_numeric_underflow": false,
+              "p_value_text": "0.5",
+              "resolution_limited_at_alpha_0_05": true
+            },
+            "neither_pass": 0,
+            "paired_cases": 10,
+            "paired_rate_delta": 0.2,
+            "pairing_status": "complete",
+            "with_skill_only_pass": 2,
+            "with_skill_unidentified_cases": 0,
+            "with_skill_unpaired_case_count": 0,
+            "with_skill_unpaired_case_ids": [],
+            "with_skill_unpaired_case_ids_truncated": false,
+            "without_skill_only_pass": 0,
+            "without_skill_unidentified_cases": 0,
+            "without_skill_unpaired_case_count": 0,
+            "without_skill_unpaired_case_ids": [],
+            "without_skill_unpaired_case_ids_truncated": false
+          },
+          "passed_cases_delta": 2,
+          "with_skill": 1.0,
+          "without_skill": 0.8
+        },
+        "with_skill": {
+          "attempts_used": 10,
+          "avg_attempts_used": 1.0,
+          "cases": {
+            "1": {
+              "attempts": [
+                {
+                  "attempt": 1,
+                  "passed": true,
+                  "score": 0.7042,
+                  "trial": "1__r7DmrG9"
+                }
+              ],
+              "attempts_missing": 0,
+              "attempts_skipped": 0,
+              "attempts_used": 1,
+              "best_score": 0.7042,
+              "first_pass_attempt": 1,
+              "passed": true
+            },
+            "10": {
+              "attempts": [
+                {
+                  "attempt": 1,
+                  "passed": true,
+                  "score": 0.7113,
+                  "trial": "10__N7UxT2y"
+                }
+              ],
+              "attempts_missing": 0,
+              "attempts_skipped": 0,
+              "attempts_used": 1,
+              "best_score": 0.7113,
+              "first_pass_attempt": 1,
+              "passed": true
+            },
+            "2": {
+              "attempts": [
+                {
+                  "attempt": 1,
+                  "passed": true,
+                  "score": 0.6896,
+                  "trial": "2__rkgUEeu"
+                }
+              ],
+              "attempts_missing": 0,
+              "attempts_skipped": 0,
+              "attempts_used": 1,
+              "best_score": 0.6896,
+              "first_pass_attempt": 1,
+              "passed": true
+            },
+            "3": {
+              "attempts": [
+                {
+                  "attempt": 1,
+                  "passed": true,
+                  "score": 0.8917,
+                  "trial": "3__GpAAayB"
+                }
+              ],
+              "attempts_missing": 0,
+              "attempts_skipped": 0,
+              "attempts_used": 1,
+              "best_score": 0.8917,
+              "first_pass_attempt": 1,
+              "passed": true
+            },
+            "4": {
+              "attempts": [
+                {
+                  "attempt": 1,
+                  "passed": true,
+                  "score": 0.5042,
+                  "trial": "4__GYzQYsM"
+                }
+              ],
+              "attempts_missing": 0,
+              "attempts_skipped": 0,
+              "attempts_used": 1,
+              "best_score": 0.5042,
+              "first_pass_attempt": 1,
+              "passed": true
+            },
+            "5": {
+              "attempts": [
+                {
+                  "attempt": 1,
+                  "passed": true,
+                  "score": 0.7458,
+                  "trial": "5__E8DWaM8"
+                }
+              ],
+              "attempts_missing": 0,
+              "attempts_skipped": 0,
+              "attempts_used": 1,
+              "best_score": 0.7458,
+              "first_pass_attempt": 1,
+              "passed": true
+            },
+            "6": {
+              "attempts": [
+                {
+                  "attempt": 1,
+                  "passed": true,
+                  "score": 0.7642,
+                  "trial": "6__4vyHU8G"
+                }
+              ],
+              "attempts_missing": 0,
+              "attempts_skipped": 0,
+              "attempts_used": 1,
+              "best_score": 0.7642,
+              "first_pass_attempt": 1,
+              "passed": true
+            },
+            "7": {
+              "attempts": [
+                {
+                  "attempt": 1,
+                  "passed": true,
+                  "score": 0.7408,
+                  "trial": "7__PrjwyXh"
+                }
+              ],
+              "attempts_missing": 0,
+              "attempts_skipped": 0,
+              "attempts_used": 1,
+              "best_score": 0.7408,
+              "first_pass_attempt": 1,
+              "passed": true
+            },
+            "8": {
+              "attempts": [
+                {
+                  "attempt": 1,
+                  "passed": true,
+                  "score": 0.8333,
+                  "trial": "8__Bu4W5bp"
+                }
+              ],
+              "attempts_missing": 0,
+              "attempts_skipped": 0,
+              "attempts_used": 1,
+              "best_score": 0.8333,
+              "first_pass_attempt": 1,
+              "passed": true
+            },
+            "9": {
+              "attempts": [
+                {
+                  "attempt": 1,
+                  "passed": true,
+                  "score": 0.907,
+                  "trial": "9__memQq9V"
+                }
+              ],
+              "attempts_missing": 0,
+              "attempts_skipped": 0,
+              "attempts_used": 1,
+              "best_score": 0.907,
+              "first_pass_attempt": 1,
+              "passed": true
+            }
+          },
+          "extra_cases": [],
+          "failed_cases": 0,
+          "k": 1,
+          "max_attempts_possible": 10,
+          "pass_threshold": 0.5,
+          "passed_cases": 10,
+          "rate": 1.0,
+          "rate_interval": {
+            "confidence_level": 0.95,
+            "lower": 0.7224672001371107,
+            "method": "wilson_score",
+            "upper": 1.0
+          },
+          "stop_on_pass": false,
+          "total_cases": 10
+        },
+        "without_skill": {
+          "attempts_used": 10,
+          "avg_attempts_used": 1.0,
+          "cases": {
+            "1": {
+              "attempts": [
+                {
+                  "attempt": 1,
+                  "passed": false,
+                  "score": 0.3722,
+                  "trial": "1__3kgdcaC"
+                }
+              ],
+              "attempts_missing": 0,
+              "attempts_skipped": 0,
+              "attempts_used": 1,
+              "best_score": 0.3722,
+              "first_pass_attempt": null,
+              "passed": false
+            },
+            "10": {
+              "attempts": [
+                {
+                  "attempt": 1,
+                  "passed": true,
+                  "score": 0.5458,
+                  "trial": "10__z27VrWg"
+                }
+              ],
+              "attempts_missing": 0,
+              "attempts_skipped": 0,
+              "attempts_used": 1,
+              "best_score": 0.5458,
+              "first_pass_attempt": 1,
+              "passed": true
+            },
+            "2": {
+              "attempts": [
+                {
+                  "attempt": 1,
+                  "passed": true,
+                  "score": 0.7242,
+                  "trial": "2__hoTjctT"
+                }
+              ],
+              "attempts_missing": 0,
+              "attempts_skipped": 0,
+              "attempts_used": 1,
+              "best_score": 0.7242,
+              "first_pass_attempt": 1,
+              "passed": true
+            },
+            "3": {
+              "attempts": [
+                {
+                  "attempt": 1,
+                  "passed": true,
+                  "score": 0.675,
+                  "trial": "3__q5YZDzK"
+                }
+              ],
+              "attempts_missing": 0,
+              "attempts_skipped": 0,
+              "attempts_used": 1,
+              "best_score": 0.675,
+              "first_pass_attempt": 1,
+              "passed": true
+            },
+            "4": {
+              "attempts": [
+                {
+                  "attempt": 1,
+                  "passed": false,
+                  "score": 0.3958,
+                  "trial": "4__rn2Fmdn"
+                }
+              ],
+              "attempts_missing": 0,
+              "attempts_skipped": 0,
+              "attempts_used": 1,
+              "best_score": 0.3958,
+              "first_pass_attempt": null,
+              "passed": false
+            },
+            "5": {
+              "attempts": [
+                {
+                  "attempt": 1,
+                  "passed": true,
+                  "score": 0.5375,
+                  "trial": "5__kDYz4b7"
+                }
+              ],
+              "attempts_missing": 0,
+              "attempts_skipped": 0,
+              "attempts_used": 1,
+              "best_score": 0.5375,
+              "first_pass_attempt": 1,
+              "passed": true
+            },
+            "6": {
+              "attempts": [
+                {
+                  "attempt": 1,
+                  "passed": true,
+                  "score": 0.6919,
+                  "trial": "6__2KM2LXi"
+                }
+              ],
+              "attempts_missing": 0,
+              "attempts_skipped": 0,
+              "attempts_used": 1,
+              "best_score": 0.6919,
+              "first_pass_attempt": 1,
+              "passed": true
+            },
+            "7": {
+              "attempts": [
+                {
+                  "attempt": 1,
+                  "passed": true,
+                  "score": 0.7542,
+                  "trial": "7__FQovQui"
+                }
+              ],
+              "attempts_missing": 0,
+              "attempts_skipped": 0,
+              "attempts_used": 1,
+              "best_score": 0.7542,
+              "first_pass_attempt": 1,
+              "passed": true
+            },
+            "8": {
+              "attempts": [
+                {
+                  "attempt": 1,
+                  "passed": true,
+                  "score": 0.7667,
+                  "trial": "8__a84KAdt"
+                }
+              ],
+              "attempts_missing": 0,
+              "attempts_skipped": 0,
+              "attempts_used": 1,
+              "best_score": 0.7667,
+              "first_pass_attempt": 1,
+              "passed": true
+            },
+            "9": {
+              "attempts": [
+                {
+                  "attempt": 1,
+                  "passed": true,
+                  "score": 0.8213,
+                  "trial": "9__iikaRFW"
+                }
+              ],
+              "attempts_missing": 0,
+              "attempts_skipped": 0,
+              "attempts_used": 1,
+              "best_score": 0.8213,
+              "first_pass_attempt": 1,
+              "passed": true
+            }
+          },
+          "extra_cases": [],
+          "failed_cases": 2,
+          "k": 1,
+          "max_attempts_possible": 10,
+          "pass_threshold": 0.5,
+          "passed_cases": 8,
+          "rate": 0.8,
+          "rate_interval": {
+            "confidence_level": 0.95,
+            "lower": 0.49016247153664183,
+            "method": "wilson_score",
+            "upper": 0.9433178485456247
+          },
+          "stop_on_pass": false,
+          "total_cases": 10
+        }
+      }
+    }
+  },
+  "dataset_digest": "sha256:cecc0bcea480a3c197e1b4c527009958ada3be67eb0205325f6c16123f9355fe",
+  "dataset_digest_algorithm": "skill-evaluator-dataset-snapshot/1",
+  "dataset_summary": {
+    "negative_tasks": 1,
+    "positive_tasks": 9,
+    "source": "dataset",
+    "total_tasks": 10,
+    "unclassified_tasks": 0
+  },
+  "execution_errors": [],
+  "execution_status": "succeeded",
+  "metric_set": "skill-evaluator-default-v2",
+  "metrics": [
+    "security",
+    "skill_execution",
+    "skill_efficiency",
+    "accuracy",
+    "goal_accuracy",
+    "behavior_check"
+  ],
+  "report_status": "complete",
+  "run_config": {
+    "agents": {
+      "codex": {
+        "agent": "codex",
+        "model": "gpt-5.6-sol",
+        "source": "CLI"
+      }
+    },
+    "config_file": "none",
+    "evaluated_source": {
+      "commit": "bb3048b4ad6b6bb0c0b747cc6a4a7608d6e4f5fe",
+      "repository": "thetechgy/agent-engineering-baseline"
+    },
+    "grading": {
+      "mode": "default"
+    },
+    "harbor": {
+      "base_image_mode": "disabled",
+      "environment": {
+        "source": "CLI",
+        "value": "docker"
+      },
+      "jobs_retained": false,
+      "n_attempts": 1,
+      "n_concurrent": 2,
+      "stop_on_pass": false,
+      "timeout_multiplier": 2.0
+    },
+    "judge": {
+      "catalog_verification": "verified",
+      "enabled": true,
+      "model": "gpt-5.6-sol",
+      "override_applied": true,
+      "provider": "openai",
+      "source": "LLM_JUDGE_MODEL"
+    },
+    "provider": {
+      "model": "gpt-5.6-sol",
+      "name": "openai"
+    },
+    "task_source": "evals_json"
+  },
+  "skill_name": "podman"
+}

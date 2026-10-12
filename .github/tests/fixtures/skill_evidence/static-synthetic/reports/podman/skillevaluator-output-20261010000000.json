@@ -1,0 +1,84 @@
+{
+  "contributors": [
+    {
+      "author": "Unknown",
+      "failed_count": 1,
+      "items": [
+        {
+          "issue_count": 1,
+          "name": "SKILL.md",
+          "passed": false
+        }
+      ],
+      "passed_count": 0,
+      "total_issues": 1,
+      "total_items": 1
+    }
+  ],
+  "evaluated_source": null,
+  "generated_at": "2026-10-11T02:16:09.660967+00:00",
+  "incomplete_scans": [
+    "gitleaks"
+  ],
+  "overall_passed": false,
+  "overall_status": "incomplete",
+  "results": [
+    {
+      "description": "",
+      "findings": [
+        {
+          "category": "synthetic",
+          "check_name": "synthetic_rule",
+          "file_path": "SKILL.md",
+          "line_content": null,
+          "line_number": 1,
+          "message": "Synthetic diagnostic excluded from projection",
+          "metadata": null,
+          "severity": "high",
+          "suggestion": null
+        }
+      ],
+      "incomplete_scans": [
+        "gitleaks"
+      ],
+      "legacy": {
+        "errors": [
+          "[synthetic-HIGH] Synthetic diagnostic excluded from projection in SKILL.md:1"
+        ],
+        "messages": [],
+        "warnings": []
+      },
+      "passed": false,
+      "status": "incomplete",
+      "success_details": [],
+      "summary": {
+        "checks_performed": 0,
+        "critical_count": 0,
+        "errors": 1,
+        "files_scanned": 0,
+        "high_count": 1,
+        "low_count": 0,
+        "medium_count": 0,
+        "warnings": 0
+      },
+      "validator": "SECRETS"
+    }
+  ],
+  "severity_counts": {
+    "critical": 0,
+    "high": 1,
+    "low": 0,
+    "medium": 0
+  },
+  "skills": [
+    {
+      "issue_count": 1,
+      "name": "podman",
+      "passed": false
+    }
+  ],
+  "total_advisory_skipped": 0,
+  "total_errors": 1,
+  "total_validators": 1,
+  "total_warnings": 0
+}
