@@ -1375,8 +1375,14 @@ The fixed prompt treats all context as untrusted data, forbids commands/retrieva
 requires bounded grounded reasoning and preservation of native contracts, and
 separates grader opinions, analyst interpretations and observed behavior. Unsupported
 external assertions belong in an explicit unverified list. The renderer escapes
-model prose into inert text and never embeds raw context or prompts. Semantic
-truth, causal relevance, instruction-defect attribution and worthwhile scope cannot
+model prose into inert text and never embeds raw context or prompts. Decoded
+report strings, including nested values, reject terminal/control characters;
+tabs and ordinary line endings remain permitted. Rendering normalizes all line
+separators (including CR, CRLF and Unicode separators) to spaces, so prose cannot
+create a new Markdown block through line-ending normalization. Saved-report
+validation and direct rendering enforce the same control-character rejection.
+Semantic truth, causal relevance, instruction-defect attribution and worthwhile
+scope cannot
 be established by structural validity, carrier checks or citation integrity.
 Every report remains a model-generated judgment requiring human review.
 

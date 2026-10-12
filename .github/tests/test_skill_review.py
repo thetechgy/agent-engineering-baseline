@@ -683,6 +683,44 @@ class ReviewTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Contradictory"):
             review.prepare([bundle], saved, "podman", rid, self.root / "source", self.root / "support")
 
+    def test_report_controls_reject_in_judgment_rendering_and_saved_validation(self):
+        context = self.control()
+        for control in ("\x00", "\x08", "\x0b", "\x0c", "\x1bc", "\x7f", "\x85", "\x9d"):
+            with self.subTest(control=repr(control)):
+                value = judgment(context)
+                value["assessment"]["interpretation"] = "Summary" + control + "suffix"
+                with self.assertRaisesRegex(ValueError, "Control characters"):
+                    review.validate_judgment(value, context)
+                with self.assertRaisesRegex(ValueError, "Control characters"):
+                    review.render_review({"judgment": value, "provenance": {}})
+        value = judgment(context, category="investigate")
+        value["recommendations"][0]["risks"] = ["Nested\x1bccontrol"]
+        with self.assertRaisesRegex(ValueError, "Control characters"):
+            review.validate_judgment(value, context)
+        calls, run = self.invoke(context, value)
+        with self.assertRaisesRegex(ValueError, "Inference rejected"):
+            asyncio.run(run())
+        self.assertEqual(len(calls), 2)
+        _, run = self.invoke(context)
+        report = asyncio.run(run())
+        report["judgment"]["assessment"]["interpretation"] = "Summary\x1bc"
+        with self.assertRaisesRegex(ValueError, "Control characters"):
+            review.validate_review(report, context)
+
+    def test_all_line_separators_render_as_inline_text(self):
+        context = self.control()
+        for separator in ("\r", "\r\n", "\n", "\u2028", "\u2029"):
+            with self.subTest(separator=repr(separator)):
+                value = judgment(context)
+                value["assessment"]["interpretation"] = "Summary" + separator + "# Forged heading"
+                checked = review.validate_judgment(value, context)
+                rendered = review.render_review({"judgment": checked, "provenance": {}})
+                self.assertIn(b"Summary # Forged heading", rendered)
+                self.assertNotIn("# Forged heading", rendered.decode().splitlines())
+        value = judgment(context)
+        value["assessment"]["interpretation"] = "Summary\tinline"
+        review.validate_judgment(value, context)
+
     def test_injection_is_inert_sensitive_output_and_input_reject(self):
         context = self.control()
         marker = self.root / "executed"
