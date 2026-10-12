@@ -1192,8 +1192,11 @@ endpoint is documented in the [official OpenAI API reference](https://developers
 There is no repair generation, provider fallback or automatic retry. Defaults are
 64,000 input tokens, 12,000 output tokens and a 180-second total async deadline
 across both requests. `--input-limit`, `--output-limit` and `--deadline-seconds`
-permit positive values up to 128,000, 32,000 and 300 respectively. Refusal,
-incompleteness, malformed output, unexpected tool output, missing usage, limits,
+permit positive values up to 128,000, 32,000 and 300 respectively.
+Model identifiers also undergo the existing sensitive-text checks before client
+creation or either SDK request; recognized credentials cannot be sent as a model
+identifier. Refusal, incompleteness, malformed output, unexpected tool output,
+missing usage, limits,
 HTTP errors and timeout reject; failures require a new manual invocation. The
 returned generating-model ID must exactly match `--model`; a missing or different
 ID rejects before a report is created. Select an explicit model ID returned
@@ -1401,6 +1404,9 @@ Private profile detection includes Unix user and root homes, macOS user/root
 homes, and standard/legacy Windows profile paths. Windows matching ignores
 profile-directory case and accepts forward, backward or repeated separators.
 Ordinary system paths and similarly named public references remain permitted.
+Unicode bidirectional formatting controls (marks, embeddings, overrides and
+isolates) reject in evidence text, judgments, saved reports and rendering.
+Ordinary multilingual text and emoji joiners remain supported.
 
 ### Offline verification and usefulness qualification
 

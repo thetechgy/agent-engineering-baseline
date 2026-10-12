@@ -721,6 +721,49 @@ class ReviewTests(unittest.TestCase):
         value["assessment"]["interpretation"] = "Summary\tinline"
         review.validate_judgment(value, context)
 
+    def test_bidi_controls_reject_inputs_reports_and_rendering(self):
+        context = self.control()
+        for point in (0x061C, 0x200E, 0x200F, *range(0x202A, 0x202F), *range(0x2066, 0x206A)):
+            control = chr(point)
+            with self.subTest(point=hex(point)):
+                with self.assertRaisesRegex(ValueError, "Bidirectional controls"):
+                    review.checked_text(("Input" + control).encode())
+                value = judgment(context)
+                value["assessment"]["interpretation"] = "Summary" + control + "suffix"
+                with self.assertRaisesRegex(ValueError, "Control characters"):
+                    review.validate_judgment(value, context)
+                with self.assertRaisesRegex(ValueError, "Control characters"):
+                    review.render_review({"judgment": value, "provenance": {}})
+        value = judgment(context, category="investigate")
+        value["recommendations"][0]["risks"] = ["Nested\u2066control"]
+        calls, run = self.invoke(context, value)
+        with self.assertRaisesRegex(ValueError, "Inference rejected"):
+            asyncio.run(run())
+        self.assertEqual(len(calls), 2)
+        _, run = self.invoke(context)
+        report = asyncio.run(run())
+        report["judgment"]["assessment"]["interpretation"] = "Summary\u202e"
+        with self.assertRaisesRegex(ValueError, "Control characters"):
+            review.validate_review(report, context)
+        value = judgment(context)
+        value["assessment"]["interpretation"] = "مرحبا λ 👩\u200d💻"
+        checked = review.validate_judgment(value, context)
+        self.assertIn(value["assessment"]["interpretation"].encode(),
+                      review.render_review({"judgment": checked, "provenance": {}}))
+
+    def test_sensitive_model_identifiers_reject_before_sdk_requests(self):
+        context = self.control()
+        fake = "sk-" + "A" * 48
+        config = {**CONFIG, "model": fake}
+        calls, run = self.invoke(context, config=config)
+        with self.assertRaises(ValueError):
+            asyncio.run(run())
+        self.assertEqual(len(calls), 0)
+        with patch("openai.AsyncOpenAI", side_effect=AssertionError("Client must not be created")) as sdk:
+            with self.assertRaises(ValueError):
+                review.main(["review", *self.args, "--model", fake, "--authorize-inference"])
+            sdk.assert_not_called()
+
     def test_decoded_sensitive_strings_reject_at_every_report_boundary(self):
         context = self.control()
         sensitive = r"C:\Users\SyntheticUser\private"

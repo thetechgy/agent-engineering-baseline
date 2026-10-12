@@ -29,6 +29,7 @@ PINS = {"openai": "2.44.0", "pydantic": "2.13.4", "skillevaluator": "0.3.0"}
 CONTEXT_LIMIT = 8 * 1024 * 1024
 REPORT_LIMIT = 1024 * 1024
 MAX_SUPPORT = 100
+BIDI_CONTROLS = r"[\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]"
 BEHAVIOR_CARRIERS = ("agent_output", "transcript", "trajectory", "messages", "commands", "stdout")
 JUDGMENT_CARRIERS = ("verifier_result", "rewards", "grader", "feedback")
 SUGGESTION_CARRIERS = ("suggestions", "recommendations", "improvements")
@@ -289,6 +290,7 @@ def versions():
 def checked_text(raw):
     text = raw.decode("utf-8") if type(raw) is bytes else raw
     require(type(text) is str and "\x00" not in text, "Invalid evidence text")
+    require(not re.search(BIDI_CONTROLS, text), "Bidirectional controls in evidence text")
     evidence.reports.public_strings(text)
     # Reject private paths/contact data not covered by the evaluator credential scanner.
     require(
@@ -307,7 +309,7 @@ def check_report_text(value):
     """Apply text gates before serialization can hide controls or private paths."""
     if type(value) is str:
         require(
-            not re.search(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]", value),
+            not re.search(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]|" + BIDI_CONTROLS, value),
             "Control characters in review text",
         )
         checked_text(value)
@@ -808,6 +810,7 @@ async def invoke(context, config, authorized, *, http_client=None):
     require(authorized is True, "Explicit inference authorization required")
     versions()
     config = ModelConfig.model_validate(config)
+    checked_text(config.model)
     for guard in context.guards:
         guard()
     import httpx
