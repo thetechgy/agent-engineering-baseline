@@ -1130,3 +1130,276 @@ retrieval/digest/locator/source checks above. Never replace original evidence wi
 today's source or another trial. Unavailable, expired, unretained or reconstructed
 support remains explicit. The summary is a fixed template from validated analysis,
 not expert causal diagnosis or a readiness assessment.
+
+## Private skill improvement review
+
+Issue #60 adds `.github/scripts/skill_review.py`. This is a Linux-first, private
+judgment tool over supplied evidence, with no retrieval, shell tools, grading,
+source edits, uploads, repository actions, or automatic publication. Existing
+public schema v1, analysis schema v1, measurements, scoring, workflows and APM
+artifacts are unchanged. Use the pinned evaluator Python 3.13 environment from
+`setup-skillevaluator.sh`: OpenAI 2.44.0, Pydantic 2.13.4, SkillEvaluator 0.3.0.
+The CLI rejects other dependency versions. No dependencies are installed by it.
+
+### Operations and authorization
+
+First produce and retain public bundles and their `analysis.json` using the
+preceding workflow. Select one logical skill and an exact non-inventory record
+ID from the analysis record index. The selected record determines the evaluated
+source identity; current installed source cannot substitute for different bytes.
+
+```bash
+# Offline: exports a private review-context.json, never invokes the model.
+"$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_review.py prepare \
+  --input /tmp/public-bundle --analysis /tmp/analysis/analysis.json \
+  --skill podman --record-id 'sha256:<selected-record-hash>' \
+  --source /tmp/evaluated-source --support /tmp/retained-support \
+  --output /tmp/new-review-context
+
+# Explicitly authorized inference: rebuilds context from originals.
+# Set OPENAI_API_KEY securely in the calling environment; never in arguments/files.
+"$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_review.py review \
+  --input /tmp/public-bundle --analysis /tmp/analysis/analysis.json \
+  --skill podman --record-id 'sha256:<selected-record-hash>' \
+  --source /tmp/evaluated-source --support /tmp/retained-support \
+  --model '<explicit-model-id>' --authorize-inference \
+  --output /tmp/new-skill-review
+
+# Offline: independent structural/evidence validation plus exact Markdown check.
+"$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_review.py validate \
+  --input /tmp/public-bundle --analysis /tmp/analysis/analysis.json \
+  --skill podman --record-id 'sha256:<selected-record-hash>' \
+  --source /tmp/evaluated-source --support /tmp/retained-support \
+  --review /tmp/new-skill-review/skill-review.json
+```
+
+`--source` and `--support` are optional. Missing support remains unavailable and
+limits conclusions. Prepare and validate never require credentials or inference
+permission. Review requires both an explicit model and `--authorize-inference`
+before reading evidence or creating a client. A prepared context is an inspection
+artifact, not a trusted input to review. Every operation revalidates saved analysis
+against the captured original public bundles. Saved reports require the same
+inputs, source selection, transformation identities and availability. Refreshing
+expired public records changes context identity; an old report must be reviewed
+against its original availability conditions and cannot silently pass as current.
+
+Review uses the pinned SDK directly with the official endpoint, `store=false`,
+`background=false`, no tools, disabled truncation, no redirects, no environment
+HTTP proxies, and zero SDK retries. There is one input-token count followed by
+one generation using identical model, instructions, input and strict JSON schema.
+The count includes the supplied structured-output schema. The supported count
+endpoint is documented in the [official OpenAI API reference](https://developers.openai.com/api/reference/python/resources/responses/subresources/input_tokens/methods/count).
+There is no repair generation, provider fallback or automatic retry. Defaults are
+64,000 input tokens, 12,000 output tokens and a 180-second total async deadline
+across both requests. `--input-limit`, `--output-limit` and `--deadline-seconds`
+permit positive values up to 128,000, 32,000 and 300 respectively. Refusal,
+incompleteness, malformed output, unexpected tool output, missing usage, limits,
+HTTP errors and timeout reject; failures require a new manual invocation. The
+review suppresses logging during SDK invocation, including debug logging. Errors
+print a fixed message without SDK bodies, prompts, evidence, credentials or paths.
+
+Omitted output destinations use the existing private temporary writer. New output
+directories remain outside the checkout and input boundaries, mode 0700, with
+0600 files and guarded cleanup. Prepare writes only `review-context.json`; review
+writes `skill-review.json` and deterministic `skill-review.md`. Validate is
+read-only. Capture guards persist until the last publication check. The public
+capture retains its 64 MiB operation and 8 MiB member bounds; saved analysis and
+supplemental source/support share a separate 64 MiB capture budget. Saved analysis
+permits a 64 MiB read; other members retain the 8 MiB bound. Context is capped
+at 8 MiB; JSON and Markdown reviews at 1 MiB each.
+No truncation or silent oversized-input omission occurs. Unsupported secure
+filesystem platforms reject; Windows is not qualified.
+
+### Evaluated source coverage
+
+A supplied source directory is read once per file using the existing no-follow,
+hard-link, special-file and change guards. Agent-visible members follow the
+existing native projection boundary. Every supplied visible member must occur
+in the selected evaluated source manifest and match its exact SHA-256. Unexpected
+members or any supplied mismatch reject. Source not represented by a known
+manifest cannot be authenticated and supplying it rejects. Excluded files are
+also bounded and scanned for sensitive strings. Text must be UTF-8; unsupported
+binary source rejects rather than being silently dropped.
+
+By default, all supplied agent-visible source text is included within the context
+bound. Coverage is complete only if all declared members are present and fully
+included. Missing members produce partial coverage with an explicit omitted-member
+list. An optional `--source-selection /tmp/selection.json` chooses line excerpts:
+
+```json
+{
+  "members": [
+    {"member": "SKILL.md", "start_line": 6, "end_line": 12}
+  ]
+}
+```
+
+The closed selection rejects duplicate or nonexistent members and invalid line
+ranges. Original source bytes are still verified in full. Each included member
+records its original digest, line range, total lines, excerpt digest, transformation
+(`utf8-splitlines-join-lf`) and completeness. Excerpted source is partial even when
+all member names are present. Missing source is unavailable, including when only
+its manifest identity is known. Absence citations require complete source coverage;
+partial coverage cannot establish that omitted guidance is absent. Source origin,
+revision, ownership and identity remain independent of coverage. Recommendations
+about upstream skills do not authorize edits to installed upstream bytes.
+
+### Optional qualitative support
+
+`--support` names a private retained directory with `support.json` and original
+members at their exact public-reference relative paths. At most 100 support items
+are accepted. All supplied files share bounds and sensitivity scanning. A support
+item is a closed descriptor:
+
+```json
+{
+  "items": [
+    {
+      "record_id": "sha256:<public-record-hash>",
+      "reference_id": "sha256:<reference-hash>",
+      "observation_id": "sha256:<observation-hash>",
+      "kind": "agent_behavior",
+      "locator": ["agent_output"],
+      "representation": "original",
+      "archive_member": null,
+      "start_line": null,
+      "end_line": null
+    }
+  ]
+}
+```
+
+Record, reference, observation and locator membership are checked against captured
+original public records. Support must name the selected skill and exact selected
+source identity. Behavior and evaluator judgments require an observation whose
+reference list contains that member. Case, arm, attempt and run identities are
+host-generated from that observation. Full locators must extend the original
+reference locator. Behavior requires an agent-output, transcript, trajectory,
+messages, commands or stdout carrier; grader/reward/feedback/suggestion carriers
+cannot be relabeled as behavior. This carrier check establishes type and location,
+not truth or causal relevance. These still require human review.
+
+Kinds are `agent_behavior`, `evaluator_judgment`, `native_suggestion`, and
+`analyst_interpretation`. Suggestions require a suggestions/recommendations/
+improvements locator. Suggestions and interpretations may have a null observation
+for run-level support. Their presence does not establish observed behavior.
+A judgment object with a score must agree with its bound native observation;
+contradictory score carriers reject. Other contradiction claims remain semantic
+judgments for human review, never reconciled by silently choosing a grader.
+
+`original` requires exact original member bytes and digest. When the public
+reference declares an archive digest, `archive_member` must name a supplied ZIP
+within the support root. Its captured digest and contained original member digest
+must both match the public reference. Null archive identities cannot be upgraded
+by supplying an unbound archive. All ZIP members are bounded, scanned in memory
+and never extracted; unsafe paths, ambiguous names, encryption, unsupported
+compression, binary/sensitive content and oversized expanded members reject.
+Archives share the 8 MiB per-file and 64 MiB aggregate supplemental bounds, including
+expanded members, with at most 10,000 entries. There is no archive retrieval. `reviewed_extract` requires the existing allowlisted
+`extract-manifest.json`, matching archive identity, original member digest and
+retained extract digest, with `archive_member: null`. Unknown extract manifests reject. Reviewed sanitization
+is recorded as a transformation with omitted original content unavailable; the
+extract never becomes a complete original. No arbitrary user-supplied sanitized
+replacement can authenticate itself with a new digest.
+
+Optional start/end lines select a derived excerpt of the verified located value.
+Null/null includes that entire value, rather than claiming the entire archive or
+trial is complete. Non-string JSON values render canonically before line selection.
+Each support item preserves original archive/member/locator identities, retained
+and excerpt digests, transformation, completeness, availability and limitations.
+Expired or unavailable public references remain so. Independently verified
+retained originals or allowlisted extracts supply separately identified local
+support, without rewriting public availability or native completed scores.
+Sensitive, corrupt, contradictory, unbound or oversized supplied evidence rejects.
+There is no automatic redaction that can silently alter authenticated evidence.
+Scanning detects known credential, contact and private-path patterns; it is not a
+comprehensive privacy audit. Inspect the private prepared context before authorizing
+its transmission. Report Markdown preserves host-generated excerpt and support
+metadata without embedding full native evidence or the review prompt.
+
+### Review contract and prompt policy
+
+The review schema is independent, version 1, method `grounded-skill-review/1`.
+One closed Pydantic model hierarchy defines the model judgment and saved envelope;
+semantic checks additionally bind it to captured evidence. Extra fields, invalid
+citations, evidence-type confusion, source paths, unavailable line ranges,
+quotation mismatches, incomplete suggestion dispositions and recommendations
+exceeding these support rules reject.
+
+Host provenance records method, dependency versions, context/analysis/schema/
+prompt digests, input provenance digest, selected record and source identity,
+origin, ownership, revision, source coverage/omissions, public reference availability,
+local support IDs, model configuration, endpoint/request policies, UTC timestamp,
+usage and validation status. The model cannot supply or change host provenance.
+Saved provenance is independently compared with rebuilt context. It is a reproducible
+binding, not a cryptographic attestation that a model call actually occurred.
+
+A top-level assessment is mandatory even when the recommendation list is empty.
+It explains tested benefit, tested harm, interpretation, uncertainty, disposition
+(`skill_change`, `investigate`, `no_change`), citations and sufficiency. Every
+supplied native suggestion receives exactly one assessment: `already_covered`,
+`potentially_ineffective`, `warranted`, `contradicted` or `unsupported`. Already
+covered requires source citations; warranted/contradicted requires observed support.
+
+There are zero to three recommendations, with category, priority, implementable
+scope, justification, source paths, explicit sufficiency, citations, expected
+benefit, alternatives, risks and measurable validation criteria. Action categories
+remain `modify_skill`, `improve_eval`, `fix_grader_or_harness`, `investigate`,
+`no_change`. Sufficiency records source identity/integrity/coverage, observed or
+unavailable behavior, behavioral scope, provenance/availability, limitations,
+and a sufficient-versus-investigation-only conclusion with rationale. Host checks
+require those identity, integrity, coverage and support claims to match citations.
+
+A specific skill change requires verified source citations for every proposed
+member and trial-bound with-skill behavior. Numeric regressions and evaluator
+opinions alone cannot meet that gate. Evaluation/grader changes marked sufficient
+require qualitative behavior or evaluator evidence; absent support restricts them
+to investigation. Investigation explicitly declares investigation-only sufficiency.
+Skill validation plans must compare current skill, candidate skill and no-skill
+baseline, retaining previously passing cases and mandatory safety gates, plus
+negative controls and fresh realistic cases. These plans propose validation;
+they do not assert that comparisons have already run.
+
+The fixed prompt treats all context as untrusted data, forbids commands/retrieval,
+requires bounded grounded reasoning and preservation of native contracts, and
+separates grader opinions, analyst interpretations and observed behavior. Unsupported
+external assertions belong in an explicit unverified list. The renderer escapes
+model prose into inert text and never embeds raw context or prompts. Semantic
+truth, causal relevance, instruction-defect attribution and worthwhile scope cannot
+be established by structural validity, carrier checks or citation integrity.
+Every report remains a model-generated judgment requiring human review.
+
+### Offline verification and usefulness qualification
+
+Run the production-path offline suite in the pinned environment:
+
+```bash
+"$SKILL_EVALUATOR_PYTHON" -B -m unittest discover \
+  -s .github/tests -p 'test_skill*.py' -v
+"$SKILL_EVALUATOR_PYTHON" -B -m unittest discover \
+  -s .github/tests -p test_public_reports.py -v
+```
+
+The review suite uses the actual pinned SDK and mocked HTTP transport, including
+CLI preparation, authorized review, independent validation and deterministic
+rendering. It covers source/citation/analysis mismatches, partial coverage and
+excerpts, existing Podman guidance, unmeasured upstream gh ownership, synthetic
+action categories and no-change assessments, unchanged historical native measures,
+expired public references with separately verified local reviewed extracts,
+contradictory graders, injection-as-data, sensitive inputs/outputs, refusal,
+malformed/incomplete output, limits, deadline, cleanup and authorization. These
+fixtures are not model-backed usefulness evidence. No paid inference belongs in
+ordinary CI. Sandbox UID or asynchronous socket restrictions must be reported as
+infrastructure limitations and cannot justify weakening production guards.
+
+**Recommendation usefulness is a separate qualification gate.** The analyst is
+`not_quality_qualified`, with `automated_publication_eligible: false`, until a
+manually reviewed model-backed proof of value passes. This implementation never
+promotes itself based on schema correctness, citation checks or green offline tests.
+After explicit authorization for each model invocation, retain representative
+Podman, unmeasured gh, synthetic positive and no-change reports privately. Review
+them against native suggestions, checking grounded reasoning, worthwhile scope,
+honest evidence sufficiency, uncertainty and practical validation plans. Verify
+that existing guidance is recognized, native grading issues do not become invented
+skill defects, and unavailable evidence stays explicit. Record human judgments
+and measured usefulness separately; no automated downstream publication is enabled.
