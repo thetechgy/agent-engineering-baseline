@@ -295,20 +295,21 @@ def checked_text(raw):
     return text
 
 
-def check_report_controls(value):
-    """Inspect decoded strings; JSON serialization can hide terminal controls."""
+def check_report_text(value):
+    """Apply text gates before serialization can hide controls or private paths."""
     if type(value) is str:
         require(
             not re.search(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]", value),
             "Control characters in review text",
         )
+        checked_text(value)
     elif type(value) is dict:
         for key, item in value.items():
-            check_report_controls(key)
-            check_report_controls(item)
+            check_report_text(key)
+            check_report_text(item)
     elif type(value) is list:
         for item in value:
-            check_report_controls(item)
+            check_report_text(item)
 
 
 def source_context(src, root, selection, capture):
@@ -719,7 +720,7 @@ def validate_judgment(value, context):
     judgment = Judgment.model_validate(value)
     require(evidence.encoded(value) == evidence.encoded(judgment.model_dump()), "Judgment structural types changed")
     checked_text(evidence.encoded(value))
-    check_report_controls(value)
+    check_report_text(value)
     check_sufficiency(
         judgment.assessment.sufficiency,
         judgment.assessment.citations,
@@ -937,7 +938,7 @@ def validate_review(value, context):
     for guard in context.guards:
         guard()
     checked_text(evidence.encoded(value))
-    check_report_controls(value)
+    check_report_text(value)
     expected = expected_provenance(context)
     provenance = report.provenance.model_dump()
     require(
@@ -960,7 +961,7 @@ def validate_review(value, context):
 
 def render_review(report):
     """Deterministic inert Markdown. Raw prompts and context never enter reports."""
-    check_report_controls(report)
+    check_report_text(report)
 
     def safe(value):
         return (

@@ -721,6 +721,31 @@ class ReviewTests(unittest.TestCase):
         value["assessment"]["interpretation"] = "Summary\tinline"
         review.validate_judgment(value, context)
 
+    def test_decoded_sensitive_strings_reject_at_every_report_boundary(self):
+        context = self.control()
+        sensitive = r"C:\Users\SyntheticUser\private"
+        value = judgment(context)
+        value["assessment"]["interpretation"] = sensitive
+        with self.assertRaisesRegex(ValueError, "Sensitive evidence text"):
+            review.validate_judgment(value, context)
+        with self.assertRaisesRegex(ValueError, "Sensitive evidence text"):
+            review.render_review({"judgment": value, "provenance": {}})
+        calls, run = self.invoke(context, value)
+        with self.assertRaisesRegex(ValueError, "Inference rejected"):
+            asyncio.run(run())
+        self.assertEqual(len(calls), 2)
+        _, run = self.invoke(context)
+        report = asyncio.run(run())
+        report["judgment"]["assessment"]["interpretation"] = sensitive
+        with self.assertRaisesRegex(ValueError, "Sensitive evidence text"):
+            review.validate_review(report, context)
+        value = judgment(context, category="investigate")
+        value["recommendations"][0]["alternatives"] = [sensitive]
+        with self.assertRaisesRegex(ValueError, "Sensitive evidence text"):
+            review.validate_judgment(value, context)
+        with self.assertRaisesRegex(ValueError, "Sensitive evidence text"):
+            review.render_review({"judgment": value, "provenance": {}})
+
     def test_injection_is_inert_sensitive_output_and_input_reject(self):
         context = self.control()
         marker = self.root / "executed"
