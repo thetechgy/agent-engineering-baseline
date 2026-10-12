@@ -4153,7 +4153,7 @@ class EvidenceTests(unittest.TestCase):
                 self.assertEqual(self.snapshot(workspace), before_workspace)
 
     def test_failed_normalization_publication_cleans_outputs_and_allows_retry(self):
-        for temporary, failure in itertools.product((False, True), ('directory_open', 'directory_stat', 'directory_list', 'open', 'write', 'flush')):
+        for temporary, failure in itertools.product((False, True), ('initial_stat', 'directory_open', 'directory_stat', 'directory_list', 'open', 'write', 'flush')):
             with self.subTest(temporary=temporary, failure=failure), tempfile.TemporaryDirectory() as temp:
                 parent = Path(temp); root = parent / 'native'
                 shutil.copytree(FIXTURES / 'static-synthetic', root)
@@ -4163,6 +4163,14 @@ class EvidenceTests(unittest.TestCase):
                 if not temporary: args += ['--output', str(destination)]
                 opened = os.open; fdopen = os.fdopen; fstat = os.fstat; listdir = os.listdir
                 output_fds = set(); directory_fds = set(); attempted = []
+                stat_path = os.stat; initial_stat_failed = False
+                def failing_initial_stat(path, *args, **kwargs):
+                    nonlocal initial_stat_failed
+                    if failure == 'initial_stat' and not initial_stat_failed and kwargs.get('dir_fd') is not None \
+                            and (str(path) == 'explicit' or str(path).startswith('skill-evidence-')):
+                        initial_stat_failed = True
+                        raise OSError(5, 'Synthetic output initial stat failure')
+                    return stat_path(path, *args, **kwargs)
                 def failing_open(path, flags, *args, **kwargs):
                     output_directory = flags & os.O_DIRECTORY and (str(path) == 'explicit' or str(path).startswith('skill-evidence-'))
                     if output_directory and failure == 'directory_open':
@@ -4203,10 +4211,11 @@ class EvidenceTests(unittest.TestCase):
                         patch.object(os, 'open', side_effect=failing_open), \
                         patch.object(os, 'fdopen', side_effect=failing_stream), \
                         patch.object(os, 'fstat', side_effect=failing_stat), \
+                        patch.object(os, 'stat', side_effect=failing_initial_stat), \
                         patch.object(os, 'listdir', side_effect=failing_list), \
                         self.assertRaisesRegex(OSError, 'Synthetic output'), redirect_stdout(StringIO()):
                     evidence.main(args)
-                self.assertEqual(attempted, [] if failure.startswith('directory_') else ['evidence.json', 'public-report.json'])
+                self.assertEqual(attempted, [] if failure.startswith('directory_') or failure == 'initial_stat' else ['evidence.json', 'public-report.json'])
                 self.assertEqual(list(output_parent.iterdir()), []); self.assertEqual(self.snapshot(root), before)
                 stdout = StringIO()
                 with patch.dict(os.environ, {'TMPDIR': str(output_parent)}), redirect_stdout(stdout): evidence.main(args)
@@ -4216,25 +4225,102 @@ class EvidenceTests(unittest.TestCase):
                 self.assertEqual(self.snapshot(root), before)
 
     def test_output_descriptor_failure_preserves_replacement_directories(self):
-        for temporary, replacement in itertools.product((False, True), ('directory', 'symlink', 'removed')):
-            with self.subTest(temporary=temporary, replacement=replacement), tempfile.TemporaryDirectory() as temp:
+        for temporary, replacement, stage in itertools.product((False, True), ('directory', 'symlink', 'removed'), ('open', 'initial_stat')):
+            with self.subTest(temporary=temporary, replacement=replacement, stage=stage), tempfile.TemporaryDirectory() as temp:
                 parent = Path(temp); retained = parent / 'retained'; target = parent / 'target'; target.mkdir(mode=0o700)
-                destination = parent / 'explicit'; opened = os.open; replaced = False
-                def failing_open(path, flags, *args, **kwargs):
+                destination = parent / 'explicit'; opened = os.open; stat_path = os.stat; replaced = False
+                def replace(path):
                     nonlocal replaced, destination
-                    if flags & os.O_DIRECTORY and (str(path) == 'explicit' or str(path).startswith('skill-evidence-')):
-                        destination = parent / str(path); destination.rename(retained); replaced = True
-                        if replacement == 'directory': target.rename(destination)
-                        elif replacement == 'symlink': destination.symlink_to(target, target_is_directory=True)
-                        raise OSError(24, 'Synthetic descriptor limit')
+                    destination = parent / str(path); destination.rename(retained); replaced = True
+                    if replacement == 'directory': target.rename(destination)
+                    elif replacement == 'symlink': destination.symlink_to(target, target_is_directory=True)
+                    raise OSError(24 if stage == 'open' else 5, 'Synthetic reservation failure')
+                def failing_open(path, flags, *args, **kwargs):
+                    if stage == 'open' and flags & os.O_DIRECTORY and (str(path) == 'explicit' or str(path).startswith('skill-evidence-')):
+                        replace(path)
                     return opened(path, flags, *args, **kwargs)
-                with patch.object(os, 'open', side_effect=failing_open), patch.dict(os.environ, {'TMPDIR': str(parent)}):
-                    with self.assertRaisesRegex(OSError, 'Synthetic descriptor limit'):
+                def failing_stat(path, *args, **kwargs):
+                    if stage == 'initial_stat' and not replaced and kwargs.get('dir_fd') is not None \
+                            and (str(path) == 'explicit' or str(path).startswith('skill-evidence-')):
+                        replace(path)
+                    return stat_path(path, *args, **kwargs)
+                with patch.object(os, 'open', side_effect=failing_open), patch.object(os, 'stat', side_effect=failing_stat), \
+                        patch.dict(os.environ, {'TMPDIR': str(parent)}):
+                    with self.assertRaisesRegex(OSError, 'Synthetic reservation failure'):
                         evidence.write_outputs({'evidence.json': {}}, None if temporary else destination)
                 self.assertTrue(replaced); self.assertEqual(list(retained.iterdir()), [])
                 if replacement == 'directory': self.assertTrue(destination.is_dir()); self.assertEqual(list(destination.iterdir()), [])
                 elif replacement == 'symlink': self.assertTrue(destination.is_symlink()); self.assertEqual(list(target.iterdir()), [])
                 else: self.assertFalse(destination.exists())
+
+    def test_in_memory_capture_rejects_changed_inputs_before_output_allocation(self):
+        root = self.root / 'native'; shutil.copytree(FIXTURES / 'static-synthetic', root)
+        data = copy.deepcopy(evidence.normalize_static(root, 'podman'))
+        public = evidence.project(data); target = root / 'versions.json'
+        raw = target.read_bytes(); target.write_bytes(raw + b' ')
+        output = self.root / 'rejected'
+        with patch.object(os, 'mkdir') as mkdir:
+            with self.assertRaisesRegex(ValueError, 'Input member changed'):
+                evidence.write_outputs({'evidence.json': data, 'public-report.json': public}, output)
+            mkdir.assert_not_called()
+        self.assertFalse(output.exists()); self.assertNotIn(b'_input_guards', evidence.encoded(public))
+
+    def test_projection_capture_keeps_strict_json_object_boundary(self):
+        value = evidence.read_json(FIXTURES / 'gh-no-model.json')
+        source = self.root / 'pairs.json'; write(source, list(value.items()))
+        before = source.read_bytes(); output = self.root / 'rejected-pairs'
+        result = subprocess.run([sys.executable, str(REPO / '.github/scripts/skill_evidence.py'),
+                                 'project', '--input', str(source), '--output', str(output)],
+                                capture_output=True, text=True, timeout=30)
+        self.assertEqual(result.returncode, 1); self.assertNotIn('Traceback', result.stderr)
+        self.assertLess(len(result.stderr), 200); self.assertFalse(output.exists())
+        self.assertEqual(source.read_bytes(), before)
+
+    def test_inputs_remain_anchored_through_publication(self):
+        for mode, mutation, stage in itertools.product(('inventory', 'static', 'behavioral', 'project-static', 'project-behavioral', 'project-reviewed'), ('replace', 'edit'), ('allocation', 'last_member')):
+            with self.subTest(mode=mode, mutation=mutation, stage=stage), tempfile.TemporaryDirectory() as temp, patch.object(self, 'root', Path(temp)):
+                repo, git = self.repository_fixture(); root = self.root / 'native'
+                kind = 'static' if 'static' in mode else 'behavioral'
+                if mode == 'inventory': target = repo / '.apm/skills/alpha/SKILL.md'
+                else:
+                    shutil.copytree(FIXTURES / ('static-synthetic' if kind == 'static' else 'podman-native'), root)
+                    if kind == 'behavioral' and mode != 'project-reviewed': (root / 'extract-manifest.json').unlink()
+                    target = root / 'versions.json'
+                inventory = evidence.inventory; normalizer = getattr(evidence, 'normalize_' + kind)
+                with patch.object(evidence, 'inventory', side_effect=lambda: inventory(repo)), \
+                        patch.object(evidence, 'normalize_' + kind, side_effect=lambda *a: normalizer(*a, workspace=repo)):
+                    if mode.startswith('project-'):
+                        value = getattr(evidence, 'normalize_' + kind)(root, 'podman')
+                        input_file = root / 'evidence.json'; write(input_file, value)
+                        if mode == 'project-reviewed': target = input_file
+                        args = ['project', '--input', str(input_file)]
+                    elif mode == 'inventory': args = ['inventory']
+                    else: args = ['normalize', '--kind', kind, '--skill', 'podman', '--input', str(root)]
+                    raw = target.read_bytes(); metadata = target.stat(); output = self.root / 'output'
+                    opened = os.open; mkdir = os.mkdir; changed = False
+                    def change():
+                        nonlocal changed
+                        changed = True
+                        if mutation == 'replace':
+                            replacement = target.with_name('replacement'); replacement.write_bytes(raw); replacement.replace(target)
+                        else:
+                            target.write_bytes(raw + b' '); target.write_bytes(raw)
+                            os.utime(target, ns=(metadata.st_atime_ns, metadata.st_mtime_ns))
+                    def changed_input(path, flags, *a, **kw):
+                        if stage == 'last_member' and flags & os.O_CREAT and not changed \
+                                and str(path) == ('inventory.json' if mode == 'inventory' else 'public-report.json'):
+                            change()
+                        return opened(path, flags, *a, **kw)
+                    def changed_allocation(path, *a, **kw):
+                        result = mkdir(path, *a, **kw)
+                        if stage == 'allocation' and not changed and str(path) == output.name: change()
+                        return result
+                    with patch.object(os, 'open', side_effect=changed_input), patch.object(os, 'mkdir', side_effect=changed_allocation), redirect_stdout(StringIO()):
+                        with self.assertRaisesRegex(ValueError, 'Input (member|directory)'):
+                            evidence.main([*args, '--output', str(output)])
+                    self.assertTrue(changed); self.assertFalse(output.exists()); self.assertEqual(target.read_bytes(), raw)
+                    with redirect_stdout(StringIO()): evidence.main([*args, '--output', str(output)])
+                    self.assertTrue(output.is_dir())
 
     def test_relocatable_output_parents_reject_before_writes(self):
         for temporary, component in itertools.product((False, True), ('parent', 'ancestor')):

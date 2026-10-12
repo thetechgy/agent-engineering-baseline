@@ -1120,10 +1120,11 @@ def inventory(workspace=ROOT):
     verify_directory_states(states, directories)
     verify_file_states(members, directories, states)
     validate_inventory(result)
-    return result
+    return _CapturedRecord(result, (input_guard(directories, states, members, budget),))
 
 
 def validate_inventory(data):
+    if type(data) is _CapturedRecord: data = dict(data)
     closed(data, ('schema_version', 'kind', 'skills'))
     require(type(data['schema_version']) is int and data['schema_version'] == 1 and data['kind'] == 'inventory', 'Inventory version')
     require(type(data['skills']) is list and len(data['skills']) <= MAX_CASES, 'Inventory limit')
@@ -1307,7 +1308,7 @@ def behavioral_identity_missing(data):
 
 def validate_evidence(data, *, public=False, _observed_at=None):
     observed_at = _observed_at
-    if type(data) in (_StaticEvidence, _BehavioralEvidence):
+    if type(data) in (_CapturedRecord, _StaticEvidence, _BehavioralEvidence):
         data = dict(data)
     fields = ('schema_version', 'kind', 'source', 'run_id', 'dataset', 'policy', 'arms', 'metrics',
               'observations', 'scans', 'findings', 'references', 'availability')
@@ -1642,12 +1643,43 @@ def static_claim_identity(data, blocking_defaults):
     return identity(claims)
 
 
-class _StaticEvidence(dict):
+def input_guard(directories, states, members, budget=None):
+    """Retain capture state until the last publication check, without rereading bytes."""
+    directories = dict(directories); states = dict(states); members = dict(members)
+    def verify():
+        if budget is not None: budget.verify_repository()
+        verify_directory_states(states, directories)
+        verify_file_states(members, directories, states)
+    return verify
+
+
+class _CapturedRecord(dict):
+    """JSON-compatible data with private, nonserialized input-state guards."""
+    __slots__ = ('_input_guards',)
+
+    def __init__(self, data, input_guards=()):
+        super().__init__(data)
+        object.__setattr__(self, '_input_guards', tuple(input_guards))
+
+    def __setattr__(self, name, value):
+        raise AttributeError('Immutable input capture')
+
+    def __deepcopy__(self, memo):
+        result = _CapturedRecord(copy.deepcopy(dict(self), memo), self._input_guards)
+        memo[id(self)] = result
+        return result
+
+
+def record_guards(data):
+    return data._input_guards if type(data) in (_CapturedRecord, _StaticEvidence, _BehavioralEvidence) else ()
+
+
+class _StaticEvidence(_CapturedRecord):
     """A data-only record with a transient witness from captured native bytes."""
     __slots__ = ('_claim_digest', '_blocking_defaults')
 
-    def __init__(self, data, claim_digest, blocking_defaults):
-        super().__init__(data)
+    def __init__(self, data, claim_digest, blocking_defaults, input_guards=()):
+        super().__init__(data, input_guards)
         object.__setattr__(self, '_claim_digest', claim_digest)
         object.__setattr__(self, '_blocking_defaults', blocking_defaults)
 
@@ -1655,7 +1687,7 @@ class _StaticEvidence(dict):
         raise AttributeError('Immutable native witness')
 
     def __deepcopy__(self, memo):
-        result = _StaticEvidence(copy.deepcopy(dict(self), memo), self._claim_digest, self._blocking_defaults)
+        result = _StaticEvidence(copy.deepcopy(dict(self), memo), self._claim_digest, self._blocking_defaults, self._input_guards)
         memo[id(self)] = result
         return result
 
@@ -1674,12 +1706,12 @@ def behavioral_claim_identity(data):
     return identity(claims)
 
 
-class _BehavioralEvidence(dict):
+class _BehavioralEvidence(_CapturedRecord):
     """Transient witness for ordinary runtime observations and headline metrics."""
     __slots__ = ('_claim_digest', '_required_reasons')
 
-    def __init__(self, data, claim_digest, *, required_reasons=None):
-        super().__init__(data)
+    def __init__(self, data, claim_digest, *, required_reasons=None, input_guards=()):
+        super().__init__(data, input_guards)
         object.__setattr__(self, '_claim_digest', claim_digest)
         object.__setattr__(self, '_required_reasons', tuple(data['availability']['reasons']
                            if required_reasons is None else required_reasons))
@@ -1689,7 +1721,7 @@ class _BehavioralEvidence(dict):
 
     def __deepcopy__(self, memo):
         result = _BehavioralEvidence(copy.deepcopy(dict(self), memo), self._claim_digest,
-                                     required_reasons=self._required_reasons)
+                                     required_reasons=self._required_reasons, input_guards=self._input_guards)
         memo[id(self)] = result
         return result
 
@@ -1703,6 +1735,7 @@ def behavioral_claims_need_witness(data):
 
 def project(data, *, static_bundle=None, behavioral_bundle=None):
     observed_at = utc_now()
+    guards = list(record_guards(data))
     validate_evidence(data, _observed_at=observed_at)
     if data['kind'] == 'static' and data['availability']['status'] != 'unavailable':
         if type(data) is _StaticEvidence:
@@ -1712,6 +1745,7 @@ def project(data, *, static_bundle=None, behavioral_bundle=None):
             witness = normalize_static(Path(static_bundle), data['source']['skill_id'])
         require(static_claim_identity(data, witness._blocking_defaults) == witness._claim_digest,
                 'Static claims differ from retained native evidence')
+        guards.extend(record_guards(witness))
     if behavioral_claims_need_witness(data):
         if type(data) is _BehavioralEvidence:
             witness = data
@@ -1723,6 +1757,7 @@ def project(data, *, static_bundle=None, behavioral_bundle=None):
                 'Behavioral claims differ from retained native evidence')
         require(set(witness._required_reasons) <= set(data['availability']['reasons']),
                 'Native behavioral limitations removed')
+        guards.extend(record_guards(witness))
     # Every object is rebuilt from fixed fields. A native report is never accepted.
     out = {key: copy.deepcopy(data[key]) for key in ('schema_version', 'kind', 'source', 'run_id', 'dataset',
            'policy', 'arms', 'metrics', 'scans', 'findings', 'references', 'availability')}
@@ -1730,7 +1765,7 @@ def project(data, *, static_bundle=None, behavioral_bundle=None):
         OBSERVATION_FIELDS}
         for obs in data['observations']]
     validate_evidence(out, public=True, _observed_at=observed_at)
-    return out
+    return _CapturedRecord(out, tuple(dict.fromkeys(guards)))
 
 
 def load_extract(root, *, budget=None, _observed_at=None, directory_identities=None, entries=None, directory_states=None, file_states=None):
@@ -2441,7 +2476,8 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     verify_directory_states(directory_states, directory_identities)
     verify_file_states(file_states, directory_identities, directory_states)
     validate_evidence(data, _observed_at=observed_at)
-    return data if extract else _BehavioralEvidence(data, behavioral_claim_identity(data))
+    guards = (input_guard(directory_identities, directory_states, file_states, budget),)
+    return _CapturedRecord(data, guards) if extract else _BehavioralEvidence(data, behavioral_claim_identity(data), input_guards=guards)
 
 
 def static_required_gate(scan, *, blocking_only=False):
@@ -2603,7 +2639,8 @@ def normalize_static(root, name, workspace=ROOT):
     verify_file_states(file_states, directory_identities, directory_states)
     validate_evidence(data)
     blocking_defaults = tuple((scan['scanner'], scan['blocking']) for scan in data['scans'])
-    return _StaticEvidence(data, static_claim_identity(data, blocking_defaults), blocking_defaults)
+    return _StaticEvidence(data, static_claim_identity(data, blocking_defaults), blocking_defaults,
+                           (input_guard(directory_identities, directory_states, file_states, budget),))
 
 
 def open_directory(path, identities=None, changed_message='Input directory changed', trusted_output=False, *, directory_states=None):
@@ -2642,6 +2679,8 @@ def write_outputs(values, destination=None, workspace=ROOT, input_path=None):
     for name in values:
         relative(name); require('/' not in name, 'Nested output member')
     payloads = {name: encoded(value) for name, value in values.items()}
+    guards = tuple(dict.fromkeys(guard for value in values.values() for guard in record_guards(value)))
+    for guard in guards: guard()
     workspace = Path(workspace).absolute()
     if input_path is not None:
         input_path = Path(input_path).absolute()
@@ -2681,14 +2720,19 @@ def write_outputs(values, destination=None, workspace=ROOT, input_path=None):
             require(destination is not None, 'Temporary output collision limit')
         else:
             os.mkdir(destination.name, mode=0o700, dir_fd=parent_fd)
-        created = os.stat(destination.name, dir_fd=parent_fd, follow_symlinks=False)
-        reserved = (stat.S_ISDIR(created.st_mode)
-                    and (created.st_dev, created.st_ino) not in forbidden_directories
-                    and created.st_uid == os.geteuid() and not created.st_mode & 0o077)
+        created = None
+        reservation_parent = None
+        reserved = False
         directory_fd = None
         owned = False
         members = []
+        def private_reservation(info):
+            return (stat.S_ISDIR(info.st_mode) and (info.st_dev, info.st_ino) not in forbidden_directories
+                    and info.st_uid == os.geteuid() and not info.st_mode & 0o077)
         try:
+            reservation_parent = directory_state(os.fstat(parent_fd))
+            created = os.stat(destination.name, dir_fd=parent_fd, follow_symlinks=False)
+            reserved = private_reservation(created)
             require(reserved, 'Output directory changed')
             directory_fd = os.open(destination.name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent_fd)
             original = os.fstat(directory_fd)
@@ -2714,7 +2758,19 @@ def write_outputs(values, destination=None, workspace=ROOT, input_path=None):
                 with stream:
                     stream.write(payload)
                 unchanged()
+            for guard in guards: guard()
+            unchanged()
         except BaseException:
+            if created is None and reservation_parent is not None:
+                # One recovery lookup for a transient initial stat failure. A
+                # changed parent entry set cannot establish reservation identity.
+                try:
+                    if directory_state(os.fstat(parent_fd)) == reservation_parent:
+                        recovered = os.stat(destination.name, dir_fd=parent_fd, follow_symlinks=False)
+                        if directory_state(os.fstat(parent_fd)) == reservation_parent and private_reservation(recovered):
+                            created = recovered; reserved = True
+                except OSError:
+                    pass
             if owned:
                 # Remove only members created here, through the retained descriptor.
                 for name in members:
@@ -2783,7 +2839,10 @@ def main(argv=None):
     if args.command == 'inventory':
         values = {'inventory.json': inventory()}
     elif args.command == 'project':
-        data = read_json(args.input)
+        directories = {}; states = {}; members = {}
+        data = parse_json(read_bytes(args.input, directory_identities=directories, directory_states=states, file_states=members))
+        require(type(data) is dict, 'Evidence object required')
+        data = _CapturedRecord(data, (input_guard(directories, states, members),))
         values = {'public-report.json': project(data, static_bundle=args.input.parent, behavioral_bundle=args.input.parent)}
         if data['kind'] == 'static' or behavioral_claims_need_witness(data):
             input_path = args.input.parent

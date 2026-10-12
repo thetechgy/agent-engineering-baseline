@@ -71,6 +71,9 @@ retry; cleanup never follows or removes a replacement destination. If opening
 or validating the new directory descriptor fails, cleanup uses the retained
 parent descriptor and captured directory identity to remove the still-empty
 reservation. A missing or replaced destination preserves the original rejection.
+The first metadata lookup is also inside cleanup scope. A transient failure
+permits one recovery lookup only while the captured parent-entry state matches;
+cleanup leaves the reservation untouched if it cannot safely establish identity.
 This path is verified on Linux; Windows output support is not established.
 Input files use the same no-follow ancestor traversal and open the final member
 relative to its parent descriptor. Replacing an ancestor cannot redirect input
@@ -96,7 +99,13 @@ not claim an atomic filesystem snapshot or isolation from privileged writers.
 Scanned regular members also retain device/inode, size and modification/change
 metadata. Reads check this state before and after capture; cached inventory bytes
 are revalidated without recapture, and every scanned member is checked again
-before publication. In-place edits and restores reject even when modification
+before publication. Private capture guards survive normalization, projection and
+in-memory copies without entering serialized records. The output writer checks
+them before allocating a destination and again after all output streams close;
+a changed input rejects and removes the partial output. Standalone projection
+also captures its input JSON through this boundary. Shared guards are checked
+once per boundary, without recapturing bytes or multiplying the read budget.
+In-place edits and restores reject even when modification
 times are restored. Optional consumed members outside scanned source trees use
 the same state map. These checks retain the same filesystem metadata limits.
 Standalone source-snapshot verification also rechecks every scanned directory,
