@@ -214,7 +214,7 @@ class EvidenceTests(unittest.TestCase):
                     self.dataset(extra, 'excess')
                 with patch.object(evidence, 'validate_skill_metadata') as metadata, \
                         patch.object(evidence, 'skill_content') as hashing, \
-                        patch.object(evidence, 'git_revision') as revision:
+                        patch.object(evidence, 'resolve_git_revision') as revision:
                     with self.assertRaisesRegex(ValueError, 'Inventory limit'):
                         evidence.inventory(root)
                     self.assertEqual((metadata.call_count, hashing.call_count, revision.call_count), (0, 0, 0))
@@ -233,7 +233,7 @@ class EvidenceTests(unittest.TestCase):
                     else:
                         with patch.object(evidence, 'validate_skill_metadata') as metadata, \
                                 patch.object(evidence, 'skill_content') as hashing, \
-                                patch.object(evidence, 'git_revision') as revision:
+                                patch.object(evidence, 'resolve_git_revision') as revision:
                             with self.assertRaisesRegex(ValueError, 'Ownership record limit'):
                                 evidence.inventory(root)
                             self.assertEqual((metadata.call_count, hashing.call_count, revision.call_count), (0, 0, 0))
@@ -1907,6 +1907,77 @@ class EvidenceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Native metric'):
             evidence.validate_native_metrics(agent)
 
+    def test_native_report_carriers_reconcile_with_retained_trials(self):
+        from skillevaluator.tier3.harbor.collector import _compute_lift
+        from skillevaluator.tier3.harbor.metrics import DEFAULT_METRICS, dimension_scores
+        root = self.native(); run = next((root / 'results/podman').iterdir())
+        self.mutate(root, '/provenance.json', lambda d: d.pop('metrics', None))
+        baseline = evidence.normalize_behavioral(root, 'podman')
+        paths = [run / 'result.json', *(run / 'codex').glob('*/summary.json'),
+                 *(run / 'codex').glob('*/trials/*/result.json'), *(run / 'codex').glob('*/trials/*/reward.json')]
+        originals = {path: evidence.read_json(path) for path in paths}
+        for arm, mutation in itertools.product(('with_skill', 'without_skill'),
+                ('headline', 'summary_scores', 'summary_dimensions', 'trial_component',
+                 'agent_runtime_failures', 'trial_failures', 'job_failures')):
+            with self.subTest(arm=arm, mutation=mutation):
+                for path, value in originals.items(): write(path, value)
+                result = copy.deepcopy(originals[run / 'result.json']); agent = result['agents']['codex']
+                summary_path = run / 'codex' / arm.replace('_', '-') / 'summary.json'
+                summary = copy.deepcopy(originals[summary_path])
+                if mutation == 'headline':
+                    scores = {side: {key: agent['lift'][key][side] for key in DEFAULT_METRICS}
+                              for side in ('with_skill', 'without_skill')}
+                    scores[arm] = dict.fromkeys(DEFAULT_METRICS, 0.1)
+                    agent.update(scores); agent['lift'] = _compute_lift(scores['with_skill'], scores['without_skill'])
+                    for side in scores: agent['dimensions_' + side] = dimension_scores(scores[side])
+                elif mutation == 'summary_scores': summary['scores'] = {'accuracy': 0.1}
+                elif mutation == 'summary_dimensions': summary['dimensions'] = {'correctness': {'score': 0.1}}
+                elif mutation == 'trial_component':
+                    path = next((summary_path.parent / 'trials').glob('*/result.json'))
+                    trial = copy.deepcopy(originals[path]); trial['verifier_result']['rewards']['accuracy'] = 0.1
+                    reward_path = path.with_name('reward.json'); reward = copy.deepcopy(originals[reward_path]); reward['accuracy'] = 0.1
+                    write(path, trial); write(reward_path, reward)
+                else: agent[mutation] = {arm: 'private diagnostic' if mutation == 'job_failures' else [{'reason': 'private diagnostic'}]}
+                write(run / 'result.json', result); write(summary_path, summary); before = self.snapshot(root)
+                with self.assertRaises(ValueError): evidence.normalize_behavioral(root, 'podman')
+                with self.assertRaises(ValueError): evidence.project(dict(baseline), behavioral_bundle=root)
+                with patch.object(evidence, 'write_outputs') as publish:
+                    with self.assertRaises(ValueError): evidence.main(['normalize', '--kind', 'behavioral', '--skill', 'podman', '--input', str(root)])
+                    publish.assert_not_called()
+                self.assertEqual(self.snapshot(root), before)
+
+    def test_native_arm_carriers_accept_success_and_consistent_partial_failures(self):
+        from skillevaluator.tier3.harbor.collector import _average_overall
+        from skillevaluator.tier3.harbor.metrics import average_metrics, dimension_scores
+        for arm in ('with_skill', 'without_skill'):
+            with self.subTest(arm=arm), tempfile.TemporaryDirectory() as temp, patch.object(self, 'root', Path(temp)):
+                root = self.native(); run = next((root / 'results/podman').iterdir())
+                summary_path = run / 'codex' / arm.replace('_', '-') / 'summary.json'
+                rewards = [evidence.read_json(p) for p in (summary_path.parent / 'trials').glob('*/reward.json')]
+                means = average_metrics(rewards)[0]; summary = evidence.read_json(summary_path)
+                summary.update(scores=means, dimensions=dimension_scores(means), overall_score=_average_overall(rewards))
+                write(summary_path, summary)
+                baseline = evidence.normalize_behavioral(root, 'podman')
+                self.assertEqual(baseline['metrics'], self.data()['metrics'])
+                path = next((summary_path.parent / 'trials').glob('*/result.json'))
+                trial = evidence.read_json(path); reward = evidence.read_json(path.with_name('reward.json'))
+                trial.update(verifier_result=None, exception_info={'diagnostic': 'PRIVATE-DIAGNOSTIC'})
+                write(path, trial); path.with_name('reward.json').unlink()
+                self.unscore_case(summary, reward['entry_id'])
+                failure = {'reason': 'PRIVATE-DIAGNOSTIC'}
+                summary.update(scored_attempts=9, execution_status='incomplete', trial_failures=[failure])
+                write(summary_path, summary)
+                result = evidence.read_json(run / 'result.json'); result['report_status'] = 'incomplete'
+                agent = result['agents']['codex']
+                agent['conditions'][arm].update(scored_attempts=9, execution_status='incomplete', execution_errors=['PRIVATE-DIAGNOSTIC'])
+                agent['pass_at_k'][arm] = summary['pass_at_k']; agent['trial_failures'] = {arm: [failure]}
+                write(run / 'result.json', result)
+                data = evidence.normalize_behavioral(root, 'podman'); public = evidence.project(dict(data), behavioral_bundle=root)
+                self.assertIn('execution_incomplete', public['availability']['reasons'])
+                self.assertNotIn('PRIVATE-DIAGNOSTIC', evidence.encoded(public).decode())
+                data['availability']['reasons'].remove('execution_incomplete')
+                with self.assertRaises(ValueError): evidence.project(data)
+
     def test_summary_case_rollups_reconcile_in_both_arms_and_projection(self):
         root = self.native(); run = next((root / 'results/podman').iterdir())
         baseline = evidence.normalize_behavioral(root, 'podman')
@@ -2601,7 +2672,8 @@ class EvidenceTests(unittest.TestCase):
         spec = git('rev-parse', 'HEAD') + ':.apm/skills/alpha/SKILL.md'
         for remaining in (path.stat().st_size, path.stat().st_size - 1):
             with self.subTest(remaining=remaining):
-                budget = evidence.ReadBudget(); budget.remaining = remaining
+                budget = evidence.ReadBudget(); evidence.workspace_repository(repo, budget=budget)
+                budget.remaining = remaining
                 trace = self.root / f'budget-{remaining}.jsonl'
                 with git_trace(trace):
                     if remaining == path.stat().st_size:
@@ -3560,7 +3632,8 @@ class EvidenceTests(unittest.TestCase):
         baseline = evidence.historical_content(repo, rev, '.apm/skills/alpha')
         for remaining in (37, total):
             with self.subTest(remaining=remaining):
-                budget = evidence.ReadBudget(); budget.remaining = remaining
+                budget = evidence.ReadBudget(); evidence.workspace_repository(repo, budget=budget)
+                budget.remaining = remaining
                 captured = []; processes = []; trace = self.root / f'listing-budget-{remaining}.jsonl'
                 with git_trace(trace):
                     popen = subprocess.Popen
@@ -4579,6 +4652,37 @@ class EvidenceTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'Normalization byte limit'):
                 evidence.verify_source_snapshot(path, src)
 
+    def test_snapshot_rechecks_directory_membership_after_capture(self):
+        path = self.local(self.root, 'alpha'); (path / 'nested').mkdir()
+        src = evidence.source('alpha', contents=evidence.skill_content(path))
+        original = evidence.read_bytes; changed = False
+        def addition(*args, **kwargs):
+            nonlocal changed
+            raw = original(*args, **kwargs)
+            if not changed:
+                changed = True; (path / 'nested/added.md').write_text('New source member')
+            return raw
+        with patch.object(evidence, 'read_bytes', side_effect=addition):
+            with self.assertRaisesRegex(ValueError, 'Input directory'):
+                evidence.verify_source_snapshot(path, src)
+        self.assertTrue(changed)
+
+    def test_source_projection_never_invokes_native_filesystem_selector(self):
+        from skillevaluator.tier3.harbor import adapter
+        from skillevaluator.tier3 import output_provenance
+        path = self.local(self.root, 'alpha')
+        for member in ('nested/skill.md', 'nested/EVALS/private.json', 'nested/evals', 'examples/evals/visible.json',
+                       'results/private.json', 'README.md'):
+            target = path / member; target.parent.mkdir(parents=True, exist_ok=True); target.write_text('{}')
+        files = evidence.safe_tree(path)
+        ignore = adapter._runtime_skill_copy_ignore(path)
+        expected = [p for p in files if not adapter._runtime_projection_path_is_ignored(p, path, ignore)]
+        with patch.object(adapter, '_runtime_skill_copy_ignore', side_effect=AssertionError('Filesystem selector invoked')), \
+                patch.object(output_provenance, '_load_existing_key') as key:
+            self.assertEqual(evidence.skill_projection_files(path, files), expected)
+            evidence.skill_content(path)
+            key.assert_not_called()
+
     def test_retrieval_rechecks_trusted_expiry_before_member_access(self):
         data = self.data(); ref = data['references'][0]
         deadline = datetime.fromisoformat(evidence.REVIEWED_REFERENCE_EXPIRY[(ref['artifact_id'], ref['artifact_digest'])])
@@ -4832,7 +4936,7 @@ class EvidenceTests(unittest.TestCase):
                     git('pack-refs', '--all', '--prune'); target = repo / '.git/packed-refs'
                 else: target = repo / '.git' / branch
                 raw = target.read_bytes(); info = target.stat(); changed = False
-                name = 'git_revision' if stage == 'lookup' else 'historical_content'
+                name = 'resolve_git_revision' if stage == 'lookup' else 'historical_content'
                 original = getattr(evidence, name)
                 def transient(*args, **kwargs):
                     nonlocal changed
@@ -4869,15 +4973,21 @@ class EvidenceTests(unittest.TestCase):
         with patch.object(evidence, 'MAX_INPUT_ENTRIES', 1):
             with self.assertRaisesRegex(ValueError, 'Git reference entry limit'):
                 evidence.inventory_revision(repo, budget)
-        original = evidence.git_revision; packed = repo / '.git/packed-refs'
-        def transient(path):
+        original = evidence.resolve_git_revision; packed = repo / '.git/packed-refs'
+        def transient(path, budget):
             packed.write_text('# transient reference storage\n'); packed.unlink()
-            return original(path)
-        with patch.object(evidence, 'git_revision', side_effect=transient):
+            return original(path, budget)
+        with patch.object(evidence, 'resolve_git_revision', side_effect=transient):
             with self.assertRaisesRegex(ValueError, 'Input directory'):
                 evidence.inventory(repo)
         git('update-ref', '-d', 'HEAD')
         self.assertIsNone(evidence.inventory(repo)['skills'][0]['source']['revision'])
+
+    def test_inventory_cardinality_rejects_before_git_revision_capture(self):
+        repo, _ = self.repository_fixture()
+        with patch.object(evidence, 'MAX_CASES', 1), patch.object(evidence, 'inventory_revision') as capture:
+            with self.assertRaisesRegex(ValueError, 'Inventory limit'): evidence.inventory(repo)
+            capture.assert_not_called()
 
     def test_missing_origin_metadata_is_anchored_and_rechecked(self):
         repo, git = self.repository_fixture()
@@ -4940,6 +5050,119 @@ class EvidenceTests(unittest.TestCase):
                     self.assertTrue(restored); self.assertFalse(output.exists())
                 finally:
                     if not restored: retained.rename(target)
+
+    def test_alternate_object_stores_rejected_across_git_readers(self):
+        repo, git = self.repository_fixture()
+        donor = self.root / 'donor'; shutil.copytree(repo, donor)
+        member = donor / '.apm/skills/podman/SKILL.md'
+        member.write_text(member.read_text() + '\nUnrelated donor source\n')
+        def donor_git(*args):
+            return subprocess.run(['git', '-C', str(donor), *args], check=True,
+                                  capture_output=True, text=True).stdout.strip()
+        donor_git('add', '.apm')
+        donor_git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+                  'commit', '-qm', 'Unrelated source')
+        rev = donor_git('rev-parse', 'HEAD')
+        linked = self.root / 'linked'; git('worktree', 'add', '--detach', str(linked), 'HEAD')
+        native = self.native(); static = self.root / 'static'; shutil.copytree(FIXTURES / 'static-synthetic', static)
+        report_path = next((static / 'reports/podman').glob('*.json')); report = evidence.read_json(report_path)
+        report['evaluated_source'] = {'repository': 'thetechgy/agent-engineering-baseline', 'commit': rev}
+        write(report_path, report)
+        alternate = repo / '.git/objects/info/alternates'
+        alternate.write_text(str(donor / '.git/objects') + '\n')
+        before = self.snapshot(repo)
+        for workspace in (repo, linked):
+            for kind in ('content', 'dataset', 'revision', 'inventory'):
+                with self.subTest(workspace=workspace.name, kind=kind):
+                    with self.assertRaisesRegex(ValueError, 'Alternate Git object store'):
+                        if kind == 'content': evidence.historical_content(workspace, rev, '.apm/skills/podman')
+                        elif kind == 'dataset': evidence.historical_blob(workspace, rev + ':.apm/skills/podman/evals/evals.json')
+                        elif kind == 'revision': evidence.git_revision(workspace)
+                        else: evidence.inventory(workspace)
+            for kind, root in (('behavioral', native), ('static', static)):
+                with self.subTest(workspace=workspace.name, kind=kind):
+                    operation = getattr(evidence, 'normalize_' + kind); output = self.root / 'alternate-rejected'
+                    with patch.object(evidence, 'normalize_' + kind,
+                                      side_effect=lambda *args, fn=operation: fn(*args, workspace=workspace)), \
+                            patch.object(evidence, 'write_outputs') as publish:
+                        with self.assertRaisesRegex(ValueError, 'Alternate Git object store'):
+                            evidence.main(['normalize', '--kind', kind, '--skill', 'podman', '--input', str(root), '--output', str(output)])
+                        publish.assert_not_called(); self.assertFalse(output.exists())
+        self.assertEqual(self.snapshot(repo), before)
+        alternate.unlink()
+        self.assertIsNone(evidence.historical_content(repo, rev, '.apm/skills/podman')['digest'])
+
+    def test_transient_alternates_and_object_directory_swaps_rejected(self):
+        repo, git = self.repository_fixture(); rev = git('rev-parse', 'HEAD')
+        linked = self.root / 'linked'; git('worktree', 'add', '--detach', str(linked), 'HEAD')
+        original = subprocess.run
+        for workspace in (repo, linked):
+            for kind in ('alternate', 'missing-info', 'objects-swap'):
+                with self.subTest(workspace=workspace.name, kind=kind):
+                    info = repo / '.git/objects/info'
+                    if kind == 'missing-info': info.rmdir()
+                    changed = False
+                    def transient(command, *args, **kwargs):
+                        nonlocal changed
+                        if not changed and 'cat-file' in command:
+                            changed = True
+                            if kind == 'objects-swap':
+                                objects = info.parent; saved = repo / '.git/saved-objects'
+                                objects.rename(saved); shutil.copytree(saved, objects)
+                                try: return original(command, *args, **kwargs)
+                                finally: shutil.rmtree(objects); saved.rename(objects)
+                            info.mkdir(exist_ok=True)
+                            alternate = info / 'alternates'; alternate.write_text(str(info.parent) + '\n')
+                            try: return original(command, *args, **kwargs)
+                            finally:
+                                alternate.unlink()
+                                if kind == 'missing-info': info.rmdir()
+                        return original(command, *args, **kwargs)
+                    try:
+                        with patch.object(subprocess, 'run', side_effect=transient):
+                            with self.assertRaisesRegex(ValueError, 'Input directory'):
+                                evidence.historical_content(workspace, rev, '.apm/skills/podman')
+                        self.assertTrue(changed)
+                    finally: info.mkdir(exist_ok=True)
+        budget = evidence.ReadBudget(); evidence.workspace_repository(repo, budget=budget)
+        alternate = repo / '.git/objects/info/alternates'
+        alternate.write_text(str(repo / '.git/objects') + '\n'); alternate.unlink()
+        with self.assertRaisesRegex(ValueError, 'Input directory'): budget.verify_repository()
+
+    def test_historical_blob_growth_is_bounded_during_capture(self):
+        import zlib
+        repo, git = self.repository_fixture()
+        oid = git('rev-parse', 'HEAD:.apm/skills/podman/SKILL.md')
+        member = repo / '.git/objects' / oid[:2] / oid[2:]; original_bytes = member.read_bytes()
+        member.chmod(0o600)
+        budget = evidence.ReadBudget(); evidence.workspace_repository(repo, budget=budget)
+        dispatch = evidence.offline_git; popen = subprocess.Popen; captured = []; changed = False
+        def growth(workspace, *args, **kwargs):
+            nonlocal changed
+            if args[:2] == ('cat-file', 'blob'):
+                changed = True; payload = b'x' * 512
+                member.write_bytes(zlib.compress(b'blob 512\0' + payload))
+            return dispatch(workspace, *args, **kwargs)
+        def counted(command, *args, **kwargs):
+            process = popen(command, *args, **kwargs)
+            if 'blob' in command:
+                communicate = process.communicate; stream = process.stdout
+                def communicated(*args, **kwargs):
+                    result = communicate(*args, **kwargs); captured.append(len(result[0])); return result
+                process.communicate = communicated
+                class CountingPipe:
+                    def read(self, size):
+                        raw = stream.read(size); captured.append(len(raw)); return raw
+                    def __getattr__(self, name): return getattr(stream, name)
+                process.stdout = CountingPipe()
+            return process
+        try:
+            with patch.object(evidence, 'JSON_LIMIT', 128), patch.object(evidence, 'offline_git', side_effect=growth), \
+                    patch.object(subprocess, 'Popen', side_effect=counted):
+                with self.assertRaises(ValueError): evidence.historical_blob(repo, oid, budget=budget)
+            self.assertTrue(changed); self.assertTrue(captured)
+            self.assertLessEqual(sum(captured), 129)
+        finally: member.write_bytes(original_bytes)
 
     def test_historical_generated_markers_reject_before_blob_reads(self):
         from skillevaluator.tier3 import output_provenance

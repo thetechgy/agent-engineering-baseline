@@ -96,6 +96,11 @@ are revalidated without recapture, and every scanned member is checked again
 before publication. In-place edits and restores reject even when modification
 times are restored. Optional consumed members outside scanned source trees use
 the same state map. These checks retain the same filesystem metadata limits.
+Standalone source-snapshot verification also rechecks every scanned directory,
+including empty directories, after capture. Current and historical source
+selection share the pinned runtime's ordinary visibility rules over captured
+member names; selection never invokes its filesystem provenance authenticator
+or private key loader. Generated-output markers remain rejected.
 Temporary and explicit output parents use the same validated ancestor identities
 before directory creation. Replacing an ordinary parent with the input directory
 rejects before output allocation, preserving the input's entries and bytes.
@@ -344,6 +349,12 @@ substitute different bytes for a declared revision, as described in the
 Inherited repository-local Git environment variables and discovery/namespace
 selectors are cleared before dispatch, so reads select the requested checkout,
 including linked worktrees, rather than another repository or object store.
+Repository-local `objects/info/alternates` and `http-alternates` are rejected.
+The common object-store directory, its `info` directory or recorded absence,
+and absent alternate lists remain anchored through each Git subprocess and final
+evidence validation. This also rejects alternate lists or directory substitutions
+introduced and removed during reads, including linked-worktree reads. Standalone
+Git retrieval and inventory use the same checks and operation byte budget.
 Inherited `GIT_TRACE*` destinations are removed and all Trace2 targets are
 explicitly disabled, including fallback targets from global/system config.
 Read-only Git calls therefore cannot append diagnostic files into the checkout,
@@ -356,7 +367,9 @@ types are checked offline: a supplied revision must itself be a commit, and
 historical file members must be blobs. Tree, blob, or annotated-tag IDs cannot
 stand in for a commit, and existing non-blob dataset paths reject. Missing exact
 objects still retain unknown provenance without fetching. Object
-size is checked before capturing content: exactly 8 MiB is accepted, larger
+size is checked before capturing content, and the stream enforces the same
+per-file and remaining operation byte caps even if a blob grows after that check:
+exactly 8 MiB is accepted, larger
 objects cause contract rejection, and missing objects retain null digests and
 unknown provenance. An authored dataset hash identifies exact file bytes; the
 inventory derives that hash, canonical case IDs, and strict dataset validation
@@ -433,10 +446,18 @@ execution checks and coverage prevent incomplete evidence promotion; unavailable
 also prevent a complete projection. Completeness describes evidence coverage,
 not task success or publication eligibility. Failed rubrics, low scores and
 failed with-skill deterministic gates remain valid observations. Rubric counts
-and deterministic scores are checked independently; no averages or new scores
-are computed. Skill Lift remains the native difference and Discoverability the
+and deterministic scores are checked independently; no replacement scores
+are published. Skill Lift remains the native difference and Discoverability the
 native skill-execution rubric. Static findings and production success remain
 separate from both.
+Retained trial components must reproduce their native rounded overall score.
+When complete scored trial details are present, the pinned evaluator's pure
+aggregation helpers must reproduce supplied arm means and summary overall scores.
+Summary components and dimensions must agree with report components; report-level
+runtime, trial and job failure records cannot contradict successful arm execution
+or their supplied summary counterparts. Partial details retain their limitations
+without inventing missing scores. These checks also run when standalone projection
+reopens retained native evidence; diagnostic prose remains private.
 Known arm rubric thresholds must agree with the canonical attempt-policy
 threshold in shared normalized/public validation. A missing value remains null;
 the validator does not fill either carrier from the other. For validation only,

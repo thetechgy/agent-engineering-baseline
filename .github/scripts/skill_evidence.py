@@ -465,7 +465,6 @@ def content(manifest=(), provenance='unknown'):
 
 
 def skill_projection_files(path, files, *, directory_identities=None, directory_states=None):
-    from skillevaluator.tier3.harbor.adapter import _runtime_skill_copy_ignore, _runtime_projection_path_is_ignored
     if directory_identities is not None and directory_states is None:
         for directory in directory_identities:
             if directory.is_relative_to(path):
@@ -473,8 +472,19 @@ def skill_projection_files(path, files, *, directory_identities=None, directory_
     if directory_states is not None:
         verify_directory_states(directory_states, directory_identities,
                                 (directory for directory in directory_states if directory.is_relative_to(path)))
-    ignore = _runtime_skill_copy_ignore(path)
-    return [p for p in files if not _runtime_projection_path_is_ignored(p, path, ignore)]
+    # Match the pinned runtime's ordinary source boundary using captured names.
+    # Its filesystem callback authenticates generated outputs and can load a
+    # private key; generated markers are rejected separately, never authenticated.
+    names = {p.relative_to(path).as_posix() for p in files}
+    return [p for p in files if agent_visible_member(p.relative_to(path).as_posix(), names)]
+
+
+def agent_visible_member(name, names):
+    parts = PurePosixPath(name).parts
+    if any(part in ('results', '__pycache__', '.git') for part in parts): return False
+    return not any(part.casefold() == 'evals' and (i == 0 or i < len(parts) - 1 and any(
+        '/'.join((*parts[:i], manifest)) in names for manifest in ('SKILL.md', 'skill.md')))
+        for i, part in enumerate(parts))
 
 
 def skill_content(path, *, reader=None, directory_identities=None, directory_states=None, file_states=None):
@@ -490,6 +500,8 @@ def skill_content(path, *, reader=None, directory_identities=None, directory_sta
     safe_path(path, directory=True, directory_identities=directories)
     result = content([{'member': p.relative_to(path).as_posix(), 'digest': digest_bytes(reader(p))}
                      for p in skill_projection_files(path, files, directory_identities=directories, directory_states=states)], 'configured')
+    verify_directory_states(states, directories,
+                            (directory for directory in states if directory.is_relative_to(path)))
     verify_file_states(members, directories, states, files)
     return result
 
@@ -536,13 +548,28 @@ def offline_git_environment():
 
 
 def offline_git(workspace, *args, text=False, max_entries=None, budget=None):
+    budget = ReadBudget() if budget is None else budget
+    workspace = Path(workspace).absolute()
+    if workspace not in budget.repository_locations:
+        workspace_repository(workspace, budget=budget)
+    if workspace not in budget.repository_locations:
+        return subprocess.CompletedProcess(['git', *args], 1, '' if text else b'', '' if text else b'')
+    budget.verify_repository()
+    try:
+        return run_offline_git(workspace, *args, text=text, max_entries=max_entries, budget=budget)
+    finally:
+        budget.verify_repository()
+
+
+def run_offline_git(workspace, *args, text=False, max_entries=None, budget=None):
     # Missing promisor objects stay unknown; replacement refs cannot alter exact evidence.
     command = ['git', '-C', str(workspace), *args]
     env = offline_git_environment()
-    if max_entries is None:
+    blob = args[:2] == ('cat-file', 'blob')
+    if max_entries is None and not blob:
         return subprocess.run(command, capture_output=True, text=text, env=env)
-    require(not text, 'Binary tree listing required')
-    # Bound the NUL-delimited listing while reading, before parsing or blob reads.
+    require(not text, 'Binary Git capture required')
+    # Bound listings and blobs while reading, including growth after cat-file -s.
     # Discard diagnostics so a blocked stderr pipe cannot stall the bounded read.
     byte_limit = min(JSON_LIMIT, budget.remaining) if budget is not None else JSON_LIMIT
     with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=env, bufsize=0) as process:
@@ -550,9 +577,11 @@ def offline_git(workspace, *args, text=False, max_entries=None, budget=None):
         entries = 0
         try:
             while chunk := process.stdout.read(min(4096, byte_limit - len(output) + 1)):
-                entries += chunk.count(b'\0')
-                require(entries <= max_entries and len(output) + len(chunk) <= JSON_LIMIT,
-                        'Historical tree listing limit')
+                if max_entries is not None:
+                    entries += chunk.count(b'\0')
+                    require(entries <= max_entries, 'Historical tree listing limit')
+                require(len(output) + len(chunk) <= JSON_LIMIT,
+                        'Oversized historical blob' if blob else 'Historical tree listing limit')
                 if budget is not None:
                     budget.consume(len(chunk))
                 output.extend(chunk)
@@ -564,7 +593,11 @@ def offline_git(workspace, *args, text=False, max_entries=None, budget=None):
 
 
 def git_revision(workspace):
-    result = offline_git(workspace, 'rev-parse', 'HEAD', text=True)
+    return resolve_git_revision(workspace, ReadBudget())
+
+
+def resolve_git_revision(workspace, budget):
+    result = offline_git(workspace, 'rev-parse', 'HEAD', text=True, budget=budget)
     return result.stdout.strip() if result.returncode == 0 else None
 
 
@@ -631,6 +664,17 @@ def workspace_repository(workspace, *, budget=None):
         return None
     raw_config = captured(config)
     budget.repository_locations[workspace] = (gitdir, common)
+    # Clearing the environment does not disable repository-local alternates.
+    # Anchor the object-store path and the absence of alternate lists, including
+    # a missing info directory, for every subsequent Git read and publication.
+    objects = common / 'objects'
+    info = inspect(objects)
+    require(info is not None and stat.S_ISDIR(info.st_mode), 'Unsafe Git object store')
+    info = inspect(objects / 'info')
+    if info is not None:
+        require(stat.S_ISDIR(info.st_mode), 'Unsafe Git object store')
+        for name in ('alternates', 'http-alternates'):
+            require(inspect(objects / 'info' / name) is None, 'Alternate Git object store')
     # Git parses only the captured buffer. Includes and ambient repository
     # configuration cannot substitute another origin after the bounded read.
     result = subprocess.run(['git', 'config', '--file', '-', '--no-includes', '--null',
@@ -681,7 +725,7 @@ def inventory_revision(workspace, budget):
         finally:
             os.close(fd)
     budget.verify_repository()
-    rev = git_revision(workspace)
+    rev = resolve_git_revision(workspace, budget)
     budget.verify_repository()
     return rev
 
@@ -695,8 +739,12 @@ def associated_repository(workspace, declared, *, budget):
 
 
 def historical_commit(workspace, rev):
+    return checked_historical_commit(workspace, rev, ReadBudget())
+
+
+def checked_historical_commit(workspace, rev, budget):
     revision(rev)
-    kind = offline_git(workspace, 'cat-file', '-t', rev, text=True)
+    kind = offline_git(workspace, 'cat-file', '-t', rev, text=True, budget=budget)
     if kind.returncode:
         return False
     require(kind.stdout.strip() == 'commit', 'Historical revision must be a commit')
@@ -705,35 +753,34 @@ def historical_commit(workspace, rev):
 
 def historical_blob(workspace, spec, *, budget=None):
     """Bound exact local object bytes before capturing content; missing stays unknown."""
+    budget = ReadBudget() if budget is None else budget
     if ':' in spec:
         rev, member = spec.split(':', 1)
         relative(member)
-        if not historical_commit(workspace, rev):
+        if not checked_historical_commit(workspace, rev, budget):
             return None
-    kind = offline_git(workspace, 'cat-file', '-t', spec, text=True)
+    kind = offline_git(workspace, 'cat-file', '-t', spec, text=True, budget=budget)
     if kind.returncode:
         return None
     require(kind.stdout.strip() == 'blob', 'Historical member must be a blob')
-    size = offline_git(workspace, 'cat-file', '-s', spec, text=True)
+    size = offline_git(workspace, 'cat-file', '-s', spec, text=True, budget=budget)
     if size.returncode:
         return None
     size = int(size.stdout.strip())
     require(0 <= size <= JSON_LIMIT, 'Oversized historical blob')
-    if budget is not None:
-        budget.consume(size)
-    blob = offline_git(workspace, 'cat-file', 'blob', spec)
+    require(size <= budget.remaining, 'Normalization byte limit')
+    blob = offline_git(workspace, 'cat-file', 'blob', spec, budget=budget)
     if blob.returncode:
         return None
     require(len(blob.stdout) <= JSON_LIMIT, 'Oversized historical blob')
-    if budget is not None:
-        budget.consume(max(0, len(blob.stdout) - size))
     return blob.stdout
 
 
 def historical_content(workspace, rev, source_path, *, budget=None):
     """Read exact local Git blobs only. Never checkout or contact a remote."""
+    budget = ReadBudget() if budget is None else budget
     relative(source_path)
-    if not historical_commit(workspace, rev):
+    if not checked_historical_commit(workspace, rev, budget):
         return content()
     listing = offline_git(workspace, 'ls-tree', '-rz', rev, '--', source_path,
                           max_entries=MAX_SOURCE_MEMBERS, budget=budget)
@@ -765,10 +812,7 @@ def historical_content(workspace, rev, source_path, *, budget=None):
     for name, oid in members:
         # Same root/nested skill eval boundary as the pinned runtime; generated
         # outputs are never accepted as historical authored source.
-        parts = Path(name).parts
-        nested_evals = any(p.casefold() == 'evals' and any('/'.join((*parts[:i], manifest)) in tree_names
-                            for manifest in ('SKILL.md', 'skill.md')) for i, p in enumerate(parts))
-        if any(p in ('results', '__pycache__', '.git') for p in parts) or nested_evals:
+        if not agent_visible_member(name, tree_names):
             continue
         blob = historical_blob(workspace, oid, budget=budget)
         if blob is None:
@@ -922,7 +966,6 @@ def inventory(workspace=ROOT):
     budget = ReadBudget()
     captured = {}
     repo = workspace_repository(workspace, budget=budget)
-    head_revision = inventory_revision(workspace, budget) if repo else None
     def reader(path):
         path = safe_path(path, directory_identities=directories)
         if path not in captured:
@@ -985,6 +1028,7 @@ def inventory(workspace=ROOT):
                          and p.parent.parent.parent == overlays]
     discovered = sorted(set(names + overlay_names))
     require(len(discovered) <= MAX_CASES, 'Inventory limit')
+    head_revision = inventory_revision(workspace, budget) if repo else None
     rows = []
     for name in discovered:
         skill_id(name)
@@ -1855,6 +1899,69 @@ def validate_summary_rollups(payload, cases, ids, maximum, stop_on_pass):
         match(payload, 'avg_attempts_used', round(attempts_used / total, 4) if total else 0.0)
 
 
+def reconcile_native_arm(agent, arm, summary, observations, details):
+    """Bind retained arm summaries and report metrics to logical trial scores."""
+    from skillevaluator.tier3.harbor.metrics import DEFAULT_METRICS, average_metrics, dimension_scores, overall_score
+    from skillevaluator.tier3.harbor.collector import _average_overall
+    condition = agent['conditions'][arm]
+    for field, summary_field in (('agent_runtime_failures', None), ('trial_failures', 'trial_failures'),
+                                 ('job_failures', 'job_failure')):
+        carriers = agent.get(field, {})
+        require(type(carriers) is dict and set(carriers) <= {'with_skill', 'without_skill'},
+                'Invalid native failure carriers')
+        if arm not in carriers: continue
+        value = carriers[arm]
+        require(type(value) is str if field == 'job_failures' else type(value) is list
+                and len(value) <= MAX_TRIALS and all(type(row) is dict for row in value),
+                'Invalid native failure carriers')
+        if summary_field in summary:
+            require(value == summary[summary_field], 'Native failure carrier disagreement')
+        require(not value or condition.get('execution_status') != 'succeeded'
+                and native_error_count(condition) > 0, 'Native failure contradicts successful execution')
+    components = {}
+    for carrier in (agent.get(arm, {}), summary.get('scores', {}),
+                    {key: row[arm] for key, row in agent.get('lift', {}).items()
+                     if key in DEFAULT_METRICS and type(row) is dict and arm in row}):
+        require(type(carrier) is dict, 'Invalid native arm scores')
+        for key in DEFAULT_METRICS:
+            if key not in carrier: continue
+            number(carrier[key])
+            require(key not in components or components[key] == carrier[key], 'Native arm score disagreement')
+            components[key] = carrier[key]
+    dimensions = summary.get('dimensions', {})
+    require(type(dimensions) is dict, 'Invalid native arm dimensions')
+    expected_dimensions = dimension_scores(components)
+    for key, row in dimensions.items():
+        require(type(row) is dict, 'Invalid native arm dimensions')
+        if 'score' in row: number(row['score'])
+        if 'sources' in row:
+            require(type(row['sources']) is dict, 'Invalid native arm dimensions')
+            for value in row['sources'].values(): number(value)
+        if key in expected_dimensions:
+            for field in ('score', 'sources'):
+                if field in row:
+                    require(row[field] == expected_dimensions[key][field], 'Native arm dimension disagreement')
+    if summary.get('metric_set') is not None:
+        require(summary['metric_set'] == 'skill-evaluator-default-v2', 'Native metric-set identity mismatch')
+    if summary.get('metrics') is not None:
+        require(summary['metrics'] == list(DEFAULT_METRICS), 'Native metric-set identity mismatch')
+    rewards = [obs['scores'] for obs in observations if obs['score'] is not None]
+    complete = all(all(row.get(key) is not None for key in DEFAULT_METRICS) for row in rewards)
+    for row in rewards:
+        for value in row.values(): optional(value, number)
+        if all(row.get(key) is not None for key in DEFAULT_METRICS):
+            require(row['overall'] == round(overall_score(row), 4), 'Native trial metric disagreement')
+    optional(summary.get('overall_score'), number)
+    if details == 'complete' and complete and rewards and len(rewards) == len(observations):
+        means = average_metrics(rewards)[0]
+        for key, value in components.items():
+            require(value == means[key], 'Native arm/trial metric disagreement')
+        if summary.get('overall_score') is not None:
+            number(summary['overall_score'])
+            require(summary['overall_score'] == _average_overall(rewards), 'Native arm/trial metric disagreement')
+    return complete
+
+
 def summary_error_count(summary):
     errors = native_error_count(summary)
     job_failure = summary.get('job_failure')
@@ -2260,6 +2367,8 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
         require(details != 'complete' or not lookup, 'Unmatched summary attempts')
         if orphan_rewards[arm]:
             details = 'partial' if observed else 'unavailable'
+        if not reconcile_native_arm(agent, arm, summary, observed, details):
+            limitations.add('coverage_missing')
         if details != 'complete':
             limitations.add('case_details_missing')
         if scored != native_condition.get('expected_attempts') or recorded != native_condition.get('expected_attempts'):
