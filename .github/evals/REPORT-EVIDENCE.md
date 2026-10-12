@@ -1195,16 +1195,19 @@ across both requests. `--input-limit`, `--output-limit` and `--deadline-seconds`
 permit positive values up to 128,000, 32,000 and 300 respectively.
 Model identifiers also undergo the existing sensitive-text checks before client
 creation or either SDK request; recognized credentials cannot be sent as a model
-identifier. Refusal, incompleteness, malformed output, unexpected tool output,
-missing usage, limits,
-HTTP errors and timeout reject; failures require a new manual invocation. The
+identifier.
+Fine-tuned model IDs (`ft:...`) reject before client creation or either request:
+the bounded strict schema uses constraints outside their
+[supported Structured Outputs subset](https://developers.openai.com/api/docs/guides/structured-outputs#some-type-specific-keywords-are-not-yet-supported).
+The schema and local bounds are retained; there is no model or schema fallback.
+Refusal, incompleteness, malformed output, unexpected tool output, missing usage,
+limits, HTTP errors and timeout reject; failures require a new manual invocation. The
 returned generating-model ID must exactly match `--model`; a missing or different
 ID rejects before a report is created. Select an explicit model ID returned
 unchanged by the service rather than an alias that resolves to another ID.
 This verifies the model recorded in configuration against the API response's
 [generating-model identity](https://developers.openai.com/api/reference/python/resources/responses/methods/create).
-The
-review suppresses logging during SDK invocation, including debug logging. Errors
+The review suppresses logging during SDK invocation, including debug logging. Errors
 print a fixed message without SDK bodies, prompts, evidence, credentials or paths.
 
 Omitted output destinations use the existing private temporary writer. New output

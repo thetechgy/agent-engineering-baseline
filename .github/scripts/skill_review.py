@@ -818,6 +818,7 @@ async def invoke(context, config, authorized, *, http_client=None):
     require(authorized is True, "Explicit inference authorization required")
     versions()
     config = ModelConfig.model_validate(config)
+    require(not config.model.lower().startswith("ft:"), "Fine-tuned models unsupported for constrained schema")
     checked_text(config.model)
     for guard in context.guards:
         guard()

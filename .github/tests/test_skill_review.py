@@ -788,6 +788,18 @@ class ReviewTests(unittest.TestCase):
                 review.main(["review", *self.args, "--model", fake, "--authorize-inference"])
             sdk.assert_not_called()
 
+    def test_fine_tuned_models_reject_before_sdk_requests(self):
+        context = self.control()
+        model = "ft:synthetic-base:synthetic-org:fixture"
+        calls, run = self.invoke(context, config={**CONFIG, "model": model})
+        with self.assertRaisesRegex(ValueError, "Fine-tuned models unsupported"):
+            asyncio.run(run())
+        self.assertEqual(len(calls), 0)
+        with patch("openai.AsyncOpenAI", side_effect=AssertionError("Client must not be created")) as sdk:
+            with self.assertRaisesRegex(ValueError, "Fine-tuned models unsupported"):
+                review.main(["review", *self.args, "--model", model, "--authorize-inference"])
+            sdk.assert_not_called()
+
     def test_decoded_sensitive_strings_reject_at_every_report_boundary(self):
         context = self.control()
         sensitive = r"C:\Users\SyntheticUser\private"
