@@ -5129,6 +5129,92 @@ class EvidenceTests(unittest.TestCase):
         alternate.write_text(str(repo / '.git/objects') + '\n'); alternate.unlink()
         with self.assertRaisesRegex(ValueError, 'Input directory'): budget.verify_repository()
 
+    def test_entire_git_object_store_rejects_links(self):
+        repo, git = self.repository_fixture(); donor = self.root / 'donor'; shutil.copytree(repo, donor)
+        member = donor / '.apm/skills/podman/SKILL.md'; member.write_text(member.read_text() + '\nDonor-only content\n')
+        def donor_git(*args):
+            return subprocess.run(['git', '-C', str(donor), *args], check=True,
+                                  capture_output=True, text=True).stdout.strip()
+        donor_git('add', '.apm')
+        donor_git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'Donor-only revision')
+        rev = donor_git('rev-parse', 'HEAD'); oid = donor_git('rev-parse', 'HEAD:.apm/skills/podman/SKILL.md')
+        donor_git('repack', '-a')
+        linked = self.root / 'linked'; git('worktree', 'add', '--detach', str(linked), 'HEAD')
+        native = self.native(); static = self.root / 'static'; shutil.copytree(FIXTURES / 'static-synthetic', static)
+        report_path = next((static / 'reports/podman').glob('*.json')); report = evidence.read_json(report_path)
+        report['evaluated_source'] = {'repository': 'thetechgy/agent-engineering-baseline', 'commit': rev}
+        write(report_path, report)
+        for kind in ('pack', 'fanout', 'blob-link', 'blob-hardlink'):
+            objects = repo / '.git/objects'; target = objects / ('pack' if kind == 'pack' else oid[:2])
+            retained = self.root / 'retained-object-directory'
+            existed = target.exists()
+            if existed: target.rename(retained)
+            if kind in ('pack', 'fanout'):
+                target.symlink_to(donor / '.git/objects' / target.name, target_is_directory=True)
+            else:
+                target.mkdir(); path = target / oid[2:]; source = donor / '.git/objects' / oid[:2] / oid[2:]
+                if kind == 'blob-link': path.symlink_to(source)
+                else: os.link(source, path)
+            try:
+                for workspace in (repo, linked):
+                    with self.subTest(kind=kind, workspace=workspace.name):
+                        with self.assertRaises(ValueError):
+                            if kind == 'pack': evidence.historical_content(workspace, rev, '.apm/skills/podman')
+                            else: evidence.historical_blob(workspace, oid)
+                        with self.assertRaises(ValueError): evidence.inventory(workspace)
+                        if kind == 'pack':
+                            for mode, root in (('behavioral', native), ('static', static)):
+                                operation = getattr(evidence, 'normalize_' + mode); output = self.root / 'linked-store-rejected'
+                                before = self.snapshot(root)
+                                with patch.object(evidence, 'normalize_' + mode,
+                                                  side_effect=lambda *args, fn=operation: fn(*args, workspace=workspace)), \
+                                        patch.object(evidence, 'write_outputs') as publish:
+                                    with self.assertRaises(ValueError):
+                                        evidence.main(['normalize', '--kind', mode, '--skill', 'podman', '--input', str(root), '--output', str(output)])
+                                    publish.assert_not_called(); self.assertFalse(output.exists())
+                                self.assertEqual(self.snapshot(root), before)
+            finally:
+                if target.is_symlink(): target.unlink()
+                else: shutil.rmtree(target)
+                if existed: retained.rename(target)
+        self.assertIsNone(evidence.historical_content(repo, rev, '.apm/skills/podman')['digest'])
+
+    def test_git_object_members_revalidated_and_tree_bounded(self):
+        repo, git = self.repository_fixture(); rev = git('rev-parse', 'HEAD')
+        oid = git('rev-parse', 'HEAD:.apm/skills/podman/SKILL.md')
+        path = repo / '.git/objects' / oid[:2] / oid[2:]; path.chmod(0o600)
+        raw = path.read_bytes(); metadata = path.stat(); original = subprocess.run; changed = False
+        def transient(command, *args, **kwargs):
+            nonlocal changed
+            if not changed and 'cat-file' in command:
+                changed = True; path.write_bytes(raw + b'transient')
+                try: return original(command, *args, **kwargs)
+                finally:
+                    path.write_bytes(raw); os.utime(path, ns=(metadata.st_atime_ns, metadata.st_mtime_ns))
+            return original(command, *args, **kwargs)
+        with patch.object(subprocess, 'run', side_effect=transient):
+            with self.assertRaisesRegex(ValueError, 'Input member'):
+                evidence.historical_content(repo, rev, '.apm/skills/podman')
+        self.assertTrue(changed); self.assertEqual(path.read_bytes(), raw)
+        with patch.object(evidence, 'MAX_INPUT_ENTRIES', 1), patch.object(evidence, 'run_offline_git') as native:
+            with self.assertRaisesRegex(ValueError, 'Input tree entry limit'): evidence.inventory(repo)
+            native.assert_not_called()
+
+    def test_historical_retrieval_bounds_object_store_revalidation_work(self):
+        repo, git = self.repository_fixture()
+        for index in range(20): (repo / '.apm/skills/podman' / f'member-{index}.md').write_text(str(index))
+        git('add', '.apm'); git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'Many source members')
+        objects = repo / '.git/objects'; count = len([p for p in objects.rglob('*') if p.is_file()])
+        verify = evidence.verify_file_states; visits = 0
+        def counted(states, *args, **kwargs):
+            nonlocal visits
+            visits += sum(path.is_relative_to(objects) for path in states)
+            return verify(states, *args, **kwargs)
+        with patch.object(evidence, 'verify_file_states', side_effect=counted):
+            contents = evidence.historical_content(repo, git('rev-parse', 'HEAD'), '.apm/skills/podman')
+        self.assertEqual(len(contents['manifest']), 21)
+        self.assertLessEqual(visits, 10 * count)
+
     def test_historical_blob_growth_is_bounded_during_capture(self):
         import zlib
         repo, git = self.repository_fixture()
@@ -5136,14 +5222,12 @@ class EvidenceTests(unittest.TestCase):
         member = repo / '.git/objects' / oid[:2] / oid[2:]; original_bytes = member.read_bytes()
         member.chmod(0o600)
         budget = evidence.ReadBudget(); evidence.workspace_repository(repo, budget=budget)
-        dispatch = evidence.offline_git; popen = subprocess.Popen; captured = []; changed = False
-        def growth(workspace, *args, **kwargs):
+        popen = subprocess.Popen; captured = []; changed = False
+        def counted(command, *args, **kwargs):
             nonlocal changed
-            if args[:2] == ('cat-file', 'blob'):
+            if 'blob' in command:
                 changed = True; payload = b'x' * 512
                 member.write_bytes(zlib.compress(b'blob 512\0' + payload))
-            return dispatch(workspace, *args, **kwargs)
-        def counted(command, *args, **kwargs):
             process = popen(command, *args, **kwargs)
             if 'blob' in command:
                 communicate = process.communicate; stream = process.stdout
@@ -5157,7 +5241,7 @@ class EvidenceTests(unittest.TestCase):
                 process.stdout = CountingPipe()
             return process
         try:
-            with patch.object(evidence, 'JSON_LIMIT', 128), patch.object(evidence, 'offline_git', side_effect=growth), \
+            with patch.object(evidence, 'JSON_LIMIT', 128), \
                     patch.object(subprocess, 'Popen', side_effect=counted):
                 with self.assertRaises(ValueError): evidence.historical_blob(repo, oid, budget=budget)
             self.assertTrue(changed); self.assertTrue(captured)

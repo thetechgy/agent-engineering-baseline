@@ -351,10 +351,15 @@ selectors are cleared before dispatch, so reads select the requested checkout,
 including linked worktrees, rather than another repository or object store.
 Repository-local `objects/info/alternates` and `http-alternates` are rejected.
 The common object-store directory, its `info` directory or recorded absence,
-and absent alternate lists remain anchored through each Git subprocess and final
-evidence validation. This also rejects alternate lists or directory substitutions
-introduced and removed during reads, including linked-worktree reads. Standalone
+and absent alternate lists remain anchored through each Git read operation and final
+evidence validation. The entire object-store tree is bounded by the existing
+entry limit and captured as ordinary, unlinked directories and single-link
+regular files, including pack files, indexes and loose-object fanout directories.
+This rejects nested links and transient object-member edits as well as alternate
+lists or directory substitutions, including linked-worktree reads. Standalone
 Git retrieval and inventory use the same checks and operation byte budget.
+Nested Git subprocesses share their enclosing retrieval's before/after state
+checks, keeping full-store revalidation work independent of source-member count.
 Inherited `GIT_TRACE*` destinations are removed and all Trace2 targets are
 explicitly disabled, including fallback targets from global/system config.
 Read-only Git calls therefore cannot append diagnostic files into the checkout,

@@ -3,6 +3,7 @@
 
 import argparse
 import copy
+from contextlib import contextmanager
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -278,6 +279,7 @@ class ReadBudget:
         self.remaining = NORMALIZATION_LIMIT
         self.repository_inputs = []
         self.repository_locations = {}
+        self.repository_depth = 0
 
     def consume(self, size):
         require(0 <= size <= self.remaining, 'Normalization byte limit')
@@ -287,6 +289,17 @@ class ReadBudget:
         for directories, states, members in self.repository_inputs:
             verify_directory_states(states, directories)
             verify_file_states(members, directories, states)
+
+    @contextmanager
+    def repository_operation(self):
+        outer = self.repository_depth == 0
+        if outer: self.verify_repository()
+        self.repository_depth += 1
+        try:
+            yield
+        finally:
+            self.repository_depth -= 1
+            if outer: self.verify_repository()
 
 
 def read_bytes(path, limit=JSON_LIMIT, *, budget=None, directory_identities=None, directory_states=None, file_states=None):
@@ -554,11 +567,8 @@ def offline_git(workspace, *args, text=False, max_entries=None, budget=None):
         workspace_repository(workspace, budget=budget)
     if workspace not in budget.repository_locations:
         return subprocess.CompletedProcess(['git', *args], 1, '' if text else b'', '' if text else b'')
-    budget.verify_repository()
-    try:
+    with budget.repository_operation():
         return run_offline_git(workspace, *args, text=text, max_entries=max_entries, budget=budget)
-    finally:
-        budget.verify_repository()
 
 
 def run_offline_git(workspace, *args, text=False, max_entries=None, budget=None):
@@ -675,6 +685,10 @@ def workspace_repository(workspace, *, budget=None):
         require(stat.S_ISDIR(info.st_mode), 'Unsafe Git object store')
         for name in ('alternates', 'http-alternates'):
             require(inspect(objects / 'info' / name) is None, 'Alternate Git object store')
+    # Git follows links below objects too (pack files, indexes and loose fanout
+    # directories). Capture the complete bounded structure, not just selectors.
+    safe_tree(objects, max_entries=MAX_INPUT_ENTRIES, directory_identities=directories,
+              directory_states=states, file_states=members)
     # Git parses only the captured buffer. Includes and ambient repository
     # configuration cannot substitute another origin after the bounded read.
     result = subprocess.run(['git', 'config', '--file', '-', '--no-includes', '--null',
@@ -754,6 +768,11 @@ def checked_historical_commit(workspace, rev, budget):
 def historical_blob(workspace, spec, *, budget=None):
     """Bound exact local object bytes before capturing content; missing stays unknown."""
     budget = ReadBudget() if budget is None else budget
+    with budget.repository_operation():
+        return captured_historical_blob(workspace, spec, budget)
+
+
+def captured_historical_blob(workspace, spec, budget):
     if ':' in spec:
         rev, member = spec.split(':', 1)
         relative(member)
@@ -779,6 +798,11 @@ def historical_blob(workspace, spec, *, budget=None):
 def historical_content(workspace, rev, source_path, *, budget=None):
     """Read exact local Git blobs only. Never checkout or contact a remote."""
     budget = ReadBudget() if budget is None else budget
+    with budget.repository_operation():
+        return captured_historical_content(workspace, rev, source_path, budget)
+
+
+def captured_historical_content(workspace, rev, source_path, budget):
     relative(source_path)
     if not checked_historical_commit(workspace, rev, budget):
         return content()
