@@ -1195,6 +1195,12 @@ across both requests. `--input-limit`, `--output-limit` and `--deadline-seconds`
 permit positive values up to 128,000, 32,000 and 300 respectively. Refusal,
 incompleteness, malformed output, unexpected tool output, missing usage, limits,
 HTTP errors and timeout reject; failures require a new manual invocation. The
+returned generating-model ID must exactly match `--model`; a missing or different
+ID rejects before a report is created. Select an explicit model ID returned
+unchanged by the service rather than an alias that resolves to another ID.
+This verifies the model recorded in configuration against the API response's
+[generating-model identity](https://developers.openai.com/api/reference/python/resources/responses/methods/create).
+The
 review suppresses logging during SDK invocation, including debug logging. Errors
 print a fixed message without SDK bodies, prompts, evidence, credentials or paths.
 
@@ -1286,6 +1292,10 @@ reference locator. Behavior requires an agent-output, transcript, trajectory,
 messages, commands or stdout carrier; grader/reward/feedback/suggestion carriers
 cannot be relabeled as behavior. This carrier check establishes type and location,
 not truth or causal relevance. These still require human review.
+Evaluator judgments require a `grader`, `verifier_result`, `rewards` or `feedback`
+carrier and reject behavior/suggestion carriers, including mixed nested locators.
+An arbitrary observation-bound value cannot establish evaluator evidence or
+satisfy the qualitative-support gate merely through its descriptor label.
 
 Kinds are `agent_behavior`, `evaluator_judgment`, `native_suggestion`, and
 `analyst_interpretation`. Suggestions require a suggestions/recommendations/

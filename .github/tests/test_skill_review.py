@@ -1056,6 +1056,40 @@ class ReviewTests(unittest.TestCase):
             rec["citations"] = [*rec["citations"], citation(context, "agent_behavior")]
             review.validate_judgment(value, context)
 
+    def test_evaluator_judgments_require_evaluator_carriers(self):
+        context = self.control(kind="evaluator_judgment", agent_output={"grader": "The agent claimed a grade."})
+        descriptor = evidence.read_json(self.root / "support/support.json")
+        for locator in (["agent_output"], ["agent_output", "grader"], ["suggestions", 0]):
+            with self.subTest(locator=locator):
+                descriptor["items"][0]["locator"] = locator
+                write(self.root / "support/support.json", descriptor)
+                with self.assertRaisesRegex(ValueError, "Evaluator judgment carrier required"):
+                    review.prepare([Path(self.args[1])], Path(self.args[3]), "podman", self.args[7],
+                                   self.root / "source", self.root / "support")
+        descriptor["items"][0]["locator"] = ["grader", "feedback"]
+        write(self.root / "support/support.json", descriptor)
+        context = review.prepare([Path(self.args[1])], Path(self.args[3]), "podman", self.args[7],
+                                 self.root / "source", self.root / "support")
+        for category in ("improve_eval", "fix_grader_or_harness"):
+            value = judgment(context, category=category)
+            rec = value["recommendations"][0]
+            rec["citations"].append(citation(context, "evaluator_judgment"))
+            rec["sufficiency"]["conclusion"] = "sufficient"
+            review.validate_judgment(value, context)
+
+    def test_returned_model_must_match_requested_model(self):
+        context = self.control()
+        for model in ("resolved-test-model", None, "", False):
+            with self.subTest(model=model):
+                calls, run = self.invoke(context, body=response_body(judgment(context), model=model))
+                with self.assertRaisesRegex(ValueError, "Inference rejected"):
+                    asyncio.run(run())
+                self.assertEqual(len(calls), 2)
+        calls, run = self.invoke(context)
+        report = asyncio.run(run())
+        self.assertEqual(report["provenance"]["configuration"]["model"], CONFIG["model"])
+        self.assertEqual(len(calls), 2)
+
     def test_log_suppression_during_sdk_request_and_restoration(self):
         context = self.control()
         stream = StringIO()
