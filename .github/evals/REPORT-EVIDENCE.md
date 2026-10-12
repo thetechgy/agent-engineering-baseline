@@ -1251,7 +1251,9 @@ ranges. Original source bytes are still verified in full. Each included member
 records its original digest, line range, total lines, excerpt digest, transformation
 (`utf8-splitlines-join-lf`) and completeness. Excerpted source is partial even when
 all member names are present. Missing source is unavailable, including when only
-its manifest identity is known. Absence citations require complete source coverage;
+its manifest identity is known or a snapshot contains no agent-visible members.
+Excluded files do not establish source integrity; a present, authenticated
+zero-byte member does. Absence citations require complete source coverage;
 partial coverage cannot establish that omitted guidance is absent. Source origin,
 revision, ownership and identity remain independent of coverage. Recommendations
 about upstream skills do not authorize edits to installed upstream bytes.

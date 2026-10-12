@@ -389,8 +389,8 @@ def source_context(src, root, selection, capture):
         )
     complete = set(chosen) == set(declared) and all(row["complete"] for row in members)
     return {
-        "coverage": "complete" if complete else "partial",
-        "integrity": "verified",
+        "coverage": "complete" if complete else "partial" if members else "unavailable",
+        "integrity": "verified" if members else "unavailable",
         "identity": evidence.identity(src),
         "members": members,
         "omitted_members": sorted(set(declared) - set(chosen)),

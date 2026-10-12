@@ -360,6 +360,49 @@ class ReviewTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Citation lines unavailable"):
                 review.check_citations([review.Citation.model_validate(cited)], context)
 
+    def test_source_snapshot_without_visible_members_is_unavailable(self):
+        original = self.control(empty_source=True)
+        for kind in ("empty", "excluded", "zero_byte"):
+            with self.subTest(kind=kind):
+                snapshot = self.root / ("snapshot-" + kind)
+                snapshot.mkdir()
+                if kind == "excluded":
+                    write(snapshot / "evals/evals.json", {})
+                if kind == "zero_byte":
+                    (snapshot / "empty.txt").write_bytes(b"")
+                context = review.prepare(
+                    [Path(self.args[1])], Path(self.args[3]), "podman", self.args[7],
+                    snapshot, self.root / "support",
+                )
+                source = context.value["source_context"]
+                expected = "partial" if kind == "zero_byte" else "unavailable"
+                self.assertEqual(source["coverage"], expected)
+                self.assertEqual(source["integrity"], "verified" if kind == "zero_byte" else "unavailable")
+                self.assertEqual(source["identity"], original.value["source_context"]["identity"])
+                self.assertEqual(source["omitted_members"], ["SKILL.md"] if kind == "zero_byte"
+                                 else ["SKILL.md", "empty.txt"])
+                if kind == "zero_byte":
+                    member = source["members"][0]
+                    self.assertEqual((member["member"], member["start_line"], member["end_line"]),
+                                     ("empty.txt", 0, 0))
+                    self.assertTrue(member["complete"])
+                else:
+                    self.assertEqual(source["members"], [])
+                    overclaim = judgment(context)
+                    overclaim["assessment"]["sufficiency"]["source_integrity"] = "verified"
+                    with self.assertRaisesRegex(ValueError, "Source sufficiency mismatch"):
+                        review.validate_judgment(overclaim, context)
+                args = self.args.copy()
+                args[9] = str(snapshot)
+                with redirect_stdout(StringIO()):
+                    prepared = review.main(["prepare", *args])
+                self.addCleanup(lambda path=prepared: __import__("shutil").rmtree(path))
+                self.assertEqual(evidence.read_json(prepared / "review-context.json"), context.value)
+                _, run = self.invoke(context)
+                report = asyncio.run(run())
+                self.assertEqual(report["provenance"]["source_coverage"], expected)
+                self.assertEqual(review.validate_review(report, context), report)
+
     def test_empty_support_preserves_provenance_without_behavioral_support(self):
         context = self.control(empty_behavior=True)
         row = next(row for row in context.value["qualitative"] if row["kind"] == "agent_behavior")
