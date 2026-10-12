@@ -344,8 +344,10 @@ def read_bytes(path, limit=JSON_LIMIT, *, budget=None, directory_identities=None
     return value
 
 
-def parse_json(raw):
-    require(type(raw) is bytes and len(raw) <= JSON_LIMIT, 'Invalid bounded JSON')
+def parse_json(raw, *, limit=None):
+    limit = JSON_LIMIT if limit is None else limit
+    require(type(limit) is int and limit > 0, 'Invalid JSON limit')
+    require(type(raw) is bytes and len(raw) <= limit, 'Invalid bounded JSON')
     def pairs(items):
         result = {}
         for key, value in items:

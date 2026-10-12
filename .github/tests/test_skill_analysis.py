@@ -459,7 +459,7 @@ class AnalysisTests(unittest.TestCase):
         result, captured = self.analyze(self.bundle('input', [synthetic(name='gh', scores=(0.4, 0.6))]))
         # Reacquire the public originals independently, then validate a serialized round trip.
         reacquired = analysis.capture_inputs(captured.roots)
-        analysis.validate_analysis(json.loads(evidence.encoded(result)), reacquired)
+        analysis.validate_analysis(evidence.parse_json(evidence.encoded(result), limit=analysis.JSON_LIMIT), reacquired)
         for mutate in (
             lambda r: r['skills'][0]['behavioral_results'][0]['native_metrics'][0].update(value=0.1),
             lambda r: r['skills'][0]['behavioral_results'][0]['case_summary']['cases'][0]['with_minus_without'].update(value='0'),
@@ -476,6 +476,51 @@ class AnalysisTests(unittest.TestCase):
         pair_result, pair_captured = self.analyze(self.bundle('pair', [synthetic(run='one'), synthetic(run='two')]))
         pair_result['skills'][0]['comparisons'][0]['classification'] = 'exploratory'
         with self.assertRaises(ValueError): analysis.validate_analysis(pair_result, pair_captured)
+
+    def test_documented_saved_analysis_rejects_duplicate_keys(self):
+        quality = self.bundle('quality', configs=[configuration('alpha')])
+        benchmark = self.bundle('benchmark', [synthetic()])
+        result, _ = self.analyze(quality, benchmark)
+        saved = self.root / 'saved'; saved.mkdir()
+        report = saved / 'analysis.json'
+        (saved / 'summary.md').write_bytes(analysis.render_summary(result))
+        documentation = (REPO / '.github/evals/REPORT-EVIDENCE.md').read_text()
+        section = documentation.split('### Independent validation and downstream evidence\n', 1)[1]
+        example = section.split('```python\n', 1)[1].split('```', 1)[0]
+        for original, replacement in (('/tmp/public-quality', quality),
+                                      ('/tmp/public-benchmark', benchmark),
+                                      ('/tmp/new-analysis', saved)):
+            example = example.replace(original, str(replacement))
+        code = compile(example, 'REPORT-EVIDENCE.md', 'exec')
+        raw = evidence.encoded(result)
+        report.write_bytes(raw)
+        exec(code, {})
+        marker = b'"maximum_pairs": 16'
+        self.assertIn(marker, raw)
+        for ambiguous in (b'{"schema_version":999,' + raw[1:],
+                          b'{"schema_version":1,' + raw[1:],
+                          raw.replace(marker, b'"maximum_pairs":999,"maximum_pairs":16', 1),
+                          raw.replace(marker, b'"maximum_pairs":16,"maximum_pairs":16', 1)):
+            with self.subTest(ambiguous=ambiguous[:40]):
+                # Last-value decoding loses the ambiguity before recomputation.
+                analysis.validate_analysis(json.loads(ambiguous), analysis.capture_inputs([quality, benchmark]))
+                report.write_bytes(ambiguous)
+                with self.assertRaisesRegex(ValueError, 'Duplicate JSON key'):
+                    exec(code, {})
+
+    def test_saved_analysis_explicit_limit_preserves_large_round_trip(self):
+        result, captured = self.analyze(self.bundle('input', [synthetic()]))
+        raw = evidence.encoded(result)
+        raw += b' ' * (evidence.JSON_LIMIT + 1 - len(raw))
+        path = self.root / 'analysis.json'; path.write_bytes(raw)
+        with self.assertRaisesRegex(ValueError, 'Invalid bounded JSON'):
+            evidence.parse_json(raw)
+        loaded = evidence.parse_json(evidence.read_bytes(path, limit=analysis.JSON_LIMIT),
+                                     limit=analysis.JSON_LIMIT)
+        analysis.validate_analysis(loaded, captured)
+        with self.assertRaisesRegex(ValueError, 'Invalid bounded JSON'):
+            evidence.parse_json(raw, limit=len(raw) - 1)
+        self.assertEqual(evidence.parse_json(raw, limit=len(raw)), loaded)
 
     def test_conflicting_behavioral_and_original_static_claims_reject(self):
         left = synthetic(); right = copy.deepcopy(left); right['metrics'][0]['value'] = 0.3

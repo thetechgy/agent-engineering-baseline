@@ -1092,20 +1092,24 @@ compatibility of recorded conditions; it does not prove causality or repeatabili
 To validate a saved analysis, capture the exact original public bundles again:
 
 ```python
-import json
 from pathlib import Path
 import skill_analysis  # .github/scripts on sys.path; pinned evaluator environment
+import skill_evidence
 
 captured = skill_analysis.capture_inputs([Path('/tmp/public-quality'),
                                          Path('/tmp/public-benchmark')])
-# Apply the documented 64 MiB analysis-file bound before this bounded read.
-with Path('/tmp/new-analysis/analysis.json').open('rb') as stream:
-    raw = stream.read(skill_analysis.JSON_LIMIT + 1)
-assert len(raw) <= skill_analysis.JSON_LIMIT
-result = json.loads(raw)
+# Preserve the 64 MiB analysis bound during both safe reading and strict parsing.
+raw = skill_evidence.read_bytes(Path('/tmp/new-analysis/analysis.json'),
+                               limit=skill_analysis.JSON_LIMIT)
+result = skill_evidence.parse_json(raw, limit=skill_analysis.JSON_LIMIT)
 skill_analysis.validate_analysis(result, captured)
 assert Path('/tmp/new-analysis/summary.md').read_bytes() == skill_analysis.render_summary(result)
 ```
+
+The strict parser rejects duplicate keys at every nesting level, nonfinite
+numbers, and excessive depth before semantic validation. Its optional `limit`
+preserves the existing 8 MiB default for evidence callers; saved analysis uses
+the explicit 64 MiB bound above.
 
 `validate_analysis(result, validated_records)` revalidates public records and
 semantic IDs, verifies closed provenance/index membership, and recomputes the

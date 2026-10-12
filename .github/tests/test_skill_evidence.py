@@ -4192,6 +4192,23 @@ class EvidenceTests(unittest.TestCase):
         data = self.data(); data['dataset']['case_ids'] = [str(i) for i in range(1001)]
         with self.assertRaises(ValueError): evidence.project(data)
 
+    def test_explicit_json_limit_retains_strict_parsing(self):
+        raw = b'{"value": 1}'
+        self.assertEqual(evidence.parse_json(raw, limit=len(raw)), {'value': 1})
+        with self.assertRaisesRegex(ValueError, 'Invalid bounded JSON'):
+            evidence.parse_json(raw, limit=len(raw) - 1)
+        with patch.object(evidence, 'JSON_LIMIT', len(raw) - 1):
+            with self.assertRaisesRegex(ValueError, 'Invalid bounded JSON'):
+                evidence.parse_json(raw)
+            self.assertEqual(evidence.parse_json(raw, limit=len(raw)), {'value': 1})
+        for invalid in (b'{"a":1,"a":2}', b'{"x":NaN}', b'{"x":Infinity}',
+                        b'[' * 34 + b'0' + b']' * 34, b'{', b'"\xff"'):
+            with self.subTest(invalid=invalid[:40]), self.assertRaises(ValueError):
+                evidence.parse_json(invalid, limit=1024)
+        for limit in (True, -1, 0, 1.5, '1024'):
+            with self.subTest(limit=limit), self.assertRaisesRegex(ValueError, 'Invalid JSON limit'):
+                evidence.parse_json(raw, limit=limit)
+
     def test_reference_escape_and_public_size(self):
         for member in ('../escape','/absolute','C:\\private','safe/../escape','a//b'):
             data = self.data(); data['references'][0]['member'] = member
