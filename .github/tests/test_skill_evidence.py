@@ -596,6 +596,89 @@ class EvidenceTests(unittest.TestCase):
                     accepted = False
                 self.assertEqual(accepted, expected)
 
+    def test_inventory_recognition_matches_pinned_entry_semantics(self):
+        from skillevaluator.tier3 import evals_spec
+        recognise = evals_spec._check_unrecognised
+        for kind in ('known', 'hidden', 'environment_directory', 'unknown_file',
+                     'unknown_directory', 'unknown_environment_file'):
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp); authored = self.local(root, 'alpha', True)
+                contents = {'config.yml': 'schema_version: 1\n', 'config.yaml': 'schema_version: 1\n',
+                            'grader.py': '# reward.json\n', 'grader.sh': '# reward.txt\n', 'EVAL.md': '# Fixture\n',
+                            'environment/Dockerfile': 'FROM scratch\n',
+                            'environment/mcp_servers.toml': 'mcp_servers = []\n',
+                            'environment/docker-compose.yaml': 'services: {}\n',
+                            'environment/docker-compose.yml': 'services: {}\n',
+                            'files/input.txt': 'fixture', 'harbor/task/input.txt': 'fixture',
+                            'results/run/input.txt': 'fixture'}
+                additions = {'hidden': ('.hidden.txt', '.hidden-dir/input.txt', '__pycache__/input.txt',
+                                        'environment/.hidden.txt', 'environment/.git/input.txt',
+                                        'environment/__pycache__/input.txt'),
+                             'environment_directory': ('environment/seed/input.txt',),
+                             'unknown_file': ('unknown.txt',),
+                             'unknown_directory': ('unknown/input.txt',),
+                             'unknown_environment_file': ('environment/unknown.txt',)}
+                contents.update({name: 'fixture' for name in additions.get(kind, ())})
+                for name, text in contents.items():
+                    member = authored / 'evals' / name; member.parent.mkdir(parents=True, exist_ok=True)
+                    member.write_text(text)
+                expected = []; recognise(authored, expected)
+                self.assertEqual(bool(expected), kind.startswith('unknown'))
+                before = self.snapshot(root)
+                def compared(target, checks):
+                    observed = []; recognise(target, observed)
+                    self.assertEqual(observed, expected); checks.extend(observed)
+                with patch.object(evals_spec, '_check_unrecognised', side_effect=compared) as recognition:
+                    if expected:
+                        with self.assertRaisesRegex(ValueError, 'Strict dataset contract failed'):
+                            evidence.inventory(root)
+                    else:
+                        self.assertEqual(evidence.inventory(root)['skills'][0]['suite']['case_ids'], ['1'])
+                    recognition.assert_called_once()
+                self.assertEqual(self.snapshot(root), before)
+
+    def test_inventory_native_helpers_use_captured_path_membership(self):
+        from skillevaluator.tier3 import evals_spec
+        root = self.repo(); authored = root / '.apm/skills/alpha'; self.dataset(authored, 'alpha')
+        (authored / 'evals/config.yaml').write_text('schema_version: 1\n')
+        environment = authored / 'evals/environment'; environment.mkdir()
+        (environment / 'Dockerfile').write_text('FROM scratch\n')
+        before = self.snapshot(root)
+        def bounded(helper):
+            def run(*args):
+                with patch.object(Path, 'exists', side_effect=AssertionError('Live native existence lookup')), \
+                        patch.object(Path, 'is_dir', side_effect=AssertionError('Live native directory lookup')), \
+                        patch.object(Path, 'iterdir', side_effect=AssertionError('Live native enumeration')):
+                    return helper(*args)
+            return run
+        with patch.object(evals_spec, '_run_file_checks', side_effect=bounded(evals_spec._run_file_checks)), \
+                patch.object(evals_spec, '_check_unrecognised', side_effect=bounded(evals_spec._check_unrecognised)):
+            self.assertEqual(evidence.inventory(root)['skills'][0]['suite']['case_ids'], ['1'])
+        self.assertEqual(self.snapshot(root), before)
+
+    def test_inventory_recognition_rejects_substituted_tree_without_enumeration(self):
+        from skillevaluator.tier3 import evals_spec
+        for name in ('evals', 'evals/environment'):
+            with self.subTest(directory=name), tempfile.TemporaryDirectory() as temp, patch.object(self, 'root', Path(temp)):
+                root = self.repo(); authored = root / '.apm/skills/alpha'; self.dataset(authored, 'alpha')
+                environment = authored / 'evals/environment'; environment.mkdir()
+                (environment / 'Dockerfile').write_text('FROM scratch\n')
+                target = authored / name; retained = self.root / 'retained'; output = self.root / 'rejected'
+                recognise = evals_spec._check_unrecognised; inventory = evidence.inventory; snapshots = []
+                def substituted(captured, checks):
+                    target.rename(retained); target.mkdir()
+                    for index in range(20): (target / f'unscanned-{index}.txt').write_text('replacement')
+                    snapshots.append(self.snapshot(root))
+                    with patch.object(Path, 'iterdir', side_effect=AssertionError('Replacement enumeration')) as listing:
+                        recognise(captured, checks)
+                        listing.assert_not_called()
+                with patch.object(evals_spec, '_check_unrecognised', side_effect=substituted), \
+                        patch.object(evidence, 'inventory', side_effect=lambda: inventory(root)), redirect_stdout(StringIO()):
+                    with self.assertRaisesRegex(ValueError, 'Input directory (?:entries )?changed'):
+                        evidence.main(['inventory', '--output', str(output)])
+                self.assertEqual(len(snapshots), 1); self.assertTrue(retained.is_dir())
+                self.assertFalse(output.exists()); self.assertEqual(self.snapshot(root), snapshots[0])
+
     def test_imported_owner_and_local_replacement(self):
         root = self.repo(); self.imported(root)
         before = next(r for r in evidence.inventory(root)['skills'] if r['source']['skill_id'] == 'beta')
@@ -1793,6 +1876,81 @@ class EvidenceTests(unittest.TestCase):
                 with patch.object(evidence, 'MAX_TRIALS', 20), self.assertRaisesRegex(ValueError, 'Trial input limit'):
                     evidence.normalize_behavioral(root, 'podman')
                 self.assertEqual(self.snapshot(root), before)
+
+    def test_snapshotless_partial_cohort_uses_either_arm_and_summary_carrier(self):
+        for retained, carrier in itertools.product(('with_skill', 'without_skill'), ('aggregate', 'summary')):
+            with self.subTest(retained=retained, carrier=carrier), tempfile.TemporaryDirectory() as temp, patch.object(self, 'root', Path(temp)):
+                repo, git = self.repository_fixture(); root = self.native(); run = next((root / 'results/podman').iterdir())
+                (run / 'dataset_snapshot.json').unlink()
+                missing = 'without_skill' if retained == 'with_skill' else 'with_skill'
+                summary_path = run / 'codex' / missing.replace('_', '-') / 'summary.json'
+                shutil.rmtree(summary_path.parent / 'trials')
+                result = evidence.read_json(run / 'result.json'); agent = result['agents']['codex']
+                result['report_status'] = 'incomplete'; result.pop('dataset_snapshot', None)
+                for obj in (result, agent):
+                    if 'scored_attempts' in obj: obj['scored_attempts'] = 10
+                for key in ('lift', 'dimensions_with_skill', 'dimensions_without_skill'): agent.pop(key, None)
+                condition = agent['conditions'][missing]
+                condition.update(scored_attempts=0, execution_status='incomplete', execution_errors=['Synthetic failure'])
+                agent['num_trials_with' if missing == 'with_skill' else 'num_trials_without'] = 0
+                agent['pass_at_k'].pop(missing)
+                if carrier == 'summary': agent['pass_at_k'].pop(retained)
+                write(run / 'result.json', result)
+                summary = evidence.read_json(summary_path)
+                summary.update(condition, num_trials=0, pass_at_k=None); write(summary_path, summary)
+                self.mutate(root, '/provenance.json', lambda d: (d.pop('dataset_digest', None), d.pop('metrics', None)))
+                before = self.snapshot(root); normalizer = evidence.normalize_behavioral
+                with patch.object(evidence, 'normalize_behavioral', side_effect=lambda *a: normalizer(*a, workspace=repo)), redirect_stdout(StringIO()):
+                    output = self.root / 'output'
+                    evidence.main(['normalize', '--kind', 'behavioral', '--skill', 'podman', '--input', str(root), '--output', str(output)])
+                    value = evidence.read_json(output / 'evidence.json')
+                    public = evidence.project(value, behavioral_bundle=root)
+                self.assertEqual(len(value['dataset']['case_ids']), 10)
+                self.assertEqual(len(value['observations']), 10)
+                self.assertEqual({row['arm'] for row in value['observations']}, {retained})
+                self.assertEqual(public['availability']['status'], 'incomplete')
+                self.assertIn('metadata_missing', public['availability']['reasons'])
+                self.assertIn('execution_incomplete', public['availability']['reasons'])
+                self.assertIsNone(value['dataset']['staged_digest'])
+                self.assertEqual(self.snapshot(root), before)
+
+    def test_snapshotless_cohort_reconciles_disjoint_arms_and_shared_limit(self):
+        repo, git = self.repository_fixture(); root = self.native(); run = next((root / 'results/podman').iterdir())
+        (run / 'dataset_snapshot.json').unlink()
+        result = evidence.read_json(run / 'result.json'); result.update(report_status='incomplete')
+        result.pop('dataset_snapshot', None); agent = result['agents']['codex']
+        for obj in (result, agent):
+            if 'scored_attempts' in obj: obj['scored_attempts'] = 10
+        for key in ('lift', 'dimensions_with_skill', 'dimensions_without_skill'): agent.pop(key, None)
+        for index, arm in enumerate(('with_skill', 'without_skill')):
+            path = run / 'codex' / arm.replace('_', '-') / 'summary.json'; summary = evidence.read_json(path)
+            payload = summary['pass_at_k']; ids = set(sorted(payload['cases'])[index * 5:(index + 1) * 5])
+            payload['cases'] = {key: row for key, row in payload['cases'].items() if key in ids}
+            passed = sum(row['passed'] for row in payload['cases'].values())
+            payload.update(attempts_used=5, avg_attempts_used=0.5, passed_cases=passed, failed_cases=10-passed, rate=round(passed/10, 4))
+            payload.pop('rate_interval', None)
+            for reward_path in (path.parent / 'trials').glob('*/reward.json'):
+                if evidence.read_json(reward_path)['entry_id'] not in ids: shutil.rmtree(reward_path.parent)
+            summary.update(num_trials=5, scored_attempts=5, execution_status='incomplete'); write(path, summary)
+            agent['conditions'][arm].update(scored_attempts=5, execution_status='incomplete')
+            agent['num_trials_with' if index == 0 else 'num_trials_without'] = 5
+            agent['pass_at_k'][arm] = payload
+        write(run / 'result.json', result)
+        self.mutate(root, '/provenance.json', lambda d: (d.pop('dataset_digest', None), d.pop('metrics', None)))
+        normalizer = evidence.normalize_behavioral
+        with patch.object(evidence, 'normalize_behavioral', side_effect=lambda *a: normalizer(*a, workspace=repo)):
+            value = evidence.normalize_behavioral(root, 'podman')
+            self.assertEqual(len(value['dataset']['case_ids']), 10); self.assertEqual(len(value['observations']), 10)
+            self.assertEqual(evidence.project(dict(value), behavioral_bundle=root)['availability']['status'], 'incomplete')
+            reader = evidence.read_bytes
+            def no_trials(path, **kwargs):
+                self.assertNotIn('trials', Path(path).parts)
+                return reader(path, **kwargs)
+            with patch.object(evidence, 'MAX_CASES', 9), patch.object(evidence, 'read_bytes', side_effect=no_trials):
+                with self.assertRaisesRegex(ValueError, 'Case limit'): evidence.normalize_behavioral(root, 'podman')
+            result['agents']['codex']['pass_at_k']['without_skill']['cases'] = {}
+            write(run / 'result.json', result)
+            with self.assertRaisesRegex(ValueError, 'Conflicting native pass data'): evidence.normalize_behavioral(root, 'podman')
 
     def test_missing_summary_never_invents_zero_trials(self):
         root = self.native(); next(root.rglob('summary.json')).unlink()
@@ -4153,7 +4311,7 @@ class EvidenceTests(unittest.TestCase):
                 self.assertEqual(self.snapshot(workspace), before_workspace)
 
     def test_failed_normalization_publication_cleans_outputs_and_allows_retry(self):
-        for temporary, failure in itertools.product((False, True), ('initial_stat', 'directory_open', 'directory_stat', 'directory_list', 'open', 'write', 'flush')):
+        for temporary, failure in itertools.product((False, True), ('parent_stat', 'initial_stat', 'directory_open', 'directory_stat', 'directory_list', 'open', 'write', 'flush')):
             with self.subTest(temporary=temporary, failure=failure), tempfile.TemporaryDirectory() as temp:
                 parent = Path(temp); root = parent / 'native'
                 shutil.copytree(FIXTURES / 'static-synthetic', root)
@@ -4162,7 +4320,13 @@ class EvidenceTests(unittest.TestCase):
                 args = ['normalize', '--kind', 'static', '--skill', 'podman', '--input', str(root)]
                 if not temporary: args += ['--output', str(destination)]
                 opened = os.open; fdopen = os.fdopen; fstat = os.fstat; listdir = os.listdir
-                output_fds = set(); directory_fds = set(); attempted = []
+                output_fds = set(); directory_fds = set(); attempted = []; created_parent = None; parent_failed = False
+                mkdir = os.mkdir
+                def captured_mkdir(path, *args, **kwargs):
+                    nonlocal created_parent
+                    result = mkdir(path, *args, **kwargs)
+                    if str(path) == 'explicit' or str(path).startswith('skill-evidence-'): created_parent = kwargs.get('dir_fd')
+                    return result
                 stat_path = os.stat; initial_stat_failed = False
                 def failing_initial_stat(path, *args, **kwargs):
                     nonlocal initial_stat_failed
@@ -4184,6 +4348,10 @@ class EvidenceTests(unittest.TestCase):
                     if flags & os.O_CREAT and str(path) == 'public-report.json': output_fds.add(fd)
                     return fd
                 def failing_stat(fd):
+                    nonlocal parent_failed
+                    if failure == 'parent_stat' and fd == created_parent and not parent_failed:
+                        parent_failed = True
+                        raise OSError(5, 'Synthetic output parent stat failure')
                     if fd in directory_fds and failure == 'directory_stat':
                         raise OSError('Synthetic output directory stat failure')
                     return fstat(fd)
@@ -4208,6 +4376,7 @@ class EvidenceTests(unittest.TestCase):
                     stream = fdopen(fd, *args, **kwargs)
                     return FailingStream(stream) if fd in output_fds else stream
                 with patch.dict(os.environ, {'TMPDIR': str(output_parent)}), \
+                        patch.object(os, 'mkdir', side_effect=captured_mkdir), \
                         patch.object(os, 'open', side_effect=failing_open), \
                         patch.object(os, 'fdopen', side_effect=failing_stream), \
                         patch.object(os, 'fstat', side_effect=failing_stat), \
@@ -4215,7 +4384,7 @@ class EvidenceTests(unittest.TestCase):
                         patch.object(os, 'listdir', side_effect=failing_list), \
                         self.assertRaisesRegex(OSError, 'Synthetic output'), redirect_stdout(StringIO()):
                     evidence.main(args)
-                self.assertEqual(attempted, [] if failure.startswith('directory_') or failure == 'initial_stat' else ['evidence.json', 'public-report.json'])
+                self.assertEqual(attempted, [] if failure.startswith('directory_') or failure in ('initial_stat', 'parent_stat') else ['evidence.json', 'public-report.json'])
                 self.assertEqual(list(output_parent.iterdir()), []); self.assertEqual(self.snapshot(root), before)
                 stdout = StringIO()
                 with patch.dict(os.environ, {'TMPDIR': str(output_parent)}), redirect_stdout(stdout): evidence.main(args)
@@ -4223,6 +4392,26 @@ class EvidenceTests(unittest.TestCase):
                 self.assertEqual({p.name for p in output.iterdir()}, {'evidence.json', 'public-report.json'})
                 for path in output.iterdir(): self.assertEqual(path.read_bytes(), evidence.encoded(evidence.read_json(path)))
                 self.assertEqual(self.snapshot(root), before)
+
+    def test_persistent_reservation_metadata_failure_is_bounded_and_fail_closed(self):
+        parent = self.root / 'outputs'; parent.mkdir(); destination = parent / 'output'
+        mkdir = os.mkdir; fstat = os.fstat; parent_fd = None; calls = 0
+        def created(path, *args, **kwargs):
+            nonlocal parent_fd
+            result = mkdir(path, *args, **kwargs)
+            if str(path) == destination.name: parent_fd = kwargs.get('dir_fd')
+            return result
+        def failed(fd):
+            nonlocal calls
+            if fd == parent_fd:
+                calls += 1; raise OSError(5, 'Persistent metadata failure')
+            return fstat(fd)
+        with patch.object(os, 'mkdir', side_effect=created), patch.object(os, 'fstat', side_effect=failed):
+            with self.assertRaisesRegex(OSError, 'Persistent metadata failure'):
+                evidence.write_outputs({'evidence.json': {}}, destination)
+        self.assertEqual(calls, 2)
+        # Without a safe identity, leave the empty reservation rather than guessing.
+        self.assertTrue(destination.is_dir()); self.assertEqual(list(destination.iterdir()), [])
 
     def test_output_descriptor_failure_preserves_replacement_directories(self):
         for temporary, replacement, stage in itertools.product((False, True), ('directory', 'symlink', 'removed'), ('open', 'initial_stat')):

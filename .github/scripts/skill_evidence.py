@@ -849,27 +849,55 @@ def captured_historical_content(workspace, rev, source_path, budget):
 
 
 class CapturedInput:
-    """Read-only path surface used by the pinned optional-file validators."""
-    def __init__(self, path, reader):
+    """Bounded captured-tree path surface for the pinned native validators."""
+    def __init__(self, path, reader, *, entries, directories, children=None):
         self.path = path
         self.reader = reader
+        self.entries = frozenset(entries)
+        self.directories = frozenset(directories)
+        if children is None:
+            index = {}
+            for member in self.entries:
+                index.setdefault(member.parent, []).append(member)
+            children = {parent: tuple(members) for parent, members in index.items()}
+        self.children = children
+
+    def at(self, path):
+        return CapturedInput(path, self.reader, entries=self.entries,
+                             directories=self.directories, children=self.children)
 
     def __str__(self):
         return str(self.path)
 
     def __truediv__(self, member):
-        return CapturedInput(self.path / member, self.reader)
+        return self.at(self.path / member)
+
+    def __lt__(self, other):
+        if not isinstance(other, CapturedInput):
+            return NotImplemented
+        return self.path < other.path
 
     @property
     def parent(self):
-        return CapturedInput(self.path.parent, self.reader)
+        return self.at(self.path.parent)
+
+    @property
+    def name(self):
+        return self.path.name
 
     @property
     def suffix(self):
         return self.path.suffix
 
     def exists(self):
-        return self.path.exists()
+        return self.path in self.entries
+
+    def is_dir(self):
+        return self.path in self.directories
+
+    def iterdir(self):
+        require(self.is_dir(), 'Captured directory required')
+        return (self.at(member) for member in self.children.get(self.path, ()))
 
     def stat(self):
         return SimpleNamespace(st_size=len(self.reader(self.path)))
@@ -885,13 +913,15 @@ def strict_dataset(path, name, *, reader=None, directory_identities=None, direct
     states = {} if directory_states is None else directory_states
     members = {} if file_states is None else file_states
     files = safe_tree(path.parent.parent, directory_identities=directories, directory_states=states, file_states=members)
-    tree_entries = set(files) | set(directories)
+    captured_directories = frozenset(directory for directory in directories if directory.is_relative_to(path.parent.parent))
+    tree_entries = frozenset(files) | captured_directories
     alternatives = [member for member in tree_entries if member.parent == path.parent and member.name.startswith('evals.')]
     require(path.name == 'evals.json' and set(alternatives) == {path}, 'Ambiguous authored dataset formats')
     if reader is None:
         reader = lambda member: read_bytes(member, directory_identities=directories, directory_states=states, file_states=members)
     captured = {}
     def optional_reader(member):
+        require(member in tree_entries, 'Uncaptured native input')
         if member not in captured:
             captured[member] = reader(member)
         return captured[member]
@@ -909,6 +939,8 @@ def strict_dataset(path, name, *, reader=None, directory_identities=None, direct
     ids = validate_case_ids(entry['id'] for entry in entries)
     case_ids(ids)
     checks = []
+    captured_tree = CapturedInput(path.parent.parent, optional_reader, entries=tree_entries,
+                                 directories=captured_directories)
     for spec in native_spec.EVALS_SPEC:
         if spec.rel_path == 'evals/evals.json' or spec.scope == native_spec.Scope.OUTPUT \
                 or '<subdirs>' in spec.rel_path or spec.kind == 'dir':
@@ -917,8 +949,8 @@ def strict_dataset(path, name, *, reader=None, directory_identities=None, direct
         if target in tree_entries:
             # Capture before invoking validators that may catch parse/read errors.
             optional_reader(target)
-            native_spec._run_file_checks(CapturedInput(target, optional_reader), spec, checks)
-    native_spec._check_unrecognised(path.parent.parent, checks)
+            native_spec._run_file_checks(captured_tree.at(target), spec, checks)
+    native_spec._check_unrecognised(captured_tree, checks)
     require(all(row.status == 'ok' for row in checks), 'Strict dataset contract failed')
     for entry in entries:
         for member in entry.get('files', []):
@@ -2167,6 +2199,13 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
         ref(root / 'versions.json')
     if any(versions.get(key) is None for key in ('skillevaluator', 'evaluator_revision')):
         limitations.add('metadata_missing')
+    arm_summaries = {}
+    for arm in ('with_skill', 'without_skill'):
+        summary_path = run / 'codex' / arm.replace('_', '-') / 'summary.json'
+        if summary_path in scanned_entries:
+            summary = read_member(summary_path)
+            require(type(summary) is dict, 'Invalid native summary')
+            arm_summaries[arm] = summary
     snapshot_path = run / 'dataset_snapshot.json'
     if snapshot_path in scanned_entries:
         snapshot = read_member(snapshot_path, native_snapshot=True)
@@ -2189,7 +2228,17 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
         ref(snapshot_path)
     else:
         # Explicit summary case identities suffice for partial evidence, never guessed task names.
-        ids = sorted(case_ids(list(result['agents']['codex'].get('pass_at_k', {}).get('with_skill', {}).get('cases', {}))))
+        rollups = result['agents']['codex'].get('pass_at_k')
+        require(rollups is None or type(rollups) is dict, 'Invalid native pass data')
+        cohort = set()
+        for arm in ('with_skill', 'without_skill'):
+            for carrier in ((rollups or {}).get(arm), arm_summaries.get(arm, {}).get('pass_at_k')):
+                require(carrier is None or type(carrier) is dict, 'Invalid summary pass data')
+                cases = (carrier or {}).get('cases')
+                require(cases is None or type(cases) is dict, 'Invalid summary cases')
+                cohort.update(case_ids(list(cases or {})))
+                require(len(cohort) <= MAX_CASES, 'Case limit exceeded')
+        ids = sorted(case_ids(list(cohort)))
         snapshot = None; limitations.add('metadata_missing')
     declared = config.get('evaluated_source', {})
     require(type(declared) is dict, 'Invalid recorded behavioral source')
@@ -2297,8 +2346,8 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
         arm_dir = run / 'codex' / arm.replace('_', '-')
         native_condition = agent['conditions'][arm]
         summary_path = arm_dir / 'summary.json'
-        if summary_path in scanned_entries:
-            summary = read_member(summary_path)
+        if arm in arm_summaries:
+            summary = arm_summaries[arm]
             summary_ref = ref(summary_path)
         else:
             # Retain run-recorded identities/counts where available, without
@@ -2730,7 +2779,14 @@ def write_outputs(values, destination=None, workspace=ROOT, input_path=None):
             return (stat.S_ISDIR(info.st_mode) and (info.st_dev, info.st_ino) not in forbidden_directories
                     and info.st_uid == os.geteuid() and not info.st_mode & 0o077)
         try:
-            reservation_parent = directory_state(os.fstat(parent_fd))
+            try:
+                reservation_parent = directory_state(os.fstat(parent_fd))
+            except OSError:
+                # Recover identity for cleanup after one transient metadata-read
+                # failure. Never retry creation or proceed with publication.
+                try: reservation_parent = directory_state(os.fstat(parent_fd))
+                except OSError: pass
+                raise
             created = os.stat(destination.name, dir_fd=parent_fd, follow_symlinks=False)
             reserved = private_reservation(created)
             require(reserved, 'Output directory changed')

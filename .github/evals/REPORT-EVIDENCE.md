@@ -74,6 +74,10 @@ reservation. A missing or replaced destination preserves the original rejection.
 The first metadata lookup is also inside cleanup scope. A transient failure
 permits one recovery lookup only while the captured parent-entry state matches;
 cleanup leaves the reservation untouched if it cannot safely establish identity.
+If the initial parent-state read itself fails, one metadata-only retry may
+establish the cleanup guard; the original operation still rejects. Persistent
+metadata failure does not retry creation or publish members, and leaves the
+unidentified empty reservation untouched.
 This path is verified on Linux; Windows output support is not established.
 Input files use the same no-follow ancestor traversal and open the final member
 relative to its parent descriptor. Replacing an ancestor cannot redirect input
@@ -87,6 +91,12 @@ checks. Its cached reader checks those identities even when reusing captured byt
 Dataset discovery and optional-file selection use the captured entries, so an
 empty replacement cannot silently remove validation inputs. Source directory
 identities are checked before invoking the runtime visibility selector.
+The pinned native recognition and optional-file validators share a captured-tree
+path adapter. Existence, directory membership and immediate child listings come
+from the bounded scan; native checks never enumerate a live replacement tree.
+Content reads remain cached and bounded, and final state checks reject substituted
+or changed trees before publication. Native known, unknown, hidden and environment
+entry recognition remains unchanged.
 Native run/trial discovery, reviewed manifests and optional metadata also use
 the initial bounded scan entries. A transient pathname subset cannot hide a
 contradictory trial or optional member; every consumed member must be scanned.
@@ -309,6 +319,13 @@ unavailable records retain their existing rules. Synthetic measured records
 require a native normalization witness too; synthetic provenance alone does not
 authenticate their scores or metrics.
 The witness is private in-memory state and adds no serialized fields or CLI flags.
+
+Without a dataset snapshot, fallback cohort identities are the bounded canonical
+union of both arms' supplied report rollups and captured arm summaries. Either
+arm may supply the surviving cases; disjoint partial case sets are reconciled
+together. Aggregate/summary contradictions still reject, and missing snapshot
+identity remains unknown with `metadata_missing`; it is never reconstructed from
+task-directory names. Each summary is captured only once under the shared budget.
 
 Supplied summary attempts are validated before indexing: case rows and attempt
 lists must have the native types, trial identities must be unique, supplied
