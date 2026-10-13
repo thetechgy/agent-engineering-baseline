@@ -1229,9 +1229,10 @@ hard-link, special-file and change guards. Agent-visible members follow the
 existing native projection boundary. Every supplied visible member must occur
 in the selected evaluated source manifest and match its exact SHA-256. Unexpected
 members or any supplied mismatch reject. Source not represented by a known
-manifest cannot be authenticated and supplying it rejects. Excluded files are
-also bounded and scanned for sensitive strings. Text must be UTF-8; unsupported
-binary source rejects rather than being silently dropped.
+manifest cannot be authenticated and supplying it rejects. Excluded and unselected
+files remain captured, bounded and guarded, but are not disclosed or screened as
+model input. Selected source must decode as UTF-8; selected binary content rejects.
+Original bytes are never redacted or changed.
 
 By default, all supplied agent-visible source text is included within the context
 bound. Coverage is complete only if all declared members are present and fully
@@ -1258,6 +1259,27 @@ partial coverage cannot establish that omitted guidance is absent. Source origin
 revision, ownership and identity remain independent of coverage. Recommendations
 about upstream skills do not authorize edits to installed upstream bytes.
 
+The separate `authentication` object records verified and missing manifest members
+and complete/partial/unavailable authentication coverage. Full authentication does
+not upgrade partial disclosure. All supplied visible members are verified even
+when omitted from the selection; changed omitted bytes reject or invalidate guards.
+
+Sensitivity gates run on decoded selected text and metadata, and on a screening
+copy of the complete serialized context and each SDK payload. Selected JSON string
+literals and credential key/value assignments are checked; serialization must not
+hide controls or credentials. Validated public-record policy-name fields retain
+their metadata meaning and still screen their values.
+Only authenticated source examples grant technical spans for inline `Secret=`
+mentions or conservative fenced Quadlet `Secret=name,type=mount|env` references,
+optionally with an identifier or `/run/secrets/` target. Names and targets retain
+credential/path/contact/control checks. The screening copy replaces only the
+recognized directive key; transmitted excerpts, hashes and transformations remain
+unchanged. Arbitrary secret assignments, environment credentials, malformed
+references, and credential-shaped names/targets reject. This is review-local
+handling, not a change to public evidence screening or a comprehensive privacy audit.
+Technical spans are capped at 1,000 per source text and the screening copy is
+built in one pass; repeated technical mentions cannot cause quadratic copying.
+
 Verified empty source members retain their original and empty-excerpt digests,
 zero total lines, and a `0/0` range. They count as complete member coverage.
 Explicit selections accept `0/0` only for empty content; nonempty content requires
@@ -1275,8 +1297,9 @@ evaluator spans cannot establish sufficient evaluation/harness support.
 ### Optional qualitative support
 
 `--support` names a private retained directory with `support.json` and original
-members at their exact public-reference relative paths. At most 100 support items
-are accepted. All supplied files share bounds and sensitivity scanning. A support
+members at their exact public-reference relative paths. At most 128 support items
+are accepted. All supplied files share bounds and change guards; only selected
+text and disclosed metadata undergo sensitivity screening. A support
 item is a closed descriptor:
 
 ```json
@@ -1286,7 +1309,7 @@ item is a closed descriptor:
       "record_id": "sha256:<public-record-hash>",
       "reference_id": "sha256:<reference-hash>",
       "observation_id": "sha256:<observation-hash>",
-      "kind": "agent_behavior",
+      "kind": "agent_statement",
       "locator": ["agent_output"],
       "representation": "original",
       "archive_member": null,
@@ -1301,17 +1324,20 @@ Record, reference, observation and locator membership are checked against captur
 original public records. Support must name the selected skill and exact selected
 source identity. Behavior and evaluator judgments require an observation whose
 reference list contains that member. Case, arm, attempt and run identities are
-host-generated from that observation. Full locators must extend the original
-reference locator. Behavior requires an agent-output, transcript, trajectory,
+host-generated from that observation. Legacy reference locators extend the original
+reference locator. Statement input requires an agent-output, transcript, trajectory,
 messages, commands or stdout carrier; grader/reward/feedback/suggestion carriers
 cannot be relabeled as behavior. This carrier check establishes type and location,
-not truth or causal relevance. These still require human review.
+not truth or causal relevance. The compatible legacy `agent_behavior` input label
+is emitted as `agent_statement` in v2. Authenticated messages establish recorded
+agent statements, not verified command execution or claimed outcomes. No supported
+message carrier is promoted to verified execution. These still require human review.
 Evaluator judgments require a `grader`, `verifier_result`, `rewards` or `feedback`
 carrier and reject behavior/suggestion carriers, including mixed nested locators.
 An arbitrary observation-bound value cannot establish evaluator evidence or
 satisfy the qualitative-support gate merely through its descriptor label.
 
-Kinds are `agent_behavior`, `evaluator_judgment`, `native_suggestion`, and
+Output kinds are `agent_statement`, `evaluator_judgment`, `native_suggestion`, and
 `analyst_interpretation`. Suggestions require a suggestions/recommendations/
 improvements locator and reject behavior carriers, including agent-generated
 suggestions nested beneath agent output. Genuine grader suggestion paths remain
@@ -1325,9 +1351,10 @@ judgments for human review, never reconciled by silently choosing a grader.
 reference declares an archive digest, `archive_member` must name a supplied ZIP
 within the support root. Its captured digest and contained original member digest
 must both match the public reference. Null archive identities cannot be upgraded
-by supplying an unbound archive. All ZIP members are bounded, scanned in memory
-and never extracted; unsafe paths, ambiguous names, encryption, unsupported
-compression, binary/sensitive content and oversized expanded members reject.
+by supplying an unbound archive. All ZIP members are bounded, read and hashed in
+memory and never extracted; unsafe paths, ambiguous names, encryption, unsupported
+compression and oversized expanded members reject. Omitted sensitive or binary
+members do not reject an authenticated parent, and never enter the context.
 Archives share the 8 MiB per-file and 64 MiB aggregate supplemental bounds, including
 expanded members, with at most 10,000 entries. There is no archive retrieval. `reviewed_extract` requires the existing allowlisted
 `extract-manifest.json`, matching archive identity, original member digest and
@@ -1344,25 +1371,69 @@ and excerpt digests, transformation, completeness, availability and limitations.
 Expired or unavailable public references remain so. Independently verified
 retained originals or allowlisted extracts supply separately identified local
 support, without rewriting public availability or native completed scores.
-Sensitive, corrupt, contradictory, unbound or oversized supplied evidence rejects.
+Sensitive selected text or metadata, corrupt, contradictory, unbound or oversized
+supplied evidence rejects.
 There is no automatic redaction that can silently alter authenticated evidence.
 Scanning detects known credential, contact and private-path patterns; it is not a
 comprehensive privacy audit. Inspect the private prepared context before authorizing
 its transmission. Report Markdown preserves host-generated excerpt and support
 metadata without embedding full native evidence or the review prompt.
 
+### Native qualitative bindings
+
+An optional `binding` adds three closed, pinned carrier recipes. Omitting it keeps
+the compatible reference descriptor above. Native bindings require `original`
+representation and a verified retained ZIP; a caller-supplied digest or reviewed
+extract cannot authenticate a new supplemental member. Members are derived from
+anchors, not arbitrary descriptor paths. All consumed companions must occur in the
+same authenticated ZIP and match their observation-linked public reference digests.
+
+- `native_trajectory`: anchor `reference_id` to the observation's native trial
+  `result.json`. Reconcile its canonical task case, result ID, trial name, arm,
+  reward identity/scores, summary-recorded attempt and observation ID. The sibling
+  `trajectory.json` must be the recorded reward trajectory source, ATIF-v1.7,
+  and match the native agent/model. Only `steps/<index>/message` structured
+  locators with `source: agent` produce `agent_statement` evidence. User/system
+  messages, tool-call locators and unsupported schemas reject. Session IDs are
+  not fabricated as shared result IDs; association is authenticated archival
+  membership, not execution attestation.
+- `native_dimension`: anchor to the observation's original `reward.json`, with
+  locator `["details", "<dimension>"]` or its `reason` child. The enclosing score,
+  reward component and canonical observation component must agree, even when
+  only a reason or line excerpt is selected. Flat security, accuracy, goal accuracy
+  and behavior check carriers are supported. Nested execution/efficiency subchecks
+  have no admitted aggregate-score mapping. Component and overall judgments have
+  separate contradiction keys; scores and native formulas are never rewritten.
+- `native_findings`: anchor to the original run-level `result.json` with no
+  observation, then authenticate its derived `codex/findings.json`, skill and
+  agent identities, and `["suggestions", <index>]` text. Suggestions remain
+  run-level hypotheses. Ambiguous trajectory pointers do not establish case
+  associations or executed behavior.
+
+Each item retains both original anchor and selected member digests, locator,
+archive identity, source/run/case/arm/attempt scope, component score or step ID,
+selection transformation, and independent public/local availability. Public schema
+v1 references are never invented or expanded to accommodate supplemental carriers.
+
 ### Review contract and prompt policy
 
-The review schema is independent, version 1, method `grounded-skill-review/1`.
+The private review schema is version 2, method `grounded-skill-review/2`.
+Public evidence and analysis schemas remain version 1. CLI arguments remain
+compatible, but older private reports reject explicitly before rebuilding context.
+Validate them using their original pinned implementation and dependencies, original
+evidence/selection, context, prompt and schema identities. Retain the original
+tooling snapshot; do not silently migrate a report or override availability/expiry
+to make it validate. The current implementation contains no parallel legacy validator.
 One closed Pydantic model hierarchy defines the model judgment and saved envelope;
 semantic checks additionally bind it to captured evidence. Extra fields, invalid
 citations, evidence-type confusion, source paths, unavailable line ranges,
 quotation mismatches, incomplete suggestion dispositions and recommendations
 exceeding these support rules reject.
 
-Host provenance records method, dependency versions, context/analysis/schema/
+Host provenance records method, dependency versions, participating implementation
+module digest, context/analysis/schema/
 prompt digests, input provenance digest, selected record and source identity,
-origin, ownership, revision, source coverage/omissions, public reference availability,
+origin, ownership, revision, source authentication and disclosure coverage/omissions, public reference availability,
 local support IDs, model configuration, endpoint/request policies, UTC timestamp,
 usage and validation status. The model cannot supply or change host provenance.
 Saved provenance is independently compared with rebuilt context. It is a reproducible
@@ -1382,13 +1453,18 @@ There are zero to three recommendations, with category, priority, implementable
 scope, justification, source paths, explicit sufficiency, citations, expected
 benefit, alternatives, risks and measurable validation criteria. Action categories
 remain `modify_skill`, `improve_eval`, `fix_grader_or_harness`, `investigate`,
-`no_change`. Sufficiency records source identity/integrity/coverage, observed or
-unavailable behavior, behavioral scope, provenance/availability, limitations,
+`no_change`. Sufficiency records source identity/integrity/coverage,
+`recorded_statements` or `unavailable` behavioral support, behavioral scope,
+provenance/availability, limitations,
 and a sufficient-versus-investigation-only conclusion with rationale. Host checks
 require those identity, integrity, coverage and support claims to match citations.
 
 A specific skill change requires verified source citations for every proposed
-member and trial-bound with-skill behavior. Numeric regressions and evaluator
+member and trial-bound with-skill statements. This can ground changes about recorded
+answers, but cannot establish execution defects. An `execution` citation claim
+rejects for every currently supported carrier; sufficiency cannot assert verified
+execution. Free-prose execution assertions still require human semantic review.
+Numeric regressions and evaluator
 opinions alone cannot meet that gate. Evaluation/grader changes marked sufficient
 require qualitative behavior or evaluator evidence; absent support restricts them
 to investigation. Top-level investigation assessments and investigation
@@ -1410,6 +1486,10 @@ tabs and ordinary line endings remain permitted. Rendering normalizes all line
 separators (including CR, CRLF and Unicode separators) to spaces, so prose cannot
 create a new Markdown block through line-ending normalization. Saved-report
 validation and direct rendering enforce the same control-character rejection.
+Only exact source-cited quotes inherit authenticated technical spans, and rendering
+such quotes requires the rebuilt context. Other report prose and metadata have no
+technical-syntax exemption. Requests recheck the sealed prepared context and screen
+the actual payload before counting and generation; neither request truncates evidence.
 Semantic truth, causal relevance, instruction-defect attribution and worthwhile
 scope cannot
 be established by structural validity, carrier checks or citation integrity.
@@ -1444,6 +1524,26 @@ malformed/incomplete output, limits, deadline, cleanup and authorization. These
 fixtures are not model-backed usefulness evidence. No paid inference belongs in
 ordinary CI. Sandbox UID or asynchronous socket restrictions must be reported as
 infrastructure limitations and cannot justify weakening production guards.
+
+The synthetic native fixture recreates four trial bindings, the three technical
+source examples, 86 recorded messages, 16 flat component reasons and four run-level
+suggestions without copying private historical evidence. The 128-item boundary,
+129-item rejection, original/archive integrity, decoded screening, and unsupported
+execution claims have offline regressions. Complete relevant suites before reporting
+validation success; prior timeouts remain inconclusive. An independent packed local
+checkout with the same history and approved changes can reduce object-store checking
+cost without relaxing production guards.
+
+Privately qualify full preparation with the preserved original ZIP and members,
+all ten evaluated source members and all 106 selected items. Use one archive-bound
+public record; unbound numeric records cannot acquire an archive identity merely
+from a supplied ZIP, and alternate representations are not additional measured runs.
+Independently rebuild and inspect the context and final request without inference.
+Keep the context and original artifacts outside the repository and uploads. Offline
+byte limits do not establish a model token count. If an explicitly authorized later
+token preflight exceeds its configured budget, reject without truncation; any new
+manual selection must document omitted locators and relevance-based reasons in the
+private qualification record. Neither paid counting nor generation belongs in this fix.
 
 **Recommendation usefulness is a separate qualification gate.** The analyst is
 `not_quality_qualified`, with `automated_publication_eligible: false`, until a
