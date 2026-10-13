@@ -64,6 +64,13 @@ benefit and measurable validation. Respect upstream ownership. Skill changes mus
 compare current and candidate skills and the no-skill baseline where appropriate,
 previously passing cases, mandatory safety gates, negative controls and fresh realistic
 cases. Unsupported external assertions belong only in unverified_external_assertions.
+Source sufficiency metadata is host-verified, not an analyst judgment. In every
+sufficiency block, copy source_coverage, source_integrity and source_identity exactly
+from source_context.coverage, source_context.integrity and source_context.identity.
+Qualitative limitations do not change those source fields. Set behavioral_support to
+recorded_statements only when that block cites an agent_statement; otherwise use
+unavailable. Copy citation IDs and locators from supplied evidence, with valid line
+ranges. Omit optional quotes unless they exactly match the cited selected lines.
 Structural and citation checks cannot prove semantic truth. Human review is required.
 Do not embed full native evidence or prompts in the report. Quote only short cited
 excerpts. No automatic publication or implementation is authorized."""
@@ -964,8 +971,16 @@ def prepare(inputs, saved_analysis, skill, record_id, source=None, support=None,
     return Context(value, (*captured.roots, *capture.roots), guards)
 
 
-def schema():
-    return Judgment.model_json_schema()
+def schema(context=None):
+    """Fresh schema; shared Sufficiency references bind every occurrence to host facts."""
+    value = Judgment.model_json_schema()
+    if context is not None:
+        source = context.value["source_context"]
+        properties = value["$defs"]["Sufficiency"]["properties"]
+        for field, key in (("source_coverage", "coverage"), ("source_integrity", "integrity"),
+                           ("source_identity", "identity")):
+            properties[field]["enum"] = [source[key]]
+    return value
 
 
 def index_context(context):
@@ -1156,7 +1171,7 @@ def common_request(context, config):
         "tools": [],
         "tool_choice": "none",
         "truncation": "disabled",
-        "text": {"format": {"type": "json_schema", "name": "skill_review", "strict": True, "schema": schema()}},
+        "text": {"format": {"type": "json_schema", "name": "skill_review", "strict": True, "schema": schema(context)}},
     }
 
 
@@ -1264,7 +1279,7 @@ def expected_provenance(context):
         "method": METHOD,
         "context_digest": evidence.identity(value),
         "analysis_digest": value["analysis_digest"],
-        "schema_digest": evidence.identity(schema()),
+        "schema_digest": evidence.identity(schema(context)),
         "prompt_digest": evidence.digest_bytes(PROMPT.encode()),
         "versions": versions(),
         "implementation_digest": value["implementation_digest"],

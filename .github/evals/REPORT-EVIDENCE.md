@@ -1189,6 +1189,18 @@ HTTP proxies, and zero SDK retries. There is one input-token count followed by
 one generation using identical model, instructions, input and strict JSON schema.
 The count includes the supplied structured-output schema. The supported count
 endpoint is documented in the [official OpenAI API reference](https://developers.openai.com/api/reference/python/resources/responses/subresources/input_tokens/methods/count).
+The schema uses single-value enums supported by
+[Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs#supported-schemas)
+to bind `source_coverage`, `source_integrity` and `source_identity` to the prepared
+context's host-verified facts in every
+sufficiency block, including recommendations. Each construction produces an
+isolated schema without changing the context or the context-free schema. Counting
+and generation share that schema, and provenance records its exact digest.
+Independent host validation still rejects incorrect metadata, invalid citations
+and unsupported execution claims; generated responses are never repaired to pass.
+The private report contract remains version 2. Changed prompt, schema and
+implementation digests bind new reports to the corrected tooling; historical
+reports require their original inputs and pinned tooling rather than migration.
 There is no repair generation, provider fallback or automatic retry. Defaults are
 64,000 input tokens, 12,000 output tokens and a 180-second total async deadline
 across both requests. `--input-limit`, `--output-limit` and `--deadline-seconds`
