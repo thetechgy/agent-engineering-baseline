@@ -3336,6 +3336,94 @@ class ReviewTests(unittest.TestCase):
         self.assertNotIn(model["recommendations"][0]["scope"], caught.exception.diagnostic_json.decode())
 
 
+    def test_review_final_member_open_races_are_typed_and_safe(self):
+        import errno
+        context = self.control()
+        member = self.root / "source/SKILL.md"
+        original_open = evidence.os.open
+        for number in (errno.ENOENT, errno.ELOOP, errno.EACCES):
+            def race(path, flags, *args, **kwargs):
+                if path == member.name and not flags & os.O_DIRECTORY:
+                    raise OSError(number, "AUDIT-PRIVATE-SENTINEL")
+                return original_open(path, flags, *args, **kwargs)
+            stderr = StringIO()
+            with self.subTest(errno=number), patch.object(evidence.os, "open", side_effect=race), \
+                    patch("openai.AsyncOpenAI") as sdk, redirect_stderr(stderr):
+                with self.assertRaises(evidence.EvidenceBoundaryError):
+                    review.main(["review", *self.args, "--model", CONFIG["model"], "--authorize-inference",
+                                 "--diagnostics"])
+                sdk.assert_not_called()
+            value = json.loads(stderr.getvalue())
+            self.assertEqual((value["code"], value["location"], value["stage"]),
+                             ("evidence_integrity_rejected", ["provenance", "input_provenance_digest"], "preflight"))
+            self.assertEqual((value["count_requests"], value["generation_requests"]), (0, 0))
+            self.assertNotIn("AUDIT-PRIVATE-SENTINEL", stderr.getvalue())
+            self.assertNotIn(str(member), stderr.getvalue())
+            self.assertNotIn("usage", value)
+        for guard in context.guards:
+            guard()
+
+    def test_review_temporary_output_permissions_and_collision_retry(self):
+        import errno
+        context = self.control()
+        body = response_body(judgment(context, compact=True))
+        calls = []
+        def handle(request):
+            calls.append(request)
+            return httpx.Response(200, json={"object": "response.input_tokens", "input_tokens": 1000}
+                                  if request.url.path.endswith("/input_tokens") else body)
+        def client(**kwargs):
+            kwargs["http_client"] = httpx.AsyncClient(transport=httpx.MockTransport(handle))
+            return AsyncOpenAI(**kwargs)
+        mkdir = evidence.os.mkdir
+        for number in (errno.EACCES, errno.EPERM):
+            def denied(path, *args, **kwargs):
+                if str(path).startswith("skill-evidence-") and "dir_fd" in kwargs:
+                    raise OSError(number, "AUDIT-PRIVATE-SENTINEL")
+                return mkdir(path, *args, **kwargs)
+            stderr = StringIO()
+            before = len(calls)
+            with self.subTest(errno=number), patch.dict(os.environ, {"TMPDIR": str(self.root)}), \
+                    patch.object(evidence.os, "mkdir", side_effect=denied), \
+                    patch("openai.AsyncOpenAI", side_effect=client), redirect_stderr(stderr):
+                with self.assertRaises(evidence.EvidenceBoundaryError):
+                    review.main(["review", *self.args, "--model", CONFIG["model"], "--authorize-inference", "--diagnostics"])
+            value = json.loads(stderr.getvalue())
+            self.assertEqual((value["code"], value["location"], value["stage"]),
+                             ("output_boundary_rejected", ["output"], "output_persistence"))
+            self.assertEqual(value["usage"]["total_tokens"], 1500)
+            self.assertEqual(len(calls) - before, 2)
+            self.assertEqual(list(self.root.glob("skill-evidence-*")), [])
+            self.assertNotIn("AUDIT-PRIVATE-SENTINEL", stderr.getvalue())
+        existing = self.root / "skill-evidence-existing"
+        existing.mkdir()
+        marker = existing / "user-work"
+        marker.write_bytes(b"preserve")
+        with patch.dict(os.environ, {"TMPDIR": str(self.root)}), \
+                patch.object(evidence.secrets, "token_hex", side_effect=["existing", "fresh"]) as names:
+            output = evidence.write_outputs({"test.json": {"fixture": True}})
+        self.assertEqual(names.call_count, 2)
+        self.assertEqual(output, self.root / "skill-evidence-fresh")
+        self.assertEqual(marker.read_bytes(), b"preserve")
+        self.assertEqual(evidence.read_json(output / "test.json"), {"fixture": True})
+
+    def test_review_final_deadline_reports_construction_after_screening(self):
+        context = self.control()
+        make = review.make_review
+        def late(*args, **kwargs):
+            value = make(*args, **kwargs)
+            review.time.sleep(1.1)  # A synchronous construction delay, after all screening succeeded.
+            return value
+        with patch.object(review, "make_review", side_effect=late):
+            calls, run = self.invoke(context, config={**CONFIG, "deadline_seconds": 1})
+            with self.assertRaises(review.InferenceRejected) as caught:
+                asyncio.run(run())
+        value = self.assert_diagnostic(caught.exception, "deadline_exceeded", ("configuration", "deadline_seconds"),
+                                      stage="report_construction")
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(value["usage"]["total_tokens"], 1500)
+
+
 
 if __name__ == "__main__":
     unittest.main()

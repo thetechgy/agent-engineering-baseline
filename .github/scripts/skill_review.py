@@ -1770,6 +1770,7 @@ async def invoke(context, config, authorized, *, http_client=None, diagnostic=No
                 screen_request(common, context)
                 diagnostic.stage = "report_construction"
                 result = make_review(judgment, context, config, usage, diagnostic=diagnostic)
+                diagnostic.stage = "report_construction"
                 review_require(time.monotonic() - started < config.deadline_seconds, "Total deadline exceeded",
                                "deadline_exceeded", ("configuration", "deadline_seconds"))
                 return result

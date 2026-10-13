@@ -64,11 +64,13 @@ def boundary_check(boundary):
     return check
 
 
-def boundary_call(boundary, operation, *args, **kwargs):
+def boundary_call(boundary, operation, *args, allow_collision=False, **kwargs):
     """Translate known protection/race errors only at a specific OS call."""
     try:
         return operation(*args, **kwargs)
     except OSError as error:
+        if allow_collision and isinstance(error, FileExistsError):
+            raise  # Only temporary-name collisions retain the existing bounded retry.
         if error.errno in (errno.ENOENT, errno.ENOTDIR, errno.ELOOP, errno.EEXIST, errno.EACCES, errno.EPERM):
             raise EvidenceBoundaryError('Filesystem boundary rejected', boundary) from None
         raise
@@ -353,7 +355,8 @@ def read_bytes(path, limit=JSON_LIMIT, *, budget=None, directory_identities=None
     # O_NONBLOCK avoids hanging if a file is replaced by a FIFO between checks.
     parent_fd = open_directory(path.parent, directory_identities, directory_states=directory_states)
     try:
-        fd = os.open(path.name, os.O_RDONLY | os.O_NOFOLLOW | getattr(os, 'O_NONBLOCK', 0), dir_fd=parent_fd)
+        fd = boundary_call("integrity", os.open, path.name,
+                           os.O_RDONLY | os.O_NOFOLLOW | getattr(os, 'O_NONBLOCK', 0), dir_fd=parent_fd)
     finally:
         os.close(parent_fd)
     with os.fdopen(fd, 'rb') as stream:
@@ -2853,7 +2856,8 @@ def write_outputs(values, destination=None, workspace=ROOT, input_path=None, *,
             for _ in range(100):
                 destination = parent / ('skill-evidence-' + secrets.token_hex(8))
                 try:
-                    os.mkdir(destination.name, mode=0o700, dir_fd=parent_fd)
+                    boundary_call("output", os.mkdir, destination.name, mode=0o700, dir_fd=parent_fd,
+                                  allow_collision=True)
                     break
                 except FileExistsError:
                     destination = None
