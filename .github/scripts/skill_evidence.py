@@ -1813,12 +1813,12 @@ def project(data, *, static_bundle=None, behavioral_bundle=None):
     return _CapturedRecord(out, tuple(dict.fromkeys(guards)))
 
 
-def load_extract(root, *, budget=None, _observed_at=None, directory_identities=None, entries=None, directory_states=None, file_states=None):
+def load_extract(root, *, budget=None, _observed_at=None, directory_identities=None, entries=None, directory_states=None, file_states=None, reader=None):
     path = root / 'extract-manifest.json'
     present = path in entries if entries is not None else path.exists()
     if not present:
         return None
-    raw = read_bytes(path, budget=budget, directory_identities=directory_identities, directory_states=directory_states, file_states=file_states)
+    raw = reader(path) if reader is not None else read_bytes(path, budget=budget, directory_identities=directory_identities, directory_states=directory_states, file_states=file_states)
     require(digest_bytes(raw) in REVIEWED_EXTRACT_MANIFESTS, 'Unrecognized reviewed extract manifest')
     value = parse_json(raw)
     closed(value, ('schema_version', 'artifact_id', 'archive_digest', 'origin', 'members'))
@@ -2908,23 +2908,29 @@ def write_outputs(values, destination=None, workspace=ROOT, input_path=None, *,
 
 
 
-def verify_reference(bundle, record):
+def resolve_locator(value, locator):
+    """Resolve captured JSON without rereading or executing supplied content."""
+    require(type(locator) is list and len(locator) <= 12, 'Locator limit')
+    for component in locator:
+        if type(component) is int:
+            require(type(value) is list and 0 <= component < len(value), 'Invalid structured locator')
+        else:
+            require(type(component) is str and type(value) is dict and component in value,
+                    'Invalid structured locator')
+        value = value[component]
+    return value
+
+
+def verify_reference(bundle, record, *, reader=None):
     """Verify retained original bytes and resolve a structured locator, without execution."""
     validate_reference(record)
     require(record['availability'] == 'available', 'Reference unavailable or expired')
     require(not reference_expired(record, utc_now()), 'Reference unavailable or expired')
     safe_path(bundle, directory=True)
     path = bundle / record['member']
-    raw = read_bytes(path)
+    raw = (read_bytes if reader is None else reader)(path)
     require(digest_bytes(raw) == record['digest'], 'Evidence member digest mismatch')
-    value = parse_json(raw)
-    for component in record['locator']:
-        if type(component) is int:
-            require(type(value) is list and component < len(value), 'Invalid structured locator')
-        else:
-            require(type(value) is dict and component in value, 'Invalid structured locator')
-        value = value[component]
-    return value
+    return resolve_locator(parse_json(raw), record['locator'])
 
 
 def verify_source_snapshot(snapshot, src):
