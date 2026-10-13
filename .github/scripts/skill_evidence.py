@@ -5,6 +5,7 @@ import argparse
 import copy
 from contextlib import contextmanager
 from datetime import datetime, timezone
+import errno
 import hashlib
 import json
 import math
@@ -46,6 +47,33 @@ REVIEWED_REFERENCE_EXPIRY = {
         '2026-10-19T19:11:15Z',
 }
 require = reports.require
+
+
+class EvidenceBoundaryError(ValueError):
+    """An explicit validation failure at a captured-data or output boundary."""
+
+    def __init__(self, message, boundary):
+        super().__init__(message)
+        self.boundary = boundary
+
+
+def boundary_check(boundary):
+    def check(condition, message):
+        if not condition:
+            raise EvidenceBoundaryError(message, boundary)
+    return check
+
+
+def boundary_call(boundary, operation, *args, **kwargs):
+    """Translate known protection/race errors only at a specific OS call."""
+    try:
+        return operation(*args, **kwargs)
+    except OSError as error:
+        if error.errno in (errno.ENOENT, errno.ENOTDIR, errno.ELOOP, errno.EEXIST, errno.EACCES, errno.EPERM):
+            raise EvidenceBoundaryError('Filesystem boundary rejected', boundary) from None
+        raise
+
+
 # Metadata identities from the exact reviewed manifest above, independently
 # checked against its pinned bytes by the fixture contract. No execution attestation.
 REVIEWED_REFERENCE_IDENTITIES = frozenset({
@@ -157,8 +185,8 @@ def identity(value):
                                    ensure_ascii=True, allow_nan=False).encode())
 
 
-def depth(value, limit, level=0, seen=None):
-    require(level <= limit, 'JSON depth exceeded')
+def depth(value, limit, level=0, seen=None, *, validate=require):
+    validate(level <= limit, 'JSON depth exceeded')
     if isinstance(value, (dict, list)):
         seen = {} if seen is None else seen
         # YAML aliases preserve shared containers. Revisit only at a deeper
@@ -168,12 +196,13 @@ def depth(value, limit, level=0, seen=None):
             return
         seen[marker] = level
         for child in value.values() if isinstance(value, dict) else value:
-            depth(child, limit, level + 1, seen)
+            depth(child, limit, level + 1, seen, validate=validate)
     elif type(value) is float:
-        require(math.isfinite(value), 'Nonfinite JSON number')
+        validate(math.isfinite(value), 'Nonfinite JSON number')
 
 
-def safe_path(path, *, directory=False, missing=False, directory_identities=None):
+def safe_path(path, *, directory=False, missing=False, directory_identities=None, boundary="integrity"):
+    require = boundary_check(boundary)
     path = Path(path).absolute()
     require('..' not in path.parts, 'Parent traversal')
     current = Path(path.anchor)
@@ -207,6 +236,7 @@ def file_state(info):
 
 
 def verify_file_states(states, directories, directory_states, paths=None):
+    require = boundary_check("integrity")
     fd = None
     parent = None
     try:
@@ -216,7 +246,7 @@ def verify_file_states(states, directories, directory_states, paths=None):
                     os.close(fd); fd = None
                 fd = open_directory(path.parent, directories, directory_states=directory_states)
                 parent = path.parent
-            info = os.stat(path.name, dir_fd=fd, follow_symlinks=False)
+            info = boundary_call("integrity", os.stat, path.name, dir_fd=fd, follow_symlinks=False)
             require(stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and file_state(info) == states[path],
                     'Input member changed')
     finally:
@@ -315,6 +345,7 @@ class ReadBudget:
 
 
 def read_bytes(path, limit=JSON_LIMIT, *, budget=None, directory_identities=None, directory_states=None, file_states=None):
+    require = boundary_check("integrity")
     if directory_identities is None:
         directory_identities = {}
     path = safe_path(path, directory_identities=directory_identities)
@@ -345,6 +376,7 @@ def read_bytes(path, limit=JSON_LIMIT, *, budget=None, directory_identities=None
 
 
 def parse_json(raw, *, limit=None):
+    require = boundary_check("json")
     limit = JSON_LIMIT if limit is None else limit
     require(type(limit) is int and limit > 0, 'Invalid JSON limit')
     require(type(raw) is bytes and len(raw) <= limit, 'Invalid bounded JSON')
@@ -357,10 +389,10 @@ def parse_json(raw, *, limit=None):
     try:
         value = json.loads(raw, object_pairs_hook=pairs,
                            parse_constant=lambda _: require(False, 'Nonfinite JSON number'))
-        depth(value, 32)
+        depth(value, 32, validate=require)
         return value
-    except (RecursionError, UnicodeError, json.JSONDecodeError) as exc:
-        raise ValueError('Invalid bounded JSON') from exc
+    except (RecursionError, UnicodeError, json.JSONDecodeError):
+        raise EvidenceBoundaryError('Invalid bounded JSON', 'json') from None
 
 
 def read_json(path):
@@ -2742,8 +2774,10 @@ def normalize_static(root, name, workspace=ROOT):
 
 def open_directory(path, identities=None, changed_message='Input directory changed', trusted_output=False, *, directory_states=None):
     """Anchor each directory component without following replacement links."""
+    boundary = "output" if trusted_output else "integrity"
+    require = boundary_check(boundary)
     flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
-    fd = os.open(path.anchor, flags)
+    fd = boundary_call(boundary, os.open, path.anchor, flags)
     def validate_owner():
         if trusted_output:
             info = os.fstat(fd)
@@ -2756,7 +2790,7 @@ def open_directory(path, identities=None, changed_message='Input directory chang
             require(directory_state(os.fstat(fd)) == directory_states[current], 'Input directory entries changed')
         for part in path.parts[1:]:
             current /= part
-            child = os.open(part, flags, dir_fd=fd)
+            child = boundary_call(boundary, os.open, part, flags, dir_fd=fd)
             os.close(fd); fd = child
             if identities is not None:
                 info = os.fstat(fd)
@@ -2772,6 +2806,7 @@ def open_directory(path, identities=None, changed_message='Input directory chang
 
 def write_outputs(values, destination=None, workspace=ROOT, input_path=None, *,
                   rendered=None, input_paths=(), input_guards=()):
+    require = boundary_check("output")
     # Finish validation/serialization before reserving an output directory.
     require(SECURE_DIRECTORY_OUTPUT, 'Secure directory output unsupported')
     rendered = {} if rendered is None else rendered
@@ -2793,16 +2828,16 @@ def write_outputs(values, destination=None, workspace=ROOT, input_path=None, *,
         # Validate explicit settings without tempfile's probing/fallback writes.
         parent = next((os.environ[key] for key in ('TMPDIR', 'TEMP', 'TMP') if os.environ.get(key)), None)
         parent = safe_path(parent if parent is not None else tempfile.gettempdir(), directory=True,
-                           directory_identities=parent_identities)
+                           directory_identities=parent_identities, boundary="output")
         require(not parent.is_relative_to(workspace), 'Output must be outside checkout')
         for boundary in boundaries:
             require(not parent.is_relative_to(boundary), 'Output overlaps input')
     else:
         destination = Path(destination).absolute()
-        parent = safe_path(destination.parent, directory=True, directory_identities=parent_identities)
+        parent = safe_path(destination.parent, directory=True, directory_identities=parent_identities, boundary="output")
         require(not os.path.lexists(destination), 'Output directory must be new')
     if destination is not None:
-        safe_path(destination, directory=True, missing=True)
+        safe_path(destination, directory=True, missing=True, boundary="output")
         require(not destination.is_relative_to(workspace) and destination != workspace, 'Output must be outside checkout')
         for boundary in boundaries:
             require(not destination.is_relative_to(boundary) and not boundary.is_relative_to(destination),
@@ -2824,7 +2859,7 @@ def write_outputs(values, destination=None, workspace=ROOT, input_path=None, *,
                     destination = None
             require(destination is not None, 'Temporary output collision limit')
         else:
-            os.mkdir(destination.name, mode=0o700, dir_fd=parent_fd)
+            boundary_call("output", os.mkdir, destination.name, mode=0o700, dir_fd=parent_fd)
         created = None
         reservation_parent = None
         reserved = False
@@ -2846,7 +2881,8 @@ def write_outputs(values, destination=None, workspace=ROOT, input_path=None, *,
             created = os.stat(destination.name, dir_fd=parent_fd, follow_symlinks=False)
             reserved = private_reservation(created)
             require(reserved, 'Output directory changed')
-            directory_fd = os.open(destination.name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent_fd)
+            directory_fd = boundary_call("output", os.open, destination.name,
+                                         os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent_fd)
             original = os.fstat(directory_fd)
             require((original.st_dev, original.st_ino) == (created.st_dev, created.st_ino)
                     and (original.st_dev, original.st_ino) not in forbidden_directories
@@ -2859,7 +2895,7 @@ def write_outputs(values, destination=None, workspace=ROOT, input_path=None, *,
                         (original.st_dev, original.st_ino), 'Output directory changed')
             unchanged()
             for name, payload in payloads.items():
-                fd = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                fd = boundary_call("output", os.open, name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
                              mode=0o600, dir_fd=directory_fd)
                 members.append(name)
                 try:
@@ -2910,6 +2946,7 @@ def write_outputs(values, destination=None, workspace=ROOT, input_path=None, *,
 
 def resolve_locator(value, locator):
     """Resolve captured JSON without rereading or executing supplied content."""
+    require = boundary_check("locator")
     require(type(locator) is list and len(locator) <= 12, 'Locator limit')
     for component in locator:
         if type(component) is int:
@@ -2983,5 +3020,6 @@ if __name__ == '__main__':
         main()
     except (ValueError, KeyError, TypeError, AttributeError, IndexError, OSError, OverflowError) as exc:
         # Native exception strings can contain prose or paths. Keep CLI errors bounded.
-        print('Evidence contract rejected (' + type(exc).__name__ + ')', file=sys.stderr)
+        error_name = 'ValueError' if isinstance(exc, EvidenceBoundaryError) else type(exc).__name__
+        print('Evidence contract rejected (' + error_name + ')', file=sys.stderr)
         sys.exit(1)

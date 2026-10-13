@@ -1231,19 +1231,47 @@ This verifies the model recorded in configuration against the API response's
 [generating-model identity](https://developers.openai.com/api/reference/python/resources/responses/methods/create).
 The review suppresses logging during SDK invocation, including debug logging. Errors
 print a fixed message without SDK bodies, prompts, evidence, credentials or paths.
-The review-only `--diagnostics` option additionally emits one bounded JSON line
-to stderr on inference rejection, before the fixed error message. A trusted local
-qualification runner may capture it privately using the existing 0700-directory /
-0600-file protections. It contains host-selected stage/code, known logical field
-names and bounded indexes, request counts, elapsed time, expected-model/match
-status, request identity digests and validated usage. Usage is checked before
-judgment validation, so a rejected citation need not discard valid billing counts.
-Known numeric cache/reasoning details are included when supplied within their
-token bounds. Arbitrary SDK or Pydantic errors, candidate IDs, unknown field
-names, quotations, locators, prose, response bodies, headers and private paths
-never enter diagnostics. Diagnostic failure falls back to fixed safe metadata;
-it never preserves a candidate, writes a report or authorizes another request.
-Default errors and report destinations remain unchanged.
+The opt-in `--diagnostics` option on `review` and offline `validate` emits one
+bounded JSON line to stderr before the fixed CLI error. It covers parsing, model
+binding, judgment validation, screening, integrity rechecks, provenance validation,
+report construction, Markdown rendering and protected output persistence. A trusted
+local qualification runner may capture this privately with 0700-directory /
+0600-file protections. The maximum diagnostic size is 8,192 bytes.
+
+Diagnostics contain host-selected stage/code, declared logical field names and
+bounded indexes, elapsed time and authenticated context, analysis, input-provenance,
+prompt, schema and implementation digests. Review also records expected-model/match
+status and at most one count and one generation request. Validated usage survives
+subsequent rejection, including rendering and persistence failures; bounded numeric
+cache/reasoning details remain available. Offline validation has no inferred API
+request counts or model-match claims. Saved-report usage is retained only after its
+provenance and usage checks; it is not an attestation that inference occurred.
+
+Expected checks raise typed host-authored failures. JSON/locator and filesystem
+signals originate only at their explicit validation or protected OS boundaries;
+the shared global assertion behavior is unchanged. Arbitrary `ValueError`, runtime,
+SDK, scanner and writer exceptions remain `rejected` with an empty location. A
+host deadline expiry has its own code; an unrelated `TimeoutError` remains generic.
+The first failing check determines the diagnostic. Unknown path components stop
+at their known parent, so generated keys and locator values never become locations.
+No Pydantic messages/input/context, SDK bodies, exception text, quotations, prose,
+headers, credentials or private paths enter diagnostics. Serializer failure falls
+back to fixed safe metadata. Diagnostics never preserve rejected candidates, create
+reports, relax output cleanup or authorize another request. Default CLI errors and
+report destinations remain unchanged.
+
+| Failure family | Representative codes and locations |
+| --- | --- |
+| Preflight | `inference_unauthorized`, `runtime_unsupported`, `model_unsupported`; configuration or versions field |
+| Structure and size | `model_structure_invalid`, `judgment_structure_invalid`, `report_structure_invalid`, `report_size_exceeded`; known field prefix |
+| Citations | `unknown_citation`, `citation_type_mismatch`, `citation_source_mismatch`, `citation_locator_mismatch`, `citation_lines_unavailable`, `citation_content_unavailable`, `quotation_mismatch`, `claim_incompatible`; citation field/index |
+| Sufficiency | `source_sufficiency_mismatch`, `behavioral_sufficiency_mismatch`, `skill_sufficiency_insufficient`, `skill_source_unverified`, `skill_source_required`, `skill_with_skill_statement_required`, `investigation_sufficiency_conflict`; sufficiency field or citations |
+| Suggestions and targets | `suggestion_coverage_mismatch`, `suggestion_source_required`, `suggestion_statement_required`, `modification_path_invalid`, `modification_not_grounded`, `non_skill_paths_forbidden`; suggestion/target field/index |
+| Actions and validation | `skill_validation_plan_incomplete`, `evaluation_support_required`, `assessment_action_conflict`, `skill_action_assessment_conflict`; exact validation field, citations or disposition/category |
+| Security | `report_control_characters`, `report_invalid_unicode`, `report_sensitive_text`, `report_sensitive_assignment`, `report_screening_budget_exceeded`, `report_technical_span_invalid`; original logical field, including decoded layers |
+| Request and provenance | `request_context_mismatch`, `request_policy_mismatch`, `request_schema_mismatch`, `evidence_integrity_rejected`, `report_provenance_mismatch`, `report_timestamp_invalid`, `private_contract_unsupported`; provenance field or fixed root |
+| Responses | `response_incomplete`, `model_mismatch`, `usage_missing`, `usage_invalid`, `usage_inconsistent`, `response_tool_output_forbidden`, `response_message_incomplete`, `response_refused`, `response_annotations_forbidden`, `response_shape_invalid`, `response_limit`, `json_invalid`; fixed response/usage fields |
+| Output | `report_markdown_limit`, `report_markdown_mismatch`, `output_boundary_rejected`; `markdown` or `output` |
 
 Omitted output destinations use the existing private temporary writer. New output
 directories remain outside the checkout and input boundaries, mode 0700, with
@@ -1474,6 +1502,15 @@ explicit valid public-record locator and null lines. Claims remain positive,
 absence or interpretation; execution is unavailable for every supported carrier.
 The host derives citation type, availability, source path and fixed source or
 qualitative locator, preserving the selected ID, range, quote and claim exactly.
+Nullable citation line fields permit only positive integers when present. Public
+locator integer components remain zero-based and nonnegative. Nullable fields,
+empty public locators and legitimately empty recommendation, suggestion, target,
+comparison and external-assertion arrays retain their existing semantics. Substantive
+strings, including validation criteria, alternatives, risks and external assertions,
+require a non-whitespace character; values are never stripped or repaired. These
+shared compact/saved constraints use supported `pattern` and `minimum` keywords;
+conditional cross-field rules stay in host validation, without `if`/`then`/`allOf`.
+The pinned SDK's strict-schema conversion must reproduce the compact schema.
 No line defaults, clamping, quote rewriting, inferred targets or guessed IDs occur.
 Native assessment IDs have their own supplied-suggestion enum; the array has the
 expected length, and independent validation rejects duplicate or substituted IDs.
@@ -1503,10 +1540,17 @@ It explains tested benefit, tested harm, interpretation, uncertainty, dispositio
 (`skill_change`, `investigate`, `no_change`), citations and sufficiency. Every
 `skill_change` assessment must include at least one `modify_skill` recommendation,
 and every `modify_skill` recommendation requires a `skill_change` assessment.
-Zero recommendations remain valid for `investigate` and `no_change`. Every
+Zero recommendations remain valid for `investigate` and `no_change`. A `no_change`
+assessment permits only `no_change` or `investigate` recommendations: evaluation or
+grader repairs require an `investigate` assessment. That assessment remains
+`investigation_only` even when an individual supported evaluation action is sufficient.
+Every
 supplied native suggestion receives exactly one assessment: `already_covered`,
 `potentially_ineffective`, `warranted`, `contradicted` or `unsupported`. Already
-covered requires source citations; warranted/contradicted requires observed support.
+covered requires source citations; contradicted requires recorded agent statements;
+warranted requires both. Source-only disagreement cannot become `contradicted`.
+`potentially_ineffective` and `unsupported` may have no citations when their reasoning
+honestly explains the supplied-evidence limitations.
 
 There are zero to three recommendations, with category, priority, implementable
 scope, justification, source paths, explicit sufficiency, citations, expected
@@ -1547,7 +1591,9 @@ create a new Markdown block through line-ending normalization. Saved-report
 validation and direct rendering enforce the same control-character rejection.
 Only exact source-cited quotes inherit authenticated technical spans, and rendering
 such quotes requires the rebuilt context. Other report prose and metadata have no
-technical-syntax exemption. Requests recheck the sealed prepared context and screen
+technical-syntax exemption. In particular, a Quadlet secret directive in free prose
+is rejected even if the same syntax occurs in an authenticated source. Decoded
+spellings never inherit a quotation's technical spans. Requests recheck the sealed prepared context and screen
 the actual payload before counting and generation; neither request truncates evidence.
 Selected evidence and report strings also inspect valid JSON string literals nested
 inside their text. Every decoded layer applies the same private-path, credential,

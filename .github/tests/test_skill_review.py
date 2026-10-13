@@ -1077,8 +1077,9 @@ class ReviewTests(unittest.TestCase):
         self.assertEqual(calls, [])
         context.value["source_context"]["members"][0]["technical_spans"] = [[0, 7]]
         calls, run = self.invoke(context)
-        with self.assertRaisesRegex(ValueError, "Prepared context changed"):
+        with self.assertRaises(review.InferenceRejected) as rejected:
             asyncio.run(run())
+        self.assert_diagnostic(rejected.exception, "evidence_integrity_rejected", ("provenance", "context_digest"))
         self.assertEqual(calls, [])
 
     def test_old_private_reports_fail_explicitly_without_migration(self):
@@ -1176,7 +1177,7 @@ class ReviewTests(unittest.TestCase):
             with self.assertRaises(review.InferenceRejected) as rejected:
                 asyncio.run(run())
             self.assertEqual(len(calls), 2)
-            self.assertEqual(json.loads(rejected.exception.diagnostic_json)["stage"], "report_validation")
+            self.assertEqual(json.loads(rejected.exception.diagnostic_json)["stage"], "judgment_validation")
         value = judgment(context, category="modify_skill", compact=True)
         value["recommendations"][0]["source_paths"] = ["references/compose-migration.md"]
         validator.validate(value)
@@ -1624,7 +1625,7 @@ class ReviewTests(unittest.TestCase):
                 start_line=0,
                 end_line=0,
             )
-            with self.assertRaisesRegex(ValueError, "Citation lines unavailable"):
+            with self.assertRaises(ValueError):
                 review.check_citations([review.Citation.model_validate(cited)], context)
 
     def test_source_snapshot_without_visible_members_is_unavailable(self):
@@ -1694,9 +1695,9 @@ class ReviewTests(unittest.TestCase):
         for start, end, quote in ((0, 0, None), (0, 0, ""), (1, 1, None)):
             cited = citation(explicit, "agent_statement")
             cited.update(start_line=start, end_line=end, quote=quote)
-            with self.assertRaisesRegex(ValueError, "Citation lines unavailable"):
+            with self.assertRaises(ValueError):
                 review.check_citations([review.Citation.model_validate(cited)], explicit)
-        with self.assertRaisesRegex(ValueError, "Citation lines unavailable"):
+        with self.assertRaises(review.ReviewRejection):
             review.validate_judgment(judgment(explicit, category="modify_skill"), explicit)
         _, run = self.invoke(explicit)
         report = asyncio.run(run())
@@ -2158,11 +2159,11 @@ class ReviewTests(unittest.TestCase):
         context = self.control()
         model = "ft:synthetic-base:synthetic-org:fixture"
         calls, run = self.invoke(context, config={**CONFIG, "model": model})
-        with self.assertRaisesRegex(ValueError, "Fine-tuned models unsupported"):
+        with self.assertRaises(review.InferenceRejected):
             asyncio.run(run())
         self.assertEqual(len(calls), 0)
         with patch("openai.AsyncOpenAI", side_effect=AssertionError("Client must not be created")) as sdk:
-            with self.assertRaisesRegex(ValueError, "Fine-tuned models unsupported"):
+            with self.assertRaises(review.InferenceRejected):
                 review.main(["review", *self.args, "--model", model, "--authorize-inference"])
             sdk.assert_not_called()
 
@@ -2761,6 +2762,579 @@ class ReviewTests(unittest.TestCase):
                     {"skill-review.json": {}}, output, input_paths=context.roots, input_guards=context.guards
                 )
         self.assertFalse(output.exists())
+
+    def assert_diagnostic(self, error, code, location, *, stage=None):
+        raw = error.diagnostic_json if isinstance(error, review.InferenceRejected) else review.failure_diagnostic(
+            error, stage or "judgment_validation", {}, review.time.monotonic()
+        )
+        diagnostic = json.loads(raw)
+        self.assertEqual(diagnostic["code"], code)
+        self.assertEqual(diagnostic["location"], list(location))
+        if stage is not None:
+            self.assertEqual(diagnostic["stage"], stage)
+        self.assertLessEqual(len(raw), review.DIAGNOSTIC_LIMIT)
+        for sentinel in ("AUDIT-PRIVATE-SENTINEL", "sk-" + "A" * 48, "/home/synthetic/private"):
+            self.assertNotIn(sentinel, raw.decode())
+        return diagnostic
+
+    def test_diagnostic_model_and_semantic_failure_matrix_through_sdk(self):
+        context = self.native_control(4)
+        base = judgment(context, category="modify_skill", compact=True)
+        base["assessment"].update(
+            tested_benefit="Native component scores describe the selected historical comparison.",
+            tested_harm="Recorded answer gaps do not establish an operational failure.",
+            interpretation="Clarify the answer checklist supported by source and with-skill messages.",
+            uncertainty="AUDIT-PRIVATE-SENTINEL: command execution remains unverified.",
+        )
+        rec = ("recommendations", 0)
+        cases = []
+        def add(path, replacement, code, location=None):
+            value = copy.deepcopy(base)
+            node = value
+            for item in path[:-1]:
+                node = node[item]
+            node[path[-1]] = replacement
+            cases.append((value, code, path if location is None else location))
+        public = model_citation(context, "public")
+        source = model_citation(context, "source")
+        statement = model_citation(context, "agent_statement")
+        citation_path = ("assessment", "citations", 0)
+        add((*citation_path, "evidence_id"), "AUDIT-PRIVATE-SENTINEL", "unknown_citation")
+        add((*citation_path, "public_locator"), ["AUDIT-PRIVATE-SENTINEL"], "citation_locator_mismatch",
+            (*citation_path, "locator"))
+        add((*citation_path, "quote"), "AUDIT-PRIVATE-SENTINEL", "quotation_mismatch")
+        add((*citation_path, "claim"), "absence", "claim_incompatible")
+        add(("assessment", "citations", 1, "public_locator"), [], "citation_locator_mismatch")
+        add(("assessment", "citations", 1, "start_line"), 999, "citation_lines_unavailable")
+        add(("assessment", "sufficiency", "rationale"), " \t\n", "model_structure_invalid")
+        add(("assessment", "citations", 1, "start_line"), 0, "model_structure_invalid")
+        add((*rec, "sufficiency", "conclusion"), "investigation_only", "skill_sufficiency_insufficient")
+        add((*rec, "citations"), [public, statement], "skill_source_required")
+        add((*rec, "citations"), [public, source], "skill_with_skill_statement_required")
+        add((*rec, "source_paths"), [], "modification_path_invalid")
+        add((*rec, "source_paths"), ["AUDIT-PRIVATE-SENTINEL"], "modification_path_invalid",
+            (*rec, "source_paths", 0))
+        other = next(row["member"] for row in context.value["source_context"]["members"] if row["member"] != "SKILL.md")
+        add((*rec, "source_paths"), [other], "modification_not_grounded", (*rec, "source_paths", 0))
+        for path in ((*rec, "alternatives", 0), (*rec, "risks", 0), (*rec, "validation", "criteria", 0)):
+            for blank in ("", " \t\n", "\u2003"):
+                add(path, blank, "model_structure_invalid")
+        add((*rec, "validation", "comparisons"), ["current_skill"], "skill_validation_plan_incomplete")
+        for field in ("previously_passing_cases", "mandatory_safety_gates", "negative_controls", "fresh_realistic_cases"):
+            add((*rec, "validation", field), False, "skill_validation_plan_incomplete")
+        add(("recommendations",), [], "skill_action_assessment_conflict", ("assessment", "disposition"))
+        for disposition, citations, code in (
+            ("already_covered", [], "suggestion_source_required"),
+            ("contradicted", [source], "suggestion_statement_required"),
+            ("warranted", [public], "suggestion_statement_required"),
+            ("warranted", [statement], "suggestion_source_required"),
+        ):
+            value = copy.deepcopy(base)
+            value["native_suggestions"][0].update(disposition=disposition, citations=citations)
+            cases.append((value, code, ("native_suggestions", 0, "citations")))
+        for category in ("improve_eval", "fix_grader_or_harness", "investigate", "no_change"):
+            value = judgment(context, category=category, compact=True)
+            if category in ("improve_eval", "fix_grader_or_harness"):
+                value["recommendations"][0]["sufficiency"]["conclusion"] = "sufficient"
+                cases.append((copy.deepcopy(value), "evaluation_support_required", (*rec, "citations")))
+                value["recommendations"][0]["sufficiency"]["conclusion"] = "investigation_only"
+                value["assessment"]["disposition"] = "no_change"
+                cases.append((value, "assessment_action_conflict", (*rec, "category")))
+            else:
+                value["recommendations"][0]["source_paths"] = ["SKILL.md"]
+                cases.append((value, "non_skill_paths_forbidden", (*rec, "source_paths")))
+        for path in (("assessment", "sufficiency", "conclusion"), (*rec, "sufficiency", "conclusion")):
+            value = judgment(context, category="investigate", compact=True)
+            node = value
+            for part in path[:-1]:
+                node = node[part]
+            node[path[-1]] = "sufficient"
+            cases.append((value, "investigation_sufficiency_conflict", path))
+        for i, identity in ((0, "AUDIT-PRIVATE-SENTINEL"), (1, base["native_suggestions"][0]["evidence_id"])):
+            add(("native_suggestions", i, "evidence_id"), identity, "suggestion_coverage_mismatch")
+        add(("native_suggestions",), [], "suggestion_coverage_mismatch")
+        for value, code, location in cases:
+            with self.subTest(code=code, location=location):
+                calls, run = self.invoke(context, value)
+                with self.assertRaises(review.InferenceRejected) as caught:
+                    asyncio.run(run())
+                diagnostic = self.assert_diagnostic(caught.exception, code, location)
+                self.assertEqual(len(calls), 2)
+                self.assertEqual(diagnostic["usage"]["total_tokens"], 1500)
+                self.assertEqual(diagnostic["schema_digest"], evidence.identity(calls[0][1]["text"]["format"]["schema"]))
+                self.assertNotIn(value["assessment"]["interpretation"], caught.exception.diagnostic_json.decode())
+                # The same semantic rejection survives independent full-report validation.
+                if code not in ("model_structure_invalid", "unknown_citation", "citation_locator_mismatch",
+                                "citation_lines_unavailable", "quotation_mismatch", "claim_incompatible"):
+                    full = review.bind_judgment(value, context)
+                    saved = {"schema_version": 2, "provenance": {
+                        **review.expected_provenance(context), "configuration": CONFIG,
+                        "timestamp": CLOCK.isoformat(), "usage": {k: diagnostic["usage"][k] for k in review.Usage.model_fields},
+                    }, "judgment": full}
+                    with self.assertRaises(review.ReviewRejection) as rejected:
+                        review.validate_review(saved, context)
+                    self.assert_diagnostic(rejected.exception, code, ("judgment", *location))
+
+    def test_diagnostic_saved_sufficiency_and_citation_locations(self):
+        context = self.control()
+        _, run = self.invoke(context, judgment(context, category="modify_skill", compact=True))
+        report = asyncio.run(run())
+        cases = []
+        for group in (("assessment",), ("recommendations", 0)):
+            for field, value in (("source_coverage", "partial"), ("source_integrity", "unavailable"),
+                                 ("source_identity", "sha256:" + "0" * 64), ("behavioral_support", "unavailable")):
+                cases.append(((*group, "sufficiency", field), value,
+                              "behavioral_sufficiency_mismatch" if field == "behavioral_support" else "source_sufficiency_mismatch"))
+            for field, value, code in (("evidence_type", "source", "citation_type_mismatch"),
+                                       ("source_path", "other.md", "citation_lines_unavailable"),
+                                       ("start_line", 1, "citation_lines_unavailable"),
+                                       ("claim", "execution", "claim_incompatible")):
+                cases.append(((*group, "citations", 0, field), value, code))
+            cases.extend([
+                ((*group, "citations", 1, "source_path"), "other.md", "citation_source_mismatch"),
+                ((*group, "citations", 1, "locator"), ["AUDIT-PRIVATE-SENTINEL"], "citation_locator_mismatch"),
+            ])
+        for path, value, code in cases:
+            saved = copy.deepcopy(report)
+            target = saved["judgment"]
+            for part in path[:-1]:
+                target = target[part]
+            target[path[-1]] = value
+            with self.subTest(path=path), self.assertRaises(review.ReviewRejection) as caught:
+                review.validate_review(saved, context)
+            self.assert_diagnostic(caught.exception, code, ("judgment", *path))
+        qualitative = next(row for row in context.value["qualitative"] if row["kind"] == "agent_statement")
+        qualitative["text"] = " "
+        cited = review.Citation.model_validate(citation(context, "agent_statement"))
+        with self.assertRaises(review.ReviewRejection) as caught:
+            review.check_citations([cited], context, path=("assessment", "citations"))
+        self.assert_diagnostic(caught.exception, "citation_content_unavailable", ("assessment", "citations", 0))
+
+    def test_diagnostic_response_envelopes_and_request_limits(self):
+        context = self.control()
+        base = response_body(judgment(context, compact=True))
+        cases = []
+        for field, value, code, location in (
+            ("status", "incomplete", "response_incomplete", ("response", "status")),
+            ("model", "AUDIT-PRIVATE-SENTINEL", "model_mismatch", ("response", "model")),
+            ("usage", None, "usage_missing", ("usage",)),
+            ("output", [], "response_shape_invalid", ()),
+            ("output", [{"type": "function_call", "id": "fc_fixture", "call_id": "call_fixture", "name": "shell",
+                         "arguments": "AUDIT-PRIVATE-SENTINEL", "status": "completed"}],
+             "response_tool_output_forbidden", ("response", "output", 0, "type")),
+        ):
+            body = copy.deepcopy(base)
+            body[field] = value
+            cases.append((body, code, location))
+        for field, value, code, location in (
+            ("status", "incomplete", "response_message_incomplete", ("response", "output", 0, "status")),
+            ("content", [{"type": "refusal", "refusal": "AUDIT-PRIVATE-SENTINEL"}], "response_refused",
+             ("response", "output", 0, "content", 0, "type")),
+            ("content", [{"type": "output_text", "text": "AUDIT-PRIVATE-SENTINEL", "annotations": [
+                {"type": "url_citation", "start_index": 0, "end_index": 1, "title": "AUDIT-PRIVATE-SENTINEL",
+                 "url": "https://example.invalid"}]}], "response_annotations_forbidden",
+             ("response", "output", 0, "content", 0, "annotations")),
+        ):
+            body = copy.deepcopy(base)
+            body["output"][0][field] = value
+            cases.append((body, code, location))
+        for field, value, code in (("input_tokens", -1, "usage_invalid"), ("input_tokens", 64001, "usage_inconsistent"),
+                                   ("output_tokens", 12001, "usage_inconsistent"), ("total_tokens", 0, "usage_inconsistent")):
+            body = copy.deepcopy(base)
+            body["usage"][field] = value
+            cases.append((body, code, ("usage", field)))
+        for text in ("AUDIT-PRIVATE-SENTINEL", '{"assessment":null,"assessment":null}', 'NaN'):
+            body = copy.deepcopy(base)
+            body["output"][0]["content"][0]["text"] = text
+            cases.append((body, "json_invalid" if text != 'NaN' else "json_invalid", ()))
+        for body, code, location in cases:
+            with self.subTest(code=code, location=location):
+                calls, run = self.invoke(context, body=body)
+                with self.assertRaises(review.InferenceRejected) as caught:
+                    asyncio.run(run())
+                self.assert_diagnostic(caught.exception, code, location)
+                self.assertEqual(len(calls), 2)
+                if code.startswith("usage_"):
+                    self.assertNotIn("usage", json.loads(caught.exception.diagnostic_json))
+        calls, run = self.invoke(context, count=64001)
+        with self.assertRaises(review.InferenceRejected) as caught:
+            asyncio.run(run())
+        self.assert_diagnostic(caught.exception, "input_limit_exceeded", ("configuration", "input_limit"))
+        self.assertEqual(len(calls), 1)
+
+    def test_diagnostic_unexpected_helpers_remain_generic_and_private(self):
+        context = self.control()
+        secret = "AUDIT-PRIVATE-SENTINEL /home/synthetic/private"
+        for function in ("parse_json", "resolve_locator"):
+            original = getattr(evidence, function)
+            def fail_at_response(*args, **kwargs):
+                if function == "parse_json" and b'"assessment"' not in args[0]:
+                    return original(*args, **kwargs)
+                raise ValueError(secret)
+            with patch.object(evidence, function, side_effect=fail_at_response):
+                calls, run = self.invoke(context)
+                with self.assertRaises(review.InferenceRejected) as caught:
+                    asyncio.run(run())
+                self.assert_diagnostic(caught.exception, "rejected", ())
+                self.assertEqual(len(calls), 2)
+        for failure in (ValueError(secret), RuntimeError(secret), TimeoutError(secret)):
+            for function in ("bind_judgment", "validate_judgment", "make_review"):
+                with self.subTest(function=function, failure=type(failure)), patch.object(review, function, side_effect=failure):
+                    calls, run = self.invoke(context)
+                    with self.assertRaises(review.InferenceRejected) as caught:
+                        asyncio.run(run())
+                    self.assert_diagnostic(caught.exception, "rejected", ())
+                    self.assertEqual(len(calls), 2)
+        with patch("skillevaluator.utils.redaction.redact_sensitive_text", side_effect=RuntimeError(secret)):
+            _, run = self.invoke(context)
+            with self.assertRaises(review.InferenceRejected) as caught:
+                asyncio.run(run())
+            self.assert_diagnostic(caught.exception, "rejected", ())
+
+    def test_diagnostic_screening_codes_keep_original_field_location(self):
+        context = self.control()
+        for text, code in (("/home/synthetic/private", "report_sensitive_text"),
+                           ("Person <synthetic@example.invalid>", "report_sensitive_text"),
+                           ('"password": "synthetic-value"', "report_sensitive_assignment"),
+                           ("unsafe\u202e", "report_control_characters"), ("unsafe\x00", "report_control_characters")):
+            model = judgment(context, compact=True)
+            model["assessment"]["interpretation"] = text
+            calls, run = self.invoke(context, model)
+            with self.subTest(code=code), self.assertRaises(review.InferenceRejected) as caught:
+                asyncio.run(run())
+            self.assert_diagnostic(caught.exception, code, ("assessment", "interpretation"))
+            self.assertEqual(len(calls), 2)
+        with self.assertRaises(review.ReviewRejection) as caught:
+            review.screen_fragment('"safe"', path=("assessment", "interpretation"),
+                                   _budget=review._ScreenBudget(0, 1))
+        self.assert_diagnostic(caught.exception, "report_screening_budget_exceeded", ("assessment", "interpretation"))
+        with self.assertRaises(review.ReviewRejection) as caught:
+            review.checked_text("Secret=", technical_spans=[[0, 6]], path=("assessment", "citations", 0, "quote"))
+        self.assert_diagnostic(caught.exception, "report_technical_span_invalid", ("assessment", "citations", 0, "quote"))
+        with self.assertRaises(review.ReviewRejection) as caught:
+            review.check_report_text({"assessment": {"interpretation": "\ud800"}})
+        self.assert_diagnostic(caught.exception, "report_invalid_unicode", ("assessment", "interpretation"))
+
+    def test_diagnostic_first_error_never_retains_sensitive_candidates(self):
+        context = self.control()
+        model = judgment(context, category="improve_eval", compact=True)
+        model["assessment"]["disposition"] = "no_change"
+        model["assessment"]["interpretation"] = json.dumps(json.dumps('/home/synthetic/private'))
+        model["recommendations"][0]["scope"] = "sk-" + "A" * 48
+        calls, run = self.invoke(context, model)
+        with self.assertRaises(review.InferenceRejected) as caught:
+            asyncio.run(run())
+        self.assert_diagnostic(caught.exception, "assessment_action_conflict", ("recommendations", 0, "category"),
+                               stage="judgment_validation")
+        self.assertEqual(len(calls), 2)
+        model["assessment"]["AUDIT-PRIVATE-SENTINEL"] = "sk-" + "A" * 48
+        _, run = self.invoke(context, model)
+        with self.assertRaises(review.InferenceRejected) as caught:
+            asyncio.run(run())
+        self.assert_diagnostic(caught.exception, "model_structure_invalid", ("assessment",), stage="model_binding")
+        self.assertEqual(review.safe_location(("assessment", "AUDIT-PRIVATE-SENTINEL", "quote")), ("assessment",))
+        self.assertEqual(review.safe_location(("assessment", True)), ("assessment",))
+        self.assertEqual(review.safe_location(("assessment", -1)), ("assessment",))
+        model["assessment"].pop("AUDIT-PRIVATE-SENTINEL")
+        model["assessment"]["provenance"] = "AUDIT-PRIVATE-SENTINEL"
+        with self.assertRaises(review.ReviewRejection) as caught:
+            review.bind_judgment(model, context)
+        self.assert_diagnostic(caught.exception, "model_structure_invalid", ("assessment",))
+
+    def test_scalar_constraints_match_pinned_structured_outputs_and_preserve_empty_values(self):
+        from openai.lib._pydantic import to_strict_json_schema
+        context = self.control(source=False, support=False)
+        schema = review.schema()
+        self.assertEqual(schema, to_strict_json_schema(review.ModelJudgment))
+        unsupported = {"allOf", "not", "dependentRequired", "dependentSchemas", "if", "then", "else", "patternProperties"}
+        def walk(node):
+            if isinstance(node, dict):
+                self.assertFalse(unsupported & node.keys())
+                if node.get("type") == "object":
+                    self.assertFalse(node["additionalProperties"])
+                    self.assertEqual(set(node["required"]), set(node["properties"]))
+                for item in node.values():
+                    walk(item)
+            elif isinstance(node, list):
+                for item in node:
+                    walk(item)
+        walk(schema)
+        nullable = review.ModelCitation(evidence_id="fixture", public_locator=None, start_line=1, end_line=1,
+                                        quote=None, claim="positive")
+        self.assertIsNone(nullable.public_locator)
+        public = nullable.model_dump()
+        public.update(public_locator=["arms", 0], start_line=None, end_line=None)
+        self.assertEqual(review.ModelCitation.model_validate(public).public_locator[-1], 0)
+        base = judgment(context, compact=True)
+        Draft202012Validator(review.schema(context)).validate(base)
+        self.assertEqual(review.bind_judgment(base, context)["recommendations"], [])
+        self.assertEqual(base["native_suggestions"], [])
+        self.assertEqual(base["unverified_external_assertions"], [])
+        # A syntactically supported bound must also reject locally, without trimming.
+        for path in (("assessment", "tested_benefit"), ("assessment", "sufficiency", "rationale"),
+                     ("unverified_external_assertions", 0)):
+            for blank in ("", " \t\n", "\u2003"):
+                value = copy.deepcopy(base)
+                if path[0] == "unverified_external_assertions":
+                    value[path[0]] = [blank]
+                else:
+                    value[path[0]][path[1]] = blank if len(path) == 2 else value[path[0]][path[1]]
+                    if len(path) == 3:
+                        value[path[0]][path[1]][path[2]] = blank
+                original = evidence.encoded(value)
+                with self.assertRaises(ValidationError):
+                    Draft202012Validator(schema).validate(value)
+                with self.assertRaises(review.ReviewRejection) as caught:
+                    review.bind_judgment(value, context)
+                self.assert_diagnostic(caught.exception, "model_structure_invalid", path)
+                self.assertEqual(evidence.encoded(value), original)
+        plan = {"criteria": [" "], "comparisons": [], "previously_passing_cases": False,
+                "mandatory_safety_gates": False, "negative_controls": False, "fresh_realistic_cases": False}
+        with self.assertRaises(ValueError):
+            review.ValidationPlan.model_validate(plan)
+
+
+    def test_diagnostic_late_cli_failures_keep_usage_provenance_and_cleanup(self):
+        context = self.control()
+        model = judgment(context, compact=True)
+        calls = []
+        body = response_body(model)
+        body["usage"]["input_tokens_details"].update(cache_write_tokens=900)
+        body["usage"]["output_tokens_details"].update(reasoning_tokens=50)
+        def handle(request):
+            calls.append(request)
+            return httpx.Response(200, json={"object": "response.input_tokens", "input_tokens": 1000}
+                                  if request.url.path.endswith("/input_tokens") else body)
+        def client(**kwargs):
+            kwargs["http_client"] = httpx.AsyncClient(transport=httpx.MockTransport(handle))
+            return AsyncOpenAI(**kwargs)
+        render = review.render_review
+        def oversized(*args, **kwargs):
+            with patch.object(review, "REPORT_LIMIT", 10):
+                return render(*args, **kwargs)
+        existing = self.root / "existing"
+        existing.mkdir()
+        marker = existing / "user-work.txt"
+        marker.write_bytes(b"preserve existing user work")
+        fdopen = evidence.os.fdopen
+        def unknown_write(fd, mode, *args, **kwargs):
+            if mode == "wb":
+                raise OSError("AUDIT-PRIVATE-SENTINEL")
+            return fdopen(fd, mode, *args, **kwargs)
+        scenarios = [
+            ("render_limit", patch.object(review, "render_review", side_effect=oversized), self.root / "render-limit",
+             "report_markdown_limit", ("markdown",), "report_rendering"),
+            ("render_bug", patch.object(review, "render_review", side_effect=RuntimeError("AUDIT-PRIVATE-SENTINEL")),
+             self.root / "render-bug", "rejected", (), "report_rendering"),
+            ("new_only", None, existing, "output_boundary_rejected", ("output",), "output_persistence"),
+            ("overlap", None, self.root / "source" / "new-output", "output_boundary_rejected", ("output",), "output_persistence"),
+            ("writer_bug", patch.object(evidence.os, "fdopen", side_effect=unknown_write), self.root / "writer-bug",
+             "rejected", (), "output_persistence"),
+        ]
+        for label, failure, destination, code, location, stage in scenarios:
+            for enabled in (False, True):
+                stderr = StringIO()
+                before = len(calls)
+                with self.subTest(case=label, enabled=enabled), ExitStack() as stack:
+                    stack.enter_context(patch("openai.AsyncOpenAI", side_effect=client))
+                    stack.enter_context(redirect_stderr(stderr))
+                    if failure is not None:
+                        stack.enter_context(failure)
+                    with self.assertRaises(ValueError):
+                        review.main(["review", *self.args, "--model", CONFIG["model"], "--authorize-inference",
+                                     "--output", str(destination), *(["--diagnostics"] if enabled else [])])
+                self.assertEqual(len(calls) - before, 2, f"{label}, diagnostics={enabled}")
+                self.assertEqual(marker.read_bytes(), b"preserve existing user work")
+                if destination != existing:
+                    self.assertFalse(destination.exists())
+                if enabled:
+                    self.assertEqual(len(stderr.getvalue().splitlines()), 1)
+                    diagnostic = json.loads(stderr.getvalue())
+                    self.assertEqual((diagnostic["code"], diagnostic["location"], diagnostic["stage"]),
+                                     (code, list(location), stage))
+                    self.assertEqual(diagnostic["usage"]["cache_write_tokens"], 900)
+                    self.assertEqual(diagnostic["usage"]["reasoning_tokens"], 50)
+                    self.assertEqual(diagnostic["usage"]["total_tokens"], 1500)
+                    self.assertEqual(diagnostic["context_digest"], evidence.identity(context.value))
+                    self.assertEqual(diagnostic["implementation_digest"], context.value["implementation_digest"])
+                    self.assertEqual(diagnostic["input_provenance_digest"], evidence.identity(context.value["input_provenance"]))
+                    for forbidden in (str(destination), "AUDIT-PRIVATE-SENTINEL", model["assessment"]["interpretation"]):
+                        self.assertNotIn(forbidden, stderr.getvalue())
+                else:
+                    self.assertEqual(stderr.getvalue(), "")
+
+    def test_diagnostic_saved_validate_provenance_usage_and_markdown(self):
+        context = self.control()
+        _, run = self.invoke(context)
+        report = asyncio.run(run())
+        cases = [
+            (("provenance", "schema_digest"), "sha256:" + "0" * 64, "report_provenance_mismatch"),
+            (("provenance", "timestamp"), "AUDIT-PRIVATE-SENTINEL", "report_timestamp_invalid"),
+            (("provenance", "timestamp"), "2026-10-13T12:00:00", "report_timestamp_invalid"),
+            (("provenance", "usage", "total_tokens"), 0, "usage_inconsistent"),
+            (("judgment", "assessment", "tested_harm"), " ", "report_structure_invalid"),
+            (("schema_version",), 1, "private_contract_unsupported"),
+        ]
+        for i, (path, value, code) in enumerate(cases):
+            saved = copy.deepcopy(report)
+            node = saved
+            for part in path[:-1]:
+                node = node[part]
+            node[path[-1]] = value
+            output = evidence.write_outputs({"skill-review.json": saved}, self.root / f"saved-invalid-{i}",
+                                            rendered={"skill-review.md": b"unaltered private Markdown"})
+            before = {p.name: p.read_bytes() for p in output.iterdir()}
+            stderr = StringIO()
+            with self.subTest(code=code), redirect_stderr(stderr), self.assertRaises(ValueError):
+                review.main(["validate", *self.args, "--review", str(output / "skill-review.json"), "--diagnostics"])
+            diagnostic = json.loads(stderr.getvalue())
+            self.assertEqual((diagnostic["code"], diagnostic["location"]), (code, list(path)))
+            self.assertNotIn("generation_requests", diagnostic)
+            self.assertNotIn("expected_model", diagnostic)
+            self.assertNotIn("AUDIT-PRIVATE-SENTINEL", stderr.getvalue())
+            self.assertEqual(before, {p.name: p.read_bytes() for p in output.iterdir()})
+        output = evidence.write_outputs({"skill-review.json": report}, self.root / "markdown-invalid",
+                                        rendered={"skill-review.md": b"altered"})
+        stderr = StringIO()
+        with redirect_stderr(stderr), self.assertRaises(ValueError):
+            review.main(["validate", *self.args, "--review", str(output / "skill-review.json"), "--diagnostics"])
+        diagnostic = json.loads(stderr.getvalue())
+        self.assertEqual((diagnostic["stage"], diagnostic["code"], diagnostic["location"]),
+                         ("report_rendering", "report_markdown_mismatch", ["markdown"]))
+        self.assertEqual(diagnostic["usage"], report["provenance"]["usage"])
+        self.assertEqual((output / "skill-review.md").read_bytes(), b"altered")
+
+    def test_diagnostic_expected_integrity_and_output_os_calls_are_narrow(self):
+        import errno
+        context = self.control()
+        calls = []
+        def handle(request):
+            calls.append(request)
+            if request.url.path.endswith("/input_tokens"):
+                return httpx.Response(200, json={"object": "response.input_tokens", "input_tokens": 1000})
+            (self.root / "source/SKILL.md").write_bytes(b"changed authenticated source")
+            return httpx.Response(200, json=response_body(judgment(context, compact=True)))
+        client = httpx.AsyncClient(transport=httpx.MockTransport(handle))
+        with self.assertRaises(review.InferenceRejected) as caught:
+            asyncio.run(review.invoke(context, CONFIG, True, http_client=client))
+        diagnostic = self.assert_diagnostic(caught.exception, "evidence_integrity_rejected",
+                                           ("provenance", "input_provenance_digest"), stage="integrity_recheck")
+        self.assertEqual(diagnostic["usage"]["total_tokens"], 1500)
+        self.assertEqual(len(calls), 2)
+        for error, code in ((PermissionError(errno.EACCES, "AUDIT-PRIVATE-SENTINEL"), "output_boundary_rejected"),
+                            (OSError("AUDIT-PRIVATE-SENTINEL"), "rejected"), (ValueError("AUDIT-PRIVATE-SENTINEL"), "rejected")):
+            def operation():
+                raise error
+            with self.assertRaises(Exception) as caught:
+                evidence.boundary_call("output", operation)
+            self.assert_diagnostic(caught.exception, code, ("output",) if code != "rejected" else (),
+                                   stage="output_persistence")
+        # The global public assertion is unchanged, rather than a catch-all known-failure signal.
+        with self.assertRaises(ValueError) as caught:
+            evidence.require(False, "AUDIT-PRIVATE-SENTINEL")
+        self.assertNotIsInstance(caught.exception, evidence.EvidenceBoundaryError)
+        self.assert_diagnostic(caught.exception, "rejected", ())
+
+    def test_diagnostic_unverified_source_and_partial_absence_remain_rejected(self):
+        context = self.control(source=False)
+        value = judgment(context, compact=True)
+        value["assessment"].update(disposition="skill_change")
+        value["assessment"]["sufficiency"]["conclusion"] = "sufficient"
+        value["assessment"]["citations"].append(model_citation(context, "agent_statement"))
+        calls, run = self.invoke(context, value)
+        with self.assertRaises(review.InferenceRejected) as caught:
+            asyncio.run(run())
+        self.assert_diagnostic(caught.exception, "skill_source_unverified", ("assessment", "sufficiency", "source_integrity"))
+        self.assertEqual(len(calls), 2)
+
+
+    def test_diagnostic_request_guards_preflight_and_response_sizes(self):
+        context = self.control()
+        assemble = review.common_request
+        for field, replacement, code, location in (
+            ("input", "AUDIT-PRIVATE-SENTINEL", "request_context_mismatch", ("provenance", "context_digest")),
+            ("instructions", "AUDIT-PRIVATE-SENTINEL", "request_policy_mismatch", ()),
+            ("text", {"format": {"type": "text"}}, "request_schema_mismatch", ("provenance", "schema_digest")),
+        ):
+            def changed(ctx, config):
+                return {**assemble(ctx, config), field: replacement}
+            with patch.object(review, "common_request", side_effect=changed):
+                calls, run = self.invoke(context)
+                with self.assertRaises(review.InferenceRejected) as caught:
+                    asyncio.run(run())
+                self.assert_diagnostic(caught.exception, code, location)
+                self.assertEqual(calls, [])
+        for config, authorized, code, location in (
+            (CONFIG, False, "inference_unauthorized", ()),
+            ({**CONFIG, "model": "ft:fixture"}, True, "model_unsupported", ("configuration", "model")),
+            ({**CONFIG, "deadline_seconds": 0}, True, "model_structure_invalid", ("configuration", "deadline_seconds")),
+        ):
+            calls, run = self.invoke(context, config=config, authorized=authorized)
+            with self.assertRaises(review.InferenceRejected) as caught:
+                asyncio.run(run())
+            self.assert_diagnostic(caught.exception, code, location)
+            self.assertEqual(calls, [])
+        with patch.object(review.importlib.metadata, "version", return_value="AUDIT-PRIVATE-SENTINEL"):
+            calls, run = self.invoke(context)
+            with self.assertRaises(review.InferenceRejected) as caught:
+                asyncio.run(run())
+            self.assert_diagnostic(caught.exception, "runtime_unsupported", ("provenance", "versions"))
+            self.assertEqual(calls, [])
+        body = response_body(judgment(context, compact=True))
+        body["output"][0]["content"][0]["text"] = "x" * (review.REPORT_LIMIT + 1)
+        calls, run = self.invoke(context, body=body)
+        with self.assertRaises(review.InferenceRejected) as caught:
+            asyncio.run(run())
+        self.assert_diagnostic(caught.exception, "response_limit", ())
+        self.assertEqual(len(calls), 2)
+        bind = review.bind_judgment
+        def small_limit(*args, **kwargs):
+            with patch.object(review, "REPORT_LIMIT", 10):
+                return bind(*args, **kwargs)
+        with patch.object(review, "bind_judgment", side_effect=small_limit):
+            _, run = self.invoke(context)
+            with self.assertRaises(review.InferenceRejected) as caught:
+                asyncio.run(run())
+            self.assert_diagnostic(caught.exception, "report_size_exceeded", ())
+        with patch.object(review, "REPORT_LIMIT", 10), self.assertRaises(review.ReviewRejection) as caught:
+            review.validate_judgment(judgment(context), context)
+        self.assert_diagnostic(caught.exception, "report_size_exceeded", ())
+
+    def test_diagnostic_real_deadline_has_validated_counts_without_retry(self):
+        context = self.control()
+        calls = []
+        async def delayed(request):
+            calls.append(request)
+            await asyncio.sleep(1.1)
+            return httpx.Response(200, json={"object": "response.input_tokens", "input_tokens": 1000})
+        client = httpx.AsyncClient(transport=httpx.MockTransport(delayed))
+        with self.assertRaises(review.InferenceRejected) as caught:
+            asyncio.run(review.invoke(context, {**CONFIG, "deadline_seconds": 1}, True, http_client=client))
+        diagnostic = self.assert_diagnostic(caught.exception, "deadline_exceeded", ("configuration", "deadline_seconds"))
+        self.assertEqual((diagnostic["count_requests"], diagnostic["generation_requests"]), (1, 0))
+        self.assertEqual(len(calls), 1)
+        self.assertNotIn("usage", diagnostic)
+
+
+
+    def test_diagnostic_independent_judgment_structure_boundary(self):
+        context = self.control()
+        model = judgment(context, category="modify_skill", compact=True)
+        bind = review.bind_judgment
+        def incomplete_projection(value, ctx):
+            full = bind(value, ctx)
+            full["recommendations"][0].pop("risks")
+            return full
+        with patch.object(review, "bind_judgment", side_effect=incomplete_projection):
+            calls, run = self.invoke(context, model)
+            with self.assertRaises(review.InferenceRejected) as caught:
+                asyncio.run(run())
+        diagnostic = self.assert_diagnostic(caught.exception, "judgment_structure_invalid",
+                                           ("recommendations", 0, "risks"), stage="judgment_validation")
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(diagnostic["usage"]["total_tokens"], 1500)
+        self.assertNotIn(model["recommendations"][0]["scope"], caught.exception.diagnostic_json.decode())
+
 
 
 if __name__ == "__main__":
