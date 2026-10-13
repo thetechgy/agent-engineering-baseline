@@ -1,0 +1,30 @@
+{
+  "fixture_provenance": "Synthetic offline data. Recreates preserved native shapes without historical identities, source prompts, or measurements.",
+  "trajectory": {
+    "schema_version": "ATIF-v1.7",
+    "session_id": "synthetic-session-unrelated-to-trial-result-id",
+    "agent": {"name": "codex", "model_name": "synthetic-codex"},
+    "steps": [
+      {"step_id": 1, "source": "system", "message": "Synthetic omitted profile: /home/synthetic/private"},
+      {"step_id": 2, "source": "user", "message": "Synthetic omitted assignment: password=fixture-value"},
+      {"step_id": 3, "source": "agent", "message": "I claim the service was restarted; this message does not verify execution."}
+    ]
+  },
+  "details": {
+    "security": {"score": 0.5, "reason": "Synthetic security judgment; not an observed command.", "omitted_note": "/home/synthetic/private"},
+    "accuracy": {"score": 1.0, "reason": "Synthetic accuracy judgment."},
+    "goal_accuracy": {"score": 0.82, "reason": "Synthetic goal judgment."},
+    "behavior_check": {"score": 1.0, "reason": "Synthetic expected-answer judgment."}
+  },
+  "suggestions": [
+    "Inspect whether verification guidance is understood.",
+    "Investigate the security judgment against independently recorded actions.",
+    "Check whether the requested end state was established.",
+    "Test the guidance in a fresh realistic case."
+  ],
+  "source_examples": {
+    "compose-migration.md": "# Synthetic Compose migration example\n\n| runtime secret | Podman secret + `Secret=` |\n",
+    "quadlet-systemd.md": "# Synthetic Quadlet example\n\n```ini\n[Container]\nImage=example.test/app:fixture\nSecret=app-secret,type=mount\n```\n",
+    "security-storage-secrets.md": "# Synthetic secret reference example\n\n```ini\nSecret=app-secret,type=mount\n```\n"
+  }
+}

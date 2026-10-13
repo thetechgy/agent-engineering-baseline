@@ -70,7 +70,7 @@ def sufficiency(context, behavior=False, sufficient=False):
         "source_coverage": src["coverage"],
         "source_identity": src["identity"],
         "source_integrity": src["integrity"],
-        "behavioral_support": "observed" if behavior else "unavailable",
+        "behavioral_support": "recorded_statements" if behavior else "unavailable",
         "behavioral_scope": "Only supplied trial 1 in the synthetic control.",
         "provenance_and_availability": "Verified retained member; excerpts retain their original locator. Public availability remains independent.",
         "limitations": "Synthetic fixture; no real-world effectiveness or causal conclusion.",
@@ -83,7 +83,7 @@ def judgment(context, *, category=None):
     citations = [citation(context, "public")]
     behavior = category == "modify_skill"
     if behavior:
-        citations += [citation(context, "source"), citation(context, "agent_behavior")]
+        citations += [citation(context, "source"), citation(context, "agent_statement")]
     assessment = {
         "disposition": "skill_change" if behavior else "no_change" if category is None else "investigate",
         "tested_benefit": "Native metrics are descriptive only.",
@@ -198,7 +198,7 @@ class ReviewTests(unittest.TestCase):
         return root, file, evidence.identity(record)
 
     def control(
-        self, *, source=True, support=True, kind="agent_behavior", name="podman", excerpt=False,
+        self, *, source=True, support=True, kind="agent_statement", name="podman", excerpt=False,
         arm="with_skill", empty_source=False, empty_behavior=False, agent_output=None
     ):
         record = synthetic(name=name)
@@ -233,7 +233,7 @@ class ReviewTests(unittest.TestCase):
             "reference_id": ref["id"],
             "observation_id": observation["id"],
             "kind": kind,
-            "locator": ["agent_output" if kind == "agent_behavior" else "grader"],
+            "locator": ["agent_output" if kind == "agent_statement" else "grader"],
             "representation": "original",
             "archive_member": None,
             "start_line": 1 if excerpt else None,
@@ -248,6 +248,129 @@ class ReviewTests(unittest.TestCase):
         if support:
             self.args += ["--support", str(retained)]
         return context
+
+    def native_control(self, message_count=86):
+        """Four synthetic trials mirror the retained 2/7 shapes, never historical bytes or identities."""
+        fixture = evidence.read_json(FIXTURES / "native-synthetic.json")
+        self.native_snapshot = self.root / "native-source"
+        self.native_snapshot.mkdir()
+        source = {"SKILL.md": (FIXTURES / "SKILL.md").read_text()}
+        source.update({"references/" + key: value for key, value in fixture["source_examples"].items()})
+        for member, text in source.items():
+            path = self.native_snapshot / member
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text)
+        record = synthetic(name="podman", cases=("2", "7"), scores=(0.7042, 0.7242))
+        record["source"]["content"] = evidence.content(
+            [{"member": member, "digest": evidence.digest_bytes(text.encode())} for member, text in source.items()],
+            "synthetic",
+        )
+        record["references"] = []
+        self.native_record = record
+        self.native_members = {}
+        self.native_descriptor = {"items": []}
+        self.native_root = self.root / "native-support"
+        prefix = f"results/podman/{record['run_id']}"
+
+        def reference(member, locator=()):
+            row = {"artifact_id": "synthetic-native-archive", "artifact_digest": None, "member": member,
+                   "locator": list(locator), "digest": "sha256:" + "0" * 64,
+                   "provenance": "synthetic", "availability": "available", "id": "sha256:" + "0" * 64}
+            # Temporary unique IDs are replaced by exact member identities in refresh_native().
+            row["id"] = evidence.identity([member, list(locator)])
+            record["references"].append(row)
+            return row
+
+        def support(ref, observation, binding, kind, locator):
+            self.native_descriptor["items"].append(
+                {"record_id": "sha256:" + "0" * 64, "reference_id": ref["id"],
+                 "observation_id": observation["id"] if observation else None,
+                 "binding": binding, "kind": kind, "locator": locator,
+                 "representation": "original", "archive_member": "original.zip", "start_line": None, "end_line": None}
+            )
+
+        for arm in ("with_skill", "without_skill"):
+            arm_prefix = prefix + "/codex/" + arm.replace("_", "-")
+            summary_member = arm_prefix + "/summary.json"
+            summary = {"agent": "codex", "model": record["policy"]["fields"]["model"], "metric_set": "skill-evaluator-default-v2",
+                       "pass_at_k": {"cases": {}}}
+            summary_ref = reference(summary_member)
+            for obs in [row for row in record["observations"] if row["arm"] == arm]:
+                trial = "synthetic-case-" + obs["case_id"]
+                native_id = "synthetic-" + arm + "-" + obs["case_id"]
+                trial_root = arm_prefix + "/trials/" + trial
+                obs["id"] = evidence.observation_id(record["run_id"], arm, obs["case_id"], native_id, trial, 1)
+                scores = {**obs["scores"], **{key: row["score"] for key, row in fixture["details"].items()}}
+                obs["scores"] = scores
+                result = {"id": native_id, "trial_name": trial, "task_name": "nvidia/skillevaluator-" + obs["case_id"],
+                          "verifier_result": {"rewards": scores}, "omitted": "/home/synthetic/private"}
+                reward = {**scores, "entry_id": obs["case_id"], "trial_id": trial, "has_skill": arm == "with_skill",
+                          "agent": "codex", "model": record["policy"]["fields"]["model"], "metric_set": "skill-evaluator-default-v2",
+                          "trajectory_source": "trajectory.json", "details": copy.deepcopy(fixture["details"])}
+                trajectory = copy.deepcopy(fixture["trajectory"])
+                trajectory["agent"]["model_name"] = record["policy"]["fields"]["model"]
+                position = record["observations"].index(obs)
+                count = message_count // 4 + (position < message_count % 4)
+                template = trajectory["steps"][-1]
+                trajectory["steps"] = trajectory["steps"][:2] + [
+                    {**template, "step_id": i + 3, "message": template["message"] + " Message " + str(i + 1)}
+                    for i in range(count)
+                ]
+                self.native_members[trial_root + "/result.json"] = evidence.encoded(result)
+                self.native_members[trial_root + "/reward.json"] = evidence.encoded(reward)
+                self.native_members[trial_root + "/trajectory.json"] = evidence.encoded(trajectory)
+                summary["pass_at_k"]["cases"][obs["case_id"]] = {
+                    "attempts": [{"trial": trial, "attempt": 1, "score": obs["score"], "passed": obs["rubric_pass"]}]
+                }
+                result_ref = reference(trial_root + "/result.json", ("verifier_result", "rewards"))
+                reward_ref = reference(trial_root + "/reward.json")
+                obs["references"] = [result_ref["id"], reward_ref["id"], summary_ref["id"]]
+                for i in range(count):
+                    support(result_ref, obs, "native_trajectory", "agent_behavior", ["steps", i + 2, "message"])
+                for dimension in fixture["details"]:
+                    support(reward_ref, obs, "native_dimension", "evaluator_judgment", ["details", dimension, "reason"])
+            self.native_members[summary_member] = evidence.encoded(summary)
+        self.native_members[prefix + "/result.json"] = evidence.encoded(
+            {"skill_name": "podman", "run_id": record["run_id"], "agents": {"codex": {}}}
+        )
+        run_ref = reference(prefix + "/result.json")
+        self.native_members[prefix + "/codex/findings.json"] = evidence.encoded(
+            {"skill_name": "podman", "agent": "codex", "suggestions": fixture["suggestions"],
+             "omitted": "password=synthetic-unselected-value"}
+        )
+        self.native_members["unselected-binary.bin"] = b"\x00\xff"
+        for i in range(4):
+            support(run_ref, None, "native_findings", "native_suggestion", ["suggestions", i])
+        return self.refresh_native()
+
+    def refresh_native(self):
+        """Rehash even adversarial substitutions; do not repair observation identities."""
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w") as archive:
+            for name, raw in sorted(self.native_members.items()):
+                archive.writestr(zipfile.ZipInfo(name), raw)
+                path = self.native_root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(raw)
+        payload = buffer.getvalue()
+        (self.native_root / "original.zip").write_bytes(payload)
+        ids = {}
+        for ref in self.native_record["references"]:
+            old = ref["id"]
+            ref["digest"] = evidence.digest_bytes(self.native_members[ref["member"]])
+            ref["artifact_digest"] = evidence.digest_bytes(payload)
+            ref["id"] = evidence.identity({key: ref[key] for key in ("artifact_id", "member", "locator", "digest")})
+            ids[old] = ref["id"]
+        for obs in self.native_record["observations"]:
+            obs["references"] = [ids.get(key, key) for key in obs["references"]]
+        bundle, saved, rid = self.bundle(self.native_record, "native-bundle")
+        for item in self.native_descriptor["items"]:
+            item["record_id"] = rid
+            item["reference_id"] = ids.get(item["reference_id"], item["reference_id"])
+        write(self.native_root / "support.json", self.native_descriptor)
+        self.native_args = ["--input", str(bundle), "--analysis", str(saved), "--skill", "podman", "--record-id", rid,
+                            "--source", str(self.native_snapshot), "--support", str(self.native_root)]
+        return review.prepare([bundle], saved, "podman", rid, self.native_snapshot, self.native_root)
 
     def invoke(self, context, value=None, *, count=1000, status=200, body=None, authorized=True, config=None):
         calls = []
@@ -269,6 +392,395 @@ class ReviewTests(unittest.TestCase):
                 await client.aclose()
 
         return calls, run
+
+    def test_native_full_106_cli_preparation_and_saved_v2_review(self):
+        context = self.native_control()
+        self.assertEqual(review.MAX_SUPPORT, 128)
+        self.assertEqual(len(context.value["qualitative"]), 106)
+        kinds = [row["kind"] for row in context.value["qualitative"]]
+        self.assertEqual(kinds.count("agent_statement"), 86)
+        self.assertEqual(kinds.count("evaluator_judgment"), 16)
+        self.assertEqual(kinds.count("native_suggestion"), 4)
+        self.assertEqual(context.value["source_context"]["coverage"], "complete")
+        self.assertEqual(context.value["source_context"]["authentication"]["coverage"], "complete")
+        for row in context.value["qualitative"]:
+            if row["binding"] == "native_trajectory":
+                self.assertTrue(row["anchor"]["member"].endswith("/result.json"))
+                self.assertTrue(row["member"].endswith("/trajectory.json"))
+                self.assertNotEqual(row["anchor"]["digest"], row["original_digest"])
+                self.assertEqual(row["kind"], "agent_statement")
+            if row["binding"] == "native_dimension":
+                self.assertEqual(row["dimension_score"], context.value["records"][row["record_id"]]["observations"][
+                    next(i for i, obs in enumerate(self.native_record["observations"]) if obs["id"] == row["observation_id"])
+                ]["scores"][row["dimension"]])
+            if row["binding"] == "native_findings":
+                self.assertIsNone(row["case_id"])
+                self.assertIsNone(row["observation_id"])
+        serialized = evidence.encoded(context.value).decode()
+        self.assertNotIn("/home/synthetic", serialized)
+        self.assertNotIn("password=fixture-value", serialized)
+        self.assertNotIn("unselected-binary", serialized)
+        self.assertIn("Secret=app-secret,type=mount", serialized)
+        output = self.root / "prepared"
+        with redirect_stdout(StringIO()):
+            review.main(["prepare", *self.native_args, "--output", str(output)])
+        self.assertEqual(evidence.read_json(output / "review-context.json"), context.value)
+        calls, run = self.invoke(context)
+        report = asyncio.run(run())
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(report["schema_version"], 2)
+        self.assertEqual(report["provenance"]["method"], "grounded-skill-review/2")
+        self.assertEqual(len(report["provenance"]["support_provenance"]), 106)
+        destination = self.root / "report"
+        evidence.write_outputs({"skill-review.json": report}, destination, input_paths=context.roots,
+                               input_guards=context.guards, rendered={"skill-review.md": review.render_review(report, context)})
+        with redirect_stdout(StringIO()):
+            review.main(["validate", *self.native_args, "--review", str(destination / "skill-review.json")])
+        self.assertEqual(self.native_record["schema_version"], 1)
+        self.assertEqual(evidence.read_json(Path(self.native_args[3]))["schema_version"], 1)
+
+    def test_statements_cannot_be_promoted_to_execution_in_citations_or_sufficiency(self):
+        context = self.native_control(4)
+        value = judgment(context, category="modify_skill")
+        self.assertEqual(value["assessment"]["sufficiency"]["behavioral_support"], "recorded_statements")
+        review.validate_judgment(value, context)
+        self.assertIn("do not prove that described commands ran", review.PROMPT)
+        for name in ("assessment", "recommendation"):
+            value = judgment(context, category="modify_skill")
+            section = value["assessment"] if name == "assessment" else value["recommendations"][0]
+            statement = next(row for row in section["citations"] if row["evidence_type"] == "agent_statement")
+            statement["claim"] = "execution"
+            with self.assertRaisesRegex(ValueError, "does not verify execution"):
+                review.validate_judgment(value, context)
+            value = judgment(context, category="modify_skill")
+            section = value["assessment"] if name == "assessment" else value["recommendations"][0]
+            section["sufficiency"]["behavioral_support"] = "verified_execution"
+            with self.assertRaises(ValueError):
+                review.validate_judgment(value, context)
+        value = judgment(context, category="modify_skill")
+        calls, run = self.invoke(context, value)
+        report = asyncio.run(run())
+        report["judgment"]["recommendations"][0]["citations"][-1]["claim"] = "execution"
+        with self.assertRaisesRegex(ValueError, "does not verify execution"):
+            review.validate_review(report, context)
+
+    def test_legacy_message_descriptor_is_accepted_only_as_a_statement(self):
+        self.control()
+        descriptor = evidence.read_json(self.root / "support/support.json")
+        descriptor["items"][0]["kind"] = "agent_behavior"
+        write(self.root / "support/support.json", descriptor)
+        context = review.prepare([Path(self.args[1])], Path(self.args[3]), "podman", self.args[7],
+                                 self.root / "source", self.root / "support")
+        statement = next(row for row in context.value["qualitative"] if row["kind"] == "agent_statement")
+        self.assertEqual(statement["binding"], "reference")
+        bad = judgment(context, category="modify_skill")
+        bad["recommendations"][0]["citations"][-1]["evidence_type"] = "agent_behavior"
+        with self.assertRaises(ValueError):
+            review.validate_judgment(bad, context)
+
+    def test_source_authentication_is_independent_of_selected_disclosure(self):
+        self.native_control(4)
+        source = self.native_snapshot / "SKILL.md"
+        source.write_text(source.read_text() + "\npassword=synthetic-omitted-value\n")
+        manifest = self.native_record["source"]["content"]["manifest"]
+        self.native_record["source"]["content"] = evidence.content(
+            [{"member": row["member"], "digest": evidence.digest_bytes((self.native_snapshot / row["member"]).read_bytes())}
+             for row in manifest], "synthetic"
+        )
+        bundle, saved, rid = self.bundle(self.native_record, "selected-source")
+        selection = self.root / "selection.json"
+        write(selection, {"members": [{"member": "SKILL.md", "start_line": 6, "end_line": 7}]})
+        excluded = self.native_snapshot / "evals/private.bin"
+        excluded.parent.mkdir(); excluded.write_bytes(b"\x00\xffpassword=synthetic-excluded")
+        context = review.prepare([bundle], saved, "podman", rid, self.native_snapshot, selection=selection)
+        self.assertEqual(context.value["source_context"]["coverage"], "partial")
+        self.assertEqual(context.value["source_context"]["authentication"]["coverage"], "complete")
+        self.assertEqual(len(context.value["source_context"]["authentication"]["verified_members"]), 4)
+        self.assertNotIn("synthetic-omitted", evidence.encoded(context.value).decode())
+        with self.assertRaises(ValueError):
+            review.prepare([bundle], saved, "podman", rid, self.native_snapshot)
+        omitted = self.native_snapshot / "references/compose-migration.md"
+        omitted.write_text(omitted.read_text() + "Changed omitted bytes")
+        with self.assertRaisesRegex(ValueError, "Exact source mismatch"):
+            review.prepare([bundle], saved, "podman", rid, self.native_snapshot, selection=selection)
+        with self.assertRaises(ValueError):
+            for guard in context.guards:
+                guard()
+
+    def test_quadlet_exceptions_are_source_bound_and_keep_credential_checks(self):
+        self.native_control(4)
+        for text in ("`Secret=`", "```ini\nSecret=app-secret,type=mount\n```",
+                     "```ini\nSecret=app-secret,type=env,target=APP_SECRET\n```"):
+            with self.subTest(safe=text):
+                review.screen_fragment(text, technical_spans=review.source_technical_spans(text))
+                with self.assertRaises(ValueError):
+                    review.screen_fragment(text)
+        for text in ("```ini\nSecret=literal-secret-contents\n```",
+                     "```ini\nSecret=sk-AAAAAAAAAAAAAAAA,type=mount\n```",
+                     "```ini\nEnvironment=PASSWORD=synthetic-value\n```",
+                     "```ini\nSecret=app-secret,type=mount,target=/home/synthetic/private\n```",
+                     "```ini\nSecret=app-secret,type=mount\npassword=synthetic-value\n```"):
+            with self.subTest(unsafe=text), self.assertRaises(ValueError):
+                review.screen_fragment(text, technical_spans=review.source_technical_spans(text))
+
+    def test_source_cited_technical_quote_survives_request_report_and_saved_validation(self):
+        context = self.native_control(4)
+        source = next(row for row in context.value["source_context"]["members"]
+                      if row["member"] == "references/quadlet-systemd.md")
+        value = judgment(context)
+        quoted = {**citation(context, "source"), "evidence_id": source["id"], "source_path": source["member"],
+                  "start_line": source["start_line"], "end_line": source["end_line"],
+                  "quote": "Secret=app-secret,type=mount"}
+        value["assessment"]["citations"].append(quoted)
+        calls, run = self.invoke(context, value)
+        report = asyncio.run(run())
+        self.assertIn("Secret=app-secret,type=mount", calls[0][1]["input"])
+        self.assertIn(b"Secret=app-secret,type=mount", review.render_review(report, context))
+        review.validate_review(report, context)
+        with self.assertRaises(ValueError):
+            review.render_review(report)
+        report["judgment"]["assessment"]["interpretation"] = "Secret=app-secret,type=mount"
+        with self.assertRaises(ValueError):
+            review.validate_review(report, context)
+
+    def test_technical_screening_view_is_bounded_and_does_not_modify_original(self):
+        original = " `Secret=` " * review.MAX_TECHNICAL_SPANS
+        spans = review.source_technical_spans(original)
+        view = review.technical_view(original, spans)
+        self.assertEqual(len(spans), review.MAX_TECHNICAL_SPANS)
+        self.assertEqual(view.count("QuadletReference="), review.MAX_TECHNICAL_SPANS)
+        self.assertEqual(original.count("Secret="), review.MAX_TECHNICAL_SPANS)
+        with self.assertRaisesRegex(ValueError, "Technical span limit"):
+            review.source_technical_spans(original + " `Secret=` ")
+        with self.assertRaisesRegex(ValueError, "Invalid technical span"):
+            review.technical_view("Secret=", [[True, 7]])
+
+    def test_native_parent_component_score_is_checked_for_reason_only_selection(self):
+        self.native_control(4)
+        member = next(key for key in self.native_members if key.endswith("/reward.json"))
+        reward = evidence.parse_json(self.native_members[member])
+        reward["details"]["security"]["score"] = reward["overall"]
+        self.native_members[member] = evidence.encoded(reward)
+        with self.assertRaisesRegex(ValueError, "Contradictory native dimension score"):
+            self.refresh_native()
+
+    def test_native_dimension_component_and_overall_are_separate_measures(self):
+        context = self.native_control(4)
+        security = next(row for row in context.value["qualitative"] if row["dimension"] == "security")
+        obs = next(row for row in self.native_record["observations"] if row["id"] == security["observation_id"])
+        self.assertEqual(security["dimension_score"], 0.5)
+        self.assertNotEqual(security["dimension_score"], obs["score"])
+        item = next(row for row in self.native_descriptor["items"] if row["binding"] == "native_dimension")
+        for locator in (["details", "skill_execution", "activation", "reason"], ["details", "unknown", "reason"],
+                        ["details", "security", "findings"], ["details", "security", "reason", "messages"]):
+            with self.subTest(locator=locator):
+                item["locator"] = locator
+                with self.assertRaisesRegex(ValueError, "Native dimension locator"):
+                    self.refresh_native()
+
+    def test_native_message_role_locator_schema_and_model_reject(self):
+        self.native_control(4)
+        original = copy.deepcopy(self.native_descriptor)
+        for locator in (["steps", 0, "message"], ["steps", 1, "message"], ["steps", True, "message"],
+                        ["steps", 2, "tool_calls"], ["steps", -1, "message"]):
+            self.native_descriptor = copy.deepcopy(original)
+            self.native_descriptor["items"][0]["locator"] = locator
+            with self.subTest(locator=locator), self.assertRaises(ValueError):
+                self.refresh_native()
+        self.native_descriptor = original
+        member = next(key for key in self.native_members if key.endswith("/trajectory.json"))
+        original_bytes = self.native_members[member]
+        for field, value in (("schema_version", "ATIF-unsupported"), ("agent", {"name": "codex", "model_name": "other"})):
+            trajectory = evidence.parse_json(original_bytes); trajectory[field] = value
+            self.native_members[member] = evidence.encoded(trajectory)
+            with self.subTest(field=field), self.assertRaisesRegex(ValueError, "Unsupported native trajectory"):
+                self.refresh_native()
+
+    def test_native_whole_case_and_cross_arm_substitution_with_valid_archive_members_reject(self):
+        self.native_control(4)
+        original_record, original_descriptor = copy.deepcopy(self.native_record), copy.deepcopy(self.native_descriptor)
+        victim = self.native_record["observations"][0]
+        for target_index in (1, 2):
+            self.native_record, self.native_descriptor = copy.deepcopy(original_record), copy.deepcopy(original_descriptor)
+            victim = self.native_record["observations"][0]
+            target = self.native_record["observations"][target_index]
+            old_refs = [row for row in self.native_record["references"] if row["id"] in victim["references"]
+                        and "/trials/" in row["member"]]
+            target_refs = [row for row in self.native_record["references"] if row["id"] in target["references"]
+                           and "/trials/" in row["member"]]
+            replacement = {old["id"]: next(row["id"] for row in target_refs
+                           if row["member"].endswith("/" + old["member"].rsplit("/", 1)[-1])) for old in old_refs}
+            victim["references"] = [replacement.get(key, key) for key in victim["references"]]
+            for item in self.native_descriptor["items"]:
+                if item["observation_id"] == victim["id"]:
+                    item["reference_id"] = replacement.get(item["reference_id"], item["reference_id"])
+            evidence.validate_public(self.native_record)  # Independently hash-valid public references are insufficient.
+            with self.subTest(target=target_index), self.assertRaisesRegex(ValueError, "Native trial"):
+                self.refresh_native()
+
+    def test_native_result_id_and_recorded_attempt_substitution_reject(self):
+        self.native_control(4)
+        original = dict(self.native_members)
+        result_member = next(key for key in original if key.endswith("/trials/synthetic-case-2/result.json"))
+        result = evidence.parse_json(original[result_member]); result["id"] = "independently-valid-other-trial-id"
+        self.native_members[result_member] = evidence.encoded(result)
+        with self.assertRaisesRegex(ValueError, "Native observation identity mismatch"):
+            self.refresh_native()
+        self.native_members = original
+        member = next(key for key in original if key.endswith("/summary.json"))
+        summary = evidence.parse_json(original[member]); summary["pass_at_k"]["cases"]["2"]["attempts"][0]["attempt"] = 2
+        self.native_members[member] = evidence.encoded(summary)
+        with self.assertRaisesRegex(ValueError, "Native recorded attempt mismatch"):
+            self.refresh_native()
+
+    def test_coherent_native_model_relabeling_cannot_replace_recorded_model(self):
+        self.native_control(4)
+        for member, raw in list(self.native_members.items()):
+            if member.endswith(("/reward.json", "/summary.json")):
+                payload = evidence.parse_json(raw)
+                payload["model"] = "different-recorded-model"
+                self.native_members[member] = evidence.encoded(payload)
+            if member.endswith("/trajectory.json"):
+                payload = evidence.parse_json(raw)
+                payload["agent"]["model_name"] = "different-recorded-model"
+                self.native_members[member] = evidence.encoded(payload)
+        with self.assertRaisesRegex(ValueError, "Native model identity mismatch"):
+            self.refresh_native()
+
+    def test_native_kind_confusion_supplemental_binding_and_run_identity_reject(self):
+        self.native_control(4)
+        original = copy.deepcopy(self.native_descriptor)
+        for binding, kind in (("native_trajectory", "evaluator_judgment"), ("native_dimension", "agent_statement"),
+                              ("native_findings", "agent_statement")):
+            self.native_descriptor = copy.deepcopy(original)
+            item = next(row for row in self.native_descriptor["items"] if row["binding"] == binding)
+            item["kind"] = kind
+            with self.subTest(binding=binding), self.assertRaises(ValueError):
+                self.refresh_native()
+        self.native_descriptor = original
+        member = next(key for key in self.native_members if key.endswith("/findings.json"))
+        findings = evidence.parse_json(self.native_members[member]); findings["skill_name"] = "other-skill"
+        self.native_members[member] = evidence.encoded(findings)
+        with self.assertRaisesRegex(ValueError, "Native findings identity mismatch"):
+            self.refresh_native()
+
+    def test_native_sensitive_selected_text_and_changed_originals_reject(self):
+        self.native_control(4)
+        member = next(key for key in self.native_members if key.endswith("/trajectory.json"))
+        trajectory = evidence.parse_json(self.native_members[member])
+        trajectory["steps"][2]["message"] = "password=synthetic-selected-value"
+        original = self.native_members[member]
+        self.native_members[member] = evidence.encoded(trajectory)
+        with self.assertRaises(ValueError):
+            self.refresh_native()
+        self.native_members[member] = original
+        context = self.refresh_native()
+        path = self.native_root / member
+        path.write_bytes(original + b" ")
+        with self.assertRaises(ValueError):
+            for guard in context.guards:
+                guard()
+        with self.assertRaisesRegex(ValueError, "Native original member mismatch"):
+            review.prepare([Path(self.native_args[1])], Path(self.native_args[3]), "podman", self.native_args[7],
+                           self.native_snapshot, self.native_root)
+
+    def test_support_boundary_128_and_129_without_truncation(self):
+        context = self.native_control(108)
+        self.assertEqual(len(context.value["qualitative"]), 128)
+        item = copy.deepcopy(self.native_descriptor["items"][0])
+        self.native_descriptor["items"].append(item)
+        with self.assertRaisesRegex(ValueError, "Support limit"):
+            self.refresh_native()
+
+    def test_original_archive_safety_and_omitted_expansion_budget_remain_enforced(self):
+        self.native_control(4)
+        for attack in ("escape", "duplicate", "symlink", "compression", "member_limit", "aggregate_limit", "malformed"):
+            buffer = io.BytesIO()
+            if attack == "malformed":
+                payload = b"not-a-zip"
+            else:
+                with zipfile.ZipFile(buffer, "w") as archive:
+                    for member, raw in self.native_members.items():
+                        archive.writestr(zipfile.ZipInfo(member), raw)
+                    if attack == "escape":
+                        archive.writestr("../escape.json", b"{}")
+                    elif attack == "duplicate":
+                        member = next(iter(self.native_members))
+                        archive.writestr(member.upper(), self.native_members[member])
+                    elif attack == "symlink":
+                        entry = zipfile.ZipInfo("link.json")
+                        entry.external_attr = 0o120777 << 16
+                        archive.writestr(entry, b"../escape")
+                    elif attack == "compression":
+                        archive.writestr("unsupported.bin", b"synthetic", compress_type=zipfile.ZIP_BZIP2)
+                    elif attack == "member_limit":
+                        archive.writestr("too-large.bin", b"x" * (evidence.JSON_LIMIT + 1), compress_type=zipfile.ZIP_DEFLATED)
+                    else:
+                        block = b"x" * (7 * 1024 * 1024)
+                        for i in range(10):
+                            archive.writestr(f"omitted-{i}.bin", block, compress_type=zipfile.ZIP_DEFLATED)
+                payload = buffer.getvalue()
+            (self.native_root / "original.zip").write_bytes(payload)
+            # Authenticate the supplied ZIP digest too: unsafe originals must still reject.
+            for ref in self.native_record["references"]:
+                ref["artifact_digest"] = evidence.digest_bytes(payload)
+            bundle, saved, rid = self.bundle(self.native_record, "archive-attack")
+            for item in self.native_descriptor["items"]:
+                item["record_id"] = rid
+            write(self.native_root / "support.json", self.native_descriptor)
+            with self.subTest(attack=attack), self.assertRaises((ValueError, zipfile.BadZipFile)):
+                review.prepare([bundle], saved, "podman", rid, self.native_snapshot, self.native_root)
+
+    def test_changed_original_archive_cannot_upgrade_its_declared_identity(self):
+        self.native_control(4)
+        archive = self.native_root / "original.zip"
+        archive.write_bytes(archive.read_bytes() + b"synthetic-unselected-archive-change")
+        with self.assertRaisesRegex(ValueError, "Retained archive identity mismatch"):
+            review.prepare([Path(self.native_args[1])], Path(self.native_args[3]), "podman", self.native_args[7],
+                           self.native_snapshot, self.native_root)
+
+    def test_decoded_fragments_controls_and_sensitive_key_value_joins_reject(self):
+        for text in ('{"password": "synthetic-value"}', '{"text": "prefix\\u202esuffix"}',
+                     '{"text": "prefix\\u0000suffix"}', '{"text": "C:\\\\Users\\\\SyntheticUser\\\\private"}'):
+            with self.subTest(text=text), self.assertRaises(ValueError):
+                review.screen_fragment(text)
+        review.checked_text("password"); review.checked_text("synthetic-value")
+        with self.assertRaisesRegex(ValueError, "Credential field"):
+            review.screen_payload({"password": "synthetic-value"})
+        for control in ("\x0b", "\x85", "\u202e"):
+            with self.subTest(control=repr(control)), self.assertRaisesRegex(ValueError, "Control"):
+                review.selected_lines("safe" + control + "suffix", 1, 1)
+
+    def test_final_request_screening_before_both_mocked_sdk_requests(self):
+        context = self.control()
+        assemble = review.common_request
+        def unsafe_request(ctx, config):
+            return {**assemble(ctx, config), "metadata": {"password": "synthetic-value"}}
+        with patch.object(review, "common_request", side_effect=unsafe_request):
+            calls, run = self.invoke(context)
+            with self.assertRaisesRegex(ValueError, "Inference rejected"):
+                asyncio.run(run())
+        self.assertEqual(calls, [])
+        context.value["source_context"]["members"][0]["technical_spans"] = [[0, 7]]
+        calls, run = self.invoke(context)
+        with self.assertRaisesRegex(ValueError, "Prepared context changed"):
+            asyncio.run(run())
+        self.assertEqual(calls, [])
+
+    def test_old_private_reports_fail_explicitly_without_migration(self):
+        context = self.control()
+        calls, run = self.invoke(context)
+        report = asyncio.run(run())
+        for version, method in ((1, "grounded-skill-review/1"), (2, "grounded-skill-review/1"),
+                                (1, "grounded-skill-review/2")):
+            old = copy.deepcopy(report); old["schema_version"] = version; old["provenance"]["method"] = method
+            with self.subTest(version=version, method=method), self.assertRaisesRegex(review.PrivateContractError, "original pinned"):
+                review.validate_review(old, context)
+        old_path = self.root / "old-review.json"
+        write(old_path, {"schema_version": 1, "provenance": {"method": "grounded-skill-review/1"}})
+        with patch.object(review, "prepare", side_effect=AssertionError("Must reject before preparation")):
+            with self.assertRaises(review.PrivateContractError):
+                review.main(["validate", *self.args, "--review", str(old_path)])
 
     def test_pin_and_strict_schema(self):
         self.assertEqual(review.versions()["openai"], "2.44.0")
@@ -405,7 +917,7 @@ class ReviewTests(unittest.TestCase):
 
     def test_empty_support_preserves_provenance_without_behavioral_support(self):
         context = self.control(empty_behavior=True)
-        row = next(row for row in context.value["qualitative"] if row["kind"] == "agent_behavior")
+        row = next(row for row in context.value["qualitative"] if row["kind"] == "agent_statement")
         self.assertEqual((row["start_line"], row["end_line"], row["text"]), (0, 0, ""))
         self.assertEqual(row["excerpt_digest"], evidence.digest_bytes(b""))
         self.assertEqual(row["original_digest"], row["retained_digest"])
@@ -425,7 +937,7 @@ class ReviewTests(unittest.TestCase):
         )
         self.assertEqual(explicit.value, context.value)
         for start, end, quote in ((0, 0, None), (0, 0, ""), (1, 1, None)):
-            cited = citation(explicit, "agent_behavior")
+            cited = citation(explicit, "agent_statement")
             cited.update(start_line=start, end_line=end, quote=quote)
             with self.assertRaisesRegex(ValueError, "Citation lines unavailable"):
                 review.check_citations([review.Citation.model_validate(cited)], explicit)
@@ -445,7 +957,7 @@ class ReviewTests(unittest.TestCase):
                 review.validate_judgment(judgment(context), context)
                 value = judgment(context, category="modify_skill")
                 for citations in (value["assessment"]["citations"], value["recommendations"][0]["citations"]):
-                    cited = next(row for row in citations if row["evidence_type"] == "agent_behavior")
+                    cited = next(row for row in citations if row["evidence_type"] == "agent_statement")
                     cited.update(start_line=1, end_line=1, quote=None)
                 with self.assertRaisesRegex(ValueError, "Qualitative citation has no content"):
                     review.validate_judgment(value, context)
@@ -456,7 +968,7 @@ class ReviewTests(unittest.TestCase):
                 if output.endswith("behavior."):
                     valid = judgment(context, category="modify_skill")
                     for citations in (valid["assessment"]["citations"], valid["recommendations"][0]["citations"]):
-                        cited = next(row for row in citations if row["evidence_type"] == "agent_behavior")
+                        cited = next(row for row in citations if row["evidence_type"] == "agent_statement")
                         cited.update(start_line=2, end_line=2, quote=None)
                     review.validate_judgment(valid, context)
 
@@ -546,7 +1058,7 @@ class ReviewTests(unittest.TestCase):
                     )
 
     def test_numeric_evidence_and_grader_opinion_do_not_support_skill_edit(self):
-        for kind in ("agent_behavior", "evaluator_judgment"):
+        for kind in ("agent_statement", "evaluator_judgment"):
             with self.subTest(kind=kind), tempfile.TemporaryDirectory() as folder:
                 self.root = Path(folder)
                 context = self.control(kind=kind)
@@ -735,7 +1247,7 @@ class ReviewTests(unittest.TestCase):
         descriptor["items"][0].update(start_line=2, end_line=2)
         write(self.root / "support/support.json", descriptor)
         context = review.prepare([bundle], saved, "podman", rid, self.root / "source", self.root / "support")
-        row = next(row for row in context.value["qualitative"] if row["kind"] == "agent_behavior")
+        row = next(row for row in context.value["qualitative"] if row["kind"] == "agent_statement")
         self.assertTrue(row["derived"])
         self.assertEqual(row["completeness"], "partial")
         self.assertEqual(row["locator"], ["agent_output"])
@@ -966,15 +1478,11 @@ class ReviewTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             review.validate_judgment(value, context)
         (self.root / "support/private.txt").write_text("password=SuperSecret123!")
-        with self.assertRaises(ValueError):
-            review.prepare(
-                [Path(self.args[1])],
-                Path(self.args[3]),
-                "podman",
-                self.args[7],
-                self.root / "source",
-                self.root / "support",
-            )
+        prepared = review.prepare(
+            [Path(self.args[1])], Path(self.args[3]), "podman", self.args[7],
+            self.root / "source", self.root / "support",
+        )
+        self.assertNotIn("SuperSecret123", evidence.encoded(prepared.value).decode())
 
     def test_pinned_sdk_one_count_one_generation_identical_context(self):
         context = self.control()
@@ -1199,7 +1707,7 @@ class ReviewTests(unittest.TestCase):
         self.assertEqual(partial.value["source_context"]["coverage"], "partial")
         self.assertEqual(partial.value["source_context"]["omitted_members"], ["references/omitted.md"])
         value = judgment(context)
-        value["assessment"]["citations"][0]["evidence_type"] = "agent_behavior"
+        value["assessment"]["citations"][0]["evidence_type"] = "agent_statement"
         with self.assertRaises(ValueError):
             review.validate_judgment(value, context)
 
@@ -1211,8 +1719,8 @@ class ReviewTests(unittest.TestCase):
             rec["sufficiency"]["conclusion"] = "sufficient"
             with self.assertRaises(ValueError):
                 review.validate_judgment(value, context)
-            rec["sufficiency"]["behavioral_support"] = "observed"
-            rec["citations"] = [*rec["citations"], citation(context, "agent_behavior")]
+            rec["sufficiency"]["behavioral_support"] = "recorded_statements"
+            rec["citations"] = [*rec["citations"], citation(context, "agent_statement")]
             review.validate_judgment(value, context)
 
     def test_evaluator_judgments_require_evaluator_carriers(self):
