@@ -1549,6 +1549,20 @@ Only exact source-cited quotes inherit authenticated technical spans, and render
 such quotes requires the rebuilt context. Other report prose and metadata have no
 technical-syntax exemption. Requests recheck the sealed prepared context and screen
 the actual payload before counting and generation; neither request truncates evidence.
+Selected evidence and report strings also inspect valid JSON string literals nested
+inside their text. Every decoded layer applies the same private-path, credential,
+sensitive-assignment and control-character gates; encoded assignment keys retain
+their assignment context. Inspection uses a forward-only quote scanner and a
+screening copy, preserving original bytes, source identities, hashes and saved
+values. Decoded spellings never acquire source technical-syntax exemptions.
+Each screening pass permits at most eight decoding steps per path and 65,536
+candidate literals. Its shared work budget is 64 × 1024² units: inspected text and
+serialized lengths consume units, and every candidate decoding attempt additionally
+costs its literal length plus 256 units, including empty or malformed candidates.
+The budget spans all fields in a payload or report and fails closed on exhaustion.
+Malformed quoted prose is not repaired or decoded. This is JSON-string inspection,
+not URL, base64, shell or general escape decoding; the existing sensitivity scanner
+remains pattern-based and does not prove the absence of every kind of private data.
 Semantic truth, causal relevance, instruction-defect attribution and worthwhile
 scope cannot
 be established by structural validity, carrier checks or citation integrity.
