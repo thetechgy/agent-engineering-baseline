@@ -1189,15 +1189,25 @@ HTTP proxies, and zero SDK retries. There is one input-token count followed by
 one generation using identical model, instructions, input and strict JSON schema.
 The count includes the supplied structured-output schema. The supported count
 endpoint is documented in the [official OpenAI API reference](https://developers.openai.com/api/reference/python/resources/responses/subresources/input_tokens/methods/count).
-The schema uses single-value enums supported by
-[Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs#supported-schemas)
-to bind `source_coverage`, `source_integrity` and `source_identity` to the prepared
-context's host-verified facts in every
-sufficiency block, including recommendations. Each construction produces an
-isolated schema without changing the context or the context-free schema. Counting
-and generation share that schema, and provenance records its exact digest.
-Independent host validation still rejects incorrect metadata, invalid citations
-and unsupported execution claims; generated responses are never repaired to pass.
+The compact model-facing schema uses context-bound evidence-ID enums supported by
+[Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs#supported-schemas).
+Counting and generation share the exact context, instructions and schema; the
+request screen rechecks the schema before each request and provenance records its
+exact digest. Each schema construction is isolated and deterministic, without
+changing the context or context-free schema.
+The host expands explicit evidence selections into the complete saved judgment,
+then independently validates its metadata, citations, action grounding and text.
+Generated responses are never repaired to pass. The model cannot supply the
+derived metadata, omit required reasoning or replace validation commitments.
+Preparation retains its existing evidence bounds. Review rejects before client
+creation if the complete schema exceeds provider budgets: 1,000 enum values,
+120,000 characters of names/enum/const strings, 5,000 properties or ten nesting
+levels. String enums with more than 250 values must total at most 15,000
+characters; consequently, the current 71-character SHA citation IDs permit at
+most 250 citable identities. Empty source/suggestion pools permit only empty
+target/assessment arrays; an entirely empty citation pool rejects. Empty or blank
+qualitative members and 0/0 source members remain authenticated but uncitable.
+There is no evidence omission, alias mapping or unconstrained-schema fallback.
 The private report contract remains version 2. Changed prompt, schema and
 implementation digests bind new reports to the corrected tooling; historical
 reports require their original inputs and pinned tooling rather than migration.
@@ -1221,6 +1231,19 @@ This verifies the model recorded in configuration against the API response's
 [generating-model identity](https://developers.openai.com/api/reference/python/resources/responses/methods/create).
 The review suppresses logging during SDK invocation, including debug logging. Errors
 print a fixed message without SDK bodies, prompts, evidence, credentials or paths.
+The review-only `--diagnostics` option additionally emits one bounded JSON line
+to stderr on inference rejection, before the fixed error message. A trusted local
+qualification runner may capture it privately using the existing 0700-directory /
+0600-file protections. It contains host-selected stage/code, known logical field
+names and bounded indexes, request counts, elapsed time, expected-model/match
+status, request identity digests and validated usage. Usage is checked before
+judgment validation, so a rejected citation need not discard valid billing counts.
+Known numeric cache/reasoning details are included when supplied within their
+token bounds. Arbitrary SDK or Pydantic errors, candidate IDs, unknown field
+names, quotations, locators, prose, response bodies, headers and private paths
+never enter diagnostics. Diagnostic failure falls back to fixed safe metadata;
+it never preserves a candidate, writes a report or authorizes another request.
+Default errors and report destinations remain unchanged.
 
 Omitted output destinations use the existing private temporary writer. New output
 directories remain outside the checkout and input boundaries, mode 0700, with
@@ -1436,11 +1459,35 @@ Validate them using their original pinned implementation and dependencies, origi
 evidence/selection, context, prompt and schema identities. Retain the original
 tooling snapshot; do not silently migrate a report or override availability/expiry
 to make it validate. The current implementation contains no parallel legacy validator.
-One closed Pydantic model hierarchy defines the model judgment and saved envelope;
-semantic checks additionally bind it to captured evidence. Extra fields, invalid
+Separate closed Pydantic types define the compact model response and the complete
+saved v2 judgment/envelope. Substantive field definitions and bounds are shared;
+the model-facing evidence slots differ. Semantic checks bind the expanded saved
+judgment to captured evidence independently of the binding function. Extra fields, invalid
 citations, evidence-type confusion, source paths, unavailable line ranges,
 quotation mismatches, incomplete suggestion dispositions and recommendations
 exceeding these support rules reject.
+
+Model-facing citations contain `evidence_id`, `public_locator`, `start_line`,
+`end_line`, `quote` and `claim`. Source and qualitative selections require explicit
+available line ranges and a null public locator. Public selections require an
+explicit valid public-record locator and null lines. Claims remain positive,
+absence or interpretation; execution is unavailable for every supported carrier.
+The host derives citation type, availability, source path and fixed source or
+qualitative locator, preserving the selected ID, range, quote and claim exactly.
+No line defaults, clamping, quote rewriting, inferred targets or guessed IDs occur.
+Native assessment IDs have their own supplied-suggestion enum; the array has the
+expected length, and independent validation rejects duplicate or substituted IDs.
+Modification paths remain explicit model choices constrained to citable source
+members; a valid path without a supporting source citation still rejects.
+
+Model-facing sufficiency retains behavioral scope, provenance/availability
+explanation, limitations, conclusion and rationale. For every assessment and
+recommendation the host derives source coverage, identity and integrity from the
+authenticated context, and recorded-statement availability from valid citations
+to actual agent statements. Grader judgments and native suggestions cannot become
+agent behavior. Neither authentication nor recorded statements prove execution.
+The model remains responsible for expert interpretation, competing explanations,
+honest uncertainty, warranted no-change advice and substantive validation plans.
 
 Host provenance records method, dependency versions, participating implementation
 module digest, context/analysis/schema/
