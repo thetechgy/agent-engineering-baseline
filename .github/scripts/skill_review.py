@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime
 import html
 import io
+import json
 import logging
 import importlib.metadata
 import re
@@ -20,7 +21,7 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import skill_analysis as analysis  # noqa: E402 - standalone import after no-bytecode/path setup
 import skill_evidence as evidence  # noqa: E402 - standalone import after no-bytecode/path setup
-from pydantic import BaseModel, ConfigDict, Field  # noqa: E402 - standalone import after no-bytecode/path setup
+from pydantic import BaseModel, ConfigDict, Field, ValidationError  # noqa: E402 - standalone import after no-bytecode/path setup
 
 require = evidence.require
 METHOD = "grounded-skill-review/2"
@@ -64,13 +65,17 @@ benefit and measurable validation. Respect upstream ownership. Skill changes mus
 compare current and candidate skills and the no-skill baseline where appropriate,
 previously passing cases, mandatory safety gates, negative controls and fresh realistic
 cases. Unsupported external assertions belong only in unverified_external_assertions.
-Source sufficiency metadata is host-verified, not an analyst judgment. In every
-sufficiency block, copy source_coverage, source_integrity and source_identity exactly
-from source_context.coverage, source_context.integrity and source_context.identity.
-Qualitative limitations do not change those source fields. Set behavioral_support to
-recorded_statements only when that block cites an agent_statement; otherwise use
-unavailable. Copy citation IDs and locators from supplied evidence, with valid line
-ranges. Omit optional quotes unless they exactly match the cited selected lines.
+Return the compact analytical response, not the complete saved report. The host
+derives source coverage/identity/integrity and recorded-statement availability for
+every sufficiency block; you must still explain scope, limitations and sufficiency.
+Choose evidence_id only from supplied citable evidence. Public reference IDs are
+not evidence IDs. For public-record citations choose an exact public_locator and
+null start_line/end_line. For source and qualitative citations use null
+public_locator and explicit available start_line/end_line; the host derives the
+type, availability, path and original locator. Never supply that derived metadata.
+Use null quote unless a short quotation exactly matches the selected lines or
+public target. Assess every supplied native suggestion exactly once by its ID.
+Choose modification source_paths explicitly; citations alone do not choose targets.
 Structural and citation checks cannot prove semantic truth. Human review is required.
 Do not embed full native evidence or prompts in the report. Quote only short cited
 excerpts. No automatic publication or implementation is authorized."""
@@ -151,6 +156,44 @@ class Judgment(Closed):
     native_suggestions: list[SuggestionAssessment] = Field(max_length=MAX_SUPPORT)
     recommendations: list[Recommendation] = Field(max_length=3)
     unverified_external_assertions: list[str] = Field(max_length=10)
+
+
+class ModelCitation(Closed):
+    evidence_id: str
+    public_locator: list[str | int] | None = Field(max_length=12)
+    start_line: int | None
+    end_line: int | None
+    quote: str | None = Field(max_length=500)
+    claim: Literal["positive", "absence", "interpretation"]
+
+
+class ModelSufficiency(Closed):
+    behavioral_scope: str = Field(min_length=1, max_length=2000)
+    provenance_and_availability: str = Field(min_length=1, max_length=2000)
+    limitations: str = Field(min_length=1, max_length=2000)
+    conclusion: Literal["sufficient", "investigation_only"]
+    rationale: str = Field(min_length=1, max_length=2000)
+
+
+# Reuse substantive fields and bounds; only the model-facing evidence slots differ.
+class ModelAssessment(Assessment):
+    sufficiency: ModelSufficiency
+    citations: list[ModelCitation] = Field(min_length=1, max_length=20)
+
+
+class ModelSuggestionAssessment(SuggestionAssessment):
+    citations: list[ModelCitation] = Field(max_length=20)
+
+
+class ModelRecommendation(Recommendation):
+    sufficiency: ModelSufficiency
+    citations: list[ModelCitation] = Field(min_length=1, max_length=20)
+
+
+class ModelJudgment(Judgment):
+    assessment: ModelAssessment
+    native_suggestions: list[ModelSuggestionAssessment] = Field(max_length=MAX_SUPPORT)
+    recommendations: list[ModelRecommendation] = Field(max_length=3)
 
 
 class ModelConfig(Closed):
@@ -972,15 +1015,71 @@ def prepare(inputs, saved_analysis, skill, record_id, source=None, support=None,
 
 
 def schema(context=None):
-    """Fresh schema; shared Sufficiency references bind every occurrence to host facts."""
-    value = Judgment.model_json_schema()
+    """Fresh compact schema, with shared evidence enums bound to the sealed context."""
+    value = ModelJudgment.model_json_schema()
     if context is not None:
-        source = context.value["source_context"]
-        properties = value["$defs"]["Sufficiency"]["properties"]
-        for field, key in (("source_coverage", "coverage"), ("source_integrity", "integrity"),
-                           ("source_identity", "identity")):
-            properties[field]["enum"] = [source[key]]
+        eligible = citation_pool(context)
+        review_require(bool(eligible), "No citable evidence", "no_citable_evidence")
+        value["$defs"]["ModelCitation"]["properties"]["evidence_id"]["enum"] = sorted(eligible)
+        suggestions = sorted(row["id"] for row in context.value["qualitative"] if row["kind"] == "native_suggestion")
+        array = value["properties"]["native_suggestions"]
+        array["minItems"] = array["maxItems"] = len(suggestions)
+        if suggestions:
+            value["$defs"]["ModelSuggestionAssessment"]["properties"]["evidence_id"]["enum"] = suggestions
+        paths = sorted(row["member"] for kind, row in eligible.values() if kind == "source")
+        targets = value["$defs"]["ModelRecommendation"]["properties"]["source_paths"]
+        if paths:
+            targets["items"]["enum"] = paths
+        else:
+            targets["maxItems"] = 0
+    check_schema_budget(value)
     return value
+
+
+def check_schema_budget(value):
+    """Check provider budgets without omitting evidence or weakening the schema."""
+    enums = strings = properties = 0
+
+    def visit(node):
+        nonlocal enums, strings, properties
+        if isinstance(node, dict):
+            for key in ("properties", "$defs"):
+                names = node.get(key, {})
+                strings += sum(len(name) for name in names)
+                if key == "properties":
+                    properties += len(names)
+            values = node.get("enum", [])
+            enums += len(values)
+            length = sum(len(item) for item in values if isinstance(item, str))
+            strings += length
+            review_require(len(values) <= 250 or length <= 15000,
+                           "Structured schema budget exceeded", "schema_budget_exceeded")
+            if isinstance(node.get("const"), str):
+                strings += len(node["const"])
+            for item in node.values():
+                visit(item)
+        elif isinstance(node, list):
+            for item in node:
+                visit(item)
+
+    visit(value)
+    review_require(enums <= 1000 and strings <= 120000 and properties <= 5000,
+                   "Structured schema budget exceeded", "schema_budget_exceeded")
+
+    def depth(node, active=()):
+        if "$ref" in node:
+            ref = node["$ref"]
+            review_require(ref.startswith("#/$defs/") and ref not in active,
+                           "Structured schema budget exceeded", "schema_budget_exceeded")
+            return depth(value["$defs"][ref.removeprefix("#/$defs/")], (*active, ref))
+        children = [depth(item, active) for item in node.get("anyOf", [])]
+        if node.get("type") == "object":
+            children.append(1 + max((depth(item, active) for item in node.get("properties", {}).values()), default=0))
+        if node.get("type") == "array":
+            children.append(1 + depth(node.get("items", {}), active))
+        return max(children, default=0)
+
+    review_require(depth(value) <= 10, "Structured schema budget exceeded", "schema_budget_exceeded")
 
 
 def index_context(context):
@@ -992,12 +1091,82 @@ def index_context(context):
     }
 
 
-def check_citations(citations, context):
+def citation_pool(context):
+    return {key: (kind, row) for key, (kind, row) in index_context(context).items()
+            if kind == "public" or (1 <= row["start_line"] <= row["end_line"]
+                                    and (kind == "source" or bool(row["text"].strip())))}
+
+
+class ReviewRejection(ValueError):
+    """Host-authored validation code/location, never candidate or SDK error text."""
+
+    def __init__(self, message, code, location=()):
+        super().__init__(message)
+        self.code = code
+        self.location = tuple(location)
+
+
+def review_require(condition, message, code, location=()):
+    if not condition:
+        raise ReviewRejection(message, code, location)
+
+
+def bind_judgment(value, context):
+    """Expand explicit model selections; full judgment validation remains mandatory."""
+    require(len(evidence.encoded(value)) <= REPORT_LIMIT, "Review size limit")
+    try:
+        model = ModelJudgment.model_validate(value)
+    except ValidationError:
+        raise ReviewRejection("Model response structure invalid", "model_structure_invalid") from None
+    result = model.model_dump()
+    require(evidence.encoded(result) == evidence.encoded(value), "Model structural types changed")
+    eligible = citation_pool(context)
+    groups = [(result["assessment"], ("assessment",))]
+    groups += [(row, (name, i)) for name in ("native_suggestions", "recommendations")
+               for i, row in enumerate(result[name])]
+    for group, path in groups:
+        citations, cited = [], []
+        for i, selection in enumerate(group["citations"]):
+            location = (*path, "citations", i)
+            review_require(selection["evidence_id"] in eligible, "Unknown or unavailable citation",
+                           "unknown_citation", (*location, "evidence_id"))
+            kind, row = eligible[selection["evidence_id"]]
+            review_require((selection["public_locator"] is not None) == (kind == "public"),
+                           "Public locator incompatible with evidence", "citation_locator_mismatch",
+                           (*location, "public_locator"))
+            citation = Citation(
+                evidence_id=selection["evidence_id"],
+                evidence_type="public_record" if kind == "public" else "source" if kind == "source" else row["kind"],
+                availability="available",
+                locator=selection["public_locator"] if kind == "public" else list(row["locator"]) if kind == "qualitative" else [],
+                source_path=row["member"] if kind == "source" else None,
+                start_line=selection["start_line"], end_line=selection["end_line"],
+                quote=selection["quote"], claim=selection["claim"],
+            )
+            cited.extend(check_citations([citation], context, path=(*path, "citations"), offset=i))
+            citations.append(citation.model_dump())
+        group["citations"] = citations
+        if "sufficiency" in group:
+            source = context.value["source_context"]
+            group["sufficiency"].update(
+                source_coverage=source["coverage"], source_identity=source["identity"],
+                source_integrity=source["integrity"],
+                behavioral_support="recorded_statements" if any(
+                    kind == "qualitative" and row["kind"] == "agent_statement" for kind, row in cited
+                ) else "unavailable",
+            )
+    return result
+
+
+def check_citations(citations, context, *, path=(), offset=0):
     index = index_context(context)
     cited = []
-    for citation in citations:
-        require(citation.claim != "execution", "Recorded evidence does not verify execution")
-        require(citation.evidence_id in index, "Unknown citation")
+    for i, citation in enumerate(citations, offset):
+        location = (*path, i)
+        review_require(citation.claim != "execution", "Recorded evidence does not verify execution",
+                       "claim_incompatible", (*location, "claim"))
+        review_require(citation.evidence_id in index, "Unknown citation", "unknown_citation",
+                       (*location, "evidence_id"))
         kind, row = index[citation.evidence_id]
         expected_type = "public_record" if kind == "public" else "source" if kind == "source" else row["kind"]
         require(citation.evidence_type == expected_type, "Citation evidence type mismatch")
@@ -1006,18 +1175,23 @@ def check_citations(citations, context):
                 citation.source_path is None and citation.start_line is None and citation.end_line is None,
                 "Public citation has source lines",
             )
-            target = evidence.resolve_locator(row, citation.locator)
+            try:
+                target = evidence.resolve_locator(row, citation.locator)
+            except ValueError:
+                raise ReviewRejection("Public locator unavailable", "citation_locator_mismatch",
+                                      (*location, "locator")) from None
             text = target if type(target) is str else evidence.encoded(target).decode()
             require(citation.claim != "absence", "Public absence claim unsupported")
         else:
             require(citation.locator == (row["locator"] if kind == "qualitative" else []), "Citation locator mismatch")
             require(citation.source_path == (row["member"] if kind == "source" else None), "Citation source mismatch")
-            require(
+            review_require(
                 type(citation.start_line) is int
                 and type(citation.end_line) is int
                 and citation.start_line >= 1
                 and row["start_line"] <= citation.start_line <= citation.end_line <= row["end_line"],
                 "Citation lines unavailable",
+                "citation_lines_unavailable", (*location, "start_line"),
             )
             start = citation.start_line - row["start_line"]
             end = citation.end_line - row["start_line"] + 1
@@ -1030,7 +1204,8 @@ def check_citations(citations, context):
                     "Partial evidence cannot establish absence",
                 )
         if citation.quote is not None:
-            require(bool(citation.quote) and citation.quote in text, "Quotation mismatch")
+            review_require(bool(citation.quote) and citation.quote in text, "Quotation mismatch",
+                           "quotation_mismatch", (*location, "quote"))
         cited.append((kind, row))
     return cited
 
@@ -1107,7 +1282,8 @@ def validate_judgment(value, context):
         )
     expected = {row["id"] for row in context.value["qualitative"] if row["kind"] == "native_suggestion"}
     actual = [row.evidence_id for row in judgment.native_suggestions]
-    require(set(actual) == expected and len(actual) == len(expected), "Native suggestion coverage mismatch")
+    review_require(set(actual) == expected and len(actual) == len(expected), "Native suggestion coverage mismatch",
+                   "suggestion_coverage_mismatch", ("native_suggestions",))
     for row in judgment.native_suggestions:
         cited = check_citations(row.citations, context)
         if row.disposition == "already_covered":
@@ -1179,9 +1355,79 @@ def screen_request(request, context):
     require(request["input"] == evidence.encoded(context.value).decode(), "Request context mismatch")
     require(request["instructions"] == PROMPT and request["tools"] == [] and request["tool_choice"] == "none",
             "Request policy mismatch")
+    review_require(request["text"]["format"] == {
+        "type": "json_schema", "name": "skill_review", "strict": True, "schema": schema(context),
+    }, "Request schema mismatch", "request_schema_mismatch")
     screening_context = screen_context(context.value)
     screen_payload({key: value for key, value in request.items() if key != "input"})
     checked_text(evidence.encoded({**request, "input": evidence.encoded(screening_context).decode()}))
+
+
+DIAGNOSTIC_CODES = frozenset({
+    "rejected", "deadline_exceeded", "no_citable_evidence", "schema_budget_exceeded",
+    "request_schema_mismatch", "input_limit_exceeded", "response_incomplete", "model_mismatch",
+    "usage_missing", "usage_inconsistent", "response_shape_invalid", "response_limit",
+    "json_invalid", "model_structure_invalid", "unknown_citation", "citation_locator_mismatch",
+    "citation_lines_unavailable", "quotation_mismatch", "claim_incompatible", "suggestion_coverage_mismatch",
+})
+DIAGNOSTIC_FIELDS = frozenset({
+    "assessment", "native_suggestions", "recommendations", "citations", "evidence_id",
+    "public_locator", "locator", "start_line", "end_line", "quote", "claim",
+})
+DIAGNOSTIC_LIMIT = 8192
+
+
+class InferenceRejected(ValueError):
+    def __init__(self, diagnostic_json):
+        super().__init__("Inference rejected; new manual invocation required")
+        self.diagnostic_json = diagnostic_json  # Immutable bytes; no candidate/SDK objects.
+
+
+def failure_diagnostic(error, stage, metadata, started):
+    """Serialize only host-selected, bounded metadata, never an exception's contents."""
+    try:
+        require(stage in {"preflight", "token_count", "generation", "response_validation", "model_binding", "report_validation"},
+                "Invalid diagnostic stage")
+        metadata = {key: value for key, value in metadata.items() if key in {
+            "expected_model", "model_match", "count_requests", "generation_requests", "context_digest",
+            "prompt_digest", "schema_digest", "implementation_digest", "preflight_input_tokens", "usage",
+        }}
+        for key in ("context_digest", "prompt_digest", "schema_digest", "implementation_digest"):
+            digest = metadata.get(key)
+            require(digest is None or (type(digest) is str and re.fullmatch(r"sha256:[0-9a-f]{64}", digest)),
+                    "Invalid diagnostic digest")
+        require(type(metadata["expected_model"]) is str and len(metadata["expected_model"]) <= 100
+                and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:-]*", metadata["expected_model"]), "Invalid diagnostic model")
+        require(metadata["model_match"] is None or type(metadata["model_match"]) is bool, "Invalid diagnostic model match")
+        for key, bound in (("count_requests", 1), ("generation_requests", 1), ("preflight_input_tokens", 128000)):
+            if key in metadata:
+                require(type(metadata[key]) is int and 0 <= metadata[key] <= bound, "Invalid diagnostic count")
+        if "usage" in metadata:
+            bounds = {"preflight_input_tokens": 128000, "input_tokens": 128000, "output_tokens": 32000,
+                      "total_tokens": 160000, "cached_tokens": 128000, "cache_write_tokens": 128000,
+                      "reasoning_tokens": 32000}
+            metadata["usage"] = {key: number for key, number in metadata["usage"].items() if key in bounds}
+            require(all(type(number) is int and 0 <= number <= bounds[key] for key, number in metadata["usage"].items()),
+                    "Invalid diagnostic usage")
+        code = "deadline_exceeded" if isinstance(error, TimeoutError) else "rejected"
+        location = ()
+        if isinstance(error, ReviewRejection):
+            code = error.code if error.code in DIAGNOSTIC_CODES else "rejected"
+            location = error.location
+        if not (len(location) <= 16 and all(
+            (type(item) is str and item in DIAGNOSTIC_FIELDS)
+            or (type(item) is int and 0 <= item <= MAX_SUPPORT) for item in location
+        )):
+            location = ()
+        value = {**metadata, "stage": stage, "code": code, "location": list(location),
+                 "elapsed_milliseconds": max(0, int((time.monotonic() - started) * 1000))}
+        raw = evidence.encoded(value)
+        require(len(raw) <= DIAGNOSTIC_LIMIT, "Diagnostic limit")
+        checked_text(raw)
+        # One JSON line for opt-in private stderr capture, without arbitrary error text.
+        return json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+    except Exception:
+        return b'{"code":"rejected","location":[]}'
 
 
 async def invoke(context, config, authorized, *, http_client=None):
@@ -1199,10 +1445,21 @@ async def invoke(context, config, authorized, *, http_client=None):
     previous_logging = logging.root.manager.disable
     logging.disable(sys.maxsize)
     started = time.monotonic()
+    stage = "preflight"
+    metadata = {"expected_model": config.model, "model_match": None,
+                "count_requests": 0, "generation_requests": 0,
+                "context_digest": evidence.identity(context.value),
+                "prompt_digest": evidence.digest_bytes(PROMPT.encode()), "schema_digest": None}
     try:
         from openai import AsyncOpenAI
 
         async with asyncio.timeout(config.deadline_seconds):
+            common = common_request(context, config)
+            screen_request(common, context)
+            metadata["schema_digest"] = evidence.identity(common["text"]["format"]["schema"])
+            implementation = context.value["implementation_digest"]
+            if type(implementation) is str and re.fullmatch(r"sha256:[0-9a-f]{64}", implementation):
+                metadata["implementation_digest"] = implementation
             async with AsyncOpenAI(
                 base_url=ENDPOINT,
                 max_retries=0,
@@ -1210,18 +1467,22 @@ async def invoke(context, config, authorized, *, http_client=None):
                 http_client=http_client
                 or httpx.AsyncClient(trust_env=False, follow_redirects=False, timeout=config.deadline_seconds),
             ) as client:
-                common = common_request(context, config)
-                screen_request(common, context)
+                stage = "token_count"
+                metadata["count_requests"] = 1
                 counted = await client.responses.input_tokens.count(**common)
-                require(
+                if type(counted.input_tokens) is int and 0 <= counted.input_tokens <= 128000:
+                    metadata["preflight_input_tokens"] = counted.input_tokens
+                review_require(
                     type(counted.input_tokens) is int and 0 <= counted.input_tokens <= config.input_limit,
-                    "Input token limit exceeded",
+                    "Input token limit exceeded", "input_limit_exceeded",
                 )
                 for guard in context.guards:
                     guard()
                 screen_request(common, context)
                 remaining = config.deadline_seconds - (time.monotonic() - started)
                 require(remaining > 0, "Total deadline exceeded")
+                stage = "generation"
+                metadata["generation_requests"] = 1
                 response = await client.responses.create(
                     **common,
                     store=False,
@@ -1229,11 +1490,35 @@ async def invoke(context, config, authorized, *, http_client=None):
                     max_output_tokens=config.output_limit,
                     timeout=remaining,
                 )
-                require(
+                stage = "response_validation"
+                review_require(
                     response.status == "completed" and response.error is None and response.incomplete_details is None,
-                    "Response incomplete",
+                    "Response incomplete", "response_incomplete",
                 )
-                require(type(response.model) is str and response.model == config.model, "Generating model mismatch")
+                metadata["model_match"] = type(response.model) is str and response.model == config.model
+                review_require(metadata["model_match"], "Generating model mismatch", "model_mismatch")
+                review_require(response.usage is not None, "Usage missing", "usage_missing")
+                usage = Usage(
+                    preflight_input_tokens=counted.input_tokens,
+                    input_tokens=response.usage.input_tokens,
+                    output_tokens=response.usage.output_tokens,
+                    total_tokens=response.usage.total_tokens,
+                )
+                review_require(
+                    usage.input_tokens <= config.input_limit
+                    and usage.output_tokens <= config.output_limit
+                    and usage.total_tokens == usage.input_tokens + usage.output_tokens,
+                    "Usage inconsistent", "usage_inconsistent",
+                )
+                metadata["usage"] = usage.model_dump()
+                for details, fields, bound in (
+                    (response.usage.input_tokens_details, ("cached_tokens", "cache_write_tokens"), usage.input_tokens),
+                    (response.usage.output_tokens_details, ("reasoning_tokens",), usage.output_tokens),
+                ):
+                    for field in fields:
+                        number = getattr(details, field, None)
+                        if type(number) is int and 0 <= number <= bound:
+                            metadata["usage"][field] = number
                 texts = []
                 for item in response.output:
                     require(item.type in ("message", "reasoning"), "Unexpected model tool output")
@@ -1244,31 +1529,26 @@ async def invoke(context, config, authorized, *, http_client=None):
                                 part.type == "output_text" and not part.annotations, "Refused or annotated response"
                             )
                             texts.append(part.text)
-                require(len(texts) == 1, "One structured response required")
+                review_require(len(texts) == 1, "One structured response required", "response_shape_invalid")
                 raw = texts[0].encode()
-                require(len(raw) <= REPORT_LIMIT, "Review response limit")
-                judgment = validate_judgment(evidence.parse_json(raw, limit=REPORT_LIMIT), context)
-                require(response.usage is not None, "Usage missing")
-                usage = Usage(
-                    preflight_input_tokens=counted.input_tokens,
-                    input_tokens=response.usage.input_tokens,
-                    output_tokens=response.usage.output_tokens,
-                    total_tokens=response.usage.total_tokens,
-                )
-                require(
-                    usage.input_tokens <= config.input_limit
-                    and usage.output_tokens <= config.output_limit
-                    and usage.total_tokens == usage.input_tokens + usage.output_tokens,
-                    "Usage inconsistent",
-                )
+                review_require(len(raw) <= REPORT_LIMIT, "Review response limit", "response_limit")
+                stage = "model_binding"
+                try:
+                    candidate = evidence.parse_json(raw, limit=REPORT_LIMIT)
+                except ValueError:
+                    raise ReviewRejection("Invalid model JSON", "json_invalid") from None
+                bound = bind_judgment(candidate, context)
+                stage = "report_validation"
+                judgment = validate_judgment(bound, context)
                 for guard in context.guards:
                     guard()
+                screen_request(common, context)
                 result = make_review(judgment, context, config, usage)
                 require(time.monotonic() - started < config.deadline_seconds, "Total deadline exceeded")
                 return result
-    except Exception:
+    except Exception as error:
         # No raw SDK errors, response bodies, prompts, paths or credentials escape.
-        raise ValueError("Inference rejected; new manual invocation required") from None
+        raise InferenceRejected(failure_diagnostic(error, stage, metadata, started)) from None
     finally:
         logging.disable(previous_logging)
 
@@ -1491,6 +1771,7 @@ def main(argv=None):
             sub.add_argument("--input-limit", type=int, default=64000)
             sub.add_argument("--output-limit", type=int, default=12000)
             sub.add_argument("--deadline-seconds", type=int, default=180)
+            sub.add_argument("--diagnostics", action="store_true", help="Emit bounded failure metadata for private stderr capture")
     args = parser.parse_args(argv)
     if args.command == "review":
         require(args.authorize_inference, "Explicit inference authorization required")
@@ -1519,7 +1800,12 @@ def main(argv=None):
         values = {"review-context.json": context.value}
         rendered = {}
     else:
-        result = asyncio.run(invoke(context, config.model_dump(), args.authorize_inference))
+        try:
+            result = asyncio.run(invoke(context, config.model_dump(), args.authorize_inference))
+        except InferenceRejected as error:
+            if args.diagnostics:
+                print(error.diagnostic_json.decode(), file=sys.stderr)
+            raise
         values = {"skill-review.json": result}
         rendered = {"skill-review.md": render_review(result, context)}
     destination = evidence.write_outputs(
