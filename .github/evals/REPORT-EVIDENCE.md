@@ -1553,7 +1553,10 @@ Selected evidence and report strings also inspect valid JSON string literals nes
 inside their text. Every decoded layer applies the same private-path, credential,
 sensitive-assignment and control-character gates; encoded assignment keys retain
 their assignment context. Inspection uses a forward-only quote scanner and a
-screening copy, preserving original bytes, source identities, hashes and saved
+screening copy. Each unescaped closing quote also starts the next candidate, so
+an earlier prose quote cannot swallow a later encoded literal's opening boundary.
+Overlapping candidates consume the same shared budget, including malformed spans.
+Inspection preserves original bytes, source identities, hashes and saved
 values. Decoded spellings never acquire source technical-syntax exemptions.
 Each screening pass permits at most eight decoding steps per path and 65,536
 candidate literals. Its shared work budget is 64 × 1024² units: inspected text and

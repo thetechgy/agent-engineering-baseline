@@ -451,7 +451,7 @@ JSON_ASSIGNMENT = re.compile(r"\s*(?::(?!\s*null\b)|=)")
 
 
 def json_string_literals(text):
-    """Disjoint quote spans in one forward pass, including malformed candidates."""
+    """Overlapping quote boundaries in one forward pass, including malformed candidates."""
     cursor = 0
     while cursor < len(text):
         start = text.find('"', cursor)
@@ -468,7 +468,8 @@ def json_string_literals(text):
                 cursor += 1
             elif char == '"':
                 yield text[start:cursor], cursor
-                break
+                # A prose quote may have consumed a later literal's opening quote.
+                start = cursor - 1
             elif char in "\r\n":
                 break  # Raw newlines cannot occur inside a valid JSON string.
 

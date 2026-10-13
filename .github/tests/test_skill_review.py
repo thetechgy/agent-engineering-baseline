@@ -816,6 +816,102 @@ class ReviewTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             review.validate_review(saved, context)
 
+    def test_overlapping_json_sensitive_literals_reject_at_report_boundaries(self):
+        context = self.control()
+        _, run = self.invoke(context)
+        saved = asyncio.run(run())
+        original = evidence.encoded(context.value)
+        for sensitive in ("/home/synthetic/private", r"C:\Users\SyntheticUser\private",
+                          "contact@example.invalid", '{"api_key": "synthetic-value"}',
+                          "prefix\x1bsuffix", "prefix\u202esuffix"):
+            for prefix in ('ordinary "unfinished ', '"ordinary '):
+                for layers in (1, 2, 3):
+                    text = prefix + encoded_string(sensitive, layers)
+                    with self.subTest(sensitive=sensitive[:12], prefix=prefix, layers=layers):
+                        for checker in (review.screen_fragment, review.check_report_text):
+                            with self.assertRaises(ValueError):
+                                checker(text)
+                        with self.assertRaises(ValueError):
+                            review.screen_payload({"text": text})
+                        value = judgment(context)
+                        value["assessment"]["interpretation"] = text
+                        with self.assertRaises(ValueError):
+                            review.validate_judgment(value, context)
+                        report = copy.deepcopy(saved)
+                        report["judgment"]["assessment"]["interpretation"] = text
+                        before = evidence.encoded(report)
+                        with self.assertRaises(ValueError):
+                            review.validate_review(report, context)
+                        with self.assertRaises(ValueError):
+                            review.render_review(report, context)
+                        self.assertEqual(evidence.encoded(report), before)
+        for separator in (":", "="):
+            with self.assertRaises(ValueError):
+                review.screen_fragment('ordinary "unfinished ' + encoded_string("api_key", 2)
+                                       + separator + ' "synthetic-value"')
+        for text in ('ordinary "unfinished ' + encoded_string("Public readiness guidance", 2),
+                     '"public" "guidance"', r'"public\q" "guidance"'):
+            report = copy.deepcopy(saved)
+            report["judgment"]["assessment"]["interpretation"] = text
+            before = evidence.encoded(report)
+            review.validate_review(report, context)
+            self.assertTrue(review.render_review(report, context).startswith(b"# Skill review\n"))
+            self.assertEqual(evidence.encoded(report), before)
+        self.assertEqual(evidence.encoded(context.value), original)
+
+    def test_overlapping_json_prepare_rejects_selected_source_and_support(self):
+        for text in ('ordinary "unfinished ' + encoded_string("/home/synthetic/private", 2),
+                     '"ordinary ' + encoded_string("/home/synthetic/private", 1)):
+            with tempfile.TemporaryDirectory() as folder:
+                self.root = Path(folder)
+                with self.assertRaises(ValueError):
+                    self.control(agent_output=text)
+            with tempfile.TemporaryDirectory() as folder:
+                self.root = Path(folder)
+                control = self.control()
+                path = self.root / "source/SKILL.md"
+                unsafe = path.read_bytes() + text.encode() + b"\n"
+                path.write_bytes(unsafe)
+                changed = copy.deepcopy(control.value["records"][control.value["selected_record_id"]])
+                changed["source"]["content"] = evidence.content(
+                    [{"member": "SKILL.md", "digest": evidence.digest_bytes(unsafe)}], "synthetic")
+                bundle, saved, rid = self.bundle(changed, "overlapping-source")
+                with self.assertRaises(ValueError):
+                    review.prepare([bundle], saved, "podman", rid, source=path.parent)
+                self.assertEqual(path.read_bytes(), unsafe)
+
+    def test_overlapping_json_mocked_generation_and_request_screening_reject(self):
+        context = self.control()
+        assemble = review.common_request
+        screen = review.screen_request
+        for text in ('ordinary "unfinished ' + encoded_string("/home/synthetic/private", 2),
+                     '"ordinary ' + encoded_string("/home/synthetic/private", 1)):
+            model = judgment(context, compact=True)
+            model["assessment"]["interpretation"] = text
+            calls, run = self.invoke(context, model)
+            with self.assertRaises(review.InferenceRejected):
+                asyncio.run(run())
+            self.assertEqual(len(calls), 2)
+            def unsafe_request(ctx, config):
+                return {**assemble(ctx, config), "metadata": {"public_label": text}}
+            with patch.object(review, "common_request", side_effect=unsafe_request):
+                calls, run = self.invoke(context)
+                with self.assertRaises(review.InferenceRejected):
+                    asyncio.run(run())
+            self.assertEqual(calls, [])
+            screenings = 0
+            def unsafe_after_count(request, ctx):
+                nonlocal screenings
+                if screenings == 1:
+                    request["metadata"] = {"public_label": text}
+                screenings += 1
+                screen(request, ctx)
+            with patch.object(review, "screen_request", side_effect=unsafe_after_count):
+                calls, run = self.invoke(context)
+                with self.assertRaises(review.InferenceRejected):
+                    asyncio.run(run())
+            self.assertEqual(len(calls), 1)  # Token counting passed; generation was blocked.
+
     def test_nested_json_harmless_literals_preserve_values_and_reports(self):
         context = self.control()
         _, run = self.invoke(context)
@@ -865,7 +961,9 @@ class ReviewTests(unittest.TestCase):
 
     def test_nested_json_malformed_literals_are_not_general_decoding(self):
         for text in ('ordinary "unfinished', r'"public\q"', r'"public\u12"',
-                     r'\u002fhome\u002fsynthetic', "JTIwaGFybWxlc3M=", "%2Fpublic%2Fdata"):
+                     r'\u002fhome\u002fsynthetic', "JTIwaGFybWxlc3M=", "%2Fpublic%2Fdata",
+                     'ordinary "unfinished ' + encoded_string("مرحبا λ 👩\u200d💻", 2),
+                     '"public" "guidance"', r'"public\q" "guidance"'):
             with self.subTest(text=text):
                 self.assertEqual(review.screen_payload({"text": text}), {"text": text})
         for prefix in ('"malformed\n', '"malformed\\\n', '"malformed\r'):
@@ -895,6 +993,12 @@ class ReviewTests(unittest.TestCase):
                 checker(["public", "public"], _budget=review._ScreenBudget(8, 100))
         with self.assertRaisesRegex(ValueError, "literal limit"):
             review.screen_fragment(r'"\q" "\q"', _budget=review._ScreenBudget(10000, 1))
+        # The closing quote also opens an overlapping candidate, even if it is malformed.
+        for text in ('"one" "two"', r'"one" \q "two"'):
+            with self.assertRaisesRegex(ValueError, "literal limit"):
+                review.screen_fragment(text, _budget=review._ScreenBudget(10000, 2))
+        with self.assertRaisesRegex(ValueError, "work limit"):
+            review.screen_fragment('"""', _budget=review._ScreenBudget(260, 10))
         context = self.control()
         with patch.object(review, "SCREEN_WORK_LIMIT", 0):
             calls, run = self.invoke(context)
@@ -905,7 +1009,8 @@ class ReviewTests(unittest.TestCase):
     def test_nested_json_selected_source_and_support_preserve_authenticated_bytes(self):
         context = self.control()
         snapshot = self.root / "source"
-        raw = (snapshot / "SKILL.md").read_bytes() + encoded_string("Public readiness guidance", 3).encode() + b"\n"
+        raw = (snapshot / "SKILL.md").read_bytes() + (
+            'ordinary "unfinished ' + encoded_string("Public readiness guidance", 3)).encode() + b"\n"
         (snapshot / "SKILL.md").write_bytes(raw)
         record = copy.deepcopy(context.value["records"][context.value["selected_record_id"]])
         record["source"]["content"] = evidence.content(
