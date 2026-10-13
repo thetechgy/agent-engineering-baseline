@@ -64,13 +64,15 @@ def boundary_check(boundary):
     return check
 
 
-def boundary_call(boundary, operation, *args, allow_collision=False, **kwargs):
+def boundary_call(boundary, operation, *args, allow_collision=False, allow_missing=False, **kwargs):
     """Translate known protection/race errors only at a specific OS call."""
     try:
         return operation(*args, **kwargs)
     except OSError as error:
         if allow_collision and isinstance(error, FileExistsError):
             raise  # Only temporary-name collisions retain the existing bounded retry.
+        if allow_missing and isinstance(error, FileNotFoundError):
+            raise  # The path walker alone decides whether a missing final component is permitted.
         if error.errno in (errno.ENOENT, errno.ENOTDIR, errno.ELOOP, errno.EEXIST, errno.EACCES, errno.EPERM):
             raise EvidenceBoundaryError('Filesystem boundary rejected', boundary) from None
         raise
@@ -211,7 +213,7 @@ def safe_path(path, *, directory=False, missing=False, directory_identities=None
     for part in path.parts[1:]:
         current /= part
         try:
-            info = current.lstat()
+            info = boundary_call(boundary, current.lstat, allow_missing=True)
         except FileNotFoundError:
             require(missing and current == path, 'Missing input component')
             return path
@@ -2848,7 +2850,7 @@ def write_outputs(values, destination=None, workspace=ROOT, input_path=None, *,
     forbidden_directories = set()
     for boundary in (workspace, *boundaries):
         if boundary is not None and boundary.exists():
-            info = boundary.lstat()
+            info = boundary_call("integrity", boundary.lstat)
             if stat.S_ISDIR(info.st_mode): forbidden_directories.add((info.st_dev, info.st_ino))
     parent_fd = open_directory(parent, parent_identities, 'Output parent directory changed', True)
     try:
@@ -2882,7 +2884,7 @@ def write_outputs(values, destination=None, workspace=ROOT, input_path=None, *,
                 try: reservation_parent = directory_state(os.fstat(parent_fd))
                 except OSError: pass
                 raise
-            created = os.stat(destination.name, dir_fd=parent_fd, follow_symlinks=False)
+            created = boundary_call("output", os.stat, destination.name, dir_fd=parent_fd, follow_symlinks=False)
             reserved = private_reservation(created)
             require(reserved, 'Output directory changed')
             directory_fd = boundary_call("output", os.open, destination.name,
@@ -2894,7 +2896,7 @@ def write_outputs(values, destination=None, workspace=ROOT, input_path=None, *,
                     and not original.st_mode & 0o077 and not os.listdir(directory_fd), 'Output directory changed')
             owned = True
             def unchanged():
-                current = destination.lstat()
+                current = boundary_call("output", destination.lstat)
                 require(stat.S_ISDIR(current.st_mode) and (current.st_dev, current.st_ino) ==
                         (original.st_dev, original.st_ino), 'Output directory changed')
             unchanged()

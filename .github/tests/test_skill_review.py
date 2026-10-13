@@ -3424,6 +3424,62 @@ class ReviewTests(unittest.TestCase):
         self.assertEqual(value["usage"]["total_tokens"], 1500)
 
 
+    def test_review_path_metadata_failures_keep_integrity_and_missing_semantics(self):
+        import errno
+        self.control()
+        target = Path(self.args[1])
+        lstat = Path.lstat
+        for number in (errno.ENOTDIR, errno.EACCES):
+            def denied(path, *args, **kwargs):
+                if path == target:
+                    raise OSError(number, "AUDIT-PRIVATE-SENTINEL")
+                return lstat(path, *args, **kwargs)
+            stderr = StringIO()
+            with self.subTest(errno=number), patch.object(Path, "lstat", side_effect=denied, autospec=True), \
+                    patch("openai.AsyncOpenAI") as sdk, redirect_stderr(stderr):
+                with self.assertRaises(evidence.EvidenceBoundaryError):
+                    review.main(["review", *self.args, "--model", CONFIG["model"], "--authorize-inference", "--diagnostics"])
+                sdk.assert_not_called()
+            value = json.loads(stderr.getvalue())
+            self.assertEqual((value["code"], value["stage"]), ("evidence_integrity_rejected", "preflight"))
+            self.assertNotIn("AUDIT-PRIVATE-SENTINEL", stderr.getvalue())
+            self.assertNotIn(str(target), stderr.getvalue())
+        missing = self.root / "new-output"
+        self.assertEqual(evidence.safe_path(missing, directory=True, missing=True, boundary="output"), missing)
+        with self.assertRaises(evidence.EvidenceBoundaryError) as caught:
+            evidence.safe_path(self.root / "missing-parent" / "child", missing=True)
+        self.assert_diagnostic(caught.exception, "evidence_integrity_rejected", ("provenance", "input_provenance_digest"))
+
+    def test_review_reservation_metadata_failures_preserve_cleanup(self):
+        import errno
+        stat_call, lstat = evidence.os.stat, Path.lstat
+        for number in (errno.ENOENT, errno.EACCES):
+            for operation in ("stat", "lstat"):
+                output = self.root / f"reservation-{number}-{operation}"
+                calls = 0
+                def missing_stat(path, *args, **kwargs):
+                    nonlocal calls
+                    if path == output.name and "dir_fd" in kwargs:
+                        calls += 1
+                        if calls == 1:
+                            raise OSError(number, "AUDIT-PRIVATE-SENTINEL")
+                    return stat_call(path, *args, **kwargs)
+                def missing_lstat(path, *args, **kwargs):
+                    nonlocal calls
+                    if path == output and output.is_dir():
+                        calls += 1
+                        if calls == 2:  # After the file stream closed; cleanup must remove only owned output.
+                            raise OSError(number, "AUDIT-PRIVATE-SENTINEL")
+                    return lstat(path, *args, **kwargs)
+                failure = patch.object(evidence.os, "stat", side_effect=missing_stat) if operation == "stat" else \
+                    patch.object(Path, "lstat", side_effect=missing_lstat, autospec=True)
+                with self.subTest(errno=number, operation=operation), failure:
+                    with self.assertRaises(evidence.EvidenceBoundaryError) as caught:
+                        evidence.write_outputs({"fixture.json": {"safe": True}}, output)
+                self.assert_diagnostic(caught.exception, "output_boundary_rejected", ("output",), stage="output_persistence")
+                self.assertFalse(output.exists())
+
+
 
 if __name__ == "__main__":
     unittest.main()
