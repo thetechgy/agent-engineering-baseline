@@ -458,6 +458,7 @@ def json_string_literals(text):
         if start < 0:
             break
         cursor = start + 1
+        valid_prefix = True
         while cursor < len(text):
             char = text[cursor]
             cursor += 1
@@ -465,13 +466,25 @@ def json_string_literals(text):
                 if cursor < len(text) and text[cursor] in "\r\n":
                     cursor += 1
                     break
+                if cursor < len(text):
+                    escaped = text[cursor]
+                    # Escaping from an already malformed candidate cannot hide a new opening.
+                    if escaped == '"' and not valid_prefix:
+                        continue
+                    if escaped not in '"\\/bfnrtu' or (
+                        escaped == "u" and re.fullmatch(r"[0-9a-fA-F]{4}", text[cursor + 1:cursor + 5]) is None
+                    ):
+                        valid_prefix = False
                 cursor += 1
             elif char == '"':
                 yield text[start:cursor], cursor
                 # A prose quote may have consumed a later literal's opening quote.
                 start = cursor - 1
+                valid_prefix = True
             elif char in "\r\n":
                 break  # Raw newlines cannot occur inside a valid JSON string.
+            elif ord(char) < 0x20:
+                valid_prefix = False
 
 
 @dataclass

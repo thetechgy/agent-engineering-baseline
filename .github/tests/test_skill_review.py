@@ -824,7 +824,8 @@ class ReviewTests(unittest.TestCase):
         for sensitive in ("/home/synthetic/private", r"C:\Users\SyntheticUser\private",
                           "contact@example.invalid", '{"api_key": "synthetic-value"}',
                           "prefix\x1bsuffix", "prefix\u202esuffix"):
-            for prefix in ('ordinary "unfinished ', '"ordinary '):
+            for prefix in ('ordinary "unfinished ', '"ordinary ', r'"ordinary\q ' + "\\",
+                           r'"ordinary\u12xz ' + "\\", '"ordinary\t ' + "\\"):
                 for layers in (1, 2, 3):
                     text = prefix + encoded_string(sensitive, layers)
                     with self.subTest(sensitive=sensitive[:12], prefix=prefix, layers=layers):
@@ -861,7 +862,8 @@ class ReviewTests(unittest.TestCase):
 
     def test_overlapping_json_prepare_rejects_selected_source_and_support(self):
         for text in ('ordinary "unfinished ' + encoded_string("/home/synthetic/private", 2),
-                     '"ordinary ' + encoded_string("/home/synthetic/private", 1)):
+                     '"ordinary ' + encoded_string("/home/synthetic/private", 1),
+                     r'"ordinary\q ' + "\\" + encoded_string("/home/synthetic/private", 2)):
             with tempfile.TemporaryDirectory() as folder:
                 self.root = Path(folder)
                 with self.assertRaises(ValueError):
@@ -885,7 +887,8 @@ class ReviewTests(unittest.TestCase):
         assemble = review.common_request
         screen = review.screen_request
         for text in ('ordinary "unfinished ' + encoded_string("/home/synthetic/private", 2),
-                     '"ordinary ' + encoded_string("/home/synthetic/private", 1)):
+                     '"ordinary ' + encoded_string("/home/synthetic/private", 1),
+                     r'"ordinary\q ' + "\\" + encoded_string("/home/synthetic/private", 2)):
             model = judgment(context, compact=True)
             model["assessment"]["interpretation"] = text
             calls, run = self.invoke(context, model)
@@ -911,6 +914,16 @@ class ReviewTests(unittest.TestCase):
                 with self.assertRaises(review.InferenceRejected):
                     asyncio.run(run())
             self.assertEqual(len(calls), 1)  # Token counting passed; generation was blocked.
+
+    def test_malformed_json_prose_retains_benign_escaped_openings_and_budgets(self):
+        for prefix in (r'"ordinary\q ', r'"ordinary\u12xz ', '"ordinary\t '):
+            text = prefix + "\\" + encoded_string("Public readiness guidance", 2)
+            payload = {"text": text}
+            before = evidence.encoded(payload)
+            self.assertEqual(review.screen_payload(payload), payload)
+            self.assertEqual(evidence.encoded(payload), before)
+            with self.assertRaisesRegex(ValueError, "literal limit"):
+                review.screen_fragment(text, _budget=review._ScreenBudget(10000, 1))
 
     def test_nested_json_harmless_literals_preserve_values_and_reports(self):
         context = self.control()

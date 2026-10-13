@@ -1556,6 +1556,9 @@ their assignment context. Inspection uses a forward-only quote scanner and a
 screening copy. Each unescaped closing quote also starts the next candidate, so
 an earlier prose quote cannot swallow a later encoded literal's opening boundary.
 Overlapping candidates consume the same shared budget, including malformed spans.
+Invalid JSON escapes or raw JSON control characters invalidate a candidate's
+escape context; subsequent escaped quotes are reconsidered as candidate boundaries.
+Valid-string escape handling remains intact, and malformed prose is not repaired.
 Inspection preserves original bytes, source identities, hashes and saved
 values. Decoded spellings never acquire source technical-syntax exemptions.
 Each screening pass permits at most eight decoding steps per path and 65,536
