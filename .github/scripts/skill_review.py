@@ -32,6 +32,9 @@ CONTEXT_LIMIT = 8 * 1024 * 1024
 REPORT_LIMIT = 1024 * 1024
 MAX_SUPPORT = 128
 MAX_TECHNICAL_SPANS = 1000
+SCREEN_DEPTH_LIMIT = 8
+SCREEN_WORK_LIMIT = 64 * 1024 * 1024
+SCREEN_LITERAL_LIMIT = 65536
 BIDI_CONTROLS = r"[\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]"
 BEHAVIOR_CARRIERS = ("agent_output", "transcript", "trajectory", "messages", "commands", "stdout")
 JUDGMENT_CARRIERS = ("verifier_result", "rewards", "grader", "feedback")
@@ -444,60 +447,124 @@ def selected_lines(text, start, end, *, spans=(), error_message="Invalid excerpt
     return excerpt, start, end, len(lines), projected
 
 
-JSON_STRING = r'"(?:[^"\\\r\n]|\\.)*"'
+JSON_ASSIGNMENT = re.compile(r"\s*(?::(?!\s*null\b)|=)")
 
 
-def screen_fragment(text, *, technical_spans=()):
-    """Screen selected decoded text and JSON string literals/assignments within it."""
+def json_string_literals(text):
+    """Overlapping quote boundaries in one forward pass, including malformed candidates."""
+    cursor = 0
+    while cursor < len(text):
+        start = text.find('"', cursor)
+        if start < 0:
+            break
+        cursor = start + 1
+        valid_prefix = True
+        while cursor < len(text):
+            char = text[cursor]
+            cursor += 1
+            if char == "\\":
+                if cursor < len(text) and text[cursor] in "\r\n":
+                    cursor += 1
+                    break
+                if cursor < len(text):
+                    escaped = text[cursor]
+                    # Escaping from an already malformed candidate cannot hide a new opening.
+                    if escaped == '"' and not valid_prefix:
+                        continue
+                    if escaped not in '"\\/bfnrtu' or (
+                        escaped == "u" and re.fullmatch(r"[0-9a-fA-F]{4}", text[cursor + 1:cursor + 5]) is None
+                    ):
+                        valid_prefix = False
+                cursor += 1
+            elif char == '"':
+                yield text[start:cursor], cursor
+                # A prose quote may have consumed a later literal's opening quote.
+                start = cursor - 1
+                valid_prefix = True
+            elif char in "\r\n":
+                break  # Raw newlines cannot occur inside a valid JSON string.
+            elif ord(char) < 0x20:
+                valid_prefix = False
+
+
+@dataclass
+class _ScreenBudget:
+    remaining_work: int
+    remaining_literals: int
+
+    def inspect(self, size):
+        require(size <= self.remaining_work, "Encoded string screening work limit")
+        self.remaining_work -= size
+
+    def literal(self, size):
+        require(self.remaining_literals > 0, "Encoded string screening literal limit")
+        self.remaining_literals -= 1
+        # Charge attempted decoding as well as characters, including empty/malformed literals.
+        self.inspect(size + 256)
+
+
+def screen_fragment(text, *, technical_spans=(), _budget=None, _assignment_key=False):
+    """Inspect valid nested JSON string literals in a bounded copy; never rewrite evidence."""
     from skillevaluator.utils.redaction import is_sensitive_key
 
-    checked_text(text, technical_spans=technical_spans)
-    scanned = technical_view(text, technical_spans)
-    for match in re.finditer(JSON_STRING, scanned):
-        try:
-            decoded = evidence.parse_json(match.group().encode())
-        except ValueError:
-            continue  # Ordinary prose quotes need not be valid JSON.
-        checked_text(decoded)
-    for match in re.finditer(r"(" + JSON_STRING + r")\s*:\s*(?!null\b)", scanned):
-        key = evidence.parse_json(match.group(1).encode())
-        require(not is_sensitive_key(key), "Credential assignment in selected text")
+    budget = _budget if _budget is not None else _ScreenBudget(SCREEN_WORK_LIMIT, SCREEN_LITERAL_LIMIT)
+    pending = [(text, 0, technical_spans, _assignment_key)]
+    while pending:
+        node, depth, spans, assignment_key = pending.pop()
+        require(type(node) is str, "Invalid evidence text")
+        budget.inspect(len(node))
+        checked_text(node, technical_spans=spans)
+        scanned = technical_view(node, spans)
+        if assignment_key:
+            require(not is_sensitive_key(scanned), "Credential assignment in selected text")
+        for literal, end in json_string_literals(scanned):
+            budget.literal(len(literal))
+            try:
+                decoded = json.loads(literal)
+            except json.JSONDecodeError:
+                continue  # Malformed prose quotes are not a decoding instruction.
+            require(depth < SCREEN_DEPTH_LIMIT, "Encoded string screening depth limit")
+            # Exemptions belong only to authenticated raw spans, never decoded spellings.
+            pending.append((decoded, depth + 1, (),
+                            assignment_key or JSON_ASSIGNMENT.match(scanned, end) is not None))
 
 
-def check_report_text(value, *, technical_fields=None, path=()):
+def check_report_text(value, *, technical_fields=None, path=(), _budget=None):
     """Apply text gates before serialization can hide controls or private paths."""
+    budget = _budget if _budget is not None else _ScreenBudget(SCREEN_WORK_LIMIT, SCREEN_LITERAL_LIMIT)
     if type(value) is str:
+        budget.inspect(len(value))
         require(
             not re.search(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]|" + BIDI_CONTROLS, value),
             "Control characters in review text",
         )
-        screen_fragment(value, technical_spans=(technical_fields or {}).get(path, ()))
+        screen_fragment(value, technical_spans=(technical_fields or {}).get(path, ()), _budget=budget)
     elif type(value) is dict:
         for key, item in value.items():
-            check_report_text(key)
-            check_report_text(item, technical_fields=technical_fields, path=(*path, key))
+            check_report_text(key, _budget=budget)
+            check_report_text(item, technical_fields=technical_fields, path=(*path, key), _budget=budget)
     elif type(value) is list:
         for i, item in enumerate(value):
-            check_report_text(item, technical_fields=technical_fields, path=(*path, i))
+            check_report_text(item, technical_fields=technical_fields, path=(*path, i), _budget=budget)
 
 
-def screen_payload(value, *, technical_fields=None, path=()):
+def screen_payload(value, *, technical_fields=None, path=(), _budget=None):
     """Decoded gates plus credential key/value joins, then a full serialized screening copy."""
     from skillevaluator.utils.redaction import is_sensitive_key
 
     fields = technical_fields or {}
+    budget = _budget if _budget is not None else _ScreenBudget(SCREEN_WORK_LIMIT, SCREEN_LITERAL_LIMIT)
 
     def walk(node, location):
         if type(node) is str:
             spans = fields.get(location, ())
-            checked_text(node, technical_spans=spans)
+            screen_fragment(node, technical_spans=spans, _budget=budget)
             return technical_view(node, spans)
         if type(node) is list:
             return [walk(item, (*location, i)) for i, item in enumerate(node)]
         if type(node) is dict:
             result = {}
             for key, item in node.items():
-                checked_text(key)
                 # Validated public records and their analysis copies carry policy names, not credentials.
                 record_path = location[2:] if location[:1] == ("records",) else (
                     location[3:] if location[:2] == ("analysis", "behavioral_results") else ()
@@ -508,23 +575,27 @@ def screen_payload(value, *, technical_fields=None, path=()):
                     and type(record_path[1]) is int and record_path[-2:] == ("condition", "execution")
                 )
                 require(item is None or not is_sensitive_key(key) or policy_name, "Credential field in payload")
+                screen_fragment(key, _budget=budget, _assignment_key=item is not None and not policy_name)
                 result[key] = walk(item, (*location, key))
             return result
         return node
 
     screened = walk(value, path)
-    checked_text(evidence.encoded(screened))
+    serialized = evidence.encoded(screened)
+    budget.inspect(len(serialized))
+    checked_text(serialized)
     return screened
 
 
 def screen_context(value):
+    budget = _ScreenBudget(SCREEN_WORK_LIMIT, SCREEN_LITERAL_LIMIT)
     fields = {("source_context", "members", i, "text"): row["technical_spans"]
               for i, row in enumerate(value["source_context"]["members"])}
     for i, row in enumerate(value["source_context"]["members"]):
-        screen_fragment(row["text"], technical_spans=fields[("source_context", "members", i, "text")])
+        screen_fragment(row["text"], technical_spans=fields[("source_context", "members", i, "text")], _budget=budget)
     for row in value["qualitative"]:
-        screen_fragment(row["text"])
-    return screen_payload(value, technical_fields=fields)
+        screen_fragment(row["text"], _budget=budget)
+    return screen_payload(value, technical_fields=fields, _budget=budget)
 
 
 class PrivateContractError(ValueError):
