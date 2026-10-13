@@ -25,6 +25,7 @@ import skill_evidence as evidence  # noqa: E402 - standalone import after no-byt
 import skill_analysis as analysis  # noqa: E402 - standalone import after no-bytecode/path setup
 from test_skill_analysis import synthetic, configuration, write  # noqa: E402 - standalone import after no-bytecode/path setup
 import httpx  # noqa: E402 - standalone import after no-bytecode/path setup
+from jsonschema import Draft202012Validator, ValidationError  # noqa: E402 - pinned evaluator dependency
 from openai import AsyncOpenAI  # noqa: E402 - standalone import after no-bytecode/path setup
 
 FIXTURES = Path(__file__).parent / "fixtures/skill_review"
@@ -790,6 +791,83 @@ class ReviewTests(unittest.TestCase):
                 self.assertFalse(row["additionalProperties"])
                 self.assertEqual(set(row["required"]), set(row["properties"]))
 
+    def test_contextual_schema_binds_all_sufficiency_occurrences(self):
+        complete = self.control(empty_source=True)
+        partial_source = self.root / "partial-source"
+        partial_source.mkdir()
+        (partial_source / "SKILL.md").write_bytes((self.root / "source/SKILL.md").read_bytes())
+        contexts = [complete]
+        for source in (partial_source, None):
+            contexts.append(review.prepare(
+                [Path(self.args[1])], Path(self.args[3]), "podman", self.args[7],
+                source, self.root / "support",
+            ))
+        self.assertEqual([ctx.value["source_context"]["coverage"] for ctx in contexts],
+                         ["complete", "partial", "unavailable"])
+        for context in contexts:
+            with self.subTest(coverage=context.value["source_context"]["coverage"]):
+                schema = review.schema(context)
+                Draft202012Validator.check_schema(schema)
+                validator = Draft202012Validator(schema)
+                value = judgment(context, category="investigate")
+                validator.validate(value)
+                for occurrence in ("Assessment", "Recommendation"):
+                    self.assertEqual(schema["$defs"][occurrence]["properties"]["sufficiency"],
+                                     {"$ref": "#/$defs/Sufficiency"})
+                properties = schema["$defs"]["Sufficiency"]["properties"]
+                for field, key in (("source_coverage", "coverage"), ("source_integrity", "integrity"),
+                                   ("source_identity", "identity")):
+                    expected = context.value["source_context"][key]
+                    self.assertEqual(properties[field]["enum"], [expected])
+                    self.assertNotIn("const", properties[field])
+                    wrong = ("partial" if expected != "partial" else "complete") if key == "coverage" else (
+                        ("unavailable" if expected == "verified" else "verified") if key == "integrity"
+                        else "sha256:" + "0" * 64
+                    )
+                    for block in ("assessment", "recommendation"):
+                        bad = copy.deepcopy(value)
+                        target = bad["assessment"] if block == "assessment" else bad["recommendations"][0]
+                        target["sufficiency"][field] = wrong
+                        with self.assertRaises(ValidationError):
+                            validator.validate(bad)
+                        # The host rejects even when the model-bound schema is bypassed.
+                        with self.assertRaisesRegex(ValueError, "Source sufficiency mismatch"):
+                            review.validate_judgment(bad, context)
+                        self.assertEqual(target["sufficiency"][field], wrong)
+
+    def test_contextual_schema_construction_is_isolated_and_deterministic(self):
+        context = self.control()
+        unavailable = review.prepare(
+            [Path(self.args[1])], Path(self.args[3]), "podman", self.args[7], None, self.root / "support",
+        )
+        original_context = evidence.encoded(context.value)
+        static = review.schema()
+        contextual = review.schema(context)
+        expected = copy.deepcopy(contextual)
+        other = review.schema(unavailable)
+        self.assertNotEqual(contextual, other)
+        self.assertEqual(review.schema(context), expected)
+        contextual["$defs"]["Sufficiency"]["properties"]["source_identity"]["enum"][0] = "Changed"
+        contextual["$defs"]["Citation"]["properties"]["claim"]["enum"].clear()
+        self.assertEqual(review.schema(context), expected)
+        self.assertEqual(review.schema(unavailable), other)
+        self.assertEqual(review.schema(), static)
+        self.assertEqual(evidence.encoded(context.value), original_context)
+        self.assertEqual(expected["$defs"]["Citation"], static["$defs"]["Citation"])
+
+    def test_sdk_rejects_incorrect_source_metadata_without_repair_or_retry(self):
+        context = self.control()
+        for block in ("assessment", "recommendation"):
+            value = judgment(context, category="investigate")
+            target = value["assessment"] if block == "assessment" else value["recommendations"][0]
+            target["sufficiency"]["source_identity"] = "sha256:" + "0" * 64
+            original = copy.deepcopy(value)
+            calls, run = self.invoke(context, value)
+            with self.assertRaisesRegex(ValueError, "Inference rejected; new manual invocation required"):
+                asyncio.run(run())
+            self.assertEqual(len(calls), 2)
+            self.assertEqual(value, original)
+
     def test_prepare_complete_source_and_native_measurements_unchanged(self):
         context = self.control()
         self.assertEqual(context.value["source_context"]["coverage"], "complete")
@@ -1499,6 +1577,15 @@ class ReviewTests(unittest.TestCase):
         self.assertEqual(generation["tools"], [])
         self.assertEqual(generation["truncation"], "disabled")
         self.assertTrue(generation["text"]["format"]["strict"])
+        bound_schema = count["text"]["format"]["schema"]
+        self.assertEqual(bound_schema, review.schema(context))
+        self.assertEqual(generation["text"]["format"]["schema"], bound_schema)
+        self.assertEqual(result["provenance"]["schema_digest"], evidence.identity(bound_schema))
+        for incorrect_schema in (review.schema(), {**bound_schema, "description": "Changed"}):
+            tampered = copy.deepcopy(result)
+            tampered["provenance"]["schema_digest"] = evidence.identity(incorrect_schema)
+            with self.assertRaisesRegex(ValueError, "Host provenance mismatch"):
+                review.validate_review(tampered, context)
         self.assertFalse(result["provenance"]["automated_publication_eligible"])
         self.assertEqual(result["provenance"]["quality_qualification"], "not_quality_qualified")
         self.assertEqual(review.validate_review(result, context), result)
