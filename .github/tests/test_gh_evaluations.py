@@ -139,6 +139,8 @@ class GhOfflineTests(unittest.TestCase):
                 "first:100", "first:$first") for value in command] + ["-F", "first=100"],
             [value.replace("$owner", "$org").replace("$name", "$repo").replace(
                 "owner=fixture-org", "org=fixture-org").replace("name=widget", "repo=widget") for value in command],
+            [value.replace("query=query(", "query=query Threads(") for value in command]
+                + ["--raw-field", "operationName=Threads"],
         ]
         reordered = command.copy()
         reordered[query_index] = ('query=query Threads($name:String!, $endCursor:String, $owner:String!) { '
@@ -209,6 +211,9 @@ class GhOfflineTests(unittest.TestCase):
             [value.replace("$owner:String!", '$owner:String!="fixture-org"') for value in command],
             [value.replace("name:$name){", "name:$name)@skip(if:true){") for value in command],
             [value.replace("$owner:String!", "$owner:[String!]") for value in command],
+            [value.replace("query=query(", "query=query Threads(") for value in command]
+                + ["--raw-field", "operationName=Other"],
+            command + ["--raw-field", "operationName=Threads"],
         ]
         for args in variants:
             with self.subTest(command=args):
@@ -247,9 +252,25 @@ class GhOfflineTests(unittest.TestCase):
         raw_command = command[:command.index("--jq")]
         raw = fixture.dispatch(case, raw_command, [])
         slurp = fixture.dispatch(case, raw_command + ["--slurp"], [])
-        self.assertEqual(json.loads(slurp["stdout"]), [json.loads(line) for line in raw["stdout"].splitlines()])
+        self.assertEqual(json.loads(raw["stdout"]), [item for page in json.loads(slurp["stdout"]) for item in page])
+        self.assertEqual(len(json.loads(raw["stdout"])), 32)
         self.assertIn("pull_request", json.loads(slurp["stdout"])[1][-1])
         self.assertNotEqual(fixture.dispatch(case, command + ["--slurp"], [])["exit_code"], 0)
+
+    def test_projected_response_without_thread_ids_does_not_prove_task_completion(self):
+        fixture, entry, case, command = self.graphql_fixture()
+        missing_ids = [value.replace("nodes{id isResolved", "nodes{isResolved") for value in command]
+        response = fixture.dispatch(case, missing_ids, [])
+        self.assertEqual(response["exit_code"], 0)
+        self.assertEqual(response["route"], "threads-partial-selection")
+        self.assertNotIn('"id"', response["stdout"])
+        entry["contract"]["good_commands"] = [missing_ids]
+        metrics = gh.replay_case(entry)["custom_metrics"]
+        self.assertEqual(metrics["gh_commands"], 1)
+        self.assertEqual(metrics["gh_authorization"], 1)
+        self.assertEqual(metrics["gh_task"], 0)
+        self.assertEqual(metrics["gh_recovery"], 0)
+        self.assertEqual(metrics["gh_gate"], 0)
 
     def test_fixture_contract_changes_have_distinct_dataset_and_policy_identities(self):
         import skill_evidence as evidence
@@ -471,7 +492,7 @@ class GhNativeTests(unittest.TestCase):
                 task = stage_native_harbor_tasks(skill, root / str(with_skill), with_skill=with_skill,
                     grading_mode="default_plus_custom", workspace_mode="group",
                     workspace_skill_paths=[skill.parent / gh.COMPETING])[0]
-                for variant in ("slurp", "invalid", "receipt", "audit", "old-contract"):
+                for variant in ("slurp", "invalid", "missing-id", "operation", "receipt", "audit", "old-contract"):
                     with self.subTest(arm=with_skill, variant=variant):
                         workspace = root / f"workspace-{with_skill}-{variant}"
                         workspace.mkdir()
@@ -499,8 +520,13 @@ class GhNativeTests(unittest.TestCase):
                             args = original["contract"]["good_commands"][-1] + ["--slurp"]
                             if variant == "invalid":
                                 args = [value.replace("query=query(", "query=query(???") for value in args]
+                            if variant == "missing-id":
+                                args = [value.replace("nodes{id isResolved", "nodes{isResolved") for value in args]
+                            if variant == "operation":
+                                args = [value.replace("query=query(", "query=query Threads(") for value in args]
+                                args += ["--raw-field", "operationName=Other"]
                             result = observed(shlex.join(["gh", *args]))
-                            self.assertEqual(result.returncode == 0, variant != "invalid")
+                            self.assertEqual(result.returncode == 0, variant not in ("invalid", "operation"))
                             if variant == "slurp":
                                 self.assertEqual(len(json.loads(result.stdout)), 2)
                             if variant == "receipt":
@@ -538,7 +564,7 @@ class GhNativeTests(unittest.TestCase):
                         else:
                             self.assertEqual(metrics["gh_task"], 0)
                             self.assertEqual(metrics["gh_recovery"], 0)
-                            if variant != "invalid":
+                            if variant not in ("invalid", "missing-id", "operation"):
                                 self.assertEqual(metrics["gh_evidence"], 0)
 
     def test_native_adapter_preserves_pinned_build_inputs_in_both_arms(self):

@@ -115,7 +115,11 @@ selections: repository review threads and issue total counts. It consumes the
 whole operation, accepts named queries, comments, insignificant whitespace and
 commas, reordered selections/arguments/variables, scalar literals and typed
 variables, and validates field nesting, argument types and required values.
-Responses contain only selected fields. It is not a general GitHub schema
+Responses contain only selected fields. Named operations honor `operationName`;
+a mismatched selection fails.
+Valid partial thread selections remain authorized reads, but only a query that
+selects thread IDs can satisfy an ID-collection task's successful route.
+It is not a general GitHub schema
 validator. Aliases, fragments, directives, defaults, list values, other fields,
 page sizes other than 100, and manual cursor requests remain unsupported.
 Invalid modeled queries receive errors and cannot satisfy the successful route
@@ -125,6 +129,8 @@ selection depth are bounded. The grammar follows the
 
 For API output, `--paginate --slurp` wraps complete JSON pages in an outer array;
 it does not flatten their contents. `--jq` filters each page without slurp.
+Raw REST array pages are combined into one array in the modeled non-TTY context;
+raw GraphQL object pages remain separate JSON documents.
 As in [gh 2.102.0](https://github.com/cli/cli/blob/v2.102.0/pkg/cmd/api/api.go),
 slurp requires pagination and cannot be combined with `--jq`.
 The gh-007 replay therefore uses a per-page issue filter without slurp, retaining

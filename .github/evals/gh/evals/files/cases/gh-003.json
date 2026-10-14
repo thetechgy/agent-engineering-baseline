@@ -45,6 +45,42 @@
           "isResolved",
           "pageInfo",
           "hasNextPage",
+          "endCursor",
+          "id"
+        ],
+        "fields": {
+          "owner": "fixture-org",
+          "name": "widget"
+        },
+        "allow": [
+          "--raw-field",
+          "--field"
+        ]
+      },
+      "responses": [
+        {
+          "stdout": "{\"data\": {\"repository\": {\"pullRequest\": {\"reviewThreads\": {\"nodes\": [{\"id\": \"T1\", \"isResolved\": false, \"comments\": {\"nodes\": [{\"body\": \"Check null input\"}]}}], \"pageInfo\": {\"hasNextPage\": true, \"endCursor\": \"C1\"}}}}}}\n{\"data\": {\"repository\": {\"pullRequest\": {\"reviewThreads\": {\"nodes\": [{\"id\": \"T2\", \"isResolved\": false, \"comments\": {\"nodes\": [{\"body\": \"Check empty input\"}]}}], \"pageInfo\": {\"hasNextPage\": false, \"endCursor\": null}}}}}}"
+        }
+      ]
+    },
+    {
+      "id": "threads-partial-selection",
+      "match": {
+        "pos": [
+          "api",
+          "graphql"
+        ],
+        "options": {
+          "--paginate": [
+            true
+          ]
+        },
+        "repo": "fixture-org/widget",
+        "query": [
+          "reviewThreads",
+          "isResolved",
+          "pageInfo",
+          "hasNextPage",
           "endCursor"
         ],
         "fields": {
@@ -76,7 +112,8 @@
           "isResolved",
           "pageInfo",
           "hasNextPage",
-          "endCursor"
+          "endCursor",
+          "id"
         ],
         "fields": {
           "owner": "fixture-org",

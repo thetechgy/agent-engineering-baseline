@@ -122,6 +122,14 @@ for p in pathlib.Path('/proc').glob('*/cmdline'):
                             ids = [item for page in result.stdout.splitlines() for item in json.loads(page)]
                             if ids != list(range(1, 32)):
                                 raise ValueError("incomplete or PR-mixed issue collection")
+                            raw_command = command[:command.index("--jq")]
+                            raw = observed(shlex.join(["gh", *raw_command]))
+                            slurp = observed(shlex.join(["gh", *raw_command, "--slurp"]))
+                            pages = json.loads(slurp.stdout)
+                            if raw.returncode or slurp.returncode or len(pages) != 2 or json.loads(raw.stdout) != [
+                                item for page in pages for item in page
+                            ]:
+                                raise ValueError("REST raw/slurp page semantics differ")
                         if task.name == "gh-003":
                             pages = json.loads(result.stdout)
                             ids = [thread["id"] for page in pages for thread in

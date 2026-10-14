@@ -109,6 +109,7 @@ class GraphQLSubset:
         self.fields = fields
         self.variables = {}
         self.used = set()
+        self.operation_name = None
         if self.peek() in ("mutation", "subscription"):
             raise UnauthorizedGraphQL("write or subscription operation")
         if self.peek() == "fragment":
@@ -116,12 +117,14 @@ class GraphQLSubset:
         if self.peek() == "query":
             self.take()
             if self.peek() not in ("(", "{"):
-                self.name()  # Optional operation name.
+                self.operation_name = self.name()
             if self.peek() == "(":
                 self.take()
                 while self.peek() != ")":
                     self.take("$")
                     name = self.name()
+                    if name in ("query", "operationName"):
+                        raise UnsupportedGraphQL("reserved API field is not a variable")
                     self.take(":")
                     if self.peek() == "[":
                         raise UnsupportedGraphQL("list types unsupported")
@@ -141,6 +144,8 @@ class GraphQLSubset:
         self.selection = self.select("Query", 0)
         if self.index != len(self.tokens) or self.used != set(self.variables):
             raise GraphQLSubsetError("trailing input or unused variable")
+        if self.fields.get("operationName") not in (None, self.operation_name):
+            raise UnsupportedGraphQL("operation selection mismatch")
 
     def peek(self):
         return self.tokens[self.index] if self.index < len(self.tokens) else None
@@ -404,6 +409,7 @@ def dispatch(case, argv, history, body=None):
         paths = {
             "reviewThreads": ("repository", "pullRequest", "reviewThreads"),
             "isResolved": ("repository", "pullRequest", "reviewThreads", "nodes", "isResolved"),
+            "id": ("repository", "pullRequest", "reviewThreads", "nodes", "id"),
             "pageInfo": ("repository", "pullRequest", "reviewThreads", "pageInfo"),
             "hasNextPage": ("repository", "pullRequest", "reviewThreads", "pageInfo", "hasNextPage"),
             "endCursor": ("repository", "pullRequest", "reviewThreads", "pageInfo", "endCursor"),
@@ -445,6 +451,14 @@ def dispatch(case, argv, history, body=None):
         elif "--slurp" in opts and response.get("exit_code", 0) == 0:
             try:
                 response["stdout"] = json.dumps([json.loads(page) for page in response["stdout"].splitlines()])
+            except ValueError:
+                return result
+        elif pos[:1] == ["api"] and "--paginate" in opts and "--jq" not in opts and response.get("exit_code", 0) == 0:
+            # Non-TTY gh splices raw REST array pages; jq/slurp preserve pages.
+            try:
+                pages = [json.loads(page) for page in response["stdout"].splitlines()]
+                if all(isinstance(page, list) for page in pages):
+                    response["stdout"] = json.dumps([item for page in pages for item in page])
             except ValueError:
                 return result
         if "--jq" in opts and response.get("exit_code", 0) == 0:
