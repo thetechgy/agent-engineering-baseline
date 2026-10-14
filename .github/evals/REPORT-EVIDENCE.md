@@ -1134,7 +1134,8 @@ not expert causal diagnosis or a readiness assessment.
 ## Private offline HTML report
 
 `.github/scripts/skill_report.py` is the first consolidated presentation layer.
-It consumes only validated public bundles and their saved `analysis.json`.
+Its base inputs are validated public bundles and their saved `analysis.json`.
+Optional private analyst attachments undergo separate original-tooling validation.
 It calls the existing analyzer's independent semantic validator at the rendering
 boundary; it does not duplicate native normalization, case arithmetic, findings,
 comparison selection or analyst decisions. Both original public records and
@@ -1263,11 +1264,12 @@ input replacement and output confinement. Run all offline contracts together:
 pwsh -NoLogo -NoProfile -File ./scripts/Invoke-Validation.ps1
 ```
 
-### Privacy, accessibility and future analyst integration
+### Privacy and accessibility
 
 Keep generated reports private and outside the checkout. There is no report
 upload, Pages integration or change to existing publication workflows. No raw
-private trajectory, prompt, grader prose or analyst context is accepted. All
+private trajectory, prompt, native report or analyst context is embedded. Only
+bounded quotations already accepted by the analyst validator can appear. All
 dynamic HTML text is escaped, URLs are internal generated anchors, and a meta
 Content Security Policy denies external content, connections, forms, objects and
 base URLs. Only hash-authorized fixed CSS and the small theme script can run.
@@ -1287,14 +1289,178 @@ and [WCAG 2.2 reflow guidance](https://www.w3.org/WAI/WCAG22/Understanding/reflo
 These design and regression checks are accessibility-oriented evidence, not a
 complete WCAG conformance or assistive-technology certification.
 
-Model-generated recommendations are explicitly absent. Future integration must
-use the separate private review validator and rebuilt authenticated context,
-preserve its provenance/citation/sufficiency contracts and reference availability,
-display judgments distinctly from deterministic findings, and retain the
-`not_quality_qualified`/publication-ineligible boundary until model usefulness
-has been qualified by humans. Structural validity does not establish semantic
-truth, causality or a worthwhile skill change. Human review and explicit action
-authorization remain necessary; this MVP initiates neither inference nor edits.
+### Optional private analyst attachments
+
+Add `--analyst-review /tmp/private-attachments/podman.json` to the report command;
+repeat for another selected record. There is at most **one analyst report per
+record**, with up to eight separately supplied independent assessments of that
+exact report. No-attachment generation keeps the existing public-evidence
+dependencies (including Pydantic), without importing the analyst modules or
+OpenAI SDK. Attachment-specific version checks run only when requested.
+Public evidence and analysis contracts remain unchanged.
+
+The rendering boundary rechecks the attachment witness and captured originals.
+Validation reconstructs each analyst's **original** context and analysis, then
+binds its selected record and source exactly to the consolidated public capture.
+The original analysis digest need not equal the aggregate analysis digest.
+Interpretation never transfers to another run, changed record, or skill revision.
+Explicit invalid attachments reject the invocation before HTML publication;
+there is no silent fallback. Omit attachment flags to generate the base report.
+
+Keep a descriptor outside the checkout. Paths may be absolute or relative to the
+descriptor. Supply independently preserved raw-byte digests; neither a report's
+self-declared validation status nor a saved validation receipt is authority.
+The closed descriptor has all these fields (replace placeholders):
+
+```json
+{
+  "schema_version": 1,
+  "profile": "podman-1cffcf9",
+  "tooling": "/tmp/private-tooling/podman",
+  "skill": "podman",
+  "record_id": "sha256:<exact-selected-public-record-identity>",
+  "review": "/tmp/preserved-pilot/reports/skill-review.json",
+  "review_digest": "sha256:<original-json-byte-digest>",
+  "markdown_digest": "sha256:<original-markdown-byte-digest>",
+  "inputs": ["/tmp/preserved-pilot/original-public"],
+  "analysis": "/tmp/preserved-pilot/original-analysis/analysis.json",
+  "source": "/tmp/preserved-pilot/original-source",
+  "support": "/tmp/preserved-pilot/original-support",
+  "selection": null,
+  "assessments": []
+}
+```
+
+`skill-review.md` must be the original JSON's sibling and must exactly match the
+original validator's Markdown rendering. `source`, `support`, and `selection`
+must reproduce the original invocation; use null only when originally absent.
+Do not reconstruct or regenerate model judgments. Each descriptor is bounded to
+1 MiB; there are at most 128 analyst attachments. Original context/evidence
+bounds remain enforced, and attachment document captures share a 64 MiB budget.
+
+#### Reviewed tooling and actual isolation
+
+The adapter hardcodes these profile revisions and individual SHA-256 hashes for
+`skill_review.py`, `skill_analysis.py`, `skill_evidence.py`, and `skill_reports.py`:
+
+| Profile | Original repository revision |
+| --- | --- |
+| `current-v2` | `3f47c9de4df362ae9977748ad6353227f403a9b8` |
+| `podman-1cffcf9` | `1cffcf9947c265f126a3ceee75e5e35249bfd722` |
+| `gh-89f46f0` | `89f46f026cdaaf001487cbcc1425204db29e8952` |
+
+Historical tooling must be retained or copied from the exact locally available
+Git revision into `<tooling>/.github/scripts/`. Nothing is fetched automatically.
+For `current-v2`, null tooling selects the current checkout's four modules; their
+bytes must still match its reviewed profile. Future module changes require an
+explicitly reviewed compatibility update, not a digest override.
+
+Only those four hash-verified modules are copied to a fresh protected temporary
+layout. Descriptors cannot supply commands, interpreters, import search paths,
+environment settings, or new executable profiles. The fixed launcher uses the
+calling pinned Python executable with `-I -B`, a neutral working directory, and
+a small clean environment without inference credentials. Python 3.13, OpenAI
+2.44.0, Pydantic 2.13.4, and SkillEvaluator 0.3.0 are required; original provenance
+validation additionally requires the saved report's exact Python patch version.
+There is no installer, provider client invocation, token count, or inference.
+
+An audit hook installed before historical imports rejects audited Python socket
+operations (including DNS) and process spawning. Each validation has a 120-second
+deadline and a bounded response. These are application-level restrictions, **not
+an OS sandbox or network namespace**. They do not protect against compromised
+native dependencies, same-UID interference, or privileged processes. The existing
+filesystem ownership, no-follow capture, input-state, and output guards remain
+in force. Tests exercise historical module imports, derived root paths, import
+shadowing, and the restricted operations in the actual temporary layout.
+
+#### Independently supplied assessments
+
+Assessment documents are a separate input, not modifications to analyst reports.
+Every assessment must contain an exact raw analyst-report hash at its declared
+`report_digest_locator`. Multiple assessments retain attribution and disagreement
+without voting, averaging, or a preferred verdict. Repeated source documents reject.
+Example assessment entry inside a descriptor's `assessments` array:
+
+```json
+{
+  "author_kind": "independent_ai",
+  "attribution": "ChatGPT (supplied attribution)",
+  "document": {
+    "path": "assessment.json",
+    "digest": "sha256:<original-assessment-byte-digest>"
+  },
+  "report_digest_locator": ["verification", "report_sha256"],
+  "fields": {
+    "verdict": ["assessment"],
+    "score": ["score"],
+    "maximum": ["max_score"],
+    "dimensions": ["dimensions"],
+    "limitations": ["scope_and_next_step"]
+  },
+  "narrative": null,
+  "rubric": {"path": "frozen-rubric.json", "digest": "sha256:<raw-rubric-digest>"},
+  "rubric_locator": ["independent_scoring"],
+  "freeze": {"path": "freeze-record.json", "digest": "sha256:<raw-freeze-digest>"}
+}
+```
+
+Locators are bounded lists of literal object keys or array indices, not JSONPath
+or executable expressions. Each optional document uses the same path/digest pair.
+`narrative` selects a UTF-8 text document displayed as inert text. `rubric` selects
+JSON, with `rubric_locator` identifying the rubric object containing `dimensions`.
+Use null for absent narrative/rubric/freeze and null `rubric_locator` without a
+rubric. Unscored narrative assessments use null score, maximum, and dimensions
+locators; no missing numeric score is inferred. Dimensions, when supplied, are
+objects keyed by rubric dimension, each with integer `score` and text `rationale`.
+Dimension names, total arithmetic, and numeric bounds are checked; qualitative
+rubric rules and pass/fatal judgments remain attributed assessor statements.
+
+A freeze record must match the full rubric's canonical digest and the analyst
+context digest. A supplied original freeze time must precede the report timestamp.
+This establishes recorded consistency, not trusted timestamp attestation or proof
+of independent authorship. Unknown metadata cannot confer authenticated approval.
+Author categories are `independent_ai`, `human_supplied`, and `unknown`; even supplied
+human assessments remain unauthenticated. This MVP provides no human-authentication
+mechanism and does not infer approval from chat participation or structural success.
+
+Only explicitly selected fields and allowlisted provenance metadata enter HTML.
+Raw preservation records can contain private paths and are never dumped wholesale.
+The presentation projection reuses the analyst's sensitivity/control-character
+screening and HTML escaping; it is not a comprehensive privacy audit. Each document
+and assessment projection is bounded to 1 MiB. Keep all originals and reports private.
+
+The supplied historical pilots have separate **ChatGPT-authored** assessments:
+Podman's substantive pass has **no numeric score** or proven preregistration;
+gh's supplied 9/10 references its preserved frozen rubric. These are individual
+pilot judgments, not authenticated human approvals, native skill-performance
+results, or global analyst qualification. The analyst remains
+`not_quality_qualified` and `automated_publication_eligible: false`.
+
+#### Time-limited historical integration
+
+Podman's reviewed-reference deadline is **2026-10-19T19:11:15Z**. Original validators
+and final publication guards use the current clock. Never backdate, rewrite
+preserved availability, or accept stale support because a past validation passed.
+After expiry, omit the analyst descriptor. Original public evidence declaring
+available support and its saved analysis can also become stale: use existing
+normalization/projection and public-bundle tooling on retained native originals
+to create **separate current-availability inputs**, then rebuild analysis and the
+base HTML report. Preserve all original files, scores, policy and observation
+identities; the derived record/analysis identities reflect changed availability.
+An attachment cannot transfer to those changed identities.
+
+The base report can retain historical measurements with explicit expired-support
+limitations. Previously generated HTML remains readable as a snapshot, not proof
+of continuing validation. Durable archived-validation semantics are deferred;
+this MVP introduces no attestation authority or expiry exception.
+
+No-review, zero-recommendation, no-change, investigation-only, incomplete-evidence,
+and upstream-owned states remain explicit. Deterministic findings, model
+interpretation, supplied assessments, and authenticated human approval are separate
+concepts. Structural validity cannot establish semantic truth, causality, or a
+worthwhile skill edit. A future human-reviewed recommendation workflow must collect
+explicit authenticated approval and usefulness evidence separately; it must not
+promote these reports automatically. This MVP initiates neither inference nor edits.
 
 ## Private skill improvement review
 
