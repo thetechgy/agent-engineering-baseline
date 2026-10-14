@@ -3,6 +3,7 @@
 
 import argparse
 import asyncio
+import copy
 from dataclasses import dataclass, field as dataclass_field
 from datetime import datetime
 import html
@@ -75,7 +76,12 @@ Return the compact analytical response, not the complete saved report. The host
 derives source coverage/identity/integrity and recorded-statement availability for
 every sufficiency block; you must still explain scope, limitations and sufficiency.
 Choose evidence_id only from supplied citable evidence. Public reference IDs are
-not evidence IDs. For public-record citations choose an exact public_locator and
+not evidence IDs. Use positive or interpretation claims for public records and
+qualitative evidence. An unmeasured public record can affirmatively report that
+results are unavailable (positive); it cannot establish that execution never
+occurred. Absence claims are allowed only for source evidence when disclosed
+source coverage is complete, and concern missing guidance, never execution.
+For public-record citations choose an exact public_locator and
 null start_line/end_line. For source and qualitative citations use null
 public_locator and explicit available start_line/end_line; the host derives the
 type, availability, path and original locator. Never supply that derived metadata.
@@ -189,7 +195,11 @@ class ModelCitation(Closed):
     start_line: Line | None
     end_line: Line | None
     quote: str | None = Field(max_length=500)
-    claim: Literal["positive", "absence", "interpretation"]
+    claim: Literal["positive", "absence", "interpretation"] = Field(
+        description="Positive reports supplied facts, including unavailable results in an unmeasured public record; "
+        "interpretation states an inference. Absence requires source evidence and complete disclosed source coverage. "
+        "Public records and qualitative evidence cannot establish that execution never occurred."
+    )
 
 
 class ModelSufficiency(Closed):
@@ -1143,12 +1153,25 @@ def prepare(inputs, saved_analysis, skill, record_id, source=None, support=None,
 
 
 def schema(context=None):
-    """Fresh compact schema, with shared evidence enums bound to the sealed context."""
+    """Fresh compact schema, with citation claim groups bound to the sealed context."""
     value = ModelJudgment.model_json_schema()
     if context is not None:
         eligible = citation_pool(context)
         review_require(bool(eligible), "No citable evidence", "no_citable_evidence")
-        value["$defs"]["ModelCitation"]["properties"]["evidence_id"]["enum"] = sorted(eligible)
+        # Disjoint ID groups keep each enum bounded without repeating the full pool.
+        # Nested anyOf is supported; every branch remains a closed, required object.
+        absence_ids = {key for key, (kind, _) in eligible.items()
+                       if kind == "source" and context.value["source_context"]["coverage"] == "complete"}
+        citation = value["$defs"]["ModelCitation"]
+        branches = []
+        for ids, claims in ((set(eligible) - absence_ids, ["positive", "interpretation"]),
+                            (absence_ids, ["positive", "absence", "interpretation"])):
+            if ids:
+                branch = copy.deepcopy(citation)
+                branch["properties"]["evidence_id"]["enum"] = sorted(ids)
+                branch["properties"]["claim"]["enum"] = claims
+                branches.append(branch)
+        value["$defs"]["ModelCitation"] = {"anyOf": branches}
         suggestions = sorted(row["id"] for row in context.value["qualitative"] if row["kind"] == "native_suggestion")
         array = value["properties"]["native_suggestions"]
         array["minItems"] = array["maxItems"] = len(suggestions)
