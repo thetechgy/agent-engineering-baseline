@@ -189,8 +189,10 @@ class AttachmentTests(unittest.TestCase):
         self.fixture('podman-1cffcf9')
         scripts = Path(self.spec['tooling']) / '.github/scripts'
         marker = self.root / 'executed'
-        (scripts / 'skill_review.py').write_text("raise RuntimeError('Never import altered module')")
-        with self.assertRaises(ValueError): self.load()
+        (scripts / 'skill_review.py').write_text(
+            f"from pathlib import Path\nPath({str(marker)!r}).write_text('Unreviewed module executed')\n"
+            "raise RuntimeError('Never import altered module')\n")
+        with self.assertRaisesRegex(ValueError, 'Unreviewed validator module'): self.load()
         self.assertFalse(marker.exists())
         self.spec['profile'] = 'arbitrary'; write(self.path, self.spec)
         with self.assertRaises(ValueError): self.load()
@@ -289,6 +291,12 @@ class AttachmentTests(unittest.TestCase):
         row['freeze'] = {'path': str(freeze), 'digest': evidence.digest_bytes(freeze.read_bytes())}; write(self.path, self.spec)
         output = report.render_report(self.result, self.captured, reviews=self.load())
         self.assertIn(b'not trusted timestamp attestation', output)
+        write(freeze, {key: v for key, v in value.items() if key != 'original_freeze_utc'})
+        row['freeze']['digest'] = evidence.digest_bytes(freeze.read_bytes()); write(self.path, self.spec)
+        undated = report.render_report(self.result, self.captured, reviews=self.load())
+        self.assertIn(b'Freeze time not supplied; time ordering is not established', undated)
+        self.assertNotIn(b'time ordering are consistent', undated)
+        self.assertNotIn(b'Recorded time ordering is consistent', undated)
         for key, change in (('rubric_digest', evidence.identity('different-rubric')),
                             ('context_digest', evidence.identity('different-context')),
                             ('original_freeze_utc', '2999-01-01T00:00:00+00:00')):

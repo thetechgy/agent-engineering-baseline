@@ -366,7 +366,9 @@ def interpretation(item):
         else:
             parts.append('<p>Rubric not supplied; no rubric-compliance claim is inferred.</p>')
         if supplied['freeze'] is not None:
-            parts.append('<p>Freeze-record digest, context and time ordering are consistent. '
+            timing = ('Recorded time ordering is consistent. ' if 'original_freeze_utc' in supplied['freeze'] else
+                      'Freeze time not supplied; time ordering is not established. ')
+            parts.append('<p>Freeze-record digest and context are consistent. ' + timing +
                 'This is not trusted timestamp attestation or proof of independent authorship.</p>' +
                 disclosure('Preserved freeze-record metadata', supplied['freeze']))
         else:
