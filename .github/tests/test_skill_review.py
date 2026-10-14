@@ -89,6 +89,11 @@ def model_citation(context, kind, *, claim="positive"):
             "end_line": row["end_line"], "quote": None, "claim": claim}
 
 
+def schema_citation_ids(schema):
+    return sorted(key for branch in schema["$defs"]["ModelCitation"]["anyOf"]
+                  for key in branch["properties"]["evidence_id"]["enum"])
+
+
 def sufficiency(context, behavior=False, sufficient=False, *, compact=False):
     src = context.value["source_context"]
     facts = {} if compact else {
@@ -371,6 +376,24 @@ class ReviewTests(unittest.TestCase):
         for i in range(4):
             support(run_ref, None, "native_findings", "native_suggestion", ["suggestions", i])
         return self.refresh_native()
+
+    def gh_control(self):
+        """The public unmeasured control and authenticated upstream source, without inference."""
+        record = evidence.read_json(NATIVE / "gh-no-model.json")
+        configured = next(row for row in evidence.inventory(evidence.ROOT)["skills"]
+                          if row["source"]["skill_id"] == "gh")
+        bundle = self.root / "gh-public"
+        write(bundle / "inventory.json", {"schema_version": 1, "kind": "inventory", "skills": [configured]})
+        write(bundle / "public-report.json", record)
+        saved = self.root / "gh-analysis.json"
+        write(saved, analysis.validate_analysis(None, analysis.capture_inputs([bundle])))
+        source = self.root / "gh-source"
+        source.mkdir()
+        (source / "SKILL.md").write_bytes((evidence.ROOT / ".agents/skills/gh/SKILL.md").read_bytes())
+        rid = evidence.identity(record)
+        self.gh_args = ["--input", str(bundle), "--analysis", str(saved), "--skill", "gh", "--record-id", rid,
+                        "--source", str(source)]
+        return review.prepare([bundle], saved, "gh", rid, source)
 
     def refresh_native(self):
         """Rehash even adversarial substitutions; do not repair observation identities."""
@@ -1105,6 +1128,209 @@ class ReviewTests(unittest.TestCase):
                 self.assertFalse(row["additionalProperties"])
                 self.assertEqual(set(row["required"]), set(row["properties"]))
 
+    def test_unmeasured_gh_public_absence_is_forbidden_by_schema_and_host(self):
+        context = self.gh_control()
+        self.assertEqual(len(context.value["records"]), 1)
+        self.assertEqual(len(context.value["source_context"]["members"]), 1)
+        self.assertEqual(context.value["source_context"]["coverage"], "complete")
+        self.assertEqual(context.value["qualitative"], [])
+        self.assertFalse(analysis.measured(next(iter(context.value["records"].values()))))
+        value = judgment(context, compact=True)
+        value["assessment"]["citations"][0]["claim"] = "absence"
+        original = copy.deepcopy(value)
+        with self.assertRaises(review.ReviewRejection) as caught:
+            review.bind_judgment(value, context)
+        self.assertEqual(caught.exception.code, "claim_incompatible")
+        self.assertEqual(caught.exception.location, ("assessment", "citations", 0, "claim"))
+        self.assertEqual(value, original)
+        with self.assertRaises(ValidationError):
+            Draft202012Validator(review.schema(context)).validate(value)
+        calls, run = self.invoke(context, value)
+        with self.assertRaises(review.InferenceRejected) as rejected:
+            asyncio.run(run())
+        diagnostic = json.loads(rejected.exception.diagnostic_json)
+        self.assertEqual((diagnostic["code"], diagnostic["stage"]), ("claim_incompatible", "model_binding"))
+        self.assertEqual(diagnostic["location"], ["assessment", "citations", 0, "claim"])
+        self.assertEqual((diagnostic["count_requests"], diagnostic["generation_requests"]), (1, 1))
+        self.assertEqual(len(calls), 2)
+        self.assertNotIn(value["assessment"]["interpretation"], rejected.exception.diagnostic_json.decode())
+        self.assertEqual(value, original)
+
+    def assert_contextual_claims(self, context):
+        schema = review.schema(context)
+        Draft202012Validator.check_schema(schema)
+        validator = Draft202012Validator(schema)
+        branches = schema["$defs"]["ModelCitation"]["anyOf"]
+        self.assertIn(len(branches), (1, 2))
+        pool = review.citation_pool(context)
+        self.assertEqual(schema_citation_ids(schema), sorted(pool))
+        seen = set()
+        for branch in branches:
+            ids = branch["properties"]["evidence_id"]["enum"]
+            self.assertTrue(ids)
+            self.assertFalse(seen.intersection(ids))
+            seen.update(ids)
+            for key in ids:
+                kind, row = pool[key]
+                allowed = kind == "source" and context.value["source_context"]["coverage"] == "complete"
+                self.assertEqual(branch["properties"]["claim"]["enum"],
+                                 ["positive", "absence", "interpretation"] if allowed else ["positive", "interpretation"])
+        # Exercise one authenticated representative of every category, through all citation slots.
+        representatives = {}
+        for key, (kind, row) in pool.items():
+            representatives.setdefault(row["kind"] if kind == "qualitative" else kind, (key, kind, row))
+        for category, (key, kind, row) in representatives.items():
+            selected = {"evidence_id": key, "public_locator": ["metrics"] if kind == "public" else None,
+                        "start_line": None if kind == "public" else row["start_line"],
+                        "end_line": None if kind == "public" else row["end_line"], "quote": None}
+            for claim in ("positive", "interpretation", "absence", "execution"):
+                value = judgment(context, category="investigate", compact=True)
+                value["assessment"]["citations"] = [{**selected, "claim": claim}]
+                value["recommendations"][0]["citations"] = [{**selected, "claim": claim}]
+                if value["native_suggestions"]:
+                    value["native_suggestions"][0]["citations"] = [{**selected, "claim": claim}]
+                allowed = claim in ("positive", "interpretation") or (
+                    claim == "absence" and kind == "source" and context.value["source_context"]["coverage"] == "complete"
+                )
+                with self.subTest(coverage=context.value["source_context"]["coverage"], category=category, claim=claim):
+                    if allowed:
+                        validator.validate(value)
+                        review.validate_judgment(review.bind_judgment(value, context), context)
+                    else:
+                        with self.assertRaises(ValidationError):
+                            validator.validate(value)
+                        with self.assertRaises(review.ReviewRejection):
+                            review.bind_judgment(value, context)
+
+    def test_contextual_claim_groups_cover_gh_and_native_podman(self):
+        self.assert_contextual_claims(self.gh_control())
+        complete = self.native_control(4)
+        self.assert_contextual_claims(complete)
+        member = next(row for row in complete.value["source_context"]["members"] if row["member"] == "SKILL.md")
+        for end in (member["end_line"], 1):
+            selection = self.root / f"selection-{end}.json"
+            write(selection, {"members": [{"member": "SKILL.md", "start_line": 1, "end_line": end}]})
+            partial = review.prepare([Path(self.native_args[1])], Path(self.native_args[3]), "podman", self.native_args[7],
+                                     self.native_snapshot, self.native_root, selection)
+            self.assertEqual(partial.value["source_context"]["coverage"], "partial")
+            self.assertEqual(partial.value["source_context"]["authentication"]["coverage"], "complete")
+            self.assertEqual(partial.value["source_context"]["members"][0]["complete"], end == member["end_line"])
+            self.assert_contextual_claims(partial)
+        for source, support in ((None, self.native_root), (self.native_snapshot, None), (None, None)):
+            context = review.prepare([Path(self.native_args[1])], Path(self.native_args[3]), "podman", self.native_args[7],
+                                     source, support)
+            self.assert_contextual_claims(context)
+
+    def test_contextual_claim_groups_preserve_analyst_interpretation(self):
+        context = self.control(kind="analyst_interpretation")
+        self.assert_contextual_claims(context)
+
+    def test_contextual_union_is_pinned_sdk_strict_and_request_compatible(self):
+        from openai.lib._pydantic import _ensure_strict_json_schema
+        from openai._utils import transform
+        from openai.types.responses.response_create_params import ResponseCreateParamsNonStreaming
+        for context in (self.gh_control(), self.native_control()):
+            schema = review.schema(context)
+            self.assertEqual(_ensure_strict_json_schema(copy.deepcopy(schema), path=(), root=schema), schema)
+            self.assertEqual(schema["type"], "object")
+            self.assertNotIn("anyOf", schema)
+            unsupported = {"allOf", "not", "dependentRequired", "dependentSchemas", "if", "then", "else", "patternProperties"}
+            def walk(node):
+                if isinstance(node, dict):
+                    self.assertFalse(unsupported & node.keys())
+                    if node.get("type") == "object":
+                        self.assertFalse(node["additionalProperties"])
+                        self.assertEqual(set(node["required"]), set(node["properties"]))
+                    for item in node.values():
+                        walk(item)
+                elif isinstance(node, list):
+                    for item in node:
+                        walk(item)
+            walk(schema)
+            request = review.common_request(context, review.ModelConfig(**CONFIG))
+            self.assertEqual(transform(request, ResponseCreateParamsNonStreaming), request)
+            review.screen_request(request, context)
+            review.check_schema_budget(schema)
+
+    def test_contextual_union_budgets_fail_before_requests_without_omitting_ids(self):
+        context = self.control()
+        source_id = context.value["source_context"]["members"][0]["id"]
+        for count in (250, 251):
+            pool = {"sha256:" + f"{i:064x}": ("public", {}) for i in range(count)}
+            pool[source_id] = ("source", {"member": "SKILL.md"})
+            with patch.object(review, "citation_pool", return_value=pool):
+                if count == 250:
+                    self.assertEqual(schema_citation_ids(review.schema(context)), sorted(pool))
+                else:
+                    with patch("openai.AsyncOpenAI") as sdk, self.assertRaises(review.InferenceRejected) as caught:
+                        asyncio.run(review.invoke(context, CONFIG, True))
+                    sdk.assert_not_called()
+                    self.assertEqual(json.loads(caught.exception.diagnostic_json)["code"], "schema_budget_exceeded")
+
+    def test_valid_decisions_through_mocked_requests_and_saved_v2_validation(self):
+        gh = self.gh_control()
+        podman = self.control(agent_output="I will treat an active unit as ready without an application-readiness check.")
+        cases = [("no-change", gh, None, self.gh_args), ("investigation", gh, "investigate", self.gh_args),
+                 ("source-absence", podman, "modify_skill", self.args)]
+        for label, context, category, args in cases:
+            with self.subTest(case=label):
+                before = evidence.encoded(context.value)
+                model = judgment(context, category=category, compact=True)
+                if context is gh:
+                    model["assessment"]["tested_benefit"] = "The public record reports unavailable results; benefit is unmeasured."
+                    model["assessment"]["uncertainty"] = "Unavailable results do not establish whether execution occurred."
+                    model["assessment"]["citations"][0]["public_locator"] = ["availability"]
+                else:
+                    absent = model_citation(context, "source", claim="absence")
+                    model["assessment"]["citations"][1] = absent
+                    model["assessment"]["interpretation"] = "The recorded answer omits an application-readiness check; execution is unverified."
+                    model["assessment"]["sufficiency"]["rationale"] = "Complete source and the with-skill recorded answer support testing a readiness clarification."
+                    rec = model["recommendations"][0]
+                    rec["citations"][1] = absent
+                    rec["scope"] = "Clarify application-readiness checks in synthetic SKILL.md."
+                    rec["justification"] = "The complete synthetic source lacks readiness guidance and the recorded answer omits a check."
+                    rec["sufficiency"]["rationale"] = model["assessment"]["sufficiency"]["rationale"]
+                    rec["expected_benefit"] = "Test whether answers distinguish active units from ready applications."
+                    rec["validation"]["criteria"] = ["Answers propose application-readiness checks; retain all prior safety cases."]
+                original = copy.deepcopy(model)
+                Draft202012Validator(review.schema(context)).validate(model)
+                calls, run = self.invoke(context, model)
+                report = asyncio.run(run())
+                self.assertEqual([url.path for url, _ in calls], ["/v1/responses/input_tokens", "/v1/responses"])
+                count, generation = [body for _, body in calls]
+                self.assertEqual(count, review.common_request(context, review.ModelConfig(**CONFIG)))
+                self.assertEqual(generation, {**count, "store": False, "background": False, "max_output_tokens": CONFIG["output_limit"]})
+                self.assertEqual(report["provenance"]["schema_digest"], evidence.identity(count["text"]["format"]["schema"]))
+                self.assertEqual(report["provenance"]["prompt_digest"], evidence.digest_bytes(count["instructions"].encode()))
+                self.assertEqual(report["provenance"]["context_digest"], evidence.identity(context.value))
+                self.assertEqual(report["provenance"]["sdk_retries"], 0)
+                self.assertFalse(report["provenance"]["automated_publication_eligible"])
+                self.assertEqual(report["provenance"]["quality_qualification"], "not_quality_qualified")
+                self.assertEqual(report["schema_version"], 2)
+                self.assertEqual(report["judgment"]["assessment"]["disposition"],
+                                 "no_change" if category is None else "skill_change" if category == "modify_skill" else "investigate")
+                self.assertEqual(len(report["judgment"]["recommendations"]), 0 if category is None else 1)
+                if category is not None:
+                    self.assertEqual(report["judgment"]["recommendations"][0]["category"], category)
+                if category == "modify_skill":
+                    self.assertEqual(report["judgment"]["recommendations"][0]["citations"][1]["claim"], "absence")
+                    invalid = copy.deepcopy(report)
+                    invalid["judgment"]["assessment"]["citations"][0]["claim"] = "absence"
+                    with self.assertRaises(review.ReviewRejection) as caught:
+                        review.validate_review(invalid, context)
+                    self.assertEqual(caught.exception.code, "claim_incompatible")
+                    self.assertEqual(caught.exception.location, ("judgment", "assessment", "citations", 0, "claim"))
+                self.assertEqual(model, original)
+                self.assertEqual(evidence.encoded(context.value), before)
+                destination = self.root / label
+                evidence.write_outputs({"skill-review.json": report}, destination, input_paths=context.roots,
+                                       input_guards=context.guards, rendered={"skill-review.md": review.render_review(report, context)})
+                self.assertEqual(destination.stat().st_mode & 0o777, 0o700)
+                self.assertTrue(all(path.stat().st_mode & 0o777 == 0o600 for path in destination.iterdir()))
+                with redirect_stdout(StringIO()):
+                    review.main(["validate", *args, "--review", str(destination / "skill-review.json")])
+                self.assertEqual(evidence.read_json(destination / "skill-review.json"), report)
+
     def test_compact_response_expands_without_changing_substantive_fields_or_inputs(self):
         context = self.control()
         for category in (None, "modify_skill", "investigate"):
@@ -1236,7 +1462,7 @@ class ReviewTests(unittest.TestCase):
         calls = []
         def handle(value):
             calls.append(value)
-            request["text"]["format"]["schema"]["$defs"]["ModelCitation"]["properties"]["evidence_id"]["enum"][0] = "invented"
+            request["text"]["format"]["schema"]["$defs"]["ModelCitation"]["anyOf"][0]["properties"]["evidence_id"]["enum"][0] = "invented"
             return httpx.Response(200, json={"object": "response.input_tokens", "input_tokens": 1000})
         client = httpx.AsyncClient(transport=httpx.MockTransport(handle))
         with patch.object(review, "common_request", return_value=request):
@@ -1281,7 +1507,7 @@ class ReviewTests(unittest.TestCase):
 
     def test_compact_empty_pools_and_uncitable_members_do_not_get_default_ranges(self):
         context = self.control(empty_source=True, empty_behavior=True)
-        allowed = review.schema(context)["$defs"]["ModelCitation"]["properties"]["evidence_id"]["enum"]
+        allowed = schema_citation_ids(review.schema(context))
         empty = [row for row in (*context.value["source_context"]["members"], *context.value["qualitative"])
                  if row["end_line"] == 0]
         self.assertEqual(len(empty), 2)
@@ -1485,7 +1711,7 @@ class ReviewTests(unittest.TestCase):
                 for occurrence in ("ModelAssessment", "ModelRecommendation", "ModelSuggestionAssessment"):
                     self.assertEqual(schema["$defs"][occurrence]["properties"]["citations"]["items"],
                                      {"$ref": "#/$defs/ModelCitation"})
-                self.assertEqual(schema["$defs"]["ModelCitation"]["properties"]["evidence_id"]["enum"],
+                self.assertEqual(schema_citation_ids(schema),
                                  sorted(review.citation_pool(context)))
                 properties = schema["$defs"]["ModelSufficiency"]["properties"]
                 for field, key in (("source_coverage", "coverage"), ("source_integrity", "integrity"),
@@ -1524,8 +1750,8 @@ class ReviewTests(unittest.TestCase):
         other = review.schema(unavailable)
         self.assertNotEqual(contextual, other)
         self.assertEqual(review.schema(context), expected)
-        contextual["$defs"]["ModelCitation"]["properties"]["evidence_id"]["enum"][0] = "Changed"
-        contextual["$defs"]["ModelCitation"]["properties"]["claim"]["enum"].clear()
+        contextual["$defs"]["ModelCitation"]["anyOf"][0]["properties"]["evidence_id"]["enum"][0] = "Changed"
+        contextual["$defs"]["ModelCitation"]["anyOf"][0]["properties"]["claim"]["enum"].clear()
         self.assertEqual(review.schema(context), expected)
         self.assertEqual(review.schema(unavailable), other)
         self.assertEqual(review.schema(), static)
