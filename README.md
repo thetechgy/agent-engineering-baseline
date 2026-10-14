@@ -405,6 +405,14 @@ checks alone do not establish model performance or portability to Copilot. An ag
 infrastructure is working; verify deployment, readiness, exposure, backups, and recovery
 in the target environment.
 
+For one private offline view of all skills in validated public evidence, generate
+a saved analysis and the [consolidated HTML report](.github/evals/REPORT-EVIDENCE.md#private-offline-html-report).
+The report shows native metrics, separate with/without-skill coverage, case
+regressions, mandatory gates, static findings and evidence gaps. It includes
+unmeasured skills and deterministic investigation priorities without making
+causal claims or proposing skill edits. It runs locally without inference,
+external assets or publication; keep the generated file outside the checkout.
+
 <!-- rumdl-disable MD033 -->
 <details>
 <summary>Manual behavioral-run setup and operation</summary>
