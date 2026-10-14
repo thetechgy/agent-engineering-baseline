@@ -101,6 +101,64 @@ class ReportTests(unittest.TestCase):
         self.assertEqual(report.render_report(first, captured), report.render_report(second, other))
         self.assertEqual(report.render_report(first, captured), report.render_report(copy.deepcopy(first), captured))
 
+    def test_overview_separates_coverage_safety_and_investigations(self):
+        output, _, _ = self.demo()
+        overview = output.split('<section class="overview"', 1)[1].split('</section>', 1)[0]
+        plain = ' '.join(Document(overview).content)
+        for value in ('Measured results', 'Configured; results not supplied', 'No configured suite',
+                      '24 configured cases per arm', '0 failed · 0 passed · 20 unknown',
+                      'Safety evidence is incomplete', 'not_quality_qualified',
+                      'Authenticated human approval is not established', 'What remains unknown'):
+            self.assertIn(value, plain)
+        self.assertLess(plain.index('20 unknown'), plain.index('Important findings'))
+        important = overview.split('Important findings', 1)[1].split('What remains unknown', 1)[0]
+        self.assertIn('Lower with-skill case score', important)
+        self.assertNotIn('Comparison unavailable or limited', important)
+
+    def test_security_component_investigation_uses_recorded_single_attempt_scores(self):
+        record = fixtures.synthetic(scores=(.7, .8))
+        for obs in record['observations']:
+            obs['scores']['security'] = 0.0 if obs['arm'] == 'with_skill' else .5
+        output, _, _ = self.render([record])
+        plain = ' '.join(Document(output).content)
+        self.assertIn('Security-component score', plain)
+        self.assertIn('0.0 with skill versus 0.5 without skill', plain)
+        self.assertIn('Grader judgments', plain)
+        self.assertIn('Inspect the security judgment separately', plain)
+        self.assertNotIn('proven unsafe', plain)
+        self.assertIn('href="#components-', output)
+        document = Document(output)
+        self.assertTrue(all(href[1:] in document.ids for href in document.links))
+
+    def test_security_investigation_does_not_infer_missing_or_adaptive_comparisons(self):
+        for maximum, scores in ((1, (None, .5)), (1, (.5, .5)), (3, (0.0, .5))):
+            record = fixtures.synthetic(maximum=maximum)
+            for obs in record['observations']:
+                obs['scores']['security'] = scores[0 if obs['arm'] == 'with_skill' else 1]
+            output, _, _ = self.render([record])
+            self.assertNotIn('Security-component score · case', output)
+
+    def test_mandatory_findings_precede_component_investigations(self):
+        record = fixtures.synthetic(name='gh')
+        for obs in record['observations']:
+            obs['scores']['security'] = 0.0 if obs['arm'] == 'with_skill' else .5
+        obs = record['observations'][0]
+        obs['deterministic_gate'] = 0
+        obs['deterministic_scores'] = dict.fromkeys(evidence.GATE_FIELDS, 1)
+        obs['deterministic_scores'].update(authorization=0, gate=0)
+        output, _, _ = self.render([record])
+        overview = output.split('<section class="overview"', 1)[1].split('</section>', 1)[0]
+        self.assertLess(overview.index('Failed mandatory gate'), overview.index('Security-component score · case'))
+
+    def test_context_findings_and_exact_identities_remain_disclosed(self):
+        output, result, _ = self.demo()
+        self.assertIn('<summary>Evidence gaps and comparison limits</summary>', output)
+        for finding in result['findings']:
+            self.assertIn(finding['id'], output)
+        self.assertIn('shortened for readability', output)
+        self.assertIn('a.hash', report.JS)
+        self.assertIn('parent.open = true', report.JS)
+
     def test_all_internal_links_resolve_without_duplicate_ids(self):
         output, _, _ = self.demo()
         document = Document(output)

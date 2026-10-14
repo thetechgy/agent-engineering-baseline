@@ -154,6 +154,21 @@ class AttachmentTests(unittest.TestCase):
         self.assertEqual(len(doc.ids), len(set(doc.ids)))
         self.assertTrue(all(href.startswith('#') and href[1:] in doc.ids for href in doc.links))
 
+    def test_overview_exposes_proposed_action_and_separate_assessments(self):
+        self.fixture('gh-89f46f0', category='investigate', unmeasured=True)
+        self.supplied()
+        self.supplied(verdict='Substantive pass; no numeric score assigned', scored=False, suffix='unscored')
+        output = report.render_report(self.result, self.captured, reviews=self.load()).decode()
+        overview = output.split('<section class="overview"', 1)[1].split('</section>', 1)[0]
+        for value in ('Analyst conclusions and recommended actions', 'model interpretation',
+                      'Request exact retained results from the overlay owner.', 'Separately supplied assessment',
+                      'Synthetic ChatGPT assessor', '9 / 10', 'Substantive pass; no numeric score assigned',
+                      'Numeric score not assigned', 'not_quality_qualified',
+                      'Authenticated human approval is not established'):
+            self.assertIn(value, overview)
+        self.assertLess(output.index('Analyst conclusion:</strong>'), output.index('<h3>Behavioral run:'))
+        self.assertIn('Read analyst conclusions, proposed actions and citations', overview)
+
     def test_unmeasured_upstream_gh_interpretation_remains_investigation_only(self):
         self.fixture('gh-89f46f0', category='investigate', unmeasured=True)
         validated = self.load()

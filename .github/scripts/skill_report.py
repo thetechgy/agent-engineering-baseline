@@ -7,6 +7,7 @@ import hashlib
 import html
 import json
 from pathlib import Path
+import re
 import sys
 
 sys.dont_write_bytecode = True
@@ -30,7 +31,7 @@ CSS = """
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);
 font:1rem/1.6 system-ui,sans-serif;overflow-wrap:anywhere}
 header,main,footer{max-width:76rem;margin:auto;padding:1.5rem}
-header{padding-top:3rem}h1{font-size:clamp(2rem,5vw,3rem);line-height:1.15}
+header{padding-top:1.5rem;padding-bottom:0}h1{font-size:clamp(1.8rem,4vw,2.5rem);line-height:1.15;margin:.4rem 0}
 h2{font-size:1.65rem;line-height:1.3}h3{font-size:1.25rem}
 p{max-width:78ch}a{color:var(--accent);text-underline-offset:.18em}
 a:focus-visible,summary:focus-visible,select:focus-visible,[tabindex]:focus-visible{
@@ -38,11 +39,15 @@ outline:3px solid var(--accent);outline-offset:4px}
 .skip{position:absolute;top:-8rem;left:1rem;background:var(--surface);padding:1rem}
 .skip:focus{top:1rem}.eyebrow{color:var(--muted);letter-spacing:.1em;font-size:.8rem}
 .muted,caption{color:var(--muted)}.notice{border-left:4px solid var(--accent);padding-left:1rem}
+.safety{border-left:4px solid var(--alert);padding:.5rem 1rem;background:var(--bg)}
+.safety p{margin:.3rem 0}.safety strong{color:var(--alert)}
+.lead{font-size:1.1rem}.finding{border-top:1px solid var(--line);padding:.75rem 0}
+.finding p{margin:.4rem 0}.assessment{margin:.75rem 0}
+:target{scroll-margin-top:1rem}summary code{font-weight:400}
 section.skill,.overview{background:var(--surface);
 border:1px solid var(--line);border-radius:.6rem;padding:1.5rem;margin-bottom:2rem}
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,14rem),1fr));gap:1rem}
-.card,.assessment{border:1px solid var(--line);border-radius:.3rem;padding:1rem;min-width:0}
-.card strong{display:block;font-size:1.5rem}.badge{display:inline-block;border:1px solid currentColor;
+.assessment{border:1px solid var(--line);border-radius:.3rem;padding:1rem;min-width:0}
+.badge{display:inline-block;border:1px solid currentColor;
 border-radius:.25rem;padding:.15rem .5rem;font-size:.85rem}
 nav ul{display:flex;flex-wrap:wrap;gap:.5rem 1.5rem;padding:0;list-style:none}
 nav a,summary,select{min-height:2rem}nav a{display:inline-block;padding:.3rem 0}
@@ -69,6 +74,16 @@ document.getElementById('theme-control').hidden = false;
 control.addEventListener('change', () => {
   if (control.value === 'system') document.documentElement.removeAttribute('data-theme');
   else document.documentElement.setAttribute('data-theme', control.value);
+});
+// Reveal nested evidence before following a link; native fragment navigation
+// remains available without JavaScript (Chromium also reveals closed details).
+document.addEventListener('click', event => {
+  const a = event.target.closest('a[href^="#"]');
+  const target = a && document.getElementById(a.hash.slice(1));
+  if (!target) return;
+  for (let parent = target.parentElement; parent; parent = parent.parentElement) {
+    if (parent.tagName === 'DETAILS') parent.open = true;
+  }
 });
 """.strip()
 
@@ -125,6 +140,11 @@ def code(value):
     return '<code>' + text(value) + '</code>'
 
 
+def short_identity(value):
+    """Display alias only; exact identities remain in evidence disclosures."""
+    return re.sub(r'sha256:[a-f0-9]{64}', lambda m: m[0][:19] + '…', str(value))
+
+
 def limitations(availability):
     return '; '.join(safe(LIMITATIONS[r]) + ' (' + code(r) + ')' for r in availability['reasons']) or 'No schema-level limitation recorded'
 
@@ -135,11 +155,12 @@ def anchor(kind, *identities):
 
 
 def link(kind, identities, label):
-    return f'<a href="#{anchor(kind, *identities)}">{safe(label)}</a>'
+    return f'<a href="#{anchor(kind, *identities)}">{safe(short_identity(label))}</a>'
 
 
-def disclosure(label, value):
-    return '<details><summary>' + safe(label) + '</summary><pre>' + safe(
+def disclosure(label, value, *, target=None):
+    identity = ' id="' + safe(target) + '"' if target is not None else ''
+    return '<details><summary>' + safe(label) + '</summary><pre' + identity + '>' + safe(
         json.dumps(value, sort_keys=True, indent=2, ensure_ascii=True, allow_nan=False)) + '</pre></details>'
 
 
@@ -195,11 +216,137 @@ def priorities(findings, records):
             facts.append('Scanners: ' + ', '.join(code(v) for v in observed['scanners']))
         if 'unavailable_references' in observed:
             facts.append('Unavailable original references: ' + text(observed['unavailable_references']))
-        items.append('<li><strong>' + safe(FINDING_LABELS[item['kind']]) + '</strong> <span class="badge">' + label +
+        items.append(f'<li id="{anchor("finding", item["id"])}"><strong>' + safe(FINDING_LABELS[item['kind']]) + '</strong> <span class="badge">' + label +
             '</span><p>' + '; '.join(facts) + '</p><p>' + safe(NEXT_STEPS[item['next_step']]) + '</p><details><summary>Finding evidence and uncertainty</summary>' +
             '<p>Cases: ' + (', '.join(code(v) for v in item['case_ids']) or 'Run or configuration scope') + '</p>' +
             disclosure('Exact deterministic finding and next-step code', item) + support_links(item, records) + '</details></li>')
     return '<ol class="priorities">' + ''.join(items) + '</ol>'
+
+
+def coverage_label(skill):
+    if any(run['measured'] for run in skill['behavioral_results']):
+        return 'Measured results'
+    if any(config['suite'] is not None for config in skill['configurations']) or skill['behavioral_results']:
+        return 'Configured; results not supplied'
+    if skill['configurations']:
+        return 'No configured suite'
+    return 'Configuration not supplied'
+
+
+def security_investigations(skills, records):
+    """Expose exact component values, without new means or analyst findings.
+
+    Only complete single-attempt comparisons are eligible. Multi-attempt and
+    missing-component comparisons remain in the original observation evidence.
+    """
+    rows = []
+    for skill in skills:
+        for run in skill['behavioral_results']:
+            record = records[run['record_id']]
+            if record['policy']['attempts']['maximum'] != 1:
+                continue
+            indexed = analysis.case_index(record)
+            for case in run['case_summary']['cases']:
+                if case['with_minus_without'] is None:
+                    continue
+                arms = indexed[case['case_id']]
+                left, right = (arms[a][0] for a in ARM)
+                with_score, without_score = left['scores']['security'], right['scores']['security']
+                if with_score is not None and without_score is not None and with_score < without_score:
+                    rows.append('<li><strong>' + safe(skill['skill']) + ' · Security-component score · case ' +
+                        code(case['case_id']) + '</strong>: ' + text(with_score) + ' with skill versus ' +
+                        text(without_score) + ' without skill. Inspect the security judgment separately from '
+                        'command-wrapper or harness concerns. ' + link('components', (run['record_id'], left['id']),
+                        'With-skill security evidence') + ' · ' + link('components', (run['record_id'], right['id']),
+                        'Without-skill security evidence') + '.</li>')
+    return rows
+
+
+def assessment_summary(supplied):
+    score = ('Numeric score not assigned' if supplied['score'] is None else
+             'Supplied score: ' + text(supplied['score']) + ' / ' + text(supplied['maximum']))
+    return text(supplied['attribution']) + ': <strong>' + text(supplied['verdict']) + '</strong>. ' + score + '.'
+
+
+def executive_summary(result, records, attached):
+    skills = result['skills']; findings = result['findings']
+    measured = [s for s in skills if any(r['measured'] for r in s['behavioral_results'])]
+    parts = ['<p class="lead">' + text(len(skills)) + ' skills represented; <strong>' + text(len(measured)) +
+        ' with measured results</strong>. ' +
+        text(sum(coverage_label(s) == 'Configured; results not supplied' for s in skills)) +
+        ' configured without supplied results; ' + text(sum(coverage_label(s) == 'No configured suite' for s in skills)) +
+        ' without a configured behavioral suite.</p>']
+    for skill in measured:
+        for run in skill['behavioral_results']:
+            if run['measured']:
+                lift = next((m['value'] for m in run['native_metrics'] if m['name'] == 'Skill Lift'), None)
+                regressions = sum(f['kind'] == 'case_regression' and run['record_id'] in f['record_ids'] for f in findings)
+                parts.append('<p><strong>' + safe(skill['skill']) + '</strong>: ' +
+                    ('native Skill Lift ' + text(lift) + ' (with minus without on the evaluator scale); ' if lift is not None else '') +
+                    text(regressions) + ' lower with-skill case scores. ' +
+                    link('record', (run['record_id'],), 'Measured results and coverage') + '.</p>')
+    runs = [r for s in skills for r in s['behavioral_results']]
+    failed = sum(len(r['gates']['failed']) for r in runs)
+    passed = sum(r['gates']['passed_observations'] for r in runs)
+    unknown = sum(r['gates']['unknown_observations'] for r in runs)
+    parts.append('<div class="safety"><p><strong>' +
+        ('Safety evidence is incomplete' if unknown else 'Recorded mandatory gate outcomes') + '</strong></p><p>' +
+        text(failed) + ' failed · ' + text(passed) + ' passed · ' + text(unknown) +
+        ' unknown</p><p>' + ('No recorded gate outcomes supplied. ' if not (failed + passed + unknown) else '') +
+        'Unknown or unmeasured gates are not passing outcomes. ' +
+        ('Inspect recorded failures before accepting the result.' if failed else 'Zero recorded failures does not establish safety.') + '</p></div>')
+    parts.append('<nav aria-label="Report sections"><ul><li><a href="#important-findings">Important findings</a></li>'
+        '<li><a href="#analyst-actions">Analyst conclusions and actions</a></li>'
+        '<li><a href="#coverage">Coverage directory</a></li><li><a href="#provenance">Provenance and limitations</a></li></ul></nav>'
+        '<h3 id="important-findings">Important findings · deterministic evidence</h3>'
+        '<p>Grader judgments describe recorded outputs; they do not verify execution. A grader failure is not automatically '
+        'an instruction defect. '
+        'Investigate these signals before proposing changes.</p>')
+    mandatory = []; important = security_investigations(skills, records)
+    for finding in findings:
+        if finding['importance'] == 'context':
+            continue
+        observed = finding['observed']
+        detail = (' · cases ' + ', '.join(safe(v) for v in finding['case_ids'])) if finding['case_ids'] else ''
+        if 'with_minus_without' in observed:
+            detail += ' · with minus without ' + quantity(observed['with_minus_without'])
+        (mandatory if finding['importance'] == 'mandatory' else important).append('<li><strong>' + text(finding['skill'] or 'Report scope') + ' · ' +
+            safe(FINDING_LABELS[finding['kind']]) + '</strong>' + detail + '. ' +
+            link('finding', (finding['id'],), 'Inspect finding and next step') + '.</li>')
+    parts.append('<ul class="priorities">' + ''.join(mandatory + important) + '</ul>' if mandatory or important else
+        '<p>No deterministic investigation findings in the supplied evidence; this does not establish readiness.</p>')
+    parts.append('<details><summary>What remains unknown</summary><p>Missing measurements, unknown gates, '
+        'omitted runs, original support availability, actual runtime behavior, production effectiveness and portability '
+        'limit interpretation. Differences are descriptive; causality, statistical significance, cross-suite ranking '
+        'and time trends are not established. Static scans and configuration do not measure behavioral benefit.</p></details>'
+        '<h3 id="analyst-actions">Analyst conclusions and recommended actions · model interpretation</h3>'
+        '<p>The analyst remains ' + code('not_quality_qualified') + '; automated publication is ineligible. '
+        'Authenticated human approval is not established. Supplied assessments are separate opinions about analyst usefulness, '
+        'not skill performance or permission to act.</p>')
+    for item in attached.values():
+        judgment = item['report']['judgment']
+        parts.append('<div class="finding"><h4>' + safe(item['skill']) + ' · ' +
+            text(judgment['assessment']['disposition']) + '</h4><p>' +
+            link('interpretation', (item['record_id'],), 'Read analyst conclusions, proposed actions and citations') + '</p>')
+        for recommendation in judgment['recommendations']:
+            parts.append('<p><strong>Proposed action · ' + text(recommendation['category']) + ':</strong> ' +
+                text(recommendation['scope']) + '</p>')
+        for supplied in item['assessments']:
+            parts.append('<p><strong>Separately supplied assessment:</strong> ' + assessment_summary(supplied) + ' ' +
+                link('assessment', (item['record_id'], supplied['id']), 'Assessment reasoning and limitations') + '</p>')
+        parts.append('</div>')
+    if not attached:
+        parts.append('<p>No analyst reports or independent assessments supplied. Use the deterministic next steps.</p>')
+    parts.append('<h3 id="coverage">Coverage directory</h3>')
+    parts.append('<p>Separate arms compare recorded outputs with and without skill. Coverage is not a quality rating.</p>')
+    parts.append(table('Coverage in supplied evidence', ('Skill', 'Behavioral evidence', 'Configured coverage', 'Static records'),
+        [[link('skill', (s['skill'],), s['skill']), safe(coverage_label(s)),
+          '; '.join(text(c['suite']['case_count']) + ' configured cases per arm' for c in s['configurations'] if c['suite']) or
+          ('No behavioral suite configured' if s['configurations'] else 'Configuration not supplied'),
+          text(len(s['static_results']))] for s in skills]))
+    if not skills:
+        parts.append('<p>The supplied inventory is empty. No skills or measurements are inferred.</p>')
+    return ''.join(parts)
 
 
 def record_support(rid, record):
@@ -211,10 +358,11 @@ def record_support(rid, record):
     observations = []
     for obs in record['observations']:
         refs = '<br>'.join(link('reference', (rid, ref), ref) for ref in obs['references'])
-        observations.append([f'<span id="{anchor("observation", rid, obs["id"])}">' + code(obs['id']) + '</span>',
+        observations.append([f'<span id="{anchor("observation", rid, obs["id"])}">' + code(short_identity(obs['id'])) + '</span>',
             safe(ARM[obs['arm']]), code(obs['case_id']), text(obs['attempt']), text(obs['score']), text(obs['rubric_pass']),
             text(obs['deterministic_gate']), disclosure('Native component scores and gate details', {
-                'scores': obs['scores'], 'deterministic_scores': obs['deterministic_scores']}) + refs])
+                'observation_id': obs['id'], 'scores': obs['scores'], 'deterministic_scores': obs['deterministic_scores']},
+                target=anchor('components', rid, obs['id'])) + refs])
     if observations:
         parts.append(table('Observation identities and recorded outcomes',
             ('Observation', 'Arm', 'Case', 'Attempt', 'Overall score', 'Rubric pass', 'Mandatory gate', 'Components and references'), observations))
@@ -222,7 +370,7 @@ def record_support(rid, record):
                  'Members and locators are inert identifiers; this report never retrieves or opens them.</p>')
     references = []
     for ref in record['references']:
-        references.append([f'<span id="{anchor("reference", rid, ref["id"])}">' + code(ref['id']) + '</span>',
+        references.append([f'<span id="{anchor("reference", rid, ref["id"])}">' + code(short_identity(ref['id'])) + '</span>',
             text(ref['availability']), code(ref['member']), disclosure('Artifact, digest, locator and provenance', ref)])
     parts.append(table('Original support references', ('Reference identity', 'Availability', 'Original member', 'Provenance'), references)
                  if references else '<p>No original support references supplied.</p>')
@@ -233,7 +381,7 @@ def behavioral(run, records):
     rid = run['record_id']; record = records[rid]
     parts = [f'<article class="run" id="{anchor("record", rid)}"><h3>Behavioral run: ' + text(run['run_id']) + '</h3>',
         '<p>Evidence: <strong>' + text(run['availability']['status']) + '</strong>. Measurement: <strong>' +
-        ('Recorded' if run['measured'] else 'Unmeasured') + '</strong>. Record ' + code(rid) + '</p>',
+        ('Recorded' if run['measured'] else 'Unmeasured') + '</strong>.</p>' + disclosure('Exact record identity', rid),
         '<p>Evaluated source: ' + text(run['source']['owner']) + ' · ' + code(run['source']['repository']) +
         ' · revision ' + code(run['source']['revision']) + '.</p>',
         '<p>Limitations: ' + limitations(run['availability']) + '</p>']
@@ -272,8 +420,8 @@ def behavioral(run, records):
 
 def static_result(run, records):
     rid = run['record_id']
-    parts = [f'<article class="run" id="{anchor("record", rid)}"><h3>Static checks</h3><p>Record ' + code(rid) +
-        '; evidence ' + text(run['availability']['status']) + '. Static checks are not behavioral performance.</p>',
+    parts = [f'<article class="run" id="{anchor("record", rid)}"><h3>Static checks</h3><p>Evidence ' +
+        text(run['availability']['status']) + '. Static checks are not behavioral performance.</p>' + disclosure('Exact record identity', rid),
         '<p>Limitations: ' + limitations(run['availability']) + '</p>']
     parts.append(table('Scanner outcomes — counts can include findings without public detail',
         ('Scanner', 'State', 'Blocking', 'Passed', 'Critical / high / medium / low'),
@@ -313,30 +461,31 @@ def asset_hash(value):
 def interpretation(item):
     """Only independently validated attachments reach this inert presentation."""
     report = item['report']; judgment = report['judgment']; assessment = judgment['assessment']
-    parts = ['<article class="run"><h3>Model interpretation · analyst report</h3>'
+    parts = [f'<article class="run" id="{anchor("interpretation", item["record_id"])}"><h3>Model interpretation · analyst report</h3>'
         '<p class="notice"><strong>Model-generated judgment requiring human review.</strong> '
         'Citation integrity does not establish semantic truth or an instruction defect. '
         'Recommendations and validation plans are proposals, not completed actions.</p><p>Bound record: ' +
         link('record', (item['record_id'],), item['record_id']) + '</p><p>Analyst disposition: <strong>' +
         text(assessment['disposition']) + '</strong> · ' + text(len(judgment['recommendations'])) +
         ' recommendations. Source owner: ' + text(report['provenance']['source_owner']) + '.</p>']
+    parts.append('<p class="lead"><strong>Analyst conclusion:</strong> ' + text(assessment['interpretation']) + '</p>')
     for key, label in (('tested_benefit', 'Tested benefit · analyst interpretation'),
                        ('tested_harm', 'Tested harm · analyst interpretation'), ('uncertainty', 'Uncertainty')):
         parts.append('<p><strong>' + label + ':</strong> ' + text(assessment[key]) + '</p>')
-    parts.append('<details><summary>Analyst reasoning, sufficiency and citations</summary><p>' +
-        text(assessment['interpretation']) + '</p>' + disclosure('Assessment evidence and limitations', {
+    parts.append('<details><summary>Analyst reasoning, sufficiency and citations</summary>' + disclosure('Assessment evidence and limitations', {
             'sufficiency': assessment['sufficiency'], 'citations': assessment['citations']}) +
         disclosure('Native suggestions and analyst dispositions', judgment['native_suggestions']) +
         disclosure('Unverified external assertions', judgment['unverified_external_assertions']) + '</details>')
     if not judgment['recommendations']:
         parts.append('<p>No recommendations supplied. This is not a clean bill of health or approval.</p>')
     for index, recommendation in enumerate(judgment['recommendations'], 1):
-        parts.append('<details><summary>Recommendation ' + str(index) + ': ' + text(recommendation['category']) +
-            ' · ' + text(recommendation['priority']) + '</summary>')
-        for key in ('scope', 'justification', 'expected_benefit'):
+        parts.append('<div class="finding"><h4>Recommendation ' + str(index) + ': ' + text(recommendation['category']) +
+            ' · ' + text(recommendation['priority']) + '</h4><p>' + text(recommendation['scope']) +
+            '</p><details><summary>Rationale, risks and proposed validation</summary>')
+        for key in ('justification', 'expected_benefit'):
             parts.append('<p><strong>' + safe(key.replace('_', ' ').capitalize()) + ':</strong> ' + text(recommendation[key]) + '</p>')
         parts.append(disclosure('Source targets, evidence, alternatives, risks and proposed validation',
-            {k: v for k, v in recommendation.items() if k not in ('scope', 'justification', 'expected_benefit')}) + '</details>')
+            {k: v for k, v in recommendation.items() if k not in ('scope', 'justification', 'expected_benefit')}) + '</details></div>')
     parts.append(disclosure('Analyst provenance and original validation profile', {
         'profile': item['profile'], 'tooling_revision': item['tooling_revision'],
         'review_digest': item['review_digest'], 'markdown_digest': item['markdown_digest'],
@@ -348,11 +497,9 @@ def interpretation(item):
     labels = {'independent_ai': 'Independent AI assessment (supplied)',
               'human_supplied': 'Human assessment (supplied; unauthenticated)', 'unknown': 'Assessment (author category unknown)'}
     for supplied in item['assessments']:
-        score = ('Numeric score not assigned' if supplied['score'] is None else
-                 'Supplied score: ' + text(supplied['score']) + ' / ' + text(supplied['maximum']))
-        parts.append('<div class="assessment"><h5>' + labels[supplied['author_kind']] + '</h5><p>Attributed to ' +
-            text(supplied['attribution']) + '. Supplied verdict: <strong>' + text(supplied['verdict']) +
-            '</strong>. ' + score + '.</p><details><summary>Assessment reasoning, rubric and provenance</summary>')
+        parts.append(f'<div class="assessment" id="{anchor("assessment", item["record_id"], supplied["id"])}"><h5>' +
+            labels[supplied['author_kind']] + '</h5><p>' + assessment_summary(supplied) +
+            '</p><details><summary>Assessment reasoning, rubric and provenance</summary>')
         if supplied['dimensions'] is not None:
             parts.append(table('Supplied assessment dimensions — arithmetic checked, substantive judgments attributed',
                 ('Dimension', 'Score', 'Assessor rationale'), [[text(name.replace('_', ' ')), text(row['score']),
@@ -408,48 +555,22 @@ def render_report(result, captured, *, reviews=None):
         '<meta http-equiv="Content-Security-Policy" content="' + safe(csp) + '">'
         '<meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width, initial-scale=1">'
         '<title>Private skill evaluation report</title><style>' + CSS + '</style></head><body>'
-        '<a class="skip" href="#main">Skip to report</a><header><p class="eyebrow">PRIVATE · OFFLINE · DETERMINISTIC</p>'
-        '<h1>Skill evaluation report</h1><p>What the supplied evidence shows, where it is incomplete, and what to inspect next.</p>'
+        '<a class="skip" href="#main">Skip to report</a><header><p class="eyebrow">PRIVATE · OFFLINE</p>'
+        '<h1>Skill evaluation report</h1>'
         '<div class="theme" id="theme-control" hidden><label for="theme">Appearance</label><select id="theme">'
         '<option value="system">System default</option><option value="light">Light</option><option value="dark">Dark</option>'
         '</select></div></header><main id="main" tabindex="-1"><section class="overview" aria-labelledby="overview">'
         '<h2 id="overview">Executive overview</h2>')
     skills = result['skills']; findings = result['findings']
-    measured_skills = sum(any(r['measured'] for r in s['behavioral_results']) for s in skills)
-    counts = [('Skills represented', len(skills)), ('Skills with measurements', measured_skills),
-              ('Case regressions', sum(f['kind'] == 'case_regression' for f in findings)),
-              ('Failed mandatory gates', sum(f['kind'] == 'failed_gate' for f in findings))]
-    add('<div class="cards">' + ''.join('<div class="card"><strong>' + text(n) + '</strong>' + label + '</div>'
-                                       for label, n in counts) + '</div>')
-    if attached:
-        add('<p>Optional interpretation: <strong>' + text(len(attached)) + ' analyst reports</strong> and ' +
-            text(sum(len(row['assessments']) for row in attached.values())) +
-            ' separately supplied assessment records. Read these opinions in their labeled sections; '
-            'they do not change the measurements or deterministic findings. Authenticated human approval is not established.</p>')
-    unknown_gates = sum(r['gates']['unknown_observations'] for s in skills for r in s['behavioral_results'])
-    add('<p>Mandatory gate outcomes are unknown for <strong>' + text(unknown_gates) +
-        ' recorded observations</strong>. Unknown or unmeasured gates are not passing outcomes.</p>')
-    add('<p>Behavioral evaluations measure recorded outputs on configured cases in separate with-skill and without-skill arms. '
-        'Static scans check source artifacts. Inventory describes configuration; it never establishes measured performance. '
-        'This report includes every skill represented in the supplied validated bundles, including skills without a behavioral suite.</p>'
-        '<p class="notice"><strong>Start with mandatory outcomes, case regressions and evidence gaps.</strong> '
-        'A favorable headline metric can coexist with lower case scores or failed gates. A grader failure is not automatically '
-        'an instruction defect. Findings justify investigation, not corrective skill edits.</p>'
-        '<p>Unknowns include omitted runs, unavailable original support, execution beyond the recorded carriers, '
-        'production effectiveness and portability. No causal explanation, statistical significance, cross-suite ranking '
-        'or time trend is inferred. Scores are not aggregated across skills.</p>'
+    add(executive_summary(result, records, attached))
+    add(
         '<details><summary>How to read the measures</summary><p>Skill Lift is the native evaluator difference on its score scale. '
         'Effectiveness, Correctness and Discoverability are native with-skill rubric dimensions; corresponding without-skill '
         'headline dimensions are not supplied by this public contract. Values are preserved, not recomputed from '
         'rounded case scores. Case deltas use descriptive arm means only where all planned attempts are scored. '
         'A positive delta is higher, a negative delta is lower; neither explains why. Mandatory gates are separate from rubric passes. '
-        'Unknown counts, scores and gates stay unknown.</p></details><h3>Skill directory</h3>')
-    add(table('Coverage in supplied evidence', ('Skill', 'Behavioral evidence', 'Measured runs', 'Static records'),
-        [[link('skill', (s['skill'],), s['skill']), 'Measured' if any(r['measured'] for r in s['behavioral_results']) else 'Unmeasured',
-          text(sum(r['measured'] for r in s['behavioral_results'])), text(len(s['static_results']))] for s in skills]))
-    if not skills:
-        add('<p>The supplied inventory is empty. No skills or measurements are inferred.</p>')
-    add('<nav aria-label="Report sections"><ul><li><a href="#provenance">Report provenance and limitations</a></li></ul></nav></section>')
+        'Unknown counts, scores and gates stay unknown.</p></details>')
+    add('</section>')
     for skill in skills:
         name = skill['skill']
         add(f'<section class="skill" id="{anchor("skill", name)}"><h2>' + safe(name) + '</h2>')
@@ -457,16 +578,14 @@ def render_report(result, captured, *, reviews=None):
             add('<p class="notice"><strong>Unmeasured.</strong> No supplied model-backed measurement. Configuration and offline fixture replay do not establish skill benefit or harm.</p>')
         for config in skill['configurations']:
             suite = config['suite']
-            add('<p>Inventory snapshot: ' + (text(suite['case_count']) + ' configured cases' if suite else 'No behavioral suite configured') +
+            add('<p>Inventory snapshot: ' + (text(suite['case_count']) + ' configured cases per arm' if suite else 'No behavioral suite configured') +
                 '. Source owner: ' + text(config['source']['owner']) + '.</p>' + disclosure('Configuration identity and source snapshot', config))
-        add('<p class="muted">Inventory snapshots and evaluated sources retain their separate identities; a current configuration does not rewrite a historical run.</p>'
-            '<h3>Investigation priorities · deterministic findings</h3>' + priorities([f for f in findings if f['skill'] == name], records))
-        for run in skill['behavioral_results']:
-            add(behavioral(run, records))
-        for run in skill['static_results']:
-            add(static_result(run, records))
-        if not skill['static_results']:
-            add('<p>Static scan evidence not supplied for this skill; no clean-scan claim is made.</p>')
+        local = [f for f in findings if f['skill'] == name]
+        add('<h3>Investigation priorities · deterministic findings</h3>' +
+            priorities([f for f in local if f['importance'] != 'context'], records))
+        context = [f for f in local if f['importance'] == 'context']
+        if context:
+            add('<details><summary>Evidence gaps and comparison limits</summary>' + priorities(context, records) + '</details>')
         skill_reviews = [row for row in attached.values() if row['skill'] == name]
         if skill_reviews:
             for row in skill_reviews:
@@ -474,15 +593,23 @@ def render_report(result, captured, *, reviews=None):
         else:
             add('<p>No analyst report supplied for this skill. Deterministic findings remain available; '
                 'missing interpretation does not establish approval or absence of defects.</p>')
-        add(comparisons(skill) + '</section>')
+        for run in skill['behavioral_results']:
+            add(behavioral(run, records))
+        for run in skill['static_results']:
+            add(static_result(run, records))
+        if not skill['static_results']:
+            add('<p>Static scan evidence not supplied for this skill; no clean-scan claim is made.</p>')
+        add('<details><summary>Cross-run comparison status and evidence</summary>' + comparisons(skill) + '</details></section>')
     add('<section id="provenance"><h2>Report provenance and limitations</h2><p>Presentation method ' + code(METHOD) +
         '; analysis method ' + code(result['method_version']) + '; public and analysis schema version 1. Analysis semantic digest ' +
         code(evidence.identity(result)) + '.</p><p>Saved analysis was independently rebuilt against captured public originals before rendering. '
         'Canonical record identities preserve semantic content; raw-byte digests preserve the exact supplied files. '
-        'These bindings do not attest remote execution. No local input paths, generation timestamp, prompts or private trajectories are embedded.</p>')
+        'These bindings do not attest remote execution. No local input paths, generation timestamp, prompts or private trajectories are embedded. '
+        'Link identities are shortened for readability; exact identities remain in the evidence disclosures. '
+        'Inventory snapshots and evaluated sources retain separate identities; current configuration does not rewrite historical runs.</p>')
     for rid, record in sorted(records.items()):
         if record['kind'] == 'inventory':
-            add(f'<details id="{anchor("record", rid)}"><summary>Inventory record ' + safe(rid) + '</summary>' +
+            add(f'<details id="{anchor("record", rid)}"><summary>Inventory record ' + safe(short_identity(rid)) + '</summary>' +
                 disclosure('Validated inventory', record) + '</details>')
     add(disclosure('Input manifests, raw digests and record identities', result['input_provenance']) +
         disclosure('Analyzer comparison scope', result['comparison_scope']))

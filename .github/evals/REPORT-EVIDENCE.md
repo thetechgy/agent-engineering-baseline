@@ -1177,7 +1177,12 @@ lasts for the open document. With JavaScript disabled the report remains readabl
 and follows the system theme. Native disclosures reveal detailed support.
 
 The executive overview and skill directory show every skill represented in the
-supplied inventories or public reports. Inventory configurations and historical
+supplied inventories or public reports. The opening summarizes measured native
+results and presents failed, passed and unknown mandatory gate counts together;
+zero recorded failures never establishes safety. The directory distinguishes
+measured results, configured suites without supplied results, and skills without
+a configured suite (or missing configuration). Configured counts are per arm,
+not completed trials. Inventory configurations and historical
 evaluated sources retain separate identities. Skills without a suite or measured
 run have explicit sections; no performance score is inferred. Each measured run
 shows native metrics, separate with/without-skill expected and observed coverage,
@@ -1189,11 +1194,21 @@ Static scanner states, blocking flags, severity counts and structured findings
 are separate from behavioral performance. Counts can exceed the number of public
 finding details; omitted scanner prose is not reconstructed.
 
-Investigation priorities use only the analyzer's deterministic findings,
-importance and next-step codes. Mandatory outcomes precede investigations and
-evidence gaps; ties follow stable finding kind/identity, not a new risk model.
+Investigation priorities retain the analyzer's deterministic findings,
+importance and next-step codes. Mandatory outcomes precede investigations;
+routine context findings remain under “Evidence gaps and comparison limits”.
+The overview also exposes lower recorded security-component scores only when
+both arms have a complete single planned attempt and a supplied security score.
+It displays the original component values with observation links, without new
+means, deltas, finding contracts or risk scores. Missing or multi-attempt
+comparisons stay in the observation evidence. Security judgments warrant
+inspection separately from command-wrapper or harness concerns; neither is
+verified execution or proof of an instruction defect.
 Finding disclosures retain exact quantities, uncertainty and support identities,
-with internal links to records, observations and original references. Original
+with internal links to records, observations and original references. Long link
+identities use display prefixes; full identities remain in disclosures. Links
+reveal containing disclosures with JavaScript; native disclosures and fragment
+targets remain available without it. Original
 member paths and locators are inert text. Public reference availability does not
 prove local possession or authenticate redacted diagnostic bytes. Expired
 references stay expired, and retained reviewed extracts do not become complete
@@ -1209,6 +1224,14 @@ There are no time trends, causal explanations, statistical claims, cross-suite
 rankings or recommendations to edit a skill. A grader failure is not automatically
 an instruction defect. All conclusions are limited to supplied evidence;
 unrepresented skills or omitted runs cannot be discovered from these bundles.
+
+When validated analyst attachments are supplied, the overview exposes their
+proposed action scopes and separately attributed assessment verdicts and scores.
+An unscored assessment stays unscored. Full analyst conclusions and actions
+precede detailed run evidence; rationale, citations and provenance remain in
+disclosures. These are model interpretations and supplied opinions, separate
+from deterministic findings. They cannot establish authenticated human approval,
+change `not_quality_qualified`, authorize execution or enable publication.
 
 ### Reproduce the offline demonstration
 
