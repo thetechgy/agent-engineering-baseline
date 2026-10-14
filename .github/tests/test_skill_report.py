@@ -299,7 +299,11 @@ class ReportTests(unittest.TestCase):
         return path
 
     def test_production_cli_secure_private_output_and_no_bytecode(self):
-        root = self.bundle('cli', [self.historical, self.static])
+        records = [fixtures.synthetic(), self.static]
+        # Subprocesses use the real clock; success inputs must never expire.
+        for record in records:
+            evidence.validate_evidence(record, public=True, _observed_at=datetime.max.replace(tzinfo=timezone.utc))
+        root = self.bundle('cli', records)
         result, captured = self.analyze(root)
         saved = self.saved(result); destination = self.root / 'output'
         command = [sys.executable, str(Path(report.__file__)), '--input', str(root), '--analysis', str(saved), '--output', str(destination)]
