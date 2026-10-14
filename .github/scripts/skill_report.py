@@ -15,7 +15,8 @@ import skill_analysis as analysis
 import skill_evidence as evidence
 
 HTML_LIMIT = 64 * 1024 * 1024
-METHOD = 'private-offline-skill-report/1'
+METHOD = 'private-offline-skill-report/2'
+CONTRACT_ERRORS = (ValueError, OSError, TypeError, KeyError, IndexError, OverflowError, RecursionError, UnicodeError)
 
 # Fixed assets only. No evidence is interpolated into CSS, JavaScript or URLs.
 CSS = """
@@ -40,7 +41,7 @@ outline:3px solid var(--accent);outline-offset:4px}
 section.skill,.overview{background:var(--surface);
 border:1px solid var(--line);border-radius:.6rem;padding:1.5rem;margin-bottom:2rem}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,14rem),1fr));gap:1rem}
-.card{border:1px solid var(--line);border-radius:.3rem;padding:1rem;min-width:0}
+.card,.assessment{border:1px solid var(--line);border-radius:.3rem;padding:1rem;min-width:0}
 .card strong{display:block;font-size:1.5rem}.badge{display:inline-block;border:1px solid currentColor;
 border-radius:.25rem;padding:.15rem .5rem;font-size:.85rem}
 nav ul{display:flex;flex-wrap:wrap;gap:.5rem 1.5rem;padding:0;list-style:none}
@@ -309,9 +310,86 @@ def asset_hash(value):
     return base64.b64encode(hashlib.sha256(value.encode('utf-8')).digest()).decode('ascii')
 
 
-def render_report(result, captured):
+def interpretation(item):
+    """Only independently validated attachments reach this inert presentation."""
+    report = item['report']; judgment = report['judgment']; assessment = judgment['assessment']
+    parts = ['<article class="run"><h3>Model interpretation · analyst report</h3>'
+        '<p class="notice"><strong>Model-generated judgment requiring human review.</strong> '
+        'Citation integrity does not establish semantic truth or an instruction defect. '
+        'Recommendations and validation plans are proposals, not completed actions.</p><p>Bound record: ' +
+        link('record', (item['record_id'],), item['record_id']) + '</p><p>Analyst disposition: <strong>' +
+        text(assessment['disposition']) + '</strong> · ' + text(len(judgment['recommendations'])) +
+        ' recommendations. Source owner: ' + text(report['provenance']['source_owner']) + '.</p>']
+    for key, label in (('tested_benefit', 'Tested benefit · analyst interpretation'),
+                       ('tested_harm', 'Tested harm · analyst interpretation'), ('uncertainty', 'Uncertainty')):
+        parts.append('<p><strong>' + label + ':</strong> ' + text(assessment[key]) + '</p>')
+    parts.append('<details><summary>Analyst reasoning, sufficiency and citations</summary><p>' +
+        text(assessment['interpretation']) + '</p>' + disclosure('Assessment evidence and limitations', {
+            'sufficiency': assessment['sufficiency'], 'citations': assessment['citations']}) +
+        disclosure('Native suggestions and analyst dispositions', judgment['native_suggestions']) +
+        disclosure('Unverified external assertions', judgment['unverified_external_assertions']) + '</details>')
+    if not judgment['recommendations']:
+        parts.append('<p>No recommendations supplied. This is not a clean bill of health or approval.</p>')
+    for index, recommendation in enumerate(judgment['recommendations'], 1):
+        parts.append('<details><summary>Recommendation ' + str(index) + ': ' + text(recommendation['category']) +
+            ' · ' + text(recommendation['priority']) + '</summary>')
+        for key in ('scope', 'justification', 'expected_benefit'):
+            parts.append('<p><strong>' + safe(key.replace('_', ' ').capitalize()) + ':</strong> ' + text(recommendation[key]) + '</p>')
+        parts.append(disclosure('Source targets, evidence, alternatives, risks and proposed validation',
+            {k: v for k, v in recommendation.items() if k not in ('scope', 'justification', 'expected_benefit')}) + '</details>')
+    parts.append(disclosure('Analyst provenance and original validation profile', {
+        'profile': item['profile'], 'tooling_revision': item['tooling_revision'],
+        'review_digest': item['review_digest'], 'markdown_digest': item['markdown_digest'],
+        'provenance': report['provenance']}) + '<h4>Independent assessments · separately supplied</h4>'
+        '<p>No authenticated human approval is established by this report. Authorship and independence are supplied '
+        'attributions. Assessments are not aggregated and cannot change analyst qualification.</p>')
+    if not item['assessments']:
+        parts.append('<p>No independent assessments supplied for this analyst report.</p>')
+    labels = {'independent_ai': 'Independent AI assessment (supplied)',
+              'human_supplied': 'Human assessment (supplied; unauthenticated)', 'unknown': 'Assessment (author category unknown)'}
+    for supplied in item['assessments']:
+        score = ('Numeric score not assigned' if supplied['score'] is None else
+                 'Supplied score: ' + text(supplied['score']) + ' / ' + text(supplied['maximum']))
+        parts.append('<div class="assessment"><h5>' + labels[supplied['author_kind']] + '</h5><p>Attributed to ' +
+            text(supplied['attribution']) + '. Supplied verdict: <strong>' + text(supplied['verdict']) +
+            '</strong>. ' + score + '.</p><details><summary>Assessment reasoning, rubric and provenance</summary>')
+        if supplied['dimensions'] is not None:
+            parts.append(table('Supplied assessment dimensions — arithmetic checked, substantive judgments attributed',
+                ('Dimension', 'Score', 'Assessor rationale'), [[text(name.replace('_', ' ')), text(row['score']),
+                    text(row['rationale'])] for name, row in supplied['dimensions'].items()]))
+        parts.append(disclosure('Supplied assessment limitations', supplied['limitations']))
+        if supplied['narrative'] is not None:
+            parts.append('<details><summary>Original assessment narrative · inert text</summary><pre>' +
+                         safe(supplied['narrative']) + '</pre></details>')
+        if supplied['rubric'] is not None:
+            parts.append(disclosure('Preserved rubric context · no retrospective scoring', supplied['rubric']))
+        else:
+            parts.append('<p>Rubric not supplied; no rubric-compliance claim is inferred.</p>')
+        if supplied['freeze'] is not None:
+            parts.append('<p>Freeze-record digest, context and time ordering are consistent. '
+                'This is not trusted timestamp attestation or proof of independent authorship.</p>' +
+                disclosure('Preserved freeze-record metadata', supplied['freeze']))
+        else:
+            parts.append('<p>Freeze evidence not supplied; preregistration is not established.</p>')
+        parts.append(disclosure('Assessment document and rubric identities', supplied['provenance']) + '</details></div>')
+    if item['reference_deadlines']:
+        parts.append('<p class="notice">Reviewed-reference deadline(s): ' +
+            ', '.join(code(value) for value in item['reference_deadlines']) +
+            '. After expiration, omit this attachment and generate a base report from separately rebuilt '
+            'current-availability public evidence. Original files must remain unchanged.</p>')
+    parts.append('<p class="muted">Historical integration is time-limited by current-time evidence validation. '
+        'A saved HTML file is a snapshot, not continuing validation. Keep analyst and assessment material private.</p></article>')
+    return ''.join(parts)
+
+
+def render_report(result, captured, *, reviews=None):
     """Validate again at the rendering boundary; never accept analysis in isolation."""
     analysis.validate_analysis(result, captured)
+    if reviews is not None:
+        import skill_report_reviews as attachments
+        evidence.require(type(reviews) is attachments.ValidatedReviews, 'Validated analyst attachments required')
+        reviews.check(captured)
+    attached = {row['record_id']: row for row in reviews.items} if reviews is not None else {}
     records = captured.records
     csp = ("default-src 'none'; base-uri 'none'; object-src 'none'; form-action 'none'; "
            "connect-src 'none'; img-src 'none'; font-src 'none'; "
@@ -341,6 +419,11 @@ def render_report(result, captured):
               ('Failed mandatory gates', sum(f['kind'] == 'failed_gate' for f in findings))]
     add('<div class="cards">' + ''.join('<div class="card"><strong>' + text(n) + '</strong>' + label + '</div>'
                                        for label, n in counts) + '</div>')
+    if attached:
+        add('<p>Optional interpretation: <strong>' + text(len(attached)) + ' analyst reports</strong> and ' +
+            text(sum(len(row['assessments']) for row in attached.values())) +
+            ' separately supplied assessment records. Read these opinions in their labeled sections; '
+            'they do not change the measurements or deterministic findings. Authenticated human approval is not established.</p>')
     unknown_gates = sum(r['gates']['unknown_observations'] for s in skills for r in s['behavioral_results'])
     add('<p>Mandatory gate outcomes are unknown for <strong>' + text(unknown_gates) +
         ' recorded observations</strong>. Unknown or unmeasured gates are not passing outcomes.</p>')
@@ -382,6 +465,13 @@ def render_report(result, captured):
             add(static_result(run, records))
         if not skill['static_results']:
             add('<p>Static scan evidence not supplied for this skill; no clean-scan claim is made.</p>')
+        skill_reviews = [row for row in attached.values() if row['skill'] == name]
+        if skill_reviews:
+            for row in skill_reviews:
+                add(interpretation(row))
+        else:
+            add('<p>No analyst report supplied for this skill. Deterministic findings remain available; '
+                'missing interpretation does not establish approval or absence of defects.</p>')
         add(comparisons(skill) + '</section>')
     add('<section id="provenance"><h2>Report provenance and limitations</h2><p>Presentation method ' + code(METHOD) +
         '; analysis method ' + code(result['method_version']) + '; public and analysis schema version 1. Analysis semantic digest ' +
@@ -397,10 +487,11 @@ def render_report(result, captured):
     global_findings = [f for f in findings if f['skill'] is None]
     if global_findings:
         add('<h3>Invocation-level investigation priorities</h3>' + priorities(global_findings, records))
-    add('<h3>Model-generated recommendations</h3><p>Not included in this MVP. All investigation priorities above are fixed descriptions '
-        'of existing deterministic findings and next-step codes. The separate private analyst remains not quality-qualified and '
-        'automated publication ineligible. A future integration must independently validate analyst provenance and citations, '
-        'retain uncertainty and support availability, label judgments as model-generated, and require human review before any action.</p>'
+    add('<h3>Model-generated recommendations and assessment boundaries</h3><p>' + text(len(attached)) +
+        ' independently validated analyst reports attached. All deterministic investigation priorities above remain fixed descriptions '
+        'of existing findings and next-step codes. The private analyst remains ' + code('not_quality_qualified') + ' and '
+        'automated publication ineligible. Supplied AI or human assessments are separately attributed opinions; structural validation, '
+        'rubric arithmetic and self-declared approval do not establish authenticated human review or authorize action.</p>'
         '<p>Keep this file private. It requires no server, external assets, analytics or network requests. '
         'Appearance follows the system unless changed for this open document. All evidence is readable without JavaScript; '
         'expand disclosures for detailed support.</p></section></main><footer>Private evidence report · supplied inputs only</footer>'
@@ -408,7 +499,7 @@ def render_report(result, captured):
     return ''.join(parts).encode('utf-8')
 
 
-def generate(inputs, saved_analysis, output=None):
+def generate(inputs, saved_analysis, output=None, *, analyst_reviews=()):
     captured = analysis.capture_inputs(inputs)
     directories = {}; states = {}; members = {}; budget = evidence.ReadBudget()
     saved_path = evidence.safe_path(saved_analysis, directory_identities=directories)
@@ -417,9 +508,15 @@ def generate(inputs, saved_analysis, output=None):
     result = evidence.parse_json(raw, limit=analysis.JSON_LIMIT)
     guard = evidence.input_guard(directories, states, members, budget)
     guard()
-    rendered = render_report(result, captured)
-    return evidence.write_outputs({}, output, input_paths=(*captured.roots, saved_path.parent),
-        input_guards=(*captured.guards, guard, lambda: analysis.check_capture(captured)), rendered={'report.html': rendered})
+    reviews = None
+    if analyst_reviews:
+        import skill_report_reviews as attachments
+        reviews = attachments.load(analyst_reviews, captured)
+    rendered = render_report(result, captured, reviews=reviews) if reviews is not None else render_report(result, captured)
+    return evidence.write_outputs({}, output, input_paths=(*captured.roots, saved_path.parent,
+            *(reviews.roots if reviews is not None else ())),
+        input_guards=(*captured.guards, guard, lambda: analysis.check_capture(captured),
+            *((lambda: reviews.check(captured),) if reviews is not None else ())), rendered={'report.html': rendered})
 
 
 class PrivateParser(argparse.ArgumentParser):
@@ -432,8 +529,16 @@ def main(argv=None):
     parser.add_argument('--input', type=Path, action='append', required=True, help='Validated public bundle; repeat for additional roots')
     parser.add_argument('--analysis', type=Path, required=True, help='Saved analysis.json for exactly these bundles')
     parser.add_argument('--output', type=Path, help='New private directory outside checkout and inputs')
+    parser.add_argument('--analyst-review', type=Path, action='append', default=[],
+                        help='Private analyst attachment descriptor; at most one per selected record')
     args = parser.parse_args(argv)
-    destination = generate(args.input, args.analysis, args.output)
+    try:
+        destination = generate(args.input, args.analysis, args.output, analyst_reviews=args.analyst_review)
+    except CONTRACT_ERRORS:
+        if args.analyst_review:
+            parser.exit(1, 'Analyst report inputs rejected; no HTML report is ready. '
+                'Omit --analyst-review for a base report with valid current-availability inputs.\n')
+        raise
     print(destination)
     return destination
 
@@ -441,6 +546,6 @@ def main(argv=None):
 if __name__ == '__main__':
     try:
         main()
-    except (ValueError, OSError, TypeError, KeyError, IndexError, OverflowError, RecursionError, UnicodeError):
+    except CONTRACT_ERRORS:
         print('Report contract rejected; no HTML report is ready.', file=sys.stderr)
         sys.exit(1)

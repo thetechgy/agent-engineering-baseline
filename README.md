@@ -409,9 +409,14 @@ For one private offline view of all skills in validated public evidence, generat
 a saved analysis and the [consolidated HTML report](.github/evals/REPORT-EVIDENCE.md#private-offline-html-report).
 The report shows native metrics, separate with/without-skill coverage, case
 regressions, mandatory gates, static findings and evidence gaps. It includes
-unmeasured skills and deterministic investigation priorities without making
-causal claims or proposing skill edits. It runs locally without inference,
+unmeasured skills; its deterministic priorities describe investigations without
+causal claims or corrective skill edits. It runs locally without inference,
 external assets or publication; keep the generated file outside the checkout.
+Optional [private analyst attachments](.github/evals/REPORT-EVIDENCE.md#optional-private-analyst-attachments)
+add independently revalidated model interpretation and separately attributed
+assessments. Historical tooling, record identities, citations and current support
+availability must match exactly. Supplied ChatGPT assessments are not authenticated
+human approval; the analyst remains `not_quality_qualified` and publication ineligible.
 
 <!-- rumdl-disable MD033 -->
 <details>

@@ -285,8 +285,8 @@ class ReportTests(unittest.TestCase):
         self.assertIn('inspect_gate_evidence', extra)
         self.assertTrue(all(f['next_step'] in report.NEXT_STEPS and f['kind'] in report.FINDING_LABELS for f in result['findings']))
         self.assertIn('Model-generated recommendations', output)
-        self.assertIn('Not included in this MVP', output)
-        self.assertIn('not quality-qualified', output)
+        self.assertIn('0 independently validated analyst reports attached', output)
+        self.assertIn('not_quality_qualified', output)
 
     def test_empty_inventory_and_html_limit_fail_without_truncation(self):
         result, captured = self.analyze(self.bundle('empty', configs=[]))
