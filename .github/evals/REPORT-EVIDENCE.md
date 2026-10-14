@@ -1294,8 +1294,10 @@ complete WCAG conformance or assistive-technology certification.
 Add `--analyst-review /tmp/private-attachments/podman.json` to the report command;
 repeat for another selected record. There is at most **one analyst report per
 record**, with up to eight separately supplied independent assessments of that
-exact report. No-attachment generation needs neither the analyst module nor its
-SDK dependencies. Public evidence and analysis contracts remain unchanged.
+exact report. No-attachment generation keeps the existing public-evidence
+dependencies (including Pydantic), without importing the analyst modules or
+OpenAI SDK. Attachment-specific version checks run only when requested.
+Public evidence and analysis contracts remain unchanged.
 
 The rendering boundary rechecks the attachment witness and captured originals.
 Validation reconstructs each analyst's **original** context and analysis, then
