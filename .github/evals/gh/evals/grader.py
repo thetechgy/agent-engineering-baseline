@@ -145,6 +145,8 @@ def grade(entry, workspace, calls, activation, fixture, authored_text=""):
     scores["activation"] = activation
     contract = entry["contract"]
     try:
+        if contract.get("fixture_contract") != "gh-cli-subset-v2":
+            raise ValueError("unsupported fixture contract")
         state = Path("/opt/gh-eval/state") if workspace == Path("/workspace") else workspace / ".gh-fixture"
         for relative, expected_hash in contract["input_hashes"].items():
             target = state / ("case.json" if relative.startswith("cases/") else relative)

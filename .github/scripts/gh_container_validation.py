@@ -13,7 +13,7 @@ import gh_evaluations as gh
 from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks
 
 
-SELECTED = ("gh-001", "gh-007", "gh-010")
+SELECTED = ("gh-001", "gh-003", "gh-007", "gh-010")
 
 
 def run(*argv, check=True):
@@ -43,7 +43,7 @@ def validate():
                     workspace_skill_paths=[skill.parent / gh.COMPETING],
                 )
                 for task in tasks:
-                    if not with_skill and task.name != "gh-001":
+                    if not with_skill and task.name not in ("gh-001", "gh-003"):
                         continue
                     name = f"{prefix}-{tested}"
                     resources.append(name)
@@ -111,13 +111,23 @@ for p in pathlib.Path('/proc').glob('*/cmdline'):
                             raise ValueError("skill inaccessible")
                     elif run(*agent, "test", "-e", "/workspace/skills/gh", check=False).returncode == 0:
                         raise ValueError("target skill present in baseline")
-                    for command in entries[task.name]["contract"]["good_commands"]:
+                    commands = entries[task.name]["contract"]["good_commands"]
+                    if task.name == "gh-003":
+                        commands = [commands[-1] + ["--slurp"]]
+                    for command in commands:
                         result = observed(shlex.join(["gh", *command]))
                         if result.returncode:
                             raise ValueError("known-good CLI call failed")
                         if task.name == "gh-007" and command[:2] == ["api", "repos/fixture-org/widget/issues"]:
-                            if json.loads(result.stdout) != list(range(1, 32)):
+                            ids = [item for page in result.stdout.splitlines() for item in json.loads(page)]
+                            if ids != list(range(1, 32)):
                                 raise ValueError("incomplete or PR-mixed issue collection")
+                        if task.name == "gh-003":
+                            pages = json.loads(result.stdout)
+                            ids = [thread["id"] for page in pages for thread in
+                                   page["data"]["repository"]["pullRequest"]["reviewThreads"]["nodes"]]
+                            if ids != ["T1", "T2"]:
+                                raise ValueError("incomplete slurped review-thread collection")
                     payload = json.dumps(entries[task.name]["contract"]["expected"])
                     if observed("printf '%s\\n' " + shlex.quote(payload) + " > output/result.json").returncode:
                         raise ValueError("authorized result write failed")
@@ -132,6 +142,10 @@ for p in pathlib.Path('/proc').glob('*/cmdline'):
                         raise ValueError("unexpected production verifier gate")
                     if reward["custom_metrics"]["gh_authorization"] != 1:
                         raise ValueError("authorized calls rejected")
+                    if task.name == "gh-003":
+                        if any(reward["custom_metrics"]["gh_" + dimension] != 1 for dimension in
+                               ("evidence", "commands", "task", "recovery", "authorization", "efficiency")):
+                            raise ValueError("common task performance failed")
                     tested += 1
             print(json.dumps({"evidence": "credential-free native Docker boundary", "containers_passed": tested,
                 "model_trials": 0, "network": "none", "task_build": gh.reports.GH_TASK_BUILD}))

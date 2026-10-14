@@ -28,32 +28,6 @@
       ]
     },
     {
-      "id": "malformed",
-      "match": {
-        "pos": [
-          "api",
-          "graphql"
-        ],
-        "options": {
-          "--raw-field": [
-            "query=query($owner:String!,$name:String!,$endCursor:String){repository(owner:$owner,name:$name){pullRequest(number:17){reviewThreads(first:100,after:$endCursor){nodes{id isResolved comments(first:100){nodes{body}}} pageInfo{hasNextPage endCursor}}}}"
-          ],
-          "--field": [
-            "owner=fixture-org",
-            "name=widget"
-          ]
-        },
-        "repo": "fixture-org/widget"
-      },
-      "responses": [
-        {
-          "stdout": "",
-          "stderr": "GraphQL: Expected RCURLY, actual EOF",
-          "exit_code": 2
-        }
-      ]
-    },
-    {
       "id": "threads",
       "match": {
         "pos": [

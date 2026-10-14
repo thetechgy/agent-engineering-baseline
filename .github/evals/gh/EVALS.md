@@ -71,6 +71,20 @@ failures remain valid comparison evidence. Native aggregate scores cannot
 outvote this gate. Publication also requires complete authored case/attempt
 coverage in both arms and the existing complete-native-result checks.
 
+Target activation is separate from common task performance. A correct
+without-skill result still has `gh_activation=0` and `gh_gate=0`; neither is
+evidence that its task result is worse. Compare `gh_evidence`, `gh_commands`,
+`gh_task`, `gh_recovery`, `gh_authorization`, and `gh_efficiency` across arms,
+and report activation and native aggregates separately. All with-skill gates
+remain mandatory.
+
+The authored contracts now declare `fixture_contract=gh-cli-subset-v2`, and
+the benchmark policy records `deterministic_gate=3`. Dataset validation and
+the verifier reject missing or different contract versions. Authored and staged
+dataset digests and the policy identity change; do not pool these results with
+earlier fixture semantics. Preserve historical artifacts and their original
+identities. Future material fixture/grader changes must update these identities.
+
 Native Harbor tasks run the agent as UID 1000 (`agent`) and the verifier as root.
 Response definitions and audit state live under root-only `/opt/gh-eval`; public
 inputs contain only a protocol notice. The installed `gh` client submits arguments
@@ -90,11 +104,37 @@ agent inputs. Native activation checks, not self-reported activation, score rout
 
 The executable models the documented command subset in each case. Unsupported
 commands fail explicitly. It accepts long flags, the relevant short aliases,
-field ordering, GraphQL whitespace, and `--jq` filtering using the installed `jq`.
+field ordering, and `--jq` filtering using the installed `jq`.
 Help responses are captured from `gh` 2.102.0. This is not a complete GitHub CLI
 emulator: alternate API strategies, templates, arbitrary GraphQL, and manual
 cursor loops outside the modeled routes fail. Treat such failures as coverage
 limitations to review before interpreting a benchmark score.
+
+GraphQL uses a dependency-free, bounded validator for the two modeled read-only
+selections: repository review threads and issue total counts. It consumes the
+whole operation, accepts named queries, comments, insignificant whitespace and
+commas, reordered selections/arguments/variables, scalar literals and typed
+variables, and validates field nesting, argument types and required values.
+Responses contain only selected fields. It is not a general GitHub schema
+validator. Aliases, fragments, directives, defaults, list values, other fields,
+page sizes other than 100, and manual cursor requests remain unsupported.
+Invalid modeled queries receive errors and cannot satisfy the successful route
+required for task/recovery credit. Query bytes, token counts, integer values and
+selection depth are bounded. The grammar follows the
+[GraphQL language specification](https://spec.graphql.org/September2025/#sec-Language).
+
+For API output, `--paginate --slurp` wraps complete JSON pages in an outer array;
+it does not flatten their contents. `--jq` filters each page without slurp.
+As in [gh 2.102.0](https://github.com/cli/cli/blob/v2.102.0/pkg/cmd/api/api.go),
+slurp requires pagination and cannot be combined with `--jq`.
+The gh-007 replay therefore uses a per-page issue filter without slurp, retaining
+all issue IDs and excluding the PR-shaped item.
+
+gh-003 measures recovery from the described failed lookup through API fallback
+and complete pagination. `attempt.txt` does not contain the original malformed
+GraphQL query; the case does not establish that an agent repaired that query.
+Its malformed replay command is a separate synthetic harness regression probe,
+not an observed original query or a manufactured skill defect.
 
 Pending checks expose an Actions run link so the run ID is observable before
 watching. Issue collection uses explicit GET, `state=all`, pagination, and a

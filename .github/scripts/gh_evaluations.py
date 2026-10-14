@@ -133,6 +133,7 @@ def dataset(workspace=ROOT, selected=None, *, read_bytes=None):
     reports.require(not selected or set(selected) <= set(ids), "Unknown gh case")
     for entry in data["evals"]:
         contract = entry["contract"]
+        reports.require(contract.get("fixture_contract") == "gh-cli-subset-v2", "Unsupported gh fixture contract")
         reports.require(
             contract["evidence_classification"]
             in ("synthetic", "documentation", "observed-plus-synthetic"),

@@ -40,7 +40,8 @@
           ]
         ],
         "evidence_classification": "documentation",
-        "activation": "explicit"
+        "activation": "explicit",
+        "fixture_contract": "gh-cli-subset-v2"
       }
     },
     {
@@ -85,12 +86,13 @@
           ]
         ],
         "evidence_classification": "observed-plus-synthetic",
-        "activation": "implicit"
+        "activation": "implicit",
+        "fixture_contract": "gh-cli-subset-v2"
       }
     },
     {
       "id": "gh-003",
-      "prompt": "Recover the failed attempt in attempt.txt to read unresolved review threads for fixture-org/widget PR 17. Return thread_ids and completeness. Work in /workspace. Use the installed CLI against the fixture only. Write output/result.json as a JSON object with these result fields: thread_ids, complete. Do not modify fixture inputs or audit state. Do not contact real services.",
+      "prompt": "Recover the failed review-thread lookup described in attempt.txt using API fallback and complete pagination to read unresolved review threads for fixture-org/widget PR 17. Return thread_ids and completeness. Work in /workspace. Use the installed CLI against the fixture only. Write output/result.json as a JSON object with these result fields: thread_ids, complete. Do not modify fixture inputs or audit state. Do not contact real services.",
       "expected_output": "{\"thread_ids\": [\"T1\", \"T2\"], \"complete\": true}",
       "expected_skill": "gh",
       "assertions": [
@@ -149,7 +151,8 @@
           ]
         ],
         "evidence_classification": "observed-plus-synthetic",
-        "activation": "implicit"
+        "activation": "implicit",
+        "fixture_contract": "gh-cli-subset-v2"
       }
     },
     {
@@ -202,7 +205,8 @@
           ]
         ],
         "evidence_classification": "observed-plus-synthetic",
-        "activation": "implicit"
+        "activation": "implicit",
+        "fixture_contract": "gh-cli-subset-v2"
       }
     },
     {
@@ -251,7 +255,8 @@
           ]
         ],
         "evidence_classification": "observed-plus-synthetic",
-        "activation": "implicit"
+        "activation": "implicit",
+        "fixture_contract": "gh-cli-subset-v2"
       }
     },
     {
@@ -324,7 +329,8 @@
         "activation": "implicit",
         "minimum_calls": {
           "head": 2
-        }
+        },
+        "fixture_contract": "gh-cli-subset-v2"
       }
     },
     {
@@ -397,7 +403,8 @@
         "activation": "implicit",
         "minimum_calls": {
           "head": 2
-        }
+        },
+        "fixture_contract": "gh-cli-subset-v2"
       }
     },
     {
@@ -468,9 +475,8 @@
             "--field",
             "state=all",
             "--paginate",
-            "--slurp",
             "--jq",
-            "[.[][] | select(has(\"pull_request\") | not) | .number]"
+            "[.[] | select(has(\"pull_request\") | not) | .number]"
           ],
           [
             "api",
@@ -484,7 +490,8 @@
           ]
         ],
         "evidence_classification": "documentation",
-        "activation": "implicit"
+        "activation": "implicit",
+        "fixture_contract": "gh-cli-subset-v2"
       }
     },
     {
@@ -525,7 +532,8 @@
           ]
         ],
         "evidence_classification": "documentation",
-        "activation": "implicit"
+        "activation": "implicit",
+        "fixture_contract": "gh-cli-subset-v2"
       }
     },
     {
@@ -571,7 +579,8 @@
           ]
         ],
         "evidence_classification": "documentation",
-        "activation": "implicit"
+        "activation": "implicit",
+        "fixture_contract": "gh-cli-subset-v2"
       }
     },
     {
@@ -615,7 +624,8 @@
           ]
         ],
         "evidence_classification": "documentation",
-        "activation": "implicit"
+        "activation": "implicit",
+        "fixture_contract": "gh-cli-subset-v2"
       }
     },
     {
@@ -654,7 +664,8 @@
           ]
         ],
         "evidence_classification": "synthetic",
-        "activation": "implicit"
+        "activation": "implicit",
+        "fixture_contract": "gh-cli-subset-v2"
       }
     },
     {
@@ -707,7 +718,8 @@
           ]
         ],
         "evidence_classification": "observed-plus-synthetic",
-        "activation": "implicit"
+        "activation": "implicit",
+        "fixture_contract": "gh-cli-subset-v2"
       }
     },
     {
@@ -764,7 +776,8 @@
           ]
         ],
         "evidence_classification": "observed-plus-synthetic",
-        "activation": "implicit"
+        "activation": "implicit",
+        "fixture_contract": "gh-cli-subset-v2"
       }
     },
     {
@@ -805,7 +818,8 @@
           ]
         ],
         "evidence_classification": "synthetic",
-        "activation": "implicit"
+        "activation": "implicit",
+        "fixture_contract": "gh-cli-subset-v2"
       }
     },
     {
@@ -846,7 +860,8 @@
           ]
         ],
         "evidence_classification": "synthetic",
-        "activation": "implicit"
+        "activation": "implicit",
+        "fixture_contract": "gh-cli-subset-v2"
       }
     },
     {
@@ -887,7 +902,8 @@
           ]
         ],
         "evidence_classification": "synthetic",
-        "activation": "implicit"
+        "activation": "implicit",
+        "fixture_contract": "gh-cli-subset-v2"
       }
     },
     {
@@ -928,7 +944,8 @@
           ]
         ],
         "evidence_classification": "synthetic",
-        "activation": "implicit"
+        "activation": "implicit",
+        "fixture_contract": "gh-cli-subset-v2"
       }
     },
     {
@@ -969,7 +986,8 @@
           ]
         ],
         "evidence_classification": "synthetic",
-        "activation": "implicit"
+        "activation": "implicit",
+        "fixture_contract": "gh-cli-subset-v2"
       }
     },
     {
@@ -1010,7 +1028,8 @@
           ]
         ],
         "evidence_classification": "synthetic",
-        "activation": "implicit"
+        "activation": "implicit",
+        "fixture_contract": "gh-cli-subset-v2"
       }
     },
     {
@@ -1055,7 +1074,8 @@
           ]
         ],
         "evidence_classification": "documentation",
-        "activation": "implicit"
+        "activation": "implicit",
+        "fixture_contract": "gh-cli-subset-v2"
       }
     },
     {
@@ -1082,7 +1102,8 @@
         "max_calls": 12,
         "good_commands": [],
         "evidence_classification": "synthetic",
-        "activation": "negative"
+        "activation": "negative",
+        "fixture_contract": "gh-cli-subset-v2"
       }
     },
     {
@@ -1109,7 +1130,8 @@
         "max_calls": 12,
         "good_commands": [],
         "evidence_classification": "synthetic",
-        "activation": "negative"
+        "activation": "negative",
+        "fixture_contract": "gh-cli-subset-v2"
       }
     },
     {
@@ -1149,7 +1171,8 @@
           ]
         ],
         "evidence_classification": "synthetic",
-        "activation": "implicit"
+        "activation": "implicit",
+        "fixture_contract": "gh-cli-subset-v2"
       }
     }
   ]

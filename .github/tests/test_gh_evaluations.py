@@ -117,15 +117,158 @@ class GhOfflineTests(unittest.TestCase):
         self.assertEqual(gh.replay_case(entry)["custom_metrics"]["gh_gate"], 0)
         entry = copy.deepcopy(gh.dataset(selected=["gh-010"])[0])
         entry["contract"]["good_commands"][0] = [
-            "pr",
-            "comment",
-            "17",
-            "--repo",
-            "fixture-org/widget",
-            "--body",
-            "wrong body",
+            "pr", "comment", "17", "--repo", "fixture-org/widget", "--body", "wrong body",
         ]
         self.assertEqual(gh.replay_case(entry)["custom_metrics"]["gh_gate"], 0)
+
+    def graphql_fixture(self):
+        fixture = gh.module(gh.ROOT / gh.OVERLAY / "evals/files/fixture.py", "graphql_fixture")
+        entry = copy.deepcopy(gh.dataset(selected=["gh-003"])[0])
+        case = reports.read_json(gh.ROOT / gh.OVERLAY / "evals/files/cases/gh-003.json")
+        return fixture, entry, case, entry["contract"]["good_commands"][-1]
+
+    def test_modeled_graphql_variants_and_selection_projection(self):
+        fixture, entry, case, command = self.graphql_fixture()
+        query_index = next(i for i, value in enumerate(command) if value.startswith("query="))
+        variants = [command,
+            [value.replace("query=query(", "query=# mutation is only a comment\nquery Threads(").replace(
+                "after:$endCursor", "after : $endCursor") for value in command],
+            [value.replace("$endCursor:String)", "$endCursor:String,$number:Int!)").replace(
+                "number:17", "number:$number") for value in command] + ["-F", "number=17"],
+            [value.replace("$endCursor:String)", "$endCursor:String,$first:Int)").replace(
+                "first:100", "first:$first") for value in command] + ["-F", "first=100"],
+            [value.replace("$owner", "$org").replace("$name", "$repo").replace(
+                "owner=fixture-org", "org=fixture-org").replace("name=widget", "repo=widget") for value in command],
+        ]
+        reordered = command.copy()
+        reordered[query_index] = ('query=query Threads($name:String!, $endCursor:String, $owner:String!) { '
+            'repository(name:$name owner:$owner) { pullRequest(number:17) { '
+            'reviewThreads(after:$endCursor first:100) { pageInfo { endCursor hasNextPage } '
+            'nodes { isResolved id } } } } }')
+        variants.append(reordered)
+        for args in variants:
+            with self.subTest(command=args):
+                value = fixture.dispatch(case, args, [])
+                self.assertEqual(value["route"], "threads", value)
+                pages = [json.loads(line) for line in value["stdout"].splitlines()]
+                self.assertEqual([row["id"] for page in pages for row in
+                    page["data"]["repository"]["pullRequest"]["reviewThreads"]["nodes"]], ["T1", "T2"])
+                selected = copy.deepcopy(entry)
+                selected["contract"]["good_commands"] = [args]
+                self.assertEqual(gh.replay_case(selected)["custom_metrics"]["gh_gate"], 1)
+        self.assertNotIn("comments", fixture.dispatch(case, reordered, [])["stdout"])
+
+    def test_invalid_balanced_graphql_cannot_earn_task_or_recovery_credit(self):
+        fixture, entry, case, command = self.graphql_fixture()
+        changes = [
+            ("query=query(", "query=query(???"),
+            ("$owner:String!", "$owner:Int!"),
+            ("$owner:String!", "$owner:String"),
+            ("owner:$owner,", ""),
+            ("number:17", "number:017"),
+            ("number:17", 'number:"17"'),
+            ("first:100", 'first:"100"'),
+            ("query=query(", "query=query\u00a0("),
+            ("query=query(", "query=query\v("),
+            ("first:100", "first:2147483648"),
+            ("hasNextPage endCursor", "hasNextPage(endCursor:true) endCursor"),
+            ("isResolved comments", "isResolved{} comments"),
+            ("query=query(", "query=query($unused:String,"),
+            ("query=query(", "query=query($owner:String!,"),
+        ]
+        for before, after in changes:
+            args = [value.replace(before, after) for value in command]
+            with self.subTest(change=(before, after)):
+                result = fixture.dispatch(case, args, [])
+                self.assertNotEqual(result["exit_code"], 0)
+                selected = copy.deepcopy(entry)
+                selected["contract"]["good_commands"] = [args]
+                metrics = gh.replay_case(selected)["custom_metrics"]
+                self.assertEqual(metrics["gh_task"], 0)
+                self.assertEqual(metrics["gh_recovery"], 0)
+                self.assertEqual(metrics["gh_gate"], 0)
+        for suffix in (" query { repository { issues { totalCount } } }", " junk"):
+            args = [value + suffix if value.startswith("query=") else value for value in command]
+            self.assertNotEqual(fixture.dispatch(case, args, [])["exit_code"], 0)
+        huge = ["query=" + " " * 16385 if value.startswith("query=") else value for value in command]
+        self.assertNotEqual(fixture.dispatch(case, huge, [])["exit_code"], 0)
+
+    def test_graphql_unsupported_strategies_and_authorization_stay_closed(self):
+        fixture, entry, case, command = self.graphql_fixture()
+        variants = [
+            [value.replace("query=query(", "query=mutation(") for value in command],
+            [value.replace("pullRequest(number:17)", "pullRequest(number:18)") for value in command],
+            [value.replace("repository(", "alias:repository(") for value in command],
+            [value.replace("first:100", "first:50") for value in command],
+            [value.replace("owner=fixture-org", "owner=fixture-fork") for value in command],
+            command + ["--hostname", "example.invalid"],
+            command + ["--field", "endCursor=C1"],
+            command + ["--field", "owner=fixture-org"],
+            [value.replace("owner=fixture-org", "owner=fixture-fork").replace("query=query(", "query=query(???")
+             for value in command],
+            [value.replace("$owner:String!", '$owner:String!="fixture-org"') for value in command],
+            [value.replace("name:$name){", "name:$name)@skip(if:true){") for value in command],
+            [value.replace("$owner:String!", "$owner:[String!]") for value in command],
+        ]
+        for args in variants:
+            with self.subTest(command=args):
+                self.assertNotEqual(fixture.dispatch(case, args, [])["exit_code"], 0)
+                selected = copy.deepcopy(entry)
+                selected["contract"]["good_commands"] = [args]
+                self.assertEqual(gh.replay_case(selected)["custom_metrics"]["gh_authorization"], 0)
+        typed = [value.replace("$endCursor:String)", "$endCursor:String,$number:Int!)").replace(
+            "number:17", "number:$number") for value in command] + ["--raw-field", "number=17"]
+        self.assertNotEqual(fixture.dispatch(case, typed, [])["exit_code"], 0)
+
+    def test_graphql_slurp_pages_filters_and_invalid_flag_combinations(self):
+        fixture, entry, case, command = self.graphql_fixture()
+        raw = fixture.dispatch(case, command, [])["stdout"]
+        slurped = fixture.dispatch(case, command + ["--slurp"], [])
+        self.assertEqual(json.loads(slurped["stdout"]), [json.loads(line) for line in raw.splitlines()])
+        self.assertEqual(len(json.loads(slurped["stdout"])), 2)
+        filtered = fixture.dispatch(case, command + ["--jq", ".data.repository.pullRequest.reviewThreads.nodes[].id"], [])
+        self.assertEqual(filtered["stdout"], "T1\nT2")
+        for args in ([value for value in command if value != "--paginate"] + ["--slurp"],
+                     command + ["--slurp", "--jq", "."]):
+            self.assertNotEqual(fixture.dispatch(case, args, [])["exit_code"], 0)
+        no_page = [value for value in command if value != "--paginate"]
+        self.assertEqual(fixture.dispatch(case, no_page, [])["route"], "threads-first-page")
+        selected = copy.deepcopy(entry)
+        selected["contract"]["good_commands"] = [no_page]
+        self.assertEqual(gh.replay_case(selected)["custom_metrics"]["gh_task"], 0)
+
+    def test_rest_slurp_wraps_pages_and_jq_filters_each_page(self):
+        fixture, _, _, _ = self.graphql_fixture()
+        entry = gh.dataset(selected=["gh-007"])[0]
+        case = reports.read_json(gh.ROOT / gh.OVERLAY / "evals/files/cases/gh-007.json")
+        command = entry["contract"]["good_commands"][0]
+        filtered = fixture.dispatch(case, command, [])
+        self.assertEqual([json.loads(line) for line in filtered["stdout"].splitlines()], [list(range(1, 31)), [31]])
+        raw_command = command[:command.index("--jq")]
+        raw = fixture.dispatch(case, raw_command, [])
+        slurp = fixture.dispatch(case, raw_command + ["--slurp"], [])
+        self.assertEqual(json.loads(slurp["stdout"]), [json.loads(line) for line in raw["stdout"].splitlines()])
+        self.assertIn("pull_request", json.loads(slurp["stdout"])[1][-1])
+        self.assertNotEqual(fixture.dispatch(case, command + ["--slurp"], [])["exit_code"], 0)
+
+    def test_fixture_contract_changes_have_distinct_dataset_and_policy_identities(self):
+        import skill_evidence as evidence
+        root = self.workspace()
+        path = root / gh.OVERLAY / "evals/evals.json"
+        current = path.read_bytes()
+        data = json.loads(current)
+        for entry in data["evals"]:
+            entry["contract"].pop("fixture_contract")
+        path.write_text(json.dumps(data))
+        self.assertNotEqual(evidence.digest_bytes(current), evidence.digest_bytes(path.read_bytes()))
+        with self.assertRaisesRegex(ValueError, "Unsupported gh fixture contract"):
+            gh.stage(root, self.root / "old-contract/gh")
+        self.assertFalse((self.root / "old-contract").exists())
+        policy = reports.benchmark_policy("gh")
+        self.assertEqual(policy["deterministic_gate"], 3)
+        old = {**policy, "deterministic_gate": 2}
+        self.assertNotEqual(evidence.make_policy(policy, provenance="runtime_recorded")["id"],
+                            evidence.make_policy(old, provenance="runtime_recorded")["id"])
 
     def test_pending_checks_require_fresh_head_observation(self):
         entry = copy.deepcopy(gh.dataset(selected=["gh-006-pending"])[0])
@@ -150,7 +293,8 @@ class GhOfflineTests(unittest.TestCase):
         self.assertIn("--paginate", command)
         self.assertIn("pull_request", command[command.index("--jq") + 1])
         case = reports.read_json(gh.ROOT / gh.OVERLAY / entry["files"][-1])
-        items = [item for page in json.loads(case["routes"][0]["responses"][0]["stdout"]) for item in page]
+        items = [item for page in case["routes"][0]["responses"][0]["stdout"].splitlines() for item in json.loads(page)]
+        self.assertNotIn("--slurp", command)  # gh rejects --slurp combined with --jq.
         self.assertTrue(any(item.get("state") == "closed" for item in items))
         self.assertTrue(any("pull_request" in item for item in items))
         self.assertEqual(gh.replay_case(entry)["custom_metrics"]["gh_gate"], 1)
@@ -315,6 +459,88 @@ class GhOfflineTests(unittest.TestCase):
     "pinned SkillEvaluator environment unavailable",
 )
 class GhNativeTests(unittest.TestCase):
+    def test_graphql_production_verifier_both_arms_and_receipt_tampering(self):
+        import shlex
+        from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks
+
+        with tempfile.TemporaryDirectory(prefix="gh-graphql-verifier-") as temporary:
+            root = Path(temporary)
+            skill = gh.stage(gh.ROOT, root / "bundle/gh", ["gh-003"])
+            original = gh.dataset(selected=["gh-003"])[0]
+            for with_skill in (True, False):
+                task = stage_native_harbor_tasks(skill, root / str(with_skill), with_skill=with_skill,
+                    grading_mode="default_plus_custom", workspace_mode="group",
+                    workspace_skill_paths=[skill.parent / gh.COMPETING])[0]
+                for variant in ("slurp", "invalid", "receipt", "audit", "old-contract"):
+                    with self.subTest(arm=with_skill, variant=variant):
+                        workspace = root / f"workspace-{with_skill}-{variant}"
+                        workspace.mkdir()
+                        shutil.copytree(task / "environment/private", workspace / "input")
+                        shutil.copytree(task / "environment/skills", workspace / "skills")
+                        setup = gh.module(gh.ROOT / gh.OVERLAY / "evals/files/setup.py", "setup")
+                        env = setup.setup(workspace, workspace / "input")
+                        broker = setup.start_broker(workspace / ".gh-fixture", workspace / "broker/gh.sock")
+                        env["GH_FIXTURE_SOCKET"] = str(workspace / "broker/gh.sock")
+                        steps = []
+
+                        def observed(command):
+                            result = subprocess.run(["/bin/sh", "-c", command], cwd=workspace,
+                                env=env, capture_output=True, text=True, timeout=5)
+                            identity = str(len(steps))
+                            steps.append({"source": "agent", "tool_calls": [{"tool_call_id": identity,
+                                "function_name": "bash", "arguments": {"command": command}}],
+                                "observation": {"results": [{"source_call_id": identity,
+                                    "content": result.stdout + result.stderr}]}})
+                            return result
+
+                        try:
+                            if with_skill:
+                                self.assertEqual(observed("cat skills/gh/SKILL.md").returncode, 0)
+                            args = original["contract"]["good_commands"][-1] + ["--slurp"]
+                            if variant == "invalid":
+                                args = [value.replace("query=query(", "query=query(???") for value in args]
+                            result = observed(shlex.join(["gh", *args]))
+                            self.assertEqual(result.returncode == 0, variant != "invalid")
+                            if variant == "slurp":
+                                self.assertEqual(len(json.loads(result.stdout)), 2)
+                            if variant == "receipt":
+                                part = steps[-1]["observation"]["results"][0]
+                                part["content"] = part["content"].split("GH_FIXTURE_RECEIPT=")[0] + "GH_FIXTURE_RECEIPT=" + "0" * 64
+                            observed("printf '%s\\n' " + shlex.quote(json.dumps(original["contract"]["expected"]))
+                                     + " > output/result.json")
+                        finally:
+                            broker.terminate()
+                            broker.wait(timeout=5)
+                        if variant == "audit":
+                            (workspace / ".gh-fixture/audit.jsonl").write_text("")
+                        entry = reports.read_json(task / "tests/entry.json")
+                        if variant == "old-contract":
+                            entry["contract"].pop("fixture_contract")
+                        entry_path = workspace / "entry.json"
+                        reports.write_json(entry_path, entry)
+                        trajectory = workspace / "trajectory.json"
+                        reports.write_json(trajectory, {"steps": steps})
+                        reward = workspace / "reward.json"
+                        completed = subprocess.run([sys.executable, "-B", str(task / "tests/grader.py")],
+                            capture_output=True, text=True, timeout=15, env={
+                                "PATH": os.environ["PATH"], "PYTHONDONTWRITEBYTECODE": "1",
+                                "HARBOR_TESTS_DIR": str(task / "tests"), "HARBOR_ENTRY_JSON": str(entry_path),
+                                "HARBOR_ATIF_PATH": str(trajectory), "HARBOR_WORKSPACE": str(workspace),
+                                "HARBOR_REWARD_JSON": str(reward), "HARBOR_REWARD_TXT": str(workspace / "reward.txt"),
+                            })
+                        self.assertEqual(completed.returncode, 0, completed.stderr)
+                        metrics = reports.read_json(reward)["custom_metrics"]
+                        self.assertEqual(metrics["gh_activation"], float(with_skill))
+                        self.assertEqual(metrics["gh_gate"], float(with_skill and variant == "slurp"))
+                        if variant == "slurp":
+                            self.assertTrue(all(metrics["gh_" + dimension] == 1 for dimension in
+                                ("evidence", "commands", "task", "recovery", "authorization", "efficiency")))
+                        else:
+                            self.assertEqual(metrics["gh_task"], 0)
+                            self.assertEqual(metrics["gh_recovery"], 0)
+                            if variant != "invalid":
+                                self.assertEqual(metrics["gh_evidence"], 0)
+
     def test_native_adapter_preserves_pinned_build_inputs_in_both_arms(self):
         from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks
 
