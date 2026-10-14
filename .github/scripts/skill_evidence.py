@@ -1057,6 +1057,7 @@ def validate_captured_gh(workspace, owner, actual, owners, competing_files, entr
     require(all(type(value) is str and re.fullmatch(r'gh-\d{3}(?:-[a-z-]+)?', value) for value in ids)
             and len(ids) == len(set(ids)), 'Invalid or duplicate gh case IDs')
     for entry in data['evals']:
+        require(entry['contract'].get('fixture_contract') == 'gh-cli-subset-v2', 'Unsupported gh fixture contract')
         require(entry['contract']['evidence_classification'] in
                 ('synthetic', 'documentation', 'observed-plus-synthetic'), 'Missing provenance classification')
         require(entry['expected_skill'] in ('gh', None), 'Invalid activation contract')
