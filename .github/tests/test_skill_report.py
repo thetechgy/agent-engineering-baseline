@@ -101,6 +101,174 @@ class ReportTests(unittest.TestCase):
         self.assertEqual(report.render_report(first, captured), report.render_report(second, other))
         self.assertEqual(report.render_report(first, captured), report.render_report(copy.deepcopy(first), captured))
 
+    def test_overview_separates_coverage_safety_and_investigations(self):
+        output, _, _ = self.demo()
+        overview = output.split('<section class="overview"', 1)[1].split('</section>', 1)[0]
+        plain = ' '.join(Document(overview).content)
+        for value in ('Measured results', 'Configured; results not supplied', 'No configured suite',
+                      '24 configured cases per arm', '0 failed · 0 passed · 20 unknown',
+                      'Safety evidence is incomplete', 'Not quality qualified',
+                      'Authenticated human approval is not established', 'What remains unknown'):
+            self.assertIn(value, plain)
+        self.assertLess(plain.index('20 unknown'), plain.index('Important findings'))
+        important = overview.split('Important findings', 1)[1].split('What remains unknown', 1)[0]
+        self.assertIn('Lower with-skill case score', important)
+        self.assertNotIn('Comparison unavailable or limited', important)
+
+    def passing_gates(self, maximum=1):
+        record = fixtures.synthetic(name='gh', maximum=maximum)
+        for obs in record['observations']:
+            obs['deterministic_gate'] = 1
+            obs['deterministic_scores'] = dict.fromkeys(evidence.GATE_FIELDS, 1)
+        return record
+
+    def test_production_safety_banner_flags_missing_coverage_without_inventing_counts(self):
+        for scenario, passed in (('missing-attempt', 5), ('configured-without-run', 2)):
+            with self.subTest(scenario=scenario):
+                record = self.passing_gates(maximum=3 if scenario == 'missing-attempt' else 1)
+                configs = None
+                if scenario == 'missing-attempt':
+                    record['observations'].pop()
+                    fixtures.reconcile(record, partial=True)
+                else:
+                    configs = [fixtures.configuration('gh'), fixtures.configuration('unmeasured')]
+                root = self.bundle(scenario, [record], configs)
+                result, captured = self.analyze(root)
+                identities = (evidence.identity(result), evidence.identity(captured.records))
+                saved = self.root / (scenario + '-analysis') / 'analysis.json'
+                fixtures.write(saved, result)
+                destination = report.generate([root], saved, self.root / (scenario + '-output'))
+                output = (destination / 'report.html').read_bytes()
+                banner = output.decode().split('<div class="safety">', 1)[1].split('</div>', 1)[0]
+                self.assertIn('Safety evidence is incomplete', banner)
+                self.assertIn(f'Among recorded observations: 0 failed · {passed} passed · 0 unknown', banner)
+                self.assertIn('Missing execution coverage is excluded from these counts', banner)
+                self.assertEqual(output, report.render_report(result, captured))
+                self.assertEqual(identities, (evidence.identity(result), evidence.identity(captured.records)))
+
+    def test_safety_banner_flags_partial_unknown_and_unmeasured_run_coverage(self):
+        for scenario, passed in (('partial-details', 1), ('unknown-expected-count', 2),
+                                 ('unknown-attempt-identity', 2), ('unmeasured-run', 2)):
+            with self.subTest(scenario=scenario):
+                record = self.passing_gates()
+                if scenario == 'partial-details':
+                    coverage = [copy.deepcopy(arm['coverage']) for arm in record['arms']]
+                    record['observations'].pop()
+                    fixtures.reconcile(record, partial=True)
+                    for arm, original in zip(record['arms'], coverage):
+                        arm['coverage'] = {**original, 'case_details': 'partial'}
+                elif scenario == 'unknown-expected-count':
+                    policy = record['policy']; policy['attempts']['maximum'] = None
+                    policy['id'] = evidence.identity({key: policy[key] for key in
+                        ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')})
+                    fixtures.reconcile(record, partial=True)
+                elif scenario == 'unknown-attempt-identity':
+                    record['observations'][0]['attempt'] = None
+                    fixtures.reconcile(record)
+                roots = [self.bundle(scenario, [record])]
+                if scenario == 'unmeasured-run':
+                    roots.append(self.bundle(scenario + '-snapshot', [self.gh], flat=True))
+                result, captured = self.analyze(*roots)
+                output = report.render_report(result, captured).decode()
+                banner = output.split('<div class="safety">', 1)[1].split('</div>', 1)[0]
+                self.assertIn('Safety evidence is incomplete', banner)
+                self.assertIn(f'Among recorded observations: 0 failed · {passed} passed · 0 unknown', banner)
+
+    def test_complete_passing_coverage_does_not_infer_missing_unconfigured_suite(self):
+        unconfigured = {'source': fixtures.synthetic_source('unconfigured'), 'deployment': None, 'suite': None,
+            'behavioral_status': 'not_configured', 'measurement': {'status': 'unavailable', 'reasons': ['results_not_supplied']}}
+        output, _, _ = self.render([self.passing_gates()], [fixtures.configuration('gh'), unconfigured])
+        banner = output.split('<div class="safety">', 1)[1].split('</div>', 1)[0]
+        self.assertIn('Recorded mandatory gate outcomes', banner)
+        self.assertIn('Among recorded observations: 0 failed · 2 passed · 0 unknown', banner)
+        self.assertNotIn('Safety evidence is incomplete', banner)
+        self.assertNotIn('Missing execution coverage', banner)
+        self.assertIn('Zero recorded failures does not establish safety', banner)
+
+    def test_complete_gate_coverage_is_independent_of_metrics_and_rubric_scores(self):
+        for scenario in ('missing-headline-metric', 'missing-rubric-scores'):
+            with self.subTest(scenario=scenario):
+                record = self.passing_gates()
+                if scenario == 'missing-headline-metric':
+                    record['metrics'].pop()
+                    record['availability'].update(status='incomplete', reasons=['coverage_missing'])
+                else:
+                    for obs in record['observations']:
+                        obs['score'] = obs['scores']['overall'] = obs['rubric_pass'] = None
+                    fixtures.reconcile(record)
+                root = self.bundle(scenario, [record])
+                result, captured = self.analyze(root)
+                self.assertTrue(any(f['kind'] == 'incomplete_execution' for f in result['findings']))
+                saved = self.root / (scenario + '-analysis') / 'analysis.json'
+                fixtures.write(saved, result)
+                destination = report.generate([root], saved, self.root / (scenario + '-output'))
+                output = (destination / 'report.html').read_text()
+                banner = output.split('<div class="safety">', 1)[1].split('</div>', 1)[0]
+                self.assertIn('Recorded mandatory gate outcomes', banner)
+                self.assertIn('Among recorded observations: 0 failed · 2 passed · 0 unknown', banner)
+                self.assertNotIn('Safety evidence is incomplete', banner)
+                self.assertNotIn('Missing execution coverage', banner)
+
+    def test_non_successful_execution_keeps_safety_incomplete_despite_passing_gates(self):
+        for state in ('failed', 'incomplete', 'unknown'):
+            with self.subTest(state=state):
+                record = self.passing_gates()
+                record['arms'][0].update(execution_status=state, execution_error_count=1 if state == 'failed' else 0)
+                record['availability'].update(status='incomplete', reasons=['execution_incomplete'])
+                root = self.bundle(state, [record])
+                result, captured = self.analyze(root)
+                saved = self.root / (state + '-analysis') / 'analysis.json'
+                fixtures.write(saved, result)
+                destination = report.generate([root], saved, self.root / (state + '-output'))
+                output = (destination / 'report.html').read_text()
+                banner = output.split('<div class="safety">', 1)[1].split('</div>', 1)[0]
+                self.assertIn('Safety evidence is incomplete', banner)
+                self.assertIn('Among recorded observations: 0 failed · 2 passed · 0 unknown', banner)
+
+    def test_security_component_investigation_uses_recorded_single_attempt_scores(self):
+        record = fixtures.synthetic(scores=(.7, .8))
+        for obs in record['observations']:
+            obs['scores']['security'] = 0.0 if obs['arm'] == 'with_skill' else .5
+        output, _, _ = self.render([record])
+        plain = ' '.join(Document(output).content)
+        self.assertIn('Security-component score', plain)
+        self.assertIn('0.0 with skill versus 0.5 without skill', plain)
+        self.assertIn('Grader judgments', plain)
+        self.assertIn('Inspect the security judgment separately', plain)
+        self.assertNotIn('proven unsafe', plain)
+        self.assertIn('href="#components-', output)
+        document = Document(output)
+        self.assertTrue(all(href[1:] in document.ids for href in document.links))
+
+    def test_security_investigation_does_not_infer_missing_or_adaptive_comparisons(self):
+        for maximum, scores in ((1, (None, .5)), (1, (.5, .5)), (3, (0.0, .5))):
+            record = fixtures.synthetic(maximum=maximum)
+            for obs in record['observations']:
+                obs['scores']['security'] = scores[0 if obs['arm'] == 'with_skill' else 1]
+            output, _, _ = self.render([record])
+            self.assertNotIn('Security-component score · case', output)
+
+    def test_mandatory_findings_precede_component_investigations(self):
+        record = fixtures.synthetic(name='gh')
+        for obs in record['observations']:
+            obs['scores']['security'] = 0.0 if obs['arm'] == 'with_skill' else .5
+        obs = record['observations'][0]
+        obs['deterministic_gate'] = 0
+        obs['deterministic_scores'] = dict.fromkeys(evidence.GATE_FIELDS, 1)
+        obs['deterministic_scores'].update(authorization=0, gate=0)
+        output, _, _ = self.render([record])
+        overview = output.split('<section class="overview"', 1)[1].split('</section>', 1)[0]
+        self.assertLess(overview.index('Failed mandatory gate'), overview.index('Security-component score · case'))
+
+    def test_context_findings_and_exact_identities_remain_disclosed(self):
+        output, result, _ = self.demo()
+        self.assertIn('<summary>Evidence gaps and comparison limits</summary>', output)
+        for finding in result['findings']:
+            self.assertIn(finding['id'], output)
+        self.assertIn('shortened for readability', output)
+        self.assertIn('a.hash', report.JS)
+        self.assertIn('parent.open = true', report.JS)
+
     def test_all_internal_links_resolve_without_duplicate_ids(self):
         output, _, _ = self.demo()
         document = Document(output)
@@ -251,6 +419,82 @@ class ReportTests(unittest.TestCase):
         self.assertIn('-0.0000</code> (negative)', output)
         self.assertIn('Lower with-skill case score', output)
 
+    def test_counts_in_empty_single_and_multiple_skill_presentations(self):
+        for count in (0, 1, 2):
+            with self.subTest(count=count):
+                roots = self.bundle('counts-' + str(count),
+                    [fixtures.synthetic(name='skill-' + str(i), cases=('1',) if count == 1 else ('1', '2'))
+                     for i in range(count)])
+                result, captured = self.analyze(roots)
+                output = report.render_report(result, captured).decode()
+                plain = ' '.join(Document(output).content)
+                self.assertIn(f'{count} ' + ('skill represented' if count == 1 else 'skills represented'), plain)
+                self.assertIn('0 independently validated analyst reports attached', plain)
+                if count:
+                    self.assertIn(f'{count} matched ' + ('case out of 1' if count == 1 else 'cases out of 2'), plain)
+                self.assertNotIn('1 cases', plain)
+                self.assertNotIn('1 skills', plain)
+
+    def test_recorded_outcomes_use_explicit_unknown_and_retain_original_values(self):
+        for gate, rubric, expected_gate, expected_rubric in (
+                (0, False, 'Failed', 'Failed'), (1, True, 'Passed', 'Passed'),
+                (None, None, 'Unknown', 'Unknown')):
+            with self.subTest(gate=gate, rubric=rubric):
+                record = fixtures.synthetic(name='gh', run='outcome-' + str(gate),
+                                            scores=(.8, .8) if rubric else (.1, .1))
+                for obs in record['observations']:
+                    obs['rubric_pass'] = rubric
+                    obs['deterministic_gate'] = gate
+                    obs['deterministic_scores'] = dict.fromkeys(evidence.GATE_FIELDS, gate)
+                    if rubric is None:
+                        obs['score'] = obs['scores']['overall'] = None
+                fixtures.reconcile(record)
+                output, _, _ = self.render([record])
+                self.assertIn(f'<td>{expected_rubric}</td><td>{expected_gate}</td>', output)
+                self.assertIn(report.disclosure('Exact observation outcomes', {
+                    'rubric_pass': rubric, 'deterministic_gate': gate}), output)
+                if rubric is None:
+                    self.assertIn('0 matched cases out of 1; 0 scored observations.', output)
+
+    def test_numeric_precision_and_positive_zero_direction_remain_visible(self):
+        record = fixtures.synthetic(scores=(.600002, .600001))
+        record['metrics'][0]['value'] = .123456789
+        output, _, _ = self.render([record])
+        self.assertIn('0.123456789', output)
+        self.assertIn('+0.0000</code> (positive)', output)
+
+    def test_configured_single_case_uses_singular(self):
+        output, _, _ = self.render([fixtures.synthetic()], [fixtures.configuration('alpha')])
+        self.assertIn('1 configured case per arm', output)
+        self.assertNotIn('1 configured cases', output)
+
+    def test_rendering_preserves_analysis_and_capture_identities(self):
+        _, result, captured = self.demo()
+        before = (evidence.identity(result), evidence.identity(captured.records))
+        report.render_report(result, captured)
+        self.assertEqual(before, (evidence.identity(result), evidence.identity(captured.records)))
+
+    def test_contextual_links_identify_skill_and_case(self):
+        output, _, _ = self.render([fixtures.synthetic(scores=(.4, .6))])
+        for label in ('alpha · measured results and coverage', 'alpha · case 1 · finding and next step',
+                      'alpha · case 1 · With skill observation', 'alpha · case 1 · reference'):
+            self.assertIn(label, output)
+        tags = [tag for tag, _ in Document(output).elements if re.fullmatch('h[1-6]', tag)]
+        for previous, current in zip(tags, tags[1:]):
+            self.assertLessEqual(int(current[1]), int(previous[1]) + 1)
+
+    def test_code_labels_translate_only_recognized_codes(self):
+        for raw, labels, expected in (
+                ('skill_change', report.DISPOSITION_LABELS, 'Skill change'),
+                ('no_change', report.DISPOSITION_LABELS, 'No change'),
+                ('modify_skill', report.PROPOSAL_LABELS, 'Modify skill'),
+                ('improve_eval', report.PROPOSAL_LABELS, 'Improve evaluation'),
+                ('fix_grader_or_harness', report.PROPOSAL_LABELS, 'Fix grader or harness')):
+            self.assertEqual(report.presentation_label(raw, labels), expected)
+        for labels in (report.STATUS_LABELS, report.DISPOSITION_LABELS, report.PROPOSAL_LABELS):
+            unfamiliar = 'Unfamiliar_Judgment: Keep <This> VERBATIM.'
+            self.assertEqual(report.presentation_label(unfamiliar, labels), report.safe(unfamiliar))
+
     def test_expired_references_remain_expired_and_stale_analysis_rejects(self):
         future = datetime(2026, 10, 20, tzinfo=timezone.utc)
         # Expiration does not change reference identity or historical numeric scores.
@@ -290,7 +534,11 @@ class ReportTests(unittest.TestCase):
 
     def test_empty_inventory_and_html_limit_fail_without_truncation(self):
         result, captured = self.analyze(self.bundle('empty', configs=[]))
-        self.assertIn('supplied inventory is empty', report.render_report(result, captured).decode())
+        output = report.render_report(result, captured).decode()
+        self.assertIn('supplied inventory is empty', output)
+        banner = output.split('<div class="safety">', 1)[1].split('</div>', 1)[0]
+        self.assertIn('Safety evidence is incomplete', banner)
+        self.assertIn('No recorded gate outcomes supplied', banner)
         with patch.object(report, 'HTML_LIMIT', 64):
             with self.assertRaisesRegex(ValueError, 'HTML report size exceeded'): report.render_report(result, captured)
 

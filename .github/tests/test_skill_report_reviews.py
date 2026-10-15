@@ -142,7 +142,7 @@ class AttachmentTests(unittest.TestCase):
         self.supplied(verdict='Needs further investigation', scored=False, suffix='two', kind='human_supplied')
         validated = self.load()
         output = report.render_report(self.result, self.captured, reviews=validated).decode()
-        for text in ('PASS', 'Needs further investigation', 'Numeric score not assigned', '9 / 10',
+        for text in ('PASS', 'Needs further investigation', 'Numeric score not assigned', '9 out of 10',
                      'Independent AI assessment', 'Human assessment (supplied; unauthenticated)',
                      'No authenticated human approval', 'investigate'):
             self.assertIn(text, output)
@@ -153,6 +153,86 @@ class AttachmentTests(unittest.TestCase):
         doc = Document(output)
         self.assertEqual(len(doc.ids), len(set(doc.ids)))
         self.assertTrue(all(href.startswith('#') and href[1:] in doc.ids for href in doc.links))
+
+    def test_overview_exposes_proposed_action_and_separate_assessments(self):
+        self.fixture('gh-89f46f0', category='investigate', unmeasured=True)
+        self.supplied()
+        self.supplied(verdict='Substantive pass; no numeric score assigned', scored=False, suffix='unscored')
+        output = report.render_report(self.result, self.captured, reviews=self.load()).decode()
+        overview = output.split('<section class="overview"', 1)[1].split('</section>', 1)[0]
+        for value in ('Analyst conclusions and recommended actions', 'model interpretation',
+                      'Request exact retained results from the overlay owner.', 'Independent AI assessment (supplied)',
+                      'Synthetic ChatGPT assessor', '9 out of 10', 'Substantive pass; no numeric score assigned',
+                      'Numeric score not assigned', 'Not quality qualified',
+                      'Authenticated human approval is not established'):
+            self.assertIn(value, overview)
+        self.assertLess(output.index('Analyst conclusion:</strong>'), output.index('<h3>Behavioral run:'))
+        self.assertIn('gh · analyst conclusions, proposed actions and citations', overview)
+
+    def test_assessment_labels_scores_and_original_fields_match_overview_and_detail(self):
+        self.fixture(category='investigate')
+        for kind in ('independent_ai', 'human_supplied', 'unknown'):
+            row = self.supplied(verdict='pass_substantive_usefulness_demonstrated', kind=kind, suffix=kind)
+            document = Path(row['document']['path'])
+            value = evidence.read_json(document)
+            value['limitations'] += ' Synthetic category: ' + kind + '.'
+            write(document, value)
+            row['document']['digest'] = evidence.digest_bytes(document.read_bytes())
+        write(self.path, self.spec)
+        self.supplied(verdict='Keep My_Unfamiliar verdict. <verbatim>', scored=False, suffix='freeform')
+        validated = self.load()
+        identities = (evidence.identity(self.result), evidence.identity(self.captured.records),
+                      evidence.identity(validated.items))
+        output = report.render_report(self.result, self.captured, reviews=validated).decode()
+        overview = output.split('<section class="overview"', 1)[1].split('</section>', 1)[0]
+        detail = output.split('Model interpretation · analyst report', 1)[1]
+        for part in (overview, detail):
+            for label in ('Independent AI assessment (supplied)', 'Human assessment (supplied; unauthenticated)',
+                          'Assessment (author category unknown)', 'Substantive usefulness pass',
+                          '9 out of 10', 'Numeric score not assigned',
+                          'Keep My_Unfamiliar verdict. &lt;verbatim&gt;'):
+                self.assertIn(label, part)
+        self.assertIn('Not quality qualified', overview)
+        self.assertIn('Analyst interpretation · Investigate', overview)
+        self.assertIn('Proposed action · Investigate:', overview)
+        self.assertIn('1 recommendation.', detail)
+        self.assertIn('1 independently validated analyst report attached.', output)
+        self.assertNotIn('1 recommendations', output)
+        for supplied in validated.items[0]['assessments']:
+            self.assertIn(report.disclosure('Original assessment fields', {k: supplied[k] for k in
+                ('author_kind', 'attribution', 'verdict', 'score', 'maximum')}), output)
+        self.assertIn('&quot;disposition&quot;: &quot;investigate&quot;', output)
+        self.assertEqual(identities, (evidence.identity(self.result), evidence.identity(self.captured.records),
+                                     evidence.identity(validated.items)))
+
+    def test_recommendation_counts_preserve_supplied_prose(self):
+        self.fixture(category='investigate')
+        original = self.load().items[0]
+        recommendation = original['report']['judgment']['recommendations'][0]
+        for count in (0, 1, 2):
+            with self.subTest(count=count):
+                item = copy.deepcopy(original)
+                item['report']['judgment']['recommendations'] = [copy.deepcopy(recommendation) for _ in range(count)]
+                output = report.interpretation(item)
+                self.assertIn(f'{count} ' + ('recommendation.' if count == 1 else 'recommendations.'), output)
+                if count:
+                    for key in ('scope', 'justification', 'expected_benefit'):
+                        self.assertIn(report.text(recommendation[key]), output)
+
+    def test_multiple_validated_analyst_reports_use_plural(self):
+        parent = self.root
+        descriptors = []; inputs = []
+        for name, unmeasured in (('measured', False), ('unmeasured', True)):
+            self.root = parent / name; self.root.mkdir()
+            spec = self.fixture(unmeasured=unmeasured)
+            descriptors.append(self.path)
+            inputs.extend(Path(value) for value in spec['inputs'])
+        captured = analysis.capture_inputs(inputs)
+        result = analysis.validate_analysis(None, captured)
+        validated = attachments.load(descriptors, captured)
+        self.assertEqual(len(validated.items), 2)
+        output = report.render_report(result, captured, reviews=validated).decode()
+        self.assertIn('2 independently validated analyst reports attached.', output)
 
     def test_unmeasured_upstream_gh_interpretation_remains_investigation_only(self):
         self.fixture('gh-89f46f0', category='investigate', unmeasured=True)

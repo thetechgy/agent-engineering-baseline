@@ -1177,7 +1177,21 @@ lasts for the open document. With JavaScript disabled the report remains readabl
 and follows the system theme. Native disclosures reveal detailed support.
 
 The executive overview and skill directory show every skill represented in the
-supplied inventories or public reports. Inventory configurations and historical
+supplied inventories or public reports. The opening summarizes measured native
+results and presents failed, passed and unknown mandatory gate counts together,
+explicitly limited to recorded observations. Missing attempts, partial or unknown
+execution coverage, unmeasured runs and configured skills without supplied
+results keep the safety banner incomplete; missing outcomes are excluded from
+these counts rather than assigned invented totals. No recorded outcomes also
+keeps the banner incomplete. Zero recorded failures never establishes safety.
+Gate coverage uses execution state, expected and recorded attempts, observation
+detail coverage and attempt identities independently of headline metrics and
+rubric scores. Failed, incomplete or unknown execution remains incomplete even
+when all recorded gate outcomes passed.
+The directory distinguishes
+measured results, configured suites without supplied results, and skills without
+a configured suite (or missing configuration). Configured counts are per arm,
+not completed trials. Inventory configurations and historical
 evaluated sources retain separate identities. Skills without a suite or measured
 run have explicit sections; no performance score is inferred. Each measured run
 shows native metrics, separate with/without-skill expected and observed coverage,
@@ -1189,11 +1203,21 @@ Static scanner states, blocking flags, severity counts and structured findings
 are separate from behavioral performance. Counts can exceed the number of public
 finding details; omitted scanner prose is not reconstructed.
 
-Investigation priorities use only the analyzer's deterministic findings,
-importance and next-step codes. Mandatory outcomes precede investigations and
-evidence gaps; ties follow stable finding kind/identity, not a new risk model.
+Investigation priorities retain the analyzer's deterministic findings,
+importance and next-step codes. Mandatory outcomes precede investigations;
+routine context findings remain under “Evidence gaps and comparison limits”.
+The overview also exposes lower recorded security-component scores only when
+both arms have a complete single planned attempt and a supplied security score.
+It displays the original component values with observation links, without new
+means, deltas, finding contracts or risk scores. Missing or multi-attempt
+comparisons stay in the observation evidence. Security judgments warrant
+inspection separately from command-wrapper or harness concerns; neither is
+verified execution or proof of an instruction defect.
 Finding disclosures retain exact quantities, uncertainty and support identities,
-with internal links to records, observations and original references. Original
+with internal links to records, observations and original references. Long link
+identities use display prefixes; full identities remain in disclosures. Links
+reveal containing disclosures with JavaScript; native disclosures and fragment
+targets remain available without it. Original
 member paths and locators are inert text. Public reference availability does not
 prove local possession or authenticate redacted diagnostic bytes. Expired
 references stay expired, and retained reviewed extracts do not become complete
@@ -1209,6 +1233,32 @@ There are no time trends, causal explanations, statistical claims, cross-suite
 rankings or recommendations to edit a skill. A grader failure is not automatically
 an instruction defect. All conclusions are limited to supplied evidence;
 unrepresented skills or omitted runs cannot be discovered from these bundles.
+
+When validated analyst attachments are supplied, the overview exposes their
+proposed action scopes and separately attributed assessment verdicts and scores.
+An unscored assessment stays unscored. Full analyst conclusions and actions
+precede detailed run evidence; rationale, citations and provenance remain in
+disclosures. These are model interpretations and supplied opinions, separate
+from deterministic findings. They cannot establish authenticated human approval,
+change `not_quality_qualified`, authorize execution or enable publication.
+
+Presentation labels translate only recognized codes: for example,
+`pass_substantive_usefulness_demonstrated` becomes “Substantive usefulness pass”
+and `not_quality_qualified` becomes “Not quality qualified”. Analyst dispositions
+are labeled as interpretations and recommendation categories as proposals.
+Unfamiliar verdicts, assessor attribution and supplied narratives remain verbatim.
+The overview and detailed assessments use the same supplied AI, unauthenticated
+human or unknown-author category and show assigned scores as “9 out of 10”.
+Unscored assessments stay unscored. Supporting disclosures retain original
+assessment fields, disposition and recommendation codes, full identities,
+citations, provenance and expiration information.
+
+Evaluator-reported metrics retain their original numeric precision. Evaluation
+groups (“arms”), grading criteria (“rubric”) and mandatory checks (“gates”) are
+explained in the report. Recorded rubric and gate outcomes display as “Passed”,
+“Failed” or “Unknown”; null never becomes a pass or failure. Derived quantities
+remain signed to four decimal places, with direction visible even when rounding
+produces zero. Contextual links identify the skill and case where applicable.
 
 ### Reproduce the offline demonstration
 
@@ -1288,6 +1338,31 @@ within labeled keyboard-focusable regions. This follows
 and [WCAG 2.2 reflow guidance](https://www.w3.org/WAI/WCAG22/Understanding/reflow.html).
 These design and regression checks are accessibility-oriented evidence, not a
 complete WCAG conformance or assistive-technology certification.
+
+### User-run Edge acceptance
+
+If browser automation cannot open local files under the active policy, keep the
+report local and use Edge's Open File command for manual acceptance. Do not
+upload private reports or screenshots or change browser policy to enable access.
+Record the report file digest and Edge version with the results. Check:
+
+- Desktop and 320 CSS pixel widths in both light and dark themes: readable
+  paragraphs and headings, no page overflow, and wide tables scrolling within
+  their own regions.
+- Keyboard-only navigation: visible focus, skip link, section navigation,
+  appearance selector and disclosure toggling, with no trapped focus.
+- Contextual skill/case links: correct targets and containing disclosures open;
+  expand reasoning, original assessment fields, citations and provenance.
+- Consistent assessor labels and scores in overview and detail, unscored results,
+  passed/failed/unknown outcomes and visible qualification/approval boundaries.
+- JavaScript disabled: readable content, system theme and usable native
+  disclosures and fragment navigation; restore the original browser setting.
+- Local screenshots of the overview, analyst actions and expanded evidence at
+  both widths and themes, plus keyboard focus and JavaScript-disabled reading.
+
+Return observations and local screenshot paths for review. Browser acceptance
+remains pending until those results have been inspected; automated HTML tests do
+not establish that it passed.
 
 ### Optional private analyst attachments
 
