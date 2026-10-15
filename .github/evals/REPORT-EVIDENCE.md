@@ -1233,6 +1233,24 @@ disclosures. These are model interpretations and supplied opinions, separate
 from deterministic findings. They cannot establish authenticated human approval,
 change `not_quality_qualified`, authorize execution or enable publication.
 
+Presentation labels translate only recognized codes: for example,
+`pass_substantive_usefulness_demonstrated` becomes “Substantive usefulness pass”
+and `not_quality_qualified` becomes “Not quality qualified”. Analyst dispositions
+are labeled as interpretations and recommendation categories as proposals.
+Unfamiliar verdicts, assessor attribution and supplied narratives remain verbatim.
+The overview and detailed assessments use the same supplied AI, unauthenticated
+human or unknown-author category and show assigned scores as “9 out of 10”.
+Unscored assessments stay unscored. Supporting disclosures retain original
+assessment fields, disposition and recommendation codes, full identities,
+citations, provenance and expiration information.
+
+Evaluator-reported metrics retain their original numeric precision. Evaluation
+groups (“arms”), grading criteria (“rubric”) and mandatory checks (“gates”) are
+explained in the report. Recorded rubric and gate outcomes display as “Passed”,
+“Failed” or “Unknown”; null never becomes a pass or failure. Derived quantities
+remain signed to four decimal places, with direction visible even when rounding
+produces zero. Contextual links identify the skill and case where applicable.
+
 ### Reproduce the offline demonstration
 
 This uses the existing ten-case/twenty-observation Podman measured extract,
@@ -1311,6 +1329,31 @@ within labeled keyboard-focusable regions. This follows
 and [WCAG 2.2 reflow guidance](https://www.w3.org/WAI/WCAG22/Understanding/reflow.html).
 These design and regression checks are accessibility-oriented evidence, not a
 complete WCAG conformance or assistive-technology certification.
+
+### User-run Edge acceptance
+
+If browser automation cannot open local files under the active policy, keep the
+report local and use Edge's Open File command for manual acceptance. Do not
+upload private reports or screenshots or change browser policy to enable access.
+Record the report file digest and Edge version with the results. Check:
+
+- Desktop and 320 CSS pixel widths in both light and dark themes: readable
+  paragraphs and headings, no page overflow, and wide tables scrolling within
+  their own regions.
+- Keyboard-only navigation: visible focus, skip link, section navigation,
+  appearance selector and disclosure toggling, with no trapped focus.
+- Contextual skill/case links: correct targets and containing disclosures open;
+  expand reasoning, original assessment fields, citations and provenance.
+- Consistent assessor labels and scores in overview and detail, unscored results,
+  passed/failed/unknown outcomes and visible qualification/approval boundaries.
+- JavaScript disabled: readable content, system theme and usable native
+  disclosures and fragment navigation; restore the original browser setting.
+- Local screenshots of the overview, analyst actions and expanded evidence at
+  both widths and themes, plus keyboard focus and JavaScript-disabled reading.
+
+Return observations and local screenshot paths for review. Browser acceptance
+remains pending until those results have been inspected; automated HTML tests do
+not establish that it passed.
 
 ### Optional private analyst attachments
 

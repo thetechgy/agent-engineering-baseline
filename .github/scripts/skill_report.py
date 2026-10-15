@@ -33,7 +33,7 @@ font:1rem/1.6 system-ui,sans-serif;overflow-wrap:anywhere}
 header,main,footer{max-width:76rem;margin:auto;padding:1.5rem}
 header{padding-top:1.5rem;padding-bottom:0}h1{font-size:clamp(1.8rem,4vw,2.5rem);line-height:1.15;margin:.4rem 0}
 h2{font-size:1.65rem;line-height:1.3}h3{font-size:1.25rem}
-p{max-width:78ch}a{color:var(--accent);text-underline-offset:.18em}
+p{max-width:78ch;margin:.75rem 0}a{color:var(--accent);text-underline-offset:.18em}
 a:focus-visible,summary:focus-visible,select:focus-visible,[tabindex]:focus-visible{
 outline:3px solid var(--accent);outline-offset:4px}
 .skip{position:absolute;top:-8rem;left:1rem;background:var(--surface);padding:1rem}
@@ -43,6 +43,7 @@ outline:3px solid var(--accent);outline-offset:4px}
 .safety p{margin:.3rem 0}.safety strong{color:var(--alert)}
 .lead{font-size:1.1rem}.finding{border-top:1px solid var(--line);padding:.75rem 0}
 .finding p{margin:.4rem 0}.assessment{margin:.75rem 0}
+.finding h4{margin:.25rem 0 .5rem}
 :target{scroll-margin-top:1rem}summary code{font-weight:400}
 section.skill,.overview{background:var(--surface);
 border:1px solid var(--line);border-radius:.6rem;padding:1.5rem;margin-bottom:2rem}
@@ -115,6 +116,20 @@ COMPARISON_STATUS = {
     'compared': 'The analyzer evaluated the two supplied runs for compatibility.',
 }
 ARM = {'with_skill': 'With skill', 'without_skill': 'Without skill'}
+STATUS_LABELS = {
+    'pass_substantive_usefulness_demonstrated': 'Substantive usefulness pass',
+    'not_quality_qualified': 'Not quality qualified',
+}
+DISPOSITION_LABELS = {'skill_change': 'Skill change', 'investigate': 'Investigate', 'no_change': 'No change'}
+PROPOSAL_LABELS = {
+    'modify_skill': 'Modify skill', 'improve_eval': 'Improve evaluation',
+    'fix_grader_or_harness': 'Fix grader or harness', 'investigate': 'Investigate', 'no_change': 'No change',
+}
+ASSESSOR_LABELS = {
+    'independent_ai': 'Independent AI assessment (supplied)',
+    'human_supplied': 'Human assessment (supplied; unauthenticated)',
+    'unknown': 'Assessment (author category unknown)',
+}
 LIMITATIONS = {
     'results_not_supplied': 'Results were not supplied', 'coverage_missing': 'Numeric coverage is incomplete',
     'execution_incomplete': 'Execution evidence is incomplete', 'case_details_missing': 'Case details are missing',
@@ -138,6 +153,26 @@ def text(value):
 
 def code(value):
     return '<code>' + text(value) + '</code>'
+
+
+def presentation_label(value, labels):
+    """Translate recognized codes only; supplied prose is otherwise verbatim."""
+    return text(labels.get(value, value))
+
+
+def count(value, singular, plural=None):
+    return text(value) + ' ' + (singular if value == 1 else plural or singular + 's')
+
+
+def outcome(value):
+    # Recorded rubric booleans and gate 0/1 values share presentation only.
+    if value is None:
+        return 'Unknown'
+    return 'Passed' if value == 1 else 'Failed'
+
+
+def context(skill, cases=()):
+    return skill + (' · ' + ('case ' if len(cases) == 1 else 'cases ') + ', '.join(cases) if cases else '')
 
 
 def short_identity(value):
@@ -183,15 +218,18 @@ def table(caption, headers, rows):
 
 
 def support_links(finding, records):
-    links = [link('record', (rid,), 'Record ' + rid) for rid in finding['record_ids']]
+    links = [link('record', (rid,), context(finding['skill'] or 'Report scope', finding['case_ids']) +
+                  ' · record ' + rid) for rid in finding['record_ids']]
     for rid in finding['record_ids']:
         record = records[rid]
         for obs in record.get('observations', []):
             if obs['id'] in finding['observation_ids']:
-                links.append(link('observation', (rid, obs['id']), 'Observation ' + obs['id']))
+                links.append(link('observation', (rid, obs['id']), context(record['source']['skill_id'], [obs['case_id']]) +
+                                  ' · ' + ARM[obs['arm']] + ' observation ' + obs['id']))
         for ref in record.get('references', []):
             if ref['id'] in finding['reference_ids']:
-                links.append(link('reference', (rid, ref['id']), 'Reference ' + ref['id']))
+                links.append(link('reference', (rid, ref['id']), context(record['source']['skill_id'], finding['case_ids']) +
+                                  ' · reference ' + ref['id']))
     return '<ul>' + ''.join('<li>' + item + '</li>' for item in links) + '</ul>' if links else '<p>No record-level support links for this invocation limit.</p>'
 
 
@@ -205,7 +243,7 @@ def priorities(findings, records):
         observed = item['observed']
         facts = []
         if item['case_ids']:
-            facts.append('Cases: ' + ', '.join(code(v) for v in item['case_ids']))
+            facts.append(('Case: ' if len(item['case_ids']) == 1 else 'Cases: ') + ', '.join(code(v) for v in item['case_ids']))
         if 'with_minus_without' in observed:
             facts.append('With minus without: ' + quantity(observed['with_minus_without']))
         if 'right_minus_left' in observed:
@@ -218,7 +256,7 @@ def priorities(findings, records):
             facts.append('Unavailable original references: ' + text(observed['unavailable_references']))
         items.append(f'<li id="{anchor("finding", item["id"])}"><strong>' + safe(FINDING_LABELS[item['kind']]) + '</strong> <span class="badge">' + label +
             '</span><p>' + '; '.join(facts) + '</p><p>' + safe(NEXT_STEPS[item['next_step']]) + '</p><details><summary>Finding evidence and uncertainty</summary>' +
-            '<p>Cases: ' + (', '.join(code(v) for v in item['case_ids']) or 'Run or configuration scope') + '</p>' +
+            '<p>Scope: ' + (', '.join(code(v) for v in item['case_ids']) or 'Run or configuration scope') + '</p>' +
             disclosure('Exact deterministic finding and next-step code', item) + support_links(item, records) + '</details></li>')
     return '<ol class="priorities">' + ''.join(items) + '</ol>'
 
@@ -257,21 +295,22 @@ def security_investigations(skills, records):
                         code(case['case_id']) + '</strong>: ' + text(with_score) + ' with skill versus ' +
                         text(without_score) + ' without skill. Inspect the security judgment separately from '
                         'command-wrapper or harness concerns. ' + link('components', (run['record_id'], left['id']),
-                        'With-skill security evidence') + ' · ' + link('components', (run['record_id'], right['id']),
-                        'Without-skill security evidence') + '.</li>')
+                        context(skill['skill'], [case['case_id']]) + ' · with-skill security evidence') + ' · ' +
+                        link('components', (run['record_id'], right['id']),
+                        context(skill['skill'], [case['case_id']]) + ' · without-skill security evidence') + '.</li>')
     return rows
 
 
 def assessment_summary(supplied):
     score = ('Numeric score not assigned' if supplied['score'] is None else
-             'Supplied score: ' + text(supplied['score']) + ' / ' + text(supplied['maximum']))
-    return text(supplied['attribution']) + ': <strong>' + text(supplied['verdict']) + '</strong>. ' + score + '.'
+             'Supplied score: ' + text(supplied['score']) + ' out of ' + text(supplied['maximum']))
+    return text(supplied['attribution']) + ': <strong>' + presentation_label(supplied['verdict'], STATUS_LABELS) + '</strong>. ' + score + '.'
 
 
 def executive_summary(result, records, attached):
     skills = result['skills']; findings = result['findings']
     measured = [s for s in skills if any(r['measured'] for r in s['behavioral_results'])]
-    parts = ['<p class="lead">' + text(len(skills)) + ' skills represented; <strong>' + text(len(measured)) +
+    parts = ['<p class="lead">' + count(len(skills), 'skill') + ' represented; <strong>' + text(len(measured)) +
         ' with measured results</strong>. ' +
         text(sum(coverage_label(s) == 'Configured; results not supplied' for s in skills)) +
         ' configured without supplied results; ' + text(sum(coverage_label(s) == 'No configured suite' for s in skills)) +
@@ -282,9 +321,9 @@ def executive_summary(result, records, attached):
                 lift = next((m['value'] for m in run['native_metrics'] if m['name'] == 'Skill Lift'), None)
                 regressions = sum(f['kind'] == 'case_regression' and run['record_id'] in f['record_ids'] for f in findings)
                 parts.append('<p><strong>' + safe(skill['skill']) + '</strong>: ' +
-                    ('native Skill Lift ' + text(lift) + ' (with minus without on the evaluator scale); ' if lift is not None else '') +
-                    text(regressions) + ' lower with-skill case scores. ' +
-                    link('record', (run['record_id'],), 'Measured results and coverage') + '.</p>')
+                    ('Skill Lift ' + text(lift) + ' (with minus without on the evaluator scale); ' if lift is not None else '') +
+                    count(regressions, 'lower with-skill case score') + '. ' +
+                    link('record', (run['record_id'],), skill['skill'] + ' · measured results and coverage') + '.</p>')
     runs = [r for s in skills for r in s['behavioral_results']]
     failed = sum(len(r['gates']['failed']) for r in runs)
     passed = sum(r['gates']['passed_observations'] for r in runs)
@@ -307,12 +346,14 @@ def executive_summary(result, records, attached):
         if finding['importance'] == 'context':
             continue
         observed = finding['observed']
-        detail = (' · cases ' + ', '.join(safe(v) for v in finding['case_ids'])) if finding['case_ids'] else ''
+        detail = (' · ' + ('case ' if len(finding['case_ids']) == 1 else 'cases ') +
+                  ', '.join(safe(v) for v in finding['case_ids'])) if finding['case_ids'] else ''
         if 'with_minus_without' in observed:
             detail += ' · with minus without ' + quantity(observed['with_minus_without'])
         (mandatory if finding['importance'] == 'mandatory' else important).append('<li><strong>' + text(finding['skill'] or 'Report scope') + ' · ' +
             safe(FINDING_LABELS[finding['kind']]) + '</strong>' + detail + '. ' +
-            link('finding', (finding['id'],), 'Inspect finding and next step') + '.</li>')
+            link('finding', (finding['id'],), context(finding['skill'] or 'Report scope', finding['case_ids']) +
+                 ' · finding and next step') + '.</li>')
     parts.append('<ul class="priorities">' + ''.join(mandatory + important) + '</ul>' if mandatory or important else
         '<p>No deterministic investigation findings in the supplied evidence; this does not establish readiness.</p>')
     parts.append('<details><summary>What remains unknown</summary><p>Missing measurements, unknown gates, '
@@ -320,28 +361,29 @@ def executive_summary(result, records, attached):
         'limit interpretation. Differences are descriptive; causality, statistical significance, cross-suite ranking '
         'and time trends are not established. Static scans and configuration do not measure behavioral benefit.</p></details>'
         '<h3 id="analyst-actions">Analyst conclusions and recommended actions · model interpretation</h3>'
-        '<p>The analyst remains ' + code('not_quality_qualified') + '; automated publication is ineligible. '
+        '<p>Analyst qualification: <strong>' + presentation_label('not_quality_qualified', STATUS_LABELS) + '</strong>. Automated publication is ineligible. '
         'Authenticated human approval is not established. Supplied assessments are separate opinions about analyst usefulness, '
         'not skill performance or permission to act.</p>')
     for item in attached.values():
         judgment = item['report']['judgment']
         parts.append('<div class="finding"><h4>' + safe(item['skill']) + ' · ' +
-            text(judgment['assessment']['disposition']) + '</h4><p>' +
-            link('interpretation', (item['record_id'],), 'Read analyst conclusions, proposed actions and citations') + '</p>')
+            'Analyst interpretation · ' + presentation_label(judgment['assessment']['disposition'], DISPOSITION_LABELS) + '</h4><p>' +
+            link('interpretation', (item['record_id'],), item['skill'] + ' · analyst conclusions, proposed actions and citations') + '</p>')
         for recommendation in judgment['recommendations']:
-            parts.append('<p><strong>Proposed action · ' + text(recommendation['category']) + ':</strong> ' +
+            parts.append('<p><strong>Proposed action · ' + presentation_label(recommendation['category'], PROPOSAL_LABELS) + ':</strong> ' +
                 text(recommendation['scope']) + '</p>')
         for supplied in item['assessments']:
-            parts.append('<p><strong>Separately supplied assessment:</strong> ' + assessment_summary(supplied) + ' ' +
-                link('assessment', (item['record_id'], supplied['id']), 'Assessment reasoning and limitations') + '</p>')
+            parts.append('<p><strong>' + safe(ASSESSOR_LABELS[supplied['author_kind']]) + ':</strong> ' + assessment_summary(supplied) + ' ' +
+                link('assessment', (item['record_id'], supplied['id']), item['skill'] + ' · ' + supplied['attribution'] +
+                     ' · assessment reasoning and limitations') + '</p>')
         parts.append('</div>')
     if not attached:
         parts.append('<p>No analyst reports or independent assessments supplied. Use the deterministic next steps.</p>')
     parts.append('<h3 id="coverage">Coverage directory</h3>')
-    parts.append('<p>Separate arms compare recorded outputs with and without skill. Coverage is not a quality rating.</p>')
+    parts.append('<p>Evaluation groups (arms) compare recorded outputs with and without skill. Coverage is not a quality rating.</p>')
     parts.append(table('Coverage in supplied evidence', ('Skill', 'Behavioral evidence', 'Configured coverage', 'Static records'),
         [[link('skill', (s['skill'],), s['skill']), safe(coverage_label(s)),
-          '; '.join(text(c['suite']['case_count']) + ' configured cases per arm' for c in s['configurations'] if c['suite']) or
+          '; '.join(count(c['suite']['case_count'], 'configured case') + ' per arm' for c in s['configurations'] if c['suite']) or
           ('No behavioral suite configured' if s['configurations'] else 'Configuration not supplied'),
           text(len(s['static_results']))] for s in skills]))
     if not skills:
@@ -357,10 +399,13 @@ def record_support(rid, record):
         parts.append(disclosure('Arm conditions and coverage', record['arms']))
     observations = []
     for obs in record['observations']:
-        refs = '<br>'.join(link('reference', (rid, ref), ref) for ref in obs['references'])
+        refs = '<br>'.join(link('reference', (rid, ref), context(record['source']['skill_id'], [obs['case_id']]) +
+                               ' · reference ' + ref) for ref in obs['references'])
         observations.append([f'<span id="{anchor("observation", rid, obs["id"])}">' + code(short_identity(obs['id'])) + '</span>',
-            safe(ARM[obs['arm']]), code(obs['case_id']), text(obs['attempt']), text(obs['score']), text(obs['rubric_pass']),
-            text(obs['deterministic_gate']), disclosure('Native component scores and gate details', {
+            safe(ARM[obs['arm']]), code(obs['case_id']), text(obs['attempt']), text(obs['score']), outcome(obs['rubric_pass']),
+            outcome(obs['deterministic_gate']), disclosure('Exact observation outcomes', {
+                'rubric_pass': obs['rubric_pass'], 'deterministic_gate': obs['deterministic_gate']}) +
+            disclosure('Native component scores and gate details', {
                 'observation_id': obs['id'], 'scores': obs['scores'], 'deterministic_scores': obs['deterministic_scores']},
                 target=anchor('components', rid, obs['id'])) + refs])
     if observations:
@@ -386,7 +431,7 @@ def behavioral(run, records):
         ' · revision ' + code(run['source']['revision']) + '.</p>',
         '<p>Limitations: ' + limitations(run['availability']) + '</p>']
     if run['native_metrics']:
-        parts.append(table('Native evaluator metrics — score units, preserved as supplied', ('Metric', 'Native value', 'Scope'),
+        parts.append(table('Evaluator-reported metrics · original score units', ('Metric', 'Original value', 'Scope'),
             [[safe(m['name']), text(m['value']), 'With minus without' if m['name'] == 'Skill Lift' else 'With-skill dimension']
              for m in run['native_metrics']]))
     else:
@@ -398,13 +443,14 @@ def behavioral(run, records):
           text(a['coverage']['scored_attempts']), text(a['coverage']['unscored_attempts']),
           text(a['rubric']['passed_cases']) + ' / ' + text(a['rubric']['total_cases'])] for a in run['arms']]))
     summary = run['case_summary']; gates = run['gates']
-    parts.append('<p>' + text(summary['matched_cases']) + ' matched cases out of ' + text(summary['cohort_cases']) +
-        '; ' + text(summary['scored_observations']) + ' scored observations. Mandatory gates: ' +
+    parts.append('<p>' + count(summary['matched_cases'], 'matched case') + ' out of ' + text(summary['cohort_cases']) +
+        '; ' + count(summary['scored_observations'], 'scored observation') + '. Mandatory gates: ' +
         text(len(gates['failed'])) + ' failed, ' + text(gates['passed_observations']) + ' passed, ' +
         text(gates['unknown_observations']) + ' unknown. Unknown gates do not count as passing.</p>')
     rows = []
     for case in summary['cases']:
-        obs_links = '<br>'.join(link('observation', (rid, oid), ARM[arm] + ' observation ' + oid)
+        obs_links = '<br>'.join(link('observation', (rid, oid), context(record['source']['skill_id'], [case['case_id']]) +
+                                   ' · ' + ARM[arm] + ' observation ' + oid)
             for arm, ids in case['observation_ids'].items() for oid in ids)
         rows.append([code(case['case_id']), quantity(case['arm_means']['with_skill']),
             quantity(case['arm_means']['without_skill']), quantity(case['with_minus_without']),
@@ -430,7 +476,8 @@ def static_result(run, records):
     parts.append('<details><summary>Structured static findings</summary>' + table('Public static finding details',
         ('Scanner / check', 'Severity', 'Member / line', 'Original reference'),
         [[code(f['scanner']) + ' / ' + code(f['check']), text(f['severity']), code(f['member']) + ' / ' + text(f['line']),
-          link('reference', (rid, f['reference']), f['reference'])] for f in run['detailed_findings']]) + '</details>')
+          link('reference', (rid, f['reference']), records[rid]['source']['skill_id'] + ' · ' + f['scanner'] +
+               ' reference ' + f['reference'])] for f in run['detailed_findings']]) + '</details>')
     parts.extend([record_support(rid, records[rid]), '</article>'])
     return ''.join(parts)
 
@@ -441,8 +488,8 @@ def comparisons(skill):
         'Direct compatibility means recorded conditions match; it does not establish causality, significance or repeatability.</p>']
     for pair in skill['comparisons']:
         parts.append('<details><summary>Comparison: ' + safe(pair['classification']) + '</summary><p>Comparison identity ' + code(pair['id']) +
-            '</p><p>Left: ' + link('record', (pair['left_record_id'],), pair['left_record_id']) + '<br>Right: ' +
-            link('record', (pair['right_record_id'],), pair['right_record_id']) + '</p>')
+            '</p><p>Left: ' + link('record', (pair['left_record_id'],), skill['skill'] + ' · left record ' + pair['left_record_id']) + '<br>Right: ' +
+            link('record', (pair['right_record_id'],), skill['skill'] + ' · right record ' + pair['right_record_id']) + '</p>')
         parts.append('<p>Compatibility reasons: ' + (', '.join(code(r) for r in pair['reasons']) or 'No recorded mismatch') + '</p>')
         parts.append(table('Cross-run native metrics', ('Metric', 'Left', 'Right', 'Right minus left'),
             [[safe(m['name']), text(m['left']), text(m['right']), quantity(m['right_minus_left'])] for m in pair['native_metrics']]))
@@ -463,23 +510,22 @@ def interpretation(item):
     report = item['report']; judgment = report['judgment']; assessment = judgment['assessment']
     parts = [f'<article class="run" id="{anchor("interpretation", item["record_id"])}"><h3>Model interpretation · analyst report</h3>'
         '<p class="notice"><strong>Model-generated judgment requiring human review.</strong> '
-        'Citation integrity does not establish semantic truth or an instruction defect. '
-        'Recommendations and validation plans are proposals, not completed actions.</p><p>Bound record: ' +
-        link('record', (item['record_id'],), item['record_id']) + '</p><p>Analyst disposition: <strong>' +
-        text(assessment['disposition']) + '</strong> · ' + text(len(judgment['recommendations'])) +
-        ' recommendations. Source owner: ' + text(report['provenance']['source_owner']) + '.</p>']
+        'Valid citations do not prove a conclusion or instruction defect. '
+        'Actions and validation plans are proposals.</p><p>Bound record: ' +
+        link('record', (item['record_id'],), item['skill'] + ' · record ' + item['record_id']) + '</p><p>Analyst interpretation: <strong>' +
+        presentation_label(assessment['disposition'], DISPOSITION_LABELS) + '</strong> · ' + count(len(judgment['recommendations']), 'recommendation') +
+        '. Source owner: ' + text(report['provenance']['source_owner']) + '.</p>']
     parts.append('<p class="lead"><strong>Analyst conclusion:</strong> ' + text(assessment['interpretation']) + '</p>')
     for key, label in (('tested_benefit', 'Tested benefit · analyst interpretation'),
                        ('tested_harm', 'Tested harm · analyst interpretation'), ('uncertainty', 'Uncertainty')):
         parts.append('<p><strong>' + label + ':</strong> ' + text(assessment[key]) + '</p>')
-    parts.append('<details><summary>Analyst reasoning, sufficiency and citations</summary>' + disclosure('Assessment evidence and limitations', {
-            'sufficiency': assessment['sufficiency'], 'citations': assessment['citations']}) +
+    parts.append('<details><summary>Analyst reasoning, sufficiency and citations</summary>' + disclosure('Original analyst assessment', assessment) +
         disclosure('Native suggestions and analyst dispositions', judgment['native_suggestions']) +
         disclosure('Unverified external assertions', judgment['unverified_external_assertions']) + '</details>')
     if not judgment['recommendations']:
-        parts.append('<p>No recommendations supplied. This is not a clean bill of health or approval.</p>')
+        parts.append('<p>No recommendations supplied. Approval is not established.</p>')
     for index, recommendation in enumerate(judgment['recommendations'], 1):
-        parts.append('<div class="finding"><h4>Recommendation ' + str(index) + ': ' + text(recommendation['category']) +
+        parts.append('<div class="finding"><h4>Recommendation ' + str(index) + ' · proposal: ' + presentation_label(recommendation['category'], PROPOSAL_LABELS) +
             ' · ' + text(recommendation['priority']) + '</h4><p>' + text(recommendation['scope']) +
             '</p><details><summary>Rationale, risks and proposed validation</summary>')
         for key in ('justification', 'expected_benefit'):
@@ -494,12 +540,12 @@ def interpretation(item):
         'attributions. Assessments are not aggregated and cannot change analyst qualification.</p>')
     if not item['assessments']:
         parts.append('<p>No independent assessments supplied for this analyst report.</p>')
-    labels = {'independent_ai': 'Independent AI assessment (supplied)',
-              'human_supplied': 'Human assessment (supplied; unauthenticated)', 'unknown': 'Assessment (author category unknown)'}
     for supplied in item['assessments']:
         parts.append(f'<div class="assessment" id="{anchor("assessment", item["record_id"], supplied["id"])}"><h5>' +
-            labels[supplied['author_kind']] + '</h5><p>' + assessment_summary(supplied) +
+            safe(ASSESSOR_LABELS[supplied['author_kind']]) + '</h5><p>' + assessment_summary(supplied) +
             '</p><details><summary>Assessment reasoning, rubric and provenance</summary>')
+        parts.append(disclosure('Original assessment fields', {k: supplied[k] for k in
+            ('author_kind', 'attribution', 'verdict', 'score', 'maximum')}))
         if supplied['dimensions'] is not None:
             parts.append(table('Supplied assessment dimensions — arithmetic checked, substantive judgments attributed',
                 ('Dimension', 'Score', 'Assessor rationale'), [[text(name.replace('_', ' ')), text(row['score']),
@@ -564,8 +610,9 @@ def render_report(result, captured, *, reviews=None):
     skills = result['skills']; findings = result['findings']
     add(executive_summary(result, records, attached))
     add(
-        '<details><summary>How to read the measures</summary><p>Skill Lift is the native evaluator difference on its score scale. '
-        'Effectiveness, Correctness and Discoverability are native with-skill rubric dimensions; corresponding without-skill '
+        '<details><summary>How to read the measures</summary><p>Evaluator-reported (native) metrics use the evaluator\'s original score units. '
+        'Skill Lift is its with-minus-without difference. Grading criteria (rubric) and mandatory checks (gates) record separate outcomes. '
+        'Effectiveness, Correctness and Discoverability are with-skill rubric dimensions; corresponding without-skill '
         'headline dimensions are not supplied by this public contract. Values are preserved, not recomputed from '
         'rounded case scores. Case deltas use descriptive arm means only where all planned attempts are scored. '
         'A positive delta is higher, a negative delta is lower; neither explains why. Mandatory gates are separate from rubric passes. '
@@ -578,7 +625,7 @@ def render_report(result, captured, *, reviews=None):
             add('<p class="notice"><strong>Unmeasured.</strong> No supplied model-backed measurement. Configuration and offline fixture replay do not establish skill benefit or harm.</p>')
         for config in skill['configurations']:
             suite = config['suite']
-            add('<p>Inventory snapshot: ' + (text(suite['case_count']) + ' configured cases per arm' if suite else 'No behavioral suite configured') +
+            add('<p>Inventory snapshot: ' + (count(suite['case_count'], 'configured case') + ' per arm' if suite else 'No behavioral suite configured') +
                 '. Source owner: ' + text(config['source']['owner']) + '.</p>' + disclosure('Configuration identity and source snapshot', config))
         local = [f for f in findings if f['skill'] == name]
         add('<h3>Investigation priorities · deterministic findings</h3>' +
@@ -616,10 +663,11 @@ def render_report(result, captured, *, reviews=None):
     global_findings = [f for f in findings if f['skill'] is None]
     if global_findings:
         add('<h3>Invocation-level investigation priorities</h3>' + priorities(global_findings, records))
-    add('<h3>Model-generated recommendations and assessment boundaries</h3><p>' + text(len(attached)) +
-        ' independently validated analyst reports attached. All deterministic investigation priorities above remain fixed descriptions '
-        'of existing findings and next-step codes. The private analyst remains ' + code('not_quality_qualified') + ' and '
-        'automated publication ineligible. Supplied AI or human assessments are separately attributed opinions; structural validation, '
+    add(disclosure('Exact qualification status', {'quality_qualification': 'not_quality_qualified'}))
+    add('<h3>Model-generated recommendations and assessment boundaries</h3><p>' + count(len(attached),
+        'independently validated analyst report') + ' attached. All deterministic investigation priorities above remain fixed descriptions '
+        'of existing findings and next-step codes. Analyst qualification: ' + presentation_label('not_quality_qualified', STATUS_LABELS) + '. '
+        'Automated publication is ineligible. Supplied AI or human assessments are separately attributed opinions; structural validation, '
         'rubric arithmetic and self-declared approval do not establish authenticated human review or authorize action.</p>'
         '<p>Keep this file private. It requires no server, external assets, analytics or network requests. '
         'Appearance follows the system unless changed for this open document. All evidence is readable without JavaScript; '

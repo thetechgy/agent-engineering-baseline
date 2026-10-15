@@ -107,7 +107,7 @@ class ReportTests(unittest.TestCase):
         plain = ' '.join(Document(overview).content)
         for value in ('Measured results', 'Configured; results not supplied', 'No configured suite',
                       '24 configured cases per arm', '0 failed · 0 passed · 20 unknown',
-                      'Safety evidence is incomplete', 'not_quality_qualified',
+                      'Safety evidence is incomplete', 'Not quality qualified',
                       'Authenticated human approval is not established', 'What remains unknown'):
             self.assertIn(value, plain)
         self.assertLess(plain.index('20 unknown'), plain.index('Important findings'))
@@ -308,6 +308,82 @@ class ReportTests(unittest.TestCase):
         output, _, _ = self.render([record])
         self.assertIn('-0.0000</code> (negative)', output)
         self.assertIn('Lower with-skill case score', output)
+
+    def test_counts_in_empty_single_and_multiple_skill_presentations(self):
+        for count in (0, 1, 2):
+            with self.subTest(count=count):
+                roots = self.bundle('counts-' + str(count),
+                    [fixtures.synthetic(name='skill-' + str(i), cases=('1',) if count == 1 else ('1', '2'))
+                     for i in range(count)])
+                result, captured = self.analyze(roots)
+                output = report.render_report(result, captured).decode()
+                plain = ' '.join(Document(output).content)
+                self.assertIn(f'{count} ' + ('skill represented' if count == 1 else 'skills represented'), plain)
+                self.assertIn('0 independently validated analyst reports attached', plain)
+                if count:
+                    self.assertIn(f'{count} matched ' + ('case out of 1' if count == 1 else 'cases out of 2'), plain)
+                self.assertNotIn('1 cases', plain)
+                self.assertNotIn('1 skills', plain)
+
+    def test_recorded_outcomes_use_explicit_unknown_and_retain_original_values(self):
+        for gate, rubric, expected_gate, expected_rubric in (
+                (0, False, 'Failed', 'Failed'), (1, True, 'Passed', 'Passed'),
+                (None, None, 'Unknown', 'Unknown')):
+            with self.subTest(gate=gate, rubric=rubric):
+                record = fixtures.synthetic(name='gh', run='outcome-' + str(gate),
+                                            scores=(.8, .8) if rubric else (.1, .1))
+                for obs in record['observations']:
+                    obs['rubric_pass'] = rubric
+                    obs['deterministic_gate'] = gate
+                    obs['deterministic_scores'] = dict.fromkeys(evidence.GATE_FIELDS, gate)
+                    if rubric is None:
+                        obs['score'] = obs['scores']['overall'] = None
+                fixtures.reconcile(record)
+                output, _, _ = self.render([record])
+                self.assertIn(f'<td>{expected_rubric}</td><td>{expected_gate}</td>', output)
+                self.assertIn(report.disclosure('Exact observation outcomes', {
+                    'rubric_pass': rubric, 'deterministic_gate': gate}), output)
+                if rubric is None:
+                    self.assertIn('0 matched cases out of 1; 0 scored observations.', output)
+
+    def test_numeric_precision_and_positive_zero_direction_remain_visible(self):
+        record = fixtures.synthetic(scores=(.600002, .600001))
+        record['metrics'][0]['value'] = .123456789
+        output, _, _ = self.render([record])
+        self.assertIn('0.123456789', output)
+        self.assertIn('+0.0000</code> (positive)', output)
+
+    def test_configured_single_case_uses_singular(self):
+        output, _, _ = self.render([fixtures.synthetic()], [fixtures.configuration('alpha')])
+        self.assertIn('1 configured case per arm', output)
+        self.assertNotIn('1 configured cases', output)
+
+    def test_rendering_preserves_analysis_and_capture_identities(self):
+        _, result, captured = self.demo()
+        before = (evidence.identity(result), evidence.identity(captured.records))
+        report.render_report(result, captured)
+        self.assertEqual(before, (evidence.identity(result), evidence.identity(captured.records)))
+
+    def test_contextual_links_identify_skill_and_case(self):
+        output, _, _ = self.render([fixtures.synthetic(scores=(.4, .6))])
+        for label in ('alpha · measured results and coverage', 'alpha · case 1 · finding and next step',
+                      'alpha · case 1 · With skill observation', 'alpha · case 1 · reference'):
+            self.assertIn(label, output)
+        tags = [tag for tag, _ in Document(output).elements if re.fullmatch('h[1-6]', tag)]
+        for previous, current in zip(tags, tags[1:]):
+            self.assertLessEqual(int(current[1]), int(previous[1]) + 1)
+
+    def test_code_labels_translate_only_recognized_codes(self):
+        for raw, labels, expected in (
+                ('skill_change', report.DISPOSITION_LABELS, 'Skill change'),
+                ('no_change', report.DISPOSITION_LABELS, 'No change'),
+                ('modify_skill', report.PROPOSAL_LABELS, 'Modify skill'),
+                ('improve_eval', report.PROPOSAL_LABELS, 'Improve evaluation'),
+                ('fix_grader_or_harness', report.PROPOSAL_LABELS, 'Fix grader or harness')):
+            self.assertEqual(report.presentation_label(raw, labels), expected)
+        for labels in (report.STATUS_LABELS, report.DISPOSITION_LABELS, report.PROPOSAL_LABELS):
+            unfamiliar = 'Unfamiliar_Judgment: Keep <This> VERBATIM.'
+            self.assertEqual(report.presentation_label(unfamiliar, labels), report.safe(unfamiliar))
 
     def test_expired_references_remain_expired_and_stale_analysis_rejects(self):
         future = datetime(2026, 10, 20, tzinfo=timezone.utc)
