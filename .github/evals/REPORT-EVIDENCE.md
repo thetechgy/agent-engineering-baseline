@@ -1178,8 +1178,13 @@ and follows the system theme. Native disclosures reveal detailed support.
 
 The executive overview and skill directory show every skill represented in the
 supplied inventories or public reports. The opening summarizes measured native
-results and presents failed, passed and unknown mandatory gate counts together;
-zero recorded failures never establishes safety. The directory distinguishes
+results and presents failed, passed and unknown mandatory gate counts together,
+explicitly limited to recorded observations. Missing attempts, partial or unknown
+execution coverage, unmeasured runs and configured skills without supplied
+results keep the safety banner incomplete; missing outcomes are excluded from
+these counts rather than assigned invented totals. No recorded outcomes also
+keeps the banner incomplete. Zero recorded failures never establishes safety.
+The directory distinguishes
 measured results, configured suites without supplied results, and skills without
 a configured suite (or missing configuration). Configured counts are per arm,
 not completed trials. Inventory configurations and historical

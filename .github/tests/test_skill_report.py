@@ -115,6 +115,72 @@ class ReportTests(unittest.TestCase):
         self.assertIn('Lower with-skill case score', important)
         self.assertNotIn('Comparison unavailable or limited', important)
 
+    def passing_gates(self, maximum=1):
+        record = fixtures.synthetic(name='gh', maximum=maximum)
+        for obs in record['observations']:
+            obs['deterministic_gate'] = 1
+            obs['deterministic_scores'] = dict.fromkeys(evidence.GATE_FIELDS, 1)
+        return record
+
+    def test_production_safety_banner_flags_missing_coverage_without_inventing_counts(self):
+        for scenario, passed in (('missing-attempt', 5), ('configured-without-run', 2)):
+            with self.subTest(scenario=scenario):
+                record = self.passing_gates(maximum=3 if scenario == 'missing-attempt' else 1)
+                configs = None
+                if scenario == 'missing-attempt':
+                    record['observations'].pop()
+                    fixtures.reconcile(record, partial=True)
+                else:
+                    configs = [fixtures.configuration('gh'), fixtures.configuration('unmeasured')]
+                root = self.bundle(scenario, [record], configs)
+                result, captured = self.analyze(root)
+                identities = (evidence.identity(result), evidence.identity(captured.records))
+                saved = self.root / (scenario + '-analysis') / 'analysis.json'
+                fixtures.write(saved, result)
+                destination = report.generate([root], saved, self.root / (scenario + '-output'))
+                output = (destination / 'report.html').read_bytes()
+                banner = output.decode().split('<div class="safety">', 1)[1].split('</div>', 1)[0]
+                self.assertIn('Safety evidence is incomplete', banner)
+                self.assertIn(f'Among recorded observations: 0 failed · {passed} passed · 0 unknown', banner)
+                self.assertIn('Missing execution coverage is excluded from these counts', banner)
+                self.assertEqual(output, report.render_report(result, captured))
+                self.assertEqual(identities, (evidence.identity(result), evidence.identity(captured.records)))
+
+    def test_safety_banner_flags_partial_unknown_and_unmeasured_run_coverage(self):
+        for scenario, passed in (('partial-details', 1), ('unknown-expected-count', 2), ('unmeasured-run', 2)):
+            with self.subTest(scenario=scenario):
+                record = self.passing_gates()
+                if scenario == 'partial-details':
+                    coverage = [copy.deepcopy(arm['coverage']) for arm in record['arms']]
+                    record['observations'].pop()
+                    fixtures.reconcile(record, partial=True)
+                    for arm, original in zip(record['arms'], coverage):
+                        arm['coverage'] = {**original, 'case_details': 'partial'}
+                elif scenario == 'unknown-expected-count':
+                    policy = record['policy']; policy['attempts']['maximum'] = None
+                    policy['id'] = evidence.identity({key: policy[key] for key in
+                        ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')})
+                    fixtures.reconcile(record, partial=True)
+                roots = [self.bundle(scenario, [record])]
+                if scenario == 'unmeasured-run':
+                    roots.append(self.bundle(scenario + '-snapshot', [self.gh], flat=True))
+                result, captured = self.analyze(*roots)
+                output = report.render_report(result, captured).decode()
+                banner = output.split('<div class="safety">', 1)[1].split('</div>', 1)[0]
+                self.assertIn('Safety evidence is incomplete', banner)
+                self.assertIn(f'Among recorded observations: 0 failed · {passed} passed · 0 unknown', banner)
+
+    def test_complete_passing_coverage_does_not_infer_missing_unconfigured_suite(self):
+        unconfigured = {'source': fixtures.synthetic_source('unconfigured'), 'deployment': None, 'suite': None,
+            'behavioral_status': 'not_configured', 'measurement': {'status': 'unavailable', 'reasons': ['results_not_supplied']}}
+        output, _, _ = self.render([self.passing_gates()], [fixtures.configuration('gh'), unconfigured])
+        banner = output.split('<div class="safety">', 1)[1].split('</div>', 1)[0]
+        self.assertIn('Recorded mandatory gate outcomes', banner)
+        self.assertIn('Among recorded observations: 0 failed · 2 passed · 0 unknown', banner)
+        self.assertNotIn('Safety evidence is incomplete', banner)
+        self.assertNotIn('Missing execution coverage', banner)
+        self.assertIn('Zero recorded failures does not establish safety', banner)
+
     def test_security_component_investigation_uses_recorded_single_attempt_scores(self):
         record = fixtures.synthetic(scores=(.7, .8))
         for obs in record['observations']:
@@ -424,7 +490,11 @@ class ReportTests(unittest.TestCase):
 
     def test_empty_inventory_and_html_limit_fail_without_truncation(self):
         result, captured = self.analyze(self.bundle('empty', configs=[]))
-        self.assertIn('supplied inventory is empty', report.render_report(result, captured).decode())
+        output = report.render_report(result, captured).decode()
+        self.assertIn('supplied inventory is empty', output)
+        banner = output.split('<div class="safety">', 1)[1].split('</div>', 1)[0]
+        self.assertIn('Safety evidence is incomplete', banner)
+        self.assertIn('No recorded gate outcomes supplied', banner)
         with patch.object(report, 'HTML_LIMIT', 64):
             with self.assertRaisesRegex(ValueError, 'HTML report size exceeded'): report.render_report(result, captured)
 
