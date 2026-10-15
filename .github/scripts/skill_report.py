@@ -328,8 +328,12 @@ def executive_summary(result, records, attached):
     failed = sum(len(r['gates']['failed']) for r in runs)
     passed = sum(r['gates']['passed_observations'] for r in runs)
     unknown = sum(r['gates']['unknown_observations'] for r in runs)
-    missing_coverage = any(not r['measured'] for r in runs) or any(
-        f['kind'] in ('incomplete_execution', 'configured_unmeasured') for f in findings)
+    missing_coverage = any(not r['measured'] or any(
+        arm['coverage']['expected_attempts'] is None
+        or arm['coverage']['recorded_attempts'] != arm['coverage']['expected_attempts']
+        or arm['coverage']['case_details'] != 'complete' for arm in r['arms'])
+        or any(obs['attempt'] is None for obs in records[r['record_id']]['observations'])
+        for r in runs) or any(f['kind'] == 'configured_unmeasured' for f in findings)
     incomplete = unknown or not (failed + passed + unknown) or missing_coverage
     parts.append('<div class="safety"><p><strong>' +
         ('Safety evidence is incomplete' if incomplete else 'Recorded mandatory gate outcomes') + '</strong></p><p>' +

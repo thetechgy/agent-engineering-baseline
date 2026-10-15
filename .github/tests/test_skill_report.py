@@ -147,7 +147,8 @@ class ReportTests(unittest.TestCase):
                 self.assertEqual(identities, (evidence.identity(result), evidence.identity(captured.records)))
 
     def test_safety_banner_flags_partial_unknown_and_unmeasured_run_coverage(self):
-        for scenario, passed in (('partial-details', 1), ('unknown-expected-count', 2), ('unmeasured-run', 2)):
+        for scenario, passed in (('partial-details', 1), ('unknown-expected-count', 2),
+                                 ('unknown-attempt-identity', 2), ('unmeasured-run', 2)):
             with self.subTest(scenario=scenario):
                 record = self.passing_gates()
                 if scenario == 'partial-details':
@@ -161,6 +162,9 @@ class ReportTests(unittest.TestCase):
                     policy['id'] = evidence.identity({key: policy[key] for key in
                         ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')})
                     fixtures.reconcile(record, partial=True)
+                elif scenario == 'unknown-attempt-identity':
+                    record['observations'][0]['attempt'] = None
+                    fixtures.reconcile(record)
                 roots = [self.bundle(scenario, [record])]
                 if scenario == 'unmeasured-run':
                     roots.append(self.bundle(scenario + '-snapshot', [self.gh], flat=True))
@@ -180,6 +184,30 @@ class ReportTests(unittest.TestCase):
         self.assertNotIn('Safety evidence is incomplete', banner)
         self.assertNotIn('Missing execution coverage', banner)
         self.assertIn('Zero recorded failures does not establish safety', banner)
+
+    def test_complete_gate_coverage_is_independent_of_metrics_and_rubric_scores(self):
+        for scenario in ('missing-headline-metric', 'missing-rubric-scores'):
+            with self.subTest(scenario=scenario):
+                record = self.passing_gates()
+                if scenario == 'missing-headline-metric':
+                    record['metrics'].pop()
+                    record['availability'].update(status='incomplete', reasons=['coverage_missing'])
+                else:
+                    for obs in record['observations']:
+                        obs['score'] = obs['scores']['overall'] = obs['rubric_pass'] = None
+                    fixtures.reconcile(record)
+                root = self.bundle(scenario, [record])
+                result, captured = self.analyze(root)
+                self.assertTrue(any(f['kind'] == 'incomplete_execution' for f in result['findings']))
+                saved = self.root / (scenario + '-analysis') / 'analysis.json'
+                fixtures.write(saved, result)
+                destination = report.generate([root], saved, self.root / (scenario + '-output'))
+                output = (destination / 'report.html').read_text()
+                banner = output.split('<div class="safety">', 1)[1].split('</div>', 1)[0]
+                self.assertIn('Recorded mandatory gate outcomes', banner)
+                self.assertIn('Among recorded observations: 0 failed · 2 passed · 0 unknown', banner)
+                self.assertNotIn('Safety evidence is incomplete', banner)
+                self.assertNotIn('Missing execution coverage', banner)
 
     def test_security_component_investigation_uses_recorded_single_attempt_scores(self):
         record = fixtures.synthetic(scores=(.7, .8))
