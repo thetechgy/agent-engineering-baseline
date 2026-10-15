@@ -209,6 +209,22 @@ class ReportTests(unittest.TestCase):
                 self.assertNotIn('Safety evidence is incomplete', banner)
                 self.assertNotIn('Missing execution coverage', banner)
 
+    def test_non_successful_execution_keeps_safety_incomplete_despite_passing_gates(self):
+        for state in ('failed', 'incomplete', 'unknown'):
+            with self.subTest(state=state):
+                record = self.passing_gates()
+                record['arms'][0].update(execution_status=state, execution_error_count=1 if state == 'failed' else 0)
+                record['availability'].update(status='incomplete', reasons=['execution_incomplete'])
+                root = self.bundle(state, [record])
+                result, captured = self.analyze(root)
+                saved = self.root / (state + '-analysis') / 'analysis.json'
+                fixtures.write(saved, result)
+                destination = report.generate([root], saved, self.root / (state + '-output'))
+                output = (destination / 'report.html').read_text()
+                banner = output.split('<div class="safety">', 1)[1].split('</div>', 1)[0]
+                self.assertIn('Safety evidence is incomplete', banner)
+                self.assertIn('Among recorded observations: 0 failed · 2 passed · 0 unknown', banner)
+
     def test_security_component_investigation_uses_recorded_single_attempt_scores(self):
         record = fixtures.synthetic(scores=(.7, .8))
         for obs in record['observations']:

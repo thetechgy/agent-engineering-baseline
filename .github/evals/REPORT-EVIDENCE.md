@@ -1184,8 +1184,10 @@ execution coverage, unmeasured runs and configured skills without supplied
 results keep the safety banner incomplete; missing outcomes are excluded from
 these counts rather than assigned invented totals. No recorded outcomes also
 keeps the banner incomplete. Zero recorded failures never establishes safety.
-Gate coverage uses expected and recorded attempts, observation detail coverage
-and attempt identities independently of headline metrics and rubric scores.
+Gate coverage uses execution state, expected and recorded attempts, observation
+detail coverage and attempt identities independently of headline metrics and
+rubric scores. Failed, incomplete or unknown execution remains incomplete even
+when all recorded gate outcomes passed.
 The directory distinguishes
 measured results, configured suites without supplied results, and skills without
 a configured suite (or missing configuration). Configured counts are per arm,
