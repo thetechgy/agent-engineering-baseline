@@ -619,7 +619,10 @@ class AnalysisTests(unittest.TestCase):
         self.assertTrue(any(row['kind'] == 'unavailable_support' for row in result['findings']))
 
     def test_cli_blocks_network_subprocess_graders_and_scanners(self):
-        root = self.bundle('cli', [self.historical])
+        record = synthetic()
+        # Subprocesses use the real clock; success inputs must never expire.
+        evidence.validate_evidence(record, public=True, _observed_at=datetime.max.replace(tzinfo=timezone.utc))
+        root = self.bundle('cli', [record])
         output = self.root / 'analysis'
         before = {path: path.read_bytes() for path in root.rglob('*.json')}
         with ExitStack() as stack:

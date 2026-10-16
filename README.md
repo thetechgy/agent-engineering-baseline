@@ -259,7 +259,7 @@ exact external references:
 <!-- external-action-requirements:start -->
 
 ```text
-astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
+astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884
 benchmark-action/github-action-benchmark@4322e5726e6334590d251fc4f92bec0efafc45dc
 docker/setup-compose-action@54042514f505b273907334ae2b9cdbb9a0213c1a
 ```
@@ -268,6 +268,11 @@ docker/setup-compose-action@54042514f505b273907334ae2b9cdbb9a0213c1a
 
 Missing entries prevent jobs from starting. CI checks that this list matches the
 workflows; keep live repository settings synchronized.
+
+When updating an external action, update its workflow references and this list
+together. Add the new exact SHA to the live allowlist before validating the PR;
+remove the superseded SHA after merging. Branches that still use the old SHA
+must refresh from `main` before rerunning their workflows.
 
 Enable **Allow GitHub Actions to create and approve pull requests** for update PRs.
 The workflow never submits an approving review. For token-created PRs, a maintainer
@@ -404,6 +409,19 @@ The cases cover **Podman** and **gh**, and automated runs use **Codex**. Harness
 checks alone do not establish model performance or portability to Copilot. An agent's result also doesn't prove
 infrastructure is working; verify deployment, readiness, exposure, backups, and recovery
 in the target environment.
+
+For one private offline view of all skills in validated public evidence, generate
+a saved analysis and the [consolidated HTML report](.github/evals/REPORT-EVIDENCE.md#private-offline-html-report).
+The report shows native metrics, separate with/without-skill coverage, case
+regressions, mandatory gates, static findings and evidence gaps. It includes
+unmeasured skills; its deterministic priorities describe investigations without
+causal claims or corrective skill edits. It runs locally without inference,
+external assets or publication; keep the generated file outside the checkout.
+Optional [private analyst attachments](.github/evals/REPORT-EVIDENCE.md#optional-private-analyst-attachments)
+add independently revalidated model interpretation and separately attributed
+assessments. Historical tooling, record identities, citations and current support
+availability must match exactly. Supplied ChatGPT assessments are not authenticated
+human approval; the analyst remains `not_quality_qualified` and publication ineligible.
 
 <!-- rumdl-disable MD033 -->
 <details>
