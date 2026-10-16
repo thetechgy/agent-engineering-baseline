@@ -4192,6 +4192,23 @@ class EvidenceTests(unittest.TestCase):
         data = self.data(); data['dataset']['case_ids'] = [str(i) for i in range(1001)]
         with self.assertRaises(ValueError): evidence.project(data)
 
+    def test_explicit_json_limit_retains_strict_parsing(self):
+        raw = b'{"value": 1}'
+        self.assertEqual(evidence.parse_json(raw, limit=len(raw)), {'value': 1})
+        with self.assertRaisesRegex(ValueError, 'Invalid bounded JSON'):
+            evidence.parse_json(raw, limit=len(raw) - 1)
+        with patch.object(evidence, 'JSON_LIMIT', len(raw) - 1):
+            with self.assertRaisesRegex(ValueError, 'Invalid bounded JSON'):
+                evidence.parse_json(raw)
+            self.assertEqual(evidence.parse_json(raw, limit=len(raw)), {'value': 1})
+        for invalid in (b'{"a":1,"a":2}', b'{"x":NaN}', b'{"x":Infinity}',
+                        b'[' * 34 + b'0' + b']' * 34, b'{', b'"\xff"'):
+            with self.subTest(invalid=invalid[:40]), self.assertRaises(ValueError):
+                evidence.parse_json(invalid, limit=1024)
+        for limit in (True, -1, 0, 1.5, '1024'):
+            with self.subTest(limit=limit), self.assertRaisesRegex(ValueError, 'Invalid JSON limit'):
+                evidence.parse_json(raw, limit=limit)
+
     def test_reference_escape_and_public_size(self):
         for member in ('../escape','/absolute','C:\\private','safe/../escape','a//b'):
             data = self.data(); data['references'][0]['member'] = member
@@ -5634,6 +5651,41 @@ class EvidenceTests(unittest.TestCase):
                             publish.assert_not_called()
                     blobs.assert_not_called(); key.assert_not_called()
                 self.assertEqual(self.snapshot(repo), before)
+
+
+class RenderedOutputTests(unittest.TestCase):
+    """The analysis writer extension preserves JSON callers and publication isolation."""
+
+    def test_rendered_bytes_and_multiple_input_boundaries(self):
+        with tempfile.TemporaryDirectory() as temp:
+            parent = Path(temp); workspace = parent / 'checkout'; workspace.mkdir()
+            roots = (parent / 'first', parent / 'second')
+            for root in roots: root.mkdir()
+            for root in roots:
+                with self.assertRaisesRegex(ValueError, 'Output overlaps input'):
+                    evidence.write_outputs({}, root / 'out', workspace, input_paths=roots,
+                                           rendered={'summary.md': b'# Fixed summary\n'})
+                with patch.dict(os.environ, {'TMPDIR': str(root)}), self.assertRaisesRegex(ValueError, 'Output overlaps input'):
+                    evidence.write_outputs({}, workspace=workspace, input_paths=roots)
+            output = parent / 'out'; calls = []
+            evidence.write_outputs({'analysis.json': {'schema_version': 1}}, output, workspace,
+                                   input_paths=roots, input_guards=(lambda: calls.append('checked'),),
+                                   rendered={'summary.md': b'# Fixed summary\n'})
+            self.assertEqual(calls, ['checked', 'checked'])
+            self.assertEqual((output / 'analysis.json').read_bytes(), evidence.encoded({'schema_version': 1}))
+            self.assertEqual((output / 'summary.md').read_bytes(), b'# Fixed summary\n')
+            self.assertEqual(output.stat().st_mode & 0o777, 0o700)
+            self.assertTrue(all(member.stat().st_mode & 0o777 == 0o600 for member in output.iterdir()))
+
+    def test_invalid_rendered_members_reject_before_reservation(self):
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp) / 'out'
+            for values, rendered in (({}, {'summary.md': 'not bytes'}),
+                                     ({'same.json': {}}, {'same.json': b'overlap'}),
+                                     ({}, {'nested/summary.md': b'unsafe'})):
+                with self.assertRaises(ValueError):
+                    evidence.write_outputs(values, output, rendered=rendered)
+                self.assertFalse(output.exists())
 
 
 if __name__ == '__main__':

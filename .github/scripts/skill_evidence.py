@@ -5,6 +5,7 @@ import argparse
 import copy
 from contextlib import contextmanager
 from datetime import datetime, timezone
+import errno
 import hashlib
 import json
 import math
@@ -46,6 +47,37 @@ REVIEWED_REFERENCE_EXPIRY = {
         '2026-10-19T19:11:15Z',
 }
 require = reports.require
+
+
+class EvidenceBoundaryError(ValueError):
+    """An explicit validation failure at a captured-data or output boundary."""
+
+    def __init__(self, message, boundary):
+        super().__init__(message)
+        self.boundary = boundary
+
+
+def boundary_check(boundary):
+    def check(condition, message):
+        if not condition:
+            raise EvidenceBoundaryError(message, boundary)
+    return check
+
+
+def boundary_call(boundary, operation, *args, allow_collision=False, allow_missing=False, **kwargs):
+    """Translate known protection/race errors only at a specific OS call."""
+    try:
+        return operation(*args, **kwargs)
+    except OSError as error:
+        if allow_collision and isinstance(error, FileExistsError):
+            raise  # Only temporary-name collisions retain the existing bounded retry.
+        if allow_missing and isinstance(error, FileNotFoundError):
+            raise  # The path walker alone decides whether a missing final component is permitted.
+        if error.errno in (errno.ENOENT, errno.ENOTDIR, errno.ELOOP, errno.EEXIST, errno.EACCES, errno.EPERM):
+            raise EvidenceBoundaryError('Filesystem boundary rejected', boundary) from None
+        raise
+
+
 # Metadata identities from the exact reviewed manifest above, independently
 # checked against its pinned bytes by the fixture contract. No execution attestation.
 REVIEWED_REFERENCE_IDENTITIES = frozenset({
@@ -157,8 +189,8 @@ def identity(value):
                                    ensure_ascii=True, allow_nan=False).encode())
 
 
-def depth(value, limit, level=0, seen=None):
-    require(level <= limit, 'JSON depth exceeded')
+def depth(value, limit, level=0, seen=None, *, validate=require):
+    validate(level <= limit, 'JSON depth exceeded')
     if isinstance(value, (dict, list)):
         seen = {} if seen is None else seen
         # YAML aliases preserve shared containers. Revisit only at a deeper
@@ -168,19 +200,20 @@ def depth(value, limit, level=0, seen=None):
             return
         seen[marker] = level
         for child in value.values() if isinstance(value, dict) else value:
-            depth(child, limit, level + 1, seen)
+            depth(child, limit, level + 1, seen, validate=validate)
     elif type(value) is float:
-        require(math.isfinite(value), 'Nonfinite JSON number')
+        validate(math.isfinite(value), 'Nonfinite JSON number')
 
 
-def safe_path(path, *, directory=False, missing=False, directory_identities=None):
+def safe_path(path, *, directory=False, missing=False, directory_identities=None, boundary="integrity"):
+    require = boundary_check(boundary)
     path = Path(path).absolute()
     require('..' not in path.parts, 'Parent traversal')
     current = Path(path.anchor)
     for part in path.parts[1:]:
         current /= part
         try:
-            info = current.lstat()
+            info = boundary_call(boundary, current.lstat, allow_missing=True)
         except FileNotFoundError:
             require(missing and current == path, 'Missing input component')
             return path
@@ -207,6 +240,7 @@ def file_state(info):
 
 
 def verify_file_states(states, directories, directory_states, paths=None):
+    require = boundary_check("integrity")
     fd = None
     parent = None
     try:
@@ -216,7 +250,7 @@ def verify_file_states(states, directories, directory_states, paths=None):
                     os.close(fd); fd = None
                 fd = open_directory(path.parent, directories, directory_states=directory_states)
                 parent = path.parent
-            info = os.stat(path.name, dir_fd=fd, follow_symlinks=False)
+            info = boundary_call("integrity", os.stat, path.name, dir_fd=fd, follow_symlinks=False)
             require(stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and file_state(info) == states[path],
                     'Input member changed')
     finally:
@@ -230,7 +264,7 @@ def verify_directory_states(states, identities, paths=None):
         os.close(fd)
 
 
-def safe_tree(path, *, max_entries=MAX_INPUT_ENTRIES, max_files=None, directory_identities=None, directory_states=None, file_states=None):
+def safe_tree(path, *, max_entries=MAX_INPUT_ENTRIES, max_files=None, directory_identities=None, directory_states=None, file_states=None, native_layout_skill=None):
     if directory_identities is None:
         directory_identities = {}
     if directory_states is None:
@@ -257,6 +291,17 @@ def safe_tree(path, *, max_entries=MAX_INPUT_ENTRIES, max_files=None, directory_
                     require(seen <= max_entries, 'Input tree entry limit')
                     info = entry.stat(follow_symlinks=False)
                     directory = stat.S_ISDIR(info.st_mode)
+                    parts = (current / entry.name).relative_to(path).parts
+                    linked = stat.S_ISLNK(info.st_mode) or bool(getattr(info, 'st_file_attributes', 0)
+                        & getattr(stat, 'FILE_ATTRIBUTE_REPARSE_POINT', 0x400))
+                    if native_layout_skill is not None and parts == ('results', native_layout_skill, 'latest'):
+                        require(linked, 'Expected native latest alias')
+                        continue  # Never resolve or inspect the generated alias.
+                    if (native_layout_skill is not None and len(parts) == 4
+                            and parts[:2] == ('results', native_layout_skill)
+                            and parts[2] != 'latest' and parts[3] in ('_harbor-jobs', '_harbor-tasks')):
+                        require(directory and not linked, 'Invalid native runtime directory')
+                        continue  # Ordinary per-run runtime contents are not evidence inputs.
                     member = safe_path(current / entry.name, directory=directory, directory_identities=directory_identities)
                     if directory:
                         pending.append(member)
@@ -304,6 +349,7 @@ class ReadBudget:
 
 
 def read_bytes(path, limit=JSON_LIMIT, *, budget=None, directory_identities=None, directory_states=None, file_states=None):
+    require = boundary_check("integrity")
     if directory_identities is None:
         directory_identities = {}
     path = safe_path(path, directory_identities=directory_identities)
@@ -311,7 +357,8 @@ def read_bytes(path, limit=JSON_LIMIT, *, budget=None, directory_identities=None
     # O_NONBLOCK avoids hanging if a file is replaced by a FIFO between checks.
     parent_fd = open_directory(path.parent, directory_identities, directory_states=directory_states)
     try:
-        fd = os.open(path.name, os.O_RDONLY | os.O_NOFOLLOW | getattr(os, 'O_NONBLOCK', 0), dir_fd=parent_fd)
+        fd = boundary_call("integrity", os.open, path.name,
+                           os.O_RDONLY | os.O_NOFOLLOW | getattr(os, 'O_NONBLOCK', 0), dir_fd=parent_fd)
     finally:
         os.close(parent_fd)
     with os.fdopen(fd, 'rb') as stream:
@@ -333,8 +380,11 @@ def read_bytes(path, limit=JSON_LIMIT, *, budget=None, directory_identities=None
     return value
 
 
-def parse_json(raw):
-    require(type(raw) is bytes and len(raw) <= JSON_LIMIT, 'Invalid bounded JSON')
+def parse_json(raw, *, limit=None):
+    require = boundary_check("json")
+    limit = JSON_LIMIT if limit is None else limit
+    require(type(limit) is int and limit > 0, 'Invalid JSON limit')
+    require(type(raw) is bytes and len(raw) <= limit, 'Invalid bounded JSON')
     def pairs(items):
         result = {}
         for key, value in items:
@@ -344,10 +394,10 @@ def parse_json(raw):
     try:
         value = json.loads(raw, object_pairs_hook=pairs,
                            parse_constant=lambda _: require(False, 'Nonfinite JSON number'))
-        depth(value, 32)
+        depth(value, 32, validate=require)
         return value
-    except (RecursionError, UnicodeError, json.JSONDecodeError) as exc:
-        raise ValueError('Invalid bounded JSON') from exc
+    except (RecursionError, UnicodeError, json.JSONDecodeError):
+        raise EvidenceBoundaryError('Invalid bounded JSON', 'json') from None
 
 
 def read_json(path):
@@ -1007,6 +1057,7 @@ def validate_captured_gh(workspace, owner, actual, owners, competing_files, entr
     require(all(type(value) is str and re.fullmatch(r'gh-\d{3}(?:-[a-z-]+)?', value) for value in ids)
             and len(ids) == len(set(ids)), 'Invalid or duplicate gh case IDs')
     for entry in data['evals']:
+        require(entry['contract'].get('fixture_contract') == 'gh-cli-subset-v2', 'Unsupported gh fixture contract')
         require(entry['contract']['evidence_classification'] in
                 ('synthetic', 'documentation', 'observed-plus-synthetic'), 'Missing provenance classification')
         require(entry['expected_skill'] in ('gh', None), 'Invalid activation contract')
@@ -1800,12 +1851,12 @@ def project(data, *, static_bundle=None, behavioral_bundle=None):
     return _CapturedRecord(out, tuple(dict.fromkeys(guards)))
 
 
-def load_extract(root, *, budget=None, _observed_at=None, directory_identities=None, entries=None, directory_states=None, file_states=None):
+def load_extract(root, *, budget=None, _observed_at=None, directory_identities=None, entries=None, directory_states=None, file_states=None, reader=None):
     path = root / 'extract-manifest.json'
     present = path in entries if entries is not None else path.exists()
     if not present:
         return None
-    raw = read_bytes(path, budget=budget, directory_identities=directory_identities, directory_states=directory_states, file_states=file_states)
+    raw = reader(path) if reader is not None else read_bytes(path, budget=budget, directory_identities=directory_identities, directory_states=directory_states, file_states=file_states)
     require(digest_bytes(raw) in REVIEWED_EXTRACT_MANIFESTS, 'Unrecognized reviewed extract manifest')
     value = parse_json(raw)
     closed(value, ('schema_version', 'artifact_id', 'archive_digest', 'origin', 'members'))
@@ -2124,7 +2175,7 @@ def reconcile_policy(fields, versions, config, agent, attempt_policy):
                     and harbor[config_key] == attempt_policy[key], 'Attempt policy disagreement')
 
 
-def normalize_behavioral(root, name, selected=None, workspace=ROOT):
+def normalize_behavioral(root, name, selected=None, workspace=ROOT, *, native_layout=False):
     from skillevaluator.tier3.harbor import report_data as native_reports
     from skillevaluator.evaluation import EvaluationService
     from skillevaluator.tier3.case_ids import validate_case_id
@@ -2132,7 +2183,9 @@ def normalize_behavioral(root, name, selected=None, workspace=ROOT):
     directory_states = {}
     file_states = {}
     root = safe_path(root, directory=True, directory_identities=directory_identities)
-    files = safe_tree(root, directory_identities=directory_identities, directory_states=directory_states, file_states=file_states); skill_id(name)
+    skill_id(name)
+    files = safe_tree(root, directory_identities=directory_identities, directory_states=directory_states,
+                      file_states=file_states, native_layout_skill=name if native_layout else None)
     scanned_entries = set(files) | set(directory_identities)
     run = select_run(root, name, selected, entries=scanned_entries, directory_identities=directory_identities)
     budget = ReadBudget()
@@ -2550,6 +2603,38 @@ def static_required_gate(scan, *, blocking_only=False):
     return blocking if blocking_only else scan['passed'] or not blocking
 
 
+def static_scanner(value):
+    """Map exact pinned reporter titles into the existing schema-v1 token domain."""
+    titles = {
+        'Schema & Repository Governance': 'SCHEMA',
+        'Semantic Version Validation': 'VERSION',
+        'Security Scan': 'SECURITY',
+        'PII Scan': 'PII',
+        'License Compliance': 'LICENSE',
+        'Code Risk Analysis': 'CODE_RISK',
+        'Secrets Detection': 'SECRETS',
+        'Code Integrity & Hygiene': 'HYGIENE',
+        'Unicode Smuggling Detection': 'UNICODE',
+    }
+    require(type(value) is str, 'Invalid scanner identity')
+    value = titles.get(value, value)
+    token(value)
+    return value
+
+
+def static_check(scanner, value):
+    """Retain the rule ID from the pinned SECURITY pattern-label formatter."""
+    if value is None:
+        return None
+    require(type(value) is str, 'Invalid static check identity')
+    if scanner == 'SECURITY':
+        match = re.fullmatch(r'[\x21-\x7e][\x20-\x7e]* \(([A-Za-z0-9][A-Za-z0-9._+~:-]{0,127})\)', value)
+        if match:
+            value = match[1]
+    token(value)
+    return value
+
+
 def normalize_static(root, name, workspace=ROOT):
     directory_identities = {}
     directory_states = {}
@@ -2642,7 +2727,7 @@ def normalize_static(root, name, workspace=ROOT):
     data['scans'] = [{'scanner': 'catalog-total', 'status': native['overall_status'], 'passed': native['overall_passed'],
                       'blocking': True, 'severity_counts': severity, 'references': [refs[1]['id']]}]
     for index, scan in enumerate(native['results']):
-        scanner = scan['validator']; token(scanner)
+        scanner = static_scanner(scan['validator'])
         enum(scan['status'], ('passed', 'failed', 'incomplete', 'skipped'))
         scan_ref = report_reference(('results', index)); refs.append(scan_ref)
         data['scans'].append({'scanner': scanner, 'status': scan['status'], 'passed': scan.get('passed'), 'blocking': blocking[index],
@@ -2663,8 +2748,9 @@ def normalize_static(root, name, workspace=ROOT):
                 relative(member)
             except ValueError:
                 member = None  # Never publish an artifact-supplied absolute path.
-            check = finding.get('check_name') or None
-            data['findings'].append({'scanner': scan['validator'], 'severity': finding['severity'],
+            scanner = static_scanner(scan['validator'])
+            check = static_check(scanner, finding.get('check_name') or None)
+            data['findings'].append({'scanner': scanner, 'severity': finding['severity'],
                 'check': check, 'member': member, 'line': finding.get('line_number'), 'reference': finding_ref['id']})
     require(set(native['incomplete_scans']) == recorded_incomplete, 'Inconsistent incomplete scanner identity')
     incomplete = any(s['status'] in ('incomplete', 'skipped') for s in data['scans'])
@@ -2694,8 +2780,10 @@ def normalize_static(root, name, workspace=ROOT):
 
 def open_directory(path, identities=None, changed_message='Input directory changed', trusted_output=False, *, directory_states=None):
     """Anchor each directory component without following replacement links."""
+    boundary = "output" if trusted_output else "integrity"
+    require = boundary_check(boundary)
     flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
-    fd = os.open(path.anchor, flags)
+    fd = boundary_call(boundary, os.open, path.anchor, flags)
     def validate_owner():
         if trusted_output:
             info = os.fstat(fd)
@@ -2708,7 +2796,7 @@ def open_directory(path, identities=None, changed_message='Input directory chang
             require(directory_state(os.fstat(fd)) == directory_states[current], 'Input directory entries changed')
         for part in path.parts[1:]:
             current /= part
-            child = os.open(part, flags, dir_fd=fd)
+            child = boundary_call(boundary, os.open, part, flags, dir_fd=fd)
             os.close(fd); fd = child
             if identities is not None:
                 info = os.fstat(fd)
@@ -2722,39 +2810,48 @@ def open_directory(path, identities=None, changed_message='Input directory chang
         raise
 
 
-def write_outputs(values, destination=None, workspace=ROOT, input_path=None):
+def write_outputs(values, destination=None, workspace=ROOT, input_path=None, *,
+                  rendered=None, input_paths=(), input_guards=()):
+    require = boundary_check("output")
     # Finish validation/serialization before reserving an output directory.
     require(SECURE_DIRECTORY_OUTPUT, 'Secure directory output unsupported')
-    for name in values:
+    rendered = {} if rendered is None else rendered
+    require(type(rendered) is dict and all(type(value) is bytes for value in rendered.values()),
+            'Invalid rendered output')
+    require(not set(values) & set(rendered), 'Duplicate output member')
+    for name in (*values, *rendered):
         relative(name); require('/' not in name, 'Nested output member')
     payloads = {name: encoded(value) for name, value in values.items()}
-    guards = tuple(dict.fromkeys(guard for value in values.values() for guard in record_guards(value)))
+    payloads.update(rendered)
+    guards = tuple(dict.fromkeys((*input_guards,
+        *(guard for value in values.values() for guard in record_guards(value)))))
     for guard in guards: guard()
     workspace = Path(workspace).absolute()
-    if input_path is not None:
-        input_path = Path(input_path).absolute()
+    boundaries = tuple(dict.fromkeys(Path(path).absolute() for path in
+        (*input_paths, *((input_path,) if input_path is not None else ()))))
     parent_identities = {}
     if destination is None:
         # Validate explicit settings without tempfile's probing/fallback writes.
         parent = next((os.environ[key] for key in ('TMPDIR', 'TEMP', 'TMP') if os.environ.get(key)), None)
         parent = safe_path(parent if parent is not None else tempfile.gettempdir(), directory=True,
-                           directory_identities=parent_identities)
+                           directory_identities=parent_identities, boundary="output")
         require(not parent.is_relative_to(workspace), 'Output must be outside checkout')
-        if input_path is not None:
-            require(not parent.is_relative_to(input_path), 'Output overlaps input')
+        for boundary in boundaries:
+            require(not parent.is_relative_to(boundary), 'Output overlaps input')
     else:
         destination = Path(destination).absolute()
-        parent = safe_path(destination.parent, directory=True, directory_identities=parent_identities)
+        parent = safe_path(destination.parent, directory=True, directory_identities=parent_identities, boundary="output")
         require(not os.path.lexists(destination), 'Output directory must be new')
     if destination is not None:
-        safe_path(destination, directory=True, missing=True)
+        safe_path(destination, directory=True, missing=True, boundary="output")
         require(not destination.is_relative_to(workspace) and destination != workspace, 'Output must be outside checkout')
-        if input_path is not None:
-            require(not destination.is_relative_to(input_path) and not input_path.is_relative_to(destination), 'Output overlaps input')
+        for boundary in boundaries:
+            require(not destination.is_relative_to(boundary) and not boundary.is_relative_to(destination),
+                    'Output overlaps input')
     forbidden_directories = set()
-    for boundary in (workspace, input_path):
+    for boundary in (workspace, *boundaries):
         if boundary is not None and boundary.exists():
-            info = boundary.lstat()
+            info = boundary_call("integrity", boundary.lstat)
             if stat.S_ISDIR(info.st_mode): forbidden_directories.add((info.st_dev, info.st_ino))
     parent_fd = open_directory(parent, parent_identities, 'Output parent directory changed', True)
     try:
@@ -2762,13 +2859,14 @@ def write_outputs(values, destination=None, workspace=ROOT, input_path=None):
             for _ in range(100):
                 destination = parent / ('skill-evidence-' + secrets.token_hex(8))
                 try:
-                    os.mkdir(destination.name, mode=0o700, dir_fd=parent_fd)
+                    boundary_call("output", os.mkdir, destination.name, mode=0o700, dir_fd=parent_fd,
+                                  allow_collision=True)
                     break
                 except FileExistsError:
                     destination = None
             require(destination is not None, 'Temporary output collision limit')
         else:
-            os.mkdir(destination.name, mode=0o700, dir_fd=parent_fd)
+            boundary_call("output", os.mkdir, destination.name, mode=0o700, dir_fd=parent_fd)
         created = None
         reservation_parent = None
         reserved = False
@@ -2787,10 +2885,11 @@ def write_outputs(values, destination=None, workspace=ROOT, input_path=None):
                 try: reservation_parent = directory_state(os.fstat(parent_fd))
                 except OSError: pass
                 raise
-            created = os.stat(destination.name, dir_fd=parent_fd, follow_symlinks=False)
+            created = boundary_call("output", os.stat, destination.name, dir_fd=parent_fd, follow_symlinks=False)
             reserved = private_reservation(created)
             require(reserved, 'Output directory changed')
-            directory_fd = os.open(destination.name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent_fd)
+            directory_fd = boundary_call("output", os.open, destination.name,
+                                         os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent_fd)
             original = os.fstat(directory_fd)
             require((original.st_dev, original.st_ino) == (created.st_dev, created.st_ino)
                     and (original.st_dev, original.st_ino) not in forbidden_directories
@@ -2798,12 +2897,12 @@ def write_outputs(values, destination=None, workspace=ROOT, input_path=None):
                     and not original.st_mode & 0o077 and not os.listdir(directory_fd), 'Output directory changed')
             owned = True
             def unchanged():
-                current = destination.lstat()
+                current = boundary_call("output", destination.lstat)
                 require(stat.S_ISDIR(current.st_mode) and (current.st_dev, current.st_ino) ==
                         (original.st_dev, original.st_ino), 'Output directory changed')
             unchanged()
             for name, payload in payloads.items():
-                fd = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                fd = boundary_call("output", os.open, name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
                              mode=0o600, dir_fd=directory_fd)
                 members.append(name)
                 try:
@@ -2852,23 +2951,30 @@ def write_outputs(values, destination=None, workspace=ROOT, input_path=None):
 
 
 
-def verify_reference(bundle, record):
+def resolve_locator(value, locator):
+    """Resolve captured JSON without rereading or executing supplied content."""
+    require = boundary_check("locator")
+    require(type(locator) is list and len(locator) <= 12, 'Locator limit')
+    for component in locator:
+        if type(component) is int:
+            require(type(value) is list and 0 <= component < len(value), 'Invalid structured locator')
+        else:
+            require(type(component) is str and type(value) is dict and component in value,
+                    'Invalid structured locator')
+        value = value[component]
+    return value
+
+
+def verify_reference(bundle, record, *, reader=None):
     """Verify retained original bytes and resolve a structured locator, without execution."""
     validate_reference(record)
     require(record['availability'] == 'available', 'Reference unavailable or expired')
     require(not reference_expired(record, utc_now()), 'Reference unavailable or expired')
     safe_path(bundle, directory=True)
     path = bundle / record['member']
-    raw = read_bytes(path)
+    raw = (read_bytes if reader is None else reader)(path)
     require(digest_bytes(raw) == record['digest'], 'Evidence member digest mismatch')
-    value = parse_json(raw)
-    for component in record['locator']:
-        if type(component) is int:
-            require(type(value) is list and component < len(value), 'Invalid structured locator')
-        else:
-            require(type(value) is dict and component in value, 'Invalid structured locator')
-        value = value[component]
-    return value
+    return resolve_locator(parse_json(raw), record['locator'])
 
 
 def verify_source_snapshot(snapshot, src):
@@ -2889,6 +2995,7 @@ def main(argv=None):
     norm = commands.add_parser('normalize'); norm.add_argument('--kind', required=True, choices=('behavioral', 'static'))
     norm.add_argument('--skill', required=True); norm.add_argument('--input', required=True, type=Path)
     norm.add_argument('--run'); norm.add_argument('--output', type=Path)
+    norm.add_argument('--native-layout', action='store_true')
     proj = commands.add_parser('project'); proj.add_argument('--input', required=True, type=Path); proj.add_argument('--output', type=Path)
     args = parser.parse_args(argv)
     input_path = getattr(args, 'input', None)
@@ -2904,7 +3011,12 @@ def main(argv=None):
             input_path = args.input.parent
     else:
         require(args.kind == 'behavioral' or args.run is None, '--run applies to behavioral evidence')
-        data = normalize_behavioral(args.input.absolute(), args.skill, args.run) if args.kind == 'behavioral' else normalize_static(args.input.absolute(), args.skill)
+        require(args.kind == 'behavioral' or not args.native_layout, '--native-layout applies to behavioral evidence')
+        if args.kind == 'behavioral':
+            options = {'native_layout': True} if args.native_layout else {}
+            data = normalize_behavioral(args.input.absolute(), args.skill, args.run, **options)
+        else:
+            data = normalize_static(args.input.absolute(), args.skill)
         values = {'evidence.json': data, 'public-report.json': project(data)}
     output = write_outputs(values, args.output, input_path=input_path)
     print(output)
@@ -2915,5 +3027,6 @@ if __name__ == '__main__':
         main()
     except (ValueError, KeyError, TypeError, AttributeError, IndexError, OSError, OverflowError) as exc:
         # Native exception strings can contain prose or paths. Keep CLI errors bounded.
-        print('Evidence contract rejected (' + type(exc).__name__ + ')', file=sys.stderr)
+        error_name = 'ValueError' if isinstance(exc, EvidenceBoundaryError) else type(exc).__name__
+        print('Evidence contract rejected (' + error_name + ')', file=sys.stderr)
         sys.exit(1)

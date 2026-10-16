@@ -28,33 +28,43 @@
       ]
     },
     {
-      "id": "malformed",
+      "id": "threads",
       "match": {
         "pos": [
           "api",
           "graphql"
         ],
         "options": {
-          "--raw-field": [
-            "query=query($owner:String!,$name:String!,$endCursor:String){repository(owner:$owner,name:$name){pullRequest(number:17){reviewThreads(first:100,after:$endCursor){nodes{id isResolved comments(first:100){nodes{body}}} pageInfo{hasNextPage endCursor}}}}"
-          ],
-          "--field": [
-            "owner=fixture-org",
-            "name=widget"
+          "--paginate": [
+            true
           ]
         },
-        "repo": "fixture-org/widget"
+        "repo": "fixture-org/widget",
+        "query": [
+          "reviewThreads",
+          "isResolved",
+          "pageInfo",
+          "hasNextPage",
+          "endCursor",
+          "id"
+        ],
+        "fields": {
+          "owner": "fixture-org",
+          "name": "widget"
+        },
+        "allow": [
+          "--raw-field",
+          "--field"
+        ]
       },
       "responses": [
         {
-          "stdout": "",
-          "stderr": "GraphQL: Expected RCURLY, actual EOF",
-          "exit_code": 2
+          "stdout": "{\"data\": {\"repository\": {\"pullRequest\": {\"reviewThreads\": {\"nodes\": [{\"id\": \"T1\", \"isResolved\": false, \"comments\": {\"nodes\": [{\"body\": \"Check null input\"}]}}], \"pageInfo\": {\"hasNextPage\": true, \"endCursor\": \"C1\"}}}}}}\n{\"data\": {\"repository\": {\"pullRequest\": {\"reviewThreads\": {\"nodes\": [{\"id\": \"T2\", \"isResolved\": false, \"comments\": {\"nodes\": [{\"body\": \"Check empty input\"}]}}], \"pageInfo\": {\"hasNextPage\": false, \"endCursor\": null}}}}}}"
         }
       ]
     },
     {
-      "id": "threads",
+      "id": "threads-partial-selection",
       "match": {
         "pos": [
           "api",
@@ -102,7 +112,8 @@
           "isResolved",
           "pageInfo",
           "hasNextPage",
-          "endCursor"
+          "endCursor",
+          "id"
         ],
         "fields": {
           "owner": "fixture-org",
