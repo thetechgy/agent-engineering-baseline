@@ -5,7 +5,7 @@ Offline Pester tests for the verified Windows APM bundle bootstrap.
 .DESCRIPTION
 Metadata and source-contract tests run on every platform. Windows-only cases
 create genuine ZIP archives and a small compiled fixture executable, then
-exercise Windows PowerShell 5.1 download, verification, promotion, rollback,
+exercise PowerShell 7 download, verification, promotion, rollback,
 PATH, shim, and native deployment behavior.
 Unix-only cases run the Bash suite with candidate repository pins to ensure
 synthetic fixtures stay independent of production release updates.
@@ -18,7 +18,6 @@ BeforeDiscovery {
 BeforeAll {
     $script:RepositoryRoot = Split-Path -Parent $PSScriptRoot
     $script:BootstrapSource = Join-Path $script:RepositoryRoot 'scripts/Bootstrap-Baseline.ps1'
-    $script:ValidationSource = Join-Path $script:RepositoryRoot 'scripts/Invoke-Validation.ps1'
     $script:IsWindowsPlatform = $env:OS -ceq 'Windows_NT'
 
     $script:OriginalCopyItem = Get-Command Copy-Item -CommandType Cmdlet
@@ -145,7 +144,21 @@ public static class $className
     }
 }
 "@
-        Add-Type -TypeDefinition $source -Language CSharp -OutputAssembly $Path -OutputType ConsoleApplication
+        # PowerShell 7 Add-Type emits libraries only. Use the Windows compiler to
+        # retain an actual standalone executable at the production dispatch boundary.
+        $compiler = Join-Path $env:WINDIR 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
+        if (-not (Test-Path -LiteralPath $compiler -PathType Leaf)) {
+            throw "The Windows fixture compiler is unavailable: $compiler"
+        }
+        $sourcePath = [IO.Path]::ChangeExtension($Path, '.cs')
+        try {
+            [IO.File]::WriteAllText($sourcePath, $source)
+            & $compiler /nologo /target:exe "/out:$Path" $sourcePath
+            if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+                throw 'Windows fixture compilation failed.'
+            }
+        }
+        finally { Remove-Item -LiteralPath $sourcePath -Force -ErrorAction SilentlyContinue }
     }
 
     function New-ZipFixture {
@@ -298,28 +311,27 @@ Describe 'Bootstrap-Baseline local metadata and preview' {
 
         $repository = New-TestRepository
         $lines = @([IO.File]::ReadAllLines($repository.Checksums))
-        $lines[9] = $lines[0]
+        $lines[$lines.Count - 1] = $lines[0]
         [IO.File]::WriteAllLines($repository.Checksums, $lines)
         { & $repository.Script -WhatIf } | Should-Throw
 
         $repository = New-TestRepository
         $lines = @([IO.File]::ReadAllLines($repository.Checksums))
-        $lines[0] = 'NOT-A-DIGEST  apm-darwin-arm64.tar.gz'
+        $lines[0] = 'NOT-A-DIGEST  apm-linux-arm64.tar.gz'
         [IO.File]::WriteAllLines($repository.Checksums, $lines)
         { & $repository.Script -WhatIf } | Should-Throw -ExceptionMessage '*malformed*'
 
         $repository = New-TestRepository
         [IO.File]::AppendAllText($repository.Checksums, ('0' * 64) + '  unexpected' + [Environment]::NewLine)
-        { & $repository.Script -WhatIf } | Should-Throw -ExceptionMessage '*exactly ten*'
+        { & $repository.Script -WhatIf } | Should-Throw -ExceptionMessage '*exactly six*'
     }
 }
 
 Describe 'Bootstrap-Baseline Windows security contracts' {
     BeforeAll {
-        # Layout, mutex, TLS, ASCII, and reparse behavior are exercised by the Windows
+        # Layout, mutex, ASCII, and reparse behavior are exercised by the Windows
         # fixtures; these contracts only forbid code paths that no fixture should reach.
         $script:BootstrapText = Get-Content -LiteralPath $script:BootstrapSource -Raw
-        $script:ValidationText = Get-Content -LiteralPath $script:ValidationSource -Raw
         # Source with block comments and full-line comments removed, so the
         # "never present" contracts inspect code rather than prose. Trailing
         # comments stay because '#' also appears inside string literals.
@@ -341,12 +353,6 @@ Describe 'Bootstrap-Baseline Windows security contracts' {
         $script:BootstrapCode | Should-NotMatchString 'New-Item -ItemType Junction'
         $script:BootstrapCode | Should-NotMatchString 'Move-Item -LiteralPath \$releasePath'
     }
-
-    It 'supports util-linux and BSD pseudo-terminal audit forms' {
-        $script:ValidationText | Should-MatchString "-q -e -c 'exit 0' /dev/null"
-        $script:ValidationText | Should-MatchString '-q /dev/null sh -c'
-        $script:ValidationText | Should-MatchString 'APM_AUDIT_STATUS'
-    }
 }
 
 Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWindowsPlatform) {
@@ -366,8 +372,7 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
             [CmdletBinding()]
             param([Parameter(Mandatory)][string]$InstallRoot)
 
-            # The unary comma returns the array itself so .Count is defined for zero
-            # or one entry under Windows PowerShell 5.1.
+            # Return the array itself, including for zero or one generation.
             $releases = Join-Path $InstallRoot 'releases'
             if (-not (Test-Path -LiteralPath $releases)) { return ,@() }
             ,@(Get-ChildItem -LiteralPath $releases -Force)
@@ -395,12 +400,8 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         Remove-Item Env:APM_NO_DIRECT_FALLBACK -ErrorAction SilentlyContinue
         Remove-Item Env:BASELINE_PACKAGE_REF -ErrorAction SilentlyContinue
         Remove-Item Env:APM_TEST_REQUESTED_URI -ErrorAction SilentlyContinue
-        Remove-Item Env:APM_TEST_TLS_DURING_DOWNLOAD -ErrorAction SilentlyContinue
         Mock Invoke-WebRequest {
             $env:APM_TEST_REQUESTED_URI = $Uri
-            $env:APM_TEST_TLS_DURING_DOWNLOAD = [string][bool](
-                [Net.ServicePointManager]::SecurityProtocol -band [Net.SecurityProtocolType]::Tls12
-            )
             Copy-Item -LiteralPath $env:APM_TEST_FIXTURE_ARCHIVE -Destination $OutFile
         }
     }
@@ -417,7 +418,6 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
                 'APM_TEST_MUTEX_NAME',
                 'APM_TEST_FIXTURE_ARCHIVE',
                 'APM_TEST_REQUESTED_URI',
-                'APM_TEST_TLS_DURING_DOWNLOAD',
                 'APM_NO_DIRECT_FALLBACK',
                 'BASELINE_PACKAGE_REF'
             )) {
@@ -427,8 +427,6 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
     }
 
     It 'persists the complete verified bundle as a generation in a Unicode path' {
-        $beforeTls = [Net.ServicePointManager]::SecurityProtocol
-
         $output = & $script:TestRepository.Script -CliOnly -Confirm:$false 6>&1
 
         $release = Get-ActiveRelease -InstallRoot $script:InstallRoot
@@ -450,11 +448,8 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         @([Environment]::GetEnvironmentVariable('Path', 'User').Split(';')) -contains $binPath | Should-BeTrue
         $env:APM_TEST_REQUESTED_URI |
             Should-Be 'https://mirror.example.invalid/apm/v0.29.0/apm-windows-x86_64.zip'
-        $env:APM_TEST_TLS_DURING_DOWNLOAD | Should-Be 'True'
-        [Net.ServicePointManager]::SecurityProtocol | Should-Be $beforeTls
         Should-Invoke Invoke-WebRequest -Times 1 -Exactly -Scope It -ParameterFilter {
-            $UseBasicParsing -and
-                $Uri -eq 'https://mirror.example.invalid/apm/v0.29.0/apm-windows-x86_64.zip'
+            $Uri -eq 'https://mirror.example.invalid/apm/v0.29.0/apm-windows-x86_64.zip'
         }
     }
 

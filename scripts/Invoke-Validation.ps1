@@ -7,7 +7,7 @@ The Full suite (default) runs Pester, PSScriptAnalyzer, the Bash bootstrap
 tests, the native APM install/compile/audit/package checks, ShellCheck,
 Markdown linting, and `git diff --check`. The Pester suite runs only
 Pester and PSScriptAnalyzer, for hosts without the Unix tooling (for example
-Windows PowerShell 5.1 CI).
+Windows CI).
 
 .EXAMPLE
 ./scripts/Invoke-Validation.ps1
@@ -15,6 +15,7 @@ Windows PowerShell 5.1 CI).
 .EXAMPLE
 ./scripts/Invoke-Validation.ps1 -Suite Pester
 #>
+#Requires -Version 7.0
 [CmdletBinding()]
 param(
     [Parameter()]
@@ -82,45 +83,16 @@ try {
     $scriptCommand = Get-Command -Name script -CommandType Application -ErrorAction Stop |
         Select-Object -First 1
     $previousApmExecutable = $env:APM_EXECUTABLE
-    $previousAuditStatus = $env:APM_AUDIT_STATUS
-    $auditStatusPath = $null
-    $auditExitCode = $null
     try {
         $env:APM_EXECUTABLE = $apmExecutable
-        & $scriptCommand.Source -q -e -c 'exit 0' /dev/null *> $null
-        if ($LASTEXITCODE -eq 0) {
-            & $scriptCommand.Source -q -e -c 'exec "$APM_EXECUTABLE" audit --ci' /dev/null
-            $auditExitCode = $LASTEXITCODE
-        }
-        else {
-            $auditStatusPath = [IO.Path]::GetTempFileName()
-            $env:APM_AUDIT_STATUS = $auditStatusPath
-            & $scriptCommand.Source -q /dev/null sh -c (
-                '"$APM_EXECUTABLE" audit --ci; status=$?; ' +
-                'printf "%s\n" "$status" > "$APM_AUDIT_STATUS"; exit "$status"'
-            )
-            $auditStatusText = if (Test-Path -LiteralPath $auditStatusPath -PathType Leaf) {
-                [IO.File]::ReadAllText($auditStatusPath).Trim()
-            }
-            else { '' }
-            if ($auditStatusText -notmatch '^[0-9]+$') {
-                throw 'BSD script did not report the APM audit exit status.'
-            }
-            $auditExitCode = [int]$auditStatusText
-        }
+        & $scriptCommand.Source -q -e -c 'exec "$APM_EXECUTABLE" audit --ci' /dev/null
+        $auditExitCode = $LASTEXITCODE
     }
     finally {
-        if ($auditStatusPath -and (Test-Path -LiteralPath $auditStatusPath)) {
-            Remove-Item -LiteralPath $auditStatusPath -Force -ErrorAction SilentlyContinue
-        }
         if ($null -eq $previousApmExecutable) {
             Remove-Item Env:APM_EXECUTABLE -ErrorAction SilentlyContinue
         }
         else { $env:APM_EXECUTABLE = $previousApmExecutable }
-        if ($null -eq $previousAuditStatus) {
-            Remove-Item Env:APM_AUDIT_STATUS -ErrorAction SilentlyContinue
-        }
-        else { $env:APM_AUDIT_STATUS = $previousAuditStatus }
     }
     if ($auditExitCode -ne 0) { throw 'APM audit failed.' }
     & $apmExecutable pack --dry-run

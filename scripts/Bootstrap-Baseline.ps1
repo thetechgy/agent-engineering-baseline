@@ -25,6 +25,7 @@ Acquire the reviewed CLI without installing the baseline package.
 .EXAMPLE
 ./scripts/Bootstrap-Baseline.ps1 -WhatIf
 #>
+#Requires -Version 7.0
 [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
 param(
     [Parameter()]
@@ -75,10 +76,6 @@ function Read-ReviewedConfig {
         throw ".apm-checksums must not be a reparse point: $checksumsFile"
     }
     $expectedNames = @(
-        'apm-darwin-arm64.tar.gz'
-        'apm-darwin-arm64/apm'
-        'apm-darwin-x86_64.tar.gz'
-        'apm-darwin-x86_64/apm'
         'apm-linux-arm64.tar.gz'
         'apm-linux-arm64/apm'
         'apm-linux-x86_64.tar.gz'
@@ -88,7 +85,7 @@ function Read-ReviewedConfig {
     )
     $lines = @([IO.File]::ReadAllLines($checksumsFile))
     if ($lines.Count -ne $expectedNames.Count) {
-        throw '.apm-checksums must contain exactly ten entries.'
+        throw '.apm-checksums must contain exactly six entries.'
     }
     $digests = New-Object 'System.Collections.Generic.Dictionary[string,string]' (
         [StringComparer]::Ordinal
@@ -213,15 +210,7 @@ function Invoke-ArchiveDownload {
         [Parameter(Mandatory)][string]$OutFile
     )
 
-    $previousProtocol = [Net.ServicePointManager]::SecurityProtocol
-    try {
-        [Net.ServicePointManager]::SecurityProtocol =
-            $previousProtocol -bor [Net.SecurityProtocolType]::Tls12
-        Invoke-WebRequest -Uri $Uri -OutFile $OutFile -UseBasicParsing
-    }
-    finally {
-        [Net.ServicePointManager]::SecurityProtocol = $previousProtocol
-    }
+    Invoke-WebRequest -Uri $Uri -OutFile $OutFile
 }
 
 function Assert-SafeZipLayout {
@@ -543,8 +532,8 @@ function Install-ReviewedBundle {
         $ownedPaths.Add($shimStagePath)
         if (Test-Path -LiteralPath $shimPath) {
             # NTFS replaces the destination atomically; the shim never disappears.
-            # NullString keeps the no-backup argument null under Windows PowerShell 5.1,
-            # which otherwise binds $null to an empty (illegal) path.
+            # PowerShell binds $null to an empty string here, which is not a valid
+            # backup path. Keep the optional backup filename genuinely null.
             [IO.File]::Replace($shimStagePath, $shimPath, [NullString]::Value)
         }
         else {
@@ -631,7 +620,7 @@ function Get-ReviewedApm {
     param([Parameter(Mandatory)]$Metadata)
 
     if ($env:OS -cne 'Windows_NT') {
-        throw 'Bootstrap-Baseline.ps1 supports Windows; use bootstrap.sh on Linux or macOS.'
+        throw 'Bootstrap-Baseline.ps1 supports Windows; use bootstrap.sh on Ubuntu.'
     }
     $architecture = if ($env:PROCESSOR_ARCHITEW6432) { $env:PROCESSOR_ARCHITEW6432 }
     else { $env:PROCESSOR_ARCHITECTURE }

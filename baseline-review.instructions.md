@@ -25,7 +25,7 @@ applyTo: "**"
   Preserve unrelated destination settings and recover the prior usable state
   after interrupted or failed installation.
 - Verify changed bootstrap behavior through the production entry point or a
-  representative pinned fixture for affected Bash and PowerShell 5.1/7 runtimes.
+  representative pinned fixture for affected Bash and latest stable PowerShell runtimes.
   Do not treat mocks or one platform's CI as proof for unexercised runtimes.
 
 ### Credentials, MCP, and privileged automation

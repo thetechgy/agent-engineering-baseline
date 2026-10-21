@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Offline fixture tests for scripts/bootstrap.sh on Linux and macOS.
+# Offline fixture tests for scripts/bootstrap.sh on Linux.
 set -euo pipefail
 
 REPO_ROOT="$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
@@ -16,11 +16,7 @@ STATUS=0
 OUTPUT=''
 
 digest() {
-    if command -v sha256sum >/dev/null 2>&1; then
-        sha256sum "$1" | awk '{ print $1 }'
-    else
-        shasum -a 256 "$1" | awk '{ print $1 }'
-    fi
+    sha256sum "$1" | awk '{ print $1 }'
 }
 
 record_result() {
@@ -103,25 +99,14 @@ EOF
 }
 
 write_hash_stubs() {
-    local real_sha='' real_shasum=''
-    real_sha=$(command -v sha256sum 2>/dev/null || true)
-    real_shasum=$(command -v shasum 2>/dev/null || true)
-    if [ -n "$real_sha" ]; then
-        cat > "$CASE_BIN/sha256sum" <<EOF
+    local real_sha
+    real_sha=$(command -v sha256sum)
+    cat > "$CASE_BIN/sha256sum" <<EOF
 #!/usr/bin/env bash
 printf 'sha256sum %s\n' "\$*" >> '$HASH_LOG'
 exec '$real_sha' "\$@"
 EOF
-        chmod +x "$CASE_BIN/sha256sum"
-    fi
-    if [ -n "$real_shasum" ]; then
-        cat > "$CASE_BIN/shasum" <<EOF
-#!/usr/bin/env bash
-printf 'shasum %s\n' "\$*" >> '$HASH_LOG'
-exec '$real_shasum' "\$@"
-EOF
-        chmod +x "$CASE_BIN/shasum"
-    fi
+    chmod +x "$CASE_BIN/sha256sum"
 }
 
 replace_checksum() {
@@ -136,7 +121,6 @@ replace_checksum() {
 make_fixture() {
     local os=$1 arch=$2 version=${3:-0.29.0}
     PLATFORM_OS=$(printf '%s' "$os" | tr '[:upper:]' '[:lower:]')
-    [ "$PLATFORM_OS" != darwin ] || PLATFORM_OS=darwin
     case "$arch" in
         arm64|aarch64) PLATFORM_ARCH=arm64 ;;
         *) PLATFORM_ARCH=x86_64 ;;
@@ -237,10 +221,9 @@ run_case() {
 }
 
 # Run the bootstrap with a pseudo-terminal on stderr through script(1), the
-# same dependency Invoke-Validation.ps1 uses for the native audit. The exit
-# status travels through a file because BSD script does not propagate it.
+# same util-linux dependency Invoke-Validation.ps1 uses for the native audit.
 run_tty_case() {
-    local runner="$CASE_ROOT/tty-run.sh" status_file="$CASE_ROOT/tty-status"
+    local runner="$CASE_ROOT/tty-run.sh"
     cat > "$runner" <<EOF
 #!/usr/bin/env bash
 env -i \\
@@ -250,18 +233,15 @@ env -i \\
     APM_INSTALL_DIR='$CASE_INSTALL' \\
     APM_RELEASE_BASE_URL='file://$MIRROR_ROOT' \\
     bash '$CASE_REPO/scripts/bootstrap.sh' $*
-printf '%s\\n' "\$?" > '$status_file'
+exit "\$?"
 EOF
     set +e
     if ! command -v script >/dev/null 2>&1; then
         OUTPUT='script(1) is required to exercise the interactive download path'
         STATUS=127
-    elif script -q -e -c 'exit 0' /dev/null </dev/null >/dev/null 2>&1; then
-        OUTPUT=$(script -q -e -c "bash '$runner'" /dev/null </dev/null 2>&1)
-        STATUS=$(cat "$status_file" 2>/dev/null || printf '126')
     else
-        OUTPUT=$(script -q /dev/null bash "$runner" </dev/null 2>&1)
-        STATUS=$(cat "$status_file" 2>/dev/null || printf '126')
+        OUTPUT=$(script -q -e -c "bash '$runner'" /dev/null </dev/null 2>&1)
+        STATUS=$?
     fi
     set -e
 }
@@ -283,7 +263,7 @@ for corruption in duplicate malformed extra missing; do
     case "$corruption" in
         duplicate)
             sed -n '1p' "$CASE_REPO/.apm-checksums" > "$CASE_REPO/duplicate-entry"
-            sed -n '1,9p' "$CASE_REPO/.apm-checksums" > "$CASE_REPO/.apm-checksums.next"
+            sed -n '1,5p' "$CASE_REPO/.apm-checksums" > "$CASE_REPO/.apm-checksums.next"
             sed -n '1p' "$CASE_REPO/duplicate-entry" >> "$CASE_REPO/.apm-checksums.next"
             mv "$CASE_REPO/.apm-checksums.next" "$CASE_REPO/.apm-checksums"
             ;;
@@ -292,12 +272,12 @@ for corruption in duplicate malformed extra missing; do
             mv "$CASE_REPO/.apm-checksums.next" "$CASE_REPO/.apm-checksums"
             ;;
         extra)
-            sed -n '1,9p' "$CASE_REPO/.apm-checksums" > "$CASE_REPO/.apm-checksums.next"
+            sed -n '1,5p' "$CASE_REPO/.apm-checksums" > "$CASE_REPO/.apm-checksums.next"
             printf '%064d  unexpected\n' 0 >> "$CASE_REPO/.apm-checksums.next"
             mv "$CASE_REPO/.apm-checksums.next" "$CASE_REPO/.apm-checksums"
             ;;
         missing)
-            sed -n '1,9p' "$CASE_REPO/.apm-checksums" > "$CASE_REPO/.apm-checksums.next"
+            sed -n '1,5p' "$CASE_REPO/.apm-checksums" > "$CASE_REPO/.apm-checksums.next"
             mv "$CASE_REPO/.apm-checksums.next" "$CASE_REPO/.apm-checksums"
             ;;
     esac
@@ -314,8 +294,15 @@ assert_true 'preview creates no temporary directory' test -z "$(find "$CASE_TMP"
 assert_true 'preview creates no installation content' test -z "$(find "$CASE_ROOT/install" -mindepth 2 -print -quit)"
 assert_true 'preview never executes ambient APM' test ! -e "$AMBIENT_SENTINEL"
 
+new_case unsupported-darwin
+write_uname_stub Darwin x86_64
+run_case --cli-only
+record_result 'Darwin is rejected' failure
+assert_true 'unsupported OS is diagnosed' out_has 'unsupported operating system: Darwin'
+assert_true 'unsupported OS creates no installation content' test -z "$(find "$CASE_INSTALL" -mindepth 1 -print -quit)"
+
 printf '# platform mapping, verification, and native deployment\n'
-for platform_case in 'Linux x86_64 sha256sum' 'Linux aarch64 sha256sum' 'Darwin x86_64 shasum' 'Darwin arm64 shasum'; do
+for platform_case in 'Linux x86_64 sha256sum' 'Linux aarch64 sha256sum'; do
     read -r platform_os platform_arch platform_hash <<EOF
 $platform_case
 EOF

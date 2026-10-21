@@ -1170,9 +1170,8 @@ directory. Explicit destinations must be new and have a trusted existing parent
 outside the checkout, evidence trees and saved-analysis directory. The only
 output is `report.html`, in a mode-0700 directory with a mode-0600 file. The
 existing descriptor/ownership boundary is verified on Linux; Windows output
-support is not established. Open the file directly in a local browser (on macOS,
-use `open`; otherwise use the browser's Open File command). No web server is
-needed. The appearance menu offers system default, light and dark; its choice
+support is not established. Open the file directly in a local browser using the
+browser's Open File command. No web server is needed. The appearance menu offers system default, light and dark; its choice
 lasts for the open document. With JavaScript disabled the report remains readable
 and follows the system theme. Native disclosures reveal detailed support.
 

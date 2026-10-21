@@ -722,6 +722,61 @@ class WorkflowTests(unittest.TestCase):
             cwd=cwd, env={**base, **env}, capture_output=True, text=True, timeout=60,
         )
 
+    def test_update_acquisition_generates_the_supported_checksum_set_without_execution(self):
+        import stat
+        import tarfile
+        import zipfile
+
+        workflow = yaml.safe_load((REPO / ".github/workflows/update-baseline.yml").read_text())
+        step = next(step for step in workflow["jobs"]["generate"]["steps"]
+                    if step.get("name") == "Inspect candidate release archives without execution")
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            releases = root / "releases"
+            releases.mkdir()
+            expected = {}
+            # An executable payload would leave a sentinel if the updater ran it.
+            payload = f"#!/bin/sh\ntouch '{root / 'candidate-executed'}'\nexit 99\n".encode()
+            for platform in ("linux-arm64", "linux-x86_64", "windows-x86_64"):
+                directory = f"apm-{platform}"
+                executable = f"{directory}/apm" + (".exe" if platform.startswith("windows") else "")
+                entries = {executable: payload, f"{directory}/_internal/data": b"fixture"}
+                archive = releases / (directory + (".zip" if platform.startswith("windows") else ".tar.gz"))
+                if platform.startswith("windows"):
+                    with zipfile.ZipFile(archive, "w") as bundle:
+                        for name, content in entries.items():
+                            entry = zipfile.ZipInfo(name)
+                            entry.external_attr = (stat.S_IFREG | 0o644) << 16
+                            bundle.writestr(entry, content)
+                else:
+                    with tarfile.open(archive, "w:gz") as bundle:
+                        for name, content in entries.items():
+                            entry = tarfile.TarInfo(name)
+                            entry.size = len(content)
+                            bundle.addfile(entry, io.BytesIO(content))
+                digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+                archive.with_name(archive.name + ".sha256").write_text(f"{digest}  {archive.name}\n")
+                expected[archive.name] = digest
+                expected[executable] = hashlib.sha256(payload).hexdigest()
+            bin_dir = root / "bin"
+            bin_dir.mkdir()
+            curl = bin_dir / "curl"
+            curl.write_text(
+                "#!/bin/sh\nwhile [ $# -gt 0 ]; do\n"
+                "  if [ \"$1\" = --output ]; then output=$2; shift 2; else url=$1; shift; fi\n"
+                "done\ncp \"$FIXTURE_RELEASE_ROOT/${url##*/}\" \"$output\"\n")
+            curl.chmod(0o755)
+            completed = self._run_step(step, {
+                "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
+                "RUNNER_TEMP": str(root / "runner"), "CANDIDATE_VERSION": "0.34.0",
+                "FIXTURE_RELEASE_ROOT": str(releases),
+            }, root)
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            checksums = dict(reversed(line.split()) for line in (root / ".apm-checksums").read_text().splitlines())
+            self.assertEqual(checksums, expected)
+            self.assertEqual((root / ".apm-version").read_text(), "0.34.0\n")
+            self.assertFalse((root / "candidate-executed").exists())
+
     def test_evaluation_budget_bounds_the_native_run_and_preserves_recovery_time(self):
         job = yaml.safe_load((REPO / ".github/workflows/benchmark-skills.yml").read_text())["jobs"]["evaluate"]
         steps = job["steps"]
