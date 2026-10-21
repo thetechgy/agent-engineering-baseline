@@ -9,8 +9,13 @@ illustrative; replay never contacts them.
 
 ## Pinned references
 
-- **CLI skill:** [cli/cli at ec5b512](https://github.com/cli/cli/blob/ec5b512045db67e5a2a4ff4a1b02660b2fb24390/skills/gh/SKILL.md).
+- **CLI skill:** [cli/cli at 89d7dce (GitHub CLI 2.102.1)](https://github.com/cli/cli/blob/89d7dcec017194af1d6f8853176b2dae9c1da762/skills/gh/SKILL.md).
   APM lockfile deployment owner and hashes are checked before staging.
+  Historical review controls retain the unchanged ec5b512 source separately at
+  `.github/tests/fixtures/skill_review/gh-ec5b512.zip`, matching their
+  original evidence manifest rather than the current deployment.
+  Report attachments pin current validator modules from `a5392b0`;
+  `baseline-3f47c9d` retains the previous module set for historical reports.
 - **CLI help:** installed `gh version 2.102.0 (2026-09-30)`, captured with
   `gh api --help`, `gh issue view --help`, `gh pr view --help`,
   `gh pr checks --help`, `gh run list --help`, `gh run view --help`,
@@ -23,7 +28,7 @@ illustrative; replay never contacts them.
   staging, hidden verifier, native activation, and custom metric contracts.
 - **Evaluation method:** [Testing Agent Skills Systematically with Evals](https://developers.openai.com/blog/eval-skills).
   Evaluate observed execution and task artifacts, not claims in a final answer.
-- **Competing skill:** [github-actions-hardening at 143a3d9](https://github.com/github/awesome-copilot/tree/143a3d976b3c1603cc8932984d5e1f28501cb5fc/skills/github-actions-hardening).
+- **Competing skill:** [github-actions-hardening at 613efc8](https://github.com/github/awesome-copilot/tree/613efc8c21d9b3ce642dff361d17006cd9967e28/skills/github-actions-hardening).
   Its unchanged locked files are staged equally in both arms.
 
 The upstream CLI skill and captured CLI help are MIT-licensed, copyright GitHub,

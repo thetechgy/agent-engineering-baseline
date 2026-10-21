@@ -15,7 +15,8 @@ dependencies:
     - merill/msgraph/skills/msgraph#main
     - addyosmani/agent-skills/skills/code-simplification#main
     - github/awesome-copilot/skills/microsoft-code-reference#main
-    - cli/cli/skills/gh#trunk
+    # GitHub CLI 2.102.1; trunk can document commands absent from released CLIs.
+    - cli/cli/skills/gh#89d7dcec017194af1d6f8853176b2dae9c1da762
   mcp:
     - name: microsoft-learn
       registry: false

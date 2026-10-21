@@ -1420,7 +1420,8 @@ The adapter hardcodes these profile revisions and individual SHA-256 hashes for
 
 | Profile | Original repository revision |
 | --- | --- |
-| `current-v2` | `3f47c9de4df362ae9977748ad6353227f403a9b8` |
+| `current-v2` | `a5392b0eda37485b131ffe416fcb9d6e5ee547d2` |
+| `baseline-3f47c9d` | `3f47c9de4df362ae9977748ad6353227f403a9b8` |
 | `podman-1cffcf9` | `1cffcf9947c265f126a3ceee75e5e35249bfd722` |
 | `gh-89f46f0` | `89f46f026cdaaf001487cbcc1425204db29e8952` |
 
@@ -1429,6 +1430,20 @@ Git revision into `<tooling>/.github/scripts/`. Nothing is fetched automatically
 For `current-v2`, null tooling selects the current checkout's four modules; their
 bytes must still match its reviewed profile. Future module changes require an
 explicitly reviewed compatibility update, not a digest override.
+
+For a saved report produced by the previous `current-v2` module set at
+`3f47c9de4df362ae9977748ad6353227f403a9b8`, select `baseline-3f47c9d` in the
+attachment descriptor and set `tooling` to the retained snapshot containing
+that revision's four modules under `.github/scripts/`. Null tooling is not
+accepted for historical profiles. The refreshed `current-v2` instead identifies
+the module set at `a5392b0eda37485b131ffe416fcb9d6e5ee547d2`.
+
+Change only the attachment descriptor's profile and tooling selection for this
+handoff. Preserve the saved report JSON and Markdown, their digests, original
+inputs, and source/support selections. Do not migrate the report, regenerate a
+judgment, substitute current source bytes, or override provenance, availability,
+or expiry checks. If the exact original tooling or evidence is unavailable,
+retain that limitation rather than treating the refreshed profile as compatible.
 
 Only those four hash-verified modules are copied to a fresh protected temporary
 layout. Descriptors cannot supply commands, interpreters, import search paths,

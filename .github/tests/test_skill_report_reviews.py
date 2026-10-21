@@ -118,7 +118,7 @@ class AttachmentTests(unittest.TestCase):
     def load(self):
         return attachments.load([self.path], self.captured)
 
-    def test_current_and_both_historical_production_validators(self):
+    def test_current_and_historical_production_validators(self):
         # A separate fixture root per profile keeps originals and guards unchanged.
         for profile in attachments.PROFILES:
             with self.subTest(profile=profile), tempfile.TemporaryDirectory() as directory:
