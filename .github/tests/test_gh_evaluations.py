@@ -72,6 +72,31 @@ class GhOfflineTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "owner mismatch"):
             gh.verify_skill(root)
 
+    def test_reviewed_revisions_match_policy_and_reject_other_commits(self):
+        import yaml
+
+        root = self.workspace()
+        lock = root / "apm.lock.yaml"
+        data = yaml.safe_load(lock.read_text())
+        owners = {entry["name"]: entry for entry in data["dependencies"]}
+        policy = reports.benchmark_policy("gh")
+        self.assertEqual(owners["gh"]["resolved_commit"], policy["upstream_revision"])
+        self.assertEqual(owners[gh.COMPETING]["resolved_commit"], policy["competing_revision"])
+        manifest = yaml.safe_load((gh.ROOT / "apm.yml").read_text())
+        self.assertIn("cli/cli/skills/gh#" + gh.UPSTREAM, manifest["dependencies"]["apm"])
+        for name, verify, diagnostic in (
+            ("gh", gh.verify_skill, "Unreviewed gh upstream"),
+            (gh.COMPETING, gh.verify_competing, "Unreviewed competing skill"),
+        ):
+            with self.subTest(skill=name):
+                candidate = copy.deepcopy(data)
+                next(entry for entry in candidate["dependencies"] if entry["name"] == name)[
+                    "resolved_commit"
+                ] = "f" * 40
+                lock.write_text(yaml.safe_dump(candidate))
+                with self.assertRaisesRegex(ValueError, diagnostic):
+                    verify(root)
+
     def test_symlinks_special_files_and_destination_escapes(self):
         root = self.workspace()
         fixture = root / gh.OVERLAY / "evals/files/bad"

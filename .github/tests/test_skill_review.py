@@ -389,7 +389,9 @@ class ReviewTests(unittest.TestCase):
         write(saved, analysis.validate_analysis(None, analysis.capture_inputs([bundle])))
         source = self.root / "gh-source"
         source.mkdir()
-        (source / "SKILL.md").write_bytes((evidence.ROOT / ".agents/skills/gh/SKILL.md").read_bytes())
+        # This record describes ec5b512, independently of the current deployment.
+        with zipfile.ZipFile(FIXTURES / "gh-ec5b512.zip") as archive:
+            (source / "SKILL.md").write_bytes(archive.read("SKILL.md"))
         rid = evidence.identity(record)
         self.gh_args = ["--input", str(bundle), "--analysis", str(saved), "--skill", "gh", "--record-id", rid,
                         "--source", str(source)]

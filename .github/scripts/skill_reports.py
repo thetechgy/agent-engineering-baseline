@@ -161,10 +161,10 @@ def benchmark_skill(workspace, name, root=None):
 
 def benchmark_policy(name):
     return {**POLICY, "grading": "default_plus_custom", "upstream_revision":
-            "ec5b512045db67e5a2a4ff4a1b02660b2fb24390", "deterministic_gate": 3, "workspace_mode": "group",
+            "89d7dcec017194af1d6f8853176b2dae9c1da762", "deterministic_gate": 3, "workspace_mode": "group",
             "fixture_boundary": "root-broker-unprivileged-agent-v1", "authorization_policy": "per-case-allowlist-v1",
             "task_source": "native_harbor", "task_build": GH_TASK_BUILD,
-            "competing_revision": "143a3d976b3c1603cc8932984d5e1f28501cb5fc"} if name == "gh" else POLICY
+            "competing_revision": "613efc8c21d9b3ce642dff361d17006cd9967e28"} if name == "gh" else POLICY
 
 
 def catalog_report(workspace, root):

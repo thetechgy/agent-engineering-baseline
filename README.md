@@ -180,10 +180,11 @@ remote systems.
   don't auto-merge. Ignored Graph indexes and binaries still have lockfile and audit
   checks.
 - **Your installation:** default bootstrap also refreshes **all branch-tracking
-  dependencies in the destination**, including unrelated packages. Seven imported skills
-  follow upstream branches (`main` or `trunk`). Your destination manifest and lockfile
-  govern the result, not this repo's lockfile. Even a fixed baseline commit doesn't
-  freeze the skills.
+  dependencies in the destination**, including unrelated packages. Six imported skills
+  follow upstream `main` branches; the gh skill is pinned to the GitHub CLI 2.102.1
+  release commit so it does not advertise unreleased commands. Your destination
+  manifest and lockfile govern the result, not this repo's lockfile. Even a fixed
+  baseline commit doesn't freeze the branch-tracking skills.
 
 Review the destination's manifest, resolved skills, and source overrides. `--trust-bin`
 authorizes bundled executables, including `msgraph`. `--trust-transitive-mcp` trusts MCP
@@ -306,8 +307,9 @@ directly.
 
 Repository review guidance lives in
 [`baseline-review.instructions.md`](baseline-review.instructions.md). Pinned APM
-0.33.0 discovers this root source during local compilation and generates it into
-the shared `AGENTS.md`; the separate Copilot instruction files stay unchanged.
+0.34.0 discovers this root source during local compilation and generates it into
+the shared `AGENTS.md`. Copilot loads the deployed personal instruction file;
+native compilation removes its redundant generated root instruction file.
 Keep this source outside `.apm/` and leave the manifest's explicit `includes`
 unchanged so downstream instructions and packages exclude these review rules.
 

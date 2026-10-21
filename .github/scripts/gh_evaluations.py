@@ -23,7 +23,7 @@ import skill_reports as reports
 ROOT = Path(__file__).resolve().parents[2]
 OVERLAY = Path(".github/evals/gh")
 DEPLOYED = Path(".agents/skills/gh")
-UPSTREAM = "ec5b512045db67e5a2a4ff4a1b02660b2fb24390"
+UPSTREAM = "89d7dcec017194af1d6f8853176b2dae9c1da762"
 SMOKE = ("gh-002", "gh-005", "gh-008", "gh-010")
 SETUP = "python3 -I /opt/gh-eval/setup.py --start"
 COMPETING = "github-actions-hardening"
@@ -98,7 +98,7 @@ def verify_competing(workspace, *, read_bytes=None):
     reports.require(
         len(owners) == 1
         and owners[0]["repo_url"] == "github/awesome-copilot"
-        and owners[0]["resolved_commit"] == "143a3d976b3c1603cc8932984d5e1f28501cb5fc",
+        and owners[0]["resolved_commit"] == "613efc8c21d9b3ce642dff361d17006cd9967e28",
         "Unreviewed competing skill identity",
     )
     source = workspace / ".agents/skills" / COMPETING
