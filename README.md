@@ -2,7 +2,7 @@
 
 [![Validate CI](https://github.com/thetechgy/agent-engineering-baseline/actions/workflows/validate.yml/badge.svg?branch=main)](https://github.com/thetechgy/agent-engineering-baseline/actions/workflows/validate.yml)
 [![Dependabot](https://img.shields.io/badge/Dependabot-enabled-025e8c?logo=dependabot)](.github/dependabot.yml)
-[![Bootstrap shells: PowerShell 5.1 / 7 and Bash](https://img.shields.io/badge/Bootstrap_shells-PowerShell_5.1_%2F_7_%7C_Bash-5391FE?logo=powershell&logoColor=white)](#get-started)
+[![Bootstrap shells: PowerShell 7 and Bash](https://img.shields.io/badge/Bootstrap_shells-PowerShell_7_%7C_Bash-5391FE?logo=powershell&logoColor=white)](#get-started)
 [![License: MIT](https://img.shields.io/badge/License-MIT-2E7D32)](LICENSE)
 
 ## Purpose
@@ -50,7 +50,7 @@ the skills: some follow upstream branches and can change when you install. See
 [Security and safety](#security-and-safety) before running the scripts.
 
 GitHub Actions checks PRs and pushes to `main`, including scripts, generated files,
-skill quality, and installation tests on Windows, Linux, and macOS.
+skill quality, and installation tests on Windows and Ubuntu.
 [Validation results](https://github.com/thetechgy/agent-engineering-baseline/actions/workflows/validate.yml)
 are public. Paid behavioral evaluations require separate approval. A
 [weekly update workflow](.github/workflows/update-baseline.yml) proposes changes through
@@ -58,10 +58,11 @@ PRs; nothing auto-merges.
 
 ## Get started
 
-The wrappers support Windows x86_64 with PowerShell 5.1 or 7, and Linux/macOS x86_64 or
-arm64 with Bash. Install your agent CLI separately. You'll need network access to
-releases/dependencies or a mirror. Bash needs `curl`, `tar`, and `sha256sum` (Linux) or
-`shasum` (macOS).
+The supported targets are Windows 11 x86_64 with the latest stable PowerShell, and
+Ubuntu 26.04 LTS x86_64 or arm64 with Bash. Install PowerShell 7 separately from the
+Windows-provided Windows PowerShell, and install your agent CLI separately. You'll
+need network access to releases/dependencies or a mirror. Bash needs `curl`, `tar`,
+and `sha256sum`.
 
 **Before installing:** Default bootstrap trusts bundled executables and transitive MCP
 servers and refreshes branch-based dependencies, including ones already in the
@@ -76,7 +77,7 @@ From the baseline checkout, on Windows:
 ./scripts/Bootstrap-Baseline.ps1 -Scope Repo
 ```
 
-On Linux or macOS:
+On Ubuntu:
 
 ```sh
 ./scripts/bootstrap.sh --dry-run  # preview: local metadata only
@@ -129,18 +130,18 @@ that infrastructure works.
 
 | Variable | Effect |
 | --- | --- |
-| `APM_INSTALL_DIR` | CLI command directory; defaults to `~/.local/bin` on Linux/macOS and `%LOCALAPPDATA%\Programs\apm\bin` on Windows. Windows uses its parent as the installation root. |
-| `APM_RELEASE_BASE_URL` | Authoritative HTTPS mirror on all platforms; `file://` mirrors work on Linux/macOS only. Downloads use no credentials and never retry against the public source. |
+| `APM_INSTALL_DIR` | CLI command directory; defaults to `~/.local/bin` on Ubuntu and `%LOCALAPPDATA%\Programs\apm\bin` on Windows. Windows uses its parent as the installation root. |
+| `APM_RELEASE_BASE_URL` | Authoritative HTTPS mirror on all platforms; `file://` mirrors work on Ubuntu only. Downloads use no credentials and never retry against the public source. |
 | `APM_NO_DIRECT_FALLBACK=1` | Requires a configured mirror. |
 | `BASELINE_PACKAGE_REF` | Overrides the installed baseline reference. |
 
 `--cli-only` or `-CliOnly` installs just the reviewed APM CLI. Preview (`--dry-run` or
 `-WhatIf`) checks local metadata without downloading, executing, or changing anything.
 
-On Linux/macOS, rerun bootstrap after moving the installation tree because its
+On Ubuntu, rerun bootstrap after moving the installation tree because its
 command link uses an absolute path. After a forced kill, confirm bootstrap has
 stopped before removing the diagnostic's `lib/apm/.lock`. Windows uses relative
-`bin\apm.cmd`, a named mutex, temporary TLS 1.2, and process/User PATH updates.
+`bin\apm.cmd`, a named mutex, PowerShell 7 HTTPS downloads, and process/User PATH updates.
 User PATH failure is a warning; both wrappers warn about other commands masking APM.
 
 Bootstrap sets `VERSION=<pin>` to avoid release lookup. Don't use `apm self-update`; it
@@ -334,7 +335,7 @@ $apmCommand = "$env:LOCALAPPDATA\Programs\apm\bin\apm.cmd"
 **Audit caveat:** The pinned APM release can report false drift when you run
 `apm audit --ci` without a terminal, even after `install --frozen --trust-bin`.
 Its scratch replay doesn't retain launcher trust in that mode. For noninteractive
-full validation on Linux/macOS, use `Invoke-Validation.ps1` below; it runs the
+full validation on Ubuntu, use `Invoke-Validation.ps1` below; it runs the
 same audit in a pseudo-terminal with drift checking enabled. Don't bypass this
 with `--no-drift`.
 
@@ -350,7 +351,7 @@ apm compile --global
 
 Project scope omits `--global` and compiles with `--target codex,copilot`.
 
-On Linux or macOS, run the [full validation suite](scripts/Invoke-Validation.ps1) with
+On Ubuntu, run the [full validation suite](scripts/Invoke-Validation.ps1) with
 PowerShell 7 and the required Unix tools and validation dependencies installed:
 
 ```powershell
@@ -361,14 +362,20 @@ From Bash, use `pwsh -NoLogo -NoProfile -File ./scripts/Invoke-Validation.ps1`.
 Full validation includes linting, regeneration, audit, packing, MCP contracts,
 Graph smoke checks, and diff hygiene.
 
-On Windows, run the Pester and PSScriptAnalyzer suite in PowerShell 5.1 or 7:
+On Windows, run the Pester and PSScriptAnalyzer suite in the latest stable PowerShell:
 
 ```powershell
 ./scripts/Invoke-Validation.ps1 -Suite Pester
 ```
 
-For Bash fixtures alone on Linux/macOS, run `./tests/bootstrap.sh`. CI runs
-the full suite on Linux, Pester/analyzer on Windows, and Bash fixtures on macOS.
+For Bash fixtures alone on Ubuntu, run `./tests/bootstrap.sh`. CI uses
+`ubuntu-latest` for the full suite and `windows-latest` for Pester/analyzer and
+Windows installation checks. Each platform job acquires the latest published stable
+PowerShell, verifies its official release SHA256, and invokes its absolute path;
+previews, betas, and release candidates are excluded. The actual host and runtime
+versions appear in the job log. CI runs on PRs and pushes to `main`, without a
+separate schedule. Rolling hosted images provide compatibility evidence; they do
+not establish exact Windows 11 or Ubuntu 26.04 acceptance.
 
 ### Evaluate authored skills
 

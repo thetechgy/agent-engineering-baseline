@@ -147,6 +147,12 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Acquire latest stable PowerShell
+        shell: pwsh
+        run: |
+          python .github/scripts/install_ci_powershell.py --destination "$env:RUNNER_TEMP/baseline-ci-pwsh" --github-env "$env:GITHUB_ENV"
+          if ($LASTEXITCODE -ne 0) { throw 'Latest stable PowerShell acquisition failed.' }
+
       - name: Install pinned APM CLI
         shell: bash
         run: |
@@ -156,9 +162,13 @@ jobs:
       - name: Install validation tools
         shell: pwsh
         run: |
-          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-          Install-Module Pester -RequiredVersion 6.1.0 -Scope CurrentUser -Force
-          Install-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -Scope CurrentUser -Force
+          & $env:CI_PWSH -NoLogo -NoProfile -NonInteractive -Command {
+            $ErrorActionPreference = 'Stop'
+            Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+            Install-Module Pester -RequiredVersion 6.1.0 -Scope CurrentUser -Force
+            Install-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -Scope CurrentUser -Force
+          }
+          if ($LASTEXITCODE -ne 0) { throw 'Validation tool installation failed.' }
 
       - name: Install hash-locked Markdown linter
         shell: bash
@@ -171,7 +181,7 @@ jobs:
 
       - name: Run full validation
         shell: pwsh
-        run: ./scripts/Invoke-Validation.ps1
+        run: '& $env:CI_PWSH -NoLogo -NoProfile -NonInteractive -File ./scripts/Invoke-Validation.ps1'
 
       - name: Require clean regeneration
         run: |
@@ -184,34 +194,8 @@ jobs:
             exit 1
           fi
 
-  macos:
-    name: Bash fixtures (macOS)
-    runs-on: macos-latest
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Run Bash fixture suite
-        shell: bash
-        run: ./tests/bootstrap.sh
-
-      - name: Acquire the reviewed CLI with the real installer
-        shell: bash
-        run: |
-          set -euo pipefail
-          APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" ./scripts/bootstrap.sh --cli-only
-          expected="$(head -n 1 .apm-version | tr -d '[:space:]')"
-          reported="$("$RUNNER_TEMP/apm/bin/apm" --version)"
-          echo "$reported"
-          case "$reported" in
-            *"$expected"*) ;;
-            *) echo "::error::Installed CLI reported '$reported', expected version $expected"; exit 1 ;;
-          esac
-
   windows-powershell:
-    name: Pester and analyzer (Windows PowerShell 5.1)
+    name: Pester and analyzer (latest stable PowerShell)
     runs-on: windows-latest
     steps:
       - name: Check out repository
@@ -219,41 +203,40 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install validation tools
-        shell: powershell
+      - name: Acquire latest stable PowerShell
+        shell: pwsh
         run: |
-          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-          Install-Module Pester -RequiredVersion 6.1.0 -Scope CurrentUser -Force
-          Install-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -Scope CurrentUser -Force
+          python .github/scripts/install_ci_powershell.py --destination "$env:RUNNER_TEMP/baseline-ci-pwsh" --github-env "$env:GITHUB_ENV"
+          if ($LASTEXITCODE -ne 0) { throw 'Latest stable PowerShell acquisition failed.' }
+
+      - name: Install validation tools
+        shell: pwsh
+        run: |
+          & $env:CI_PWSH -NoLogo -NoProfile -NonInteractive -Command {
+            $ErrorActionPreference = 'Stop'
+            Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+            Install-Module Pester -RequiredVersion 6.1.0 -Scope CurrentUser -Force
+            Install-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -Scope CurrentUser -Force
+          }
+          if ($LASTEXITCODE -ne 0) { throw 'Validation tool installation failed.' }
 
       - name: Run Pester and PSScriptAnalyzer
-        shell: powershell
-        run: ./scripts/Invoke-Validation.ps1 -Suite Pester
-
-      - name: Acquire the reviewed CLI with the real installer (Windows PowerShell 5.1)
-        shell: powershell
-        env:
-          APM_INSTALL_DIR: ${{ runner.temp }}\apm-ps51\bin
-        run: |
-          $ErrorActionPreference = 'Stop'
-          ./scripts/Bootstrap-Baseline.ps1 -CliOnly
-          $expected = (Get-Content -LiteralPath .apm-version -TotalCount 1).Trim()
-          $reported = (& (Join-Path $env:APM_INSTALL_DIR 'apm.cmd') --version) -join ' '
-          Write-Host $reported
-          if ($LASTEXITCODE -ne 0 -or $reported -notlike "*$expected*") {
-            throw "Installed CLI reported '$reported', expected version $expected"
-          }
+        shell: pwsh
+        run: '& $env:CI_PWSH -NoLogo -NoProfile -NonInteractive -File ./scripts/Invoke-Validation.ps1 -Suite Pester'
 
       - name: Acquire the reviewed CLI with the real installer (PowerShell 7)
         shell: pwsh
         env:
           APM_INSTALL_DIR: ${{ runner.temp }}\apm-pwsh\bin
         run: |
-          $ErrorActionPreference = 'Stop'
-          ./scripts/Bootstrap-Baseline.ps1 -CliOnly
-          $expected = (Get-Content -LiteralPath .apm-version -TotalCount 1).Trim()
-          $reported = (& (Join-Path $env:APM_INSTALL_DIR 'apm.cmd') --version) -join ' '
-          Write-Host $reported
-          if ($LASTEXITCODE -ne 0 -or $reported -notlike "*$expected*") {
-            throw "Installed CLI reported '$reported', expected version $expected"
+          & $env:CI_PWSH -NoLogo -NoProfile -NonInteractive -Command {
+            $ErrorActionPreference = 'Stop'
+            ./scripts/Bootstrap-Baseline.ps1 -CliOnly
+            $expected = (Get-Content -LiteralPath .apm-version -TotalCount 1).Trim()
+            $reported = (& (Join-Path $env:APM_INSTALL_DIR 'apm.cmd') --version) -join ' '
+            Write-Host $reported
+            if ($LASTEXITCODE -ne 0 -or $reported -notlike "*$expected*") {
+              throw "Installed CLI reported '$reported', expected version $expected"
+            }
           }
+          if ($LASTEXITCODE -ne 0) { throw 'Reviewed CLI acquisition failed.' }

@@ -95,11 +95,7 @@ validate_checksums() {
         die ".apm-checksums is missing or linked: $CHECKSUMS_FILE"
     fi
     local expected_names name
-    expected_names='apm-darwin-arm64.tar.gz
-apm-darwin-arm64/apm
-apm-darwin-x86_64.tar.gz
-apm-darwin-x86_64/apm
-apm-linux-arm64.tar.gz
+    expected_names='apm-linux-arm64.tar.gz
 apm-linux-arm64/apm
 apm-linux-x86_64.tar.gz
 apm-linux-x86_64/apm
@@ -108,9 +104,9 @@ apm-windows-x86_64/apm.exe'
 
     awk '
         NF != 2 || length($1) != 64 || $1 !~ /^[0-9a-f]+$/ { exit 1 }
-        END { if (NR != 10) exit 1 }
+        END { if (NR != 6) exit 1 }
     ' "$CHECKSUMS_FILE" ||
-        die '.apm-checksums must contain exactly ten lowercase SHA256/name entries.'
+        die '.apm-checksums must contain exactly six lowercase SHA256/name entries.'
 
     while IFS= read -r name; do
         [ "$(awk -v expected="$name" '$2 == expected { count++ } END { print count + 0 }' "$CHECKSUMS_FILE")" -eq 1 ] ||
@@ -134,8 +130,7 @@ select_platform() {
         *) die "unsupported architecture: $machine" ;;
     esac
     case "$os" in
-        Linux) PLATFORM_OS='linux'; HASH_COMMAND='sha256sum' ;;
-        Darwin) PLATFORM_OS='darwin'; HASH_COMMAND='shasum' ;;
+        Linux) PLATFORM_OS='linux' ;;
         *) die "unsupported operating system: $os" ;;
     esac
     ARCHIVE_NAME="apm-$PLATFORM_OS-$PLATFORM_ARCH.tar.gz"
@@ -144,11 +139,7 @@ select_platform() {
 }
 
 sha256_file() {
-    if [ "$HASH_COMMAND" = sha256sum ]; then
-        sha256sum "$1" | awk '{ print $1 }'
-    else
-        shasum -a 256 "$1" | awk '{ print $1 }'
-    fi
+    sha256sum "$1" | awk '{ print $1 }'
 }
 
 verify_file() {
@@ -314,7 +305,7 @@ promote_bundle() {
     assert_safe_directory "$releases_path" 'APM releases directory'
     mkdir -p "$INSTALL_DIR" "$releases_path"
 
-    # mkdir is atomic on Linux and macOS. Never wait or steal: a second bootstrap
+    # mkdir is atomic on Linux. Never wait or steal: a second bootstrap
     # fails immediately with a diagnostic naming the lock it would need.
     # Interrupts are ignored across the create-and-record pair (mkdir inherits
     # the disposition) so an interruption cannot leave a lock nobody records
@@ -428,7 +419,7 @@ acquire_cli() {
     require_command tar
     require_command uname
     select_platform
-    require_command "$HASH_COMMAND"
+    require_command sha256sum
 
     case "$temp_parent" in
         /*|./*|../*) ;;

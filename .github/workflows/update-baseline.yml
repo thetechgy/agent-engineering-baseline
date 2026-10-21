@@ -105,8 +105,6 @@ jobs:
           }
 
           for platform in \
-            darwin-arm64 \
-            darwin-x86_64 \
             linux-arm64 \
             linux-x86_64; do
             asset="apm-$platform.tar.gz"
@@ -144,7 +142,7 @@ jobs:
 
           printf '%s\n' "$CANDIDATE_VERSION" > .apm-version
           {
-            for platform in darwin-arm64 darwin-x86_64 linux-arm64 linux-x86_64; do
+            for platform in linux-arm64 linux-x86_64; do
               asset="apm-$platform.tar.gz"
               root="apm-$platform"
               printf '%s  %s\n' "$(sha256sum "$candidate_root/$asset" | awk '{ print $1 }')" "$asset"
@@ -300,14 +298,14 @@ jobs:
             '' \
             "- APM CLI candidate: $pinned_version (upstream release published $CANDIDATE_PUBLISHED_AT)" \
             "- release page: https://github.com/microsoft/apm/releases/tag/v$pinned_version" \
-            '- refreshes the CLI pin and reviewed hashes for all five release bundles and executables; every archive matched its upstream `.sha256` sidecar at generation time' \
+            '- refreshes the CLI pin and reviewed hashes for all three release bundles and executables; every archive matched its upstream `.sha256` sidecar at generation time' \
             '- re-resolves branch-ref dependencies and regenerates compiled outputs with the previously reviewed CLI' \
             '- never executes the candidate CLI in this privileged update workflow' \
             '- contains only allowlisted regenerated paths; validation ran after this patch was captured' \
             '' \
             '## Required review' \
             '' \
-            'Review the upstream release, all ten replacement digests, dependency commits, and generated output diff before merging.' \
+            'Review the upstream release, all six replacement digests, dependency commits, and generated output diff before merging.' \
             '' \
             'After reviewing the candidate changes, select **Approve workflows to run** in this pull request to start candidate CLI validation. Require all validation checks to pass before merging.' \
             '' \
