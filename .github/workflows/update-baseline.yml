@@ -158,6 +158,9 @@ jobs:
       - name: Update APM dependencies with reviewed CLI
         run: |
           "$APM_EXECUTABLE" update --yes
+          # APM 0.34 update skips bin/ in CI and has no --trust-bin option.
+          # Record the trusted deployment before checking frozen replay.
+          "$APM_EXECUTABLE" install --trust-bin
           "$APM_EXECUTABLE" install --frozen --trust-bin
           "$APM_EXECUTABLE" compile --target codex,copilot --validate
           "$APM_EXECUTABLE" compile --target codex,copilot
@@ -172,10 +175,9 @@ jobs:
             echo 'changed=true' >> "$GITHUB_OUTPUT"
           fi
 
-      # The patch is captured before any validation step so that nothing
-      # executed from freshly resolved upstream skill content can add files
-      # to what the privileged publish job commits. Only data the reviewed
-      # CLI regenerates natively may appear in the candidate.
+      # Capture reviewed CLI regeneration before validation so validation side
+      # effects are not included. Candidate code can still replace this artifact;
+      # the isolated publisher independently checks the downloaded patch.
       - name: Create candidate patch from allowlisted paths only
         if: steps.changes.outputs.changed == 'true'
         run: |
@@ -252,8 +254,27 @@ jobs:
 
       - name: Apply data-only candidate patch
         run: |
+          set -euo pipefail
           git apply --check "$RUNNER_TEMP/baseline.patch"
           git apply --binary --index "$RUNNER_TEMP/baseline.patch"
+          # Candidate execution can replace the artifact after generation's check.
+          # Isolated Python prevents imports from the just-applied artifact.
+          python3 -I - <<'PY'
+          import re
+          import subprocess
+
+          allowed = (
+              rb"(?:\.apm-version|\.apm-checksums|apm\.lock\.yaml|AGENTS\.md|"
+              rb"\.github/copilot-instructions\.md|\.github/mcp\.json|"
+              rb"\.codex/config\.toml|\.agents/skills/[^/]+/.+)"
+          )
+          paths = subprocess.check_output([
+              "git", "diff", "--cached", "--no-renames", "--name-only", "-z",
+          ]).split(b"\0")[:-1]
+          if any(re.fullmatch(allowed, path) is None for path in paths):
+              raise SystemExit("Candidate touches paths outside the reviewed regeneration allowlist.")
+          PY
+          git diff --cached --check
 
       - name: Create or update review pull request
         env:
@@ -302,6 +323,7 @@ jobs:
             '- re-resolves branch-ref dependencies and regenerates compiled outputs with the previously reviewed CLI' \
             '- never executes the candidate CLI in this privileged update workflow' \
             '- contains only allowlisted regenerated paths; validation ran after this patch was captured' \
+            '- the isolated publisher independently checks downloaded patch paths before publication' \
             '' \
             '## Required review' \
             '' \

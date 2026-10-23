@@ -722,6 +722,42 @@ class WorkflowTests(unittest.TestCase):
             cwd=cwd, env={**base, **env}, capture_output=True, text=True, timeout=60,
         )
 
+    def test_update_reconciles_binary_lock_before_frozen_replay_and_stops_on_failure(self):
+        workflow = yaml.safe_load((REPO / ".github/workflows/update-baseline.yml").read_text())
+        step = next(step for step in workflow["jobs"]["generate"]["steps"]
+                    if step.get("name") == "Update APM dependencies with reviewed CLI")
+        commands = [
+            "update --yes",
+            "install --trust-bin",
+            "install --frozen --trust-bin",
+            "compile --target codex,copilot --validate",
+            "compile --target codex,copilot",
+        ]
+        for failure in ("", "install --trust-bin", "install --frozen --trust-bin"):
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                executable = root / "reviewed apm"
+                executable.write_text(
+                    '#!/bin/sh\n'
+                    'printf "%s\\n" "$*" >> "$CALL_LOG"\n'
+                    '[ "$*" != "$FAIL_COMMAND" ] || exit 23\n'
+                    'case "$*" in\n'
+                    '  "update --yes") rm -f lock-ready ;;\n'
+                    '  "install --trust-bin") touch lock-ready ;;\n'
+                    '  "install --frozen --trust-bin"|compile*) test -f lock-ready ;;\n'
+                    '  *) exit 24 ;;\n'
+                    'esac\n'
+                )
+                executable.chmod(0o755)
+                call_log = root / "calls"
+                completed = self._run_step(step, {
+                    "APM_EXECUTABLE": str(executable), "CALL_LOG": str(call_log),
+                    "FAIL_COMMAND": failure,
+                }, root)
+                self.assertEqual(completed.returncode, 23 if failure else 0, completed.stderr)
+                expected = commands[:commands.index(failure) + 1] if failure else commands
+                self.assertEqual(call_log.read_text().splitlines(), expected)
+
     def test_update_acquisition_generates_the_supported_checksum_set_without_execution(self):
         import stat
         import tarfile
@@ -879,29 +915,70 @@ class WorkflowTests(unittest.TestCase):
         metrics = next(step for step in steps if step.get("with", {}).get("name") == "skill-metrics")
         self.assertIn("success()", metrics["if"])
 
+    def _assert_hash_locked(self, source, lock):
+        requirement = re.compile(
+            r"(?P<name>[A-Za-z0-9_.-]+)"
+            r"(?:\[(?:[A-Za-z0-9_.-]+(?:,[A-Za-z0-9_.-]+)*)?\])?"
+            r"==(?P<version>[A-Za-z0-9][A-Za-z0-9.!+_-]*)"
+        )
+
+        def parse_pin(header):
+            match = requirement.fullmatch(header)
+            self.assertIsNotNone(match, f"Not an exact requirement pin: {header}")
+            return match["name"].lower(), match["version"]
+
+        pins = {}
+        for line in source.splitlines():
+            if line and not line.startswith("#"):
+                name, version = parse_pin(line)
+                pins[name] = version
+        # One block per requirement: a pinned header followed by indented hash lines.
+        blocks = re.split(r"\n(?=\S)", lock.strip())
+        locked = {}
+        for block in blocks:
+            header, *hashes = block.split(" \\\n")
+            name, version = parse_pin(header)
+            self.assertTrue(hashes, f"{header} has no hashes")
+            for entry in hashes:
+                self.assertRegex(entry, r"^    --hash=sha256:[0-9a-f]{64}$")
+            locked[name] = version
+        # The source pin must be what the lock actually installs, not merely present by name.
+        for name, version in pins.items():
+            self.assertEqual(locked.get(name), version, f"Source pins {name}=={version}")
+        return pins
+
+    def test_hash_lock_accepts_extras_in_source_and_lock_headers(self):
+        digest = "    --hash=sha256:" + "a" * 64
+        for requirement in ("pyjwt==2.13.0", "pyjwt[]==2.13.0", "pyjwt[crypto]==2.13.0",
+                            "PyJWT[crypto,other-extra]==2.13.0"):
+            for source in ("pyjwt==2.13.0", requirement):
+                with self.subTest(source=source, requirement=requirement):
+                    self._assert_hash_locked(source, requirement + " \\\n" + digest)
+
+    def test_hash_lock_rejects_malformed_or_unpinned_requirements_and_bad_hashes(self):
+        digest = "    --hash=sha256:" + "a" * 64
+        invalid = (
+            "pyjwt[,crypto]==2.13.0", "pyjwt[crypto,]==2.13.0", "pyjwt[crypto==2.13.0",
+            "pyjwt>=2.13.0", "pyjwt==2.*", "pyjwt==2.13.0;python_version>='3.13'",
+        )
+        for requirement in invalid:
+            with self.subTest(matching_invalid_pins=requirement), self.assertRaises(AssertionError):
+                self._assert_hash_locked(requirement, requirement + " \\\n" + digest)
+            with self.subTest(source=requirement), self.assertRaises(AssertionError):
+                self._assert_hash_locked(requirement, "pyjwt==2.13.0 \\\n" + digest)
+            with self.subTest(lock=requirement), self.assertRaises(AssertionError):
+                self._assert_hash_locked("pyjwt==2.13.0", requirement + " \\\n" + digest)
+        for lock in ("pyjwt==2.13.0", "pyjwt==2.13.0 \\\n    --hash=sha256:bad", "pyjwt==2.12.0 \\\n" + digest):
+            with self.subTest(lock=lock), self.assertRaises(AssertionError):
+                self._assert_hash_locked("pyjwt==2.13.0", lock)
+
     def test_python_tooling_is_hash_locked(self):
         for lock in ("semgrep", "rumdl"):
-            pins = {}
-            for line in (REPO / f".github/requirements/{lock}.in").read_text().splitlines():
-                if line and not line.startswith("#"):
-                    self.assertRegex(line, r"^[A-Za-z0-9_.-]+==[^ ]+$", line)
-                    name, version = line.split("==")
-                    pins[name.lower()] = version
+            pins = self._assert_hash_locked(
+                (REPO / f".github/requirements/{lock}.in").read_text(),
+                (REPO / f".github/requirements/{lock}.txt").read_text(),
+            )
             self.assertIn(lock, pins)
-            # One block per requirement: a `name==version \` header followed by indented hash lines.
-            blocks = re.split(r"\n(?=\S)", (REPO / f".github/requirements/{lock}.txt").read_text().strip())
-            locked = {}
-            for block in blocks:
-                header, *hashes = block.split(" \\\n")
-                self.assertRegex(header, r"^[A-Za-z0-9_.-]+==[^ ]+$", block)
-                self.assertTrue(hashes, f"{header} has no hashes")
-                for entry in hashes:
-                    self.assertRegex(entry, r"^    --hash=sha256:[0-9a-f]{64}$")
-                name, version = header.split("==")
-                locked[name.lower()] = version
-            # The source pin must be what the lock actually installs, not merely present by name.
-            for name, version in pins.items():
-                self.assertEqual(locked.get(name), version, f"{lock}.in pins {name}=={version}")
         # Both locks are consumed by the commands the policy below verifies.
         sources = list(_command_sources())
         self.assertIn('"$GITHUB_WORKSPACE/.github/requirements/semgrep.txt"',
@@ -1049,6 +1126,89 @@ class WorkflowTests(unittest.TestCase):
         for guard in ("isCrossRepository == false", "headRepositoryOwner.login == $owner", "author.is_bot == true"):
             self.assertIn(guard, create)
         self.assertIn("-gt 1", create)
+
+    def _publish_candidate_patch(self, before, after):
+        """Hand a substituted artifact to the actual publisher in disposable Git repos."""
+        workflow = yaml.safe_load((REPO / ".github/workflows/update-baseline.yml").read_text())
+        step = next(step for step in workflow["jobs"]["publish"]["steps"]
+                    if step.get("name") == "Apply data-only candidate patch").copy()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            producer, consumer = root / "producer", root / "consumer"
+            producer.mkdir()
+
+            def git(cwd, *arguments):
+                return subprocess.check_output(["git", *arguments], cwd=cwd, stderr=subprocess.PIPE)
+
+            git(producer, "init", "--quiet")
+            (producer / ".apm-version").write_bytes(b"0.34.0\n")
+            for name, content in before.items():
+                path = producer / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(content)
+            git(producer, "add", "--all")
+            git(producer, "-c", "user.name=Boundary fixture", "-c", "user.email=fixture@example.invalid",
+                "commit", "--quiet", "-m", "fixture")
+            git(root, "clone", "--quiet", "--no-hardlinks", str(producer), str(consumer))
+            for name in before.keys() - after.keys():
+                (producer / name).unlink()
+            for name, content in after.items():
+                path = producer / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(content)
+            git(producer, "add", "--all")
+            (root / "baseline.patch").write_bytes(git(producer, "diff", "--cached", "--binary", "--find-renames"))
+            # No real publication: the runner must stop before this marker on rejection.
+            step["run"] += '\nprintf published > "$RUNNER_TEMP/published"\n'
+            completed = self._run_step(step, {"RUNNER_TEMP": str(root)}, consumer)
+            self.assertFalse((root / "candidate-executed").exists(), "Publisher executed artifact code")
+            paths = git(consumer, "diff", "--cached", "--no-renames", "--name-only", "-z").split(b"\0")[:-1]
+            return completed, (root / "published").exists(), paths
+
+    def test_update_publisher_accepts_allowlisted_text_binary_and_rename_changes(self):
+        fixtures = (
+            ({}, {name: b"updated\n" for name in (
+                ".apm-checksums", "apm.lock.yaml", "AGENTS.md", ".github/copilot-instructions.md",
+                ".github/mcp.json", ".codex/config.toml", ".agents/skills/example/SKILL.md",
+            )}),
+            ({".apm-version": b"0.34.0\n"}, {".apm-version": b"0.35.0\n"}),
+            ({".agents/skills/example/bin/tool": b"old\0binary"},
+             {".agents/skills/example/bin/tool": b"new\0binary"}),
+            ({".agents/skills/example/old": b"rename\n"}, {".agents/skills/example/new": b"rename\n"}),
+            ({".agents/skills/example/removed": b"removed\n"}, {}),
+        )
+        for before, after in fixtures:
+            with self.subTest(before=list(before), after=list(after)):
+                completed, published, paths = self._publish_candidate_patch(before, after)
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+                self.assertTrue(published)
+                self.assertEqual(set(paths), {name.encode() for name in before.keys() | after.keys()})
+
+    def test_update_publisher_rejects_substituted_artifacts_before_publication(self):
+        shadow_module = (
+            b'import os\n'
+            b'open(os.path.join(os.environ["RUNNER_TEMP"], "candidate-executed"), "w").close()\n'
+            b'raise SystemExit(0)\n'
+        )
+        fixtures = (
+            ({}, {".github/workflows/replacement.yml": b"inert substitution fixture\n"}),
+            ({"README.md": b"before\n"}, {"README.md": b"after\n"}),
+            ({"README.md": b"removed\n"}, {}),
+            ({"README.md": b"rename\n"}, {".agents/skills/example/renamed": b"rename\n"}),
+            ({".agents/skills/example/old": b"rename\n"}, {"README.md": b"rename\n"}),
+            ({}, {".apm-version.extra": b"prefix collision\n"}),
+            ({}, {".agents/skills-extra/example/file": b"prefix collision\n"}),
+            ({}, {".github/mcp.json\nAGENTS.md": b"newline path\n"}),
+            ({}, {".agents/skills/example/file\nREADME.md": b"newline path\n"}),
+            ({}, {"re.py": shadow_module}),
+            ({}, {"sitecustomize.py": shadow_module}),
+        )
+        for before, after in fixtures:
+            with self.subTest(before=list(before), after=list(after)):
+                completed, published, _ = self._publish_candidate_patch(before, after)
+                self.assertNotEqual(completed.returncode, 0)
+                self.assertFalse(published)
+                self.assertIn("outside the reviewed regeneration allowlist", completed.stderr)
 
     def test_documented_external_action_requirements_match_all_workflows(self):
         required = set()
