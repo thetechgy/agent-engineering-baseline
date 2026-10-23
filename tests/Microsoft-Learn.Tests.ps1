@@ -33,7 +33,8 @@ Describe 'Microsoft Learn generated MCP configuration' {
         $script:LearnCodex | Should-MatchString '(?m)^url = "https://learn\.microsoft\.com/api/mcp"\r?$'
         $keys = @([regex]::Matches($script:LearnCodex, '(?m)^([a-z_]+)\s*=') |
             ForEach-Object { $_.Groups[1].Value })
-        $keys | Should-BeCollection @('url', 'id', 'enabled_tools')
+        # APM 0.35 keeps its bookkeeping identity outside Codex's native settings.
+        $keys | Should-BeCollection @('url', 'enabled_tools')
     }
 
     It 'exposes exactly the reviewed tools through the Codex native allowlist' {
