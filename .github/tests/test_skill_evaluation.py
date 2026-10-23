@@ -722,6 +722,42 @@ class WorkflowTests(unittest.TestCase):
             cwd=cwd, env={**base, **env}, capture_output=True, text=True, timeout=60,
         )
 
+    def test_update_reconciles_binary_lock_before_frozen_replay_and_stops_on_failure(self):
+        workflow = yaml.safe_load((REPO / ".github/workflows/update-baseline.yml").read_text())
+        step = next(step for step in workflow["jobs"]["generate"]["steps"]
+                    if step.get("name") == "Update APM dependencies with reviewed CLI")
+        commands = [
+            "update --yes",
+            "install --trust-bin",
+            "install --frozen --trust-bin",
+            "compile --target codex,copilot --validate",
+            "compile --target codex,copilot",
+        ]
+        for failure in ("", "install --trust-bin", "install --frozen --trust-bin"):
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                executable = root / "reviewed apm"
+                executable.write_text(
+                    '#!/bin/sh\n'
+                    'printf "%s\\n" "$*" >> "$CALL_LOG"\n'
+                    '[ "$*" != "$FAIL_COMMAND" ] || exit 23\n'
+                    'case "$*" in\n'
+                    '  "update --yes") rm -f lock-ready ;;\n'
+                    '  "install --trust-bin") touch lock-ready ;;\n'
+                    '  "install --frozen --trust-bin"|compile*) test -f lock-ready ;;\n'
+                    '  *) exit 24 ;;\n'
+                    'esac\n'
+                )
+                executable.chmod(0o755)
+                call_log = root / "calls"
+                completed = self._run_step(step, {
+                    "APM_EXECUTABLE": str(executable), "CALL_LOG": str(call_log),
+                    "FAIL_COMMAND": failure,
+                }, root)
+                self.assertEqual(completed.returncode, 23 if failure else 0, completed.stderr)
+                expected = commands[:commands.index(failure) + 1] if failure else commands
+                self.assertEqual(call_log.read_text().splitlines(), expected)
+
     def test_update_acquisition_generates_the_supported_checksum_set_without_execution(self):
         import stat
         import tarfile
@@ -879,29 +915,70 @@ class WorkflowTests(unittest.TestCase):
         metrics = next(step for step in steps if step.get("with", {}).get("name") == "skill-metrics")
         self.assertIn("success()", metrics["if"])
 
+    def _assert_hash_locked(self, source, lock):
+        requirement = re.compile(
+            r"(?P<name>[A-Za-z0-9_.-]+)"
+            r"(?:\[(?:[A-Za-z0-9_.-]+(?:,[A-Za-z0-9_.-]+)*)?\])?"
+            r"==(?P<version>[A-Za-z0-9][A-Za-z0-9.!+_-]*)"
+        )
+
+        def parse_pin(header):
+            match = requirement.fullmatch(header)
+            self.assertIsNotNone(match, f"Not an exact requirement pin: {header}")
+            return match["name"].lower(), match["version"]
+
+        pins = {}
+        for line in source.splitlines():
+            if line and not line.startswith("#"):
+                name, version = parse_pin(line)
+                pins[name] = version
+        # One block per requirement: a pinned header followed by indented hash lines.
+        blocks = re.split(r"\n(?=\S)", lock.strip())
+        locked = {}
+        for block in blocks:
+            header, *hashes = block.split(" \\\n")
+            name, version = parse_pin(header)
+            self.assertTrue(hashes, f"{header} has no hashes")
+            for entry in hashes:
+                self.assertRegex(entry, r"^    --hash=sha256:[0-9a-f]{64}$")
+            locked[name] = version
+        # The source pin must be what the lock actually installs, not merely present by name.
+        for name, version in pins.items():
+            self.assertEqual(locked.get(name), version, f"Source pins {name}=={version}")
+        return pins
+
+    def test_hash_lock_accepts_extras_in_source_and_lock_headers(self):
+        digest = "    --hash=sha256:" + "a" * 64
+        for requirement in ("pyjwt==2.13.0", "pyjwt[]==2.13.0", "pyjwt[crypto]==2.13.0",
+                            "PyJWT[crypto,other-extra]==2.13.0"):
+            for source in ("pyjwt==2.13.0", requirement):
+                with self.subTest(source=source, requirement=requirement):
+                    self._assert_hash_locked(source, requirement + " \\\n" + digest)
+
+    def test_hash_lock_rejects_malformed_or_unpinned_requirements_and_bad_hashes(self):
+        digest = "    --hash=sha256:" + "a" * 64
+        invalid = (
+            "pyjwt[,crypto]==2.13.0", "pyjwt[crypto,]==2.13.0", "pyjwt[crypto==2.13.0",
+            "pyjwt>=2.13.0", "pyjwt==2.*", "pyjwt==2.13.0;python_version>='3.13'",
+        )
+        for requirement in invalid:
+            with self.subTest(matching_invalid_pins=requirement), self.assertRaises(AssertionError):
+                self._assert_hash_locked(requirement, requirement + " \\\n" + digest)
+            with self.subTest(source=requirement), self.assertRaises(AssertionError):
+                self._assert_hash_locked(requirement, "pyjwt==2.13.0 \\\n" + digest)
+            with self.subTest(lock=requirement), self.assertRaises(AssertionError):
+                self._assert_hash_locked("pyjwt==2.13.0", requirement + " \\\n" + digest)
+        for lock in ("pyjwt==2.13.0", "pyjwt==2.13.0 \\\n    --hash=sha256:bad", "pyjwt==2.12.0 \\\n" + digest):
+            with self.subTest(lock=lock), self.assertRaises(AssertionError):
+                self._assert_hash_locked("pyjwt==2.13.0", lock)
+
     def test_python_tooling_is_hash_locked(self):
         for lock in ("semgrep", "rumdl"):
-            pins = {}
-            for line in (REPO / f".github/requirements/{lock}.in").read_text().splitlines():
-                if line and not line.startswith("#"):
-                    self.assertRegex(line, r"^[A-Za-z0-9_.-]+==[^ ]+$", line)
-                    name, version = line.split("==")
-                    pins[name.lower()] = version
+            pins = self._assert_hash_locked(
+                (REPO / f".github/requirements/{lock}.in").read_text(),
+                (REPO / f".github/requirements/{lock}.txt").read_text(),
+            )
             self.assertIn(lock, pins)
-            # One block per requirement: a `name==version \` header followed by indented hash lines.
-            blocks = re.split(r"\n(?=\S)", (REPO / f".github/requirements/{lock}.txt").read_text().strip())
-            locked = {}
-            for block in blocks:
-                header, *hashes = block.split(" \\\n")
-                self.assertRegex(header, r"^[A-Za-z0-9_.-]+==[^ ]+$", block)
-                self.assertTrue(hashes, f"{header} has no hashes")
-                for entry in hashes:
-                    self.assertRegex(entry, r"^    --hash=sha256:[0-9a-f]{64}$")
-                name, version = header.split("==")
-                locked[name.lower()] = version
-            # The source pin must be what the lock actually installs, not merely present by name.
-            for name, version in pins.items():
-                self.assertEqual(locked.get(name), version, f"{lock}.in pins {name}=={version}")
         # Both locks are consumed by the commands the policy below verifies.
         sources = list(_command_sources())
         self.assertIn('"$GITHUB_WORKSPACE/.github/requirements/semgrep.txt"',

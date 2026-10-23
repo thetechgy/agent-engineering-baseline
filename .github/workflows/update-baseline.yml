@@ -158,6 +158,9 @@ jobs:
       - name: Update APM dependencies with reviewed CLI
         run: |
           "$APM_EXECUTABLE" update --yes
+          # APM 0.34 update skips bin/ in CI and has no --trust-bin option.
+          # Record the trusted deployment before checking frozen replay.
+          "$APM_EXECUTABLE" install --trust-bin
           "$APM_EXECUTABLE" install --frozen --trust-bin
           "$APM_EXECUTABLE" compile --target codex,copilot --validate
           "$APM_EXECUTABLE" compile --target codex,copilot
