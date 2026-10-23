@@ -14,8 +14,9 @@ illustrative; replay never contacts them.
   Historical review controls retain the unchanged ec5b512 source separately at
   `.github/tests/fixtures/skill_review/gh-ec5b512.zip`, matching their
   original evidence manifest rather than the current deployment.
-  Report attachments pin current validator modules from `a5392b0`;
-  `baseline-3f47c9d` retains the previous module set for historical reports.
+  Report attachments pin current validator modules from `afdb659`;
+  `baseline-a5392b0` and `baseline-3f47c9d` retain the previous module sets
+  for historical reports.
 - **CLI help:** installed `gh version 2.102.0 (2026-09-30)`, captured with
   `gh api --help`, `gh issue view --help`, `gh pr view --help`,
   `gh pr checks --help`, `gh run list --help`, `gh run view --help`,

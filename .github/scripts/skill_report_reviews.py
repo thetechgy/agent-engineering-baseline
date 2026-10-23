@@ -23,7 +23,12 @@ PINS = {'openai': '2.44.0', 'pydantic': '2.13.4', 'skillevaluator': '0.3.0'}
 MODULES = ('skill_review.py', 'skill_analysis.py', 'skill_evidence.py', 'skill_reports.py')
 # Reviewed source bytes, not commands or report-supplied executable identities.
 PROFILES = {
-    'current-v2': ('a5392b0eda37485b131ffe416fcb9d6e5ee547d2', (
+    'current-v2': ('afdb659ee130171d263da6f13c9dec6de912d3a4', (
+        '778f26c48da2eb7811a895a8c6b4cc6f3d304262abbfbd86ee5e7bfa97102680',
+        'b120aa5ed4d0f1d8267295ab79d4bc5bc05f9dd4a68e39e26131a61401a4d73f',
+        '0cb9a970e0325d4212b53dbf3cc7a81a8ad01635109eba7bab9d5ac8d3af73ca',
+        '730e66118b5b047dac5b26035e283a6e1ed293e01c9cf9be08af287fa73f0f9b')),
+    'baseline-a5392b0': ('a5392b0eda37485b131ffe416fcb9d6e5ee547d2', (
         '778f26c48da2eb7811a895a8c6b4cc6f3d304262abbfbd86ee5e7bfa97102680',
         'b120aa5ed4d0f1d8267295ab79d4bc5bc05f9dd4a68e39e26131a61401a4d73f',
         '0cb9a970e0325d4212b53dbf3cc7a81a8ad01635109eba7bab9d5ac8d3af73ca',
