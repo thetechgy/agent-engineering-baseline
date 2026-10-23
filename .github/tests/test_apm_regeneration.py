@@ -163,6 +163,25 @@ class RegenerationTests(unittest.TestCase):
             self.invoke("refresh")
         self.assertEqual((self.source / ".agents/skills/fixture/SKILL.md").read_text(), "caller edit\n")
 
+    def test_refresh_preserves_ignored_caller_files_before_any_publication(self):
+        private = self.source / ".agents/skills/new/SKILL.md"
+        self.write(".agents/skills/new/SKILL.md", "private caller data\n")
+        with (self.source / ".git/info/exclude").open("a") as exclude:
+            exclude.write("\n.agents/skills/new/\n")
+        before = regeneration.inventory(self.source)
+        self.assertNotIn(".agents/skills/new/SKILL.md", before)
+
+        def collide(apm, scratch, refresh, environment):
+            self.materialize(apm, scratch, refresh)
+            output = scratch / ".agents/skills/new/SKILL.md"
+            output.parent.mkdir(parents=True)
+            output.write_text("generated replacement\n")
+
+        with self.assertRaisesRegex(RuntimeError, "untracked caller files"):
+            self.invoke("refresh", collide)
+        self.assertEqual(private.read_text(), "private caller data\n")
+        self.assertEqual(before, regeneration.inventory(self.source))
+
     def test_failed_publication_restores_prior_output_bytes_and_modes(self):
         before = regeneration.inventory(self.source)
         copy = regeneration.shutil.copy2

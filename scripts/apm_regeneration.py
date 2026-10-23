@@ -132,6 +132,10 @@ def publish(source, scratch, before, after):
         raise RuntimeError("Checkout changed during regeneration; nothing was published")
     for name in changed:
         target = safe_path(source, name)
+        # Git inventory deliberately omits ignored user files. They must still
+        # block a new output, before writing any member of the publication set.
+        if name not in before and target.exists():
+            raise RuntimeError("APM output collides with untracked caller files")
         if target.exists() and not target.is_file():
             raise RuntimeError("APM output collides with a non-file caller path")
     backups = {name: (safe_path(source, name).read_bytes(), safe_path(source, name).stat().st_mode) if name in before else None for name in changed}
