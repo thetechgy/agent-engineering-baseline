@@ -321,26 +321,31 @@ For skill-specific conventions, see
 
 ### Regenerate and validate
 
-To reproduce the reviewed checkout, use the command path reported by bootstrap:
+Use the full validation suite below to reproduce the reviewed checkout. Its
+[regeneration helper](scripts/apm_regeneration.py) copies current tracked inputs
+(including staged additions and unstaged edits) into an independent temporary
+checkout with the same Git origin. It regenerates skills from their sources,
+checks frozen pins, compiles instructions, runs both native audit passes and
+packaging, and compares generated outputs with the supplied checkout. It leaves
+the caller's files, index, installation identity, and APM settings unchanged.
+Stage new source files before running it; untracked files are not inputs.
 
-```powershell
-$apmCommand = "$env:LOCALAPPDATA\Programs\apm\bin\apm.cmd"
-& $apmCommand install --frozen --trust-bin
-& $apmCommand compile --target codex,copilot --validate
-& $apmCommand compile --target codex,copilot
-& $apmCommand audit --ci
-& $apmCommand pack --dry-run
-```
+APM 0.35 records rendered deployment receipts locally. A fresh checkout has no
+such receipts, so installing over committed generated skills can skip or remove
+them. Isolated regeneration starts with no deployed skills and establishes its
+own temporary receipts. Output drift is a failure, not an instruction to repair
+the caller's checkout or use `--force`.
 
-**Audit caveat:** The pinned APM release can report false drift when you run
-`apm audit --ci` without a terminal, even after `install --frozen --trust-bin`.
-Its scratch replay doesn't retain launcher trust in that mode. For noninteractive
-full validation on Ubuntu, use `Invoke-Validation.ps1` below; it runs the
-same audit in a pseudo-terminal with drift checking enabled. Don't bypass this
-with `--no-drift`.
+The update workflow uses the same helper in refresh mode with the currently
+reviewed CLI. It refuses pre-existing generated edits, verifies source files
+remain unchanged, and returns only allowlisted generated outputs before the
+existing patch capture and independent publisher checks. The candidate CLI is
+still validated separately in its PR.
 
-Bash uses the same arguments with `"$apm_command"`, after setting
-`apm_command="$HOME/.local/bin/apm"` to the reported path.
+**Audit caveat:** Native audit replay does not retain launcher trust without a
+terminal. The helper runs `apm audit --ci` in a pseudo-terminal with full drift
+checking enabled. Do not bypass it with `--no-drift`.
+
 For comparison, bootstrap's user-scope sequence is:
 
 ```text
