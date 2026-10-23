@@ -1127,6 +1127,89 @@ class WorkflowTests(unittest.TestCase):
             self.assertIn(guard, create)
         self.assertIn("-gt 1", create)
 
+    def _publish_candidate_patch(self, before, after):
+        """Hand a substituted artifact to the actual publisher in disposable Git repos."""
+        workflow = yaml.safe_load((REPO / ".github/workflows/update-baseline.yml").read_text())
+        step = next(step for step in workflow["jobs"]["publish"]["steps"]
+                    if step.get("name") == "Apply data-only candidate patch").copy()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            producer, consumer = root / "producer", root / "consumer"
+            producer.mkdir()
+
+            def git(cwd, *arguments):
+                return subprocess.check_output(["git", *arguments], cwd=cwd, stderr=subprocess.PIPE)
+
+            git(producer, "init", "--quiet")
+            (producer / ".apm-version").write_bytes(b"0.34.0\n")
+            for name, content in before.items():
+                path = producer / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(content)
+            git(producer, "add", "--all")
+            git(producer, "-c", "user.name=Boundary fixture", "-c", "user.email=fixture@example.invalid",
+                "commit", "--quiet", "-m", "fixture")
+            git(root, "clone", "--quiet", "--no-hardlinks", str(producer), str(consumer))
+            for name in before.keys() - after.keys():
+                (producer / name).unlink()
+            for name, content in after.items():
+                path = producer / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(content)
+            git(producer, "add", "--all")
+            (root / "baseline.patch").write_bytes(git(producer, "diff", "--cached", "--binary", "--find-renames"))
+            # No real publication: the runner must stop before this marker on rejection.
+            step["run"] += '\nprintf published > "$RUNNER_TEMP/published"\n'
+            completed = self._run_step(step, {"RUNNER_TEMP": str(root)}, consumer)
+            self.assertFalse((root / "candidate-executed").exists(), "Publisher executed artifact code")
+            paths = git(consumer, "diff", "--cached", "--no-renames", "--name-only", "-z").split(b"\0")[:-1]
+            return completed, (root / "published").exists(), paths
+
+    def test_update_publisher_accepts_allowlisted_text_binary_and_rename_changes(self):
+        fixtures = (
+            ({}, {name: b"updated\n" for name in (
+                ".apm-checksums", "apm.lock.yaml", "AGENTS.md", ".github/copilot-instructions.md",
+                ".github/mcp.json", ".codex/config.toml", ".agents/skills/example/SKILL.md",
+            )}),
+            ({".apm-version": b"0.34.0\n"}, {".apm-version": b"0.35.0\n"}),
+            ({".agents/skills/example/bin/tool": b"old\0binary"},
+             {".agents/skills/example/bin/tool": b"new\0binary"}),
+            ({".agents/skills/example/old": b"rename\n"}, {".agents/skills/example/new": b"rename\n"}),
+            ({".agents/skills/example/removed": b"removed\n"}, {}),
+        )
+        for before, after in fixtures:
+            with self.subTest(before=list(before), after=list(after)):
+                completed, published, paths = self._publish_candidate_patch(before, after)
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+                self.assertTrue(published)
+                self.assertEqual(set(paths), {name.encode() for name in before.keys() | after.keys()})
+
+    def test_update_publisher_rejects_substituted_artifacts_before_publication(self):
+        shadow_module = (
+            b'import os\n'
+            b'open(os.path.join(os.environ["RUNNER_TEMP"], "candidate-executed"), "w").close()\n'
+            b'raise SystemExit(0)\n'
+        )
+        fixtures = (
+            ({}, {".github/workflows/replacement.yml": b"inert substitution fixture\n"}),
+            ({"README.md": b"before\n"}, {"README.md": b"after\n"}),
+            ({"README.md": b"removed\n"}, {}),
+            ({"README.md": b"rename\n"}, {".agents/skills/example/renamed": b"rename\n"}),
+            ({".agents/skills/example/old": b"rename\n"}, {"README.md": b"rename\n"}),
+            ({}, {".apm-version.extra": b"prefix collision\n"}),
+            ({}, {".agents/skills-extra/example/file": b"prefix collision\n"}),
+            ({}, {".github/mcp.json\nAGENTS.md": b"newline path\n"}),
+            ({}, {".agents/skills/example/file\nREADME.md": b"newline path\n"}),
+            ({}, {"re.py": shadow_module}),
+            ({}, {"sitecustomize.py": shadow_module}),
+        )
+        for before, after in fixtures:
+            with self.subTest(before=list(before), after=list(after)):
+                completed, published, _ = self._publish_candidate_patch(before, after)
+                self.assertNotEqual(completed.returncode, 0)
+                self.assertFalse(published)
+                self.assertIn("outside the reviewed regeneration allowlist", completed.stderr)
+
     def test_documented_external_action_requirements_match_all_workflows(self):
         required = set()
         for path in _workflow_files():
