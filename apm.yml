@@ -10,7 +10,8 @@ targets:
 dependencies:
   apm:
     - github/awesome-copilot/skills/dependabot#main
-    - github/awesome-copilot/skills/git-commit#main
+    # Retain the reviewed skill until upstream preserves unrelated partial staging.
+    - github/awesome-copilot/skills/git-commit#613efc8c21d9b3ce642dff361d17006cd9967e28
     - github/awesome-copilot/skills/github-actions-hardening#main
     - merill/msgraph/skills/msgraph#main
     - addyosmani/agent-skills/skills/code-simplification#main

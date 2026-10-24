@@ -1419,7 +1419,8 @@ The adapter hardcodes these profile revisions and individual SHA-256 hashes for
 
 | Profile | Original repository revision |
 | --- | --- |
-| `current-v2` | `a5392b0eda37485b131ffe416fcb9d6e5ee547d2` |
+| `current-v2` | `afdb659ee130171d263da6f13c9dec6de912d3a4` |
+| `baseline-a5392b0` | `a5392b0eda37485b131ffe416fcb9d6e5ee547d2` |
 | `baseline-3f47c9d` | `3f47c9de4df362ae9977748ad6353227f403a9b8` |
 | `podman-1cffcf9` | `1cffcf9947c265f126a3ceee75e5e35249bfd722` |
 | `gh-89f46f0` | `89f46f026cdaaf001487cbcc1425204db29e8952` |
@@ -1435,7 +1436,10 @@ For a saved report produced by the previous `current-v2` module set at
 attachment descriptor and set `tooling` to the retained snapshot containing
 that revision's four modules under `.github/scripts/`. Null tooling is not
 accepted for historical profiles. The refreshed `current-v2` instead identifies
-the module set at `a5392b0eda37485b131ffe416fcb9d6e5ee547d2`.
+the module set at `afdb659ee130171d263da6f13c9dec6de912d3a4`. Reports from
+`a5392b0eda37485b131ffe416fcb9d6e5ee547d2` use `baseline-a5392b0` with their
+retained original tooling. Its exact source bytes and hashes remain unchanged;
+the current competing-skill policy is not applied retroactively.
 
 Change only the attachment descriptor's profile and tooling selection for this
 handoff. Preserve the saved report JSON and Markdown, their digests, original

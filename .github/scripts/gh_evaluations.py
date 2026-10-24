@@ -98,7 +98,7 @@ def verify_competing(workspace, *, read_bytes=None):
     reports.require(
         len(owners) == 1
         and owners[0]["repo_url"] == "github/awesome-copilot"
-        and owners[0]["resolved_commit"] == "613efc8c21d9b3ce642dff361d17006cd9967e28",
+        and owners[0]["resolved_commit"] == reports.benchmark_policy("gh")["competing_revision"],
         "Unreviewed competing skill identity",
     )
     source = workspace / ".agents/skills" / COMPETING

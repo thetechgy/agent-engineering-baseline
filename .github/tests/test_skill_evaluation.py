@@ -722,41 +722,27 @@ class WorkflowTests(unittest.TestCase):
             cwd=cwd, env={**base, **env}, capture_output=True, text=True, timeout=60,
         )
 
-    def test_update_reconciles_binary_lock_before_frozen_replay_and_stops_on_failure(self):
+    def test_update_uses_isolated_refresh_with_only_the_reviewed_cli(self):
         workflow = yaml.safe_load((REPO / ".github/workflows/update-baseline.yml").read_text())
         step = next(step for step in workflow["jobs"]["generate"]["steps"]
                     if step.get("name") == "Update APM dependencies with reviewed CLI")
-        commands = [
-            "update --yes",
-            "install --trust-bin",
-            "install --frozen --trust-bin",
-            "compile --target codex,copilot --validate",
-            "compile --target codex,copilot",
-        ]
-        for failure in ("", "install --trust-bin", "install --frozen --trust-bin"):
-            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as temporary:
+        for status in (0, 23):
+            with self.subTest(status=status), tempfile.TemporaryDirectory() as temporary:
                 root = Path(temporary)
-                executable = root / "reviewed apm"
-                executable.write_text(
-                    '#!/bin/sh\n'
-                    'printf "%s\\n" "$*" >> "$CALL_LOG"\n'
-                    '[ "$*" != "$FAIL_COMMAND" ] || exit 23\n'
-                    'case "$*" in\n'
-                    '  "update --yes") rm -f lock-ready ;;\n'
-                    '  "install --trust-bin") touch lock-ready ;;\n'
-                    '  "install --frozen --trust-bin"|compile*) test -f lock-ready ;;\n'
-                    '  *) exit 24 ;;\n'
-                    'esac\n'
-                )
+                executable = root / "python3"
+                executable.write_text('#!/bin/sh\nprintf "%s\\n" "$@" > "$CALL_LOG"\nexit "$FAIL_STATUS"\n')
                 executable.chmod(0o755)
-                call_log = root / "calls"
+                log = root / "calls"
                 completed = self._run_step(step, {
-                    "APM_EXECUTABLE": str(executable), "CALL_LOG": str(call_log),
-                    "FAIL_COMMAND": failure,
+                    "PATH": str(root) + os.pathsep + os.environ["PATH"],
+                    "APM_EXECUTABLE": str(root / "reviewed apm"),
+                    "CALL_LOG": str(log), "FAIL_STATUS": str(status),
                 }, root)
-                self.assertEqual(completed.returncode, 23 if failure else 0, completed.stderr)
-                expected = commands[:commands.index(failure) + 1] if failure else commands
-                self.assertEqual(call_log.read_text().splitlines(), expected)
+                self.assertEqual(completed.returncode, status, completed.stderr)
+                self.assertEqual(log.read_text().splitlines(), [
+                    "scripts/apm_regeneration.py", "--mode", "refresh", "--apm", str(root / "reviewed apm"),
+                ])
+
 
     def test_update_acquisition_generates_the_supported_checksum_set_without_execution(self):
         import stat
