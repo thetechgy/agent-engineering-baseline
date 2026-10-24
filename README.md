@@ -111,6 +111,45 @@ projects. APM writes these files:
 | User | `~/.apm/apm.yml`, `~/.apm/apm.lock.yaml`, `~/.apm/config.json` | `~/.codex/AGENTS.md`, `~/.copilot/AGENTS.md`, `~/.copilot/copilot-instructions.md` | `~/.codex/config.toml`, `~/.copilot/mcp-config.json` | `~/.agents/skills/*` |
 | Project | `./apm.yml`, `./apm.lock.yaml`, `./apm_modules/` | `./AGENTS.md`, `./.github/copilot-instructions.md` | `./.codex/config.toml`, `./.github/mcp.json` | `./.agents/skills/*` |
 
+### Reinstall when adopting APM 0.35
+
+An in-place upgrade from APM 0.34 to 0.35 is unsupported here. Existing skills
+lack the installation-local deployment receipts required by 0.35; bootstrap can
+report success while removing dependency skills. This personal baseline uses a
+manual clean reinstall instead of maintaining a version migration path. Bootstrap
+does not detect or repair the old installation automatically.
+
+For my user-scope installation, all skills come from this baseline. Close agent
+sessions, then move the deployed skills aside as a backup. On Windows:
+
+```powershell
+$skills = Join-Path $HOME '.agents/skills'
+$backup = "$skills.pre-apm-0.35-$([Guid]::NewGuid().ToString('N'))"
+Move-Item -LiteralPath $skills -Destination $backup -ErrorAction Stop
+```
+
+On Ubuntu:
+
+```sh
+skills="$HOME/.agents/skills"
+backup="$skills.pre-apm-0.35-$(date -u +%Y%m%dT%H%M%SZ)"
+mv -T --no-clobber -- "$skills" "$backup"
+```
+
+After the move succeeds, rerun the appropriate bootstrap command above. Keep APM
+metadata and the Codex/Copilot configuration in place so their settings survive.
+The missing skills are deployed afresh and APM establishes its own receipts.
+This recipe assumes the entire skills directory belongs to this baseline; it is
+not a reset procedure for an installation containing other sources or local edits.
+For project scope, use the target project's `.agents/skills` directory and the
+repository-scope bootstrap command.
+
+Before removing the backup, confirm every expected skill is present, exercise the
+Microsoft Graph launcher, rerun bootstrap, and run `apm audit --ci` interactively
+from the APM metadata directory (`~/.apm` for user scope, the project root for
+project scope). Keep the backup if any check fails. Native Windows reinstall
+behavior has not been verified; see the PR's platform validation results.
+
 ### Example: maintain a PowerShell module
 
 For a routine change, I might ask:
@@ -181,9 +220,11 @@ remote systems.
   don't auto-merge. Ignored Graph indexes and binaries still have lockfile and audit
   checks.
 - **Your installation:** default bootstrap also refreshes **all branch-tracking
-  dependencies in the destination**, including unrelated packages. Six imported skills
-  follow upstream `main` branches; the gh skill is pinned to the GitHub CLI 2.102.1
-  release commit so it does not advertise unreleased commands. Your destination
+  dependencies in the destination**, including unrelated packages. Five imported skills
+  follow upstream `main` branches. The git-commit skill retains its reviewed revision
+  because the newer split-commit guidance unstages unrelated partial changes; the gh
+  skill is pinned to the GitHub CLI 2.102.1 release commit so it does not advertise
+  unreleased commands. Your destination
   manifest and lockfile govern the result, not this repo's lockfile. Even a fixed
   baseline commit doesn't freeze the branch-tracking skills.
 
@@ -308,7 +349,7 @@ directly.
 
 Repository review guidance lives in
 [`baseline-review.instructions.md`](baseline-review.instructions.md). Pinned APM
-0.34.0 discovers this root source during local compilation and generates it into
+0.35.0 discovers this root source during local compilation and generates it into
 the shared `AGENTS.md`. Copilot loads the deployed personal instruction file;
 native compilation removes its redundant generated root instruction file.
 Keep this source outside `.apm/` and leave the manifest's explicit `includes`
