@@ -46,7 +46,8 @@ Microsoft Learn uses **Model Context Protocol (MCP)** to let agents search offic
 Microsoft documentation. There's also an offline Microsoft Graph reference skill.
 
 The bootstrap scripts verify and install a pinned APM CLI. That's different from pinning
-the skills: some follow upstream branches and can change when you install. See
+the skills: fresh installations can resolve upstream branches, while unchanged
+destination locks are retained on reinstall. See
 [Security and safety](#security-and-safety) before running the scripts.
 
 GitHub Actions checks PRs and pushes to `main`, including scripts, generated files,
@@ -65,9 +66,11 @@ need network access to releases/dependencies or a mirror. Bash needs `curl`, `ta
 and `sha256sum`.
 
 **Before installing:** Default bootstrap trusts bundled executables and transitive MCP
-servers and refreshes branch-based dependencies, including ones already in the
-destination. Review the [security details](#security-and-safety). User scope changes
-your shared agent configuration; project scope changes the current project.
+servers. Ordinary installation retains matching destination locks; it does not
+refresh dependency branches. A fresh installation can still select upstream revisions
+that have not been individually reviewed here. Review the
+[security details](#security-and-safety). User scope changes your shared agent
+configuration; project scope changes the current project.
 
 From the baseline checkout, on Windows:
 
@@ -101,7 +104,9 @@ cd /path/to/target-project
 The wrapper uses the APM pins from its own checkout but installs
 `https://github.com/thetechgy/agent-engineering-baseline.git#main` by default. Set
 `BASELINE_PACKAGE_REF` to install a different reviewed revision; local edits to the
-wrapper's checkout aren't automatically installed.
+wrapper's checkout aren't automatically installed. Reinstalling unchanged `#main`
+keeps the destination's locked baseline commit; it does not adopt newer commits
+on that branch. See [deliberate updates](#install-and-update-deliberately).
 
 Both scopes configure both CLIs. Codex only loads project configuration for trusted
 projects. APM writes these files:
@@ -110,6 +115,88 @@ projects. APM writes these files:
 | --- | --- | --- | --- | --- |
 | User | `~/.apm/apm.yml`, `~/.apm/apm.lock.yaml`, `~/.apm/config.json` | `~/.codex/AGENTS.md`, `~/.copilot/AGENTS.md`, `~/.copilot/copilot-instructions.md` | `~/.codex/config.toml`, `~/.copilot/mcp-config.json` | `~/.agents/skills/*` |
 | Project | `./apm.yml`, `./apm.lock.yaml`, `./apm_modules/` | `./AGENTS.md`, `./.github/copilot-instructions.md` | `./.codex/config.toml`, `./.github/mcp.json` | `./.agents/skills/*` |
+
+### Install and update deliberately
+
+Ordinary bootstrap uses native `apm install` followed by compilation. Matching
+locked revisions stay fixed even when upstream branches move. New or changed
+dependency declarations resolve natively. Missing locks require new resolution;
+a selected install does not reconstruct unrelated packages' lock entries, even
+when their declarations and deployed files remain. Restore the reviewed lock in
+an existing multi-package destination rather than treating bootstrap as lock
+repair. Malformed or conflicted locks fail rather than being silently reset. Preserve the
+destination manifest and lockfile, and inspect APM's reported resolved commits.
+
+**Adopt a specific reviewed baseline commit:** set the existing override, then run
+bootstrap for the intended scope. For example:
+
+```sh
+export BASELINE_PACKAGE_REF='https://github.com/thetechgy/agent-engineering-baseline.git#<reviewed-commit>'
+./scripts/bootstrap.sh --global  # or --repo from the destination project
+```
+
+```powershell
+$env:BASELINE_PACKAGE_REF = 'https://github.com/thetechgy/agent-engineering-baseline.git#<reviewed-commit>'
+./scripts/Bootstrap-Baseline.ps1 -Scope Global # or Repo from the destination project
+```
+
+Replace `<reviewed-commit>` with the reviewed commit SHA. **Reuse this override on
+every bootstrap invocation**, or persist it in your own shell configuration for
+future sessions. These assignments persist only in the current shell. Bootstrap
+otherwise selects `#main` and can change an existing SHA declaration back to that
+branch. Fetching newer wrapper code alone does not update an unchanged locked
+baseline. Changing the baseline ref adopts its instructions/local skills and any
+changed dependency declarations; unchanged transitive declarations retain their
+destination locks. It does not import the new baseline's source lockfile.
+
+**Deliberately refresh branch-tracking dependencies:** use the reviewed executable
+reported by bootstrap. The following paths are the defaults; adjust them for
+`APM_INSTALL_DIR`. Select the same baseline reference you intend to retain.
+
+On Ubuntu:
+
+```sh
+apm_path="$HOME/.local/bin/apm"
+baseline_ref="${BASELINE_PACKAGE_REF:-https://github.com/thetechgy/agent-engineering-baseline.git#main}"
+# User scope:
+"$apm_path" install --global --update --target codex,copilot --trust-bin --trust-transitive-mcp "$baseline_ref"
+"$apm_path" compile --global
+# Repository scope, from the destination project:
+"$apm_path" install --update --target codex,copilot --trust-bin --trust-transitive-mcp "$baseline_ref"
+"$apm_path" compile --target codex,copilot
+```
+
+On Windows, with the latest stable PowerShell:
+
+```powershell
+$apm = Join-Path $env:LOCALAPPDATA 'Programs/apm/bin/apm.cmd'
+$baselineRef = if ($env:BASELINE_PACKAGE_REF) { $env:BASELINE_PACKAGE_REF } else {
+    'https://github.com/thetechgy/agent-engineering-baseline.git#main'
+}
+# User scope:
+& $apm install --global --update --target codex,copilot --trust-bin --trust-transitive-mcp $baselineRef
+& $apm compile --global
+# Repository scope, from the destination project:
+& $apm install --update --target codex,copilot --trust-bin --trust-transitive-mcp $baselineRef
+& $apm compile --target codex,copilot
+```
+
+Run only the pair for your intended scope and stop if installation fails. The
+positional package scopes refresh to the baseline and its dependency subtree;
+with a valid destination lock, independent unrelated packages retain their locked
+commits. Shared dependency
+identities can affect other consumers, subject to APM's native conflict rules.
+Both trust flags are intentionally retained in these commands. A SHA-selected baseline stays
+at that SHA while its branch-tracking children refresh; a `#main` selection also
+adopts the current baseline branch tip. Inspect the resulting commits and deployed
+configuration before use. This is deliberate upstream resolution, **not** replay of
+this repository's reviewed transitive lock. Avoid bare `apm update` when you do not
+intend to refresh every dependency in the destination.
+
+The daily freshness report detects candidates, review approves changes, and the
+weekly updater proposes source/lock changes. Installing an approved baseline ref
+and deliberately refreshing a destination are separate actions. Neither process
+makes every fresh-installed transitive revision individually reviewed.
 
 ### Reinstall when adopting APM 0.35
 
@@ -219,29 +306,51 @@ remote systems.
   revisions, files, launchers, and hashes. Updates to `main` need a PR and review; they
   don't auto-merge. Ignored Graph indexes and binaries still have lockfile and audit
   checks.
-- **Your installation:** default bootstrap also refreshes **all branch-tracking
-  dependencies in the destination**, including unrelated packages. Five imported skills
-  follow upstream `main` branches. The git-commit skill retains its reviewed revision
-  because the newer split-commit guidance unstages unrelated partial changes; the gh
-  skill is pinned to the GitHub CLI 2.102.1 release commit so it does not advertise
-  unreleased commands. Your destination
-  manifest and lockfile govern the result, not this repo's lockfile. Even a fixed
-  baseline commit doesn't freeze the branch-tracking skills.
+- **Your installation:** its own manifest and lock govern the result. Ordinary
+  bootstrap retains matching locks, including an unchanged baseline branch ref.
+  Fresh installations or new declarations can resolve branch-tracking skills to
+  current upstream commits rather than this repository's reviewed commits. Even a
+  fixed baseline commit does not freeze those transitive branches. Five imported
+  skills track `main`; git-commit and gh retain explicit commit declarations.
 
-Review the destination's manifest, resolved skills, and source overrides. `--trust-bin`
-authorizes bundled executables, including `msgraph`. `--trust-transitive-mcp` trusts MCP
-servers across the **whole dependency graph**, not just Microsoft Learn. A compromised
-upstream skill could execute code on your next bootstrap.
+Review the destination's manifest, resolved skills, executable assets and source
+overrides. `--trust-bin` remains necessary for `msgraph`: APM 0.35.0 can exit zero
+without it while omitting the skill's platform binaries. Package approvals alone
+do not replace noninteractive bin consent; adding destination approval policy is
+outside this change.
 
-For fixed skill content, use immutable commit references in the destination manifest and
-native APM commands without branch updates. To limit MCP trust, declare the reviewed
-server directly and omit `--trust-transitive-mcp`.
+`--trust-transitive-mcp` temporarily remains and trusts self-defined MCP servers
+across the **whole dependency graph**, not just Microsoft Learn. This is broader
+trust than desired and **not a completed security remediation**. The reviewed
+Learn declaration still specifies HTTP transport, `https://learn.microsoft.com/api/mcp`,
+and exactly `microsoft_docs_search`, `microsoft_docs_fetch` and
+`microsoft_code_sample_search` through both clients' intended allowlists.
+
+APM 0.35.0 automatically trusts the baseline's direct-package Learn declaration
+without the blanket flag. Nevertheless, Copilot lifecycle probes demonstrated
+success with a preserved but incorrect local endpoint, and deletion of edited
+connections during stale cleanup. Codex rejected the corresponding edited
+connection. Retaining today's flags does not fix those native risks, and an exit
+code of zero alone does not establish complete installation or correct native
+settings. Preserve user changes and inspect deployed functionality; do not use
+`--force` to take over foreign configuration.
+
+[Issue #88](https://github.com/thetechgy/agent-engineering-baseline/issues/88)
+tracks safe native MCP trust narrowing **and** reviewed transitive reproducibility
+for fresh installations. It includes the tagged source evidence, reproduced
+limitations and Windows/Ubuntu acceptance criteria. A fresh probe of baseline
+`8c5f7af` selected msgraph `5da043b2` while the reviewed source lock contained
+`e77b382d`, illustrating the executable supply-chain gap. Removing automatic
+updates stabilizes subsequent installs; it does not retroactively review those
+initial choices. Immutable declarations or reviewed native bundles require a
+separate installation/publication design. No custom resolver, MCP restoration
+mechanism or extra bootstrap runtime is introduced here.
 
 ### Verified tooling and reviewed refreshes
 
 The wrappers never rely on an existing `apm` from PATH. They use the release in
-[`.apm-version`](.apm-version) and ten reviewed SHA-256 hashes in
-[`.apm-checksums`](.apm-checksums), covering five archives and their executables.
+[`.apm-version`](.apm-version) and six reviewed SHA-256 hashes in
+[`.apm-checksums`](.apm-checksums), covering three archives and their executables.
 Downloads use no credentials. Bootstrap rejects unsafe or incomplete bundles, checks the
 executable and version, and runs it by absolute path. Matching hashes prove integrity
 against the reviewed values, **not** that the code is safe.

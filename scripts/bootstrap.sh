@@ -461,19 +461,16 @@ run_apm() {
 
 deploy_baseline() {
     local package_ref=${BASELINE_PACKAGE_REF:-$DEFAULT_PACKAGE_REF}
+    log 'syncing destination locks; dependency refreshes require an explicit native APM command (see README)'
     case "$MODE" in
         global)
             log "installing $package_ref at user scope"
             run_apm install --global --target codex,copilot --trust-bin --trust-transitive-mcp "$package_ref"
-            log 'refreshing all user-scope branch-ref dependencies to their latest commits'
-            run_apm update --global --yes --target codex,copilot
             run_apm compile --global
             ;;
         repo)
             log "installing $package_ref into $PWD"
             run_apm install --target codex,copilot --trust-bin --trust-transitive-mcp "$package_ref"
-            log 'refreshing all repository branch-ref dependencies to their latest commits'
-            run_apm update --yes --target codex,copilot
             run_apm compile --target codex,copilot
             ;;
     esac
