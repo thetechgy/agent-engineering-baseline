@@ -1,0 +1,422 @@
+{
+  "schema_version": 1,
+  "dependencies": [
+    {
+      "id": "skillevaluator",
+      "label": "SkillEvaluator",
+      "repo": "NVIDIA/SkillEvaluator",
+      "sources": [
+        {
+          "path": ".github/scripts/setup-skillevaluator.sh",
+          "pattern": "^\\s*evaluator_revision=(?P<revision>[0-9a-f]{40}) # v(?P<version>\\S+)$",
+          "count": 1
+        },
+        {
+          "path": ".github/scripts/skill_reports.py",
+          "symbol": "POLICY",
+          "key": "evaluator_revision",
+          "field": "revision"
+        },
+        {
+          "path": ".github/scripts/skill_review.py",
+          "symbol": "PINS",
+          "key": "skillevaluator",
+          "field": "version"
+        },
+        {
+          "path": ".github/scripts/skill_report_reviews.py",
+          "symbol": "PINS",
+          "key": "skillevaluator",
+          "field": "version"
+        }
+      ],
+      "owner": "Maintainer review",
+      "hold": null,
+      "group": null,
+      "tag_prefix": "v",
+      "validation": "Qualify the evaluation runtime as a group: frozen locks, compatibility patch, CLI/preflight, graders, scoring, evidence/schema consumers, redaction, and historical comparison policy. Preserve historical tooling and use a new policy identity when inputs change. No independent SDK upgrade.",
+      "modified": true,
+      "package": {
+        "ecosystem": "pip",
+        "name": "skillevaluator"
+      }
+    },
+    {
+      "id": "skillspector",
+      "label": "SkillSpector",
+      "repo": "NVIDIA/SkillSpector",
+      "sources": [
+        {
+          "path": ".github/scripts/setup-skillevaluator.sh",
+          "pattern": "^\\s*skillspector_revision=(?P<revision>[0-9a-f]{40}) # v(?P<version>\\S+)$",
+          "count": 1
+        }
+      ],
+      "owner": "Maintainer review",
+      "hold": null,
+      "group": null,
+      "tag_prefix": "v",
+      "validation": "Run controlled scanner regressions, native catalog collection and public projection; compare findings and incomplete-coverage accounting, not installation alone.",
+      "package": {
+        "ecosystem": "pip",
+        "name": "skillspector"
+      }
+    },
+    {
+      "id": "codex",
+      "label": "Codex evaluation runtime",
+      "repo": "openai/codex",
+      "sources": [
+        {
+          "path": ".github/scripts/skill_reports.py",
+          "symbol": "POLICY",
+          "key": "codex",
+          "field": "version"
+        },
+        {
+          "path": ".github/patches/skillevaluator-v0.3.0-pin-codex.patch",
+          "pattern": "^\\+.*\"version=(?P<version>[^\" ]+)\".*$",
+          "count": 1
+        }
+      ],
+      "owner": "Maintainer review",
+      "hold": null,
+      "group": null,
+      "tag_prefix": "rust-v",
+      "validation": "Qualify the evaluation runtime as a group: frozen locks, compatibility patch, CLI/preflight, graders, scoring, evidence/schema consumers, redaction, and historical comparison policy. Preserve historical tooling and use a new policy identity when inputs change. No independent SDK upgrade.",
+      "package": {
+        "ecosystem": "npm",
+        "name": "@openai/codex"
+      }
+    },
+    {
+      "id": "uv",
+      "label": "uv",
+      "repo": "astral-sh/uv",
+      "sources": [
+        {
+          "path": ".github/workflows/validate.yml",
+          "pattern": "uses: astral-sh/setup-uv@[^\\n]+\\n(?:[^\\n]*\\n){0,5}?\\s+version: \\'(?P<version>[^\\']+)\\'",
+          "count": 1
+        },
+        {
+          "path": ".github/workflows/benchmark-skills.yml",
+          "pattern": "uses: astral-sh/setup-uv@[^\\n]+\\n(?:[^\\n]*\\n){0,5}?\\s+version: \\'(?P<version>[^\\']+)\\'",
+          "count": 1
+        },
+        {
+          "path": ".github/scripts/setup-skillevaluator.sh",
+          "pattern": "^test .*uv --version.* = \\'(?P<version>[^\\']+)\\'$",
+          "count": 1
+        }
+      ],
+      "owner": "Maintainer review",
+      "hold": null,
+      "group": null,
+      "tag_prefix": "",
+      "validation": "Review security fixes, lock/compiler behavior and managed Python changes; validate both frozen evaluator/scanner installs and hash-lock reproduction in a separate focused PR.",
+      "package": {
+        "ecosystem": "pip",
+        "name": "uv"
+      }
+    },
+    {
+      "id": "compose",
+      "label": "Docker Compose",
+      "repo": "docker/compose",
+      "sources": [
+        {
+          "path": ".github/scripts/skill_reports.py",
+          "symbol": "POLICY",
+          "key": "docker_compose",
+          "field": "version"
+        },
+        {
+          "path": ".github/workflows/benchmark-skills.yml",
+          "pattern": "^          version: v(?P<version>\\S+)$",
+          "count": 1
+        },
+        {
+          "path": ".github/workflows/benchmark-skills.yml",
+          "pattern": "^\\s*run: test .*docker compose version --short.* = \\'(?P<version>[^\\']+)\\'$",
+          "count": 1
+        },
+        {
+          "path": ".github/workflows/validate.yml",
+          "pattern": "https://github.com/docker/compose/releases/download/v(?P<version>[^/]+)/",
+          "count": 1
+        }
+      ],
+      "owner": "Maintainer review",
+      "hold": null,
+      "group": null,
+      "tag_prefix": "v",
+      "validation": "Qualify the evaluation runtime as a group: frozen locks, compatibility patch, CLI/preflight, graders, scoring, evidence/schema consumers, redaction, and historical comparison policy. Preserve historical tooling and use a new policy identity when inputs change. No independent SDK upgrade."
+    },
+    {
+      "id": "semgrep",
+      "label": "Semgrep",
+      "repo": "semgrep/semgrep",
+      "sources": [
+        {
+          "path": ".github/requirements/semgrep.in",
+          "pattern": "^semgrep==(?P<version>[^\\s\\\\]+)(?: \\\\)?$",
+          "count": 1
+        },
+        {
+          "path": ".github/requirements/semgrep.txt",
+          "pattern": "^semgrep==(?P<version>[^\\s\\\\]+)(?: \\\\)?$",
+          "count": 1
+        }
+      ],
+      "owner": "Maintainer review",
+      "hold": null,
+      "group": null,
+      "tag_prefix": "v",
+      "validation": "Regenerate the reviewed hash lock with the pinned compiler; inspect resolved changes and run the affected scanner/lint contracts.",
+      "package": {
+        "ecosystem": "pip",
+        "name": "semgrep"
+      }
+    },
+    {
+      "id": "rumdl",
+      "label": "rumdl",
+      "repo": "rvben/rumdl",
+      "sources": [
+        {
+          "path": ".github/requirements/rumdl.in",
+          "pattern": "^rumdl==(?P<version>[^\\s\\\\]+)(?: \\\\)?$",
+          "count": 1
+        },
+        {
+          "path": ".github/requirements/rumdl.txt",
+          "pattern": "^rumdl==(?P<version>[^\\s\\\\]+)(?: \\\\)?$",
+          "count": 1
+        }
+      ],
+      "owner": "Maintainer review",
+      "hold": null,
+      "group": null,
+      "tag_prefix": "v",
+      "validation": "Regenerate the reviewed hash lock with the pinned compiler; inspect resolved changes and run the affected scanner/lint contracts.",
+      "package": {
+        "ecosystem": "pip",
+        "name": "rumdl"
+      }
+    },
+    {
+      "id": "pester",
+      "label": "Pester",
+      "repo": "pester/Pester",
+      "sources": [
+        {
+          "path": ".github/workflows/validate.yml",
+          "pattern": "Install-Module Pester -RequiredVersion (?P<version>\\S+)",
+          "count": 2
+        },
+        {
+          "path": ".github/workflows/update-baseline.yml",
+          "pattern": "Install-Module Pester -RequiredVersion (?P<version>\\S+)",
+          "count": 1
+        }
+      ],
+      "owner": "Maintainer review",
+      "hold": null,
+      "group": null,
+      "tag_prefix": "",
+      "validation": "Run repository Pester/analyzer checks on latest stable PowerShell on both Windows and Linux."
+    },
+    {
+      "id": "psscriptanalyzer",
+      "label": "PSScriptAnalyzer",
+      "repo": "PowerShell/PSScriptAnalyzer",
+      "sources": [
+        {
+          "path": ".github/workflows/validate.yml",
+          "pattern": "Install-Module PSScriptAnalyzer -RequiredVersion (?P<version>\\S+)",
+          "count": 2
+        },
+        {
+          "path": ".github/workflows/update-baseline.yml",
+          "pattern": "Install-Module PSScriptAnalyzer -RequiredVersion (?P<version>\\S+)",
+          "count": 1
+        }
+      ],
+      "owner": "Maintainer review",
+      "hold": null,
+      "group": null,
+      "tag_prefix": "",
+      "validation": "Run repository Pester/analyzer checks on latest stable PowerShell on both Windows and Linux."
+    },
+    {
+      "id": "gitleaks",
+      "label": "Gitleaks",
+      "repo": "gitleaks/gitleaks",
+      "sources": [
+        {
+          "path": ".github/scripts/setup-skillevaluator.sh",
+          "pattern": "https://github.com/gitleaks/gitleaks/releases/download/v(?P<version>[^/]+)/gitleaks_(?P=version)_linux_x64.tar.gz",
+          "count": 1
+        }
+      ],
+      "owner": "Maintainer review",
+      "hold": null,
+      "group": null,
+      "tag_prefix": "v",
+      "validation": "Review upstream changes and validate the affected installation and consumers before updating."
+    },
+    {
+      "id": "harbor",
+      "label": "Harbor",
+      "repo": "harbor-framework/harbor",
+      "sources": [
+        {
+          "path": ".github/scripts/skill_reports.py",
+          "symbol": "POLICY",
+          "key": "harbor",
+          "field": "version"
+        }
+      ],
+      "owner": "Maintainer review",
+      "hold": "Qualified evaluation environment; review and update with its owning evaluator lock and compatibility assertions.",
+      "group": "evaluation-runtime compatibility group",
+      "tag_prefix": "v",
+      "validation": "Qualify the evaluation runtime as a group: frozen locks, compatibility patch, CLI/preflight, graders, scoring, evidence/schema consumers, redaction, and historical comparison policy. Preserve historical tooling and use a new policy identity when inputs change. No independent SDK upgrade.",
+      "lock_package": "harbor",
+      "package": {
+        "ecosystem": "pip",
+        "name": "harbor"
+      }
+    },
+    {
+      "id": "openai",
+      "label": "OpenAI SDK",
+      "repo": "openai/openai-python",
+      "sources": [
+        {
+          "path": ".github/scripts/skill_review.py",
+          "symbol": "PINS",
+          "key": "openai",
+          "field": "version"
+        },
+        {
+          "path": ".github/scripts/skill_report_reviews.py",
+          "symbol": "PINS",
+          "key": "openai",
+          "field": "version"
+        }
+      ],
+      "owner": "Maintainer review",
+      "hold": "Qualified evaluation environment; review and update with its owning evaluator lock and compatibility assertions.",
+      "group": "evaluation-runtime compatibility group",
+      "tag_prefix": "v",
+      "validation": "Qualify the evaluation runtime as a group: frozen locks, compatibility patch, CLI/preflight, graders, scoring, evidence/schema consumers, redaction, and historical comparison policy. Preserve historical tooling and use a new policy identity when inputs change. No independent SDK upgrade.",
+      "lock_package": "openai",
+      "package": {
+        "ecosystem": "pip",
+        "name": "openai"
+      }
+    },
+    {
+      "id": "pydantic",
+      "label": "Pydantic",
+      "repo": "pydantic/pydantic",
+      "sources": [
+        {
+          "path": ".github/scripts/skill_review.py",
+          "symbol": "PINS",
+          "key": "pydantic",
+          "field": "version"
+        },
+        {
+          "path": ".github/scripts/skill_report_reviews.py",
+          "symbol": "PINS",
+          "key": "pydantic",
+          "field": "version"
+        }
+      ],
+      "owner": "Maintainer review",
+      "hold": "Qualified evaluation environment; review and update with its owning evaluator lock and compatibility assertions.",
+      "group": "evaluation-runtime compatibility group",
+      "tag_prefix": "v",
+      "validation": "Qualify the evaluation runtime as a group: frozen locks, compatibility patch, CLI/preflight, graders, scoring, evidence/schema consumers, redaction, and historical comparison policy. Preserve historical tooling and use a new policy identity when inputs change. No independent SDK upgrade.",
+      "lock_package": "pydantic",
+      "package": {
+        "ecosystem": "pip",
+        "name": "pydantic"
+      }
+    },
+    {
+      "id": "apm",
+      "label": "APM CLI",
+      "repo": "microsoft/apm",
+      "sources": [
+        {
+          "path": ".apm-version",
+          "pattern": "^(?P<version>\\S+)$",
+          "count": 1
+        },
+        {
+          "path": "apm.lock.yaml",
+          "pattern": "^apm_version: (?P<version>\\S+)$",
+          "count": 1
+        }
+      ],
+      "owner": "Weekly reviewed APM updater",
+      "hold": null,
+      "group": null,
+      "tag_prefix": "v",
+      "validation": "Use the existing reviewed weekly updater; review release changes, replacement hashes, regeneration and Windows/Linux bootstrap evidence."
+    },
+    {
+      "id": "git-commit",
+      "label": "git-commit skill",
+      "repo": "github/awesome-copilot",
+      "kind": "skill",
+      "path": "skills/git-commit",
+      "ref": "main",
+      "sources": [
+        {
+          "path": "apm.yml",
+          "pattern": "^\\s*- github/awesome-copilot/skills/git-commit#(?P<revision>[0-9a-f]{40})$",
+          "count": 1
+        }
+      ],
+      "owner": "Maintainer review",
+      "hold": "Retain the reviewed skill until upstream preserves unrelated partial staging.",
+      "group": null,
+      "validation": "Review the skill directory diff and reproduce preservation of unrelated partial staging before changing the APM reference."
+    },
+    {
+      "id": "gh",
+      "label": "gh skill compatibility baseline",
+      "repo": "cli/cli",
+      "kind": "skill",
+      "path": "skills/gh",
+      "sources": [
+        {
+          "path": "apm.yml",
+          "pattern": "^\\s*- cli/cli/skills/gh#(?P<revision>[0-9a-f]{40})$",
+          "count": 1
+        },
+        {
+          "path": "apm.yml",
+          "pattern": "^\\s*# GitHub CLI (?P<version>[0-9.]+);.*$",
+          "count": 1
+        },
+        {
+          "path": ".github/scripts/gh_evaluations.py",
+          "symbol": "UPSTREAM",
+          "key": "",
+          "field": "revision"
+        }
+      ],
+      "tag_prefix": "v",
+      "owner": "Maintainer review",
+      "hold": "Released CLI compatibility baseline; trunk may describe unavailable commands. The recorded help fixture is a separate contract, not an installed CLI.",
+      "group": null,
+      "validation": "Review released skill-content changes, CLI compatibility, fixture/help contracts and credential-free native evaluation. Do not infer an installed CLI vulnerability from a documentation pin."
+    }
+  ]
+}
