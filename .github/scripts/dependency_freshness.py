@@ -563,6 +563,9 @@ def render(report, definitions):
                 reference += quote(result["pin"]["revision"] or item.get("tag_prefix", "v") + result["pin"]["version"], safe='')
                 reference += "..." + quote(result["upstream"].get("ref") or item.get("tag_prefix", "v") + result["upstream"]["version"], safe='') + ")."
             lines += [reference, ""]
+        if "content_digest" in result["upstream"]:
+            lines += ["Upstream skill-directory fingerprint: " + result["upstream"]["content_digest"] + ". "
+                      + ("Content differs from the held revision." if result["upstream"]["content_changed"] else "Content matches the held revision."), ""]
         for signal in result["signals"]:
             lines += ["- Upstream " + escape(signal["kind"]) + " signal (untrusted excerpt; applicability unverified): " + escape(signal["text"])]
         if result["signals"]:

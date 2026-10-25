@@ -200,6 +200,20 @@ class FreshnessTests(unittest.TestCase):
         report = self.collect(api)
         self.assertEqual(self.find(report, "skillevaluator")["freshness"], "unverified")
 
+    def test_held_skill_content_changes_update_issue_but_unrelated_commits_do_not(self):
+        api = FixtureAPI()
+        api.tree_changed = True
+        report = self.collect(api)
+        before = fresh.render(report, fresh.load_config(ROOT))
+        unrelated = copy.deepcopy(report)
+        self.find(unrelated, "git-commit")["upstream"]["revision"] = "c" * 40
+        self.assertEqual(before, fresh.render(unrelated, fresh.load_config(ROOT)))
+        changed = copy.deepcopy(unrelated)
+        self.find(changed, "git-commit")["upstream"]["content_digest"] = "d" * 64
+        self.assertTrue(before != fresh.render(changed, fresh.load_config(ROOT)),
+                        "A newly changed held skill directory must update the persistent issue")
+        self.assertEqual(fresh.risk_events(report), fresh.risk_events(changed))
+
     def test_missing_contradictory_and_unsupported_pins_remain_visible(self):
         for kind in ("missing", "contradictory", "format", "duplicate"):
             root = self.scratch()
