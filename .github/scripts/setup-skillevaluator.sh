@@ -70,6 +70,7 @@ uv pip list --python "$evaluator_bin/python" --format json > "$tool_root/depende
 
 printf '%s\n' "$evaluator_bin" "$tool_root/bin" >> "$GITHUB_PATH"
 {
+  printf 'SKILL_EVALUATION_KIND=%s\n' "$kind"
   printf 'SKILL_EVALUATOR_PYTHON=%s/python\n' "$evaluator_bin"
   printf 'XDG_CACHE_HOME=%s\nXDG_STATE_HOME=%s\n' "$XDG_CACHE_HOME" "$XDG_STATE_HOME"
   printf 'SKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE=%s/provenance.key\n' "$tool_root"

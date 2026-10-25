@@ -25,8 +25,10 @@ The two frozen locks contain the same 157 third-party package records; only the
 SkillSpector package version changes. Installed evaluator and Semgrep inventories
 also match exactly. Both tool roots were installed independently through the
 production setup script. Neither scanner checkout nor its lock was modified.
-The sole production change is the scanner pin and passing that selected revision
-to version metadata rather than repeating a literal SHA.
+Production changes are the scanner pin, passing that selected revision to version
+metadata rather than repeating a literal SHA, and recording `SKILL_EVALUATION_KIND`
+for the shared test suite. Scanner-only checks skip explicitly in benchmark setup,
+which intentionally does not install the scanner; quality setup still requires it.
 
 [Upstream releases](https://github.com/NVIDIA/SkillSpector/releases/tag/v2.13.1)
 and tagged implementation/tests were reviewed across 2.12.0, 2.13.0 and 2.13.1.
@@ -253,10 +255,21 @@ it excludes `evals/`. Before/after conclusions above use the native scope.
 
 Local validation:
 
-- Full offline Python suite: 589 tests run, 588 passed, one skipped because the
+- Full offline Python suite at `97f315a`, before the benchmark-mode review fix:
+  589 tests run, 588 passed, one skipped because the
   installed gh version differs from the recorded 2.102.0 help contract. Runtime
   was 1537.136 seconds. The four new real-scanner tests all passed; the benign
   regression also failed against 2.11.2 before passing against 2.13.1.
+- Review follow-up reproduced four scanner-test failures and the native/public
+  P2 assertion failure with the scanner absent. After recording setup kind,
+  quality mode passes all four scanner tests and the native/public handoff;
+  benchmark mode intentionally skips only those four scanner tests and passes
+  the existing native/public contract without the scanner. Quality mode with
+  the scanner absent still fails all four assertions. Both setup contract tests
+  pass. All 80 affected setup, public-report and scanner tests pass after the fix,
+  including a permanent scanner-absent benchmark regression. The complete local
+  suite was not repeated for this narrow mode guard;
+  final-revision hosted validation remains required.
 - Both production installations, fresh six-skill catalogs, catalog infrastructure
   contracts, and native strict Podman dataset validation passed.
 - Both six-skill public bundles, combined offline analysis and HTML generation
@@ -273,8 +286,8 @@ Local validation:
   Changed setup ShellCheck, repository Markdown lint (rumdl 0.2.34, 25 files),
   changed Python parsing and whitespace checks passed separately.
 
-Permanent additions are four small real-scanner tests, a selected-revision
-provenance test, and a stronger existing native-CLI/public-handoff test. They
+Permanent additions are four small real-scanner tests, selected-revision and
+scanner-absent benchmark tests, and a stronger native-CLI/public-handoff test. They
 cover benign comments and Python strings, real hidden directives and shell
 execution, retained findings from partial scans, contradictory accounting, and
 failed/unavailable tools. No generalized compatibility framework or new fixture

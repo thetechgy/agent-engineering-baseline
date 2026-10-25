@@ -996,6 +996,7 @@ class WorkflowTests(unittest.TestCase):
 
     def test_setup_provenance_records_the_selected_scanner_revision(self):
         setup = (REPO / ".github/scripts/setup-skillevaluator.sh").read_text()
+        self.assertIn("printf 'SKILL_EVALUATION_KIND=%s\\n' \"$kind\"", setup)
         producer = setup.split("<<'PY' > \"$tool_root/versions.json\"\n", 1)[1].rsplit("\nPY", 1)[0]
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -1015,6 +1016,17 @@ class WorkflowTests(unittest.TestCase):
                     self.assertEqual(versions["scanners"]["skillspector"], "fixture-version")
                 else:
                     self.assertNotIn("skillspector_revision", versions)
+
+    def test_benchmark_contracts_allow_the_intentionally_absent_scanner(self):
+        with tempfile.TemporaryDirectory() as directory:
+            environment = {**os.environ, "SKILL_EVALUATION_KIND": "benchmark",
+                "SKILLEVALUATOR_SKILLSPECTOR_PATH": str(Path(directory) / "absent-skillspector"),
+                "PYTHONDONTWRITEBYTECODE": "1"}
+            result = subprocess.run([sys.executable, "-m", "unittest", "-v", "test_skillspector",
+                "test_public_reports.PublicReportsTests.test_pinned_native_quality_cli_provenance_titles_and_public_handoff"],
+                cwd=REPO / ".github/tests", env=environment, capture_output=True, text=True, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("skipped", result.stderr)
 
     def test_permissions_pins_and_exact_history_handoff(self):
         workflow = yaml.safe_load((REPO / ".github/workflows/benchmark-skills.yml").read_text())

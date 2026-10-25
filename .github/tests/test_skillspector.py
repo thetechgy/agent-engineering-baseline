@@ -12,6 +12,8 @@ from skillevaluator.validators.base import ValidationResult
 from skillevaluator.validators.security import SecurityValidator, _skillspector_process_env
 
 
+@unittest.skipIf(os.environ.get('SKILL_EVALUATION_KIND') == 'benchmark',
+                 'SkillSpector is installed only by quality setup')
 class SkillSpectorTests(unittest.TestCase):
     def setUp(self):
         temporary = tempfile.TemporaryDirectory()
