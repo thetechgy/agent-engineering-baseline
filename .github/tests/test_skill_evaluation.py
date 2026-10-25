@@ -994,6 +994,28 @@ class WorkflowTests(unittest.TestCase):
         self.assertIn('chmod 700 "$tool_root"', setup)
         self.assertIn('["docker", "compose", "version", "--short"]', setup)
 
+    def test_setup_provenance_records_the_selected_scanner_revision(self):
+        setup = (REPO / ".github/scripts/setup-skillevaluator.sh").read_text()
+        producer = setup.split("<<'PY' > \"$tool_root/versions.json\"\n", 1)[1].rsplit("\nPY", 1)[0]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "dependencies").mkdir()
+            for name in ("semgrep", "skillspector"):
+                (root / "dependencies" / f"{name}.json").write_text(
+                    json.dumps([{"name": name, "version": "fixture-version"}]))
+            for kind in ("quality", "benchmark"):
+                output = io.StringIO()
+                with self.subTest(kind=kind), patch.object(sys, "argv", ["-", str(root), kind, SHA]), \
+                        patch.object(subprocess, "check_output", return_value="fixture-version\n"), \
+                        contextlib.redirect_stdout(output):
+                    exec(compile(producer, "setup-provenance", "exec"), {})
+                versions = json.loads(output.getvalue())
+                if kind == "quality":
+                    self.assertEqual(versions["skillspector_revision"], SHA)
+                    self.assertEqual(versions["scanners"]["skillspector"], "fixture-version")
+                else:
+                    self.assertNotIn("skillspector_revision", versions)
+
     def test_permissions_pins_and_exact_history_handoff(self):
         workflow = yaml.safe_load((REPO / ".github/workflows/benchmark-skills.yml").read_text())
         # PyYAML 1.1 parses the bare YAML key `on` as True.
