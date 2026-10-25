@@ -146,6 +146,18 @@ class FreshnessTests(unittest.TestCase):
             self.assertEqual(row["policy"]["group"], "evaluation-runtime compatibility group")
             self.assertTrue(row["policy"]["hold"])
 
+    def test_gh_fixture_contract_is_extracted_separately_from_released_skill_baseline(self):
+        root = self.scratch()
+        source = root / ".github/scripts/gh_evaluations.py"
+        import re
+        source.write_text(re.sub(r'("cli_contract": ")[0-9.]+(")', r'\g<1>99.0.0\2', source.read_text()))
+        _, rows, _ = fresh.inventory(root)
+        runtime = next(row for row in rows if row["id"] == "runtime-selectors")
+        self.assertEqual(json.loads(runtime["pin"]["value"])["gh_cli_fixture_contract"], "99.0.0")
+        skill = next(row for row in rows if row["id"] == "gh")
+        self.assertNotEqual(skill["pin"]["version"], "99.0.0")
+        self.assertIn("not installed CLI", runtime["policy"]["hold"])
+
     def test_current_and_managed_not_checked_are_distinct_from_policy(self):
         report = self.collect()
         self.assertTrue(report["complete"])
@@ -344,6 +356,18 @@ class FreshnessTests(unittest.TestCase):
                 result["freshness"] = "not_checked"
             with self.assertRaises(fresh.DiscoveryError):
                 fresh.validate_report(candidate, ROOT, REVISION)
+
+    def test_failed_version_match_query_retains_successful_reviewed_advisory_metadata(self):
+        api = FixtureAPI()
+        api.reviewed["uv"] = [advisory()]
+        api.failures["advisories?ecosystem=pip&affects=uv%40"] = "timeout"
+        report = self.collect(api)
+        security = self.find(report, "uv")["security"]
+        self.assertEqual(security["status"], "partial")
+        self.assertEqual(len(security["advisories"]), 1, "Successful package metadata must survive a failed version query")
+        self.assertEqual(security["advisories"][0]["source"], "github_reviewed")
+        self.assertEqual(security["advisories"][0]["applicability"], "unknown")
+        fresh.validate_report(report, ROOT, REVISION)
 
     def test_security_signal_deduplicates_against_advisory_and_substantive_breaking_changes_notify(self):
         api = FixtureAPI()

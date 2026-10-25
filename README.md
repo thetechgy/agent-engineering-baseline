@@ -264,6 +264,9 @@ runs daily at 13:43 UTC and supports manual dispatch. Its first default-branch r
 creates one bot-owned **Dependency freshness and upgrade review** issue. The issue
 holds the current inventory and review evidence; its workflow-health link exposes
 failed or interrupted collection. Reports are also retained as seven-day artifacts.
+Find the issue through [its title](https://github.com/thetechgy/agent-engineering-baseline/issues?q=is%3Aissue+%22Dependency+freshness+and+upgrade+review%22+in%3Atitle)
+and subscribe to receive material-change comments through your GitHub notification
+settings. The publisher also links the issue from its job summary.
 
 Freshness and management policy are separate. An outdated component can remain on
 an intentional hold or belong to another updater. Actions and branch-tracking APM

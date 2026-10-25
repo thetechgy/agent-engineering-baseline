@@ -210,16 +210,24 @@ def inventory(root):
     for id, label, symbol, keys, note in (
         ("task-build", "Container and Debian snapshot", "GH_TASK_BUILD", None,
          "Intentional reproducibility constraints; review image, signed snapshot and direct package pins together. No OS package monitoring or image vulnerability scanning here."),
-        ("runtime-selectors", "Evaluation Python and model selectors", "POLICY", ("python", "model", "provider"),
-         "Evaluation policy selectors, not exact installed Python patch versions or a model-release freshness assessment."),
+        ("runtime-selectors", "Evaluation runtime and fixture selectors", "POLICY", ("python", "model", "provider"),
+         "Evaluation policy selectors and captured gh fixture contract, not installed CLI/Python patch versions or a model-release freshness assessment."),
     ):
         value, line = literal(read(root, ".github/scripts/skill_reports.py"), symbol)
         if keys:
             value = {key: value[key] for key in keys}
+            fixture_path = ".github/scripts/gh_evaluations.py"
+            fixture_source = read(root, fixture_path)
+            matches = list(re.finditer(r'"cli_contract": "([^"]+)"', fixture_source))
+            require(len(matches) == 1, "missing_or_duplicate_fixture_contract")
+            stable(matches[0][1])
+            value["gh_cli_fixture_contract"] = matches[0][1]
         item = dict(id=id, label=label, owner="Maintainer evaluation qualification", hold=note,
                     group="Evaluation reproducibility", validation=note)
         rows.append(row(item, {"version": None, "revision": None, "value": json.dumps(value, sort_keys=True)},
                         [{"path": ".github/scripts/skill_reports.py", "line": line}]))
+        if keys:
+            rows[-1]["sources"].append({"path": fixture_path, "line": fixture_source.count("\n", 0, matches[0].start()) + 1})
     # Configuration declares routine version coverage, not the independent security setting.
     dependabot = read(root, ".github/dependabot.yml")
     mechanisms = {"dependabot_routine_ecosystems": sorted(re.findall(r"package-ecosystem:\s*([a-z-]+)", dependabot)),
@@ -374,7 +382,8 @@ def advisory_record(data, source, identity):
         return None
     return {"id": data["ghsa_id"], "source": source, "severity": data.get("severity") or "unknown",
             "summary": plain(data.get("summary") or "No summary", 240), "packages": packages,
-            "applicability": "unknown", "evidence": "Publisher metadata; version applicability not established."}
+            "applicability": "unknown", "evidence": ("Publisher metadata" if source == "publisher" else "GitHub-reviewed metadata")
+            + "; version applicability not established."}
 
 
 def advisories(api, item, pin):
@@ -391,22 +400,24 @@ def advisories(api, item, pin):
     if package and pin["version"]:
         try:
             all_values = api.pages("advisories?" + query(ecosystem=package["ecosystem"], affects=package["name"]))
+            reviewed = []
+            for value in all_values:
+                if value.get("withdrawn_at") is None:
+                    record = advisory_record(value, "github_reviewed", package)
+                    if record:
+                        reviewed.append(record)
+                        records.append(record)
             matches = api.pages("advisories?" + query(ecosystem=package["ecosystem"], affects=package["name"] + "@" + pin["version"])) if all_values else []
             matched = {v["ghsa_id"] for v in matches if v.get("withdrawn_at") is None}
-            for value in all_values:
-                if value.get("withdrawn_at") is not None:
-                    continue
-                record = advisory_record(value, "github_reviewed", package)
-                if record:
-                    if record["id"] in matched:
-                        record["applicability"] = "potentially_affected" if item.get("modified") else "confirmed_version_match"
-                        record["evidence"] = ("GitHub package@version match for " + package["name"] + "@" + pin["version"]
-                                              + "; platform, configuration and exploitability require review."
-                                              + (" Locally modified evaluator; build applicability remains unqualified." if item.get("modified") else ""))
-                    else:
-                        record["applicability"] = "not_matched"
-                        record["evidence"] = "Not returned by the complete GitHub affected-version query; not a comprehensive safety assessment."
-                    records.append(record)
+            for record in reviewed:
+                if record["id"] in matched:
+                    record["applicability"] = "potentially_affected" if item.get("modified") else "confirmed_version_match"
+                    record["evidence"] = ("GitHub package@version match for " + package["name"] + "@" + pin["version"]
+                                          + "; platform, configuration and exploitability require review."
+                                          + (" Locally modified evaluator; build applicability remains unqualified." if item.get("modified") else ""))
+                else:
+                    record["applicability"] = "not_matched"
+                    record["evidence"] = "Not returned by the complete GitHub affected-version query; not a comprehensive safety assessment."
             # A positive result missing from the package-wide response cannot be silently dropped.
             require(matched <= {r["id"] for r in records if r["source"] == "github_reviewed"}, "inconsistent_advisory_queries")
         except (DiscoveryError, KeyError, TypeError, AttributeError) as error:
@@ -712,6 +723,10 @@ def main(argv=None):
                 and args.report.stat().st_size <= MAX_REPORT, "invalid_report_file")
         require(os.environ.get("GH_TOKEN"), "missing_publisher_token")
         result = publish(json.loads(args.report.read_text()), ROOT, GitHub(os.environ["GH_TOKEN"]), revision)
+        summary = os.environ.get("GITHUB_STEP_SUMMARY")
+        if summary:
+            with open(summary, "a", encoding="utf-8") as stream:
+                stream.write(f"[Dependency tracking issue](https://github.com/{REPOSITORY}/issues/{result['issue']})\n")
         print(json.dumps(result, sort_keys=True))
         return 0
     if args.command == "inventory":
