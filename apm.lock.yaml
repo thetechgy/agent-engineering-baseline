@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-10-24T02:51:37.931641+00:00'
+generated_at: '2026-10-25T00:27:19.980258+00:00'
 apm_version: 0.35.0
 dependencies:
 - repo_url: addyosmani/agent-skills
@@ -810,7 +810,25 @@ deployments:
   owners:
   - .
   active_owner: .
-  content_hash: sha256:279824abf07feb466fd5deaab79fc872609d5674502bcfa51b31f2909874efab
+  content_hash: sha256:b57df2ff4072b2e25744ae2bd530b02bbb6ab83a22a0d374c73d48de4dc70887
+- kind: project-relative
+  target: codex
+  value: .agents/skills/powershell-pester-6/references/compatibility-and-migration.md
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:6d05a890eb1c53c59755f9e560c05d65467a614d36af7c812f4a32c89b47f4e9
+- kind: project-relative
+  target: codex
+  value: .agents/skills/powershell-pester-6/references/execution.md
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:3b80a98abfefdcd9a765da9a9436caa43de6a873e57253f1ecfb36e1095ea4b8
 - kind: project-relative
   target: copilot
   value: .github/instructions/personal.instructions.md
@@ -882,6 +900,8 @@ local_deployed_files:
 - .agents/skills/powershell-module-engineering/SKILL.md
 - .agents/skills/powershell-pester-6
 - .agents/skills/powershell-pester-6/SKILL.md
+- .agents/skills/powershell-pester-6/references/compatibility-and-migration.md
+- .agents/skills/powershell-pester-6/references/execution.md
 - .github/instructions/personal.instructions.md
 local_deployed_file_hashes:
   .agents/skills/a11y/SKILL.md: sha256:96d578e9646cd80ff6e1bedb26069222ad37b473960f3c0cc069716484b22553
@@ -902,5 +922,7 @@ local_deployed_file_hashes:
   .agents/skills/podman/references/security-storage-secrets.md: sha256:37e1fae3de6f4b7ae1ea3ccc2b0b84d7fd854ea2730a51f0e3b3b1bc9b2e1068
   .agents/skills/podman/references/validation.md: sha256:465321094bc936d8a9e187bd3b4daa1ab271b93242a2c07fe88c58db6bd4bdd5
   .agents/skills/powershell-module-engineering/SKILL.md: sha256:801cecfd42aeb32f3fd6083d9af08f44c8a5ca48202761533c072a10c06060c9
-  .agents/skills/powershell-pester-6/SKILL.md: sha256:279824abf07feb466fd5deaab79fc872609d5674502bcfa51b31f2909874efab
+  .agents/skills/powershell-pester-6/SKILL.md: sha256:b57df2ff4072b2e25744ae2bd530b02bbb6ab83a22a0d374c73d48de4dc70887
+  .agents/skills/powershell-pester-6/references/compatibility-and-migration.md: sha256:6d05a890eb1c53c59755f9e560c05d65467a614d36af7c812f4a32c89b47f4e9
+  .agents/skills/powershell-pester-6/references/execution.md: sha256:3b80a98abfefdcd9a765da9a9436caa43de6a873e57253f1ecfb36e1095ea4b8
   .github/instructions/personal.instructions.md: sha256:6bee5bb117bf796efe4f5b1873e6f9d11d0f3d698525d0c4fd2e20b17fb955e8

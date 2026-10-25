@@ -35,9 +35,12 @@ Describe 'Local skill APM integration' {
         Should-BeCollection -Actual $includedSkills -Expected $sourceSkills
     }
 
-    It 'deploys every Podman skill file byte-for-byte' {
-        $sourceRoot = Join-Path $script:ApmSource 'podman'
-        $targetRoot = Join-Path $script:DeployedSkills 'podman'
+    It 'deploys every <Skill> skill file byte-for-byte' -ForEach @(
+        @{ Skill = 'podman' }
+        @{ Skill = 'powershell-pester-6' }
+    ) {
+        $sourceRoot = Join-Path $script:ApmSource $Skill
+        $targetRoot = Join-Path $script:DeployedSkills $Skill
         Test-Path -LiteralPath (Join-Path $targetRoot 'SKILL.md') -PathType Leaf |
             Should-BeTrue
 
@@ -45,14 +48,16 @@ Describe 'Local skill APM integration' {
             Get-ChildItem -LiteralPath $sourceRoot -File -Recurse |
                 ForEach-Object {
                     $_.FullName.Substring($sourceRoot.Length + 1).Replace('\', '/')
-                }
-        ) | Sort-Object
+                } |
+                Sort-Object
+        )
         $targetFiles = @(
             Get-ChildItem -LiteralPath $targetRoot -File -Recurse |
                 ForEach-Object {
                     $_.FullName.Substring($targetRoot.Length + 1).Replace('\', '/')
-                }
-        ) | Sort-Object
+                } |
+                Sort-Object
+        )
         Should-BeCollection -Actual $targetFiles -Expected $sourceFiles
 
         foreach ($relativePath in $sourceFiles) {
