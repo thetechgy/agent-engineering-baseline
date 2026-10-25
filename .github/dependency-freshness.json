@@ -207,12 +207,12 @@
       "sources": [
         {
           "path": ".github/workflows/validate.yml",
-          "pattern": "Install-Module Pester -RequiredVersion (?P<version>\\S+)",
-          "count": 2
+          "pattern": "^  PESTER_VERSION: '(?P<version>[^']+)'$",
+          "count": 1
         },
         {
           "path": ".github/workflows/update-baseline.yml",
-          "pattern": "Install-Module Pester -RequiredVersion (?P<version>\\S+)",
+          "pattern": "^  PESTER_VERSION: '(?P<version>[^']+)'$",
           "count": 1
         }
       ],

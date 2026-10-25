@@ -7,6 +7,9 @@ on:
 
 permissions: {}
 
+env:
+  PESTER_VERSION: '6.2.0'
+
 concurrency:
   group: update-apm-baseline
   cancel-in-progress: false
@@ -197,7 +200,7 @@ jobs:
         shell: pwsh
         run: |
           Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-          Install-Module Pester -RequiredVersion 6.1.0 -Scope CurrentUser -Force
+          Install-Module Pester -RequiredVersion $env:PESTER_VERSION -Scope CurrentUser -Force
           Install-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -Scope CurrentUser -Force
 
       - name: Install hash-locked Markdown linter
@@ -213,7 +216,14 @@ jobs:
       - name: Validate candidate update with reviewed CLI
         if: steps.changes.outputs.changed == 'true'
         shell: pwsh
-        run: ./scripts/Invoke-Validation.ps1
+        run: |
+          Import-Module Pester -RequiredVersion $env:PESTER_VERSION -ErrorAction Stop
+          $loadedPester = @(Get-Module Pester)
+          if ($loadedPester.Count -ne 1 -or $loadedPester[0].Version.ToString() -cne $env:PESTER_VERSION) {
+            throw "Expected exactly Pester $env:PESTER_VERSION to be loaded."
+          }
+          Write-Host "Using Pester $($loadedPester[0].Version)"
+          ./scripts/Invoke-Validation.ps1
 
       - name: Upload candidate patch
         if: steps.changes.outputs.changed == 'true'
