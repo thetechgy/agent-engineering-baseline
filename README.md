@@ -513,8 +513,8 @@ candidate, then require all validation checks before merging. See
 
 SkillSpector uses its upstream frozen lock; Semgrep and rumdl use reviewed hashed
 locks in [.github/requirements](.github/requirements). CI rejects unverified Python
-installers and records tool versions and dependency inventories. The existing
-Semgrep and rumdl locks were generated with uv 0.12.17. Use uv 0.13.5 for future
+installers and records tool versions and dependency inventories. The Semgrep lock
+was generated with uv 0.12.17; the rumdl lock uses uv 0.13.5. Use uv 0.13.5 for future
 regeneration; replace `semgrep` with `rumdl` in both paths for the linter:
 
 ```bash

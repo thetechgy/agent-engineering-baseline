@@ -170,6 +170,34 @@ class FreshnessTests(unittest.TestCase):
                 self.assertEqual(uv["pin"]["value"], "Unknown")
                 self.assertEqual(uv["errors"], ["contradictory_pins"])
 
+    def test_pester_inventory_reconciles_the_shared_workflow_pins(self):
+        import re
+        definition = next(item for item in fresh.load_config(ROOT) if item["id"] == "pester")
+        pin, sources = fresh.extract(ROOT, definition)
+        self.assertEqual({source["path"] for source in sources}, {
+            ".github/workflows/validate.yml", ".github/workflows/update-baseline.yml",
+        })
+        self.assertEqual(len(sources), 2)
+        for selector in definition["sources"]:
+            for kind in ("missing", "duplicate", "conflicting"):
+                with self.subTest(source=selector["path"], kind=kind):
+                    root = self.scratch()
+                    source = root / selector["path"]
+                    text = source.read_text()
+                    match = re.search(selector["pattern"], text, re.MULTILINE)
+                    self.assertIsNotNone(match)
+                    replacement = "99.0.0" if pin["version"] != "99.0.0" else "98.0.0"
+                    if kind == "missing":
+                        text = text[:match.start()] + text[match.end():]
+                    elif kind == "duplicate":
+                        text += "\n" + match[0] + "\n"
+                    else:
+                        text = text[:match.start("version")] + replacement + text[match.end("version"):]
+                    source.write_text(text)
+                    expected = "contradictory_pins" if kind == "conflicting" else "missing_or_duplicate_pin"
+                    with self.assertRaisesRegex(fresh.DiscoveryError, expected):
+                        fresh.extract(root, definition)
+
     def test_compose_inventory_reconciles_helper_policy_and_runtime_assertion(self):
         import re
         definition = next(item for item in fresh.load_config(ROOT) if item["id"] == "compose")
