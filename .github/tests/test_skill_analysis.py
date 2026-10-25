@@ -45,6 +45,42 @@ def synthetic_source(name):
     return evidence.source(name, 'local', 'example/controls', 'a' * 40, '.apm/skills/' + name, content)
 
 
+def static_control(name='alpha', flags=(), states=None, stamp='20261010000000'):
+    """Public synthetic control with real static locator/count/status contracts."""
+    states = states or {'SECURITY': 'failed' if flags else 'passed'}
+    value = evidence.evidence(name, 'static', src=synthetic_source(name))
+    value['availability'] = {'status': 'incomplete' if any(s in ('incomplete', 'skipped') for s in states.values()) else 'complete',
+        'reasons': ['scan_incomplete'] if any(s in ('incomplete', 'skipped') for s in states.values()) else [], 'provenance': 'synthetic'}
+
+    def ref(locator):
+        item = {'artifact_id': 'synthetic-quality', 'artifact_digest': None,
+            'member': f'reports/{name}/skillevaluator-output-{stamp}.json', 'locator': locator,
+            'digest': evidence.identity([name, flags, states]), 'provenance': 'synthetic', 'availability': 'available'}
+        item['id'] = evidence.identity({k: item[k] for k in ('artifact_id', 'member', 'locator', 'digest')})
+        value['references'].append(item)
+        return item['id']
+
+    scans = []
+    for index, (scanner, state) in enumerate(states.items()):
+        counts = dict.fromkeys(analysis.SEVERITIES, 0)
+        for scanner_id, check, severity in flags:
+            if scanner_id != scanner:
+                continue
+            locator = ['results', index, 'findings', sum(f['scanner'] == scanner for f in value['findings'])]
+            value['findings'].append({'scanner': scanner, 'severity': severity, 'check': check,
+                                     'member': 'SKILL.md', 'line': 42, 'reference': ref(locator)})
+            if severity in counts: counts[severity] += 1
+        scans.append({'scanner': scanner, 'status': state, 'passed': state == 'passed', 'blocking': state != 'skipped',
+                      'severity_counts': counts, 'references': [ref(['results', index])]})
+    passed = all(s['passed'] or not s['blocking'] for s in scans)
+    state = 'incomplete' if any(s['status'] == 'incomplete' for s in scans) else 'passed' if passed else 'failed'
+    value['scans'] = [{'scanner': 'catalog-total', 'status': state, 'passed': passed, 'blocking': True,
+        'severity_counts': {level: sum(s['severity_counts'][level] for s in scans) for level in analysis.SEVERITIES},
+        'references': [ref([])]}, *scans]
+    evidence.validate_public(value)
+    return value
+
+
 def synthetic(name='alpha', run='run-a', maximum=1, scores=(0.8, 0.6), cases=('1',)):
     """Explicitly synthetic, fully recorded control for comparison and arithmetic tests."""
     fields = {**evidence.reports.POLICY, 'workspace_mode': 'isolated'}
@@ -147,6 +183,77 @@ class AnalysisTests(unittest.TestCase):
 
     def test_pinned_environment(self):
         self.assertEqual(importlib.metadata.version('skillevaluator'), '0.3.0')
+
+    def test_static_summary_preserves_native_outcome_and_coverage_semantics(self):
+        for state, flags in (('passed', ()), ('failed', (('SECURITY', 'RA1', 'high'),)),
+                             ('incomplete', (('SECURITY', 'RA1', 'high'),)), ('incomplete', ()), ('skipped', ())):
+            with self.subTest(state=state, flags=flags):
+                record = static_control(flags=flags, states={'SECURITY': state})
+                result, _ = self.analyze(self.bundle(state + str(len(flags)), [record]))
+                output = analysis.render_summary(result).decode()
+                self.assertIn(f'Scanner `SECURITY`: {state}', output)
+                self.assertIn('Scanner severity is not confirmed engineering significance', output)
+                self.assertIn('No supplied model-backed measurement', output)
+                if flags:
+                    self.assertIn('HIGH · `SECURITY` / `RA1`', output)
+                    self.assertIn(record['findings'][0]['reference'], output)
+                else:
+                    self.assertIn('No detailed critical/high flags supplied', output)
+                self.assertNotIn('confirmed safe', output)
+
+    def test_static_rollups_do_not_add_scanner_subset_or_combine_rules(self):
+        record = static_control(flags=(('SECURITY', 'RA1', 'high'), ('PII', 'RA1', 'high'),
+            ('PII', 'hardcoded_secrets', 'critical')), states={'SECURITY': 'incomplete', 'PII': 'failed'})
+        run = analysis.static_record(evidence.identity(record), record)
+        groups = analysis.static_groups([run])
+        self.assertEqual(len(groups), 3)
+        self.assertEqual(analysis.static_totals([run]), {'critical': 1, 'high': 2, 'medium': 0, 'low': 0})
+        self.assertEqual(analysis.static_totals([run], 'SECURITY')['high'], 1)
+        output = '\n'.join(analysis.render_static_summary([run]))
+        self.assertIn('All evaluator findings: 1 critical · 2 high', output)
+        self.assertIn('SECURITY subset (not additional findings): 0 critical · 1 high', output)
+
+    def test_group_limit_preserves_unique_rules_and_reports_omissions(self):
+        flags = [('SCHEMA', 'author_missing', 'high')] * 20
+        flags += [('SECURITY', f'R{i:02}', 'high') for i in range(10)]
+        flags += [('PII', 'hardcoded_secrets', 'critical')]
+        record = static_control(flags=flags, states={'SCHEMA': 'failed', 'SECURITY': 'failed', 'PII': 'failed'})
+        run = analysis.static_record(evidence.identity(record), record)
+        groups = analysis.static_groups([run])
+        self.assertEqual(len(groups), 12)
+        output = '\n'.join(analysis.render_static_summary([run]))
+        self.assertEqual(output.count('- **'), 8)
+        self.assertLess(output.index('CRITICAL ·'), output.index('HIGH ·'))
+        self.assertIn('20 findings', output)
+        self.assertIn('0 critical groups / 0 findings; 4 high groups / 4 findings', output)
+        self.assertIn('Author metadata is optional', output)
+        self.assertIn('does not establish a defect', output)
+        reversed_run = copy.deepcopy(run); reversed_run['detailed_findings'].reverse()
+        self.assertEqual(analysis.render_static_summary([run]), analysis.render_static_summary([reversed_run]))
+
+    def test_unidentified_rules_stay_distinct_and_missing_counts_stay_unknown(self):
+        record = static_control(flags=(('PII', None, 'high'), ('PII', None, 'high')), states={'PII': 'failed'})
+        run = analysis.static_record(evidence.identity(record), record)
+        self.assertEqual(len(analysis.static_groups([run])), 2)
+        output = '\n'.join(analysis.render_static_summary([run]))
+        self.assertIn('SECURITY subset (not additional findings): unknown critical', output)
+        self.assertIn('1 unavailable', output)
+        record['scans'][0]['severity_counts']['high'] += 1
+        record['scans'][1]['severity_counts']['high'] += 1
+        evidence.validate_public(record)
+        run = analysis.static_record(evidence.identity(record), record)
+        self.assertIn('Some native findings have no structured public detail', '\n'.join(analysis.render_static_summary([run])))
+
+    def test_repeated_static_snapshots_withhold_headline_totals(self):
+        left = static_control()
+        right = static_control(flags=(('SECURITY', 'RA1', 'high'),), stamp='20261011000000')
+        a = self.bundle('static-left', [left], flat=True)
+        b = self.bundle('static-right', [right], flat=True)
+        result, _ = self.analyze(a, b)
+        output = analysis.render_summary(result).decode()
+        self.assertIn('totals withheld; no single snapshot per skill is established', output)
+        self.assertIn('HIGH · `SECURITY` / `RA1`', output)
+        self.assertEqual(len(result['skills'][0]['static_results']), 2)
         self.assertEqual(sys.version_info[:2], (3, 13))
 
     def test_historical_native_metrics_regressions_and_denominators(self):

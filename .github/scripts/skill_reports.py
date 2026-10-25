@@ -176,16 +176,13 @@ def catalog_report(workspace, root):
     require(type(data["total"]) is int and data["total"] == len(names), "Incorrect catalog cardinality")
     exit_code = int((root / "catalog.exit").read_text())
     errors = []
-    lines = ["## Skill quality (findings are advisory)", "",
-             "| Skill | Native status | Critical / High / Medium / Low | Strict eval contract |",
-             "| --- | --- | --- | --- |"]
+    lines = ["## Native collection and dataset contracts", ""]
+    datasets = 0
     if exit_code not in (0, 1):
         errors.append(f"Catalog exited with infrastructure status {exit_code}")
     for item in entries:
         name = item["name"]
         status = "invalid report"
-        findings = "unknown"
-        strict = "no dataset"
         try:
             require(type(item.get("passed")) is bool, "Missing native pass/fail status")
             require(item.get("reason", "") == ("" if item["passed"] else "validation failed"),
@@ -212,18 +209,15 @@ def catalog_report(workspace, root):
             require(status == expected_status, "Inconsistent native status/pass/evidence")
             counts = [report["severity_counts"][severity] for severity in ("critical", "high", "medium", "low")]
             require(all(type(count) is int and count >= 0 for count in counts), "Invalid finding counts")
-            findings = " / ".join(str(count) for count in counts)
-            if report["incomplete_scans"]:
-                status += " (" + ", ".join(report["incomplete_scans"]) + ")"
             for suffix in (".md", ".html"):
                 sibling = root / "reports" / name / Path(filename).with_suffix(suffix)
                 require(sibling.is_file() and not sibling.is_symlink() and sibling.stat().st_size > 0,
                         "Missing human-readable report")
-        except (ValueError, KeyError, TypeError, IndexError, OSError) as error:
-            errors.append(f"{name}: {error}")
+        except (ValueError, KeyError, TypeError, IndexError, OSError):
+            errors.append(f"{name}: Native report missing or invalid; inspect native JSON, Markdown and HTML evidence.")
         dataset = workspace / ".apm/skills" / name / "evals/evals.json"
         if dataset.exists() or dataset.is_symlink():
-            strict = "failed"
+            datasets += 1
             try:
                 benchmark_skill(workspace, name)
                 require(int((root / "datasets" / f"{name}.exit").read_text()) == 0,
@@ -231,17 +225,19 @@ def catalog_report(workspace, root):
                 checks = read_json(root / "datasets" / f"{name}.json")
                 require(isinstance(checks, list) and checks and all(row["status"] == "ok" for row in checks),
                         "Invalid strict-validation report")
-                strict = "passed"
-            except (ValueError, KeyError, TypeError, OSError) as error:
-                errors.append(f"{name}: {error}")
-        lines.append(f"| {name} | {html.escape(str(status))} | {findings} | {strict} |")
+            except (ValueError, KeyError, TypeError, OSError):
+                errors.append(f"{name}: Strict eval dataset validation failed; inspect dataset reports and collection steps.")
     require(type(data["failed"]) is int and data["failed"] == sum(not item["passed"] for item in entries),
             "Incorrect failure count")
     if (exit_code == 0) != (data["failed"] == 0):
         errors.append("Catalog exit status disagrees with its reports")
-    lines += ["", "See the skill-quality artifact for full JSON, Markdown, HTML, and dataset reports."]
     if errors:
-        lines += ["", "Infrastructure / contract failures:"] + [f"- {html.escape(error)}" for error in errors]
+        lines += ["**Infrastructure / contract checks failed. Findings remain unresolved.**", ""] + [f"- {error}" for error in errors]
+    else:
+        lines += [f"Native catalog exit/report checks and {datasets} strict dataset " + ('contract' if datasets == 1 else 'contracts') +
+                  f" passed for {len(names)} local skills.",
+                  "Findings are advisory. This does not establish skill security or effectiveness; public reporting is validated separately."]
+    lines += ["", "The skill-quality artifact retains native JSON, Markdown, HTML and dataset evidence. A richer summary cannot override infrastructure failures."]
     summary(lines)
     require(not errors, "Skill evaluation infrastructure or dataset contract failed")
 
@@ -605,6 +601,7 @@ def stage_public(workspace, root, destination, records):
 
 def public_quality(workspace, root, destination):
     import skill_evidence as evidence
+    import skill_analysis as analysis
 
     inv = evidence.inventory(workspace)
     names = sorted(row["source"]["skill_id"] for row in inv["skills"]
@@ -621,16 +618,51 @@ def public_quality(workspace, root, destination):
         summary(["Public quality unavailable: catalog does not exactly cover discovered local skills."])
         raise ValueError("Public quality catalog membership mismatch")
 
+    runs = []
+    summary_bytes = 0
+
     def records():
+        nonlocal summary_bytes
         yield "inventory/inventory.json", inv
         for name in names:
             data = evidence.normalize_static(Path(root), name, workspace)
-            yield f"skills/{name}/static/public-report.json", evidence.project(data)
+            public = evidence.project(data)
+            run = analysis.static_record(evidence.identity(public), public)
+            summary_bytes += len(evidence.encoded(run))
+            require(summary_bytes <= analysis.JSON_LIMIT, 'Quality summary input limit')
+            runs.append(run)
+            yield f"skills/{name}/static/public-report.json", public
         for guard in evidence.record_guards(inv):
             guard()
         catalog_guard()
 
     count = stage_public(workspace, root, destination, records())
+    lines = ["## Skill quality · validated evidence (findings advisory)", "",
+             "Infrastructure status is reported separately; this summary does not override a failed job or contract check.",
+             f"{len(names)} local skills assessed. Static assessment excludes imported/deployed copies and evaluation overlays.",
+             "Behavioral evaluations were not executed by this job; configured suites are not measured results.", "",
+             *analysis.render_static_summary(runs), "",
+             "| Skill | Native status | Failed / incomplete / skipped checks | Critical / High / Medium / Low | Behavioral suite |",
+             "| --- | --- | --- | --- | --- |"]
+    configured = {row['source']['skill_id']: row['suite'] is not None for row in inv['skills']}
+    for run in runs:
+        total = next(s for s in run['scans'] if s['scanner'] == 'catalog-total')
+        flags = '; '.join(f"{s['scanner']} {s['status']}" for s in run['scans']
+                          if s['scanner'] != 'catalog-total' and s['status'] != 'passed') or 'None recorded'
+        counts = ' / '.join(str(total['severity_counts'][level]) for level in analysis.SEVERITIES)
+        name = run['source']['skill_id']
+        lines.append(f"| {name} | {total['status']} | {flags} | {counts} | " +
+                     ('Configured; not executed here' if configured[name] else 'Not configured') + ' |')
+    lines += ["", "Incomplete tool markers are coverage evidence, not additional findings. "
+              "Detailed findings and reference IDs are in skill-public-quality; full native reports are in skill-quality."]
+    repo = os.environ.get('GITHUB_REPOSITORY', '')
+    run_id = os.environ.get('GITHUB_RUN_ID', '')
+    if (re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]*/[A-Za-z0-9][A-Za-z0-9_.-]*', repo)
+            and re.fullmatch(r'[0-9]{1,20}', run_id)):
+        public_strings(repo)
+        lines += [f"[Run artifacts](https://github.com/{repo}/actions/runs/{run_id}#artifacts)"]
+    require(len('\n'.join(lines).encode('utf-8')) <= analysis.MARKDOWN_LIMIT, 'Quality summary size exceeded')
+    summary(lines)
     summary([f"Public quality ready: {count - 1} validated skill reports and inventory."])
 
 
@@ -697,7 +729,7 @@ def main():
                 public_quality(workspace, args.root, args.destination)
             else:
                 public_benchmark(workspace, args.root, args.skill, args.mode, args.destination, args.run)
-        except (ValueError, KeyError, TypeError, AttributeError, IndexError, OSError, OverflowError):
+        except (ValueError, KeyError, TypeError, AttributeError, IndexError, OSError, OverflowError, UnicodeError, RecursionError):
             # Native exceptions may contain credentials or arbitrary prose. Never echo them.
             summary(["Public evidence unavailable: input or publication contract rejected; no bundle is ready."])
             return 1
@@ -707,7 +739,12 @@ def main():
         benchmark_skill(workspace, args.skill)
         outputs(skill=args.skill, attempts=MODES[args.mode])
     elif args.command == "catalog":
-        catalog_report(workspace, args.root)
+        try:
+            catalog_report(workspace, args.root)
+        except (ValueError, KeyError, TypeError, AttributeError, IndexError, OSError, OverflowError, UnicodeError, RecursionError):
+            summary(["Native infrastructure contracts failed: catalog, exit, native report or dataset evidence is missing or invalid. "
+                     "Inspect collection steps and the skill-quality artifact. Findings are unresolved; a richer summary cannot override this failure."])
+            return 1
     elif args.command == "benchmark":
         benchmark_report(workspace, args.root, args.skill, args.mode, args.destination)
     elif args.command == "recover":

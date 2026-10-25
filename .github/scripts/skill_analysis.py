@@ -26,6 +26,109 @@ MARKDOWN_LIMIT = 1024 * 1024
 # precision retains the smallest float contribution even beside a score of 1,
 # through at most 100 planned attempts and subsequent differences of means.
 DECIMAL_PRECISION = 400
+SIGNIFICANT_GROUP_LIMIT = 8
+SEVERITIES = ('critical', 'high', 'medium', 'low')
+
+
+def static_record(record_id, record):
+    return {'record_id': record_id, 'run_id': record['run_id'], 'source': compact_source(record['source']),
+            'availability': copy.deepcopy(record['availability']), 'scans': copy.deepcopy(record['scans']),
+            'detailed_findings': copy.deepcopy(record['findings'])}
+
+
+def static_groups(runs):
+    """Display roll-ups only; every finding and its containing record stay distinct."""
+    groups = {}
+    for run in runs:
+        for item in run['detailed_findings']:
+            if item['severity'] not in ('critical', 'high'):
+                continue
+            key = (item['severity'], item['scanner'], item['check'],
+                   None if item['check'] is not None else (run['record_id'], item['reference']))
+            groups.setdefault(key, []).append((run, item))
+    return [(key, sorted(items, key=lambda pair: (pair[0]['source']['skill_id'], pair[0]['record_id'], pair[1]['reference'])))
+            for key, items in sorted(groups.items(), key=lambda pair:
+                (SEVERITIES.index(pair[0][0]), pair[0][1], pair[0][2] or '', pair[0][3] or ('', '')))]
+
+
+def static_totals(runs, scanner='catalog-total'):
+    """Sum authoritative counts once per skill; never combine repeated snapshots."""
+    names = [run['source']['skill_id'] for run in runs]
+    if not runs or len(names) != len(set(names)):
+        return None
+    scans = [next((s for s in run['scans'] if s['scanner'] == scanner), None) for run in runs]
+    return {level: sum(s['severity_counts'][level] for s in scans)
+            if all(s is not None and s['severity_counts'][level] is not None for s in scans) else None
+            for level in SEVERITIES}
+
+
+def static_guidance(scanner, check):
+    if (scanner, check) == ('SCHEMA', 'author_missing'):
+        return ('Author metadata is optional under the Agent Skills specification. This evaluator flag alone '
+                'does not establish a defect or justify a metadata change; inspect the evaluator requirement and repository policy.')
+    return {
+        'SECURITY': 'Inspect exact source context and applicability, including prohibitions and examples; the flag is not a confirmed vulnerability.',
+        'PII': 'Privately inspect the flagged source and classification; do not reproduce potentially sensitive content.',
+        'SCHEMA': 'Inspect the named evaluator requirement and repository policy before deciding whether a change is warranted.',
+        'QUALITY': 'Inspect the reported heuristic; it does not measure task success, token consumption or execution efficiency.',
+    }.get(scanner, 'Inspect the original evaluator finding and source context before deciding whether a change is warranted.')
+
+
+def static_overview(runs):
+    states = [next((s['status'] for s in run['scans'] if s['scanner'] == 'catalog-total'), 'unavailable') for run in runs]
+    lines = [f"{len(runs)} static records supplied: " + ' · '.join(
+        f'{states.count(state)} {state}' for state in ('passed', 'failed', 'incomplete', 'unavailable')) + ' native assessments.']
+    for scanner, label in (('catalog-total', 'All evaluator findings'), ('SECURITY', 'SECURITY subset (not additional findings)')):
+        totals = static_totals(runs, scanner)
+        lines.append(label + ': ' + ('totals withheld; no single snapshot per skill is established.' if totals is None else
+            ' · '.join(f"{totals[level] if totals[level] is not None else 'unknown'} {level}" for level in SEVERITIES) +
+            (f" ({sum(totals.values())} total)." if all(value is not None for value in totals.values()) else '.')))
+    totals = static_totals(runs)
+    detail = {level: sum(item['severity'] == level for run in runs for item in run['detailed_findings']) for level in SEVERITIES}
+    if totals is not None and any(totals[level] is None or totals[level] > detail[level] for level in SEVERITIES):
+        lines.append('Structured detail records: ' + ' · '.join(f'{detail[level]} {level}' for level in SEVERITIES) +
+                     ('. Native totals are unavailable; details do not establish total findings.' if any(value is None for value in totals.values()) else
+                      '. Some native findings have no structured public detail; inspect the original reports.'))
+    security = [next((s['status'] for s in run['scans'] if s['scanner'] == 'SECURITY'), 'unavailable') for run in runs]
+    lines.append('SECURITY coverage: ' + ' · '.join((
+        f"{security.count('incomplete')} incomplete", f"{security.count('skipped')} skipped",
+        f"{security.count('unavailable')} unavailable",
+        f"{sum(s in ('passed', 'failed') for s in security)} with no incompleteness reported")) +
+        '.')
+    return lines
+
+
+def render_static_summary(runs):
+    """Markdown over already validated static projections; no scanner prose or new findings."""
+    lines = ['### Static quality and coverage', '',
+             'Scanner severity is not confirmed engineering significance. Findings remain advisory in quality CI.', '',
+             *[part for line in static_overview(runs) for part in (line, '')],
+             '#### Significant evaluator flags · applicability unresolved', '']
+    if not runs or any(not any(s['scanner'] == 'SECURITY' and s['status'] in ('passed', 'failed') for s in run['scans']) for run in runs):
+        lines[2:2] = ['**Security-analysis coverage is incomplete or unavailable.**', '']
+    groups = static_groups(runs)
+    if not groups:
+        lines.append('No detailed critical/high flags supplied. Native counts and evidence gaps above remain authoritative.')
+    for key, items in groups[:SIGNIFICANT_GROUP_LIMIT]:
+        level, scanner, check, _ = key
+        names = sorted({run['source']['skill_id'] for run, _ in items})
+        skills = ', '.join(f'`{name}`' for name in names[:6]) + (f' (+{len(names) - 6} more)' if len(names) > 6 else '')
+        run, item = items[0]
+        lines.extend([f"- **{level.upper()} · `{scanner}` / `{check or 'rule-unavailable'}`** — {len(items)} " +
+            ('finding' if len(items) == 1 else 'findings') + f"; skills: {skills}.",
+            f"  Representative: record `{run['record_id']}`, reference `{item['reference']}`.",
+            '  ' + static_guidance(scanner, check)])
+    omitted = groups[SIGNIFICANT_GROUP_LIMIT:]
+    if omitted:
+        lines.extend(['', 'Additional groups omitted from this preview: ' + '; '.join(
+            f"{sum(key[0] == level for key, _ in omitted)} {level} groups / "
+            f"{sum(len(items) for key, items in omitted if key[0] == level)} findings" for level in ('critical', 'high')) + '.'])
+    lines.extend(['', 'Groups count retained finding records, not raw scanner occurrence spans. '
+                  'Every individual finding remains in the detailed evidence; no false-positive classification is inferred.'])
+    lines.extend(['', 'SECURITY denotes this pipeline\'s SkillSpector integration. Partial scans may retain valid findings; '
+                  'zero findings and no incompleteness reported do not prove exhaustive inspection or behavioral benefit. '
+                  'Detailed coverage reasons and separate scanner process outcomes are not retained by this native-report path.'])
+    return lines
 
 
 @dataclass(frozen=True)
@@ -412,9 +515,7 @@ def build_analysis(captured):
             continue
         names.add(name)
         if record['kind'] == 'static':
-            result = {'record_id': record_id, 'run_id': record['run_id'], 'source': compact_source(record['source']),
-                      'availability': copy.deepcopy(record['availability']), 'scans': copy.deepcopy(record['scans']),
-                      'detailed_findings': copy.deepcopy(record['findings'])}
+            result = static_record(record_id, record)
             static.setdefault(name, []).append(result)
             incomplete = [scan for scan in record['scans'] if scan['status'] in ('incomplete', 'skipped')]
             if incomplete:
@@ -546,6 +647,7 @@ def render_summary(result):
              'repeatability, causal inference, production readiness, or cross-suite rankings are established.', '',
              'Skill Lift is a native difference on the evaluator score scale. Effectiveness, Correctness,',
              'and Discoverability are native rubric dimensions. Derived case means never reconstruct native lift.', '']
+    lines.extend(render_static_summary([run for skill in result['skills'] for run in skill['static_results']]) + [''])
     for skill in result['skills']:
         lines.extend([f"## `{skill['skill']}`", ''])
         for config in skill['configurations']:

@@ -98,17 +98,31 @@ jobs:
             printf '%s\n' "$status" > "$report_root/datasets/$skill.exit"
           done
 
-      - name: Summarize findings and enforce infrastructure contracts
+      - name: Enforce native collection and dataset contracts
+        id: native-quality
         if: always()
         run: python3 .github/scripts/skill_reports.py catalog "$RUNNER_TEMP/skill-quality"
 
-      - name: Generate validated public quality evidence
+      - name: Generate validated public quality evidence and findings summary
         id: public-quality
         if: always() && env.SKILL_EVALUATOR_PYTHON != ''
         timeout-minutes: 3
         run: |
           "$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_reports.py public-quality \
             "$RUNNER_TEMP/skill-quality" "$RUNNER_TEMP/skill-public-quality"
+
+      - name: Report quality summary availability
+        if: always()
+        env:
+          PUBLIC_QUALITY_OUTCOME: ${{ steps.public-quality.outcome }}
+          NATIVE_QUALITY_OUTCOME: ${{ steps.native-quality.outcome }}
+        run: |
+          if [ "$PUBLIC_QUALITY_OUTCOME" != success ]; then
+            echo '**Validated findings summary unavailable: projection failed, was interrupted, or was skipped. This is not a zero-finding result. Inspect collection/projection steps and the skill-quality artifact.**' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ "$NATIVE_QUALITY_OUTCOME" != success ]; then
+            echo '**Native infrastructure validation did not succeed. Any retained findings summary cannot override this failure.**' >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Verify evaluator left the checkout unchanged
         id: public-quality-integrity

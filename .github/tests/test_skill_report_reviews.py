@@ -56,15 +56,15 @@ class AttachmentTests(unittest.TestCase):
                    review_fixtures.ReviewTests.control(self))
         args = self.gh_args if unmeasured else self.args
         opts = dict(zip(args[::2], args[1::2]))
-        tooling = evidence.ROOT
-        if profile != 'current-v2':
-            tooling = self.root / 'tooling'
-            scripts = tooling / '.github/scripts'; scripts.mkdir(parents=True)
-            with zipfile.ZipFile(FIXTURE) as archive:
-                for name, expected in zip(attachments.MODULES, attachments.PROFILES[profile][1]):
-                    raw = archive.read(expected + '.py')
-                    self.assertEqual(evidence.digest_bytes(raw), 'sha256:' + expected)
-                    (scripts / name).write_bytes(raw)
+        # Every profile names frozen reviewed bytes, including the one named current-v2.
+        # Presentation changes must not silently relabel the checkout as that validator.
+        tooling = self.root / 'tooling'
+        scripts = tooling / '.github/scripts'; scripts.mkdir(parents=True)
+        with zipfile.ZipFile(FIXTURE) as archive:
+            for name, expected in zip(attachments.MODULES, attachments.PROFILES[profile][1]):
+                raw = archive.read(expected + '.py')
+                self.assertEqual(evidence.digest_bytes(raw), 'sha256:' + expected)
+                (scripts / name).write_bytes(raw)
         body = judgment(context, category=category)
         if unmeasured:
             body['assessment'].update(tested_benefit='Not measured; configuration is not observed benefit.',
@@ -83,7 +83,7 @@ class AttachmentTests(unittest.TestCase):
             input=evidence.encoded(request), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
         self.assertEqual(result.returncode, 0, result.stderr.decode())
         saved = self.root / 'saved/skill-review.json'
-        spec = {'schema_version': 1, 'profile': profile, 'tooling': str(tooling) if profile != 'current-v2' else None,
+        spec = {'schema_version': 1, 'profile': profile, 'tooling': str(tooling),
                 'skill': request['skill'], 'record_id': request['record_id'], 'review': str(saved),
                 'review_digest': evidence.digest_bytes(saved.read_bytes()),
                 'markdown_digest': evidence.digest_bytes(saved.with_suffix('.md').read_bytes()),
@@ -135,6 +135,13 @@ class AttachmentTests(unittest.TestCase):
                 self.assertIn('No recommendations supplied', output)
                 self.assertIn('not_quality_qualified', output)
                 self.assertNotIn(str(self.root), output)
+
+    def test_changed_checkout_cannot_substitute_for_frozen_current_profile(self):
+        self.fixture('current-v2')
+        self.load()  # Exact retained original modules remain supported.
+        self.spec['tooling'] = None; write(self.path, self.spec)
+        with self.assertRaisesRegex(ValueError, 'Unreviewed validator module'):
+            self.load()
 
     def test_multiple_assessments_preserve_disagreement_and_unscored_result(self):
         self.fixture(category='investigate')
