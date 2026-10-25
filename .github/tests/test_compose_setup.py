@@ -96,6 +96,11 @@ sys.exit(22 if os.environ.get('COMPOSE_TEST_DOWNLOAD') == 'fail' else 0)
     def test_wrong_runtime_version_removes_installation(self):
         self.assert_failed_cleanly(self.invoke(COMPOSE_TEST_VERSION="unexpected"))
 
+    def test_failed_cli_plugin_discovery_removes_verified_installation(self):
+        self.executable("docker", "#!/bin/sh\nexit 1\n")
+        self.assert_failed_cleanly(self.invoke())
+        self.assertEqual(self.marker.read_text().splitlines(), ["invoked"])
+
     def test_interrupted_download_removes_partial_installation(self):
         process = subprocess.Popen(["bash", str(self.script)], env={**self.env, "COMPOSE_TEST_DOWNLOAD": "wait"},
                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, start_new_session=True)

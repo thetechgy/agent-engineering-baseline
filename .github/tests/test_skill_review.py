@@ -47,6 +47,14 @@ def encoded_string(text, layers):
     return text
 
 
+def citation_row(context, kind):
+    rows = context.value["source_context"]["members"] if kind == "source" else context.value["qualitative"]
+    if kind == "agent_statement":
+        # Policy hashes change ordering; positive controls require semantic arm selection.
+        rows = sorted(rows, key=lambda row: row.get("arm") != "with_skill")
+    return next(row for row in rows if kind == "source" or row["kind"] == kind)
+
+
 def citation(context, kind, *, claim="positive"):
     if kind == "public":
         return {
@@ -60,11 +68,7 @@ def citation(context, kind, *, claim="positive"):
             "quote": None,
             "claim": claim,
         }
-    row = next(
-        row
-        for row in (context.value["source_context"]["members"] if kind == "source" else context.value["qualitative"])
-        if kind == "source" or row["kind"] == kind
-    )
+    row = citation_row(context, kind)
     return {
         "evidence_id": row["id"],
         "evidence_type": kind,
@@ -82,9 +86,7 @@ def model_citation(context, kind, *, claim="positive"):
     if kind == "public":
         return {"evidence_id": context.value["selected_record_id"], "public_locator": ["metrics"],
                 "start_line": None, "end_line": None, "quote": None, "claim": claim}
-    row = next(row for row in (
-        context.value["source_context"]["members"] if kind == "source" else context.value["qualitative"]
-    ) if kind == "source" or row["kind"] == kind)
+    row = citation_row(context, kind)
     return {"evidence_id": row["id"], "public_locator": None, "start_line": row["start_line"],
             "end_line": row["end_line"], "quote": None, "claim": claim}
 
@@ -492,6 +494,15 @@ class ReviewTests(unittest.TestCase):
             review.main(["validate", *self.native_args, "--review", str(destination / "skill-review.json")])
         self.assertEqual(self.native_record["schema_version"], 1)
         self.assertEqual(evidence.read_json(Path(self.native_args[3]))["schema_version"], 1)
+
+    def test_statement_citation_controls_select_arm_independently_of_identity_order(self):
+        context = self.native_control(4)
+        context.value["qualitative"].sort(key=lambda row: row.get("arm") == "with_skill")
+        for factory in (citation, model_citation):
+            with self.subTest(factory=factory.__name__):
+                selected = factory(context, "agent_statement")
+                row = next(row for row in context.value["qualitative"] if row["id"] == selected["evidence_id"])
+                self.assertEqual(row["arm"], "with_skill")
 
     def test_statements_cannot_be_promoted_to_execution_in_citations_or_sufficiency(self):
         context = self.native_control(4)

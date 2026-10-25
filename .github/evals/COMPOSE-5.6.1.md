@@ -50,7 +50,9 @@ gh attestation verify docker-compose-linux-x86_64 \
   --repo docker/compose \
   --cert-identity https://github.com/docker/github-builder/.github/workflows/bake.yml@58cb9f5b71b1836d6f690c1e95effdeb9b98cb8a \
   --cert-oidc-issuer https://token.actions.githubusercontent.com \
-  --source-ref refs/tags/v5.6.1 --format json
+  --source-ref refs/tags/v5.6.1 \
+  --source-digest 6cbc19a3fd59e305fb814dca4d854a4fb67d2941 \
+  --deny-self-hosted-runners --format json
 ```
 
 The verified certificate records source commit `6cbc19a`, the tag ref,
@@ -122,3 +124,15 @@ same failing test passes under native ownership with unchanged assertions. The
 complete native offline suite and hosted qualification are pending; final results
 will be recorded after those checks complete. No paid evaluation, skill-score improvement, native
 Windows Docker qualification or universal Compose compatibility is claimed.
+
+The first hosted run (40215504064) stopped before Docker qualification: 643
+contracts reported 20 failures and one error in synthetic review controls. The
+policy change reordered hash-derived statement identities; test helpers selected
+a `without_skill` statement as a positive control. A controlled old/new-policy
+reproduction confirms the selection change. The narrow correction selects the
+semantic arm in test helpers, with a failing-before regression for both citation
+formats. All 125 affected review-module tests pass after the correction, including
+the original negative gates and diagnostic matrix. Production review code, guards
+and historical evidence remain unchanged.
+The unrelated single local broad-suite error is retained separately until its
+complete traceback is available; an isolated passing observation does not explain it.
