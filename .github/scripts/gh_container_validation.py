@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 """Credential-free checks of the staged native Docker CLI/broker/verifier boundary."""
 
+import asyncio
 import json
 from pathlib import Path
 import shlex
 import signal
 import subprocess
 import tempfile
+import tomllib
 import uuid
 
 import gh_evaluations as gh
-from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks
+from skillevaluator.tier3.harbor.adapter import _task_environment_context_hash, stage_native_harbor_tasks
 
 
 SELECTED = ("gh-001", "gh-003", "gh-007", "gh-010")
@@ -20,9 +22,130 @@ def run(*argv, check=True):
     return subprocess.run(argv, check=check, capture_output=True, text=True, timeout=600)
 
 
+async def compose_lifecycle(root, prefix):
+    """One real staged Harbor task, without an agent, credentials or inference."""
+    from harbor.environments.docker.docker import DockerEnvironment
+    from harbor.models.task.config import NetworkMode, NetworkPolicy, TaskConfig
+    from harbor.models.trial.paths import TrialPaths
+
+    skill = gh.stage(gh.ROOT, root / "bundle/gh", ["gh-003"])
+    task, = stage_native_harbor_tasks(
+        skill, root / "tasks", with_skill=True, grading_mode="default_plus_custom",
+        workspace_mode="group", workspace_skill_paths=[skill.parent / gh.COMPETING],
+    )
+    config = TaskConfig.model_validate(tomllib.loads((task / "task.toml").read_text()))
+    context_digest = _task_environment_context_hash(task / "environment")
+    paths = TrialPaths(root / "trial")
+    paths.mkdir()
+    mounts = [{"type": "bind", "source": str(paths.agent_dir), "target": "/logs/agent"}]
+    environment = DockerEnvironment(
+        environment_dir=task / "environment", environment_name=prefix, session_id=prefix,
+        trial_paths=paths, task_env_config=config.environment, mounts=mounts,
+        network_policy=NetworkPolicy(network_mode=NetworkMode.NO_NETWORK),
+    )
+    image_ids = []
+    image_name = None
+    override_paths = []
+    try:
+        await environment.start(force_build=True)
+        override_paths = [environment._mounts_compose_path, environment._resources_compose_path]
+        effective = json.loads((await environment._run_docker_compose_command(
+            ["config", "--format", "json"])).stdout)
+        main = effective["services"]["main"]
+        if main["network_mode"] != "none" or main.get("privileged", False):
+            raise ValueError("Harbor Compose isolation mismatch")
+        volumes = main.get("volumes", [])
+        if len(volumes) != 1 or any(volume.get(key) != value for volume in volumes
+                for key, value in (("type", "bind"), ("source", str(paths.agent_dir)), ("target", "/logs/agent"))):
+            raise ValueError("Unexpected Harbor Compose mount")
+        if main.get("environment"):
+            raise ValueError("Unexpected container environment inheritance")
+        limits = main["deploy"]["resources"]["limits"]
+        if float(limits["cpus"]) != config.environment.cpus or int(limits["memory"]) != config.environment.memory_mb * 1024**2:
+            raise ValueError("Harbor Compose resource limit mismatch")
+        normalized = {"network_mode": main["network_mode"], "limits": limits,
+                      "mounts": [{"type": "bind", "target": "/logs/agent"}],
+                      "command": main["command"], "environment": main.get("environment", {})}
+        print(json.dumps({"evidence": "Harbor Compose configuration", "configuration": normalized,
+                          "task_context_digest": context_digest}), flush=True)
+        container = (await environment._run_docker_compose_command(["ps", "--quiet", "main"])).stdout.strip()
+        inspected, = json.loads(run("docker", "inspect", container).stdout)
+        image_name = inspected["Config"]["Image"]
+        if inspected["Config"]["Labels"].get("com.docker.compose.project") != prefix:
+            raise ValueError("Unexpected Harbor container owner")
+        image_ids.append(inspected["Image"])
+        if inspected["State"]["Status"] != "running" or inspected["HostConfig"]["NetworkMode"] != "none":
+            raise ValueError("Harbor container not ready or isolated")
+        if inspected["HostConfig"]["Privileged"] or len(inspected["Mounts"]) != 1:
+            raise ValueError("Unexpected Harbor privileges or mounts")
+        if (inspected["HostConfig"]["Memory"] != config.environment.memory_mb * 1024**2
+                or inspected["HostConfig"]["NanoCpus"] != config.environment.cpus * 10**9):
+            raise ValueError("Harbor container resource limit mismatch")
+        if (await environment.exec("id -u", user="agent")).stdout.strip() != "1000":
+            raise ValueError("Harbor agent is privileged")
+        if (await environment.exec(gh.SETUP, user="root")).return_code:
+            raise ValueError("Harbor fixture setup failed")
+        for forbidden in ("cat /opt/gh-eval/state/case.json", "cat /opt/gh-eval/state/audit.jsonl"):
+            if (await environment.exec(forbidden, user="agent")).return_code == 0:
+                raise ValueError("Harbor exposed private fixture data")
+        marker = root / "transfer.txt"
+        marker.write_text("credential-free Compose transfer\n")
+        await environment.upload_file(marker, "/tmp/compose-transfer.txt")
+        downloaded = root / "roundtrip.txt"
+        await environment.download_file("/tmp/compose-transfer.txt", downloaded)
+        if downloaded.read_bytes() != marker.read_bytes():
+            raise ValueError("Harbor Compose copy mismatch")
+        if (await environment.exec("exit 7", user="agent")).return_code != 7:
+            raise ValueError("Harbor Compose lost command failure")
+        await environment._run_docker_compose_command(["up", "--detach", "--wait"])
+        repeated = (await environment._run_docker_compose_command(["ps", "--quiet", "main"])).stdout.strip()
+        if container != repeated:
+            raise ValueError("Unchanged Compose up recreated the Harbor container")
+        # End through an actual nonzero Compose command, then the same finally path.
+        try:
+            await environment._run_docker_compose_command(["exec", "-T", "main", "sh", "-c", "exit 9"])
+        except RuntimeError as error:
+            if "Return code: 9." not in str(error):
+                raise
+        else:
+            raise ValueError("Harbor Compose swallowed a checked command failure")
+        return {"evidence": "credential-free Harbor Compose lifecycle", "model_trials": 0,
+                "compose": run("docker", "compose", "version", "--short").stdout.strip(),
+                "engine": run("docker", "version", "--format", "{{.Server.Version}}").stdout.strip(),
+                "configuration": normalized, "repeated_up": "same-container",
+                "task_context_digest": context_digest}
+    finally:
+        # Harbor logs teardown errors; independently enforce observable cleanup.
+        for path in (environment._mounts_compose_path, environment._resources_compose_path):
+            if path is not None and path not in override_paths:
+                override_paths.append(path)
+        try:
+            await environment.stop(delete=True)
+        finally:
+            remaining = {}
+            for kind in ("container", "network", "volume", "image"):
+                result = run("docker", kind, "ls", *(["--all"] if kind in ("container", "image") else []),
+                             "--quiet", "--filter", "label=com.docker.compose.project=" + prefix)
+                remaining[kind] = result.stdout.split()
+            # Observe production teardown before any fallback: cleanup cannot hide a regression.
+            if any(remaining.values()):
+                for kind, resources in remaining.items():
+                    for resource in resources:
+                        run("docker", kind, "rm", *(["--force"] if kind == "container" else []),
+                            resource, check=False)
+                raise ValueError("Harbor Compose resource cleanup incomplete")
+            if any(path.exists() for path in override_paths if path is not None):
+                raise ValueError("Harbor Compose temporary override cleanup incomplete")
+            for image in image_ids:
+                if run("docker", "image", "inspect", image, check=False).returncode == 0:
+                    if image_name is not None:
+                        run("docker", "image", "rm", image_name, check=False)
+                    raise ValueError("Harbor Compose image cleanup incomplete")
+
+
 def validate():
-    if run("docker", "compose", "version", "--short").stdout.strip() != "5.0.2":
-        raise ValueError("Docker Compose 5.0.2 required")
+    if run("docker", "compose", "version", "--short").stdout.strip() != gh.reports.POLICY["docker_compose"]:
+        raise ValueError("Reviewed Docker Compose runtime required")
     prefix = "gh-eval-validation-" + uuid.uuid4().hex[:12]
     resources = []
     # Make interruption follow the same exact-resource cleanup path as test failures.
@@ -33,6 +156,9 @@ def validate():
     try:
         with tempfile.TemporaryDirectory(prefix=prefix) as temporary:
             root = Path(temporary)
+            lifecycle_root = root / "compose"
+            lifecycle_root.mkdir()
+            print(json.dumps(asyncio.run(compose_lifecycle(lifecycle_root, prefix + "-compose"))), flush=True)
             skill = gh.stage(gh.ROOT, root / "bundle/gh", list(SELECTED))
             entries = {e["id"]: e for e in gh.dataset(selected=SELECTED)}
             tested = 0

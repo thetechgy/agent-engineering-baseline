@@ -615,7 +615,13 @@ validator cannot. Validator status must agree with its pass, incomplete-scan,
 and advisory-skip observations.
 
 Policy IDs hash recorded fields, patch digest, metric set, judge and attempt
-policy. Recorded published policy IDs are preserved separately and never replaced
+policy. Current benchmark admission requires Compose 5.6.1; historical 5.0.2
+measurements retain their original runtime, policy and published identities.
+The [Compose security assessment](COMPOSE-5.6.1.md) records qualification evidence.
+A changed Compose version produces a distinct policy/history identity and blocks
+direct cross-run comparison. These rules do not retroactively qualify old runs.
+
+Recorded published policy IDs are preserved separately and never replaced
 by today's policy. Behavioral and static readers reject a supplied evaluator
 revision outside the supported pin. Supplied policy fields must agree with
 corresponding known runtime/configuration observations: evaluator, Harbor,

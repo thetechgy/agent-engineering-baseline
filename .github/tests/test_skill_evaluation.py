@@ -331,7 +331,7 @@ class ReportTests(unittest.TestCase):
         reports.write_json(run / "result.json", data)
         (run / "report.html").write_text("Native HTML fixture")
         reports.write_json(root / "versions.json", {"python": "3.13.15", "skillevaluator": "0.3.0",
-                                                     "harbor": "0.13.2", "docker_compose": "5.0.2"})
+                                                     "harbor": "0.13.2", "docker_compose": reports.POLICY["docker_compose"]})
         return root, run, data
 
     def test_confirmation_gets_summary_and_provenance_but_no_history_artifact(self):
@@ -373,17 +373,32 @@ class ReportTests(unittest.TestCase):
     def test_wrong_python_runtime_prevents_history(self):
         root, _, _ = self.benchmark("standard")
         reports.write_json(root / "versions.json", {"python": "3.14.0", "skillevaluator": "0.3.0",
-                                                     "harbor": "0.13.2", "docker_compose": "5.0.2"})
+                                                     "harbor": "0.13.2", "docker_compose": reports.POLICY["docker_compose"]})
         with self.assertRaises(ValueError):
             reports.benchmark_report(self.workspace, root, "podman", "standard", self.root / "metrics")
 
     def test_missing_or_wrong_docker_compose_runtime_prevents_history(self):
-        for version in (None, "2.38.2"):
+        for version in (None, "5.0.2", "2.38.2"):
             versions = {"python": "3.13.15", "skillevaluator": "0.3.0", "harbor": "0.13.2"}
             if version is not None:
                 versions["docker_compose"] = version
             with self.subTest(version=version), self.assertRaises(ValueError):
                 reports.validate_benchmark_versions(versions)
+
+    def test_compose_policy_change_separates_history_and_rejects_old_admission(self):
+        directories = []
+        with patch.dict(os.environ, {"GITHUB_EVENT_NAME": "workflow_dispatch",
+                                     "GITHUB_REF": "refs/heads/main", "BENCHMARK_MODE": "standard"}):
+            for version in ("5.0.2", reports.POLICY["docker_compose"]):
+                with patch.dict(reports.POLICY, {"docker_compose": version}):
+                    data = self.metrics()
+                    reports.write_json(self.root / "metrics.json", data)
+                    reports.publish_metrics(self.workspace, self.root, "podman")
+                    directories.append(self.output.read_text().splitlines()[-1])
+                if version == "5.0.2":
+                    with self.assertRaisesRegex(ValueError, "Benchmark policy mismatch"):
+                        reports.validate_metrics(data, self.workspace, "podman", SHA)
+        self.assertNotEqual(*directories)
 
     def test_native_usage_unknown_and_duplicate_trial_handling(self):
         for name in ("trial", "duplicate"):
@@ -1041,11 +1056,9 @@ class WorkflowTests(unittest.TestCase):
         selection = next(step for step in jobs["evaluate"]["steps"] if step.get("id") == "selection")
         self.assertIn('test "$(git rev-parse HEAD)" = "$GITHUB_SHA"', selection["run"])
         compose = next(step for step in jobs["evaluate"]["steps"]
-                       if step.get("uses", "").startswith("docker/setup-compose-action@"))
-        self.assertEqual(compose["uses"],
-                         "docker/setup-compose-action@54042514f505b273907334ae2b9cdbb9a0213c1a")
-        self.assertEqual(compose["with"]["version"], f"v{reports.POLICY['docker_compose']}")
-        self.assertIs(compose["with"]["cache-binary"], False)
+                       if step.get("run") == "bash .github/scripts/setup-compose.sh")
+        self.assertFalse(any(step.get("uses", "").startswith("docker/setup-compose-action@")
+                             for step in jobs["evaluate"]["steps"]))
         compose_index = jobs["evaluate"]["steps"].index(compose)
         evaluator_index = next(index for index, step in enumerate(jobs["evaluate"]["steps"])
                                if "setup-skillevaluator.sh" in step.get("run", ""))
@@ -1054,6 +1067,17 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(verification["name"], "Verify pinned Docker Compose")
         self.assertIn("docker compose version --short", verification["run"])
         self.assertIn(reports.POLICY["docker_compose"], verification["run"])
+        for file in ("validate.yml", "benchmark-skills.yml"):
+            candidate = yaml.safe_load((REPO / ".github/workflows" / file).read_text())
+            job = candidate["jobs"]["skill-quality" if file == "validate.yml" else "evaluate"]
+            installs = [step for step in job["steps"] if step.get("run") == "bash .github/scripts/setup-compose.sh"]
+            cleanups = [step for step in job["steps"] if step.get("run") == "bash .github/scripts/setup-compose.sh cleanup"]
+            self.assertEqual(len(installs), 1)
+            self.assertEqual(len(cleanups), 1)
+            self.assertEqual(cleanups[0]["if"], "always()")
+            self.assertLess(job["steps"].index(installs[0]), job["steps"].index(cleanups[0]))
+        setup = (REPO / ".github/scripts/setup-compose.sh").read_text()
+        self.assertEqual(re.search(r"^compose_version=(\S+)$", setup, re.M)[1], reports.POLICY["docker_compose"])
         self.assertEqual(jobs["publish-history"]["permissions"], {"contents": "write"})
         for name in ("publish-history", "deploy-pages"):
             self.assertIn("github.ref == 'refs/heads/main'", jobs[name]["if"])

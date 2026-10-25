@@ -1534,6 +1534,20 @@ class EvidenceTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             evidence.normalize_static(root, 'podman')
 
+    def test_current_compose_pin_preserves_reviewed_historical_policy(self):
+        root = self.native()
+        with patch.dict(evidence.reports.POLICY, {'docker_compose': '5.0.2'}):
+            before = evidence.project(evidence.normalize_behavioral(root, 'podman'))
+        self.assertEqual(evidence.reports.POLICY['docker_compose'], '5.6.1')
+        after = evidence.project(evidence.normalize_behavioral(root, 'podman'))
+        self.assertEqual(after, before)
+        self.assertEqual(after['policy']['fields']['docker_compose'], '5.0.2')
+        gh = evidence.read_json(FIXTURES / 'gh-no-model.json')
+        policy = copy.deepcopy(gh['policy'])
+        evidence.validate_policy(policy)
+        self.assertEqual(policy, gh['policy'])
+        self.assertEqual(policy['fields']['docker_compose'], '5.0.2')
+
     def test_compatible_python_precision_and_historical_policy(self):
         root = self.native()
         for python in ('3', '3.13', '3.13.15'):

@@ -60,16 +60,13 @@ jobs:
           test -z "$(git status --porcelain=v1 --untracked-files=all --ignored)"
           python3 .github/scripts/skill_reports.py select "$BENCHMARK_SKILL" "$BENCHMARK_MODE"
 
-      - name: Set up pinned Docker Compose
-        uses: docker/setup-compose-action@54042514f505b273907334ae2b9cdbb9a0213c1a # v2.4.0
+      - name: Install verified pinned Docker Compose
         timeout-minutes: 5
-        with:
-          version: v5.0.2
-          cache-binary: false
+        run: bash .github/scripts/setup-compose.sh
 
       - name: Verify pinned Docker Compose
         timeout-minutes: 1
-        run: test "$(docker compose version --short)" = '5.0.2'
+        run: test "$(docker compose version --short)" = '5.6.1'
 
       - name: Set up pinned uv
         uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
@@ -238,6 +235,10 @@ jobs:
             echo '::warning::Public benchmark evidence unavailable; inspect the reporting step. Native history eligibility is unchanged.'
             echo 'Public benchmark evidence unavailable (generation, integrity verification, or upload did not succeed).' >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      - name: Remove isolated Compose plugin
+        if: always()
+        run: bash .github/scripts/setup-compose.sh cleanup
 
   publish-history:
     needs: evaluate
