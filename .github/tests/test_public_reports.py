@@ -22,6 +22,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / '.github/scripts'))
 import skill_evidence as evidence
 import skill_reports as reports
+import skill_analysis as analysis
 
 FIXTURES = REPO / '.github/tests/fixtures/skill_evidence'
 
@@ -102,6 +103,98 @@ class PublicReportsTests(unittest.TestCase):
         self.assertEqual(value['availability']['status'], 'incomplete')
         self.assertEqual(value['availability']['reasons'], ['scan_incomplete', 'source_unavailable'])
         self.assertFalse(value['scans'][0]['passed']); self.assertEqual(value['scans'][0]['severity_counts']['high'], 1)
+
+    def test_quality_summary_uses_validated_projection_and_safe_artifact_link(self):
+        native = self.static(('zeta', 'podman'))
+        outputs = []
+        for index, repository in enumerate(('thetechgy/agent-engineering-baseline', '../..', 'owner/repo\n::error::injected')):
+            with redirect_stdout(StringIO()) as output, patch.dict(os.environ, {'GITHUB_REPOSITORY': repository, 'GITHUB_RUN_ID': '123'}):
+                reports.public_quality(self.workspace, native, self.root / f'public-{index}')
+            text = output.getvalue(); outputs.append(text)
+            self.assertIn('2 local skills assessed', text)
+            self.assertIn('All evaluator findings: 0 critical · 2 high', text)
+            self.assertIn('SECURITY subset (not additional findings): unknown critical', text)
+            self.assertIn('Behavioral evaluations were not executed by this job', text)
+            self.assertIn('SECRETS incomplete; gitleaks incomplete', text)
+            self.assertIn('Configured; not executed here', text)
+            self.assertIn('Not configured', text)
+            self.assertNotIn('Synthetic diagnostic excluded', text)
+            self.assertNotIn(str(native), text)
+            self.assertNotIn('::error::injected', text)
+            if index == 0:
+                self.assertIn('[Run artifacts](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/123#artifacts)', text)
+            else:
+                self.assertNotIn('[Run artifacts]', text)
+        # The full identity is a lookup into the validated public record, not an invented ID.
+        public = evidence.read_json(self.root / 'public-0/skills/podman/static/public-report.json')
+        self.assertIn(evidence.identity(public), outputs[0])
+        self.assertIn(public['findings'][0]['reference'], outputs[0])
+
+    def test_quality_cli_projection_failure_never_prints_clean_summary(self):
+        native = self.static(('podman',))
+        path = next((native / 'reports/podman').glob('*.json'))
+        original = evidence.read_json(path)
+        mutations = [lambda: path.unlink(),
+            lambda: path.write_text('{"results": [}'),
+            lambda: write(path, {**original, 'severity_counts': dict.fromkeys(('critical', 'high', 'medium', 'low'), 0)}),
+            lambda: write(path, {**original, 'incomplete_scans': ['unsafe\n::error::injected']}),
+            lambda: write(path, {**original, 'results': [{**original['results'][0], 'validator': 'x' * 100000}]}),
+            lambda: path.write_text('{"skills":[],"skills":[]}'),
+        ]
+        for index, mutate in enumerate(mutations):
+            write(path, original); mutate()
+            summary = self.root / f'failure-{index}.md'
+            result = subprocess.run([sys.executable, '-B', str(REPO / '.github/scripts/skill_reports.py'),
+                'public-quality', str(native), str(self.root / f'rejected-{index}')], capture_output=True, text=True,
+                env={**os.environ, 'GITHUB_WORKSPACE': str(self.workspace), 'GITHUB_STEP_SUMMARY': str(summary)}, timeout=20)
+            with self.subTest(index=index):
+                self.assertNotEqual(result.returncode, 0)
+                output = summary.read_text()
+                self.assertIn('Public evidence unavailable', output)
+                self.assertNotIn('All evaluator findings', output)
+                self.assertNotIn('Public quality ready', output)
+                self.assertNotIn('::error::injected', result.stdout + result.stderr + output)
+                self.assertLess(len(output), 1000)
+                self.assertFalse((self.root / f'rejected-{index}').exists())
+
+    def test_valid_projection_does_not_overwrite_native_infrastructure_failure(self):
+        native = self.static(('podman',))
+        (native / 'catalog.exit').write_text('1\n')
+        for path in (native / 'reports/podman').glob('*.json'):
+            for extension in ('.html', '.md'): path.with_suffix(extension).write_text('Native report')
+        write(native / 'datasets/podman.json', [{'status': 'ok'}])
+        (native / 'datasets/podman.exit').write_text('1\n')
+        summary = self.root / 'summary.md'
+        env = {**os.environ, 'GITHUB_WORKSPACE': str(self.workspace), 'GITHUB_STEP_SUMMARY': str(summary)}
+        command = [sys.executable, '-B', str(REPO / '.github/scripts/skill_reports.py')]
+        infrastructure = subprocess.run([*command, 'catalog', str(native)], env=env, capture_output=True, text=True, timeout=20)
+        projection = subprocess.run([*command, 'public-quality', str(native), str(self.root / 'public')],
+                                    env=env, capture_output=True, text=True, timeout=20)
+        self.assertEqual(infrastructure.returncode, 1)
+        self.assertEqual(projection.returncode, 0, projection.stderr)
+        output = summary.read_text()
+        self.assertIn('Strict eval dataset validation failed', output)
+        self.assertIn('Findings remain unresolved', output)
+        self.assertIn('this summary does not override a failed job or contract check', output)
+        self.assertIn('All evaluator findings: 0 critical · 1 high', output)
+
+    def test_summary_bound_rejects_without_printing_partial_or_ready_summary(self):
+        native = self.static(('podman',))
+        with patch.object(analysis, 'MARKDOWN_LIMIT', 64), redirect_stdout(StringIO()) as output:
+            with self.assertRaisesRegex(ValueError, 'Quality summary size exceeded'):
+                reports.public_quality(self.workspace, native, self.root / 'public')
+        self.assertNotIn('All evaluator findings', output.getvalue())
+        self.assertNotIn('Public quality ready', output.getvalue())
+        # A staged validated bundle alone is not workflow readiness; upload still requires successful generation.
+        self.bundle(self.root / 'public')
+
+    def test_summary_input_budget_rejects_and_cleans_partial_staging(self):
+        native = self.static(('podman', 'zeta'))
+        with patch.object(analysis, 'JSON_LIMIT', 64), redirect_stdout(StringIO()) as output:
+            with self.assertRaisesRegex(ValueError, 'Quality summary input limit'):
+                reports.public_quality(self.workspace, native, self.root / 'public')
+        self.assertEqual(output.getvalue(), '')
+        self.assertFalse((self.root / 'public').exists())
 
     def test_pinned_native_quality_cli_provenance_titles_and_public_handoff(self):
         quality = os.environ.get('SKILL_EVALUATION_KIND') != 'benchmark'
@@ -446,10 +539,37 @@ class PublicWorkflowTests(unittest.TestCase):
         return [yaml.safe_load((REPO / '.github/workflows' / name).read_text())
                 for name in ('validate.yml', 'benchmark-skills.yml')]
 
+    def test_quality_availability_step_covers_failed_skipped_and_interrupted_projection(self):
+        workflow, _ = self.workflows()
+        steps = workflow['jobs']['skill-quality']['steps']
+        native = next(step for step in steps if step.get('id') == 'native-quality')
+        generation = next(step for step in steps if step.get('id') == 'public-quality')
+        availability = next(step for step in steps if step['name'] == 'Report quality summary availability')
+        self.assertEqual(native['if'], 'always()')
+        self.assertEqual(availability['if'], 'always()')
+        self.assertFalse(native.get('continue-on-error', False))
+        self.assertFalse(generation.get('continue-on-error', False))
+        self.assertGreater(steps.index(availability), steps.index(generation))
+        self.assertEqual(availability['env'], {'PUBLIC_QUALITY_OUTCOME': '${{ steps.public-quality.outcome }}',
+                                              'NATIVE_QUALITY_OUTCOME': '${{ steps.native-quality.outcome }}'})
+        with tempfile.TemporaryDirectory() as root:
+            for projection in ('success', 'failure', 'skipped', 'cancelled', ''):
+                for infrastructure in ('success', 'failure', 'skipped', 'cancelled', ''):
+                    summary = Path(root) / 'summary'; summary.write_text('Prior infrastructure diagnostic\n')
+                    env = {**os.environ, 'GITHUB_STEP_SUMMARY': str(summary),
+                           'PUBLIC_QUALITY_OUTCOME': projection, 'NATIVE_QUALITY_OUTCOME': infrastructure}
+                    result = subprocess.run(['bash', '-e', '-c', availability['run']], env=env, capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    output = summary.read_text()
+                    self.assertIn('Prior infrastructure diagnostic', output)
+                    self.assertEqual('Validated findings summary unavailable' in output, projection != 'success')
+                    self.assertEqual('Native infrastructure validation did not succeed' in output, infrastructure != 'success')
+                    if projection != 'success': self.assertIn('not a zero-finding result', output)
+
     def test_order_permissions_upload_allowlist_and_outcome_gates(self):
         quality, benchmark = self.workflows()
         for workflow, job, command, previous, retention in (
-            (quality, 'skill-quality', 'public-quality', 'Summarize findings and enforce infrastructure contracts', 14),
+            (quality, 'skill-quality', 'public-quality', 'Enforce native collection and dataset contracts', 14),
             (benchmark, 'evaluate', 'public-benchmark', 'Upload sanitized standard metrics', 30)):
             steps = workflow['jobs'][job]['steps']
             self.assertEqual(workflow['jobs'][job]['permissions'], {'contents': 'read'})

@@ -101,6 +101,80 @@ class ReportTests(unittest.TestCase):
         self.assertEqual(report.render_report(first, captured), report.render_report(second, other))
         self.assertEqual(report.render_report(first, captured), report.render_report(copy.deepcopy(first), captured))
 
+    def test_static_overview_preserves_scanner_flags_and_exact_navigation(self):
+        controls = [fixtures.static_control('ansible', (('PII', 'hardcoded_secrets', 'critical'),), {'PII': 'failed', 'SECURITY': 'incomplete'}),
+            fixtures.static_control('agent-safety', (('SECURITY', 'RA1', 'high'), ('SCHEMA', 'author_missing', 'high')),
+                                    {'SECURITY': 'failed', 'SCHEMA': 'failed'})]
+        output, result, captured = self.render(controls)
+        overview = output.split('<section class="overview"', 1)[1].split('</section>', 1)[0]
+        plain = ' '.join(Document(overview).content)
+        for expected in ('All evaluator findings: 1 critical · 2 high',
+                         'SECURITY subset (not additional findings): 0 critical · 1 high',
+                         'Security-analysis coverage is incomplete or unavailable', '1 with no incompleteness reported',
+                         'hardcoded_secrets', 'RA1', 'author_missing', 'Author metadata is optional',
+                         'does not establish a defect', 'Native required check not passed'):
+            self.assertIn(expected, plain)
+        self.assertLess(plain.index('CRITICAL'), plain.index('HIGH'))
+        self.assertIn('Required by native evaluator', output)
+        self.assertNotIn('Failed blocking static check', output)
+        doc = Document(output)
+        self.assertEqual(len(doc.ids), len(set(doc.ids)))
+        self.assertTrue(all(href.startswith('#') and href[1:] in doc.ids for href in doc.links))
+        for record in controls:
+            rid = evidence.identity(record)
+            for finding in record['findings']:
+                self.assertIn(report.anchor('static-finding', rid, finding['reference']), doc.ids)
+                self.assertIn(finding['reference'], output)
+        identities = evidence.identity(result), evidence.identity(captured.records)
+        self.assertEqual(report.render_report(result, captured).decode(), output)
+        self.assertEqual(identities, (evidence.identity(result), evidence.identity(captured.records)))
+
+    def test_static_skipped_unavailable_zero_and_partial_never_imply_clean_evidence(self):
+        for state in ('passed', 'failed', 'incomplete', 'skipped'):
+            record = fixtures.static_control(name=state, states={'SECURITY': state})
+            result, captured = self.analyze(self.bundle(state, [record], [fixtures.configuration(state), fixtures.configuration('unmeasured')]))
+            output = report.render_report(result, captured).decode()
+            plain = ' '.join(Document(output).content)
+            self.assertIn('No detailed critical/high flags supplied', plain)
+            self.assertIn('Static evidence not supplied for:', plain)
+            self.assertIn('Not supplied; no clean-scan claim', plain)
+            self.assertIn('does not establish a confirmed vulnerability', plain)
+            self.assertIn('No supplied model-backed measurement', plain)
+            if state in ('incomplete', 'skipped'):
+                self.assertIn('Security-analysis coverage is incomplete or unavailable', plain)
+
+    def test_static_preview_limit_and_missing_detail_remain_explicit(self):
+        flags = [('PII', 'critical_rule', 'critical')] + [('SECURITY', f'R{i}', 'high') for i in range(10)]
+        record = fixtures.static_control(flags=flags, states={'PII': 'failed', 'SECURITY': 'incomplete'})
+        record['scans'][0]['severity_counts']['high'] += 2
+        record['scans'][2]['severity_counts']['high'] += 2
+        evidence.validate_public(record)
+        output, _, _ = self.render([record])
+        plain = ' '.join(Document(output).content)
+        self.assertIn('0 critical groups / 0 findings; 3 high groups / 3 findings', plain)
+        self.assertIn('Some native findings have no structured public detail', plain)
+        self.assertIn('R9', plain)  # Beyond the preview; retained in the existing detailed table.
+        self.assertIn('not raw scanner occurrence spans', plain)
+
+    def test_entirely_unavailable_static_record_preserves_unknown_totals(self):
+        record = evidence.evidence('unavailable', 'static', src=fixtures.synthetic_source('unavailable'))
+        evidence.validate_public(record)
+        output, _, _ = self.render([record])
+        plain = ' '.join(Document(output).content)
+        self.assertIn('1 unavailable native assessments', plain)
+        self.assertIn('All evaluator findings: unknown critical', plain)
+        self.assertIn('Native totals are unavailable; details do not establish total findings', plain)
+        self.assertNotIn('Some native findings have no structured public detail', plain)
+
+    def test_static_multiple_snapshots_are_separate_without_current_total(self):
+        a = self.bundle('snapshot-a', [fixtures.static_control()], flat=True)
+        b = self.bundle('snapshot-b', [fixtures.static_control(stamp='20261011000000')], flat=True)
+        result, captured = self.analyze(a, b)
+        output = report.render_report(result, captured).decode()
+        self.assertIn('totals withheld; no single snapshot per skill is established', output)
+        for run in result['skills'][0]['static_results']:
+            self.assertIn(report.anchor('record', run['record_id']), Document(output).ids)
+
     def test_overview_separates_coverage_safety_and_investigations(self):
         output, _, _ = self.demo()
         overview = output.split('<section class="overview"', 1)[1].split('</section>', 1)[0]

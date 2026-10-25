@@ -165,6 +165,59 @@ retains raw diagnostics privately. Routine collection and public schemas remain
 unchanged. A 100% file-coverage counter can coexist with partial analysis when
 reference or analyzer limitations remain; use the native completeness state too.
 
+### Quality summary and interpretation
+
+The quality job reports native collection/dataset contracts separately from
+findings. The `catalog` command retains blocking exit/report/dataset checks and
+bounded, fixed failure categories with affected skill names. Native findings
+remain advisory. The richer summary is emitted by `public-quality` only after
+all discovered local skills pass the existing public projection and staging
+contracts; it consumes those same projections without another scan or model call.
+A successful projection cannot override an earlier infrastructure failure.
+An always-run availability step explicitly reports failed, cancelled or skipped
+projection, including an unavailable evaluator environment. Unavailable reporting
+is never a zero-finding result. Native artifacts remain available under the
+existing upload behavior; missing artifacts must be investigated in the collection
+and upload steps rather than assumed present.
+
+The summary shows native passed/failed/incomplete assessments, aggregate C/H/M/L
+counts, the separate `SECURITY` subset, incomplete/skipped/unavailable security
+evidence, per-skill nonpassing validator/tool identifiers and suite configuration.
+`SECURITY` denotes the pinned pipeline's SkillSpector integration, not every
+validator. Tool incompleteness markers, validator totals, aggregate totals and
+structured detail records are separate views of evidence, never added together.
+Behavioral suites are not executed by the quality job. Its inventory covers local
+skills and configured upstream evaluation overlays; it does not enumerate every
+installed upstream skill. Deployed copies are not additional assessed skills.
+
+Critical/high previews group by severity, validator and check identity, ordered
+CRITICAL then HIGH, then validator/rule. Eight groups are displayed; omitted group
+and finding counts are explicit by severity. Frequency does not determine order.
+Affected skill previews show six names and an explicit remaining count. Missing
+rule identities stay separate by record/reference. These are rule roll-ups, not
+finding deduplication: every individual finding stays in existing evidence.
+Counts mean retained finding records, not raw scanner occurrence spans. References
+are the existing full record/reference identities; look them up in the selected
+public report's `references` array for the exact native member, JSON locator and
+digest. The run-artifact link uses validated repository/run identifiers; native
+members remain inert text, not invented artifact deep links.
+
+Scanner severity and actual engineering significance remain distinct. For example,
+`SCHEMA / author_missing` retains its native HIGH severity while explaining that
+author metadata is optional in the [Agent Skills specification](https://agentskills.io/specification#metadata-field).
+That flag alone establishes neither a specification defect nor a reason to edit
+the skill. Fixed investigation guidance identifies the evidence to inspect; it
+does not confirm vulnerabilities, classify false positives, override severities
+or automatically recommend skill changes. Static quality/efficiency heuristics
+are not measurements of token use, execution efficiency or behavioral benefit.
+
+The shared presentation helpers operate on existing validated static projections.
+Analysis JSON, public schemas, findings and reference identities are unchanged.
+Compact CI summary rows share the existing 64 MiB analysis bound. Markdown
+retains its 1 MiB output bound; failures do not print partial findings
+summaries. No raw scanner prose, matched sensitive text, diagnostic exceptions,
+prompts or trajectories are added to Actions summaries.
+
 Representative offline commands, run from the checkout with the existing
 evaluator environment, are:
 
@@ -1210,6 +1263,24 @@ Static scanner states, blocking flags, severity counts and structured findings
 are separate from behavioral performance. Counts can exceed the number of public
 finding details; omitted scanner prose is not reconstructed.
 
+The overview now exposes static-quality totals, native outcomes, security coverage
+limitations and grouped critical/high flags with direct links to individual
+structured findings and exact original references. The coverage directory links
+each static record with its native outcome and severity counts. Multiple static
+records for the same skill remain separate: headline finding totals are withheld
+rather than selecting a current snapshot or counting repeated findings as new.
+Missing static results are explicit. Detailed tables retain every finding, ordered
+by severity for presentation. A native required check is evaluator policy, not
+the advisory CI finding policy or a scanner process outcome. Complete failing
+assessments and partial assessments with retained findings remain distinguishable.
+The offline Markdown summary uses the same rule groups and limitations.
+
+"No incompleteness reported" describes the retained native state; it does not
+establish exhaustive inspection. Detailed SkillSpector reasons, analyzer states,
+raw occurrence spans and separate process outcomes cannot be reconstructed from
+this public contract. Investigation guidance asks readers to characterize the
+limitation before regeneration; a rerun alone may not resolve a tooling limitation.
+
 Investigation priorities retain the analyzer's deterministic findings,
 importance and next-step codes. Mandatory outcomes precede investigations;
 routine context findings remain under “Evidence gaps and comparison limits”.
@@ -1439,6 +1510,17 @@ For `current-v2`, null tooling selects the current checkout's four modules; thei
 bytes must still match its reviewed profile. Future module changes require an
 explicitly reviewed compatibility update, not a digest override.
 
+The visibility presentation changes modify `skill_analysis.py` and
+`skill_reports.py`; they do not refresh any reviewed execution profile. For saved
+`current-v2` reports, explicitly select the exact retained `afdb659` tooling
+snapshot instead of null tooling. The existing fixture archive retains that
+profile's original modules, including its original `skill_reports.py`; tests
+verify those exact hashes rather than treating current checkout bytes as historical
+tooling. Reports generated by newer tooling need a separately reviewed compatibility
+profile before attachment. Base HTML generation and offline review preparation
+remain available without that update. Do not regenerate or relabel a saved report
+to bypass the original-module check.
+
 For a saved report produced by the previous `current-v2` module set at
 `3f47c9de4df362ae9977748ad6353227f403a9b8`, select `baseline-3f47c9d` in the
 attachment descriptor and set `tooling` to the retained snapshot containing
@@ -1564,6 +1646,27 @@ explicit authenticated approval and usefulness evidence separately; it must not
 promote these reports automatically. This MVP initiates neither inference nor edits.
 
 ## Private skill improvement review
+
+For static triage, start with the rule group and select its exact static record
+from `analysis.json`. Follow its existing finding reference into the original
+native evidence and use the offline `prepare` operation below with the same public
+bundles and analysis. The existing reviewer already receives static records and
+findings; no second reviewer, prompt change or inference workflow is added.
+An independent Codex session can use `summary.md` and the same record/reference
+identities. Source context and appropriate behavioral support are still required
+before recommending a skill edit. A proposed improvement should specify current,
+candidate and no-skill comparisons, previously passing cases, mandatory safety
+gates, negative controls and fresh realistic cases. These are future validation
+requirements, not evidence that an evaluation ran.
+
+Detailed coverage retention warrants a separate upstream SkillEvaluator proposal:
+retain bounded validated completeness enums, counters and reason/location metadata
+with provenance, then separately review any safe public projection. Do not replace
+this with recurring raw-scanner wrapping. Dependency freshness is also deferred:
+Dependabot currently covers workflow actions and the scheduled APM update workflow
+already supplies a controlled refresh path. A subsequent focused PR can assess
+uncovered Git/tool/bootstrap pins and release-note review without adding another
+dependency manager here.
 
 Issue #60 adds `.github/scripts/skill_review.py`. This is a Linux-first, private
 judgment tool over supplied evidence, with no retrieval, shell tools, grading,

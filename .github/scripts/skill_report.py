@@ -89,7 +89,7 @@ document.addEventListener('click', event => {
 """.strip()
 
 NEXT_STEPS = {
-    'complete_scans_and_reproject': 'Complete missing scans, then regenerate public evidence.',
+    'complete_scans_and_reproject': 'Inspect available evidence and identify the scan limitation. Regenerate evidence after resolving or better characterizing it; rerunning alone may not resolve a tooling limitation.',
     'inspect_original_scanner_evidence': 'Inspect the original scanner finding and its applicability.',
     'inspect_original_case_evidence': 'Inspect both arms of the case, including attempts and grader evidence.',
     'inspect_gate_evidence': 'Inspect the mandatory gate evidence before treating the result as acceptable.',
@@ -103,7 +103,7 @@ NEXT_STEPS = {
 }
 FINDING_LABELS = {
     'case_regression': 'Lower with-skill case score', 'failed_gate': 'Failed mandatory gate',
-    'failed_static_checks': 'Failed blocking static check', 'incomplete_scans': 'Incomplete static scans',
+    'failed_static_checks': 'Native required check not passed', 'incomplete_scans': 'Incomplete static scans',
     'incomplete_execution': 'Incomplete execution evidence', 'unavailable_support': 'Original support unavailable',
     'comparison_limit': 'Comparison invocation limit', 'comparison_limitation': 'Comparison unavailable or limited',
     'configured_unmeasured': 'Configured suite without measurement',
@@ -307,6 +307,66 @@ def assessment_summary(supplied):
     return text(supplied['attribution']) + ': <strong>' + presentation_label(supplied['verdict'], STATUS_LABELS) + '</strong>. ' + score + '.'
 
 
+def static_quality(skills):
+    runs = [run for skill in skills for run in skill['static_results']]
+    parts = ['<h3 id="static-quality">Static quality and coverage · native evaluator judgments</h3>',
+             '<p>Scanner severity does not establish a confirmed vulnerability, instruction defect or need to change a skill. '
+             'Findings remain advisory in quality CI.</p>']
+    if not runs or any(not any(s['scanner'] == 'SECURITY' and s['status'] in ('passed', 'failed') for s in run['scans']) for run in runs):
+        parts.append('<p class="notice"><strong>Security-analysis coverage is incomplete or unavailable.</strong> '
+                     'Retained findings still require investigation.</p>')
+    parts.extend('<p>' + safe(line) + '</p>' for line in analysis.static_overview(runs))
+    if any(not skill['static_results'] for skill in skills):
+        parts.append('<p>Static evidence not supplied for: ' + ', '.join(
+            link('skill', (skill['skill'],), skill['skill']) for skill in skills if not skill['static_results']) +
+            '. Imported skills without an evaluation overlay may be outside the supplied inventory.</p>')
+    parts.append('<h4>Significant static flags · applicability unresolved</h4>')
+    groups = analysis.static_groups(runs)
+    if not groups:
+        parts.append('<p>No detailed critical/high flags supplied. Native counts and evidence gaps remain authoritative.</p>')
+    else:
+        parts.append('<ul class="priorities">')
+        for key, items in groups[:analysis.SIGNIFICANT_GROUP_LIMIT]:
+            level, scanner, check, _ = key
+            names = sorted({run['source']['skill_id'] for run, _ in items})
+            run, item = items[0]
+            location = (item['member'] + (':' + str(item['line']) if item['line'] is not None else '')) if item['member'] else 'Source location unavailable'
+            parts.append('<li><strong>' + safe(level.upper()) + ' · ' + code(scanner) + ' / ' + code(check) +
+                '</strong> · ' + count(len(items), 'finding') + '<p>Affected skills: ' + ', '.join(
+                    link('skill', (name,), name) for name in names) + '</p><p>' +
+                safe(analysis.static_guidance(scanner, check)) + '</p><p>Representative: ' +
+                link('static-finding', (run['record_id'], item['reference']),
+                     run['source']['skill_id'] + ' · ' + location + ' · structured finding') + ' · ' +
+                link('reference', (run['record_id'], item['reference']), 'exact report reference') + '</p></li>')
+        parts.append('</ul>')
+    omitted = groups[analysis.SIGNIFICANT_GROUP_LIMIT:]
+    if omitted:
+        parts.append('<p>Additional groups omitted from this preview: ' + '; '.join(
+            str(sum(key[0] == level for key, _ in omitted)) + ' ' + level + ' groups / ' +
+            str(sum(len(items) for key, items in omitted if key[0] == level)) + ' findings'
+            for level in ('critical', 'high')) + '. Use the per-skill static evidence below for every finding.</p>')
+    parts.append('<p>Groups count retained finding records, not raw scanner occurrence spans. Every individual finding remains '
+                 'in the per-skill evidence. No false-positive classification or historical novelty is inferred.</p>')
+    parts.append('<details><summary>Static evidence interpretation and limits</summary><p>SECURITY denotes this pipeline\'s '
+        'SkillSpector integration; other validators retain separate attribution. Native required checks describe evaluator policy, '
+        'not the CI finding policy or a scanner process outcome. Partial scans may retain valid findings. Zero findings and no '
+        'incompleteness reported do not prove exhaustive inspection or behavioral benefit. Detailed SkillSpector coverage reasons '
+        'and separate process outcomes are not retained by this native-report path.</p></details>')
+    return ''.join(parts)
+
+
+def static_directory(skill):
+    if not skill['static_results']:
+        return 'Not supplied; no clean-scan claim'
+    rows = []
+    for run in skill['static_results']:
+        native = next((s for s in run['scans'] if s['scanner'] == 'catalog-total'), None)
+        rows.append(link('record', (run['record_id'],), skill['skill'] + ' · static record ' + run['record_id']) +
+            ' · native ' + text(native['status'] if native else None) + ' · C/H/M/L ' +
+            (' / '.join(text(native['severity_counts'][k]) for k in analysis.SEVERITIES) if native else 'Unknown'))
+    return '<br>'.join(rows)
+
+
 def executive_summary(result, records, attached):
     skills = result['skills']; findings = result['findings']
     measured = [s for s in skills if any(r['measured'] for r in s['behavioral_results'])]
@@ -344,9 +404,11 @@ def executive_summary(result, records, attached):
         'Unknown or unmeasured gates are not passing outcomes. ' +
         ('Inspect recorded failures before accepting the result.' if failed else 'Zero recorded failures does not establish safety.') + '</p></div>')
     parts.append('<nav aria-label="Report sections"><ul><li><a href="#important-findings">Important findings</a></li>'
+        '<li><a href="#static-quality">Static quality and coverage</a></li>'
         '<li><a href="#analyst-actions">Analyst conclusions and actions</a></li>'
-        '<li><a href="#coverage">Coverage directory</a></li><li><a href="#provenance">Provenance and limitations</a></li></ul></nav>'
-        '<h3 id="important-findings">Important findings · deterministic evidence</h3>'
+        '<li><a href="#coverage">Coverage directory</a></li><li><a href="#provenance">Provenance and limitations</a></li></ul></nav>')
+    parts.append(static_quality(skills))
+    parts.append('<h3 id="important-findings">Important findings · deterministic evidence</h3>'
         '<p>Grader judgments describe recorded outputs; they do not verify execution. A grader failure is not automatically '
         'an instruction defect. '
         'Investigate these signals before proposing changes.</p>')
@@ -390,11 +452,11 @@ def executive_summary(result, records, attached):
         parts.append('<p>No analyst reports or independent assessments supplied. Use the deterministic next steps.</p>')
     parts.append('<h3 id="coverage">Coverage directory</h3>')
     parts.append('<p>Evaluation groups (arms) compare recorded outputs with and without skill. Coverage is not a quality rating.</p>')
-    parts.append(table('Coverage in supplied evidence', ('Skill', 'Behavioral evidence', 'Configured coverage', 'Static records'),
+    parts.append(table('Coverage in supplied evidence', ('Skill', 'Behavioral evidence', 'Configured coverage', 'Static evidence'),
         [[link('skill', (s['skill'],), s['skill']), safe(coverage_label(s)),
           '; '.join(count(c['suite']['case_count'], 'configured case') + ' per arm' for c in s['configurations'] if c['suite']) or
           ('No behavioral suite configured' if s['configurations'] else 'Configuration not supplied'),
-          text(len(s['static_results']))] for s in skills]))
+          static_directory(s)] for s in skills]))
     if not skills:
         parts.append('<p>The supplied inventory is empty. No skills or measurements are inferred.</p>')
     return ''.join(parts)
@@ -478,15 +540,23 @@ def static_result(run, records):
     parts = [f'<article class="run" id="{anchor("record", rid)}"><h3>Static checks</h3><p>Evidence ' +
         text(run['availability']['status']) + '. Static checks are not behavioral performance.</p>' + disclosure('Exact record identity', rid),
         '<p>Limitations: ' + limitations(run['availability']) + '</p>']
+    parts.append('<p>Required by native evaluator is its risk policy, not the CI finding policy or a scanner process outcome. '
+                 'Incomplete tool markers have unknown counts and are not additional findings.</p>')
     parts.append(table('Scanner outcomes — counts can include findings without public detail',
-        ('Scanner', 'State', 'Blocking', 'Passed', 'Critical / high / medium / low'),
+        ('Validator / tool marker', 'Native state', 'Required by native evaluator', 'Native passed', 'Critical / high / medium / low'),
         [[code(s['scanner']), text(s['status']), text(s.get('blocking', True)), text(s['passed']),
           ' / '.join(text(s['severity_counts'][k]) for k in ('critical', 'high', 'medium', 'low'))] for s in run['scans']]))
     parts.append('<details><summary>Structured static findings</summary>' + table('Public static finding details',
         ('Scanner / check', 'Severity', 'Member / line', 'Original reference'),
-        [[code(f['scanner']) + ' / ' + code(f['check']), text(f['severity']), code(f['member']) + ' / ' + text(f['line']),
+        [[f'<span id="{anchor("static-finding", rid, f["reference"])}">' + code(f['scanner']) + ' / ' + code(f['check']) + '</span>',
+          text(f['severity']), code(f['member']) + ' / ' + text(f['line']),
           link('reference', (rid, f['reference']), records[rid]['source']['skill_id'] + ' · ' + f['scanner'] +
-               ' reference ' + f['reference'])] for f in run['detailed_findings']]) + '</details>')
+               ' reference ' + f['reference'])] for f in sorted(run['detailed_findings'], key=lambda f:
+                   ((*analysis.SEVERITIES, 'info').index(f['severity']), f['scanner'], f['check'] or '', f['reference']))]) + '</details>')
+    for scanner in sorted({f['scanner'] for f in run['detailed_findings']}):
+        parts.append('<p>' + code(scanner) + ': ' + safe(analysis.static_guidance(scanner, None)) + '</p>')
+    if any((f['scanner'], f['check']) == ('SCHEMA', 'author_missing') for f in run['detailed_findings']):
+        parts.append('<p>' + safe(analysis.static_guidance('SCHEMA', 'author_missing')) + '</p>')
     parts.extend([record_support(rid, records[rid]), '</article>'])
     return ''.join(parts)
 

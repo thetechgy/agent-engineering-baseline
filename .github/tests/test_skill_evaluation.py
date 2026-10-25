@@ -248,7 +248,7 @@ class ReportTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             reports.catalog_report(self.workspace, root)
         summary = (self.root / "summary").read_text()
-        self.assertIn("Missing or linked JSON", summary)
+        self.assertIn("Native report missing or invalid", summary)
         self.assertIn("Strict eval dataset validation failed", summary)
 
     def test_invalid_numeric_and_extra_artifact_fields_are_rejected(self):
