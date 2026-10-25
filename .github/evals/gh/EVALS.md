@@ -44,7 +44,7 @@ python3 .github/scripts/gh_evaluations.py benchmark gh --smoke --output /tmp/gh-
 Use the evaluator's Python 3.13 interpreter and place its executables on `PATH`.
 The exact dependencies and Codex patch come from
 [setup-skillevaluator.sh](../../scripts/setup-skillevaluator.sh). Docker Compose
-5.0.2, Harbor 0.13.2, SkillEvaluator 0.3.0 at `ac0a049`, Codex 0.155.1, and
+5.6.1, Harbor 0.13.2, SkillEvaluator 0.3.0 at `ac0a049`, Codex 0.155.1, and
 `gpt-5.6-sol` remain pinned. Do not substitute a newer host Codex or Podman.
 The runner refuses missing runtime tools and credentials. It does not install them.
 
@@ -170,8 +170,12 @@ credentials, and no inference. It verifies private reads/modifications fail,
 valid issue collection excludes the PR and includes the closed issue, one mock
 comment succeeds, and both comparison-arm skill layouts work. Exact test containers
 and images are removed on success, failure, and handled interruption; cleanup
-is checked. CI uses a hash-verified Compose 5.0.2 plugin in a task-owned temporary
-directory. When local administrator authentication is unavailable, report local
+is checked. CI uses a checksum-first Compose 5.6.1 plugin in a task-owned temporary
+directory, installed by the same helper as the manual benchmark. A focused
+credential-free Harbor check additionally exercises generated configuration,
+resource limits, startup/readiness, copy/exec, nonzero exits, repeated `up`, and
+teardown for one staged task. The existing raw-Docker fixture boundary remains
+separate; neither check qualifies model inference. When local administrator authentication is unavailable, report local
 container validation as unavailable and use the hosted check. Preserve pre-existing
 Podman and remove only resources introduced for the Docker validation task.
 

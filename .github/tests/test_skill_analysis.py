@@ -414,6 +414,7 @@ class AnalysisTests(unittest.TestCase):
         mutations = [
             ('incompatible_or_unknown', lambda r: r['dataset'].update(authored_digest=evidence.identity('different suite'))),
             ('incompatible_or_unknown', lambda r: r['policy']['fields'].update(model='changed-model')),
+            ('incompatible_or_unknown', lambda r: r['policy']['fields'].update(docker_compose='5.0.2')),
             ('incompatible_or_unknown', lambda r: r['policy']['fields'].update(model=None)),
             ('exploratory', lambda r: r['arms'][0]['condition'].update(instruction_digest=None)),
             ('incompatible_or_unknown', lambda r: r['arms'][0]['condition'].update(fixture_digest=evidence.identity('changed fixture'))),

@@ -132,18 +132,13 @@
           "field": "version"
         },
         {
-          "path": ".github/workflows/benchmark-skills.yml",
-          "pattern": "^          version: v(?P<version>\\S+)$",
+          "path": ".github/scripts/setup-compose.sh",
+          "pattern": "^compose_version=(?P<version>\\S+)$",
           "count": 1
         },
         {
           "path": ".github/workflows/benchmark-skills.yml",
           "pattern": "^\\s*run: test .*docker compose version --short.* = \\'(?P<version>[^\\']+)\\'$",
-          "count": 1
-        },
-        {
-          "path": ".github/workflows/validate.yml",
-          "pattern": "https://github.com/docker/compose/releases/download/v(?P<version>[^/]+)/",
           "count": 1
         }
       ],

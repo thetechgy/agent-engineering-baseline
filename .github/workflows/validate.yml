@@ -39,32 +39,40 @@ jobs:
 
       - name: Test CI contracts without inference
         run: |
-          shellcheck .github/scripts/setup-skillevaluator.sh
+          shellcheck .github/scripts/setup-skillevaluator.sh .github/scripts/setup-compose.sh
           "$SKILL_EVALUATOR_PYTHON" -m unittest discover -s .github/tests -v
           "$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_evaluations.py validate gh
           "$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_evaluations.py replay gh
           "$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_evaluations.py stage gh "$RUNNER_TEMP/gh-eval-bundle/gh"
           skillevaluator tier3 validate "$RUNNER_TEMP/gh-eval-bundle/gh" --strict --json
 
-      - name: Install test-only Docker Compose 5.0.2 plugin
+      - name: Install verified test-only Docker Compose
+        run: bash .github/scripts/setup-compose.sh
+
+      # One-time qualification on one daemon; remove after retaining its results.
+      - name: Compare reviewed Compose releases without inference
+        timeout-minutes: 10
         run: |
           set -euo pipefail
-          plugin_root="$RUNNER_TEMP/gh-compose-validation"
-          mkdir -p "$plugin_root/cli-plugins"
+          umask 077
+          qualification_root=$(mktemp -d "$RUNNER_TEMP/compose-qualification.XXXXXXXX")
+          trap 'rm -rf -- "$qualification_root"' EXIT
+          mkdir -p "$qualification_root/baseline/cli-plugins"
+          binary="$qualification_root/baseline/cli-plugins/docker-compose"
           curl --fail --location --silent --show-error --proto '=https' --proto-redir '=https' \
             https://github.com/docker/compose/releases/download/v5.0.2/docker-compose-linux-x86_64 \
-            --output "$plugin_root/cli-plugins/docker-compose"
+            --output "$binary"
           printf '%s  %s\n' 2d880f723d3da7c779c54fdaea91a842fca8af55d1397f1ed8d7cbab3dd7af67 \
-            "$plugin_root/cli-plugins/docker-compose" | sha256sum --check --strict
-          chmod 755 "$plugin_root/cli-plugins/docker-compose"
-          printf 'DOCKER_CONFIG=%s\n' "$plugin_root" >> "$GITHUB_ENV"
+            "$binary" | sha256sum --check --strict
+          chmod 755 "$binary"
+          "$SKILL_EVALUATOR_PYTHON" .github/scripts/qualify-compose.py "$qualification_root"
 
       - name: Validate native gh Docker boundary without inference or credentials
         run: '"$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_container_validation.py'
 
       - name: Remove test-only Compose plugin
         if: always()
-        run: rm -rf -- "$RUNNER_TEMP/gh-compose-validation"
+        run: bash .github/scripts/setup-compose.sh cleanup
 
       - name: Collect native skill and dataset reports
         env:

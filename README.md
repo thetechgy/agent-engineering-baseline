@@ -353,7 +353,13 @@ generated outputs.
 
 Validation uses read-only repository access without retained checkout credentials.
 GitHub Actions are pinned to commit SHAs; Python dependencies use hashed or frozen
-locks. PowerShell Gallery modules have version pins but no native hash pins.
+locks. Both evaluation workflows install Compose 5.6.1 through the shared
+[checksum-first helper](.github/scripts/setup-compose.sh), verifying reviewed
+release bytes before execution in an isolated temporary Docker CLI configuration.
+Its always-run cleanup removes only that installation. Historical evidence keeps
+its recorded Compose version; changed versions use separate benchmark policy
+identities and are not directly comparable.
+PowerShell Gallery modules have version pins but no native hash pins.
 
 Paid evaluation requires approval through `skill-benchmark`, and only the live step
 receives the API key. History and Pages jobs don't get it or execute skills; history
@@ -378,7 +384,6 @@ exact external references:
 ```text
 astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884
 benchmark-action/github-action-benchmark@4322e5726e6334590d251fc4f92bec0efafc45dc
-docker/setup-compose-action@54042514f505b273907334ae2b9cdbb9a0213c1a
 ```
 
 <!-- external-action-requirements:end -->

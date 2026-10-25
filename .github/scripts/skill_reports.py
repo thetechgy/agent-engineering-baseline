@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 POLICY = {
     "evaluator_revision": "ac0a04905100acdafc6c95829311a9739c340ff6",
     "harbor": "0.13.2",
-    "docker_compose": "5.0.2",
+    "docker_compose": "5.6.1",
     "codex": "0.155.1",
     "python": "3.13",
     "model": "gpt-5.6-sol",

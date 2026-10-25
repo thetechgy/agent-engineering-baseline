@@ -170,6 +170,32 @@ class FreshnessTests(unittest.TestCase):
                 self.assertEqual(uv["pin"]["value"], "Unknown")
                 self.assertEqual(uv["errors"], ["contradictory_pins"])
 
+    def test_compose_inventory_reconciles_helper_policy_and_runtime_assertion(self):
+        import re
+        definition = next(item for item in fresh.load_config(ROOT) if item["id"] == "compose")
+        pin, sources = fresh.extract(ROOT, definition)
+        self.assertEqual({source["path"] for source in sources}, {
+            ".github/scripts/skill_reports.py", ".github/scripts/setup-compose.sh",
+            ".github/workflows/benchmark-skills.yml",
+        })
+        for selector in definition["sources"]:
+            with self.subTest(source=selector["path"]):
+                root = self.scratch()
+                source = root / selector["path"]
+                text = source.read_text()
+                pattern = selector.get("pattern", r'"docker_compose": "(?P<version>[^\"]+)"')
+                match = re.search(pattern, text, re.MULTILINE)
+                self.assertIsNotNone(match)
+                source.write_text(text[:match.start("version")] + "99.0.0" + text[match.end("version"):])
+                with self.assertRaisesRegex(fresh.DiscoveryError, "contradictory_pins"):
+                    fresh.extract(root, definition)
+                _, rows, _ = fresh.inventory(root)
+                compose = next(row for row in rows if row["id"] == "compose")
+                self.assertEqual(compose["pin"]["value"], "Unknown")
+                self.assertEqual(compose["errors"], ["contradictory_pins"])
+        self.assertEqual(pin["version"], re.search(r'^compose_version=(\S+)$',
+            (ROOT / ".github/scripts/setup-compose.sh").read_text(), re.MULTILINE)[1])
+
     def test_gh_fixture_contract_is_extracted_separately_from_released_skill_baseline(self):
         root = self.scratch()
         source = root / ".github/scripts/gh_evaluations.py"
