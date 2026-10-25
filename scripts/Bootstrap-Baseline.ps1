@@ -8,7 +8,8 @@ archive and executable digests, rejects unsafe ZIP entries, executes only the
 staged absolute executable, installs the complete onedir bundle as a new
 generation under releases\, and activates it by atomically replacing the
 bin\apm.cmd shim. Native APM then owns package installation, executable
-trust, compilation, update, audit, and packing.
+trust, compilation, deliberate updates, audit, and packing. Matching destination
+lock entries are retained; bootstrap does not refresh dependency branches.
 
 .PARAMETER Scope
 Global installs at user scope. Repo installs into the current repository.
@@ -711,16 +712,15 @@ try {
     }
 
     if (-not $CliOnly) {
+        Write-Information -MessageData 'Syncing destination locks; dependency refreshes require an explicit native APM command (see README).' -InformationAction Continue
         $packageRef = if ($env:BASELINE_PACKAGE_REF) { $env:BASELINE_PACKAGE_REF }
         else { $defaultPackageRef }
         if ($Scope -eq 'Global') {
             Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata install --global --target 'codex,copilot' --trust-bin --trust-transitive-mcp $packageRef
-            Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata update --global --yes --target 'codex,copilot'
             Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata compile --global
         }
         else {
             Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata install --target 'codex,copilot' --trust-bin --trust-transitive-mcp $packageRef
-            Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata update --yes --target 'codex,copilot'
             Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata compile --target 'codex,copilot'
         }
     }

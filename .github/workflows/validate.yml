@@ -163,6 +163,10 @@ jobs:
           APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" ./scripts/bootstrap.sh --cli-only
           echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
 
+      - name: Verify native scoped installation and update behavior
+        shell: bash
+        run: python3 tests/bootstrap_lifecycle.py --apm "$APM_EXECUTABLE"
+
       - name: Install validation tools
         shell: pwsh
         run: |
@@ -244,3 +248,7 @@ jobs:
             }
           }
           if ($LASTEXITCODE -ne 0) { throw 'Reviewed CLI acquisition failed.' }
+          $executables = @(Get-ChildItem -Path "$env:APM_INSTALL_DIR/../releases/v*/apm.exe" -File)
+          if ($executables.Count -ne 1) { throw 'Expected exactly one reviewed CLI generation.' }
+          python tests/bootstrap_lifecycle.py --apm $executables[0].FullName
+          if ($LASTEXITCODE -ne 0) { throw 'Native scoped lifecycle validation failed.' }

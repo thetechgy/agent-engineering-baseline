@@ -476,7 +476,7 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
     ) {
         & $script:TestRepository.Script -Scope $ScopeValue -Confirm:$false
         $calls = @(Get-Content -LiteralPath $script:CallLog -Encoding UTF8 | Where-Object { $_ -notmatch '--version' })
-        $calls.Count | Should-Be 3
+        $calls.Count | Should-Be 2
         $release = Get-ActiveRelease -InstallRoot $script:InstallRoot
         foreach ($call in $calls) { $call | Should-MatchString ([regex]::Escape("$release\apm.exe")) }
         $globalOption = if ($GlobalScope) { ' --global' } else { '' }
@@ -486,9 +486,9 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
             ' install' + $globalOption + ' --target codex,copilot --trust-bin --trust-transitive-mcp ' +
             'https://github.com/thetechgy/agent-engineering-baseline\.git#main' + $pinned
         )
-        $calls[1] | Should-MatchString (' update' + $globalOption + ' --yes --target codex,copilot' + $pinned)
+        ($calls -join "`n") | Should-NotMatchString ' update '
         $compileOptions = if ($GlobalScope) { ' --global' } else { ' --target codex,copilot' }
-        $calls[2] | Should-MatchString (' compile' + $compileOptions + $pinned)
+        $calls[1] | Should-MatchString (' compile' + $compileOptions + $pinned)
         $env:VERSION | Should-BeFalsy
     }
 
@@ -496,7 +496,7 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         $env:VERSION = 'caller-sentinel'
         & $script:TestRepository.Script -Scope Repo -Confirm:$false
         $calls = @(Get-Content -LiteralPath $script:CallLog -Encoding UTF8 | Where-Object { $_ -notmatch '--version' })
-        $calls.Count | Should-Be 3
+        $calls.Count | Should-Be 2
         foreach ($call in $calls) { $call | Should-MatchString ' VERSION=0\.29\.0$' }
         $env:VERSION | Should-Be 'caller-sentinel'
     }
