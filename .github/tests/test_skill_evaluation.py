@@ -33,7 +33,7 @@ SHA = "a" * 40
 # command line of every workflow `run:` body and every `.github/scripts/*.sh`.
 INSTALL_POLICY = (
     (re.compile(r'\b(pip3?|python3? -m pip)"?\s+install\b'), ("--require-hashes", "--only-binary :all:")),
-    (re.compile(r"\buv pip (install|sync)\b"), ("--require-hashes",)),
+    (re.compile(r"\buv pip (install|sync)\b"), ("--require-hashes", "--only-binary :all:")),
     (re.compile(r"\buv sync\b"), ("--frozen",)),
 )
 FORBIDDEN_INSTALLERS = re.compile(r"\b(pipx|uvx|uv tool install)\b")
@@ -1036,8 +1036,9 @@ class WorkflowTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             environment = {**os.environ, "SKILL_EVALUATION_KIND": "benchmark",
                 "SKILLEVALUATOR_SKILLSPECTOR_PATH": str(Path(directory) / "absent-skillspector"),
+                "SKILLEVALUATOR_SEMGREP_PATH": str(Path(directory) / "absent-semgrep"),
                 "PYTHONDONTWRITEBYTECODE": "1"}
-            result = subprocess.run([sys.executable, "-m", "unittest", "-v", "test_skillspector",
+            result = subprocess.run([sys.executable, "-m", "unittest", "-v", "test_skillspector", "test_semgrep",
                 "test_public_reports.PublicReportsTests.test_pinned_native_quality_cli_provenance_titles_and_public_handoff"],
                 cwd=REPO / ".github/tests", env=environment, capture_output=True, text=True, timeout=30)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

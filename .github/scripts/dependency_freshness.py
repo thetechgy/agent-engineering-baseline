@@ -28,6 +28,7 @@ ROOT = Path(__file__).resolve().parents[2]
 REPOSITORY = "thetechgy/agent-engineering-baseline"
 CONFIG = ".github/dependency-freshness.json"
 API = "https://api.github.com/"
+SEMGREP_PYPI = "https://pypi.org/pypi/semgrep/json"
 ISSUE_MARKER = "<!-- dependency-freshness:v1 -->"
 ALERT_MARKER = "<!-- dependency-freshness-alert:"
 BOT = "github-actions[bot]"
@@ -89,6 +90,8 @@ def load_config(root):
     require(len(ids) == len(set(ids)) and 1 <= len(ids) <= 30, "invalid_config")
     for item in data["dependencies"]:
         require(full(r"[a-z0-9-]+", item["id"]) and full(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", item["repo"]), "invalid_config")
+        require(item.get("release_source", "github") == "github" or
+                (item["id"] == "semgrep" and item["release_source"] == "pypi"), "invalid_release_source")
     return data["dependencies"]
 
 
@@ -239,7 +242,8 @@ def inventory(root):
 
 class SameOrigin(HTTPRedirectHandler):
     def redirect_request(self, request, response, code, message, headers, newurl):
-        require(newurl.startswith(API), "unsafe_redirect")
+        origin = SEMGREP_PYPI if request is not None and request.full_url == SEMGREP_PYPI else API
+        require(newurl == origin if origin == SEMGREP_PYPI else newurl.startswith(origin), "unsafe_redirect")
         return super().redirect_request(request, response, code, message, headers, newurl)
 
 
@@ -254,14 +258,24 @@ class GitHub:
 
     def request(self, path, *, public=False, method="GET", data=None):
         require(isinstance(path, str) and not path.startswith("/") and ":" not in path, "unsafe_api_path")
-        key = (path, public)
+        return self._json_request(API + path, public=public, method=method, data=data)
+
+    def semgrep_metadata(self):
+        """The sole package-registry lookup; never carries GitHub credentials."""
+        return self._json_request(SEMGREP_PYPI, public=True)
+
+    def _json_request(self, url, *, public=False, method="GET", data=None):
+        require(url.startswith(API) or (url == SEMGREP_PYPI and public and method == "GET" and data is None),
+                "unsafe_api_path")
+        key = (url, public)
         if method == "GET" and key in self.cache:
             return self.cache[key]
         if method == "GET" and key in self.failed:
             raise DiscoveryError(self.failed[key])
         require(self.requests < 100 and time.monotonic() - self.started < 180, "request_budget_exceeded")
-        headers = {"Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28",
-                   "User-Agent": "baseline-dependency-freshness"}
+        headers = {"Accept": "application/json", "User-Agent": "baseline-dependency-freshness"}
+        if url.startswith(API):
+            headers.update({"Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"})
         if self.token and not public:
             headers["Authorization"] = f"Bearer {self.token}"
         payload = None if data is None else json.dumps(data).encode()
@@ -269,7 +283,7 @@ class GitHub:
             headers["Content-Type"] = "application/json"
         self.requests += 1
         try:
-            with self.opener.open(Request(API + path, headers=headers, data=payload, method=method), timeout=10) as response:
+            with self.opener.open(Request(url, headers=headers, data=payload, method=method), timeout=10) as response:
                 raw = response.read(MAX_BYTES + 1)
                 require(len(raw) <= MAX_BYTES, "oversized_response")
                 result = json.loads(raw)
@@ -321,7 +335,43 @@ def released(api, item, current):
     if current["revision"] and current["version"]:
         tag_commit = api.request(f"repos/{item['repo']}/commits/{quote(prefix + current['version'], safe='')}")
         require(tag_commit.get("sha") == current["revision"], "pin_tag_mismatch")
-    return {"status": "verified", "version": version, "revision": None}, data.get("body") or ""
+    body = data.get("body") or ""
+    if item.get("release_source") == "pypi":
+        github_version = version
+        version = semgrep_version(api.semgrep_metadata())
+        # Notes describe the GitHub release, which can lag the PyPI package.
+        require(isinstance(body, str), "invalid_release_notes")
+        body = ("\n".join(f"GitHub {tag}: {line}" for line in body.splitlines())
+                if stable(current["version"]) < stable(github_version) <= stable(version) else "")
+    return {"status": "verified", "version": version, "revision": None}, body
+
+
+def semgrep_version(data):
+    """Validate Semgrep's published stable inventory without fetching artifacts."""
+    require(isinstance(data, dict) and isinstance(data.get("info"), dict)
+            and data["info"].get("name") == "semgrep", "invalid_pypi_identity")
+    version = data["info"].get("version")
+    stable(version)
+    releases = data.get("releases")
+    require(isinstance(releases, dict) and 0 < len(releases) <= 2000, "invalid_pypi_releases")
+    available = []
+    for candidate, files in releases.items():
+        require(isinstance(files, list) and len(files) <= 100, "invalid_pypi_files")
+        if not full(VERSION, candidate):
+            continue  # Prereleases and other unsupported version forms are not stable candidates.
+        for artifact in files:
+            require(isinstance(artifact, dict) and type(artifact.get("yanked")) is bool
+                    and isinstance(artifact.get("digests"), dict)
+                    and full(r"[0-9a-f]{64}", artifact["digests"].get("sha256")), "invalid_pypi_artifact")
+            filename = artifact.get("filename")
+            require(isinstance(filename, str) and
+                    ((filename.startswith(f"semgrep-{candidate}-") and filename.endswith(".whl"))
+                     or filename == f"semgrep-{candidate}.tar.gz"), "invalid_pypi_artifact")
+        if any(not artifact["yanked"] for artifact in files):
+            available.append(candidate)
+    require(available and version == max(available, key=stable), "inconsistent_pypi_latest")
+    require(isinstance(data.get("urls"), list) and data["urls"] == releases[version], "inconsistent_pypi_files")
+    return version
 
 
 def skill_tree(api, item, ref):
@@ -486,6 +536,9 @@ def collect(root, api, revision):
 
 
 def release_url(item, upstream):
+    if item.get("release_source") == "pypi":
+        version = upstream.get("version")
+        return "https://pypi.org/project/semgrep/" + (version + "/" if version else "")
     ref = upstream.get("ref") or (item.get("tag_prefix", "v") + upstream["version"] if upstream.get("version") else None)
     if not ref:
         return f"https://github.com/{item['repo']}/releases"
@@ -568,8 +621,11 @@ def render(report, definitions):
             lines += ["Pin sources: " + ", ".join(source_links) + ".", ""]
         item = by_id.get(result["id"])
         if item:
-            reference = "[Upstream release/content](" + release_url(item, result["upstream"]) + ")."
-            if result["upstream"]["status"] == "verified":
+            pypi = item.get("release_source") == "pypi"
+            reference = ("[PyPI version availability](" if pypi else "[Upstream release/content](") + release_url(item, result["upstream"]) + ")."
+            if pypi:
+                reference += f" [GitHub release notes and tags](https://github.com/{item['repo']}/releases) are a separate source and may lag PyPI."
+            elif result["upstream"]["status"] == "verified":
                 reference += f" [Full comparison](https://github.com/{item['repo']}/compare/"
                 reference += quote(result["pin"]["revision"] or item.get("tag_prefix", "v") + result["pin"]["version"], safe='')
                 reference += "..." + quote(result["upstream"].get("ref") or item.get("tag_prefix", "v") + result["upstream"]["version"], safe='') + ")."
