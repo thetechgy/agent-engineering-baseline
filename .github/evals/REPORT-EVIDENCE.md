@@ -157,6 +157,14 @@ malformed identifiers, control characters, and other free-text check names
 reject. The display label remains available through the original native
 finding reference rather than becoming public prose.
 
+The [SkillSpector 2.13.1 assessment](SKILLSPECTOR-2.13.1.md) records the controlled
+upgrade comparison, remaining findings, completeness limitations and reproduction
+commands. SkillEvaluator 0.3.0 does not retain the scanner's detailed completeness
+ledger in native reports; the public projection cannot reconstruct it. The study
+retains raw diagnostics privately. Routine collection and public schemas remain
+unchanged. A 100% file-coverage counter can coexist with partial analysis when
+reference or analyzer limitations remain; use the native completeness state too.
+
 Representative offline commands, run from the checkout with the existing
 evaluator environment, are:
 

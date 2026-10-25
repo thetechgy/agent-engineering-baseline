@@ -42,7 +42,7 @@ if [ "$kind" = quality ]; then
   uv pip sync --quiet --python "$tool_root/semgrep/bin/python" --require-hashes \
     "$GITHUB_WORKSPACE/.github/requirements/semgrep.txt"
   ln -s "$tool_root/semgrep/bin/semgrep" "$tool_root/bin/semgrep"
-  skillspector_revision=69dcdfb74487d361ba4c811d088cfdea2ff3a9dc # v2.11.2
+  skillspector_revision=f3b25697d76256998ca9d42c198d256258d4c035 # v2.13.1
   git init --quiet "$tool_root/skillspector"
   git -C "$tool_root/skillspector" fetch --quiet --depth=1 \
     https://github.com/NVIDIA/SkillSpector.git "$skillspector_revision"
@@ -70,11 +70,12 @@ uv pip list --python "$evaluator_bin/python" --format json > "$tool_root/depende
 
 printf '%s\n' "$evaluator_bin" "$tool_root/bin" >> "$GITHUB_PATH"
 {
+  printf 'SKILL_EVALUATION_KIND=%s\n' "$kind"
   printf 'SKILL_EVALUATOR_PYTHON=%s/python\n' "$evaluator_bin"
   printf 'XDG_CACHE_HOME=%s\nXDG_STATE_HOME=%s\n' "$XDG_CACHE_HOME" "$XDG_STATE_HOME"
   printf 'SKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE=%s/provenance.key\n' "$tool_root"
 } >> "$GITHUB_ENV"
-"$evaluator_bin/python" - "$tool_root" "$kind" <<'PY' > "$tool_root/versions.json"
+"$evaluator_bin/python" - "$tool_root" "$kind" "${skillspector_revision:-}" <<'PY' > "$tool_root/versions.json"
 import importlib.metadata, json, platform, subprocess, sys
 from pathlib import Path
 root = Path(sys.argv[1])
@@ -93,6 +94,6 @@ if sys.argv[2] == "quality":
         for name in ("semgrep", "skillspector")}
     versions["scanners"].update({name: importlib.metadata.version(name) for name in ("bandit", "pip-audit")})
     versions["scanners"]["gitleaks"] = subprocess.check_output([root / "bin/gitleaks", "version"], text=True).strip()
-    versions["skillspector_revision"] = "69dcdfb74487d361ba4c811d088cfdea2ff3a9dc"
+    versions["skillspector_revision"] = sys.argv[3]
 print(json.dumps(versions, indent=2))
 PY
