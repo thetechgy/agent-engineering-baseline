@@ -111,6 +111,7 @@ async def compose_lifecycle(root, prefix):
             raise ValueError("Harbor Compose swallowed a checked command failure")
         return {"evidence": "credential-free Harbor Compose lifecycle", "model_trials": 0,
                 "compose": run("docker", "compose", "version", "--short").stdout.strip(),
+                "engine": run("docker", "version", "--format", "{{.Server.Version}}").stdout.strip(),
                 "configuration": normalized, "repeated_up": "same-container",
                 "task_context_digest": context_digest}
     finally:

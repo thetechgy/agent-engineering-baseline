@@ -2,8 +2,8 @@
 
 ## Decision and security relevance
 
-Update the current evaluation runtime from Compose 5.0.2 to 5.6.1, subject to
-the container qualification recorded below. The verified starting repository
+Adopt Compose 5.6.1 for the current evaluation runtime. The security fix,
+verified release bytes and paired native qualification below support the update. The verified starting repository
 revision is `9a6c1b71f8eb61c778f5e97737987797e145299c` (PR #84).
 
 [CVE-2026-111943](https://www.cve.org/CVERecord?id=CVE-2026-111943) /
@@ -27,6 +27,7 @@ The latest official stable release observed on 2026-10-25 is
 
 | Identity | Value |
 | --- | --- |
+| Baseline source commit | `c428a77111d56683b823a47590eb08de5c59a162` |
 | Candidate source commit | `6cbc19a3fd59e305fb814dca4d854a4fb67d2941` |
 | Annotated tag object | `02f05e3787e5b2e83220923907bb014e6a36b359` |
 | Candidate Linux x86_64 SHA-256 | `47737f4236e6d3ccea7291995203f8f018058783b4c3a9469119811a0b5db8c0` |
@@ -40,7 +41,7 @@ asset metadata and the provenance subject. The provenance identifies the signed
 tag, exact source commit and Go 1.26.10 build image. GitHub reports the tag's SSH
 signature as verified; that observation is separate from binary verification.
 
-The installed GitHub CLI successfully verified the published Sigstore bundle,
+The installed GitHub CLI 2.103.2 successfully verified the published Sigstore bundle,
 including the binary subject, trusted certificate chain and transparency-log
 timestamp, with the following identity restrictions:
 
@@ -104,14 +105,52 @@ known Compose-version difference. No historical migration or version-range
 acceptance is added.
 
 The development host has no Docker executable/daemon. No distribution packages,
-daemon configuration or existing Podman resources were changed. Actual native
-qualification runs on the existing GitHub-hosted Validate runner without model
-credentials or inference. A temporary paired check compares 5.0.2 and 5.6.1 on
-one daemon with identical staged inputs and toolchain; it will be removed after
-retaining its evidence. Final CI retains one representative Harbor lifecycle
-check alongside the existing six-container raw-Docker boundary.
+daemon configuration or existing Podman resources were changed. The completed
+paired step in [run 40217123854](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/40217123854)
+used the existing GitHub-hosted runner, one Docker Engine **28.0.4 / API 1.48**,
+SkillEvaluator **0.3.0**, Harbor **0.13.2**, identical staging and fixed build pins.
+The same daemon identity was checked before and after the pair. The exact
+qualification code is retained at commit `cb5c16b`; its one-time driver and old
+binary installation are removed from the final tree.
 
-Local validation: 68 focused installer/freshness/policy/reporting contracts pass;
+| Observed boundary | 5.0.2 | 5.6.1 |
+| --- | --- | --- |
+| Harbor build/start and container readiness | Passed | Passed |
+| Effective network, mount, environment and resource checks | Passed | Passed |
+| Agent UID and private fixture read denial | Passed | Passed |
+| Compose file-copy round trip | Passed | Passed |
+| Exec exit 7 and checked failure exit 9 propagation | Passed | Passed |
+| Repeated unchanged `up` | Same container | Same container |
+| Container, image, network, volume and temporary override cleanup | Passed | Passed |
+
+Both full task-context hashes are
+`959e2b3c11f1bb5e2f2a4ca0970881594c0ac97178dfbf2e4f80cddfdb4fbdcc`.
+Compared effective fields agree: `network_mode: none`, one task-owned log bind,
+no Compose-inherited environment, two CPUs, 4 GiB memory, and the same keepalive
+command. Actual container inspection confirms limits, mounts, privilege and
+network settings. Project names and host temporary paths intentionally differ.
+The unchanged benchmark metadata producer also ran against the discovered
+candidate plugin and passed exact current-runtime admission.
+
+The baseline went first with a cold build; the candidate reused the same build
+cache. No timing or performance inference is made. This is one representative
+credential-free task, not model-backed Harbor qualification or coverage of every
+Compose feature, engine/image-store combination, signal or failure path. No Codex
+or model was invoked; the unchanged Codex integration is covered separately by
+scanner-free contract tests. Installer interruption cleanup is exercised with an
+inert fixture. Native lifecycle cleanup is observed after successful operations
+and a checked command failure.
+
+After the paired step completed, the superseded run was cancelled for the known
+follow-up that removes qualification-only wiring and triggers replacement CI.
+Its paired step is successful; its cancelled overall result is inconclusive.
+Raw logs, checksums, provenance, the one-time driver and paired results are retained
+outside the checkout. Final CI retains only the candidate lifecycle check plus
+the existing six-container raw-Docker security boundary. Complete final-revision
+CI and artifact verification results are recorded in
+[PR #85](https://github.com/thetechgy/agent-engineering-baseline/pull/85).
+
+Local validation: 69 focused installer/freshness/policy/reporting contracts pass;
 all 26 Markdown files and changed shell blocks pass lint. Native repository
 validation passes 29 Pester tests (52 platform skips), PSScriptAnalyzer, Bash
 fixtures and isolated APM regeneration/audits, then stops at six existing SC2329
@@ -120,10 +159,9 @@ reproduce those findings. No assertion or lint rule is weakened.
 
 An initial sandboxed broad suite was interrupted after filesystem ownership
 mapping caused existing secure-output checks to reject unmapped ancestors. The
-same failing test passes under native ownership with unchanged assertions. The
-complete native offline suite and hosted qualification are pending; final results
-will be recorded after those checks complete. No paid evaluation, skill-score improvement, native
-Windows Docker qualification or universal Compose compatibility is claimed.
+same failing test passes under native ownership with unchanged assertions.
+No paid evaluation, skill-score improvement, native Windows Docker qualification
+or universal Compose compatibility is claimed.
 
 The first hosted run (40215504064) stopped before Docker qualification: 643
 contracts reported 20 failures and one error in synthetic review controls. The
@@ -134,5 +172,9 @@ semantic arm in test helpers, with a failing-before regression for both citation
 formats. All 125 affected review-module tests pass after the correction, including
 the original negative gates and diagnostic matrix. Production review code, guards
 and historical evidence remain unchanged.
-The unrelated single local broad-suite error is retained separately until its
-complete traceback is available; an isolated passing observation does not explain it.
+The local broad run used the initial implementation and reported 643 tests,
+20 failures, two errors and one host-gh version skip. The review-control failures
+match the correction above. Its additional error is the unchanged repository
+snapshot guard rejecting input-directory changes during concurrent local edits.
+That run is retained as invalid for clean-revision qualification; the guard is
+unchanged. An isolated pass is not substituted for full stable-checkout CI.
