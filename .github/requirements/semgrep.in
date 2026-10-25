@@ -1,2 +1,3 @@
-# Compile with uv 0.12.17 for Linux x86_64 / Python 3.13; see README.
+# Existing lock generated with uv 0.12.17 for Linux x86_64 / Python 3.13.
+# For future regeneration with uv 0.13.5, see README.
 semgrep==1.177.0

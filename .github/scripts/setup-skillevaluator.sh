@@ -12,7 +12,7 @@ case "$(realpath -m "$tool_root")/" in
 esac
 mkdir -p "$tool_root/bin" "$tool_root/dependencies"
 chmod 700 "$tool_root"
-test "$(uv --version | awk '{print $2}')" = '0.12.17'
+test "$(uv --version | awk '{print $2}')" = '0.13.5'
 export UV_CACHE_DIR="$tool_root/uv-cache"
 export UV_PYTHON_INSTALL_DIR="$tool_root/python"
 export XDG_CACHE_HOME="$tool_root/cache"

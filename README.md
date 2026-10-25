@@ -399,8 +399,9 @@ candidate, then require all validation checks before merging. See
 
 SkillSpector uses its upstream frozen lock; Semgrep and rumdl use reviewed hashed
 locks in [.github/requirements](.github/requirements). CI rejects unverified Python
-installers and records tool versions and dependency inventories. To refresh with
-uv 0.12.17, replace `semgrep` with `rumdl` in both paths for the linter:
+installers and records tool versions and dependency inventories. The existing
+Semgrep and rumdl locks were generated with uv 0.12.17. Use uv 0.13.5 for future
+regeneration; replace `semgrep` with `rumdl` in both paths for the linter:
 
 ```bash
 uv pip compile --python-version 3.13 --python-platform x86_64-unknown-linux-gnu \
@@ -410,6 +411,11 @@ uv pip compile --python-version 3.13 --python-platform x86_64-unknown-linux-gnu 
 
 Review dependency changes and rerun validation. These locks cover Python artifacts,
 not every underlying OS or build tool.
+
+Evaluation setup pins uv 0.13.5 and retains the managed Python 3.13 selector.
+Fresh installations currently select Python 3.13.17; the exact interpreter version
+is recorded in `versions.json`. Historical evaluation records retain their original
+runtime identities, including Python 3.13.15; they are not rebaselined by this update.
 
 </details>
 <!-- rumdl-enable MD033 -->

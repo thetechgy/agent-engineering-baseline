@@ -146,6 +146,30 @@ class FreshnessTests(unittest.TestCase):
             self.assertEqual(row["policy"]["group"], "evaluation-runtime compatibility group")
             self.assertTrue(row["policy"]["hold"])
 
+    def test_uv_inventory_reconciles_all_workflow_and_setup_pins(self):
+        import re
+        definition = next(item for item in fresh.load_config(ROOT) if item["id"] == "uv")
+        pin, sources = fresh.extract(ROOT, definition)
+        self.assertEqual({source["path"] for source in sources}, {
+            ".github/workflows/validate.yml", ".github/workflows/benchmark-skills.yml",
+            ".github/scripts/setup-skillevaluator.sh",
+        })
+        for selector in definition["sources"]:
+            with self.subTest(source=selector["path"]):
+                root = self.scratch()
+                source = root / selector["path"]
+                text = source.read_text()
+                match = re.search(selector["pattern"], text, re.MULTILINE)
+                self.assertIsNotNone(match)
+                replacement = "99.0.0" if pin["version"] != "99.0.0" else "98.0.0"
+                source.write_text(text[:match.start("version")] + replacement + text[match.end("version"):])
+                with self.assertRaisesRegex(fresh.DiscoveryError, "contradictory_pins"):
+                    fresh.extract(root, definition)
+                _, rows, _ = fresh.inventory(root)
+                uv = next(row for row in rows if row["id"] == "uv")
+                self.assertEqual(uv["pin"]["value"], "Unknown")
+                self.assertEqual(uv["errors"], ["contradictory_pins"])
+
     def test_gh_fixture_contract_is_extracted_separately_from_released_skill_baseline(self):
         root = self.scratch()
         source = root / ".github/scripts/gh_evaluations.py"
