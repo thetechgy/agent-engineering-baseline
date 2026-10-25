@@ -513,7 +513,7 @@ def risk_events(report):
                 continue
             # Prefer advisory IDs over release versions so the same fix does not alert every patch.
             ids = sorted(set(re.findall(GHSA + r"|CVE-[0-9]{4}-[0-9]+", signal["text"], re.IGNORECASE)))
-            if signal["kind"] == "security" and confirmed and (not ids or set(ids) <= confirmed):
+            if signal["kind"] == "security" and ids and set(ids) <= confirmed:
                 continue  # Existing advisory evidence owns this security notification.
             identity = [result["id"], pin, signal["kind"], ids or signal["text"]]
             key = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()

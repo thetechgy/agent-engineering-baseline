@@ -377,11 +377,26 @@ class FreshnessTests(unittest.TestCase):
         api.affected["uv@" + api.rows["uv"]["pin"]["version"]] = [source]
         report = self.collect(api)
         before = fresh.risk_events(report)
-        api.notes["uv"] = "### Security\n\nSame known fix described again"
+        api.notes["uv"] = "### Security\n\nGHSA-abcd-1234-5678: same known fix described again"
         self.assertEqual(before, fresh.risk_events(self.collect(api)))
         first = fresh.signals("### BREAKING CHANGES\n\n- Removes interface A")
         second = fresh.signals("### BREAKING CHANGES\n\n- Removes interface B")
         self.assertNotEqual(first, second)
+
+    def test_unidentified_security_fix_notifies_once_even_with_an_existing_advisory(self):
+        api = FixtureAPI()
+        api.latest["uv"] = "99.0.0"
+        source = advisory()
+        api.reviewed["uv"] = [source]
+        api.affected["uv@" + api.rows["uv"]["pin"]["version"]] = [source]
+        self.publish(self.collect(api), api)
+        self.assertEqual(len(api.comments), 1)
+        api.notes["uv"] = "Security: fix unrelated credential disclosure without an assigned advisory ID"
+        updated = self.collect(api)
+        self.assertEqual(self.publish(updated, api)["new_notifications"], 1)
+        self.assertEqual(len(api.comments), 2)
+        self.assertEqual(self.publish(updated, api)["new_notifications"], 0)
+        self.assertEqual(len(api.comments), 2)
 
     def test_real_check_entrypoint_writes_partial_report_and_returns_failure(self):
         api = FixtureAPI()
