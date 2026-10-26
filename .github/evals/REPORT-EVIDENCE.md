@@ -2229,6 +2229,8 @@ Version 2 adds registered deterministic measurements to the same native admissio
 public projection, analysis, private HTML and optional review pipeline. Static
 records and behavioral v1 records retain their existing contracts. Archived
 metrics are not rescored, and frozen analyst profiles retain their original bytes.
+The new `custom-metrics-v2` analyst profile pins its four original validator
+modules and the exact registry data asset; it does not replace `current-v2`.
 No model inference is required to qualify this integration.
 
 The reviewed `custom-metrics.json` registry defines the current Pester and gh

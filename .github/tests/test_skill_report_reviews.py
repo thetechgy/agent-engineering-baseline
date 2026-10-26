@@ -65,6 +65,13 @@ class AttachmentTests(unittest.TestCase):
                 raw = archive.read(expected + '.py')
                 self.assertEqual(evidence.digest_bytes(raw), 'sha256:' + expected)
                 (scripts / name).write_bytes(raw)
+            if profile in attachments.REGISTRY_DIGESTS:
+                digest = attachments.REGISTRY_DIGESTS[profile]
+                asset = archive.read(digest + '.json')
+                self.assertEqual(evidence.digest_bytes(asset), 'sha256:' + digest)
+                registry = tooling / '.github/evals/custom-metrics.json'
+                registry.parent.mkdir()
+                registry.write_bytes(asset)
         body = judgment(context, category=category)
         if unmeasured:
             body['assessment'].update(tested_benefit='Not measured; configuration is not observed benefit.',
@@ -127,14 +134,27 @@ class AttachmentTests(unittest.TestCase):
                 validated = self.load()
                 item = validated.items[0]
                 hashes = attachments.PROFILES[profile][1]
-                self.assertEqual(item['report']['provenance']['implementation_digest'], evidence.identity(
-                    [[name, 'sha256:' + digest] for name, digest in zip(attachments.MODULES, hashes)]))
+                implementation = [[name, 'sha256:' + digest] for name, digest in zip(attachments.MODULES, hashes)]
+                if profile in attachments.REGISTRY_DIGESTS:
+                    implementation.append(['custom-metrics.json', 'sha256:' + attachments.REGISTRY_DIGESTS[profile]])
+                self.assertEqual(item['report']['provenance']['implementation_digest'], evidence.identity(implementation))
                 self.assertEqual(item['record_id'], self.spec['record_id'])
                 output = report.render_report(self.result, self.captured, reviews=validated).decode()
                 self.assertIn('Model interpretation', output)
                 self.assertIn('No recommendations supplied', output)
                 self.assertIn('not_quality_qualified', output)
                 self.assertNotIn(str(self.root), output)
+
+    def test_custom_profile_requires_exact_retained_metric_registry(self):
+        self.fixture('custom-metrics-v2')
+        self.load()
+        registry = self.root / 'tooling/.github/evals/custom-metrics.json'
+        registry.write_bytes(b'{}')
+        with self.assertRaisesRegex(ValueError, 'Unreviewed metric registry'):
+            self.load()
+        registry.unlink()
+        with self.assertRaises((ValueError, FileNotFoundError)):
+            self.load()
 
     def test_changed_checkout_cannot_substitute_for_frozen_current_profile(self):
         self.fixture('current-v2')
