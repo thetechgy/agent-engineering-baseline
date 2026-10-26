@@ -387,6 +387,7 @@ def benchmark_report(workspace, root, name, mode, destination):
     from skillevaluator.evaluation import EvaluationService
     from skillevaluator.source_identity import evaluated_source_revision
 
+    capture_benchmark_custom(workspace, root, name)
     if benchmark_options(name)['diagnostic_only']:
         return diagnostic_benchmark_report(workspace, root, name, mode)
 
@@ -433,7 +434,15 @@ def benchmark_report(workspace, root, name, mode, destination):
             selection = read_json(root / "selection.json")
             require(selection["case_ids"] == expected_ids and (mode != "standard" or not selection["diagnostic_only"]),
                     "Diagnostic selection cannot publish benchmark history")
-        deterministic = gh.deterministic_gate(run, expected_ids, MODES[mode])
+        numeric_excerpts = None
+        if (root / 'custom-metric-capture.json').exists():
+            import skill_evidence as evidence
+            admitted = evidence.normalize_behavioral(root, name, run.name, workspace, native_layout=True)
+            capture = evidence.read_json(root / evidence.CUSTOM_CAPTURE)
+            numeric_excerpts = evidence.custom_numeric_excerpts(capture, evidence.custom_contract(name, workspace)[1])
+            for guard in evidence.record_guards(admitted): guard()
+        deterministic = (gh.deterministic_gate(run, expected_ids, MODES[mode]) if numeric_excerpts is None else
+                         gh.deterministic_gate(run, expected_ids, MODES[mode], numeric_excerpts=numeric_excerpts))
         write_json(root / "deterministic.json", {"trials": deterministic})
     rows = metric_rows(agent)
     provenance = {
@@ -550,11 +559,42 @@ def publish_metrics(workspace, root, name):
     outputs(history_dir=f"benchmarks/{name}/{policy_id}")
 
 
+def capture_benchmark_custom(workspace, root, name):
+    """Hash retained native staging through the common admission contract."""
+    if name not in ('gh', 'powershell-pester-6') or (root / 'custom-metric-capture.json').exists():
+        return
+    import skill_evidence as evidence
+    results = root / 'results' / name
+    if not results.exists(): return
+    entries = list(results.iterdir())
+    runs = [path for path in entries if path.name != 'latest' and path.is_dir() and not path.is_symlink()]
+    if len(runs) != 1: return  # Public selection remains explicit for ambiguous runs.
+    run = runs[0]
+    tasks = run / '_harbor-tasks/codex'
+    if not tasks.exists(): return
+    rows = []
+    for arm, directory in (('with_skill', 'with'), ('without_skill', 'without')):
+        task_root = evidence.safe_path(tasks / directory, directory=True)
+        candidates = [path for path in task_root.iterdir() if path.is_dir()]
+        rows.extend(evidence.capture_custom_tasks(workspace, name, candidates, arm))
+    config = read_json(run / 'run_config.json')
+    prepared_ids = {row['id'] for row in read_json(benchmark_skill(workspace, name, root) / 'evals/evals.json')['evals']}
+    if prepared_ids != set(evidence.custom_contract(name, workspace)[0]['cases']): return
+    capture = evidence.custom_capture(workspace, name, benchmark_skill(workspace, name, root), rows,
+        purpose='benchmark', attempts=config['harbor']['n_attempts'], agent='codex',
+        execution_policy={'environment': config['harbor']['environment']['value'],
+            'concurrency': config['harbor']['n_concurrent'], 'timeout_multiplier': config['harbor']['timeout_multiplier'],
+            'stop_on_pass': config['harbor']['stop_on_pass']},
+        numeric_excerpts=evidence.capture_custom_numeric_fields(workspace, name, run / '_harbor-jobs', root, rows))
+    write_json(root / evidence.CUSTOM_CAPTURE, capture)
+
+
 def benchmark_artifacts(workspace, root, name, destination):
     """Stage only native report contracts, using upstream credential redaction."""
     from skillevaluator.utils.redaction import redact_sensitive_data, redact_sensitive_text
 
     benchmark_skill(workspace, name)
+    capture_benchmark_custom(workspace, root, name)
     root = root.absolute()
     destination = destination.absolute()
     for path in (root, destination):
@@ -568,7 +608,7 @@ def benchmark_artifacts(workspace, root, name, destination):
         excluded_links={Path("results") / name / "latest"},
     )
     metadata = {"versions.json", "dataset-validation.json", "provenance.json",
-                "docker-version.json", "docker-images.jsonl"}
+                "docker-version.json", "docker-images.jsonl", "custom-metric-capture.json"}
     if name == "gh":
         metadata.update({"deterministic.json", "selection.json"})
     # Reviewed v0.3.0 report/collector contract, restricted to this workflow's Codex agent.
@@ -771,7 +811,6 @@ def public_quality(workspace, root, destination):
 
 
 def public_benchmark(workspace, root, name, mode, destination, selected=None):
-    require(not benchmark_options(name)['diagnostic_only'], 'Custom-only public normalization is not supported')
     import skill_evidence as evidence
 
     evidence.skill_id(name)
@@ -781,7 +820,8 @@ def public_benchmark(workspace, root, name, mode, destination, selected=None):
             "Selected public benchmark has no configured suite")
     data = evidence.normalize_behavioral(Path(root), name, selected, workspace, native_layout=True)
     attempts = data["policy"]["attempts"]
-    require(attempts["mode"] in (mode, "unknown") and attempts["maximum"] in (None, MODES[mode]),
+    qualification = data.get('custom', {}).get('purpose') == 'oracle_qualification'
+    require(qualification or attempts["mode"] in (mode, "unknown") and attempts["maximum"] in (None, MODES[mode]),
             "Public benchmark mode mismatch")
     public = evidence.project(data)
     count = stage_public(workspace, root, destination, [
@@ -850,7 +890,7 @@ def main():
                 'Diagnostic-only suite requires confirmation mode; history is unavailable')
         outputs(skill=args.skill, attempts=MODES[args.mode],
                 history_eligible=str(not options['diagnostic_only']).lower(),
-                public_supported=str(not options['diagnostic_only']).lower())
+                public_supported='true', public_source_kind='retained' if options['grading_mode'] == 'custom_only' else 'original')
     elif args.command == 'prepare':
         skill = prepare_benchmark(workspace, args.root, args.skill)
         options = benchmark_options(args.skill)

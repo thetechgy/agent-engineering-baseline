@@ -57,7 +57,7 @@ class SelectionTests(unittest.TestCase):
                 reports.publish_metrics(ROOT, path, pilot.NAME)
             with self.assertRaisesRegex(ValueError, 'cannot publish history'):
                 reports.validate_metrics({}, ROOT, pilot.NAME, '0' * 40)
-            with self.assertRaisesRegex(ValueError, 'not supported'):
+            with self.assertRaises(ValueError):
                 reports.public_benchmark(ROOT, path, pilot.NAME, 'confirmation', path / 'public')
 
     def test_shared_cli_rejects_standard_and_declares_diagnostic_eligibility(self):
@@ -71,7 +71,7 @@ class SelectionTests(unittest.TestCase):
             accepted = subprocess.run([*command, 'confirmation'], env=env, capture_output=True, text=True)
             self.assertEqual(accepted.returncode, 0, accepted.stderr)
             self.assertIn('history_eligible=false\n', output.read_text())
-            self.assertIn('public_supported=false\n', output.read_text())
+            self.assertIn('public_supported=true\n', output.read_text())
 
     def test_workflow_uses_shared_routing_and_independent_history_guards(self):
         workflow = yaml.safe_load((ROOT / '.github/workflows/benchmark-skills.yml').read_text())

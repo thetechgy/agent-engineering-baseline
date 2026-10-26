@@ -102,6 +102,8 @@ NEXT_STEPS = {
     'supply_model_backed_public_report': 'Supply a validated model-backed public report when an evaluation is authorized.',
 }
 FINDING_LABELS = {
+    'custom_unavailable': 'Unavailable deterministic evaluation',
+    'custom_measured_failure': 'Reported deterministic measurement warrants investigation',
     'case_regression': 'Lower with-skill case score', 'failed_gate': 'Failed mandatory gate',
     'failed_static_checks': 'Native required check not passed', 'incomplete_scans': 'Incomplete static scans',
     'incomplete_execution': 'Incomplete execution evidence', 'unavailable_support': 'Original support unavailable',
@@ -382,7 +384,10 @@ def executive_summary(result, records, attached):
                 regressions = sum(f['kind'] == 'case_regression' and run['record_id'] in f['record_ids'] for f in findings)
                 parts.append('<p><strong>' + safe(skill['skill']) + '</strong>: ' +
                     ('Skill Lift ' + text(lift) + ' (with minus without on the evaluator scale); ' if lift is not None else '') +
-                    count(regressions, 'lower with-skill case score') + '. ' +
+                    ('Reported custom measurements; paired population ' +
+                     ('complete' if run['custom']['complete_paired_population'] else 'incomplete')
+                     if run['policy']['fields']['grading'] == 'custom_only' and 'custom' in run else
+                     count(regressions, 'lower with-skill case score')) + '. ' +
                     link('record', (run['record_id'],), skill['skill'] + ' · measured results and coverage') + '.</p>')
     runs = [r for s in skills for r in s['behavioral_results']]
     failed = sum(len(r['gates']['failed']) for r in runs)
@@ -477,7 +482,8 @@ def record_support(rid, record):
             outcome(obs['deterministic_gate']), disclosure('Exact observation outcomes', {
                 'rubric_pass': obs['rubric_pass'], 'deterministic_gate': obs['deterministic_gate']}) +
             disclosure('Native component scores and gate details', {
-                'observation_id': obs['id'], 'scores': obs['scores'], 'deterministic_scores': obs['deterministic_scores']},
+                'observation_id': obs['id'], 'scores': obs['scores'], 'deterministic_scores': obs['deterministic_scores'],
+                **({'custom': obs['custom']} if 'custom' in obs else {})},
                 target=anchor('components', rid, obs['id'])) + refs])
     if observations:
         parts.append(table('Observation identities and recorded outcomes',
@@ -493,6 +499,57 @@ def record_support(rid, record):
     return '<details><summary>Source, policy, observations and original support</summary>' + ''.join(parts) + '</details>'
 
 
+def custom_measurements(run, record):
+    result = run['custom']; rid = run['record_id']
+    parts = ['<h4>Skill-specific deterministic measurements</h4>',
+        '<p class="notice"><strong>Structurally validated reported evidence.</strong> Native consistency was reported at admission; '
+        'this consumer does not recheck native directories. Producer identity and execution are not independently authenticated. '
+        'Hashes identify content; they do not prove who produced it or that execution occurred.</p>',
+        '<p>Purpose: ' + text(result['purpose']) + '; recorded agent: ' + code(result['agent']) + '; version ' + code(record['custom']['agent_version']) + '. ' +
+        ('Oracle fixture qualification is not model-backed skill-effectiveness evidence.' if result['purpose'] == 'oracle_qualification' else
+         'Within-run differences describe supplied measurements; they do not establish causality.') + '</p>']
+    parts.append(table('Tasks and applicability', ('Case', 'Task', 'Source case', 'Applicable native metrics'),
+        [[code(case['case_id']), text(case['title']), code(case['source_case_id']), ', '.join(code(k) for k in case['metrics'])]
+         for case in record['custom']['cases']]))
+    if any(definition['role'] == 'mandatory_with_skill_gate' for definition in record['custom']['definitions']):
+        parts.append('<p>Pass/fail below summarizes the registered gate conjunction. Task correctness is separate. '
+                     'Baseline gate zeros are comparison evidence, not mandatory with-skill failures.</p>')
+    kinds = (*evidence.CUSTOM_OUTCOMES, 'missing')
+    parts.append(table('Reported custom-grader classifications · failures and unavailability stay distinct', ('Arm', *kinds),
+        [[safe(ARM[arm]), *[text(result['outcomes'][arm][kind]) for kind in kinds]] for arm in ARM]))
+    for metric in result['metrics']:
+        definition = metric['definition']
+        parts += ['<h4>' + text(definition['title']) + '</h4><p>' + text(definition['definition']) + '</p>',
+            '<p>Metric ' + code(definition['id']) + '; competency ' + code(definition['competency']) + '; unit ' + code(definition['unit']) +
+            '. Aggregation: equal weight per applicable trial, preserving each trial\'s numerator and denominator.</p>',
+            table('Applicability and complete-population comparison · ' + definition['id'],
+                ('Arm', 'Expected applicable', 'Measured', 'Unavailable / missing', 'Recorded nonapplicable', 'Complete-population mean'),
+                [[safe(ARM[arm]), *[text(metric['coverage'][arm][key]) for key in ('expected_applicable', 'measured', 'unavailable_or_missing', 'recorded_nonapplicable')],
+                  quantity(metric['arm_means'][arm])] for arm in ARM]),
+            '<p>With minus without: ' + quantity(metric['with_minus_without']) + '. ' +
+            text(metric['unavailable_reason'] or metric['interpretation']) + '. '
+            'Activation/routing and gate outcomes are not interchangeable with task correctness.</p>']
+    rows = []
+    for obs in record['observations']:
+        for measurement in obs['custom']['measurements']:
+            rows.append([code(obs['case_id']), safe(ARM[obs['arm']]), text(obs['attempt']),
+                text(obs['custom']['outcome']), code(measurement['metric_id']), text(measurement['applicability']),
+                text(measurement['value']) if measurement['status'] == 'measured' else 'Unavailable',
+                text(measurement['numerator']) + ' / ' + text(measurement['denominator']),
+                text(measurement['reason']), link('observation', (rid, obs['id']), 'Trial and evidence')])
+    parts.append('<details><summary>All custom measurements and scoring bases</summary>' + table('Recorded custom measurements',
+        ('Case', 'Arm', 'Attempt', 'Grader outcome', 'Metric', 'Applicability', 'Value', 'Numerator / denominator', 'Limitation', 'Evidence'), rows) + '</details>')
+    parts.append('<details><summary>Native token and phase-runtime observations</summary><p>Missing values stay unknown. '
+        'Input tokens include cache tokens; phase durations are derived only from recorded start/finish times. '
+        'These observations do not establish total model/judge usage.</p>' + table('Per-trial reported usage',
+        ('Case / arm', 'Input tokens', 'Cache tokens', 'Output tokens', 'Agent seconds', 'Verifier seconds'),
+        [[code(obs['case_id']) + ' / ' + safe(ARM[obs['arm']]), *[text(obs['custom']['usage'][key]) for key in ('n_input_tokens', 'n_cache_tokens', 'n_output_tokens', 'agent_execution_seconds', 'verifier_seconds')]]
+         for obs in record['observations']]) + '</details>')
+    parts.append('<p>Custom cross-run numeric comparisons and custom-metric history publication are disabled. '
+                 'Incomplete required populations retain trial measurements but no aggregate comparison.</p>')
+    return ''.join(parts)
+
+
 def behavioral(run, records):
     rid = run['record_id']; record = records[rid]
     parts = [f'<article class="run" id="{anchor("record", rid)}"><h3>Behavioral run: ' + text(run['run_id']) + '</h3>',
@@ -501,23 +558,32 @@ def behavioral(run, records):
         '<p>Evaluated source: ' + text(run['source']['owner']) + ' · ' + code(run['source']['repository']) +
         ' · revision ' + code(run['source']['revision']) + '.</p>',
         '<p>Limitations: ' + limitations(run['availability']) + '</p>']
+    custom_only = record.get('custom', {}).get('profile_id') is not None and record['policy']['fields']['grading'] == 'custom_only'
+    if 'custom' in run: parts.append(custom_measurements(run, record))
     if run['native_metrics']:
         parts.append(table('Evaluator-reported metrics · original score units', ('Metric', 'Original value', 'Scope'),
             [[safe(m['name']), text(m['value']), 'With minus without' if m['name'] == 'Skill Lift' else 'With-skill dimension']
              for m in run['native_metrics']]))
     else:
-        parts.append('<p>Native metrics unavailable; no performance value is inferred.</p>')
+        parts.append('<p>Standard judge metrics were not collected in custom-only mode.</p>' if custom_only else
+                     '<p>Native metrics unavailable; no performance value is inferred.</p>')
     parts.append(table('Measured coverage by arm — unknown counts are not zero',
-        ('Arm', 'Execution', 'Cases expected', 'Attempts expected', 'Recorded', 'Scored', 'Unscored', 'Rubric cases passed / total'),
+        ('Arm', 'Execution', 'Cases expected', 'Attempts expected', 'Recorded', 'Scored', 'Unscored') + (() if custom_only else ('Rubric cases passed / total',)),
         [[safe(ARM[a['name']]), text(a['execution_status']), text(a['coverage']['expected_cases']),
           text(a['coverage']['expected_attempts']), text(a['coverage']['recorded_attempts']),
-          text(a['coverage']['scored_attempts']), text(a['coverage']['unscored_attempts']),
-          text(a['rubric']['passed_cases']) + ' / ' + text(a['rubric']['total_cases'])] for a in run['arms']]))
+          text(a['coverage']['scored_attempts']), text(a['coverage']['unscored_attempts'])] +
+          ([] if custom_only else [text(a['rubric']['passed_cases']) + ' / ' + text(a['rubric']['total_cases'])]) for a in run['arms']]))
     summary = run['case_summary']; gates = run['gates']
-    parts.append('<p>' + count(summary['matched_cases'], 'matched case') + ' out of ' + text(summary['cohort_cases']) +
-        '; ' + count(summary['scored_observations'], 'scored observation') + '. Mandatory gates: ' +
-        text(len(gates['failed'])) + ' failed, ' + text(gates['passed_observations']) + ' passed, ' +
-        text(gates['unknown_observations']) + ' unknown. Unknown gates do not count as passing.</p>')
+    if custom_only:
+        measured = sum(obs['custom']['outcome'] in evidence.CUSTOM_MEASURED for obs in record['observations'])
+        parts.append('<p>' + text(measured) + ' trials with evaluated custom outcomes; ' +
+            text(len(record['observations']) - measured) + ' retained trials without scoreable custom outcomes. '
+            'Standard rubric dimensions were not collected. Applicable populations and comparison limits appear per metric above.</p>')
+    else:
+        parts.append('<p>' + count(summary['matched_cases'], 'matched case') + ' out of ' + text(summary['cohort_cases']) +
+            '; ' + count(summary['scored_observations'], 'scored observation') + '. Mandatory gates: ' +
+            text(len(gates['failed'])) + ' failed, ' + text(gates['passed_observations']) + ' passed, ' +
+            text(gates['unknown_observations']) + ' unknown. Unknown gates do not count as passing.</p>')
     rows = []
     for case in summary['cases']:
         obs_links = '<br>'.join(link('observation', (rid, oid), context(record['source']['skill_id'], [case['case_id']]) +
@@ -527,7 +593,7 @@ def behavioral(run, records):
             quantity(case['arm_means']['without_skill']), quantity(case['with_minus_without']),
             ', '.join(code(v) for v in case['unavailable_reasons']) or 'Complete planned scores',
             disclosure('Exact derived quantities and support identities', case) + obs_links])
-    parts.append('<details><summary>All case scores and comparison coverage</summary><p>Descriptive arm means across complete planned attempts; '
+    if not custom_only: parts.append('<details><summary>All case scores and comparison coverage</summary><p>Descriptive arm means across complete planned attempts; '
         'with minus without. Attempts are not statistically paired. Missing or adaptive attempts suppress means. '
         'These case means do not reconstruct native Skill Lift.</p>' + table('Within-run case comparison',
         ('Case', 'With skill mean', 'Without skill mean', 'With minus without', 'Coverage limitations', 'Evidence'), rows) + '</details>')
@@ -727,7 +793,9 @@ def render_report(result, captured, *, reviews=None):
             add('<p>Static scan evidence not supplied for this skill; no clean-scan claim is made.</p>')
         add('<details><summary>Cross-run comparison status and evidence</summary>' + comparisons(skill) + '</details></section>')
     add('<section id="provenance"><h2>Report provenance and limitations</h2><p>Presentation method ' + code(METHOD) +
-        '; analysis method ' + code(result['method_version']) + '; public and analysis schema version 1. Analysis semantic digest ' +
+        '; analysis method ' + code(result['method_version']) +
+        ('; public schemas 1/2 and analysis schema 2. Analysis semantic digest ' if result['schema_version'] == 2 else
+         '; public and analysis schema version 1. Analysis semantic digest ') +
         code(evidence.identity(result)) + '.</p><p>Saved analysis was independently rebuilt against captured public originals before rendering. '
         'Canonical record identities preserve semantic content; raw-byte digests preserve the exact supplied files. '
         'These bindings do not attest remote execution. No local input paths, generation timestamp, prompts or private trajectories are embedded. '
