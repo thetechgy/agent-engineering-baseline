@@ -1,0 +1,11 @@
+{
+  "skill_name": "powershell-pester-6",
+  "evals": [
+    {
+      "id": "pester-001",
+      "prompt": "Write Pester 6 tests for Get-ActivePort in input/Subject.ps1. Its contract is in input/README.md. Save your self-contained suite as output/Subject.Tests.ps1. Work within the supplied project and its declared dependencies; use the supplied execution-profile documentation for supported operations.",
+      "expected_output": "Executable tests check the documented empty, singleton, filtering, collection, and integer-output behavior.",
+      "expected_skill": "powershell-pester-6"
+    }
+  ]
+}

@@ -114,7 +114,10 @@ class EvidenceTests(unittest.TestCase):
     def test_current_discovery(self):
         inv = evidence.inventory()
         self.assertEqual(sum(r['source']['owner'] == 'local' for r in inv['skills']), 6)
-        self.assertEqual(sum(r['suite'] is not None for r in inv['skills']), 2)
+        self.assertEqual(sum(r['suite'] is not None for r in inv['skills']), 3)
+        pester = next(r for r in inv['skills'] if r['source']['skill_id'] == 'powershell-pester-6')
+        self.assertEqual(pester['suite']['owner'], 'overlay')
+        self.assertEqual(pester['suite']['case_ids'], ['pester-001'])
         gh = next(r for r in inv['skills'] if r['source']['skill_id'] == 'gh')
         self.assertEqual(gh['source']['repository'], 'cli/cli')
         self.assertEqual(len(gh['suite']['case_ids']), 24)
