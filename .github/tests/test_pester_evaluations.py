@@ -216,6 +216,11 @@ class NativeStagingTests(unittest.TestCase):
                         self.assertNotIn(b'PESTER_VERIFIER_ONLY_', member.read_bytes(), member.name)
                     self.assertIn('PESTER_VERIFIER_ONLY_', (task / 'tests/Runner.ps1').read_text())
                     self.assertFalse((task / 'environment/.github').exists())
+                    public = task / 'environment/input'
+                    self.assertEqual({p.name for p in public.iterdir()},
+                                     {'Subject.ps1', 'README.md', 'EXECUTION-PROFILE.md'})
+                    self.assertEqual((public / 'Subject.ps1').read_bytes(),
+                                     (SOURCE / 'cases/pester-001/input/Subject.ps1').read_bytes())
                     self.assertIn('--mode custom_only', (task / 'tests/test.sh').read_text())
                 self.assertEqual(pilot.manifest(tasks[0] / 'environment/input'), pilot.manifest(tasks[1] / 'environment/input'))
                 self.assertEqual((tasks[0] / 'instruction.md').read_bytes(), (tasks[1] / 'instruction.md').read_bytes())

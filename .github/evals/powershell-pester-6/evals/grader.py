@@ -110,7 +110,17 @@ def invoke(candidate, profile, *, admission=False):
             if process.returncode in (-signal.SIGXCPU, -signal.SIGKILL):
                 return {'status': 'timeout', 'code': 'process_budget'}
             if process.returncode:
-                return {'status': 'invalid', 'code': 'process'}
+                # The fixed runner catches candidate failures. Nonzero process
+                # termination is an unqualified runtime, not candidate quality.
+                stderr.seek(0)
+                diagnostic = stderr.read(1024 * 1024)
+                kind = next((label for label, pattern in (
+                    ('permission', b'Permission denied'), ('coreclr', b'Failed to create CoreCLR'),
+                    ('memory', b'Out of memory'), ('memory', b'Cannot allocate memory'),
+                    ('dependency', b'Unable to load shared library'),
+                ) if pattern in diagnostic), 'unclassified')
+                return {'status': 'infrastructure_error', 'code': 'worker_' + kind,
+                        'process_exit': process.returncode}
             stdout.seek(0)
             try:
                 result = json.loads(stdout.read(1024 * 1024 + 1))
@@ -179,7 +189,10 @@ def grade(tests):
     prepare(runtime / 'profile.json', regular_bytes(tests / 'case/profile.json'))
     admission = invoke(output, runtime / 'profile.json', admission=True)
     if admission.get('status') != 'admitted':
-        return admission.get('status', 'infrastructure_error'), {'code': admission.get('code', 'admission')}
+        details = {'code': admission.get('code', 'admission')}
+        if type(admission.get('process_exit')) is int:
+            details['process_exit'] = admission['process_exit']
+        return admission.get('status', 'infrastructure_error'), details
     variants = [tests / 'case/reference/Subject.ps1', *sorted((tests / 'case/mutants').glob('*.ps1'))]
     if not 2 <= len(variants) <= MAX_VARIANTS:
         raise RuntimeError('variants')
