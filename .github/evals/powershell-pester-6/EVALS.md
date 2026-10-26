@@ -83,6 +83,15 @@ policy. Direct additional packages are libicu76 76.1-4, curl 8.14.1-2+deb13u5,
 and ripgrep 14.1.1-1+b4. PowerShell 7.6.6 and Pester 6.2.0 are downloaded and
 hash-verified at build time, followed by actual import/version checks.
 
+The per-file resource cap is 64 MiB. A fixed PowerShell 7.6.6 version command
+reproduced CoreCLR startup failure (exit 137, `0x8007000E`) with a 1 MiB cap;
+16 MiB permits startup but fails a trusted Pester import/execution smoke test.
+64 MiB permits both with the other worker limits unchanged. This is a runtime
+prerequisite, not a candidate retry or relaxed container memory/CPU limit.
+Each captured stream remains bounded by the per-file cap; stdout larger than
+1 MiB is rejected before JSON parsing, including valid prefixes followed by
+padding or additional output. Captured stderr is never published.
+
 The PowerShell archive SHA-256 is
 `ddbc4a2d113bbd46d283cfedcbcd117a70caefd7673f41f2b4e0000badf103bc`,
 from the official release checksum file. The Pester Gallery package SHA-256 is

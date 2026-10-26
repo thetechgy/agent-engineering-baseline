@@ -19,6 +19,8 @@ CASE_SECONDS = 220
 MAX_VARIANTS = 5
 WORKER_UID = 53001
 LIMIT = 64 * 1024
+FILE_BYTES = 64 * 1024 * 1024
+OUTPUT_BYTES = 1024 * 1024
 UNSCORED = {'invalid', 'unsupported', 'timeout', 'infrastructure_error'}
 
 
@@ -45,13 +47,18 @@ def regular_bytes(path, limit=LIMIT):
         os.close(fd)
 
 
-def worker_identity():
-    """Fixed privilege drop, not an agent-accessible privileged helper."""
+def worker_limits():
+    """Bound files without preventing CoreCLR startup and Pester execution."""
     resource.setrlimit(resource.RLIMIT_CPU, (20, 20))
     resource.setrlimit(resource.RLIMIT_NPROC, (128, 128))
     resource.setrlimit(resource.RLIMIT_NOFILE, (256, 256))
-    resource.setrlimit(resource.RLIMIT_FSIZE, (1024 * 1024, 1024 * 1024))
+    resource.setrlimit(resource.RLIMIT_FSIZE, (FILE_BYTES, FILE_BYTES))
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+
+
+def worker_identity():
+    """Fixed privilege drop, not an agent-accessible privileged helper."""
+    worker_limits()
     if ctypes.CDLL(None, use_errno=True).prctl(38, 1, 0, 0, 0) != 0:
         raise RuntimeError('privilege')
     os.setgroups([])
@@ -73,6 +80,19 @@ def check_environment():
         raise RuntimeError('resources')
     if Path('/var/run/docker.sock').exists() or Path('/run/podman/podman.sock').exists():
         raise RuntimeError('mount')
+
+
+def read_result(stream):
+    """Require one bounded complete JSON object, never a truncated prefix."""
+    stream.seek(0)
+    data = stream.read(OUTPUT_BYTES + 1)
+    if len(data) > OUTPUT_BYTES:
+        return {'status': 'invalid', 'code': 'output_budget'}
+    try:
+        result = json.loads(data)
+    except (ValueError, UnicodeError):
+        return {'status': 'invalid', 'code': 'protocol'}
+    return result if type(result) is dict else {'status': 'invalid', 'code': 'protocol'}
 
 
 def invoke(candidate, profile, *, admission=False):
@@ -109,6 +129,8 @@ def invoke(candidate, profile, *, admission=False):
                 process.wait(timeout=REAP_SECONDS)
             if process.returncode in (-signal.SIGXCPU, -signal.SIGKILL):
                 return {'status': 'timeout', 'code': 'process_budget'}
+            if process.returncode == -signal.SIGXFSZ:
+                return {'status': 'invalid', 'code': 'output_budget'}
             if process.returncode:
                 # The fixed runner catches candidate failures. Nonzero process
                 # termination is an unqualified runtime, not candidate quality.
@@ -121,12 +143,7 @@ def invoke(candidate, profile, *, admission=False):
                 ) if pattern in diagnostic), 'unclassified')
                 return {'status': 'infrastructure_error', 'code': 'worker_' + kind,
                         'process_exit': process.returncode}
-            stdout.seek(0)
-            try:
-                result = json.loads(stdout.read(1024 * 1024 + 1))
-            except (ValueError, UnicodeError):
-                return {'status': 'invalid', 'code': 'protocol'}
-            return result if type(result) is dict else {'status': 'invalid', 'code': 'protocol'}
+            return read_result(stdout)
 
 
 def executed(result, minimum):

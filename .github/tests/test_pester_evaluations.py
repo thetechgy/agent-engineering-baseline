@@ -286,6 +286,16 @@ class NativeStagingTests(unittest.TestCase):
 
 @unittest.skipUnless(sys.platform == 'linux', 'Execution profile targets Linux')
 class ClassificationTests(unittest.TestCase):
+    def test_worker_output_rejects_oversized_valid_prefix_and_trailing_payload(self):
+        g = grader()
+        good = b'{"status":"admitted","code":"ok"}'
+        self.assertEqual(g.read_result(io.BytesIO(good)), {'status': 'admitted', 'code': 'ok'})
+        malicious = good + b' ' * g.OUTPUT_BYTES + b'{"status":"invalid"}'
+        self.assertEqual(g.read_result(io.BytesIO(malicious)), {'status': 'invalid', 'code': 'output_budget'})
+        for payload in (good + b'{}', b'[]', b'\xff', b''):
+            with self.subTest(payload=payload):
+                self.assertEqual(g.read_result(io.BytesIO(payload)), {'status': 'invalid', 'code': 'protocol'})
+
     def test_classifications_and_mutant_evidence(self):
         g = grader()
         good = dict(status='executed', version='6.2.0', powershell_version='7.6.6', total=3, passed=3, failed=0,
@@ -334,6 +344,20 @@ class ClassificationTests(unittest.TestCase):
 
 @unittest.skipUnless(shutil.which('pwsh'), 'PowerShell not available for parser qualification')
 class RealParserTests(unittest.TestCase):
+    @unittest.skipUnless(sys.platform == 'linux', 'Worker resource limits target Linux')
+    def test_trusted_powershell_starts_under_actual_worker_resource_limits(self):
+        # A fixed version command only: no submitted tests execute on the host.
+        # Container identity, cgroups, and Pester execution remain hosted checks.
+        g = grader()
+        with tempfile.TemporaryDirectory() as directory:
+            result = subprocess.run([shutil.which('pwsh'), '-NoLogo', '-NoProfile', '-NonInteractive',
+                                     '-Command', '$PSVersionTable.PSVersion.ToString()'],
+                cwd=directory, env={'PATH': '/usr/bin:/bin', 'HOME': directory, 'TMPDIR': directory,
+                                   'DOTNET_EnableDiagnostics': '0', 'POWERSHELL_TELEMETRY_OPTOUT': '1'},
+                preexec_fn=g.worker_limits, capture_output=True, text=True, timeout=10)
+            self.assertEqual(result.returncode, 0, 'Trusted PowerShell startup failed under worker limits')
+            self.assertRegex(result.stdout.strip(), r'^7\.\d+\.\d+$')
+
     def admission(self, text):
         with tempfile.TemporaryDirectory() as directory:
             candidate = Path(directory) / 'Subject.Tests.ps1'; candidate.write_text(text)
