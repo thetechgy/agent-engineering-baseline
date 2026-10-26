@@ -121,6 +121,8 @@ try {
                 if ($__peCommand -notin @($__peBlocks + $__peAssertions + @('Out-Null', $__pePolicy.command))) { throw 'admission' }
                 foreach ($__peElement in $__peNode.CommandElements) {
                     if ($__peElement -is [System.Management.Automation.Language.CommandParameterAst]) {
+                        if ($__peCommand -eq 'Out-Null' -or
+                            ($__peCommand -eq $__pePolicy.command -and $__pePolicy.parameters -notcontains $__peElement.ParameterName)) { throw 'admission' }
                         if ($__peAssertions -contains $__peCommand -and $__peAssertParameters -notcontains $__peElement.ParameterName) { throw 'admission' }
                         if ($__peBlocks -contains $__peCommand -and $__peElement.ParameterName -notin @('Name', 'ForEach', 'TestCases', 'Test', 'Tag', 'Skip')) { throw 'admission' }
                     }

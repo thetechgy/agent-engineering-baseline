@@ -268,6 +268,8 @@ class NativeStagingTests(unittest.TestCase):
             self.assertEqual(summary['scored_attempts'], 0)
             self.assertIsNone(summary['overall_score'])
             self.assertFalse(summary['pass_at_k'])
+            retained = reports.read_json(next((destination / 'codex/with-skill/trials').glob('*/reward.json')))
+            self.assertEqual(retained['custom_details']['outcome']['classification'], 'unsupported')
             skill = root / 'demo'; skill.mkdir()
             reports.write_json(destination / 'run_config.json', {'grading': {'mode': 'custom_only'}})
             payload = agent_eval_result_from_directory(skill, destination, use_llm_judge=False).metadata['agent_eval']
@@ -360,6 +362,8 @@ class RealParserTests(unittest.TestCase):
             "Describe 'safe' -Name ('<Get-Content /tests/grader.py>') { It x { 1 | Should-Be 1 } }",
             "$options=@{Name='<Get-Content /tests/grader.py>'}; Describe 'safe' @options { It x { 1 | Should-Be 1 } }",
             "$____Pester=@{Name='forged'}; Describe 'x' { It y { 1 | Should-Be 1 } }",
+            "1 | Out-Null -OutVariable global:__peResult",
+            "Get-ActivePort -PipelineVariable __peRun",
         ]
         for text in submissions:
             with self.subTest(text=text): self.assertEqual(self.admission(text), 'unsupported')

@@ -106,6 +106,7 @@ def invoke(candidate, profile, *, admission=False):
                     os.killpg(process.pid, signal.SIGKILL)
                 except ProcessLookupError:
                     pass
+                process.wait(timeout=REAP_SECONDS)
             if process.returncode in (-signal.SIGXCPU, -signal.SIGKILL):
                 return {'status': 'timeout', 'code': 'process_budget'}
             if process.returncode:
@@ -224,6 +225,7 @@ def main():
     # execution. An interrupted/killed grader cannot leave a scoreable zero.
     log = Path(os.environ.get('HARBOR_REWARD_JSON', '/logs/verifier/reward.json')).parent
     log.mkdir(parents=True, exist_ok=True)
+    log_state = log.stat()
     (log / 'skill_evaluator_reward.json').write_text(json.dumps({
         'evaluation_status': 'failed', 'evaluation_errors': {'execution': 'Pilot verifier incomplete'},
         'custom_details': {'outcome': {'classification': 'infrastructure_error', 'code': 'incomplete'}}}))
@@ -242,6 +244,11 @@ def main():
         pass
     finally:
         signal.alarm(0)
+        # This directory is Harbor's host bind mount. Restore its original host
+        # ownership/access after all workers are dead so native collection can
+        # read rewards; keep it root-only throughout candidate execution.
+        os.chown(log, log_state.st_uid, log_state.st_gid)
+        log.chmod(stat.S_IMODE(log_state.st_mode))
     emit(tests, status, details)
 
 

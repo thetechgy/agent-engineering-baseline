@@ -1,6 +1,7 @@
 {
   "protected_marker": "PESTER_VERIFIER_ONLY_PROFILE_329F",
   "command": "Get-ActivePort",
+  "parameters": ["Endpoint"],
   "properties": ["Port", "Enabled", "Count", "Length", "Name", "Expected", "Items"],
   "dependencies": [],
   "module": null,
