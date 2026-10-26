@@ -384,7 +384,10 @@ def executive_summary(result, records, attached):
                 regressions = sum(f['kind'] == 'case_regression' and run['record_id'] in f['record_ids'] for f in findings)
                 parts.append('<p><strong>' + safe(skill['skill']) + '</strong>: ' +
                     ('Skill Lift ' + text(lift) + ' (with minus without on the evaluator scale); ' if lift is not None else '') +
-                    count(regressions, 'lower with-skill case score') + '. ' +
+                    ('Reported custom measurements; paired population ' +
+                     ('complete' if run['custom']['complete_paired_population'] else 'incomplete')
+                     if run['policy']['fields']['grading'] == 'custom_only' and 'custom' in run else
+                     count(regressions, 'lower with-skill case score')) + '. ' +
                     link('record', (run['record_id'],), skill['skill'] + ' · measured results and coverage') + '.</p>')
     runs = [r for s in skills for r in s['behavioral_results']]
     failed = sum(len(r['gates']['failed']) for r in runs)
@@ -565,16 +568,22 @@ def behavioral(run, records):
         parts.append('<p>Standard judge metrics were not collected in custom-only mode.</p>' if custom_only else
                      '<p>Native metrics unavailable; no performance value is inferred.</p>')
     parts.append(table('Measured coverage by arm — unknown counts are not zero',
-        ('Arm', 'Execution', 'Cases expected', 'Attempts expected', 'Recorded', 'Scored', 'Unscored', 'Rubric cases passed / total'),
+        ('Arm', 'Execution', 'Cases expected', 'Attempts expected', 'Recorded', 'Scored', 'Unscored') + (() if custom_only else ('Rubric cases passed / total',)),
         [[safe(ARM[a['name']]), text(a['execution_status']), text(a['coverage']['expected_cases']),
           text(a['coverage']['expected_attempts']), text(a['coverage']['recorded_attempts']),
-          text(a['coverage']['scored_attempts']), text(a['coverage']['unscored_attempts']),
-          text(a['rubric']['passed_cases']) + ' / ' + text(a['rubric']['total_cases'])] for a in run['arms']]))
+          text(a['coverage']['scored_attempts']), text(a['coverage']['unscored_attempts'])] +
+          ([] if custom_only else [text(a['rubric']['passed_cases']) + ' / ' + text(a['rubric']['total_cases'])]) for a in run['arms']]))
     summary = run['case_summary']; gates = run['gates']
-    parts.append('<p>' + count(summary['matched_cases'], 'matched case') + ' out of ' + text(summary['cohort_cases']) +
-        '; ' + count(summary['scored_observations'], 'scored observation') + '. Mandatory gates: ' +
-        text(len(gates['failed'])) + ' failed, ' + text(gates['passed_observations']) + ' passed, ' +
-        text(gates['unknown_observations']) + ' unknown. Unknown gates do not count as passing.</p>')
+    if custom_only:
+        measured = sum(obs['custom']['outcome'] in evidence.CUSTOM_MEASURED for obs in record['observations'])
+        parts.append('<p>' + text(measured) + ' trials with evaluated custom outcomes; ' +
+            text(len(record['observations']) - measured) + ' retained trials without scoreable custom outcomes. '
+            'Standard rubric dimensions were not collected. Applicable populations and comparison limits appear per metric above.</p>')
+    else:
+        parts.append('<p>' + count(summary['matched_cases'], 'matched case') + ' out of ' + text(summary['cohort_cases']) +
+            '; ' + count(summary['scored_observations'], 'scored observation') + '. Mandatory gates: ' +
+            text(len(gates['failed'])) + ' failed, ' + text(gates['passed_observations']) + ' passed, ' +
+            text(gates['unknown_observations']) + ' unknown. Unknown gates do not count as passing.</p>')
     rows = []
     for case in summary['cases']:
         obs_links = '<br>'.join(link('observation', (rid, oid), context(record['source']['skill_id'], [case['case_id']]) +

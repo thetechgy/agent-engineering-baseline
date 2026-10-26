@@ -244,9 +244,12 @@ class CustomMetricTests(unittest.TestCase):
         output = report.generate([public], saved, self.root / 'rendered')
         text = (output / 'report.html').read_text()
         for expected in ('Seeded mutation detection', 'Reference correctness', 'not_applicable', 'unsupported',
-                         'Structurally validated reported evidence', 'not independently authenticated', 'not collected in custom-only'):
+                         'Structurally validated reported evidence', 'not independently authenticated', 'not collected in custom-only',
+                         '18 trials with evaluated custom outcomes', 'Reported custom measurements; paired population incomplete'):
             self.assertIn(expected, text)
         self.assertNotIn('PESTER_VERIFIER_ONLY_', text)
+        self.assertNotIn('0 scored observations', text)
+        self.assertNotIn('0 lower with-skill case scores', text)
         from test_skill_report import Document
         document = Document(text)
         self.assertEqual(len(document.ids), len(set(document.ids)))
