@@ -6,6 +6,30 @@
       "prompt": "Write Pester 6 tests for Get-ActivePort in input/Subject.ps1. Its contract is in input/README.md. Save your self-contained suite as output/Subject.Tests.ps1. Work within the supplied project and its declared dependencies; use the supplied execution-profile documentation for supported operations.",
       "expected_output": "Executable tests check the documented empty, singleton, filtering, collection, and integer-output behavior.",
       "expected_skill": "powershell-pester-6"
+    },
+    {
+      "id": "pester-002",
+      "prompt": "Add unit tests for Get-RetryDelay in input/Subject.ps1. Use the project contract and dependencies documented in input/README.md. Save the self-contained suite as output/Subject.Tests.ps1.",
+      "expected_output": "Tests exercise valid delay calculations and verify the documented errors for invalid attempts.",
+      "expected_skill": "powershell-pester-6"
+    },
+    {
+      "id": "pester-003",
+      "prompt": "Repair and extend the endpoint module tests described in input/README.md. Test the module contract using the supplied project dependencies and save the suite as output/Subject.Tests.ps1.",
+      "expected_output": "Tests pass against the correct module and detect missing transport calls or incorrect target forwarding.",
+      "expected_skill": "powershell-pester-6"
+    },
+    {
+      "id": "pester-004",
+      "prompt": "Repair input/Existing.Tests.ps1 so it really checks all four supplied port boundaries against input/Subject.ps1. Follow the project contract in input/README.md and save the complete repaired suite as output/Subject.Tests.ps1.",
+      "expected_output": "Executed tests verify all four supplied boundaries and detect off-by-one implementation defects.",
+      "expected_skill": "powershell-pester-6"
+    },
+    {
+      "id": "pester-005",
+      "prompt": "Summarize the Python unittest report in input/unittest.txt. Write only output/summary.json using the fields specified in input/README.md.",
+      "expected_output": "A JSON summary has the correct integer counts for total, passed, failures, errors, and skipped tests.",
+      "expected_skill": null
     }
   ]
 }

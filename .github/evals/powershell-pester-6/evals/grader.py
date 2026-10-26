@@ -180,6 +180,18 @@ def prepare(path, data):
     path.chmod(0o444)
 
 
+def assess_summary(candidate, expected):
+    """The negative control is data only; it never executes submitted code."""
+    try:
+        actual = json.loads(candidate)
+    except (ValueError, UnicodeError, RecursionError):
+        return 'invalid', {'code': 'summary_protocol'}
+    correct = (type(actual) is dict and actual.keys() == expected.keys()
+               and all(type(value) is int for value in actual.values()) and actual == expected)
+    return ('passed' if correct else 'failed'), {
+        'code': 'evaluated', 'negative_control_correct': int(correct)}
+
+
 def grade(tests):
     check_environment()
     # Harbor initially chmods its log directory; close that host mount to the child.
@@ -188,12 +200,21 @@ def grade(tests):
     logs.chmod(0o700)
     tests.chmod(0o700)
     profile = json.loads(regular_bytes(tests / 'case/profile.json'))
+    output_name = profile.get('output', 'Subject.Tests.ps1')
+    if output_name not in ('Subject.Tests.ps1', 'summary.json'):
+        raise ValueError('profile')
     try:
-        candidate = regular_bytes(Path('/workspace/output/Subject.Tests.ps1'))
+        candidate = regular_bytes(Path('/workspace/output') / output_name)
         candidate.decode('utf-8')
     except (FileNotFoundError, ValueError, UnicodeError):
         return 'invalid', {'code': 'artifact'}
-    output = Path('/workspace/output/Subject.Tests.ps1')
+    if profile.get('kind') == 'summary':
+        expected = json.loads(regular_bytes(tests / 'case/reference/summary.json'))
+        return assess_summary(candidate, expected)
+    subject = profile.get('subject', 'Subject.ps1')
+    if subject not in ('Subject.ps1', 'Probe.psm1'):
+        raise ValueError('profile')
+    output = Path('/workspace/output') / output_name
     prepare(output, candidate)
     # Upload is finished, and the producer container is stopped. Replace the
     # artifact directory with verifier-owned immutable execution inputs.
@@ -215,7 +236,7 @@ def grade(tests):
         raise RuntimeError('variants')
     runs = []
     for variant in variants:
-        prepare(Path('/workspace/input/Subject.ps1'), regular_bytes(variant))
+        prepare(Path('/workspace/input') / subject, regular_bytes(variant))
         runs.append(invoke(output, runtime / 'profile.json'))
     return assess(runs[0], runs[1:], profile['minimum_tests'])
 
@@ -231,6 +252,7 @@ def emit(tests, status, details):
         entry = json.loads(regular_bytes(tests / 'entry.json'))
         entry_id = entry['id']
     except Exception:
+        entry = {}
         status, details, entry_id = 'infrastructure_error', {'code': 'entry'}, 'unknown'
     reward = {'overall': float(status == 'passed'), 'entry_id': entry_id,
               'details': {'outcome': {'classification': status, **details}}}
@@ -239,6 +261,8 @@ def emit(tests, status, details):
                'custom_details': reward['details']}
     if status in UNSCORED:
         sidecar['evaluation_errors'] = {'applicability': 'Unscoreable pilot trial: ' + status}
+    elif 'negative_control_correct' in details:
+        reward['custom_metrics'] = {'negative_control_correct': float(details['negative_control_correct'])}
     else:
         reward['custom_metrics'] = {'pester_reference_pass': float(details['reference_pass']),
                                     'pester_mutation_detection': details['mutants_detected'] / details['mutants_executed'],

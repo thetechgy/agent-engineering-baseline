@@ -1,0 +1,20 @@
+{
+  "command": "Get-EndpointStatus",
+  "parameters": [
+    "Target"
+  ],
+  "properties": [
+    "Count",
+    "Length",
+    "Name",
+    "Target",
+    "Healthy"
+  ],
+  "dependencies": [
+    "Test-ProbeConnection"
+  ],
+  "module": "Probe",
+  "minimum_tests": 1,
+  "protected_marker": "PESTER_VERIFIER_ONLY_PESTER_003",
+  "subject": "Probe.psm1"
+}

@@ -1,52 +1,87 @@
-# Pester behavioral evaluation feasibility gate
+# Pester behavioral evaluation pilot
 
-This draft currently implements the first case of the approved five-case pilot.
-Do not treat this gate as the complete pilot or as measured skill effectiveness.
-No model evaluation has been run. Remaining cases follow only after hosted
-qualification of the execution and reporting boundary.
+This five-case pilot measures test engineering with executable counterfactuals.
+No model evaluation has run and no skill-effectiveness improvement is claimed.
+The first milestone is diagnostic-only; public normalization and history remain
+unavailable until the shared contract work in
+[issue #92](https://github.com/thetechgy/agent-engineering-baseline/issues/92).
 
-## Measurement and isolation
+## Cases and deterministic outcomes
 
-`pester-001` requests tests for integer collection output. Three independently
-authored solutions use classic assertions, standalone assertions, and discovery
-data. Good tests pass on the correct subject and detect filtering and type
-regressions. Weak, skipped, empty, unsupported, and failing submissions exercise
-negative paths. Only recognized Pester assertion failures earn mutant credit.
+| Case | Activation intent | Task | Reference and defect checks |
+| --- | --- | --- | --- |
+| `pester-001` | Explicit Pester 6 request | Test integer collection output | Correct subject passes; filtering and string-coercion defects fail |
+| `pester-002` | Implicit PowerShell testing request | Test retry calculations and errors | Correct subject passes; wrong exponent and swallowed errors fail |
+| `pester-003` | Contextual module defect | Repair mocks and check transport invocation | Correct module passes; missing call and wrong target fail |
+| `pester-004` | Contextual discovery defect | Repair a suite that does not run its data cases | Correct subject passes; four independent boundary defects fail |
+| `pester-005` | Negative control | Summarize Python unittest output as JSON | Correct integer counts pass; wrong counts or types fail; no submitted code executes |
 
-The AST profile is documented in `support/EXECUTION-PROFILE.md`. It admits a
-limited language, not arbitrary PowerShell. Valid unsupported code remains a
-coverage gap. OS boundaries are independently required: the producer container
-stops before a separate network-disabled verifier starts; candidate execution
-uses UID 53001 with no supplementary groups, no-new-privileges, bounded process
-resources, and immutable subject/test inputs. A high worker UID avoids sharing
-the hosted runner's UID and its per-user process limit. Native cgroups bound CPU
-and memory; the runner verifies effective permissions, capabilities and seccomp.
+Pester suites must execute at least one test on every variant, pass the correct
+implementation, and reject every seeded mutant with recognized assertion
+failures. Empty, skipped and otherwise nonexecuting suites are unscoreable.
+Test count is an observation, not a quality target: an equivalent compact test
+that checks every boundary and kills all four mutants is accepted. Weak suites
+that pass the reference but miss defects receive a measured failure.
 
-The grader emits only fixed classifications and numeric observations. Captured
-PowerShell output, exception text, script extents, and assertion actual/expected
-values never enter grader logs. The existing shared artifact allowlist and
-redaction remain authoritative; protected fixture markers reject artifact
-staging as an additional containment check, not a general data-loss filter.
+The three collection-test styles, two error-test styles, two module-mocking
+styles, and three discovery/runtime-loop styles are independently authored
+acceptable solutions. Mutation checks establish sensitivity to these ten
+specific regressions, not general coverage or resilience to unseen defects.
+The module's transport stub always throws unless mocked; no real network,
+cloud, domain, GitHub, Graph service or credentials are required.
 
-The verifier pre-arms the existing native failure sidecar before execution.
-Unsupported, invalid, timeout, infrastructure, and interrupted outcomes remain
-unscoreable. The native transport may retain numeric zero, but collection must
-exclude it, retain its classification, and suppress the comparison's overall,
-pass-at-k and lift. A completed evaluated failure is a measured failure instead.
+For Pester cases, `pester_reference_pass` records reference correctness,
+`pester_mutation_detection` records the fraction of seeded mutants rejected,
+and `pester_test_quality` requires both. The unrelated negative control records
+only `negative_control_correct`. Do not compare these as interchangeable skill
+competencies or turn their native aggregate into an effectiveness conclusion.
 
-## Public versus evaluator-owned content
+## Admission, execution and classification
 
-The overlay is outside the distributable skill. The normal skill, APM includes,
-and deployment bytes are unchanged. Staging copies verified skill content into
-a new minimal repository outside the checkout; native staging then constructs
-the comparison arms. Public subject source, contracts and profile documentation
-are identical in both arms. Graders, oracle solutions, mutants and reference
-copies belong only to the separate verifier build context.
+The small AST profile is documented in `support/EXECUTION-PROFILE.md`. It is not
+a sandbox for arbitrary PowerShell. Potentially valid unsupported solutions are
+coverage gaps and remain unscoreable, rather than receiving zero quality.
 
-These files are public repository content, not secrets. Filesystem exclusion
-does not prevent retrieval over the agent runtime's public network. The task
-forbids fetching evaluator answers; observed contamination makes a later paired
-comparison inconclusive. This pilot does not establish a blinded benchmark.
+The native producer container stops before a separate network-disabled verifier
+starts. Candidate execution uses UID 53001, no supplementary groups,
+no-new-privileges, bounded resources and immutable input files. Native cgroups
+bound CPU/memory; the runner checks actual identities, capabilities, seccomp,
+private-file read denials and immutable-file write denials. The high worker UID
+avoids sharing the hosted runner's per-user process limit. Qualification uses
+native concurrency two, matching the existing benchmark policy.
+
+The grader emits only fixed classifications and numeric observations. Raw
+PowerShell output, exceptions, script extents and assertion actual/expected
+values never enter grader logs. The shared artifact allowlist and redaction
+remain authoritative. Protected fixture markers reject artifact staging as an
+additional containment check, not a general data-loss filter.
+
+The grader pre-arms the existing native failed sidecar before execution.
+`invalid`, `unsupported`, `timeout`, `infrastructure_error` and interrupted
+outcomes remain unscoreable. A numeric transport zero may exist but must not
+become measured quality. A single unscoreable trial makes the complete paired
+pilot comparison inconclusive. `failed` means a completed, evaluated failure.
+Model-judged standard dimensions are not collected in `custom_only` mode.
+Activation and substantive skill use still require trajectory/evidence review;
+SkillEvaluator 0.3.0 heuristics and aggregate lift do not establish causality.
+Missing token/runtime observations remain unknown.
+
+## Public versus verifier-owned content
+
+The overlay is outside the distributable skill because APM normally discovers
+skill `evals/` content regardless of publication `includes:`. The authored skill
+instructions, deployment bytes, manifest and dependency pins are unchanged.
+Preparation verifies authored/deployed skill bytes and creates a minimal
+repository outside the checkout. Legitimate inputs match in both arms. Native
+Codex registration copies the actual skill into the unprivileged user's
+`$HOME/.agents/skills`; baseline tasks contain no target skill.
+
+Grader code, private reference copies, mutants, profiles and qualification
+solutions never belong to agent build contexts or ordinary APM deployment/
+package outputs. Only allowlisted/redacted native evidence is retained. These
+files are public repository content, not secrets: agent Internet access could
+retrieve them. The tasks forbid fetching evaluator answers; observed
+contamination makes later results inconclusive. This is not a blinded holdout.
 
 ## Credential-free qualification
 
@@ -56,71 +91,83 @@ Use the existing pinned evaluator Python 3.13 environment:
 python -B -m unittest discover -s .github/tests -p test_pester_evaluations.py -v
 ```
 
-On a disposable hosted runner with the repository's verified Docker Compose
-5.6.1 plugin and evaluator setup, run:
+On a disposable hosted runner with the existing evaluator setup and verified
+Docker Compose 5.6.1 plugin:
 
 ```bash
 python -B .github/scripts/pester_container_validation.py
 ```
 
-This uses native Harbor's oracle to supply fixture submissions and native
-custom-only verification. It performs no Codex/model invocation or judging. The
-collector's `codex` directory convention is retained for shared artifact tests;
-native trial metadata and qualification metadata explicitly identify the oracle.
-It also executes the pinned Codex skill-registration command and checks its
-actual unprivileged discovery path without inference. It does not qualify model
-activation or the native Codex installation/bootstrap supply chain.
+The helper expands 26 reviewed fixture submissions into a temporary qualification
+dataset, then uses Harbor's native scheduler, oracle, separate verifier,
+collector and HTML renderer in both arms (52 trials). Fixture identities are
+created before native staging; trusted staged identities are not edited.
+No Codex/model/provider/judge is invoked. The collector's `codex` directory
+convention is retained; actual trial metadata and explicit qualification
+metadata identify the oracle, and reports remain diagnostic/incomplete.
 
-The hosted feasibility job is required evidence. Local real-parser and trusted
-fixture Pester probes are component evidence, not container-isolation evidence.
-Missing Docker never converts the hosted gate into a successful skip. Do not
-install Docker or change workstation services for this task.
+Qualification includes valid and weak suites, wrong module scope, broken
+discovery, skipped/empty/malformed submissions, a real worker CPU timeout,
+missing PowerShell and a deliberately modified Pester version manifest. The
+version test proves runtime pin rejection; it does not qualify Pester 5 or 6.1
+behavior. Shared artifact checks cover rewards, logs, failure diagnostics and
+reports. Oracle runs have no model trajectory; shared trajectory carriers are
+also tested with injected protected payloads.
 
-## Runtime and deadlines
+Local parser and trusted Pester fixture probes are component evidence. The
+hosted job is required for container qualification; missing Docker is a failure,
+not a successful skip. Do not install Docker or change workstation services.
+Frozen APM regeneration can be checked through the existing
+`scripts/apm_regeneration.py` entry point with the reviewed APM executable.
 
-Task builds reuse the reviewed Debian image digest and fixed 20261010 snapshot
-policy. Direct additional packages are libicu76 76.1-4, curl 8.14.1-2+deb13u5,
-and ripgrep 14.1.1-1+b4. PowerShell 7.6.6 and Pester 6.2.0 are downloaded and
-hash-verified at build time, followed by actual import/version checks.
+## Runtime inputs and deadlines
 
-The per-file resource cap is 64 MiB. A fixed PowerShell 7.6.6 version command
-reproduced CoreCLR startup failure (exit 137, `0x8007000E`) with a 1 MiB cap;
-16 MiB permits startup but fails a trusted Pester import/execution smoke test.
-64 MiB permits both with the other worker limits unchanged. This is a runtime
-prerequisite, not a candidate retry or relaxed container memory/CPU limit.
-Each captured stream remains bounded by the per-file cap; stdout larger than
-1 MiB is rejected before JSON parsing, including valid prefixes followed by
-padding or additional output. Captured stderr is never published.
+Task builds reuse the reviewed Debian image digest and 20261010 snapshot from
+the shared task-build policy. Extra direct packages are libicu76 76.1-4,
+curl 8.14.1-2+deb13u5 and ripgrep 14.1.1-1+b4. PowerShell 7.6.6 and Pester 6.2.0
+are hash-verified at build time, followed by real import/version checks.
 
-The PowerShell archive SHA-256 is
-`ddbc4a2d113bbd46d283cfedcbcd117a70caefd7673f41f2b4e0000badf103bc`,
-from the official release checksum file. The Pester Gallery package SHA-256 is
+PowerShell archive SHA-256:
+`ddbc4a2d113bbd46d283cfedcbcd117a70caefd7673f41f2b4e0000badf103bc`.
+Pester Gallery package SHA-256:
 `e6ac7418d4f12500269aaca58ae56cf1caafbbf1afa2cec334e289d1cf50a239`.
 
-At most five executions each have 30 seconds including PowerShell startup plus
-five seconds to reap. Admission/runtime preflight has 15 seconds; preparation
-has 10 and finalization/cleanup 20. The resulting 220-second case budget sits
-inside the 240-second native verifier deadline before any native multiplier.
-Native image build/start deadlines are separate. Outer CI deadline exhaustion
-is incomplete evidence, never successful qualification.
+The per-file cap is 64 MiB. A trusted PowerShell 7.6.6 version command reproduced
+CoreCLR failure (exit 137, `0x8007000E`) at 1 MiB. At 16 MiB startup worked but
+Pester import/execution failed; 64 MiB permitted both with other limits unchanged.
+Each captured stream is bounded by that cap; stdout exceeding 1 MiB is rejected
+before JSON parsing, including valid prefixes followed by padding or extra data.
+This does not relax container memory/CPU limits or retry failed candidates.
 
-## Shared reporting and future model runs
+Up to five variant processes each have 30 seconds including startup and five
+to reap. Successful admission has at most 15 seconds; preparation has 10 and
+finalization/cleanup 20. The 220-second case budget fits inside the native
+240-second verifier deadline. An admission timeout stops before variant runs.
+Image build/start deadlines are separate. Qualification uses two native jobs
+with concurrency two; outer deadline exhaustion remains incomplete evidence.
 
-The shared selector/preparer routes this overlay into custom-only, isolated
-staging. Confirmation runs are diagnostic. Standard selection, direct history
-publication, and public normalization reject this profile. No standard judge
-fields are fabricated, and no Pester report generator or history store exists.
-Native rewards, trajectories and reports use shared collection and redaction.
+## Authorized paired evaluation and interpretation
 
-The shared inventory discovers this local overlay once. Generic custom metrics
-and applicability are not yet admitted by the consolidated public evidence and
-AI-analysis contracts; [issue #92](https://github.com/thetechgy/agent-engineering-baseline/issues/92)
-tracks that shared integration. No per-skill publication path is planned.
-No native aggregate alone establishes activation, skill lift causality, or
-real-world usefulness. Inspect actual successful skill reads and substantive
-use separately from task outcomes. Missing token/runtime data remains unknown.
+After offline qualification, a separately authorized protected manual benchmark
+may select `skill=powershell-pester-6`, `mode=confirmation`. The shared workflow
+uses the same model, task inputs, policy and grading in both arms. Never skip the
+baseline or stop on pass. No model-backed run is required for CI.
 
-After the complete pilot is qualified, a separately authorized protected manual
-benchmark can select `skill=powershell-pester-6`, `mode=confirmation`. Do not
-dispatch it for offline qualification. Preserve the same model, policy, task
-inputs and grading in both arms; never use skip-baseline or stop-on-pass.
+The shared selector/preparer, inventory, native collection/recovery, evidence
+validation and artifact pipeline own this integration. Standard selection,
+direct history publication and public normalization reject this diagnostic
+profile. No standard judge fields are fabricated and no Pester report generator,
+history store, dashboard or analyst pipeline is introduced. Generic custom
+metrics/applicability admission remains centralized in issue #92.
+
+The suite covers bounded Pester 6.2 tasks; it does not qualify older project pins,
+all valid PowerShell idioms, arbitrary module initialization, real external
+services, security against a general PowerShell adversary, or hidden holdouts.
+Native Codex installation/bootstrap supply-chain behavior is inherited and is
+not qualified by the oracle's skill-registration check.
+
+Review real paired failures and unsupported outcomes before changing the skill.
+Preserve the evidence, isolate the faulty behavior, add a focused mutant and
+multiple acceptable solutions, and qualify any necessary admission change.
+Avoid grading assertion style, helper preferences, or test count as quality.
+Do not alter historical scores or broaden shared schemas as part of this pilot.

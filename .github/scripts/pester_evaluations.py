@@ -87,13 +87,17 @@ def stage(workspace, destination):
     lines = ['[dataset]', 'name = "nvidia/pester-pilot"', '']
     for entry in entries:
         case = support / 'cases' / entry['id']
+        profile = reports.read_json(case / 'profile.json')
+        output = profile.get('output', 'Subject.Tests.ps1')
+        reports.require(output in ('Subject.Tests.ps1', 'summary.json'), 'Invalid pilot output')
         task = native / entry['id']
         env = task / 'environment'
         tests = task / 'tests'
         env.mkdir(parents=True)
         tests.mkdir()
         shutil.copytree(case / 'input', env / 'input')
-        shutil.copyfile(support / 'EXECUTION-PROFILE.md', env / 'input/EXECUTION-PROFILE.md')
+        if entry.get('expected_skill') is not None:
+            shutil.copyfile(support / 'EXECUTION-PROFILE.md', env / 'input/EXECUTION-PROFILE.md')
         for context in (env, tests):
             (context / 'build').mkdir()
             shutil.copyfile(support / 'install-runtime.py', context / 'build/install-runtime.py')
@@ -103,12 +107,13 @@ def stage(workspace, destination):
         for filename in ('profile.json',):
             shutil.copyfile(case / filename, tests / 'case' / filename)
         for directory in ('reference', 'mutants'):
-            shutil.copytree(case / directory, tests / 'case' / directory)
+            if (case / directory).exists():
+                shutil.copytree(case / directory, tests / 'case' / directory)
         (env / 'Dockerfile').write_text(dockerfile())
         (tests / 'Dockerfile').write_text(dockerfile(verifier=True))
         (task / 'instruction.md').write_text(entry['prompt'] + '\n')
         (task / 'task.toml').write_text(
-            'schema_version = "1.3"\nartifacts = ["/workspace/output/Subject.Tests.ps1"]\n'
+            'schema_version = "1.3"\nartifacts = [' + json.dumps('/workspace/output/' + output) + ']\n'
             '[metadata]\nentry_id = ' + json.dumps(entry['id']) + '\n'
             '[agent]\nuser = "agent"\ntimeout_sec = 300.0\n'
             '[verifier]\nuser = "root"\nenvironment_mode = "separate"\ntimeout_sec = 240.0\n'

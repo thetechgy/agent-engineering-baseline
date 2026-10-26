@@ -117,7 +117,7 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual(sum(r['suite'] is not None for r in inv['skills']), 3)
         pester = next(r for r in inv['skills'] if r['source']['skill_id'] == 'powershell-pester-6')
         self.assertEqual(pester['suite']['owner'], 'overlay')
-        self.assertEqual(pester['suite']['case_ids'], ['pester-001'])
+        self.assertEqual(pester['suite']['case_ids'], [f'pester-{i:03}' for i in range(1, 6)])
         gh = next(r for r in inv['skills'] if r['source']['skill_id'] == 'gh')
         self.assertEqual(gh['source']['repository'], 'cli/cli')
         self.assertEqual(len(gh['suite']['case_ids']), 24)

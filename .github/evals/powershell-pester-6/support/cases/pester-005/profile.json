@@ -1,0 +1,15 @@
+{
+  "command": null,
+  "parameters": [],
+  "properties": [
+    "Count",
+    "Length",
+    "Name"
+  ],
+  "dependencies": [],
+  "module": null,
+  "minimum_tests": 1,
+  "protected_marker": "PESTER_VERIFIER_ONLY_PESTER_005",
+  "kind": "summary",
+  "output": "summary.json"
+}

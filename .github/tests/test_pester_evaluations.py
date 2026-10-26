@@ -130,6 +130,30 @@ class SelectionTests(unittest.TestCase):
 
 @unittest.skipUnless(importlib.util.find_spec('skillevaluator'), 'Requires the pinned evaluator environment')
 class NativeStagingTests(unittest.TestCase):
+    def test_qualification_fixtures_use_native_staging_without_identity_edits(self):
+        from click.testing import CliRunner
+        from skillevaluator.cli import cli
+        from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks
+        import pester_container_validation as qualification
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bundle, fixtures = qualification.qualification_bundle(root)
+            self.assertEqual(len(fixtures), 26)
+            self.assertEqual(len(pilot.dataset(ROOT)), 5)
+            with patch.dict(os.environ, {'SKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE': str(root / 'private/key')}):
+                result = CliRunner().invoke(cli, ['tier3', 'validate', str(bundle), '--strict', '--harbor-contract', '--json'])
+                self.assertEqual(result.exit_code, 0, result.output)
+                staged = stage_native_harbor_tasks(bundle, root / 'tasks', with_skill=False, grading_mode='custom_only')
+            self.assertEqual({task.name for task in staged}, set(fixtures))
+            for task in staged:
+                entry = reports.read_json(task / 'tests/entry.json')
+                self.assertEqual(entry['id'], task.name)
+                self.assertFalse(entry['has_skill'])
+                for member in reports.regular_tree(task / 'environment'):
+                    self.assertNotIn(b'PESTER_VERIFIER_ONLY_', member.read_bytes())
+            self.assertIn('n_concurrent=2', (ROOT / '.github/scripts/pester_container_validation.py').read_text())
+
     def test_recovery_retains_incomplete_native_trials_and_blocks_completion(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -154,22 +178,24 @@ class NativeStagingTests(unittest.TestCase):
             root = Path(directory)
             reports.prepare_benchmark(ROOT, root, pilot.NAME)
             run = root / 'results' / pilot.NAME / 'run'; run.mkdir(parents=True)
-            cases = reports.MODES['confirmation']
+            attempts = reports.MODES['confirmation']
+            case_ids = [entry['id'] for entry in pilot.dataset(ROOT)]
+            total = attempts * len(case_ids)
             agent = {'model': reports.POLICY['model'], 'conditions': {}}
             config = {'grading': {'mode': 'custom_only'}, 'judge': {'enabled': False},
                       'provider': {'name': 'openai', 'model': reports.POLICY['model']},
                       'evaluated_source': {}, 'harbor': {'environment': {'value': 'docker'},
-                      'n_attempts': cases, 'n_concurrent': 2, 'stop_on_pass': False,
+                      'n_attempts': attempts, 'n_concurrent': 2, 'stop_on_pass': False,
                       'timeout_multiplier': reports.POLICY['timeout_multiplier']}}
             for arm in ('with_skill', 'without_skill'):
                 agent['conditions'][arm] = {'execution_status': 'succeeded', 'execution_errors': [],
-                                            'scored_attempts': cases, 'expected_attempts': cases}
-                for index in range(cases):
+                                            'scored_attempts': total, 'expected_attempts': total}
+                for index in range(total):
                     reports.write_json(run / 'codex' / arm.replace('_', '-') / 'trials' / str(index) / 'reward.json', {
-                        'entry_id': 'pester-001', 'has_skill': arm == 'with_skill', 'evaluation_status': 'complete',
+                        'entry_id': case_ids[index // attempts], 'has_skill': arm == 'with_skill', 'evaluation_status': 'complete',
                         'custom_details': {'outcome': {'classification': 'failed' if index == 0 else 'passed'}}})
             reports.write_json(run / 'result.json', {'report_status': 'complete', 'skill_name': pilot.NAME,
-                               'run_config': config, 'dataset_summary': {'total_tasks': 1}, 'agents': {'codex': agent}})
+                               'run_config': config, 'dataset_summary': {'total_tasks': len(case_ids)}, 'agents': {'codex': agent}})
             reports.write_json(root / 'versions.json', {'python': '3.13.17', 'skillevaluator': '0.3.0',
                                'harbor': '0.13.2', 'docker_compose': '5.6.1'})
             # These are explicitly synthetic report-policy inputs, not execution
@@ -200,30 +226,40 @@ class NativeStagingTests(unittest.TestCase):
             with patch.dict(os.environ, {'SKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE': str(root / 'private/key')}):
                 validated = CliRunner().invoke(cli, ['tier3', 'validate', str(bundle), '--strict', '--harbor-contract', '--json'])
                 self.assertEqual(validated.exit_code, 0, validated.output)
-                tasks = []
+                arms = []
                 for present in (True, False):
-                    task, = stage_native_harbor_tasks(bundle, root / str(present), with_skill=present, grading_mode='custom_only')
-                    tasks.append(task)
-                    config = tomllib.loads((task / 'task.toml').read_text())
-                    self.assertEqual(config['agent']['user'], 'agent')
-                    self.assertEqual(config['verifier']['environment_mode'], 'separate')
-                    self.assertEqual(config['verifier']['environment']['network_mode'], 'no-network')
-                    self.assertEqual(config['verifier']['timeout_sec'], 240)
-                    self.assertEqual(config['verifier'].get('env', {}), {})
-                    self.assertEqual((task / 'environment/skills' / pilot.NAME / 'SKILL.md').exists(), present)
-                    self.assertFalse(list((task / 'environment/skills').glob('*/evals')))
-                    for member in reports.regular_tree(task / 'environment'):
-                        self.assertNotIn(b'PESTER_VERIFIER_ONLY_', member.read_bytes(), member.name)
-                    self.assertIn('PESTER_VERIFIER_ONLY_', (task / 'tests/Runner.ps1').read_text())
-                    self.assertFalse((task / 'environment/.github').exists())
-                    public = task / 'environment/input'
-                    self.assertEqual({p.name for p in public.iterdir()},
-                                     {'Subject.ps1', 'README.md', 'EXECUTION-PROFILE.md'})
-                    self.assertEqual((public / 'Subject.ps1').read_bytes(),
-                                     (SOURCE / 'cases/pester-001/input/Subject.ps1').read_bytes())
-                    self.assertIn('--mode custom_only', (task / 'tests/test.sh').read_text())
-                self.assertEqual(pilot.manifest(tasks[0] / 'environment/input'), pilot.manifest(tasks[1] / 'environment/input'))
-                self.assertEqual((tasks[0] / 'instruction.md').read_bytes(), (tasks[1] / 'instruction.md').read_bytes())
+                    tasks = stage_native_harbor_tasks(bundle, root / str(present), with_skill=present, grading_mode='custom_only')
+                    arms.append({task.name: task for task in tasks})
+                    self.assertEqual(len(tasks), 5)
+                    for task in tasks:
+                        self.check_task_projection(task, present, tomllib)
+                for case in arms[0]:
+                    self.assertEqual(pilot.manifest(arms[0][case] / 'environment/input'), pilot.manifest(arms[1][case] / 'environment/input'))
+                    self.assertEqual((arms[0][case] / 'instruction.md').read_bytes(), (arms[1][case] / 'instruction.md').read_bytes())
+
+    def check_task_projection(self, task, present, tomllib):
+        config = tomllib.loads((task / 'task.toml').read_text())
+        self.assertEqual(config['agent']['user'], 'agent')
+        self.assertEqual(config['verifier']['environment_mode'], 'separate')
+        self.assertEqual(config['verifier']['environment']['network_mode'], 'no-network')
+        self.assertEqual(config['verifier']['timeout_sec'], 240)
+        self.assertEqual(config['verifier'].get('env', {}), {})
+        self.assertEqual((task / 'environment/skills' / pilot.NAME / 'SKILL.md').exists(), present)
+        self.assertFalse(list((task / 'environment/skills').glob('*/evals')))
+        for member in reports.regular_tree(task / 'environment'):
+            self.assertNotIn(b'PESTER_VERIFIER_ONLY_', member.read_bytes(), member.name)
+        self.assertIn('PESTER_VERIFIER_ONLY_', (task / 'tests/Runner.ps1').read_text())
+        self.assertFalse((task / 'environment/.github').exists())
+        public = task / 'environment/input'
+        original = SOURCE / 'cases' / task.name / 'input'
+        for member in original.iterdir():
+            self.assertEqual((public / member.name).read_bytes(), member.read_bytes())
+        if task.name == 'pester-005':
+            self.assertFalse((public / 'EXECUTION-PROFILE.md').exists())
+            self.assertEqual(config['artifacts'], ['/workspace/output/summary.json'])
+        else:
+            self.assertTrue((public / 'EXECUTION-PROFILE.md').exists())
+        self.assertIn('--mode custom_only', (task / 'tests/test.sh').read_text())
 
     def test_shared_inventory_records_local_overlay_once(self):
         import skill_evidence as evidence
@@ -286,6 +322,24 @@ class NativeStagingTests(unittest.TestCase):
 
 @unittest.skipUnless(sys.platform == 'linux', 'Execution profile targets Linux')
 class ClassificationTests(unittest.TestCase):
+    def test_negative_control_is_separate_from_pester_quality(self):
+        g = grader()
+        expected = json.loads((SOURCE / 'cases/pester-005/reference/summary.json').read_text())
+        good = (SOURCE / 'qualification/pester-005/good.json').read_bytes()
+        self.assertEqual(g.assess_summary(good, expected)[0], 'passed')
+        self.assertEqual(g.assess_summary((SOURCE / 'qualification/pester-005/wrong.json').read_bytes(), expected)[0], 'failed')
+        for value in ({**expected, 'total': True}, {**expected, 'passed': 2.0}, {**expected, 'other': 0}, []):
+            self.assertEqual(g.assess_summary(json.dumps(value).encode(), expected)[0], 'failed')
+        self.assertEqual(g.assess_summary(b'not JSON', expected)[0], 'invalid')
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); (root / 'entry.json').write_text(json.dumps({'id': 'pester-005'}))
+            with patch.dict(os.environ, {'HARBOR_REWARD_JSON': str(root / 'logs/reward.json')}):
+                status, detail = g.assess_summary(good, expected)
+                g.emit(root, status, detail)
+            reward = reports.read_json(root / 'logs/reward.json')
+            self.assertEqual(reward['custom_metrics'], {'negative_control_correct': 1.0})
+            self.assertFalse(any(key.startswith('pester_') for key in reward['custom_metrics']))
+
     def test_worker_output_rejects_oversized_valid_prefix_and_trailing_payload(self):
         g = grader()
         good = b'{"status":"admitted","code":"ok"}'
@@ -341,6 +395,19 @@ class ClassificationTests(unittest.TestCase):
                     self.assertEqual(sidecar['evaluation_status'], 'failed')
                     self.assertEqual(sidecar['custom_details']['outcome']['classification'], status)
 
+    def test_malformed_private_entry_stays_an_infrastructure_failure(self):
+        g = grader()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for entry in ('[]', 'null', '{}', 'malformed'):
+                (root / 'entry.json').write_text(entry)
+                with patch.dict(os.environ, {'HARBOR_REWARD_JSON': str(root / 'logs/reward.json')}):
+                    g.emit(root, 'passed', {'negative_control_correct': 1})
+                reward = reports.read_json(root / 'logs/reward.json')
+                self.assertNotIn('custom_metrics', reward)
+                self.assertEqual(reward['details']['outcome']['classification'], 'infrastructure_error')
+                self.assertEqual(reports.read_json(root / 'logs/skill_evaluator_reward.json')['evaluation_status'], 'failed')
+
 
 @unittest.skipUnless(shutil.which('pwsh'), 'PowerShell not available for parser qualification')
 class RealParserTests(unittest.TestCase):
@@ -358,19 +425,34 @@ class RealParserTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, 'Trusted PowerShell startup failed under worker limits')
             self.assertRegex(result.stdout.strip(), r'^7\.\d+\.\d+$')
 
-    def admission(self, text):
+    def admission(self, text, case='pester-001'):
         with tempfile.TemporaryDirectory() as directory:
             candidate = Path(directory) / 'Subject.Tests.ps1'; candidate.write_text(text)
             result = subprocess.run(['pwsh', '-NoLogo', '-NoProfile', '-NonInteractive', '-File', str(SOURCE / 'Runner.ps1'),
-                                     '-Candidate', str(candidate), '-Profile', str(SOURCE / 'cases/pester-001/profile.json'),
+                                     '-Candidate', str(candidate), '-Profile', str(SOURCE / 'cases' / case / 'profile.json'),
                                      '-AdmissionOnly'], capture_output=True, text=True, timeout=15)
             self.assertEqual(result.returncode, 0)
             return json.loads(result.stdout)['status']
 
     def test_independent_valid_solutions_are_admitted(self):
-        for style in ('classic', 'standalone', 'data'):
-            with self.subTest(style=style):
-                self.assertEqual(self.admission((SOURCE / f'qualification/pester-001/{style}.Tests.ps1').read_text()), 'admitted')
+        for case in ('pester-001', 'pester-002', 'pester-003', 'pester-004'):
+            for solution in sorted((SOURCE / 'qualification' / case).glob('*.Tests.ps1')):
+                with self.subTest(case=case, solution=solution.name):
+                    self.assertEqual(self.admission(solution.read_text(), case), 'admitted')
+
+    def test_module_commands_cannot_target_other_modules_or_dependencies(self):
+        submissions = [
+            "Import-Module '/tests/private.psm1'", "Import-Module $path",
+            "Import-Module '/workspace/input/Probe.psm1' -ArgumentList @('private')",
+            "InModuleScope Pester { 1 | Should-Be 1 }", "InModuleScope $name { 1 | Should-Be 1 }",
+            "Mock Get-EndpointStatus { $true }", "Mock Test-ProbeConnection { $true } -ModuleName Pester",
+            "Mock $command { $true } -ModuleName Probe", "Mock Test-ProbeConnection { $true } -OutVariable __peRun",
+            "Should-Invoke Get-Content -ModuleName Probe -Times 0",
+            "Should -Invoke -CommandName Test-ProbeConnection -ModuleName $name -Times 0",
+        ]
+        for submission in submissions:
+            with self.subTest(submission=submission):
+                self.assertEqual(self.admission(submission, 'pester-003'), 'unsupported')
 
     def test_prohibited_execution_and_binding_paths_never_execute(self):
         submissions = [

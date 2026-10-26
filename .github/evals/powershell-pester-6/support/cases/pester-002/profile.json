@@ -1,0 +1,20 @@
+{
+  "command": "Get-RetryDelay",
+  "parameters": [
+    "Attempt",
+    "BaseMilliseconds"
+  ],
+  "properties": [
+    "Count",
+    "Length",
+    "Name",
+    "Attempt",
+    "Base",
+    "Expected"
+  ],
+  "dependencies": [],
+  "module": null,
+  "minimum_tests": 1,
+  "protected_marker": "PESTER_VERIFIER_ONLY_PESTER_002",
+  "subject": "Subject.ps1"
+}
