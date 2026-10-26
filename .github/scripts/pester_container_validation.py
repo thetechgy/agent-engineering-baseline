@@ -40,7 +40,7 @@ def qualification_bundle(root):
         ('pester-001', 'timeout', b"Describe 'bounded' { It 'runs out of CPU' { foreach ($a in 1..100000) { foreach ($b in 1..100000) { $value=1 } } } }", 'timeout', None),
         ('pester-001', 'missing-runtime', good, 'infrastructure_error', 'missing'),
         ('pester-001', 'version-drift', good, 'infrastructure_error', 'version'),
-        ('pester-003', 'wrong-scope', b"BeforeAll { Import-Module '/workspace/input/Probe.psm1' -Force }; Describe 'scope' { BeforeEach { Mock Test-ProbeConnection { $true } }; It 'checks status' { (Get-EndpointStatus -Target 'service.invalid').Healthy | Should-BeTrue } }", 'invalid', None),
+        ('pester-003', 'wrong-scope', b"BeforeAll { Import-Module '/workspace/input/Probe.psm1' -Force }; Describe 'scope' { BeforeEach { Mock Test-ProbeConnection { $true } }; It 'checks status' { (Get-EndpointStatus -Target 'service.invalid').Healthy | Should-BeTrue } }", 'failed', None),
         ('pester-004', 'broken-discovery', (source / 'cases/pester-004/input/Existing.Tests.ps1').read_bytes(), 'invalid', None),
         ('pester-005', 'good', (source / 'qualification/pester-005/good.json').read_bytes(), 'passed', None),
         ('pester-005', 'wrong', (source / 'qualification/pester-005/wrong.json').read_bytes(), 'failed', None),

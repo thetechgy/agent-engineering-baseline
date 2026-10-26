@@ -358,6 +358,13 @@ class ClassificationTests(unittest.TestCase):
         self.assertEqual(g.assess(good, [detected])[0], 'passed')
         self.assertEqual(g.assess(good, [good])[0], 'failed')
         self.assertEqual(g.assess(good, [{**detected, 'assertion_failures': 0}])[0], 'failed')
+        # Pester attributes this BeforeEach error to an executed It. It is a
+        # completed reference failure, not an empty or undiscovered suite.
+        scope_error = {**detected, 'assertion_failures': 0}
+        status, detail = g.assess(scope_error, [scope_error])
+        self.assertEqual(status, 'failed')
+        self.assertEqual(detail['reference_pass'], 0)
+        self.assertEqual(detail['mutants_detected'], 0)
         for field in ('skipped', 'not_run', 'inconclusive', 'failed_blocks', 'failed_containers'):
             with self.subTest(field=field):
                 self.assertEqual(g.assess({**good, field: 1}, [detected])[0], 'invalid')

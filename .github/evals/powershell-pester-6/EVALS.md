@@ -110,7 +110,9 @@ Qualification includes valid and weak suites, wrong module scope, broken
 discovery, skipped/empty/malformed submissions, a real worker CPU timeout,
 missing PowerShell and a deliberately modified Pester version manifest. The
 version test proves runtime pin rejection; it does not qualify Pester 5 or 6.1
-behavior. Shared artifact checks cover rewards, logs, failure diagnostics and
+behavior. Pester attributes the wrong-scope fixture's `BeforeEach` error to its
+executed test, so it is a completed failure; broken discovery is unscoreable.
+Shared artifact checks cover rewards, logs, failure diagnostics and
 reports. Oracle runs have no model trajectory; shared trajectory carriers are
 also tested with injected protected payloads.
 
