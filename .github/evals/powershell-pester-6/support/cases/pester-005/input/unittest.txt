@@ -1,0 +1,9 @@
+test_empty (test_parser.ParserTests.test_empty) ... ok
+test_valid (test_parser.ParserTests.test_valid) ... ok
+test_negative (test_parser.ParserTests.test_negative) ... FAIL
+test_missing (test_parser.ParserTests.test_missing) ... ERROR
+test_platform (test_parser.ParserTests.test_platform) ... skipped 'platform-specific'
+
+Ran 5 tests in 0.012s
+
+FAILED (failures=1, errors=1, skipped=1)

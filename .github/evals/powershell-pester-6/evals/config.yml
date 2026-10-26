@@ -1,0 +1,8 @@
+schema_version: 1
+grading:
+  mode: custom_only
+harbor:
+  task_source: native_harbor
+  custom_dockerfile_mode: preserve
+skill_workspace:
+  mode: isolated
