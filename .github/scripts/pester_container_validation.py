@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import tempfile
 
+import skill_evidence as evidence
 import pester_evaluations as pilot
 import skill_reports as reports
 from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks
@@ -91,10 +92,13 @@ def main():
         bundle, fixtures = qualification_bundle(root)
         register = Codex(logs_dir=root / 'registration', skills_dir='/workspace/skills', version='0.155.1')._build_register_skills_command()
         jobs = root / 'jobs'
+        staged_evidence = []
+        before_inputs = evidence.custom_source_manifest(ROOT, pilot.NAME)
         native_failed = False
         for present in (True, False):
             tasks = root / 'tasks' / str(present)
-            for task in stage_native_harbor_tasks(bundle, tasks, with_skill=present, grading_mode='custom_only'):
+            staged_tasks = stage_native_harbor_tasks(bundle, tasks, with_skill=present, grading_mode='custom_only')
+            for task in staged_tasks:
                 fixture = fixtures[task.name]
                 solution = task / 'solution'; solution.mkdir()
                 (solution / 'candidate').write_bytes(fixture['candidate'])
@@ -106,6 +110,8 @@ def main():
                     'test ! -e /tests\ntest ! -e /opt/pester-runtime/Runner.ps1\n'
                     'test -z "$(find /workspace/skills -type d -name evals -print -quit)"\n' + register + '\n' + check +
                     f'cp /solution/candidate /workspace/output/{fixture["output"]}\n')
+            staged_evidence.extend(evidence.capture_custom_tasks(ROOT, pilot.NAME, staged_tasks,
+                'with_skill' if present else 'without_skill', purpose='oracle_qualification'))
             command = build_harbor_run_command(agent='oracle', env_mode='docker', dataset_path=tasks,
                 job_name=f'{pilot.NAME}-codex-{"with" if present else "without"}', jobs_dir=jobs,
                 n_attempts=1, n_concurrent=2, timeout_multiplier=1.0)
@@ -122,8 +128,14 @@ def main():
         collected = collect_harbor_results(pilot.NAME, ['codex'], run, jobs, expected_cases=len(fixtures),
             expected_case_ids=list(fixtures), expected_trials=len(fixtures),
             agent_models={'codex': {'model': 'credential-free-oracle', 'source': 'qualification'}})
+        if evidence.custom_source_manifest(ROOT, pilot.NAME) != before_inputs:
+            raise RuntimeError('Approved qualification inputs changed')
+        if not native_failed:
+            reports.write_json(raw / evidence.CUSTOM_CAPTURE, evidence.custom_capture(ROOT, pilot.NAME, bundle, staged_evidence,
+                purpose='oracle_qualification', attempts=1, agent='oracle',
+                execution_policy={'environment': 'docker', 'concurrency': 2, 'timeout_multiplier': 1.0, 'stop_on_pass': False}))
         # Directory convention only: actual trial metadata identifies oracle.
-        reports.write_json(run / 'run_config.json', {'grading': {'mode': 'custom_only'},
+        reports.write_json(run / 'run_config.json', {'grading': {'mode': 'custom_only'}, 'judge': {'enabled': False},
             'qualification': {'producer': 'oracle', 'inference': False}})
         reports.write_json(run / 'result.json', {**collected, 'diagnostic_only': True, 'qualification': True,
             'skill_name': pilot.NAME, 'report_status': 'incomplete'})
@@ -166,7 +178,49 @@ def main():
                 raise RuntimeError('Applicability or incomplete qualification status was lost')
         if any(resources(kind) != before[kind] for kind in before):
             raise RuntimeError('Native Harbor resource cleanup incomplete')
-        print('Pester five-case qualification passed; no model inference executed.', flush=True)
+        qualify_reporting(root, artifact)
+        if any(b'PESTER_VERIFIER_ONLY_' in p.read_bytes() for p in reports.regular_tree(artifact)):
+            raise RuntimeError('Protected payload entered a derived reporting artifact')
+        print('Pester five-case qualification and shared reporting passed; no model inference executed.', flush=True)
+
+
+def qualify_reporting(root, native):
+    """Use the consolidated public-only consumers, then remove native originals."""
+    import skill_analysis as analysis
+    import skill_report as report
+    import skill_review as review
+
+    public = root / 'public'
+    reports.public_benchmark(ROOT, native, pilot.NAME, 'confirmation', public)
+    captured = analysis.capture_inputs([public])
+    value = analysis.validate_analysis(None, captured)
+    saved = root / 'analysis/analysis.json'
+    reports.write_json(saved, value)
+    rid = next(key for key, row in captured.records.items() if row['kind'] == 'behavioral')
+    first = report.render_report(value, captured)
+    context = review.prepare([public], saved, pilot.NAME, rid)
+    if context.value['analysis']['behavioral_results'][0]['custom']['purpose'] != 'oracle_qualification':
+        raise RuntimeError('Oracle reporting purpose lost')
+    # Keep the already allowlisted native diagnostics in a separate retained
+    # copy. These fresh consumers see public input only, with no native tree.
+    hidden = root / 'retained-native'
+    native.rename(hidden)
+    try:
+        again = analysis.capture_inputs([public])
+        if evidence.encoded(analysis.validate_analysis(value, again)) != evidence.encoded(value):
+            raise RuntimeError('Public-only analysis changed')
+        if report.render_report(value, again) != first:
+            raise RuntimeError('Public-only rendered report changed')
+        review.prepare([public], saved, pilot.NAME, rid)
+    finally:
+        hidden.rename(native)
+    output = report.generate([public], saved, root / 'consolidated')
+    # Fixed new derived members only; no native staging or verifier inputs.
+    reports.write_json(native / 'reporting/analysis.json', value)
+    (native / 'reporting/consolidated.html').write_bytes((output / 'report.html').read_bytes())
+    public_records = [(member['member'], evidence._CapturedRecord(again.records[member['record_id']], again.guards))
+                      for manifest in again.manifests for member in manifest['members']]
+    reports.stage_public(ROOT, public, native / 'reporting/public', public_records)
 
 
 if __name__ == '__main__':

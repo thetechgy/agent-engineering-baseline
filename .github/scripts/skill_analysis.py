@@ -336,13 +336,73 @@ def analyze_cases(record, index):
     return rows
 
 
+def complete_custom_population(record):
+    maximum = record['policy']['attempts']['maximum']
+    if record['custom']['agent_version'] is None: return False
+    if maximum is None or record['policy']['attempts']['stop_on_pass'] is not False:
+        return False
+    for arms in case_index(record).values():
+        for rows in arms.values():
+            if [row['attempt'] for row in rows] != list(range(1, maximum + 1)):
+                return False
+            if any(row['custom']['outcome'] not in evidence.CUSTOM_MEASURED for row in rows):
+                return False
+    return bool(record['dataset']['case_ids']) and all(arm['execution_status'] == 'succeeded'
+        and arm['coverage']['recorded_attempts'] == arm['coverage']['expected_attempts']
+        and arm['coverage']['case_details'] == 'complete'
+        and arm['execution_error_count'] == 0 for arm in record['arms'])
+
+
+def analyze_custom(record):
+    custom = record['custom']; maximum = record['policy']['attempts']['maximum']
+    complete = complete_custom_population(record)
+    rows = []; outcomes = {}
+    for arm in ('with_skill', 'without_skill'):
+        observed = [obs for obs in record['observations'] if obs['arm'] == arm]
+        outcomes[arm] = {kind: sum(obs['custom']['outcome'] == kind for obs in observed) for kind in evidence.CUSTOM_OUTCOMES}
+        outcomes[arm]['missing'] = len(record['dataset']['case_ids']) * maximum - len(observed)
+    for definition in custom['definitions']:
+        native = definition['native_name']
+        populations = {}; means = {}
+        applicable_cases = [case['case_id'] for case in custom['cases'] if native in case['metrics']]
+        for arm in ('with_skill', 'without_skill'):
+            observations = [obs for obs in record['observations'] if obs['arm'] == arm]
+            measurements = [measurement for obs in observations for measurement in obs['custom']['measurements']
+                            if measurement['metric_id'] == definition['id']]
+            measured = [m for m in measurements if m['status'] == 'measured']
+            expected = len(applicable_cases) * maximum
+            populations[arm] = {'expected_applicable': expected, 'measured': len(measured),
+                'unavailable_or_missing': expected - len(measured),
+                'recorded_nonapplicable': sum(m['applicability'] == 'not_applicable' for m in measurements)}
+            with localcontext() as ctx:
+                ctx.prec = DECIMAL_PRECISION
+                means[arm] = quantity(sum((Decimal(str(m['value'])) for m in measured), Decimal(0)) / Decimal(expected)) \
+                    if complete and expected and len(measured) == expected else None
+        # Activation and the conjunction are policy/routing evidence. Preserve
+        # their numbers without translating their difference into task benefit.
+        rows.append({'native_name': native, 'definition': copy.deepcopy(definition), 'coverage': populations,
+            'arm_means': means, 'with_minus_without': difference(means['with_skill'], means['without_skill']),
+            'interpretation': 'routing_or_gate_not_task_correctness' if definition['competency'] in ('activation_routing', 'fixture_gate')
+                              else 'descriptive_reported_measurement_only',
+            'unavailable_reason': None if complete and applicable_cases else 'not_applicable' if not applicable_cases else 'incomplete_required_population'})
+    return {'purpose': custom['purpose'], 'agent': custom['agent'], 'outcomes': outcomes,
+            'complete_paired_population': complete, 'metrics': rows,
+            'assurance': {'structural_validation': 'passed', 'native_consistency': 'producer_reported_at_admission',
+                          'native_revalidation_here': 'not_performed', 'producer_authentication': 'not_established',
+                          'execution_authentication': 'not_established'},
+            'cross_run_policy': 'disabled_pending_qualification', 'history_policy': 'custom_metrics_not_admitted'}
+
+
 def behavioral_result(record_id, record, cases):
     observations = record['observations']
     failed = [{'observation_id': obs['id'], 'case_id': obs['case_id'], 'arm': obs['arm'],
                'components': sorted(key for key, value in obs['deterministic_scores'].items()
                                     if key != 'gate' and value == 0),
                'reference_ids': obs['references']} for obs in observations if obs['deterministic_gate'] == 0]
-    return {'record_id': record_id, 'run_id': record['run_id'], 'measured': measured(record),
+    if record['schema_version'] == 2:
+        failed = [row for row in failed if row['arm'] == 'with_skill']
+    return {**({'custom': analyze_custom(record)} if record['schema_version'] == 2 else {}),
+            'record_id': record_id, 'run_id': record['run_id'], 'measured': measured(record),
             'source': compact_source(record['source']),
             'dataset': {key: copy.deepcopy(value) for key, value in record['dataset'].items() if key != 'case_ids'},
             'policy': copy.deepcopy(record['policy']), 'native_metrics': copy.deepcopy(record['metrics']),
@@ -352,8 +412,10 @@ def behavioral_result(record_id, record, cases):
             'case_summary': {'matched_cases': sum(row['with_minus_without'] is not None for row in cases),
                              'cohort_cases': len(cases), 'scored_observations': sum(obs['score'] is not None for obs in observations),
                              'method': 'descriptive_arm_means_with_minus_without', 'cases': cases},
-            'gates': {'failed': failed, 'passed_observations': sum(obs['deterministic_gate'] == 1 for obs in observations),
-                      'unknown_observations': sum(obs['deterministic_gate'] is None for obs in observations)}}
+            'gates': {'failed': failed, 'passed_observations': sum(obs['deterministic_gate'] == 1 and
+                        (record['schema_version'] == 1 or obs['arm'] == 'with_skill') for obs in observations),
+                      'unknown_observations': sum(obs['deterministic_gate'] is None for obs in observations)
+                        if record['schema_version'] == 1 else 0}}
 
 
 def source_compatible(left, right):
@@ -428,6 +490,8 @@ def condition_identity(record):
 
 
 def complete_numeric(record):
+    if record['schema_version'] == 2 and record['policy']['fields']['grading'] == 'custom_only':
+        return complete_custom_population(record)
     return bool(record['dataset']['case_ids']) and len(record['metrics']) == 4 and len(record['arms']) == 2 and all(
         obs['attempt'] is not None and obs['score'] is not None for obs in record['observations']) and all(
         arm['execution_status'] == 'succeeded' and arm['coverage']['case_details'] == 'complete'
@@ -460,6 +524,8 @@ def classify(left, right, left_conditions, right_conditions):
 def cross_run(left_id, right_id, records, results, conditions):
     left, right = records[left_id], records[right_id]
     classification, reasons = classify(left, right, conditions[left_id], conditions[right_id])
+    if left['schema_version'] == 2 or right['schema_version'] == 2:
+        classification, reasons = 'custom_comparison_deferred', ['custom_cross_run_not_qualified']
     direct = classification == 'directly_comparable'
     a = {row['case_id']: row for row in results[left_id]['case_summary']['cases']}
     b = {row['case_id']: row for row in results[right_id]['case_summary']['cases']}
@@ -474,9 +540,10 @@ def cross_run(left_id, right_id, records, results, conditions):
                                           if direct else None for arm in ('with_skill', 'without_skill')}})
     am = {row['name']: row['value'] for row in left['metrics']}
     bm = {row['name']: row['value'] for row in right['metrics']}
+    names = () if (left['schema_version'] == 2 or right['schema_version'] == 2) and not am and not bm else evidence.reports.METRICS
     metrics = [{'name': name, 'left': am.get(name), 'right': bm.get(name),
                 'right_minus_left': difference(quantity(Decimal(str(bm[name]))), quantity(Decimal(str(am[name]))))
-                if direct and name in am and name in bm else None} for name in evidence.reports.METRICS]
+                if direct and name in am and name in bm else None} for name in names]
     subject = {'left_record_id': left_id, 'right_record_id': right_id}
     return {'id': evidence.identity(subject), **subject, 'classification': classification, 'reasons': reasons,
             'scope': 'two_supplied_runs_right_minus_left_descriptive_only',
@@ -532,9 +599,24 @@ def build_analysis(captured):
                     importance='mandatory', next_step='inspect_original_scanner_evidence'))
         else:
             cases = analyze_cases(record, case_index(record))
+            if record['schema_version'] == 2 and record['policy']['fields']['grading'] == 'custom_only':
+                for case in cases: case['unavailable_reasons'] = ['standard_judge_not_collected']
             conditions[record_id] = condition_identity(record)
             result = behavioral_result(record_id, record, cases)
             behavioral.setdefault(name, []).append(result)
+            if record['schema_version'] == 2:
+                for obs in record['observations']:
+                    if obs['custom']['outcome'] in ('invalid', 'unsupported', 'timeout', 'infrastructure_error', 'interrupted', 'unknown'):
+                        findings.append(finding('custom_unavailable', name, [record_id], [obs['case_id']], [obs['id']], obs['custom']['references'],
+                            observed={'classification': obs['custom']['outcome']}, uncertainty='reported_unscoreable_outcome',
+                            importance='investigate', next_step='inspect_original_case_evidence'))
+                    failed_metrics = [m['metric_id'] for m in obs['custom']['measurements'] if m['status'] == 'measured' and m['value'] < 1
+                        and next(d for d in record['custom']['definitions'] if d['id'] == m['metric_id'])['competency']
+                        not in ('activation_routing', 'fixture_gate')]
+                    if failed_metrics:
+                        findings.append(finding('custom_measured_failure', name, [record_id], [obs['case_id']], [obs['id']], obs['custom']['references'],
+                            observed={'metric_ids': failed_metrics, 'arm': obs['arm']}, uncertainty='reported_measurement_not_instruction_causality',
+                            importance='investigate', next_step='inspect_original_case_evidence'))
             for row in cases:
                 delta = row['with_minus_without']
                 if delta is not None and delta['direction'] == 'negative':
@@ -604,7 +686,9 @@ def build_analysis(captured):
         skills.append({'skill': name, 'configurations': configs, 'static_results': static.get(name, []),
                        'behavioral_results': behavioral.get(name, []), 'comparison_status': status,
                        'comparisons': comparisons})
-    return {'schema_version': SCHEMA_VERSION, 'method_version': METHOD,
+    has_custom = any(record.get('schema_version') == 2 and record.get('kind') == 'behavioral' for record in records.values())
+    return {'schema_version': 2 if has_custom else SCHEMA_VERSION,
+            'method_version': 'bounded-descriptive-skill-analysis/2' if has_custom else METHOD,
             'input_provenance': copy.deepcopy(captured.manifests), 'record_index': record_index, 'skills': skills,
             'comparison_scope': {'eligible_pairs': pairs, 'maximum_pairs': MAX_COMPARISONS,
                                  'performed_pairs': 0 if global_limit else pairs,
@@ -657,6 +741,19 @@ def render_summary(result):
             lines.extend(['No supplied model-backed measurement.', ''])
         for run in skill['behavioral_results']:
             lines.extend([f"Run `{run['run_id']}` (record `{run['record_id']}`):", ''])
+            if 'custom' in run:
+                custom = run['custom']
+                lines.append(f"- Purpose `{custom['purpose']}`; agent `{custom['agent']}`; complete paired population: {custom['complete_paired_population']}.")
+                lines.append('- Structural validation passed; native consistency is producer reported at admission. Producer and execution authentication are not established.')
+                for metric in custom['metrics']:
+                    definition = metric['definition']
+                    lines.append(f"- `{definition['id']}`: {definition['definition']} Competency `{definition['competency']}`; unit `{definition['unit']}`.")
+                    for arm, coverage in metric['coverage'].items():
+                        mean = metric['arm_means'][arm]
+                        lines.append(f"  - `{arm}`: applicable {coverage['expected_applicable']}, measured {coverage['measured']}, unavailable/missing {coverage['unavailable_or_missing']}, recorded nonapplicable {coverage['recorded_nonapplicable']}; mean {mean['display'] if mean else 'unavailable'}.")
+                    delta = metric['with_minus_without']
+                    lines.append(f"  - With-minus-without: {signed(delta) if delta else 'unavailable'}; {metric['interpretation']}.")
+                lines.append('- Activation and fixture-gate baseline zeros are routing/policy evidence, not worse task correctness. Oracle qualification is not a model-backed skill-benefit measurement.')
             for metric in run['native_metrics']:
                 value = quantity(Decimal(str(metric['value'])))
                 lines.append(f"- Native {metric['name']}: {signed(value) if metric['name'] == 'Skill Lift' else value['display']}.")

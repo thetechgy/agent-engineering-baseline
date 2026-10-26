@@ -190,9 +190,15 @@ jobs:
         if: always() && env.SKILL_EVALUATOR_PYTHON != '' && steps.selection.outcome == 'success' && steps.selection.outputs.public_supported == 'true'
         timeout-minutes: 3
         continue-on-error: true
+        env:
+          PUBLIC_SOURCE_KIND: ${{ steps.selection.outputs.public_source_kind }}
         run: |
+          public_root="$RUNNER_TEMP/skill-benchmark"
+          if [ "$PUBLIC_SOURCE_KIND" = retained ] && [ -f "$RUNNER_TEMP/skill-benchmark-artifact/custom-metric-capture.json" ]; then
+            public_root="$RUNNER_TEMP/skill-benchmark-artifact"
+          fi
           "$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_reports.py public-benchmark \
-            "$RUNNER_TEMP/skill-benchmark" "$BENCHMARK_SKILL" "$BENCHMARK_MODE" "$RUNNER_TEMP/skill-public-benchmark"
+            "$public_root" "$BENCHMARK_SKILL" "$BENCHMARK_MODE" "$RUNNER_TEMP/skill-public-benchmark"
 
       - name: Verify public reporting left the checkout unchanged
         id: public-benchmark-integrity

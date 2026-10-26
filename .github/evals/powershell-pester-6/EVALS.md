@@ -2,9 +2,10 @@
 
 This five-case pilot measures test engineering with executable counterfactuals.
 No model evaluation has run and no skill-effectiveness improvement is claimed.
-The first milestone is diagnostic-only; public normalization and history remain
-unavailable until the shared contract work in
-[issue #92](https://github.com/thetechgy/agent-engineering-baseline/issues/92).
+The pilot remains diagnostic-only and history-ineligible. Registered native
+evidence can enter the shared behavioral v2 public projection, analyzer, consolidated
+HTML report and offline review preparation. Cross-run comparisons and history
+admission remain deferred in [issue #92](https://github.com/thetechgy/agent-engineering-baseline/issues/92).
 
 ## Cases and deterministic outcomes
 
@@ -156,11 +157,12 @@ uses the same model, task inputs, policy and grading in both arms. Never skip th
 baseline or stop on pass. No model-backed run is required for CI.
 
 The shared selector/preparer, inventory, native collection/recovery, evidence
-validation and artifact pipeline own this integration. Standard selection,
-direct history publication and public normalization reject this diagnostic
-profile. No standard judge fields are fabricated and no Pester report generator,
+validation and artifact pipeline own this integration. Standard selection and direct history publication reject this diagnostic
+profile. Shared public normalization admits only the approved v2 native capture,
+with provenance and completeness limitations retained. No standard judge fields are fabricated and no Pester report generator,
 history store, dashboard or analyst pipeline is introduced. Generic custom
-metrics/applicability admission remains centralized in issue #92.
+metrics/applicability admission is centralized in the shared evidence contract;
+its trust and history boundaries are documented in `../REPORT-EVIDENCE.md`.
 
 The suite covers bounded Pester 6.2 tasks; it does not qualify older project pins,
 all valid PowerShell idioms, arbitrary module initialization, real external
@@ -172,4 +174,6 @@ Review real paired failures and unsupported outcomes before changing the skill.
 Preserve the evidence, isolate the faulty behavior, add a focused mutant and
 multiple acceptable solutions, and qualify any necessary admission change.
 Avoid grading assertion style, helper preferences, or test count as quality.
-Do not alter historical scores or broaden shared schemas as part of this pilot.
+Do not alter historical scores or infer model-backed effectiveness from oracle
+qualification. The earlier oracle artifact is retained unchanged; prospective
+capture qualifies the new reporting path without retroactive authentication.
