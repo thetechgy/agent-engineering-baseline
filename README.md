@@ -513,18 +513,25 @@ candidate, then require all validation checks before merging. See
 
 SkillSpector uses its upstream frozen lock; Semgrep and rumdl use reviewed hashed
 locks in [.github/requirements](.github/requirements). CI rejects unverified Python
-installers and records tool versions and dependency inventories. The Semgrep lock
-was generated with uv 0.12.17; the rumdl lock uses uv 0.13.5. Use uv 0.13.5 for future
-regeneration; replace `semgrep` with `rumdl` in both paths for the linter:
+installers and records tool versions and dependency inventories. Both locks use
+uv 0.13.5. Semgrep installation requires wheels; regenerate its lock for Python
+3.13 and the Linux x86_64 / glibc 2.34 wheel floor:
 
 ```bash
-uv pip compile --python-version 3.13 --python-platform x86_64-unknown-linux-gnu \
+uv pip compile --python-version 3.13 --python-platform x86_64-manylinux_2_34 \
   .github/requirements/semgrep.in --output-file .github/requirements/semgrep.txt \
-  --no-header --no-annotate --generate-hashes
+  --no-header --no-annotate --generate-hashes --only-binary :all:
 ```
 
-Review dependency changes and rerun validation. These locks cover Python artifacts,
-not every underlying OS or build tool.
+For rumdl, substitute `rumdl` in both paths and retain its existing
+`x86_64-unknown-linux-gnu` target. Review dependency changes and rerun validation.
+These locks cover Python artifacts, not every underlying OS or build tool.
+
+Semgrep version freshness uses official PyPI metadata, matching the package
+installation source. Its GitHub release notes/tags and advisory checks remain
+separate evidence; a PyPI patch can precede a public GitHub tag. See the
+[Semgrep 1.182.1 assessment](.github/evals/SEMGREP-1.182.1.md) for artifact
+verification, scanner comparisons, and residual MCP dependency risk.
 
 Evaluation setup pins uv 0.13.5 and retains the managed Python 3.13 selector.
 Fresh installations currently select Python 3.13.17; the exact interpreter version

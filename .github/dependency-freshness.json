@@ -152,6 +152,7 @@
       "id": "semgrep",
       "label": "Semgrep",
       "repo": "semgrep/semgrep",
+      "release_source": "pypi",
       "sources": [
         {
           "path": ".github/requirements/semgrep.in",

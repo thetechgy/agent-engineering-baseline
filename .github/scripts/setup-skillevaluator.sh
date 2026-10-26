@@ -39,7 +39,7 @@ git -C "$tool_root/evaluator" diff --exit-code -- uv.lock pyproject.toml
 if [ "$kind" = quality ]; then
   # Every Semgrep artifact must match a reviewed hash; nothing is resolved at run time.
   uv venv --quiet --python 3.13 --managed-python "$tool_root/semgrep"
-  uv pip sync --quiet --python "$tool_root/semgrep/bin/python" --require-hashes \
+  uv pip sync --quiet --python "$tool_root/semgrep/bin/python" --require-hashes --only-binary :all: \
     "$GITHUB_WORKSPACE/.github/requirements/semgrep.txt"
   ln -s "$tool_root/semgrep/bin/semgrep" "$tool_root/bin/semgrep"
   skillspector_revision=f3b25697d76256998ca9d42c198d256258d4c035 # v2.13.1

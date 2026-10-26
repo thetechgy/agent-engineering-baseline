@@ -29,6 +29,12 @@ def advisory(id="GHSA-abcd-1234-5678", package="uv", severity="high", affected="
                                  "vulnerable_version_range": affected, "first_patched_version": fixed}]}
 
 
+def pypi_metadata(version):
+    files = [{"filename": f"semgrep-{version}-py3-none-any.whl", "yanked": False,
+              "digests": {"sha256": "a" * 64}}]
+    return {"info": {"name": "semgrep", "version": version}, "releases": {version: files}, "urls": files}
+
+
 class FixtureAPI(fresh.GitHub):
     """Fixed transport fixtures; the real collectors, pagination and publisher run."""
 
@@ -51,6 +57,14 @@ class FixtureAPI(fresh.GitHub):
         self.lose_response = None
         self.main_revision = REVISION
         self.tree_changed = False
+        self.pypi = pypi_metadata(self.rows["semgrep"]["pin"]["version"])
+
+    def semgrep_metadata(self):
+        self.requests += 1
+        self.calls.append(("GET", fresh.SEMGREP_PYPI, True))
+        if fresh.SEMGREP_PYPI in self.failures:
+            raise fresh.DiscoveryError(self.failures[fresh.SEMGREP_PYPI])
+        return copy.deepcopy(self.pypi)
 
     def request(self, path, *, public=False, method="GET", data=None):
         self.requests += 1
@@ -275,6 +289,140 @@ class FreshnessTests(unittest.TestCase):
                 self.assertEqual(self.find(report, "uv")["freshness"], "unverified")
                 self.assertEqual(self.find(report, "semgrep")["freshness"], "current")
                 fresh.validate_report(report, ROOT, REVISION)
+
+    def test_semgrep_pypi_patch_is_current_without_a_github_tag_or_comparison(self):
+        root = self.scratch()
+        current = next(row for row in fresh.inventory(root)[1] if row["id"] == "semgrep")["pin"]["version"]
+        pin = "1.2.1"
+        for suffix in ("in", "txt"):
+            source = root / f".github/requirements/semgrep.{suffix}"
+            source.write_text(source.read_text().replace(f"semgrep=={current}", f"semgrep=={pin}"))
+        api = FixtureAPI(root)
+        api.latest["semgrep"] = "1.2.0"
+        api.notes["semgrep"] = "Security: controlled GitHub-only release note"
+        report = self.collect(api, root)
+        result = self.find(report, "semgrep")
+        self.assertTrue(report["complete"])
+        self.assertEqual(result["freshness"], "current")
+        self.assertEqual(result["upstream"]["version"], pin)
+        self.assertEqual(result["signals"], [], "Older GitHub notes do not describe a new package update")
+        text = fresh.render(report, fresh.load_config(root))
+        self.assertIn(f"https://pypi.org/project/semgrep/{pin}/", text)
+        self.assertNotIn("https://github.com/semgrep/semgrep/compare/", text)
+        self.assertIn("https://github.com/astral-sh/uv/compare/", text)
+        self.assertIn(("GET", fresh.SEMGREP_PYPI, True), api.calls)
+        self.assertTrue(any(path.startswith("repos/semgrep/semgrep/security-advisories") for _, path, _ in api.calls))
+        self.assertTrue(any(path.startswith("advisories?") and "affects=semgrep" in path for _, path, _ in api.calls))
+        fresh.validate_report(report, root, REVISION)
+
+    def test_semgrep_newer_pypi_stable_release_is_an_update_and_prereleases_are_not(self):
+        api = FixtureAPI()
+        major, minor, patch_version = fresh.stable(api.rows["semgrep"]["pin"]["version"])
+        latest = f"{major}.{minor}.{patch_version + 1}"
+        api.pypi = pypi_metadata(latest)
+        for candidate in ("99.0.0rc1", "99.0.0.dev1"):
+            api.pypi["releases"][candidate] = pypi_metadata(candidate)["urls"]
+        api.pypi["releases"]["99.0.0"] = pypi_metadata("99.0.0")["urls"]
+        api.pypi["releases"]["99.0.0"][0]["yanked"] = True
+        api.pypi["releases"]["98.0.0"] = []
+        report = self.collect(api)
+        self.assertTrue(report["complete"])
+        self.assertEqual(self.find(report, "semgrep")["freshness"], "update_available")
+        self.assertEqual(self.find(report, "semgrep")["upstream"]["version"], latest)
+        self.assertEqual(self.find(report, "uv")["freshness"], "current")
+
+    def test_semgrep_stale_or_inconsistent_registry_metadata_is_unverified(self):
+        for kind in ("behind_pin", "behind_inventory", "missing_selected", "urls_disagree", "yanked_latest", "prerelease_latest"):
+            api = FixtureAPI()
+            pin = api.rows["semgrep"]["pin"]["version"]
+            if kind == "behind_pin":
+                api.pypi = pypi_metadata("0.0.0")
+            elif kind == "behind_inventory":
+                api.pypi["releases"]["99.0.0"] = pypi_metadata("99.0.0")["urls"]
+            elif kind == "missing_selected":
+                api.pypi["releases"][pin] = []
+            elif kind == "urls_disagree":
+                api.pypi["urls"] = []
+            elif kind == "yanked_latest":
+                api.pypi["releases"][pin][0]["yanked"] = True
+            else:
+                api.pypi = pypi_metadata("99.0.0rc1")
+            with self.subTest(kind=kind):
+                report = self.collect(api)
+                self.assertFalse(report["complete"])
+                self.assertEqual(self.find(report, "semgrep")["freshness"], "unverified")
+                self.assertEqual(self.find(report, "semgrep")["security"]["status"], "checked")
+                self.assertEqual(self.find(report, "rumdl")["freshness"], "current")
+                fresh.validate_report(report, ROOT, REVISION)
+
+    def test_semgrep_malformed_registry_responses_fail_without_fallback(self):
+        for kind in ("not_object", "identity", "info", "version", "releases", "files", "artifact", "filename", "digest", "yanked"):
+            api = FixtureAPI()
+            if kind == "not_object": api.pypi = []
+            elif kind == "identity": api.pypi["info"]["name"] = "other-package"
+            elif kind == "info": api.pypi["info"] = None
+            elif kind == "version": api.pypi["info"]["version"] = "latest"
+            elif kind == "releases": api.pypi["releases"] = []
+            elif kind == "files": api.pypi["releases"][api.pypi["info"]["version"]] = {}
+            elif kind == "artifact": api.pypi["urls"][0] = None
+            elif kind == "filename": api.pypi["urls"][0]["filename"] = "other-package-1.0.0.whl"
+            elif kind == "digest": api.pypi["urls"][0]["digests"]["sha256"] = "untrusted"
+            else: api.pypi["urls"][0].pop("yanked")
+            with self.subTest(kind=kind):
+                report = self.collect(api)
+                self.assertFalse(report["complete"])
+                self.assertEqual(self.find(report, "semgrep")["freshness"], "unverified")
+                self.assertTrue(self.find(report, "semgrep")["errors"])
+                self.assertEqual(self.find(report, "uv")["freshness"], "current")
+                fresh.validate_report(report, ROOT, REVISION)
+
+    def test_semgrep_registry_and_github_failures_remain_independent(self):
+        for path in (fresh.SEMGREP_PYPI, "repos/semgrep/semgrep/releases/latest", "repos/semgrep/semgrep/security-advisories"):
+            for failure in ("timeout", "http_429", "invalid_or_unavailable_response"):
+                api = FixtureAPI()
+                api.failures[path] = failure
+                with self.subTest(path=path, failure=failure):
+                    report = self.collect(api)
+                    result = self.find(report, "semgrep")
+                    self.assertFalse(report["complete"])
+                    self.assertEqual(result["freshness"], "current" if "security-advisories" in path else "unverified")
+                    self.assertEqual(result["security"]["status"], "partial" if "security-advisories" in path else "checked")
+                    self.assertEqual(self.find(report, "uv")["freshness"], "current")
+                    fresh.validate_report(report, ROOT, REVISION)
+
+    def test_old_github_notes_do_not_signal_a_new_pypi_security_update(self):
+        pin = next(row for row in fresh.inventory(ROOT)[1] if row["id"] == "semgrep")["pin"]["version"]
+        major, minor, patch_version = fresh.stable(pin)
+        latest = f"{major}.{minor}.{patch_version + 1}"
+        for github_version in ("0.0.0", pin, latest, f"{major}.{minor + 1}.0"):
+            api = FixtureAPI()
+            api.pypi = pypi_metadata(latest)
+            api.latest["semgrep"] = github_version
+            api.notes["semgrep"] = "Security: controlled release-note signal"
+            with self.subTest(github_version=github_version):
+                report = self.collect(api)
+                result = self.find(report, "semgrep")
+                self.assertTrue(report["complete"])
+                self.assertEqual(result["freshness"], "update_available")
+                events = list(fresh.risk_events(report).values())
+                ordinary_update = "Semgrep: direct pin is behind a stable release; review required"
+                self.assertIn(ordinary_update, events)
+                if github_version == latest:
+                    self.assertIn(f"GitHub v{latest}:", result["signals"][0]["text"])
+                    self.assertEqual(len(events), 2)
+                    self.assertTrue(any("upstream security signal" in event for event in events))
+                else:
+                    self.assertEqual(result["signals"], [])
+                    self.assertEqual(events, [ordinary_update])
+
+    def test_pypi_source_is_limited_to_semgrep(self):
+        root = self.scratch()
+        config = root / fresh.CONFIG
+        data = json.loads(config.read_text())
+        next(item for item in data["dependencies"] if item["id"] == "rumdl")["release_source"] = "pypi"
+        config.write_text(json.dumps(data))
+        with self.assertRaisesRegex(fresh.DiscoveryError, "invalid_release_source"):
+            fresh.load_config(root)
 
     def test_content_sha_holds_and_tag_commit_mismatch(self):
         api = FixtureAPI()
@@ -595,6 +743,60 @@ class FreshnessTests(unittest.TestCase):
                 api.request(path)
         with patch.object(api, "request", return_value=[{}] * 100), self.assertRaisesRegex(fresh.DiscoveryError, "pagination_limit"):
             api.pages("advisories")
+
+    def test_pypi_transport_is_unauthenticated_fixed_origin_cached_and_budgeted(self):
+        class Response:
+            def __enter__(self): return self
+            def __exit__(self, *args): pass
+            def read(self, size):
+                self.size = size
+                return b'{}'
+        api = fresh.GitHub("secret-fixture-token")
+        response = Response()
+        with patch.object(api.opener, "open", return_value=response) as opened:
+            api.semgrep_metadata()
+            request = opened.call_args.args[0]
+            self.assertEqual(request.full_url, fresh.SEMGREP_PYPI)
+            self.assertEqual(request.get_method(), "GET")
+            self.assertIsNone(request.get_header("Authorization"))
+            self.assertIsNone(request.get_header("X-github-api-version"))
+            self.assertEqual(request.get_header("Accept"), "application/json")
+            self.assertEqual(response.size, fresh.MAX_BYTES + 1)
+            self.assertEqual(opened.call_args.kwargs["timeout"], 10)
+            api.semgrep_metadata()
+            self.assertEqual(opened.call_count, 1)
+            api.request("advisories?affects=uv")
+            self.assertEqual(opened.call_args.args[0].get_header("Authorization"), "Bearer secret-fixture-token")
+            self.assertEqual(api.requests, 2)
+        for target in (fresh.API, "https://pypi.org/other", "http://pypi.org/pypi/semgrep/json",
+                       "https://pypi.org.evil.invalid/pypi/semgrep/json"):
+            with self.subTest(target=target), self.assertRaisesRegex(fresh.DiscoveryError, "unsafe_redirect"):
+                fresh.SameOrigin().redirect_request(request, None, 302, "", {}, target)
+        for kind in ("requests", "elapsed"):
+            api = fresh.GitHub("secret-fixture-token")
+            if kind == "requests": api.requests = 100
+            else: api.started -= 181
+            with patch.object(api.opener, "open") as opened, self.assertRaisesRegex(fresh.DiscoveryError, "request_budget_exceeded"):
+                api.semgrep_metadata()
+            opened.assert_not_called()
+
+    def test_pypi_transport_failures_are_bounded_and_not_retried(self):
+        class Response:
+            def __init__(self, raw): self.raw = raw
+            def __enter__(self): return self
+            def __exit__(self, *args): pass
+            def read(self, size): return self.raw
+        for value, code in ((b'x' * (fresh.MAX_BYTES + 1), "oversized_response"),
+                            (b'not json', "invalid_or_unavailable_response"),
+                            (TimeoutError(), "timeout"),
+                            (HTTPError(fresh.SEMGREP_PYPI, 503, "untrusted", {}, None), "http_503")):
+            api = fresh.GitHub("secret-fixture-token")
+            kwargs = {"side_effect": value} if isinstance(value, Exception) else {"return_value": Response(value)}
+            with self.subTest(code=code), patch.object(api.opener, "open", **kwargs) as opened:
+                for _ in range(2):
+                    with self.assertRaisesRegex(fresh.DiscoveryError, "^" + code + "$"):
+                        api.semgrep_metadata()
+                self.assertEqual(opened.call_count, 1)
 
 
 class WorkflowTests(unittest.TestCase):
