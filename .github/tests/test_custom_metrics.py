@@ -107,7 +107,7 @@ def synthetic_native(root, *, complete=False):
     return native, run
 
 
-def synthetic_gh_native(root):
+def synthetic_gh_native(root, *, unscoreable=False):
     """Pinned collector over synthetic default+custom rewards; no model inference."""
     import gh_evaluations as gh
     from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks
@@ -125,24 +125,27 @@ def synthetic_gh_native(root):
             job = jobs / ('gh-codex-with' if present else 'gh-codex-without')
             names = []
             for item in captured:
-                name = item['case_id'] + '__attempt1'; names.append(name); trial = job / name
+                name = item['case_id'] + '__attempt1'; trial = job / name
+                failed = unscoreable and item['case_id'] == 'gh-001'
+                if not failed: names.append(name)
                 default = dict.fromkeys(('security', 'skill_execution', 'skill_efficiency', 'accuracy', 'goal_accuracy', 'behavior_check'), 1.0)
                 custom = {'gh_' + key: 1.0 for key in evidence.GATE_FIELDS}
                 if not present: custom.update(gh_activation=0.0, gh_gate=0.0)
                 numeric = {**default, 'overall': 1.0, **custom}
-                write(trial / 'verifier/reward.json', numeric)
-                write(trial / 'verifier/skill_evaluator_reward.json', {**default, 'overall': 1.0,
-                    'metric_set': 'skill-evaluator-default-v2', 'entry_id': item['case_id'], 'has_skill': present,
-                    'evaluation_status': 'complete', 'custom_metrics': custom})
+                if not failed:
+                    write(trial / 'verifier/reward.json', numeric)
+                    write(trial / 'verifier/skill_evaluator_reward.json', {**default, 'overall': 1.0,
+                        'metric_set': 'skill-evaluator-default-v2', 'entry_id': item['case_id'], 'has_skill': present,
+                        'evaluation_status': 'complete', 'custom_metrics': custom})
                 write(trial / 'result.json', {'id': 'id-' + name, 'trial_name': name, 'task_name': item['case_id'],
                     'task_checksum': item['task_checksum'], 'config': {'task': {'path': '/tasks/' + item['case_id']},
                         'agent': {'name': 'codex'}, 'timeout_multiplier': 2.0,
                         'environment': {'import_path': 'skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment'}},
-                    'agent_info': {'name': 'codex', 'version': '0.155.1'}, 'verifier_result': {'rewards': numeric},
-                    'exception_info': None, 'started_at': '2026-10-26T00:00:00Z', 'finished_at': '2026-10-26T00:00:02Z',
+                    'agent_info': {'name': 'codex', 'version': '0.155.1'}, 'verifier_result': None if failed else {'rewards': numeric},
+                    'exception_info': {'exception_type': 'VerifierTimeoutError', 'exception_message': 'Synthetic native timeout'} if failed else None, 'started_at': '2026-10-26T00:00:00Z', 'finished_at': '2026-10-26T00:00:02Z',
                     'verifier': {'started_at': '2026-10-26T00:00:01Z', 'finished_at': '2026-10-26T00:00:02Z'}})
-            write(job / 'result.json', {'n_total_trials': len(ids), 'stats': {'n_trials': len(ids), 'n_errors': 0,
-                  'evals': {'synthetic__model___tasks': {'n_trials': len(ids), 'n_errors': 0,
+            write(job / 'result.json', {'n_total_trials': len(ids), 'stats': {'n_trials': len(ids), 'n_errors': int(unscoreable),
+                  'evals': {'synthetic__model___tasks': {'n_trials': len(ids), 'n_errors': int(unscoreable),
                           'reward_stats': {'reward': {'1.0': names}}}}}})
     native = root / 'native'; run = native / 'results/gh/synthetic-gh'
     collected = collect_harbor_results('gh', ['codex'], run, jobs, expected_cases=len(ids), expected_case_ids=ids,
@@ -156,7 +159,7 @@ def synthetic_gh_native(root):
     snapshot = build_dataset_snapshot(load_dataset_entries(bundle / 'evals/evals.json'), evaluator_version='0.3.0')
     write(run / 'dataset_snapshot.json', snapshot)
     write(run / 'run_config.json', config)
-    write(run / 'result.json', {**collected, 'skill_name': 'gh', 'report_status': 'complete', 'run_config': config,
+    write(run / 'result.json', {**collected, 'skill_name': 'gh', 'report_status': 'incomplete' if unscoreable else 'complete', 'run_config': config,
         'dataset_digest': snapshot['dataset_digest'], 'dataset_summary': snapshot['dataset_summary']})
     write(native / 'versions.json', {'python': '3.13.17', 'skillevaluator': '0.3.0', 'harbor': '0.13.2',
           'docker_compose': '5.6.1', 'evaluator_revision': reports.POLICY['evaluator_revision']})
@@ -227,6 +230,8 @@ class CustomMetricTests(unittest.TestCase):
         native, run, value = self.normalize()
         result = analysis.analyze_custom(evidence.project(value))
         self.assertFalse(result['complete_paired_population'])
+        run = analysis.behavioral_result(evidence.identity(value), value, analysis.analyze_cases(value, analysis.case_index(value)))
+        self.assertEqual(run['gates']['unknown_observations'], 0)
         self.assertTrue(all(m['with_minus_without'] is None and all(v is None for v in m['arm_means'].values()) for m in result['metrics']))
 
     def test_public_only_analysis_html_and_review_after_native_removal(self):
@@ -342,6 +347,85 @@ class CustomMetricTests(unittest.TestCase):
             payload = evidence.read_json(path); payload['custom_metrics']['gh_authorization'] = 0; payload['custom_metrics']['gh_gate'] = 0; write(path, payload)
             import gh_evaluations as gh
             gh.deterministic_gate(run, sorted(public['dataset']['case_ids']), 1)
+
+    def test_incomplete_gh_native_admission_preserves_unavailable_gates_and_exact_error_ledgers(self):
+        from skillevaluator.tier3.harbor import report_data as native_reports
+        native, run = synthetic_gh_native(self.root, unscoreable=True)
+        data = evidence.normalize_behavioral(native, 'gh')
+        self.assertEqual(len(data['observations']), 48)
+        self.assertFalse(data['metrics'])
+        for arm in data['arms']:
+            self.assertEqual(arm['coverage']['recorded_attempts'], 24)
+            self.assertEqual(arm['coverage']['scored_attempts'], 23)
+            self.assertEqual(arm['coverage']['unscored_attempts'], 1)
+            self.assertEqual(arm['coverage']['case_details'], 'partial')
+        unavailable = [obs for obs in data['observations'] if obs['custom']['outcome'] == 'timeout']
+        self.assertEqual(len(unavailable), 2)
+        self.assertTrue(all(obs['deterministic_gate'] is None and obs['rubric_pass'] is None for obs in unavailable))
+        self.assertTrue(all(m['value'] is None for obs in unavailable for m in obs['custom']['measurements']))
+        public = self.root / 'public-partial-gh'
+        reports.public_benchmark(ROOT, native, 'gh', 'standard', public)
+        captured = analysis.capture_inputs([public]); result = analysis.validate_analysis(None, captured)
+        row = next(skill for skill in result['skills'] if skill['skill'] == 'gh')['behavioral_results'][0]
+        self.assertEqual(row['gates']['unknown_observations'], 1)
+        self.assertEqual(row['gates']['passed_observations'], 23)
+        self.assertTrue(all(metric['with_minus_without'] is None for metric in row['custom']['metrics']))
+        saved = self.root / 'partial-analysis/analysis.json'; write(saved, result)
+        review.prepare([public], saved, 'gh', evidence.identity(evidence.project(data)))
+        self.assertIn('Mandatory gates: 0 failed, 23 passed, 1 unknown.', report.render_report(result, captured).decode())
+        # The pinned loader adds structured job/trial diagnostics. Admit that
+        # exact ledger too, while rejecting arbitrary same-count replacements.
+        payload = evidence.read_json(run / 'result.json')
+        payload['agents']['codex']['conditions'] = native_reports.load_agent_data(run)['codex']['conditions']
+        write(run / 'result.json', payload)
+        evidence.normalize_behavioral(native, 'gh')
+        payload['agents']['codex']['conditions']['with_skill']['execution_errors'][0] = 'Forged same-count diagnostic'
+        write(run / 'result.json', payload)
+        with self.assertRaisesRegex(ValueError, 'ledger contradiction'):
+            evidence.normalize_behavioral(native, 'gh')
+
+    def test_unavailable_gh_gates_count_only_enforced_with_skill_observations(self):
+        native, _ = synthetic_gh_native(self.root)
+        # A controlled public-only record exercises the consumer contract. It
+        # makes no claim that the edited outcomes passed native admission.
+        public = json.loads(evidence.encoded(evidence.project(evidence.normalize_behavioral(native, 'gh'))))
+        complete = copy.deepcopy(public)
+        public['metrics'] = []
+        public['availability'] = {'status': 'incomplete', 'provenance': 'runtime_recorded',
+            'reasons': sorted(set(public['availability']['reasons']) | {'coverage_missing', 'execution_incomplete'})}
+        for arm in ('with_skill', 'without_skill'):
+            obs = next(row for row in public['observations'] if row['arm'] == arm)
+            obs.update(score=None, scores=dict.fromkeys(evidence.SCORE_FIELDS), rubric_pass=None,
+                       deterministic_gate=None, deterministic_scores=dict.fromkeys(evidence.GATE_FIELDS))
+            obs['custom']['outcome'] = 'unknown'
+            for measurement in obs['custom']['measurements']:
+                measurement.update(status='unavailable', value=None, numerator=None, denominator=None, reason='unknown')
+            group = next(row for row in public['arms'] if row['name'] == arm)
+            group['coverage'].update(scored_attempts=23, unscored_attempts=1)
+            group.update(execution_status='incomplete', execution_error_count=1)
+            group['rubric']['passed_cases'] = 23
+        evidence.validate_public(public)
+        bundle = self.root / 'public-unknown-gh'
+        reports.stage_public(ROOT, native, bundle, [('inventory/inventory.json', evidence.inventory(ROOT)),
+            ('skills/gh/behavioral/synthetic-gh/public-report.json', public)])
+        captured = analysis.capture_inputs([bundle]); result = analysis.validate_analysis(None, captured)
+        run = next(skill for skill in result['skills'] if skill['skill'] == 'gh')['behavioral_results'][0]
+        self.assertEqual(run['gates']['unknown_observations'], 1)
+        self.assertEqual(run['gates']['passed_observations'], 23)
+        self.assertFalse(run['gates']['failed'])
+        self.assertIn('23 passed, 1 unknown observations', analysis.render_summary(result).decode())
+        self.assertIn('Mandatory gates: 0 failed, 23 passed, 1 unknown.', report.render_report(result, captured).decode())
+        self.assertFalse(run['custom']['complete_paired_population'])
+        # An unavailable baseline gate is not an unknown mandatory outcome.
+        public['observations'] = [obs for obs in public['observations'] if obs['arm'] == 'without_skill'] + [
+            obs for obs in complete['observations'] if obs['arm'] == 'with_skill']
+        public['arms'] = [arm for arm in public['arms'] if arm['name'] == 'without_skill'] + [
+            arm for arm in complete['arms'] if arm['name'] == 'with_skill']
+        evidence.validate_public(public)
+        baseline_only = analysis.behavioral_result(evidence.identity(public), public,
+            analysis.analyze_cases(public, analysis.case_index(public)))
+        self.assertEqual(baseline_only['gates']['unknown_observations'], 0)
+        self.assertEqual(baseline_only['gates']['passed_observations'], 24)
 
     def test_missing_retained_results_stay_visible_and_suppress_comparison(self):
         native, run = self.native(True)

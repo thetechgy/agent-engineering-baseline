@@ -395,12 +395,14 @@ def analyze_custom(record):
 
 def behavioral_result(record_id, record, cases):
     observations = record['observations']
+    gate_observations = observations
+    if record['schema_version'] == 2:
+        mandatory = any(definition['role'] == 'mandatory_with_skill_gate' for definition in record['custom']['definitions'])
+        gate_observations = [obs for obs in observations if obs['arm'] == 'with_skill'] if mandatory else []
     failed = [{'observation_id': obs['id'], 'case_id': obs['case_id'], 'arm': obs['arm'],
                'components': sorted(key for key, value in obs['deterministic_scores'].items()
                                     if key != 'gate' and value == 0),
-               'reference_ids': obs['references']} for obs in observations if obs['deterministic_gate'] == 0]
-    if record['schema_version'] == 2:
-        failed = [row for row in failed if row['arm'] == 'with_skill']
+               'reference_ids': obs['references']} for obs in gate_observations if obs['deterministic_gate'] == 0]
     return {**({'custom': analyze_custom(record)} if record['schema_version'] == 2 else {}),
             'record_id': record_id, 'run_id': record['run_id'], 'measured': measured(record),
             'source': compact_source(record['source']),
@@ -412,10 +414,9 @@ def behavioral_result(record_id, record, cases):
             'case_summary': {'matched_cases': sum(row['with_minus_without'] is not None for row in cases),
                              'cohort_cases': len(cases), 'scored_observations': sum(obs['score'] is not None for obs in observations),
                              'method': 'descriptive_arm_means_with_minus_without', 'cases': cases},
-            'gates': {'failed': failed, 'passed_observations': sum(obs['deterministic_gate'] == 1 and
-                        (record['schema_version'] == 1 or obs['arm'] == 'with_skill') for obs in observations),
-                      'unknown_observations': sum(obs['deterministic_gate'] is None for obs in observations)
-                        if record['schema_version'] == 1 else 0}}
+            'gates': {'failed': failed,
+                      'passed_observations': sum(obs['deterministic_gate'] == 1 for obs in gate_observations),
+                      'unknown_observations': sum(obs['deterministic_gate'] is None for obs in gate_observations)}}
 
 
 def source_compatible(left, right):

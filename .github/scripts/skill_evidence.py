@@ -2185,7 +2185,7 @@ def reconcile_policy(fields, versions, config, agent, attempt_policy):
                     and harbor[config_key] == attempt_policy[key], 'Attempt policy disagreement')
 
 
-def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, native_layout=False, _numeric_excerpts=None):
+def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, native_layout=False, _numeric_excerpts=None, _custom_admission=False):
     from skillevaluator.tier3.harbor import report_data as native_reports
     from skillevaluator.evaluation import EvaluationService
     from skillevaluator.tier3.case_ids import validate_case_id
@@ -2372,9 +2372,11 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
                 if key in carrier:
                     require(type(carrier[key]) is int and carrier[key] == sum(values), 'Conflicting aggregate coverage')
     if all(k in agent for k in ('lift', 'dimensions_with_skill')):
-        if not validate_native_metrics(agent): limitations.add('coverage_missing')
+        complete_metrics = validate_native_metrics(agent)
+        if not complete_metrics: limitations.add('coverage_missing')
         try:
-            data['metrics'] = reports.metric_rows(agent)
+            if complete_metrics or not _custom_admission:
+                data['metrics'] = reports.metric_rows(agent)
         except OverflowError:
             raise ValueError('Invalid native numeric observation') from None
     else:
@@ -2431,9 +2433,21 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
         for key in ('execution_status', 'expected_attempts', 'scored_attempts'):
             require(summary[key] == native_condition[key], 'Conflicting native coverage')
         condition_errors = native_error_count(native_condition)
-        require(summary_error_count(summary) == condition_errors, 'Conflicting native error count')
+        if _custom_admission:
+            validate_custom_error_ledger(summary, native_condition, arm)
+        else:
+            require(summary_error_count(summary) == condition_errors, 'Conflicting native error count')
         recorded = summary.get('num_trials'); scored = native_condition.get('scored_attempts')
         optional(recorded, count); optional(scored, count)
+        native_recorded = recorded
+        if _custom_admission:
+            # Native 0.3 counts scoreable rewards in num_trials. The registered
+            # v2 boundary independently binds unique failed trial identities.
+            failures = summary.get('trial_failures', [])
+            require(recorded is not None and type(failures) is list, 'Missing custom population')
+            names = [row.get('trial') for row in failures]
+            require(all(type(name) is str and name for name in names) and len(names) == len(set(names)), 'Invalid custom failure population')
+            recorded += len(names)
         pass_data = summary.get('pass_at_k')
         require(pass_data is None or type(pass_data) is dict, 'Invalid summary pass data')
         pass_data = pass_data or {}
@@ -2467,7 +2481,7 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
                 require(trial not in lookup, 'Duplicate summary trial')
                 lookup[trial] = (case, attempt)
         validate_summary_rollups(pass_data, native_cases, ids, maximum, stop_on_pass)
-        observed = []
+        observed = []; missing_rubric_details = False
         if trials_by_arm[arm]:
             for path in trials_by_arm[arm]:
                 trial_result = read_member(path)
@@ -2500,7 +2514,12 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
                     require(reward['trial_id'] == trial and reward['has_skill'] == (arm == 'with_skill'), 'Reward trial/arm mismatch')
                 verifier = (trial_result.get('verifier_result') or {}).get('rewards') or {}
                 overall = verifier.get('overall')
-                require(overall == attempt.get('score'), 'Native trial/summary score mismatch')
+                if _custom_admission and matched is None and not native_cases and native_condition.get('execution_status') == 'failed':
+                    # The pinned collector suppresses pass_at_k for failed arms.
+                    # Retain actual trial scores; do not invent rubric outcomes.
+                    missing_rubric_details |= overall is not None
+                else:
+                    require(overall == attempt.get('score'), 'Native trial/summary score mismatch')
                 scores = {k: verifier.get(k) for k in SCORE_FIELDS}
                 if native_trial_failed(trial_result, reward):
                     require(all(value is None for value in scores.values()) and attempt.get('passed') is None,
@@ -2537,10 +2556,10 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
                 observed.append(obs)
         cardinality = agent.get('num_trials_with' if arm == 'with_skill' else 'num_trials_without')
         if cardinality is not None:
-            require(type(cardinality) is int and cardinality == recorded, 'Conflicting aggregate trial count')
+            require(type(cardinality) is int and cardinality == native_recorded, 'Conflicting aggregate trial count')
         details = 'complete' if len(observed) == recorded else 'partial' if observed else 'unavailable'
         require(details != 'complete' or not lookup, 'Unmatched summary attempts')
-        if orphan_rewards[arm]:
+        if orphan_rewards[arm] or missing_rubric_details:
             details = 'partial' if observed else 'unavailable'
         if not reconcile_native_arm(agent, arm, summary, observed, details):
             limitations.add('coverage_missing')
@@ -3017,6 +3036,25 @@ CUSTOM_ASSURANCE = {'native_consistency': 'producer_reported_at_admission',
                     'execution_authentication': 'not_established'}
 
 
+def validate_custom_error_ledger(summary, condition, arm):
+    """Require an exact raw or pinned-loader ledger, never just equal counts."""
+    enum(arm, ('with_skill', 'without_skill'))
+    native_error_count(summary); native_error_count(condition)
+    raw = summary.get('execution_errors', [])
+    augmented = list(raw)
+    label = 'With skill' if arm == 'with_skill' else 'Without skill'
+    job = summary.get('job_failure')
+    require(job is None or type(job) is str, 'Invalid native job failure')
+    if job: augmented.append(f'{label} aggregate job: {job}')
+    failures = summary.get('trial_failures', [])
+    require(type(failures) is list and len(failures) <= MAX_TRIALS, 'Invalid native failure ledger')
+    for failure in failures:
+        require(type(failure) is dict and type(failure.get('reason')) is str, 'Invalid native failure ledger')
+        token(failure.get('trial'))
+        augmented.append(f"{label} trial {failure['trial']}: {failure['reason']}")
+    require(condition.get('execution_errors', []) in (raw, augmented), 'Custom execution error ledger contradiction')
+
+
 def custom_registry(workspace=ROOT):
     registry = parse_json(read_bytes(workspace / CUSTOM_REGISTRY))
     closed(registry, ('schema_version', 'metrics', 'profiles', 'active_profiles'))
@@ -3446,7 +3484,7 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
     # Retain the supported v1 standard path and its arithmetic/gate checks.
     standard = None
     if profile['grading'] == 'default_plus_custom':
-        standard = _normalize_behavioral_v1(root, name, selected, workspace, native_layout=native_layout, _numeric_excerpts=numeric_excerpts)
+        standard = _normalize_behavioral_v1(root, name, selected, workspace, native_layout=native_layout, _numeric_excerpts=numeric_excerpts, _custom_admission=True)
         data = copy.deepcopy(dict(standard))
         require(all(data['source'][key] == capture['source'][key] for key in
                     ('skill_id', 'owner', 'repository', 'revision', 'source_path')), 'Captured source origin contradiction')
@@ -3493,8 +3531,7 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
             require(type(failure) is dict, 'Invalid failure identity')
             token(failure.get('trial')); failure_names.append(failure['trial'])
         require(len(set(failure_names)) == len(failure_names), 'Duplicate native failure identity')
-        require(native.get('execution_errors', []) == summary.get('execution_errors', [])
-                or native_error_count(native) == summary_error_count(summary), 'Custom execution error contradiction')
+        validate_custom_error_ledger(summary, native, arm)
         if native.get('execution_status') == 'succeeded':
             require(native_error_count(native) == 0 and not failure_rows and not summary.get('job_failure'), 'Successful custom arm has failures')
         carrier = agent.get('trial_failures', {})

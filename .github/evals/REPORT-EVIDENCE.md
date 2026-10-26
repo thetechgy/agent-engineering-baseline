@@ -2265,6 +2265,15 @@ extract. Missing extracts, arbitrary strings, contradictory values and unknown
 metric names fail closed. Native files and redaction rules are not rewritten;
 aggregate scores, prose and HTML cannot reconstruct the original field.
 
+Native 0.3.0 `num_trials` counts scoreable rows. Registered v2 admission
+reconciles those rows with unique named failed trials rather than discarding the
+unscoreable population. Raw collector error ledgers and the pinned loader's
+expanded ledgers must match exactly; equal counts with different entries fail.
+When a failed arm omits headline aggregates or its native rubric summary, those
+measurements remain unavailable. Retained trial components and custom values stay
+visible without reconstructing missing rubric outcomes. Behavioral v1 keeps its
+original interpretation.
+
 These checks establish consistency against supplied native evidence and retained
 producer-captured extracts. They do not authenticate the producer or independently
 prove execution. The in-memory native witness prevents edited normalized claims
