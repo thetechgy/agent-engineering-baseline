@@ -230,12 +230,12 @@
       "sources": [
         {
           "path": ".github/workflows/validate.yml",
-          "pattern": "Install-Module PSScriptAnalyzer -RequiredVersion (?P<version>\\S+)",
-          "count": 2
+          "pattern": "^  PSSCRIPTANALYZER_VERSION: '(?P<version>[^']+)'$",
+          "count": 1
         },
         {
           "path": ".github/workflows/update-baseline.yml",
-          "pattern": "Install-Module PSScriptAnalyzer -RequiredVersion (?P<version>\\S+)",
+          "pattern": "^  PSSCRIPTANALYZER_VERSION: '(?P<version>[^']+)'$",
           "count": 1
         }
       ],

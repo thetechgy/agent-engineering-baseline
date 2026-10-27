@@ -13,6 +13,8 @@ from unittest.mock import patch
 import zipfile
 
 
+ROOT = Path(__file__).resolve().parents[2]
+
 SPEC = importlib.util.spec_from_file_location(
     "ci_powershell", Path(__file__).resolve().parents[1] / "scripts/install_ci_powershell.py")
 runtime = importlib.util.module_from_spec(SPEC)
@@ -159,7 +161,37 @@ class CIPowerShellTests(unittest.TestCase):
             acquisition = next(i for i, step in enumerate(job["steps"])
                                if "install_ci_powershell.py" in step.get("run", ""))
             for index, step in enumerate(job["steps"]):
-                if "Install-Module" in step.get("run", "") or "Invoke-Validation.ps1" in step.get("run", ""):
+                if "Install-CIValidationModule" in step.get("run", "") or "Invoke-Validation.ps1" in step.get("run", ""):
                     self.assertGreater(index, acquisition)
                     self.assertIn("& $env:CI_PWSH", step["run"])
                 self.assertNotEqual(step.get("shell"), "powershell")
+
+    def test_validation_concurrency_only_supersedes_initial_runs_of_the_same_pr(self):
+        import yaml
+        workflow = yaml.safe_load((ROOT / ".github/workflows/validate.yml").read_text())
+        triggers = workflow.get("on", workflow.get(True))
+        self.assertEqual(triggers, {"push": {"branches": ["main"]}, "pull_request": None})
+        self.assertEqual(workflow["concurrency"], {
+            "group": "${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.run_attempt == '1' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}",
+            "cancel-in-progress": "${{ github.event_name == 'pull_request' && github.run_attempt == '1' }}",
+        })
+        self.assertEqual(workflow["jobs"]["linux"]["name"], "Full validation (PowerShell 7 and Bash)")
+        self.assertEqual(workflow["jobs"]["windows-powershell"]["name"], "Pester and analyzer (latest stable PowerShell)")
+
+    def test_all_validation_installers_and_consumers_use_the_shared_exact_version_contract(self):
+        import yaml
+        for name in ("validate", "update-baseline"):
+            workflow = yaml.safe_load((ROOT / f".github/workflows/{name}.yml").read_text())
+            self.assertEqual(workflow["env"]["PESTER_VERSION"], "6.2.0")
+            self.assertEqual(workflow["env"]["PSSCRIPTANALYZER_VERSION"], "1.25.0")
+            for job in workflow["jobs"].values():
+                for step in job["steps"]:
+                    source = step.get("run", "")
+                    self.assertNotIn("Install-Module ", source)
+                    if step.get("name") == "Install validation tools":
+                        self.assertIn(". ./scripts/Install-CIValidationModule.ps1", source)
+                        for module, variable in (("Pester", "PESTER_VERSION"), ("PSScriptAnalyzer", "PSSCRIPTANALYZER_VERSION")):
+                            self.assertIn(f"Install-CIValidationModule -Name {module} -RequiredVersion $env:{variable}", source)
+                    if "./scripts/Invoke-Validation.ps1" in source:
+                        for module, variable in (("Pester", "PESTER_VERSION"), ("PSScriptAnalyzer", "PSSCRIPTANALYZER_VERSION")):
+                            self.assertIn(f"Import-CIValidationModule -Name {module} -RequiredVersion $env:{variable}", source)

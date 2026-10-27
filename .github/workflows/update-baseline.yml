@@ -9,6 +9,7 @@ permissions: {}
 
 env:
   PESTER_VERSION: '6.2.0'
+  PSSCRIPTANALYZER_VERSION: '1.25.0'
 
 concurrency:
   group: update-apm-baseline
@@ -197,12 +198,13 @@ jobs:
           git diff --cached --binary > "$RUNNER_TEMP/baseline.patch"
 
       - name: Install validation tools
+        timeout-minutes: 5
         if: steps.changes.outputs.changed == 'true'
         shell: pwsh
         run: |
-          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-          Install-Module Pester -RequiredVersion $env:PESTER_VERSION -Scope CurrentUser -Force
-          Install-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -Scope CurrentUser -Force
+          . ./scripts/Install-CIValidationModule.ps1
+          Install-CIValidationModule -Name Pester -RequiredVersion $env:PESTER_VERSION
+          Install-CIValidationModule -Name PSScriptAnalyzer -RequiredVersion $env:PSSCRIPTANALYZER_VERSION
 
       - name: Install hash-locked Markdown linter
         if: steps.changes.outputs.changed == 'true'
@@ -218,12 +220,9 @@ jobs:
         if: steps.changes.outputs.changed == 'true'
         shell: pwsh
         run: |
-          Import-Module Pester -RequiredVersion $env:PESTER_VERSION -ErrorAction Stop
-          $loadedPester = @(Get-Module Pester)
-          if ($loadedPester.Count -ne 1 -or $loadedPester[0].Version.ToString() -cne $env:PESTER_VERSION) {
-            throw "Expected exactly Pester $env:PESTER_VERSION to be loaded."
-          }
-          Write-Host "Using Pester $($loadedPester[0].Version)"
+          . ./scripts/Install-CIValidationModule.ps1
+          Import-CIValidationModule -Name Pester -RequiredVersion $env:PESTER_VERSION
+          Import-CIValidationModule -Name PSScriptAnalyzer -RequiredVersion $env:PSSCRIPTANALYZER_VERSION
           ./scripts/Invoke-Validation.ps1
 
       - name: Upload candidate patch
