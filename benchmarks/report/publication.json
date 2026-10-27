@@ -1,45 +1,46 @@
 {
   "current": {
-    "digest": "74463a5769b23188473c6089152382ec11a0009d0af75636cd23f2a4e93918ca",
-    "revision": "873040dc093042bbb9817d1c7e1fc964aa0987a1"
+    "digest": "21ccf134f385f939e158ef9d94aa07aa7bfd680b36f9ac011abd27db44d156bb",
+    "revision": "a474ba1ed8022cbf26e7f0b3a6374eab7ecb468d"
   },
-  "schema_version": 1,
+  "history_digest": "58650d5292b9dabc9d4a1bf5f2a6050c2a44ab2095911039906251f949982310",
+  "schema_version": 2,
   "slots": {
     "oracle--powershell-pester-6": {
       "members": {
-        "inventory/inventory.json": "74463a5769b23188473c6089152382ec11a0009d0af75636cd23f2a4e93918ca",
-        "skills/powershell-pester-6/behavioral/qualification/public-report.json": "0b17d39ae77c924c2c4eeba15762557076832ecacb5fd36208f183d1e79f0b10"
+        "inventory/inventory.json": "21ccf134f385f939e158ef9d94aa07aa7bfd680b36f9ac011abd27db44d156bb",
+        "skills/powershell-pester-6/behavioral/qualification/public-report.json": "94189cd6211c9f82591d9bab4eb846b571919ebc3f8848011b7f4a41246b6b61"
       },
       "provenance": {
-        "archive_digest": "sha256:db4776dd147ac5c2a66faf3fc6f1872def170adc7d553adbacb89e90e980e5b6",
-        "artifact_id": 12774100032,
+        "archive_digest": "sha256:2cdfd83c122432f3937076d4f30e1ef567d406c9c83f517d1a5252dc9c7a068f",
+        "artifact_id": 12775919662,
         "attempt": 1,
         "event": "push",
         "repository": "thetechgy/agent-engineering-baseline",
-        "revision": "873040dc093042bbb9817d1c7e1fc964aa0987a1",
-        "run_id": 40587103370,
+        "revision": "a474ba1ed8022cbf26e7f0b3a6374eab7ecb468d",
+        "run_id": 40595108718,
         "workflow_id": 313370522,
         "workflow_path": ".github/workflows/validate.yml"
       }
     },
     "quality": {
       "members": {
-        "inventory/inventory.json": "74463a5769b23188473c6089152382ec11a0009d0af75636cd23f2a4e93918ca",
-        "skills/a11y/static/public-report.json": "56e5f5cda4e2e8a2288307500130c4a39fb93e19234c8a1ba953acc8f160a1f2",
-        "skills/agent-safety/static/public-report.json": "f8565ce6a4c1c5624d12381143116aa8a7d64d1e979022f60182a09322dc1202",
-        "skills/ansible/static/public-report.json": "26e135ab3d25190109e3214e9777fa0f1f57599b54a212f8c492a07b6a6c8b24",
-        "skills/podman/static/public-report.json": "275d90ca2de6c8e8d50784b1067dfacbd8ce5425f78f8c076c3d5da8af98b614",
-        "skills/powershell-module-engineering/static/public-report.json": "c15dbf5c94e1934fe37e55e0ecd027d150c1f60d75670af312e9956fd0f9db97",
-        "skills/powershell-pester-6/static/public-report.json": "72f7f254151c9f63d0c2fdce6570ce5086ee41f373da1d15ad234048917973ad"
+        "inventory/inventory.json": "21ccf134f385f939e158ef9d94aa07aa7bfd680b36f9ac011abd27db44d156bb",
+        "skills/a11y/static/public-report.json": "0e1bca65d9250df0e6a3e6cecdb4cd5867c5e071e4b6daedf92b3581d70f49d8",
+        "skills/agent-safety/static/public-report.json": "a71a286def1bd20a514ebbc8ea8b28b35898a5886a5c01cd4af2b518d3335df9",
+        "skills/ansible/static/public-report.json": "f00524d293e481289abae385b9721e43bbc9a02728769e9bf365b438252933af",
+        "skills/podman/static/public-report.json": "02831abe5d1b009e0766c40a59b4d6e19e45721d3835bfc1f6e312b881323412",
+        "skills/powershell-module-engineering/static/public-report.json": "56ef5e1f84ceaf3f451b97fff9c2fd02c50b757de46c8dfac719f7a2282a17da",
+        "skills/powershell-pester-6/static/public-report.json": "ddaa480253e080a407c18d1b01bc003347e65ae4fa0f417daa04ec48df95e42e"
       },
       "provenance": {
-        "archive_digest": "sha256:8ee8bfe65e341947115395043e30c47f8313c791df18e16711dae8b01dcc1f28",
-        "artifact_id": 12772963891,
+        "archive_digest": "sha256:56df82c6181dca6ba3fa53c47aad69394124868bd01ec7fc84ba76082281eb82",
+        "artifact_id": 12776003850,
         "attempt": 1,
         "event": "push",
         "repository": "thetechgy/agent-engineering-baseline",
-        "revision": "873040dc093042bbb9817d1c7e1fc964aa0987a1",
-        "run_id": 40587103370,
+        "revision": "a474ba1ed8022cbf26e7f0b3a6374eab7ecb468d",
+        "run_id": 40595108718,
         "workflow_id": 313370522,
         "workflow_path": ".github/workflows/validate.yml"
       }

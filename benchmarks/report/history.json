@@ -1,0 +1,4523 @@
+{
+  "observations": [
+    {
+      "admitted_at": "2026-10-27T22:52:26Z",
+      "class": "standard",
+      "execution": {
+        "completed_at": "2026-10-27T20:16:53Z",
+        "started_at": "2026-10-27T19:48:53Z"
+      },
+      "finding_counts": {
+        "critical": 0,
+        "high": 0,
+        "low": 0,
+        "medium": 0
+      },
+      "id": "sha256:0bbd4c10a883e8dbed3b5e90b6061363036366ce397d46c86c01efd00da59da2",
+      "numeric_complete": true,
+      "provenance": {
+        "archive_digest": "sha256:47a672783212dc413439bd7036d6801be53d88ded2f0b2e31372b21436ec9a13",
+        "artifact_id": 12767910719,
+        "attempt": 1,
+        "event": "workflow_dispatch",
+        "repository": "thetechgy/agent-engineering-baseline",
+        "revision": "21242feb817ec76ad3ff2674ff6b7b4171196733",
+        "run_id": 40572244242,
+        "workflow_id": 361827575,
+        "workflow_path": ".github/workflows/benchmark-skills.yml"
+      },
+      "record": {
+        "arms": [
+          {
+            "condition": {
+              "build_digest": null,
+              "competing_skills": [],
+              "execution": {
+                "authorization_policy": null,
+                "base_image_mode": "disabled",
+                "environment": "docker",
+                "fixture_boundary": null,
+                "task_source": "evals_json"
+              },
+              "fixture_digest": null,
+              "id": "sha256:50e7dde293cc8dd398aa971d12ba9524b1343a8d05bdbdb7ab86f462514b433a",
+              "instruction_digest": null,
+              "provenance": "runtime_recorded",
+              "target_present": true,
+              "workspace_mode": "isolated"
+            },
+            "coverage": {
+              "case_details": "complete",
+              "expected_attempts": 10,
+              "expected_cases": 10,
+              "recorded_attempts": 10,
+              "scored_attempts": 10,
+              "unscored_attempts": 0
+            },
+            "execution_error_count": 0,
+            "execution_status": "succeeded",
+            "name": "with_skill",
+            "rubric": {
+              "passed_cases": 8,
+              "threshold": 0.5,
+              "total_cases": 10
+            }
+          },
+          {
+            "condition": {
+              "build_digest": null,
+              "competing_skills": [],
+              "execution": {
+                "authorization_policy": null,
+                "base_image_mode": "disabled",
+                "environment": "docker",
+                "fixture_boundary": null,
+                "task_source": "evals_json"
+              },
+              "fixture_digest": null,
+              "id": "sha256:43153043c854c931c9c2fd4ceaa8f683d4f697dd75a217390491c0b23971344a",
+              "instruction_digest": null,
+              "provenance": "runtime_recorded",
+              "target_present": false,
+              "workspace_mode": "isolated"
+            },
+            "coverage": {
+              "case_details": "complete",
+              "expected_attempts": 10,
+              "expected_cases": 10,
+              "recorded_attempts": 10,
+              "scored_attempts": 10,
+              "unscored_attempts": 0
+            },
+            "execution_error_count": 0,
+            "execution_status": "succeeded",
+            "name": "without_skill",
+            "rubric": {
+              "passed_cases": 7,
+              "threshold": 0.5,
+              "total_cases": 10
+            }
+          }
+        ],
+        "availability": {
+          "provenance": "runtime_recorded",
+          "reasons": [],
+          "status": "complete"
+        },
+        "dataset": {
+          "authored_digest": "sha256:6c343468a5b508d60449d6c464b79ab100dd39d5831613b89541fb1352c321c2",
+          "authored_provenance": "reconstructed_from_declared_revision",
+          "case_cohort_digest": "sha256:d5caba195eef9ebfa4650c9d5b8be4f9925f21b177f196489b3be4adefb7813c",
+          "case_ids": [
+            "1",
+            "10",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9"
+          ],
+          "owner": "local",
+          "staged_algorithm": "skill-evaluator-dataset-snapshot/1",
+          "staged_digest": "sha256:cecc0bcea480a3c197e1b4c527009958ada3be67eb0205325f6c16123f9355fe",
+          "staged_provenance": "runtime_recorded"
+        },
+        "kind": "behavioral",
+        "metrics": [
+          {
+            "name": "Skill Lift",
+            "unit": "score",
+            "value": 0.0593
+          },
+          {
+            "name": "Effectiveness",
+            "unit": "score",
+            "value": 0.717
+          },
+          {
+            "name": "Correctness",
+            "unit": "score",
+            "value": 0.84
+          },
+          {
+            "name": "Discoverability",
+            "unit": "score",
+            "value": 0.6875
+          }
+        ],
+        "policy": {
+          "attempts": {
+            "maximum": 1,
+            "mode": "standard",
+            "pass_threshold": 0.5,
+            "stop_on_pass": false
+          },
+          "fields": {
+            "authorization_policy": null,
+            "baseline": true,
+            "codex": "0.155.1",
+            "competing_revision": null,
+            "concurrency": 2,
+            "deterministic_gate": null,
+            "docker_compose": "5.6.1",
+            "environment": "docker",
+            "evaluator_revision": "ac0a04905100acdafc6c95829311a9739c340ff6",
+            "fixture_boundary": null,
+            "grading": "default",
+            "harbor": "0.13.2",
+            "model": "gpt-5.6-sol",
+            "provider": "openai",
+            "python": "3.13",
+            "standard_attempts": 1,
+            "stop_on_pass": false,
+            "task_build": null,
+            "task_source": null,
+            "timeout_multiplier": 2.0,
+            "upstream_revision": null,
+            "workspace_mode": null
+          },
+          "id": "sha256:b5ebc1f774866bf24c057aed9ce3d9883d35bbe14b606e06b7324f8176d2d6f3",
+          "judge": {
+            "enabled": true,
+            "model": "gpt-5.6-sol",
+            "provider": "openai"
+          },
+          "metric_set": "skill-evaluator-default-v2",
+          "patch_digest": "sha256:ff159054bbd840fb793c20352ffa074cb79394a95a9f32f178e3aab5d4c91c49",
+          "provenance": "runtime_recorded",
+          "published_id": null
+        },
+        "run_id": "20261027_194915_2684_7ac392d22e85",
+        "scans": [],
+        "schema_version": 1,
+        "source": {
+          "content": {
+            "algorithm": "sha256-relative-file-manifest-v1",
+            "digest": "sha256:506e78b501906831944d7c6559091c898de9476d42347c56381c950d0099d07d",
+            "manifest": [
+              {
+                "digest": "sha256:96088308ed8df85d9f369263de4ec02fefdb7f59fbccc2b4629991be7266e581",
+                "member": "EVALS.md"
+              },
+              {
+                "digest": "sha256:93f772d47f661cc721a211257f4a2aecabcc53ed77f0d4b16b754944128586c9",
+                "member": "MAINTENANCE.md"
+              },
+              {
+                "digest": "sha256:625107071889166612f64ac52920be2b9455f671e4ce1f805835f7fee14ef274",
+                "member": "SKILL.md"
+              },
+              {
+                "digest": "sha256:fce55e0ec0a56608d714f273afdbdc44017d0a4ebed73b61291cd0fdebbf434a",
+                "member": "references/compose-migration.md"
+              },
+              {
+                "digest": "sha256:adb6f7a2a07f2067036354cb57bb69e694d423f20bd578e09db6a5a799859168",
+                "member": "references/fedora-hosts.md"
+              },
+              {
+                "digest": "sha256:55a300354c77b6e59b5876b1b3a6b7e00f9525a21c9160fa5b3200a3a8128f23",
+                "member": "references/quadlet-systemd.md"
+              },
+              {
+                "digest": "sha256:6a8d789b72d821e3fed320ca84325086d5a42ced25912a4b52ea760a306111ff",
+                "member": "references/reverse-proxy.md"
+              },
+              {
+                "digest": "sha256:a5fc3f33815caa196d5f8d6cb090136bcccc88fb95dedb921c99bd0b3cf6b524",
+                "member": "references/rootless-networking.md"
+              },
+              {
+                "digest": "sha256:37e1fae3de6f4b7ae1ea3ccc2b0b84d7fd854ea2730a51f0e3b3b1bc9b2e1068",
+                "member": "references/security-storage-secrets.md"
+              },
+              {
+                "digest": "sha256:465321094bc936d8a9e187bd3b4daa1ab271b93242a2c07fe88c58db6bd4bdd5",
+                "member": "references/validation.md"
+              }
+            ],
+            "provenance": "reconstructed_from_declared_revision",
+            "scope": "pinned-agent-visible"
+          },
+          "lineage": null,
+          "owner": "local",
+          "repository": "thetechgy/agent-engineering-baseline",
+          "revision": "21242feb817ec76ad3ff2674ff6b7b4171196733",
+          "skill_id": "podman",
+          "source_path": ".apm/skills/podman"
+        }
+      },
+      "record_digest": "sha256:a644bde856cc8cd1720c4415bfd17aee3fca73a1223bc95b6bd27c91c58df7a7",
+      "record_id": "sha256:2802ba9cad2f2510a1416eb220a25549ce61a1163a586c95fd5dac97070de1a7",
+      "slot": "standard--podman"
+    },
+    {
+      "admitted_at": "2026-10-27T22:52:26Z",
+      "class": "diagnostic",
+      "execution": {
+        "completed_at": "2026-10-27T21:45:49Z",
+        "started_at": "2026-10-27T21:28:42Z"
+      },
+      "finding_counts": {
+        "critical": 0,
+        "high": 0,
+        "low": 0,
+        "medium": 0
+      },
+      "id": "sha256:bcaabb9ff09e087df9698e7a516c52dd01fdb69dd9ff935d9e5721996ee17649",
+      "numeric_complete": false,
+      "provenance": {
+        "archive_digest": "sha256:db4776dd147ac5c2a66faf3fc6f1872def170adc7d553adbacb89e90e980e5b6",
+        "artifact_id": 12774100032,
+        "attempt": 1,
+        "event": "push",
+        "repository": "thetechgy/agent-engineering-baseline",
+        "revision": "873040dc093042bbb9817d1c7e1fc964aa0987a1",
+        "run_id": 40587103370,
+        "workflow_id": 313370522,
+        "workflow_path": ".github/workflows/validate.yml"
+      },
+      "record": {
+        "arms": [
+          {
+            "condition": {
+              "build_digest": "sha256:8c03bebc1e593862664e3b43259b1c0229d375557ceb3bc494b9fdf06565121b",
+              "competing_skills": [],
+              "execution": {
+                "authorization_policy": null,
+                "base_image_mode": "recorded_staging",
+                "environment": "docker",
+                "fixture_boundary": "separate-verifier-v1",
+                "task_source": "native_harbor"
+              },
+              "fixture_digest": "sha256:9cb42074767b6dd33930c83f4725a8d9f19f04ed4efe283c7d9315f15d7a95f1",
+              "id": "sha256:6507f8a74d08d79fa527f4f99b00dd6bb9d4bea409458eb15831923fbcc94f1c",
+              "instruction_digest": "sha256:b5467c6a132921b3b3caca771c63baf0d681327e8db2846bf771d8d7a81f8dc7",
+              "provenance": "runtime_recorded",
+              "target_present": true,
+              "workspace_mode": "isolated"
+            },
+            "coverage": {
+              "case_details": "complete",
+              "expected_attempts": 26,
+              "expected_cases": 26,
+              "recorded_attempts": 26,
+              "scored_attempts": 18,
+              "unscored_attempts": 8
+            },
+            "execution_error_count": 10,
+            "execution_status": "failed",
+            "name": "with_skill",
+            "rubric": {
+              "passed_cases": null,
+              "threshold": null,
+              "total_cases": null
+            }
+          },
+          {
+            "condition": {
+              "build_digest": "sha256:8c03bebc1e593862664e3b43259b1c0229d375557ceb3bc494b9fdf06565121b",
+              "competing_skills": [],
+              "execution": {
+                "authorization_policy": null,
+                "base_image_mode": "recorded_staging",
+                "environment": "docker",
+                "fixture_boundary": "separate-verifier-v1",
+                "task_source": "native_harbor"
+              },
+              "fixture_digest": "sha256:9cb42074767b6dd33930c83f4725a8d9f19f04ed4efe283c7d9315f15d7a95f1",
+              "id": "sha256:00a5d4fc11e0449d8feafaebfeed0661be0ed97a734634ef552fe1b166156dcd",
+              "instruction_digest": "sha256:b5467c6a132921b3b3caca771c63baf0d681327e8db2846bf771d8d7a81f8dc7",
+              "provenance": "runtime_recorded",
+              "target_present": false,
+              "workspace_mode": "isolated"
+            },
+            "coverage": {
+              "case_details": "complete",
+              "expected_attempts": 26,
+              "expected_cases": 26,
+              "recorded_attempts": 26,
+              "scored_attempts": 18,
+              "unscored_attempts": 8
+            },
+            "execution_error_count": 10,
+            "execution_status": "failed",
+            "name": "without_skill",
+            "rubric": {
+              "passed_cases": null,
+              "threshold": null,
+              "total_cases": null
+            }
+          }
+        ],
+        "availability": {
+          "provenance": "runtime_recorded",
+          "reasons": [
+            "coverage_missing",
+            "execution_incomplete",
+            "metadata_missing"
+          ],
+          "status": "incomplete"
+        },
+        "dataset": {
+          "authored_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+          "authored_provenance": "runtime_recorded",
+          "case_cohort_digest": "sha256:1630284ecb507fb436fdc25b8b5db7ad13177b6418f8f1a6cf603b1baa8bc491",
+          "case_ids": [
+            "pester-001-classic",
+            "pester-001-data",
+            "pester-001-empty",
+            "pester-001-failure-text",
+            "pester-001-malformed",
+            "pester-001-missing-runtime",
+            "pester-001-skipped",
+            "pester-001-standalone",
+            "pester-001-timeout",
+            "pester-001-unsupported",
+            "pester-001-version-drift",
+            "pester-001-weak",
+            "pester-002-classic",
+            "pester-002-data",
+            "pester-002-weak",
+            "pester-003-external",
+            "pester-003-module",
+            "pester-003-weak",
+            "pester-003-wrong-scope",
+            "pester-004-broken-discovery",
+            "pester-004-compact",
+            "pester-004-discovery",
+            "pester-004-inline",
+            "pester-004-weak",
+            "pester-005-good",
+            "pester-005-wrong"
+          ],
+          "owner": "overlay",
+          "staged_algorithm": "sha256-staged-task-inputs-v1",
+          "staged_digest": "sha256:d2f7bd4984ab3126624b7ec4ba84b7cab7c2aeea71392cf49aeeba6e11e0fcde",
+          "staged_provenance": "runtime_recorded"
+        },
+        "kind": "behavioral",
+        "metrics": [],
+        "policy": {
+          "attempts": {
+            "maximum": 1,
+            "mode": "unknown",
+            "pass_threshold": null,
+            "stop_on_pass": false
+          },
+          "fields": {
+            "authorization_policy": null,
+            "baseline": true,
+            "codex": null,
+            "competing_revision": null,
+            "concurrency": 2,
+            "deterministic_gate": null,
+            "docker_compose": null,
+            "environment": "docker",
+            "evaluator_revision": "ac0a04905100acdafc6c95829311a9739c340ff6",
+            "fixture_boundary": null,
+            "grading": "custom_only",
+            "harbor": "0.13.2",
+            "model": null,
+            "provider": null,
+            "python": "3.13.17",
+            "standard_attempts": null,
+            "stop_on_pass": false,
+            "task_build": null,
+            "task_source": "native_harbor",
+            "timeout_multiplier": 1.0,
+            "upstream_revision": null,
+            "workspace_mode": "isolated"
+          },
+          "id": "sha256:04dbeb91193b60f36c87ff33d0a1b865ab631de1e8cb0689552024a8ad4d471a",
+          "judge": {
+            "enabled": false,
+            "model": null,
+            "provider": null
+          },
+          "metric_set": "custom-only",
+          "patch_digest": "sha256:ff159054bbd840fb793c20352ffa074cb79394a95a9f32f178e3aab5d4c91c49",
+          "provenance": "runtime_recorded",
+          "published_id": null
+        },
+        "run_id": "qualification",
+        "scans": [],
+        "schema_version": 2,
+        "source": {
+          "content": {
+            "algorithm": "sha256-relative-file-manifest-v1",
+            "digest": "sha256:d3641c5190c1b86d8e853adc8f3c68fe6376b5fdaf5c1d90c610a745102ff03e",
+            "manifest": [
+              {
+                "digest": "sha256:b57df2ff4072b2e25744ae2bd530b02bbb6ab83a22a0d374c73d48de4dc70887",
+                "member": "SKILL.md"
+              },
+              {
+                "digest": "sha256:6d05a890eb1c53c59755f9e560c05d65467a614d36af7c812f4a32c89b47f4e9",
+                "member": "references/compatibility-and-migration.md"
+              },
+              {
+                "digest": "sha256:3b80a98abfefdcd9a765da9a9436caa43de6a873e57253f1ecfb36e1095ea4b8",
+                "member": "references/execution.md"
+              }
+            ],
+            "provenance": "configured",
+            "scope": "pinned-agent-visible"
+          },
+          "lineage": null,
+          "owner": "local",
+          "repository": "thetechgy/agent-engineering-baseline",
+          "revision": "873040dc093042bbb9817d1c7e1fc964aa0987a1",
+          "skill_id": "powershell-pester-6",
+          "source_path": ".apm/skills/powershell-pester-6"
+        }
+      },
+      "record_digest": "sha256:0b17d39ae77c924c2c4eeba15762557076832ecacb5fd36208f183d1e79f0b10",
+      "record_id": "sha256:aefcb8cb866dd374c2f884dbf3a73ef6ec3741e0a4c1115673d4216a1d60e7e0",
+      "slot": "oracle--powershell-pester-6"
+    },
+    {
+      "admitted_at": "2026-10-27T22:52:26Z",
+      "class": "quality",
+      "execution": {
+        "completed_at": "2026-10-27T21:51:15Z",
+        "started_at": "2026-10-27T21:28:42Z"
+      },
+      "finding_counts": {
+        "critical": 0,
+        "high": 1,
+        "low": 6,
+        "medium": 5
+      },
+      "id": "sha256:09b72ec6c75ce0afee3229567e4db62479cf82b7a6f96abae94bf34206f3edcb",
+      "numeric_complete": false,
+      "provenance": {
+        "archive_digest": "sha256:8ee8bfe65e341947115395043e30c47f8313c791df18e16711dae8b01dcc1f28",
+        "artifact_id": 12772963891,
+        "attempt": 1,
+        "event": "push",
+        "repository": "thetechgy/agent-engineering-baseline",
+        "revision": "873040dc093042bbb9817d1c7e1fc964aa0987a1",
+        "run_id": 40587103370,
+        "workflow_id": 313370522,
+        "workflow_path": ".github/workflows/validate.yml"
+      },
+      "record": {
+        "arms": [],
+        "availability": {
+          "provenance": "runtime_recorded",
+          "reasons": [
+            "scan_incomplete"
+          ],
+          "status": "incomplete"
+        },
+        "dataset": {
+          "authored_digest": null,
+          "authored_provenance": "unknown",
+          "case_cohort_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "case_ids": [],
+          "owner": "unknown",
+          "staged_algorithm": null,
+          "staged_digest": null,
+          "staged_provenance": "unknown"
+        },
+        "kind": "static",
+        "metrics": [],
+        "policy": {
+          "attempts": {
+            "maximum": null,
+            "mode": "unknown",
+            "pass_threshold": null,
+            "stop_on_pass": null
+          },
+          "fields": {
+            "authorization_policy": null,
+            "baseline": null,
+            "codex": null,
+            "competing_revision": null,
+            "concurrency": null,
+            "deterministic_gate": null,
+            "docker_compose": null,
+            "environment": null,
+            "evaluator_revision": "ac0a04905100acdafc6c95829311a9739c340ff6",
+            "fixture_boundary": null,
+            "grading": null,
+            "harbor": null,
+            "model": null,
+            "provider": null,
+            "python": null,
+            "standard_attempts": null,
+            "stop_on_pass": null,
+            "task_build": null,
+            "task_source": null,
+            "timeout_multiplier": null,
+            "upstream_revision": null,
+            "workspace_mode": null
+          },
+          "id": "sha256:8e0caef1dcf3679ce807e77343ba5d78c0675d8b273c2cfcae10cb3fc2bef24f",
+          "judge": {
+            "enabled": null,
+            "model": null,
+            "provider": null
+          },
+          "metric_set": null,
+          "patch_digest": null,
+          "provenance": "runtime_recorded",
+          "published_id": null
+        },
+        "run_id": null,
+        "scans": [
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:7f80527d804a34dac76e6591b424df333bf3031197be2320385b1a67ad8f8fc8"
+            ],
+            "scanner": "catalog-total",
+            "severity_counts": {
+              "critical": 0,
+              "high": 1,
+              "low": 6,
+              "medium": 5
+            },
+            "status": "incomplete"
+          },
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:6c9e7a90cffdd5efb1898d2c51a4709b5490d608c9f8ed5a094bc09fc1abc230"
+            ],
+            "scanner": "SCHEMA",
+            "severity_counts": {
+              "critical": 0,
+              "high": 1,
+              "low": 0,
+              "medium": 2
+            },
+            "status": "failed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:893550cde8d5463e70e5dd0129925e0c4d6576a2c70397ae1e230ad70cf57984"
+            ],
+            "scanner": "VERSION",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:6e7c9c8f3dea2bc468c3462530a3eb20ff83d958f6908c71cc9baeb7787de7e8"
+            ],
+            "scanner": "SECURITY",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "incomplete"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:bf1ae0852fd1dc661d65acfe5c992cde542ac05885bb81bd373135d5e6040f1f"
+            ],
+            "scanner": "PII",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:f5122f3572001b17f85276a93d49975045ab42da0dcd9e034a3c688bec6ea98d"
+            ],
+            "scanner": "LICENSE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:7653e88bdf1f0668a94808c6320da539817eb1bdb96b74f03b9d2fdd94c0d819"
+            ],
+            "scanner": "CODE_RISK",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:ec04aa872f39095ab42933eea4d190de1a6950b179adf56ac65e90b435e740ae"
+            ],
+            "scanner": "SECRETS",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:5e644ac997a572c945ccf271c838721c64d15584c445015bfc730328ebdac28e"
+            ],
+            "scanner": "HYGIENE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:07811e6a8cbf75e0edca999762eab4f0879469e5d2b6dccc8832b0853443b444"
+            ],
+            "scanner": "UNICODE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 1,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:c66f91747a053ce3c1559cb861d724e371b6f0a1c968bc7c7b9a6b7a9376324c"
+            ],
+            "scanner": "QUALITY",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 5,
+              "medium": 3
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:d89ea6eb9c21708f861e6a490fd3de4d1c2bc1afde1103a802f7bb1742f72a63"
+            ],
+            "scanner": "SCRIPT_LINT",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": false,
+            "passed": null,
+            "references": [
+              "sha256:7f80527d804a34dac76e6591b424df333bf3031197be2320385b1a67ad8f8fc8"
+            ],
+            "scanner": "skillspector",
+            "severity_counts": {
+              "critical": null,
+              "high": null,
+              "low": null,
+              "medium": null
+            },
+            "status": "incomplete"
+          }
+        ],
+        "schema_version": 1,
+        "source": {
+          "content": {
+            "algorithm": "sha256-relative-file-manifest-v1",
+            "digest": "sha256:18dab091e9e3b9817af70ce3d968d84939e96ebc8917f8f400ac6a7416905d66",
+            "manifest": [
+              {
+                "digest": "sha256:801cecfd42aeb32f3fd6083d9af08f44c8a5ca48202761533c072a10c06060c9",
+                "member": "SKILL.md"
+              }
+            ],
+            "provenance": "reconstructed_from_declared_revision",
+            "scope": "pinned-agent-visible"
+          },
+          "lineage": null,
+          "owner": "local",
+          "repository": "thetechgy/agent-engineering-baseline",
+          "revision": "873040dc093042bbb9817d1c7e1fc964aa0987a1",
+          "skill_id": "powershell-module-engineering",
+          "source_path": ".apm/skills/powershell-module-engineering"
+        }
+      },
+      "record_digest": "sha256:c15dbf5c94e1934fe37e55e0ecd027d150c1f60d75670af312e9956fd0f9db97",
+      "record_id": "sha256:da996afebed22e35109b690906fc1406bd97e256ab01df5ae1baee4a43c2e1da",
+      "slot": "quality"
+    },
+    {
+      "admitted_at": "2026-10-27T22:52:26Z",
+      "class": "quality",
+      "execution": {
+        "completed_at": "2026-10-27T21:51:15Z",
+        "started_at": "2026-10-27T21:28:42Z"
+      },
+      "finding_counts": {
+        "critical": 0,
+        "high": 2,
+        "low": 5,
+        "medium": 7
+      },
+      "id": "sha256:23cf57d2a53c2e4ffeeb53739535d632fe8c947ad9f746f5eb8640455e7daa0d",
+      "numeric_complete": false,
+      "provenance": {
+        "archive_digest": "sha256:8ee8bfe65e341947115395043e30c47f8313c791df18e16711dae8b01dcc1f28",
+        "artifact_id": 12772963891,
+        "attempt": 1,
+        "event": "push",
+        "repository": "thetechgy/agent-engineering-baseline",
+        "revision": "873040dc093042bbb9817d1c7e1fc964aa0987a1",
+        "run_id": 40587103370,
+        "workflow_id": 313370522,
+        "workflow_path": ".github/workflows/validate.yml"
+      },
+      "record": {
+        "arms": [],
+        "availability": {
+          "provenance": "runtime_recorded",
+          "reasons": [
+            "scan_incomplete"
+          ],
+          "status": "incomplete"
+        },
+        "dataset": {
+          "authored_digest": null,
+          "authored_provenance": "unknown",
+          "case_cohort_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "case_ids": [],
+          "owner": "unknown",
+          "staged_algorithm": null,
+          "staged_digest": null,
+          "staged_provenance": "unknown"
+        },
+        "kind": "static",
+        "metrics": [],
+        "policy": {
+          "attempts": {
+            "maximum": null,
+            "mode": "unknown",
+            "pass_threshold": null,
+            "stop_on_pass": null
+          },
+          "fields": {
+            "authorization_policy": null,
+            "baseline": null,
+            "codex": null,
+            "competing_revision": null,
+            "concurrency": null,
+            "deterministic_gate": null,
+            "docker_compose": null,
+            "environment": null,
+            "evaluator_revision": "ac0a04905100acdafc6c95829311a9739c340ff6",
+            "fixture_boundary": null,
+            "grading": null,
+            "harbor": null,
+            "model": null,
+            "provider": null,
+            "python": null,
+            "standard_attempts": null,
+            "stop_on_pass": null,
+            "task_build": null,
+            "task_source": null,
+            "timeout_multiplier": null,
+            "upstream_revision": null,
+            "workspace_mode": null
+          },
+          "id": "sha256:8e0caef1dcf3679ce807e77343ba5d78c0675d8b273c2cfcae10cb3fc2bef24f",
+          "judge": {
+            "enabled": null,
+            "model": null,
+            "provider": null
+          },
+          "metric_set": null,
+          "patch_digest": null,
+          "provenance": "runtime_recorded",
+          "published_id": null
+        },
+        "run_id": null,
+        "scans": [
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:8ecddb45c3dc5c256a9b6961239b7dd7a21ac3423a5ca1c2acad810125cc37c3"
+            ],
+            "scanner": "catalog-total",
+            "severity_counts": {
+              "critical": 0,
+              "high": 2,
+              "low": 5,
+              "medium": 7
+            },
+            "status": "incomplete"
+          },
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:0a0d149de92f9fcc0521891bd3b43a78013277d68eb894fc82139b9aca79e74a"
+            ],
+            "scanner": "SCHEMA",
+            "severity_counts": {
+              "critical": 0,
+              "high": 1,
+              "low": 0,
+              "medium": 3
+            },
+            "status": "failed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:6868ad030444cd39632359604acd45daa587a403813b50f71947cd6ad2b88035"
+            ],
+            "scanner": "VERSION",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:f9860b37ff0ca6df40cd218bbdaa65715c15a981acaa999144b21db45ec46d16"
+            ],
+            "scanner": "SECURITY",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "incomplete"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:27978497aee4a5cbbd9a01917baad7fdf32a94ea6dd1a5c2f17dc2c7654bb766"
+            ],
+            "scanner": "PII",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:70d0f70d35aff84a186b98c59dbd142302e42109a5e05024caf512d95e374113"
+            ],
+            "scanner": "LICENSE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:d7c10adb6a321e43012e6f59495c21dd03dd1422aad670731acde4a0c48338a5"
+            ],
+            "scanner": "CODE_RISK",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:c4c411d27e43f9487194f60f9422eb52ec8175d53e62c0d31f8dd5474fac6c1b"
+            ],
+            "scanner": "SECRETS",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:a34a782b0ff72ec8d00cbcf7642a1afc001d1bc50627d9771d0cda9494dd6b8b"
+            ],
+            "scanner": "HYGIENE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:d88d7dba1d5e08201fcc2e9e4801dca1fda61f2a094646973037069398fcacb7"
+            ],
+            "scanner": "UNICODE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:3b7a60ed084b4727f4898a1e1b189bc0961399bed50bb6e85e1f207f33ad1872"
+            ],
+            "scanner": "QUALITY",
+            "severity_counts": {
+              "critical": 0,
+              "high": 1,
+              "low": 5,
+              "medium": 4
+            },
+            "status": "failed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:55eb3610d69262f4dd645043ef36f6ff265a8cade02163b216a8175bc71c7b82"
+            ],
+            "scanner": "SCRIPT_LINT",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": false,
+            "passed": null,
+            "references": [
+              "sha256:8ecddb45c3dc5c256a9b6961239b7dd7a21ac3423a5ca1c2acad810125cc37c3"
+            ],
+            "scanner": "skillspector",
+            "severity_counts": {
+              "critical": null,
+              "high": null,
+              "low": null,
+              "medium": null
+            },
+            "status": "incomplete"
+          }
+        ],
+        "schema_version": 1,
+        "source": {
+          "content": {
+            "algorithm": "sha256-relative-file-manifest-v1",
+            "digest": "sha256:bd38520667287390ab5b35bf3a81033b1a1d0eae7f0545ec907410ba39ad1216",
+            "manifest": [
+              {
+                "digest": "sha256:96d578e9646cd80ff6e1bedb26069222ad37b473960f3c0cc069716484b22553",
+                "member": "SKILL.md"
+              }
+            ],
+            "provenance": "reconstructed_from_declared_revision",
+            "scope": "pinned-agent-visible"
+          },
+          "lineage": null,
+          "owner": "local",
+          "repository": "thetechgy/agent-engineering-baseline",
+          "revision": "873040dc093042bbb9817d1c7e1fc964aa0987a1",
+          "skill_id": "a11y",
+          "source_path": ".apm/skills/a11y"
+        }
+      },
+      "record_digest": "sha256:56e5f5cda4e2e8a2288307500130c4a39fb93e19234c8a1ba953acc8f160a1f2",
+      "record_id": "sha256:443bb8186e996cd07fe9216ce7e39faea320a45e626277097b9aa177ea504e93",
+      "slot": "quality"
+    },
+    {
+      "admitted_at": "2026-10-27T22:52:26Z",
+      "class": "quality",
+      "execution": {
+        "completed_at": "2026-10-27T21:51:15Z",
+        "started_at": "2026-10-27T21:28:42Z"
+      },
+      "finding_counts": {
+        "critical": 0,
+        "high": 1,
+        "low": 5,
+        "medium": 6
+      },
+      "id": "sha256:44ce9b07a00e3fa14aa2d7af1d9ae20be3cf3d50177256c4c547ed161e3adf9e",
+      "numeric_complete": false,
+      "provenance": {
+        "archive_digest": "sha256:8ee8bfe65e341947115395043e30c47f8313c791df18e16711dae8b01dcc1f28",
+        "artifact_id": 12772963891,
+        "attempt": 1,
+        "event": "push",
+        "repository": "thetechgy/agent-engineering-baseline",
+        "revision": "873040dc093042bbb9817d1c7e1fc964aa0987a1",
+        "run_id": 40587103370,
+        "workflow_id": 313370522,
+        "workflow_path": ".github/workflows/validate.yml"
+      },
+      "record": {
+        "arms": [],
+        "availability": {
+          "provenance": "runtime_recorded",
+          "reasons": [
+            "scan_incomplete"
+          ],
+          "status": "incomplete"
+        },
+        "dataset": {
+          "authored_digest": null,
+          "authored_provenance": "unknown",
+          "case_cohort_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "case_ids": [],
+          "owner": "unknown",
+          "staged_algorithm": null,
+          "staged_digest": null,
+          "staged_provenance": "unknown"
+        },
+        "kind": "static",
+        "metrics": [],
+        "policy": {
+          "attempts": {
+            "maximum": null,
+            "mode": "unknown",
+            "pass_threshold": null,
+            "stop_on_pass": null
+          },
+          "fields": {
+            "authorization_policy": null,
+            "baseline": null,
+            "codex": null,
+            "competing_revision": null,
+            "concurrency": null,
+            "deterministic_gate": null,
+            "docker_compose": null,
+            "environment": null,
+            "evaluator_revision": "ac0a04905100acdafc6c95829311a9739c340ff6",
+            "fixture_boundary": null,
+            "grading": null,
+            "harbor": null,
+            "model": null,
+            "provider": null,
+            "python": null,
+            "standard_attempts": null,
+            "stop_on_pass": null,
+            "task_build": null,
+            "task_source": null,
+            "timeout_multiplier": null,
+            "upstream_revision": null,
+            "workspace_mode": null
+          },
+          "id": "sha256:8e0caef1dcf3679ce807e77343ba5d78c0675d8b273c2cfcae10cb3fc2bef24f",
+          "judge": {
+            "enabled": null,
+            "model": null,
+            "provider": null
+          },
+          "metric_set": null,
+          "patch_digest": null,
+          "provenance": "runtime_recorded",
+          "published_id": null
+        },
+        "run_id": null,
+        "scans": [
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:2f721fc838d420c1a63f04386edae1713863d06339868bccd74ab69682f485f7"
+            ],
+            "scanner": "catalog-total",
+            "severity_counts": {
+              "critical": 0,
+              "high": 1,
+              "low": 5,
+              "medium": 6
+            },
+            "status": "incomplete"
+          },
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:b8220fddb60b4548c895761f86ed5035c743781df542fc8b3d67d66a66e63b53"
+            ],
+            "scanner": "SCHEMA",
+            "severity_counts": {
+              "critical": 0,
+              "high": 1,
+              "low": 0,
+              "medium": 2
+            },
+            "status": "failed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:b89133efa3148a1b5c808f147a6ff97bff124f0aab55316fa99faac77a1cf8d5"
+            ],
+            "scanner": "VERSION",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:0e9c7ab9345ba2a8660ec134154c9bcff37240ab900fa7b24ca55776ba39ccec"
+            ],
+            "scanner": "SECURITY",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "incomplete"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:833bd4be59026a1efe8dd93c87988f0f732a11ac17728e789b4d53f6da03fcd1"
+            ],
+            "scanner": "PII",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:68cc9fb14bbb348ec9da6a37cdeeed470febefc2c109e4880eaed614f566413b"
+            ],
+            "scanner": "LICENSE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:9fa1b258bc6a2b535fb906513307a849a01a09337ebcc6ba894c0386822a11cf"
+            ],
+            "scanner": "CODE_RISK",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:2849cbd09e95b8c59a71d75bfe6bd77d3e537d4d9fe0501b6372d6f433ddabf1"
+            ],
+            "scanner": "SECRETS",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:fa9861e0b7bd1f712069510270825eeabc6dbb5f11bd0053ed105f08617fa8f5"
+            ],
+            "scanner": "HYGIENE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:e4a0d104c28cc64642112c009cd181750abd70ae4a678cdf644473a8cd71b353"
+            ],
+            "scanner": "UNICODE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:23a40446f9581d163d9e78946be74fc4d10e620c7550c2f4d3c103f4a9dc8e22"
+            ],
+            "scanner": "QUALITY",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 5,
+              "medium": 4
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:b9e3ed7d6f6b61057529d7e7b2617ac0a77721a30e5a30394755b6df6eeb50ac"
+            ],
+            "scanner": "SCRIPT_LINT",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": false,
+            "passed": null,
+            "references": [
+              "sha256:2f721fc838d420c1a63f04386edae1713863d06339868bccd74ab69682f485f7"
+            ],
+            "scanner": "skillspector",
+            "severity_counts": {
+              "critical": null,
+              "high": null,
+              "low": null,
+              "medium": null
+            },
+            "status": "incomplete"
+          }
+        ],
+        "schema_version": 1,
+        "source": {
+          "content": {
+            "algorithm": "sha256-relative-file-manifest-v1",
+            "digest": "sha256:d3641c5190c1b86d8e853adc8f3c68fe6376b5fdaf5c1d90c610a745102ff03e",
+            "manifest": [
+              {
+                "digest": "sha256:b57df2ff4072b2e25744ae2bd530b02bbb6ab83a22a0d374c73d48de4dc70887",
+                "member": "SKILL.md"
+              },
+              {
+                "digest": "sha256:6d05a890eb1c53c59755f9e560c05d65467a614d36af7c812f4a32c89b47f4e9",
+                "member": "references/compatibility-and-migration.md"
+              },
+              {
+                "digest": "sha256:3b80a98abfefdcd9a765da9a9436caa43de6a873e57253f1ecfb36e1095ea4b8",
+                "member": "references/execution.md"
+              }
+            ],
+            "provenance": "reconstructed_from_declared_revision",
+            "scope": "pinned-agent-visible"
+          },
+          "lineage": null,
+          "owner": "local",
+          "repository": "thetechgy/agent-engineering-baseline",
+          "revision": "873040dc093042bbb9817d1c7e1fc964aa0987a1",
+          "skill_id": "powershell-pester-6",
+          "source_path": ".apm/skills/powershell-pester-6"
+        }
+      },
+      "record_digest": "sha256:72f7f254151c9f63d0c2fdce6570ce5086ee41f373da1d15ad234048917973ad",
+      "record_id": "sha256:e1536aaec0d8ce72f4159416abc2df776d0f0fe01240fd5adf794ed8f0bee73d",
+      "slot": "quality"
+    },
+    {
+      "admitted_at": "2026-10-27T22:52:26Z",
+      "class": "quality",
+      "execution": {
+        "completed_at": "2026-10-27T21:51:15Z",
+        "started_at": "2026-10-27T21:28:42Z"
+      },
+      "finding_counts": {
+        "critical": 1,
+        "high": 1,
+        "low": 6,
+        "medium": 5
+      },
+      "id": "sha256:86db1a1cc299346125bb33c913728453e8b8e7a234730f948a9c4d96369a819e",
+      "numeric_complete": false,
+      "provenance": {
+        "archive_digest": "sha256:8ee8bfe65e341947115395043e30c47f8313c791df18e16711dae8b01dcc1f28",
+        "artifact_id": 12772963891,
+        "attempt": 1,
+        "event": "push",
+        "repository": "thetechgy/agent-engineering-baseline",
+        "revision": "873040dc093042bbb9817d1c7e1fc964aa0987a1",
+        "run_id": 40587103370,
+        "workflow_id": 313370522,
+        "workflow_path": ".github/workflows/validate.yml"
+      },
+      "record": {
+        "arms": [],
+        "availability": {
+          "provenance": "runtime_recorded",
+          "reasons": [
+            "scan_incomplete"
+          ],
+          "status": "incomplete"
+        },
+        "dataset": {
+          "authored_digest": null,
+          "authored_provenance": "unknown",
+          "case_cohort_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "case_ids": [],
+          "owner": "unknown",
+          "staged_algorithm": null,
+          "staged_digest": null,
+          "staged_provenance": "unknown"
+        },
+        "kind": "static",
+        "metrics": [],
+        "policy": {
+          "attempts": {
+            "maximum": null,
+            "mode": "unknown",
+            "pass_threshold": null,
+            "stop_on_pass": null
+          },
+          "fields": {
+            "authorization_policy": null,
+            "baseline": null,
+            "codex": null,
+            "competing_revision": null,
+            "concurrency": null,
+            "deterministic_gate": null,
+            "docker_compose": null,
+            "environment": null,
+            "evaluator_revision": "ac0a04905100acdafc6c95829311a9739c340ff6",
+            "fixture_boundary": null,
+            "grading": null,
+            "harbor": null,
+            "model": null,
+            "provider": null,
+            "python": null,
+            "standard_attempts": null,
+            "stop_on_pass": null,
+            "task_build": null,
+            "task_source": null,
+            "timeout_multiplier": null,
+            "upstream_revision": null,
+            "workspace_mode": null
+          },
+          "id": "sha256:8e0caef1dcf3679ce807e77343ba5d78c0675d8b273c2cfcae10cb3fc2bef24f",
+          "judge": {
+            "enabled": null,
+            "model": null,
+            "provider": null
+          },
+          "metric_set": null,
+          "patch_digest": null,
+          "provenance": "runtime_recorded",
+          "published_id": null
+        },
+        "run_id": null,
+        "scans": [
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:e2e2e0432a68cb1615f93f66b4bfc493610b0c372a84681713dee017d872b3e3"
+            ],
+            "scanner": "catalog-total",
+            "severity_counts": {
+              "critical": 1,
+              "high": 1,
+              "low": 6,
+              "medium": 5
+            },
+            "status": "incomplete"
+          },
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:2a816623224b303f3be624c196aae342ce0d456176977384f7426f389faefdb9"
+            ],
+            "scanner": "SCHEMA",
+            "severity_counts": {
+              "critical": 0,
+              "high": 1,
+              "low": 0,
+              "medium": 2
+            },
+            "status": "failed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:d8df2a0192df8bd77d15803ac9ed88f29f9c7807353658b33194c6610628fca1"
+            ],
+            "scanner": "VERSION",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:517bce80863ee35fa2f74446d5014ad016ad689860bee414f71c0c0df3452f6a"
+            ],
+            "scanner": "SECURITY",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "incomplete"
+          },
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:bbe138eac041b9ed6a07db684cca888aa885e38679b238b2fba9f1f48a590954"
+            ],
+            "scanner": "PII",
+            "severity_counts": {
+              "critical": 1,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "failed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:90e755ce7d0c51f18a57ba092fd644f8f2ebba2a621fdabab31800bf23bc4a63"
+            ],
+            "scanner": "LICENSE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:3362a372ef415ef3fb8e0f458417fea2b7330ee2b271f808032feb61ed89961c"
+            ],
+            "scanner": "CODE_RISK",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:b0de821ad8716a9a3b9382268bc564e97e2b8e7654877996dfe5cf46dd065d42"
+            ],
+            "scanner": "SECRETS",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:b5a231f878e17cd62a34daf2de60cb7f131c832d87a8ff2e22fe4884ffabb6cf"
+            ],
+            "scanner": "HYGIENE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:b1567c05f4942fc08a24dc531cf5e1d80654ac2b6cc8ba478f22175014bbc3b4"
+            ],
+            "scanner": "UNICODE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:3fe129d587e71429eed6fecaefcbeb8c38be58b021a6860387e29704a90116c2"
+            ],
+            "scanner": "QUALITY",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 6,
+              "medium": 3
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:77d90d3e28cc2826478b438ca0da5dbcb083a9dc714d0ee20bd70da81a247146"
+            ],
+            "scanner": "SCRIPT_LINT",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": false,
+            "passed": null,
+            "references": [
+              "sha256:e2e2e0432a68cb1615f93f66b4bfc493610b0c372a84681713dee017d872b3e3"
+            ],
+            "scanner": "skillspector",
+            "severity_counts": {
+              "critical": null,
+              "high": null,
+              "low": null,
+              "medium": null
+            },
+            "status": "incomplete"
+          }
+        ],
+        "schema_version": 1,
+        "source": {
+          "content": {
+            "algorithm": "sha256-relative-file-manifest-v1",
+            "digest": "sha256:080622eb297ce99914bd08fbada178bed0eeb162a223017b8e6bb6b9a389eca8",
+            "manifest": [
+              {
+                "digest": "sha256:a79531195a9bdf942b301edf1588c8814ceb976557f4f0cb79bd9aa79e59d52e",
+                "member": "SKILL.md"
+              }
+            ],
+            "provenance": "reconstructed_from_declared_revision",
+            "scope": "pinned-agent-visible"
+          },
+          "lineage": null,
+          "owner": "local",
+          "repository": "thetechgy/agent-engineering-baseline",
+          "revision": "873040dc093042bbb9817d1c7e1fc964aa0987a1",
+          "skill_id": "ansible",
+          "source_path": ".apm/skills/ansible"
+        }
+      },
+      "record_digest": "sha256:26e135ab3d25190109e3214e9777fa0f1f57599b54a212f8c492a07b6a6c8b24",
+      "record_id": "sha256:c51e52a4738ee32b0c241f2def31e0a82a877937e84d0a11fdffcf311092232b",
+      "slot": "quality"
+    },
+    {
+      "admitted_at": "2026-10-27T22:52:26Z",
+      "class": "quality",
+      "execution": {
+        "completed_at": "2026-10-27T21:51:15Z",
+        "started_at": "2026-10-27T21:28:42Z"
+      },
+      "finding_counts": {
+        "critical": 0,
+        "high": 2,
+        "low": 5,
+        "medium": 7
+      },
+      "id": "sha256:a5f7811364cd4beb7d17405b0ec5cdd88f6af87683d1f50c7fa559f445a687e0",
+      "numeric_complete": false,
+      "provenance": {
+        "archive_digest": "sha256:8ee8bfe65e341947115395043e30c47f8313c791df18e16711dae8b01dcc1f28",
+        "artifact_id": 12772963891,
+        "attempt": 1,
+        "event": "push",
+        "repository": "thetechgy/agent-engineering-baseline",
+        "revision": "873040dc093042bbb9817d1c7e1fc964aa0987a1",
+        "run_id": 40587103370,
+        "workflow_id": 313370522,
+        "workflow_path": ".github/workflows/validate.yml"
+      },
+      "record": {
+        "arms": [],
+        "availability": {
+          "provenance": "runtime_recorded",
+          "reasons": [],
+          "status": "complete"
+        },
+        "dataset": {
+          "authored_digest": null,
+          "authored_provenance": "unknown",
+          "case_cohort_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "case_ids": [],
+          "owner": "unknown",
+          "staged_algorithm": null,
+          "staged_digest": null,
+          "staged_provenance": "unknown"
+        },
+        "kind": "static",
+        "metrics": [],
+        "policy": {
+          "attempts": {
+            "maximum": null,
+            "mode": "unknown",
+            "pass_threshold": null,
+            "stop_on_pass": null
+          },
+          "fields": {
+            "authorization_policy": null,
+            "baseline": null,
+            "codex": null,
+            "competing_revision": null,
+            "concurrency": null,
+            "deterministic_gate": null,
+            "docker_compose": null,
+            "environment": null,
+            "evaluator_revision": "ac0a04905100acdafc6c95829311a9739c340ff6",
+            "fixture_boundary": null,
+            "grading": null,
+            "harbor": null,
+            "model": null,
+            "provider": null,
+            "python": null,
+            "standard_attempts": null,
+            "stop_on_pass": null,
+            "task_build": null,
+            "task_source": null,
+            "timeout_multiplier": null,
+            "upstream_revision": null,
+            "workspace_mode": null
+          },
+          "id": "sha256:8e0caef1dcf3679ce807e77343ba5d78c0675d8b273c2cfcae10cb3fc2bef24f",
+          "judge": {
+            "enabled": null,
+            "model": null,
+            "provider": null
+          },
+          "metric_set": null,
+          "patch_digest": null,
+          "provenance": "runtime_recorded",
+          "published_id": null
+        },
+        "run_id": null,
+        "scans": [
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:a247a470d7fae4c10c7ac289480f25bafded774ccdbd5192d1d4f1ce44b77b06"
+            ],
+            "scanner": "catalog-total",
+            "severity_counts": {
+              "critical": 0,
+              "high": 2,
+              "low": 5,
+              "medium": 7
+            },
+            "status": "failed"
+          },
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:c9a5daf00339fa71e9bd27c9b9a6b97f63a6d81397b4f9c6f25829c426e9e343"
+            ],
+            "scanner": "SCHEMA",
+            "severity_counts": {
+              "critical": 0,
+              "high": 1,
+              "low": 0,
+              "medium": 2
+            },
+            "status": "failed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:08428e3ee896deecc0feecb3b07776679ce7797c8cbd801546b777931bd8e248"
+            ],
+            "scanner": "VERSION",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:48bdea505e02080175bff57978b0cbff2d8f89038b31c0c376f8103002b6ddb8"
+            ],
+            "scanner": "SECURITY",
+            "severity_counts": {
+              "critical": 0,
+              "high": 1,
+              "low": 0,
+              "medium": 2
+            },
+            "status": "failed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:c50add9be1f6f3e6fd5c8735bf7a84f9125ed833242193b68a6326db5716dba7"
+            ],
+            "scanner": "PII",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:cf0d39c3b78a2456243a68fa5f1f45680b69aa9582544821ea9332206d248783"
+            ],
+            "scanner": "LICENSE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:334abb95c6f26a0c257776adb8f5d4e84f4d81cdd12ad718cafa707bdcd8d93b"
+            ],
+            "scanner": "CODE_RISK",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:a240c074051a1329355eba39cb59360dbad34b6138b9fabe89b557a2bc1f1367"
+            ],
+            "scanner": "SECRETS",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:2a2063cfb6f6fe2167cad4a5a468ad2640a3d8c332b556e374066df784f82317"
+            ],
+            "scanner": "HYGIENE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:9fc5b8654a4825273cac2b6c68c9fb9a9ea8a29e2a989e4bab4a6fe5f833eee7"
+            ],
+            "scanner": "UNICODE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:3d9eab655894b8873f00f810108cb5c79fa8c37aa7742da7614b45a57b7c377f"
+            ],
+            "scanner": "QUALITY",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 5,
+              "medium": 3
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:660951dc0c5607129e5145203d4e043cfc276774a83f01d210d6d0ad99435eed"
+            ],
+            "scanner": "SCRIPT_LINT",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          }
+        ],
+        "schema_version": 1,
+        "source": {
+          "content": {
+            "algorithm": "sha256-relative-file-manifest-v1",
+            "digest": "sha256:8a0486315d9e6462604e467c28c733640142865f5cf2ef7cba769c3cdb014719",
+            "manifest": [
+              {
+                "digest": "sha256:2dc7898d11fb55a1a042d46e6e60800d0f948253c5216efa3e470e8914cc84ab",
+                "member": "SKILL.md"
+              }
+            ],
+            "provenance": "reconstructed_from_declared_revision",
+            "scope": "pinned-agent-visible"
+          },
+          "lineage": null,
+          "owner": "local",
+          "repository": "thetechgy/agent-engineering-baseline",
+          "revision": "873040dc093042bbb9817d1c7e1fc964aa0987a1",
+          "skill_id": "agent-safety",
+          "source_path": ".apm/skills/agent-safety"
+        }
+      },
+      "record_digest": "sha256:f8565ce6a4c1c5624d12381143116aa8a7d64d1e979022f60182a09322dc1202",
+      "record_id": "sha256:6cd4a4faadac27c299d339011c9c3407984f064ad88a1cacab8309acb75d183b",
+      "slot": "quality"
+    },
+    {
+      "admitted_at": "2026-10-27T22:52:26Z",
+      "class": "quality",
+      "execution": {
+        "completed_at": "2026-10-27T21:51:15Z",
+        "started_at": "2026-10-27T21:28:42Z"
+      },
+      "finding_counts": {
+        "critical": 0,
+        "high": 6,
+        "low": 7,
+        "medium": 11
+      },
+      "id": "sha256:c83971e394951c2472d94abb97fbb2813fb135e2602d43c28ec22941ca596636",
+      "numeric_complete": false,
+      "provenance": {
+        "archive_digest": "sha256:8ee8bfe65e341947115395043e30c47f8313c791df18e16711dae8b01dcc1f28",
+        "artifact_id": 12772963891,
+        "attempt": 1,
+        "event": "push",
+        "repository": "thetechgy/agent-engineering-baseline",
+        "revision": "873040dc093042bbb9817d1c7e1fc964aa0987a1",
+        "run_id": 40587103370,
+        "workflow_id": 313370522,
+        "workflow_path": ".github/workflows/validate.yml"
+      },
+      "record": {
+        "arms": [],
+        "availability": {
+          "provenance": "runtime_recorded",
+          "reasons": [
+            "scan_incomplete"
+          ],
+          "status": "incomplete"
+        },
+        "dataset": {
+          "authored_digest": null,
+          "authored_provenance": "unknown",
+          "case_cohort_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "case_ids": [],
+          "owner": "unknown",
+          "staged_algorithm": null,
+          "staged_digest": null,
+          "staged_provenance": "unknown"
+        },
+        "kind": "static",
+        "metrics": [],
+        "policy": {
+          "attempts": {
+            "maximum": null,
+            "mode": "unknown",
+            "pass_threshold": null,
+            "stop_on_pass": null
+          },
+          "fields": {
+            "authorization_policy": null,
+            "baseline": null,
+            "codex": null,
+            "competing_revision": null,
+            "concurrency": null,
+            "deterministic_gate": null,
+            "docker_compose": null,
+            "environment": null,
+            "evaluator_revision": "ac0a04905100acdafc6c95829311a9739c340ff6",
+            "fixture_boundary": null,
+            "grading": null,
+            "harbor": null,
+            "model": null,
+            "provider": null,
+            "python": null,
+            "standard_attempts": null,
+            "stop_on_pass": null,
+            "task_build": null,
+            "task_source": null,
+            "timeout_multiplier": null,
+            "upstream_revision": null,
+            "workspace_mode": null
+          },
+          "id": "sha256:8e0caef1dcf3679ce807e77343ba5d78c0675d8b273c2cfcae10cb3fc2bef24f",
+          "judge": {
+            "enabled": null,
+            "model": null,
+            "provider": null
+          },
+          "metric_set": null,
+          "patch_digest": null,
+          "provenance": "runtime_recorded",
+          "published_id": null
+        },
+        "run_id": null,
+        "scans": [
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:a35d12d9d3e4da0c2991df1576ccab8965513764e9d388ad0972cba11fc05def"
+            ],
+            "scanner": "catalog-total",
+            "severity_counts": {
+              "critical": 0,
+              "high": 6,
+              "low": 7,
+              "medium": 11
+            },
+            "status": "incomplete"
+          },
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:863aa7c60c03f9f292779c7827a4e76efef0b7d945763038251425d24c439048"
+            ],
+            "scanner": "SCHEMA",
+            "severity_counts": {
+              "critical": 0,
+              "high": 1,
+              "low": 2,
+              "medium": 2
+            },
+            "status": "failed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:a148626f6edba26145b2a45f7c8730018367e791d52d305ebcce7ce0eccd9aef"
+            ],
+            "scanner": "VERSION",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:d306109484f9c186e799ce5c6c80f3abdd7ac2773e1f506c2b5b1bb4aa46d441"
+            ],
+            "scanner": "SECURITY",
+            "severity_counts": {
+              "critical": 0,
+              "high": 3,
+              "low": 0,
+              "medium": 6
+            },
+            "status": "incomplete"
+          },
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:1ed60e04dcc7ab51e6d6e97858b205ced8f078abbe8974cc02ebacbbc814e1ab"
+            ],
+            "scanner": "PII",
+            "severity_counts": {
+              "critical": 0,
+              "high": 2,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "failed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:c790671c36e3c56d3eac024693c4d69a3399b571561db7f6b9b6b7c6022c900c"
+            ],
+            "scanner": "LICENSE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:b4498489184b321863c713f5313e71f33caa40445d91e48d4b4a976b1335905d"
+            ],
+            "scanner": "CODE_RISK",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:78dc298047ce21b88ba7217995f5a14615f5c5ac2f27ed499c0ec27118e365fd"
+            ],
+            "scanner": "SECRETS",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:dc7f3fd155517f2de3714169d095f111cb77c7ea7be7ffdf241aa26e3dcdfdfe"
+            ],
+            "scanner": "HYGIENE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:ded5fdb52a93184639fb5b1122733597ea7ac638a5d8d3098a8abe5440122e53"
+            ],
+            "scanner": "UNICODE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:d0b6453580371d4d46ba143c44d1f4d6571f296727362c210fa411e85952e44d"
+            ],
+            "scanner": "QUALITY",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 5,
+              "medium": 3
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:28793cca6f54950f12b1c9a5d7f15364569e33b954538a0fc1438f229999fdbe"
+            ],
+            "scanner": "SCRIPT_LINT",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": false,
+            "passed": null,
+            "references": [
+              "sha256:a35d12d9d3e4da0c2991df1576ccab8965513764e9d388ad0972cba11fc05def"
+            ],
+            "scanner": "skillspector",
+            "severity_counts": {
+              "critical": null,
+              "high": null,
+              "low": null,
+              "medium": null
+            },
+            "status": "incomplete"
+          }
+        ],
+        "schema_version": 1,
+        "source": {
+          "content": {
+            "algorithm": "sha256-relative-file-manifest-v1",
+            "digest": "sha256:506e78b501906831944d7c6559091c898de9476d42347c56381c950d0099d07d",
+            "manifest": [
+              {
+                "digest": "sha256:96088308ed8df85d9f369263de4ec02fefdb7f59fbccc2b4629991be7266e581",
+                "member": "EVALS.md"
+              },
+              {
+                "digest": "sha256:93f772d47f661cc721a211257f4a2aecabcc53ed77f0d4b16b754944128586c9",
+                "member": "MAINTENANCE.md"
+              },
+              {
+                "digest": "sha256:625107071889166612f64ac52920be2b9455f671e4ce1f805835f7fee14ef274",
+                "member": "SKILL.md"
+              },
+              {
+                "digest": "sha256:fce55e0ec0a56608d714f273afdbdc44017d0a4ebed73b61291cd0fdebbf434a",
+                "member": "references/compose-migration.md"
+              },
+              {
+                "digest": "sha256:adb6f7a2a07f2067036354cb57bb69e694d423f20bd578e09db6a5a799859168",
+                "member": "references/fedora-hosts.md"
+              },
+              {
+                "digest": "sha256:55a300354c77b6e59b5876b1b3a6b7e00f9525a21c9160fa5b3200a3a8128f23",
+                "member": "references/quadlet-systemd.md"
+              },
+              {
+                "digest": "sha256:6a8d789b72d821e3fed320ca84325086d5a42ced25912a4b52ea760a306111ff",
+                "member": "references/reverse-proxy.md"
+              },
+              {
+                "digest": "sha256:a5fc3f33815caa196d5f8d6cb090136bcccc88fb95dedb921c99bd0b3cf6b524",
+                "member": "references/rootless-networking.md"
+              },
+              {
+                "digest": "sha256:37e1fae3de6f4b7ae1ea3ccc2b0b84d7fd854ea2730a51f0e3b3b1bc9b2e1068",
+                "member": "references/security-storage-secrets.md"
+              },
+              {
+                "digest": "sha256:465321094bc936d8a9e187bd3b4daa1ab271b93242a2c07fe88c58db6bd4bdd5",
+                "member": "references/validation.md"
+              }
+            ],
+            "provenance": "reconstructed_from_declared_revision",
+            "scope": "pinned-agent-visible"
+          },
+          "lineage": null,
+          "owner": "local",
+          "repository": "thetechgy/agent-engineering-baseline",
+          "revision": "873040dc093042bbb9817d1c7e1fc964aa0987a1",
+          "skill_id": "podman",
+          "source_path": ".apm/skills/podman"
+        }
+      },
+      "record_digest": "sha256:275d90ca2de6c8e8d50784b1067dfacbd8ce5425f78f8c076c3d5da8af98b614",
+      "record_id": "sha256:9bb254ed14f2beda758070cf3b050127f536a5ae6bb9525a887233b03628222b",
+      "slot": "quality"
+    },
+    {
+      "admitted_at": "2026-10-27T22:52:26Z",
+      "class": "diagnostic",
+      "execution": {
+        "completed_at": "2026-10-27T22:48:10Z",
+        "started_at": "2026-10-27T22:28:42Z"
+      },
+      "finding_counts": {
+        "critical": 0,
+        "high": 0,
+        "low": 0,
+        "medium": 0
+      },
+      "id": "sha256:93c358477bb49729ddcb411f707e53b7f0d8d7a9ef8742c8c5c7036b539c3dae",
+      "numeric_complete": false,
+      "provenance": {
+        "archive_digest": "sha256:2cdfd83c122432f3937076d4f30e1ef567d406c9c83f517d1a5252dc9c7a068f",
+        "artifact_id": 12775919662,
+        "attempt": 1,
+        "event": "push",
+        "repository": "thetechgy/agent-engineering-baseline",
+        "revision": "a474ba1ed8022cbf26e7f0b3a6374eab7ecb468d",
+        "run_id": 40595108718,
+        "workflow_id": 313370522,
+        "workflow_path": ".github/workflows/validate.yml"
+      },
+      "record": {
+        "arms": [
+          {
+            "condition": {
+              "build_digest": "sha256:8c03bebc1e593862664e3b43259b1c0229d375557ceb3bc494b9fdf06565121b",
+              "competing_skills": [],
+              "execution": {
+                "authorization_policy": null,
+                "base_image_mode": "recorded_staging",
+                "environment": "docker",
+                "fixture_boundary": "separate-verifier-v1",
+                "task_source": "native_harbor"
+              },
+              "fixture_digest": "sha256:9cb42074767b6dd33930c83f4725a8d9f19f04ed4efe283c7d9315f15d7a95f1",
+              "id": "sha256:6507f8a74d08d79fa527f4f99b00dd6bb9d4bea409458eb15831923fbcc94f1c",
+              "instruction_digest": "sha256:b5467c6a132921b3b3caca771c63baf0d681327e8db2846bf771d8d7a81f8dc7",
+              "provenance": "runtime_recorded",
+              "target_present": true,
+              "workspace_mode": "isolated"
+            },
+            "coverage": {
+              "case_details": "complete",
+              "expected_attempts": 26,
+              "expected_cases": 26,
+              "recorded_attempts": 26,
+              "scored_attempts": 18,
+              "unscored_attempts": 8
+            },
+            "execution_error_count": 10,
+            "execution_status": "failed",
+            "name": "with_skill",
+            "rubric": {
+              "passed_cases": null,
+              "threshold": null,
+              "total_cases": null
+            }
+          },
+          {
+            "condition": {
+              "build_digest": "sha256:8c03bebc1e593862664e3b43259b1c0229d375557ceb3bc494b9fdf06565121b",
+              "competing_skills": [],
+              "execution": {
+                "authorization_policy": null,
+                "base_image_mode": "recorded_staging",
+                "environment": "docker",
+                "fixture_boundary": "separate-verifier-v1",
+                "task_source": "native_harbor"
+              },
+              "fixture_digest": "sha256:9cb42074767b6dd33930c83f4725a8d9f19f04ed4efe283c7d9315f15d7a95f1",
+              "id": "sha256:00a5d4fc11e0449d8feafaebfeed0661be0ed97a734634ef552fe1b166156dcd",
+              "instruction_digest": "sha256:b5467c6a132921b3b3caca771c63baf0d681327e8db2846bf771d8d7a81f8dc7",
+              "provenance": "runtime_recorded",
+              "target_present": false,
+              "workspace_mode": "isolated"
+            },
+            "coverage": {
+              "case_details": "complete",
+              "expected_attempts": 26,
+              "expected_cases": 26,
+              "recorded_attempts": 26,
+              "scored_attempts": 18,
+              "unscored_attempts": 8
+            },
+            "execution_error_count": 10,
+            "execution_status": "failed",
+            "name": "without_skill",
+            "rubric": {
+              "passed_cases": null,
+              "threshold": null,
+              "total_cases": null
+            }
+          }
+        ],
+        "availability": {
+          "provenance": "runtime_recorded",
+          "reasons": [
+            "coverage_missing",
+            "execution_incomplete",
+            "metadata_missing"
+          ],
+          "status": "incomplete"
+        },
+        "dataset": {
+          "authored_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+          "authored_provenance": "runtime_recorded",
+          "case_cohort_digest": "sha256:1630284ecb507fb436fdc25b8b5db7ad13177b6418f8f1a6cf603b1baa8bc491",
+          "case_ids": [
+            "pester-001-classic",
+            "pester-001-data",
+            "pester-001-empty",
+            "pester-001-failure-text",
+            "pester-001-malformed",
+            "pester-001-missing-runtime",
+            "pester-001-skipped",
+            "pester-001-standalone",
+            "pester-001-timeout",
+            "pester-001-unsupported",
+            "pester-001-version-drift",
+            "pester-001-weak",
+            "pester-002-classic",
+            "pester-002-data",
+            "pester-002-weak",
+            "pester-003-external",
+            "pester-003-module",
+            "pester-003-weak",
+            "pester-003-wrong-scope",
+            "pester-004-broken-discovery",
+            "pester-004-compact",
+            "pester-004-discovery",
+            "pester-004-inline",
+            "pester-004-weak",
+            "pester-005-good",
+            "pester-005-wrong"
+          ],
+          "owner": "overlay",
+          "staged_algorithm": "sha256-staged-task-inputs-v1",
+          "staged_digest": "sha256:d2f7bd4984ab3126624b7ec4ba84b7cab7c2aeea71392cf49aeeba6e11e0fcde",
+          "staged_provenance": "runtime_recorded"
+        },
+        "kind": "behavioral",
+        "metrics": [],
+        "policy": {
+          "attempts": {
+            "maximum": 1,
+            "mode": "unknown",
+            "pass_threshold": null,
+            "stop_on_pass": false
+          },
+          "fields": {
+            "authorization_policy": null,
+            "baseline": true,
+            "codex": null,
+            "competing_revision": null,
+            "concurrency": 2,
+            "deterministic_gate": null,
+            "docker_compose": null,
+            "environment": "docker",
+            "evaluator_revision": "ac0a04905100acdafc6c95829311a9739c340ff6",
+            "fixture_boundary": null,
+            "grading": "custom_only",
+            "harbor": "0.13.2",
+            "model": null,
+            "provider": null,
+            "python": "3.13.17",
+            "standard_attempts": null,
+            "stop_on_pass": false,
+            "task_build": null,
+            "task_source": "native_harbor",
+            "timeout_multiplier": 1.0,
+            "upstream_revision": null,
+            "workspace_mode": "isolated"
+          },
+          "id": "sha256:04dbeb91193b60f36c87ff33d0a1b865ab631de1e8cb0689552024a8ad4d471a",
+          "judge": {
+            "enabled": false,
+            "model": null,
+            "provider": null
+          },
+          "metric_set": "custom-only",
+          "patch_digest": "sha256:ff159054bbd840fb793c20352ffa074cb79394a95a9f32f178e3aab5d4c91c49",
+          "provenance": "runtime_recorded",
+          "published_id": null
+        },
+        "run_id": "qualification",
+        "scans": [],
+        "schema_version": 2,
+        "source": {
+          "content": {
+            "algorithm": "sha256-relative-file-manifest-v1",
+            "digest": "sha256:d3641c5190c1b86d8e853adc8f3c68fe6376b5fdaf5c1d90c610a745102ff03e",
+            "manifest": [
+              {
+                "digest": "sha256:b57df2ff4072b2e25744ae2bd530b02bbb6ab83a22a0d374c73d48de4dc70887",
+                "member": "SKILL.md"
+              },
+              {
+                "digest": "sha256:6d05a890eb1c53c59755f9e560c05d65467a614d36af7c812f4a32c89b47f4e9",
+                "member": "references/compatibility-and-migration.md"
+              },
+              {
+                "digest": "sha256:3b80a98abfefdcd9a765da9a9436caa43de6a873e57253f1ecfb36e1095ea4b8",
+                "member": "references/execution.md"
+              }
+            ],
+            "provenance": "configured",
+            "scope": "pinned-agent-visible"
+          },
+          "lineage": null,
+          "owner": "local",
+          "repository": "thetechgy/agent-engineering-baseline",
+          "revision": "a474ba1ed8022cbf26e7f0b3a6374eab7ecb468d",
+          "skill_id": "powershell-pester-6",
+          "source_path": ".apm/skills/powershell-pester-6"
+        }
+      },
+      "record_digest": "sha256:94189cd6211c9f82591d9bab4eb846b571919ebc3f8848011b7f4a41246b6b61",
+      "record_id": "sha256:fdadd0c4f42e362466e88e6a5d32c79a12802c98f3dba922647d2dc7d854f350",
+      "slot": "oracle--powershell-pester-6"
+    },
+    {
+      "admitted_at": "2026-10-27T22:52:26Z",
+      "class": "quality",
+      "execution": {
+        "completed_at": "2026-10-27T22:52:05Z",
+        "started_at": "2026-10-27T22:28:42Z"
+      },
+      "finding_counts": {
+        "critical": 0,
+        "high": 2,
+        "low": 5,
+        "medium": 7
+      },
+      "id": "sha256:035aac09ab41044bd1a3e0e4a428db881bfb5c8b7db4383a4a5bb8a30306cf1f",
+      "numeric_complete": false,
+      "provenance": {
+        "archive_digest": "sha256:56df82c6181dca6ba3fa53c47aad69394124868bd01ec7fc84ba76082281eb82",
+        "artifact_id": 12776003850,
+        "attempt": 1,
+        "event": "push",
+        "repository": "thetechgy/agent-engineering-baseline",
+        "revision": "a474ba1ed8022cbf26e7f0b3a6374eab7ecb468d",
+        "run_id": 40595108718,
+        "workflow_id": 313370522,
+        "workflow_path": ".github/workflows/validate.yml"
+      },
+      "record": {
+        "arms": [],
+        "availability": {
+          "provenance": "runtime_recorded",
+          "reasons": [],
+          "status": "complete"
+        },
+        "dataset": {
+          "authored_digest": null,
+          "authored_provenance": "unknown",
+          "case_cohort_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "case_ids": [],
+          "owner": "unknown",
+          "staged_algorithm": null,
+          "staged_digest": null,
+          "staged_provenance": "unknown"
+        },
+        "kind": "static",
+        "metrics": [],
+        "policy": {
+          "attempts": {
+            "maximum": null,
+            "mode": "unknown",
+            "pass_threshold": null,
+            "stop_on_pass": null
+          },
+          "fields": {
+            "authorization_policy": null,
+            "baseline": null,
+            "codex": null,
+            "competing_revision": null,
+            "concurrency": null,
+            "deterministic_gate": null,
+            "docker_compose": null,
+            "environment": null,
+            "evaluator_revision": "ac0a04905100acdafc6c95829311a9739c340ff6",
+            "fixture_boundary": null,
+            "grading": null,
+            "harbor": null,
+            "model": null,
+            "provider": null,
+            "python": null,
+            "standard_attempts": null,
+            "stop_on_pass": null,
+            "task_build": null,
+            "task_source": null,
+            "timeout_multiplier": null,
+            "upstream_revision": null,
+            "workspace_mode": null
+          },
+          "id": "sha256:8e0caef1dcf3679ce807e77343ba5d78c0675d8b273c2cfcae10cb3fc2bef24f",
+          "judge": {
+            "enabled": null,
+            "model": null,
+            "provider": null
+          },
+          "metric_set": null,
+          "patch_digest": null,
+          "provenance": "runtime_recorded",
+          "published_id": null
+        },
+        "run_id": null,
+        "scans": [
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:a771e108e260848326dce53af4f99703e2d6689593ff2033e156406a1c69b0df"
+            ],
+            "scanner": "catalog-total",
+            "severity_counts": {
+              "critical": 0,
+              "high": 2,
+              "low": 5,
+              "medium": 7
+            },
+            "status": "failed"
+          },
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:440ae36e81270a87f8c908aa057c14624161e5c2dfe7c1061ffd39e616625e8e"
+            ],
+            "scanner": "SCHEMA",
+            "severity_counts": {
+              "critical": 0,
+              "high": 1,
+              "low": 0,
+              "medium": 2
+            },
+            "status": "failed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:b340f58abe79197366a7b9bd2dacbbf1bc727a49a4b66fad6c1d37b2a1b89ee8"
+            ],
+            "scanner": "VERSION",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:4b74c2915cf62de1a906346722a59a965cae63f3eadb1c05df4a778d58125694"
+            ],
+            "scanner": "SECURITY",
+            "severity_counts": {
+              "critical": 0,
+              "high": 1,
+              "low": 0,
+              "medium": 2
+            },
+            "status": "failed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:5e44cf44df192e64521b61d41ab747f14117a1681280cbcdc8fc286a2129025c"
+            ],
+            "scanner": "PII",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:dd942aa515d306e58d97b26506486d0a0f0d5a909517ef84d05a93c4c1b53840"
+            ],
+            "scanner": "LICENSE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:e33bdb448c5f7f6bb456b6f2bc1cbbbf47904dd9a36aef8d379bb9c5e31121e0"
+            ],
+            "scanner": "CODE_RISK",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:5b5977aed7e03b73d365d36c1981f72aa9fc0af24ddec1d9644387d36e0eb756"
+            ],
+            "scanner": "SECRETS",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:27f3e915289655555f6a6d823a21516b57dc0b30682588b9c573591c87f97f2f"
+            ],
+            "scanner": "HYGIENE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:1c9289522ec54ed9f75b6ce5c593e7edfe97b1cabf017adcf33b006b8a438393"
+            ],
+            "scanner": "UNICODE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:1731f93361af8e825bdff44c8444bf2e7a81016b5dd11d95eceb234a60cacae5"
+            ],
+            "scanner": "QUALITY",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 5,
+              "medium": 3
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:8470e65eb51b304bf0ee986a93ee2e547e92012ae0a0cae527c4a2a5d6fc0c10"
+            ],
+            "scanner": "SCRIPT_LINT",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          }
+        ],
+        "schema_version": 1,
+        "source": {
+          "content": {
+            "algorithm": "sha256-relative-file-manifest-v1",
+            "digest": "sha256:8a0486315d9e6462604e467c28c733640142865f5cf2ef7cba769c3cdb014719",
+            "manifest": [
+              {
+                "digest": "sha256:2dc7898d11fb55a1a042d46e6e60800d0f948253c5216efa3e470e8914cc84ab",
+                "member": "SKILL.md"
+              }
+            ],
+            "provenance": "reconstructed_from_declared_revision",
+            "scope": "pinned-agent-visible"
+          },
+          "lineage": null,
+          "owner": "local",
+          "repository": "thetechgy/agent-engineering-baseline",
+          "revision": "a474ba1ed8022cbf26e7f0b3a6374eab7ecb468d",
+          "skill_id": "agent-safety",
+          "source_path": ".apm/skills/agent-safety"
+        }
+      },
+      "record_digest": "sha256:a71a286def1bd20a514ebbc8ea8b28b35898a5886a5c01cd4af2b518d3335df9",
+      "record_id": "sha256:a2a25175447a94403dd113e8eb64a45c6eca0b22f2b7e434d8222cba9030fcb0",
+      "slot": "quality"
+    },
+    {
+      "admitted_at": "2026-10-27T22:52:26Z",
+      "class": "quality",
+      "execution": {
+        "completed_at": "2026-10-27T22:52:05Z",
+        "started_at": "2026-10-27T22:28:42Z"
+      },
+      "finding_counts": {
+        "critical": 0,
+        "high": 1,
+        "low": 6,
+        "medium": 5
+      },
+      "id": "sha256:54299cd9ace4b1b312c1fdeab9eed9fc6697be5f11ba41b5692cfcc75be26ee5",
+      "numeric_complete": false,
+      "provenance": {
+        "archive_digest": "sha256:56df82c6181dca6ba3fa53c47aad69394124868bd01ec7fc84ba76082281eb82",
+        "artifact_id": 12776003850,
+        "attempt": 1,
+        "event": "push",
+        "repository": "thetechgy/agent-engineering-baseline",
+        "revision": "a474ba1ed8022cbf26e7f0b3a6374eab7ecb468d",
+        "run_id": 40595108718,
+        "workflow_id": 313370522,
+        "workflow_path": ".github/workflows/validate.yml"
+      },
+      "record": {
+        "arms": [],
+        "availability": {
+          "provenance": "runtime_recorded",
+          "reasons": [
+            "scan_incomplete"
+          ],
+          "status": "incomplete"
+        },
+        "dataset": {
+          "authored_digest": null,
+          "authored_provenance": "unknown",
+          "case_cohort_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "case_ids": [],
+          "owner": "unknown",
+          "staged_algorithm": null,
+          "staged_digest": null,
+          "staged_provenance": "unknown"
+        },
+        "kind": "static",
+        "metrics": [],
+        "policy": {
+          "attempts": {
+            "maximum": null,
+            "mode": "unknown",
+            "pass_threshold": null,
+            "stop_on_pass": null
+          },
+          "fields": {
+            "authorization_policy": null,
+            "baseline": null,
+            "codex": null,
+            "competing_revision": null,
+            "concurrency": null,
+            "deterministic_gate": null,
+            "docker_compose": null,
+            "environment": null,
+            "evaluator_revision": "ac0a04905100acdafc6c95829311a9739c340ff6",
+            "fixture_boundary": null,
+            "grading": null,
+            "harbor": null,
+            "model": null,
+            "provider": null,
+            "python": null,
+            "standard_attempts": null,
+            "stop_on_pass": null,
+            "task_build": null,
+            "task_source": null,
+            "timeout_multiplier": null,
+            "upstream_revision": null,
+            "workspace_mode": null
+          },
+          "id": "sha256:8e0caef1dcf3679ce807e77343ba5d78c0675d8b273c2cfcae10cb3fc2bef24f",
+          "judge": {
+            "enabled": null,
+            "model": null,
+            "provider": null
+          },
+          "metric_set": null,
+          "patch_digest": null,
+          "provenance": "runtime_recorded",
+          "published_id": null
+        },
+        "run_id": null,
+        "scans": [
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:e4a88501fa7918aec6a3d3677ff0ec5dafde8842b9bc508ce3dec33cff020522"
+            ],
+            "scanner": "catalog-total",
+            "severity_counts": {
+              "critical": 0,
+              "high": 1,
+              "low": 6,
+              "medium": 5
+            },
+            "status": "incomplete"
+          },
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:9cddc0737cf2d56cc50a6e806b3235feb0aee4faf22068be0ac62796ca3095db"
+            ],
+            "scanner": "SCHEMA",
+            "severity_counts": {
+              "critical": 0,
+              "high": 1,
+              "low": 0,
+              "medium": 2
+            },
+            "status": "failed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:b2d3a1c6747e0af3cf419a38c2a6b44fe490bab40b69660c11c367b58434ba88"
+            ],
+            "scanner": "VERSION",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:2664829a71efc3a8e54302b03dfe0c434bfcae9bc675c0877f691e4ae7247c76"
+            ],
+            "scanner": "SECURITY",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "incomplete"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:bb892ad88920c38724878497123efd6dddf8b2c9965994d7ddb4efd864909cdd"
+            ],
+            "scanner": "PII",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:3002ffd410ab65602f046b8ff87c7725d071497f8f2d18d472653ddca91611ee"
+            ],
+            "scanner": "LICENSE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:9cde65cb3c40ef5ed9bc73122900ad9f89465ba06bcb66f7a05e98bd028fe8ea"
+            ],
+            "scanner": "CODE_RISK",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:d69bbc60497e6a1df513e0de8d4d5b3da14fe86072e70984b158df98ce834807"
+            ],
+            "scanner": "SECRETS",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:47a94761d68f5a14c7cebff33b7ffaa573e592ec0e5669ffd6ee2e6306c7a3c5"
+            ],
+            "scanner": "HYGIENE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:b8328a03999b5d73fc91d3bc4e53286c17cb2be2303717dcd1cdeb83ba370d9e"
+            ],
+            "scanner": "UNICODE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 1,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:cc17cb654e818ce971986d84a7d1f315e74f0b0e970a05fa81d6cc081a8130b1"
+            ],
+            "scanner": "QUALITY",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 5,
+              "medium": 3
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:fa641511822ad6169bdd998a28452165d67e6580cfdf8793dbbf2be404407e6f"
+            ],
+            "scanner": "SCRIPT_LINT",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": false,
+            "passed": null,
+            "references": [
+              "sha256:e4a88501fa7918aec6a3d3677ff0ec5dafde8842b9bc508ce3dec33cff020522"
+            ],
+            "scanner": "skillspector",
+            "severity_counts": {
+              "critical": null,
+              "high": null,
+              "low": null,
+              "medium": null
+            },
+            "status": "incomplete"
+          }
+        ],
+        "schema_version": 1,
+        "source": {
+          "content": {
+            "algorithm": "sha256-relative-file-manifest-v1",
+            "digest": "sha256:18dab091e9e3b9817af70ce3d968d84939e96ebc8917f8f400ac6a7416905d66",
+            "manifest": [
+              {
+                "digest": "sha256:801cecfd42aeb32f3fd6083d9af08f44c8a5ca48202761533c072a10c06060c9",
+                "member": "SKILL.md"
+              }
+            ],
+            "provenance": "reconstructed_from_declared_revision",
+            "scope": "pinned-agent-visible"
+          },
+          "lineage": null,
+          "owner": "local",
+          "repository": "thetechgy/agent-engineering-baseline",
+          "revision": "a474ba1ed8022cbf26e7f0b3a6374eab7ecb468d",
+          "skill_id": "powershell-module-engineering",
+          "source_path": ".apm/skills/powershell-module-engineering"
+        }
+      },
+      "record_digest": "sha256:56ef5e1f84ceaf3f451b97fff9c2fd02c50b757de46c8dfac719f7a2282a17da",
+      "record_id": "sha256:bf1b37fcbab56c6c0a88344e5f2060845a6d6e8dd942e5e3f335d75ed9ba113d",
+      "slot": "quality"
+    },
+    {
+      "admitted_at": "2026-10-27T22:52:26Z",
+      "class": "quality",
+      "execution": {
+        "completed_at": "2026-10-27T22:52:05Z",
+        "started_at": "2026-10-27T22:28:42Z"
+      },
+      "finding_counts": {
+        "critical": 0,
+        "high": 1,
+        "low": 5,
+        "medium": 6
+      },
+      "id": "sha256:a61d7af05e619be641e5abdac4ed81de30a61c40324ea97c0d650beb5c559435",
+      "numeric_complete": false,
+      "provenance": {
+        "archive_digest": "sha256:56df82c6181dca6ba3fa53c47aad69394124868bd01ec7fc84ba76082281eb82",
+        "artifact_id": 12776003850,
+        "attempt": 1,
+        "event": "push",
+        "repository": "thetechgy/agent-engineering-baseline",
+        "revision": "a474ba1ed8022cbf26e7f0b3a6374eab7ecb468d",
+        "run_id": 40595108718,
+        "workflow_id": 313370522,
+        "workflow_path": ".github/workflows/validate.yml"
+      },
+      "record": {
+        "arms": [],
+        "availability": {
+          "provenance": "runtime_recorded",
+          "reasons": [
+            "scan_incomplete"
+          ],
+          "status": "incomplete"
+        },
+        "dataset": {
+          "authored_digest": null,
+          "authored_provenance": "unknown",
+          "case_cohort_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "case_ids": [],
+          "owner": "unknown",
+          "staged_algorithm": null,
+          "staged_digest": null,
+          "staged_provenance": "unknown"
+        },
+        "kind": "static",
+        "metrics": [],
+        "policy": {
+          "attempts": {
+            "maximum": null,
+            "mode": "unknown",
+            "pass_threshold": null,
+            "stop_on_pass": null
+          },
+          "fields": {
+            "authorization_policy": null,
+            "baseline": null,
+            "codex": null,
+            "competing_revision": null,
+            "concurrency": null,
+            "deterministic_gate": null,
+            "docker_compose": null,
+            "environment": null,
+            "evaluator_revision": "ac0a04905100acdafc6c95829311a9739c340ff6",
+            "fixture_boundary": null,
+            "grading": null,
+            "harbor": null,
+            "model": null,
+            "provider": null,
+            "python": null,
+            "standard_attempts": null,
+            "stop_on_pass": null,
+            "task_build": null,
+            "task_source": null,
+            "timeout_multiplier": null,
+            "upstream_revision": null,
+            "workspace_mode": null
+          },
+          "id": "sha256:8e0caef1dcf3679ce807e77343ba5d78c0675d8b273c2cfcae10cb3fc2bef24f",
+          "judge": {
+            "enabled": null,
+            "model": null,
+            "provider": null
+          },
+          "metric_set": null,
+          "patch_digest": null,
+          "provenance": "runtime_recorded",
+          "published_id": null
+        },
+        "run_id": null,
+        "scans": [
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:250604aa760c683990640dc143dec1d012a694ad9e6247797d5a3e2a2119e9b3"
+            ],
+            "scanner": "catalog-total",
+            "severity_counts": {
+              "critical": 0,
+              "high": 1,
+              "low": 5,
+              "medium": 6
+            },
+            "status": "incomplete"
+          },
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:a7dc22516f1c7e99e2b678141c30ac181924f20f05d52d07992bca7e15d5aca3"
+            ],
+            "scanner": "SCHEMA",
+            "severity_counts": {
+              "critical": 0,
+              "high": 1,
+              "low": 0,
+              "medium": 2
+            },
+            "status": "failed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:893d8a425dc75ac3b08c60c6ba8703808a6643cc717c21af6180ff8a0945f572"
+            ],
+            "scanner": "VERSION",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:f6b0ecee7dd1f93d8c4da94c850d34dadea6bc0cc4261f68424ad94c77ef5d72"
+            ],
+            "scanner": "SECURITY",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "incomplete"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:127799221d3b3d2c4ccf727a88cbeb26b6854adbe89fef576bf417d796d391c4"
+            ],
+            "scanner": "PII",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:3949c358c94822207986bdf698f31d3ecb0f296cef0b1a83c1530d3f8c32af10"
+            ],
+            "scanner": "LICENSE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:f51af56aa6b70eecf041f53b4260a226320c4952e44e43d2da6610a236f5d7c9"
+            ],
+            "scanner": "CODE_RISK",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:c2302b3849c987a17f3214a7db3235955ea12ffde3e19d0ab2280d9515c9429c"
+            ],
+            "scanner": "SECRETS",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:976c5198c6e2429865f06e52f17e461fb3341457af1c9eb8edc49b6e3e4d2a53"
+            ],
+            "scanner": "HYGIENE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:2b6c8e8ec423289f5f9bf4886db6b12e766dd4b85686ce9fe47a9884d192e9e7"
+            ],
+            "scanner": "UNICODE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:3411a51b858ad823b293e107789b3951605e760181cfadc8a2cbc40b33364c26"
+            ],
+            "scanner": "QUALITY",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 5,
+              "medium": 4
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:e306bd8dee85e3e9abec488ccf96f7faa9bd62865b435d1199c4a1f5b0d27d5c"
+            ],
+            "scanner": "SCRIPT_LINT",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": false,
+            "passed": null,
+            "references": [
+              "sha256:250604aa760c683990640dc143dec1d012a694ad9e6247797d5a3e2a2119e9b3"
+            ],
+            "scanner": "skillspector",
+            "severity_counts": {
+              "critical": null,
+              "high": null,
+              "low": null,
+              "medium": null
+            },
+            "status": "incomplete"
+          }
+        ],
+        "schema_version": 1,
+        "source": {
+          "content": {
+            "algorithm": "sha256-relative-file-manifest-v1",
+            "digest": "sha256:d3641c5190c1b86d8e853adc8f3c68fe6376b5fdaf5c1d90c610a745102ff03e",
+            "manifest": [
+              {
+                "digest": "sha256:b57df2ff4072b2e25744ae2bd530b02bbb6ab83a22a0d374c73d48de4dc70887",
+                "member": "SKILL.md"
+              },
+              {
+                "digest": "sha256:6d05a890eb1c53c59755f9e560c05d65467a614d36af7c812f4a32c89b47f4e9",
+                "member": "references/compatibility-and-migration.md"
+              },
+              {
+                "digest": "sha256:3b80a98abfefdcd9a765da9a9436caa43de6a873e57253f1ecfb36e1095ea4b8",
+                "member": "references/execution.md"
+              }
+            ],
+            "provenance": "reconstructed_from_declared_revision",
+            "scope": "pinned-agent-visible"
+          },
+          "lineage": null,
+          "owner": "local",
+          "repository": "thetechgy/agent-engineering-baseline",
+          "revision": "a474ba1ed8022cbf26e7f0b3a6374eab7ecb468d",
+          "skill_id": "powershell-pester-6",
+          "source_path": ".apm/skills/powershell-pester-6"
+        }
+      },
+      "record_digest": "sha256:ddaa480253e080a407c18d1b01bc003347e65ae4fa0f417daa04ec48df95e42e",
+      "record_id": "sha256:9cf1532f9ffaff2fd53fe059ac6a531163df79237a243d1fc0e1329750fed0c5",
+      "slot": "quality"
+    },
+    {
+      "admitted_at": "2026-10-27T22:52:26Z",
+      "class": "quality",
+      "execution": {
+        "completed_at": "2026-10-27T22:52:05Z",
+        "started_at": "2026-10-27T22:28:42Z"
+      },
+      "finding_counts": {
+        "critical": 1,
+        "high": 1,
+        "low": 6,
+        "medium": 5
+      },
+      "id": "sha256:b6dceccc97c1d16a6686a1299e102751d00981772ec6ce9037d8d5f8b3ef7597",
+      "numeric_complete": false,
+      "provenance": {
+        "archive_digest": "sha256:56df82c6181dca6ba3fa53c47aad69394124868bd01ec7fc84ba76082281eb82",
+        "artifact_id": 12776003850,
+        "attempt": 1,
+        "event": "push",
+        "repository": "thetechgy/agent-engineering-baseline",
+        "revision": "a474ba1ed8022cbf26e7f0b3a6374eab7ecb468d",
+        "run_id": 40595108718,
+        "workflow_id": 313370522,
+        "workflow_path": ".github/workflows/validate.yml"
+      },
+      "record": {
+        "arms": [],
+        "availability": {
+          "provenance": "runtime_recorded",
+          "reasons": [
+            "scan_incomplete"
+          ],
+          "status": "incomplete"
+        },
+        "dataset": {
+          "authored_digest": null,
+          "authored_provenance": "unknown",
+          "case_cohort_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "case_ids": [],
+          "owner": "unknown",
+          "staged_algorithm": null,
+          "staged_digest": null,
+          "staged_provenance": "unknown"
+        },
+        "kind": "static",
+        "metrics": [],
+        "policy": {
+          "attempts": {
+            "maximum": null,
+            "mode": "unknown",
+            "pass_threshold": null,
+            "stop_on_pass": null
+          },
+          "fields": {
+            "authorization_policy": null,
+            "baseline": null,
+            "codex": null,
+            "competing_revision": null,
+            "concurrency": null,
+            "deterministic_gate": null,
+            "docker_compose": null,
+            "environment": null,
+            "evaluator_revision": "ac0a04905100acdafc6c95829311a9739c340ff6",
+            "fixture_boundary": null,
+            "grading": null,
+            "harbor": null,
+            "model": null,
+            "provider": null,
+            "python": null,
+            "standard_attempts": null,
+            "stop_on_pass": null,
+            "task_build": null,
+            "task_source": null,
+            "timeout_multiplier": null,
+            "upstream_revision": null,
+            "workspace_mode": null
+          },
+          "id": "sha256:8e0caef1dcf3679ce807e77343ba5d78c0675d8b273c2cfcae10cb3fc2bef24f",
+          "judge": {
+            "enabled": null,
+            "model": null,
+            "provider": null
+          },
+          "metric_set": null,
+          "patch_digest": null,
+          "provenance": "runtime_recorded",
+          "published_id": null
+        },
+        "run_id": null,
+        "scans": [
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:1cb880a3a5ffb753f91035eaa516ccbafb45d0365aa86e90a2fd6c0976ad6df1"
+            ],
+            "scanner": "catalog-total",
+            "severity_counts": {
+              "critical": 1,
+              "high": 1,
+              "low": 6,
+              "medium": 5
+            },
+            "status": "incomplete"
+          },
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:61badcce8c6e3734cc5f660626e0bea50bd4575c05800a2ec00f4cf59224343a"
+            ],
+            "scanner": "SCHEMA",
+            "severity_counts": {
+              "critical": 0,
+              "high": 1,
+              "low": 0,
+              "medium": 2
+            },
+            "status": "failed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:879be24b6cdfa4f5386ed9583d1dc75cac428c898c7327a3e76256de4d4fd1be"
+            ],
+            "scanner": "VERSION",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:bd7d2e9356c77de47594eb2a2b7c61406e3e664dd2dd072fec95042ca236801b"
+            ],
+            "scanner": "SECURITY",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "incomplete"
+          },
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:d711ed7a7d0431680e78380809ff9d834d2c6bf3cd7d46b33708395d3f467d82"
+            ],
+            "scanner": "PII",
+            "severity_counts": {
+              "critical": 1,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "failed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:ea85e73187f1051177ce6bc47b260b788a1fea2018e94a036b620b8108f64bf1"
+            ],
+            "scanner": "LICENSE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:086470c4b8d7782857d4fb03e0b4962896467a21ce7aeda77049efb39e814d31"
+            ],
+            "scanner": "CODE_RISK",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:8718e54bd3e41ea47975a1fbf203b0c7dce7baa669768f1a642c4c9c1a1bd22a"
+            ],
+            "scanner": "SECRETS",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:6c0c176d15f8c8eab71aee24ffaa17c17e41e716619a78a1d91c35bc939f90b7"
+            ],
+            "scanner": "HYGIENE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:e9ba7eec4250e9c1b1109be702e269a11aaeb9d21bf6e97c76e9f950c64f88f8"
+            ],
+            "scanner": "UNICODE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:fd17263fda7b7bdb35aa4b0d2adf4c41ffbba7f04562caf62eb3350f0c96d27d"
+            ],
+            "scanner": "QUALITY",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 6,
+              "medium": 3
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:48e6b62f59c95ab487b61475a107f5e963cb260a94d774c88431c5150d7048e7"
+            ],
+            "scanner": "SCRIPT_LINT",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": false,
+            "passed": null,
+            "references": [
+              "sha256:1cb880a3a5ffb753f91035eaa516ccbafb45d0365aa86e90a2fd6c0976ad6df1"
+            ],
+            "scanner": "skillspector",
+            "severity_counts": {
+              "critical": null,
+              "high": null,
+              "low": null,
+              "medium": null
+            },
+            "status": "incomplete"
+          }
+        ],
+        "schema_version": 1,
+        "source": {
+          "content": {
+            "algorithm": "sha256-relative-file-manifest-v1",
+            "digest": "sha256:080622eb297ce99914bd08fbada178bed0eeb162a223017b8e6bb6b9a389eca8",
+            "manifest": [
+              {
+                "digest": "sha256:a79531195a9bdf942b301edf1588c8814ceb976557f4f0cb79bd9aa79e59d52e",
+                "member": "SKILL.md"
+              }
+            ],
+            "provenance": "reconstructed_from_declared_revision",
+            "scope": "pinned-agent-visible"
+          },
+          "lineage": null,
+          "owner": "local",
+          "repository": "thetechgy/agent-engineering-baseline",
+          "revision": "a474ba1ed8022cbf26e7f0b3a6374eab7ecb468d",
+          "skill_id": "ansible",
+          "source_path": ".apm/skills/ansible"
+        }
+      },
+      "record_digest": "sha256:f00524d293e481289abae385b9721e43bbc9a02728769e9bf365b438252933af",
+      "record_id": "sha256:0a44e1a0d6228e537466d1d03f3d0c5af97b55652f7f897c515185ea2190d944",
+      "slot": "quality"
+    },
+    {
+      "admitted_at": "2026-10-27T22:52:26Z",
+      "class": "quality",
+      "execution": {
+        "completed_at": "2026-10-27T22:52:05Z",
+        "started_at": "2026-10-27T22:28:42Z"
+      },
+      "finding_counts": {
+        "critical": 0,
+        "high": 6,
+        "low": 7,
+        "medium": 11
+      },
+      "id": "sha256:c07e44c9468bfacfd261aa11c9c6f25b4f37be2def12f77f52d0458872db21e2",
+      "numeric_complete": false,
+      "provenance": {
+        "archive_digest": "sha256:56df82c6181dca6ba3fa53c47aad69394124868bd01ec7fc84ba76082281eb82",
+        "artifact_id": 12776003850,
+        "attempt": 1,
+        "event": "push",
+        "repository": "thetechgy/agent-engineering-baseline",
+        "revision": "a474ba1ed8022cbf26e7f0b3a6374eab7ecb468d",
+        "run_id": 40595108718,
+        "workflow_id": 313370522,
+        "workflow_path": ".github/workflows/validate.yml"
+      },
+      "record": {
+        "arms": [],
+        "availability": {
+          "provenance": "runtime_recorded",
+          "reasons": [
+            "scan_incomplete"
+          ],
+          "status": "incomplete"
+        },
+        "dataset": {
+          "authored_digest": null,
+          "authored_provenance": "unknown",
+          "case_cohort_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "case_ids": [],
+          "owner": "unknown",
+          "staged_algorithm": null,
+          "staged_digest": null,
+          "staged_provenance": "unknown"
+        },
+        "kind": "static",
+        "metrics": [],
+        "policy": {
+          "attempts": {
+            "maximum": null,
+            "mode": "unknown",
+            "pass_threshold": null,
+            "stop_on_pass": null
+          },
+          "fields": {
+            "authorization_policy": null,
+            "baseline": null,
+            "codex": null,
+            "competing_revision": null,
+            "concurrency": null,
+            "deterministic_gate": null,
+            "docker_compose": null,
+            "environment": null,
+            "evaluator_revision": "ac0a04905100acdafc6c95829311a9739c340ff6",
+            "fixture_boundary": null,
+            "grading": null,
+            "harbor": null,
+            "model": null,
+            "provider": null,
+            "python": null,
+            "standard_attempts": null,
+            "stop_on_pass": null,
+            "task_build": null,
+            "task_source": null,
+            "timeout_multiplier": null,
+            "upstream_revision": null,
+            "workspace_mode": null
+          },
+          "id": "sha256:8e0caef1dcf3679ce807e77343ba5d78c0675d8b273c2cfcae10cb3fc2bef24f",
+          "judge": {
+            "enabled": null,
+            "model": null,
+            "provider": null
+          },
+          "metric_set": null,
+          "patch_digest": null,
+          "provenance": "runtime_recorded",
+          "published_id": null
+        },
+        "run_id": null,
+        "scans": [
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:b164f5e192f700d8b9b0cc90d4c1022685b7f5bcabebfb751bd4605a2f6e7e2d"
+            ],
+            "scanner": "catalog-total",
+            "severity_counts": {
+              "critical": 0,
+              "high": 6,
+              "low": 7,
+              "medium": 11
+            },
+            "status": "incomplete"
+          },
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:ce93c9812a9c11f3d3482db558f6e853397f9123bc92c9936cd81ec9f7c1278b"
+            ],
+            "scanner": "SCHEMA",
+            "severity_counts": {
+              "critical": 0,
+              "high": 1,
+              "low": 2,
+              "medium": 2
+            },
+            "status": "failed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:b9add16352942b7f38daa755f9a7f7c5860ee40bd0faadab976670196ae8bc08"
+            ],
+            "scanner": "VERSION",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:bb3e73167fa57c86e2536a182a247b1e04f428b0c1cdb4d23b20900fb78f6e2c"
+            ],
+            "scanner": "SECURITY",
+            "severity_counts": {
+              "critical": 0,
+              "high": 3,
+              "low": 0,
+              "medium": 6
+            },
+            "status": "incomplete"
+          },
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:d51492b4a7142c7b696d8151c63bfc30621d409126e573ba303cfceb0c772f6a"
+            ],
+            "scanner": "PII",
+            "severity_counts": {
+              "critical": 0,
+              "high": 2,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "failed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:55415c260ea9a5b0c3732808081bfc0f55f2286c7af7233db3fdf765c1edf15e"
+            ],
+            "scanner": "LICENSE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:538b6ff83893f14eefbf2afc59958828d1b1cbbcf4aa50bb88b384258cf2c8a4"
+            ],
+            "scanner": "CODE_RISK",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:a40ae78ae4f4c65328d1cbd0df976fcdaf75d7845d281a1fea3d471462ec85f0"
+            ],
+            "scanner": "SECRETS",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:c00b172d777eddaefb2c548fbdeaed30b29746db4f3bc8a1e8739a8825e1a637"
+            ],
+            "scanner": "HYGIENE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:3d12e266fe59fbe1437da986058d365b430d2bc9671d439e1421b0aac2fbbf64"
+            ],
+            "scanner": "UNICODE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:eac5c44d774eba982ecfae57dc798a7f87f4c9f82cca22870047bbc2a4dfa626"
+            ],
+            "scanner": "QUALITY",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 5,
+              "medium": 3
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:9431d7eb4543ede250e1351fcb8043e84c91f64781eb9d7d57e9300c67f6f50c"
+            ],
+            "scanner": "SCRIPT_LINT",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": false,
+            "passed": null,
+            "references": [
+              "sha256:b164f5e192f700d8b9b0cc90d4c1022685b7f5bcabebfb751bd4605a2f6e7e2d"
+            ],
+            "scanner": "skillspector",
+            "severity_counts": {
+              "critical": null,
+              "high": null,
+              "low": null,
+              "medium": null
+            },
+            "status": "incomplete"
+          }
+        ],
+        "schema_version": 1,
+        "source": {
+          "content": {
+            "algorithm": "sha256-relative-file-manifest-v1",
+            "digest": "sha256:506e78b501906831944d7c6559091c898de9476d42347c56381c950d0099d07d",
+            "manifest": [
+              {
+                "digest": "sha256:96088308ed8df85d9f369263de4ec02fefdb7f59fbccc2b4629991be7266e581",
+                "member": "EVALS.md"
+              },
+              {
+                "digest": "sha256:93f772d47f661cc721a211257f4a2aecabcc53ed77f0d4b16b754944128586c9",
+                "member": "MAINTENANCE.md"
+              },
+              {
+                "digest": "sha256:625107071889166612f64ac52920be2b9455f671e4ce1f805835f7fee14ef274",
+                "member": "SKILL.md"
+              },
+              {
+                "digest": "sha256:fce55e0ec0a56608d714f273afdbdc44017d0a4ebed73b61291cd0fdebbf434a",
+                "member": "references/compose-migration.md"
+              },
+              {
+                "digest": "sha256:adb6f7a2a07f2067036354cb57bb69e694d423f20bd578e09db6a5a799859168",
+                "member": "references/fedora-hosts.md"
+              },
+              {
+                "digest": "sha256:55a300354c77b6e59b5876b1b3a6b7e00f9525a21c9160fa5b3200a3a8128f23",
+                "member": "references/quadlet-systemd.md"
+              },
+              {
+                "digest": "sha256:6a8d789b72d821e3fed320ca84325086d5a42ced25912a4b52ea760a306111ff",
+                "member": "references/reverse-proxy.md"
+              },
+              {
+                "digest": "sha256:a5fc3f33815caa196d5f8d6cb090136bcccc88fb95dedb921c99bd0b3cf6b524",
+                "member": "references/rootless-networking.md"
+              },
+              {
+                "digest": "sha256:37e1fae3de6f4b7ae1ea3ccc2b0b84d7fd854ea2730a51f0e3b3b1bc9b2e1068",
+                "member": "references/security-storage-secrets.md"
+              },
+              {
+                "digest": "sha256:465321094bc936d8a9e187bd3b4daa1ab271b93242a2c07fe88c58db6bd4bdd5",
+                "member": "references/validation.md"
+              }
+            ],
+            "provenance": "reconstructed_from_declared_revision",
+            "scope": "pinned-agent-visible"
+          },
+          "lineage": null,
+          "owner": "local",
+          "repository": "thetechgy/agent-engineering-baseline",
+          "revision": "a474ba1ed8022cbf26e7f0b3a6374eab7ecb468d",
+          "skill_id": "podman",
+          "source_path": ".apm/skills/podman"
+        }
+      },
+      "record_digest": "sha256:02831abe5d1b009e0766c40a59b4d6e19e45721d3835bfc1f6e312b881323412",
+      "record_id": "sha256:da080bf0ff22485b42ed48c5bc6173623d1c7203848f05022b9d2bedde55c051",
+      "slot": "quality"
+    },
+    {
+      "admitted_at": "2026-10-27T22:52:26Z",
+      "class": "quality",
+      "execution": {
+        "completed_at": "2026-10-27T22:52:05Z",
+        "started_at": "2026-10-27T22:28:42Z"
+      },
+      "finding_counts": {
+        "critical": 0,
+        "high": 2,
+        "low": 5,
+        "medium": 7
+      },
+      "id": "sha256:c5da6ccf043bbfe436321e7693fc86e96823538bbbdc8e2fffa11385ecb9fc78",
+      "numeric_complete": false,
+      "provenance": {
+        "archive_digest": "sha256:56df82c6181dca6ba3fa53c47aad69394124868bd01ec7fc84ba76082281eb82",
+        "artifact_id": 12776003850,
+        "attempt": 1,
+        "event": "push",
+        "repository": "thetechgy/agent-engineering-baseline",
+        "revision": "a474ba1ed8022cbf26e7f0b3a6374eab7ecb468d",
+        "run_id": 40595108718,
+        "workflow_id": 313370522,
+        "workflow_path": ".github/workflows/validate.yml"
+      },
+      "record": {
+        "arms": [],
+        "availability": {
+          "provenance": "runtime_recorded",
+          "reasons": [
+            "scan_incomplete"
+          ],
+          "status": "incomplete"
+        },
+        "dataset": {
+          "authored_digest": null,
+          "authored_provenance": "unknown",
+          "case_cohort_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "case_ids": [],
+          "owner": "unknown",
+          "staged_algorithm": null,
+          "staged_digest": null,
+          "staged_provenance": "unknown"
+        },
+        "kind": "static",
+        "metrics": [],
+        "policy": {
+          "attempts": {
+            "maximum": null,
+            "mode": "unknown",
+            "pass_threshold": null,
+            "stop_on_pass": null
+          },
+          "fields": {
+            "authorization_policy": null,
+            "baseline": null,
+            "codex": null,
+            "competing_revision": null,
+            "concurrency": null,
+            "deterministic_gate": null,
+            "docker_compose": null,
+            "environment": null,
+            "evaluator_revision": "ac0a04905100acdafc6c95829311a9739c340ff6",
+            "fixture_boundary": null,
+            "grading": null,
+            "harbor": null,
+            "model": null,
+            "provider": null,
+            "python": null,
+            "standard_attempts": null,
+            "stop_on_pass": null,
+            "task_build": null,
+            "task_source": null,
+            "timeout_multiplier": null,
+            "upstream_revision": null,
+            "workspace_mode": null
+          },
+          "id": "sha256:8e0caef1dcf3679ce807e77343ba5d78c0675d8b273c2cfcae10cb3fc2bef24f",
+          "judge": {
+            "enabled": null,
+            "model": null,
+            "provider": null
+          },
+          "metric_set": null,
+          "patch_digest": null,
+          "provenance": "runtime_recorded",
+          "published_id": null
+        },
+        "run_id": null,
+        "scans": [
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:2168adb89124091954714b4b407517c6fe286dc7d26e475f07cbc8a03c45d425"
+            ],
+            "scanner": "catalog-total",
+            "severity_counts": {
+              "critical": 0,
+              "high": 2,
+              "low": 5,
+              "medium": 7
+            },
+            "status": "incomplete"
+          },
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:ec1960eb097e773d6a2f347cee3570b252fa1b8cff4dce9a181098a561b1d539"
+            ],
+            "scanner": "SCHEMA",
+            "severity_counts": {
+              "critical": 0,
+              "high": 1,
+              "low": 0,
+              "medium": 3
+            },
+            "status": "failed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:50f304065ebb41ba92fb330918159ad74a7f3e11999ddf0fac75e5390894a15a"
+            ],
+            "scanner": "VERSION",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:68a98dc4807c244ef355374053c2815522f8b7617feea706a93ce6b29e51ddf8"
+            ],
+            "scanner": "SECURITY",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "incomplete"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:db8de1946f442b2e0705094aa63c9bfa9badc505033687220aa922755445085a"
+            ],
+            "scanner": "PII",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:bb69c13e45a43fa1d6e2129f5d4f6caf963f14c354d963a1214034018b6c870d"
+            ],
+            "scanner": "LICENSE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:792b3622a68822fd6dc0230014204a1dc84ebb95b4886997cd6d249416671cb3"
+            ],
+            "scanner": "CODE_RISK",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:3bdc662daa63fdc9adaee113d92952ac960258a52a32ec0ab0829598b27ca4c4"
+            ],
+            "scanner": "SECRETS",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:dfac4753bb26f0784449a951420427054ab096b223e0c48289ed49911d8afc9b"
+            ],
+            "scanner": "HYGIENE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:5d923219b5b75aa60aa8faaf7d87d459249f0b9dfc2cf9d33c81f70068de7779"
+            ],
+            "scanner": "UNICODE",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": true,
+            "passed": false,
+            "references": [
+              "sha256:964735f4d820abdcf3b7eaa5b734f3541fdc11dc481dc65356c6963464a742cb"
+            ],
+            "scanner": "QUALITY",
+            "severity_counts": {
+              "critical": 0,
+              "high": 1,
+              "low": 5,
+              "medium": 4
+            },
+            "status": "failed"
+          },
+          {
+            "blocking": true,
+            "passed": true,
+            "references": [
+              "sha256:682de84b8c5297f8fe283112fda49928c0ea674c9483b923a7f13472f2da3e98"
+            ],
+            "scanner": "SCRIPT_LINT",
+            "severity_counts": {
+              "critical": 0,
+              "high": 0,
+              "low": 0,
+              "medium": 0
+            },
+            "status": "passed"
+          },
+          {
+            "blocking": false,
+            "passed": null,
+            "references": [
+              "sha256:2168adb89124091954714b4b407517c6fe286dc7d26e475f07cbc8a03c45d425"
+            ],
+            "scanner": "skillspector",
+            "severity_counts": {
+              "critical": null,
+              "high": null,
+              "low": null,
+              "medium": null
+            },
+            "status": "incomplete"
+          }
+        ],
+        "schema_version": 1,
+        "source": {
+          "content": {
+            "algorithm": "sha256-relative-file-manifest-v1",
+            "digest": "sha256:bd38520667287390ab5b35bf3a81033b1a1d0eae7f0545ec907410ba39ad1216",
+            "manifest": [
+              {
+                "digest": "sha256:96d578e9646cd80ff6e1bedb26069222ad37b473960f3c0cc069716484b22553",
+                "member": "SKILL.md"
+              }
+            ],
+            "provenance": "reconstructed_from_declared_revision",
+            "scope": "pinned-agent-visible"
+          },
+          "lineage": null,
+          "owner": "local",
+          "repository": "thetechgy/agent-engineering-baseline",
+          "revision": "a474ba1ed8022cbf26e7f0b3a6374eab7ecb468d",
+          "skill_id": "a11y",
+          "source_path": ".apm/skills/a11y"
+        }
+      },
+      "record_digest": "sha256:0e1bca65d9250df0e6a3e6cecdb4cd5867c5e071e4b6daedf92b3581d70f49d8",
+      "record_id": "sha256:327b6c08c129cd7cbc7cef7429a3a3e47b56c5f1140885650a6cc1e1240d0fa9",
+      "slot": "quality"
+    }
+  ],
+  "protected": [
+    "sha256:0bbd4c10a883e8dbed3b5e90b6061363036366ce397d46c86c01efd00da59da2"
+  ],
+  "retained_at": "2026-10-27T22:52:26Z",
+  "schema_version": 1
+}
