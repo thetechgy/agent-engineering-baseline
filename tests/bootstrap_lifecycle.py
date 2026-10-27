@@ -46,10 +46,12 @@ def write(path, value):
     path.write_text(value, encoding="utf-8")
 
 
-def package(path, name, dependencies=None):
+def package(path, name, dependencies=None, includes=None):
     data = {"name": name, "version": "1.0.0", "targets": ["codex", "copilot"]}
     if dependencies:
         data["dependencies"] = dependencies
+    if includes is not None:
+        data["includes"] = includes
     # JSON is a YAML subset accepted by the native APM manifest reader.
     write(path / "apm.yml", json.dumps(data))
 
@@ -57,6 +59,13 @@ def package(path, name, dependencies=None):
 def skill(path, name, marker):
     write(path / ".apm/skills" / name / "SKILL.md",
           f"---\nname: {name}\ndescription: Isolated bootstrap lifecycle fixture\n---\n# {marker}\n")
+
+
+def instructions(path, marker):
+    write(path / ".apm/instructions/personal.instructions.md",
+          f"---\ndescription: Shared lifecycle fixture\n---\n# Shared guidance: {marker}\n")
+    write(path / "baseline-review.instructions.md",
+          '---\ndescription: Repository-only fixture\napplyTo: "**"\n---\n# REPOSITORY_ONLY_REVIEW\n')
 
 
 def locked_dependencies(path):
@@ -222,6 +231,8 @@ class Scenario:
     def commit(self, name, marker):
         path = self.repos[name]
         skill(path, name, marker)
+        if name == "baseline":
+            instructions(path, marker)
         if name == "graph":
             scripts = path / ".apm/skills/graph/scripts"
             write(scripts / "bin/probe.py", f"print({marker!r})\n")
@@ -238,12 +249,28 @@ class Scenario:
         # Compare installed bytes, not cache and local receipt timestamps.
         files = [self.metadata / "apm.yml", self.metadata / "apm.lock.yaml"]
         files += [p for p in (self.deploy / ".agents").rglob("*") if p.is_file()]
-        files += self.config_paths()
+        files += self.config_paths() + self.instruction_paths()
         return {str(p): digest(p) for p in files}
 
     def config_paths(self):
         return [self.deploy / ".codex/config.toml", self.deploy /
                 (".copilot/mcp-config.json" if self.global_scope else ".github/mcp.json")]
+
+    def instruction_paths(self):
+        # These are APM outputs. Local Copilot CLI 1.0.103 discovery selected
+        # the modular user instruction; it did not select the user AGENTS.md.
+        names = ([".codex/AGENTS.md", ".copilot/AGENTS.md",
+                  ".copilot/instructions/personal.instructions.md"] if self.global_scope else
+                 ["AGENTS.md", ".github/instructions/personal.instructions.md"])
+        return [self.deploy / name for name in names]
+
+    def instruction_delivery(self, marker):
+        for path in self.instruction_paths():
+            text = path.read_text(encoding="utf-8")
+            check(f"# Shared guidance: {marker}" in text,
+                  f"{path.relative_to(self.deploy)} delivers the selected shared instruction")
+            check("REPOSITORY_ONLY_REVIEW" not in text,
+                  f"{path.relative_to(self.deploy)} excludes repository-only review guidance")
 
     def functionality(self, marker):
         codex, copilot = self.config_paths()
@@ -271,7 +298,7 @@ class Scenario:
         unrelated_a = self.commit("unrelated", "unrelated-a")
         package(self.repos["baseline"], "baseline", {
             "apm": [self.url("graph") + ".git#main"], "mcp": [LEARN],
-        })
+        }, includes=[".apm/instructions/personal.instructions.md", ".apm/skills/baseline/"])
         # Deliberately older source-package lock: fresh consumers must not
         # mistake this for a reviewed transitive replay guarantee.
         write(self.repos["baseline"] / "apm.lock.yaml", json.dumps({
@@ -287,6 +314,7 @@ class Scenario:
         }}}))
         ref = self.url("baseline") + ".git#main"
         self.install(ref)
+        self.instruction_delivery("baseline-a")
         check(self.pins()["bootstrap-fixture/baseline"] == baseline_a, "fresh baseline commit recorded")
         check(self.pins()["bootstrap-fixture/graph"] == graph_b, "fresh install resolves branches rather than source package lock")
         self.install(self.url("unrelated") + ".git#main")
@@ -298,10 +326,12 @@ class Scenario:
         self.commit("unrelated", "unrelated-b")
         baseline_b = self.commit("baseline", "baseline-b")
         self.install(ref)
-        check(before == self.content(), "unchanged reinstall preserves manifest, lock, skills, executables and MCP bytes")
+        check(before == self.content(), "unchanged reinstall preserves manifest, lock, skills, instructions, executables and MCP bytes")
+        self.instruction_delivery("baseline-a")
         self.functionality("graph-b")
         # A specific reviewed baseline ref is distinct from a subtree refresh.
         self.install(self.url("baseline") + ".git#" + baseline_b)
+        self.instruction_delivery("baseline-b")
         pins = self.pins()
         check(pins["bootstrap-fixture/baseline"] == baseline_b, "changed immutable baseline ref adopted")
         check(pins["bootstrap-fixture/graph"] == graph_b, "baseline ref change retains matching child lock")
@@ -317,6 +347,7 @@ class Scenario:
             locked_dependencies(self.metadata / "apm.lock.yaml")["bootstrap-fixture/unrelated"],
             digest(unrelated_skill)), "explicit refresh preserves unrelated lock record and deployed bytes")
         self.functionality("graph-c")
+        self.instruction_delivery("baseline-b")
         lock = self.metadata / "apm.lock.yaml"
         good = lock.read_bytes()
         for bad in (b"dependencies: [broken", b"dependencies: false\n",
@@ -337,6 +368,40 @@ class Scenario:
               "missing lock leaves unrelated deployed skill intact")
         check((self.metadata / "apm.yml").read_bytes() == manifest_before,
               "missing lock leaves dependency declarations byte-identical")
+
+
+def instruction_regeneration(root, apm):
+    """Exercise the production helper with native APM and no external dependencies."""
+    scenario = Scenario(root, apm, False)
+    source = scenario.project
+    scenario.run(["git", "init", "--quiet"], source)
+    scenario.run(["git", "remote", "add", "origin", "https://git.example.invalid/regeneration.git"], source)
+    package(source, "instructions", includes=[".apm/instructions/personal.instructions.md"])
+    instructions(source, "original")
+    scenario.native("install", "--target", "codex,copilot", "--trust-bin")
+    scenario.native("compile", "--target", "codex,copilot")
+    scenario.run(["git", "add", "."], source)
+    scenario.run(["git", "commit", "--message", "Original native instruction outputs"], source)
+    instructions(source, "updated")
+    authored = (source / ".apm/instructions/personal.instructions.md").read_bytes()
+    helper = [sys.executable, REPOSITORY / "scripts/apm_regeneration.py",
+              "--repository", source, "--apm", apm, "--mode", "refresh"]
+    scenario.run(helper)
+    for path in scenario.instruction_paths():
+        check("# Shared guidance: updated" in path.read_text(encoding="utf-8"),
+              f"native regeneration publishes the updated {path.relative_to(source)}")
+    check((source / ".apm/instructions/personal.instructions.md").read_bytes() == authored,
+          "native regeneration preserves the authored instruction")
+    check("REPOSITORY_ONLY_REVIEW" in (source / "AGENTS.md").read_text(encoding="utf-8"),
+          "local compilation retains repository-only review guidance")
+    # The helper deliberately requires clean generated files for another refresh.
+    scenario.run(["git", "add", "."], source)
+    scenario.run(["git", "commit", "--message", "Regenerated instruction outputs"], source)
+    paths = [source / "apm.lock.yaml", *scenario.instruction_paths()]
+    before = [path.read_bytes() for path in paths]
+    scenario.run(helper)
+    check([path.read_bytes() for path in paths] == before,
+          "repeated native instruction regeneration retains lock and output bytes")
 
 
 def reviewed_msgraph(root, apm):
@@ -374,6 +439,7 @@ def main():
         bootstrap = prepare_bootstrap(root, member, expected)
         for scope in (False, True):
             Scenario(root / ("user" if scope else "repo"), apm, scope, bootstrap).exercise()
+        instruction_regeneration(root / "instructions", apm)
         reviewed_msgraph(root / "reviewed-msgraph", apm)
     print(f"Native APM lifecycle: {CHECKS} checks passed.")
 

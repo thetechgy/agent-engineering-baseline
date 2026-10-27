@@ -27,6 +27,7 @@ class RegenerationTests(unittest.TestCase):
         self.write("apm.lock.yaml", "locked\n")
         self.write("apm.yml", "source\n")
         self.write(".codex/config.toml", "reviewed config\n")
+        self.write(".github/instructions/personal.instructions.md", "reviewed\n")
         self.write(".gitignore", "apm_modules/\n")
         self.write(".agents/skills/fixture/SKILL.md", "reviewed\n")
         self.git("add", "--all")
@@ -53,6 +54,8 @@ class RegenerationTests(unittest.TestCase):
         assert not (scratch / "apm_modules").exists(), "Local modules were copied"
         skill.parent.mkdir(parents=True)
         skill.write_text("refreshed\n" if refresh else "reviewed\n")
+        (scratch / ".github/instructions/personal.instructions.md").write_text(
+            "refreshed\n" if refresh else "reviewed\n")
 
     def invoke(self, mode="validate", implementation=None):
         with patch.object(regeneration, "native_checks", side_effect=implementation or self.materialize):
@@ -115,10 +118,12 @@ class RegenerationTests(unittest.TestCase):
         self.write("private.txt", "keep\n")
         self.invoke("refresh")
         self.assertEqual((self.source / ".agents/skills/fixture/SKILL.md").read_text(), "refreshed\n")
+        self.assertEqual((self.source / ".github/instructions/personal.instructions.md").read_text(), "refreshed\n")
         self.assertEqual((self.source / "private.txt").read_text(), "keep\n")
 
     def test_unexpected_source_edit_or_extra_output_blocks_refresh(self):
-        for name in ("apm.yml", "unexpected.txt"):
+        for name in ("apm.yml", "unexpected.txt", ".github/instructions/other.instructions.md",
+                     ".github/instructions/personal.instructions.md.extra"):
             with self.subTest(path=name):
                 before = regeneration.inventory(self.source)
 
@@ -158,10 +163,13 @@ class RegenerationTests(unittest.TestCase):
         self.assertEqual(before, regeneration.inventory(self.source))
 
     def test_refresh_refuses_preexisting_generated_edits(self):
-        self.write(".agents/skills/fixture/SKILL.md", "caller edit\n")
-        with self.assertRaisesRegex(RuntimeError, "unchanged generated outputs"):
-            self.invoke("refresh")
-        self.assertEqual((self.source / ".agents/skills/fixture/SKILL.md").read_text(), "caller edit\n")
+        for name in (".agents/skills/fixture/SKILL.md", ".github/instructions/personal.instructions.md"):
+            with self.subTest(path=name):
+                self.write(name, "caller edit\n")
+                with self.assertRaisesRegex(RuntimeError, "unchanged generated outputs"):
+                    self.invoke("refresh")
+                self.assertEqual((self.source / name).read_text(), "caller edit\n")
+                self.write(name, "reviewed\n")
 
     def test_refresh_preserves_ignored_caller_files_before_any_publication(self):
         private = self.source / ".agents/skills/new/SKILL.md"
@@ -186,8 +194,8 @@ class RegenerationTests(unittest.TestCase):
         before = regeneration.inventory(self.source)
         copy = regeneration.shutil.copy2
 
-        def fail_second_output(source, destination):
-            if destination == self.source / ".codex/config.toml":
+        def fail_last_output(source, destination):
+            if destination == self.source / "apm.lock.yaml":
                 raise OSError("Injected publication failure")
             return copy(source, destination)
 
@@ -195,8 +203,9 @@ class RegenerationTests(unittest.TestCase):
             self.materialize(apm, scratch, refresh)
             (scratch / ".agents/skills/fixture/SKILL.md").chmod(0o755)
             (scratch / ".codex/config.toml").write_text("refreshed config\n")
+            (scratch / "apm.lock.yaml").write_text("refreshed lock\n")
 
-        with patch.object(regeneration.shutil, "copy2", side_effect=fail_second_output):
+        with patch.object(regeneration.shutil, "copy2", side_effect=fail_last_output):
             with self.assertRaisesRegex(OSError, "Injected publication failure"):
                 self.invoke("refresh", change)
         self.assertEqual(before, regeneration.inventory(self.source))

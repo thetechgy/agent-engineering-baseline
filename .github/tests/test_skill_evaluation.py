@@ -1213,11 +1213,31 @@ class WorkflowTests(unittest.TestCase):
             paths = git(consumer, "diff", "--cached", "--no-renames", "--name-only", "-z").split(b"\0")[:-1]
             return completed, (root / "published").exists(), paths
 
+    def test_update_generator_admits_only_the_reviewed_modular_instruction(self):
+        workflow = yaml.safe_load((REPO / ".github/workflows/update-baseline.yml").read_text())
+        step = next(step for step in workflow["jobs"]["generate"]["steps"]
+                    if step.get("name") == "Create candidate patch from allowlisted paths only")
+        for name, accepted in (
+            (".github/instructions/personal.instructions.md", True),
+            (".github/instructions/other.instructions.md", False),
+            (".github/instructions/personal.instructions.md.extra", False),
+        ):
+            with self.subTest(path=name), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                subprocess.run(["git", "init", "--quiet"], cwd=root, check=True)
+                path = root / name
+                path.parent.mkdir(parents=True)
+                path.write_text("instruction fixture\n")
+                completed = self._run_step(step, {"RUNNER_TEMP": str(root)}, root)
+                self.assertEqual(completed.returncode == 0, accepted, completed.stderr)
+                self.assertEqual((root / "baseline.patch").exists(), accepted)
+
     def test_update_publisher_accepts_allowlisted_text_binary_and_rename_changes(self):
         fixtures = (
             ({}, {name: b"updated\n" for name in (
                 ".apm-checksums", "apm.lock.yaml", "AGENTS.md", ".github/copilot-instructions.md",
                 ".github/mcp.json", ".codex/config.toml", ".agents/skills/example/SKILL.md",
+                ".github/instructions/personal.instructions.md",
             )}),
             ({".apm-version": b"0.34.0\n"}, {".apm-version": b"0.35.0\n"}),
             ({".agents/skills/example/bin/tool": b"old\0binary"},
@@ -1245,6 +1265,8 @@ class WorkflowTests(unittest.TestCase):
             ({"README.md": b"rename\n"}, {".agents/skills/example/renamed": b"rename\n"}),
             ({".agents/skills/example/old": b"rename\n"}, {"README.md": b"rename\n"}),
             ({}, {".apm-version.extra": b"prefix collision\n"}),
+            ({}, {".github/instructions/other.instructions.md": b"foreign instruction\n"}),
+            ({}, {".github/instructions/personal.instructions.md.extra": b"prefix collision\n"}),
             ({}, {".agents/skills-extra/example/file": b"prefix collision\n"}),
             ({}, {".github/mcp.json\nAGENTS.md": b"newline path\n"}),
             ({}, {".agents/skills/example/file\nREADME.md": b"newline path\n"}),
