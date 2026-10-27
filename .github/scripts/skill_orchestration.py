@@ -241,10 +241,12 @@ def stale_skip(api, run, jobs, request):
     evaluation = evaluations[0]
     if evaluation['conclusion'] == 'skipped':
         contexts = [j for j in jobs if j['name'] == 'context']
-        require(len(contexts) == 1, 'Context job unavailable')
+        if len(contexts) != 1:
+            return False
         for name in ('Publish scope and authorization context before requesting approval', 'Retain preapproval scope'):
             steps = [s for s in contexts[0].get('steps', []) if s['name'] == name]
-            require(len(steps) == 1 and steps[0]['conclusion'] == 'success', 'Context receipt producer unavailable')
+            if len(steps) != 1 or steps[0]['conclusion'] != 'success':
+                return False
         record = read_artifact(api, run, f'skill-benchmark-context-{run["id"]}-1')
         phase = 'preapproval'
     else:
@@ -277,7 +279,8 @@ def prior_requests(api, workspace, main, benchmark_runs, since, *, exclude=None)
                 api, workspace, main, run['id'], attempt, WORKFLOW)
             steps = [s for j in old_jobs if j['name'] == 'plan' for s in j.get('steps', [])
                      if s['name'] == 'Upload immutable plan and dispatch intents' and s['conclusion'] == 'success']
-            dispatched = any(j['name'] == 'dispatch' and j['status'] != 'queued' for j in old_jobs)
+            dispatched = any(j['name'] == 'dispatch' and j['status'] != 'queued'
+                             and j['conclusion'] != 'skipped' for j in old_jobs)
             if not steps:
                 require(not dispatched, 'Dispatch intent unavailable')
                 continue

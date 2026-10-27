@@ -80,6 +80,8 @@ succeeded but its response was lost. An intent is not evidence that execution
 occurred. A timeout or absent correlation is **unresolved**, and blocks automatic
 resubmission. Failed, rejected, cancelled, or interrupted requests also block
 automatic retries of the same demand. Rerunning the dispatcher does not resend.
+Planning failures before intent upload are recoverable when GitHub proves the
+dependent dispatch job was skipped; that is not an uncertain POST.
 
 Inspect the planner's `record.json`, the dispatcher outcome, and benchmark run
 metadata to reconcile a request. If execution cannot be established, keep it
@@ -139,6 +141,11 @@ or publication. They are separate from qualified evidence. The orchestration
 only reads a verified `gh-pages` snapshot. Existing successful-producer admission,
 history writers, and canonical Pages publishing remain authoritative and unchanged.
 Richer operational Pages reporting and retention analytics are deferred.
+
+History snapshots are read after dependency setup, close to their use. If the
+canonical branch moves before verification, planning fails closed; rerun the
+inference-free planner to obtain a fresh snapshot. No publication lock or extra
+history writer is introduced.
 
 ## Verification and remaining qualification
 

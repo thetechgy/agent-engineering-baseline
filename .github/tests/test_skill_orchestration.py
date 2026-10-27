@@ -311,6 +311,17 @@ class OrchestrationTests(unittest.TestCase):
         self.assertFalse(self.assess()['requests'])
         self.assertEqual(next(r for r in self.assess()['health'] if r['skill'] == 'podman')['reason'], 'already_requested')
 
+    def test_failed_preapproval_setup_is_a_failed_request_not_a_stale_retry(self):
+        result = self.selected(); self.intent(result)
+        request = result['requests'][0]
+        run = self.api.run(90, orchestration.BENCHMARK, conclusion='failure',
+                           title=f'Benchmark podman (standard) [{request["request_id"]}]')
+        self.api.job(run, 'context', conclusion='failure')
+        self.api.job(run, 'evaluate', conclusion='skipped')
+        result = self.assess()
+        self.assertFalse(result['requests'])
+        self.assertEqual(next(r for r in result['health'] if r['skill'] == 'podman')['reason'], 'already_requested')
+
     def test_two_suites_and_outstanding_same_suite_are_bounded(self):
         self.reference(); self.reference('gh'); self.enable('podman', 'gh')
         self.assertEqual(len(self.assess()['requests']), 2)
@@ -392,6 +403,20 @@ class OrchestrationTests(unittest.TestCase):
     def test_expired_intent_and_missing_qualification_are_not_success(self):
         result = self.selected(); self.intent(result)
         self.api.artifacts[30][0]['expired'] = True
+        with self.assertRaises(ValueError): self.assess()
+
+    def test_failed_planning_with_skipped_dispatch_is_proven_nonexecution(self):
+        self.selected()
+        run = self.api.run(31, orchestration.WORKFLOW, conclusion='failure')
+        self.api.job(run, 'plan', conclusion='failure')
+        self.api.job(run, 'dispatch', conclusion='skipped')
+        self.assertEqual(len(self.assess()['requests']), 1)
+
+    def test_started_dispatch_without_intent_record_remains_blocked(self):
+        self.selected()
+        run = self.api.run(31, orchestration.WORKFLOW, conclusion='failure')
+        self.api.job(run, 'plan', conclusion='failure')
+        self.api.job(run, 'dispatch', conclusion='failure')
         with self.assertRaises(ValueError): self.assess()
 
     def test_incomplete_api_listing_blocks_dispatch(self):
@@ -525,6 +550,17 @@ class WorkflowAndUsageTests(unittest.TestCase):
         self.assertEqual(gate['timeout-minutes'], 5)
         self.assertIn('tier3 validate', gate['run'])
         self.assertIn('skill_orchestration.py guard', gate['run'])
+
+    def test_mutable_history_is_read_after_setup_and_before_consumption(self):
+        planner = yaml.safe_load((ROOT / orchestration.WORKFLOW).read_text())
+        benchmark = yaml.safe_load((ROOT / orchestration.BENCHMARK).read_text())
+        for job in (planner['jobs']['plan'], planner['jobs']['dispatch'], benchmark['jobs']['context'], benchmark['jobs']['evaluate']):
+            steps = job['steps']
+            history = next(i for i, step in enumerate(steps) if step.get('with', {}).get('ref') == 'gh-pages')
+            setup = next(i for i, step in enumerate(steps) if 'setup-skillevaluator.sh' in step.get('run', ''))
+            self.assertGreater(history, setup)
+            features = [i for i, step in enumerate(steps) if '-m unittest discover' in step.get('run', '')]
+            self.assertTrue(all(history > i for i in features))
 
     def test_usage_conflicts_unknowns_and_cache_accounting(self):
         with tempfile.TemporaryDirectory() as temp:

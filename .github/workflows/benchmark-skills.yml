@@ -56,12 +56,6 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
           path: trusted
-      - name: Read canonical history snapshot
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: gh-pages
-          persist-credentials: false
-          path: retained
       - name: Set up pinned uv
         uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with: &benchmark-uv
@@ -77,6 +71,12 @@ jobs:
         env:
           SKILL_EVALUATION_KIND: benchmark
         run: '"$SKILL_EVALUATOR_PYTHON" -m unittest discover -s .github/tests -v'
+      - name: Read canonical history snapshot
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: gh-pages
+          persist-credentials: false
+          path: retained
       - name: Publish scope and authorization context before requesting approval
         id: context
         working-directory: trusted
@@ -132,19 +132,10 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Read canonical history after approval
-        timeout-minutes: 1
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: gh-pages
-          persist-credentials: false
-          path: .orchestration-retained
-
       - name: Validate selection and clean checkout
         id: selection
         timeout-minutes: 2
         run: |
-          mv .orchestration-retained "$RUNNER_TEMP/skill-history"
           [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           test -z "$(git status --porcelain=v1 --untracked-files=all --ignored)"
@@ -167,12 +158,21 @@ jobs:
         timeout-minutes: 15
         run: bash .github/scripts/setup-skillevaluator.sh benchmark
 
+      - name: Read canonical history after approval
+        timeout-minutes: 1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: gh-pages
+          persist-credentials: false
+          path: .orchestration-retained
+
       - name: Validate dataset, runtime, and final eligibility before inference
         id: preparation
         timeout-minutes: 5
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          mv .orchestration-retained "$RUNNER_TEMP/skill-history"
           mkdir -p "$RUNNER_TEMP/skill-benchmark"
           cp "$RUNNER_TEMP/skill-evaluation-tools/versions.json" "$RUNNER_TEMP/skill-benchmark/versions.json"
           cp -r "$RUNNER_TEMP/skill-evaluation-tools/dependencies" "$RUNNER_TEMP/skill-benchmark/dependencies"
