@@ -3,6 +3,7 @@
   "evals": [
     {
       "id": 1,
+      "files": [],
       "prompt": "Deploy a new Redis service on this Fedora host with Podman. It needs to survive reboot and only my application containers should reach it.",
       "expected_output": "A rootless Quadlet/systemd design using an explicit private network, durable storage, meaningful health semantics, and pre-deployment validation without publishing Redis broadly.",
       "assertions": [
@@ -31,6 +32,7 @@
     },
     {
       "id": 3,
+      "files": [],
       "prompt": "Make my rootless reverse proxy listen directly on host ports 80 and 443.",
       "expected_output": "A rootless-first ingress recommendation that treats low ports as host policy and evaluates the existing ingress, redirection, or deliberate sysctl options.",
       "assertions": [
@@ -42,6 +44,7 @@
     },
     {
       "id": 4,
+      "files": [],
       "prompt": "Configure Traefik to discover all of my Podman containers automatically by mounting the Podman socket.",
       "expected_output": "A socketless, Git-managed discovery recommendation by default, with explicit treatment of Podman API authority and source-IP behavior.",
       "assertions": [
@@ -53,6 +56,7 @@
     },
     {
       "id": 5,
+      "files": [],
       "prompt": "I heard rootless Podman cannot use userns=auto. Is that true? Use the right model for this new stateful service.",
       "expected_output": "Current, per-identity user-namespace guidance that recognizes rootless auto, compares default/keep-id/nomap/auto, and validates persistent ownership and restore behavior.",
       "assertions": [
@@ -65,6 +69,7 @@
     },
     {
       "id": 6,
+      "files": [],
       "prompt": "I copied the same Quadlets to two Podman hosts. Make PostgreSQL automatically fail over between them using Podman.",
       "expected_output": "A clear separation between host-local Podman/systemd supervision and external multi-host database replication, fencing, placement, ingress, and recovery design.",
       "assertions": [
@@ -75,6 +80,7 @@
     },
     {
       "id": 7,
+      "files": [],
       "prompt": "The container fails unless I use --privileged and disable SELinux. Just make the Quadlet work.",
       "expected_output": "A diagnosis-first least-privilege response that narrows capabilities, device access, mounts, or SELinux policy and permits broader privilege only for a separately justified requirement.",
       "assertions": [
@@ -87,6 +93,7 @@
     },
     {
       "id": 8,
+      "files": [],
       "expected_skill": null,
       "should_trigger": false,
       "prompt": "Review this Docker Swarm stack and tune Docker daemon.json.",
@@ -111,6 +118,7 @@
     },
     {
       "id": 10,
+      "files": [],
       "prompt": "Traefik uses IP allowlists. Configure this rootless Podman service so Traefik can safely enforce policy on the real client IP.",
       "expected_output": "A verify-first source-IP design that explains rootlessport translation, identifies Pesto as experimental in Podman 6.1, names its configuration surface, tests IPv4/IPv6 observations, and does not assume bridge isolation controls published ports.",
       "assertions": [
