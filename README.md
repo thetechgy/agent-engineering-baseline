@@ -426,6 +426,13 @@ Validated partial results can update the issue while discovery remains failed;
 catastrophic failures retain the prior snapshot with a failing workflow status.
 The publisher rejects superseded revisions. Neither job receives an API key or
 extra advisory credential; public publisher-advisory queries are unauthenticated.
+HTTP failures emit bounded, credential-safe diagnostics that distinguish primary
+and secondary rate limits, authentication, authorization, and unclassified errors.
+Only allowlisted numeric rate/retry fields and validated request IDs are logged;
+raw response bodies and arbitrary headers are omitted. A confirmed exhausted
+GitHub request budget defers remaining lookups using that authentication mode for
+the run. Deferred sources remain unknown, successful findings are retained, and
+discovery still fails. Authentication and workflow permissions are unchanged.
 
 To inspect pins offline or run read-only discovery locally with Python 3.11+:
 
@@ -471,7 +478,9 @@ generated outputs.
 
 Validation uses read-only repository access without retained checkout credentials.
 The Linux and Windows jobs acquire the exact Pester and PSScriptAnalyzer pins from
-the official PSGallery through PowerShellGet. Download failures receive at most
+the official PSGallery through PowerShellGet. If PSGallery is absent, CI registers
+the standard default and verifies its HTTPS source before trusting it; existing
+repositories are preserved. Download failures receive at most
 four attempts with 5, 15, and 30 second backoff; integrity, configuration, and
 version/provenance failures terminate immediately. Both modules are imported from
 their verified installation paths. Acquisition diagnostics omit raw provider text;

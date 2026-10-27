@@ -10,7 +10,7 @@ from pathlib import Path
 import shutil
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stdout, redirect_stderr
 from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.parse import parse_qs, urlsplit
@@ -797,6 +797,109 @@ class FreshnessTests(unittest.TestCase):
                     with self.assertRaisesRegex(fresh.DiscoveryError, "^" + code + "$"):
                         api.semgrep_metadata()
                 self.assertEqual(opened.call_count, 1)
+
+
+class HTTPDiagnosticTests(unittest.TestCase):
+    def failure(self, status=403, headers=None, message="untrusted", raw=None):
+        body = json.dumps({"message": message}).encode() if raw is None else raw
+        return HTTPError(fresh.API, status, "never log this reason", headers or {}, io.BytesIO(body))
+
+    def request_failure(self, api, error, path="repos/pester/Pester/security-advisories?state=published", public=True):
+        output = io.StringIO()
+        with patch.object(api.opener, "open", side_effect=error) as opened, redirect_stderr(output):
+            with self.assertRaisesRegex(fresh.DiscoveryError, f"^http_{error.code}$"):
+                api.request(path, public=public)
+        line = output.getvalue().strip()
+        self.assertTrue(line.startswith("Dependency HTTP failure: "))
+        return json.loads(line.split(": ", 1)[1]), opened
+
+    def test_real_transport_classifies_rate_limits_authorization_and_other_failures(self):
+        cases = [
+            (403, {"x-ratelimit-remaining": "0"}, "hidden address", "primary_rate_limit"),
+            (403, {}, "API rate limit exceeded for private-address", "primary_rate_limit"),
+            (403, {"x-ratelimit-remaining": "12"}, "You have exceeded a secondary rate limit", "secondary_rate_limit"),
+            (429, {"retry-after": "60"}, "hidden", "rate_limit_unspecified"),
+            (403, {"retry-after": "60"}, "hidden", "rate_limit_unspecified"),
+            (403, {}, "Resource not accessible by integration", "authorization_failure"),
+            (403, {}, "Resource not accessible by personal access token", "authorization_failure"),
+            (403, {}, "Requires authentication", "authentication_failure"),
+            (401, {}, "Bad credentials", "authentication_failure"),
+            (403, {}, "unknown forbidden response", "forbidden_unclassified"),
+            (503, {}, "unavailable", "http_failure"),
+        ]
+        for status, headers, message, category in cases:
+            with self.subTest(category=category, message=message):
+                diagnostic, opened = self.request_failure(fresh.GitHub("fixture-secret"), self.failure(status, headers, message))
+                self.assertEqual(diagnostic["category"], category)
+                self.assertEqual(diagnostic["source"], "publisher_advisories")
+                self.assertEqual(diagnostic["repository"], "pester/Pester")
+                self.assertEqual(diagnostic["authentication"], "unauthenticated")
+                self.assertIsNone(opened.call_args.args[0].get_header("Authorization"))
+                self.assertNotIn(message, json.dumps(diagnostic))
+
+    def test_allowlisted_headers_never_emit_credentials_bodies_or_arbitrary_header_values(self):
+        headers = {"x-ratelimit-limit": "60", "x-ratelimit-used": "60", "x-ratelimit-remaining": "0",
+                   "x-ratelimit-reset": "1793116568", "retry-after": "60", "x-ratelimit-resource": "core",
+                   "x-github-request-id": "ABCD:1234:5678", "authorization": "fixture-secret",
+                   "set-cookie": "fixture-secret"}
+        diagnostic, _ = self.request_failure(fresh.GitHub("fixture-secret"), self.failure(headers=headers, message="fixture-secret private-address"))
+        self.assertEqual(diagnostic["rate_limit"], 60)
+        self.assertEqual(diagnostic["rate_reset"], 1793116568)
+        self.assertEqual(diagnostic["request_id"], "ABCD:1234:5678")
+        self.assertNotIn("fixture-secret", json.dumps(diagnostic))
+        for key in headers:
+            headers[key] = "fixture-secret\n::error::injected"
+        diagnostic, _ = self.request_failure(fresh.GitHub("fixture-secret"), self.failure(headers=headers))
+        self.assertEqual(set(diagnostic), {"host", "status", "authentication", "category", "source", "repository"})
+        self.assertNotIn("fixture-secret", json.dumps(diagnostic))
+
+    def test_malformed_oversized_or_unreadable_body_cannot_hide_the_http_failure(self):
+        for body in (b"not-json", b"[", b"[]", b"\xff", b"x" * 8193, b'[' * 2000):
+            with self.subTest(body_length=len(body)):
+                diagnostic, _ = self.request_failure(fresh.GitHub(), self.failure(raw=body))
+                self.assertEqual(diagnostic["category"], "forbidden_unclassified")
+        error = self.failure()
+        with patch.object(error, "read", side_effect=TimeoutError()):
+            diagnostic, _ = self.request_failure(fresh.GitHub(), error)
+        self.assertEqual(diagnostic["category"], "forbidden_unclassified")
+
+    def test_exhausted_public_budget_defers_new_requests_but_preserves_independent_sources(self):
+        class Response:
+            def __enter__(self): return self
+            def __exit__(self, *args): pass
+            def read(self, size): return b"[]"
+        api = fresh.GitHub("fixture-secret")
+        self.request_failure(api, self.failure(headers={"x-ratelimit-remaining": "0", "x-ratelimit-resource": "core"}))
+        with patch.object(api.opener, "open", return_value=Response()) as opened:
+            with self.assertRaisesRegex(fresh.DiscoveryError, "^rate_limit_deferred$"):
+                api.request("repos/other/project/security-advisories?state=published", public=True)
+            self.assertEqual(opened.call_count, 0)
+            self.assertEqual(api.request("advisories?affects=pester"), [])
+            self.assertEqual(opened.call_args.args[0].get_header("Authorization"), "Bearer fixture-secret")
+            self.assertEqual(api.semgrep_metadata(), [])
+            self.assertIsNone(opened.call_args.args[0].get_header("Authorization"))
+        self.assertEqual(api.requests, 3)
+
+    def test_partial_production_collection_retains_findings_and_defers_exhausted_budget(self):
+        api = FixtureAPI()
+        transport = fresh.GitHub("fixture-secret")
+        original = api.request
+        def request(path, *, public=False, method="GET", data=None):
+            if "/security-advisories" in path:
+                return transport.request(path, public=public, method=method, data=data)
+            return original(path, public=public, method=method, data=data)
+        api.request = request
+        with patch.object(transport.opener, "open", side_effect=self.failure(headers={"x-ratelimit-remaining": "0"})) as opened, redirect_stderr(io.StringIO()):
+            report = fresh.collect(ROOT, api, REVISION)
+        self.assertEqual(opened.call_count, 1)
+        definitions = fresh.validate_report(report, ROOT, REVISION)
+        self.assertFalse(report["complete"])
+        active = [row for row in report["dependencies"] if row["security"]["status"] == "partial"]
+        self.assertGreater(len(active), 1)
+        self.assertTrue(any("publisher_advisories:http_403" in row["errors"] for row in active))
+        self.assertTrue(any("publisher_advisories:rate_limit_deferred" in row["errors"] for row in active))
+        self.assertTrue(any(row["upstream"]["status"] == "verified" for row in active))
+        self.assertIn("INCOMPLETE", fresh.render(report, definitions))
 
 
 class WorkflowTests(unittest.TestCase):

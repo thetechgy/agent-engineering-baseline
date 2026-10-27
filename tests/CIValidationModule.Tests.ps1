@@ -13,7 +13,8 @@ Describe 'CI validation module acquisition' {
             Name = 'Pester'; Version = [version]'6.2.0'; ModuleBase = $script:Installed.InstalledLocation
         }
         $script:Calls = 0
-        Mock Get-PSRepository { [pscustomobject]@{ SourceLocation = 'https://www.powershellgallery.com/api/v2' } }
+        Mock Get-PSRepository { [pscustomobject]@{ Name = 'PSGallery'; SourceLocation = 'https://www.powershellgallery.com/api/v2' } }
+        Mock Register-PSRepository {}
         Mock Set-PSRepository {}
         Mock Get-PackageProvider { [pscustomobject]@{ Name = "NuGet"; Version = "3.0.0.1" } }
         Mock Get-InstalledModule { $script:Installed }
@@ -107,8 +108,68 @@ Describe 'CI validation module acquisition' {
     }
 
     It 'rejects a changed Gallery source before acquisition' {
-        Mock Get-PSRepository { [pscustomobject]@{ SourceLocation = 'https://example.invalid/gallery' } }
+        Mock Get-PSRepository { [pscustomobject]@{ Name = 'PSGallery'; SourceLocation = 'https://example.invalid/gallery' } }
         { Install-CIValidationModule -Name Pester -RequiredVersion 6.2.0 } | Should-Throw -ExceptionMessage '*official HTTPS PSGallery*'
+        Should-NotInvoke Register-PSRepository
+        Should-NotInvoke Set-PSRepository
+        Should-NotInvoke Install-Module
+    }
+
+    It 'registers only the missing default Gallery with other repositories present: <OtherRepository>' -ForEach @(
+        @{ OtherRepository = $false }
+        @{ OtherRepository = $true }
+    ) {
+        $script:Registered = $false
+        $script:OtherRepository = $OtherRepository
+        Mock Get-PSRepository {
+            if ($script:Registered) {
+                [pscustomobject]@{ Name = 'PSGallery'; SourceLocation = 'https://www.powershellgallery.com/api/v2' }
+            }
+            elseif ($Name) {
+                throw [Management.Automation.ErrorRecord]::new([Exception]::new('Missing Gallery'),
+                    'RepositoryNotFound', [Management.Automation.ErrorCategory]::InvalidArgument, 'PSGallery')
+            }
+            elseif ($script:OtherRepository) {
+                [pscustomobject]@{ Name = 'Other'; SourceLocation = 'https://example.invalid/other' }
+            }
+        }
+        Mock Register-PSRepository { $script:Registered = $true }
+        Install-CIValidationModule -Name Pester -RequiredVersion 6.2.0
+        Should-Invoke Register-PSRepository -Times 1 -Exactly -ParameterFilter { $Default -and $ErrorAction -eq 'Stop' }
+        Should-Invoke Get-PSRepository -Times 1 -Exactly -ParameterFilter { $Name -eq 'PSGallery' }
+        Should-Invoke Install-Module -Times 1 -Exactly -ParameterFilter { $Repository -eq 'PSGallery' -and $RequiredVersion -eq '6.2.0' }
+    }
+
+    It 'fails a registration failure before installation' {
+        Mock Get-PSRepository { @() }
+        Mock Register-PSRepository { throw 'Registration failed' }
+        { Install-CIValidationModule -Name Pester -RequiredVersion 6.2.0 } | Should-Throw -ExceptionMessage 'Registration failed'
+        Should-Invoke Register-PSRepository -Times 1 -Exactly
+        Should-NotInvoke Set-PSRepository
+        Should-NotInvoke Install-Module
+    }
+
+    It 'verifies the registered source before trusting or installing it' {
+        Mock Get-PSRepository {
+            if ($Name) { [pscustomobject]@{ Name = 'PSGallery'; SourceLocation = 'https://example.invalid/other' } }
+        }
+        { Install-CIValidationModule -Name Pester -RequiredVersion 6.2.0 } | Should-Throw -ExceptionMessage '*official HTTPS PSGallery*'
+        Should-Invoke Register-PSRepository -Times 1 -Exactly
+        Should-NotInvoke Set-PSRepository
+        Should-NotInvoke Install-Module
+    }
+
+    It 'does not turn an unknown repository read failure into default registration' {
+        Mock Get-PSRepository { throw [UnauthorizedAccessException]::new('Repository store unavailable') }
+        { Install-CIValidationModule -Name Pester -RequiredVersion 6.2.0 } | Should-Throw -ExceptionMessage '*Repository store unavailable*'
+        Should-NotInvoke Register-PSRepository
+        Should-NotInvoke Install-Module
+    }
+
+    It 'honors WhatIf when the default Gallery is absent' {
+        Mock Get-PSRepository { @() }
+        Install-CIValidationModule -Name Pester -RequiredVersion 6.2.0 -WhatIf
+        Should-NotInvoke Register-PSRepository
         Should-NotInvoke Set-PSRepository
         Should-NotInvoke Install-Module
     }
