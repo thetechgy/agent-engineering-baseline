@@ -139,7 +139,12 @@ class ReportTests(unittest.TestCase):
         self.assertEqual(reports.local_skill(self.workspace, "podman", dataset=True), self.skill)
 
     def test_complete_findings_are_advisory(self):
-        reports.catalog_report(self.workspace, self.catalog())
+        with patch.object(reports, 'summary') as summary:
+            reports.catalog_report(self.workspace, self.catalog())
+        text = '\n'.join(summary.call_args.args[0])
+        self.assertIn('Collection status:', text)
+        self.assertIn('Findings are advisory', text)
+        self.assertIn('public projection and upload are reported separately', text)
 
     def test_nested_links_and_special_files_fail_before_evaluation(self):
         fixture = self.skill / "evals/files/input.txt"

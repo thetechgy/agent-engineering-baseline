@@ -45,8 +45,13 @@ outline:3px solid var(--accent);outline-offset:4px}
 .finding p{margin:.4rem 0}.assessment{margin:.75rem 0}
 .finding h4{margin:.25rem 0 .5rem}
 :target{scroll-margin-top:1rem}summary code{font-weight:400}
-section.skill,.overview{background:var(--surface);
+.overview{background:var(--surface);
 border:1px solid var(--line);border-radius:.6rem;padding:1.5rem;margin-bottom:2rem}
+section.skill{border-top:2px solid var(--line);padding:1rem 0;margin:1.5rem 0}
+.status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,16rem),1fr));gap:1rem;margin-top:1rem}
+.status-grid>div{background:var(--bg);padding:1rem;border-radius:.3rem}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+h2{margin-top:2rem}h4{font-size:1.05rem}.overview h2{margin-top:0}
 .assessment{border:1px solid var(--line);border-radius:.3rem;padding:1rem;min-width:0}
 .badge{display:inline-block;border:1px solid currentColor;
 border-radius:.25rem;padding:.15rem .5rem;font-size:.85rem}
@@ -65,7 +70,11 @@ thead th{background:var(--bg)}tbody th{font-weight:600}td p{margin:0}
 label{display:inline-block;margin-right:.5rem}select{font:inherit;background:var(--surface);
 color:var(--text);border:1px solid var(--line);padding:.4rem}
 @media(max-width:40rem){header,main,footer{padding:1rem}section.skill,.overview{padding:1rem}}
-@media print{body{background:white;color:black}details{break-inside:avoid}
+@media print{:root,:root[data-theme=dark],:root:not([data-theme=light]){color-scheme:light;
+--bg:#f4f6f8;--surface:#fff;--text:#192b3a;--muted:#455c6b;--line:#788995;--accent:#005a87;--alert:#963511}
+body{background:white;color:var(--text)}details{break-inside:auto}
+details::details-content{display:block;content-visibility:visible}pre{white-space:pre-wrap}
+table.wide{min-width:0}th,td{padding:.3rem}
 header,main,footer{max-width:none}.theme,.skip{display:none}.table-scroll{overflow:visible}}
 """.strip()
 
@@ -88,29 +97,8 @@ document.addEventListener('click', event => {
 });
 """.strip()
 
-NEXT_STEPS = {
-    'complete_scans_and_reproject': 'Inspect available evidence and identify the scan limitation. Regenerate evidence after resolving or better characterizing it; rerunning alone may not resolve a tooling limitation.',
-    'inspect_original_scanner_evidence': 'Inspect the original scanner finding and its applicability.',
-    'inspect_original_case_evidence': 'Inspect both arms of the case, including attempts and grader evidence.',
-    'inspect_gate_evidence': 'Inspect the mandatory gate evidence before treating the result as acceptable.',
-    'complete_execution_and_reproject': 'Complete missing execution evidence, then regenerate public evidence.',
-    'retain_or_reacquire_exact_evidence': 'Retain or reacquire the exact identified evidence; keep availability unchanged until verified.',
-    'supply_at_most_16_skill_pairs': 'Supply at most 16 intended skill pairs in a separate analysis invocation.',
-    'verify_benchmark_identities': 'Verify source, dataset, policy and execution identities before comparing runs.',
-    'inspect_original_run_evidence': 'Inspect original run evidence under the recorded benchmark conditions.',
-    'supply_two_intended_runs': 'Supply exactly two intended measured runs per skill to the existing analyzer.',
-    'supply_model_backed_public_report': 'Supply a validated model-backed public report when an evaluation is authorized.',
-}
-FINDING_LABELS = {
-    'custom_unavailable': 'Unavailable deterministic evaluation',
-    'custom_measured_failure': 'Reported deterministic measurement warrants investigation',
-    'case_regression': 'Lower with-skill case score', 'failed_gate': 'Failed mandatory gate',
-    'failed_static_checks': 'Native required check not passed', 'incomplete_scans': 'Incomplete static scans',
-    'incomplete_execution': 'Incomplete execution evidence', 'unavailable_support': 'Original support unavailable',
-    'comparison_limit': 'Comparison invocation limit', 'comparison_limitation': 'Comparison unavailable or limited',
-    'configured_unmeasured': 'Configured suite without measurement',
-    'run_metric_regression': 'Lower metric in right-hand run', 'run_case_regression': 'Lower case score in right-hand run',
-}
+NEXT_STEPS = analysis.NEXT_STEPS
+FINDING_LABELS = analysis.FINDING_LABELS
 COMPARISON_STATUS = {
     'insufficient_run_evidence': 'Fewer than two measured runs supplied; cross-run comparison is unavailable.',
     'comparison_limit_exceeded': 'More than two measured runs supplied; the analyzer does not select or order a pair.',
@@ -212,8 +200,8 @@ def table(caption, headers, rows):
     cells = []
     for row in rows:
         cells.append('<tr><th scope="row">' + row[0] + '</th>' + ''.join(
-            '<td>' + cell + '</td>' for cell in row[1:]) + '</tr>')
-    width_class = ' class="wide"' if len(headers) > 4 else ''
+            ('<td class="num">' if re.fullmatch(r'-?[0-9]+(?:[.][0-9]+)?', cell) else '<td>') + cell + '</td>' for cell in row[1:]) + '</tr>')
+    width_class = ' class="wide"' if len(headers) > 3 else ''
     return '<div class="table-scroll" role="region" aria-label="' + safe(caption) + '" tabindex="0"><table' + width_class + '><caption>' + safe(
         caption) + '</caption><thead><tr>' + ''.join('<th scope="col">' + safe(h) + '</th>' for h in headers
         ) + '</tr></thead><tbody>' + ''.join(cells) + '</tbody></table></div>'
@@ -238,9 +226,8 @@ def support_links(finding, records):
 def priorities(findings, records):
     if not findings:
         return '<p>No deterministic investigation findings in the supplied evidence. This does not establish production readiness.</p>'
-    order = {'mandatory': 0, 'investigate': 1, 'context': 2}
     items = []
-    for item in sorted(findings, key=lambda f: (order[f['importance']], f['kind'], f['id'])):
+    for item in analysis.ordered_findings(findings):
         label = {'mandatory': 'Mandatory outcome to inspect', 'investigate': 'Investigation', 'context': 'Evidence gap'}[item['importance']]
         observed = item['observed']
         facts = []
@@ -257,20 +244,13 @@ def priorities(findings, records):
         if 'unavailable_references' in observed:
             facts.append('Unavailable original references: ' + text(observed['unavailable_references']))
         items.append(f'<li id="{anchor("finding", item["id"])}"><strong>' + safe(FINDING_LABELS[item['kind']]) + '</strong> <span class="badge">' + label +
-            '</span><p>' + '; '.join(facts) + '</p><p>' + safe(NEXT_STEPS[item['next_step']]) + '</p><details><summary>Finding evidence and uncertainty</summary>' +
+            '</span><p>' + safe(item['skill'] or 'Report scope') + ' · ' + '; '.join(facts) + '</p><p>Evidence limit: ' + safe(analysis.finding_qualifier(item)) + '.</p><p>Next: ' + safe(NEXT_STEPS[item['next_step']]) + '</p><details><summary>Finding evidence and uncertainty</summary>' +
             '<p>Scope: ' + (', '.join(code(v) for v in item['case_ids']) or 'Run or configuration scope') + '</p>' +
             disclosure('Exact deterministic finding and next-step code', item) + support_links(item, records) + '</details></li>')
     return '<ol class="priorities">' + ''.join(items) + '</ol>'
 
 
-def coverage_label(skill):
-    if any(run['measured'] for run in skill['behavioral_results']):
-        return 'Measured results'
-    if any(config['suite'] is not None for config in skill['configurations']) or skill['behavioral_results']:
-        return 'Configured; results not supplied'
-    if skill['configurations']:
-        return 'No configured suite'
-    return 'Configuration not supplied'
+coverage_label = analysis.coverage_label
 
 
 def security_investigations(skills, records):
@@ -363,32 +343,20 @@ def static_directory(skill):
     rows = []
     for run in skill['static_results']:
         native = next((s for s in run['scans'] if s['scanner'] == 'catalog-total'), None)
-        rows.append(link('record', (run['record_id'],), skill['skill'] + ' · static record ' + run['record_id']) +
+        rows.append(link('record', (run['record_id'],), skill['skill'] + ' · static results') +
             ' · native ' + text(native['status'] if native else None) + ' · C/H/M/L ' +
             (' / '.join(text(native['severity_counts'][k]) for k in analysis.SEVERITIES) if native else 'Unknown'))
     return '<br>'.join(rows)
 
 
-def executive_summary(result, records, attached):
+def executive_summary(result, records):
     skills = result['skills']; findings = result['findings']
     measured = [s for s in skills if any(r['measured'] for r in s['behavioral_results'])]
-    parts = ['<p class="lead">' + count(len(skills), 'skill') + ' represented; <strong>' + text(len(measured)) +
+    parts = ['<p class="lead">Supplied evidence only. ' + count(len(skills), 'skill') + ' represented; <strong>' + text(len(measured)) +
         ' with measured results</strong>. ' +
         text(sum(coverage_label(s) == 'Configured; results not supplied' for s in skills)) +
         ' configured without supplied results; ' + text(sum(coverage_label(s) == 'No configured suite' for s in skills)) +
         ' without a configured behavioral suite.</p>']
-    for skill in measured:
-        for run in skill['behavioral_results']:
-            if run['measured']:
-                lift = next((m['value'] for m in run['native_metrics'] if m['name'] == 'Skill Lift'), None)
-                regressions = sum(f['kind'] == 'case_regression' and run['record_id'] in f['record_ids'] for f in findings)
-                parts.append('<p><strong>' + safe(skill['skill']) + '</strong>: ' +
-                    ('Skill Lift ' + text(lift) + ' (with minus without on the evaluator scale); ' if lift is not None else '') +
-                    ('Reported custom measurements; paired population ' +
-                     ('complete' if run['custom']['complete_paired_population'] else 'incomplete')
-                     if run['policy']['fields']['grading'] == 'custom_only' and 'custom' in run else
-                     count(regressions, 'lower with-skill case score')) + '. ' +
-                    link('record', (run['record_id'],), skill['skill'] + ' · measured results and coverage') + '.</p>')
     runs = [r for s in skills for r in s['behavioral_results']]
     failed = sum(len(r['gates']['failed']) for r in runs)
     passed = sum(r['gates']['passed_observations'] for r in runs)
@@ -402,41 +370,56 @@ def executive_summary(result, records, attached):
     incomplete = unknown or not (failed + passed + unknown) or missing_coverage
     parts.append('<div class="safety"><p><strong>' +
         ('Safety evidence is incomplete' if incomplete else 'Recorded mandatory gate outcomes') + '</strong></p><p>' +
-        'Among recorded observations: ' +
+        'Mandatory gates · Among recorded observations: ' +
         text(failed) + ' failed · ' + text(passed) + ' passed · ' + text(unknown) +
         ' unknown</p><p>' + ('No recorded gate outcomes supplied. ' if not (failed + passed + unknown) else '') +
         ('Missing execution coverage is excluded from these counts. ' if missing_coverage else '') +
         'Unknown or unmeasured gates are not passing outcomes. ' +
         ('Inspect recorded failures before accepting the result.' if failed else 'Zero recorded failures does not establish safety.') + '</p></div>')
-    parts.append('<nav aria-label="Report sections"><ul><li><a href="#important-findings">Important findings</a></li>'
-        '<li><a href="#static-quality">Static quality and coverage</a></li>'
-        '<li><a href="#analyst-actions">Analyst conclusions and actions</a></li>'
-        '<li><a href="#coverage">Coverage directory</a></li><li><a href="#provenance">Provenance and limitations</a></li></ul></nav>')
+    static_runs = [run for skill in skills for run in skill['static_results']]
+    static_status = analysis.static_count_label(static_runs)
+    parts.append('<div class="status-grid"><div><strong>Static findings · advisory</strong><p>' + safe(static_status) +
+        '</p></div><div><strong>Investigation records</strong><p>' + count(len(findings), 'record') +
+        '; ' + text(sum(f['importance'] == 'mandatory' for f in findings)) + ' mandatory outcomes to inspect</p></div></div>')
+    if not static_runs or any(not any(scan['scanner'] == 'SECURITY' and scan['status'] in ('passed', 'failed')
+                                      for scan in run['scans']) for run in static_runs):
+        parts.append('<p class="notice">Security-analysis coverage is incomplete or unavailable.</p>')
+    parts.append('<nav aria-label="Report sections"><ul><li><a href="#important-findings">Review first</a></li>'
+        '<li><a href="#coverage">Skills and coverage</a></li><li><a href="#provenance">Source details</a></li></ul></nav>')
+    return ''.join(parts)
+
+
+def review_first(result, records, attached):
+    skills = result['skills']; findings = analysis.ordered_findings(result['findings'])
+    parts = ['<section aria-labelledby="important-findings"><h2 id="important-findings">Review first</h2>',
+        '<p>Native required-check failures describe evaluator policy; they are not CI blockers. '
+        'Grader judgments do not verify execution. A grader failure is not automatically an instruction defect.</p>',
+        '<h3>Deterministic investigations</h3><p>' + count(len(findings), 'investigation record') +
+        '; showing ' + text(min(len(findings), analysis.FINDING_PREVIEW_LIMIT)) + '. ' +
+        '<a href="#all-findings">Complete list and evidence</a>.</p><ol class="priorities">']
+    for item in findings[:analysis.FINDING_PREVIEW_LIMIT]:
+        parts.append('<li><strong>' + safe(FINDING_LABELS[item['kind']]) + '</strong><p>' +
+            safe(analysis.finding_observation(item)) + '.</p><p>Evidence limit: ' +
+            safe(analysis.finding_qualifier(item)) + '.</p><p>Next: ' + safe(NEXT_STEPS[item['next_step']]) + ' ' +
+            link('finding', (item['id'],), context(item['skill'] or 'Report scope', item['case_ids']) + ' · finding evidence') + '.</p></li>')
+    parts.append('</ol><p>' + text(max(0, len(findings) - analysis.FINDING_PREVIEW_LIMIT)) +
+        ' additional investigation records in the complete list.</p>')
+    if not findings:
+        parts.append('<p>No deterministic investigation findings in the supplied evidence. This does not establish readiness.</p>')
     parts.append(static_quality(skills))
-    parts.append('<h3 id="important-findings">Important findings · deterministic evidence</h3>'
-        '<p>Grader judgments describe recorded outputs; they do not verify execution. A grader failure is not automatically '
-        'an instruction defect. '
-        'Investigate these signals before proposing changes.</p>')
-    mandatory = []; important = security_investigations(skills, records)
-    for finding in findings:
-        if finding['importance'] == 'context':
-            continue
-        observed = finding['observed']
-        detail = (' · ' + ('case ' if len(finding['case_ids']) == 1 else 'cases ') +
-                  ', '.join(safe(v) for v in finding['case_ids'])) if finding['case_ids'] else ''
-        if 'with_minus_without' in observed:
-            detail += ' · with minus without ' + quantity(observed['with_minus_without'])
-        (mandatory if finding['importance'] == 'mandatory' else important).append('<li><strong>' + text(finding['skill'] or 'Report scope') + ' · ' +
-            safe(FINDING_LABELS[finding['kind']]) + '</strong>' + detail + '. ' +
-            link('finding', (finding['id'],), context(finding['skill'] or 'Report scope', finding['case_ids']) +
-                 ' · finding and next step') + '.</li>')
-    parts.append('<ul class="priorities">' + ''.join(mandatory + important) + '</ul>' if mandatory or important else
-        '<p>No deterministic investigation findings in the supplied evidence; this does not establish readiness.</p>')
-    parts.append('<details><summary>What remains unknown</summary><p>Missing measurements, unknown gates, '
+    components = security_investigations(skills, records)
+    if components:
+        parts.append('<details><summary>Security-component observations · descriptive comparisons</summary><ul>' +
+                     ''.join(components) + '</ul></details>')
+    parts.append('<details id="all-findings"><summary>All deterministic investigations · ' +
+        count(len(findings), 'record') + '</summary>' + priorities(findings, records) + '</details>')
+    parts.append('<details><summary>Evidence gaps and comparison limits</summary><p>Missing measurements, unknown gates, '
         'omitted runs, original support availability, actual runtime behavior, production effectiveness and portability '
         'limit interpretation. Differences are descriptive; causality, statistical significance, cross-suite ranking '
         'and time trends are not established. Static scans and configuration do not measure behavioral benefit.</p></details>'
-        '<h3 id="analyst-actions">Analyst conclusions and recommended actions · model interpretation</h3>'
+    )
+    if attached:
+        parts.append('<h3 id="analyst-actions">Analyst conclusions and recommended actions · model interpretation</h3>'
         '<p>Analyst qualification: <strong>' + presentation_label('not_quality_qualified', STATUS_LABELS) + '</strong>. Automated publication is ineligible. '
         'Authenticated human approval is not established. Supplied assessments are separate opinions about analyst usefulness, '
         'not skill performance or permission to act.</p>')
@@ -455,7 +438,7 @@ def executive_summary(result, records, attached):
         parts.append('</div>')
     if not attached:
         parts.append('<p>No analyst reports or independent assessments supplied. Use the deterministic next steps.</p>')
-    parts.append('<h3 id="coverage">Coverage directory</h3>')
+    parts.append('</section><section aria-labelledby="coverage"><h2 id="coverage">Skills and coverage</h2>')
     parts.append('<p>Evaluation groups (arms) compare recorded outputs with and without skill. Coverage is not a quality rating.</p>')
     parts.append(table('Coverage in supplied evidence', ('Skill', 'Behavioral evidence', 'Configured coverage', 'Static evidence'),
         [[link('skill', (s['skill'],), s['skill']), safe(coverage_label(s)),
@@ -464,6 +447,7 @@ def executive_summary(result, records, attached):
           static_directory(s)] for s in skills]))
     if not skills:
         parts.append('<p>The supplied inventory is empty. No skills or measurements are inferred.</p>')
+    parts.append('</section>')
     return ''.join(parts)
 
 
@@ -502,33 +486,39 @@ def record_support(rid, record):
 def custom_measurements(run, record):
     result = run['custom']; rid = run['record_id']
     parts = ['<h4>Skill-specific deterministic measurements</h4>',
-        '<p class="notice"><strong>Structurally validated reported evidence.</strong> Native consistency was reported at admission; '
+        '<p>Reported custom measurements; paired population ' + ('complete' if result['complete_paired_population'] else 'incomplete') + '.</p>',
+        '<details><summary>Reported evidence and authentication limits</summary><p><strong>Structurally validated reported evidence.</strong> Native consistency was reported at admission; '
         'this consumer does not recheck native directories. Producer identity and execution are not independently authenticated. '
-        'Hashes identify content; they do not prove who produced it or that execution occurred.</p>',
+        'Hashes identify content; they do not prove who produced it or that execution occurred.</p></details>',
         '<p>Purpose: ' + text(result['purpose']) + '; recorded agent: ' + code(result['agent']) + '; version ' + code(record['custom']['agent_version']) + '. ' +
         ('Oracle fixture qualification is not model-backed skill-effectiveness evidence.' if result['purpose'] == 'oracle_qualification' else
          'Within-run differences describe supplied measurements; they do not establish causality.') + '</p>']
-    parts.append(table('Tasks and applicability', ('Case', 'Task', 'Source case', 'Applicable native metrics'),
+    parts.append('<details><summary>Task definitions and applicability</summary>' + table('Tasks and applicability', ('Case', 'Task', 'Source case', 'Applicable native metrics'),
         [[code(case['case_id']), text(case['title']), code(case['source_case_id']), ', '.join(code(k) for k in case['metrics'])]
-         for case in record['custom']['cases']]))
+         for case in record['custom']['cases']]) + '</details>')
     if any(definition['role'] == 'mandatory_with_skill_gate' for definition in record['custom']['definitions']):
         parts.append('<p>Pass/fail below summarizes the registered gate conjunction. Task correctness is separate. '
                      'Baseline gate zeros are comparison evidence, not mandatory with-skill failures.</p>')
     kinds = (*evidence.CUSTOM_OUTCOMES, 'missing')
-    parts.append(table('Reported custom-grader classifications · failures and unavailability stay distinct', ('Arm', *kinds),
-        [[safe(ARM[arm]), *[text(result['outcomes'][arm][kind]) for kind in kinds]] for arm in ARM]))
+    parts.append(table('Reported custom-grader classifications · failures and unavailability stay distinct', ('Outcome', 'With skill', 'Without skill'),
+        [[safe(kind), *[text(result['outcomes'][arm][kind]) for arm in ARM]] for kind in kinds]))
     for metric in result['metrics']:
         definition = metric['definition']
-        parts += ['<h4>' + text(definition['title']) + '</h4><p>' + text(definition['definition']) + '</p>',
+        parts += ['<h4>' + text(definition['title']) + '</h4>',
+            table('Measured values · ' + definition['id'], ('Metric', 'With skill mean', 'Without skill mean', 'With minus without'),
+                [[text(definition['title']), quantity(metric['arm_means']['with_skill']), quantity(metric['arm_means']['without_skill']),
+                  quantity(metric['with_minus_without'])]]),
+            '<p>' + text(metric['unavailable_reason'] or metric['interpretation']) + '. '
+            'Activation/routing and gate outcomes are not interchangeable with task correctness.</p>',
+            '<details><summary>Metric definition, applicability and scoring basis</summary><p>' + text(definition['definition']) + '</p>',
             '<p>Metric ' + code(definition['id']) + '; competency ' + code(definition['competency']) + '; unit ' + code(definition['unit']) +
             '. Aggregation: equal weight per applicable trial, preserving each trial\'s numerator and denominator.</p>',
             table('Applicability and complete-population comparison · ' + definition['id'],
-                ('Arm', 'Expected applicable', 'Measured', 'Unavailable / missing', 'Recorded nonapplicable', 'Complete-population mean'),
-                [[safe(ARM[arm]), *[text(metric['coverage'][arm][key]) for key in ('expected_applicable', 'measured', 'unavailable_or_missing', 'recorded_nonapplicable')],
-                  quantity(metric['arm_means'][arm])] for arm in ARM]),
-            '<p>With minus without: ' + quantity(metric['with_minus_without']) + '. ' +
-            text(metric['unavailable_reason'] or metric['interpretation']) + '. '
-            'Activation/routing and gate outcomes are not interchangeable with task correctness.</p>']
+                ('Coverage', 'With skill', 'Without skill'),
+                [[safe(label), *[text(metric['coverage'][arm][key]) for arm in ARM]] for key, label in
+                 (('expected_applicable', 'Expected applicable'), ('measured', 'Measured'),
+                  ('unavailable_or_missing', 'Unavailable / missing'), ('recorded_nonapplicable', 'Recorded nonapplicable'))]),
+            '</details>']
     rows = []
     for obs in record['observations']:
         for measurement in obs['custom']['measurements']:
@@ -554,10 +544,10 @@ def behavioral(run, records):
     rid = run['record_id']; record = records[rid]
     parts = [f'<article class="run" id="{anchor("record", rid)}"><h3>Behavioral run: ' + text(run['run_id']) + '</h3>',
         '<p>Evidence: <strong>' + text(run['availability']['status']) + '</strong>. Measurement: <strong>' +
-        ('Recorded' if run['measured'] else 'Unmeasured') + '</strong>.</p>' + disclosure('Exact record identity', rid),
-        '<p>Evaluated source: ' + text(run['source']['owner']) + ' · ' + code(run['source']['repository']) +
-        ' · revision ' + code(run['source']['revision']) + '.</p>',
-        '<p>Limitations: ' + limitations(run['availability']) + '</p>']
+        ('Recorded' if run['measured'] else 'Unmeasured') + '</strong>.</p>',
+        '<p>Limitations: ' + limitations(run['availability']) + '</p>',
+        '<details><summary>Run identity and evaluated source</summary>' + disclosure('Exact record identity', rid) + '<p>Evaluated source: ' + text(run['source']['owner']) + ' · ' + code(run['source']['repository']) +
+        ' · revision ' + code(run['source']['revision']) + '.</p></details>']
     custom_only = record.get('custom', {}).get('profile_id') is not None and record['policy']['fields']['grading'] == 'custom_only'
     if 'custom' in run: parts.append(custom_measurements(run, record))
     if run['native_metrics']:
@@ -608,10 +598,10 @@ def static_result(run, records):
         '<p>Limitations: ' + limitations(run['availability']) + '</p>']
     parts.append('<p>Required by native evaluator is its risk policy, not the CI finding policy or a scanner process outcome. '
                  'Incomplete tool markers have unknown counts and are not additional findings.</p>')
-    parts.append(table('Scanner outcomes — counts can include findings without public detail',
+    parts.append('<details><summary>All scanner outcomes and native counts</summary>' + table('Scanner outcomes — counts can include findings without public detail',
         ('Validator / tool marker', 'Native state', 'Required by native evaluator', 'Native passed', 'Critical / high / medium / low'),
         [[code(s['scanner']), text(s['status']), text(s.get('blocking', True)), text(s['passed']),
-          ' / '.join(text(s['severity_counts'][k]) for k in ('critical', 'high', 'medium', 'low'))] for s in run['scans']]))
+          ' / '.join(text(s['severity_counts'][k]) for k in ('critical', 'high', 'medium', 'low'))] for s in run['scans']]) + '</details>')
     parts.append('<details><summary>Structured static findings</summary>' + table('Public static finding details',
         ('Scanner / check', 'Severity', 'Member / line', 'Original reference'),
         [[f'<span id="{anchor("static-finding", rid, f["reference"])}">' + code(f['scanner']) + ' / ' + code(f['check']) + '</span>',
@@ -751,9 +741,11 @@ def render_report(result, captured, *, reviews=None):
         '<div class="theme" id="theme-control" hidden><label for="theme">Appearance</label><select id="theme">'
         '<option value="system">System default</option><option value="light">Light</option><option value="dark">Dark</option>'
         '</select></div></header><main id="main" tabindex="-1"><section class="overview" aria-labelledby="overview">'
-        '<h2 id="overview">Executive overview</h2>')
-    skills = result['skills']; findings = result['findings']
-    add(executive_summary(result, records, attached))
+        '<h2 id="overview">Evidence overview</h2>')
+    skills = result['skills']
+    add(executive_summary(result, records))
+    add('</section>')
+    add(review_first(result, records, attached))
     add(
         '<details><summary>How to read the measures</summary><p>Evaluator-reported (native) metrics use the evaluator\'s original score units. '
         'Skill Lift is its with-minus-without difference. Grading criteria (rubric) and mandatory checks (gates) record separate outcomes. '
@@ -762,37 +754,28 @@ def render_report(result, captured, *, reviews=None):
         'rounded case scores. Case deltas use descriptive arm means only where all planned attempts are scored. '
         'A positive delta is higher, a negative delta is lower; neither explains why. Mandatory gates are separate from rubric passes. '
         'Unknown counts, scores and gates stay unknown.</p></details>')
-    add('</section>')
     for skill in skills:
         name = skill['skill']
-        add(f'<section class="skill" id="{anchor("skill", name)}"><h2>' + safe(name) + '</h2>')
+        add(f'<section class="skill" id="{anchor("skill", name)}"><h2>' + safe(name) + '</h2>' +
+            '<p>' + safe(coverage_label(skill)) + '</p><details class="skill-results"><summary>Results and supporting evidence</summary>')
         if not any(r['measured'] for r in skill['behavioral_results']):
             add('<p class="notice"><strong>Unmeasured.</strong> No supplied model-backed measurement. Configuration and offline fixture replay do not establish skill benefit or harm.</p>')
         for config in skill['configurations']:
             suite = config['suite']
             add('<p>Inventory snapshot: ' + (count(suite['case_count'], 'configured case') + ' per arm' if suite else 'No behavioral suite configured') +
                 '. Source owner: ' + text(config['source']['owner']) + '.</p>' + disclosure('Configuration identity and source snapshot', config))
-        local = [f for f in findings if f['skill'] == name]
-        add('<h3>Investigation priorities · deterministic findings</h3>' +
-            priorities([f for f in local if f['importance'] != 'context'], records))
-        context = [f for f in local if f['importance'] == 'context']
-        if context:
-            add('<details><summary>Evidence gaps and comparison limits</summary>' + priorities(context, records) + '</details>')
         skill_reviews = [row for row in attached.values() if row['skill'] == name]
         if skill_reviews:
             for row in skill_reviews:
                 add(interpretation(row))
-        else:
-            add('<p>No analyst report supplied for this skill. Deterministic findings remain available; '
-                'missing interpretation does not establish approval or absence of defects.</p>')
         for run in skill['behavioral_results']:
             add(behavioral(run, records))
         for run in skill['static_results']:
             add(static_result(run, records))
         if not skill['static_results']:
             add('<p>Static scan evidence not supplied for this skill; no clean-scan claim is made.</p>')
-        add('<details><summary>Cross-run comparison status and evidence</summary>' + comparisons(skill) + '</details></section>')
-    add('<section id="provenance"><h2>Report provenance and limitations</h2><p>Presentation method ' + code(METHOD) +
+        add('<details><summary>Cross-run comparison status and evidence</summary>' + comparisons(skill) + '</details></details></section>')
+    add('<section id="provenance"><h2>Source details</h2><details><summary>Report provenance and validation boundaries</summary><p>Presentation method ' + code(METHOD) +
         '; analysis method ' + code(result['method_version']) +
         ('; public schemas 1/2 and analysis schema 2. Analysis semantic digest ' if result['schema_version'] == 2 else
          '; public and analysis schema version 1. Analysis semantic digest ') +
@@ -800,25 +783,22 @@ def render_report(result, captured, *, reviews=None):
         'Canonical record identities preserve semantic content; raw-byte digests preserve the exact supplied files. '
         'These bindings do not attest remote execution. No local input paths, generation timestamp, prompts or private trajectories are embedded. '
         'Link identities are shortened for readability; exact identities remain in the evidence disclosures. '
-        'Inventory snapshots and evaluated sources retain separate identities; current configuration does not rewrite historical runs.</p>')
+        'Inventory snapshots and evaluated sources retain separate identities; current configuration does not rewrite historical runs.</p></details>')
     for rid, record in sorted(records.items()):
         if record['kind'] == 'inventory':
             add(f'<details id="{anchor("record", rid)}"><summary>Inventory record ' + safe(short_identity(rid)) + '</summary>' +
                 disclosure('Validated inventory', record) + '</details>')
     add(disclosure('Input manifests, raw digests and record identities', result['input_provenance']) +
         disclosure('Analyzer comparison scope', result['comparison_scope']))
-    global_findings = [f for f in findings if f['skill'] is None]
-    if global_findings:
-        add('<h3>Invocation-level investigation priorities</h3>' + priorities(global_findings, records))
     add(disclosure('Exact qualification status', {'quality_qualification': 'not_quality_qualified'}))
-    add('<h3>Model-generated recommendations and assessment boundaries</h3><p>' + count(len(attached),
+    add('<details><summary>Model-generated recommendations and assessment boundaries</summary><p>' + count(len(attached),
         'independently validated analyst report') + ' attached. All deterministic investigation priorities above remain fixed descriptions '
         'of existing findings and next-step codes. Analyst qualification: ' + presentation_label('not_quality_qualified', STATUS_LABELS) + '. '
         'Automated publication is ineligible. Supplied AI or human assessments are separately attributed opinions; structural validation, '
         'rubric arithmetic and self-declared approval do not establish authenticated human review or authorize action.</p>'
         '<p>Keep this file private. It requires no server, external assets, analytics or network requests. '
         'Appearance follows the system unless changed for this open document. All evidence is readable without JavaScript; '
-        'expand disclosures for detailed support.</p></section></main><footer>Private evidence report · supplied inputs only</footer>'
+        'expand disclosures for detailed support.</p></details></section></main><footer>Private evidence report · supplied inputs only</footer>'
         '<script>' + JS + '</script></body></html>')
     return ''.join(parts).encode('utf-8')
 

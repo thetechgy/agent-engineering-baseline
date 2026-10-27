@@ -269,9 +269,9 @@ def catalog_report(workspace, root):
     if errors:
         lines += ["**Infrastructure / contract checks failed. Findings remain unresolved.**", ""] + [f"- {error}" for error in errors]
     else:
-        lines += [f"Native catalog exit/report checks and {datasets} strict dataset " + ('contract' if datasets == 1 else 'contracts') +
+        lines += [f"Collection status: native catalog exit/report checks and {datasets} strict dataset " + ('contract' if datasets == 1 else 'contracts') +
                   f" passed for {len(names)} local skills.",
-                  "Findings are advisory. This does not establish skill security or effectiveness; public reporting is validated separately."]
+                  "Findings are advisory; public projection and upload are reported separately."]
     lines += ["", "The skill-quality artifact retains native JSON, Markdown, HTML and dataset evidence. A richer summary cannot override infrastructure failures."]
     summary(lines)
     require(not errors, "Skill evaluation infrastructure or dataset contract failed")
@@ -522,7 +522,7 @@ def diagnostic_benchmark_report(workspace, root, name, mode):
                'diagnostic_only': True, 'skill': name, 'mode': mode})
     summary([f'## {name}: native diagnostic comparison', '',
              'Native execution is complete. No standard judge metrics were scored. '
-             'Custom outcomes remain diagnostic; public normalization and history are unavailable.'])
+             'Custom outcomes remain diagnostic. Public reporting is supported but projection and upload success are reported separately; history remains ineligible.'])
 
 
 def validate_metrics(data, workspace, name, revision, *, mode="standard"):
@@ -785,8 +785,8 @@ def public_quality(workspace, root, destination):
              "Infrastructure status is reported separately; this summary does not override a failed job or contract check.",
              f"{len(names)} local skills assessed. Static assessment excludes imported/deployed copies and evaluation overlays.",
              "Behavioral evaluations were not executed by this job; configured suites are not measured results.", "",
-             *analysis.render_static_summary(runs), "",
-             "| Skill | Native status | Failed / incomplete / skipped checks | Critical / High / Medium / Low | Behavioral suite |",
+             *analysis.render_static_summary(runs, heading="Review first"), "",
+             "### Skills and coverage", "", "| Skill | Native evaluator status | Failed / incomplete / skipped checks | Critical / High / Medium / Low | Behavioral suite |",
              "| --- | --- | --- | --- | --- |"]
     configured = {row['source']['skill_id']: row['suite'] is not None for row in inv['skills']}
     for run in runs:

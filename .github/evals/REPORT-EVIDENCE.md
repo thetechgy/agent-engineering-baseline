@@ -197,7 +197,8 @@ Affected skill previews show six names and an explicit remaining count. Missing
 rule identities stay separate by record/reference. These are rule roll-ups, not
 finding deduplication: every individual finding stays in existing evidence.
 Counts mean retained finding records, not raw scanner occurrence spans. References
-are the existing full record/reference identities; look them up in the selected
+are the existing full record/reference identities, available in labeled Markdown
+disclosures after the observation and inspection step; look them up in the selected
 public report's `references` array for the exact native member, JSON locator and
 digest. The run-artifact link uses validated repository/run identifiers; native
 members remain inert text, not invented artifact deep links.
@@ -1007,6 +1008,14 @@ Contract failures return exit status 1 with a fixed message that excludes input
 content and paths. Unsupported descriptor platforms reject; Linux publication
 is tested. This does not establish Windows output support.
 
+The Markdown summary previews at most 100 individual static detail rows across
+all records, in the analysis's existing skill, record and finding order. Each
+record reports shown and omitted counts and links to the complete
+`skills[].static_results[].detailed_findings` list in the sibling `analysis.json`,
+identified by `record_id`. The separate critical/high grouped preview is unchanged.
+This presentation cap does not remove evidence from JSON or the HTML report,
+change finding identities or counts, or relax either output-size limit.
+
 ### Analysis schema and identity
 
 The analysis schema is independently versioned (`schema_version: 1`), with method
@@ -1242,9 +1251,11 @@ browser's Open File command. No web server is needed. The appearance menu offers
 lasts for the open document. With JavaScript disabled the report remains readable
 and follows the system theme. Native disclosures reveal detailed support.
 
-The executive overview and skill directory show every skill represented in the
-supplied inventories or public reports. The opening summarizes measured native
-results and presents failed, passed and unknown mandatory gate counts together,
+The compact evidence overview precedes **Review first**, **Skills and coverage**,
+and **Source details**. The directory shows every represented skill; detailed
+per-skill results are collapsed by default. The opening summarizes measurement
+coverage, advisory static findings and investigation records separately, and
+presents failed, passed and unknown mandatory gate counts together,
 explicitly limited to recorded observations. Missing attempts, partial or unknown
 execution coverage, unmeasured runs and configured skills without supplied
 results keep the safety banner incomplete; missing outcomes are excluded from
@@ -1269,9 +1280,10 @@ Static scanner states, blocking flags, severity counts and structured findings
 are separate from behavioral performance. Counts can exceed the number of public
 finding details; omitted scanner prose is not reconstructed.
 
-The overview now exposes static-quality totals, native outcomes, security coverage
-limitations and grouped critical/high flags with direct links to individual
-structured findings and exact original references. The coverage directory links
+The overview exposes static-quality totals and material security coverage limits.
+Review first retains native outcomes and the eight-group critical/high preview,
+with explicit omission counts and links to individual structured findings and
+exact original references. The coverage directory links
 each static record with its native outcome and severity counts. Multiple static
 records for the same skill remain separate: headline finding totals are withheld
 rather than selecting a current snapshot or counting repeated findings as new.
@@ -1288,15 +1300,27 @@ this public contract. Investigation guidance asks readers to characterize the
 limitation before regeneration; a rerun alone may not resolve a tooling limitation.
 
 Investigation priorities retain the analyzer's deterministic findings,
-importance and next-step codes. Mandatory outcomes precede investigations;
-routine context findings remain under “Evidence gaps and comparison limits”.
-The overview also exposes lower recorded security-component scores only when
+importance and next-step codes. The first five records are previewed, ordered by
+importance (mandatory, investigate, context), then kind and stable identity. The
+total and remaining counts link to the complete disclosed list. Each preview
+shows affected skills/cases, its existing uncertainty and the next inspection
+step. Scanner finding counts and investigation record counts remain separate.
+Review first also discloses lower recorded security-component scores only when
 both arms have a complete single planned attempt and a supplied security score.
 It displays the original component values with observation links, without new
 means, deltas, finding contracts or risk scores. Missing or multi-attempt
 comparisons stay in the observation evidence. Security judgments warrant
 inspection separately from command-wrapper or harness concerns; neither is
 verified execution or proof of an instruction defect.
+Custom skill summaries identify oracle qualification versus model-backed evidence.
+Outcome classifications use rows with with-skill/without-skill columns; measured
+failures, unscoreable outcomes, missing trials and nonapplicability stay distinct.
+Metric values and availability reasons precede disclosed definitions, applicability,
+scoring bases and usage. Oracle qualification is not model-effectiveness evidence;
+routing and gate measurements do not substitute for task correctness. Missing
+analyst attachments receive one shared absence statement. Supplied analyst
+interpretations retain their separate attribution and qualification limits.
+
 Finding disclosures retain exact quantities, uncertainty and support identities,
 with internal links to records, observations and original references. Long link
 identities use display prefixes; full identities remain in disclosures. Links
@@ -1318,7 +1342,7 @@ rankings or recommendations to edit a skill. A grader failure is not automatical
 an instruction defect. All conclusions are limited to supplied evidence;
 unrepresented skills or omitted runs cannot be discovered from these bundles.
 
-When validated analyst attachments are supplied, the overview exposes their
+When validated analyst attachments are supplied, Review first exposes their
 proposed action scopes and separately attributed assessment verdicts and scores.
 An unscored assessment stays unscored. Full analyst conclusions and actions
 precede detailed run evidence; rationale, citations and provenance remain in
@@ -1331,7 +1355,7 @@ Presentation labels translate only recognized codes: for example,
 and `not_quality_qualified` becomes “Not quality qualified”. Analyst dispositions
 are labeled as interpretations and recommendation categories as proposals.
 Unfamiliar verdicts, assessor attribution and supplied narratives remain verbatim.
-The overview and detailed assessments use the same supplied AI, unauthenticated
+Review first and detailed assessments use the same supplied AI, unauthenticated
 human or unknown-author category and show assigned scores as “9 out of 10”.
 Unscored assessments stay unscored. Supporting disclosures retain original
 assessment fields, disposition and recommendation codes, full identities,

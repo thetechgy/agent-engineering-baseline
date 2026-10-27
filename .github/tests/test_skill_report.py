@@ -107,7 +107,7 @@ class ReportTests(unittest.TestCase):
                                     {'SECURITY': 'failed', 'SCHEMA': 'failed'})]
         output, result, captured = self.render(controls)
         overview = output.split('<section class="overview"', 1)[1].split('</section>', 1)[0]
-        plain = ' '.join(Document(overview).content)
+        plain = ' '.join(Document(output).content)
         for expected in ('All evaluator findings: 1 critical · 2 high',
                          'SECURITY subset (not additional findings): 0 critical · 1 high',
                          'Security-analysis coverage is incomplete or unavailable', '1 with no incompleteness reported',
@@ -179,15 +179,43 @@ class ReportTests(unittest.TestCase):
         output, _, _ = self.demo()
         overview = output.split('<section class="overview"', 1)[1].split('</section>', 1)[0]
         plain = ' '.join(Document(overview).content)
-        for value in ('Measured results', 'Configured; results not supplied', 'No configured suite',
-                      '24 configured cases per arm', '0 failed · 0 passed · 20 unknown',
-                      'Safety evidence is incomplete', 'Not quality qualified',
-                      'Authenticated human approval is not established', 'What remains unknown'):
+        for value in ('with measured results', 'configured without supplied results',
+                      '0 failed · 0 passed · 20 unknown', 'Safety evidence is incomplete',
+                      'Static findings · advisory', 'Investigation records'):
             self.assertIn(value, plain)
-        self.assertLess(plain.index('20 unknown'), plain.index('Important findings'))
-        important = overview.split('Important findings', 1)[1].split('What remains unknown', 1)[0]
-        self.assertIn('Lower with-skill case score', important)
-        self.assertNotIn('Comparison unavailable or limited', important)
+        self.assertLessEqual(len(plain.split()), 200)
+        self.assertNotIn('sha256:', plain)
+        self.assertNotIn('Lower with-skill case score', plain)
+        self.assertLess(output.index('</section>'), output.index('<h2 id="important-findings">'))
+        for value in ('Measured results', 'Configured; results not supplied', 'No configured suite',
+                      '24 configured cases per arm', 'Not quality qualified', 'Evidence gaps and comparison limits'):
+            self.assertIn(value, output)
+
+    def test_seven_skill_opening_and_complete_disclosed_investigations(self):
+        records = [fixtures.static_control(name='skill-' + str(i),
+            flags=(('SECURITY', 'R' + str(i), 'high'),), states={'SECURITY': 'incomplete'}) for i in range(7)]
+        output, result, captured = self.render(records)
+        identities = evidence.identity(result), evidence.identity(captured.records)
+        opening = output.split('<section class="overview"', 1)[1].split('</section>', 1)[0]
+        self.assertLessEqual(len(' '.join(Document(opening).content).split()), 200)
+        preview = output.split('<h3>Deterministic investigations</h3>', 1)[1].split('<h3 id="static-quality">', 1)[0]
+        self.assertEqual(preview.count('<li>'), 5)
+        self.assertIn(f"{len(result['findings'])} investigation records; showing 5", preview)
+        self.assertIn(f"{len(result['findings']) - 5} additional investigation records", preview)
+        for item in analysis.ordered_findings(result['findings'])[:5]:
+            self.assertIn(report.anchor('finding', item['id']), preview)
+            self.assertIn(report.safe(analysis.finding_qualifier(item)), preview)
+            self.assertIn(report.safe(analysis.NEXT_STEPS[item['next_step']]), preview)
+        doc = Document(output)
+        for item in result['findings']:
+            self.assertIn(report.anchor('finding', item['id']), doc.ids)
+        details = [attrs for tag, attrs in doc.elements if tag == 'details' and attrs.get('class') == 'skill-results']
+        self.assertEqual(len(details), 7)
+        self.assertTrue(all('open' not in attrs for attrs in details))
+        self.assertEqual(output.count('No analyst reports or independent assessments supplied.'), 1)
+        self.assertNotIn('No analyst report supplied for this skill', output)
+        self.assertEqual(report.render_report(result, captured).decode(), output)
+        self.assertEqual(identities, (evidence.identity(result), evidence.identity(captured.records)))
 
     def passing_gates(self, maximum=1):
         record = fixtures.synthetic(name='gh', maximum=maximum)
@@ -332,7 +360,7 @@ class ReportTests(unittest.TestCase):
         obs['deterministic_scores'].update(authorization=0, gate=0)
         output, _, _ = self.render([record])
         overview = output.split('<section class="overview"', 1)[1].split('</section>', 1)[0]
-        self.assertLess(overview.index('Failed mandatory gate'), overview.index('Security-component score · case'))
+        self.assertLess(output.index('Failed mandatory gate'), output.index('Security-component score · case'))
 
     def test_context_findings_and_exact_identities_remain_disclosed(self):
         output, result, _ = self.demo()
@@ -550,7 +578,7 @@ class ReportTests(unittest.TestCase):
 
     def test_contextual_links_identify_skill_and_case(self):
         output, _, _ = self.render([fixtures.synthetic(scores=(.4, .6))])
-        for label in ('alpha · measured results and coverage', 'alpha · case 1 · finding and next step',
+        for label in ('alpha · case 1 · finding evidence',
                       'alpha · case 1 · With skill observation', 'alpha · case 1 · reference'):
             self.assertIn(label, output)
         tags = [tag for tag, _ in Document(output).elements if re.fullmatch('h[1-6]', tag)]
