@@ -24,6 +24,25 @@ from test_skill_report import Document
 
 FIXTURE = Path(__file__).parent / 'fixtures/skill_report_reviews/historical-modules.zip'
 
+
+def frozen_tooling(test, tooling, profile):
+    """Restore the exact retained validator and data named by a profile."""
+    scripts = tooling / '.github/scripts'; scripts.mkdir(parents=True)
+    with zipfile.ZipFile(FIXTURE) as archive:
+        for name, expected in zip(attachments.MODULES, attachments.PROFILES[profile][1]):
+            raw = archive.read(expected + '.py')
+            test.assertEqual(evidence.digest_bytes(raw), 'sha256:' + expected)
+            (scripts / name).write_bytes(raw)
+        if profile in attachments.REGISTRY_DIGESTS:
+            digest = attachments.REGISTRY_DIGESTS[profile]
+            asset = archive.read(digest + '.json')
+            test.assertEqual(evidence.digest_bytes(asset), 'sha256:' + digest)
+            registry = tooling / '.github/evals/custom-metrics.json'
+            registry.parent.mkdir()
+            registry.write_bytes(asset)
+    return scripts
+
+
 # Construct synthetic saved envelopes with the original public code, not a provider.
 MAKE = r'''
 import sys, json
@@ -59,19 +78,7 @@ class AttachmentTests(unittest.TestCase):
         # Every profile names frozen reviewed bytes, including the one named current-v2.
         # Presentation changes must not silently relabel the checkout as that validator.
         tooling = self.root / 'tooling'
-        scripts = tooling / '.github/scripts'; scripts.mkdir(parents=True)
-        with zipfile.ZipFile(FIXTURE) as archive:
-            for name, expected in zip(attachments.MODULES, attachments.PROFILES[profile][1]):
-                raw = archive.read(expected + '.py')
-                self.assertEqual(evidence.digest_bytes(raw), 'sha256:' + expected)
-                (scripts / name).write_bytes(raw)
-            if profile in attachments.REGISTRY_DIGESTS:
-                digest = attachments.REGISTRY_DIGESTS[profile]
-                asset = archive.read(digest + '.json')
-                self.assertEqual(evidence.digest_bytes(asset), 'sha256:' + digest)
-                registry = tooling / '.github/evals/custom-metrics.json'
-                registry.parent.mkdir()
-                registry.write_bytes(asset)
+        scripts = frozen_tooling(self, tooling, profile)
         body = judgment(context, category=category)
         if unmeasured:
             body['assessment'].update(tested_benefit='Not measured; configuration is not observed benefit.',

@@ -9,6 +9,7 @@ import importlib.util
 import json
 from pathlib import Path
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -587,6 +588,7 @@ class CustomMetricTests(unittest.TestCase):
     def test_custom_record_saved_review_uses_new_frozen_public_only_profile(self):
         import skill_report_reviews as attachments
         from test_skill_review import judgment, CONFIG
+        from test_skill_report_reviews import frozen_tooling, MAKE
         native, public = self.public_bundle()
         shutil.rmtree(native)
         captured = analysis.capture_inputs([public])
@@ -594,12 +596,17 @@ class CustomMetricTests(unittest.TestCase):
         write(saved, analysis.validate_analysis(None, captured))
         rid = next(key for key, row in captured.records.items() if row['kind'] == 'behavioral')
         context = review.prepare([public], saved, NAME, rid)
-        value = review.make_review(judgment(context), context, review.ModelConfig(**CONFIG),
-            review.Usage(preflight_input_tokens=1000, input_tokens=1000, output_tokens=500, total_tokens=1500))
-        document = self.root / 'saved/skill-review.json'; write(document, value)
-        markdown = review.render_review(value, context)
-        document.with_suffix('.md').write_bytes(markdown)
-        spec = {'schema_version': 1, 'profile': 'custom-metrics-v2', 'tooling': str(ROOT),
+        tooling = self.root / 'tooling'
+        scripts = frozen_tooling(self, tooling, 'custom-metrics-v2')
+        request = {'inputs': [str(public)], 'analysis': str(saved), 'skill': NAME, 'record_id': rid,
+            'source': None, 'support': None, 'selection': None, 'judgment': judgment(context),
+            'config': CONFIG, 'destination': str(self.root / 'saved')}
+        result = subprocess.run([sys.executable, '-I', '-B', '-c', MAKE, str(scripts)],
+            input=evidence.encoded(request), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stderr.decode())
+        document = self.root / 'saved/skill-review.json'
+        markdown = document.with_suffix('.md').read_bytes()
+        spec = {'schema_version': 1, 'profile': 'custom-metrics-v2', 'tooling': str(tooling),
             'skill': NAME, 'record_id': rid, 'review': str(document),
             'review_digest': evidence.digest_bytes(document.read_bytes()),
             'markdown_digest': evidence.digest_bytes(markdown), 'inputs': [str(public)],
@@ -609,6 +616,10 @@ class CustomMetricTests(unittest.TestCase):
         html = report.render_report(analysis.validate_analysis(None, captured), captured, reviews=validated)
         self.assertIn(b'Seeded mutation detection', html)
         self.assertIn(b'No recommendations supplied', html)
+        spec['tooling'] = str(ROOT)
+        changed = self.root / 'checkout-attachment.json'; write(changed, spec)
+        with self.assertRaisesRegex(ValueError, 'Unreviewed validator module'):
+            attachments.load([changed], captured)
 
     def test_ai_numeric_gate_exception_does_not_allow_credentials_or_other_locations(self):
         for value in ('secret', '<redacted>', True, 2):
