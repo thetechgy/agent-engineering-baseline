@@ -752,6 +752,14 @@ usage are subtotals; missing usage is unknown. Time limits reserve recovery/uplo
 time. Recovered runs are incomplete and cannot publish; runner loss or cancellation
 can prevent recovery. Raw execution directories stay on the runner.
 
+The [evaluation planner](.github/evals/ORCHESTRATION.md) assesses validated main
+changes and runs inference-free health checks weekly. Unchanged suites are due
+after 30 days. Automatic requests ship disabled and require separate current-policy
+qualification and reviewed enablement for Podman and gh. Every paid run retains
+environment approval, with scope and cost limitations published before the request.
+Pester remains diagnostic-only. Operational Actions records do not establish
+qualified evaluation evidence or history admission.
+
 Only successful standard runs on main publish Skill Lift, Effectiveness,
 Correctness, and Discoverability to separate skill/policy histories on `gh-pages`;
 Security and Efficiency remain in complete reports. Source revisions and dataset
