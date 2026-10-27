@@ -687,6 +687,36 @@ class UpstreamTests(unittest.TestCase):
         result = CliRunner().invoke(cli, ["tier3", "validate", str(skill), "--strict", "--json"])
         self.assertEqual(result.exit_code, 0, result.output)
 
+    def test_podman_task_inputs_are_explicit_and_isolated_in_both_arms(self):
+        import shutil
+        from skillevaluator.tier3.harbor.adapter import generate_harbor_tasks
+
+        skill = reports.local_skill(REPO, "podman", dataset=True)
+        expected = {2: {"vendor-compose.yaml", "vendor-web/Containerfile"},
+                    9: {"postgres.container"}}
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "podman"
+            shutil.copytree(skill, source)
+            # A future fixture must not silently become input to unrelated cases.
+            (source / "evals/files/unrelated-sentinel.txt").write_text("Unrelated input")
+            for with_skill in (True, False):
+                with self.subTest(with_skill=with_skill):
+                    tasks = generate_harbor_tasks(
+                        source, root / str(with_skill), with_skill=with_skill,
+                        base_image="", custom_dockerfile_mode="disabled",
+                    )
+                    self.assertEqual(len(tasks), 10)
+                    for task in tasks:
+                        case = int(task.name)
+                        with self.subTest(case=case):
+                            inputs = task / "environment/input"
+                            actual = {p.relative_to(inputs).as_posix(): p.read_bytes()
+                                      for p in inputs.rglob("*") if p.is_file()}
+                            wanted = {name: (source / "evals/files" / name).read_bytes()
+                                      for name in expected.get(case, set())}
+                            self.assertEqual(actual, wanted, f"case {case}, arm {with_skill}")
+
     def test_pinned_evaluator_patch_only_pins_codex_for_docker_runs(self):
         from skillevaluator.tier3.harbor import runner
         from harbor.agents.installed.codex import Codex
