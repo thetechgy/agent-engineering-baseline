@@ -349,7 +349,7 @@ def static_directory(skill):
     return '<br>'.join(rows)
 
 
-def executive_summary(result, records):
+def executive_summary(result, records, *, pages=None):
     skills = result['skills']; findings = result['findings']
     measured = [s for s in skills if any(r['measured'] for r in s['behavioral_results'])]
     parts = ['<p class="lead">Supplied evidence only. ' + count(len(skills), 'skill') + ' represented; <strong>' + text(len(measured)) +
@@ -357,6 +357,17 @@ def executive_summary(result, records):
         text(sum(coverage_label(s) == 'Configured; results not supplied' for s in skills)) +
         ' configured without supplied results; ' + text(sum(coverage_label(s) == 'No configured suite' for s in skills)) +
         ' without a configured behavioral suite.</p>']
+    if pages is not None:
+        standard = {s['skill'] for s in skills for run in s['behavioral_results']
+                    if run['measured'] and records[run['record_id']]['policy']['attempts']['mode'] == 'standard'}
+        diagnostic = {s['skill'] for s in skills for run in s['behavioral_results']
+                      if run['measured'] and (records[run['record_id']].get('custom', {}).get('purpose') == 'oracle_qualification'
+                          or records[run['record_id']]['policy']['attempts']['mode'] == 'confirmation')}
+        parts = ['<p class="lead">Retained validated evidence. ' + count(len(skills), 'skill') + ' represented; <strong>' +
+                 count(len(standard), 'skill') + ' with detailed standard model-backed evidence</strong>; ' +
+                 count(len({row['skill'] for row in pages['history']}), 'skill') + ' in <a href="#history">admitted numeric history</a>; ' +
+                 count(len(diagnostic), 'skill') + ' with diagnostic evidence. Oracle qualification tests the harness; '
+                 'confirmation runs remain diagnostic. Neither enters qualified performance history.</p>']
     runs = [r for s in skills for r in s['behavioral_results']]
     failed = sum(len(r['gates']['failed']) for r in runs)
     passed = sum(r['gates']['passed_observations'] for r in runs)
@@ -712,9 +723,64 @@ def interpretation(item):
     return ''.join(parts)
 
 
-def render_report(result, captured, *, reviews=None):
+def pages_overview(context, captured):
+    from skill_pages import validate_context
+    validate_context(context, captured)
+    parts = ['<section aria-labelledby="publication"><h2 id="publication">Publication context</h2>',
+        '<p>Current main configuration: ' + code(context['current']['revision']) +
+        '. Evaluated revisions below retain their recorded identities. Static coverage, model-backed measurements, '
+        'and diagnostic qualification answer separate questions. Missing evidence remains unknown.</p>',
+        '<p><a href="#history">Benchmark history</a> · <a href="report/publication.json" download>Publication manifest</a> · '
+        '<a href="report/analysis.json" download>Saved validated analysis</a></p>',
+        '<details><summary>Retained evidence slots and authenticated producer provenance</summary>']
+    if not context['slots']:
+        parts.append('<p>No producer bundles retained. Current configuration alone is not an evaluation.</p>')
+    for item in context['slots']:
+        purpose = item['slot'].split('--', 1)[0]
+        label = {'quality': 'Static quality coverage', 'standard': 'Standard behavioral evidence',
+                 'oracle': 'Diagnostic oracle qualification', 'confirmation': 'Diagnostic confirmation'}[purpose]
+        parts.append('<h3>' + safe(label) + '</h3><p>' + code(item['slot']) +
+            (' · diagnostic evidence; excluded from qualified performance history.' if purpose in ('oracle', 'confirmation') else '.') +
+            '</p>' + disclosure('Authenticated producer', item['provenance']))
+        prefix = 'report/bundles/' + item['slot'] + '/'
+        for member in sorted(item['members']):
+            parts.append('<p><a href="' + safe(prefix + member) + '" download>' + safe(member) + '</a></p>')
+    parts.append('</details></section>')
+    return ''.join(parts)
+
+
+def pages_history(context):
+    parts = ['<section id="history"><h2>Benchmark history</h2><p>Native admitted ledger values are unchanged. '
+        'Ledger entries do not bind a workflow run or attempt; matching public detail does not establish that missing binding. These descriptive measurements '
+        'do not establish causality. Different skill, policy or dataset groups are not directly comparable. '
+        'Custom-metric history and custom cross-run comparisons remain disabled.</p>']
+    groups = {}
+    for row in context['history']:
+        groups.setdefault((row['skill'], row['policy']), {}).setdefault(row['dataset'], []).append(row)
+    if not groups:
+        parts.append('<p>No admitted numeric history is available.</p>')
+    for (skill, policy), datasets in sorted(groups.items()):
+        parts.append('<h3 id="' + anchor('history', skill, policy) + '">' + safe(skill) + ' · policy ' + code(policy) + '</h3>')
+        for dataset, records in sorted(datasets.items()):
+            parts.append('<details open><summary>Dataset ' + safe(dataset) + '</summary>')
+            rows = []
+            for row in records:
+                support = (link('record', (row['record_id'],), 'Supporting public detail (matching recorded identities and values)') if row['record_id'] else
+                           '<strong>Ledger only</strong> · supporting public detail unavailable')
+                rows.append([code(row['revision']), text(row['date']),
+                    *[text(metric['value']) for metric in row['metrics']], support])
+            parts.append(table('Admitted native measurements · original score units',
+                ('Evaluated revision', 'Recorded date (epoch ms)', 'Skill Lift', 'Effectiveness', 'Correctness', 'Discoverability', 'Evidence'), rows))
+            parts.append('<p><a href="' + safe(records[0]['member']) + '" download>Download original data.js</a></p>'
+                         '<details><summary>Exact ledger identities and values</summary>' + disclosure('Recorded measurements', records) + '</details></details>')
+    parts.append('</section>')
+    return ''.join(parts)
+
+
+def render_report(result, captured, *, reviews=None, pages_context=None):
     """Validate again at the rendering boundary; never accept analysis in isolation."""
     analysis.validate_analysis(result, captured)
+    evidence.require(pages_context is None or reviews is None, 'Analyst attachments cannot enter Pages')
     if reviews is not None:
         import skill_report_reviews as attachments
         evidence.require(type(reviews) is attachments.ValidatedReviews, 'Validated analyst attachments required')
@@ -735,17 +801,19 @@ def render_report(result, captured, *, reviews=None):
     add('<!doctype html><html lang="en"><head><meta charset="utf-8">'
         '<meta http-equiv="Content-Security-Policy" content="' + safe(csp) + '">'
         '<meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width, initial-scale=1">'
-        '<title>Private skill evaluation report</title><style>' + CSS + '</style></head><body>'
-        '<a class="skip" href="#main">Skip to report</a><header><p class="eyebrow">PRIVATE · OFFLINE</p>'
+        '<title>' + ('Skill evaluation report' if pages_context is not None else 'Private skill evaluation report') + '</title><style>' + CSS + '</style></head><body>'
+        '<a class="skip" href="#main">Skip to report</a><header><p class="eyebrow">' + ('PUBLIC · CANONICAL PAGES' if pages_context is not None else 'PRIVATE · OFFLINE') + '</p>'
         '<h1>Skill evaluation report</h1>'
         '<div class="theme" id="theme-control" hidden><label for="theme">Appearance</label><select id="theme">'
         '<option value="system">System default</option><option value="light">Light</option><option value="dark">Dark</option>'
         '</select></div></header><main id="main" tabindex="-1"><section class="overview" aria-labelledby="overview">'
         '<h2 id="overview">Evidence overview</h2>')
     skills = result['skills']
-    add(executive_summary(result, records))
+    add(executive_summary(result, records, pages=pages_context))
     add('</section>')
     add(review_first(result, records, attached))
+    if pages_context is not None:
+        add(pages_overview(pages_context, captured))
     add(
         '<details><summary>How to read the measures</summary><p>Evaluator-reported (native) metrics use the evaluator\'s original score units. '
         'Skill Lift is its with-minus-without difference. Grading criteria (rubric) and mandatory checks (gates) record separate outcomes. '
@@ -762,19 +830,27 @@ def render_report(result, captured, *, reviews=None):
             add('<p class="notice"><strong>Unmeasured.</strong> No supplied model-backed measurement. Configuration and offline fixture replay do not establish skill benefit or harm.</p>')
         for config in skill['configurations']:
             suite = config['suite']
-            add('<p>Inventory snapshot: ' + (count(suite['case_count'], 'configured case') + ' per arm' if suite else 'No behavioral suite configured') +
+            label = ('Current main inventory' if pages_context['current']['inventory_record_id'] in config['inventory_record_ids'] else 'Older inventory snapshot') if pages_context is not None else 'Inventory snapshot'
+            add('<p>' + label + ': ' + (count(suite['case_count'], 'configured case') + ' per arm' if suite else 'No behavioral suite configured') +
                 '. Source owner: ' + text(config['source']['owner']) + '.</p>' + disclosure('Configuration identity and source snapshot', config))
         skill_reviews = [row for row in attached.values() if row['skill'] == name]
         if skill_reviews:
             for row in skill_reviews:
                 add(interpretation(row))
         for run in skill['behavioral_results']:
+            if pages_context is not None:
+                record = records[run['record_id']]
+                purpose = ('Diagnostic oracle qualification' if record.get('custom', {}).get('purpose') == 'oracle_qualification' else
+                           'Diagnostic confirmation' if record['policy']['attempts']['mode'] == 'confirmation' else 'Standard behavioral evidence')
+                add('<p><strong>' + purpose + '</strong></p>')
             add(behavioral(run, records))
         for run in skill['static_results']:
             add(static_result(run, records))
         if not skill['static_results']:
             add('<p>Static scan evidence not supplied for this skill; no clean-scan claim is made.</p>')
         add('<details><summary>Cross-run comparison status and evidence</summary>' + comparisons(skill) + '</details></details></section>')
+    if pages_context is not None:
+        add(pages_history(pages_context))
     add('<section id="provenance"><h2>Source details</h2><details><summary>Report provenance and validation boundaries</summary><p>Presentation method ' + code(METHOD) +
         '; analysis method ' + code(result['method_version']) +
         ('; public schemas 1/2 and analysis schema 2. Analysis semantic digest ' if result['schema_version'] == 2 else
@@ -793,12 +869,14 @@ def render_report(result, captured, *, reviews=None):
     add(disclosure('Exact qualification status', {'quality_qualification': 'not_quality_qualified'}))
     add('<details><summary>Model-generated recommendations and assessment boundaries</summary><p>' + count(len(attached),
         'independently validated analyst report') + ' attached. All deterministic investigation priorities above remain fixed descriptions '
-        'of existing findings and next-step codes. Analyst qualification: ' + presentation_label('not_quality_qualified', STATUS_LABELS) + '. '
-        'Automated publication is ineligible. Supplied AI or human assessments are separately attributed opinions; structural validation, '
-        'rubric arithmetic and self-declared approval do not establish authenticated human review or authorize action.</p>'
-        '<p>Keep this file private. It requires no server, external assets, analytics or network requests. '
+        'of existing findings and next-step codes. Analyst qualification: ' + presentation_label('not_quality_qualified', STATUS_LABELS) + '. ' +
+        ('Analyst attachments are excluded from canonical Pages. ' if pages_context is not None else 'Automated publication is ineligible. ') +
+        'Supplied AI or human assessments are separately attributed opinions; structural validation, '
+        'rubric arithmetic and self-declared approval do not establish authenticated human review or authorize action.</p>' +
+        ('<p>This public report uses retained validated projections. It requires no external assets, analytics or network requests. ' if pages_context is not None else
+         '<p>Keep this file private. It requires no server, external assets, analytics or network requests. ') +
         'Appearance follows the system unless changed for this open document. All evidence is readable without JavaScript; '
-        'expand disclosures for detailed support.</p></details></section></main><footer>Private evidence report · supplied inputs only</footer>'
+        'expand disclosures for detailed support.</p></details></section></main><footer>' + ('Public canonical report · retained validated inputs' if pages_context is not None else 'Private evidence report · supplied inputs only') + '</footer>'
         '<script>' + JS + '</script></body></html>')
     return ''.join(parts).encode('utf-8')
 

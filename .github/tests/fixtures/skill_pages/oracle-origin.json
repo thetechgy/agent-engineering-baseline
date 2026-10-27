@@ -1,0 +1,12 @@
+{
+  "classification": "Retained public-only oracle projection; no model-backed performance claim",
+  "repository": "thetechgy/agent-engineering-baseline",
+  "revision": "1e2bc9beab366134e9872af4e196c538a03ec132",
+  "run_id": 40440720443,
+  "attempt": 1,
+  "artifact_id": 12706686257,
+  "artifact_name": "pester-feasibility-diagnostics",
+  "archive_digest": "sha256:f22d8f6ea6bea629c8b80e79bdf172c7d36d1cdc88263817999ae802f08e6cf3",
+  "member": "reporting/public/skills/powershell-pester-6/behavioral/qualification/public-report.json",
+  "sha256": "861760157ce6e184fa8dc72932ced64af6245b1c183b78949819e1feebd7992a"
+}

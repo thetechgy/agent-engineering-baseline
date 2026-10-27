@@ -3,8 +3,8 @@
 set -euo pipefail
 umask 077
 
-kind=${1:?usage: setup-skillevaluator.sh quality|benchmark}
-case "$kind" in quality|benchmark) ;; *) exit 2 ;; esac
+kind=${1:?usage: setup-skillevaluator.sh quality|benchmark|reporting}
+case "$kind" in quality|benchmark|reporting) ;; *) exit 2 ;; esac
 : "${RUNNER_TEMP:?}" "${GITHUB_WORKSPACE:?}" "${GITHUB_ENV:?}" "${GITHUB_PATH:?}"
 tool_root="$RUNNER_TEMP/skill-evaluation-tools"
 case "$(realpath -m "$tool_root")/" in
