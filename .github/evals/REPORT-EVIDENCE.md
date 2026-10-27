@@ -2506,10 +2506,68 @@ older validation runs may provide quality only if they predate the public-only o
 upload. Inspect workflow failures rather than weakening validation, changing identities,
 or rescoring historical evidence.
 
-Git history preserves prior committed snapshots for recovery. It does **not** enforce
-bounded retention: the proposed 90-day/30-snapshot policy remains deferred. Offline
+Git history preserves prior committed publications for recovery. Compact historical
+observations now have bounded working-tree retention as described below. Git objects
+are not erased or bounded by that policy. Offline
 fixtures and disposable Git remotes verify admission, deterministic generation,
 history preservation, conflicts, and exact-commit handoff. They cannot establish hosted
 queue behavior, protected-environment approval, OIDC or live deployment success; those
 require an eligible post-merge hosted publication. Do not equate a draft PR or passing
 validation CI with a live Pages deployment.
+
+### Compact historical observations
+
+Publication manifest v2 hashes `report/history.json`, a versioned collection of
+publisher-derived summaries. Preparation migrates validated v1 retained slots once,
+then captures eligible observations before detailed slots advance. Original public
+record identities and digests, authenticated run/attempt provenance, evaluated
+source, dataset, policy, native metrics, arm coverage and static counts survive
+replacement of the latest detail. These summaries are not native execution evidence
+and cannot reproduce the full original assessment. Unknown metadata stays unknown.
+
+Chronology uses authenticated execution-job completion timestamps. Ledger dates,
+commit dates, publication dates and native run names do not establish that timestamp.
+Migration preserves summaries with unavailable timestamps; their first admission is
+used only for retention. Undated observations do not produce chronological deltas.
+Exact replays and reused native measurements are deduplicated. Conflicting duplicate
+measurements fail closed. Eligible late arrivals can fill retained history without
+rewinding the latest detailed slot.
+
+The canonical report displays native values, SVG observation charts and readable
+HTML tables without JavaScript or external assets. Lines and descriptive differences
+require strictly ordered, directly comparable standard measurements under the shared
+analyzer rules. Comparisons use the preceding compatible observation and applicable
+protected baseline. Negative differences indicate observed decreases, not statistical
+significance, causality, or a confirmed skill regression. Policy/dataset groups remain
+separate; incomplete or unknown conditions withhold deltas. The current qualified
+Podman reference can remain exploratory because comparison metadata is unknown.
+Static scanner counts and coverage remain observations; missing scanner provenance
+prevents numerical quality-change claims. Custom metric values and schema-v2 numerical
+comparisons remain excluded under issue #92. Diagnostic summaries preserve operational
+coverage and policy context, not a qualified performance series.
+
+Preparation retains observations from the inclusive preceding 90 days, capped at the
+newest 30 **per skill and evidence class**, across policy cohorts. Standard behavior,
+static quality and diagnostics have independent budgets. Registered qualification
+references in `orchestration.json` are protected outside both limits (at most two per
+skill/class); the initial protected Podman reference is `40572244242`, attempt 1.
+This implementation uses that reviewed reference registry for baseline designation.
+A missing reference summary does not fabricate evidence or remove its native ledger.
+The stored UTC retention timestamp makes offline regeneration deterministic; builds
+do not prune using a new wall clock. Snapshots are bounded to 64 KiB each and the
+history document to 16 MiB; overflow blocks preparation without data loss.
+
+Native benchmark ledgers, including legacy policy `bcf6348b71caddcb`, are explicit
+retention exceptions and are never pruned or rewritten. Latest detailed slots remain
+independent. Actions artifact retention is unchanged. Git history can recover prior
+committed publications but is not a promise of complete original diagnostic evidence.
+Original artifacts may expire while historical measurements remain readable. Retained
+public-detail links appear only when the matching record remains available.
+
+The existing producer authentication, read-only preparation, sealed data handoff,
+shared queue, fast-forward commit and exact-commit deployment apply to history too.
+No new trigger or token permission is needed. Empty recovery rebuilds saved history;
+producer replay repeats admission and retention. Failed/interrupted workflows remain
+outside the successful-producer admission boundary; incomplete observations inside
+an eligible collected bundle cannot become successful measurements. No automated
+Git-history backfill or reconstruction of expired original reports is performed.

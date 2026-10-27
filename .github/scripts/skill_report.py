@@ -777,7 +777,113 @@ def pages_history(context):
     return ''.join(parts)
 
 
-def render_report(result, captured, *, reviews=None, pages_context=None):
+def history_chart(items):
+    """Native observations on a fixed score axis; lines require direct compatibility."""
+    import skill_history as history
+    groups={}
+    for item in items:
+        if item['execution']['completed_at'] and item['record']['schema_version']==1:
+            key=(item['record']['policy']['id'],item['record']['dataset']['staged_digest'])
+            groups.setdefault(key,[]).append(item)
+    parts=[]
+    for (policy,dataset), rows in groups.items():
+        rows.sort(key=lambda r:(history.date(r),r['id']))
+        times=[history.timestamp(history.date(r)).timestamp() for r in rows]
+        span=max(times)-min(times)
+        for metric in evidence.reports.METRICS:
+            title=metric+' · policy '+str(policy)+' · dataset '+str(dataset)
+            parts.append('<figure><figcaption>'+safe(title)+'</figcaption><svg role="img" aria-label="'+safe(title)+'" viewBox="0 0 600 180" style="width:100%;max-width:600px"><title>'+safe(title)+'</title><desc>Points are recorded native measurements, oldest to newest. Lines connect directly comparable observations only. Exact values and dates follow in the table.</desc><path d="M40 15V150H580" fill="none" stroke="currentColor"/>')
+            previous=None
+            low=-1 if metric=='Skill Lift' else 0
+            parts.append('<text x="5" y="25" fill="currentColor">1</text><text x="5" y="150" fill="currentColor">'+str(low)+'</text>')
+            for row,t in zip(rows,times):
+                val=next((m['value'] for m in row['record']['metrics'] if m['name']==metric),None)
+                if val is None:
+                    previous=None; continue
+                x=40+540*((t-min(times))/span if span else .5); y=150-130*(val-low)/(1-low)
+                if previous and history.compare(previous[0],row)[0]=='directly_comparable':
+                    parts.append('<path d="M'+str(previous[1])+' '+str(previous[2])+'L'+str(x)+' '+str(y)+'" stroke="currentColor" fill="none"/>')
+                parts.append('<circle cx="'+str(x)+'" cy="'+str(y)+'" r="4" fill="currentColor"><title>'+safe(history.date(row)+' · '+str(val))+'</title></circle>')
+                previous=(row,x,y)
+            parts.append('<text x="40" y="175" fill="currentColor">Oldest</text><text x="520" y="175" fill="currentColor">Newest</text></svg></figure>')
+    return ''.join(parts)
+
+
+def historical_view(value, records=None):
+    import skill_history as history
+    history.validate(value)
+    records = records or {}
+    groups = {}
+    for item in value['observations']:
+        groups.setdefault((item['record']['source']['skill_id'], item['class']), []).append(item)
+    parts = ['<section id="evaluation-history"><h2>Evaluation history and trends</h2><p>Compact validated summaries retain reported measurements, not complete original evidence. '
+             '90 days, capped at 30 observations per skill and evidence class; registered comparison baselines are protected. '
+             'Different conditions remain separate. Custom metric history and comparisons remain disabled.</p>'
+             '<p><a href="report/history.json" download>Download retained historical summaries</a></p>']
+    if not groups:
+        parts.append('<p>No historical observations retained.</p>')
+    for (skill, category), items in sorted(groups.items()):
+        items.sort(key=lambda r: (history.date(r), r['id']))
+        parts.append('<details><summary>' + safe(skill + ' · ' + category) + ' · ' + str(len(items)) + ' observations</summary>')
+        if len(items) == 1:
+            parts.append('<p>One observation; a trend is not yet established.</p>')
+        if category == 'standard':
+            parts.append(history_chart(items))
+        rows=[]
+        for index,item in enumerate(items):
+            r=item['record']; p=item['provenance']; metrics={m['name']:m['value'] for m in r['metrics']}
+            explanation='No earlier directly comparable measurement.'
+            earlier=[]
+            if category=='standard':
+                for previous in reversed(items[:index]):
+                    status,reasons,deltas=history.compare(previous,item)
+                    if status=='directly_comparable' and deltas:
+                        earlier.append((previous,deltas)); break
+                if earlier:
+                    previous,deltas=earlier[0]
+                    explanation='Compared with run ' + str(previous['provenance']['run_id']) + ': ' + '; '.join(name + ' ' + q['display'] for name,q in sorted(deltas.items()))
+                    if any(q['direction']=='negative' for q in deltas.values()):
+                        explanation+=' · Observed decrease—potential regression; ordinary variation remains possible.'
+                elif index:
+                    status,reasons,_=history.compare(items[index-1],item)
+                    explanation=status + ': ' + ', '.join(reasons)
+            else:
+                explanation='Diagnostic observation; no performance comparison.' if category=='diagnostic' else 'Static counts and coverage; scanner provenance does not establish comparable quality changes.'
+            if item['id'] in value['protected']:
+                explanation += ' · Protected comparison baseline.'
+            if category=='standard':
+                for baseline in items:
+                    if baseline['id'] in value['protected'] and baseline['id'] != item['id']:
+                        status,_,deltas=history.compare(baseline,item)
+                        if status=='directly_comparable' and deltas:
+                            explanation+=' · Baseline run '+str(baseline['provenance']['run_id'])+': '+ '; '.join(n+' '+q['display'] for n,q in sorted(deltas.items()))
+            coverage = [{'arm':a['name'], 'execution':a['execution_status'], 'coverage':a['coverage']} for a in r['arms']]
+            rows.append([text(item['execution']['completed_at'] or 'Execution time unknown; admitted '+item['admitted_at']),
+                         '<a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/'+str(p['run_id'])+'/attempts/'+str(p['attempt'])+'">Run '+str(p['run_id'])+' / '+str(p['attempt'])+'</a>',
+                         code(r['source']['revision']), code(r['policy']['id']),
+                         *[text(metrics.get(name)) if category=='standard' else 'Not performance history' for name in evidence.reports.METRICS],
+                         safe(explanation), (link('record', (item['record_id'],), 'Retained public detail') if item['record_id'] in records else '<p>Public detail unavailable; summary retained.</p>') + disclosure('Coverage and retained provenance', {'coverage':coverage,'scans':r['scans'],'availability':r['availability'],'source':r['source'],'dataset':r['dataset'],'policy':r['policy'],'provenance':p,'support':'Summary only; original diagnostic artifact possession is unknown.'})])
+        headers = ('Execution completed (UTC)','Producer','Evaluated revision','Policy','Skill Lift','Effectiveness','Correctness','Discoverability','Comparison','Evidence')
+        if category != 'standard':
+            compact = []
+            for row, item in zip(rows, items):
+                r = item['record']
+                if category == 'quality':
+                    total = next((scan for scan in r['scans'] if scan['scanner'] == 'catalog-total'), None)
+                    counts = ' · '.join(level + ': ' + str(total['severity_counts'][level]) for level in analysis.SEVERITIES) if total else 'Native counts unavailable'
+                else:
+                    counts = ' · '.join(a['name'] + ': ' + str(a['coverage']['scored_attempts']) + ' scored / ' + str(a['coverage']['expected_attempts']) + ' expected' for a in r['arms'])
+                compact.append([*row[:3], safe(r['availability']['status']), safe(counts), row[-1]])
+            rows = compact
+            headers = ('Execution completed (UTC)','Producer','Evaluated revision','Coverage','Native finding counts' if category == 'quality' else 'Measurement coverage','Evidence')
+        parts.append(table('Chronological observations · source-specific native values', headers, rows[-100:]))
+        if len(rows)>100: parts.append('<p>Additional observations are available in the historical summary download.</p>')
+        parts.append('</details>')
+    parts.append('</section>')
+    return ''.join(parts)
+
+
+def render_report(result, captured, *, reviews=None, pages_context=None, historical=None):
     """Validate again at the rendering boundary; never accept analysis in isolation."""
     analysis.validate_analysis(result, captured)
     evidence.require(pages_context is None or reviews is None, 'Analyst attachments cannot enter Pages')
@@ -850,7 +956,7 @@ def render_report(result, captured, *, reviews=None, pages_context=None):
             add('<p>Static scan evidence not supplied for this skill; no clean-scan claim is made.</p>')
         add('<details><summary>Cross-run comparison status and evidence</summary>' + comparisons(skill) + '</details></details></section>')
     if pages_context is not None:
-        add(pages_history(pages_context))
+        add(pages_history(pages_context) + (historical_view(historical, captured.records) if historical is not None else ''))
     add('<section id="provenance"><h2>Source details</h2><details><summary>Report provenance and validation boundaries</summary><p>Presentation method ' + code(METHOD) +
         '; analysis method ' + code(result['method_version']) +
         ('; public schemas 1/2 and analysis schema 2. Analysis semantic digest ' if result['schema_version'] == 2 else
