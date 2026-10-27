@@ -10,6 +10,12 @@ permissions:
 
 env:
   PESTER_VERSION: '6.2.0'
+  PSSCRIPTANALYZER_VERSION: '1.25.0'
+
+# Preserve all main producers and diagnostic reruns; only initial PR runs supersede.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.run_attempt == '1' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == '1' }}
 
 jobs:
   pester-eval-feasibility:
@@ -226,13 +232,14 @@ jobs:
         run: python3 tests/bootstrap_lifecycle.py --apm "$APM_EXECUTABLE"
 
       - name: Install validation tools
+        timeout-minutes: 5
         shell: pwsh
         run: |
           & $env:CI_PWSH -NoLogo -NoProfile -NonInteractive -Command {
             $ErrorActionPreference = 'Stop'
-            Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-            Install-Module Pester -RequiredVersion $env:PESTER_VERSION -Scope CurrentUser -Force
-            Install-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -Scope CurrentUser -Force
+            . ./scripts/Install-CIValidationModule.ps1
+            Install-CIValidationModule -Name Pester -RequiredVersion $env:PESTER_VERSION
+            Install-CIValidationModule -Name PSScriptAnalyzer -RequiredVersion $env:PSSCRIPTANALYZER_VERSION
           }
           if ($LASTEXITCODE -ne 0) { throw 'Validation tool installation failed.' }
 
@@ -250,12 +257,9 @@ jobs:
         run: |
           & $env:CI_PWSH -NoLogo -NoProfile -NonInteractive -Command {
             $ErrorActionPreference = 'Stop'
-            Import-Module Pester -RequiredVersion $env:PESTER_VERSION -ErrorAction Stop
-            $loadedPester = @(Get-Module Pester)
-            if ($loadedPester.Count -ne 1 -or $loadedPester[0].Version.ToString() -cne $env:PESTER_VERSION) {
-              throw "Expected exactly Pester $env:PESTER_VERSION to be loaded."
-            }
-            Write-Host "Using Pester $($loadedPester[0].Version)"
+            . ./scripts/Install-CIValidationModule.ps1
+            Import-CIValidationModule -Name Pester -RequiredVersion $env:PESTER_VERSION
+            Import-CIValidationModule -Name PSScriptAnalyzer -RequiredVersion $env:PSSCRIPTANALYZER_VERSION
             ./scripts/Invoke-Validation.ps1
           }
           if ($LASTEXITCODE -ne 0) { throw 'Full validation failed.' }
@@ -287,13 +291,14 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Latest stable PowerShell acquisition failed.' }
 
       - name: Install validation tools
+        timeout-minutes: 5
         shell: pwsh
         run: |
           & $env:CI_PWSH -NoLogo -NoProfile -NonInteractive -Command {
             $ErrorActionPreference = 'Stop'
-            Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-            Install-Module Pester -RequiredVersion $env:PESTER_VERSION -Scope CurrentUser -Force
-            Install-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -Scope CurrentUser -Force
+            . ./scripts/Install-CIValidationModule.ps1
+            Install-CIValidationModule -Name Pester -RequiredVersion $env:PESTER_VERSION
+            Install-CIValidationModule -Name PSScriptAnalyzer -RequiredVersion $env:PSSCRIPTANALYZER_VERSION
           }
           if ($LASTEXITCODE -ne 0) { throw 'Validation tool installation failed.' }
 
@@ -302,12 +307,9 @@ jobs:
         run: |
           & $env:CI_PWSH -NoLogo -NoProfile -NonInteractive -Command {
             $ErrorActionPreference = 'Stop'
-            Import-Module Pester -RequiredVersion $env:PESTER_VERSION -ErrorAction Stop
-            $loadedPester = @(Get-Module Pester)
-            if ($loadedPester.Count -ne 1 -or $loadedPester[0].Version.ToString() -cne $env:PESTER_VERSION) {
-              throw "Expected exactly Pester $env:PESTER_VERSION to be loaded."
-            }
-            Write-Host "Using Pester $($loadedPester[0].Version)"
+            . ./scripts/Install-CIValidationModule.ps1
+            Import-CIValidationModule -Name Pester -RequiredVersion $env:PESTER_VERSION
+            Import-CIValidationModule -Name PSScriptAnalyzer -RequiredVersion $env:PSSCRIPTANALYZER_VERSION
             ./scripts/Invoke-Validation.ps1 -Suite Pester
           }
           if ($LASTEXITCODE -ne 0) { throw 'Pester and analyzer validation failed.' }

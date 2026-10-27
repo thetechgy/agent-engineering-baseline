@@ -477,6 +477,15 @@ generated outputs.
 ### CI permissions, credentials, and dependency checks
 
 Validation uses read-only repository access without retained checkout credentials.
+The Linux and Windows jobs acquire the exact Pester and PSScriptAnalyzer pins from
+the official PSGallery through PowerShellGet. Download failures receive at most
+four attempts with 5, 15, and 30 second backoff; integrity, configuration, and
+version/provenance failures terminate immediately. Both modules are imported from
+their verified installation paths. Acquisition diagnostics omit raw provider text;
+a final official-endpoint probe describes a later observation, not the original
+HTTP response. Main producers and diagnostic reruns are retained; only initial
+validation runs for the same PR supersede one another.
+
 GitHub Actions are pinned to commit SHAs; Python dependencies use hashed or frozen
 locks. Both evaluation workflows install Compose 5.6.1 through the shared
 [checksum-first helper](.github/scripts/setup-compose.sh), verifying reviewed
