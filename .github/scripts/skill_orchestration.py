@@ -369,6 +369,19 @@ def assess(workspace, retained, api, event_name, event, *, exclude=None, benchma
                     compatible.append(qualified(api, workspace, main, candidate, name, snap, ledger))
                 except ValueError:
                     continue
+        reference = suite_policy['reference']
+        if reference is not None:
+            try:
+                ref = next((r for r in compatible if r['run_id'] == reference['run_id']
+                            and r['attempt'] == reference['attempt']), None)
+                if ref is None:
+                    ref_run = api.get(f'actions/runs/{reference["run_id"]}/attempts/{reference["attempt"]}')
+                    ref = qualified(api, workspace, main, ref_run, name, snap, ledger)
+                    compatible.append(ref)
+                row['reference'] = ref
+            except ValueError:
+                row.update(status='blocked', reason='reference_requires_qualification')
+                continue
         compatible.sort(key=lambda r: timestamp(r['completed_at']), reverse=True)
         matching = [r for r in compatible if r['fingerprint'] == snap['fingerprint']]
         latest = matching[0] if matching else None
@@ -378,14 +391,6 @@ def assess(workspace, retained, api, event_name, event, *, exclude=None, benchma
             age = now() - timestamp(latest['completed_at'])
             require(age >= timedelta(0), 'Future measurement timestamp')
             row['reason'] = 'periodic_due' if age >= timedelta(days=cfg['due_days']) else 'fresh'
-        reference = suite_policy['reference']
-        if reference is not None:
-            try:
-                ref_run = api.get(f'actions/runs/{reference["run_id"]}/attempts/{reference["attempt"]}')
-                row['reference'] = qualified(api, workspace, main, ref_run, name, snap, ledger)
-            except ValueError:
-                row.update(status='blocked', reason='reference_requires_qualification')
-                continue
         if validation_error:
             row.update(status='blocked', reason=validation_error)
         elif snap['cases'] > suite_policy['max_cases']:

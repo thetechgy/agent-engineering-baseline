@@ -222,6 +222,19 @@ class OrchestrationTests(unittest.TestCase):
         self.api.runs[10, 1]['updated_at'] = stamp(29)
         self.assertFalse(self.assess()['requests'])
 
+    def test_failed_rerun_does_not_erase_successful_reference_attempt(self):
+        reference = self.reference(days=1); self.enable('podman')
+        failed = self.api.run(10, orchestration.BENCHMARK, reference['head_sha'], conclusion='failure',
+                              attempt=2, title='Benchmark podman (standard)')
+        # GitHub's workflow-run listing exposes the latest attempt, while the
+        # configured successful attempt remains available through its exact URL.
+        self.api.benchmark_runs = [failed]
+        result = self.assess()
+        self.assertFalse(result['requests'])
+        row = next(r for r in result['health'] if r['skill'] == 'podman')
+        self.assertEqual(row['status'], 'fresh')
+        self.assertEqual(row['last_qualified']['attempt'], 1)
+
     def test_meaningful_change_survives_following_irrelevant_merge(self):
         self.reference(days=1); self.enable('podman')
         self.change('.apm/skills/podman/SKILL.md')
