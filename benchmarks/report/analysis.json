@@ -68,6 +68,39 @@
     },
     {
       "case_ids": [
+        "8"
+      ],
+      "id": "sha256:10393d430f109292a5c5e81e59ed431cdc2fe7bf6e9bf4d0813becdc70f69e60",
+      "importance": "investigate",
+      "kind": "case_regression",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:794b023c08d3b7c3d8890b1a26ff1210a0ecc39e1e882d2f115328fd35fa11c0",
+        "sha256:fa281599f51ad328eaccf0054d533a9e1105f373ec8f7cfd33c53ea2056026b5"
+      ],
+      "observed": {
+        "with_minus_without": {
+          "direction": "negative",
+          "display": "-0.0033",
+          "value": "-0.0033"
+        }
+      },
+      "record_ids": [
+        "sha256:2802ba9cad2f2510a1416eb220a25549ce61a1163a586c95fd5dac97070de1a7"
+      ],
+      "reference_ids": [
+        "sha256:27f548a6c7fa3a24b167025eddb6582d1fb5929da5b193278e8a3fd2d5c653be",
+        "sha256:48e635cd50c6bca03ffd7e65210b52dee51d57dc1774bb9bb5a9bb4836fc7c60",
+        "sha256:53cdf521fcaa23f865dc2bed2fdf4fa101bf4fd10ebf0ea5fa78b9307e27dfb5",
+        "sha256:614cf5b2fbad6d074c4c631076faed49f575dd9f27fdff60a1d1910a2fd070ad",
+        "sha256:64b3b5a3901cb7e2f4b1968b2aa0b262ce72157775f6794c508a46e5763fb8d2",
+        "sha256:e103cb93d124ebde1404496022e1277d2fc0d6a12dce3a39559463b751b0f6e6"
+      ],
+      "skill": "podman",
+      "uncertainty": "descriptive_only_no_trial_pairing"
+    },
+    {
+      "case_ids": [
         "pester-001-failure-text"
       ],
       "id": "sha256:120f1ff899dde33e2bb6b6e099e2431abd9bcc4d244cf05c9320874d272184ce",
@@ -127,6 +160,39 @@
       ],
       "skill": "powershell-pester-6",
       "uncertainty": "reported_measurement_not_instruction_causality"
+    },
+    {
+      "case_ids": [
+        "5"
+      ],
+      "id": "sha256:14c4a04dc07af766996d67bb62f7e6e2994cd3918fc88a9d65ac6032d08736d1",
+      "importance": "investigate",
+      "kind": "case_regression",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:5d36e6f80295b95dbec830416f5c4185914244760ecb454053d6524319ae10b8",
+        "sha256:d2f4bc4e6311ffd0ab61c9dc2ad31c32da1a0da2efa936ee8396af333486d90c"
+      ],
+      "observed": {
+        "with_minus_without": {
+          "direction": "negative",
+          "display": "-0.1112",
+          "value": "-0.1112"
+        }
+      },
+      "record_ids": [
+        "sha256:2802ba9cad2f2510a1416eb220a25549ce61a1163a586c95fd5dac97070de1a7"
+      ],
+      "reference_ids": [
+        "sha256:24ddc64d2b8dbe5b8e6a9550f27ecb6c3ee57d72e9d119151daa6cedb3c14c14",
+        "sha256:27f548a6c7fa3a24b167025eddb6582d1fb5929da5b193278e8a3fd2d5c653be",
+        "sha256:53cdf521fcaa23f865dc2bed2fdf4fa101bf4fd10ebf0ea5fa78b9307e27dfb5",
+        "sha256:66ede1970e4692415ac2d5a2055fdc08bcc83cbc8ed40cfb069d85bb5fcd4f89",
+        "sha256:81024a90a30ee6f3f781f8a64b56c382cd5c641ac3afbba56883f1befa6afaa0",
+        "sha256:cae33bf89daf4ae1d90feb02f31f21a0a90e547b973b180967e28b1583f3b255"
+      ],
+      "skill": "podman",
+      "uncertainty": "descriptive_only_no_trial_pairing"
     },
     {
       "case_ids": [],
@@ -370,6 +436,57 @@
       ],
       "skill": "powershell-pester-6",
       "uncertainty": "reported_measurement_not_instruction_causality"
+    },
+    {
+      "case_ids": [
+        "9"
+      ],
+      "id": "sha256:429c6c96ff6b92a050c1bf205446b409e27e9ee6043a678f3802df8fa084d5ea",
+      "importance": "investigate",
+      "kind": "case_regression",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:31c128b6fc12f9c2c3b911fb76016ff3acdd2e95289ae8688c46a19037d8e45a",
+        "sha256:5a4a39b61e21dc156c6d3c5b777e4304b260d19b78d2c54fd94140370566f6bf"
+      ],
+      "observed": {
+        "with_minus_without": {
+          "direction": "negative",
+          "display": "-0.0233",
+          "value": "-0.0233"
+        }
+      },
+      "record_ids": [
+        "sha256:2802ba9cad2f2510a1416eb220a25549ce61a1163a586c95fd5dac97070de1a7"
+      ],
+      "reference_ids": [
+        "sha256:115cb74a62ca47288907a1892beec2ee1a25f2d40a7f61dbdd7b8414b34a3eef",
+        "sha256:27f548a6c7fa3a24b167025eddb6582d1fb5929da5b193278e8a3fd2d5c653be",
+        "sha256:53cdf521fcaa23f865dc2bed2fdf4fa101bf4fd10ebf0ea5fa78b9307e27dfb5",
+        "sha256:a7020f9c307e5ee58e67bfc4fb9ff4667b89826ff7dd163562748495265c19ec",
+        "sha256:d99f4f4e2c2439fe3a0ec057e1f96d7916e28e75cb0067089916647700be863f",
+        "sha256:fa2e340b3ac2ab5ace2cb636d6eaf4dc0d78691767f520c303b8a5e5d0a51218"
+      ],
+      "skill": "podman",
+      "uncertainty": "descriptive_only_no_trial_pairing"
+    },
+    {
+      "case_ids": [],
+      "id": "sha256:44c38c22e6f094c801744afe14bd248bda6148a5a049c8004fc2e07c70873e17",
+      "importance": "context",
+      "kind": "comparison_limitation",
+      "next_step": "supply_two_intended_runs",
+      "observation_ids": [],
+      "observed": {
+        "measured_runs": 1,
+        "status": "insufficient_run_evidence"
+      },
+      "record_ids": [
+        "sha256:2802ba9cad2f2510a1416eb220a25549ce61a1163a586c95fd5dac97070de1a7"
+      ],
+      "reference_ids": [],
+      "skill": "podman",
+      "uncertainty": "supplied_inputs_only"
     },
     {
       "case_ids": [
@@ -816,22 +933,6 @@
     },
     {
       "case_ids": [],
-      "id": "sha256:ab61adbc5cdf85b56b6204ce0a67e03d5e4549c30b04147a830832075799a493",
-      "importance": "context",
-      "kind": "comparison_limitation",
-      "next_step": "supply_two_intended_runs",
-      "observation_ids": [],
-      "observed": {
-        "measured_runs": 0,
-        "status": "insufficient_run_evidence"
-      },
-      "record_ids": [],
-      "reference_ids": [],
-      "skill": "podman",
-      "uncertainty": "supplied_inputs_only"
-    },
-    {
-      "case_ids": [],
       "id": "sha256:aba94df2226a34f20f22b2d6355944366dfc78598771bef608107728d2d931f9",
       "importance": "investigate",
       "kind": "incomplete_scans",
@@ -883,25 +984,6 @@
       ],
       "skill": "powershell-pester-6",
       "uncertainty": "reported_measurement_not_instruction_causality"
-    },
-    {
-      "case_ids": [],
-      "id": "sha256:b3b7f4f68d84d5042b64951c9b2219421ed014666e85c5bd5ca5497b21990a77",
-      "importance": "context",
-      "kind": "configured_unmeasured",
-      "next_step": "supply_model_backed_public_report",
-      "observation_ids": [],
-      "observed": {
-        "configured_case_counts": [
-          10
-        ]
-      },
-      "record_ids": [
-        "sha256:62cb9f5fcfa91bb7bcd3f5a4e7036078553d5787b74fa8b218aa911a28001d7c"
-      ],
-      "reference_ids": [],
-      "skill": "podman",
-      "uncertainty": "no_measurement_in_supplied_inputs"
     },
     {
       "case_ids": [],
@@ -1094,6 +1176,39 @@
       ],
       "skill": "powershell-pester-6",
       "uncertainty": "reported_unscoreable_outcome"
+    },
+    {
+      "case_ids": [
+        "7"
+      ],
+      "id": "sha256:df8189789111d812d080282f31d80b3fa551cc06f444c1e5bb8702a59af0a996",
+      "importance": "investigate",
+      "kind": "case_regression",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:1576a4580c1678830e20c4f3b4870aa9f6cb55ab7833ae13139f1a51de4cd66b",
+        "sha256:cfcb6d69cb996ebdf2794295ede31f5e08fac2caf401273149bc289e93d35351"
+      ],
+      "observed": {
+        "with_minus_without": {
+          "direction": "negative",
+          "display": "-0.0979",
+          "value": "-0.0979"
+        }
+      },
+      "record_ids": [
+        "sha256:2802ba9cad2f2510a1416eb220a25549ce61a1163a586c95fd5dac97070de1a7"
+      ],
+      "reference_ids": [
+        "sha256:27f548a6c7fa3a24b167025eddb6582d1fb5929da5b193278e8a3fd2d5c653be",
+        "sha256:53cdf521fcaa23f865dc2bed2fdf4fa101bf4fd10ebf0ea5fa78b9307e27dfb5",
+        "sha256:5faeaf3759d4078644f1acbbe3cbd4e942020b0884e82aa3fb724f7d04da72e3",
+        "sha256:60e9158c6d95893ffeddcbe247cda0df9807d1a32568a35b46047a6253eb1efe",
+        "sha256:6de58615cac1195bb63d6a84b802001ba107d16b89e2162c91ba2494cf25df2f",
+        "sha256:ecb061661e2f0acdbc4db85c64687ea1075e584583d11c392407f1420c40e4ff"
+      ],
+      "skill": "podman",
+      "uncertainty": "descriptive_only_no_trial_pairing"
     },
     {
       "case_ids": [
@@ -1372,6 +1487,21 @@
           "record_id": "sha256:0469bcb40ea1367ec1a763452c1deb181ba3901b7759027ddd66a22306ecaad7"
         }
       ]
+    },
+    {
+      "id": "sha256:f30db60e3361f4ad3acbbf7dbadab2811a0264f4d9b835089b311c44c90e1390",
+      "members": [
+        {
+          "member": "inventory/inventory.json",
+          "raw_digest": "sha256:99af71e9e862b18ff9341f9f21bce3e766cf3eac5215bc8b625ff94cc7911539",
+          "record_id": "sha256:62cb9f5fcfa91bb7bcd3f5a4e7036078553d5787b74fa8b218aa911a28001d7c"
+        },
+        {
+          "member": "skills/podman/behavioral/20261027_194915_2684_7ac392d22e85/public-report.json",
+          "raw_digest": "sha256:a644bde856cc8cd1720c4415bfd17aee3fca73a1223bc95b6bd27c91c58df7a7",
+          "record_id": "sha256:2802ba9cad2f2510a1416eb220a25549ce61a1163a586c95fd5dac97070de1a7"
+        }
+      ]
     }
   ],
   "method_version": "bounded-descriptive-skill-analysis/2",
@@ -1381,6 +1511,12 @@
       "kind": "static",
       "run_id": null,
       "skill": "powershell-pester-6"
+    },
+    {
+      "id": "sha256:2802ba9cad2f2510a1416eb220a25549ce61a1163a586c95fd5dac97070de1a7",
+      "kind": "behavioral",
+      "run_id": "20261027_194915_2684_7ac392d22e85",
+      "skill": "podman"
     },
     {
       "id": "sha256:282d482d8ffd1bee7d929727f273b30538cc01a69ffaa5f7da078b13a0e49c90",
@@ -2516,7 +2652,556 @@
       "static_results": []
     },
     {
-      "behavioral_results": [],
+      "behavioral_results": [
+        {
+          "arms": [
+            {
+              "condition": {
+                "build_digest": null,
+                "competing_skills": [],
+                "execution": {
+                  "authorization_policy": null,
+                  "base_image_mode": "disabled",
+                  "environment": "docker",
+                  "fixture_boundary": null,
+                  "task_source": "evals_json"
+                },
+                "fixture_digest": null,
+                "id": "sha256:50e7dde293cc8dd398aa971d12ba9524b1343a8d05bdbdb7ab86f462514b433a",
+                "instruction_digest": null,
+                "provenance": "runtime_recorded",
+                "target_present": true,
+                "workspace_mode": "isolated"
+              },
+              "coverage": {
+                "case_details": "complete",
+                "expected_attempts": 10,
+                "expected_cases": 10,
+                "recorded_attempts": 10,
+                "scored_attempts": 10,
+                "unscored_attempts": 0
+              },
+              "execution_error_count": 0,
+              "execution_status": "succeeded",
+              "name": "with_skill",
+              "rubric": {
+                "passed_cases": 8,
+                "threshold": 0.5,
+                "total_cases": 10
+              }
+            },
+            {
+              "condition": {
+                "build_digest": null,
+                "competing_skills": [],
+                "execution": {
+                  "authorization_policy": null,
+                  "base_image_mode": "disabled",
+                  "environment": "docker",
+                  "fixture_boundary": null,
+                  "task_source": "evals_json"
+                },
+                "fixture_digest": null,
+                "id": "sha256:43153043c854c931c9c2fd4ceaa8f683d4f697dd75a217390491c0b23971344a",
+                "instruction_digest": null,
+                "provenance": "runtime_recorded",
+                "target_present": false,
+                "workspace_mode": "isolated"
+              },
+              "coverage": {
+                "case_details": "complete",
+                "expected_attempts": 10,
+                "expected_cases": 10,
+                "recorded_attempts": 10,
+                "scored_attempts": 10,
+                "unscored_attempts": 0
+              },
+              "execution_error_count": 0,
+              "execution_status": "succeeded",
+              "name": "without_skill",
+              "rubric": {
+                "passed_cases": 7,
+                "threshold": 0.5,
+                "total_cases": 10
+              }
+            }
+          ],
+          "availability": {
+            "provenance": "runtime_recorded",
+            "reasons": [],
+            "status": "complete"
+          },
+          "case_summary": {
+            "cases": [
+              {
+                "arm_means": {
+                  "with_skill": {
+                    "direction": "positive",
+                    "display": "0.6646",
+                    "value": "0.6646"
+                  },
+                  "without_skill": {
+                    "direction": "positive",
+                    "display": "0.6542",
+                    "value": "0.6542"
+                  }
+                },
+                "case_id": "1",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:37a95237bb3bbcd1efe7741d8eaaf5cc7144dafdaf4d40e888cf3e0071e74120"
+                  ],
+                  "without_skill": [
+                    "sha256:125dcdd6393baf0e3d68c9f30ddd9ad05097ce31d2fd7a43ba320006aff7446a"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:278c559a2b56147b6c01e9d73f99bb1721d92c77330575543149adfc9b41af3b",
+                  "sha256:27f548a6c7fa3a24b167025eddb6582d1fb5929da5b193278e8a3fd2d5c653be",
+                  "sha256:2dd06263b37125f55370eabd86f645e0416984e1bf2ca8e04607782efd5e2a49",
+                  "sha256:53cdf521fcaa23f865dc2bed2fdf4fa101bf4fd10ebf0ea5fa78b9307e27dfb5",
+                  "sha256:90aadac52e4968d876378c5574895b5dc363ad91c29dd6fec6c11e02ea74b804",
+                  "sha256:dfa76fc3507faaf4b588d446d51ffe7e9f5911ad6e56074c39a22e63c02da351"
+                ],
+                "unavailable_reasons": [],
+                "with_minus_without": {
+                  "direction": "positive",
+                  "display": "0.0104",
+                  "value": "0.0104"
+                }
+              },
+              {
+                "arm_means": {
+                  "with_skill": {
+                    "direction": "positive",
+                    "display": "0.7375",
+                    "value": "0.7375"
+                  },
+                  "without_skill": {
+                    "direction": "positive",
+                    "display": "0.4542",
+                    "value": "0.4542"
+                  }
+                },
+                "case_id": "10",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:14a2e5775631570e954b55e790b8a66a130f9480dbb919882181394022ac980c"
+                  ],
+                  "without_skill": [
+                    "sha256:0c7b6b275e9d22ad7573a1f93d47216de74af885033ceb29e0f83e8011fa3c98"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:27f548a6c7fa3a24b167025eddb6582d1fb5929da5b193278e8a3fd2d5c653be",
+                  "sha256:53cdf521fcaa23f865dc2bed2fdf4fa101bf4fd10ebf0ea5fa78b9307e27dfb5",
+                  "sha256:579472b42419e5f89871d6d652a252f404a81a246031a6a430aefbe44ecee9d6",
+                  "sha256:a9addf38ed182183f13000103686b0217b6240487bb45cf53ab7d454be70514d",
+                  "sha256:b836986a080a7e09d1ac51fb7409208e1bb99301050ea407f504399264455ead",
+                  "sha256:d46b4b5036994681bd440feb8334f3a73f15bfab878dcee752b2f6ed1434c097"
+                ],
+                "unavailable_reasons": [],
+                "with_minus_without": {
+                  "direction": "positive",
+                  "display": "0.2833",
+                  "value": "0.2833"
+                }
+              },
+              {
+                "arm_means": {
+                  "with_skill": {
+                    "direction": "positive",
+                    "display": "0.7258",
+                    "value": "0.7258"
+                  },
+                  "without_skill": {
+                    "direction": "positive",
+                    "display": "0.6458",
+                    "value": "0.6458"
+                  }
+                },
+                "case_id": "2",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:17d14c0d5933e27d4bc23faf3d86852a14a51c4689e8d16c2c7df9216903d0a5"
+                  ],
+                  "without_skill": [
+                    "sha256:47b3802d12c814bfd706effce622c00d97d2cbd559da14840e109669e9cd1516"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:04103298dff67e7894b6ce2475f26429afba26e28bab95926deaa4234ef34099",
+                  "sha256:27f548a6c7fa3a24b167025eddb6582d1fb5929da5b193278e8a3fd2d5c653be",
+                  "sha256:53cdf521fcaa23f865dc2bed2fdf4fa101bf4fd10ebf0ea5fa78b9307e27dfb5",
+                  "sha256:7ad4160ca94367c0f788bb2010158cfd455caf70a08b0366ef95e60d51f8951a",
+                  "sha256:ac7a6f61069756626874964c1bb25f534f05528d57131ea76b70fd1e6a15510b",
+                  "sha256:e5a2d0b536f09fee6f218aa1aa70fa791e461bee9d1cbb1b09364af89b4da15e"
+                ],
+                "unavailable_reasons": [],
+                "with_minus_without": {
+                  "direction": "positive",
+                  "display": "0.0800",
+                  "value": "0.0800"
+                }
+              },
+              {
+                "arm_means": {
+                  "with_skill": {
+                    "direction": "positive",
+                    "display": "0.7508",
+                    "value": "0.7508"
+                  },
+                  "without_skill": {
+                    "direction": "positive",
+                    "display": "0.4750",
+                    "value": "0.475"
+                  }
+                },
+                "case_id": "3",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:84a593ad0621d7a3e1051ff10df34e1602ba2e48b3ff8b8dd2b999901397d1da"
+                  ],
+                  "without_skill": [
+                    "sha256:d3dab17d308faeb82457e77103ba372cbf8620622796060313c2c5f2296f058f"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:275aca4cc735c712c78e49e691672d2637e7c2eb2924f588f3240efd035dd635",
+                  "sha256:27f548a6c7fa3a24b167025eddb6582d1fb5929da5b193278e8a3fd2d5c653be",
+                  "sha256:53cdf521fcaa23f865dc2bed2fdf4fa101bf4fd10ebf0ea5fa78b9307e27dfb5",
+                  "sha256:71a423baa39ea2a31e58e457e6f1a420c174ba05571cb8ab8a66f33a3b3a5944",
+                  "sha256:ef6dc50544f6f99c6b481715df2bb6b82a77dc1d8d1cef6b5a118a97b5eaddb6",
+                  "sha256:f3eb42bbf61879155851b68f414f0fe2f0933a1b619ad362f1cfc94d4b77f9ee"
+                ],
+                "unavailable_reasons": [],
+                "with_minus_without": {
+                  "direction": "positive",
+                  "display": "0.2758",
+                  "value": "0.2758"
+                }
+              },
+              {
+                "arm_means": {
+                  "with_skill": {
+                    "direction": "positive",
+                    "display": "0.4708",
+                    "value": "0.4708"
+                  },
+                  "without_skill": {
+                    "direction": "positive",
+                    "display": "0.4458",
+                    "value": "0.4458"
+                  }
+                },
+                "case_id": "4",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:18057647c096562ba4152880b7807ebcdb7a71adb950f45c3049f5f9fd215572"
+                  ],
+                  "without_skill": [
+                    "sha256:eac81e63def023185ce73acd68e26ac8752eca8f2cf42db87a59b831cff0583b"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:27f548a6c7fa3a24b167025eddb6582d1fb5929da5b193278e8a3fd2d5c653be",
+                  "sha256:3eb5f76b9e8da0afceef188919cc11cbe20c360ad669adadbeed2b37c305256c",
+                  "sha256:43741d275c50b726aca9589a6beed88484f1d76b55e46b156bb5278e92a9f6fc",
+                  "sha256:468fbdcce669066d87bd61a745db8f2b3639dc53ef5bd2e5cd19fec421bfa4cd",
+                  "sha256:53cdf521fcaa23f865dc2bed2fdf4fa101bf4fd10ebf0ea5fa78b9307e27dfb5",
+                  "sha256:70d7bec0cbe79bba7c2f40069a1bf189e408dfc6f66c237ed2165d27b7a72ce4"
+                ],
+                "unavailable_reasons": [],
+                "with_minus_without": {
+                  "direction": "positive",
+                  "display": "0.0250",
+                  "value": "0.0250"
+                }
+              },
+              {
+                "arm_means": {
+                  "with_skill": {
+                    "direction": "positive",
+                    "display": "0.4896",
+                    "value": "0.4896"
+                  },
+                  "without_skill": {
+                    "direction": "positive",
+                    "display": "0.6008",
+                    "value": "0.6008"
+                  }
+                },
+                "case_id": "5",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:5d36e6f80295b95dbec830416f5c4185914244760ecb454053d6524319ae10b8"
+                  ],
+                  "without_skill": [
+                    "sha256:d2f4bc4e6311ffd0ab61c9dc2ad31c32da1a0da2efa936ee8396af333486d90c"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:24ddc64d2b8dbe5b8e6a9550f27ecb6c3ee57d72e9d119151daa6cedb3c14c14",
+                  "sha256:27f548a6c7fa3a24b167025eddb6582d1fb5929da5b193278e8a3fd2d5c653be",
+                  "sha256:53cdf521fcaa23f865dc2bed2fdf4fa101bf4fd10ebf0ea5fa78b9307e27dfb5",
+                  "sha256:66ede1970e4692415ac2d5a2055fdc08bcc83cbc8ed40cfb069d85bb5fcd4f89",
+                  "sha256:81024a90a30ee6f3f781f8a64b56c382cd5c641ac3afbba56883f1befa6afaa0",
+                  "sha256:cae33bf89daf4ae1d90feb02f31f21a0a90e547b973b180967e28b1583f3b255"
+                ],
+                "unavailable_reasons": [],
+                "with_minus_without": {
+                  "direction": "negative",
+                  "display": "-0.1112",
+                  "value": "-0.1112"
+                }
+              },
+              {
+                "arm_means": {
+                  "with_skill": {
+                    "direction": "positive",
+                    "display": "0.9846",
+                    "value": "0.9846"
+                  },
+                  "without_skill": {
+                    "direction": "positive",
+                    "display": "0.8300",
+                    "value": "0.83"
+                  }
+                },
+                "case_id": "6",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:e976d15c799c8e949ec52b1a7d10c5d481f9039fec0e5df1bef87d9491fb0666"
+                  ],
+                  "without_skill": [
+                    "sha256:dc7a6389886e3341476f85ccea5a214c776f94ecdba26cb50963c5ed28080ea0"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:27f548a6c7fa3a24b167025eddb6582d1fb5929da5b193278e8a3fd2d5c653be",
+                  "sha256:53cdf521fcaa23f865dc2bed2fdf4fa101bf4fd10ebf0ea5fa78b9307e27dfb5",
+                  "sha256:a179169e863993fec4728551239b41ffb359f1762983790fe81fc39f8a66f0ba",
+                  "sha256:b330454e6100313adeedfc1d32a610026ad31931d8799b0ddf28486c3c10fd73",
+                  "sha256:cf4db5d9d93c67a5075a934160346ac966696ff9b248268249c82a918e94e6fd",
+                  "sha256:edae34716874fad6f40ed4b552007de87d231c52a331455c16048743fbd41910"
+                ],
+                "unavailable_reasons": [],
+                "with_minus_without": {
+                  "direction": "positive",
+                  "display": "0.1546",
+                  "value": "0.1546"
+                }
+              },
+              {
+                "arm_means": {
+                  "with_skill": {
+                    "direction": "positive",
+                    "display": "0.6613",
+                    "value": "0.6613"
+                  },
+                  "without_skill": {
+                    "direction": "positive",
+                    "display": "0.7592",
+                    "value": "0.7592"
+                  }
+                },
+                "case_id": "7",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:1576a4580c1678830e20c4f3b4870aa9f6cb55ab7833ae13139f1a51de4cd66b"
+                  ],
+                  "without_skill": [
+                    "sha256:cfcb6d69cb996ebdf2794295ede31f5e08fac2caf401273149bc289e93d35351"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:27f548a6c7fa3a24b167025eddb6582d1fb5929da5b193278e8a3fd2d5c653be",
+                  "sha256:53cdf521fcaa23f865dc2bed2fdf4fa101bf4fd10ebf0ea5fa78b9307e27dfb5",
+                  "sha256:5faeaf3759d4078644f1acbbe3cbd4e942020b0884e82aa3fb724f7d04da72e3",
+                  "sha256:60e9158c6d95893ffeddcbe247cda0df9807d1a32568a35b46047a6253eb1efe",
+                  "sha256:6de58615cac1195bb63d6a84b802001ba107d16b89e2162c91ba2494cf25df2f",
+                  "sha256:ecb061661e2f0acdbc4db85c64687ea1075e584583d11c392407f1420c40e4ff"
+                ],
+                "unavailable_reasons": [],
+                "with_minus_without": {
+                  "direction": "negative",
+                  "display": "-0.0979",
+                  "value": "-0.0979"
+                }
+              },
+              {
+                "arm_means": {
+                  "with_skill": {
+                    "direction": "positive",
+                    "display": "0.8300",
+                    "value": "0.83"
+                  },
+                  "without_skill": {
+                    "direction": "positive",
+                    "display": "0.8333",
+                    "value": "0.8333"
+                  }
+                },
+                "case_id": "8",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:794b023c08d3b7c3d8890b1a26ff1210a0ecc39e1e882d2f115328fd35fa11c0"
+                  ],
+                  "without_skill": [
+                    "sha256:fa281599f51ad328eaccf0054d533a9e1105f373ec8f7cfd33c53ea2056026b5"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:27f548a6c7fa3a24b167025eddb6582d1fb5929da5b193278e8a3fd2d5c653be",
+                  "sha256:48e635cd50c6bca03ffd7e65210b52dee51d57dc1774bb9bb5a9bb4836fc7c60",
+                  "sha256:53cdf521fcaa23f865dc2bed2fdf4fa101bf4fd10ebf0ea5fa78b9307e27dfb5",
+                  "sha256:614cf5b2fbad6d074c4c631076faed49f575dd9f27fdff60a1d1910a2fd070ad",
+                  "sha256:64b3b5a3901cb7e2f4b1968b2aa0b262ce72157775f6794c508a46e5763fb8d2",
+                  "sha256:e103cb93d124ebde1404496022e1277d2fc0d6a12dce3a39559463b751b0f6e6"
+                ],
+                "unavailable_reasons": [],
+                "with_minus_without": {
+                  "direction": "negative",
+                  "display": "-0.0033",
+                  "value": "-0.0033"
+                }
+              },
+              {
+                "arm_means": {
+                  "with_skill": {
+                    "direction": "positive",
+                    "display": "0.7042",
+                    "value": "0.7042"
+                  },
+                  "without_skill": {
+                    "direction": "positive",
+                    "display": "0.7275",
+                    "value": "0.7275"
+                  }
+                },
+                "case_id": "9",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:5a4a39b61e21dc156c6d3c5b777e4304b260d19b78d2c54fd94140370566f6bf"
+                  ],
+                  "without_skill": [
+                    "sha256:31c128b6fc12f9c2c3b911fb76016ff3acdd2e95289ae8688c46a19037d8e45a"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:115cb74a62ca47288907a1892beec2ee1a25f2d40a7f61dbdd7b8414b34a3eef",
+                  "sha256:27f548a6c7fa3a24b167025eddb6582d1fb5929da5b193278e8a3fd2d5c653be",
+                  "sha256:53cdf521fcaa23f865dc2bed2fdf4fa101bf4fd10ebf0ea5fa78b9307e27dfb5",
+                  "sha256:a7020f9c307e5ee58e67bfc4fb9ff4667b89826ff7dd163562748495265c19ec",
+                  "sha256:d99f4f4e2c2439fe3a0ec057e1f96d7916e28e75cb0067089916647700be863f",
+                  "sha256:fa2e340b3ac2ab5ace2cb636d6eaf4dc0d78691767f520c303b8a5e5d0a51218"
+                ],
+                "unavailable_reasons": [],
+                "with_minus_without": {
+                  "direction": "negative",
+                  "display": "-0.0233",
+                  "value": "-0.0233"
+                }
+              }
+            ],
+            "cohort_cases": 10,
+            "matched_cases": 10,
+            "method": "descriptive_arm_means_with_minus_without",
+            "scored_observations": 20
+          },
+          "dataset": {
+            "authored_digest": "sha256:6c343468a5b508d60449d6c464b79ab100dd39d5831613b89541fb1352c321c2",
+            "authored_provenance": "reconstructed_from_declared_revision",
+            "case_cohort_digest": "sha256:d5caba195eef9ebfa4650c9d5b8be4f9925f21b177f196489b3be4adefb7813c",
+            "owner": "local",
+            "staged_algorithm": "skill-evaluator-dataset-snapshot/1",
+            "staged_digest": "sha256:cecc0bcea480a3c197e1b4c527009958ada3be67eb0205325f6c16123f9355fe",
+            "staged_provenance": "runtime_recorded"
+          },
+          "gates": {
+            "failed": [],
+            "passed_observations": 0,
+            "unknown_observations": 20
+          },
+          "measured": true,
+          "native_metrics": [
+            {
+              "name": "Skill Lift",
+              "unit": "score",
+              "value": 0.0593
+            },
+            {
+              "name": "Effectiveness",
+              "unit": "score",
+              "value": 0.717
+            },
+            {
+              "name": "Correctness",
+              "unit": "score",
+              "value": 0.84
+            },
+            {
+              "name": "Discoverability",
+              "unit": "score",
+              "value": 0.6875
+            }
+          ],
+          "policy": {
+            "attempts": {
+              "maximum": 1,
+              "mode": "standard",
+              "pass_threshold": 0.5,
+              "stop_on_pass": false
+            },
+            "fields": {
+              "authorization_policy": null,
+              "baseline": true,
+              "codex": "0.155.1",
+              "competing_revision": null,
+              "concurrency": 2,
+              "deterministic_gate": null,
+              "docker_compose": "5.6.1",
+              "environment": "docker",
+              "evaluator_revision": "ac0a04905100acdafc6c95829311a9739c340ff6",
+              "fixture_boundary": null,
+              "grading": "default",
+              "harbor": "0.13.2",
+              "model": "gpt-5.6-sol",
+              "provider": "openai",
+              "python": "3.13",
+              "standard_attempts": 1,
+              "stop_on_pass": false,
+              "task_build": null,
+              "task_source": null,
+              "timeout_multiplier": 2.0,
+              "upstream_revision": null,
+              "workspace_mode": null
+            },
+            "id": "sha256:b5ebc1f774866bf24c057aed9ce3d9883d35bbe14b606e06b7324f8176d2d6f3",
+            "judge": {
+              "enabled": true,
+              "model": "gpt-5.6-sol",
+              "provider": "openai"
+            },
+            "metric_set": "skill-evaluator-default-v2",
+            "patch_digest": "sha256:ff159054bbd840fb793c20352ffa074cb79394a95a9f32f178e3aab5d4c91c49",
+            "provenance": "runtime_recorded",
+            "published_id": null
+          },
+          "record_id": "sha256:2802ba9cad2f2510a1416eb220a25549ce61a1163a586c95fd5dac97070de1a7",
+          "run_id": "20261027_194915_2684_7ac392d22e85",
+          "source": {
+            "content_digest": "sha256:506e78b501906831944d7c6559091c898de9476d42347c56381c950d0099d07d",
+            "content_provenance": "reconstructed_from_declared_revision",
+            "lineage": null,
+            "owner": "local",
+            "repository": "thetechgy/agent-engineering-baseline",
+            "revision": "21242feb817ec76ad3ff2674ff6b7b4171196733",
+            "skill_id": "podman",
+            "source_path": ".apm/skills/podman"
+          }
+        }
+      ],
       "comparison_status": "insufficient_run_evidence",
       "comparisons": [],
       "configurations": [

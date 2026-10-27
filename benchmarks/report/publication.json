@@ -43,6 +43,23 @@
         "workflow_id": 313370522,
         "workflow_path": ".github/workflows/validate.yml"
       }
+    },
+    "standard--podman": {
+      "members": {
+        "inventory/inventory.json": "99af71e9e862b18ff9341f9f21bce3e766cf3eac5215bc8b625ff94cc7911539",
+        "skills/podman/behavioral/20261027_194915_2684_7ac392d22e85/public-report.json": "a644bde856cc8cd1720c4415bfd17aee3fca73a1223bc95b6bd27c91c58df7a7"
+      },
+      "provenance": {
+        "archive_digest": "sha256:47a672783212dc413439bd7036d6801be53d88ded2f0b2e31372b21436ec9a13",
+        "artifact_id": 12767910719,
+        "attempt": 1,
+        "event": "workflow_dispatch",
+        "repository": "thetechgy/agent-engineering-baseline",
+        "revision": "21242feb817ec76ad3ff2674ff6b7b4171196733",
+        "run_id": 40572244242,
+        "workflow_id": 361827575,
+        "workflow_path": ".github/workflows/benchmark-skills.yml"
+      }
     }
   }
 }
