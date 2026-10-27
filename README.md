@@ -109,12 +109,21 @@ keeps the destination's locked baseline commit; it does not adopt newer commits
 on that branch. See [deliberate updates](#install-and-update-deliberately).
 
 Both scopes configure both CLIs. Codex only loads project configuration for trusted
-projects. APM writes these files:
+projects; Copilot CLI also requires folder trust before loading project MCP servers.
+APM maintains the following state and CLI instruction sources:
 
 | Scope | APM state | Instructions | MCP configuration | Skills |
 | --- | --- | --- | --- | --- |
-| User | `~/.apm/apm.yml`, `~/.apm/apm.lock.yaml`, `~/.apm/config.json` | `~/.codex/AGENTS.md`, `~/.copilot/AGENTS.md`, `~/.copilot/copilot-instructions.md` | `~/.codex/config.toml`, `~/.copilot/mcp-config.json` | `~/.agents/skills/*` |
-| Project | `./apm.yml`, `./apm.lock.yaml`, `./apm_modules/` | `./AGENTS.md`, `./.github/copilot-instructions.md` | `./.codex/config.toml`, `./.github/mcp.json` | `./.agents/skills/*` |
+| User | `~/.apm/apm.yml`, `~/.apm/apm.lock.yaml`, `~/.apm/config.json` | Codex: `~/.codex/AGENTS.md`; Copilot: `~/.copilot/instructions/personal.instructions.md` | `~/.codex/config.toml`, `~/.copilot/mcp-config.json` | `~/.agents/skills/*` |
+| Project | `./apm.yml`, `./apm.lock.yaml`, `./apm_modules/` | Both: `./AGENTS.md`; Copilot also: `./.github/instructions/personal.instructions.md` | `./.codex/config.toml`, `./.github/mcp.json` | `./.agents/skills/*` |
+
+With APM 0.35.0, user-scope compilation also generates `~/.copilot/AGENTS.md`.
+Local discovery with Copilot CLI 1.0.103 selected the modular user instruction above,
+not that generated root file. At project scope it discovered both `AGENTS.md` and
+the modular instruction. For these baseline inputs, native compilation removes
+the redundant `.github/copilot-instructions.md`; it does not generate a user
+`~/.copilot/copilot-instructions.md`. Generated-file checks establish delivery;
+they do not by themselves establish what a CLI loads.
 
 ### Install and update deliberately
 
@@ -551,8 +560,9 @@ directly.
 Repository review guidance lives in
 [`baseline-review.instructions.md`](baseline-review.instructions.md). Pinned APM
 0.35.0 discovers this root source during local compilation and generates it into
-the shared `AGENTS.md`. Copilot loads the deployed personal instruction file;
-native compilation removes its redundant generated root instruction file.
+the shared `AGENTS.md`. Copilot CLI discovers that file and the deployed
+`.github/instructions/personal.instructions.md`; native compilation removes the
+redundant `.github/copilot-instructions.md`.
 Keep this source outside `.apm/` and leave the manifest's explicit `includes`
 unchanged so downstream instructions and packages exclude these review rules.
 
@@ -592,7 +602,6 @@ For comparison, bootstrap's user-scope sequence is:
 
 ```text
 apm install --global --target codex,copilot --trust-bin --trust-transitive-mcp <ref>
-apm update --global --yes --target codex,copilot
 apm compile --global
 ```
 
