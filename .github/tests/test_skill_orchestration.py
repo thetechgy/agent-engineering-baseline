@@ -130,6 +130,11 @@ class OrchestrationTests(unittest.TestCase):
                 if source.is_file() and not source.is_symlink():
                     target.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copyfile(source, target)
+        # Synthetic runs must not inherit production qualification or activation.
+        cfg = orchestration.policy(cls.base)
+        for suite in cfg['suites'].values():
+            suite.update(enabled=False, reference=None)
+        reports.write_json(cls.base / orchestration.POLICY_FILE, cfg)
         git(cls.base, 'init', '-q', '-b', 'main')
         cls.base_revision = commit(cls.base, 'Fixture runtime and skills')
 

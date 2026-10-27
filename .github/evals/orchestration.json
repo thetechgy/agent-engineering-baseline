@@ -2,7 +2,7 @@
   "schema_version": 1,
   "due_days": 30,
   "suites": {
-    "podman": {"enabled": false, "max_cases": 10, "reference": null},
+    "podman": {"enabled": false, "max_cases": 10, "reference": {"run_id": 40572244242, "attempt": 1}},
     "gh": {"enabled": false, "max_cases": 24, "reference": null}
   }
 }
