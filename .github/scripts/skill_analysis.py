@@ -597,10 +597,15 @@ def complete_numeric(record):
 
 
 def classify(left, right, left_conditions, right_conditions):
+    return classify_facts({'source': left['source'], 'complete_numeric': complete_numeric(left), 'conditions': left_conditions},
+                          {'source': right['source'], 'complete_numeric': complete_numeric(right), 'conditions': right_conditions})
+
+
+def classify_facts(left, right):
     incompatible = []; exploratory = []
     if not source_compatible(left['source'], right['source']):
         incompatible.append('source_origin_or_lineage_unknown_or_conflicting')
-    for group, a, b in zip(('essential', 'supplementary'), left_conditions, right_conditions):
+    for group, a, b in zip(('essential', 'supplementary'), left['conditions'], right['conditions']):
         for key in sorted(set(a) | set(b)):
             x, y = a.get(key), b.get(key)
             unknown = x is None or y is None or x == 'unknown' or y == 'unknown'
@@ -608,7 +613,7 @@ def classify(left, right, left_conditions, right_conditions):
                 (incompatible if group == 'essential' else exploratory).append('unknown:' + key)
             elif x != y:
                 incompatible.append('changed:' + key)
-    if not complete_numeric(left) or not complete_numeric(right):
+    if not left['complete_numeric'] or not right['complete_numeric']:
         exploratory.append('incomplete_numeric_execution')
     if left['source']['content']['digest'] is None or right['source']['content']['digest'] is None:
         exploratory.append('target_content_unknown')

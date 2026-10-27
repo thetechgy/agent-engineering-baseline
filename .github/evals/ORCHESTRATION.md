@@ -157,3 +157,12 @@ Before activation, hosted qualification must establish native run-ID correlation
 preapproval context ordering, approval waiting/rejection, postapproval stale
 skipping, operational artifact recovery, and unchanged history/publication behavior.
 The separately approved current-policy Podman and gh reference runs remain required.
+
+## Reporting retention
+
+The Pages publisher protects registered qualification references from compact
+snapshot pruning. Its 90-day/30-observation budgets apply per skill and evidence
+class. Native ledgers and Actions operational records remain separate; reporting
+retention does not change qualification, freshness, dispatch duplicate suppression,
+or operational-record expiry behavior. See `REPORT-EVIDENCE.md` for summary recovery
+and the distinction between retained measurements and original diagnostic evidence.

@@ -138,6 +138,27 @@ class PagesTests(unittest.TestCase):
         self.save()
         return changed
 
+    def test_versioned_history_build_and_seal(self):
+        import skill_history as history
+        record = fixtures.synthetic(name='alpha')
+        value = history.empty('2026-10-27T12:00:00Z')
+        item = history.observation(record, 'standard--alpha', prov(self.revision, kind='benchmark'), value['retained_at'])
+        history.add(value, item)
+        raw = pages.encoded(history.validate(value))
+        pages.write(self.site, 'report/history.json', raw)
+        self.state.update(schema_version=2, history_digest=pages.digest(raw)); self.save()
+        pages.build(self.site)
+        html = (self.site / 'index.html').read_text()
+        self.assertIn('Evaluation history and trends', html)
+        first = pages.tree(self.site); pages.build(self.site)
+        self.assertEqual(first, pages.tree(self.site))
+        self.assertEqual((self.site / self.member).read_bytes(), self.raw_ledger)
+        candidate = self.root / 'candidate'; candidate.mkdir()
+        shutil.copytree(self.site, candidate / 'benchmarks')
+        pages.seal(candidate, self.revision); pages.verify_candidate(candidate)
+        pages.write(self.site, 'report/history.json', b'{}')
+        with self.assertRaises(ValueError): pages.build(self.site)
+
     def test_build_determinism_ledger_only_and_compatibility_links(self):
         self.admit('quality', [self.quality()])
         rows = pages.build(self.site)
@@ -379,6 +400,18 @@ class PagesTests(unittest.TestCase):
         result = pages.prepare(ROOT, retained, output, 'workflow_run', {'workflow_run': {'id': 20, 'run_attempt': 1}}, api)
         self.assertIn('detailed evidence unavailable for 1', result[-1])
         seal = pages.verify_candidate(output)
+        historical = pages.parse((output / 'benchmarks/report/history.json').read_bytes())
+        self.assertEqual(len(historical['observations']), 1)
+        self.assertEqual(historical['observations'][0]['class'], 'quality')
+        self.assertIsNone(historical['observations'][0]['execution']['completed_at'])
+        shutil.rmtree(retained / 'benchmarks')
+        shutil.copytree(output / 'benchmarks', retained / 'benchmarks')
+        pages.git(retained, 'add', '.')
+        pages.git(retained, '-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '--quiet', '-m', 'Retained v2')
+        api.parent = pages.git(retained, 'rev-parse', 'HEAD')
+        replay = self.root / 'replay'
+        pages.prepare(ROOT, retained, replay, 'workflow_run', {'workflow_run': {'id': 20, 'run_attempt': 1}}, api)
+        self.assertEqual(historical['observations'], pages.parse((replay / 'benchmarks/report/history.json').read_bytes())['observations'])
         before = pages.tree(output / 'benchmarks')
         command = [sys.executable, '-B', str(ROOT / '.github/scripts/skill_pages.py'), 'build', '--site', str(output / 'benchmarks')]
         run = subprocess.run(command, capture_output=True, text=True)

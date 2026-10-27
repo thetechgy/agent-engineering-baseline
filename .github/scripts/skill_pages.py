@@ -284,7 +284,11 @@ def load_state(site):
         require(not any(name.startswith('report/') for name in files), 'Unmanifested retained evidence')
         return {'schema_version': 1, 'current': None, 'slots': {}}
     value = parse(manifest)
-    require(set(value) == {'schema_version', 'current', 'slots'} and type(value['schema_version']) is int and value['schema_version'] == 1, 'Publication manifest version')
+    require(set(value) == ({'schema_version', 'current', 'slots'} if value.get('schema_version') == 1 else {'schema_version', 'current', 'slots', 'history_digest'}) and type(value['schema_version']) is int and value['schema_version'] in (1, 2), 'Publication manifest version')
+    if value['schema_version'] == 2:
+        import skill_history as history
+        require(digest(files.get('report/history.json', b'')) == value['history_digest'], 'History digest mismatch')
+        history.validate(parse(files['report/history.json']))
     require(type(value['slots']) is dict and len(value['slots']) <= 100, 'Publication slot limit')
     import skill_analysis as analysis
     for slot, item in value['slots'].items():
@@ -302,6 +306,8 @@ def load_state(site):
     require(digest(files.get('report/current/inventory/inventory.json', b'')) == current['digest'], 'Current inventory digest mismatch')
     analysis.capture_inputs([site / 'report/current'])
     allowed = {'report/publication.json', 'report/analysis.json', 'report/current/inventory/inventory.json'}
+    if value['schema_version'] == 2:
+        allowed.add('report/history.json')
     allowed.update(f'report/bundles/{slot}/{member}' for slot, item in value['slots'].items() for member in item['members'])
     require(all(not name.startswith('report/') or name in allowed for name in files), 'Unmanifested publication member')
     return value
@@ -458,6 +464,7 @@ def build(site):
     import skill_analysis as analysis
     import skill_evidence as evidence
     import skill_report as report
+    import skill_history as history
     state = load_state(site)
     require(state['current'] is not None, 'Current inventory required')
     roots = [site / 'report/current'] + [site / f'report/bundles/{slot}' for slot in sorted(state['slots'])]
@@ -475,7 +482,8 @@ def build(site):
     context = {'current': {**state['current'], 'inventory_record_id': evidence.identity(evidence.parse_json((site / 'report/current/inventory/inventory.json').read_bytes()))}, 'slots': [{'slot': slot, **item} for slot, item in sorted(state['slots'].items())], 'history': rows}
     for value in (state, rows):
         evidence.reports.public_strings(value)
-    write(site, 'index.html', report.render_report(saved, captured, pages_context=context))
+    historical = history.validate(parse((site / 'report/history.json').read_bytes())) if state['schema_version'] == 2 else None
+    write(site, 'index.html', report.render_report(saved, captured, pages_context=context, historical=historical))
     write(site, '.nojekyll', b'')
     for member in sorted({row['member'] for row in rows}):
         skill, policy, _ = member.split('/')
@@ -494,7 +502,18 @@ def build(site):
     return rows
 
 
-def acquire(api, run, jobs, kind, site, state, workspace, temporary):
+def execution_times(jobs, slot):
+    if slot == 'quality':
+        name = 'Skill quality (advisory findings)'
+    elif slot.startswith('oracle--'):
+        name = 'Pester evaluation feasibility (no inference)'
+    else:
+        name = 'evaluate'
+    job = next(j for j in jobs if j['name'] == name)
+    return {key: job.get(key) for key in ('started_at', 'completed_at')}
+
+
+def acquire(api, run, jobs, kind, site, state, workspace, temporary, historical=None, observed_at=None):
     run_id = run['id']; attempt = run['run_attempt']
     artifacts = api.listing(f'actions/runs/{run_id}/artifacts', 'artifacts')
     selected = []
@@ -548,8 +567,17 @@ def acquire(api, run, jobs, kind, site, state, workspace, temporary):
                 and item['workflow_run']['head_repository_id'] == run['head_repository']['id'], 'Artifact provenance mismatch')
         raw = api.raw(f'repos/{REPOSITORY}/actions/artifacts/{item["id"]}/zip')
         destination = temporary / slot
-        extract_public(raw, item['digest'], destination)
-        admit(site, state, slot, provenance(run, item), destination, workspace)
+        captured = extract_public(raw, item['digest'], destination)
+        prov = provenance(run, item)
+        records = bundle_claims(captured, slot, prov)
+        if slot.startswith('standard--'):
+            reconcile_history(ledger(site), captured, {rid: prov['revision'] for rid in captured.records})
+        if historical is not None:
+            import skill_history as history
+            execution = execution_times(jobs, slot)
+            for record in records:
+                history.add(historical, history.observation(record, slot, prov, observed_at, execution))
+        admit(site, state, slot, prov, destination, workspace)
     return warnings
 
 
@@ -582,11 +610,27 @@ def prepare(workspace, retained, output, event_name, event, api=None):
     else:
         site.mkdir()
     state = load_state(site)
+    import skill_history as history
+    from datetime import datetime, timezone
+    observed_at = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+    historical = history.validate(parse((site / 'report/history.json').read_bytes())) if state['schema_version'] == 2 else history.empty(observed_at)
+    if state['schema_version'] == 1:
+        import skill_analysis as analysis
+        for slot, item in state['slots'].items():
+            captured = analysis.capture_inputs([site / f'report/bundles/{slot}'])
+            execution = None
+            try:
+                _, _, jobs = authenticate(api, item['provenance']['run_id'], item['provenance']['attempt'], workspace, main_sha)
+                execution = execution_times(jobs, slot)
+            except (ValueError, KeyError, StopIteration):
+                pass  # Valid retained evidence survives unavailable chronology metadata.
+            for record in bundle_claims(captured, slot, item['provenance']):
+                history.add(historical, history.observation(record, slot, item['provenance'], observed_at, execution))
     warnings = []
     if requested:
         kind, run, jobs = authenticate(api, *requested, workspace, main_sha)
         with tempfile.TemporaryDirectory(prefix='skill-pages-input-') as temporary:
-            warnings = acquire(api, run, jobs, kind, site, state, workspace, Path(temporary))
+            warnings = acquire(api, run, jobs, kind, site, state, workspace, Path(temporary), historical, observed_at)
     if state['current'] is not None:
         require(ancestor(workspace, state['current']['revision'], main_sha), 'Current inventory would rewind or diverge')
     current = evidence.inventory(workspace)
@@ -596,6 +640,12 @@ def prepare(workspace, retained, output, event_name, event, api=None):
     evidence.reports.public_strings(current)
     write(site, 'report/current/inventory/inventory.json', raw)
     state['current'] = {'revision': main_sha, 'digest': digest(raw)}
+    cfg = parse((workspace / '.github/evals/orchestration.json').read_bytes())
+    baselines = {(v['reference']['run_id'], v['reference']['attempt']) for v in cfg['suites'].values() if v.get('reference')}
+    history.retain(historical, observed_at, baselines)
+    history_raw = encoded(historical)
+    write(site, 'report/history.json', history_raw)
+    state.update(schema_version=2, history_digest=digest(history_raw))
     write(site, 'report/publication.json', encoded(state))
     rows = build(site)
     seal(output, parent_sha)
@@ -619,7 +669,7 @@ def verify_candidate(candidate, expected_digest=None):
         require(member.startswith('benchmarks/'), 'Unexpected candidate path')
         name = member[len('benchmarks/'):]
         require(name in ('index.html', '.nojekyll', 'report/publication.json', 'report/analysis.json',
-                         'report/current/inventory/inventory.json')
+                         'report/current/inventory/inventory.json', 'report/history.json')
                 or SERIES.fullmatch(name) or SERIES.fullmatch(name.removesuffix('index.html') + 'data.js')
                 or re.fullmatch(r'report/bundles/(' + SLOT.pattern + r')/(' + PUBLIC.pattern + ')', name), 'Unexpected generated file')
         actual[name] = digest(raw)
