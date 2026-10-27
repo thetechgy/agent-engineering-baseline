@@ -11,33 +11,90 @@
   },
   "findings": [
     {
-      "case_ids": [],
-      "id": "sha256:12c27f3623337c769ce390ced2b103ce2df418f8fb836250096c40b7c01db5d7",
-      "importance": "mandatory",
-      "kind": "failed_static_checks",
-      "next_step": "inspect_original_scanner_evidence",
-      "observation_ids": [],
+      "case_ids": [
+        "pester-001-malformed"
+      ],
+      "id": "sha256:05f4552ed6f0cc75e4227339eabcfb7b9b92faa73a72cace3f42aee570fffa43",
+      "importance": "investigate",
+      "kind": "custom_unavailable",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:b3e3113fe02694a4c01e0157f4bc9812b3dd33586d92aed5ca16e0cf2265aa04"
+      ],
       "observed": {
-        "scanners": [
-          "SCHEMA",
-          "SECURITY",
-          "QUALITY"
+        "classification": "invalid"
+      },
+      "record_ids": [
+        "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
+      ],
+      "reference_ids": [
+        "sha256:2223538365db6297f5f0600d3664106df36b739378bf3c934960de47a6151ee0",
+        "sha256:44cad1196a109ee1c31afcd1d041bf576ad9b54cead10fbd27104ffb28aaa022",
+        "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+        "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+      ],
+      "skill": "powershell-pester-6",
+      "uncertainty": "reported_unscoreable_outcome"
+    },
+    {
+      "case_ids": [
+        "pester-001-timeout"
+      ],
+      "id": "sha256:0739f960dd4c00a349a119a4642955556e0746143717732eafae570c215aa8dd",
+      "importance": "investigate",
+      "kind": "custom_unavailable",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:d3a1cf46b7aabc0c0754ebfe3434052aa0fb6d67996e6c7a84e4bfb86d2acdc9"
+      ],
+      "observed": {
+        "classification": "timeout"
+      },
+      "record_ids": [
+        "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
+      ],
+      "reference_ids": [
+        "sha256:77dc3f4f85f31f1f9efbd89bb988e79e7e8deba47d9ed5ced679a7b327aa0957",
+        "sha256:96fa3fbc0c17925ad96404a8bf547ec121b540a28657b232f93f79d463a4daa7",
+        "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+        "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+      ],
+      "skill": "powershell-pester-6",
+      "uncertainty": "reported_unscoreable_outcome"
+    },
+    {
+      "case_ids": [
+        "pester-001-weak"
+      ],
+      "id": "sha256:0a01fcfa5d03226c3cde73ff39ebf71edae85327597ab8359f301b42514fcaa3",
+      "importance": "investigate",
+      "kind": "custom_measured_failure",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:7b9157c52121b6fb622294bd0f17d5349d3f8b619c471f9ee33fcf27640683de"
+      ],
+      "observed": {
+        "arm": "with_skill",
+        "metric_ids": [
+          "powershell-pester-6.mutation-detection.v1",
+          "powershell-pester-6.test-quality.v1"
         ]
       },
       "record_ids": [
-        "sha256:948375ab119863523957e34e2612e54f866f35b6cbdd26aac5429fadde625190"
+        "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
       ],
       "reference_ids": [
-        "sha256:0d95e9b277555f43e756a61822db23fa6a47dc0bc1420bbc38008a2b59984a62",
-        "sha256:21ee488c50e7cdb5cf46cdfd4b9e53f1be84e4f23ce478fa0cf5897d7039c553",
-        "sha256:efc1ea5f5eeb3242650f00dd939aadd7d1ae975a90437339701a0444ae3ae0b3"
+        "sha256:507ec5a8cbbb632c73d12a3ed32a44d0a8dc6735d32b3b7939e51903bedb396a",
+        "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+        "sha256:846ddd0d0a83fb112b19147dfed1722702d0f7c09678acb2b33d13a5751022d4",
+        "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
       ],
-      "skill": "a11y",
-      "uncertainty": "recorded_static_outcome"
+      "skill": "powershell-pester-6",
+      "uncertainty": "reported_measurement_not_instruction_causality"
     },
     {
       "case_ids": [],
-      "id": "sha256:1a4c04d8bb5cda957305e8a371943a58c1361fa77bed10810812d011fbea37ef",
+      "id": "sha256:139af1f90e545e58f89e453154cf6390f7babddfbb90fbf24fac0614c93d4396",
       "importance": "investigate",
       "kind": "incomplete_scans",
       "next_step": "complete_scans_and_reproject",
@@ -50,18 +107,49 @@
         ]
       },
       "record_ids": [
-        "sha256:1d7773c42299614442f7188622796870afeacaa0a822c23bbf8ca3e1f225ba20"
+        "sha256:ee3fa409e240d7ba99e1f5838c25e6382b15cfb799de1e2d15bde86f6ed0812a"
       ],
       "reference_ids": [
-        "sha256:4a3e0023438ce43fc63b159a8617056b555f955752ea18266534eafefdc7fd10",
-        "sha256:90c88215117f3ff479ba9b69f33d7266aa4d74f10e8fc91fc0ef0c3b5f4b0ba7"
+        "sha256:7c6ed4f6c312e3f71c00aca801e2c475b7630f9588ebedbbcecff5868b6b6a52",
+        "sha256:cd78b8373b58928aef464ccb9ed34827ae4e7a6cde1de18f6f7ab9b0c5a6a163"
       ],
       "skill": "podman",
       "uncertainty": "scanner_coverage_incomplete"
     },
     {
+      "case_ids": [
+        "pester-003-wrong-scope"
+      ],
+      "id": "sha256:16fa7093041848adc7173e23e44d58088d6452c6e828371c7fa2364c3aee6890",
+      "importance": "investigate",
+      "kind": "custom_measured_failure",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:354269768739a3b1c4222af7bdff6605236e1b37007db0e6e9ac1db523f5eb30"
+      ],
+      "observed": {
+        "arm": "without_skill",
+        "metric_ids": [
+          "powershell-pester-6.mutation-detection.v1",
+          "powershell-pester-6.reference-pass.v1",
+          "powershell-pester-6.test-quality.v1"
+        ]
+      },
+      "record_ids": [
+        "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
+      ],
+      "reference_ids": [
+        "sha256:57dfc93cc7989be4fb5b67cf8cc41569649fdb636f7bdc5d1a7b896e9f93ef3b",
+        "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+        "sha256:ce26a2ec1005dc73c1dcc3399a4d01d4abd93bd248fd9a9174506e6425886f81",
+        "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+      ],
+      "skill": "powershell-pester-6",
+      "uncertainty": "reported_measurement_not_instruction_causality"
+    },
+    {
       "case_ids": [],
-      "id": "sha256:1fe2e8986cf315c591bbc64cbbab39ae4c7ff474db117e4ba533d24d41165cb5",
+      "id": "sha256:1d15844440e88d6b47be195b6837a46bbf820dae3222fd6f048a7feb2c65529c",
       "importance": "mandatory",
       "kind": "failed_static_checks",
       "next_step": "inspect_original_scanner_evidence",
@@ -74,14 +162,186 @@
         ]
       },
       "record_ids": [
-        "sha256:1d7773c42299614442f7188622796870afeacaa0a822c23bbf8ca3e1f225ba20"
+        "sha256:ee3fa409e240d7ba99e1f5838c25e6382b15cfb799de1e2d15bde86f6ed0812a"
       ],
       "reference_ids": [
-        "sha256:0eea0f9de693302a2635fc4e0d681b4a3f1cfb0141f5b8ab6d7777a2fa4f0ff5",
-        "sha256:4a3e0023438ce43fc63b159a8617056b555f955752ea18266534eafefdc7fd10",
-        "sha256:9f526b3124a34b18740ed1e8d1bb94ff2e1a1cbee9cf73399e48a3b310b10b6f"
+        "sha256:27a2837e3bb088b2b30d9c56081f742bb3a71d4ff16a1d26d0c8a50db1158c10",
+        "sha256:51ff5f333f1ff6efa7b6b957e3c6e9778f033f5834bd51e4f446aeb752bb4e2c",
+        "sha256:7c6ed4f6c312e3f71c00aca801e2c475b7630f9588ebedbbcecff5868b6b6a52"
       ],
       "skill": "podman",
+      "uncertainty": "recorded_static_outcome"
+    },
+    {
+      "case_ids": [
+        "pester-001-missing-runtime"
+      ],
+      "id": "sha256:1d31466d90523204745aca3394ed8ac0713a3c30af08d7cde5516886f3ee0330",
+      "importance": "investigate",
+      "kind": "custom_unavailable",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:0ae846b79511c4408cf47dc5b8b922da8b8e6d1e0478245f4f009941c9b0c85f"
+      ],
+      "observed": {
+        "classification": "infrastructure_error"
+      },
+      "record_ids": [
+        "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
+      ],
+      "reference_ids": [
+        "sha256:4f400ea6b94f9ae9df3ecdff03f08b099fd014c974f1d1d7177db8014f042d5f",
+        "sha256:8e58e496ba44804713cb1803db239e1392798f5ac5f143ae805e57172ac7564e",
+        "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+        "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+      ],
+      "skill": "powershell-pester-6",
+      "uncertainty": "reported_unscoreable_outcome"
+    },
+    {
+      "case_ids": [
+        "pester-001-malformed"
+      ],
+      "id": "sha256:1f5de9c86688c0321589e7e5c45c2ae39683d857bd3ebe55b4415e1515d49d21",
+      "importance": "investigate",
+      "kind": "custom_unavailable",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:b18e08815b5c7d48a18f6b1b3e90a34b0c509e35fec6bdcb8283336b74d96f55"
+      ],
+      "observed": {
+        "classification": "invalid"
+      },
+      "record_ids": [
+        "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
+      ],
+      "reference_ids": [
+        "sha256:5eb4b3552d9f4ffb6507647db8143953d1076f6cab4bf49a0b952a099aa9e11d",
+        "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+        "sha256:8bc6f4a7a967fe4f82cd86a20f706a194cecd85dc4762a7625690017443c02f5",
+        "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+      ],
+      "skill": "powershell-pester-6",
+      "uncertainty": "reported_unscoreable_outcome"
+    },
+    {
+      "case_ids": [
+        "pester-005-wrong"
+      ],
+      "id": "sha256:2da398acfc0b3670750b2ce325a4a1fc18d858976a224c5bb0f44afa8a658e1e",
+      "importance": "investigate",
+      "kind": "custom_measured_failure",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:a9a4dcaf3d40daa7f69ea671d0915ad8d1f1f45c644a4d60db46a53c108576e9"
+      ],
+      "observed": {
+        "arm": "with_skill",
+        "metric_ids": [
+          "powershell-pester-6.negative-control-correct.v1"
+        ]
+      },
+      "record_ids": [
+        "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
+      ],
+      "reference_ids": [
+        "sha256:55d8c4dc6c7fdcc850e3b408a141a401dc82d4a3415386162be6b301176b06a2",
+        "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+        "sha256:886a873a6aa86d31d7be71f0254112ff4dcbe7fa1657fd8deec6928e1be4993b",
+        "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+      ],
+      "skill": "powershell-pester-6",
+      "uncertainty": "reported_measurement_not_instruction_causality"
+    },
+    {
+      "case_ids": [],
+      "id": "sha256:2eba73c5328bcef8c1f6269512d800223cc8cf8fe70b8be351a5c243abb24700",
+      "importance": "investigate",
+      "kind": "incomplete_execution",
+      "next_step": "complete_execution_and_reproject",
+      "observation_ids": [],
+      "observed": {
+        "arms": [
+          {
+            "coverage": {
+              "case_details": "complete",
+              "expected_attempts": 26,
+              "expected_cases": 26,
+              "recorded_attempts": 26,
+              "scored_attempts": 18,
+              "unscored_attempts": 8
+            },
+            "execution_status": "failed",
+            "name": "with_skill"
+          },
+          {
+            "coverage": {
+              "case_details": "complete",
+              "expected_attempts": 26,
+              "expected_cases": 26,
+              "recorded_attempts": 26,
+              "scored_attempts": 18,
+              "unscored_attempts": 8
+            },
+            "execution_status": "failed",
+            "name": "without_skill"
+          }
+        ]
+      },
+      "record_ids": [
+        "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
+      ],
+      "reference_ids": [],
+      "skill": "powershell-pester-6",
+      "uncertainty": "numeric_coverage_incomplete"
+    },
+    {
+      "case_ids": [
+        "pester-001-empty"
+      ],
+      "id": "sha256:33d236bbdd98a4c0910e226d8d2c7e24bc383217ab9fc21e0b176686b6c02c6b",
+      "importance": "investigate",
+      "kind": "custom_unavailable",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:227465734d007ad261e0de4ee839bda2fc78d0526e3cfce25fbf37555c897392"
+      ],
+      "observed": {
+        "classification": "invalid"
+      },
+      "record_ids": [
+        "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
+      ],
+      "reference_ids": [
+        "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+        "sha256:95af4d5860ca520aa10b84bf7d523e9f3ec8722930b171e6c03fdd2c74f783a8",
+        "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae",
+        "sha256:f56ffc387023fe9d906c6e1c6e30e89456acb52e4a88645d2dc511e84bb7599e"
+      ],
+      "skill": "powershell-pester-6",
+      "uncertainty": "reported_unscoreable_outcome"
+    },
+    {
+      "case_ids": [],
+      "id": "sha256:33f8e7e8f45255c4b1b47649c2fb263d67cd7417a69b8ab64f1e05f5d14d6ea4",
+      "importance": "mandatory",
+      "kind": "failed_static_checks",
+      "next_step": "inspect_original_scanner_evidence",
+      "observation_ids": [],
+      "observed": {
+        "scanners": [
+          "SCHEMA",
+          "SECURITY"
+        ]
+      },
+      "record_ids": [
+        "sha256:31d400318e95fcf7efbe3901451f167b0c4cfb95d0e661f7f9f08fe7d22d39ec"
+      ],
+      "reference_ids": [
+        "sha256:59c064097c26706c74def673ad9c7feb06621b743f6133d62e41cbb9d023d418",
+        "sha256:fe2240da85ecfe6ae7f2c0dde15b99d19d5e4e400b234793b391d130acdd5c99"
+      ],
+      "skill": "powershell-module-engineering",
       "uncertainty": "recorded_static_outcome"
     },
     {
@@ -101,20 +361,56 @@
       "uncertainty": "supplied_inputs_only"
     },
     {
-      "case_ids": [],
-      "id": "sha256:3aa992acbb0afbb88cb43ff2ba12db5fd998c5c86c6c5c88002cb0dcb5a3fe50",
-      "importance": "context",
-      "kind": "comparison_limitation",
-      "next_step": "supply_two_intended_runs",
-      "observation_ids": [],
+      "case_ids": [
+        "pester-001-version-drift"
+      ],
+      "id": "sha256:3aeb93ff15bb48ae142d30b60f09755b79a415a904a06f59d01da339a5bbf423",
+      "importance": "investigate",
+      "kind": "custom_unavailable",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:4ec086f857096343461e0a6ec291af802a777d9bff92ac18d31d63cca70acf9a"
+      ],
       "observed": {
-        "measured_runs": 0,
-        "status": "insufficient_run_evidence"
+        "classification": "infrastructure_error"
       },
-      "record_ids": [],
-      "reference_ids": [],
+      "record_ids": [
+        "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
+      ],
+      "reference_ids": [
+        "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+        "sha256:c882a9202dda45627325a74f45b98d6d3c7fd81c382e23805d0c54eccf54f36b",
+        "sha256:e4e46997442f96fbf2d1d68af408a462c309db9135e6d1b46d34d370253af96a",
+        "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+      ],
       "skill": "powershell-pester-6",
-      "uncertainty": "supplied_inputs_only"
+      "uncertainty": "reported_unscoreable_outcome"
+    },
+    {
+      "case_ids": [
+        "pester-001-skipped"
+      ],
+      "id": "sha256:3d3b0e0f5d0eb5f93dcd7ff7ac353c195c90213f3802caca6877fb0a6f9dc69a",
+      "importance": "investigate",
+      "kind": "custom_unavailable",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:90a84fce2b815d035b39cbeb8adca3debc36eb8ff37f5a75ca56cb7358574e45"
+      ],
+      "observed": {
+        "classification": "invalid"
+      },
+      "record_ids": [
+        "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
+      ],
+      "reference_ids": [
+        "sha256:a62daf5a197f44564e68dc549bb8bff494c5b0116eecb64ef668bb4057f61b59",
+        "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+        "sha256:b0e706aa278fd6d174babd176fdfc8df307a21d57edc0cca30da779399d4fc5c",
+        "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+      ],
+      "skill": "powershell-pester-6",
+      "uncertainty": "reported_unscoreable_outcome"
     },
     {
       "case_ids": [],
@@ -133,8 +429,91 @@
       "uncertainty": "supplied_inputs_only"
     },
     {
+      "case_ids": [
+        "pester-003-wrong-scope"
+      ],
+      "id": "sha256:477f9faf712aaa7952985401715dc4e4bdcd304a767e7a4924301d46eccc8efb",
+      "importance": "investigate",
+      "kind": "custom_measured_failure",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:5662a87a594376854e6529c39715ea60736a0d5ef08c91a17cef7055e539c0db"
+      ],
+      "observed": {
+        "arm": "with_skill",
+        "metric_ids": [
+          "powershell-pester-6.mutation-detection.v1",
+          "powershell-pester-6.reference-pass.v1",
+          "powershell-pester-6.test-quality.v1"
+        ]
+      },
+      "record_ids": [
+        "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
+      ],
+      "reference_ids": [
+        "sha256:115d42ec10f005f5659477091fc6adf709d4d7352fc6f3aea718539c564e1698",
+        "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+        "sha256:644307424eb28c4d14bad678c26b44e3e9079bf09142eaa8e0bf8d339fae2dbf",
+        "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+      ],
+      "skill": "powershell-pester-6",
+      "uncertainty": "reported_measurement_not_instruction_causality"
+    },
+    {
+      "case_ids": [
+        "pester-001-empty"
+      ],
+      "id": "sha256:4d078be7587201e45e10a90b022a713a436b70a9124cb5ce376fe63f63199fdc",
+      "importance": "investigate",
+      "kind": "custom_unavailable",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:bc164782d7aa790fc6d1a53876b74f09023c451df9b03bc058e3f6079fe9bda6"
+      ],
+      "observed": {
+        "classification": "invalid"
+      },
+      "record_ids": [
+        "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
+      ],
+      "reference_ids": [
+        "sha256:0741d7d8f2d09da2d05fe0c3a84deebd03c977c205e05d6fbe809b776250acdc",
+        "sha256:9d68d0250d705a36c041f76f5fff4490453691a3d7a92973eea5cf0473c11a04",
+        "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+        "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+      ],
+      "skill": "powershell-pester-6",
+      "uncertainty": "reported_unscoreable_outcome"
+    },
+    {
+      "case_ids": [
+        "pester-004-broken-discovery"
+      ],
+      "id": "sha256:4e02761cd4d8b287eab3c74343cb0c5cf39d016d713a84b6a968d0ceddf43a09",
+      "importance": "investigate",
+      "kind": "custom_unavailable",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:6f25fa58832dfa4378052e1ab87ff59dc50d2e97f9b1d1c30334faea2e1f2f68"
+      ],
+      "observed": {
+        "classification": "invalid"
+      },
+      "record_ids": [
+        "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
+      ],
+      "reference_ids": [
+        "sha256:826743072dc8a6c56332449a612b8f99e159bf32df7a02f7059acc931aefc1ab",
+        "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+        "sha256:b273c11c13f53d3778eb104059741340f90fe5ec0adc0091c9420ffd955a83dc",
+        "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+      ],
+      "skill": "powershell-pester-6",
+      "uncertainty": "reported_unscoreable_outcome"
+    },
+    {
       "case_ids": [],
-      "id": "sha256:74cff2c07bf9749e4e49f257c5c587c46aaf57d624b0f3cc49f00bd7fe096ded",
+      "id": "sha256:525ff353427a8a00a55edb0e0f59fd120a4bf5657b6d71ed023b0f4ec37f787d",
       "importance": "mandatory",
       "kind": "failed_static_checks",
       "next_step": "inspect_original_scanner_evidence",
@@ -146,65 +525,18 @@
         ]
       },
       "record_ids": [
-        "sha256:ad2f3b1562bd2e2391b7ff6d9510881273772c872a355d9909804fa2f60f9f9e"
+        "sha256:29c81caee1ef25b2355bf3afb6e401d138791a6ccc50c8d6774661740738dec7"
       ],
       "reference_ids": [
-        "sha256:1ac6f0f5cf94f05f31ffa3e081db7920afb31c64d041960766c1a5b35909f566",
-        "sha256:f2993a8f6030f0a10e98d93b5ea4ce1a81aa09486592724756f27621fbb4dee9"
+        "sha256:4e6e13a085d66fe2b0dfd1b41dfaea0a2675374d03a97090073567df8d2d4efb",
+        "sha256:ba3ec4e59376980dbfc85d62d39859082c749fc61f8eb33df0cee6075af5cbd7"
       ],
       "skill": "powershell-pester-6",
       "uncertainty": "recorded_static_outcome"
     },
     {
       "case_ids": [],
-      "id": "sha256:7c858053fa2b0f73a47bd4e31cdb13d09866054ffc454629cbd375fdf1086032",
-      "importance": "investigate",
-      "kind": "incomplete_scans",
-      "next_step": "complete_scans_and_reproject",
-      "observation_ids": [],
-      "observed": {
-        "scanners": [
-          "catalog-total",
-          "SECURITY",
-          "skillspector"
-        ]
-      },
-      "record_ids": [
-        "sha256:90be2aaeb9c1af9056d443044214a6fc722ed1997f3383f8640ac269ad2dfee7"
-      ],
-      "reference_ids": [
-        "sha256:35502b677ec3d1a3fe13d1c838024b558d228b6cdd7e43ce5e2ef0b04006c329",
-        "sha256:c24fb37c573dc835e7fa14028490b4ed0ebec0ef5663dd56900a1d4bfdf04dad"
-      ],
-      "skill": "ansible",
-      "uncertainty": "scanner_coverage_incomplete"
-    },
-    {
-      "case_ids": [],
-      "id": "sha256:802b4ee351ec5ae8f4623545e3137139f078425408534f0c3de5d04909bc3faa",
-      "importance": "mandatory",
-      "kind": "failed_static_checks",
-      "next_step": "inspect_original_scanner_evidence",
-      "observation_ids": [],
-      "observed": {
-        "scanners": [
-          "SCHEMA",
-          "SECURITY"
-        ]
-      },
-      "record_ids": [
-        "sha256:f746cc2400d67a7d5c89feafcfe2a9db4bddfd134f389ee36c5496b6d5f366d6"
-      ],
-      "reference_ids": [
-        "sha256:dd714320ef180b0e48f2d1ccc19d4339a18b015414589e66dabdbfd2be832608",
-        "sha256:dff8b474c8f0400ef50027cc6cbebfd26d6f379c50d9fbb20be7c103e747f31b"
-      ],
-      "skill": "agent-safety",
-      "uncertainty": "recorded_static_outcome"
-    },
-    {
-      "case_ids": [],
-      "id": "sha256:8bd7ce0abcf344f7c35ff88762d124d73c07c91234e3f49195f3cb4a0e4f648c",
+      "id": "sha256:5278e4c54ff2148d9d6941141f501d95b62a1635db2372f6f4fd479d3b6f2b83",
       "importance": "context",
       "kind": "configured_unmeasured",
       "next_step": "supply_model_backed_public_report",
@@ -215,16 +547,186 @@
         ]
       },
       "record_ids": [
-        "sha256:672e6163848cf4ee98313d0d80fc07bc1b49c27d4d3075ecb4165724298b38c2",
-        "sha256:d34632fa7d5d306a4a3a175c6f71cd7fe1a45fe29fdf09fe797d0609faa8d779"
+        "sha256:c8ad61a248bda8c4c924412e26e60491e50503b89001df37bbcfe58924fdc860"
       ],
       "reference_ids": [],
       "skill": "gh",
       "uncertainty": "no_measurement_in_supplied_inputs"
     },
     {
+      "case_ids": [
+        "pester-002-weak"
+      ],
+      "id": "sha256:541bd5cf546a9e5ae40a15c077d4a039ef8b8b5f93cd25a042e343e5094b1d13",
+      "importance": "investigate",
+      "kind": "custom_measured_failure",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:aeb805b48ddbd8725e57af9fff49fc529c997cd533d433025d56faead7bcc238"
+      ],
+      "observed": {
+        "arm": "with_skill",
+        "metric_ids": [
+          "powershell-pester-6.mutation-detection.v1",
+          "powershell-pester-6.test-quality.v1"
+        ]
+      },
+      "record_ids": [
+        "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
+      ],
+      "reference_ids": [
+        "sha256:31c05904fb31b842982751edbb3b5872025c1b91b5250e09632542776ab4ed68",
+        "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+        "sha256:6c3762748f048b830c5bf8dfbdae36ba09e9c2dd3f0d20cbda236bfd998bb7a9",
+        "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+      ],
+      "skill": "powershell-pester-6",
+      "uncertainty": "reported_measurement_not_instruction_causality"
+    },
+    {
+      "case_ids": [
+        "pester-003-weak"
+      ],
+      "id": "sha256:5bd0ab0aadaf675bc907f1fca1e3d754e1576eb98e769cf4424a70929f941b9a",
+      "importance": "investigate",
+      "kind": "custom_measured_failure",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:f2df49de7aa7ba40a9afb1f3009a99cc5953ae6ae046df79f4b62b5203eca213"
+      ],
+      "observed": {
+        "arm": "without_skill",
+        "metric_ids": [
+          "powershell-pester-6.mutation-detection.v1",
+          "powershell-pester-6.test-quality.v1"
+        ]
+      },
+      "record_ids": [
+        "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
+      ],
+      "reference_ids": [
+        "sha256:33155cf55d961e81e2d6a523f07643e8ec4b4a1f2791c27978f9b3f889d287d3",
+        "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+        "sha256:ed97233866e50c083edb5a4daac8858849f965ff837ef07f90b7acdccc399713",
+        "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+      ],
+      "skill": "powershell-pester-6",
+      "uncertainty": "reported_measurement_not_instruction_causality"
+    },
+    {
+      "case_ids": [
+        "pester-003-weak"
+      ],
+      "id": "sha256:63686ddcdffcf0027964d346b4aaa6468cd1d48461196f7cf716ff6a8ded48da",
+      "importance": "investigate",
+      "kind": "custom_measured_failure",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:4c617e48d80fe9a507a5bd990dd63d4c1643630379d573139f79b94ce5deb724"
+      ],
+      "observed": {
+        "arm": "with_skill",
+        "metric_ids": [
+          "powershell-pester-6.mutation-detection.v1",
+          "powershell-pester-6.test-quality.v1"
+        ]
+      },
+      "record_ids": [
+        "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
+      ],
+      "reference_ids": [
+        "sha256:4f8e1bb9c7eaa670960196ff9b04204be6ed39f97ee6ab1fab991dabe92ccae0",
+        "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+        "sha256:d019b3970f54c143cbb4ccc6f0a0156ccbf0df3e5859e566d58eaf50065b792f",
+        "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+      ],
+      "skill": "powershell-pester-6",
+      "uncertainty": "reported_measurement_not_instruction_causality"
+    },
+    {
       "case_ids": [],
-      "id": "sha256:a076b2d1aa382e767b6bd299d3f8756125b00df83915bdbe5a87036cf215ef34",
+      "id": "sha256:6dad5e9b46b038d76b9554b750bf73b83e7e81626e52e30b9d4e423e9d0068d0",
+      "importance": "mandatory",
+      "kind": "failed_static_checks",
+      "next_step": "inspect_original_scanner_evidence",
+      "observation_ids": [],
+      "observed": {
+        "scanners": [
+          "SCHEMA",
+          "SECURITY",
+          "QUALITY"
+        ]
+      },
+      "record_ids": [
+        "sha256:b9aec112c15357ce54dcab3c7ab400b308a63881a638a67515289a2139a33ed2"
+      ],
+      "reference_ids": [
+        "sha256:3abbb62e02d9995aec75e4ecee81289f6534f9e4594d2d0e6762da7b4b80a5ea",
+        "sha256:511996f2c27523a0adef6121d338d15fe5cfed08a073de78e293d472da0bd01a",
+        "sha256:77a3855fe13c2ea01dfec076460ff893c85d96218b73bfad772c5653f4c5c2a7"
+      ],
+      "skill": "a11y",
+      "uncertainty": "recorded_static_outcome"
+    },
+    {
+      "case_ids": [
+        "pester-004-weak"
+      ],
+      "id": "sha256:6f3fd5a1320f64ea2fc1d673209f213ec90495ed322ca5451ad7d0c6482efe68",
+      "importance": "investigate",
+      "kind": "custom_measured_failure",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:29dd720c623cfa0bb3b2c44303de60fc8798c3626bcc482cce2dcded3669f841"
+      ],
+      "observed": {
+        "arm": "without_skill",
+        "metric_ids": [
+          "powershell-pester-6.mutation-detection.v1",
+          "powershell-pester-6.test-quality.v1"
+        ]
+      },
+      "record_ids": [
+        "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
+      ],
+      "reference_ids": [
+        "sha256:1649a6f95855dbd18b21ebfdcebc9b81d13cc5816f40f21a2bf79366788d1b04",
+        "sha256:62968307b1c810b3777ec3f73ec776e5a82fdaa7037a2e28a07d197994fcfbd5",
+        "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+        "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+      ],
+      "skill": "powershell-pester-6",
+      "uncertainty": "reported_measurement_not_instruction_causality"
+    },
+    {
+      "case_ids": [
+        "pester-001-unsupported"
+      ],
+      "id": "sha256:785050c5b50450f7d58226864fb43ed431a3681b8d7615cab0b10c8ab0983f3b",
+      "importance": "investigate",
+      "kind": "custom_unavailable",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:11291858f6ed2089828e050eb691e166d1c07f342ad38a15d12529fccc6cd91e"
+      ],
+      "observed": {
+        "classification": "unsupported"
+      },
+      "record_ids": [
+        "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
+      ],
+      "reference_ids": [
+        "sha256:93547a034a1fe955a70b9ceb20e08a8b0233d1fce36fc8332804267749d5574d",
+        "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+        "sha256:bd1d0311f1d1265e4c257d3a9b673129183818103dadd6091b7afca5986b0b07",
+        "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+      ],
+      "skill": "powershell-pester-6",
+      "uncertainty": "reported_unscoreable_outcome"
+    },
+    {
+      "case_ids": [],
+      "id": "sha256:7a30b757d500349955bdbf3687082e4fe187a053bfc8d9df81e6f72e9aed3c8b",
       "importance": "investigate",
       "kind": "incomplete_scans",
       "next_step": "complete_scans_and_reproject",
@@ -237,13 +739,145 @@
         ]
       },
       "record_ids": [
-        "sha256:948375ab119863523957e34e2612e54f866f35b6cbdd26aac5429fadde625190"
+        "sha256:31d400318e95fcf7efbe3901451f167b0c4cfb95d0e661f7f9f08fe7d22d39ec"
       ],
       "reference_ids": [
-        "sha256:0d95e9b277555f43e756a61822db23fa6a47dc0bc1420bbc38008a2b59984a62",
-        "sha256:2f619fc150a9f8f60807496efdb7b5b602895855098b738694a1f41e9f8cdd96"
+        "sha256:51037a12a864e5285ad9b5b4987d9400a2ba7f12d923356f7f68bd6fd7149bc0",
+        "sha256:59c064097c26706c74def673ad9c7feb06621b743f6133d62e41cbb9d023d418"
       ],
-      "skill": "a11y",
+      "skill": "powershell-module-engineering",
+      "uncertainty": "scanner_coverage_incomplete"
+    },
+    {
+      "case_ids": [],
+      "id": "sha256:878c9c040ccdc1e94ddcbba48563032b2ce3ff68db37ef52e12ac0490f5ec5ee",
+      "importance": "mandatory",
+      "kind": "failed_static_checks",
+      "next_step": "inspect_original_scanner_evidence",
+      "observation_ids": [],
+      "observed": {
+        "scanners": [
+          "SCHEMA",
+          "SECURITY",
+          "PII"
+        ]
+      },
+      "record_ids": [
+        "sha256:9b8875e6511272c5300084e156e67e2e05b1dc73a53510aa5a4fbd5a10eeacd9"
+      ],
+      "reference_ids": [
+        "sha256:3ee78e37d8c472b5551a43a9b3133006c57d12f8dc8286c7fca584501f32da7d",
+        "sha256:4e274f0359c3fdcb5d076cb13ed601ba0a9a2f9358d2236f65a6a022ad717252",
+        "sha256:d6bd3ca48cb02f16223efc73b8703cf9f2d9a19f453a38b02f1ed4406e7b6228"
+      ],
+      "skill": "ansible",
+      "uncertainty": "recorded_static_outcome"
+    },
+    {
+      "case_ids": [
+        "pester-001-failure-text"
+      ],
+      "id": "sha256:8e73449c9a547fe9d9eb25f8996915716c2ad0174ce7d50359db5c02b9c26a58",
+      "importance": "investigate",
+      "kind": "custom_measured_failure",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:eecd4d31d4a51df66f6efc13e3247ecaf3126069419af709b28645eb65667cbc"
+      ],
+      "observed": {
+        "arm": "with_skill",
+        "metric_ids": [
+          "powershell-pester-6.mutation-detection.v1",
+          "powershell-pester-6.reference-pass.v1",
+          "powershell-pester-6.test-quality.v1"
+        ]
+      },
+      "record_ids": [
+        "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
+      ],
+      "reference_ids": [
+        "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+        "sha256:c831a667fdb107e319d8ddcaa421d1b88207cc6bfc754f66d052301d9bb781c3",
+        "sha256:eb04e245084690cbb2891bc8d04e4edf4c25f32293c3bf7b7f33e3d7fdf0b648",
+        "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+      ],
+      "skill": "powershell-pester-6",
+      "uncertainty": "reported_measurement_not_instruction_causality"
+    },
+    {
+      "case_ids": [
+        "pester-001-timeout"
+      ],
+      "id": "sha256:928d8719ea3127e2fec75d1a359cc379cf6769162cf99e153d6f4bdac2bdf4b9",
+      "importance": "investigate",
+      "kind": "custom_unavailable",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:8e91d086384bfb9eb58f2f7a8d76ee27432948a04da7395c49a89777d0e2633c"
+      ],
+      "observed": {
+        "classification": "timeout"
+      },
+      "record_ids": [
+        "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
+      ],
+      "reference_ids": [
+        "sha256:309844ca66f050dc98d10589310f60ef64960d0ab8593de118445c4b7c6653db",
+        "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+        "sha256:6cc19462f1ebb1ca645952fdaf5d025e03e578d1ec26ca43fde7302f681518a3",
+        "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+      ],
+      "skill": "powershell-pester-6",
+      "uncertainty": "reported_unscoreable_outcome"
+    },
+    {
+      "case_ids": [
+        "pester-001-version-drift"
+      ],
+      "id": "sha256:9db08805ce524baadf13cb2bc2f4fe6ee28e5107615e288f43fbaa9a53a1173a",
+      "importance": "investigate",
+      "kind": "custom_unavailable",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:6952b0d9fd05d661ebbbc312a3d93ebd95edf096cab60cd3025dfb47fc59f318"
+      ],
+      "observed": {
+        "classification": "infrastructure_error"
+      },
+      "record_ids": [
+        "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
+      ],
+      "reference_ids": [
+        "sha256:5a4ba65ed02db6dc2e13b1976850edeec3948ed50d3410ecc1203f08e97120cb",
+        "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+        "sha256:d5efb21387b9d1058ee1f32019aaa64ffb65b0a6a12c03d2266704b8c8e59041",
+        "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+      ],
+      "skill": "powershell-pester-6",
+      "uncertainty": "reported_unscoreable_outcome"
+    },
+    {
+      "case_ids": [],
+      "id": "sha256:aad3b0a039e28c86cff6863068491013ee7c4500f444cecef1e7448f3bd7444f",
+      "importance": "investigate",
+      "kind": "incomplete_scans",
+      "next_step": "complete_scans_and_reproject",
+      "observation_ids": [],
+      "observed": {
+        "scanners": [
+          "catalog-total",
+          "SECURITY",
+          "skillspector"
+        ]
+      },
+      "record_ids": [
+        "sha256:29c81caee1ef25b2355bf3afb6e401d138791a6ccc50c8d6774661740738dec7"
+      ],
+      "reference_ids": [
+        "sha256:4e6e13a085d66fe2b0dfd1b41dfaea0a2675374d03a97090073567df8d2d4efb",
+        "sha256:d73f4f447242164d1bb30204ab4b1956b6a20b464eb654b4e58cc23273e7ad79"
+      ],
+      "skill": "powershell-pester-6",
       "uncertainty": "scanner_coverage_incomplete"
     },
     {
@@ -263,57 +897,168 @@
       "uncertainty": "supplied_inputs_only"
     },
     {
-      "case_ids": [],
-      "id": "sha256:b1d05c192fe479ed4da555cf1909f6002257dcd954dfcbd6bf208c7906366f6e",
+      "case_ids": [
+        "pester-001-failure-text"
+      ],
+      "id": "sha256:b1533ab690630a3001fb089fba242b0ed2b9957f06ae92b8b2f7acde5c866c9f",
       "importance": "investigate",
-      "kind": "incomplete_scans",
-      "next_step": "complete_scans_and_reproject",
-      "observation_ids": [],
+      "kind": "custom_measured_failure",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:5086083ba00fc4612aefeaa8ec60aff3a6c8518eb5bc92d6ae7bb038195c65cf"
+      ],
       "observed": {
-        "scanners": [
-          "catalog-total",
-          "SECURITY",
-          "skillspector"
+        "arm": "without_skill",
+        "metric_ids": [
+          "powershell-pester-6.mutation-detection.v1",
+          "powershell-pester-6.reference-pass.v1",
+          "powershell-pester-6.test-quality.v1"
         ]
       },
       "record_ids": [
-        "sha256:d874e3d2d21c06c6310cf8a459166738ae16d4e723712b3bea65c9c712bb2b93"
+        "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
       ],
       "reference_ids": [
-        "sha256:07162df66dfa5063e9c55508336683246aa02eac0eca789942380411802807b5",
-        "sha256:9e827cf14ed6b36efbf82e5b9eee1ed376c0f8182deddf792a541820b3dc217c"
+        "sha256:204e13530dbf1eb1105579052748618d9a7cf917dd4f9b36e300ce64bc000c81",
+        "sha256:5d4b8c3432a2218bfd65df7b7a5cf465f28218bb135aa4a74df56f9692a8fc8d",
+        "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+        "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
       ],
-      "skill": "powershell-module-engineering",
-      "uncertainty": "scanner_coverage_incomplete"
+      "skill": "powershell-pester-6",
+      "uncertainty": "reported_measurement_not_instruction_causality"
+    },
+    {
+      "case_ids": [
+        "pester-001-skipped"
+      ],
+      "id": "sha256:b56fe4a99ae1439bb603eb1719f49483ceae2c04f25dd53ff1c537a6cba9e270",
+      "importance": "investigate",
+      "kind": "custom_unavailable",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:d21936cfdc62b4f08ce2aedb1129e2bed71bcab4943501e20792c9e042fd3758"
+      ],
+      "observed": {
+        "classification": "invalid"
+      },
+      "record_ids": [
+        "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
+      ],
+      "reference_ids": [
+        "sha256:577c7d02d34df614876dc2b4690387c16ce66649401b6d6047d3f89b471c0f6c",
+        "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+        "sha256:d1d03157bc8fc18d4ef07c89580c29c98cdc492ff03d8bdcffc838f7fc0d7fbe",
+        "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+      ],
+      "skill": "powershell-pester-6",
+      "uncertainty": "reported_unscoreable_outcome"
+    },
+    {
+      "case_ids": [
+        "pester-004-broken-discovery"
+      ],
+      "id": "sha256:c1c08f6a14991dd701c969f1aead853b197dae756a4bc22904bafdd7b0648f43",
+      "importance": "investigate",
+      "kind": "custom_unavailable",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:1a204035263abec399c1736e3426b3074c77c04032be1e277cd902f10b5ce3e2"
+      ],
+      "observed": {
+        "classification": "invalid"
+      },
+      "record_ids": [
+        "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
+      ],
+      "reference_ids": [
+        "sha256:06649bed84f1c0cc2f735fd0bdb0f0ffa140a3a7c4361187974d122618f4c1b7",
+        "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+        "sha256:a46e794e66c541c4c13ea25a13abab22c726f410aebede308ea58b88f8c330a5",
+        "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+      ],
+      "skill": "powershell-pester-6",
+      "uncertainty": "reported_unscoreable_outcome"
     },
     {
       "case_ids": [],
-      "id": "sha256:c08044be65cc34ea13cc3344816632ad6bb5a6359206e57fbeaf875bffb6cfdf",
-      "importance": "mandatory",
-      "kind": "failed_static_checks",
-      "next_step": "inspect_original_scanner_evidence",
+      "id": "sha256:c358221fa02ab95da65e14de71c9de8bd34461cc6617a4ab8341c513a6d6ef92",
+      "importance": "context",
+      "kind": "comparison_limitation",
+      "next_step": "supply_two_intended_runs",
       "observation_ids": [],
       "observed": {
-        "scanners": [
-          "SCHEMA",
-          "SECURITY",
-          "PII"
+        "measured_runs": 1,
+        "status": "insufficient_run_evidence"
+      },
+      "record_ids": [
+        "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
+      ],
+      "reference_ids": [],
+      "skill": "powershell-pester-6",
+      "uncertainty": "supplied_inputs_only"
+    },
+    {
+      "case_ids": [
+        "pester-005-wrong"
+      ],
+      "id": "sha256:d109647eca534a87fc12a5bd862204031e4bf6acd26ed8340fb56f0550f3ab79",
+      "importance": "investigate",
+      "kind": "custom_measured_failure",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:d17b27953e4aac3fbfbed043fa7534d5aeb8324ba3b9c28f3ed62d0f2ed0c5e8"
+      ],
+      "observed": {
+        "arm": "without_skill",
+        "metric_ids": [
+          "powershell-pester-6.negative-control-correct.v1"
         ]
       },
       "record_ids": [
-        "sha256:90be2aaeb9c1af9056d443044214a6fc722ed1997f3383f8640ac269ad2dfee7"
+        "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
       ],
       "reference_ids": [
-        "sha256:304805db9221766c218fdcaf86663c6931fd2ba6b3a4bc1efba0c2a198ab4fca",
-        "sha256:8630f0c37cf5245de9349bb45ea9a5f22a17a74c038d65cd8db97b823742eaf4",
-        "sha256:c24fb37c573dc835e7fa14028490b4ed0ebec0ef5663dd56900a1d4bfdf04dad"
+        "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+        "sha256:af96892da7cdc9d7fbf3c685ccaef58d88721227052d1f658719a34b8b0a0d07",
+        "sha256:d3ac54df16341ce4d53b9dc74c6dcc6beb924d0ace2926496da65b77812a45cf",
+        "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
       ],
-      "skill": "ansible",
-      "uncertainty": "recorded_static_outcome"
+      "skill": "powershell-pester-6",
+      "uncertainty": "reported_measurement_not_instruction_causality"
+    },
+    {
+      "case_ids": [
+        "pester-004-weak"
+      ],
+      "id": "sha256:daaaa77f6b71c13920c62863a6473c2ea1949cde1a12a6380c2e0c2227185d55",
+      "importance": "investigate",
+      "kind": "custom_measured_failure",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:27e789a4a31c2c516a7ecfd9992d4bc569a9247901c0d82453885dd9e952cfc4"
+      ],
+      "observed": {
+        "arm": "with_skill",
+        "metric_ids": [
+          "powershell-pester-6.mutation-detection.v1",
+          "powershell-pester-6.test-quality.v1"
+        ]
+      },
+      "record_ids": [
+        "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
+      ],
+      "reference_ids": [
+        "sha256:03fd2fc3b9208c6916d613a2631a7c78b6e0c332578fbbc516b97439a1edd45b",
+        "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+        "sha256:862d5a5f103facb42bcfeae4f139d4927e31bb50b09959c16854d0680e275b36",
+        "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+      ],
+      "skill": "powershell-pester-6",
+      "uncertainty": "reported_measurement_not_instruction_causality"
     },
     {
       "case_ids": [],
-      "id": "sha256:c583aef8f8763c897a2b098b4a36f3bd87ba1b719a3592a995d393a469808660",
+      "id": "sha256:df148439b47ce414ebfbeaa1af3b961b9626366fcb5efa4486e907390764cd99",
       "importance": "mandatory",
       "kind": "failed_static_checks",
       "next_step": "inspect_original_scanner_evidence",
@@ -325,14 +1070,44 @@
         ]
       },
       "record_ids": [
-        "sha256:d874e3d2d21c06c6310cf8a459166738ae16d4e723712b3bea65c9c712bb2b93"
+        "sha256:3610407cdbf661957aa08d011df99ef110292985feb443f3c7949dcd6def246a"
       ],
       "reference_ids": [
-        "sha256:9e827cf14ed6b36efbf82e5b9eee1ed376c0f8182deddf792a541820b3dc217c",
-        "sha256:a2e477e6a5d7f678253ac5f7dc6868425ef0dba16e9df631eee485ad61b9710c"
+        "sha256:20bd356bb4c9dbe3b4b80459da0a8c1b525c7a7c8c306a2a6e7507266de08d1c",
+        "sha256:c0e20a7ee12bc37d2a309bc62f9ef291b0f020783ecb403a8dd264aee0b6e769"
       ],
-      "skill": "powershell-module-engineering",
+      "skill": "agent-safety",
       "uncertainty": "recorded_static_outcome"
+    },
+    {
+      "case_ids": [
+        "pester-001-weak"
+      ],
+      "id": "sha256:e2feb9b9e0229407f29766366ff2d75d311c0174da2234fe77ebb4b090635b70",
+      "importance": "investigate",
+      "kind": "custom_measured_failure",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:f19135c7a79fbcbe029593fdf2062316418b39d9840bb9215357b85cbc4ac7b7"
+      ],
+      "observed": {
+        "arm": "without_skill",
+        "metric_ids": [
+          "powershell-pester-6.mutation-detection.v1",
+          "powershell-pester-6.test-quality.v1"
+        ]
+      },
+      "record_ids": [
+        "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
+      ],
+      "reference_ids": [
+        "sha256:1460c412df6694c033fc7488b58078ccf8d6bb0e52f884e9cd3b5e9178a2d8fb",
+        "sha256:75e203ee1e132a7422fb684f6278a3953d7d7905ef0ee529316917374bdf6b22",
+        "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+        "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+      ],
+      "skill": "powershell-pester-6",
+      "uncertainty": "reported_measurement_not_instruction_causality"
     },
     {
       "case_ids": [],
@@ -351,48 +1126,60 @@
       "uncertainty": "supplied_inputs_only"
     },
     {
-      "case_ids": [],
-      "id": "sha256:ee0ec25aa5d2535c243aea190a15bb13da4e78d573ecfdc82e321543ce98cc32",
+      "case_ids": [
+        "pester-001-missing-runtime"
+      ],
+      "id": "sha256:ea5a911c197d2575cab7190d9db5694c7552724db08542972c9b52f6f9d741e0",
       "importance": "investigate",
-      "kind": "incomplete_scans",
-      "next_step": "complete_scans_and_reproject",
-      "observation_ids": [],
+      "kind": "custom_unavailable",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:afd4ccb8b60a39cfd41f5a8ce3cb1b55735827dd7553ef7fbe664928157d73d3"
+      ],
       "observed": {
-        "scanners": [
-          "catalog-total",
-          "SECURITY",
-          "skillspector"
-        ]
+        "classification": "infrastructure_error"
       },
       "record_ids": [
-        "sha256:ad2f3b1562bd2e2391b7ff6d9510881273772c872a355d9909804fa2f60f9f9e"
+        "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
       ],
       "reference_ids": [
-        "sha256:f2993a8f6030f0a10e98d93b5ea4ce1a81aa09486592724756f27621fbb4dee9",
-        "sha256:f7aac1e77d2154a615091f601ecd2bb6a06ae1ca9b1d7d016cc4cbae9f03dc57"
+        "sha256:5d100c5edac0b87e36ee4bcd4f42e61f19319413920a0f431ef54838c3df967a",
+        "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+        "sha256:9a992f07479796598761d4b61a8c94100aafa5fd0942ec7bc04b3f2a21e3c211",
+        "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
       ],
       "skill": "powershell-pester-6",
-      "uncertainty": "scanner_coverage_incomplete"
+      "uncertainty": "reported_unscoreable_outcome"
     },
     {
-      "case_ids": [],
-      "id": "sha256:ef2328922114b77ec7ac0ea12e9a62091b924a4c4329c8d7e9dae2669e9cc636",
-      "importance": "context",
-      "kind": "configured_unmeasured",
-      "next_step": "supply_model_backed_public_report",
-      "observation_ids": [],
+      "case_ids": [
+        "pester-002-weak"
+      ],
+      "id": "sha256:f0cbd433886210c1cb55ab28dce0d6cb290975cece553b24138b88ce835ca914",
+      "importance": "investigate",
+      "kind": "custom_measured_failure",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:8a6a63953897767dbb9dde68106375719953a2bc1aedf7cc507c4965d42b06f7"
+      ],
       "observed": {
-        "configured_case_counts": [
-          10
+        "arm": "without_skill",
+        "metric_ids": [
+          "powershell-pester-6.mutation-detection.v1",
+          "powershell-pester-6.test-quality.v1"
         ]
       },
       "record_ids": [
-        "sha256:672e6163848cf4ee98313d0d80fc07bc1b49c27d4d3075ecb4165724298b38c2",
-        "sha256:d34632fa7d5d306a4a3a175c6f71cd7fe1a45fe29fdf09fe797d0609faa8d779"
+        "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
       ],
-      "reference_ids": [],
-      "skill": "podman",
-      "uncertainty": "no_measurement_in_supplied_inputs"
+      "reference_ids": [
+        "sha256:75a7fa9723b1aa91445d1d4d3b915a96bdcb479aa567eeef6abc7aa8c16360dc",
+        "sha256:951918c692af5df6075586c09bf5d66c464b615df0830e90449921d0a0fbf3c4",
+        "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+        "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+      ],
+      "skill": "powershell-pester-6",
+      "uncertainty": "reported_measurement_not_instruction_causality"
     },
     {
       "case_ids": [],
@@ -411,23 +1198,48 @@
       "uncertainty": "supplied_inputs_only"
     },
     {
+      "case_ids": [
+        "pester-001-unsupported"
+      ],
+      "id": "sha256:f5dc89b75067ac1813999a6b25fdf32774c86648a3b82215d7d131872c3a9055",
+      "importance": "investigate",
+      "kind": "custom_unavailable",
+      "next_step": "inspect_original_case_evidence",
+      "observation_ids": [
+        "sha256:4e88285a9ab81b2feeb20d01eb37943f367017d6eb3cf97e4d064ac7c8b38f07"
+      ],
+      "observed": {
+        "classification": "unsupported"
+      },
+      "record_ids": [
+        "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
+      ],
+      "reference_ids": [
+        "sha256:2222275851ea1dab9fdd31e0b526ecfb5e339552526e45b6f3a03005a55500d5",
+        "sha256:4ece6fcb9802b0ac75983f0e1adfc2742674068abfa07cba6df4266f0f505e34",
+        "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+        "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+      ],
+      "skill": "powershell-pester-6",
+      "uncertainty": "reported_unscoreable_outcome"
+    },
+    {
       "case_ids": [],
-      "id": "sha256:f47f2360ab11ec38ba1c8ead4364467c8c5a9aca72c5c62fe320d5c8d14f17a6",
+      "id": "sha256:f698cc92f6904c6edd3fdb50090702cbf99a4d93ca8fb66c729eeea0f4f38743",
       "importance": "context",
       "kind": "configured_unmeasured",
       "next_step": "supply_model_backed_public_report",
       "observation_ids": [],
       "observed": {
         "configured_case_counts": [
-          5
+          10
         ]
       },
       "record_ids": [
-        "sha256:672e6163848cf4ee98313d0d80fc07bc1b49c27d4d3075ecb4165724298b38c2",
-        "sha256:d34632fa7d5d306a4a3a175c6f71cd7fe1a45fe29fdf09fe797d0609faa8d779"
+        "sha256:c8ad61a248bda8c4c924412e26e60491e50503b89001df37bbcfe58924fdc860"
       ],
       "reference_ids": [],
-      "skill": "powershell-pester-6",
+      "skill": "podman",
       "uncertainty": "no_measurement_in_supplied_inputs"
     },
     {
@@ -445,112 +1257,175 @@
       "reference_ids": [],
       "skill": "a11y",
       "uncertainty": "supplied_inputs_only"
+    },
+    {
+      "case_ids": [],
+      "id": "sha256:fc06ffabee4ad1baa17643bb359fd6cc1fe60f506944f0c55d43f383a02c6610",
+      "importance": "investigate",
+      "kind": "incomplete_scans",
+      "next_step": "complete_scans_and_reproject",
+      "observation_ids": [],
+      "observed": {
+        "scanners": [
+          "catalog-total",
+          "SECURITY",
+          "skillspector"
+        ]
+      },
+      "record_ids": [
+        "sha256:9b8875e6511272c5300084e156e67e2e05b1dc73a53510aa5a4fbd5a10eeacd9"
+      ],
+      "reference_ids": [
+        "sha256:0e81564f26e4f7615646da4e5bce2efeb01aabce654e34868d468a5e08c9225b",
+        "sha256:4e274f0359c3fdcb5d076cb13ed601ba0a9a2f9358d2236f65a6a022ad717252"
+      ],
+      "skill": "ansible",
+      "uncertainty": "scanner_coverage_incomplete"
+    },
+    {
+      "case_ids": [],
+      "id": "sha256:fc69e0898b9c4710bede4d28d6bd6f5472b31faa85a5569f3e2989edd1d43079",
+      "importance": "investigate",
+      "kind": "incomplete_scans",
+      "next_step": "complete_scans_and_reproject",
+      "observation_ids": [],
+      "observed": {
+        "scanners": [
+          "catalog-total",
+          "SECURITY",
+          "skillspector"
+        ]
+      },
+      "record_ids": [
+        "sha256:b9aec112c15357ce54dcab3c7ab400b308a63881a638a67515289a2139a33ed2"
+      ],
+      "reference_ids": [
+        "sha256:76c8b384a026796dfe763c881a1711d5ca8e7d4deae84d1f93f3ab8b409f2abf",
+        "sha256:77a3855fe13c2ea01dfec076460ff893c85d96218b73bfad772c5653f4c5c2a7"
+      ],
+      "skill": "a11y",
+      "uncertainty": "scanner_coverage_incomplete"
     }
   ],
   "input_provenance": [
     {
-      "id": "sha256:52fef7be4e66915050606006ab7830094684e55b9f5383e8ad2d9dd855d68752",
+      "id": "sha256:99320f0aa6c60427b60627d608133751c30ed5d99dc284379b45b44c39d32650",
       "members": [
         {
           "member": "inventory/inventory.json",
-          "raw_digest": "sha256:bac19db60db686f4ebe4c1deb957a0a5d90095a0d659a078afa071462e3da44d",
-          "record_id": "sha256:672e6163848cf4ee98313d0d80fc07bc1b49c27d4d3075ecb4165724298b38c2"
+          "raw_digest": "sha256:5c52a3cbed1c505b50b7aae7a15f570ad627205261685f77106e0904c405bdac",
+          "record_id": "sha256:c8ad61a248bda8c4c924412e26e60491e50503b89001df37bbcfe58924fdc860"
+        },
+        {
+          "member": "skills/a11y/static/public-report.json",
+          "raw_digest": "sha256:ccf8aeada8d9f822dee33db7a0725523437bb0ef11dc608a0f99a97bbb628da9",
+          "record_id": "sha256:b9aec112c15357ce54dcab3c7ab400b308a63881a638a67515289a2139a33ed2"
+        },
+        {
+          "member": "skills/agent-safety/static/public-report.json",
+          "raw_digest": "sha256:d9323ed9a709398b5e3c298643db258f26be9dc488261a11bbdf48dfdb18a377",
+          "record_id": "sha256:3610407cdbf661957aa08d011df99ef110292985feb443f3c7949dcd6def246a"
+        },
+        {
+          "member": "skills/ansible/static/public-report.json",
+          "raw_digest": "sha256:2d071f4a089f11c8f5bfbcfe8ae44f335c49c4b7ea7049825e8e1ab59567c897",
+          "record_id": "sha256:9b8875e6511272c5300084e156e67e2e05b1dc73a53510aa5a4fbd5a10eeacd9"
+        },
+        {
+          "member": "skills/podman/static/public-report.json",
+          "raw_digest": "sha256:c5d3633f83a1d84f30013e82d8ae50ba34c70b62c2918d791a7268a796218c1c",
+          "record_id": "sha256:ee3fa409e240d7ba99e1f5838c25e6382b15cfb799de1e2d15bde86f6ed0812a"
+        },
+        {
+          "member": "skills/powershell-module-engineering/static/public-report.json",
+          "raw_digest": "sha256:b55f3d433cdd5e07d2a5f85a9e99741af8d1943315a012bbc3aef8297fec7da3",
+          "record_id": "sha256:31d400318e95fcf7efbe3901451f167b0c4cfb95d0e661f7f9f08fe7d22d39ec"
+        },
+        {
+          "member": "skills/powershell-pester-6/static/public-report.json",
+          "raw_digest": "sha256:3fdbfe5ff89a6ae9b79e8721f6ce681f8c6c50445b02d5c01748460995a3a447",
+          "record_id": "sha256:29c81caee1ef25b2355bf3afb6e401d138791a6ccc50c8d6774661740738dec7"
         }
       ]
     },
     {
-      "id": "sha256:5dde0d1c1066af53134ec54f42ee5276c1e0a27a2361dc66bccec948f7c814b7",
+      "id": "sha256:d30df8c8f64be1d2e66de6ee035c1aad8fe7ef24948013d09542da840c01f101",
       "members": [
         {
           "member": "inventory/inventory.json",
-          "raw_digest": "sha256:4ee1637448277ebf1025691056ef0c3a7d16920e49b368319227865e83003f90",
-          "record_id": "sha256:d34632fa7d5d306a4a3a175c6f71cd7fe1a45fe29fdf09fe797d0609faa8d779"
+          "raw_digest": "sha256:5c52a3cbed1c505b50b7aae7a15f570ad627205261685f77106e0904c405bdac",
+          "record_id": "sha256:c8ad61a248bda8c4c924412e26e60491e50503b89001df37bbcfe58924fdc860"
         },
         {
-          "member": "skills/a11y/static/public-report.json",
-          "raw_digest": "sha256:4135b83b8a95cc371d502688e21ba1cb9957690307c4456c26fdb5c96867b936",
-          "record_id": "sha256:948375ab119863523957e34e2612e54f866f35b6cbdd26aac5429fadde625190"
-        },
+          "member": "skills/powershell-pester-6/behavioral/qualification/public-report.json",
+          "raw_digest": "sha256:99e6ef8b9c0864250653b032650368094ccad14d73a06315a4b38d70036ecb42",
+          "record_id": "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820"
+        }
+      ]
+    },
+    {
+      "id": "sha256:ea53f1b630e1b0011173562069b3e6e6743e377ec79af31f0d96f2d6459685e2",
+      "members": [
         {
-          "member": "skills/agent-safety/static/public-report.json",
-          "raw_digest": "sha256:d48479b24c1667543531a7a927b5bb20baf544e870c1fa3c9176dd367c97980f",
-          "record_id": "sha256:f746cc2400d67a7d5c89feafcfe2a9db4bddfd134f389ee36c5496b6d5f366d6"
-        },
-        {
-          "member": "skills/ansible/static/public-report.json",
-          "raw_digest": "sha256:937b4e200036c346fb10d4e2b5ee3dac87aa373e44f65de6fa5047cd59217634",
-          "record_id": "sha256:90be2aaeb9c1af9056d443044214a6fc722ed1997f3383f8640ac269ad2dfee7"
-        },
-        {
-          "member": "skills/podman/static/public-report.json",
-          "raw_digest": "sha256:9a7698e25c28ed6f35846f5eb5da6da5cdc35c5b9d0f2b5cf6f0044ac3577e12",
-          "record_id": "sha256:1d7773c42299614442f7188622796870afeacaa0a822c23bbf8ca3e1f225ba20"
-        },
-        {
-          "member": "skills/powershell-module-engineering/static/public-report.json",
-          "raw_digest": "sha256:1f95742d36fa2c30fd0d399431a909a3ab9fd75d6e0376485d20d2aff77eca91",
-          "record_id": "sha256:d874e3d2d21c06c6310cf8a459166738ae16d4e723712b3bea65c9c712bb2b93"
-        },
-        {
-          "member": "skills/powershell-pester-6/static/public-report.json",
-          "raw_digest": "sha256:46635addd8b4a97a54cd2101a34275740e4fc7dd77ca050e9bba83970b8290d5",
-          "record_id": "sha256:ad2f3b1562bd2e2391b7ff6d9510881273772c872a355d9909804fa2f60f9f9e"
+          "member": "inventory/inventory.json",
+          "raw_digest": "sha256:5c52a3cbed1c505b50b7aae7a15f570ad627205261685f77106e0904c405bdac",
+          "record_id": "sha256:c8ad61a248bda8c4c924412e26e60491e50503b89001df37bbcfe58924fdc860"
         }
       ]
     }
   ],
-  "method_version": "bounded-descriptive-skill-analysis/1",
+  "method_version": "bounded-descriptive-skill-analysis/2",
   "record_index": [
     {
-      "id": "sha256:1d7773c42299614442f7188622796870afeacaa0a822c23bbf8ca3e1f225ba20",
-      "kind": "static",
-      "run_id": null,
-      "skill": "podman"
-    },
-    {
-      "id": "sha256:672e6163848cf4ee98313d0d80fc07bc1b49c27d4d3075ecb4165724298b38c2",
-      "kind": "inventory",
-      "run_id": null,
-      "skill": null
-    },
-    {
-      "id": "sha256:90be2aaeb9c1af9056d443044214a6fc722ed1997f3383f8640ac269ad2dfee7",
-      "kind": "static",
-      "run_id": null,
-      "skill": "ansible"
-    },
-    {
-      "id": "sha256:948375ab119863523957e34e2612e54f866f35b6cbdd26aac5429fadde625190",
-      "kind": "static",
-      "run_id": null,
-      "skill": "a11y"
-    },
-    {
-      "id": "sha256:ad2f3b1562bd2e2391b7ff6d9510881273772c872a355d9909804fa2f60f9f9e",
+      "id": "sha256:29c81caee1ef25b2355bf3afb6e401d138791a6ccc50c8d6774661740738dec7",
       "kind": "static",
       "run_id": null,
       "skill": "powershell-pester-6"
     },
     {
-      "id": "sha256:d34632fa7d5d306a4a3a175c6f71cd7fe1a45fe29fdf09fe797d0609faa8d779",
-      "kind": "inventory",
-      "run_id": null,
-      "skill": null
-    },
-    {
-      "id": "sha256:d874e3d2d21c06c6310cf8a459166738ae16d4e723712b3bea65c9c712bb2b93",
+      "id": "sha256:31d400318e95fcf7efbe3901451f167b0c4cfb95d0e661f7f9f08fe7d22d39ec",
       "kind": "static",
       "run_id": null,
       "skill": "powershell-module-engineering"
     },
     {
-      "id": "sha256:f746cc2400d67a7d5c89feafcfe2a9db4bddfd134f389ee36c5496b6d5f366d6",
+      "id": "sha256:3610407cdbf661957aa08d011df99ef110292985feb443f3c7949dcd6def246a",
       "kind": "static",
       "run_id": null,
       "skill": "agent-safety"
+    },
+    {
+      "id": "sha256:9b8875e6511272c5300084e156e67e2e05b1dc73a53510aa5a4fbd5a10eeacd9",
+      "kind": "static",
+      "run_id": null,
+      "skill": "ansible"
+    },
+    {
+      "id": "sha256:b9aec112c15357ce54dcab3c7ab400b308a63881a638a67515289a2139a33ed2",
+      "kind": "static",
+      "run_id": null,
+      "skill": "a11y"
+    },
+    {
+      "id": "sha256:c8ad61a248bda8c4c924412e26e60491e50503b89001df37bbcfe58924fdc860",
+      "kind": "inventory",
+      "run_id": null,
+      "skill": null
+    },
+    {
+      "id": "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820",
+      "kind": "behavioral",
+      "run_id": "qualification",
+      "skill": "powershell-pester-6"
+    },
+    {
+      "id": "sha256:ee3fa409e240d7ba99e1f5838c25e6382b15cfb799de1e2d15bde86f6ed0812a",
+      "kind": "static",
+      "run_id": null,
+      "skill": "podman"
     }
   ],
-  "schema_version": 1,
+  "schema_version": 2,
   "skills": [
     {
       "behavioral_results": [],
@@ -559,9 +1434,9 @@
       "configurations": [
         {
           "behavioral_status": "not_configured",
-          "id": "sha256:410db73a64f206c1157652233124ba21a719103a64a4fd3d18979659dee3e60a",
+          "id": "sha256:77822bf4f61b65daa6a9bdac0f771edbf55a6c15a903858ef61663117cf214ff",
           "inventory_record_ids": [
-            "sha256:d34632fa7d5d306a4a3a175c6f71cd7fe1a45fe29fdf09fe797d0609faa8d779"
+            "sha256:c8ad61a248bda8c4c924412e26e60491e50503b89001df37bbcfe58924fdc860"
           ],
           "source": {
             "content_digest": "sha256:bd38520667287390ab5b35bf3a81033b1a1d0eae7f0545ec907410ba39ad1216",
@@ -569,25 +1444,7 @@
             "lineage": null,
             "owner": "local",
             "repository": "thetechgy/agent-engineering-baseline",
-            "revision": "1e2bc9beab366134e9872af4e196c538a03ec132",
-            "skill_id": "a11y",
-            "source_path": ".apm/skills/a11y"
-          },
-          "suite": null
-        },
-        {
-          "behavioral_status": "not_configured",
-          "id": "sha256:a095b352579c7988a1653485d6790ed617ceeebf43540e382ce6d521af3b7567",
-          "inventory_record_ids": [
-            "sha256:672e6163848cf4ee98313d0d80fc07bc1b49c27d4d3075ecb4165724298b38c2"
-          ],
-          "source": {
-            "content_digest": "sha256:bd38520667287390ab5b35bf3a81033b1a1d0eae7f0545ec907410ba39ad1216",
-            "content_provenance": "configured",
-            "lineage": null,
-            "owner": "local",
-            "repository": "thetechgy/agent-engineering-baseline",
-            "revision": "39b6c43583d414c78dedd28e43551a550deb0544",
+            "revision": "ff9f4935c7b917a328461dcd62e12d83576baac7",
             "skill_id": "a11y",
             "source_path": ".apm/skills/a11y"
           },
@@ -609,7 +1466,7 @@
               "check": "line_count",
               "line": null,
               "member": null,
-              "reference": "sha256:299d92fbd7425af7f13bf8d2e08ffdae0e869a2cd493670caccdab152622df7f",
+              "reference": "sha256:b756dffd5b385ff0da54fda32d550f5a47b3ee34b06b7f404dc1fa39d8c3593d",
               "scanner": "SCHEMA",
               "severity": "medium"
             },
@@ -617,7 +1474,7 @@
               "check": "body_recommended_section",
               "line": null,
               "member": null,
-              "reference": "sha256:3bf7fdfcf7d9c3a2b8ab8f8fd99ddc1e3b04013aae1041e643733865d1a82c3b",
+              "reference": "sha256:537c46cd5819a0380c0ef21f92cac50b0ef76e20e7da76909c9d20f56d2eec84",
               "scanner": "SCHEMA",
               "severity": "medium"
             },
@@ -625,7 +1482,7 @@
               "check": "body_recommended_section",
               "line": null,
               "member": null,
-              "reference": "sha256:bcca588ca17d3382cb95b40ce4f190eb6804cd798012e69a5426fe42844366e2",
+              "reference": "sha256:6eeb4fd9696f82f33ef61637d14265ffa6b6ed9f0c1b8c0fc12ef696ac76d561",
               "scanner": "SCHEMA",
               "severity": "medium"
             },
@@ -633,7 +1490,7 @@
               "check": "author_missing",
               "line": null,
               "member": null,
-              "reference": "sha256:32784ad2b2bde19c24d398a8cc58972ef3064291fe748169ffa963011472c49a",
+              "reference": "sha256:babcb2a4ea14167f39fca9d3ec5e81064a5e2376392b920ce4f5ac19faac1f70",
               "scanner": "SCHEMA",
               "severity": "high"
             },
@@ -641,7 +1498,7 @@
               "check": "quality_correctness",
               "line": null,
               "member": null,
-              "reference": "sha256:12cfaff52fee16fa9df890146469d4ac5d9ff2765b2a798fc31db5dda6a43fee",
+              "reference": "sha256:f02856c44f5f07a9a6fa104de974f21416d930599290526c277fa1db96ee966e",
               "scanner": "QUALITY",
               "severity": "medium"
             },
@@ -649,7 +1506,7 @@
               "check": "quality_correctness",
               "line": null,
               "member": null,
-              "reference": "sha256:a9af09c77d067c4bd6760597b2a2ca6ce0e0fecabaac34ea734ff9bb69fc6fde",
+              "reference": "sha256:a7c04944f4c8f21b8ec838d7220778f3ef6209fdbabfb19a31a621e11643acd9",
               "scanner": "QUALITY",
               "severity": "medium"
             },
@@ -657,7 +1514,7 @@
               "check": "quality_correctness",
               "line": null,
               "member": null,
-              "reference": "sha256:e1e087e274a2bcd56237075ab93f1d9a32519b64019d8bb132220b012a299b3e",
+              "reference": "sha256:f2f2a372b0a4a17dff64aa0834b2174a6253bdb0cc979f6686001eefe0936443",
               "scanner": "QUALITY",
               "severity": "medium"
             },
@@ -665,7 +1522,7 @@
               "check": "quality_discoverability",
               "line": null,
               "member": null,
-              "reference": "sha256:d873159c8122d6599f07db25dc5b71fbc0ed4183594db46854490fed64c4db6b",
+              "reference": "sha256:94867b3fffbe5af87ae72a125eda755a45161a39ffce857911d86fad4b0cc4e9",
               "scanner": "QUALITY",
               "severity": "low"
             },
@@ -673,7 +1530,7 @@
               "check": "quality_discoverability",
               "line": null,
               "member": null,
-              "reference": "sha256:9be33881990850691295126f456a1fed487528045c2584b811dcbde7d8f2d437",
+              "reference": "sha256:5e196e0d55c245ce829259ff1d51228f495c14f1bc1445416d7bf2b6dcfffe69",
               "scanner": "QUALITY",
               "severity": "low"
             },
@@ -681,7 +1538,7 @@
               "check": "quality_discoverability",
               "line": null,
               "member": null,
-              "reference": "sha256:05f4d43be7c8c09aaac3dc95a200b2fa40e41c3e070eb01879bc9e0659dd7b34",
+              "reference": "sha256:36021443f11b4c1f18ce8f8e4c18af2458a499e695c12da1402c6fea27c3758b",
               "scanner": "QUALITY",
               "severity": "medium"
             },
@@ -689,7 +1546,7 @@
               "check": "quality_reliability",
               "line": null,
               "member": null,
-              "reference": "sha256:c4a8ad9b59ea5530200955eabd817074ca63097645c43b7a317ad55723cf1361",
+              "reference": "sha256:e7a4ae4f14c278ef0cef688d14b29558e58200ed2f5fad88e19859589251aea9",
               "scanner": "QUALITY",
               "severity": "low"
             },
@@ -697,7 +1554,7 @@
               "check": "quality_reliability",
               "line": null,
               "member": null,
-              "reference": "sha256:41fcae26e9988f9caf43b6b7934690c52f6a1c93885d62b3b1685891c563f234",
+              "reference": "sha256:e4f9e204b646be89539f49401fabf2e48dfc5a8f2f37c1dec6e611bdf2aea5fc",
               "scanner": "QUALITY",
               "severity": "low"
             },
@@ -705,7 +1562,7 @@
               "check": "quality_reliability",
               "line": null,
               "member": null,
-              "reference": "sha256:cd0be0860cd52acbcc5bb2c33c95b19580536dcef9e87a90c0e7f1c3d0e2f50d",
+              "reference": "sha256:41f500fc2acf8ab2e58df037b444e96088f916f2ef0ecfc1fa7758dbbb99a5b8",
               "scanner": "QUALITY",
               "severity": "low"
             },
@@ -713,19 +1570,19 @@
               "check": "quality_efficiency",
               "line": null,
               "member": null,
-              "reference": "sha256:1e9c1df9d916e40081a30916caecfa791b58f09a91f42c06a7c458daad99759e",
+              "reference": "sha256:bd877a94e182b16f1723edb8a34a4b8a29b586bff5b955244effbc6dd215cd42",
               "scanner": "QUALITY",
               "severity": "high"
             }
           ],
-          "record_id": "sha256:948375ab119863523957e34e2612e54f866f35b6cbdd26aac5429fadde625190",
+          "record_id": "sha256:b9aec112c15357ce54dcab3c7ab400b308a63881a638a67515289a2139a33ed2",
           "run_id": null,
           "scans": [
             {
               "blocking": true,
               "passed": false,
               "references": [
-                "sha256:2f619fc150a9f8f60807496efdb7b5b602895855098b738694a1f41e9f8cdd96"
+                "sha256:76c8b384a026796dfe763c881a1711d5ca8e7d4deae84d1f93f3ab8b409f2abf"
               ],
               "scanner": "catalog-total",
               "severity_counts": {
@@ -740,7 +1597,7 @@
               "blocking": true,
               "passed": false,
               "references": [
-                "sha256:21ee488c50e7cdb5cf46cdfd4b9e53f1be84e4f23ce478fa0cf5897d7039c553"
+                "sha256:511996f2c27523a0adef6121d338d15fe5cfed08a073de78e293d472da0bd01a"
               ],
               "scanner": "SCHEMA",
               "severity_counts": {
@@ -755,7 +1612,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:a98416c403c01f74c25408eacb02c867dcb2cd4a60ae528677e0f5aa822c24c1"
+                "sha256:d056d2781233902e1baefd7cbce5315ef39f725da9e9e01fb626c42395867c7e"
               ],
               "scanner": "VERSION",
               "severity_counts": {
@@ -770,7 +1627,7 @@
               "blocking": true,
               "passed": false,
               "references": [
-                "sha256:0d95e9b277555f43e756a61822db23fa6a47dc0bc1420bbc38008a2b59984a62"
+                "sha256:77a3855fe13c2ea01dfec076460ff893c85d96218b73bfad772c5653f4c5c2a7"
               ],
               "scanner": "SECURITY",
               "severity_counts": {
@@ -785,7 +1642,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:4e499b7ec632a4a2dce1633c344de31fb4a9df4eba049c799a6357791e8c3eb1"
+                "sha256:883c768e10f65c312c5f9e2031a063677f140d4d1d3f6f1c99f49ca442bfb386"
               ],
               "scanner": "PII",
               "severity_counts": {
@@ -800,7 +1657,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:49722fb22a0763734d032fa15b557b1e318e4b7c19e31e5501f9e97b07847167"
+                "sha256:37703462a92bde754af0aa1f03e28fce794c60672409053c72bdcc5f7fc0cb5f"
               ],
               "scanner": "LICENSE",
               "severity_counts": {
@@ -815,7 +1672,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:d251c7f89021abc7dbb31957b1c27069d7bec88345461daa6656cdbd0509590c"
+                "sha256:1f078e1ac01d2a3b37e6f4c8e010f7a311bafab68be03a8c72321dfda9d312a4"
               ],
               "scanner": "CODE_RISK",
               "severity_counts": {
@@ -830,7 +1687,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:e0fcdc77c776eda6d281cceec57f020e3e34dea064df831a34f235bce197d73f"
+                "sha256:57aaa5d19b636a65d85e171224587094cb37bd6a10d30a228c907ae61c4b9e5a"
               ],
               "scanner": "SECRETS",
               "severity_counts": {
@@ -845,7 +1702,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:3b6f1f507da2059840639cee1056faa547f705436ce0d94459dd468ba7fe1737"
+                "sha256:93e9ac3c16542e05d4797ab4750aa8e004f96f259efed5dd383d1e8bf04913ab"
               ],
               "scanner": "HYGIENE",
               "severity_counts": {
@@ -860,7 +1717,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:4204bf3528b809d34ce3113ac871b27edd74bf412fa9f7adbb87a12eee3bd39e"
+                "sha256:07956fce3ccb45d211bb141463eeb6e621de564e2c5bbdf41c8076d6f0ae9d12"
               ],
               "scanner": "UNICODE",
               "severity_counts": {
@@ -875,7 +1732,7 @@
               "blocking": true,
               "passed": false,
               "references": [
-                "sha256:efc1ea5f5eeb3242650f00dd939aadd7d1ae975a90437339701a0444ae3ae0b3"
+                "sha256:3abbb62e02d9995aec75e4ecee81289f6534f9e4594d2d0e6762da7b4b80a5ea"
               ],
               "scanner": "QUALITY",
               "severity_counts": {
@@ -890,7 +1747,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:dc419d2790dfdfb84eda7542cfc52bcebb57c743a51389479ef52ccaab377f0b"
+                "sha256:9cfda03c5ba99bedd6c13eb7870c60ea251d991f6154d15b9b21a801499e2c4b"
               ],
               "scanner": "SCRIPT_LINT",
               "severity_counts": {
@@ -905,7 +1762,7 @@
               "blocking": false,
               "passed": null,
               "references": [
-                "sha256:2f619fc150a9f8f60807496efdb7b5b602895855098b738694a1f41e9f8cdd96"
+                "sha256:76c8b384a026796dfe763c881a1711d5ca8e7d4deae84d1f93f3ab8b409f2abf"
               ],
               "scanner": "skillspector",
               "severity_counts": {
@@ -923,7 +1780,7 @@
             "lineage": null,
             "owner": "local",
             "repository": "thetechgy/agent-engineering-baseline",
-            "revision": "1e2bc9beab366134e9872af4e196c538a03ec132",
+            "revision": "ff9f4935c7b917a328461dcd62e12d83576baac7",
             "skill_id": "a11y",
             "source_path": ".apm/skills/a11y"
           }
@@ -937,9 +1794,9 @@
       "configurations": [
         {
           "behavioral_status": "not_configured",
-          "id": "sha256:5b40d5924bc64ef9e51ebb0f1a90990a925a85304302a08f9ad07b60778e506d",
+          "id": "sha256:99bd8ceba49c4959d2c36e0a10bfd5937cf42f7a2b34baaa4384d6493acc9b73",
           "inventory_record_ids": [
-            "sha256:d34632fa7d5d306a4a3a175c6f71cd7fe1a45fe29fdf09fe797d0609faa8d779"
+            "sha256:c8ad61a248bda8c4c924412e26e60491e50503b89001df37bbcfe58924fdc860"
           ],
           "source": {
             "content_digest": "sha256:8a0486315d9e6462604e467c28c733640142865f5cf2ef7cba769c3cdb014719",
@@ -947,25 +1804,7 @@
             "lineage": null,
             "owner": "local",
             "repository": "thetechgy/agent-engineering-baseline",
-            "revision": "1e2bc9beab366134e9872af4e196c538a03ec132",
-            "skill_id": "agent-safety",
-            "source_path": ".apm/skills/agent-safety"
-          },
-          "suite": null
-        },
-        {
-          "behavioral_status": "not_configured",
-          "id": "sha256:7f9ff5a973f26f6a29ac995eb411eae4943ca24a4851311e8ab39f39a2130cfc",
-          "inventory_record_ids": [
-            "sha256:672e6163848cf4ee98313d0d80fc07bc1b49c27d4d3075ecb4165724298b38c2"
-          ],
-          "source": {
-            "content_digest": "sha256:8a0486315d9e6462604e467c28c733640142865f5cf2ef7cba769c3cdb014719",
-            "content_provenance": "configured",
-            "lineage": null,
-            "owner": "local",
-            "repository": "thetechgy/agent-engineering-baseline",
-            "revision": "39b6c43583d414c78dedd28e43551a550deb0544",
+            "revision": "ff9f4935c7b917a328461dcd62e12d83576baac7",
             "skill_id": "agent-safety",
             "source_path": ".apm/skills/agent-safety"
           },
@@ -985,7 +1824,7 @@
               "check": "body_recommended_section",
               "line": null,
               "member": null,
-              "reference": "sha256:06a3bb558611c4ca3453a6f4d09d8cc61a66305d75723ba05514545533a75acf",
+              "reference": "sha256:a61c8d32ac9819e7e34ff4fb9055ebb92a0d364dc025dae773d13840f3281d25",
               "scanner": "SCHEMA",
               "severity": "medium"
             },
@@ -993,7 +1832,7 @@
               "check": "body_recommended_section",
               "line": null,
               "member": null,
-              "reference": "sha256:99cf956f78de091e025845274e030a40b14a321442bf0523d5292a1312223522",
+              "reference": "sha256:21f718b479440cf21c92a534efa57bbb75c886bad7ae04f2d87758e17721c643",
               "scanner": "SCHEMA",
               "severity": "medium"
             },
@@ -1001,7 +1840,7 @@
               "check": "author_missing",
               "line": null,
               "member": null,
-              "reference": "sha256:80eea737a2d04c830de3affa3ae7b16a6f8ebc602cb44e465e0a4299910fb682",
+              "reference": "sha256:2fc2db529291fee585ccbcbcd9000ea45406e8bc6db037ff8a89cd88d4513cf4",
               "scanner": "SCHEMA",
               "severity": "high"
             },
@@ -1009,7 +1848,7 @@
               "check": "RA1",
               "line": 92,
               "member": "SKILL.md",
-              "reference": "sha256:93932f576c988cffc5f0bf6ae146cf876eb6eb9da7b664bbbe58b8307f5f365f",
+              "reference": "sha256:258f3e3e932890eb67c62ab698b00cb2e7b55eae21dba757a14e6c2bc7d32916",
               "scanner": "SECURITY",
               "severity": "high"
             },
@@ -1017,7 +1856,7 @@
               "check": "EA1",
               "line": 17,
               "member": "SKILL.md",
-              "reference": "sha256:505778a6a6484e7e372bf3d5a16a2ca1efd81c9347d742d67758606dd53126c9",
+              "reference": "sha256:53180e7fa819fe57ff6d8d4ac9fe6f5ed8a52e83b3297fe60d63bc4ee6fe0772",
               "scanner": "SECURITY",
               "severity": "medium"
             },
@@ -1025,7 +1864,7 @@
               "check": "EA1",
               "line": 68,
               "member": "SKILL.md",
-              "reference": "sha256:fa3c3ce33fb1cfe6d9a4854953dd757c40449a716913adab3ce31e9748989a26",
+              "reference": "sha256:d61ec4b45f4309ea146f7316a2b0d78a50f2e85791917f9411ea88ae1e26e6e6",
               "scanner": "SECURITY",
               "severity": "medium"
             },
@@ -1033,7 +1872,7 @@
               "check": "quality_correctness",
               "line": null,
               "member": null,
-              "reference": "sha256:fc40c9a58baa07e47157a15ba2656cf7c1985b3501c1453b8f7b5aaa49b9c0e6",
+              "reference": "sha256:043462aae51bf7405aeef28ca46610ccabc6e29015de8843a072f9094070f9fb",
               "scanner": "QUALITY",
               "severity": "medium"
             },
@@ -1041,7 +1880,7 @@
               "check": "quality_correctness",
               "line": null,
               "member": null,
-              "reference": "sha256:ed7408adaf758968272e356e4dc065c3fcb95d0144c8ba7578ab1b546500e0f1",
+              "reference": "sha256:0c42e8550a53db1bc13cab1ecaf071b80f12866a220bddba1a502f476cb34667",
               "scanner": "QUALITY",
               "severity": "medium"
             },
@@ -1049,7 +1888,7 @@
               "check": "quality_correctness",
               "line": null,
               "member": null,
-              "reference": "sha256:800cd3235918a44c7314ef0a73694d71a6703a02551a33e87ec1e5846909a676",
+              "reference": "sha256:aaab64706d0c1be962035ffce7e5538369549e10742f6c0c6e935329b988e7af",
               "scanner": "QUALITY",
               "severity": "medium"
             },
@@ -1057,7 +1896,7 @@
               "check": "quality_discoverability",
               "line": null,
               "member": null,
-              "reference": "sha256:a1b3b7491f545d0e732d8bfb48f0f0fb52e16abbbbfd36610bc2fe77ad2d3ce2",
+              "reference": "sha256:ff134593eb12458b846ddc168f079b68aa902d85f9fc4e4d486b282b8a48c2dd",
               "scanner": "QUALITY",
               "severity": "low"
             },
@@ -1065,7 +1904,7 @@
               "check": "quality_discoverability",
               "line": null,
               "member": null,
-              "reference": "sha256:ec24854318b1f4bce6bbe6aa587ae67c9fe20ade81303d794e12f2b3d55ce9c5",
+              "reference": "sha256:521b8191bec2b229ae3b4651c351f720caabed543a41a7c2fdba50331c376e38",
               "scanner": "QUALITY",
               "severity": "low"
             },
@@ -1073,7 +1912,7 @@
               "check": "quality_reliability",
               "line": null,
               "member": null,
-              "reference": "sha256:ae6705249b5a53975969b9ea633a9f6949103601eec7f2cfecf267439fd5dbf3",
+              "reference": "sha256:8fffac1deb664498d9ffa11e902d922c0cf3d31244bb3b06dcf95838d60daf2c",
               "scanner": "QUALITY",
               "severity": "low"
             },
@@ -1081,7 +1920,7 @@
               "check": "quality_reliability",
               "line": null,
               "member": null,
-              "reference": "sha256:068c6393f879247dc317d5749eda67cf9a53ba6e3217c4387a21ac20b28083a0",
+              "reference": "sha256:30df53f3e89d5c6b62bbcdfbb74f57ecebf3eda9fdbb53e421c69cf96564ee6c",
               "scanner": "QUALITY",
               "severity": "low"
             },
@@ -1089,19 +1928,19 @@
               "check": "quality_reliability",
               "line": null,
               "member": null,
-              "reference": "sha256:8c1b2213055814b3157e95b6a979e7d4653be49eabda2654a38189e63b9abb38",
+              "reference": "sha256:3f5db881b1e3075a2d2f3149eef18f4939ef33df63ab19606b9107919a00afdd",
               "scanner": "QUALITY",
               "severity": "low"
             }
           ],
-          "record_id": "sha256:f746cc2400d67a7d5c89feafcfe2a9db4bddfd134f389ee36c5496b6d5f366d6",
+          "record_id": "sha256:3610407cdbf661957aa08d011df99ef110292985feb443f3c7949dcd6def246a",
           "run_id": null,
           "scans": [
             {
               "blocking": true,
               "passed": false,
               "references": [
-                "sha256:48519ade7315b4468eeb7441a5c3d9cf8ab292dd094825e17e0ab9842e37b309"
+                "sha256:21418e0ed8f0a144ac08cb177abf08f43758c7f7b705876fae04fdf99b5abc94"
               ],
               "scanner": "catalog-total",
               "severity_counts": {
@@ -1116,7 +1955,7 @@
               "blocking": true,
               "passed": false,
               "references": [
-                "sha256:dff8b474c8f0400ef50027cc6cbebfd26d6f379c50d9fbb20be7c103e747f31b"
+                "sha256:c0e20a7ee12bc37d2a309bc62f9ef291b0f020783ecb403a8dd264aee0b6e769"
               ],
               "scanner": "SCHEMA",
               "severity_counts": {
@@ -1131,7 +1970,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:83904ea0327012c29d4f65d8700a88be9277de1fa1884aeb1e9a0931cc932ad3"
+                "sha256:4814aa82d55c5649fa9dc71791009353d9ee8394e01bb59577653c7a4d397ac6"
               ],
               "scanner": "VERSION",
               "severity_counts": {
@@ -1146,7 +1985,7 @@
               "blocking": true,
               "passed": false,
               "references": [
-                "sha256:dd714320ef180b0e48f2d1ccc19d4339a18b015414589e66dabdbfd2be832608"
+                "sha256:20bd356bb4c9dbe3b4b80459da0a8c1b525c7a7c8c306a2a6e7507266de08d1c"
               ],
               "scanner": "SECURITY",
               "severity_counts": {
@@ -1161,7 +2000,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:2ab70c39f56c494c0bc40a555751777b3babcc83aa20267e699396a41355537a"
+                "sha256:2daf044d9ee00736097936145c2d0c7458951b41a77904a6ef750cc484ac44c1"
               ],
               "scanner": "PII",
               "severity_counts": {
@@ -1176,7 +2015,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:e6d54b0ca9b3673327501970677913bfbe4ffe63d1cd65d5730dbe36e877cc2e"
+                "sha256:0593b21cbc6c64991b1bb7e575362ec19d152677585c936a7f79f50f86340d62"
               ],
               "scanner": "LICENSE",
               "severity_counts": {
@@ -1191,7 +2030,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:b5035862bbd1588f4db58f4595ca2b818573161c884a49f220f057781e3a8c05"
+                "sha256:daf35f370d2cefa4d5ce633af2648e7e0044616f5ffc20b42cbb4ab3963844f6"
               ],
               "scanner": "CODE_RISK",
               "severity_counts": {
@@ -1206,7 +2045,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:7e88c8c5f94819c8309d6fad79f526e87ecc721ac8b345b965ea39ea093faa1a"
+                "sha256:669da2affc9a36fe11e6f69089c49a7afb51037dc0e0dd6137500b92ba92cc65"
               ],
               "scanner": "SECRETS",
               "severity_counts": {
@@ -1221,7 +2060,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:da050d9d6af311512ecde3bbd87e95db1cd6b245246e6e78adc14c1e20a53c1d"
+                "sha256:9ab6bdd71049f33fdc103633bc180efbfbbfd7061894f8b634f9056605d87d30"
               ],
               "scanner": "HYGIENE",
               "severity_counts": {
@@ -1236,7 +2075,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:ca3210d63ed91e7877ed5db6b149f435ddcb8f8f4de6c7dd13fbbf2c1096009f"
+                "sha256:670269e0b906a614b327cf540ccfb29c0c7d4305c0d60e94e2c24b05c3919ebb"
               ],
               "scanner": "UNICODE",
               "severity_counts": {
@@ -1251,7 +2090,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:a5afe528082adffe9dc7401a9c6226c23c89f555abd9d2f46c47a8bf0b9c98c8"
+                "sha256:4ea2d9f7836dfa6b9f9f9061750a9c318495cf387c3712a2ea5b6f14c6c4f5db"
               ],
               "scanner": "QUALITY",
               "severity_counts": {
@@ -1266,7 +2105,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:bd09c37afcc5fea4ace7788584d0e2477944ef357822e81328252174cb19742b"
+                "sha256:3f20b7f67f5077feb85832ebbfd352de5434339d0f8027055b35447111e94e65"
               ],
               "scanner": "SCRIPT_LINT",
               "severity_counts": {
@@ -1284,7 +2123,7 @@
             "lineage": null,
             "owner": "local",
             "repository": "thetechgy/agent-engineering-baseline",
-            "revision": "1e2bc9beab366134e9872af4e196c538a03ec132",
+            "revision": "ff9f4935c7b917a328461dcd62e12d83576baac7",
             "skill_id": "agent-safety",
             "source_path": ".apm/skills/agent-safety"
           }
@@ -1298,9 +2137,9 @@
       "configurations": [
         {
           "behavioral_status": "not_configured",
-          "id": "sha256:3c7661e4522801554d00683a916e9e439746b3299399f7ea738efb189a2c9e7d",
+          "id": "sha256:0eeea20c890e028ef3f123e4794f640b8d7bc4094288c9044779110c52cac84b",
           "inventory_record_ids": [
-            "sha256:672e6163848cf4ee98313d0d80fc07bc1b49c27d4d3075ecb4165724298b38c2"
+            "sha256:c8ad61a248bda8c4c924412e26e60491e50503b89001df37bbcfe58924fdc860"
           ],
           "source": {
             "content_digest": "sha256:080622eb297ce99914bd08fbada178bed0eeb162a223017b8e6bb6b9a389eca8",
@@ -1308,25 +2147,7 @@
             "lineage": null,
             "owner": "local",
             "repository": "thetechgy/agent-engineering-baseline",
-            "revision": "39b6c43583d414c78dedd28e43551a550deb0544",
-            "skill_id": "ansible",
-            "source_path": ".apm/skills/ansible"
-          },
-          "suite": null
-        },
-        {
-          "behavioral_status": "not_configured",
-          "id": "sha256:62f966579b2e916523a90bca412446f71f06ebea2abb2242dfb975fd28036d08",
-          "inventory_record_ids": [
-            "sha256:d34632fa7d5d306a4a3a175c6f71cd7fe1a45fe29fdf09fe797d0609faa8d779"
-          ],
-          "source": {
-            "content_digest": "sha256:080622eb297ce99914bd08fbada178bed0eeb162a223017b8e6bb6b9a389eca8",
-            "content_provenance": "configured",
-            "lineage": null,
-            "owner": "local",
-            "repository": "thetechgy/agent-engineering-baseline",
-            "revision": "1e2bc9beab366134e9872af4e196c538a03ec132",
+            "revision": "ff9f4935c7b917a328461dcd62e12d83576baac7",
             "skill_id": "ansible",
             "source_path": ".apm/skills/ansible"
           },
@@ -1348,7 +2169,7 @@
               "check": "body_recommended_section",
               "line": null,
               "member": null,
-              "reference": "sha256:4aa08705ab74650ca3eb82c56011790c531bdd1fedd2d6ea8b8bc7325652cb8b",
+              "reference": "sha256:8309e8c5980844ef8e62398be5826a1bcd79312ca968bd5aa08ce06f3e00148b",
               "scanner": "SCHEMA",
               "severity": "medium"
             },
@@ -1356,7 +2177,7 @@
               "check": "body_recommended_section",
               "line": null,
               "member": null,
-              "reference": "sha256:f0415ec1c45dd3fc21942e65aeee74bce7b3b2e4b02db5da0b8bf5d933596fcf",
+              "reference": "sha256:255355f3334cca04ec866c00d026a0595c0612062b7437c86e2dbf2792683e30",
               "scanner": "SCHEMA",
               "severity": "medium"
             },
@@ -1364,7 +2185,7 @@
               "check": "author_missing",
               "line": null,
               "member": null,
-              "reference": "sha256:a2a07289875e87167852918909a99dc6d102fc26bc7eb9ecb676893dd4d99267",
+              "reference": "sha256:5ab56276a6235f8427816b5829952d571d9ef9ff34de9576bab0caa9655b5a83",
               "scanner": "SCHEMA",
               "severity": "high"
             },
@@ -1372,7 +2193,7 @@
               "check": "hardcoded_secrets",
               "line": 42,
               "member": "SKILL.md",
-              "reference": "sha256:d2cd7cc8184737aae69965f9d69357f491fcd682a8b7d34436897d5ef0fce850",
+              "reference": "sha256:77d2e429ad8e76c9a189ef0eacfb16f95fb178af790a7dbf318664e0bce5fd75",
               "scanner": "PII",
               "severity": "critical"
             },
@@ -1380,7 +2201,7 @@
               "check": "quality_correctness",
               "line": null,
               "member": null,
-              "reference": "sha256:a9767a3ef9201ae8d00e6cbec4176708d51268a90b8bd4ffa00bd7806cf77a01",
+              "reference": "sha256:9b8cdd06c87ac7926bc16998fdcb0defb326411c37f59f9f747c97c1d1dfe784",
               "scanner": "QUALITY",
               "severity": "low"
             },
@@ -1388,7 +2209,7 @@
               "check": "quality_correctness",
               "line": null,
               "member": null,
-              "reference": "sha256:493ed216ae6232300efa97a21a14b7907e570105f2c23538777eed7b8f0d3b6a",
+              "reference": "sha256:4caca87ea44b7bb2825a647f2a02873c494c397e0932f6eb161d913441d56fd2",
               "scanner": "QUALITY",
               "severity": "medium"
             },
@@ -1396,7 +2217,7 @@
               "check": "quality_correctness",
               "line": null,
               "member": null,
-              "reference": "sha256:60a187511b5f77fd6cb01e83318f5ba6e99859ffca8d69abee26c4f51e7c6e27",
+              "reference": "sha256:63d30c1b80c49db122b512d86fde7f180117c9518eaed1cea956e4a64d30ddbf",
               "scanner": "QUALITY",
               "severity": "medium"
             },
@@ -1404,7 +2225,7 @@
               "check": "quality_correctness",
               "line": null,
               "member": null,
-              "reference": "sha256:6d1fda9276abb3d32cee0bd0a1fdaefcb2797fdb53992d4294903bdca50143fa",
+              "reference": "sha256:18ab559bdf8f17eb20aed592a3a000d82c68e231f0fd3d8a6ce85afd74b76c1b",
               "scanner": "QUALITY",
               "severity": "medium"
             },
@@ -1412,7 +2233,7 @@
               "check": "quality_discoverability",
               "line": null,
               "member": null,
-              "reference": "sha256:bc86f55d73cd5f748700ec4f5bb6158f208b53b0a55046b4a81e0510183de6b9",
+              "reference": "sha256:39183217c21c58191605c1950fe3762aa64e44aa7dc074e035cba5b775dc8b97",
               "scanner": "QUALITY",
               "severity": "low"
             },
@@ -1420,7 +2241,7 @@
               "check": "quality_discoverability",
               "line": null,
               "member": null,
-              "reference": "sha256:cfadde3dd0d1407d437c6d4591e8a33ef6c14011245e97853a686095e76a3589",
+              "reference": "sha256:a6e862016c9ee6d728bb3622c6c77fc8cd5a88d67b5f032e362f9fb31de2c40a",
               "scanner": "QUALITY",
               "severity": "low"
             },
@@ -1428,7 +2249,7 @@
               "check": "quality_reliability",
               "line": null,
               "member": null,
-              "reference": "sha256:2718e3a117897582d18114b2cbb98fc5708a7eda3e69268994a91335003d5dc2",
+              "reference": "sha256:92eea1d21f2f8145236384d0c5df30c437c749dfc01b67738e41d1c28fdfb5fb",
               "scanner": "QUALITY",
               "severity": "low"
             },
@@ -1436,7 +2257,7 @@
               "check": "quality_reliability",
               "line": null,
               "member": null,
-              "reference": "sha256:7aa1a6d8b26e65ef20e56e9968b9b79f7ef1e2b1566951222a60973578f90582",
+              "reference": "sha256:8a176308924218cad31cf01b6d3ce9c6ecfd8b6dde624d95cc5eb46476697b2f",
               "scanner": "QUALITY",
               "severity": "low"
             },
@@ -1444,19 +2265,19 @@
               "check": "quality_reliability",
               "line": null,
               "member": null,
-              "reference": "sha256:0a19e9c29934ee68b1a09e4903af0d7647fb2a491c8251eaf886739c8299390a",
+              "reference": "sha256:c9ec3ffaa7ea945fe0d2f821a01c6017776eaa830cecd6a4af7e36f62593f5a5",
               "scanner": "QUALITY",
               "severity": "low"
             }
           ],
-          "record_id": "sha256:90be2aaeb9c1af9056d443044214a6fc722ed1997f3383f8640ac269ad2dfee7",
+          "record_id": "sha256:9b8875e6511272c5300084e156e67e2e05b1dc73a53510aa5a4fbd5a10eeacd9",
           "run_id": null,
           "scans": [
             {
               "blocking": true,
               "passed": false,
               "references": [
-                "sha256:35502b677ec3d1a3fe13d1c838024b558d228b6cdd7e43ce5e2ef0b04006c329"
+                "sha256:0e81564f26e4f7615646da4e5bce2efeb01aabce654e34868d468a5e08c9225b"
               ],
               "scanner": "catalog-total",
               "severity_counts": {
@@ -1471,7 +2292,7 @@
               "blocking": true,
               "passed": false,
               "references": [
-                "sha256:8630f0c37cf5245de9349bb45ea9a5f22a17a74c038d65cd8db97b823742eaf4"
+                "sha256:3ee78e37d8c472b5551a43a9b3133006c57d12f8dc8286c7fca584501f32da7d"
               ],
               "scanner": "SCHEMA",
               "severity_counts": {
@@ -1486,7 +2307,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:67c19b3092fc50e5c31aae8e0b558ad5093f4dca9a71b3a4c12ddaafce36f905"
+                "sha256:692ab8bc6d390338e990cb279381a4b3692e408539301af50b567bedb88b8c3b"
               ],
               "scanner": "VERSION",
               "severity_counts": {
@@ -1501,7 +2322,7 @@
               "blocking": true,
               "passed": false,
               "references": [
-                "sha256:c24fb37c573dc835e7fa14028490b4ed0ebec0ef5663dd56900a1d4bfdf04dad"
+                "sha256:4e274f0359c3fdcb5d076cb13ed601ba0a9a2f9358d2236f65a6a022ad717252"
               ],
               "scanner": "SECURITY",
               "severity_counts": {
@@ -1516,7 +2337,7 @@
               "blocking": true,
               "passed": false,
               "references": [
-                "sha256:304805db9221766c218fdcaf86663c6931fd2ba6b3a4bc1efba0c2a198ab4fca"
+                "sha256:d6bd3ca48cb02f16223efc73b8703cf9f2d9a19f453a38b02f1ed4406e7b6228"
               ],
               "scanner": "PII",
               "severity_counts": {
@@ -1531,7 +2352,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:16f41e8241f80c0aece3450049cc78b679563708c8a29993affc3b8cad83f0de"
+                "sha256:7554ada939e9308c8c89d92b52c75bf274abf5654fbf92da7feac3d0ad9babc6"
               ],
               "scanner": "LICENSE",
               "severity_counts": {
@@ -1546,7 +2367,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:05d7895bc05f4062995a8e7788cc0416677a3aa803f64a36f3216c7867d67ab3"
+                "sha256:6c01c14436be322d29fac5539b8474b8ef65130c7acfa875f9edd039c35ac5c3"
               ],
               "scanner": "CODE_RISK",
               "severity_counts": {
@@ -1561,7 +2382,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:6164eb29664983b9d97fa75809b475992121f245e268a1a433e655e143d35b05"
+                "sha256:718bb8869976aad080e28811060d674734ae67a1dfd80e4f1115ab3aef484878"
               ],
               "scanner": "SECRETS",
               "severity_counts": {
@@ -1576,7 +2397,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:2cdabdc5dd60d670743fd492c53876e778398daeabbdc384036c33938010afa0"
+                "sha256:ab0aaeae4305da3a466cb95ff76a1106bac1565b5ae758cb5fa2b378cc06354a"
               ],
               "scanner": "HYGIENE",
               "severity_counts": {
@@ -1591,7 +2412,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:8943f1a7c5aca2bc965527e92621469331a6b6cae96a3b4e5c662c4fba3c3131"
+                "sha256:0b23f3ccca06c2053d2f496e317bf4fb480b3adac59b5312513b6ac6d2a14192"
               ],
               "scanner": "UNICODE",
               "severity_counts": {
@@ -1606,7 +2427,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:e90190d9f093ce0bafa9dbf737ddb502150f1317f2a086f3cc861deaac25197c"
+                "sha256:c668cb3a8ecab5bfdc215d448b8ea23f29649838d0bbda1c352aefce13c54d57"
               ],
               "scanner": "QUALITY",
               "severity_counts": {
@@ -1621,7 +2442,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:5468695a912bfd95b3012f71938b75c49153daf6d3db5685f259b8dc0cd7f472"
+                "sha256:d6beb7aa3eaf3223880169bc9da6fe1a991b505bc11f97b5c4d38a1c7c713ad8"
               ],
               "scanner": "SCRIPT_LINT",
               "severity_counts": {
@@ -1636,7 +2457,7 @@
               "blocking": false,
               "passed": null,
               "references": [
-                "sha256:35502b677ec3d1a3fe13d1c838024b558d228b6cdd7e43ce5e2ef0b04006c329"
+                "sha256:0e81564f26e4f7615646da4e5bce2efeb01aabce654e34868d468a5e08c9225b"
               ],
               "scanner": "skillspector",
               "severity_counts": {
@@ -1654,7 +2475,7 @@
             "lineage": null,
             "owner": "local",
             "repository": "thetechgy/agent-engineering-baseline",
-            "revision": "1e2bc9beab366134e9872af4e196c538a03ec132",
+            "revision": "ff9f4935c7b917a328461dcd62e12d83576baac7",
             "skill_id": "ansible",
             "source_path": ".apm/skills/ansible"
           }
@@ -1670,8 +2491,7 @@
           "behavioral_status": "configured",
           "id": "sha256:ca4f5ecbeb87245cd5313b92338b854a9b3cfdcc14dc75decd690f034a1ff8e7",
           "inventory_record_ids": [
-            "sha256:672e6163848cf4ee98313d0d80fc07bc1b49c27d4d3075ecb4165724298b38c2",
-            "sha256:d34632fa7d5d306a4a3a175c6f71cd7fe1a45fe29fdf09fe797d0609faa8d779"
+            "sha256:c8ad61a248bda8c4c924412e26e60491e50503b89001df37bbcfe58924fdc860"
           ],
           "source": {
             "content_digest": "sha256:cda652c90fc4fd16ea450214bfeeb202936ff16a836b5a181528e3506854c17d",
@@ -1702,9 +2522,9 @@
       "configurations": [
         {
           "behavioral_status": "configured",
-          "id": "sha256:b17a601f98f34e61aa3c1e997299d3e7038764c12fb4e1dd1e3baa1b6bc4caf7",
+          "id": "sha256:03d9ad413e8a4ecc9e74634715a89057a262cdfb18dc859c43637bb93eaf98c8",
           "inventory_record_ids": [
-            "sha256:d34632fa7d5d306a4a3a175c6f71cd7fe1a45fe29fdf09fe797d0609faa8d779"
+            "sha256:c8ad61a248bda8c4c924412e26e60491e50503b89001df37bbcfe58924fdc860"
           ],
           "source": {
             "content_digest": "sha256:506e78b501906831944d7c6559091c898de9476d42347c56381c950d0099d07d",
@@ -1712,31 +2532,7 @@
             "lineage": null,
             "owner": "local",
             "repository": "thetechgy/agent-engineering-baseline",
-            "revision": "1e2bc9beab366134e9872af4e196c538a03ec132",
-            "skill_id": "podman",
-            "source_path": ".apm/skills/podman"
-          },
-          "suite": {
-            "authored_digest": "sha256:6c343468a5b508d60449d6c464b79ab100dd39d5831613b89541fb1352c321c2",
-            "case_count": 10,
-            "owner": "local",
-            "path": ".apm/skills/podman/evals/evals.json",
-            "status": "configured"
-          }
-        },
-        {
-          "behavioral_status": "configured",
-          "id": "sha256:e461b1af5350b6e53701e21c6c87094a34ffcfdb50d802a3734371f6c710d5ec",
-          "inventory_record_ids": [
-            "sha256:672e6163848cf4ee98313d0d80fc07bc1b49c27d4d3075ecb4165724298b38c2"
-          ],
-          "source": {
-            "content_digest": "sha256:506e78b501906831944d7c6559091c898de9476d42347c56381c950d0099d07d",
-            "content_provenance": "configured",
-            "lineage": null,
-            "owner": "local",
-            "repository": "thetechgy/agent-engineering-baseline",
-            "revision": "39b6c43583d414c78dedd28e43551a550deb0544",
+            "revision": "ff9f4935c7b917a328461dcd62e12d83576baac7",
             "skill_id": "podman",
             "source_path": ".apm/skills/podman"
           },
@@ -1764,7 +2560,7 @@
               "check": "body_recommended_section",
               "line": null,
               "member": null,
-              "reference": "sha256:9f60bc5b0a03dcce7a14ddc6cb70bff79ee7362a536803d976b8c72ef730918b",
+              "reference": "sha256:8400522b47f142c57905a71d11e63acc88cf46d2ff51a126f4a8c5b63a9fd2af",
               "scanner": "SCHEMA",
               "severity": "medium"
             },
@@ -1772,7 +2568,7 @@
               "check": "body_recommended_section",
               "line": null,
               "member": null,
-              "reference": "sha256:e2fdb0bd419118b3d7cd0cd348b008469126eb395f8cc86acdd6f7cdc936b366",
+              "reference": "sha256:214cfd8d1fbb8e4e118c1db5002b513fcd05cd383ae8533511b362fa1c250ddc",
               "scanner": "SCHEMA",
               "severity": "medium"
             },
@@ -1780,7 +2576,7 @@
               "check": "unexpected_file",
               "line": null,
               "member": null,
-              "reference": "sha256:5a39321798bfd96fdafaad0b5d0003c227f7b4a3713f53cb1f27b02bb9683c1f",
+              "reference": "sha256:76117ded1fc36ddffb552affddb167f6ed1176ead64f885e798120a1e5a1e51a",
               "scanner": "SCHEMA",
               "severity": "low"
             },
@@ -1788,7 +2584,7 @@
               "check": "unexpected_file",
               "line": null,
               "member": null,
-              "reference": "sha256:d28394dfb3be6ec71c5419caf38ee16dfb783e8ccf2ff8874e09a00209b87a8c",
+              "reference": "sha256:b13419e21c16135b942e60ca0d015461266504efee30032e6d57873ffdbe1984",
               "scanner": "SCHEMA",
               "severity": "low"
             },
@@ -1796,7 +2592,7 @@
               "check": "author_missing",
               "line": null,
               "member": null,
-              "reference": "sha256:572d33df12b05263f67aa8697816120f2daa832219326b5a43898057fd993b71",
+              "reference": "sha256:452c3756e37a3f6784f8780dc81a2169b977d683698ae38e400eaa193eed6017",
               "scanner": "SCHEMA",
               "severity": "high"
             },
@@ -1804,7 +2600,7 @@
               "check": "RA1",
               "line": 31,
               "member": "EVALS.md",
-              "reference": "sha256:6f6e0f31a8c5566ec35d8e982af47da27525c9732f83bfd8eb02a8c1fe83ac2e",
+              "reference": "sha256:c3db958f66d4e95c917d4d5920efeee9fd7aec50cc64ea1af3a714cac4a24d78",
               "scanner": "SECURITY",
               "severity": "high"
             },
@@ -1812,7 +2608,7 @@
               "check": "PE5",
               "line": 43,
               "member": "references/security-storage-secrets.md",
-              "reference": "sha256:0daa23e50a946d874c2632b2010b0e602b46aac5869c76f5ec8b910badf31d61",
+              "reference": "sha256:612b2a314a9deadae95d4127ee3d8c6121a8afc6e127c9ddd01c0136e7859b4b",
               "scanner": "SECURITY",
               "severity": "high"
             },
@@ -1820,7 +2616,7 @@
               "check": "PE5",
               "line": 108,
               "member": "references/security-storage-secrets.md",
-              "reference": "sha256:54b688d6b6ea6f8f706f0fdf1ec43bf0f89b85c3fa54dd01719184b31822b9ab",
+              "reference": "sha256:032bc09587bb09047b18d4222ad375a66c61e527717bcd1bf5c1f578b14bceba",
               "scanner": "SECURITY",
               "severity": "high"
             },
@@ -1828,7 +2624,7 @@
               "check": "RA2",
               "line": 189,
               "member": "SKILL.md",
-              "reference": "sha256:97ab37282048973bc0c034ecc38f351e81ece5927ff94135c86c03cc92bbd860",
+              "reference": "sha256:98a98d88d69ae70c57e260561838c960e816580be6c882f10ea28c5acc3f0f87",
               "scanner": "SECURITY",
               "severity": "medium"
             },
@@ -1836,7 +2632,7 @@
               "check": "RA2",
               "line": 196,
               "member": "references/quadlet-systemd.md",
-              "reference": "sha256:844dcd3fe4243046d41e0d4e14b6572c5cd744e511b2c803d53b0819c6fb852b",
+              "reference": "sha256:2eae955f9ed01eb3e54b62f09ff1a876ad35cf9f6053db17a7bcb20c9e020c90",
               "scanner": "SECURITY",
               "severity": "medium"
             },
@@ -1844,7 +2640,7 @@
               "check": "RA2",
               "line": 66,
               "member": "references/validation.md",
-              "reference": "sha256:3d42db31b24ebcf48ff43398ed18bbd37503a9863d7c146dd8833fc42c7dbc6d",
+              "reference": "sha256:c90237633117d9021ec3b5873c0b4dc2cbba637e6bb3d5c7ad81c470ad28c8ee",
               "scanner": "SECURITY",
               "severity": "medium"
             },
@@ -1852,7 +2648,7 @@
               "check": "RA2",
               "line": 20,
               "member": "references/quadlet-systemd.md",
-              "reference": "sha256:10bde859089dc111909242ee0814bafda071c19d5b296b13259757ce4635afc2",
+              "reference": "sha256:900c741c32d7efcfe8f25fb2e145b6e4c155e7ea35649c386597b5d7692ca235",
               "scanner": "SECURITY",
               "severity": "medium"
             },
@@ -1860,7 +2656,7 @@
               "check": "EA1",
               "line": 9,
               "member": "references/reverse-proxy.md",
-              "reference": "sha256:1f45501b4215f263440b13df55a7597275995c5cfe3c161c39ea67c3f2a0ade2",
+              "reference": "sha256:c57dd36e76920bc1944f9953c70fb8b8037670bb3624c0d2b728e9c4aa420476",
               "scanner": "SECURITY",
               "severity": "medium"
             },
@@ -1868,7 +2664,7 @@
               "check": "EA1",
               "line": 193,
               "member": "references/security-storage-secrets.md",
-              "reference": "sha256:74d14f567243b35d8744b637ca16d1b88c46bf2070a12d0348e6d42ef1675956",
+              "reference": "sha256:221257d3e1447661f2f46bf693d319a3f8e49ba33902201d9e994cda925b68d8",
               "scanner": "SECURITY",
               "severity": "medium"
             },
@@ -1876,7 +2672,7 @@
               "check": "personal_paths",
               "line": 128,
               "member": "SKILL.md",
-              "reference": "sha256:4ab5997646c4154e1973284db024d3553cbe1d0f0016f568caba429acfa7b032",
+              "reference": "sha256:479907b99d1db21e2c764e178d39b4cbc464191a7e5c95bd028b8e8ae63e2a2a",
               "scanner": "PII",
               "severity": "high"
             },
@@ -1884,7 +2680,7 @@
               "check": "personal_paths",
               "line": 32,
               "member": "references/quadlet-systemd.md",
-              "reference": "sha256:917a90c3133b0ced197bc348af72e0fac70958251492ca30455d881f83084415",
+              "reference": "sha256:2664772be6fb091394b2e083dc081a2ef1efacc3bab706171df01359a24086ac",
               "scanner": "PII",
               "severity": "high"
             },
@@ -1892,7 +2688,7 @@
               "check": "quality_correctness",
               "line": null,
               "member": null,
-              "reference": "sha256:86825e1db31f6c94c7f886df51bc968c33c65baf276a7ce095adfa5873d4e6a3",
+              "reference": "sha256:03775e32d61512d7a6ec231f8ab32279057104a6c632e766d69f8ea48e472ed2",
               "scanner": "QUALITY",
               "severity": "medium"
             },
@@ -1900,7 +2696,7 @@
               "check": "quality_correctness",
               "line": null,
               "member": null,
-              "reference": "sha256:3d663341b21e985d17bf0bdab9d3ddfe84b2f2c3792daca8efc17442911b00a3",
+              "reference": "sha256:0aa42988b9cdff9e35f398400c951cb680b1c37ba99940fc43910680e98a1921",
               "scanner": "QUALITY",
               "severity": "medium"
             },
@@ -1908,7 +2704,7 @@
               "check": "quality_correctness",
               "line": null,
               "member": null,
-              "reference": "sha256:784b239acfbd201fdcddf0c68103c5d7a4e9a38452270f01e0cd8d3eaac5c189",
+              "reference": "sha256:f3d96805d4a0f9a1eefbaee092f631bf63b107244f7d9b315ae6d83374e76716",
               "scanner": "QUALITY",
               "severity": "medium"
             },
@@ -1916,7 +2712,7 @@
               "check": "quality_discoverability",
               "line": null,
               "member": null,
-              "reference": "sha256:f3ff2de6517d5a6f48fb3270a3eb708ed3b779a0f8f14181892890655d42e58f",
+              "reference": "sha256:32267b2116912f7b85305a72bd441d77c09fb1287f4ef7a30fe493549216c27a",
               "scanner": "QUALITY",
               "severity": "low"
             },
@@ -1924,7 +2720,7 @@
               "check": "quality_discoverability",
               "line": null,
               "member": null,
-              "reference": "sha256:9512b8d671a8aacb78d0933d38f38ac4c5e9d31c8f95751675e274ec95c975ef",
+              "reference": "sha256:ca3745e1e7d760e548d60f7c1ac4079930f0a74589beffada269c336d91e5220",
               "scanner": "QUALITY",
               "severity": "low"
             },
@@ -1932,7 +2728,7 @@
               "check": "quality_reliability",
               "line": null,
               "member": null,
-              "reference": "sha256:0231196401b68618a2fa708bf2aa699f16cd7589d9db289956577efe95b97ef9",
+              "reference": "sha256:c3b53ef26efdca4160c2bf5ead696dacfce61ba9195a6fb492a3563a972d0667",
               "scanner": "QUALITY",
               "severity": "low"
             },
@@ -1940,7 +2736,7 @@
               "check": "quality_reliability",
               "line": null,
               "member": null,
-              "reference": "sha256:2595d0418758a4969768b8647852b4e99c0a3128b477875f47e770d85a8d9fb6",
+              "reference": "sha256:108e5b80e5c6d82631ce13feff41ef4bf711b5e23fe788e80a652e2340b4e0e8",
               "scanner": "QUALITY",
               "severity": "low"
             },
@@ -1948,19 +2744,19 @@
               "check": "quality_reliability",
               "line": null,
               "member": null,
-              "reference": "sha256:c721fede76b18ce75a66a185d195aa98edcab23d0769c5067ee2a247e88567d6",
+              "reference": "sha256:9bb39b7452d6566b89dc93ebef64210e36ce3e1da7aff95224698263c288cbf2",
               "scanner": "QUALITY",
               "severity": "low"
             }
           ],
-          "record_id": "sha256:1d7773c42299614442f7188622796870afeacaa0a822c23bbf8ca3e1f225ba20",
+          "record_id": "sha256:ee3fa409e240d7ba99e1f5838c25e6382b15cfb799de1e2d15bde86f6ed0812a",
           "run_id": null,
           "scans": [
             {
               "blocking": true,
               "passed": false,
               "references": [
-                "sha256:90c88215117f3ff479ba9b69f33d7266aa4d74f10e8fc91fc0ef0c3b5f4b0ba7"
+                "sha256:cd78b8373b58928aef464ccb9ed34827ae4e7a6cde1de18f6f7ab9b0c5a6a163"
               ],
               "scanner": "catalog-total",
               "severity_counts": {
@@ -1975,7 +2771,7 @@
               "blocking": true,
               "passed": false,
               "references": [
-                "sha256:0eea0f9de693302a2635fc4e0d681b4a3f1cfb0141f5b8ab6d7777a2fa4f0ff5"
+                "sha256:51ff5f333f1ff6efa7b6b957e3c6e9778f033f5834bd51e4f446aeb752bb4e2c"
               ],
               "scanner": "SCHEMA",
               "severity_counts": {
@@ -1990,7 +2786,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:639fed362e01bb28f7cb42b2175c1e336717955608072732f38066187679db86"
+                "sha256:7d25f531b0749ddfb2249d427762737ebb2b0176ab57d0e9bbe1846e5973a283"
               ],
               "scanner": "VERSION",
               "severity_counts": {
@@ -2005,7 +2801,7 @@
               "blocking": true,
               "passed": false,
               "references": [
-                "sha256:4a3e0023438ce43fc63b159a8617056b555f955752ea18266534eafefdc7fd10"
+                "sha256:7c6ed4f6c312e3f71c00aca801e2c475b7630f9588ebedbbcecff5868b6b6a52"
               ],
               "scanner": "SECURITY",
               "severity_counts": {
@@ -2020,7 +2816,7 @@
               "blocking": true,
               "passed": false,
               "references": [
-                "sha256:9f526b3124a34b18740ed1e8d1bb94ff2e1a1cbee9cf73399e48a3b310b10b6f"
+                "sha256:27a2837e3bb088b2b30d9c56081f742bb3a71d4ff16a1d26d0c8a50db1158c10"
               ],
               "scanner": "PII",
               "severity_counts": {
@@ -2035,7 +2831,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:c261d9605f451703ddd27a59e6160882847f4840521e5774bf49c8b7e53b42b8"
+                "sha256:668825e4c4b28ed291923cb874e6d113e6a76d52ee2cc76529af12076c6dd93a"
               ],
               "scanner": "LICENSE",
               "severity_counts": {
@@ -2050,7 +2846,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:44526111b738102a5255e647d7e83a432bd75d6faed657257a6e36316c8bd559"
+                "sha256:c349372106fa85e946f944351fff55c44f1cb08efd2482aca2f6652dc2a5f949"
               ],
               "scanner": "CODE_RISK",
               "severity_counts": {
@@ -2065,7 +2861,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:2e508fbb1977308a1739706269ab2ed48ad5be6d0d85494cb470d55510406f7a"
+                "sha256:b6171a9860bc676001f093e397e1980c4d65c54e98e27bfb7040e1dcca70d83c"
               ],
               "scanner": "SECRETS",
               "severity_counts": {
@@ -2080,7 +2876,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:01ba6ee1207d96915e29bccb77ed359e72f96244305f8f537ec404167bb5e474"
+                "sha256:f8c77ef2d7f44d9cc7716fa5674a5ee4b36b8fafd53f9e7e1f51c9bf4327b136"
               ],
               "scanner": "HYGIENE",
               "severity_counts": {
@@ -2095,7 +2891,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:58610db9e3db160f0cfc4baa4e6a980b3a0d826b8bd7cfa092885f599cec015d"
+                "sha256:764ccbc0b1be7d2366b9175b0c6f42dce9c0841f7de9bfb08a9c6f4cf2c74eaa"
               ],
               "scanner": "UNICODE",
               "severity_counts": {
@@ -2110,7 +2906,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:f06ca032fb8bf2ef5233185916e91b17272af4e670fb95f5938858e695e5a311"
+                "sha256:5f45dbf0615f95fceb8125385bdea544d5002de3c1255c31c60489234a35e6c4"
               ],
               "scanner": "QUALITY",
               "severity_counts": {
@@ -2125,7 +2921,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:6b9976ca71efb8a767f81d819c1a5dfaa8b2c8faa379cae16e3be210f308f26a"
+                "sha256:882f110679dff8d227ef5e7cce9f983215b2828a3a00ce0ae3cd73b3b3d81ef2"
               ],
               "scanner": "SCRIPT_LINT",
               "severity_counts": {
@@ -2140,7 +2936,7 @@
               "blocking": false,
               "passed": null,
               "references": [
-                "sha256:90c88215117f3ff479ba9b69f33d7266aa4d74f10e8fc91fc0ef0c3b5f4b0ba7"
+                "sha256:cd78b8373b58928aef464ccb9ed34827ae4e7a6cde1de18f6f7ab9b0c5a6a163"
               ],
               "scanner": "skillspector",
               "severity_counts": {
@@ -2158,7 +2954,7 @@
             "lineage": null,
             "owner": "local",
             "repository": "thetechgy/agent-engineering-baseline",
-            "revision": "1e2bc9beab366134e9872af4e196c538a03ec132",
+            "revision": "ff9f4935c7b917a328461dcd62e12d83576baac7",
             "skill_id": "podman",
             "source_path": ".apm/skills/podman"
           }
@@ -2172,9 +2968,9 @@
       "configurations": [
         {
           "behavioral_status": "not_configured",
-          "id": "sha256:6178c8e067ee679d51ac21e127ccb6d163d88781d09895ecf0282bfa06000856",
+          "id": "sha256:24d572407676a52991346b9ceb679c6c24f81696f6abb54da9ef16999d7f7ad2",
           "inventory_record_ids": [
-            "sha256:672e6163848cf4ee98313d0d80fc07bc1b49c27d4d3075ecb4165724298b38c2"
+            "sha256:c8ad61a248bda8c4c924412e26e60491e50503b89001df37bbcfe58924fdc860"
           ],
           "source": {
             "content_digest": "sha256:18dab091e9e3b9817af70ce3d968d84939e96ebc8917f8f400ac6a7416905d66",
@@ -2182,25 +2978,7 @@
             "lineage": null,
             "owner": "local",
             "repository": "thetechgy/agent-engineering-baseline",
-            "revision": "39b6c43583d414c78dedd28e43551a550deb0544",
-            "skill_id": "powershell-module-engineering",
-            "source_path": ".apm/skills/powershell-module-engineering"
-          },
-          "suite": null
-        },
-        {
-          "behavioral_status": "not_configured",
-          "id": "sha256:d06b1207ac9bef96b311ffdb966169b6c228cb37c0e51ad9c1e62dc89408c592",
-          "inventory_record_ids": [
-            "sha256:d34632fa7d5d306a4a3a175c6f71cd7fe1a45fe29fdf09fe797d0609faa8d779"
-          ],
-          "source": {
-            "content_digest": "sha256:18dab091e9e3b9817af70ce3d968d84939e96ebc8917f8f400ac6a7416905d66",
-            "content_provenance": "configured",
-            "lineage": null,
-            "owner": "local",
-            "repository": "thetechgy/agent-engineering-baseline",
-            "revision": "1e2bc9beab366134e9872af4e196c538a03ec132",
+            "revision": "ff9f4935c7b917a328461dcd62e12d83576baac7",
             "skill_id": "powershell-module-engineering",
             "source_path": ".apm/skills/powershell-module-engineering"
           },
@@ -2222,7 +3000,7 @@
               "check": "body_recommended_section",
               "line": null,
               "member": null,
-              "reference": "sha256:649a99bde4b1b9390469a353f93047d86e9d14815d121f3889461fb359096cd7",
+              "reference": "sha256:73a67778a9d549b639bd54427e266732bed4cb3df88550ac6cd5d00610746535",
               "scanner": "SCHEMA",
               "severity": "medium"
             },
@@ -2230,7 +3008,7 @@
               "check": "body_recommended_section",
               "line": null,
               "member": null,
-              "reference": "sha256:61e97155b1678ce4b385cdc486c3a90ac5e4347008fd6d77d15241fd5e955c02",
+              "reference": "sha256:4e0f8048384cdb7bc677f83c67b0ed091ea209d9eb59a545ea3a1405f33c01db",
               "scanner": "SCHEMA",
               "severity": "medium"
             },
@@ -2238,7 +3016,7 @@
               "check": "author_missing",
               "line": null,
               "member": null,
-              "reference": "sha256:d1533bde05f3fa9ceb1b3eb77867c13c428fe1952df67eb87d49679f62be3b35",
+              "reference": "sha256:df6a46f6cb38f4b7074a71629baa8e5ecb58414336c9a1c3e523b01f450fba01",
               "scanner": "SCHEMA",
               "severity": "high"
             },
@@ -2246,7 +3024,7 @@
               "check": "isolated_invisible_char",
               "line": 101,
               "member": "SKILL.md",
-              "reference": "sha256:81b9eb74acbe3dc6497cff5723d94327255b459046e20bddeca043e512d7c85a",
+              "reference": "sha256:110e4d8b041056b91ca4fb9416e0236dd72862c9447598881744c69d18e536d3",
               "scanner": "UNICODE",
               "severity": "low"
             },
@@ -2254,7 +3032,7 @@
               "check": "quality_correctness",
               "line": null,
               "member": null,
-              "reference": "sha256:c81fbb4c28fbdd8fdc31b3c19183ad77b4aa83945ad8f6a1789996e43ccbcfdb",
+              "reference": "sha256:b13ff41341e12bc3842763563fb1ede3fccff2d23300b8e545110efe9a3dfcfd",
               "scanner": "QUALITY",
               "severity": "medium"
             },
@@ -2262,7 +3040,7 @@
               "check": "quality_correctness",
               "line": null,
               "member": null,
-              "reference": "sha256:780a64eb741868ea2b7124bc680fb77b931de17e6fd1506a0d668b2815d35662",
+              "reference": "sha256:f617113cd61bc4cb81c066601b42a2b8a838660d96dd021be1fb7a8747530caf",
               "scanner": "QUALITY",
               "severity": "medium"
             },
@@ -2270,7 +3048,7 @@
               "check": "quality_correctness",
               "line": null,
               "member": null,
-              "reference": "sha256:730b1863fb3f128a59d8ebebf5224f8a8272a5db2244b6a39992700d1dbcb295",
+              "reference": "sha256:89dc6fce059ec25674d7409f079ffaaa00d1daf0f2d49d2690cff9c89e2dedf5",
               "scanner": "QUALITY",
               "severity": "medium"
             },
@@ -2278,7 +3056,7 @@
               "check": "quality_discoverability",
               "line": null,
               "member": null,
-              "reference": "sha256:4f5898d38591a99ac7d4e3d2e8422a89a547a8e431413843070d2d587cf9a8b3",
+              "reference": "sha256:973b64f3595a6320582b367116421f52c982753027a4e7b666afc2f206edd549",
               "scanner": "QUALITY",
               "severity": "low"
             },
@@ -2286,7 +3064,7 @@
               "check": "quality_discoverability",
               "line": null,
               "member": null,
-              "reference": "sha256:0e51c029935ae0aa9d6929d26813a3fc54b7ee9f57d6deb11b550dd60ac2ec36",
+              "reference": "sha256:b8b51aedc7f25f811ac5d27e955e2643131b954e05ae95d77af5a3c13602340a",
               "scanner": "QUALITY",
               "severity": "low"
             },
@@ -2294,7 +3072,7 @@
               "check": "quality_reliability",
               "line": null,
               "member": null,
-              "reference": "sha256:41864914689bb9d5c017f9bdf4411365bc466247a9ffdd9d05623d30faa5dabb",
+              "reference": "sha256:fb78a5975ae253e82d5e5dbf99995a0551a6ced53366788a5bf8b3a2d33bd6ac",
               "scanner": "QUALITY",
               "severity": "low"
             },
@@ -2302,7 +3080,7 @@
               "check": "quality_reliability",
               "line": null,
               "member": null,
-              "reference": "sha256:d6f8d09dc68a04b3479b297859905de1e2c04df4c53d01a3065b271aae451ed0",
+              "reference": "sha256:438baf46d3f3da49273603779a35660506557bc0bc6838a7ca6963b6d0af6d10",
               "scanner": "QUALITY",
               "severity": "low"
             },
@@ -2310,19 +3088,19 @@
               "check": "quality_reliability",
               "line": null,
               "member": null,
-              "reference": "sha256:d1597a2ec6f7d26c5cf01c0ac73ea9112e2be4a2c46b285c595db96dffd150b9",
+              "reference": "sha256:6397c6dc4071d6d0d640719d5209c21b49ee50dde5202d5e5c5bcb9926791615",
               "scanner": "QUALITY",
               "severity": "low"
             }
           ],
-          "record_id": "sha256:d874e3d2d21c06c6310cf8a459166738ae16d4e723712b3bea65c9c712bb2b93",
+          "record_id": "sha256:31d400318e95fcf7efbe3901451f167b0c4cfb95d0e661f7f9f08fe7d22d39ec",
           "run_id": null,
           "scans": [
             {
               "blocking": true,
               "passed": false,
               "references": [
-                "sha256:07162df66dfa5063e9c55508336683246aa02eac0eca789942380411802807b5"
+                "sha256:51037a12a864e5285ad9b5b4987d9400a2ba7f12d923356f7f68bd6fd7149bc0"
               ],
               "scanner": "catalog-total",
               "severity_counts": {
@@ -2337,7 +3115,7 @@
               "blocking": true,
               "passed": false,
               "references": [
-                "sha256:a2e477e6a5d7f678253ac5f7dc6868425ef0dba16e9df631eee485ad61b9710c"
+                "sha256:fe2240da85ecfe6ae7f2c0dde15b99d19d5e4e400b234793b391d130acdd5c99"
               ],
               "scanner": "SCHEMA",
               "severity_counts": {
@@ -2352,7 +3130,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:ca509f37e92e33e69ae9ff98a537d6a7e8fd7bb1ea651b8d5eb57c5d0fd8b179"
+                "sha256:27814ee1072e86beb073d54825a2d88fbe94c0c5993ad4bd9d0027042b47897b"
               ],
               "scanner": "VERSION",
               "severity_counts": {
@@ -2367,7 +3145,7 @@
               "blocking": true,
               "passed": false,
               "references": [
-                "sha256:9e827cf14ed6b36efbf82e5b9eee1ed376c0f8182deddf792a541820b3dc217c"
+                "sha256:59c064097c26706c74def673ad9c7feb06621b743f6133d62e41cbb9d023d418"
               ],
               "scanner": "SECURITY",
               "severity_counts": {
@@ -2382,7 +3160,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:2898664ad8d400e5481b2ebf447ac35638ba8d9da4fe0b4feb71d52397b2f87e"
+                "sha256:042564e733d316807ef4aed6f1171861ad1f4926b8bb2c9b70fba42d4cddf062"
               ],
               "scanner": "PII",
               "severity_counts": {
@@ -2397,7 +3175,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:be0c788ffcb034f8538752cd776577cec03aa4badaddfefd4e45553d950a1919"
+                "sha256:c30544a284533b67ceeb56b320e15cf7a2b1b59e4519f768ea32999663a10eb3"
               ],
               "scanner": "LICENSE",
               "severity_counts": {
@@ -2412,7 +3190,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:c2da7a841ad85d69f85f49bbe49546296e3e15369050a8d5eff48476bdb19913"
+                "sha256:43b25456636cd812bc02c80298c98863cb9e0a2cfce3cc506b56c5638b2842d8"
               ],
               "scanner": "CODE_RISK",
               "severity_counts": {
@@ -2427,7 +3205,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:53a00c58ef74ecae61fe8fc05b3e0985016d2a37fc2393d571493267d4da3250"
+                "sha256:7d7b7e7e91bc123ce8d4f60791116569dc93aa7646ec216a1bdffbc76b3bc1c0"
               ],
               "scanner": "SECRETS",
               "severity_counts": {
@@ -2442,7 +3220,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:e1bc4a89f51468953b37eb125548152052a7a0f35d9b0c6b99d2a6beca9cdf42"
+                "sha256:c71acb99a3cb42292b81c9d747d733a687dbfcb25ac4c28b6e566e2b1d0bd70c"
               ],
               "scanner": "HYGIENE",
               "severity_counts": {
@@ -2457,7 +3235,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:22da90a7e06c960a3b5f352604b6aca8cf6ab41906586f74524244ecdcb142ca"
+                "sha256:790797cab939d40141a7b176ab5a5e2668240de7262d9aef7542d2e5768a0533"
               ],
               "scanner": "UNICODE",
               "severity_counts": {
@@ -2472,7 +3250,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:e2f5b9afa847d598b7fadacb7d20dafa6d2db6ea05f99fd40892645ade77fc2b"
+                "sha256:fe2ccbca537a7c4d10f4ab4b6a15019d3ee63888e2b70945c8bc9bbb1fbeaa67"
               ],
               "scanner": "QUALITY",
               "severity_counts": {
@@ -2487,7 +3265,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:998b5f718526f00e218d9a4e2490e85df77ceff13fbe3260a7364eca70d0861e"
+                "sha256:b7a0a74c00734d690f553e603f47d178f1e1d880312c109857d97e84fbd14dce"
               ],
               "scanner": "SCRIPT_LINT",
               "severity_counts": {
@@ -2502,7 +3280,7 @@
               "blocking": false,
               "passed": null,
               "references": [
-                "sha256:07162df66dfa5063e9c55508336683246aa02eac0eca789942380411802807b5"
+                "sha256:51037a12a864e5285ad9b5b4987d9400a2ba7f12d923356f7f68bd6fd7149bc0"
               ],
               "scanner": "skillspector",
               "severity_counts": {
@@ -2520,7 +3298,7 @@
             "lineage": null,
             "owner": "local",
             "repository": "thetechgy/agent-engineering-baseline",
-            "revision": "1e2bc9beab366134e9872af4e196c538a03ec132",
+            "revision": "ff9f4935c7b917a328461dcd62e12d83576baac7",
             "skill_id": "powershell-module-engineering",
             "source_path": ".apm/skills/powershell-module-engineering"
           }
@@ -2528,15 +3306,1085 @@
       ]
     },
     {
-      "behavioral_results": [],
+      "behavioral_results": [
+        {
+          "arms": [
+            {
+              "condition": {
+                "build_digest": "sha256:8c03bebc1e593862664e3b43259b1c0229d375557ceb3bc494b9fdf06565121b",
+                "competing_skills": [],
+                "execution": {
+                  "authorization_policy": null,
+                  "base_image_mode": "recorded_staging",
+                  "environment": "docker",
+                  "fixture_boundary": "separate-verifier-v1",
+                  "task_source": "native_harbor"
+                },
+                "fixture_digest": "sha256:9cb42074767b6dd33930c83f4725a8d9f19f04ed4efe283c7d9315f15d7a95f1",
+                "id": "sha256:6507f8a74d08d79fa527f4f99b00dd6bb9d4bea409458eb15831923fbcc94f1c",
+                "instruction_digest": "sha256:b5467c6a132921b3b3caca771c63baf0d681327e8db2846bf771d8d7a81f8dc7",
+                "provenance": "runtime_recorded",
+                "target_present": true,
+                "workspace_mode": "isolated"
+              },
+              "coverage": {
+                "case_details": "complete",
+                "expected_attempts": 26,
+                "expected_cases": 26,
+                "recorded_attempts": 26,
+                "scored_attempts": 18,
+                "unscored_attempts": 8
+              },
+              "execution_error_count": 10,
+              "execution_status": "failed",
+              "name": "with_skill",
+              "rubric": {
+                "passed_cases": null,
+                "threshold": null,
+                "total_cases": null
+              }
+            },
+            {
+              "condition": {
+                "build_digest": "sha256:8c03bebc1e593862664e3b43259b1c0229d375557ceb3bc494b9fdf06565121b",
+                "competing_skills": [],
+                "execution": {
+                  "authorization_policy": null,
+                  "base_image_mode": "recorded_staging",
+                  "environment": "docker",
+                  "fixture_boundary": "separate-verifier-v1",
+                  "task_source": "native_harbor"
+                },
+                "fixture_digest": "sha256:9cb42074767b6dd33930c83f4725a8d9f19f04ed4efe283c7d9315f15d7a95f1",
+                "id": "sha256:00a5d4fc11e0449d8feafaebfeed0661be0ed97a734634ef552fe1b166156dcd",
+                "instruction_digest": "sha256:b5467c6a132921b3b3caca771c63baf0d681327e8db2846bf771d8d7a81f8dc7",
+                "provenance": "runtime_recorded",
+                "target_present": false,
+                "workspace_mode": "isolated"
+              },
+              "coverage": {
+                "case_details": "complete",
+                "expected_attempts": 26,
+                "expected_cases": 26,
+                "recorded_attempts": 26,
+                "scored_attempts": 18,
+                "unscored_attempts": 8
+              },
+              "execution_error_count": 10,
+              "execution_status": "failed",
+              "name": "without_skill",
+              "rubric": {
+                "passed_cases": null,
+                "threshold": null,
+                "total_cases": null
+              }
+            }
+          ],
+          "availability": {
+            "provenance": "runtime_recorded",
+            "reasons": [
+              "coverage_missing",
+              "execution_incomplete",
+              "metadata_missing"
+            ],
+            "status": "incomplete"
+          },
+          "case_summary": {
+            "cases": [
+              {
+                "arm_means": {
+                  "with_skill": null,
+                  "without_skill": null
+                },
+                "case_id": "pester-001-classic",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:892f7fbd1cd2a011f0b73e7b12a1ce1b57a14a48a6ecbaea26ff2f46339a18df"
+                  ],
+                  "without_skill": [
+                    "sha256:9f64c4a58bc970377a2186cbd8387ed3c111a90e3e37a2710c11fac819591eb3"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:28f11a4ab56d6a8858889f4ff998b445f4ac8fb802772c533bb59577f8f5a1f8",
+                  "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+                  "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+                  "sha256:afcef4703560c2329c12c6f0570a4ab7a4e01adda17d34b58815d70c2d446507",
+                  "sha256:c6c27f27713d7dfddfeeec0b279ca1bcd3a291fd756e6a867fa01cd413f9bc96",
+                  "sha256:e0a5a1ab93cd9eed636c2a9813840ab952d866d6c3c7e7b52d1110893472c7fc",
+                  "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+                ],
+                "unavailable_reasons": [
+                  "standard_judge_not_collected"
+                ],
+                "with_minus_without": null
+              },
+              {
+                "arm_means": {
+                  "with_skill": null,
+                  "without_skill": null
+                },
+                "case_id": "pester-001-data",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:2fe07602065a8097dcce652398ec605a20c74507e750810f46e2f08cb1bdb937"
+                  ],
+                  "without_skill": [
+                    "sha256:1b217b5bed9cc1b9eb2cc8e5d7b0f232b2689ea743a6ae3bc5600d5af84db1c3"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:157489031def500c530a9ff61fde7dd5df10d11cecfc26f4730773235fa5c162",
+                  "sha256:27534e04d7f87c95b73e229430a0760f497fcceb3e5595f6b6ee23bbd22e3015",
+                  "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+                  "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+                  "sha256:bea68cc1fecdb7095903b7eb0b2a2507eb439e1a8ea3709bcbecd7215e451228",
+                  "sha256:c9c82d56a698c5149107822eb5521789d7f6256d611375f4e2a7e3ea86f06c9f",
+                  "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+                ],
+                "unavailable_reasons": [
+                  "standard_judge_not_collected"
+                ],
+                "with_minus_without": null
+              },
+              {
+                "arm_means": {
+                  "with_skill": null,
+                  "without_skill": null
+                },
+                "case_id": "pester-001-empty",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:227465734d007ad261e0de4ee839bda2fc78d0526e3cfce25fbf37555c897392"
+                  ],
+                  "without_skill": [
+                    "sha256:bc164782d7aa790fc6d1a53876b74f09023c451df9b03bc058e3f6079fe9bda6"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:0741d7d8f2d09da2d05fe0c3a84deebd03c977c205e05d6fbe809b776250acdc",
+                  "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+                  "sha256:95af4d5860ca520aa10b84bf7d523e9f3ec8722930b171e6c03fdd2c74f783a8",
+                  "sha256:9d68d0250d705a36c041f76f5fff4490453691a3d7a92973eea5cf0473c11a04",
+                  "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+                  "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae",
+                  "sha256:f56ffc387023fe9d906c6e1c6e30e89456acb52e4a88645d2dc511e84bb7599e"
+                ],
+                "unavailable_reasons": [
+                  "standard_judge_not_collected"
+                ],
+                "with_minus_without": null
+              },
+              {
+                "arm_means": {
+                  "with_skill": null,
+                  "without_skill": null
+                },
+                "case_id": "pester-001-failure-text",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:eecd4d31d4a51df66f6efc13e3247ecaf3126069419af709b28645eb65667cbc"
+                  ],
+                  "without_skill": [
+                    "sha256:5086083ba00fc4612aefeaa8ec60aff3a6c8518eb5bc92d6ae7bb038195c65cf"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:204e13530dbf1eb1105579052748618d9a7cf917dd4f9b36e300ce64bc000c81",
+                  "sha256:5d4b8c3432a2218bfd65df7b7a5cf465f28218bb135aa4a74df56f9692a8fc8d",
+                  "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+                  "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+                  "sha256:c831a667fdb107e319d8ddcaa421d1b88207cc6bfc754f66d052301d9bb781c3",
+                  "sha256:eb04e245084690cbb2891bc8d04e4edf4c25f32293c3bf7b7f33e3d7fdf0b648",
+                  "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+                ],
+                "unavailable_reasons": [
+                  "standard_judge_not_collected"
+                ],
+                "with_minus_without": null
+              },
+              {
+                "arm_means": {
+                  "with_skill": null,
+                  "without_skill": null
+                },
+                "case_id": "pester-001-malformed",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:b18e08815b5c7d48a18f6b1b3e90a34b0c509e35fec6bdcb8283336b74d96f55"
+                  ],
+                  "without_skill": [
+                    "sha256:b3e3113fe02694a4c01e0157f4bc9812b3dd33586d92aed5ca16e0cf2265aa04"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:2223538365db6297f5f0600d3664106df36b739378bf3c934960de47a6151ee0",
+                  "sha256:44cad1196a109ee1c31afcd1d041bf576ad9b54cead10fbd27104ffb28aaa022",
+                  "sha256:5eb4b3552d9f4ffb6507647db8143953d1076f6cab4bf49a0b952a099aa9e11d",
+                  "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+                  "sha256:8bc6f4a7a967fe4f82cd86a20f706a194cecd85dc4762a7625690017443c02f5",
+                  "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+                  "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+                ],
+                "unavailable_reasons": [
+                  "standard_judge_not_collected"
+                ],
+                "with_minus_without": null
+              },
+              {
+                "arm_means": {
+                  "with_skill": null,
+                  "without_skill": null
+                },
+                "case_id": "pester-001-missing-runtime",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:afd4ccb8b60a39cfd41f5a8ce3cb1b55735827dd7553ef7fbe664928157d73d3"
+                  ],
+                  "without_skill": [
+                    "sha256:0ae846b79511c4408cf47dc5b8b922da8b8e6d1e0478245f4f009941c9b0c85f"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:4f400ea6b94f9ae9df3ecdff03f08b099fd014c974f1d1d7177db8014f042d5f",
+                  "sha256:5d100c5edac0b87e36ee4bcd4f42e61f19319413920a0f431ef54838c3df967a",
+                  "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+                  "sha256:8e58e496ba44804713cb1803db239e1392798f5ac5f143ae805e57172ac7564e",
+                  "sha256:9a992f07479796598761d4b61a8c94100aafa5fd0942ec7bc04b3f2a21e3c211",
+                  "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+                  "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+                ],
+                "unavailable_reasons": [
+                  "standard_judge_not_collected"
+                ],
+                "with_minus_without": null
+              },
+              {
+                "arm_means": {
+                  "with_skill": null,
+                  "without_skill": null
+                },
+                "case_id": "pester-001-skipped",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:d21936cfdc62b4f08ce2aedb1129e2bed71bcab4943501e20792c9e042fd3758"
+                  ],
+                  "without_skill": [
+                    "sha256:90a84fce2b815d035b39cbeb8adca3debc36eb8ff37f5a75ca56cb7358574e45"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:577c7d02d34df614876dc2b4690387c16ce66649401b6d6047d3f89b471c0f6c",
+                  "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+                  "sha256:a62daf5a197f44564e68dc549bb8bff494c5b0116eecb64ef668bb4057f61b59",
+                  "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+                  "sha256:b0e706aa278fd6d174babd176fdfc8df307a21d57edc0cca30da779399d4fc5c",
+                  "sha256:d1d03157bc8fc18d4ef07c89580c29c98cdc492ff03d8bdcffc838f7fc0d7fbe",
+                  "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+                ],
+                "unavailable_reasons": [
+                  "standard_judge_not_collected"
+                ],
+                "with_minus_without": null
+              },
+              {
+                "arm_means": {
+                  "with_skill": null,
+                  "without_skill": null
+                },
+                "case_id": "pester-001-standalone",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:03987987ac6813778233d02bce5ecb38ab752cee8c27cd4fa391f39e52c83fec"
+                  ],
+                  "without_skill": [
+                    "sha256:f0ff268db7ff876170af22eef4b3fc035a733765224b851a64a8564a88def996"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:05f92817ee7335445be3b9fe9ddd09e4f6825e7e5507273055af1fc1c06e9b8f",
+                  "sha256:3c03bdeaa8052f88a0467ae76928e09d19ac4bc6e1461feaff1b4ea115121ade",
+                  "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+                  "sha256:8104f4f6b487a8e2dc1e463a96e816e778c94e0bca9de43ab724af507b3cf715",
+                  "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+                  "sha256:e0a27dd98a7394d2598b5a26e0e7e82de28147d3841c5963069382033b6f20fd",
+                  "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+                ],
+                "unavailable_reasons": [
+                  "standard_judge_not_collected"
+                ],
+                "with_minus_without": null
+              },
+              {
+                "arm_means": {
+                  "with_skill": null,
+                  "without_skill": null
+                },
+                "case_id": "pester-001-timeout",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:8e91d086384bfb9eb58f2f7a8d76ee27432948a04da7395c49a89777d0e2633c"
+                  ],
+                  "without_skill": [
+                    "sha256:d3a1cf46b7aabc0c0754ebfe3434052aa0fb6d67996e6c7a84e4bfb86d2acdc9"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:309844ca66f050dc98d10589310f60ef64960d0ab8593de118445c4b7c6653db",
+                  "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+                  "sha256:6cc19462f1ebb1ca645952fdaf5d025e03e578d1ec26ca43fde7302f681518a3",
+                  "sha256:77dc3f4f85f31f1f9efbd89bb988e79e7e8deba47d9ed5ced679a7b327aa0957",
+                  "sha256:96fa3fbc0c17925ad96404a8bf547ec121b540a28657b232f93f79d463a4daa7",
+                  "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+                  "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+                ],
+                "unavailable_reasons": [
+                  "standard_judge_not_collected"
+                ],
+                "with_minus_without": null
+              },
+              {
+                "arm_means": {
+                  "with_skill": null,
+                  "without_skill": null
+                },
+                "case_id": "pester-001-unsupported",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:4e88285a9ab81b2feeb20d01eb37943f367017d6eb3cf97e4d064ac7c8b38f07"
+                  ],
+                  "without_skill": [
+                    "sha256:11291858f6ed2089828e050eb691e166d1c07f342ad38a15d12529fccc6cd91e"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:2222275851ea1dab9fdd31e0b526ecfb5e339552526e45b6f3a03005a55500d5",
+                  "sha256:4ece6fcb9802b0ac75983f0e1adfc2742674068abfa07cba6df4266f0f505e34",
+                  "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+                  "sha256:93547a034a1fe955a70b9ceb20e08a8b0233d1fce36fc8332804267749d5574d",
+                  "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+                  "sha256:bd1d0311f1d1265e4c257d3a9b673129183818103dadd6091b7afca5986b0b07",
+                  "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+                ],
+                "unavailable_reasons": [
+                  "standard_judge_not_collected"
+                ],
+                "with_minus_without": null
+              },
+              {
+                "arm_means": {
+                  "with_skill": null,
+                  "without_skill": null
+                },
+                "case_id": "pester-001-version-drift",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:4ec086f857096343461e0a6ec291af802a777d9bff92ac18d31d63cca70acf9a"
+                  ],
+                  "without_skill": [
+                    "sha256:6952b0d9fd05d661ebbbc312a3d93ebd95edf096cab60cd3025dfb47fc59f318"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:5a4ba65ed02db6dc2e13b1976850edeec3948ed50d3410ecc1203f08e97120cb",
+                  "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+                  "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+                  "sha256:c882a9202dda45627325a74f45b98d6d3c7fd81c382e23805d0c54eccf54f36b",
+                  "sha256:d5efb21387b9d1058ee1f32019aaa64ffb65b0a6a12c03d2266704b8c8e59041",
+                  "sha256:e4e46997442f96fbf2d1d68af408a462c309db9135e6d1b46d34d370253af96a",
+                  "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+                ],
+                "unavailable_reasons": [
+                  "standard_judge_not_collected"
+                ],
+                "with_minus_without": null
+              },
+              {
+                "arm_means": {
+                  "with_skill": null,
+                  "without_skill": null
+                },
+                "case_id": "pester-001-weak",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:7b9157c52121b6fb622294bd0f17d5349d3f8b619c471f9ee33fcf27640683de"
+                  ],
+                  "without_skill": [
+                    "sha256:f19135c7a79fbcbe029593fdf2062316418b39d9840bb9215357b85cbc4ac7b7"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:1460c412df6694c033fc7488b58078ccf8d6bb0e52f884e9cd3b5e9178a2d8fb",
+                  "sha256:507ec5a8cbbb632c73d12a3ed32a44d0a8dc6735d32b3b7939e51903bedb396a",
+                  "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+                  "sha256:75e203ee1e132a7422fb684f6278a3953d7d7905ef0ee529316917374bdf6b22",
+                  "sha256:846ddd0d0a83fb112b19147dfed1722702d0f7c09678acb2b33d13a5751022d4",
+                  "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+                  "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+                ],
+                "unavailable_reasons": [
+                  "standard_judge_not_collected"
+                ],
+                "with_minus_without": null
+              },
+              {
+                "arm_means": {
+                  "with_skill": null,
+                  "without_skill": null
+                },
+                "case_id": "pester-002-classic",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:db1e6db15f91bccbccd5e6750a084bc6ec0c22b267e4de7eb6cc399d5f368d65"
+                  ],
+                  "without_skill": [
+                    "sha256:2b3b3bf1aa83053c2b122044db371a722ea782d8c797713043778e9984f1ad82"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:53be96d93cfac4749fb0c4fbe4a4980c3ac8b1fa9f0d210cbc9165c0281b719e",
+                  "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+                  "sha256:95709cd4f8814b450833d2a93d1eee1a5a2e56766d30c0ec0ba5c46c3513cc63",
+                  "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+                  "sha256:b1da41dd48277e7202730109692b8d47e230b1177e37247a434e506eafccc0ba",
+                  "sha256:d22edbc8b345f4ed519947cab60ab692c434d082f77b1c3fb50a1046f0faa2a7",
+                  "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+                ],
+                "unavailable_reasons": [
+                  "standard_judge_not_collected"
+                ],
+                "with_minus_without": null
+              },
+              {
+                "arm_means": {
+                  "with_skill": null,
+                  "without_skill": null
+                },
+                "case_id": "pester-002-data",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:ab0e01fbde8209ac4516e093e8a019448ce394d21f58241a08b9b07efc09d142"
+                  ],
+                  "without_skill": [
+                    "sha256:b37e7433554bb29083ce3c170e195d813b2fa80a90e415f30e48a79cca3abede"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:38b5377a01177394b9a5db40970553d9a8a44eef124405a985dda9f8b59dbb0e",
+                  "sha256:4aff4fe7f1850e435b6d14544de97a03269ab8d292f189c7ea185e00436c92ca",
+                  "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+                  "sha256:7568a2d2b6176d509742f3eec07f1a80a914f31c4efb1cdf8e482cac02734cf8",
+                  "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+                  "sha256:a883d0527068881f97334768dc82877b82c8104dfc9435a7a9a5899d301b31c8",
+                  "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+                ],
+                "unavailable_reasons": [
+                  "standard_judge_not_collected"
+                ],
+                "with_minus_without": null
+              },
+              {
+                "arm_means": {
+                  "with_skill": null,
+                  "without_skill": null
+                },
+                "case_id": "pester-002-weak",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:aeb805b48ddbd8725e57af9fff49fc529c997cd533d433025d56faead7bcc238"
+                  ],
+                  "without_skill": [
+                    "sha256:8a6a63953897767dbb9dde68106375719953a2bc1aedf7cc507c4965d42b06f7"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:31c05904fb31b842982751edbb3b5872025c1b91b5250e09632542776ab4ed68",
+                  "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+                  "sha256:6c3762748f048b830c5bf8dfbdae36ba09e9c2dd3f0d20cbda236bfd998bb7a9",
+                  "sha256:75a7fa9723b1aa91445d1d4d3b915a96bdcb479aa567eeef6abc7aa8c16360dc",
+                  "sha256:951918c692af5df6075586c09bf5d66c464b615df0830e90449921d0a0fbf3c4",
+                  "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+                  "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+                ],
+                "unavailable_reasons": [
+                  "standard_judge_not_collected"
+                ],
+                "with_minus_without": null
+              },
+              {
+                "arm_means": {
+                  "with_skill": null,
+                  "without_skill": null
+                },
+                "case_id": "pester-003-external",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:8339f3e7b77f35ceb74e7334f20c830d1a6038b0554a46f267f286356343d8a5"
+                  ],
+                  "without_skill": [
+                    "sha256:583da8bca4010c0e006a38ca980c637b2f6b2ca8ce2b701b2f41bcb6d47b11d4"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:4aa7c05b6d06c48ab76f6e8e28ec7f5a94bee6cc0c459ffce57d63c8da23ba55",
+                  "sha256:5484455efae1f627e4428f8bad63be702c52149a86cfe3dfffd2fbe9304e5018",
+                  "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+                  "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+                  "sha256:b61bd38cb8dea2997a63489109bbb8634ae9ed51208b4e2b8bd47ce20aae4494",
+                  "sha256:e1d0c8148fa3a57005ed4dd31910718c17877c0c7db028a01c263ab240456b4a",
+                  "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+                ],
+                "unavailable_reasons": [
+                  "standard_judge_not_collected"
+                ],
+                "with_minus_without": null
+              },
+              {
+                "arm_means": {
+                  "with_skill": null,
+                  "without_skill": null
+                },
+                "case_id": "pester-003-module",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:651eee557af5e677162921a664d290ac89f0463599321c85cf4177890d0cea5a"
+                  ],
+                  "without_skill": [
+                    "sha256:8d3fd0dfbb2e3d7016de108dd24d43d4785424566aa6821f2aef40939a7358a3"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:5099a687b9d8419c752f55cf13f505f13028f7c5b3268c4aff4142b8bbb1d8f5",
+                  "sha256:5ab82b97a5aaec9398762460f9ab9c834ed70dca8a5cd7b40cbcee1a1a1c518c",
+                  "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+                  "sha256:7922a58302646cf0305bd782e5aec311f9fd4344d71c5157dda4d6690bafdc81",
+                  "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+                  "sha256:b9252fcec24b782f81b40904175df0ba2f77ad66e23ddcae3d4f7d94d6b980be",
+                  "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+                ],
+                "unavailable_reasons": [
+                  "standard_judge_not_collected"
+                ],
+                "with_minus_without": null
+              },
+              {
+                "arm_means": {
+                  "with_skill": null,
+                  "without_skill": null
+                },
+                "case_id": "pester-003-weak",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:4c617e48d80fe9a507a5bd990dd63d4c1643630379d573139f79b94ce5deb724"
+                  ],
+                  "without_skill": [
+                    "sha256:f2df49de7aa7ba40a9afb1f3009a99cc5953ae6ae046df79f4b62b5203eca213"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:33155cf55d961e81e2d6a523f07643e8ec4b4a1f2791c27978f9b3f889d287d3",
+                  "sha256:4f8e1bb9c7eaa670960196ff9b04204be6ed39f97ee6ab1fab991dabe92ccae0",
+                  "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+                  "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+                  "sha256:d019b3970f54c143cbb4ccc6f0a0156ccbf0df3e5859e566d58eaf50065b792f",
+                  "sha256:ed97233866e50c083edb5a4daac8858849f965ff837ef07f90b7acdccc399713",
+                  "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+                ],
+                "unavailable_reasons": [
+                  "standard_judge_not_collected"
+                ],
+                "with_minus_without": null
+              },
+              {
+                "arm_means": {
+                  "with_skill": null,
+                  "without_skill": null
+                },
+                "case_id": "pester-003-wrong-scope",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:5662a87a594376854e6529c39715ea60736a0d5ef08c91a17cef7055e539c0db"
+                  ],
+                  "without_skill": [
+                    "sha256:354269768739a3b1c4222af7bdff6605236e1b37007db0e6e9ac1db523f5eb30"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:115d42ec10f005f5659477091fc6adf709d4d7352fc6f3aea718539c564e1698",
+                  "sha256:57dfc93cc7989be4fb5b67cf8cc41569649fdb636f7bdc5d1a7b896e9f93ef3b",
+                  "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+                  "sha256:644307424eb28c4d14bad678c26b44e3e9079bf09142eaa8e0bf8d339fae2dbf",
+                  "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+                  "sha256:ce26a2ec1005dc73c1dcc3399a4d01d4abd93bd248fd9a9174506e6425886f81",
+                  "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+                ],
+                "unavailable_reasons": [
+                  "standard_judge_not_collected"
+                ],
+                "with_minus_without": null
+              },
+              {
+                "arm_means": {
+                  "with_skill": null,
+                  "without_skill": null
+                },
+                "case_id": "pester-004-broken-discovery",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:1a204035263abec399c1736e3426b3074c77c04032be1e277cd902f10b5ce3e2"
+                  ],
+                  "without_skill": [
+                    "sha256:6f25fa58832dfa4378052e1ab87ff59dc50d2e97f9b1d1c30334faea2e1f2f68"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:06649bed84f1c0cc2f735fd0bdb0f0ffa140a3a7c4361187974d122618f4c1b7",
+                  "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+                  "sha256:826743072dc8a6c56332449a612b8f99e159bf32df7a02f7059acc931aefc1ab",
+                  "sha256:a46e794e66c541c4c13ea25a13abab22c726f410aebede308ea58b88f8c330a5",
+                  "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+                  "sha256:b273c11c13f53d3778eb104059741340f90fe5ec0adc0091c9420ffd955a83dc",
+                  "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+                ],
+                "unavailable_reasons": [
+                  "standard_judge_not_collected"
+                ],
+                "with_minus_without": null
+              },
+              {
+                "arm_means": {
+                  "with_skill": null,
+                  "without_skill": null
+                },
+                "case_id": "pester-004-compact",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:79dd88db3741a98871d39109315a4065600181169c3f64923acff2172364f28f"
+                  ],
+                  "without_skill": [
+                    "sha256:432b281913ec23cf54c634b3e9b85dbced41106ab5f7ecb12a1907003521b30c"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+                  "sha256:99bb55364d3725f33057ef8b07e7dae97068e01ac549eb188b8993d8ba61104a",
+                  "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+                  "sha256:daee5340fa10fd8ce33514c94613f00eba629b490d7e83d6046ff2cfe3ddef7c",
+                  "sha256:e5180e60aade53b06dced724c27c2b90ce115471c34239e30aba6d41e380590f",
+                  "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae",
+                  "sha256:f45e119b6752c74c566fc4d0cfa3e1c20e372612ddb8e3d8d8c2fee43a1de78a"
+                ],
+                "unavailable_reasons": [
+                  "standard_judge_not_collected"
+                ],
+                "with_minus_without": null
+              },
+              {
+                "arm_means": {
+                  "with_skill": null,
+                  "without_skill": null
+                },
+                "case_id": "pester-004-discovery",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:14d776d0a714d59ad9a4a5e5d4172015580a1f42b57f3e48fbbff320ca5c938c"
+                  ],
+                  "without_skill": [
+                    "sha256:d8b7fa50c632189b257a7a9f77f3c3650c65215cf2da73a0084c6313ba10e086"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:05f9c210e4d9b199e154465f989bd7f8452213eb40da89e497163b96482515e3",
+                  "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+                  "sha256:89d4b53dfdf8e55ee6b2464b4e20393b7cf975ac69a0fc05cd5c4d86ef762dee",
+                  "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+                  "sha256:b95db27094359a4e524d2fc49e0a26e650deb559e339e2e945a861cb74dfe732",
+                  "sha256:c174ee5915bbd2c22b5ae1d88871b3f6c7c0815c6faa66f2762e96925e467988",
+                  "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+                ],
+                "unavailable_reasons": [
+                  "standard_judge_not_collected"
+                ],
+                "with_minus_without": null
+              },
+              {
+                "arm_means": {
+                  "with_skill": null,
+                  "without_skill": null
+                },
+                "case_id": "pester-004-inline",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:615cb204a29022e3cf2792d4e63776a3bc3b3e635744c63173316da223081f15"
+                  ],
+                  "without_skill": [
+                    "sha256:3e03ffba636101c94ded7bdc28598c14e7b64fb421ccd7b163167313a2bef22d"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:0a8aa272208f550fa421c1491ed7b63ecea238413f0942f259ca9c1d86ce13f2",
+                  "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+                  "sha256:8ba107397301c5575b594aa19634283cd7bde16a08c5a5b567ff5dfbd3a6beda",
+                  "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+                  "sha256:cb997e198f2135e6eb15cc2b9c69e6abd9f4c8b557a086c90ff81db8bdc90159",
+                  "sha256:ed8de6fbba1d191c0446b2102df29b451cff19a139a46aeca63aa192692409a1",
+                  "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+                ],
+                "unavailable_reasons": [
+                  "standard_judge_not_collected"
+                ],
+                "with_minus_without": null
+              },
+              {
+                "arm_means": {
+                  "with_skill": null,
+                  "without_skill": null
+                },
+                "case_id": "pester-004-weak",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:27e789a4a31c2c516a7ecfd9992d4bc569a9247901c0d82453885dd9e952cfc4"
+                  ],
+                  "without_skill": [
+                    "sha256:29dd720c623cfa0bb3b2c44303de60fc8798c3626bcc482cce2dcded3669f841"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:03fd2fc3b9208c6916d613a2631a7c78b6e0c332578fbbc516b97439a1edd45b",
+                  "sha256:1649a6f95855dbd18b21ebfdcebc9b81d13cc5816f40f21a2bf79366788d1b04",
+                  "sha256:62968307b1c810b3777ec3f73ec776e5a82fdaa7037a2e28a07d197994fcfbd5",
+                  "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+                  "sha256:862d5a5f103facb42bcfeae4f139d4927e31bb50b09959c16854d0680e275b36",
+                  "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+                  "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+                ],
+                "unavailable_reasons": [
+                  "standard_judge_not_collected"
+                ],
+                "with_minus_without": null
+              },
+              {
+                "arm_means": {
+                  "with_skill": null,
+                  "without_skill": null
+                },
+                "case_id": "pester-005-good",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:1b3587e6dbc7ff0457dff496aa70d27ddbfee0f70bb3b30e3fd17d311d18c5c1"
+                  ],
+                  "without_skill": [
+                    "sha256:b57f5ca6ea3c476ea7f36d16be395df5cdb930f52f29d5498fcce72e933907fb"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:56eef374b1a240be77ae666dc9aeb8258d3e343fe30e5d141fb31cc3511c32c0",
+                  "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+                  "sha256:6dd3a7940bd2b8dcb774cbaf88ce599b183cf71a101ca9f62c886122c32b4e9b",
+                  "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+                  "sha256:d5d1d6b1d99c497e3768dad7547815f2a6fae4b45cbe1ee72c492f67e9554a18",
+                  "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae",
+                  "sha256:f93b8852eb90b64038fe9a18cb51c5583520be67ed80eca6257fcf12bbef9637"
+                ],
+                "unavailable_reasons": [
+                  "standard_judge_not_collected"
+                ],
+                "with_minus_without": null
+              },
+              {
+                "arm_means": {
+                  "with_skill": null,
+                  "without_skill": null
+                },
+                "case_id": "pester-005-wrong",
+                "observation_ids": {
+                  "with_skill": [
+                    "sha256:a9a4dcaf3d40daa7f69ea671d0915ad8d1f1f45c644a4d60db46a53c108576e9"
+                  ],
+                  "without_skill": [
+                    "sha256:d17b27953e4aac3fbfbed043fa7534d5aeb8324ba3b9c28f3ed62d0f2ed0c5e8"
+                  ]
+                },
+                "reference_ids": [
+                  "sha256:55d8c4dc6c7fdcc850e3b408a141a401dc82d4a3415386162be6b301176b06a2",
+                  "sha256:6337ebaad47add17b193e20af4812a9380d8872988eb9abc08b2536ea68a302b",
+                  "sha256:886a873a6aa86d31d7be71f0254112ff4dcbe7fa1657fd8deec6928e1be4993b",
+                  "sha256:a69939930bc9f0c3f79128a85f07e34de076fc7417bc14151084d9ba9e05ae17",
+                  "sha256:af96892da7cdc9d7fbf3c685ccaef58d88721227052d1f658719a34b8b0a0d07",
+                  "sha256:d3ac54df16341ce4d53b9dc74c6dcc6beb924d0ace2926496da65b77812a45cf",
+                  "sha256:f23d5e46bfd4c8a377322897d4485272d335963180b4cbec5792ae0802b9ebae"
+                ],
+                "unavailable_reasons": [
+                  "standard_judge_not_collected"
+                ],
+                "with_minus_without": null
+              }
+            ],
+            "cohort_cases": 26,
+            "matched_cases": 0,
+            "method": "descriptive_arm_means_with_minus_without",
+            "scored_observations": 0
+          },
+          "custom": {
+            "agent": "oracle",
+            "assurance": {
+              "execution_authentication": "not_established",
+              "native_consistency": "producer_reported_at_admission",
+              "native_revalidation_here": "not_performed",
+              "producer_authentication": "not_established",
+              "structural_validation": "passed"
+            },
+            "complete_paired_population": false,
+            "cross_run_policy": "disabled_pending_qualification",
+            "history_policy": "custom_metrics_not_admitted",
+            "metrics": [
+              {
+                "arm_means": {
+                  "with_skill": null,
+                  "without_skill": null
+                },
+                "coverage": {
+                  "with_skill": {
+                    "expected_applicable": 2,
+                    "measured": 2,
+                    "recorded_nonapplicable": 24,
+                    "unavailable_or_missing": 0
+                  },
+                  "without_skill": {
+                    "expected_applicable": 2,
+                    "measured": 2,
+                    "recorded_nonapplicable": 24,
+                    "unavailable_or_missing": 0
+                  }
+                },
+                "definition": {
+                  "aggregation": "mean_of_applicable_trial_values",
+                  "basis": "binary",
+                  "competency": "control_task_correctness",
+                  "definition": "Correct JSON summary of the unrelated Python report; this is not Pester test-quality evidence.",
+                  "id": "powershell-pester-6.negative-control-correct.v1",
+                  "native_name": "negative_control_correct",
+                  "role": "diagnostic",
+                  "title": "Negative-control correctness",
+                  "unit": "binary_score"
+                },
+                "interpretation": "descriptive_reported_measurement_only",
+                "native_name": "negative_control_correct",
+                "unavailable_reason": "incomplete_required_population",
+                "with_minus_without": null
+              },
+              {
+                "arm_means": {
+                  "with_skill": null,
+                  "without_skill": null
+                },
+                "coverage": {
+                  "with_skill": {
+                    "expected_applicable": 24,
+                    "measured": 16,
+                    "recorded_nonapplicable": 2,
+                    "unavailable_or_missing": 8
+                  },
+                  "without_skill": {
+                    "expected_applicable": 24,
+                    "measured": 16,
+                    "recorded_nonapplicable": 2,
+                    "unavailable_or_missing": 8
+                  }
+                },
+                "definition": {
+                  "aggregation": "mean_of_applicable_trial_values",
+                  "basis": "ratio",
+                  "competency": "mutation_detection",
+                  "definition": "Fraction of the configured seeded mutants rejected through recognized assertion failures. This measures only these seeded faults.",
+                  "id": "powershell-pester-6.mutation-detection.v1",
+                  "native_name": "pester_mutation_detection",
+                  "role": "diagnostic",
+                  "title": "Seeded mutation detection",
+                  "unit": "fraction"
+                },
+                "interpretation": "descriptive_reported_measurement_only",
+                "native_name": "pester_mutation_detection",
+                "unavailable_reason": "incomplete_required_population",
+                "with_minus_without": null
+              },
+              {
+                "arm_means": {
+                  "with_skill": null,
+                  "without_skill": null
+                },
+                "coverage": {
+                  "with_skill": {
+                    "expected_applicable": 24,
+                    "measured": 16,
+                    "recorded_nonapplicable": 2,
+                    "unavailable_or_missing": 8
+                  },
+                  "without_skill": {
+                    "expected_applicable": 24,
+                    "measured": 16,
+                    "recorded_nonapplicable": 2,
+                    "unavailable_or_missing": 8
+                  }
+                },
+                "definition": {
+                  "aggregation": "mean_of_applicable_trial_values",
+                  "basis": "binary",
+                  "competency": "reference_correctness",
+                  "definition": "Submitted tests execute and pass against the correct reference implementation.",
+                  "id": "powershell-pester-6.reference-pass.v1",
+                  "native_name": "pester_reference_pass",
+                  "role": "diagnostic",
+                  "title": "Reference correctness",
+                  "unit": "binary_score"
+                },
+                "interpretation": "descriptive_reported_measurement_only",
+                "native_name": "pester_reference_pass",
+                "unavailable_reason": "incomplete_required_population",
+                "with_minus_without": null
+              },
+              {
+                "arm_means": {
+                  "with_skill": null,
+                  "without_skill": null
+                },
+                "coverage": {
+                  "with_skill": {
+                    "expected_applicable": 24,
+                    "measured": 16,
+                    "recorded_nonapplicable": 2,
+                    "unavailable_or_missing": 8
+                  },
+                  "without_skill": {
+                    "expected_applicable": 24,
+                    "measured": 16,
+                    "recorded_nonapplicable": 2,
+                    "unavailable_or_missing": 8
+                  }
+                },
+                "definition": {
+                  "aggregation": "mean_of_applicable_trial_values",
+                  "basis": "binary",
+                  "competency": "test_quality",
+                  "definition": "Reference correctness and detection of every configured seeded mutant must both hold.",
+                  "id": "powershell-pester-6.test-quality.v1",
+                  "native_name": "pester_test_quality",
+                  "role": "diagnostic",
+                  "title": "Joint test quality",
+                  "unit": "binary_score"
+                },
+                "interpretation": "descriptive_reported_measurement_only",
+                "native_name": "pester_test_quality",
+                "unavailable_reason": "incomplete_required_population",
+                "with_minus_without": null
+              }
+            ],
+            "outcomes": {
+              "with_skill": {
+                "failed": 7,
+                "infrastructure_error": 2,
+                "interrupted": 0,
+                "invalid": 4,
+                "missing": 0,
+                "passed": 11,
+                "timeout": 1,
+                "unknown": 0,
+                "unsupported": 1
+              },
+              "without_skill": {
+                "failed": 7,
+                "infrastructure_error": 2,
+                "interrupted": 0,
+                "invalid": 4,
+                "missing": 0,
+                "passed": 11,
+                "timeout": 1,
+                "unknown": 0,
+                "unsupported": 1
+              }
+            },
+            "purpose": "oracle_qualification"
+          },
+          "dataset": {
+            "authored_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+            "authored_provenance": "runtime_recorded",
+            "case_cohort_digest": "sha256:1630284ecb507fb436fdc25b8b5db7ad13177b6418f8f1a6cf603b1baa8bc491",
+            "owner": "overlay",
+            "staged_algorithm": "sha256-staged-task-inputs-v1",
+            "staged_digest": "sha256:d2f7bd4984ab3126624b7ec4ba84b7cab7c2aeea71392cf49aeeba6e11e0fcde",
+            "staged_provenance": "runtime_recorded"
+          },
+          "gates": {
+            "failed": [],
+            "passed_observations": 0,
+            "unknown_observations": 0
+          },
+          "measured": true,
+          "native_metrics": [],
+          "policy": {
+            "attempts": {
+              "maximum": 1,
+              "mode": "unknown",
+              "pass_threshold": null,
+              "stop_on_pass": false
+            },
+            "fields": {
+              "authorization_policy": null,
+              "baseline": true,
+              "codex": null,
+              "competing_revision": null,
+              "concurrency": 2,
+              "deterministic_gate": null,
+              "docker_compose": null,
+              "environment": "docker",
+              "evaluator_revision": "ac0a04905100acdafc6c95829311a9739c340ff6",
+              "fixture_boundary": null,
+              "grading": "custom_only",
+              "harbor": "0.13.2",
+              "model": null,
+              "provider": null,
+              "python": "3.13.17",
+              "standard_attempts": null,
+              "stop_on_pass": false,
+              "task_build": null,
+              "task_source": "native_harbor",
+              "timeout_multiplier": 1.0,
+              "upstream_revision": null,
+              "workspace_mode": "isolated"
+            },
+            "id": "sha256:04dbeb91193b60f36c87ff33d0a1b865ab631de1e8cb0689552024a8ad4d471a",
+            "judge": {
+              "enabled": false,
+              "model": null,
+              "provider": null
+            },
+            "metric_set": "custom-only",
+            "patch_digest": "sha256:ff159054bbd840fb793c20352ffa074cb79394a95a9f32f178e3aab5d4c91c49",
+            "provenance": "runtime_recorded",
+            "published_id": null
+          },
+          "record_id": "sha256:d3abc68bfd6b56fa8f64788e762826829c5a6d228eee9c8362f6ced448983820",
+          "run_id": "qualification",
+          "source": {
+            "content_digest": "sha256:d3641c5190c1b86d8e853adc8f3c68fe6376b5fdaf5c1d90c610a745102ff03e",
+            "content_provenance": "configured",
+            "lineage": null,
+            "owner": "local",
+            "repository": "thetechgy/agent-engineering-baseline",
+            "revision": "ff9f4935c7b917a328461dcd62e12d83576baac7",
+            "skill_id": "powershell-pester-6",
+            "source_path": ".apm/skills/powershell-pester-6"
+          }
+        }
+      ],
       "comparison_status": "insufficient_run_evidence",
       "comparisons": [],
       "configurations": [
         {
           "behavioral_status": "configured",
-          "id": "sha256:a6f2275e445c86ce9daa023805b546bce9d99f56bc893593e3400acad0740b7e",
+          "id": "sha256:9e0b35d1edd6741540063acaf67a88eb7d7cd26dc297b65f4a4a57a866346b1b",
           "inventory_record_ids": [
-            "sha256:672e6163848cf4ee98313d0d80fc07bc1b49c27d4d3075ecb4165724298b38c2"
+            "sha256:c8ad61a248bda8c4c924412e26e60491e50503b89001df37bbcfe58924fdc860"
           ],
           "source": {
             "content_digest": "sha256:d3641c5190c1b86d8e853adc8f3c68fe6376b5fdaf5c1d90c610a745102ff03e",
@@ -2544,31 +4392,7 @@
             "lineage": null,
             "owner": "local",
             "repository": "thetechgy/agent-engineering-baseline",
-            "revision": "39b6c43583d414c78dedd28e43551a550deb0544",
-            "skill_id": "powershell-pester-6",
-            "source_path": ".apm/skills/powershell-pester-6"
-          },
-          "suite": {
-            "authored_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
-            "case_count": 5,
-            "owner": "overlay",
-            "path": ".github/evals/powershell-pester-6/evals/evals.json",
-            "status": "configured"
-          }
-        },
-        {
-          "behavioral_status": "configured",
-          "id": "sha256:c6cd686e0b29e29699f4a72f4d6a7ac4049d8bad09baf002d4656ddc5a1fbb3c",
-          "inventory_record_ids": [
-            "sha256:d34632fa7d5d306a4a3a175c6f71cd7fe1a45fe29fdf09fe797d0609faa8d779"
-          ],
-          "source": {
-            "content_digest": "sha256:d3641c5190c1b86d8e853adc8f3c68fe6376b5fdaf5c1d90c610a745102ff03e",
-            "content_provenance": "configured",
-            "lineage": null,
-            "owner": "local",
-            "repository": "thetechgy/agent-engineering-baseline",
-            "revision": "1e2bc9beab366134e9872af4e196c538a03ec132",
+            "revision": "ff9f4935c7b917a328461dcd62e12d83576baac7",
             "skill_id": "powershell-pester-6",
             "source_path": ".apm/skills/powershell-pester-6"
           },
@@ -2596,7 +4420,7 @@
               "check": "body_recommended_section",
               "line": null,
               "member": null,
-              "reference": "sha256:0df2aa5d4900e3c5d90ede04f7a6f8e9634f8874527896299a6df42f9d84ef06",
+              "reference": "sha256:4edcd540b2b24b4a13b1f2fab1829f4295179bcee64ffd68955ed434df92dd63",
               "scanner": "SCHEMA",
               "severity": "medium"
             },
@@ -2604,7 +4428,7 @@
               "check": "body_recommended_section",
               "line": null,
               "member": null,
-              "reference": "sha256:ef25246aa5e9b5bf0a71744fedef2dddacff6505d1d1daec8bb6237f0487cce9",
+              "reference": "sha256:b059cd72bdc6aff2f7d84256d64e61d05597ad22c33d6f06988d6793de1060a1",
               "scanner": "SCHEMA",
               "severity": "medium"
             },
@@ -2612,7 +4436,7 @@
               "check": "author_missing",
               "line": null,
               "member": null,
-              "reference": "sha256:de5944b461eca97b0e6e0ce0bc425c763d935277a65226dff32b2d35f94c231c",
+              "reference": "sha256:379f9f4d7bfaf9f66eddbf910f656f1f526f469bfc414e756fe86b3f30f9ef96",
               "scanner": "SCHEMA",
               "severity": "high"
             },
@@ -2620,7 +4444,7 @@
               "check": "quality_correctness",
               "line": null,
               "member": null,
-              "reference": "sha256:b65b5a44a89c242d8598d9ca5af4e3a9b3207f929e4924019a1e777b9d01608a",
+              "reference": "sha256:9b4d50241e907303b7b2b6f472d0e9ed03def1b9e1050575a698f01441c33579",
               "scanner": "QUALITY",
               "severity": "medium"
             },
@@ -2628,7 +4452,7 @@
               "check": "quality_correctness",
               "line": null,
               "member": null,
-              "reference": "sha256:700613e893530261c836a309f2850c0960dc5caac0d33ba72b6e159a2aa032dc",
+              "reference": "sha256:2f68ebf02073f0dbde5a42c38264b80a6b4fde36b9b1c03c7f227279c0f5b6f6",
               "scanner": "QUALITY",
               "severity": "medium"
             },
@@ -2636,7 +4460,7 @@
               "check": "quality_correctness",
               "line": null,
               "member": null,
-              "reference": "sha256:63423a3318d43fc5a15fa3f2fbc4f0149fbe9c6a372b56837684f95f2c0618e5",
+              "reference": "sha256:36365b0373dfce0396df369e8d75aaab5bf44427213ba026d359018f118c687e",
               "scanner": "QUALITY",
               "severity": "medium"
             },
@@ -2644,7 +4468,7 @@
               "check": "quality_discoverability",
               "line": null,
               "member": null,
-              "reference": "sha256:1ca996287167e60e9bb3fb562b637a139a36616fa9edc05247614f3520368970",
+              "reference": "sha256:7675a28dff6182ba0163c7bcdf697a25ad27e7ca77bc1e5351eb341355e7edc3",
               "scanner": "QUALITY",
               "severity": "low"
             },
@@ -2652,7 +4476,7 @@
               "check": "quality_discoverability",
               "line": null,
               "member": null,
-              "reference": "sha256:0aec4c1d082dc90a94b778138cc8bd63a2e381d4340f40ce1ce29f1a47e199e3",
+              "reference": "sha256:a8f2acf194c62f3130f2bb961aea69904b21484b06131230fb01c92d30a83aad",
               "scanner": "QUALITY",
               "severity": "low"
             },
@@ -2660,7 +4484,7 @@
               "check": "quality_reliability",
               "line": null,
               "member": null,
-              "reference": "sha256:88a4e233a559fb1b1f8574530e155495e851af5a7908855fe17c8b2c9c1d234d",
+              "reference": "sha256:24041f516990148a51bf373a17f61e18f3f5bb8351733718a777d6a6e53c2c43",
               "scanner": "QUALITY",
               "severity": "low"
             },
@@ -2668,7 +4492,7 @@
               "check": "quality_reliability",
               "line": null,
               "member": null,
-              "reference": "sha256:39b81727ea3bc06db0bfb9e449280d542b76c90cce300dd770498ec70bcc893e",
+              "reference": "sha256:d78678956927e6d75644079e46d777c90a4ece214b466ad51bec672c49afb5b2",
               "scanner": "QUALITY",
               "severity": "low"
             },
@@ -2676,7 +4500,7 @@
               "check": "quality_reliability",
               "line": null,
               "member": null,
-              "reference": "sha256:7697e9b3953ebfcf20412cc5d3046792e621ad49420c29b070601cff67af3b1a",
+              "reference": "sha256:cb72b0ed472761dc3c43aad752c1716abfff2d9b768a80f3a8e97987483dbb2a",
               "scanner": "QUALITY",
               "severity": "low"
             },
@@ -2684,19 +4508,19 @@
               "check": "quality_efficiency",
               "line": null,
               "member": null,
-              "reference": "sha256:7755eefcfe86f5e044fd3f8e166c46b079a0c927fc06fe5e20328ae3ee08c543",
+              "reference": "sha256:1c3231ce45080d664451719e34bac13fa3ec8c3c6858633de550776749a3d05a",
               "scanner": "QUALITY",
               "severity": "medium"
             }
           ],
-          "record_id": "sha256:ad2f3b1562bd2e2391b7ff6d9510881273772c872a355d9909804fa2f60f9f9e",
+          "record_id": "sha256:29c81caee1ef25b2355bf3afb6e401d138791a6ccc50c8d6774661740738dec7",
           "run_id": null,
           "scans": [
             {
               "blocking": true,
               "passed": false,
               "references": [
-                "sha256:f7aac1e77d2154a615091f601ecd2bb6a06ae1ca9b1d7d016cc4cbae9f03dc57"
+                "sha256:d73f4f447242164d1bb30204ab4b1956b6a20b464eb654b4e58cc23273e7ad79"
               ],
               "scanner": "catalog-total",
               "severity_counts": {
@@ -2711,7 +4535,7 @@
               "blocking": true,
               "passed": false,
               "references": [
-                "sha256:1ac6f0f5cf94f05f31ffa3e081db7920afb31c64d041960766c1a5b35909f566"
+                "sha256:ba3ec4e59376980dbfc85d62d39859082c749fc61f8eb33df0cee6075af5cbd7"
               ],
               "scanner": "SCHEMA",
               "severity_counts": {
@@ -2726,7 +4550,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:3045007e261c899b71d06821b9e86a73a39c787e07040ff98f361e3eef315ec0"
+                "sha256:803728e5741b8aa2437c628dc0b21ff5c2af94a1699dbe7e37c887721d441baa"
               ],
               "scanner": "VERSION",
               "severity_counts": {
@@ -2741,7 +4565,7 @@
               "blocking": true,
               "passed": false,
               "references": [
-                "sha256:f2993a8f6030f0a10e98d93b5ea4ce1a81aa09486592724756f27621fbb4dee9"
+                "sha256:4e6e13a085d66fe2b0dfd1b41dfaea0a2675374d03a97090073567df8d2d4efb"
               ],
               "scanner": "SECURITY",
               "severity_counts": {
@@ -2756,7 +4580,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:001f3fed9c5a2c65de7adf7bc3e046a3e402e1062464acdf709b14681033d991"
+                "sha256:da690274f20f4e1b6d5661c97ffd41aeaaaf746d955e73724e78237b12f8f4e5"
               ],
               "scanner": "PII",
               "severity_counts": {
@@ -2771,7 +4595,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:7ff5e00506742a32ebd4048fd0b65b5092181f2b4e0359b66113419fb78b16c9"
+                "sha256:fa1c36651334efa2f502a1ab6c4d7deeaeecb70985df9da75e53b67e72fe404a"
               ],
               "scanner": "LICENSE",
               "severity_counts": {
@@ -2786,7 +4610,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:a305d169313cd49097d9555602fd82e23b825114f28b3252ce01ebc65df96215"
+                "sha256:969ed3bf2fabdb50a7696a7aedf3e75d503b40ae059d22403d9a13155452f2bb"
               ],
               "scanner": "CODE_RISK",
               "severity_counts": {
@@ -2801,7 +4625,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:179563f08d7eda0dcded1c7b20784625cff08a6862b16fdfc305f5c4dbe72486"
+                "sha256:1f51a0b6cc67c52c9b6e0a6ad2f42e8584bc1487df7c8c2812be5bab7da98211"
               ],
               "scanner": "SECRETS",
               "severity_counts": {
@@ -2816,7 +4640,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:36b8a5b4145aeb3d1021172b739b1317d61591a7d5bb5740b45f3924640f602d"
+                "sha256:7a8474c50695a1001c96221b3f4763978ba2dc0342ac2e5ed7f3d5de5af3fd78"
               ],
               "scanner": "HYGIENE",
               "severity_counts": {
@@ -2831,7 +4655,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:0623227cb828d0850ae6e1dce29552caf57ca7cfef451104547ec89cef036a20"
+                "sha256:1dad0e82b0ea2c94a349ddea040577fd209719ff6663c849130150e5fbd84b08"
               ],
               "scanner": "UNICODE",
               "severity_counts": {
@@ -2846,7 +4670,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:1f7b9d37d747ca77bf4451d876f4eac9e780b0e47a64558bfc29a0b87fe7fc31"
+                "sha256:3f56333aac3fa21d4ad5193424be3e4c9cd76829593d7969f921a81bdb42f349"
               ],
               "scanner": "QUALITY",
               "severity_counts": {
@@ -2861,7 +4685,7 @@
               "blocking": true,
               "passed": true,
               "references": [
-                "sha256:e7f2fc17bb7ffdba0d306029999ca45b3c933b5603df4f1730bc4859dca927e3"
+                "sha256:afcfbdf460a7cad154ccc8b6f5d0b16782407c46ad527df0707466dbc27561d3"
               ],
               "scanner": "SCRIPT_LINT",
               "severity_counts": {
@@ -2876,7 +4700,7 @@
               "blocking": false,
               "passed": null,
               "references": [
-                "sha256:f7aac1e77d2154a615091f601ecd2bb6a06ae1ca9b1d7d016cc4cbae9f03dc57"
+                "sha256:d73f4f447242164d1bb30204ab4b1956b6a20b464eb654b4e58cc23273e7ad79"
               ],
               "scanner": "skillspector",
               "severity_counts": {
@@ -2894,7 +4718,7 @@
             "lineage": null,
             "owner": "local",
             "repository": "thetechgy/agent-engineering-baseline",
-            "revision": "1e2bc9beab366134e9872af4e196c538a03ec132",
+            "revision": "ff9f4935c7b917a328461dcd62e12d83576baac7",
             "skill_id": "powershell-pester-6",
             "source_path": ".apm/skills/powershell-pester-6"
           }
