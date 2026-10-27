@@ -111,6 +111,14 @@ eligibility immediately before inference and retains
 `skill-benchmark-authorization-<run>-<attempt>` when available. The inference key
 is still exposed only to the existing native evaluation step.
 
+Main benchmarks reuse the authenticated successful Validate run for their exact
+source revision, including its full regression suite. Reviewed feature revisions
+run the equivalent inference-free suite in the unprotected context job. The
+protected job retains strict dataset validation, runtime checks, and its existing
+five-minute preparation limit; it does not repeat the full suite there. Hosted
+CI-contract validation took 15 minutes 15 seconds during implementation, so
+repeating it inside that five-minute step would exhaust the preparation budget.
+
 An ineligible or stale request finishes with an unsuccessful workflow and an
 explicit nonexecution disposition. This prevents the existing successful-producer
 publisher from treating a skipped benchmark as a completed evaluation. Read its

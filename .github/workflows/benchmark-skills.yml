@@ -43,7 +43,7 @@ jobs:
       contents: read
       actions: read
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
       PYTHONDONTWRITEBYTECODE: '1'
     outputs:
@@ -70,6 +70,13 @@ jobs:
       - name: Install pinned reporting dependencies
         working-directory: trusted
         run: bash .github/scripts/setup-skillevaluator.sh reporting
+      - name: Validate reviewed feature revision without inference
+        if: github.ref != 'refs/heads/main'
+        timeout-minutes: 25
+        working-directory: trusted
+        env:
+          SKILL_EVALUATION_KIND: benchmark
+        run: '"$SKILL_EVALUATOR_PYTHON" -m unittest discover -s .github/tests -v'
       - name: Publish scope and authorization context before requesting approval
         id: context
         working-directory: trusted
@@ -169,7 +176,8 @@ jobs:
           mkdir -p "$RUNNER_TEMP/skill-benchmark"
           cp "$RUNNER_TEMP/skill-evaluation-tools/versions.json" "$RUNNER_TEMP/skill-benchmark/versions.json"
           cp -r "$RUNNER_TEMP/skill-evaluation-tools/dependencies" "$RUNNER_TEMP/skill-benchmark/dependencies"
-          "$SKILL_EVALUATOR_PYTHON" -m unittest discover -s .github/tests -v
+          # Main's full regression suite is authenticated by context/guard. Feature
+          # revisions run it before requesting approval; do not repeat it here.
           "$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_reports.py prepare "$RUNNER_TEMP/skill-benchmark" "$BENCHMARK_SKILL"
           skill_dir="$(sed -n 's/^skill_dir=//p' "$GITHUB_OUTPUT")"
           skillevaluator tier3 validate "$skill_dir" --strict --json \

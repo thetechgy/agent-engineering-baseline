@@ -454,6 +454,14 @@ class OrchestrationTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 orchestration.context(self.workspace, self.retained, self.api, {**inputs, 'planner_run_id': '30'}, phase='preapproval')
 
+    def test_main_manual_context_requires_authenticated_validation(self):
+        self.validate('failure')
+        with patch.object(reports, 'summary'):
+            value = orchestration.context(self.workspace, self.retained, self.api,
+                                          {'skill': 'podman', 'mode': 'standard'}, phase='preapproval')
+        self.assertFalse(value['execute'])
+        self.assertEqual(value['status'], 'validation_unsuccessful')
+
 
 class WorkflowAndUsageTests(unittest.TestCase):
     def test_dispatch_adapter_requests_direct_run_details_once(self):
@@ -503,6 +511,20 @@ class WorkflowAndUsageTests(unittest.TestCase):
         self.assertIn("needs.evaluate.outputs.execution_success == 'true'", benchmark['jobs']['publish-history']['if'])
         publisher = yaml.safe_load((ROOT / '.github/workflows/publish-skill-report.yml').read_text())
         self.assertEqual(publisher.get('on', publisher.get(True))['workflow_run']['workflows'], ['Validate', 'Benchmark skills'])
+
+    def test_full_regression_validation_is_reused_on_main_and_preapproval_on_features(self):
+        workflow = yaml.safe_load((ROOT / orchestration.BENCHMARK).read_text())
+        context = workflow['jobs']['context']
+        protected = workflow['jobs']['evaluate']
+        self.assertFalse(any('-m unittest discover' in step.get('run', '') for step in protected['steps']))
+        tests = [step for step in context['steps'] if '-m unittest discover' in step.get('run', '')]
+        self.assertEqual(len(tests), 1)
+        self.assertEqual(tests[0]['if'], "github.ref != 'refs/heads/main'")
+        self.assertEqual(tests[0]['env']['SKILL_EVALUATION_KIND'], 'benchmark')
+        gate = next(s for s in protected['steps'] if s.get('id') == 'preparation')
+        self.assertEqual(gate['timeout-minutes'], 5)
+        self.assertIn('tier3 validate', gate['run'])
+        self.assertIn('skill_orchestration.py guard', gate['run'])
 
     def test_usage_conflicts_unknowns_and_cache_accounting(self):
         with tempfile.TemporaryDirectory() as temp:
