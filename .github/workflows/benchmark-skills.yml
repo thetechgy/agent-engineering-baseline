@@ -247,6 +247,10 @@ jobs:
         run: bash .github/scripts/setup-compose.sh cleanup
 
   publish-history:
+    concurrency:
+      group: skill-report-publication
+      queue: max
+      cancel-in-progress: false
     needs: evaluate
     if: >-
       github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' &&
@@ -306,49 +310,3 @@ jobs:
           [[ "$history_sha" =~ ^[0-9a-f]{40}$ ]]
           test "$history_sha" = "$remote_sha"
           printf 'history_sha=%s\n' "$history_sha" >> "$GITHUB_OUTPUT"
-
-  deploy-pages:
-    needs: publish-history
-    if: >-
-      github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' &&
-      inputs.mode == 'standard' && needs.publish-history.result == 'success'
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Check out exactly the published history commit
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ needs.publish-history.outputs.history_sha }}
-          persist-credentials: false
-
-      - name: Require static history without links
-        run: |
-          test -d benchmarks
-          test -z "$(find benchmarks ! -type d ! -type f -print -quit)"
-
-      - name: Configure Pages
-        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
-
-      - name: Upload static history
-        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
-        with:
-          path: benchmarks
-
-      - name: Deploy exact history artifact
-        id: deployment
-        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
-
-      - name: Link canonical history
-        env:
-          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
-          HISTORY_DIR: ${{ needs.publish-history.outputs.history_dir }}
-        run: |
-          printf '[Standard benchmark history](%s/%s/)\n' \
-            "${PAGE_URL%/}" "${HISTORY_DIR#benchmarks/}" >> "$GITHUB_STEP_SUMMARY"

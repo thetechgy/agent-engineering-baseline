@@ -665,6 +665,20 @@ adds 24 fixture cases and deterministic grading around the unchanged upstream
 `skill=gh` in the same protected manual workflow. Replay, model-backed results,
 and optional live read-only checks are reported separately.
 
+The [canonical skill report](https://thetechgy.github.io/agent-engineering-baseline/)
+combines current main configuration, retained static quality, standard behavioral
+evidence, diagnostic oracle/confirmation evidence, and the existing numeric ledger.
+The trusted **Publish skill report** workflow runs after successful eligible main
+producers. It uses no inference credentials and does not start evaluations.
+A ledger-only measurement keeps its original values and identities when supporting
+public detail is unavailable; diagnostic qualification never becomes performance
+history. Legacy skill/policy history URLs link to stable canonical history sections.
+
+See [canonical Pages operation and recovery](.github/evals/REPORT-EVIDENCE.md#canonical-pages-report)
+for provenance checks, independent evidence slots, offline reproduction, exact-commit
+deployment, recovery commands, and troubleshooting. This workflow takes effect on the
+default branch; publishing an implementation PR does not deploy a site.
+
 [Benchmark reports](https://github.com/thetechgy/agent-engineering-baseline/actions/workflows/benchmark-skills.yml)
 include the underlying evidence. The
 [historical Podman charts](https://thetechgy.github.io/agent-engineering-baseline/podman/bcf6348b71caddcb/)
@@ -723,7 +737,8 @@ can prevent recovery. Raw execution directories stay on the runner.
 Only successful standard runs on main publish Skill Lift, Effectiveness,
 Correctness, and Discoverability to separate skill/policy histories on `gh-pages`;
 Security and Efficiency remain in complete reports. Source revisions and dataset
-hashes identify points, and Pages deploys the exact history commit.
+hashes identify points. The reporting publisher reads the admitted ledger and
+deploys an exact consolidated publication commit; the history writer does not deploy.
 
 CI pins the evaluator/runtime and its Codex compatibility patch; policy changes
 start a new history series. Recorded versions help track runtime drift: some

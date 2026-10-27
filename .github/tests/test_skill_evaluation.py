@@ -1088,7 +1088,7 @@ class WorkflowTests(unittest.TestCase):
         setup = (REPO / ".github/scripts/setup-compose.sh").read_text()
         self.assertEqual(re.search(r"^compose_version=(\S+)$", setup, re.M)[1], reports.POLICY["docker_compose"])
         self.assertEqual(jobs["publish-history"]["permissions"], {"contents": "write"})
-        for name in ("publish-history", "deploy-pages"):
+        for name in ("publish-history",):
             self.assertIn("github.ref == 'refs/heads/main'", jobs[name]["if"])
             self.assertIn("inputs.mode == 'standard'", jobs[name]["if"])
             self.assertNotIn("OPENAI_API_KEY", json.dumps(jobs[name]))
@@ -1107,8 +1107,8 @@ class WorkflowTests(unittest.TestCase):
         setup = next(index for index, step in enumerate(quality["steps"])
                      if "setup-skillevaluator.sh" in step.get("run", ""))
         self.assertLess(preflight, setup)
-        checkout = jobs["deploy-pages"]["steps"][0]
-        self.assertEqual(checkout["with"]["ref"], "${{ needs.publish-history.outputs.history_sha }}")
+        self.assertNotIn("deploy-pages", jobs)
+        self.assertEqual(jobs["publish-history"]["concurrency"], {"group": "skill-report-publication", "queue": "max", "cancel-in-progress": False})
         for filename in ("benchmark-skills.yml", "validate.yml"):
             data = yaml.safe_load((REPO / ".github/workflows" / filename).read_text())
             for job in data["jobs"].values():

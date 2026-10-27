@@ -2378,3 +2378,138 @@ confirmation-only, diagnostic and history-ineligible at selection, metric
 validation and direct publication. Existing Podman and gh standard history remains
 separate and unchanged. Issue #92 stays open for independently qualified cross-run
 compatibility and history admission; this reporting slice does not complete it.
+
+## Canonical Pages report
+
+The canonical URL is
+<https://thetechgy.github.io/agent-engineering-baseline/>. The dedicated
+`publish-skill-report.yml` workflow consumes completed `Validate` and
+`Benchmark skills` runs. Executable publisher code comes from verified default
+branch `main`; producer archives supply data only. The whole producer workflow must
+succeed. A public record may still contain failed, incomplete, invalid, unsupported,
+timeout, interrupted, or infrastructure outcomes: workflow success authenticates
+collection, not skill performance.
+
+Admission authenticates repository, workflow ID/path, main ancestry, event, exact
+run attempt, jobs, steps, and artifact metadata with GitHub's API. ZIP acquisition
+uses authenticated artifact IDs, verifies archive SHA-256, and bounds archive and
+expanded sizes, member counts, and layouts. Public validators run with read-only
+permissions. The commit job downloads the generated artifact by ID, verifies its seal against
+the digest emitted directly by the read-only preparation job, checks every member
+hash, preserves native ledger bytes, and executes only trusted publisher code.
+Deployment uses the protected `github-pages` environment and the exact committed SHA.
+No inference credentials, paid schedules, evaluator upgrades, or skill edits are
+part of reporting.
+
+### Evidence and history distinctions
+
+The publication tree under `gh-pages:benchmarks/` retains:
+
+- `report/current/`: inventory captured from current verified main. Upstream skills
+  retain their upstream ownership and pins; this does not label them locally authored.
+- `report/bundles/quality/`: latest successful main-push `Validate` public quality bundle.
+- `report/bundles/standard--<skill>/`: latest detailed standard main-dispatch bundle
+  whose native history append succeeded and whose values agree with admitted history.
+- `report/bundles/oracle--<skill>/` and `confirmation--<skill>/`: independent diagnostic
+  slots. Pester oracle qualification uploads only its existing inventory/public-report
+  projection after qualification and checkout integrity succeed. Its retained 52-trial
+  fixture contains no standard headline metrics and explicitly incomplete coverage.
+  Oracle outcomes qualify the harness; confirmation runs remain diagnostic. Neither
+  enters qualified performance history or enables custom-metric comparisons.
+- `report/publication.json`: versioned slot provenance and hashes of every retained
+  public member; `report/analysis.json`: saved consolidated analysis; `index.html`:
+  the existing consolidated renderer with explicit public Pages context. Private
+  analyst attachments are excluded. The private offline report remains the default.
+- `<skill>/<policy>/data.js`: unchanged native ledger downloads. The fixed assignment
+  is parsed as bounded JSON, never evaluated as JavaScript. Compatibility `index.html`
+  pages link to canonical history anchors and require no CDN or chart library.
+
+Slots advance independently using commit ancestry and, within one revision, numeric
+run/attempt ordering. Replaying the same immutable admission is idempotent. Stale runs
+cannot rewind a slot. PRs, feature branches, unsuccessful and interrupted producers
+cannot replace retained evidence. Current configuration does not rewrite evaluated
+revisions or establish model benefit. All retained public inputs are revalidated
+before analysis and again at the renderer boundary; scoring, schemas and comparison
+rules are unchanged.
+
+A valid admitted ledger measurement remains visible as **Ledger only** when public
+detail was never uploaded or expired. Previously retained detail is preserved. There
+is no synthetic public report, inferred trial population, or zero substituted for
+missing evidence. The Actions summaries distinguish ledger, detailed-evidence, durable
+commit, and site-deployment outcomes. Supplied malformed archives, bad digests,
+contradictory reports, and invalid ledgers block publication. Ledger rows group by
+skill, policy, and staged dataset identity. The ledger does not record a workflow run
+or attempt; matching detailed values and identities cannot establish that missing
+binding. Unknown provenance and existing comparison restrictions remain explicit.
+
+### Offline reproduction
+
+Use the existing pinned Python 3.13 / SkillEvaluator 0.3.0 environment. CI's
+`bash .github/scripts/setup-skillevaluator.sh reporting` installs the frozen reporting
+dependencies without standalone scanners, Compose preflight, or evaluation execution.
+Copy the retained tree to a disposable directory outside the repository, then run:
+
+```bash
+git clone --single-branch --branch gh-pages \
+  https://github.com/thetechgy/agent-engineering-baseline.git /tmp/skill-report-replay
+"$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_pages.py build \
+  --site /tmp/skill-report-replay/benchmarks
+```
+
+Once a publication manifest is present, this revalidates bundles and hashes, rebuilds
+saved analysis, reloads and verifies it, and reproduces canonical HTML without network
+access. The current inventory remains the saved snapshot for deterministic offline
+reproduction. Open `benchmarks/index.html`; links, disclosures, history and evidence
+remain readable with JavaScript disabled. JavaScript only enhances appearance and
+anchor disclosure navigation. No analyst attachments, raw trajectories, native
+prompts, external assets, or network requests enter the page.
+
+### Recovery and troubleshooting
+
+Use native Actions reruns for ordinary retries. Manual reporting recovery is the
+narrow `repository_dispatch` event `recover-skill-report`. It executes from the
+default branch, without a workflow branch selector. An empty payload rebuilds retained
+state with a fresh main inventory; numeric `run_id` plus `attempt` replays one producer
+through the same admission checks. Payloads cannot select executable refs, repositories,
+URLs, or paths. These commands start reporting only, never evaluation:
+
+```bash
+# Rebuild retained state.
+gh api --method POST repos/thetechgy/agent-engineering-baseline/dispatches \
+  --input - <<'JSON'
+{"event_type":"recover-skill-report","client_payload":{}}
+JSON
+
+# Replay one eligible producer attempt; substitute actual numeric identities.
+gh api --method POST repos/thetechgy/agent-engineering-baseline/dispatches \
+  --input - <<'JSON'
+{"event_type":"recover-skill-report","client_payload":{"run_id":40440720443,"attempt":1}}
+JSON
+```
+
+The publisher holds the same native `skill-report-publication` queue as the existing
+history append job, covering preparation through deployment. `queue: max` retains up
+to GitHub's 100 pending publications; running publications are not cancelled. Branch
+state is read after the lock is acquired. A complete candidate is built and sealed
+before a normal fast-forward commit. Unexpected branch movement fails visibly; there
+is no force push. Check the preparation summary for ledger-only warnings, producer
+job/step results for handoff failures, and the commit output for the prepared SHA.
+
+Generation failure leaves the live site unchanged. If commit succeeded but deployment
+failed, the prepared revision remains on `gh-pages` and the previous live deployment
+remains available. Rerun the deployment job for that exact revision, or request a
+retained-state rebuild. A deployment-only rerun checks the current remote branch and
+refuses a cached revision if `gh-pages` has advanced; rebuild retained state instead. A
+missing/expired quality or diagnostic artifact cannot replace a retained slot. Rebuild
+retained state or replay a producer whose public artifact is still available. Replaying
+older validation runs may provide quality only if they predate the public-only oracle
+upload. Inspect workflow failures rather than weakening validation, changing identities,
+or rescoring historical evidence.
+
+Git history preserves prior committed snapshots for recovery. It does **not** enforce
+bounded retention: the proposed 90-day/30-snapshot policy remains deferred. Offline
+fixtures and disposable Git remotes verify admission, deterministic generation,
+history preservation, conflicts, and exact-commit handoff. They cannot establish hosted
+queue behavior, protected-environment approval, OIDC or live deployment success; those
+require an eligible post-merge hosted publication. Do not equate a draft PR or passing
+validation CI with a live Pages deployment.
