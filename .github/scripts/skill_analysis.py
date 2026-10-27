@@ -30,6 +30,86 @@ SIGNIFICANT_GROUP_LIMIT = 8
 SEVERITIES = ('critical', 'high', 'medium', 'low')
 
 
+NEXT_STEPS = {
+    'complete_scans_and_reproject': 'Inspect available evidence and identify the scan limitation. Regenerate evidence after resolving or better characterizing it; rerunning alone may not resolve a tooling limitation.',
+    'inspect_original_scanner_evidence': 'Inspect the original scanner finding and its applicability.',
+    'inspect_original_case_evidence': 'Inspect both arms of the case, including attempts and grader evidence.',
+    'inspect_gate_evidence': 'Inspect the mandatory gate evidence before treating the result as acceptable.',
+    'complete_execution_and_reproject': 'Complete missing execution evidence, then regenerate public evidence.',
+    'retain_or_reacquire_exact_evidence': 'Retain or reacquire the exact identified evidence; keep availability unchanged until verified.',
+    'supply_at_most_16_skill_pairs': 'Supply at most 16 intended skill pairs in a separate analysis invocation.',
+    'verify_benchmark_identities': 'Verify source, dataset, policy and execution identities before comparing runs.',
+    'inspect_original_run_evidence': 'Inspect original run evidence under the recorded benchmark conditions.',
+    'supply_two_intended_runs': 'Supply exactly two intended measured runs per skill to the existing analyzer.',
+    'supply_model_backed_public_report': 'Supply a validated model-backed public report when an evaluation is authorized.',
+}
+FINDING_LABELS = {
+    'custom_unavailable': 'Unavailable deterministic evaluation',
+    'custom_measured_failure': 'Reported deterministic measurement warrants investigation',
+    'case_regression': 'Lower with-skill case score', 'failed_gate': 'Failed mandatory gate',
+    'failed_static_checks': 'Native required check not passed', 'incomplete_scans': 'Incomplete static scans',
+    'incomplete_execution': 'Incomplete execution evidence', 'unavailable_support': 'Original support unavailable',
+    'comparison_limit': 'Comparison invocation limit', 'comparison_limitation': 'Comparison unavailable or limited',
+    'configured_unmeasured': 'Configured suite without measurement',
+    'run_metric_regression': 'Lower metric in right-hand run', 'run_case_regression': 'Lower case score in right-hand run',
+}
+
+
+def coverage_label(skill):
+    purposes = {run['custom']['purpose'] for run in skill['behavioral_results'] if 'custom' in run}
+    if purposes:
+        return ' · '.join(('Oracle qualification' if purpose == 'oracle_qualification' else 'Model-backed custom evidence')
+                          for purpose in sorted(purposes))
+    if any(run['measured'] for run in skill['behavioral_results']):
+        return 'Measured results'
+    if any(config['suite'] is not None for config in skill['configurations']) or skill['behavioral_results']:
+        return 'Configured; results not supplied'
+    if skill['configurations']:
+        return 'No configured suite'
+    return 'Configuration not supplied'
+
+
+FINDING_PREVIEW_LIMIT = 5
+
+
+def ordered_findings(findings):
+    """Presentation order only; serialized analysis and identities are unchanged."""
+    order = {'mandatory': 0, 'investigate': 1, 'context': 2}
+    return sorted(findings, key=lambda f: (order[f['importance']], f['kind'], f['id']))
+
+
+def finding_observation(item):
+    observed = item['observed']
+    facts = [item['skill'] or 'Report scope']
+    if item['case_ids']:
+        facts.append('cases ' + ', '.join(item['case_ids']))
+    for key, label in (('with_minus_without', 'with minus without'), ('right_minus_left', 'right minus left')):
+        if key in observed:
+            facts.append(label + ' ' + signed(observed[key]))
+    for key, label in (('scanners', 'scanners'), ('components', 'failed gate components'), ('metric_ids', 'metrics')):
+        if observed.get(key):
+            facts.append(label + ': ' + ', '.join(observed[key]))
+    if 'classification' in observed:
+        facts.append('recorded outcome: ' + observed['classification'])
+    return '; '.join(facts)
+
+
+def finding_qualifier(item):
+    return item['uncertainty'].replace('_', ' ')
+
+
+def render_finding(item, *, exact=False):
+    lines = [f"- **{FINDING_LABELS[item['kind']]}**: {finding_observation(item)}.",
+             f"  Evidence limit: {finding_qualifier(item)}. Next: {NEXT_STEPS[item['next_step']]}"]
+    if exact:
+        lines += ['', '<details><summary>Exact finding and evidence identities</summary>', '',
+                  f"Finding `{item['id']}`; importance `{item['importance']}`; uncertainty `{item['uncertainty']}`; next step `{item['next_step']}`."]
+        for key in ('record_ids', 'case_ids', 'observation_ids', 'reference_ids'):
+            lines.append(key + ': ' + (', '.join('`' + value + '`' for value in item[key]) or 'none'))
+        lines += ['', '</details>', '']
+    return lines
+
+
 def static_record(record_id, record):
     return {'record_id': record_id, 'run_id': record['run_id'], 'source': compact_source(record['source']),
             'availability': copy.deepcopy(record['availability']), 'scans': copy.deepcopy(record['scans']),
@@ -60,6 +140,17 @@ def static_totals(runs, scanner='catalog-total'):
     return {level: sum(s['severity_counts'][level] for s in scans)
             if all(s is not None and s['severity_counts'][level] is not None for s in scans) else None
             for level in SEVERITIES}
+
+
+
+def static_count_label(runs):
+    totals = static_totals(runs)
+    if not runs:
+        return 'Not supplied'
+    if totals is None:
+        return 'Totals withheld: no single snapshot per skill'
+    return ' · '.join((str(totals[level]) if totals[level] is not None else 'unknown') + ' ' + level
+                      for level in SEVERITIES)
 
 
 def static_guidance(scanner, check):
@@ -98,9 +189,9 @@ def static_overview(runs):
     return lines
 
 
-def render_static_summary(runs):
+def render_static_summary(runs, *, heading='Static quality and coverage'):
     """Markdown over already validated static projections; no scanner prose or new findings."""
-    lines = ['### Static quality and coverage', '',
+    lines = ['### ' + heading, '',
              'Scanner severity is not confirmed engineering significance. Findings remain advisory in quality CI.', '',
              *[part for line in static_overview(runs) for part in (line, '')],
              '#### Significant evaluator flags · applicability unresolved', '']
@@ -116,8 +207,10 @@ def render_static_summary(runs):
         run, item = items[0]
         lines.extend([f"- **{level.upper()} · `{scanner}` / `{check or 'rule-unavailable'}`** — {len(items)} " +
             ('finding' if len(items) == 1 else 'findings') + f"; skills: {skills}.",
-            f"  Representative: record `{run['record_id']}`, reference `{item['reference']}`.",
-            '  ' + static_guidance(scanner, check)])
+            '  Next: ' + static_guidance(scanner, check), '',
+            '<details><summary>Exact representative evidence</summary>', '',
+            f"Skill `{run['source']['skill_id']}`; record `{run['record_id']}`; reference `{item['reference']}`.",
+            '', '</details>', ''])
     omitted = groups[SIGNIFICANT_GROUP_LIMIT:]
     if omitted:
         lines.extend(['', 'Additional groups omitted from this preview: ' + '; '.join(
@@ -125,9 +218,9 @@ def render_static_summary(runs):
             f"{sum(len(items) for key, items in omitted if key[0] == level)} findings" for level in ('critical', 'high')) + '.'])
     lines.extend(['', 'Groups count retained finding records, not raw scanner occurrence spans. '
                   'Every individual finding remains in the detailed evidence; no false-positive classification is inferred.'])
-    lines.extend(['', 'SECURITY denotes this pipeline\'s SkillSpector integration. Partial scans may retain valid findings; '
+    lines.extend(['', '<details><summary>Evidence limits · static interpretation</summary>', '', 'SECURITY denotes this pipeline\'s SkillSpector integration. Partial scans may retain valid findings; '
                   'zero findings and no incompleteness reported do not prove exhaustive inspection or behavioral benefit. '
-                  'Detailed coverage reasons and separate scanner process outcomes are not retained by this native-report path.'])
+                  'Detailed coverage reasons and separate scanner process outcomes are not retained by this native-report path.', '', '</details>'])
     return lines
 
 
@@ -727,33 +820,64 @@ def signed(quantity_value):
 
 def render_summary(result):
     """Fixed templates over validated analysis; no raw prose, timestamps, or paths."""
+    findings = ordered_findings(result['findings'])
+    runs = [run for skill in result['skills'] for run in skill['behavioral_results']]
+    static_runs = [run for skill in result['skills'] for run in skill['static_results']]
     lines = ['# Offline skill analysis', '',
-             'Descriptive evidence from supplied public bundles only. No chronology, statistical significance,',
-             'repeatability, causal inference, production readiness, or cross-suite rankings are established.', '',
-             'Skill Lift is a native difference on the evaluator score scale. Effectiveness, Correctness,',
-             'and Discoverability are native rubric dimensions. Derived case means never reconstruct native lift.', '']
-    lines.extend(render_static_summary([run for skill in result['skills'] for run in skill['static_results']]) + [''])
+             'Descriptive evidence from supplied public bundles only. Static findings, mandatory gates and measurement coverage have separate scopes.', '',
+             '| Evidence scope | Supplied status |', '| --- | --- |',
+             f"| Skills | {len(result['skills'])} represented |",
+             f"| Mandatory gates · recorded observations | {sum(len(r['gates']['failed']) for r in runs)} failed; "
+             f"{sum(r['gates']['passed_observations'] for r in runs)} passed; {sum(r['gates']['unknown_observations'] for r in runs)} unknown |",
+             f"| Static findings · advisory | {static_count_label(static_runs)} |",
+             f"| Investigation records | {len(findings)} |",
+             f"| Skills with measured results | {sum(any(r['measured'] for r in skill['behavioral_results']) for skill in result['skills'])} |", '',
+             'Unknown gates are not passes. Missing execution coverage is excluded from recorded counts.', '',
+             '## Review first', '',
+             'Native required-check failures describe evaluator policy, not CI blockers.', '',
+             f"{len(findings)} investigation records; showing {min(len(findings), FINDING_PREVIEW_LIMIT)}. "
+             f"{max(0, len(findings) - FINDING_PREVIEW_LIMIT)} additional records in the complete list below.", '']
+    for item in findings[:FINDING_PREVIEW_LIMIT]:
+        lines.extend(render_finding(item))
+    if not findings:
+        lines += ['No deterministic investigation findings in the supplied evidence. This does not establish readiness.', '']
+    lines += ['', '<details><summary>All deterministic investigations and exact evidence</summary>', '']
+    for item in findings:
+        lines.extend(render_finding(item, exact=True))
+    lines += ['', '</details>', '']
+    lines.extend(render_static_summary(static_runs) + [''])
+    lines += ['## Skills and coverage', '']
     for skill in result['skills']:
-        lines.extend([f"## `{skill['skill']}`", ''])
+        lines.extend([f"### `{skill['skill']}`", '', coverage_label(skill), '',
+                      '<details><summary>Results and supporting evidence</summary>', ''])
         for config in skill['configurations']:
             count = config['suite']['case_count'] if config['suite'] else 0
             lines.append(f"Configuration `{config['id']}`: {count} configured cases; {config['behavioral_status']}.")
         if not any(run['measured'] for run in skill['behavioral_results']):
             lines.extend(['No supplied model-backed measurement.', ''])
         for run in skill['behavioral_results']:
-            lines.extend([f"Run `{run['run_id']}` (record `{run['record_id']}`):", ''])
+            lines.extend([f"Run `{run['run_id']}`; evidence {run['availability']['status']}; "
+                          f"limitations: {', '.join(run['availability']['reasons']) or 'none recorded'}.", '',
+                          '<details><summary>Exact record identity</summary>', '', f"`{run['record_id']}`", '', '</details>', ''])
             if 'custom' in run:
                 custom = run['custom']
                 lines.append(f"- Purpose `{custom['purpose']}`; agent `{custom['agent']}`; complete paired population: {custom['complete_paired_population']}.")
                 lines.append('- Structural validation passed; native consistency is producer reported at admission. Producer and execution authentication are not established.')
+                lines += ['', '| Reported custom outcome | With skill | Without skill |', '| --- | --- | --- |']
+                for kind in (*evidence.CUSTOM_OUTCOMES, 'missing'):
+                    lines.append(f"| {kind} | {custom['outcomes']['with_skill'][kind]} | {custom['outcomes']['without_skill'][kind]} |")
+                lines.append('')
                 for metric in custom['metrics']:
                     definition = metric['definition']
-                    lines.append(f"- `{definition['id']}`: {definition['definition']} Competency `{definition['competency']}`; unit `{definition['unit']}`.")
+                    lines.append(f"- **{definition['title']}** (`{definition['id']}`)")
                     for arm, coverage in metric['coverage'].items():
                         mean = metric['arm_means'][arm]
                         lines.append(f"  - `{arm}`: applicable {coverage['expected_applicable']}, measured {coverage['measured']}, unavailable/missing {coverage['unavailable_or_missing']}, recorded nonapplicable {coverage['recorded_nonapplicable']}; mean {mean['display'] if mean else 'unavailable'}.")
                     delta = metric['with_minus_without']
-                    lines.append(f"  - With-minus-without: {signed(delta) if delta else 'unavailable'}; {metric['interpretation']}.")
+                    lines.append(f"  - With-minus-without: {signed(delta) if delta else 'unavailable'}; {metric['unavailable_reason'] or metric['interpretation']}.")
+                    lines += ['', '<details><summary>Metric definition and interpretation</summary>', '',
+                              f"{definition['definition']} Competency `{definition['competency']}`; unit `{definition['unit']}`. {metric['interpretation']}.",
+                              '', '</details>', '']
                 lines.append('- Activation and fixture-gate baseline zeros are routing/policy evidence, not worse task correctness. Oracle qualification is not a model-backed skill-benefit measurement.')
             for metric in run['native_metrics']:
                 value = quantity(Decimal(str(metric['value'])))
@@ -775,12 +899,16 @@ def render_summary(result):
                     lines.append(f"- Case `{case['case_id']}` regression: {signed(delta)} with-minus-without (descriptive).")
             limitations = run['availability']['reasons']
             lines.extend([f"- Supporting evidence: {run['availability']['status']}; limitations: {', '.join(limitations) or 'none recorded'}.", ''])
+        lines += ['', '<details><summary>All scanner outcomes and native counts</summary>', '']
         for static in skill['static_results']:
             lines.append(f"Static record `{static['record_id']}`; support {static['availability']['status']}.")
             for scan in static['scans']:
                 counts = ', '.join(f"{key}={scan['severity_counts'][key]}" for key in ('critical', 'high', 'medium', 'low'))
-                lines.append(f"- Scanner `{scan['scanner']}`: {scan['status']}; blocking {scan.get('blocking', True)}; counts {counts}.")
+                lines.append(f"- Scanner `{scan['scanner']}`: {scan['status']}; required by native evaluator {scan.get('blocking', True)}; counts {counts}.")
             lines.extend([f"- {len(static['detailed_findings'])} detailed findings retained separately; aggregate and scanner counts are not added.", ''])
+            for finding in static['detailed_findings']:
+                lines.append(f"- `{finding['scanner']}` / `{finding['check']}`: {finding['severity']}; reference `{finding['reference']}`.")
+        lines += ['', '</details>', '', '<details><summary>Cross-run comparison status and evidence</summary>', '']
         lines.append(f"Cross-run comparison: {skill['comparison_status']}.")
         for comparison in skill['comparisons']:
             lines.extend([f"- `{comparison['classification']}`: left `{comparison['left_record_id']}`, right `{comparison['right_record_id']}`.",
@@ -788,11 +916,11 @@ def render_summary(result):
             for metric in comparison['native_metrics']:
                 delta = metric['right_minus_left']
                 lines.append(f"- {metric['name']}: left {metric['left']}, right {metric['right']}; right-minus-left {signed(delta) if delta else 'unsupported'}.")
-        lines.append('')
-    lines.extend(['## Evidence-backed findings', ''])
-    for item in result['findings']:
-        lines.append(f"- `{item['id']}`: {item['kind']} ({item['importance']}); skill `{item['skill']}`; "
-                     f"uncertainty `{item['uncertainty']}`; next step `{item['next_step']}`.")
+        lines += ['', '</details>', '', '</details>', '']
+    lines += ['## Source details', '', '<details><summary>Evidence limits and measure interpretation</summary>', '',
+              'No chronology, statistical significance, repeatability, causal inference, production readiness, or cross-suite rankings are established.',
+              'Skill Lift is a native difference on the evaluator score scale. Effectiveness, Correctness and Discoverability are native rubric dimensions. '
+              'Derived case means never reconstruct native lift.', '', '</details>']
     lines.extend(['', 'Independent semantic validation requires these exact public records. Expert investigation also',
                   'requires the appropriate original trial/scanner evidence and exact source content; unavailable',
                   'or expired references cannot supply discarded bytes. Reference expiry preserves completed scores.', ''])

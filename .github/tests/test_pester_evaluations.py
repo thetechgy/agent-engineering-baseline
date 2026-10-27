@@ -203,10 +203,14 @@ class NativeStagingTests(unittest.TestCase):
             with patch.object(EvaluationService, 'discover_latest_results', return_value=run), \
                     patch.object(EvaluationService, 'failure_reason', return_value=None), \
                     patch('skillevaluator.source_identity.evaluated_source_revision', return_value='a' * 40), \
-                    patch.dict(os.environ, {'GITHUB_SHA': 'a' * 40}), contextlib.redirect_stdout(io.StringIO()):
+                    patch.dict(os.environ, {'GITHUB_SHA': 'a' * 40}), contextlib.redirect_stdout(io.StringIO()) as summary:
                 reports.benchmark_report(ROOT, root, pilot.NAME, 'confirmation', root / 'metrics')
                 self.assertFalse((root / 'metrics').exists())
                 self.assertTrue(reports.read_json(root / 'provenance.json')['diagnostic_only'])
+                self.assertIn('Public reporting is supported', summary.getvalue())
+                self.assertIn('projection and upload success are reported separately', summary.getvalue())
+                self.assertIn('history remains ineligible', summary.getvalue())
+                self.assertNotIn('public normalization and history are unavailable', summary.getvalue())
                 reward = run / 'codex/with-skill/trials/0/reward.json'
                 data = reports.read_json(reward)
                 data['custom_details']['outcome']['classification'] = 'unsupported'

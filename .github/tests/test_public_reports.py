@@ -129,6 +129,11 @@ class PublicReportsTests(unittest.TestCase):
         public = evidence.read_json(self.root / 'public-0/skills/podman/static/public-report.json')
         self.assertIn(evidence.identity(public), outputs[0])
         self.assertIn(public['findings'][0]['reference'], outputs[0])
+        visible = re.sub(r'<details>.*?</details>', '', outputs[0], flags=re.S)
+        self.assertNotIn('sha256:', visible)
+        self.assertIn('Next:', visible)
+        self.assertIn('### Review first', visible)
+        self.assertIn('### Skills and coverage', visible)
 
     def test_quality_cli_projection_failure_never_prints_clean_summary(self):
         native = self.static(('podman',))

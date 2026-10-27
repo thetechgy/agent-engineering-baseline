@@ -7,6 +7,7 @@ import copy
 from datetime import datetime, timezone
 import importlib.util
 import json
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -234,6 +235,13 @@ class CustomMetricTests(unittest.TestCase):
         run = analysis.behavioral_result(evidence.identity(value), value, analysis.analyze_cases(value, analysis.case_index(value)))
         self.assertEqual(run['gates']['unknown_observations'], 0)
         self.assertTrue(all(m['with_minus_without'] is None and all(v is None for v in m['arm_means'].values()) for m in result['metrics']))
+        html = report.custom_measurements(run, value)
+        self.assertIn('incomplete_required_population', html)
+        self.assertIn('Unavailable', html)
+        # A withheld mean cannot masquerade as a measured zero.
+        means = re.findall(r'<caption>Measured values.*?</table>', html)
+        self.assertTrue(means)
+        self.assertTrue(all('Unavailable' in table and '>0.0000<' not in table for table in means))
 
     def test_public_only_analysis_html_and_review_after_native_removal(self):
         native, public = self.public_bundle()
@@ -253,6 +261,13 @@ class CustomMetricTests(unittest.TestCase):
                          'Structurally validated reported evidence', 'not independently authenticated', 'not collected in custom-only',
                          '18 trials with evaluated custom outcomes', 'Reported custom measurements; paired population incomplete'):
             self.assertIn(expected, text)
+        self.assertIn('Model-backed custom evidence', text)
+        self.assertIn('<th scope="col">Outcome</th><th scope="col">With skill</th><th scope="col">Without skill</th>', text)
+        self.assertIn('<summary>Metric definition, applicability and scoring basis</summary>', text)
+        markdown = analysis.render_summary(result).decode()
+        self.assertIn('| Reported custom outcome | With skill | Without skill |', markdown)
+        self.assertIn('unavailable', markdown)
+        self.assertIn('recorded nonapplicable', markdown)
         self.assertNotIn('PESTER_VERIFIER_ONLY_', text)
         self.assertNotIn('0 scored observations', text)
         self.assertNotIn('0 lower with-skill case scores', text)

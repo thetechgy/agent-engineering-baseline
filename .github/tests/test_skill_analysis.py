@@ -181,6 +181,25 @@ class AnalysisTests(unittest.TestCase):
         value, _ = self.analyze(self.bundle('input', [record]))
         return value['skills'][0]['behavioral_results'][0]
 
+    def test_markdown_preview_preserves_order_and_discloses_exact_identities(self):
+        records = [static_control(name='skill-' + str(i), flags=(('SECURITY', 'R1', 'high'),),
+                                  states={'SECURITY': 'incomplete'}) for i in range(7)]
+        result, captured = self.analyze(self.bundle('preview', records))
+        identities = evidence.identity(result), evidence.identity(captured.records)
+        markdown = analysis.render_summary(result).decode()
+        preview = markdown.split('## Review first', 1)[1].split('<details>', 1)[0]
+        self.assertEqual(preview.count('- **'), 5)
+        self.assertNotIn('sha256:', preview)
+        self.assertIn(f"{len(result['findings']) - 5} additional records", preview)
+        ordered = analysis.ordered_findings(result['findings'])
+        self.assertEqual(ordered, analysis.ordered_findings(list(reversed(result['findings']))))
+        for item in ordered[:5]:
+            self.assertIn(analysis.finding_observation(item), preview)
+        for item in ordered:
+            for identity in [item['id'], *item['record_ids'], *item['observation_ids'], *item['reference_ids']]:
+                self.assertIn(identity, markdown)
+        self.assertEqual(identities, (evidence.identity(result), evidence.identity(captured.records)))
+
     def test_pinned_environment(self):
         self.assertEqual(importlib.metadata.version('skillevaluator'), '0.3.0')
 

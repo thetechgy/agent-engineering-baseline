@@ -188,12 +188,12 @@ class AttachmentTests(unittest.TestCase):
         self.assertEqual(len(doc.ids), len(set(doc.ids)))
         self.assertTrue(all(href.startswith('#') and href[1:] in doc.ids for href in doc.links))
 
-    def test_overview_exposes_proposed_action_and_separate_assessments(self):
+    def test_review_first_exposes_proposed_action_and_separate_assessments(self):
         self.fixture('gh-89f46f0', category='investigate', unmeasured=True)
         self.supplied()
         self.supplied(verdict='Substantive pass; no numeric score assigned', scored=False, suffix='unscored')
         output = report.render_report(self.result, self.captured, reviews=self.load()).decode()
-        overview = output.split('<section class="overview"', 1)[1].split('</section>', 1)[0]
+        overview = output.split('<section aria-labelledby="important-findings"', 1)[1].split('</section>', 1)[0]
         for value in ('Analyst conclusions and recommended actions', 'model interpretation',
                       'Request exact retained results from the overlay owner.', 'Independent AI assessment (supplied)',
                       'Synthetic ChatGPT assessor', '9 out of 10', 'Substantive pass; no numeric score assigned',
@@ -203,7 +203,7 @@ class AttachmentTests(unittest.TestCase):
         self.assertLess(output.index('Analyst conclusion:</strong>'), output.index('<h3>Behavioral run:'))
         self.assertIn('gh · analyst conclusions, proposed actions and citations', overview)
 
-    def test_assessment_labels_scores_and_original_fields_match_overview_and_detail(self):
+    def test_assessment_labels_scores_and_original_fields_match_preview_and_detail(self):
         self.fixture(category='investigate')
         for kind in ('independent_ai', 'human_supplied', 'unknown'):
             row = self.supplied(verdict='pass_substantive_usefulness_demonstrated', kind=kind, suffix=kind)
@@ -218,7 +218,7 @@ class AttachmentTests(unittest.TestCase):
         identities = (evidence.identity(self.result), evidence.identity(self.captured.records),
                       evidence.identity(validated.items))
         output = report.render_report(self.result, self.captured, reviews=validated).decode()
-        overview = output.split('<section class="overview"', 1)[1].split('</section>', 1)[0]
+        overview = output.split('<section aria-labelledby="important-findings"', 1)[1].split('</section>', 1)[0]
         detail = output.split('Model interpretation · analyst report', 1)[1]
         for part in (overview, detail):
             for label in ('Independent AI assessment (supplied)', 'Human assessment (supplied; unauthenticated)',
