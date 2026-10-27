@@ -732,6 +732,42 @@ class AnalysisTests(unittest.TestCase):
         with patch.object(analysis, 'MARKDOWN_LIMIT', size - 1), self.assertRaisesRegex(ValueError, 'Markdown size'):
             analysis.render_summary(result)
 
+    def test_large_static_detail_preview_preserves_production_json_output(self):
+        # Each report fits the public byte limit; their combined Markdown used
+        # to exceed 1 MiB and prevent publication of either output file.
+        records = [static_control(name=f'large-{index:02}',
+            flags=[('SECURITY', 'R1', 'high')] * 1000) for index in range(10)]
+        for record in records:
+            self.assertLessEqual(len(evidence.encoded(record)), evidence.PUBLIC_LIMIT)
+        root = self.bundle('large-static', records)
+        result, captured = self.analyze(root)
+        identities = evidence.identity(result), evidence.identity(captured.records)
+        output = self.root / 'large-output'
+        child = subprocess.run([sys.executable, '-B', str(REPO / '.github/scripts/skill_analysis.py'),
+            '--input', str(root), '--output', str(output)], capture_output=True, text=True, timeout=60)
+        self.assertEqual(child.returncode, 0, child.stderr)
+        self.assertEqual((output / 'analysis.json').read_bytes(), evidence.encoded(result))
+        markdown = (output / 'summary.md').read_text()
+        self.assertLessEqual(len(markdown.encode()), analysis.MARKDOWN_LIMIT)
+        self.assertEqual(markdown.count('- `SECURITY` / `R1`: high; reference'), 100)
+        self.assertEqual(markdown.count('Detail preview: 100 shown; 900 omitted'), 1)
+        self.assertEqual(markdown.count('Detail preview: 0 shown; 1000 omitted'), 9)
+        self.assertIn('[analysis.json](analysis.json)', markdown)
+        self.assertIn('`skills[].static_results[].detailed_findings`', markdown)
+        self.assertEqual(sum(len(run['detailed_findings']) for skill in result['skills']
+                             for run in skill['static_results']), 10000)
+        self.assertEqual(identities, (evidence.identity(result), evidence.identity(captured.records)))
+
+    def test_static_detail_preview_boundary_counts(self):
+        for size in (0, 99, 100, 101):
+            with self.subTest(size=size):
+                record = static_control(flags=[('SECURITY', 'R1', 'high')] * size)
+                result, _ = self.analyze(self.bundle('details-' + str(size), [record]))
+                markdown = analysis.render_summary(result).decode()
+                shown = min(size, 100)
+                self.assertEqual(markdown.count('- `SECURITY` / `R1`: high; reference'), shown)
+                self.assertIn(f'Detail preview: {shown} shown; {size - shown} omitted', markdown)
+
     def test_stale_expiry_rejects_refreshed_projection_preserves_scores(self):
         root = self.bundle('old', [self.historical])
         later = datetime(2026, 10, 20, tzinfo=timezone.utc)

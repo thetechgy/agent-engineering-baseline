@@ -27,6 +27,8 @@ MARKDOWN_LIMIT = 1024 * 1024
 # through at most 100 planned attempts and subsequent differences of means.
 DECIMAL_PRECISION = 400
 SIGNIFICANT_GROUP_LIMIT = 8
+# Shared across the entire Markdown summary, not renewed for each record.
+STATIC_DETAIL_PREVIEW_LIMIT = 100
 SEVERITIES = ('critical', 'high', 'medium', 'low')
 
 
@@ -820,6 +822,7 @@ def signed(quantity_value):
 
 def render_summary(result):
     """Fixed templates over validated analysis; no raw prose, timestamps, or paths."""
+    remaining_static_details = STATIC_DETAIL_PREVIEW_LIMIT
     findings = ordered_findings(result['findings'])
     runs = [run for skill in result['skills'] for run in skill['behavioral_results']]
     static_runs = [run for skill in result['skills'] for run in skill['static_results']]
@@ -906,7 +909,14 @@ def render_summary(result):
                 counts = ', '.join(f"{key}={scan['severity_counts'][key]}" for key in ('critical', 'high', 'medium', 'low'))
                 lines.append(f"- Scanner `{scan['scanner']}`: {scan['status']}; required by native evaluator {scan.get('blocking', True)}; counts {counts}.")
             lines.extend([f"- {len(static['detailed_findings'])} detailed findings retained separately; aggregate and scanner counts are not added.", ''])
-            for finding in static['detailed_findings']:
+            preview = static['detailed_findings'][:remaining_static_details]
+            remaining_static_details -= len(preview)
+            omitted = len(static['detailed_findings']) - len(preview)
+            lines.extend([f"Detail preview: {len(preview)} shown; {omitted} omitted "
+                          f"(at most {STATIC_DETAIL_PREVIEW_LIMIT} detail rows across this summary). "
+                          "The complete list is in [analysis.json](analysis.json), "
+                          "`skills[].static_results[].detailed_findings`, under the record identity above.", ''])
+            for finding in preview:
                 lines.append(f"- `{finding['scanner']}` / `{finding['check']}`: {finding['severity']}; reference `{finding['reference']}`.")
         lines += ['', '</details>', '', '<details><summary>Cross-run comparison status and evidence</summary>', '']
         lines.append(f"Cross-run comparison: {skill['comparison_status']}.")

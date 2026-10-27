@@ -1008,6 +1008,14 @@ Contract failures return exit status 1 with a fixed message that excludes input
 content and paths. Unsupported descriptor platforms reject; Linux publication
 is tested. This does not establish Windows output support.
 
+The Markdown summary previews at most 100 individual static detail rows across
+all records, in the analysis's existing skill, record and finding order. Each
+record reports shown and omitted counts and links to the complete
+`skills[].static_results[].detailed_findings` list in the sibling `analysis.json`,
+identified by `record_id`. The separate critical/high grouped preview is unchanged.
+This presentation cap does not remove evidence from JSON or the HTML report,
+change finding identities or counts, or relax either output-size limit.
+
 ### Analysis schema and identity
 
 The analysis schema is independently versioned (`schema_version: 1`), with method
