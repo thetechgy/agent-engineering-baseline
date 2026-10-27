@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       skill:
-        description: Authored skill or verified gh evaluation overlay
+        description: Authored skill or verified evaluation overlay
         required: true
         default: podman
         type: string
@@ -38,6 +38,7 @@ jobs:
       BENCHMARK_MODE: ${{ inputs.mode }}
     outputs:
       skill: ${{ steps.selection.outputs.skill }}
+      history_eligible: ${{ steps.selection.outputs.history_eligible }}
     steps:
       - name: Establish evaluation deadline
         id: budget
@@ -80,17 +81,15 @@ jobs:
         run: bash .github/scripts/setup-skillevaluator.sh benchmark
 
       - name: Validate dataset and runtime before inference
+        id: preparation
         timeout-minutes: 5
         run: |
           mkdir -p "$RUNNER_TEMP/skill-benchmark"
           cp "$RUNNER_TEMP/skill-evaluation-tools/versions.json" "$RUNNER_TEMP/skill-benchmark/versions.json"
           cp -r "$RUNNER_TEMP/skill-evaluation-tools/dependencies" "$RUNNER_TEMP/skill-benchmark/dependencies"
           "$SKILL_EVALUATOR_PYTHON" -m unittest discover -s .github/tests -v
-          skill_dir="$GITHUB_WORKSPACE/.apm/skills/$BENCHMARK_SKILL"
-          if [ "$BENCHMARK_SKILL" = gh ]; then
-            skill_dir="$RUNNER_TEMP/skill-benchmark/bundle/gh"
-            "$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_evaluations.py stage gh "$skill_dir"
-          fi
+          "$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_reports.py prepare "$RUNNER_TEMP/skill-benchmark" "$BENCHMARK_SKILL"
+          skill_dir="$(sed -n 's/^skill_dir=//p' "$GITHUB_OUTPUT")"
           skillevaluator tier3 validate "$skill_dir" --strict --json \
             > "$RUNNER_TEMP/skill-benchmark/dataset-validation.json"
           docker info > /dev/null
@@ -107,6 +106,9 @@ jobs:
           LLM_JUDGE_MODEL: gpt-5.6-sol
           ATTEMPTS: ${{ steps.selection.outputs.attempts }}
           EVALUATION_DEADLINE_EPOCH: ${{ steps.budget.outputs.deadline_epoch }}
+          SKILL_DIR: ${{ steps.preparation.outputs.skill_dir }}
+          GRADING_MODE: ${{ steps.preparation.outputs.grading_mode }}
+          WORKSPACE_MODE: ${{ steps.preparation.outputs.workspace_mode }}
         run: |
           if [ -z "$OPENAI_API_KEY" ]; then
             echo '::error::Add OPENAI_API_KEY to the protected skill-benchmark environment before running a paid benchmark.'
@@ -121,14 +123,9 @@ jobs:
           if (( evaluation_seconds > 8400 )); then
             evaluation_seconds=8400
           fi
-          skill_dir="$GITHUB_WORKSPACE/.apm/skills/$BENCHMARK_SKILL"
-          grading_mode=default
-          workspace_mode=isolated
-          if [ "$BENCHMARK_SKILL" = gh ]; then
-            skill_dir="$RUNNER_TEMP/skill-benchmark/bundle/gh"
-            grading_mode=default_plus_custom
-            workspace_mode=group
-          fi
+          skill_dir="$SKILL_DIR"
+          grading_mode="$GRADING_MODE"
+          workspace_mode="$WORKSPACE_MODE"
           cd "$RUNNER_TEMP/skill-benchmark"
           # Stop by the deadline, including forced-termination grace, to preserve recovery time.
           timeout --signal=INT --kill-after=30s "${evaluation_seconds}s" skillevaluator tier3 evaluate "$skill_dir" \
@@ -180,7 +177,7 @@ jobs:
           retention-days: 30
 
       - name: Upload sanitized standard metrics
-        if: success() && inputs.mode == 'standard'
+        if: success() && inputs.mode == 'standard' && steps.selection.outputs.history_eligible == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: skill-metrics
@@ -190,12 +187,18 @@ jobs:
 
       - name: Generate validated public benchmark evidence
         id: public-benchmark
-        if: always() && env.SKILL_EVALUATOR_PYTHON != '' && steps.selection.outcome == 'success'
+        if: always() && env.SKILL_EVALUATOR_PYTHON != '' && steps.selection.outcome == 'success' && steps.selection.outputs.public_supported == 'true'
         timeout-minutes: 3
         continue-on-error: true
+        env:
+          PUBLIC_SOURCE_KIND: ${{ steps.selection.outputs.public_source_kind }}
         run: |
+          public_root="$RUNNER_TEMP/skill-benchmark"
+          if [ "$PUBLIC_SOURCE_KIND" = retained ] && [ -f "$RUNNER_TEMP/skill-benchmark-artifact/custom-metric-capture.json" ]; then
+            public_root="$RUNNER_TEMP/skill-benchmark-artifact"
+          fi
           "$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_reports.py public-benchmark \
-            "$RUNNER_TEMP/skill-benchmark" "$BENCHMARK_SKILL" "$BENCHMARK_MODE" "$RUNNER_TEMP/skill-public-benchmark"
+            "$public_root" "$BENCHMARK_SKILL" "$BENCHMARK_MODE" "$RUNNER_TEMP/skill-public-benchmark"
 
       - name: Verify public reporting left the checkout unchanged
         id: public-benchmark-integrity
@@ -228,8 +231,11 @@ jobs:
           PUBLIC_GENERATION_OUTCOME: ${{ steps.public-benchmark.outcome }}
           PUBLIC_INTEGRITY_OUTCOME: ${{ steps.public-benchmark-integrity.outcome }}
           PUBLIC_UPLOAD_OUTCOME: ${{ steps.public-benchmark-upload.outcome }}
+          PUBLIC_SUPPORTED: ${{ steps.selection.outputs.public_supported }}
         run: |
-          if [ "$PUBLIC_GENERATION_OUTCOME" = success ] && [ "$PUBLIC_INTEGRITY_OUTCOME" = success ] && [ "$PUBLIC_UPLOAD_OUTCOME" = success ]; then
+          if [ "$PUBLIC_SUPPORTED" = false ]; then
+            echo 'Public normalization is unavailable for this diagnostic grading contract. Native diagnostics remain separate; history is ineligible.' >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$PUBLIC_GENERATION_OUTCOME" = success ] && [ "$PUBLIC_INTEGRITY_OUTCOME" = success ] && [ "$PUBLIC_UPLOAD_OUTCOME" = success ]; then
             echo 'Public benchmark evidence uploaded.' >> "$GITHUB_STEP_SUMMARY"
           else
             echo '::warning::Public benchmark evidence unavailable; inspect the reporting step. Native history eligibility is unchanged.'
@@ -244,7 +250,8 @@ jobs:
     needs: evaluate
     if: >-
       github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' &&
-      inputs.mode == 'standard' && needs.evaluate.result == 'success'
+      inputs.mode == 'standard' && needs.evaluate.result == 'success' &&
+      needs.evaluate.outputs.history_eligible == 'true'
     permissions:
       contents: write
     runs-on: ubuntu-latest

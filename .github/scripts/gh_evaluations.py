@@ -589,7 +589,7 @@ def redact_publication(value):
     return value
 
 
-def deterministic_gate(run, case_ids, attempts):
+def deterministic_gate(run, case_ids, attempts, *, numeric_excerpts=None):
     records = []
     for arm in ("with-skill", "without-skill"):
         rewards = sorted((run / "codex" / arm / "trials").glob("*/reward.json"))
@@ -607,6 +607,13 @@ def deterministic_gate(run, case_ids, attempts):
             reports.require(identity in counts, "Missing authored case identity")
             counts[identity] += 1
             metrics = reward.get("custom_metrics", {})
+            if numeric_excerpts is not None:
+                import skill_evidence as evidence
+                trial = reports.read_json(path.with_name('result.json'))
+                reports.require(trial.get('trial_name') == reward.get('trial_id')
+                    and reward.get('has_skill') is (arm == 'with-skill'), 'Deterministic extract identity mismatch')
+                metrics = evidence.restore_captured_numeric_fields(metrics, numeric_excerpts,
+                    arm.replace('-', '_'), trial['id'], identity)
             reports.require(
                 set(metrics)
                 == {

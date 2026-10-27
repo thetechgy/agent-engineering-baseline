@@ -13,7 +13,7 @@ from urllib.parse import urlsplit
 
 OUTPUTS = {
     "apm.lock.yaml", "AGENTS.md", ".github/copilot-instructions.md",
-    ".github/mcp.json", ".codex/config.toml",
+    ".github/instructions/personal.instructions.md", ".github/mcp.json", ".codex/config.toml",
 }
 GIT_PATH_ENV = {
     "GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR", "GIT_INDEX_FILE", "GIT_PREFIX",

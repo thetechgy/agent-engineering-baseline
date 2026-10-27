@@ -23,6 +23,11 @@ PINS = {'openai': '2.44.0', 'pydantic': '2.13.4', 'skillevaluator': '0.3.0'}
 MODULES = ('skill_review.py', 'skill_analysis.py', 'skill_evidence.py', 'skill_reports.py')
 # Reviewed source bytes, not commands or report-supplied executable identities.
 PROFILES = {
+    'custom-metrics-v2': ('f879f698e4d8d3db30bf6507538f07f3d142722b', (
+        'bb47d02509539a1049c96befb461bde044baa2da0b8b29d700461395f40cfc9d',
+        'e4f166ce6a5776911c8c673591751f83b55b3a7b32157adec920532cb6a55e47',
+        '8cba160927ecf52cd34e1afae2763fc5e6d89be07f11aa0df2512bc43ae2331a',
+        'f197b6338972be5817a935f1f6c51554f03b054c56c3fb6fed5b178cbd168d50')),
     'current-v2': ('afdb659ee130171d263da6f13c9dec6de912d3a4', (
         '778f26c48da2eb7811a895a8c6b4cc6f3d304262abbfbd86ee5e7bfa97102680',
         'b120aa5ed4d0f1d8267295ab79d4bc5bc05f9dd4a68e39e26131a61401a4d73f',
@@ -49,6 +54,9 @@ PROFILES = {
         '0f63d7671743807225c100b64c56221ec62b8437b4ef0ab364791ebc171afc63',
         '51d83cf47b7f64902d1f186364cfafd40933f81afb01c786aa9c3c8d448d9e97')),
 }
+
+# A reviewed data asset accompanies only profiles whose contract uses it.
+REGISTRY_DIGESTS = {'custom-metrics-v2': '380b377022281b36be2f3833cf116fa44e712a529ce9e7f9ad2060915f095d41'}
 
 # Fixed launcher. -I ignores caller PYTHONPATH, user site and working-directory imports.
 # Audit hooks restrict audited Python operations; they are NOT an OS sandbox.
@@ -208,13 +216,16 @@ def assessment(spec, parent, capture, report, review):
     return value
 
 
-def run_validator(request, modules, capture, roots):
+def run_validator(request, modules, capture, roots, registry=None):
     guards = (capture.guard(),)
     temporary = evidence.write_outputs({}, input_paths=roots, input_guards=guards)
     try:
         evidence.write_outputs({}, temporary / '.github', input_paths=roots, input_guards=guards)
         scripts = evidence.write_outputs({}, temporary / '.github' / 'scripts', input_paths=roots,
                                          input_guards=guards, rendered=modules)
+        if registry is not None:
+            evidence.write_outputs({}, temporary / '.github' / 'evals', input_paths=roots,
+                                   input_guards=guards, rendered={'custom-metrics.json': registry})
         try:
             response = subprocess.run([sys.executable, '-I', '-B', '-c', RUNNER, str(scripts)],
                 input=evidence.encoded(request), stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
@@ -289,6 +300,11 @@ def load(paths, captured):
             data = capture.read(tooling / '.github' / 'scripts' / name)
             require(evidence.digest_bytes(data) == 'sha256:' + digest, 'Unreviewed validator module')
             modules[name] = data
+        registry = None
+        if spec['profile'] in REGISTRY_DIGESTS:
+            registry = capture.read(tooling / '.github/evals/custom-metrics.json', limit=LIMIT)
+            require(evidence.digest_bytes(registry) == 'sha256:' + REGISTRY_DIGESTS[spec['profile']],
+                    'Unreviewed metric registry')
         roots.append(tooling)
         require(type(spec['assessments']) is list and len(spec['assessments']) <= MAX_ASSESSMENTS, 'Assessment limit')
         # Capture assessment originals before any temporary output is allocated.
@@ -299,7 +315,7 @@ def load(paths, captured):
         require(len({row['provenance']['assessment_digest'] for row in assessments}) == len(assessments), 'Duplicate assessment document')
         require(len(capture.members) + len(capture.states) <= analysis.MAX_ENTRIES, 'Attachment entry limit')
         require(len(evidence.encoded(request)) <= LIMIT, 'Validator request limit')
-        result = run_validator(request, modules, capture, tuple((*roots, *capture.roots)))
+        result = run_validator(request, modules, capture, tuple((*roots, *capture.roots)), registry)
         require(result['review_digest'] == spec['review_digest'] and result['markdown_digest'] == spec['markdown_digest'],
                 'Validated report capture mismatch')
         require(evidence.encoded(result['report']) == evidence.encoded(evidence.parse_json(raw, limit=LIMIT)), 'Validated report changed')

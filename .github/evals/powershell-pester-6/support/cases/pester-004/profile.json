@@ -1,0 +1,18 @@
+{
+  "command": "Test-PortAllowed",
+  "parameters": [
+    "Port"
+  ],
+  "properties": [
+    "Count",
+    "Length",
+    "Name",
+    "Port",
+    "Expected"
+  ],
+  "dependencies": [],
+  "module": null,
+  "minimum_tests": 1,
+  "protected_marker": "PESTER_VERIFIER_ONLY_PESTER_004",
+  "subject": "Subject.ps1"
+}

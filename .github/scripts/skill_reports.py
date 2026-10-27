@@ -141,7 +141,19 @@ def local_skill(workspace, name, *, dataset=False):
 
 
 def benchmark_skill(workspace, name, root=None):
-    """Only gh has an explicit repository overlay; other skills keep local ownership."""
+    """Resolve the existing upstream overlay and the bounded local pilot overlay."""
+    if name == 'powershell-pester-6':
+        import pester_evaluations as pester
+        local_skill(workspace, name)
+        pester.dataset(workspace)
+        if root is not None and (root / 'bundle' / name).exists():
+            staged = root / 'bundle' / name
+            regular_tree(staged)
+            for relative, digest in pester.manifest(workspace / '.apm/skills' / name).items():
+                require(hashlib.sha256((staged / relative).read_bytes()).hexdigest() == digest,
+                        'Staged local skill drift')
+            return staged
+        return workspace / pester.OVERLAY
     if name != "gh":
         return local_skill(workspace, name, dataset=True)
     import gh_evaluations as gh
@@ -159,7 +171,30 @@ def benchmark_skill(workspace, name, root=None):
     return workspace / gh.OVERLAY
 
 
+def benchmark_options(name):
+    """Execution routing only; this does not define scores or publication schemas."""
+    return {
+        'gh': {'grading_mode': 'default_plus_custom', 'workspace_mode': 'group', 'diagnostic_only': False},
+        'powershell-pester-6': {'grading_mode': 'custom_only', 'workspace_mode': 'isolated', 'diagnostic_only': True},
+    }.get(name, {'grading_mode': 'default', 'workspace_mode': 'isolated', 'diagnostic_only': False})
+
+
+def prepare_benchmark(workspace, root, name):
+    source = benchmark_skill(workspace, name)
+    root = root.absolute()
+    require(root.resolve() == root and not root.is_relative_to(workspace), 'Unsafe preparation root')
+    if name == 'gh':
+        import gh_evaluations as gh
+        source = gh.stage(workspace, root / 'bundle' / name)
+    elif name == 'powershell-pester-6':
+        import pester_evaluations as pester
+        source = pester.stage(workspace, root / 'bundle' / name)
+    return source
+
+
 def benchmark_policy(name):
+    if benchmark_options(name)['diagnostic_only']:
+        return {**POLICY, 'grading': 'custom_only', 'workspace_mode': 'isolated', 'diagnostic_only': True}
     return {**POLICY, "grading": "default_plus_custom", "upstream_revision":
             "89d7dcec017194af1d6f8853176b2dae9c1da762", "deterministic_gate": 3, "workspace_mode": "group",
             "fixture_boundary": "root-broker-unprivileged-agent-v1", "authorization_policy": "per-case-allowlist-v1",
@@ -352,6 +387,10 @@ def benchmark_report(workspace, root, name, mode, destination):
     from skillevaluator.evaluation import EvaluationService
     from skillevaluator.source_identity import evaluated_source_revision
 
+    capture_benchmark_custom(workspace, root, name)
+    if benchmark_options(name)['diagnostic_only']:
+        return diagnostic_benchmark_report(workspace, root, name, mode)
+
     if (root / "provenance.json").exists():
         require(read_json(root / "provenance.json").get("status") != "incomplete",
                 "Incomplete benchmark recovery cannot produce history metrics")
@@ -395,7 +434,15 @@ def benchmark_report(workspace, root, name, mode, destination):
             selection = read_json(root / "selection.json")
             require(selection["case_ids"] == expected_ids and (mode != "standard" or not selection["diagnostic_only"]),
                     "Diagnostic selection cannot publish benchmark history")
-        deterministic = gh.deterministic_gate(run, expected_ids, MODES[mode])
+        numeric_excerpts = None
+        if (root / 'custom-metric-capture.json').exists():
+            import skill_evidence as evidence
+            admitted = evidence.normalize_behavioral(root, name, run.name, workspace, native_layout=True)
+            capture = evidence.read_json(root / evidence.CUSTOM_CAPTURE)
+            numeric_excerpts = evidence.custom_numeric_excerpts(capture, evidence.custom_contract(name, workspace)[1])
+            for guard in evidence.record_guards(admitted): guard()
+        deterministic = (gh.deterministic_gate(run, expected_ids, MODES[mode]) if numeric_excerpts is None else
+                         gh.deterministic_gate(run, expected_ids, MODES[mode], numeric_excerpts=numeric_excerpts))
         write_json(root / "deterministic.json", {"trials": deterministic})
     rows = metric_rows(agent)
     provenance = {
@@ -420,7 +467,66 @@ def benchmark_report(workspace, root, name, mode, destination):
         write_json(destination / "metrics.json", provenance)
 
 
+def diagnostic_benchmark_report(workspace, root, name, mode):
+    """Validate native custom-only completion without standard-score projection."""
+    from skillevaluator.evaluation import EvaluationService
+    from skillevaluator.source_identity import evaluated_source_revision
+
+    require(mode == 'confirmation', 'Diagnostic-only suite cannot enter standard history')
+    if (root / 'provenance.json').exists():
+        require(read_json(root / 'provenance.json').get('status') != 'incomplete',
+                'Interrupted diagnostic recovery cannot certify a complete comparison')
+    skill = benchmark_skill(workspace, name, root)
+    service = EvaluationService()
+    run = service.discover_latest_results(skill, root / 'results')
+    require(run is not None and run.is_relative_to((root / 'results').resolve()),
+            'No complete diagnostic comparison; retained trials are inconclusive')
+    result = read_json(run / 'result.json')
+    require(service.failure_reason(result) is None and result['report_status'] == 'complete',
+            'Diagnostic comparison is incomplete or unscoreable')
+    validate_benchmark_versions(read_json(root / 'versions.json'))
+    require(result['skill_name'] == name and set(result['agents']) == {'codex'}, 'Diagnostic identity mismatch')
+    config = result['run_config']
+    require(config['grading']['mode'] == 'custom_only' and config['judge']['enabled'] is False,
+            'Diagnostic grading mismatch')
+    require(config['provider'] == {'name': 'openai', 'model': POLICY['model']}
+            and result['agents']['codex']['model'] == POLICY['model'], 'Diagnostic model mismatch')
+    require(evaluated_source_revision(config['evaluated_source']) == os.environ['GITHUB_SHA'],
+            'Diagnostic source mismatch')
+    harbor = config['harbor']
+    require(harbor['environment']['value'] == 'docker' and harbor['n_attempts'] == MODES[mode]
+            and harbor['n_concurrent'] == 2 and harbor['stop_on_pass'] is False
+            and harbor['timeout_multiplier'] == POLICY['timeout_multiplier'], 'Diagnostic execution policy mismatch')
+    cases = len(read_json(skill / 'evals/evals.json')['evals'])
+    expected_ids = {entry['id'] for entry in read_json(skill / 'evals/evals.json')['evals']}
+    require(result['dataset_summary']['total_tasks'] == cases, 'Diagnostic case coverage mismatch')
+    for arm in ('with_skill', 'without_skill'):
+        condition = result['agents']['codex']['conditions'][arm]
+        require(condition['execution_status'] == 'succeeded' and not condition['execution_errors']
+                and condition['scored_attempts'] == condition['expected_attempts'] == cases * MODES[mode],
+                'Unscoreable trial makes the complete pilot comparison inconclusive')
+        counts = {case: 0 for case in expected_ids}
+        rewards = list((run / 'codex' / arm.replace('_', '-') / 'trials').glob('*/reward.json'))
+        require(len(rewards) == cases * MODES[mode], 'Diagnostic retained trial cardinality mismatch')
+        for path in rewards:
+            reward = read_json(path)
+            require(reward.get('entry_id') in counts and reward.get('has_skill') is (arm == 'with_skill'),
+                    'Diagnostic retained trial identity mismatch')
+            outcome = reward.get('custom_details', {}).get('outcome', {})
+            require(outcome.get('classification') in ('passed', 'failed')
+                    and reward.get('evaluation_status') == 'complete',
+                    'Unscoreable or unclassified trial makes the comparison inconclusive')
+            counts[reward['entry_id']] += 1
+        require(all(count == MODES[mode] for count in counts.values()), 'Diagnostic retained case coverage mismatch')
+    write_json(root / 'provenance.json', {'schema_version': 1, 'status': 'complete',
+               'diagnostic_only': True, 'skill': name, 'mode': mode})
+    summary([f'## {name}: native diagnostic comparison', '',
+             'Native execution is complete. No standard judge metrics were scored. '
+             'Custom outcomes remain diagnostic; public normalization and history are unavailable.'])
+
+
 def validate_metrics(data, workspace, name, revision, *, mode="standard"):
+    require(not benchmark_options(name)['diagnostic_only'], 'Diagnostic-only suite cannot publish history')
     require(set(data) == {"schema_version", "skill", "mode", "revision", "policy", "patch_sha256",
                           "dataset_digest", "metrics"}, "Unexpected history artifact fields")
     require(data["schema_version"] == 1 and data["skill"] == name and data["mode"] == mode,
@@ -441,6 +547,7 @@ def validate_metrics(data, workspace, name, revision, *, mode="standard"):
 
 
 def publish_metrics(workspace, root, name):
+    require(not benchmark_options(name)['diagnostic_only'], 'Diagnostic-only suite cannot publish history')
     require(os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch"
             and os.environ.get("GITHUB_REF") == "refs/heads/main"
             and os.environ.get("BENCHMARK_MODE") == "standard", "History requires a main standard dispatch")
@@ -452,11 +559,42 @@ def publish_metrics(workspace, root, name):
     outputs(history_dir=f"benchmarks/{name}/{policy_id}")
 
 
+def capture_benchmark_custom(workspace, root, name):
+    """Hash retained native staging through the common admission contract."""
+    if name not in ('gh', 'powershell-pester-6') or (root / 'custom-metric-capture.json').exists():
+        return
+    import skill_evidence as evidence
+    results = root / 'results' / name
+    if not results.exists(): return
+    entries = list(results.iterdir())
+    runs = [path for path in entries if path.name != 'latest' and path.is_dir() and not path.is_symlink()]
+    if len(runs) != 1: return  # Public selection remains explicit for ambiguous runs.
+    run = runs[0]
+    tasks = run / '_harbor-tasks/codex'
+    if not tasks.exists(): return
+    rows = []
+    for arm, directory in (('with_skill', 'with'), ('without_skill', 'without')):
+        task_root = evidence.safe_path(tasks / directory, directory=True)
+        candidates = [path for path in task_root.iterdir() if path.is_dir()]
+        rows.extend(evidence.capture_custom_tasks(workspace, name, candidates, arm))
+    config = read_json(run / 'run_config.json')
+    prepared_ids = {row['id'] for row in read_json(benchmark_skill(workspace, name, root) / 'evals/evals.json')['evals']}
+    if prepared_ids != set(evidence.custom_contract(name, workspace)[0]['cases']): return
+    capture = evidence.custom_capture(workspace, name, benchmark_skill(workspace, name, root), rows,
+        purpose='benchmark', attempts=config['harbor']['n_attempts'], agent='codex',
+        execution_policy={'environment': config['harbor']['environment']['value'],
+            'concurrency': config['harbor']['n_concurrent'], 'timeout_multiplier': config['harbor']['timeout_multiplier'],
+            'stop_on_pass': config['harbor']['stop_on_pass']},
+        numeric_excerpts=evidence.capture_custom_numeric_fields(workspace, name, run / '_harbor-jobs', root, rows))
+    write_json(root / evidence.CUSTOM_CAPTURE, capture)
+
+
 def benchmark_artifacts(workspace, root, name, destination):
     """Stage only native report contracts, using upstream credential redaction."""
     from skillevaluator.utils.redaction import redact_sensitive_data, redact_sensitive_text
 
     benchmark_skill(workspace, name)
+    capture_benchmark_custom(workspace, root, name)
     root = root.absolute()
     destination = destination.absolute()
     for path in (root, destination):
@@ -470,7 +608,7 @@ def benchmark_artifacts(workspace, root, name, destination):
         excluded_links={Path("results") / name / "latest"},
     )
     metadata = {"versions.json", "dataset-validation.json", "provenance.json",
-                "docker-version.json", "docker-images.jsonl"}
+                "docker-version.json", "docker-images.jsonl", "custom-metric-capture.json"}
     if name == "gh":
         metadata.update({"deterministic.json", "selection.json"})
     # Reviewed v0.3.0 report/collector contract, restricted to this workflow's Codex agent.
@@ -513,7 +651,10 @@ def benchmark_artifacts(workspace, root, name, destination):
         # Recheck the final input immediately before reading; raw results stay untouched.
         require(not source.is_symlink() and source.resolve() == source, "Linked publication input")
         if source.suffix == ".json":
-            value = redact_sensitive_data(read_json(source, limit=64 * 1024 * 1024))
+            value = read_json(source, limit=64 * 1024 * 1024)
+            if benchmark_options(name)['diagnostic_only']:
+                require('PESTER_VERIFIER_ONLY_' not in json.dumps(value), 'Protected verifier input in diagnostic artifact')
+            value = redact_sensitive_data(value)
             if name == "gh":
                 from gh_evaluations import redact_publication
                 value = redact_publication(value)
@@ -521,7 +662,10 @@ def benchmark_artifacts(workspace, root, name, destination):
         else:
             if name == "gh":
                 require(source.stat().st_size <= 64 * 1024 * 1024, "Oversized gh diagnostic")
-            text = redact_sensitive_text(source.read_text(encoding="utf-8"))
+            text = source.read_text(encoding="utf-8")
+            if benchmark_options(name)['diagnostic_only']:
+                require('PESTER_VERIFIER_ONLY_' not in text, 'Protected verifier input in diagnostic artifact')
+            text = redact_sensitive_text(text)
             if name == "gh":
                 from gh_evaluations import redact_publication
                 text = redact_publication(text)
@@ -676,7 +820,8 @@ def public_benchmark(workspace, root, name, mode, destination, selected=None):
             "Selected public benchmark has no configured suite")
     data = evidence.normalize_behavioral(Path(root), name, selected, workspace, native_layout=True)
     attempts = data["policy"]["attempts"]
-    require(attempts["mode"] in (mode, "unknown") and attempts["maximum"] in (None, MODES[mode]),
+    qualification = data.get('custom', {}).get('purpose') == 'oracle_qualification'
+    require(qualification or attempts["mode"] in (mode, "unknown") and attempts["maximum"] in (None, MODES[mode]),
             "Public benchmark mode mismatch")
     public = evidence.project(data)
     count = stage_public(workspace, root, destination, [
@@ -693,6 +838,9 @@ def main():
     select = commands.add_parser("select")
     select.add_argument("skill")
     select.add_argument("mode", choices=MODES)
+    prepare = commands.add_parser('prepare')
+    prepare.add_argument('root', type=Path)
+    prepare.add_argument('skill')
     catalog = commands.add_parser("catalog")
     catalog.add_argument("root", type=Path)
     benchmark = commands.add_parser("benchmark")
@@ -737,7 +885,16 @@ def main():
         catalog_preflight(workspace)
     elif args.command == "select":
         benchmark_skill(workspace, args.skill)
-        outputs(skill=args.skill, attempts=MODES[args.mode])
+        options = benchmark_options(args.skill)
+        require(not options['diagnostic_only'] or args.mode == 'confirmation',
+                'Diagnostic-only suite requires confirmation mode; history is unavailable')
+        outputs(skill=args.skill, attempts=MODES[args.mode],
+                history_eligible=str(not options['diagnostic_only']).lower(),
+                public_supported='true', public_source_kind='retained' if options['grading_mode'] == 'custom_only' else 'original')
+    elif args.command == 'prepare':
+        skill = prepare_benchmark(workspace, args.root, args.skill)
+        options = benchmark_options(args.skill)
+        outputs(skill_dir=str(skill), grading_mode=options['grading_mode'], workspace_mode=options['workspace_mode'])
     elif args.command == "catalog":
         try:
             catalog_report(workspace, args.root)

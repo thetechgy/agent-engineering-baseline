@@ -97,7 +97,7 @@
         {
           "path": ".github/workflows/validate.yml",
           "pattern": "uses: astral-sh/setup-uv@[^\\n]+\\n(?:[^\\n]*\\n){0,5}?\\s+version: \\'(?P<version>[^\\']+)\\'",
-          "count": 1
+          "count": 2
         },
         {
           "path": ".github/workflows/benchmark-skills.yml",

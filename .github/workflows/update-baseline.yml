@@ -186,6 +186,7 @@ jobs:
             -e 'apm\.lock\.yaml' \
             -e 'AGENTS\.md' \
             -e '\.github/copilot-instructions\.md' \
+            -e '\.github/instructions/personal\.instructions\.md' \
             -e '\.github/mcp\.json' \
             -e '\.codex/config\.toml' \
             -e '\.agents/skills/[^/]+/.+' || true)"
@@ -269,6 +270,7 @@ jobs:
           allowed = (
               rb"(?:\.apm-version|\.apm-checksums|apm\.lock\.yaml|AGENTS\.md|"
               rb"\.github/copilot-instructions\.md|\.github/mcp\.json|"
+              rb"\.github/instructions/personal\.instructions\.md|"
               rb"\.codex/config\.toml|\.agents/skills/[^/]+/.+)"
           )
           paths = subprocess.check_output([

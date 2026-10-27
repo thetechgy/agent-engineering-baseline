@@ -2222,3 +2222,135 @@ honest evidence sufficiency, uncertainty and practical validation plans. Verify
 that existing guidance is recognized, native grading issues do not become invented
 skill defects, and unavailable evidence stays explicit. Record human judgments
 and measured usefulness separately; no automated downstream publication is enabled.
+
+## Behavioral custom-metric evidence v2 (reporting first)
+
+Version 2 adds registered deterministic measurements to the same native admission,
+public projection, analysis, private HTML and optional review pipeline. Static
+records and behavioral v1 records retain their existing contracts. Archived
+metrics are not rescored, and frozen analyst profiles retain their original bytes.
+The new `custom-metrics-v2` analyst profile pins its four original validator
+modules and the exact registry data asset; it does not replace `current-v2`.
+No model inference is required to qualify this integration.
+
+The reviewed `custom-metrics.json` registry defines the current Pester and gh
+competencies, native field mappings, units, scoring bases, applicability and
+aggregation. Metric definitions and profiles have immutable versioned identities;
+the active-profile selector applies only to new admission. Retained bundles resolve
+their recorded profile without adopting a newer definition. Change the identity
+when meaning or relevant input policy changes. Results cannot supply new definitions or namespaces. The current
+profiles admit the complete approved production cohort or the complete approved
+oracle-qualification cohort. They cannot turn a selected successful subset into
+a complete experiment. Existing gh diagnostic subsets keep their v1 path.
+
+### Admission and assurance
+
+The shared native boundary checks approved source and staged task identities,
+Harbor task checksums, grader/reference/mutant identities, prepared dataset,
+execution policy, native completion, trial/case/arm/attempt identities, arithmetic
+and native summary carriers. Dataset identity excludes target-skill bytes and
+staging nonces; full staged task checksums remain separate witnesses.
+`custom-metric-capture.json` records bounded hashes
+of prepared inputs and prospective task staging. It contains no fixture source,
+reference implementation, mutant, submitted solution or credential.
+
+The pinned collector key-redacts `gh_authorization`, including valid binary
+scores. The common capture helper therefore retains this enrolled numeric field
+from the original structured verifier result before that information is lost.
+The bounded native extract includes its trial/arm/case/task identity, original
+member digest and locator. Only registry-enrolled numeric fields subject to the
+pinned redactor are eligible. The admission reader requires agreement with known
+retained values and accepts only the pinned redaction placeholder when using the
+extract. Missing extracts, arbitrary strings, contradictory values and unknown
+metric names fail closed. Native files and redaction rules are not rewritten;
+aggregate scores, prose and HTML cannot reconstruct the original field.
+
+Native 0.3.0 `num_trials` counts scoreable rows. Registered v2 admission
+reconciles those rows with unique named failed trials rather than discarding the
+unscoreable population. Raw collector error ledgers and the pinned loader's
+expanded ledgers must match exactly; equal counts with different entries fail.
+When a failed arm omits headline aggregates or its native rubric summary, those
+measurements remain unavailable. Retained trial components and custom values stay
+visible without reconstructing missing rubric outcomes. Behavioral v1 keeps its
+original interpretation.
+
+These checks establish consistency against supplied native evidence and retained
+producer-captured extracts. They do not authenticate the producer or independently
+prove execution. The in-memory native witness prevents edited normalized claims
+from passing projection against different retained native evidence. It is not a
+signature and does not survive serialization as trusted authority.
+
+The public projection retains definitions, applicability, scoring bases, reported
+outcomes, identities, limitations and references. Its admission metadata is a
+producer-reported claim. The analyzer, HTML reporter and offline review preparation
+continue to consume **public bundles only**, using their existing command-line
+interfaces. They validate structure and recompute analysis; they do not require,
+locate or reopen native directories.
+
+| Assurance | Meaning |
+| --- | --- |
+| Structural validation | The supplied public record satisfies the closed contract and internally consistent arithmetic, identities and coverage. |
+| Native consistency | Reported admission against the supplied native evidence; not independently rechecked by public consumers. |
+| Producer/execution authentication | Not established by hashes, run identifiers or an unsigned admission record. |
+
+A coordinated, self-consistent rewrite of an unsigned public bundle cannot be
+detected through its own hashes alone. Such a bundle cannot acquire authenticated
+producer or verified-execution status. AI citations retain the existing execution-
+claim prohibition. Public scores alone do not justify an instruction change.
+Rechecking native consistency, if originals remain available, uses the existing
+normalization/projection boundary rather than new consumer flags.
+
+Known original-reference expiry/unavailability remains a limitation, not a zero
+score. Public consumers can still interpret retained reported measurements after
+native directories are removed. Recorded reference availability is not independent
+verification of current possession. This PR adds no signing or trust service.
+
+### Outcomes, populations and interpretation
+
+An evaluated failure is measured and can be zero. Invalid, unsupported, timeout,
+infrastructure, interrupted and unknown outcomes are unavailable measurements.
+Missing retained results remain visible through coverage gaps; absent results do
+not establish that execution never occurred. No attempt ordinal comes from
+filesystem enumeration. Nonapplicable measurements have no numerical value.
+
+Pester reference correctness, seeded mutation detection and their conjunction
+remain separate competencies. Mutation measurements retain detected/executed
+counts; the native denominator must match the configured fixture. The Python
+negative control receives only its control-correctness metric. It receives no
+Pester mutation or test-quality score. A transport `overall: 0` on an unscoreable
+trial never becomes measured quality. Custom-only grading has no invented standard
+headline metrics or rubric dimensions.
+
+Complete-population means weight applicable trials equally, retaining each trial's
+numerator and denominator. Required missing/unscoreable trials, unknown ordinals,
+adaptive stopping or incomplete details suppress aggregate means and paired
+metric differences. Valid individual measurements remain visible. No portfolio
+average ranks unrelated competencies.
+
+The gh activation metric retains the native activation or negative-case check,
+as appropriate to the case. Its baseline zero is not worse task correctness.
+`gh_gate` remains the conjunction of all seven components; the acceptance policy
+requires with-skill passes. Baseline gate zeros remain comparison evidence. Task
+correctness is the separate `gh_task` measurement, and routing/gate differences
+do not generate task-correctness or skill-benefit findings.
+
+Oracle reports identify the recorded oracle agent and fixture population. They
+qualify the harness and reporting path, not model-backed skill effectiveness.
+Token counts and phase durations are reported only where native fields exist;
+missing values remain unknown, and input tokens include cache tokens.
+
+### Qualification and deferred history
+
+The existing credential-free Pester job runs a fresh 52-trial oracle campaign with
+prospective capture. It then invokes common public projection, analysis, HTML
+rendering and offline AI-review preparation, and checks public-only operation with
+the native input path removed. Its allowlisted derived artifacts are under
+`reporting/`: analysis JSON, consolidated HTML and the validated public bundle.
+The earlier 52-trial artifact is preserved; it is not retroactively authenticated.
+
+Custom cross-run numerical comparisons and custom-metric history publication
+remain disabled, with an explicit comparison limitation. Pester remains
+confirmation-only, diagnostic and history-ineligible at selection, metric
+validation and direct publication. Existing Podman and gh standard history remains
+separate and unchanged. Issue #92 stays open for independently qualified cross-run
+compatibility and history admission; this reporting slice does not complete it.
