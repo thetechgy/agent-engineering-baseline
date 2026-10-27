@@ -426,6 +426,13 @@ Validated partial results can update the issue while discovery remains failed;
 catastrophic failures retain the prior snapshot with a failing workflow status.
 The publisher rejects superseded revisions. Neither job receives an API key or
 extra advisory credential; public publisher-advisory queries are unauthenticated.
+HTTP failures emit bounded, credential-safe diagnostics that distinguish primary
+and secondary rate limits, authentication, authorization, and unclassified errors.
+Only allowlisted numeric rate/retry fields and validated request IDs are logged;
+raw response bodies and arbitrary headers are omitted. A confirmed exhausted
+GitHub request budget defers remaining lookups using that authentication mode for
+the run. Deferred sources remain unknown, successful findings are retained, and
+discovery still fails. Authentication and workflow permissions are unchanged.
 
 To inspect pins offline or run read-only discovery locally with Python 3.11+:
 

@@ -252,6 +252,7 @@ class GitHub:
         self.token = token
         self.cache = {}
         self.failed = {}
+        self.rate_limited = set()
         self.requests = 0
         self.started = time.monotonic()
         self.opener = build_opener(SameOrigin())
@@ -272,6 +273,9 @@ class GitHub:
             return self.cache[key]
         if method == "GET" and key in self.failed:
             raise DiscoveryError(self.failed[key])
+        authenticated = bool(self.token and not public)
+        if method == "GET" and url.startswith(API) and authenticated in self.rate_limited:
+            raise DiscoveryError("rate_limit_deferred")
         require(self.requests < 100 and time.monotonic() - self.started < 180, "request_budget_exceeded")
         headers = {"Accept": "application/json", "User-Agent": "baseline-dependency-freshness"}
         if url.startswith(API):
@@ -288,7 +292,18 @@ class GitHub:
                 require(len(raw) <= MAX_BYTES, "oversized_response")
                 result = json.loads(raw)
         except HTTPError as error:
-            error.close()
+            try:
+                diagnostic = http_diagnostic(error, url, authenticated)
+            finally:
+                error.close()
+            print("Dependency HTTP failure: " + json.dumps(diagnostic, sort_keys=True), file=sys.stderr)
+            if (url.startswith(API) and method == "GET" and
+                    (diagnostic["category"] == "secondary_rate_limit" or
+                     (diagnostic["category"] in {"primary_rate_limit", "rate_limit_unspecified"} and
+                      diagnostic.get("rate_resource", "core") == "core"))):
+                # This run is deliberately bounded: leave remaining sources unknown
+                # instead of sleeping through a reset or hammering an exhausted budget.
+                self.rate_limited.add(authenticated)
             if method == "GET":
                 self.failed[key] = f"http_{error.code}"
             raise DiscoveryError(f"http_{error.code}") from error
@@ -318,6 +333,62 @@ class GitHub:
             if len(values) < 100:
                 return result
         raise DiscoveryError("pagination_limit")
+
+
+def http_diagnostic(error, url, authenticated):
+    """Classify bounded untrusted responses; return only allowlisted diagnostics."""
+    github = url.startswith(API)
+    result = {"host": "api.github.com" if github else "pypi.org", "status": error.code,
+              "authentication": "authenticated" if authenticated else "unauthenticated",
+              "category": "http_failure"}
+    if github:
+        publisher = re.fullmatch(r"repos/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)/security-advisories(?:\?.*)?", url[len(API):])
+        result["source"] = "publisher_advisories" if publisher else "github_api"
+        if publisher:
+            result["repository"] = publisher[1]
+    else:
+        result["source"] = "semgrep_pypi"
+    headers = error.headers or {}
+    for header, field in (("x-ratelimit-limit", "rate_limit"), ("x-ratelimit-remaining", "rate_remaining"),
+                          ("x-ratelimit-used", "rate_used"), ("x-ratelimit-reset", "rate_reset"),
+                          ("retry-after", "retry_after_seconds")):
+        value = headers.get(header)
+        if full(r"[0-9]{1,12}", value):
+            result[field] = int(value)
+    resource = headers.get("x-ratelimit-resource")
+    if resource in {"core", "search", "code_search", "graphql", "integration_manifest"}:
+        result["rate_resource"] = resource
+    request_id = headers.get("x-github-request-id")
+    if github and full(r"[A-Fa-f0-9:]{1,100}", request_id):
+        result["request_id"] = request_id
+    message = ""
+    try:
+        raw = error.read(8193)
+        if len(raw) <= 8192:
+            body = json.loads(raw)
+            if isinstance(body, dict) and isinstance(body.get("message"), str):
+                message = body["message"][:2048].lower()
+    except (OSError, UnicodeError, ValueError, TypeError, RecursionError):
+        pass
+    # Never emit the message: GitHub's rate-limit body can contain the client's
+    # address, while other error bodies can reflect credentials or private text.
+    if error.code in (403, 429):
+        if result.get("rate_remaining") == 0 or "api rate limit exceeded" in message:
+            result["category"] = "primary_rate_limit"
+        elif "secondary rate limit" in message or "abuse detection" in message:
+            result["category"] = "secondary_rate_limit"
+        elif error.code == 429 or "retry_after_seconds" in result:
+            result["category"] = "rate_limit_unspecified"
+        elif any(value in message for value in ("resource not accessible by integration", "resource not accessible by personal access token",
+                                                "must have admin rights", "insufficient permission")):
+            result["category"] = "authorization_failure"
+        elif "requires authentication" in message or "bad credentials" in message:
+            result["category"] = "authentication_failure"
+        else:
+            result["category"] = "forbidden_unclassified"
+    elif error.code == 401:
+        result["category"] = "authentication_failure"
+    return result
 
 
 def query(**values):
