@@ -1,4 +1,5 @@
 name: Benchmark skills
+run-name: Benchmark ${{ inputs.skill }} (${{ inputs.mode }})${{ inputs.request_id && format(' [{0}]', inputs.request_id) || '' }}
 
 on:
   workflow_dispatch:
@@ -16,17 +17,94 @@ on:
         options:
           - standard
           - confirmation
+      request_id:
+        description: Optional authenticated orchestration request (leave empty for manual runs)
+        type: string
+      planner_run_id:
+        description: Producing planner run ID
+        type: string
+      planner_attempt:
+        description: Producing planner attempt
+        type: string
+      expected_revision:
+        description: Revision bound to the orchestration request
+        type: string
 
 permissions: {}
 
 concurrency:
   group: benchmark-skills
+  queue: max
   cancel-in-progress: false
 
 jobs:
-  evaluate:
+  context:
     permissions:
       contents: read
+      actions: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    outputs:
+      execute: ${{ steps.context.outputs.execute }}
+    steps:
+      - name: Check out dispatched revision for scope review
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+          path: trusted
+      - name: Set up pinned uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with: &benchmark-uv
+          version: '0.13.5'
+          enable-cache: false
+      - name: Install pinned reporting dependencies
+        working-directory: trusted
+        run: bash .github/scripts/setup-skillevaluator.sh reporting
+      - name: Validate reviewed feature revision without inference
+        if: github.ref != 'refs/heads/main'
+        timeout-minutes: 25
+        working-directory: trusted
+        env:
+          SKILL_EVALUATION_KIND: benchmark
+        run: '"$SKILL_EVALUATOR_PYTHON" -m unittest discover -s .github/tests -v'
+      - name: Read canonical history snapshot
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: gh-pages
+          persist-credentials: false
+          path: retained
+      - name: Publish scope and authorization context before requesting approval
+        id: context
+        working-directory: trusted
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RETAINED: ${{ github.workspace }}/retained
+        run: |
+          "$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_orchestration.py context \
+            --workspace "$PWD" --retained "$RETAINED" --output "$RUNNER_TEMP/skill-context/record.json"
+      - name: Retain preapproval scope
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: skill-benchmark-context-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/skill-context/record.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Mark ineligible request as nonexecuted
+        if: steps.context.outputs.execute == 'false'
+        run: |
+          echo '::error::Benchmark did not enter inference. Inspect the scope record for its eligibility disposition.'
+          exit 1
+
+  evaluate:
+    needs: context
+    if: needs.context.outputs.execute == 'true'
+    permissions:
+      contents: read
+      actions: read
     runs-on: ubuntu-latest
     timeout-minutes: 180
     environment:
@@ -39,6 +117,7 @@ jobs:
     outputs:
       skill: ${{ steps.selection.outputs.skill }}
       history_eligible: ${{ steps.selection.outputs.history_eligible }}
+      execution_success: ${{ steps.evaluation.outcome == 'success' }}
     steps:
       - name: Establish evaluation deadline
         id: budget
@@ -50,6 +129,7 @@ jobs:
         timeout-minutes: 5
         with:
           ref: ${{ github.sha }}
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Validate selection and clean checkout
@@ -72,30 +152,44 @@ jobs:
       - name: Set up pinned uv
         uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         timeout-minutes: 5
-        with:
-          version: '0.13.5'
-          enable-cache: false
+        with: *benchmark-uv
 
       - name: Install evaluator with Python 3.13 and pinned Codex integration
         timeout-minutes: 15
         run: bash .github/scripts/setup-skillevaluator.sh benchmark
 
-      - name: Validate dataset and runtime before inference
+      - name: Read canonical history after approval
+        timeout-minutes: 1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: gh-pages
+          persist-credentials: false
+          path: .orchestration-retained
+
+      - name: Validate dataset, runtime, and final eligibility before inference
         id: preparation
         timeout-minutes: 5
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          mv .orchestration-retained "$RUNNER_TEMP/skill-history"
           mkdir -p "$RUNNER_TEMP/skill-benchmark"
           cp "$RUNNER_TEMP/skill-evaluation-tools/versions.json" "$RUNNER_TEMP/skill-benchmark/versions.json"
           cp -r "$RUNNER_TEMP/skill-evaluation-tools/dependencies" "$RUNNER_TEMP/skill-benchmark/dependencies"
-          "$SKILL_EVALUATOR_PYTHON" -m unittest discover -s .github/tests -v
+          # Main's full regression suite is authenticated by context/guard. Feature
+          # revisions run it before requesting approval; do not repeat it here.
           "$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_reports.py prepare "$RUNNER_TEMP/skill-benchmark" "$BENCHMARK_SKILL"
           skill_dir="$(sed -n 's/^skill_dir=//p' "$GITHUB_OUTPUT")"
           skillevaluator tier3 validate "$skill_dir" --strict --json \
             > "$RUNNER_TEMP/skill-benchmark/dataset-validation.json"
           docker info > /dev/null
+          # This is the final command before the native inference step. It has no inference secret.
+          "$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_orchestration.py guard \
+            --workspace "$PWD" --retained "$RUNNER_TEMP/skill-history" --output "$RUNNER_TEMP/skill-authorization/record.json"
 
       - name: Run native with-skill and without-skill evaluation
         id: evaluation
+        if: steps.preparation.outputs.execute == 'true'
         timeout-minutes: 145
         env:
           SKILLEVALUATOR_RESULTS_DIR: ${{ runner.temp }}/skill-benchmark/results
@@ -110,6 +204,8 @@ jobs:
           GRADING_MODE: ${{ steps.preparation.outputs.grading_mode }}
           WORKSPACE_MODE: ${{ steps.preparation.outputs.workspace_mode }}
         run: |
+          printf 'started_epoch=%s\n' "$(date +%s)" >> "$GITHUB_OUTPUT"
+          trap 'printf "finished_epoch=%s\n" "$(date +%s)" >> "$GITHUB_OUTPUT"' EXIT
           if [ -z "$OPENAI_API_KEY" ]; then
             echo '::error::Add OPENAI_API_KEY to the protected skill-benchmark environment before running a paid benchmark.'
             exit 1
@@ -137,7 +233,7 @@ jobs:
             --evaluated-source-repository "$GITHUB_REPOSITORY" --evaluated-source-revision "$GITHUB_SHA"
 
       - name: Recover interrupted native diagnostics
-        if: always() && env.SKILL_EVALUATOR_PYTHON != '' && steps.selection.outcome == 'success'
+        if: always() && env.SKILL_EVALUATOR_PYTHON != '' && steps.selection.outcome == 'success' && steps.evaluation.outcome != 'skipped'
         timeout-minutes: 5
         env:
           EVALUATION_OUTCOME: ${{ steps.evaluation.outcome }}
@@ -146,7 +242,7 @@ jobs:
             "$RUNNER_TEMP/skill-benchmark" "$BENCHMARK_SKILL" "$BENCHMARK_MODE" "$EVALUATION_OUTCOME"
 
       - name: Summarize native results and prepare standard metrics
-        if: always() && env.SKILL_EVALUATOR_PYTHON != '' && steps.selection.outcome == 'success'
+        if: always() && env.SKILL_EVALUATOR_PYTHON != '' && steps.selection.outcome == 'success' && steps.evaluation.outcome != 'skipped'
         run: |
           docker version --format '{{json .Server}}' > "$RUNNER_TEMP/skill-benchmark/docker-version.json"
           docker image ls --digests --no-trunc --format '{{json .}}' > "$RUNNER_TEMP/skill-benchmark/docker-images.jsonl"
@@ -155,7 +251,7 @@ jobs:
 
       - name: Stage allowlisted reports with upstream redaction
         id: artifacts
-        if: always() && env.SKILL_EVALUATOR_PYTHON != '' && steps.selection.outcome == 'success'
+        if: always() && env.SKILL_EVALUATOR_PYTHON != '' && steps.selection.outcome == 'success' && steps.evaluation.outcome != 'skipped'
         run: |
           "$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_reports.py artifacts \
             "$RUNNER_TEMP/skill-benchmark" "$BENCHMARK_SKILL" "$RUNNER_TEMP/skill-benchmark-artifact"
@@ -177,7 +273,7 @@ jobs:
           retention-days: 30
 
       - name: Upload sanitized standard metrics
-        if: success() && inputs.mode == 'standard' && steps.selection.outputs.history_eligible == 'true'
+        if: success() && steps.evaluation.outcome == 'success' && inputs.mode == 'standard' && steps.selection.outputs.history_eligible == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: skill-metrics
@@ -187,7 +283,7 @@ jobs:
 
       - name: Generate validated public benchmark evidence
         id: public-benchmark
-        if: always() && env.SKILL_EVALUATOR_PYTHON != '' && steps.selection.outcome == 'success' && steps.selection.outputs.public_supported == 'true'
+        if: always() && env.SKILL_EVALUATOR_PYTHON != '' && steps.selection.outcome == 'success' && steps.selection.outputs.public_supported == 'true' && steps.evaluation.outcome != 'skipped'
         timeout-minutes: 3
         continue-on-error: true
         env:
@@ -224,7 +320,7 @@ jobs:
           retention-days: 30
 
       - name: Report public evidence handoff status
-        if: always()
+        if: always() && steps.evaluation.outcome != 'skipped'
         timeout-minutes: 1
         continue-on-error: true
         env:
@@ -246,6 +342,45 @@ jobs:
         if: always()
         run: bash .github/scripts/setup-compose.sh cleanup
 
+      - name: Retain postapproval authorization decision
+        if: always() && steps.preparation.outcome == 'success'
+        continue-on-error: true
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: skill-benchmark-authorization-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/skill-authorization/record.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Collect minimal operational receipt
+        if: always() && env.SKILL_EVALUATOR_PYTHON != '' && steps.selection.outcome == 'success'
+        continue-on-error: true
+        env:
+          EVALUATION_OUTCOME: ${{ steps.evaluation.outcome }}
+          INFERENCE_STARTED: ${{ steps.evaluation.outputs.started_epoch }}
+          INFERENCE_FINISHED: ${{ steps.evaluation.outputs.finished_epoch }}
+          REQUEST_ID: ${{ inputs.request_id }}
+        run: |
+          "$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_reports.py operation \
+            "$RUNNER_TEMP/skill-benchmark" "$BENCHMARK_SKILL" "$BENCHMARK_MODE" "$EVALUATION_OUTCOME" \
+            "$RUNNER_TEMP/skill-operation/record.json"
+
+      - name: Retain operational receipt separately from qualified evidence
+        if: always() && env.SKILL_EVALUATOR_PYTHON != '' && steps.selection.outcome == 'success'
+        continue-on-error: true
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: skill-benchmark-operation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/skill-operation/record.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Mark postapproval nonexecution separately from benchmark success
+        if: always() && steps.preparation.outputs.execute == 'false'
+        run: |
+          echo '::error::Benchmark did not enter inference. Inspect the postapproval authorization record.'
+          exit 1
+
   publish-history:
     concurrency:
       group: skill-report-publication
@@ -255,6 +390,7 @@ jobs:
     if: >-
       github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' &&
       inputs.mode == 'standard' && needs.evaluate.result == 'success' &&
+      needs.evaluate.outputs.execution_success == 'true' &&
       needs.evaluate.outputs.history_eligible == 'true'
     permissions:
       contents: write

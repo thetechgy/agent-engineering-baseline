@@ -591,7 +591,8 @@ class PublicWorkflowTests(unittest.TestCase):
             (quality, 'skill-quality', 'public-quality', 'Enforce native collection and dataset contracts', 14),
             (benchmark, 'evaluate', 'public-benchmark', 'Upload sanitized standard metrics', 30)):
             steps = workflow['jobs'][job]['steps']
-            self.assertEqual(workflow['jobs'][job]['permissions'], {'contents': 'read'})
+            expected_permissions = {'contents': 'read', **({'actions': 'read'} if job == 'evaluate' else {})}
+            self.assertEqual(workflow['jobs'][job]['permissions'], expected_permissions)
             generation = next(step for step in steps if step.get('id') == command)
             upload = next(step for step in steps if step.get('with', {}).get('name', '').startswith('skill-' + command + '-'))
             self.assertGreater(steps.index(generation), next(i for i, step in enumerate(steps) if step['name'] == previous))
@@ -628,7 +629,8 @@ class PublicWorkflowTests(unittest.TestCase):
         self.assertIn('::warning::', warning['run']); self.assertIn('GITHUB_STEP_SUMMARY', warning['run'])
         generation = reporting[0]
         self.assertTrue(generation['if'].startswith('always()'))
-        self.assertNotIn('steps.evaluation.outcome', generation['if'])
+        self.assertIn("steps.evaluation.outcome != 'skipped'", generation['if'])
+        self.assertNotIn("steps.evaluation.outcome == 'success'", generation['if'])
         self.assertNotIn('success()', generation['if'])
 
     def test_public_uploads_require_integrity_after_generation_and_native_integrity(self):

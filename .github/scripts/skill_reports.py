@@ -289,33 +289,79 @@ def metric_rows(agent):
     return rows
 
 
-def usage_summary(run):
-    """Display only native agent fields; no pricing or inferred token accounting."""
+def usage_observations(run):
+    """Allowlisted native observations; partial subtotals never imply billed totals."""
     fields = ("n_input_tokens", "n_cache_tokens", "n_output_tokens", "cost_usd")
-    lines = ["", "### Native agent usage", "",
-             "Reported subtotals only; cache tokens are included in input tokens. Missing values remain unknown.",
-             "Cost may be estimated by Harbor and excludes usage not reported here, including judging/preflight.", "",
-             "| Arm | Field | Reported subtotal | Trials reporting / recorded |", "| --- | --- | --- | --- |"]
+    arms = {}
     for arm in ("with-skill", "without-skill"):
         records = {}
+        conflicts = set()
+        unreadable = 0
         for path in sorted((run / "codex" / arm / "trials").glob("*/result.json")):
             try:
                 require(path.resolve().is_relative_to(run), "Escaping trial report")
                 data = read_json(path)
-                identity = data["id"]
-                require(isinstance(identity, str), "Missing trial identity")
+                trial = data["id"]
+                require(type(trial) is str and trial, "Missing trial identity")
                 context = data.get("agent_result") or {}
                 require(isinstance(context, dict), "Invalid optional agent usage")
-                records[identity] = context
+                selected = {field: context.get(field) for field in fields}
+                if trial in records and records[trial] != selected:
+                    conflicts.add(trial)
+                records[trial] = selected
             except (ValueError, KeyError, TypeError, OSError):
-                continue  # Optional usage never substitutes a zero for unknown data.
+                unreadable += 1
+        observations = {}
         for field in fields:
-            values = [record[field] for record in records.values()
+            values = [record[field] for trial, record in records.items() if trial not in conflicts
                       if type(record.get(field)) in (int, float)
-                      and math.isfinite(record[field]) and record[field] >= 0]
-            total = f"{sum(values):.6f}" if values and field == "cost_usd" else str(sum(values)) if values else "unknown"
-            lines.append(f"| {arm} | {field} | {total} | {len(values)} / {len(records)} |")
+                      and math.isfinite(record[field]) and record[field] >= 0
+                      and (field == 'cost_usd' or type(record[field]) is int)
+                      and (field != 'n_cache_tokens' or type(record.get('n_input_tokens')) is int
+                           and record[field] <= record['n_input_tokens'])]
+            total = sum(values) if values else None
+            require(total is None or math.isfinite(total), 'Invalid usage subtotal')
+            observations[field] = {'subtotal': total, 'reporting_trials': len(values)}
+        arms[arm] = {'recorded_trials': len(records), 'conflicting_trials': len(conflicts),
+                     'unreadable_records': unreadable, 'fields': observations}
+    return {'arms': arms, 'cost_basis': 'native_estimate', 'actual_billed_cost_usd': None,
+            'judge_usage': None, 'preflight_usage': None, 'cache_included_in_input': True}
+
+
+def usage_summary(run):
+    lines = ["", "### Native agent usage", "",
+             "Reported subtotals only; cache tokens are included in input tokens. Missing values remain unknown.",
+             "Cost may be estimated by Harbor and excludes usage not reported here, including judging/preflight.", "",
+             "| Arm | Field | Reported subtotal | Trials reporting / recorded |", "| --- | --- | --- | --- |"]
+    for arm, data in usage_observations(run)['arms'].items():
+        for field, observed in data['fields'].items():
+            total = observed['subtotal']
+            text = 'unknown' if total is None else f'{total:.6f}' if field == 'cost_usd' else str(total)
+            lines.append(f"| {arm} | {field} | {text} | {observed['reporting_trials']} / {data['recorded_trials']} |")
     return lines
+
+
+def operation_receipt(workspace, root, name, mode, outcome, destination):
+    """Operational accounting only; this function never admits evaluation evidence."""
+    import time
+    receipt = {'schema_version': 1, 'kind': 'benchmark_operation', 'skill': name, 'mode': mode,
+               'run_id': int(os.environ['GITHUB_RUN_ID']), 'attempt': int(os.environ['GITHUB_RUN_ATTEMPT']),
+               'revision': os.environ['GITHUB_SHA'], 'request_id': os.environ.get('REQUEST_ID', ''),
+               'inference_step_outcome': outcome, 'observed_epoch': int(time.time()),
+               'inference_step_seconds': None, 'usage': None, 'usage_status': 'unavailable',
+               'history_admission': 'not_established_by_operational_receipt'}
+    started, finished = os.environ.get('INFERENCE_STARTED', ''), os.environ.get('INFERENCE_FINISHED', '')
+    if started.isdecimal() and finished.isdecimal() and 0 <= int(finished) - int(started) <= 10800:
+        receipt['inference_step_seconds'] = int(finished) - int(started)
+    try:
+        from skillevaluator.evaluation import EvaluationService
+        run = EvaluationService().discover_latest_results(benchmark_skill(workspace, name, root), root / 'results')
+        require(run is not None and run.resolve().is_relative_to(root.resolve()), 'Native usage unavailable')
+        receipt['usage'] = usage_observations(run)
+        receipt['usage_status'] = 'reported_subtotals'
+    except (ValueError, KeyError, TypeError, OSError):
+        pass
+    write_json(destination, receipt)
 
 
 def validate_benchmark_versions(versions):
@@ -835,6 +881,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("preflight")
+    operation = commands.add_parser('operation')
+    operation.add_argument('root', type=Path)
+    operation.add_argument('skill')
+    operation.add_argument('mode', choices=MODES)
+    operation.add_argument('outcome', choices=('success', 'failure', 'cancelled', 'skipped'))
+    operation.add_argument('destination', type=Path)
     select = commands.add_parser("select")
     select.add_argument("skill")
     select.add_argument("mode", choices=MODES)
@@ -881,6 +933,8 @@ def main():
             # Native exceptions may contain credentials or arbitrary prose. Never echo them.
             summary(["Public evidence unavailable: input or publication contract rejected; no bundle is ready."])
             return 1
+    elif args.command == 'operation':
+        operation_receipt(workspace, args.root, args.skill, args.mode, args.outcome, args.destination)
     elif args.command == "preflight":
         catalog_preflight(workspace)
     elif args.command == "select":

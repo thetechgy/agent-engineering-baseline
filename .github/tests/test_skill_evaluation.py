@@ -862,6 +862,7 @@ class WorkflowTests(unittest.TestCase):
                 "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
                 "TIMEOUT_LOG": str(timeout_log),
                 "RUNNER_TEMP": str(runner_temp),
+                "GITHUB_OUTPUT": str(output),
                 "GITHUB_WORKSPACE": str(REPO),
                 "GITHUB_REPOSITORY": "owner/repo",
                 "GITHUB_SHA": "0" * 40,
@@ -1057,7 +1058,7 @@ class WorkflowTests(unittest.TestCase):
         # PyYAML 1.1 parses the bare YAML key `on` as True.
         self.assertEqual(set(workflow.get("on", workflow.get(True))), {"workflow_dispatch"})
         jobs = workflow["jobs"]
-        self.assertEqual(jobs["evaluate"]["permissions"], {"contents": "read"})
+        self.assertEqual(jobs["evaluate"]["permissions"], {"contents": "read", "actions": "read"})
         self.assertEqual(jobs["evaluate"]["environment"], {"name": "skill-benchmark", "deployment": False})
         checkout = next(step for step in jobs["evaluate"]["steps"]
                         if step.get("uses", "").startswith("actions/checkout@"))

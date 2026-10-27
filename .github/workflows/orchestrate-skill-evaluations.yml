@@ -1,0 +1,120 @@
+name: Plan skill evaluations
+
+on:
+  workflow_run:
+    workflows: [Validate]
+    branches: [main]
+    types: [completed]
+  schedule:
+    - cron: '37 10 * * 2'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: skill-evaluation-orchestration
+  queue: max
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    if: >-
+      github.repository == 'thetechgy/agent-engineering-baseline' &&
+      ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+       github.event_name == 'schedule' ||
+       (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_branch == 'main' &&
+        github.event.workflow_run.head_repository.full_name == github.repository))
+    permissions:
+      contents: read
+      actions: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    outputs:
+      has_requests: ${{ steps.plan.outputs.has_requests }}
+    steps:
+      - name: Check out trusted orchestration revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+          path: trusted
+      - name: Set up pinned uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with: &orchestration-uv
+          version: '0.13.5'
+          enable-cache: false
+      - name: Install pinned reporting dependencies without inference
+        working-directory: trusted
+        run: bash .github/scripts/setup-skillevaluator.sh reporting
+      - name: Read canonical history snapshot
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: gh-pages
+          persist-credentials: false
+          path: retained
+      - name: Plan evaluation health without inference
+        id: plan
+        working-directory: trusted
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RETAINED: ${{ github.workspace }}/retained
+        run: |
+          "$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_orchestration.py plan \
+            --workspace "$PWD" --retained "$RETAINED" --output "$RUNNER_TEMP/skill-plan/record.json"
+      - name: Upload immutable plan and dispatch intents
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: skill-evaluation-plan-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/skill-plan/record.json
+          if-no-files-found: error
+          retention-days: 30
+
+  dispatch:
+    needs: plan
+    if: needs.plan.outputs.has_requests == 'true'
+    permissions:
+      contents: read
+      actions: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Check out trusted dispatcher revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+          path: trusted
+      - name: Set up pinned uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with: *orchestration-uv
+      - name: Install pinned reporting dependencies
+        working-directory: trusted
+        run: bash .github/scripts/setup-skillevaluator.sh reporting
+      - name: Read canonical history snapshot
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: gh-pages
+          persist-credentials: false
+          path: retained
+      - name: Reauthenticate intents and request protected benchmarks once
+        working-directory: trusted
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RETAINED: ${{ github.workspace }}/retained
+        run: |
+          "$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_orchestration.py dispatch \
+            --workspace "$PWD" --retained "$RETAINED" --output "$RUNNER_TEMP/skill-dispatch/record.json"
+      - name: Retain direct dispatch correlations
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: skill-evaluation-dispatch-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/skill-dispatch/record.json
+          if-no-files-found: error
+          retention-days: 30
