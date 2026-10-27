@@ -478,7 +478,9 @@ generated outputs.
 
 Validation uses read-only repository access without retained checkout credentials.
 The Linux and Windows jobs acquire the exact Pester and PSScriptAnalyzer pins from
-the official PSGallery through PowerShellGet. Download failures receive at most
+the official PSGallery through PowerShellGet. If PSGallery is absent, CI registers
+the standard default and verifies its HTTPS source before trusting it; existing
+repositories are preserved. Download failures receive at most
 four attempts with 5, 15, and 30 second backoff; integrity, configuration, and
 version/provenance failures terminate immediately. Both modules are imported from
 their verified installation paths. Acquisition diagnostics omit raw provider text;

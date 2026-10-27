@@ -48,7 +48,17 @@ function Install-CIValidationModule {
         [string]$RequiredVersion
     )
 
-    $repository = @(Get-PSRepository -Name PSGallery -ErrorAction Stop)
+    # A named lookup throws when PSGallery is absent. Enumerate first so a
+    # missing default is distinct from a repository-store read failure.
+    $repository = @(Get-PSRepository -ErrorAction Stop | Where-Object Name -EQ 'PSGallery')
+    if ($repository.Count -eq 0) {
+        if (-not $PSCmdlet.ShouldProcess('PSGallery', 'Register the default PowerShell Gallery')) {
+            return
+        }
+        Write-Information -InformationAction Continue -MessageData 'PSGallery is absent; registering the default repository.'
+        Register-PSRepository -Default -ErrorAction Stop
+        $repository = @(Get-PSRepository -Name PSGallery -ErrorAction Stop)
+    }
     if ($repository.Count -ne 1 -or
         $repository[0].SourceLocation.TrimEnd('/') -cne 'https://www.powershellgallery.com/api/v2') {
         throw 'CI validation requires the official HTTPS PSGallery source.'
