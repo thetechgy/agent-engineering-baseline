@@ -1,0 +1,31 @@
+{
+  "current": {
+    "digest": "bac19db60db686f4ebe4c1deb957a0a5d90095a0d659a078afa071462e3da44d",
+    "revision": "39b6c43583d414c78dedd28e43551a550deb0544"
+  },
+  "schema_version": 1,
+  "slots": {
+    "quality": {
+      "members": {
+        "inventory/inventory.json": "4ee1637448277ebf1025691056ef0c3a7d16920e49b368319227865e83003f90",
+        "skills/a11y/static/public-report.json": "4135b83b8a95cc371d502688e21ba1cb9957690307c4456c26fdb5c96867b936",
+        "skills/agent-safety/static/public-report.json": "d48479b24c1667543531a7a927b5bb20baf544e870c1fa3c9176dd367c97980f",
+        "skills/ansible/static/public-report.json": "937b4e200036c346fb10d4e2b5ee3dac87aa373e44f65de6fa5047cd59217634",
+        "skills/podman/static/public-report.json": "9a7698e25c28ed6f35846f5eb5da6da5cdc35c5b9d0f2b5cf6f0044ac3577e12",
+        "skills/powershell-module-engineering/static/public-report.json": "1f95742d36fa2c30fd0d399431a909a3ab9fd75d6e0376485d20d2aff77eca91",
+        "skills/powershell-pester-6/static/public-report.json": "46635addd8b4a97a54cd2101a34275740e4fc7dd77ca050e9bba83970b8290d5"
+      },
+      "provenance": {
+        "archive_digest": "sha256:ebc3852f7741ee0fd7775049fdc1c4339f207a83213ceb38c3845c914c9cb69e",
+        "artifact_id": 12706263721,
+        "attempt": 1,
+        "event": "push",
+        "repository": "thetechgy/agent-engineering-baseline",
+        "revision": "1e2bc9beab366134e9872af4e196c538a03ec132",
+        "run_id": 40440720443,
+        "workflow_id": 313370522,
+        "workflow_path": ".github/workflows/validate.yml"
+      }
+    }
+  }
+}
