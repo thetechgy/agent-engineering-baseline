@@ -490,6 +490,10 @@ def context(workspace, retained, api, inputs, *, phase):
             selected = reports.prepare_benchmark(workspace, Path(temporary), name)
             value['cases'] = len(reports.read_json(selected / 'evals/evals.json')['evals'])
             value['trials'] = value['cases'] * reports.MODES[mode] * 2
+    # Assessment can perform many reads. Check the authoritative head after them,
+    # immediately before returning the decision consumed by the inference step.
+    if value['execute'] and os.environ['GITHUB_REF'] == 'refs/heads/main' and api.get('git/ref/heads/main')['object']['sha'] != revision:
+        value.update(execute=False, status='stale')
     reports.summary(['## Benchmark scope before inference', '',
         f'Suite: `{name}`; mode: `{mode}`; cases: {value["cases"]}; task trials: {value["trials"]}.',
         f'Evaluated revision: `{revision}`.',

@@ -349,6 +349,22 @@ class OrchestrationTests(unittest.TestCase):
         step['conclusion'] = 'failure'
         self.assertFalse(self.assess()['requests'])
 
+    def test_main_moving_during_postapproval_assessment_blocks_inference(self):
+        result = self.selected(); self.intent(result)
+        request = result['requests'][0]
+        inputs = {'skill': 'podman', 'mode': 'standard', 'request_id': request['request_id'],
+                  'planner_run_id': '30', 'planner_attempt': '1', 'expected_revision': result['revision']}
+        original = orchestration.assess
+        def main_moves(*args, **kwargs):
+            assessment = original(*args, **kwargs)
+            self.api.main = 'e' * 40
+            return assessment
+        with patch.dict(os.environ, {'GITHUB_RUN_ID': '90'}), patch.object(reports, 'summary'), \
+                patch.object(orchestration, 'assess', side_effect=main_moves):
+            value = orchestration.context(self.workspace, self.retained, self.api, inputs, phase='postapproval')
+        self.assertFalse(value['execute'])
+        self.assertEqual(value['status'], 'stale')
+
     def test_forged_producer_attempt_workflow_and_digest_are_rejected(self):
         result = self.selected(); run = self.intent(result)
         for key, value in [('head_branch', 'feature'), ('event', 'pull_request'), ('workflow_id', 999), ('run_attempt', 2)]:
