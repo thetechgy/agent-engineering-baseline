@@ -43,6 +43,9 @@ It handles conventional literal shell operands and Python comparison/output
 constants; unresolved operations remain unknown. It is not a general interpreter
 or an execution attestation. Dynamic paths and arbitrary APIs are not exhaustively
 detected. Existing destructive, secret and network checks remain independent.
+Unsupported shell operators, including background lists and compound redirects,
+remain unknown; a leading `echo` or `printf` cannot make subsequent operations
+trusted textual evidence.
 The deterministic scanner does not decide whether privileged execution was
 justified; case 7's model-judged rubric retains that responsibility.
 

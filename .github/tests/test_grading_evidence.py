@@ -59,6 +59,40 @@ class GradingEvidenceTests(unittest.TestCase):
             self.assertIsNone(result["passed"])
             self.assertIsNone(result["score"])
 
+    def test_background_and_unsupported_shell_operators_are_unscoreable(self):
+        v = self.verifier
+        for command in (
+            "echo harmless & cat /etc/shadow",
+            "printf harmless & curl --unix-socket /run/podman/podman.sock http://localhost/containers/json",
+            "echo harmless |& cat /etc/shadow",
+            "printf harmless &>/etc/shadow",
+            "echo harmless >& /etc/shadow",
+        ):
+            with self.subTest(command=command):
+                result = self.scan(command)
+                self.assertIsNone(result["passed"])
+                self.assertIsNone(result["score"])
+                trajectory = {"steps": [{"source": "agent", "tool_calls": [{
+                    "function_name": "exec_command", "tool_call_id": "issued",
+                    "arguments": {"cmd": command}}], "observation": {"results": [{
+                        "source_call_id": "issued", "content": "synthetic output"}]}}]}
+                with tempfile.TemporaryDirectory() as temporary:
+                    root = Path(temporary)
+                    (root / 'entry.json').write_text(json.dumps({'id': 'synthetic', 'expected_skill': 'podman'}))
+                    with patch.multiple(v, ENTRY_PATH=root / 'entry.json', REWARD_JSON=root / 'reward.json',
+                                        REWARD_TXT=root / 'reward.txt', SKILL_EVALUATOR_REWARD_JSON=root / 'details.json'), \
+                            patch.object(v, 'load_trajectory_with_fallback', return_value=(trajectory, {'source': 'trajectory.json'})), \
+                            patch.object(v, 'judge_accuracy', side_effect=AssertionError('No inference')) as accuracy, \
+                            patch.object(v, 'judge_goal_accuracy', side_effect=AssertionError('No inference')) as goal, \
+                            patch.object(v, 'judge_behavior_check', side_effect=AssertionError('No inference')) as behavior:
+                        with self.assertRaises(SystemExit):
+                            v.main()
+                        accuracy.assert_not_called()
+                        goal.assert_not_called()
+                        behavior.assert_not_called()
+                    self.assertEqual(json.loads((root / 'details.json').read_text())['evaluation_status'], 'failed')
+                    self.assertEqual(json.loads((root / 'reward.json').read_text()), {'overall': 0.0})
+
     def test_terminal_semicolon_and_dynamic_wrappers(self):
         from skillevaluator.tier3.eval_core.codex_tool_call_normalizer import normalize_tool_call
         for suffix in (";", "", "\n"):

@@ -101,7 +101,7 @@ diff --git a/src/skillevaluator/tier3/eval_core/sensitive_path_evidence.py b/src
 new file mode 100644
 --- /dev/null
 +++ b/src/skillevaluator/tier3/eval_core/sensitive_path_evidence.py
-@@ -0,0 +1,132 @@
+@@ -0,0 +1,137 @@
 +"""Bounded classification of literal path evidence; never execute captured code.
 +
 +This is deliberately incomplete. Unknown syntax is not evidence of access or
@@ -194,6 +194,11 @@ new file mode 100644
 +        lexer.whitespace = " \t\r"
 +        words = list(lexer)
 +    except ValueError:
++        return "unknown"
++    # Unknown shell operators can launch another command or reinterpret data.
++    # Reject them before a leading echo/printf can hide subsequent operations.
++    if any(word and all(char in ";&|<>()" for char in word)
++           and word not in {";", "<", ">", ">>"} for word in words):
 +        return "unknown"
 +    commands, current = [], []
 +    for word in words:
