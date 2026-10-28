@@ -10,7 +10,6 @@ class TrustedEnvironment(SkillEvaluatorSecureDockerEnvironment):
   super().__init__(*a,**kw);self.fail_init=fail_init
  async def start(self,force_build):
   await super().start(force_build)
-  if self.fail_init:raise RuntimeError('injected required initializer failure')
   for module,target in [('broker.py','broker'),('native_probe.py','probe'),('start_native.py','start')]:
    source=pathlib.Path(__file__).with_name(module)
    remote='/opt/operator-'+target+'.py'
@@ -18,6 +17,10 @@ class TrustedEnvironment(SkillEvaluatorSecureDockerEnvironment):
    program="import pathlib,os,hashlib,stat; p=pathlib.Path('"+remote+"'); parent=p.parent.lstat(); assert parent.st_uid==0 and not parent.st_mode&0o022; f=p.open('xb'); f.write(bytes.fromhex('"+source.read_bytes().hex()+"')); f.close(); os.chmod(p,0o444); s=p.lstat(); assert s.st_uid==0 and s.st_nlink==1 and stat.S_ISREG(s.st_mode); print(hashlib.sha256(p.read_bytes()).hexdigest())"
    check=await self.exec('python -c '+shlex.quote(program),user='root',timeout_sec=5)
    assert check.return_code==0 and check.stdout.strip()==expected,'operator code substitution'
+  absent=await self.exec('python /opt/operator-broker.py ready',user='agent',timeout_sec=5)
+  assert absent.return_code!=0,'missing broker passed readiness'
+  if self.fail_init:
+   assert (await self.exec('mkdir /opt/private',user='root',timeout_sec=5)).return_code==0
   r=await self.exec('python /opt/operator-broker.py init',user='root',timeout_sec=10)
   if r.return_code:raise RuntimeError('required initializer failed: '+r.stderr)
   self.initializer=json.loads(r.stdout)
@@ -84,6 +87,7 @@ async def main(root):
   (out/'harbor-results.json').write_text(json.dumps(rows,indent=2))
   if arm in ('with','without'):assert result.exception_info is None,str(result.exception_info)
   else:assert result.exception_info is not None
+  if fail:assert not (out/'trials'/('architecture-'+arm)/'agent/setup-order.json').exists(),'failed initialization reached agent setup'
   if arm in ('missing','contradictory'):assert result.verifier_result is None,'invalid evidence reached grader'
  (out/'harbor-results.json').write_text(json.dumps(rows,indent=2))
  identities=[json.loads(p.read_text())['identity'] for p in [out/'trials'/('architecture-'+arm)/'agent/setup-order.json' for arm in ('with','without')]]

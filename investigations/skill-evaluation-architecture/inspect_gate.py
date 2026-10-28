@@ -15,10 +15,12 @@ script=next(ast.literal_eval(n.value) for n in ast.parse((base/'native_probe.py'
 def initialize():
  async def run(state,generate):
   s=sandbox()
-  if mode=='failure':raise RuntimeError('injected required initialization failure')
   code=(base/'broker.py').read_bytes().hex()
   provision="import pathlib,os; p=pathlib.Path('/opt/operator-broker.py'); f=p.open('xb'); f.write(bytes.fromhex('"+code+"')); f.close(); os.chmod(p,0o644); assert p.stat().st_uid==0"
   assert (await s.exec(['python','-c',provision],user='root',timeout=5,timeout_retry=False)).success
+  absent=await s.exec(['python','/opt/operator-broker.py','ready'],user='agent',timeout=5,timeout_retry=False)
+  assert not absent.success,'missing broker passed readiness'
+  if mode=='failure':assert (await s.exec(['mkdir','/opt/private'],user='root',timeout=5,timeout_retry=False)).success
   r=await s.exec(['python','/opt/operator-broker.py','init'],user='root',timeout=10,timeout_retry=False)
   assert r.success
   ident=json.loads(r.stdout)['identity'];store().set('initializer_identity',ident)
@@ -47,6 +49,7 @@ logs=eval(task,model=model,log_dir=str(root/'evidence/inspect'),max_samples=1,ma
 if mode=='failure':
  assert logs[0].samples[0].error is not None
  assert not logs[0].samples[0].store.get('actual_patch_verified')
+ assert not any(e.event=='model' for e in logs[0].samples[0].events),'failed initialization reached agent'
  sys.exit(0)
 assert logs[0].status=='success',str(logs[0].error)
 assert logs[0].samples[0].store.get('actual_patch_verified') is True, 'sample did not reach verification'
