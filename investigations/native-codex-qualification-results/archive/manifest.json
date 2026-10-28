@@ -1,0 +1,55 @@
+{
+  "schema": "native-qualification-archive-manifest-v1",
+  "policy": "native-submission-contract-v2",
+  "runs": [
+    {
+      "run_id": 40756112436,
+      "source_revision": "e131c64f9716563152cddb03d51248e494bfbd34",
+      "artifact_id": 12846011569,
+      "archive": "40756112436-1.zip",
+      "run_metadata": "40756112436-run.json",
+      "sha256": "637a72b15250effb60dda7086d54dcac8e1072e954fc8004ceb8fa5a7927a634",
+      "compressed_bytes": 29344,
+      "members": 26,
+      "uncompressed_bytes": 206610,
+      "classification": "retained intermediate or failed control; not production qualification"
+    },
+    {
+      "run_id": 40757866640,
+      "source_revision": "7b21be52f0f8dfc2a238a84e48875c5dbf1c7123",
+      "artifact_id": 12846583327,
+      "archive": "40757866640-1.zip",
+      "run_metadata": "40757866640-run.json",
+      "sha256": "306cb771c0d262acb414ee86a2cc0e38be5403524d9fe54061fc94f98f856c4e",
+      "compressed_bytes": 36718,
+      "members": 33,
+      "uncompressed_bytes": 246982,
+      "classification": "retained intermediate or failed control; not production qualification"
+    },
+    {
+      "run_id": 40763796014,
+      "source_revision": "e2c775112786fb1a1ca825d5bf275cc706645a8a",
+      "artifact_id": 12848953072,
+      "archive": "40763796014-1.zip",
+      "run_metadata": "40763796014-run.json",
+      "sha256": "2acb4438145340f0718c9073e5979f823eb6016f71fb309489a4933c103444c4",
+      "compressed_bytes": 820917,
+      "members": 43,
+      "uncompressed_bytes": 3271358,
+      "classification": "retained intermediate or failed control; not production qualification"
+    },
+    {
+      "run_id": 40764246980,
+      "source_revision": "0efbe50b503e1f41527fe3512de851555dd28237",
+      "artifact_id": 12849967569,
+      "archive": "40764246980-1.zip",
+      "run_metadata": "40764246980-run.json",
+      "sha256": "a8b4ffcd0fcdd8c61be51bc2a99678c8510d7667049f94a55684a059b51d8335",
+      "compressed_bytes": 821214,
+      "members": 43,
+      "uncompressed_bytes": 3271803,
+      "final": true,
+      "classification": "final bounded controls passed; architecture not production-qualified"
+    }
+  ]
+}

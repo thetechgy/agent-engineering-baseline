@@ -1,0 +1,8 @@
+{
+  "foreign-terminal": "contradictory terminal scope",
+  "foreign-item": "foreign execution scope",
+  "missing-result": "incomplete native item population",
+  "snapshot-conflict": "live/snapshot population disagreement",
+  "late-item": "item after terminal completion",
+  "missing-eof": "native stream not closed"
+}

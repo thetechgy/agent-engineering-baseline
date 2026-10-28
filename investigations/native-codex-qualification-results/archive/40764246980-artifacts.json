@@ -1,0 +1,25 @@
+{
+  "total_count": 1,
+  "artifacts": [
+    {
+      "id": 12849967569,
+      "node_id": "MDg6QXJ0aWZhY3QxMjg0OTk2NzU2OQ==",
+      "name": "native-qualification",
+      "size_in_bytes": 821214,
+      "url": "https://api.github.com/repos/thetechgy/agent-engineering-baseline/actions/artifacts/12849967569",
+      "archive_download_url": "https://api.github.com/repos/thetechgy/agent-engineering-baseline/actions/artifacts/12849967569/zip",
+      "expired": false,
+      "digest": "sha256:a8b4ffcd0fcdd8c61be51bc2a99678c8510d7667049f94a55684a059b51d8335",
+      "created_at": "2026-10-28T20:35:48Z",
+      "updated_at": "2026-10-28T20:35:48Z",
+      "expires_at": "2026-11-11T20:35:47Z",
+      "workflow_run": {
+        "id": 40764246980,
+        "repository_id": 1299967456,
+        "head_repository_id": 1299967456,
+        "head_branch": "experiment/native-codex-qualification",
+        "head_sha": "0efbe50b503e1f41527fe3512de851555dd28237"
+      }
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "evidence_class": "actual-upstream-dispatch-and-config-functions",
+  "bad_wrapper": "rejected",
+  "required_wrapper": "inherited",
+  "config_routing": "preserved",
+  "secure_execution_methods": "inherited",
+  "actual_cli": "separate gate required"
+}

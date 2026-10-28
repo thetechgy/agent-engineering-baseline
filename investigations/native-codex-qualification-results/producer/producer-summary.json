@@ -1,0 +1,85 @@
+{
+  "evidence_class": "actual-container-and-native-producer",
+  "rows": [
+    {
+      "mode": "pipe-control",
+      "exit_code": 0,
+      "item_population_observed": false,
+      "reason": "unqualified capture transport",
+      "classification": "rejected-injection-control"
+    },
+    {
+      "mode": "normal",
+      "exit_code": 0,
+      "item_population_observed": true,
+      "reason": null,
+      "classification": "available"
+    },
+    {
+      "mode": "fd-inject",
+      "exit_code": 0,
+      "item_population_observed": true,
+      "reason": null,
+      "classification": "available"
+    },
+    {
+      "mode": "ptrace",
+      "exit_code": 0,
+      "item_population_observed": true,
+      "reason": null,
+      "classification": "available"
+    },
+    {
+      "mode": "proc-mem",
+      "exit_code": 0,
+      "item_population_observed": true,
+      "reason": null,
+      "classification": "available"
+    },
+    {
+      "mode": "forged-output",
+      "exit_code": 0,
+      "item_population_observed": true,
+      "reason": null,
+      "classification": "available"
+    },
+    {
+      "mode": "kill-producer",
+      "exit_code": 0,
+      "item_population_observed": false,
+      "reason": "capture incomplete",
+      "classification": "unavailable"
+    },
+    {
+      "mode": "kill-controller",
+      "exit_code": 137,
+      "item_population_observed": false,
+      "reason": null,
+      "classification": "unavailable"
+    },
+    {
+      "mode": "stop-producer",
+      "exit_code": 0,
+      "item_population_observed": false,
+      "reason": "capture incomplete",
+      "classification": "unavailable"
+    },
+    {
+      "mode": "workspace-normal",
+      "exit_code": 0,
+      "item_population_observed": true,
+      "runtime_qualified": false,
+      "classification": "unsupported-runtime",
+      "reason": "default runtime blocks inner user namespace; outer protections retained"
+    },
+    {
+      "mode": "workspace-fd-inject",
+      "exit_code": 0,
+      "item_population_observed": true,
+      "runtime_qualified": false,
+      "classification": "unsupported-runtime",
+      "reason": "default runtime blocks inner user namespace; outer protections retained"
+    }
+  ],
+  "cleanup_verified": true
+}

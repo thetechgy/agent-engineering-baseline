@@ -1,0 +1,40 @@
+{
+  "evidence_class": "actual-skillevaluator-cli",
+  "rows": [
+    {
+      "name": "unrelated-wrapper",
+      "source": "candidate",
+      "exit_code": 1,
+      "intended_rejection_observed": true
+    },
+    {
+      "name": "native-wrapper-staging-guard",
+      "source": "candidate",
+      "exit_code": 1,
+      "intended_rejection_observed": true
+    },
+    {
+      "name": "released-staging-guard",
+      "source": "released",
+      "exit_code": 1,
+      "intended_rejection_observed": true
+    },
+    {
+      "name": "released-custom-mode",
+      "source": "released",
+      "exit_code": 2,
+      "intended_rejection_observed": true
+    }
+  ],
+  "fixture_projection": "unchanged production gh-001 staging",
+  "catalog_requests": [
+    {
+      "method": "GET",
+      "path": "/v1/models"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/models"
+    }
+  ]
+}
