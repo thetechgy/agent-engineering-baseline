@@ -1,0 +1,140 @@
+{
+  "schema_version": "ATIF-v1.6",
+  "session_id": "fixture-unknown-session",
+  "agent": {
+    "name": "fixture",
+    "version": "1",
+    "extra": {
+      "auth_policy": null,
+      "selected_authenticate_method_id": null,
+      "selected_distribution": null,
+      "source": null
+    }
+  },
+  "steps": [
+    {
+      "step_id": 1,
+      "source": "user",
+      "message": "fixture"
+    },
+    {
+      "step_id": 2,
+      "source": "agent",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "exec-0fe500cc-cb1e-40e3-b4e7-ff2378e98f3c",
+          "function_name": "execute",
+          "arguments": {
+            "command": "printf parallel-one",
+            "cwd": "/workspace"
+          }
+        },
+        {
+          "tool_call_id": "exec-e7e2c80b-9e3b-48cd-a3ec-9585e19a3d0c",
+          "function_name": "execute",
+          "arguments": {
+            "command": "printf parallel-two",
+            "cwd": "/workspace"
+          }
+        }
+      ],
+      "extra": {
+        "session_update_counts": {
+          "tool_call": 2,
+          "tool_call_update": 2
+        },
+        "permissions_requested": null
+      }
+    },
+    {
+      "step_id": 3,
+      "source": "agent",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "exec-04622871-fdf7-4ba2-bb46-104538ce1fc2",
+          "function_name": "execute",
+          "arguments": {
+            "command": "printf identical",
+            "cwd": "/workspace"
+          }
+        }
+      ],
+      "extra": {
+        "session_update_counts": {
+          "tool_call": 1,
+          "tool_call_update": 1
+        },
+        "permissions_requested": null
+      }
+    },
+    {
+      "step_id": 4,
+      "source": "agent",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "exec-93b58375-4b6e-4c7d-bfb8-bda9987a17e5",
+          "function_name": "execute",
+          "arguments": {
+            "command": "printf identical",
+            "cwd": "/workspace"
+          }
+        }
+      ],
+      "extra": {
+        "session_update_counts": {
+          "tool_call": 1,
+          "tool_call_update": 1
+        },
+        "permissions_requested": null
+      }
+    },
+    {
+      "step_id": 5,
+      "source": "agent",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "exec-aea87205-26a1-448e-a96f-0e19aca7b609",
+          "function_name": "edit",
+          "arguments": {}
+        }
+      ],
+      "extra": {
+        "session_update_counts": {
+          "tool_call": 1,
+          "tool_call_update": 1
+        },
+        "permissions_requested": null
+      }
+    },
+    {
+      "step_id": 6,
+      "source": "agent",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "exec-cb410b74-f91d-4e86-a112-c5e8b734973c",
+          "function_name": "execute",
+          "arguments": {
+            "command": "exit 7",
+            "cwd": "/workspace"
+          }
+        }
+      ],
+      "extra": {
+        "session_update_counts": {
+          "tool_call": 1,
+          "tool_call_update": 1
+        },
+        "permissions_requested": null
+      }
+    }
+  ],
+  "notes": "Converted from ACP session updates captured in acp-events.jsonl. Step boundaries are inferred best-effort from chunked ACP events.",
+  "final_metrics": {
+    "total_steps": 6
+  }
+}

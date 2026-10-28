@@ -1,0 +1,759 @@
+[
+  {
+    "id": 1,
+    "result": {
+      "userAgent": "qualification_fixture/0.164.0 (Debian 13.0.0; x86_64) unknown (qualification_fixture; 1)",
+      "codexHome": "/home/agent/.codex",
+      "platformFamily": "unix",
+      "platformOs": "linux"
+    }
+  },
+  {
+    "method": "configWarning",
+    "params": {
+      "summary": "Codex could not find bubblewrap on PATH. Install bubblewrap with your OS package manager. See the sandbox prerequisites: https://developers.openai.com/codex/concepts/sandboxing#prerequisites. Codex will use the bundled bubblewrap in the meantime.",
+      "details": null
+    },
+    "emittedAtMs": 1793204224892
+  },
+  {
+    "method": "remoteControl/status/changed",
+    "params": {
+      "status": "disabled",
+      "serverName": "f8c06890bff6",
+      "installationId": "4b3e5c08-470b-4655-89fc-69fe135907e7",
+      "environmentId": null
+    },
+    "emittedAtMs": 1793204224892
+  },
+  {
+    "id": 2,
+    "result": {
+      "thread": {
+        "id": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+        "environments": [
+          {
+            "environmentId": "local",
+            "cwd": "/workspace",
+            "runtimeWorkspaceRoots": [
+              "/workspace"
+            ]
+          }
+        ],
+        "extra": null,
+        "sessionId": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+        "forkedFromId": null,
+        "parentThreadId": null,
+        "preview": "",
+        "ephemeral": true,
+        "section": null,
+        "sectionEnteredAt": null,
+        "projectId": null,
+        "historyMode": "paginated",
+        "modelProvider": "fixture",
+        "model": "gpt-5.6-sol",
+        "reasoningEffort": null,
+        "createdAt": 1793204224,
+        "updatedAt": 1793204224,
+        "recencyAt": 1793204224,
+        "status": {
+          "type": "idle"
+        },
+        "path": null,
+        "cwd": "/workspace",
+        "cliVersion": "0.164.0",
+        "originator": "qualification_fixture",
+        "source": "vscode",
+        "canAcceptDirectInput": true,
+        "threadSource": null,
+        "agentNickname": null,
+        "agentRole": null,
+        "gitInfo": null,
+        "name": null,
+        "daybreakEnabled": null,
+        "turns": []
+      },
+      "model": "gpt-5.6-sol",
+      "modelProvider": "fixture",
+      "serviceTier": null,
+      "disabledPluginIds": [],
+      "cwd": "/workspace",
+      "runtimeWorkspaceRoots": [
+        "/workspace"
+      ],
+      "instructionSources": [],
+      "approvalPolicy": "never",
+      "approvalsReviewer": "user",
+      "sandbox": {
+        "type": "dangerFullAccess"
+      },
+      "activePermissionProfile": null,
+      "reasoningEffort": null,
+      "multiAgentMode": "explicitRequestOnly"
+    }
+  },
+  {
+    "method": "thread/started",
+    "params": {
+      "thread": {
+        "id": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+        "environments": [
+          {
+            "environmentId": "local",
+            "cwd": "/workspace",
+            "runtimeWorkspaceRoots": [
+              "/workspace"
+            ]
+          }
+        ],
+        "extra": null,
+        "sessionId": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+        "forkedFromId": null,
+        "parentThreadId": null,
+        "preview": "",
+        "ephemeral": true,
+        "section": null,
+        "sectionEnteredAt": null,
+        "projectId": null,
+        "historyMode": "paginated",
+        "modelProvider": "fixture",
+        "model": "gpt-5.6-sol",
+        "reasoningEffort": null,
+        "createdAt": 1793204224,
+        "updatedAt": 1793204224,
+        "recencyAt": 1793204224,
+        "status": {
+          "type": "idle"
+        },
+        "path": null,
+        "cwd": "/workspace",
+        "cliVersion": "0.164.0",
+        "originator": "qualification_fixture",
+        "source": "vscode",
+        "canAcceptDirectInput": true,
+        "threadSource": null,
+        "agentNickname": null,
+        "agentRole": null,
+        "gitInfo": null,
+        "name": null,
+        "daybreakEnabled": null,
+        "turns": []
+      }
+    },
+    "emittedAtMs": 1793204224903
+  },
+  {
+    "id": 3,
+    "result": {
+      "turn": {
+        "id": "01a1834d-0387-70e2-b2b3-97eeac0e2edb",
+        "rootTurnId": "01a1834d-0387-70e2-b2b3-97eeac0e2edb",
+        "items": [],
+        "itemsView": "notLoaded",
+        "status": "inProgress",
+        "error": null,
+        "startedAt": null,
+        "completedAt": null,
+        "durationMs": null
+      }
+    }
+  },
+  {
+    "method": "thread/status/changed",
+    "params": {
+      "threadId": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+      "status": {
+        "type": "active",
+        "activeFlags": []
+      }
+    },
+    "emittedAtMs": 1793204224906
+  },
+  {
+    "method": "turn/started",
+    "params": {
+      "threadId": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+      "turn": {
+        "id": "01a1834d-0387-70e2-b2b3-97eeac0e2edb",
+        "rootTurnId": "01a1834d-0387-70e2-b2b3-97eeac0e2edb",
+        "items": [],
+        "itemsView": "notLoaded",
+        "status": "inProgress",
+        "error": null,
+        "startedAt": 1793204224,
+        "completedAt": null,
+        "durationMs": null
+      }
+    },
+    "emittedAtMs": 1793204224906
+  },
+  {
+    "method": "item/started",
+    "params": {
+      "item": {
+        "type": "userMessage",
+        "id": "01a1834d-038b-7901-8632-f5d0860e828d",
+        "clientId": null,
+        "content": [
+          {
+            "type": "text",
+            "text": "Execute the fixed fixture script.",
+            "text_elements": []
+          }
+        ]
+      },
+      "threadId": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+      "turnId": "01a1834d-0387-70e2-b2b3-97eeac0e2edb",
+      "startedAtMs": 1793204224907
+    },
+    "emittedAtMs": 1793204224907
+  },
+  {
+    "method": "item/completed",
+    "params": {
+      "item": {
+        "type": "userMessage",
+        "id": "01a1834d-038b-7901-8632-f5d0860e828d",
+        "clientId": null,
+        "content": [
+          {
+            "type": "text",
+            "text": "Execute the fixed fixture script.",
+            "text_elements": []
+          }
+        ]
+      },
+      "threadId": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+      "turnId": "01a1834d-0387-70e2-b2b3-97eeac0e2edb",
+      "completedAtMs": 1793204224907
+    },
+    "emittedAtMs": 1793204224907
+  },
+  {
+    "method": "item/started",
+    "params": {
+      "item": {
+        "type": "commandExecution",
+        "id": "exec-0fe500cc-cb1e-40e3-b4e7-ff2378e98f3c",
+        "pluginId": null,
+        "scriptPath": null,
+        "command": "/bin/sh -lc 'printf parallel-one'",
+        "cwd": "/workspace",
+        "processId": "76953",
+        "source": "unifiedExecStartup",
+        "status": "inProgress",
+        "commandActions": [
+          {
+            "type": "unknown",
+            "command": "printf parallel-one"
+          }
+        ],
+        "aggregatedOutput": null,
+        "exitCode": null,
+        "durationMs": null
+      },
+      "threadId": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+      "turnId": "01a1834d-0387-70e2-b2b3-97eeac0e2edb",
+      "startedAtMs": 1793204224964
+    },
+    "emittedAtMs": 1793204224968
+  },
+  {
+    "method": "item/started",
+    "params": {
+      "item": {
+        "type": "commandExecution",
+        "id": "exec-e7e2c80b-9e3b-48cd-a3ec-9585e19a3d0c",
+        "pluginId": null,
+        "scriptPath": null,
+        "command": "/bin/sh -lc 'printf parallel-two'",
+        "cwd": "/workspace",
+        "processId": "91888",
+        "source": "unifiedExecStartup",
+        "status": "inProgress",
+        "commandActions": [
+          {
+            "type": "unknown",
+            "command": "printf parallel-two"
+          }
+        ],
+        "aggregatedOutput": null,
+        "exitCode": null,
+        "durationMs": null
+      },
+      "threadId": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+      "turnId": "01a1834d-0387-70e2-b2b3-97eeac0e2edb",
+      "startedAtMs": 1793204224964
+    },
+    "emittedAtMs": 1793204224968
+  },
+  {
+    "method": "item/completed",
+    "params": {
+      "item": {
+        "type": "commandExecution",
+        "id": "exec-e7e2c80b-9e3b-48cd-a3ec-9585e19a3d0c",
+        "pluginId": null,
+        "scriptPath": null,
+        "command": "/bin/sh -lc 'printf parallel-two'",
+        "cwd": "/workspace",
+        "processId": "91888",
+        "source": "unifiedExecStartup",
+        "status": "completed",
+        "commandActions": [
+          {
+            "type": "unknown",
+            "command": "printf parallel-two"
+          }
+        ],
+        "aggregatedOutput": "parallel-two",
+        "exitCode": 0,
+        "durationMs": 0
+      },
+      "threadId": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+      "turnId": "01a1834d-0387-70e2-b2b3-97eeac0e2edb",
+      "completedAtMs": 1793204224964
+    },
+    "emittedAtMs": 1793204224968
+  },
+  {
+    "method": "item/completed",
+    "params": {
+      "item": {
+        "type": "commandExecution",
+        "id": "exec-0fe500cc-cb1e-40e3-b4e7-ff2378e98f3c",
+        "pluginId": null,
+        "scriptPath": null,
+        "command": "/bin/sh -lc 'printf parallel-one'",
+        "cwd": "/workspace",
+        "processId": "76953",
+        "source": "unifiedExecStartup",
+        "status": "completed",
+        "commandActions": [
+          {
+            "type": "unknown",
+            "command": "printf parallel-one"
+          }
+        ],
+        "aggregatedOutput": "parallel-one",
+        "exitCode": 0,
+        "durationMs": 0
+      },
+      "threadId": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+      "turnId": "01a1834d-0387-70e2-b2b3-97eeac0e2edb",
+      "completedAtMs": 1793204224964
+    },
+    "emittedAtMs": 1793204224968
+  },
+  {
+    "method": "item/started",
+    "params": {
+      "item": {
+        "type": "commandExecution",
+        "id": "exec-04622871-fdf7-4ba2-bb46-104538ce1fc2",
+        "pluginId": null,
+        "scriptPath": null,
+        "command": "/bin/sh -lc 'printf identical'",
+        "cwd": "/workspace",
+        "processId": "14834",
+        "source": "unifiedExecStartup",
+        "status": "inProgress",
+        "commandActions": [
+          {
+            "type": "unknown",
+            "command": "printf identical"
+          }
+        ],
+        "aggregatedOutput": null,
+        "exitCode": null,
+        "durationMs": null
+      },
+      "threadId": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+      "turnId": "01a1834d-0387-70e2-b2b3-97eeac0e2edb",
+      "startedAtMs": 1793204225001
+    },
+    "emittedAtMs": 1793204225001
+  },
+  {
+    "method": "item/completed",
+    "params": {
+      "item": {
+        "type": "commandExecution",
+        "id": "exec-04622871-fdf7-4ba2-bb46-104538ce1fc2",
+        "pluginId": null,
+        "scriptPath": null,
+        "command": "/bin/sh -lc 'printf identical'",
+        "cwd": "/workspace",
+        "processId": "14834",
+        "source": "unifiedExecStartup",
+        "status": "completed",
+        "commandActions": [
+          {
+            "type": "unknown",
+            "command": "printf identical"
+          }
+        ],
+        "aggregatedOutput": "identical",
+        "exitCode": 0,
+        "durationMs": 0
+      },
+      "threadId": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+      "turnId": "01a1834d-0387-70e2-b2b3-97eeac0e2edb",
+      "completedAtMs": 1793204225001
+    },
+    "emittedAtMs": 1793204225001
+  },
+  {
+    "method": "item/started",
+    "params": {
+      "item": {
+        "type": "commandExecution",
+        "id": "exec-93b58375-4b6e-4c7d-bfb8-bda9987a17e5",
+        "pluginId": null,
+        "scriptPath": null,
+        "command": "/bin/sh -lc 'printf identical'",
+        "cwd": "/workspace",
+        "processId": "81729",
+        "source": "unifiedExecStartup",
+        "status": "inProgress",
+        "commandActions": [
+          {
+            "type": "unknown",
+            "command": "printf identical"
+          }
+        ],
+        "aggregatedOutput": null,
+        "exitCode": null,
+        "durationMs": null
+      },
+      "threadId": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+      "turnId": "01a1834d-0387-70e2-b2b3-97eeac0e2edb",
+      "startedAtMs": 1793204225036
+    },
+    "emittedAtMs": 1793204225037
+  },
+  {
+    "method": "item/completed",
+    "params": {
+      "item": {
+        "type": "commandExecution",
+        "id": "exec-93b58375-4b6e-4c7d-bfb8-bda9987a17e5",
+        "pluginId": null,
+        "scriptPath": null,
+        "command": "/bin/sh -lc 'printf identical'",
+        "cwd": "/workspace",
+        "processId": "81729",
+        "source": "unifiedExecStartup",
+        "status": "completed",
+        "commandActions": [
+          {
+            "type": "unknown",
+            "command": "printf identical"
+          }
+        ],
+        "aggregatedOutput": "identical",
+        "exitCode": 0,
+        "durationMs": 0
+      },
+      "threadId": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+      "turnId": "01a1834d-0387-70e2-b2b3-97eeac0e2edb",
+      "completedAtMs": 1793204225037
+    },
+    "emittedAtMs": 1793204225037
+  },
+  {
+    "method": "item/started",
+    "params": {
+      "item": {
+        "type": "fileChange",
+        "id": "exec-aea87205-26a1-448e-a96f-0e19aca7b609",
+        "changes": [
+          {
+            "path": "/workspace/actual.txt",
+            "kind": {
+              "type": "add"
+            },
+            "diff": "actual-modification\n"
+          }
+        ],
+        "status": "inProgress"
+      },
+      "threadId": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+      "turnId": "01a1834d-0387-70e2-b2b3-97eeac0e2edb",
+      "startedAtMs": 1793204225038
+    },
+    "emittedAtMs": 1793204225038
+  },
+  {
+    "method": "item/completed",
+    "params": {
+      "item": {
+        "type": "fileChange",
+        "id": "exec-aea87205-26a1-448e-a96f-0e19aca7b609",
+        "changes": [
+          {
+            "path": "/workspace/actual.txt",
+            "kind": {
+              "type": "add"
+            },
+            "diff": "actual-modification\n"
+          }
+        ],
+        "status": "completed"
+      },
+      "threadId": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+      "turnId": "01a1834d-0387-70e2-b2b3-97eeac0e2edb",
+      "completedAtMs": 1793204225039
+    },
+    "emittedAtMs": 1793204225039
+  },
+  {
+    "method": "turn/diff/updated",
+    "params": {
+      "threadId": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+      "turnId": "01a1834d-0387-70e2-b2b3-97eeac0e2edb",
+      "diff": "diff --git a/actual.txt b/actual.txt\nnew file mode 100644\nindex 0000000000000000000000000000000000000000..9396b7197de5912604df42eb8b5485480190359f\n--- /dev/null\n+++ b/actual.txt\n@@ -0,0 +1 @@\n+actual-modification\n"
+    },
+    "emittedAtMs": 1793204225039
+  },
+  {
+    "method": "item/started",
+    "params": {
+      "item": {
+        "type": "commandExecution",
+        "id": "exec-cb410b74-f91d-4e86-a112-c5e8b734973c",
+        "pluginId": null,
+        "scriptPath": null,
+        "command": "/bin/sh -lc 'exit 7'",
+        "cwd": "/workspace",
+        "processId": "44888",
+        "source": "unifiedExecStartup",
+        "status": "inProgress",
+        "commandActions": [
+          {
+            "type": "unknown",
+            "command": "exit 7"
+          }
+        ],
+        "aggregatedOutput": null,
+        "exitCode": null,
+        "durationMs": null
+      },
+      "threadId": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+      "turnId": "01a1834d-0387-70e2-b2b3-97eeac0e2edb",
+      "startedAtMs": 1793204225075
+    },
+    "emittedAtMs": 1793204225075
+  },
+  {
+    "method": "item/completed",
+    "params": {
+      "item": {
+        "type": "commandExecution",
+        "id": "exec-cb410b74-f91d-4e86-a112-c5e8b734973c",
+        "pluginId": null,
+        "scriptPath": null,
+        "command": "/bin/sh -lc 'exit 7'",
+        "cwd": "/workspace",
+        "processId": "44888",
+        "source": "unifiedExecStartup",
+        "status": "failed",
+        "commandActions": [
+          {
+            "type": "unknown",
+            "command": "exit 7"
+          }
+        ],
+        "aggregatedOutput": null,
+        "exitCode": 7,
+        "durationMs": 0
+      },
+      "threadId": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+      "turnId": "01a1834d-0387-70e2-b2b3-97eeac0e2edb",
+      "completedAtMs": 1793204225075
+    },
+    "emittedAtMs": 1793204225075
+  },
+  {
+    "method": "thread/tokenUsage/updated",
+    "params": {
+      "threadId": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+      "turnId": "01a1834d-0387-70e2-b2b3-97eeac0e2edb",
+      "tokenUsage": {
+        "total": {
+          "totalTokens": 0,
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 0,
+          "reasoningOutputTokens": 0
+        },
+        "last": {
+          "totalTokens": 0,
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 0,
+          "reasoningOutputTokens": 0
+        },
+        "modelContextWindow": 258400
+      }
+    },
+    "emittedAtMs": 1793204225077
+  },
+  {
+    "method": "account/rateLimits/updated",
+    "params": {
+      "rateLimits": {
+        "limitId": "codex",
+        "limitName": null,
+        "normalModelSlug": null,
+        "primary": null,
+        "secondary": null,
+        "credits": null,
+        "individualLimit": null,
+        "spendControlReached": null,
+        "planType": null,
+        "rateLimitReachedType": null
+      }
+    },
+    "emittedAtMs": 1793204225077
+  },
+  {
+    "method": "turn/diff/updated",
+    "params": {
+      "threadId": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+      "turnId": "01a1834d-0387-70e2-b2b3-97eeac0e2edb",
+      "diff": "diff --git a/actual.txt b/actual.txt\nnew file mode 100644\nindex 0000000000000000000000000000000000000000..9396b7197de5912604df42eb8b5485480190359f\n--- /dev/null\n+++ b/actual.txt\n@@ -0,0 +1 @@\n+actual-modification\n"
+    },
+    "emittedAtMs": 1793204225077
+  },
+  {
+    "method": "item/started",
+    "params": {
+      "item": {
+        "type": "agentMessage",
+        "id": "answer",
+        "text": "fixture finished",
+        "phase": null,
+        "memoryCitation": null,
+        "delivery": null,
+        "questions": null
+      },
+      "threadId": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+      "turnId": "01a1834d-0387-70e2-b2b3-97eeac0e2edb",
+      "startedAtMs": 1793204225102
+    },
+    "emittedAtMs": 1793204225103
+  },
+  {
+    "method": "item/completed",
+    "params": {
+      "item": {
+        "type": "agentMessage",
+        "id": "answer",
+        "text": "fixture finished",
+        "phase": null,
+        "memoryCitation": null,
+        "delivery": null,
+        "questions": null
+      },
+      "threadId": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+      "turnId": "01a1834d-0387-70e2-b2b3-97eeac0e2edb",
+      "completedAtMs": 1793204225102
+    },
+    "emittedAtMs": 1793204225103
+  },
+  {
+    "method": "thread/tokenUsage/updated",
+    "params": {
+      "threadId": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+      "turnId": "01a1834d-0387-70e2-b2b3-97eeac0e2edb",
+      "tokenUsage": {
+        "total": {
+          "totalTokens": 0,
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 0,
+          "reasoningOutputTokens": 0
+        },
+        "last": {
+          "totalTokens": 0,
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 0,
+          "reasoningOutputTokens": 0
+        },
+        "modelContextWindow": 258400
+      }
+    },
+    "emittedAtMs": 1793204225103
+  },
+  {
+    "method": "account/rateLimits/updated",
+    "params": {
+      "rateLimits": {
+        "limitId": "codex",
+        "limitName": null,
+        "normalModelSlug": null,
+        "primary": null,
+        "secondary": null,
+        "credits": null,
+        "individualLimit": null,
+        "spendControlReached": null,
+        "planType": null,
+        "rateLimitReachedType": null
+      }
+    },
+    "emittedAtMs": 1793204225103
+  },
+  {
+    "method": "turn/diff/updated",
+    "params": {
+      "threadId": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+      "turnId": "01a1834d-0387-70e2-b2b3-97eeac0e2edb",
+      "diff": "diff --git a/actual.txt b/actual.txt\nnew file mode 100644\nindex 0000000000000000000000000000000000000000..9396b7197de5912604df42eb8b5485480190359f\n--- /dev/null\n+++ b/actual.txt\n@@ -0,0 +1 @@\n+actual-modification\n"
+    },
+    "emittedAtMs": 1793204225103
+  },
+  {
+    "method": "thread/status/changed",
+    "params": {
+      "threadId": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+      "status": {
+        "type": "idle"
+      }
+    },
+    "emittedAtMs": 1793204225103
+  },
+  {
+    "method": "turn/completed",
+    "params": {
+      "threadId": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+      "turn": {
+        "id": "01a1834d-0387-70e2-b2b3-97eeac0e2edb",
+        "rootTurnId": "01a1834d-0387-70e2-b2b3-97eeac0e2edb",
+        "items": [
+          {
+            "type": "agentMessage",
+            "id": "answer",
+            "text": "fixture finished",
+            "phase": null,
+            "memoryCitation": null,
+            "delivery": null,
+            "questions": null
+          }
+        ],
+        "itemsView": "summary",
+        "status": "completed",
+        "error": null,
+        "startedAt": 1793204224,
+        "completedAt": 1793204225,
+        "durationMs": 198
+      }
+    },
+    "emittedAtMs": 1793204225103
+  }
+]

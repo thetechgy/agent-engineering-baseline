@@ -3,6 +3,10 @@ import http.server, json, os, pathlib, queue, subprocess, threading, time
 ROOT=pathlib.Path('/workspace')
 pathlib.Path('/home/agent/.codex').mkdir(exist_ok=True)
 SCRIPT='''const a = await Promise.all([tools.exec_command({cmd:"printf parallel-one"}), tools.exec_command({cmd:"printf parallel-two"})]); for (const r of a) text(r.output); text((await tools.exec_command({cmd:"printf identical"})).output); text((await tools.exec_command({cmd:"printf identical"})).output); text(await tools.apply_patch("*** Begin Patch\\n*** Add File: /workspace/actual.txt\\n+actual-modification\\n*** End Patch")); text((await tools.exec_command({cmd:"exit 7"})).output); text("reported-only: never executed ghost-command");'''
+if len(__import__('sys').argv)>1 and __import__('sys').argv[1]=='interrupt':
+ SCRIPT='text(await tools.exec_command({cmd:"sleep 20",yield_time_ms:1000})); await new Promise(r=>setTimeout(r,20000));'
+if len(__import__('sys').argv)>1 and __import__('sys').argv[1]=='decline':
+ SCRIPT='text(await tools.exec_command({cmd:"touch /tmp/poc-declined",sandbox_permissions:"require_escalated",justification:"Synthetic denial control"}));'
 requests=[]
 class Server(http.server.BaseHTTPRequestHandler):
  def log_message(self,*a): pass
@@ -36,16 +40,21 @@ def until(predicate,seconds=65):
  while time.monotonic()<end:
   e=q.get(timeout=max(.1,end-time.monotonic()));events.append(e)
   if e.get('eof'): raise RuntimeError('App Server exited')
+  if e.get('method')=='item/commandExecution/requestApproval':
+   proc.stdin.write(json.dumps({'id':e['id'],'result':{'decision':'decline'}})+'\n');proc.stdin.flush()
   if predicate(e):return e
  raise TimeoutError()
 try:
  send(1,'initialize',{'clientInfo':{'name':'qualification_fixture','version':'1'},'capabilities':{'experimentalApi':True}})
  init=until(lambda e:e.get('id')==1)
  proc.stdin.write('{"method":"initialized"}\n');proc.stdin.flush()
- send(2,'thread/start',{'model':'gpt-5.6-sol','modelProvider':'fixture','cwd':str(ROOT),'approvalPolicy':'never','sandbox':'danger-full-access','ephemeral':True})
+ send(2,'thread/start',{'model':'gpt-5.6-sol','modelProvider':'fixture','cwd':str(ROOT),'approvalPolicy':('on-request' if 'decline' in __import__('sys').argv else 'never'),'sandbox':('read-only' if 'decline' in __import__('sys').argv else 'danger-full-access'),'ephemeral':True})
  thread=until(lambda e:e.get('id')==2)
  if 'error' in thread:raise RuntimeError(str(thread))
  send(3,'turn/start',{'threadId':thread['result']['thread']['id'],'input':[{'type':'text','text':'Execute the fixed fixture script.'}]})
+ if 'interrupt' in __import__('sys').argv:
+  until(lambda e:e.get('method')=='item/started' and e.get('params',{}).get('item',{}).get('type')=='commandExecution')
+  send(4,'turn/interrupt',{'threadId':thread['result']['thread']['id'],'turnId':next(e['params']['turnId'] for e in reversed(events) if e.get('method')=='item/started')})
  until(lambda e:e.get('method')=='turn/completed')
 finally:
  proc.terminate()
@@ -55,4 +64,4 @@ finally:
  pathlib.Path('/workspace/events.json').write_text(json.dumps(events,indent=2))
  pathlib.Path('/workspace/requests.json').write_text(json.dumps(requests,indent=2))
  pathlib.Path('/workspace/stderr.txt').write_text(proc.stderr.read())
-print(json.dumps({'requests':len(requests),'native_items':[e['params']['item'] for e in events if e.get('method')=='item/completed'],'actual_file':(ROOT/'actual.txt').exists()}))
+print(json.dumps({'requests':len(requests),'native_items':[e['params']['item'] for e in events if e.get('method')=='item/completed'],'actual_file':(ROOT/'actual.txt').exists(),'declined_file_exists':pathlib.Path('/tmp/poc-declined').exists()}))

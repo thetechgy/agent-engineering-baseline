@@ -23,6 +23,9 @@ class ProbeAgent(BaseAgent):
  def version(self):return '1'
  async def setup(self,environment):
   assert (await environment.exec('id -u')).stdout.strip()=='1000'
+  r=await environment.exec("python -c 'import json,pathlib; s=pathlib.Path(\"/proc/self/status\").read_text(); print(json.dumps({\"capabilities\":next(x for x in s.splitlines() if x.startswith(\"CapEff:\")),\"seccomp\":next(x for x in s.splitlines() if x.startswith(\"Seccomp:\")),\"no_new_privs\":next(x for x in s.splitlines() if x.startswith(\"NoNewPrivs:\")),\"interfaces\":sorted(p.name for p in pathlib.Path(\"/sys/class/net\").iterdir())}))'")
+  security=json.loads(r.stdout);assert security['capabilities'].endswith('0000000000000000') and security['seccomp'].endswith('2') and security['no_new_privs'].endswith('1') and security['interfaces']==['lo']
+  (self.logs_dir/'security.json').write_text(json.dumps(security))
   ready=await environment.exec('python /opt/broker.py ready',timeout_sec=5)
   assert ready.return_code==0
   assert json.loads(ready.stdout)['identity']==environment.initializer['identity']
@@ -37,8 +40,10 @@ class ProbeAgent(BaseAgent):
    r=await environment.exec('python /opt/broker.py '+op,timeout_sec=5)
    assert r.return_code==0 and json.loads(r.stdout)['allowed']==expected
   assert (await environment.exec('python /opt/probe.py',timeout_sec=90)).return_code==0
+  from evidence_gate import admit
   for name in ['events.json','requests.json','stderr.txt','actual.txt']:
    await environment.download_file('/workspace/'+name,self.logs_dir/name)
+  admit(json.loads((self.logs_dir/'events.json').read_text()))
 
 async def main(root):
  out=root/'evidence';task=root/'task';env=task/'environment';env.mkdir(parents=True)

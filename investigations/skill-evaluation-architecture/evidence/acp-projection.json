@@ -1,0 +1,305 @@
+{
+  "events": [
+    {
+      "event_type": "session_update",
+      "payload": {
+        "session_id": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+        "update": {
+          "sessionUpdate": "tool_call",
+          "toolCallId": "exec-0fe500cc-cb1e-40e3-b4e7-ff2378e98f3c",
+          "name": "exec_command",
+          "kind": "execute",
+          "title": "printf parallel-one",
+          "status": "in_progress",
+          "content": [
+            {
+              "type": "terminal",
+              "terminalId": "exec-0fe500cc-cb1e-40e3-b4e7-ff2378e98f3c"
+            }
+          ],
+          "rawInput": {
+            "command": "printf parallel-one",
+            "cwd": "/workspace"
+          },
+          "_meta": {
+            "terminal_info": {
+              "cwd": "/workspace",
+              "terminal_id": "exec-0fe500cc-cb1e-40e3-b4e7-ff2378e98f3c"
+            }
+          }
+        }
+      }
+    },
+    {
+      "event_type": "session_update",
+      "payload": {
+        "session_id": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+        "update": {
+          "sessionUpdate": "tool_call",
+          "toolCallId": "exec-e7e2c80b-9e3b-48cd-a3ec-9585e19a3d0c",
+          "name": "exec_command",
+          "kind": "execute",
+          "title": "printf parallel-two",
+          "status": "in_progress",
+          "content": [
+            {
+              "type": "terminal",
+              "terminalId": "exec-e7e2c80b-9e3b-48cd-a3ec-9585e19a3d0c"
+            }
+          ],
+          "rawInput": {
+            "command": "printf parallel-two",
+            "cwd": "/workspace"
+          },
+          "_meta": {
+            "terminal_info": {
+              "cwd": "/workspace",
+              "terminal_id": "exec-e7e2c80b-9e3b-48cd-a3ec-9585e19a3d0c"
+            }
+          }
+        }
+      }
+    },
+    {
+      "event_type": "session_update",
+      "payload": {
+        "session_id": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+        "update": {
+          "sessionUpdate": "tool_call_update",
+          "toolCallId": "exec-e7e2c80b-9e3b-48cd-a3ec-9585e19a3d0c",
+          "name": "exec_command",
+          "status": "completed",
+          "_meta": {
+            "terminal_output_delta": {
+              "data": "parallel-two",
+              "terminal_id": "exec-e7e2c80b-9e3b-48cd-a3ec-9585e19a3d0c"
+            },
+            "terminal_exit": {
+              "exit_code": 0,
+              "signal": null,
+              "terminal_id": "exec-e7e2c80b-9e3b-48cd-a3ec-9585e19a3d0c"
+            }
+          }
+        }
+      }
+    },
+    {
+      "event_type": "session_update",
+      "payload": {
+        "session_id": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+        "update": {
+          "sessionUpdate": "tool_call_update",
+          "toolCallId": "exec-0fe500cc-cb1e-40e3-b4e7-ff2378e98f3c",
+          "name": "exec_command",
+          "status": "completed",
+          "_meta": {
+            "terminal_output_delta": {
+              "data": "parallel-one",
+              "terminal_id": "exec-0fe500cc-cb1e-40e3-b4e7-ff2378e98f3c"
+            },
+            "terminal_exit": {
+              "exit_code": 0,
+              "signal": null,
+              "terminal_id": "exec-0fe500cc-cb1e-40e3-b4e7-ff2378e98f3c"
+            }
+          }
+        }
+      }
+    },
+    {
+      "event_type": "session_update",
+      "payload": {
+        "session_id": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+        "update": {
+          "sessionUpdate": "tool_call",
+          "toolCallId": "exec-04622871-fdf7-4ba2-bb46-104538ce1fc2",
+          "name": "exec_command",
+          "kind": "execute",
+          "title": "printf identical",
+          "status": "in_progress",
+          "content": [
+            {
+              "type": "terminal",
+              "terminalId": "exec-04622871-fdf7-4ba2-bb46-104538ce1fc2"
+            }
+          ],
+          "rawInput": {
+            "command": "printf identical",
+            "cwd": "/workspace"
+          },
+          "_meta": {
+            "terminal_info": {
+              "cwd": "/workspace",
+              "terminal_id": "exec-04622871-fdf7-4ba2-bb46-104538ce1fc2"
+            }
+          }
+        }
+      }
+    },
+    {
+      "event_type": "session_update",
+      "payload": {
+        "session_id": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+        "update": {
+          "sessionUpdate": "tool_call_update",
+          "toolCallId": "exec-04622871-fdf7-4ba2-bb46-104538ce1fc2",
+          "name": "exec_command",
+          "status": "completed",
+          "_meta": {
+            "terminal_output_delta": {
+              "data": "identical",
+              "terminal_id": "exec-04622871-fdf7-4ba2-bb46-104538ce1fc2"
+            },
+            "terminal_exit": {
+              "exit_code": 0,
+              "signal": null,
+              "terminal_id": "exec-04622871-fdf7-4ba2-bb46-104538ce1fc2"
+            }
+          }
+        }
+      }
+    },
+    {
+      "event_type": "session_update",
+      "payload": {
+        "session_id": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+        "update": {
+          "sessionUpdate": "tool_call",
+          "toolCallId": "exec-93b58375-4b6e-4c7d-bfb8-bda9987a17e5",
+          "name": "exec_command",
+          "kind": "execute",
+          "title": "printf identical",
+          "status": "in_progress",
+          "content": [
+            {
+              "type": "terminal",
+              "terminalId": "exec-93b58375-4b6e-4c7d-bfb8-bda9987a17e5"
+            }
+          ],
+          "rawInput": {
+            "command": "printf identical",
+            "cwd": "/workspace"
+          },
+          "_meta": {
+            "terminal_info": {
+              "cwd": "/workspace",
+              "terminal_id": "exec-93b58375-4b6e-4c7d-bfb8-bda9987a17e5"
+            }
+          }
+        }
+      }
+    },
+    {
+      "event_type": "session_update",
+      "payload": {
+        "session_id": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+        "update": {
+          "sessionUpdate": "tool_call_update",
+          "toolCallId": "exec-93b58375-4b6e-4c7d-bfb8-bda9987a17e5",
+          "name": "exec_command",
+          "status": "completed",
+          "_meta": {
+            "terminal_output_delta": {
+              "data": "identical",
+              "terminal_id": "exec-93b58375-4b6e-4c7d-bfb8-bda9987a17e5"
+            },
+            "terminal_exit": {
+              "exit_code": 0,
+              "signal": null,
+              "terminal_id": "exec-93b58375-4b6e-4c7d-bfb8-bda9987a17e5"
+            }
+          }
+        }
+      }
+    },
+    {
+      "event_type": "session_update",
+      "payload": {
+        "session_id": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+        "update": {
+          "sessionUpdate": "tool_call",
+          "toolCallId": "exec-aea87205-26a1-448e-a96f-0e19aca7b609",
+          "kind": "edit",
+          "title": "Editing files",
+          "status": "in_progress",
+          "content": [
+            {
+              "type": "diff",
+              "oldText": null,
+              "newText": "actual-modification\n",
+              "path": "/workspace/actual.txt",
+              "_meta": {
+                "kind": "add"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "event_type": "session_update",
+      "payload": {
+        "session_id": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+        "update": {
+          "sessionUpdate": "tool_call_update",
+          "toolCallId": "exec-aea87205-26a1-448e-a96f-0e19aca7b609",
+          "status": "completed"
+        }
+      }
+    },
+    {
+      "event_type": "session_update",
+      "payload": {
+        "session_id": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+        "update": {
+          "sessionUpdate": "tool_call",
+          "toolCallId": "exec-cb410b74-f91d-4e86-a112-c5e8b734973c",
+          "name": "exec_command",
+          "kind": "execute",
+          "title": "exit 7",
+          "status": "in_progress",
+          "content": [
+            {
+              "type": "terminal",
+              "terminalId": "exec-cb410b74-f91d-4e86-a112-c5e8b734973c"
+            }
+          ],
+          "rawInput": {
+            "command": "exit 7",
+            "cwd": "/workspace"
+          },
+          "_meta": {
+            "terminal_info": {
+              "cwd": "/workspace",
+              "terminal_id": "exec-cb410b74-f91d-4e86-a112-c5e8b734973c"
+            }
+          }
+        }
+      }
+    },
+    {
+      "event_type": "session_update",
+      "payload": {
+        "session_id": "01a1834d-037e-72c3-877d-5e3b64dbab0e",
+        "update": {
+          "sessionUpdate": "tool_call_update",
+          "toolCallId": "exec-cb410b74-f91d-4e86-a112-c5e8b734973c",
+          "name": "exec_command",
+          "status": "failed",
+          "_meta": {
+            "terminal_exit": {
+              "exit_code": 7,
+              "signal": null,
+              "terminal_id": "exec-cb410b74-f91d-4e86-a112-c5e8b734973c"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "terminalStates": {
+    "failed": "failed",
+    "declined": "failed",
+    "interrupted": "failed"
+  }
+}

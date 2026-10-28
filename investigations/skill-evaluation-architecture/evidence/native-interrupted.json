@@ -1,0 +1,338 @@
+[
+  {
+    "id": 1,
+    "result": {
+      "userAgent": "qualification_fixture/0.164.0 (Debian 13.0.0; x86_64) unknown (qualification_fixture; 1)",
+      "codexHome": "/home/agent/.codex",
+      "platformFamily": "unix",
+      "platformOs": "linux"
+    }
+  },
+  {
+    "method": "configWarning",
+    "params": {
+      "summary": "Codex could not find bubblewrap on PATH. Install bubblewrap with your OS package manager. See the sandbox prerequisites: https://developers.openai.com/codex/concepts/sandboxing#prerequisites. Codex will use the bundled bubblewrap in the meantime.",
+      "details": null
+    },
+    "emittedAtMs": 1793204876292
+  },
+  {
+    "method": "remoteControl/status/changed",
+    "params": {
+      "status": "disabled",
+      "serverName": "5343147f1472",
+      "installationId": "e07fa9d0-b427-401d-a2a4-d62a4fd50d55",
+      "environmentId": null
+    },
+    "emittedAtMs": 1793204876292
+  },
+  {
+    "id": 2,
+    "result": {
+      "thread": {
+        "id": "01a18356-f405-7a93-84c2-179c95bb3da9",
+        "environments": [
+          {
+            "environmentId": "local",
+            "cwd": "/workspace",
+            "runtimeWorkspaceRoots": [
+              "/workspace"
+            ]
+          }
+        ],
+        "extra": null,
+        "sessionId": "01a18356-f405-7a93-84c2-179c95bb3da9",
+        "forkedFromId": null,
+        "parentThreadId": null,
+        "preview": "",
+        "ephemeral": true,
+        "section": null,
+        "sectionEnteredAt": null,
+        "projectId": null,
+        "historyMode": "paginated",
+        "modelProvider": "fixture",
+        "model": "gpt-5.6-sol",
+        "reasoningEffort": null,
+        "createdAt": 1793204876,
+        "updatedAt": 1793204876,
+        "recencyAt": 1793204876,
+        "status": {
+          "type": "idle"
+        },
+        "path": null,
+        "cwd": "/workspace",
+        "cliVersion": "0.164.0",
+        "originator": "qualification_fixture",
+        "source": "vscode",
+        "canAcceptDirectInput": true,
+        "threadSource": null,
+        "agentNickname": null,
+        "agentRole": null,
+        "gitInfo": null,
+        "name": null,
+        "daybreakEnabled": null,
+        "turns": []
+      },
+      "model": "gpt-5.6-sol",
+      "modelProvider": "fixture",
+      "serviceTier": null,
+      "disabledPluginIds": [],
+      "cwd": "/workspace",
+      "runtimeWorkspaceRoots": [
+        "/workspace"
+      ],
+      "instructionSources": [],
+      "approvalPolicy": "never",
+      "approvalsReviewer": "user",
+      "sandbox": {
+        "type": "dangerFullAccess"
+      },
+      "activePermissionProfile": null,
+      "reasoningEffort": null,
+      "multiAgentMode": "explicitRequestOnly"
+    }
+  },
+  {
+    "method": "thread/started",
+    "params": {
+      "thread": {
+        "id": "01a18356-f405-7a93-84c2-179c95bb3da9",
+        "environments": [
+          {
+            "environmentId": "local",
+            "cwd": "/workspace",
+            "runtimeWorkspaceRoots": [
+              "/workspace"
+            ]
+          }
+        ],
+        "extra": null,
+        "sessionId": "01a18356-f405-7a93-84c2-179c95bb3da9",
+        "forkedFromId": null,
+        "parentThreadId": null,
+        "preview": "",
+        "ephemeral": true,
+        "section": null,
+        "sectionEnteredAt": null,
+        "projectId": null,
+        "historyMode": "paginated",
+        "modelProvider": "fixture",
+        "model": "gpt-5.6-sol",
+        "reasoningEffort": null,
+        "createdAt": 1793204876,
+        "updatedAt": 1793204876,
+        "recencyAt": 1793204876,
+        "status": {
+          "type": "idle"
+        },
+        "path": null,
+        "cwd": "/workspace",
+        "cliVersion": "0.164.0",
+        "originator": "qualification_fixture",
+        "source": "vscode",
+        "canAcceptDirectInput": true,
+        "threadSource": null,
+        "agentNickname": null,
+        "agentRole": null,
+        "gitInfo": null,
+        "name": null,
+        "daybreakEnabled": null,
+        "turns": []
+      }
+    },
+    "emittedAtMs": 1793204876300
+  },
+  {
+    "id": 3,
+    "result": {
+      "turn": {
+        "id": "01a18356-f40d-71a0-9d4a-fe27e36bf4ef",
+        "rootTurnId": "01a18356-f40d-71a0-9d4a-fe27e36bf4ef",
+        "items": [],
+        "itemsView": "notLoaded",
+        "status": "inProgress",
+        "error": null,
+        "startedAt": null,
+        "completedAt": null,
+        "durationMs": null
+      }
+    }
+  },
+  {
+    "method": "thread/status/changed",
+    "params": {
+      "threadId": "01a18356-f405-7a93-84c2-179c95bb3da9",
+      "status": {
+        "type": "active",
+        "activeFlags": []
+      }
+    },
+    "emittedAtMs": 1793204876303
+  },
+  {
+    "method": "turn/started",
+    "params": {
+      "threadId": "01a18356-f405-7a93-84c2-179c95bb3da9",
+      "turn": {
+        "id": "01a18356-f40d-71a0-9d4a-fe27e36bf4ef",
+        "rootTurnId": "01a18356-f40d-71a0-9d4a-fe27e36bf4ef",
+        "items": [],
+        "itemsView": "notLoaded",
+        "status": "inProgress",
+        "error": null,
+        "startedAt": 1793204876,
+        "completedAt": null,
+        "durationMs": null
+      }
+    },
+    "emittedAtMs": 1793204876303
+  },
+  {
+    "method": "item/started",
+    "params": {
+      "item": {
+        "type": "userMessage",
+        "id": "01a18356-f410-75f3-a704-2de354aee183",
+        "clientId": null,
+        "content": [
+          {
+            "type": "text",
+            "text": "Execute the fixed fixture script.",
+            "text_elements": []
+          }
+        ]
+      },
+      "threadId": "01a18356-f405-7a93-84c2-179c95bb3da9",
+      "turnId": "01a18356-f40d-71a0-9d4a-fe27e36bf4ef",
+      "startedAtMs": 1793204876304
+    },
+    "emittedAtMs": 1793204876304
+  },
+  {
+    "method": "item/completed",
+    "params": {
+      "item": {
+        "type": "userMessage",
+        "id": "01a18356-f410-75f3-a704-2de354aee183",
+        "clientId": null,
+        "content": [
+          {
+            "type": "text",
+            "text": "Execute the fixed fixture script.",
+            "text_elements": []
+          }
+        ]
+      },
+      "threadId": "01a18356-f405-7a93-84c2-179c95bb3da9",
+      "turnId": "01a18356-f40d-71a0-9d4a-fe27e36bf4ef",
+      "completedAtMs": 1793204876304
+    },
+    "emittedAtMs": 1793204876304
+  },
+  {
+    "method": "item/started",
+    "params": {
+      "item": {
+        "type": "commandExecution",
+        "id": "exec-815955e4-e782-4afa-ad37-77085e2728de",
+        "pluginId": null,
+        "scriptPath": null,
+        "command": "/bin/sh -lc 'sleep 20'",
+        "cwd": "/workspace",
+        "processId": "87630",
+        "source": "unifiedExecStartup",
+        "status": "inProgress",
+        "commandActions": [
+          {
+            "type": "unknown",
+            "command": "sleep 20"
+          }
+        ],
+        "aggregatedOutput": null,
+        "exitCode": null,
+        "durationMs": null
+      },
+      "threadId": "01a18356-f405-7a93-84c2-179c95bb3da9",
+      "turnId": "01a18356-f40d-71a0-9d4a-fe27e36bf4ef",
+      "startedAtMs": 1793204876489
+    },
+    "emittedAtMs": 1793204876492
+  },
+  {
+    "method": "thread/tokenUsage/updated",
+    "params": {
+      "threadId": "01a18356-f405-7a93-84c2-179c95bb3da9",
+      "turnId": "01a18356-f40d-71a0-9d4a-fe27e36bf4ef",
+      "tokenUsage": {
+        "total": {
+          "totalTokens": 0,
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 0,
+          "reasoningOutputTokens": 0
+        },
+        "last": {
+          "totalTokens": 0,
+          "inputTokens": 0,
+          "cachedInputTokens": 0,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 0,
+          "reasoningOutputTokens": 0
+        },
+        "modelContextWindow": 258400
+      }
+    },
+    "emittedAtMs": 1793204876494
+  },
+  {
+    "method": "account/rateLimits/updated",
+    "params": {
+      "rateLimits": {
+        "limitId": "codex",
+        "limitName": null,
+        "normalModelSlug": null,
+        "primary": null,
+        "secondary": null,
+        "credits": null,
+        "individualLimit": null,
+        "spendControlReached": null,
+        "planType": null,
+        "rateLimitReachedType": null
+      }
+    },
+    "emittedAtMs": 1793204876494
+  },
+  {
+    "id": 4,
+    "result": {}
+  },
+  {
+    "method": "thread/status/changed",
+    "params": {
+      "threadId": "01a18356-f405-7a93-84c2-179c95bb3da9",
+      "status": {
+        "type": "idle"
+      }
+    },
+    "emittedAtMs": 1793204876597
+  },
+  {
+    "method": "turn/completed",
+    "params": {
+      "threadId": "01a18356-f405-7a93-84c2-179c95bb3da9",
+      "turn": {
+        "id": "01a18356-f40d-71a0-9d4a-fe27e36bf4ef",
+        "rootTurnId": "01a18356-f40d-71a0-9d4a-fe27e36bf4ef",
+        "items": [],
+        "itemsView": "notLoaded",
+        "status": "interrupted",
+        "error": null,
+        "startedAt": 1793204876,
+        "completedAt": 1793204876,
+        "durationMs": 294
+      }
+    },
+    "emittedAtMs": 1793204876597
+  }
+]
