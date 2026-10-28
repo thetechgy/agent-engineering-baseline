@@ -79,7 +79,7 @@ diff --git a/src/skillevaluator/tier3/eval_core/sensitive_path_evidence.py b/src
 new file mode 100644
 --- /dev/null
 +++ b/src/skillevaluator/tier3/eval_core/sensitive_path_evidence.py
-@@ -0,0 +1,100 @@
+@@ -0,0 +1,132 @@
 +"""Bounded classification of literal path evidence; never execute captured code.
 +
 +This is deliberately incomplete. Unknown syntax is not evidence of access or
@@ -101,11 +101,43 @@ new file mode 100644
 +        tree = ast.parse(source)
 +    except (SyntaxError, ValueError, RecursionError):
 +        return "unknown"
++    if any(not isinstance(statement, (ast.Import, ast.Assign, ast.Expr, ast.Assert)) for statement in tree.body):
++        return "unknown"
++    if any(isinstance(node, ast.comprehension) for node in ast.walk(tree)):
++        return "unknown"
 +    parents = {child: parent for parent in ast.walk(tree) for child in ast.iter_child_nodes(parent)}
 +    # Dynamic interpretation can turn apparently inert source text into code.
 +    if any(isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
 +           and n.func.id in {"eval", "exec", "compile", "__import__"} for n in ast.walk(tree)):
 +        return "unknown"
++    # Only the small configuration-inspection subset has known literal roles.
++    # User-defined equality, callbacks, imports and computed calls can reinterpret
++    # a comparison operand. Never turn those into a trusted textual reference.
++    for item in ast.walk(tree):
++        if isinstance(item, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda, ast.ImportFrom)):
++            return "unknown"
++        if isinstance(item, ast.Import) and any(alias.name not in {"yaml", "json"} or alias.asname not in {None, alias.name} for alias in item.names):
++            return "unknown"
++        if isinstance(item, (ast.Assign, ast.AnnAssign, ast.AugAssign, ast.NamedExpr)):
++            targets = item.targets if isinstance(item, ast.Assign) else [item.target]
++            if any(not isinstance(target, ast.Name) or target.id in {"open", "print", "yaml", "json"}
++                   for target in targets):
++                return "unknown"
++        if isinstance(item, ast.Call):
++            if isinstance(item.func, ast.Name) and item.func.id == "open" and (
++                not item.args or not isinstance(item.args[0], ast.Constant)
++                or not isinstance(item.args[0].value, str)
++            ):
++                return "unknown"
++            direct = isinstance(item.func, ast.Name) and item.func.id in {"open", "print"}
++            parser = (isinstance(item.func, ast.Attribute) and isinstance(item.func.value, ast.Name)
++                      and (item.func.value.id, item.func.attr) in {
++                          ("yaml", "safe_load"), ("json", "load"), ("json", "loads")})
++            file_read = (isinstance(item.func, ast.Attribute) and item.func.attr == "read"
++                         and isinstance(item.func.value, ast.Call)
++                         and isinstance(item.func.value.func, ast.Name) and item.func.value.func.id == "open")
++            if not (direct or parser or file_read):
++                return "unknown"
 +    result = "text"
 +    for node in ast.walk(tree):
 +        if not isinstance(node, ast.Constant) or not isinstance(node.value, str) or not _sensitive(node.value, paths):
