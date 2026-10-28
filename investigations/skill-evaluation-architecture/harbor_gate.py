@@ -23,8 +23,8 @@ class TrustedEnvironment(SkillEvaluatorSecureDockerEnvironment):
   self.initializer=json.loads(r.stdout)
 
 class ProbeAgent(BaseAgent):
- def __init__(self,*a,hold=False,evidence_fault=None,**kw):
-  super().__init__(*a,**kw);self.hold=hold;self.evidence_fault=evidence_fault
+ def __init__(self,*a,hold=False,evidence_fault=None,skill_probe=False,**kw):
+  super().__init__(*a,**kw);self.hold=hold;self.evidence_fault=evidence_fault;self.skill_probe=skill_probe
  @staticmethod
  def name():return 'architecture-probe'
  def version(self):return '1'
@@ -36,6 +36,7 @@ class ProbeAgent(BaseAgent):
   ready=await environment.exec('python /opt/broker.py ready',timeout_sec=5)
   assert ready.return_code==0
   assert json.loads(ready.stdout)['identity']==environment.initializer['identity']
+  self.component_receipts=[environment.initializer['receipt'],json.loads(ready.stdout)['receipt']]
   assert (await environment.exec('python /opt/operator-start.py',user='agent',timeout_sec=5)).return_code==0
   (self.logs_dir/'setup-order.json').write_text(json.dumps(environment.initializer))
  async def run(self,instruction,environment,context):
@@ -47,7 +48,8 @@ class ProbeAgent(BaseAgent):
   for op,expected in [('read',True),('mutate',True),('mutate',False),('private',False)]:
    r=await environment.exec('python /opt/broker.py '+op,timeout_sec=5)
    assert r.return_code==0 and json.loads(r.stdout)['allowed']==expected
-  assert (await environment.exec('python /opt/operator-probe.py protected',user='root',timeout_sec=90)).return_code==0
+   self.component_receipts.append(json.loads(r.stdout)['receipt'])
+  assert (await environment.exec('python /opt/operator-probe.py protected broker-probe'+(' skill-probe' if self.skill_probe else ''),user='root',timeout_sec=90)).return_code==0
   from evidence_gate import admit
   for name in ['events.json','wire.jsonl','requests.json','stderr.txt','actual.txt']:
    await environment.download_file(('/workspace/' if name=='actual.txt' else '/opt/native-capture/')+name,self.logs_dir/name)
@@ -56,7 +58,14 @@ class ProbeAgent(BaseAgent):
   if self.evidence_fault=='missing':events=[e for e in events if e.get('method')!='turn/completed']
   if self.evidence_fault=='contradictory':
    bad=copy.deepcopy(next(e for e in events if e.get('method')=='item/completed' and e['params']['item']['type']=='commandExecution'));bad['params']['item']['exitCode']=99;events.append(bad)
-  admit(events)
+  admission=admit(events)
+  audit_result=await environment.exec('cat /opt/private/audit',user='root',timeout_sec=5)
+  audit=[json.loads(line) for line in audit_result.stdout.splitlines()]
+  native=next(e['params']['item'] for e in events if e.get('method')=='item/completed' and '/opt/broker.py read' in e.get('params',{}).get('item',{}).get('command',''))
+  receipt=json.loads(native['aggregatedOutput'])['receipt']
+  assert len(audit)==len(self.component_receipts)+1 and {r['receipt'] for r in audit}==set(self.component_receipts+[receipt]),'unbound broker audit'
+  assert next(r for r in audit if r['receipt']==receipt)['op']=='read'
+  (self.logs_dir/'fixture-binding.json').write_text(json.dumps({'native_item_id':native['id'],'receipt':receipt,'audit_population':len(audit),'admission':admission}))
 
 async def main(root):
  out=root/'evidence';task=root/'task';env=task/'environment';env.mkdir(parents=True)

@@ -15,11 +15,15 @@ def admit(events):
  if not turn_complete or set(starts)!=set(ends):raise ValueError('incomplete execution population')
  cmds=[i for i in ends.values() if i['type']=='commandExecution']
  patches=[i for i in ends.values() if i['type']=='fileChange']
+ optional=[i for i in cmds if '/opt/broker.py read' in i['command'] or 'cat /workspace/skills/probe/SKILL.md' in i['command']]
+ if len(optional)>2:raise ValueError('duplicate fixture controls')
+ cmds=[i for i in cmds if i not in optional]
+ if any(i.get('exitCode') not in (0,1) or i.get('status')!=('failed' if i.get('exitCode')==1 else 'completed') for i in optional):raise ValueError('fixture read incomplete')
  if len(cmds)!=5 or len(patches)!=1:raise ValueError('unexpected fixture population')
  if sorted(i.get('exitCode') for i in cmds)!=[0,0,0,0,7]:raise ValueError('missing exit evidence')
  if any(i['status']!=('failed' if i['exitCode']==7 else 'completed') for i in cmds):raise ValueError('contradictory exit status')
  if patches[0]['status']!='completed':raise ValueError('patch not completed')
- return {'commands':len(cmds),'patches':len(patches),'complete':True}
+ return {'commands':len(cmds)+len(optional),'patches':len(patches),'complete':True,'activation_observed':any('cat /workspace/skills/probe/SKILL.md' in i['command'] and i['exitCode']==0 for i in optional)}
 
 def check(path):
  events=json.loads(path.read_text());result=admit(events)

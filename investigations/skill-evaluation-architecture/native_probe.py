@@ -10,6 +10,10 @@ if len(__import__('sys').argv)>1 and __import__('sys').argv[1]=='interrupt':
  SCRIPT='text(await tools.exec_command({cmd:"sleep 20",yield_time_ms:1000})); await new Promise(r=>setTimeout(r,20000));'
 if len(__import__('sys').argv)>1 and __import__('sys').argv[1]=='decline':
  SCRIPT='text(await tools.exec_command({cmd:"touch /tmp/poc-declined",sandbox_permissions:"require_escalated",justification:"Synthetic denial control"}));'
+if 'broker-probe' in __import__('sys').argv:
+ SCRIPT='text((await tools.exec_command({cmd:"python /opt/broker.py read"})).output);'+SCRIPT
+if 'skill-probe' in __import__('sys').argv:
+ SCRIPT='text((await tools.exec_command({cmd:"cat /workspace/skills/probe/SKILL.md"})).output);'+SCRIPT
 requests=[]
 class Server(http.server.BaseHTTPRequestHandler):
  def log_message(self,*a): pass

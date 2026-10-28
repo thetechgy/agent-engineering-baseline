@@ -21,6 +21,12 @@ uv pip sync --python "$root/inspect/bin/python" --require-hashes investigations/
 set +e
 "$root/evaluator/.venv/bin/python" investigations/skill-evaluation-architecture/harbor_gate.py "$root"
 harbor_status=$?
+if [ "$harbor_status" = 0 ]; then
+  "$root/evaluator/.venv/bin/python" investigations/skill-evaluation-architecture/paired_gate.py "$root"
+  paired_status=$?
+else
+  paired_status=125
+fi
 "$root/inspect/bin/python" investigations/skill-evaluation-architecture/inspect_gate.py "$root"
 inspect_status=$?
 "$root/inspect/bin/python" investigations/skill-evaluation-architecture/inspect_controls.py "$root"
@@ -34,4 +40,4 @@ files=[p for p in src.rglob('*') if p.is_file() and not p.is_symlink()]
 assert len(files)<256 and sum(p.stat().st_size for p in files)<16*1024*1024
 shutil.copytree(src,root/'public-evidence')
 EXPORT
-test "$harbor_status" = 0 && test "$inspect_status" = 0 && test "$inspect_controls_status" = 0
+test "$paired_status" = 0 && test "$harbor_status" = 0 && test "$inspect_status" = 0 && test "$inspect_controls_status" = 0
