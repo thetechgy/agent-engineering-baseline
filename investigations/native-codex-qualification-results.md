@@ -75,7 +75,8 @@ The actual CLI exercises paired configuration, provider selection and existing g
 sources reject the unchanged gh authored healthcheck; that protection remains intact. The native wrapper's selection is
 necessary compatibility evidence, **not** proof that install/setup/run/verifier/collector succeed. Its capabilities do
 not falsely advertise an implemented ATIF trajectory. Its experimental environment only provisions fixed operator helper
-files; it does not implement the production broker contract. The operator profile also forces no-network despite the original gh task's
+files; it does not implement the production broker contract. The operator profile also forces no-network despite the
+original gh task's
 public-network metadata; that is a distinct experimental condition, not fixture parity.
 
 The proposed gh projection would have removed the authored healthcheck and selected the operator profile instead, with
