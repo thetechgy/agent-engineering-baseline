@@ -15,6 +15,10 @@ script=next(ast.literal_eval(n.value) for n in ast.parse((base/'native_probe.py'
 def initialize():
  async def run(state,generate):
   s=sandbox()
+  program='import json,os,pathlib; s=pathlib.Path("/proc/self/status").read_text(); print(json.dumps({"uid":os.geteuid(),"status":{k:next(x.split(":",1)[1].strip() for x in s.splitlines() if x.startswith(k+":")) for k in ["CapEff","Seccomp","NoNewPrivs"]},"interfaces":sorted(p.name for p in pathlib.Path("/sys/class/net").iterdir())}))'
+  security=json.loads((await s.exec(['python','-c',program],user='agent',timeout=5,timeout_retry=False)).stdout)
+  assert security=={'uid':1000,'status':{'CapEff':'0000000000000000','Seccomp':'2','NoNewPrivs':'1'},'interfaces':['lo']},security
+  store().set('runtime_security',security)
   code=(base/'broker.py').read_bytes().hex()
   provision="import pathlib,os; p=pathlib.Path('/opt/operator-broker.py'); f=p.open('xb'); f.write(bytes.fromhex('"+code+"')); f.close(); os.chmod(p,0o644); assert p.stat().st_uid==0"
   assert (await s.exec(['python','-c',provision],user='root',timeout=5,timeout_retry=False)).success
@@ -24,7 +28,7 @@ def initialize():
   r=await s.exec(['python','/opt/operator-broker.py','init'],user='root',timeout=10,timeout_retry=False)
   assert r.success
   ident=json.loads(r.stdout)['identity'];store().set('initializer_identity',ident)
-  for cmd in [['cat','/opt/private/identity'],['python','/opt/broker.py','init'],['rm','/run/poc/broker.sock']]:
+  for cmd in [['cat','/opt/private/identity'],['cat','/opt/private/audit'],['python','/opt/broker.py','init'],['rm','/run/poc/broker.sock']]:
    assert not (await s.exec(cmd,user='agent',timeout=5,timeout_retry=False)).success
   assert json.loads((await s.exec(['python','/opt/broker.py','ready'],user='agent',timeout=5,timeout_retry=False)).stdout)['identity']==ident
   assert (await s.exec(['mkdir','-p','/home/agent/.codex'],user='agent',timeout_retry=False)).success
