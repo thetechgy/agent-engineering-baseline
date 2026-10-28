@@ -16,7 +16,10 @@ def initialize():
  async def run(state,generate):
   s=sandbox()
   if mode=='failure':raise RuntimeError('injected required initialization failure')
-  r=await s.exec(['python','/opt/broker.py','init'],user='root',timeout=10,timeout_retry=False)
+  code=(base/'broker.py').read_bytes().hex()
+  provision="import pathlib,os; p=pathlib.Path('/opt/operator-broker.py'); f=p.open('xb'); f.write(bytes.fromhex('"+code+"')); f.close(); os.chmod(p,0o644); assert p.stat().st_uid==0"
+  assert (await s.exec(['python','-c',provision],user='root',timeout=5,timeout_retry=False)).success
+  r=await s.exec(['python','/opt/operator-broker.py','init'],user='root',timeout=10,timeout_retry=False)
   assert r.success
   ident=json.loads(r.stdout)['identity'];store().set('initializer_identity',ident)
   for cmd in [['cat','/opt/private/identity'],['python','/opt/broker.py','init'],['rm','/run/poc/broker.sock']]:

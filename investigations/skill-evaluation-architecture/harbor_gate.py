@@ -1,5 +1,5 @@
 """Actual Harbor Trial lifecycle through the inherited secure Docker backend."""
-import asyncio, contextlib, copy, json, pathlib, subprocess, sys
+import asyncio, contextlib, copy, hashlib, json, pathlib, subprocess, sys
 from harbor.agents.base import BaseAgent
 from harbor.models.trial.config import TrialConfig
 from harbor.trial.trial import Trial
@@ -11,7 +11,12 @@ class TrustedEnvironment(SkillEvaluatorSecureDockerEnvironment):
  async def start(self,force_build):
   await super().start(force_build)
   if self.fail_init:raise RuntimeError('injected required initializer failure')
-  r=await self.exec('python /opt/broker.py init',user='root',timeout_sec=10)
+  source=pathlib.Path(__file__).with_name('broker.py')
+  await self.upload_file(source,'/opt/operator-broker.py')
+  expected=hashlib.sha256(source.read_bytes()).hexdigest()
+  check=await self.exec("python -c 'import pathlib,hashlib,stat; p=pathlib.Path(\"/opt/operator-broker.py\"); s=p.lstat(); assert s.st_uid==0 and s.st_nlink==1 and stat.S_ISREG(s.st_mode) and not s.st_mode&0o022; print(hashlib.sha256(p.read_bytes()).hexdigest())'",user='root',timeout_sec=5)
+  assert check.return_code==0 and check.stdout.strip()==expected,'initializer substitution'
+  r=await self.exec('python /opt/operator-broker.py init',user='root',timeout_sec=10)
   if r.return_code:raise RuntimeError('required initializer failed: '+r.stderr)
   self.initializer=json.loads(r.stdout)
 
