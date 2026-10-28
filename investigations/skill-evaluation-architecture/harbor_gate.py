@@ -10,20 +10,23 @@ class TrustedEnvironment(SkillEvaluatorSecureDockerEnvironment):
   super().__init__(*a,**kw);self.fail_init=fail_init
  async def start(self,force_build):
   await super().start(force_build)
+  poison="import pathlib; pathlib.Path('/workspace/pathlib.py').open('x').write(\"raise RuntimeError('untrusted cwd import')\\n\")"
+  assert (await self.exec('python -I -c '+shlex.quote(poison),user='agent',timeout_sec=5)).return_code==0
   for module,target in [('broker.py','broker'),('native_probe.py','probe'),('start_native.py','start')]:
    source=pathlib.Path(__file__).with_name(module)
    remote='/opt/operator-'+target+'.py'
    expected=hashlib.sha256(source.read_bytes()).hexdigest()
    program="import pathlib,os,hashlib,stat; p=pathlib.Path('"+remote+"'); parent=p.parent.lstat(); assert parent.st_uid==0 and not parent.st_mode&0o022; f=p.open('xb'); f.write(bytes.fromhex('"+source.read_bytes().hex()+"')); f.close(); os.chmod(p,0o444); s=p.lstat(); assert s.st_uid==0 and s.st_nlink==1 and stat.S_ISREG(s.st_mode); print(hashlib.sha256(p.read_bytes()).hexdigest())"
-   check=await self.exec('python -c '+shlex.quote(program),user='root',timeout_sec=5)
+   check=await self.exec('python -I -c '+shlex.quote(program),user='root',timeout_sec=5)
    assert check.return_code==0 and check.stdout.strip()==expected,'operator code substitution'
   absent=await self.exec('python /opt/operator-broker.py ready',user='agent',timeout_sec=5)
   assert absent.return_code!=0,'missing broker passed readiness'
   if self.fail_init:
    assert (await self.exec('mkdir /opt/private',user='root',timeout_sec=5)).return_code==0
-  r=await self.exec('python /opt/operator-broker.py init',user='root',timeout_sec=10)
+  r=await self.exec('python -I /opt/operator-broker.py init',user='root',timeout_sec=10)
   if r.return_code:raise RuntimeError(f'required initializer failed (exit {r.return_code})')
-  self.initializer=json.loads(r.stdout)
+  assert (await self.exec('rm /workspace/pathlib.py',user='agent',timeout_sec=5)).return_code==0
+  self.initializer={**json.loads(r.stdout),'cwd_import_isolated':True}
 
 class ProbeAgent(BaseAgent):
  def __init__(self,*a,hold=False,evidence_fault=None,skill_probe=False,**kw):

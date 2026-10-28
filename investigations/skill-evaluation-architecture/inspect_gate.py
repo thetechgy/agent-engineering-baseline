@@ -19,14 +19,18 @@ def initialize():
   security=json.loads((await s.exec(['python','-c',program],user='agent',timeout=5,timeout_retry=False)).stdout)
   assert security=={'uid':1000,'status':{'CapEff':'0000000000000000','Seccomp':'2','NoNewPrivs':'1'},'interfaces':['lo']},security
   store().set('runtime_security',security)
+  poison="import pathlib; pathlib.Path('/workspace/pathlib.py').open('x').write(\"raise RuntimeError('untrusted cwd import')\\n\")"
+  assert (await s.exec(['python','-I','-c',poison],user='agent',timeout=5,timeout_retry=False)).success
   code=(base/'broker.py').read_bytes().hex()
   provision="import pathlib,os; p=pathlib.Path('/opt/operator-broker.py'); f=p.open('xb'); f.write(bytes.fromhex('"+code+"')); f.close(); os.chmod(p,0o644); assert p.stat().st_uid==0"
-  assert (await s.exec(['python','-c',provision],user='root',timeout=5,timeout_retry=False)).success
+  assert (await s.exec(['python','-I','-c',provision],user='root',timeout=5,timeout_retry=False)).success
   absent=await s.exec(['python','/opt/operator-broker.py','ready'],user='agent',timeout=5,timeout_retry=False)
   assert not absent.success,'missing broker passed readiness'
   if mode=='failure':assert (await s.exec(['mkdir','/opt/private'],user='root',timeout=5,timeout_retry=False)).success
-  r=await s.exec(['python','/opt/operator-broker.py','init'],user='root',timeout=10,timeout_retry=False)
+  r=await s.exec(['python','-I','/opt/operator-broker.py','init'],user='root',timeout=10,timeout_retry=False)
   if not r.success:raise RuntimeError(f'required initializer failed (exit {r.returncode})')
+  assert (await s.exec(['rm','/workspace/pathlib.py'],user='agent',timeout=5,timeout_retry=False)).success
+  store().set('initializer_cwd_poison_rejected',True)
   ident=json.loads(r.stdout)['identity'];store().set('initializer_identity',ident)
   for cmd in [['cat','/opt/private/identity'],['cat','/opt/private/audit'],['python','/opt/broker.py','init'],['rm','/run/poc/broker.sock']]:
    assert not (await s.exec(cmd,user='agent',timeout=5,timeout_retry=False)).success
