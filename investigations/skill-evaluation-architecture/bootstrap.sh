@@ -13,6 +13,8 @@ git clone --quiet https://github.com/NVIDIA/SkillEvaluator.git "$root/evaluator"
 git -C "$root/evaluator" checkout --quiet d9fa4b4041b31f417f02ed145999ecf1f0c11fcd
 uv sync --project "$root/evaluator" --python 3.13.15 --frozen --no-dev --extra tier3
 git -C "$root/evaluator" diff --exit-code -- uv.lock pyproject.toml
+uv pip install --python "$root/evaluator/.venv/bin/python" ./investigations/skill-evaluation-architecture --no-deps
+"$root/evaluator/.venv/bin/python" investigations/skill-evaluation-architecture/backend_gate.py
 uv venv --python 3.13.15 "$root/inspect"
 uv pip sync --python "$root/inspect/bin/python" --require-hashes investigations/skill-evaluation-architecture/inspect-requirements.txt
 set +e
@@ -20,6 +22,8 @@ set +e
 harbor_status=$?
 "$root/inspect/bin/python" investigations/skill-evaluation-architecture/inspect_gate.py "$root"
 inspect_status=$?
+"$root/inspect/bin/python" investigations/skill-evaluation-architecture/inspect_controls.py "$root"
+inspect_controls_status=$?
 set -e
 printf '{"harbor_exit":%s,"inspect_exit":%s}\n' "$harbor_status" "$inspect_status" > "$root/evidence/outcomes.json"
 python3 - "$root" <<'EXPORT'
@@ -29,4 +33,4 @@ files=[p for p in src.rglob('*') if p.is_file() and not p.is_symlink()]
 assert len(files)<256 and sum(p.stat().st_size for p in files)<16*1024*1024
 shutil.copytree(src,root/'public-evidence')
 EXPORT
-test "$harbor_status" = 0 && test "$inspect_status" = 0
+test "$harbor_status" = 0 && test "$inspect_status" = 0 && test "$inspect_controls_status" = 0

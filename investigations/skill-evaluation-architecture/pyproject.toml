@@ -1,0 +1,10 @@
+[build-system]
+requires = ["setuptools==82.0.0"]
+build-backend = "setuptools.build_meta"
+[project]
+name = "aeb-architecture-poc"
+version = "0.0.1"
+[project.entry-points."skillevaluator.env_modes"]
+architecture-poc = "backend_spec:SPEC"
+[tool.setuptools]
+py-modules = ["backend_spec", "harbor_gate"]

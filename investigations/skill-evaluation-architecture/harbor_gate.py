@@ -1,5 +1,5 @@
 """Actual Harbor Trial lifecycle through the inherited secure Docker backend."""
-import asyncio, json, pathlib, subprocess, sys
+import asyncio, contextlib, json, pathlib, subprocess, sys
 from harbor.agents.base import BaseAgent
 from harbor.models.trial.config import TrialConfig
 from harbor.trial.trial import Trial
@@ -16,6 +16,8 @@ class TrustedEnvironment(SkillEvaluatorSecureDockerEnvironment):
   self.initializer=json.loads(r.stdout)
 
 class ProbeAgent(BaseAgent):
+ def __init__(self,*a,hold=False,**kw):
+  super().__init__(*a,**kw);self.hold=hold
  @staticmethod
  def name():return 'architecture-probe'
  def version(self):return '1'
@@ -26,6 +28,9 @@ class ProbeAgent(BaseAgent):
   assert json.loads(ready.stdout)['identity']==environment.initializer['identity']
   (self.logs_dir/'setup-order.json').write_text(json.dumps(environment.initializer))
  async def run(self,instruction,environment,context):
+  if self.hold:
+   await environment.exec('sleep 30',timeout_sec=35)
+   return
   for command in ['cat /opt/private/identity','cat /opt/private/audit','python /opt/broker.py init','rm /run/poc/broker.sock']:
    assert (await environment.exec(command,timeout_sec=5)).return_code!=0,command
   for op,expected in [('read',True),('mutate',True),('mutate',False),('private',False)]:
@@ -42,6 +47,7 @@ async def main(root):
  (task/'instruction.md').write_text('Execute the operator fixture.\n')
  (task/'task.toml').write_text('schema_version="1.3"\n[agent]\nuser="agent"\ntimeout_sec=100\n[verifier]\nuser="root"\ntimeout_sec=10\n[environment]\ncpus=2\nmemory_mb=1024\nstorage_mb=1024\nworkdir="/workspace"\nnetwork_mode="no-network"\n')
  (task/'tests').mkdir();(task/'tests/test.sh').write_text('#!/bin/sh\nmkdir -p /logs/verifier\nprintf 1 > /logs/verifier/reward.txt\n')
+ (task/'tests').chmod(0o755)
  (task/'tests/test.sh').chmod(0o755)
  rows=[]
  for arm,fail in [('with',False),('without',False),('init-failure',True)]:
@@ -54,6 +60,15 @@ async def main(root):
  (out/'harbor-results.json').write_text(json.dumps(rows,indent=2))
  identities=[json.loads(p.read_text())['identity'] for p in out.glob('trials/*/agent/setup-order.json')]
  assert len(identities)==2 and len(set(identities))==2
+ config=TrialConfig.model_validate({'task':{'path':str(task)},'trial_name':'architecture-cancel','trials_dir':str(out/'trials'),'agent':{'import_path':'harbor_gate:ProbeAgent','kwargs':{'hold':True}},'environment':{'import_path':'harbor_gate:TrustedEnvironment'}})
+ trial=await Trial.create(config);work=asyncio.create_task(trial.run())
+ for _ in range(900):
+  if (out/'trials/architecture-cancel/agent/setup-order.json').exists():break
+  if work.done():raise AssertionError('cancellation trial ended before setup')
+  await asyncio.sleep(.1)
+ else:raise TimeoutError('cancellation setup deadline')
+ await asyncio.sleep(.5);work.cancel()
+ with contextlib.suppress(asyncio.CancelledError):await asyncio.wait_for(work,20)
  remaining=subprocess.check_output(['docker','ps','-aq','--filter','name=architecture-'],text=True).strip()
  assert not remaining,'trial containers remain'
  print('Harbor secure lifecycle gates passed')
