@@ -1,6 +1,6 @@
 """Actual container/producer attacks; no mocked transport or inferred operation identity."""
 import argparse,copy,json,pathlib,subprocess,uuid
-from aeb_native_qualification.evidence import admit,Unavailable
+from aeb_native_qualification.evidence import observe,Unavailable
 
 def main():
     ap=argparse.ArgumentParser();ap.add_argument('--engine',choices=('docker','podman'),default='docker');ap.add_argument('--out',type=pathlib.Path,required=True);args=ap.parse_args();args.out.mkdir(parents=True,exist_ok=True)
@@ -20,7 +20,7 @@ def main():
             capture=json.loads(r.stdout) if r.returncode==0 else None
             accepted=False;reason=None
             if capture:
-                try:admitted=admit(capture);accepted=True
+                try:admitted=observe(capture);accepted=True
                 except Unavailable as e:reason=str(e)
             if mode=='pipe-control':
                 assert not accepted and reason=='unqualified capture transport'
@@ -29,7 +29,7 @@ def main():
             elif mode.startswith('workspace-') and run('exec','--user','agent',name,'test','-f','/workspace/actual.txt').returncode!=0:
                 failed=[i for i in admitted['commands'] if i['status']=='failed']
                 assert failed and all('bwrap: No permissions to create a new namespace' in i['aggregatedOutput'] for i in failed)
-                rows.append({'mode':mode,'exit_code':r.returncode,'capture_admitted':accepted,'runtime_qualified':False,'classification':'unsupported-runtime','reason':'default runtime blocks inner user namespace; outer protections retained'})
+                rows.append({'mode':mode,'exit_code':r.returncode,'item_population_observed':accepted,'runtime_qualified':False,'classification':'unsupported-runtime','reason':'default runtime blocks inner user namespace; outer protections retained'})
                 (args.out/'producer-summary.json').write_text(json.dumps({'evidence_class':'actual-container-and-native-producer','rows':rows,'cleanup_verified':False},indent=2))
                 continue
             elif mode in ('normal','fd-inject','ptrace','proc-mem','forged-output','workspace-normal','workspace-fd-inject'):
@@ -43,7 +43,7 @@ def main():
                     if mode=='proc-mem':assert len(report['checks'])==2 and all(not c['memory_opened'] and c['pidfd_getfd']==-1 for c in report['checks'])
                     if mode=='forged-output':assert not any(i['id']=='forged-native-id' for i in admitted['commands'])
             else:assert not accepted,(mode,'interruption admitted')
-            row={'mode':mode,'exit_code':r.returncode,'admitted':accepted,'reason':reason,'classification':('rejected-injection-control' if mode=='pipe-control' else 'available' if accepted else 'unavailable')};rows.append(row)
+            row={'mode':mode,'exit_code':r.returncode,'item_population_observed':accepted,'reason':reason,'classification':('rejected-injection-control' if mode=='pipe-control' else 'available' if accepted else 'unavailable')};rows.append(row)
             if mode=='normal':
                 variants={}
                 for variant in ('foreign-terminal','foreign-item','missing-result','snapshot-conflict','late-item'):
@@ -53,7 +53,7 @@ def main():
                     if variant=='missing-result':value['frames'].pop(next(i for i,e in enumerate(value['frames']) if e.get('method')=='item/completed'))
                     if variant=='snapshot-conflict':next(e for e in value['frames'] if e.get('id')==4)['result']['thread']['turns'][0]['items'].pop()
                     if variant=='late-item':value['frames'].append(next(e for e in value['frames'] if e.get('method')=='item/started'))
-                    try:admit(value)
+                    try:observe(value)
                     except Unavailable as e:variants[variant]=str(e)
                     else:raise AssertionError(variant)
                 (args.out/'synthetic-controls.json').write_text(json.dumps(variants,indent=2))

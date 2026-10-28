@@ -3,6 +3,7 @@ import json
 import shlex
 from skillevaluator.tier3.harbor.local_agents import SkillEvaluatorGatewayCodex
 from .evidence import admit,Unavailable
+from .retention import retain
 from harbor.agents.capabilities import AgentCapabilities
 
 class NativeCodex(SkillEvaluatorGatewayCodex):
@@ -17,7 +18,7 @@ class NativeCodex(SkillEvaluatorGatewayCodex):
         await self.install(environment)
         skills_command=self._build_register_skills_command()
         if skills_command:await self.exec_as_agent(environment,skills_command,timeout_sec=5)
-        (self.logs_dir/'qualification-setup.json').write_text(json.dumps(environment.qualification_profile))
+        retain(self.logs_dir,'qualification-setup.json',json.dumps(environment.qualification_profile))
     async def run(self,instruction,environment,context):
         access=self.model_connection
         if access.configured_base_url!='http://127.0.0.1:8991/v1':raise RuntimeError('qualification forbids external provider')
@@ -27,7 +28,8 @@ class NativeCodex(SkillEvaluatorGatewayCodex):
         env={'OPENAI_API_KEY':access.api_key or '', 'OPENAI_BASE_URL':access.configured_base_url}
         result=await self.exec_as_agent(environment,'python3 -I /opt/qualification/native_controller.py '+shlex.quote(json.dumps(payload)),env=env,cwd='/workspace',timeout_sec=50)
         raw=result.stdout or ''
-        (self.logs_dir/'native-capture.json').write_text(raw)
+        retained=retain(self.logs_dir,'native-capture.json',raw)
+        context.metadata=context.metadata or {}
+        context.metadata['native_evidence']={k:v for k,v in retained.items() if k!='private_host_copy'}
         if result.return_code:raise Unavailable('native producer/capture failed')
-        admitted=admit(json.loads(raw))
-        (self.logs_dir/'native-admission.json').write_text(json.dumps(admitted,indent=2))
+        admit(json.loads(raw))

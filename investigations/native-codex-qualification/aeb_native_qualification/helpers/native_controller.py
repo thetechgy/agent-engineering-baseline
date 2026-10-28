@@ -22,14 +22,20 @@ class Provider(http.server.BaseHTTPRequestHandler):
     def log_message(self,*args):pass
     def do_POST(self):
         size=int(self.headers['Content-Length']);assert size<2*1024*1024
-        request=json.loads(self.rfile.read(size));requests.append(request)
+        request=json.loads(self.rfile.read(size));assert len(requests)<4 and sum(len(json.dumps(r)) for r in requests)+size<6*1024*1024;requests.append(request)
         n=len(requests)
         script=payload.get('script',base_script)
-        if mode!='normal':
+        if mode=='escalated-inner':
+            script='text(await tools.exec_command({cmd:"printf denied-escalation",sandbox_permissions:"require_escalated",justification:"denied request qualification"}));'
+        elif mode!='normal':
             command='python3 -I /opt/qualification/attack.py '+mode+' '+str(os.getpid())+' '+str(state['producer_pid'])
             script='text((await tools.exec_command({cmd:'+json.dumps(command)+'})).output);'+(base_script if mode in ('fd-inject','ptrace','proc-mem','forged-output') else '')
         items=[{'type':'response.created','response':{'id':f'fixture-{n}'}}]
-        if n==1:items.append({'type':'response.output_item.done','item':{'type':'custom_tool_call','call_id':'script-1','name':'exec','input':script}})
+        if n==1 and payload.get('direct'):
+            arguments={'cmd':'printf direct-native'}
+            if payload.get('escalated'):arguments.update(sandbox_permissions='require_escalated',justification='non-sensitive denied-request qualification')
+            items.append({'type':'response.output_item.done','item':{'type':'function_call','call_id':'direct-1','name':'exec_command','arguments':json.dumps(arguments)}})
+        elif n==1:items.append({'type':'response.output_item.done','item':{'type':'custom_tool_call','call_id':'script-1','name':'exec','input':script}})
         else:items.append({'type':'response.output_item.done','item':{'type':'message','id':'answer','role':'assistant','content':[{'type':'output_text','text':'scripted fixture finished'}]}})
         items.append({'type':'response.completed','response':{'id':f'fixture-{n}','usage':{'input_tokens':0,'output_tokens':0,'total_tokens':0}}})
         wire=''.join('event: '+i['type']+'\ndata: '+json.dumps(i)+'\n\n' for i in items).encode()
@@ -39,6 +45,8 @@ server=http.server.ThreadingHTTPServer(('127.0.0.1',8991),Provider)
 threading.Thread(target=server.serve_forever,daemon=True).start()
 settings=payload.get('config',{'model_provider':'fixture','model_providers':{'fixture':{'name':'fixture','base_url':'http://127.0.0.1:8991/v1','wire_api':'responses','requires_openai_auth':False}},'web_search':'disabled'})
 # Configuration comes from the provider wrapper in integration tests; reject external routes.
+if payload.get('tool_metadata'):settings.setdefault('features',{})['executed_tool_call_metadata']=True
+if payload.get('disable_code_mode_host') or (payload.get('direct') and not payload.get('keep_code_mode_host')):settings.setdefault('features',{})['code_mode_host']=False
 provider=settings['model_providers'][settings['model_provider']]
 assert provider['base_url']=='http://127.0.0.1:8991/v1'
 executable=pathlib.Path('/opt/codex/bin/codex'); info=executable.lstat()
@@ -97,7 +105,7 @@ try:
     rpc(1,'initialize',{'clientInfo':{'name':'aeb_qualification','version':'1'},'capabilities':{'experimentalApi':True}})
     response=wait(lambda e:e.get('id')==1);assert 'result' in response
     write({'method':'initialized'})
-    rpc(2,'thread/start',{'model':payload.get('model','gpt-5.6-sol'),'modelProvider':settings['model_provider'],'cwd':'/workspace','approvalPolicy':'never','sandbox':payload.get('sandbox','danger-full-access'),'ephemeral':False})
+    rpc(2,'thread/start',{'model':payload.get('model','gpt-5.6-sol'),'modelProvider':settings['model_provider'],'cwd':'/workspace','approvalPolicy':'never','sandbox':payload.get('sandbox','danger-full-access'),'ephemeral':False,'experimentalRawEvents':True})
     response=wait(lambda e:e.get('id')==2);thread_id=response['result']['thread']['id']
     rpc(3,'turn/start',{'threadId':thread_id,'input':[{'type':'text','text':payload.get('instruction','Execute the supplied scripted fixture.')} ]})
     response=wait(lambda e:e.get('id')==3);turn_id=response['result']['turn']['id']
@@ -116,7 +124,7 @@ finally:
     except subprocess.TimeoutExpired:p.kill();p.wait()
     server.shutdown()
     if errors:status='unavailable';error='native transport parse/size failure'
-    result={'schema':'native-capture-v1','channel':channel,'status':status,'error':error,'controller_pid':os.getpid(),'producer_pid':p.pid,'shutdown_by_operator':shutdown_by_operator,'producer_exit':p.returncode,'thread_id':thread_id,'turn_id':turn_id,'frames':frames,'state':state,'provider_requests':len(requests),'stderr':''.join(stderr),'controller_dumpable':ctypes.CDLL(None).prctl(3,0,0,0,0),'yama_ptrace_scope':pathlib.Path('/proc/sys/kernel/yama/ptrace_scope').read_text().strip()}
+    result={'schema':'native-capture-v1','channel':channel,'status':status,'error':error,'controller_pid':os.getpid(),'producer_pid':p.pid,'shutdown_by_operator':shutdown_by_operator,'producer_exit':p.returncode,'thread_id':thread_id,'turn_id':turn_id,'frames':frames,'state':state,'provider_requests':len(requests),'tool_catalog':[tool for item in requests[0].get('input',[]) if item.get('type')=='additional_tools' for tool in item.get('tools',[])] if requests else [],'provider_request_bodies':requests,'stderr':''.join(stderr),'controller_dumpable':ctypes.CDLL(None).prctl(3,0,0,0,0),'yama_ptrace_scope':pathlib.Path('/proc/sys/kernel/yama/ptrace_scope').read_text().strip()}
     print(json.dumps(result),flush=True)
 # This exit describes capture delivery, not execution success; the host admits the envelope.
 sys.exit(0)

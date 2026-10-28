@@ -5,7 +5,7 @@ class Unavailable(ValueError):
 def require(value,reason):
     if not value:raise Unavailable(reason)
 
-def admit(capture):
+def observe(capture):
     require(capture.get('schema')=='native-capture-v1','unknown capture schema')
     require(capture.get('channel')=='socketpair','unqualified capture transport')
     require(capture.get('controller_dumpable')==0,'controller memory protection absent')
@@ -58,4 +58,13 @@ def admit(capture):
             commands.append(item)
         elif item['type']=='fileChange':
             require(item['status'] in ('completed','failed','declined'),'unknown file outcome');patches.append(item)
-    return {'scope':{'thread_id':tid,'turn_id':turn},'commands':commands,'patches':patches,'complete':True}
+    return {'scope':{'thread_id':tid,'turn_id':turn},'commands':commands,'patches':patches,'item_population_complete':True}
+
+
+ADMISSION_BLOCKER='original nested tool arguments and complete submitted-call population unavailable in qualified public protocol'
+
+def admit(capture):
+    observe(capture)
+    # Full native item coverage is narrower than full submitted-operation coverage.
+    # No supported public API was qualified for the latter in this pinned runtime.
+    raise Unavailable(ADMISSION_BLOCKER)
