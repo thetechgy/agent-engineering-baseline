@@ -239,7 +239,42 @@ def file_state(info):
     return info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns
 
 
-def verify_file_states(states, directories, directory_states, paths=None):
+def require_unchanged_member(condition, check, *, phase, role, path, expected, info):
+    """Annotate the original rejection using only closed diagnostic vocabularies.
+
+    Identity differences compare the retained five-field snapshot. Type/link
+    diagnostics describe the regular, single-link input requirement; those
+    properties are not part of the retained snapshot. Never reread the input.
+    """
+    try:
+        check(condition, 'Input member changed')
+    except ValueError as error:
+        if not condition:
+            try:
+                fields = ('device', 'inode', 'size', 'mtime', 'ctime')
+                observed = (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns)
+                changed = [name for name, before, after in zip(fields, expected, observed) if before != after]
+                types = {stat.S_IFREG: 'regular', stat.S_IFDIR: 'directory', stat.S_IFLNK: 'symlink',
+                         stat.S_IFIFO: 'fifo', stat.S_IFSOCK: 'socket', stat.S_IFCHR: 'device', stat.S_IFBLK: 'device'}
+                observed_type = types.get(stat.S_IFMT(info.st_mode), 'other')
+                links = 'single' if info.st_nlink == 1 else 'zero' if info.st_nlink == 0 else 'multiple'
+                failed = ([] if stat.S_ISREG(info.st_mode) else ['file_type']) + ([] if info.st_nlink == 1 else ['link_count'])
+                member_role = role(path) if callable(role) else role
+                note = {'phase': phase if type(phase) is str and phase in {'member_revalidation', 'repository_revalidation', 'tree_capture',
+                                                    'read_open', 'read_complete', 'inventory_presence'} else 'unknown',
+                        'role': member_role if type(member_role) is str and member_role in {'input_file', 'git_metadata', 'git_reference', 'git_object_store'} else 'unknown',
+                        'changed_fields': changed, 'failed_requirements': failed,
+                        'observed_type': observed_type, 'observed_links': links}
+                diagnostic = 'Input member diagnostic: ' + json.dumps(note, sort_keys=True, separators=(',', ':'))
+            except Exception:
+                # Diagnostic failure must not replace the original integrity rejection.
+                diagnostic = 'Input member diagnostic: unavailable'
+            error.add_note(diagnostic)
+        raise
+
+
+def verify_file_states(states, directories, directory_states, paths=None, *,
+                       phase="member_revalidation", role="input_file"):
     require = boundary_check("integrity")
     fd = None
     parent = None
@@ -251,8 +286,9 @@ def verify_file_states(states, directories, directory_states, paths=None):
                 fd = open_directory(path.parent, directories, directory_states=directory_states)
                 parent = path.parent
             info = boundary_call("integrity", os.stat, path.name, dir_fd=fd, follow_symlinks=False)
-            require(stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and file_state(info) == states[path],
-                    'Input member changed')
+            require_unchanged_member(
+                stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and file_state(info) == states[path], require,
+                phase=phase, role=role, path=path, expected=states[path], info=info)
     finally:
         if fd is not None: os.close(fd)
 
@@ -264,7 +300,7 @@ def verify_directory_states(states, identities, paths=None):
         os.close(fd)
 
 
-def safe_tree(path, *, max_entries=MAX_INPUT_ENTRIES, max_files=None, directory_identities=None, directory_states=None, file_states=None, native_layout_skill=None):
+def safe_tree(path, *, max_entries=MAX_INPUT_ENTRIES, max_files=None, directory_identities=None, directory_states=None, file_states=None, native_layout_skill=None, member_role="input_file"):
     if directory_identities is None:
         directory_identities = {}
     if directory_states is None:
@@ -308,14 +344,16 @@ def safe_tree(path, *, max_entries=MAX_INPUT_ENTRIES, max_files=None, directory_
                     else:
                         require(max_files is None or len(files) < max_files, 'Input tree entry limit')
                         observed_file = file_state(info)
-                        require(member not in file_states or file_states[member] == observed_file, 'Input member changed')
+                        require_unchanged_member(member not in file_states or file_states[member] == observed_file, require,
+                            phase='tree_capture', role=member_role, path=member,
+                            expected=file_states.get(member, observed_file), info=info)
                         file_states[member] = observed_file
                         files.append(member)
             require(directory_state(os.fstat(fd)) == directory_states[current], 'Input directory entries changed')
         finally:
             os.close(fd)
     verify_directory_states(directory_states, directory_identities, scanned)
-    verify_file_states(file_states, directory_identities, directory_states, files)
+    verify_file_states(file_states, directory_identities, directory_states, files, role=member_role)
     return files
 
 
@@ -333,7 +371,15 @@ class ReadBudget:
     def verify_repository(self):
         for directories, states, members in self.repository_inputs:
             verify_directory_states(states, directories)
-            verify_file_states(members, directories, states)
+            verify_file_states(members, directories, states, phase='repository_revalidation', role=self.member_role)
+
+    def member_role(self, path):
+        for gitdir, common in self.repository_locations.values():
+            if path.is_relative_to(common / 'objects'):
+                return 'git_object_store'
+            if any(path.is_relative_to(root / name) for root in (gitdir, common) for name in ('refs', 'reftable')):
+                return 'git_reference'
+        return 'git_metadata'
 
     @contextmanager
     def repository_operation(self):
@@ -348,7 +394,7 @@ class ReadBudget:
         if outer: self.verify_repository()
 
 
-def read_bytes(path, limit=JSON_LIMIT, *, budget=None, directory_identities=None, directory_states=None, file_states=None):
+def read_bytes(path, limit=JSON_LIMIT, *, budget=None, directory_identities=None, directory_states=None, file_states=None, member_role="input_file"):
     require = boundary_check("integrity")
     if directory_identities is None:
         directory_identities = {}
@@ -367,13 +413,16 @@ def read_bytes(path, limit=JSON_LIMIT, *, budget=None, directory_identities=None
                 'Special, hard-linked or oversized input')
         if file_states is not None:
             observed = file_state(info)
-            require(path not in file_states or file_states[path] == observed, 'Input member changed')
+            require_unchanged_member(path not in file_states or file_states[path] == observed, require,
+                phase='read_open', role=member_role, path=path, expected=file_states.get(path, observed), info=info)
             file_states[path] = observed
         if budget is not None:
             budget.consume(info.st_size)
         value = stream.read(min(limit, info.st_size + budget.remaining) + 1 if budget is not None else limit + 1)
         if file_states is not None:
-            require(file_state(os.fstat(stream.fileno())) == observed, 'Input member changed')
+            final_info = os.fstat(stream.fileno())
+            require_unchanged_member(file_state(final_info) == observed, require,
+                phase='read_complete', role=member_role, path=path, expected=observed, info=final_info)
     require(len(value) <= limit, 'Oversized input')
     if budget is not None:
         budget.consume(max(0, len(value) - info.st_size))
@@ -692,7 +741,7 @@ def workspace_repository(workspace, *, budget=None):
             os.close(fd)
     def captured(path, limit=JSON_LIMIT):
         return read_bytes(path, limit=limit, budget=budget, directory_identities=directories,
-                          directory_states=states, file_states=members)
+                          directory_states=states, file_states=members, member_role="git_metadata")
     def pointer(parent, raw):
         text = raw.decode('utf-8').removesuffix('\n')
         require(text and '\n' not in text and '\0' not in text, 'Invalid Git metadata pointer')
@@ -739,7 +788,7 @@ def workspace_repository(workspace, *, budget=None):
     # Git follows links below objects too (pack files, indexes and loose fanout
     # directories). Capture the complete bounded structure, not just selectors.
     safe_tree(objects, max_entries=MAX_INPUT_ENTRIES, directory_identities=directories,
-              directory_states=states, file_states=members)
+              directory_states=states, file_states=members, member_role="git_object_store")
     # Git parses only the captured buffer. Includes and ambient repository
     # configuration cannot substitute another origin after the bounded read.
     result = subprocess.run(['git', 'config', '--file', '-', '--no-includes', '--null',
@@ -778,7 +827,7 @@ def inventory_revision(workspace, budget):
                 if stat.S_ISDIR(info.st_mode):
                     require(name in ('refs', 'reftable'), 'Unsafe Git reference storage')
                     files = safe_tree(path, directory_identities=directories,
-                                      directory_states=states, file_states=members)
+                                      directory_states=states, file_states=members, member_role="git_reference")
                 else:
                     require(stat.S_ISREG(info.st_mode) and name in ('HEAD', 'packed-refs'),
                             'Unsafe Git reference storage')
@@ -786,7 +835,7 @@ def inventory_revision(workspace, budget):
                 require(len(directories) + len(members) <= MAX_INPUT_ENTRIES, 'Git reference entry limit')
                 for member in files:
                     read_bytes(member, budget=budget, directory_identities=directories,
-                               directory_states=states, file_states=members)
+                               directory_states=states, file_states=members, member_role="git_reference")
         finally:
             os.close(fd)
     budget.verify_repository()
@@ -1092,7 +1141,9 @@ def inventory(workspace=ROOT):
                 info = os.stat(path.name, dir_fd=fd, follow_symlinks=False)
                 if stat.S_ISREG(info.st_mode):
                     observed_file = file_state(info)
-                    require(path not in members or members[path] == observed_file, 'Input member changed')
+                    require_unchanged_member(path not in members or members[path] == observed_file, require,
+                        phase='inventory_presence', role='input_file', path=path,
+                        expected=members.get(path, observed_file), info=info)
                     members[path] = observed_file
                 return True
             except FileNotFoundError:
