@@ -5,6 +5,7 @@ from harbor.trial.trial import Trial
 
 async def main(root):
  out=root/'evidence/paired';out.mkdir(parents=True);sem=asyncio.Semaphore(2)
+ sessions=[]
  cases=['activation','negative-control','task-failure','missing','contradictory']
  async def one(case,arm,attempt):
   async with sem:
@@ -20,7 +21,7 @@ async def main(root):
    verifier=task/'tests/test.sh'
    verifier.write_text('#!/bin/sh\nmkdir -p /logs/verifier\nif [ "$(cat /workspace/actual.txt)" = "'+expected+'" ]; then printf 1; else printf 0; fi > /logs/verifier/reward.txt\n');verifier.chmod(0o755)
    config=TrialConfig.model_validate({'task':{'path':str(task)},'trial_name':name,'trials_dir':str(out),'agent':{'import_path':'harbor_gate:ProbeAgent','kwargs':{'skill_probe':case!='negative-control','evidence_fault':case if case in ('missing','contradictory') else None}},'environment':{'import_path':'harbor_gate:TrustedEnvironment'}})
-   trial=await Trial.create(config);r=await trial.run();invalid=case in ('missing','contradictory')
+   trial=await Trial.create(config);sessions.append(trial.agent_environment.session_id);r=await trial.run();invalid=case in ('missing','contradictory')
    assert (r.exception_info is not None)==invalid,(name,r.exception_info)
    if invalid:
     assert r.verifier_result is None
@@ -37,5 +38,7 @@ async def main(root):
  assert len(identities)==20 and len(set(identities))==20
  assert not subprocess.check_output(['docker','ps','-aq','--filter','name=paired-'],text=True).strip()
  (root/'evidence/paired-summary.json').write_text(json.dumps({'policy':'synthetic-infrastructure-v1','rows':rows,'aggregate':'withheld: intentionally incomplete required evidence','independent_states':len(set(identities))},indent=2))
+ from resource_audit import audit
+ (root/'evidence/paired-cleanup.json').write_text(json.dumps(audit(sessions)))
  print('Twenty paired infrastructure trials passed expected classifications')
 if __name__=='__main__':asyncio.run(main(pathlib.Path(sys.argv[1])))

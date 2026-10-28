@@ -32,12 +32,12 @@ inspect_status=$?
 "$root/inspect/bin/python" investigations/skill-evaluation-architecture/inspect_controls.py "$root"
 inspect_controls_status=$?
 set -e
-printf '{"harbor_exit":%s,"inspect_exit":%s}\n' "$harbor_status" "$inspect_status" > "$root/evidence/outcomes.json"
+printf '{"harbor_exit":%s,"paired_exit":%s,"inspect_exit":%s,"inspect_controls_exit":%s}\n' "$harbor_status" "$paired_status" "$inspect_status" "$inspect_controls_status" > "$root/evidence/outcomes.json"
 python3 - "$root" <<'EXPORT'
 import pathlib,sys,shutil
 root=pathlib.Path(sys.argv[1]);src=root/'evidence'
 files=[p for p in src.rglob('*') if p.is_file() and not p.is_symlink()]
-assert len(files)<256 and sum(p.stat().st_size for p in files)<16*1024*1024
+assert len(files)<1024 and sum(p.stat().st_size for p in files)<16*1024*1024
 shutil.copytree(src,root/'public-evidence')
 EXPORT
 test "$paired_status" = 0 && test "$harbor_status" = 0 && test "$inspect_status" = 0 && test "$inspect_controls_status" = 0

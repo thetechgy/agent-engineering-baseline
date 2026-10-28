@@ -76,10 +76,10 @@ async def main(root):
  (task/'tests').mkdir();(task/'tests/test.sh').write_text('#!/bin/sh\nmkdir -p /logs/verifier\nprintf 1 > /logs/verifier/reward.txt\n')
  (task/'tests').chmod(0o755)
  (task/'tests/test.sh').chmod(0o755)
- rows=[]
+ rows=[];sessions=[]
  for arm,fail in [('with',False),('without',False),('init-failure',True),('missing',False),('contradictory',False)]:
   config=TrialConfig.model_validate({'task':{'path':str(task)},'trial_name':'architecture-'+arm,'trials_dir':str(out/'trials'),'agent':{'import_path':'harbor_gate:ProbeAgent','kwargs':{'evidence_fault':arm if arm in ('missing','contradictory') else None}},'environment':{'import_path':'harbor_gate:TrustedEnvironment','kwargs':{'fail_init':fail}}})
-  trial=await Trial.create(config);result=await trial.run()
+  trial=await Trial.create(config);sessions.append(trial.agent_environment.session_id);result=await trial.run()
   rows.append({'arm':arm,'result':result.model_dump(mode='json')})
   (out/'harbor-results.json').write_text(json.dumps(rows,indent=2))
   if arm in ('with','without'):assert result.exception_info is None,str(result.exception_info)
@@ -89,7 +89,7 @@ async def main(root):
  identities=[json.loads(p.read_text())['identity'] for p in [out/'trials'/('architecture-'+arm)/'agent/setup-order.json' for arm in ('with','without')]]
  assert len(identities)==2 and len(set(identities))==2
  config=TrialConfig.model_validate({'task':{'path':str(task)},'trial_name':'architecture-cancel','trials_dir':str(out/'trials'),'agent':{'import_path':'harbor_gate:ProbeAgent','kwargs':{'hold':True}},'environment':{'import_path':'harbor_gate:TrustedEnvironment'}})
- trial=await Trial.create(config);work=asyncio.create_task(trial.run())
+ trial=await Trial.create(config);sessions.append(trial.agent_environment.session_id);work=asyncio.create_task(trial.run())
  for _ in range(900):
   if (out/'trials/architecture-cancel/agent/setup-order.json').exists():break
   if work.done():raise AssertionError('cancellation trial ended before setup')
@@ -99,5 +99,7 @@ async def main(root):
  with contextlib.suppress(asyncio.CancelledError):await asyncio.wait_for(work,20)
  remaining=subprocess.check_output(['docker','ps','-aq','--filter','name=architecture-'],text=True).strip()
  assert not remaining,'trial containers remain'
+ from resource_audit import audit
+ (out/'harbor-cleanup.json').write_text(json.dumps(audit(sessions)))
  print('Harbor secure lifecycle gates passed')
 if __name__=='__main__':asyncio.run(main(pathlib.Path(sys.argv[1])))
