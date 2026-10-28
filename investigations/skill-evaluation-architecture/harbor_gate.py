@@ -1,5 +1,5 @@
 """Actual Harbor Trial lifecycle through the inherited secure Docker backend."""
-import asyncio, contextlib, copy, hashlib, json, pathlib, subprocess, sys
+import asyncio, contextlib, copy, hashlib, json, pathlib, shlex, subprocess, sys
 from harbor.agents.base import BaseAgent
 from harbor.models.trial.config import TrialConfig
 from harbor.trial.trial import Trial
@@ -11,11 +11,13 @@ class TrustedEnvironment(SkillEvaluatorSecureDockerEnvironment):
  async def start(self,force_build):
   await super().start(force_build)
   if self.fail_init:raise RuntimeError('injected required initializer failure')
-  source=pathlib.Path(__file__).with_name('broker.py')
-  await self.upload_file(source,'/opt/operator-broker.py')
-  expected=hashlib.sha256(source.read_bytes()).hexdigest()
-  check=await self.exec("python -c 'import pathlib,hashlib,stat; p=pathlib.Path(\"/opt/operator-broker.py\"); s=p.lstat(); assert s.st_uid==0 and s.st_nlink==1 and stat.S_ISREG(s.st_mode) and not s.st_mode&0o022; print(hashlib.sha256(p.read_bytes()).hexdigest())'",user='root',timeout_sec=5)
-  assert check.return_code==0 and check.stdout.strip()==expected,'initializer substitution'
+  for module,target in [('broker.py','broker'),('native_probe.py','probe'),('start_native.py','start')]:
+   source=pathlib.Path(__file__).with_name(module)
+   remote='/opt/operator-'+target+'.py'
+   expected=hashlib.sha256(source.read_bytes()).hexdigest()
+   program="import pathlib,os,hashlib,stat; p=pathlib.Path('"+remote+"'); parent=p.parent.lstat(); assert parent.st_uid==0 and not parent.st_mode&0o022; f=p.open('xb'); f.write(bytes.fromhex('"+source.read_bytes().hex()+"')); f.close(); os.chmod(p,0o444); s=p.lstat(); assert s.st_uid==0 and s.st_nlink==1 and stat.S_ISREG(s.st_mode); print(hashlib.sha256(p.read_bytes()).hexdigest())"
+   check=await self.exec('python -c '+shlex.quote(program),user='root',timeout_sec=5)
+   assert check.return_code==0 and check.stdout.strip()==expected,'operator code substitution'
   r=await self.exec('python /opt/operator-broker.py init',user='root',timeout_sec=10)
   if r.return_code:raise RuntimeError('required initializer failed: '+r.stderr)
   self.initializer=json.loads(r.stdout)
@@ -34,6 +36,7 @@ class ProbeAgent(BaseAgent):
   ready=await environment.exec('python /opt/broker.py ready',timeout_sec=5)
   assert ready.return_code==0
   assert json.loads(ready.stdout)['identity']==environment.initializer['identity']
+  assert (await environment.exec('python /opt/operator-start.py',user='agent',timeout_sec=5)).return_code==0
   (self.logs_dir/'setup-order.json').write_text(json.dumps(environment.initializer))
  async def run(self,instruction,environment,context):
   if self.hold:
@@ -44,10 +47,11 @@ class ProbeAgent(BaseAgent):
   for op,expected in [('read',True),('mutate',True),('mutate',False),('private',False)]:
    r=await environment.exec('python /opt/broker.py '+op,timeout_sec=5)
    assert r.return_code==0 and json.loads(r.stdout)['allowed']==expected
-  assert (await environment.exec('python /opt/probe.py',timeout_sec=90)).return_code==0
+  assert (await environment.exec('python /opt/operator-probe.py protected',user='root',timeout_sec=90)).return_code==0
   from evidence_gate import admit
-  for name in ['events.json','requests.json','stderr.txt','actual.txt']:
-   await environment.download_file('/workspace/'+name,self.logs_dir/name)
+  for name in ['events.json','wire.jsonl','requests.json','stderr.txt','actual.txt']:
+   await environment.download_file(('/workspace/' if name=='actual.txt' else '/opt/native-capture/')+name,self.logs_dir/name)
+  assert (await environment.exec('cat /opt/native-capture/events.json',user='agent',timeout_sec=5)).return_code!=0
   events=json.loads((self.logs_dir/'events.json').read_text())
   if self.evidence_fault=='missing':events=[e for e in events if e.get('method')!='turn/completed']
   if self.evidence_fault=='contradictory':

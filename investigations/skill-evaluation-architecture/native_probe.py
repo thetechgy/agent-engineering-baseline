@@ -1,7 +1,10 @@
 """Real Codex/App Server probe; canned loopback SSE, no inference or credentials."""
 import http.server, json, os, pathlib, queue, subprocess, threading, time
+PROTECTED='protected' in __import__('sys').argv
 ROOT=pathlib.Path('/workspace')
-pathlib.Path('/home/agent/.codex').mkdir(exist_ok=True)
+OUTPUT=pathlib.Path('/opt/native-capture') if PROTECTED else ROOT
+if PROTECTED: OUTPUT.mkdir(mode=0o700)
+else: pathlib.Path('/home/agent/.codex').mkdir(exist_ok=True)
 SCRIPT='''const a = await Promise.all([tools.exec_command({cmd:"printf parallel-one"}), tools.exec_command({cmd:"printf parallel-two"})]); for (const r of a) text(r.output); text((await tools.exec_command({cmd:"printf identical"})).output); text((await tools.exec_command({cmd:"printf identical"})).output); text(await tools.apply_patch("*** Begin Patch\\n*** Add File: /workspace/actual.txt\\n+actual-modification\\n*** End Patch")); text((await tools.exec_command({cmd:"exit 7"})).output); text("reported-only: never executed ghost-command");'''
 if len(__import__('sys').argv)>1 and __import__('sys').argv[1]=='interrupt':
  SCRIPT='text(await tools.exec_command({cmd:"sleep 20",yield_time_ms:1000})); await new Promise(r=>setTimeout(r,20000));'
@@ -26,28 +29,44 @@ config=['model_provider="fixture"','model_providers.fixture.name="fixture"','mod
 cmd=['/opt/codex/bin/codex']
 for c in config:cmd+=['-c',c]
 cmd+=['app-server']
-proc=subprocess.Popen(cmd,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,env={'PATH':'/opt/codex/bin:/usr/local/bin:/usr/bin:/bin','HOME':'/home/agent','CODEX_HOME':'/home/agent/.codex'},cwd=ROOT)
-q=queue.Queue(); events=[]
+proc=None
+ws=None
+if PROTECTED:
+ from websockets.sync.client import connect
+ for attempt in range(50):
+  try:ws=connect('ws://127.0.0.1:8766');break
+  except OSError:time.sleep(.1)
+ else:raise RuntimeError('native WebSocket readiness failed')
+else: proc=subprocess.Popen(cmd,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,env={'PATH':'/opt/codex/bin:/usr/local/bin:/usr/bin:/bin','HOME':'/home/agent','CODEX_HOME':'/home/agent/.codex'},cwd=ROOT)
+q=queue.Queue(); events=[]; raw_frames=[]
 def read():
- for line in proc.stdout:
-  try:q.put(json.loads(line))
-  except ValueError: q.put({'malformed':line})
- q.put({'eof':True})
+ try:
+  for line in (iter(ws.recv,None) if PROTECTED else proc.stdout):
+   raw_frames.append(line)
+   if sum(map(len,raw_frames))>8*1024*1024:raise ValueError('native capture budget')
+   try:q.put(json.loads(line))
+   except ValueError:q.put({'malformed':True})
+ except Exception as error:q.put({'transport_error':type(error).__name__})
+ finally:q.put({'eof':True})
 threading.Thread(target=read,daemon=True).start()
-def send(i,method,params):proc.stdin.write(json.dumps({'id':i,'method':method,'params':params})+'\n');proc.stdin.flush()
+def write(obj):
+ line=json.dumps(obj)
+ if PROTECTED:ws.send(line)
+ else:proc.stdin.write(line+'\n');proc.stdin.flush()
+def send(i,method,params):write({'id':i,'method':method,'params':params})
 def until(predicate,seconds=65):
  end=time.monotonic()+seconds
  while time.monotonic()<end:
   e=q.get(timeout=max(.1,end-time.monotonic()));events.append(e)
-  if e.get('eof'): raise RuntimeError('App Server exited')
+  if e.get('eof') or e.get('transport_error') or e.get('malformed'): raise RuntimeError('native transport incomplete')
   if e.get('method')=='item/commandExecution/requestApproval':
-   proc.stdin.write(json.dumps({'id':e['id'],'result':{'decision':'decline'}})+'\n');proc.stdin.flush()
+   write({'id':e['id'],'result':{'decision':'decline'}})
   if predicate(e):return e
  raise TimeoutError()
 try:
  send(1,'initialize',{'clientInfo':{'name':'qualification_fixture','version':'1'},'capabilities':{'experimentalApi':True}})
  init=until(lambda e:e.get('id')==1)
- proc.stdin.write('{"method":"initialized"}\n');proc.stdin.flush()
+ write({'method':'initialized'})
  send(2,'thread/start',{'model':'gpt-5.6-sol','modelProvider':'fixture','cwd':str(ROOT),'approvalPolicy':('on-request' if 'decline' in __import__('sys').argv else 'never'),'sandbox':('read-only' if 'decline' in __import__('sys').argv else 'danger-full-access'),'ephemeral':True})
  thread=until(lambda e:e.get('id')==2)
  if 'error' in thread:raise RuntimeError(str(thread))
@@ -57,11 +76,14 @@ try:
   send(4,'turn/interrupt',{'threadId':thread['result']['thread']['id'],'turnId':next(e['params']['turnId'] for e in reversed(events) if e.get('method')=='item/started')})
  until(lambda e:e.get('method')=='turn/completed')
 finally:
- proc.terminate()
- try:proc.wait(timeout=5)
- except subprocess.TimeoutExpired:proc.kill();proc.wait()
+ if PROTECTED:ws.close()
+ else:
+  proc.terminate()
+  try:proc.wait(timeout=5)
+  except subprocess.TimeoutExpired:proc.kill();proc.wait()
  server.shutdown()
- pathlib.Path('/workspace/events.json').write_text(json.dumps(events,indent=2))
- pathlib.Path('/workspace/requests.json').write_text(json.dumps(requests,indent=2))
- pathlib.Path('/workspace/stderr.txt').write_text(proc.stderr.read())
+ (OUTPUT/'wire.jsonl').write_text('\n'.join(raw_frames))
+ (OUTPUT/'events.json').write_text(json.dumps(events,indent=2))
+ (OUTPUT/'requests.json').write_text(json.dumps(requests,indent=2))
+ (OUTPUT/'stderr.txt').write_text('WebSocket connection closed; server lifecycle owned by container' if PROTECTED else proc.stderr.read())
 print(json.dumps({'requests':len(requests),'native_items':[e['params']['item'] for e in events if e.get('method')=='item/completed'],'actual_file':(ROOT/'actual.txt').exists(),'declined_file_exists':pathlib.Path('/tmp/poc-declined').exists()}))

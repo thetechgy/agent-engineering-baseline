@@ -8,6 +8,7 @@ printf '%s  %s\n' 3ec55053109608d5038f7e50750f7d25f768dfd740fef071aa710e2559b63a
 mkdir "$root/context/codex"
 tar -xzf "$root/codex.tar.gz" -C "$root/context/codex"
 cp investigations/skill-evaluation-architecture/{Dockerfile,native_probe.py,broker.py} "$root/context/"
+uv pip install --target "$root/context/pythondeps" --python-version 3.12 --only-binary :all: --require-hashes -r investigations/skill-evaluation-architecture/websocket-requirements.txt
 docker build -q -t architecture-poc:164 "$root/context"
 git clone --quiet https://github.com/NVIDIA/SkillEvaluator.git "$root/evaluator"
 git -C "$root/evaluator" checkout --quiet d9fa4b4041b31f417f02ed145999ecf1f0c11fcd

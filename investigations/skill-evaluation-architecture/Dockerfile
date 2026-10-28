@@ -3,7 +3,9 @@ RUN useradd --uid 1000 --create-home agent && mkdir /workspace && chown agent:ag
 COPY codex /opt/codex
 COPY native_probe.py /opt/probe.py
 COPY broker.py /opt/broker.py
-RUN chmod -R a+rX /opt/codex /opt/probe.py /opt/broker.py
+COPY pythondeps /opt/pythondeps
+ENV PYTHONPATH=/opt/pythondeps
+RUN chmod -R a+rX /opt/codex /opt/probe.py /opt/broker.py /opt/pythondeps
 USER agent
 WORKDIR /workspace
 CMD ["python", "/opt/probe.py"]
