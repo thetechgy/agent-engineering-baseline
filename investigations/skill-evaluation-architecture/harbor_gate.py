@@ -1,5 +1,5 @@
 """Actual Harbor Trial lifecycle through the inherited secure Docker backend."""
-import asyncio, contextlib, json, pathlib, subprocess, sys
+import asyncio, contextlib, copy, json, pathlib, subprocess, sys
 from harbor.agents.base import BaseAgent
 from harbor.models.trial.config import TrialConfig
 from harbor.trial.trial import Trial
@@ -16,8 +16,8 @@ class TrustedEnvironment(SkillEvaluatorSecureDockerEnvironment):
   self.initializer=json.loads(r.stdout)
 
 class ProbeAgent(BaseAgent):
- def __init__(self,*a,hold=False,**kw):
-  super().__init__(*a,**kw);self.hold=hold
+ def __init__(self,*a,hold=False,evidence_fault=None,**kw):
+  super().__init__(*a,**kw);self.hold=hold;self.evidence_fault=evidence_fault
  @staticmethod
  def name():return 'architecture-probe'
  def version(self):return '1'
@@ -43,7 +43,11 @@ class ProbeAgent(BaseAgent):
   from evidence_gate import admit
   for name in ['events.json','requests.json','stderr.txt','actual.txt']:
    await environment.download_file('/workspace/'+name,self.logs_dir/name)
-  admit(json.loads((self.logs_dir/'events.json').read_text()))
+  events=json.loads((self.logs_dir/'events.json').read_text())
+  if self.evidence_fault=='missing':events=[e for e in events if e.get('method')!='turn/completed']
+  if self.evidence_fault=='contradictory':
+   bad=copy.deepcopy(next(e for e in events if e.get('method')=='item/completed' and e['params']['item']['type']=='commandExecution'));bad['params']['item']['exitCode']=99;events.append(bad)
+  admit(events)
 
 async def main(root):
  out=root/'evidence';task=root/'task';env=task/'environment';env.mkdir(parents=True)
@@ -55,15 +59,16 @@ async def main(root):
  (task/'tests').chmod(0o755)
  (task/'tests/test.sh').chmod(0o755)
  rows=[]
- for arm,fail in [('with',False),('without',False),('init-failure',True)]:
-  config=TrialConfig.model_validate({'task':{'path':str(task)},'trial_name':'architecture-'+arm,'trials_dir':str(out/'trials'),'agent':{'import_path':'harbor_gate:ProbeAgent'},'environment':{'import_path':'harbor_gate:TrustedEnvironment','kwargs':{'fail_init':fail}}})
+ for arm,fail in [('with',False),('without',False),('init-failure',True),('missing',False),('contradictory',False)]:
+  config=TrialConfig.model_validate({'task':{'path':str(task)},'trial_name':'architecture-'+arm,'trials_dir':str(out/'trials'),'agent':{'import_path':'harbor_gate:ProbeAgent','kwargs':{'evidence_fault':arm if arm in ('missing','contradictory') else None}},'environment':{'import_path':'harbor_gate:TrustedEnvironment','kwargs':{'fail_init':fail}}})
   trial=await Trial.create(config);result=await trial.run()
   rows.append({'arm':arm,'result':result.model_dump(mode='json')})
   (out/'harbor-results.json').write_text(json.dumps(rows,indent=2))
-  if not fail:assert result.exception_info is None,str(result.exception_info)
+  if arm in ('with','without'):assert result.exception_info is None,str(result.exception_info)
   else:assert result.exception_info is not None
+  if arm in ('missing','contradictory'):assert result.verifier_result is None,'invalid evidence reached grader'
  (out/'harbor-results.json').write_text(json.dumps(rows,indent=2))
- identities=[json.loads(p.read_text())['identity'] for p in out.glob('trials/*/agent/setup-order.json')]
+ identities=[json.loads(p.read_text())['identity'] for p in [out/'trials'/('architecture-'+arm)/'agent/setup-order.json' for arm in ('with','without')]]
  assert len(identities)==2 and len(set(identities))==2
  config=TrialConfig.model_validate({'task':{'path':str(task)},'trial_name':'architecture-cancel','trials_dir':str(out/'trials'),'agent':{'import_path':'harbor_gate:ProbeAgent','kwargs':{'hold':True}},'environment':{'import_path':'harbor_gate:TrustedEnvironment'}})
  trial=await Trial.create(config);work=asyncio.create_task(trial.run())
