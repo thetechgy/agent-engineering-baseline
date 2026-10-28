@@ -1,0 +1,42 @@
+name: Experimental native qualification (no inference)
+on:
+  push:
+    branches: [experiment/native-codex-qualification]
+    paths:
+      - investigations/native-codex-qualification/**
+      - .github/workflows/experimental-native-qualification.yml
+permissions:
+  contents: read
+concurrency:
+  group: experimental-native-qualification
+  cancel-in-progress: false
+jobs:
+  critical-boundaries:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: '0.13.5'
+          enable-cache: false
+      - run: bash .github/scripts/setup-compose.sh
+      - name: Prepare pinned environments and qualify critical boundaries
+        timeout-minutes: 20
+        run: bash investigations/native-codex-qualification/bootstrap.sh
+      - name: Validate bounded evidence export
+        if: always()
+        run: python3 investigations/native-codex-qualification/export_evidence.py "$RUNNER_TEMP/native-qualification"
+      - name: Retain non-sensitive qualification evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: native-qualification
+          path: ${{ runner.temp }}/native-qualification/public-evidence/
+          retention-days: 14
+          if-no-files-found: warn
+      - name: Remove disposable Compose configuration
+        if: always()
+        run: bash .github/scripts/setup-compose.sh cleanup
