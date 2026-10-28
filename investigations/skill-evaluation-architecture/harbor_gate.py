@@ -42,11 +42,13 @@ async def main(root):
  (task/'instruction.md').write_text('Execute the operator fixture.\n')
  (task/'task.toml').write_text('schema_version="1.3"\n[agent]\nuser="agent"\ntimeout_sec=100\n[verifier]\nuser="root"\ntimeout_sec=10\n[environment]\ncpus=2\nmemory_mb=1024\nstorage_mb=1024\nworkdir="/workspace"\nnetwork_mode="no-network"\n')
  (task/'tests').mkdir();(task/'tests/test.sh').write_text('#!/bin/sh\nmkdir -p /logs/verifier\nprintf 1 > /logs/verifier/reward.txt\n')
+ (task/'tests/test.sh').chmod(0o755)
  rows=[]
  for arm,fail in [('with',False),('without',False),('init-failure',True)]:
   config=TrialConfig.model_validate({'task':{'path':str(task)},'trial_name':'architecture-'+arm,'trials_dir':str(out/'trials'),'agent':{'import_path':'harbor_gate:ProbeAgent'},'environment':{'import_path':'harbor_gate:TrustedEnvironment','kwargs':{'fail_init':fail}}})
   trial=await Trial.create(config);result=await trial.run()
   rows.append({'arm':arm,'result':result.model_dump(mode='json')})
+  (out/'harbor-results.json').write_text(json.dumps(rows,indent=2))
   if not fail:assert result.exception_info is None,str(result.exception_info)
   else:assert result.exception_info is not None
  (out/'harbor-results.json').write_text(json.dumps(rows,indent=2))

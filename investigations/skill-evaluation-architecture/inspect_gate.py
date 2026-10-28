@@ -1,0 +1,40 @@
+"""Real Inspect sandbox lifecycle and stock SWE capture with a deterministic model."""
+import ast,json,pathlib,sys
+from inspect_ai import Task,eval
+from inspect_ai.dataset import Sample
+from inspect_ai.solver import solver,chain
+from inspect_ai.agent import as_solver
+from inspect_ai.model import get_model,ModelOutput,ChatCompletionChoice,ChatMessageAssistant
+from inspect_ai.tool import ToolCall
+from inspect_ai.util import sandbox,store
+from inspect_swe import codex_cli
+root=pathlib.Path(sys.argv[1]);base=pathlib.Path(__file__).parent
+script=next(ast.literal_eval(n.value) for n in ast.parse((base/'native_probe.py').read_text()).body if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='SCRIPT' for t in n.targets))
+@solver
+def initialize():
+ async def run(state,generate):
+  s=sandbox()
+  r=await s.exec(['python','/opt/broker.py','init'],user='root',timeout=10,timeout_retry=False)
+  assert r.success
+  ident=json.loads(r.stdout)['identity'];store().set('initializer_identity',ident)
+  for cmd in [['cat','/opt/private/identity'],['python','/opt/broker.py','init'],['rm','/run/poc/broker.sock']]:
+   assert not (await s.exec(cmd,user='agent',timeout=5,timeout_retry=False)).success
+  assert json.loads((await s.exec(['python','/opt/broker.py','ready'],user='agent',timeout=5,timeout_retry=False)).stdout)['identity']==ident
+  assert (await s.exec(['mkdir','-p','/home/agent/.codex'],user='agent',timeout_retry=False)).success
+  return state
+ return run
+@solver
+def verify():
+ async def run(state,generate):
+  r=await sandbox().exec(['cat','/workspace/actual.txt'],user='agent',timeout=5,timeout_retry=False)
+  assert r.success and r.stdout=='actual-modification\n'
+  store().set('actual_patch_verified',True);return state
+ return run
+outputs=[ModelOutput(model='mockllm/model',choices=[ChatCompletionChoice(message=ChatMessageAssistant(content='',tool_calls=[ToolCall(id='script-1',function='exec',type='custom',arguments={'input':script})]))]),ModelOutput.from_content(model='mockllm/model',content='fixture finished')]
+model=get_model('mockllm/model',custom_outputs=outputs)
+compose=root/'inspect-compose.yaml';compose.write_text('services:\n  default:\n    image: architecture-poc:164\n    command: ["sleep", "infinity"]\n    user: agent\n    network_mode: none\n    cap_drop: [ALL]\n    security_opt: ["no-new-privileges:true"]\n    pids_limit: 128\n    mem_limit: 1g\n    cpus: 2\n    environment:\n      PATH: /opt/codex/bin:/usr/local/bin:/usr/bin:/bin\n')
+agent=codex_cli(version='sandbox',model_config='gpt-5.6-sol',web_search='disabled',goals=False,auto_review=False,attempts=1,user='agent',cwd='/workspace',home_dir='/home/agent/.codex',network_access=False)
+task=Task(dataset=[Sample(id='capture',input='Execute the fixed fixture script.')],solver=chain(initialize(),as_solver(agent),verify()),sandbox=('docker',str(compose)),name='architecture-inspect',message_limit=8,time_limit=120)
+logs=eval(task,model=model,log_dir=str(root/'evidence/inspect'),max_samples=1,max_tasks=1,max_subprocesses=2,retry_on_error=0)
+assert logs[0].status=='success',str(logs[0].error)
+print('Inspect stock Codex capture gate completed')
