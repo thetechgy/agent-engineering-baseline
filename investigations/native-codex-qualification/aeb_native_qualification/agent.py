@@ -23,7 +23,7 @@ class NativeCodex(SkillEvaluatorGatewayCodex):
         if access.configured_base_url!='http://127.0.0.1:8991/v1':raise RuntimeError('qualification forbids external provider')
         config=self._build_effective_config(access.configured_base_url)
         config['web_search']='disabled'
-        payload={'model':self.model_name,'config':config,'instruction':instruction,'sandbox':'workspace-write'}
+        payload={'model':self.model_name,'config':config,'instruction':instruction,'sandbox':environment.qualification_profile['codex_sandbox']}
         env={'OPENAI_API_KEY':access.api_key or '', 'OPENAI_BASE_URL':access.configured_base_url}
         result=await self.exec_as_agent(environment,'python3 -I /opt/qualification/native_controller.py '+shlex.quote(json.dumps(payload)),env=env,cwd='/workspace',timeout_sec=50)
         raw=result.stdout or ''

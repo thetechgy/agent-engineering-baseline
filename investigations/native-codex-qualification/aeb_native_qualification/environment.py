@@ -22,4 +22,4 @@ class SecureNativeEnvironment(SkillEvaluatorSecureDockerEnvironment):
         r=await self.exec("python3 -I -c 'import os,json,pathlib; s=pathlib.Path(\"/proc/self/status\").read_text(); print(json.dumps({\"uid\":os.getuid(),\"interfaces\":[p.name for p in pathlib.Path(\"/sys/class/net\").iterdir()],\"status\":{k:next(l.split(\":\",1)[1].strip() for l in s.splitlines() if l.startswith(k+\":\")) for k in [\"CapEff\",\"Seccomp\",\"NoNewPrivs\"]}}))'",user='agent',timeout_sec=5)
         security=json.loads(r.stdout)
         if security!={'uid':1000,'interfaces':['lo'],'status':{'CapEff':'0000000000000000','Seccomp':'2','NoNewPrivs':'1'}}:raise RuntimeError('runtime isolation mismatch')
-        self.qualification_profile={'name':'producer-smoke','security':security}
+        self.qualification_profile={'name':'producer-smoke','security':security,'codex_sandbox':'danger-full-access','policy':'outer-container-socketpair-v1'}

@@ -26,6 +26,12 @@ def main():
                 assert not accepted and reason=='unqualified capture transport'
                 injected=next(e['params']['item']['aggregatedOutput'] for e in capture['frames'] if e.get('method')=='item/completed' and '/opt/qualification/attack.py' in e.get('params',{}).get('item',{}).get('command',''))
                 assert any(c['injected'] and c['fd'] in ('0','1') for c in json.loads(injected.splitlines()[-1])['checks'])
+            elif mode.startswith('workspace-') and run('exec','--user','agent',name,'test','-f','/workspace/actual.txt').returncode!=0:
+                failed=[i for i in admitted['commands'] if i['status']=='failed']
+                assert failed and all('bwrap: No permissions to create a new namespace' in i['aggregatedOutput'] for i in failed)
+                rows.append({'mode':mode,'exit_code':r.returncode,'capture_admitted':accepted,'runtime_qualified':False,'classification':'unsupported-runtime','reason':'default runtime blocks inner user namespace; outer protections retained'})
+                (args.out/'producer-summary.json').write_text(json.dumps({'evidence_class':'actual-container-and-native-producer','rows':rows,'cleanup_verified':False},indent=2))
+                continue
             elif mode in ('normal','fd-inject','ptrace','proc-mem','forged-output','workspace-normal','workspace-fd-inject'):
                 assert accepted,(mode,reason,r.stderr)
                 assert run('exec','--user','agent',name,'cat','/workspace/actual.txt').stdout=='actual-modification\n'
@@ -55,5 +61,6 @@ def main():
             assert run('rm','-f',name).returncode==0
             assert not run('ps','-aq','--filter','name='+name).stdout.strip()
         (args.out/'producer-summary.json').write_text(json.dumps({'evidence_class':'actual-container-and-native-producer','rows':rows,'cleanup_verified':True},indent=2))
+    (args.out/'producer-summary.json').write_text(json.dumps({'evidence_class':'actual-container-and-native-producer','rows':rows,'cleanup_verified':True},indent=2))
     print(json.dumps(rows))
 if __name__=='__main__':main()

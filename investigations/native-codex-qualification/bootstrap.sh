@@ -29,12 +29,18 @@ env -i PATH="$PATH" HOME="$root/home" DOCKER_CONFIG="$DOCKER_CONFIG" PYTHON_DOTE
 set +e
 env -i PATH="$PATH" HOME="$root/home" DOCKER_CONFIG="$DOCKER_CONFIG" PYTHON_DOTENV_DISABLED=1 PYTHONDONTWRITEBYTECODE=1 "$root/candidate/.venv/bin/python" "$source_root/producer_gate.py" --out "$root/evidence/producer"
 producer_status=$?
+if [ "$producer_status" = 0 ]; then
+  env -i PATH="$PATH" HOME="$root/home" DOCKER_CONFIG="$DOCKER_CONFIG" PYTHON_DOTENV_DISABLED=1 PYTHONDONTWRITEBYTECODE=1 "$root/candidate/.venv/bin/python" "$source_root/cli_controls.py" "$root" "$GITHUB_WORKSPACE"
+  cli_status=$?
+else
+  cli_status=125
+fi
 set -e
-printf '{"producer_exit":%s}\n' "$producer_status" > "$root/evidence/outcomes.json"
+printf '{"producer_exit":%s,"cli_controls_exit":%s}\n' "$producer_status" "$cli_status" > "$root/evidence/outcomes.json"
 python3 - "$root/evidence" <<'LIMITS'
 import pathlib,sys
 root=pathlib.Path(sys.argv[1]);files=[p for p in root.rglob('*') if p.is_file()]
 assert len(files)<1024 and sum(p.stat().st_size for p in files)<16*1024*1024
 assert not any(p.is_symlink() for p in root.rglob('*'))
 LIMITS
-test "$producer_status" = 0
+test "$producer_status" = 0 && test "$cli_status" = 0
