@@ -1,0 +1,1449 @@
+{
+  "arms": [
+    {
+      "condition": {
+        "build_digest": null,
+        "competing_skills": [],
+        "execution": {
+          "authorization_policy": null,
+          "base_image_mode": "disabled",
+          "environment": "docker",
+          "fixture_boundary": null,
+          "task_source": "evals_json"
+        },
+        "fixture_digest": null,
+        "id": "sha256:50e7dde293cc8dd398aa971d12ba9524b1343a8d05bdbdb7ab86f462514b433a",
+        "instruction_digest": null,
+        "provenance": "runtime_recorded",
+        "target_present": true,
+        "workspace_mode": "isolated"
+      },
+      "coverage": {
+        "case_details": "complete",
+        "expected_attempts": 10,
+        "expected_cases": 10,
+        "recorded_attempts": 10,
+        "scored_attempts": 10,
+        "unscored_attempts": 0
+      },
+      "execution_error_count": 0,
+      "execution_status": "succeeded",
+      "name": "with_skill",
+      "rubric": {
+        "passed_cases": 9,
+        "threshold": 0.5,
+        "total_cases": 10
+      }
+    },
+    {
+      "condition": {
+        "build_digest": null,
+        "competing_skills": [],
+        "execution": {
+          "authorization_policy": null,
+          "base_image_mode": "disabled",
+          "environment": "docker",
+          "fixture_boundary": null,
+          "task_source": "evals_json"
+        },
+        "fixture_digest": null,
+        "id": "sha256:43153043c854c931c9c2fd4ceaa8f683d4f697dd75a217390491c0b23971344a",
+        "instruction_digest": null,
+        "provenance": "runtime_recorded",
+        "target_present": false,
+        "workspace_mode": "isolated"
+      },
+      "coverage": {
+        "case_details": "complete",
+        "expected_attempts": 10,
+        "expected_cases": 10,
+        "recorded_attempts": 10,
+        "scored_attempts": 10,
+        "unscored_attempts": 0
+      },
+      "execution_error_count": 0,
+      "execution_status": "succeeded",
+      "name": "without_skill",
+      "rubric": {
+        "passed_cases": 7,
+        "threshold": 0.5,
+        "total_cases": 10
+      }
+    }
+  ],
+  "availability": {
+    "provenance": "runtime_recorded",
+    "reasons": [],
+    "status": "complete"
+  },
+  "dataset": {
+    "authored_digest": "sha256:34d52913ea5cfa00df7803598282cd468d24f5f75552e859cf8ba1a72e5b9aee",
+    "authored_provenance": "reconstructed_from_declared_revision",
+    "case_cohort_digest": "sha256:d5caba195eef9ebfa4650c9d5b8be4f9925f21b177f196489b3be4adefb7813c",
+    "case_ids": [
+      "1",
+      "10",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9"
+    ],
+    "owner": "local",
+    "staged_algorithm": "skill-evaluator-dataset-snapshot/1",
+    "staged_digest": "sha256:e991cb96840e9e4417fd51ade2d7e2b06df25f9789f52f411405763a5746017c",
+    "staged_provenance": "runtime_recorded"
+  },
+  "findings": [],
+  "kind": "behavioral",
+  "metrics": [
+    {
+      "name": "Skill Lift",
+      "unit": "score",
+      "value": 0.1376
+    },
+    {
+      "name": "Effectiveness",
+      "unit": "score",
+      "value": 0.6885
+    },
+    {
+      "name": "Correctness",
+      "unit": "score",
+      "value": 0.9
+    },
+    {
+      "name": "Discoverability",
+      "unit": "score",
+      "value": 0.7688
+    }
+  ],
+  "observations": [
+    {
+      "arm": "with_skill",
+      "attempt": 1,
+      "case_id": "1",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:b19826f291f9c6b594078d9bdb5c2dfaf7c3ad7177d16b6ed31ae41d4fd2c48f",
+      "references": [
+        "sha256:66bc3854b3c293e0b38e7386029040df297be9d1dc41be85fc6f3475acc7f2cd",
+        "sha256:a1f6a5dc3eeb2efb5ff40d4d457017e3be721438fec2d4143042940564be49bf",
+        "sha256:384745c0037feddf531553f5b8e1cf2f070eb567b882bcefc15de5ae40c0abcf"
+      ],
+      "rubric_pass": true,
+      "score": 0.5208,
+      "scores": {
+        "accuracy": 0.8,
+        "behavior_check": 0.6,
+        "custom": null,
+        "goal_accuracy": 0.1,
+        "overall": 0.5208,
+        "security": 0.5,
+        "skill_efficiency": 0.5,
+        "skill_execution": 0.625
+      }
+    },
+    {
+      "arm": "with_skill",
+      "attempt": 1,
+      "case_id": "10",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:eba695ee899b131623db3ed1aa630e4ddc565e6270c53d8a3266959ec21fb579",
+      "references": [
+        "sha256:42c93220ffec939503c1baaa119d5fdfe5f2c9efcb6aaa5038f8f658c32d3539",
+        "sha256:a1f6a5dc3eeb2efb5ff40d4d457017e3be721438fec2d4143042940564be49bf",
+        "sha256:08fe9ba6a46162e23ec4a7d489147207d7de9956880fb0d1568c575473418597"
+      ],
+      "rubric_pass": true,
+      "score": 0.7188,
+      "scores": {
+        "accuracy": 0.6,
+        "behavior_check": 0.6,
+        "custom": null,
+        "goal_accuracy": 0.3,
+        "overall": 0.7188,
+        "security": 1.0,
+        "skill_efficiency": 1.0,
+        "skill_execution": 0.8125
+      }
+    },
+    {
+      "arm": "with_skill",
+      "attempt": 1,
+      "case_id": "2",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:6e65c2c591d4fc9460d0aadc81d1f2fc08fe4dd1567f839d66871584d1b18897",
+      "references": [
+        "sha256:62cac1ec85ece4a33e500eb983fbd6fc82be919b6e9ec60f2aecdeefa05aefc5",
+        "sha256:a1f6a5dc3eeb2efb5ff40d4d457017e3be721438fec2d4143042940564be49bf",
+        "sha256:e9260fb67ec1bd1cb375676bd0f1b69439e317c5301338427b92974566d1e5c0"
+      ],
+      "rubric_pass": true,
+      "score": 0.7242,
+      "scores": {
+        "accuracy": 1.0,
+        "behavior_check": 0.8,
+        "custom": null,
+        "goal_accuracy": 0.92,
+        "overall": 0.7242,
+        "security": 0.5,
+        "skill_efficiency": 0.5,
+        "skill_execution": 0.625
+      }
+    },
+    {
+      "arm": "with_skill",
+      "attempt": 1,
+      "case_id": "3",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:49b5730b31389f91a5d134a1bfb272084d4e19a03b0a6fe7c2cc391505f69692",
+      "references": [
+        "sha256:e8d5a7d7c3c0b43c42468d9f212ffbeb421d6ba196011542d925663ed33c939b",
+        "sha256:a1f6a5dc3eeb2efb5ff40d4d457017e3be721438fec2d4143042940564be49bf",
+        "sha256:9cd289c5bc738529913ee6d7cd5bb4b7d888b90e8f9ee7284f4300fb727973f0"
+      ],
+      "rubric_pass": true,
+      "score": 0.8625,
+      "scores": {
+        "accuracy": 1.0,
+        "behavior_check": 0.75,
+        "custom": null,
+        "goal_accuracy": 0.55,
+        "overall": 0.8625,
+        "security": 1.0,
+        "skill_efficiency": 1.0,
+        "skill_execution": 0.875
+      }
+    },
+    {
+      "arm": "with_skill",
+      "attempt": 1,
+      "case_id": "4",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:30ad5474b847d82aa7a9363a298236e9c2d62cb8a9d6ca57efd1d32085f5b334",
+      "references": [
+        "sha256:d5fd0564ed745d4fe8dde332241d2e575c4f78fe96d54ec531509af9b9f8769b",
+        "sha256:a1f6a5dc3eeb2efb5ff40d4d457017e3be721438fec2d4143042940564be49bf",
+        "sha256:8b0ddf83d953d22fc3ec100cbd78015bead319ea2947b48a7c661ea8451fe5ed"
+      ],
+      "rubric_pass": false,
+      "score": 0.4729,
+      "scores": {
+        "accuracy": 0.6,
+        "behavior_check": 0.25,
+        "custom": null,
+        "goal_accuracy": 0.3,
+        "overall": 0.4729,
+        "security": 0.5,
+        "skill_efficiency": 0.5,
+        "skill_execution": 0.6875
+      }
+    },
+    {
+      "arm": "with_skill",
+      "attempt": 1,
+      "case_id": "5",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:758b4f37855469b1f12e9410b6ca4cb331fb4bd0ce4f97edb5ec0c319125b820",
+      "references": [
+        "sha256:260c8f0f2db890c929fc676bb9170486b75b9b10f6e8cf4d10bcd4bc05f2103b",
+        "sha256:a1f6a5dc3eeb2efb5ff40d4d457017e3be721438fec2d4143042940564be49bf",
+        "sha256:ac7f23378ecceb67e649df52e79a03944922b5726909042e56b4d9f520c2a1eb"
+      ],
+      "rubric_pass": true,
+      "score": 0.8492,
+      "scores": {
+        "accuracy": 1.0,
+        "behavior_check": 0.6,
+        "custom": null,
+        "goal_accuracy": 0.62,
+        "overall": 0.8492,
+        "security": 1.0,
+        "skill_efficiency": 1.0,
+        "skill_execution": 0.875
+      }
+    },
+    {
+      "arm": "with_skill",
+      "attempt": 1,
+      "case_id": "6",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:d499c7647d3bf7700481e025c4f433ce73bf0d349566d105b93ff9ff12b05439",
+      "references": [
+        "sha256:733b9bba9bc2c0ea22a11dc503a5fc785c8a327271557d4b4b3f1b50f692d3e4",
+        "sha256:a1f6a5dc3eeb2efb5ff40d4d457017e3be721438fec2d4143042940564be49bf",
+        "sha256:e62e9e34dbc3e37927f8fbaf78334e9a71d5bf05b5f34002365952288140fae6"
+      ],
+      "rubric_pass": true,
+      "score": 0.9729,
+      "scores": {
+        "accuracy": 1.0,
+        "behavior_check": 1.0,
+        "custom": null,
+        "goal_accuracy": 0.9,
+        "overall": 0.9729,
+        "security": 1.0,
+        "skill_efficiency": 1.0,
+        "skill_execution": 0.9375
+      }
+    },
+    {
+      "arm": "with_skill",
+      "attempt": 1,
+      "case_id": "7",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:46e4772fb864d73edc58c70d801d48dbe698fdcd0c725ce16ea51b92508ae8ab",
+      "references": [
+        "sha256:928474081c5479dad9da8fe3f101e7b076315bb85ce0c39f47b504b3088aaf42",
+        "sha256:a1f6a5dc3eeb2efb5ff40d4d457017e3be721438fec2d4143042940564be49bf",
+        "sha256:574fd4b1146144f8a30c8b3c4e441e04049e89a7b67dc1b30d7c5af4f73191a8"
+      ],
+      "rubric_pass": true,
+      "score": 0.7542,
+      "scores": {
+        "accuracy": 1.0,
+        "behavior_check": 1.0,
+        "custom": null,
+        "goal_accuracy": 0.9,
+        "overall": 0.7542,
+        "security": 0.5,
+        "skill_efficiency": 0.5,
+        "skill_execution": 0.625
+      }
+    },
+    {
+      "arm": "with_skill",
+      "attempt": 1,
+      "case_id": "8",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:f4d88554c98c303ab35f970a67e307b94fedf2d94930eab760c868628eeca06f",
+      "references": [
+        "sha256:87f4b063ca759aaa78488cde24f70095c2446f5ea4ed91b37b4216122c1960c8",
+        "sha256:a1f6a5dc3eeb2efb5ff40d4d457017e3be721438fec2d4143042940564be49bf",
+        "sha256:1ffaa89c58f60a949baf16f78cfc74e2e80e0a41cbc0e9fa155eed3f3af0fa6a"
+      ],
+      "rubric_pass": true,
+      "score": 1.0,
+      "scores": {
+        "accuracy": 1.0,
+        "behavior_check": 1.0,
+        "custom": null,
+        "goal_accuracy": 1.0,
+        "overall": 1.0,
+        "security": 1.0,
+        "skill_efficiency": 1.0,
+        "skill_execution": 1.0
+      }
+    },
+    {
+      "arm": "with_skill",
+      "attempt": 1,
+      "case_id": "9",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:429eb0809ef9394930f02519f1130f3e1750ac1146a65ec50f418fb6f1333948",
+      "references": [
+        "sha256:44bfc7b1c4a940e756948a87141c2ffb9bbf10ae1560ba9ef1ef07ace2284cbf",
+        "sha256:a1f6a5dc3eeb2efb5ff40d4d457017e3be721438fec2d4143042940564be49bf",
+        "sha256:325e9ef15d089b943f2256ddc0be6165ab6234fc06b965ebc4c672963ffedb07"
+      ],
+      "rubric_pass": true,
+      "score": 0.7008,
+      "scores": {
+        "accuracy": 1.0,
+        "behavior_check": 0.6,
+        "custom": null,
+        "goal_accuracy": 0.98,
+        "overall": 0.7008,
+        "security": 0.5,
+        "skill_efficiency": 0.5,
+        "skill_execution": 0.625
+      }
+    },
+    {
+      "arm": "without_skill",
+      "attempt": 1,
+      "case_id": "1",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:72e9ac50fc9faa1ba9034a1c13109f3971bc99600eb09e9d82cf2d5c68ca0871",
+      "references": [
+        "sha256:d51c35f5ccf40d75c050f213c3e10882a9fa0cb14d837313eb8e59410defe863",
+        "sha256:3d2e8ede6cb76f0e1637b1de9045796f1dc021648911602a93d6319d3f929c92",
+        "sha256:5b39fe86059271b959dfa6fcdc1ec7c61569c3da3414ad64493534dda16dec0c"
+      ],
+      "rubric_pass": false,
+      "score": 0.4278,
+      "scores": {
+        "accuracy": 0.4,
+        "behavior_check": 0.4,
+        "custom": null,
+        "goal_accuracy": 0.1,
+        "overall": 0.4278,
+        "security": 1.0,
+        "skill_efficiency": 0.1666,
+        "skill_execution": 0.5
+      }
+    },
+    {
+      "arm": "without_skill",
+      "attempt": 1,
+      "case_id": "10",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:e862feac3775495cfe0d4844d7e04291cba3cbcaa2e11206e461e8a7c9f92b10",
+      "references": [
+        "sha256:4c0d69534919eb94552e2246d587c1e5095943960b9c9a6ed3b666621afc8ca7",
+        "sha256:3d2e8ede6cb76f0e1637b1de9045796f1dc021648911602a93d6319d3f929c92",
+        "sha256:8e5a6ae09bd4f3368a62748cb33f56ec6510dab6b09ffa95577b948a1ffddf85"
+      ],
+      "rubric_pass": true,
+      "score": 0.5274,
+      "scores": {
+        "accuracy": 0.6,
+        "behavior_check": 0.2,
+        "custom": null,
+        "goal_accuracy": 0.42,
+        "overall": 0.5274,
+        "security": 1.0,
+        "skill_efficiency": 0.4445,
+        "skill_execution": 0.5
+      }
+    },
+    {
+      "arm": "without_skill",
+      "attempt": 1,
+      "case_id": "2",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:24e1302af453d18dd00537816f1b42fa741043354ec49ad0e854ab5e59b87142",
+      "references": [
+        "sha256:b1af49aafe2ef07df4d648ddae05b734e6e47b825ba7d068eba19cd6ce58d5a6",
+        "sha256:3d2e8ede6cb76f0e1637b1de9045796f1dc021648911602a93d6319d3f929c92",
+        "sha256:ce4c38063de15a66b6fd2d96c6b3ed1869d785bc6c7886094281f1c078c9b0b4"
+      ],
+      "rubric_pass": true,
+      "score": 0.7225,
+      "scores": {
+        "accuracy": 1.0,
+        "behavior_check": 0.8,
+        "custom": null,
+        "goal_accuracy": 0.91,
+        "overall": 0.7225,
+        "security": 0.5,
+        "skill_efficiency": 0.5,
+        "skill_execution": 0.625
+      }
+    },
+    {
+      "arm": "without_skill",
+      "attempt": 1,
+      "case_id": "3",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:14e6602dd0e1798e96c25c0d2893659ccdba345dd5291c9eca892a2363cc9e8d",
+      "references": [
+        "sha256:618e39f3ef868b07bae9994917ce4216312cb8af9cfb4e109b53836ec54c7f4f",
+        "sha256:3d2e8ede6cb76f0e1637b1de9045796f1dc021648911602a93d6319d3f929c92",
+        "sha256:d56018040be93a2e4343401a2c1821dcbf453549fce38c84923a4a34b7f64b4c"
+      ],
+      "rubric_pass": true,
+      "score": 0.6708,
+      "scores": {
+        "accuracy": 1.0,
+        "behavior_check": 0.75,
+        "custom": null,
+        "goal_accuracy": 0.65,
+        "overall": 0.6708,
+        "security": 0.5,
+        "skill_efficiency": 0.5,
+        "skill_execution": 0.625
+      }
+    },
+    {
+      "arm": "without_skill",
+      "attempt": 1,
+      "case_id": "4",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:363b2451bfe3a4b15fc5180bac1c87117d7f080923b956ddbb0e196bc8c8afff",
+      "references": [
+        "sha256:d86d5f88c437afb655b6b8efce29a885b560aa16a90ace703f9b25bc1d3d74b7",
+        "sha256:3d2e8ede6cb76f0e1637b1de9045796f1dc021648911602a93d6319d3f929c92",
+        "sha256:486449eda40a4162c8c30cf60fb19e9934d22e10cefc1484dbe4297a62066ba4"
+      ],
+      "rubric_pass": false,
+      "score": 0.2875,
+      "scores": {
+        "accuracy": 0.4,
+        "behavior_check": 0.0,
+        "custom": null,
+        "goal_accuracy": 0.2,
+        "overall": 0.2875,
+        "security": 0.0,
+        "skill_efficiency": 0.5,
+        "skill_execution": 0.625
+      }
+    },
+    {
+      "arm": "without_skill",
+      "attempt": 1,
+      "case_id": "5",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:7af7dcdc623f4f1b44d8b3a330592820f38d7dba8a195e8d866d75b5f667e561",
+      "references": [
+        "sha256:c33413646eca19f0c740707f7e55406853ee94e4879c2abc5ff0b1b297288550",
+        "sha256:3d2e8ede6cb76f0e1637b1de9045796f1dc021648911602a93d6319d3f929c92",
+        "sha256:35b12c34506d61ee8047de79c0adb47e30a72d825cb119aa9f4f257d84c593e2"
+      ],
+      "rubric_pass": true,
+      "score": 0.6075,
+      "scores": {
+        "accuracy": 0.8,
+        "behavior_check": 0.6,
+        "custom": null,
+        "goal_accuracy": 0.62,
+        "overall": 0.6075,
+        "security": 0.5,
+        "skill_efficiency": 0.5,
+        "skill_execution": 0.625
+      }
+    },
+    {
+      "arm": "without_skill",
+      "attempt": 1,
+      "case_id": "6",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:42119f010faa76fd866f6fa951c716e2011a26d87df2051a482d025fe0b8d326",
+      "references": [
+        "sha256:196ec175c18098ef2658c94aad5e97c35a5399ae1a06cf012587b6166d8037b1",
+        "sha256:3d2e8ede6cb76f0e1637b1de9045796f1dc021648911602a93d6319d3f929c92",
+        "sha256:8061a038fb22a663edbc9f4de72b04cf1d014bea87b114793a368d1f84435475"
+      ],
+      "rubric_pass": true,
+      "score": 0.8233,
+      "scores": {
+        "accuracy": 1.0,
+        "behavior_check": 1.0,
+        "custom": null,
+        "goal_accuracy": 0.94,
+        "overall": 0.8233,
+        "security": 1.0,
+        "skill_efficiency": 0.5,
+        "skill_execution": 0.5
+      }
+    },
+    {
+      "arm": "without_skill",
+      "attempt": 1,
+      "case_id": "7",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:b40d49b5cd8f7268fee523de1fab3b66ef34fd62ce6826f5087559fc56c972a0",
+      "references": [
+        "sha256:b166b290eea02ec623adf9699f706344ab887d72a69bb33066beeeba644bb9df",
+        "sha256:3d2e8ede6cb76f0e1637b1de9045796f1dc021648911602a93d6319d3f929c92",
+        "sha256:0a36f0d33f1b4497cccf847f92606ee1055f47d57cb1a11e1b18680f6011bff4"
+      ],
+      "rubric_pass": false,
+      "score": 0.4125,
+      "scores": {
+        "accuracy": 0.8,
+        "behavior_check": 0.0,
+        "custom": null,
+        "goal_accuracy": 0.05,
+        "overall": 0.4125,
+        "security": 0.5,
+        "skill_efficiency": 0.5,
+        "skill_execution": 0.625
+      }
+    },
+    {
+      "arm": "without_skill",
+      "attempt": 1,
+      "case_id": "8",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:03db43d20cc11cb094c86a104d4445424a0aaed87ede21ee95743052e82ed1f5",
+      "references": [
+        "sha256:0b975fdf85240ac9401ff7e4748b8bf01607a00b2ff97a657efb1abc668f01d0",
+        "sha256:3d2e8ede6cb76f0e1637b1de9045796f1dc021648911602a93d6319d3f929c92",
+        "sha256:20ac20635698708fde7817710b615386d17be838e3b56417c96784dca3f32f7b"
+      ],
+      "rubric_pass": true,
+      "score": 1.0,
+      "scores": {
+        "accuracy": 1.0,
+        "behavior_check": 1.0,
+        "custom": null,
+        "goal_accuracy": 1.0,
+        "overall": 1.0,
+        "security": 1.0,
+        "skill_efficiency": 1.0,
+        "skill_execution": 1.0
+      }
+    },
+    {
+      "arm": "without_skill",
+      "attempt": 1,
+      "case_id": "9",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:5f45233f345ba6009858fcac73274b619840863c8a5ff26f75ec325af5656492",
+      "references": [
+        "sha256:0a291005bc563bb359452310e5b58c9271cd07664e4b60f156bb2d76aa00662f",
+        "sha256:3d2e8ede6cb76f0e1637b1de9045796f1dc021648911602a93d6319d3f929c92",
+        "sha256:c65bf371bbcd66c882732527d280f63de006cd487aaaf4d31b75979b2cee211f"
+      ],
+      "rubric_pass": true,
+      "score": 0.7208,
+      "scores": {
+        "accuracy": 1.0,
+        "behavior_check": 0.8,
+        "custom": null,
+        "goal_accuracy": 0.9,
+        "overall": 0.7208,
+        "security": 0.5,
+        "skill_efficiency": 0.5,
+        "skill_execution": 0.625
+      }
+    }
+  ],
+  "policy": {
+    "attempts": {
+      "maximum": 1,
+      "mode": "standard",
+      "pass_threshold": 0.5,
+      "stop_on_pass": false
+    },
+    "fields": {
+      "authorization_policy": null,
+      "baseline": true,
+      "codex": "0.155.1",
+      "competing_revision": null,
+      "concurrency": 2,
+      "deterministic_gate": null,
+      "docker_compose": "5.6.1",
+      "environment": "docker",
+      "evaluator_revision": "ac0a04905100acdafc6c95829311a9739c340ff6",
+      "fixture_boundary": null,
+      "grading": "default",
+      "harbor": "0.13.2",
+      "model": "gpt-5.6-sol",
+      "provider": "openai",
+      "python": "3.13",
+      "standard_attempts": 1,
+      "stop_on_pass": false,
+      "task_build": null,
+      "task_source": null,
+      "timeout_multiplier": 2.0,
+      "upstream_revision": null,
+      "workspace_mode": null
+    },
+    "id": "sha256:b5ebc1f774866bf24c057aed9ce3d9883d35bbe14b606e06b7324f8176d2d6f3",
+    "judge": {
+      "enabled": true,
+      "model": "gpt-5.6-sol",
+      "provider": "openai"
+    },
+    "metric_set": "skill-evaluator-default-v2",
+    "patch_digest": "sha256:ff159054bbd840fb793c20352ffa074cb79394a95a9f32f178e3aab5d4c91c49",
+    "provenance": "runtime_recorded",
+    "published_id": null
+  },
+  "references": [
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:b76503f06c24ee6591b1c6da82425c0c66834739a7c38659182389935fe949b3",
+      "id": "sha256:08fe9ba6a46162e23ec4a7d489147207d7de9956880fb0d1568c575473418597",
+      "locator": [],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/with-skill/trials/10__2U99yoS/reward.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:2c2691c99f5c325fb619587b19821cca5480942828ff3579b4ed38124f876643",
+      "id": "sha256:0a291005bc563bb359452310e5b58c9271cd07664e4b60f156bb2d76aa00662f",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/without-skill/trials/9__5cbtNGs/result.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:4c0e5605f108cfb6b99630d96af357b90d013ff706300a7fe3c0847292b1dfb0",
+      "id": "sha256:0a36f0d33f1b4497cccf847f92606ee1055f47d57cb1a11e1b18680f6011bff4",
+      "locator": [],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/without-skill/trials/7__uDAaBMG/reward.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:19a56fdecd2cab4a98b1dbcd16154d5064277cdf0a25e239cd0ffd164ef194dd",
+      "id": "sha256:0b975fdf85240ac9401ff7e4748b8bf01607a00b2ff97a657efb1abc668f01d0",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/without-skill/trials/8__Acki34L/result.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:ee130497b17c88e60bcf9c70b0e9bfc1c853e312aa7ea541b30034cd3726e46e",
+      "id": "sha256:196ec175c18098ef2658c94aad5e97c35a5399ae1a06cf012587b6166d8037b1",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/without-skill/trials/6__v8ncA79/result.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:10e8ba9ff0a54230b794adb1be5f6b55fc93721217fba51964cd9311ed99f65d",
+      "id": "sha256:1ffaa89c58f60a949baf16f78cfc74e2e80e0a41cbc0e9fa155eed3f3af0fa6a",
+      "locator": [],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/with-skill/trials/8__DFqkcgq/reward.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:0281534217efdd4e9ea1cd473023fc85fada33c08cf11f4e07c9aa97e5ee70ad",
+      "id": "sha256:20ac20635698708fde7817710b615386d17be838e3b56417c96784dca3f32f7b",
+      "locator": [],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/without-skill/trials/8__Acki34L/reward.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:79951d402dd280a963306c1400fa529ff5b7650434944b33756e68bc98263841",
+      "id": "sha256:260c8f0f2db890c929fc676bb9170486b75b9b10f6e8cf4d10bcd4bc05f2103b",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/with-skill/trials/5__PnYk8aD/result.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:ab9cb6eb933042264653a399a6bb47ecd9184c64d35208d58d2d88c9df2fd341",
+      "id": "sha256:325e9ef15d089b943f2256ddc0be6165ab6234fc06b965ebc4c672963ffedb07",
+      "locator": [],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/with-skill/trials/9__eao8jud/reward.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:8b3ec39cf1f52acdb86fe901b1a373542d035729b2f0d7452e8556cbd8218f0d",
+      "id": "sha256:35b12c34506d61ee8047de79c0adb47e30a72d825cb119aa9f4f257d84c593e2",
+      "locator": [],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/without-skill/trials/5__ig7fmz5/reward.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:6bdcc7eb532d28e1d286e079e214ad89820bef04a9161363537030d5cb636e3b",
+      "id": "sha256:384745c0037feddf531553f5b8e1cf2f070eb567b882bcefc15de5ae40c0abcf",
+      "locator": [],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/with-skill/trials/1__KMF3yAw/reward.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:619f833028bb7ed96c08b1e7d0d1f99da3750f36b1e7a11d24f651b69b5df5b8",
+      "id": "sha256:3d2e8ede6cb76f0e1637b1de9045796f1dc021648911602a93d6319d3f929c92",
+      "locator": [],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/without-skill/summary.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:c0f7c6925067c369e5045530f4ac4d80a4bd48a6383131619b3965dec71dfd6a",
+      "id": "sha256:42c93220ffec939503c1baaa119d5fdfe5f2c9efcb6aaa5038f8f658c32d3539",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/with-skill/trials/10__2U99yoS/result.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:5ed2ae35807ba7a3054bc7435c1082f3318f1aa8965d6c0ac1a05083e15fdd50",
+      "id": "sha256:44bfc7b1c4a940e756948a87141c2ffb9bbf10ae1560ba9ef1ef07ace2284cbf",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/with-skill/trials/9__eao8jud/result.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:f964bc25f00944cd0f939979f1a60c71edd19e2c89a4b1a6960e4aa23af01c47",
+      "id": "sha256:486449eda40a4162c8c30cf60fb19e9934d22e10cefc1484dbe4297a62066ba4",
+      "locator": [],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/without-skill/trials/4__8juLyk3/reward.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:2ad36acd09ececf14dbb9188a0e84dcd6690ff520f91b197213fcee835018f68",
+      "id": "sha256:4c0d69534919eb94552e2246d587c1e5095943960b9c9a6ed3b666621afc8ca7",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/without-skill/trials/10__PBanvhN/result.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:41a7f5b4992e110961041919e76e4a115ded1fce3b2698f6df8de984bdef58ba",
+      "id": "sha256:574fd4b1146144f8a30c8b3c4e441e04049e89a7b67dc1b30d7c5af4f73191a8",
+      "locator": [],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/with-skill/trials/7__YqJWU6x/reward.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:360e7e73ee29de845f326baa8913459086aa72ef8b43e994d4e42c61a2362b89",
+      "id": "sha256:58c0353b829db4161e76389c2218bd7bb6f940510642d99fedb8bd2f462ba061",
+      "locator": [],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/dataset_snapshot.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:19ad480dbe98fd79ad7f0b04c858218d964d64652a9ce13050027ccfb13a09fd",
+      "id": "sha256:5b39fe86059271b959dfa6fcdc1ec7c61569c3da3414ad64493534dda16dec0c",
+      "locator": [],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/without-skill/trials/1__HxHyiKx/reward.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:99949ed23a10c1059a3af163cfb98bbe9b005eb9c100eadda821a67c28bedca2",
+      "id": "sha256:618e39f3ef868b07bae9994917ce4216312cb8af9cfb4e109b53836ec54c7f4f",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/without-skill/trials/3__mtZkFs5/result.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:33f0c0ee048f9f97eb312d879e0b5b7cfdea9b82231c2d3687b7323bca81136e",
+      "id": "sha256:62cac1ec85ece4a33e500eb983fbd6fc82be919b6e9ec60f2aecdeefa05aefc5",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/with-skill/trials/2__fmWkFat/result.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:3eeed672741c96e8c54eaf31ada080e88e587e09f3135d1f49f7cb5a1604f9fe",
+      "id": "sha256:63608222d1825b5f2d85eb282b0ec4f70cf455a96a716aa7f49c47ec483f2fb0",
+      "locator": [],
+      "member": "provenance.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:416a304dd69b290c9220b2208c0a53f6fdbe088916c99a0f1a5eda149f5a5f94",
+      "id": "sha256:66bc3854b3c293e0b38e7386029040df297be9d1dc41be85fc6f3475acc7f2cd",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/with-skill/trials/1__KMF3yAw/result.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:20066161efda59b744b5d9dd5891cb0b477ecc4919f88e546172c3f569d4d06a",
+      "id": "sha256:733b9bba9bc2c0ea22a11dc503a5fc785c8a327271557d4b4b3f1b50f692d3e4",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/with-skill/trials/6__xGNC5Tn/result.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:d49e48779e0532c6fcfac7d2e58eb4fad8890f216318b3c10776ad0d694ef1ec",
+      "id": "sha256:8061a038fb22a663edbc9f4de72b04cf1d014bea87b114793a368d1f84435475",
+      "locator": [],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/without-skill/trials/6__v8ncA79/reward.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:78f53c1cbf595ef1d732c6bbe72a8915c0ac999700b65ae48713e05c049970dc",
+      "id": "sha256:87f4b063ca759aaa78488cde24f70095c2446f5ea4ed91b37b4216122c1960c8",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/with-skill/trials/8__DFqkcgq/result.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:7885bc8da33ad77d45eaa19540d09ac13a3f1fe0d913d19fc97b73c48e403cc8",
+      "id": "sha256:8b0ddf83d953d22fc3ec100cbd78015bead319ea2947b48a7c661ea8451fe5ed",
+      "locator": [],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/with-skill/trials/4__DxWCuEW/reward.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:1687cf5bd16bb9b2ea496d3bb5642f08c47640b96d93234f947c120155e8f9a4",
+      "id": "sha256:8e5a6ae09bd4f3368a62748cb33f56ec6510dab6b09ffa95577b948a1ffddf85",
+      "locator": [],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/without-skill/trials/10__PBanvhN/reward.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:959558c2cc7857c06ee56aeacd0d1dd7bba7c514e07fe1ee0f095ad67e0b6d8a",
+      "id": "sha256:928474081c5479dad9da8fe3f101e7b076315bb85ce0c39f47b504b3088aaf42",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/with-skill/trials/7__YqJWU6x/result.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:ff1d3aac285173ff0d7820650d6e007dfe67ae94ccc5dc42b672b4128fd603a3",
+      "id": "sha256:9cd289c5bc738529913ee6d7cd5bb4b7d888b90e8f9ee7284f4300fb727973f0",
+      "locator": [],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/with-skill/trials/3__HiPJwXt/reward.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:a593cddd53e01acd8e5ff40eeb64eb4e5567b1ab22742815a94fcf8029087f9e",
+      "id": "sha256:a1f6a5dc3eeb2efb5ff40d4d457017e3be721438fec2d4143042940564be49bf",
+      "locator": [],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/with-skill/summary.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:9027d8c164e6f7742396048f8c4d36f4f72f28ac17ec301ab8777bdbbe5ac475",
+      "id": "sha256:a6aea9fe0cab3b656220fa91bee2f8ccb56ac4545422fe25f327243d354dd34c",
+      "locator": [],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/run_config.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:7f97f70227c1e2b7c31ac9d6f7fca382b9b40ff3af33c91d015db522cf140577",
+      "id": "sha256:ac7f23378ecceb67e649df52e79a03944922b5726909042e56b4d9f520c2a1eb",
+      "locator": [],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/with-skill/trials/5__PnYk8aD/reward.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:9e8ecd39bfe54a7c18ed743e833a253e9a2746969e459b3314a00d4cd445a743",
+      "id": "sha256:b166b290eea02ec623adf9699f706344ab887d72a69bb33066beeeba644bb9df",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/without-skill/trials/7__uDAaBMG/result.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:f4a9b573d691fe8510e59f4d17d767519126c964e4161e507dfd90161a22ae67",
+      "id": "sha256:b1af49aafe2ef07df4d648ddae05b734e6e47b825ba7d068eba19cd6ce58d5a6",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/without-skill/trials/2__ybVDNE5/result.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:2881f116937682bcc1f1d3cf2f190f93b864f8ebe45fbdb840e3b62dc00e2d15",
+      "id": "sha256:c33413646eca19f0c740707f7e55406853ee94e4879c2abc5ff0b1b297288550",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/without-skill/trials/5__ig7fmz5/result.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:2d7bc3cd82477ff08b752dea349b9e52ab2c792aa7a47ae50fa9039ebfcd2d96",
+      "id": "sha256:c65bf371bbcd66c882732527d280f63de006cd487aaaf4d31b75979b2cee211f",
+      "locator": [],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/without-skill/trials/9__5cbtNGs/reward.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:b207e014d8824bfd05d6ec33e0858b47605237e8e423280776a20394e893e4e0",
+      "id": "sha256:c9b44dc0a7f6ff3ebf6b5ad40c8bbf4b9bdfa4519f15cc4680e0135a14620164",
+      "locator": [],
+      "member": "versions.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:535137f83abfcc4a89b9b7ffaba4bd06140945744e7ea02efaa815760b1e02e0",
+      "id": "sha256:ce4c38063de15a66b6fd2d96c6b3ed1869d785bc6c7886094281f1c078c9b0b4",
+      "locator": [],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/without-skill/trials/2__ybVDNE5/reward.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:4210d57c79d5095f7ff9ebdea332bad3bfaf3a463fbaeae54ef4fe5265af699e",
+      "id": "sha256:d51c35f5ccf40d75c050f213c3e10882a9fa0cb14d837313eb8e59410defe863",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/without-skill/trials/1__HxHyiKx/result.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:2d2e1725a61a6424c1d359ec7a3b45999a556e1eccf6694177a0094ada52e7ee",
+      "id": "sha256:d56018040be93a2e4343401a2c1821dcbf453549fce38c84923a4a34b7f64b4c",
+      "locator": [],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/without-skill/trials/3__mtZkFs5/reward.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:d438157fb7d8c2488422ef95fa58ef9a9b1fcaa43ef2a3dd6b4feee3a9948aa6",
+      "id": "sha256:d5fd0564ed745d4fe8dde332241d2e575c4f78fe96d54ec531509af9b9f8769b",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/with-skill/trials/4__DxWCuEW/result.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:4395b6e2631cce9065ca7ebb5fa7a916197e43487b3930e719c5ac2f2e1d424c",
+      "id": "sha256:d86d5f88c437afb655b6b8efce29a885b560aa16a90ace703f9b25bc1d3d74b7",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/without-skill/trials/4__8juLyk3/result.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:b469c5120563cf0ef605a55d44023895cf84f58897853a5342e9bd2536ce629c",
+      "id": "sha256:d9ad8fea6f4880e07f690ba3e27a9505d2f7b38242b63c28258367b3240e8127",
+      "locator": [],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/attempt_policy.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:890227d0acd21f7c81c4d0231d7efafed533809dfb28a53940788756f34ec235",
+      "id": "sha256:e62e9e34dbc3e37927f8fbaf78334e9a71d5bf05b5f34002365952288140fae6",
+      "locator": [],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/with-skill/trials/6__xGNC5Tn/reward.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:3e2e4fdca55686380f876e5361ac8b7989855c34fbe656c2b1114d3528005727",
+      "id": "sha256:e739a5ca98dcca51dfb954cd4f3dd6139a40819f05ef2c55355e61899561bdec",
+      "locator": [],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/result.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:31f52a742c3511aa664e648cd79c052e65cfa7f77b99998f5276a772572d587b",
+      "id": "sha256:e8d5a7d7c3c0b43c42468d9f212ffbeb421d6ba196011542d925663ed33c939b",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/with-skill/trials/3__HiPJwXt/result.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "20261027_235356_2698_dd1e50c5781f",
+      "availability": "available",
+      "digest": "sha256:c48514b6e49ea47b1c2cc9ab6057c466a19f381271ec3136f10ce448f6f7a1a7",
+      "id": "sha256:e9260fb67ec1bd1cb375676bd0f1b69439e317c5301338427b92974566d1e5c0",
+      "locator": [],
+      "member": "results/podman/20261027_235356_2698_dd1e50c5781f/codex/with-skill/trials/2__fmWkFat/reward.json",
+      "provenance": "runtime_recorded"
+    }
+  ],
+  "run_id": "20261027_235356_2698_dd1e50c5781f",
+  "scans": [],
+  "schema_version": 1,
+  "source": {
+    "content": {
+      "algorithm": "sha256-relative-file-manifest-v1",
+      "digest": "sha256:506e78b501906831944d7c6559091c898de9476d42347c56381c950d0099d07d",
+      "manifest": [
+        {
+          "digest": "sha256:96088308ed8df85d9f369263de4ec02fefdb7f59fbccc2b4629991be7266e581",
+          "member": "EVALS.md"
+        },
+        {
+          "digest": "sha256:93f772d47f661cc721a211257f4a2aecabcc53ed77f0d4b16b754944128586c9",
+          "member": "MAINTENANCE.md"
+        },
+        {
+          "digest": "sha256:625107071889166612f64ac52920be2b9455f671e4ce1f805835f7fee14ef274",
+          "member": "SKILL.md"
+        },
+        {
+          "digest": "sha256:fce55e0ec0a56608d714f273afdbdc44017d0a4ebed73b61291cd0fdebbf434a",
+          "member": "references/compose-migration.md"
+        },
+        {
+          "digest": "sha256:adb6f7a2a07f2067036354cb57bb69e694d423f20bd578e09db6a5a799859168",
+          "member": "references/fedora-hosts.md"
+        },
+        {
+          "digest": "sha256:55a300354c77b6e59b5876b1b3a6b7e00f9525a21c9160fa5b3200a3a8128f23",
+          "member": "references/quadlet-systemd.md"
+        },
+        {
+          "digest": "sha256:6a8d789b72d821e3fed320ca84325086d5a42ced25912a4b52ea760a306111ff",
+          "member": "references/reverse-proxy.md"
+        },
+        {
+          "digest": "sha256:a5fc3f33815caa196d5f8d6cb090136bcccc88fb95dedb921c99bd0b3cf6b524",
+          "member": "references/rootless-networking.md"
+        },
+        {
+          "digest": "sha256:37e1fae3de6f4b7ae1ea3ccc2b0b84d7fd854ea2730a51f0e3b3b1bc9b2e1068",
+          "member": "references/security-storage-secrets.md"
+        },
+        {
+          "digest": "sha256:465321094bc936d8a9e187bd3b4daa1ab271b93242a2c07fe88c58db6bd4bdd5",
+          "member": "references/validation.md"
+        }
+      ],
+      "provenance": "reconstructed_from_declared_revision",
+      "scope": "pinned-agent-visible"
+    },
+    "lineage": null,
+    "owner": "local",
+    "repository": "thetechgy/agent-engineering-baseline",
+    "revision": "f4bff2658c2843fbe46d6836e0d2c31d61bb6c70",
+    "skill_id": "podman",
+    "source_path": ".apm/skills/podman"
+  }
+}

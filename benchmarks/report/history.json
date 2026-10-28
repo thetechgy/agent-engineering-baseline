@@ -6643,11 +6643,265 @@
       "record_digest": "sha256:7e6439268da92f918ed0c1ed83589de8b754f1b89f4aec4bbf31e23eb9ad69e0",
       "record_id": "sha256:d1e4240838f5c4e8447652f72a4c616cc7b5795aa7dedeb45d8b35d0d2781199",
       "slot": "quality"
+    },
+    {
+      "admitted_at": "2026-10-28T00:30:52Z",
+      "class": "standard",
+      "execution": {
+        "completed_at": "2026-10-28T00:30:10Z",
+        "started_at": "2026-10-27T23:53:36Z"
+      },
+      "finding_counts": {
+        "critical": 0,
+        "high": 0,
+        "low": 0,
+        "medium": 0
+      },
+      "id": "sha256:980eeb14452c6487dcc1264fe0ca3f658f94a51ce982a53b421c6067ce501e55",
+      "numeric_complete": true,
+      "provenance": {
+        "archive_digest": "sha256:ba401cd5e1b1ed490bba1c0737ed77eec3c13308533696a351cb7b0ed45c9f63",
+        "artifact_id": 12782515488,
+        "attempt": 1,
+        "event": "workflow_dispatch",
+        "repository": "thetechgy/agent-engineering-baseline",
+        "revision": "f4bff2658c2843fbe46d6836e0d2c31d61bb6c70",
+        "run_id": 40605108248,
+        "workflow_id": 361827575,
+        "workflow_path": ".github/workflows/benchmark-skills.yml"
+      },
+      "record": {
+        "arms": [
+          {
+            "condition": {
+              "build_digest": null,
+              "competing_skills": [],
+              "execution": {
+                "authorization_policy": null,
+                "base_image_mode": "disabled",
+                "environment": "docker",
+                "fixture_boundary": null,
+                "task_source": "evals_json"
+              },
+              "fixture_digest": null,
+              "id": "sha256:50e7dde293cc8dd398aa971d12ba9524b1343a8d05bdbdb7ab86f462514b433a",
+              "instruction_digest": null,
+              "provenance": "runtime_recorded",
+              "target_present": true,
+              "workspace_mode": "isolated"
+            },
+            "coverage": {
+              "case_details": "complete",
+              "expected_attempts": 10,
+              "expected_cases": 10,
+              "recorded_attempts": 10,
+              "scored_attempts": 10,
+              "unscored_attempts": 0
+            },
+            "execution_error_count": 0,
+            "execution_status": "succeeded",
+            "name": "with_skill",
+            "rubric": {
+              "passed_cases": 9,
+              "threshold": 0.5,
+              "total_cases": 10
+            }
+          },
+          {
+            "condition": {
+              "build_digest": null,
+              "competing_skills": [],
+              "execution": {
+                "authorization_policy": null,
+                "base_image_mode": "disabled",
+                "environment": "docker",
+                "fixture_boundary": null,
+                "task_source": "evals_json"
+              },
+              "fixture_digest": null,
+              "id": "sha256:43153043c854c931c9c2fd4ceaa8f683d4f697dd75a217390491c0b23971344a",
+              "instruction_digest": null,
+              "provenance": "runtime_recorded",
+              "target_present": false,
+              "workspace_mode": "isolated"
+            },
+            "coverage": {
+              "case_details": "complete",
+              "expected_attempts": 10,
+              "expected_cases": 10,
+              "recorded_attempts": 10,
+              "scored_attempts": 10,
+              "unscored_attempts": 0
+            },
+            "execution_error_count": 0,
+            "execution_status": "succeeded",
+            "name": "without_skill",
+            "rubric": {
+              "passed_cases": 7,
+              "threshold": 0.5,
+              "total_cases": 10
+            }
+          }
+        ],
+        "availability": {
+          "provenance": "runtime_recorded",
+          "reasons": [],
+          "status": "complete"
+        },
+        "dataset": {
+          "authored_digest": "sha256:34d52913ea5cfa00df7803598282cd468d24f5f75552e859cf8ba1a72e5b9aee",
+          "authored_provenance": "reconstructed_from_declared_revision",
+          "case_cohort_digest": "sha256:d5caba195eef9ebfa4650c9d5b8be4f9925f21b177f196489b3be4adefb7813c",
+          "case_ids": [
+            "1",
+            "10",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9"
+          ],
+          "owner": "local",
+          "staged_algorithm": "skill-evaluator-dataset-snapshot/1",
+          "staged_digest": "sha256:e991cb96840e9e4417fd51ade2d7e2b06df25f9789f52f411405763a5746017c",
+          "staged_provenance": "runtime_recorded"
+        },
+        "kind": "behavioral",
+        "metrics": [
+          {
+            "name": "Skill Lift",
+            "unit": "score",
+            "value": 0.1376
+          },
+          {
+            "name": "Effectiveness",
+            "unit": "score",
+            "value": 0.6885
+          },
+          {
+            "name": "Correctness",
+            "unit": "score",
+            "value": 0.9
+          },
+          {
+            "name": "Discoverability",
+            "unit": "score",
+            "value": 0.7688
+          }
+        ],
+        "policy": {
+          "attempts": {
+            "maximum": 1,
+            "mode": "standard",
+            "pass_threshold": 0.5,
+            "stop_on_pass": false
+          },
+          "fields": {
+            "authorization_policy": null,
+            "baseline": true,
+            "codex": "0.155.1",
+            "competing_revision": null,
+            "concurrency": 2,
+            "deterministic_gate": null,
+            "docker_compose": "5.6.1",
+            "environment": "docker",
+            "evaluator_revision": "ac0a04905100acdafc6c95829311a9739c340ff6",
+            "fixture_boundary": null,
+            "grading": "default",
+            "harbor": "0.13.2",
+            "model": "gpt-5.6-sol",
+            "provider": "openai",
+            "python": "3.13",
+            "standard_attempts": 1,
+            "stop_on_pass": false,
+            "task_build": null,
+            "task_source": null,
+            "timeout_multiplier": 2.0,
+            "upstream_revision": null,
+            "workspace_mode": null
+          },
+          "id": "sha256:b5ebc1f774866bf24c057aed9ce3d9883d35bbe14b606e06b7324f8176d2d6f3",
+          "judge": {
+            "enabled": true,
+            "model": "gpt-5.6-sol",
+            "provider": "openai"
+          },
+          "metric_set": "skill-evaluator-default-v2",
+          "patch_digest": "sha256:ff159054bbd840fb793c20352ffa074cb79394a95a9f32f178e3aab5d4c91c49",
+          "provenance": "runtime_recorded",
+          "published_id": null
+        },
+        "run_id": "20261027_235356_2698_dd1e50c5781f",
+        "scans": [],
+        "schema_version": 1,
+        "source": {
+          "content": {
+            "algorithm": "sha256-relative-file-manifest-v1",
+            "digest": "sha256:506e78b501906831944d7c6559091c898de9476d42347c56381c950d0099d07d",
+            "manifest": [
+              {
+                "digest": "sha256:96088308ed8df85d9f369263de4ec02fefdb7f59fbccc2b4629991be7266e581",
+                "member": "EVALS.md"
+              },
+              {
+                "digest": "sha256:93f772d47f661cc721a211257f4a2aecabcc53ed77f0d4b16b754944128586c9",
+                "member": "MAINTENANCE.md"
+              },
+              {
+                "digest": "sha256:625107071889166612f64ac52920be2b9455f671e4ce1f805835f7fee14ef274",
+                "member": "SKILL.md"
+              },
+              {
+                "digest": "sha256:fce55e0ec0a56608d714f273afdbdc44017d0a4ebed73b61291cd0fdebbf434a",
+                "member": "references/compose-migration.md"
+              },
+              {
+                "digest": "sha256:adb6f7a2a07f2067036354cb57bb69e694d423f20bd578e09db6a5a799859168",
+                "member": "references/fedora-hosts.md"
+              },
+              {
+                "digest": "sha256:55a300354c77b6e59b5876b1b3a6b7e00f9525a21c9160fa5b3200a3a8128f23",
+                "member": "references/quadlet-systemd.md"
+              },
+              {
+                "digest": "sha256:6a8d789b72d821e3fed320ca84325086d5a42ced25912a4b52ea760a306111ff",
+                "member": "references/reverse-proxy.md"
+              },
+              {
+                "digest": "sha256:a5fc3f33815caa196d5f8d6cb090136bcccc88fb95dedb921c99bd0b3cf6b524",
+                "member": "references/rootless-networking.md"
+              },
+              {
+                "digest": "sha256:37e1fae3de6f4b7ae1ea3ccc2b0b84d7fd854ea2730a51f0e3b3b1bc9b2e1068",
+                "member": "references/security-storage-secrets.md"
+              },
+              {
+                "digest": "sha256:465321094bc936d8a9e187bd3b4daa1ab271b93242a2c07fe88c58db6bd4bdd5",
+                "member": "references/validation.md"
+              }
+            ],
+            "provenance": "reconstructed_from_declared_revision",
+            "scope": "pinned-agent-visible"
+          },
+          "lineage": null,
+          "owner": "local",
+          "repository": "thetechgy/agent-engineering-baseline",
+          "revision": "f4bff2658c2843fbe46d6836e0d2c31d61bb6c70",
+          "skill_id": "podman",
+          "source_path": ".apm/skills/podman"
+        }
+      },
+      "record_digest": "sha256:f77dfe2f04528c45ebb8b67e7f93e8ef4b12cc5256d5a4d8af16d9100b94130a",
+      "record_id": "sha256:d56bf7c3f1be609731920c8727655c94043bce3ddbd3cc3b308241151f48f965",
+      "slot": "standard--podman"
     }
   ],
   "protected": [
     "sha256:0bbd4c10a883e8dbed3b5e90b6061363036366ce397d46c86c01efd00da59da2"
   ],
-  "retained_at": "2026-10-27T23:50:04Z",
+  "retained_at": "2026-10-28T00:30:52Z",
   "schema_version": 1
 }
