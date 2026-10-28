@@ -6,3 +6,6 @@
 /.agents/skills/msgraph/references/docs/errors.md -whitespace
 /.agents/skills/msgraph/references/docs/query-parameters.md -whitespace
 /.agents/skills/msgraph/references/docs/throttling.md -whitespace
+
+# Unified patch context retains upstream blank-line whitespace.
+/.github/patches/skillevaluator-v0.3.0-pin-codex.patch -whitespace

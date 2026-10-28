@@ -45,25 +45,25 @@
     {
       "id": 4,
       "files": [],
-      "prompt": "Configure Traefik to discover all of my Podman containers automatically by mounting the Podman socket.",
-      "expected_output": "A socketless, Git-managed discovery recommendation by default, with explicit treatment of Podman API authority and source-IP behavior.",
+      "prompt": "Configure Traefik to discover all of my Podman containers automatically by mounting the Podman socket. Before enabling socket access, explain its authority and safer discovery alternatives and obtain my informed acceptance. No acceptance has been provided yet. Source-IP allowlisting is not currently required.",
+      "expected_output": "An explanation that Podman API access permits arbitrary code execution as its service user, with safer file/configuration discovery considered and informed acceptance requested before enabling socket access. Clearly conditional examples are allowed; source-IP validation is required only if source-IP policy becomes a requirement.",
       "assertions": [
         "Explains that Podman API access grants code-execution authority as the service user",
-        "Prefers a file or configuration-driven provider when compatible with the repository",
-        "Requires explicit acceptance before proceeding with socket access",
-        "Validates the rootless forwarding path when source-IP policy matters"
+        "Evaluates file or configuration-driven discovery and prefers it when compatible with the actual discovery requirements",
+        "Requests informed acceptance before enabling socket access; clearly conditional examples or discussion alone are not enabled access",
+        "Requires rootless forwarding validation if source-IP policy matters; does not claim unperformed host validation"
       ]
     },
     {
       "id": 5,
       "files": [],
       "prompt": "I heard rootless Podman cannot use userns=auto. Is that true? Use the right model for this new stateful service.",
-      "expected_output": "Current, per-identity user-namespace guidance that recognizes rootless auto, compares default/keep-id/nomap/auto, and validates persistent ownership and restore behavior.",
+      "expected_output": "Condition-dependent rootless user-namespace guidance: auto uses available subordinate IDs; nomap excludes the calling user UID/GID; conflicts are scoped to the same rootless identity and allocated ranges. Select mappings from image, storage and host requirements and require ownership validation through recreation and restore.",
       "assertions": [
-        "Rejects the claim that current rootless Podman cannot use userns=auto",
-        "Describes nomap factually without claiming it is uniquely strongest",
-        "Scopes subordinate-ID allocation conflicts to the same rootless Unix identity",
-        "Selects a mode from ownership and compatibility requirements",
+        "Recognizes current rootless auto support subject to available configured subordinate UID/GID ranges",
+        "Explains that nomap excludes the rootless caller UID/GID without claiming universal security superiority; a passing mention of nomap is insufficient",
+        "Scopes allocation conflicts to the same rootless Unix identity and available subordinate ranges, accounting for namespace size limits rather than declaring unconditional incompatibility",
+        "Selects mappings from image UID/GID, storage and effective host configuration; does not categorically require or prohibit auto for stateful services",
         "Requires volume ownership and restore-path validation"
       ]
     },
