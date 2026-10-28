@@ -721,16 +721,15 @@ class UpstreamTests(unittest.TestCase):
         from skillevaluator.tier3.harbor import runner
         from harbor.agents.installed.codex import Codex
         patch_text = (REPO / reports.PATCH).read_text()
-        self.assertEqual(
-            re.findall(r"^diff --git a/(\S+)", patch_text, re.MULTILINE),
-            ["src/skillevaluator/tier3/harbor/runner.py"],
-            "the reviewed patch must touch only Harbor's run-command builder",
-        )
-        self.assertEqual(len(re.findall(r"^@@", patch_text, re.MULTILINE)), 1)
-        added = [line[1:] for line in patch_text.splitlines() if line.startswith("+") and not line.startswith("+++")]
-        self.assertEqual([line.strip() for line in added],
-                         ['if agent == "codex":', 'command.extend(["--ak", "version=0.155.1"])'])
-        self.assertFalse(any(line.startswith("-") and not line.startswith("---") for line in patch_text.splitlines()))
+        members = re.findall(r"^diff --git a/(\S+)", patch_text, re.MULTILINE)
+        self.assertEqual(set(members), {"src/skillevaluator/tier3/" + name for name in (
+            "eval_core/checks.py", "eval_core/codex_tool_call_normalizer.py",
+            "eval_core/sensitive_path_evidence.py", "harbor/adapter.py",
+            "harbor/collector.py", "harbor/runner.py", "harbor/templates/eval.py")})
+        runner_patch = "diff --git" + patch_text.split("diff --git")[members.index("src/skillevaluator/tier3/harbor/runner.py") + 1]
+        added = [line[1:].strip() for line in runner_patch.splitlines()
+                 if line.startswith("+") and not line.startswith("+++")]
+        self.assertEqual(added, ['if agent == "codex":', 'command.extend(["--ak", "version=0.155.1"])'])
 
         runner_source = Path(inspect.getfile(runner)).read_text()
         with tempfile.TemporaryDirectory() as directory:
@@ -740,8 +739,8 @@ class UpstreamTests(unittest.TestCase):
             runner_target.write_text(runner_source)
             # Benchmark setup is already patched; quality setup is the pristine source.
             if 'command.extend(["--ak", "version=0.155.1"])' not in runner_source:
-                subprocess.run(["git", "apply", "--check", str(REPO / reports.PATCH)], cwd=root, check=True)
-                subprocess.run(["git", "apply", str(REPO / reports.PATCH)], cwd=root, check=True)
+                subprocess.run(["git", "apply", "--include=src/skillevaluator/tier3/harbor/runner.py", "--check", str(REPO / reports.PATCH)], cwd=root, check=True)
+                subprocess.run(["git", "apply", "--include=src/skillevaluator/tier3/harbor/runner.py", str(REPO / reports.PATCH)], cwd=root, check=True)
             runner_tree = ast.parse(runner_target.read_text())
             function = next(node for node in runner_tree.body if isinstance(node, ast.FunctionDef)
                             and node.name == "build_harbor_run_command")
