@@ -3,7 +3,7 @@ import argparse,json,pathlib,subprocess,uuid
 from aeb_native_qualification.evidence import observe,admit,Unavailable,ADMISSION_BLOCKER
 
 def main():
-    ap=argparse.ArgumentParser();ap.add_argument('--engine',choices=('docker','podman'),default='docker');ap.add_argument('--out',type=pathlib.Path,required=True);args=ap.parse_args();args.out.mkdir(parents=True,exist_ok=True)
+    ap=argparse.ArgumentParser();ap.add_argument('--engine',choices=('docker','podman'),default='docker');ap.add_argument('--out',type=pathlib.Path,required=True);args=ap.parse_args();args.out.mkdir(parents=True,exist_ok=False)
     rows=[]
     profiles=[('normal',{}),('denied-inner',{'mode':'escalated-inner'}),('metadata-normal',{'tool_metadata':True}),('metadata-denied',{'tool_metadata':True,'mode':'escalated-inner'}),('host-disabled',{'disable_code_mode_host':True}),('unadvertised-direct',{'direct':True,'keep_code_mode_host':True})]
     def run(*parts):return subprocess.run([args.engine,*parts],capture_output=True,text=True,timeout=65)

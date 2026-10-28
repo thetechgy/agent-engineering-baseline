@@ -46,12 +46,13 @@ def main():
             row={'mode':mode,'exit_code':r.returncode,'item_population_observed':accepted,'reason':reason,'classification':('rejected-injection-control' if mode=='pipe-control' else 'available' if accepted else 'unavailable')};rows.append(row)
             if mode=='normal':
                 variants={}
-                for variant in ('foreign-terminal','foreign-item','missing-result','snapshot-conflict','late-item'):
+                for variant in ('foreign-terminal','foreign-item','missing-result','snapshot-conflict','late-item','missing-eof'):
                     value=copy.deepcopy(capture)
                     if variant=='foreign-terminal':next(e for e in value['frames'] if e.get('method')=='turn/completed')['params']['turn']['id']='foreign'
                     if variant=='foreign-item':next(e for e in value['frames'] if e.get('method')=='item/started')['params']['turnId']='foreign'
                     if variant=='missing-result':value['frames'].pop(next(i for i,e in enumerate(value['frames']) if e.get('method')=='item/completed'))
                     if variant=='snapshot-conflict':next(e for e in value['frames'] if e.get('id')==4)['result']['thread']['turns'][0]['items'].pop()
+                    if variant=='missing-eof':value['state']['transport_eof']=False
                     if variant=='late-item':value['frames'].append(next(e for e in value['frames'] if e.get('method')=='item/started'))
                     try:observe(value)
                     except Unavailable as e:variants[variant]=str(e)

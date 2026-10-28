@@ -84,13 +84,14 @@ def reader():
             byte_count+=len(line.encode());assert byte_count<8*1024*1024
             frame=json.loads(line);frames.append(frame);pending.put(frame)
     except Exception as e:errors.append(type(e).__name__)
-    finally:pending.put({'transport_eof':True})
+    finally:state['transport_eof']=True;pending.put({'transport_eof':True})
 stderr=[]
 def read_error():
     for block in iter(lambda:p.stderr.read(4096),''):
         stderr.append(block)
         if sum(map(len,stderr))>1024*1024:p.kill();break
-threading.Thread(target=reader,daemon=True).start();threading.Thread(target=read_error,daemon=True).start()
+reader_thread=threading.Thread(target=reader,daemon=True);stderr_thread=threading.Thread(target=read_error,daemon=True)
+reader_thread.start();stderr_thread.start()
 def write(value):native_in.write(json.dumps(value)+'\n');native_in.flush()
 def rpc(n,method,params):write({'id':n,'method':method,'params':params})
 def wait(predicate,timeout=30):
@@ -122,6 +123,8 @@ finally:
     if shutdown_by_operator:p.terminate()
     try:p.wait(timeout=5)
     except subprocess.TimeoutExpired:p.kill();p.wait()
+    reader_thread.join(timeout=2);stderr_thread.join(timeout=2)
+    if reader_thread.is_alive() or stderr_thread.is_alive():errors.append('native stream did not close')
     server.shutdown()
     if errors:status='unavailable';error='native transport parse/size failure'
     result={'schema':'native-capture-v1','channel':channel,'status':status,'error':error,'controller_pid':os.getpid(),'producer_pid':p.pid,'shutdown_by_operator':shutdown_by_operator,'producer_exit':p.returncode,'thread_id':thread_id,'turn_id':turn_id,'frames':frames,'state':state,'provider_requests':len(requests),'tool_catalog':[tool for item in requests[0].get('input',[]) if item.get('type')=='additional_tools' for tool in item.get('tools',[])] if requests else [],'provider_request_bodies':requests,'stderr':''.join(stderr),'controller_dumpable':ctypes.CDLL(None).prctl(3,0,0,0,0),'yama_ptrace_scope':pathlib.Path('/proc/sys/kernel/yama/ptrace_scope').read_text().strip()}

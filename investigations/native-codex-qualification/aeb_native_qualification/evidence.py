@@ -11,6 +11,7 @@ def observe(capture):
     require(capture.get('controller_dumpable')==0,'controller memory protection absent')
     require(int(capture.get('yama_ptrace_scope','0'))>=1,'same-UID memory boundary unavailable')
     require(capture.get('status')=='completed','capture incomplete')
+    require(capture.get('state',{}).get('transport_eof') is True,'native stream not closed')
     require(capture.get('shutdown_by_operator') is True,'producer ended unexpectedly')
     require(capture.get('producer_exit') in (0,-15),'producer shutdown failed')
     tid,turn=capture['thread_id'],capture['turn_id'];require(tid and turn,'missing execution scope')
