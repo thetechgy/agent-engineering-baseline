@@ -25,6 +25,8 @@ async def main(root):
    assert (r.exception_info is not None)==invalid,(name,r.exception_info)
    if invalid:
     assert r.verifier_result is None
+    expected='incomplete execution population' if case=='missing' else 'contradictory native identity'
+    assert r.exception_info.exception_type=='ValueError' and r.exception_info.exception_message==expected
     row={'case':case,'arm':arm,'attempt':attempt,'status':'unavailable','score':None,'activation_observed':None}
    else:
     rewards=r.verifier_result.rewards;score=next(iter(rewards.values()));assert score==(0 if case=='task-failure' else 1),(name,rewards)

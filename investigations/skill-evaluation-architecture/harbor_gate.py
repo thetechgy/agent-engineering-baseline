@@ -22,7 +22,7 @@ class TrustedEnvironment(SkillEvaluatorSecureDockerEnvironment):
   if self.fail_init:
    assert (await self.exec('mkdir /opt/private',user='root',timeout_sec=5)).return_code==0
   r=await self.exec('python /opt/operator-broker.py init',user='root',timeout_sec=10)
-  if r.return_code:raise RuntimeError('required initializer failed: '+r.stderr)
+  if r.return_code:raise RuntimeError(f'required initializer failed (exit {r.return_code})')
   self.initializer=json.loads(r.stdout)
 
 class ProbeAgent(BaseAgent):
@@ -87,8 +87,12 @@ async def main(root):
   (out/'harbor-results.json').write_text(json.dumps(rows,indent=2))
   if arm in ('with','without'):assert result.exception_info is None,str(result.exception_info)
   else:assert result.exception_info is not None
+  if fail:assert result.exception_info.exception_type=='RuntimeError' and result.exception_info.exception_message=='required initializer failed (exit 1)'
   if fail:assert not (out/'trials'/('architecture-'+arm)/'agent/setup-order.json').exists(),'failed initialization reached agent setup'
-  if arm in ('missing','contradictory'):assert result.verifier_result is None,'invalid evidence reached grader'
+  if arm in ('missing','contradictory'):
+   assert result.verifier_result is None,'invalid evidence reached grader'
+   expected='incomplete execution population' if arm=='missing' else 'contradictory native identity'
+   assert result.exception_info.exception_type=='ValueError' and result.exception_info.exception_message==expected
  (out/'harbor-results.json').write_text(json.dumps(rows,indent=2))
  identities=[json.loads(p.read_text())['identity'] for p in [out/'trials'/('architecture-'+arm)/'agent/setup-order.json' for arm in ('with','without')]]
  assert len(identities)==2 and len(set(identities))==2

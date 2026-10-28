@@ -26,7 +26,7 @@ def initialize():
   assert not absent.success,'missing broker passed readiness'
   if mode=='failure':assert (await s.exec(['mkdir','/opt/private'],user='root',timeout=5,timeout_retry=False)).success
   r=await s.exec(['python','/opt/operator-broker.py','init'],user='root',timeout=10,timeout_retry=False)
-  assert r.success
+  if not r.success:raise RuntimeError(f'required initializer failed (exit {r.returncode})')
   ident=json.loads(r.stdout)['identity'];store().set('initializer_identity',ident)
   for cmd in [['cat','/opt/private/identity'],['cat','/opt/private/audit'],['python','/opt/broker.py','init'],['rm','/run/poc/broker.sock']]:
    assert not (await s.exec(cmd,user='agent',timeout=5,timeout_retry=False)).success
@@ -52,6 +52,7 @@ task=Task(dataset=[Sample(id='capture',input='Execute the fixed fixture script.'
 logs=eval(task,model=model,log_dir=str(root/'evidence/inspect'),max_samples=1,max_tasks=1,max_subprocesses=2,retry_on_error=0)
 if mode=='failure':
  assert logs[0].samples[0].error is not None
+ assert 'required initializer failed (exit 1)' in logs[0].samples[0].error.message
  assert not logs[0].samples[0].store.get('actual_patch_verified')
  assert not any(e.event=='model' for e in logs[0].samples[0].events),'failed initialization reached agent'
  sys.exit(0)
