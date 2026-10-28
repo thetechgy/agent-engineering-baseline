@@ -1,0 +1,15 @@
+{
+  "schema": "original-investigation-preservation-v1",
+  "source_revision": "6af0587664cca0af3996594cc028a449b4520899",
+  "report_revision": "691db4e1c0e77dd5b51475e6d150ce9f89d24c13",
+  "run_id": 40735637067,
+  "run_attempt": 1,
+  "artifact_id": 12837322910,
+  "archive": "40735637067-1.zip",
+  "sha256": "70aca889c3165cad7091e391b29db4866b5b4efba34240475f44cbd824889bbe",
+  "compressed_bytes": 1117098,
+  "members": 363,
+  "uncompressed_bytes": 3958397,
+  "classification": "non-sensitive scripted infrastructure evidence; no production credentials or provider inference",
+  "handling": "data only; never execute producer artifacts"
+}

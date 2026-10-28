@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools==82.0.0"]
+build-backend = "setuptools.build_meta"
+[project]
+name = "aeb-native-qualification"
+version = "0.0.1"
+[project.entry-points."skillevaluator.env_modes"]
+aeb-native = "aeb_native_qualification.backend:SPEC"
+[tool.setuptools.packages.find]
+include = ["aeb_native_qualification*"]
+[tool.setuptools.package-data]
+aeb_native_qualification = ["helpers/*.py"]

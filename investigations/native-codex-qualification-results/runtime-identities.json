@@ -1,0 +1,87 @@
+{
+  "schema": "native-qualification-identities-v1",
+  "qualification": "not-production-qualified",
+  "policy": "native-submission-contract-v2",
+  "source": "0efbe50b503e1f41527fe3512de851555dd28237",
+  "run_id": "40764246980",
+  "run_attempt": "1",
+  "kernel": "7.0.0-1017-azure",
+  "python_host": "3.12.3",
+  "candidate_source": "d9fa4b4041b31f417f02ed145999ecf1f0c11fcd",
+  "released_source": "5320d9329c36ecc72bc94c4f58cc813d6b54224b",
+  "codex_source": "6aaac694803004a63c6f393d153c96d22521a6b9",
+  "codex_version": "0.164.0",
+  "codex_package_sha256": "3ec55053109608d5038f7e50750f7d25f768dfd740fef071aa710e2559b63aac",
+  "docker": {
+    "Client": {
+      "Platform": {
+        "Name": "Docker Engine - Community"
+      },
+      "Version": "28.0.4",
+      "ApiVersion": "1.48",
+      "DefaultAPIVersion": "1.48",
+      "GitCommit": "b8034c0",
+      "GoVersion": "go1.23.7",
+      "Os": "linux",
+      "Arch": "amd64",
+      "BuildTime": "Tue Mar 25 15:07:16 2025",
+      "Context": "default"
+    },
+    "Server": {
+      "Platform": {
+        "Name": "Docker Engine - Community"
+      },
+      "Components": [
+        {
+          "Name": "Engine",
+          "Version": "28.0.4",
+          "Details": {
+            "ApiVersion": "1.48",
+            "Arch": "amd64",
+            "BuildTime": "Tue Mar 25 15:07:16 2025",
+            "Experimental": "false",
+            "GitCommit": "6430e49",
+            "GoVersion": "go1.23.7",
+            "KernelVersion": "7.0.0-1017-azure",
+            "MinAPIVersion": "1.24",
+            "Os": "linux"
+          }
+        },
+        {
+          "Name": "containerd",
+          "Version": "v2.4.2",
+          "Details": {
+            "GitCommit": "b7a25261e029d68978bbf290df0a62fc819b3c51"
+          }
+        },
+        {
+          "Name": "runc",
+          "Version": "1.5.2",
+          "Details": {
+            "GitCommit": "v1.5.2-0-g29dd3dc2"
+          }
+        },
+        {
+          "Name": "docker-init",
+          "Version": "0.19.0",
+          "Details": {
+            "GitCommit": "de40ad0"
+          }
+        }
+      ],
+      "Version": "28.0.4",
+      "ApiVersion": "1.48",
+      "MinAPIVersion": "1.24",
+      "GitCommit": "6430e49",
+      "GoVersion": "go1.23.7",
+      "Os": "linux",
+      "Arch": "amd64",
+      "KernelVersion": "7.0.0-1017-azure",
+      "BuildTime": "2025-03-25T15:07:16.000000000+00:00"
+    }
+  },
+  "images": [
+    "sha256:c76ee104b6a86aef6f7b5fff878f2d82f8bbc3cedf3312eb1a963cc20ba32465",
+    "sha256:04333e6146b0d3a7bd53f29bc4f02d5bc2e1998465cb16287062e38d9353e79b"
+  ]
+}

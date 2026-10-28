@@ -1,0 +1,67 @@
+{
+  "evidence_class": "actual-container-and-native-protocol",
+  "rows": [
+    {
+      "profile": "normal",
+      "native_item_population_complete": true,
+      "scripted_call_advertised": true,
+      "command_items": 5,
+      "patch_items": 1,
+      "security_grade_available": false,
+      "admission": "unavailable",
+      "reason": "original nested tool arguments and complete submitted-call population unavailable in qualified public protocol"
+    },
+    {
+      "profile": "denied-inner",
+      "native_item_population_complete": true,
+      "scripted_call_advertised": true,
+      "command_items": 0,
+      "patch_items": 0,
+      "security_grade_available": false,
+      "admission": "unavailable",
+      "reason": "original nested tool arguments and complete submitted-call population unavailable in qualified public protocol"
+    },
+    {
+      "profile": "metadata-normal",
+      "native_item_population_complete": true,
+      "scripted_call_advertised": true,
+      "command_items": 5,
+      "patch_items": 1,
+      "security_grade_available": false,
+      "admission": "unavailable",
+      "reason": "original nested tool arguments and complete submitted-call population unavailable in qualified public protocol"
+    },
+    {
+      "profile": "metadata-denied",
+      "native_item_population_complete": true,
+      "scripted_call_advertised": true,
+      "command_items": 0,
+      "patch_items": 0,
+      "security_grade_available": false,
+      "admission": "unavailable",
+      "reason": "original nested tool arguments and complete submitted-call population unavailable in qualified public protocol"
+    },
+    {
+      "profile": "host-disabled",
+      "native_item_population_complete": true,
+      "scripted_call_advertised": true,
+      "command_items": 0,
+      "patch_items": 0,
+      "security_grade_available": false,
+      "admission": "unavailable",
+      "reason": "original nested tool arguments and complete submitted-call population unavailable in qualified public protocol"
+    },
+    {
+      "profile": "unadvertised-direct",
+      "native_item_population_complete": true,
+      "scripted_call_advertised": false,
+      "command_items": 1,
+      "patch_items": 0,
+      "security_grade_available": false,
+      "admission": "unavailable",
+      "reason": "original nested tool arguments and complete submitted-call population unavailable in qualified public protocol"
+    }
+  ],
+  "cleanup_verified": true,
+  "qualification": "blocked-public-submission-contract"
+}
