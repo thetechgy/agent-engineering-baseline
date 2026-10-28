@@ -75,6 +75,20 @@ class GradingEvidenceTests(unittest.TestCase):
             'const b = await tools.exec_command({cmd:"false"}); text(b);'}})
         self.assertEqual(len(ambiguous), 2)
         self.assertTrue(all(c['_atif_observation_status'] == 'ambiguous_outer_exec_result' for c in ambiguous))
+        malformed = normalize_tool_call({'function_name': 'exec', 'arguments': {'input': 42}})
+        self.assertEqual(malformed[0]['_atif_normalization_status'], 'unsupported_native_codex_exec_wrapper')
+
+    def test_missing_or_unlinked_execution_observations_stay_unknown(self):
+        from skillevaluator.tier3.eval_core.atif_helpers import extract_tool_calls_as_dicts
+        call = {'function_name': 'exec_command', 'tool_call_id': 'issued', 'arguments': {'cmd': 'true'}}
+        for results in ([], [{'source_call_id': 'other', 'content': 'success'}],
+                        [{'source_call_id': 'issued', 'content': ''}]):
+            trajectory = {'steps': [{'source': 'agent', 'tool_calls': [call], 'observation': {'results': results}}]}
+            normalized = extract_tool_calls_as_dicts(trajectory)
+            if results and results[0]['source_call_id'] == 'issued':
+                self.assertNotIn('observation_status', normalized[0])
+            else:
+                self.assertEqual(normalized[0]['observation_status'], 'unobserved_inner_call')
 
     def test_native_main_rejects_unknown_before_any_judge(self):
         v = self.verifier

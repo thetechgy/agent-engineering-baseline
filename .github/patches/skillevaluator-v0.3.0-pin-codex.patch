@@ -57,7 +57,20 @@ diff --git a/src/skillevaluator/tier3/eval_core/checks.py b/src/skillevaluator/t
 diff --git a/src/skillevaluator/tier3/eval_core/codex_tool_call_normalizer.py b/src/skillevaluator/tier3/eval_core/codex_tool_call_normalizer.py
 --- a/src/skillevaluator/tier3/eval_core/codex_tool_call_normalizer.py
 +++ b/src/skillevaluator/tier3/eval_core/codex_tool_call_normalizer.py
-@@ -138,7 +138,7 @@
+@@ -25,6 +25,12 @@
+     for step in traj.get("steps", []):
+         for raw_index, tool_call in enumerate(step.get("tool_calls") or []):
+             for normalized in normalize_tool_call(tool_call):
++                observed = any(
++                    normalized.get("tool_call_id") and result.get("source_call_id") == normalized["tool_call_id"]
++                    for result in (step.get("observation") or {}).get("results") or []
++                )
++                if normalized.get("function_name") in {"exec_command", "bash", "Bash", "run_command"} and not observed:
++                    normalized = {**normalized, "_atif_observation_status": UNOBSERVED_INNER_CALL}
+                 yield step, {**normalized, "_atif_raw_tool_index": raw_index}
+ 
+ 
+@@ -138,7 +144,7 @@
  _CODEX_CALL_RE = re.compile(rf"const\s+({_JS_IDENTIFIER})\s*=\s*await\s+tools\.({_JS_IDENTIFIER})\s*\(\s*")
  _CODEX_RENDER_RE = re.compile(
      rf"text\s*\(\s*(?:JSON\.stringify\(\s*({_JS_IDENTIFIER})\s*\)|"
@@ -66,7 +79,7 @@ diff --git a/src/skillevaluator/tier3/eval_core/codex_tool_call_normalizer.py b/
  )
  _CODEX_PRAGMA_RE = re.compile(r"[ \t]*// @exec:[^\r\n]*\r?\n")
  _CODEX_PRAGMA_PREFIX_RE = re.compile(r"[ \t]*// @exec:")
-@@ -627,7 +627,7 @@
+@@ -627,7 +633,7 @@
              if decoded is None:
                  return None
              arguments, end = decoded
@@ -75,6 +88,15 @@ diff --git a/src/skillevaluator/tier3/eval_core/codex_tool_call_normalizer.py b/
              if close is None:
                  return None
              variables.append(variable)
+@@ -663,7 +669,7 @@
+         return [tool_call]
+     arguments = tool_call.get("arguments") or {}
+     if not isinstance(arguments, dict) or not isinstance(arguments.get("input"), str):
+-        return [tool_call]
++        return [{**tool_call, "_atif_normalization_status": UNSUPPORTED_NATIVE_CODEX_EXEC}]
+     source = arguments["input"]
+     if len(source) > _MAX_SOURCE_CHARS:
+         return [{**tool_call, "_atif_normalization_status": UNSUPPORTED_NATIVE_CODEX_EXEC}]
 diff --git a/src/skillevaluator/tier3/eval_core/sensitive_path_evidence.py b/src/skillevaluator/tier3/eval_core/sensitive_path_evidence.py
 new file mode 100644
 --- /dev/null
