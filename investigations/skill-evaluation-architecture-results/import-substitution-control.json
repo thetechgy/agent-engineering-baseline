@@ -1,0 +1,14 @@
+{
+  "unsafe": {
+    "exit_code": 1,
+    "stdout": "",
+    "poison_observed": true
+  },
+  "isolated": {
+    "exit_code": 0,
+    "stdout": "/usr/local/lib/python3.12/pathlib.py\n",
+    "poison_observed": false
+  },
+  "cleanup_verified": true,
+  "evidence_class": "local-rootless-container-component-control"
+}

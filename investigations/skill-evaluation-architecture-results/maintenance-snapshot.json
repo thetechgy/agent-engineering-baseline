@@ -1,0 +1,196 @@
+[
+  {
+    "repository": "NVIDIA/SkillEvaluator",
+    "recent_releases": [
+      {
+        "tag": "v0.6.0",
+        "published_at": "2026-10-20T10:07:08Z",
+        "prerelease": false
+      },
+      {
+        "tag": "v0.5.0",
+        "published_at": "2026-10-06T18:10:49Z",
+        "prerelease": false
+      },
+      {
+        "tag": "v0.4.0",
+        "published_at": "2026-09-30T22:55:20Z",
+        "prerelease": false
+      },
+      {
+        "tag": "v0.3.0",
+        "published_at": "2026-09-17T21:44:30Z",
+        "prerelease": false
+      },
+      {
+        "tag": "v0.1.0",
+        "published_at": "2026-08-05T18:07:54Z",
+        "prerelease": false
+      }
+    ],
+    "public_repository_advisories_returned": 0,
+    "advisory_ids": []
+  },
+  {
+    "repository": "harbor-framework/harbor",
+    "recent_releases": [
+      {
+        "tag": "v0.25.0",
+        "published_at": "2026-10-25T20:27:33Z",
+        "prerelease": false
+      },
+      {
+        "tag": "v0.24.0",
+        "published_at": "2026-10-05T05:04:52Z",
+        "prerelease": false
+      },
+      {
+        "tag": "v0.23.0",
+        "published_at": "2026-09-12T04:55:17Z",
+        "prerelease": false
+      },
+      {
+        "tag": "v0.22.0",
+        "published_at": "2026-08-22T03:22:45Z",
+        "prerelease": false
+      },
+      {
+        "tag": "v0.21.0",
+        "published_at": "2026-08-10T20:52:40Z",
+        "prerelease": false
+      }
+    ],
+    "public_repository_advisories_returned": 0,
+    "advisory_ids": []
+  },
+  {
+    "repository": "agentclientprotocol/codex-acp",
+    "recent_releases": [
+      {
+        "tag": "v2.3.0",
+        "published_at": "2026-10-26T12:47:12Z",
+        "prerelease": false
+      },
+      {
+        "tag": "v2.2.2",
+        "published_at": "2026-10-10T03:15:52Z",
+        "prerelease": false
+      },
+      {
+        "tag": "v2.2.1",
+        "published_at": "2026-10-10T01:34:25Z",
+        "prerelease": false
+      },
+      {
+        "tag": "v2.2.0",
+        "published_at": "2026-10-10T01:00:23Z",
+        "prerelease": false
+      },
+      {
+        "tag": "v2.1.1",
+        "published_at": "2026-10-01T11:39:46Z",
+        "prerelease": false
+      }
+    ],
+    "public_repository_advisories_returned": 0,
+    "advisory_ids": []
+  },
+  {
+    "repository": "UKGovernmentBEIS/inspect_ai",
+    "recent_releases": [
+      {
+        "tag": "0.3.286",
+        "published_at": "2026-10-28T14:22:32Z",
+        "prerelease": false
+      },
+      {
+        "tag": "0.3.285",
+        "published_at": "2026-10-25T14:27:46Z",
+        "prerelease": false
+      },
+      {
+        "tag": "0.3.284",
+        "published_at": "2026-10-25T01:19:11Z",
+        "prerelease": false
+      },
+      {
+        "tag": "0.3.283",
+        "published_at": "2026-10-21T20:41:27Z",
+        "prerelease": false
+      },
+      {
+        "tag": "0.3.282",
+        "published_at": "2026-10-19T21:33:21Z",
+        "prerelease": false
+      }
+    ],
+    "public_repository_advisories_returned": 0,
+    "advisory_ids": []
+  },
+  {
+    "repository": "meridianlabs-ai/inspect_swe",
+    "recent_releases": [
+      {
+        "tag": "0.2.72",
+        "published_at": "2026-10-20T19:10:37Z",
+        "prerelease": false
+      },
+      {
+        "tag": "0.2.71",
+        "published_at": "2026-09-17T20:49:46Z",
+        "prerelease": false
+      },
+      {
+        "tag": "0.2.70",
+        "published_at": "2026-08-09T16:05:23Z",
+        "prerelease": false
+      },
+      {
+        "tag": "0.2.69",
+        "published_at": "2026-08-08T12:29:18Z",
+        "prerelease": false
+      },
+      {
+        "tag": "0.2.68",
+        "published_at": "2026-08-05T01:09:27Z",
+        "prerelease": false
+      }
+    ],
+    "public_repository_advisories_returned": 0,
+    "advisory_ids": []
+  },
+  {
+    "repository": "openai/codex",
+    "recent_releases": [
+      {
+        "tag": "rust-v0.166.0-alpha.5",
+        "published_at": "2026-10-28T04:43:10Z",
+        "prerelease": true
+      },
+      {
+        "tag": "rust-v0.165.0",
+        "published_at": "2026-10-27T20:09:38Z",
+        "prerelease": false
+      },
+      {
+        "tag": "rust-v0.166.0-alpha.4",
+        "published_at": "2026-10-28T01:22:03Z",
+        "prerelease": true
+      },
+      {
+        "tag": "rust-v0.166.0-alpha.3",
+        "published_at": "2026-10-27T19:23:16Z",
+        "prerelease": true
+      },
+      {
+        "tag": "rust-v0.166.0-alpha.2",
+        "published_at": "2026-10-27T11:54:48Z",
+        "prerelease": true
+      }
+    ],
+    "public_repository_advisories_returned": 1,
+    "advisory_ids": [
+      "GHSA-w5fx-fh39-j5rw"
+    ]
+  }
+]

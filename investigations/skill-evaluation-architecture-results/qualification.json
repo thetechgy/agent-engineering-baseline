@@ -1,0 +1,668 @@
+{
+  "schema": "architecture-poc-qualification-v1",
+  "evidence_class": "actual-framework-container-lifecycle-with-scripted-inference-free-provider",
+  "run_id": 40735637067,
+  "run_attempt": 1,
+  "code_revision": "6af0587664cca0af3996594cc028a449b4520899",
+  "artifact": {
+    "id": 12837322910,
+    "name": "architecture-critical-gates",
+    "digest": "sha256:70aca889c3165cad7091e391b29db4866b5b4efba34240475f44cbd824889bbe",
+    "size_in_bytes": 1117098,
+    "expires_at": "2026-11-04T17:33:41Z"
+  },
+  "archive_members": 363,
+  "uncompressed_bytes": 3958397,
+  "outcomes": {
+    "harbor_exit": 0,
+    "paired_exit": 0,
+    "inspect_exit": 0,
+    "inspect_controls_exit": 0
+  },
+  "focused_outcomes": [
+    {
+      "arm": "with",
+      "exception_type": null,
+      "exception_message": null,
+      "verifier_ran": true
+    },
+    {
+      "arm": "without",
+      "exception_type": null,
+      "exception_message": null,
+      "verifier_ran": true
+    },
+    {
+      "arm": "init-failure",
+      "exception_type": "RuntimeError",
+      "exception_message": "required initializer failed (exit 1)",
+      "verifier_ran": false
+    },
+    {
+      "arm": "missing",
+      "exception_type": "ValueError",
+      "exception_message": "incomplete execution population",
+      "verifier_ran": false
+    },
+    {
+      "arm": "contradictory",
+      "exception_type": "ValueError",
+      "exception_message": "contradictory native identity",
+      "verifier_ran": false
+    }
+  ],
+  "paired": {
+    "policy": "synthetic-infrastructure-v1",
+    "rows": [
+      {
+        "case": "activation",
+        "arm": "with",
+        "attempt": 1,
+        "status": "passed",
+        "score": 1.0,
+        "activation_observed": true,
+        "initializer_identity": "e18ae54b4a894a51af934be26771b2a2"
+      },
+      {
+        "case": "activation",
+        "arm": "with",
+        "attempt": 2,
+        "status": "passed",
+        "score": 1.0,
+        "activation_observed": true,
+        "initializer_identity": "d7d8a722e2f346b7a3c53ab4371d697b"
+      },
+      {
+        "case": "activation",
+        "arm": "without",
+        "attempt": 1,
+        "status": "passed",
+        "score": 1.0,
+        "activation_observed": false,
+        "initializer_identity": "c6feb0b08bb14360976ac622e846b92e"
+      },
+      {
+        "case": "activation",
+        "arm": "without",
+        "attempt": 2,
+        "status": "passed",
+        "score": 1.0,
+        "activation_observed": false,
+        "initializer_identity": "d31955050d5b459c8d887f313bd5072e"
+      },
+      {
+        "case": "negative-control",
+        "arm": "with",
+        "attempt": 1,
+        "status": "passed",
+        "score": 1.0,
+        "activation_observed": false,
+        "initializer_identity": "86c455aa4d14456fa98ded799015c42b"
+      },
+      {
+        "case": "negative-control",
+        "arm": "with",
+        "attempt": 2,
+        "status": "passed",
+        "score": 1.0,
+        "activation_observed": false,
+        "initializer_identity": "26ef31e47617472c86ae075814196347"
+      },
+      {
+        "case": "negative-control",
+        "arm": "without",
+        "attempt": 1,
+        "status": "passed",
+        "score": 1.0,
+        "activation_observed": false,
+        "initializer_identity": "46ec6cce5af8471eab5efd3f3bf35171"
+      },
+      {
+        "case": "negative-control",
+        "arm": "without",
+        "attempt": 2,
+        "status": "passed",
+        "score": 1.0,
+        "activation_observed": false,
+        "initializer_identity": "11634d40b28d4328bc1ea3e122ca5bbc"
+      },
+      {
+        "case": "task-failure",
+        "arm": "with",
+        "attempt": 1,
+        "status": "failed",
+        "score": 0.0,
+        "activation_observed": true,
+        "initializer_identity": "2d7de8065b054e0d8b4c728d66f2516c"
+      },
+      {
+        "case": "task-failure",
+        "arm": "with",
+        "attempt": 2,
+        "status": "failed",
+        "score": 0.0,
+        "activation_observed": true,
+        "initializer_identity": "9a60f0a3fa924fdb8ec35d85dfcfb127"
+      },
+      {
+        "case": "task-failure",
+        "arm": "without",
+        "attempt": 1,
+        "status": "failed",
+        "score": 0.0,
+        "activation_observed": false,
+        "initializer_identity": "67f4864daaba43eb90a3acd6627aa9ce"
+      },
+      {
+        "case": "task-failure",
+        "arm": "without",
+        "attempt": 2,
+        "status": "failed",
+        "score": 0.0,
+        "activation_observed": false,
+        "initializer_identity": "236d518bcba94fa49a5d970fd897910b"
+      },
+      {
+        "case": "missing",
+        "arm": "with",
+        "attempt": 1,
+        "status": "unavailable",
+        "score": null,
+        "activation_observed": null
+      },
+      {
+        "case": "missing",
+        "arm": "with",
+        "attempt": 2,
+        "status": "unavailable",
+        "score": null,
+        "activation_observed": null
+      },
+      {
+        "case": "missing",
+        "arm": "without",
+        "attempt": 1,
+        "status": "unavailable",
+        "score": null,
+        "activation_observed": null
+      },
+      {
+        "case": "missing",
+        "arm": "without",
+        "attempt": 2,
+        "status": "unavailable",
+        "score": null,
+        "activation_observed": null
+      },
+      {
+        "case": "contradictory",
+        "arm": "with",
+        "attempt": 1,
+        "status": "unavailable",
+        "score": null,
+        "activation_observed": null
+      },
+      {
+        "case": "contradictory",
+        "arm": "with",
+        "attempt": 2,
+        "status": "unavailable",
+        "score": null,
+        "activation_observed": null
+      },
+      {
+        "case": "contradictory",
+        "arm": "without",
+        "attempt": 1,
+        "status": "unavailable",
+        "score": null,
+        "activation_observed": null
+      },
+      {
+        "case": "contradictory",
+        "arm": "without",
+        "attempt": 2,
+        "status": "unavailable",
+        "score": null,
+        "activation_observed": null
+      }
+    ],
+    "aggregate": "withheld: intentionally incomplete required evidence",
+    "independent_states": 20
+  },
+  "all_initializer_identities": [
+    "236d518bcba94fa49a5d970fd897910b",
+    "67f4864daaba43eb90a3acd6627aa9ce",
+    "9a60f0a3fa924fdb8ec35d85dfcfb127",
+    "2d7de8065b054e0d8b4c728d66f2516c",
+    "11634d40b28d4328bc1ea3e122ca5bbc",
+    "46ec6cce5af8471eab5efd3f3bf35171",
+    "26ef31e47617472c86ae075814196347",
+    "86c455aa4d14456fa98ded799015c42b",
+    "60f75baef7564c968ce35ce753e8269a",
+    "db36b4eb29034c46a9f59e92c32f962a",
+    "b3aba6f1e9264b368b5a2defdcdb17b9",
+    "140f3e23b92e4cf5b765f0fd0c014768",
+    "9d69350c55af414882a971cbb28a4bcb",
+    "5051203d86304708a085df737e1c2f63",
+    "c11ad71b64a14d95af9508f72426d128",
+    "35fb2892614142fbac55f057e019d6bc",
+    "d31955050d5b459c8d887f313bd5072e",
+    "c6feb0b08bb14360976ac622e846b92e",
+    "d7d8a722e2f346b7a3c53ab4371d697b",
+    "e18ae54b4a894a51af934be26771b2a2"
+  ],
+  "cleanup": {
+    "harbor-cleanup.json": [
+      {
+        "project": "architecture-with__env",
+        "container": 0,
+        "network": 0,
+        "volume": 0,
+        "image": 0
+      },
+      {
+        "project": "architecture-without__env",
+        "container": 0,
+        "network": 0,
+        "volume": 0,
+        "image": 0
+      },
+      {
+        "project": "architecture-init-failure__env",
+        "container": 0,
+        "network": 0,
+        "volume": 0,
+        "image": 0
+      },
+      {
+        "project": "architecture-missing__env",
+        "container": 0,
+        "network": 0,
+        "volume": 0,
+        "image": 0
+      },
+      {
+        "project": "architecture-contradictory__env",
+        "container": 0,
+        "network": 0,
+        "volume": 0,
+        "image": 0
+      },
+      {
+        "project": "architecture-cancel__env",
+        "container": 0,
+        "network": 0,
+        "volume": 0,
+        "image": 0
+      }
+    ],
+    "paired-cleanup.json": [
+      {
+        "project": "paired-activation-with-1__env",
+        "container": 0,
+        "network": 0,
+        "volume": 0,
+        "image": 0
+      },
+      {
+        "project": "paired-activation-with-2__env",
+        "container": 0,
+        "network": 0,
+        "volume": 0,
+        "image": 0
+      },
+      {
+        "project": "paired-activation-without-1__env",
+        "container": 0,
+        "network": 0,
+        "volume": 0,
+        "image": 0
+      },
+      {
+        "project": "paired-activation-without-2__env",
+        "container": 0,
+        "network": 0,
+        "volume": 0,
+        "image": 0
+      },
+      {
+        "project": "paired-negative-control-with-1__env",
+        "container": 0,
+        "network": 0,
+        "volume": 0,
+        "image": 0
+      },
+      {
+        "project": "paired-negative-control-with-2__env",
+        "container": 0,
+        "network": 0,
+        "volume": 0,
+        "image": 0
+      },
+      {
+        "project": "paired-negative-control-without-1__env",
+        "container": 0,
+        "network": 0,
+        "volume": 0,
+        "image": 0
+      },
+      {
+        "project": "paired-negative-control-without-2__env",
+        "container": 0,
+        "network": 0,
+        "volume": 0,
+        "image": 0
+      },
+      {
+        "project": "paired-task-failure-with-1__env",
+        "container": 0,
+        "network": 0,
+        "volume": 0,
+        "image": 0
+      },
+      {
+        "project": "paired-task-failure-with-2__env",
+        "container": 0,
+        "network": 0,
+        "volume": 0,
+        "image": 0
+      },
+      {
+        "project": "paired-task-failure-without-1__env",
+        "container": 0,
+        "network": 0,
+        "volume": 0,
+        "image": 0
+      },
+      {
+        "project": "paired-task-failure-without-2__env",
+        "container": 0,
+        "network": 0,
+        "volume": 0,
+        "image": 0
+      },
+      {
+        "project": "paired-missing-with-1__env",
+        "container": 0,
+        "network": 0,
+        "volume": 0,
+        "image": 0
+      },
+      {
+        "project": "paired-missing-with-2__env",
+        "container": 0,
+        "network": 0,
+        "volume": 0,
+        "image": 0
+      },
+      {
+        "project": "paired-missing-without-1__env",
+        "container": 0,
+        "network": 0,
+        "volume": 0,
+        "image": 0
+      },
+      {
+        "project": "paired-missing-without-2__env",
+        "container": 0,
+        "network": 0,
+        "volume": 0,
+        "image": 0
+      },
+      {
+        "project": "paired-contradictory-with-1__env",
+        "container": 0,
+        "network": 0,
+        "volume": 0,
+        "image": 0
+      },
+      {
+        "project": "paired-contradictory-with-2__env",
+        "container": 0,
+        "network": 0,
+        "volume": 0,
+        "image": 0
+      },
+      {
+        "project": "paired-contradictory-without-1__env",
+        "container": 0,
+        "network": 0,
+        "volume": 0,
+        "image": 0
+      },
+      {
+        "project": "paired-contradictory-without-2__env",
+        "container": 0,
+        "network": 0,
+        "volume": 0,
+        "image": 0
+      }
+    ]
+  },
+  "inspect": [
+    {
+      "mode": "normal",
+      "store": {
+        "runtime_security": {
+          "uid": 1000,
+          "status": {
+            "CapEff": "0000000000000000",
+            "Seccomp": "2",
+            "NoNewPrivs": "1"
+          },
+          "interfaces": [
+            "lo"
+          ]
+        },
+        "initializer_cwd_poison_rejected": true,
+        "initializer_identity": "8e177da6a31b4ce0b3bb9889d85a64d7",
+        "codex_cli_model_port": 3001,
+        "actual_patch_verified": true
+      },
+      "error_message": null,
+      "event_counts": {
+        "span_begin": 7,
+        "sample_init": 1,
+        "sandbox": 26,
+        "span_end": 7,
+        "state": 3,
+        "store": 5,
+        "logger": 10,
+        "model": 2
+      },
+      "log_file": "2026-10-28T17-32-41-00-00_architecture-inspect-normal_8Dpgh5sA3KZGfEYRwCp2Rw.eval"
+    },
+    {
+      "mode": "failure",
+      "store": {
+        "runtime_security": {
+          "uid": 1000,
+          "status": {
+            "CapEff": "0000000000000000",
+            "Seccomp": "2",
+            "NoNewPrivs": "1"
+          },
+          "interfaces": [
+            "lo"
+          ]
+        }
+      },
+      "error_message": "RuntimeError('required initializer failed (exit 1)')",
+      "event_counts": {
+        "span_begin": 3,
+        "sample_init": 1,
+        "sandbox": 7,
+        "span_end": 3,
+        "store": 2,
+        "error": 1
+      },
+      "log_file": "2026-10-28T17-33-11-00-00_architecture-inspect-failure_i982LXRtfcpEYYX6V2KzAB.eval"
+    },
+    {
+      "mode": "cancel",
+      "store": {
+        "runtime_security": {
+          "uid": 1000,
+          "status": {
+            "CapEff": "0000000000000000",
+            "Seccomp": "2",
+            "NoNewPrivs": "1"
+          },
+          "interfaces": [
+            "lo"
+          ]
+        },
+        "initializer_cwd_poison_rejected": true,
+        "initializer_identity": "b185fd4b3cf247bfbd88212a37357e94"
+      },
+      "error_message": "CancelledError(\"Cancelled via cancel scope 7f48adf06170 by <Task cancelling name='inspect_ai._util.asyncfiles.with_async_fs.<locals>.wrapper' coro=<with_async_fs.<locals>.wrapper() running at /home/runner/work/_temp/architecture-poc/inspect/lib/python3.13/site-packages/anyio/_backends/_asyncio.py:2531> cb=[_run_until_complete_cb() at /home/runner/work/_temp/uv-python-dir/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/asyncio/base_events.py:181, <1 more>, WorkerThread.stop()]>\")",
+      "event_counts": {
+        "span_begin": 3,
+        "sample_init": 1,
+        "sandbox": 13,
+        "span_end": 3,
+        "store": 2,
+        "error": 1
+      },
+      "log_file": "2026-10-28T17-33-26-00-00_architecture-inspect-cancel_iEi42U8TAQhYfiFoDbzQar.eval"
+    }
+  ],
+  "paired_native_broker_bindings": [
+    {
+      "native_item_id": "exec-3bd7aa6f-2262-4ad3-be10-93fddb7a270e",
+      "receipt": "fe91d5ae9b2748c59058eeaa5bbd1398",
+      "audit_population": 7,
+      "admission": {
+        "commands": 7,
+        "patches": 1,
+        "complete": true,
+        "activation_observed": false
+      }
+    },
+    {
+      "native_item_id": "exec-e07f5f9f-6e9d-4bfb-971a-19df4d8419b8",
+      "receipt": "b540370473234de88f32d53c36ca840e",
+      "audit_population": 7,
+      "admission": {
+        "commands": 7,
+        "patches": 1,
+        "complete": true,
+        "activation_observed": false
+      }
+    },
+    {
+      "native_item_id": "exec-5f0cabc1-5f78-4597-a4cc-a92d72e62d0f",
+      "receipt": "e83afd246cee4eed98ccf828b4f87495",
+      "audit_population": 7,
+      "admission": {
+        "commands": 7,
+        "patches": 1,
+        "complete": true,
+        "activation_observed": true
+      }
+    },
+    {
+      "native_item_id": "exec-35c064e4-30b1-4ae4-ab0d-38e8ab4600cb",
+      "receipt": "ac3904b2ce7741b794828d7522f75aa4",
+      "audit_population": 7,
+      "admission": {
+        "commands": 7,
+        "patches": 1,
+        "complete": true,
+        "activation_observed": true
+      }
+    },
+    {
+      "native_item_id": "exec-1b087693-a4a0-48e0-a9f6-49c3638ccf31",
+      "receipt": "1b7f5ea1ff224ed6853d3a9d9a992a55",
+      "audit_population": 7,
+      "admission": {
+        "commands": 6,
+        "patches": 1,
+        "complete": true,
+        "activation_observed": false
+      }
+    },
+    {
+      "native_item_id": "exec-d0193817-4589-4cb1-9074-1867cbfc94e9",
+      "receipt": "e60caa7771644a2e947c8664aaea6307",
+      "audit_population": 7,
+      "admission": {
+        "commands": 6,
+        "patches": 1,
+        "complete": true,
+        "activation_observed": false
+      }
+    },
+    {
+      "native_item_id": "exec-257262b2-9156-47c7-a1d1-6a9b81eaa9a2",
+      "receipt": "0d79f2a3b5f4482591d819cd308cbdef",
+      "audit_population": 7,
+      "admission": {
+        "commands": 6,
+        "patches": 1,
+        "complete": true,
+        "activation_observed": false
+      }
+    },
+    {
+      "native_item_id": "exec-c3df9236-e233-471c-ab38-f8554a8a67ae",
+      "receipt": "cb6843b9b8734856a907dc199f1f3937",
+      "audit_population": 7,
+      "admission": {
+        "commands": 6,
+        "patches": 1,
+        "complete": true,
+        "activation_observed": false
+      }
+    },
+    {
+      "native_item_id": "exec-96f7c9fe-70ae-494e-9ef9-c59ae20b5a9c",
+      "receipt": "f62c0143fd3e4a868d9ff884b08d6096",
+      "audit_population": 7,
+      "admission": {
+        "commands": 7,
+        "patches": 1,
+        "complete": true,
+        "activation_observed": false
+      }
+    },
+    {
+      "native_item_id": "exec-b631289d-0386-4e26-b6e0-caf2dc801bc5",
+      "receipt": "6636842889f44e479680786fdf0f20e8",
+      "audit_population": 7,
+      "admission": {
+        "commands": 7,
+        "patches": 1,
+        "complete": true,
+        "activation_observed": false
+      }
+    },
+    {
+      "native_item_id": "exec-5817fcd5-cff2-4f40-b392-7c971f69d14f",
+      "receipt": "7420577917f246fbb6addd6c46b7e498",
+      "audit_population": 7,
+      "admission": {
+        "commands": 7,
+        "patches": 1,
+        "complete": true,
+        "activation_observed": true
+      }
+    },
+    {
+      "native_item_id": "exec-4cef8cbb-e36c-4aad-96be-bff7a0c7d694",
+      "receipt": "d4bab03795ed45ff8fc44e1a14a6909d",
+      "audit_population": 7,
+      "admission": {
+        "commands": 7,
+        "patches": 1,
+        "complete": true,
+        "activation_observed": true
+      }
+    }
+  ],
+  "fault_injection": "missing/contradictory controls mutate admission input in memory; original native capture retained",
+  "production_qualification": "not-qualified",
+  "paid_inference": false
+}
