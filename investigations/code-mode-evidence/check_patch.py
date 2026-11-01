@@ -10,7 +10,7 @@ records=[json.loads(line) for line in raw.splitlines()]
 scopes={}
 for record in records:
     scopes.setdefault(record['scope'], []).append(record)
-assert len(scopes)==6
+assert len(scopes)==7
 result={}
 for entries in scopes.values():
     opened=entries[0]
@@ -31,6 +31,7 @@ assert result['outer-serialization-rejection']==dict(callbacks=1,serialized=[])
 assert result['outer-oversized-rejection']==dict(callbacks=1,serialized=[False])
 assert result['outer-no-arguments']==dict(callbacks=1,serialized=[True])
 assert result['outer-null-argument']==dict(callbacks=1,serialized=[True])
+assert result['outer-unawaited']==dict(callbacks=1,serialized=[True])
 (root/'patch-summary.json').write_text(json.dumps(dict(
     callback_coverage=result, argument_incompleteness_preserved=True,
     security_admission='unavailable-not-qualified-for-production'),indent=2))

@@ -28,6 +28,7 @@ async def trial(stub, label, source, truncation=None):
     session = opened.opened.session_id
     calls, events = [], []
     closed = asyncio.Event()
+    calls_changed = asyncio.Event()
     async def read_events():
         while True:
             event = await lease.read()
@@ -45,6 +46,7 @@ async def trial(stub, label, source, truncation=None):
             value['input_present'] = call.HasField('input_json')
             value['input_sha256'] = hashlib.sha256(call.input_json).hexdigest()
             calls.append(value)
+            calls_changed.set()
             await stub.CompleteToolCall(p.CompleteToolCallRequest(
                 session_id=session, invocation_id=call.invocation_id,
                 succeeded=p.ToolCallSucceeded(output_json=b'{"ok":true}')))
@@ -70,6 +72,15 @@ async def trial(stub, label, source, truncation=None):
         print(label, 'outcomes', outcomes, 'events', events,
               'reader_errors', [str(t.exception()) for t in tasks if t.done() and not t.cancelled()], flush=True)
         await asyncio.wait_for(closed.wait(), 5)
+        final=next(e['cell_closed'] for e in events if 'cell_closed' in e)
+        expected=int(final.get('final_tool_call_sequence',0))
+        async def drain():
+            while len(calls)<expected:
+                calls_changed.clear()
+                if len(calls)<expected:
+                    await calls_changed.wait()
+        await asyncio.wait_for(drain(),5)
+        assert sorted(int(call['sequence']) for call in calls)==list(range(1,expected+1))
         return dict(label=label, opened=projection(opened), calls=calls,
                     events=events, outcomes=outcomes)
     finally:
@@ -101,7 +112,8 @@ async def main(args):
                      ('serialization-rejection', 'try {await tools.probe({value:1n});} catch (_) {} text("control-finished");'),
                      ('oversized-rejection', 'try {await tools.probe({value:"x".repeat(64*1024*1024)});} catch (_) {} text("control-finished");'),
                      ('no-arguments', 'await tools.probe();text("control-finished");'),
-                     ('null-argument', 'await tools.probe(null);text("control-finished");')]
+                     ('null-argument', 'await tools.probe(null);text("control-finished");'),
+                     ('unawaited', 'tools.probe({value:1}).catch(()=>{});text("control-finished");')]
             for label, source in cases:
                 row = await trial(stub, label, source)
                 rows.append(row)
@@ -113,6 +125,7 @@ async def main(args):
             assert rows[4]['calls'][0]['input_present'] is False
             assert rows[5]['calls'][0]['input_present'] is True
             assert rows[5]['calls'][0]['input_bytes']==4
+            assert len(rows[6]['calls']) in (0,1)
             for row in (rows[0], rows[2], rows[3]):
                 assert row['events'][-1]['cell_closed'].get('final_tool_call_sequence', '0') == '0'
                 assert 'control-finished' in json.dumps(row['outcomes'])

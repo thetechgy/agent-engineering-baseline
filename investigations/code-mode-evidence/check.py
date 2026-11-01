@@ -9,7 +9,8 @@ summary = {}
 for version in (166, 165):
     stock = json.loads((root/f'stock-{version}.json').read_text())
     native = json.loads((root/f'native-{version}.json').read_text())
-    assert [len(row['calls']) for row in stock['rows']] == [0, 1, 0, 0, 1, 1]
+    assert [len(row['calls']) for row in stock['rows'][:6]] == [0, 1, 0, 0, 1, 1]
+    assert len(stock['rows'])==7 and len(stock['rows'][6]['calls']) in (0,1)
     empty, denied, direct = native['rows'][:3]
     assert all(row['capture']['status']=='completed' for row in native['rows'])
     calls = [r['message'] for r in denied['grpc'] if r['method']=='SubscribeToToolCalls' and r['direction']=='response']

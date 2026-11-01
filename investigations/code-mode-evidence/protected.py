@@ -47,13 +47,13 @@ def main(args):
         subnet='172.29.'+str(int(prefix[-2:],16))+'.0/24'
         run('network','create','--internal','--subnet',subnet,
             '--opt','com.docker.network.bridge.gateway_mode_ipv4=isolated',network)
-        net=json.loads(run('network','inspect',network).stdout)[0]
-        assert net['Internal'] and not net['EnableIPv6']
-        assert net['Options']['com.docker.network.bridge.gateway_mode_ipv4']=='isolated'
-        interfaces=json.loads(subprocess.check_output(['ip','-j','-4','addr','show'],text=True))
-        bridge=next(item for item in interfaces if item['ifname']=='br-'+net['Id'][:12])
-        assert not bridge['addr_info']
         try:
+            net=json.loads(run('network','inspect',network).stdout)[0]
+            assert net['Internal'] and not net['EnableIPv6']
+            assert net['Options']['com.docker.network.bridge.gateway_mode_ipv4']=='isolated'
+            interfaces=json.loads(subprocess.check_output(['ip','-j','addr','show','dev','br-'+net['Id'][:12]],text=True))
+            bridge=next(item for item in interfaces if item['ifname']=='br-'+net['Id'][:12])
+            assert not any(address['family']=='inet' for address in bridge['addr_info'])
             common=['--network',network,'--cap-drop=ALL','--security-opt=no-new-privileges',
                     '--pids-limit=256','--memory=2g','--cpus=2']
             for name in (agent,attacker):
