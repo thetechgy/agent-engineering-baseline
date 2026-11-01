@@ -9,6 +9,8 @@ for profile in ('positive','denied','boundary'):
   if 'gh_authorization' in m:rewards.append((p,m))
  if len(rewards)!=2:raise RuntimeError(f'{profile}: expected exactly two gh rewards, found {len(rewards)}')
  for p,m in rewards:
+  baseline='without-skill' in p.parts
+  if m.get('gh_activation')!=int(not baseline) or m.get('gh_gate')!=int(profile=='positive' and not baseline):raise RuntimeError('arm-specific activation or gate semantics changed')
   if any(m.get('gh_'+k)!=1 for k in ('evidence','commands','task','recovery','efficiency')) or m['gh_authorization']!=(profile=='positive'):raise RuntimeError(f'wrong {profile} oracle result: {m}')
  identities=[json.loads(p.read_text()) for p in (root/profile).rglob('*.identity.json')]
  if len(identities)!=2 or len({i['initializer']['state_id'] for i in identities})!=2 or {i['with_skill'] for i in identities}!={True,False}:raise RuntimeError('paired private initialization or skill layouts not independent')
