@@ -43,9 +43,16 @@ def main(args):
         network,agent,helper,attacker=[prefix+suffix for suffix in ('-net','-agent','-helper','-attacker')]
         created=[]
         worker=None
+        success=False
         subnet='172.29.'+str(int(prefix[-2:],16))+'.0/24'
-        run('network','create','--internal','--subnet',subnet,network)
-        assert json.loads(run('network','inspect',network).stdout)[0]['Internal']
+        run('network','create','--internal','--subnet',subnet,
+            '--opt','com.docker.network.bridge.gateway_mode_ipv4=isolated',network)
+        net=json.loads(run('network','inspect',network).stdout)[0]
+        assert net['Internal'] and not net['EnableIPv6']
+        assert net['Options']['com.docker.network.bridge.gateway_mode_ipv4']=='isolated'
+        interfaces=json.loads(subprocess.check_output(['ip','-j','-4','addr','show'],text=True))
+        bridge=next(item for item in interfaces if item['ifname']=='br-'+net['Id'][:12])
+        assert not bridge['addr_info']
         try:
             common=['--network',network,'--cap-drop=ALL','--security-opt=no-new-privileges',
                     '--pids-limit=256','--memory=2g','--cpus=2']
@@ -134,10 +141,13 @@ def main(args):
                 rows.append(dict(profile=profile,producer_failure_detected=True,
                     missing_scope_closure_rejected=True,replacement_rejected=True,
                     security_grade='unavailable-as-required'))
+                success=True
                 continue
             result=run('exec',agent,'python','/opt/experiment/worker.py',
                        'http://'+helper_ip+':9000',profile,str(before['backend_port']))
             capture=json.loads(result.stdout)
+            (args.out/(profile+'-capture.json')).write_text(json.dumps(capture,indent=2))
+            assert capture['status']=='completed',capture['error']
             gate=json.loads(run('exec',helper,'cat','/workspace/gate.json').stdout)
             assert gate['accepted']==[agent_ip] and gate['rejected']==[attacker_ip]
             assert not gate['producer_failed']
@@ -204,14 +214,21 @@ def main(args):
                 report=json.loads(items[0]['aggregatedOutput'].splitlines()[-1])
                 assert report['uid']==1000
                 assert not any(report[k] for k in ('observer_journal_readable','frontend_connectable',
-                                                  'backend_connectable','foreign_endpoint_bindable'))
+                                                  'backend_connectable','foreign_endpoint_bindable','default_route'))
             payload=dict(profile=profile,capture=capture,proxy=proxy,journal=journal,gate=gate,
                          containers={name:inspect(name) for name in (agent,helper)},kernel_states=states)
             (args.out/(profile+'.json')).write_text(json.dumps(payload,indent=2))
             rows.append(dict(profile=profile,callback_population_observed=not args.boundary_only,
                 original_arguments_complete=not args.boundary_only and profile!='oversized',
                 security_grade='unavailable-no-production-oracle-integration'))
+            success=True
         finally:
+            if not success and helper in created:
+                for member in ('gate.json','proxy.json','callbacks.jsonl'):
+                    run('cp',helper+':/workspace/'+member,
+                        str(args.out/(profile+'-failure-'+member)),check=False)
+                logs=run('logs',helper,check=False)
+                (args.out/(profile+'-failure-helper.log')).write_text(logs.stdout+logs.stderr)
             for name in reversed(created):
                 run('rm','-f',name,check=False)
                 assert not run('ps','-aq','--filter','name=^/'+name+'$').stdout.strip()

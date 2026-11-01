@@ -32,6 +32,4 @@ with tempfile.TemporaryDirectory(prefix='protected-native-') as td:
         capture_output=True,text=True,timeout=90)
     assert result.returncode==0,result.stderr[-2000:]
     capture=json.loads(result.stdout)
-    if profile!='interrupted':
-        assert capture['status']=='completed',capture['error']
     print(json.dumps(capture))

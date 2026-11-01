@@ -7,6 +7,8 @@ import sys
 
 address,backend_port=sys.argv[1],int(sys.argv[2])
 result={'uid':os.getuid()}
+routes=Path('/proc/net/route').read_text().splitlines()[1:]
+result['default_route']=any(line.split()[1]=='00000000' for line in routes)
 path=Path('/workspace/callbacks.jsonl')
 try:
     path.read_bytes()

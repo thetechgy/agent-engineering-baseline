@@ -12,7 +12,7 @@ git -C "$root/source" diff rust-v0.165.0 HEAD -- codex-rs/code-mode-protocol/src
 for version in 166 165; do
   context="$root/context/$version"
   mkdir -p "$context/bindings"
-  cp "$experiment/"{Dockerfile,requirements.txt,stock.py,native.py,lifecycle.py,controller_adapter.py,worker.py,isolation_probe.py} "$context/"
+  cp "$experiment/"{Dockerfile,requirements.txt,stock.py,native.py,lifecycle.py,controller_adapter.py,worker.py,isolation_probe.py,gate_regression.py} "$context/"
   cp "$GITHUB_WORKSPACE/investigations/native-codex-qualification/aeb_native_qualification/helpers/native_controller.py" "$context/controller.py"
   cp "$GITHUB_WORKSPACE/investigations/native-codex-qualification/aeb_native_qualification/helpers/attack.py" "$context/attack.py"
   for component in codex codex-code-mode-host; do
@@ -41,6 +41,7 @@ for version in 166 165; do
   docker cp "$name:/workspace/stock.json" "$root/evidence/stock-$version.json"
   docker cp "$name:/workspace/native.json" "$root/evidence/native-$version.json"
   if [ "$version" = 166 ]; then
+    docker exec "$name" python /opt/experiment/gate_regression.py > "$root/evidence/gate-primitive.json"
     docker exec "$name" python /opt/experiment/native.py --attacks --host /opt/experiment/codex-code-mode-host-x86_64-unknown-linux-musl --codex /opt/experiment/codex-x86_64-unknown-linux-musl --catalog /opt/experiment/catalog.json --controller /opt/experiment/controller.py --out /workspace/producer.json
     docker cp "$name:/workspace/producer.json" "$root/evidence/producer.json"
     docker exec "$name" python /opt/experiment/lifecycle.py --host /opt/experiment/codex-code-mode-host-x86_64-unknown-linux-musl --out /workspace/lifecycle.json

@@ -47,7 +47,9 @@ async def protected_gate(args, backend_port, host):
             return
         state['accepted'].append(peer)
         listener.close()
-        await listener.wait_closed()
+        # wait_closed also waits for active clients; awaiting it here deadlocks
+        # the accepted HTTP/2 connection before its first byte is forwarded.
+        assert not listener.is_serving()
         save()
         upstream_reader,upstream_writer=await asyncio.open_connection('127.0.0.1',backend_port)
         active.extend([writer,upstream_writer])
