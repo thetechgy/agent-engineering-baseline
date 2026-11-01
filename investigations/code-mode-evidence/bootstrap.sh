@@ -11,7 +11,7 @@ git -C "$root/source" diff rust-v0.165.0 HEAD -- codex-rs/code-mode-protocol/src
 for version in 166 165; do
   context="$root/context/$version"
   mkdir -p "$context/bindings"
-  cp "$experiment/"{Dockerfile,requirements.txt,stock.py,native.py} "$context/"
+  cp "$experiment/"{Dockerfile,requirements.txt,stock.py,native.py,lifecycle.py} "$context/"
   cp "$GITHUB_WORKSPACE/investigations/native-codex-qualification/aeb_native_qualification/helpers/native_controller.py" "$context/controller.py"
   for component in codex codex-code-mode-host; do
     archive="$root/$version-$component.tar.gz"
@@ -37,15 +37,23 @@ for version in 166 165; do
   docker exec "$name" python /opt/experiment/native.py --host /opt/experiment/codex-code-mode-host-x86_64-unknown-linux-musl --codex /opt/experiment/codex-x86_64-unknown-linux-musl --catalog /opt/experiment/catalog.json --controller /opt/experiment/controller.py --out /workspace/native.json
   docker cp "$name:/workspace/stock.json" "$root/evidence/stock-$version.json"
   docker cp "$name:/workspace/native.json" "$root/evidence/native-$version.json"
+  if [ "$version" = 166 ]; then
+    docker exec "$name" python /opt/experiment/lifecycle.py --host /opt/experiment/codex-code-mode-host-x86_64-unknown-linux-musl --out /workspace/lifecycle.json
+    docker cp "$name:/workspace/lifecycle.json" "$root/evidence/lifecycle.json"
+  fi
   docker rm -f "$name"
   trap - EXIT
 done
 python3 "$experiment/check.py" "$root/evidence"
+python3 "$experiment/outcome_security.py" > "$root/evidence/outcome-security.json"
 git -C "$root/source" apply --check "$experiment/callback-observation.patch"
 git -C "$root/source" apply "$experiment/callback-observation.patch"
 git -C "$root/source" diff --stat > "$root/evidence/patch-stat.txt"
 cd "$root/source/codex-rs"
 rustup toolchain install 1.95.0 --profile minimal
+python3 "$experiment/prepare_v8.py" "$root/source" "$root/v8"
+export RUSTY_V8_ARCHIVE="$root/v8/librusty_v8_ptrcomp_sandbox_release_x86_64-unknown-linux-gnu.a.gz"
+export RUSTY_V8_SRC_BINDING_PATH="$root/v8/src_binding_ptrcomp_sandbox_release_x86_64-unknown-linux-gnu.rs"
 set +e
 timeout 1200 cargo build --locked -p codex-code-mode-host -j 2 > "$root/evidence/patch-build.log" 2>&1
 build_status=$?
@@ -61,6 +69,7 @@ if [ "$build_status" = 0 ]; then
   docker exec -e AEB_CALLBACK_JOURNAL=/workspace/callbacks.jsonl "$name" python /opt/experiment/stock.py --host /workspace/patched-host --out /workspace/patched.json
   docker cp "$name:/workspace/patched.json" "$root/evidence/patched.json"
   docker cp "$name:/workspace/callbacks.jsonl" "$root/evidence/callbacks.jsonl"
+  python3 "$experiment/check_patch.py" "$root/evidence"
   docker rm -f "$name"
   trap - EXIT
 fi
