@@ -27,6 +27,7 @@ for version in 166 165; do
     printf '%s  %s\n' "$digest" "$archive" | sha256sum -c
     tar -xzf "$archive" -C "$context"
   done
+  chmod 0555 "$context/codex-x86_64-unknown-linux-musl" "$context/codex-code-mode-host-x86_64-unknown-linux-musl"
   git -C "$root/source" show "rust-v0.$version.0:codex-rs/code-mode-protocol/src/grpc/codex.code_mode.v1.proto" > "$context/bindings/code_mode.proto"
   git -C "$root/source" show "rust-v0.$version.0:codex-rs/models-manager/models.json" > "$context/catalog.json"
   docker build --quiet -t "aeb-cm:$version" "$context"
