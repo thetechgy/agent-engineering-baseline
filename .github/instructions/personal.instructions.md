@@ -12,6 +12,12 @@ description: Shared cross-project engineering boundaries for Codex and GitHub Co
   isolation is not possible.
 - Use a dedicated feature branch for implementation work and branch from the
   requester-specified or current verified base.
+- Keep checkouts, retained evidence, and reusable development environments in
+  persistent workspaces outside temporary storage. Use the runtime's configured
+  temporary directory for disposable scratch, respecting `TMPDIR` or platform
+  equivalents; do not hardcode `/tmp` for bulk development work. Keep cleanup
+  limited to explicitly disposable, inactive, task-owned data and preserve
+  repositories, retained evidence, and anything whose ownership or use is uncertain.
 - Do not commit, push, open or update pull requests, reply to reviews, resolve
   threads, deploy, or otherwise modify remote state unless explicitly asked,
   except for the scoped CI cancellation described below.
