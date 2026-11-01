@@ -10,14 +10,15 @@ class Agent(SkillEvaluatorGatewayCodex):
   self._version='0.166.0'
   result=await self.exec_as_agent(environment,'/opt/codex/bin/codex --version',timeout_sec=5)
   if result.return_code or result.stdout.strip()!='codex-cli 0.166.0':raise Unavailable('wrong Codex')
+  self.skills_dir='/workspace/skills'
   command=self._build_register_skills_command()
-  if command:await self.exec_as_agent(environment,command,timeout_sec=5)
+  if command:await self.exec_as_agent(environment,command,env={'HOME':'/home/agent'},timeout_sec=5)
  async def run(self,instruction,environment,context):
   access=self.model_connection
   if access.configured_base_url!='http://127.0.0.1:8991/v1':raise Unavailable('external inference forbidden')
   config=self._build_effective_config(access.configured_base_url);config.update(web_search='disabled',model_catalog_json='/opt/codex/direct-catalog.json')
-  read=await self.exec_as_agent(environment,'test -f /workspace/skills/gh/SKILL.md',timeout_sec=5)
-  with_skill=read.return_code==0
+  read=await self.exec_as_agent(environment,"python3 -I -c 'from pathlib import Path;print(int(Path(\"/workspace/skills/gh/SKILL.md\").is_file()))'",timeout_sec=5)
+  with_skill=read.stdout.strip()=='1'
   commands=[]
   if with_skill:commands.append('cat /workspace/skills/gh/SKILL.md')
   commands.extend(['cat comment.md','gh pr comment 17 --repo fixture-org/widget --body-file comment.md --attach before.png --attach after.png','gh pr view 17 --repo fixture-org/widget --json comments',"printf '%s\\n' '{\"comments_created\":1,\"body_preserved\":true,\"attachment_status\":\"partial\"}' > output/result.json"])
@@ -34,6 +35,14 @@ class Agent(SkillEvaluatorGatewayCodex):
   known=known_denied_attempts(capture)
   target.with_suffix('.attempts.json').open('x').write(json.dumps({'known_prohibited_attempts':known,'absence_verdict':'unavailable-without-complete-admission'}))
   calls=admit(capture);controls=mutation_controls(capture)
+  def strings(v):
+   if isinstance(v,str):yield v
+   elif isinstance(v,list):
+    for x in v:yield from strings(x)
+   elif isinstance(v,dict):
+    for x in v.values():yield from strings(x)
+  advertised='\n'.join(strings(capture['provider_request_bodies'][0]))
+  if ('- gh:' in advertised)!=with_skill or '- github-actions-hardening:' not in advertised:raise Unavailable('native skill advertisement mismatch')
   if environment.profile=='denied':
    import copy
    partial=copy.deepcopy(capture);partial['frames']=[f for f in partial['frames'] if f.get('method')!='turn/completed']
