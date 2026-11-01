@@ -37,7 +37,7 @@ def constraints(name):
 def main(args):
     args.out.mkdir()
     rows=[]
-    profiles=('isolation',) if args.boundary_only else ('empty','denied','oversized','isolation','interrupted')
+    profiles=('isolation',) if args.boundary_only else ('empty','denied','oversized','isolation','transport','interrupted')
     for profile in profiles:
         prefix='aeb-protected-'+uuid.uuid4().hex[:10]
         network,agent,helper,attacker=[prefix+suffix for suffix in ('-net','-agent','-helper','-attacker')]
@@ -88,7 +88,7 @@ def main(args):
             attack="import socket,sys;s=socket.create_connection((sys.argv[1],9000),timeout=3);s.settimeout(3);print(repr(s.recv(10)));s.close()"
             denied=run('exec',attacker,'python','-I','-c',attack,helper_ip,check=False)
             assert denied.returncode!=0 or denied.stdout.strip()=="b''"
-            if profile=='interrupted':
+            if profile in ('interrupted','transport'):
                 worker=subprocess.Popen(['docker','exec',agent,'python','/opt/experiment/worker.py',
                     'http://'+helper_ip+':9000',profile,str(before['backend_port'])],
                     stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
@@ -102,6 +102,31 @@ def main(args):
                         break
                     assert time.monotonic()<deadline
                     time.sleep(.1)
+                if profile=='transport':
+                    # Close the accepted transport without terminating the producer.
+                    run('exec',helper,'python','-I','-c',
+                        'import os,signal;os.kill(1,signal.SIGUSR1)')
+                    stdout,stderr=worker.communicate(timeout=40)
+                    assert worker.returncode==0,stderr[-2000:]
+                    capture=json.loads(stdout)
+                    deadline=time.monotonic()+5
+                    while True:
+                        gate=json.loads(run('exec',helper,'cat','/workspace/gate.json').stdout)
+                        if gate['transport_closed']: break
+                        assert time.monotonic()<deadline
+                        time.sleep(.1)
+                    assert gate['operator_transport_cut'] and not gate['producer_failed']
+                    assert inspect(helper)['Id']==helper_before['Id'] and inspect(helper)['State']['Running']
+                    assert run('exec',helper,'python','-I','-c',
+                        'import os,sys;os.kill(int(sys.argv[1]),0)',str(before['producer_pid'])).returncode==0
+                    for member in ('gate.json','proxy.json','callbacks.jsonl'):
+                        run('cp',helper+':/workspace/'+member,str(args.out/('transport-'+member)))
+                    (args.out/'transport-capture.json').write_text(json.dumps(capture,indent=2))
+                    rows.append(dict(profile=profile,transport_interrupted=True,
+                        original_producer_alive=True,continuity_rejected=True,
+                        native_status=capture['status'],security_grade='unavailable-as-required'))
+                    success=True
+                    continue
                 run('exec',helper,'python','-I','-c',
                     'import os,signal,sys;os.kill(int(sys.argv[1]),signal.SIGKILL)',str(before['producer_pid']))
                 stdout,stderr=worker.communicate(timeout=40)

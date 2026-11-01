@@ -8,6 +8,7 @@ import asyncio
 import hashlib
 import json
 import os
+import signal
 from pathlib import Path
 import subprocess
 import sys
@@ -68,6 +69,12 @@ async def protected_gate(args, backend_port, host):
             upstream_writer.close()
             state['transport_closed']=True
             save()
+    def cut_transport():
+        # Operator-only fault injection in this isolated qualification helper.
+        state['operator_transport_cut']=True
+        for writer in active: writer.close()
+        save()
+    asyncio.get_running_loop().add_signal_handler(signal.SIGUSR1,cut_transport)
     listener=await asyncio.start_server(connect,'0.0.0.0',9000)
     save()
     Path('/workspace/ready').write_text('ready')
