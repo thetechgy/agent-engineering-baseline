@@ -1,9 +1,10 @@
 """Operator-only initializer and identity-bound, audit-neutral active readiness."""
-import importlib.util,json,os,socket,stat,struct,time
+import importlib.util,json,os,socket,stat,struct,time,uuid
 from pathlib import Path
 root=Path('/opt/gh-eval');state=root/'state';sock=Path('/run/gh-eval/gh.sock')
 if os.geteuid()!=0: raise RuntimeError('root initializer required')
 spec=importlib.util.spec_from_file_location('trusted_setup',root/'setup.py');setup=importlib.util.module_from_spec(spec);spec.loader.exec_module(setup)
+if sock.exists() or sock.is_symlink():raise RuntimeError('refusing existing broker socket')
 setup.setup(Path('/workspace'),root/'source',install=True,private=state)
 broker=setup.start_broker(state,sock)
 pid=broker.pid;start=Path(f'/proc/{pid}/stat').read_text().split()[21]
@@ -15,5 +16,5 @@ with socket.socket(socket.AF_UNIX) as c:
  c.sendall(b'{}\n')
  if c.recv(1024)!=b'{"error":"invalid broker request"}\n':raise RuntimeError('broker readiness failed')
 if Path(f'/proc/{pid}/stat').read_text().split()[21]!=start or sock.lstat().st_ino!=info.st_ino or (state/'audit.jsonl').read_bytes():raise RuntimeError('readiness identity/audit changed')
-identity={'pid':pid,'start':start,'socket_inode':info.st_ino,'socket_device':info.st_dev,'peer_uid':peer[1],'state_inode':state.stat().st_ino}
+identity={'state_id':uuid.uuid4().hex,'pid':pid,'start':start,'socket_inode':info.st_ino,'socket_device':info.st_dev,'peer_uid':peer[1],'state_inode':state.stat().st_ino}
 (root/'ready.json').write_text(json.dumps(identity));print(json.dumps(identity))

@@ -3,7 +3,7 @@ from pathlib import Path
 from skillevaluator.tier3.harbor.secure_docker_environment import SkillEvaluatorSecureDockerEnvironment
 class Environment(SkillEvaluatorSecureDockerEnvironment):
  def __init__(self,*args,profile='positive',**kwargs):
-  if profile not in ('positive','denied'):raise ValueError('unknown qualification profile')
+  if profile not in ('positive','denied','boundary'):raise ValueError('unknown qualification profile')
   self.profile=profile
   self._operator_overlay=tempfile.TemporaryDirectory(prefix='aeb-direct-overlay-')
   overlay=Path(self._operator_overlay.name)/'containment.json'

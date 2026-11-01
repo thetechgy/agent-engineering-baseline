@@ -33,7 +33,7 @@ export PYTHON_DOTENV_DISABLED=1 PYTHONDONTWRITEBYTECODE=1
 export SKILL_EVAL_LLM_PROVIDER=openai-compatible SKILL_EVAL_LLM_MODEL=gpt-5.6-sol
 export SKILL_EVAL_LLM_API_KEY=offline-sentinel-not-a-real-key SKILL_EVAL_LLM_BASE_URL=http://127.0.0.1:8991/v1
 unset OPENAI_API_KEY ANTHROPIC_API_KEY
-for profile in positive denied; do
+for profile in positive denied boundary; do
   export SKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE="$root/$profile.key"
   timeout --signal=INT --kill-after=30s 600 "$root/evaluator/.venv/bin/skillevaluator" tier3 evaluate "$root/source/gh" \
     --agents codex --agent-model codex=gpt-5.6-sol --env-mode aeb-direct --ek "profile=$profile" \
