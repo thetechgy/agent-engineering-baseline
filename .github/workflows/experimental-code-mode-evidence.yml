@@ -24,6 +24,7 @@ jobs:
         timeout-minutes: 30
         run: bash investigations/code-mode-evidence/bootstrap.sh
       - name: Check export bounds
+        id: bounds
         if: always()
         env:
           EVIDENCE_ROOT: ${{ runner.temp }}/code-mode-evidence/evidence
@@ -37,7 +38,7 @@ jobs:
           assert sum(p.stat().st_size for p in members)<16*1024*1024
           PY
       - name: Preserve diagnostic evidence
-        if: always()
+        if: always() && steps.bounds.outcome == 'success'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: code-mode-evidence

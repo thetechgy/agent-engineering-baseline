@@ -50,6 +50,8 @@ done
 python3 "$experiment/check.py" "$root/evidence"
 python3 "$experiment/check_producer.py" "$root/evidence"
 python3 "$experiment/outcome_security.py" > "$root/evidence/outcome-security.json"
+python3 "$experiment/normalize_lock.py" "$root/source" "$root/evidence/build-lock-identity.json"
+cp "$root/source/codex-rs/Cargo.lock" "$root/build-Cargo.lock"
 git -C "$root/source" apply --check "$experiment/callback-observation.patch"
 git -C "$root/source" apply "$experiment/callback-observation.patch"
 git -C "$root/source" diff --stat > "$root/evidence/patch-stat.txt"
@@ -75,7 +77,7 @@ if [ "$build_status" != 0 ]; then
   set -e
   git diff -- Cargo.lock > "$root/evidence/diagnostic-lock-delta.txt"
   cp "$root/original-Cargo.lock" Cargo.lock
-  git diff --exit-code -- Cargo.lock
+  cmp "$root/build-Cargo.lock" Cargo.lock
   printf '{"unmodified_build_exit":%s,"diagnostic_metadata_exit":%s,"candidate_lock_used_for_build":false}\n' "$baseline_status" "$diagnostic_status" > "$root/evidence/build-boundary.json"
 fi
 if [ "$build_status" = 0 ]; then
