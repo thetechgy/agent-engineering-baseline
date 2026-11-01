@@ -83,6 +83,7 @@ if [ "$build_status" != 0 ]; then
   cp "$root/original-Cargo.lock" Cargo.lock
   cmp "$root/build-Cargo.lock" Cargo.lock
   printf '{"unmodified_build_exit":%s,"diagnostic_metadata_exit":%s,"candidate_lock_used_for_build":false}\n' "$baseline_status" "$diagnostic_status" > "$root/evidence/build-boundary.json"
+  exit "$build_status"
 fi
 if [ "$build_status" = 0 ]; then
   chmod 0555 target/debug/codex-code-mode-host

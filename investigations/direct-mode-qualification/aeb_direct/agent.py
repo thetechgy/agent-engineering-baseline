@@ -1,0 +1,36 @@
+import hashlib,json,shlex,os
+from pathlib import Path
+from skillevaluator.tier3.harbor.local_agents import SkillEvaluatorGatewayCodex
+from harbor.agents.capabilities import AgentCapabilities
+from .evidence import admit,Unavailable
+class Agent(SkillEvaluatorGatewayCodex):
+ capabilities=AgentCapabilities(native_config=True,skills=True)
+ async def setup(self,environment):
+  if not getattr(environment,'direct_identity',None):raise Unavailable('initializer absent')
+  self._version='0.166.0'
+  result=await self.exec_as_agent(environment,'/opt/codex/bin/codex --version',timeout_sec=5)
+  if result.return_code or result.stdout.strip()!='codex-cli 0.166.0':raise Unavailable('wrong Codex')
+  command=self._build_register_skills_command()
+  if command:await self.exec_as_agent(environment,command,timeout_sec=5)
+ async def run(self,instruction,environment,context):
+  access=self.model_connection
+  if access.configured_base_url!='http://127.0.0.1:8991/v1':raise Unavailable('external inference forbidden')
+  config=self._build_effective_config(access.configured_base_url);config.update(web_search='disabled',model_catalog_json='/opt/codex/direct-catalog.json')
+  read=await self.exec_as_agent(environment,'test -f /workspace/skills/gh/SKILL.md',timeout_sec=5)
+  with_skill=read.return_code==0
+  commands=[]
+  if with_skill:commands.append('cat /workspace/skills/gh/SKILL.md')
+  commands.extend(['cat comment.md','gh pr comment 17 --repo fixture-org/widget --body-file comment.md --attach before.png --attach after.png','gh pr view 17 --repo fixture-org/widget --json comments',"printf '%s\\n' '{\"comments_created\":1,\"body_preserved\":true,\"attachment_status\":\"partial\"}' > output/result.json"])
+  version=await self.exec_as_agent(environment,'sha256sum /opt/codex/bin/codex',timeout_sec=5)
+  payload={'model':'gpt-5.6-sol','config':config,'instruction':instruction,'sandbox':'danger-full-access','calls':[{'cmd':c} for c in commands],'codex_sha256':version.stdout.split()[0]}
+  if environment.profile=='denied':payload['calls'].append({'cmd':'printf denied-control','sandbox_permissions':'require_escalated','justification':'offline authorization control'})
+  response=await self.exec_as_agent(environment,'python3 -I /opt/direct-qualification/controller.py '+shlex.quote(json.dumps(payload)),env={'OPENAI_API_KEY':'offline-sentinel-not-a-real-key'},cwd='/workspace',timeout_sec=110)
+  if response.return_code:raise Unavailable('native producer failed')
+  capture=json.loads(response.stdout);calls=admit(capture)
+  # Keep authoritative capture outside agent-writable logs; never import a task's copy.
+  private=self.logs_dir.parent.parent/'direct-private';private.mkdir(exist_ok=True,mode=0o700)
+  target=private/(self.logs_dir.parent.name+'.json');target.open('x').write(response.stdout)
+  code="from pathlib import Path;import json;p=Path('/opt/gh-eval/native.json');p.open('x').write("+repr(json.dumps({'calls':calls,'activation':with_skill,'identity':environment.direct_identity}))+ ")"
+  result=await environment.exec('python3 -I -c '+shlex.quote(code),user='root',timeout_sec=5)
+  if result.return_code:raise Unavailable('verifier handoff failed')
+  context.metadata=context.metadata or {};context.metadata['direct_evidence']={'sha256':hashlib.sha256(response.stdout.encode()).hexdigest(),'policy':'offline-direct-v1','production_admission':False}

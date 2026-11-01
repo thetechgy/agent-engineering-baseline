@@ -3,6 +3,9 @@
 Run after verify_archives.py. Producer provenance is a separate prerequisite;
 this validates retained contents, not an arbitrary caller's authenticity claim.
 """
+if not __debug__:
+    raise RuntimeError("experimental checker requires assertions enabled")
+
 import base64
 import copy
 import json
@@ -61,6 +64,11 @@ def protected(payload, expected_binary):
         executes=[r['message'] for r in proxy if r['method']=='Execute' and r['direction']=='request']
         assert len(executes)==1
         execution=executes[0]
+        opened=[r['message']['opened'] for r in proxy if r['method']=='OpenSession' and r['direction']=='response' and 'opened' in r['message']]
+        assert len(opened)==1 and opened[0]['session_id']==execution['session_id']
+        assert all(r['message'].get('session_id')==execution['session_id'] for r in proxy if r['direction']=='request' and r['method'] in ('SubscribeToToolCalls','CompleteToolCall'))
+        assert sum(r['method']=='CompleteToolCall' and r['direction']=='response' for r in proxy)==sum(r['method']=='CompleteToolCall' and r['direction']=='request' for r in proxy)
+
         submitted=[f['params']['item'] for f in payload['capture']['frames']
                    if f.get('method')=='rawResponseItem/completed'
                    and f['params']['item'].get('type') in ('custom_tool_call','function_call')]
@@ -73,9 +81,13 @@ def protected(payload, expected_binary):
         calls=[r['message'] for r in proxy if r['method']=='SubscribeToToolCalls' and r['direction']=='response']
         assert sorted(int(c['sequence']) for c in calls)==list(range(1,int(closed[0].get('final_tool_call_sequence',0))+1))
         for call in calls:
+            assert call['session_id']==execution['session_id']
             assert call['execution_id']==closed[0]['execution_id'] and call['cell_id']==closed[0]['cell_id']
             identified=next(r for r in payload['journal'] if r['stage']=='runtime_queued'
                             and r['runtime_tool_call_id']==call['runtime_tool_call_id'])
+            entry=next(r for r in payload['journal'] if r['stage']=='callback_entered' and r['callback']==identified['callback'])
+            definition=execution['enabled_tools'][entry['tool_index']]
+            assert call['tool_name']==definition['tool_name'] and call['tool_kind']==definition['kind']
             serialized=next(r for r in payload['journal'] if r['stage']=='serialized'
                             and r['callback']==identified['callback'])
             assert serialized['arguments_complete'] and serialized['input_present']

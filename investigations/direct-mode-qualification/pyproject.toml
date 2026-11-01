@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools==82.0.0"]
+build-backend = "setuptools.build_meta"
+[project]
+name = "aeb-direct-qualification"
+version = "0.0.1"
+[project.entry-points."skillevaluator.env_modes"]
+aeb-direct = "aeb_direct.backend:SPEC"
+[tool.setuptools.packages.find]
+include = ["aeb_direct*"]
+[tool.setuptools.package-data]
+aeb_direct = ["*.py"]

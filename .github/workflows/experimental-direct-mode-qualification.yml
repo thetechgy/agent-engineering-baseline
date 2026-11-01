@@ -1,0 +1,45 @@
+name: Experimental Direct Mode qualification (no inference)
+on:
+  push:
+    branches: [experiment/direct-mode-qualification]
+    paths:
+      - investigations/direct-mode-qualification/**
+      - .github/workflows/experimental-direct-mode-qualification.yml
+permissions:
+  contents: read
+concurrency:
+  group: experimental-direct-mode-qualification
+  cancel-in-progress: false
+jobs:
+  qualification:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Install pinned uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884
+        with:
+          version: '0.13.5'
+          enable-cache: false
+      - run: bash .github/scripts/setup-compose.sh
+      - name: Actual paired CLI and deterministic oracle
+        run: bash investigations/direct-mode-qualification/bootstrap.sh
+      - name: Export bounded diagnostic evidence
+        id: bounds
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import os,pathlib,stat
+          r=pathlib.Path(os.environ['RUNNER_TEMP'])/'direct-qualification/evidence'
+          files=list(r.rglob('*'))
+          assert all(stat.S_ISDIR(p.lstat().st_mode) or stat.S_ISREG(p.lstat().st_mode) for p in files)
+          assert len(files)<2048 and sum(p.stat().st_size for p in files if p.is_file())<32*1024*1024
+          PY
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always() && steps.bounds.outcome == 'success'
+        with:
+          name: direct-mode-qualification
+          path: ${{ runner.temp }}/direct-qualification/evidence/
+          retention-days: 14
