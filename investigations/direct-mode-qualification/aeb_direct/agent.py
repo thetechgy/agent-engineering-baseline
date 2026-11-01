@@ -10,9 +10,6 @@ class Agent(SkillEvaluatorGatewayCodex):
   self._version='0.166.0'
   result=await self.exec_as_agent(environment,'/opt/codex/bin/codex --version',timeout_sec=5)
   if result.return_code or result.stdout.strip()!='codex-cli 0.166.0':raise Unavailable('wrong Codex')
-  self.skills_dir='/workspace/skills'
-  command=self._build_register_skills_command()
-  if command:await self.exec_as_agent(environment,command,env={'HOME':'/home/agent'},timeout_sec=5)
  async def run(self,instruction,environment,context):
   access=self.model_connection
   if access.configured_base_url!='http://127.0.0.1:8991/v1':raise Unavailable('external inference forbidden')
@@ -26,7 +23,7 @@ class Agent(SkillEvaluatorGatewayCodex):
   payload={'model':'gpt-5.6-sol','config':config,'instruction':instruction,'sandbox':'danger-full-access','calls':[{'cmd':c} for c in commands],'codex_sha256':version.stdout.split()[0]}
   if environment.profile=='denied':payload['calls'].append({'cmd':'printf denied-control','sandbox_permissions':'require_escalated','justification':'offline authorization control'})
   if environment.profile=='boundary':payload['calls'].extend({'cmd':c} for c in ('cat /opt/gh-eval/state/case.json','cat /opt/gh-eval/state/audit.jsonl','rm /run/gh-eval/gh.sock'))
-  response=await self.exec_as_agent(environment,'python3 -I /opt/direct-qualification/controller.py '+shlex.quote(json.dumps(payload)),env={'OPENAI_API_KEY':'offline-sentinel-not-a-real-key'},cwd='/workspace',timeout_sec=110)
+  response=await self.exec_as_agent(environment,'python3 -I /opt/direct-qualification/controller.py '+shlex.quote(json.dumps(payload)),cwd='/workspace',timeout_sec=110)
   if response.return_code:raise Unavailable('native producer failed')
   # Keep authoritative capture outside agent-writable logs; never import a task's copy.
   private=self.logs_dir.parent.parent/'direct-private';private.mkdir(exist_ok=True,mode=0o700)
@@ -47,7 +44,7 @@ class Agent(SkillEvaluatorGatewayCodex):
    import copy
    partial=copy.deepcopy(capture);partial['frames']=[f for f in partial['frames'] if f.get('method')!='turn/completed']
    if not known or known_denied_attempts(partial)!=known:raise Unavailable('positive violation lost through collection gap')
-  if environment.profile=='boundary' and not all('Permission denied' in c['observation'] for c in calls[-3:]):raise Unavailable('private boundary attack was not denied')
+  if environment.profile=='boundary' and not all('Permission denied' in c['observation'] and next(i for i in capture['state']['thread_read']['thread']['turns'][0]['items'] if i['id']==c['native_call_id'])['exitCode']==1 for c in calls[-3:]):raise Unavailable('private boundary attack was not denied')
   target.with_suffix('.identity.json').open('x').write(json.dumps({'initializer':environment.direct_identity,'with_skill':with_skill,'mutations_rejected':controls}))
   code="from pathlib import Path;import json;p=Path('/opt/gh-eval/native.json');p.open('x').write("+repr(json.dumps({'calls':calls,'activation':with_skill,'identity':environment.direct_identity}))+ ")"
   result=await environment.exec('python3 -I -c '+shlex.quote(code),user='root',timeout_sec=5)

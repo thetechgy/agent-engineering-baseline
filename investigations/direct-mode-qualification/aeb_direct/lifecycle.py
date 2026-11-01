@@ -40,7 +40,7 @@ def observe(capture):
                     if key in item:require(item[key]==before.get(key),'native operation changed')
             target[item['id']]=item
     require(done and set(starts)==set(ends),'incomplete native item population')
-    require(set(responses)=={1,2,3,4},'incomplete RPC population')
+    require(set(responses)=={1,2,3,4,5} and responses[5]=={},'incomplete RPC population')
     require(responses[2]['thread']['id']==tid and responses[3]['turn']['id']==turn,'unbound launch response')
     snapshot=responses[4]['thread'];require(snapshot['id']==tid and len(snapshot['turns'])==1,'snapshot scope changed')
     terminal=snapshot['turns'][0];require(terminal['id']==turn and terminal['status']=='completed','snapshot incomplete')

@@ -5,7 +5,8 @@ class Unavailable(ValueError): pass
 def require(ok,why):
     if not ok: raise Unavailable(why)
 def admit(c):
-    observe(c)
+    native=observe(c)
+    native_commands={i['id']:i for i in native['commands']}
     advertised={t['name'] for group in c['tool_catalog'] for t in group.get('tools',[])}
     require('exec_command' in advertised and 'apply_patch' in advertised and 'exec' not in advertised,'wrong direct catalog')
     require(all(r.get('model')=='gpt-5.6-sol' for r in c['provider_request_bodies']),'wrong provider model route')
@@ -27,7 +28,7 @@ def admit(c):
             if kind not in ('function_call','function_call_output'):continue
             key=i['call_id'];target=calls if kind=='function_call' else outputs
             require(key not in target,'duplicate call identity');target[key]=i
-    require(done and set(rpc)=={1,2,3,4},'incomplete native closure')
+    require(done and set(rpc)=={1,2,3,4,5} and rpc[5]=={},'incomplete native closure')
     require(rpc[2]['thread']['id']==tid and rpc[3]['turn']['id']==turn,'launch mismatch')
     require(rpc[4]['thread']['id']==tid and len(rpc[4]['thread']['turns'])==1 and rpc[4]['thread']['turns'][0]['id']==turn and rpc[4]['thread']['turns'][0]['status']=='completed','snapshot mismatch')
     require(set(calls)==set(outputs),'missing tool outcome')
@@ -44,6 +45,10 @@ def admit(c):
             return d
         args=json.loads(i['arguments'],object_pairs_hook=unique);require(isinstance(args,dict),'non-object arguments')
         output=outputs[e['call_id']]['output'];require(isinstance(output,str),'unsupported output')
+        if args.get('sandbox_permissions')=='require_escalated':
+            require('approval policy is Never' in output and e['call_id'] not in native_commands,'denial outcome not qualified')
+        else:
+            require(e['call_id'] in native_commands and native_commands[e['call_id']]['status'] in ('completed','failed'),'execution correlation missing or interrupted')
         result.append({'action':'exec_command','action_input':args,'observation':output,'native_call_id':e['call_id']})
     return result
 

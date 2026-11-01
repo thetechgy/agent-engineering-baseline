@@ -56,7 +56,7 @@ for key,value in settings.items():
 cmd+=['app-server','--listen','stdio://']
 home='/home/agent/.codex';pathlib.Path(home).mkdir(exist_ok=True)
 env={'PATH':'/opt/codex/bin:/usr/local/bin:/usr/bin:/bin','HOME':'/home/agent','CODEX_HOME':home}
-if os.environ.get('OPENAI_API_KEY'):env['OPENAI_API_KEY']=os.environ['OPENAI_API_KEY']
+env['OPENAI_API_KEY']='offline-sentinel-not-a-real-key'
 channel=payload.get('channel','socketpair')
 parent_socket=None
 if channel=='socketpair':
@@ -99,6 +99,8 @@ try:
     rpc(1,'initialize',{'clientInfo':{'name':'aeb_qualification','version':'1'},'capabilities':{'experimentalApi':True}})
     response=wait(lambda e:e.get('id')==1);assert 'result' in response
     write({'method':'initialized'})
+    rpc(5,'skills/extraRoots/set',{'extraRoots':['/workspace/skills']})
+    registration=wait(lambda e:e.get('id')==5);assert registration.get('result')=={}
     rpc(2,'thread/start',{'model':payload.get('model','gpt-5.6-sol'),'modelProvider':settings['model_provider'],'cwd':'/workspace','approvalPolicy':'never','sandbox':payload.get('sandbox','danger-full-access'),'ephemeral':False,'experimentalRawEvents':True})
     response=wait(lambda e:e.get('id')==2);thread_id=response['result']['thread']['id']
     rpc(3,'turn/start',{'threadId':thread_id,'input':[{'type':'text','text':payload.get('instruction','Execute the supplied scripted fixture.')} ]})
