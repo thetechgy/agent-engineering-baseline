@@ -7,7 +7,7 @@ class Environment(SkillEvaluatorSecureDockerEnvironment):
   self.profile=profile
   self._operator_overlay=tempfile.TemporaryDirectory(prefix='aeb-direct-overlay-')
   overlay=Path(self._operator_overlay.name)/'containment.json'
-  overlay.write_text(json.dumps({'services':{'main':{'network_mode':'none','cap_drop':['ALL'],'security_opt':['no-new-privileges:true'],'pids_limit':256}}}))
+  overlay.write_text(json.dumps({'services':{'main':{'network_mode':'none','cap_drop':['ALL'],'security_opt':['no-new-privileges:true'],'pids_limit':256,'healthcheck':{'test':['CMD','python3','-I','-c','import os;os.kill(1,0)'],'interval':'1s','timeout':'2s','retries':5}}}}))
   if kwargs.get('extra_docker_compose'):raise ValueError('unqualified operator overlay')
   kwargs['extra_docker_compose']=[str(overlay)]
   super().__init__(*args,**kwargs)

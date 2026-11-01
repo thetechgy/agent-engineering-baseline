@@ -4,6 +4,7 @@ root=Path(sys.argv[1]);rows=[]
 for profile in ('positive','denied','boundary'):
  rewards=[]
  for p in (root/profile).rglob('reward.json'):
+  if '_harbor-jobs' in p.parts:continue
   d=json.loads(p.read_text());m=d.get('custom_metrics',d)
   if 'gh_authorization' in m:rewards.append((p,m))
  if len(rewards)!=2:raise RuntimeError(f'{profile}: expected exactly two gh rewards, found {len(rewards)}')
