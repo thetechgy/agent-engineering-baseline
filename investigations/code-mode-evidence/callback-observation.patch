@@ -85,7 +85,7 @@ index a364385..f15eb0f 100644
          pending_timeouts: HashMap::new(),
 diff --git a/codex-rs/code-mode-runtime/src/runtime/observation.rs b/codex-rs/code-mode-runtime/src/runtime/observation.rs
 new file mode 100644
-index 0000000..730dd72
+index 0000000..2baaa6d
 --- /dev/null
 +++ b/codex-rs/code-mode-runtime/src/runtime/observation.rs
 @@ -0,0 +1,80 @@
@@ -155,7 +155,7 @@ index 0000000..730dd72
 +        let complete = serde_json::to_writer(&mut bytes, input).is_ok();
 +        let arguments = if complete { input.clone() } else { None };
 +        emit(json!({"stage":"serialized", "scope":self.id, "callback":callback,
-+            "arguments_complete":complete, "arguments":arguments}));
++            "arguments_complete":complete, "input_present":input.is_some(), "arguments":arguments}));
 +    }
 +    pub(super) fn queued(&self, callback: u64, runtime: &str) {
 +        if self.id == 0 { return; }

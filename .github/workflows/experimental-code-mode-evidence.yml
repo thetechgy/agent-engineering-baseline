@@ -34,7 +34,7 @@ jobs:
           root=pathlib.Path(os.environ['EVIDENCE_ROOT'])
           members=list(root.rglob('*'))
           assert len(members)<100
-          assert all(stat.S_ISREG(p.lstat().st_mode) for p in members)
+          assert all(stat.S_ISREG(p.lstat().st_mode) or stat.S_ISDIR(p.lstat().st_mode) for p in members)
           assert sum(p.stat().st_size for p in members)<16*1024*1024
           PY
       - name: Preserve diagnostic evidence

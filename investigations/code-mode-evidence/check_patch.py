@@ -10,7 +10,7 @@ records=[json.loads(line) for line in raw.splitlines()]
 scopes={}
 for record in records:
     scopes.setdefault(record['scope'], []).append(record)
-assert len(scopes)==4
+assert len(scopes)==6
 result={}
 for entries in scopes.values():
     opened=entries[0]
@@ -21,10 +21,16 @@ for entries in scopes.values():
     assert [e['callback'] for e in entered]==list(range(1,len(entered)+1))
     result[opened['outer']]=dict(callbacks=len(entered),
         serialized=[e['arguments_complete'] for e in entries if e['stage']=='serialized'])
+    if opened['outer']=='outer-no-arguments':
+        assert next(e for e in entries if e['stage']=='serialized')['input_present'] is False
+    if opened['outer']=='outer-null-argument':
+        assert next(e for e in entries if e['stage']=='serialized')['input_present'] is True
 assert result['outer-empty']['callbacks']==0
 assert result['outer-normal']==dict(callbacks=1,serialized=[True])
 assert result['outer-serialization-rejection']==dict(callbacks=1,serialized=[])
 assert result['outer-oversized-rejection']==dict(callbacks=1,serialized=[False])
+assert result['outer-no-arguments']==dict(callbacks=1,serialized=[True])
+assert result['outer-null-argument']==dict(callbacks=1,serialized=[True])
 (root/'patch-summary.json').write_text(json.dumps(dict(
     callback_coverage=result, argument_incompleteness_preserved=True,
     security_admission='unavailable-not-qualified-for-production'),indent=2))

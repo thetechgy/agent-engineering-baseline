@@ -19,10 +19,62 @@ import code_mode_pb2_grpc as g
 from google.protobuf.json_format import MessageToDict
 
 
+async def protected_gate(args, backend_port, host):
+    """One operator-seeded connection; no listener remains for evaluated code."""
+    state=dict(schema='operator-gate-v1',allowed_ip=args.allowed_ip,accepted=[],
+               rejected=[],producer_pid=host.pid,
+               producer_sha256=hashlib.sha256(Path(args.host).read_bytes()).hexdigest(),
+               backend_port=backend_port,producer_failed=False,transport_closed=False)
+    state_path=Path('/workspace/gate.json')
+    def save():
+        state_path.write_text(json.dumps(state))
+    active=[]
+    async def connect(reader,writer):
+        peer=writer.get_extra_info('peername')[0]
+        if peer!=args.allowed_ip or state['accepted']:
+            state['rejected'].append(peer)
+            save()
+            writer.close()
+            await writer.wait_closed()
+            return
+        state['accepted'].append(peer)
+        listener.close()
+        await listener.wait_closed()
+        save()
+        upstream_reader,upstream_writer=await asyncio.open_connection('127.0.0.1',backend_port)
+        active.extend([writer,upstream_writer])
+        async def copy(source,destination):
+            while data:=await source.read(65536):
+                destination.write(data)
+                await destination.drain()
+        tasks=[asyncio.create_task(copy(reader,upstream_writer)),
+               asyncio.create_task(copy(upstream_reader,writer))]
+        try:
+            await asyncio.wait(tasks,return_when=asyncio.FIRST_COMPLETED)
+        finally:
+            for task in tasks: task.cancel()
+            await asyncio.gather(*tasks,return_exceptions=True)
+            writer.close()
+            upstream_writer.close()
+            state['transport_closed']=True
+            save()
+    listener=await asyncio.start_server(connect,'0.0.0.0',9000)
+    save()
+    Path('/workspace/ready').write_text('ready')
+    await asyncio.to_thread(host.wait)
+    state['producer_failed']=True
+    save()
+    listener.close()
+    for writer in active: writer.close()
+
+
 async def main(args):
+    environment={'PATH':'/usr/bin:/bin'}
+    if args.serve:
+        environment['AEB_CALLBACK_JOURNAL']='/workspace/callbacks.jsonl'
     host = subprocess.Popen([args.host, '--listen', 'grpc://127.0.0.1:0'],
                             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-                            env={'PATH':'/usr/bin:/bin'}, text=True)
+                            env=environment, text=True)
     records = []
     recorded_bytes = 0
     endpoint = host.stdout.readline().strip()[7:]
@@ -34,19 +86,23 @@ async def main(args):
     def record(method, direction, value):
         nonlocal recorded_bytes
         if len(records)>=4096 or recorded_bytes+value.ByteSize()*2+200>4*1024*1024:
-            if records[-1].get('observer_loss') is not True:
+            if not records or records[-1].get('observer_loss') is not True:
                 records.append(dict(observer_loss=True, reason='record-count-limit'))
+            if args.serve: Path(args.out).write_text(json.dumps(records))
             return
         recorded_bytes += value.ByteSize()*2+200
         if value.ByteSize()>256*1024:
             records.append(dict(method=method,direction=direction,
                 arguments_complete=False, retained=False, serialized_bytes=value.ByteSize(),
                 sha256=hashlib.sha256(value.SerializeToString()).hexdigest()))
+            if args.serve: Path(args.out).write_text(json.dumps(records))
             return
         records.append(dict(method=method, direction=direction,
                             message=MessageToDict(value, preserving_proto_field_name=True)))
+        if args.serve: Path(args.out).write_text(json.dumps(records))
     handlers = {}
     for method in p.DESCRIPTOR.services_by_name['CodeModeHost'].methods:
+        assert not method.client_streaming
         def factory(method):
             name = method.name
             async def unary(request, context):
@@ -80,6 +136,9 @@ async def main(args):
     port = server.add_insecure_port('127.0.0.1:0')
     await server.start()
     try:
+        if args.serve:
+            await protected_gate(args,port,host)
+            return
         original = Path(args.controller).read_text()
         original = original.replace("executable=pathlib.Path('/opt/codex/bin/codex')", "executable=pathlib.Path(payload['codex'])")
         original = original.replace("info.st_uid==0 and ", "")
@@ -98,7 +157,7 @@ async def main(args):
             controller = root/'controller.py'
             controller.write_text(original)
             output = []
-            labels = ['empty', 'denied', 'direct-denied']
+            labels = ['empty', 'denied', 'direct-denied', 'uncaught-denied']
             if args.attacks:
                 labels += ['direct-'+mode for mode in (
                     'fd-inject','ptrace','proc-mem','forged-output','kill-producer')]
@@ -112,6 +171,8 @@ async def main(args):
                     home=str(home), workspace=str(home), endpoint=f'http://127.0.0.1:{port}', sandbox='read-only')
                 script = ('try {await tools.exec_command('+json.dumps(arguments)+');} catch (_) {} ' if label=='denied' else '')+'text("control-finished");'
                 payload['script'] = script
+                if label=='uncaught-denied':
+                    payload['mode']='escalated-inner'
                 if label.startswith('direct-'):
                     catalog = json.loads(Path(args.catalog).read_text())
                     catalog['models'] = [m for m in catalog['models'] if m['slug']=='gpt-5.6-sol']
@@ -166,4 +227,6 @@ if __name__=='__main__':
     for name in ['host','codex','catalog','controller','out']:
         parser.add_argument('--'+name, required=True)
     parser.add_argument('--attacks', action='store_true')
+    parser.add_argument('--serve', action='store_true')
+    parser.add_argument('--allowed-ip')
     asyncio.run(main(parser.parse_args()))

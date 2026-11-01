@@ -7,11 +7,12 @@ mkdir -p "$root/evidence" "$root/context"
 git clone --quiet --depth=1 --branch rust-v0.166.0 https://github.com/openai/codex.git "$root/source"
 test "$(git -C "$root/source" rev-parse HEAD)" = 6ff1e1ca3b30fc8b914720681fcf5fe62e95f856
 git -C "$root/source" fetch --quiet --depth=1 origin tag rust-v0.165.0
+test "$(git -C "$root/source" rev-parse 'rust-v0.165.0^{commit}')" = 360319d8dee62d87e2d59fc0c21805d79519cfed
 git -C "$root/source" diff rust-v0.165.0 HEAD -- codex-rs/code-mode-protocol/src/grpc/codex.code_mode.v1.proto codex-rs/core/src/code_mode_host.rs codex-rs/code-mode/src/grpc_session > "$root/evidence/version-diff.txt"
 for version in 166 165; do
   context="$root/context/$version"
   mkdir -p "$context/bindings"
-  cp "$experiment/"{Dockerfile,requirements.txt,stock.py,native.py,lifecycle.py} "$context/"
+  cp "$experiment/"{Dockerfile,requirements.txt,stock.py,native.py,lifecycle.py,controller_adapter.py,worker.py,isolation_probe.py} "$context/"
   cp "$GITHUB_WORKSPACE/investigations/native-codex-qualification/aeb_native_qualification/helpers/native_controller.py" "$context/controller.py"
   cp "$GITHUB_WORKSPACE/investigations/native-codex-qualification/aeb_native_qualification/helpers/attack.py" "$context/attack.py"
   for component in codex codex-code-mode-host; do
@@ -94,4 +95,5 @@ if [ "$build_status" = 0 ]; then
   python3 "$experiment/check_patch.py" "$root/evidence"
   docker rm -f "$name"
   trap - EXIT
+  python3 "$experiment/protected.py" --host "$root/source/codex-rs/target/debug/codex-code-mode-host" --out "$root/evidence/protected"
 fi

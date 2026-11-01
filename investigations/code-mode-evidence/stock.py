@@ -42,6 +42,7 @@ async def trial(stub, label, source, truncation=None):
             value = projection(call)
             value.pop('input_json', None)
             value['input_bytes'] = len(call.input_json)
+            value['input_present'] = call.HasField('input_json')
             value['input_sha256'] = hashlib.sha256(call.input_json).hexdigest()
             calls.append(value)
             await stub.CompleteToolCall(p.CompleteToolCallRequest(
@@ -98,7 +99,9 @@ async def main(args):
             cases = [('empty', 'text("control-finished");'),
                      ('normal', 'await tools.probe({value:1});text("control-finished");'),
                      ('serialization-rejection', 'try {await tools.probe({value:1n});} catch (_) {} text("control-finished");'),
-                     ('oversized-rejection', 'try {await tools.probe({value:"x".repeat(64*1024*1024)});} catch (_) {} text("control-finished");')]
+                     ('oversized-rejection', 'try {await tools.probe({value:"x".repeat(64*1024*1024)});} catch (_) {} text("control-finished");'),
+                     ('no-arguments', 'await tools.probe();text("control-finished");'),
+                     ('null-argument', 'await tools.probe(null);text("control-finished");')]
             for label, source in cases:
                 row = await trial(stub, label, source)
                 rows.append(row)
@@ -107,6 +110,9 @@ async def main(args):
                 print(label, len(row['calls']), row['events'], flush=True)
             assert len(rows[0]['calls']) == 0 and len(rows[1]['calls']) == 1
             assert len(rows[2]['calls']) == 0 and len(rows[3]['calls']) == 0
+            assert rows[4]['calls'][0]['input_present'] is False
+            assert rows[5]['calls'][0]['input_present'] is True
+            assert rows[5]['calls'][0]['input_bytes']==4
             for row in (rows[0], rows[2], rows[3]):
                 assert row['events'][-1]['cell_closed'].get('final_tool_call_sequence', '0') == '0'
                 assert 'control-finished' in json.dumps(row['outcomes'])

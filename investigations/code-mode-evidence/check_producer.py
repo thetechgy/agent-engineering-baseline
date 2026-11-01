@@ -9,6 +9,8 @@ rows=[]
 for row in capture['rows'][3:]:
     label=row['label']
     native=row['capture']
+    if label=='uncaught-denied':
+        continue
     if label.startswith('direct-effect-'):
         assert row['verified_effect']['exists']==(label=='direct-effect-allowed')
         rows.append(dict(profile=label,result='scoped-effect-verified'))

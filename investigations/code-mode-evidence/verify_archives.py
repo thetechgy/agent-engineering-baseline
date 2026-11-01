@@ -28,7 +28,7 @@ for metadata_path in sorted(root.glob('*-artifacts.json')):
         for member in members:
             path=PurePosixPath(member.filename)
             assert not path.is_absolute() and '..' not in path.parts and '\\' not in member.filename
-            assert stat.S_IFMT(member.external_attr>>16) in (0,stat.S_IFREG)
+            assert stat.S_IFMT(member.external_attr>>16) in (0,stat.S_IFREG,stat.S_IFDIR)
         summary=json.loads(archive.read('summary.json'))
         for version in ('166','165'):
             assert summary[version]['stock_full_submission_contract']=='failed'
