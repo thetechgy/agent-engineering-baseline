@@ -13,6 +13,7 @@ for version in 166 165; do
   mkdir -p "$context/bindings"
   cp "$experiment/"{Dockerfile,requirements.txt,stock.py,native.py,lifecycle.py} "$context/"
   cp "$GITHUB_WORKSPACE/investigations/native-codex-qualification/aeb_native_qualification/helpers/native_controller.py" "$context/controller.py"
+  cp "$GITHUB_WORKSPACE/investigations/native-codex-qualification/aeb_native_qualification/helpers/attack.py" "$context/attack.py"
   for component in codex codex-code-mode-host; do
     archive="$root/$version-$component.tar.gz"
     curl --fail --location --silent --show-error --proto '=https' --proto-redir '=https' "https://github.com/openai/codex/releases/download/rust-v0.$version.0/$component-x86_64-unknown-linux-musl.tar.gz" -o "$archive"
@@ -38,6 +39,8 @@ for version in 166 165; do
   docker cp "$name:/workspace/stock.json" "$root/evidence/stock-$version.json"
   docker cp "$name:/workspace/native.json" "$root/evidence/native-$version.json"
   if [ "$version" = 166 ]; then
+    docker exec "$name" python /opt/experiment/native.py --attacks --host /opt/experiment/codex-code-mode-host-x86_64-unknown-linux-musl --codex /opt/experiment/codex-x86_64-unknown-linux-musl --catalog /opt/experiment/catalog.json --controller /opt/experiment/controller.py --out /workspace/producer.json
+    docker cp "$name:/workspace/producer.json" "$root/evidence/producer.json"
     docker exec "$name" python /opt/experiment/lifecycle.py --host /opt/experiment/codex-code-mode-host-x86_64-unknown-linux-musl --out /workspace/lifecycle.json
     docker cp "$name:/workspace/lifecycle.json" "$root/evidence/lifecycle.json"
   fi
@@ -45,6 +48,7 @@ for version in 166 165; do
   trap - EXIT
 done
 python3 "$experiment/check.py" "$root/evidence"
+python3 "$experiment/check_producer.py" "$root/evidence"
 python3 "$experiment/outcome_security.py" > "$root/evidence/outcome-security.json"
 git -C "$root/source" apply --check "$experiment/callback-observation.patch"
 git -C "$root/source" apply "$experiment/callback-observation.patch"
@@ -59,7 +63,23 @@ timeout 1200 cargo build --locked -p codex-code-mode-host -j 2 > "$root/evidence
 build_status=$?
 set -e
 printf '{"build_exit":%s,"security_admission":"unavailable-pending-patch-qualification"}\n' "$build_status" > "$root/evidence/patch-build.json"
+if [ "$build_status" != 0 ]; then
+  # Diagnose the release boundary independently. Never build with a new lock.
+  git -C "$root/source" apply -R "$experiment/callback-observation.patch"
+  cp Cargo.lock "$root/original-Cargo.lock"
+  set +e
+  timeout 120 cargo build --locked -p codex-code-mode-host -j 2 > "$root/evidence/unmodified-build.log" 2>&1
+  baseline_status=$?
+  timeout 60 cargo metadata --offline --format-version 1 > /dev/null 2> "$root/evidence/diagnostic-metadata.log"
+  diagnostic_status=$?
+  set -e
+  git diff -- Cargo.lock > "$root/evidence/diagnostic-lock-delta.txt"
+  cp "$root/original-Cargo.lock" Cargo.lock
+  git diff --exit-code -- Cargo.lock
+  printf '{"unmodified_build_exit":%s,"diagnostic_metadata_exit":%s,"candidate_lock_used_for_build":false}\n' "$baseline_status" "$diagnostic_status" > "$root/evidence/build-boundary.json"
+fi
 if [ "$build_status" = 0 ]; then
+  chmod 0555 target/debug/codex-code-mode-host
   sha256sum target/debug/codex-code-mode-host > "$root/evidence/patch-binary.sha256"
   name="aeb-cm-$GITHUB_RUN_ID-patched"
   trap 'docker rm -f "$name" >/dev/null 2>&1 || true' EXIT
