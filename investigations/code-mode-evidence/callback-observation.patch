@@ -1,0 +1,140 @@
+diff --git a/codex-rs/code-mode-runtime/src/runtime/callbacks.rs b/codex-rs/code-mode-runtime/src/runtime/callbacks.rs
+index 36bd5f3..628d1a9 100644
+--- a/codex-rs/code-mode-runtime/src/runtime/callbacks.rs
++++ b/codex-rs/code-mode-runtime/src/runtime/callbacks.rs
+@@ -23,6 +23,8 @@ pub(super) fn tool_callback(
+             return;
+         }
+     };
++    let observed_callback = scope.get_slot_mut::<RuntimeState>()
++        .map(|state| state.observation.enter(tool_index));
+     let input = if args.length() == 0 {
+         Ok(None)
+     } else {
+@@ -36,6 +38,9 @@ pub(super) fn tool_callback(
+         }
+     };
+ 
++    if let (Some(state), Some(callback)) = (scope.get_slot::<RuntimeState>(), observed_callback) {
++        state.observation.serialized(callback, &input);
++    }
+     let (tool_name, tool_kind) = {
+         let Some(state) = scope.get_slot::<RuntimeState>() else {
+             throw_type_error(scope, "runtime state unavailable");
+@@ -64,6 +69,9 @@ pub(super) fn tool_callback(
+         return;
+     };
+     let id = format!("tool-{}", state.next_tool_call_id);
++    if let Some(callback) = observed_callback {
++        state.observation.queued(callback, &id);
++    }
+     state.next_tool_call_id = state.next_tool_call_id.saturating_add(1);
+     let event_tx = state.event_tx.clone();
+     state.pending_tool_calls.insert(id.clone(), resolver);
+diff --git a/codex-rs/code-mode-runtime/src/runtime/mod.rs b/codex-rs/code-mode-runtime/src/runtime/mod.rs
+index 6e00316..2cbd575 100644
+--- a/codex-rs/code-mode-runtime/src/runtime/mod.rs
++++ b/codex-rs/code-mode-runtime/src/runtime/mod.rs
+@@ -2,6 +2,7 @@ mod audio;
+ mod callbacks;
+ mod globals;
+ mod module_loader;
++mod observation;
+ mod timers;
+ mod value;
+ 
+@@ -157,6 +158,7 @@ struct ToolCallbackMetadata {
+ }
+ 
+ pub(super) struct RuntimeState {
++    observation: observation::Scope,
+     event_tx: mpsc::UnboundedSender<RuntimeEvent>,
+     pending_tool_calls: HashMap<String, v8::Global<v8::PromiseResolver>>,
+     pending_timeouts: HashMap<u64, timers::ScheduledTimeout>,
+@@ -201,6 +203,7 @@ fn run_runtime(
+     }
+ 
+     scope.set_slot(RuntimeState {
++        observation: observation::Scope::new(&config.tool_call_id),
+         event_tx: event_tx.clone(),
+         pending_tool_calls: HashMap::new(),
+         pending_timeouts: HashMap::new(),
+diff --git a/codex-rs/code-mode-runtime/src/runtime/observation.rs b/codex-rs/code-mode-runtime/src/runtime/observation.rs
+new file mode 100644
+index 0000000..8b629f3
+--- /dev/null
++++ b/codex-rs/code-mode-runtime/src/runtime/observation.rs
+@@ -0,0 +1,73 @@
++//! Experimental operator-owned callback journal. Never an authorization input.
++use std::fs::{File, OpenOptions};
++use std::io::Write;
++use std::sync::{Mutex, OnceLock};
++use std::sync::atomic::{AtomicU64, Ordering};
++use serde_json::{Value, json};
++
++static NEXT_SCOPE: AtomicU64 = AtomicU64::new(1);
++static JOURNAL: OnceLock<Mutex<Option<File>>> = OnceLock::new();
++
++struct Bounded(Vec<u8>);
++impl Write for Bounded {
++    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
++        if self.0.len() + bytes.len() > 65536 {
++            return Err(std::io::Error::other("observation argument limit"));
++        }
++        self.0.extend_from_slice(bytes);
++        Ok(bytes.len())
++    }
++    fn flush(&mut self) -> std::io::Result<()> { Ok(()) }
++}
++
++fn emit(value: Value) {
++    let journal = JOURNAL.get_or_init(|| Mutex::new(
++        std::env::var_os("AEB_CALLBACK_JOURNAL").and_then(|path|
++            OpenOptions::new().write(true).create_new(true).open(path).ok())));
++    let Ok(mut journal) = journal.lock() else { return; };
++    if let Some(file) = journal.as_mut() {
++        if file.metadata().map_or(true, |meta| meta.len() > 8 * 1024 * 1024) {
++            *journal = None;
++            return;
++        }
++        // Any failed write leaves a partial record or missing scope closure.
++        // Consumers must reject either; logging never changes tool behavior.
++        let result = serde_json::to_writer(&mut *file, &value)
++            .and_then(|()| file.write_all(b"\n").map_err(serde_json::Error::io));
++        if result.is_err() { *journal = None; }
++    }
++}
++
++pub(super) struct Scope {
++    id: u64,
++    entered: u64,
++}
++impl Scope {
++    pub(super) fn new(outer: &str) -> Self {
++        let scope = Self { id: NEXT_SCOPE.fetch_add(1, Ordering::Relaxed), entered: 0 };
++        emit(json!({"stage":"scope_open", "scope":scope.id, "outer":outer}));
++        scope
++    }
++    pub(super) fn enter(&mut self, index: usize) -> u64 {
++        self.entered += 1;
++        emit(json!({"stage":"callback_entered", "scope":self.id,
++            "callback":self.entered, "tool_index":index}));
++        self.entered
++    }
++    pub(super) fn serialized(&self, callback: u64, input: &Option<Value>) {
++        let mut bytes = Bounded(Vec::new());
++        let complete = serde_json::to_writer(&mut bytes, input).is_ok();
++        let arguments = if complete { input.clone() } else { None };
++        emit(json!({"stage":"serialized", "scope":self.id, "callback":callback,
++            "arguments_complete":complete, "arguments":arguments}));
++    }
++    pub(super) fn queued(&self, callback: u64, runtime: &str) {
++        emit(json!({"stage":"runtime_queued", "scope":self.id,
++            "callback":callback, "runtime_tool_call_id":runtime}));
++    }
++}
++impl Drop for Scope {
++    fn drop(&mut self) {
++        emit(json!({"stage":"scope_closed", "scope":self.id, "callbacks":self.entered}));
++    }
++}

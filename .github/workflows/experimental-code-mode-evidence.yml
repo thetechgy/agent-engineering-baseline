@@ -1,0 +1,31 @@
+name: Experimental Code Mode evidence (no inference)
+on:
+  push:
+    branches: [experiment/code-mode-evidence-166]
+    paths:
+      - investigations/code-mode-evidence/**
+      - .github/workflows/experimental-code-mode-evidence.yml
+permissions:
+  contents: read
+concurrency:
+  group: experimental-code-mode-evidence-166
+  cancel-in-progress: false
+jobs:
+  qualification:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Stock controls and conditional observation build
+        timeout-minutes: 30
+        run: bash investigations/code-mode-evidence/bootstrap.sh
+      - name: Preserve diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: code-mode-evidence
+          path: ${{ runner.temp }}/code-mode-evidence/evidence/
+          retention-days: 14
+          if-no-files-found: warn
