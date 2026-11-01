@@ -1,5 +1,5 @@
 """Operator-only initializer and identity-bound, audit-neutral active readiness."""
-import importlib.util,json,os,socket,stat,struct,time,uuid,hashlib
+import importlib.util,json,os,socket,stat,struct,time,uuid,hashlib,tempfile
 from pathlib import Path
 root=Path('/opt/gh-eval');state=root/'state';sock=Path('/run/gh-eval/gh.sock')
 if os.geteuid()!=0: raise RuntimeError('root initializer required')
@@ -12,7 +12,10 @@ for name,digest in EXPECTED.items():
 if hashlib.sha256((root/'setup.py').read_bytes()).hexdigest()!=EXPECTED['setup.py']:raise RuntimeError('initializer source substitution')
 spec=importlib.util.spec_from_file_location('trusted_setup',root/'setup.py');setup=importlib.util.module_from_spec(spec);spec.loader.exec_module(setup)
 if sock.exists() or sock.is_symlink():raise RuntimeError('refusing existing broker socket')
-setup.setup(Path('/workspace'),root/'source',install=True,private=state)
+# Public workspace/client provisioning happened at image build. Runtime private
+# state is new and operator-owned; no chown capability or audit reset is needed.
+with tempfile.TemporaryDirectory(prefix='initializer-',dir=root) as td:
+ setup.setup(Path(td),root/'source',private=state)
 broker=setup.start_broker(state,sock)
 pid=broker.pid;start=Path(f'/proc/{pid}/stat').read_text().split()[21]
 info=sock.lstat()

@@ -29,17 +29,10 @@ jobs:
       - name: Export bounded diagnostic evidence
         id: bounds
         if: always()
-        run: |
-          python3 - <<'PY'
-          import os,pathlib,stat
-          r=pathlib.Path(os.environ['RUNNER_TEMP'])/'direct-qualification/evidence'
-          files=list(r.rglob('*'))
-          assert all(stat.S_ISDIR(p.lstat().st_mode) or stat.S_ISREG(p.lstat().st_mode) for p in files)
-          assert len(files)<2048 and sum(p.stat().st_size for p in files if p.is_file())<32*1024*1024
-          PY
+        run: python3 investigations/direct-mode-qualification/export.py "$RUNNER_TEMP/direct-qualification"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always() && steps.bounds.outcome == 'success'
         with:
           name: direct-mode-qualification
-          path: ${{ runner.temp }}/direct-qualification/evidence/
+          path: ${{ runner.temp }}/direct-qualification/public-evidence/
           retention-days: 14

@@ -29,6 +29,7 @@ c['models'][0]['tool_mode']='direct'
 (r/'evidence/identities.json').write_text(json.dumps({'model':'gpt-5.6-sol','catalog_original_sha256':hashlib.sha256(raw).hexdigest(),'catalog_direct_sha256':hashlib.sha256((r/'codex/direct-catalog.json').read_bytes()).hexdigest(),'codex_sha256':hashlib.sha256((r/'codex/bin/codex').read_bytes()).hexdigest(),'production_admission':False},indent=2))
 CATALOG
 "$python" "$experiment/stage.py" "$GITHUB_WORKSPACE" "$root"
+timeout 300 docker build -t aeb-direct-gh:166 "$root/source/gh/evals/harbor/gh-010-partial/environment" > "$root/evidence/image-build.log" 2>&1 || { tail -100 "$root/evidence/image-build.log"; exit 1; }
 export PYTHON_DOTENV_DISABLED=1 PYTHONDONTWRITEBYTECODE=1
 export SKILL_EVAL_LLM_PROVIDER=openai-compatible SKILL_EVAL_LLM_MODEL=gpt-5.6-sol
 export SKILL_EVAL_LLM_API_KEY=offline-sentinel-not-a-real-key SKILL_EVAL_LLM_BASE_URL=http://127.0.0.1:8991/v1
