@@ -25,6 +25,6 @@ with socket.socket(socket.AF_UNIX) as c:
  if peer[0]!=pid or peer[1]!=0:raise RuntimeError('wrong broker peer')
  c.sendall(b'{}\n')
  if c.recv(1024)!=b'{"error":"invalid broker request"}\n':raise RuntimeError('broker readiness failed')
-if Path(f'/proc/{pid}/stat').read_text().split()[21]!=start or sock.lstat().st_ino!=info.st_ino or (state/'audit.jsonl').read_bytes():raise RuntimeError('readiness identity/audit changed')
+if Path(f'/proc/{pid}/stat').read_text().split()[21]!=start or (sock.lstat().st_dev,sock.lstat().st_ino)!=(info.st_dev,info.st_ino) or (state/'audit.jsonl').read_bytes():raise RuntimeError('readiness identity/audit changed')
 identity={'state_id':uuid.uuid4().hex,'pid':pid,'start':start,'socket_inode':info.st_ino,'socket_device':info.st_dev,'peer_uid':peer[1],'state_inode':state.stat().st_ino}
 (root/'ready.json').write_text(json.dumps(identity));print(json.dumps(identity))

@@ -1,5 +1,5 @@
 """Strict Direct capture admission. Caller must authenticate the controller separately."""
-import json
+import json,shlex
 from .lifecycle import observe
 class Unavailable(ValueError): pass
 def require(ok,why):
@@ -27,14 +27,17 @@ def admit(c):
             require(kind not in ('custom_tool_call','custom_tool_call_output'),'unexpected tool surface')
             if kind not in ('function_call','function_call_output'):continue
             key=i['call_id'];target=calls if kind=='function_call' else outputs
-            require(key not in target,'duplicate call identity');target[key]=i
+            require(key not in target,'duplicate call identity')
+            if kind=='function_call_output':require(key in calls,'outcome precedes submission')
+            target[key]=i
     require(done and set(rpc)=={1,2,3,4,5} and rpc[5]=={},'incomplete native closure')
     require(rpc[2]['thread']['id']==tid and rpc[3]['turn']['id']==turn,'launch mismatch')
     require(rpc[4]['thread']['id']==tid and len(rpc[4]['thread']['turns'])==1 and rpc[4]['thread']['turns'][0]['id']==turn and rpc[4]['thread']['turns'][0]['status']=='completed','snapshot mismatch')
     require(set(calls)==set(outputs),'missing tool outcome')
     expected=c['provider_submissions']
     require(len(expected)==len(calls) and len({i['call_id'] for i in expected})==len(expected),'provider inventory mismatch')
-    result=[]
+    result=[];executed=set()
+    require(not native['patches'],'unsubmitted native patch')
     for e in expected:
         i=calls[e['call_id']];require(all(i[k]==e[k] for k in ('call_id','name','arguments')),'original arguments mismatch')
         require(i['name']=='exec_command','unqualified direct tool')
@@ -49,14 +52,18 @@ def admit(c):
             require('approval policy is Never' in output and e['call_id'] not in native_commands,'denial outcome not qualified')
         else:
             require(e['call_id'] in native_commands and native_commands[e['call_id']]['status'] in ('completed','failed'),'execution correlation missing or interrupted')
+            item=native_commands[e['call_id']]
+            require(shlex.split(item['command'])==['/bin/sh','-lc',args['cmd']] and item['cwd']=='/workspace','native executed arguments changed')
+            executed.add(e['call_id'])
         result.append({'action':'exec_command','action_input':args,'observation':output,'native_call_id':e['call_id']})
+    require(set(native_commands)==executed,'unsubmitted native execution')
     return result
 
 
 def mutation_controls(c):
     """Synthetic corruption of a real capture; never fed to an oracle."""
     import copy
-    labels=('missing-output','foreign-turn','changed-arguments','duplicate-call','missing-terminal','producer-loss')
+    labels=('missing-output','foreign-turn','changed-arguments','duplicate-call','missing-terminal','producer-loss','output-before-call','changed-native-command')
     for label in labels:
         d=copy.deepcopy(c)
         frames=d['frames']
@@ -66,7 +73,15 @@ def mutation_controls(c):
         elif label=='changed-arguments':raw[0]['params']['item']['arguments']='{}'
         elif label=='duplicate-call':frames.insert(frames.index(raw[0]),copy.deepcopy(raw[0]))
         elif label=='missing-terminal':d['frames']=[f for f in frames if f.get('method')!='turn/completed']
-        else:d['shutdown_by_operator']=False
+        elif label=='producer-loss':d['shutdown_by_operator']=False
+        elif label=='output-before-call':
+            outcome=next(f for f in frames if f.get('method')=='rawResponseItem/completed' and f['params']['item']['type']=='function_call_output');frames.remove(outcome);frames.insert(frames.index(raw[0]),outcome)
+        else:
+            for f in frames:
+                if f.get('method') in ('item/started','item/completed') and f['params']['item']['type']=='commandExecution':f['params']['item']['command']='changed-native-command'
+                if f.get('id')==4:
+                    for item in f['result']['thread']['turns'][0]['items']:
+                        if item['type']=='commandExecution':item['command']='changed-native-command'
         try:admit(d)
         except (ValueError,KeyError):continue
         raise RuntimeError('false admission: '+label)
