@@ -26,10 +26,10 @@ class Agent(SkillEvaluatorGatewayCodex):
   if environment.profile=='denied':payload['calls'].append({'cmd':'printf denied-control','sandbox_permissions':'require_escalated','justification':'offline authorization control'})
   response=await self.exec_as_agent(environment,'python3 -I /opt/direct-qualification/controller.py '+shlex.quote(json.dumps(payload)),env={'OPENAI_API_KEY':'offline-sentinel-not-a-real-key'},cwd='/workspace',timeout_sec=110)
   if response.return_code:raise Unavailable('native producer failed')
-  capture=json.loads(response.stdout);calls=admit(capture);controls=mutation_controls(capture)
   # Keep authoritative capture outside agent-writable logs; never import a task's copy.
   private=self.logs_dir.parent.parent/'direct-private';private.mkdir(exist_ok=True,mode=0o700)
   target=private/(self.logs_dir.parent.name+'.json');target.open('x').write(response.stdout)
+  capture=json.loads(response.stdout);calls=admit(capture);controls=mutation_controls(capture)
   code="from pathlib import Path;import json;p=Path('/opt/gh-eval/native.json');p.open('x').write("+repr(json.dumps({'calls':calls,'activation':with_skill,'identity':environment.direct_identity}))+ ")"
   result=await environment.exec('python3 -I -c '+shlex.quote(code),user='root',timeout_sec=5)
   if result.return_code:raise Unavailable('verifier handoff failed')

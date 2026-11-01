@@ -3,6 +3,7 @@ set -euo pipefail
 umask 077
 root="$RUNNER_TEMP/direct-qualification"
 experiment="$GITHUB_WORKSPACE/investigations/direct-mode-qualification"
+python3 "$experiment/test_gates.py"
 mkdir -p "$root/evidence" "$root/codex/bin" "$root/home"
 git clone -q https://github.com/NVIDIA/SkillEvaluator.git "$root/evaluator"
 git -C "$root/evaluator" checkout -q d9fa4b4041b31f417f02ed145999ecf1f0c11fcd

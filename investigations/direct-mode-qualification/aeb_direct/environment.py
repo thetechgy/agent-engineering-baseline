@@ -1,9 +1,16 @@
-import hashlib,importlib.resources,json,shlex
+import hashlib,importlib.resources,json,shlex,tempfile
+from pathlib import Path
 from skillevaluator.tier3.harbor.secure_docker_environment import SkillEvaluatorSecureDockerEnvironment
 class Environment(SkillEvaluatorSecureDockerEnvironment):
  def __init__(self,*args,profile='positive',**kwargs):
   if profile not in ('positive','denied'):raise ValueError('unknown qualification profile')
-  self.profile=profile;super().__init__(*args,**kwargs)
+  self.profile=profile
+  self._operator_overlay=tempfile.TemporaryDirectory(prefix='aeb-direct-overlay-')
+  overlay=Path(self._operator_overlay.name)/'containment.json'
+  overlay.write_text(json.dumps({'services':{'main':{'network_mode':'none','cap_drop':['ALL'],'security_opt':['no-new-privileges:true'],'pids_limit':256}}}))
+  if kwargs.get('extra_docker_compose'):raise ValueError('unqualified operator overlay')
+  kwargs['extra_docker_compose']=[str(overlay)]
+  super().__init__(*args,**kwargs)
  async def start(self,force_build):
   await super().start(force_build)
   for name in ('controller.py','initialize.py'):
