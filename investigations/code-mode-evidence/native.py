@@ -17,6 +17,14 @@ import grpc
 import code_mode_pb2 as p
 import code_mode_pb2_grpc as g
 from google.protobuf.json_format import MessageToDict
+from controller_adapter import adapt
+
+
+def atomic_json(path,value):
+    path=Path(path)
+    temporary=path.with_name(path.name+'.next')
+    temporary.write_text(json.dumps(value))
+    temporary.replace(path)
 
 
 async def protected_gate(args, backend_port, host):
@@ -27,7 +35,7 @@ async def protected_gate(args, backend_port, host):
                backend_port=backend_port,producer_failed=False,transport_closed=False)
     state_path=Path('/workspace/gate.json')
     def save():
-        state_path.write_text(json.dumps(state))
+        atomic_json(state_path,state)
     active=[]
     async def connect(reader,writer):
         peer=writer.get_extra_info('peername')[0]
@@ -61,7 +69,7 @@ async def protected_gate(args, backend_port, host):
     listener=await asyncio.start_server(connect,'0.0.0.0',9000)
     save()
     Path('/workspace/ready').write_text('ready')
-    await asyncio.to_thread(host.wait)
+    state['producer_exit']=await asyncio.to_thread(host.wait)
     state['producer_failed']=True
     save()
     listener.close()
@@ -88,18 +96,18 @@ async def main(args):
         if len(records)>=4096 or recorded_bytes+value.ByteSize()*2+200>4*1024*1024:
             if not records or records[-1].get('observer_loss') is not True:
                 records.append(dict(observer_loss=True, reason='record-count-limit'))
-            if args.serve: Path(args.out).write_text(json.dumps(records))
+            if args.serve: atomic_json(args.out,records)
             return
         recorded_bytes += value.ByteSize()*2+200
         if value.ByteSize()>256*1024:
             records.append(dict(method=method,direction=direction,
                 arguments_complete=False, retained=False, serialized_bytes=value.ByteSize(),
                 sha256=hashlib.sha256(value.SerializeToString()).hexdigest()))
-            if args.serve: Path(args.out).write_text(json.dumps(records))
+            if args.serve: atomic_json(args.out,records)
             return
         records.append(dict(method=method, direction=direction,
                             message=MessageToDict(value, preserving_proto_field_name=True)))
-        if args.serve: Path(args.out).write_text(json.dumps(records))
+        if args.serve: atomic_json(args.out,records)
     handlers = {}
     for method in p.DESCRIPTOR.services_by_name['CodeModeHost'].methods:
         assert not method.client_streaming
@@ -139,14 +147,7 @@ async def main(args):
         if args.serve:
             await protected_gate(args,port,host)
             return
-        original = Path(args.controller).read_text()
-        original = original.replace("executable=pathlib.Path('/opt/codex/bin/codex')", "executable=pathlib.Path(payload['codex'])")
-        original = original.replace("info.st_uid==0 and ", "")
-        original = original.replace("=='b93f6811d3f653f0fb83be4050d857fb9abbb111dfa2ce160563327daff7f306'", "==payload['codex_sha256']")
-        original = original.replace("cmd+=['app-server','--listen','stdio://']", "cmd+=['app-server','--listen','stdio://','--code-mode-host',payload['endpoint']]")
-        original = original.replace("home='/home/agent/.codex'", "home=payload['home']")
-        original = original.replace("'HOME':'/home/agent'", "'HOME':payload['home']")
-        original = original.replace("cwd='/workspace'", "cwd=payload['workspace']")
+        original = adapt(args.controller)
         original = original.replace("arguments={'cmd':'printf direct-native'}",
             "arguments=payload.get('direct_arguments',{'cmd':'printf direct-native'})\n"
             "            if payload.get('direct_attack'):\n"

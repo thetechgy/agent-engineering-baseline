@@ -20,16 +20,18 @@ with tempfile.TemporaryDirectory(prefix='protected-native-') as td:
         'oversized':'try {await tools.exec_command({cmd:"x".repeat(64*1024*1024)});} catch (_) {} text("control-finished");',
         'isolation':'text((await tools.exec_command({cmd:'+json.dumps(
             'python3 -I /opt/experiment/isolation_probe.py '+endpoint.split('//')[1].split(':')[0]+' '+backend_port)+'})).output);',
+        'interrupted':'text(await tools.exec_command({cmd:"sleep 20"}));',
     }
     binary=Path('/opt/experiment/codex-x86_64-unknown-linux-musl')
     payload=dict(codex=str(binary),codex_sha256=hashlib.sha256(binary.read_bytes()).hexdigest(),
         endpoint=endpoint,home=str(root),workspace='/workspace',
-        sandbox='danger-full-access' if profile=='isolation' else 'read-only',
+        sandbox='danger-full-access' if profile in ('isolation','interrupted') else 'read-only',
         script=scripts[profile])
     result=subprocess.run([sys.executable,'-I',str(controller),json.dumps(payload)],
         env={'PATH':'/usr/local/bin:/usr/bin:/bin','HOME':str(root)},
         capture_output=True,text=True,timeout=90)
     assert result.returncode==0,result.stderr[-2000:]
     capture=json.loads(result.stdout)
-    assert capture['status']=='completed',capture['error']
+    if profile!='interrupted':
+        assert capture['status']=='completed',capture['error']
     print(json.dumps(capture))

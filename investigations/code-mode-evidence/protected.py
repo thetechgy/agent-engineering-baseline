@@ -37,12 +37,14 @@ def constraints(name):
 def main(args):
     args.out.mkdir()
     rows=[]
-    profiles=('isolation',) if args.boundary_only else ('empty','denied','oversized','isolation')
+    profiles=('isolation',) if args.boundary_only else ('empty','denied','oversized','isolation','interrupted')
     for profile in profiles:
         prefix='aeb-protected-'+uuid.uuid4().hex[:10]
         network,agent,helper,attacker=[prefix+suffix for suffix in ('-net','-agent','-helper','-attacker')]
         created=[]
-        run('network','create','--internal',network)
+        worker=None
+        subnet='172.29.'+str(int(prefix[-2:],16))+'.0/24'
+        run('network','create','--internal','--subnet',subnet,network)
         assert json.loads(run('network','inspect',network).stdout)[0]['Internal']
         try:
             common=['--network',network,'--cap-drop=ALL','--security-opt=no-new-privileges',
@@ -55,6 +57,7 @@ def main(args):
             command=('python -m grpc_tools.protoc -I/opt/experiment/bindings --python_out=/workspace '
                      '--grpc_python_out=/workspace /opt/experiment/bindings/code_mode.proto; '
                      'exec python /opt/experiment/native.py --serve --host /workspace/patched-host '
+                     '--codex /opt/experiment/codex-x86_64-unknown-linux-musl '
                      '--catalog /opt/experiment/catalog.json --controller /opt/experiment/controller.py '
                      '--out /workspace/proxy.json --allowed-ip '+agent_ip)
             run('create','--name',helper,*common,'aeb-cm:166','sh','-ec',command)
@@ -78,6 +81,60 @@ def main(args):
             attack="import socket,sys;s=socket.create_connection((sys.argv[1],9000),timeout=3);s.settimeout(3);print(repr(s.recv(10)));s.close()"
             denied=run('exec',attacker,'python','-I','-c',attack,helper_ip,check=False)
             assert denied.returncode!=0 or denied.stdout.strip()=="b''"
+            if profile=='interrupted':
+                worker=subprocess.Popen(['docker','exec',agent,'python','/opt/experiment/worker.py',
+                    'http://'+helper_ip+':9000',profile,str(before['backend_port'])],
+                    stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+                deadline=time.monotonic()+15
+                while True:
+                    snapshot=run('exec',helper,'cat','/workspace/proxy.json',check=False)
+                    try: prefix_records=json.loads(snapshot.stdout)
+                    except ValueError: prefix_records=[]
+                    if any(r.get('method')=='SubscribeToToolCalls' and r['direction']=='response'
+                           for r in prefix_records):
+                        break
+                    assert time.monotonic()<deadline
+                    time.sleep(.1)
+                run('exec',helper,'python','-I','-c',
+                    'import os,signal,sys;os.kill(int(sys.argv[1]),signal.SIGKILL)',str(before['producer_pid']))
+                stdout,stderr=worker.communicate(timeout=40)
+                assert worker.returncode==0,stderr[-2000:]
+                capture=json.loads(stdout)
+                run('wait',helper,timeout=15)
+                for name in ('gate.json','proxy.json','callbacks.jsonl'):
+                    run('cp',helper+':/workspace/'+name,str(args.out/('interrupted-'+name)))
+                failed=json.loads((args.out/'interrupted-gate.json').read_text())
+                assert failed['producer_failed'] and failed['producer_exit']==-9
+                prefix_journal=[json.loads(line) for line in
+                    (args.out/'interrupted-callbacks.jsonl').read_text().splitlines()]
+                assert any(r['stage']=='callback_entered' for r in prefix_journal)
+                assert not any(r['stage']=='scope_closed' for r in prefix_journal)
+                # Same binary and endpoint, genuinely different operator-observed producer.
+                run('rm',helper)
+                run('create','--name',helper,*common,'--ip',helper_ip,'aeb-cm:166','sh','-ec',command)
+                run('cp',str(args.host),helper+':/workspace/patched-host')
+                run('start',helper)
+                deadline=time.monotonic()+15
+                while run('exec',helper,'test','-f','/workspace/ready',check=False).returncode:
+                    assert time.monotonic()<deadline
+                    time.sleep(.1)
+                replacement=inspect(helper)
+                assert replacement['Id']!=helper_before['Id']
+                assert replacement['NetworkSettings']['Networks'][network]['IPAddress']==helper_ip
+                run('exec',agent,'python','-m','grpc_tools.protoc','-I/opt/experiment/bindings',
+                    '--python_out=/workspace','--grpc_python_out=/workspace','/opt/experiment/bindings/code_mode.proto')
+                client="import grpc,code_mode_pb2 as p,code_mode_pb2_grpc as g,sys;c=g.CodeModeHostStub(grpc.insecure_channel(sys.argv[1]));lease=c.OpenSession(p.OpenSessionRequest(),timeout=5);print(next(lease).opened.session_id);lease.cancel()"
+                new_session=run('exec',agent,'python','-c',client,helper_ip+':9000').stdout.strip()
+                assert new_session
+                (args.out/'interrupted-capture.json').write_text(json.dumps(capture,indent=2))
+                (args.out/'replacement.json').write_text(json.dumps(dict(
+                    original_container=helper_before['Id'],replacement_container=replacement['Id'],
+                    same_endpoint=True,new_session=new_session,
+                    admission='unavailable-producer-instance-changed'),indent=2))
+                rows.append(dict(profile=profile,producer_failure_detected=True,
+                    missing_scope_closure_rejected=True,replacement_rejected=True,
+                    security_grade='unavailable-as-required'))
+                continue
             result=run('exec',agent,'python','/opt/experiment/worker.py',
                        'http://'+helper_ip+':9000',profile,str(before['backend_port']))
             capture=json.loads(result.stdout)
@@ -159,6 +216,9 @@ def main(args):
                 run('rm','-f',name,check=False)
                 assert not run('ps','-aq','--filter','name=^/'+name+'$').stdout.strip()
             run('network','rm',network)
+            if worker is not None and worker.poll() is None:
+                worker.terminate()
+                worker.wait(timeout=5)
     (args.out/'summary.json').write_text(json.dumps(dict(
         evidence_class=('actual-boundary-with-operator-marker' if args.boundary_only else
                         'actual-native-and-isolated-observer-containers'),rows=rows,
