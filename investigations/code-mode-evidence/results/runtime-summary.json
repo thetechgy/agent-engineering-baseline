@@ -1,0 +1,243 @@
+{
+  "schema": "reviewed-runtime-summary-v1",
+  "run_id": 41341470944,
+  "source": "21b3c4b0f89021b0934360606f3cf20a462aa220",
+  "versions": {
+    "166": {
+      "stock_forwarded_counts": {
+        "empty": 0,
+        "normal": 1,
+        "serialization-rejection": 0,
+        "oversized-rejection": 0,
+        "no-arguments": 1,
+        "null-argument": 1,
+        "unawaited": 0
+      },
+      "native_empty_and_denied_same_terminal_text": true,
+      "direct_advertised_tools": [
+        "exec_command",
+        "write_stdin",
+        "request_user_input",
+        "apply_patch",
+        "view_image",
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "followup_task",
+        "interrupt_agent",
+        "list_agents",
+        "send_message",
+        "spawn_agent",
+        "wait_agent"
+      ],
+      "conditions": {
+        "model": "gpt-5.6-sol",
+        "codex_sha256": "b8a11fedf24b2dfb59a70c9e52b030f9a508dcd49cd2dd0d41956f4c785156b8",
+        "catalog_sha256": "559ed891ba1f2ec04700b581d0566f0f8c8f9d91778f86e7c2d9b493925e7ec6",
+        "profile": "gpt-5.6-sol-direct-catalog-v1",
+        "provider": "canned-responses-no-inference"
+      },
+      "real_provider_compatibility": "unavailable-no-inference"
+    },
+    "165": {
+      "stock_forwarded_counts": {
+        "empty": 0,
+        "normal": 1,
+        "serialization-rejection": 0,
+        "oversized-rejection": 0,
+        "no-arguments": 1,
+        "null-argument": 1,
+        "unawaited": 0
+      },
+      "native_empty_and_denied_same_terminal_text": true,
+      "direct_advertised_tools": [
+        "exec_command",
+        "write_stdin",
+        "request_user_input",
+        "apply_patch",
+        "view_image",
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "followup_task",
+        "interrupt_agent",
+        "list_agents",
+        "send_message",
+        "spawn_agent",
+        "wait_agent"
+      ],
+      "conditions": {
+        "model": "gpt-5.6-sol",
+        "codex_sha256": "c06a67fd8ac76508dc78bd99ce20c9f317b8d568beda59485f3f4134df9962d5",
+        "catalog_sha256": "559ed891ba1f2ec04700b581d0566f0f8c8f9d91778f86e7c2d9b493925e7ec6",
+        "profile": "gpt-5.6-sol-direct-catalog-v1",
+        "provider": "canned-responses-no-inference"
+      },
+      "real_provider_compatibility": "unavailable-no-inference"
+    }
+  },
+  "patch": {
+    "callback_coverage": {
+      "outer-empty": {
+        "callbacks": 0,
+        "serialized": []
+      },
+      "outer-normal": {
+        "callbacks": 1,
+        "serialized": [
+          true
+        ]
+      },
+      "outer-serialization-rejection": {
+        "callbacks": 1,
+        "serialized": []
+      },
+      "outer-oversized-rejection": {
+        "callbacks": 1,
+        "serialized": [
+          false
+        ]
+      },
+      "outer-no-arguments": {
+        "callbacks": 1,
+        "serialized": [
+          true
+        ]
+      },
+      "outer-null-argument": {
+        "callbacks": 1,
+        "serialized": [
+          true
+        ]
+      },
+      "outer-unawaited": {
+        "callbacks": 1,
+        "serialized": [
+          true
+        ]
+      }
+    },
+    "argument_incompleteness_preserved": true,
+    "security_admission": "unavailable-not-qualified-for-production"
+  },
+  "protected": {
+    "evidence_class": "actual-native-and-isolated-observer-containers",
+    "rows": [
+      {
+        "profile": "empty",
+        "callback_population_observed": true,
+        "original_arguments_complete": true,
+        "security_grade": "unavailable-no-production-oracle-integration"
+      },
+      {
+        "profile": "denied",
+        "callback_population_observed": true,
+        "original_arguments_complete": true,
+        "security_grade": "unavailable-no-production-oracle-integration"
+      },
+      {
+        "profile": "oversized",
+        "callback_population_observed": true,
+        "original_arguments_complete": false,
+        "security_grade": "unavailable-no-production-oracle-integration"
+      },
+      {
+        "profile": "isolation",
+        "callback_population_observed": true,
+        "original_arguments_complete": true,
+        "security_grade": "unavailable-no-production-oracle-integration"
+      },
+      {
+        "profile": "transport",
+        "transport_interrupted": true,
+        "original_producer_alive": true,
+        "continuity_rejected": true,
+        "native_status": "completed",
+        "security_grade": "unavailable-as-required"
+      },
+      {
+        "profile": "interrupted",
+        "producer_failure_detected": true,
+        "missing_scope_closure_rejected": true,
+        "replacement_rejected": true,
+        "security_grade": "unavailable-as-required"
+      }
+    ],
+    "cleanup_verified": true,
+    "scope": "single seeded connection and one session per host instance"
+  },
+  "producer": {
+    "rows": [
+      {
+        "profile": "direct-fd-inject",
+        "result": "tested-attack-blocked"
+      },
+      {
+        "profile": "direct-ptrace",
+        "result": "tested-attack-blocked"
+      },
+      {
+        "profile": "direct-proc-mem",
+        "result": "tested-attack-blocked"
+      },
+      {
+        "profile": "direct-forged-output",
+        "result": "tested-attack-blocked"
+      },
+      {
+        "profile": "direct-kill-producer",
+        "result": "unavailable-as-required"
+      },
+      {
+        "profile": "direct-effect-allowed",
+        "result": "scoped-effect-verified"
+      },
+      {
+        "profile": "direct-effect-denied",
+        "result": "scoped-effect-verified"
+      }
+    ],
+    "scope": "bounded socketpair producer tests; no external proxy authenticity claim"
+  },
+  "behavior_controls": {
+    "empty": {
+      "terminal_text_equal": true,
+      "stock_forwarded": 0,
+      "patched_forwarded": 0
+    },
+    "normal": {
+      "terminal_text_equal": true,
+      "stock_forwarded": 1,
+      "patched_forwarded": 1
+    },
+    "serialization-rejection": {
+      "terminal_text_equal": true,
+      "stock_forwarded": 0,
+      "patched_forwarded": 0
+    },
+    "oversized-rejection": {
+      "terminal_text_equal": true,
+      "stock_forwarded": 0,
+      "patched_forwarded": 0
+    },
+    "no-arguments": {
+      "terminal_text_equal": true,
+      "stock_forwarded": 1,
+      "patched_forwarded": 1
+    },
+    "null-argument": {
+      "terminal_text_equal": true,
+      "stock_forwarded": 1,
+      "patched_forwarded": 1
+    },
+    "unawaited": {
+      "terminal_text_equal": true,
+      "stock_forwarded": 0,
+      "patched_forwarded": 0
+    }
+  },
+  "patched_binary_sha256": "c21bdb05c5c7a5f6beed93ae5a3765cd54b82958631fd7777d106d897c9e090c",
+  "cold_build": "14m32s",
+  "job_elapsed": "19m0s",
+  "production_admission": false
+}

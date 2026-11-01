@@ -1,0 +1,13 @@
+{
+  "schema": "source-only-compatibility-v1",
+  "source": "360319d8dee62d87e2d59fc0c21805d79519cfed",
+  "patch_sha256": "f1c980cf8a7578b030510dbf8047b57c40fff792467bc43b3229590a2822c24c",
+  "original_files_verified": [
+    "codex-rs/code-mode-runtime/src/runtime/callbacks.rs",
+    "codex-rs/code-mode-runtime/src/runtime/callbacks_tests.rs",
+    "codex-rs/code-mode-runtime/src/runtime/mod.rs",
+    "codex-rs/code-mode-runtime/src/runtime/module_loader_tests.rs"
+  ],
+  "patch_hunks_checked": 5,
+  "binary_build_or_execution": false
+}

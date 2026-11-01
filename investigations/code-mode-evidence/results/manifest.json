@@ -1,0 +1,120 @@
+{
+  "schema": "experimental-evidence-manifest-v1",
+  "repository": "thetechgy/agent-engineering-baseline",
+  "branch": "experiment/code-mode-evidence-166",
+  "workflow": ".github/workflows/experimental-code-mode-evidence.yml",
+  "raw_archives": "retained-privately-data-only-not-published",
+  "production_admission": false,
+  "runs": [
+    {
+      "run_id": 41323275576,
+      "attempt": 1,
+      "source": "83434040f82860f1acd669a746196eb384bfd958",
+      "conclusion": "cancelled",
+      "artifact_id": 13089859216,
+      "archive_sha256": "48098eb3607e1af223bf48543c677271df05984d8a821ca8eb8ae1282f61e0ef",
+      "archive_bytes": 324742,
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41323275576"
+    },
+    {
+      "run_id": 41323971680,
+      "attempt": 1,
+      "source": "910000ea21a93dd8a4094c2842011f298c1739dd",
+      "conclusion": "success",
+      "artifact_id": 13090662180,
+      "archive_sha256": "b34e2fb38e2de1b339fce626be3fc5bc3ad1f57886c80478d7868c66d9360579",
+      "archive_bytes": 326241,
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41323971680"
+    },
+    {
+      "run_id": 41325034647,
+      "attempt": 1,
+      "source": "50d100746c859d83234bfceb7889156e3c3821c9",
+      "conclusion": "success",
+      "artifact_id": 13090643762,
+      "archive_sha256": "49c70ee6697c8d00b443d0b77251c6d0b42c5dabfd6ece0263a9954f45e68e68",
+      "archive_bytes": 796087,
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41325034647"
+    },
+    {
+      "run_id": 41326099147,
+      "attempt": 1,
+      "source": "24447dec9416fa8d878293d798c291abca4c29f1",
+      "conclusion": "success",
+      "artifact_id": 13091304226,
+      "archive_sha256": "f433fadb86ad2cd80e4cc6a8f212be82def876d6478f3d5572d549655bcd8866",
+      "archive_bytes": 802786,
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41326099147"
+    },
+    {
+      "run_id": 41329327476,
+      "attempt": 1,
+      "source": "235200ee24bf598735008feb02053e0719717555",
+      "conclusion": "cancelled",
+      "artifact_id": 13092344187,
+      "archive_sha256": "4759b519e8c16978f61bb0dc9e2fcd17dff59d5cb00cc3c8883fff3a5c9890e1",
+      "archive_bytes": 961345,
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41329327476"
+    },
+    {
+      "run_id": 41329706826,
+      "attempt": 1,
+      "source": "dbb17814a18633ab6ed5a43bcc43a67bbeef2e32",
+      "conclusion": "failure",
+      "artifact_id": 13092573941,
+      "archive_sha256": "e0729299afe56a1c7df793185e3acdd3248abdbf1bfb2d4f1747d1b7484784ec",
+      "archive_bytes": 959254,
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41329706826"
+    },
+    {
+      "run_id": 41338286587,
+      "attempt": 1,
+      "source": "0df7be8c1a3a9b762edb364d4b491c68f38cb0f0",
+      "conclusion": "failure",
+      "artifact_id": 13095992190,
+      "archive_sha256": "48057797f6715802e9a139acdf905a7d1acf842048b16b760c8f44f119f92e7a",
+      "archive_bytes": 959056,
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41338286587"
+    },
+    {
+      "run_id": 41338806947,
+      "attempt": 1,
+      "source": "bcb63f528c12603ac612d5c83d72e5cd4ce87b55",
+      "conclusion": "failure",
+      "artifact_id": 13096496474,
+      "archive_sha256": "b89553c5d69d721f451e9aa89c5daf4ff7d200597f9d01ce05b142ff32fcc3d8",
+      "archive_bytes": 959330,
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41338806947"
+    },
+    {
+      "run_id": 41339668467,
+      "attempt": 1,
+      "source": "378842b990cb430b00edb79558c4b01c237b7af7",
+      "conclusion": "failure",
+      "artifact_id": 13097135742,
+      "archive_sha256": "0d1525a10afb345bdcf208894fe33e50072ed34f3f674c1add5010e88ec538c9",
+      "archive_bytes": 959355,
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41339668467"
+    },
+    {
+      "run_id": 41340955992,
+      "attempt": 1,
+      "source": "9947a8cca6fe95d923e0e2cb593ebeca8babd2a2",
+      "conclusion": "cancelled",
+      "artifact_id": 13097580874,
+      "archive_sha256": "14cd299f220f55afa1d461c41081ab1db5a27f5a22e6ee82f9947aacc5a360ea",
+      "archive_bytes": 1077109,
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41340955992"
+    },
+    {
+      "run_id": 41341470944,
+      "attempt": 1,
+      "source": "21b3c4b0f89021b0934360606f3cf20a462aa220",
+      "conclusion": "success",
+      "artifact_id": 13098367148,
+      "archive_sha256": "06d2284b5a611383143c459a6465ce00ee57dbc76adce7d7118098ed4e7e1046",
+      "archive_bytes": 1659201,
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41341470944"
+    }
+  ]
+}

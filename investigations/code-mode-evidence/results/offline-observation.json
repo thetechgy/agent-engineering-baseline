@@ -1,0 +1,44 @@
+{
+  "schema": "offline-observation-check-v1",
+  "rows": {
+    "empty": {
+      "callback_inventory_complete": true,
+      "arguments_complete": true,
+      "callback_count": 0,
+      "forwarded_sequence_complete": true,
+      "production_security_admission": "unavailable-no-production-integration"
+    },
+    "denied": {
+      "callback_inventory_complete": true,
+      "arguments_complete": true,
+      "callback_count": 1,
+      "forwarded_sequence_complete": true,
+      "production_security_admission": "unavailable-no-production-integration"
+    },
+    "oversized": {
+      "callback_inventory_complete": true,
+      "arguments_complete": false,
+      "callback_count": 1,
+      "forwarded_sequence_complete": true,
+      "production_security_admission": "unavailable-no-production-integration"
+    },
+    "isolation": {
+      "callback_inventory_complete": true,
+      "arguments_complete": true,
+      "callback_count": 1,
+      "forwarded_sequence_complete": true,
+      "production_security_admission": "unavailable-no-production-integration"
+    }
+  },
+  "synthetic_mutation_controls": [
+    "missing-closure",
+    "missing-entry",
+    "wrong-outer",
+    "wrong-producer",
+    "observer-loss",
+    "incomplete-arguments"
+  ],
+  "actual_missing_closure_rejected": true,
+  "actual_transport_and_replacement_fenced": true,
+  "producer_authentication": "separate-operator-prerequisite"
+}
