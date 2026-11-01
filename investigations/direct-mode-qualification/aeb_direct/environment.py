@@ -11,6 +11,9 @@ class Environment(SkillEvaluatorSecureDockerEnvironment):
    code="from pathlib import Path;import os,stat,hashlib;p=Path('/opt/direct-qualification');p.mkdir(exist_ok=True);s=p.lstat();assert s.st_uid==0 and not s.st_mode&0o022;f=p/"+repr(name)+";f.open('xb').write(bytes.fromhex('"+raw.hex()+"'));f.chmod(0o444);assert f.lstat().st_uid==0 and f.lstat().st_nlink==1;print(hashlib.sha256(f.read_bytes()).hexdigest())"
    result=await self.exec('python3 -I -c '+shlex.quote(code),user='root',timeout_sec=10)
    if result.return_code or result.stdout.strip()!=hashlib.sha256(raw).hexdigest():raise RuntimeError('operator helper substitution')
+  check="import os,pathlib,json;d=dict(x.split(':',1) for x in pathlib.Path('/proc/self/status').read_text().splitlines() if ':' in x);print(json.dumps([os.getuid(),d['CapEff'].strip(),d['NoNewPrivs'].strip(),d['Seccomp'].strip(),sorted(p.name for p in pathlib.Path('/sys/class/net').iterdir())]))"
+  security=await self.exec('python3 -I -c '+shlex.quote(check),user='agent',timeout_sec=5)
+  if security.return_code or json.loads(security.stdout)!=[1000,'0000000000000000','1','2',['lo']]:raise RuntimeError('runtime isolation mismatch')
   result=await self.exec('python3 -I /opt/direct-qualification/initialize.py',user='root',timeout_sec=10)
   if result.return_code:raise RuntimeError('required initializer failed')
   self.direct_identity=json.loads(result.stdout)

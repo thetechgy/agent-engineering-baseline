@@ -1,9 +1,14 @@
 """Strict Direct capture admission. Caller must authenticate the controller separately."""
 import json
+from .lifecycle import observe
 class Unavailable(ValueError): pass
 def require(ok,why):
     if not ok: raise Unavailable(why)
 def admit(c):
+    observe(c)
+    advertised={t['name'] for group in c['tool_catalog'] for t in group.get('tools',[])}
+    require('exec_command' in advertised and 'apply_patch' in advertised and 'exec' not in advertised,'wrong direct catalog')
+    require(all(r.get('model')=='gpt-5.6-sol' for r in c['provider_request_bodies']),'wrong provider model route')
     require(c.get('status')=='completed' and c.get('channel')=='socketpair','incomplete capture')
     require(c.get('controller_dumpable')==0 and int(c.get('yama_ptrace_scope','0'))>=1,'unprotected producer')
     require(c.get('shutdown_by_operator') and c.get('producer_exit') in (0,-15) and c.get('state',{}).get('transport_eof'),'producer continuity lost')
@@ -41,3 +46,23 @@ def admit(c):
         output=outputs[e['call_id']]['output'];require(isinstance(output,str),'unsupported output')
         result.append({'action':'exec_command','action_input':args,'observation':output,'native_call_id':e['call_id']})
     return result
+
+
+def mutation_controls(c):
+    """Synthetic corruption of a real capture; never fed to an oracle."""
+    import copy
+    labels=('missing-output','foreign-turn','changed-arguments','duplicate-call','missing-terminal','producer-loss')
+    for label in labels:
+        d=copy.deepcopy(c)
+        frames=d['frames']
+        raw=[f for f in frames if f.get('method')=='rawResponseItem/completed' and f['params']['item']['type']=='function_call']
+        if label=='missing-output':d['frames']=[f for f in frames if not (f.get('method')=='rawResponseItem/completed' and f['params']['item']['type']=='function_call_output')]
+        elif label=='foreign-turn':raw[0]['params']['turnId']='foreign'
+        elif label=='changed-arguments':raw[0]['params']['item']['arguments']='{}'
+        elif label=='duplicate-call':frames.insert(frames.index(raw[0]),copy.deepcopy(raw[0]))
+        elif label=='missing-terminal':d['frames']=[f for f in frames if f.get('method')!='turn/completed']
+        else:d['shutdown_by_operator']=False
+        try:admit(d)
+        except (ValueError,KeyError):continue
+        raise RuntimeError('false admission: '+label)
+    return list(labels)

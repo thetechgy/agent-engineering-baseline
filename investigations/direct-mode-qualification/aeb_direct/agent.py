@@ -2,7 +2,7 @@ import hashlib,json,shlex,os
 from pathlib import Path
 from skillevaluator.tier3.harbor.local_agents import SkillEvaluatorGatewayCodex
 from harbor.agents.capabilities import AgentCapabilities
-from .evidence import admit,Unavailable
+from .evidence import admit,Unavailable,mutation_controls
 class Agent(SkillEvaluatorGatewayCodex):
  capabilities=AgentCapabilities(native_config=True,skills=True)
  async def setup(self,environment):
@@ -26,11 +26,11 @@ class Agent(SkillEvaluatorGatewayCodex):
   if environment.profile=='denied':payload['calls'].append({'cmd':'printf denied-control','sandbox_permissions':'require_escalated','justification':'offline authorization control'})
   response=await self.exec_as_agent(environment,'python3 -I /opt/direct-qualification/controller.py '+shlex.quote(json.dumps(payload)),env={'OPENAI_API_KEY':'offline-sentinel-not-a-real-key'},cwd='/workspace',timeout_sec=110)
   if response.return_code:raise Unavailable('native producer failed')
-  capture=json.loads(response.stdout);calls=admit(capture)
+  capture=json.loads(response.stdout);calls=admit(capture);controls=mutation_controls(capture)
   # Keep authoritative capture outside agent-writable logs; never import a task's copy.
   private=self.logs_dir.parent.parent/'direct-private';private.mkdir(exist_ok=True,mode=0o700)
   target=private/(self.logs_dir.parent.name+'.json');target.open('x').write(response.stdout)
   code="from pathlib import Path;import json;p=Path('/opt/gh-eval/native.json');p.open('x').write("+repr(json.dumps({'calls':calls,'activation':with_skill,'identity':environment.direct_identity}))+ ")"
   result=await environment.exec('python3 -I -c '+shlex.quote(code),user='root',timeout_sec=5)
   if result.return_code:raise Unavailable('verifier handoff failed')
-  context.metadata=context.metadata or {};context.metadata['direct_evidence']={'sha256':hashlib.sha256(response.stdout.encode()).hexdigest(),'policy':'offline-direct-v1','production_admission':False}
+  context.metadata=context.metadata or {};context.metadata['direct_evidence']={'sha256':hashlib.sha256(response.stdout.encode()).hexdigest(),'policy':'offline-direct-v1','production_admission':False,'synthetic_mutations_rejected':controls}
