@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-10-28T01:10:18.771674+00:00'
+generated_at: '2026-11-01T16:40:28.658446+00:00'
 apm_version: 0.35.0
 dependencies:
 - repo_url: addyosmani/agent-skills
@@ -837,7 +837,7 @@ deployments:
   owners:
   - .
   active_owner: .
-  content_hash: sha256:6bee5bb117bf796efe4f5b1873e6f9d11d0f3d698525d0c4fd2e20b17fb955e8
+  content_hash: sha256:135a6b0c95614ed9cabf326971f6bc80629759344344fa0ec77bc850f95ba6af
 - kind: uri
   target: mcp
   value: microsoft-learn
@@ -925,4 +925,4 @@ local_deployed_file_hashes:
   .agents/skills/powershell-pester-6/SKILL.md: sha256:b57df2ff4072b2e25744ae2bd530b02bbb6ab83a22a0d374c73d48de4dc70887
   .agents/skills/powershell-pester-6/references/compatibility-and-migration.md: sha256:6d05a890eb1c53c59755f9e560c05d65467a614d36af7c812f4a32c89b47f4e9
   .agents/skills/powershell-pester-6/references/execution.md: sha256:3b80a98abfefdcd9a765da9a9436caa43de6a873e57253f1ecfb36e1095ea4b8
-  .github/instructions/personal.instructions.md: sha256:6bee5bb117bf796efe4f5b1873e6f9d11d0f3d698525d0c4fd2e20b17fb955e8
+  .github/instructions/personal.instructions.md: sha256:135a6b0c95614ed9cabf326971f6bc80629759344344fa0ec77bc850f95ba6af
