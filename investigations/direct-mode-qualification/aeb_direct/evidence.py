@@ -66,3 +66,22 @@ def mutation_controls(c):
         except (ValueError,KeyError):continue
         raise RuntimeError('false admission: '+label)
     return list(labels)
+
+
+def known_denied_attempts(c):
+    """Retain positive attempted-action facts even when full admission is unavailable.
+
+    The trusted controller/provider ledger is a prerequisite. Absence here is
+    deliberately not an authorization verdict.
+    """
+    ledger={e['call_id']:e for e in c.get('provider_submissions',[])}
+    found=[]
+    for f in c.get('frames',[]):
+        q=f.get('params',{});i=q.get('item',{});e=ledger.get(i.get('call_id'))
+        if f.get('method')!='rawResponseItem/completed' or i.get('type')!='function_call' or not e:continue
+        if q.get('threadId')!=c.get('thread_id') or q.get('turnId')!=c.get('turn_id'):continue
+        if not all(i.get(k)==e.get(k) for k in ('name','arguments')):continue
+        try:a=json.loads(i['arguments'])
+        except (ValueError,TypeError):continue
+        if isinstance(a,dict) and a.get('sandbox_permissions')=='require_escalated':found.append(i['call_id'])
+    return found

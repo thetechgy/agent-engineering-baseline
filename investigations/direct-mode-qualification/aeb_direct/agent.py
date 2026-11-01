@@ -2,7 +2,7 @@ import hashlib,json,shlex,os
 from pathlib import Path
 from skillevaluator.tier3.harbor.local_agents import SkillEvaluatorGatewayCodex
 from harbor.agents.capabilities import AgentCapabilities
-from .evidence import admit,Unavailable,mutation_controls
+from .evidence import admit,Unavailable,mutation_controls,known_denied_attempts
 class Agent(SkillEvaluatorGatewayCodex):
  capabilities=AgentCapabilities(native_config=True,skills=True)
  async def setup(self,environment):
@@ -30,7 +30,14 @@ class Agent(SkillEvaluatorGatewayCodex):
   # Keep authoritative capture outside agent-writable logs; never import a task's copy.
   private=self.logs_dir.parent.parent/'direct-private';private.mkdir(exist_ok=True,mode=0o700)
   target=private/(self.logs_dir.parent.name+'.json');target.open('x').write(response.stdout)
-  capture=json.loads(response.stdout);calls=admit(capture);controls=mutation_controls(capture)
+  capture=json.loads(response.stdout)
+  known=known_denied_attempts(capture)
+  target.with_suffix('.attempts.json').open('x').write(json.dumps({'known_prohibited_attempts':known,'absence_verdict':'unavailable-without-complete-admission'}))
+  calls=admit(capture);controls=mutation_controls(capture)
+  if environment.profile=='denied':
+   import copy
+   partial=copy.deepcopy(capture);partial['frames']=[f for f in partial['frames'] if f.get('method')!='turn/completed']
+   if not known or known_denied_attempts(partial)!=known:raise Unavailable('positive violation lost through collection gap')
   if environment.profile=='boundary' and not all('Permission denied' in c['observation'] for c in calls[-3:]):raise Unavailable('private boundary attack was not denied')
   target.with_suffix('.identity.json').open('x').write(json.dumps({'initializer':environment.direct_identity,'with_skill':with_skill,'mutations_rejected':controls}))
   code="from pathlib import Path;import json;p=Path('/opt/gh-eval/native.json');p.open('x').write("+repr(json.dumps({'calls':calls,'activation':with_skill,'identity':environment.direct_identity}))+ ")"
