@@ -51,6 +51,7 @@ done
 python3 "$experiment/check.py" "$root/evidence"
 python3 "$experiment/check_producer.py" "$root/evidence"
 python3 "$experiment/outcome_security.py" > "$root/evidence/outcome-security.json"
+python3 "$experiment/protected.py" --boundary-only --host "$root/context/166/codex-code-mode-host-x86_64-unknown-linux-musl" --out "$root/evidence/boundary-smoke"
 python3 "$experiment/normalize_lock.py" "$root/source" "$root/evidence/build-lock-identity.json"
 cp "$root/source/codex-rs/Cargo.lock" "$root/build-Cargo.lock"
 git -C "$root/source" apply --check "$experiment/callback-observation.patch"

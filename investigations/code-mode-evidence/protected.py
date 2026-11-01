@@ -37,7 +37,8 @@ def constraints(name):
 def main(args):
     args.out.mkdir()
     rows=[]
-    for profile in ('empty','denied','oversized','isolation'):
+    profiles=('isolation',) if args.boundary_only else ('empty','denied','oversized','isolation')
+    for profile in profiles:
         prefix='aeb-protected-'+uuid.uuid4().hex[:10]
         network,agent,helper,attacker=[prefix+suffix for suffix in ('-net','-agent','-helper','-attacker')]
         created=[]
@@ -67,6 +68,9 @@ def main(args):
             helper_before=inspect(helper)
             helper_ip=str(ipaddress.IPv4Address(helper_before['NetworkSettings']['Networks'][network]['IPAddress']))
             before=json.loads(run('exec',helper,'cat','/workspace/gate.json').stdout)
+            if args.boundary_only:
+                run('exec',helper,'python','-I','-c',
+                    'from pathlib import Path;Path("/workspace/callbacks.jsonl").write_text(\'{"operator_marker":true}\\n\')')
             states={name:constraints(name) for name in (agent,helper)}
             for kind in ('pid','net','mnt'):
                 assert states[agent]['ns'][kind]!=states[helper]['ns'][kind]
@@ -90,14 +94,19 @@ def main(args):
             journal_text=run('exec',helper,'cat','/workspace/callbacks.jsonl').stdout
             assert 'FORGED-JOURNAL' not in journal_text
             journal=[json.loads(line) for line in journal_text.splitlines()]
-            opens=[r for r in journal if r['stage']=='scope_open']
-            closes=[r for r in journal if r['stage']=='scope_closed']
-            entered=[r for r in journal if r['stage']=='callback_entered']
-            assert len(opens)==len(closes)==1
-            assert opens[0]['scope']==closes[0]['scope']
-            assert closes[0]['callbacks']==len(entered)==(0 if profile=='empty' else 1)
+            if args.boundary_only:
+                assert journal==[{'operator_marker':True}]
+            else:
+                opens=[r for r in journal if r['stage']=='scope_open']
+                closes=[r for r in journal if r['stage']=='scope_closed']
+                entered=[r for r in journal if r['stage']=='callback_entered']
+                assert len(opens)==len(closes)==1
+                assert opens[0]['scope']==closes[0]['scope']
+                assert closes[0]['callbacks']==len(entered)==(0 if profile=='empty' else 1)
             executions=[r['message'] for r in proxy if r.get('method')=='Execute' and r['direction']=='request']
-            assert len(executions)==1 and executions[0]['tool_call_id']==opens[0]['outer']
+            assert len(executions)==1
+            if not args.boundary_only:
+                assert executions[0]['tool_call_id']==opens[0]['outer']
             raw=[frame['params']['item'] for frame in capture['frames']
                  if frame.get('method')=='rawResponseItem/completed']
             submitted=[item for item in raw if item.get('type') in ('custom_tool_call','function_call')]
@@ -116,12 +125,13 @@ def main(args):
             assert all(call['execution_id']==closed[0]['execution_id'] and
                        call['cell_id']==closed[0]['cell_id'] for call in calls)
             for call in calls:
-                queued=next(r for r in journal if r['stage']=='runtime_queued' and
-                            r['runtime_tool_call_id']==call['runtime_tool_call_id'])
-                original=next(r for r in journal if r['stage']=='serialized' and
-                              r['scope']==queued['scope'] and r['callback']==queued['callback'])
-                assert original['arguments_complete'] and original['input_present']
-                assert original['arguments']==json.loads(base64.b64decode(call['input_json']))
+                if not args.boundary_only:
+                    queued=next(r for r in journal if r['stage']=='runtime_queued' and
+                                r['runtime_tool_call_id']==call['runtime_tool_call_id'])
+                    original=next(r for r in journal if r['stage']=='serialized' and
+                                  r['scope']==queued['scope'] and r['callback']==queued['callback'])
+                    assert original['arguments_complete'] and original['input_present']
+                    assert original['arguments']==json.loads(base64.b64decode(call['input_json']))
                 terminals=[r for r in proxy if r.get('method')=='CompleteToolCall' and
                            r['direction']=='request' and r['message']['invocation_id']==call['invocation_id']]
                 assert len(terminals)==1
@@ -141,8 +151,8 @@ def main(args):
             payload=dict(profile=profile,capture=capture,proxy=proxy,journal=journal,gate=gate,
                          containers={name:inspect(name) for name in (agent,helper)},kernel_states=states)
             (args.out/(profile+'.json')).write_text(json.dumps(payload,indent=2))
-            rows.append(dict(profile=profile,callback_population_observed=True,
-                original_arguments_complete=profile!='oversized',
+            rows.append(dict(profile=profile,callback_population_observed=not args.boundary_only,
+                original_arguments_complete=not args.boundary_only and profile!='oversized',
                 security_grade='unavailable-no-production-oracle-integration'))
         finally:
             for name in reversed(created):
@@ -150,7 +160,8 @@ def main(args):
                 assert not run('ps','-aq','--filter','name=^/'+name+'$').stdout.strip()
             run('network','rm',network)
     (args.out/'summary.json').write_text(json.dumps(dict(
-        evidence_class='actual-native-and-isolated-observer-containers',rows=rows,
+        evidence_class=('actual-boundary-with-operator-marker' if args.boundary_only else
+                        'actual-native-and-isolated-observer-containers'),rows=rows,
         cleanup_verified=True,scope='single seeded connection and one session per host instance'),indent=2))
 
 
@@ -158,4 +169,5 @@ if __name__=='__main__':
     parser=argparse.ArgumentParser()
     parser.add_argument('--host',type=Path,required=True)
     parser.add_argument('--out',type=Path,required=True)
+    parser.add_argument('--boundary-only',action='store_true')
     main(parser.parse_args())
