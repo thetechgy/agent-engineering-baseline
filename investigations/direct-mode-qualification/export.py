@@ -12,4 +12,4 @@ for p in source.rglob('*'):
  if len(selected)>=2048 or total>=32*1024*1024:raise RuntimeError('diagnostic export budget')
 for p in selected:
  q=target/p.relative_to(source);q.parent.mkdir(parents=True,exist_ok=True);q.open('xb').write(p.read_bytes())
-(target/'export.json').write_text(json.dumps({'source':os.environ.get('GITHUB_SHA'),'run':os.environ.get('GITHUB_RUN_ID'),'attempt':os.environ.get('GITHUB_RUN_ATTEMPT'),'members':len(selected),'bytes':total,'production_admission':False}))
+(target/'export.json').write_text(json.dumps({'source':os.environ.get('GITHUB_SHA'),'run':os.environ.get('GITHUB_RUN_ID'),'attempt':os.environ.get('GITHUB_RUN_ATTEMPT'),'members':len(selected),'bytes':total,'production_admission':False,'qualification':'offline-qualified' if (source/'qualification.json').is_file() else 'unavailable-required-gates-incomplete','error_rewards':'retained raw; never admitted as scores'}))

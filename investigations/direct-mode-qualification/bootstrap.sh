@@ -15,6 +15,8 @@ printf '%s  %s\n' a0bf572d2f93f056c6712a6da348e96078dc84f3885fd7be67807ef389cb39
 tar -xzf "$root/codex.tar.gz" -C "$root/codex/bin"
 mv "$root/codex/bin/codex-x86_64-unknown-linux-musl" "$root/codex/bin/codex"
 chmod 0555 "$root/codex/bin/codex"
+curl -fsSL --proto '=https' --proto-redir '=https' https://files.pythonhosted.org/packages/1e/5e/d4e9f1a599fb8e573b7b87160658329fbf28d19eac2718f51fc3def3aa5a/idna-3.18-py3-none-any.whl -o "$root/codex/idna-3.18-py3-none-any.whl"
+printf '%s  %s\n' 7f952cbe720b688055e3f87de14f5c3e5fdaa8bc3928985c4077ca689de849a2 "$root/codex/idna-3.18-py3-none-any.whl" | sha256sum -c
 git init -q "$root/codex-source"
 git -C "$root/codex-source" fetch -q --depth=1 https://github.com/openai/codex.git 6ff1e1ca3b30fc8b914720681fcf5fe62e95f856
 git -C "$root/codex-source" show FETCH_HEAD:codex-rs/models-manager/models.json > "$root/catalog.json"

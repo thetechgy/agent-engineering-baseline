@@ -12,6 +12,7 @@ for name,digest in EXPECTED.items():
 if hashlib.sha256((root/'setup.py').read_bytes()).hexdigest()!=EXPECTED['setup.py']:raise RuntimeError('initializer source substitution')
 spec=importlib.util.spec_from_file_location('trusted_setup',root/'setup.py');setup=importlib.util.module_from_spec(spec);spec.loader.exec_module(setup)
 if sock.exists() or sock.is_symlink():raise RuntimeError('refusing existing broker socket')
+if state.exists() or state.is_symlink():raise RuntimeError('refusing existing private state')
 # Public workspace/client provisioning happened at image build. Runtime private
 # state is new and operator-owned; no chown capability or audit reset is needed.
 with tempfile.TemporaryDirectory(prefix='initializer-',dir=root) as td:

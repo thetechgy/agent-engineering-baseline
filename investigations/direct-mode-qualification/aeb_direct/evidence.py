@@ -63,7 +63,7 @@ def admit(c):
 def mutation_controls(c):
     """Synthetic corruption of a real capture; never fed to an oracle."""
     import copy
-    labels=('missing-output','foreign-turn','changed-arguments','duplicate-call','missing-terminal','producer-loss','output-before-call','changed-native-command')
+    labels=('missing-output','foreign-turn','changed-arguments','duplicate-call','missing-terminal','producer-loss','output-before-call','changed-native-command','unsubmitted-native-command')
     for label in labels:
         d=copy.deepcopy(c)
         frames=d['frames']
@@ -76,12 +76,19 @@ def mutation_controls(c):
         elif label=='producer-loss':d['shutdown_by_operator']=False
         elif label=='output-before-call':
             outcome=next(f for f in frames if f.get('method')=='rawResponseItem/completed' and f['params']['item']['type']=='function_call_output');frames.remove(outcome);frames.insert(frames.index(raw[0]),outcome)
-        else:
+        elif label=='changed-native-command':
             for f in frames:
                 if f.get('method') in ('item/started','item/completed') and f['params']['item']['type']=='commandExecution':f['params']['item']['command']='changed-native-command'
                 if f.get('id')==4:
                     for item in f['result']['thread']['turns'][0]['items']:
                         if item['type']=='commandExecution':item['command']='changed-native-command'
+        else:
+            terminal=next(f for f in frames if f.get('method')=='turn/completed')
+            for method in ('item/started','item/completed'):
+                extra=copy.deepcopy(next(f for f in frames if f.get('method')==method and f['params']['item']['type']=='commandExecution'))
+                extra['params']['item']['id']='unsubmitted-native-id';frames.insert(frames.index(terminal),extra)
+            snapshot=next(f for f in frames if f.get('id')==4)['result']['thread']['turns'][0]['items']
+            extra=copy.deepcopy(next(i for i in snapshot if i['type']=='commandExecution'));extra['id']='unsubmitted-native-id';snapshot.append(extra)
         try:admit(d)
         except (ValueError,KeyError):continue
         raise RuntimeError('false admission: '+label)
