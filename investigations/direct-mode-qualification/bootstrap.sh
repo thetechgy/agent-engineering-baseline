@@ -7,9 +7,11 @@ python3 "$experiment/test_gates.py"
 mkdir -p "$root/evidence" "$root/codex/bin" "$root/home"
 git clone -q https://github.com/NVIDIA/SkillEvaluator.git "$root/evaluator"
 git -C "$root/evaluator" checkout -q d9fa4b4041b31f417f02ed145999ecf1f0c11fcd
+python3 "$experiment/prepare_evaluator.py" "$root/evaluator" "$root/evidence"
 uv sync --project "$root/evaluator" --python 3.13.15 --frozen --no-dev --extra tier3
 uv pip install --python "$root/evaluator/.venv/bin/python" --no-deps "$experiment"
 python="$root/evaluator/.venv/bin/python"
+"$python" "$experiment/test_publication.py" "$root/evaluator" "$root/evidence"
 curl -fsSL --proto '=https' --proto-redir '=https' https://github.com/openai/codex/releases/download/rust-v0.166.0/codex-x86_64-unknown-linux-musl.tar.gz -o "$root/codex.tar.gz"
 printf '%s  %s\n' a0bf572d2f93f056c6712a6da348e96078dc84f3885fd7be67807ef389cb3978 "$root/codex.tar.gz" | sha256sum -c
 tar -xzf "$root/codex.tar.gz" -C "$root/codex/bin"

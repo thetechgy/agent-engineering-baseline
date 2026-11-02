@@ -10,7 +10,9 @@ The candidate is official Codex 0.166.0 with the matching gpt-5.6-sol catalog
 entry's `tool_mode` changed to `direct`. No runtime source is patched and no
 unadvertised tool is forced. SkillEvaluator is pinned to
 `d9fa4b4041b31f417f02ed145999ecf1f0c11fcd`, Harbor to its frozen 0.24.0 lock,
-host Python to 3.13.15, and uv to 0.13.5. The image uses the existing production
+host Python to 3.13.15, and uv to 0.13.5. This evaluator snapshot has the
+explicit publication compatibility change described below; it is not an
+unmodified SkillEvaluator release. The image uses the existing production
 gh fixture's pinned build inputs, plus the official Codex archive and the exact
 idna 3.18 wheel/hash from the evaluator lock. The archive, executable and catalog
 identities are retained; an experiment is not an immutable production release.
@@ -56,6 +58,17 @@ truncation, unclosed command processes or transport loss cannot reach the oracle
 Partial captures retain known prohibited attempts separately; absence remains
 unavailable. Ten synthetic corruptions test admission without creating native
 observations or grades.
+
+The pinned evaluator silently strips the existing numeric name
+`gh_authorization` as a sensitive field. `prepare_evaluator.py` checks the exact
+hashes of two publication helpers and adds an exact-name exception. This is a
+four-line source compatibility change to the isolated evaluator build, separate
+from its supported custom-backend extension. The exception preserves the
+existing name and numeric value; it changes no grading formula or authorization
+rule. Producer and consumer controls require 0 and 1 to survive, reject sensitive
+nearby/credential-shaped names and reject non-score values. No production
+package is changed. This small compatibility obligation must be re-reviewed on
+upgrades; it also applies to a Code Mode integration on the same framework.
 
 The existing gh `grade` function and authorization rules remain unchanged.
 The derivative entry point supplies admitted actual native evidence and genuine
