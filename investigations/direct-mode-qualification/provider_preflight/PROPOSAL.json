@@ -1,0 +1,75 @@
+{
+  "schema": "bounded-provider-proposal-v1",
+  "authorization": "not-granted",
+  "execution_ready": false,
+  "model": "gpt-5.6-sol",
+  "runtime": "official-codex-0.166.0",
+  "runtime_identities": {
+    "model": "gpt-5.6-sol",
+    "catalog_original_sha256": "1384625c0b6b3e67d3c60da29becea2b017f2c283fc1e2d05b8edafb4698eb10",
+    "catalog_direct_sha256": "559ed891ba1f2ec04700b581d0566f0f8c8f9d91778f86e7c2d9b493925e7ec6",
+    "codex_sha256": "b8a11fedf24b2dfb59a70c9e52b030f9a508dcd49cd2dd0d41956f4c785156b8",
+    "production_admission": false
+  },
+  "tool_mode": "direct",
+  "tool_catalog_sha256": "3261a6c98fca558d3ce6561bcfd3924357c1f7e04c8e376a7132891ae635f369",
+  "reasoning_effort": "low",
+  "service_tier": "default",
+  "provider_origin": "https://api.openai.com",
+  "provider_path": "/v1/responses",
+  "cache_ttl": "30m",
+  "fixture": "provider-smoke-v1-fresh-nonce",
+  "grading": "none-compatibility-only",
+  "limits": {
+    "sessions": 1,
+    "generation_requests": 8,
+    "count_requests": 8,
+    "input_tokens_per_request": 16000,
+    "input_tokens_total": 128000,
+    "output_tokens_per_request_including_reasoning": 1024,
+    "output_tokens_total": 8192,
+    "tool_calls": 16,
+    "command_deadline_seconds": 10,
+    "session_deadline_seconds": 300,
+    "retries": 0,
+    "max_micro_usd": 1000000
+  },
+  "billing": {
+    "reserved_input_micro_usd_per_token": 5,
+    "reserved_output_micro_usd_per_token": 20,
+    "generation_ceiling_micro_usd": 803840,
+    "count_fee_headroom_micro_usd": 196160,
+    "count_fee_per_request_maximum_micro_usd": 24520,
+    "count_fee_verified": false,
+    "count_fee_per_request_micro_usd": null,
+    "account_model_access_verified": false,
+    "account_pricing_verified": false,
+    "sources": [
+      "https://developers.openai.com/api/docs/models/gpt-5.6-sol",
+      "https://developers.openai.com/api/docs/guides/prompt-caching",
+      "https://developers.openai.com/api/docs/guides/token-counting"
+    ]
+  },
+  "inconclusive_conditions": [
+    "token-limit",
+    "request-limit",
+    "tool-limit",
+    "command-deadline",
+    "session-deadline",
+    "smoke-allowlist",
+    "scenario-not-completed"
+  ],
+  "future_conditions": [
+    {
+      "model": "gpt-6.1-sol",
+      "tool_mode": "direct",
+      "status": "not-qualified-separate-catalog-and-budget-required"
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "tool_mode": "code_mode_only",
+      "status": "user-development-model-separate-evidence-qualification-required"
+    }
+  ],
+  "condition_id": "sha256:bb38d0ebf603ef5ba11318826f6f9c777856963e8d040ec15767067895608a0b"
+}

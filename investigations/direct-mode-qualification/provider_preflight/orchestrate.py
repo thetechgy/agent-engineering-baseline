@@ -42,7 +42,8 @@ class Trial:
   up_ip=result('inspect','--format','{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}',upstream)
   relay=self.create('relay',agent_net,['python3','-I','/opt/qualification/provider_preflight/relay.py'],[secret_mount,'type=bind,src='+str(self.private/'trial-token')+',dst=/run/trial-token,readonly','type=bind,src='+str(self.evidence)+',dst=/evidence'],user=self.uid)
   docker('network','connect',up_net,relay)
-  self.start_service(relay,{'mode':'fake','nonce':self.nonce,'scenario':self.scenario,'count_fee_micro_usd':0,'fake_origin':'http://'+up_ip+':8080','extra_commands':['sleep 30'] if self.scenario=='watchdog' else []})
+  self.relay_config={'mode':'fake','nonce':self.nonce,'scenario':self.scenario,'count_fee_micro_usd':0,'fake_origin':'http://'+up_ip+':8080','extra_commands':['sleep 30'] if self.scenario=='watchdog' else []}
+  self.start_service(relay,self.relay_config)
   relay_ip=result('inspect','--format','{{(index .NetworkSettings.Networks "'+agent_net+'").IPAddress}}',relay)
   # Scoped rules affect only this disposable bridge and are removed exactly.
   for chain,rule in [('INPUT',['-i',self.bridge,'-j','DROP']),('DOCKER-USER',['-i',self.bridge,'-j','DROP']),('DOCKER-USER',['-i',self.bridge,'-d',relay_ip,'-p','tcp','--dport','8991','-j','ACCEPT'])]:
@@ -53,7 +54,7 @@ class Trial:
   for p in (self.private/'skills',skill):p.chmod(0o755)
   (skill/'SKILL.md').chmod(0o444)
   agent=self.create('agent',agent_net,['sleep','infinity'],['type=volume,src='+self.volume+',dst=/workspace','type=bind,src='+str(self.private/'skills')+',dst=/skills,readonly'])
-  docker('start',agent);docker('exec','--user','root',agent,'chmod','777','/workspace')
+  docker('start',agent);docker('exec',agent,'python3','-I','-c',"from pathlib import Path;p=Path('/workspace/.preflight-write-probe');p.open('x').close();p.unlink()")
   # Readiness uses the expected container's PID namespace and a TCP listener
   # probe; an error response alone is never producer authentication.
   for cid,port in [(upstream,8080),(relay,8991)]:
@@ -90,6 +91,7 @@ print(json.dumps(out))""" % json.dumps([['relay',self.relay_ip,8991],['relay_wro
   p=subprocess.Popen(['docker','exec','-i',self.agent,'python3','-I','/opt/qualification/provider_preflight/native.py'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,start_new_session=True)
   p.stdin.write(canonical(payload)+b'\n');p.stdin.close();selector=selectors.DefaultSelector();selector.register(p.stdout,selectors.EVENT_READ);selector.register(p.stderr,selectors.EVENT_READ)
   buffer=b'';error=b'';active={};started=time.monotonic();capture=None;stop=None;events=0;total=0
+  journal=(self.evidence/'native-events.jsonl').open('xb')
   try:
    while selector.get_map():
     now=time.monotonic()
@@ -104,25 +106,40 @@ print(json.dumps(out))""" % json.dumps([['relay',self.relay_ip,8991],['relay_wro
      total+=len(data);buffer+=data
      if total>8*1024*1024 or len(buffer)>1024*1024:raise Stop('controller-stream-cap','inconclusive-limit')
      while b'\n' in buffer:
-      line,buffer=buffer.split(b'\n',1);record=decode(line);events+=1
+      line,buffer=buffer.split(b'\n',1);record=decode(line);events+=1;journal.write(canonical(record)+b'\n');journal.flush()
       if events>4096:raise Stop('controller-event-cap','inconclusive-limit')
       if 'capture' in record:capture=record['capture']
       f=record.get('frame',{});item=f.get('params',{}).get('item',{})
-      if f.get('method')=='item/started' and item.get('type') in ('commandExecution','fileChange'):active[item['id']]=time.monotonic()
-      if f.get('method')=='item/completed':active.pop(item['id'],None)
+      if f.get('method')=='item/started' and item.get('type') in ('commandExecution','fileChange'):
+       if item['id'] in active:raise Stop('duplicate-active-operation')
+       active[item['id']]=time.monotonic()
+      if f.get('method')=='item/completed' and item.get('status') in ('completed','failed','declined','interrupted'):
+       if item['type']!='commandExecution' or item['status'] in ('declined','interrupted') or isinstance(item.get('exitCode'),int):active.pop(item['id'],None)
    if stop:
     docker('kill',self.agent)
     if result('inspect','--format','{{.State.Running}}',self.agent)!='false':raise Stop('watchdog-did-not-stop-container')
    p.wait(timeout=5)
   finally:
-   selector.close()
+   journal.close();selector.close()
    if p.poll() is None:
     os.killpg(p.pid,signal.SIGKILL);p.wait(timeout=5)
-  if stop:return {'classification':'inconclusive-limit','reason':stop,'container_stopped':True}
+  if stop:
+   (self.evidence/'watchdog-fired.json').write_bytes(canonical({'reason':stop,'active_ids':sorted(active),'elapsed_seconds':time.monotonic()-started,'container_running_after_stop':False}))
+   return {'classification':'inconclusive-limit','reason':stop,'container_stopped':True}
   if error:(self.evidence/'controller-stderr.txt').write_bytes(error.replace(self.secret.encode(),b'[provider-key]').replace(self.token.encode(),b'[trial-token]'))
   if buffer or capture is None:raise Stop('missing-native-capture')
   (self.evidence/'native.json').write_bytes(canonical(capture))
   return capture
+ def restart_probe(self):
+  before=(self.evidence/'relay.jsonl').read_bytes()
+  docker('kill',self.relay)
+  p=subprocess.Popen(['docker','start','-ai',self.relay],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+  try:stdout,stderr=p.communicate(canonical(self.relay_config)+b'\n',timeout=10)
+  except subprocess.TimeoutExpired:p.kill();p.wait();raise Stop('relay-restart-not-fenced')
+  state=decode(docker('inspect','--format','{{json .State}}',self.relay).stdout)
+  if state['Running'] or state['Pid']!=0 or state['ExitCode']==0 or (self.evidence/'relay.jsonl').read_bytes()!=before:raise Stop('relay-restart-not-fenced')
+  if b'refusing-existing' not in stderr:raise Stop('relay-restart-failed-for-unqualified-reason')
+  return True
  def archive_file(self,path):
   response=subprocess.run(['docker','cp',self.agent+':'+path,'-'],stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=10)
   if response.returncode:
@@ -165,7 +182,7 @@ def main():
  global IMAGE
  IMAGE=result('image','inspect','--format','{{.Id}}',IMAGE)
  destination=Path(sys.argv[1]);destination.mkdir(parents=True,exist_ok=True);rows=[]
- for scenario in ('normal','watchdog','http-error','stream-cut','model-mismatch','patch-escape','input-limit','output-limit','secret-response','redirect'):
+ for scenario in ('normal','watchdog','http-error','stream-cut','model-mismatch','patch-escape','input-limit','output-limit','secret-response','redirect','tool-limit'):
   with tempfile.TemporaryDirectory(prefix='provider-preflight-') as td:
    trial=Trial(Path(td),scenario)
    try:
@@ -174,13 +191,15 @@ def main():
     if scenario=='normal':
      reqs=[decode(p.read_bytes()) for p in sorted(trial.evidence.glob('request-*.json'),key=lambda p:int(p.stem.split('-')[-1]))]
      responses=[p.read_bytes() for p in sorted(trial.evidence.glob('response-*.sse'),key=lambda p:int(p.stem.split('-')[-1]))]
-     effects=trial.effects();summary=admit(capture,reqs,responses,audit,effects,trial.nonce)
+     effects=trial.effects();summary=admit(capture,reqs,responses,audit,effects,trial.nonce);summary['actual_relay_restart_refused']=trial.restart_probe()
     elif scenario=='watchdog':
      if capture!={'classification':'inconclusive-limit','reason':'command-time-limit','container_stopped':True}:raise Stop('watchdog-control-did-not-fire')
      summary=capture
     else:
      closed=[r for r in audit if r['phase']=='session-closed']
-     if not closed or any(r['phase']=='response-admitted' for r in audit):raise Stop('failure-control-false-admission')
+     expected={'http-error':('provider-error','upstream-http-503'),'stream-cut':('unavailable-evidence','incomplete-provider-stream'),'model-mismatch':('unavailable-evidence','response-model-or-scope'),'patch-escape':('inconclusive-policy','patch-outside-smoke-policy'),'input-limit':('inconclusive-limit','input-token-limit'),'output-limit':('inconclusive-limit','provider-output-limit'),'secret-response':('security-block','credential-in-provider-response'),'redirect':('provider-error','upstream-http-307'),'tool-limit':('inconclusive-limit','tool-limit')}[scenario]
+     if len(closed)!=1 or (closed[0]['category'],closed[0]['reason'])!=expected or any(r['phase']=='response-admitted' for r in audit):raise Stop('failure-control-false-admission')
+     if any(f.get('method')=='item/started' and f.get('params',{}).get('item',{}).get('type') in ('commandExecution','fileChange') for f in capture.get('frames',[])):raise Stop('buffered-failure-released-a-tool')
      # The stock runtime must not retry into a second generation reservation.
      if len([r for r in audit if r['phase']=='generation-reserved'])>1 or len([r for r in audit if r['phase']=='authenticated-client-request'])!=1:raise Stop('unintended-native-retry')
      summary={'classification':closed[-1]['category'],'reason':closed[-1]['reason'],'no_tool_release':True}
@@ -196,6 +215,6 @@ def main():
       data=path.read_bytes()
       if trial.secret.encode() in data or trial.token.encode() in data:raise Stop('credential-in-export')
       target=destination/scenario/path.name;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(data)
- (destination/'preflight.json').write_bytes(canonical({'schema':'bounded-provider-preflight-v1','inference_executed':False,'real_provider_compatibility':'unqualified','rows':rows,'cleanup_verified':True,'immutable_image_id':IMAGE}))
+ (destination/'preflight.json').write_bytes(canonical({'schema':'bounded-provider-preflight-v1','inference_executed':False,'real_provider_compatibility':'unqualified','rows':rows,'cleanup_verified':True,'immutable_image_id':IMAGE,'ready_for_inference':False,'live_blockers':['separate-authorization-required','account-model-access-and-pricing-unverified','token-count-fee-unverified']}))
  print(json.dumps({'fake_native_scenarios':len(rows),'cleanup_verified':True,'real_inference':False}))
 if __name__=='__main__':main()

@@ -25,6 +25,11 @@ class Controls(unittest.TestCase):
   self.assertEqual(digest(CATALOG),CATALOG_SHA)
   with self.assertRaises(Stop):Upstream('never-read-real-key')
   with self.assertRaises(Stop):Policy(NONCE).prepare(request())
+ def test_restart_and_ledger_substitution_fail_closed(self):
+  r=self.relay()
+  with self.assertRaises(Stop):self.relay()
+  r.audit.unlink();r.audit.write_text('replacement');r.audit.chmod(0o600)
+  with self.assertRaises(Stop):r.record('must-not-accept')
  def test_atomic_reservation_and_no_refund_after_failure(self):
   upstream=Fake('transport');r=self.relay(fake=upstream)
   with self.assertRaises(Stop):r.request(canonical(request()))
@@ -42,6 +47,10 @@ class Controls(unittest.TestCase):
    folder=self.root/field;folder.mkdir();r=Relay(p,Fake(),'trial-token-'+'x'*32,folder/'audit.jsonl')
    with self.assertRaises(Stop) as e:r.request(canonical(request()))
    self.assertEqual(e.exception.category,'inconclusive-limit')
+ def test_generation_dollar_limit_never_forwards(self):
+  p=Policy(NONCE,count_fee=0,fake=True);p.reserved=990000;r=self.relay(p)
+  with self.assertRaises(Stop) as e:r.request(canonical(request()))
+  self.assertEqual(e.exception.category,'inconclusive-limit');self.assertEqual(r.upstream.paths,['/v1/responses/input_tokens'])
  def test_zero_retries_and_usage_reserve_latch(self):
   p=Policy(NONCE,count_fee=3,fake=True);r=self.relay(p)
   r.request(canonical(request()));reserved=p.reserved

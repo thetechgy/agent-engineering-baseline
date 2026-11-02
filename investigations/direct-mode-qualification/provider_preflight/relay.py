@@ -14,8 +14,8 @@ class Upstream:
    if not parsed.hostname or not ipaddress.ip_address(parsed.hostname).is_private or not key.startswith('fake-provider-key-'):raise Stop('fake-route-or-key')
    self.host,self.port=parsed.hostname,parsed.port
   else:
-   if not approval or approval.get('inference_authorized') is not True or approval.get('max_micro_usd')!=1000000 or approval.get('model')!=MODEL or approval.get('count_fee_verified') is not True or approval.get('account_model_access_verified') is not True:raise Stop('separate-authorization-and-billing-required','preflight-blocked')
-   if not approval.get('reviewed_source') or not approval.get('billing_evidence_sha256') or approval.get('expires_unix',0)<=time.time():raise Stop('invalid-authorization-record','preflight-blocked')
+   if not approval or approval.get('inference_authorized') is not True or approval.get('max_micro_usd')!=1000000 or approval.get('model')!=MODEL or approval.get('count_fee_verified') is not True or approval.get('account_model_access_verified') is not True or approval.get('account_pricing_verified') is not True or approval.get('input_micro_usd_per_token')!=5 or approval.get('output_micro_usd_per_token')!=20 or approval.get('cache_ttl')!='30m':raise Stop('separate-authorization-and-billing-required','preflight-blocked')
+   if not isinstance(approval.get('reviewed_source'),str) or len(approval['reviewed_source'])!=40 or not isinstance(approval.get('billing_evidence_sha256'),str) or len(approval['billing_evidence_sha256'])!=64 or not 0<approval.get('expires_unix',0)-time.time()<=86400 or not 0<=time.time()-approval.get('pricing_checked_unix',0)<=3600:raise Stop('invalid-or-stale-authorization-record','preflight-blocked')
    self.host,self.port='api.openai.com',443
  def post(self,path,body,timeout):
   if path not in ('/v1/responses','/v1/responses/input_tokens'):raise Stop('upstream-path')
@@ -32,14 +32,23 @@ class Upstream:
   finally:conn.close()
 class Relay:
  def __init__(self,policy,upstream,token,audit):
-  self.policy,self.upstream,self.token=policy,upstream,token;self.audit=Path(audit);self.lock=threading.Lock();self.previous='0'*64;self.sequence=0;self.submissions=[]
-  if self.audit.exists():raise Stop('refusing-existing-relay-ledger')
+  self.policy,self.upstream,self.token=policy,upstream,token;self.audit=Path(audit);self.lock=threading.Lock();self.audit_lock=threading.Lock();self.previous='0'*64;self.sequence=0;self.submissions=[]
+  try:fd=os.open(self.audit,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
+  except OSError:raise Stop('refusing-existing-or-unsafe-relay-ledger') from None
+  m=os.fstat(fd);self.audit_identity=(m.st_dev,m.st_ino);self.audit_fd=fd
   self.record('session-open',model=MODEL)
+ def __del__(self):
+  fd=getattr(self,'audit_fd',None)
+  if fd is not None:
+   os.close(fd);self.audit_fd=None
  def record(self,phase,**fields):
-  row={'sequence':self.sequence,'previous':self.previous,'phase':phase,'reserved_micro_usd':self.policy.reserved,**fields}
-  raw=canonical(row);fd=os.open(self.audit,os.O_WRONLY|os.O_CREAT|os.O_APPEND,0o600)
-  with os.fdopen(fd,'ab') as f:f.write(raw+b'\n');f.flush();os.fsync(f.fileno())
-  self.previous=hashlib.sha256(raw).hexdigest();self.sequence+=1
+  with self.audit_lock:
+   row={'sequence':self.sequence,'previous':self.previous,'phase':phase,'reserved_micro_usd':self.policy.reserved,**fields}
+   raw=canonical(row);fd=os.open(self.audit,os.O_WRONLY|os.O_APPEND|os.O_NOFOLLOW)
+   m=os.fstat(fd)
+   if (m.st_dev,m.st_ino)!=self.audit_identity or m.st_uid!=os.getuid() or m.st_nlink!=1 or m.st_mode&0o077:os.close(fd);raise Stop('relay-ledger-substitution')
+   with os.fdopen(fd,'ab') as f:f.write(raw+b'\n');f.flush();os.fsync(f.fileno())
+   self.previous=hashlib.sha256(raw).hexdigest();self.sequence+=1
  def request(self,body):
   if not self.lock.acquire(blocking=False):
    self.policy.closed=('concurrent-or-retried-request','unavailable-evidence');raise Stop(*self.policy.closed)

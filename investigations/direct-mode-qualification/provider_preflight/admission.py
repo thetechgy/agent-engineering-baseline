@@ -7,7 +7,7 @@ from policy import Policy,Stop,MODEL,canonical,decode,digest,smoke
 
 def admit(capture,requests,responses,audit,effects,nonce):
  native=observe(capture);actions=smoke(nonce)
- if len(requests)!=len(responses) or len(requests)!=6:raise Stop('provider-roundtrip-population')
+ if len(requests)!=len(responses) or not 1<=len(requests)<=8:raise Stop('provider-roundtrip-population')
  if any(r.get('model')!=MODEL for r in requests):raise Stop('outbound-model-drift')
  if '- provider-smoke:' not in json.dumps(requests[0]):raise Stop('skill-not-natively-advertised')
  policy=Policy(nonce,count_fee=0,fake=True);expected=[]
@@ -24,20 +24,32 @@ def admit(capture,requests,responses,audit,effects,nonce):
   target=calls if kind in ('function_call','custom_tool_call') else outputs;key=i['call_id']
   if key in target or (target is outputs and key not in calls):raise Stop('raw-call-order-or-identity')
   target[key]=i
- if len(expected)!=5 or {i['call_id'] for i in expected}!=set(calls) or set(outputs)!=set(calls):raise Stop('native-original-inventory')
+ if len({i['call_id'] for i in expected})!=len(expected) or {i['call_id'] for i in expected}!=set(calls) or set(outputs)!=set(calls):raise Stop('native-original-inventory')
  for e in expected:
   i=calls[e['call_id']]
   for k in ('type','call_id','name','arguments' if e['type']=='function_call' else 'input'):
    if i.get(k)!=e.get(k):raise Stop('native-original-arguments')
- commands={i['id']:i for i in native['commands']};patches={i['id']:i for i in native['patches']}
- if set(commands)!={'smoke-read','smoke-failure','smoke-verify'} or set(patches)!={'smoke-patch'}:raise Stop('native-execution-population')
- for key,name,code in [('smoke-read','read',0),('smoke-failure','failure',7),('smoke-verify','verify',0)]:
-  item=commands[key]
-  if item['exitCode']!=code or item['cwd']!='/workspace' or shlex.split(item['command'])!=['/bin/sh','-lc',actions[name]]:raise Stop('native-command-outcome')
- if nonce not in commands['smoke-read']['aggregatedOutput'] or commands['smoke-verify']['aggregatedOutput']!=nonce+'\n':raise Stop('skill-read-or-recovery-verification')
- patch=patches['smoke-patch']
+ commands={i['id']:i for i in native['commands']};patches={i['id']:i for i in native['patches']};roles={};expected_commands=set();expected_patches=set()
+ # Determine scenario roles from ORIGINAL provider submissions, then correlate
+ # execution exclusively by the authenticated native call ID, never command text.
+ for e in expected:
+  key=e['call_id']
+  if e['type']=='custom_tool_call':role='patch';expected_patches.add(key)
+  else:
+   args=decode(e['arguments']);role=next((name for name,value in actions.items() if name!='patch' and args['cmd']==value),None)
+   if role is None:raise Stop('unreviewed-scenario-action','inconclusive-policy')
+   if role!='denied':expected_commands.add(key)
+  roles.setdefault(role,[]).append(key)
+ if set(roles)!={'read','failure','verify','denied','patch'} or len(roles['patch'])!=1 or len(roles['denied'])!=1:raise Stop('scenario-not-completed','inconclusive-scenario')
+ if set(commands)!=expected_commands or set(patches)!=expected_patches:raise Stop('native-execution-population')
+ for role,code in [('read',0),('failure',7),('verify',0)]:
+  for key in roles[role]:
+   item=commands[key]
+   if item['exitCode']!=code or item['cwd']!='/workspace' or shlex.split(item['command'])!=['/bin/sh','-lc',actions[role]]:raise Stop('native-command-outcome')
+ if not any(nonce in commands[key]['aggregatedOutput'] for key in roles['read']) or not all(commands[key]['aggregatedOutput']==nonce+'\n' for key in roles['verify']):raise Stop('skill-read-or-recovery-verification')
+ patch=patches[roles['patch'][0]]
  if patch['status']!='completed' or len(patch['changes'])!=1 or patch['changes'][0]['path']!='/workspace/smoke.txt':raise Stop('native-patch-outcome')
- denial=outputs['smoke-denied']['output']
+ denial=outputs[roles['denied'][0]]['output']
  if not isinstance(denial,str) or 'approval policy is Never' not in denial:raise Stop('approval-denial-unqualified')
  if effects!={'smoke_bytes':(nonce+'\n').encode().hex(),'forbidden_present':False,'collection':'paused-container-daemon-archive'}:raise Stop('independent-effects')
- return {'evidence_class':'fake-provider-native-compatibility-control','original_submissions':5,'native_commands':3,'native_patches':1,'denied_without_command_item':1,'native_skill_read':True,'nonzero_recovery':True,'independent_effects':True,'real_provider_compatibility':'unqualified-no-inference','grading':'not-invoked'}
+ return {'evidence_class':'fake-provider-native-compatibility-control','original_submissions':len(expected),'native_commands':len(commands),'native_patches':1,'denied_without_command_item':1,'native_skill_read':True,'nonzero_recovery':True,'independent_effects':True,'real_provider_compatibility':'unqualified-no-inference','grading':'not-invoked'}

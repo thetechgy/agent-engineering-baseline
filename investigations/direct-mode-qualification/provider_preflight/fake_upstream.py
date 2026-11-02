@@ -21,7 +21,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
    plan=[{'type':'function_call','call_id':'smoke-read','name':'exec_command','arguments':json.dumps({'cmd':actions['read']})}, {'type':'function_call','call_id':'smoke-failure','name':'exec_command','arguments':json.dumps({'cmd':actions['failure']})}, {'type':'custom_tool_call','call_id':'smoke-patch','name':'apply_patch','input':actions['patch']}, {'type':'function_call','call_id':'smoke-verify','name':'exec_command','arguments':json.dumps({'cmd':actions['verify']})}, {'type':'function_call','call_id':'smoke-denied','name':'exec_command','arguments':json.dumps({'cmd':actions['denied'],'sandbox_permissions':'require_escalated','justification':'harmless compatibility denial'})}]
    if mode=='watchdog':plan=[{'type':'function_call','call_id':'smoke-sleep','name':'exec_command','arguments':json.dumps({'cmd':'sleep 30'})}]
    if mode=='patch-escape':plan=[{'type':'custom_tool_call','call_id':'bad-patch','name':'apply_patch','input':'*** Begin Patch\n*** Add File: /root/escape\n+bad\n*** End Patch\n'}]
-   if mode=='tool-limit':plan=plan*4
+   if mode=='tool-limit':plan=[dict(plan[0],call_id='over-'+str(i)) for i in range(17)]
    item=plan[calls-1] if calls<=len(plan) else {'type':'message','id':'final','role':'assistant','content':[{'type':'output_text','text':'canned compatibility finished'}]}
    items=plan if mode=='tool-limit' else [item]
    result={'id':'fake-'+str(calls),'model':'other' if mode=='model-mismatch' else MODEL,'status':'completed','output':items,'usage':{'input_tokens':1000,'output_tokens':100}}
