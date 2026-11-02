@@ -1,5 +1,5 @@
 """Operator-only relay: buffered admission, no redirects/proxies/retries or arbitrary routes."""
-import ipaddress,hashlib,hmac,http.client,http.server,json,os,socket,stat,sys,threading,time
+import re,ipaddress,hashlib,hmac,http.client,http.server,json,os,socket,stat,sys,threading,time
 from pathlib import Path
 from urllib.parse import urlsplit
 sys.path.insert(0,str(Path(__file__).resolve().parent))
@@ -15,6 +15,8 @@ class Upstream:
    self.host,self.port=parsed.hostname,parsed.port
   else:
    if not approval or approval.get('inference_authorized') is not True or approval.get('max_micro_usd')!=1000000 or approval.get('model')!=MODEL or approval.get('count_fee_verified') is not True or approval.get('account_model_access_verified') is not True or approval.get('account_pricing_verified') is not True or approval.get('input_micro_usd_per_token')!=5 or approval.get('output_micro_usd_per_token')!=20 or approval.get('cache_ttl')!='30m':raise Stop('separate-authorization-and-billing-required','preflight-blocked')
+   fee=approval.get('count_fee_micro_usd')
+   if not isinstance(fee,int) or isinstance(fee,bool) or not 0<=fee<=24520 or approval.get('count_fee_covers_request_bytes')!=262144:raise Stop('unverified-count-fee-bound','preflight-blocked')
    if not isinstance(approval.get('reviewed_source'),str) or len(approval['reviewed_source'])!=40 or not isinstance(approval.get('billing_evidence_sha256'),str) or len(approval['billing_evidence_sha256'])!=64 or not 0<approval.get('expires_unix',0)-time.time()<=86400 or not 0<=time.time()-approval.get('pricing_checked_unix',0)<=3600:raise Stop('invalid-or-stale-authorization-record','preflight-blocked')
    self.host,self.port='api.openai.com',443
  def post(self,path,body,timeout):
@@ -24,7 +26,15 @@ class Upstream:
   try:
    conn.request('POST',path,body=canonical(body),headers={'Authorization':'Bearer '+self.key,'Content-Type':'application/json'})
    response=conn.getresponse()
-   if response.status!=200:raise Stop('upstream-http-'+str(response.status),'provider-error')
+   if response.status!=200:
+    details={'http_status':response.status}
+    try:
+     error=decode(response.read(8193)).get('error',{})
+     for name in ('type','code','param'):
+      value=error.get(name)
+      if isinstance(value,str) and re.fullmatch(r'[a-z0-9_.\[\]]{1,128}',value) and 'secret' not in value and 'authorization' not in value:details[name]=value
+    except Exception:pass
+    stopped=Stop('upstream-http-'+str(response.status),'provider-error');stopped.provider_details=details;raise stopped
    data=response.read(4*1024*1024+1)
    if len(data)>4*1024*1024:raise Stop('upstream-response-cap','inconclusive-limit')
    if self.key.encode() in data:raise Stop('credential-in-provider-response','security-block')
@@ -74,7 +84,7 @@ class Relay:
    return wire
   except Exception as error:
    e=error if isinstance(error,Stop) else Stop('relay-transport-or-parse-failure')
-   self.policy.closed=(e.reason,e.category);self.record('session-closed',reason=e.reason,category=e.category)
+   self.policy.closed=(e.reason,e.category);self.record('session-closed',reason=e.reason,category=e.category,provider_details=getattr(e,'provider_details',None))
    raise e from None
   finally:self.lock.release()
  def remaining(self):
@@ -121,9 +131,9 @@ if __name__=='__main__':
  approval=config.get('authorization')
  # Check authorization BEFORE reading any real provider credential.
  if mode=='live':Upstream('',approval=approval)
- key=read_secret('/run/provider-key');token=read_secret('/run/trial-token')
  policy=Policy(config['nonce'],count_fee=config.get('count_fee_micro_usd'),fake=mode=='fake')
  if mode=='live' and (policy.count_fee is None or policy.count_fee!=approval.get('count_fee_micro_usd')):raise Stop('unverified-count-fee','preflight-blocked')
+ key=read_secret('/run/provider-key');token=read_secret('/run/trial-token')
  if mode=='fake':policy.extra_commands=set(config.get('extra_commands',[]))
  relay=Relay(policy,Upstream(key,fake_origin=config.get('fake_origin') if mode=='fake' else None,approval=approval),token,'/evidence/relay.jsonl')
  server=http.server.HTTPServer(('0.0.0.0',8991),relay.handler());server.daemon_threads=True

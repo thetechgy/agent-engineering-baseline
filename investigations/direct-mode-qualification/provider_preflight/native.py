@@ -60,9 +60,12 @@ try:
 except Exception as failure:error=type(failure).__name__
 finally:
  owned=p.poll() is None
- if owned:p.terminate()
- try:p.wait(timeout=3)
- except subprocess.TimeoutExpired:p.kill();p.wait()
+ if owned:
+  try:a.shutdown(socket.SHUT_WR)
+  except OSError:errors.append('operator-input-shutdown-failed')
+ try:p.wait(timeout=50)
+ except subprocess.TimeoutExpired:
+  p.kill();p.wait();status='unavailable';error='inconclusive-producer-shutdown-time-limit'
  r.join(2);e.join(2)
  if errors or r.is_alive() or e.is_alive():status='unavailable';error='native-transport-failure'
  capture={'schema':'native-capture-v1','channel':'socketpair','status':status,'error':error,'frames':frames,'thread_id':thread,'turn_id':turn,'state':state,'shutdown_by_operator':owned,'producer_exit':p.returncode,'controller_dumpable':ctypes.CDLL(None).prctl(3,0,0,0,0),'yama_ptrace_scope':Path('/proc/sys/kernel/yama/ptrace_scope').read_text().strip()}

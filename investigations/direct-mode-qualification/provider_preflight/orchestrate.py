@@ -14,7 +14,7 @@ class Trial:
  def __init__(self,root,scenario):
   self.root=root;self.scenario=scenario;self.uid=str(os.getuid());self.id='aebpf-'+uuid.uuid4().hex[:10];self.containers=[];self.networks=[];self.rules=[];self.volume=None;self.processes=[]
   self.bridge='pf'+uuid.uuid4().hex[:10];self.nonce=uuid.uuid4().hex;self.secret='fake-provider-key-'+uuid.uuid4().hex;self.token='trial-token-'+uuid.uuid4().hex
-  self.private=root/'private';self.private.mkdir(mode=0o700);self.evidence=root/'evidence';self.evidence.mkdir(mode=0o700)
+  self.private=root/'private';self.private.mkdir(mode=0o700);self.evidence=root/'evidence';self.evidence.mkdir(mode=0o700);self.upstream_evidence=root/'upstream-evidence';self.upstream_evidence.mkdir(mode=0o700)
   for name,value in [('provider-key',self.secret),('trial-token',self.token)]:p=self.private/name;p.write_text(value);p.chmod(0o400)
  def net(self,suffix,bridge=None):
   args=['network','create','--internal','--label','aeb.preflight='+self.id]
@@ -37,7 +37,7 @@ class Trial:
   # Both fake networks are internal. Only a future separately authorized live
   # deployment would attach the relay to an approved provider egress network.
   secret_mount='type=bind,src='+str(self.private/'provider-key')+',dst=/run/provider-key,readonly'
-  upstream=self.create('upstream',up_net,['python3','-I','/opt/qualification/provider_preflight/fake_upstream.py'],[secret_mount],user=self.uid)
+  upstream=self.create('upstream',up_net,['python3','-I','/opt/qualification/provider_preflight/fake_upstream.py'],[secret_mount,'type=bind,src='+str(self.upstream_evidence)+',dst=/upstream-evidence'],user=self.uid)
   self.start_service(upstream,{'nonce':self.nonce,'scenario':self.scenario})
   up_ip=result('inspect','--format','{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}',upstream)
   relay=self.create('relay',agent_net,['python3','-I','/opt/qualification/provider_preflight/relay.py'],[secret_mount,'type=bind,src='+str(self.private/'trial-token')+',dst=/run/trial-token,readonly','type=bind,src='+str(self.evidence)+',dst=/evidence'],user=self.uid)
@@ -191,7 +191,12 @@ def main():
     if scenario=='normal':
      reqs=[decode(p.read_bytes()) for p in sorted(trial.evidence.glob('request-*.json'),key=lambda p:int(p.stem.split('-')[-1]))]
      responses=[p.read_bytes() for p in sorted(trial.evidence.glob('response-*.sse'),key=lambda p:int(p.stem.split('-')[-1]))]
-     effects=trial.effects();summary=admit(capture,reqs,responses,audit,effects,trial.nonce);summary['synthetic_patch_controls_rejected']=patch_controls(capture,reqs,responses,audit,effects,trial.nonce);summary['actual_relay_restart_refused']=trial.restart_probe()
+     consumed=[decode(line) for line in (trial.upstream_evidence/'consumption.jsonl').read_bytes().splitlines()]
+     generated=[r for r in consumed if r['path']=='/v1/responses']
+     reserved=[r for r in audit if r['phase']=='generation-reserved']
+     if len(consumed)!=2*len(reqs) or len(generated)!=len(reqs) or [r['body_sha256'] for r in generated]!=[r['request_sha256'] for r in reserved]:raise Stop('upstream-consumption-population')
+     if any(r['max_output_tokens']!=1024 or r['service_tier']!='default' or r['cache_options']!={'ttl':'30m'} or not r['expected_provider_authorization'] for r in generated):raise Stop('outbound-budget-controls-not-consumed')
+     effects=trial.effects();(trial.evidence/'independent-effects.json').write_bytes(canonical({'nonce':trial.nonce,'effects':effects}));summary=admit(capture,reqs,responses,audit,effects,trial.nonce);summary['synthetic_patch_controls_rejected']=patch_controls(capture,reqs,responses,audit,effects,trial.nonce);summary['actual_relay_restart_refused']=trial.restart_probe()
     elif scenario=='watchdog':
      if capture!={'classification':'inconclusive-limit','reason':'command-time-limit','container_stopped':True}:raise Stop('watchdog-control-did-not-fire')
      summary=capture
@@ -203,7 +208,7 @@ def main():
      # The stock runtime must not retry into a second generation reservation.
      if len([r for r in audit if r['phase']=='generation-reserved'])>1 or len([r for r in audit if r['phase']=='authenticated-client-request'])!=1:raise Stop('unintended-native-retry')
      summary={'classification':closed[-1]['category'],'reason':closed[-1]['reason'],'no_tool_release':True}
-    summary.update(scenario=scenario,network=trial.probe);rows.append(summary)
+    summary.update(scenario=scenario,network=trial.probe);rows.append(summary);(trial.evidence/'scenario-result.json').write_bytes(canonical(summary))
    finally:
     try:trial.cleanup()
     finally:
@@ -211,6 +216,8 @@ def main():
       if process.poll() is not None:
        data=process.stderr.read(65537).replace(trial.secret.encode(),b'[provider-key]').replace(trial.token.encode(),b'[trial-token]')
        if data:(trial.evidence/('service-'+str(index)+'-stderr.txt')).write_bytes(data[:65536])
+     consumption=trial.upstream_evidence/'consumption.jsonl'
+     if consumption.exists():(trial.evidence/'upstream-consumption.jsonl').write_bytes(consumption.read_bytes())
      for path in trial.evidence.iterdir():
       data=path.read_bytes()
       if trial.secret.encode() in data or trial.token.encode() in data:raise Stop('credential-in-export')

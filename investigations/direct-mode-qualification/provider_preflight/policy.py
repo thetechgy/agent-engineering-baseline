@@ -80,6 +80,7 @@ class Policy:
   self.check();kind=item.get('type');name=item.get('name');key=item.get('call_id')
   if not isinstance(key,str) or not key or key in self.ids:self.stop('tool-identity')
   if self.tools>=self.max_tools:self.stop('tool-limit','inconclusive-limit')
+  if (name=='apply_patch' and kind!='custom_tool_call') or (name=='exec_command' and kind!='function_call'):self.stop('advertised-tool-kind-mismatch','provider-protocol-error')
   if kind=='custom_tool_call' and name=='apply_patch':
    if item.get('input') not in (self.actions['patch'],self.actions['patch'].rstrip('\n')):self.stop('patch-outside-smoke-policy','inconclusive-policy')
   elif kind=='function_call' and name=='exec_command':

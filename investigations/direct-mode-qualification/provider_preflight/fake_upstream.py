@@ -1,8 +1,8 @@
 """Canned upstream on an internal-only network; no internet route or real key."""
-import http.server,json,sys,time
+import http.server,json,sys,time,os
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parent))
-from policy import MODEL,canonical,decode,smoke
+from policy import MODEL,CATALOG_SHA,canonical,decode,smoke,catalog,digest
 config=decode(sys.stdin.buffer.readline(65537));actions=smoke(config['nonce']);mode=config['scenario'];calls=0
 key=Path('/run/provider-key').read_text().strip()
 class Handler(http.server.BaseHTTPRequestHandler):
@@ -11,6 +11,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
   global calls
   if self.headers.get('Authorization')!='Bearer '+key:self.send_error(403);return
   body=decode(self.rfile.read(int(self.headers['Content-Length'])))
+  if body.get('model')!=MODEL or digest(catalog(body))!=CATALOG_SHA or body.get('reasoning',{}).get('effort')!='low':self.send_error(422);return
+  if self.path=='/v1/responses' and (body.get('max_output_tokens')!=1024 or body.get('service_tier')!='default' or body.get('prompt_cache_options')!={'ttl':'30m'}):self.send_error(422);return
+  row={'path':self.path,'model':body['model'],'body_sha256':digest(body),'tool_catalog_sha256':digest(catalog(body)),'max_output_tokens':body.get('max_output_tokens'),'service_tier':body.get('service_tier'),'cache_options':body.get('prompt_cache_options'),'expected_provider_authorization':True}
+  fd=os.open('/upstream-evidence/consumption.jsonl',os.O_WRONLY|os.O_CREAT|os.O_APPEND,0o600)
+  with os.fdopen(fd,'ab') as stream:stream.write(canonical(row)+b'\n');stream.flush();os.fsync(stream.fileno())
   if self.path=='/v1/responses/input_tokens':
    data=canonical({'object':'response.input_tokens','input_tokens':20000 if mode=='input-limit' else 1000});mime='application/json'
   elif self.path=='/v1/responses':

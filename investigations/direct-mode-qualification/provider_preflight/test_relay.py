@@ -96,6 +96,20 @@ class Controls(unittest.TestCase):
    self.assertEqual(r.upstream.paths,[])
    c=http.client.HTTPConnection('127.0.0.1',server.server_port,timeout=2);c.request('POST','http://attacker.invalid/v1/responses',canonical(request()),{'Content-Type':'application/json','Authorization':'Bearer '+r.token});response=c.getresponse();self.assertEqual(response.status,503);response.read();c.close();self.assertEqual(r.upstream.paths,[])
   finally:server.shutdown();thread.join();server.server_close()
+ def test_safe_provider_error_metadata(self):
+  key='fake-provider-key-'+'x'*32
+  class Handler(http.server.BaseHTTPRequestHandler):
+   def log_message(self,*args):pass
+   def do_POST(self):
+    self.rfile.read(int(self.headers['Content-Length']));body=canonical({'error':{'type':'invalid_request_error','code':'unknown_parameter','param':'input[0].type','message':key}})
+    self.send_response(400);self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body)
+  server=http.server.HTTPServer(('127.0.0.1',0),Handler);thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
+  try:
+   up=Upstream(key,fake_origin='http://127.0.0.1:'+str(server.server_port))
+   with self.assertRaises(Stop) as error:up.post('/v1/responses',request(),2)
+   self.assertEqual(error.exception.provider_details,{'http_status':400,'type':'invalid_request_error','code':'unknown_parameter','param':'input[0].type'})
+   self.assertNotIn(key,str(error.exception));self.assertNotIn(key,json.dumps(error.exception.provider_details))
+  finally:server.shutdown();thread.join();server.server_close()
  def test_credential_file_protection(self):
   p=self.root/'key';p.write_text('fake-provider-secret-'+'x'*32);p.chmod(0o600);self.assertEqual(read_secret(p),p.read_text())
   p.chmod(0o644)
