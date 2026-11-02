@@ -4,7 +4,7 @@ from pathlib import Path
 root=Path(sys.argv[1]);source=root/'evidence';target=root/'public-evidence';target.mkdir()
 selected=[];total=0
 for p in source.rglob('*'):
- if p.suffix not in ('.json','.jsonl','.log','.txt'):continue
+ if p.suffix not in ('.json','.jsonl','.log','.txt','.sse'):continue
  st=p.lstat()
  if not stat.S_ISREG(st.st_mode) or st.st_nlink!=1:raise RuntimeError('unsafe export member')
  if st.st_size>8*1024*1024:raise RuntimeError('oversized diagnostic member')

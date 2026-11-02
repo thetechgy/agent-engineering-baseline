@@ -47,3 +47,8 @@ for profile in positive denied boundary; do
     > "$root/evidence/$profile.log" 2>&1 || { tail -60 "$root/evidence/$profile.log"; exit 1; }
 done
 "$python" "$experiment/check_results.py" "$root/evidence"
+
+# This entry point has no live provider execution mode or credential input.
+"$python" "$experiment/provider_preflight/test_relay.py"
+timeout 120 docker build -f "$experiment/provider_preflight/Dockerfile" -t aeb-provider-preflight:166 "$experiment" > "$root/evidence/preflight-image-build.log" 2>&1 || { tail -60 "$root/evidence/preflight-image-build.log"; exit 1; }
+timeout --signal=INT --kill-after=15s 240 "$python" "$experiment/provider_preflight/orchestrate.py" "$root/evidence/provider-preflight"
