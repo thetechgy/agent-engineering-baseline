@@ -4,6 +4,8 @@ from pathlib import Path
 if ctypes.CDLL(None,use_errno=True).prctl(4,0,0,0,0)!=0:raise RuntimeError('non-dumpable controller required')
 sys.path.insert(0,str(Path(__file__).resolve().parent))
 from policy import MODEL,Stop,canonical,decode
+yama=Path('/proc/sys/kernel/yama/ptrace_scope').read_text().strip()
+if int(yama)<1:raise Stop('same-uid-producer-boundary-unavailable')
 payload=decode(sys.stdin.buffer.readline(65537))
 exe=Path('/opt/codex/bin/codex');m=exe.lstat()
 if not stat.S_ISREG(m.st_mode) or m.st_uid!=0 or m.st_mode&0o022 or hashlib.sha256(exe.read_bytes()).hexdigest()!=payload['codex_sha256']:raise Stop('official-runtime-substitution')
@@ -68,5 +70,5 @@ finally:
   p.kill();p.wait();status='unavailable';error='inconclusive-producer-shutdown-time-limit'
  r.join(2);e.join(2)
  if errors or r.is_alive() or e.is_alive():status='unavailable';error='native-transport-failure'
- capture={'schema':'native-capture-v1','channel':'socketpair','status':status,'error':error,'frames':frames,'thread_id':thread,'turn_id':turn,'state':state,'shutdown_by_operator':owned,'producer_exit':p.returncode,'controller_dumpable':ctypes.CDLL(None).prctl(3,0,0,0,0),'yama_ptrace_scope':Path('/proc/sys/kernel/yama/ptrace_scope').read_text().strip()}
+ capture={'schema':'native-capture-v1','producer_pid':p.pid,'controller_pid':os.getpid(),'channel':'socketpair','status':status,'error':error,'frames':frames,'thread_id':thread,'turn_id':turn,'state':state,'shutdown_by_operator':owned,'producer_exit':p.returncode,'controller_dumpable':ctypes.CDLL(None).prctl(3,0,0,0,0),'yama_ptrace_scope':Path('/proc/sys/kernel/yama/ptrace_scope').read_text().strip()}
  emit({'capture':capture})

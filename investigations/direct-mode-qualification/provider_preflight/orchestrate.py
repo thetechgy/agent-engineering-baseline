@@ -131,7 +131,7 @@ print(json.dumps(out))""" % json.dumps([['relay',self.relay_ip,8991],['relay_wro
   (self.evidence/'native.json').write_bytes(canonical(capture))
   return capture
  def restart_probe(self):
-  before=(self.evidence/'relay.jsonl').read_bytes()
+  before=(self.evidence/'relay.jsonl').read_bytes();original_pid=int(result('inspect','--format','{{.State.Pid}}',self.relay))
   docker('kill',self.relay)
   p=subprocess.Popen(['docker','start','-ai',self.relay],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
   try:stdout,stderr=p.communicate(canonical(self.relay_config)+b'\n',timeout=10)
@@ -139,6 +139,7 @@ print(json.dumps(out))""" % json.dumps([['relay',self.relay_ip,8991],['relay_wro
   state=decode(docker('inspect','--format','{{json .State}}',self.relay).stdout)
   if state['Running'] or state['Pid']!=0 or state['ExitCode']==0 or (self.evidence/'relay.jsonl').read_bytes()!=before:raise Stop('relay-restart-not-fenced')
   if b'refusing-existing' not in stderr:raise Stop('relay-restart-failed-for-unqualified-reason')
+  (self.evidence/'relay-restart.json').write_bytes(canonical({'original_pid':original_pid,'replacement_running':state['Running'],'replacement_pid':state['Pid'],'replacement_exit_code':state['ExitCode'],'ledger_sha256_before':hashlib.sha256(before).hexdigest(),'ledger_sha256_after':hashlib.sha256((self.evidence/'relay.jsonl').read_bytes()).hexdigest(),'expected_existing_ledger_refusal':True}))
   return True
  def archive_file(self,path):
   response=subprocess.run(['docker','cp',self.agent+':'+path,'-'],stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=10)
@@ -177,6 +178,7 @@ print(json.dumps(out))""" % json.dumps([['relay',self.relay_ip,8991],['relay_wro
    r=subprocess.run(['docker','volume','rm',self.volume],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,timeout=10)
    if r.returncode:failures.append('volume')
   if failures:raise Stop('task-owned-cleanup-failed')
+  (self.evidence/'cleanup.json').write_bytes(canonical({'verified':True,'containers_removed':len(self.containers),'networks_removed':len(self.networks),'volumes_removed':int(self.volume is not None),'firewall_rules_removed':len(self.rules)}))
 
 def main():
  global IMAGE
