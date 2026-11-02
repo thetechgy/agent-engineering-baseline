@@ -53,7 +53,7 @@ def admit(capture,requests,responses,audit,effects,nonce):
    if item['exitCode']!=code or item['cwd']!='/workspace' or shlex.split(item['command'])!=['/bin/sh','-lc',actions[role]]:raise Stop('native-command-outcome')
  if not any(nonce in commands[key]['aggregatedOutput'] for key in roles['read']) or not all(commands[key]['aggregatedOutput']==nonce+'\n' for key in roles['verify']):raise Stop('skill-read-or-recovery-verification')
  patch=patches[roles['patch'][0]]
- if patch['status']!='completed' or len(patch['changes'])!=1 or patch['changes'][0]['path']!='/workspace/smoke.txt':raise Stop('native-patch-outcome')
+ if patch['status']!='completed' or len(patch['changes'])!=1 or patch['changes'][0]['path']!='/workspace/smoke.txt' or patch['changes'][0]['kind']!={'type':'add'}:raise Stop('native-patch-outcome')
  denial=outputs[roles['denied'][0]]['output']
  if not isinstance(denial,str) or 'approval policy is Never' not in denial:raise Stop('approval-denial-unqualified')
  if effects!={'smoke_bytes':(nonce+'\n').encode().hex(),'forbidden_present':False,'collection':'paused-container-daemon-archive'}:raise Stop('independent-effects')
@@ -63,7 +63,7 @@ def admit(capture,requests,responses,audit,effects,nonce):
 def patch_controls(capture,requests,responses,audit,effects,nonce):
  """Synthetic corruption of actual patch evidence; never native grades."""
  import copy
- labels=('changed-original-patch','missing-patch-output','changed-native-patch-id','changed-independent-bytes')
+ labels=('changed-original-patch','missing-patch-output','changed-native-patch-id','changed-independent-bytes','changed-native-patch-kind')
  for label in labels:
   c=copy.deepcopy(capture);e=copy.deepcopy(effects)
   patch=next(f['params']['item'] for f in c['frames'] if f.get('method')=='rawResponseItem/completed' and f['params']['item']['type']=='custom_tool_call')
@@ -76,7 +76,13 @@ def patch_controls(capture,requests,responses,audit,effects,nonce):
     if f.get('id')==4:
      for item in f['result']['thread']['turns'][0]['items']:
       if item['type']=='fileChange':item['id']='foreign-patch-id'
-  else:e['smoke_bytes']='00'
+  elif label=='changed-independent-bytes':e['smoke_bytes']='00'
+  else:
+   for f in c['frames']:
+    if f.get('method') in ('item/started','item/completed') and f['params']['item']['type']=='fileChange':f['params']['item']['changes'][0]['kind']={'type':'update','move_path':'/workspace/unexpected'}
+    if f.get('id')==4:
+     for item in f['result']['thread']['turns'][0]['items']:
+      if item['type']=='fileChange':item['changes'][0]['kind']={'type':'update','move_path':'/workspace/unexpected'}
   try:admit(c,requests,responses,audit,e,nonce)
   except ValueError:continue
   raise Stop('synthetic-patch-corruption-admitted')

@@ -1,6 +1,7 @@
 """Independent bounded data reader. Uses trusted checkout code, never artifact code."""
 import sys
 sys.dont_write_bytecode=True
+if not __debug__:raise SystemExit("Optimized evidence readers are not qualified")
 import hashlib,io,json,stat,subprocess,zipfile
 from pathlib import Path,PurePosixPath
 HERE=Path(__file__).resolve().parent;sys.path.insert(0,str(HERE))
@@ -34,7 +35,7 @@ def main():
   requests=[read(prefix+f'request-{i}.json') for i in range(1,7)];responses=[z.read(prefix+f'response-{i}.sse') for i in range(1,7)]
   audit=[decode(s) for s in z.read(prefix+'relay.jsonl').splitlines()];effects=read(prefix+'independent-effects.json');capture=read(prefix+'native.json')
   recomputed=admit(capture,requests,responses,audit,effects['effects'],effects['nonce']);assert recomputed['native_patches']==1 and recomputed['native_commands']==3
-  assert len(patch_controls(capture,requests,responses,audit,effects['effects'],effects['nonce']))==4
+  assert len(patch_controls(capture,requests,responses,audit,effects['effects'],effects['nonce']))==5
   restart=read(prefix+'relay-restart.json');assert restart['original_pid']>0 and restart['replacement_running'] is False and restart['replacement_pid']==0 and restart['replacement_exit_code']!=0 and restart['ledger_sha256_before']==restart['ledger_sha256_after']
   consumed=[decode(s) for s in z.read(prefix+'upstream-consumption.jsonl').splitlines()];generated=[r for r in consumed if r['path']=='/v1/responses'];reserved=[r for r in audit if r['phase']=='generation-reserved']
   assert len(consumed)==12 and [r['body_sha256'] for r in generated]==[r['request_sha256'] for r in reserved]
@@ -52,6 +53,6 @@ def main():
    elif scenario!='normal':
     assert not any(r['phase']=='response-admitted' for r in rows) and len([r for r in rows if r['phase']=='authenticated-client-request'])==1
     assert not any(f.get('method')=='item/started' and f.get('params',{}).get('item',{}).get('type') in ('commandExecution','fileChange') for f in read(p+'native.json')['frames'])
-  result={'schema':'independent-provider-preflight-verification-v1','source':head,'run_id':int(run_id),'attempt':1,'artifact_id':a['id'],'artifact_digest':a['digest'],'members':len(entries),'bytes_uncompressed':sum(e.file_size for e in entries),'native_fake_scenarios':len(scenarios),'native_patch_corruptions_rejected':4,'exact_catalog_sha256':CATALOG_SHA,'independent_upstream_consumption':True,'ledger_chains_and_cleanup_verified':True,'real_inference_executed':False,'ready_for_inference':False,'live_blockers':pre['live_blockers']}
+  result={'schema':'independent-provider-preflight-verification-v1','source':head,'run_id':int(run_id),'attempt':1,'artifact_id':a['id'],'artifact_digest':a['digest'],'members':len(entries),'bytes_uncompressed':sum(e.file_size for e in entries),'native_fake_scenarios':len(scenarios),'native_patch_corruptions_rejected':5,'exact_catalog_sha256':CATALOG_SHA,'independent_upstream_consumption':True,'ledger_chains_and_cleanup_verified':True,'real_inference_executed':False,'ready_for_inference':False,'live_blockers':pre['live_blockers']}
   (out/'PREFLIGHT_VERIFICATION.json').write_bytes(canonical(result));print(json.dumps(result,indent=2))
 if __name__=='__main__':main()
