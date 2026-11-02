@@ -88,3 +88,11 @@ No judge, delegation, hosted tools, fallback model, second session or automatic
 retry is authorized. Stop on any evidence, identity, private-boundary or budget
 contradiction. Do not ask to spend until count fees and account access/pricing are
 verified and the selected live execution host/configuration passes these controls.
+
+Admission also binds retained request bodies and reconstructed outbound requests to
+the ledger hashes, checks response hashes, and compares recovery output types, call
+IDs and exact output bytes with native observations. Raw tool records after terminal
+completion are rejected. Nine independent corruptions require specific admission
+reasons; they run on each newly captured normal scenario and in the independent
+reader. Retained archives may be replayed with `AEB_PREFLIGHT_ARCHIVE` and
+`test_admission.py`; replay is not a new native capture or provider execution.

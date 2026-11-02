@@ -52,3 +52,5 @@ done
 "$python" "$experiment/provider_preflight/test_relay.py"
 timeout 120 docker build -f "$experiment/provider_preflight/Dockerfile" -t aeb-provider-preflight:166 "$experiment" > "$root/evidence/preflight-image-build.log" 2>&1 || { tail -60 "$root/evidence/preflight-image-build.log"; exit 1; }
 timeout --signal=INT --kill-after=15s 240 "$python" "$experiment/provider_preflight/orchestrate.py" "$root/evidence/provider-preflight"
+
+AEB_PREFLIGHT_DIRECTORY="$root/evidence/provider-preflight/normal" "$python" "$experiment/provider_preflight/test_admission.py"

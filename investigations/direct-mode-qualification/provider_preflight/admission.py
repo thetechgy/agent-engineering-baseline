@@ -1,5 +1,5 @@
 """Native patch/command/denial evidence admission, never a numerical grader."""
-import json,shlex,sys
+import hashlib,json,shlex,sys
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from aeb_direct.lifecycle import observe
@@ -11,16 +11,24 @@ def admit(capture,requests,responses,audit,effects,nonce):
  if any(r.get('model')!=MODEL for r in requests):raise Stop('outbound-model-drift')
  if '- provider-smoke:' not in json.dumps(requests[0]):raise Stop('skill-not-natively-advertised')
  policy=Policy(nonce,count_fee=0,fake=True);expected=[];contexts={}
- reserved=[r['input_tokens'] for r in audit if r['phase']=='generation-reserved']
- if len(reserved)!=len(responses) or len([r for r in audit if r['phase']=='response-admitted'])!=len(responses) or any(r['phase']=='session-closed' for r in audit):raise Stop('relay-closure-or-reservation-population')
- for request,response,count in zip(requests,responses,reserved):
-  policy.prepare(request);policy.reserve(count);new=policy.response(response);expected.extend(new)
+ phases=('count-reserved','generation-reserved','provider-response-observed','response-admitted')
+ records={phase:[r for r in audit if r['phase']==phase] for phase in phases}
+ if any(len(rows)!=len(responses) for rows in records.values()) or any(r['phase']=='session-closed' for r in audit):raise Stop('relay-closure-or-reservation-population')
+ for index,(request,response) in enumerate(zip(requests,responses)):
+  if digest(request)!=records['count-reserved'][index]['request_sha256']:raise Stop('retained-request-hash')
+  outbound=policy.prepare(request)
+  if digest(outbound)!=records['generation-reserved'][index]['request_sha256']:raise Stop('outbound-request-hash')
+  wire_hash=hashlib.sha256(response).hexdigest()
+  if any(wire_hash!=records[phase][index]['response_sha256'] for phase in ('provider-response-observed','response-admitted')):raise Stop('retained-response-hash')
+  policy.reserve(records['generation-reserved'][index]['input_tokens']);new=policy.response(response);expected.extend(new)
   for call in new:contexts[call['call_id']]=request['input']
- calls={};outputs={}
+ calls={};outputs={};terminal=False
  for f in capture['frames']:
+  if f.get('method')=='turn/completed':terminal=True
   if f.get('method')!='rawResponseItem/completed':continue
   p=f['params'];i=p['item'];kind=i['type']
   if kind not in ('function_call','custom_tool_call','function_call_output','custom_tool_call_output'):continue
+  if terminal:raise Stop('raw-call-after-terminal')
   if p['threadId']!=capture['thread_id'] or p['turnId']!=capture['turn_id']:raise Stop('raw-call-scope')
   target=calls if kind in ('function_call','custom_tool_call') else outputs;key=i['call_id']
   if key in target or (target is outputs and key not in calls):raise Stop('raw-call-order-or-identity')
@@ -44,8 +52,18 @@ def admit(capture,requests,responses,audit,effects,nonce):
  if set(roles)!={'read','failure','verify','denied','patch'} or len(roles['patch'])!=1 or len(roles['denied'])!=1:raise Stop('scenario-not-completed','inconclusive-scenario')
  for role,required_roles in [('patch',('read','failure')),('verify',('read','failure','patch'))]:
   for key in roles[role]:
-   available={item.get('call_id') for item in contexts[key] if item.get('type') in ('function_call_output','custom_tool_call_output')}
-   if any(not set(roles[prior])<=available for prior in required_roles):raise Stop('recovery-context-not-consumed','inconclusive-scenario')
+   available={}
+   for item in contexts[key]:
+    if item.get('type') not in ('function_call_output','custom_tool_call_output'):continue
+    prior=item.get('call_id')
+    if prior in available:raise Stop('recovery-context-duplicate-output')
+    available[prior]=item
+   for prior_role in required_roles:
+    for prior in roles[prior_role]:
+     if prior not in available:raise Stop('recovery-context-not-consumed','inconclusive-scenario')
+     observed=outputs[prior];consumed=available[prior]
+     if any(consumed.get(field)!=observed.get(field) for field in ('type','call_id','output')):raise Stop('recovery-context-output-mismatch')
+
  if set(commands)!=expected_commands or set(patches)!=expected_patches:raise Stop('native-execution-population')
  for role,code in [('read',0),('failure',7),('verify',0)]:
   for key in roles[role]:

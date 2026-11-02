@@ -5,6 +5,7 @@ HERE=Path(__file__).resolve().parent
 sys.path.insert(0,str(HERE))
 from policy import MODEL,Stop,canonical,decode,smoke
 from admission import admit,patch_controls
+from admission_controls import admission_controls
 IMAGE='aeb-provider-preflight:166'
 def run(args,**kwargs):
  return subprocess.run(args,stdout=subprocess.PIPE,stderr=subprocess.PIPE,check=True,timeout=30,**kwargs)
@@ -198,7 +199,7 @@ def main():
      reserved=[r for r in audit if r['phase']=='generation-reserved']
      if len(consumed)!=2*len(reqs) or len(generated)!=len(reqs) or [r['body_sha256'] for r in generated]!=[r['request_sha256'] for r in reserved]:raise Stop('upstream-consumption-population')
      if any(r['max_output_tokens']!=1024 or r['service_tier']!='default' or r['cache_options']!={'ttl':'30m'} or not r['expected_provider_authorization'] for r in generated):raise Stop('outbound-budget-controls-not-consumed')
-     effects=trial.effects();(trial.evidence/'independent-effects.json').write_bytes(canonical({'nonce':trial.nonce,'effects':effects}));summary=admit(capture,reqs,responses,audit,effects,trial.nonce);summary['synthetic_patch_controls_rejected']=patch_controls(capture,reqs,responses,audit,effects,trial.nonce);summary['actual_relay_restart_refused']=trial.restart_probe()
+     effects=trial.effects();(trial.evidence/'independent-effects.json').write_bytes(canonical({'nonce':trial.nonce,'effects':effects}));summary=admit(capture,reqs,responses,audit,effects,trial.nonce);summary['synthetic_patch_controls_rejected']=patch_controls(capture,reqs,responses,audit,effects,trial.nonce);summary['admission_corruptions_rejected']=admission_controls(capture,reqs,responses,audit,effects,trial.nonce);summary['actual_relay_restart_refused']=trial.restart_probe()
     elif scenario=='watchdog':
      if capture!={'classification':'inconclusive-limit','reason':'command-time-limit','container_stopped':True}:raise Stop('watchdog-control-did-not-fire')
      summary=capture
