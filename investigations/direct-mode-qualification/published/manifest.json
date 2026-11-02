@@ -1,0 +1,12 @@
+{
+  "schema": "offline-qualification-publication-v1",
+  "tested_source": "5bf6b2a6a8a9529ac44bf10d3b3b25efd78ca68f",
+  "run_id": 41366173772,
+  "artifact_id": 13107730649,
+  "artifact_digest": "sha256:a32fd8b460613aaa5fc820b7e9383e70f7927aa8acd14906437bedf71398597b",
+  "raw_evidence_changed": false,
+  "files": {
+    "RESULTS.md": "29aa3485d62b1087907a995d4edc7bfaaad427a0e7f3bf8e7bed53b4284ae8b1",
+    "published/offline-verification.json": "74f479c819c2de5631ae8e86c06fd463a9027559353d805526f5d221992da27e"
+  }
+}

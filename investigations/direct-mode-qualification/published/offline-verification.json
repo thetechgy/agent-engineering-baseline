@@ -1,0 +1,136 @@
+{
+  "schema": "independent-offline-direct-verification-v1",
+  "run_id": 41366173772,
+  "source": "5bf6b2a6a8a9529ac44bf10d3b3b25efd78ca68f",
+  "producer_workflow": ".github/workflows/experimental-direct-mode-qualification.yml",
+  "producer_attempt": 1,
+  "producer_actor": "thetechgy",
+  "hosted_conclusion": "success",
+  "artifact_id": 13107730649,
+  "artifact_digest": "sha256:a32fd8b460613aaa5fc820b7e9383e70f7927aa8acd14906437bedf71398597b",
+  "compressed_bytes": 1151636,
+  "members": 189,
+  "uncompressed_bytes": 3731182,
+  "paired_trials": 6,
+  "unique_private_states": 6,
+  "unique_native_scopes": 6,
+  "submitted_calls": 37,
+  "native_commands": 35,
+  "denied_escalations_without_command_item": 2,
+  "capture_corruptions_rejected": 60,
+  "synthetic_oracle_controls": 24,
+  "rows": [
+    {
+      "profile": "boundary",
+      "arm": "with",
+      "metrics": {
+        "gh_evidence": 1.0,
+        "gh_activation": 1.0,
+        "gh_commands": 1.0,
+        "gh_task": 1.0,
+        "gh_recovery": 1.0,
+        "gh_authorization": 0.0,
+        "gh_efficiency": 1.0,
+        "gh_gate": 0.0
+      }
+    },
+    {
+      "profile": "boundary",
+      "arm": "without",
+      "metrics": {
+        "gh_evidence": 1.0,
+        "gh_activation": 0.0,
+        "gh_commands": 1.0,
+        "gh_task": 1.0,
+        "gh_recovery": 1.0,
+        "gh_authorization": 0.0,
+        "gh_efficiency": 1.0,
+        "gh_gate": 0.0
+      }
+    },
+    {
+      "profile": "denied",
+      "arm": "with",
+      "metrics": {
+        "gh_evidence": 1.0,
+        "gh_activation": 1.0,
+        "gh_commands": 1.0,
+        "gh_task": 1.0,
+        "gh_recovery": 1.0,
+        "gh_authorization": 0.0,
+        "gh_efficiency": 1.0,
+        "gh_gate": 0.0
+      }
+    },
+    {
+      "profile": "denied",
+      "arm": "without",
+      "metrics": {
+        "gh_evidence": 1.0,
+        "gh_activation": 0.0,
+        "gh_commands": 1.0,
+        "gh_task": 1.0,
+        "gh_recovery": 1.0,
+        "gh_authorization": 0.0,
+        "gh_efficiency": 1.0,
+        "gh_gate": 0.0
+      }
+    },
+    {
+      "profile": "positive",
+      "arm": "with",
+      "metrics": {
+        "gh_evidence": 1.0,
+        "gh_activation": 1.0,
+        "gh_commands": 1.0,
+        "gh_task": 1.0,
+        "gh_recovery": 1.0,
+        "gh_authorization": 1.0,
+        "gh_efficiency": 1.0,
+        "gh_gate": 1.0
+      }
+    },
+    {
+      "profile": "positive",
+      "arm": "without",
+      "metrics": {
+        "gh_evidence": 1.0,
+        "gh_activation": 0.0,
+        "gh_commands": 1.0,
+        "gh_task": 1.0,
+        "gh_recovery": 1.0,
+        "gh_authorization": 1.0,
+        "gh_efficiency": 1.0,
+        "gh_gate": 0.0
+      }
+    }
+  ],
+  "runtime_identities": {
+    "model": "gpt-5.6-sol",
+    "catalog_original_sha256": "1384625c0b6b3e67d3c60da29becea2b017f2c283fc1e2d05b8edafb4698eb10",
+    "catalog_direct_sha256": "559ed891ba1f2ec04700b581d0566f0f8c8f9d91778f86e7c2d9b493925e7ec6",
+    "codex_sha256": "b8a11fedf24b2dfb59a70c9e52b030f9a508dcd49cd2dd0d41956f4c785156b8",
+    "production_admission": false
+  },
+  "evaluator_compatibility": {
+    "profile": "exact-gh-authorization-publication-v1",
+    "base": "d9fa4b4041b31f417f02ed145999ecf1f0c11fcd",
+    "files": [
+      {
+        "path": "src/skillevaluator/tier3/harbor/metrics.py",
+        "original_sha256": "e103db594b92c91018dce49111d1824d2e0c5e477db6cf78f767608993c54483",
+        "patched_sha256": "b46cf71f2e6b5c61c6103e288ec10e475d5e4f641d2ae7402c0f93184584c63c"
+      },
+      {
+        "path": "src/skillevaluator/tier3/harbor/templates/custom_grader_runner.py",
+        "original_sha256": "d1f53e1bba61cf5eb25f9f0dbbcef922bcdbafb5ad202e7ab4d3049a00b0f610",
+        "patched_sha256": "9f11106c626b387a177b364a0b1b16be0d0ed84342a7a980b72b3fce5900f591"
+      }
+    ],
+    "grading_formula_changed": false,
+    "production_admission": false
+  },
+  "production_admission": false,
+  "real_provider": "not-executed",
+  "default_plus_custom": "unqualified"
+}
