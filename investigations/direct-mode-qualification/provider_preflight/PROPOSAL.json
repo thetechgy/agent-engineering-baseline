@@ -32,7 +32,10 @@
     "command_deadline_seconds": 10,
     "session_deadline_seconds": 300,
     "retries": 0,
-    "max_micro_usd": 1000000
+    "max_micro_usd": 1000000,
+    "request_bytes": 262144,
+    "response_bytes": 4194304,
+    "capture_bytes": 8388608
   },
   "billing": {
     "reserved_input_micro_usd_per_token": 5,
@@ -48,7 +51,8 @@
       "https://developers.openai.com/api/docs/models/gpt-5.6-sol",
       "https://developers.openai.com/api/docs/guides/prompt-caching",
       "https://developers.openai.com/api/docs/guides/token-counting"
-    ]
+    ],
+    "count_fee_scope": "Upper bound must cover the complete 262144-byte count request, including requests rejected before generation"
   },
   "inconclusive_conditions": [
     "token-limit",
@@ -71,5 +75,5 @@
       "status": "user-development-model-separate-evidence-qualification-required"
     }
   ],
-  "condition_id": "sha256:bb38d0ebf603ef5ba11318826f6f9c777856963e8d040ec15767067895608a0b"
+  "condition_id": "sha256:6f4a6c0a66e6c5b1335398f8470fa3080ac2e66cf3e90d101e0166a492e48c31"
 }

@@ -24,7 +24,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
    if mode=='tool-limit':plan=[dict(plan[0],call_id='over-'+str(i)) for i in range(17)]
    item=plan[calls-1] if calls<=len(plan) else {'type':'message','id':'final','role':'assistant','content':[{'type':'output_text','text':'canned compatibility finished'}]}
    items=plan if mode=='tool-limit' else [item]
-   result={'id':'fake-'+str(calls),'model':'other' if mode=='model-mismatch' else MODEL,'status':'completed','output':items,'usage':{'input_tokens':1000,'output_tokens':100}}
+   result={'id':'fake-'+str(calls),'model':'other' if mode=='model-mismatch' else MODEL,'status':'completed','output':items,'usage':{'input_tokens':1000,'output_tokens':100,'total_tokens':1100}}
    events=[{'type':'response.created','response':{'id':result['id']}},*[{'type':'response.output_item.done','item':i} for i in items],{'type':'response.completed','response':result}]
    if mode=='stream-cut':events.pop()
    if mode=='output-limit':events[-1]={'type':'response.incomplete','response':{**result,'status':'incomplete','incomplete_details':{'reason':'max_output_tokens'}}}

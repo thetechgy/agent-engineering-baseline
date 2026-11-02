@@ -116,6 +116,7 @@ class Policy:
   if terminal.get('output')!=items:self.stop('response-item-population')
   usage=terminal.get('usage',{});i=usage.get('input_tokens');o=usage.get('output_tokens')
   if any(not isinstance(v,int) or isinstance(v,bool) or v<0 for v in (i,o)):self.stop('missing-provider-usage')
+  if usage.get('total_tokens')!=i+o or isinstance(usage.get('total_tokens'),bool):self.stop('inconsistent-provider-usage')
   if i>self.last_count or o>self.output:self.stop('provider-exceeded-reservation')
   calls=[]
   for item in items:

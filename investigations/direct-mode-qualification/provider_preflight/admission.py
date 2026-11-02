@@ -10,11 +10,12 @@ def admit(capture,requests,responses,audit,effects,nonce):
  if len(requests)!=len(responses) or not 1<=len(requests)<=8:raise Stop('provider-roundtrip-population')
  if any(r.get('model')!=MODEL for r in requests):raise Stop('outbound-model-drift')
  if '- provider-smoke:' not in json.dumps(requests[0]):raise Stop('skill-not-natively-advertised')
- policy=Policy(nonce,count_fee=0,fake=True);expected=[]
+ policy=Policy(nonce,count_fee=0,fake=True);expected=[];contexts={}
  reserved=[r['input_tokens'] for r in audit if r['phase']=='generation-reserved']
  if len(reserved)!=len(responses) or len([r for r in audit if r['phase']=='response-admitted'])!=len(responses) or any(r['phase']=='session-closed' for r in audit):raise Stop('relay-closure-or-reservation-population')
  for request,response,count in zip(requests,responses,reserved):
-  policy.prepare(request);policy.reserve(count);expected.extend(policy.response(response))
+  policy.prepare(request);policy.reserve(count);new=policy.response(response);expected.extend(new)
+  for call in new:contexts[call['call_id']]=request['input']
  calls={};outputs={}
  for f in capture['frames']:
   if f.get('method')!='rawResponseItem/completed':continue
@@ -41,6 +42,10 @@ def admit(capture,requests,responses,audit,effects,nonce):
    if role!='denied':expected_commands.add(key)
   roles.setdefault(role,[]).append(key)
  if set(roles)!={'read','failure','verify','denied','patch'} or len(roles['patch'])!=1 or len(roles['denied'])!=1:raise Stop('scenario-not-completed','inconclusive-scenario')
+ for role,required_roles in [('patch',('read','failure')),('verify',('read','failure','patch'))]:
+  for key in roles[role]:
+   available={item.get('call_id') for item in contexts[key] if item.get('type') in ('function_call_output','custom_tool_call_output')}
+   if any(not set(roles[prior])<=available for prior in required_roles):raise Stop('recovery-context-not-consumed','inconclusive-scenario')
  if set(commands)!=expected_commands or set(patches)!=expected_patches:raise Stop('native-execution-population')
  for role,code in [('read',0),('failure',7),('verify',0)]:
   for key in roles[role]:
@@ -53,3 +58,26 @@ def admit(capture,requests,responses,audit,effects,nonce):
  if not isinstance(denial,str) or 'approval policy is Never' not in denial:raise Stop('approval-denial-unqualified')
  if effects!={'smoke_bytes':(nonce+'\n').encode().hex(),'forbidden_present':False,'collection':'paused-container-daemon-archive'}:raise Stop('independent-effects')
  return {'evidence_class':'fake-provider-native-compatibility-control','original_submissions':len(expected),'native_commands':len(commands),'native_patches':1,'denied_without_command_item':1,'native_skill_read':True,'nonzero_recovery':True,'independent_effects':True,'real_provider_compatibility':'unqualified-no-inference','grading':'not-invoked'}
+
+
+def patch_controls(capture,requests,responses,audit,effects,nonce):
+ """Synthetic corruption of actual patch evidence; never native grades."""
+ import copy
+ labels=('changed-original-patch','missing-patch-output','changed-native-patch-id','changed-independent-bytes')
+ for label in labels:
+  c=copy.deepcopy(capture);e=copy.deepcopy(effects)
+  patch=next(f['params']['item'] for f in c['frames'] if f.get('method')=='rawResponseItem/completed' and f['params']['item']['type']=='custom_tool_call')
+  key=patch['call_id']
+  if label=='changed-original-patch':patch['input']+='changed'
+  elif label=='missing-patch-output':c['frames']=[f for f in c['frames'] if not (f.get('method')=='rawResponseItem/completed' and f['params']['item'].get('call_id')==key and f['params']['item']['type']=='custom_tool_call_output')]
+  elif label=='changed-native-patch-id':
+   for f in c['frames']:
+    if f.get('method') in ('item/started','item/completed') and f['params']['item']['type']=='fileChange':f['params']['item']['id']='foreign-patch-id'
+    if f.get('id')==4:
+     for item in f['result']['thread']['turns'][0]['items']:
+      if item['type']=='fileChange':item['id']='foreign-patch-id'
+  else:e['smoke_bytes']='00'
+  try:admit(c,requests,responses,audit,e,nonce)
+  except ValueError:continue
+  raise Stop('synthetic-patch-corruption-admitted')
+ return list(labels)

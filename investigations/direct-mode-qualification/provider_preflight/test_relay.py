@@ -7,14 +7,14 @@ NONCE='a'*32
 CATALOG=json.loads(Path(__file__).with_name('tool-catalog.json').read_text())
 def request(n=1):return {'model':MODEL,'stream':True,'input':[{'type':'additional_tools','tools':CATALOG},{'type':'message','role':'user','content':str(n)}],'reasoning':{'effort':'low'}}
 def wire(items=(),*,model=MODEL,status='completed',input_tokens=1000,output_tokens=100):
- response={'id':'fake','model':model,'status':status,'output':list(items),'usage':{'input_tokens':input_tokens,'output_tokens':output_tokens}}
+ response={'id':'fake','model':model,'status':status,'output':list(items),'usage':{'input_tokens':input_tokens,'output_tokens':output_tokens,'total_tokens':(input_tokens or 0)+(output_tokens or 0)}}
  events=[{'type':'response.created','response':{'id':'fake'}},*[{'type':'response.output_item.done','item':i} for i in items],{'type':'response.completed','response':response}]
  return b''.join(b'data: '+canonical(e)+b'\n\n' for e in events)
 class Fake:
  def __init__(self,scenario='normal'):self.paths=[];self.scenario=scenario
  def post(self,path,body,timeout):
   self.paths.append(path)
-  if self.scenario=='transport':raise TimeoutError()
+  if self.scenario=='transport' or (self.scenario=='generation-transport' and path=='/v1/responses'):raise TimeoutError()
   if path.endswith('input_tokens'):return canonical({'object':'response.input_tokens','input_tokens':20000 if self.scenario=='input-cap' else 1000})
   return wire()
 class Controls(unittest.TestCase):
@@ -35,6 +35,12 @@ class Controls(unittest.TestCase):
   with self.assertRaises(Stop):r.request(canonical(request()))
   with self.assertRaises(Stop):r.request(canonical(request(2)))
   self.assertEqual(upstream.paths,['/v1/responses/input_tokens']);self.assertIsNotNone(r.policy.closed)
+ def test_ambiguous_generation_keeps_maximum_reservation(self):
+  upstream=Fake('generation-transport');p=Policy(NONCE,count_fee=11,fake=True);r=self.relay(p,upstream)
+  with self.assertRaises(Stop):r.request(canonical(request()))
+  self.assertEqual(p.reserved,11+1000*5+1024*20)
+  with self.assertRaises(Stop):r.request(canonical(request(2)))
+  self.assertEqual(upstream.paths,['/v1/responses/input_tokens','/v1/responses'])
  def test_eight_requests_and_replay(self):
   r=self.relay()
   for i in range(8):r.request(canonical(request(i)))

@@ -4,7 +4,7 @@ from pathlib import Path
 HERE=Path(__file__).resolve().parent
 sys.path.insert(0,str(HERE))
 from policy import MODEL,Stop,canonical,decode,smoke
-from admission import admit
+from admission import admit,patch_controls
 IMAGE='aeb-provider-preflight:166'
 def run(args,**kwargs):
  return subprocess.run(args,stdout=subprocess.PIPE,stderr=subprocess.PIPE,check=True,timeout=30,**kwargs)
@@ -191,7 +191,7 @@ def main():
     if scenario=='normal':
      reqs=[decode(p.read_bytes()) for p in sorted(trial.evidence.glob('request-*.json'),key=lambda p:int(p.stem.split('-')[-1]))]
      responses=[p.read_bytes() for p in sorted(trial.evidence.glob('response-*.sse'),key=lambda p:int(p.stem.split('-')[-1]))]
-     effects=trial.effects();summary=admit(capture,reqs,responses,audit,effects,trial.nonce);summary['actual_relay_restart_refused']=trial.restart_probe()
+     effects=trial.effects();summary=admit(capture,reqs,responses,audit,effects,trial.nonce);summary['synthetic_patch_controls_rejected']=patch_controls(capture,reqs,responses,audit,effects,trial.nonce);summary['actual_relay_restart_refused']=trial.restart_probe()
     elif scenario=='watchdog':
      if capture!={'classification':'inconclusive-limit','reason':'command-time-limit','container_stopped':True}:raise Stop('watchdog-control-did-not-fire')
      summary=capture
