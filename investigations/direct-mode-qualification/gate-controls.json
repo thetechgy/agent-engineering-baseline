@@ -1,0 +1,30 @@
+{
+  "evidence_class": "synthetic-gate-controls-not-runtime-qualification",
+  "base": "bf40abeb12be819233cca813a6015982ed5a6e6a",
+  "failed_build_exit_before_after": [
+    0,
+    7
+  ],
+  "correlation": [
+    {
+      "synthetic_corruption": "foreign-session",
+      "before_complete": true,
+      "after_complete": false
+    },
+    {
+      "synthetic_corruption": "foreign-completion-session",
+      "before_complete": true,
+      "after_complete": false
+    },
+    {
+      "synthetic_corruption": "wrong-tool",
+      "before_complete": true,
+      "after_complete": false
+    },
+    {
+      "synthetic_corruption": "missing-ack",
+      "before_complete": true,
+      "after_complete": false
+    }
+  ]
+}

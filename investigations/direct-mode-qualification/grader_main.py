@@ -52,7 +52,7 @@ def main():
         'existing_oracle_metrics':reward['custom_metrics'],
         'effect_scope':'production fixture transition replay and workspace artifacts; no live GitHub state',
     }
-    fd=os.open(target.with_name('evidence-classes.json'),os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+    fd=os.open(Path('/opt/gh-eval/evidence-classes.json'),os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
     with os.fdopen(fd,'w') as stream:json.dump(retained,stream)
     target.write_text(json.dumps(reward)+'\n')
     Path(os.environ.get('HARBOR_REWARD_TXT','/logs/verifier/reward.txt')).write_text(str(reward['custom_metrics']['gh_gate']))

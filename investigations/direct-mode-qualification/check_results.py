@@ -19,11 +19,11 @@ for profile in ('positive','denied','boundary'):
   key=identity['initializer']['state_id']
   if key in all_states:raise RuntimeError('private state reused across profiles')
   all_states.add(key)
- captures=[p for p in (root/profile).rglob('*.json') if p.parent.name=='direct-private' and not p.name.endswith(('.attempts.json','.identity.json'))]
+ captures=[p for p in (root/profile).rglob('*.json') if p.parent.name=='direct-private' and not p.name.endswith(('.attempts.json','.identity.json','.classes.json'))]
  if len(captures)!=2:raise RuntimeError('missing authoritative captures')
  for capture in captures:
   raw=json.loads(capture.read_text());admit(raw);mutation_controls(raw)
- classes=[p for p in (root/profile).rglob('evidence-classes.json') if p.parent.name=='verifier']
+ classes=[p for p in (root/profile).rglob('*.classes.json') if p.parent.name=='direct-private']
  if len(classes)!=2:raise RuntimeError('missing separated oracle evidence')
  for path in classes:
   evidence=json.loads(path.read_text())

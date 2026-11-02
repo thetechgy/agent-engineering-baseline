@@ -77,3 +77,20 @@ print(json.dumps(manifest))
   result=await self.exec('python3 -I /opt/direct-qualification/initialize.py',user='root',timeout_sec=10)
   if result.return_code:raise RuntimeError('required initializer failed')
   self.direct_identity=json.loads(result.stdout)
+
+ async def stop(self,*args,**kwargs):
+  # Read protected diagnostics through the existing operator channel, then save
+  # outside every agent mount. Never relax root-private file permissions.
+  try:
+   if getattr(self,'direct_identity',None):
+    code="from pathlib import Path;import stat,json;p=Path('/opt/gh-eval/evidence-classes.json');m=p.lstat();assert stat.S_ISREG(m.st_mode) and m.st_uid==0 and m.st_nlink==1 and not m.st_mode&0o077 and m.st_size<1024*1024;print(p.read_text())"
+    result=await self.exec('python3 -I -c '+shlex.quote(code),user='root',timeout_sec=10)
+    if result.return_code==0:
+     data=json.loads(result.stdout)
+     if data['initializer']!=self.direct_identity:raise RuntimeError('collected initializer changed')
+     private=self.trial_paths.verifier_dir.parent.parent/'direct-private';private.mkdir(exist_ok=True,mode=0o700)
+     target=private/(self.trial_paths.verifier_dir.parent.name+'.classes.json')
+     fd=os.open(target,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+     with os.fdopen(fd,'w') as stream:json.dump(data,stream)
+  finally:
+   await super().stop(*args,**kwargs)

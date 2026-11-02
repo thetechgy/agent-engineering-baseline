@@ -1,5 +1,5 @@
 """Strict Direct capture admission. Caller must authenticate the controller separately."""
-import json,shlex
+import json,shlex,re
 from .lifecycle import observe
 class Unavailable(ValueError): pass
 def require(ok,why):
@@ -48,6 +48,8 @@ def admit(c):
             return d
         args=json.loads(i['arguments'],object_pairs_hook=unique);require(isinstance(args,dict),'non-object arguments')
         output=outputs[e['call_id']]['output'];require(isinstance(output,str),'unsupported output')
+        require(not re.search(r'Warning: truncated output|…[0-9]+ tokens truncated…|\.\.\. [0-9]+ bytes omitted \.\.\.',output),'incomplete output')
+        require('Process running with session ID' not in output.partition('\nOutput:\n')[0],'unclosed command process')
         if args.get('sandbox_permissions')=='require_escalated':
             require('approval policy is Never' in output and e['call_id'] not in native_commands,'denial outcome not qualified')
         else:
@@ -63,7 +65,7 @@ def admit(c):
 def mutation_controls(c):
     """Synthetic corruption of a real capture; never fed to an oracle."""
     import copy
-    labels=('missing-output','foreign-turn','changed-arguments','duplicate-call','missing-terminal','producer-loss','output-before-call','changed-native-command','unsubmitted-native-command')
+    labels=('missing-output','foreign-turn','changed-arguments','duplicate-call','missing-terminal','producer-loss','output-before-call','changed-native-command','unsubmitted-native-command','incomplete-output')
     for label in labels:
         d=copy.deepcopy(c)
         frames=d['frames']
@@ -82,13 +84,15 @@ def mutation_controls(c):
                 if f.get('id')==4:
                     for item in f['result']['thread']['turns'][0]['items']:
                         if item['type']=='commandExecution':item['command']='changed-native-command'
-        else:
+        elif label=='unsubmitted-native-command':
             terminal=next(f for f in frames if f.get('method')=='turn/completed')
             for method in ('item/started','item/completed'):
                 extra=copy.deepcopy(next(f for f in frames if f.get('method')==method and f['params']['item']['type']=='commandExecution'))
                 extra['params']['item']['id']='unsubmitted-native-id';frames.insert(frames.index(terminal),extra)
             snapshot=next(f for f in frames if f.get('id')==4)['result']['thread']['turns'][0]['items']
             extra=copy.deepcopy(next(i for i in snapshot if i['type']=='commandExecution'));extra['id']='unsubmitted-native-id';snapshot.append(extra)
+        else:
+            output=next(f for f in frames if f.get('method')=='rawResponseItem/completed' and f['params']['item']['type']=='function_call_output')['params']['item'];output['output']+='\nWarning: truncated output (original token count: 99999)'
         try:admit(d)
         except (ValueError,KeyError):continue
         raise RuntimeError('false admission: '+label)
