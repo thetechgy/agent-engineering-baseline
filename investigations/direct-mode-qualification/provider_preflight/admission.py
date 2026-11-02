@@ -30,14 +30,14 @@ def admit(capture,requests,responses,audit,effects,nonce):
   i=calls[e['call_id']]
   for k in ('type','call_id','name','arguments' if e['type']=='function_call' else 'input'):
    if i.get(k)!=e.get(k):raise Stop('native-original-arguments')
- commands={i['id']:i for i in native['commands']};patches={i['id']:i for i in native['patches']};roles={};expected_commands=set();expected_patches=set()
+ commands={i['id']:i for i in native['commands']};patches={i['id']:i for i in native['patches']};roles={};expected_commands=set();expected_patches=set();command_args={}
  # Determine scenario roles from ORIGINAL provider submissions, then correlate
  # execution exclusively by the authenticated native call ID, never command text.
  for e in expected:
   key=e['call_id']
   if e['type']=='custom_tool_call':role='patch';expected_patches.add(key)
   else:
-   args=decode(e['arguments']);role=next((name for name,value in actions.items() if name!='patch' and args['cmd']==value),None)
+   args=decode(e['arguments']);command_args[key]=args;role=next((name for name,value in actions.items() if name!='patch' and args['cmd']==value),None)
    if role is None:raise Stop('unreviewed-scenario-action','inconclusive-policy')
    if role!='denied':expected_commands.add(key)
   roles.setdefault(role,[]).append(key)
@@ -50,7 +50,7 @@ def admit(capture,requests,responses,audit,effects,nonce):
  for role,code in [('read',0),('failure',7),('verify',0)]:
   for key in roles[role]:
    item=commands[key]
-   if item['exitCode']!=code or item['cwd']!='/workspace' or shlex.split(item['command'])!=['/bin/sh','-lc',actions[role]]:raise Stop('native-command-outcome')
+   if item['exitCode']!=code or item['cwd']!='/workspace' or shlex.split(item['command'])!=['/bin/sh','-lc' if command_args[key].get('login',True) else '-c',actions[role]]:raise Stop('native-command-outcome')
  if not any(nonce in commands[key]['aggregatedOutput'] for key in roles['read']) or not all(commands[key]['aggregatedOutput']==nonce+'\n' for key in roles['verify']):raise Stop('skill-read-or-recovery-verification')
  patch=patches[roles['patch'][0]]
  if patch['status']!='completed' or len(patch['changes'])!=1 or patch['changes'][0]['path']!='/workspace/smoke.txt' or patch['changes'][0]['kind']!={'type':'add'}:raise Stop('native-patch-outcome')
