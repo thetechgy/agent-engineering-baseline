@@ -10,7 +10,7 @@ reference registrations, source fixtures and historical tool identities are reta
 | Dependency | Before | After | Verification |
 | --- | --- | --- | --- |
 | uv | 0.13.5 | 0.13.6 | Verified official release digest; frozen quality setup and hash-lock generation |
-| setup-uv Action | 10.3.0 | 10.3.3 | Immutable release commit; allowlist blocker resolved, hosted execution pending |
+| setup-uv Action | 10.3.0 | 10.3.3 | Immutable release commit; selected-action policy resolved and hosted setup succeeds |
 | rumdl | 0.3.0 | 0.3.2 | Hash-verified installation; repository Markdown passes |
 | Semgrep | 1.182.1 | 1.183.0 | Wheel-only hash sync; dependency consistency and native catalog comparison |
 | SkillSpector | 2.13.1 | 2.13.3 | Exact release commit and frozen lock; native catalog comparison |
@@ -85,6 +85,17 @@ it is not a full-suite pass. The final
 ownership controls were also rerun separately after their last test refinement.
 Hosted validation, including Action execution and native Docker boundaries,
 is required before claiming full validation.
+
+## CI follow-up
+
+Hosted run `41729531292` passed native APM scoped lifecycle and isolated
+regeneration, then failed ShellCheck on six bootstrap test helpers. Each helper
+is dispatched indirectly through `assert_true`; ShellCheck does not recognize
+those calls. The existing per-function indirect-call annotations now also cover
+SC2329. ShellCheck 0.11.0 fails before and passes after this annotation change,
+and all 356 offline Bash bootstrap cases pass. No executable code or assertions
+changed. The reporting setup fixture correction separately passes all 22 Pages
+tests. Final hosted validation remains required on the published revision.
 
 ## Updates held back
 
