@@ -153,3 +153,52 @@ allowlist on November 3, and the new reference is now permitted. GitHub cannot
 retry that startup-failed run; this documentation update triggers a fresh run.
 This assessment records local qualification; hosted checks must be verified
 against the published revision.
+
+## uv 0.13.7 follow-up
+
+The follow-up starts from merged main
+`724d7d5788b4415ebf90865d94408f0dc3c6c228`. It updates only current uv pins,
+compiler guidance and the reporting command fixture from 0.13.6 to 0.13.7.
+Package locks, historical evidence and other dependency pins remain unchanged.
+
+The official uv 0.13.7 Linux archive matches its release asset SHA-256:
+`c5221ff41b7892bfc223543883600125f6a47fe845093e0f5bdff4f359196d83`.
+The production quality and patched benchmark installers complete with the new
+compiler. Both existing hash locks reproduce byte for byte when retaining their
+package selections, as the documented existing-output compile command does.
+Fresh resolution with either uv 0.13.6 or 0.13.7 selects bracex 3.2.1 instead of
+3.2; that registry drift is not included in the delivered locks. All three
+installed quality dependency inventories agree with the retained uv 0.13.6
+environment, and dependency consistency checks pass.
+
+The 45 freshness tests, 22 Pages/reporting tests, eight real Semgrep/SkillSpector
+contracts and five affected workflow/tooling contracts pass. ShellCheck, focused
+Markdown lint and diff checks pass. Hosted and native Windows validation are
+not run for this follow-up. No model inference or historical rescoring is performed.
+
+### gh candidate remains held
+
+The released gh 2.103.3 skill passed scoped native APM update, frozen restore,
+compilation, audit, packaging, released-CLI help checks and its settled offline
+suite. The original full native Docker run with Engine 29.1.3 and Compose 5.6.1
+passed Harbor lifecycle, isolation and cleanup checks, then failed the private
+fixture access assertion. It is not a full native qualification pass.
+
+A separately labeled control using unchanged baseline `724d7d5`, the pinned task
+image and the actual staged gh-001 verifier reproduces the copy/chmod ownership
+boundary: `/tests` and its entry file retain host UID 1000, matching the fixture
+agent. Mode 700 therefore does not deny that agent access. This is bounded
+baseline handoff evidence, not a complete unchanged-baseline run. A dummy-only
+copy control agrees. An extra full-image diagnostic probe was interrupted after
+that narrower control established the ownership defect; it remains inconclusive.
+
+The gh candidate and its generated outputs are withheld. Its original pins,
+fixtures and private-access checks remain intact; no permissions or guards were
+changed to obtain a pass. The candidate diff and failed/partial diagnostics are
+retained separately from the delivered uv change.
+
+Temporary Docker packages, task-created stores/runtime directories, socket ACL,
+bridge, Docker-specific firewall rules and the Compose plugin were removed after
+the checks. No Docker runtime processes remain. Global forwarding policy/sysctl
+values were not captured before installation, so exact network-state restoration
+is unverified; cleanup preserves the current global values rather than guessing.
