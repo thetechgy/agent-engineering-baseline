@@ -46,12 +46,12 @@ assert_true() {
     fi
 }
 
-# Invoked indirectly by assert_true.
-# shellcheck disable=SC2317
+# Invoked indirectly by assert_true, which dispatches the command through "$@".
+# shellcheck disable=SC2317,SC2329
 out_has() { printf '%s\n' "$OUTPUT" | grep -Fq -- "$1"; }
-# shellcheck disable=SC2317
+# shellcheck disable=SC2317,SC2329
 out_lacks() { ! out_has "$1"; }
-# shellcheck disable=SC2317
+# shellcheck disable=SC2317,SC2329
 file_has() { grep -Fq -- "$2" "$1"; }
 # The generation directory currently activated through the managed symlink.
 active_release() { dirname "$(readlink "$CASE_INSTALL/apm")"; }
@@ -180,7 +180,7 @@ STUB
 # independent. Options that take a value are paired with it; exactly one
 # --output destination and exactly one URL are required, and the URL's
 # value is checked separately.
-# shellcheck disable=SC2317
+# shellcheck disable=SC2317,SC2329
 curl_options_are() {
     local call=$1
     shift
@@ -197,7 +197,7 @@ curl_options_are() {
     [ "$outputs" -eq 1 ] && [ "$urls" -eq 1 ] &&
         [ "$(printf '%s\n' "${actual[@]}" | sort)" = "$(printf '%s\n' "$@" | sort)" ]
 }
-# shellcheck disable=SC2317
+# shellcheck disable=SC2317,SC2329
 curl_url_is() { [ "$(tail -n 1 "$CURL_LOG.$1")" = "$2" ]; }
 
 run_case() {
@@ -988,8 +988,8 @@ assert_true 'lock release signal does not remove the next owner lock' test -d "$
 assert_true 'lock release signal leaves the new generation active' file_has <("$CASE_INSTALL/apm" --version) '0.29.0'
 
 # File barriers make the ordering deterministic; polling only bounds fixture failures.
-# Invoked indirectly by assert_true.
-# shellcheck disable=SC2317
+# Invoked indirectly by assert_true, which dispatches the command through "$@".
+# shellcheck disable=SC2317,SC2329
 wait_for_file() {
     local path=$1 attempt=0
     while [ ! -f "$path" ] && [ "$attempt" -lt 200 ]; do

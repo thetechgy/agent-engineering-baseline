@@ -510,7 +510,7 @@ class PagesTests(unittest.TestCase):
         uv = """import os,pathlib,sys,shlex
 args=sys.argv[1:]
 with open(os.environ['CALL_LOG'],'a') as f: f.write('uv '+ ' '.join(args)+'\\n')
-if args==['--version']: print('uv 0.13.5')
+if args==['--version']: print('uv 0.13.6')
 elif args[0]=='sync':
  root=pathlib.Path(args[args.index('--project')+1])/'.venv/bin'; root.mkdir(parents=True)
  (root/'python').write_text('#!/bin/sh\\nexec '+shlex.quote(sys.executable)+' \"$@\"\\n'); (root/'python').chmod(0o700)

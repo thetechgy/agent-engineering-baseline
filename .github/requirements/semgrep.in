@@ -1,2 +1,2 @@
-# Lock generated with uv 0.13.5 for Linux x86_64 / glibc 2.34 / Python 3.13; see README.
-semgrep==1.182.1
+# Lock generated with uv 0.13.6 for Linux x86_64 / glibc 2.34 / Python 3.13; see README.
+semgrep==1.183.0

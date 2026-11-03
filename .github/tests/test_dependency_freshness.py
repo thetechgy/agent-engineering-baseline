@@ -127,6 +127,13 @@ class FixtureAPI(fresh.GitHub):
 
 
 class FreshnessTests(unittest.TestCase):
+    def setUp(self):
+        # Exercise the manual collector's existing transport/advisory contracts
+        # independently of production delegation, which has its own tests below.
+        ownership = patch.object(fresh, "dependabot_python", return_value=False)
+        ownership.start()
+        self.addCleanup(ownership.stop)
+
     def collect(self, api=None, root=ROOT):
         return fresh.collect(root, api or FixtureAPI(root), REVISION)
 
@@ -153,7 +160,7 @@ class FreshnessTests(unittest.TestCase):
         with patch.object(fresh.subprocess, "run", side_effect=AssertionError("execution forbidden")):
             _, rows, mechanisms = fresh.inventory(ROOT)
         self.assertFalse([r for r in rows if r["errors"]])
-        self.assertEqual(mechanisms["dependabot_routine_ecosystems"], ["github-actions"])
+        self.assertEqual(mechanisms["dependabot_routine_ecosystems"], ["github-actions", "pip"])
         self.assertIn("not proof", mechanisms["dependabot_python_security_updates"])
         for id in ("harbor", "openai", "pydantic"):
             row = next(r for r in rows if r["id"] == id)
@@ -797,6 +804,66 @@ class FreshnessTests(unittest.TestCase):
                     with self.assertRaisesRegex(fresh.DiscoveryError, "^" + code + "$"):
                         api.semgrep_metadata()
                 self.assertEqual(opened.call_count, 1)
+
+
+class DelegationTests(unittest.TestCase):
+    def test_production_collection_omits_delegated_lookups_rows_and_alerts(self):
+        api = FixtureAPI()
+        api.latest.update(semgrep="99.0.0", rumdl="99.0.0", pydantic="99.0.0")
+        report = fresh.collect(ROOT, api, REVISION)
+        fresh.validate_report(report, ROOT, REVISION)
+        body = fresh.render(report, fresh.load_config(ROOT))
+        self.assertIn("Dependabot pull requests", body)
+        for label in ("Action: actions/checkout", "Semgrep", "rumdl"):
+            self.assertNotIn(label, body)
+        for _, path, _ in api.calls:
+            self.assertNotEqual(path, fresh.SEMGREP_PYPI)
+            self.assertNotIn("repos/semgrep/semgrep/", path)
+            self.assertNotIn("repos/rvben/rumdl/", path)
+            self.assertNotIn("affects=rumdl", path)
+            self.assertNotIn("affects=semgrep", path)
+        self.assertTrue(any("pydantic" in path for _, path, _ in api.calls))
+        self.assertIn("Pydantic", body)
+        self.assertFalse(any("Semgrep" in value or "rumdl" in value
+                             for value in fresh.risk_events(report).values()))
+        forged = copy.deepcopy(report)
+        managed = next(row for row in forged["dependencies"] if row["id"] == "semgrep")
+        managed["signals"] = [{"kind": "security", "text": "forged"}]
+        with self.assertRaisesRegex(fresh.DiscoveryError, "modified_delegated_inventory"):
+            fresh.validate_report(forged, ROOT, REVISION)
+
+    def test_restricted_or_disabled_python_coverage_retains_monitoring(self):
+        source = (ROOT / ".github/dependabot.yml").read_text()
+        variants = [source.replace("/.github/requirements", "/other"),
+                    source.replace("dependency-type: all", "dependency-name: rumdl"),
+                    source.replace("package-ecosystem: pip", "package-ecosystem: uv"),
+                    source + "    ignore:\n      - dependency-name: semgrep\n",
+                    source.replace("open-pull-requests-limit: 5", "open-pull-requests-limit: 0"),
+                    source.replace("open-pull-requests-limit: 5", 'open-pull-requests-limit: "0"'),
+                    source.replace("directory: /.github/requirements", "directory: /.github/requirements\n    directory: /other")]
+        original = fresh.read
+        for variant in variants:
+            with self.subTest(config=variant), patch.object(
+                    fresh, "read", side_effect=lambda root, path: variant if path == ".github/dependabot.yml"
+                    else original(root, path)):
+                self.assertFalse(fresh.dependabot_python(ROOT))
+                api = FixtureAPI()
+                report = fresh.collect(ROOT, api, REVISION)
+                self.assertTrue(any(path == fresh.SEMGREP_PYPI for _, path, _ in api.calls))
+                self.assertIn("Semgrep", fresh.render(report, fresh.load_config(ROOT)))
+
+    def test_managed_pin_errors_remain_visible(self):
+        root = FreshnessTests.scratch(self)
+        source = root / ".github/requirements/semgrep.in"
+        source.write_text(source.read_text().replace("semgrep==", "semgrep==99"))
+        report = fresh.collect(root, FixtureAPI(root), REVISION)
+        fresh.validate_report(report, root, REVISION)
+        managed = next(row for row in report["dependencies"] if row["id"] == "semgrep")
+        self.assertEqual(managed["errors"], ["contradictory_pins"])
+        self.assertFalse(report["complete"])
+        body = fresh.render(report, fresh.load_config(root))
+        self.assertIn("Semgrep", body)
+        self.assertIn("contradictory", body)
 
 
 class HTTPDiagnosticTests(unittest.TestCase):

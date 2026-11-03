@@ -31,8 +31,8 @@
         }
       ],
       "owner": "Maintainer review",
-      "hold": null,
-      "group": null,
+      "hold": "Retain the qualified runtime until coordinated lock, compatibility patch, grader and execution-evidence qualification passes. See draft PR #109; newer releases alone do not establish admission.",
+      "group": "evaluation-runtime compatibility group",
       "tag_prefix": "v",
       "validation": "Qualify the evaluation runtime as a group: frozen locks, compatibility patch, CLI/preflight, graders, scoring, evidence/schema consumers, redaction, and historical comparison policy. Preserve historical tooling and use a new policy identity when inputs change. No independent SDK upgrade.",
       "modified": true,
@@ -80,8 +80,8 @@
         }
       ],
       "owner": "Maintainer review",
-      "hold": null,
-      "group": null,
+      "hold": "Retain the qualified runtime until coordinated lock, compatibility patch, grader and execution-evidence qualification passes. See draft PR #109; newer releases alone do not establish admission.",
+      "group": "evaluation-runtime compatibility group",
       "tag_prefix": "rust-v",
       "validation": "Qualify the evaluation runtime as a group: frozen locks, compatibility patch, CLI/preflight, graders, scoring, evidence/schema consumers, redaction, and historical comparison policy. Preserve historical tooling and use a new policy identity when inputs change. No independent SDK upgrade.",
       "package": {
@@ -143,7 +143,7 @@
         }
       ],
       "owner": "Maintainer review",
-      "hold": null,
+      "hold": "Retain the reviewed Compose version until native Docker/Harbor container qualification passes for the candidate.",
       "group": null,
       "tag_prefix": "v",
       "validation": "Qualify the evaluation runtime as a group: frozen locks, compatibility patch, CLI/preflight, graders, scoring, evidence/schema consumers, redaction, and historical comparison policy. Preserve historical tooling and use a new policy identity when inputs change. No independent SDK upgrade."
@@ -410,7 +410,7 @@
       ],
       "tag_prefix": "v",
       "owner": "Maintainer review",
-      "hold": "Released CLI compatibility baseline; trunk may describe unavailable commands. The recorded help fixture is a separate contract, not an installed CLI.",
+      "hold": "Released CLI compatibility baseline; update requires successful pinned APM regeneration and credential-free native gh qualification. Captured CLI help remains a separate historical contract.",
       "group": null,
       "validation": "Review released skill-content changes, CLI compatibility, fixture/help contracts and credential-free native evaluation. Do not infer an installed CLI vulnerability from a documentation pin."
     }
