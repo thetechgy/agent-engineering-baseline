@@ -10,7 +10,7 @@ reference registrations, source fixtures and historical tool identities are reta
 | Dependency | Before | After | Verification |
 | --- | --- | --- | --- |
 | uv | 0.13.5 | 0.13.6 | Verified official release digest; frozen quality setup and hash-lock generation |
-| setup-uv Action | 10.3.0 | 10.3.3 | Immutable release commit; hosted execution remains pending |
+| setup-uv Action | 10.3.0 | 10.3.3 | Immutable release commit; allowlist blocker resolved, hosted execution pending |
 | rumdl | 0.3.0 | 0.3.2 | Hash-verified installation; repository Markdown passes |
 | Semgrep | 1.182.1 | 1.183.0 | Wheel-only hash sync; dependency consistency and native catalog comparison |
 | SkillSpector | 2.13.1 | 2.13.3 | Exact release commit and frozen lock; native catalog comparison |
@@ -127,7 +127,10 @@ without deploying skills or compiling instructions, so it does not replace that
 workflow in this refresh. Shell downloads, generated image inputs and the frozen
 evaluator/scanner repositories retain their existing owners.
 
-Existing PRs #108, #109 and #111 remain separate from this refresh. The
-selected-action administrator will need to allow the new setup-uv SHA before
-hosted execution can be accepted. This assessment records local qualification;
-hosted checks must be verified against the published revision.
+Existing PRs #108, #109 and #111 remain separate from this refresh. Initial
+hosted Validate run `41569176364` was blocked before jobs started because the
+selected-action policy rejected the new setup-uv SHA. The maintainer updated the
+allowlist on November 3, and the new reference is now permitted. GitHub cannot
+retry that startup-failed run; this documentation update triggers a fresh run.
+This assessment records local qualification; hosted checks must be verified
+against the published revision.
