@@ -160,6 +160,41 @@ def row(item, pin, sources, errors=None):
             "security": {"status": "not_checked", "advisories": []}, "signals": [], "errors": errors or []}
 
 
+def dependabot_scope(root, ecosystem, directory):
+    """Recognize the reviewed unrestricted updater syntax conservatively.
+
+    Unknown/restricted configurations retain custom monitoring. Package names in
+    evaluator-owned locks never establish ownership of our requirements files.
+    """
+    source = read(root, ".github/dependabot.yml")
+    for block in re.split(r"(?m)^  - package-ecosystem: ", source)[1:]:
+        if block.splitlines()[0].strip() != ecosystem:
+            continue
+        if (len(re.findall(r"(?m)^    directory:", block)) != 1
+                or re.search(r"(?m)^    directories:", block)
+                or not re.search(rf"(?m)^    directory: {re.escape(directory)}$", block)):
+            continue
+        if re.search(r"(?m)^    (ignore|exclude-paths|target-branch):", block):
+            continue
+        if re.search(r"(?m)^    open-pull-requests-limit:", block):
+            limits = re.findall(r"(?m)^    open-pull-requests-limit: ([0-9]+)$", block)
+            if len(limits) != 1 or int(limits[0]) == 0:
+                continue
+        if re.search(r"(?m)^    allow:", block):
+            if not re.search(r"(?m)^    allow:\n      - dependency-type: all\n(?=    [a-z]|$)", block):
+                continue
+        return True
+    return False
+
+
+def dependabot_python(root):
+    return dependabot_scope(root, "pip", "/.github/requirements")
+
+
+def delegated(result):
+    return result["policy"]["owner"].startswith("Dependabot routine ")
+
+
 def inventory(root):
     definitions, rows = load_config(root), []
     for item in definitions:
@@ -169,6 +204,10 @@ def inventory(root):
         except (DiscoveryError, OSError, SyntaxError, KeyError) as error:
             code = str(error) if isinstance(error, DiscoveryError) else "invalid_source"
             rows.append(row(item, {"version": None, "revision": None, "value": "Unknown"}, [], [code]))
+    if dependabot_python(root):
+        for result in rows:
+            if result["id"] in {"semgrep", "rumdl"}:
+                result["policy"]["owner"] = "Dependabot routine Python requirements updates"
     # Reconcile source refs with the lock and retain independent held skill ownership.
     try:
         locked = apm_entries(root)
@@ -205,7 +244,8 @@ def inventory(root):
         revisions = {m[0] for m in matches}
         valid = len(revisions) == 1 and all(full(SHA, value) for value in revisions)
         item = dict(id="action-" + action.lower().replace("/", "-"), label=f"Action: {action}",
-                    owner="Dependabot routine GitHub Actions version updates", hold=None, group="GitHub Actions",
+                    owner=("Dependabot routine GitHub Actions version updates" if dependabot_scope(root, "github-actions", "/")
+                           else "Maintainer review"), hold=None, group="GitHub Actions",
                     validation="Review the Dependabot PR, action permissions and exact-SHA CI; synchronize the external-action allowlist when required.")
         pin = next(iter(revisions)) if valid else "Unknown"
         rows.append(row(item, {"version": None, "revision": pin if valid else None, "value": pin},
@@ -567,7 +607,7 @@ def collect(root, api, revision):
     lock = None
     for result in rows:
         item = by_id.get(result["id"])
-        if item is None or result["errors"]:
+        if item is None or result["errors"] or delegated(result):
             continue
         try:
             if item.get("lock_package"):
@@ -621,6 +661,8 @@ def risk_events(report):
     """Stable evidence keys, independent of timestamps, patch churn and lookup gaps."""
     events = {}
     for result in report["dependencies"]:
+        if delegated(result):
+            continue
         pin = result["pin"]["version"] or result["pin"]["revision"]
         if pin is None:
             continue
@@ -656,12 +698,14 @@ def risk_events(report):
 
 def render(report, definitions):
     by_id = {item["id"]: item for item in definitions}
+    visible = [result for result in report["dependencies"] if not delegated(result) or result["errors"]]
     lines = ["# Dependency freshness", "", ISSUE_MARKER, "",
              "This snapshot changes only with meaningful findings. Check [workflow health](https://github.com/" + REPOSITORY + "/actions/workflows/dependency-freshness.yml) for collection failures and recent observations.", "",
              "**Discovery: " + ("complete for the configured checks." if report["complete"] else "INCOMPLETE. Unknown fields and failed sources remain visible; successful findings are retained.") + "**", "",
              "Freshness, management policy, and advisory evidence are independent. A newer stable release is not an upgrade approval. No matching advisory is not proof of safety.", ""]
+    lines += ["Routine dependency updates are handled by [Dependabot pull requests](https://github.com/" + REPOSITORY + "/pulls?q=is%3Aopen+author%3Aapp%2Fdependabot) using the [reviewed configuration](https://github.com/" + REPOSITORY + "/blob/main/.github/dependabot.yml).", ""]
     priorities = []
-    for result in report["dependencies"]:
+    for result in visible:
         matches = [a for a in result["security"]["advisories"] if a["applicability"] in {"confirmed_version_match", "potentially_affected"}]
         security_signal = result["freshness"] == "update_available" and any(s["kind"] == "security" for s in result["signals"])
         if matches or security_signal:
@@ -671,7 +715,7 @@ def render(report, definitions):
         lines += ["## Priority review", "", *priorities, ""]
     lines += ["| Dependency | Pinned | Latest stable / content | Freshness | Management policy |",
               "| --- | --- | --- | --- | --- |"]
-    for result in report["dependencies"]:
+    for result in visible:
         upstream = result["upstream"]
         latest = upstream.get("version") or ("Changed" if upstream.get("content_changed") else "Unchanged" if "content_changed" in upstream else "Unknown / not checked")
         management = result["policy"]["owner"] or "Unknown"
@@ -680,7 +724,7 @@ def render(report, definitions):
         lines.append("| " + " | ".join(escape(v) for v in (result["label"], result["pin"]["value"], latest,
                                                               result["freshness"].replace("_", " "), management)) + " |")
     lines += ["", "## Evidence and next actions", ""]
-    for result in report["dependencies"]:
+    for result in visible:
         lines += ["### " + escape(result["label"]), ""]
         if result["policy"]["group"]:
             lines += ["Group: " + escape(result["policy"]["group"]) + ".", ""]
@@ -751,6 +795,8 @@ def validate_report(report, root, revision):
         require(isinstance(result, dict) and set(result) == set(original), "invalid_row")
         for key in ("id", "label", "repo", "pin", "sources", "policy"):
             require(result[key] == original[key], "inventory_mismatch")
+        if delegated(original):
+            require(result == original, "modified_delegated_inventory")
         upstream = result["upstream"]
         require(isinstance(upstream, dict) and set(upstream) <= {"status", "version", "revision", "content_changed", "content_digest", "ref"}, "invalid_upstream")
         require({"status", "version", "revision"} <= set(upstream) and upstream["status"] in {"verified", "unverified", "not_checked"}, "invalid_upstream")
@@ -765,14 +811,14 @@ def validate_report(report, root, revision):
         require(result["freshness"] == ("unverified" if original["errors"] else freshness(result["pin"], upstream)), "invalid_freshness")
         require(not (upstream["status"] == "unverified" and not result["errors"]), "hidden_failure")
         item = by_id.get(result["id"])
-        if item and not original["errors"]:
+        if item and not original["errors"] and not delegated(original):
             require(upstream["status"] != "not_checked", "missing_release_assessment")
         security = result["security"]
         require(isinstance(security, dict) and set(security) == {"status", "advisories"}
                 and security["status"] in {"checked", "partial", "not_checked"} and isinstance(security["advisories"], list)
                 and len(security["advisories"]) <= 100, "invalid_security")
         require(not (security["status"] == "partial" and not result["errors"]), "hidden_failure")
-        if item and not original["errors"] and item.get("kind") != "skill":
+        if item and not original["errors"] and not delegated(original) and item.get("kind") != "skill":
             require(security["status"] != "not_checked", "missing_advisory_assessment")
         for advisory in security["advisories"]:
             require(isinstance(advisory, dict) and set(advisory) == {"id", "source", "severity", "summary", "packages", "applicability", "evidence"}

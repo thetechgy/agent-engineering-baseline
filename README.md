@@ -387,12 +387,15 @@ and subscribe to receive material-change comments through your GitHub notificati
 settings. The publisher also links the issue from its job summary.
 
 Freshness and management policy are separate. An outdated component can remain on
-an intentional hold or belong to another updater. Actions and branch-tracking APM
-skills show their actual pins with freshness **not checked** where this report
-delegates upstream polling. Dependabot provides routine Actions version updates;
-the Python security update in PR #77 does not establish routine Python version
-coverage. The existing reviewed weekly APM update workflow remains responsible for
-CLI/hash refreshes and branch dependencies. Neither mechanism is replaced.
+an intentional hold or belong to another updater. Branch-tracking APM skills show
+their actual pins with freshness **not checked** where upstream polling is
+delegated to the weekly updater. Dependabot proposes Actions and Python updates. Those
+dependencies are omitted from this issue and its upstream polling and alerts;
+local pin and hash checks remain enforced. Python coverage applies only to
+`.github/requirements`, including its transitive dependencies, and does not
+include the evaluator or SkillSpector frozen locks. The existing reviewed weekly
+APM update workflow remains responsible for CLI/hash refreshes and branch
+dependencies.
 
 The report monitors direct tooling and the explicitly constrained Harbor, OpenAI
 and Pydantic compatibility group. It extracts pins from existing installation,
@@ -518,7 +521,7 @@ exact external references:
 <!-- external-action-requirements:start -->
 
 ```text
-astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884
+astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2
 benchmark-action/github-action-benchmark@4322e5726e6334590d251fc4f92bec0efafc45dc
 ```
 
@@ -539,9 +542,11 @@ candidate, then require all validation checks before merging. See
 [GitHub's token-triggered workflow behavior](https://docs.github.com/en/actions/concepts/security/github_token).
 
 SkillSpector uses its upstream frozen lock; Semgrep and rumdl use reviewed hashed
-locks in [.github/requirements](.github/requirements). CI rejects unverified Python
+locks in [.github/requirements](.github/requirements). See the
+[issue #95 assessment](.github/evals/DEPENDENCY-REFRESH-95.md) for adopted updates,
+holds and validation limits. CI rejects unverified Python
 installers and records tool versions and dependency inventories. Both locks use
-uv 0.13.5. Semgrep installation requires wheels; regenerate its lock for Python
+uv 0.13.6. Semgrep installation requires wheels; regenerate its lock for Python
 3.13 and the Linux x86_64 / glibc 2.34 wheel floor:
 
 ```bash
@@ -552,6 +557,11 @@ uv pip compile --python-version 3.13 --python-platform x86_64-manylinux_2_34 \
 
 For rumdl, substitute `rumdl` in both paths and retain its existing
 `x86_64-unknown-linux-gnu` target. Review dependency changes and rerun validation.
+Dependabot uses pip-compile when proposing Python updates. Before merging,
+regenerate both affected `.in`/`.txt` pairs with the pinned uv compiler and
+platform targets above, review the dependency diff, and run scanner and lint
+contracts. Keep wheel-only, hash-verified installation enabled. Major updates
+remain separate PRs; minor and patch proposals are grouped weekly.
 These locks cover Python artifacts, not every underlying OS or build tool.
 
 Semgrep version freshness uses official PyPI metadata, matching the package
@@ -560,8 +570,8 @@ separate evidence; a PyPI patch can precede a public GitHub tag. See the
 [Semgrep 1.182.1 assessment](.github/evals/SEMGREP-1.182.1.md) for artifact
 verification, scanner comparisons, and residual MCP dependency risk.
 
-Evaluation setup pins uv 0.13.5 and retains the managed Python 3.13 selector.
-Fresh installations currently select Python 3.13.17; the exact interpreter version
+Evaluation setup pins uv 0.13.6 and retains the managed Python 3.13 selector.
+Fresh installations select a managed Python 3.13 patch release; the exact interpreter version
 is recorded in `versions.json`. Historical evaluation records retain their original
 runtime identities, including Python 3.13.15; they are not rebaselined by this update.
 
