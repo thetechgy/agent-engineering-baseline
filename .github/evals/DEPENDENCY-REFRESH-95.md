@@ -72,8 +72,16 @@ collector, then omit them with the new collector. Semgrep metadata requests drop
 from one to zero, while held evaluator Pydantic remains visible.
 
 The broad local unit-suite attempt exceeded the 30-minute skill-quality budget
-and was stopped. Retained output contains no failure markers before termination;
-that partial execution is **inconclusive**, not a full-suite pass. The final
+and was stopped. The retained output contains two inline failures: the reporting
+setup fixture still advertised uv 0.13.5, and trusted PowerShell startup failed
+under the worker resource limits. The earlier scan for summary failure markers
+missed those inline results. The reporting fixture is corrected to uv 0.13.6;
+its production-script test fails before and passes after the correction on Python
+3.13. The unchanged worker-startup test reproduces exit 137 under both baseline and
+candidate environments on this workstation, with identical worker limits. No
+limits or production guards were changed to make it pass.
+This interrupted broad attempt is incomplete and includes the failures above;
+it is not a full-suite pass. The final
 ownership controls were also rerun separately after their last test refinement.
 Hosted validation, including Action execution and native Docker boundaries,
 is required before claiming full validation.
