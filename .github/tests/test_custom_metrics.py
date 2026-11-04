@@ -616,7 +616,7 @@ class CustomMetricTests(unittest.TestCase):
         request = {'inputs': [str(public)], 'analysis': str(saved), 'skill': NAME, 'record_id': rid,
             'source': None, 'support': None, 'selection': None, 'judgment': judgment(context),
             'config': CONFIG, 'destination': str(self.root / 'saved')}
-        result = subprocess.run([sys.executable, '-I', '-B', '-c', MAKE, str(scripts)],
+        result = subprocess.run([attachments.validator_runtime('custom-metrics-v3')[0], '-I', '-B', '-c', MAKE, str(scripts)],
             input=evidence.encoded(request), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
         self.assertEqual(result.returncode, 0, result.stderr.decode())
         document = self.root / 'saved/skill-review.json'

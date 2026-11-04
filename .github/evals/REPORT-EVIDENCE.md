@@ -1418,7 +1418,7 @@ table headers/captions, theme contrast, corrupted input, private permissions,
 input replacement and output confinement. Run all offline contracts together:
 
 ```bash
-"$SKILL_EVALUATOR_PYTHON" -B -m unittest discover -s .github/tests -v
+"$SKILL_REVIEW_PYTHON" -B -m unittest discover -s .github/tests -v
 pwsh -NoLogo -NoProfile -File ./scripts/Invoke-Validation.ps1
 ```
 
@@ -1528,6 +1528,7 @@ The adapter hardcodes these profile revisions and individual SHA-256 hashes for
 
 | Profile | Original repository revision |
 | --- | --- |
+| `current-v3` | `1aa5b06a4d0d3c1c8b97f2e7b3398964c67d8166` |
 | `current-v2` | `afdb659ee130171d263da6f13c9dec6de912d3a4` |
 | `baseline-a5392b0` | `a5392b0eda37485b131ffe416fcb9d6e5ee547d2` |
 | `baseline-3f47c9d` | `3f47c9de4df362ae9977748ad6353227f403a9b8` |
@@ -1536,8 +1537,10 @@ The adapter hardcodes these profile revisions and individual SHA-256 hashes for
 
 Historical tooling must be retained or copied from the exact locally available
 Git revision into `<tooling>/.github/scripts/`. Nothing is fetched automatically.
-For `current-v2`, null tooling selects the current checkout's four modules; their
-bytes must still match its reviewed profile. Future module changes require an
+For `current-v3`, null tooling selects the current checkout's four modules and
+reviewed metric registry; their bytes must still match its reviewed profile.
+The older `current-v2` selector remains frozen and requires its retained tooling
+when the checkout bytes differ. Future module changes require an
 explicitly reviewed compatibility update, not a digest override.
 
 The visibility presentation changes modify `skill_analysis.py` and
@@ -1571,10 +1574,17 @@ retain that limitation rather than treating the refreshed profile as compatible.
 Only those four hash-verified modules are copied to a fresh protected temporary
 layout. Descriptors cannot supply commands, interpreters, import search paths,
 environment settings, or new executable profiles. The fixed launcher uses the
-calling pinned Python executable with `-I -B`, a neutral working directory, and
-a small clean environment without inference credentials. Python 3.13, OpenAI
-2.44.0, Pydantic 2.13.4, and SkillEvaluator 0.3.0 are required; original provenance
-validation additionally requires the saved report's exact Python patch version.
+profile's pinned Python executable with `-I -B`, a neutral working directory, and
+a small clean environment without inference credentials. `current-v3` uses Python
+3.13, OpenAI 2.54.0, Pydantic 2.14.2, and SkillEvaluator 0.3.0. Older profiles
+retain OpenAI 2.44.0 and Pydantic 2.13.4; original provenance validation also
+requires the saved report's exact Python patch version. Setup exports
+`SKILL_REVIEW_PYTHON` and `SKILL_LEGACY_REVIEW_PYTHON` for these two environments.
+The repository-owned profile selects the required version set. If the host
+interpreter differs, only operator/setup configuration supplies the other
+absolute interpreter path; the child verifies its versions again before reading
+the saved review. Missing or mismatched runtimes reject validation without
+fallback. Attachment data cannot select executables or environment settings.
 There is no installer, provider client invocation, token count, or inference.
 
 An audit hook installed before historical imports rejects audited Python socket
@@ -1702,8 +1712,11 @@ Issue #60 adds `.github/scripts/skill_review.py`. This is a Linux-first, private
 judgment tool over supplied evidence, with no retrieval, shell tools, grading,
 source edits, uploads, repository actions, or automatic publication. Existing
 public schema v1, analysis schema v1, measurements, scoring, workflows and APM
-artifacts are unchanged. Use the pinned evaluator Python 3.13 environment from
-`setup-skillevaluator.sh`: OpenAI 2.44.0, Pydantic 2.13.4, SkillEvaluator 0.3.0.
+artifacts are unchanged. For current reviews, use `SKILL_REVIEW_PYTHON` from
+`setup-skillevaluator.sh`: Python 3.13, OpenAI 2.54.0, Pydantic 2.14.2,
+SkillEvaluator 0.3.0. Its separately reviewed lock overlay leaves the evaluator,
+benchmark and historical-validator environments unchanged. See the
+[review-runtime qualification](REVIEW-RUNTIME-95.md).
 The CLI rejects other dependency versions. No dependencies are installed by it.
 
 ### Operations and authorization
@@ -1715,7 +1728,7 @@ source identity; current installed source cannot substitute for different bytes.
 
 ```bash
 # Offline: exports a private review-context.json, never invokes the model.
-"$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_review.py prepare \
+"$SKILL_REVIEW_PYTHON" .github/scripts/skill_review.py prepare \
   --input /tmp/public-bundle --analysis /tmp/analysis/analysis.json \
   --skill podman --record-id 'sha256:<selected-record-hash>' \
   --source /tmp/evaluated-source --support /tmp/retained-support \
@@ -1723,7 +1736,7 @@ source identity; current installed source cannot substitute for different bytes.
 
 # Explicitly authorized inference: rebuilds context from originals.
 # Set OPENAI_API_KEY securely in the calling environment; never in arguments/files.
-"$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_review.py review \
+"$SKILL_REVIEW_PYTHON" .github/scripts/skill_review.py review \
   --input /tmp/public-bundle --analysis /tmp/analysis/analysis.json \
   --skill podman --record-id 'sha256:<selected-record-hash>' \
   --source /tmp/evaluated-source --support /tmp/retained-support \
@@ -1731,7 +1744,7 @@ source identity; current installed source cannot substitute for different bytes.
   --output /tmp/new-skill-review
 
 # Offline: independent structural/evidence validation plus exact Markdown check.
-"$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_review.py validate \
+"$SKILL_REVIEW_PYTHON" .github/scripts/skill_review.py validate \
   --input /tmp/public-bundle --analysis /tmp/analysis/analysis.json \
   --skill podman --record-id 'sha256:<selected-record-hash>' \
   --source /tmp/evaluated-source --support /tmp/retained-support \
@@ -2197,9 +2210,9 @@ Ordinary multilingual text and emoji joiners remain supported.
 Run the production-path offline suite in the pinned environment:
 
 ```bash
-"$SKILL_EVALUATOR_PYTHON" -B -m unittest discover \
+"$SKILL_REVIEW_PYTHON" -B -m unittest discover \
   -s .github/tests -p 'test_skill*.py' -v
-"$SKILL_EVALUATOR_PYTHON" -B -m unittest discover \
+"$SKILL_REVIEW_PYTHON" -B -m unittest discover \
   -s .github/tests -p test_public_reports.py -v
 ```
 

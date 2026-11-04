@@ -28,7 +28,7 @@ FIXTURE = Path(__file__).parent / 'fixtures/skill_report_reviews/historical-modu
 def frozen_tooling(test, tooling, profile):
     """Restore the exact retained validator and data named by a profile."""
     scripts = tooling / '.github/scripts'; scripts.mkdir(parents=True)
-    with zipfile.ZipFile(FIXTURE) as archive:
+    with zipfile.ZipFile(FIXTURE.with_name('review-runtime-modules.zip') if profile == 'current-v3' else FIXTURE) as archive:
         for name, expected in zip(attachments.MODULES, attachments.PROFILES[profile][1]):
             raw = archive.read(expected + '.py')
             test.assertEqual(evidence.digest_bytes(raw), 'sha256:' + expected)
@@ -74,7 +74,7 @@ class AttachmentTests(unittest.TestCase):
         self.clock = patch.object(evidence, 'utc_now', wraps=evidence.utc_now)
         self.clock.start(); self.addCleanup(self.clock.stop)
 
-    def fixture(self, profile='current-v2', category=None, *, unmeasured=False):
+    def fixture(self, profile='current-v3', category=None, *, unmeasured=False):
         context = (review_fixtures.ReviewTests.gh_control(self) if unmeasured else
                    review_fixtures.ReviewTests.control(self))
         args = self.gh_args if unmeasured else self.args
@@ -155,6 +155,25 @@ class AttachmentTests(unittest.TestCase):
                 self.assertIn('No recommendations supplied', output)
                 self.assertIn('not_quality_qualified', output)
                 self.assertNotIn(str(self.root), output)
+
+    def test_current_profile_uses_current_checkout_and_legacy_host_dispatch(self):
+        self.fixture('current-v3')
+        self.spec['tooling'] = None; write(self.path, self.spec)
+        self.load()
+        output_parent = tempfile.TemporaryDirectory(); self.addCleanup(output_parent.cleanup)
+        output_root = Path(output_parent.name)
+        command = [os.environ['SKILL_LEGACY_REVIEW_PYTHON'], '-B',
+                   str(evidence.ROOT / '.github/scripts/skill_report.py'),
+                   '--input', self.spec['inputs'][0], '--analysis', self.spec['analysis'],
+                   '--analyst-review', str(self.path), '--output', str(output_root / 'legacy-host')]
+        child = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
+        self.assertEqual(child.returncode, 0, child.stderr.decode())
+        self.assertTrue((output_root / 'legacy-host/report.html').is_file())
+        with patch.dict(os.environ, {'SKILL_REVIEW_PYTHON': os.environ['SKILL_LEGACY_REVIEW_PYTHON']}):
+            command[-1] = str(output_root / 'rejected')
+            child = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
+        self.assertEqual(child.returncode, 1)
+        self.assertFalse((output_root / 'rejected').exists())
 
     def test_custom_profile_requires_exact_retained_metric_registry(self):
         self.fixture('custom-metrics-v2')

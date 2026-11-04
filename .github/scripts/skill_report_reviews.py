@@ -65,6 +65,14 @@ REGISTRY_DIGESTS = {
     'custom-metrics-v3': 'cf78bf851a8a1e0b123d08956e76db764d004a3f4c1d7557c6a53339beea31c2',
 }
 
+PROFILES['current-v3'] = ('1aa5b06a4d0d3c1c8b97f2e7b3398964c67d8166', (
+    '453046546b07212ce35610194d3db2dc1e088ae8ce67441fbe8b0dc3b2b5e9ab',
+    'aa9e5d0dcb49d098c8cee0eb6773f1b51f53c2f460ec7d4c124605440ca15782',
+    '6495ed3d8b89d44be05170b595d22052da4af79ccf51ab004760d394fbcb2ce5',
+    '911ee50046e00b0e6e863f8949d72029ae73ad256b4151cecc4e27b0cdaa966e',
+))
+REGISTRY_DIGESTS['current-v3'] = 'cf78bf851a8a1e0b123d08956e76db764d004a3f4c1d7557c6a53339beea31c2'
+
 # Profile selection never accepts executable identities from attachment data.
 # Only setup/operator configuration supplies the two reviewed environments.
 def validator_runtime(profile):
