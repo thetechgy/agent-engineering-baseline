@@ -164,8 +164,17 @@ class FreshnessTests(unittest.TestCase):
         self.assertIn("not proof", mechanisms["dependabot_python_security_updates"])
         for id in ("harbor", "openai", "pydantic"):
             row = next(r for r in rows if r["id"] == id)
-            self.assertEqual(row["policy"]["group"], "evaluation-runtime compatibility group")
+            self.assertEqual(row["policy"]["group"],
+                             "evaluation-runtime compatibility group" if id == "harbor" else "review-runtime compatibility group")
             self.assertTrue(row["policy"]["hold"])
+
+    def test_review_lock_overlay_disagreement_remains_visible(self):
+        root = self.scratch()
+        overlay = root / '.github/patches/skillevaluator-v0.3.0-review-runtime.patch'
+        overlay.write_text(overlay.read_text().replace('+version = "2.54.0"', '+version = "2.54.1"'))
+        _, rows, _ = fresh.inventory(root)
+        sdk = next(row for row in rows if row['id'] == 'openai')
+        self.assertIn('contradictory_pins', sdk['errors'])
 
     def test_uv_inventory_reconciles_all_workflow_and_setup_pins(self):
         import re
@@ -568,8 +577,9 @@ class FreshnessTests(unittest.TestCase):
             return result
         api.request = request
         report = self.collect(api)
-        for id in ("harbor", "openai", "pydantic"):
-            self.assertIn("release:frozen_lock_mismatch", self.find(report, id)["errors"])
+        self.assertIn("release:frozen_lock_mismatch", self.find(report, "harbor")["errors"])
+        for id in ("openai", "pydantic"):
+            self.assertFalse(self.find(report, id)["errors"], "Current reviews use their own lock overlay")
 
     def test_failed_reviewed_lookup_retains_publisher_unknown_and_rejects_skipped_assessments(self):
         api = FixtureAPI()

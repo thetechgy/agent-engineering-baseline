@@ -19,7 +19,8 @@ require = evidence.require
 LIMIT = 1024 * 1024
 REPLY_LIMIT = 16 * LIMIT
 MAX_ASSESSMENTS = 8
-PINS = {'openai': '2.44.0', 'pydantic': '2.13.4', 'skillevaluator': '0.3.0'}
+PINS = {'openai': '2.54.0', 'pydantic': '2.14.2', 'skillevaluator': '0.3.0'}
+LEGACY_PINS = {'openai': '2.44.0', 'pydantic': '2.13.4', 'skillevaluator': '0.3.0'}
 MODULES = ('skill_review.py', 'skill_analysis.py', 'skill_evidence.py', 'skill_reports.py')
 # Reviewed source bytes, not commands or report-supplied executable identities.
 PROFILES = {
@@ -64,6 +65,28 @@ REGISTRY_DIGESTS = {
     'custom-metrics-v3': 'cf78bf851a8a1e0b123d08956e76db764d004a3f4c1d7557c6a53339beea31c2',
 }
 
+PROFILES['current-v3'] = ('1aa5b06a4d0d3c1c8b97f2e7b3398964c67d8166', (
+    '453046546b07212ce35610194d3db2dc1e088ae8ce67441fbe8b0dc3b2b5e9ab',
+    'aa9e5d0dcb49d098c8cee0eb6773f1b51f53c2f460ec7d4c124605440ca15782',
+    '6495ed3d8b89d44be05170b595d22052da4af79ccf51ab004760d394fbcb2ce5',
+    '911ee50046e00b0e6e863f8949d72029ae73ad256b4151cecc4e27b0cdaa966e',
+))
+REGISTRY_DIGESTS['current-v3'] = 'cf78bf851a8a1e0b123d08956e76db764d004a3f4c1d7557c6a53339beea31c2'
+
+# Profile selection never accepts executable identities from attachment data.
+# Only setup/operator configuration supplies the two reviewed environments.
+def validator_runtime(profile):
+    require(profile in PROFILES, 'Unsupported validator profile')
+    expected = PINS if profile == 'current-v3' else LEGACY_PINS
+    installed = {name: importlib.metadata.version(name) for name in PINS}
+    if installed == expected:
+        return sys.executable, expected
+    variable = 'SKILL_REVIEW_PYTHON' if profile == 'current-v3' else 'SKILL_LEGACY_REVIEW_PYTHON'
+    executable = Path(os.environ.get(variable, ''))
+    require(executable.is_absolute() and executable.is_file(), 'Pinned validator runtime unavailable')
+    return str(executable), expected
+
+
 # Fixed launcher. -I ignores caller PYTHONPATH, user site and working-directory imports.
 # Audit hooks restrict audited Python operations; they are NOT an OS sandbox.
 RUNNER = r'''
@@ -81,6 +104,11 @@ sys.path.insert(0, sys.argv[1])
 import skill_review as review
 
 try:
+    import importlib.metadata
+    expected = json.loads(sys.argv[2])
+    review.require(sys.version_info[:2] == (3, 13) and
+        {name: importlib.metadata.version(name) for name in expected} == expected,
+        'Pinned validator environment required')
     request = json.loads(sys.stdin.buffer.read(1024 * 1024 + 1))
     capture = review.Capture()
     raw = capture.read(Path(request['review']), limit=review.REPORT_LIMIT)
@@ -222,7 +250,8 @@ def assessment(spec, parent, capture, report, review):
     return value
 
 
-def run_validator(request, modules, capture, roots, registry=None):
+def run_validator(request, modules, capture, roots, registry, profile):
+    executable, expected = validator_runtime(profile)
     guards = (capture.guard(),)
     temporary = evidence.write_outputs({}, input_paths=roots, input_guards=guards)
     try:
@@ -233,7 +262,8 @@ def run_validator(request, modules, capture, roots, registry=None):
             evidence.write_outputs({}, temporary / '.github' / 'evals', input_paths=roots,
                                    input_guards=guards, rendered={'custom-metrics.json': registry})
         try:
-            response = subprocess.run([sys.executable, '-I', '-B', '-c', RUNNER, str(scripts)],
+            response = subprocess.run([executable, '-I', '-B', '-c', RUNNER, str(scripts),
+                                       evidence.encoded(expected).decode()],
                 input=evidence.encoded(request), stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
                 cwd=temporary, env={'PATH': os.defpath, 'PYTHONDONTWRITEBYTECODE': '1', 'GIT_NO_LAZY_FETCH': '1'},
                 timeout=120, check=False)
@@ -258,7 +288,7 @@ def load(paths, captured):
         versions = {k: importlib.metadata.version(k) for k in PINS}
     except importlib.metadata.PackageNotFoundError:
         raise ValueError('Pinned validator environment required') from None
-    require(sys.version_info[:2] == (3, 13) and versions == PINS, 'Pinned validator environment required')
+    require(sys.version_info[:2] == (3, 13) and versions in (PINS, LEGACY_PINS), 'Pinned validator environment required')
     import skill_review as review  # Optional dependency, never needed by a base report.
     capture = review.Capture()
     items = []; roots = []; original_records = []; seen = set()
@@ -298,7 +328,7 @@ def load(paths, captured):
         for key, data in (('review_digest', raw), ('markdown_digest', markdown)):
             evidence.sha(spec[key])
             require(spec[key] == evidence.digest_bytes(data), 'Analyst report digest mismatch')
-        require(spec['tooling'] is not None or spec['profile'] == 'current-v2', 'Historical tooling snapshot required')
+        require(spec['tooling'] is not None or spec['profile'] in ('current-v2', 'current-v3'), 'Historical tooling snapshot required')
         tooling = attachment_path(spec['tooling'], parent) if spec['tooling'] is not None else evidence.ROOT
         modules = {}
         revision, hashes = PROFILES[spec['profile']]
@@ -321,7 +351,7 @@ def load(paths, captured):
         require(len({row['provenance']['assessment_digest'] for row in assessments}) == len(assessments), 'Duplicate assessment document')
         require(len(capture.members) + len(capture.states) <= analysis.MAX_ENTRIES, 'Attachment entry limit')
         require(len(evidence.encoded(request)) <= LIMIT, 'Validator request limit')
-        result = run_validator(request, modules, capture, tuple((*roots, *capture.roots)), registry)
+        result = run_validator(request, modules, capture, tuple((*roots, *capture.roots)), registry, spec['profile'])
         require(result['review_digest'] == spec['review_digest'] and result['markdown_digest'] == spec['markdown_digest'],
                 'Validated report capture mismatch')
         require(evidence.encoded(result['report']) == evidence.encoded(evidence.parse_json(raw, limit=LIMIT)), 'Validated report changed')

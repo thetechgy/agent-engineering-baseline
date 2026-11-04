@@ -1020,7 +1020,7 @@ class WorkflowTests(unittest.TestCase):
             self.assertIn(lock, pins)
         # Both locks are consumed by the commands the policy below verifies.
         sources = list(_command_sources())
-        self.assertIn('"$GITHUB_WORKSPACE/.github/requirements/semgrep.txt"',
+        self.assertIn('"$repository_root/.github/requirements/semgrep.txt"',
                       next(text for source, text in sources if source == "setup-skillevaluator.sh"))
         self.assertEqual(
             sum("--requirement .github/requirements/rumdl.txt" in text for _, text in sources), 2)
@@ -1036,6 +1036,38 @@ class WorkflowTests(unittest.TestCase):
         # Sanity check that the patterns still match the known install commands:
         # pip (rumdl x2), uv pip sync (Semgrep), uv sync (SkillEvaluator, SkillSpector).
         self.assertGreaterEqual(matched, 5)
+
+    def test_setup_resolves_its_checkout_and_confines_tools_before_install(self):
+        setup = (REPO / '.github/scripts/setup-skillevaluator.sh').read_text()
+        self.assertNotIn('$GITHUB_WORKSPACE/.github/', setup)
+        prefix = setup.split('\nevaluator_revision=', 1)[0]
+        # Execute the actual pre-install shell path; no Git fetch or installation.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            tools = root / 'bin'; tools.mkdir()
+            uv = tools / 'uv'; uv.write_text('#!/bin/sh\nprintf "uv 0.13.7\\n"\n'); uv.chmod(0o755)
+            for layout in ('flat', 'trusted', 'external'):
+                workspace = root / layout / 'workspace'; workspace.mkdir(parents=True)
+                checkout = (workspace if layout == 'flat' else workspace / 'trusted checkout'
+                            if layout == 'trusted' else root / layout / 'separate checkout')
+                script = checkout / '.github/scripts/setup-skillevaluator.sh'
+                script.parent.mkdir(parents=True)
+                script.write_text(prefix + '\nprintf "%s\\n" "$repository_root"\n')
+                for inside in (False, True):
+                    with self.subTest(layout=layout, tools_inside_checkout=inside):
+                        temporary = checkout / 'tools' if inside else root / layout / 'tools'
+                        env = {'PATH': str(tools) + os.pathsep + os.defpath,
+                               'RUNNER_TEMP': str(temporary), 'GITHUB_WORKSPACE': str(workspace),
+                               'GITHUB_ENV': str(root / 'environment'), 'GITHUB_PATH': str(root / 'path')}
+                        result = subprocess.run(['bash', str(script), 'reporting'], cwd=root, env=env,
+                                                text=True, capture_output=True, timeout=10)
+                        if inside:
+                            self.assertNotEqual(result.returncode, 0)
+                            self.assertIn('Tools must be outside the checkout.', result.stderr)
+                            self.assertFalse((temporary / 'skill-evaluation-tools').exists())
+                        else:
+                            self.assertEqual(result.returncode, 0, result.stderr)
+                            self.assertEqual(result.stdout.strip(), str(checkout.resolve()))
 
     def test_setup_private_tool_root_for_provenance_key(self):
         setup = (REPO / ".github/scripts/setup-skillevaluator.sh").read_text()

@@ -6,9 +6,10 @@ umask 077
 kind=${1:?usage: setup-skillevaluator.sh quality|benchmark|reporting}
 case "$kind" in quality|benchmark|reporting) ;; *) exit 2 ;; esac
 : "${RUNNER_TEMP:?}" "${GITHUB_WORKSPACE:?}" "${GITHUB_ENV:?}" "${GITHUB_PATH:?}"
+repository_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)
 tool_root="$RUNNER_TEMP/skill-evaluation-tools"
 case "$(realpath -m "$tool_root")/" in
-  "$(realpath "$GITHUB_WORKSPACE")/"*) echo 'Tools must be outside the checkout.' >&2; exit 1 ;;
+  "$(realpath "$GITHUB_WORKSPACE")/"*|"$repository_root/"*) echo 'Tools must be outside the checkout.' >&2; exit 1 ;;
 esac
 mkdir -p "$tool_root/bin" "$tool_root/dependencies"
 chmod 700 "$tool_root"
@@ -25,7 +26,7 @@ git -C "$tool_root/evaluator" fetch --quiet --depth=1 \
 git -C "$tool_root/evaluator" checkout --quiet --detach FETCH_HEAD
 test "$(git -C "$tool_root/evaluator" rev-parse HEAD)" = "$evaluator_revision"
 if [ "$kind" = benchmark ]; then
-  patch="$GITHUB_WORKSPACE/.github/patches/skillevaluator-v0.3.0-pin-codex.patch"
+  patch="$repository_root/.github/patches/skillevaluator-v0.3.0-pin-codex.patch"
   git -C "$tool_root/evaluator" apply --check "$patch"
   git -C "$tool_root/evaluator" apply "$patch"
 fi
@@ -36,11 +37,35 @@ evaluator_bin="$tool_root/evaluator/.venv/bin"
 "$evaluator_bin/skillevaluator" --version
 git -C "$tool_root/evaluator" diff --exit-code -- uv.lock pyproject.toml
 
+# Current reviews have their own reviewed lock; historical validators and all
+# evaluator/benchmark commands retain the original upstream environment.
+git -C "$tool_root/evaluator" worktree add --quiet --detach "$tool_root/review" "$evaluator_revision"
+review_patch="$repository_root/.github/patches/skillevaluator-v0.3.0-review-runtime.patch"
+git -C "$tool_root/review" apply --check "$review_patch"
+git -C "$tool_root/review" apply "$review_patch"
+review_lock_sha256=99e40a0c414b500dba410fe1e6e687f48e4c10209397997732392ffd472520c4
+printf '%s  %s\n' "$review_lock_sha256" "$tool_root/review/uv.lock" | sha256sum --check --strict
+git -C "$tool_root/review" diff --exit-code -- pyproject.toml
+uv sync --project "$tool_root/review" --python 3.13 --managed-python \
+  --frozen --no-dev --extra security --extra tier3
+review_bin="$tool_root/review/.venv/bin"
+uv pip check --python "$review_bin/python"
+printf '%s  %s\n' "$review_lock_sha256" "$tool_root/review/uv.lock" | sha256sum --check --strict
+uv pip list --python "$review_bin/python" --format json > "$tool_root/dependencies/review.json"
+"$review_bin/python" - <<'PYREVIEW' > "$tool_root/review-versions.json"
+import importlib.metadata, json, sys
+expected = {'openai': '2.54.0', 'pydantic': '2.14.2', 'pydantic-core': '2.50.2',
+            'typing-inspection': '0.4.4', 'skillevaluator': '0.3.0', 'harbor': '0.13.2'}
+actual = {name: importlib.metadata.version(name) for name in expected}
+assert sys.version_info[:2] == (3, 13) and actual == expected
+print(json.dumps(actual, indent=2))
+PYREVIEW
+
 if [ "$kind" = quality ]; then
   # Every Semgrep artifact must match a reviewed hash; nothing is resolved at run time.
   uv venv --quiet --python 3.13 --managed-python "$tool_root/semgrep"
   uv pip sync --quiet --python "$tool_root/semgrep/bin/python" --require-hashes --only-binary :all: \
-    "$GITHUB_WORKSPACE/.github/requirements/semgrep.txt"
+    "$repository_root/.github/requirements/semgrep.txt"
   ln -s "$tool_root/semgrep/bin/semgrep" "$tool_root/bin/semgrep"
   skillspector_revision=38a1dfe93325d2f8bfcd4f8d0241eed706334915 # v2.13.3
   git init --quiet "$tool_root/skillspector"
@@ -72,6 +97,8 @@ printf '%s\n' "$evaluator_bin" "$tool_root/bin" >> "$GITHUB_PATH"
 {
   printf 'SKILL_EVALUATION_KIND=%s\n' "$kind"
   printf 'SKILL_EVALUATOR_PYTHON=%s/python\n' "$evaluator_bin"
+  printf 'SKILL_LEGACY_REVIEW_PYTHON=%s/python\n' "$evaluator_bin"
+  printf 'SKILL_REVIEW_PYTHON=%s/python\n' "$review_bin"
   printf 'XDG_CACHE_HOME=%s\nXDG_STATE_HOME=%s\n' "$XDG_CACHE_HOME" "$XDG_STATE_HOME"
   printf 'SKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE=%s/provenance.key\n' "$tool_root"
 } >> "$GITHUB_ENV"
