@@ -279,6 +279,12 @@ class NativeStagingTests(unittest.TestCase):
         self.assertFalse((task / 'tests/grader.py').exists())
         self.assertFalse((task / 'tests/skill_evaluator').exists())
         self.assertIn('COPY verifier/grader.py /tests/verifier/grader.py', (task / 'tests/Dockerfile').read_text())
+        for dockerfile in (task / 'tests/Dockerfile', task / 'environment/Dockerfile'):
+            content = dockerfile.read_text()
+            for option in ('Acquire::Retries=3', 'Acquire::http::Timeout=30', 'Acquire::https::Timeout=30'):
+                self.assertEqual(content.count('-o ' + option), 2)
+            for forbidden in ('--fix-missing', '--allow-unauthenticated', 'trusted=yes'):
+                self.assertNotIn(forbidden, content)
 
     def test_shared_inventory_records_local_overlay_once(self):
         import skill_evidence as evidence

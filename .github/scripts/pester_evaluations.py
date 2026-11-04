@@ -41,12 +41,14 @@ def dockerfile(*, verifier=False):
     sources = [f'deb [check-valid-until=no signed-by=/usr/share/keyrings/debian-archive-keyring.gpg] '
                f'https://snapshot.debian.org/archive/{archive}/{build["apt_snapshot"]}/ {suite} main'
                for archive, suite in [('debian', 'trixie'), ('debian-security', 'trixie-security')]]
+    # Bound transient snapshot failures without changing source or package verification.
+    acquire = '-o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30'
     apt = ' '.join(f'{key}={value}' for key, value in packages.items())
     lines = [f'FROM {build["base_image"]}',
              "RUN rm -f /etc/apt/sources.list.d/* && rm -rf /var/lib/apt/lists/* && "
              "printf '%s\\n' " + ' '.join("'" + source + "'" for source in sources) +
-             ' > /etc/apt/sources.list && apt-get update --error-on=any && '
-             f'apt-get install -y --no-install-recommends {apt} && rm -rf /var/lib/apt/lists/*',
+             f' > /etc/apt/sources.list && apt-get update --error-on=any {acquire} && '
+             f'apt-get install -y --no-install-recommends {acquire} {apt} && rm -rf /var/lib/apt/lists/*',
              'COPY build/install-runtime.py /tmp/install-runtime.py',
              'RUN python3 -I /tmp/install-runtime.py && rm /tmp/install-runtime.py',
              'RUN useradd --create-home --uid 1000 agent && useradd --uid 53001 --no-create-home runner && '

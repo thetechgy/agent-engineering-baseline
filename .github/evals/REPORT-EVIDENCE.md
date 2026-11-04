@@ -2605,3 +2605,11 @@ arm flag must also agree. Missing native fields are not reconstructed.
 fixture archive. Previous profiles, runtime routing and archives are unchanged.
 Candidate 0.7.2/0.24.0 qualification remains diagnostic-only and is not admitted
 through production public/history validation.
+
+Pinned task image acquisition retries each failed file at most three times with
+30-second HTTP and HTTPS connection/data timeouts. Existing native build and
+qualification deadlines still apply. Snapshot URLs, package versions, signature
+and hash checks remain unchanged; exhausted acquisition still fails qualification.
+The producer change has a new `gh-deterministic-gate-v5` runtime identity, while
+`gh-deterministic-gate-v4` remains available with its original identity. The new
+Pester layout remains `pester-pilot-v3`.

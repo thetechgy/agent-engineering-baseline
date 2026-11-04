@@ -625,10 +625,12 @@ class GhNativeTests(unittest.TestCase):
                     self.assertIn("rm -f /etc/apt/sources.list.d/*", dockerfile)
                     self.assertIn("> /etc/apt/sources.list", dockerfile)
                     self.assertIn("apt-get update --error-on=any", dockerfile)
+                    for option in ('Acquire::Retries=3', 'Acquire::http::Timeout=30', 'Acquire::https::Timeout=30'):
+                        self.assertEqual(dockerfile.count('-o ' + option), 2)
                     for package, version in packages.items():
                         self.assertIn(package + "=" + version, dockerfile)
                     for forbidden in ("deb.debian.org", "security.debian.org", "trixie-updates",
-                                      "trusted=yes", "--allow-unauthenticated", "Acquire::Check-Valid-Until"):
+                                      "trusted=yes", "--allow-unauthenticated", "--fix-missing", "Acquire::Check-Valid-Until"):
                         self.assertNotIn(forbidden, dockerfile)
         self.assertEqual(reports.benchmark_policy("gh")["task_build"], {
             "base_image": image, "apt_snapshot": snapshot, "apt_packages": packages,

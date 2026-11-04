@@ -237,6 +237,8 @@ def native_tasks(destination, entries, workspace):
         f"{package}={version}" for package, version in reports.GH_TASK_BUILD["apt_packages"].items()
     ])
     sources = shlex.join(APT_SOURCES)
+    # Bound transient snapshot failures without changing source or package verification.
+    acquire = "-o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30"
     for original in entries:
         task = destination / "evals/harbor" / original["id"]
         env = task / "environment"
@@ -252,8 +254,8 @@ def native_tasks(destination, entries, workspace):
             f"FROM {reports.GH_TASK_BUILD['base_image']}\n"
             "RUN rm -f /etc/apt/sources.list.d/* && rm -rf /var/lib/apt/lists/* "
             f"&& printf '%s\\n' {sources} > /etc/apt/sources.list "
-            "&& apt-get update --error-on=any "
-            f"&& apt-get install -y --no-install-recommends {packages} "
+            f"&& apt-get update --error-on=any {acquire} "
+            f"&& apt-get install -y --no-install-recommends {acquire} {packages} "
             "&& rm -rf /var/lib/apt/lists/*\n"
             "RUN useradd --create-home --uid 1000 agent && mkdir -p /workspace /opt/gh-eval "
             "&& chmod 700 /opt/gh-eval\n"
