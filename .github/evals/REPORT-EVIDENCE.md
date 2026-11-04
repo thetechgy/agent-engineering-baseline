@@ -1528,7 +1528,7 @@ The adapter hardcodes these profile revisions and individual SHA-256 hashes for
 
 | Profile | Original repository revision |
 | --- | --- |
-| `current-v4` | `3558a88858337375da8ac26c83695f665aec7976` |
+| `current-v4` | `84f170ebb424f8b4b12fc7438bc7618969e8401e` |
 | `current-v3` | `1aa5b06a4d0d3c1c8b97f2e7b3398964c67d8166` |
 | `current-v2` | `afdb659ee130171d263da6f13c9dec6de912d3a4` |
 | `baseline-a5392b0` | `a5392b0eda37485b131ffe416fcb9d6e5ee547d2` |
