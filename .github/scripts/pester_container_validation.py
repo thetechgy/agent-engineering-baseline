@@ -69,6 +69,14 @@ def qualification_bundle(root):
         expanded.append({**entries[case], 'id': identity})
         records[identity] = {'case': case, 'candidate': candidate, 'expected': expected,
                              'output': reports.read_json(source / 'cases' / case / 'profile.json').get('output', 'Subject.Tests.ps1')}
+        if expected in ('passed', 'failed'):
+            if case == 'pester-005':
+                metrics = {'negative_control_correct': float(expected == 'passed')}
+            else:
+                metrics = {'pester_reference_pass': float(style not in ('failure-text', 'wrong-scope')),
+                           'pester_mutation_detection': float(expected == 'passed'),
+                           'pester_test_quality': float(expected == 'passed')}
+            records[identity]['metrics'] = metrics
     for case in entries:
         shutil.rmtree(native / case)
     reports.write_json(bundle / 'evals/evals.json', {'skill_name': pilot.NAME, 'evals': expanded})
@@ -183,23 +191,16 @@ def main(*, candidate=False, artifact=None):
                 if fixture['expected'] not in ('passed', 'failed'):
                     if reward.get('evaluation_status') != 'failed' or reward.get('custom_metrics'):
                         raise RuntimeError('Unscoreable fixture acquired quality metrics')
-                if fixture['expected'] == 'passed' and fixture['case'] != 'pester-005':
-                    mutants = len(list((source / fixture['case'] / 'mutants').glob('*.ps1')))
-                    if (outcome.get('reference_pass') != 1 or outcome.get('mutants_detected') != mutants
-                            or outcome.get('mutants_executed') != mutants or outcome.get('pester_version') != '6.2.0'
-                            or outcome.get('powershell_version') != '7.6.9'):
-                        raise RuntimeError('Mutation/runtime evidence mismatch')
                 if fixture['expected'] in ('passed', 'failed'):
                     metrics = reward.get('custom_metrics', {})
-                    if fixture['case'] == 'pester-005':
-                        expected_metrics = {'negative_control_correct': float(fixture['expected'] == 'passed')}
-                    else:
-                        expected_metrics = {'pester_reference_pass': float(outcome['reference_pass']),
-                            'pester_mutation_detection': outcome['mutants_detected'] / outcome['mutants_executed'],
-                            'pester_test_quality': float(fixture['expected'] == 'passed')}
-                        if outcome.get('pester_version') != '6.2.0' or outcome.get('powershell_version') != '7.6.9':
-                            raise RuntimeError('Measured runtime mismatch')
-                    if metrics != expected_metrics:
+                    if fixture['case'] != 'pester-005':
+                        mutants = len(list((source / fixture['case'] / 'mutants').glob('*.ps1')))
+                        if (outcome.get('pester_version') != '6.2.0' or outcome.get('powershell_version') != '7.6.9'
+                                or outcome.get('reference_pass') != fixture['metrics']['pester_reference_pass']
+                                or outcome.get('mutants_executed') != mutants
+                                or outcome.get('mutants_detected') != int(fixture['expected'] == 'passed') * mutants):
+                            raise RuntimeError('Mutation/runtime evidence mismatch')
+                    if metrics != fixture['metrics']:
                         raise RuntimeError('Qualification metric mismatch')
                 if fixture['case'] == 'pester-005' and any(k.startswith('pester_') for k in reward.get('custom_metrics', {})):
                     raise RuntimeError('Negative control acquired Pester quality metrics')
