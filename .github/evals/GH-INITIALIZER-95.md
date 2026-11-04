@@ -255,3 +255,11 @@ preparation checkpoint. This only labels diagnostic context; it changes no
 execution, scoring or admission behavior. The workflow's source identity and
 step outcomes bind that context. Standalone native commands retain unprepared
 context unless the operator explicitly declares prior preparation.
+
+Image preparation and native qualification use separate freshly hash-verified,
+credential-free Compose configuration directories. Docker Buildx may create
+client state under `DOCKER_CONFIG/buildx`; a used preparation directory cannot
+pass the native phase's unchanged plugin-only admission check. The preparation
+directory remains available until final task-owned cleanup. This refresh changes
+no container state, broker audit or native trial. See the [Buildx configuration
+lookup order](https://docs.docker.com/build/building/variables/#buildx_config).

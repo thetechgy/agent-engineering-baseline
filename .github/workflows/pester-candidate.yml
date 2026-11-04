@@ -72,6 +72,10 @@ jobs:
             ${{ runner.temp }}/pester-candidate-preparation/pester-preparation.json
           if-no-files-found: error
           retention-days: 14
+      - name: Install fresh verified Compose configuration for native phase
+        run: |
+          printf 'PREPARATION_COMPOSE_PLUGIN_ROOT=%s\n' "$COMPOSE_PLUGIN_ROOT" >> "$GITHUB_ENV"
+          bash .github/scripts/setup-compose.sh
       - name: Qualify evidence controls then native Pester lifecycle
         timeout-minutes: 46
         run: |
@@ -97,7 +101,11 @@ jobs:
           retention-days: 14
       - name: Remove test-only Compose plugin
         if: always()
-        run: bash .github/scripts/setup-compose.sh cleanup
+        run: |
+          bash .github/scripts/setup-compose.sh cleanup
+          if [[ -n "${PREPARATION_COMPOSE_PLUGIN_ROOT:-}" ]]; then
+            COMPOSE_PLUGIN_ROOT="$PREPARATION_COMPOSE_PLUGIN_ROOT" bash .github/scripts/setup-compose.sh cleanup
+          fi
 
   native-gh:
     name: Candidate gh initialization (${{ matrix.arm }}, ${{ matrix.shard }}/3, no inference)
@@ -146,6 +154,10 @@ jobs:
             ${{ runner.temp }}/gh-candidate-preparation/gh-preparation.json
           if-no-files-found: error
           retention-days: 14
+      - name: Install fresh verified Compose configuration for native phase
+        run: |
+          printf 'PREPARATION_COMPOSE_PLUGIN_ROOT=%s\n' "$COMPOSE_PLUGIN_ROOT" >> "$GITHUB_ENV"
+          bash .github/scripts/setup-compose.sh
       - name: Qualify native gh initialization and deterministic fixtures
         timeout-minutes: 46
         run: |
@@ -171,4 +183,8 @@ jobs:
           retention-days: 14
       - name: Remove test-only Compose plugin
         if: always()
-        run: bash .github/scripts/setup-compose.sh cleanup
+        run: |
+          bash .github/scripts/setup-compose.sh cleanup
+          if [[ -n "${PREPARATION_COMPOSE_PLUGIN_ROOT:-}" ]]; then
+            COMPOSE_PLUGIN_ROOT="$PREPARATION_COMPOSE_PLUGIN_ROOT" bash .github/scripts/setup-compose.sh cleanup
+          fi
