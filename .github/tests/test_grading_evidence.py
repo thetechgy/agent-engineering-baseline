@@ -155,7 +155,8 @@ class GradingEvidenceTests(unittest.TestCase):
         self.assertEqual(good["details"]["security"]["findings"], [])
 
     def test_generated_verifier_contains_the_same_classifier(self):
-        from skillevaluator.tier3.harbor.adapter import generate_harbor_tasks
+        from skillevaluator.tier3.harbor import adapter
+        generate_harbor_tasks = adapter.generate_harbor_tasks
         from skillevaluator.tier3.eval_core import sensitive_path_evidence
         skill = Path(__file__).resolve().parents[2] / '.apm/skills/podman'
         with tempfile.TemporaryDirectory() as temporary:
@@ -164,7 +165,8 @@ class GradingEvidenceTests(unittest.TestCase):
                                               with_skill=present, base_image='', custom_dockerfile_mode='disabled')
                 self.assertEqual(len(tasks), 10)
                 for task in tasks:
-                    self.assertEqual((task / 'tests/sensitive_path_evidence.py').read_bytes(),
+                    verifier_dir = task / 'tests' / getattr(adapter, '_EVALUATOR_TESTS_SUBDIR', '')
+                    self.assertEqual((verifier_dir / 'sensitive_path_evidence.py').read_bytes(),
                                      Path(sensitive_path_evidence.__file__).read_bytes())
 
     def test_no_trajectory_produces_no_complete_numeric_reward(self):
