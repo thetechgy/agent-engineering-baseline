@@ -24,6 +24,10 @@ OUTPUT_BYTES = 1024 * 1024
 UNSCORED = {'invalid', 'unsupported', 'timeout', 'infrastructure_error'}
 
 
+class IsolationError(RuntimeError):
+    """A fixed verifier prerequisite failed before candidate execution."""
+
+
 def regular_bytes(path, limit=LIMIT):
     """Do not follow candidate links, including linked parent directories."""
     path = Path(path)
@@ -68,18 +72,18 @@ def worker_identity():
 
 def check_environment():
     if os.geteuid() != 0 or not Path('/.dockerenv').is_file():
-        raise RuntimeError('environment')
+        raise IsolationError('environment')
     if {p.name for p in Path('/sys/class/net').iterdir()} != {'lo'}:
-        raise RuntimeError('network')
+        raise IsolationError('network')
     status = Path('/proc/self/status').read_text()
     if 'Seccomp:\t2' not in status:
-        raise RuntimeError('seccomp')
+        raise IsolationError('seccomp')
     memory = Path('/sys/fs/cgroup/memory.max').read_text().strip()
     quota, period = Path('/sys/fs/cgroup/cpu.max').read_text().split()
     if memory == 'max' or int(memory) > 2 * 1024**3 or quota == 'max' or int(quota) / int(period) > 2:
-        raise RuntimeError('resources')
+        raise IsolationError('resources')
     if Path('/var/run/docker.sock').exists() or Path('/run/podman/podman.sock').exists():
-        raise RuntimeError('mount')
+        raise IsolationError('mount')
 
 
 def read_result(stream):
@@ -302,6 +306,10 @@ def main():
         signal.signal(signal.SIGALRM, expired)
         signal.alarm(CASE_SECONDS)
         status, details = grade(tests)
+    except IsolationError as error:
+        code = error.args[0] if error.args else None
+        if code in ('environment', 'network', 'seccomp', 'resources', 'mount'):
+            details = {'code': 'isolation_' + code}
     except TimeoutError:
         status, details = 'timeout', {'code': 'case_budget'}
     except (ValueError, UnicodeError):

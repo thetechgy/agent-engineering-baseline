@@ -20,9 +20,16 @@ from harbor.agents.installed.codex import Codex
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def qualification_bundle(root):
+def qualification_bundle(root, *, candidate=False):
     """Expand reviewed fixture submissions before native staging, never model data."""
     bundle = pilot.stage(ROOT, root / 'bundle' / pilot.NAME)
+    if candidate:
+        # Harbor 0.24 otherwise routes no-network through its egress namespace.
+        # The candidate's bounded verifier-only compatibility rule admits this
+        # literal offline override; the shared grader still requires only lo.
+        for task in (bundle / 'evals/harbor').iterdir():
+            if task.is_dir():
+                (task / 'tests/docker-compose.yaml').write_text('services:\n  main:\n    network_mode: none\n')
     source = ROOT / pilot.OVERLAY / 'support'
     solutions = {'pester-001': ('classic', 'standalone', 'data'),
                  'pester-002': ('classic', 'data'), 'pester-003': ('external', 'module'),
@@ -104,7 +111,7 @@ def main(*, candidate=False, artifact=None):
     with tempfile.TemporaryDirectory(prefix='pester-container-gate-', dir=os.environ.get('RUNNER_TEMP')) as temporary:
         root = Path(temporary)
         os.environ['SKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE'] = str(root / 'private/key')
-        bundle, fixtures = qualification_bundle(root)
+        bundle, fixtures = qualification_bundle(root, candidate=candidate)
         register = Codex(logs_dir=root / 'registration', skills_dir='/workspace/skills', version='0.155.1')._build_register_skills_command()
         jobs = root / 'jobs'
         staged_evidence = []
@@ -167,7 +174,8 @@ def main(*, candidate=False, artifact=None):
         if native_failed:
             raise RuntimeError('Native oracle lifecycle failed; shared diagnostics retained')
         reports.write_json(artifact / 'qualification.json', {'runtime': dict(zip(('skillevaluator', 'harbor'), expected_runtime)),
-            'diagnostic_only': True, 'inference': False, 'staged_tasks': staged_evidence})
+            'diagnostic_only': True, 'inference': False, 'staged_tasks': staged_evidence,
+            'harness_sha256': evidence.digest_bytes(Path(__file__).read_bytes()).removeprefix('sha256:')})
         source = ROOT / pilot.OVERLAY / 'support/cases'
         eligible = sum(f['expected'] in ('passed', 'failed') for f in fixtures.values())
         observed = []

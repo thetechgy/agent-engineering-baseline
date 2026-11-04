@@ -378,6 +378,24 @@ class ClassificationTests(unittest.TestCase):
             self.assertNotIn('has_skill', numeric)
             self.assertEqual(numeric['custom_metrics']['pester_mutation_detection'], 1.0)
 
+    def test_isolation_failures_emit_only_fixed_unscoreable_codes(self):
+        g = grader()
+        for code in ('network', 'seccomp', 'resources', 'mount', 'environment', 'PESTER_VERIFIER_ONLY_PRIVATE'):
+            with self.subTest(code=code), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                (root / 'entry.json').write_text(json.dumps({'id': 'pester-001', 'grading_mode': 'custom_only'}))
+                logs = root / 'logs'
+                with patch.dict(os.environ, {'HARBOR_REWARD_JSON': str(logs / 'reward.json'), 'HARBOR_TESTS_DIR': str(root)}), \
+                        patch.object(g, 'grade', side_effect=g.IsolationError(code)), patch.object(g.os, 'chown'):
+                    g.main()
+                sidecar = reports.read_json(logs / 'skill_evaluator_reward.json')
+                outcome = sidecar['details']['outcome']
+                self.assertEqual(sidecar['evaluation_status'], 'failed')
+                self.assertEqual(outcome['classification'], 'infrastructure_error')
+                self.assertEqual(outcome['code'], 'verifier' if code.startswith('PESTER_VERIFIER_ONLY_') else 'isolation_' + code)
+                self.assertNotIn('custom_metrics', reports.read_json(logs / 'custom_reward.json'))
+                self.assertFalse(any(b'PESTER_VERIFIER_ONLY_PRIVATE' in p.read_bytes() for p in logs.iterdir()))
+
     def test_interrupted_grader_keeps_prearmed_failure_over_fabricated_success(self):
         g = grader()
         with tempfile.TemporaryDirectory() as directory:

@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
 
@@ -49,6 +50,54 @@ class CandidateHarnessTests(unittest.TestCase):
 
 @unittest.skipUnless(os.environ.get('CANDIDATE_EVIDENCE_CHILD') == '1', 'opt-in candidate qualification only')
 class CandidateEvidenceTests(unittest.TestCase):
+    def test_only_bundled_offline_verifiers_accept_literal_network_none(self):
+        from skillevaluator.tier3.harbor import adapter
+        from harbor.environments.docker.docker import DockerEnvironment
+        import pester_container_validation as qualification
+        import pester_evaluations as pilot
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            candidate, fixtures = qualification.qualification_bundle(root / 'candidate', candidate=True)
+            production, _ = qualification.qualification_bundle(root / 'production')
+            for case in fixtures:
+                candidate_tests = candidate / 'evals/harbor' / case / 'tests'
+                production_tests = production / 'evals/harbor' / case / 'tests'
+                actual = pilot.manifest(candidate_tests); actual.pop('docker-compose.yaml')
+                self.assertEqual(actual, pilot.manifest(production_tests), 'Verifier payload must be identical')
+            for present in (True, False):
+                tasks = adapter.stage_native_harbor_tasks(candidate, root / str(present), with_skill=present, grading_mode='custom_only')
+                self.assertEqual(len(tasks), 26)
+                for task in tasks:
+                    compose = task / 'tests/docker-compose.yaml'
+                    native = SimpleNamespace(_user_compose_paths=lambda: [compose])
+                    self.assertEqual(DockerEnvironment._egress_controlled_service_names(native), [])
+            # A verifier whose configured baseline permits networking cannot
+            # acquire the exception just by authoring an offline-looking file.
+            config = candidate / 'evals/harbor/pester-001-classic/task.toml'
+            config.write_text(config.read_text().replace('network_mode = "no-network"', 'network_mode = "public"'))
+            with self.assertRaisesRegex(ValueError, 'main.*may set only'):
+                adapter.stage_native_harbor_tasks(candidate, root / 'public-verifier', with_skill=False, grading_mode='custom_only')
+            config.write_text(config.read_text().replace('network_mode = "public"', 'network_mode = "no-network"', 1))
+            agent_compose = candidate / 'evals/harbor/pester-001-classic/environment/docker-compose.yaml'
+            agent_compose.write_text('services:\n  main:\n    network_mode: none\n')
+            with self.assertRaisesRegex(ValueError, 'main.*may set only'):
+                adapter.stage_native_harbor_tasks(candidate, root / 'agent-override', with_skill=False, grading_mode='custom_only')
+            compose = root / 'docker-compose.yaml'
+            compose.write_text('services:\n  main:\n    network_mode: none\n')
+            # Ordinary agent Compose contexts keep the original restriction.
+            with self.assertRaisesRegex(ValueError, 'main.*may set only'):
+                adapter._validate_and_sanitize_custom_compose(compose, allowed_env=set())
+            for value in ('host', 'bridge', 'service:sidecar', 'container:other', '${MODE}', None, [], {}):
+                compose.write_text(json.dumps({'services': {'main': {'network_mode': value}}}))
+                with self.assertRaises(ValueError):
+                    adapter._validate_and_sanitize_custom_compose(compose, allowed_env=set(), allow_offline_main=True)
+            for key, value in (('networks', []), ('privileged', True), ('cap_add', ['NET_ADMIN']),
+                               ('security_opt', ['seccomp:unconfined']), ('entrypoint', ['sh']),
+                               ('healthcheck', {'test': ['CMD', 'true']}), ('volumes', ['/host:/container'])):
+                compose.write_text(json.dumps({'services': {'main': {'network_mode': 'none', key: value}}}))
+                with self.assertRaises(ValueError):
+                    adapter._validate_and_sanitize_custom_compose(compose, allowed_env=set(), allow_offline_main=True)
+
     def test_unknown_attribution_preserves_summary_bounds_and_unknown_counts(self):
         from skillevaluator.tier3.harbor import collector
         total = collector.PUBLISHED_CASE_DETAILS_MAX + 3

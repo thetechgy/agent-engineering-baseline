@@ -68,7 +68,7 @@ opt-in and is not part of production setup or automatic candidate adoption.
 
 ## Qualification results
 
-The patched candidate passes 16 controls: the ten existing grading cases, the
+The original evidence port passes 16 controls: the ten existing grading cases, the
 native Pester runner/collector/report case and five additional controls for
 bounded diagnoses, unlinked observations, independent secret evidence,
 standalone verifier imports and bounded unknown-attribution summaries. The
@@ -138,8 +138,9 @@ registry entries, hashes and fixture archives retain their original contracts.
 `current-v4` freezes the new validator modules and registry; `current-v3` retains
 its original current-review runtime, while older profiles retain legacy routing.
 
-Add `--native-pester` to the qualification command to first run all 16 evidence
-controls, then the shared 26-fixture matrix in both arms through the candidate's
+Add `--native-pester` to the qualification command to first run the original 16
+evidence controls and the offline-verifier boundary control, then the shared
+26-fixture matrix in both arms through the candidate's
 actual Harbor lifecycle. Native execution requires the existing `setup-compose.sh`
 plugin environment. Only its hash-verified directory, containing no Docker auth
 configuration, enters the otherwise empty child environment. The required 52 outcomes are 22 passed, 14 failed,
@@ -157,7 +158,35 @@ are hidden. Missing Docker is a failed prerequisite; no workstation service or
 container runtime is installed by the qualification tooling.
 
 Local controls reproduce the original staging rejection and stage all five
-cases in both arms under the candidate. The 16 evidence controls pass. Native
+cases in both arms under the candidate. All 17 controls pass. Native
 container qualification is owned by the hosted jobs; staging alone does not
 establish the 52 terminal outcomes, cleanup or upgrade readiness. Trusted gh
 initialization and overall evaluator adoption remain separate gates.
+
+### Candidate offline verifier correction
+
+Harbor 0.24 implements its default `no-network` policy through an egress-control
+namespace. The shared verifier requires a literal offline namespace and retains
+that check. Candidate qualification therefore authors `network_mode: none` for
+the verifier's `main` service. The verifier image, entry point, grader, runner,
+case data, prompts and public inputs remain identical to production qualification.
+The production compatibility patch and dependency pins are unchanged.
+
+The candidate adapter permits this one literal value only in a bundled separate
+verifier context whose configured network policy is `no-network`. Agent contexts,
+public verifier policies, dynamic values, other network modes, host binds,
+privilege changes, entrypoints and healthchecks retain their rejection. A context
+shared by different verifier policies does not receive the exception. This is a
+reviewed extension of the candidate validator; no guard is bypassed after staging.
+
+The new control fails against the original candidate patch and passes with the
+correction, while all 16 existing controls remain green. It stages both arms,
+compares every verifier payload, exercises Harbor's actual Compose routing
+parser, and tests the rejected configurations. The harness records the native
+qualification script hash along with the candidate patch and source identities.
+Only a complete native 52-outcome run can qualify runtime execution and cleanup.
+
+Isolation prerequisite failures now retain one of five fixed codes in
+`details.outcome`. Arbitrary exception text and test payloads remain excluded;
+these failures remain unscoreable. Snapshot service HTTP 503/504 build failures
+are infrastructure evidence, not failed Pester measurements or zero scores.

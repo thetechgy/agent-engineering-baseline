@@ -126,7 +126,8 @@ def main():
                                    for name in ('test_grading_evidence.py', 'test_pester_evaluations.py',
                                                 'test_evaluator_candidate.py')},
                 'harness_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-                'production_pins_changed': False}
+                'production_pins_changed': False,
+                'native_harness_sha256': hashlib.sha256((project / '.github/scripts/pester_container_validation.py').read_bytes()).hexdigest()}
     (output / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
     with (output / 'qualification.log').open('w') as log:
         try:
