@@ -74,13 +74,13 @@ PROFILES['current-v3'] = ('1aa5b06a4d0d3c1c8b97f2e7b3398964c67d8166', (
 REGISTRY_DIGESTS['current-v3'] = 'cf78bf851a8a1e0b123d08956e76db764d004a3f4c1d7557c6a53339beea31c2'
 
 # Self-contained Pester packaging and its versioned diagnostic carrier.
-PROFILES['current-v4'] = ('84f170ebb424f8b4b12fc7438bc7618969e8401e', (
+PROFILES['current-v4'] = ('8450427a480fb313ed3e07f154f9323c44d728be', (
     '453046546b07212ce35610194d3db2dc1e088ae8ce67441fbe8b0dc3b2b5e9ab',
     'aa9e5d0dcb49d098c8cee0eb6773f1b51f53c2f460ec7d4c124605440ca15782',
     '15aad470fe74eeb4722cdef3193e09e49e087f548ed4faa6b8cc430363945887',
     '7f79d9af94ec98c2310cf55fc380191b31c5db915ab1abf28dc927b64d4827ac',
 ))
-REGISTRY_DIGESTS['current-v4'] = '73fc83c935e625c26380e31a1485f3321c54225488706356eb55f42f5b336e42'
+REGISTRY_DIGESTS['current-v4'] = '428a6689ea6f15692e9b74d0351c22ec9ea6d26f013a1b62647758ca39baaada'
 
 # Profile selection never accepts executable identities from attachment data.
 # Only setup/operator configuration supplies the two reviewed environments.
