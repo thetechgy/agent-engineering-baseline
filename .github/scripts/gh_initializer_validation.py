@@ -282,7 +282,7 @@ async def qualify(root, artifact, arm=None, shard=None):
                     teardown = {"status": "complete"}
                 except BaseException as cleanup_error:
                     kind = type(cleanup_error).__name__
-                    if kind not in {"RuntimeError", "TimeoutError", "CancelledError", "KeyboardInterrupt", "OSError", "CalledProcessError"}:
+                    if kind not in {"RuntimeError", "TimeoutError", "CancelledError", "KeyboardInterrupt", "OSError", "CalledProcessError", "TimeoutExpired"}:
                         kind = "Exception"
                     teardown = {"status": "infrastructure_error", "code": "native_teardown_failed",
                         "phase": cleanup_phase, "error": kind}

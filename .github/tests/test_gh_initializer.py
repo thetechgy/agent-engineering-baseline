@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -46,9 +47,9 @@ class InitializerTests(unittest.TestCase):
 
     def test_failed_start_retains_evidence_even_when_teardown_fails(self):
         import gh_initializer_validation as native
-        for fault in ("none", "teardown", "evidence"):
+        for fault in ("none", "teardown", "teardown-timeout", "evidence"):
             with self.subTest(fault=fault):
-                teardown_fails = fault == "teardown"
+                teardown_fails = fault.startswith("teardown")
                 root = self.root / fault
                 root.mkdir()
                 artifact = root / "native-gh.json"
@@ -68,6 +69,8 @@ class InitializerTests(unittest.TestCase):
                         pending = json.loads(artifact.read_text())
                         self.assertFalse(pending["success"])
                         self.assertEqual(pending["teardown"]["status"], "pending")
+                    if fault == "teardown-timeout":
+                        raise subprocess.TimeoutExpired(["docker", "ps"], 5)
                     if teardown_fails:
                         raise RuntimeError("cleanup failed")
                 environment = SimpleNamespace(
@@ -76,7 +79,7 @@ class InitializerTests(unittest.TestCase):
                 with patch.object(native, "TrustedGhEnvironment", return_value=environment), \
                         patch.object(native, "docker", return_value=""), \
                         patch.object(Path, "write_text", write), patch.dict(os.environ):
-                    with self.assertRaises((RuntimeError, OSError)):
+                    with self.assertRaises((RuntimeError, OSError, subprocess.TimeoutExpired)):
                         asyncio.run(native.qualify(root, artifact))
                 retained = json.loads(artifact.read_text())
                 self.assertFalse(retained["success"])
@@ -84,6 +87,9 @@ class InitializerTests(unittest.TestCase):
                 self.assertEqual(retained["failure"]["phase"], "secure_start_and_initialization")
                 self.assertEqual(retained["teardown"]["status"],
                     "infrastructure_error" if teardown_fails else "complete")
+                if teardown_fails:
+                    self.assertEqual(retained["teardown"]["error"],
+                        "TimeoutExpired" if fault == "teardown-timeout" else "RuntimeError")
                 environment.stop.assert_awaited_once_with(delete=True)
 
     def test_fixed_native_shards_cover_all_24_cases_once_per_arm(self):
