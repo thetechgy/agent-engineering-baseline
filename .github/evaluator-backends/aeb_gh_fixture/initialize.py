@@ -14,6 +14,7 @@ import time
 STATE = Path("/opt/gh-eval/state")
 SOCKET = Path("/run/gh-eval/gh.sock")
 CONTROL = Path("/opt/aeb-gh")
+PHASE = "operator"
 
 
 def require(value):
@@ -62,8 +63,10 @@ def probe(expected):
 
 
 def initialize():
+    global PHASE
     require(os.geteuid() == 0 and sys.argv[1:] == [])
     private(CONTROL, directory=True)
+    PHASE = "private_inputs"
     private(STATE, directory=True)
     approved = json.loads((CONTROL / "approved.json").read_text())
     require(set(approved) == {"case.json", "fixture.py", "setup.py", "client.py"})
@@ -74,16 +77,19 @@ def initialize():
     private(STATE / "audit.jsonl")
     record = CONTROL / "broker.json"
     if SOCKET.exists() or SOCKET.is_symlink() or record.exists() or record.is_symlink():
+        PHASE = "resume"
         private(record)
         identity = probe(json.loads(record.read_text()))
     else:
         SOCKET.parent.mkdir(mode=0o755, parents=True, exist_ok=True)
         private(SOCKET.parent, directory=True)
+        PHASE = "spawn"
         process = subprocess.Popen([sys.executable, "-I", str(STATE / "fixture.py"), "--serve", str(STATE), str(SOCKET)],
             env={"PATH": "/usr/local/bin:/usr/bin:/bin", "LANG": "C.UTF-8"}, stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
         try:
             expected = {"pid": process.pid, "start": fingerprint(process.pid)}
+            PHASE = "readiness"
             deadline = time.monotonic() + 25
             while True:
                 require(process.poll() is None)
@@ -104,4 +110,11 @@ def initialize():
 
 
 if __name__ == "__main__":
-    initialize()
+    try:
+        initialize()
+    except Exception as error:
+        kind = type(error).__name__
+        if kind not in {"RuntimeError", "ValueError", "OSError", "FileNotFoundError", "PermissionError", "TimeoutError", "ConnectionRefusedError", "ProcessLookupError", "JSONDecodeError"}:
+            kind = "Exception"
+        print(json.dumps({"status": "infrastructure_error", "phase": PHASE, "error": kind}, sort_keys=True))
+        raise SystemExit(1)

@@ -51,6 +51,14 @@ class TrustedGhEnvironment(SkillEvaluatorSecureDockerEnvironment):
                     raise RuntimeError("Cannot protect initializer payload")
                 result = await self.exec(COMMAND, user="root", timeout_sec=28)
                 if result.return_code or len(result.stdout or "") > 1024:
+                    try:
+                        diagnostic = json.loads((result.stdout or "")[:1024])
+                        if (set(diagnostic) == {"status", "phase", "error"} and diagnostic["status"] == "infrastructure_error"
+                                and diagnostic["phase"] in {"operator", "private_inputs", "resume", "spawn", "readiness"}
+                                and diagnostic["error"] in {"RuntimeError", "ValueError", "OSError", "FileNotFoundError", "PermissionError", "TimeoutError", "ConnectionRefusedError", "ProcessLookupError", "JSONDecodeError", "Exception"}):
+                            status["failure"] = diagnostic
+                    except (ValueError, TypeError):
+                        pass
                     raise RuntimeError("Trusted gh initialization failed")
                 identity = json.loads(result.stdout)
                 if (set(identity) != {"status", "pid", "start", "uid", "socket_inode"}

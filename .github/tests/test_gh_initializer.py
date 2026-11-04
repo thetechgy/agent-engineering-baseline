@@ -64,6 +64,16 @@ class InitializerTests(unittest.TestCase):
             self.assertIn("HEALTHCHECK NONE", dockerfile)
         self.assertEqual(len(set(identities)), 48)
 
+    def test_native_restaging_preserves_approved_content_identity(self):
+        import gh_evaluations as gh
+        from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks
+        restaged = stage_native_harbor_tasks(self.bundle, self.root / "native-restaged", with_skill=True,
+            grading_mode="default_plus_custom", workspace_mode="group",
+            workspace_skill_paths=[self.bundle.parent / gh.COMPETING])
+        self.assertEqual(len(restaged), 24)
+        for task in restaged:
+            self.manifest.approve(self.path, task)
+
     def test_missing_corrupt_altered_linked_and_hardlinked_manifests_reject(self):
         with self.assertRaises((ValueError, OSError)):
             self.manifest.approve(self.path.with_name("absent.json"), self.tasks[0])
@@ -82,7 +92,9 @@ class InitializerTests(unittest.TestCase):
         import aeb_gh_fixture.manifest as manifest
         with patch.object(manifest, "payload_digest", return_value="0" * 64):
             with self.assertRaises(ValueError): manifest.approve(self.path, self.tasks[0])
-        copied = self.root / "task"; shutil.copytree(self.tasks[0], copied)
+        copied = self.root / "copy" / self.tasks[0].name; shutil.copytree(self.tasks[0], copied)
+        # Native CLI restaging may choose a different private host directory.
+        self.assertEqual(manifest.approve(self.path, copied)[0], manifest.approve(self.path, self.tasks[0])[0])
         path = manifest.write_manifest(self.root / "copy-approval", [copied], staged_roots=[copied])
         entry = copied / "tests/entry.json"; original = entry.read_bytes()
         data = json.loads(original); data["has_skill"] = not data["has_skill"]

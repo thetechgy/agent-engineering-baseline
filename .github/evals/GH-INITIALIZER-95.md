@@ -27,7 +27,9 @@ The operator creates a content-addressed manifest in a private directory outside
 all staged roots. Its filename binds its bytes. Approval checks ordinary,
 unlinked files, ownership, private permissions, the native Harbor task checksum,
 complete staged members, environment-context hash, case/arm and initializer hash.
-The installed backend bytes must match repository source before qualification.
+Approval binds case and content rather than a temporary host path, allowing the
+native CLI to restage identical tasks into its private directory. The installed
+backend bytes must match repository source before qualification.
 Changing an arm, checksum, manifest, payload or private fixture rejects startup.
 The manifest is an operator approval artifact, not a signature against a malicious
 operator with access to that same private directory.
@@ -79,7 +81,10 @@ The existing 24 successful replay traces and 13 rejected fault traces remain
 unchanged. Candidate controls additionally exercise manifest/payload/arm/context
 changes, missing/linked approval, operator-configuration isolation, startup ordering,
 failed startup, timeout, cancellation and stale/foreign/dead broker identities.
-Mocked failure controls are separate from native container execution.
+Mocked failure controls are separate from native container execution. Native
+failure diagnostics retain fixed stage/error codes and bounded initialization
+records. Qualification timeout first requests graceful teardown, then ends an
+unresponsive child within a separate cleanup bound.
 
 The existing `--native-pester` still requires 52 exact terminal outcomes.
 Native jobs require the credential-free hash-verified plugin from

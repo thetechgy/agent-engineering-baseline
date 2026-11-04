@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import shlex
+import signal
 import subprocess
 import tempfile
 import uuid
@@ -51,6 +52,8 @@ async def qualify(root, artifact, arm=None):
             session_id=name, trial_paths=paths, task_env_config=native.config.environment, mounts=[],
             network_policy=native.config.environment.resolve_baseline())
         environment.default_user = "agent"
+        phase = "secure_start_and_initialization"
+        failure = None
         try:
             await environment.start(force_build=True)
             async def checked(command, user="root"):
@@ -60,6 +63,7 @@ async def qualify(root, artifact, arm=None):
                 return result.stdout or ""
             if (await checked("id -u", "agent")).strip() != "1000":
                 raise RuntimeError("Agent UID changed")
+            phase = "setup_only"
             setup_only = None
             if index == 0:
                 from skillevaluator.tier3.harbor.installed_agents import SkillEvaluatorCodex
@@ -79,6 +83,7 @@ async def qualify(root, artifact, arm=None):
                 if measured != pin:
                     raise RuntimeError("Installed setup-only Codex version mismatch")
                 setup_only = {"installed_codex": measured, "inference": False}
+            phase = "repeated_startup"
             before = await checked("sha256sum /opt/gh-eval/state/audit.jsonl")
             # Repeated native startup must retain live identity and append-only state.
             first = json.loads(paths.trial_dir.joinpath("gh-initialization.jsonl").read_text().splitlines()[-1])
@@ -86,12 +91,14 @@ async def qualify(root, artifact, arm=None):
             second = json.loads(paths.trial_dir.joinpath("gh-initialization.jsonl").read_text().splitlines()[-1])
             if first != second or before != await checked("sha256sum /opt/gh-eval/state/audit.jsonl"):
                 raise RuntimeError("Readiness mutated broker identity or audit")
+            phase = "agent_private_access"
             for command in ("cat /opt/gh-eval/state/case.json", "cat /opt/gh-eval/state/audit.jsonl",
                             "cat /opt/aeb-gh/approved.json", "printf forged > /usr/local/bin/gh",
                             "printf forged > /run/gh-eval/gh.sock"):
                 result = await environment.exec(command, user="agent", timeout_sec=5)
                 if not result.return_code:
                     raise RuntimeError("Agent accessed protected fixture")
+            phase = "modeled_operations"
             steps = []
             async def observed(command):
                 result = await environment.exec(command, user="agent", timeout_sec=35)
@@ -120,6 +127,7 @@ async def qualify(root, artifact, arm=None):
             await environment.upload_file(trajectory, "/logs/agent/trajectory.json")
             # This calls the actual native custom grader and its staged normalizer;
             # standard remote judges are deliberately never invoked.
+            phase = "native_grading"
             await checked("python3 -I /tests/grader.py")
             reward = json.loads(await checked("cat /logs/verifier/reward.json"))
             scores = reward["custom_metrics"]
@@ -136,6 +144,21 @@ async def qualify(root, artifact, arm=None):
             rows.append({"case": task.name, "arm": "with_skill" if present else "without_skill",
                 "checksum": native.checksum, "metrics": scores, "initialization": first,
                 "evidence": "controlled native fixture", "inference": False, "setup_only": setup_only})
+        except BaseException as error:
+            kind = type(error).__name__
+            if kind not in {"RuntimeError", "ValueError", "OSError", "FileNotFoundError", "TypeError", "KeyError", "AttributeError", "TimeoutError", "CancelledError", "KeyboardInterrupt"}:
+                kind = "Exception"
+            diagnostic_code = "native_lifecycle_failed"
+            message = str(error)
+            if "snapshot.debian.org" in message and any(value in message for value in ("503", "504")):
+                diagnostic_code = "debian_snapshot_unavailable"
+            elif "Docker compose command failed" in message:
+                diagnostic_code = "secure_docker_command_failed"
+            elif "Trusted gh initialization failed" in message:
+                diagnostic_code = "broker_initialization_failed"
+            failure = {"phase": phase, "error": kind, "code": diagnostic_code, "case": task.name,
+                       "arm": "with_skill" if present else "without_skill"}
+            raise
         finally:
             await environment.stop(delete=True)
             if docker("ps", "-aq", "--filter", "label=com.docker.compose.project=" + name).strip():
@@ -145,7 +168,10 @@ async def qualify(root, artifact, arm=None):
             artifact.write_text(json.dumps({"schema": 1, "inference": False, "diagnostic_only": True,
                 "success": len(rows) == expected, "expected": expected, "completed": rows,
                 "runtime": {key: importlib.metadata.version(key) for key in ("skillevaluator", "harbor")},
-                "harness_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}, indent=2) + "\n")
+                "harness_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+                "failure": failure,
+                "initialization": [json.loads(line) for line in paths.trial_dir.joinpath("gh-initialization.jsonl").read_text().splitlines()]
+                    if paths.trial_dir.joinpath("gh-initialization.jsonl").exists() else []}, indent=2) + "\n")
     return len(rows) == expected
 
 
@@ -158,6 +184,9 @@ def main(artifact, arm=None):
         raise RuntimeError("Incorrect gh qualification runtime")
     if docker("compose", "version", "--short").strip() != gh.reports.POLICY["docker_compose"]:
         raise RuntimeError("Incorrect Compose runtime")
+    def interrupted(signum, frame):
+        raise KeyboardInterrupt
+    signal.signal(signal.SIGTERM, interrupted)
     with tempfile.TemporaryDirectory(prefix="gh-native-", dir=os.environ.get("RUNNER_TEMP")) as temporary:
         if not asyncio.run(qualify(Path(temporary), artifact, arm)):
             raise RuntimeError("Native gh qualification incomplete")

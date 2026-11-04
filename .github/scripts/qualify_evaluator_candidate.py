@@ -69,6 +69,29 @@ def native_compose_config(project):
     return str(root)
 
 
+def run_native(command, *, env, log):
+    """Allow bounded teardown before forcibly ending a hung no-inference child."""
+    with subprocess.Popen(command, env=env, stdout=log, stderr=subprocess.STDOUT) as process:
+        try:
+            return process.wait(timeout=2600)
+        except subprocess.TimeoutExpired:
+            process.terminate()
+            try:
+                process.wait(timeout=30)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=5)
+            return 124
+        except BaseException:
+            process.terminate()
+            try:
+                process.wait(timeout=30)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=5)
+            raise
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source', type=Path, required=True, help='Clean checkout of the exact candidate revision')
@@ -173,10 +196,9 @@ def main():
                     'from gh_initializer_validation import main; main(sys.argv[3], sys.argv[4] or None)')
         with (output / 'native-gh.log').open('w') as log:
             try:
-                process = subprocess.run([sys.executable, '-I', '-B', '-c', launcher, str(snapshot / 'src'),
+                returncode = run_native([sys.executable, '-I', '-B', '-c', launcher, str(snapshot / 'src'),
                     str(project / '.github/scripts'), str(output / 'native-gh.json'), args.gh_arm or ''], env=native_env,
-                    stdout=log, stderr=subprocess.STDOUT, timeout=2700)
-                returncode = process.returncode
+                    log=log)
             except subprocess.TimeoutExpired:
                 returncode = 124
         metadata['returncode'] = returncode
@@ -190,10 +212,9 @@ def main():
                     'main(candidate=True, artifact=sys.argv[3])')
         with (output / 'native-pester.log').open('w') as log:
             try:
-                process = subprocess.run([sys.executable, '-I', '-B', '-c', launcher, str(snapshot / 'src'),
+                returncode = run_native([sys.executable, '-I', '-B', '-c', launcher, str(snapshot / 'src'),
                     str(project / '.github/scripts'), str(output / 'native-pester')], env=native_env,
-                    stdout=log, stderr=subprocess.STDOUT, timeout=2700)
-                returncode = process.returncode
+                    log=log)
             except subprocess.TimeoutExpired:
                 returncode = 124
         metadata['returncode'] = returncode

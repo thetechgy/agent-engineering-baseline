@@ -65,6 +65,7 @@ def task_identity(task):
     require(type(entry.get("has_skill")) is bool)
     case = entry["id"]
     require(isinstance(case, str) and re.fullmatch(r"gh-[0-9]{3}(?:-[a-z-]+)?", case))
+    require(native.name == case)
     private = task / "environment/private"
     return {"case": case, "arm": "with_skill" if entry["has_skill"] else "without_skill",
             "checksum": native.checksum,
@@ -83,9 +84,9 @@ def write_manifest(directory, tasks, *, staged_roots):
     require(directory.resolve() == directory and not directory.exists())
     require(all(not directory.is_relative_to(Path(root).resolve()) for root in staged_roots))
     require(0 < len(tasks) <= 48)
-    rows = {str(Path(task).absolute()): task_identity(Path(task).absolute()) for task in tasks}
-    require(rows and len(rows) == len(tasks) and len(rows) <= 48)
-    require(len({(row["case"], row["arm"]) for row in rows.values()}) == len(rows))
+    identities = [task_identity(Path(task).absolute()) for task in tasks]
+    rows = {row["case"] + "__" + row["arm"]: row for row in identities}
+    require(len(rows) == len(tasks))
     directory.mkdir(mode=0o700, parents=True)
     raw = json.dumps({"schema": 1, "payload": payload_digest(), "tasks": rows}, sort_keys=True, separators=(",", ":")).encode()
     require(len(raw) <= MAX_BYTES)
@@ -96,31 +97,43 @@ def write_manifest(directory, tasks, *, staged_roots):
     return path
 
 
-def approve(path, task):
-    path, task = Path(path), Path(task).absolute()
+def load_manifest(path):
+    path = Path(path)
     raw = regular(path)
     require(path.name == "manifest-" + hashlib.sha256(raw).hexdigest() + ".json")
     for target in (path, path.parent):
         info = target.lstat()
         require(info.st_uid == os.geteuid() and not stat.S_IMODE(info.st_mode) & 0o077)
-    require(not path.is_relative_to(task))
     data = json.loads(raw)
     require(set(data) == {"schema", "payload", "tasks"} and type(data["schema"]) is int and data["schema"] == 1)
     require(data["payload"] == payload_digest() and type(data["tasks"]) is dict and 0 < len(data["tasks"]) <= 48)
-    row = data["tasks"].get(str(task))
-    require(row == task_identity(task))
-    return row, hashlib.sha256(raw).hexdigest()
+    for key, row in data["tasks"].items():
+        require(type(row) is dict and set(row) == {"case", "arm", "checksum", "context", "members", "private"})
+        require(isinstance(row["case"], str) and re.fullmatch(r"gh-[0-9]{3}(?:-[a-z-]+)?", row["case"]))
+        require(row["arm"] in ("with_skill", "without_skill") and key == row["case"] + "__" + row["arm"])
+        require(type(row["members"]) is dict and 0 < len(row["members"]) <= 4096)
+        require(type(row["private"]) is dict and set(row["private"]) == {"case.json", "fixture.py", "setup.py", "client.py"})
+        require(all(isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value)
+                    for value in (row["checksum"], row["context"], *row["members"].values(), *row["private"].values())))
+    return data, hashlib.sha256(raw).hexdigest()
+
+
+def approve(path, task):
+    path, task = Path(path), Path(task).absolute()
+    require(not path.is_relative_to(task))
+    data, seal = load_manifest(path)
+    row = task_identity(task)
+    require(data["tasks"].get(row["case"] + "__" + row["arm"]) == row)
+    return row, seal
 
 
 def prerequisites(environment_kwargs):
     from . import MANIFEST_ENV
     try:
         require(not environment_kwargs)
-        path = Path(os.environ.get(MANIFEST_ENV, ""))
-        data = json.loads(regular(path))
-        require(type(data) is dict and type(data.get("tasks")) is dict and 0 < len(data["tasks"]) <= 48)
-        for task in data["tasks"]:
-            approve(path, Path(task))
+        # Content identity is portable to the CLI's private staging directory;
+        # actual task checksums are revalidated at environment startup.
+        load_manifest(Path(os.environ.get(MANIFEST_ENV, "")))
     except (OSError, ValueError, KeyError, TypeError):
         return ["Reviewed operator gh initialization manifest required"]
     return []
