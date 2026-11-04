@@ -12,7 +12,7 @@ case "$(realpath -m "$tool_root")/" in
 esac
 mkdir -p "$tool_root/bin" "$tool_root/dependencies"
 chmod 700 "$tool_root"
-test "$(uv --version | awk '{print $2}')" = '0.13.5'
+test "$(uv --version | awk '{print $2}')" = '0.13.6'
 export UV_CACHE_DIR="$tool_root/uv-cache"
 export UV_PYTHON_INSTALL_DIR="$tool_root/python"
 export XDG_CACHE_HOME="$tool_root/cache"
@@ -42,7 +42,7 @@ if [ "$kind" = quality ]; then
   uv pip sync --quiet --python "$tool_root/semgrep/bin/python" --require-hashes --only-binary :all: \
     "$GITHUB_WORKSPACE/.github/requirements/semgrep.txt"
   ln -s "$tool_root/semgrep/bin/semgrep" "$tool_root/bin/semgrep"
-  skillspector_revision=f3b25697d76256998ca9d42c198d256258d4c035 # v2.13.1
+  skillspector_revision=38a1dfe93325d2f8bfcd4f8d0241eed706334915 # v2.13.3
   git init --quiet "$tool_root/skillspector"
   git -C "$tool_root/skillspector" fetch --quiet --depth=1 \
     https://github.com/NVIDIA/SkillSpector.git "$skillspector_revision"
