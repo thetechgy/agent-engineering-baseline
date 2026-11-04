@@ -173,7 +173,7 @@ def main(*, candidate=False, artifact=None):
                     raise RuntimeError('Qualification trial identity mismatch')
                 seen.add(identity); fixture = fixtures[identity]
                 trial = reports.read_json(path.with_name('result.json'))
-                if (trial.get('task_checksum') != expected_tasks[arm, identity]
+                if (trial.get('task_name') != identity or trial.get('task_checksum') != expected_tasks[arm, identity]
                         or ('has_skill' in reward and reward['has_skill'] is not (arm == 'with-skill'))):
                     raise RuntimeError('Native identity or arm mismatch')
                 outcome = reward.get('details', {}).get('outcome', {})

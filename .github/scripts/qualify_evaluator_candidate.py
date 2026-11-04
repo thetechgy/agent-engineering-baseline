@@ -127,6 +127,7 @@ def main():
                 returncode = process.returncode
             except subprocess.TimeoutExpired:
                 returncode = 124
+        metadata['returncode'] = returncode
         metadata['native_pester'] = {'success': returncode == 0, 'returncode': returncode, 'diagnostic_only': True}
         (output / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
     print(json.dumps({**metadata, 'result': json.loads((output / 'result.json').read_text())}))
