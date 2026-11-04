@@ -1,6 +1,6 @@
 # SkillEvaluator 0.3.0 compatibility correction
 
-The legacy-named `skillevaluator-v0.3.0-pin-codex.patch` is the single reviewed
+The legacy-named `skillevaluator-v0.3.0-pin-codex.patch` is the production
 benchmark compatibility artifact. Apply only to upstream
 `ac0a04905100acdafc6c95829311a9739c340ff6` through `setup-skillevaluator.sh`.
 It retains Codex 0.155.1 and adds bounded execution-evidence corrections. No
@@ -67,3 +67,10 @@ without inference. Fixed judge responses can validate assembly only; they do not
 establish future semantic judging accuracy. Full original artifact replay and
 target-host deployment remain unavailable. Another paid benchmark requires
 separate approval and a design addressing residual unsupported evidence.
+
+## SkillEvaluator 0.7.2 candidate
+
+`skillevaluator-v0.7.2-evidence.patch` applies only to upstream
+`f878f99a9cd4a85dd04043feb43e5bd6a777f64b` for opt-in grading and collector
+qualification. It is not used by setup or production evaluation. See
+[the candidate contract, reproduction and remaining adoption gates](../evals/EVALUATOR-CANDIDATE-95.md).
