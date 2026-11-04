@@ -270,15 +270,22 @@ async def qualify(root, artifact, arm=None, shard=None):
                     "arm": "with_skill" if present else "without_skill"}
                 raise
             finally:
+                cleanup_phase = "stop"
                 try:
-                    await asyncio.wait_for(environment.stop(delete=True), timeout=20)
+                    await asyncio.wait_for(environment.stop(delete=True), timeout=60)
+                    cleanup_phase = "containers"
                     if docker("ps", "-aq", "--filter", "label=com.docker.compose.project=" + name, timeout=5).strip():
                         raise RuntimeError("Native gh teardown left a container")
+                    cleanup_phase = "networks"
                     if docker("network", "ls", "-q", "--filter", "label=com.docker.compose.project=" + name, timeout=5).strip():
                         raise RuntimeError("Native gh teardown left a network")
                     teardown = {"status": "complete"}
-                except BaseException:
-                    teardown = {"status": "infrastructure_error", "code": "native_teardown_failed"}
+                except BaseException as cleanup_error:
+                    kind = type(cleanup_error).__name__
+                    if kind not in {"RuntimeError", "TimeoutError", "CancelledError", "KeyboardInterrupt", "OSError", "CalledProcessError"}:
+                        kind = "Exception"
+                    teardown = {"status": "infrastructure_error", "code": "native_teardown_failed",
+                        "phase": cleanup_phase, "error": kind}
                     raise
                 finally:
                     retain()

@@ -203,3 +203,11 @@ partial results are failing-after evidence for cohort completeness, and passing-
 after evidence only for the completed lifecycle boundaries. CI now partitions
 each arm into three fixed eight-case jobs within the existing phase deadline.
 Promotion still requires every case in both arms on the final source revision.
+
+An eight-case shard on `a1f1d99` completed its first native fixture and retained
+a teardown infrastructure failure. The initial artifact did not preserve the
+cleanup stage/error class, so its cause is unestablished. Cleanup now records
+those bounded fields, allows the hardened backend up to 60 seconds, and still
+requires independent container/network absence. The parent observation retains
+80 seconds for cleanup; CI's total remains below the unchanged 46-minute step
+deadline. Failure evidence is written before cleanup starts.

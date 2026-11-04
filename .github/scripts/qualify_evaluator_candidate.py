@@ -70,17 +70,17 @@ def native_compose_config(project):
     return str(root)
 
 
-def run_native(command, *, env, log, timeout=2500):
+def run_native(command, *, env, log, timeout=2400):
     """Allow bounded teardown before forcibly ending a hung no-inference child."""
     with subprocess.Popen(command, env=env, stdout=log, stderr=subprocess.STDOUT) as process:
         try:
-            # 180s controls + 2500s native + 40s cleanup + 5s kill
+            # 180s controls + 2400s native + 80s cleanup + 5s kill
             # stays below the CI qualification step's 46-minute deadline.
             return process.wait(timeout=timeout)
         except subprocess.TimeoutExpired:
             process.terminate()
             try:
-                process.wait(timeout=40)
+                process.wait(timeout=80)
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.wait(timeout=5)
@@ -88,7 +88,7 @@ def run_native(command, *, env, log, timeout=2500):
         except BaseException:
             process.terminate()
             try:
-                process.wait(timeout=40)
+                process.wait(timeout=80)
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.wait(timeout=5)
@@ -224,7 +224,7 @@ def main():
     if controls_ready and args.native_gh:
         # CI always selects eight cases. Unsharded operator qualification keeps
         # the complete requested cohort with a separate bounded observation.
-        native_timeout = 2500 if args.gh_shard else 300 + 180 * (24 if args.gh_arm else 48)
+        native_timeout = 2400 if args.gh_shard else 300 + 180 * (24 if args.gh_arm else 48)
         native_env = {**env, 'DOCKER_CONFIG': compose_config, 'RUNNER_TEMP': str(output),
                       'PATH': str(Path(sys.executable).parent) + os.pathsep + env['PATH']}
         launcher = ('import sys; sys.path[:0] = sys.argv[1:3]; '
