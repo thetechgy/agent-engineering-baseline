@@ -23,7 +23,7 @@ import skill_reports as reports
 ROOT = Path(__file__).resolve().parents[2]
 OVERLAY = Path(".github/evals/gh")
 DEPLOYED = Path(".agents/skills/gh")
-UPSTREAM = "89d7dcec017194af1d6f8853176b2dae9c1da762"
+UPSTREAM = "63837fb778d6a39f02be0ce76ff89f2bc8d74bdc"
 SMOKE = ("gh-002", "gh-005", "gh-008", "gh-010")
 SETUP = "python3 -I /opt/gh-eval/setup.py --start"
 COMPETING = "github-actions-hardening"

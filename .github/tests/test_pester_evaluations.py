@@ -197,7 +197,7 @@ class NativeStagingTests(unittest.TestCase):
             reports.write_json(run / 'result.json', {'report_status': 'complete', 'skill_name': pilot.NAME,
                                'run_config': config, 'dataset_summary': {'total_tasks': len(case_ids)}, 'agents': {'codex': agent}})
             reports.write_json(root / 'versions.json', {'python': '3.13.17', 'skillevaluator': '0.3.0',
-                               'harbor': '0.13.2', 'docker_compose': '5.6.1'})
+                               'harbor': '0.13.2', 'docker_compose': '5.7.0'})
             # These are explicitly synthetic report-policy inputs, not execution
             # evidence. Native execution/collection is qualified separately.
             with patch.object(EvaluationService, 'discover_latest_results', return_value=run), \
@@ -356,7 +356,7 @@ class ClassificationTests(unittest.TestCase):
 
     def test_classifications_and_mutant_evidence(self):
         g = grader()
-        good = dict(status='executed', version='6.2.0', powershell_version='7.6.6', total=3, passed=3, failed=0,
+        good = dict(status='executed', version='6.2.0', powershell_version='7.6.9', total=3, passed=3, failed=0,
                     skipped=0, not_run=0, inconclusive=0, failed_blocks=0, failed_containers=0, assertion_failures=0)
         detected = {**good, 'passed': 2, 'failed': 1, 'assertion_failures': 1}
         self.assertEqual(g.assess(good, [detected])[0], 'passed')

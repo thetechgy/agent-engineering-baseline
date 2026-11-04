@@ -35,7 +35,11 @@ def frozen_tooling(test, tooling, profile):
             (scripts / name).write_bytes(raw)
         if profile in attachments.REGISTRY_DIGESTS:
             digest = attachments.REGISTRY_DIGESTS[profile]
-            asset = archive.read(digest + '.json')
+            if profile == 'custom-metrics-v3':
+                with zipfile.ZipFile(FIXTURE.with_name('refresh-95-registry.zip')) as refreshed:
+                    asset = refreshed.read(digest + '.json')
+            else:
+                asset = archive.read(digest + '.json')
             test.assertEqual(evidence.digest_bytes(asset), 'sha256:' + digest)
             registry = tooling / '.github/evals/custom-metrics.json'
             registry.parent.mkdir()

@@ -10,8 +10,8 @@ import zipfile
 
 
 INPUTS = (
-    ('https://github.com/PowerShell/PowerShell/releases/download/v7.6.6/powershell-7.6.6-linux-x64.tar.gz',
-     'ddbc4a2d113bbd46d283cfedcbcd117a70caefd7673f41f2b4e0000badf103bc', 'powershell.tar.gz'),
+    ('https://github.com/PowerShell/PowerShell/releases/download/v7.6.9/powershell-7.6.9-linux-x64.tar.gz',
+     '1da6d6d6035d651f20e70ddee7c4c15ac6ab8b9fb40ee92240d91263f28a884b', 'powershell.tar.gz'),
     ('https://www.powershellgallery.com/api/v2/package/Pester/6.2.0',
      'e6ac7418d4f12500269aaca58ae56cf1caafbbf1afa2cec334e289d1cf50a239', 'pester.nupkg'),
 )
@@ -43,7 +43,7 @@ def main():
                     raise ValueError('Unsafe fixture archive')
             archive.extractall(module)
         subprocess.run([str(runtime / 'pwsh'), '-NoLogo', '-NoProfile', '-NonInteractive', '-Command',
-                        "if ($PSVersionTable.PSVersion.ToString() -cne '7.6.6') { throw 'runtime' }; "
+                        "if ($PSVersionTable.PSVersion.ToString() -cne '7.6.9') { throw 'runtime' }; "
                         "Import-Module /opt/pester/Modules/Pester/6.2.0/Pester.psd1 -RequiredVersion 6.2.0 -ErrorAction Stop; "
                         "if ((Get-Module Pester).Version.ToString() -cne '6.2.0') { throw 'module' }"],
                        check=True, timeout=30)

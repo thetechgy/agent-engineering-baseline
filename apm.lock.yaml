@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-11-01T16:40:28.658446+00:00'
+generated_at: '2026-11-04T00:08:25.042521+00:00'
 apm_version: 0.35.0
 dependencies:
 - repo_url: addyosmani/agent-skills
@@ -20,8 +20,8 @@ dependencies:
 - repo_url: cli/cli
   name: gh
   host: github.com
-  resolved_commit: 89d7dcec017194af1d6f8853176b2dae9c1da762
-  resolved_ref: 89d7dcec017194af1d6f8853176b2dae9c1da762
+  resolved_commit: 63837fb778d6a39f02be0ce76ff89f2bc8d74bdc
+  resolved_ref: 63837fb778d6a39f02be0ce76ff89f2bc8d74bdc
   version: unknown
   virtual_path: skills/gh
   is_virtual: true
@@ -30,8 +30,8 @@ dependencies:
   - .agents/skills/gh
   - .agents/skills/gh/SKILL.md
   deployed_file_hashes:
-    .agents/skills/gh/SKILL.md: sha256:789a8bfa1605ae1ed6f6cb0eeeacea218a9671684638ab59f7e9a63cf64ccba7
-  content_hash: sha256:f2c4b15043980ca7d31b52d694e589e44b0924ebcff3f9d35cb1825e79ff370f
+    .agents/skills/gh/SKILL.md: sha256:b40d44ef9077b34d710b4c0737fee0e72c595e0770fbbdcb339de2ba0b40e23b
+  content_hash: sha256:79aa63cc988ba7de21886fd25377656a5b671a01ee107db9a4ca5b951550074b
 - repo_url: github/awesome-copilot
   name: dependabot
   host: github.com
@@ -306,7 +306,7 @@ deployments:
   owners:
   - cli/cli/skills/gh
   active_owner: cli/cli/skills/gh
-  content_hash: sha256:789a8bfa1605ae1ed6f6cb0eeeacea218a9671684638ab59f7e9a63cf64ccba7
+  content_hash: sha256:b40d44ef9077b34d710b4c0737fee0e72c595e0770fbbdcb339de2ba0b40e23b
 - kind: project-relative
   target: codex
   value: .agents/skills/git-commit

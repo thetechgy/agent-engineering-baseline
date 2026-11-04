@@ -150,7 +150,7 @@ def executed(result, minimum):
     keys = ('total', 'passed', 'failed', 'skipped', 'not_run', 'inconclusive',
             'failed_blocks', 'failed_containers', 'assertion_failures')
     return (result.get('status') == 'executed' and result.get('version') == '6.2.0'
-            and result.get('powershell_version') == '7.6.6'
+            and result.get('powershell_version') == '7.6.9'
             and all(type(result.get(k)) is int and result[k] >= 0 for k in keys)
             and result['total'] >= minimum and result['total'] == result['passed'] + result['failed']
             and all(result[k] == 0 for k in ('skipped', 'not_run', 'inconclusive', 'failed_blocks', 'failed_containers')))

@@ -1,6 +1,6 @@
 # Port validation suite
 
-This project uses PowerShell 7.6.6 and Pester 6.2.0. `Test-PortAllowed -Port <int>`
+This project uses PowerShell 7.6.9 and Pester 6.2.0. `Test-PortAllowed -Port <int>`
 returns a Boolean: true for ports 1 through 65535 inclusive, false otherwise.
 The supplied `Existing.Tests.ps1` appears green but does not execute its four
 cases correctly. Repair the suite so all four supplied boundaries are checked.
