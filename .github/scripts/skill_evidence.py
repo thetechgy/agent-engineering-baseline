@@ -3628,7 +3628,11 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
             require(path.parent.name == trial_name, 'Native trial name mismatch')
             native_id = trial.get('id'); token(native_id)
             from skillevaluator.tier3.harbor.collector import _entry_id_from_harbor_result, _canonical_case_id, _attempt_ordinal
-            case_id = _canonical_case_id(_entry_id_from_harbor_result(trial), set(capture['case_ids']))
+            if profile['id'] == 'pester-pilot-v3':
+                case_id = trial.get('task_name')
+                require(type(case_id) is str and case_id in capture['case_ids'], 'Missing native task identity')
+            else:
+                case_id = _canonical_case_id(_entry_id_from_harbor_result(trial), set(capture['case_ids']))
             require(case_id in capture['case_ids'] and trial.get('task_checksum') == tasks[arm, case_id]['task_checksum'],
                     'Native task identity or checksum mismatch')
             actual_agent = (trial.get('agent_info') or {}).get('name')
