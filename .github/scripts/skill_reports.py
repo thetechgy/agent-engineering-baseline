@@ -566,7 +566,7 @@ def diagnostic_benchmark_report(workspace, root, name, mode):
         require(all(count == MODES[mode] for count in counts.values()), 'Diagnostic retained case coverage mismatch')
     # Completion uses the same captured native identities as public admission.
     import skill_evidence as evidence
-    evidence.normalize_behavioral(root, name, workspace=workspace)
+    evidence.normalize_behavioral(root, name, workspace=workspace, native_layout=True)
     write_json(root / 'provenance.json', {'schema_version': 1, 'status': 'complete',
                'diagnostic_only': True, 'skill': name, 'mode': mode})
     summary([f'## {name}: native diagnostic comparison', '',

@@ -195,6 +195,9 @@ class NativeStagingTests(unittest.TestCase):
             for arm in ('with_skill', 'without_skill'):
                 agent['conditions'][arm] = {'execution_status': 'succeeded', 'execution_errors': [],
                                             'scored_attempts': total, 'expected_attempts': total}
+            (run.parent / 'latest').symlink_to(run.name, target_is_directory=True)
+            runtime = run / '_harbor-jobs'; runtime.mkdir()
+            (runtime / 'opaque-runtime').symlink_to(root / 'unavailable-native-only')
             reports.write_json(run / 'run_config.json', config)
             reports.write_json(run / 'result.json', {'report_status': 'complete', 'skill_name': pilot.NAME,
                                'run_config': config, 'dataset_summary': {'total_tasks': len(case_ids)}, 'agents': {'codex': agent}})
