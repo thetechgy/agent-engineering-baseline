@@ -104,22 +104,27 @@ def main():
     parser.add_argument('--gh-arm', choices=('with_skill', 'without_skill'), help='Bound native gh qualification to one arm; adoption requires both')
     parser.add_argument('--gh-shard', type=int, choices=(1, 2, 3), help='One fixed eight-case shard of --gh-arm; all three are required')
     parser.add_argument('--adoption', action='store_true', help='Run available native gates and report every remaining adoption blocker; never promote implicitly')
+    parser.add_argument('--cache-prepared', action='store_true', help='Label native fixtures following a separately retained operator preparation; changes no runtime behavior')
+    parser.add_argument('--prepare-gh', action='store_true', help='Prepare the unchanged approved gh image through its trusted backend, without agent setup')
+    parser.add_argument('--prepare-pester', action='store_true', help='Prepare unchanged pinned Pester image packages without agent setup or grading')
     parser.add_argument('--native-pester', action='store_true', help='After the evidence controls, qualify native Pester packaging without inference')
     args = parser.parse_args()
-    if args.gh_arm and not args.native_gh:
-        parser.error('--gh-arm requires --native-gh')
-    if args.gh_shard and (not args.native_gh or not args.gh_arm):
-        parser.error('--gh-shard requires --native-gh and --gh-arm')
+    if args.cache_prepared and not (args.native_gh or args.native_pester or args.adoption):
+        parser.error('--cache-prepared requires native qualification')
+    if args.gh_arm and not (args.native_gh or args.prepare_gh):
+        parser.error('--gh-arm requires --native-gh or --prepare-gh')
+    if args.gh_shard and (not (args.native_gh or args.prepare_gh) or not args.gh_arm):
+        parser.error('--gh-shard requires a gh operation and --gh-arm')
     if args.adoption and args.gh_arm:
         parser.error('Adoption requires both native gh arms')
     if args.adoption:
         args.native_gh = args.native_pester = True
-    if (args.native_pester or args.native_gh) and args.unpatched:
+    if (args.native_pester or args.native_gh or args.prepare_gh or args.prepare_pester) and args.unpatched:
         parser.error('Native qualification requires the reviewed evidence patch')
     project = Path(__file__).resolve().parents[2]
     compose_error = False
     try:
-        compose_config = native_compose_config(project) if args.native_pester or args.native_gh else None
+        compose_config = native_compose_config(project) if args.native_pester or args.native_gh or args.prepare_gh or args.prepare_pester else None
     except (OSError, ValueError):
         compose_config = None
         compose_error = True
@@ -190,6 +195,7 @@ def main():
                 'gh_harness_sha256': hashlib.sha256((project / '.github/scripts/gh_initializer_validation.py').read_bytes()).hexdigest(),
                 'gh_staging_sha256': hashlib.sha256((project / '.github/scripts/gh_candidate.py').read_bytes()).hexdigest(),
                 'backend_builder_sha256': hashlib.sha256((project / '.github/evaluator-backends/build_wheel.py').read_bytes()).hexdigest(),
+                'preparation_harness_sha256': hashlib.sha256((project / '.github/scripts/prepare_candidate_images.py').read_bytes()).hexdigest(),
                 'native_harness_sha256': hashlib.sha256((project / '.github/scripts/pester_container_validation.py').read_bytes()).hexdigest()}
     (output / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
     with (output / 'qualification.log').open('w') as log:
@@ -221,7 +227,23 @@ def main():
         metadata['returncode'] = returncode = returncode or 2
         (output / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
     controls_ready = returncode == 0
-    if controls_ready and args.native_gh:
+    preparations = (["gh", "pester"] if args.adoption else
+                    [suite for suite, selected in (("gh", args.prepare_gh), ("pester", args.prepare_pester)) if selected])
+    for suite in preparations if controls_ready else []:
+        preparation_env = {**env, 'DOCKER_CONFIG': compose_config, 'RUNNER_TEMP': str(output),
+                           'PATH': str(Path(sys.executable).parent) + os.pathsep + env['PATH']}
+        launcher = ('import sys; sys.path[:0] = sys.argv[1:3]; '
+                    'from prepare_candidate_images import main; main(sys.argv[3], sys.argv[4], sys.argv[5] or None, int(sys.argv[6]) or None)')
+        with (output / (suite + '-preparation.log')).open('w') as log:
+            preparation_code = run_native([sys.executable, '-I', '-B', '-c', launcher, str(snapshot / 'src'),
+                str(project / '.github/scripts'), str(output / (suite + '-preparation.json')), suite, args.gh_arm or '', str(args.gh_shard or 0)],
+                env=preparation_env, log=log, timeout=1200)
+        returncode = returncode or preparation_code
+        metadata[suite + '_preparation'] = {'success': preparation_code == 0, 'returncode': preparation_code,
+                                         'diagnostic_only': True, 'inference': False, 'qualification_context': 'cache_prepared'}
+        metadata['returncode'] = returncode
+        (output / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
+    if controls_ready and args.native_gh and metadata.get('gh_preparation', {}).get('success', True):
         # CI always selects eight cases. Unsharded operator qualification keeps
         # the complete requested cohort with a separate bounded observation.
         native_timeout = 2400 if args.gh_shard else 300 + 180 * (24 if args.gh_arm else 48)
@@ -239,9 +261,10 @@ def main():
         returncode = returncode or native_code
         metadata['returncode'] = returncode
         metadata['native_gh'] = {'success': native_code == 0, 'returncode': native_code, 'diagnostic_only': True,
-                                 'arm': args.gh_arm, 'shard': args.gh_shard, 'observation_seconds': native_timeout}
+                                 'arm': args.gh_arm, 'shard': args.gh_shard, 'observation_seconds': native_timeout,
+                                 'qualification_context': 'cache_prepared' if args.cache_prepared or metadata.get('gh_preparation', {}).get('success') else 'unprepared'}
         (output / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
-    if controls_ready and args.native_pester:
+    if controls_ready and args.native_pester and metadata.get('pester_preparation', {}).get('success', True):
         native_env = {**env, 'DOCKER_CONFIG': compose_config, 'PYTHONPATH': str(snapshot / 'src'), 'RUNNER_TEMP': str(output),
                       'PATH': str(Path(sys.executable).parent) + os.pathsep + env['PATH']}
         launcher = ('import sys; sys.path[:0] = sys.argv[1:3]; '
@@ -256,7 +279,8 @@ def main():
                 native_code = 124
         returncode = returncode or native_code
         metadata['returncode'] = returncode
-        metadata['native_pester'] = {'success': native_code == 0, 'returncode': native_code, 'diagnostic_only': True}
+        metadata['native_pester'] = {'success': native_code == 0, 'returncode': native_code, 'diagnostic_only': True,
+                                     'qualification_context': 'cache_prepared' if args.cache_prepared or metadata.get('pester_preparation', {}).get('success') else 'unprepared'}
         (output / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
     if args.adoption and controls_ready:
         legacy_python = os.environ.get('SKILL_LEGACY_REVIEW_PYTHON')

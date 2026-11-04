@@ -36,7 +36,7 @@ jobs:
   native-pester:
     name: Candidate Pester packaging (no inference)
     runs-on: ubuntu-latest
-    timeout-minutes: 65
+    timeout-minutes: 95
     env:
       PYTHONDONTWRITEBYTECODE: '1'
     steps:
@@ -54,12 +54,30 @@ jobs:
       - name: Acquire isolated candidate owning lock and backend
         timeout-minutes: 12
         run: bash .github/scripts/setup-skillevaluator.sh candidate
+      - name: Prepare unchanged pinned Pester image packages
+        timeout-minutes: 27
+        run: |
+          "$SKILL_CANDIDATE_PYTHON" .github/scripts/qualify_evaluator_candidate.py \
+            --source "$SKILL_CANDIDATE_SOURCE" \
+            --output "$RUNNER_TEMP/pester-candidate-preparation" --prepare-pester
+      - name: Retain bounded package-preparation checkpoint
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pester-candidate-preparation
+          path: |
+            ${{ runner.temp }}/pester-candidate-preparation/metadata.json
+            ${{ runner.temp }}/pester-candidate-preparation/result.json
+            ${{ runner.temp }}/pester-candidate-preparation/podman-fixtures.json
+            ${{ runner.temp }}/pester-candidate-preparation/pester-preparation.json
+          if-no-files-found: error
+          retention-days: 14
       - name: Qualify evidence controls then native Pester lifecycle
         timeout-minutes: 46
         run: |
           "$SKILL_CANDIDATE_PYTHON" .github/scripts/qualify_evaluator_candidate.py \
             --source "$SKILL_CANDIDATE_SOURCE" \
-            --output "$RUNNER_TEMP/pester-candidate-evidence" --native-pester
+            --output "$RUNNER_TEMP/pester-candidate-evidence" --native-pester --cache-prepared
       - name: Verify checkout integrity
         if: always()
         run: |
@@ -84,9 +102,10 @@ jobs:
   native-gh:
     name: Candidate gh initialization (${{ matrix.arm }}, ${{ matrix.shard }}/3, no inference)
     runs-on: ubuntu-latest
-    timeout-minutes: 65
+    timeout-minutes: 95
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
         arm: [with_skill, without_skill]
         shard: [1, 2, 3]
@@ -109,12 +128,30 @@ jobs:
       - name: Acquire isolated candidate owning lock and backend
         timeout-minutes: 12
         run: bash .github/scripts/setup-skillevaluator.sh candidate
+      - name: Prepare unchanged approved gh image packages
+        timeout-minutes: 27
+        run: |
+          "$SKILL_CANDIDATE_PYTHON" .github/scripts/qualify_evaluator_candidate.py \
+            --source "$SKILL_CANDIDATE_SOURCE" \
+            --output "$RUNNER_TEMP/gh-candidate-preparation" --prepare-gh --gh-arm "$GH_ARM" --gh-shard "$GH_SHARD"
+      - name: Retain bounded gh preparation checkpoint
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: gh-candidate-${{ matrix.arm }}-${{ matrix.shard }}-preparation
+          path: |
+            ${{ runner.temp }}/gh-candidate-preparation/metadata.json
+            ${{ runner.temp }}/gh-candidate-preparation/result.json
+            ${{ runner.temp }}/gh-candidate-preparation/podman-fixtures.json
+            ${{ runner.temp }}/gh-candidate-preparation/gh-preparation.json
+          if-no-files-found: error
+          retention-days: 14
       - name: Qualify native gh initialization and deterministic fixtures
         timeout-minutes: 46
         run: |
           "$SKILL_CANDIDATE_PYTHON" .github/scripts/qualify_evaluator_candidate.py \
             --source "$SKILL_CANDIDATE_SOURCE" \
-            --output "$RUNNER_TEMP/gh-candidate-evidence" --native-gh --gh-arm "$GH_ARM" --gh-shard "$GH_SHARD"
+            --output "$RUNNER_TEMP/gh-candidate-evidence" --native-gh --cache-prepared --gh-arm "$GH_ARM" --gh-shard "$GH_SHARD"
       - name: Verify checkout integrity
         if: always()
         run: |

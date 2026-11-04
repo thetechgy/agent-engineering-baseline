@@ -147,7 +147,7 @@ Real-provider readiness and model effectiveness remain unverified in either case
 
 ## Current delivery evidence
 
-All 33 local candidate controls pass with no network attempts. They stage all 48
+All 37 local candidate controls pass with no network attempts. They stage all 48
 gh tasks and exercise native CLI restaging with unchanged checksums in a new
 private directory. Initial hosted controls pass,
 but native run `41902822407` fails its first with-skill task build with fixed
@@ -227,3 +227,31 @@ without pilot quality metrics and twelve failure records; there is no complete
 52-outcome qualification. The underlying image-build delay is unestablished.
 This does not establish a scoring mismatch or justify changing task images,
 execution limits or isolation. Production promotion remains gated.
+
+The candidate workflow now prepares the unchanged Pester image's common pinned
+packages in a separate bounded operator setup step through the owning hardened
+Docker API. It verifies PowerShell 7.6.9 and Pester 6.2.0, preserves native task
+checksums and independently checks teardown. No agent setup, grading or inference
+runs during preparation. Its bounded checkpoint is uploaded before qualification.
+`--prepare-pester` exposes this setup step; `--adoption` includes it. Preparation
+failure blocks candidate Pester qualification while independent gates remain
+observable. Images, source/package hashes and native 600-second startup limits
+remain unchanged. Any following success is explicitly cache-prepared fixture
+compatibility, not cold-start or real-provider readiness. Native qualification
+still requires all 52 outcomes and cannot publish fixture data as benchmarks.
+
+The same explicit image-preparation phase applies to each gh shard through
+`aeb-gh-fixture`, with a separate sealed operator manifest and no agent setup.
+Observed Debian snapshot HTTP 503/504 build failures may retry at most three
+preparation attempts within one shared 1,100-second budget. Each uses a fresh
+backend/trial, preserves its failure record and requires complete teardown
+before retry. Manifest, initializer, version, cancellation and other failures
+do not retry. Actual native trials remain single-attempt, retain all limits,
+and require their full case sets. Package preparation cannot produce quality
+measurements. Concurrent cold acquisition is bounded to two gh jobs.
+
+The native CI steps declare `--cache-prepared` after their separately retained
+preparation checkpoint. This only labels diagnostic context; it changes no
+execution, scoring or admission behavior. The workflow's source identity and
+step outcomes bind that context. Standalone native commands retain unprepared
+context unless the operator explicitly declares prior preparation.

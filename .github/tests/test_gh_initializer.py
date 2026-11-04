@@ -106,6 +106,100 @@ class InitializerTests(unittest.TestCase):
             with self.assertRaises(RuntimeError): select_tasks(tasks[:-1], arm, 1)
         with self.assertRaises(ValueError): select_tasks(self.tasks, None, 1)
 
+    def test_pester_package_preparation_uses_fixed_probe_without_agent_setup(self):
+        import prepare_candidate_images as preparation
+        task = preparation.staged_task(self.root / "source")
+        root = self.root / "prepare"; root.mkdir()
+        artifact = root / "preparation.json"
+        environment = SimpleNamespace(start=AsyncMock(), stop=AsyncMock(), setup=AsyncMock(),
+            exec=AsyncMock(return_value=SimpleNamespace(return_code=0, stdout="7.6.9\n6.2.0\n")))
+        with patch.object(preparation, "staged_task", return_value=task), \
+                patch.object(preparation, "SkillEvaluatorSecureDockerEnvironment", return_value=environment), \
+                patch.object(preparation.subprocess, "check_output", return_value=""):
+            observed = asyncio.run(preparation.prepare(root, artifact))
+        self.assertEqual(observed["status"], "prepared")
+        self.assertEqual(observed["qualification_context"], "cache_prepared")
+        self.assertEqual(observed["teardown"], "complete")
+        self.assertFalse(observed["inference"])
+        environment.start.assert_awaited_once_with(force_build=True)
+        environment.exec.assert_awaited_once_with(preparation.RUNTIME_COMMAND, user="root", timeout_sec=20)
+        environment.stop.assert_awaited_once_with(delete=True)
+        environment.setup.assert_not_awaited()
+
+    def test_pester_package_preparation_failures_remain_infrastructure(self):
+        import prepare_candidate_images as preparation
+        task = preparation.staged_task(self.root / "source")
+        for fault in ("startup", "timeout", "cancel", "version", "teardown"):
+            with self.subTest(fault=fault):
+                root = self.root / fault; root.mkdir()
+                artifact = root / "preparation.json"
+                error = {"startup": RuntimeError(), "timeout": TimeoutError(), "cancel": asyncio.CancelledError()}.get(fault)
+                environment = SimpleNamespace(start=AsyncMock(side_effect=error), setup=AsyncMock(),
+                    stop=AsyncMock(side_effect=RuntimeError() if fault == "teardown" else None),
+                    exec=AsyncMock(return_value=SimpleNamespace(return_code=0,
+                        stdout="7.6.9\n6.1.0\n" if fault == "version" else "7.6.9\n6.2.0\n")))
+                with patch.object(preparation, "staged_task", return_value=task), \
+                        patch.object(preparation, "SkillEvaluatorSecureDockerEnvironment", return_value=environment), \
+                        patch.object(preparation.subprocess, "check_output", return_value=""):
+                    with self.assertRaises((RuntimeError, TimeoutError, asyncio.CancelledError)):
+                        asyncio.run(preparation.prepare(root, artifact))
+                retained = json.loads(artifact.read_text())
+                self.assertEqual(retained["status"], "cancelled" if fault == "cancel" else "infrastructure_error")
+                self.assertNotIn("metrics", retained)
+                environment.stop.assert_awaited_once_with(delete=True)
+                environment.setup.assert_not_awaited()
+
+    def test_package_preparation_retries_transient_build_in_new_environment(self):
+        import prepare_candidate_images as preparation
+        task = preparation.staged_task(self.root / "source")
+        root = self.root / "prepare"; root.mkdir()
+        transient = ("Docker compose command failed: E: Failed to fetch https://snapshot.debian.org/pkg "
+                     "TooManyRequests 503 No healthy backends\napt-get failed: exit code: 100")
+        self.assertTrue(preparation.transient_snapshot_failure(transient))
+        for detail in ("Fixture input digest mismatch", "Hash Sum mismatch", "GPG error", "signature invalid",
+                       "certificate verification failed"):
+            self.assertFalse(preparation.transient_snapshot_failure(transient + "\n" + detail))
+        self.assertFalse(preparation.transient_snapshot_failure("snapshot.debian.org warning 503; exit code: 1"))
+        failed = SimpleNamespace(start=AsyncMock(side_effect=RuntimeError(transient)), stop=AsyncMock(), setup=AsyncMock())
+        ready = SimpleNamespace(start=AsyncMock(), stop=AsyncMock(), setup=AsyncMock(),
+            exec=AsyncMock(return_value=SimpleNamespace(return_code=0, stdout="7.6.9\n6.2.0\n")))
+        with patch.object(preparation, "staged_task", return_value=task), \
+                patch.object(preparation, "SkillEvaluatorSecureDockerEnvironment", side_effect=[failed, ready]) as create, \
+                patch.object(preparation.subprocess, "check_output", return_value=""), \
+                patch.object(preparation.asyncio, "sleep", new_callable=AsyncMock):
+            observed = asyncio.run(preparation.prepare(root, root / "preparation.json"))
+        self.assertEqual(create.call_count, 2)
+        self.assertEqual(observed["status"], "prepared")
+        self.assertEqual(len(observed["attempts"]), 2)
+        self.assertEqual(observed["attempts"][0]["code"], "debian_snapshot_unavailable")
+        self.assertEqual(observed["attempts"][0]["teardown"], "complete")
+        self.assertTrue(observed["attempts"][0]["retry"])
+        for environment in (failed, ready):
+            environment.start.assert_awaited_once_with(force_build=True)
+            environment.stop.assert_awaited_once_with(delete=True)
+            environment.setup.assert_not_awaited()
+
+    def test_gh_package_preparation_retains_operator_manifest_and_backend(self):
+        import prepare_candidate_images as preparation
+        import aeb_gh_fixture.backend as backend
+        root = self.root / "prepare"; root.mkdir()
+        original_manifest = os.environ.get("AEB_GH_MANIFEST")
+        async def approved_start(*, force_build):
+            row, _ = self.manifest.approve(os.environ["AEB_GH_MANIFEST"], self.tasks[0])
+            self.assertEqual(row["case"], "gh-001")
+            self.assertTrue(force_build)
+        environment = SimpleNamespace(start=AsyncMock(side_effect=approved_start), stop=AsyncMock(), setup=AsyncMock(),
+            exec=AsyncMock(return_value=SimpleNamespace(return_code=0, stdout="v20.19.2\n")))
+        with patch.object(preparation, "staged_task", return_value=self.tasks[0]), \
+                patch.object(backend, "TrustedGhEnvironment", return_value=environment), \
+                patch.object(preparation.subprocess, "check_output", return_value=""):
+            observed = asyncio.run(preparation.prepare(root, root / "preparation.json", "gh", "with_skill", 1))
+        self.assertEqual(observed["status"], "prepared")
+        self.assertEqual(observed["node"], "20.19.2")
+        self.assertEqual(os.environ.get("AEB_GH_MANIFEST"), original_manifest)
+        environment.exec.assert_awaited_once_with(preparation.GH_RUNTIME_COMMAND, user="root", timeout_sec=20)
+        environment.setup.assert_not_awaited()
+
     def test_existing_authored_healthcheck_still_rejects_baseline(self):
         import gh_evaluations as gh
         from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks
