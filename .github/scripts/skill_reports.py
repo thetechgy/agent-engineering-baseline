@@ -199,7 +199,7 @@ def benchmark_policy(name):
             "63837fb778d6a39f02be0ce76ff89f2bc8d74bdc", "deterministic_gate": 3, "workspace_mode": "group",
             "fixture_boundary": "root-broker-unprivileged-agent-v1", "authorization_policy": "per-case-allowlist-v1",
             "task_source": "native_harbor", "task_build": GH_TASK_BUILD,
-            "competing_revision": "b1a00457c0b8794243883f387e7de71e88800e3e"} if name == "gh" else POLICY
+            "competing_revision": "61fa1fa8fcc63d6dbd2f07a75aeb8e214df5acfb"} if name == "gh" else POLICY
 
 
 def catalog_report(workspace, root):
