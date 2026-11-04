@@ -253,16 +253,17 @@ index bf660c3..0cade41 100644
          (_EVAL_CORE_DIR / "secret_redaction.py", "Deterministic redaction helper"),
          (_EVAL_CORE_DIR / "codex_tool_call_normalizer.py", "Codex tool-call normalizer"),
 diff --git a/src/skillevaluator/tier3/harbor/collector.py b/src/skillevaluator/tier3/harbor/collector.py
-index 33ba588..c06bda3 100644
+index 33ba588..82439f0 100644
 --- a/src/skillevaluator/tier3/harbor/collector.py
 +++ b/src/skillevaluator/tier3/harbor/collector.py
-@@ -3058,4 +3058,5 @@ def _merge_reward_sidecars(data: dict[str, Any], verifier_dir: Path) -> None:
+@@ -3058,4 +3058,6 @@ def _merge_reward_sidecars(data: dict[str, Any], verifier_dir: Path) -> None:
              str(metric): detail for metric, detail in custom_details.items() if str(metric) in custom_metrics
          }
-+        safe_custom_details.update(_custom_outcome_diagnosis(custom_details))
++        if "outcome" not in safe_custom_details:
++            safe_custom_details.update(_custom_outcome_diagnosis(custom_details))
          if safe_custom_details:
              data["custom_details"] = safe_custom_details
-@@ -4237,4 +4238,18 @@ def _overall_score(reward: dict[str, Any]) -> float | None:
+@@ -4237,4 +4239,18 @@ def _overall_score(reward: dict[str, Any]) -> float | None:
 
 
 +def _custom_outcome_diagnosis(details: dict[str, Any]) -> dict[str, Any]:
@@ -281,13 +282,14 @@ index 33ba588..c06bda3 100644
 +
  def _sanitize_reward_metric_surfaces(reward: dict[str, Any]) -> dict[str, Any]:
      """Omit unsafe metric names without creating redaction aliases."""
-@@ -4312,4 +4327,5 @@ def _sanitize_reward_metric_surfaces(reward: dict[str, Any]) -> dict[str, Any]:
+@@ -4312,4 +4328,6 @@ def _sanitize_reward_metric_surfaces(reward: dict[str, Any]) -> dict[str, Any]:
              str(raw_name): detail for raw_name, detail in custom_details.items() if str(raw_name) in custom_metric_names
          }
-+        safe_custom_details.update(_custom_outcome_diagnosis(custom_details))
++        if "outcome" not in safe_custom_details:
++            safe_custom_details.update(_custom_outcome_diagnosis(custom_details))
          if safe_custom_details:
              sanitized["custom_details"] = safe_custom_details
-@@ -5762,4 +5778,26 @@ def _annotate_security_attribution(
+@@ -5762,4 +5780,26 @@ def _annotate_security_attribution(
              continue
 
 +        evidence_limitations = {"unsupported_tool_wrapper", "unsupported_path_evidence"}
@@ -314,10 +316,11 @@ index 33ba588..c06bda3 100644
 +
          with_findings = _security_score_findings(reward)
          baseline_findings = baseline_by_case.get(entry_id, [])
-@@ -6213,4 +6251,5 @@ def _restore_custom_metric_details(
+@@ -6213,4 +6253,6 @@ def _restore_custom_metric_details(
              if str(raw_name) in custom_names
          }
-+        safe_custom_details.update(_custom_outcome_diagnosis(source_custom_details))
++        if "outcome" not in safe_custom_details:
++            safe_custom_details.update(_custom_outcome_diagnosis(source_custom_details))
          if safe_custom_details:
              safe_reward["custom_details"] = safe_custom_details
 diff --git a/src/skillevaluator/tier3/harbor/templates/eval.py b/src/skillevaluator/tier3/harbor/templates/eval.py

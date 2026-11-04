@@ -28,7 +28,8 @@ its sidecar. Only six fixed classifications survive this exception: passed,
 failed, invalid, timeout, unsupported and infrastructure_error. Extra fields and
 unknown values are discarded. This diagnosis creates no custom metric and does
 not change failed-attempt admission. Existing redaction and metric-name filters
-remain active.
+remain active. Validated custom metrics named `outcome` retain their existing
+evidence and take precedence over the diagnosis-only exception.
 
 These checks classify submitted command text and evidence linkage. They do not
 attest successful execution, authorization or a complete native operation
@@ -86,6 +87,8 @@ failures, all in the following reviewed contract differences:
 | Unscoped output expects attribution to the first call rather than separate diagnostic evidence | 6 |
 
 These remain failed upstream assertions; the upstream tests were not rewritten.
+After the custom-metric collision correction, a focused rerun passes 149 upstream
+metric and collector-truth cases, with 134 deselected.
 The project controls assert the intended replacement behavior. The selection
 covers normalizer, shared ATIF staging, path extraction, secret detection,
 metrics, collector failure handling, report truth and verifier redaction. It is

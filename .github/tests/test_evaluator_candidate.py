@@ -97,6 +97,20 @@ assert verifier.check_security({'steps': []}, calls)['supported'] is False
             self.assertFalse(collector.extract_custom_metrics(safe))
         for value in ('dummy-private-data', 0, None, {}, [], {'classification': 'unsupported', 'extra': 1}):
             self.assertEqual(collector._custom_outcome_diagnosis({'outcome': {'classification': value}}), {})
+        # A legitimate metric named outcome keeps the upstream evidence path.
+        reward = {'custom_metrics': {'outcome': 1.0}, 'custom_details': {
+            'outcome': {'classification': 'passed', 'explanation': 'validated metric detail'}}}
+        safe = collector._sanitize_reward_metric_surfaces(reward)
+        self.assertEqual(safe['custom_details'], reward['custom_details'])
+        collector._restore_custom_metric_details(reward, safe)
+        self.assertEqual(safe['custom_details'], reward['custom_details'])
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / 'custom_reward.json').write_text(json.dumps({
+                'custom_metrics': reward['custom_metrics'], 'details': reward['custom_details']}))
+            merged = {}
+            collector._merge_reward_sidecars(merged, root)
+            self.assertEqual(merged['custom_details'], reward['custom_details'])
 
     def test_missing_and_unlinked_results_stop_before_judges(self):
         from skillevaluator.tier3.harbor.templates import eval as verifier
