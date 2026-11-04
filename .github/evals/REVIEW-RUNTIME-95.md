@@ -77,3 +77,13 @@ pre-install guard excludes tool storage from both the declared workspace and
 the actual checkout, including when those directories are separate. Native
 reporting setup was reproduced in this nested layout before and after the fix;
 the earlier revision failed to locate the review patch.
+
+Native Pester scheduling, execution and collection continue under the retained
+evaluator interpreter. Its final shared-reporting qualification hands off to
+`SKILL_REVIEW_PYTHON` through a fixed isolated launcher with no provider
+credentials. Reporting uses the current review runtime before and after native
+originals are hidden, then restores those originals and retains the same derived
+public outputs. The reporting-only replay used digest-verified diagnostics from
+the native CI run at `293fc63`: direct legacy reporting rejected its version mismatch, while
+the handoff produced consolidated and public outputs. Producer artifacts were
+read as bounded data, never executed; native containers remain covered by CI.

@@ -185,6 +185,24 @@ def main():
 
 
 def qualify_reporting(root, native):
+    """Keep native execution on its legacy runtime; hand reviews to their owner."""
+    python = Path(os.environ['SKILL_REVIEW_PYTHON'])
+    if not python.is_absolute() or not python.is_file():
+        raise RuntimeError('Current review interpreter unavailable')
+    environment = {'PATH': os.defpath, 'PYTHONDONTWRITEBYTECODE': '1', 'GIT_NO_LAZY_FETCH': '1'}
+    for name in ('TMPDIR', 'RUNNER_TEMP', 'SKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE'):
+        if name in os.environ:
+            environment[name] = os.environ[name]
+    launcher = (
+        "import sys; from pathlib import Path; sys.path.insert(0, sys.argv[1]); "
+        "from pester_container_validation import _qualify_reporting; "
+        "_qualify_reporting(Path(sys.argv[2]), Path(sys.argv[3]))"
+    )
+    subprocess.run([str(python), '-I', '-B', '-c', launcher, str(ROOT / '.github/scripts'),
+                    str(root), str(native)], env=environment, check=True, timeout=120)
+
+
+def _qualify_reporting(root, native):
     """Use the consolidated public-only consumers, then remove native originals."""
     import skill_analysis as analysis
     import skill_report as report
