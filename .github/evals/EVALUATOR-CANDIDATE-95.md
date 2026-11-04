@@ -36,6 +36,13 @@ attest successful execution, authorization or a complete native operation
 inventory. The existing classifier's 64 KiB bound and conservative unsupported
 syntax behavior remain in place.
 
+## Trusted gh follow-up
+
+The [trusted initializer qualification](GH-INITIALIZER-95.md) adds an installed
+operator backend, candidate-only recipe, explicit Codex 0.155.1 dispatch and
+credential-free native gates. Existing qualification results below describe their
+original revisions. Production promotion remains gated.
+
 ## Reproduction
 
 Use a separate clean checkout and the pinned uv 0.13.7. Keep the checkout and
@@ -47,6 +54,10 @@ git clone https://github.com/NVIDIA/SkillEvaluator.git "$candidate_source"
 git -C "$candidate_source" checkout --detach f878f99a9cd4a85dd04043feb43e5bd6a777f64b
 uv sync --project "$candidate_source" --python 3.13 --frozen --no-dev --extra tier3
 uv pip check --python "$candidate_source/.venv/bin/python"
+"$candidate_source/.venv/bin/python" .github/evaluator-backends/build_wheel.py \
+  "$HOME/worktrees/evaluator-95-backend-wheel"
+uv pip install --python "$candidate_source/.venv/bin/python" --no-deps --no-index \
+  --link-mode copy "$HOME/worktrees/evaluator-95-backend-wheel/aeb_gh_fixture-1.0.0-py3-none-any.whl"
 "$candidate_source/.venv/bin/python" .github/scripts/qualify_evaluator_candidate.py \
   --source "$candidate_source" \
   --output "$HOME/worktrees/evaluator-95-evidence"

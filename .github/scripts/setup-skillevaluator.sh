@@ -3,8 +3,8 @@
 set -euo pipefail
 umask 077
 
-kind=${1:?usage: setup-skillevaluator.sh quality|benchmark|reporting}
-case "$kind" in quality|benchmark|reporting) ;; *) exit 2 ;; esac
+kind=${1:?usage: setup-skillevaluator.sh quality|benchmark|reporting|candidate}
+case "$kind" in quality|benchmark|reporting|candidate) ;; *) exit 2 ;; esac
 : "${RUNNER_TEMP:?}" "${GITHUB_WORKSPACE:?}" "${GITHUB_ENV:?}" "${GITHUB_PATH:?}"
 repository_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)
 tool_root="$RUNNER_TEMP/skill-evaluation-tools"
@@ -18,6 +18,34 @@ export UV_CACHE_DIR="$tool_root/uv-cache"
 export UV_PYTHON_INSTALL_DIR="$tool_root/python"
 export XDG_CACHE_HOME="$tool_root/cache"
 export XDG_STATE_HOME="$tool_root/state"
+
+# Qualification owns a separate pristine source/lock and installed local wheel.
+# Production and both historical/current review environments retain their pins.
+if [ "$kind" = candidate ]; then
+  candidate_revision=f878f99a9cd4a85dd04043feb43e5bd6a777f64b # v0.7.2
+  candidate_root="$RUNNER_TEMP/candidate-evaluation-tools"
+  git init --quiet "$candidate_root/evaluator"
+  git -C "$candidate_root/evaluator" fetch --quiet --depth=1 \
+    https://github.com/NVIDIA/SkillEvaluator.git "$candidate_revision"
+  git -C "$candidate_root/evaluator" checkout --quiet --detach FETCH_HEAD
+  test "$(git -C "$candidate_root/evaluator" rev-parse HEAD)" = "$candidate_revision"
+  uv sync --project "$candidate_root/evaluator" --python 3.13 --managed-python \
+    --frozen --no-dev --extra tier3
+  candidate_python="$candidate_root/evaluator/.venv/bin/python"
+  "$candidate_python" "$repository_root/.github/evaluator-backends/build_wheel.py" "$candidate_root/wheel"
+  "$candidate_python" "$repository_root/.github/evaluator-backends/build_wheel.py" "$candidate_root/wheel-repeat"
+  cmp "$candidate_root/wheel/aeb_gh_fixture-1.0.0-py3-none-any.whl" \
+    "$candidate_root/wheel-repeat/aeb_gh_fixture-1.0.0-py3-none-any.whl"
+  uv pip install --python "$candidate_python" --no-deps --no-index --link-mode copy \
+    "$candidate_root/wheel/aeb_gh_fixture-1.0.0-py3-none-any.whl"
+  uv pip check --python "$candidate_python"
+  git -C "$candidate_root/evaluator" diff --exit-code
+  {
+    printf 'SKILL_CANDIDATE_PYTHON=%s\n' "$candidate_python"
+    printf 'SKILL_CANDIDATE_SOURCE=%s/evaluator\n' "$candidate_root"
+  } >> "$GITHUB_ENV"
+  exit 0
+fi
 
 evaluator_revision=ac0a04905100acdafc6c95829311a9739c340ff6 # v0.3.0
 git init --quiet "$tool_root/evaluator"

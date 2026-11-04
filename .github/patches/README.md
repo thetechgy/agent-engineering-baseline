@@ -72,5 +72,8 @@ separate approval and a design addressing residual unsupported evidence.
 
 `skillevaluator-v0.7.2-evidence.patch` applies only to upstream
 `f878f99a9cd4a85dd04043feb43e5bd6a777f64b` for opt-in grading and collector
-qualification. It is not used by setup or production evaluation. See
+qualification. It also fixes generated Codex dispatch to the reviewed 0.155.1,
+rather than upstream's 0.161.0 default. Trusted initialization is an installed
+operator backend, not another upstream lifecycle patch. The candidate patch is
+not used by production evaluation. See
 [the candidate contract, reproduction and remaining adoption gates](../evals/EVALUATOR-CANDIDATE-95.md).
