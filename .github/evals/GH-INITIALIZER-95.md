@@ -211,3 +211,19 @@ those bounded fields, allows the hardened backend up to 60 seconds, and still
 requires independent container/network absence. The parent observation retains
 80 seconds for cleanup; CI's total remains below the unchanged 46-minute step
 deadline. Failure evidence is written before cleanup starts.
+
+On `a1f1d99`, five native gh shards pass: all 24 with-skill and 16 without-skill
+cases, including exact metric/skill-byte replay and all seven fault controls in
+each arm. The sixth shard remains failed on teardown; these results are not a
+complete cohort. That revision also passes all 846 Python contracts (33 skipped),
+the full quality job, both required project checks and all 52 retained-runtime
+Pester outcomes with shared/public-only reporting.
+
+Candidate Pester qualification on the same revision fails during the with-skill
+native lifecycle. Two native records report `EnvironmentStartTimeoutError`
+while the hardened backend awaits Docker image build at the unchanged 600-second
+startup deadline. The diagnostic archive retains seven failed reward carriers
+without pilot quality metrics and twelve failure records; there is no complete
+52-outcome qualification. The underlying image-build delay is unestablished.
+This does not establish a scoring mismatch or justify changing task images,
+execution limits or isolation. Production promotion remains gated.
