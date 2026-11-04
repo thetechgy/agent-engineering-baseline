@@ -50,7 +50,10 @@ def main():
     parser.add_argument('--source', type=Path, required=True, help='Clean checkout of the exact candidate revision')
     parser.add_argument('--output', type=Path, required=True, help='New persistent evidence directory outside both checkouts')
     parser.add_argument('--unpatched', action='store_true', help='Measure failing-before controls against pristine source')
+    parser.add_argument('--native-pester', action='store_true', help='After the evidence controls, qualify native Pester packaging without inference')
     args = parser.parse_args()
+    if args.native_pester and args.unpatched:
+        parser.error('Native qualification requires the reviewed evidence patch')
     project = Path(__file__).resolve().parents[2]
     source, output = args.source.resolve(strict=True), args.output.absolute()
     if output.resolve() != output or output.exists() or any(output.is_relative_to(root) for root in (project, source)):
@@ -110,6 +113,22 @@ def main():
         (output / 'result.json').write_text(json.dumps({'success': False, 'error': 'Control process did not produce a terminal result'}) + '\n')
     metadata['returncode'] = returncode
     (output / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
+    if returncode == 0 and args.native_pester:
+        native_env = {**env, 'PYTHONPATH': str(snapshot / 'src'), 'RUNNER_TEMP': str(output),
+                      'PATH': str(Path(sys.executable).parent) + os.pathsep + env['PATH']}
+        launcher = ('import sys; sys.path[:0] = sys.argv[1:3]; '
+                    'from pester_container_validation import main; '
+                    'main(candidate=True, artifact=sys.argv[3])')
+        with (output / 'native-pester.log').open('w') as log:
+            try:
+                process = subprocess.run([sys.executable, '-I', '-B', '-c', launcher, str(snapshot / 'src'),
+                    str(project / '.github/scripts'), str(output / 'native-pester')], env=native_env,
+                    stdout=log, stderr=subprocess.STDOUT, timeout=2700)
+                returncode = process.returncode
+            except subprocess.TimeoutExpired:
+                returncode = 124
+        metadata['native_pester'] = {'success': returncode == 0, 'returncode': returncode, 'diagnostic_only': True}
+        (output / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
     print(json.dumps({**metadata, 'result': json.loads((output / 'result.json').read_text())}))
     return returncode
 

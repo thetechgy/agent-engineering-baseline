@@ -1020,10 +1020,104 @@
       "fixture_digest": "sha256:9dd6c53ce8090ff3790ff2274d8067775a5605def5cc80479bf2c85ef6330060",
       "runtime_digest": "sha256:9b550425f57f46e807c669582bf23e5064b5d7de70b5208627b70a53d4c10088",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0"
+    },
+    "pester-pilot-v3": {
+      "id": "pester-pilot-v3",
+      "grading": "custom_only",
+      "cases": {
+        "pester-001": {
+          "title": "Integer collection tests",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v1",
+            "powershell-pester-6.test-quality.v1"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v1": 2
+          }
+        },
+        "pester-002": {
+          "title": "Retry and error tests",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v1",
+            "powershell-pester-6.test-quality.v1"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v1": 2
+          }
+        },
+        "pester-003": {
+          "title": "Module mocking and invocation assertions",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v1",
+            "powershell-pester-6.test-quality.v1"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v1": 2
+          }
+        },
+        "pester-004": {
+          "title": "Discovery and data-case repair",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v1",
+            "powershell-pester-6.test-quality.v1"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v1": 4
+          }
+        },
+        "pester-005": {
+          "title": "Python report summary control",
+          "metrics": [
+            "powershell-pester-6.negative-control-correct.v1"
+          ],
+          "denominators": {}
+        }
+      },
+      "qualification_cases": {
+        "pester-001-classic": "pester-001",
+        "pester-001-standalone": "pester-001",
+        "pester-001-data": "pester-001",
+        "pester-001-weak": "pester-001",
+        "pester-001-unsupported": "pester-001",
+        "pester-001-empty": "pester-001",
+        "pester-001-skipped": "pester-001",
+        "pester-001-failure-text": "pester-001",
+        "pester-001-malformed": "pester-001",
+        "pester-001-timeout": "pester-001",
+        "pester-001-missing-runtime": "pester-001",
+        "pester-001-version-drift": "pester-001",
+        "pester-002-classic": "pester-002",
+        "pester-002-data": "pester-002",
+        "pester-002-weak": "pester-002",
+        "pester-003-external": "pester-003",
+        "pester-003-module": "pester-003",
+        "pester-003-weak": "pester-003",
+        "pester-003-wrong-scope": "pester-003",
+        "pester-004-discovery": "pester-004",
+        "pester-004-inline": "pester-004",
+        "pester-004-compact": "pester-004",
+        "pester-004-weak": "pester-004",
+        "pester-004-broken-discovery": "pester-004",
+        "pester-005-good": "pester-005",
+        "pester-005-wrong": "pester-005"
+      },
+      "runtime": {
+        "powershell": "7.6.9",
+        "pester": "6.2.0"
+      },
+      "skill_id": "powershell-pester-6",
+      "grader_digest": "sha256:4cef272ded4c42ff8e2bd2e8cec70900a946fca796d565a8cc06f87cd7dd3266",
+      "fixture_digest": "sha256:9dd6c53ce8090ff3790ff2274d8067775a5605def5cc80479bf2c85ef6330060",
+      "runtime_digest": "sha256:07460ed81656fb2658ad55079d9e9c99c1bca21b223dabdcb9ca060392a0174a",
+      "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0"
     }
   },
   "active_profiles": {
-    "powershell-pester-6": "pester-pilot-v2",
+    "powershell-pester-6": "pester-pilot-v3",
     "gh": "gh-deterministic-gate-v4"
   }
 }

@@ -254,20 +254,32 @@ def emit(tests, status, details):
     except Exception:
         entry = {}
         status, details, entry_id = 'infrastructure_error', {'code': 'entry'}, 'unknown'
-    reward = {'overall': float(status == 'passed'), 'entry_id': entry_id,
-              'details': {'outcome': {'classification': status, **details}}}
+    if (type(entry) is not dict or entry.get('grading_mode') != 'custom_only'
+            or type(entry_id) is not str or not entry_id.startswith('pester-')
+            or '/' in entry_id or ('has_skill' in entry and type(entry['has_skill']) is not bool)):
+        status, details, entry_id = 'infrastructure_error', {'code': 'entry'}, 'unknown'
+    numeric = {'overall': float(status == 'passed')}
+    rich = {'entry_id': entry_id, 'details': {'outcome': {'classification': status, **details}}}
     sidecar = {'evaluation_status': 'failed' if status in UNSCORED else 'complete',
-               'entry_id': entry_id, 'has_skill': entry.get('has_skill'),
-               'custom_details': reward['details']}
+               'entry_id': entry_id, 'details': rich['details']}
+    if 'has_skill' in entry:
+        sidecar['has_skill'] = entry['has_skill']
     if status in UNSCORED:
         sidecar['evaluation_errors'] = {'applicability': 'Unscoreable pilot trial: ' + status}
     elif 'negative_control_correct' in details:
-        reward['custom_metrics'] = {'negative_control_correct': float(details['negative_control_correct'])}
+        rich['custom_metrics'] = {'negative_control_correct': float(details['negative_control_correct'])}
     else:
-        reward['custom_metrics'] = {'pester_reference_pass': float(details['reference_pass']),
-                                    'pester_mutation_detection': details['mutants_detected'] / details['mutants_executed'],
-                                    'pester_test_quality': reward['overall']}
-    target.write_text(json.dumps(reward))
+        rich['custom_metrics'] = {'pester_reference_pass': float(details['reference_pass']),
+                                  'pester_mutation_detection': details['mutants_detected'] / details['mutants_executed'],
+                                  'pester_test_quality': numeric['overall']}
+    numeric.update(rich.get('custom_metrics', {}))
+    # Publish the terminal status last. Until then the pre-armed failure wins,
+    # even if Harbor has already observed a numeric reward.
+    for name, value in (('custom_reward.json', rich), ('reward.json', numeric)):
+        temporary = target.parent / (name + '.tmp')
+        temporary.write_text(json.dumps(value))
+        os.replace(temporary, target.parent / name)
+    (target.parent / 'reward.txt').write_text(str(numeric['overall']) + '\n')
     temporary = target.parent / 'pilot-sidecar.tmp'
     temporary.write_text(json.dumps(sidecar))
     os.replace(temporary, target.parent / 'skill_evaluator_reward.json')
@@ -282,7 +294,7 @@ def main():
     log_state = log.stat()
     (log / 'skill_evaluator_reward.json').write_text(json.dumps({
         'evaluation_status': 'failed', 'evaluation_errors': {'execution': 'Pilot verifier incomplete'},
-        'custom_details': {'outcome': {'classification': 'infrastructure_error', 'code': 'incomplete'}}}))
+        'details': {'outcome': {'classification': 'infrastructure_error', 'code': 'incomplete'}}}))
     status, details = 'infrastructure_error', {'code': 'verifier'}
     try:
         def expired(_number, _frame):

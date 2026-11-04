@@ -556,9 +556,9 @@ def diagnostic_benchmark_report(workspace, root, name, mode):
         require(len(rewards) == cases * MODES[mode], 'Diagnostic retained trial cardinality mismatch')
         for path in rewards:
             reward = read_json(path)
-            require(reward.get('entry_id') in counts and reward.get('has_skill') is (arm == 'with_skill'),
+            require(reward.get('entry_id') in counts and ('has_skill' not in reward or reward['has_skill'] is (arm == 'with_skill')),
                     'Diagnostic retained trial identity mismatch')
-            outcome = reward.get('custom_details', {}).get('outcome', {})
+            outcome = reward.get('details', {}).get('outcome', {})
             require(outcome.get('classification') in ('passed', 'failed')
                     and reward.get('evaluation_status') == 'complete',
                     'Unscoreable or unclassified trial makes the comparison inconclusive')

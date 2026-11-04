@@ -3159,7 +3159,7 @@ def custom_source_manifest(workspace, name):
 
 def custom_input_identities(workspace, name, inputs=None):
     inputs = custom_source_manifest(workspace, name) if inputs is None else inputs
-    grader = [row for row in inputs if row['member'] in ('evals/grader.py', 'support/Runner.ps1', 'evals/files/fixture.py')]
+    grader = [row for row in inputs if row['member'] in ('evals/grader.py', 'support/Runner.ps1', 'support/test.sh', 'evals/files/fixture.py')]
     fixture = [row for row in inputs if row['member'].startswith(('support/cases/', 'evals/files/'))
                or row['member'] == 'support/EXECUTION-PROFILE.md']
     runtime = [row for row in inputs if row['member'].startswith('producer/')
@@ -3198,13 +3198,24 @@ def capture_custom_tasks(workspace, name, tasks, arm, *, purpose='benchmark'):
         entry = parse_json(captured['tests/entry.json'])
         case = entry['id']; token(case)
         source_case = profile['qualification_cases'].get(case) if purpose == 'oracle_qualification' else case
-        require(source_case in profile['cases'] and entry['has_skill'] is (arm == 'with_skill')
-                and entry['grading_mode'] == profile['grading'], 'Staged custom identity mismatch')
+        shared_pester = profile['id'] == 'pester-pilot-v3'
+        require(source_case in profile['cases'] and entry['grading_mode'] == profile['grading']
+                and (('has_skill' not in entry and shared_pester)
+                     or entry.get('has_skill') is (arm == 'with_skill')), 'Staged custom identity mismatch')
+        if shared_pester:
+            prefix = 'environment/skills/' + name + '/'
+            actual_skill = {key.removeprefix(prefix): raw for key, raw in captured.items() if key.startswith(prefix)}
+            source = workspace / ('.apm/skills' if name == 'powershell-pester-6' else '.agents/skills') / name
+            expected_skill = {p.relative_to(source).as_posix(): read_bytes(p) for p in safe_tree(source)
+                              if p.relative_to(source).parts[0] != 'evals'} if arm == 'with_skill' else {}
+            require(actual_skill == expected_skill, 'Staged target skill drift')
         overlay = workspace / '.github/evals' / name
         grader = read_bytes(overlay / 'evals/grader.py')
         if name == 'gh':
             grader = read_bytes(overlay / 'evals/files/fixture.py').decode().rsplit('\nif __name__ ==', 1)[0].encode() + b'\n' + grader
-        require(captured['tests/grader.py'] == grader, 'Unapproved staged grader')
+        require(captured['tests/verifier/grader.py' if shared_pester else 'tests/grader.py'] == grader, 'Unapproved staged grader')
+        if shared_pester:
+            require(captured['tests/test.sh'] == read_bytes(overlay / 'support/test.sh'), 'Staged verifier entry drift')
         if name == 'powershell-pester-6':
             require(captured['tests/Runner.ps1'] == read_bytes(overlay / 'support/Runner.ps1'), 'Staged runner drift')
             fixture_root = overlay / 'support/cases' / source_case
@@ -3420,7 +3431,13 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None):
         overlay = workspace / '.github/evals' / name
         grader = read_bytes(overlay / 'evals/grader.py')
         if name == 'gh': grader = read_bytes(overlay / 'evals/files/fixture.py').decode().rsplit('\nif __name__ ==', 1)[0].encode() + b'\n' + grader
-        require(task['members'].get('tests/grader.py') == digest_bytes(grader), 'Staged grader drift')
+        shared_pester = profile['id'] == 'pester-pilot-v3'
+        require(task['members'].get('tests/verifier/grader.py' if shared_pester else 'tests/grader.py') == digest_bytes(grader), 'Staged grader drift')
+        if shared_pester:
+            expected_entry = json.dumps({'id': task['case_id'], 'grading_mode': 'custom_only'}, indent=2) + '\n'
+            require(task['members'].get('tests/entry.json') == digest_bytes(expected_entry.encode())
+                    and task['members'].get('tests/test.sh') == digest_bytes(read_bytes(overlay / 'support/test.sh')),
+                    'Staged verifier metadata drift')
         entry = next(row for row in prepared if row['id'] == task['case_id'])
         require(task['members'].get('instruction.md') == digest_bytes((entry['prompt'] + '\n').encode()), 'Staged instruction drift')
         prefix = 'environment/skills/' + name + '/'
@@ -3632,14 +3649,15 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
             if ordinal is None: limitations.add('metadata_missing')
             if reward is not None:
                 require(reward.get('trial_id') == trial_name and reward.get('entry_id') == case_id
-                        and reward.get('has_skill') is (arm == 'with_skill'), 'Reward identity mismatch')
+                        and ((profile['id'] == 'pester-pilot-v3' and 'has_skill' not in reward)
+                             or reward.get('has_skill') is (arm == 'with_skill')), 'Reward identity mismatch')
             raw = ((trial.get('verifier_result') or {}).get('rewards') or {})
             if profile['grading'] == 'custom_only':
                 require(not (set(raw) & {'security', 'skill_execution', 'skill_efficiency', 'accuracy', 'goal_accuracy', 'behavior_check'}),
                         'Custom-only trial contains standard judge metrics')
             if matched is not None and matched[1].get('score') is not None:
                 require(matched[1]['score'] == raw.get('overall'), 'Custom native attempt score mismatch')
-            detail = (reward or {}).get('custom_details', {}).get('outcome', {})
+            detail = (reward or {}).get('details' if profile['id'] == 'pester-pilot-v3' else 'custom_details', {}).get('outcome', {})
             outcome = detail.get('classification', 'unknown') if profile['grading'] == 'custom_only' else (
                 'failed' if native_trial_failed(trial, reward) else 'passed' if (reward or {}).get('custom_metrics', {}).get('gh_gate') == 1 else 'failed')
             if profile['grading'] == 'default_plus_custom' and native_trial_failed(trial, reward): outcome = 'unknown'

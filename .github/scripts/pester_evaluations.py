@@ -56,7 +56,10 @@ def dockerfile(*, verifier=False):
              'ENV PATH=/opt/microsoft/powershell/7:/usr/local/bin:/usr/bin:/bin',
              'WORKDIR /workspace']
     if verifier:
-        lines += ['COPY . /tests/', 'RUN chmod 700 /tests && chown root:root /workspace/output']
+        lines += ['COPY test.sh entry.json Runner.ps1 /tests/',
+                  'COPY verifier/grader.py /tests/verifier/grader.py',
+                  'COPY case/ /tests/case/',
+                  'RUN chmod 700 /tests && chmod 700 /tests/test.sh && chown root:root /workspace/output']
     return '\n'.join(lines) + '\n'
 
 
@@ -101,7 +104,10 @@ def stage(workspace, destination):
         for context in (env, tests):
             (context / 'build').mkdir()
             shutil.copyfile(support / 'install-runtime.py', context / 'build/install-runtime.py')
-        shutil.copyfile(root / 'evals/grader.py', tests / 'grader.py')
+        (tests / 'verifier').mkdir()
+        shutil.copyfile(root / 'evals/grader.py', tests / 'verifier/grader.py')
+        shutil.copyfile(support / 'test.sh', tests / 'test.sh')
+        (tests / 'entry.json').write_text(json.dumps({'id': entry['id'], 'grading_mode': 'custom_only'}, indent=2) + '\n')
         shutil.copyfile(support / 'Runner.ps1', tests / 'Runner.ps1')
         (tests / 'case').mkdir()
         for filename in ('profile.json',):
