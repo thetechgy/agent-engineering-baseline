@@ -93,7 +93,7 @@ python -B -m unittest discover -s .github/tests -p test_pester_evaluations.py -v
 ```
 
 On a disposable hosted runner with the existing evaluator setup and verified
-Docker Compose 5.6.1 plugin:
+Docker Compose 5.7.0 plugin:
 
 ```bash
 python -B .github/scripts/pester_container_validation.py
@@ -158,7 +158,7 @@ baseline or stop on pass. No model-backed run is required for CI.
 
 The shared selector/preparer, inventory, native collection/recovery, evidence
 validation and artifact pipeline own this integration. Standard selection and direct history publication reject this diagnostic
-profile. Shared public normalization admits only the approved v2 native capture,
+profile. Shared public normalization admits only the approved `pester-pilot-v3` native capture,
 with provenance and completeness limitations retained. No standard judge fields are fabricated and no Pester report generator,
 history store, dashboard or analyst pipeline is introduced. Generic custom
 metrics/applicability admission is centralized in the shared evidence contract;
@@ -177,3 +177,15 @@ Avoid grading assertion style, helper preferences, or test count as quality.
 Do not alter historical scores or infer model-backed effectiveness from oracle
 qualification. The earlier oracle artifact is retained unchanged; prospective
 capture qualifies the new reporting path without retroactive authentication.
+
+## Shared verifier package
+
+Production SkillEvaluator 0.3.0/Harbor 0.13.2 and the opt-in
+0.7.2/0.24.0 candidate use the same authored verifier package. `support/test.sh`
+executes the nested grader copied into the verifier image with the runner,
+case data and minimal entry identity. Harbor receives numeric-only rewards;
+rich sidecars retain `details.outcome` and the pre-armed unscoreable status.
+Arm membership comes from captured target-skill contents and matching native
+task checksums. Grading rules, metric definitions and the five public tasks
+remain unchanged. The candidate command and remaining adoption limits are in
+[`EVALUATOR-CANDIDATE-95.md`](../EVALUATOR-CANDIDATE-95.md#shared-pester-verifier-qualification).

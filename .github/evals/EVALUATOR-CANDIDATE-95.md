@@ -102,11 +102,11 @@ Current production bundle preparation still reproduces the staging barriers:
 | --- | --- |
 | gh with skill | One task staged |
 | gh without skill | Rejects an authored environment healthcheck in a paired baseline |
-| Pester, either arm | Rejects a dedicated verifier image that does not receive the grader payload |
+| Pester, either arm, before shared packaging | Rejects a dedicated verifier image that does not receive the grader payload |
 
 The next changes need an operator-owned gh initializer after secure container
-start and before agent setup in both arms, and supported Pester verifier-image
-packaging. Restoring image entrypoints, bypassing the healthcheck rejection or
+start and before agent setup in both arms, while Pester uses the shared packaging
+described below. Restoring image entrypoints, bypassing the healthcheck rejection or
 removing verifier separation would not qualify those boundaries.
 
 Before adoption, also qualify actual Harbor lifecycle and cleanup, explicit
@@ -115,3 +115,47 @@ scoring and new policy identities. This port neither qualifies newer Codex
 native evidence nor requires all of draft PR #109. Harbor 0.25.0 and SDK 3.x
 remain separate owning-lock compatibility decisions. Historical results are
 not replayed or relabeled as evidence for this candidate.
+
+## Shared Pester verifier qualification
+
+The Pester package now owns its `test.sh`, nested `verifier/grader.py`, runner,
+case data and minimal `entry.json`. Explicit Dockerfile copies include them in
+the separate verifier image. Neither runtime selects a top-level custom grader
+or generates a verifier runner for this package. The unprivileged agent and
+root-owned, network-disabled verifier retain their existing limits.
+
+The grader writes numeric-only `reward.json` and `reward.txt`, a rich
+`custom_reward.json`, and the existing evaluation-status sidecar. `details.outcome`
+carries classifications, mutation counts and verified runtime versions. The
+pre-armed infrastructure-failure sidecar remains authoritative until the final
+atomic status write. Interruption cannot convert missing measurements into zero.
+
+`pester-pilot-v3` identifies this prospective layout and carrier. Staged target
+skill contents bind the arm, and the native task checksum binds each trial to
+that capture. An optional arm flag must agree. Missing or transplanted checksums,
+metadata, grader, fixtures or skill contents reject evidence. Older profiles,
+registry entries, hashes and fixture archives retain their original contracts.
+`current-v4` freezes the new validator modules and registry; `current-v3` retains
+its original current-review runtime, while older profiles retain legacy routing.
+
+Add `--native-pester` to the qualification command to first run all 16 evidence
+controls, then the shared 26-fixture matrix in both arms through the candidate's
+actual Harbor lifecycle. The required 52 outcomes are 22 passed, 14 failed,
+eight invalid, two timeout, two unsupported and four infrastructure errors.
+Every classification, applicable metric and measured runtime must match.
+The candidate retains native collection and HTML diagnostics only. It cannot
+create a production custom capture, public benchmark or history record.
+
+The separate `Candidate Pester packaging` workflow uses the pinned owning lock,
+uv, actions and verified Compose with read-only permissions and no credentials.
+Its artifact contains bounded sanitized diagnostics and control metadata, without
+source snapshots, protected fixtures or raw verifier logs. Production qualification
+also exercises shared reporting and public-only replay after native originals
+are hidden. Missing Docker is a failed prerequisite; no workstation service or
+container runtime is installed by the qualification tooling.
+
+Local controls reproduce the original staging rejection and stage all five
+cases in both arms under the candidate. The 16 evidence controls pass. Native
+container qualification is owned by the hosted jobs; staging alone does not
+establish the 52 terminal outcomes, cleanup or upgrade readiness. Trusted gh
+initialization and overall evaluator adoption remain separate gates.

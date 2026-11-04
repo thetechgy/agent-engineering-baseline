@@ -1,0 +1,88 @@
+name: Candidate Pester packaging
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/evals/**'
+      - '.github/scripts/**'
+      - '.github/tests/**'
+      - '.github/patches/**'
+      - '.github/requirements/**'
+      - '.github/workflows/**'
+      - '.apm/skills/powershell-pester-6/**'
+      - '.agents/skills/powershell-pester-6/**'
+  pull_request:
+    paths:
+      - '.github/evals/**'
+      - '.github/scripts/**'
+      - '.github/tests/**'
+      - '.github/patches/**'
+      - '.github/requirements/**'
+      - '.github/workflows/**'
+      - '.apm/skills/powershell-pester-6/**'
+      - '.agents/skills/powershell-pester-6/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: candidate-pester-${{ github.event_name == 'pull_request' && github.run_attempt == '1' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == '1' }}
+
+jobs:
+  native-pester:
+    name: Candidate Pester packaging (no inference)
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install verified test-only Docker Compose
+        run: bash .github/scripts/setup-compose.sh
+      - name: Set up pinned uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: '0.13.7'
+          enable-cache: false
+      - name: Acquire candidate owning lock
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          candidate_source="$RUNNER_TEMP/pester-candidate-source"
+          git init --quiet "$candidate_source"
+          git -C "$candidate_source" fetch --quiet --depth=1 https://github.com/NVIDIA/SkillEvaluator.git f878f99a9cd4a85dd04043feb43e5bd6a777f64b
+          git -C "$candidate_source" checkout --quiet --detach FETCH_HEAD
+          test "$(git -C "$candidate_source" rev-parse HEAD)" = f878f99a9cd4a85dd04043feb43e5bd6a777f64b
+          uv sync --project "$candidate_source" --python 3.13 --managed-python --frozen --no-dev --extra tier3
+          uv pip check --python "$candidate_source/.venv/bin/python"
+          git -C "$candidate_source" diff --exit-code
+      - name: Qualify evidence controls then native Pester lifecycle
+        timeout-minutes: 46
+        run: |
+          "$RUNNER_TEMP/pester-candidate-source/.venv/bin/python" .github/scripts/qualify_evaluator_candidate.py \
+            --source "$RUNNER_TEMP/pester-candidate-source" \
+            --output "$RUNNER_TEMP/pester-candidate-evidence" --native-pester
+      - name: Verify checkout integrity
+        if: always()
+        run: |
+          git diff --exit-code
+          test -z "$(git status --porcelain=v1 --untracked-files=all --ignored)"
+      - name: Retain bounded sanitized candidate diagnostics
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pester-candidate-diagnostics
+          path: |
+            ${{ runner.temp }}/pester-candidate-evidence/metadata.json
+            ${{ runner.temp }}/pester-candidate-evidence/result.json
+            ${{ runner.temp }}/pester-candidate-evidence/native-pester/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Remove test-only Compose plugin
+        if: always()
+        run: bash .github/scripts/setup-compose.sh cleanup

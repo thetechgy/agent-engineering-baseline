@@ -87,7 +87,7 @@ def synthetic_native(root, *, complete=False):
                                        pester_version='6.2.0', powershell_version='7.6.9')
                 numeric = {'overall': float(outcome == 'passed'), **metrics}
                 reward = {**numeric, 'entry_id': case, 'trial_id': trial_name, 'has_skill': arm == 'with_skill',
-                          'evaluation_status': 'complete' if measured else 'failed', 'custom_details': {'outcome': details}}
+                          'evaluation_status': 'complete' if measured else 'failed', 'details': {'outcome': details}}
                 if metrics: reward['custom_metrics'] = metrics; values.append(metrics)
                 if not measured: failures.append({'trial': trial_name, 'reason': 'Synthetic unscoreable carrier'})
                 write(trial / 'reward.json', reward)
@@ -220,6 +220,45 @@ class CustomMetricTests(unittest.TestCase):
         self.assertTrue(any(m['value'] == 0 for obs in value['observations'] for m in obs['custom']['measurements']))
         self.assertEqual(evidence.project(value), evidence.project(json.loads(evidence.encoded(value)), behavioral_bundle=native))
 
+    def test_v3_arm_identity_requires_native_checksum_and_approved_skill(self):
+        native, run = self.native(True)
+        path = run / 'codex/with-skill/trials/pester-001__attempt1/reward.json'
+        reward = evidence.read_json(path)
+        reward.pop('has_skill')
+        write(path, reward)
+        evidence.normalize_behavioral(native, NAME)
+        trial_path = path.with_name('result.json')
+        original = evidence.read_json(trial_path)
+        other = evidence.read_json(run / 'codex/without-skill/trials/pester-001__attempt1/result.json')
+        for checksum in (None, '0' * 64, other['task_checksum']):
+            changed = {**original, 'task_checksum': checksum}
+            write(trial_path, changed)
+            with self.assertRaisesRegex(ValueError, 'checksum'):
+                evidence.normalize_behavioral(native, NAME)
+        write(trial_path, {k: v for k, v in original.items() if k != 'task_name'})
+        with self.assertRaisesRegex(ValueError, 'native task identity'):
+            evidence.normalize_behavioral(native, NAME)
+        write(trial_path, original)
+        capture_path = native / evidence.CUSTOM_CAPTURE
+        capture = evidence.read_json(capture_path)
+        row = next(t for t in capture['tasks'] if t['arm'] == 'with_skill')
+        key = next(k for k in row['members'] if k.startswith('environment/skills/'))
+        row['members'][key] = evidence.identity('transplanted skill')
+        row['task_checksum'] = evidence.custom_task_checksum(row['members'])
+        write(capture_path, capture)
+        with self.assertRaisesRegex(ValueError, 'skill drift'):
+            evidence.normalize_behavioral(native, NAME)
+
+    def test_v3_missing_metadata_or_changed_entrypoint_rejects_even_with_recomputed_checksum(self):
+        for member in ('tests/entry.json', 'tests/test.sh', 'tests/verifier/grader.py', 'tests/case/profile.json'):
+            with self.subTest(member=member):
+                capture = evidence.read_json(self.base / 'True/native' / evidence.CUSTOM_CAPTURE)
+                row = capture['tasks'][0]
+                row['members'].pop(member)
+                row['task_checksum'] = evidence.custom_task_checksum(row['members'])
+                with self.assertRaises(ValueError):
+                    evidence.validate_custom_capture(capture, NAME, ROOT)
+
     def test_complete_population_permits_only_metric_specific_means(self):
         native, run, value = self.normalize(True)
         public = evidence.project(value)
@@ -305,11 +344,11 @@ class CustomMetricTests(unittest.TestCase):
                 reward_path = next(run.glob('codex/with-skill/trials/pester-001*/reward.json'))
                 reward = evidence.read_json(reward_path)
                 capture = evidence.read_json(target / evidence.CUSTOM_CAPTURE)
-                if change == 'denominator': reward['custom_details']['outcome']['mutants_executed'] = 0
+                if change == 'denominator': reward['details']['outcome']['mutants_executed'] = 0
                 elif change == 'value': reward['custom_metrics']['pester_mutation_detection'] = 0.3
                 elif change == 'definition': capture['contract_digest'] = evidence.identity('forged')
                 elif change == 'runtime': capture['runtime']['pester'] = '6.1.0'
-                elif change == 'grader': capture['tasks'][0]['members']['tests/grader.py'] = evidence.identity('forged')
+                elif change == 'grader': capture['tasks'][0]['members']['tests/verifier/grader.py'] = evidence.identity('forged')
                 elif change == 'dataset': capture['authored_digest'] = evidence.identity('changed')
                 elif change == 'task': capture['tasks'][0]['task_checksum'] = '0' * 64
                 elif change == 'duplicate': capture['tasks'][1] = capture['tasks'][0]
@@ -536,7 +575,7 @@ class CustomMetricTests(unittest.TestCase):
                 elif change == 'evaluator': capture['evaluator_version'] = '0.6.0'
                 elif change == 'namespace': reward['custom_metrics']['forged_metric'] = 1
                 elif change == 'unscoreable-zero':
-                    reward['evaluation_status'] = 'failed'; reward['custom_details']['outcome']['classification'] = 'unsupported'
+                    reward['evaluation_status'] = 'failed'; reward['details']['outcome']['classification'] = 'unsupported'
                 else: trial['agent_result'].update(n_input_tokens=1, n_cache_tokens=2)
                 write(path, trial); write(reward_path, reward); write(target / evidence.CUSTOM_CAPTURE, capture)
                 with self.assertRaises((ValueError, KeyError)): evidence.normalize_behavioral(target, NAME)
@@ -612,16 +651,16 @@ class CustomMetricTests(unittest.TestCase):
         rid = next(key for key, row in captured.records.items() if row['kind'] == 'behavioral')
         context = review.prepare([public], saved, NAME, rid)
         tooling = self.root / 'tooling'
-        scripts = frozen_tooling(self, tooling, 'custom-metrics-v3')
+        scripts = frozen_tooling(self, tooling, 'current-v4')
         request = {'inputs': [str(public)], 'analysis': str(saved), 'skill': NAME, 'record_id': rid,
             'source': None, 'support': None, 'selection': None, 'judgment': judgment(context),
             'config': CONFIG, 'destination': str(self.root / 'saved')}
-        result = subprocess.run([attachments.validator_runtime('custom-metrics-v3')[0], '-I', '-B', '-c', MAKE, str(scripts)],
+        result = subprocess.run([attachments.validator_runtime('current-v4')[0], '-I', '-B', '-c', MAKE, str(scripts)],
             input=evidence.encoded(request), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
         self.assertEqual(result.returncode, 0, result.stderr.decode())
         document = self.root / 'saved/skill-review.json'
         markdown = document.with_suffix('.md').read_bytes()
-        spec = {'schema_version': 1, 'profile': 'custom-metrics-v3', 'tooling': str(tooling),
+        spec = {'schema_version': 1, 'profile': 'current-v4', 'tooling': str(tooling),
             'skill': NAME, 'record_id': rid, 'review': str(document),
             'review_digest': evidence.digest_bytes(document.read_bytes()),
             'markdown_digest': evidence.digest_bytes(markdown), 'inputs': [str(public)],
@@ -631,6 +670,7 @@ class CustomMetricTests(unittest.TestCase):
         html = report.render_report(analysis.validate_analysis(None, captured), captured, reviews=validated)
         self.assertIn(b'Seeded mutation detection', html)
         self.assertIn(b'No recommendations supplied', html)
+        spec['profile'] = 'current-v3'
         spec['tooling'] = str(ROOT)
         changed = self.root / 'checkout-attachment.json'; write(changed, spec)
         with self.assertRaisesRegex(ValueError, 'Unreviewed validator module'):
