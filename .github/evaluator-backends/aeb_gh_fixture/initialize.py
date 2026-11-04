@@ -64,7 +64,8 @@ def probe(expected):
 
 def initialize():
     global PHASE
-    require(os.geteuid() == 0 and sys.argv[1:] == [])
+    require(os.geteuid() == 0 and sys.argv[1:] in ([], ["--verify"]))
+    verify_only = sys.argv[1:] == ["--verify"]
     private(CONTROL, directory=True)
     PHASE = "private_inputs"
     private(STATE, directory=True)
@@ -81,6 +82,7 @@ def initialize():
         private(record)
         identity = probe(json.loads(record.read_text()))
     else:
+        require(not verify_only)
         SOCKET.parent.mkdir(mode=0o755, parents=True, exist_ok=True)
         private(SOCKET.parent, directory=True)
         PHASE = "spawn"

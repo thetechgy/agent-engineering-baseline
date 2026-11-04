@@ -12,10 +12,17 @@ from . import MANIFEST_ENV
 from .manifest import approve, payload_digest
 
 COMMAND = "/usr/local/bin/python3 -I /opt/aeb-gh/initialize.py"
+VERIFY_COMMAND = COMMAND + " --verify"
 
 
 class TrustedGhEnvironment(SkillEvaluatorSecureDockerEnvironment):
     async def start(self, force_build):
+        if not hasattr(self, "_aeb_start_lock"):
+            self._aeb_start_lock = asyncio.Lock()
+        async with self._aeb_start_lock:
+            await self._start_locked(force_build)
+
+    async def _start_locked(self, force_build):
         status = {"status": "infrastructure_error", "initializer": payload_digest()}
         # Host trial root is outside all agent mounts (agent logs are a child).
         target = self.trial_paths.trial_dir / "gh-initialization.jsonl"
@@ -33,7 +40,13 @@ class TrustedGhEnvironment(SkillEvaluatorSecureDockerEnvironment):
             # Only the declared operator host variable can select the sealed manifest.
             row, manifest = approve(os.environ.get(MANIFEST_ENV, ""), self.environment_dir.parent)
             status.update(manifest=manifest, case=row["case"], arm=row["arm"], checksum=row["checksum"])
-            await super().start(force_build)
+            repeated = getattr(self, "_aeb_ready", False)
+            if getattr(self, "_aeb_failed", False):
+                raise RuntimeError("Failed gh initialization requires a new trial")
+            if repeated and force_build:
+                raise RuntimeError("Refusing to rebuild an initialized gh trial")
+            if not repeated:
+                await super().start(force_build)
             async with asyncio.timeout(30):
                 # Revalidate after startup; changed contexts cannot initialize.
                 approve(os.environ.get(MANIFEST_ENV, ""), self.environment_dir.parent)
@@ -49,7 +62,7 @@ class TrustedGhEnvironment(SkillEvaluatorSecureDockerEnvironment):
                 owned = await self.exec("/usr/bin/chown -R root:root /opt/aeb-gh && /usr/bin/chmod 700 /opt/aeb-gh && /usr/bin/chmod 600 /opt/aeb-gh/*.py /opt/aeb-gh/*.json", user="root", timeout_sec=5)
                 if owned.return_code:
                     raise RuntimeError("Cannot protect initializer payload")
-                result = await self.exec(COMMAND, user="root", timeout_sec=28)
+                result = await self.exec(VERIFY_COMMAND if repeated else COMMAND, user="root", timeout_sec=28)
                 if result.return_code or len(result.stdout or "") > 1024:
                     try:
                         diagnostic = json.loads((result.stdout or "")[:1024])
@@ -67,8 +80,13 @@ class TrustedGhEnvironment(SkillEvaluatorSecureDockerEnvironment):
                         or type(identity["socket_inode"]) is not int or identity["socket_inode"] <= 0
                         or type(identity["start"]) is not str or not identity["start"].isdecimal()):
                     raise RuntimeError("Invalid gh broker identity")
+                if repeated and identity != self._aeb_broker_identity:
+                    raise RuntimeError("Repeated startup changed the approved gh broker")
+                self._aeb_broker_identity = identity
+                self._aeb_ready = True
                 status.update(status="ready", broker=identity)
         except BaseException as error:
+            self._aeb_failed = True
             status["status"] = "cancelled" if isinstance(error, asyncio.CancelledError) else "infrastructure_error"
             record()
             raise

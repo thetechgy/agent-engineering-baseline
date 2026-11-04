@@ -38,7 +38,9 @@ The initializer verifies fixture bytes, the root-owned socket, live peer UID/PID
 exact broker command and process start identity. A fixed invalid request requires
 a bounded response before readiness succeeds; the broker rejects it before
 modeled dispatch and audit append. Repeated startup accepts the same healthy
-broker and preserves audit state. Stale/foreign sockets, missing identity records,
+broker and preserves audit state. Harbor startup runs once per trial; repeat
+backend calls use a fixed verify-only command, require the same broker identity,
+and reject rebuilding an initialized or failed trial. Stale/foreign sockets, missing identity records,
 dead brokers and changed private inputs reject; initialization never removes the
 socket or resets an audit. Identity evidence stays in the host trial root, outside
 agent log mounts. Private payloads stay under root-only `/opt/aeb-gh`.
@@ -76,7 +78,12 @@ not model trials or evidence of skill effectiveness. The first case also invokes
 Harbor's setup-only Codex lifecycle and checks the installed CLI version; inference
 entry points remain forbidden. Readiness is checked before and after grading to
 verify audit continuity. Protected data access is attempted as the agent and must
-fail. Teardown is independently observed.
+fail. Every native case also rejects a fabricated receipt. Seven native cases
+then inject dead brokers, foreign socket ownership, missing identity, altered
+private inputs, timeout, cancellation or missing approval after the positive
+fixture. Each must retain unscoreable infrastructure evidence and prevent setup;
+these fault fixtures are separate from the preceding deterministic grading.
+Teardown is independently observed.
 
 The existing 24 successful replay traces and 13 rejected fault traces remain
 unchanged. Candidate controls additionally exercise manifest/payload/arm/context
@@ -131,7 +138,7 @@ Real-provider readiness and model effectiveness remain unverified in either case
 
 ## Current delivery evidence
 
-All 30 local candidate controls pass with no network attempts. They stage all 48
+All 31 local candidate controls pass with no network attempts. They stage all 48
 gh tasks and exercise native CLI restaging with unchanged checksums in a new
 private directory. Initial hosted controls pass,
 but native run `41902822407` fails its first with-skill task build with fixed
@@ -153,3 +160,12 @@ snapshot remain gated and are not delivered as qualified producer selection by
 this candidate-only PR. A snapshot download failure is infrastructure evidence;
 it cannot qualify an image or justify relaxed completeness, changed scoring,
 a Codex upgrade, different fixture images or model inference.
+
+The first successful image acquisition on run `41906112691` reached a responsive
+root broker in both arms, then correctly rejected repeat startup because Harbor's
+base `start()` deliberately tears down and recreates the container. The backend
+now runs that lifecycle once, uses a fixed verify-only root command on repeats,
+and rejects rebuilding initialized or failed trials. The failing native identity
+records are retained as failing-before evidence; unit controls additionally prove
+repeat verification cannot create a broker or reset audit bytes. Native passing-
+after evidence is still required.

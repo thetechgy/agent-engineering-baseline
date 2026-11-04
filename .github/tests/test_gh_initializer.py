@@ -161,7 +161,7 @@ class InitializerTests(unittest.TestCase):
             self.assertIn("OPENAI_API_KEY", result.stdout + result.stderr)
 
     def test_start_awaits_secure_start_and_records_failures_without_agent_setup(self):
-        from aeb_gh_fixture.backend import TrustedGhEnvironment, COMMAND
+        from aeb_gh_fixture.backend import TrustedGhEnvironment, COMMAND, VERIFY_COMMAND
         from skillevaluator.tier3.harbor.secure_docker_environment import SkillEvaluatorSecureDockerEnvironment as Base
         async def exercise(fault):
             task = self.tasks[0]
@@ -177,7 +177,7 @@ class InitializerTests(unittest.TestCase):
                 self.assertEqual(order[0], "secure")
                 self.assertEqual(kwargs["user"], "root")
                 order.append(command)
-                if command == COMMAND:
+                if command in (COMMAND, VERIFY_COMMAND):
                     if fault == "cancel": raise asyncio.CancelledError()
                     if fault == "timeout": raise TimeoutError()
                     if fault == "failed": return SimpleNamespace(return_code=1, stdout="")
@@ -190,7 +190,9 @@ class InitializerTests(unittest.TestCase):
                     patch.object(TrustedGhEnvironment, "upload_file", AsyncMock()):
                 if fault == "success":
                     await environment.start(force_build=True)
-                    await environment.start(force_build=True)
+                    await environment.start(force_build=False)
+                    self.assertEqual(order.count("secure"), 1)
+                    self.assertEqual(order[-1], VERIFY_COMMAND)
                 else:
                     with self.assertRaises(BaseException): await environment.start(force_build=True)
             records = [json.loads(line) for line in (trial / "gh-initialization.jsonl").read_text().splitlines()]
@@ -198,6 +200,37 @@ class InitializerTests(unittest.TestCase):
             self.assertEqual(len(records), 2 if fault == "success" else 1)
         for fault in ("success", "secure-failure", "failed", "cancel", "timeout"):
             asyncio.run(exercise(fault))
+
+    def test_repeat_verification_never_rebuilds_or_creates_a_new_broker(self):
+        from aeb_gh_fixture.backend import TrustedGhEnvironment
+        from skillevaluator.tier3.harbor.secure_docker_environment import SkillEvaluatorSecureDockerEnvironment as Base
+        for failed, force in ((False, True), (True, False)):
+            trial = self.root / ("failed" if failed else "rebuild"); trial.mkdir()
+            environment = object.__new__(TrustedGhEnvironment)
+            environment.environment_dir = self.tasks[0] / "environment"
+            environment.trial_paths = SimpleNamespace(trial_dir=trial)
+            environment._aeb_ready = not failed
+            environment._aeb_failed = failed
+            with patch.dict(os.environ, {"AEB_GH_MANIFEST": str(self.path)}), \
+                    patch.object(Base, "start", AsyncMock()) as secure_start:
+                with self.assertRaises(RuntimeError): asyncio.run(environment.start(force_build=force))
+                secure_start.assert_not_awaited()
+        from aeb_gh_fixture import initialize
+        import hashlib
+        control = self.root / "private-control"; control.mkdir()
+        state = self.root / "private-state"; state.mkdir()
+        names = ("case.json", "fixture.py", "setup.py", "client.py")
+        for name in names: (state / name).write_bytes(b"controlled fixture")
+        (state / "audit.jsonl").write_bytes(b"retained audit\n")
+        (control / "approved.json").write_text(json.dumps({name: hashlib.sha256((state / name).read_bytes()).hexdigest() for name in names}))
+        with patch.multiple(initialize, STATE=state, CONTROL=control, SOCKET=self.root / "absent/gh.sock"), \
+                patch.object(initialize, "private", return_value=SimpleNamespace(st_size=1)), \
+                patch.object(initialize.os, "geteuid", return_value=0), \
+                patch.object(sys, "argv", ["initialize", "--verify"]), \
+                patch.object(initialize.subprocess, "Popen") as spawn:
+            with self.assertRaises(RuntimeError): initialize.initialize()
+            spawn.assert_not_called()
+        self.assertEqual((state / "audit.jsonl").read_bytes(), b"retained audit\n")
 
     def test_candidate_grader_loads_standalone_verifier_without_installed_runtime(self):
         import subprocess

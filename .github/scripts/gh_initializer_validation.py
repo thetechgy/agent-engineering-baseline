@@ -54,6 +54,7 @@ async def qualify(root, artifact, arm=None):
         environment.default_user = "agent"
         phase = "secure_start_and_initialization"
         failure = None
+        setup_only = None
         try:
             await environment.start(force_build=True)
             async def checked(command, user="root"):
@@ -64,7 +65,6 @@ async def qualify(root, artifact, arm=None):
             if (await checked("id -u", "agent")).strip() != "1000":
                 raise RuntimeError("Agent UID changed")
             phase = "setup_only"
-            setup_only = None
             if index == 0:
                 from skillevaluator.tier3.harbor.installed_agents import SkillEvaluatorCodex
                 from skillevaluator.tier3.harbor.runner import _harbor_agent_kwargs
@@ -141,9 +141,70 @@ async def qualify(root, artifact, arm=None):
             await environment.start(force_build=False)
             if audit != await checked("sha256sum /opt/gh-eval/state/audit.jsonl"):
                 raise RuntimeError("Readiness modified completed audit")
+            phase = "negative_controls"
+            # A fabricated receipt cannot be promoted by a complete-looking
+            # trajectory or by otherwise correct deterministic output.
+            forged = json.loads(json.dumps({"steps": steps}))
+            forged["steps"][-1]["observation"]["results"][0]["content"] += "\nGH_FIXTURE_RECEIPT=" + "0" * 64
+            trajectory.write_text(json.dumps(forged))
+            await environment.upload_file(trajectory, "/logs/agent/trajectory.json")
+            await checked("python3 -I /tests/grader.py")
+            rejected = json.loads(await checked("cat /logs/verifier/reward.json"))
+            if rejected["custom_metrics"]["gh_gate"] != 0 or rejected["custom_metrics"]["gh_evidence"] != 0:
+                raise RuntimeError("Native grader accepted fabricated receipt")
+            if audit != await checked("sha256sum /opt/gh-eval/state/audit.jsonl"):
+                raise RuntimeError("Negative grading changed append-only audit")
+            fault = {"gh-001": "dead_broker", "gh-002": "foreign_socket_owner", "gh-003": "missing_identity",
+                     "gh-004": "changed_private_input", "gh-005": "timeout", "gh-006-changed-head": "cancellation",
+                     "gh-007": "missing_manifest"}.get(task.name)
+            fault_result = None
+            if fault:
+                if fault == "dead_broker":
+                    await checked("kill -TERM " + str(first["broker"]["pid"]))
+                elif fault == "foreign_socket_owner":
+                    await checked("/usr/bin/chown agent /run/gh-eval/gh.sock")
+                elif fault == "missing_identity":
+                    await checked("/usr/bin/rm /opt/aeb-gh/broker.json")
+                elif fault == "changed_private_input":
+                    await checked("/usr/bin/printf ' ' >> /opt/gh-eval/state/case.json")
+                elif fault == "timeout":
+                    await checked("kill -STOP " + str(first["broker"]["pid"]))
+                elif fault == "missing_manifest":
+                    os.environ["AEB_GH_MANIFEST"] = str(root / "absent-manifest.json")
+                blocked = False
+                try:
+                    if fault == "cancellation":
+                        pending = asyncio.create_task(environment.start(force_build=False))
+                        await asyncio.sleep(0)
+                        pending.cancel()
+                        await pending
+                    else:
+                        await environment.start(force_build=False)
+                except (RuntimeError, ValueError, OSError, asyncio.CancelledError):
+                    blocked = True
+                finally:
+                    os.environ["AEB_GH_MANIFEST"] = str(manifest)
+                if not blocked:
+                    raise RuntimeError("Native initializer accepted invalid or cancelled startup")
+                if fault == "timeout":
+                    await checked("kill -CONT " + str(first["broker"]["pid"]))
+                status = json.loads(paths.trial_dir.joinpath("gh-initialization.jsonl").read_text().splitlines()[-1])
+                if status["status"] not in ("infrastructure_error", "cancelled"):
+                    raise RuntimeError("Native startup failure lost infrastructure classification")
+                if fault == "cancellation":
+                    # Containment may stop the main container. Recover through
+                    # the hardened copy API; unavailable audit is not a pass.
+                    retained_audit = root / "cancelled-audit.jsonl"
+                    await environment.download_file("/opt/gh-eval/state/audit.jsonl", retained_audit)
+                    if retained_audit.stat().st_size > 8 * 1024 * 1024 or hashlib.sha256(retained_audit.read_bytes()).hexdigest() != audit.split()[0]:
+                        raise RuntimeError("Cancellation changed append-only audit")
+                elif audit != await checked("sha256sum /opt/gh-eval/state/audit.jsonl"):
+                    raise RuntimeError("Failed initialization changed append-only audit")
+                fault_result = {"control": fault, "blocked": True, "measurement": "unscoreable", "audit": "unchanged"}
             rows.append({"case": task.name, "arm": "with_skill" if present else "without_skill",
                 "checksum": native.checksum, "metrics": scores, "initialization": first,
-                "evidence": "controlled native fixture", "inference": False, "setup_only": setup_only})
+                "evidence": "controlled native fixture before injected fault", "inference": False, "setup_only": setup_only,
+                "fabricated_receipt_rejected": True, "startup_fault": fault_result})
         except BaseException as error:
             kind = type(error).__name__
             if kind not in {"RuntimeError", "ValueError", "OSError", "FileNotFoundError", "TypeError", "KeyError", "AttributeError", "TimeoutError", "CancelledError", "KeyboardInterrupt"}:
@@ -169,7 +230,7 @@ async def qualify(root, artifact, arm=None):
                 "success": len(rows) == expected, "expected": expected, "completed": rows,
                 "runtime": {key: importlib.metadata.version(key) for key in ("skillevaluator", "harbor")},
                 "harness_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-                "failure": failure,
+                "failure": failure, "setup_only": setup_only,
                 "initialization": [json.loads(line) for line in paths.trial_dir.joinpath("gh-initialization.jsonl").read_text().splitlines()]
                     if paths.trial_dir.joinpath("gh-initialization.jsonl").exists() else []}, indent=2) + "\n")
     return len(rows) == expected
