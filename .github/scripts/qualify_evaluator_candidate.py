@@ -7,6 +7,8 @@ import importlib.metadata
 import io
 import json
 import os
+import re
+import stat
 from pathlib import Path
 import subprocess
 import sys
@@ -45,13 +47,40 @@ raise SystemExit(0 if payload['success'] else 1)
 '''
 
 
+def native_compose_config(project):
+    """Pass only setup-compose's hash-verified, credential-free plugin directory."""
+    root = Path(os.environ.get('COMPOSE_PLUGIN_ROOT', ''))
+    def require(condition):
+        if not condition:
+            raise ValueError('Reviewed Compose plugin required')
+    require(root.is_absolute() and root.resolve() == root and not root.is_symlink()
+            and os.environ.get('DOCKER_CONFIG') == str(root))
+    require(root.is_dir() and {p.name for p in root.iterdir()} == {'cli-plugins'})
+    directory = root / 'cli-plugins'
+    require(not directory.is_symlink() and directory.is_dir()
+            and {p.name for p in directory.iterdir()} == {'docker-compose'})
+    binary = directory / 'docker-compose'
+    info = binary.lstat()
+    require(stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and info.st_size <= 128 * 1024 * 1024)
+    pins = re.findall(r'^compose_sha256=([0-9a-f]{64})$', (project / '.github/scripts/setup-compose.sh').read_text(), re.M)
+    require(len(pins) == 1 and hashlib.sha256(binary.read_bytes()).hexdigest() == pins[0])
+    return str(root)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source', type=Path, required=True, help='Clean checkout of the exact candidate revision')
     parser.add_argument('--output', type=Path, required=True, help='New persistent evidence directory outside both checkouts')
     parser.add_argument('--unpatched', action='store_true', help='Measure failing-before controls against pristine source')
+    parser.add_argument('--native-pester', action='store_true', help='After the evidence controls, qualify native Pester packaging without inference')
     args = parser.parse_args()
+    if args.native_pester and args.unpatched:
+        parser.error('Native qualification requires the reviewed evidence patch')
     project = Path(__file__).resolve().parents[2]
+    try:
+        compose_config = native_compose_config(project) if args.native_pester else None
+    except (OSError, ValueError):
+        parser.error('Native qualification requires the credential-free plugin from setup-compose.sh')
     source, output = args.source.resolve(strict=True), args.output.absolute()
     if output.resolve() != output or output.exists() or any(output.is_relative_to(root) for root in (project, source)):
         parser.error('Output must be a new resolved directory outside both checkouts')
@@ -97,7 +126,8 @@ def main():
                                    for name in ('test_grading_evidence.py', 'test_pester_evaluations.py',
                                                 'test_evaluator_candidate.py')},
                 'harness_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-                'production_pins_changed': False}
+                'production_pins_changed': False,
+                'native_harness_sha256': hashlib.sha256((project / '.github/scripts/pester_container_validation.py').read_bytes()).hexdigest()}
     (output / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
     with (output / 'qualification.log').open('w') as log:
         try:
@@ -110,6 +140,23 @@ def main():
         (output / 'result.json').write_text(json.dumps({'success': False, 'error': 'Control process did not produce a terminal result'}) + '\n')
     metadata['returncode'] = returncode
     (output / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
+    if returncode == 0 and args.native_pester:
+        native_env = {**env, 'DOCKER_CONFIG': compose_config, 'PYTHONPATH': str(snapshot / 'src'), 'RUNNER_TEMP': str(output),
+                      'PATH': str(Path(sys.executable).parent) + os.pathsep + env['PATH']}
+        launcher = ('import sys; sys.path[:0] = sys.argv[1:3]; '
+                    'from pester_container_validation import main; '
+                    'main(candidate=True, artifact=sys.argv[3])')
+        with (output / 'native-pester.log').open('w') as log:
+            try:
+                process = subprocess.run([sys.executable, '-I', '-B', '-c', launcher, str(snapshot / 'src'),
+                    str(project / '.github/scripts'), str(output / 'native-pester')], env=native_env,
+                    stdout=log, stderr=subprocess.STDOUT, timeout=2700)
+                returncode = process.returncode
+            except subprocess.TimeoutExpired:
+                returncode = 124
+        metadata['returncode'] = returncode
+        metadata['native_pester'] = {'success': returncode == 0, 'returncode': returncode, 'diagnostic_only': True}
+        (output / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
     print(json.dumps({**metadata, 'result': json.loads((output / 'result.json').read_text())}))
     return returncode
 

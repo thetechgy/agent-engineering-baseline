@@ -20,9 +20,16 @@ from harbor.agents.installed.codex import Codex
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def qualification_bundle(root):
+def qualification_bundle(root, *, candidate=False):
     """Expand reviewed fixture submissions before native staging, never model data."""
     bundle = pilot.stage(ROOT, root / 'bundle' / pilot.NAME)
+    if candidate:
+        # Harbor 0.24 otherwise routes no-network through its egress namespace.
+        # The candidate's bounded verifier-only compatibility rule admits this
+        # literal offline override; the shared grader still requires only lo.
+        for task in (bundle / 'evals/harbor').iterdir():
+            if task.is_dir():
+                (task / 'tests/docker-compose.yaml').write_text('services:\n  main:\n    network_mode: none\n')
     source = ROOT / pilot.OVERLAY / 'support'
     solutions = {'pester-001': ('classic', 'standalone', 'data'),
                  'pester-002': ('classic', 'data'), 'pester-003': ('external', 'module'),
@@ -56,6 +63,7 @@ def qualification_bundle(root):
         config = target / 'task.toml'
         config.write_text(config.read_text().replace('entry_id = ' + json.dumps(case),
                                                     'entry_id = ' + json.dumps(identity)))
+        (target / 'tests/entry.json').write_text(json.dumps({'id': identity, 'grading_mode': 'custom_only'}, indent=2) + '\n')
         if mode:
             with (target / 'tests/Dockerfile').open('a') as dockerfile:
                 if mode == 'missing':
@@ -68,6 +76,14 @@ def qualification_bundle(root):
         expanded.append({**entries[case], 'id': identity})
         records[identity] = {'case': case, 'candidate': candidate, 'expected': expected,
                              'output': reports.read_json(source / 'cases' / case / 'profile.json').get('output', 'Subject.Tests.ps1')}
+        if expected in ('passed', 'failed'):
+            if case == 'pester-005':
+                metrics = {'negative_control_correct': float(expected == 'passed')}
+            else:
+                metrics = {'pester_reference_pass': float(style not in ('failure-text', 'wrong-scope')),
+                           'pester_mutation_detection': float(expected == 'passed'),
+                           'pester_test_quality': float(expected == 'passed')}
+            records[identity]['metrics'] = metrics
     for case in entries:
         shutil.rmtree(native / case)
     reports.write_json(bundle / 'evals/evals.json', {'skill_name': pilot.NAME, 'evals': expanded})
@@ -76,12 +92,18 @@ def qualification_bundle(root):
     return bundle, records
 
 
-def main():
+def main(*, candidate=False, artifact=None):
     subprocess.run(['docker', 'info'], check=True, stdout=subprocess.DEVNULL, timeout=15)
-    subprocess.run(['docker', 'compose', 'version', '--short'], check=True, timeout=15)
+    compose = subprocess.check_output(['docker', 'compose', 'version', '--short'], text=True, timeout=15).strip()
+    if compose != reports.POLICY['docker_compose']:
+        raise RuntimeError('Qualification Compose version mismatch')
     if any(os.environ.get(key) for key in ('OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'NVIDIA_API_KEY')):
         raise RuntimeError('Qualification must not receive model credentials')
-    artifact = Path(os.environ['RUNNER_TEMP']) / 'pester-gate-artifacts'
+    artifact = Path(artifact) if artifact is not None else Path(os.environ['RUNNER_TEMP']) / 'pester-gate-artifacts'
+    from importlib.metadata import version
+    expected_runtime = ('0.7.2', '0.24.0') if candidate else ('0.3.0', '0.13.2')
+    if (version('skillevaluator'), version('harbor')) != expected_runtime:
+        raise RuntimeError('Qualification runtime mismatch')
     def resources(kind):
         command = ['docker', 'ps', '--all', '--quiet'] if kind == 'containers' else ['docker', 'network', 'ls', '--quiet']
         return set(subprocess.check_output(command, text=True, timeout=15).split())
@@ -89,7 +111,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix='pester-container-gate-', dir=os.environ.get('RUNNER_TEMP')) as temporary:
         root = Path(temporary)
         os.environ['SKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE'] = str(root / 'private/key')
-        bundle, fixtures = qualification_bundle(root)
+        bundle, fixtures = qualification_bundle(root, candidate=candidate)
         register = Codex(logs_dir=root / 'registration', skills_dir='/workspace/skills', version='0.155.1')._build_register_skills_command()
         jobs = root / 'jobs'
         staged_evidence = []
@@ -98,6 +120,8 @@ def main():
         for present in (True, False):
             tasks = root / 'tasks' / str(present)
             staged_tasks = stage_native_harbor_tasks(bundle, tasks, with_skill=present, grading_mode='custom_only')
+            if len(staged_tasks) != len(fixtures):
+                raise RuntimeError('Native staging coverage mismatch')
             for task in staged_tasks:
                 fixture = fixtures[task.name]
                 solution = task / 'solution'; solution.mkdir()
@@ -110,8 +134,12 @@ def main():
                     'test ! -e /tests\ntest ! -e /opt/pester-runtime/Runner.ps1\n'
                     'test -z "$(find /workspace/skills -type d -name evals -print -quit)"\n' + register + '\n' + check +
                     f'cp /solution/candidate /workspace/output/{fixture["output"]}\n')
-            staged_evidence.extend(evidence.capture_custom_tasks(ROOT, pilot.NAME, staged_tasks,
-                'with_skill' if present else 'without_skill', purpose='oracle_qualification'))
+            captured = evidence.capture_custom_tasks(ROOT, pilot.NAME, staged_tasks,
+                'with_skill' if present else 'without_skill', purpose='oracle_qualification')
+            from harbor.models.task.task import Task
+            if any(Task(task).checksum != row['task_checksum'] for task, row in zip(sorted(staged_tasks), captured)):
+                raise RuntimeError('Native task checksum mismatch')
+            staged_evidence.extend(captured)
             command = build_harbor_run_command(agent='oracle', env_mode='docker', dataset_path=tasks,
                 job_name=f'{pilot.NAME}-codex-{"with" if present else "without"}', jobs_dir=jobs,
                 n_attempts=1, n_concurrent=2, timeout_multiplier=1.0)
@@ -130,7 +158,7 @@ def main():
             agent_models={'codex': {'model': 'credential-free-oracle', 'source': 'qualification'}})
         if evidence.custom_source_manifest(ROOT, pilot.NAME) != before_inputs:
             raise RuntimeError('Approved qualification inputs changed')
-        if not native_failed:
+        if not native_failed and not candidate:
             reports.write_json(raw / evidence.CUSTOM_CAPTURE, evidence.custom_capture(ROOT, pilot.NAME, bundle, staged_evidence,
                 purpose='oracle_qualification', attempts=1, agent='oracle',
                 execution_policy={'environment': 'docker', 'concurrency': 2, 'timeout_multiplier': 1.0, 'stop_on_pass': False}))
@@ -145,8 +173,13 @@ def main():
             raise RuntimeError('Protected payload entered a diagnostic artifact')
         if native_failed:
             raise RuntimeError('Native oracle lifecycle failed; shared diagnostics retained')
+        reports.write_json(artifact / 'qualification.json', {'runtime': dict(zip(('skillevaluator', 'harbor'), expected_runtime)),
+            'diagnostic_only': True, 'inference': False, 'staged_tasks': staged_evidence,
+            'harness_sha256': evidence.digest_bytes(Path(__file__).read_bytes()).removeprefix('sha256:')})
         source = ROOT / pilot.OVERLAY / 'support/cases'
         eligible = sum(f['expected'] in ('passed', 'failed') for f in fixtures.values())
+        observed = []
+        expected_tasks = {(row['arm'].replace('_', '-'), row['case_id']): row['task_checksum'] for row in staged_evidence}
         for arm in ('with-skill', 'without-skill'):
             rewards = list((run / 'codex' / arm / 'trials').glob('*/reward.json'))
             if len(rewards) != len(fixtures):
@@ -157,18 +190,28 @@ def main():
                 if identity not in fixtures or identity in seen:
                     raise RuntimeError('Qualification trial identity mismatch')
                 seen.add(identity); fixture = fixtures[identity]
-                outcome = reward.get('custom_details', {}).get('outcome', {})
+                trial = reports.read_json(path.with_name('result.json'))
+                if (trial.get('task_name') != identity or trial.get('task_checksum') != expected_tasks[arm, identity]
+                        or ('has_skill' in reward and reward['has_skill'] is not (arm == 'with-skill'))):
+                    raise RuntimeError('Native identity or arm mismatch')
+                outcome = reward.get('details', {}).get('outcome', {})
+                observed.append(outcome.get('classification'))
                 if outcome.get('classification') != fixture['expected']:
                     raise RuntimeError(f'Unexpected outcome ({identity}, {arm}, {outcome.get("classification")})')
                 if fixture['expected'] not in ('passed', 'failed'):
                     if reward.get('evaluation_status') != 'failed' or reward.get('custom_metrics'):
                         raise RuntimeError('Unscoreable fixture acquired quality metrics')
-                if fixture['expected'] == 'passed' and fixture['case'] != 'pester-005':
-                    mutants = len(list((source / fixture['case'] / 'mutants').glob('*.ps1')))
-                    if (outcome.get('reference_pass') != 1 or outcome.get('mutants_detected') != mutants
-                            or outcome.get('mutants_executed') != mutants or outcome.get('pester_version') != '6.2.0'
-                            or outcome.get('powershell_version') != '7.6.9'):
-                        raise RuntimeError('Mutation/runtime evidence mismatch')
+                if fixture['expected'] in ('passed', 'failed'):
+                    metrics = reward.get('custom_metrics', {})
+                    if fixture['case'] != 'pester-005':
+                        mutants = len(list((source / fixture['case'] / 'mutants').glob('*.ps1')))
+                        if (outcome.get('pester_version') != '6.2.0' or outcome.get('powershell_version') != '7.6.9'
+                                or outcome.get('reference_pass') != fixture['metrics']['pester_reference_pass']
+                                or outcome.get('mutants_executed') != mutants
+                                or outcome.get('mutants_detected') != int(fixture['expected'] == 'passed') * mutants):
+                            raise RuntimeError('Mutation/runtime evidence mismatch')
+                    if metrics != fixture['metrics']:
+                        raise RuntimeError('Qualification metric mismatch')
                 if fixture['case'] == 'pester-005' and any(k.startswith('pester_') for k in reward.get('custom_metrics', {})):
                     raise RuntimeError('Negative control acquired Pester quality metrics')
                 print(json.dumps({'fixture': identity, 'arm': arm, 'outcome': outcome['classification'],
@@ -178,10 +221,16 @@ def main():
                 raise RuntimeError('Applicability or incomplete qualification status was lost')
         if any(resources(kind) != before[kind] for kind in before):
             raise RuntimeError('Native Harbor resource cleanup incomplete')
-        qualify_reporting(root, artifact)
+        from collections import Counter
+        if Counter(observed) != {'passed': 22, 'failed': 14, 'invalid': 8, 'timeout': 2,
+                                 'unsupported': 2, 'infrastructure_error': 4}:
+            raise RuntimeError('Qualification classification population mismatch')
+        if not candidate:
+            qualify_reporting(root, artifact)
         if any(b'PESTER_VERIFIER_ONLY_' in p.read_bytes() for p in reports.regular_tree(artifact)):
             raise RuntimeError('Protected payload entered a derived reporting artifact')
-        print('Pester five-case qualification and shared reporting passed; no model inference executed.', flush=True)
+        print('Pester native qualification passed' + ('; candidate HTML diagnostics only' if candidate else ' with shared reporting')
+              + '; no model inference executed.', flush=True)
 
 
 def qualify_reporting(root, native):

@@ -68,7 +68,7 @@ opt-in and is not part of production setup or automatic candidate adoption.
 
 ## Qualification results
 
-The patched candidate passes 16 controls: the ten existing grading cases, the
+The original evidence port passes 16 controls: the ten existing grading cases, the
 native Pester runner/collector/report case and five additional controls for
 bounded diagnoses, unlinked observations, independent secret evidence,
 standalone verifier imports and bounded unknown-attribution summaries. The
@@ -102,11 +102,11 @@ Current production bundle preparation still reproduces the staging barriers:
 | --- | --- |
 | gh with skill | One task staged |
 | gh without skill | Rejects an authored environment healthcheck in a paired baseline |
-| Pester, either arm | Rejects a dedicated verifier image that does not receive the grader payload |
+| Pester, either arm, before shared packaging | Rejects a dedicated verifier image that does not receive the grader payload |
 
 The next changes need an operator-owned gh initializer after secure container
-start and before agent setup in both arms, and supported Pester verifier-image
-packaging. Restoring image entrypoints, bypassing the healthcheck rejection or
+start and before agent setup in both arms, while Pester uses the shared packaging
+described below. Restoring image entrypoints, bypassing the healthcheck rejection or
 removing verifier separation would not qualify those boundaries.
 
 Before adoption, also qualify actual Harbor lifecycle and cleanup, explicit
@@ -115,3 +115,78 @@ scoring and new policy identities. This port neither qualifies newer Codex
 native evidence nor requires all of draft PR #109. Harbor 0.25.0 and SDK 3.x
 remain separate owning-lock compatibility decisions. Historical results are
 not replayed or relabeled as evidence for this candidate.
+
+## Shared Pester verifier qualification
+
+The Pester package now owns its `test.sh`, nested `verifier/grader.py`, runner,
+case data and minimal `entry.json`. Explicit Dockerfile copies include them in
+the separate verifier image. Neither runtime selects a top-level custom grader
+or generates a verifier runner for this package. The unprivileged agent and
+root-owned, network-disabled verifier retain their existing limits.
+
+The grader writes numeric-only `reward.json` and `reward.txt`, a rich
+`custom_reward.json`, and the existing evaluation-status sidecar. `details.outcome`
+carries classifications, mutation counts and verified runtime versions. The
+pre-armed infrastructure-failure sidecar remains authoritative until the final
+atomic status write. Interruption cannot convert missing measurements into zero.
+
+`pester-pilot-v3` identifies this prospective layout and carrier. Staged target
+skill contents bind the arm, and the native task checksum binds each trial to
+that capture. An optional arm flag must agree. Missing or transplanted checksums,
+metadata, grader, fixtures or skill contents reject evidence. Older profiles,
+registry entries, hashes and fixture archives retain their original contracts.
+`current-v4` freezes the new validator modules and registry; `current-v3` retains
+its original current-review runtime, while older profiles retain legacy routing.
+
+Add `--native-pester` to the qualification command to first run the original 16
+evidence controls and the offline-verifier boundary control, then the shared
+26-fixture matrix in both arms through the candidate's
+actual Harbor lifecycle. Native execution requires the existing `setup-compose.sh`
+plugin environment. Only its hash-verified directory, containing no Docker auth
+configuration, enters the otherwise empty child environment. The required 52 outcomes are 22 passed, 14 failed,
+eight invalid, two timeout, two unsupported and four infrastructure errors.
+Every classification, applicable metric and measured runtime must match.
+The candidate retains native collection and HTML diagnostics only. It cannot
+create a production custom capture, public benchmark or history record.
+
+The separate `Candidate Pester packaging` workflow uses the pinned owning lock,
+uv, actions and verified Compose with read-only permissions and no credentials.
+Its artifact contains bounded sanitized diagnostics and control metadata, without
+source snapshots, protected fixtures or raw verifier logs. Production qualification
+also exercises shared reporting and public-only replay after native originals
+are hidden. Missing Docker is a failed prerequisite; no workstation service or
+container runtime is installed by the qualification tooling.
+
+Local controls reproduce the original staging rejection and stage all five
+cases in both arms under the candidate. All 17 controls pass. Native
+container qualification is owned by the hosted jobs; staging alone does not
+establish the 52 terminal outcomes, cleanup or upgrade readiness. Trusted gh
+initialization and overall evaluator adoption remain separate gates.
+
+### Candidate offline verifier correction
+
+Harbor 0.24 implements its default `no-network` policy through an egress-control
+namespace. The shared verifier requires a literal offline namespace and retains
+that check. Candidate qualification therefore authors `network_mode: none` for
+the verifier's `main` service. The verifier image, entry point, grader, runner,
+case data, prompts and public inputs remain identical to production qualification.
+The production compatibility patch and dependency pins are unchanged.
+
+The candidate adapter permits this one literal value only in a bundled separate
+verifier context whose configured network policy is `no-network`. Agent contexts,
+public verifier policies, dynamic values, other network modes, host binds,
+privilege changes, entrypoints and healthchecks retain their rejection. A context
+shared by different verifier policies does not receive the exception. This is a
+reviewed extension of the candidate validator; no guard is bypassed after staging.
+
+The new control fails against the original candidate patch and passes with the
+correction, while all 16 existing controls remain green. It stages both arms,
+compares every verifier payload, exercises Harbor's actual Compose routing
+parser, and tests the rejected configurations. The harness records the native
+qualification script hash along with the candidate patch and source identities.
+Only a complete native 52-outcome run can qualify runtime execution and cleanup.
+
+Isolation prerequisite failures now retain one of five fixed codes in
+`details.outcome`. Arbitrary exception text and test payloads remain excluded;
+these failures remain unscoreable. Snapshot service HTTP 503/504 build failures
+are infrastructure evidence, not failed Pester measurements or zero scores.

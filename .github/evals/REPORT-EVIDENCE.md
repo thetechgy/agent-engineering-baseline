@@ -1528,6 +1528,7 @@ The adapter hardcodes these profile revisions and individual SHA-256 hashes for
 
 | Profile | Original repository revision |
 | --- | --- |
+| `current-v4` | `35c04044b7c53fccebb4eff61a42e9352450065d` |
 | `current-v3` | `1aa5b06a4d0d3c1c8b97f2e7b3398964c67d8166` |
 | `current-v2` | `afdb659ee130171d263da6f13c9dec6de912d3a4` |
 | `baseline-a5392b0` | `a5392b0eda37485b131ffe416fcb9d6e5ee547d2` |
@@ -1537,9 +1538,9 @@ The adapter hardcodes these profile revisions and individual SHA-256 hashes for
 
 Historical tooling must be retained or copied from the exact locally available
 Git revision into `<tooling>/.github/scripts/`. Nothing is fetched automatically.
-For `current-v3`, null tooling selects the current checkout's four modules and
+For `current-v4`, null tooling selects the current checkout's four modules and
 reviewed metric registry; their bytes must still match its reviewed profile.
-The older `current-v2` selector remains frozen and requires its retained tooling
+The older `current-v3` and `current-v2` selectors remain frozen and requires its retained tooling
 when the checkout bytes differ. Future module changes require an
 explicitly reviewed compatibility update, not a digest override.
 
@@ -2593,3 +2594,22 @@ producer replay repeats admission and retention. Failed/interrupted workflows re
 outside the successful-producer admission boundary; incomplete observations inside
 an eligible collected bundle cannot become successful measurements. No automated
 Git-history backfill or reconstruction of expired original reports is performed.
+
+### Pester shared packaging profile
+
+`pester-pilot-v3` uses the authored native verifier package and `details.outcome`
+diagnostic carrier. Capture checks the approved staged target-skill contents;
+every admitted native trial must match the captured task checksum. An optional
+arm flag must also agree. Missing native fields are not reconstructed.
+`current-v4` retains these validator modules and the exact registry in a new
+fixture archive. Previous profiles, runtime routing and archives are unchanged.
+Candidate 0.7.2/0.24.0 qualification remains diagnostic-only and is not admitted
+through production public/history validation.
+
+Pinned task image acquisition retries each failed file at most three times with
+30-second HTTP and HTTPS connection/data timeouts. Existing native build and
+qualification deadlines still apply. Snapshot URLs, package versions, signature
+and hash checks remain unchanged; exhausted acquisition still fails qualification.
+The producer change has a new `gh-deterministic-gate-v5` runtime identity, while
+`gh-deterministic-gate-v4` remains available with its original identity. The new
+Pester layout remains `pester-pilot-v3`.

@@ -149,7 +149,7 @@ class NativeStagingTests(unittest.TestCase):
             for task in staged:
                 entry = reports.read_json(task / 'tests/entry.json')
                 self.assertEqual(entry['id'], task.name)
-                self.assertFalse(entry['has_skill'])
+                self.assertEqual(entry, {'id': task.name, 'grading_mode': 'custom_only'})
                 for member in reports.regular_tree(task / 'environment'):
                     self.assertNotIn(b'PESTER_VERIFIER_ONLY_', member.read_bytes())
             self.assertIn('n_concurrent=2', (ROOT / '.github/scripts/pester_container_validation.py').read_text())
@@ -187,13 +187,18 @@ class NativeStagingTests(unittest.TestCase):
                       'evaluated_source': {}, 'harbor': {'environment': {'value': 'docker'},
                       'n_attempts': attempts, 'n_concurrent': 2, 'stop_on_pass': False,
                       'timeout_multiplier': reports.POLICY['timeout_multiplier']}}
+            from test_custom_metrics import synthetic_native
+            import skill_evidence as evidence
+            native, synthetic_run = synthetic_native(root / 'synthetic', complete=True)
+            shutil.copytree(synthetic_run / 'codex', run / 'codex')
+            shutil.copyfile(native / evidence.CUSTOM_CAPTURE, root / evidence.CUSTOM_CAPTURE)
             for arm in ('with_skill', 'without_skill'):
                 agent['conditions'][arm] = {'execution_status': 'succeeded', 'execution_errors': [],
                                             'scored_attempts': total, 'expected_attempts': total}
-                for index in range(total):
-                    reports.write_json(run / 'codex' / arm.replace('_', '-') / 'trials' / str(index) / 'reward.json', {
-                        'entry_id': case_ids[index // attempts], 'has_skill': arm == 'with_skill', 'evaluation_status': 'complete',
-                        'custom_details': {'outcome': {'classification': 'failed' if index == 0 else 'passed'}}})
+            (run.parent / 'latest').symlink_to(run.name, target_is_directory=True)
+            runtime = run / '_harbor-jobs'; runtime.mkdir()
+            (runtime / 'opaque-runtime').symlink_to(root / 'unavailable-native-only')
+            reports.write_json(run / 'run_config.json', config)
             reports.write_json(run / 'result.json', {'report_status': 'complete', 'skill_name': pilot.NAME,
                                'run_config': config, 'dataset_summary': {'total_tasks': len(case_ids)}, 'agents': {'codex': agent}})
             reports.write_json(root / 'versions.json', {'python': '3.13.17', 'skillevaluator': '0.3.0',
@@ -211,9 +216,16 @@ class NativeStagingTests(unittest.TestCase):
                 self.assertIn('projection and upload success are reported separately', summary.getvalue())
                 self.assertIn('history remains ineligible', summary.getvalue())
                 self.assertNotIn('public normalization and history are unavailable', summary.getvalue())
-                reward = run / 'codex/with-skill/trials/0/reward.json'
+                reward = run / 'codex/with-skill/trials/pester-001__attempt1/reward.json'
+                trial_path = reward.with_name('result.json')
+                trial = reports.read_json(trial_path)
+                changed = dict(trial); changed.pop('task_checksum')
+                reports.write_json(trial_path, changed)
+                with self.assertRaisesRegex(ValueError, 'checksum'):
+                    reports.benchmark_report(ROOT, root, pilot.NAME, 'confirmation', root / 'metrics')
+                reports.write_json(trial_path, trial)
                 data = reports.read_json(reward)
-                data['custom_details']['outcome']['classification'] = 'unsupported'
+                data['details']['outcome']['classification'] = 'unsupported'
                 reports.write_json(reward, data)
                 with self.assertRaisesRegex(ValueError, 'Unscoreable or unclassified'):
                     reports.benchmark_report(ROOT, root, pilot.NAME, 'confirmation', root / 'metrics')
@@ -263,7 +275,16 @@ class NativeStagingTests(unittest.TestCase):
             self.assertEqual(config['artifacts'], ['/workspace/output/summary.json'])
         else:
             self.assertTrue((public / 'EXECUTION-PROFILE.md').exists())
-        self.assertIn('--mode custom_only', (task / 'tests/test.sh').read_text())
+        self.assertEqual((task / 'tests/test.sh').read_bytes(), (SOURCE / 'test.sh').read_bytes())
+        self.assertFalse((task / 'tests/grader.py').exists())
+        self.assertFalse((task / 'tests/skill_evaluator').exists())
+        self.assertIn('COPY verifier/grader.py /tests/verifier/grader.py', (task / 'tests/Dockerfile').read_text())
+        for dockerfile in (task / 'tests/Dockerfile', task / 'environment/Dockerfile'):
+            content = dockerfile.read_text()
+            for option in ('Acquire::Retries=3', 'Acquire::http::Timeout=30', 'Acquire::https::Timeout=30'):
+                self.assertEqual(content.count('-o ' + option), 2)
+            for forbidden in ('--fix-missing', '--allow-unauthenticated', 'trusted=yes'):
+                self.assertNotIn(forbidden, content)
 
     def test_shared_inventory_records_local_overlay_once(self):
         import skill_evidence as evidence
@@ -336,13 +357,67 @@ class ClassificationTests(unittest.TestCase):
             self.assertEqual(g.assess_summary(json.dumps(value).encode(), expected)[0], 'failed')
         self.assertEqual(g.assess_summary(b'not JSON', expected)[0], 'invalid')
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory); (root / 'entry.json').write_text(json.dumps({'id': 'pester-005'}))
+            root = Path(directory); (root / 'entry.json').write_text(json.dumps({'id': 'pester-005', 'grading_mode': 'custom_only'}))
             with patch.dict(os.environ, {'HARBOR_REWARD_JSON': str(root / 'logs/reward.json')}):
                 status, detail = g.assess_summary(good, expected)
                 g.emit(root, status, detail)
-            reward = reports.read_json(root / 'logs/reward.json')
+            reward = reports.read_json(root / 'logs/custom_reward.json')
             self.assertEqual(reward['custom_metrics'], {'negative_control_correct': 1.0})
             self.assertFalse(any(key.startswith('pester_') for key in reward['custom_metrics']))
+
+    def test_native_protocol_preserves_diagnostics_without_generated_runner(self):
+        g = grader()
+        from skillevaluator.tier3.harbor import collector
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'entry.json').write_text(json.dumps({'id': 'pester-001', 'grading_mode': 'custom_only'}))
+            logs = root / 'logs'
+            details = dict(code='evaluated', reference_pass=1, mutants_detected=2, mutants_executed=2,
+                           tests_executed=3, pester_version='6.2.0', powershell_version='7.6.9')
+            with patch.dict(os.environ, {'HARBOR_REWARD_JSON': str(logs / 'reward.json')}):
+                g.emit(root, 'passed', details)
+            numeric = reports.read_json(logs / 'reward.json')
+            self.assertTrue(all(type(v) in (int, float) for v in numeric.values()))
+            self.assertEqual((logs / 'reward.txt').read_text(), '1.0\n')
+            collector._merge_reward_sidecars(numeric, logs)
+            self.assertEqual(numeric['details']['outcome'], {'classification': 'passed', **details})
+            self.assertNotIn('has_skill', numeric)
+            self.assertEqual(numeric['custom_metrics']['pester_mutation_detection'], 1.0)
+
+    def test_isolation_failures_emit_only_fixed_unscoreable_codes(self):
+        g = grader()
+        for code in ('network', 'seccomp', 'resources', 'mount', 'environment', 'PESTER_VERIFIER_ONLY_PRIVATE'):
+            with self.subTest(code=code), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                (root / 'entry.json').write_text(json.dumps({'id': 'pester-001', 'grading_mode': 'custom_only'}))
+                logs = root / 'logs'
+                with patch.dict(os.environ, {'HARBOR_REWARD_JSON': str(logs / 'reward.json'), 'HARBOR_TESTS_DIR': str(root)}), \
+                        patch.object(g, 'grade', side_effect=g.IsolationError(code)), patch.object(g.os, 'chown'):
+                    g.main()
+                sidecar = reports.read_json(logs / 'skill_evaluator_reward.json')
+                outcome = sidecar['details']['outcome']
+                self.assertEqual(sidecar['evaluation_status'], 'failed')
+                self.assertEqual(outcome['classification'], 'infrastructure_error')
+                self.assertEqual(outcome['code'], 'verifier' if code.startswith('PESTER_VERIFIER_ONLY_') else 'isolation_' + code)
+                self.assertNotIn('custom_metrics', reports.read_json(logs / 'custom_reward.json'))
+                self.assertFalse(any(b'PESTER_VERIFIER_ONLY_PRIVATE' in p.read_bytes() for p in logs.iterdir()))
+
+    def test_interrupted_grader_keeps_prearmed_failure_over_fabricated_success(self):
+        g = grader()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'reward.json').write_text('{"overall": 1.0}')
+            with patch.dict(os.environ, {'HARBOR_REWARD_JSON': str(root / 'reward.json')}), \
+                    patch.object(g, 'grade', side_effect=KeyboardInterrupt), patch.object(g.os, 'chown'):
+                with self.assertRaises(KeyboardInterrupt):
+                    g.main()
+            sidecar = reports.read_json(root / 'skill_evaluator_reward.json')
+            self.assertEqual(sidecar['evaluation_status'], 'failed')
+            self.assertEqual(sidecar['details']['outcome']['classification'], 'infrastructure_error')
+            from skillevaluator.tier3.harbor import collector
+            numeric = reports.read_json(root / 'reward.json')
+            collector._merge_reward_sidecars(numeric, root)
+            self.assertEqual(numeric['evaluation_status'], 'failed')
 
     def test_worker_output_rejects_oversized_valid_prefix_and_trailing_payload(self):
         g = grader()
@@ -396,7 +471,7 @@ class ClassificationTests(unittest.TestCase):
     def test_unscoreable_reward_preserves_status_without_custom_zero_metrics(self):
         g = grader()
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory); (root / 'entry.json').write_text(json.dumps({'id': 'pester-001', 'has_skill': True}))
+            root = Path(directory); (root / 'entry.json').write_text(json.dumps({'id': 'pester-001', 'grading_mode': 'custom_only'}))
             with patch.dict(os.environ, {'HARBOR_REWARD_JSON': str(root / 'logs/reward.json')}):
                 for status in g.UNSCORED:
                     g.emit(root, status, {'code': 'fixture'})
@@ -404,19 +479,22 @@ class ClassificationTests(unittest.TestCase):
                     sidecar = json.loads((root / 'logs/skill_evaluator_reward.json').read_text())
                     self.assertNotIn('custom_metrics', reward)
                     self.assertEqual(sidecar['evaluation_status'], 'failed')
-                    self.assertEqual(sidecar['custom_details']['outcome']['classification'], status)
+                    self.assertEqual(sidecar['details']['outcome']['classification'], status)
 
     def test_malformed_private_entry_stays_an_infrastructure_failure(self):
         g = grader()
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            for entry in ('[]', 'null', '{}', 'malformed'):
+            for entry in ('[]', 'null', '{}', 'malformed',
+                          '{"id":"pester-001"}',
+                          '{"id":"pester-001","grading_mode":"default"}',
+                          '{"id":"pester-001","grading_mode":"custom_only","has_skill":1}'):
                 (root / 'entry.json').write_text(entry)
                 with patch.dict(os.environ, {'HARBOR_REWARD_JSON': str(root / 'logs/reward.json')}):
                     g.emit(root, 'passed', {'negative_control_correct': 1})
                 reward = reports.read_json(root / 'logs/reward.json')
                 self.assertNotIn('custom_metrics', reward)
-                self.assertEqual(reward['details']['outcome']['classification'], 'infrastructure_error')
+                self.assertEqual(reports.read_json(root / 'logs/custom_reward.json')['details']['outcome']['classification'], 'infrastructure_error')
                 self.assertEqual(reports.read_json(root / 'logs/skill_evaluator_reward.json')['evaluation_status'], 'failed')
 
 

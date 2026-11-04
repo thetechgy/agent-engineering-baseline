@@ -28,7 +28,9 @@ FIXTURE = Path(__file__).parent / 'fixtures/skill_report_reviews/historical-modu
 def frozen_tooling(test, tooling, profile):
     """Restore the exact retained validator and data named by a profile."""
     scripts = tooling / '.github/scripts'; scripts.mkdir(parents=True)
-    with zipfile.ZipFile(FIXTURE.with_name('review-runtime-modules.zip') if profile == 'current-v3' else FIXTURE) as archive:
+    archive_path = (FIXTURE.with_name('pester-packaging-modules.zip') if profile == 'current-v4' else
+                    FIXTURE.with_name('review-runtime-modules.zip') if profile == 'current-v3' else FIXTURE)
+    with zipfile.ZipFile(archive_path) as archive:
         for name, expected in zip(attachments.MODULES, attachments.PROFILES[profile][1]):
             raw = archive.read(expected + '.py')
             test.assertEqual(evidence.digest_bytes(raw), 'sha256:' + expected)
@@ -74,7 +76,7 @@ class AttachmentTests(unittest.TestCase):
         self.clock = patch.object(evidence, 'utc_now', wraps=evidence.utc_now)
         self.clock.start(); self.addCleanup(self.clock.stop)
 
-    def fixture(self, profile='current-v3', category=None, *, unmeasured=False):
+    def fixture(self, profile='current-v4', category=None, *, unmeasured=False):
         context = (review_fixtures.ReviewTests.gh_control(self) if unmeasured else
                    review_fixtures.ReviewTests.control(self))
         args = self.gh_args if unmeasured else self.args
@@ -157,7 +159,7 @@ class AttachmentTests(unittest.TestCase):
                 self.assertNotIn(str(self.root), output)
 
     def test_current_profile_uses_current_checkout_and_legacy_host_dispatch(self):
-        self.fixture('current-v3')
+        self.fixture('current-v4')
         self.spec['tooling'] = None; write(self.path, self.spec)
         self.load()
         output_parent = tempfile.TemporaryDirectory(); self.addCleanup(output_parent.cleanup)

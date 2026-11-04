@@ -243,7 +243,7 @@ index 0000000..0ceb787
 +            result = kind
 +    return result
 diff --git a/src/skillevaluator/tier3/harbor/adapter.py b/src/skillevaluator/tier3/harbor/adapter.py
-index bf660c3..0cade41 100644
+index bf660c3..6e602df 100644
 --- a/src/skillevaluator/tier3/harbor/adapter.py
 +++ b/src/skillevaluator/tier3/harbor/adapter.py
 @@ -2397,4 +2397,5 @@ def _copy_verifier(task_dir: Path) -> None:
@@ -252,6 +252,55 @@ index bf660c3..0cade41 100644
 +        (_EVAL_CORE_DIR / "sensitive_path_evidence.py", "Sensitive-path evidence classifier"),
          (_EVAL_CORE_DIR / "secret_redaction.py", "Deterministic redaction helper"),
          (_EVAL_CORE_DIR / "codex_tool_call_normalizer.py", "Codex tool-call normalizer"),
+@@ -3411,4 +3412,5 @@ def _validate_and_sanitize_custom_compose(
+     allowed_env: set[str],
+     sanitize: bool = True,
++    allow_offline_main: bool = False,
+ ) -> None:
+     """Reject Docker-host escape features and remove sidecar host ports.
+@@ -3453,4 +3455,9 @@ def _validate_and_sanitize_custom_compose(
+
+         allowed_service_keys = _COMPOSE_MAIN_ALLOWED_KEYS if svc_name == "main" else _COMPOSE_SIDECAR_ALLOWED_KEYS
++        # Only the native bundled-verifier boundary can grant this exception.
++        # Literal "none" removes networking; all other main overrides retain
++        # their existing rejection, including dynamic network_mode values.
++        if svc_name == "main" and allow_offline_main and service.get("network_mode") == "none":
++            allowed_service_keys = allowed_service_keys | {"network_mode"}
+         unsupported_keys = sorted(set(service) - allowed_service_keys)
+         if unsupported_keys:
+@@ -5122,5 +5129,5 @@ def _validate_native_verifier_compose_boundaries(
+ ) -> None:
+     """Keep separate-verifier Compose models inside the verifier env boundary."""
+-    from harbor.models.task.config import TaskConfig
++    from harbor.models.task.config import NetworkMode, TaskConfig
+
+     allowed_env = set(verifier_env if verifier_env is not None else runtime_env or {})
+@@ -5128,5 +5135,5 @@ def _validate_native_verifier_compose_boundaries(
+     config = TaskConfig.model_validate(data)
+     paths, steps = _validated_native_task_steps(task_dir, config)
+-    contexts: list[Path] = []
++    contexts: dict[Path, bool] = {}
+     for verifier_pass in _native_verifier_passes(task_dir, config, paths, steps):
+         definition = verifier_pass.definition
+@@ -5144,7 +5151,10 @@ def _validate_native_verifier_compose_boundaries(
+                     f"recognizes for {verifier_pass.scope}: {candidate / 'docker-compose.yml'}"
+                 )
+-        contexts.append(definition.directory if definition.bundled_tests else paths.environment_dir)
++        context = definition.directory if definition.bundled_tests else paths.environment_dir
++        offline = definition.bundled_tests and definition.config.network_mode == NetworkMode.NO_NETWORK
++        # A context reused by any other verifier policy must remain restricted.
++        contexts[context] = contexts.get(context, True) and offline
+
+-    for context in dict.fromkeys(contexts):
++    for context, allow_offline_main in contexts.items():
+         if _has_symlink_component(context, paths.task_dir):
+             raise ValueError(f"Native Harbor verifier environment cannot use linked paths: {context}")
+@@ -5157,4 +5167,5 @@ def _validate_native_verifier_compose_boundaries(
+                 allowed_env=allowed_env,
+                 sanitize=sanitize,
++                allow_offline_main=allow_offline_main,
+             )
+
 diff --git a/src/skillevaluator/tier3/harbor/collector.py b/src/skillevaluator/tier3/harbor/collector.py
 index 33ba588..82439f0 100644
 --- a/src/skillevaluator/tier3/harbor/collector.py

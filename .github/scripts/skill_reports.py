@@ -556,14 +556,17 @@ def diagnostic_benchmark_report(workspace, root, name, mode):
         require(len(rewards) == cases * MODES[mode], 'Diagnostic retained trial cardinality mismatch')
         for path in rewards:
             reward = read_json(path)
-            require(reward.get('entry_id') in counts and reward.get('has_skill') is (arm == 'with_skill'),
+            require(reward.get('entry_id') in counts and ('has_skill' not in reward or reward['has_skill'] is (arm == 'with_skill')),
                     'Diagnostic retained trial identity mismatch')
-            outcome = reward.get('custom_details', {}).get('outcome', {})
+            outcome = reward.get('details', {}).get('outcome', {})
             require(outcome.get('classification') in ('passed', 'failed')
                     and reward.get('evaluation_status') == 'complete',
                     'Unscoreable or unclassified trial makes the comparison inconclusive')
             counts[reward['entry_id']] += 1
         require(all(count == MODES[mode] for count in counts.values()), 'Diagnostic retained case coverage mismatch')
+    # Completion uses the same captured native identities as public admission.
+    import skill_evidence as evidence
+    evidence.normalize_behavioral(root, name, workspace=workspace, native_layout=True)
     write_json(root / 'provenance.json', {'schema_version': 1, 'status': 'complete',
                'diagnostic_only': True, 'skill': name, 'mode': mode})
     summary([f'## {name}: native diagnostic comparison', '',
