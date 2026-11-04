@@ -36,6 +36,13 @@ both audits, packaging and offline msgraph launcher checks. The installed gh
 file and lock changes came from APM. The new released skill adds artifact CLI
 guidance; the historical captured CLI help remains at 2.102.0.
 
+The final main-integrated cold regeneration rerun failed after 838.7 seconds:
+APM did not restore the msgraph package manifest and rejected the frozen MCP
+declaration comparison. Its cause is not established by that message. The
+failed run published no generated output, and no non-frozen or transport fallback
+was enabled. Earlier successful APM runs remain retained evidence; current
+cold-restoration qualification must still be established in hosted validation.
+
 The native gh verifier originally copied host-owned tests into the container
 with UID 1000 ownership. Mode 700 therefore allowed the agent with the same
 UID to read private verifier input. The production copy helper now explicitly
