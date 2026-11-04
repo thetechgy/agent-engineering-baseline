@@ -74,7 +74,9 @@ def run_native(command, *, env, log):
     """Allow bounded teardown before forcibly ending a hung no-inference child."""
     with subprocess.Popen(command, env=env, stdout=log, stderr=subprocess.STDOUT) as process:
         try:
-            return process.wait(timeout=2600)
+            # 180s controls + 2500s native + 40s cleanup + 5s kill
+            # stays below the CI qualification step's 46-minute deadline.
+            return process.wait(timeout=2500)
         except subprocess.TimeoutExpired:
             process.terminate()
             try:
