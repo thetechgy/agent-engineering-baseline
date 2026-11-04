@@ -69,3 +69,11 @@ The private temporary-directory baseline control reproduced an unrelated fixture
 failure: the injection string disclosed an absolute home path. The test now
 spells the same sentinel target relative to its working directory. Production
 redaction and the sentinel non-execution assertion are unchanged.
+
+The setup script resolves patches and requirement files from its own checkout
+root. Reporting workflows use `path: trusted` while `GITHUB_WORKSPACE` points
+to the parent directory, so the parent is not a resource lookup root. The
+pre-install guard excludes tool storage from both the declared workspace and
+the actual checkout, including when those directories are separate. Native
+reporting setup was reproduced in this nested layout before and after the fix;
+the earlier revision failed to locate the review patch.
