@@ -14,7 +14,7 @@ import skill_reports as reports
 
 NAME = 'powershell-pester-6'
 OVERLAY = Path('.github/evals') / NAME
-EXTRA_PACKAGES = {'libicu76': '76.1-4', 'curl': '8.14.1-2+deb13u5', 'ripgrep': '14.1.1-1+b4'}
+EXTRA_PACKAGES = {'libicu76': '76.1-4', 'curl': '8.14.1-2+deb13u7', 'ripgrep': '14.1.1-1+b4'}
 
 
 def manifest(root):

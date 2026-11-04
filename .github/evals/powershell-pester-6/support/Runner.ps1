@@ -201,7 +201,7 @@ try {
         $__peResult = @{ status = 'admitted'; code = 'ok' }
         if (-not $AdmissionOnly) {
             $__peResult = @{ status = 'infrastructure_error'; code = 'runtime' }
-            if ($PSVersionTable.PSVersion.ToString() -cne '7.6.6') { throw 'runtime' }
+            if ($PSVersionTable.PSVersion.ToString() -cne '7.6.9') { throw 'runtime' }
             Import-Module -Name $PesterManifest -RequiredVersion 6.2.0 -ErrorAction Stop
             if (@(Get-Module Pester).Count -ne 1 -or (Get-Module Pester).Version.ToString() -cne '6.2.0') { throw 'runtime' }
             $__peConfig = New-PesterConfiguration

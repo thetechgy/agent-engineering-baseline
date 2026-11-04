@@ -1,6 +1,6 @@
 # Endpoint status module
 
-This project uses PowerShell 7.6.6 and Pester 6.2.0. `Probe.psm1` exports
+This project uses PowerShell 7.6.9 and Pester 6.2.0. `Probe.psm1` exports
 `Get-EndpointStatus -Target <string>`. It calls the private
 `Test-ProbeConnection -Target <string>` exactly once with that same target and
 returns an object with the original `Target` and a Boolean `Healthy` result.

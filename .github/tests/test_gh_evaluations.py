@@ -595,15 +595,15 @@ class GhNativeTests(unittest.TestCase):
     def test_native_adapter_preserves_pinned_build_inputs_in_both_arms(self):
         from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks
 
-        image = "python:3.12-slim-trixie@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1"
+        image = "python:3.12-slim-trixie@sha256:b18b261e1b4974b4f321451ad5251ded85abb22c2b8b262da527dda1d031ab30"
         packages = {
             "git": "1:2.47.3-0+deb13u1",
             "jq": "1.7.1-6+deb13u4",
             "nodejs": "20.19.2+dfsg-1+deb13u3",
             "npm": "9.2.0~ds1-3",
-            "ca-certificates": "20250419",
+            "ca-certificates": "20250419+deb13u1",
         }
-        snapshot = "20261010T000000Z"
+        snapshot = "20261103T000000Z"
         with tempfile.TemporaryDirectory(prefix="gh-build-pins-") as temporary:
             root = Path(temporary)
             skill = gh.stage(gh.ROOT, root / "bundle/gh", ["gh-001"])

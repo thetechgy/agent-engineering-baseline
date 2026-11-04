@@ -9,7 +9,7 @@ illustrative; replay never contacts them.
 
 ## Pinned references
 
-- **CLI skill:** [cli/cli at 89d7dce (GitHub CLI 2.102.1)](https://github.com/cli/cli/blob/89d7dcec017194af1d6f8853176b2dae9c1da762/skills/gh/SKILL.md).
+- **CLI skill:** [cli/cli at 63837fb (GitHub CLI 2.103.3)](https://github.com/cli/cli/blob/63837fb778d6a39f02be0ce76ff89f2bc8d74bdc/skills/gh/SKILL.md).
   APM lockfile deployment owner and hashes are checked before staging.
   Historical review controls retain the unchanged ec5b512 source separately at
   `.github/tests/fixtures/skill_review/gh-ec5b512.zip`, matching their
@@ -41,14 +41,14 @@ skill source is edited by this suite.
 ## Task build inputs
 
 The reviewed Docker Official Image is
-`python:3.12-slim-trixie@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1`.
+`python:3.12-slim-trixie@sha256:b18b261e1b4974b4f321451ad5251ded85abb22c2b8b262da527dda1d031ab30`.
 The digest identifies the official `library/python` image index, keeping the
 selected platform's base layers fixed. See the [official image source](https://github.com/docker-library/python)
 and [Docker's digest-pinning guidance](https://docs.docker.com/build/building/best-practices/#pin-base-image-versions).
 
-Debian inputs come exclusively from the fixed `20261010T000000Z` snapshots:
-[Debian trixie](https://snapshot.debian.org/archive/debian/20261010T000000Z/dists/trixie/)
-and [Debian-security trixie-security](https://snapshot.debian.org/archive/debian-security/20261010T000000Z/dists/trixie-security/),
+Debian inputs come exclusively from the fixed `20261103T000000Z` snapshots:
+[Debian trixie](https://snapshot.debian.org/archive/debian/20261103T000000Z/dists/trixie/)
+and [Debian-security trixie-security](https://snapshot.debian.org/archive/debian-security/20261103T000000Z/dists/trixie-security/),
 component `main`. Inherited sources and package indexes are removed before update;
 there is no live-repository fallback. Each source uses the image's Debian archive
 keyring. Only these sources disable `Valid-Until` checking, as described by
@@ -61,7 +61,7 @@ enabled and an apt update error fails the build.
 | jq | `1.7.1-6+deb13u4` |
 | nodejs | `20.19.2+dfsg-1+deb13u3` |
 | npm | `9.2.0~ds1-3` |
-| ca-certificates | `20250419` |
+| ca-certificates | `20250419+deb13u1` |
 
 The base image, snapshot timestamp, and direct package versions share one
 definition in `skill_reports.py` and are included in the `gh` benchmark policy
@@ -125,7 +125,8 @@ and policy identities distinguish it from earlier results. Original artifacts
 retain their historical identities and must not be relabeled or pooled silently.
 The target-skill activation gate remains mandatory for with-skill qualification;
 compare common functional dimensions independently of the baseline's absent
-target activation. The locked upstream skill is unchanged.
+target activation. The captured CLI help remains at 2.102.0; the current
+released skill revision participates in the benchmark policy identity.
 
 Replay proves fixture/grader regression behavior. Native task generation proves
 adapter contracts without inference. Neither establishes model performance.

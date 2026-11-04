@@ -125,13 +125,13 @@ Frozen APM regeneration can be checked through the existing
 
 ## Runtime inputs and deadlines
 
-Task builds reuse the reviewed Debian image digest and 20261010 snapshot from
+Task builds reuse the reviewed Debian image digest and 20261103 snapshot from
 the shared task-build policy. Extra direct packages are libicu76 76.1-4,
-curl 8.14.1-2+deb13u5 and ripgrep 14.1.1-1+b4. PowerShell 7.6.6 and Pester 6.2.0
+curl 8.14.1-2+deb13u7 and ripgrep 14.1.1-1+b4. PowerShell 7.6.9 and Pester 6.2.0
 are hash-verified at build time, followed by real import/version checks.
 
 PowerShell archive SHA-256:
-`ddbc4a2d113bbd46d283cfedcbcd117a70caefd7673f41f2b4e0000badf103bc`.
+`1da6d6d6035d651f20e70ddee7c4c15ac6ab8b9fb40ee92240d91263f28a884b`.
 Pester Gallery package SHA-256:
 `e6ac7418d4f12500269aaca58ae56cf1caafbbf1afa2cec334e289d1cf50a239`.
 
