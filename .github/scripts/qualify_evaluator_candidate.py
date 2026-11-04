@@ -78,7 +78,7 @@ def run_native(command, *, env, log):
         except subprocess.TimeoutExpired:
             process.terminate()
             try:
-                process.wait(timeout=30)
+                process.wait(timeout=40)
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.wait(timeout=5)
@@ -86,7 +86,7 @@ def run_native(command, *, env, log):
         except BaseException:
             process.terminate()
             try:
-                process.wait(timeout=30)
+                process.wait(timeout=40)
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.wait(timeout=5)
@@ -215,22 +215,24 @@ def main():
         metadata['native_prerequisite'] = 'reviewed_compose_unavailable'
         metadata['returncode'] = returncode = returncode or 2
         (output / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
-    if returncode == 0 and args.native_gh:
+    controls_ready = returncode == 0
+    if controls_ready and args.native_gh:
         native_env = {**env, 'DOCKER_CONFIG': compose_config, 'RUNNER_TEMP': str(output),
                       'PATH': str(Path(sys.executable).parent) + os.pathsep + env['PATH']}
         launcher = ('import sys; sys.path[:0] = sys.argv[1:3]; '
                     'from gh_initializer_validation import main; main(sys.argv[3], sys.argv[4] or None)')
         with (output / 'native-gh.log').open('w') as log:
             try:
-                returncode = run_native([sys.executable, '-I', '-B', '-c', launcher, str(snapshot / 'src'),
+                native_code = run_native([sys.executable, '-I', '-B', '-c', launcher, str(snapshot / 'src'),
                     str(project / '.github/scripts'), str(output / 'native-gh.json'), args.gh_arm or ''], env=native_env,
                     log=log)
             except subprocess.TimeoutExpired:
-                returncode = 124
+                native_code = 124
+        returncode = returncode or native_code
         metadata['returncode'] = returncode
-        metadata['native_gh'] = {'success': returncode == 0, 'returncode': returncode, 'diagnostic_only': True}
+        metadata['native_gh'] = {'success': native_code == 0, 'returncode': native_code, 'diagnostic_only': True}
         (output / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
-    if returncode == 0 and args.native_pester:
+    if controls_ready and args.native_pester:
         native_env = {**env, 'DOCKER_CONFIG': compose_config, 'PYTHONPATH': str(snapshot / 'src'), 'RUNNER_TEMP': str(output),
                       'PATH': str(Path(sys.executable).parent) + os.pathsep + env['PATH']}
         launcher = ('import sys; sys.path[:0] = sys.argv[1:3]; '
@@ -238,15 +240,16 @@ def main():
                     'main(candidate=True, artifact=sys.argv[3])')
         with (output / 'native-pester.log').open('w') as log:
             try:
-                returncode = run_native([sys.executable, '-I', '-B', '-c', launcher, str(snapshot / 'src'),
+                native_code = run_native([sys.executable, '-I', '-B', '-c', launcher, str(snapshot / 'src'),
                     str(project / '.github/scripts'), str(output / 'native-pester')], env=native_env,
                     log=log)
             except subprocess.TimeoutExpired:
-                returncode = 124
+                native_code = 124
+        returncode = returncode or native_code
         metadata['returncode'] = returncode
-        metadata['native_pester'] = {'success': returncode == 0, 'returncode': returncode, 'diagnostic_only': True}
+        metadata['native_pester'] = {'success': native_code == 0, 'returncode': native_code, 'diagnostic_only': True}
         (output / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
-    if args.adoption and returncode == 0:
+    if args.adoption and controls_ready:
         legacy_python = os.environ.get('SKILL_LEGACY_REVIEW_PYTHON')
         if legacy_python and Path(legacy_python).is_absolute():
             launcher = ("import sys, importlib.metadata; sys.path.insert(0, sys.argv[1]); "

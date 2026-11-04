@@ -83,7 +83,9 @@ then inject dead brokers, foreign socket ownership, missing identity, altered
 private inputs, timeout, cancellation or missing approval after the positive
 fixture. Each must retain unscoreable infrastructure evidence and prevent setup;
 these fault fixtures are separate from the preceding deterministic grading.
-Teardown is independently observed.
+Teardown is independently observed and bounded; teardown failure retains diagnostics
+and cannot produce a successful qualification verdict. Skill reads must succeed
+and match the exact staged skill bytes.
 
 The existing 24 successful replay traces and 13 rejected fault traces remain
 unchanged. Candidate controls additionally exercise manifest/payload/arm/context
@@ -114,7 +116,9 @@ are excluded. Qualification records cannot enter benchmark history.
 
 `--adoption` runs the available native gates and requires the retained evaluator
 interpreter in `SKILL_LEGACY_REVIEW_PYTHON` for the second Pester qualification;
-the current review SDK overlay is rejected. It returns a failed readiness
+the current review SDK overlay is rejected. Once offline controls pass, the native
+gates run independently so a failed gh lifecycle does not suppress Pester evidence.
+It returns a failed readiness
 verdict while any required boundary is unqualified. The command never edits pins
 or implicitly promotes a producer. In addition to gh and both Pester runtimes,
 adoption requires Podman's 20 standard-grading staging/collection/recovery
@@ -138,7 +142,7 @@ Real-provider readiness and model effectiveness remain unverified in either case
 
 ## Current delivery evidence
 
-All 31 local candidate controls pass with no network attempts. They stage all 48
+All 32 local candidate controls pass with no network attempts. They stage all 48
 gh tasks and exercise native CLI restaging with unchanged checksums in a new
 private directory. Initial hosted controls pass,
 but native run `41902822407` fails its first with-skill task build with fixed
@@ -169,3 +173,18 @@ and rejects rebuilding initialized or failed trials. The failing native identity
 records are retained as failing-before evidence; unit controls additionally prove
 repeat verification cannot create a broker or reset audit bytes. Native passing-
 after evidence is still required.
+
+A separate host-only controlled check exercises all 48 staged grader/normalizer
+seams, including successful approved skill reads, modeled broker receipts and
+expected arm outcomes. All 48 fabricated receipt controls reject. This is a
+local grader compatibility check; it does not establish container isolation or
+replace the native lifecycle gate.
+
+Hosted validation on revision `6f03d1e25af408520d78c0d73ed7093712672712` passes
+all 844 Python contracts (31 skipped), Linux/Bash project validation and Windows
+PowerShell/analyzer validation. The retained Pester gate fails strict completeness:
+42 rewards are present, with ten image-build infrastructure failures. Earlier
+revision `842f5f550f46d8cd0d8a62af9452dd59324121ee` completed all 52 exact Pester
+outcomes and shared/public-only reporting. The prior success does not certify
+the later failed gate. Both source identities and authenticated artifacts are
+retained separately.

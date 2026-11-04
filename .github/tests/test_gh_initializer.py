@@ -44,6 +44,48 @@ class InitializerTests(unittest.TestCase):
         self.root = Path(self.scratch.name)
         self.path = manifest.write_manifest(self.root / "operator", self.tasks, staged_roots=[self.bundle, *self.tasks])
 
+    def test_failed_start_retains_evidence_even_when_teardown_fails(self):
+        import gh_initializer_validation as native
+        for fault in ("none", "teardown", "evidence"):
+            with self.subTest(fault=fault):
+                teardown_fails = fault == "teardown"
+                root = self.root / fault
+                root.mkdir()
+                artifact = root / "native-gh.json"
+                original_write = Path.write_text
+                writes = []
+                def write(path, text, *args, **kwargs):
+                    if path == artifact:
+                        writes.append(path)
+                        if fault == "evidence" and len(writes) == 1:
+                            raise OSError("evidence write failed")
+                    return original_write(path, text, *args, **kwargs)
+                async def cleanup(*, delete):
+                    self.assertTrue(delete)
+                    if fault == "evidence":
+                        self.assertFalse(artifact.exists())
+                    else:
+                        pending = json.loads(artifact.read_text())
+                        self.assertFalse(pending["success"])
+                        self.assertEqual(pending["teardown"]["status"], "pending")
+                    if teardown_fails:
+                        raise RuntimeError("cleanup failed")
+                environment = SimpleNamespace(
+                    start=AsyncMock(side_effect=RuntimeError("secure startup failed")),
+                    stop=AsyncMock(side_effect=cleanup))
+                with patch.object(native, "TrustedGhEnvironment", return_value=environment), \
+                        patch.object(native, "docker", return_value=""), \
+                        patch.object(Path, "write_text", write), patch.dict(os.environ):
+                    with self.assertRaises((RuntimeError, OSError)):
+                        asyncio.run(native.qualify(root, artifact))
+                retained = json.loads(artifact.read_text())
+                self.assertFalse(retained["success"])
+                self.assertEqual(retained["completed"], [])
+                self.assertEqual(retained["failure"]["phase"], "secure_start_and_initialization")
+                self.assertEqual(retained["teardown"]["status"],
+                    "infrastructure_error" if teardown_fails else "complete")
+                environment.stop.assert_awaited_once_with(delete=True)
+
     def test_existing_authored_healthcheck_still_rejects_baseline(self):
         import gh_evaluations as gh
         from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks

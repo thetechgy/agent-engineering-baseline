@@ -22,8 +22,8 @@ from harbor.models.trial.paths import TrialPaths
 from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks
 
 
-def docker(*args):
-    return subprocess.check_output(["docker", *args], text=True, timeout=30)
+def docker(*args, timeout=30):
+    return subprocess.check_output(["docker", *args], text=True, timeout=timeout)
 
 
 async def qualify(root, artifact, arm=None):
@@ -107,8 +107,12 @@ async def qualify(root, artifact, arm=None):
                     "function_name": "exec_command", "arguments": {"cmd": command}}],
                     "observation": {"results": [{"source_call_id": identity, "content": (result.stdout or "") + (result.stderr or "")}]}})
                 return result
+            skill_read_digest = None
             if present and entry.get("expected_skill"):
-                await observed("cat /workspace/skills/gh/SKILL.md")
+                skill_read = await observed("cat /workspace/skills/gh/SKILL.md")
+                skill_read_digest = hashlib.sha256((skill_read.stdout or "").encode()).hexdigest()
+                if skill_read.return_code or skill_read_digest != hashlib.sha256((gh.ROOT / gh.DEPLOYED / "SKILL.md").read_bytes()).hexdigest():
+                    raise RuntimeError("Agent could not read the exact staged skill")
             elif not present:
                 await checked("test ! -e /workspace/skills/gh", "agent")
             fixture = fixtures[task.name]
@@ -171,6 +175,7 @@ async def qualify(root, artifact, arm=None):
                     await checked("kill -STOP " + str(first["broker"]["pid"]))
                 elif fault == "missing_manifest":
                     os.environ["AEB_GH_MANIFEST"] = str(root / "absent-manifest.json")
+                prior_records = len(paths.trial_dir.joinpath("gh-initialization.jsonl").read_text().splitlines())
                 blocked = False
                 try:
                     if fault == "cancellation":
@@ -180,7 +185,13 @@ async def qualify(root, artifact, arm=None):
                         await pending
                     else:
                         await environment.start(force_build=False)
-                except (RuntimeError, ValueError, OSError, asyncio.CancelledError):
+                except asyncio.CancelledError:
+                    if fault != "cancellation":
+                        raise
+                    blocked = True
+                except (RuntimeError, ValueError, OSError):
+                    if fault == "cancellation":
+                        raise
                     blocked = True
                 finally:
                     os.environ["AEB_GH_MANIFEST"] = str(manifest)
@@ -188,9 +199,14 @@ async def qualify(root, artifact, arm=None):
                     raise RuntimeError("Native initializer accepted invalid or cancelled startup")
                 if fault == "timeout":
                     await checked("kill -CONT " + str(first["broker"]["pid"]))
-                status = json.loads(paths.trial_dir.joinpath("gh-initialization.jsonl").read_text().splitlines()[-1])
-                if status["status"] not in ("infrastructure_error", "cancelled"):
-                    raise RuntimeError("Native startup failure lost infrastructure classification")
+                records = paths.trial_dir.joinpath("gh-initialization.jsonl").read_text().splitlines()
+                status = json.loads(records[-1])
+                expected_status = "cancelled" if fault == "cancellation" else "infrastructure_error"
+                if len(records) != prior_records + 1 or status["status"] != expected_status:
+                    raise RuntimeError("Native startup failure lost its exact infrastructure classification")
+                if fault == "timeout" and status.get("failure") != {
+                        "status": "infrastructure_error", "phase": "resume", "error": "TimeoutError"}:
+                    raise RuntimeError("Native timeout control failed for a different reason")
                 if fault == "cancellation":
                     # Containment may stop the main container. Recover through
                     # the hardened copy API; unavailable audit is not a pass.
@@ -200,11 +216,11 @@ async def qualify(root, artifact, arm=None):
                         raise RuntimeError("Cancellation changed append-only audit")
                 elif audit != await checked("sha256sum /opt/gh-eval/state/audit.jsonl"):
                     raise RuntimeError("Failed initialization changed append-only audit")
-                fault_result = {"control": fault, "blocked": True, "measurement": "unscoreable", "audit": "unchanged"}
+                fault_result = {"control": fault, "blocked": True, "measurement": "unscoreable", "audit": "unchanged", "initialization": status}
             rows.append({"case": task.name, "arm": "with_skill" if present else "without_skill",
                 "checksum": native.checksum, "metrics": scores, "initialization": first,
                 "evidence": "controlled native fixture before injected fault", "inference": False, "setup_only": setup_only,
-                "fabricated_receipt_rejected": True, "startup_fault": fault_result})
+                "fabricated_receipt_rejected": True, "startup_fault": fault_result, "skill_read_sha256": skill_read_digest})
         except BaseException as error:
             kind = type(error).__name__
             if kind not in {"RuntimeError", "ValueError", "OSError", "FileNotFoundError", "TypeError", "KeyError", "AttributeError", "TimeoutError", "CancelledError", "KeyboardInterrupt"}:
@@ -221,18 +237,38 @@ async def qualify(root, artifact, arm=None):
                        "arm": "with_skill" if present else "without_skill"}
             raise
         finally:
-            await environment.stop(delete=True)
-            if docker("ps", "-aq", "--filter", "label=com.docker.compose.project=" + name).strip():
-                raise RuntimeError("Native gh teardown left a container")
-            if docker("network", "ls", "-q", "--filter", "label=com.docker.compose.project=" + name).strip():
-                raise RuntimeError("Native gh teardown left a network")
-            artifact.write_text(json.dumps({"schema": 1, "inference": False, "diagnostic_only": True,
-                "success": len(rows) == expected, "expected": expected, "completed": rows,
-                "runtime": {key: importlib.metadata.version(key) for key in ("skillevaluator", "harbor")},
-                "harness_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-                "failure": failure, "setup_only": setup_only,
-                "initialization": [json.loads(line) for line in paths.trial_dir.joinpath("gh-initialization.jsonl").read_text().splitlines()]
-                    if paths.trial_dir.joinpath("gh-initialization.jsonl").exists() else []}, indent=2) + "\n")
+            teardown = {"status": "pending"}
+            def retain():
+                artifact.write_text(json.dumps({"schema": 1, "inference": False, "diagnostic_only": True,
+                    "success": len(rows) == expected and failure is None and teardown["status"] == "complete",
+                    "teardown": teardown, "expected": expected, "completed": rows,
+                    "runtime": {key: importlib.metadata.version(key) for key in ("skillevaluator", "harbor")},
+                    "harness_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+                    "failure": failure, "setup_only": setup_only,
+                    "initialization": [json.loads(line) for line in paths.trial_dir.joinpath("gh-initialization.jsonl").read_text().splitlines()]
+                        if paths.trial_dir.joinpath("gh-initialization.jsonl").exists() else []}, indent=2) + "\n")
+            # Persist current infrastructure evidence before cleanup can hang or
+            # be interrupted. Pending cleanup is never a successful verdict.
+            try:
+                retain()
+            except BaseException:
+                failure = failure or {"phase": "evidence_retention", "error": "Exception",
+                    "code": "native_evidence_failed", "case": task.name,
+                    "arm": "with_skill" if present else "without_skill"}
+                raise
+            finally:
+                try:
+                    await asyncio.wait_for(environment.stop(delete=True), timeout=20)
+                    if docker("ps", "-aq", "--filter", "label=com.docker.compose.project=" + name, timeout=5).strip():
+                        raise RuntimeError("Native gh teardown left a container")
+                    if docker("network", "ls", "-q", "--filter", "label=com.docker.compose.project=" + name, timeout=5).strip():
+                        raise RuntimeError("Native gh teardown left a network")
+                    teardown = {"status": "complete"}
+                except BaseException:
+                    teardown = {"status": "infrastructure_error", "code": "native_teardown_failed"}
+                    raise
+                finally:
+                    retain()
     return len(rows) == expected
 
 
