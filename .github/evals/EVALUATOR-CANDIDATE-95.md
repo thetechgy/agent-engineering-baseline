@@ -140,7 +140,9 @@ its original current-review runtime, while older profiles retain legacy routing.
 
 Add `--native-pester` to the qualification command to first run all 16 evidence
 controls, then the shared 26-fixture matrix in both arms through the candidate's
-actual Harbor lifecycle. The required 52 outcomes are 22 passed, 14 failed,
+actual Harbor lifecycle. Native execution requires the existing `setup-compose.sh`
+plugin environment. Only its hash-verified directory, containing no Docker auth
+configuration, enters the otherwise empty child environment. The required 52 outcomes are 22 passed, 14 failed,
 eight invalid, two timeout, two unsupported and four infrastructure errors.
 Every classification, applicable metric and measured runtime must match.
 The candidate retains native collection and HTML diagnostics only. It cannot

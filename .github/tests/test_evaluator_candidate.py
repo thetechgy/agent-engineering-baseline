@@ -1,6 +1,8 @@
 """Opt-in candidate controls supplement the unchanged production evidence cases."""
 
 import json
+import hashlib
+import importlib.util
 import os
 from pathlib import Path
 import subprocess
@@ -11,6 +13,27 @@ from unittest.mock import patch
 
 
 class CandidateHarnessTests(unittest.TestCase):
+    def test_native_compose_accepts_only_the_reviewed_credential_free_directory(self):
+        project = Path(__file__).resolve().parents[2]
+        spec = importlib.util.spec_from_file_location('candidate_harness', project / '.github/scripts/qualify_evaluator_candidate.py')
+        harness = importlib.util.module_from_spec(spec); spec.loader.exec_module(harness)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); plugin = root / 'plugin'; plugins = plugin / 'cli-plugins'
+            plugins.mkdir(parents=True)
+            binary = plugins / 'docker-compose'; binary.write_bytes(b'reviewed-fixture-binary')
+            source = root / 'project/.github/scripts'; source.mkdir(parents=True)
+            (source / 'setup-compose.sh').write_text('compose_sha256=' + hashlib.sha256(binary.read_bytes()).hexdigest() + '\n')
+            with patch.dict(os.environ, {'COMPOSE_PLUGIN_ROOT': str(plugin), 'DOCKER_CONFIG': str(plugin)}):
+                self.assertEqual(harness.native_compose_config(root / 'project'), str(plugin))
+                # A Docker auth/config file must never enter the native child.
+                (plugin / 'config.json').write_text('{"auths": {"dummy.invalid": "dummy"}}')
+                with self.assertRaises(ValueError): harness.native_compose_config(root / 'project')
+                (plugin / 'config.json').unlink()
+                binary.write_bytes(b'altered')
+                with self.assertRaises(ValueError): harness.native_compose_config(root / 'project')
+                binary.unlink(); binary.symlink_to(source / 'setup-compose.sh')
+                with self.assertRaises(ValueError): harness.native_compose_config(root / 'project')
+
     def test_repository_runtime_cannot_silently_adopt_the_candidate(self):
         project = Path(__file__).resolve().parents[2]
         with tempfile.TemporaryDirectory() as temporary:

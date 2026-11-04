@@ -87,7 +87,9 @@ def qualification_bundle(root):
 
 def main(*, candidate=False, artifact=None):
     subprocess.run(['docker', 'info'], check=True, stdout=subprocess.DEVNULL, timeout=15)
-    subprocess.run(['docker', 'compose', 'version', '--short'], check=True, timeout=15)
+    compose = subprocess.check_output(['docker', 'compose', 'version', '--short'], text=True, timeout=15).strip()
+    if compose != reports.POLICY['docker_compose']:
+        raise RuntimeError('Qualification Compose version mismatch')
     if any(os.environ.get(key) for key in ('OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'NVIDIA_API_KEY')):
         raise RuntimeError('Qualification must not receive model credentials')
     artifact = Path(artifact) if artifact is not None else Path(os.environ['RUNNER_TEMP']) / 'pester-gate-artifacts'

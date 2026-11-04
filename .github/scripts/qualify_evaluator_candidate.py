@@ -7,6 +7,8 @@ import importlib.metadata
 import io
 import json
 import os
+import re
+import stat
 from pathlib import Path
 import subprocess
 import sys
@@ -45,6 +47,26 @@ raise SystemExit(0 if payload['success'] else 1)
 '''
 
 
+def native_compose_config(project):
+    """Pass only setup-compose's hash-verified, credential-free plugin directory."""
+    root = Path(os.environ.get('COMPOSE_PLUGIN_ROOT', ''))
+    def require(condition):
+        if not condition:
+            raise ValueError('Reviewed Compose plugin required')
+    require(root.is_absolute() and root.resolve() == root and not root.is_symlink()
+            and os.environ.get('DOCKER_CONFIG') == str(root))
+    require(root.is_dir() and {p.name for p in root.iterdir()} == {'cli-plugins'})
+    directory = root / 'cli-plugins'
+    require(not directory.is_symlink() and directory.is_dir()
+            and {p.name for p in directory.iterdir()} == {'docker-compose'})
+    binary = directory / 'docker-compose'
+    info = binary.lstat()
+    require(stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and info.st_size <= 128 * 1024 * 1024)
+    pins = re.findall(r'^compose_sha256=([0-9a-f]{64})$', (project / '.github/scripts/setup-compose.sh').read_text(), re.M)
+    require(len(pins) == 1 and hashlib.sha256(binary.read_bytes()).hexdigest() == pins[0])
+    return str(root)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source', type=Path, required=True, help='Clean checkout of the exact candidate revision')
@@ -55,6 +77,10 @@ def main():
     if args.native_pester and args.unpatched:
         parser.error('Native qualification requires the reviewed evidence patch')
     project = Path(__file__).resolve().parents[2]
+    try:
+        compose_config = native_compose_config(project) if args.native_pester else None
+    except (OSError, ValueError):
+        parser.error('Native qualification requires the credential-free plugin from setup-compose.sh')
     source, output = args.source.resolve(strict=True), args.output.absolute()
     if output.resolve() != output or output.exists() or any(output.is_relative_to(root) for root in (project, source)):
         parser.error('Output must be a new resolved directory outside both checkouts')
@@ -114,7 +140,7 @@ def main():
     metadata['returncode'] = returncode
     (output / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
     if returncode == 0 and args.native_pester:
-        native_env = {**env, 'PYTHONPATH': str(snapshot / 'src'), 'RUNNER_TEMP': str(output),
+        native_env = {**env, 'DOCKER_CONFIG': compose_config, 'PYTHONPATH': str(snapshot / 'src'), 'RUNNER_TEMP': str(output),
                       'PATH': str(Path(sys.executable).parent) + os.pathsep + env['PATH']}
         launcher = ('import sys; sys.path[:0] = sys.argv[1:3]; '
                     'from pester_container_validation import main; '
