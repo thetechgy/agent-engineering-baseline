@@ -63,7 +63,8 @@ bash .github/scripts/setup-skillevaluator.sh candidate
 
 Source the setup outputs through the CI runner or explicitly export their values
 in an operator shell. The local wheel uses only stdlib build inputs. Two builds
-must match byte for byte; installation uses `--no-deps --no-index --link-mode copy`.
+must match byte for byte; installation uses a generated hash-bound requirements
+file with `--require-hashes --only-binary :all: --no-deps --no-index --link-mode copy`.
 Candidate dependencies retain the frozen upstream lock. Current and historical
 review environments are not rebuilt or selected by candidate setup.
 
@@ -86,6 +87,14 @@ failure diagnostics retain fixed stage/error codes and bounded initialization
 records. Qualification timeout first requests graceful teardown, then ends an
 unresponsive child within a separate cleanup bound.
 
+The controlled standard-grading gate stages all ten Podman cases in both arms,
+runs the real verifier with explicitly mocked judges, serializes Harbor-native
+records, collects them, and renders HTML diagnostics. It retains a bounded
+`podman-fixtures.json` containing task checksums and numeric fixture results.
+Interruption controls distinguish an embedded original native trial from a missing
+duplicate file, then require an incomplete job to retain nine original trial
+records without publishing successful scores. No fixture is benchmark history.
+
 The existing `--native-pester` still requires 52 exact terminal outcomes.
 Native jobs require the credential-free hash-verified plugin from
 `setup-compose.sh`. No Docker service or alternative runtime is installed by the
@@ -96,7 +105,9 @@ are excluded. Qualification records cannot enter benchmark history.
 
 ## Adoption and rollback
 
-`--adoption` runs the available native gates and returns a failed readiness
+`--adoption` runs the available native gates and requires the retained evaluator
+interpreter in `SKILL_LEGACY_REVIEW_PYTHON` for the second Pester qualification;
+the current review SDK overlay is rejected. It returns a failed readiness
 verdict while any required boundary is unqualified. The command never edits pins
 or implicitly promotes a producer. In addition to gh and both Pester runtimes,
 adoption requires Podman's 20 standard-grading staging/collection/recovery
@@ -117,3 +128,28 @@ selection. Retain new readers, original historical archives and runtime routes;
 do not rewrite measurements or silently fall back within a run. The candidate-only
 state needs no production rollback because production selection has not changed.
 Real-provider readiness and model effectiveness remain unverified in either case.
+
+## Current delivery evidence
+
+All 30 local candidate controls pass with no network attempts. They stage all 48
+gh tasks and exercise native CLI restaging with unchanged checksums in a new
+private directory. Initial hosted controls pass,
+but native run `41902822407` fails its first with-skill task build with fixed
+code `debian_snapshot_unavailable`. The root broker never starts, and no task
+measurement is produced. The authenticated sanitized artifact retains the
+owning runtime, harness and initializer identities and infrastructure status.
+Do not infer broker execution, setup-only CLI compatibility or adoption from it.
+
+The upstream selection contains 1,142 tests including the five explicit Codex
+pin checks. Pristine source passes 1,137 with five skips. Patched source passes
+1,059 with five skips and 78 failed upstream expectations: the same 74 documented
+classifier/attribution differences plus four expecting upstream's Codex 0.161.0
+instead of the required 0.155.1. The local installed-CLI check is a separate native
+gate and remains unqualified while image acquisition fails. No unexplained
+upstream differences were observed; these are not 78 passing assertions.
+
+The production runtime/reporting migration, new profiles and frozen validator
+snapshot remain gated and are not delivered as qualified producer selection by
+this candidate-only PR. A snapshot download failure is infrastructure evidence;
+it cannot qualify an image or justify relaxed completeness, changed scoring,
+a Codex upgrade, different fixture images or model inference.

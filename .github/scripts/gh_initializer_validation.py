@@ -38,7 +38,7 @@ async def qualify(root, artifact, arm=None):
     expected = 24 if arm else 48
     if len(tasks) != expected:
         raise RuntimeError("Native gh cohort incomplete")
-    manifest = write_manifest(root / "operator", tasks, staged_roots=[bundle, root / "tasks"])
+    manifest = write_manifest(root / "operator", tasks, staged_roots=[bundle.parent, root / "tasks"])
     os.environ["AEB_GH_MANIFEST"] = str(manifest)
     fixtures = {entry["id"]: entry for entry in gh.dataset()}
     rows = []

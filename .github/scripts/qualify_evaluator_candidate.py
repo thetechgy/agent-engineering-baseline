@@ -38,6 +38,7 @@ suite = unittest.defaultTestLoader.loadTestsFromNames([
     'test_pester_evaluations.NativeStagingTests.test_native_runner_collector_and_report_do_not_score_unsupported_zero',
     'test_evaluator_candidate.CandidateEvidenceTests',
     'test_gh_initializer.InitializerTests',
+    'test_candidate_standard_grading.CandidateStandardTests',
 ])
 result = unittest.TextTestRunner(verbosity=2).run(suite)
 payload = dict(tests=result.testsRun, failures=len(result.failures), errors=len(result.errors),
@@ -102,6 +103,8 @@ def main():
     parser.add_argument('--adoption', action='store_true', help='Run available native gates and report every remaining adoption blocker; never promote implicitly')
     parser.add_argument('--native-pester', action='store_true', help='After the evidence controls, qualify native Pester packaging without inference')
     args = parser.parse_args()
+    if args.gh_arm and not args.native_gh:
+        parser.error('--gh-arm requires --native-gh')
     if args.adoption and args.gh_arm:
         parser.error('Adoption requires both native gh arms')
     if args.adoption:
@@ -120,10 +123,19 @@ def main():
         parser.error('Output must be a new resolved directory outside both checkouts')
     if sys.version_info[:2] != (3, 13):
         parser.error('Run with the candidate frozen Python 3.13 environment')
-    versions = {name: importlib.metadata.version(name) for name in PINS}
+    try:
+        versions = {name: importlib.metadata.version(name) for name in PINS}
+    except importlib.metadata.PackageNotFoundError:
+        parser.error('Candidate frozen dependency versions do not match')
     if versions != PINS:
         parser.error('Candidate frozen dependency versions do not match')
-    backend = Path(importlib.util.find_spec('aeb_gh_fixture').origin).parent
+    backend_spec = importlib.util.find_spec('aeb_gh_fixture')
+    if backend_spec is None or backend_spec.origin is None:
+        parser.error('Candidate backend is not installed')
+    backend = Path(backend_spec.origin).parent
+    if any(p.resolve() != p.absolute() or not stat.S_ISREG(p.lstat().st_mode)
+           or p.stat().st_nlink != 1 or p.stat().st_size > 128 * 1024 for p in backend.glob('*.py')):
+        parser.error('Candidate backend has unsafe installed source inputs')
     authored = project / '.github/evaluator-backends/aeb_gh_fixture'
     actual = {p.name: p.read_bytes() for p in backend.glob('*.py')}
     expected = {p.name: p.read_bytes() for p in authored.glob('*.py')}
@@ -159,13 +171,14 @@ def main():
     env = {'PATH': os.environ.get('PATH', '/usr/bin:/bin'), 'HOME': str(home),
            'TMPDIR': os.environ.get('TMPDIR', '/tmp'), 'PYTHON_DOTENV_DISABLED': '1',
            'PYTHONDONTWRITEBYTECODE': '1', 'GRADING_PATCH_CHILD': '1', 'CANDIDATE_EVIDENCE_CHILD': '1',
-           'SKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE': str(output / 'provenance.key')}
+           'SKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE': str(output / 'provenance.key'),
+           'AEB_CANDIDATE_FIXTURE_RESULT': str(output / 'podman-fixtures.json')}
     metadata = {'source_revision': REVISION, 'versions': versions, 'patched': not args.unpatched,
                 'patch_sha256': hashlib.sha256(patch_bytes).hexdigest(),
                 'lock_sha256': hashlib.sha256(git('show', 'HEAD:uv.lock')).hexdigest(),
                 'control_sha256': {name: hashlib.sha256((project / '.github/tests' / name).read_bytes()).hexdigest()
                                    for name in ('test_grading_evidence.py', 'test_pester_evaluations.py',
-                                                'test_evaluator_candidate.py', 'test_gh_initializer.py')},
+                                                'test_evaluator_candidate.py', 'test_gh_initializer.py', 'test_candidate_standard_grading.py')},
                 'harness_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
                 'production_pins_changed': False, 'inference': False, 'diagnostic_only': True,
                 'backend_sources': {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted((project / '.github/evaluator-backends/aeb_gh_fixture').glob('*.py'))},
@@ -184,6 +197,19 @@ def main():
     if not (output / 'result.json').exists():
         (output / 'result.json').write_text(json.dumps({'success': False, 'error': 'Control process did not produce a terminal result'}) + '\n')
     metadata['returncode'] = returncode
+    (output / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
+    fixture_path = output / 'podman-fixtures.json'
+    fixture_result = json.loads(fixture_path.read_text()) if fixture_path.exists() else {}
+    fixture_cases = fixture_result.get('cases', [])
+    fixture_ok = (fixture_result.get('success') is True and fixture_result.get('diagnostic_only') is True
+                  and fixture_result.get('inference') is False
+                  and fixture_result.get('runtime') == {'skillevaluator': '0.7.2', 'harbor': '0.24.0'}
+                  and len(fixture_cases) == 20
+                  and {(row['case'], row['arm']) for row in fixture_cases} ==
+                      {(str(i), arm) for i in range(1, 11) for arm in ('with_skill', 'without_skill')})
+    metadata['podman_standard_fixtures'] = {'success': fixture_ok, 'diagnostic_only': True, 'inference': False}
+    if not fixture_ok:
+        metadata['returncode'] = returncode = returncode or 1
     (output / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
     if compose_error:
         metadata['native_prerequisite'] = 'reviewed_compose_unavailable'
@@ -220,15 +246,35 @@ def main():
         metadata['returncode'] = returncode
         metadata['native_pester'] = {'success': returncode == 0, 'returncode': returncode, 'diagnostic_only': True}
         (output / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
+    if args.adoption and returncode == 0:
+        legacy_python = os.environ.get('SKILL_LEGACY_REVIEW_PYTHON')
+        if legacy_python and Path(legacy_python).is_absolute():
+            launcher = ("import sys, importlib.metadata; sys.path.insert(0, sys.argv[1]); "
+                        "assert {k: importlib.metadata.version(k) for k in ('skillevaluator','harbor','openai')} == "
+                        "{'skillevaluator':'0.3.0','harbor':'0.13.2','openai':'2.44.0'}; "
+                        "from pester_container_validation import main; main(artifact=sys.argv[2])")
+            legacy_env = {**env, 'DOCKER_CONFIG': compose_config, 'RUNNER_TEMP': str(output),
+                          'PATH': str(Path(legacy_python).parent) + os.pathsep + env['PATH']}
+            with (output / 'legacy-pester.log').open('w') as log:
+                legacy_code = run_native([legacy_python, '-I', '-B', '-c', launcher,
+                    str(project / '.github/scripts'), str(output / 'legacy-pester')], env=legacy_env, log=log)
+            metadata['legacy_pester'] = {'success': legacy_code == 0, 'returncode': legacy_code, 'diagnostic_only': True}
+            returncode = returncode or legacy_code
+        else:
+            metadata['legacy_pester'] = {'success': False, 'code': 'retained_evaluator_python_required'}
     if args.adoption:
         # No green verdict while required migration boundaries lack evidence.
-        blockers = ['podman_standard_collection_recovery', 'codex_setup_only_installed_version',
+        blockers = [
                     'dual_runtime_reporting_and_public_replay', 'historical_original_tooling_replay',
                     'new_profiles_provenance_and_publisher_admission', 'upstream_differential_selection']
+        if not fixture_ok:
+            blockers.append('podman_standard_collection_recovery')
         if not metadata.get('native_gh', {}).get('success'):
             blockers.append('native_gh_48_outcomes')
         if not metadata.get('native_pester', {}).get('success'):
             blockers.append('candidate_pester_52_outcomes')
+        if not metadata.get('legacy_pester', {}).get('success'):
+            blockers.append('retained_pester_52_outcomes')
         metadata['adoption'] = {'ready': False, 'blockers': blockers, 'inference': False}
         metadata['returncode'] = returncode = returncode or 1
         (output / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')

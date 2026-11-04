@@ -73,6 +73,7 @@ jobs:
           path: |
             ${{ runner.temp }}/pester-candidate-evidence/metadata.json
             ${{ runner.temp }}/pester-candidate-evidence/result.json
+            ${{ runner.temp }}/pester-candidate-evidence/podman-fixtures.json
             ${{ runner.temp }}/pester-candidate-evidence/native-pester/
           if-no-files-found: warn
           retention-days: 14
@@ -125,6 +126,7 @@ jobs:
           path: |
             ${{ runner.temp }}/gh-candidate-evidence/metadata.json
             ${{ runner.temp }}/gh-candidate-evidence/result.json
+            ${{ runner.temp }}/gh-candidate-evidence/podman-fixtures.json
             ${{ runner.temp }}/gh-candidate-evidence/native-gh.json
           if-no-files-found: warn
           retention-days: 14

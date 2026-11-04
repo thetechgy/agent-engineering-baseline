@@ -57,7 +57,8 @@ uv pip check --python "$candidate_source/.venv/bin/python"
 "$candidate_source/.venv/bin/python" .github/evaluator-backends/build_wheel.py \
   "$HOME/worktrees/evaluator-95-backend-wheel"
 uv pip install --python "$candidate_source/.venv/bin/python" --no-deps --no-index \
-  --link-mode copy "$HOME/worktrees/evaluator-95-backend-wheel/aeb_gh_fixture-1.0.0-py3-none-any.whl"
+  --link-mode copy --require-hashes --only-binary :all: \
+  --requirement "$HOME/worktrees/evaluator-95-backend-wheel/requirements.txt"
 "$candidate_source/.venv/bin/python" .github/scripts/qualify_evaluator_candidate.py \
   --source "$candidate_source" \
   --output "$HOME/worktrees/evaluator-95-evidence"

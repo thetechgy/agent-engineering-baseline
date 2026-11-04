@@ -32,6 +32,8 @@ def build(destination):
             info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
             info.external_attr = 0o100644 << 16
             bundle.writestr(info, raw)
+    requirements = destination / "requirements.txt"
+    requirements.write_text(wheel.absolute().as_uri() + " --hash=sha256:" + hashlib.sha256(wheel.read_bytes()).hexdigest() + "\n")
     return wheel
 
 

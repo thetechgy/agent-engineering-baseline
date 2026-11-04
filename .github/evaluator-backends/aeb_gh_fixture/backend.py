@@ -11,7 +11,7 @@ from skillevaluator.tier3.harbor.secure_docker_environment import SkillEvaluator
 from . import MANIFEST_ENV
 from .manifest import approve, payload_digest
 
-COMMAND = "python3 -I /opt/aeb-gh/initialize.py"
+COMMAND = "/usr/local/bin/python3 -I /opt/aeb-gh/initialize.py"
 
 
 class TrustedGhEnvironment(SkillEvaluatorSecureDockerEnvironment):
@@ -37,7 +37,7 @@ class TrustedGhEnvironment(SkillEvaluatorSecureDockerEnvironment):
             async with asyncio.timeout(30):
                 # Revalidate after startup; changed contexts cannot initialize.
                 approve(os.environ.get(MANIFEST_ENV, ""), self.environment_dir.parent)
-                created = await self.exec("install -d -m 700 -o root -g root /opt/aeb-gh", user="root", timeout_sec=5)
+                created = await self.exec("/usr/bin/install -d -m 700 -o root -g root /opt/aeb-gh", user="root", timeout_sec=5)
                 if created.return_code:
                     raise RuntimeError("Cannot create private initializer directory")
                 await self.upload_file(Path(__file__).with_name("initialize.py"), "/opt/aeb-gh/initialize.py")
@@ -46,7 +46,7 @@ class TrustedGhEnvironment(SkillEvaluatorSecureDockerEnvironment):
                 approval.write_text(json.dumps(row["private"], sort_keys=True))
                 approval.chmod(0o600)
                 await self.upload_file(approval, "/opt/aeb-gh/approved.json")
-                owned = await self.exec("chown -R root:root /opt/aeb-gh && chmod 700 /opt/aeb-gh && chmod 600 /opt/aeb-gh/*.py /opt/aeb-gh/*.json", user="root", timeout_sec=5)
+                owned = await self.exec("/usr/bin/chown -R root:root /opt/aeb-gh && /usr/bin/chmod 700 /opt/aeb-gh && /usr/bin/chmod 600 /opt/aeb-gh/*.py /opt/aeb-gh/*.json", user="root", timeout_sec=5)
                 if owned.return_code:
                     raise RuntimeError("Cannot protect initializer payload")
                 result = await self.exec(COMMAND, user="root", timeout_sec=28)

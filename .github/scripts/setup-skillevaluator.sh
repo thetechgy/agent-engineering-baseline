@@ -36,8 +36,8 @@ if [ "$kind" = candidate ]; then
   "$candidate_python" "$repository_root/.github/evaluator-backends/build_wheel.py" "$candidate_root/wheel-repeat"
   cmp "$candidate_root/wheel/aeb_gh_fixture-1.0.0-py3-none-any.whl" \
     "$candidate_root/wheel-repeat/aeb_gh_fixture-1.0.0-py3-none-any.whl"
-  uv pip install --python "$candidate_python" --no-deps --no-index --link-mode copy \
-    "$candidate_root/wheel/aeb_gh_fixture-1.0.0-py3-none-any.whl"
+  uv pip install --python "$candidate_python" --no-deps --no-index --link-mode copy --require-hashes --only-binary :all: \
+    --requirement "$candidate_root/wheel/requirements.txt"
   uv pip check --python "$candidate_python"
   git -C "$candidate_root/evaluator" diff --exit-code
   {

@@ -40,14 +40,16 @@ def tree(root):
     require(root.resolve(strict=True) == root and root.is_dir())
     result = {}
     total = 0
+    count = 0
     pending = [root]
     while pending:
         directory = pending.pop()
         for path in sorted(directory.iterdir()):
+            count += 1
             info = path.lstat()
             mode = info.st_mode
             total += info.st_size if stat.S_ISREG(mode) else 0
-            require(len(result) + len(pending) < 4096 and total <= 64 * 1024 * 1024)
+            require(count <= 4096 and total <= 64 * 1024 * 1024)
             require(not path.is_symlink())
             if stat.S_ISDIR(mode):
                 pending.append(path)
