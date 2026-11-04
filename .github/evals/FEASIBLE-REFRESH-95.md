@@ -4,7 +4,7 @@ This follows the original [dependency assessment](DEPENDENCY-REFRESH-95.md).
 That document records the earlier decision and evidence; it is not a statement
 that every previously held candidate is still blocked.
 
-## Candidates under qualification
+## Proposed updates
 
 | Input | Previous | Candidate |
 | --- | --- | --- |
@@ -17,7 +17,7 @@ that every previously held candidate is still blocked.
 | Pester fixture curl | 8.14.1-2+deb13u5 | 8.14.1-2+deb13u7 |
 | Pester fixture PowerShell | 7.6.6 | 7.6.9 |
 
-The uv 0.13.7 update remains in PR #113. The branch-based APM refresh remains
+The uv 0.13.7 update is already on main through PR #113. The branch-based APM refresh remains
 in PR #111, with the current competing-skill policy aligned to its native lock.
 The hardening skill's six deployed file hashes are unchanged there. These PRs
 remain separate from this follow-up.
@@ -26,7 +26,7 @@ remain separate from this follow-up.
 
 The bracex update is the only package-version change in the Semgrep lock.
 The lock was regenerated with pinned uv 0.13.6 for the existing platform and
-Python targets. Hash-checked binary installation, dependency consistency,
+Python targets, then reproduced byte for byte with main's uv 0.13.7. Hash-checked binary installation, dependency consistency,
 four real Semgrep contract tests, seven path-matching controls and four
 published brace-expansion bug controls passed. Semgrep's actual glob flags do
 not enable brace expansion. See the [bracex release](https://github.com/facelessuser/bracex/releases/tag/3.2.1).
@@ -61,8 +61,37 @@ remain unchanged. Existing measurements must not be relabeled as these profiles.
 The `custom-metrics-v3` saved-review selector retains the original v2 validator
 modules and pins the expanded registry separately; v2 and its archive are unchanged.
 
-Native gh and Pester qualification results are pending. This document does not
-yet establish adoption of their candidate runtime inputs.
+The production benchmark environment, with the unchanged project patch,
+passed the real gh boundary in all six selected containers. The credential-free
+Harbor Compose lifecycle also passed: UID 1000 execution, network isolation,
+resource limits, private-data denial, copy round trip, command exit propagation,
+repeated startup and resource cleanup. No model trials ran.
+
+The patched gh and custom-metric suites completed 33 tests (one skip) and 26
+tests respectively. Thirty current/historical frozen-review tests and eight
+main-integrated policy, inventory and workflow checks passed. These are focused
+checks, not a claim that the full local regression suite passed.
+
+Native Pester qualification could not complete. The signed fixed snapshot
+returned HTTP 503 while downloading package archives, including
+`python3.13-minimal` and `libk5crypto3`. After the first infrastructure failures,
+the run was interrupted to stop repeated failed builds. Partial trial results
+and build logs were retained; interruption is inconclusive, and none of those
+fixtures qualifies the PowerShell/curl changes or the Pester boundary for the
+shared Compose/image refresh. Sources, signature checks, deadlines, retries,
+worker limits and expected outcomes were not relaxed.
+
+On this host, the trusted PowerShell startup command exits 137 under the
+existing worker limits with both 7.6.6 and 7.6.9. The isolated 7.6.9 archive
+passes its version check outside those limits, and parser/classification checks
+pass apart from that baseline-reproduced startup failure. This is not a full
+runtime qualification.
+
+The follow-up PR remains a draft until hosted validation establishes the full
+Pester boundary and the required checks pass on its current revision. Passing
+gh/component checks do not substitute for that missing evidence. The separate
+APM PR also encountered a snapshot-service HTTP 503 on its newer main-merge
+revision; that failure is retained rather than reported as a pass.
 
 ## Remaining holds
 

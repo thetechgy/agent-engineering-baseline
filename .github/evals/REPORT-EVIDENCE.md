@@ -2257,6 +2257,15 @@ The new `custom-metrics-v2` analyst profile pins its four original validator
 modules and the exact registry data asset; it does not replace `current-v2`.
 No model inference is required to qualify this integration.
 
+The issue #95 runtime refresh adds `gh-deterministic-gate-v4` and
+`pester-pilot-v2` as separate input-policy cohorts. Earlier profiles and metric
+definitions retain their original bytes. The `custom-metrics-v3` saved-review
+selector reuses the reviewed v2 validator modules with a separately hash-pinned
+expanded registry asset. It retains v2's registry and historical module archive;
+records must keep their actual profile identity. See the
+[follow-up qualification record](FEASIBLE-REFRESH-95.md) for available and missing
+native evidence.
+
 The reviewed `custom-metrics.json` registry defines the current Pester and gh
 competencies, native field mappings, units, scoring bases, applicability and
 aggregation. Metric definitions and profiles have immutable versioned identities;
