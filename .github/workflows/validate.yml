@@ -104,7 +104,7 @@ jobs:
       - name: Test CI contracts without inference
         run: |
           shellcheck .github/scripts/setup-skillevaluator.sh .github/scripts/setup-compose.sh
-          "$SKILL_EVALUATOR_PYTHON" -m unittest discover -s .github/tests -v
+          "$SKILL_REVIEW_PYTHON" -m unittest discover -s .github/tests -v
           "$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_evaluations.py validate gh
           "$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_evaluations.py replay gh
           "$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_evaluations.py stage gh "$RUNNER_TEMP/gh-eval-bundle/gh"

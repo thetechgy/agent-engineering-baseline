@@ -1134,7 +1134,7 @@ class ReviewTests(unittest.TestCase):
                 review.main(["validate", *self.args, "--review", str(old_path)])
 
     def test_pin_and_strict_schema(self):
-        self.assertEqual(review.versions()["openai"], "2.44.0")
+        self.assertEqual(review.versions()["openai"], "2.54.0")
         schema = review.schema()
         for row in [schema, *schema["$defs"].values()]:
             if row.get("type") == "object":

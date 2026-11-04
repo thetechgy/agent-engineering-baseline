@@ -301,14 +301,18 @@
           "symbol": "PINS",
           "key": "openai",
           "field": "version"
+        },
+        {
+          "path": ".github/patches/skillevaluator-v0.3.0-review-runtime.patch",
+          "pattern": "^ name = \"openai\"\\n-version = \"[^\"\\n]+\"\\n\\+version = \"(?P<version>[^\"\\n]+)\"$",
+          "count": 1
         }
       ],
       "owner": "Maintainer review",
-      "hold": "Qualified evaluation environment; review and update with its owning evaluator lock and compatibility assertions.",
-      "group": "evaluation-runtime compatibility group",
+      "hold": "Current reviews use a reviewed lock overlay; frozen historical validators and evaluator/scanner locks retain their original environments.",
+      "group": "review-runtime compatibility group",
       "tag_prefix": "v",
-      "validation": "Qualify the evaluation runtime as a group: frozen locks, compatibility patch, CLI/preflight, graders, scoring, evidence/schema consumers, redaction, and historical comparison policy. Preserve historical tooling and use a new policy identity when inputs change. No independent SDK upgrade.",
-      "lock_package": "openai",
+      "validation": "Qualify the review lock overlay, current API/schema and redaction contracts, exact historical validators through their retained runtime, and a new reviewed attachment profile. Evaluator/Harbor/Codex upgrades are separate qualifications.",
       "package": {
         "ecosystem": "pip",
         "name": "openai"
@@ -330,14 +334,18 @@
           "symbol": "PINS",
           "key": "pydantic",
           "field": "version"
+        },
+        {
+          "path": ".github/patches/skillevaluator-v0.3.0-review-runtime.patch",
+          "pattern": "^ name = \"pydantic\"\\n-version = \"[^\"\\n]+\"\\n\\+version = \"(?P<version>[^\"\\n]+)\"$",
+          "count": 1
         }
       ],
       "owner": "Maintainer review",
-      "hold": "Qualified evaluation environment; review and update with its owning evaluator lock and compatibility assertions.",
-      "group": "evaluation-runtime compatibility group",
+      "hold": "Current reviews use a reviewed lock overlay; frozen historical validators and evaluator/scanner locks retain their original environments.",
+      "group": "review-runtime compatibility group",
       "tag_prefix": "v",
-      "validation": "Qualify the evaluation runtime as a group: frozen locks, compatibility patch, CLI/preflight, graders, scoring, evidence/schema consumers, redaction, and historical comparison policy. Preserve historical tooling and use a new policy identity when inputs change. No independent SDK upgrade.",
-      "lock_package": "pydantic",
+      "validation": "Qualify the review lock overlay, current API/schema and redaction contracts, exact historical validators through their retained runtime, and a new reviewed attachment profile. Evaluator/Harbor/Codex upgrades are separate qualifications.",
       "package": {
         "ecosystem": "pip",
         "name": "pydantic"

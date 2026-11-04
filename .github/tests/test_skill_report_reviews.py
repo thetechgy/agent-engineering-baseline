@@ -97,7 +97,7 @@ class AttachmentTests(unittest.TestCase):
                    'record_id': opts['--record-id'], 'source': opts.get('--source'), 'support': opts.get('--support'),
                    'selection': opts.get('--selection'), 'judgment': body, 'config': CONFIG,
                    'destination': str(self.root / 'saved')}
-        result = subprocess.run([sys.executable, '-I', '-B', '-c', MAKE, str(tooling / '.github/scripts')],
+        result = subprocess.run([attachments.validator_runtime(profile)[0], '-I', '-B', '-c', MAKE, str(tooling / '.github/scripts')],
             input=evidence.encoded(request), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
         self.assertEqual(result.returncode, 0, result.stderr.decode())
         saved = self.root / 'saved/skill-review.json'
@@ -428,6 +428,18 @@ class AttachmentTests(unittest.TestCase):
             with self.assertRaises(ValueError): self.load()
         self.spec['command'] = 'never execute descriptor commands'; write(self.path, self.spec)
         with self.assertRaises(ValueError): self.load()
+
+    def test_missing_legacy_runtime_rejects_without_changing_profile(self):
+        self.fixture('current-v2')
+        with patch.dict(os.environ, {'SKILL_LEGACY_REVIEW_PYTHON': ''}):
+            with self.assertRaisesRegex(ValueError, 'Pinned validator runtime unavailable'):
+                self.load()
+
+    def test_wrong_runtime_cannot_validate_legacy_modules(self):
+        self.fixture('current-v2')
+        with patch.dict(os.environ, {'SKILL_LEGACY_REVIEW_PYTHON': sys.executable}):
+            with self.assertRaisesRegex(ValueError, 'Original validator rejected attachment'):
+                self.load()
 
     def test_duplicate_json_keys_and_linked_documents_reject(self):
         self.fixture(); self.supplied()
