@@ -22,6 +22,13 @@ def run(*argv, check=True):
     return subprocess.run(argv, check=check, capture_output=True, text=True, timeout=600)
 
 
+def install_private_tests(container, tests):
+    """Keep copied verifier data root-owned when host and agent UIDs coincide."""
+    run("docker", "cp", str(tests), container + ":/tests")
+    run("docker", "exec", "--user", "root", container, "chown", "-R", "0:0", "/tests")
+    run("docker", "exec", "--user", "root", container, "chmod", "700", "/tests")
+
+
 async def compose_lifecycle(root, prefix):
     """One real staged Harbor task, without an agent, credentials or inference."""
     from harbor.environments.docker.docker import DockerEnvironment
@@ -195,8 +202,7 @@ def validate():
                         "from pathlib import Path; assert not list(Path('/etc/apt/sources.list.d').iterdir())")
                     run("docker", "exec", "--user", "root", name,
                         "python3", "-I", "/opt/gh-eval/setup.py", "--start")
-                    run("docker", "cp", str(task / "tests"), name + ":/tests")
-                    run("docker", "exec", "--user", "root", name, "chmod", "700", "/tests")
+                    install_private_tests(name, task / "tests")
                     agent = ("docker", "exec", "--user", "agent", "--workdir", "/workspace", name)
                     if run(*agent, "id", "-u").stdout.strip() != "1000":
                         raise ValueError("agent is privileged")

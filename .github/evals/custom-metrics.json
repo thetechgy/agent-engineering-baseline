@@ -577,10 +577,453 @@
       "fixture_digest": "sha256:43e6c6d9c0bb082be0c8ea0bef2c8ede07a04484a6f6c61359dcaae2e0376587",
       "runtime_digest": "sha256:0dc203dde5b265ce9238129da7afaed21eeb631945659edf19e6ac889229a408",
       "dataset_digest": "sha256:7da7fa863ddc768c34bb423b4667cfe43e8d714697c4e217e4a27d789028f598"
+    },
+    "gh-deterministic-gate-v4": {
+      "id": "gh-deterministic-gate-v4",
+      "grading": "default_plus_custom",
+      "cases": {
+        "gh-001": {
+          "title": "GitHub CLI fixture gh-001",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-002": {
+          "title": "GitHub CLI fixture gh-002",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-003": {
+          "title": "GitHub CLI fixture gh-003",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-004": {
+          "title": "GitHub CLI fixture gh-004",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-005": {
+          "title": "GitHub CLI fixture gh-005",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-006-pending": {
+          "title": "GitHub CLI fixture gh-006-pending",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-006-changed-head": {
+          "title": "GitHub CLI fixture gh-006-changed-head",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-007": {
+          "title": "GitHub CLI fixture gh-007",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-007-relationships": {
+          "title": "GitHub CLI fixture gh-007-relationships",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-008": {
+          "title": "GitHub CLI fixture gh-008",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-008-empty": {
+          "title": "GitHub CLI fixture gh-008-empty",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-009": {
+          "title": "GitHub CLI fixture gh-009",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-010": {
+          "title": "GitHub CLI fixture gh-010",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-010-partial": {
+          "title": "GitHub CLI fixture gh-010-partial",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-011-missing": {
+          "title": "GitHub CLI fixture gh-011-missing",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-011-auth": {
+          "title": "GitHub CLI fixture gh-011-auth",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-011-permission": {
+          "title": "GitHub CLI fixture gh-011-permission",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-011-network": {
+          "title": "GitHub CLI fixture gh-011-network",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-011-rate-limit": {
+          "title": "GitHub CLI fixture gh-011-rate-limit",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-011-unavailable": {
+          "title": "GitHub CLI fixture gh-011-unavailable",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-012": {
+          "title": "GitHub CLI fixture gh-012",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-013-local": {
+          "title": "GitHub CLI fixture gh-013-local",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-013-hardening": {
+          "title": "GitHub CLI fixture gh-013-hardening",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-014": {
+          "title": "GitHub CLI fixture gh-014",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        }
+      },
+      "qualification_cases": {},
+      "runtime": {},
+      "skill_id": "gh",
+      "grader_digest": "sha256:40bfba820868668d24cf375a049b6240ed399e8b6a94300ff799d8c6b7d9bcbd",
+      "fixture_digest": "sha256:43e6c6d9c0bb082be0c8ea0bef2c8ede07a04484a6f6c61359dcaae2e0376587",
+      "runtime_digest": "sha256:6b880b776f938d3a80a62d603989a1288d364b0157663ff09c488436f5af7dc3",
+      "dataset_digest": "sha256:7da7fa863ddc768c34bb423b4667cfe43e8d714697c4e217e4a27d789028f598"
+    },
+    "pester-pilot-v2": {
+      "id": "pester-pilot-v2",
+      "grading": "custom_only",
+      "cases": {
+        "pester-001": {
+          "title": "Integer collection tests",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v1",
+            "powershell-pester-6.test-quality.v1"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v1": 2
+          }
+        },
+        "pester-002": {
+          "title": "Retry and error tests",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v1",
+            "powershell-pester-6.test-quality.v1"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v1": 2
+          }
+        },
+        "pester-003": {
+          "title": "Module mocking and invocation assertions",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v1",
+            "powershell-pester-6.test-quality.v1"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v1": 2
+          }
+        },
+        "pester-004": {
+          "title": "Discovery and data-case repair",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v1",
+            "powershell-pester-6.test-quality.v1"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v1": 4
+          }
+        },
+        "pester-005": {
+          "title": "Python report summary control",
+          "metrics": [
+            "powershell-pester-6.negative-control-correct.v1"
+          ],
+          "denominators": {}
+        }
+      },
+      "qualification_cases": {
+        "pester-001-classic": "pester-001",
+        "pester-001-standalone": "pester-001",
+        "pester-001-data": "pester-001",
+        "pester-001-weak": "pester-001",
+        "pester-001-unsupported": "pester-001",
+        "pester-001-empty": "pester-001",
+        "pester-001-skipped": "pester-001",
+        "pester-001-failure-text": "pester-001",
+        "pester-001-malformed": "pester-001",
+        "pester-001-timeout": "pester-001",
+        "pester-001-missing-runtime": "pester-001",
+        "pester-001-version-drift": "pester-001",
+        "pester-002-classic": "pester-002",
+        "pester-002-data": "pester-002",
+        "pester-002-weak": "pester-002",
+        "pester-003-external": "pester-003",
+        "pester-003-module": "pester-003",
+        "pester-003-weak": "pester-003",
+        "pester-003-wrong-scope": "pester-003",
+        "pester-004-discovery": "pester-004",
+        "pester-004-inline": "pester-004",
+        "pester-004-compact": "pester-004",
+        "pester-004-weak": "pester-004",
+        "pester-004-broken-discovery": "pester-004",
+        "pester-005-good": "pester-005",
+        "pester-005-wrong": "pester-005"
+      },
+      "runtime": {
+        "powershell": "7.6.9",
+        "pester": "6.2.0"
+      },
+      "skill_id": "powershell-pester-6",
+      "grader_digest": "sha256:02a331fa9edb65398a4526ae3cf2a9c45ff26b9fefef39182bc5dd43a2b45e2c",
+      "fixture_digest": "sha256:9dd6c53ce8090ff3790ff2274d8067775a5605def5cc80479bf2c85ef6330060",
+      "runtime_digest": "sha256:9b550425f57f46e807c669582bf23e5064b5d7de70b5208627b70a53d4c10088",
+      "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0"
     }
   },
   "active_profiles": {
-    "powershell-pester-6": "pester-pilot-v1",
-    "gh": "gh-deterministic-gate-v3"
+    "powershell-pester-6": "pester-pilot-v2",
+    "gh": "gh-deterministic-gate-v4"
   }
 }

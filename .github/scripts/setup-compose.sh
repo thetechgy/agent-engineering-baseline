@@ -3,8 +3,8 @@
 set -euo pipefail
 umask 077
 
-compose_version=5.6.1
-compose_sha256=47737f4236e6d3ccea7291995203f8f018058783b4c3a9469119811a0b5db8c0
+compose_version=5.7.0
+compose_sha256=7758048ad38e580f22559603312874fec8bb638d021a9e64182385fc17cc12a2
 : "${RUNNER_TEMP:?}" "${GITHUB_WORKSPACE:?}"
 temporary=$(realpath -e -- "$RUNNER_TEMP")
 workspace=$(realpath -e -- "$GITHUB_WORKSPACE")

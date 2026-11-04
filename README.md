@@ -492,7 +492,7 @@ HTTP response. Main producers and diagnostic reruns are retained; only initial
 validation runs for the same PR supersede one another.
 
 GitHub Actions are pinned to commit SHAs; Python dependencies use hashed or frozen
-locks. Both evaluation workflows install Compose 5.6.1 through the shared
+locks. Both evaluation workflows install Compose 5.7.0 through the shared
 [checksum-first helper](.github/scripts/setup-compose.sh), verifying reviewed
 release bytes before execution in an isolated temporary Docker CLI configuration.
 Its always-run cleanup removes only that installation. Historical evidence keeps
@@ -543,7 +543,8 @@ candidate, then require all validation checks before merging. See
 
 SkillSpector uses its upstream frozen lock; Semgrep and rumdl use reviewed hashed
 locks in [.github/requirements](.github/requirements). See the
-[issue #95 assessment](.github/evals/DEPENDENCY-REFRESH-95.md) for adopted updates,
+[issue #95 assessment](.github/evals/DEPENDENCY-REFRESH-95.md) and
+[follow-up qualification](.github/evals/FEASIBLE-REFRESH-95.md) for adopted updates,
 holds and validation limits. CI rejects unverified Python
 installers and records tool versions and dependency inventories. Both locks use
 uv 0.13.7. Semgrep installation requires wheels; regenerate its lock for Python

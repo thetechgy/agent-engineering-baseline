@@ -84,7 +84,7 @@ def synthetic_native(root, *, complete=False):
                         metrics = {'pester_reference_pass': 1.0, 'pester_mutation_detection': score, 'pester_test_quality': score}
                         details.update(reference_pass=1, mutants_detected=int(score) * denominator,
                                        mutants_executed=denominator, tests_executed=3,
-                                       pester_version='6.2.0', powershell_version='7.6.6')
+                                       pester_version='6.2.0', powershell_version='7.6.9')
                 numeric = {'overall': float(outcome == 'passed'), **metrics}
                 reward = {**numeric, 'entry_id': case, 'trial_id': trial_name, 'has_skill': arm == 'with_skill',
                           'evaluation_status': 'complete' if measured else 'failed', 'custom_details': {'outcome': details}}
@@ -164,7 +164,7 @@ def synthetic_gh_native(root, *, unscoreable=False):
     write(run / 'result.json', {**collected, 'skill_name': 'gh', 'report_status': 'incomplete' if unscoreable else 'complete', 'run_config': config,
         'dataset_digest': snapshot['dataset_digest'], 'dataset_summary': snapshot['dataset_summary']})
     write(native / 'versions.json', {'python': '3.13.17', 'skillevaluator': '0.3.0', 'harbor': '0.13.2',
-          'docker_compose': '5.6.1', 'evaluator_revision': reports.POLICY['evaluator_revision']})
+          'docker_compose': '5.7.0', 'evaluator_revision': reports.POLICY['evaluator_revision']})
     write(native / 'provenance.json', {'schema_version': 1, 'skill': 'gh', 'mode': 'standard',
           'policy': reports.benchmark_policy('gh'), 'revision': evidence.git_revision(ROOT),
           'patch_sha256': evidence.digest_bytes(evidence.read_bytes(ROOT / reports.PATCH)).removeprefix('sha256:')})
@@ -612,7 +612,7 @@ class CustomMetricTests(unittest.TestCase):
         rid = next(key for key, row in captured.records.items() if row['kind'] == 'behavioral')
         context = review.prepare([public], saved, NAME, rid)
         tooling = self.root / 'tooling'
-        scripts = frozen_tooling(self, tooling, 'custom-metrics-v2')
+        scripts = frozen_tooling(self, tooling, 'custom-metrics-v3')
         request = {'inputs': [str(public)], 'analysis': str(saved), 'skill': NAME, 'record_id': rid,
             'source': None, 'support': None, 'selection': None, 'judgment': judgment(context),
             'config': CONFIG, 'destination': str(self.root / 'saved')}
@@ -621,7 +621,7 @@ class CustomMetricTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr.decode())
         document = self.root / 'saved/skill-review.json'
         markdown = document.with_suffix('.md').read_bytes()
-        spec = {'schema_version': 1, 'profile': 'custom-metrics-v2', 'tooling': str(tooling),
+        spec = {'schema_version': 1, 'profile': 'custom-metrics-v3', 'tooling': str(tooling),
             'skill': NAME, 'record_id': rid, 'review': str(document),
             'review_digest': evidence.digest_bytes(document.read_bytes()),
             'markdown_digest': evidence.digest_bytes(markdown), 'inputs': [str(public)],

@@ -1,6 +1,6 @@
 # Endpoint port contract
 
-This project uses PowerShell 7.6.6 and Pester 6.2.0.
+This project uses PowerShell 7.6.9 and Pester 6.2.0.
 
 `Get-ActivePort -Endpoint <object[]>` emits the distinct ports of enabled
 endpoints, sorted numerically. Each emitted value is an integer. No matching

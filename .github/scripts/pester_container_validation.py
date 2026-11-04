@@ -167,7 +167,7 @@ def main():
                     mutants = len(list((source / fixture['case'] / 'mutants').glob('*.ps1')))
                     if (outcome.get('reference_pass') != 1 or outcome.get('mutants_detected') != mutants
                             or outcome.get('mutants_executed') != mutants or outcome.get('pester_version') != '6.2.0'
-                            or outcome.get('powershell_version') != '7.6.6'):
+                            or outcome.get('powershell_version') != '7.6.9'):
                         raise RuntimeError('Mutation/runtime evidence mismatch')
                 if fixture['case'] == 'pester-005' and any(k.startswith('pester_') for k in reward.get('custom_metrics', {})):
                     raise RuntimeError('Negative control acquired Pester quality metrics')

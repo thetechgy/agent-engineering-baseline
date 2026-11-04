@@ -1,6 +1,6 @@
 # Retry delay contract
 
-This project uses PowerShell 7.6.6 and Pester 6.2.0.
+This project uses PowerShell 7.6.9 and Pester 6.2.0.
 
 `Get-RetryDelay -Attempt <int> [-BaseMilliseconds <int>]` returns an integer
 number of milliseconds. Attempts 1 through 4 return the base multiplied by

@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 POLICY = {
     "evaluator_revision": "ac0a04905100acdafc6c95829311a9739c340ff6",
     "harbor": "0.13.2",
-    "docker_compose": "5.6.1",
+    "docker_compose": "5.7.0",
     "codex": "0.155.1",
     "python": "3.13",
     "model": "gpt-5.6-sol",
@@ -41,14 +41,14 @@ METRICS = {
 MODES = {"standard": POLICY["standard_attempts"], "confirmation": 3}
 PATCH = ".github/patches/skillevaluator-v0.3.0-pin-codex.patch"
 GH_TASK_BUILD = {
-    "base_image": "python:3.12-slim-trixie@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1",
-    "apt_snapshot": "20261010T000000Z",
+    "base_image": "python:3.12-slim-trixie@sha256:b18b261e1b4974b4f321451ad5251ded85abb22c2b8b262da527dda1d031ab30",
+    "apt_snapshot": "20261103T000000Z",
     "apt_packages": {
         "git": "1:2.47.3-0+deb13u1",
         "jq": "1.7.1-6+deb13u4",
         "nodejs": "20.19.2+dfsg-1+deb13u3",
         "npm": "9.2.0~ds1-3",
-        "ca-certificates": "20250419",
+        "ca-certificates": "20250419+deb13u1",
     },
 }
 
@@ -196,7 +196,7 @@ def benchmark_policy(name):
     if benchmark_options(name)['diagnostic_only']:
         return {**POLICY, 'grading': 'custom_only', 'workspace_mode': 'isolated', 'diagnostic_only': True}
     return {**POLICY, "grading": "default_plus_custom", "upstream_revision":
-            "89d7dcec017194af1d6f8853176b2dae9c1da762", "deterministic_gate": 3, "workspace_mode": "group",
+            "63837fb778d6a39f02be0ce76ff89f2bc8d74bdc", "deterministic_gate": 3, "workspace_mode": "group",
             "fixture_boundary": "root-broker-unprivileged-agent-v1", "authorization_policy": "per-case-allowlist-v1",
             "task_source": "native_harbor", "task_build": GH_TASK_BUILD,
             "competing_revision": "61fa1fa8fcc63d6dbd2f07a75aeb8e214df5acfb"} if name == "gh" else POLICY

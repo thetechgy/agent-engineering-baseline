@@ -55,8 +55,14 @@ PROFILES = {
         '51d83cf47b7f64902d1f186364cfafd40933f81afb01c786aa9c3c8d448d9e97')),
 }
 
+# Same reviewed validator modules; the new data asset admits refreshed runtimes.
+PROFILES['custom-metrics-v3'] = PROFILES['custom-metrics-v2']
+
 # A reviewed data asset accompanies only profiles whose contract uses it.
-REGISTRY_DIGESTS = {'custom-metrics-v2': '380b377022281b36be2f3833cf116fa44e712a529ce9e7f9ad2060915f095d41'}
+REGISTRY_DIGESTS = {
+    'custom-metrics-v2': '380b377022281b36be2f3833cf116fa44e712a529ce9e7f9ad2060915f095d41',
+    'custom-metrics-v3': 'cf78bf851a8a1e0b123d08956e76db764d004a3f4c1d7557c6a53339beea31c2',
+}
 
 # Fixed launcher. -I ignores caller PYTHONPATH, user site and working-directory imports.
 # Audit hooks restrict audited Python operations; they are NOT an OS sandbox.
