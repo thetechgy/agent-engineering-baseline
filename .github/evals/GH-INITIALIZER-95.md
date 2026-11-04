@@ -71,7 +71,12 @@ Candidate dependencies retain the frozen upstream lock. Current and historical
 review environments are not rebuilt or selected by candidate setup.
 
 Add `--native-gh` for all 24 cases in both arms. `--gh-arm with_skill` or
-`--gh-arm without_skill` bounds one native job to 24 cases. It uses the real
+`--gh-arm without_skill` selects 24 cases. CI adds `--gh-shard 1`, `2` or `3` for fixed disjoint eight-case
+jobs. All three shards per arm are required; none is a complete arm qualification.
+The partition is checked against the full staged cohort before selection. Unsharded
+operator runs retain the full cohort and a separately bounded observation budget;
+CI shards keep the existing step deadline. Per-task execution limits stay unchanged.
+It uses the real
 hardened environment startup/exec/copy/stop lifecycle, real broker receipts and
 native deterministic grader, with controlled command/output fixtures. These are
 not model trials or evidence of skill effectiveness. The first case also invokes
@@ -142,7 +147,7 @@ Real-provider readiness and model effectiveness remain unverified in either case
 
 ## Current delivery evidence
 
-All 32 local candidate controls pass with no network attempts. They stage all 48
+All 33 local candidate controls pass with no network attempts. They stage all 48
 gh tasks and exercise native CLI restaging with unchanged checksums in a new
 private directory. Initial hosted controls pass,
 but native run `41902822407` fails its first with-skill task build with fixed
@@ -188,3 +193,13 @@ revision `842f5f550f46d8cd0d8a62af9452dd59324121ee` completed all 52 exact Peste
 outcomes and shared/public-only reporting. The prior success does not certify
 the later failed gate. Both source identities and authenticated artifacts are
 retained separately.
+
+Run `41909625336` reached 23 with-skill and 19 without-skill completed native
+fixtures, then hit the overall observation deadline during later secure startup.
+Completed cases preserve broker identity and audit continuity, exercise the
+native deterministic grader and reject fabricated receipts. The first case in
+each arm verifies installed Codex 0.155.1 without inference. These authenticated
+partial results are failing-after evidence for cohort completeness, and passing-
+after evidence only for the completed lifecycle boundaries. CI now partitions
+each arm into three fixed eight-case jobs within the existing phase deadline.
+Promotion still requires every case in both arms on the final source revision.

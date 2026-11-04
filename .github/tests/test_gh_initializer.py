@@ -86,6 +86,20 @@ class InitializerTests(unittest.TestCase):
                     "infrastructure_error" if teardown_fails else "complete")
                 environment.stop.assert_awaited_once_with(delete=True)
 
+    def test_fixed_native_shards_cover_all_24_cases_once_per_arm(self):
+        from gh_initializer_validation import select_tasks
+        for arm, tasks in (("with_skill", self.tasks[:24]), ("without_skill", self.tasks[24:])):
+            selected = []
+            for shard in (1, 2, 3):
+                cases, expected = select_tasks(tasks, arm, shard)
+                self.assertEqual(expected, 8)
+                self.assertEqual(len(cases), 8)
+                selected.extend(case.name for case in cases)
+            self.assertEqual(len(selected), len(set(selected)))
+            self.assertEqual(set(selected), {task.name for task in tasks})
+            with self.assertRaises(RuntimeError): select_tasks(tasks[:-1], arm, 1)
+        with self.assertRaises(ValueError): select_tasks(self.tasks, None, 1)
+
     def test_existing_authored_healthcheck_still_rejects_baseline(self):
         import gh_evaluations as gh
         from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks

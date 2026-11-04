@@ -70,13 +70,13 @@ def native_compose_config(project):
     return str(root)
 
 
-def run_native(command, *, env, log):
+def run_native(command, *, env, log, timeout=2500):
     """Allow bounded teardown before forcibly ending a hung no-inference child."""
     with subprocess.Popen(command, env=env, stdout=log, stderr=subprocess.STDOUT) as process:
         try:
             # 180s controls + 2500s native + 40s cleanup + 5s kill
             # stays below the CI qualification step's 46-minute deadline.
-            return process.wait(timeout=2500)
+            return process.wait(timeout=timeout)
         except subprocess.TimeoutExpired:
             process.terminate()
             try:
@@ -102,11 +102,14 @@ def main():
     parser.add_argument('--unpatched', action='store_true', help='Measure failing-before controls against pristine source')
     parser.add_argument('--native-gh', action='store_true', help='Qualify all 24 gh cases in both arms using the trusted backend, without inference')
     parser.add_argument('--gh-arm', choices=('with_skill', 'without_skill'), help='Bound native gh qualification to one arm; adoption requires both')
+    parser.add_argument('--gh-shard', type=int, choices=(1, 2, 3), help='One fixed eight-case shard of --gh-arm; all three are required')
     parser.add_argument('--adoption', action='store_true', help='Run available native gates and report every remaining adoption blocker; never promote implicitly')
     parser.add_argument('--native-pester', action='store_true', help='After the evidence controls, qualify native Pester packaging without inference')
     args = parser.parse_args()
     if args.gh_arm and not args.native_gh:
         parser.error('--gh-arm requires --native-gh')
+    if args.gh_shard and (not args.native_gh or not args.gh_arm):
+        parser.error('--gh-shard requires --native-gh and --gh-arm')
     if args.adoption and args.gh_arm:
         parser.error('Adoption requires both native gh arms')
     if args.adoption:
@@ -219,20 +222,24 @@ def main():
         (output / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
     controls_ready = returncode == 0
     if controls_ready and args.native_gh:
+        # CI always selects eight cases. Unsharded operator qualification keeps
+        # the complete requested cohort with a separate bounded observation.
+        native_timeout = 2500 if args.gh_shard else 300 + 180 * (24 if args.gh_arm else 48)
         native_env = {**env, 'DOCKER_CONFIG': compose_config, 'RUNNER_TEMP': str(output),
                       'PATH': str(Path(sys.executable).parent) + os.pathsep + env['PATH']}
         launcher = ('import sys; sys.path[:0] = sys.argv[1:3]; '
-                    'from gh_initializer_validation import main; main(sys.argv[3], sys.argv[4] or None)')
+                    'from gh_initializer_validation import main; main(sys.argv[3], sys.argv[4] or None, int(sys.argv[5]) or None)')
         with (output / 'native-gh.log').open('w') as log:
             try:
                 native_code = run_native([sys.executable, '-I', '-B', '-c', launcher, str(snapshot / 'src'),
-                    str(project / '.github/scripts'), str(output / 'native-gh.json'), args.gh_arm or ''], env=native_env,
-                    log=log)
+                    str(project / '.github/scripts'), str(output / 'native-gh.json'), args.gh_arm or '', str(args.gh_shard or 0)], env=native_env,
+                    log=log, timeout=native_timeout)
             except subprocess.TimeoutExpired:
                 native_code = 124
         returncode = returncode or native_code
         metadata['returncode'] = returncode
-        metadata['native_gh'] = {'success': native_code == 0, 'returncode': native_code, 'diagnostic_only': True}
+        metadata['native_gh'] = {'success': native_code == 0, 'returncode': native_code, 'diagnostic_only': True,
+                                 'arm': args.gh_arm, 'shard': args.gh_shard, 'observation_seconds': native_timeout}
         (output / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
     if controls_ready and args.native_pester:
         native_env = {**env, 'DOCKER_CONFIG': compose_config, 'PYTHONPATH': str(snapshot / 'src'), 'RUNNER_TEMP': str(output),

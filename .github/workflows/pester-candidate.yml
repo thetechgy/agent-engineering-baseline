@@ -82,16 +82,18 @@ jobs:
         run: bash .github/scripts/setup-compose.sh cleanup
 
   native-gh:
-    name: Candidate gh initialization (${{ matrix.arm }}, no inference)
+    name: Candidate gh initialization (${{ matrix.arm }}, ${{ matrix.shard }}/3, no inference)
     runs-on: ubuntu-latest
     timeout-minutes: 65
     strategy:
       fail-fast: false
       matrix:
         arm: [with_skill, without_skill]
+        shard: [1, 2, 3]
     env:
       PYTHONDONTWRITEBYTECODE: '1'
       GH_ARM: ${{ matrix.arm }}
+      GH_SHARD: ${{ matrix.shard }}
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -112,7 +114,7 @@ jobs:
         run: |
           "$SKILL_CANDIDATE_PYTHON" .github/scripts/qualify_evaluator_candidate.py \
             --source "$SKILL_CANDIDATE_SOURCE" \
-            --output "$RUNNER_TEMP/gh-candidate-evidence" --native-gh --gh-arm "$GH_ARM"
+            --output "$RUNNER_TEMP/gh-candidate-evidence" --native-gh --gh-arm "$GH_ARM" --gh-shard "$GH_SHARD"
       - name: Verify checkout integrity
         if: always()
         run: |
@@ -122,7 +124,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: gh-candidate-${{ matrix.arm }}-diagnostics
+          name: gh-candidate-${{ matrix.arm }}-${{ matrix.shard }}-diagnostics
           path: |
             ${{ runner.temp }}/gh-candidate-evidence/metadata.json
             ${{ runner.temp }}/gh-candidate-evidence/result.json

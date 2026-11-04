@@ -26,7 +26,21 @@ def docker(*args, timeout=30):
     return subprocess.check_output(["docker", *args], text=True, timeout=timeout)
 
 
-async def qualify(root, artifact, arm=None):
+def select_tasks(tasks, arm, shard):
+    expected = 24 if arm else 48
+    if len(tasks) != expected:
+        raise RuntimeError("Native gh cohort incomplete")
+    if shard is not None:
+        if arm not in ("with_skill", "without_skill") or shard not in (1, 2, 3):
+            raise ValueError("Native gh shard requires one arm and a reviewed index")
+        ordered = sorted(tasks, key=lambda task: task.name)
+        if len({task.name for task in ordered}) != 24:
+            raise RuntimeError("Native gh shard identities are not unique")
+        return ordered[(shard - 1) * 8:shard * 8], 8
+    return tasks, expected
+
+
+async def qualify(root, artifact, arm=None, shard=None):
     bundle = gh_candidate.stage(gh.ROOT, root / "bundle/gh")
     tasks = []
     for present in (True, False):
@@ -35,9 +49,7 @@ async def qualify(root, artifact, arm=None):
         tasks.extend(stage_native_harbor_tasks(bundle, root / "tasks" / str(present), with_skill=present,
             grading_mode="default_plus_custom", workspace_mode="group",
             workspace_skill_paths=[bundle.parent / gh.COMPETING]))
-    expected = 24 if arm else 48
-    if len(tasks) != expected:
-        raise RuntimeError("Native gh cohort incomplete")
+    tasks, expected = select_tasks(tasks, arm, shard)
     manifest = write_manifest(root / "operator", tasks, staged_roots=[bundle.parent, root / "tasks"])
     os.environ["AEB_GH_MANIFEST"] = str(manifest)
     fixtures = {entry["id"]: entry for entry in gh.dataset()}
@@ -242,6 +254,7 @@ async def qualify(root, artifact, arm=None):
                 artifact.write_text(json.dumps({"schema": 1, "inference": False, "diagnostic_only": True,
                     "success": len(rows) == expected and failure is None and teardown["status"] == "complete",
                     "teardown": teardown, "expected": expected, "completed": rows,
+                    "selection": {"arm": arm, "shard": shard, "shards": 3 if shard else 1},
                     "runtime": {key: importlib.metadata.version(key) for key in ("skillevaluator", "harbor")},
                     "harness_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
                     "failure": failure, "setup_only": setup_only,
@@ -272,7 +285,7 @@ async def qualify(root, artifact, arm=None):
     return len(rows) == expected
 
 
-def main(artifact, arm=None):
+def main(artifact, arm=None, shard=None):
     artifact = Path(artifact); artifact.parent.mkdir(parents=True, exist_ok=True)
     artifact.write_text(json.dumps({"success": False, "inference": False, "diagnostic_only": True, "completed": []}) + "\n")
     if any(os.environ.get(key) for key in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "NVIDIA_API_KEY")):
@@ -285,7 +298,7 @@ def main(artifact, arm=None):
         raise KeyboardInterrupt
     signal.signal(signal.SIGTERM, interrupted)
     with tempfile.TemporaryDirectory(prefix="gh-native-", dir=os.environ.get("RUNNER_TEMP")) as temporary:
-        if not asyncio.run(qualify(Path(temporary), artifact, arm)):
+        if not asyncio.run(qualify(Path(temporary), artifact, arm, shard)):
             raise RuntimeError("Native gh qualification incomplete")
 
 
