@@ -29,8 +29,8 @@ illustrative; replay never contacts them.
   staging, hidden verifier, native activation, and custom metric contracts.
 - **Evaluation method:** [Testing Agent Skills Systematically with Evals](https://developers.openai.com/blog/eval-skills).
   Evaluate observed execution and task artifacts, not claims in a final answer.
-- **Competing skill:** [github-actions-hardening at b1a0045](https://github.com/github/awesome-copilot/tree/b1a00457c0b8794243883f387e7de71e88800e3e/skills/github-actions-hardening).
-  Its six locked files are byte-identical to the previous `d85f762` selection and
+- **Competing skill:** [github-actions-hardening at 61fa1fa](https://github.com/github/awesome-copilot/tree/61fa1fa8fcc63d6dbd2f07a75aeb8e214df5acfb/skills/github-actions-hardening).
+  Its six locked files are byte-identical to the previous `b1a0045` selection and
   are staged equally in both arms. The new revision changes current benchmark
   policy identity; historical reports retain their original policy and tooling.
 
