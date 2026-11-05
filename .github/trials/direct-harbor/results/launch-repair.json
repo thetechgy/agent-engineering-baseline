@@ -1,0 +1,446 @@
+{
+  "source_commit": "714224976b80f355c0e0e994eebc9c3b5ac515b3",
+  "workflow_run": 42108206579,
+  "verification": {
+    "kind": "credential_free_diagnostic_verification",
+    "checks": {
+      "historical_reserved_id_reproduced": true,
+      "http_effective_alias": true,
+      "http_one_request": true,
+      "http_real_startup": true,
+      "http_intentional_failure": true,
+      "idle_effective_alias": true,
+      "idle_one_request": true,
+      "idle_real_startup": true,
+      "idle_intentional_failure": true,
+      "idle_60_second_deadline": true
+    },
+    "passed": true,
+    "paid_attempts_added": 0,
+    "task_outcome_measured": false
+  },
+  "probes": {
+    "historical": {
+      "result_extraction_succeeded": true,
+      "rollout_present": false,
+      "native_failure_cause": "unclassified",
+      "native_exception_types": [
+        "NonZeroAgentExitCodeError"
+      ],
+      "agent_timing": {
+        "started_at": "2026-11-05T21:01:31.146722Z",
+        "finished_at": "2026-11-05T21:01:31.744884Z"
+      },
+      "provider_observation": null,
+      "observed_stream_wait_seconds": null,
+      "effective_config": {
+        "mcp_servers": {
+          "microsoft-learn": {
+            "url": "https://learn.microsoft.com/api/mcp",
+            "enabled_tools": [
+              "microsoft_docs_search",
+              "microsoft_docs_fetch",
+              "microsoft_code_sample_search"
+            ],
+            "enabled": false
+          }
+        },
+        "web_search": "disabled",
+        "service_tier": "default",
+        "model_reasoning_effort": "medium",
+        "forced_login_method": "api",
+        "projects": {
+          "/workspace": {
+            "trust_level": "trusted"
+          }
+        },
+        "model_providers": {
+          "openai": {
+            "name": "OpenAI",
+            "base_url": "https://api.openai.com/v1",
+            "wire_api": "responses",
+            "requires_openai_auth": true,
+            "request_max_retries": 0,
+            "stream_max_retries": 0,
+            "stream_idle_timeout_ms": 60000
+          }
+        },
+        "features": {
+          "rollout_budget": {
+            "enabled": true,
+            "limit_tokens": 30000,
+            "reminder_at_remaining_tokens": [
+              5000
+            ],
+            "sampling_token_weight": 5.0,
+            "prefill_token_weight": 1.0
+          }
+        }
+      },
+      "stages": [
+        {
+          "stage": "ownership_check",
+          "user": "agent (task default)",
+          "cwd": "/workspace (task workdir)",
+          "exit_status": 0
+        },
+        {
+          "stage": "directory_setup",
+          "user": "agent (task default)",
+          "cwd": "/workspace (task workdir)",
+          "exit_status": 0
+        },
+        {
+          "stage": "configuration_upload",
+          "user": "agent (task default)",
+          "cwd": "/workspace (task workdir)",
+          "exit_status": 0
+        },
+        {
+          "stage": "authentication_setup",
+          "user": "agent (task default)",
+          "cwd": "/workspace (task workdir)",
+          "exit_status": 0
+        },
+        {
+          "stage": "cli_startup",
+          "user": "agent (task default)",
+          "cwd": "/workspace (task workdir)",
+          "exit_status": 1
+        },
+        {
+          "stage": "cleanup",
+          "user": "agent (task default)",
+          "cwd": "/workspace (task workdir)",
+          "exit_status": 0
+        },
+        {
+          "stage": "cleanup",
+          "user": "root",
+          "cwd": "/workspace (task workdir)",
+          "exit_status": 1
+        }
+      ],
+      "startup_error": "Reserved built-in provider ID: openai",
+      "cleanup_failures": [
+        {
+          "stage": "cleanup",
+          "command": "rm -rf /tmp/codex-secrets /installed-agent/codex-home",
+          "user": "root",
+          "cwd": "/workspace (task workdir)",
+          "exit_status": 1,
+          "stdout": "rm: cannot remove '/tmp/codex-secrets/auth.json': Permission denied\nrm: cannot remove '/installed-agent/codex-home': Permission denied",
+          "stderr": "None",
+          "stream_note": "Harbor Docker merges stderr into stdout"
+        }
+      ],
+      "measured_task_outcome": false
+    },
+    "http": {
+      "result_extraction_succeeded": true,
+      "rollout_present": true,
+      "native_failure_cause": "model_provider_failed",
+      "native_exception_types": [
+        "ApiOverloadedError"
+      ],
+      "agent_timing": {
+        "started_at": "2026-11-05T21:01:54.435251Z",
+        "finished_at": "2026-11-05T21:01:55.291082Z"
+      },
+      "provider_observation": {
+        "mode": "http",
+        "requests": [
+          {
+            "method": "POST",
+            "path": "/v1/responses",
+            "at": 1793912515.0883517
+          }
+        ]
+      },
+      "observed_stream_wait_seconds": null,
+      "effective_config": {
+        "mcp_servers": {
+          "microsoft-learn": {
+            "url": "https://learn.microsoft.com/api/mcp",
+            "enabled_tools": [
+              "microsoft_docs_search",
+              "microsoft_docs_fetch",
+              "microsoft_code_sample_search"
+            ],
+            "enabled": false
+          }
+        },
+        "web_search": "disabled",
+        "service_tier": "default",
+        "model_reasoning_effort": "medium",
+        "forced_login_method": "api",
+        "projects": {
+          "/workspace": {
+            "trust_level": "trusted"
+          }
+        },
+        "model_provider": "trial_openai",
+        "model_providers": {
+          "trial_openai": {
+            "name": "OpenAI",
+            "base_url": "http://127.0.0.1:8765/v1",
+            "wire_api": "responses",
+            "requires_openai_auth": true,
+            "request_max_retries": 0,
+            "stream_max_retries": 0,
+            "stream_idle_timeout_ms": 60000,
+            "supports_websockets": true,
+            "supports_standalone_web_search": true,
+            "http_headers": {
+              "version": "0.155.1"
+            },
+            "env_http_headers": {
+              "OpenAI-Organization": "OPENAI_ORGANIZATION",
+              "OpenAI-Project": "OPENAI_PROJECT"
+            }
+          }
+        },
+        "features": {
+          "rollout_budget": {
+            "enabled": true,
+            "limit_tokens": 30000,
+            "reminder_at_remaining_tokens": [
+              5000
+            ],
+            "sampling_token_weight": 5.0,
+            "prefill_token_weight": 1.0
+          }
+        }
+      },
+      "stages": [
+        {
+          "stage": "ownership_check",
+          "user": "agent (task default)",
+          "cwd": "/workspace (task workdir)",
+          "exit_status": 0
+        },
+        {
+          "stage": "directory_setup",
+          "user": "agent (task default)",
+          "cwd": "/workspace (task workdir)",
+          "exit_status": 0
+        },
+        {
+          "stage": "configuration_upload",
+          "user": "agent (task default)",
+          "cwd": "/workspace (task workdir)",
+          "exit_status": 0
+        },
+        {
+          "stage": "authentication_setup",
+          "user": "agent (task default)",
+          "cwd": "/workspace (task workdir)",
+          "exit_status": 0
+        },
+        {
+          "stage": "cli_startup",
+          "user": "agent (task default)",
+          "cwd": "/workspace (task workdir)",
+          "exit_status": 1
+        },
+        {
+          "stage": "cleanup",
+          "user": "agent (task default)",
+          "cwd": "/workspace (task workdir)",
+          "exit_status": 0
+        },
+        {
+          "stage": "cleanup",
+          "user": "root",
+          "cwd": "/workspace (task workdir)",
+          "exit_status": 1
+        }
+      ],
+      "startup_error": "HTTP 503 from loopback fixture",
+      "cleanup_failures": [
+        {
+          "stage": "cleanup",
+          "command": "rm -rf /tmp/codex-secrets /installed-agent/codex-home",
+          "user": "root",
+          "cwd": "/workspace (task workdir)",
+          "exit_status": 1,
+          "stdout": "rm: cannot remove '/tmp/codex-secrets/auth.json': Permission denied\nrm: cannot remove '/installed-agent/codex-home': Permission denied",
+          "stderr": "None",
+          "stream_note": "Harbor Docker merges stderr into stdout"
+        }
+      ],
+      "measured_task_outcome": false
+    },
+    "idle": {
+      "result_extraction_succeeded": true,
+      "rollout_present": true,
+      "native_failure_cause": "unclassified",
+      "native_exception_types": [
+        "NonZeroAgentExitCodeError"
+      ],
+      "agent_timing": {
+        "started_at": "2026-11-05T21:02:16.975230Z",
+        "finished_at": "2026-11-05T21:03:17.828471Z"
+      },
+      "provider_observation": {
+        "mode": "idle",
+        "requests": [
+          {
+            "method": "POST",
+            "path": "/v1/responses",
+            "at": 1793912537.6280441
+          }
+        ]
+      },
+      "observed_stream_wait_seconds": 60.2,
+      "effective_config": {
+        "mcp_servers": {
+          "microsoft-learn": {
+            "url": "https://learn.microsoft.com/api/mcp",
+            "enabled_tools": [
+              "microsoft_docs_search",
+              "microsoft_docs_fetch",
+              "microsoft_code_sample_search"
+            ],
+            "enabled": false
+          }
+        },
+        "web_search": "disabled",
+        "service_tier": "default",
+        "model_reasoning_effort": "medium",
+        "forced_login_method": "api",
+        "projects": {
+          "/workspace": {
+            "trust_level": "trusted"
+          }
+        },
+        "model_provider": "trial_openai",
+        "model_providers": {
+          "trial_openai": {
+            "name": "OpenAI",
+            "base_url": "http://127.0.0.1:8765/v1",
+            "wire_api": "responses",
+            "requires_openai_auth": true,
+            "request_max_retries": 0,
+            "stream_max_retries": 0,
+            "stream_idle_timeout_ms": 60000,
+            "supports_websockets": true,
+            "supports_standalone_web_search": true,
+            "http_headers": {
+              "version": "0.155.1"
+            },
+            "env_http_headers": {
+              "OpenAI-Organization": "OPENAI_ORGANIZATION",
+              "OpenAI-Project": "OPENAI_PROJECT"
+            }
+          }
+        },
+        "features": {
+          "rollout_budget": {
+            "enabled": true,
+            "limit_tokens": 30000,
+            "reminder_at_remaining_tokens": [
+              5000
+            ],
+            "sampling_token_weight": 5.0,
+            "prefill_token_weight": 1.0
+          }
+        }
+      },
+      "stages": [
+        {
+          "stage": "ownership_check",
+          "user": "agent (task default)",
+          "cwd": "/workspace (task workdir)",
+          "exit_status": 0
+        },
+        {
+          "stage": "directory_setup",
+          "user": "agent (task default)",
+          "cwd": "/workspace (task workdir)",
+          "exit_status": 0
+        },
+        {
+          "stage": "configuration_upload",
+          "user": "agent (task default)",
+          "cwd": "/workspace (task workdir)",
+          "exit_status": 0
+        },
+        {
+          "stage": "authentication_setup",
+          "user": "agent (task default)",
+          "cwd": "/workspace (task workdir)",
+          "exit_status": 0
+        },
+        {
+          "stage": "cli_startup",
+          "user": "agent (task default)",
+          "cwd": "/workspace (task workdir)",
+          "exit_status": 1
+        },
+        {
+          "stage": "cleanup",
+          "user": "agent (task default)",
+          "cwd": "/workspace (task workdir)",
+          "exit_status": 0
+        },
+        {
+          "stage": "cleanup",
+          "user": "root",
+          "cwd": "/workspace (task workdir)",
+          "exit_status": 1
+        }
+      ],
+      "startup_error": "idle timeout waiting for SSE",
+      "cleanup_failures": [
+        {
+          "stage": "cleanup",
+          "command": "rm -rf /tmp/codex-secrets /installed-agent/codex-home",
+          "user": "root",
+          "cwd": "/workspace (task workdir)",
+          "exit_status": 1,
+          "stdout": "rm: cannot remove '/tmp/codex-secrets/auth.json': Permission denied\nrm: cannot remove '/installed-agent/codex-home': Permission denied",
+          "stderr": "None",
+          "stream_note": "Harbor Docker merges stderr into stdout"
+        }
+      ],
+      "measured_task_outcome": false
+    }
+  },
+  "failed_command_shape": "CODEX_API_KEY= codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --model gpt-5.6-sol --json --enable unified_exec -c model_reasoning_effort=medium -c web_search=disabled -- <TASK_PROMPT>",
+  "command_shape_provenance": "Pinned stock launcher; historical sanitizer incorrectly masked the codex token after an empty assignment. Corrected and regression tested before paid execution. No task prompt or submission is republished.",
+  "root_cause": "Codex 0.155.1 rejects the reserved configured provider ID openai during config loading, before authentication/model inference. All preceding stock-launch setup commands succeed. This reproduces the retained historical configuration defect; the original failed-run stderr itself was unavailable.",
+  "provider_source": {
+    "merge": "Built-in providers win entry.or_insert; configured openai would not replace them.",
+    "validation": "ConfigToml deserialization additionally rejects reserved provider IDs before merge.",
+    "alias": "trial_openai",
+    "request_max_retries": 0,
+    "stream_max_retries": 0,
+    "stream_idle_timeout_ms": 60000,
+    "runtime_evidence": "One POST /v1/responses on HTTP 503 and one on silent SSE, which failed at 60.2 seconds. Stock WebSocket probes received 404 and fell back to HTTP; zero HTTP/SSE retries does not disable all transport probing.",
+    "intended_endpoint": "https://api.openai.com/v1",
+    "diagnostic_endpoint": "http://127.0.0.1:8765/v1",
+    "authentication": "requires_openai_auth=true; nonsecret sentinel only in diagnostics"
+  },
+  "source_files": {
+    "config_toml.rs": "11d13bf623582836b60d81bd3cae6ddba1db206595102d5492bfbd9c79c0942c",
+    "model-provider-info.rs": "e2e7dbd6c5475c40eb89e5c8160e515b8957c161e8d1ade1b78e755511153f93"
+  },
+  "local_cli_config_checks": {
+    "historical_exit": 1,
+    "corrected_exit": 0,
+    "command": "codex app-server --stdio --strict-config",
+    "fresh_home": true,
+    "real_credential": false,
+    "scope": "Actual CLI configuration loading only; not task execution or container qualification."
+  },
+  "diagnostic_differences": [
+    "NetworkMode none instead of API allowlist",
+    "Verifier disabled; no task outcome measured",
+    "Local non-forwarding refusal fixture added only to diagnostic image",
+    "Sentinel replaces real credential",
+    "Corrected probes use loopback base URL; intended endpoint unchanged in live config"
+  ],
+  "paid_attempts_added": 0,
+  "diagnostic_actions_runs_used": 2
+}

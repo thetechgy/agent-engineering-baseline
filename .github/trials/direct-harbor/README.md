@@ -7,8 +7,10 @@ commit `29f7765a3e2e48ca573160d412749b717d63bb06`.
 
 [The single report](results/report.html) and its [machine-readable results](results/results.json)
 are authoritative for outcomes and spending. Report packaging is not native evaluation.
-The current pass stops at a stock-launch failure: two credentialed current-arm
-attempts consumed two recovery slots; absent was skipped and usage is unknown.
+The launch repair reproduced the reserved-provider rejection and verified its
+correction through stock Harbor/Codex. The user subsequently authorized the two
+remaining paid smoke attempts despite unknown costs. Historical paid slots remain
+2/4 until those attempts run; the broader comparison is not authorized here.
 Only reviewed metadata is published; previously rejected raw oracle content is not
 repackaged. Raw agent transcripts, submissions, authentication files and environment
 dumps are excluded from the live artifacts.
@@ -29,6 +31,15 @@ ownership changes during execution. Their names, paths and calling contracts req
 review on upgrades. No upstream files are patched; this still carries compatibility
 maintenance. The version check matches the explicit `codex-cli` line because Docker
 merges stderr warnings into stdout and Harbor's first-line parser can reject the pin.
+
+Codex 0.155.1 rejects the reserved `model_providers.openai` ID during configuration
+loading. The supported `trial_openai` alias preserves OpenAI endpoint, authentication,
+headers and transport capabilities while selecting request/stream retry counts of
+zero and a 60-second stream idle timeout. The offline stock-launch probes observed
+one HTTP POST on a 503 and one silent SSE request ending after 60.2 seconds. Normal
+WebSocket probing/fallback remains; these checks cover HTTP/SSE retries. The first
+diagnostic Actions run hit a snapshot-index HTTP 503; the second passed all ten
+verification checks while intentionally retaining nonzero probe exits.
 
 Harbor's native allowlist permits `api.openai.com`; runtime configuration disables
 web search and remote MCP equally in both arms. UID/GID 1000, no agent capabilities,
@@ -65,8 +76,9 @@ Harbor and provider retries are disabled and no judge is used. The supported rol
 budget is supplemental, not a dollar meter. A conservative estimate charges all input,
 including cached input, at $20/M and output at $30/M; the pair preflight estimate is
 $2.64. The $4 scheduling threshold retains $16 reserve within the $20 operational
-budget. It is not a provider cap and overshoot is possible. Missing or incomplete
-usage stops the next arm. No pass-seeking retry or skill revision is authorized here.
+budget. It is not a provider cap and overshoot is possible. The user explicitly accepts unknown costs for testing. A completed first execution
+with unknown cost may therefore proceed to the second arm; incomplete execution or
+a known estimate exceeding the scheduling reserve still stops it. No pass-seeking retry or skill revision is authorized here.
 
 ## Reused grading and maintenance
 
@@ -83,9 +95,18 @@ and integration failures remain distinct. Independent artifact grades can surviv
 agent exhaustion when Harbor considers them valid. Missing usage stays unknown.
 
 Custom components are fixed staging/projection/reporting, a small live runner, the
-48-line pinned-installation/ownership subclass, focused tests, a 29-line signed
+pinned-installation/ownership subclass, focused tests, a 29-line signed
 snapshot download helper and one branch-only workflow. The old sandbox probe is
 retained as historical code, unused by the current workflow. Graders, task fixtures,
 PowerShell runner and runtime installer are reused unchanged. Another skill still
 requires representative tasks, executable checks and independent controls. Nothing
 can yet be removed from production on this evidence alone.
+
+Sanitized launch diagnostics consume the pinned native command logger and checkpoint
+each stage before cleanup. Original launch failures and cleanup failures remain
+separate. A local failure-path test verifies nonzero exit and sentinel redaction.
+The fixed loopback refusal fixture never forwards requests or retains their headers
+or bodies, and is included only in offline diagnostic images. No framework patch or
+additional private Harbor method override was added; logging-record shape remains a
+compatibility dependency. `rollout_present` and `result_extraction_succeeded` describe
+their actual evidence; neither field proves successful task execution.

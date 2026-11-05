@@ -10,19 +10,36 @@ def sanitize(value, secrets=()):
         if secret:
             text = text.replace(secret, '<REDACTED>')
     text = re.sub(r'(?im)(authorization[\"\s]*[:=][\"\s]*(?:bearer|basic)?\s*)[^\s\"\r\n,}]+', r'\1<REDACTED>', text)
-    text = re.sub(r'(?i)((?:OPENAI_API_KEY|CODEX_API_KEY|api[_-]key)[\"\s]*[:=]\s*)[\"\']?[^\s\"\'\n,}]+', r'\1<CREDENTIAL>', text)
     text = re.sub(r'(cat >[^\n]*auth.json[^\n]*<<EOF\n).*?\nEOF', r'\1<AUTH_JSON_REDACTED>\nEOF', text, flags=re.S)
     text = re.sub(r'(printf %s ).*?( > /installed-agent/codex-home/config.toml)', r'\1<CONFIG_TOML>\2', text, flags=re.S)
     text = re.sub(r'(codex exec .*? -- ).*?( 2>&1 </dev/null \| tee)', r'\1<TASK_PROMPT>\2', text, flags=re.S)
+    text = re.sub(r"(?i)((?:OPENAI_API_KEY|CODEX_API_KEY|api[_-]key)=)(?:'[^']*'|\"[^\"]*\"|[^\s;'\"]+)", r'\1<CREDENTIAL>', text)
+    text = re.sub(r'(?i)([\"](?:OPENAI_API_KEY|CODEX_API_KEY|api[_-]key)[\"]\s*:\s*[\"])[^\"]+', r'\1<CREDENTIAL>', text)
+    text = re.sub(r'\bsk-[A-Za-z0-9_*.-]{8,}', '<CREDENTIAL>', text)
     # Never export model text, tool results, or submitted code embedded in JSONL.
     lines=[]
     for line in text.splitlines():
         try: event=json.loads(line)
         except ValueError: event=None
-        if isinstance(event,dict) and str(event.get('type','')).startswith('item.'):
+        if re.match(r'\s*\{\s*"type"\s*:\s*"item\.',line) or (isinstance(event,dict) and str(event.get('type','')).startswith('item.')):
             line='<TASK_EVENT_OMITTED>'
         lines.append(line)
     return '\n'.join(lines)[:12000]
+
+def startup_output(value, secrets=()):
+    # Native logging can truncate in the middle of a JSONL item. Once the CLI
+    # reports a session, retain only complete harness events, never tail fragments.
+    text=sanitize(value,secrets); lines=[]; started=False
+    for line in text.splitlines():
+        try:event=json.loads(line)
+        except ValueError:event=None
+        if isinstance(event,dict) and event.get('type')=='thread.started':started=True
+        if started:
+            if isinstance(event,dict) and event.get('type') in ('thread.started','turn.started','error','turn.failed'):
+                lines.append(line)
+            elif not lines or lines[-1]!='<NON_HARNESS_OUTPUT_OMITTED>':lines.append('<NON_HARNESS_OUTPUT_OMITTED>')
+        else:lines.append(line)
+    return '\n'.join(lines)
 
 class LaunchDiagnostics(logging.Handler):
     """Consume pinned Harbor DEBUG records; checkpoint each result before cleanup."""
@@ -52,7 +69,7 @@ class LaunchDiagnostics(logging.Handler):
             self.data['commands'].append(self.pending);self.save()
         elif self.pending is not None and message in ('Command failed','Command outputs captured'):
             self.pending.update(exit_status=getattr(record,'return_code',0),
-                stdout=sanitize(getattr(record,'stdout',''),self.secrets),
+                stdout=(startup_output if self.pending['stage']=='cli_startup' else sanitize)(getattr(record,'stdout',''),self.secrets),
                 stderr=sanitize(getattr(record,'stderr',''),self.secrets),
                 stream_note='Harbor Docker merges stderr into stdout')
             if self.pending['exit_status']:

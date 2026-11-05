@@ -1,5 +1,5 @@
 {
-  "phase": "diagnostic-verify",
+  "phase": "live-pair",
   "campaign": "direct-harbor-20261104",
   "paid_attempts_used": 2,
   "paid_attempt_limit": 36,
@@ -11,11 +11,11 @@
   "recovery_control_attempt": 3,
   "native_fixture_retry": 1,
   "transport_preflight_corrections": 1,
-  "state": "blocked_at_stock_launch_usage_unknown",
+  "state": "launch_repaired_two_final_smoke_attempts_authorized",
   "final_native_run": 41958553130,
   "native_grading_smoke_qualified": true,
   "native_sandbox_qualified": false,
-  "paid_attempts_reserved": 0,
+  "paid_attempts_reserved": 2,
   "planned_variants": [
     "current",
     "absent"
@@ -47,10 +47,14 @@
   ],
   "final_live_run": 41966399157,
   "api_spend_usd": null,
-  "scheduling_stopped": true,
-  "stop_reason": "Final launch failed with no complete usage; absent skipped",
+  "scheduling_stopped": false,
+  "stop_reason": null,
   "diagnostic_actions_runs_reserved": 2,
   "diagnostic_actions_run_limit": 2,
-  "paid_execution_enabled": false,
-  "diagnostic_reproduction_run": 42106956278
+  "paid_execution_enabled": true,
+  "diagnostic_reproduction_run": 42106956278,
+  "accept_unknown_cost_for_testing": true,
+  "credential_free_checks_passed": true,
+  "diagnostic_verification_run": 42108206579,
+  "authorization_note": "User: we can run it for testing with unknown cost. Two remaining smoke attempts only; no retry beyond four recovery slots."
 }

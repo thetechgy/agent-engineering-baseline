@@ -24,8 +24,13 @@ jobs:
           python3 - <<'PYCODE'
           import json, os
           phase = json.load(open('.github/trials/direct-harbor/launch.json'))['phase']
-          assert phase in ('diagnostic-reproduce', 'diagnostic-verify', 'report')
-          assert json.load(open('.github/trials/direct-harbor/launch.json'))['scheduling_stopped'] is True
+          assert phase in ('diagnostic-reproduce', 'diagnostic-verify', 'report', 'live-pair')
+          launch = json.load(open('.github/trials/direct-harbor/launch.json'))
+          if phase == 'live-pair':
+              assert launch['paid_execution_enabled'] is True and launch['paid_attempts_used'] == 2
+              assert launch['credential_free_checks_passed'] is True
+          else:
+              assert launch['scheduling_stopped'] is True
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
               print('phase=' + phase, file=output)
           PYCODE
@@ -103,6 +108,87 @@ jobs:
           path: ${{ runner.temp }}/launch-diagnostic/public/
           retention-days: 30
           if-no-files-found: error
+      - name: Verify checkout integrity
+        if: always()
+        run: git diff --exit-code
+      - name: Remove test-only Compose
+        if: always()
+        run: bash .github/scripts/setup-compose.sh cleanup
+  live:
+    needs: phase
+    if: needs.phase.outputs.phase == 'live-pair'
+    environment: skill-benchmark
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHON_DOTENV_DISABLED: '1'
+      LITELLM_LOCAL_MODEL_COST_MAP: 'True'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: '0.13.7'
+          enable-cache: false
+      - name: Acquire unchanged Harbor release and lock
+        run: |
+          set -euo pipefail
+          source="$RUNNER_TEMP/harbor"
+          git init --quiet "$source"
+          git -C "$source" fetch --quiet --depth=1 https://github.com/harbor-framework/harbor.git fdba28fc411e47e8765420a1a063b4918fce3def
+          git -C "$source" checkout --quiet --detach FETCH_HEAD
+          test "$(git -C "$source" rev-parse HEAD)" = fdba28fc411e47e8765420a1a063b4918fce3def
+          uv sync --project "$source" --python 3.13.15 --managed-python --frozen --no-dev
+          uv pip check --python "$source/.venv/bin/python"
+          git -C "$source" diff --exit-code
+          echo "$source/.venv/bin" >> "$GITHUB_PATH"
+      - name: Verify projection and launch extension
+        run: python -m unittest discover -s .github/trials/direct-harbor -p test_projection.py -q
+      - name: Install reviewed Compose
+        run: bash .github/scripts/setup-compose.sh
+      - name: Prepare both arms and check external boundary without credentials
+        id: preflight
+        timeout-minutes: 25
+        run: python -u .github/trials/direct-harbor/live.py prepare "$RUNNER_TEMP/live-pair"
+      - name: Checkpoint external boundary before inference
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: live-preflight
+          path: ${{ runner.temp }}/live-pair/public/
+          retention-days: 30
+          if-no-files-found: error
+      - name: Current skill - one actual Codex attempt
+        id: current
+        if: steps.preflight.outcome == 'success'
+        timeout-minutes: 18
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: python -u .github/trials/direct-harbor/live.py current "$RUNNER_TEMP/live-pair"
+      - name: Checkpoint current attempt before absent arm
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: live-current
+          path: ${{ runner.temp }}/live-pair/public/current/
+          retention-days: 30
+          if-no-files-found: warn
+      - name: Absent skill - one actual Codex attempt
+        if: steps.current.outcome == 'success'
+        timeout-minutes: 18
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: python -u .github/trials/direct-harbor/live.py absent "$RUNNER_TEMP/live-pair"
+      - name: Checkpoint absent attempt
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: live-absent
+          path: ${{ runner.temp }}/live-pair/public/absent/
+          retention-days: 30
+          if-no-files-found: warn
       - name: Verify checkout integrity
         if: always()
         run: git diff --exit-code

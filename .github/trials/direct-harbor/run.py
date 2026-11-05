@@ -169,6 +169,14 @@ def report(output, data):
     text = '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">\n<title>Direct Harbor recovery trial</title><style>body{font:16px system-ui;max-width:1100px;margin:3rem auto;padding:0 1rem;color:#172033}table{border-collapse:collapse;width:100%;margin:1rem 0}th,td{border:1px solid #cbd5e1;padding:.5rem;text-align:left;vertical-align:top}pre{white-space:pre-wrap;overflow-wrap:anywhere}h1,h2{color:#174f78}a{color:#145f91}</style>\n<h1>Direct Harbor recovery trial</h1><p>Diagnostic only. Production evaluation and Pages remain unchanged.</p>\n<p><a href="results.json" download>Download machine-readable results</a> · <a href="manifest.json">Frozen input manifests</a> · <a href="workflow-evidence.txt">Workflow evidence excerpts</a></p>'
     text += '<h2>Decision</h2><p>' + esc(data['decision']) + '</p>'
     text += '<p>' + esc(data['summary']) + '</p>'
+    if data.get('launch_repair'):
+        repair=data['launch_repair']
+        text += '<h2>Credential-free launch repair</h2><p>'+esc(repair['summary'])+'</p>'
+        text += '<p><a href="launch-repair.json">Sanitized launch diagnostics and provider checks</a></p>'
+        text += table(('Probe','CLI startup','Outcome','Requests to local fixture','Stream wait seconds'),
+                      [(r['probe'],r['startup'],r['outcome'],r.get('requests'),r.get('stream_wait_seconds')) for r in repair['observations']])
+        for paragraph in repair['notes']:
+            text += '<p>'+esc(paragraph)+'</p>'
     text += '<h2>Native credential-free controls</h2>'
     text += table(('Case / submission', 'Expected', 'Verifier observation', 'Reference pass', 'Defects detected', 'Harbor failure cause', 'Valid measured grade'),
                   [(r['task'], r['expected'], r['outcome']['classification'] + ': ' + str(r['outcome'].get('code', '')),

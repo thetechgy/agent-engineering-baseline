@@ -4,7 +4,6 @@
       "attempt": 1,
       "variant": "current",
       "reserved": true,
-      "codex_executed": false,
       "usage_estimate_usd": null,
       "projection": [
         {
@@ -46,14 +45,16 @@
         "completion_event": false
       },
       "usage_complete": false,
-      "integration_valid": true,
-      "duration_seconds": 19.81
+      "duration_seconds": 19.81,
+      "rollout_present": false,
+      "result_extraction_succeeded": true,
+      "cli_process_started": null,
+      "task_session_completed": false
     },
     {
       "attempt": 2,
       "variant": "current",
       "reserved": true,
-      "codex_executed": false,
       "usage_estimate_usd": null,
       "projection": [
         {
@@ -103,8 +104,11 @@
         "completion_event": false
       },
       "usage_complete": false,
-      "integration_valid": true,
-      "duration_seconds": 36.08
+      "duration_seconds": 36.08,
+      "rollout_present": false,
+      "result_extraction_succeeded": true,
+      "cli_process_started": null,
+      "task_session_completed": false
     }
   ],
   "preflight": {
@@ -381,5 +385,10 @@
   },
   "launch_command_shape": "CODEX_API_KEY= codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --model gpt-5.6-sol --json --enable unified_exec -c model_reasoning_effort=medium -c web_search=disabled -- <unchanged task prompt>",
   "launch_observation_limit": "Stock source and generated flags/config verified. Effective config exported before upload; the exact failing shell command and whether codex exec itself started were not recovered. No task session was recovered. The codex_executed field is a rollout-presence detector, not proof that the executable never started.",
-  "native_exception_policy": "Native unclassified failure retained; do not infer provider, environment or agent-budget cause from NonZeroAgentExitCodeError alone."
+  "native_exception_policy": "Native unclassified failure retained; do not infer provider, environment or agent-budget cause from NonZeroAgentExitCodeError alone.",
+  "field_renames": {
+    "codex_executed": "rollout_present",
+    "integration_valid": "result_extraction_succeeded",
+    "note": "Only derived names changed; raw historical artifacts remain linked and unchanged."
+  }
 }

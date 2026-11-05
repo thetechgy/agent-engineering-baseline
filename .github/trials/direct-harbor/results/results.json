@@ -1,9 +1,9 @@
 {
   "schema_version": 3,
   "campaign": "direct-harbor-20261104",
-  "state": "blocked_at_stock_launch_usage_unknown",
-  "decision": "One launch integration blocker remains: the stock unprivileged Codex run exits with NonZeroAgentExitCodeError before a recoverable task session. Recover its command-level cause and reconcile unknown usage before another paid attempt. Do not begin the original comparison.",
-  "summary": "External-boundary and pinned-CLI checks pass. Two credentialed current-arm launch attempts failed; absent was skipped. No completed Codex task or live valid grade was recovered. Existing good (2/2 defects) and weak (0/2) native controls remain valid and unchanged.",
+  "state": "launch_repaired_live_pair_authorized",
+  "decision": "Launch defect identified and corrected. Credential-free stock-launch/provider checks passed. User subsequently authorized the remaining two paid smoke attempts despite unknown costs; no broader comparison is scheduled.",
+  "summary": "Reserved model_providers.openai caused startup rejection. The trial_openai alias is accepted and reaches a local Responses endpoint through stock Harbor/Codex. One HTTP request and a 60.2-second silent-stream timeout demonstrate the configured HTTP/SSE limits. Prior live attempts remain failed and ungraded; the newly authorized pair is pending.",
   "source_commit": "cc0819f5dafc05610dd8c3293ce2f52744c66f1a",
   "reviewed_trial_commit": "29f7765a3e2e48ca573160d412749b717d63bb06",
   "executed_commit": "11bf0db52f020271efc8b1e4c136f7795b480114",
@@ -13,7 +13,9 @@
     "44c02a7b16f67787dcbd4f18d54605f1c630b741",
     "e66ee65db546b5e39f2e932186ed8898bd082f4a",
     "725e8d5e08d5d6c30c97d9ad58f2b2bf53358803",
-    "11bf0db52f020271efc8b1e4c136f7795b480114"
+    "11bf0db52f020271efc8b1e4c136f7795b480114",
+    "9a4ad95d883ed91cd7f5de13e1afb1f633662986",
+    "714224976b80f355c0e0e994eebc9c3b5ac515b3"
   ],
   "calibration": [
     {
@@ -379,7 +381,7 @@
   "api_spend_usd": null,
   "estimated_cumulative_api_spend_usd": null,
   "provider_billing_observation": null,
-  "spending_note": "Two credentialed launch attempts consumed 2/4 recovery slots and 2/36 campaign slots; absent was never scheduled. The verified prior record was zero attempts and $0. Attempt 1 failed before agent execution; attempt 2 has no usable usage record or provider invoice. Actual inference request count and cumulative spending therefore remain unknown, not $0. Scheduling stopped. The preflight pair estimate was $2.64 (60k input including cache and 4k output per arm at conservative $20/M input and $30/M output). These rates reserve for cache writes and long-context pricing; they are not observed charges. The operational $20 budget has no verified provider cap. A $4 scheduling threshold reserves $16 for uncertainty/in-flight usage; overshoot remains possible. Runtime and rollout-token limits are not dollar meters.",
+  "spending_note": "Two credentialed launch attempts consumed 2/4 recovery slots and 2/36 campaign slots; absent was never scheduled. The verified prior record was zero attempts and $0. Attempt 1 failed before agent execution; attempt 2 has no usable usage record or provider invoice. Actual inference request count and cumulative spending therefore remain unknown, not $0. Scheduling stopped. The preflight pair estimate was $2.64 (60k input including cache and 4k output per arm at conservative $20/M input and $30/M output). These rates reserve for cache writes and long-context pricing; they are not observed charges. The operational $20 budget has no verified provider cap. A $4 scheduling threshold reserves $16 for uncertainty/in-flight usage; overshoot remains possible. Runtime and rollout-token limits are not dollar meters. The repair added zero paid attempts. Two diagnostic Actions runs used a nonsecret sentinel with external inference blocked. The user subsequently said \"we can run it for testing with unknown cost\", authorizing the remaining bounded pair; this acceptance does not turn missing costs into zero or establish a provider cap.",
   "budget": {
     "operational_usd": 20,
     "provider_hard_cap_verified": false,
@@ -392,10 +394,11 @@
     "proposed_scheduling_stop_estimate_usd": 4,
     "reserve_usd": 16,
     "pair_preflight_estimate_usd": 2.64,
-    "scheduling_stopped": true,
-    "stop_reason": "Failed launch and missing usage",
+    "scheduling_stopped": false,
+    "stop_reason": null,
     "conservative_input_usd_per_million": 20,
-    "conservative_output_usd_per_million": 30
+    "conservative_output_usd_per_million": 30,
+    "unknown_cost_accepted_for_testing": true
   },
   "configured_runtime": {
     "codex": "0.155.1 observed by unprivileged version command; no task session recovered",
@@ -458,7 +461,8 @@
     "Actual containers passed UID/GID 1000, CapEff=0, NoNewPrivs=1, Seccomp=2, writable output, fresh-session/auth checks, protected-path absence and deployment hashes. Docker metadata confirms no privilege, no added agent capabilities, cap_drop=ALL, default seccomp (no unconfined override), 2 CPUs, 2 GiB RAM, 256 PIDs, no host PID/network mode and no host mounts. No Docker socket, grader source, reference implementation, mutants or unrelated credential names were available.",
     "Harbor native allowlist restricts the agent to api.openai.com using its separate disposable egress controller; only that controller needs NET_ADMIN/NET_RAW. Credential-free HTTPS requests reached the API root (HTTP 421); GitHub, raw GitHub, Microsoft Learn and the metadata IP failed to connect. This does not prove authenticated Responses API operation or formal network isolation. DNS and the allowed API remain residual channels; web search and remote MCP are disabled.",
     "The inference key must be accessible to Codex and can be read by code in the same environment. Container isolation does not conceal it. No auth file, secret-bearing environment dump, raw agent log or submission is exported. Preflight checks and host metadata are practical evidence, not a formal container-security proof or interactive-workstation equivalence.",
-    "The separate offline verifier and protected executable checks are unchanged from the successful controls. Its latest live result is invalid/artifact, not a measured incorrect answer. Host/report metadata validates transport invariants only: integration_valid=true in attempt.json does not assert successful agent execution."
+    "The separate offline verifier and protected executable checks are unchanged from the successful controls. Its latest live result is invalid/artifact, not a measured incorrect answer. Host/report metadata validates transport invariants only: integration_valid=true in attempt.json does not assert successful agent execution.",
+    "Repair diagnostics use the same stock launcher, UID, ownership and pins with external networking disabled. Corrected live config selects trial_openai while preserving API endpoint/authentication, OpenAI headers, WebSocket capability, model, effort and matched arms. The same runtime config function serves current and absent."
   ],
   "history_note": "Original run 41952213509 explicitly received a runner shutdown signal. Cause remains unknown; exit 143 alone does not identify a Harbor timeout/crash. No original native grade survived. Its prior report is preserved as history below; the prior recommendation is superseded and does not show that the existing stack is better. The prior recovery report at 29f7765 is retained under history, including its zero-spend record and now-superseded native-sandbox requirement. The known-good and weak native observations were not rerun or rescored.",
   "history": {
@@ -869,6 +873,38 @@
         "No full comparison, revision or confirmation-case evidence",
         "Native sandbox unqualified under tested Docker boundary"
       ]
+    },
+    "before_launch_repair_at_f61201a": {
+      "state": "blocked_at_stock_launch_usage_unknown",
+      "decision": "One launch integration blocker remains: the stock unprivileged Codex run exits with NonZeroAgentExitCodeError before a recoverable task session. Recover its command-level cause and reconcile unknown usage before another paid attempt. Do not begin the original comparison.",
+      "summary": "External-boundary and pinned-CLI checks pass. Two credentialed current-arm launch attempts failed; absent was skipped. No completed Codex task or live valid grade was recovered. Existing good (2/2 defects) and weak (0/2) native controls remain valid and unchanged.",
+      "boundary_assessment": [
+        "Explicit user authorization replaces only the evaluated Codex inner-sandbox requirement with the disposable hosted runner/container boundary. Stock Harbor run/exec methods are inherited without command rewriting. No implementing-agent sandbox or approval mechanism was disabled. Historical Bubblewrap/Landlock failures remain in sandbox.json and are not a current gate.",
+        "Actual containers passed UID/GID 1000, CapEff=0, NoNewPrivs=1, Seccomp=2, writable output, fresh-session/auth checks, protected-path absence and deployment hashes. Docker metadata confirms no privilege, no added agent capabilities, cap_drop=ALL, default seccomp (no unconfined override), 2 CPUs, 2 GiB RAM, 256 PIDs, no host PID/network mode and no host mounts. No Docker socket, grader source, reference implementation, mutants or unrelated credential names were available.",
+        "Harbor native allowlist restricts the agent to api.openai.com using its separate disposable egress controller; only that controller needs NET_ADMIN/NET_RAW. Credential-free HTTPS requests reached the API root (HTTP 421); GitHub, raw GitHub, Microsoft Learn and the metadata IP failed to connect. This does not prove authenticated Responses API operation or formal network isolation. DNS and the allowed API remain residual channels; web search and remote MCP are disabled.",
+        "The inference key must be accessible to Codex and can be read by code in the same environment. Container isolation does not conceal it. No auth file, secret-bearing environment dump, raw agent log or submission is exported. Preflight checks and host metadata are practical evidence, not a formal container-security proof or interactive-workstation equivalence.",
+        "The separate offline verifier and protected executable checks are unchanged from the successful controls. Its latest live result is invalid/artifact, not a measured incorrect answer. Host/report metadata validates transport invariants only: integration_valid=true in attempt.json does not assert successful agent execution.",
+        "Repair diagnostics use the same stock launcher, UID, ownership and pins with external networking disabled. Corrected live config selects trial_openai while preserving API endpoint/authentication, OpenAI headers, WebSocket capability, model, effort and matched arms. The same runtime config function serves current and absent."
+      ],
+      "assessment": [
+        "The prior oracle controls establish a useful narrow grading distinction: both pass the reference; only the good suite detects both defects. The latest invalid artifact remains excluded despite native reward zero and process exit zero. No skill-effectiveness or adoption conclusion follows.",
+        "Fourteen focused tests cover native failure/reward validity, unsupported/missing evidence, post-run status/exit, stock launch inheritance, exact-pin version warnings, deployment equality, activation/usage separation and unknown-usage scheduling. No full production suite was run because production code is unchanged.",
+        "Custom maintenance: existing staging/projection/report code, a 217-line fixed live runner, 48-line custom-agent class/helper, 14 tests, 29-line snapshot transport helper, branch-only workflow, and historical unused sandbox probe. Two private Harbor overrides (home ownership and effective config upload) remain. No framework patch, but pin compatibility and task checksum deprecation need maintenance. Native egress control requires another pinned sidecar image.",
+        "The first host-inspection error and CLI parser correction were integration defects in the trial path. The final native nonzero launch lacks preserved command-level diagnostics because the metadata export was too restrictive. This is an evidence-retention limitation: raw runner-private logs were discarded with the runner, and no new packaging of rejected raw content is attempted.",
+        "Existing task prompts, inputs, references, mutants, grader, PowerShell runner and runtime installer are unchanged. Authoring another skill still requires representative tasks, independently executable checks and good/weak controls. Lower maintenance effort has not been demonstrated.",
+        "Production components removed: none. If broader adoption becomes justified, overlapping behavioral wrapper/staging/collection might be removable; APM, static checks, protected graders, historical records and publication controls remain.",
+        "Smallest next step: a credential-free reproduction of the unprivileged launch setup with allowlisted command-stage/exit diagnostics, followed by reconciliation of any provider usage from attempt 2 before another paid attempt. Do not expand the experiment or retry for a passing answer."
+      ],
+      "coverage_gaps": [
+        "No completed live Codex task or valid live grade",
+        "No absent-arm task execution",
+        "No confirmed model request count or cumulative spend",
+        "Exact failing stock-launch command and stderr not recovered",
+        "No activation, instruction-following or skill-effectiveness measurement",
+        "No revision, reserved confirmation case or broader comparison",
+        "No new unsupported/adversarial submission qualification",
+        "No interactive-workstation or native Codex approval equivalence"
+      ]
     }
   },
   "recovery_runs": [
@@ -969,32 +1005,55 @@
           "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41966399157/artifacts/13387243701"
         }
       ]
+    },
+    {
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42106956278",
+      "label": "Credential-free reproduction: build interruption",
+      "summary": "Pinned snapshot Packages index HTTP 503; Harbor not started; build error retained in Actions logs; no artifact created before failure."
+    },
+    {
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42108206579",
+      "label": "Credential-free stock launch and provider verification",
+      "summary": "Historical config rejected; corrected HTTP/SSE probes reach refusal endpoints. Ten behavioral checks pass. Overall workflow failure is deliberate negative-probe status.",
+      "artifacts": [
+        {
+          "name": "Sanitized diagnostic evidence",
+          "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42108206579/artifacts/13452044517"
+        },
+        {
+          "name": "Historical failure checkpoint",
+          "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42108206579/artifacts/13452743308"
+        }
+      ]
     }
   ],
   "local_validation": {
-    "focused_tests_passed": 14,
+    "focused_tests_passed": 18,
     "postrun_failure_status_and_exit_tested": true,
     "pinned_native_policy_used": true,
     "staging_current_absent_match": true,
     "production_full_suite_not_run": "Production unchanged; focused tests, boundary/installation checks and bounded native launch only.",
     "stock_run_and_exec_inherited": true,
     "warning_contaminated_version_failing_before_passing_after": true,
-    "external_boundary_checks_passed": true
+    "external_boundary_checks_passed": true,
+    "credential_free_failure_retention": true,
+    "actual_cli_config_loading": true,
+    "actual_harbor_startup_and_provider_probes": true
   },
   "assessment": [
     "The prior oracle controls establish a useful narrow grading distinction: both pass the reference; only the good suite detects both defects. The latest invalid artifact remains excluded despite native reward zero and process exit zero. No skill-effectiveness or adoption conclusion follows.",
     "Fourteen focused tests cover native failure/reward validity, unsupported/missing evidence, post-run status/exit, stock launch inheritance, exact-pin version warnings, deployment equality, activation/usage separation and unknown-usage scheduling. No full production suite was run because production code is unchanged.",
     "Custom maintenance: existing staging/projection/report code, a 217-line fixed live runner, 48-line custom-agent class/helper, 14 tests, 29-line snapshot transport helper, branch-only workflow, and historical unused sandbox probe. Two private Harbor overrides (home ownership and effective config upload) remain. No framework patch, but pin compatibility and task checksum deprecation need maintenance. Native egress control requires another pinned sidecar image.",
-    "The first host-inspection error and CLI parser correction were integration defects in the trial path. The final native nonzero launch lacks preserved command-level diagnostics because the metadata export was too restrictive. This is an evidence-retention limitation: raw runner-private logs were discarded with the runner, and no new packaging of rejected raw content is attempted.",
+    "The earlier f61201a export discarded command-level startup diagnostics. The repair now checkpoints sanitized native command stages before cleanup and preserves the primary failure separately. The original stderr remains unavailable; the same configuration error was reproduced through the pinned stock launch.",
     "Existing task prompts, inputs, references, mutants, grader, PowerShell runner and runtime installer are unchanged. Authoring another skill still requires representative tasks, independently executable checks and good/weak controls. Lower maintenance effort has not been demonstrated.",
     "Production components removed: none. If broader adoption becomes justified, overlapping behavioral wrapper/staging/collection might be removable; APM, static checks, protected graders, historical records and publication controls remain.",
-    "Smallest next step: a credential-free reproduction of the unprivileged launch setup with allowlisted command-stage/exit diagnostics, followed by reconciliation of any provider usage from attempt 2 before another paid attempt. Do not expand the experiment or retry for a passing answer."
+    "The repaired path uses existing Harbor DEBUG command records plus a bounded sanitizer/checkpoint handler, a small non-forwarding loopback refusal fixture and a fixed verifier for these probes. Two private home/config overrides remain; no additional private Harbor hook or framework patch was added. Logging-record shape and provider defaults require pin-aware maintenance.",
+    "Smallest next step now authorized: the current/absent smoke pair only. It cannot establish skill effectiveness or adoption readiness."
   ],
   "coverage_gaps": [
     "No completed live Codex task or valid live grade",
     "No absent-arm task execution",
     "No confirmed model request count or cumulative spend",
-    "Exact failing stock-launch command and stderr not recovered",
     "No activation, instruction-following or skill-effectiveness measurement",
     "No revision, reserved confirmation case or broader comparison",
     "No new unsupported/adversarial submission qualification",
@@ -1013,7 +1072,9 @@
     "debian_bubblewrap": "https://packages.debian.org/trixie/bubblewrap",
     "network_policy": "https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/environments/docker/docker.py",
     "prompt_caching": "https://developers.openai.com/api/docs/guides/prompt-caching",
-    "config_reference": "https://learn.chatgpt.com/docs/config-file/config-reference"
+    "config_reference": "https://learn.chatgpt.com/docs/config-file/config-reference",
+    "pinned_codex_config_validation": "https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/config/src/config_toml.rs#L900",
+    "pinned_provider_merging": "https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/model-provider-info/src/lib.rs#L609"
   },
   "live_pair_operationally_valid": false,
   "live_evidence": "live-evidence.json",
@@ -1049,5 +1110,39 @@
       "output_tokens": null,
       "estimate_usd": null
     }
-  ]
+  ],
+  "launch_repair": {
+    "summary": "Codex 0.155.1 rejects the reserved configured provider ID openai during config loading, before authentication/model inference. All preceding stock-launch setup commands succeed. This reproduces the retained historical configuration defect; the original failed-run stderr itself was unavailable.",
+    "observations": [
+      {
+        "probe": "historical",
+        "startup": "Rejected configuration",
+        "outcome": "Reserved built-in provider ID: openai",
+        "requests": 0,
+        "stream_wait_seconds": null
+      },
+      {
+        "probe": "http",
+        "startup": "Reached local Responses endpoint",
+        "outcome": "HTTP 503 from loopback fixture",
+        "requests": 1,
+        "stream_wait_seconds": null
+      },
+      {
+        "probe": "idle",
+        "startup": "Reached local Responses endpoint",
+        "outcome": "idle timeout waiting for SSE",
+        "requests": 1,
+        "stream_wait_seconds": 60.2
+      }
+    ],
+    "notes": [
+      "The diagnostic workflow intentionally reports failure for its three negative probes; the final verification step passes all ten checks. These are expected refusals, not successful model tasks. No real API credential or external inference was used.",
+      "Command-stage checkpoints preserve ownership, directory, configuration, auth, CLI startup and cleanup outcomes. Root cleanup cannot remove the agent-owned private home under dropped capabilities; the original failure remains primary. Disposable container teardown removes the environment. No capabilities were added.",
+      "The first diagnostic Actions run failed before Harbor because the signed snapshot index returned HTTP 503. The second used the available compressed index route with by-hash disabled; signed metadata and package/hash pins remain unchanged. No dependency upgrade or oracle requalification was performed.",
+      "The user later explicitly authorized paid testing with unknown cost. The next pair remains bounded to the two remaining recovery slots; historical spend remains unknown."
+    ]
+  },
+  "billing_evidence": "No attributable provider billing export or OpenAI billing connector was available. For reconciliation, obtain project/key-attributed usage/cost records covering 2026-11-05 04:06:42\u201304:07:03 UTC and 04:15:59\u201304:16:36 UTC, including cached input and failed requests. User accepts unknown costs for testing; absence remains unknown.",
+  "paid_attempts_reserved": 2
 }

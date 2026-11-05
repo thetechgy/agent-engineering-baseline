@@ -127,6 +127,9 @@ class LiveMetadataTests(unittest.TestCase):
         self.assertFalse(live.can_schedule({'usage_complete':True,'usage_estimate_usd':None}))
         self.assertFalse(live.can_schedule({'usage_complete':True,'usage_estimate_usd':3}))
         self.assertTrue(live.can_schedule({'usage_complete':True,'usage_estimate_usd':0.1}))
+        self.assertTrue(live.can_schedule({'execution_completed':True,'usage_estimate_usd':None},accept_unknown_cost=True))
+        self.assertFalse(live.can_schedule({'execution_completed':False,'usage_estimate_usd':None},accept_unknown_cost=True))
+        self.assertFalse(live.can_schedule({'execution_completed':True,'usage_estimate_usd':3},accept_unknown_cost=True))
 
     def test_remote_tools_and_retry_settings_match_arms(self):
         import live
@@ -199,3 +202,22 @@ class EffectiveProviderTests(unittest.TestCase):
             self.assertEqual(override['model_provider'],'trial_openai')
             self.assertEqual(override['model_providers']['trial_openai']['request_max_retries'],0)
             self.assertEqual(override['model_providers']['trial_openai']['stream_idle_timeout_ms'],60000)
+
+class DiagnosticShapeTests(unittest.TestCase):
+    def test_empty_auth_assignment_preserves_codex_and_removes_prompt(self):
+        from diagnostics import sanitize
+        command="CODEX_API_KEY= codex exec --json -- 'private task prompt' 2>&1 </dev/null | tee /logs/agent/codex.txt"
+        redacted=sanitize(command)
+        self.assertIn('CODEX_API_KEY= codex exec',redacted)
+        self.assertIn('<TASK_PROMPT>',redacted)
+        self.assertNotIn('private task prompt',redacted)
+        for value in ["OPENAI_API_KEY='hidden-value'", 'Authorization: Bearer hidden-value', '{"api_key": "hidden-value"}']:
+            self.assertNotIn('hidden-value',sanitize(value))
+
+class StartupOutputTests(unittest.TestCase):
+    def test_truncated_task_events_are_omitted(self):
+        from diagnostics import startup_output
+        source='{"type":"thread.started","thread_id":"fixture"}\n{"type":"item.completed","item":{"text":"private submission [truncated]\nprivate tail\n{"type":"error","message":"startup refused"}'
+        result=startup_output(source)
+        self.assertNotIn('private',result)
+        self.assertIn('startup refused',result)

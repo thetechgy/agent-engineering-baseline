@@ -98,14 +98,17 @@ def prepare(root, diagnostic=False):
     root.mkdir(parents=True,exist_ok=False)
     public=root/'public';public.mkdir()
     previous=json.loads((trial.ROOT/'.github/trials/direct-harbor/results/results.json').read_text())
-    assert diagnostic and previous['grading_smoke_qualified'] and previous['agent_attempts']==2 and previous['api_spend_usd'] is None, 'Live preparation disabled'
-    for variant in ('current',):
+    assert previous['grading_smoke_qualified'] and previous['agent_attempts']==2 and previous['api_spend_usd'] is None
+    if not diagnostic:
+        assert json.loads((trial.ROOT/'.github/trials/direct-harbor/launch.json').read_text())['paid_execution_enabled'] is True
+    for variant in (('current',) if diagnostic else ('current','absent')):
         output=public/variant;output.mkdir()
         native,manifest=trial.stage(root/variant,variant)
         task=native/'pester-002';cfg=toml.load(task/'task.toml')
-        shutil.copyfile(Path(__file__).with_name('refusal_fixture.py'),task/'environment/refusal_fixture.py')
-        with (task/'environment/Dockerfile').open('a') as build:build.write('COPY refusal_fixture.py /opt/refusal_fixture.py\n')
-        cfg['artifacts'].append('/tmp/provider-observation.json')
+        if diagnostic:
+            shutil.copyfile(Path(__file__).with_name('refusal_fixture.py'),task/'environment/refusal_fixture.py')
+            with (task/'environment/Dockerfile').open('a') as build:build.write('COPY refusal_fixture.py /opt/refusal_fixture.py\n')
+            cfg['artifacts'].append('/tmp/provider-observation.json')
         cfg['agent']['timeout_sec']=600
         cfg['environment'].update(network_mode='allowlist',allowed_hosts=['api.openai.com'])
         compose=task/'environment/docker-compose.yaml'
@@ -117,9 +120,9 @@ def prepare(root, diagnostic=False):
     mem_limit: 256m
     cpus: 0.5
 ''')
-        compose.write_text(compose.read_text().replace('    user: "1000:1000"', '    user: "1000:1000"\n    network_mode: none'))
+        if diagnostic:compose.write_text(compose.read_text().replace('    user: "1000:1000"', '    user: "1000:1000"\n    network_mode: none'))
         trial.write(output/'preparation.json',{'stage':'building_pinned_image','paid_inference_permitted':False})
-        for folder,tag in [('environment','direct-harbor-agent:'+variant)]:
+        for folder,tag in ([('environment','direct-harbor-agent:'+variant)] + ([] if diagnostic else [('tests','direct-harbor-verifier:live')])):
             subprocess.run(['docker','build','--progress=plain','-t',tag,str(task/folder)],check=True,timeout=600)
             (cfg['environment'] if folder=='environment' else cfg['verifier']['environment'])['docker_image']=tag
         (task/'task.toml').write_text(toml.dumps(cfg))
@@ -139,7 +142,7 @@ def prepare(root, diagnostic=False):
         trial.write(root/(variant+'-task.json'),{'path':str(task)})
         print('External preflight passed: '+variant,flush=True)
     assert {k:v for k,v in expected_files('current').items() if not k.startswith(TARGET+'/')}==expected_files('absent')
-    trial.write(public/'preflight.json',{'passed':True,'commit':os.environ.get('GITHUB_SHA'),'paid_inference_permitted':False,'network_mode':'none','remote_tools_disabled':True})
+    trial.write(public/'preflight.json',{'passed':True,'commit':os.environ.get('GITHUB_SHA'),'paid_inference_permitted':not diagnostic,'network_mode':'none' if diagnostic else 'allowlist','remote_tools_disabled':True})
 
 def usage_and_activation(native_dir):
     totals=None;activation=set();completion=False;calls=0
@@ -158,9 +161,10 @@ def usage_and_activation(native_dir):
             if event.get('type')=='event_msg' and payload.get('type') in ('task_complete','turn_complete'):completion=True
     return {'total_usage':totals,'skill_file_access_attempts':sorted(activation),'tool_calls':calls,'completion_event':completion}
 
-def can_schedule(previous):
+def can_schedule(previous, accept_unknown_cost=False):
+    if previous.get('execution_completed',previous.get('usage_complete')) is not True:return False
     cost=previous.get('usage_estimate_usd')
-    return previous.get('usage_complete') is True and cost is not None and cost+1.32<4
+    return accept_unknown_cost if cost is None else cost+1.32<4
 
 def diagnostic(root, mode):
     from harbor.models.task.task import Task
@@ -206,6 +210,62 @@ def diagnostic(root, mode):
         print(json.dumps(record),flush=True)
     return 0 if record['launch_succeeded'] else 1
 
+def live_attempt(root,variant):
+    from harbor.models.task.task import Task
+    from diagnostics import sanitized_exception, sanitize
+    launch=json.loads((trial.ROOT/'.github/trials/direct-harbor/launch.json').read_text())
+    assert launch['paid_execution_enabled'] is True and launch['paid_attempts_used']==2
+    assert launch['accept_unknown_cost_for_testing'] is True
+    assert not os.environ.get('TRIAL_DIAGNOSTIC') and not os.environ.get('TRIAL_PROVIDER_PROBE')
+    assert os.environ.get('OPENAI_API_KEY') and variant in ('current','absent')
+    assert json.loads((root/'public/preflight.json').read_text())['passed']
+    output=root/'public'/variant
+    assert not (output/'attempt.json').exists(), 'No implicit retry'
+    if variant=='absent':
+        first=json.loads((root/'public/current/attempt.json').read_text())
+        assert first['result_extraction_succeeded'] and can_schedule(first,accept_unknown_cost=launch['accept_unknown_cost_for_testing']), 'Execution incomplete or operational reserve reached'
+    task=Path(json.loads((root/(variant+'-task.json')).read_text())['path'])
+    manifest=json.loads((output/'manifest.json').read_text());assert Task(task).checksum==manifest['task_checksum']
+    record={'attempt':3 if variant=='current' else 4,'variant':variant,'reserved':True,'rollout_present':False,
+            'result_extraction_succeeded':False,'execution_completed':False,'usage_estimate_usd':None,
+            'projection':[],'commit':os.environ.get('GITHUB_SHA')}
+    trial.write(output/'attempt.json',record)
+    cfg={'job_name':variant,'jobs_dir':str(root/'jobs'),'n_attempts':1,'n_concurrent_trials':1,
+        'retry':{'max_retries':0},'environment':{'type':'docker','delete':True},
+        'agents':[{'import_path':'pinned_codex:PinnedCodex','model_name':MODEL,'extra_allowed_hosts':['api.openai.com'],
+          'kwargs':{'version':'0.155.1','reasoning_effort':'medium','web_search':'disabled','config':config()}}],
+        'tasks':[{'path':str(task)}]}
+    trial.write(root/(variant+'-job.json'),cfg)
+    env=os.environ.copy();env.update(PYTHONPATH=str(Path(__file__).parent),TRIAL_VARIANT=variant,TRIAL_PUBLIC_DIR=str(output))
+    started=time.monotonic()
+    try:
+        with (root/(variant+'-private.log')).open('w') as log:
+            completed=subprocess.run(['harbor','run','--config',str(root/(variant+'-job.json'))],env=env,stdout=log,stderr=subprocess.STDOUT,timeout=1000)
+        record['harbor_returncode']=completed.returncode
+        row=next(r for r in trial.project(root/'jobs',{}) if r['native_result'].startswith('jobs/'+variant+'/'))
+        native=root/Path(row['native_result']).parent
+        row['exceptions']=[sanitized_exception(e) for e in row['exceptions']]
+        row.pop('expected',None);row.pop('matches',None);record['projection']=[row]
+        details=usage_and_activation(native);record['usage_and_activation']=details
+        record['rollout_present']=bool(list((native/'agent').glob('**/rollout-*.jsonl')))
+        record['execution_completed']=details['completion_event'] and row['failure_cause'] is None
+        record['usage_complete']=record['execution_completed'] and details['total_usage'] is not None
+        if details['total_usage']:
+            usage=details['total_usage'];record['usage_estimate_usd']=trial.conservative_usage_cost({'input_including_cache':usage.get('input_tokens'),'cached_input':usage.get('cached_input_tokens'),'output':usage.get('output_tokens')})
+        artifact=native/'artifacts/workspace/output/Subject.Tests.ps1'
+        if artifact.is_file():record['submitted_artifact']={'bytes':artifact.stat().st_size,'sha256':hashlib.sha256(artifact.read_bytes()).hexdigest()}
+        assert Task(task).checksum==manifest['task_checksum'], 'Frozen task changed'
+        remaining=subprocess.check_output(['docker','ps','--all','--filter','label=com.docker.compose.service=main','--filter','ancestor=direct-harbor-agent:'+variant,'--quiet'],text=True).strip()
+        record['agent_container_removed']=not remaining
+        assert not remaining, 'Agent container disposal incomplete'
+        record['result_extraction_succeeded']=True
+    except Exception as exc:
+        record['extraction_exception']={'type':type(exc).__name__,'message':sanitize(str(exc),(os.environ.get('OPENAI_API_KEY',''),))}
+    finally:
+        record['duration_seconds']=round(time.monotonic()-started,3);trial.write(output/'attempt.json',record)
+        print(json.dumps({k:record.get(k) for k in ('attempt','variant','rollout_present','execution_completed','result_extraction_succeeded','usage_estimate_usd')}),flush=True)
+    return 0 if record['result_extraction_succeeded'] and record['execution_completed'] else 1
+
 if __name__=='__main__':
     mode=sys.argv[1];root=Path(sys.argv[2]).resolve()
     if mode=='diagnostic-prepare':
@@ -215,4 +275,6 @@ if __name__=='__main__':
             trial.write(root/'public/preparation-failure.json',{'type':type(exc).__name__,'message':sanitize(str(exc)),'paid_inference_permitted':False})
             raise
     elif mode=='diagnostic':raise SystemExit(diagnostic(root,sys.argv[3]))
+    elif mode=='prepare':prepare(root)
+    elif mode in ('current','absent'):raise SystemExit(live_attempt(root,mode))
     else:raise ValueError('Paid execution disabled; only credential-free diagnostics are allowed')
