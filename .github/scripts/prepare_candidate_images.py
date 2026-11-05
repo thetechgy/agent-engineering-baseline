@@ -33,6 +33,10 @@ RUNTIME_COMMAND = (
 RUNTIMES = {"candidate": {"skillevaluator": "0.7.2", "harbor": "0.24.0"},
             "retained": {"skillevaluator": "0.3.0", "harbor": "0.13.2"}}
 
+BUILD_ATTEMPT_SECONDS = 300
+INTEGRITY_ERRORS = ("digest mismatch", "hash sum mismatch", "gpg error", "not signed",
+                    "signature", "certificate verification")
+
 GH_RUNTIME_COMMAND = "/usr/bin/node --version"
 
 
@@ -64,12 +68,20 @@ def staged_task(root, suite="pester", arm=None, shard=None, runtime="candidate")
 def transient_snapshot_failure(message):
     # Require the observed fatal APT fetch failure, rather than an earlier
     # warning followed by an integrity/signature failure elsewhere in build.
-    integrity = ("digest mismatch", "hash sum mismatch", "gpg error", "not signed",
-                 "signature", "certificate verification")
     return ("Docker compose command failed" in message and "exit code: 100" in message
-            and not any(value in message.lower() for value in integrity)
+            and not any(value in message.lower() for value in INTEGRITY_ERRORS)
             and any("Failed to fetch" in line and "snapshot.debian.org" in line
                     and re.search(r"\b(?:503|504)\b", line) for line in message.splitlines()))
+
+
+def retryable_build_timeout(entry):
+    commands = entry.get("commands", [])
+    if entry.get("commands_truncated") or not commands:
+        return False
+    last = commands[-1]
+    return (last.get("kind") == "compose" and last.get("operation") == "build"
+            and last.get("status") == "timed_out"
+            and not last.get("build_progress", {}).get("integrity_failure"))
 
 
 def observed_environment(base, entry):
@@ -87,11 +99,15 @@ def observed_environment(base, entry):
             entry["commands_truncated"] = True
         started = time.monotonic()
         try:
-            result = await invoke()
+            if kind == "compose" and operation == "build":
+                result = await asyncio.wait_for(invoke(), timeout=entry.get("build_timeout_sec", BUILD_ATTEMPT_SECONDS))
+            else:
+                result = await invoke()
             event["status"] = "complete"
             return result
         except BaseException as error:
-            event["status"] = "cancelled" if isinstance(error, asyncio.CancelledError) else "failed"
+            event["status"] = ("timed_out" if isinstance(error, TimeoutError) else
+                               "cancelled" if isinstance(error, asyncio.CancelledError) else "failed")
             if isinstance(error, RuntimeError) and transient_snapshot_failure(str(error)):
                 event["code"] = "debian_snapshot_unavailable"
             raise
@@ -126,6 +142,8 @@ def observed_environment(base, entry):
                             progress["http_" + code] = True
                     if "snapshot.debian.org" in tail:
                         progress["debian_snapshot"] = True
+                    if any(token in tail.lower() for token in INTEGRITY_ERRORS):
+                        progress["integrity_failure"] = True
                     if original is not None:
                         await original(text, stream)
                 arguments.arguments["on_output"] = classify
@@ -182,6 +200,7 @@ async def prepare(root, artifact, suite="pester", arm=None, shard=None, runtime=
                 remaining = deadline - time.monotonic() - 90
                 if remaining <= 0:
                     raise TimeoutError("Preparation budget exhausted")
+                entry["build_timeout_sec"] = min(BUILD_ATTEMPT_SECONDS, remaining)
                 status["phase"] = "secure_start"
                 retain()
                 # Only operator package acquisition uses this separate budget.
@@ -201,9 +220,12 @@ async def prepare(root, artifact, suite="pester", arm=None, shard=None, runtime=
                 message = str(error)
                 transient = (entry["phase"] == "secure_start" and isinstance(error, RuntimeError)
                              and transient_snapshot_failure(message))
-                entry["code"] = "debian_snapshot_unavailable" if transient else "preparation_failed"
+                build_timeout = (entry["phase"] == "secure_start" and isinstance(error, TimeoutError)
+                                 and retryable_build_timeout(entry))
+                entry["code"] = ("debian_snapshot_unavailable" if transient else
+                                 "build_timeout" if build_timeout else "preparation_failed")
                 delay = 30 * 2 ** (number - 1)
-                if transient and number < 3 and deadline - time.monotonic() > 90 + delay:
+                if (transient or build_timeout) and number < 3 and deadline - time.monotonic() > 90 + delay:
                     entry.update(retry=True, retry_delay_sec=delay)
                 else:
                     status.update(status=entry["status"], error=entry["error"])

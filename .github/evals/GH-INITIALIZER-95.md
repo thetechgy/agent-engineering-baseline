@@ -147,7 +147,7 @@ Real-provider readiness and model effectiveness remain unverified in either case
 
 ## Current delivery evidence
 
-All 44 local candidate controls pass with no network attempts. They stage all 48
+All 45 local candidate controls pass with no network attempts. They stage all 48
 gh tasks and exercise native CLI restaging with unchanged checksums in a new
 private directory. Initial hosted controls pass,
 but native run `41902822407` fails its first with-skill task build with fixed
@@ -242,11 +242,13 @@ still requires all 52 outcomes and cannot publish fixture data as benchmarks.
 
 The same explicit image-preparation phase applies to each gh shard through
 `aeb-gh-fixture`, with a separate sealed operator manifest and no agent setup.
-Observed Debian snapshot HTTP 503/504 build failures may retry at most three
-preparation attempts within one shared 1,100-second budget. Each uses a fresh
+Observed fatal Debian snapshot HTTP 503/504 failures and operator build-deadline
+failures may retry at most three preparation attempts within one shared
+1,100-second budget. Each Compose build has a 300-second operator deadline,
+shortened to preserve the remaining cleanup budget. Each uses a fresh
 backend/trial, preserves its failure record and requires complete teardown
-before retry. Manifest, initializer, version, cancellation and other failures
-do not retry. Actual native trials remain single-attempt, retain all limits,
+before retry. Manifest, initializer, version, cancellation, observed integrity
+errors and other failures do not retry. Actual native trials remain single-attempt, retain all limits,
 and require their full case sets. Package preparation cannot produce quality
 measurements. Concurrent cold acquisition is bounded to two gh jobs.
 
@@ -288,7 +290,7 @@ forwarding through the entry point's strict plugin admission and isolated home.
 
 Preparation checkpoints also retain at most 32 command phase records per attempt:
 Docker/Compose operation names from a fixed allowlist, elapsed seconds, and
-complete/failed/cancelled status. Hardened command arguments and execution are
+complete/failed/timed-out/cancelled status. Hardened command arguments and execution are
 delegated unchanged. Raw arguments, environment values and build output never
 enter these records. A preparation deadline records the interrupted operation;
 it remains an infrastructure failure and does not admit a native measurement.
@@ -296,8 +298,8 @@ it remains an infrastructure failure and does not admit a native measurement.
 Where the candidate owning API supports redacted build streaming, preparation
 classifies only fixed build-stage names, Debian snapshot presence and HTTP
 503/504 observations. The callback chains any existing output callback, never
-retains raw output, and does not change retry admission. The retained owning
-API keeps its original collector. These observations diagnose infrastructure;
+retains raw output. Observed integrity failures block deadline retry. The
+retained owning API keeps its original collector. These observations diagnose infrastructure;
 they cannot make an incomplete build or native cohort successful.
 
 Validation runs CI contract tests and native/static quality in separate bounded
@@ -306,3 +308,15 @@ existing native, scanner, collection and publication step, and receives a fresh
 clean checkout with the same owning tools. Contract commands are unchanged. A
 clean-checkout check also runs after the contract job. This separates phase
 deadlines without changing native task execution limits or publication admission.
+
+The retryable build deadline is enforced only around the hardened Compose build
+operation. It does not retry outer cancellation, container startup, broker
+initialization, runtime validation or teardown failures. Candidate streaming
+retains an integrity-failure flag and blocks a deadline retry if it observed one.
+Retained builds keep their original output collector; completed integrity errors
+still fail without retry. Every new attempt uses the original pinned inputs and unchanged signature/hash
+checks. Native task build and execution limits are unchanged.
+
+The split CI-contract job adds a third uv reference in `validate.yml`; dependency
+freshness now requires exactly three matching pins there. Versions, dependency
+owners and every other freshness selector are unchanged.

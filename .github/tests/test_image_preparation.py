@@ -178,3 +178,48 @@ class ImagePreparationTests(unittest.TestCase):
                          {'stage': 'package_install', 'debian_snapshot': True, 'http_503': True})
         self.assertNotIn('PRIVATE', json.dumps(entry))
         self.assertNotIn('snapshot.debian.org', json.dumps(entry))
+
+    def test_build_deadline_retries_only_after_complete_cleanup_and_never_after_integrity_failure(self):
+        p = self.preparation
+        for fault in ('none', 'cleanup', 'integrity'):
+            with self.subTest(fault=fault):
+                events, instances = [], []
+                class Hardened:
+                    def __init__(self, **kwargs):
+                        self.number = len(instances) + 1
+                        instances.append(self)
+                    async def start(self, force_build):
+                        events.append(('start', self.number))
+                        await self._run_docker_compose_command(['build'])
+                    async def _run_docker_compose_command(self, command, on_output=None):
+                        if self.number == 1:
+                            if fault == 'integrity':
+                                await on_output('Hash Sum mismatch PRIVATE_DATA', 'stdout')
+                            await asyncio.Future()
+                    async def stop(self, delete):
+                        self.assert_delete = delete
+                        events.append(('stop', self.number))
+                        if fault == 'cleanup':
+                            raise OSError('controlled teardown failure')
+                    async def exec(self, command, **kwargs):
+                        return SimpleNamespace(return_code=0, stdout='7.6.9\n6.2.0\n')
+                    async def setup(self):
+                        raise AssertionError('Preparation must never enter agent setup')
+                artifact = self.output / (fault + '.json')
+                with patch.object(p, 'staged_task', return_value=self.task), \
+                        patch.object(p, 'SkillEvaluatorSecureDockerEnvironment', Hardened), \
+                        patch.object(p, 'BUILD_ATTEMPT_SECONDS', 0.02), \
+                        patch.object(p.asyncio, 'sleep', new_callable=AsyncMock), \
+                        patch.object(p.subprocess, 'check_output', return_value=''):
+                    if fault == 'none':
+                        result = asyncio.run(p.prepare(self.output, artifact, runtime=RUNTIME))
+                        self.assertEqual(result['status'], 'prepared')
+                        self.assertEqual(events, [('start', 1), ('stop', 1), ('start', 2), ('stop', 2)])
+                        self.assertEqual(result['attempts'][0]['code'], 'build_timeout')
+                        self.assertEqual(result['attempts'][0]['commands'][0]['status'], 'timed_out')
+                    else:
+                        with self.assertRaises((TimeoutError, OSError)):
+                            asyncio.run(p.prepare(self.output, artifact, runtime=RUNTIME))
+                        self.assertEqual(len(instances), 1)
+                        self.assertEqual(json.loads(artifact.read_text())['status'], 'infrastructure_error')
+                self.assertNotIn('PRIVATE_DATA', artifact.read_text())
