@@ -71,9 +71,14 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
       - name: Probe native Codex sandbox without credentials
+        id: sandbox
         if: always()
         timeout-minutes: 2
         run: python -u .github/trials/direct-harbor/check_sandbox.py "$RUNNER_TEMP/recovery-sandbox"
+      - name: Probe built-in Landlock compatibility without credentials
+        if: always() && steps.sandbox.outcome == 'failure'
+        timeout-minutes: 2
+        run: python -u .github/trials/direct-harbor/check_sandbox.py "$RUNNER_TEMP/recovery-sandbox/legacy-landlock" legacy-landlock
       - name: Checkpoint sandbox evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

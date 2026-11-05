@@ -4,6 +4,7 @@ import html
 import importlib.metadata
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -40,6 +41,18 @@ def stage(root, variant="current"):
         shutil.copytree(deployed, env / 'skills')
         if variant == 'absent':
             shutil.rmtree(env / 'skills' / pilot.NAME)
+        # Transport-only correction: retain signed snapshot selection and hashes.
+        # apt --no-download then refuses any missing/changed selected package.
+        for context in (env, task / 'tests'):
+            shutil.copyfile(Path(__file__).with_name('prefetch-apt.py'), context / 'build/prefetch-apt.py')
+            dockerfile = context / 'Dockerfile'
+            text = dockerfile.read_text()
+            install = re.search(r'apt-get install -y --no-install-recommends [^&]+', text).group().strip()
+            plan = install.replace('apt-get install', 'apt-get --print-uris -o Acquire::ForceHash=sha256 install')
+            text = text.replace(install, plan + ' > /tmp/apt-uris && python3 /tmp/prefetch-apt.py && '
+                                + install.replace('apt-get install', 'apt-get --no-download install'))
+            first, rest = text.split('\n', 1)
+            dockerfile.write_text(first + '\nCOPY build/prefetch-apt.py /tmp/prefetch-apt.py\n' + rest)
         shutil.copytree(ROOT / '.codex', env / 'codex')
         shutil.copyfile(ROOT / 'AGENTS.md', env / 'AGENTS.md')
         # Copy the deployed content and supporting files, never .apm sources,
@@ -47,7 +60,7 @@ def stage(root, variant="current"):
         with (env / 'Dockerfile').open('a') as f:
             f.write('COPY input/ /workspace/input/\nCOPY skills/ /workspace/.agents/skills/\n'
                     'COPY AGENTS.md /workspace/AGENTS.md\nCOPY codex/ /workspace/.codex/\n'
-                    'RUN mkdir -p /outside /home/agent/.codex && chown agent:agent /outside /home/agent/.codex\n'
+                    'RUN mkdir -p /outside /home/agent/.codex /installed-agent/codex-home && chown agent:agent /outside /home/agent/.codex /installed-agent/codex-home && chmod 700 /installed-agent/codex-home\n'
                     'RUN curl -fsSL https://github.com/openai/codex/releases/download/rust-v0.155.1/codex-x86_64-unknown-linux-musl.tar.gz -o /tmp/codex.tgz && '
                     "echo 'a0ef8b2debc3bf747e07b1a039354de31300ac0dcc2276498ba281470b5d9115  /tmp/codex.tgz' | sha256sum -c - && "
                     'tar -xzf /tmp/codex.tgz -C /usr/local/bin && mv /usr/local/bin/codex-x86_64-unknown-linux-musl /usr/local/bin/codex && rm /tmp/codex.tgz && codex --version\n'
@@ -108,6 +121,21 @@ def project(jobs, expected):
             'native_result': result_path.relative_to(jobs.parent).as_posix(),
         })
     return observations
+
+
+def conservative_usage_cost(tokens):
+    """Operational estimate, not provider billing or an enforced dollar cap.
+
+    Charge ALL input (including cached input) at $10/M and output at $30/M:
+    long-context prices plus the input cache-write premium. Cache observations
+    remain intact; absence of usage is never substituted with a measured zero.
+    """
+    total, cached, output = (tokens.get(k) for k in ('input_including_cache', 'cached_input', 'output'))
+    if any(type(v) is not int or v < 0 for v in (total, output)):
+        return None
+    if cached is not None and (type(cached) is not int or not 0 <= cached <= total):
+        return None
+    return (total * 10 + output * 30) / 1_000_000
 
 
 def validate_control(rows, expected, before, after, returncode):

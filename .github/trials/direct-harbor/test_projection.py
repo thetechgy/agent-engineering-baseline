@@ -1,6 +1,8 @@
 """Use actual pinned Harbor result semantics, including handled step exceptions."""
 from pathlib import Path
 import tempfile
+import json
+from unittest.mock import patch, Mock
 import unittest
 from harbor.models.trial.result import TrialResult, ExceptionInfo
 from harbor.models.trial.config import TrialConfig, TaskConfig
@@ -58,6 +60,35 @@ class ProjectionTests(unittest.TestCase):
     def test_postrun_mutation_cannot_pass(self):
         with self.assertRaisesRegex(RuntimeError,'Task input mutation'):
             trial.validate_control([self.project()], 'fixture','before','after',0)
+
+    def test_postrun_failure_returns_nonzero_and_persists_false(self):
+        row = self.project()
+        row['task'] = 'pester-002-good'
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            task = root / 'native/pester-002'
+            (task / 'environment').mkdir(parents=True)
+            (task / 'tests').mkdir()
+            (task / 'task.toml').write_text('[environment]\n[verifier.environment]\n')
+            output = root / 'output'
+            with patch.object(trial, 'stage', return_value=(task.parent, {})), \
+                 patch.object(trial.importlib.metadata, 'version', return_value='0.25.0'), \
+                 patch.object(trial.subprocess, 'run', return_value=Mock(returncode=0)), \
+                 patch.object(trial.subprocess, 'check_output', return_value='sha256:fixture'), \
+                 patch('harbor.models.task.task.Task', return_value=Mock(checksum='same')), \
+                 patch.object(trial, 'project', return_value=[row]), \
+                 patch.object(trial, 'validate_control', side_effect=RuntimeError('Task input mutation')), \
+                 patch.dict(trial.os.environ, {}, clear=True), patch('builtins.print'):
+                self.assertEqual(trial.control('good', output), 1)
+            saved = json.loads((output / 'control.json').read_text())
+            self.assertFalse(saved['qualification_passed'])
+            self.assertEqual(saved['integration_failure']['message'], 'Task input mutation')
+            self.assertTrue(saved['calibration'][0]['measured'])
+
+    def test_cost_estimate_includes_cached_input_and_missing_is_unknown(self):
+        self.assertEqual(trial.conservative_usage_cost({'input_including_cache':60000,'cached_input':50000,'output':4000}), .72)
+        self.assertIsNone(trial.conservative_usage_cost({'input_including_cache':None,'output':4000}))
+        self.assertIsNone(trial.conservative_usage_cost({'input_including_cache':10,'cached_input':20,'output':0}))
 
     def test_sandbox_extension_changes_only_launch_policy(self):
         command='codex exec --dangerously-bypass-approvals-and-sandbox --json -- public-task'
