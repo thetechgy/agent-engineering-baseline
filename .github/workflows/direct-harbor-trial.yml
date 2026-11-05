@@ -9,10 +9,10 @@ concurrency:
   group: direct-harbor-trial
   cancel-in-progress: false
 jobs:
-  trial:
+  recovery:
     if: github.run_attempt == 1
     runs-on: ubuntu-24.04
-    timeout-minutes: 50
+    timeout-minutes: 40
     env:
       PYTHONDONTWRITEBYTECODE: '1'
       PYTHON_DOTENV_DISABLED: '1'
@@ -20,24 +20,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Read fixed trial phase
-        id: phase
-        run: |
-          python3 - <<'PY'
-          import json, os
-          from pathlib import Path
-          phase = json.loads(Path('.github/trials/direct-harbor/launch.json').read_text())['phase']
-          assert phase in ('calibration', 'stopped')
-          with open(os.environ['GITHUB_OUTPUT'], 'a') as stream:
-              stream.write('value=' + phase + '\n')
-          PY
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
-        if: steps.phase.outputs.value == 'calibration'
         with:
           version: '0.13.7'
           enable-cache: false
-      - name: Acquire released Harbor with its owning lock
-        if: steps.phase.outputs.value == 'calibration'
+      - name: Acquire unchanged Harbor release and lock
         run: |
           set -euo pipefail
           source="$RUNNER_TEMP/harbor"
@@ -49,35 +36,55 @@ jobs:
           uv pip check --python "$source/.venv/bin/python"
           git -C "$source" diff --exit-code
           echo "$source/.venv/bin" >> "$GITHUB_PATH"
+      - name: Verify projection and launch extension
+        run: python -m unittest discover -s .github/trials/direct-harbor -p test_projection.py -q
       - name: Install reviewed Compose
-        if: steps.phase.outputs.value == 'calibration'
         run: bash .github/scripts/setup-compose.sh
-      - name: Qualify existing graders through direct Harbor
-        if: steps.phase.outputs.value == 'calibration'
-        run: python .github/trials/direct-harbor/run.py "$RUNNER_TEMP/direct-harbor"
-      - name: Validate and package stopped-trial report
-        if: steps.phase.outputs.value == 'stopped'
-        run: |
-          python3 -m unittest discover -s .github/trials/direct-harbor -p test_projection.py -q
-          cp -R .github/trials/direct-harbor/results "$RUNNER_TEMP/direct-harbor"
-      - name: Retain single report and credential-free diagnostics
+      - name: Known-good native control
+        id: good
+        timeout-minutes: 25
+        run: python -u .github/trials/direct-harbor/run.py good "$RUNNER_TEMP/recovery-good"
+      - name: Checkpoint known-good evidence before next control
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: direct-harbor-trial
+          name: recovery-good
           path: |
-            ${{ runner.temp }}/direct-harbor/report.html
-            ${{ runner.temp }}/direct-harbor/results.json
-            ${{ runner.temp }}/direct-harbor/manifest.json
-            ${{ runner.temp }}/direct-harbor/workflow-evidence.txt
-            ${{ runner.temp }}/direct-harbor/jobs/**/exception.txt
-            ${{ runner.temp }}/direct-harbor/jobs/**/result.json
-            ${{ runner.temp }}/direct-harbor/jobs/**/skill_evaluator_reward.json
+            ${{ runner.temp }}/recovery-good/control.json
+            ${{ runner.temp }}/recovery-good/manifest.json
+            ${{ runner.temp }}/recovery-good/jobs/
+          retention-days: 30
+          if-no-files-found: error
+      - name: Known-weak native control
+        if: steps.good.outcome == 'success'
+        timeout-minutes: 10
+        run: python -u .github/trials/direct-harbor/run.py weak "$RUNNER_TEMP/recovery-weak"
+      - name: Checkpoint known-weak evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: recovery-weak
+          path: |
+            ${{ runner.temp }}/recovery-weak/control.json
+            ${{ runner.temp }}/recovery-weak/manifest.json
+            ${{ runner.temp }}/recovery-weak/jobs/
+          retention-days: 30
+          if-no-files-found: warn
+      - name: Probe native Codex sandbox without credentials
+        if: always()
+        timeout-minutes: 2
+        run: python -u .github/trials/direct-harbor/check_sandbox.py "$RUNNER_TEMP/recovery-sandbox"
+      - name: Checkpoint sandbox evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: recovery-sandbox
+          path: ${{ runner.temp }}/recovery-sandbox/
           retention-days: 30
           if-no-files-found: error
       - name: Verify checkout integrity
         if: always()
         run: git diff --exit-code
       - name: Remove test-only Compose
-        if: always() && steps.phase.outputs.value == 'calibration'
+        if: always()
         run: bash .github/scripts/setup-compose.sh cleanup

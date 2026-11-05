@@ -47,6 +47,10 @@ def stage(root, variant="current"):
         with (env / 'Dockerfile').open('a') as f:
             f.write('COPY input/ /workspace/input/\nCOPY skills/ /workspace/.agents/skills/\n'
                     'COPY AGENTS.md /workspace/AGENTS.md\nCOPY codex/ /workspace/.codex/\n'
+                    'RUN mkdir -p /outside /home/agent/.codex && chown agent:agent /outside /home/agent/.codex\n'
+                    'RUN curl -fsSL https://github.com/openai/codex/releases/download/rust-v0.155.1/codex-x86_64-unknown-linux-musl.tar.gz -o /tmp/codex.tgz && '
+                    "echo 'a0ef8b2debc3bf747e07b1a039354de31300ac0dcc2276498ba281470b5d9115  /tmp/codex.tgz' | sha256sum -c - && "
+                    'tar -xzf /tmp/codex.tgz -C /usr/local/bin && mv /usr/local/bin/codex-x86_64-unknown-linux-musl /usr/local/bin/codex && rm /tmp/codex.tgz && codex --version\n'
                     'RUN chmod -R a-w /workspace/input /workspace/.agents /workspace/AGENTS.md\n')
         config = task / 'task.toml'
         config.write_text(config.read_text().replace('skills_dir = "/workspace/skills"',
@@ -64,50 +68,57 @@ def stage(root, variant="current"):
                     'grader_files': pilot.manifest(ROOT / pilot.OVERLAY)}
 
 
-def fixtures():
-    support = ROOT / pilot.OVERLAY / 'support'
-    rows = []
-    for case, styles in {'pester-002': ('classic', 'data'),
-                         'pester-004': ('discovery', 'inline', 'compact'),
-                         'pester-005': ('good',)}.items():
-        suffix = '.json' if case == 'pester-005' else '.Tests.ps1'
-        for style in (*styles, 'wrong' if case == 'pester-005' else 'weak'):
-            rows.append((case, style, (support / 'qualification' / case / (style + suffix)).read_bytes(),
-                         'failed' if style in ('weak', 'wrong') else 'passed'))
-    rows += [('pester-002', 'empty', b'# no tests', 'invalid'),
-             ('pester-002', 'malformed', b'\xff', 'invalid'),
-             ('pester-002', 'unsupported', b"[System.IO.File]::ReadAllText('/tests/entry.json')", 'unsupported'),
-             ('pester-002', 'forged-reward', b"Set-Content /logs/verifier/reward.txt 1", 'unsupported'),
-             ('pester-002', 'missing', None, 'infrastructure_error'),
-             ('pester-004', 'broken-discovery',
-              (support / 'cases/pester-004/input/Existing.Tests.ps1').read_bytes(), 'invalid'),
-             ('pester-002', 'timeout', b"Describe 'bounded' { It 'CPU' { foreach ($a in 1..100000) { foreach ($b in 1..100000) { $value=1 } } } }", 'timeout')]
-    return rows
-
-
 def project(jobs, expected):
+    """Keep Harbor failure policy separate from independent verifier observations."""
+    from harbor.models.trial.result import TrialResult
     observations = []
     for result_path in sorted(jobs.glob('*/*/result.json')):
-        native = json.loads(result_path.read_text())
-        name = native['task_name']
+        native = TrialResult.model_validate_json(result_path.read_text())
+        name = native.task_name
         sidecar = result_path.parent / 'verifier/skill_evaluator_reward.json'
-        outcome = {'classification': 'verifier_failure', 'code': 'missing_evidence'}
+        outcome = {'classification': 'missing_evidence', 'code': 'missing_sidecar'}
         if sidecar.is_file():
-            carrier = json.loads(sidecar.read_text())
-            observed = carrier.get('details', {}).get('outcome', {})
-            classification = observed.get('classification')
-            if classification in ('invalid', 'unsupported', 'timeout', 'infrastructure_error'):
-                outcome = observed
-            elif classification in ('passed', 'failed') and carrier.get('evaluation_status') == 'complete':
-                outcome = observed
-        error = native.get('exception_info')
-        if error:
-            outcome = {'classification': 'infrastructure_error',
-                       'code': error.get('exception_type', 'unknown')}
-        observations.append({'task': name, 'expected': expected[name], 'outcome': outcome,
-                             'matches': outcome['classification'] == expected[name],
-                             'tokens': None, 'cost_usd': None})
+            try:
+                carrier = json.loads(sidecar.read_text())
+                observed = carrier.get('details', {}).get('outcome', {})
+                classification = observed.get('classification')
+                if classification in ('invalid', 'unsupported', 'timeout', 'infrastructure_error'):
+                    outcome = observed
+                elif classification in ('passed', 'failed') and carrier.get('evaluation_status') == 'complete':
+                    outcome = observed
+                else:
+                    outcome = {'classification': 'missing_evidence', 'code': 'incomplete_sidecar'}
+            except (ValueError, AttributeError):
+                outcome = {'classification': 'missing_evidence', 'code': 'malformed_sidecar'}
+        n_input, n_cache, n_output, cost = native.compute_token_cost_totals()
+        measured = native.reward_valid and outcome['classification'] in ('passed', 'failed')
+        exceptions = ([native.exception_info] if native.exception_info else []) + [
+            step.exception_info for step in native.step_results or [] if step.exception_info]
+        observations.append({
+            'task': name, 'expected': expected.get(name), 'outcome': outcome,
+            'failure_cause': native.failure_cause.value if native.failure_cause else None,
+            'exceptions': [e.model_dump(mode='json') for e in exceptions],
+            'harbor_reward_valid': native.reward_valid, 'measured': measured,
+            'matches': (outcome['classification'] == expected.get(name)) if measured else False,
+            'native_rewards': native.verifier_result.rewards if native.verifier_result else None,
+            'tokens': {'input_including_cache': n_input, 'cached_input': n_cache, 'output': n_output},
+            'cost_usd': cost,
+            'timing': {key: getattr(native, key).model_dump(mode='json') if getattr(native, key) else None
+                       for key in ('agent_execution', 'verifier')},
+            'native_result': result_path.relative_to(jobs.parent).as_posix(),
+        })
     return observations
+
+
+def validate_control(rows, expected, before, after, returncode):
+    """Success is assigned only after all post-run invariants have passed."""
+    if before != after:
+        raise RuntimeError('Task input mutation')
+    if returncode or len(rows) != 1 or rows[0]['task'] != expected:
+        raise RuntimeError('Incomplete control execution')
+    row = rows[0]
+    if not row['matches'] or row['failure_cause'] is not None:
+        raise RuntimeError('Unexpected control outcome')
 
 
 def report(output, data):
@@ -145,77 +156,70 @@ def report(output, data):
     (output / 'report.html').write_text(text)
 
 
-def main():
-    output = Path(sys.argv[1]).resolve()
-    output.mkdir(parents=True, exist_ok=False)
+def control(kind, root):
+    """One existing fixture per process; Actions checkpoints it before the next."""
+    from harbor.models.task.task import Task
+    root = Path(root).resolve()
+    root.mkdir(parents=True, exist_ok=False)
     if any(os.environ.get(k) for k in ('OPENAI_API_KEY', 'CODEX_API_KEY', 'ANTHROPIC_API_KEY')):
-        raise RuntimeError('Calibration must be credential-free')
+        raise RuntimeError('Controls must be credential-free')
     if importlib.metadata.version('harbor') != '0.25.0':
         raise RuntimeError('Harbor version mismatch')
-    data = {'source_commit': SOURCE, 'trial_commit': os.environ.get('GITHUB_SHA'),
-            'workflow': os.environ.get('GITHUB_SERVER_URL', 'https://github.com') + '/' +
-                        os.environ.get('GITHUB_REPOSITORY', 'thetechgy/agent-engineering-baseline') + '/actions/runs/' + os.environ.get('GITHUB_RUN_ID', ''),
-            'harbor': {'version': '0.25.0', 'commit': HARBOR, 'patches': []},
-            'runtime': {'codex': '0.155.1', 'model': 'gpt-5.6-sol', 'effort': 'medium',
-                        'powershell': '7.6.9', 'pester': '6.2.0', 'build': reports.GH_TASK_BUILD},
-            'agent_attempts': 0, 'api_spend_usd': 0, 'api_spend_basis': 'No API credentials or inference in calibration',
-            'decision': 'Qualification incomplete; retain existing approach pending evidence.',
-            'contamination': 'Public fixtures and skills may appear in model training. Author inspected case descriptions and qualification mapping, including reserved-case grading details; confirmation is not blinded.',
-            'maintenance': 'Reuses Pester stage, grader, runtime installer and protected Runner unchanged. Adds one trial staging/projection script and one branch-only workflow. No framework fork.',
-            'live_gate': 'Must qualify grading, preserve sandbox and bound cost before live launch. Do not interpret numeric transport rewards without terminal classification.'}
+    name = 'pester-002-' + kind
+    expected = {name: 'passed' if kind == 'good' else 'failed'}
+    data = {'control': kind, 'qualification_passed': False, 'calibration': [],
+            'commit': os.environ.get('GITHUB_SHA'), 'workflow_run': os.environ.get('GITHUB_RUN_ID')}
+    write(root / 'control.json', data)
     start = time.monotonic()
-    expected = {}
     try:
-        native, manifest = stage(output / 'staging')
-        tasks = output / 'tasks'
-        expected = {}
-        for case, style, content, status in fixtures():
-            name = case + '-' + style
-            target = tasks / name
-            shutil.copytree(native / case, target)
-            output_name = 'summary.json' if case == 'pester-005' else 'Subject.Tests.ps1'
-            solution = target / 'solution'
-            solution.mkdir()
-            command = '#!/bin/sh\nset -eu\ntest "$(id -u)" = 1000\ntest ! -e /tests\ntest ! -e /var/run/docker.sock\n'
-            if content is not None:
-                (solution / 'candidate').write_bytes(content)
-                command += 'cp /solution/candidate /workspace/output/' + output_name + '\n'
-            (solution / 'solve.sh').write_text(command)
-            expected[name] = status
-        from harbor.models.task.task import Task
-        manifest['tasks'] = {t.name: Task(t).checksum for t in sorted(tasks.iterdir())}
-        write(output / 'manifest.json', manifest)
-        config = {'job_name': 'calibration', 'jobs_dir': str(output / 'jobs'), 'n_attempts': 1,
-                  'n_concurrent_trials': 2, 'retry': {'max_retries': 0},
+        native, manifest = stage(root / 'staging')
+        task = root / 'tasks' / name
+        shutil.copytree(native / 'pester-002', task)
+        solution = task / 'solution'; solution.mkdir()
+        style = 'classic' if kind == 'good' else 'weak'
+        shutil.copyfile(ROOT / pilot.OVERLAY / 'support/qualification/pester-002' / (style + '.Tests.ps1'), solution / 'candidate')
+        (solution / 'solve.sh').write_text('#!/bin/sh\nset -eu\ntest "$(id -u)" = 1000\ntest ! -e /tests\ntest ! -e /var/run/docker.sock\ncp /solution/candidate /workspace/output/Subject.Tests.ps1\n')
+        # Build explicitly to expose Docker progress even if the runner shuts down.
+        # Both controls use the same contexts, so the second uses local layers.
+        for folder, image in [('environment', 'direct-harbor-agent:recovery'), ('tests', 'direct-harbor-verifier:recovery')]:
+            subprocess.run(['docker', 'build', '--progress=plain', '-t', image, str(task / folder)], check=True, timeout=600)
+            section = '[environment]' if folder == 'environment' else '[verifier.environment]'
+            config = task / 'task.toml'
+            config.write_text(config.read_text().replace(section, section + '\ndocker_image = "' + image + '"'))
+        manifest['task_checksum'] = Task(task).checksum
+        manifest['images'] = {image: subprocess.check_output(['docker', 'image', 'inspect', '--format', '{{.Id}}', image], text=True).strip()
+                              for image in ('direct-harbor-agent:recovery', 'direct-harbor-verifier:recovery')}
+        write(root / 'manifest.json', manifest)
+        config = {'job_name': kind, 'jobs_dir': str(root / 'jobs'), 'n_attempts': 1,
+                  'n_concurrent_trials': 1, 'retry': {'max_retries': 0},
                   'environment': {'type': 'docker', 'delete': True},
-                  'agents': [{'name': 'oracle'}], 'datasets': [{'path': str(tasks)}]}
-        write(output / 'job.json', config)
-        # Credential-free native output goes directly to the retained Actions log.
-        # A killed runner must not take the only copy of diagnostics with it.
-        run = subprocess.run(['harbor', 'run', '--config', str(output / 'job.json')],
-                             stderr=subprocess.STDOUT, timeout=2400)
+                  'agents': [{'name': 'oracle'}], 'tasks': [{'path': str(task)}]}
+        write(root / 'job.json', config)
+        run = subprocess.run(['harbor', 'run', '--config', str(root / 'job.json')], stderr=subprocess.STDOUT, timeout=480)
         data['returncode'] = run.returncode
-        data['calibration'] = project(output / 'jobs', expected)
-        data['expected_controls'] = len(expected)
-        data['qualification_passed'] = (len(data['calibration']) == len(expected) and
-                                        {r['task'] for r in data['calibration']} == set(expected) and
-                                        all(r['matches'] for r in data['calibration']) and run.returncode == 0)
-        if data['qualification_passed']:
-            data['decision'] = 'Grading fixtures qualified under direct Harbor; live execution remains gated.'
-        else:
-            data['decision'] = 'Direct Harbor qualification failed. Retain the existing approach; no paid comparison is justified yet.'
-        if manifest['tasks'] != {t.name: Task(t).checksum for t in sorted(tasks.iterdir())}:
-            raise RuntimeError('Task input mutation')
+        data['calibration'] = project(root / 'jobs', expected)
+        validate_control(data['calibration'], name, manifest['task_checksum'], Task(task).checksum, run.returncode)
+        data['qualification_passed'] = True
     except Exception as exc:
-        data['failure'] = type(exc).__name__
+        data['qualification_passed'] = False
+        data['integration_failure'] = {'type': type(exc).__name__, 'message': str(exc)[:1200]}
     finally:
-        if 'calibration' not in data and expected:
-            data['calibration'] = project(output / 'jobs', expected)
-            data['expected_controls'] = len(expected)
+        if not data['calibration']:
+            try:
+                data['calibration'] = project(root / 'jobs', expected)
+            except Exception as exc:
+                data['projection_failure'] = type(exc).__name__
+                data['qualification_passed'] = False
         data['duration_seconds'] = round(time.monotonic() - start, 2)
-        report(output, data)
-    return 0 if data.get('qualification_passed') else 1
+        write(root / 'control.json', data)
+        print(json.dumps(data), flush=True)
+    return 0 if data['qualification_passed'] else 1
 
 
 if __name__ == '__main__':
-    raise SystemExit(main())
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('control', choices=('good', 'weak'))
+    parser.add_argument('output')
+    args = parser.parse_args()
+    raise SystemExit(control(args.control, args.output))
