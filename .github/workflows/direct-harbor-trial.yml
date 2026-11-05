@@ -24,26 +24,22 @@ jobs:
           python3 - <<'PYCODE'
           import json, os
           phase = json.load(open('.github/trials/direct-harbor/launch.json'))['phase']
-          assert phase in ('diagnostic-reproduce', 'diagnostic-verify', 'report', 'live-pair')
+          assert phase in ('handoff', 'report')
           launch = json.load(open('.github/trials/direct-harbor/launch.json'))
-          if phase == 'live-pair':
-              assert launch['paid_execution_enabled'] is True and launch['paid_attempts_used'] == 2
-              assert launch['credential_free_checks_passed'] is True
-          else:
-              assert launch['scheduling_stopped'] is True
+          assert launch['scheduling_stopped'] is True and launch['paid_execution_enabled'] is False
+          assert launch['paid_attempts_used'] == 4
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
               print('phase=' + phase, file=output)
           PYCODE
-  diagnostic:
+  handoff:
     needs: phase
-    if: startsWith(needs.phase.outputs.phase, 'diagnostic-')
+    if: needs.phase.outputs.phase == 'handoff'
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 40
     env:
       PYTHONDONTWRITEBYTECODE: '1'
       PYTHON_DOTENV_DISABLED: '1'
       LITELLM_LOCAL_MODEL_COST_MAP: 'True'
-      TRIAL_DIAGNOSTIC: '1'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -65,130 +61,94 @@ jobs:
           git -C "$source" diff --exit-code
           echo "$source/.venv/bin" >> "$GITHUB_PATH"
       - name: Verify projection and launch extension
-        run: python -m unittest discover -s .github/trials/direct-harbor -p test_projection.py -q
+        run: python -m unittest discover -s .github/trials/direct-harbor -p 'test_*.py' -q
       - name: Install reviewed Compose
         run: bash .github/scripts/setup-compose.sh
-      - name: Prepare pinned offline agent
-        id: prepare
+      - name: Prepare historical handoff environment without credentials
+        id: handoff_prepare
+        timeout-minutes: 15
+        run: python -u .github/trials/direct-harbor/handoff.py prepare "$RUNNER_TEMP/handoff"
+      - name: Deterministic good submission
+        if: always() && steps.handoff_prepare.outcome == 'success'
+        timeout-minutes: 8
+        run: python -u .github/trials/direct-harbor/handoff.py good "$RUNNER_TEMP/handoff"
+      - name: Checkpoint good metadata before continuing
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: handoff-good
+          path: ${{ runner.temp }}/handoff/public/good/
+          retention-days: 30
+      - name: Deterministic missing submission
+        if: always() && steps.handoff_prepare.outcome == 'success'
+        timeout-minutes: 8
+        run: python -u .github/trials/direct-harbor/handoff.py missing "$RUNNER_TEMP/handoff"
+      - name: Checkpoint missing metadata before continuing
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: handoff-missing
+          path: ${{ runner.temp }}/handoff/public/missing/
+          retention-days: 30
+      - name: Deterministic rejected submission
+        if: always() && steps.handoff_prepare.outcome == 'success'
+        timeout-minutes: 8
+        run: python -u .github/trials/direct-harbor/handoff.py rejected "$RUNNER_TEMP/handoff"
+      - name: Checkpoint rejected metadata before continuing
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: handoff-rejected
+          path: ${{ runner.temp }}/handoff/public/rejected/
+          retention-days: 30
+      - name: Prepare upgraded offline Codex environment
+        id: runtime_prepare
+        if: always()
         timeout-minutes: 12
-        run: python -u .github/trials/direct-harbor/live.py diagnostic-prepare "$RUNNER_TEMP/launch-diagnostic"
-      - name: Checkpoint offline boundary before launch
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: diagnostic-preflight
-          path: ${{ runner.temp }}/launch-diagnostic/public/
-          retention-days: 30
-      - name: Reproduce historical stock launch - expected nonzero
+        env:
+          TRIAL_DIAGNOSTIC: '1'
+        run: python -u .github/trials/direct-harbor/live.py diagnostic-prepare "$RUNNER_TEMP/runtime-check"
+      - name: Actual upgraded CLI http refusal probe - nonzero expected
+        if: always() && steps.runtime_prepare.outcome == 'success'
         timeout-minutes: 4
-        run: python -u .github/trials/direct-harbor/live.py diagnostic "$RUNNER_TEMP/launch-diagnostic" historical
-      - name: Checkpoint historical failure before corrected probes
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: diagnostic-historical
-          path: ${{ runner.temp }}/launch-diagnostic/public/historical/
-          retention-days: 30
-      - name: Corrected provider HTTP refusal - expected nonzero
-        if: always() && steps.prepare.outcome == 'success'
-        timeout-minutes: 4
-        run: python -u .github/trials/direct-harbor/live.py diagnostic "$RUNNER_TEMP/launch-diagnostic" http
-      - name: Corrected provider silent stream - expected nonzero
-        if: always() && steps.prepare.outcome == 'success'
-        timeout-minutes: 4
-        run: python -u .github/trials/direct-harbor/live.py diagnostic "$RUNNER_TEMP/launch-diagnostic" idle
-      - name: Verify observed startup, no retries and 60-second stream timeout
-        if: always() && steps.prepare.outcome == 'success'
-        run: python .github/trials/direct-harbor/verify_diagnostic.py "$RUNNER_TEMP/launch-diagnostic"
-      - name: Recover sanitized launch diagnostics including failure
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: launch-diagnostics
-          path: ${{ runner.temp }}/launch-diagnostic/public/
-          retention-days: 30
-          if-no-files-found: error
-      - name: Verify checkout integrity
-        if: always()
-        run: git diff --exit-code
-      - name: Remove test-only Compose
-        if: always()
-        run: bash .github/scripts/setup-compose.sh cleanup
-  live:
-    needs: phase
-    if: needs.phase.outputs.phase == 'live-pair'
-    environment: skill-benchmark
-    runs-on: ubuntu-24.04
-    timeout-minutes: 65
-    env:
-      PYTHONDONTWRITEBYTECODE: '1'
-      PYTHON_DOTENV_DISABLED: '1'
-      LITELLM_LOCAL_MODEL_COST_MAP: 'True'
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
-        with:
-          version: '0.13.7'
-          enable-cache: false
-      - name: Acquire unchanged Harbor release and lock
+        env:
+          TRIAL_DIAGNOSTIC: '1'
         run: |
-          set -euo pipefail
-          source="$RUNNER_TEMP/harbor"
-          git init --quiet "$source"
-          git -C "$source" fetch --quiet --depth=1 https://github.com/harbor-framework/harbor.git fdba28fc411e47e8765420a1a063b4918fce3def
-          git -C "$source" checkout --quiet --detach FETCH_HEAD
-          test "$(git -C "$source" rev-parse HEAD)" = fdba28fc411e47e8765420a1a063b4918fce3def
-          uv sync --project "$source" --python 3.13.15 --managed-python --frozen --no-dev
-          uv pip check --python "$source/.venv/bin/python"
-          git -C "$source" diff --exit-code
-          echo "$source/.venv/bin" >> "$GITHUB_PATH"
-      - name: Verify projection and launch extension
-        run: python -m unittest discover -s .github/trials/direct-harbor -p test_projection.py -q
-      - name: Install reviewed Compose
-        run: bash .github/scripts/setup-compose.sh
-      - name: Prepare both arms and check external boundary without credentials
-        id: preflight
-        timeout-minutes: 25
-        run: python -u .github/trials/direct-harbor/live.py prepare "$RUNNER_TEMP/live-pair"
-      - name: Checkpoint external boundary before inference
+          set +e
+          python -u .github/trials/direct-harbor/live.py diagnostic "$RUNNER_TEMP/runtime-check" http
+          status=$?
+          test "$status" -eq 1
+      - name: Actual upgraded CLI idle refusal probe - nonzero expected
+        if: always() && steps.runtime_prepare.outcome == 'success'
+        timeout-minutes: 4
+        env:
+          TRIAL_DIAGNOSTIC: '1'
+        run: |
+          set +e
+          python -u .github/trials/direct-harbor/live.py diagnostic "$RUNNER_TEMP/runtime-check" idle
+          status=$?
+          test "$status" -eq 1
+      - name: Verify effective runtime behavior
+        if: always() && steps.runtime_prepare.outcome == 'success'
+        run: python .github/trials/direct-harbor/verify_diagnostic.py "$RUNNER_TEMP/runtime-check"
+      - name: Consolidate the single report including incomplete evidence
+        if: always()
+        run: python .github/trials/direct-harbor/update_handoff_report.py "$RUNNER_TEMP/handoff" "$RUNNER_TEMP/runtime-check" "$RUNNER_TEMP/trial-report"
+      - name: Checkpoint runtime metadata
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: live-preflight
-          path: ${{ runner.temp }}/live-pair/public/
+          name: runtime-check
+          path: ${{ runner.temp }}/runtime-check/public/
+          retention-days: 30
+      - name: Downloadable single report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: direct-harbor-trial-report
+          path: ${{ runner.temp }}/trial-report/
           retention-days: 30
           if-no-files-found: error
-      - name: Current skill - one actual Codex attempt
-        id: current
-        if: steps.preflight.outcome == 'success'
-        timeout-minutes: 18
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: python -u .github/trials/direct-harbor/live.py current "$RUNNER_TEMP/live-pair"
-      - name: Checkpoint current attempt before absent arm
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: live-current
-          path: ${{ runner.temp }}/live-pair/public/current/
-          retention-days: 30
-          if-no-files-found: warn
-      - name: Absent skill - one actual Codex attempt
-        if: steps.current.outcome == 'success'
-        timeout-minutes: 18
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: python -u .github/trials/direct-harbor/live.py absent "$RUNNER_TEMP/live-pair"
-      - name: Checkpoint absent attempt
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: live-absent
-          path: ${{ runner.temp }}/live-pair/public/absent/
-          retention-days: 30
-          if-no-files-found: warn
       - name: Verify checkout integrity
         if: always()
         run: git diff --exit-code

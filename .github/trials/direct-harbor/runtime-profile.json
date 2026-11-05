@@ -1,0 +1,52 @@
+{
+  "id": "codex-0.166.0_gpt-6.1-sol_high",
+  "codex_version": "0.166.0",
+  "model": "gpt-6.1-sol",
+  "reasoning_effort": "high",
+  "release": "https://github.com/openai/codex/releases/tag/rust-v0.166.0",
+  "verified_at": "2026-11-05",
+  "archive_url": "https://github.com/openai/codex/releases/download/rust-v0.166.0/codex-package-x86_64-unknown-linux-musl.tar.gz",
+  "archive_sha256": "1d44b28bc4ac9937d7d3532264baa68a507ce364956a0d4ebb856f331cdee254",
+  "package_layout": {
+    "entrypoint": "bin/codex",
+    "execServer": "bin/codex-exec-server",
+    "resourcesDir": "codex-resources",
+    "pathDir": "codex-path"
+  },
+  "historical_profile": {
+    "codex_version": "0.155.1",
+    "model": "gpt-5.6-sol",
+    "reasoning_effort": "medium",
+    "executed_commit": "c5a430ac15b4fac0eb6a29b1ac46ad4e7e06ca3e"
+  },
+  "paid_execution_enabled": false,
+  "pricing": {
+    "source": "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+    "pricing_source": "https://developers.openai.com/api/docs/pricing",
+    "per_million_standard_usd": {
+      "uncached_input": 2,
+      "cached_input": 0.1,
+      "cache_write_30m": 2.5,
+      "cache_write_12h": 5,
+      "output": 10
+    },
+    "long_context_threshold": 272000,
+    "long_context_input_multiplier": 2,
+    "long_context_output_multiplier": 1.5,
+    "conservative_all_input_per_million": 10,
+    "conservative_output_per_million": 15,
+    "note": "No charge observed. Conservative future estimate applies long-context 12h cache-write rate to all input. Per-call categories/context needed for standard estimates; missing categories stay unknown.",
+    "harbor_native_pricing_entry_available": false
+  },
+  "reviewed_source_sha256": {
+    "codex-rs__protocol__src__models.rs": "753498bc730ba21ded710d9aa2b2f9163e6bbe4eaa18f1c25d998c36138a54f7",
+    "codex-rs__protocol__src__protocol.rs": "35d4a01a35c1771e7ae24d3c55964c2d6ecfe880a91539c1045f75cac0c8e356",
+    "codex-rs__core__config.schema.json": "211bec2282459fcd70e4905af948721177b6ec7a03e0df84cd8b7c131006a6ca",
+    "scripts__install__install.sh": "44ac252c1b9a68c02bdf0de8e1c6cbfde36fc1afa8684624962eae7d4c461e70",
+    "scripts__build_codex_package.py": "7a5b7ba90604944831dd25ad89ccba46b4c40f44ec6aeec67a6d058a0c837ad2",
+    "codex-rs__core__src__rollout_budget.rs": "223a573c35088799879688d0aea54f86bdd4420017b95861596a073ac3678380",
+    "codex-rs__config__src__config_toml.rs": "e8f6b45b73eaca1a89be9524bb02bf069e9715e3aeba270e87285d941405c877",
+    "codex-rs__model-provider-info__src__lib.rs": "ea822c232e47fc88251cf20060da91ca0c1195b2d2853c5b3fa4bfcdd4cc0184"
+  },
+  "budget_semantics": "0.166.0 accepts enforce_limit=true. Source charges provider budget units when available, otherwise weighted non-cached input plus output. Token budget is not a dollar meter; enforcement under inference remains untested."
+}

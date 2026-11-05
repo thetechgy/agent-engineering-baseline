@@ -26,7 +26,7 @@ def write(path, value):
     path.write_text(json.dumps(value, indent=2) + '\n')
 
 
-def stage(root, variant="current"):
+def stage(root, variant="current", *, historical_runtime=False):
     if variant not in ("current", "absent"):
         raise ValueError("Only existing skill variants may be staged before discovery")
     bundle = pilot.stage(ROOT, root / 'bundle')
@@ -64,16 +64,37 @@ def stage(root, variant="current"):
         # Copy the deployed content and supporting files, never .apm sources,
         # evaluation overlays, repository metadata, home caches or plugins.
         with (env / 'Dockerfile').open('a') as f:
-            f.write('COPY input/ /workspace/input/\nCOPY skills/ /workspace/.agents/skills/\n'
+            image_tail = ('COPY input/ /workspace/input/\nCOPY skills/ /workspace/.agents/skills/\n'
                     'COPY AGENTS.md /workspace/AGENTS.md\nCOPY codex/ /workspace/.codex/\n'
                     'RUN mkdir -p /outside /home/agent/.codex /installed-agent/codex-home && chown agent:agent /outside /home/agent/.codex /installed-agent/codex-home && chmod 700 /installed-agent/codex-home\n'
                     'RUN curl -fsSL https://github.com/openai/codex/releases/download/rust-v0.155.1/codex-x86_64-unknown-linux-musl.tar.gz -o /tmp/codex.tgz && '
                     "echo 'a0ef8b2debc3bf747e07b1a039354de31300ac0dcc2276498ba281470b5d9115  /tmp/codex.tgz' | sha256sum -c - && "
                     'tar -xzf /tmp/codex.tgz -C /usr/local/bin && mv /usr/local/bin/codex-x86_64-unknown-linux-musl /usr/local/bin/codex && rm /tmp/codex.tgz && codex --version\n'
                     'RUN chmod -R a-w /workspace/input /workspace/.agents /workspace/AGENTS.md\n')
+            if not historical_runtime:
+                profile=json.loads(Path(__file__).with_name('runtime-profile.json').read_text())
+                begin=image_tail.index('RUN curl -fsSL ')
+                finish=image_tail.index('RUN chmod -R a-w ',begin)
+                image_tail=image_tail[:begin]+('RUN curl -fsSL '+profile['archive_url']+' -o /tmp/codex.tgz && '
+                    "echo '"+profile['archive_sha256']+"  /tmp/codex.tgz' | sha256sum -c - && "
+                    'mkdir -p /opt/codex && tar -xzf /tmp/codex.tgz -C /opt/codex && '
+                    'ln -s /opt/codex/bin/codex /usr/local/bin/codex && rm /tmp/codex.tgz && codex --version\n')+image_tail[finish:]
+            f.write(image_tail)
+        # Supported collection hook: metadata only, before normal Harbor collection.
+        shutil.copyfile(Path(__file__).with_name('artifact_state.py'),env/'artifact_state.py')
+        shutil.copyfile(Path(__file__).with_name('artifact_state.py'),task/'tests/artifact_state.py')
+        with (env/'Dockerfile').open('a') as f:
+            f.write('COPY artifact_state.py /opt/trial-artifact-state.py\nRUN chmod 555 /opt/trial-artifact-state.py\n')
+        with (task/'tests/Dockerfile').open('a') as f:
+            f.write('COPY artifact_state.py /tests/artifact_state.py\n')
+        entry=task/'tests/test.sh'
+        entry.write_text(entry.read_text().replace('exec python3 -I /tests/verifier/grader.py',
+            'python3 -I /tests/artifact_state.py /workspace/output/Subject.Tests.ps1 /logs/verifier/artifact-transfer.json\nexec python3 -I /tests/verifier/grader.py'))
         config = task / 'task.toml'
         config.write_text(config.read_text().replace('skills_dir = "/workspace/skills"',
                                                     'skills_dir = "/runtime/skills"'))
+        with config.open('a') as f:
+            f.write('\n[[verifier.collect]]\ncommand = "python3 /opt/trial-artifact-state.py /workspace/output/Subject.Tests.ps1 /logs/artifacts/agent-artifact.json"\nuser = "agent"\ntimeout_sec = 15\n')
         # Supported task-local Compose override: the existing verifier checks
         # that only loopback is present, not merely a blocked egress proxy.
         (task / 'tests/docker-compose.yaml').write_text(
@@ -131,7 +152,7 @@ def project(jobs, expected):
     return observations
 
 
-def conservative_usage_cost(tokens):
+def conservative_usage_cost(tokens, input_rate=20, output_rate=30):
     """Operational estimate, not provider billing or an enforced dollar cap.
 
     Charge ALL input (including cached input) at $20/M and output at $30/M:
@@ -143,7 +164,7 @@ def conservative_usage_cost(tokens):
         return None
     if cached is not None and (type(cached) is not int or not 0 <= cached <= total):
         return None
-    return (total * 20 + output * 30) / 1_000_000
+    return (total * input_rate + output * output_rate) / 1_000_000
 
 
 def validate_control(rows, expected, before, after, returncode):
@@ -169,6 +190,15 @@ def report(output, data):
     text = '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">\n<title>Direct Harbor recovery trial</title><style>body{font:16px system-ui;max-width:1100px;margin:3rem auto;padding:0 1rem;color:#172033}table{border-collapse:collapse;width:100%;margin:1rem 0}th,td{border:1px solid #cbd5e1;padding:.5rem;text-align:left;vertical-align:top}pre{white-space:pre-wrap;overflow-wrap:anywhere}h1,h2{color:#174f78}a{color:#145f91}</style>\n<h1>Direct Harbor recovery trial</h1><p>Bounded experimental trial. Production evaluation and Pages remain unchanged.</p>\n<p><a href="results.json" download>Download machine-readable results</a> · <a href="manifest.json">Frozen input manifests</a> · <a href="workflow-evidence.txt">Workflow evidence excerpts</a></p>'
     text += '<h2>Decision</h2><p>' + esc(data['decision']) + '</p>'
     text += '<p>' + esc(data['summary']) + '</p>'
+    if data.get('handoff_pass'):
+        handoff=data['handoff_pass']
+        text += '<h2>Credential-free artifact handoff and new runtime</h2><p>'+esc(handoff['summary'])+'</p>'
+        text += '<p><a href="handoff-evidence.json">Native handoff metadata and runtime compatibility evidence</a></p>'
+        text += table(('Deterministic control','Expected','Observed handoff','Verifier','Control matched'),
+            [(kind,{'good':'Reference pass and 2/2 defects','missing':'Missing submission','rejected':'Transferred then invalid UTF-8'}[kind],
+              (row or {}).get('classification',{}).get('classification'),(row or {}).get('native_result',{}).get('outcome'),(row or {}).get('passed')) for kind,row in handoff['controls'].items()])
+        text += '<p>Future profile: '+esc(handoff['profile'])+'. Model inference in this pass: none.</p>'
+        for paragraph in handoff['notes']:text += '<p>'+esc(paragraph)+'</p>'
     if data.get('launch_repair'):
         repair=data['launch_repair']
         text += '<h2>Credential-free launch repair</h2><p>'+esc(repair['summary'])+'</p>'

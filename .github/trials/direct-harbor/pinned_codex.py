@@ -5,7 +5,7 @@ import re
 import toml
 from harbor.agents.installed.codex import Codex
 
-async def check_pin(environment):
+async def check_pin(environment, version=None):
     # Docker merges stderr into stdout; Codex can print a startup warning before
     # its version. Match the explicit version line, never the first output line.
     result = await environment.exec(command='/usr/local/bin/codex --version', user='agent', timeout_sec=30)
@@ -14,7 +14,7 @@ async def check_pin(environment):
     return {'stdout':sanitize(result.stdout),'stderr':sanitize(result.stderr),'cwd':'/workspace',
             'command':'/usr/local/bin/codex --version', 'user':'agent',
             'returncode':result.return_code, 'version':versions[0] if len(versions)==1 else None,
-            'matched':result.return_code==0 and versions==['0.155.1']}
+            'matched':result.return_code==0 and versions==[version or json.loads(__import__('pathlib').Path(__file__).with_name('runtime-profile.json').read_text())['codex_version']]}
 
 class PinnedCodex(Codex):
     """Stock run/exec path; only pinned installation and unprivileged ownership."""
@@ -39,6 +39,11 @@ class PinnedCodex(Codex):
         (Path(os.environ['TRIAL_PUBLIC_DIR']) / 'installation.json').write_text(json.dumps(check, indent=2) + '\n')
         if not check['matched']:
             raise RuntimeError('Preinstalled Codex version mismatch')
+        package=await environment.exec(command='test -x /opt/codex/bin/codex-code-mode-host && test -x /opt/codex/bin/codex-exec-server && test -x /opt/codex/codex-path/rg && test -d /opt/codex/codex-resources && cat /opt/codex/codex-package.json',user='agent',timeout_sec=30)
+        if package.return_code:raise RuntimeError('Pinned package layout incomplete')
+        check['package']=json.loads(package.stdout)
+        assert check['package']['version']=='0.166.0' and check['package']['entrypoint']=='bin/codex'
+        (Path(os.environ['TRIAL_PUBLIC_DIR'])/'installation.json').write_text(json.dumps(check,indent=2)+'\n')
         probe=os.environ.get('TRIAL_PROVIDER_PROBE')
         if os.environ.get('TRIAL_DIAGNOSTIC')=='1' and probe in ('http','idle'):
             result=await environment.exec(command='nohup python3 /opt/refusal_fixture.py '+probe+' </dev/null >/tmp/refusal-fixture.log 2>&1 &',user='agent')
@@ -62,3 +67,8 @@ class PinnedCodex(Codex):
             raise ValueError('Unexpected Codex configuration destination')
         await self.exec_as_agent(environment,
             'umask 077; printf %s ' + shlex.quote(toml.dumps(config)) + ' > ' + shlex.quote(remote_path))
+        loaded=await self.exec_as_agent(environment,
+            'CODEX_HOME=/installed-agent/codex-home codex app-server --strict-config --print-startup-config')
+        parsed=next(json.loads(line) for line in loaded.stdout.splitlines() if line.startswith('{') and 'appServerVersion' in line)
+        observed={'version':parsed['appServerVersion'],'allowed_login_methods':parsed['configRequirements']['requirements']['allowedLoginMethods'],'exit_status':loaded.return_code}
+        (Path(os.environ['TRIAL_PUBLIC_DIR'])/'configuration-load.json').write_text(json.dumps(observed,indent=2)+'\n')

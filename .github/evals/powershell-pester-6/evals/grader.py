@@ -28,27 +28,52 @@ class IsolationError(RuntimeError):
     """A fixed verifier prerequisite failed before candidate execution."""
 
 
+class ArtifactError(ValueError):
+    def __init__(self, reason):
+        super().__init__('artifact')
+        self.reason = reason
+
+
 def regular_bytes(path, limit=LIMIT):
     """Do not follow candidate links, including linked parent directories."""
     path = Path(path)
     for parent in (path, *path.parents):
         info = parent.lstat()
         if stat.S_ISLNK(info.st_mode):
-            raise ValueError('artifact')
+            raise ArtifactError('symlink')
     info = path.lstat()
-    if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_size > limit:
-        raise ValueError('artifact')
+    if not stat.S_ISREG(info.st_mode):
+        raise ArtifactError('file_type')
+    if info.st_nlink != 1:
+        raise ArtifactError('hardlink')
+    if info.st_size > limit:
+        raise ArtifactError('size')
     fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     try:
         info = os.fstat(fd)
         if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_size > limit:
-            raise ValueError('artifact')
+            raise ArtifactError('changed_file')
         data = os.read(fd, limit + 1)
         if len(data) > limit:
-            raise ValueError('artifact')
+            raise ArtifactError('size')
         return data
     finally:
         os.close(fd)
+
+
+def read_candidate(path):
+    try:
+        candidate = regular_bytes(path)
+        candidate.decode('utf-8')
+    except FileNotFoundError:
+        return None, 'missing'
+    except ArtifactError as error:
+        return None, error.reason
+    except UnicodeError:
+        return None, 'invalid_utf8'
+    except ValueError:
+        return None, 'other_invalid'
+    return candidate, None
 
 
 def worker_limits():
@@ -207,11 +232,9 @@ def grade(tests):
     output_name = profile.get('output', 'Subject.Tests.ps1')
     if output_name not in ('Subject.Tests.ps1', 'summary.json'):
         raise ValueError('profile')
-    try:
-        candidate = regular_bytes(Path('/workspace/output') / output_name)
-        candidate.decode('utf-8')
-    except (FileNotFoundError, ValueError, UnicodeError):
-        return 'invalid', {'code': 'artifact'}
+    candidate, reason = read_candidate(Path('/workspace/output') / output_name)
+    if reason:
+        return 'invalid', {'code': 'artifact', 'admission_reason': reason}
     if profile.get('kind') == 'summary':
         expected = json.loads(regular_bytes(tests / 'case/reference/summary.json'))
         return assess_summary(candidate, expected)

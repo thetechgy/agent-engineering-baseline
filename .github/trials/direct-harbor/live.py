@@ -4,22 +4,25 @@ from pathlib import Path
 import toml
 import run as trial
 TARGET = 'powershell-pester-6'
-MODEL = 'gpt-5.6-sol'
+PROFILE=json.loads(Path(__file__).with_name('runtime-profile.json').read_text())
+MODEL=PROFILE['model']
+EFFORT=PROFILE['reasoning_effort']
+VERSION=PROFILE['codex_version']
 
 def config():
     value = toml.load(trial.ROOT / '.codex/config.toml')
     for server in value.get('mcp_servers', {}).values():
         server['enabled'] = False
-    value.update(web_search='disabled', service_tier='default', model_reasoning_effort='medium',
+    value.update(web_search='disabled', service_tier='default', model_reasoning_effort=EFFORT,
         forced_login_method='api', projects={'/workspace': {'trust_level': 'trusted'}},
         model_provider='trial_openai',
         model_providers={'trial_openai': {'name':'OpenAI', 'base_url':'https://api.openai.com/v1',
             'wire_api':'responses', 'requires_openai_auth':True, 'request_max_retries':0,
             'stream_max_retries':0, 'stream_idle_timeout_ms':60000,
             'supports_websockets':True,'supports_standalone_web_search':True,
-            'http_headers':{'version':'0.155.1'},
+            'http_headers':{'version':VERSION},
             'env_http_headers':{'OpenAI-Organization':'OPENAI_ORGANIZATION','OpenAI-Project':'OPENAI_PROJECT'}}},
-        features={'rollout_budget': {'enabled':True, 'limit_tokens':30000,
+        features={'rollout_budget': {'enabled':True, 'limit_tokens':30000, 'enforce_limit':True,
             'reminder_at_remaining_tokens':[5000], 'sampling_token_weight':5.0, 'prefill_token_weight':1.0}})
     return value
 
@@ -27,7 +30,7 @@ def expected_files(variant):
     values = trial.pilot.manifest(trial.ROOT / '.agents/skills')
     return {k:v for k,v in values.items() if variant=='current' or not k.startswith(TARGET+'/')}
 
-async def runtime_check(environment, variant, output):
+async def runtime_check(environment, variant, output, expected_version=None):
     offline=os.environ.get('TRIAL_DIAGNOSTIC')=='1'
     program = r'''
 import hashlib,json,os,pathlib,urllib.request,urllib.error
@@ -65,7 +68,8 @@ print(json.dumps({'skills':manifest('/workspace/.agents/skills'),'instructions_s
         raise RuntimeError('External preflight failed: '+(result.stderr or '')[-1200:])
     observed=json.loads(result.stdout)
     from pinned_codex import check_pin
-    pin=await check_pin(environment)
+    output.mkdir(parents=True,exist_ok=True)
+    pin=await check_pin(environment,version=expected_version)
     trial.write(output/'installation.json',pin)
     assert pin['matched'], 'Pinned unprivileged Codex version check failed'
     assert observed['skills']==expected_files(variant), 'Deployed skill manifest mismatch'
@@ -98,7 +102,7 @@ def prepare(root, diagnostic=False):
     root.mkdir(parents=True,exist_ok=False)
     public=root/'public';public.mkdir()
     previous=json.loads((trial.ROOT/'.github/trials/direct-harbor/results/results.json').read_text())
-    assert previous['grading_smoke_qualified'] and previous['agent_attempts']==2 and previous['api_spend_usd'] is None
+    assert previous['grading_smoke_qualified'] and previous['agent_attempts']==4 and previous['api_spend_usd'] is None
     if not diagnostic:
         assert json.loads((trial.ROOT/'.github/trials/direct-harbor/launch.json').read_text())['paid_execution_enabled'] is True
     for variant in (('current',) if diagnostic else ('current','absent')):
@@ -107,7 +111,8 @@ def prepare(root, diagnostic=False):
         task=native/'pester-002';cfg=toml.load(task/'task.toml')
         if diagnostic:
             shutil.copyfile(Path(__file__).with_name('refusal_fixture.py'),task/'environment/refusal_fixture.py')
-            with (task/'environment/Dockerfile').open('a') as build:build.write('COPY refusal_fixture.py /opt/refusal_fixture.py\n')
+            shutil.copyfile(task/'instruction.md',task/'environment/task-instruction.txt')
+            with (task/'environment/Dockerfile').open('a') as build:build.write('COPY refusal_fixture.py /opt/refusal_fixture.py\nCOPY task-instruction.txt /opt/trial-task-instruction.txt\n')
             cfg['artifacts'].append('/tmp/provider-observation.json')
         cfg['agent']['timeout_sec']=600
         cfg['environment'].update(network_mode='allowlist',allowed_hosts=['api.openai.com'])
@@ -145,22 +150,34 @@ def prepare(root, diagnostic=False):
     trial.write(public/'preflight.json',{'passed':True,'commit':os.environ.get('GITHUB_SHA'),'paid_inference_permitted':not diagnostic,'network_mode':'none' if diagnostic else 'allowlist','remote_tools_disabled':True})
 
 def usage_and_activation(native_dir):
-    totals=None;activation=set();completion=False;calls=0
+    totals=None;activation=set();completion=False;calls=0;event_types={};tool_names={};outcomes=[];completion_shape=None
     for p in sorted((native_dir/'agent').glob('**/rollout-*.jsonl')):
         for line in p.read_text().splitlines():
             try:event=json.loads(line)
             except ValueError:continue
             payload=event.get('payload',{})
+            event_type=payload.get('type')
+            known={'function_call','custom_tool_call','function_call_output','custom_tool_call_output','exec_command_end','task_complete','turn_complete','token_count'}
+            label=event_type if event_type in known else 'other'
+            event_types[label]=event_types.get(label,0)+1
             if event.get('type')=='event_msg' and payload.get('type')=='token_count':
                 value=(payload.get('info') or {}).get('total_token_usage')
                 if value:totals={k:(value.get(k) if type(value.get(k)) is int and value[k]>=0 else None) for k in ('input_tokens','cached_input_tokens','output_tokens','reasoning_output_tokens','cache_write_input_tokens','total_tokens')}
             if event.get('type')=='response_item' and payload.get('type') in ('function_call','custom_tool_call'):
                 calls+=1
+                name=payload.get('name')
+                safe_name=name if name in ('exec_command','write_stdin','apply_patch','functions.exec','shell','shell_command','read_file','update_plan') else 'other'
+                tool_names[safe_name]=tool_names.get(safe_name,0)+1
                 arguments=payload.get('arguments' if payload['type']=='function_call' else 'input','')
                 for name in expected_files('current'):
                     if name.startswith(TARGET+'/') and name in str(arguments):activation.add(name)
-            if event.get('type')=='event_msg' and payload.get('type') in ('task_complete','turn_complete'):completion=True
-    return {'total_usage':totals,'skill_file_access_attempts':sorted(activation),'tool_calls':calls,'completion_event':completion}
+            if event.get('type')=='event_msg' and event_type=='exec_command_end':
+                outcomes.append({'exit_code':payload.get('exit_code') if type(payload.get('exit_code')) is int else None,'output_retained':False})
+            if event.get('type')=='event_msg' and event_type in ('task_complete','turn_complete'):
+                completion=True
+                message=payload.get('last_agent_message')
+                completion_shape={'message_present':isinstance(message,str),'message_characters':len(message) if isinstance(message,str) else None,'content_retained':False}
+    return {'total_usage':totals,'skill_file_access_attempts':sorted(activation),'tool_calls':calls,'completion_event':completion,'event_type_counts':event_types,'tool_name_counts':tool_names,'exec_outcomes':outcomes[:100],'completion_shape':completion_shape,'evidence_limit':'File-access attempts do not prove successful reads, instruction following or correctness.'}
 
 def can_schedule(previous, accept_unknown_cost=False):
     if previous.get('execution_completed',previous.get('usage_complete')) is not True:return False
@@ -180,7 +197,7 @@ def diagnostic(root, mode):
     cfg={'job_name':mode,'jobs_dir':str(root/'jobs'),'n_attempts':1,'n_concurrent_trials':1,
         'retry':{'max_retries':0},'environment':{'type':'docker','delete':True},'verifier':{'disable':True},
         'agents':[{'import_path':'pinned_codex:PinnedCodex','model_name':MODEL,'extra_allowed_hosts':['api.openai.com'],
-            'kwargs':{'version':'0.155.1','reasoning_effort':'medium','web_search':'disabled','config':settings}}],
+            'kwargs':{'version':VERSION,'reasoning_effort':EFFORT,'web_search':'disabled','config':settings}}],
         'tasks':[{'path':str(task)}]}
     if mode!='historical':cfg['agents'][0]['base_url']='http://127.0.0.1:8765/v1'
     trial.write(root/(mode+'-job.json'),cfg)
@@ -215,6 +232,7 @@ def live_attempt(root,variant):
     from harbor.models.task.task import Task
     from diagnostics import sanitized_exception, sanitize
     launch=json.loads((trial.ROOT/'.github/trials/direct-harbor/launch.json').read_text())
+    raise RuntimeError('Paid scheduling disabled for this credential-free handoff pass')
     assert launch['paid_execution_enabled'] is True and launch['paid_attempts_used']==2
     assert launch['accept_unknown_cost_for_testing'] is True
     assert not os.environ.get('TRIAL_DIAGNOSTIC') and not os.environ.get('TRIAL_PROVIDER_PROBE')
@@ -234,7 +252,7 @@ def live_attempt(root,variant):
     cfg={'job_name':variant,'jobs_dir':str(root/'jobs'),'n_attempts':1,'n_concurrent_trials':1,
         'retry':{'max_retries':0},'environment':{'type':'docker','delete':True},
         'agents':[{'import_path':'pinned_codex:PinnedCodex','model_name':MODEL,'extra_allowed_hosts':['api.openai.com'],
-          'kwargs':{'version':'0.155.1','reasoning_effort':'medium','web_search':'disabled','config':config()}}],
+          'kwargs':{'version':VERSION,'reasoning_effort':EFFORT,'web_search':'disabled','config':config()}}],
         'tasks':[{'path':str(task)}]}
     trial.write(root/(variant+'-job.json'),cfg)
     env=os.environ.copy();env.update(PYTHONPATH=str(Path(__file__).parent),TRIAL_VARIANT=variant,TRIAL_PUBLIC_DIR=str(output))
@@ -247,12 +265,14 @@ def live_attempt(root,variant):
         native=root/Path(row['native_result']).parent
         row['exceptions']=[sanitized_exception(e) for e in row['exceptions']]
         row.pop('expected',None);row.pop('matches',None);record['projection']=[row]
+        from handoff import collect
+        record['handoff']=collect(native,row)
         details=usage_and_activation(native);record['usage_and_activation']=details
         record['rollout_present']=bool(list((native/'agent').glob('**/rollout-*.jsonl')))
         record['execution_completed']=details['completion_event'] and row['failure_cause'] is None
         record['usage_complete']=record['execution_completed'] and details['total_usage'] is not None
         if details['total_usage']:
-            usage=details['total_usage'];record['usage_estimate_usd']=trial.conservative_usage_cost({'input_including_cache':usage.get('input_tokens'),'cached_input':usage.get('cached_input_tokens'),'output':usage.get('output_tokens')})
+            usage=details['total_usage'];record['usage_estimate_usd']=trial.conservative_usage_cost({'input_including_cache':usage.get('input_tokens'),'cached_input':usage.get('cached_input_tokens'),'output':usage.get('output_tokens')},input_rate=PROFILE['pricing']['conservative_all_input_per_million'],output_rate=PROFILE['pricing']['conservative_output_per_million'])
         artifact=native/'artifacts/workspace/output/Subject.Tests.ps1'
         if artifact.is_file():record['submitted_artifact']={'bytes':artifact.stat().st_size,'sha256':hashlib.sha256(artifact.read_bytes()).hexdigest()}
         assert Task(task).checksum==manifest['task_checksum'], 'Frozen task changed'

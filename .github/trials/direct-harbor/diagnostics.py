@@ -61,6 +61,7 @@ class LaunchDiagnostics(logging.Handler):
             stage=('cli_startup' if 'codex exec ' in command else
                    'cleanup' if 'rm -rf' in command or 'cp -R "$CODEX_HOME/sessions"' in command else
                    'authentication_setup' if 'auth.json' in command else
+                   'configuration_load' if '--print-startup-config' in command else
                    'configuration_upload' if 'config.toml' in command else
                    'ownership_check' if 'stat -c' in command else 'directory_setup')
             self.pending={'stage':stage,'command':sanitize(command,self.secrets),

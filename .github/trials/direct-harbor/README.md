@@ -18,7 +18,53 @@ Only reviewed metadata is published; previously rejected raw oracle content is n
 repackaged. Raw agent transcripts, submissions, authentication files and environment
 dumps are excluded from the live artifacts.
 
-## Execution profile
+## Credential-free handoff and runtime pass
+
+This pass starts from `9146314` and never supplies a real API credential or runs
+inference. The workflow has only handoff and report phases, no protected credential
+environment, and no live job. The explicit runtime paid-scheduling guard remains.
+The ledger stays 4/4 recovery slots and 4/36 campaign slots; cumulative spending is
+unknown. Historical estimates are not provider bills.
+
+Three serial deterministic producers use the historical agent image/UID/workspace
+and normal Harbor artifact collection and separate verification. They write a known-good
+fixture, omit output, or write three invalid UTF-8 bytes. The supported `verifier.collect`
+hook observes metadata before collection; the native manifest records download status;
+a protected pre-grader probe records post-upload metadata. Contents are excluded.
+The shared grader adds fixed admission reasons while preserving acceptance criteria,
+`invalid/artifact` classification, numeric rewards and reference/mutant checks.
+
+Historical live artifacts and Actions logs lack the native collection manifest and
+raw rollout. Their `invalid/artifact` cause remains unresolved. New successful controls
+cannot retroactively establish that the historical agent omitted its deliverable.
+A confirmed missing deliverable is now a task-completion failure; correctness/mutation
+metrics remain separate from that denominator and from infrastructure uncertainty.
+
+The selected official stable CLI is 0.166.0, published 2026-10-29 and rechecked on
+2026-11-05. Its canonical musl package SHA256 is
+`1d44b28bc4ac9937d7d3532264baa68a507ce364956a0d4ebb856f331cdee254`.
+The package stays intact under `/opt/codex`, including its code-mode host, executor,
+ripgrep and resources. Harbor stays 0.25.0 and other dependencies remain pinned.
+`runtime-profile.json` selects `gpt-6.1-sol` with `high` reasoning for every future arm.
+This is a new comparison profile, not a skill-only change to historical evaluations.
+
+Runtime probes use sentinel authentication and a non-forwarding loopback refusal
+endpoint inside a network-disabled agent container. They check real CLI startup,
+prompt delivery, API authentication shape, model/effort selection, retries and idle
+timeout; strict native configuration loading covers the budget setting. No successful
+model task or budget exhaustion is claimed. The custom provider alias does not enable
+built-in-only internal metadata, which is not exposed as configuration.
+
+Pinned Harbor/LiteLLM has no price entry for GPT-6.1 Sol. Future native costs remain
+unknown when unavailable; raw usage categories are separate from official-price
+estimates. The profile records current standard rates and a conservative long-context,
+12-hour cache-write reserve calculation. Nothing schedules that future allocation.
+
+The single report records observed controls/runtime checks once CI runs. Local checks
+cover 24 trial tests and seven shared grader tests. Two unrelated shared collector checks
+require SkillEvaluator, which is not installed in the direct-Harbor environment.
+
+## Historical evaluated execution profile
 
 The user explicitly authorizes Harbor's stock unattended Codex launch within the
 external benchmark boundary. Native Codex sandbox failures remain historical evidence
@@ -67,7 +113,7 @@ plugin and cache copies. Reference code, mutants and graders are in the verifier
 not the agent input. Public availability and possible model memorization remain risks;
 no case is genuinely blinded.
 
-Pins remain Harbor 0.25.0 (`fdba28fc411e47e8765420a1a063b4918fce3def`), Codex 0.155.1,
+Historical evaluated pins remain Harbor 0.25.0 (`fdba28fc411e47e8765420a1a063b4918fce3def`), Codex 0.155.1,
 `gpt-5.6-sol`, medium effort, PowerShell 7.6.9 and Pester 6.2.0. The existing image
 and package digests, snapshot and archive hashes remain pinned. No routine upgrade
 is included. The model slug has no immutable published snapshot.

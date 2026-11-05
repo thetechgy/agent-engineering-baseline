@@ -99,7 +99,7 @@ class ProjectionTests(unittest.TestCase):
 class PinTests(unittest.IsolatedAsyncioTestCase):
     async def test_version_warning_does_not_replace_the_exact_pin(self):
         from pinned_codex import check_pin
-        for output,code,matched in [('WARNING: path aliases unavailable\ncodex-cli 0.155.1\n',0,True),('codex-cli 0.155.2\n',0,False),('codex-cli 0.155.1\n',1,False),('warning only',0,False)]:
+        for output,code,matched in [('WARNING: path aliases unavailable\ncodex-cli 0.166.0\n',0,True),('codex-cli 0.155.1\n',0,False),('codex-cli 0.166.0\n',1,False),('warning only',0,False)]:
             env=Mock(exec=AsyncMock(return_value=Mock(stdout=output,return_code=code)))
             self.assertEqual((await check_pin(env))['matched'],matched)
             self.assertEqual(env.exec.call_args.kwargs['user'],'agent')
