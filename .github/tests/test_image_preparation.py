@@ -45,6 +45,7 @@ class ImagePreparationTests(unittest.TestCase):
         env = self.environment()
         with patch.object(p, 'staged_task', return_value=self.task), \
                 patch.object(p, 'SkillEvaluatorSecureDockerEnvironment', return_value=env), \
+                patch.object(p, 'observed_environment', side_effect=lambda base, _entry: base), \
                 patch.object(p.subprocess, 'check_output', return_value=''):
             result = asyncio.run(p.prepare(self.output, self.output / 'status.json', runtime=RUNTIME))
         self.assertEqual(result['runtime'], p.RUNTIMES[RUNTIME])
@@ -71,6 +72,7 @@ class ImagePreparationTests(unittest.TestCase):
         environments = [self.environment(RuntimeError(message)), self.environment(RuntimeError(message)), self.environment()]
         with patch.object(p, 'staged_task', return_value=self.task), \
                 patch.object(p, 'SkillEvaluatorSecureDockerEnvironment', side_effect=environments) as create, \
+                patch.object(p, 'observed_environment', side_effect=lambda base, _entry: base), \
                 patch.object(p.subprocess, 'check_output', return_value=''), \
                 patch.object(p.asyncio, 'sleep', new_callable=AsyncMock) as sleep:
             result = asyncio.run(p.prepare(self.output, self.output / 'status.json', runtime=RUNTIME))
@@ -109,3 +111,48 @@ class ImagePreparationTests(unittest.TestCase):
                 patch.object(p, 'prepare', side_effect=inspect):
             p.main(self.output / 'admission.json', runtime=RUNTIME)
         self.assertEqual(verified, [str(plugin)])
+
+    def test_command_diagnostics_preserve_hardened_dispatch_without_raw_arguments(self):
+        calls = []
+        marker = object()
+        class Hardened:
+            async def _run_docker_compose_command(self, command, *args, **kwargs):
+                calls.append((command, args, kwargs))
+                return marker
+            async def _run_trusted_docker_command(self, command):
+                calls.append(command)
+                return marker
+        entry = {}
+        environment = self.preparation.observed_environment(Hardened, entry)()
+        async def run():
+            self.assertIs(await environment._run_docker_compose_command(['build', 'PRIVATE_PAYLOAD'],
+                False, timeout_sec=9, env_overrides={'PRIVATE_KEY': 'PRIVATE_VALUE'}), marker)
+            self.assertIs(await environment._run_trusted_docker_command(['PRIVATE_COMMAND']), marker)
+        asyncio.run(run())
+        self.assertEqual(calls[0], (['build', 'PRIVATE_PAYLOAD'], (False,),
+            {'timeout_sec': 9, 'env_overrides': {'PRIVATE_KEY': 'PRIVATE_VALUE'}}))
+        self.assertEqual(calls[1], ['PRIVATE_COMMAND'])
+        self.assertEqual([(e['kind'], e['operation'], e['status']) for e in entry['commands']],
+                         [('compose', 'build', 'complete'), ('docker', 'other', 'complete')])
+        self.assertNotIn('PRIVATE', json.dumps(entry))
+        async def overflow():
+            for _ in range(40):
+                await environment._run_trusted_docker_command(['PRIVATE_COMMAND'])
+        asyncio.run(overflow())
+        self.assertEqual(len(entry['commands']), 32)
+        self.assertTrue(entry['commands_truncated'])
+        self.assertNotIn('PRIVATE', json.dumps(entry))
+
+    def test_timed_out_command_retains_phase_and_propagates_cancellation(self):
+        class Hardened:
+            async def _run_docker_compose_command(self, command):
+                await asyncio.Future()
+        entry = {}
+        environment = self.preparation.observed_environment(Hardened, entry)()
+        async def run():
+            with self.assertRaises(TimeoutError):
+                await asyncio.wait_for(environment._run_docker_compose_command(['build']), timeout=0.01)
+        asyncio.run(run())
+        self.assertEqual(entry['commands'][0]['operation'], 'build')
+        self.assertEqual(entry['commands'][0]['status'], 'cancelled')
+        self.assertGreater(entry['commands'][0]['elapsed_sec'], 0)

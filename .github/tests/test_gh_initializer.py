@@ -114,6 +114,7 @@ class InitializerTests(unittest.TestCase):
         environment = SimpleNamespace(start=AsyncMock(), stop=AsyncMock(), setup=AsyncMock(),
             exec=AsyncMock(return_value=SimpleNamespace(return_code=0, stdout="7.6.9\n6.2.0\n")))
         with patch.object(preparation, "staged_task", return_value=task), \
+                patch.object(preparation, "observed_environment", side_effect=lambda base, _entry: base), \
                 patch.object(preparation, "SkillEvaluatorSecureDockerEnvironment", return_value=environment), \
                 patch.object(preparation.subprocess, "check_output", return_value=""):
             observed = asyncio.run(preparation.prepare(root, artifact))
@@ -139,6 +140,7 @@ class InitializerTests(unittest.TestCase):
                     exec=AsyncMock(return_value=SimpleNamespace(return_code=0,
                         stdout="7.6.9\n6.1.0\n" if fault == "version" else "7.6.9\n6.2.0\n")))
                 with patch.object(preparation, "staged_task", return_value=task), \
+                patch.object(preparation, "observed_environment", side_effect=lambda base, _entry: base), \
                         patch.object(preparation, "SkillEvaluatorSecureDockerEnvironment", return_value=environment), \
                         patch.object(preparation.subprocess, "check_output", return_value=""):
                     with self.assertRaises((RuntimeError, TimeoutError, asyncio.CancelledError)):
@@ -164,6 +166,7 @@ class InitializerTests(unittest.TestCase):
         ready = SimpleNamespace(start=AsyncMock(), stop=AsyncMock(), setup=AsyncMock(),
             exec=AsyncMock(return_value=SimpleNamespace(return_code=0, stdout="7.6.9\n6.2.0\n")))
         with patch.object(preparation, "staged_task", return_value=task), \
+                patch.object(preparation, "observed_environment", side_effect=lambda base, _entry: base), \
                 patch.object(preparation, "SkillEvaluatorSecureDockerEnvironment", side_effect=[failed, ready]) as create, \
                 patch.object(preparation.subprocess, "check_output", return_value=""), \
                 patch.object(preparation.asyncio, "sleep", new_callable=AsyncMock):
@@ -191,6 +194,7 @@ class InitializerTests(unittest.TestCase):
         environment = SimpleNamespace(start=AsyncMock(side_effect=approved_start), stop=AsyncMock(), setup=AsyncMock(),
             exec=AsyncMock(return_value=SimpleNamespace(return_code=0, stdout="v20.19.2\n")))
         with patch.object(preparation, "staged_task", return_value=self.tasks[0]), \
+                patch.object(preparation, "observed_environment", side_effect=lambda base, _entry: base), \
                 patch.object(backend, "TrustedGhEnvironment", return_value=environment), \
                 patch.object(preparation.subprocess, "check_output", return_value=""):
             observed = asyncio.run(preparation.prepare(root, root / "preparation.json", "gh", "with_skill", 1))

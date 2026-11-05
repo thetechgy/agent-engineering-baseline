@@ -71,6 +71,42 @@ def transient_snapshot_failure(message):
                     and re.search(r"\b(?:503|504)\b", line) for line in message.splitlines()))
 
 
+def observed_environment(base, entry):
+    """Record bounded command phases while delegating every hardened operation."""
+    async def observe(kind, command, invoke):
+        allowed = {"build", "up", "down", "exec", "cp", "ps", "logs", "stop", "rm", "config", "image", "info", "inspect", "network", "version"}
+        operation = command[0] if command and command[0] in allowed else "other"
+        events = entry.setdefault("commands", [])
+        event = {"kind": kind, "operation": operation, "status": "running"}
+        if len(events) < 32:
+            events.append(event)
+        else:
+            entry["commands_truncated"] = True
+        started = time.monotonic()
+        try:
+            result = await invoke()
+            event["status"] = "complete"
+            return result
+        except BaseException as error:
+            event["status"] = "cancelled" if isinstance(error, asyncio.CancelledError) else "failed"
+            if isinstance(error, RuntimeError) and transient_snapshot_failure(str(error)):
+                event["code"] = "debian_snapshot_unavailable"
+            raise
+        finally:
+            event["elapsed_sec"] = round(time.monotonic() - started, 3)
+
+    class Observed(base):
+        async def _run_docker_compose_command(self, command, *args, **kwargs):
+            parent = super()._run_docker_compose_command
+            return await observe("compose", command, lambda: parent(command, *args, **kwargs))
+
+        async def _run_trusted_docker_command(self, command):
+            parent = super()._run_trusted_docker_command
+            return await observe("docker", command, lambda: parent(command))
+
+    return Observed
+
+
 async def prepare(root, artifact, suite="pester", arm=None, shard=None, runtime="candidate"):
     status = {"schema": 1, "status": "preparing", "diagnostic_only": True, "inference": False,
               "phase": "stage", "suite": suite, "arm": arm, "shard": shard, "runtime_name": runtime,
@@ -107,7 +143,7 @@ async def prepare(root, artifact, suite="pester", arm=None, shard=None, runtime=
             status["attempts"].append(entry)
             environment = None
             try:
-                environment = environment_type(environment_dir=task / "environment", environment_name=name,
+                environment = observed_environment(environment_type, entry)(environment_dir=task / "environment", environment_name=name,
                     session_id=name, trial_paths=paths, task_env_config=native.config.environment, mounts=[],
                     network_policy=native.config.environment.resolve_baseline())
                 environment.default_user = "agent"

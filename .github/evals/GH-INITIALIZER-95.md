@@ -147,7 +147,7 @@ Real-provider readiness and model effectiveness remain unverified in either case
 
 ## Current delivery evidence
 
-All 40 local candidate controls pass with no network attempts. They stage all 48
+All 43 local candidate controls pass with no network attempts. They stage all 48
 gh tasks and exercise native CLI restaging with unchanged checksums in a new
 private directory. Initial hosted controls pass,
 but native run `41902822407` fails its first with-skill task build with fixed
@@ -285,3 +285,10 @@ reruns without overwriting prior artifacts.
 The preparation launcher forwards the identical admitted Compose path in both
 `DOCKER_CONFIG` and `COMPOSE_PLUGIN_ROOT`. An owning-runtime test exercises this
 forwarding through the entry point's strict plugin admission and isolated home.
+
+Preparation checkpoints also retain at most 32 command phase records per attempt:
+Docker/Compose operation names from a fixed allowlist, elapsed seconds, and
+complete/failed/cancelled status. Hardened command arguments and execution are
+delegated unchanged. Raw arguments, environment values and build output never
+enter these records. A preparation deadline records the interrupted operation;
+it remains an infrastructure failure and does not admit a native measurement.
