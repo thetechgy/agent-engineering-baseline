@@ -1,12 +1,12 @@
 {
   "schema_version": 3,
   "campaign": "direct-harbor-20261104",
-  "state": "launch_repaired_live_pair_authorized",
-  "decision": "Launch defect identified and corrected. Credential-free stock-launch/provider checks passed. User subsequently authorized the remaining two paid smoke attempts despite unknown costs; no broader comparison is scheduled.",
-  "summary": "Reserved model_providers.openai caused startup rejection. The trial_openai alias is accepted and reaches a local Responses endpoint through stock Harbor/Codex. One HTTP request and a 60.2-second silent-stream timeout demonstrate the configured HTTP/SSE limits. Prior live attempts remain failed and ungraded; the newly authorized pair is pending.",
+  "state": "launch_repaired_live_sessions_complete_artifacts_ungradeable",
+  "decision": "A specific blocker remains: recover valid submitted-artifact evidence before another comparison. The launch defect is corrected and credential-free provider checks passed. Both authorized live sessions completed, but neither produced a valid independent task grade. Stop scheduling; no adoption or skill-effectiveness conclusion is supported.",
+  "summary": "Codex 0.155.1 rejects reserved model_providers.openai before authentication; the supported trial_openai alias fixes startup. Stock Harbor/Codex reached real inference in both arms. Current and absent deployments matched except the three target-skill files. Both verifiers returned invalid/artifact, not measured incorrect answers. Four recovery slots are consumed; historical and cumulative charges remain unknown.",
   "source_commit": "cc0819f5dafc05610dd8c3293ce2f52744c66f1a",
-  "reviewed_trial_commit": "29f7765a3e2e48ca573160d412749b717d63bb06",
-  "executed_commit": "11bf0db52f020271efc8b1e4c136f7795b480114",
+  "reviewed_trial_commit": "f61201a730746921abd17d8f8366dfd1505ad6f8",
+  "executed_commit": "c5a430ac15b4fac0eb6a29b1ac46ad4e7e06ca3e",
   "recovery_commits": [
     "04516b8581bd41b7a4ed7590b9f718688080ddda",
     "8b7dd45ca2136a55112440dfa11ec5221341f461",
@@ -15,7 +15,8 @@
     "725e8d5e08d5d6c30c97d9ad58f2b2bf53358803",
     "11bf0db52f020271efc8b1e4c136f7795b480114",
     "9a4ad95d883ed91cd7f5de13e1afb1f633662986",
-    "714224976b80f355c0e0e994eebc9c3b5ac515b3"
+    "714224976b80f355c0e0e994eebc9c3b5ac515b3",
+    "c5a430ac15b4fac0eb6a29b1ac46ad4e7e06ca3e"
   ],
   "calibration": [
     {
@@ -354,56 +355,72 @@
     {
       "case": "pester-002",
       "variant": "current",
-      "attempts": 2,
-      "execution": "Setup failure, then immediate launch failure; no recovered task session",
+      "attempts": 3,
+      "current_pass_attempt": 3,
+      "execution": "CLI/session completed; verifier invalid/artifact",
       "valid_denominator": 0,
       "correctness": null,
       "activation": null,
       "mutation_detection": null,
-      "variability": null
+      "variability": null,
+      "failure_cause": null,
+      "artifact_outcome": "invalid/artifact",
+      "rollout_present": true,
+      "execution_completed": true,
+      "result_extraction_succeeded": true,
+      "agent_duration_seconds": 12.26,
+      "attempt_duration_seconds": 47.37
     },
     {
       "case": "pester-002",
       "variant": "absent",
-      "attempts": 0,
-      "execution": "Skipped by failure and unknown-usage gate",
+      "attempts": 1,
+      "current_pass_attempt": 4,
+      "execution": "CLI/session completed; verifier invalid/artifact",
       "valid_denominator": 0,
       "correctness": null,
       "activation": null,
       "mutation_detection": null,
-      "variability": null
+      "variability": null,
+      "failure_cause": null,
+      "artifact_outcome": "invalid/artifact",
+      "rollout_present": true,
+      "execution_completed": true,
+      "result_extraction_succeeded": true,
+      "agent_duration_seconds": 12.086,
+      "attempt_duration_seconds": 47.16
     }
   ],
-  "live_note": "Current attempt 1: RuntimeError during installation, no agent-execution timing or effective config. A locally reproduced version-parser defect was corrected once. Attempt 2: pinned version passes; Harbor agent phase lasts 0.614 seconds and raises NonZeroAgentExitCodeError. The offline verifier then reports invalid/artifact, reward 0, Harbor reward_valid=false, measured=false. Harbor returns process zero but the trial wrapper exits nonzero. No rollout, tool call, activation or token observation survives. Whether codex exec itself started is unknown. Absent is staged/preflighted only. No skill revision, effectiveness finding or live comparison is claimed.",
-  "agent_attempts": 2,
+  "live_note": "Attempts 1 and 2 remain historical setup/launch failures. Attempts 3 (current) and 4 (absent) completed actual Codex sessions with recovered rollouts, token usage and no native execution failure. Each offline verifier returned invalid/artifact with reward 0; Harbor reward_valid=true does not make this a measured grade. No submission hash/size was recovered at the declared canonical path. The exact missing/rejected/transfer cause is unresolved from retained metadata. Activation is unknown because the executed collector omitted custom_tool_call records; the zero function-call count is not an all-tools count. No reference or mutation checks were reached by a valid candidate. Workflow success covers completion/extraction, not correctness or a valid comparison. One attempt per arm would remain insufficient for effectiveness even with valid grades.",
+  "agent_attempts": 4,
   "prior_paid_attempts": 0,
-  "recovery_paid_attempts": 2,
+  "recovery_paid_attempts": 4,
   "api_spend_usd": null,
   "estimated_cumulative_api_spend_usd": null,
   "provider_billing_observation": null,
-  "spending_note": "Two credentialed launch attempts consumed 2/4 recovery slots and 2/36 campaign slots; absent was never scheduled. The verified prior record was zero attempts and $0. Attempt 1 failed before agent execution; attempt 2 has no usable usage record or provider invoice. Actual inference request count and cumulative spending therefore remain unknown, not $0. Scheduling stopped. The preflight pair estimate was $2.64 (60k input including cache and 4k output per arm at conservative $20/M input and $30/M output). These rates reserve for cache writes and long-context pricing; they are not observed charges. The operational $20 budget has no verified provider cap. A $4 scheduling threshold reserves $16 for uncertainty/in-flight usage; overshoot remains possible. Runtime and rollout-token limits are not dollar meters. The repair added zero paid attempts. Two diagnostic Actions runs used a nonsecret sentinel with external inference blocked. The user subsequently said \"we can run it for testing with unknown cost\", authorizing the remaining bounded pair; this acceptance does not turn missing costs into zero or establish a provider cap.",
+  "spending_note": "Four credentialed reservations consumed 4/4 recovery slots and 4/36 campaign slots: two historical failed launches plus the authorized current/absent pair. Two actual model sessions are now confirmed. Current reported 47,987 input (35,617 cached; 12,329 cache-write) and 637 output tokens; absent 47,842 input (35,525 cached; 12,276 cache-write) and 730 output. Cache counts are components, not additional input totals. Harbor native pricing estimates are $0.11417975 and $0.11659250 ($0.23077225 subtotal), not provider bills. Conservative estimates including all cached input at $20/M and output at $30/M are $0.97885 and $0.97874 ($1.95759 subtotal). Cumulative observed/estimated campaign spending remains unknown because prior usage and attributable billing are unavailable. The $2.64 pair preflight estimate was not an observed charge. User explicitly accepted unknown costs for testing. The operational $20 budget is not a guaranteed cap; a $4 scheduling threshold retained $16 nominal reserve, but unknown prior charges and in-flight usage can overshoot it. Scheduling is now disabled. Two diagnostic Actions runs added no paid attempts; no judge, inference retry or skill revision was used.",
   "budget": {
     "operational_usd": 20,
     "provider_hard_cap_verified": false,
     "campaign_attempt_limit": 36,
     "recovery_attempt_limit": 4,
-    "planned_live_attempts": 2,
+    "planned_live_attempts": 0,
     "concurrency": 1,
     "max_agent_seconds": 600,
     "model_judge": false,
     "proposed_scheduling_stop_estimate_usd": 4,
     "reserve_usd": 16,
     "pair_preflight_estimate_usd": 2.64,
-    "scheduling_stopped": false,
-    "stop_reason": null,
+    "scheduling_stopped": true,
+    "stop_reason": "All four recovery slots consumed; both live artifact outcomes ungradeable.",
     "conservative_input_usd_per_million": 20,
     "conservative_output_usd_per_million": 30,
     "unknown_cost_accepted_for_testing": true
   },
   "configured_runtime": {
-    "codex": "0.155.1 observed by unprivileged version command; no task session recovered",
-    "model": "gpt-5.6-sol configured; actual model response not established; mutable slug",
-    "reasoning_effort": "medium configured; no completed model task",
+    "codex": "0.155.1 observed in both actual agent containers and stock CLI startup",
+    "model": "gpt-5.6-sol selected in both effective commands; actual token-bearing sessions completed; mutable slug",
+    "reasoning_effort": "medium selected in both effective commands/configs",
     "powershell": "7.6.9 (observed by both verifiers)",
     "pester": "6.2.0 (observed by both verifiers)",
     "build": {
@@ -432,10 +449,10 @@
     "deployed_file_count": 48,
     "absent_file_count_local": 45,
     "local_match_verified": true,
-    "runtime_absent_duplicate_audit": null,
+    "runtime_absent_duplicate_audit": true,
     "native_skill_activation": null,
     "instructions_sha256": "7b8d5aca90cd1a90d32b98d1e86ee16d82c808336e309c26853d3aab73fb4543",
-    "note": "Actual APM content/support staged. Source and deployed target hashes match. Local absent staging removes only three target files. Actual Codex discovery remains untested.",
+    "note": "Actual APM content and support files staged; 48 current files and 45 absent files verified inside actual live containers. Only three target files differ. Activation remains unknown due partial executed collector.",
     "live_followup": {
       "current_files": 48,
       "absent_files": 45,
@@ -453,18 +470,18 @@
       ],
       "absent_target_copies": [],
       "evidence": "live-evidence.json",
-      "config_note": "APM files preserved; matched runtime overlay disables remote MCP and web search. Only current reached effective config generation."
+      "config_note": "Both effective configs recovered and exactly equal, including trial_openai provider alias. Other deployment files, shared instructions and grader hashes match."
     }
   },
   "boundary_assessment": [
     "Explicit user authorization replaces only the evaluated Codex inner-sandbox requirement with the disposable hosted runner/container boundary. Stock Harbor run/exec methods are inherited without command rewriting. No implementing-agent sandbox or approval mechanism was disabled. Historical Bubblewrap/Landlock failures remain in sandbox.json and are not a current gate.",
     "Actual containers passed UID/GID 1000, CapEff=0, NoNewPrivs=1, Seccomp=2, writable output, fresh-session/auth checks, protected-path absence and deployment hashes. Docker metadata confirms no privilege, no added agent capabilities, cap_drop=ALL, default seccomp (no unconfined override), 2 CPUs, 2 GiB RAM, 256 PIDs, no host PID/network mode and no host mounts. No Docker socket, grader source, reference implementation, mutants or unrelated credential names were available.",
-    "Harbor native allowlist restricts the agent to api.openai.com using its separate disposable egress controller; only that controller needs NET_ADMIN/NET_RAW. Credential-free HTTPS requests reached the API root (HTTP 421); GitHub, raw GitHub, Microsoft Learn and the metadata IP failed to connect. This does not prove authenticated Responses API operation or formal network isolation. DNS and the allowed API remain residual channels; web search and remote MCP are disabled.",
+    "Harbor native allowlist restricts the agent to api.openai.com using its separate disposable controller; only that controller needs NET_ADMIN/NET_RAW. Both actual agent preflights reached the API root (HTTP 421) while GitHub, raw GitHub, Microsoft Learn and metadata IP connections failed. Both later authenticated model sessions completed. DNS and the allowed API remain residual channels; web search and remote MCP were disabled. This is not a formal network-isolation proof.",
     "The inference key must be accessible to Codex and can be read by code in the same environment. Container isolation does not conceal it. No auth file, secret-bearing environment dump, raw agent log or submission is exported. Preflight checks and host metadata are practical evidence, not a formal container-security proof or interactive-workstation equivalence.",
-    "The separate offline verifier and protected executable checks are unchanged from the successful controls. Its latest live result is invalid/artifact, not a measured incorrect answer. Host/report metadata validates transport invariants only: integration_valid=true in attempt.json does not assert successful agent execution.",
+    "The separate offline verifier and protected executable checks are unchanged from successful controls. Both latest live outcomes are invalid/artifact and unmeasured despite Harbor reward_valid=true. result_extraction_succeeded describes metadata recovery only; execution_completed describes native completion only. Best-effort root cleanup failed under dropped capabilities, but entire agent containers were verified removed. No privilege was added.",
     "Repair diagnostics use the same stock launcher, UID, ownership and pins with external networking disabled. Corrected live config selects trial_openai while preserving API endpoint/authentication, OpenAI headers, WebSocket capability, model, effort and matched arms. The same runtime config function serves current and absent."
   ],
-  "history_note": "Original run 41952213509 explicitly received a runner shutdown signal. Cause remains unknown; exit 143 alone does not identify a Harbor timeout/crash. No original native grade survived. Its prior report is preserved as history below; the prior recommendation is superseded and does not show that the existing stack is better. The prior recovery report at 29f7765 is retained under history, including its zero-spend record and now-superseded native-sandbox requirement. The known-good and weak native observations were not rerun or rescored.",
+  "history_note": "Original run 41952213509 explicitly received a runner shutdown signal. Cause remains unknown; exit 143 alone does not identify a Harbor timeout/crash. No original native grade survived. Its prior report is preserved as history below; the prior recommendation is superseded and does not show that the existing stack is better. The prior recovery report at 29f7765 is retained under history, including its zero-spend record and now-superseded native-sandbox requirement. The known-good and weak native observations were not rerun or rescored. The repaired pair ran c5a430a; f61201a was earlier packaging, while failed run 41966399157 executed 11bf0db. User later authorized the remaining two smoke attempts with unknown costs. Their successful process completion does not supersede the invalid-artifact observations.",
   "history": {
     "original_report": {
       "schema_version": 1,
@@ -1025,37 +1042,58 @@
           "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42108206579/artifacts/13452743308"
         }
       ]
+    },
+    {
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42110435228",
+      "label": "Repaired live smoke pair, attempts 3 and 4",
+      "summary": "Both real Codex sessions completed and metadata extraction passed. Both independent verifier outcomes invalid/artifact; zero valid task-grade denominators. Workflow success is not valid evaluation.",
+      "artifacts": [
+        {
+          "name": "Matched external-boundary checkpoint",
+          "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42110435228/artifacts/13454161608"
+        },
+        {
+          "name": "Current attempt 3 sanitized evidence",
+          "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42110435228/artifacts/13454361517"
+        },
+        {
+          "name": "Absent attempt 4 sanitized evidence",
+          "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42110435228/artifacts/13454096587"
+        }
+      ]
     }
   ],
   "local_validation": {
-    "focused_tests_passed": 18,
+    "focused_tests_passed": 19,
     "postrun_failure_status_and_exit_tested": true,
     "pinned_native_policy_used": true,
     "staging_current_absent_match": true,
-    "production_full_suite_not_run": "Production unchanged; focused tests, boundary/installation checks and bounded native launch only.",
+    "production_full_suite_not_run": "Production unchanged. Eighteen focused checks ran on live execution head; nineteen pass locally after the metadata-only custom-tool schema correction. No additional native or paid validation was scheduled.",
     "stock_run_and_exec_inherited": true,
     "warning_contaminated_version_failing_before_passing_after": true,
     "external_boundary_checks_passed": true,
     "credential_free_failure_retention": true,
     "actual_cli_config_loading": true,
-    "actual_harbor_startup_and_provider_probes": true
+    "actual_harbor_startup_and_provider_probes": true,
+    "executed_head_ci_focused_tests_passed": 18,
+    "postrun_custom_tool_schema_failing_before_passing_after": true
   },
   "assessment": [
-    "The prior oracle controls establish a useful narrow grading distinction: both pass the reference; only the good suite detects both defects. The latest invalid artifact remains excluded despite native reward zero and process exit zero. No skill-effectiveness or adoption conclusion follows.",
-    "Fourteen focused tests cover native failure/reward validity, unsupported/missing evidence, post-run status/exit, stock launch inheritance, exact-pin version warnings, deployment equality, activation/usage separation and unknown-usage scheduling. No full production suite was run because production code is unchanged.",
-    "Custom maintenance: existing staging/projection/report code, a 217-line fixed live runner, 48-line custom-agent class/helper, 14 tests, 29-line snapshot transport helper, branch-only workflow, and historical unused sandbox probe. Two private Harbor overrides (home ownership and effective config upload) remain. No framework patch, but pin compatibility and task checksum deprecation need maintenance. Native egress control requires another pinned sidecar image.",
-    "The earlier f61201a export discarded command-level startup diagnostics. The repair now checkpoints sanitized native command stages before cleanup and preserves the primary failure separately. The original stderr remains unavailable; the same configuration error was reproduced through the pinned stock launch.",
-    "Existing task prompts, inputs, references, mutants, grader, PowerShell runner and runtime installer are unchanged. Authoring another skill still requires representative tasks, independently executable checks and good/weak controls. Lower maintenance effort has not been demonstrated.",
-    "Production components removed: none. If broader adoption becomes justified, overlapping behavioral wrapper/staging/collection might be removable; APM, static checks, protected graders, historical records and publication controls remain.",
-    "The repaired path uses existing Harbor DEBUG command records plus a bounded sanitizer/checkpoint handler, a small non-forwarding loopback refusal fixture and a fixed verifier for these probes. Two private home/config overrides remain; no additional private Harbor hook or framework patch was added. Logging-record shape and provider defaults require pin-aware maintenance.",
-    "Smallest next step now authorized: the current/absent smoke pair only. It cannot establish skill effectiveness or adoption readiness."
+    "The unchanged oracle controls prove a narrow grading distinction: both pass the reference; only the good suite detects 2/2 defects. Both live sessions completed, but invalid/artifact outcomes are excluded. A successful workflow or numeric zero reward cannot establish a valid comparison.",
+    "The root cause is reproduced with the retained historical config through the same pinned stock launcher: Codex rejects reserved model_providers.openai before authentication. The original run's stderr was not retained, so the recovered reproduction is the causal evidence. trial_openai preserves endpoint/authentication/model/effort; actual runtime probes verified one HTTP POST on 503 and one silent stream ending after 60.2 seconds. WebSocket probing/fallback remains outside that no-retry observation.",
+    "Nineteen focused tests pass locally; eighteen ran on the executed live head. The new custom_tool_call fixture failed before the collector correction and passes after it. These completed live rollouts were not republished or reprocessed; activation and total tool usage remain unknown. No production full-suite or repeated oracle qualification was run.",
+    "Custom maintenance remains fixed staging/projection/reporting, a small live runner, pinned installation/ownership subclass, native-log sanitizer/checkpoint handler, diagnostic-only refusal fixture and verifier, signed snapshot transport helper, and a branch-only workflow. Two private Harbor methods remain overridden for home ownership and config upload. No upstream patch, added private hook or new execution layer was introduced. Provider defaults, native log/event schemas, task checksum deprecation and pinned egress sidecar still require compatibility review.",
+    "The compressed signed snapshot index selection fixed transport without changing package/image pins or signature/hash validation. The disposable external boundary remained unprivileged with dropped capabilities, no-new-privileges, default seccomp, bounded CPU/RAM/PIDs, no host resources, API-only egress and separate offline verification. Root best-effort secret deletion can fail under these capabilities; verified container disposal is the actual cleanup boundary.",
+    "Existing task requirements, references, seeded defects, grader, PowerShell runner, runtime installer and target skill are unchanged. Valid output handoff, activation, natural skill selection, skill benefit, revision improvement and lower maintenance have not been established by this pair. Another skill still requires representative tasks, executable graders and controls.",
+    "Production components removed: none. APM, static checks, production evaluation, recurring workflows and Pages are untouched. Adoption is not justified by launch success alone.",
+    "Smallest next step: diagnose the submitted-artifact boundary with credential-free checks and bounded artifact-status metadata before authorizing any further model attempt. Retain native artifact-manifest status and non-content tool/completion classifications to distinguish no output, output rejection and transport failure. Do not repeat the full qualification campaign or expand the architecture. All recovery attempts are consumed."
   ],
   "coverage_gaps": [
-    "No completed live Codex task or valid live grade",
-    "No absent-arm task execution",
-    "No confirmed model request count or cumulative spend",
-    "No activation, instruction-following or skill-effectiveness measurement",
-    "No revision, reserved confirmation case or broader comparison",
+    "No valid live task grade or reference/mutation result",
+    "Cause of absent/rejected/untransferred output is unresolved from retained metadata",
+    "Activation and complete tool-use evidence unavailable for live pair",
+    "No attributable provider invoice or cumulative campaign spending",
+    "No revision, reserved confirmation case, repeated comparison or skill-effectiveness conclusion",
     "No new unsupported/adversarial submission qualification",
     "No interactive-workstation or native Codex approval equivalence"
   ],
@@ -1074,41 +1112,49 @@
     "prompt_caching": "https://developers.openai.com/api/docs/guides/prompt-caching",
     "config_reference": "https://learn.chatgpt.com/docs/config-file/config-reference",
     "pinned_codex_config_validation": "https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/config/src/config_toml.rs#L900",
-    "pinned_provider_merging": "https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/model-provider-info/src/lib.rs#L609"
+    "pinned_provider_merging": "https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/model-provider-info/src/lib.rs#L609",
+    "harbor_codex_cost_estimation": "https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/agents/installed/codex.py#L1319",
+    "harbor_artifact_path": "https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/trial/artifact_handler.py#L27"
   },
   "live_pair_operationally_valid": false,
   "live_evidence": "live-evidence.json",
-  "confirmed_model_sessions": 0,
+  "confirmed_model_sessions": 2,
   "actual_provider_request_count": null,
   "attempt_accounting": {
-    "charged_recovery_slots": 2,
+    "charged_recovery_slots": 4,
     "limit": 4,
     "prior_paid_attempts": 0,
     "prior_api_spend_usd": 0,
-    "credentialed_launch_attempts": 2,
-    "completed_task_sessions": 0,
-    "absent_attempts": 0,
+    "credentialed_launch_attempts": 4,
+    "completed_task_sessions": 2,
+    "absent_attempts": 1,
     "attempt_1_inference_not_started": true,
     "attempt_1_api_spend_usd": 0,
     "attempt_2_usage_unknown": true,
-    "remaining_reserved_attempts_cancelled": true,
+    "remaining_reserved_attempts_cancelled": false,
     "no_additional_scheduling": true,
-    "note": "Both credentialed launch attempts count against the recovery and campaign ceilings, even though inference was not established. Unknown usage from attempt 2 is not converted to zero."
+    "note": "Four credentialed reservations count against recovery/campaign limits. Two historical failures are preserved; current and absent sessions completed in this pass. Unknown historical usage is not zero. All recovery slots are consumed."
   },
   "usage_rows": [
     {
       "variant": "current",
-      "input_tokens": null,
-      "cached_input_tokens": null,
-      "output_tokens": null,
-      "estimate_usd": null
+      "attempt": 3,
+      "input_tokens": 47987,
+      "cached_input_tokens": 35617,
+      "cache_write_input_tokens": 12329,
+      "output_tokens": 637,
+      "estimate_usd": 0.97885,
+      "native_pricing_estimate_usd": 0.11417975
     },
     {
       "variant": "absent",
-      "input_tokens": null,
-      "cached_input_tokens": null,
-      "output_tokens": null,
-      "estimate_usd": null
+      "attempt": 4,
+      "input_tokens": 47842,
+      "cached_input_tokens": 35525,
+      "cache_write_input_tokens": 12276,
+      "output_tokens": 730,
+      "estimate_usd": 0.97874,
+      "native_pricing_estimate_usd": 0.1165925
     }
   ],
   "launch_repair": {
@@ -1143,6 +1189,13 @@
       "The user later explicitly authorized paid testing with unknown cost. The next pair remains bounded to the two remaining recovery slots; historical spend remains unknown."
     ]
   },
-  "billing_evidence": "No attributable provider billing export or OpenAI billing connector was available. For reconciliation, obtain project/key-attributed usage/cost records covering 2026-11-05 04:06:42\u201304:07:03 UTC and 04:15:59\u201304:16:36 UTC, including cached input and failed requests. User accepts unknown costs for testing; absence remains unknown.",
-  "paid_attempts_reserved": 2
+  "billing_evidence": "No attributable provider billing export or billing connector was available. Reconciliation needs project/key-attributed usage/cost (including cache read/write and failed requests) for 2026-11-05 04:06:42\u201304:07:03 UTC, 04:15:59\u201304:16:36 UTC and 21:15:36\u201321:16:38 UTC. Native rollout totals and pricing estimates are available for the latter pair only. User accepts unknown costs for testing; missing historical charges remain unknown.",
+  "paid_attempts_reserved": 0,
+  "historical_failed_live_commit": "11bf0db52f020271efc8b1e4c136f7795b480114",
+  "historical_report_packaging_commit": "f61201a730746921abd17d8f8366dfd1505ad6f8",
+  "latest_pair_cost_estimates_usd": {
+    "harbor_native_pricing_estimate": 0.23077225,
+    "conservative_reserve_estimate": 1.95759,
+    "provider_observed_charge": null
+  }
 }

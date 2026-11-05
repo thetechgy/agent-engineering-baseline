@@ -390,5 +390,587 @@
     "codex_executed": "rollout_present",
     "integration_valid": "result_extraction_succeeded",
     "note": "Only derived names changed; raw historical artifacts remain linked and unchanged."
+  },
+  "post_repair": {
+    "commit": "c5a430ac15b4fac0eb6a29b1ac46ad4e7e06ca3e",
+    "workflow_run": 42110435228,
+    "workflow_conclusion": "success",
+    "workflow_success_meaning": "Both sessions completed and metadata extraction/invariants passed; neither submission received a valid task grade.",
+    "attempts": {
+      "current": {
+        "attempt": 3,
+        "variant": "current",
+        "reserved": true,
+        "rollout_present": true,
+        "result_extraction_succeeded": true,
+        "execution_completed": true,
+        "usage_estimate_usd": 0.97885,
+        "projection": [
+          {
+            "task": "pester-002",
+            "outcome": {
+              "classification": "invalid",
+              "code": "artifact"
+            },
+            "failure_cause": null,
+            "exceptions": [],
+            "harbor_reward_valid": true,
+            "measured": false,
+            "native_agent_exit_code": null,
+            "native_rewards": {
+              "overall": 0.0
+            },
+            "tokens": {
+              "input_including_cache": 47987,
+              "cached_input": 35617,
+              "output": 637
+            },
+            "cost_usd": 0.11417975,
+            "timing": {
+              "agent_execution": {
+                "started_at": "2026-11-05T21:15:36.436484Z",
+                "finished_at": "2026-11-05T21:15:48.696087Z"
+              },
+              "verifier": {
+                "started_at": "2026-11-05T21:15:59.410444Z",
+                "finished_at": "2026-11-05T21:16:13.236324Z"
+              }
+            },
+            "native_result": "jobs/current/pester-002__JYQ52Ca/result.json"
+          }
+        ],
+        "commit": "c5a430ac15b4fac0eb6a29b1ac46ad4e7e06ca3e",
+        "harbor_returncode": 0,
+        "usage_and_activation": {
+          "total_usage": {
+            "input_tokens": 47987,
+            "cached_input_tokens": 35617,
+            "output_tokens": 637,
+            "reasoning_output_tokens": 282,
+            "cache_write_input_tokens": 12329,
+            "total_tokens": 48624
+          },
+          "skill_file_access_attempts": [],
+          "tool_calls": 0,
+          "completion_event": true
+        },
+        "usage_complete": true,
+        "agent_container_removed": true,
+        "duration_seconds": 47.37
+      },
+      "absent": {
+        "attempt": 4,
+        "variant": "absent",
+        "reserved": true,
+        "rollout_present": true,
+        "result_extraction_succeeded": true,
+        "execution_completed": true,
+        "usage_estimate_usd": 0.97874,
+        "projection": [
+          {
+            "task": "pester-002",
+            "outcome": {
+              "classification": "invalid",
+              "code": "artifact"
+            },
+            "failure_cause": null,
+            "exceptions": [],
+            "harbor_reward_valid": true,
+            "measured": false,
+            "native_agent_exit_code": null,
+            "native_rewards": {
+              "overall": 0.0
+            },
+            "tokens": {
+              "input_including_cache": 47842,
+              "cached_input": 35525,
+              "output": 730
+            },
+            "cost_usd": 0.1165925,
+            "timing": {
+              "agent_execution": {
+                "started_at": "2026-11-05T21:16:25.792998Z",
+                "finished_at": "2026-11-05T21:16:37.878715Z"
+              },
+              "verifier": {
+                "started_at": "2026-11-05T21:16:48.585485Z",
+                "finished_at": "2026-11-05T21:17:02.418751Z"
+              }
+            },
+            "native_result": "jobs/absent/pester-002__YfAbHN2/result.json"
+          }
+        ],
+        "commit": "c5a430ac15b4fac0eb6a29b1ac46ad4e7e06ca3e",
+        "harbor_returncode": 0,
+        "usage_and_activation": {
+          "total_usage": {
+            "input_tokens": 47842,
+            "cached_input_tokens": 35525,
+            "output_tokens": 730,
+            "reasoning_output_tokens": 325,
+            "cache_write_input_tokens": 12276,
+            "total_tokens": 48572
+          },
+          "skill_file_access_attempts": [],
+          "tool_calls": 0,
+          "completion_event": true
+        },
+        "usage_complete": true,
+        "agent_container_removed": true,
+        "duration_seconds": 47.16
+      }
+    },
+    "preflight": {
+      "passed": true,
+      "commit": "c5a430ac15b4fac0eb6a29b1ac46ad4e7e06ca3e",
+      "paid_inference_permitted": true,
+      "network_mode": "allowlist",
+      "remote_tools_disabled": true
+    },
+    "effective_config": {
+      "mcp_servers": {
+        "microsoft-learn": {
+          "url": "https://learn.microsoft.com/api/mcp",
+          "enabled_tools": [
+            "microsoft_docs_search",
+            "microsoft_docs_fetch",
+            "microsoft_code_sample_search"
+          ],
+          "enabled": false
+        }
+      },
+      "web_search": "disabled",
+      "service_tier": "default",
+      "model_reasoning_effort": "medium",
+      "forced_login_method": "api",
+      "projects": {
+        "/workspace": {
+          "trust_level": "trusted"
+        }
+      },
+      "model_provider": "trial_openai",
+      "model_providers": {
+        "trial_openai": {
+          "name": "OpenAI",
+          "base_url": "https://api.openai.com/v1",
+          "wire_api": "responses",
+          "requires_openai_auth": true,
+          "request_max_retries": 0,
+          "stream_max_retries": 0,
+          "stream_idle_timeout_ms": 60000,
+          "supports_websockets": true,
+          "supports_standalone_web_search": true,
+          "http_headers": {
+            "version": "0.155.1"
+          },
+          "env_http_headers": {
+            "OpenAI-Organization": "OPENAI_ORGANIZATION",
+            "OpenAI-Project": "OPENAI_PROJECT"
+          }
+        }
+      },
+      "features": {
+        "rollout_budget": {
+          "enabled": true,
+          "limit_tokens": 30000,
+          "reminder_at_remaining_tokens": [
+            5000
+          ],
+          "sampling_token_weight": 5.0,
+          "prefill_token_weight": 1.0
+        }
+      }
+    },
+    "boundaries": {
+      "current": {
+        "skills": {
+          "gh/SKILL.md": "b40d44ef9077b34d710b4c0737fee0e72c595e0770fbbdcb339de2ba0b40e23b",
+          "powershell-pester-6/SKILL.md": "b57df2ff4072b2e25744ae2bd530b02bbb6ab83a22a0d374c73d48de4dc70887",
+          "a11y/SKILL.md": "96d578e9646cd80ff6e1bedb26069222ad37b473960f3c0cc069716484b22553",
+          "podman/EVALS.md": "96088308ed8df85d9f369263de4ec02fefdb7f59fbccc2b4629991be7266e581",
+          "podman/SKILL.md": "625107071889166612f64ac52920be2b9455f671e4ce1f805835f7fee14ef274",
+          "podman/MAINTENANCE.md": "93f772d47f661cc721a211257f4a2aecabcc53ed77f0d4b16b754944128586c9",
+          "code-simplification/SKILL.md": "e13b433345e6bf425c3625442ac1b3507b371c18d7ea3e3db822da7a7f742a29",
+          "agent-safety/SKILL.md": "2dc7898d11fb55a1a042d46e6e60800d0f948253c5216efa3e470e8914cc84ab",
+          "msgraph/SKILL.md": "b4763f6ae89a4e2843ca5bfe15fddf49f5924e20054ff5d7fb7e43a2df3df67e",
+          "msgraph/CONTRIBUTING.md": "60dc9074eedcb06cb29845a4ab6d41866f357be6b8d810e8c84408788e2babf0",
+          "ansible/SKILL.md": "a79531195a9bdf942b301edf1588c8814ceb976557f4f0cb79bd9aa79e59d52e",
+          "microsoft-code-reference/SKILL.md": "19f13822dd8674ac0a24787ac15472c9137d0db5b03750ba43ee9dcdac8ddd03",
+          "github-actions-hardening/SKILL.md": "31a8e7483d978e6267941edefebbe42aaa946bb3d43c9095aa3db343d4a8ff06",
+          "git-commit/SKILL.md": "554d1a3c6d95f15bc1170160659ecdc9a9958b64f377f3988941b672c249b13f",
+          "powershell-module-engineering/SKILL.md": "801cecfd42aeb32f3fd6083d9af08f44c8a5ca48202761533c072a10c06060c9",
+          "dependabot/SKILL.md": "2b5f3af7d8a5555d330d4d72ba9ad6140e85215d006dd9d7a92ee0dae76bbf82",
+          "powershell-pester-6/references/compatibility-and-migration.md": "6d05a890eb1c53c59755f9e560c05d65467a614d36af7c812f4a32c89b47f4e9",
+          "powershell-pester-6/references/execution.md": "3b80a98abfefdcd9a765da9a9436caa43de6a873e57253f1ecfb36e1095ea4b8",
+          "podman/evals/evals.json": "9bc7fdebc99616983bd501006f97a0a3233cc9901da06443e49d63652de2f0c5",
+          "podman/references/reverse-proxy.md": "6a8d789b72d821e3fed320ca84325086d5a42ced25912a4b52ea760a306111ff",
+          "podman/references/quadlet-systemd.md": "55a300354c77b6e59b5876b1b3a6b7e00f9525a21c9160fa5b3200a3a8128f23",
+          "podman/references/compose-migration.md": "fce55e0ec0a56608d714f273afdbdc44017d0a4ebed73b61291cd0fdebbf434a",
+          "podman/references/rootless-networking.md": "a5fc3f33815caa196d5f8d6cb090136bcccc88fb95dedb921c99bd0b3cf6b524",
+          "podman/references/security-storage-secrets.md": "37e1fae3de6f4b7ae1ea3ccc2b0b84d7fd854ea2730a51f0e3b3b1bc9b2e1068",
+          "podman/references/validation.md": "465321094bc936d8a9e187bd3b4daa1ab271b93242a2c07fe88c58db6bd4bdd5",
+          "podman/references/fedora-hosts.md": "adb6f7a2a07f2067036354cb57bb69e694d423f20bd578e09db6a5a799859168",
+          "podman/evals/files/postgres.container": "9da8bb708c14453616a43d2a9527484f6fa4ddc1d06c2339ddecadeeb9f54b5f",
+          "podman/evals/files/vendor-compose.yaml": "1f36c57615a4efa9bc6c1de9e7088d2dd82040cb14ec74b00c910c75f5ea26f7",
+          "podman/evals/files/vendor-web/Containerfile": "486aa74e34330bc0122d85c4f3719f3bf66c405ffe7fcd0a2969bec6d5c21a2d",
+          "msgraph/references/REFERENCE.md": "61639bb509391df6e65762355c87ef53c98f544d04e4455fd17f571c6732b5d7",
+          "msgraph/scripts/run.ps1": "208a0323c85c94c8b8f23d974a92fb37dab77c44de5638fb3e7688e00d761cbb",
+          "msgraph/scripts/run.sh": "ef3545fee5e2f2654cedf32ed543ba2e496109c1eb90ea6f915fd9bcf4abd51b",
+          "msgraph/references/docs/errors.md": "2c297ff319457b717c4d38948444e3586960d4669ad65fc4e38f7d36138a0d8b",
+          "msgraph/references/docs/query-parameters.md": "f20ddb64c70f3b94c224882cb57bfc1541df6b2bb74532a5e16cb83ca94b6cd3",
+          "msgraph/references/docs/batching.md": "f5132b3027554ededc2ba6b116a47187df4c408be5ddbb273ff7653352e60e3b",
+          "msgraph/references/docs/authentication.md": "dae0fca55119fd89a9b719705d5263aa4705215c1de57d0bf33627d30c9d7c42",
+          "msgraph/references/docs/throttling.md": "cb6db141e600f3c433c80e8f21a6840b1ed83237d7c73f2b0144de37225b0a85",
+          "msgraph/references/docs/paging.md": "f1b76a08cde517b495023098385b63fdf921eb3dc5e374b4f285e71786feb716",
+          "msgraph/references/docs/advanced-queries.md": "89ac64478ca6539412ce66d5f6ac2f76f3c88ff709c8bee7c81da0d79017345e",
+          "msgraph/references/docs/best-practices.md": "48e18d277aa4412ac66acb084aaa8d1ba1af31fe840fdc9ff42c644ddbd8d03b",
+          "github-actions-hardening/references/permissions-and-tokens.md": "7272d00b20cf99c6fcbf34346f76730907c00701aef44bb9cfb7ab3eecac336b",
+          "github-actions-hardening/references/supply-chain.md": "f66f613dbd732ce87c1e76b88208efde8feae3ffe5a3ab405cde4ce3df66f605",
+          "github-actions-hardening/references/triggers-and-privilege.md": "465f3f76517e9f5374a73e30f46cb47e1fe62ce9fd81f782808a3abbb2df2756",
+          "github-actions-hardening/references/injection.md": "ebd6ef8d39ba6f1cd3dc13051e6ed4163d1d2ba36518cf0f7393836a211e58ff",
+          "github-actions-hardening/references/report-format.md": "3ecd2442e173bc001f858747873349be7c6c77050470b87ae516647908b1e86e",
+          "dependabot/references/pr-commands.md": "471a786456c798364d13c0da554c12c712c581986b7f4a1de95d8b3638fd21cb",
+          "dependabot/references/example-configs.md": "35375699cfbaa372b68a232a2704f88a190e1267f937e1f1921e8d83c97485ca",
+          "dependabot/references/dependabot-yml-reference.md": "c3b101d7e200a215211c9e23157ddfb1c051e437815b4d5a3d9bc13e504d6ed6"
+        },
+        "instructions_sha256": "7b8d5aca90cd1a90d32b98d1e86ee16d82c808336e309c26853d3aab73fb4543",
+        "codex_files": {
+          "config.toml": "782c639a9261c6c7920ce141d84bbb207f8695ca8405091fadaa25a5051d6e05"
+        },
+        "target_copies": [
+          "/workspace/.agents/skills/powershell-pester-6"
+        ],
+        "network": {
+          "api.openai.com": 421,
+          "github.com": null,
+          "raw.githubusercontent.com": null,
+          "learn.microsoft.com": null,
+          "169.254.169.254": null
+        },
+        "uid": 1000,
+        "capabilities": 0,
+        "no_new_privileges": true,
+        "seccomp_filter": true,
+        "workspace_writable": true,
+        "fresh_session": true,
+        "image": "sha256:7377d29cc82fa0e767f8c73f3d795dd3057f30d1e0b36638e0489b26fe96d2fc",
+        "mount_destinations": [],
+        "resources": {
+          "cpus": 2,
+          "memory_mb": 2048,
+          "pids": 256
+        },
+        "variant": "current"
+      },
+      "absent": {
+        "skills": {
+          "gh/SKILL.md": "b40d44ef9077b34d710b4c0737fee0e72c595e0770fbbdcb339de2ba0b40e23b",
+          "a11y/SKILL.md": "96d578e9646cd80ff6e1bedb26069222ad37b473960f3c0cc069716484b22553",
+          "podman/EVALS.md": "96088308ed8df85d9f369263de4ec02fefdb7f59fbccc2b4629991be7266e581",
+          "podman/SKILL.md": "625107071889166612f64ac52920be2b9455f671e4ce1f805835f7fee14ef274",
+          "podman/MAINTENANCE.md": "93f772d47f661cc721a211257f4a2aecabcc53ed77f0d4b16b754944128586c9",
+          "code-simplification/SKILL.md": "e13b433345e6bf425c3625442ac1b3507b371c18d7ea3e3db822da7a7f742a29",
+          "agent-safety/SKILL.md": "2dc7898d11fb55a1a042d46e6e60800d0f948253c5216efa3e470e8914cc84ab",
+          "msgraph/SKILL.md": "b4763f6ae89a4e2843ca5bfe15fddf49f5924e20054ff5d7fb7e43a2df3df67e",
+          "msgraph/CONTRIBUTING.md": "60dc9074eedcb06cb29845a4ab6d41866f357be6b8d810e8c84408788e2babf0",
+          "ansible/SKILL.md": "a79531195a9bdf942b301edf1588c8814ceb976557f4f0cb79bd9aa79e59d52e",
+          "microsoft-code-reference/SKILL.md": "19f13822dd8674ac0a24787ac15472c9137d0db5b03750ba43ee9dcdac8ddd03",
+          "github-actions-hardening/SKILL.md": "31a8e7483d978e6267941edefebbe42aaa946bb3d43c9095aa3db343d4a8ff06",
+          "git-commit/SKILL.md": "554d1a3c6d95f15bc1170160659ecdc9a9958b64f377f3988941b672c249b13f",
+          "powershell-module-engineering/SKILL.md": "801cecfd42aeb32f3fd6083d9af08f44c8a5ca48202761533c072a10c06060c9",
+          "dependabot/SKILL.md": "2b5f3af7d8a5555d330d4d72ba9ad6140e85215d006dd9d7a92ee0dae76bbf82",
+          "podman/evals/evals.json": "9bc7fdebc99616983bd501006f97a0a3233cc9901da06443e49d63652de2f0c5",
+          "podman/references/reverse-proxy.md": "6a8d789b72d821e3fed320ca84325086d5a42ced25912a4b52ea760a306111ff",
+          "podman/references/quadlet-systemd.md": "55a300354c77b6e59b5876b1b3a6b7e00f9525a21c9160fa5b3200a3a8128f23",
+          "podman/references/compose-migration.md": "fce55e0ec0a56608d714f273afdbdc44017d0a4ebed73b61291cd0fdebbf434a",
+          "podman/references/rootless-networking.md": "a5fc3f33815caa196d5f8d6cb090136bcccc88fb95dedb921c99bd0b3cf6b524",
+          "podman/references/security-storage-secrets.md": "37e1fae3de6f4b7ae1ea3ccc2b0b84d7fd854ea2730a51f0e3b3b1bc9b2e1068",
+          "podman/references/validation.md": "465321094bc936d8a9e187bd3b4daa1ab271b93242a2c07fe88c58db6bd4bdd5",
+          "podman/references/fedora-hosts.md": "adb6f7a2a07f2067036354cb57bb69e694d423f20bd578e09db6a5a799859168",
+          "podman/evals/files/postgres.container": "9da8bb708c14453616a43d2a9527484f6fa4ddc1d06c2339ddecadeeb9f54b5f",
+          "podman/evals/files/vendor-compose.yaml": "1f36c57615a4efa9bc6c1de9e7088d2dd82040cb14ec74b00c910c75f5ea26f7",
+          "podman/evals/files/vendor-web/Containerfile": "486aa74e34330bc0122d85c4f3719f3bf66c405ffe7fcd0a2969bec6d5c21a2d",
+          "msgraph/references/REFERENCE.md": "61639bb509391df6e65762355c87ef53c98f544d04e4455fd17f571c6732b5d7",
+          "msgraph/scripts/run.ps1": "208a0323c85c94c8b8f23d974a92fb37dab77c44de5638fb3e7688e00d761cbb",
+          "msgraph/scripts/run.sh": "ef3545fee5e2f2654cedf32ed543ba2e496109c1eb90ea6f915fd9bcf4abd51b",
+          "msgraph/references/docs/errors.md": "2c297ff319457b717c4d38948444e3586960d4669ad65fc4e38f7d36138a0d8b",
+          "msgraph/references/docs/query-parameters.md": "f20ddb64c70f3b94c224882cb57bfc1541df6b2bb74532a5e16cb83ca94b6cd3",
+          "msgraph/references/docs/batching.md": "f5132b3027554ededc2ba6b116a47187df4c408be5ddbb273ff7653352e60e3b",
+          "msgraph/references/docs/authentication.md": "dae0fca55119fd89a9b719705d5263aa4705215c1de57d0bf33627d30c9d7c42",
+          "msgraph/references/docs/throttling.md": "cb6db141e600f3c433c80e8f21a6840b1ed83237d7c73f2b0144de37225b0a85",
+          "msgraph/references/docs/paging.md": "f1b76a08cde517b495023098385b63fdf921eb3dc5e374b4f285e71786feb716",
+          "msgraph/references/docs/advanced-queries.md": "89ac64478ca6539412ce66d5f6ac2f76f3c88ff709c8bee7c81da0d79017345e",
+          "msgraph/references/docs/best-practices.md": "48e18d277aa4412ac66acb084aaa8d1ba1af31fe840fdc9ff42c644ddbd8d03b",
+          "github-actions-hardening/references/permissions-and-tokens.md": "7272d00b20cf99c6fcbf34346f76730907c00701aef44bb9cfb7ab3eecac336b",
+          "github-actions-hardening/references/supply-chain.md": "f66f613dbd732ce87c1e76b88208efde8feae3ffe5a3ab405cde4ce3df66f605",
+          "github-actions-hardening/references/triggers-and-privilege.md": "465f3f76517e9f5374a73e30f46cb47e1fe62ce9fd81f782808a3abbb2df2756",
+          "github-actions-hardening/references/injection.md": "ebd6ef8d39ba6f1cd3dc13051e6ed4163d1d2ba36518cf0f7393836a211e58ff",
+          "github-actions-hardening/references/report-format.md": "3ecd2442e173bc001f858747873349be7c6c77050470b87ae516647908b1e86e",
+          "dependabot/references/pr-commands.md": "471a786456c798364d13c0da554c12c712c581986b7f4a1de95d8b3638fd21cb",
+          "dependabot/references/example-configs.md": "35375699cfbaa372b68a232a2704f88a190e1267f937e1f1921e8d83c97485ca",
+          "dependabot/references/dependabot-yml-reference.md": "c3b101d7e200a215211c9e23157ddfb1c051e437815b4d5a3d9bc13e504d6ed6"
+        },
+        "instructions_sha256": "7b8d5aca90cd1a90d32b98d1e86ee16d82c808336e309c26853d3aab73fb4543",
+        "codex_files": {
+          "config.toml": "782c639a9261c6c7920ce141d84bbb207f8695ca8405091fadaa25a5051d6e05"
+        },
+        "target_copies": [],
+        "network": {
+          "api.openai.com": 421,
+          "github.com": null,
+          "raw.githubusercontent.com": null,
+          "learn.microsoft.com": null,
+          "169.254.169.254": null
+        },
+        "uid": 1000,
+        "capabilities": 0,
+        "no_new_privileges": true,
+        "seccomp_filter": true,
+        "workspace_writable": true,
+        "fresh_session": true,
+        "image": "sha256:80efb2c7edbd051a3732b26885e1d27c81c5d98c6de87630dd5ee926e7cd9ee8",
+        "mount_destinations": [],
+        "resources": {
+          "cpus": 2,
+          "memory_mb": 2048,
+          "pids": 256
+        },
+        "variant": "absent"
+      }
+    },
+    "container_policies": {
+      "current": {
+        "Privileged": false,
+        "CapDrop": [
+          "ALL"
+        ],
+        "CapAdd": null,
+        "PidsLimit": 256,
+        "Memory": 2147483648,
+        "NanoCpus": 2000000000,
+        "NetworkMode": "container:5358e96f1f6807ab7298e3362c8f7919dcd49592f693aa0895468b7a9e91718b",
+        "PidMode": "",
+        "SecurityOpt": [
+          "no-new-privileges:true"
+        ]
+      },
+      "absent": {
+        "Privileged": false,
+        "CapDrop": [
+          "ALL"
+        ],
+        "CapAdd": null,
+        "PidsLimit": 256,
+        "Memory": 2147483648,
+        "NanoCpus": 2000000000,
+        "NetworkMode": "container:17826633e791c33d986fd2cd6b3bc1a5f828b983491e5b89d5e5a2386412e902",
+        "PidMode": "",
+        "SecurityOpt": [
+          "no-new-privileges:true"
+        ]
+      }
+    },
+    "launch_diagnostics": {
+      "current": {
+        "commands": [
+          {
+            "stage": "ownership_check",
+            "command": "test \"$(id -u)\" = 1000 && test \"$(id -g)\" = 1000 && test \"$(stat -c %u /installed-agent/codex-home)\" = 1000 && test \"$(stat -c %a /installed-agent/codex-home)\" = 700",
+            "user": "agent (task default)",
+            "cwd": "/workspace (task workdir)",
+            "exit_status": 0,
+            "stdout": "None",
+            "stderr": "None",
+            "stream_note": "Harbor Docker merges stderr into stdout"
+          },
+          {
+            "stage": "directory_setup",
+            "command": "mkdir -p \"$CODEX_HOME\" /tmp/codex-secrets /logs/agent",
+            "user": "agent (task default)",
+            "cwd": "/workspace (task workdir)",
+            "exit_status": 0,
+            "stdout": "None",
+            "stderr": "None",
+            "stream_note": "Harbor Docker merges stderr into stdout"
+          },
+          {
+            "stage": "configuration_upload",
+            "command": "umask 077; printf %s <CONFIG_TOML> > /installed-agent/codex-home/config.toml",
+            "user": "agent (task default)",
+            "cwd": "/workspace (task workdir)",
+            "exit_status": 0,
+            "stdout": "None",
+            "stderr": "None",
+            "stream_note": "Harbor Docker merges stderr into stdout"
+          },
+          {
+            "stage": "authentication_setup",
+            "command": "cat >/tmp/codex-secrets/auth.json <<EOF\n<AUTH_JSON_REDACTED>\nEOF\nln -sf /tmp/codex-secrets/auth.json \"$CODEX_HOME/auth.json\"\n\nmkdir -p $HOME/.agents/skills && cp -r /runtime/skills/* $HOME/.agents/skills/ 2>/dev/null || true",
+            "user": "agent (task default)",
+            "cwd": "/workspace (task workdir)",
+            "exit_status": 0,
+            "stdout": "None",
+            "stderr": "None",
+            "stream_note": "Harbor Docker merges stderr into stdout"
+          },
+          {
+            "stage": "cli_startup",
+            "command": "if [ -s ~/.nvm/nvm.sh ]; then . ~/.nvm/nvm.sh; fi; CODEX_API_KEY= codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --model gpt-5.6-sol --json --enable unified_exec -c model_reasoning_effort=medium -c web_search=disabled -- <TASK_PROMPT> 2>&1 </dev/null | tee /logs/agent/codex.txt",
+            "user": "agent (task default)",
+            "cwd": "/workspace (task workdir)",
+            "exit_status": 0,
+            "stdout": "Reading additional input from stdin...\n{\"type\":\"thread.started\",\"thread_id\":\"01a1ad91-3496-7763-91d7-c04880cbe50e\"}\n<NON_HARNESS_OUTPUT_OMITTED>",
+            "stderr": "None",
+            "stream_note": "Harbor Docker merges stderr into stdout"
+          },
+          {
+            "stage": "cleanup",
+            "command": "mkdir -p /logs/agent\nif [ -d \"$CODEX_HOME/sessions\" ]; then\n  rm -rf /logs/agent/sessions\n  cp -R \"$CODEX_HOME/sessions\" /logs/agent/sessions\nfi",
+            "user": "agent (task default)",
+            "cwd": "/workspace (task workdir)",
+            "exit_status": 0,
+            "stdout": "None",
+            "stderr": "None",
+            "stream_note": "Harbor Docker merges stderr into stdout"
+          },
+          {
+            "stage": "cleanup",
+            "command": "rm -rf /tmp/codex-secrets /installed-agent/codex-home",
+            "user": "root",
+            "cwd": "/workspace (task workdir)",
+            "exit_status": 1,
+            "stdout": "rm: cannot remove '/tmp/codex-secrets/auth.json': Permission denied\nrm: cannot remove '/installed-agent/codex-home': Permission denied",
+            "stderr": "None",
+            "stream_note": "Harbor Docker merges stderr into stdout"
+          }
+        ],
+        "primary_failure": null,
+        "cleanup_failures": [
+          {
+            "stage": "cleanup",
+            "command": "rm -rf /tmp/codex-secrets /installed-agent/codex-home",
+            "user": "root",
+            "cwd": "/workspace (task workdir)",
+            "exit_status": 1,
+            "stdout": "rm: cannot remove '/tmp/codex-secrets/auth.json': Permission denied\nrm: cannot remove '/installed-agent/codex-home': Permission denied",
+            "stderr": "None",
+            "stream_note": "Harbor Docker merges stderr into stdout"
+          }
+        ]
+      },
+      "absent": {
+        "commands": [
+          {
+            "stage": "ownership_check",
+            "command": "test \"$(id -u)\" = 1000 && test \"$(id -g)\" = 1000 && test \"$(stat -c %u /installed-agent/codex-home)\" = 1000 && test \"$(stat -c %a /installed-agent/codex-home)\" = 700",
+            "user": "agent (task default)",
+            "cwd": "/workspace (task workdir)",
+            "exit_status": 0,
+            "stdout": "None",
+            "stderr": "None",
+            "stream_note": "Harbor Docker merges stderr into stdout"
+          },
+          {
+            "stage": "directory_setup",
+            "command": "mkdir -p \"$CODEX_HOME\" /tmp/codex-secrets /logs/agent",
+            "user": "agent (task default)",
+            "cwd": "/workspace (task workdir)",
+            "exit_status": 0,
+            "stdout": "None",
+            "stderr": "None",
+            "stream_note": "Harbor Docker merges stderr into stdout"
+          },
+          {
+            "stage": "configuration_upload",
+            "command": "umask 077; printf %s <CONFIG_TOML> > /installed-agent/codex-home/config.toml",
+            "user": "agent (task default)",
+            "cwd": "/workspace (task workdir)",
+            "exit_status": 0,
+            "stdout": "None",
+            "stderr": "None",
+            "stream_note": "Harbor Docker merges stderr into stdout"
+          },
+          {
+            "stage": "authentication_setup",
+            "command": "cat >/tmp/codex-secrets/auth.json <<EOF\n<AUTH_JSON_REDACTED>\nEOF\nln -sf /tmp/codex-secrets/auth.json \"$CODEX_HOME/auth.json\"\n\nmkdir -p $HOME/.agents/skills && cp -r /runtime/skills/* $HOME/.agents/skills/ 2>/dev/null || true",
+            "user": "agent (task default)",
+            "cwd": "/workspace (task workdir)",
+            "exit_status": 0,
+            "stdout": "None",
+            "stderr": "None",
+            "stream_note": "Harbor Docker merges stderr into stdout"
+          },
+          {
+            "stage": "cli_startup",
+            "command": "if [ -s ~/.nvm/nvm.sh ]; then . ~/.nvm/nvm.sh; fi; CODEX_API_KEY= codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --model gpt-5.6-sol --json --enable unified_exec -c model_reasoning_effort=medium -c web_search=disabled -- <TASK_PROMPT> 2>&1 </dev/null | tee /logs/agent/codex.txt",
+            "user": "agent (task default)",
+            "cwd": "/workspace (task workdir)",
+            "exit_status": 0,
+            "stdout": "Reading additional input from stdin...\n{\"type\":\"thread.started\",\"thread_id\":\"01a1ad91-f566-7783-9e62-f5d07a78a323\"}\n<NON_HARNESS_OUTPUT_OMITTED>",
+            "stderr": "None",
+            "stream_note": "Harbor Docker merges stderr into stdout"
+          },
+          {
+            "stage": "cleanup",
+            "command": "mkdir -p /logs/agent\nif [ -d \"$CODEX_HOME/sessions\" ]; then\n  rm -rf /logs/agent/sessions\n  cp -R \"$CODEX_HOME/sessions\" /logs/agent/sessions\nfi",
+            "user": "agent (task default)",
+            "cwd": "/workspace (task workdir)",
+            "exit_status": 0,
+            "stdout": "None",
+            "stderr": "None",
+            "stream_note": "Harbor Docker merges stderr into stdout"
+          },
+          {
+            "stage": "cleanup",
+            "command": "rm -rf /tmp/codex-secrets /installed-agent/codex-home",
+            "user": "root",
+            "cwd": "/workspace (task workdir)",
+            "exit_status": 1,
+            "stdout": "rm: cannot remove '/tmp/codex-secrets/auth.json': Permission denied\nrm: cannot remove '/installed-agent/codex-home': Permission denied",
+            "stderr": "None",
+            "stream_note": "Harbor Docker merges stderr into stdout"
+          }
+        ],
+        "primary_failure": null,
+        "cleanup_failures": [
+          {
+            "stage": "cleanup",
+            "command": "rm -rf /tmp/codex-secrets /installed-agent/codex-home",
+            "user": "root",
+            "cwd": "/workspace (task workdir)",
+            "exit_status": 1,
+            "stdout": "rm: cannot remove '/tmp/codex-secrets/auth.json': Permission denied\nrm: cannot remove '/installed-agent/codex-home': Permission denied",
+            "stderr": "None",
+            "stream_note": "Harbor Docker merges stderr into stdout"
+          }
+        ]
+      }
+    },
+    "installations": {
+      "current": {
+        "stdout": "WARNING: proceeding, even though we could not create PATH aliases: Operation not permitted (os error 1)\ncodex-cli 0.155.1",
+        "stderr": "",
+        "cwd": "/workspace",
+        "command": "/usr/local/bin/codex --version",
+        "user": "agent",
+        "returncode": 0,
+        "version": "0.155.1",
+        "matched": true
+      },
+      "absent": {
+        "stdout": "WARNING: proceeding, even though we could not create PATH aliases: Operation not permitted (os error 1)\ncodex-cli 0.155.1",
+        "stderr": "",
+        "cwd": "/workspace",
+        "command": "/usr/local/bin/codex --version",
+        "user": "agent",
+        "returncode": 0,
+        "version": "0.155.1",
+        "matched": true
+      }
+    },
+    "artifact_observation": "No submitted_artifact hash/size was recorded at Harbor's canonical artifacts/workspace/output/Subject.Tests.ps1 path. Both offline verifiers returned invalid/artifact. Missing, rejected or untransferred output is not distinguished by retained metadata; raw sessions and submissions were not exported.",
+    "activation_observation": "The executed collector counted response_item/function_call only. Its zero tool_calls and empty skill_file_access_attempts are partial observations, not proof of no tools or no activation. Pinned Harbor also supports custom_tool_call. The post-run collector correction has a failing-before/passing-after local fixture; these live observations could not be reprocessed.",
+    "usage_provenance": "Token totals were extracted from Codex rollout token_count events. Native cost_usd is Harbor pricing-derived evidence, not a provider invoice; pinned code falls back to per-call LiteLLM pricing including cache read/write. The separate conservative estimate charges all input including cached input at $20/M and output at $30/M. Historical cumulative spending remains unknown.",
+    "cleanup": "Stock best-effort root cleanup returned permission denied under cap_drop=ALL in both arms. No launch failure was overwritten. Both entire agent containers were subsequently removed, as verified by Docker metadata."
   }
 }

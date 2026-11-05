@@ -154,10 +154,11 @@ def usage_and_activation(native_dir):
             if event.get('type')=='event_msg' and payload.get('type')=='token_count':
                 value=(payload.get('info') or {}).get('total_token_usage')
                 if value:totals={k:(value.get(k) if type(value.get(k)) is int and value[k]>=0 else None) for k in ('input_tokens','cached_input_tokens','output_tokens','reasoning_output_tokens','cache_write_input_tokens','total_tokens')}
-            if event.get('type')=='response_item' and payload.get('type')=='function_call':
+            if event.get('type')=='response_item' and payload.get('type') in ('function_call','custom_tool_call'):
                 calls+=1
+                arguments=payload.get('arguments' if payload['type']=='function_call' else 'input','')
                 for name in expected_files('current'):
-                    if name.startswith(TARGET+'/') and name in str(payload.get('arguments','')):activation.add(name)
+                    if name.startswith(TARGET+'/') and name in str(arguments):activation.add(name)
             if event.get('type')=='event_msg' and payload.get('type') in ('task_complete','turn_complete'):completion=True
     return {'total_usage':totals,'skill_file_access_attempts':sorted(activation),'tool_calls':calls,'completion_event':completion}
 

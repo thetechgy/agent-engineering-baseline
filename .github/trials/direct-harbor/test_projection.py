@@ -121,6 +121,22 @@ class LiveMetadataTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             self.assertIsNone(live.usage_and_activation(Path(tmp))['total_usage'])
 
+    def test_custom_tool_call_is_counted_without_claiming_success(self):
+        import live
+        with tempfile.TemporaryDirectory() as temporary:
+            root=Path(temporary); (root/'agent').mkdir()
+            events=[{'type':'response_item','payload':{'type':'custom_tool_call',
+                     'call_id':'fixture','name':'exec_command',
+                     'input':'cat .agents/skills/powershell-pester-6/references/execution.md'}},
+                    {'type':'response_item','payload':{'type':'custom_tool_call_output',
+                     'call_id':'fixture','output':'permission denied'}}]
+            (root/'agent/rollout-fixture.jsonl').write_text('\n'.join(json.dumps(x) for x in events))
+            result=live.usage_and_activation(root)
+            self.assertEqual(result['tool_calls'],1)
+            self.assertEqual(result['skill_file_access_attempts'],['powershell-pester-6/references/execution.md'])
+            self.assertFalse(result['completion_event'])
+            self.assertNotIn('correctness',result)
+
     def test_partial_or_unknown_usage_stops_additional_scheduling(self):
         import live
         self.assertFalse(live.can_schedule({'usage_complete':False,'usage_estimate_usd':0.1}))

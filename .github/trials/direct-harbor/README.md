@@ -3,14 +3,17 @@
 This branch-only trial preserves production SkillEvaluator 0.3.0 / Harbor 0.13.2,
 APM deployment, static checks, historical scores and Pages. Source commit:
 `cc0819f5dafc05610dd8c3293ce2f52744c66f1a`. This pass starts from reviewed trial
-commit `29f7765a3e2e48ca573160d412749b717d63bb06`.
+commit `f61201a730746921abd17d8f8366dfd1505ad6f8`; the earlier failed live run executed
+`11bf0db52f020271efc8b1e4c136f7795b480114`, not that packaging commit.
 
 [The single report](results/report.html) and its [machine-readable results](results/results.json)
 are authoritative for outcomes and spending. Report packaging is not native evaluation.
 The launch repair reproduced the reserved-provider rejection and verified its
 correction through stock Harbor/Codex. The user subsequently authorized the two
-remaining paid smoke attempts despite unknown costs. Historical paid slots remain
-2/4 until those attempts run; the broader comparison is not authorized here.
+remaining paid smoke attempts despite unknown costs. Both sessions completed in run
+42110435228 at `c5a430a`, but both verifier outcomes were `invalid/artifact`. Four of
+four recovery slots are consumed; scheduling is disabled. This is launch evidence,
+not a valid task comparison. The broader comparison is not authorized here.
 Only reviewed metadata is published; previously rejected raw oracle content is not
 repackaged. Raw agent transcripts, submissions, authentication files and environment
 dumps are excluded from the live artifacts.
@@ -110,3 +113,13 @@ or bodies, and is included only in offline diagnostic images. No framework patch
 additional private Harbor method override was added; logging-record shape remains a
 compatibility dependency. `rollout_present` and `result_extraction_succeeded` describe
 their actual evidence; neither field proves successful task execution.
+
+The final pair reported 95,829 input tokens including 71,142 cached input tokens,
+24,605 cache-write input tokens and 1,367 output tokens. Cache counts are components
+of input, not additive totals. Harbor's pricing estimate is $0.23077225; the separate
+conservative estimate is $1.95759. Neither is a provider bill; cumulative spending
+remains unknown. No candidate hash/size was recovered at the declared artifact path.
+The executed metadata collector omitted custom tool calls, so activation is unknown.
+That collector now has a failing-before/passing-after regression check; 19 focused
+tests pass locally, while 18 ran on the live head. The smallest next step is a
+credential-free artifact-boundary diagnosis, not another model attempt.

@@ -28,3 +28,13 @@ External-container follow-up (reviewed metadata only)
 41965390294: external preflight passed; attempt 1 RuntimeError before agent execution; absent skipped.
 41966399157 at 11bf0db52f020271efc8b1e4c136f7795b480114: CLI 0.155.1 pin passes both arms; attempt 2 NonZeroAgentExitCodeError, agent phase 0.614 seconds, verifier invalid/artifact, reward_valid=false, measured=false. Harbor process returns 0; wrapper exits 1. No session/usage recovered; absent skipped; no more scheduling.
 Command-level raw diagnostics were not retained in exported evidence. Do not infer root cause or zero spending.
+
+Credential-free launch repair (2026-11-05)
+42106956278 at 9a4ad95: signed snapshot index HTTP 503; no Harbor or model execution.
+42108206579 at 7142249: retained historical config rejected reserved built-in openai provider. Corrected alias reached local HTTP/SSE refusal fixture; one POST each; silent stream terminated after 60.2 seconds. All ten diagnostic verification checks passed; deliberate probe failures kept overall workflow nonzero. No paid inference.
+
+Authorized final smoke pair
+42110435228 at c5a430a: both actual CLI/session executions completed, both rollouts and usage recovered; no native failure cause. Both offline verifiers returned invalid/artifact, native reward=0, Harbor reward_valid=true, measured=false. Valid denominator=0 per arm. No submitted-artifact hash recovered. Metadata extraction and boundary checks passed; workflow success does not qualify the live pair. Best-effort root cleanup returned Permission denied; entire agent containers verified removed. Four recovery slots consumed; scheduling disabled. Unknown cumulative charge preserved.
+Current: input=47987 cached=35617 cache_write=12329 output=637 native_pricing_estimate=0.11417975 conservative_estimate=0.97885.
+Absent: input=47842 cached=35525 cache_write=12276 output=730 native_pricing_estimate=0.11659250 conservative_estimate=0.97874.
+Executed collector omitted custom_tool_call, so zero function-call metadata does not establish no tools/activation. Nineteen local tests pass after focused collector correction; eighteen ran on the live head.
