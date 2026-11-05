@@ -1,8 +1,18 @@
 """Trial-local Harbor custom-agent extension; upstream files remain unchanged."""
 import json
 import shlex
+import re
 import toml
 from harbor.agents.installed.codex import Codex
+
+async def check_pin(environment):
+    # Docker merges stderr into stdout; Codex can print a startup warning before
+    # its version. Match the explicit version line, never the first output line.
+    result = await environment.exec(command='/usr/local/bin/codex --version', user='agent', timeout_sec=30)
+    versions = re.findall(r'^codex-cli ([0-9.]+)$', result.stdout or '', re.MULTILINE)
+    return {'command':'/usr/local/bin/codex --version', 'user':'agent',
+            'returncode':result.return_code, 'version':versions[0] if len(versions)==1 else None,
+            'matched':result.return_code==0 and versions==['0.155.1']}
 
 class PinnedCodex(Codex):
     """Stock run/exec path; only pinned installation and unprivileged ownership."""
@@ -13,7 +23,9 @@ class PinnedCodex(Codex):
         import os
         from pathlib import Path
         await runtime_check(environment, os.environ['TRIAL_VARIANT'], Path(os.environ['TRIAL_PUBLIC_DIR']))
-        if not await self._installed_codex_satisfies_version(environment):
+        check = await check_pin(environment)
+        (Path(os.environ['TRIAL_PUBLIC_DIR']) / 'installation.json').write_text(json.dumps(check, indent=2) + '\n')
+        if not check['matched']:
             raise RuntimeError('Preinstalled Codex version mismatch')
 
     async def _ensure_agent_owned_dir(self, environment, path):

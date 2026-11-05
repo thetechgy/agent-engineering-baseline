@@ -57,6 +57,10 @@ print(json.dumps({'skills':manifest('/workspace/.agents/skills'),'instructions_s
     if result.return_code:
         raise RuntimeError('External preflight failed: '+(result.stderr or '')[-1200:])
     observed=json.loads(result.stdout)
+    from pinned_codex import check_pin
+    pin=await check_pin(environment)
+    trial.write(output/'installation.json',pin)
+    assert pin['matched'], 'Pinned unprivileged Codex version check failed'
     assert observed['skills']==expected_files(variant), 'Deployed skill manifest mismatch'
     assert observed['target_copies']==(['/workspace/.agents/skills/'+TARGET] if variant=='current' else []), 'Target copies mismatch'
     assert observed['codex_files']==trial.pilot.manifest(trial.ROOT/'.codex'), 'APM config mismatch'
@@ -152,11 +156,12 @@ def attempt(root,variant):
     assert os.environ.get('OPENAI_API_KEY'), 'Existing protected credential required'
     assert json.loads((public/'preflight.json').read_text())['passed']
     launch=json.loads((trial.ROOT/'.github/trials/direct-harbor/launch.json').read_text())
-    assert launch['paid_attempts_used']==0 and launch['recovery_live_attempt_limit']==4
+    assert launch['paid_attempts_used']==1 and launch['recovery_live_attempt_limit']==4
+    assert launch['prior_attempts'][0]['inference_started'] is False and launch['prior_attempts'][0]['api_spend_usd']==0
     if variant=='absent':
         first=json.loads((public/'current/attempt.json').read_text())
         assert can_schedule(first), 'Incomplete usage or scheduling reserve reached'
-    number=1 if variant=='current' else 2
+    number=launch['paid_attempts_used']+(1 if variant=='current' else 2)
     assert number<=4 and number<=36
     assert not (output/'attempt.json').exists(), 'No implicit retry'
     task=Path(json.loads((root/(variant+'-task.json')).read_text())['path'])

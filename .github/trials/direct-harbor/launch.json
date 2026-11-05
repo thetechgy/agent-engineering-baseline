@@ -1,7 +1,7 @@
 {
   "phase": "live-pair",
   "campaign": "direct-harbor-20261104",
-  "paid_attempts_used": 0,
+  "paid_attempts_used": 1,
   "paid_attempt_limit": 36,
   "recovery_live_attempt_limit": 4,
   "budget_usd": 20,
@@ -23,5 +23,17 @@
   "preflight_estimate_usd": 2.64,
   "native_inner_sandbox_required": false,
   "external_preflight_attempt": 2,
-  "prior_external_preflight_run": 41964780671
+  "prior_external_preflight_run": 41964780671,
+  "focused_live_setup_correction": 1,
+  "prior_attempts": [
+    {
+      "attempt": 1,
+      "run": 41965390294,
+      "commit": "725e8d5e08d5d6c30c97d9ad58f2b2bf53358803",
+      "status": "agent_setup_failed",
+      "inference_started": false,
+      "api_spend_usd": 0,
+      "evidence": "Boundary checkpoint exists; no effective config, agent execution timing, or session; install check is the subsequent RuntimeError path."
+    }
+  ]
 }

@@ -2,7 +2,7 @@
 from pathlib import Path
 import tempfile
 import json
-from unittest.mock import patch, Mock
+from unittest.mock import patch, Mock, AsyncMock
 import unittest
 from harbor.models.trial.result import TrialResult, ExceptionInfo
 from harbor.models.trial.config import TrialConfig, TaskConfig
@@ -95,6 +95,14 @@ class ProjectionTests(unittest.TestCase):
     def test_extension_inherits_stock_launch_and_exec(self):
         self.assertIs(PinnedCodex.run, Codex.run)
         self.assertIs(PinnedCodex.exec_as_agent, Codex.exec_as_agent)
+
+class PinTests(unittest.IsolatedAsyncioTestCase):
+    async def test_version_warning_does_not_replace_the_exact_pin(self):
+        from pinned_codex import check_pin
+        for output,code,matched in [('WARNING: path aliases unavailable\ncodex-cli 0.155.1\n',0,True),('codex-cli 0.155.2\n',0,False),('codex-cli 0.155.1\n',1,False),('warning only',0,False)]:
+            env=Mock(exec=AsyncMock(return_value=Mock(stdout=output,return_code=code)))
+            self.assertEqual((await check_pin(env))['matched'],matched)
+            self.assertEqual(env.exec.call_args.kwargs['user'],'agent')
 
 class LiveMetadataTests(unittest.TestCase):
     def test_rollout_usage_is_numeric_and_activation_is_separate(self):
