@@ -1,0 +1,61 @@
+name: Direct Harbor trial
+on:
+  push:
+    branches: [trial/direct-harbor]
+    paths: ['.github/trials/direct-harbor/launch.json']
+permissions:
+  contents: read
+concurrency:
+  group: direct-harbor-trial
+  cancel-in-progress: false
+jobs:
+  calibration:
+    if: github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHON_DOTENV_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: '0.13.7'
+          enable-cache: false
+      - name: Acquire released Harbor with its owning lock
+        run: |
+          set -euo pipefail
+          source="$RUNNER_TEMP/harbor"
+          git init --quiet "$source"
+          git -C "$source" fetch --quiet --depth=1 https://github.com/harbor-framework/harbor.git fdba28fc411e47e8765420a1a063b4918fce3def
+          git -C "$source" checkout --quiet --detach FETCH_HEAD
+          test "$(git -C "$source" rev-parse HEAD)" = fdba28fc411e47e8765420a1a063b4918fce3def
+          uv sync --project "$source" --python 3.13.15 --managed-python --frozen --no-dev
+          uv pip check --python "$source/.venv/bin/python"
+          git -C "$source" diff --exit-code
+          echo "$source/.venv/bin" >> "$GITHUB_PATH"
+      - name: Install reviewed Compose
+        run: bash .github/scripts/setup-compose.sh
+      - name: Qualify existing graders through direct Harbor
+        run: python .github/trials/direct-harbor/run.py "$RUNNER_TEMP/direct-harbor"
+      - name: Retain single report and credential-free diagnostics
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: direct-harbor-trial
+          path: |
+            ${{ runner.temp }}/direct-harbor/report.html
+            ${{ runner.temp }}/direct-harbor/results.json
+            ${{ runner.temp }}/direct-harbor/manifest.json
+            ${{ runner.temp }}/direct-harbor/harbor.log
+            ${{ runner.temp }}/direct-harbor/jobs/**/exception.txt
+          retention-days: 30
+          if-no-files-found: error
+      - name: Verify checkout integrity
+        if: always()
+        run: git diff --exit-code
+      - name: Remove test-only Compose
+        if: always()
+        run: bash .github/scripts/setup-compose.sh cleanup
