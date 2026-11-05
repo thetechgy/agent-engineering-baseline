@@ -39,6 +39,10 @@ class PinnedCodex(Codex):
         (Path(os.environ['TRIAL_PUBLIC_DIR']) / 'installation.json').write_text(json.dumps(check, indent=2) + '\n')
         if not check['matched']:
             raise RuntimeError('Preinstalled Codex version mismatch')
+        probe=os.environ.get('TRIAL_PROVIDER_PROBE')
+        if os.environ.get('TRIAL_DIAGNOSTIC')=='1' and probe in ('http','idle'):
+            result=await environment.exec(command='nohup python3 /opt/refusal_fixture.py '+probe+' </dev/null >/tmp/refusal-fixture.log 2>&1 &',user='agent')
+            if result.return_code:raise RuntimeError('Local refusal fixture failed to start')
 
     async def _ensure_agent_owned_dir(self, environment, path):
         # Build-time ownership avoids root chown under cap_drop=ALL.

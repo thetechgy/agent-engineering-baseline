@@ -132,9 +132,11 @@ class LiveMetadataTests(unittest.TestCase):
         import live
         settings=live.config()
         self.assertEqual(settings['web_search'],'disabled')
+        self.assertEqual(settings['model_provider'],'trial_openai')
+        self.assertNotIn('openai',settings['model_providers'])
         self.assertTrue(all(v['enabled'] is False for v in settings['mcp_servers'].values()))
-        self.assertEqual(settings['model_providers']['openai']['request_max_retries'],0)
-        self.assertEqual(settings['model_providers']['openai']['stream_max_retries'],0)
+        self.assertEqual(settings['model_providers']['trial_openai']['request_max_retries'],0)
+        self.assertEqual(settings['model_providers']['trial_openai']['stream_max_retries'],0)
         self.assertEqual(len(live.expected_files('current'))-len(live.expected_files('absent')),3)
 
 if __name__=='__main__': unittest.main()
@@ -180,3 +182,20 @@ raise SystemExit(asyncio.run(check()))
             self.assertIn('startup failure',saved['native_exception']['message'])
             self.assertIn('command',saved['primary_failure'])
             self.assertIn('cwd',saved['primary_failure'])
+
+class EffectiveProviderTests(unittest.TestCase):
+    def test_harbor_preserves_selected_provider_and_diagnostic_override(self):
+        import live
+        from harbor.models.trial.config import AgentConfig
+        from harbor.agents.factory import AgentFactory
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg=AgentConfig(import_path='pinned_codex:PinnedCodex',model_name=live.MODEL,
+                kwargs={'version':'0.155.1','config':live.config()})
+            agent=AgentFactory.create_agent_from_config(cfg,logs_dir=Path(tmp))
+            actual=agent._build_effective_config()
+            self.assertEqual(actual['model_provider'],'trial_openai')
+            self.assertEqual(actual['model_providers']['trial_openai']['base_url'],'https://api.openai.com/v1')
+            override=agent._build_effective_config('http://127.0.0.1:8765/v1')
+            self.assertEqual(override['model_provider'],'trial_openai')
+            self.assertEqual(override['model_providers']['trial_openai']['request_max_retries'],0)
+            self.assertEqual(override['model_providers']['trial_openai']['stream_idle_timeout_ms'],60000)

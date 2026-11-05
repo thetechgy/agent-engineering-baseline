@@ -64,6 +64,7 @@ jobs:
       - name: Install reviewed Compose
         run: bash .github/scripts/setup-compose.sh
       - name: Prepare pinned offline agent
+        id: prepare
         timeout-minutes: 12
         run: python -u .github/trials/direct-harbor/live.py diagnostic-prepare "$RUNNER_TEMP/launch-diagnostic"
       - name: Checkpoint offline boundary before launch
@@ -73,9 +74,27 @@ jobs:
           name: diagnostic-preflight
           path: ${{ runner.temp }}/launch-diagnostic/public/
           retention-days: 30
-      - name: Instrumented actual Harbor Codex launch - no inference egress
+      - name: Reproduce historical stock launch - expected nonzero
         timeout-minutes: 4
-        run: python -u .github/trials/direct-harbor/live.py diagnostic "$RUNNER_TEMP/launch-diagnostic"
+        run: python -u .github/trials/direct-harbor/live.py diagnostic "$RUNNER_TEMP/launch-diagnostic" historical
+      - name: Checkpoint historical failure before corrected probes
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: diagnostic-historical
+          path: ${{ runner.temp }}/launch-diagnostic/public/historical/
+          retention-days: 30
+      - name: Corrected provider HTTP refusal - expected nonzero
+        if: always() && steps.prepare.outcome == 'success'
+        timeout-minutes: 4
+        run: python -u .github/trials/direct-harbor/live.py diagnostic "$RUNNER_TEMP/launch-diagnostic" http
+      - name: Corrected provider silent stream - expected nonzero
+        if: always() && steps.prepare.outcome == 'success'
+        timeout-minutes: 4
+        run: python -u .github/trials/direct-harbor/live.py diagnostic "$RUNNER_TEMP/launch-diagnostic" idle
+      - name: Verify observed startup, no retries and 60-second stream timeout
+        if: always() && steps.prepare.outcome == 'success'
+        run: python .github/trials/direct-harbor/verify_diagnostic.py "$RUNNER_TEMP/launch-diagnostic"
       - name: Recover sanitized launch diagnostics including failure
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

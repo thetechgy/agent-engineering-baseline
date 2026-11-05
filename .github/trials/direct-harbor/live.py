@@ -12,9 +12,13 @@ def config():
         server['enabled'] = False
     value.update(web_search='disabled', service_tier='default', model_reasoning_effort='medium',
         forced_login_method='api', projects={'/workspace': {'trust_level': 'trusted'}},
-        model_providers={'openai': {'name':'OpenAI', 'base_url':'https://api.openai.com/v1',
+        model_provider='trial_openai',
+        model_providers={'trial_openai': {'name':'OpenAI', 'base_url':'https://api.openai.com/v1',
             'wire_api':'responses', 'requires_openai_auth':True, 'request_max_retries':0,
-            'stream_max_retries':0, 'stream_idle_timeout_ms':60000}},
+            'stream_max_retries':0, 'stream_idle_timeout_ms':60000,
+            'supports_websockets':True,'supports_standalone_web_search':True,
+            'http_headers':{'version':'0.155.1'},
+            'env_http_headers':{'OpenAI-Organization':'OPENAI_ORGANIZATION','OpenAI-Project':'OPENAI_PROJECT'}}},
         features={'rollout_budget': {'enabled':True, 'limit_tokens':30000,
             'reminder_at_remaining_tokens':[5000], 'sampling_token_weight':5.0, 'prefill_token_weight':1.0}})
     return value
@@ -99,6 +103,9 @@ def prepare(root, diagnostic=False):
         output=public/variant;output.mkdir()
         native,manifest=trial.stage(root/variant,variant)
         task=native/'pester-002';cfg=toml.load(task/'task.toml')
+        shutil.copyfile(Path(__file__).with_name('refusal_fixture.py'),task/'environment/refusal_fixture.py')
+        with (task/'environment/Dockerfile').open('a') as build:build.write('COPY refusal_fixture.py /opt/refusal_fixture.py\n')
+        cfg['artifacts'].append('/tmp/provider-observation.json')
         cfg['agent']['timeout_sec']=600
         cfg['environment'].update(network_mode='allowlist',allowed_hosts=['api.openai.com'])
         compose=task/'environment/docker-compose.yaml'
@@ -111,6 +118,7 @@ def prepare(root, diagnostic=False):
     cpus: 0.5
 ''')
         compose.write_text(compose.read_text().replace('    user: "1000:1000"', '    user: "1000:1000"\n    network_mode: none'))
+        trial.write(output/'preparation.json',{'stage':'building_pinned_image','paid_inference_permitted':False})
         for folder,tag in [('environment','direct-harbor-agent:'+variant)]:
             subprocess.run(['docker','build','--progress=plain','-t',tag,str(task/folder)],check=True,timeout=600)
             (cfg['environment'] if folder=='environment' else cfg['verifier']['environment'])['docker_image']=tag
@@ -154,44 +162,57 @@ def can_schedule(previous):
     cost=previous.get('usage_estimate_usd')
     return previous.get('usage_complete') is True and cost is not None and cost+1.32<4
 
-def diagnostic(root):
+def diagnostic(root, mode):
     from harbor.models.task.task import Task
     from diagnostics import SENTINEL, sanitized_exception, sanitize
     assert not any(os.environ.get(k) for k in ('OPENAI_API_KEY','CODEX_API_KEY','CODEX_AUTH_JSON_PATH','CODEX_FORCE_AUTH_JSON')), 'No real authentication permitted'
     assert os.environ.get('TRIAL_DIAGNOSTIC')=='1'
-    output=root/'public/current';task=Path(json.loads((root/'current-task.json').read_text())['path'])
+    assert mode in ('historical','http','idle')
+    output=root/'public'/mode;output.mkdir(parents=True,exist_ok=False)
+    task=Path(json.loads((root/'current-task.json').read_text())['path'])
     before=Task(task).checksum
-    cfg={'job_name':'diagnostic','jobs_dir':str(root/'jobs'),'n_attempts':1,'n_concurrent_trials':1,
+    settings=(json.loads((trial.ROOT/'.github/trials/direct-harbor/results/live-evidence.json').read_text())['effective_config_current'] if mode=='historical' else config())
+    cfg={'job_name':mode,'jobs_dir':str(root/'jobs'),'n_attempts':1,'n_concurrent_trials':1,
         'retry':{'max_retries':0},'environment':{'type':'docker','delete':True},'verifier':{'disable':True},
         'agents':[{'import_path':'pinned_codex:PinnedCodex','model_name':MODEL,'extra_allowed_hosts':['api.openai.com'],
-            'kwargs':{'version':'0.155.1','reasoning_effort':'medium','web_search':'disabled','config':config()}}],
+            'kwargs':{'version':'0.155.1','reasoning_effort':'medium','web_search':'disabled','config':settings}}],
         'tasks':[{'path':str(task)}]}
-    trial.write(root/'diagnostic-job.json',cfg)
+    if mode!='historical':cfg['agents'][0]['base_url']='http://127.0.0.1:8765/v1'
+    trial.write(root/(mode+'-job.json'),cfg)
     environment=os.environ.copy();environment.update(PYTHONPATH=str(Path(__file__).parent),
-        TRIAL_VARIANT='current',TRIAL_PUBLIC_DIR=str(output),OPENAI_API_KEY=SENTINEL)
-    record={'kind':'credential_free_launch_diagnostic','paid_attempt':False,'measured_task_outcome':False,
+        TRIAL_VARIANT='current',TRIAL_PUBLIC_DIR=str(output),OPENAI_API_KEY=SENTINEL,TRIAL_PROVIDER_PROBE=mode)
+    record={'mode':mode,'kind':'credential_free_launch_diagnostic','paid_attempt':False,'measured_task_outcome':False,
         'result_extraction_succeeded':False,'launch_succeeded':False,'rollout_present':False,
         'commit':os.environ.get('GITHUB_SHA')}
+    started=time.monotonic()
     try:
-        with (root/'private-native.log').open('w') as log:
-            completed=subprocess.run(['harbor','run','--config',str(root/'diagnostic-job.json')],env=environment,stdout=log,stderr=subprocess.STDOUT,timeout=180)
+        with (root/(mode+'-private-native.log')).open('w') as log:
+            completed=subprocess.run(['harbor','run','--config',str(root/(mode+'-job.json'))],env=environment,stdout=log,stderr=subprocess.STDOUT,timeout=180)
         record['harbor_returncode']=completed.returncode
-        row=trial.project(root/'jobs',{})[0]
+        row=next(r for r in trial.project(root/'jobs',{}) if r['native_result'].startswith('jobs/'+mode+'/'))
         row['exceptions']=[sanitized_exception(e) for e in row['exceptions']]
         record['native_result']=row
-        record['rollout_present']=bool(list((root/'jobs').glob('**/rollout-*.jsonl')))
+        record['rollout_present']=bool(list((root/'jobs'/mode).glob('**/rollout-*.jsonl')))
+        observations=list((root/'jobs'/mode).glob('**/provider-observation.json'))
+        if observations:record['provider_observation']=json.loads(observations[0].read_text())
         assert Task(task).checksum==before, 'Frozen task changed'
         record['result_extraction_succeeded']=True
         record['launch_succeeded']=row['failure_cause'] is None and not row['exceptions']
     except Exception as exc:
         record['extraction_exception']={'type':type(exc).__name__,'message':sanitize(str(exc))}
     finally:
+        record['duration_seconds']=round(time.monotonic()-started,3)
         trial.write(output/'diagnostic.json',record)
         print(json.dumps(record),flush=True)
     return 0 if record['launch_succeeded'] else 1
 
 if __name__=='__main__':
     mode=sys.argv[1];root=Path(sys.argv[2]).resolve()
-    if mode=='diagnostic-prepare':prepare(root,diagnostic=True)
-    elif mode=='diagnostic':raise SystemExit(diagnostic(root))
+    if mode=='diagnostic-prepare':
+        try:prepare(root,diagnostic=True)
+        except Exception as exc:
+            from diagnostics import sanitize
+            trial.write(root/'public/preparation-failure.json',{'type':type(exc).__name__,'message':sanitize(str(exc)),'paid_inference_permitted':False})
+            raise
+    elif mode=='diagnostic':raise SystemExit(diagnostic(root,sys.argv[3]))
     else:raise ValueError('Paid execution disabled; only credential-free diagnostics are allowed')
