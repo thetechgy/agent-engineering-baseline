@@ -1,7 +1,7 @@
 {
-  "phase": "live-pair",
+  "phase": "report",
   "campaign": "direct-harbor-20261104",
-  "paid_attempts_used": 1,
+  "paid_attempts_used": 2,
   "paid_attempt_limit": 36,
   "recovery_live_attempt_limit": 4,
   "budget_usd": 20,
@@ -11,11 +11,11 @@
   "recovery_control_attempt": 3,
   "native_fixture_retry": 1,
   "transport_preflight_corrections": 1,
-  "state": "external_boundary_authorized",
+  "state": "blocked_at_stock_launch_usage_unknown",
   "final_native_run": 41958553130,
   "native_grading_smoke_qualified": true,
   "native_sandbox_qualified": false,
-  "paid_attempts_reserved": 2,
+  "paid_attempts_reserved": 0,
   "planned_variants": [
     "current",
     "absent"
@@ -34,6 +34,19 @@
       "inference_started": false,
       "api_spend_usd": 0,
       "evidence": "Boundary checkpoint exists; no effective config, agent execution timing, or session; install check is the subsequent RuntimeError path."
+    },
+    {
+      "attempt": 2,
+      "run": 41966399157,
+      "commit": "11bf0db52f020271efc8b1e4c136f7795b480114",
+      "status": "NonZeroAgentExitCodeError",
+      "inference_started": null,
+      "api_spend_usd": null,
+      "evidence": "No recovered rollout or token usage. Verifier invalid/artifact; unmeasured."
     }
-  ]
+  ],
+  "final_live_run": 41966399157,
+  "api_spend_usd": null,
+  "scheduling_stopped": true,
+  "stop_reason": "Final launch failed with no complete usage; absent skipped"
 }

@@ -158,7 +158,7 @@ def report(output, data):
     """The campaign's single report; packaging is never a qualification result."""
     write(output / 'results.json', data)
     def esc(value):
-        return html.escape(str(value))
+        return html.escape("Unknown" if value is None else str(value))
     def table(headers, rows):
         return ('<table><thead><tr>' + ''.join('<th scope="col">'+esc(v)+'</th>' for v in headers)
                 + '</tr></thead><tbody>' + ''.join('<tr>'+''.join('<td>'+esc(v)+'</td>' for v in row)+'</tr>' for row in rows)
@@ -170,16 +170,20 @@ def report(output, data):
     text += table(('Case / submission', 'Expected', 'Verifier observation', 'Reference pass', 'Defects detected', 'Harbor failure cause', 'Valid measured grade'),
                   [(r['task'], r['expected'], r['outcome']['classification'] + ': ' + str(r['outcome'].get('code', '')),
                     r['outcome'].get('reference_pass'), str(r['outcome'].get('mutants_detected')) + '/' + str(r['outcome'].get('mutants_executed')),
-                    r.get('failure_cause'), r.get('measured', False)) for r in data['calibration']])
+                    r.get('failure_cause') or 'None', r.get('measured', False)) for r in data['calibration']])
     text += '<p>' + esc(data['calibration_note']) + '</p><ul>'
     for row in data['calibration']:
         for label, path in row.get('evidence', {}).items():
             text += '<li><a href="' + html.escape(path, quote=True) + '">' + esc(row['task'] + ': ' + label) + '</a></li>'
     text += '</ul>'
     text += '<h2>Live Codex pair</h2>'
-    text += table(('Case', 'Variant', 'Paid attempts', 'Valid denominator', 'Correctness', 'Activation'),
-                  [(r['case'],r['variant'],r['attempts'],r['valid_denominator'],r['correctness'],r['activation']) for r in data['live_results']])
+    text += table(('Case', 'Variant', 'Task execution', 'Valid denominator', 'Reference', 'Defects detected', 'Activation evidence'),
+                  [(r['case'],r['variant'],r.get('execution'),r['valid_denominator'],r['correctness'],r['mutation_detection'],r['activation']) for r in data['live_results']])
     text += '<p>' + esc(data['live_note']) + '</p>'
+    if data.get('live_evidence'):
+        text += '<p><a href="live-evidence.json">Reviewed live attempt, deployment and usage metadata</a></p>'
+        text += table(('Variant', 'Input tokens (including cache)', 'Cached input tokens', 'Output tokens', 'Conservative USD estimate'),
+                      [(r['variant'],r.get('input_tokens'),r.get('cached_input_tokens'),r.get('output_tokens'),r.get('estimate_usd')) for r in data.get('usage_rows',[])])
     text += '<h2>Campaign usage</h2><p>' + esc(data['spending_note']) + '</p>'
     text += '<h2>Sandbox and deployment boundary</h2>'
     for paragraph in data['boundary_assessment']:

@@ -1,19 +1,22 @@
 <!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
 <title>Direct Harbor recovery trial</title><style>body{font:16px system-ui;max-width:1100px;margin:3rem auto;padding:0 1rem;color:#172033}table{border-collapse:collapse;width:100%;margin:1rem 0}th,td{border:1px solid #cbd5e1;padding:.5rem;text-align:left;vertical-align:top}pre{white-space:pre-wrap;overflow-wrap:anywhere}h1,h2{color:#174f78}a{color:#145f91}</style>
 <h1>Direct Harbor recovery trial</h1><p>Diagnostic only. Production evaluation and Pages remain unchanged.</p>
-<p><a href="results.json" download>Download machine-readable results</a> · <a href="manifest.json">Frozen input manifests</a> · <a href="workflow-evidence.txt">Workflow evidence excerpts</a></p><h2>Decision</h2><p>Address one specific blocker before the live pair: native Codex workspace-write sandbox compatibility with the existing unprivileged Docker/runner boundary. The grading smoke passed; adoption and skill effectiveness remain unproven.</p><p>Two expected native grades recovered: good detects 2/2 seeded defects; weak detects 0/2 despite passing the reference. No codex exec task or paid inference occurred. Production remains unchanged.</p><h2>Native credential-free controls</h2><table><thead><tr><th scope="col">Case / submission</th><th scope="col">Expected</th><th scope="col">Verifier observation</th><th scope="col">Reference pass</th><th scope="col">Defects detected</th><th scope="col">Harbor failure cause</th><th scope="col">Valid measured grade</th></tr></thead><tbody><tr><td>pester-002-good</td><td>passed</td><td>passed: evaluated</td><td>1</td><td>2/2</td><td>None</td><td>True</td></tr><tr><td>pester-002-weak</td><td>failed</td><td>failed: evaluated</td><td>1</td><td>0/2</td><td>None</td><td>True</td></tr></tbody></table><p>These are deterministic oracle controls, not live model evidence. Each final control has one valid observation. Both suites execute three tests and pass the reference; only the good suite detects both defects. The earlier missing-submission result remains ungradeable. Raw native carriers and submitted work are in the linked Actions artifacts and retained local evidence; this bundle contains reviewed metadata only.</p><ul><li><a href="native-outcomes.json">pester-002-good: Reviewed native metadata and verifier outcome</a></li><li><a href="native-outcomes.json">pester-002-weak: Reviewed native metadata and verifier outcome</a></li></ul><h2>Live Codex pair</h2><table><thead><tr><th scope="col">Case</th><th scope="col">Variant</th><th scope="col">Paid attempts</th><th scope="col">Valid denominator</th><th scope="col">Correctness</th><th scope="col">Activation</th></tr></thead><tbody><tr><td>pester-002</td><td>current</td><td>0</td><td>0</td><td>None</td><td>None</td></tr><tr><td>pester-002</td><td>absent</td><td>0</td><td>0</td><td>None</td><td>None</td></tr></tbody></table><p>Neither live variant ran. Four actual Codex sandbox-helper probes executed without credentials; no codex exec task or provider inference occurred. Activation, instruction following, skill effectiveness and efficiency/regressions remain unmeasured. No skill revision was created or authorized in this recovery.</p><h2>Campaign usage</h2><p>Cumulative paid attempts: 0/36; recovery: 0/4 maximum. Cumulative API spend: $0 because no credential or model call was used, not because missing telemetry became zero. Oracle token/cost observations remain null. The $20 operational budget is not a provider cap. A future pair is conservatively estimated at $1.44 for two 60k-input/4k-output attempts, charging all input including cache at $10/M and output at $30/M. The proposed $4 scheduling stop leaves $16 reserve; in-flight overshoot remains possible. Unknown usage stops further scheduling. No paid accounting control was exercised.</p><h2>Sandbox and deployment boundary</h2><p>The actual helper used workspace-write, approval_policy=never, inner network disabled and temporary-directory write exceptions excluded. The probe first checks UID 1000, zero effective capabilities, no-new-privileges, no Docker socket and an ordinary outside-workspace write. Exact helper commands, errors and return codes are retained in sandbox.json.</p><p>Bubblewrap reports namespace creation denied under the tested Docker/runner restrictions; the exact enforcing kernel/seccomp/AppArmor mechanism was not isolated. The explicitly tested deprecated Landlock backend rejects this policy as requiring direct runtime enforcement. Neither probe reaches its intended inner write/network assertions, so the inner boundary is not qualified.</p><p>The outer container kept default seccomp, cap_drop=ALL, no-new-privileges, CPU/memory/PID limits and no host Docker socket. The sandbox probe was offline; a live API-connected agent did not run. Codex inner sandbox and outer container protection are separate. No protection was relaxed.</p><p>Harbor import_path is the supported extension point. The small trial subclass replaces the stock bypass flag with --sandbox workspace-write -c approval_policy=never, requires the pinned preinstalled CLI and uses a build-owned private home. The transformation is unit tested; no effective live command/config was produced. No installed upstream file changed.</p><h2>Execution and supporting artifacts</h2><ul><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41956647063">Recovery build preflight</a> — Failed before Harbor started: snapshot 503/504 responses and a 600-second image-build timeout. Failure record retained. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41956647063/artifacts/13383608340">Build failure</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41956647063/artifacts/13384480020">Image unavailable</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958131429">First native control</a> — Oracle exit 126: script lacked executable permission. Verifier invalid/artifact remains unmeasured. Default sandbox helper was missing; legacy policy rejected. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958131429/artifacts/13383049571">Native invalid result</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958131429/artifacts/13383782957">Sandbox errors</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130">Final native controls and sandbox checks</a> — Good passes and weak fails as expected. Overall workflow failed because both sandbox probes failed. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130/artifacts/13384044283">Known-good pass</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130/artifacts/13383659806">Known-weak fail</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130/artifacts/13384059131">Sandbox blocker</a></li></ul><h2>History</h2><p>Original run 41952213509 explicitly received a runner shutdown signal. Cause remains unknown; exit 143 alone does not identify a Harbor timeout/crash. No original native grade survived. Its prior report is preserved as history below; the prior recommendation is superseded and does not show that the existing stack is better.</p><h2>Maintenance and remaining evidence</h2><p>Recovered grading evidence is useful: both suites pass the reference, but only the good suite detects both mutants. The earlier numeric zero reward with a missing submission remains ungradeable. This validates the narrow pass/fail distinction, not all legitimate or adversarial submissions.</p><p>The projection delegates failure cause and reward validity to pinned Harbor, preserves native exceptions/verifier observations and excludes unsupported or missing evidence. Ten tests cover correct/incorrect work, agent timeout with valid grading, provider/environment/verifier failures, handled step failures, unknown usage and post-run failed status/exit.</p><p>Custom maintenance: staging/projection/reporting, 10 focused tests, a 47-line Codex subclass, 34-line native sandbox probe, 29-line snapshot transport helper and one branch-only workflow. No framework patches. The adapter depends on the stock launch string and three pinned helper methods and needs review on Harbor/Codex changes. The transport helper is another component to retain only while needed.</p><p>Existing tasks, reference implementations, mutants, grader, PowerShell runner and runtime installer were reused unchanged. Another skill still needs representative inputs, independent good/weak submissions and a protected executable verifier. Lower total maintenance cost has not been demonstrated.</p><p>Production components removed: none. Only overlapping behavioral wrapper/staging/collection layers could become removable after broader adoption evidence. APM deployment, static checks, graders, historical evidence and publication controls remain necessary.</p><p>Smallest next step: qualify one supported native Codex sandbox configuration under the same required outer boundary without disabling protections. Then run the current/absent pester-002 smoke pair. Do not start the original full comparison yet.</p><h2>Primary references</h2><ul><li><a href="https://github.com/harbor-framework/harbor/releases/tag/v0.25.0">harbor release</a></li><li><a href="https://docs.harborframework.com/tasks/separate-verifier">separate verifier</a></li><li><a href="https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/agents/installed/codex.py#L2072">codex launcher</a></li><li><a href="https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/core/src/rollout_budget.rs">budget accounting</a></li><li><a href="https://developers.openai.com/api/docs/models/gpt-5.6-sol">pricing</a></li><li><a href="https://docs.harborframework.com/jobs/error-classification">harbor failure policy</a></li><li><a href="https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/linux-sandbox/src/linux_run_main.rs">codex native sandbox</a></li><li><a href="https://packages.debian.org/trixie/bubblewrap">debian bubblewrap</a></li></ul><details><summary>Complete machine-readable evidence</summary><pre>{
-  &quot;schema_version&quot;: 2,
+<p><a href="results.json" download>Download machine-readable results</a> · <a href="manifest.json">Frozen input manifests</a> · <a href="workflow-evidence.txt">Workflow evidence excerpts</a></p><h2>Decision</h2><p>One launch integration blocker remains: the stock unprivileged Codex run exits with NonZeroAgentExitCodeError before a recoverable task session. Recover its command-level cause and reconcile unknown usage before another paid attempt. Do not begin the original comparison.</p><p>External-boundary and pinned-CLI checks pass. Two credentialed current-arm launch attempts failed; absent was skipped. No completed Codex task or live valid grade was recovered. Existing good (2/2 defects) and weak (0/2) native controls remain valid and unchanged.</p><h2>Native credential-free controls</h2><table><thead><tr><th scope="col">Case / submission</th><th scope="col">Expected</th><th scope="col">Verifier observation</th><th scope="col">Reference pass</th><th scope="col">Defects detected</th><th scope="col">Harbor failure cause</th><th scope="col">Valid measured grade</th></tr></thead><tbody><tr><td>pester-002-good</td><td>passed</td><td>passed: evaluated</td><td>1</td><td>2/2</td><td>None</td><td>True</td></tr><tr><td>pester-002-weak</td><td>failed</td><td>failed: evaluated</td><td>1</td><td>0/2</td><td>None</td><td>True</td></tr></tbody></table><p>These are deterministic oracle controls, not live model evidence. Each final control has one valid observation. Both suites execute three tests and pass the reference; only the good suite detects both defects. The earlier missing-submission result remains ungradeable. Raw native carriers and submitted work are in the linked Actions artifacts and retained local evidence; this bundle contains reviewed metadata only.</p><ul><li><a href="native-outcomes.json">pester-002-good: Reviewed native metadata and verifier outcome</a></li><li><a href="native-outcomes.json">pester-002-weak: Reviewed native metadata and verifier outcome</a></li></ul><h2>Live Codex pair</h2><table><thead><tr><th scope="col">Case</th><th scope="col">Variant</th><th scope="col">Task execution</th><th scope="col">Valid denominator</th><th scope="col">Reference</th><th scope="col">Defects detected</th><th scope="col">Activation evidence</th></tr></thead><tbody><tr><td>pester-002</td><td>current</td><td>Setup failure, then immediate launch failure; no recovered task session</td><td>0</td><td>Unknown</td><td>Unknown</td><td>Unknown</td></tr><tr><td>pester-002</td><td>absent</td><td>Skipped by failure and unknown-usage gate</td><td>0</td><td>Unknown</td><td>Unknown</td><td>Unknown</td></tr></tbody></table><p>Current attempt 1: RuntimeError during installation, no agent-execution timing or effective config. A locally reproduced version-parser defect was corrected once. Attempt 2: pinned version passes; Harbor agent phase lasts 0.614 seconds and raises NonZeroAgentExitCodeError. The offline verifier then reports invalid/artifact, reward 0, Harbor reward_valid=false, measured=false. Harbor returns process zero but the trial wrapper exits nonzero. No rollout, tool call, activation or token observation survives. Whether codex exec itself started is unknown. Absent is staged/preflighted only. No skill revision, effectiveness finding or live comparison is claimed.</p><p><a href="live-evidence.json">Reviewed live attempt, deployment and usage metadata</a></p><table><thead><tr><th scope="col">Variant</th><th scope="col">Input tokens (including cache)</th><th scope="col">Cached input tokens</th><th scope="col">Output tokens</th><th scope="col">Conservative USD estimate</th></tr></thead><tbody><tr><td>current</td><td>Unknown</td><td>Unknown</td><td>Unknown</td><td>Unknown</td></tr><tr><td>absent</td><td>Unknown</td><td>Unknown</td><td>Unknown</td><td>Unknown</td></tr></tbody></table><h2>Campaign usage</h2><p>Two credentialed launch attempts consumed 2/4 recovery slots and 2/36 campaign slots; absent was never scheduled. The verified prior record was zero attempts and $0. Attempt 1 failed before agent execution; attempt 2 has no usable usage record or provider invoice. Actual inference request count and cumulative spending therefore remain unknown, not $0. Scheduling stopped. The preflight pair estimate was $2.64 (60k input including cache and 4k output per arm at conservative $20/M input and $30/M output). These rates reserve for cache writes and long-context pricing; they are not observed charges. The operational $20 budget has no verified provider cap. A $4 scheduling threshold reserves $16 for uncertainty/in-flight usage; overshoot remains possible. Runtime and rollout-token limits are not dollar meters.</p><h2>Sandbox and deployment boundary</h2><p>Explicit user authorization replaces only the evaluated Codex inner-sandbox requirement with the disposable hosted runner/container boundary. Stock Harbor run/exec methods are inherited without command rewriting. No implementing-agent sandbox or approval mechanism was disabled. Historical Bubblewrap/Landlock failures remain in sandbox.json and are not a current gate.</p><p>Actual containers passed UID/GID 1000, CapEff=0, NoNewPrivs=1, Seccomp=2, writable output, fresh-session/auth checks, protected-path absence and deployment hashes. Docker metadata confirms no privilege, no added agent capabilities, cap_drop=ALL, default seccomp (no unconfined override), 2 CPUs, 2 GiB RAM, 256 PIDs, no host PID/network mode and no host mounts. No Docker socket, grader source, reference implementation, mutants or unrelated credential names were available.</p><p>Harbor native allowlist restricts the agent to api.openai.com using its separate disposable egress controller; only that controller needs NET_ADMIN/NET_RAW. Credential-free HTTPS requests reached the API root (HTTP 421); GitHub, raw GitHub, Microsoft Learn and the metadata IP failed to connect. This does not prove authenticated Responses API operation or formal network isolation. DNS and the allowed API remain residual channels; web search and remote MCP are disabled.</p><p>The inference key must be accessible to Codex and can be read by code in the same environment. Container isolation does not conceal it. No auth file, secret-bearing environment dump, raw agent log or submission is exported. Preflight checks and host metadata are practical evidence, not a formal container-security proof or interactive-workstation equivalence.</p><p>The separate offline verifier and protected executable checks are unchanged from the successful controls. Its latest live result is invalid/artifact, not a measured incorrect answer. Host/report metadata validates transport invariants only: integration_valid=true in attempt.json does not assert successful agent execution.</p><h2>Execution and supporting artifacts</h2><ul><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41956647063">Recovery build preflight</a> — Failed before Harbor started: snapshot 503/504 responses and a 600-second image-build timeout. Failure record retained. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41956647063/artifacts/13383608340">Build failure</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41956647063/artifacts/13384480020">Image unavailable</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958131429">First native control</a> — Oracle exit 126: script lacked executable permission. Verifier invalid/artifact remains unmeasured. Default sandbox helper was missing; legacy policy rejected. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958131429/artifacts/13383049571">Native invalid result</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958131429/artifacts/13383782957">Sandbox errors</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130">Final native controls and sandbox checks</a> — Good passes and weak fails as expected. Overall workflow failed because both sandbox probes failed. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130/artifacts/13384044283">Known-good pass</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130/artifacts/13383659806">Known-weak fail</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130/artifacts/13384059131">Sandbox blocker</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41964780671">External preflight identity failure</a> — No credentialed task was scheduled. Host inspection selected the network-sharing container by hostname; corrected to the Compose main service and pinned agent image. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41964780671/artifacts/13387311896">Preflight failure</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41965390294">First credentialed launch</a> — Both external preflights passed. Current failed installation; absent skipped. Exception RuntimeError, no native agent execution timing. All evidence retained. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41965390294/artifacts/13387531677">Preflight metadata</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41965390294/artifacts/13387536636">Current attempt 1</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41965390294/artifacts/13387397744">Absent staging only</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41966399157">Focused version-check correction and final launch</a> — Both exact CLI pins pass. Current launch raises NonZeroAgentExitCodeError; invalid artifact grade, unknown usage; absent skipped. No further scheduling. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41966399157/artifacts/13388085910">External boundary checkpoint</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41966399157/artifacts/13386909710">Current attempt 2</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41966399157/artifacts/13387243701">Absent staging only</a></li></ul><h2>History</h2><p>Original run 41952213509 explicitly received a runner shutdown signal. Cause remains unknown; exit 143 alone does not identify a Harbor timeout/crash. No original native grade survived. Its prior report is preserved as history below; the prior recommendation is superseded and does not show that the existing stack is better. The prior recovery report at 29f7765 is retained under history, including its zero-spend record and now-superseded native-sandbox requirement. The known-good and weak native observations were not rerun or rescored.</p><h2>Maintenance and remaining evidence</h2><p>The prior oracle controls establish a useful narrow grading distinction: both pass the reference; only the good suite detects both defects. The latest invalid artifact remains excluded despite native reward zero and process exit zero. No skill-effectiveness or adoption conclusion follows.</p><p>Fourteen focused tests cover native failure/reward validity, unsupported/missing evidence, post-run status/exit, stock launch inheritance, exact-pin version warnings, deployment equality, activation/usage separation and unknown-usage scheduling. No full production suite was run because production code is unchanged.</p><p>Custom maintenance: existing staging/projection/report code, a 217-line fixed live runner, 48-line custom-agent class/helper, 14 tests, 29-line snapshot transport helper, branch-only workflow, and historical unused sandbox probe. Two private Harbor overrides (home ownership and effective config upload) remain. No framework patch, but pin compatibility and task checksum deprecation need maintenance. Native egress control requires another pinned sidecar image.</p><p>The first host-inspection error and CLI parser correction were integration defects in the trial path. The final native nonzero launch lacks preserved command-level diagnostics because the metadata export was too restrictive. This is an evidence-retention limitation: raw runner-private logs were discarded with the runner, and no new packaging of rejected raw content is attempted.</p><p>Existing task prompts, inputs, references, mutants, grader, PowerShell runner and runtime installer are unchanged. Authoring another skill still requires representative tasks, independently executable checks and good/weak controls. Lower maintenance effort has not been demonstrated.</p><p>Production components removed: none. If broader adoption becomes justified, overlapping behavioral wrapper/staging/collection might be removable; APM, static checks, protected graders, historical records and publication controls remain.</p><p>Smallest next step: a credential-free reproduction of the unprivileged launch setup with allowlisted command-stage/exit diagnostics, followed by reconciliation of any provider usage from attempt 2 before another paid attempt. Do not expand the experiment or retry for a passing answer.</p><h2>Primary references</h2><ul><li><a href="https://github.com/harbor-framework/harbor/releases/tag/v0.25.0">harbor release</a></li><li><a href="https://docs.harborframework.com/tasks/separate-verifier">separate verifier</a></li><li><a href="https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/agents/installed/codex.py#L2072">codex launcher</a></li><li><a href="https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/core/src/rollout_budget.rs">budget accounting</a></li><li><a href="https://developers.openai.com/api/docs/models/gpt-5.6-sol">pricing</a></li><li><a href="https://docs.harborframework.com/jobs/error-classification">harbor failure policy</a></li><li><a href="https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/linux-sandbox/src/linux_run_main.rs">codex native sandbox</a></li><li><a href="https://packages.debian.org/trixie/bubblewrap">debian bubblewrap</a></li><li><a href="https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/environments/docker/docker.py">network policy</a></li><li><a href="https://developers.openai.com/api/docs/guides/prompt-caching">prompt caching</a></li><li><a href="https://learn.chatgpt.com/docs/config-file/config-reference">config reference</a></li></ul><details><summary>Complete machine-readable evidence</summary><pre>{
+  &quot;schema_version&quot;: 3,
   &quot;campaign&quot;: &quot;direct-harbor-20261104&quot;,
-  &quot;state&quot;: &quot;blocked_before_live_pair&quot;,
-  &quot;decision&quot;: &quot;Address one specific blocker before the live pair: native Codex workspace-write sandbox compatibility with the existing unprivileged Docker/runner boundary. The grading smoke passed; adoption and skill effectiveness remain unproven.&quot;,
-  &quot;summary&quot;: &quot;Two expected native grades recovered: good detects 2/2 seeded defects; weak detects 0/2 despite passing the reference. No codex exec task or paid inference occurred. Production remains unchanged.&quot;,
+  &quot;state&quot;: &quot;blocked_at_stock_launch_usage_unknown&quot;,
+  &quot;decision&quot;: &quot;One launch integration blocker remains: the stock unprivileged Codex run exits with NonZeroAgentExitCodeError before a recoverable task session. Recover its command-level cause and reconcile unknown usage before another paid attempt. Do not begin the original comparison.&quot;,
+  &quot;summary&quot;: &quot;External-boundary and pinned-CLI checks pass. Two credentialed current-arm launch attempts failed; absent was skipped. No completed Codex task or live valid grade was recovered. Existing good (2/2 defects) and weak (0/2) native controls remain valid and unchanged.&quot;,
   &quot;source_commit&quot;: &quot;cc0819f5dafc05610dd8c3293ce2f52744c66f1a&quot;,
-  &quot;reviewed_trial_commit&quot;: &quot;e64b9f6cc74fbc75aa5a24107c27c21518b6c354&quot;,
-  &quot;executed_commit&quot;: &quot;44c02a7b16f67787dcbd4f18d54605f1c630b741&quot;,
+  &quot;reviewed_trial_commit&quot;: &quot;29f7765a3e2e48ca573160d412749b717d63bb06&quot;,
+  &quot;executed_commit&quot;: &quot;11bf0db52f020271efc8b1e4c136f7795b480114&quot;,
   &quot;recovery_commits&quot;: [
     &quot;04516b8581bd41b7a4ed7590b9f718688080ddda&quot;,
     &quot;8b7dd45ca2136a55112440dfa11ec5221341f461&quot;,
-    &quot;44c02a7b16f67787dcbd4f18d54605f1c630b741&quot;
+    &quot;44c02a7b16f67787dcbd4f18d54605f1c630b741&quot;,
+    &quot;e66ee65db546b5e39f2e932186ed8898bd082f4a&quot;,
+    &quot;725e8d5e08d5d6c30c97d9ad58f2b2bf53358803&quot;,
+    &quot;11bf0db52f020271efc8b1e4c136f7795b480114&quot;
   ],
   &quot;calibration&quot;: [
     {
@@ -116,7 +119,7 @@
   &quot;native_fixture_retries&quot;: 1,
   &quot;completed_expected_native_outcomes&quot;: 2,
   &quot;grading_smoke_qualified&quot;: true,
-  &quot;live_prerequisites_passed&quot;: false,
+  &quot;live_prerequisites_passed&quot;: true,
   &quot;controls&quot;: {
     &quot;good&quot;: {
       &quot;control&quot;: &quot;good&quot;,
@@ -352,7 +355,8 @@
     {
       &quot;case&quot;: &quot;pester-002&quot;,
       &quot;variant&quot;: &quot;current&quot;,
-      &quot;attempts&quot;: 0,
+      &quot;attempts&quot;: 2,
+      &quot;execution&quot;: &quot;Setup failure, then immediate launch failure; no recovered task session&quot;,
       &quot;valid_denominator&quot;: 0,
       &quot;correctness&quot;: null,
       &quot;activation&quot;: null,
@@ -363,6 +367,7 @@
       &quot;case&quot;: &quot;pester-002&quot;,
       &quot;variant&quot;: &quot;absent&quot;,
       &quot;attempts&quot;: 0,
+      &quot;execution&quot;: &quot;Skipped by failure and unknown-usage gate&quot;,
       &quot;valid_denominator&quot;: 0,
       &quot;correctness&quot;: null,
       &quot;activation&quot;: null,
@@ -370,14 +375,14 @@
       &quot;variability&quot;: null
     }
   ],
-  &quot;live_note&quot;: &quot;Neither live variant ran. Four actual Codex sandbox-helper probes executed without credentials; no codex exec task or provider inference occurred. Activation, instruction following, skill effectiveness and efficiency/regressions remain unmeasured. No skill revision was created or authorized in this recovery.&quot;,
-  &quot;agent_attempts&quot;: 0,
+  &quot;live_note&quot;: &quot;Current attempt 1: RuntimeError during installation, no agent-execution timing or effective config. A locally reproduced version-parser defect was corrected once. Attempt 2: pinned version passes; Harbor agent phase lasts 0.614 seconds and raises NonZeroAgentExitCodeError. The offline verifier then reports invalid/artifact, reward 0, Harbor reward_valid=false, measured=false. Harbor returns process zero but the trial wrapper exits nonzero. No rollout, tool call, activation or token observation survives. Whether codex exec itself started is unknown. Absent is staged/preflighted only. No skill revision, effectiveness finding or live comparison is claimed.&quot;,
+  &quot;agent_attempts&quot;: 2,
   &quot;prior_paid_attempts&quot;: 0,
-  &quot;recovery_paid_attempts&quot;: 0,
-  &quot;api_spend_usd&quot;: 0,
-  &quot;estimated_cumulative_api_spend_usd&quot;: 0,
+  &quot;recovery_paid_attempts&quot;: 2,
+  &quot;api_spend_usd&quot;: null,
+  &quot;estimated_cumulative_api_spend_usd&quot;: null,
   &quot;provider_billing_observation&quot;: null,
-  &quot;spending_note&quot;: &quot;Cumulative paid attempts: 0/36; recovery: 0/4 maximum. Cumulative API spend: $0 because no credential or model call was used, not because missing telemetry became zero. Oracle token/cost observations remain null. The $20 operational budget is not a provider cap. A future pair is conservatively estimated at $1.44 for two 60k-input/4k-output attempts, charging all input including cache at $10/M and output at $30/M. The proposed $4 scheduling stop leaves $16 reserve; in-flight overshoot remains possible. Unknown usage stops further scheduling. No paid accounting control was exercised.&quot;,
+  &quot;spending_note&quot;: &quot;Two credentialed launch attempts consumed 2/4 recovery slots and 2/36 campaign slots; absent was never scheduled. The verified prior record was zero attempts and $0. Attempt 1 failed before agent execution; attempt 2 has no usable usage record or provider invoice. Actual inference request count and cumulative spending therefore remain unknown, not $0. Scheduling stopped. The preflight pair estimate was $2.64 (60k input including cache and 4k output per arm at conservative $20/M input and $30/M output). These rates reserve for cache writes and long-context pricing; they are not observed charges. The operational $20 budget has no verified provider cap. A $4 scheduling threshold reserves $16 for uncertainty/in-flight usage; overshoot remains possible. Runtime and rollout-token limits are not dollar meters.&quot;,
   &quot;budget&quot;: {
     &quot;operational_usd&quot;: 20,
     &quot;provider_hard_cap_verified&quot;: false,
@@ -389,12 +394,16 @@
     &quot;model_judge&quot;: false,
     &quot;proposed_scheduling_stop_estimate_usd&quot;: 4,
     &quot;reserve_usd&quot;: 16,
-    &quot;pair_preflight_estimate_usd&quot;: 1.44
+    &quot;pair_preflight_estimate_usd&quot;: 2.64,
+    &quot;scheduling_stopped&quot;: true,
+    &quot;stop_reason&quot;: &quot;Failed launch and missing usage&quot;,
+    &quot;conservative_input_usd_per_million&quot;: 20,
+    &quot;conservative_output_usd_per_million&quot;: 30
   },
   &quot;configured_runtime&quot;: {
-    &quot;codex&quot;: &quot;0.155.1 (native sandbox helper executed; no codex exec task)&quot;,
-    &quot;model&quot;: &quot;gpt-5.6-sol (not executed; slug, no immutable snapshot published)&quot;,
-    &quot;reasoning_effort&quot;: &quot;medium (not executed)&quot;,
+    &quot;codex&quot;: &quot;0.155.1 observed by unprivileged version command; no task session recovered&quot;,
+    &quot;model&quot;: &quot;gpt-5.6-sol configured; actual model response not established; mutable slug&quot;,
+    &quot;reasoning_effort&quot;: &quot;medium configured; no completed model task&quot;,
     &quot;powershell&quot;: &quot;7.6.9 (observed by both verifiers)&quot;,
     &quot;pester&quot;: &quot;6.2.0 (observed by both verifiers)&quot;,
     &quot;build&quot;: {
@@ -408,7 +417,7 @@
         &quot;ca-certificates&quot;: &quot;20250419+deb13u1&quot;
       }
     },
-    &quot;bubblewrap&quot;: &quot;0.12.0-1~deb13u1 (missing native helper added from unchanged snapshot)&quot;,
+    &quot;bubblewrap&quot;: &quot;0.12.0-1~deb13u1 retained but unused by this profile&quot;,
     &quot;codex_binary_sha256&quot;: &quot;a0ef8b2debc3bf747e07b1a039354de31300ac0dcc2276498ba281470b5d9115&quot;
   },
   &quot;observed_host_runtime&quot;: {
@@ -426,15 +435,35 @@
     &quot;runtime_absent_duplicate_audit&quot;: null,
     &quot;native_skill_activation&quot;: null,
     &quot;instructions_sha256&quot;: &quot;7b8d5aca90cd1a90d32b98d1e86ee16d82c808336e309c26853d3aab73fb4543&quot;,
-    &quot;note&quot;: &quot;Actual APM content/support staged. Source and deployed target hashes match. Local absent staging removes only three target files. Actual Codex discovery remains untested.&quot;
+    &quot;note&quot;: &quot;Actual APM content/support staged. Source and deployed target hashes match. Local absent staging removes only three target files. Actual Codex discovery remains untested.&quot;,
+    &quot;live_followup&quot;: {
+      &quot;current_files&quot;: 48,
+      &quot;absent_files&quot;: 45,
+      &quot;removed&quot;: [
+        &quot;powershell-pester-6/SKILL.md&quot;,
+        &quot;powershell-pester-6/references/compatibility-and-migration.md&quot;,
+        &quot;powershell-pester-6/references/execution.md&quot;
+      ],
+      &quot;other_files_matched&quot;: true,
+      &quot;instructions_matched&quot;: true,
+      &quot;original_codex_config_matched&quot;: true,
+      &quot;grader_manifest_matched&quot;: true,
+      &quot;current_target_copies&quot;: [
+        &quot;/workspace/.agents/skills/powershell-pester-6&quot;
+      ],
+      &quot;absent_target_copies&quot;: [],
+      &quot;evidence&quot;: &quot;live-evidence.json&quot;,
+      &quot;config_note&quot;: &quot;APM files preserved; matched runtime overlay disables remote MCP and web search. Only current reached effective config generation.&quot;
+    }
   },
   &quot;boundary_assessment&quot;: [
-    &quot;The actual helper used workspace-write, approval_policy=never, inner network disabled and temporary-directory write exceptions excluded. The probe first checks UID 1000, zero effective capabilities, no-new-privileges, no Docker socket and an ordinary outside-workspace write. Exact helper commands, errors and return codes are retained in sandbox.json.&quot;,
-    &quot;Bubblewrap reports namespace creation denied under the tested Docker/runner restrictions; the exact enforcing kernel/seccomp/AppArmor mechanism was not isolated. The explicitly tested deprecated Landlock backend rejects this policy as requiring direct runtime enforcement. Neither probe reaches its intended inner write/network assertions, so the inner boundary is not qualified.&quot;,
-    &quot;The outer container kept default seccomp, cap_drop=ALL, no-new-privileges, CPU/memory/PID limits and no host Docker socket. The sandbox probe was offline; a live API-connected agent did not run. Codex inner sandbox and outer container protection are separate. No protection was relaxed.&quot;,
-    &quot;Harbor import_path is the supported extension point. The small trial subclass replaces the stock bypass flag with --sandbox workspace-write -c approval_policy=never, requires the pinned preinstalled CLI and uses a build-owned private home. The transformation is unit tested; no effective live command/config was produced. No installed upstream file changed.&quot;
+    &quot;Explicit user authorization replaces only the evaluated Codex inner-sandbox requirement with the disposable hosted runner/container boundary. Stock Harbor run/exec methods are inherited without command rewriting. No implementing-agent sandbox or approval mechanism was disabled. Historical Bubblewrap/Landlock failures remain in sandbox.json and are not a current gate.&quot;,
+    &quot;Actual containers passed UID/GID 1000, CapEff=0, NoNewPrivs=1, Seccomp=2, writable output, fresh-session/auth checks, protected-path absence and deployment hashes. Docker metadata confirms no privilege, no added agent capabilities, cap_drop=ALL, default seccomp (no unconfined override), 2 CPUs, 2 GiB RAM, 256 PIDs, no host PID/network mode and no host mounts. No Docker socket, grader source, reference implementation, mutants or unrelated credential names were available.&quot;,
+    &quot;Harbor native allowlist restricts the agent to api.openai.com using its separate disposable egress controller; only that controller needs NET_ADMIN/NET_RAW. Credential-free HTTPS requests reached the API root (HTTP 421); GitHub, raw GitHub, Microsoft Learn and the metadata IP failed to connect. This does not prove authenticated Responses API operation or formal network isolation. DNS and the allowed API remain residual channels; web search and remote MCP are disabled.&quot;,
+    &quot;The inference key must be accessible to Codex and can be read by code in the same environment. Container isolation does not conceal it. No auth file, secret-bearing environment dump, raw agent log or submission is exported. Preflight checks and host metadata are practical evidence, not a formal container-security proof or interactive-workstation equivalence.&quot;,
+    &quot;The separate offline verifier and protected executable checks are unchanged from the successful controls. Its latest live result is invalid/artifact, not a measured incorrect answer. Host/report metadata validates transport invariants only: integration_valid=true in attempt.json does not assert successful agent execution.&quot;
   ],
-  &quot;history_note&quot;: &quot;Original run 41952213509 explicitly received a runner shutdown signal. Cause remains unknown; exit 143 alone does not identify a Harbor timeout/crash. No original native grade survived. Its prior report is preserved as history below; the prior recommendation is superseded and does not show that the existing stack is better.&quot;,
+  &quot;history_note&quot;: &quot;Original run 41952213509 explicitly received a runner shutdown signal. Cause remains unknown; exit 143 alone does not identify a Harbor timeout/crash. No original native grade survived. Its prior report is preserved as history below; the prior recommendation is superseded and does not show that the existing stack is better. The prior recovery report at 29f7765 is retained under history, including its zero-spend record and now-superseded native-sandbox requirement. The known-good and weak native observations were not rerun or rescored.&quot;,
   &quot;history&quot;: {
     &quot;original_report&quot;: {
       &quot;schema_version&quot;: 1,
@@ -819,7 +848,31 @@
     },
     &quot;original_report_commit&quot;: &quot;e64b9f6cc74fbc75aa5a24107c27c21518b6c354&quot;,
     &quot;shutdown_annotation&quot;: &quot;The runner has received a shutdown signal. This can happen when the runner service is stopped, or a manually started runner is canceled.&quot;,
-    &quot;original_cause&quot;: null
+    &quot;original_cause&quot;: null,
+    &quot;prior_recovery_report_at_29f7765&quot;: {
+      &quot;state&quot;: &quot;blocked_before_live_pair&quot;,
+      &quot;decision&quot;: &quot;Address one specific blocker before the live pair: native Codex workspace-write sandbox compatibility with the existing unprivileged Docker/runner boundary. The grading smoke passed; adoption and skill effectiveness remain unproven.&quot;,
+      &quot;summary&quot;: &quot;Two expected native grades recovered: good detects 2/2 seeded defects; weak detects 0/2 despite passing the reference. No codex exec task or paid inference occurred. Production remains unchanged.&quot;,
+      &quot;executed_commit&quot;: &quot;44c02a7b16f67787dcbd4f18d54605f1c630b741&quot;,
+      &quot;agent_attempts&quot;: 0,
+      &quot;api_spend_usd&quot;: 0,
+      &quot;spending_note&quot;: &quot;Cumulative paid attempts: 0/36; recovery: 0/4 maximum. Cumulative API spend: $0 because no credential or model call was used, not because missing telemetry became zero. Oracle token/cost observations remain null. The $20 operational budget is not a provider cap. A future pair is conservatively estimated at $1.44 for two 60k-input/4k-output attempts, charging all input including cache at $10/M and output at $30/M. The proposed $4 scheduling stop leaves $16 reserve; in-flight overshoot remains possible. Unknown usage stops further scheduling. No paid accounting control was exercised.&quot;,
+      &quot;boundary_assessment&quot;: [
+        &quot;The actual helper used workspace-write, approval_policy=never, inner network disabled and temporary-directory write exceptions excluded. The probe first checks UID 1000, zero effective capabilities, no-new-privileges, no Docker socket and an ordinary outside-workspace write. Exact helper commands, errors and return codes are retained in sandbox.json.&quot;,
+        &quot;Bubblewrap reports namespace creation denied under the tested Docker/runner restrictions; the exact enforcing kernel/seccomp/AppArmor mechanism was not isolated. The explicitly tested deprecated Landlock backend rejects this policy as requiring direct runtime enforcement. Neither probe reaches its intended inner write/network assertions, so the inner boundary is not qualified.&quot;,
+        &quot;The outer container kept default seccomp, cap_drop=ALL, no-new-privileges, CPU/memory/PID limits and no host Docker socket. The sandbox probe was offline; a live API-connected agent did not run. Codex inner sandbox and outer container protection are separate. No protection was relaxed.&quot;,
+        &quot;Harbor import_path is the supported extension point. The small trial subclass replaces the stock bypass flag with --sandbox workspace-write -c approval_policy=never, requires the pinned preinstalled CLI and uses a build-owned private home. The transformation is unit tested; no effective live command/config was produced. No installed upstream file changed.&quot;
+      ],
+      &quot;coverage_gaps&quot;: [
+        &quot;No codex exec task or model inference&quot;,
+        &quot;No runtime absent-arm duplicate-copy audit&quot;,
+        &quot;No natural activation, skill effect or live instruction-following evidence&quot;,
+        &quot;No live usage accounting&quot;,
+        &quot;No unsupported-submission native coverage in this two-control pass&quot;,
+        &quot;No full comparison, revision or confirmation-case evidence&quot;,
+        &quot;Native sandbox unqualified under tested Docker boundary&quot;
+      ]
+    }
   },
   &quot;recovery_runs&quot;: [
     {
@@ -870,33 +923,87 @@
           &quot;url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130/artifacts/13384059131&quot;
         }
       ]
+    },
+    {
+      &quot;url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41964780671&quot;,
+      &quot;label&quot;: &quot;External preflight identity failure&quot;,
+      &quot;summary&quot;: &quot;No credentialed task was scheduled. Host inspection selected the network-sharing container by hostname; corrected to the Compose main service and pinned agent image.&quot;,
+      &quot;artifacts&quot;: [
+        {
+          &quot;name&quot;: &quot;Preflight failure&quot;,
+          &quot;url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41964780671/artifacts/13387311896&quot;
+        }
+      ]
+    },
+    {
+      &quot;url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41965390294&quot;,
+      &quot;label&quot;: &quot;First credentialed launch&quot;,
+      &quot;summary&quot;: &quot;Both external preflights passed. Current failed installation; absent skipped. Exception RuntimeError, no native agent execution timing. All evidence retained.&quot;,
+      &quot;artifacts&quot;: [
+        {
+          &quot;name&quot;: &quot;Preflight metadata&quot;,
+          &quot;url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41965390294/artifacts/13387531677&quot;
+        },
+        {
+          &quot;name&quot;: &quot;Current attempt 1&quot;,
+          &quot;url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41965390294/artifacts/13387536636&quot;
+        },
+        {
+          &quot;name&quot;: &quot;Absent staging only&quot;,
+          &quot;url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41965390294/artifacts/13387397744&quot;
+        }
+      ]
+    },
+    {
+      &quot;url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41966399157&quot;,
+      &quot;label&quot;: &quot;Focused version-check correction and final launch&quot;,
+      &quot;summary&quot;: &quot;Both exact CLI pins pass. Current launch raises NonZeroAgentExitCodeError; invalid artifact grade, unknown usage; absent skipped. No further scheduling.&quot;,
+      &quot;artifacts&quot;: [
+        {
+          &quot;name&quot;: &quot;External boundary checkpoint&quot;,
+          &quot;url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41966399157/artifacts/13388085910&quot;
+        },
+        {
+          &quot;name&quot;: &quot;Current attempt 2&quot;,
+          &quot;url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41966399157/artifacts/13386909710&quot;
+        },
+        {
+          &quot;name&quot;: &quot;Absent staging only&quot;,
+          &quot;url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41966399157/artifacts/13387243701&quot;
+        }
+      ]
     }
   ],
   &quot;local_validation&quot;: {
-    &quot;focused_tests_passed&quot;: 10,
+    &quot;focused_tests_passed&quot;: 14,
     &quot;postrun_failure_status_and_exit_tested&quot;: true,
     &quot;pinned_native_policy_used&quot;: true,
     &quot;staging_current_absent_match&quot;: true,
-    &quot;production_full_suite_not_run&quot;: &quot;Production code unchanged; focused recovery tests and native controls only.&quot;
+    &quot;production_full_suite_not_run&quot;: &quot;Production unchanged; focused tests, boundary/installation checks and bounded native launch only.&quot;,
+    &quot;stock_run_and_exec_inherited&quot;: true,
+    &quot;warning_contaminated_version_failing_before_passing_after&quot;: true,
+    &quot;external_boundary_checks_passed&quot;: true
   },
   &quot;assessment&quot;: [
-    &quot;Recovered grading evidence is useful: both suites pass the reference, but only the good suite detects both mutants. The earlier numeric zero reward with a missing submission remains ungradeable. This validates the narrow pass/fail distinction, not all legitimate or adversarial submissions.&quot;,
-    &quot;The projection delegates failure cause and reward validity to pinned Harbor, preserves native exceptions/verifier observations and excludes unsupported or missing evidence. Ten tests cover correct/incorrect work, agent timeout with valid grading, provider/environment/verifier failures, handled step failures, unknown usage and post-run failed status/exit.&quot;,
-    &quot;Custom maintenance: staging/projection/reporting, 10 focused tests, a 47-line Codex subclass, 34-line native sandbox probe, 29-line snapshot transport helper and one branch-only workflow. No framework patches. The adapter depends on the stock launch string and three pinned helper methods and needs review on Harbor/Codex changes. The transport helper is another component to retain only while needed.&quot;,
-    &quot;Existing tasks, reference implementations, mutants, grader, PowerShell runner and runtime installer were reused unchanged. Another skill still needs representative inputs, independent good/weak submissions and a protected executable verifier. Lower total maintenance cost has not been demonstrated.&quot;,
-    &quot;Production components removed: none. Only overlapping behavioral wrapper/staging/collection layers could become removable after broader adoption evidence. APM deployment, static checks, graders, historical evidence and publication controls remain necessary.&quot;,
-    &quot;Smallest next step: qualify one supported native Codex sandbox configuration under the same required outer boundary without disabling protections. Then run the current/absent pester-002 smoke pair. Do not start the original full comparison yet.&quot;
+    &quot;The prior oracle controls establish a useful narrow grading distinction: both pass the reference; only the good suite detects both defects. The latest invalid artifact remains excluded despite native reward zero and process exit zero. No skill-effectiveness or adoption conclusion follows.&quot;,
+    &quot;Fourteen focused tests cover native failure/reward validity, unsupported/missing evidence, post-run status/exit, stock launch inheritance, exact-pin version warnings, deployment equality, activation/usage separation and unknown-usage scheduling. No full production suite was run because production code is unchanged.&quot;,
+    &quot;Custom maintenance: existing staging/projection/report code, a 217-line fixed live runner, 48-line custom-agent class/helper, 14 tests, 29-line snapshot transport helper, branch-only workflow, and historical unused sandbox probe. Two private Harbor overrides (home ownership and effective config upload) remain. No framework patch, but pin compatibility and task checksum deprecation need maintenance. Native egress control requires another pinned sidecar image.&quot;,
+    &quot;The first host-inspection error and CLI parser correction were integration defects in the trial path. The final native nonzero launch lacks preserved command-level diagnostics because the metadata export was too restrictive. This is an evidence-retention limitation: raw runner-private logs were discarded with the runner, and no new packaging of rejected raw content is attempted.&quot;,
+    &quot;Existing task prompts, inputs, references, mutants, grader, PowerShell runner and runtime installer are unchanged. Authoring another skill still requires representative tasks, independently executable checks and good/weak controls. Lower maintenance effort has not been demonstrated.&quot;,
+    &quot;Production components removed: none. If broader adoption becomes justified, overlapping behavioral wrapper/staging/collection might be removable; APM, static checks, protected graders, historical records and publication controls remain.&quot;,
+    &quot;Smallest next step: a credential-free reproduction of the unprivileged launch setup with allowlisted command-stage/exit diagnostics, followed by reconciliation of any provider usage from attempt 2 before another paid attempt. Do not expand the experiment or retry for a passing answer.&quot;
   ],
   &quot;coverage_gaps&quot;: [
-    &quot;No codex exec task or model inference&quot;,
-    &quot;No runtime absent-arm duplicate-copy audit&quot;,
-    &quot;No natural activation, skill effect or live instruction-following evidence&quot;,
-    &quot;No live usage accounting&quot;,
-    &quot;No unsupported-submission native coverage in this two-control pass&quot;,
-    &quot;No full comparison, revision or confirmation-case evidence&quot;,
-    &quot;Native sandbox unqualified under tested Docker boundary&quot;
+    &quot;No completed live Codex task or valid live grade&quot;,
+    &quot;No absent-arm task execution&quot;,
+    &quot;No confirmed model request count or cumulative spend&quot;,
+    &quot;Exact failing stock-launch command and stderr not recovered&quot;,
+    &quot;No activation, instruction-following or skill-effectiveness measurement&quot;,
+    &quot;No revision, reserved confirmation case or broader comparison&quot;,
+    &quot;No new unsupported/adversarial submission qualification&quot;,
+    &quot;No interactive-workstation or native Codex approval equivalence&quot;
   ],
-  &quot;contamination&quot;: &quot;Public tasks, mutants and answers may be known to models. Author inspected public grading details; no case is genuinely blinded. Grading code/reference/mutants stay in the separate verifier image. Oracle fixtures are supplied only to credential-free controls. The successful oracle assertions establish absence of /tests and Docker socket in that agent container; broader live isolation remains unqualified.&quot;,
+  &quot;contamination&quot;: &quot;Public prompts, grading details and answers may be known to models; the author inspected them. No case is blinded. Runtime agent inputs omit repository history, grader/reference/mutant files; external GitHub access and remote tools were blocked, and absent target-directory scans were empty. This reduces runtime access but cannot rule out memorization or every covert channel.&quot;,
   &quot;publication_note&quot;: &quot;Automatic review rejected copying raw oracle logs/submissions into the report. They remain retained locally and in existing Actions artifacts. Only reviewed result metadata, counts, hashes and sandbox diagnostics are published here.&quot;,
   &quot;sources&quot;: {
     &quot;harbor_release&quot;: &quot;https://github.com/harbor-framework/harbor/releases/tag/v0.25.0&quot;,
@@ -906,6 +1013,44 @@
     &quot;pricing&quot;: &quot;https://developers.openai.com/api/docs/models/gpt-5.6-sol&quot;,
     &quot;harbor_failure_policy&quot;: &quot;https://docs.harborframework.com/jobs/error-classification&quot;,
     &quot;codex_native_sandbox&quot;: &quot;https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/linux-sandbox/src/linux_run_main.rs&quot;,
-    &quot;debian_bubblewrap&quot;: &quot;https://packages.debian.org/trixie/bubblewrap&quot;
-  }
+    &quot;debian_bubblewrap&quot;: &quot;https://packages.debian.org/trixie/bubblewrap&quot;,
+    &quot;network_policy&quot;: &quot;https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/environments/docker/docker.py&quot;,
+    &quot;prompt_caching&quot;: &quot;https://developers.openai.com/api/docs/guides/prompt-caching&quot;,
+    &quot;config_reference&quot;: &quot;https://learn.chatgpt.com/docs/config-file/config-reference&quot;
+  },
+  &quot;live_pair_operationally_valid&quot;: false,
+  &quot;live_evidence&quot;: &quot;live-evidence.json&quot;,
+  &quot;confirmed_model_sessions&quot;: 0,
+  &quot;actual_provider_request_count&quot;: null,
+  &quot;attempt_accounting&quot;: {
+    &quot;charged_recovery_slots&quot;: 2,
+    &quot;limit&quot;: 4,
+    &quot;prior_paid_attempts&quot;: 0,
+    &quot;prior_api_spend_usd&quot;: 0,
+    &quot;credentialed_launch_attempts&quot;: 2,
+    &quot;completed_task_sessions&quot;: 0,
+    &quot;absent_attempts&quot;: 0,
+    &quot;attempt_1_inference_not_started&quot;: true,
+    &quot;attempt_1_api_spend_usd&quot;: 0,
+    &quot;attempt_2_usage_unknown&quot;: true,
+    &quot;remaining_reserved_attempts_cancelled&quot;: true,
+    &quot;no_additional_scheduling&quot;: true,
+    &quot;note&quot;: &quot;Both credentialed launch attempts count against the recovery and campaign ceilings, even though inference was not established. Unknown usage from attempt 2 is not converted to zero.&quot;
+  },
+  &quot;usage_rows&quot;: [
+    {
+      &quot;variant&quot;: &quot;current&quot;,
+      &quot;input_tokens&quot;: null,
+      &quot;cached_input_tokens&quot;: null,
+      &quot;output_tokens&quot;: null,
+      &quot;estimate_usd&quot;: null
+    },
+    {
+      &quot;variant&quot;: &quot;absent&quot;,
+      &quot;input_tokens&quot;: null,
+      &quot;cached_input_tokens&quot;: null,
+      &quot;output_tokens&quot;: null,
+      &quot;estimate_usd&quot;: null
+    }
+  ]
 }</pre></details></html>

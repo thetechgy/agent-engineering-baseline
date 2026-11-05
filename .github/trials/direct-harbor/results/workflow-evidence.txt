@@ -22,3 +22,9 @@ Final native sandbox probes (same run):
 bwrap: No permissions to create a new namespace, likely because the kernel does not allow non-privileged user namespaces.
 Legacy backend: permission profiles requiring direct runtime enforcement are incompatible with --use-legacy-landlock
 Actual enforcing mechanism not isolated. No protection was relaxed; no paid inference launched.
+
+External-container follow-up (reviewed metadata only)
+41964780671: external preflight host identity assertion failed; no live step.
+41965390294: external preflight passed; attempt 1 RuntimeError before agent execution; absent skipped.
+41966399157 at 11bf0db52f020271efc8b1e4c136f7795b480114: CLI 0.155.1 pin passes both arms; attempt 2 NonZeroAgentExitCodeError, agent phase 0.614 seconds, verifier invalid/artifact, reward_valid=false, measured=false. Harbor process returns 0; wrapper exits 1. No session/usage recovered; absent skipped; no more scheduling.
+Command-level raw diagnostics were not retained in exported evidence. Do not infer root cause or zero spending.
