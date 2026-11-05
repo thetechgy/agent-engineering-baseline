@@ -61,10 +61,14 @@ print(json.dumps({'skills':manifest('/workspace/.agents/skills'),'instructions_s
     assert observed['target_copies']==(['/workspace/.agents/skills/'+TARGET] if variant=='current' else []), 'Target copies mismatch'
     assert observed['codex_files']==trial.pilot.manifest(trial.ROOT/'.codex'), 'APM config mismatch'
     assert observed['instructions_sha256']==hashlib.sha256((trial.ROOT/'AGENTS.md').read_bytes()).hexdigest()
-    identity=await environment.exec(command='hostname',user='agent')
-    inspected=json.loads(subprocess.check_output(['docker','inspect',identity.stdout.strip()],text=True))[0]
+    ids=subprocess.check_output(['docker','ps','--filter','label=com.docker.compose.service=main',
+        '--filter','ancestor='+environment.task_env_config.docker_image,'--quiet'],text=True).split()
+    assert len(ids)==1, 'Expected one main service for this pinned agent image'
+    inspected=json.loads(subprocess.check_output(['docker','inspect',ids[0]],text=True))[0]
     host=inspected['HostConfig']
-    assert not host['Privileged'] and 'ALL' in host['CapDrop'] and not host.get('CapAdd')
+    fields={k:host.get(k) for k in ('Privileged','CapDrop','CapAdd','PidsLimit','Memory','NanoCpus','NetworkMode','PidMode','SecurityOpt')}
+    trial.write(output/'container-policy.json',fields)
+    assert not host['Privileged'] and 'ALL' in [v.upper() for v in host['CapDrop']] and not host.get('CapAdd'), 'Agent capability policy mismatch'
     assert host['PidsLimit']==256 and host['Memory']==2147483648 and host['NanoCpus']==2000000000
     assert host['NetworkMode'].startswith('container:') and host.get('PidMode','')!='host'
     assert not any('unconfined' in s for s in host.get('SecurityOpt',[]))
@@ -138,6 +142,10 @@ def usage_and_activation(native_dir):
             if event.get('type')=='event_msg' and payload.get('type') in ('task_complete','turn_complete'):completion=True
     return {'total_usage':totals,'skill_file_access_attempts':sorted(activation),'tool_calls':calls,'completion_event':completion}
 
+def can_schedule(previous):
+    cost=previous.get('usage_estimate_usd')
+    return previous.get('usage_complete') is True and cost is not None and cost+1.32<4
+
 def attempt(root,variant):
     from harbor.models.task.task import Task
     public=root/'public';output=public/variant
@@ -147,7 +155,7 @@ def attempt(root,variant):
     assert launch['paid_attempts_used']==0 and launch['recovery_live_attempt_limit']==4
     if variant=='absent':
         first=json.loads((public/'current/attempt.json').read_text())
-        assert first['usage_estimate_usd'] is not None and first['usage_estimate_usd']+1.32<4, 'Unknown usage or scheduling reserve reached'
+        assert can_schedule(first), 'Incomplete usage or scheduling reserve reached'
     number=1 if variant=='current' else 2
     assert number<=4 and number<=36
     assert not (output/'attempt.json').exists(), 'No implicit retry'
@@ -173,7 +181,9 @@ def attempt(root,variant):
         details=usage_and_activation(native_dir)
         record['codex_executed']=any((native_dir/'agent').glob('**/rollout-*.jsonl'))
         row['exceptions']=[{k:e[k] for k in ('exception_type','occurred_at')} for e in row['exceptions']]
+        row.pop('expected',None);row.pop('matches',None)
         record['projection']=[row];record['usage_and_activation']=details
+        record['usage_complete']=details['completion_event'] and row['failure_cause'] is None
         totals=details['total_usage']
         if totals:
             tokens={'input_including_cache':totals.get('input_tokens'),'cached_input':totals.get('cached_input_tokens'),'output':totals.get('output_tokens')}
@@ -188,7 +198,7 @@ def attempt(root,variant):
         record['duration_seconds']=round(time.monotonic()-started,2)
         trial.write(output/'attempt.json',record)
         print(json.dumps({k:record.get(k) for k in ('attempt','variant','codex_executed','usage_estimate_usd','integration_valid')}),flush=True)
-    return 0 if record.get('integration_valid') and record['usage_estimate_usd'] is not None else 1
+    return 0 if record.get('integration_valid') and record.get('usage_complete') and record['usage_estimate_usd'] is not None else 1
 
 if __name__=='__main__':
     mode=sys.argv[1];root=Path(sys.argv[2]).resolve()

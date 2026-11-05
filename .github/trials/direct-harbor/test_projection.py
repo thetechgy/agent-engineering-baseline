@@ -113,6 +113,13 @@ class LiveMetadataTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             self.assertIsNone(live.usage_and_activation(Path(tmp))['total_usage'])
 
+    def test_partial_or_unknown_usage_stops_additional_scheduling(self):
+        import live
+        self.assertFalse(live.can_schedule({'usage_complete':False,'usage_estimate_usd':0.1}))
+        self.assertFalse(live.can_schedule({'usage_complete':True,'usage_estimate_usd':None}))
+        self.assertFalse(live.can_schedule({'usage_complete':True,'usage_estimate_usd':3}))
+        self.assertTrue(live.can_schedule({'usage_complete':True,'usage_estimate_usd':0.1}))
+
     def test_remote_tools_and_retry_settings_match_arms(self):
         import live
         settings=live.config()

@@ -21,5 +21,7 @@
     "absent"
   ],
   "preflight_estimate_usd": 2.64,
-  "native_inner_sandbox_required": false
+  "native_inner_sandbox_required": false,
+  "external_preflight_attempt": 2,
+  "prior_external_preflight_run": 41964780671
 }
