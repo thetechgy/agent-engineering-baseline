@@ -24,20 +24,21 @@ jobs:
           python3 - <<'PYCODE'
           import json, os
           phase = json.load(open('.github/trials/direct-harbor/launch.json'))['phase']
-          assert phase in ('live-pair', 'report')
+          assert phase in ('diagnostic-reproduce', 'diagnostic-verify', 'report')
+          assert json.load(open('.github/trials/direct-harbor/launch.json'))['scheduling_stopped'] is True
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
               print('phase=' + phase, file=output)
           PYCODE
-  live:
+  diagnostic:
     needs: phase
-    if: needs.phase.outputs.phase == 'live-pair'
-    environment: skill-benchmark
+    if: startsWith(needs.phase.outputs.phase, 'diagnostic-')
     runs-on: ubuntu-24.04
-    timeout-minutes: 65
+    timeout-minutes: 20
     env:
       PYTHONDONTWRITEBYTECODE: '1'
       PYTHON_DOTENV_DISABLED: '1'
       LITELLM_LOCAL_MODEL_COST_MAP: 'True'
+      TRIAL_DIAGNOSTIC: '1'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -62,47 +63,27 @@ jobs:
         run: python -m unittest discover -s .github/trials/direct-harbor -p test_projection.py -q
       - name: Install reviewed Compose
         run: bash .github/scripts/setup-compose.sh
-      - name: Prepare both arms and check external boundary without credentials
-        id: preflight
-        timeout-minutes: 25
-        run: python -u .github/trials/direct-harbor/live.py prepare "$RUNNER_TEMP/live-pair"
-      - name: Checkpoint external boundary before inference
+      - name: Prepare pinned offline agent
+        timeout-minutes: 12
+        run: python -u .github/trials/direct-harbor/live.py diagnostic-prepare "$RUNNER_TEMP/launch-diagnostic"
+      - name: Checkpoint offline boundary before launch
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: live-preflight
-          path: ${{ runner.temp }}/live-pair/public/
+          name: diagnostic-preflight
+          path: ${{ runner.temp }}/launch-diagnostic/public/
+          retention-days: 30
+      - name: Instrumented actual Harbor Codex launch - no inference egress
+        timeout-minutes: 4
+        run: python -u .github/trials/direct-harbor/live.py diagnostic "$RUNNER_TEMP/launch-diagnostic"
+      - name: Recover sanitized launch diagnostics including failure
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: launch-diagnostics
+          path: ${{ runner.temp }}/launch-diagnostic/public/
           retention-days: 30
           if-no-files-found: error
-      - name: Current skill - one actual Codex attempt
-        id: current
-        if: steps.preflight.outcome == 'success'
-        timeout-minutes: 18
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: python -u .github/trials/direct-harbor/live.py current "$RUNNER_TEMP/live-pair"
-      - name: Checkpoint current attempt before absent arm
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: live-current
-          path: ${{ runner.temp }}/live-pair/public/current/
-          retention-days: 30
-          if-no-files-found: warn
-      - name: Absent skill - one actual Codex attempt
-        if: steps.current.outcome == 'success'
-        timeout-minutes: 18
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: python -u .github/trials/direct-harbor/live.py absent "$RUNNER_TEMP/live-pair"
-      - name: Checkpoint absent attempt
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: live-absent
-          path: ${{ runner.temp }}/live-pair/public/absent/
-          retention-days: 30
-          if-no-files-found: warn
       - name: Verify checkout integrity
         if: always()
         run: git diff --exit-code

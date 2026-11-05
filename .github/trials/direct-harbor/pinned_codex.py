@@ -10,12 +10,24 @@ async def check_pin(environment):
     # its version. Match the explicit version line, never the first output line.
     result = await environment.exec(command='/usr/local/bin/codex --version', user='agent', timeout_sec=30)
     versions = re.findall(r'^codex-cli ([0-9.]+)$', result.stdout or '', re.MULTILINE)
-    return {'command':'/usr/local/bin/codex --version', 'user':'agent',
+    from diagnostics import sanitize
+    return {'stdout':sanitize(result.stdout),'stderr':sanitize(result.stderr),'cwd':'/workspace',
+            'command':'/usr/local/bin/codex --version', 'user':'agent',
             'returncode':result.return_code, 'version':versions[0] if len(versions)==1 else None,
             'matched':result.return_code==0 and versions==['0.155.1']}
 
 class PinnedCodex(Codex):
     """Stock run/exec path; only pinned installation and unprivileged ownership."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        import os
+        from pathlib import Path
+        from diagnostics import LaunchDiagnostics
+        if os.environ.get('TRIAL_PUBLIC_DIR'):
+            self.launch_diagnostics=LaunchDiagnostics(Path(os.environ['TRIAL_PUBLIC_DIR'])/'launch-diagnostics.json',
+                tuple(os.environ.get(k,'') for k in ('OPENAI_API_KEY','CODEX_API_KEY')))
+            self.logger.addHandler(self.launch_diagnostics)
+
     async def install(self, environment):
         # The image contains the checksum-verified pin. Never fall back to an
         # installer with broader network/privilege requirements during a trial.

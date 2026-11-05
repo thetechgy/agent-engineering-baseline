@@ -1,5 +1,5 @@
 {
-  "phase": "report",
+  "phase": "diagnostic-reproduce",
   "campaign": "direct-harbor-20261104",
   "paid_attempts_used": 2,
   "paid_attempt_limit": 36,
@@ -48,5 +48,8 @@
   "final_live_run": 41966399157,
   "api_spend_usd": null,
   "scheduling_stopped": true,
-  "stop_reason": "Final launch failed with no complete usage; absent skipped"
+  "stop_reason": "Final launch failed with no complete usage; absent skipped",
+  "diagnostic_actions_runs_reserved": 1,
+  "diagnostic_actions_run_limit": 2,
+  "paid_execution_enabled": false
 }

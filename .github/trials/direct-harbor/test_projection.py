@@ -138,3 +138,45 @@ class LiveMetadataTests(unittest.TestCase):
         self.assertEqual(len(live.expected_files('current'))-len(live.expected_files('absent')),3)
 
 if __name__=='__main__': unittest.main()
+
+class DiagnosticRetentionTests(unittest.TestCase):
+    def test_failed_native_command_exits_nonzero_and_checkpoints_without_secret(self):
+        import subprocess,sys
+        from diagnostics import SENTINEL
+        program=r'''
+import asyncio,json,logging,subprocess,sys
+from pathlib import Path
+from types import SimpleNamespace
+from harbor.agents.installed.codex import Codex
+from diagnostics import LaunchDiagnostics
+root=Path(sys.argv[1]);secret=sys.argv[2]
+a=Codex(logs_dir=root,model_name='gpt-5.6-sol',version='0.155.1')
+h=LaunchDiagnostics(root/'launch-diagnostics.json',(secret,));a.logger.addHandler(h)
+class Fixture:
+ async def exec(self,command,**kwargs):
+  r=subprocess.run(command,shell=True,executable='/bin/bash',capture_output=True,text=True)
+  return SimpleNamespace(return_code=r.returncode,stdout=r.stdout,stderr=r.stderr)
+async def check():
+ try:
+  await a.exec_as_agent(Fixture(),'printf "startup failure Authorization: Bearer '+secret+'\\n" >&2; exit 23')
+ except Exception as exc:
+  h.exception(exc)
+  assert json.loads(h.destination.read_text())['primary_failure']['exit_status']==23
+  try:await a.exec_as_agent(Fixture(),'# rm -rf cleanup fixture\nexit 24')
+  except Exception:pass
+  return 1
+ return 0
+raise SystemExit(asyncio.run(check()))
+'''
+        with tempfile.TemporaryDirectory() as tmp:
+            result=subprocess.run([sys.executable,'-c',program,tmp,SENTINEL],cwd=Path(__file__).parent,
+                capture_output=True,text=True)
+            self.assertEqual(result.returncode,1,result.stderr)
+            artifact=(Path(tmp)/'launch-diagnostics.json').read_text()
+            self.assertNotIn(SENTINEL,artifact+result.stdout+result.stderr)
+            saved=json.loads(artifact)
+            self.assertEqual(saved['primary_failure']['exit_status'],23)
+            self.assertEqual(saved['cleanup_failures'][0]['exit_status'],24)
+            self.assertIn('startup failure',saved['native_exception']['message'])
+            self.assertIn('command',saved['primary_failure'])
+            self.assertIn('cwd',saved['primary_failure'])

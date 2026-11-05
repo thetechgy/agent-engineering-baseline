@@ -24,6 +24,7 @@ def expected_files(variant):
     return {k:v for k,v in values.items() if variant=='current' or not k.startswith(TARGET+'/')}
 
 async def runtime_check(environment, variant, output):
+    offline=os.environ.get('TRIAL_DIAGNOSTIC')=='1'
     program = r'''
 import hashlib,json,os,pathlib,urllib.request,urllib.error
 P=pathlib.Path
@@ -53,6 +54,8 @@ assert network['api.openai.com'] is not None, 'model endpoint unreachable'
 assert all(v is None for k,v in network.items() if k!='api.openai.com'), 'unapproved HTTPS endpoint reachable'
 print(json.dumps({'skills':manifest('/workspace/.agents/skills'),'instructions_sha256':hashlib.sha256(P('/workspace/AGENTS.md').read_bytes()).hexdigest(),'codex_files':manifest('/workspace/.codex'),'target_copies':copies,'network':network,'uid':os.getuid(),'capabilities':0,'no_new_privileges':True,'seccomp_filter':True,'workspace_writable':True,'fresh_session':True}))
 '''
+    if offline:
+        program=program.replace("assert network['api.openai.com'] is not None, 'model endpoint unreachable'", "assert all(v is None for v in network.values()), 'offline diagnostic endpoint reachable'")
     result = await environment.exec(command='python3 -c '+shlex.quote(program), user='agent', timeout_sec=75)
     if result.return_code:
         raise RuntimeError('External preflight failed: '+(result.stderr or '')[-1200:])
@@ -74,7 +77,7 @@ print(json.dumps({'skills':manifest('/workspace/.agents/skills'),'instructions_s
     trial.write(output/'container-policy.json',fields)
     assert not host['Privileged'] and 'ALL' in [v.upper() for v in host['CapDrop']] and not host.get('CapAdd'), 'Agent capability policy mismatch'
     assert host['PidsLimit']==256 and host['Memory']==2147483648 and host['NanoCpus']==2000000000
-    assert host['NetworkMode'].startswith('container:') and host.get('PidMode','')!='host'
+    assert (host['NetworkMode']=='none' if offline else host['NetworkMode'].startswith('container:')) and host.get('PidMode','')!='host'
     assert not any('unconfined' in s for s in host.get('SecurityOpt',[]))
     mounts=[m['Destination'] for m in inspected['Mounts']]
     assert all(p in ['/logs/agent','/logs/artifacts'] for p in mounts), 'unexpected host mount'
@@ -82,7 +85,7 @@ print(json.dumps({'skills':manifest('/workspace/.agents/skills'),'instructions_s
     trial.write(output/'boundary.json',observed)
     return observed
 
-def prepare(root):
+def prepare(root, diagnostic=False):
     from harbor.models.task.task import Task
     from harbor.models.trial.paths import TrialPaths
     from harbor.environments.docker.docker import DockerEnvironment
@@ -91,8 +94,8 @@ def prepare(root):
     root.mkdir(parents=True,exist_ok=False)
     public=root/'public';public.mkdir()
     previous=json.loads((trial.ROOT/'.github/trials/direct-harbor/results/results.json').read_text())
-    assert previous['grading_smoke_qualified'] and previous['agent_attempts']==0 and previous['api_spend_usd']==0
-    for variant in ('current','absent'):
+    assert diagnostic and previous['grading_smoke_qualified'] and previous['agent_attempts']==2 and previous['api_spend_usd'] is None, 'Live preparation disabled'
+    for variant in ('current',):
         output=public/variant;output.mkdir()
         native,manifest=trial.stage(root/variant,variant)
         task=native/'pester-002';cfg=toml.load(task/'task.toml')
@@ -107,7 +110,8 @@ def prepare(root):
     mem_limit: 256m
     cpus: 0.5
 ''')
-        for folder,tag in [('environment','direct-harbor-agent:'+variant),('tests','direct-harbor-verifier:live')]:
+        compose.write_text(compose.read_text().replace('    user: "1000:1000"', '    user: "1000:1000"\n    network_mode: none'))
+        for folder,tag in [('environment','direct-harbor-agent:'+variant)]:
             subprocess.run(['docker','build','--progress=plain','-t',tag,str(task/folder)],check=True,timeout=600)
             (cfg['environment'] if folder=='environment' else cfg['verifier']['environment'])['docker_image']=tag
         (task/'task.toml').write_text(toml.dumps(cfg))
@@ -127,7 +131,7 @@ def prepare(root):
         trial.write(root/(variant+'-task.json'),{'path':str(task)})
         print('External preflight passed: '+variant,flush=True)
     assert {k:v for k,v in expected_files('current').items() if not k.startswith(TARGET+'/')}==expected_files('absent')
-    trial.write(public/'preflight.json',{'passed':True,'commit':os.environ.get('GITHUB_SHA'),'api_calls':0,'network_allowlist':['api.openai.com'],'remote_tools_disabled':True})
+    trial.write(public/'preflight.json',{'passed':True,'commit':os.environ.get('GITHUB_SHA'),'paid_inference_permitted':False,'network_mode':'none','remote_tools_disabled':True})
 
 def usage_and_activation(native_dir):
     totals=None;activation=set();completion=False;calls=0
@@ -150,68 +154,44 @@ def can_schedule(previous):
     cost=previous.get('usage_estimate_usd')
     return previous.get('usage_complete') is True and cost is not None and cost+1.32<4
 
-def attempt(root,variant):
+def diagnostic(root):
     from harbor.models.task.task import Task
-    public=root/'public';output=public/variant
-    assert os.environ.get('OPENAI_API_KEY'), 'Existing protected credential required'
-    assert json.loads((public/'preflight.json').read_text())['passed']
-    launch=json.loads((trial.ROOT/'.github/trials/direct-harbor/launch.json').read_text())
-    assert launch['paid_attempts_used']==1 and launch['recovery_live_attempt_limit']==4
-    assert launch['prior_attempts'][0]['inference_started'] is False and launch['prior_attempts'][0]['api_spend_usd']==0
-    if variant=='absent':
-        first=json.loads((public/'current/attempt.json').read_text())
-        assert can_schedule(first), 'Incomplete usage or scheduling reserve reached'
-    number=launch['paid_attempts_used']+(1 if variant=='current' else 2)
-    assert number<=4 and number<=36
-    assert not (output/'attempt.json').exists(), 'No implicit retry'
-    task=Path(json.loads((root/(variant+'-task.json')).read_text())['path'])
-    manifest=json.loads((output/'manifest.json').read_text())
-    assert Task(task).checksum==manifest['task_checksum']
-    record={'attempt':number,'variant':variant,'reserved':True,'codex_executed':False,'usage_estimate_usd':None,'projection':[],'commit':os.environ.get('GITHUB_SHA')}
-    trial.write(output/'attempt.json',record)
-    cfg={'job_name':variant,'jobs_dir':str(root/'jobs'),'n_attempts':1,'n_concurrent_trials':1,
-        'retry':{'max_retries':0},'environment':{'type':'docker','delete':True},
+    from diagnostics import SENTINEL, sanitized_exception, sanitize
+    assert not any(os.environ.get(k) for k in ('OPENAI_API_KEY','CODEX_API_KEY','CODEX_AUTH_JSON_PATH','CODEX_FORCE_AUTH_JSON')), 'No real authentication permitted'
+    assert os.environ.get('TRIAL_DIAGNOSTIC')=='1'
+    output=root/'public/current';task=Path(json.loads((root/'current-task.json').read_text())['path'])
+    before=Task(task).checksum
+    cfg={'job_name':'diagnostic','jobs_dir':str(root/'jobs'),'n_attempts':1,'n_concurrent_trials':1,
+        'retry':{'max_retries':0},'environment':{'type':'docker','delete':True},'verifier':{'disable':True},
         'agents':[{'import_path':'pinned_codex:PinnedCodex','model_name':MODEL,'extra_allowed_hosts':['api.openai.com'],
             'kwargs':{'version':'0.155.1','reasoning_effort':'medium','web_search':'disabled','config':config()}}],
         'tasks':[{'path':str(task)}]}
-    trial.write(root/(variant+'-job.json'),cfg)
-    environment=os.environ.copy();environment.update(PYTHONPATH=str(Path(__file__).parent),TRIAL_VARIANT=variant,TRIAL_PUBLIC_DIR=str(output))
-    started=time.monotonic()
+    trial.write(root/'diagnostic-job.json',cfg)
+    environment=os.environ.copy();environment.update(PYTHONPATH=str(Path(__file__).parent),
+        TRIAL_VARIANT='current',TRIAL_PUBLIC_DIR=str(output),OPENAI_API_KEY=SENTINEL)
+    record={'kind':'credential_free_launch_diagnostic','paid_attempt':False,'measured_task_outcome':False,
+        'result_extraction_succeeded':False,'launch_succeeded':False,'rollout_present':False,
+        'commit':os.environ.get('GITHUB_SHA')}
     try:
-        with (root/(variant+'-private.log')).open('w') as log:
-            completed=subprocess.run(['harbor','run','--config',str(root/(variant+'-job.json'))],env=environment,stdout=log,stderr=subprocess.STDOUT,timeout=1000)
+        with (root/'private-native.log').open('w') as log:
+            completed=subprocess.run(['harbor','run','--config',str(root/'diagnostic-job.json')],env=environment,stdout=log,stderr=subprocess.STDOUT,timeout=180)
         record['harbor_returncode']=completed.returncode
-        row=next(r for r in trial.project(root/'jobs',{}) if r['native_result'].startswith('jobs/'+variant+'/'))
-        native_dir=root/Path(row['native_result']).parent
-        details=usage_and_activation(native_dir)
-        record['codex_executed']=any((native_dir/'agent').glob('**/rollout-*.jsonl'))
-        row['exceptions']=[{k:e[k] for k in ('exception_type','occurred_at')} for e in row['exceptions']]
-        row.pop('expected',None);row.pop('matches',None)
-        record['projection']=[row];record['usage_and_activation']=details
-        record['usage_complete']=details['completion_event'] and row['failure_cause'] is None
-        totals=details['total_usage']
-        if totals:
-            tokens={'input_including_cache':totals.get('input_tokens'),'cached_input':totals.get('cached_input_tokens'),'output':totals.get('output_tokens')}
-            record['usage_estimate_usd']=trial.conservative_usage_cost(tokens)
-        artifact=native_dir/'artifacts/workspace/output/Subject.Tests.ps1'
-        if artifact.is_file():record['submitted_artifact']={'bytes':artifact.stat().st_size,'sha256':hashlib.sha256(artifact.read_bytes()).hexdigest()}
-        assert Task(task).checksum==manifest['task_checksum'], 'Frozen input mutation'
-        record['integration_valid']=True
+        row=trial.project(root/'jobs',{})[0]
+        row['exceptions']=[sanitized_exception(e) for e in row['exceptions']]
+        record['native_result']=row
+        record['rollout_present']=bool(list((root/'jobs').glob('**/rollout-*.jsonl')))
+        assert Task(task).checksum==before, 'Frozen task changed'
+        record['result_extraction_succeeded']=True
+        record['launch_succeeded']=row['failure_cause'] is None and not row['exceptions']
     except Exception as exc:
-        record['integration_valid']=False;record['integration_failure_type']=type(exc).__name__
+        record['extraction_exception']={'type':type(exc).__name__,'message':sanitize(str(exc))}
     finally:
-        record['duration_seconds']=round(time.monotonic()-started,2)
-        trial.write(output/'attempt.json',record)
-        print(json.dumps({k:record.get(k) for k in ('attempt','variant','codex_executed','usage_estimate_usd','integration_valid')}),flush=True)
-    return 0 if record.get('integration_valid') and record.get('usage_complete') and record['usage_estimate_usd'] is not None else 1
+        trial.write(output/'diagnostic.json',record)
+        print(json.dumps(record),flush=True)
+    return 0 if record['launch_succeeded'] else 1
 
 if __name__=='__main__':
     mode=sys.argv[1];root=Path(sys.argv[2]).resolve()
-    if mode=='prepare':
-        try:prepare(root)
-        except Exception as exc:
-            trial.write(root/'public/preflight.json',{'passed':False,'failure_type':type(exc).__name__,'message':str(exc)[-1600:],'api_calls':0})
-            raise
-    elif mode in ('current','absent'):raise SystemExit(attempt(root,mode))
-    else:raise ValueError('Unsupported fixed phase')
-
+    if mode=='diagnostic-prepare':prepare(root,diagnostic=True)
+    elif mode=='diagnostic':raise SystemExit(diagnostic(root))
+    else:raise ValueError('Paid execution disabled; only credential-free diagnostics are allowed')
