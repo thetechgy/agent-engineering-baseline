@@ -1,13 +1,24 @@
-Workflow: https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41952213509
-Commit: a644d44f490d76acfad6c0c8acb1fdaf58cf031a
-Run attempt: 1
-Conclusion: failure
-Job duration: 17m49s
-Host dependency check: 92 packages compatible
-Compose installer: success
-Qualification step started: 2026-11-05T02:00:04Z
-Last failure: 2026-11-05T02:17:38.3249324Z Process completed with exit code 143.
-Artifact upload, checkout integrity and cleanup steps: skipped
-GitHub artifacts API: total_count=0
-Cause: unknown
-Full workflow log retained locally; native log and per-trial results were not recovered.
+Original run 41952213509 (complete log archive):
+The runner has received a shutdown signal. This can happen when the runner service is stopped, or a manually started runner is canceled.
+Cause unknown. No native grade recovered.
+
+Recovery 41956647063: snapshot package downloads
+TooManyRequests 503 No healthy backends
+504 Gateway Timeout
+Agent image build reached its 600-second process deadline before Harbor execution.
+
+Recovery 41958131429: native oracle
+bash: line 1: /solution/solve.sh: Permission denied
+Native oracle exit-code.txt: 126
+Verifier: invalid / artifact. Harbor reward overall 0, no native exception.
+Integration wrapper: Unexpected control outcome, qualification false, exit 1.
+
+Recovery 41958553130: final native controls
+Good: reference_pass=1, mutants_detected=2, mutants_executed=2, tests_executed=3, passed.
+Weak: reference_pass=1, mutants_detected=0, mutants_executed=2, tests_executed=3, failed.
+Both expected outcomes qualified. PowerShell 7.6.9, Pester 6.2.0.
+
+Final native sandbox probes (same run):
+bwrap: No permissions to create a new namespace, likely because the kernel does not allow non-privileged user namespaces.
+Legacy backend: permission profiles requiring direct runtime enforcement are incompatible with --use-legacy-landlock
+Actual enforcing mechanism not isolated. No protection was relaxed; no paid inference launched.

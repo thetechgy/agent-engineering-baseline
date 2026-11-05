@@ -1,37 +1,402 @@
 <!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
-<title>Direct Harbor trial</title><style>body{font:16px system-ui;max-width:1100px;margin:3rem auto;padding:0 1rem;color:#172033}table{border-collapse:collapse;width:100%}th,td{border:1px solid #cbd5e1;padding:.5rem;text-align:left}pre{white-space:pre-wrap;overflow-wrap:anywhere}h1,h2{color:#174f78}</style>
-<h1>Direct Harbor trial</h1><p>Diagnostic only. Production evaluation and Pages remain unchanged.</p>
-<p><a href="results.json">Machine-readable results</a> · <a href="manifest.json">Frozen input manifests</a> · <a href="workflow-evidence.txt">Workflow evidence excerpt</a></p><h2>Decision</h2><p>Retain the existing approach. This trial did not qualify direct Harbor for adoption or reach the live skill comparison.</p><p><strong>0 live Codex attempts · $0 API spend · 0 native grading outcomes recovered</strong></p><p>Executed commit: <code>a644d44f490d76acfad6c0c8acb1fdaf58cf031a</code> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41952213509">Failed native workflow</a></p><h2>Calibration</h2><table><tr><th>Fixture</th><th>Expected</th><th>Observed</th><th>Detail</th><th>Matches</th></tr><tr><td>pester-002-classic</td><td>passed</td><td>unavailable</td><td>runner_result_not_recovered</td><td>None</td></tr><tr><td>pester-002-data</td><td>passed</td><td>unavailable</td><td>runner_result_not_recovered</td><td>None</td></tr><tr><td>pester-002-weak</td><td>failed</td><td>unavailable</td><td>runner_result_not_recovered</td><td>None</td></tr><tr><td>pester-004-discovery</td><td>passed</td><td>unavailable</td><td>runner_result_not_recovered</td><td>None</td></tr><tr><td>pester-004-inline</td><td>passed</td><td>unavailable</td><td>runner_result_not_recovered</td><td>None</td></tr><tr><td>pester-004-compact</td><td>passed</td><td>unavailable</td><td>runner_result_not_recovered</td><td>None</td></tr><tr><td>pester-004-weak</td><td>failed</td><td>unavailable</td><td>runner_result_not_recovered</td><td>None</td></tr><tr><td>pester-005-good</td><td>passed</td><td>unavailable</td><td>runner_result_not_recovered</td><td>None</td></tr><tr><td>pester-005-wrong</td><td>failed</td><td>unavailable</td><td>runner_result_not_recovered</td><td>None</td></tr><tr><td>pester-002-empty</td><td>invalid</td><td>unavailable</td><td>runner_result_not_recovered</td><td>None</td></tr><tr><td>pester-002-malformed</td><td>invalid</td><td>unavailable</td><td>runner_result_not_recovered</td><td>None</td></tr><tr><td>pester-002-unsupported</td><td>unsupported</td><td>unavailable</td><td>runner_result_not_recovered</td><td>None</td></tr><tr><td>pester-002-forged-reward</td><td>unsupported</td><td>unavailable</td><td>runner_result_not_recovered</td><td>None</td></tr><tr><td>pester-002-missing</td><td>infrastructure_error</td><td>unavailable</td><td>runner_result_not_recovered</td><td>None</td></tr><tr><td>pester-004-broken-discovery</td><td>invalid</td><td>unavailable</td><td>runner_result_not_recovered</td><td>None</td></tr><tr><td>pester-002-timeout</td><td>timeout</td><td>unavailable</td><td>runner_result_not_recovered</td><td>None</td></tr></table><h2>Live comparison</h2><p>No live inference has been launched. Skill effect, activation, revision effect, variability and comparison denominators are unavailable. No justified revision identified without discovery evidence.</p><table><tr><th>Case</th><th>Variant</th><th>Attempts</th><th>Valid denominator</th><th>Correctness / activation / improvement</th></tr><tr><td>pester-002</td><td>absent</td><td>0</td><td>0</td><td>Unmeasured</td></tr><tr><td>pester-002</td><td>current</td><td>0</td><td>0</td><td>Unmeasured</td></tr><tr><td>pester-002</td><td>revised</td><td>0</td><td>0</td><td>Unmeasured</td></tr><tr><td>pester-004</td><td>absent</td><td>0</td><td>0</td><td>Unmeasured</td></tr><tr><td>pester-004</td><td>current</td><td>0</td><td>0</td><td>Unmeasured</td></tr><tr><td>pester-004</td><td>revised</td><td>0</td><td>0</td><td>Unmeasured</td></tr><tr><td>pester-005</td><td>absent</td><td>0</td><td>0</td><td>Unmeasured</td></tr><tr><td>pester-005</td><td>current</td><td>0</td><td>0</td><td>Unmeasured</td></tr><tr><td>pester-005</td><td>revised</td><td>0</td><td>0</td><td>Unmeasured</td></tr></table><h2>Primary references</h2><ul><li><a href="https://github.com/harbor-framework/harbor/releases/tag/v0.25.0">harbor release</a></li><li><a href="https://docs.harborframework.com/tasks/separate-verifier">separate verifier</a></li><li><a href="https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/agents/installed/codex.py#L2072">codex launcher</a></li><li><a href="https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/core/src/rollout_budget.rs">budget accounting</a></li><li><a href="https://developers.openai.com/api/docs/models/gpt-5.6-sol">pricing</a></li></ul><h2>Assessment</h2><p>The workflow successfully installed and dependency-checked the released Harbor host runtime and verified Compose. It staged 16 controls, then terminated without recoverable fixture results. Installation is not evidence of trustworthy grading.</p><p>The wrapper buffered native output in a runner-local file. When the job terminated, upload steps did not execute, so no native diagnostics or grading sidecars survived. The retained code now streams credential-free native output to the Actions log and allowlists partial results for upload, but that correction has not been exercised in another native campaign.</p><p>Paid expansion stopped because the stock Codex launcher disables its inner sandbox and the inspected rollout limit does not bound all billable input or the in-flight response. No workaround, custom cost proxy, framework fork or paid retry was introduced.</p><p>Skill activation, instruction following, correctness, seeded-defect detection, safety regressions, efficiency gains and revision improvement all remain unmeasured. A file read, favorable completion message or numeric reward cannot substitute for this evidence.</p><p>The smallest next step is one credential-free known-good task with streamed logs and recoverable checkpoints, plus qualification of a sandbox-preserving Codex launch and complete spending accounting before any paid discovery. These are prerequisites, not a recommendation to expand this trial now.</p><h2>Evidence and limitations</h2><pre>{
-  &quot;schema_version&quot;: 1,
+<title>Direct Harbor recovery trial</title><style>body{font:16px system-ui;max-width:1100px;margin:3rem auto;padding:0 1rem;color:#172033}table{border-collapse:collapse;width:100%;margin:1rem 0}th,td{border:1px solid #cbd5e1;padding:.5rem;text-align:left;vertical-align:top}pre{white-space:pre-wrap;overflow-wrap:anywhere}h1,h2{color:#174f78}a{color:#145f91}</style>
+<h1>Direct Harbor recovery trial</h1><p>Diagnostic only. Production evaluation and Pages remain unchanged.</p>
+<p><a href="results.json" download>Download machine-readable results</a> · <a href="manifest.json">Frozen input manifests</a> · <a href="workflow-evidence.txt">Workflow evidence excerpts</a></p><h2>Decision</h2><p>Address one specific blocker before the live pair: native Codex workspace-write sandbox compatibility with the existing unprivileged Docker/runner boundary. The grading smoke passed; adoption and skill effectiveness remain unproven.</p><p>Two expected native grades recovered: good detects 2/2 seeded defects; weak detects 0/2 despite passing the reference. No codex exec task or paid inference occurred. Production remains unchanged.</p><h2>Native credential-free controls</h2><table><thead><tr><th scope="col">Case / submission</th><th scope="col">Expected</th><th scope="col">Verifier observation</th><th scope="col">Reference pass</th><th scope="col">Defects detected</th><th scope="col">Harbor failure cause</th><th scope="col">Valid measured grade</th></tr></thead><tbody><tr><td>pester-002-good</td><td>passed</td><td>passed: evaluated</td><td>1</td><td>2/2</td><td>None</td><td>True</td></tr><tr><td>pester-002-weak</td><td>failed</td><td>failed: evaluated</td><td>1</td><td>0/2</td><td>None</td><td>True</td></tr></tbody></table><p>These are deterministic oracle controls, not live model evidence. Each final control has one valid observation. Both suites execute three tests and pass the reference; only the good suite detects both defects. The earlier missing-submission result remains ungradeable. Raw native carriers and submitted work are in the linked Actions artifacts and retained local evidence; this bundle contains reviewed metadata only.</p><ul><li><a href="native-outcomes.json">pester-002-good: Reviewed native metadata and verifier outcome</a></li><li><a href="native-outcomes.json">pester-002-weak: Reviewed native metadata and verifier outcome</a></li></ul><h2>Live Codex pair</h2><table><thead><tr><th scope="col">Case</th><th scope="col">Variant</th><th scope="col">Paid attempts</th><th scope="col">Valid denominator</th><th scope="col">Correctness</th><th scope="col">Activation</th></tr></thead><tbody><tr><td>pester-002</td><td>current</td><td>0</td><td>0</td><td>None</td><td>None</td></tr><tr><td>pester-002</td><td>absent</td><td>0</td><td>0</td><td>None</td><td>None</td></tr></tbody></table><p>Neither live variant ran. Four actual Codex sandbox-helper probes executed without credentials; no codex exec task or provider inference occurred. Activation, instruction following, skill effectiveness and efficiency/regressions remain unmeasured. No skill revision was created or authorized in this recovery.</p><h2>Campaign usage</h2><p>Cumulative paid attempts: 0/36; recovery: 0/4 maximum. Cumulative API spend: $0 because no credential or model call was used, not because missing telemetry became zero. Oracle token/cost observations remain null. The $20 operational budget is not a provider cap. A future pair is conservatively estimated at $1.44 for two 60k-input/4k-output attempts, charging all input including cache at $10/M and output at $30/M. The proposed $4 scheduling stop leaves $16 reserve; in-flight overshoot remains possible. Unknown usage stops further scheduling. No paid accounting control was exercised.</p><h2>Sandbox and deployment boundary</h2><p>The actual helper used workspace-write, approval_policy=never, inner network disabled and temporary-directory write exceptions excluded. The probe first checks UID 1000, zero effective capabilities, no-new-privileges, no Docker socket and an ordinary outside-workspace write. Exact helper commands, errors and return codes are retained in sandbox.json.</p><p>Bubblewrap reports namespace creation denied under the tested Docker/runner restrictions; the exact enforcing kernel/seccomp/AppArmor mechanism was not isolated. The explicitly tested deprecated Landlock backend rejects this policy as requiring direct runtime enforcement. Neither probe reaches its intended inner write/network assertions, so the inner boundary is not qualified.</p><p>The outer container kept default seccomp, cap_drop=ALL, no-new-privileges, CPU/memory/PID limits and no host Docker socket. The sandbox probe was offline; a live API-connected agent did not run. Codex inner sandbox and outer container protection are separate. No protection was relaxed.</p><p>Harbor import_path is the supported extension point. The small trial subclass replaces the stock bypass flag with --sandbox workspace-write -c approval_policy=never, requires the pinned preinstalled CLI and uses a build-owned private home. The transformation is unit tested; no effective live command/config was produced. No installed upstream file changed.</p><h2>Execution and supporting artifacts</h2><ul><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41956647063">Recovery build preflight</a> — Failed before Harbor started: snapshot 503/504 responses and a 600-second image-build timeout. Failure record retained. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41956647063/artifacts/13383608340">Build failure</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41956647063/artifacts/13384480020">Image unavailable</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958131429">First native control</a> — Oracle exit 126: script lacked executable permission. Verifier invalid/artifact remains unmeasured. Default sandbox helper was missing; legacy policy rejected. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958131429/artifacts/13383049571">Native invalid result</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958131429/artifacts/13383782957">Sandbox errors</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130">Final native controls and sandbox checks</a> — Good passes and weak fails as expected. Overall workflow failed because both sandbox probes failed. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130/artifacts/13384044283">Known-good pass</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130/artifacts/13383659806">Known-weak fail</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130/artifacts/13384059131">Sandbox blocker</a></li></ul><h2>History</h2><p>Original run 41952213509 explicitly received a runner shutdown signal. Cause remains unknown; exit 143 alone does not identify a Harbor timeout/crash. No original native grade survived. Its prior report is preserved as history below; the prior recommendation is superseded and does not show that the existing stack is better.</p><h2>Maintenance and remaining evidence</h2><p>Recovered grading evidence is useful: both suites pass the reference, but only the good suite detects both mutants. The earlier numeric zero reward with a missing submission remains ungradeable. This validates the narrow pass/fail distinction, not all legitimate or adversarial submissions.</p><p>The projection delegates failure cause and reward validity to pinned Harbor, preserves native exceptions/verifier observations and excludes unsupported or missing evidence. Ten tests cover correct/incorrect work, agent timeout with valid grading, provider/environment/verifier failures, handled step failures, unknown usage and post-run failed status/exit.</p><p>Custom maintenance: staging/projection/reporting, 10 focused tests, a 47-line Codex subclass, 34-line native sandbox probe, 29-line snapshot transport helper and one branch-only workflow. No framework patches. The adapter depends on the stock launch string and three pinned helper methods and needs review on Harbor/Codex changes. The transport helper is another component to retain only while needed.</p><p>Existing tasks, reference implementations, mutants, grader, PowerShell runner and runtime installer were reused unchanged. Another skill still needs representative inputs, independent good/weak submissions and a protected executable verifier. Lower total maintenance cost has not been demonstrated.</p><p>Production components removed: none. Only overlapping behavioral wrapper/staging/collection layers could become removable after broader adoption evidence. APM deployment, static checks, graders, historical evidence and publication controls remain necessary.</p><p>Smallest next step: qualify one supported native Codex sandbox configuration under the same required outer boundary without disabling protections. Then run the current/absent pester-002 smoke pair. Do not start the original full comparison yet.</p><h2>Primary references</h2><ul><li><a href="https://github.com/harbor-framework/harbor/releases/tag/v0.25.0">harbor release</a></li><li><a href="https://docs.harborframework.com/tasks/separate-verifier">separate verifier</a></li><li><a href="https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/agents/installed/codex.py#L2072">codex launcher</a></li><li><a href="https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/core/src/rollout_budget.rs">budget accounting</a></li><li><a href="https://developers.openai.com/api/docs/models/gpt-5.6-sol">pricing</a></li><li><a href="https://docs.harborframework.com/jobs/error-classification">harbor failure policy</a></li><li><a href="https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/linux-sandbox/src/linux_run_main.rs">codex native sandbox</a></li><li><a href="https://packages.debian.org/trixie/bubblewrap">debian bubblewrap</a></li></ul><details><summary>Complete machine-readable evidence</summary><pre>{
+  &quot;schema_version&quot;: 2,
   &quot;campaign&quot;: &quot;direct-harbor-20261104&quot;,
-  &quot;state&quot;: &quot;stopped&quot;,
-  &quot;decision&quot;: &quot;Retain the existing approach. This trial did not qualify direct Harbor for adoption or reach the live skill comparison.&quot;,
+  &quot;state&quot;: &quot;blocked_before_live_pair&quot;,
+  &quot;decision&quot;: &quot;Address one specific blocker before the live pair: native Codex workspace-write sandbox compatibility with the existing unprivileged Docker/runner boundary. The grading smoke passed; adoption and skill effectiveness remain unproven.&quot;,
+  &quot;summary&quot;: &quot;Two expected native grades recovered: good detects 2/2 seeded defects; weak detects 0/2 despite passing the reference. No codex exec task or paid inference occurred. Production remains unchanged.&quot;,
   &quot;source_commit&quot;: &quot;cc0819f5dafc05610dd8c3293ce2f52744c66f1a&quot;,
-  &quot;executed_commit&quot;: &quot;a644d44f490d76acfad6c0c8acb1fdaf58cf031a&quot;,
-  &quot;workflow&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41952213509&quot;,
-  &quot;workflow_conclusion&quot;: &quot;failure&quot;,
-  &quot;workflow_attempt&quot;: 1,
-  &quot;job_duration_seconds&quot;: 1069,
-  &quot;failure&quot;: {
-    &quot;classification&quot;: &quot;infrastructure_interruption&quot;,
-    &quot;observed_exit_code&quot;: 143,
-    &quot;root_cause&quot;: null,
-    &quot;artifacts_recovered&quot;: 0,
-    &quot;note&quot;: &quot;Artifact upload and cleanup were skipped. Exit 143 alone does not identify root cause.&quot;
+  &quot;reviewed_trial_commit&quot;: &quot;e64b9f6cc74fbc75aa5a24107c27c21518b6c354&quot;,
+  &quot;executed_commit&quot;: &quot;44c02a7b16f67787dcbd4f18d54605f1c630b741&quot;,
+  &quot;recovery_commits&quot;: [
+    &quot;04516b8581bd41b7a4ed7590b9f718688080ddda&quot;,
+    &quot;8b7dd45ca2136a55112440dfa11ec5221341f461&quot;,
+    &quot;44c02a7b16f67787dcbd4f18d54605f1c630b741&quot;
+  ],
+  &quot;calibration&quot;: [
+    {
+      &quot;task&quot;: &quot;pester-002-good&quot;,
+      &quot;expected&quot;: &quot;passed&quot;,
+      &quot;outcome&quot;: {
+        &quot;classification&quot;: &quot;passed&quot;,
+        &quot;code&quot;: &quot;evaluated&quot;,
+        &quot;reference_pass&quot;: 1,
+        &quot;mutants_detected&quot;: 2,
+        &quot;mutants_executed&quot;: 2,
+        &quot;tests_executed&quot;: 3,
+        &quot;pester_version&quot;: &quot;6.2.0&quot;,
+        &quot;powershell_version&quot;: &quot;7.6.9&quot;
+      },
+      &quot;failure_cause&quot;: null,
+      &quot;exceptions&quot;: [],
+      &quot;harbor_reward_valid&quot;: true,
+      &quot;measured&quot;: true,
+      &quot;matches&quot;: true,
+      &quot;native_agent_exit_code&quot;: null,
+      &quot;native_rewards&quot;: {
+        &quot;overall&quot;: 1.0,
+        &quot;pester_reference_pass&quot;: 1.0,
+        &quot;pester_mutation_detection&quot;: 1.0,
+        &quot;pester_test_quality&quot;: 1.0
+      },
+      &quot;tokens&quot;: {
+        &quot;input_including_cache&quot;: null,
+        &quot;cached_input&quot;: null,
+        &quot;output&quot;: null
+      },
+      &quot;cost_usd&quot;: null,
+      &quot;timing&quot;: {
+        &quot;agent_execution&quot;: {
+          &quot;started_at&quot;: &quot;2026-11-05T02:59:48.071829Z&quot;,
+          &quot;finished_at&quot;: &quot;2026-11-05T02:59:48.285405Z&quot;
+        },
+        &quot;verifier&quot;: {
+          &quot;started_at&quot;: &quot;2026-11-05T02:59:58.774035Z&quot;,
+          &quot;finished_at&quot;: &quot;2026-11-05T03:00:21.950961Z&quot;
+        }
+      },
+      &quot;native_result&quot;: &quot;jobs/good/pester-002-good__iyCycs3/result.json&quot;,
+      &quot;evidence&quot;: {
+        &quot;Reviewed native metadata and verifier outcome&quot;: &quot;native-outcomes.json&quot;
+      }
+    },
+    {
+      &quot;task&quot;: &quot;pester-002-weak&quot;,
+      &quot;expected&quot;: &quot;failed&quot;,
+      &quot;outcome&quot;: {
+        &quot;classification&quot;: &quot;failed&quot;,
+        &quot;code&quot;: &quot;evaluated&quot;,
+        &quot;reference_pass&quot;: 1,
+        &quot;mutants_detected&quot;: 0,
+        &quot;mutants_executed&quot;: 2,
+        &quot;tests_executed&quot;: 3,
+        &quot;pester_version&quot;: &quot;6.2.0&quot;,
+        &quot;powershell_version&quot;: &quot;7.6.9&quot;
+      },
+      &quot;failure_cause&quot;: null,
+      &quot;exceptions&quot;: [],
+      &quot;harbor_reward_valid&quot;: true,
+      &quot;measured&quot;: true,
+      &quot;matches&quot;: true,
+      &quot;native_agent_exit_code&quot;: null,
+      &quot;native_rewards&quot;: {
+        &quot;overall&quot;: 0.0,
+        &quot;pester_reference_pass&quot;: 1.0,
+        &quot;pester_mutation_detection&quot;: 0.0,
+        &quot;pester_test_quality&quot;: 0.0
+      },
+      &quot;tokens&quot;: {
+        &quot;input_including_cache&quot;: null,
+        &quot;cached_input&quot;: null,
+        &quot;output&quot;: null
+      },
+      &quot;cost_usd&quot;: null,
+      &quot;timing&quot;: {
+        &quot;agent_execution&quot;: {
+          &quot;started_at&quot;: &quot;2026-11-05T03:00:30.091578Z&quot;,
+          &quot;finished_at&quot;: &quot;2026-11-05T03:00:30.308871Z&quot;
+        },
+        &quot;verifier&quot;: {
+          &quot;started_at&quot;: &quot;2026-11-05T03:00:40.835809Z&quot;,
+          &quot;finished_at&quot;: &quot;2026-11-05T03:00:59.735786Z&quot;
+        }
+      },
+      &quot;native_result&quot;: &quot;jobs/weak/pester-002-weak__R5mjxsi/result.json&quot;,
+      &quot;evidence&quot;: {
+        &quot;Reviewed native metadata and verifier outcome&quot;: &quot;native-outcomes.json&quot;
+      }
+    }
+  ],
+  &quot;calibration_note&quot;: &quot;These are deterministic oracle controls, not live model evidence. Each final control has one valid observation. Both suites execute three tests and pass the reference; only the good suite detects both defects. The earlier missing-submission result remains ungradeable. Raw native carriers and submitted work are in the linked Actions artifacts and retained local evidence; this bundle contains reviewed metadata only.&quot;,
+  &quot;credential_free_oracle_attempts&quot;: 3,
+  &quot;build_preflight_failures&quot;: 1,
+  &quot;transport_corrections&quot;: 1,
+  &quot;native_fixture_retries&quot;: 1,
+  &quot;completed_expected_native_outcomes&quot;: 2,
+  &quot;grading_smoke_qualified&quot;: true,
+  &quot;live_prerequisites_passed&quot;: false,
+  &quot;controls&quot;: {
+    &quot;good&quot;: {
+      &quot;control&quot;: &quot;good&quot;,
+      &quot;qualification_passed&quot;: true,
+      &quot;calibration&quot;: [
+        {
+          &quot;task&quot;: &quot;pester-002-good&quot;,
+          &quot;expected&quot;: &quot;passed&quot;,
+          &quot;outcome&quot;: {
+            &quot;classification&quot;: &quot;passed&quot;,
+            &quot;code&quot;: &quot;evaluated&quot;,
+            &quot;reference_pass&quot;: 1,
+            &quot;mutants_detected&quot;: 2,
+            &quot;mutants_executed&quot;: 2,
+            &quot;tests_executed&quot;: 3,
+            &quot;pester_version&quot;: &quot;6.2.0&quot;,
+            &quot;powershell_version&quot;: &quot;7.6.9&quot;
+          },
+          &quot;failure_cause&quot;: null,
+          &quot;exceptions&quot;: [],
+          &quot;harbor_reward_valid&quot;: true,
+          &quot;measured&quot;: true,
+          &quot;matches&quot;: true,
+          &quot;native_agent_exit_code&quot;: null,
+          &quot;native_rewards&quot;: {
+            &quot;overall&quot;: 1.0,
+            &quot;pester_reference_pass&quot;: 1.0,
+            &quot;pester_mutation_detection&quot;: 1.0,
+            &quot;pester_test_quality&quot;: 1.0
+          },
+          &quot;tokens&quot;: {
+            &quot;input_including_cache&quot;: null,
+            &quot;cached_input&quot;: null,
+            &quot;output&quot;: null
+          },
+          &quot;cost_usd&quot;: null,
+          &quot;timing&quot;: {
+            &quot;agent_execution&quot;: {
+              &quot;started_at&quot;: &quot;2026-11-05T02:59:48.071829Z&quot;,
+              &quot;finished_at&quot;: &quot;2026-11-05T02:59:48.285405Z&quot;
+            },
+            &quot;verifier&quot;: {
+              &quot;started_at&quot;: &quot;2026-11-05T02:59:58.774035Z&quot;,
+              &quot;finished_at&quot;: &quot;2026-11-05T03:00:21.950961Z&quot;
+            }
+          },
+          &quot;native_result&quot;: &quot;jobs/good/pester-002-good__iyCycs3/result.json&quot;,
+          &quot;evidence&quot;: {
+            &quot;Reviewed native metadata and verifier outcome&quot;: &quot;native-outcomes.json&quot;
+          }
+        }
+      ],
+      &quot;commit&quot;: &quot;44c02a7b16f67787dcbd4f18d54605f1c630b741&quot;,
+      &quot;workflow_run&quot;: &quot;41958553130&quot;,
+      &quot;returncode&quot;: 0,
+      &quot;duration_seconds&quot;: 139.02
+    },
+    &quot;weak&quot;: {
+      &quot;control&quot;: &quot;weak&quot;,
+      &quot;qualification_passed&quot;: true,
+      &quot;calibration&quot;: [
+        {
+          &quot;task&quot;: &quot;pester-002-weak&quot;,
+          &quot;expected&quot;: &quot;failed&quot;,
+          &quot;outcome&quot;: {
+            &quot;classification&quot;: &quot;failed&quot;,
+            &quot;code&quot;: &quot;evaluated&quot;,
+            &quot;reference_pass&quot;: 1,
+            &quot;mutants_detected&quot;: 0,
+            &quot;mutants_executed&quot;: 2,
+            &quot;tests_executed&quot;: 3,
+            &quot;pester_version&quot;: &quot;6.2.0&quot;,
+            &quot;powershell_version&quot;: &quot;7.6.9&quot;
+          },
+          &quot;failure_cause&quot;: null,
+          &quot;exceptions&quot;: [],
+          &quot;harbor_reward_valid&quot;: true,
+          &quot;measured&quot;: true,
+          &quot;matches&quot;: true,
+          &quot;native_agent_exit_code&quot;: null,
+          &quot;native_rewards&quot;: {
+            &quot;overall&quot;: 0.0,
+            &quot;pester_reference_pass&quot;: 1.0,
+            &quot;pester_mutation_detection&quot;: 0.0,
+            &quot;pester_test_quality&quot;: 0.0
+          },
+          &quot;tokens&quot;: {
+            &quot;input_including_cache&quot;: null,
+            &quot;cached_input&quot;: null,
+            &quot;output&quot;: null
+          },
+          &quot;cost_usd&quot;: null,
+          &quot;timing&quot;: {
+            &quot;agent_execution&quot;: {
+              &quot;started_at&quot;: &quot;2026-11-05T03:00:30.091578Z&quot;,
+              &quot;finished_at&quot;: &quot;2026-11-05T03:00:30.308871Z&quot;
+            },
+            &quot;verifier&quot;: {
+              &quot;started_at&quot;: &quot;2026-11-05T03:00:40.835809Z&quot;,
+              &quot;finished_at&quot;: &quot;2026-11-05T03:00:59.735786Z&quot;
+            }
+          },
+          &quot;native_result&quot;: &quot;jobs/weak/pester-002-weak__R5mjxsi/result.json&quot;,
+          &quot;evidence&quot;: {
+            &quot;Reviewed native metadata and verifier outcome&quot;: &quot;native-outcomes.json&quot;
+          }
+        }
+      ],
+      &quot;commit&quot;: &quot;44c02a7b16f67787dcbd4f18d54605f1c630b741&quot;,
+      &quot;workflow_run&quot;: &quot;41958553130&quot;,
+      &quot;returncode&quot;: 0,
+      &quot;duration_seconds&quot;: 35.86
+    }
   },
-  &quot;observed_host_runtime&quot;: {
-    &quot;harbor&quot;: &quot;0.25.0&quot;,
-    &quot;harbor_commit&quot;: &quot;fdba28fc411e47e8765420a1a063b4918fce3def&quot;,
-    &quot;python&quot;: &quot;3.13.15&quot;,
-    &quot;locked_packages_checked&quot;: 92,
-    &quot;compose_installer&quot;: &quot;verified existing installer completed&quot;
+  &quot;prior_recovery_failures&quot;: {
+    &quot;41956647063&quot;: {
+      &quot;control&quot;: &quot;good&quot;,
+      &quot;qualification_passed&quot;: false,
+      &quot;calibration&quot;: [],
+      &quot;commit&quot;: &quot;04516b8581bd41b7a4ed7590b9f718688080ddda&quot;,
+      &quot;workflow_run&quot;: &quot;41956647063&quot;,
+      &quot;integration_failure&quot;: {
+        &quot;type&quot;: &quot;TimeoutExpired&quot;,
+        &quot;message&quot;: &quot;Command &#x27;[&#x27;docker&#x27;, &#x27;build&#x27;, &#x27;--progress=plain&#x27;, &#x27;-t&#x27;, &#x27;direct-harbor-agent:recovery&#x27;, &#x27;/home/runner/work/_temp/recovery-good/tasks/pester-002-good/environment&#x27;]&#x27; timed out after 600 seconds&quot;
+      },
+      &quot;duration_seconds&quot;: 600.13
+    },
+    &quot;41958131429&quot;: {
+      &quot;control&quot;: &quot;good&quot;,
+      &quot;qualification_passed&quot;: false,
+      &quot;calibration&quot;: [
+        {
+          &quot;task&quot;: &quot;pester-002-good&quot;,
+          &quot;expected&quot;: &quot;passed&quot;,
+          &quot;outcome&quot;: {
+            &quot;classification&quot;: &quot;invalid&quot;,
+            &quot;code&quot;: &quot;artifact&quot;
+          },
+          &quot;failure_cause&quot;: null,
+          &quot;exceptions&quot;: [],
+          &quot;harbor_reward_valid&quot;: true,
+          &quot;measured&quot;: false,
+          &quot;matches&quot;: false,
+          &quot;native_rewards&quot;: {
+            &quot;overall&quot;: 0.0
+          },
+          &quot;tokens&quot;: {
+            &quot;input_including_cache&quot;: null,
+            &quot;cached_input&quot;: null,
+            &quot;output&quot;: null
+          },
+          &quot;cost_usd&quot;: null,
+          &quot;timing&quot;: {
+            &quot;agent_execution&quot;: {
+              &quot;started_at&quot;: &quot;2026-11-05T02:54:56.158870Z&quot;,
+              &quot;finished_at&quot;: &quot;2026-11-05T02:54:56.329799Z&quot;
+            },
+            &quot;verifier&quot;: {
+              &quot;started_at&quot;: &quot;2026-11-05T02:55:06.772400Z&quot;,
+              &quot;finished_at&quot;: &quot;2026-11-05T02:55:23.890522Z&quot;
+            }
+          },
+          &quot;native_result&quot;: &quot;jobs/good/pester-002-good__3tLYb8F/result.json&quot;
+        }
+      ],
+      &quot;commit&quot;: &quot;8b7dd45ca2136a55112440dfa11ec5221341f461&quot;,
+      &quot;workflow_run&quot;: &quot;41958131429&quot;,
+      &quot;returncode&quot;: 0,
+      &quot;integration_failure&quot;: {
+        &quot;type&quot;: &quot;RuntimeError&quot;,
+        &quot;message&quot;: &quot;Unexpected control outcome&quot;
+      },
+      &quot;duration_seconds&quot;: 75.92
+    }
+  },
+  &quot;sandbox&quot;: {
+    &quot;bubblewrap&quot;: {
+      &quot;qualified&quot;: false,
+      &quot;returncode&quot;: 1,
+      &quot;backend&quot;: &quot;bubblewrap&quot;,
+      &quot;command&quot;: [
+        &quot;codex&quot;,
+        &quot;sandbox&quot;,
+        &quot;-c&quot;,
+        &quot;sandbox_mode=\&quot;workspace-write\&quot;&quot;,
+        &quot;-c&quot;,
+        &quot;approval_policy=\&quot;never\&quot;&quot;,
+        &quot;-c&quot;,
+        &quot;sandbox_workspace_write.network_access=false&quot;,
+        &quot;-c&quot;,
+        &quot;sandbox_workspace_write.exclude_slash_tmp=true&quot;,
+        &quot;-c&quot;,
+        &quot;sandbox_workspace_write.exclude_tmpdir_env_var=true&quot;,
+        &quot;--&quot;,
+        &quot;python3&quot;,
+        &quot;-c&quot;,
+        &quot;import pathlib,socket; pathlib.Path(&#x27;/workspace/output/sandbox-ok&#x27;).write_text(&#x27;ok&#x27;); exec(\&quot;try:\\n pathlib.Path(&#x27;/outside/inner-denied&#x27;).write_text(&#x27;bad&#x27;)\\n raise AssertionError(&#x27;outside write allowed&#x27;)\\nexcept PermissionError: pass\\ntry:\\n socket.socket().connect((&#x27;127.0.0.1&#x27;,9))\\n raise AssertionError(&#x27;network allowed&#x27;)\\nexcept PermissionError: pass\&quot;); print(&#x27;native sandbox restrictions verified&#x27;)&quot;
+      ],
+      &quot;stdout&quot;: &quot;&quot;,
+      &quot;stderr&quot;: &quot;WARNING: proceeding, even though we could not create PATH aliases: Operation not permitted (os error 1)\nbwrap: No permissions to create a new namespace, likely because the kernel does not allow non-privileged user namespaces. See &lt;https://deb.li/bubblewrap&gt; or &lt;file:///usr/share/doc/bubblewrap/README.Debian.gz&gt;.\n&quot;,
+      &quot;boundary&quot;: &quot;Codex native workspace-write plus unprivileged Docker, default seccomp, no-new-privileges, no extra capabilities or mounts&quot;
+    },
+    &quot;legacy_landlock&quot;: {
+      &quot;qualified&quot;: false,
+      &quot;returncode&quot;: 101,
+      &quot;backend&quot;: &quot;legacy-landlock&quot;,
+      &quot;command&quot;: [
+        &quot;codex&quot;,
+        &quot;sandbox&quot;,
+        &quot;-c&quot;,
+        &quot;features.use_legacy_landlock=true&quot;,
+        &quot;-c&quot;,
+        &quot;sandbox_mode=\&quot;workspace-write\&quot;&quot;,
+        &quot;-c&quot;,
+        &quot;approval_policy=\&quot;never\&quot;&quot;,
+        &quot;-c&quot;,
+        &quot;sandbox_workspace_write.network_access=false&quot;,
+        &quot;-c&quot;,
+        &quot;sandbox_workspace_write.exclude_slash_tmp=true&quot;,
+        &quot;-c&quot;,
+        &quot;sandbox_workspace_write.exclude_tmpdir_env_var=true&quot;,
+        &quot;--&quot;,
+        &quot;python3&quot;,
+        &quot;-c&quot;,
+        &quot;import pathlib,socket; pathlib.Path(&#x27;/workspace/output/sandbox-ok&#x27;).write_text(&#x27;ok&#x27;); exec(\&quot;try:\\n pathlib.Path(&#x27;/outside/inner-denied&#x27;).write_text(&#x27;bad&#x27;)\\n raise AssertionError(&#x27;outside write allowed&#x27;)\\nexcept PermissionError: pass\\ntry:\\n socket.socket().connect((&#x27;127.0.0.1&#x27;,9))\\n raise AssertionError(&#x27;network allowed&#x27;)\\nexcept PermissionError: pass\&quot;); print(&#x27;native sandbox restrictions verified&#x27;)&quot;
+      ],
+      &quot;stdout&quot;: &quot;&quot;,
+      &quot;stderr&quot;: &quot;WARNING: proceeding, even though we could not create PATH aliases: Operation not permitted (os error 1)\n\nthread &#x27;main&#x27; (13) panicked at linux-sandbox/src/linux_run_main.rs:392:9:\npermission profiles requiring direct runtime enforcement are incompatible with --use-legacy-landlock\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n&quot;,
+      &quot;boundary&quot;: &quot;Codex native workspace-write plus unprivileged Docker, default seccomp, no-new-privileges, no extra capabilities or mounts&quot;
+    }
+  },
+  &quot;live_results&quot;: [
+    {
+      &quot;case&quot;: &quot;pester-002&quot;,
+      &quot;variant&quot;: &quot;current&quot;,
+      &quot;attempts&quot;: 0,
+      &quot;valid_denominator&quot;: 0,
+      &quot;correctness&quot;: null,
+      &quot;activation&quot;: null,
+      &quot;mutation_detection&quot;: null,
+      &quot;variability&quot;: null
+    },
+    {
+      &quot;case&quot;: &quot;pester-002&quot;,
+      &quot;variant&quot;: &quot;absent&quot;,
+      &quot;attempts&quot;: 0,
+      &quot;valid_denominator&quot;: 0,
+      &quot;correctness&quot;: null,
+      &quot;activation&quot;: null,
+      &quot;mutation_detection&quot;: null,
+      &quot;variability&quot;: null
+    }
+  ],
+  &quot;live_note&quot;: &quot;Neither live variant ran. Four actual Codex sandbox-helper probes executed without credentials; no codex exec task or provider inference occurred. Activation, instruction following, skill effectiveness and efficiency/regressions remain unmeasured. No skill revision was created or authorized in this recovery.&quot;,
+  &quot;agent_attempts&quot;: 0,
+  &quot;prior_paid_attempts&quot;: 0,
+  &quot;recovery_paid_attempts&quot;: 0,
+  &quot;api_spend_usd&quot;: 0,
+  &quot;estimated_cumulative_api_spend_usd&quot;: 0,
+  &quot;provider_billing_observation&quot;: null,
+  &quot;spending_note&quot;: &quot;Cumulative paid attempts: 0/36; recovery: 0/4 maximum. Cumulative API spend: $0 because no credential or model call was used, not because missing telemetry became zero. Oracle token/cost observations remain null. The $20 operational budget is not a provider cap. A future pair is conservatively estimated at $1.44 for two 60k-input/4k-output attempts, charging all input including cache at $10/M and output at $30/M. The proposed $4 scheduling stop leaves $16 reserve; in-flight overshoot remains possible. Unknown usage stops further scheduling. No paid accounting control was exercised.&quot;,
+  &quot;budget&quot;: {
+    &quot;operational_usd&quot;: 20,
+    &quot;provider_hard_cap_verified&quot;: false,
+    &quot;campaign_attempt_limit&quot;: 36,
+    &quot;recovery_attempt_limit&quot;: 4,
+    &quot;planned_live_attempts&quot;: 2,
+    &quot;concurrency&quot;: 1,
+    &quot;max_agent_seconds&quot;: 600,
+    &quot;model_judge&quot;: false,
+    &quot;proposed_scheduling_stop_estimate_usd&quot;: 4,
+    &quot;reserve_usd&quot;: 16,
+    &quot;pair_preflight_estimate_usd&quot;: 1.44
   },
   &quot;configured_runtime&quot;: {
-    &quot;codex&quot;: &quot;0.155.1 (not executed)&quot;,
+    &quot;codex&quot;: &quot;0.155.1 (native sandbox helper executed; no codex exec task)&quot;,
     &quot;model&quot;: &quot;gpt-5.6-sol (not executed; slug, no immutable snapshot published)&quot;,
     &quot;reasoning_effort&quot;: &quot;medium (not executed)&quot;,
-    &quot;powershell&quot;: &quot;7.6.9 (container runtime not recovered)&quot;,
-    &quot;pester&quot;: &quot;6.2.0 (container runtime not recovered)&quot;,
+    &quot;powershell&quot;: &quot;7.6.9 (observed by both verifiers)&quot;,
+    &quot;pester&quot;: &quot;6.2.0 (observed by both verifiers)&quot;,
     &quot;build&quot;: {
       &quot;base_image&quot;: &quot;python:3.12-slim-trixie@sha256:b18b261e1b4974b4f321451ad5251ded85abb22c2b8b262da527dda1d031ab30&quot;,
       &quot;apt_snapshot&quot;: &quot;20261103T000000Z&quot;,
@@ -42,343 +407,505 @@
         &quot;npm&quot;: &quot;9.2.0~ds1-3&quot;,
         &quot;ca-certificates&quot;: &quot;20250419+deb13u1&quot;
       }
-    }
+    },
+    &quot;bubblewrap&quot;: &quot;0.12.0-1~deb13u1 (missing native helper added from unchanged snapshot)&quot;,
+    &quot;codex_binary_sha256&quot;: &quot;a0ef8b2debc3bf747e07b1a039354de31300ac0dcc2276498ba281470b5d9115&quot;
   },
-  &quot;calibration&quot;: [
-    {
-      &quot;task&quot;: &quot;pester-002-classic&quot;,
-      &quot;expected&quot;: &quot;passed&quot;,
-      &quot;outcome&quot;: {
-        &quot;classification&quot;: &quot;unavailable&quot;,
-        &quot;code&quot;: &quot;runner_result_not_recovered&quot;
-      },
-      &quot;matches&quot;: null,
-      &quot;tokens&quot;: null,
-      &quot;cost_usd&quot;: null
-    },
-    {
-      &quot;task&quot;: &quot;pester-002-data&quot;,
-      &quot;expected&quot;: &quot;passed&quot;,
-      &quot;outcome&quot;: {
-        &quot;classification&quot;: &quot;unavailable&quot;,
-        &quot;code&quot;: &quot;runner_result_not_recovered&quot;
-      },
-      &quot;matches&quot;: null,
-      &quot;tokens&quot;: null,
-      &quot;cost_usd&quot;: null
-    },
-    {
-      &quot;task&quot;: &quot;pester-002-weak&quot;,
-      &quot;expected&quot;: &quot;failed&quot;,
-      &quot;outcome&quot;: {
-        &quot;classification&quot;: &quot;unavailable&quot;,
-        &quot;code&quot;: &quot;runner_result_not_recovered&quot;
-      },
-      &quot;matches&quot;: null,
-      &quot;tokens&quot;: null,
-      &quot;cost_usd&quot;: null
-    },
-    {
-      &quot;task&quot;: &quot;pester-004-discovery&quot;,
-      &quot;expected&quot;: &quot;passed&quot;,
-      &quot;outcome&quot;: {
-        &quot;classification&quot;: &quot;unavailable&quot;,
-        &quot;code&quot;: &quot;runner_result_not_recovered&quot;
-      },
-      &quot;matches&quot;: null,
-      &quot;tokens&quot;: null,
-      &quot;cost_usd&quot;: null
-    },
-    {
-      &quot;task&quot;: &quot;pester-004-inline&quot;,
-      &quot;expected&quot;: &quot;passed&quot;,
-      &quot;outcome&quot;: {
-        &quot;classification&quot;: &quot;unavailable&quot;,
-        &quot;code&quot;: &quot;runner_result_not_recovered&quot;
-      },
-      &quot;matches&quot;: null,
-      &quot;tokens&quot;: null,
-      &quot;cost_usd&quot;: null
-    },
-    {
-      &quot;task&quot;: &quot;pester-004-compact&quot;,
-      &quot;expected&quot;: &quot;passed&quot;,
-      &quot;outcome&quot;: {
-        &quot;classification&quot;: &quot;unavailable&quot;,
-        &quot;code&quot;: &quot;runner_result_not_recovered&quot;
-      },
-      &quot;matches&quot;: null,
-      &quot;tokens&quot;: null,
-      &quot;cost_usd&quot;: null
-    },
-    {
-      &quot;task&quot;: &quot;pester-004-weak&quot;,
-      &quot;expected&quot;: &quot;failed&quot;,
-      &quot;outcome&quot;: {
-        &quot;classification&quot;: &quot;unavailable&quot;,
-        &quot;code&quot;: &quot;runner_result_not_recovered&quot;
-      },
-      &quot;matches&quot;: null,
-      &quot;tokens&quot;: null,
-      &quot;cost_usd&quot;: null
-    },
-    {
-      &quot;task&quot;: &quot;pester-005-good&quot;,
-      &quot;expected&quot;: &quot;passed&quot;,
-      &quot;outcome&quot;: {
-        &quot;classification&quot;: &quot;unavailable&quot;,
-        &quot;code&quot;: &quot;runner_result_not_recovered&quot;
-      },
-      &quot;matches&quot;: null,
-      &quot;tokens&quot;: null,
-      &quot;cost_usd&quot;: null
-    },
-    {
-      &quot;task&quot;: &quot;pester-005-wrong&quot;,
-      &quot;expected&quot;: &quot;failed&quot;,
-      &quot;outcome&quot;: {
-        &quot;classification&quot;: &quot;unavailable&quot;,
-        &quot;code&quot;: &quot;runner_result_not_recovered&quot;
-      },
-      &quot;matches&quot;: null,
-      &quot;tokens&quot;: null,
-      &quot;cost_usd&quot;: null
-    },
-    {
-      &quot;task&quot;: &quot;pester-002-empty&quot;,
-      &quot;expected&quot;: &quot;invalid&quot;,
-      &quot;outcome&quot;: {
-        &quot;classification&quot;: &quot;unavailable&quot;,
-        &quot;code&quot;: &quot;runner_result_not_recovered&quot;
-      },
-      &quot;matches&quot;: null,
-      &quot;tokens&quot;: null,
-      &quot;cost_usd&quot;: null
-    },
-    {
-      &quot;task&quot;: &quot;pester-002-malformed&quot;,
-      &quot;expected&quot;: &quot;invalid&quot;,
-      &quot;outcome&quot;: {
-        &quot;classification&quot;: &quot;unavailable&quot;,
-        &quot;code&quot;: &quot;runner_result_not_recovered&quot;
-      },
-      &quot;matches&quot;: null,
-      &quot;tokens&quot;: null,
-      &quot;cost_usd&quot;: null
-    },
-    {
-      &quot;task&quot;: &quot;pester-002-unsupported&quot;,
-      &quot;expected&quot;: &quot;unsupported&quot;,
-      &quot;outcome&quot;: {
-        &quot;classification&quot;: &quot;unavailable&quot;,
-        &quot;code&quot;: &quot;runner_result_not_recovered&quot;
-      },
-      &quot;matches&quot;: null,
-      &quot;tokens&quot;: null,
-      &quot;cost_usd&quot;: null
-    },
-    {
-      &quot;task&quot;: &quot;pester-002-forged-reward&quot;,
-      &quot;expected&quot;: &quot;unsupported&quot;,
-      &quot;outcome&quot;: {
-        &quot;classification&quot;: &quot;unavailable&quot;,
-        &quot;code&quot;: &quot;runner_result_not_recovered&quot;
-      },
-      &quot;matches&quot;: null,
-      &quot;tokens&quot;: null,
-      &quot;cost_usd&quot;: null
-    },
-    {
-      &quot;task&quot;: &quot;pester-002-missing&quot;,
-      &quot;expected&quot;: &quot;infrastructure_error&quot;,
-      &quot;outcome&quot;: {
-        &quot;classification&quot;: &quot;unavailable&quot;,
-        &quot;code&quot;: &quot;runner_result_not_recovered&quot;
-      },
-      &quot;matches&quot;: null,
-      &quot;tokens&quot;: null,
-      &quot;cost_usd&quot;: null
-    },
-    {
-      &quot;task&quot;: &quot;pester-004-broken-discovery&quot;,
-      &quot;expected&quot;: &quot;invalid&quot;,
-      &quot;outcome&quot;: {
-        &quot;classification&quot;: &quot;unavailable&quot;,
-        &quot;code&quot;: &quot;runner_result_not_recovered&quot;
-      },
-      &quot;matches&quot;: null,
-      &quot;tokens&quot;: null,
-      &quot;cost_usd&quot;: null
-    },
-    {
-      &quot;task&quot;: &quot;pester-002-timeout&quot;,
-      &quot;expected&quot;: &quot;timeout&quot;,
-      &quot;outcome&quot;: {
-        &quot;classification&quot;: &quot;unavailable&quot;,
-        &quot;code&quot;: &quot;runner_result_not_recovered&quot;
-      },
-      &quot;matches&quot;: null,
-      &quot;tokens&quot;: null,
-      &quot;cost_usd&quot;: null
-    }
-  ],
-  &quot;planned_calibration_trials&quot;: 16,
-  &quot;completed_calibration_results_recovered&quot;: 0,
-  &quot;native_oracle_attempts_started&quot;: null,
-  &quot;native_oracle_attempts_possible_range&quot;: [
-    0,
-    16
-  ],
-  &quot;qualification_passed&quot;: false,
-  &quot;agent_attempts&quot;: 0,
-  &quot;agent_attempt_definition&quot;: &quot;Actual Codex/provider attempts, including smoke and retries. Oracle fixture trials are reported separately.&quot;,
-  &quot;api_spend_usd&quot;: 0,
-  &quot;api_spend_basis&quot;: &quot;No credential was attached; this workflow invokes only the credential-free oracle, not Codex or a judge. Not inferred from missing token observations.&quot;,
-  &quot;initial_planning_estimate_usd&quot;: 9.6,
-  &quot;conservative_planning_estimate_usd&quot;: 11.4,
-  &quot;estimate_basis&quot;: &quot;30 attempts at 60k input and 4k output tokens, $5/M input including 25% cache-write premium, $20/M output. Not a ceiling; no inference occurred.&quot;,
-  &quot;budget_limit_usd&quot;: 20,
-  &quot;attempt_limit&quot;: 36,
-  &quot;provider_dollar_cap_verified&quot;: false,
-  &quot;live_results&quot;: [
-    {
-      &quot;case&quot;: &quot;pester-002&quot;,
-      &quot;variant&quot;: &quot;absent&quot;,
-      &quot;attempts&quot;: 0,
-      &quot;valid_denominator&quot;: 0,
-      &quot;correctness&quot;: null,
-      &quot;activation&quot;: null,
-      &quot;mutation_detection&quot;: null,
-      &quot;variability&quot;: null
-    },
-    {
-      &quot;case&quot;: &quot;pester-002&quot;,
-      &quot;variant&quot;: &quot;current&quot;,
-      &quot;attempts&quot;: 0,
-      &quot;valid_denominator&quot;: 0,
-      &quot;correctness&quot;: null,
-      &quot;activation&quot;: null,
-      &quot;mutation_detection&quot;: null,
-      &quot;variability&quot;: null
-    },
-    {
-      &quot;case&quot;: &quot;pester-002&quot;,
-      &quot;variant&quot;: &quot;revised&quot;,
-      &quot;attempts&quot;: 0,
-      &quot;valid_denominator&quot;: 0,
-      &quot;correctness&quot;: null,
-      &quot;activation&quot;: null,
-      &quot;mutation_detection&quot;: null,
-      &quot;variability&quot;: null
-    },
-    {
-      &quot;case&quot;: &quot;pester-004&quot;,
-      &quot;variant&quot;: &quot;absent&quot;,
-      &quot;attempts&quot;: 0,
-      &quot;valid_denominator&quot;: 0,
-      &quot;correctness&quot;: null,
-      &quot;activation&quot;: null,
-      &quot;mutation_detection&quot;: null,
-      &quot;variability&quot;: null
-    },
-    {
-      &quot;case&quot;: &quot;pester-004&quot;,
-      &quot;variant&quot;: &quot;current&quot;,
-      &quot;attempts&quot;: 0,
-      &quot;valid_denominator&quot;: 0,
-      &quot;correctness&quot;: null,
-      &quot;activation&quot;: null,
-      &quot;mutation_detection&quot;: null,
-      &quot;variability&quot;: null
-    },
-    {
-      &quot;case&quot;: &quot;pester-004&quot;,
-      &quot;variant&quot;: &quot;revised&quot;,
-      &quot;attempts&quot;: 0,
-      &quot;valid_denominator&quot;: 0,
-      &quot;correctness&quot;: null,
-      &quot;activation&quot;: null,
-      &quot;mutation_detection&quot;: null,
-      &quot;variability&quot;: null
-    },
-    {
-      &quot;case&quot;: &quot;pester-005&quot;,
-      &quot;variant&quot;: &quot;absent&quot;,
-      &quot;attempts&quot;: 0,
-      &quot;valid_denominator&quot;: 0,
-      &quot;correctness&quot;: null,
-      &quot;activation&quot;: null,
-      &quot;mutation_detection&quot;: null,
-      &quot;variability&quot;: null
-    },
-    {
-      &quot;case&quot;: &quot;pester-005&quot;,
-      &quot;variant&quot;: &quot;current&quot;,
-      &quot;attempts&quot;: 0,
-      &quot;valid_denominator&quot;: 0,
-      &quot;correctness&quot;: null,
-      &quot;activation&quot;: null,
-      &quot;mutation_detection&quot;: null,
-      &quot;variability&quot;: null
-    },
-    {
-      &quot;case&quot;: &quot;pester-005&quot;,
-      &quot;variant&quot;: &quot;revised&quot;,
-      &quot;attempts&quot;: 0,
-      &quot;valid_denominator&quot;: 0,
-      &quot;correctness&quot;: null,
-      &quot;activation&quot;: null,
-      &quot;mutation_detection&quot;: null,
-      &quot;variability&quot;: null
-    }
-  ],
-  &quot;revision&quot;: {
-    &quot;created&quot;: false,
-    &quot;reason&quot;: &quot;No justified revision identified: discovery did not run. This is not evidence that the current skill has no weakness.&quot;
+  &quot;observed_host_runtime&quot;: {
+    &quot;harbor&quot;: &quot;0.25.0&quot;,
+    &quot;harbor_commit&quot;: &quot;fdba28fc411e47e8765420a1a063b4918fce3def&quot;,
+    &quot;python&quot;: &quot;3.13.15&quot;,
+    &quot;locked_packages_checked&quot;: 92,
+    &quot;compose_installer&quot;: &quot;verified existing installer completed&quot;
   },
+  &quot;deployment&quot;: {
+    &quot;current_target_sha256&quot;: &quot;b57df2ff4072b2e25744ae2bd530b02bbb6ab83a22a0d374c73d48de4dc70887&quot;,
+    &quot;deployed_file_count&quot;: 48,
+    &quot;absent_file_count_local&quot;: 45,
+    &quot;local_match_verified&quot;: true,
+    &quot;runtime_absent_duplicate_audit&quot;: null,
+    &quot;native_skill_activation&quot;: null,
+    &quot;instructions_sha256&quot;: &quot;7b8d5aca90cd1a90d32b98d1e86ee16d82c808336e309c26853d3aab73fb4543&quot;,
+    &quot;note&quot;: &quot;Actual APM content/support staged. Source and deployed target hashes match. Local absent staging removes only three target files. Actual Codex discovery remains untested.&quot;
+  },
+  &quot;boundary_assessment&quot;: [
+    &quot;The actual helper used workspace-write, approval_policy=never, inner network disabled and temporary-directory write exceptions excluded. The probe first checks UID 1000, zero effective capabilities, no-new-privileges, no Docker socket and an ordinary outside-workspace write. Exact helper commands, errors and return codes are retained in sandbox.json.&quot;,
+    &quot;Bubblewrap reports namespace creation denied under the tested Docker/runner restrictions; the exact enforcing kernel/seccomp/AppArmor mechanism was not isolated. The explicitly tested deprecated Landlock backend rejects this policy as requiring direct runtime enforcement. Neither probe reaches its intended inner write/network assertions, so the inner boundary is not qualified.&quot;,
+    &quot;The outer container kept default seccomp, cap_drop=ALL, no-new-privileges, CPU/memory/PID limits and no host Docker socket. The sandbox probe was offline; a live API-connected agent did not run. Codex inner sandbox and outer container protection are separate. No protection was relaxed.&quot;,
+    &quot;Harbor import_path is the supported extension point. The small trial subclass replaces the stock bypass flag with --sandbox workspace-write -c approval_policy=never, requires the pinned preinstalled CLI and uses a build-owned private home. The transformation is unit tested; no effective live command/config was produced. No installed upstream file changed.&quot;
+  ],
+  &quot;history_note&quot;: &quot;Original run 41952213509 explicitly received a runner shutdown signal. Cause remains unknown; exit 143 alone does not identify a Harbor timeout/crash. No original native grade survived. Its prior report is preserved as history below; the prior recommendation is superseded and does not show that the existing stack is better.&quot;,
+  &quot;history&quot;: {
+    &quot;original_report&quot;: {
+      &quot;schema_version&quot;: 1,
+      &quot;campaign&quot;: &quot;direct-harbor-20261104&quot;,
+      &quot;state&quot;: &quot;stopped&quot;,
+      &quot;decision&quot;: &quot;Retain the existing approach. This trial did not qualify direct Harbor for adoption or reach the live skill comparison.&quot;,
+      &quot;source_commit&quot;: &quot;cc0819f5dafc05610dd8c3293ce2f52744c66f1a&quot;,
+      &quot;executed_commit&quot;: &quot;a644d44f490d76acfad6c0c8acb1fdaf58cf031a&quot;,
+      &quot;workflow&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41952213509&quot;,
+      &quot;workflow_conclusion&quot;: &quot;failure&quot;,
+      &quot;workflow_attempt&quot;: 1,
+      &quot;job_duration_seconds&quot;: 1069,
+      &quot;failure&quot;: {
+        &quot;classification&quot;: &quot;infrastructure_interruption&quot;,
+        &quot;observed_exit_code&quot;: 143,
+        &quot;root_cause&quot;: null,
+        &quot;artifacts_recovered&quot;: 0,
+        &quot;note&quot;: &quot;Artifact upload and cleanup were skipped. Exit 143 alone does not identify root cause.&quot;
+      },
+      &quot;observed_host_runtime&quot;: {
+        &quot;harbor&quot;: &quot;0.25.0&quot;,
+        &quot;harbor_commit&quot;: &quot;fdba28fc411e47e8765420a1a063b4918fce3def&quot;,
+        &quot;python&quot;: &quot;3.13.15&quot;,
+        &quot;locked_packages_checked&quot;: 92,
+        &quot;compose_installer&quot;: &quot;verified existing installer completed&quot;
+      },
+      &quot;configured_runtime&quot;: {
+        &quot;codex&quot;: &quot;0.155.1 (not executed)&quot;,
+        &quot;model&quot;: &quot;gpt-5.6-sol (not executed; slug, no immutable snapshot published)&quot;,
+        &quot;reasoning_effort&quot;: &quot;medium (not executed)&quot;,
+        &quot;powershell&quot;: &quot;7.6.9 (container runtime not recovered)&quot;,
+        &quot;pester&quot;: &quot;6.2.0 (container runtime not recovered)&quot;,
+        &quot;build&quot;: {
+          &quot;base_image&quot;: &quot;python:3.12-slim-trixie@sha256:b18b261e1b4974b4f321451ad5251ded85abb22c2b8b262da527dda1d031ab30&quot;,
+          &quot;apt_snapshot&quot;: &quot;20261103T000000Z&quot;,
+          &quot;apt_packages&quot;: {
+            &quot;git&quot;: &quot;1:2.47.3-0+deb13u1&quot;,
+            &quot;jq&quot;: &quot;1.7.1-6+deb13u4&quot;,
+            &quot;nodejs&quot;: &quot;20.19.2+dfsg-1+deb13u3&quot;,
+            &quot;npm&quot;: &quot;9.2.0~ds1-3&quot;,
+            &quot;ca-certificates&quot;: &quot;20250419+deb13u1&quot;
+          }
+        }
+      },
+      &quot;calibration&quot;: [
+        {
+          &quot;task&quot;: &quot;pester-002-classic&quot;,
+          &quot;expected&quot;: &quot;passed&quot;,
+          &quot;outcome&quot;: {
+            &quot;classification&quot;: &quot;unavailable&quot;,
+            &quot;code&quot;: &quot;runner_result_not_recovered&quot;
+          },
+          &quot;matches&quot;: null,
+          &quot;tokens&quot;: null,
+          &quot;cost_usd&quot;: null
+        },
+        {
+          &quot;task&quot;: &quot;pester-002-data&quot;,
+          &quot;expected&quot;: &quot;passed&quot;,
+          &quot;outcome&quot;: {
+            &quot;classification&quot;: &quot;unavailable&quot;,
+            &quot;code&quot;: &quot;runner_result_not_recovered&quot;
+          },
+          &quot;matches&quot;: null,
+          &quot;tokens&quot;: null,
+          &quot;cost_usd&quot;: null
+        },
+        {
+          &quot;task&quot;: &quot;pester-002-weak&quot;,
+          &quot;expected&quot;: &quot;failed&quot;,
+          &quot;outcome&quot;: {
+            &quot;classification&quot;: &quot;unavailable&quot;,
+            &quot;code&quot;: &quot;runner_result_not_recovered&quot;
+          },
+          &quot;matches&quot;: null,
+          &quot;tokens&quot;: null,
+          &quot;cost_usd&quot;: null
+        },
+        {
+          &quot;task&quot;: &quot;pester-004-discovery&quot;,
+          &quot;expected&quot;: &quot;passed&quot;,
+          &quot;outcome&quot;: {
+            &quot;classification&quot;: &quot;unavailable&quot;,
+            &quot;code&quot;: &quot;runner_result_not_recovered&quot;
+          },
+          &quot;matches&quot;: null,
+          &quot;tokens&quot;: null,
+          &quot;cost_usd&quot;: null
+        },
+        {
+          &quot;task&quot;: &quot;pester-004-inline&quot;,
+          &quot;expected&quot;: &quot;passed&quot;,
+          &quot;outcome&quot;: {
+            &quot;classification&quot;: &quot;unavailable&quot;,
+            &quot;code&quot;: &quot;runner_result_not_recovered&quot;
+          },
+          &quot;matches&quot;: null,
+          &quot;tokens&quot;: null,
+          &quot;cost_usd&quot;: null
+        },
+        {
+          &quot;task&quot;: &quot;pester-004-compact&quot;,
+          &quot;expected&quot;: &quot;passed&quot;,
+          &quot;outcome&quot;: {
+            &quot;classification&quot;: &quot;unavailable&quot;,
+            &quot;code&quot;: &quot;runner_result_not_recovered&quot;
+          },
+          &quot;matches&quot;: null,
+          &quot;tokens&quot;: null,
+          &quot;cost_usd&quot;: null
+        },
+        {
+          &quot;task&quot;: &quot;pester-004-weak&quot;,
+          &quot;expected&quot;: &quot;failed&quot;,
+          &quot;outcome&quot;: {
+            &quot;classification&quot;: &quot;unavailable&quot;,
+            &quot;code&quot;: &quot;runner_result_not_recovered&quot;
+          },
+          &quot;matches&quot;: null,
+          &quot;tokens&quot;: null,
+          &quot;cost_usd&quot;: null
+        },
+        {
+          &quot;task&quot;: &quot;pester-005-good&quot;,
+          &quot;expected&quot;: &quot;passed&quot;,
+          &quot;outcome&quot;: {
+            &quot;classification&quot;: &quot;unavailable&quot;,
+            &quot;code&quot;: &quot;runner_result_not_recovered&quot;
+          },
+          &quot;matches&quot;: null,
+          &quot;tokens&quot;: null,
+          &quot;cost_usd&quot;: null
+        },
+        {
+          &quot;task&quot;: &quot;pester-005-wrong&quot;,
+          &quot;expected&quot;: &quot;failed&quot;,
+          &quot;outcome&quot;: {
+            &quot;classification&quot;: &quot;unavailable&quot;,
+            &quot;code&quot;: &quot;runner_result_not_recovered&quot;
+          },
+          &quot;matches&quot;: null,
+          &quot;tokens&quot;: null,
+          &quot;cost_usd&quot;: null
+        },
+        {
+          &quot;task&quot;: &quot;pester-002-empty&quot;,
+          &quot;expected&quot;: &quot;invalid&quot;,
+          &quot;outcome&quot;: {
+            &quot;classification&quot;: &quot;unavailable&quot;,
+            &quot;code&quot;: &quot;runner_result_not_recovered&quot;
+          },
+          &quot;matches&quot;: null,
+          &quot;tokens&quot;: null,
+          &quot;cost_usd&quot;: null
+        },
+        {
+          &quot;task&quot;: &quot;pester-002-malformed&quot;,
+          &quot;expected&quot;: &quot;invalid&quot;,
+          &quot;outcome&quot;: {
+            &quot;classification&quot;: &quot;unavailable&quot;,
+            &quot;code&quot;: &quot;runner_result_not_recovered&quot;
+          },
+          &quot;matches&quot;: null,
+          &quot;tokens&quot;: null,
+          &quot;cost_usd&quot;: null
+        },
+        {
+          &quot;task&quot;: &quot;pester-002-unsupported&quot;,
+          &quot;expected&quot;: &quot;unsupported&quot;,
+          &quot;outcome&quot;: {
+            &quot;classification&quot;: &quot;unavailable&quot;,
+            &quot;code&quot;: &quot;runner_result_not_recovered&quot;
+          },
+          &quot;matches&quot;: null,
+          &quot;tokens&quot;: null,
+          &quot;cost_usd&quot;: null
+        },
+        {
+          &quot;task&quot;: &quot;pester-002-forged-reward&quot;,
+          &quot;expected&quot;: &quot;unsupported&quot;,
+          &quot;outcome&quot;: {
+            &quot;classification&quot;: &quot;unavailable&quot;,
+            &quot;code&quot;: &quot;runner_result_not_recovered&quot;
+          },
+          &quot;matches&quot;: null,
+          &quot;tokens&quot;: null,
+          &quot;cost_usd&quot;: null
+        },
+        {
+          &quot;task&quot;: &quot;pester-002-missing&quot;,
+          &quot;expected&quot;: &quot;infrastructure_error&quot;,
+          &quot;outcome&quot;: {
+            &quot;classification&quot;: &quot;unavailable&quot;,
+            &quot;code&quot;: &quot;runner_result_not_recovered&quot;
+          },
+          &quot;matches&quot;: null,
+          &quot;tokens&quot;: null,
+          &quot;cost_usd&quot;: null
+        },
+        {
+          &quot;task&quot;: &quot;pester-004-broken-discovery&quot;,
+          &quot;expected&quot;: &quot;invalid&quot;,
+          &quot;outcome&quot;: {
+            &quot;classification&quot;: &quot;unavailable&quot;,
+            &quot;code&quot;: &quot;runner_result_not_recovered&quot;
+          },
+          &quot;matches&quot;: null,
+          &quot;tokens&quot;: null,
+          &quot;cost_usd&quot;: null
+        },
+        {
+          &quot;task&quot;: &quot;pester-002-timeout&quot;,
+          &quot;expected&quot;: &quot;timeout&quot;,
+          &quot;outcome&quot;: {
+            &quot;classification&quot;: &quot;unavailable&quot;,
+            &quot;code&quot;: &quot;runner_result_not_recovered&quot;
+          },
+          &quot;matches&quot;: null,
+          &quot;tokens&quot;: null,
+          &quot;cost_usd&quot;: null
+        }
+      ],
+      &quot;planned_calibration_trials&quot;: 16,
+      &quot;completed_calibration_results_recovered&quot;: 0,
+      &quot;native_oracle_attempts_started&quot;: null,
+      &quot;native_oracle_attempts_possible_range&quot;: [
+        0,
+        16
+      ],
+      &quot;qualification_passed&quot;: false,
+      &quot;agent_attempts&quot;: 0,
+      &quot;agent_attempt_definition&quot;: &quot;Actual Codex/provider attempts, including smoke and retries. Oracle fixture trials are reported separately.&quot;,
+      &quot;api_spend_usd&quot;: 0,
+      &quot;api_spend_basis&quot;: &quot;No credential was attached; this workflow invokes only the credential-free oracle, not Codex or a judge. Not inferred from missing token observations.&quot;,
+      &quot;initial_planning_estimate_usd&quot;: 9.6,
+      &quot;conservative_planning_estimate_usd&quot;: 11.4,
+      &quot;estimate_basis&quot;: &quot;30 attempts at 60k input and 4k output tokens, $5/M input including 25% cache-write premium, $20/M output. Not a ceiling; no inference occurred.&quot;,
+      &quot;budget_limit_usd&quot;: 20,
+      &quot;attempt_limit&quot;: 36,
+      &quot;provider_dollar_cap_verified&quot;: false,
+      &quot;live_results&quot;: [
+        {
+          &quot;case&quot;: &quot;pester-002&quot;,
+          &quot;variant&quot;: &quot;absent&quot;,
+          &quot;attempts&quot;: 0,
+          &quot;valid_denominator&quot;: 0,
+          &quot;correctness&quot;: null,
+          &quot;activation&quot;: null,
+          &quot;mutation_detection&quot;: null,
+          &quot;variability&quot;: null
+        },
+        {
+          &quot;case&quot;: &quot;pester-002&quot;,
+          &quot;variant&quot;: &quot;current&quot;,
+          &quot;attempts&quot;: 0,
+          &quot;valid_denominator&quot;: 0,
+          &quot;correctness&quot;: null,
+          &quot;activation&quot;: null,
+          &quot;mutation_detection&quot;: null,
+          &quot;variability&quot;: null
+        },
+        {
+          &quot;case&quot;: &quot;pester-002&quot;,
+          &quot;variant&quot;: &quot;revised&quot;,
+          &quot;attempts&quot;: 0,
+          &quot;valid_denominator&quot;: 0,
+          &quot;correctness&quot;: null,
+          &quot;activation&quot;: null,
+          &quot;mutation_detection&quot;: null,
+          &quot;variability&quot;: null
+        },
+        {
+          &quot;case&quot;: &quot;pester-004&quot;,
+          &quot;variant&quot;: &quot;absent&quot;,
+          &quot;attempts&quot;: 0,
+          &quot;valid_denominator&quot;: 0,
+          &quot;correctness&quot;: null,
+          &quot;activation&quot;: null,
+          &quot;mutation_detection&quot;: null,
+          &quot;variability&quot;: null
+        },
+        {
+          &quot;case&quot;: &quot;pester-004&quot;,
+          &quot;variant&quot;: &quot;current&quot;,
+          &quot;attempts&quot;: 0,
+          &quot;valid_denominator&quot;: 0,
+          &quot;correctness&quot;: null,
+          &quot;activation&quot;: null,
+          &quot;mutation_detection&quot;: null,
+          &quot;variability&quot;: null
+        },
+        {
+          &quot;case&quot;: &quot;pester-004&quot;,
+          &quot;variant&quot;: &quot;revised&quot;,
+          &quot;attempts&quot;: 0,
+          &quot;valid_denominator&quot;: 0,
+          &quot;correctness&quot;: null,
+          &quot;activation&quot;: null,
+          &quot;mutation_detection&quot;: null,
+          &quot;variability&quot;: null
+        },
+        {
+          &quot;case&quot;: &quot;pester-005&quot;,
+          &quot;variant&quot;: &quot;absent&quot;,
+          &quot;attempts&quot;: 0,
+          &quot;valid_denominator&quot;: 0,
+          &quot;correctness&quot;: null,
+          &quot;activation&quot;: null,
+          &quot;mutation_detection&quot;: null,
+          &quot;variability&quot;: null
+        },
+        {
+          &quot;case&quot;: &quot;pester-005&quot;,
+          &quot;variant&quot;: &quot;current&quot;,
+          &quot;attempts&quot;: 0,
+          &quot;valid_denominator&quot;: 0,
+          &quot;correctness&quot;: null,
+          &quot;activation&quot;: null,
+          &quot;mutation_detection&quot;: null,
+          &quot;variability&quot;: null
+        },
+        {
+          &quot;case&quot;: &quot;pester-005&quot;,
+          &quot;variant&quot;: &quot;revised&quot;,
+          &quot;attempts&quot;: 0,
+          &quot;valid_denominator&quot;: 0,
+          &quot;correctness&quot;: null,
+          &quot;activation&quot;: null,
+          &quot;mutation_detection&quot;: null,
+          &quot;variability&quot;: null
+        }
+      ],
+      &quot;revision&quot;: {
+        &quot;created&quot;: false,
+        &quot;reason&quot;: &quot;No justified revision identified: discovery did not run. This is not evidence that the current skill has no weakness.&quot;
+      },
+      &quot;local_validation&quot;: {
+        &quot;projection_controls_passed&quot;: 4,
+        &quot;existing_pure_grader_checks_passed&quot;: 7,
+        &quot;staging_variants&quot;: &quot;For all three cases, absent removes only the three target files. Other deployed files and generated instructions/configuration match. This post-run staging change was not executed in native containers.&quot;,
+        &quot;legacy_suite&quot;: &quot;25 tests attempted: FAILED with 13 errors and 6 skips; several tests import unavailable SkillEvaluator. Not a full-suite pass.&quot;,
+        &quot;workflow&quot;: &quot;YAML parses, read-only contents permission, full action pins, no provider secrets, no schedule. Final CI packages this report only.&quot;
+      },
+      &quot;assessment&quot;: [
+        &quot;The workflow successfully installed and dependency-checked the released Harbor host runtime and verified Compose. It staged 16 controls, then terminated without recoverable fixture results. Installation is not evidence of trustworthy grading.&quot;,
+        &quot;The wrapper buffered native output in a runner-local file. When the job terminated, upload steps did not execute, so no native diagnostics or grading sidecars survived. The retained code now streams credential-free native output to the Actions log and allowlists partial results for upload, but that correction has not been exercised in another native campaign.&quot;,
+        &quot;Paid expansion stopped because the stock Codex launcher disables its inner sandbox and the inspected rollout limit does not bound all billable input or the in-flight response. No workaround, custom cost proxy, framework fork or paid retry was introduced.&quot;,
+        &quot;Skill activation, instruction following, correctness, seeded-defect detection, safety regressions, efficiency gains and revision improvement all remain unmeasured. A file read, favorable completion message or numeric reward cannot substitute for this evidence.&quot;,
+        &quot;The smallest next step is one credential-free known-good task with streamed logs and recoverable checkpoints, plus qualification of a sandbox-preserving Codex launch and complete spending accounting before any paid discovery. These are prerequisites, not a recommendation to expand this trial now.&quot;
+      ],
+      &quot;maintenance&quot;: {
+        &quot;custom_components&quot;: [
+          &quot;one staging/classification/report script&quot;,
+          &quot;four projection tests&quot;,
+          &quot;one branch-only calibration/report workflow&quot;,
+          &quot;trial contract and retained results&quot;
+        ],
+        &quot;framework_modifications&quot;: 0,
+        &quot;production_components_removed&quot;: 0,
+        &quot;burden&quot;: &quot;The existing grader, fixed PowerShell runner and pinned runtime installer were reused unchanged. Adding a skill still requires representative tasks, independent good/weak controls, protected grading and deployment checks. Reliable live launch, cost accounting and interruption evidence remain unfinished.&quot;,
+        &quot;potential_removals_after_future_qualification&quot;: &quot;Only overlapping behavioral SkillEvaluator staging/execution/collection layers. Keep APM, static checks, task graders, historical records and publication controls until equivalent contracts are demonstrated.&quot;
+      },
+      &quot;coverage_gaps&quot;: [
+        &quot;No native grading outcome recovered&quot;,
+        &quot;No actual Codex CLI execution&quot;,
+        &quot;No provider/budget failure fixture through actual CLI&quot;,
+        &quot;No runtime activation evidence&quot;,
+        &quot;No live deployment duplicate-copy audit&quot;,
+        &quot;No three-arm comparison&quot;,
+        &quot;No experimental revision&quot;,
+        &quot;No confirmation-case evidence&quot;,
+        &quot;No final container runtime/image identities recovered&quot;
+      ],
+      &quot;contamination&quot;: &quot;Public fixtures, mutants and qualification submissions may be present in training or otherwise accessible. Author inspected case descriptions and qualification mappings including reserved grading details. Reserved confirmation is not blinded. Grading inputs were excluded from agent build contexts in local staging; runtime isolation was not established by this failed run.&quot;,
+      &quot;sources&quot;: {
+        &quot;harbor_release&quot;: &quot;https://github.com/harbor-framework/harbor/releases/tag/v0.25.0&quot;,
+        &quot;separate_verifier&quot;: &quot;https://docs.harborframework.com/tasks/separate-verifier&quot;,
+        &quot;codex_launcher&quot;: &quot;https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/agents/installed/codex.py#L2072&quot;,
+        &quot;budget_accounting&quot;: &quot;https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/core/src/rollout_budget.rs&quot;,
+        &quot;pricing&quot;: &quot;https://developers.openai.com/api/docs/models/gpt-5.6-sol&quot;
+      }
+    },
+    &quot;original_report_commit&quot;: &quot;e64b9f6cc74fbc75aa5a24107c27c21518b6c354&quot;,
+    &quot;shutdown_annotation&quot;: &quot;The runner has received a shutdown signal. This can happen when the runner service is stopped, or a manually started runner is canceled.&quot;,
+    &quot;original_cause&quot;: null
+  },
+  &quot;recovery_runs&quot;: [
+    {
+      &quot;url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41956647063&quot;,
+      &quot;label&quot;: &quot;Recovery build preflight&quot;,
+      &quot;summary&quot;: &quot;Failed before Harbor started: snapshot 503/504 responses and a 600-second image-build timeout. Failure record retained.&quot;,
+      &quot;artifacts&quot;: [
+        {
+          &quot;name&quot;: &quot;Build failure&quot;,
+          &quot;url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41956647063/artifacts/13383608340&quot;
+        },
+        {
+          &quot;name&quot;: &quot;Image unavailable&quot;,
+          &quot;url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41956647063/artifacts/13384480020&quot;
+        }
+      ]
+    },
+    {
+      &quot;url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958131429&quot;,
+      &quot;label&quot;: &quot;First native control&quot;,
+      &quot;summary&quot;: &quot;Oracle exit 126: script lacked executable permission. Verifier invalid/artifact remains unmeasured. Default sandbox helper was missing; legacy policy rejected.&quot;,
+      &quot;artifacts&quot;: [
+        {
+          &quot;name&quot;: &quot;Native invalid result&quot;,
+          &quot;url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958131429/artifacts/13383049571&quot;
+        },
+        {
+          &quot;name&quot;: &quot;Sandbox errors&quot;,
+          &quot;url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958131429/artifacts/13383782957&quot;
+        }
+      ]
+    },
+    {
+      &quot;url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130&quot;,
+      &quot;label&quot;: &quot;Final native controls and sandbox checks&quot;,
+      &quot;summary&quot;: &quot;Good passes and weak fails as expected. Overall workflow failed because both sandbox probes failed.&quot;,
+      &quot;artifacts&quot;: [
+        {
+          &quot;name&quot;: &quot;Known-good pass&quot;,
+          &quot;url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130/artifacts/13384044283&quot;
+        },
+        {
+          &quot;name&quot;: &quot;Known-weak fail&quot;,
+          &quot;url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130/artifacts/13383659806&quot;
+        },
+        {
+          &quot;name&quot;: &quot;Sandbox blocker&quot;,
+          &quot;url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130/artifacts/13384059131&quot;
+        }
+      ]
+    }
+  ],
   &quot;local_validation&quot;: {
-    &quot;projection_controls_passed&quot;: 4,
-    &quot;existing_pure_grader_checks_passed&quot;: 7,
-    &quot;staging_variants&quot;: &quot;For all three cases, absent removes only the three target files. Other deployed files and generated instructions/configuration match. This post-run staging change was not executed in native containers.&quot;,
-    &quot;legacy_suite&quot;: &quot;25 tests attempted: FAILED with 13 errors and 6 skips; several tests import unavailable SkillEvaluator. Not a full-suite pass.&quot;,
-    &quot;workflow&quot;: &quot;YAML parses, read-only contents permission, full action pins, no provider secrets, no schedule. Final CI packages this report only.&quot;
+    &quot;focused_tests_passed&quot;: 10,
+    &quot;postrun_failure_status_and_exit_tested&quot;: true,
+    &quot;pinned_native_policy_used&quot;: true,
+    &quot;staging_current_absent_match&quot;: true,
+    &quot;production_full_suite_not_run&quot;: &quot;Production code unchanged; focused recovery tests and native controls only.&quot;
   },
   &quot;assessment&quot;: [
-    &quot;The workflow successfully installed and dependency-checked the released Harbor host runtime and verified Compose. It staged 16 controls, then terminated without recoverable fixture results. Installation is not evidence of trustworthy grading.&quot;,
-    &quot;The wrapper buffered native output in a runner-local file. When the job terminated, upload steps did not execute, so no native diagnostics or grading sidecars survived. The retained code now streams credential-free native output to the Actions log and allowlists partial results for upload, but that correction has not been exercised in another native campaign.&quot;,
-    &quot;Paid expansion stopped because the stock Codex launcher disables its inner sandbox and the inspected rollout limit does not bound all billable input or the in-flight response. No workaround, custom cost proxy, framework fork or paid retry was introduced.&quot;,
-    &quot;Skill activation, instruction following, correctness, seeded-defect detection, safety regressions, efficiency gains and revision improvement all remain unmeasured. A file read, favorable completion message or numeric reward cannot substitute for this evidence.&quot;,
-    &quot;The smallest next step is one credential-free known-good task with streamed logs and recoverable checkpoints, plus qualification of a sandbox-preserving Codex launch and complete spending accounting before any paid discovery. These are prerequisites, not a recommendation to expand this trial now.&quot;
+    &quot;Recovered grading evidence is useful: both suites pass the reference, but only the good suite detects both mutants. The earlier numeric zero reward with a missing submission remains ungradeable. This validates the narrow pass/fail distinction, not all legitimate or adversarial submissions.&quot;,
+    &quot;The projection delegates failure cause and reward validity to pinned Harbor, preserves native exceptions/verifier observations and excludes unsupported or missing evidence. Ten tests cover correct/incorrect work, agent timeout with valid grading, provider/environment/verifier failures, handled step failures, unknown usage and post-run failed status/exit.&quot;,
+    &quot;Custom maintenance: staging/projection/reporting, 10 focused tests, a 47-line Codex subclass, 34-line native sandbox probe, 29-line snapshot transport helper and one branch-only workflow. No framework patches. The adapter depends on the stock launch string and three pinned helper methods and needs review on Harbor/Codex changes. The transport helper is another component to retain only while needed.&quot;,
+    &quot;Existing tasks, reference implementations, mutants, grader, PowerShell runner and runtime installer were reused unchanged. Another skill still needs representative inputs, independent good/weak submissions and a protected executable verifier. Lower total maintenance cost has not been demonstrated.&quot;,
+    &quot;Production components removed: none. Only overlapping behavioral wrapper/staging/collection layers could become removable after broader adoption evidence. APM deployment, static checks, graders, historical evidence and publication controls remain necessary.&quot;,
+    &quot;Smallest next step: qualify one supported native Codex sandbox configuration under the same required outer boundary without disabling protections. Then run the current/absent pester-002 smoke pair. Do not start the original full comparison yet.&quot;
   ],
-  &quot;maintenance&quot;: {
-    &quot;custom_components&quot;: [
-      &quot;one staging/classification/report script&quot;,
-      &quot;four projection tests&quot;,
-      &quot;one branch-only calibration/report workflow&quot;,
-      &quot;trial contract and retained results&quot;
-    ],
-    &quot;framework_modifications&quot;: 0,
-    &quot;production_components_removed&quot;: 0,
-    &quot;burden&quot;: &quot;The existing grader, fixed PowerShell runner and pinned runtime installer were reused unchanged. Adding a skill still requires representative tasks, independent good/weak controls, protected grading and deployment checks. Reliable live launch, cost accounting and interruption evidence remain unfinished.&quot;,
-    &quot;potential_removals_after_future_qualification&quot;: &quot;Only overlapping behavioral SkillEvaluator staging/execution/collection layers. Keep APM, static checks, task graders, historical records and publication controls until equivalent contracts are demonstrated.&quot;
-  },
   &quot;coverage_gaps&quot;: [
-    &quot;No native grading outcome recovered&quot;,
-    &quot;No actual Codex CLI execution&quot;,
-    &quot;No provider/budget failure fixture through actual CLI&quot;,
-    &quot;No runtime activation evidence&quot;,
-    &quot;No live deployment duplicate-copy audit&quot;,
-    &quot;No three-arm comparison&quot;,
-    &quot;No experimental revision&quot;,
-    &quot;No confirmation-case evidence&quot;,
-    &quot;No final container runtime/image identities recovered&quot;
+    &quot;No codex exec task or model inference&quot;,
+    &quot;No runtime absent-arm duplicate-copy audit&quot;,
+    &quot;No natural activation, skill effect or live instruction-following evidence&quot;,
+    &quot;No live usage accounting&quot;,
+    &quot;No unsupported-submission native coverage in this two-control pass&quot;,
+    &quot;No full comparison, revision or confirmation-case evidence&quot;,
+    &quot;Native sandbox unqualified under tested Docker boundary&quot;
   ],
-  &quot;contamination&quot;: &quot;Public fixtures, mutants and qualification submissions may be present in training or otherwise accessible. Author inspected case descriptions and qualification mappings including reserved grading details. Reserved confirmation is not blinded. Grading inputs were excluded from agent build contexts in local staging; runtime isolation was not established by this failed run.&quot;,
+  &quot;contamination&quot;: &quot;Public tasks, mutants and answers may be known to models. Author inspected public grading details; no case is genuinely blinded. Grading code/reference/mutants stay in the separate verifier image. Oracle fixtures are supplied only to credential-free controls. The successful oracle assertions establish absence of /tests and Docker socket in that agent container; broader live isolation remains unqualified.&quot;,
+  &quot;publication_note&quot;: &quot;Automatic review rejected copying raw oracle logs/submissions into the report. They remain retained locally and in existing Actions artifacts. Only reviewed result metadata, counts, hashes and sandbox diagnostics are published here.&quot;,
   &quot;sources&quot;: {
     &quot;harbor_release&quot;: &quot;https://github.com/harbor-framework/harbor/releases/tag/v0.25.0&quot;,
     &quot;separate_verifier&quot;: &quot;https://docs.harborframework.com/tasks/separate-verifier&quot;,
     &quot;codex_launcher&quot;: &quot;https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/agents/installed/codex.py#L2072&quot;,
     &quot;budget_accounting&quot;: &quot;https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/core/src/rollout_budget.rs&quot;,
-    &quot;pricing&quot;: &quot;https://developers.openai.com/api/docs/models/gpt-5.6-sol&quot;
+    &quot;pricing&quot;: &quot;https://developers.openai.com/api/docs/models/gpt-5.6-sol&quot;,
+    &quot;harbor_failure_policy&quot;: &quot;https://docs.harborframework.com/jobs/error-classification&quot;,
+    &quot;codex_native_sandbox&quot;: &quot;https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/linux-sandbox/src/linux_run_main.rs&quot;,
+    &quot;debian_bubblewrap&quot;: &quot;https://packages.debian.org/trixie/bubblewrap&quot;
   }
-}</pre></html>
+}</pre></details></html>

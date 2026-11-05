@@ -1,111 +1,135 @@
-# Direct Harbor trial
+# Direct Harbor recovery trial
 
-This opt-in trial preserves production SkillEvaluator 0.3.0 / Harbor 0.13.2,
-static checks, historical results and Pages. Source baseline:
-`cc0819f5dafc05610dd8c3293ce2f52744c66f1a`. No PR or merge is required: the
-workflow listens for a push of `launch.json` on `trial/direct-harbor` only.
-No schedule or provider secret is attached to the calibration workflow.
+This branch-only trial preserves production SkillEvaluator 0.3.0 / Harbor 0.13.2,
+static checks, APM deployment, historical results and Pages. The verified default
+source remains `cc0819f5dafc05610dd8c3293ce2f52744c66f1a`; recovery started at the
+unchanged reviewed trial commit `e64b9f6`.
 
-## Frozen candidate
+[The single report](results/report.html) contains the decision, machine-readable
+results, reviewed native metadata, verifier outcomes, manifests and links to
+Actions checkpoints containing native carriers and submitted work. Report packaging is not native qualification.
 
-- Harbor 0.25.0, source `fdba28fc411e47e8765420a1a063b4918fce3def`, with its
-  unchanged owning `uv.lock`; Python 3.13.15 and uv 0.13.7.
-- Docker Compose 5.7.0 through the existing verified installer.
-- Existing Pester image recipe: digest-pinned Python/Debian base, snapshot and
-  exact package versions, PowerShell 7.6.9 and Pester 6.2.0 with archive hashes.
-- Intended live agent: actual Codex CLI 0.155.1, gpt-5.6-sol, explicit medium
-  reasoning. The production model is retained; explicit effort removes a default.
-- Unchanged public tasks, reference implementations, mutants, grader, AST profile
-  and qualification submissions. The machine-readable manifest records bytes.
+## Recovered evidence
 
-Harbor's [separate verifier](https://docs.harborframework.com/tasks/separate-verifier)
-fits the existing root-owned Pester verifier. `run.py` reuses that packaging and
-executes Harbor directly. There is no SkillEvaluator execution or collection
-wrapper and no provider judge. The native oracle supplies credential-free
-calibration submissions; it is not live-agent evidence.
+At `44c02a7`, direct Harbor 0.25.0 ran the existing two pester-002 oracle controls
+serially with its separate offline verifier:
 
-The runner stages all 48 tracked APM-deployed skill/support files, generated
-AGENTS.md and Codex MCP configuration. The absent variant removes only the three
-target-skill files. Source skills, evaluation overlays, repository metadata and
-ambient home/plugin caches are not agent inputs. Solutions and checks belong to
-separate contexts. Agent images use an unprivileged user, dropped capabilities,
-no-new-privileges and bounded resources; verifier workers use the existing
-UID 53001 privilege drop. No host Docker socket or write credential is mounted.
-Manifest files record both source and task hashes. Runtime duplicate-copy auditing
-and actual Codex discovery remain unqualified until a live/preflight phase runs.
+- Good: reference passed, three tests, both seeded defects detected, measured pass.
+- Weak: reference passed, three tests, no seeded defects detected, measured fail.
 
-## Experiment and spending gate
+Both checkpoints were uploaded before the next stage. One earlier native oracle
+attempt was ungradeable: its solution script lacked executable permissions.
+Harbor returned zero and a numeric zero reward, but the verifier reported invalid
+artifact evidence. The recovery wrapper correctly returned failure. Staging the
+script as executable fixed the fixture without adding runtime capabilities.
 
-Planned allocation: up to three current-skill discovery attempts on pester-002,
-then 27 interleaved comparisons across pester-002, pester-004 and pester-005,
-three variants and three repetitions. Six remaining attempts are contingency,
-not permission for silent retries. Maximum 36 attempts, $20 incremental API
-spending, 600 seconds per attempt and at most two concurrent agents. The proposed
-paid schedule is serial to simplify campaign accounting. Every smoke, failure and
-retry would count. There is no response reuse or automatic retry.
+The initial recovery build failed before Harbor started because the snapshot
+service returned 503/504 errors. A 29-line trial transport helper now downloads
+exact snapshot-selected package files from Debian's mirror and verifies their
+snapshot SHA-256 hashes. apt resolves from the unchanged signed snapshot and
+installs with `--no-download`; it cannot silently substitute current packages.
+One transport correction and one native fixture correction were executed. The
+16-control suite was not rerun.
 
-At 60,000 input and 4,000 output tokens each, 30 attempts would be about $9.60
-before caching (about $11.40 including a 25% input cache-write premium), using [published model rates](https://developers.openai.com/api/docs/models/gpt-5.6-sol).
-This is a planning estimate, not a hard limit or an observation. Larger contexts,
-cache-write charges, retries and output overshoot can increase spending.
-No provider-side dollar cap has been configured or verified. The existing
-credential reference is `OPENAI_API_KEY` in the protected `skill-benchmark`
-environment; its value was not retrieved.
+## Sandbox gate: blocked
 
-Two boundaries need qualification before paid execution:
+The pinned stock Codex adapter hardcodes
+`--dangerously-bypass-approvals-and-sandbox`. The supported Harbor `import_path`
+custom-agent API permits a trial-local `SandboxedCodex` subclass. It replaces that
+exact flag with `--sandbox workspace-write -c approval_policy=never`, fails closed
+if the expected launch shape changes, requires the preinstalled pinned CLI, and
+uses a build-owned private Codex home. No installed upstream file is modified.
+The command transformation is unit tested; no live effective `codex exec` command
+or configuration was produced because the native sandbox prerequisite failed.
 
-1. [Harbor's pinned Codex launcher](https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/agents/installed/codex.py#L2072)
-   unconditionally passes `--dangerously-bypass-approvals-and-sandbox`.
-   `CodexOptions` has no sandbox/approval override. A native configuration file
-   cannot remove a command-line bypass. A narrow subclass or patch may be
-   feasible, but has not been implemented or qualified; no protection is disabled.
-2. [Codex 0.155.1 rollout accounting](https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/core/src/rollout_budget.rs)
-   uses noncached input plus weighted output (or provider rollout units), and
-   [raises exhaustion after usage is recorded](https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/core/src/session/rollout_budget.rs).
-   That is not a complete billable-token cap and does not bound the in-flight
-   response. Harbor's adapter exposes no dollar cap. An estimate and a ten-minute
-   timeout alone do not establish the campaign's $20 ceiling. A trusted request
-   meter or separately verified spending control would need qualification.
+Credential-free probes used the actual Codex 0.155.1 sandbox helper, UID/GID 1000,
+Docker's default seccomp profile, `cap_drop=ALL`, `no-new-privileges`, no host Docker
+socket, CPU/memory/PID limits and a fresh home. The outer probe had no network.
+Those outer controls and Codex's inner filesystem/network policy are distinct.
+The check first proves an outside-workspace write is allowed by ordinary file
+permissions, then asks the native sandbox to deny it while permitting output.
 
-Stop before paid work if these boundaries cannot be addressed narrowly. Do not
-build another platform or quietly relax the spending ceiling. The credential-free
-phase remains useful evidence even if the live comparison cannot proceed.
+The standalone Codex archive did not contain Bubblewrap. Adding the exact snapshot
+package `bubblewrap=0.12.0-1~deb13u1` resolved that missing dependency, but Bubblewrap
+then reported that namespace creation was denied under this runner/container
+boundary. The enforcing kernel/seccomp/AppArmor mechanism was not isolated.
+The explicitly tested, deprecated native Landlock backend rejected the requested
+policy as requiring direct runtime enforcement. Neither probe qualified the inner
+restrictions. No outer protection was relaxed and no further redesign was made.
 
-## Interpretation
+This is a specific tested compatibility blocker, not proof that Harbor is generally
+unsuitable or that the production stack performs better. Resolve this boundary
+before launching the authorized current/absent execution smoke pair. A new model,
+framework fork, billing proxy or recurring workflow is not part of this recovery.
 
-Only a complete terminal grader classification may be measured. Numeric reward
-files alone do not establish correctness. Passed/failed outcomes are distinct
-from invalid, unsupported, timeout, infrastructure and missing-verifier evidence.
-Token and cost observations remain null when absent. Zero campaign API spend in
-calibration follows from executing no inference with no credentials, not from
-missing telemetry. The single HTML report links its JSON, manifest and diagnostics.
+## Pins and deployment
 
-The public repository exposes the tasks and answers. The trial author has read
-case descriptions and qualification mappings, including reserved-case grading
-details. Confirmation would therefore be reserved from revision tuning, not
-blinded. No discovery outcome currently justifies a skill revision. Do not create
-one merely to fill the third variant.
+- Harbor 0.25.0 at `fdba28fc411e47e8765420a1a063b4918fce3def`, unchanged `uv.lock`.
+- Python 3.13.15, uv 0.13.7, verified Compose 5.7.0.
+- Digest-pinned Python/Debian image, snapshot `20261103T000000Z`, existing exact
+  packages and verified PowerShell 7.6.9 / Pester 6.2.0 archives.
+- Actual pinned Codex 0.155.1 binary with published SHA-256 verification. The only
+  added runtime dependency is the missing Bubblewrap helper described above.
+- Intended live settings remain `gpt-5.6-sol`, explicit medium effort, serial,
+  at most 600 seconds per attempt; no judge, response reuse or automatic retry.
 
-To add another skill, an engineer would still need a representative task contract,
-independent good/weak submissions, a protected deterministic verifier, deployment
-staging and diagnostic interpretation. Direct Harbor does not remove that work.
-Potential future removals are the behavioral wrapper/staging/collection portions
-of SkillEvaluator, only after their contracts are replaced and qualified. Static
-checks, APM deployment, graders and historical evidence remain necessary.
+Staging reuses the Pester pilot package and all 48 actual APM-deployed skill/support
+files, generated AGENTS.md and the deployed Codex MCP configuration. Local manifest
+checks establish that the absent variant removes exactly three target files and
+preserves every other deployed file. The current skill SHA-256 is
+`b57df2ff4072b2e25744ae2bd530b02bbb6ab83a22a0d374c73d48de4dc70887`.
+Actual Codex discovery and the absent runtime's duplicate-copy audit remain untested.
+Grading inputs stay in the separate verifier context. The reference solution is
+provided to the oracle only for these credential-free calibration controls.
 
-## Stopped outcome
+## Classification and spending
 
-[Run 41952213509](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41952213509)
-failed at `a644d44` after 17m49s with exit 143. Upload steps were skipped and the
-artifacts API returned zero artifacts. No per-fixture grading result survived;
-all 16 planned controls are unavailable. The cause of termination is unknown.
-The initial wrapper buffered native output on the runner, which made recovery
-inadequate. The retained runner streams credential-free output and retains
-partial result carriers; those changes were checked locally, not rerun natively.
+`project()` reads the pinned native `TrialResult.failure_cause` and `reward_valid`,
+including handled step exceptions. Agent budget exhaustion remains separate from
+provider, environment and verifier failures. A valid independent verifier outcome
+can survive an agent timeout; provider/environment/verifier failures retain their
+diagnostic observations without entering measured denominators. Complete passed/
+failed grader evidence is required in addition to Harbor reward validity. Invalid,
+unsupported and missing evidence remain unmeasured. Native exceptions and any
+native oracle exit-code file remain available. Success is assigned only after
+post-run invariants pass; tests check the saved status and nonzero process exit.
 
-The campaign is stopped: zero Codex/provider attempts and zero API spending.
-No revision was created and no skill-effectiveness claim is supported. Retain the
-existing approach. [The consolidated report](results/report.html) contains the
-machine-readable results, source manifests and workflow evidence. The final
-workflow phase only validates and packages this report; its success must not be
-represented as successful native qualification.
+Cumulative paid attempts and API spend remain **0 and $0**. This follows from the
+absence of provider credentials and model calls, not from missing telemetry.
+Four actual credential-free Codex sandbox probes executed; none ran `codex exec`.
+Oracle token/cost observations remain unknown. No skill revision was created.
+
+The original $20 is an operational campaign budget, not a provider hard cap. The
+follow-up authorizes two planned live attempts and at most four including retries,
+within 36 campaign attempts. A conservative estimate charges all input, including
+cached input, at $10/M and output at $30/M: $1.44 for two 60k-input/4k-output attempts.
+The proposed scheduling stop is $4 estimated cumulative spend, retaining $16 for
+in-flight usage and uncertainty. This is not an enforced cap or a guarantee against
+overshoot. Unknown usage must stop further paid scheduling. The existing credential
+reference remains `OPENAI_API_KEY` in protected environment `skill-benchmark`; no
+credential value was retrieved or attached during recovery. No paid workflow was
+enabled while the sandbox prerequisite remained unmet.
+
+## Maintenance and limitations
+
+Custom work is limited to trial staging/projection/reporting, focused tests, the
+small Codex subclass, a native sandbox probe, the snapshot download helper and one
+branch-only workflow. The subclass depends on three pinned helper methods plus the
+stock launch string and needs review on a Harbor/Codex change. Landlock's deprecated
+status makes it an unsuitable unverified long-term escape route. Framework patches:
+zero. Existing graders, reference implementations, mutants, PowerShell runner and
+runtime installer were reused unchanged. None of production has been removed.
+
+The successful grading smoke covers these two pester-002 submissions only. It does
+not qualify arbitrary legitimate solutions, unsupported AST forms, live activation,
+skill effectiveness, security/efficiency regressions, accounting or the full
+comparison. The public repository contains answers and grading details, which the
+author inspected; no case is genuinely blinded. Adding another skill still requires
+representative inputs, independent good/weak controls and protected executable
+checks. Only overlapping behavioral wrapper/staging/collection layers could become
+removable after broader adoption evidence; APM, static checks, graders, historical
+records and publication controls would remain necessary.
+
+The earlier run `41952213509` explicitly received a runner shutdown signal. Its
+cause remains unknown, and no native grading outcome survived. Its full prior
+report is preserved in the current JSON history. It is not evidence against Harbor.

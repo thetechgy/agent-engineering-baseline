@@ -1,1 +1,18 @@
-{"phase":"recovery-controls","campaign":"direct-harbor-20261104","paid_attempts_used":0,"paid_attempt_limit":36,"recovery_live_attempt_limit":4,"budget_usd":20,"scheduling_stop_estimate_usd":4,"prior_report_commit":"e64b9f6cc74fbc75aa5a24107c27c21518b6c354","prior_calibration_run":41952213509,"recovery_control_attempt":3,"native_fixture_retry":1,"transport_preflight_corrections":1}
+{
+  "phase": "report",
+  "campaign": "direct-harbor-20261104",
+  "paid_attempts_used": 0,
+  "paid_attempt_limit": 36,
+  "recovery_live_attempt_limit": 4,
+  "budget_usd": 20,
+  "scheduling_stop_estimate_usd": 4,
+  "prior_report_commit": "e64b9f6cc74fbc75aa5a24107c27c21518b6c354",
+  "prior_calibration_run": 41952213509,
+  "recovery_control_attempt": 3,
+  "native_fixture_retry": 1,
+  "transport_preflight_corrections": 1,
+  "state": "blocked_before_live_pair",
+  "final_native_run": 41958553130,
+  "native_grading_smoke_qualified": true,
+  "native_sandbox_qualified": false
+}

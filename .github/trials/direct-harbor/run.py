@@ -167,10 +167,15 @@ def report(output, data):
     text += '<h2>Decision</h2><p>' + esc(data['decision']) + '</p>'
     text += '<p>' + esc(data['summary']) + '</p>'
     text += '<h2>Native credential-free controls</h2>'
-    text += table(('Case / submission', 'Expected', 'Verifier observation', 'Harbor failure cause', 'Valid measured grade'),
+    text += table(('Case / submission', 'Expected', 'Verifier observation', 'Reference pass', 'Defects detected', 'Harbor failure cause', 'Valid measured grade'),
                   [(r['task'], r['expected'], r['outcome']['classification'] + ': ' + str(r['outcome'].get('code', '')),
+                    r['outcome'].get('reference_pass'), str(r['outcome'].get('mutants_detected')) + '/' + str(r['outcome'].get('mutants_executed')),
                     r.get('failure_cause'), r.get('measured', False)) for r in data['calibration']])
-    text += '<p>' + esc(data['calibration_note']) + '</p>'
+    text += '<p>' + esc(data['calibration_note']) + '</p><ul>'
+    for row in data['calibration']:
+        for label, path in row.get('evidence', {}).items():
+            text += '<li><a href="' + html.escape(path, quote=True) + '">' + esc(row['task'] + ': ' + label) + '</a></li>'
+    text += '</ul>'
     text += '<h2>Live Codex pair</h2>'
     text += table(('Case', 'Variant', 'Paid attempts', 'Valid denominator', 'Correctness', 'Activation'),
                   [(r['case'],r['variant'],r['attempts'],r['valid_denominator'],r['correctness'],r['activation']) for r in data['live_results']])

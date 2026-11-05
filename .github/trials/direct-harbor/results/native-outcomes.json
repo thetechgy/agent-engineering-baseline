@@ -1,0 +1,136 @@
+{
+  "good": {
+    "native_result_excerpt": {
+      "id": "1d085929-67a8-4487-bfbd-04754bcf93e8",
+      "task_name": "pester-002-good",
+      "trial_name": "pester-002-good__iyCycs3",
+      "task_checksum": "0d65fef23f2989898506269610a6e78f2345fd8803494781304a45d5d099d8c6",
+      "agent_info": {
+        "name": "oracle",
+        "version": "1.0.0",
+        "model_info": null
+      },
+      "agent_result": {
+        "n_input_tokens": null,
+        "n_cache_tokens": null,
+        "n_output_tokens": null,
+        "cost_usd": null,
+        "model_usage": null,
+        "rollout_details": null,
+        "metadata": null
+      },
+      "verifier_result": {
+        "rewards": {
+          "overall": 1.0,
+          "pester_reference_pass": 1.0,
+          "pester_mutation_detection": 1.0,
+          "pester_test_quality": 1.0
+        }
+      },
+      "verifier_environment_mode": "separate",
+      "exception_info": null,
+      "started_at": "2026-11-05T02:59:47.042979Z",
+      "finished_at": "2026-11-05T03:00:21.950977Z",
+      "environment_setup": {
+        "started_at": "2026-11-05T02:59:47.095024Z",
+        "finished_at": "2026-11-05T02:59:48.071612Z"
+      },
+      "agent_setup": {
+        "started_at": "2026-11-05T02:59:48.071686Z",
+        "finished_at": "2026-11-05T02:59:48.071751Z"
+      },
+      "agent_execution": {
+        "started_at": "2026-11-05T02:59:48.071829Z",
+        "finished_at": "2026-11-05T02:59:48.285405Z"
+      },
+      "verifier": {
+        "started_at": "2026-11-05T02:59:58.774035Z",
+        "finished_at": "2026-11-05T03:00:21.950961Z"
+      },
+      "step_results": null
+    },
+    "verifier_outcome": {
+      "evaluation_status": "complete",
+      "entry_id": "pester-002",
+      "details": {
+        "outcome": {
+          "classification": "passed",
+          "code": "evaluated",
+          "reference_pass": 1,
+          "mutants_detected": 2,
+          "mutants_executed": 2,
+          "tests_executed": 3,
+          "pester_version": "6.2.0",
+          "powershell_version": "7.6.9"
+        }
+      }
+    }
+  },
+  "weak": {
+    "native_result_excerpt": {
+      "id": "e74d4ac6-9966-40c5-b6a1-711dbf52c233",
+      "task_name": "pester-002-weak",
+      "trial_name": "pester-002-weak__R5mjxsi",
+      "task_checksum": "721c3477ed69a21f33647aa0802f4208be5f7ea1bdec3f5ca46e5b51f571edc4",
+      "agent_info": {
+        "name": "oracle",
+        "version": "1.0.0",
+        "model_info": null
+      },
+      "agent_result": {
+        "n_input_tokens": null,
+        "n_cache_tokens": null,
+        "n_output_tokens": null,
+        "cost_usd": null,
+        "model_usage": null,
+        "rollout_details": null,
+        "metadata": null
+      },
+      "verifier_result": {
+        "rewards": {
+          "overall": 0.0,
+          "pester_reference_pass": 1.0,
+          "pester_mutation_detection": 0.0,
+          "pester_test_quality": 0.0
+        }
+      },
+      "verifier_environment_mode": "separate",
+      "exception_info": null,
+      "started_at": "2026-11-05T03:00:29.127069Z",
+      "finished_at": "2026-11-05T03:00:59.735802Z",
+      "environment_setup": {
+        "started_at": "2026-11-05T03:00:29.178608Z",
+        "finished_at": "2026-11-05T03:00:30.091389Z"
+      },
+      "agent_setup": {
+        "started_at": "2026-11-05T03:00:30.091444Z",
+        "finished_at": "2026-11-05T03:00:30.091500Z"
+      },
+      "agent_execution": {
+        "started_at": "2026-11-05T03:00:30.091578Z",
+        "finished_at": "2026-11-05T03:00:30.308871Z"
+      },
+      "verifier": {
+        "started_at": "2026-11-05T03:00:40.835809Z",
+        "finished_at": "2026-11-05T03:00:59.735786Z"
+      },
+      "step_results": null
+    },
+    "verifier_outcome": {
+      "evaluation_status": "complete",
+      "entry_id": "pester-002",
+      "details": {
+        "outcome": {
+          "classification": "failed",
+          "code": "evaluated",
+          "reference_pass": 1,
+          "mutants_detected": 0,
+          "mutants_executed": 2,
+          "tests_executed": 3,
+          "pester_version": "6.2.0",
+          "powershell_version": "7.6.9"
+        }
+      }
+    }
+  }
+}

@@ -9,8 +9,28 @@ concurrency:
   group: direct-harbor-trial
   cancel-in-progress: false
 jobs:
-  recovery:
+  phase:
     if: github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    outputs:
+      phase: ${{ steps.select.outputs.phase }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: select
+        run: |
+          python3 - <<'PYCODE'
+          import json, os
+          phase = json.load(open('.github/trials/direct-harbor/launch.json'))['phase']
+          assert phase in ('recovery-controls', 'report')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              print('phase=' + phase, file=output)
+          PYCODE
+  recovery:
+    needs: phase
+    if: needs.phase.outputs.phase == 'recovery-controls'
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
@@ -93,3 +113,34 @@ jobs:
       - name: Remove test-only Compose
         if: always()
         run: bash .github/scripts/setup-compose.sh cleanup
+  report:
+    name: Report packaging only
+    needs: phase
+    if: needs.phase.outputs.phase == 'report'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validate retained report inputs
+        run: |
+          python3 - <<'PYCODE'
+          import json
+          from pathlib import Path
+          root = Path('.github/trials/direct-harbor/results')
+          for path in root.rglob('*.json'):
+              json.loads(path.read_text())
+          data = json.loads((root / 'results.json').read_text())
+          assert data['campaign'] == 'direct-harbor-20261104'
+          assert '<title>Direct Harbor recovery trial</title>' in (root / 'report.html').read_text()
+          assert (root / 'workflow-evidence.txt').is_file()
+          print('Report files parse. This does not qualify native execution.')
+          PYCODE
+          git diff --exit-code
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: direct-harbor-trial-report
+          path: .github/trials/direct-harbor/results/
+          retention-days: 30
+          if-no-files-found: error

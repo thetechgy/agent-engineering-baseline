@@ -1,0 +1,56 @@
+{
+  "bubblewrap": {
+    "qualified": false,
+    "returncode": 1,
+    "backend": "bubblewrap",
+    "command": [
+      "codex",
+      "sandbox",
+      "-c",
+      "sandbox_mode=\"workspace-write\"",
+      "-c",
+      "approval_policy=\"never\"",
+      "-c",
+      "sandbox_workspace_write.network_access=false",
+      "-c",
+      "sandbox_workspace_write.exclude_slash_tmp=true",
+      "-c",
+      "sandbox_workspace_write.exclude_tmpdir_env_var=true",
+      "--",
+      "python3",
+      "-c",
+      "import pathlib,socket; pathlib.Path('/workspace/output/sandbox-ok').write_text('ok'); exec(\"try:\\n pathlib.Path('/outside/inner-denied').write_text('bad')\\n raise AssertionError('outside write allowed')\\nexcept PermissionError: pass\\ntry:\\n socket.socket().connect(('127.0.0.1',9))\\n raise AssertionError('network allowed')\\nexcept PermissionError: pass\"); print('native sandbox restrictions verified')"
+    ],
+    "stdout": "",
+    "stderr": "WARNING: proceeding, even though we could not create PATH aliases: Operation not permitted (os error 1)\nbwrap: No permissions to create a new namespace, likely because the kernel does not allow non-privileged user namespaces. See <https://deb.li/bubblewrap> or <file:///usr/share/doc/bubblewrap/README.Debian.gz>.\n",
+    "boundary": "Codex native workspace-write plus unprivileged Docker, default seccomp, no-new-privileges, no extra capabilities or mounts"
+  },
+  "legacy_landlock": {
+    "qualified": false,
+    "returncode": 101,
+    "backend": "legacy-landlock",
+    "command": [
+      "codex",
+      "sandbox",
+      "-c",
+      "features.use_legacy_landlock=true",
+      "-c",
+      "sandbox_mode=\"workspace-write\"",
+      "-c",
+      "approval_policy=\"never\"",
+      "-c",
+      "sandbox_workspace_write.network_access=false",
+      "-c",
+      "sandbox_workspace_write.exclude_slash_tmp=true",
+      "-c",
+      "sandbox_workspace_write.exclude_tmpdir_env_var=true",
+      "--",
+      "python3",
+      "-c",
+      "import pathlib,socket; pathlib.Path('/workspace/output/sandbox-ok').write_text('ok'); exec(\"try:\\n pathlib.Path('/outside/inner-denied').write_text('bad')\\n raise AssertionError('outside write allowed')\\nexcept PermissionError: pass\\ntry:\\n socket.socket().connect(('127.0.0.1',9))\\n raise AssertionError('network allowed')\\nexcept PermissionError: pass\"); print('native sandbox restrictions verified')"
+    ],
+    "stdout": "",
+    "stderr": "WARNING: proceeding, even though we could not create PATH aliases: Operation not permitted (os error 1)\n\nthread 'main' (13) panicked at linux-sandbox/src/linux_run_main.rs:392:9:\npermission profiles requiring direct runtime enforcement are incompatible with --use-legacy-landlock\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n",
+    "boundary": "Codex native workspace-write plus unprivileged Docker, default seccomp, no-new-privileges, no extra capabilities or mounts"
+  }
+}
