@@ -20,9 +20,9 @@ dumps are excluded from the live artifacts.
 
 ## Credential-free handoff and runtime pass
 
-This pass starts from `9146314` and never supplies a real API credential or runs
-inference. The workflow has only handoff and report phases, no protected credential
-environment, and no live job. The explicit runtime paid-scheduling guard remains.
+The credential-free pass started from `9146314` and supplied no real API credential
+or inference. Its workflow had only handoff and report phases. The pass-specific
+prohibition is now replaced by the separately authorized allocation checks below.
 The ledger stays 4/4 recovery slots and 4/36 campaign slots; cumulative spending is
 unknown. Historical estimates are not provider bills.
 
@@ -179,3 +179,23 @@ The executed metadata collector omitted custom tool calls, so activation is unkn
 That collector now has a failing-before/passing-after regression check; 19 focused
 tests pass locally, while 18 ran on the live head. The smallest next step is a
 credential-free artifact-boundary diagnosis, not another model attempt.
+
+## Authorized GPT-6.1 Sol/High live allocation
+
+The next allocation is separate from the exhausted 4/4 recovery allowance. It permits
+only campaign attempt five (current) and six (absent), serially on pester-002. The
+switch remains disabled unless an explicit arming commit binds the unchanged code
+parent to one GitHub workflow run number. Reruns and other pushes cannot consume it.
+Reservations are uploaded before each credentialed step; lost completion evidence
+consumes the reserved slot. The first result is checkpointed before reserving six.
+
+The second arm requires complete CLI usage categories, successful evidence extraction,
+confirmed container disposal and an interpretable graded/missing/rejected outcome.
+A passing result is not required. Unknown new usage or broken transfer stops scheduling.
+The $5 incremental operational budget requires the first conservative estimate plus
+$2.50 second-attempt reserve and $0.50 headroom to fit. All input is charged at the
+conservative $10/M rate (including cache subsets), and output at $15/M (including
+reasoning). This is not a provider-enforced cap; historical spending stays unknown.
+The workflow closes its local ledger on completion/failure; branch metadata is then
+closed and returned to disabled/report-only state. No new runtime or grader qualification
+is inferred from the scheduling tests.

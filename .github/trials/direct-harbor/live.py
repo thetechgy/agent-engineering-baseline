@@ -104,7 +104,8 @@ def prepare(root, diagnostic=False):
     previous=json.loads((trial.ROOT/'.github/trials/direct-harbor/results/results.json').read_text())
     assert previous['grading_smoke_qualified'] and previous['agent_attempts']==4 and previous['api_spend_usd'] is None
     if not diagnostic:
-        assert json.loads((trial.ROOT/'.github/trials/direct-harbor/launch.json').read_text())['paid_execution_enabled'] is True
+        from allocation import active
+        active()
     for variant in (('current',) if diagnostic else ('current','absent')):
         output=public/variant;output.mkdir()
         native,manifest=trial.stage(root/variant,variant)
@@ -147,10 +148,18 @@ def prepare(root, diagnostic=False):
         trial.write(root/(variant+'-task.json'),{'path':str(task)})
         print('External preflight passed: '+variant,flush=True)
     assert {k:v for k,v in expected_files('current').items() if not k.startswith(TARGET+'/')}==expected_files('absent')
+    if not diagnostic:
+        current=json.loads((public/'current/manifest.json').read_text());absent=json.loads((public/'absent/manifest.json').read_text())
+        for key in ('instructions_sha256','codex_configuration','grader_files','effective_codex_config'):
+            assert current[key]==absent[key], 'Unmatched arm configuration: '+key
+        removed=sorted(set(current['effective_skills'])-set(absent['effective_skills']))
+        assert len(removed)==3 and all(k.startswith(TARGET+'/') for k in removed)
+        trial.write(public/'comparison-manifest.json',{'matched':True,'removed_target_files':removed,
+            'profile':PROFILE['id'],'shared_config':config(),'instructions_sha256':current['instructions_sha256']})
     trial.write(public/'preflight.json',{'passed':True,'commit':os.environ.get('GITHUB_SHA'),'paid_inference_permitted':not diagnostic,'network_mode':'none' if diagnostic else 'allowlist','remote_tools_disabled':True})
 
 def usage_and_activation(native_dir):
-    totals=None;activation=set();completion=False;calls=0;event_types={};tool_names={};outcomes=[];completion_shape=None
+    totals=None;activation=set();completion=False;calls=0;event_types={};tool_names={};outcomes=[];completion_shape=None;tool_errors={'runtime_tool_error':0,'permission_denied':0,'missing_path':0}
     for p in sorted((native_dir/'agent').glob('**/rollout-*.jsonl')):
         for line in p.read_text().splitlines():
             try:event=json.loads(line)
@@ -171,18 +180,32 @@ def usage_and_activation(native_dir):
                 arguments=payload.get('arguments' if payload['type']=='function_call' else 'input','')
                 for name in expected_files('current'):
                     if name.startswith(TARGET+'/') and name in str(arguments):activation.add(name)
+            if event_type in ('function_call_output','custom_tool_call_output','exec_command_end'):
+                observed=str(payload.get('output',payload.get('aggregated_output',''))).lower()
+                if ('codex-exec-server' in observed or 'codex-code-mode-host' in observed) and any(x in observed for x in ('no such file','failed to start','permission denied')):
+                    tool_errors['runtime_tool_error']+=1
+                if 'permission denied' in observed:tool_errors['permission_denied']+=1
+                if 'no such file or directory' in observed:tool_errors['missing_path']+=1
             if event.get('type')=='event_msg' and event_type=='exec_command_end':
                 outcomes.append({'exit_code':payload.get('exit_code') if type(payload.get('exit_code')) is int else None,'output_retained':False})
             if event.get('type')=='event_msg' and event_type in ('task_complete','turn_complete'):
                 completion=True
                 message=payload.get('last_agent_message')
                 completion_shape={'message_present':isinstance(message,str),'message_characters':len(message) if isinstance(message,str) else None,'content_retained':False}
-    return {'total_usage':totals,'skill_file_access_attempts':sorted(activation),'tool_calls':calls,'completion_event':completion,'event_type_counts':event_types,'tool_name_counts':tool_names,'exec_outcomes':outcomes[:100],'completion_shape':completion_shape,'evidence_limit':'File-access attempts do not prove successful reads, instruction following or correctness.'}
+    return {'total_usage':totals,'skill_file_access_attempts':sorted(activation),'tool_calls':calls,'completion_event':completion,'event_type_counts':event_types,'tool_name_counts':tool_names,'exec_outcomes':outcomes[:100],'completion_shape':completion_shape,'tool_error_flags':tool_errors,'evidence_limit':'File-access attempts do not prove successful reads, instruction following or correctness.'}
 
-def can_schedule(previous, accept_unknown_cost=False):
-    if previous.get('execution_completed',previous.get('usage_complete')) is not True:return False
-    cost=previous.get('usage_estimate_usd')
-    return accept_unknown_cost if cost is None else cost+1.32<4
+def usage_estimate(usage):
+    if not isinstance(usage,dict):return None
+    keys=('input_tokens','cached_input_tokens','cache_write_input_tokens','output_tokens','reasoning_output_tokens','total_tokens')
+    if any(type(usage.get(k)) is not int or usage[k]<0 for k in keys):return None
+    if usage['cached_input_tokens']+usage['cache_write_input_tokens']>usage['input_tokens']:return None
+    if usage['reasoning_output_tokens']>usage['output_tokens']:return None
+    if usage['total_tokens']!=usage['input_tokens']+usage['output_tokens']:return None
+    # Cache reads/writes are input subsets; reasoning is an output subset.
+    return trial.conservative_usage_cost({'input_including_cache':usage['input_tokens'],
+        'cached_input':usage['cached_input_tokens'],'output':usage['output_tokens']},
+        input_rate=PROFILE['pricing']['conservative_all_input_per_million'],
+        output_rate=PROFILE['pricing']['conservative_output_per_million'])
 
 def diagnostic(root, mode):
     from harbor.models.task.task import Task
@@ -232,9 +255,12 @@ def live_attempt(root,variant):
     from harbor.models.task.task import Task
     from diagnostics import sanitized_exception, sanitize
     launch=json.loads((trial.ROOT/'.github/trials/direct-harbor/launch.json').read_text())
-    raise RuntimeError('Paid scheduling disabled for this credential-free handoff pass')
-    assert launch['paid_execution_enabled'] is True and launch['paid_attempts_used']==2
-    assert launch['accept_unknown_cost_for_testing'] is True
+    from allocation import active,ATTEMPTS,ID,receipt_path,gate
+    a=active()
+    assert not (root/'public/allocation/closed.json').exists(), 'Allocation already closed'
+    receipt=json.loads(receipt_path(root,variant).read_text())
+    assert receipt['run_id']==os.environ['GITHUB_RUN_ID'] and receipt['commit']==os.environ['GITHUB_SHA']
+    assert receipt['attempt']==ATTEMPTS[variant] and receipt['allocation_id']==ID
     assert not os.environ.get('TRIAL_DIAGNOSTIC') and not os.environ.get('TRIAL_PROVIDER_PROBE')
     assert os.environ.get('OPENAI_API_KEY') and variant in ('current','absent')
     assert json.loads((root/'public/preflight.json').read_text())['passed']
@@ -242,13 +268,13 @@ def live_attempt(root,variant):
     assert not (output/'attempt.json').exists(), 'No implicit retry'
     if variant=='absent':
         first=json.loads((root/'public/current/attempt.json').read_text())
-        assert first['result_extraction_succeeded'] and can_schedule(first,accept_unknown_cost=launch['accept_unknown_cost_for_testing']), 'Execution incomplete or operational reserve reached'
+        assert gate(first,a)['allowed'], 'Unreliable first outcome or insufficient spending reserve'
     task=Path(json.loads((root/(variant+'-task.json')).read_text())['path'])
     manifest=json.loads((output/'manifest.json').read_text());assert Task(task).checksum==manifest['task_checksum']
-    record={'attempt':3 if variant=='current' else 4,'variant':variant,'reserved':True,'rollout_present':False,
+    record={'allocation_id':ID,'attempt':ATTEMPTS[variant],'variant':variant,'reserved':True,'rollout_present':False,
             'result_extraction_succeeded':False,'execution_completed':False,'usage_estimate_usd':None,
             'projection':[],'commit':os.environ.get('GITHUB_SHA')}
-    trial.write(output/'attempt.json',record)
+    with (output/'attempt.json').open('x') as f:json.dump(record,f,indent=2)
     cfg={'job_name':variant,'jobs_dir':str(root/'jobs'),'n_attempts':1,'n_concurrent_trials':1,
         'retry':{'max_retries':0},'environment':{'type':'docker','delete':True},
         'agents':[{'import_path':'pinned_codex:PinnedCodex','model_name':MODEL,'extra_allowed_hosts':['api.openai.com'],
@@ -269,23 +295,37 @@ def live_attempt(root,variant):
         details=usage_and_activation(native);record['usage_and_activation']=details
         record['rollout_present']=bool(list((native/'agent').glob('**/rollout-*.jsonl')))
         record['execution_completed']=details['completion_event'] and row['failure_cause'] is None
+        record['usage_estimate_usd']=usage_estimate(details['total_usage'])
+        record['usage_complete']=record['execution_completed'] and record['usage_estimate_usd'] is not None
+        record['native_pricing_estimate_usd']=row['cost_usd']
+        record['api_bill_usd']=None
+        trial.write(output/'attempt.json',record)
         record['handoff']=collect(native,row,completed=record['execution_completed'])
-        record['usage_complete']=record['execution_completed'] and details['total_usage'] is not None
-        if details['total_usage']:
-            usage=details['total_usage'];record['usage_estimate_usd']=trial.conservative_usage_cost({'input_including_cache':usage.get('input_tokens'),'cached_input':usage.get('cached_input_tokens'),'output':usage.get('output_tokens')},input_rate=PROFILE['pricing']['conservative_all_input_per_million'],output_rate=PROFILE['pricing']['conservative_output_per_million'])
-        artifact=native/'artifacts/workspace/output/Subject.Tests.ps1'
-        if artifact.is_file():record['submitted_artifact']={'bytes':artifact.stat().st_size,'sha256':hashlib.sha256(artifact.read_bytes()).hexdigest()}
         assert Task(task).checksum==manifest['task_checksum'], 'Frozen task changed'
-        remaining=subprocess.check_output(['docker','ps','--all','--filter','label=com.docker.compose.service=main','--filter','ancestor=direct-harbor-agent:'+variant,'--quiet'],text=True).strip()
-        record['agent_container_removed']=not remaining
-        assert not remaining, 'Agent container disposal incomplete'
         record['result_extraction_succeeded']=True
     except Exception as exc:
         record['extraction_exception']={'type':type(exc).__name__,'message':sanitize(str(exc),(os.environ.get('OPENAI_API_KEY',''),))}
     finally:
+        # Inspect/stop only this disposable runner's trial containers, never export inspect env.
+        for label,tag in (('agent','direct-harbor-agent:'+variant),('verifier','direct-harbor-verifier:live')):
+            try:
+                remaining=subprocess.check_output(['docker','ps','--all','--filter','label=com.docker.compose.service=main','--filter','ancestor='+tag,'--quiet'],text=True,timeout=30).split()
+                record[label+'_container_removed']=not remaining
+                if remaining:
+                    assert all(__import__('re').fullmatch('[0-9a-f]{12,64}',x) for x in remaining)
+                    subprocess.run(['docker','rm','--force',*remaining],check=True,timeout=30,stdout=subprocess.DEVNULL)
+                    record[label+'_forced_cleanup']=True
+                    record['result_extraction_succeeded']=False
+            except Exception as exc:
+                record[label+'_container_removed']=None
+                record['disposal_exception']=sanitize(str(exc),(os.environ.get('OPENAI_API_KEY',''),))
+                record['result_extraction_succeeded']=False
+        record['second_arm_gate']=gate(record,a)
         record['duration_seconds']=round(time.monotonic()-started,3);trial.write(output/'attempt.json',record)
-        print(json.dumps({k:record.get(k) for k in ('attempt','variant','rollout_present','execution_completed','result_extraction_succeeded','usage_estimate_usd')}),flush=True)
-    return 0 if record['result_extraction_succeeded'] and record['execution_completed'] else 1
+        print(json.dumps({k:record.get(k) for k in ('attempt','variant','rollout_present','execution_completed','result_extraction_succeeded','usage_estimate_usd','second_arm_gate')}),flush=True)
+    if variant=='current':return 0 if record['second_arm_gate']['allowed'] else 1
+    completed_gate=gate(record,{**a,'second_attempt_reserve_usd':0,'headroom_usd':0})
+    return 0 if completed_gate['allowed'] else 1
 
 if __name__=='__main__':
     mode=sys.argv[1];root=Path(sys.argv[2]).resolve()
@@ -298,4 +338,4 @@ if __name__=='__main__':
     elif mode=='diagnostic':raise SystemExit(diagnostic(root,sys.argv[3]))
     elif mode=='prepare':prepare(root)
     elif mode in ('current','absent'):raise SystemExit(live_attempt(root,mode))
-    else:raise ValueError('Paid execution disabled; only credential-free diagnostics are allowed')
+    else:raise ValueError('Unknown trial mode')

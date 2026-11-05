@@ -190,6 +190,17 @@ def report(output, data):
     text = '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">\n<title>Direct Harbor recovery trial</title><style>body{font:16px system-ui;max-width:1100px;margin:3rem auto;padding:0 1rem;color:#172033}table{border-collapse:collapse;width:100%;margin:1rem 0}th,td{border:1px solid #cbd5e1;padding:.5rem;text-align:left;vertical-align:top}pre{white-space:pre-wrap;overflow-wrap:anywhere}h1,h2{color:#174f78}a{color:#145f91}</style>\n<h1>Direct Harbor recovery trial</h1><p>Bounded experimental trial. Production evaluation and Pages remain unchanged.</p>\n<p><a href="results.json" download>Download machine-readable results</a> · <a href="manifest.json">Frozen input manifests</a> · <a href="workflow-evidence.txt">Workflow evidence excerpts</a></p>'
     text += '<h2>Decision</h2><p>' + esc(data['decision']) + '</p>'
     text += '<p>' + esc(data['summary']) + '</p>'
+    if data.get('live_allocation'):
+        allocation=data['live_allocation'];rows=allocation['rows']
+        text += '<h2>New live allocation: '+esc(allocation['profile'])+'</h2><p><a href="allocation-evidence.json">Sanitized launch, deployment, handoff and usage evidence</a></p>'
+        text += table(('Arm / attempt','Session completed','Task outcome','Artifact transfer / admission','Reference / defects','Skill-file access attempts','Duration seconds'),
+            [(r['variant']+' / '+str(r['attempt']),r['session_completed'],r['outcome'],str(r['handoff'])+' / '+str(r['admission']),
+              str(r['reference_pass'])+' / '+str(r['mutants_detected'])+'/'+str(r['mutants_executed']),r['skill_file_access_attempts'],r['duration_seconds']) for r in rows])
+        text += table(('Arm','Total input','Cached input','Cache-write input','Total output','Reasoning output','Conservative USD estimate','Native pricing estimate'),
+            [(r['variant'],*( (r['usage'] or {}).get(k) for k in ('input_tokens','cached_input_tokens','cache_write_input_tokens','output_tokens','reasoning_output_tokens')),r['conservative_estimate_usd'],r['native_pricing_estimate_usd']) for r in rows])
+        text += '<p>'+esc(allocation['usage_note'])+'</p>'
+        for note in allocation['limits']:text += '<p>'+esc(note)+'</p>'
+        text += '<p>Allocation closed; paid scheduling disabled. Consumed campaign slots: '+esc(allocation['closure']['reserved_slots_consumed'])+'.</p>'
     if data.get('handoff_pass'):
         handoff=data['handoff_pass']
         text += '<h2>Credential-free artifact handoff and new runtime</h2><p>'+esc(handoff['summary'])+'</p>'
@@ -217,7 +228,7 @@ def report(output, data):
         for label, path in row.get('evidence', {}).items():
             text += '<li><a href="' + html.escape(path, quote=True) + '">' + esc(row['task'] + ': ' + label) + '</a></li>'
     text += '</ul>'
-    text += '<h2>Live Codex pair</h2>'
+    text += '<h2>Historical live Codex pair</h2>'
     text += table(('Case', 'Variant', 'Task execution', 'Valid denominator', 'Reference', 'Defects detected', 'Activation evidence'),
                   [(r['case'],r['variant'],r.get('execution'),r['valid_denominator'],r['correctness'],r['mutation_detection'],r['activation']) for r in data['live_results']])
     text += '<p>' + esc(data['live_note']) + '</p>'

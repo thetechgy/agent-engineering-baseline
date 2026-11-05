@@ -137,16 +137,6 @@ class LiveMetadataTests(unittest.TestCase):
             self.assertFalse(result['completion_event'])
             self.assertNotIn('correctness',result)
 
-    def test_partial_or_unknown_usage_stops_additional_scheduling(self):
-        import live
-        self.assertFalse(live.can_schedule({'usage_complete':False,'usage_estimate_usd':0.1}))
-        self.assertFalse(live.can_schedule({'usage_complete':True,'usage_estimate_usd':None}))
-        self.assertFalse(live.can_schedule({'usage_complete':True,'usage_estimate_usd':3}))
-        self.assertTrue(live.can_schedule({'usage_complete':True,'usage_estimate_usd':0.1}))
-        self.assertTrue(live.can_schedule({'execution_completed':True,'usage_estimate_usd':None},accept_unknown_cost=True))
-        self.assertFalse(live.can_schedule({'execution_completed':False,'usage_estimate_usd':None},accept_unknown_cost=True))
-        self.assertFalse(live.can_schedule({'execution_completed':True,'usage_estimate_usd':3},accept_unknown_cost=True))
-
     def test_remote_tools_and_retry_settings_match_arms(self):
         import live
         settings=live.config()

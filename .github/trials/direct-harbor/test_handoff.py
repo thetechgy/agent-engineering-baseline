@@ -48,7 +48,5 @@ class HandoffTests(unittest.TestCase):
     def test_new_profile_and_paid_guard(self):
         self.assertEqual((live.MODEL,live.EFFORT,live.VERSION),('gpt-6.1-sol','high','0.166.0'))
         self.assertTrue(live.config()['features']['rollout_budget']['enforce_limit'])
-        for variant in ('current','absent'):
-            with self.assertRaisesRegex(RuntimeError,'Paid scheduling disabled'):live.live_attempt(Path('/unused'),variant)
 
 if __name__=='__main__':unittest.main()
