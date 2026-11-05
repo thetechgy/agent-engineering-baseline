@@ -147,7 +147,7 @@ Real-provider readiness and model effectiveness remain unverified in either case
 
 ## Current delivery evidence
 
-All 43 local candidate controls pass with no network attempts. They stage all 48
+All 44 local candidate controls pass with no network attempts. They stage all 48
 gh tasks and exercise native CLI restaging with unchanged checksums in a new
 private directory. Initial hosted controls pass,
 but native run `41902822407` fails its first with-skill task build with fixed
@@ -292,3 +292,17 @@ complete/failed/cancelled status. Hardened command arguments and execution are
 delegated unchanged. Raw arguments, environment values and build output never
 enter these records. A preparation deadline records the interrupted operation;
 it remains an infrastructure failure and does not admit a native measurement.
+
+Where the candidate owning API supports redacted build streaming, preparation
+classifies only fixed build-stage names, Debian snapshot presence and HTTP
+503/504 observations. The callback chains any existing output callback, never
+retains raw output, and does not change retry admission. The retained owning
+API keeps its original collector. These observations diagnose infrastructure;
+they cannot make an incomplete build or native cohort successful.
+
+Validation runs CI contract tests and native/static quality in separate bounded
+30-minute jobs. The quality job requires successful contracts, retains every
+existing native, scanner, collection and publication step, and receives a fresh
+clean checkout with the same owning tools. Contract commands are unchanged. A
+clean-checkout check also runs after the contract job. This separates phase
+deadlines without changing native task execution limits or publication admission.

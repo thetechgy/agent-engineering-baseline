@@ -156,3 +156,25 @@ class ImagePreparationTests(unittest.TestCase):
         self.assertEqual(entry['commands'][0]['operation'], 'build')
         self.assertEqual(entry['commands'][0]['status'], 'cancelled')
         self.assertGreater(entry['commands'][0]['elapsed_sec'], 0)
+
+    def test_candidate_build_progress_is_bounded_and_chains_the_original_callback(self):
+        calls = []
+        marker = object()
+        async def original(text, stream):
+            calls.append((text, stream))
+        class Hardened:
+            async def _run_docker_compose_command(self, command, check=True, on_output=None):
+                self.command = command
+                await on_output('RUN apt-get install PRIVATE_PAYLOAD\nsnapshot.debian.org 50', 'stdout')
+                await on_output('3 Service Unavailable PRIVATE_VALUE\n', 'stdout')
+                return marker
+        entry = {}
+        environment = self.preparation.observed_environment(Hardened, entry)()
+        result = asyncio.run(environment._run_docker_compose_command(['build'], False, original))
+        self.assertIs(result, marker)
+        self.assertEqual(environment.command, ['build'])
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(entry['commands'][0]['build_progress'],
+                         {'stage': 'package_install', 'debian_snapshot': True, 'http_503': True})
+        self.assertNotIn('PRIVATE', json.dumps(entry))
+        self.assertNotIn('snapshot.debian.org', json.dumps(entry))

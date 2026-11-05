@@ -96,8 +96,8 @@ jobs:
             COMPOSE_PLUGIN_ROOT="$PREPARATION_COMPOSE_PLUGIN_ROOT" bash .github/scripts/setup-compose.sh cleanup
           fi
 
-  skill-quality:
-    name: Skill quality (advisory findings)
+  ci-contracts:
+    name: CI contracts (no inference)
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -132,6 +132,41 @@ jobs:
           "$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_evaluations.py replay gh
           "$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_evaluations.py stage gh "$RUNNER_TEMP/gh-eval-bundle/gh"
           skillevaluator tier3 validate "$RUNNER_TEMP/gh-eval-bundle/gh" --strict --json
+
+      - name: Verify contract tests left the checkout unchanged
+        if: always()
+        run: |
+          git diff --exit-code
+          test -z "$(git status --porcelain=v1 --untracked-files=all --ignored)"
+
+  skill-quality:
+    name: Skill quality (advisory findings)
+    needs: ci-contracts
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Require an initially clean checkout
+        run: |
+          test -z "$(git status --porcelain=v1 --untracked-files=all --ignored)"
+          python3 .github/scripts/skill_reports.py preflight
+
+      - name: Set up pinned uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: '0.13.7'
+          enable-cache: false
+
+      - name: Install evaluator and security scanners with Python 3.13
+        run: bash .github/scripts/setup-skillevaluator.sh quality
 
       - name: Install verified test-only Docker Compose
         run: bash .github/scripts/setup-compose.sh

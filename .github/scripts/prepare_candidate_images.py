@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import hashlib
 import importlib.metadata
+import inspect
 import json
 import os
 import re
@@ -73,11 +74,13 @@ def transient_snapshot_failure(message):
 
 def observed_environment(base, entry):
     """Record bounded command phases while delegating every hardened operation."""
-    async def observe(kind, command, invoke):
+    async def observe(kind, command, invoke, progress=None):
         allowed = {"build", "up", "down", "exec", "cp", "ps", "logs", "stop", "rm", "config", "image", "info", "inspect", "network", "version"}
         operation = command[0] if command and command[0] in allowed else "other"
         events = entry.setdefault("commands", [])
         event = {"kind": kind, "operation": operation, "status": "running"}
+        if progress is not None:
+            event["build_progress"] = progress
         if len(events) < 32:
             events.append(event)
         else:
@@ -98,6 +101,35 @@ def observed_environment(base, entry):
     class Observed(base):
         async def _run_docker_compose_command(self, command, *args, **kwargs):
             parent = super()._run_docker_compose_command
+            signature = inspect.signature(parent)
+            # Only the candidate owning API supports redacted build streaming.
+            # Retained commands keep their original collector and arguments.
+            if command and command[0] == "build" and "on_output" in signature.parameters:
+                arguments = signature.bind(command, *args, **kwargs)
+                original = arguments.arguments.get("on_output")
+                progress, tail = {}, ""
+                async def classify(text, stream):
+                    nonlocal tail
+                    tail = (tail + text)[-4096:]
+                    stages = (("load metadata for", "base_image_metadata"),
+                              ("transferring context", "context_transfer"),
+                              ("apt-get update", "package_install"),
+                              ("apt-get install", "package_install"),
+                              ("install-runtime.py", "runtime_install"),
+                              ("exporting layers", "layer_export"))
+                    for token, stage in stages:
+                        if token in text:
+                            progress["stage"] = stage
+                    for code, description in (("503", "Service Unavailable|No healthy backends"),
+                                              ("504", "Gateway Time-out|Gateway Timeout")):
+                        if re.search(r"\b" + code + r"\s+(?:" + description + r")\b", tail, re.I):
+                            progress["http_" + code] = True
+                    if "snapshot.debian.org" in tail:
+                        progress["debian_snapshot"] = True
+                    if original is not None:
+                        await original(text, stream)
+                arguments.arguments["on_output"] = classify
+                return await observe("compose", command, lambda: parent(*arguments.args, **arguments.kwargs), progress)
             return await observe("compose", command, lambda: parent(command, *args, **kwargs))
 
         async def _run_trusted_docker_command(self, command):
