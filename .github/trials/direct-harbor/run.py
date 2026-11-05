@@ -131,8 +131,8 @@ def project(jobs, expected):
 def conservative_usage_cost(tokens):
     """Operational estimate, not provider billing or an enforced dollar cap.
 
-    Charge ALL input (including cached input) at $10/M and output at $30/M:
-    long-context prices plus the input cache-write premium. Cache observations
+    Charge ALL input (including cached input) at $20/M and output at $30/M:
+    long-context prices plus the maximum 12-hour cache-write premium. Cache observations
     remain intact; absence of usage is never substituted with a measured zero.
     """
     total, cached, output = (tokens.get(k) for k in ('input_including_cache', 'cached_input', 'output'))
@@ -140,7 +140,7 @@ def conservative_usage_cost(tokens):
         return None
     if cached is not None and (type(cached) is not int or not 0 <= cached <= total):
         return None
-    return (total * 10 + output * 30) / 1_000_000
+    return (total * 20 + output * 30) / 1_000_000
 
 
 def validate_control(rows, expected, before, after, returncode):

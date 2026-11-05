@@ -24,18 +24,20 @@ jobs:
           python3 - <<'PYCODE'
           import json, os
           phase = json.load(open('.github/trials/direct-harbor/launch.json'))['phase']
-          assert phase in ('recovery-controls', 'report')
+          assert phase in ('live-pair', 'report')
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
               print('phase=' + phase, file=output)
           PYCODE
-  recovery:
+  live:
     needs: phase
-    if: needs.phase.outputs.phase == 'recovery-controls'
+    if: needs.phase.outputs.phase == 'live-pair'
+    environment: skill-benchmark
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 65
     env:
       PYTHONDONTWRITEBYTECODE: '1'
       PYTHON_DOTENV_DISABLED: '1'
+      LITELLM_LOCAL_MODEL_COST_MAP: 'True'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -60,53 +62,47 @@ jobs:
         run: python -m unittest discover -s .github/trials/direct-harbor -p test_projection.py -q
       - name: Install reviewed Compose
         run: bash .github/scripts/setup-compose.sh
-      - name: Known-good native control
-        id: good
+      - name: Prepare both arms and check external boundary without credentials
+        id: preflight
         timeout-minutes: 25
-        run: python -u .github/trials/direct-harbor/run.py good "$RUNNER_TEMP/recovery-good"
-      - name: Checkpoint known-good evidence before next control
+        run: python -u .github/trials/direct-harbor/live.py prepare "$RUNNER_TEMP/live-pair"
+      - name: Checkpoint external boundary before inference
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: recovery-good
-          path: |
-            ${{ runner.temp }}/recovery-good/control.json
-            ${{ runner.temp }}/recovery-good/manifest.json
-            ${{ runner.temp }}/recovery-good/jobs/
+          name: live-preflight
+          path: ${{ runner.temp }}/live-pair/public/
           retention-days: 30
           if-no-files-found: error
-      - name: Known-weak native control
-        if: steps.good.outcome == 'success'
-        timeout-minutes: 10
-        run: python -u .github/trials/direct-harbor/run.py weak "$RUNNER_TEMP/recovery-weak"
-      - name: Checkpoint known-weak evidence
+      - name: Current skill - one actual Codex attempt
+        id: current
+        if: steps.preflight.outcome == 'success'
+        timeout-minutes: 18
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: python -u .github/trials/direct-harbor/live.py current "$RUNNER_TEMP/live-pair"
+      - name: Checkpoint current attempt before absent arm
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: recovery-weak
-          path: |
-            ${{ runner.temp }}/recovery-weak/control.json
-            ${{ runner.temp }}/recovery-weak/manifest.json
-            ${{ runner.temp }}/recovery-weak/jobs/
+          name: live-current
+          path: ${{ runner.temp }}/live-pair/public/current/
           retention-days: 30
           if-no-files-found: warn
-      - name: Probe native Codex sandbox without credentials
-        id: sandbox
-        if: always()
-        timeout-minutes: 2
-        run: python -u .github/trials/direct-harbor/check_sandbox.py "$RUNNER_TEMP/recovery-sandbox"
-      - name: Probe built-in Landlock compatibility without credentials
-        if: always() && steps.sandbox.outcome == 'failure'
-        timeout-minutes: 2
-        run: python -u .github/trials/direct-harbor/check_sandbox.py "$RUNNER_TEMP/recovery-sandbox/legacy-landlock" legacy-landlock
-      - name: Checkpoint sandbox evidence
+      - name: Absent skill - one actual Codex attempt
+        if: steps.current.outcome == 'success'
+        timeout-minutes: 18
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: python -u .github/trials/direct-harbor/live.py absent "$RUNNER_TEMP/live-pair"
+      - name: Checkpoint absent attempt
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: recovery-sandbox
-          path: ${{ runner.temp }}/recovery-sandbox/
+          name: live-absent
+          path: ${{ runner.temp }}/live-pair/public/absent/
           retention-days: 30
-          if-no-files-found: error
+          if-no-files-found: warn
       - name: Verify checkout integrity
         if: always()
         run: git diff --exit-code

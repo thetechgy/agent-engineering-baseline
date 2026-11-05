@@ -7,7 +7,8 @@ import unittest
 from harbor.models.trial.result import TrialResult, ExceptionInfo
 from harbor.models.trial.config import TrialConfig, TaskConfig
 import run as trial
-from sandboxed_codex import sandbox_command
+from pinned_codex import PinnedCodex
+from harbor.agents.installed.codex import Codex
 
 
 class ProjectionTests(unittest.TestCase):
@@ -87,14 +88,38 @@ class ProjectionTests(unittest.TestCase):
             self.assertTrue(saved['calibration'][0]['measured'])
 
     def test_cost_estimate_includes_cached_input_and_missing_is_unknown(self):
-        self.assertEqual(trial.conservative_usage_cost({'input_including_cache':60000,'cached_input':50000,'output':4000}), .72)
+        self.assertEqual(trial.conservative_usage_cost({'input_including_cache':60000,'cached_input':50000,'output':4000}), 1.32)
         self.assertIsNone(trial.conservative_usage_cost({'input_including_cache':None,'output':4000}))
         self.assertIsNone(trial.conservative_usage_cost({'input_including_cache':10,'cached_input':20,'output':0}))
 
-    def test_sandbox_extension_changes_only_launch_policy(self):
-        command='codex exec --dangerously-bypass-approvals-and-sandbox --json -- public-task'
-        actual=sandbox_command(command)
-        self.assertEqual(actual,'codex exec --sandbox workspace-write -c approval_policy=never --json -- public-task')
-        with self.assertRaises(ValueError): sandbox_command('codex exec --json')
+    def test_extension_inherits_stock_launch_and_exec(self):
+        self.assertIs(PinnedCodex.run, Codex.run)
+        self.assertIs(PinnedCodex.exec_as_agent, Codex.exec_as_agent)
+
+class LiveMetadataTests(unittest.TestCase):
+    def test_rollout_usage_is_numeric_and_activation_is_separate(self):
+        import live
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp); (root/'agent').mkdir()
+            events=[{'type':'event_msg','payload':{'type':'token_count','info':{'total_token_usage':{'input_tokens':1000,'cached_input_tokens':900,'output_tokens':25,'untrusted':'do not export'}}}},
+                    {'type':'response_item','payload':{'type':'function_call','arguments':'cat .agents/skills/powershell-pester-6/SKILL.md'}}]
+            (root/'agent/rollout-fixture.jsonl').write_text('\n'.join(json.dumps(x) for x in events))
+            result=live.usage_and_activation(root)
+            self.assertEqual(result['total_usage']['cached_input_tokens'],900)
+            self.assertNotIn('untrusted',result['total_usage'])
+            self.assertEqual(result['skill_file_access_attempts'],['powershell-pester-6/SKILL.md'])
+            self.assertFalse(result['completion_event'])
+            self.assertNotIn('correctness',result)
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertIsNone(live.usage_and_activation(Path(tmp))['total_usage'])
+
+    def test_remote_tools_and_retry_settings_match_arms(self):
+        import live
+        settings=live.config()
+        self.assertEqual(settings['web_search'],'disabled')
+        self.assertTrue(all(v['enabled'] is False for v in settings['mcp_servers'].values()))
+        self.assertEqual(settings['model_providers']['openai']['request_max_retries'],0)
+        self.assertEqual(settings['model_providers']['openai']['stream_max_retries'],0)
+        self.assertEqual(len(live.expected_files('current'))-len(live.expected_files('absent')),3)
 
 if __name__=='__main__': unittest.main()

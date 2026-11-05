@@ -1,5 +1,34 @@
 # Direct Harbor recovery trial
 
+## Authorized live smoke follow-up
+
+The user now authorizes Harbor stock Codex unattended execution within the external
+container boundary. The historical inner-sandbox gate below is superseded. The
+current/absent pair uses unchanged pinned versions and the existing offline grader;
+no new control suite, skill revision or wider comparison is scheduled.
+
+The stock launcher is inherited unchanged. The small `PinnedCodex` extension still
+depends on the pinned installation check and private home/config methods. It runs a
+credential-free boundary check before agent setup. This is compatibility maintenance,
+even though no upstream source is patched.
+
+Harbor's supported allowlist permits only `api.openai.com`. Web search and the deployed
+remote MCP server are disabled equally in both arms by runtime configuration. The
+APM-generated files stay intact. The agent has no capabilities; only Harbor's isolated
+network controller has NET_ADMIN/NET_RAW. Default seccomp, no-new-privileges, UID 1000,
+CPU/memory/PID limits and separate offline verification remain in place. Ordinary
+HTTPS denial is tested; DNS and API access are necessary residual channels. The
+OpenAI credential is readable by code sharing the agent environment. No unrelated
+credential or host Docker socket is provided. Raw agent logs/auth/submissions are
+not uploaded; only numeric usage, hashes, native classifications and bounded
+activation metadata are exported. This is not workstation approval equivalence.
+
+Two serial attempts are reserved from a verified zero-paid campaign record. The
+conservative pair estimate is $2.64 (all input, including cache, at $20/M; output
+at $30/M). A $4 scheduling threshold retains $16 operational reserve; unknown usage
+stops additional scheduling. Runtime/rollout limits are not a provider dollar cap.
+
+
 This branch-only trial preserves production SkillEvaluator 0.3.0 / Harbor 0.13.2,
 static checks, APM deployment, historical results and Pages. The verified default
 source remains `cc0819f5dafc05610dd8c3293ce2f52744c66f1a`; recovery started at the
