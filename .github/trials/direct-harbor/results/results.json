@@ -1,9 +1,9 @@
 {
   "schema_version": 3,
   "campaign": "direct-harbor-20261104",
-  "state": "launch_repaired_live_sessions_complete_artifacts_ungradeable",
-  "decision": "A specific blocker remains: recover valid submitted-artifact evidence before another comparison. The launch defect is corrected and credential-free provider checks passed. Both authorized live sessions completed, but neither produced a valid independent task grade. Stop scheduling; no adoption or skill-effectiveness conclusion is supported.",
-  "summary": "Codex 0.155.1 rejects reserved model_providers.openai before authentication; the supported trial_openai alias fixes startup. Stock Harbor/Codex reached real inference in both arms. Current and absent deployments matched except the three target-skill files. Both verifiers returned invalid/artifact, not measured incorrect answers. Four recovery slots are consumed; historical and cumulative charges remain unknown.",
+  "state": "handoff_qualified_historical_cause_unresolved",
+  "decision": "The controlled handoff works, but the historical agent-output failure remains unresolved. The upgraded runtime passed credential-free startup/configuration checks. Consider a separately authorized new-profile allocation; no inference is scheduled.",
+  "summary": "Three deterministic producers exercise the original agent UID/workspace through Harbor collection and independent verification. These are not Codex task executions. GPT-6.1 Sol/High is configured for a new comparison profile and has not been evaluated. Historical paid attempts, ungradeable outcomes, controls and spending uncertainty are unchanged.",
   "source_commit": "cc0819f5dafc05610dd8c3293ce2f52744c66f1a",
   "reviewed_trial_commit": "f61201a730746921abd17d8f8366dfd1505ad6f8",
   "executed_commit": "c5a430ac15b4fac0eb6a29b1ac46ad4e7e06ca3e",
@@ -412,7 +412,7 @@
     "reserve_usd": 16,
     "pair_preflight_estimate_usd": 2.64,
     "scheduling_stopped": true,
-    "stop_reason": "All four recovery slots consumed; both live artifact outcomes ungradeable.",
+    "stop_reason": "This pass is credential-free; four recovery slots already consumed. A new live allocation is not authorized.",
     "conservative_input_usd_per_million": 20,
     "conservative_output_usd_per_million": 30,
     "unknown_cost_accepted_for_testing": true
@@ -1061,6 +1061,16 @@
           "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42110435228/artifacts/13454096587"
         }
       ]
+    },
+    {
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42115972887",
+      "label": "First credential-free handoff diagnostic",
+      "summary": "Pinned snapshot HTTP 503 stopped image builds before controls or CLI startup. Failure report retained."
+    },
+    {
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42117106768",
+      "label": "Credential-free artifact handoff and Codex 0.166.0 qualification",
+      "summary": "Three deterministic handoff controls and offline startup checks; no inference. This artifact contains the single consolidated report."
     }
   ],
   "local_validation": {
@@ -1086,16 +1096,19 @@
     "The compressed signed snapshot index selection fixed transport without changing package/image pins or signature/hash validation. The disposable external boundary remained unprivileged with dropped capabilities, no-new-privileges, default seccomp, bounded CPU/RAM/PIDs, no host resources, API-only egress and separate offline verification. Root best-effort secret deletion can fail under these capabilities; verified container disposal is the actual cleanup boundary.",
     "Existing task requirements, references, seeded defects, grader, PowerShell runner, runtime installer and target skill are unchanged. Valid output handoff, activation, natural skill selection, skill benefit, revision improvement and lower maintenance have not been established by this pair. Another skill still requires representative tasks, executable graders and controls.",
     "Production components removed: none. APM, static checks, production evaluation, recurring workflows and Pages are untouched. Adoption is not justified by launch success alone.",
-    "Smallest next step: diagnose the submitted-artifact boundary with credential-free checks and bounded artifact-status metadata before authorizing any further model attempt. Retain native artifact-manifest status and non-content tool/completion classifications to distinguish no output, output rejection and transport failure. Do not repeat the full qualification campaign or expand the architecture. All recovery attempts are consumed."
+    "Smallest next step: diagnose the submitted-artifact boundary with credential-free checks and bounded artifact-status metadata before authorizing any further model attempt. Retain native artifact-manifest status and non-content tool/completion classifications to distinguish no output, output rejection and transport failure. Do not repeat the full qualification campaign or expand the architecture. All recovery attempts are consumed.",
+    "This pass reuses normal Harbor collection/upload and the existing grader. Native collection manifests plus safe pre-collection/post-upload metadata distinguish missing output from transport/admission failures. A confirmed missing deliverable is a task-completion failure, even when correctness and mutation denominators remain unavailable. Historical metadata is insufficient for that classification.",
+    "The new comparison profile deliberately changes Codex CLI, model and reasoning effort. No production runtime or skill was changed. No additional private Harbor hooks, transport system, model-based judge or paid attempt was introduced."
   ],
   "coverage_gaps": [
-    "No valid live task grade or reference/mutation result",
     "Cause of absent/rejected/untransferred output is unresolved from retained metadata",
     "Activation and complete tool-use evidence unavailable for live pair",
     "No attributable provider invoice or cumulative campaign spending",
     "No revision, reserved confirmation case, repeated comparison or skill-effectiveness conclusion",
     "No new unsupported/adversarial submission qualification",
-    "No interactive-workstation or native Codex approval equivalence"
+    "No interactive-workstation or native Codex approval equivalence",
+    "No valid historical live grade; new controls do not rescore the historical pair",
+    "New CLI/model/effort has not been evaluated; comparisons cannot attribute historical differences solely to the skill"
   ],
   "contamination": "Public prompts, grading details and answers may be known to models; the author inspected them. No case is blinded. Runtime agent inputs omit repository history, grader/reference/mutant files; external GitHub access and remote tools were blocked, and absent target-directory scans were empty. This reduces runtime access but cannot rule out memorization or every covert channel.",
   "publication_note": "Automatic review rejected copying raw oracle logs/submissions into the report. They remain retained locally and in existing Actions artifacts. Only reviewed result metadata, counts, hashes and sandbox diagnostics are published here.",
@@ -1114,7 +1127,9 @@
     "pinned_codex_config_validation": "https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/config/src/config_toml.rs#L900",
     "pinned_provider_merging": "https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/model-provider-info/src/lib.rs#L609",
     "harbor_codex_cost_estimation": "https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/agents/installed/codex.py#L1319",
-    "harbor_artifact_path": "https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/trial/artifact_handler.py#L27"
+    "harbor_artifact_path": "https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/trial/artifact_handler.py#L27",
+    "codex_selected_release": "https://github.com/openai/codex/releases/tag/rust-v0.166.0",
+    "future_model_pricing": "https://developers.openai.com/api/docs/models/gpt-6.1-sol"
   },
   "live_pair_operationally_valid": false,
   "live_evidence": "live-evidence.json",
@@ -1197,5 +1212,415 @@
     "harbor_native_pricing_estimate": 0.23077225,
     "conservative_reserve_estimate": 1.95759,
     "provider_observed_charge": null
+  },
+  "handoff_pass": {
+    "evidence": "handoff-evidence.json",
+    "controls": {
+      "good": {
+        "kind": "deterministic_handoff_control",
+        "control": "good",
+        "paid_attempt": false,
+        "codex_task_execution": false,
+        "passed": true,
+        "commit": "6e0fdb899b62c46ad1a190be7a66c01219358849",
+        "native_result": {
+          "task": "pester-002-good",
+          "outcome": {
+            "classification": "passed",
+            "code": "evaluated",
+            "reference_pass": 1,
+            "mutants_detected": 2,
+            "mutants_executed": 2,
+            "tests_executed": 3,
+            "pester_version": "6.2.0",
+            "powershell_version": "7.6.9"
+          },
+          "failure_cause": null,
+          "exceptions": [],
+          "harbor_reward_valid": true,
+          "measured": true,
+          "native_agent_exit_code": null,
+          "native_rewards": {
+            "overall": 1.0,
+            "pester_reference_pass": 1.0,
+            "pester_mutation_detection": 1.0,
+            "pester_test_quality": 1.0
+          },
+          "tokens": {
+            "input_including_cache": null,
+            "cached_input": null,
+            "output": null
+          },
+          "cost_usd": null,
+          "timing": {
+            "agent_execution": {
+              "started_at": "2026-11-05T21:58:48.825172Z",
+              "finished_at": "2026-11-05T21:58:49.096893Z"
+            },
+            "verifier": {
+              "started_at": "2026-11-05T21:58:59.862796Z",
+              "finished_at": "2026-11-05T21:59:19.961694Z"
+            }
+          },
+          "native_result": "jobs/good/pester-002-good__d6nBLYn/result.json"
+        },
+        "harbor_returncode": 0,
+        "task_checksum": "566ae2846b3131bd563cccd2282429ede4f1603d5b7b23526d85a1b5c69077ed",
+        "native_collection_manifest": [
+          {
+            "source": "/logs/artifacts",
+            "destination": "artifacts/logs/artifacts",
+            "type": "directory",
+            "status": "ok",
+            "service": null,
+            "exclude": []
+          },
+          {
+            "source": "/workspace/output/Subject.Tests.ps1",
+            "destination": "artifacts/workspace/output/Subject.Tests.ps1",
+            "type": "file",
+            "status": "ok",
+            "service": null,
+            "exclude": []
+          }
+        ],
+        "agent_observation": {
+          "artifact": {
+            "exists": true,
+            "type": "file",
+            "size": 493,
+            "uid": 1000,
+            "gid": 1000,
+            "mode": "0o644",
+            "sha256": "8784023e56e7757644ae38797e7fc6cfedfda289a25d0a98283b34d0f40b090a",
+            "links": 1
+          },
+          "observer_uid": 1000,
+          "observer_gid": 1000,
+          "cwd": "/workspace"
+        },
+        "host_artifact": {
+          "exists": true,
+          "type": "file",
+          "size": 493,
+          "uid": 1001,
+          "gid": 1001,
+          "mode": "0o644",
+          "sha256": "8784023e56e7757644ae38797e7fc6cfedfda289a25d0a98283b34d0f40b090a",
+          "links": 1
+        },
+        "verifier_observation": {
+          "artifact": {
+            "exists": true,
+            "type": "file",
+            "size": 493,
+            "uid": 1001,
+            "gid": 1001,
+            "mode": "0o644",
+            "sha256": "8784023e56e7757644ae38797e7fc6cfedfda289a25d0a98283b34d0f40b090a",
+            "links": 1
+          },
+          "observer_uid": 0,
+          "observer_gid": 0,
+          "cwd": "/workspace"
+        },
+        "classification": {
+          "classification": "graded_passed",
+          "task_completion_measured": true,
+          "task_completed": true,
+          "correctness_measured": true
+        },
+        "upload_status": "hash_matched"
+      },
+      "missing": {
+        "kind": "deterministic_handoff_control",
+        "control": "missing",
+        "paid_attempt": false,
+        "codex_task_execution": false,
+        "passed": true,
+        "commit": "6e0fdb899b62c46ad1a190be7a66c01219358849",
+        "native_result": {
+          "task": "pester-002-missing",
+          "outcome": {
+            "classification": "invalid",
+            "code": "artifact",
+            "admission_reason": "missing"
+          },
+          "failure_cause": null,
+          "exceptions": [],
+          "harbor_reward_valid": true,
+          "measured": false,
+          "native_agent_exit_code": null,
+          "native_rewards": {
+            "overall": 0.0
+          },
+          "tokens": {
+            "input_including_cache": null,
+            "cached_input": null,
+            "output": null
+          },
+          "cost_usd": null,
+          "timing": {
+            "agent_execution": {
+              "started_at": "2026-11-05T21:59:31.556454Z",
+              "finished_at": "2026-11-05T21:59:31.824611Z"
+            },
+            "verifier": {
+              "started_at": "2026-11-05T21:59:42.620108Z",
+              "finished_at": "2026-11-05T21:59:56.523636Z"
+            }
+          },
+          "native_result": "jobs/missing/pester-002-missing__jeJEhKu/result.json"
+        },
+        "harbor_returncode": 0,
+        "task_checksum": "fe95cb7ebc13108988072376f8273612259458ea50595095ad5eca4d8f00e84f",
+        "native_collection_manifest": [
+          {
+            "source": "/logs/artifacts",
+            "destination": "artifacts/logs/artifacts",
+            "type": "directory",
+            "status": "ok",
+            "service": null,
+            "exclude": []
+          },
+          {
+            "source": "/workspace/output/Subject.Tests.ps1",
+            "destination": "artifacts/workspace/output/Subject.Tests.ps1",
+            "type": "file",
+            "status": "failed",
+            "service": null,
+            "exclude": []
+          }
+        ],
+        "agent_observation": {
+          "artifact": {
+            "exists": false,
+            "type": null,
+            "size": null,
+            "uid": null,
+            "gid": null,
+            "mode": null,
+            "sha256": null,
+            "observation": "missing"
+          },
+          "observer_uid": 1000,
+          "observer_gid": 1000,
+          "cwd": "/workspace"
+        },
+        "host_artifact": {
+          "exists": false,
+          "type": null,
+          "size": null,
+          "uid": null,
+          "gid": null,
+          "mode": null,
+          "sha256": null,
+          "observation": "missing"
+        },
+        "verifier_observation": {
+          "artifact": {
+            "exists": false,
+            "type": null,
+            "size": null,
+            "uid": null,
+            "gid": null,
+            "mode": null,
+            "sha256": null,
+            "observation": "missing"
+          },
+          "observer_uid": 0,
+          "observer_gid": 0,
+          "cwd": "/workspace"
+        },
+        "classification": {
+          "classification": "missing_deliverable",
+          "task_completion_measured": true,
+          "task_completed": false,
+          "correctness_measured": false
+        },
+        "upload_status": "no_source"
+      },
+      "rejected": {
+        "kind": "deterministic_handoff_control",
+        "control": "rejected",
+        "paid_attempt": false,
+        "codex_task_execution": false,
+        "passed": true,
+        "commit": "6e0fdb899b62c46ad1a190be7a66c01219358849",
+        "native_result": {
+          "task": "pester-002-rejected",
+          "outcome": {
+            "classification": "invalid",
+            "code": "artifact",
+            "admission_reason": "invalid_utf8"
+          },
+          "failure_cause": null,
+          "exceptions": [],
+          "harbor_reward_valid": true,
+          "measured": false,
+          "native_agent_exit_code": null,
+          "native_rewards": {
+            "overall": 0.0
+          },
+          "tokens": {
+            "input_including_cache": null,
+            "cached_input": null,
+            "output": null
+          },
+          "cost_usd": null,
+          "timing": {
+            "agent_execution": {
+              "started_at": "2026-11-05T22:00:08.279547Z",
+              "finished_at": "2026-11-05T22:00:08.573938Z"
+            },
+            "verifier": {
+              "started_at": "2026-11-05T22:00:19.351145Z",
+              "finished_at": "2026-11-05T22:00:33.390718Z"
+            }
+          },
+          "native_result": "jobs/rejected/pester-002-rejected__H9yZfyh/result.json"
+        },
+        "harbor_returncode": 0,
+        "task_checksum": "34fa56f8957d45b7c591ca1c68c3489ac0f52d47b41ae9685a1e286fd9c98c2c",
+        "native_collection_manifest": [
+          {
+            "source": "/logs/artifacts",
+            "destination": "artifacts/logs/artifacts",
+            "type": "directory",
+            "status": "ok",
+            "service": null,
+            "exclude": []
+          },
+          {
+            "source": "/workspace/output/Subject.Tests.ps1",
+            "destination": "artifacts/workspace/output/Subject.Tests.ps1",
+            "type": "file",
+            "status": "ok",
+            "service": null,
+            "exclude": []
+          }
+        ],
+        "agent_observation": {
+          "artifact": {
+            "exists": true,
+            "type": "file",
+            "size": 3,
+            "uid": 1000,
+            "gid": 1000,
+            "mode": "0o644",
+            "sha256": "b632bfa9c60bc17f7fd78dba311fd3f5dfa66cb8c017a4278e2bae28d668844d",
+            "links": 1
+          },
+          "observer_uid": 1000,
+          "observer_gid": 1000,
+          "cwd": "/workspace"
+        },
+        "host_artifact": {
+          "exists": true,
+          "type": "file",
+          "size": 3,
+          "uid": 1001,
+          "gid": 1001,
+          "mode": "0o644",
+          "sha256": "b632bfa9c60bc17f7fd78dba311fd3f5dfa66cb8c017a4278e2bae28d668844d",
+          "links": 1
+        },
+        "verifier_observation": {
+          "artifact": {
+            "exists": true,
+            "type": "file",
+            "size": 3,
+            "uid": 1001,
+            "gid": 1001,
+            "mode": "0o644",
+            "sha256": "b632bfa9c60bc17f7fd78dba311fd3f5dfa66cb8c017a4278e2bae28d668844d",
+            "links": 1
+          },
+          "observer_uid": 0,
+          "observer_gid": 0,
+          "cwd": "/workspace"
+        },
+        "classification": {
+          "classification": "rejected_output",
+          "task_completion_measured": true,
+          "task_completed": false,
+          "correctness_measured": false
+        },
+        "upload_status": "hash_matched"
+      }
+    },
+    "handoff_qualified": true,
+    "runtime_qualified": true,
+    "profile": "codex-0.166.0_gpt-6.1-sol_high",
+    "summary": "Controlled handoff works; historical output failure remains unresolved.",
+    "notes": [
+      "Observed runtime: Codex 0.166.0 strict configuration load exited 0 with API-only login. Both probes sent one POST to the loopback Responses endpoint; prompt, output path, GPT-6.1 Sol, High effort and sentinel API authentication matched. HTTP 503 was not retried; idle streaming ended after 60.206 seconds without reconnect. Prompt comparison uses the stripped frozen instruction. Budget configuration was accepted; enforcement under inference is untested.",
+      "APT cache bypass was added after HTTP 503; subsequent build passed with unchanged signed snapshot/package pins. The option is not proven to have caused recovery",
+      "Trial-only supported collection hook and pre-grader metadata probe; no transport replacement or new private Harbor override",
+      "Shared grader adds ArtifactError/read_candidate admission reasons; acceptance rules, classification invalid/artifact, numeric rewards and mutation criteria unchanged",
+      "Canonical Codex package installed intact, including exec server, code-mode host, ripgrep and resources; external isolation unchanged",
+      "One shared future model/effort profile; original live evidence remains attached to Codex 0.155.1/gpt-5.6-sol/medium",
+      "Bounded rollout metadata retains event/tool counts, integer command exits and completion shape without commands, outputs or final-message content",
+      "Successful controls cannot establish the historical cause",
+      "No new actual agent task, skill activation or model access is established",
+      "Custom provider alias does not receive Codex built-in-only internal metadata, which is not configurable; budget source falls back to weighted non-cached input/output when provider units are absent",
+      "Runtime configuration loading and HTTP/SSE refusal checks do not exercise successful inference or end-to-end budget exhaustion",
+      "Pinned Harbor/LiteLLM has no gpt-6.1-sol pricing entry; native cost must remain unknown. Future conservative estimates use official long-context/12h cache-write assumptions, not provider bills",
+      "Code-mode and executor companions are shipped, but agent tool execution under the new model has not occurred",
+      "Stock Harbor root cleanup returned permission denied under dropped capabilities in both probes; original refusal failures and cleanup errors are separately retained. Full container disposal remains required; no added private cleanup hook",
+      "Only the current arm was started with the upgraded CLI in this pass. Future arms use one shared configuration; historical three-file deployment differences remain historical evidence"
+    ]
+  },
+  "future_runtime_profile": {
+    "id": "codex-0.166.0_gpt-6.1-sol_high",
+    "codex_version": "0.166.0",
+    "model": "gpt-6.1-sol",
+    "reasoning_effort": "high",
+    "release": "https://github.com/openai/codex/releases/tag/rust-v0.166.0",
+    "verified_at": "2026-11-05",
+    "archive_url": "https://github.com/openai/codex/releases/download/rust-v0.166.0/codex-package-x86_64-unknown-linux-musl.tar.gz",
+    "archive_sha256": "1d44b28bc4ac9937d7d3532264baa68a507ce364956a0d4ebb856f331cdee254",
+    "package_layout": {
+      "entrypoint": "bin/codex",
+      "execServer": "bin/codex-exec-server",
+      "resourcesDir": "codex-resources",
+      "pathDir": "codex-path"
+    },
+    "historical_profile": {
+      "codex_version": "0.155.1",
+      "model": "gpt-5.6-sol",
+      "reasoning_effort": "medium",
+      "executed_commit": "c5a430ac15b4fac0eb6a29b1ac46ad4e7e06ca3e"
+    },
+    "paid_execution_enabled": false,
+    "pricing": {
+      "source": "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+      "pricing_source": "https://developers.openai.com/api/docs/pricing",
+      "per_million_standard_usd": {
+        "uncached_input": 2,
+        "cached_input": 0.1,
+        "cache_write_30m": 2.5,
+        "cache_write_12h": 5,
+        "output": 10
+      },
+      "long_context_threshold": 272000,
+      "long_context_input_multiplier": 2,
+      "long_context_output_multiplier": 1.5,
+      "conservative_all_input_per_million": 10,
+      "conservative_output_per_million": 15,
+      "note": "No charge observed. Conservative future estimate applies long-context 12h cache-write rate to all input. Per-call categories/context needed for standard estimates; missing categories stay unknown.",
+      "harbor_native_pricing_entry_available": false
+    },
+    "reviewed_source_sha256": {
+      "codex-rs__protocol__src__models.rs": "753498bc730ba21ded710d9aa2b2f9163e6bbe4eaa18f1c25d998c36138a54f7",
+      "codex-rs__protocol__src__protocol.rs": "35d4a01a35c1771e7ae24d3c55964c2d6ecfe880a91539c1045f75cac0c8e356",
+      "codex-rs__core__config.schema.json": "211bec2282459fcd70e4905af948721177b6ec7a03e0df84cd8b7c131006a6ca",
+      "scripts__install__install.sh": "44ac252c1b9a68c02bdf0de8e1c6cbfde36fc1afa8684624962eae7d4c461e70",
+      "scripts__build_codex_package.py": "7a5b7ba90604944831dd25ad89ccba46b4c40f44ec6aeec67a6d058a0c837ad2",
+      "codex-rs__core__src__rollout_budget.rs": "223a573c35088799879688d0aea54f86bdd4420017b95861596a073ac3678380",
+      "codex-rs__config__src__config_toml.rs": "e8f6b45b73eaca1a89be9524bb02bf069e9715e3aeba270e87285d941405c877",
+      "codex-rs__model-provider-info__src__lib.rs": "ea822c232e47fc88251cf20060da91ca0c1195b2d2853c5b3fa4bfcdd4cc0184"
+    },
+    "budget_semantics": "0.166.0 accepts enforce_limit=true. Source charges provider budget units when available, otherwise weighted non-cached input plus output. Token budget is not a dollar meter; enforcement under inference remains untested."
   }
 }

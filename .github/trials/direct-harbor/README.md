@@ -2,7 +2,7 @@
 
 This branch-only trial preserves production SkillEvaluator 0.3.0 / Harbor 0.13.2,
 APM deployment, static checks, historical scores and Pages. Source commit:
-`cc0819f5dafc05610dd8c3293ce2f52744c66f1a`. This pass starts from reviewed trial
+`cc0819f5dafc05610dd8c3293ce2f52744c66f1a`. The earlier launch-repair pass started from reviewed trial
 commit `f61201a730746921abd17d8f8366dfd1505ad6f8`; the earlier failed live run executed
 `11bf0db52f020271efc8b1e4c136f7795b480114`, not that packaging commit.
 
@@ -60,7 +60,17 @@ unknown when unavailable; raw usage categories are separate from official-price
 estimates. The profile records current standard rates and a conservative long-context,
 12-hour cache-write reserve calculation. Nothing schedules that future allocation.
 
-The single report records observed controls/runtime checks once CI runs. Local checks
+Run [42117106768](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42117106768)
+at `6e0fdb899b62c46ad1a190be7a66c01219358849` passed all three controls and both
+real-CLI refusal probes. Good bytes matched across all three boundaries and graded
+reference-pass/2-of-2; missing output was explicit; invalid UTF-8 transferred unchanged
+and was rejected. The probes observed one POST each and a 60.206-second idle timeout.
+Stock root cleanup reported permission errors under dropped capabilities; the original
+failure remained visible and the whole container was disposed. No cleanup hook was added.
+The first run, 42115972887, stopped at snapshot HTTP 503 before any controls. Both
+authorized diagnostic runs are consumed. No further execution is scheduled.
+
+The single report preserves those observations and historical uncertainty. Local checks
 cover 24 trial tests and seven shared grader tests. Two unrelated shared collector checks
 require SkillEvaluator, which is not installed in the direct-Harbor environment.
 

@@ -38,3 +38,9 @@ Authorized final smoke pair
 Current: input=47987 cached=35617 cache_write=12329 output=637 native_pricing_estimate=0.11417975 conservative_estimate=0.97885.
 Absent: input=47842 cached=35525 cache_write=12276 output=730 native_pricing_estimate=0.11659250 conservative_estimate=0.97874.
 Executed collector omitted custom_tool_call, so zero function-call metadata does not establish no tools/activation. Nineteen local tests pass after focused collector correction; eighteen ran on the live head.
+
+Credential-free handoff pass: 42117106768
+good: {"passed": true, "classification": {"classification": "graded_passed", "task_completion_measured": true, "task_completed": true, "correctness_measured": true}, "outcome": {"classification": "passed", "code": "evaluated", "reference_pass": 1, "mutants_detected": 2, "mutants_executed": 2, "tests_executed": 3, "pester_version": "6.2.0", "powershell_version": "7.6.9"}}
+missing: {"passed": true, "classification": {"classification": "missing_deliverable", "task_completion_measured": true, "task_completed": false, "correctness_measured": false}, "outcome": {"classification": "invalid", "code": "artifact", "admission_reason": "missing"}}
+rejected: {"passed": true, "classification": {"classification": "rejected_output", "task_completion_measured": true, "task_completed": false, "correctness_measured": false}, "outcome": {"classification": "invalid", "code": "artifact", "admission_reason": "invalid_utf8"}}
+Runtime offline verification: True. Paid ledger remains 4/4 recovery, 4/36 campaign; cumulative spending unknown.

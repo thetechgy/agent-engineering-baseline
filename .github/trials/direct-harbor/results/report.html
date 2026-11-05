@@ -1,12 +1,12 @@
 <!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
 <title>Direct Harbor recovery trial</title><style>body{font:16px system-ui;max-width:1100px;margin:3rem auto;padding:0 1rem;color:#172033}table{border-collapse:collapse;width:100%;margin:1rem 0}th,td{border:1px solid #cbd5e1;padding:.5rem;text-align:left;vertical-align:top}pre{white-space:pre-wrap;overflow-wrap:anywhere}h1,h2{color:#174f78}a{color:#145f91}</style>
 <h1>Direct Harbor recovery trial</h1><p>Bounded experimental trial. Production evaluation and Pages remain unchanged.</p>
-<p><a href="results.json" download>Download machine-readable results</a> · <a href="manifest.json">Frozen input manifests</a> · <a href="workflow-evidence.txt">Workflow evidence excerpts</a></p><h2>Decision</h2><p>A specific blocker remains: recover valid submitted-artifact evidence before another comparison. The launch defect is corrected and credential-free provider checks passed. Both authorized live sessions completed, but neither produced a valid independent task grade. Stop scheduling; no adoption or skill-effectiveness conclusion is supported.</p><p>Codex 0.155.1 rejects reserved model_providers.openai before authentication; the supported trial_openai alias fixes startup. Stock Harbor/Codex reached real inference in both arms. Current and absent deployments matched except the three target-skill files. Both verifiers returned invalid/artifact, not measured incorrect answers. Four recovery slots are consumed; historical and cumulative charges remain unknown.</p><h2>Credential-free launch repair</h2><p>Codex 0.155.1 rejects the reserved configured provider ID openai during config loading, before authentication/model inference. All preceding stock-launch setup commands succeed. This reproduces the retained historical configuration defect; the original failed-run stderr itself was unavailable.</p><p><a href="launch-repair.json">Sanitized launch diagnostics and provider checks</a></p><table><thead><tr><th scope="col">Probe</th><th scope="col">CLI startup</th><th scope="col">Outcome</th><th scope="col">Requests to local fixture</th><th scope="col">Stream wait seconds</th></tr></thead><tbody><tr><td>historical</td><td>Rejected configuration</td><td>Reserved built-in provider ID: openai</td><td>0</td><td>Unknown</td></tr><tr><td>http</td><td>Reached local Responses endpoint</td><td>HTTP 503 from loopback fixture</td><td>1</td><td>Unknown</td></tr><tr><td>idle</td><td>Reached local Responses endpoint</td><td>idle timeout waiting for SSE</td><td>1</td><td>60.2</td></tr></tbody></table><p>The diagnostic workflow intentionally reports failure for its three negative probes; the final verification step passes all ten checks. These are expected refusals, not successful model tasks. No real API credential or external inference was used.</p><p>Command-stage checkpoints preserve ownership, directory, configuration, auth, CLI startup and cleanup outcomes. Root cleanup cannot remove the agent-owned private home under dropped capabilities; the original failure remains primary. Disposable container teardown removes the environment. No capabilities were added.</p><p>The first diagnostic Actions run failed before Harbor because the signed snapshot index returned HTTP 503. The second used the available compressed index route with by-hash disabled; signed metadata and package/hash pins remain unchanged. No dependency upgrade or oracle requalification was performed.</p><p>The user later explicitly authorized paid testing with unknown cost. The next pair remains bounded to the two remaining recovery slots; historical spend remains unknown.</p><h2>Native credential-free controls</h2><table><thead><tr><th scope="col">Case / submission</th><th scope="col">Expected</th><th scope="col">Verifier observation</th><th scope="col">Reference pass</th><th scope="col">Defects detected</th><th scope="col">Harbor failure cause</th><th scope="col">Valid measured grade</th></tr></thead><tbody><tr><td>pester-002-good</td><td>passed</td><td>passed: evaluated</td><td>1</td><td>2/2</td><td>None</td><td>True</td></tr><tr><td>pester-002-weak</td><td>failed</td><td>failed: evaluated</td><td>1</td><td>0/2</td><td>None</td><td>True</td></tr></tbody></table><p>These are deterministic oracle controls, not live model evidence. Each final control has one valid observation. Both suites execute three tests and pass the reference; only the good suite detects both defects. The earlier missing-submission result remains ungradeable. Raw native carriers and submitted work are in the linked Actions artifacts and retained local evidence; this bundle contains reviewed metadata only.</p><ul><li><a href="native-outcomes.json">pester-002-good: Reviewed native metadata and verifier outcome</a></li><li><a href="native-outcomes.json">pester-002-weak: Reviewed native metadata and verifier outcome</a></li></ul><h2>Live Codex pair</h2><table><thead><tr><th scope="col">Case</th><th scope="col">Variant</th><th scope="col">Task execution</th><th scope="col">Valid denominator</th><th scope="col">Reference</th><th scope="col">Defects detected</th><th scope="col">Activation evidence</th></tr></thead><tbody><tr><td>pester-002</td><td>current</td><td>CLI/session completed; verifier invalid/artifact</td><td>0</td><td>Unknown</td><td>Unknown</td><td>Unknown</td></tr><tr><td>pester-002</td><td>absent</td><td>CLI/session completed; verifier invalid/artifact</td><td>0</td><td>Unknown</td><td>Unknown</td><td>Unknown</td></tr></tbody></table><p>Attempts 1 and 2 remain historical setup/launch failures. Attempts 3 (current) and 4 (absent) completed actual Codex sessions with recovered rollouts, token usage and no native execution failure. Each offline verifier returned invalid/artifact with reward 0; Harbor reward_valid=true does not make this a measured grade. No submission hash/size was recovered at the declared canonical path. The exact missing/rejected/transfer cause is unresolved from retained metadata. Activation is unknown because the executed collector omitted custom_tool_call records; the zero function-call count is not an all-tools count. No reference or mutation checks were reached by a valid candidate. Workflow success covers completion/extraction, not correctness or a valid comparison. One attempt per arm would remain insufficient for effectiveness even with valid grades.</p><p><a href="live-evidence.json">Reviewed live attempt, deployment and usage metadata</a></p><table><thead><tr><th scope="col">Variant</th><th scope="col">Input tokens (including cache)</th><th scope="col">Cached input tokens</th><th scope="col">Output tokens</th><th scope="col">Conservative USD estimate</th></tr></thead><tbody><tr><td>current</td><td>47987</td><td>35617</td><td>637</td><td>0.97885</td></tr><tr><td>absent</td><td>47842</td><td>35525</td><td>730</td><td>0.97874</td></tr></tbody></table><h2>Campaign usage</h2><p>Four credentialed reservations consumed 4/4 recovery slots and 4/36 campaign slots: two historical failed launches plus the authorized current/absent pair. Two actual model sessions are now confirmed. Current reported 47,987 input (35,617 cached; 12,329 cache-write) and 637 output tokens; absent 47,842 input (35,525 cached; 12,276 cache-write) and 730 output. Cache counts are components, not additional input totals. Harbor native pricing estimates are $0.11417975 and $0.11659250 ($0.23077225 subtotal), not provider bills. Conservative estimates including all cached input at $20/M and output at $30/M are $0.97885 and $0.97874 ($1.95759 subtotal). Cumulative observed/estimated campaign spending remains unknown because prior usage and attributable billing are unavailable. The $2.64 pair preflight estimate was not an observed charge. User explicitly accepted unknown costs for testing. The operational $20 budget is not a guaranteed cap; a $4 scheduling threshold retained $16 nominal reserve, but unknown prior charges and in-flight usage can overshoot it. Scheduling is now disabled. Two diagnostic Actions runs added no paid attempts; no judge, inference retry or skill revision was used.</p><h2>Sandbox and deployment boundary</h2><p>Explicit user authorization replaces only the evaluated Codex inner-sandbox requirement with the disposable hosted runner/container boundary. Stock Harbor run/exec methods are inherited without command rewriting. No implementing-agent sandbox or approval mechanism was disabled. Historical Bubblewrap/Landlock failures remain in sandbox.json and are not a current gate.</p><p>Actual containers passed UID/GID 1000, CapEff=0, NoNewPrivs=1, Seccomp=2, writable output, fresh-session/auth checks, protected-path absence and deployment hashes. Docker metadata confirms no privilege, no added agent capabilities, cap_drop=ALL, default seccomp (no unconfined override), 2 CPUs, 2 GiB RAM, 256 PIDs, no host PID/network mode and no host mounts. No Docker socket, grader source, reference implementation, mutants or unrelated credential names were available.</p><p>Harbor native allowlist restricts the agent to api.openai.com using its separate disposable controller; only that controller needs NET_ADMIN/NET_RAW. Both actual agent preflights reached the API root (HTTP 421) while GitHub, raw GitHub, Microsoft Learn and metadata IP connections failed. Both later authenticated model sessions completed. DNS and the allowed API remain residual channels; web search and remote MCP were disabled. This is not a formal network-isolation proof.</p><p>The inference key must be accessible to Codex and can be read by code in the same environment. Container isolation does not conceal it. No auth file, secret-bearing environment dump, raw agent log or submission is exported. Preflight checks and host metadata are practical evidence, not a formal container-security proof or interactive-workstation equivalence.</p><p>The separate offline verifier and protected executable checks are unchanged from successful controls. Both latest live outcomes are invalid/artifact and unmeasured despite Harbor reward_valid=true. result_extraction_succeeded describes metadata recovery only; execution_completed describes native completion only. Best-effort root cleanup failed under dropped capabilities, but entire agent containers were verified removed. No privilege was added.</p><p>Repair diagnostics use the same stock launcher, UID, ownership and pins with external networking disabled. Corrected live config selects trial_openai while preserving API endpoint/authentication, OpenAI headers, WebSocket capability, model, effort and matched arms. The same runtime config function serves current and absent.</p><h2>Execution and supporting artifacts</h2><ul><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41956647063">Recovery build preflight</a> — Failed before Harbor started: snapshot 503/504 responses and a 600-second image-build timeout. Failure record retained. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41956647063/artifacts/13383608340">Build failure</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41956647063/artifacts/13384480020">Image unavailable</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958131429">First native control</a> — Oracle exit 126: script lacked executable permission. Verifier invalid/artifact remains unmeasured. Default sandbox helper was missing; legacy policy rejected. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958131429/artifacts/13383049571">Native invalid result</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958131429/artifacts/13383782957">Sandbox errors</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130">Final native controls and sandbox checks</a> — Good passes and weak fails as expected. Overall workflow failed because both sandbox probes failed. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130/artifacts/13384044283">Known-good pass</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130/artifacts/13383659806">Known-weak fail</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130/artifacts/13384059131">Sandbox blocker</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41964780671">External preflight identity failure</a> — No credentialed task was scheduled. Host inspection selected the network-sharing container by hostname; corrected to the Compose main service and pinned agent image. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41964780671/artifacts/13387311896">Preflight failure</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41965390294">First credentialed launch</a> — Both external preflights passed. Current failed installation; absent skipped. Exception RuntimeError, no native agent execution timing. All evidence retained. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41965390294/artifacts/13387531677">Preflight metadata</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41965390294/artifacts/13387536636">Current attempt 1</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41965390294/artifacts/13387397744">Absent staging only</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41966399157">Focused version-check correction and final launch</a> — Both exact CLI pins pass. Current launch raises NonZeroAgentExitCodeError; invalid artifact grade, unknown usage; absent skipped. No further scheduling. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41966399157/artifacts/13388085910">External boundary checkpoint</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41966399157/artifacts/13386909710">Current attempt 2</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41966399157/artifacts/13387243701">Absent staging only</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42106956278">Credential-free reproduction: build interruption</a> — Pinned snapshot Packages index HTTP 503; Harbor not started; build error retained in Actions logs; no artifact created before failure.</li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42108206579">Credential-free stock launch and provider verification</a> — Historical config rejected; corrected HTTP/SSE probes reach refusal endpoints. Ten behavioral checks pass. Overall workflow failure is deliberate negative-probe status. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42108206579/artifacts/13452044517">Sanitized diagnostic evidence</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42108206579/artifacts/13452743308">Historical failure checkpoint</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42110435228">Repaired live smoke pair, attempts 3 and 4</a> — Both real Codex sessions completed and metadata extraction passed. Both independent verifier outcomes invalid/artifact; zero valid task-grade denominators. Workflow success is not valid evaluation. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42110435228/artifacts/13454161608">Matched external-boundary checkpoint</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42110435228/artifacts/13454361517">Current attempt 3 sanitized evidence</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42110435228/artifacts/13454096587">Absent attempt 4 sanitized evidence</a></li></ul><h2>History</h2><p>Original run 41952213509 explicitly received a runner shutdown signal. Cause remains unknown; exit 143 alone does not identify a Harbor timeout/crash. No original native grade survived. Its prior report is preserved as history below; the prior recommendation is superseded and does not show that the existing stack is better. The prior recovery report at 29f7765 is retained under history, including its zero-spend record and now-superseded native-sandbox requirement. The known-good and weak native observations were not rerun or rescored. The repaired pair ran c5a430a; f61201a was earlier packaging, while failed run 41966399157 executed 11bf0db. User later authorized the remaining two smoke attempts with unknown costs. Their successful process completion does not supersede the invalid-artifact observations.</p><h2>Maintenance and remaining evidence</h2><p>The unchanged oracle controls prove a narrow grading distinction: both pass the reference; only the good suite detects 2/2 defects. Both live sessions completed, but invalid/artifact outcomes are excluded. A successful workflow or numeric zero reward cannot establish a valid comparison.</p><p>The root cause is reproduced with the retained historical config through the same pinned stock launcher: Codex rejects reserved model_providers.openai before authentication. The original run&#x27;s stderr was not retained, so the recovered reproduction is the causal evidence. trial_openai preserves endpoint/authentication/model/effort; actual runtime probes verified one HTTP POST on 503 and one silent stream ending after 60.2 seconds. WebSocket probing/fallback remains outside that no-retry observation.</p><p>Nineteen focused tests pass locally; eighteen ran on the executed live head. The new custom_tool_call fixture failed before the collector correction and passes after it. These completed live rollouts were not republished or reprocessed; activation and total tool usage remain unknown. No production full-suite or repeated oracle qualification was run.</p><p>Custom maintenance remains fixed staging/projection/reporting, a small live runner, pinned installation/ownership subclass, native-log sanitizer/checkpoint handler, diagnostic-only refusal fixture and verifier, signed snapshot transport helper, and a branch-only workflow. Two private Harbor methods remain overridden for home ownership and config upload. No upstream patch, added private hook or new execution layer was introduced. Provider defaults, native log/event schemas, task checksum deprecation and pinned egress sidecar still require compatibility review.</p><p>The compressed signed snapshot index selection fixed transport without changing package/image pins or signature/hash validation. The disposable external boundary remained unprivileged with dropped capabilities, no-new-privileges, default seccomp, bounded CPU/RAM/PIDs, no host resources, API-only egress and separate offline verification. Root best-effort secret deletion can fail under these capabilities; verified container disposal is the actual cleanup boundary.</p><p>Existing task requirements, references, seeded defects, grader, PowerShell runner, runtime installer and target skill are unchanged. Valid output handoff, activation, natural skill selection, skill benefit, revision improvement and lower maintenance have not been established by this pair. Another skill still requires representative tasks, executable graders and controls.</p><p>Production components removed: none. APM, static checks, production evaluation, recurring workflows and Pages are untouched. Adoption is not justified by launch success alone.</p><p>Smallest next step: diagnose the submitted-artifact boundary with credential-free checks and bounded artifact-status metadata before authorizing any further model attempt. Retain native artifact-manifest status and non-content tool/completion classifications to distinguish no output, output rejection and transport failure. Do not repeat the full qualification campaign or expand the architecture. All recovery attempts are consumed.</p><h2>Primary references</h2><ul><li><a href="https://github.com/harbor-framework/harbor/releases/tag/v0.25.0">harbor release</a></li><li><a href="https://docs.harborframework.com/tasks/separate-verifier">separate verifier</a></li><li><a href="https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/agents/installed/codex.py#L2072">codex launcher</a></li><li><a href="https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/core/src/rollout_budget.rs">budget accounting</a></li><li><a href="https://developers.openai.com/api/docs/models/gpt-5.6-sol">pricing</a></li><li><a href="https://docs.harborframework.com/jobs/error-classification">harbor failure policy</a></li><li><a href="https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/linux-sandbox/src/linux_run_main.rs">codex native sandbox</a></li><li><a href="https://packages.debian.org/trixie/bubblewrap">debian bubblewrap</a></li><li><a href="https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/environments/docker/docker.py">network policy</a></li><li><a href="https://developers.openai.com/api/docs/guides/prompt-caching">prompt caching</a></li><li><a href="https://learn.chatgpt.com/docs/config-file/config-reference">config reference</a></li><li><a href="https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/config/src/config_toml.rs#L900">pinned codex config validation</a></li><li><a href="https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/model-provider-info/src/lib.rs#L609">pinned provider merging</a></li><li><a href="https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/agents/installed/codex.py#L1319">harbor codex cost estimation</a></li><li><a href="https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/trial/artifact_handler.py#L27">harbor artifact path</a></li></ul><details><summary>Complete machine-readable evidence</summary><pre>{
+<p><a href="results.json" download>Download machine-readable results</a> · <a href="manifest.json">Frozen input manifests</a> · <a href="workflow-evidence.txt">Workflow evidence excerpts</a></p><h2>Decision</h2><p>The controlled handoff works, but the historical agent-output failure remains unresolved. The upgraded runtime passed credential-free startup/configuration checks. Consider a separately authorized new-profile allocation; no inference is scheduled.</p><p>Three deterministic producers exercise the original agent UID/workspace through Harbor collection and independent verification. These are not Codex task executions. GPT-6.1 Sol/High is configured for a new comparison profile and has not been evaluated. Historical paid attempts, ungradeable outcomes, controls and spending uncertainty are unchanged.</p><h2>Credential-free artifact handoff and new runtime</h2><p>Controlled handoff works; historical output failure remains unresolved.</p><p><a href="handoff-evidence.json">Native handoff metadata and runtime compatibility evidence</a></p><table><thead><tr><th scope="col">Deterministic control</th><th scope="col">Expected</th><th scope="col">Observed handoff</th><th scope="col">Verifier</th><th scope="col">Control matched</th></tr></thead><tbody><tr><td>good</td><td>Reference pass and 2/2 defects</td><td>graded_passed</td><td>{&#x27;classification&#x27;: &#x27;passed&#x27;, &#x27;code&#x27;: &#x27;evaluated&#x27;, &#x27;reference_pass&#x27;: 1, &#x27;mutants_detected&#x27;: 2, &#x27;mutants_executed&#x27;: 2, &#x27;tests_executed&#x27;: 3, &#x27;pester_version&#x27;: &#x27;6.2.0&#x27;, &#x27;powershell_version&#x27;: &#x27;7.6.9&#x27;}</td><td>True</td></tr><tr><td>missing</td><td>Missing submission</td><td>missing_deliverable</td><td>{&#x27;classification&#x27;: &#x27;invalid&#x27;, &#x27;code&#x27;: &#x27;artifact&#x27;, &#x27;admission_reason&#x27;: &#x27;missing&#x27;}</td><td>True</td></tr><tr><td>rejected</td><td>Transferred then invalid UTF-8</td><td>rejected_output</td><td>{&#x27;classification&#x27;: &#x27;invalid&#x27;, &#x27;code&#x27;: &#x27;artifact&#x27;, &#x27;admission_reason&#x27;: &#x27;invalid_utf8&#x27;}</td><td>True</td></tr></tbody></table><p>Future profile: codex-0.166.0_gpt-6.1-sol_high. Model inference in this pass: none.</p><p>Observed runtime: Codex 0.166.0 strict configuration load exited 0 with API-only login. Both probes sent one POST to the loopback Responses endpoint; prompt, output path, GPT-6.1 Sol, High effort and sentinel API authentication matched. HTTP 503 was not retried; idle streaming ended after 60.206 seconds without reconnect. Prompt comparison uses the stripped frozen instruction. Budget configuration was accepted; enforcement under inference is untested.</p><p>APT cache bypass was added after HTTP 503; subsequent build passed with unchanged signed snapshot/package pins. The option is not proven to have caused recovery</p><p>Trial-only supported collection hook and pre-grader metadata probe; no transport replacement or new private Harbor override</p><p>Shared grader adds ArtifactError/read_candidate admission reasons; acceptance rules, classification invalid/artifact, numeric rewards and mutation criteria unchanged</p><p>Canonical Codex package installed intact, including exec server, code-mode host, ripgrep and resources; external isolation unchanged</p><p>One shared future model/effort profile; original live evidence remains attached to Codex 0.155.1/gpt-5.6-sol/medium</p><p>Bounded rollout metadata retains event/tool counts, integer command exits and completion shape without commands, outputs or final-message content</p><p>Successful controls cannot establish the historical cause</p><p>No new actual agent task, skill activation or model access is established</p><p>Custom provider alias does not receive Codex built-in-only internal metadata, which is not configurable; budget source falls back to weighted non-cached input/output when provider units are absent</p><p>Runtime configuration loading and HTTP/SSE refusal checks do not exercise successful inference or end-to-end budget exhaustion</p><p>Pinned Harbor/LiteLLM has no gpt-6.1-sol pricing entry; native cost must remain unknown. Future conservative estimates use official long-context/12h cache-write assumptions, not provider bills</p><p>Code-mode and executor companions are shipped, but agent tool execution under the new model has not occurred</p><p>Stock Harbor root cleanup returned permission denied under dropped capabilities in both probes; original refusal failures and cleanup errors are separately retained. Full container disposal remains required; no added private cleanup hook</p><p>Only the current arm was started with the upgraded CLI in this pass. Future arms use one shared configuration; historical three-file deployment differences remain historical evidence</p><h2>Credential-free launch repair</h2><p>Codex 0.155.1 rejects the reserved configured provider ID openai during config loading, before authentication/model inference. All preceding stock-launch setup commands succeed. This reproduces the retained historical configuration defect; the original failed-run stderr itself was unavailable.</p><p><a href="launch-repair.json">Sanitized launch diagnostics and provider checks</a></p><table><thead><tr><th scope="col">Probe</th><th scope="col">CLI startup</th><th scope="col">Outcome</th><th scope="col">Requests to local fixture</th><th scope="col">Stream wait seconds</th></tr></thead><tbody><tr><td>historical</td><td>Rejected configuration</td><td>Reserved built-in provider ID: openai</td><td>0</td><td>Unknown</td></tr><tr><td>http</td><td>Reached local Responses endpoint</td><td>HTTP 503 from loopback fixture</td><td>1</td><td>Unknown</td></tr><tr><td>idle</td><td>Reached local Responses endpoint</td><td>idle timeout waiting for SSE</td><td>1</td><td>60.2</td></tr></tbody></table><p>The diagnostic workflow intentionally reports failure for its three negative probes; the final verification step passes all ten checks. These are expected refusals, not successful model tasks. No real API credential or external inference was used.</p><p>Command-stage checkpoints preserve ownership, directory, configuration, auth, CLI startup and cleanup outcomes. Root cleanup cannot remove the agent-owned private home under dropped capabilities; the original failure remains primary. Disposable container teardown removes the environment. No capabilities were added.</p><p>The first diagnostic Actions run failed before Harbor because the signed snapshot index returned HTTP 503. The second used the available compressed index route with by-hash disabled; signed metadata and package/hash pins remain unchanged. No dependency upgrade or oracle requalification was performed.</p><p>The user later explicitly authorized paid testing with unknown cost. The next pair remains bounded to the two remaining recovery slots; historical spend remains unknown.</p><h2>Native credential-free controls</h2><table><thead><tr><th scope="col">Case / submission</th><th scope="col">Expected</th><th scope="col">Verifier observation</th><th scope="col">Reference pass</th><th scope="col">Defects detected</th><th scope="col">Harbor failure cause</th><th scope="col">Valid measured grade</th></tr></thead><tbody><tr><td>pester-002-good</td><td>passed</td><td>passed: evaluated</td><td>1</td><td>2/2</td><td>None</td><td>True</td></tr><tr><td>pester-002-weak</td><td>failed</td><td>failed: evaluated</td><td>1</td><td>0/2</td><td>None</td><td>True</td></tr></tbody></table><p>These are deterministic oracle controls, not live model evidence. Each final control has one valid observation. Both suites execute three tests and pass the reference; only the good suite detects both defects. The earlier missing-submission result remains ungradeable. Raw native carriers and submitted work are in the linked Actions artifacts and retained local evidence; this bundle contains reviewed metadata only.</p><ul><li><a href="native-outcomes.json">pester-002-good: Reviewed native metadata and verifier outcome</a></li><li><a href="native-outcomes.json">pester-002-weak: Reviewed native metadata and verifier outcome</a></li></ul><h2>Live Codex pair</h2><table><thead><tr><th scope="col">Case</th><th scope="col">Variant</th><th scope="col">Task execution</th><th scope="col">Valid denominator</th><th scope="col">Reference</th><th scope="col">Defects detected</th><th scope="col">Activation evidence</th></tr></thead><tbody><tr><td>pester-002</td><td>current</td><td>CLI/session completed; verifier invalid/artifact</td><td>0</td><td>Unknown</td><td>Unknown</td><td>Unknown</td></tr><tr><td>pester-002</td><td>absent</td><td>CLI/session completed; verifier invalid/artifact</td><td>0</td><td>Unknown</td><td>Unknown</td><td>Unknown</td></tr></tbody></table><p>Attempts 1 and 2 remain historical setup/launch failures. Attempts 3 (current) and 4 (absent) completed actual Codex sessions with recovered rollouts, token usage and no native execution failure. Each offline verifier returned invalid/artifact with reward 0; Harbor reward_valid=true does not make this a measured grade. No submission hash/size was recovered at the declared canonical path. The exact missing/rejected/transfer cause is unresolved from retained metadata. Activation is unknown because the executed collector omitted custom_tool_call records; the zero function-call count is not an all-tools count. No reference or mutation checks were reached by a valid candidate. Workflow success covers completion/extraction, not correctness or a valid comparison. One attempt per arm would remain insufficient for effectiveness even with valid grades.</p><p><a href="live-evidence.json">Reviewed live attempt, deployment and usage metadata</a></p><table><thead><tr><th scope="col">Variant</th><th scope="col">Input tokens (including cache)</th><th scope="col">Cached input tokens</th><th scope="col">Output tokens</th><th scope="col">Conservative USD estimate</th></tr></thead><tbody><tr><td>current</td><td>47987</td><td>35617</td><td>637</td><td>0.97885</td></tr><tr><td>absent</td><td>47842</td><td>35525</td><td>730</td><td>0.97874</td></tr></tbody></table><h2>Campaign usage</h2><p>Four credentialed reservations consumed 4/4 recovery slots and 4/36 campaign slots: two historical failed launches plus the authorized current/absent pair. Two actual model sessions are now confirmed. Current reported 47,987 input (35,617 cached; 12,329 cache-write) and 637 output tokens; absent 47,842 input (35,525 cached; 12,276 cache-write) and 730 output. Cache counts are components, not additional input totals. Harbor native pricing estimates are $0.11417975 and $0.11659250 ($0.23077225 subtotal), not provider bills. Conservative estimates including all cached input at $20/M and output at $30/M are $0.97885 and $0.97874 ($1.95759 subtotal). Cumulative observed/estimated campaign spending remains unknown because prior usage and attributable billing are unavailable. The $2.64 pair preflight estimate was not an observed charge. User explicitly accepted unknown costs for testing. The operational $20 budget is not a guaranteed cap; a $4 scheduling threshold retained $16 nominal reserve, but unknown prior charges and in-flight usage can overshoot it. Scheduling is now disabled. Two diagnostic Actions runs added no paid attempts; no judge, inference retry or skill revision was used.</p><h2>Sandbox and deployment boundary</h2><p>Explicit user authorization replaces only the evaluated Codex inner-sandbox requirement with the disposable hosted runner/container boundary. Stock Harbor run/exec methods are inherited without command rewriting. No implementing-agent sandbox or approval mechanism was disabled. Historical Bubblewrap/Landlock failures remain in sandbox.json and are not a current gate.</p><p>Actual containers passed UID/GID 1000, CapEff=0, NoNewPrivs=1, Seccomp=2, writable output, fresh-session/auth checks, protected-path absence and deployment hashes. Docker metadata confirms no privilege, no added agent capabilities, cap_drop=ALL, default seccomp (no unconfined override), 2 CPUs, 2 GiB RAM, 256 PIDs, no host PID/network mode and no host mounts. No Docker socket, grader source, reference implementation, mutants or unrelated credential names were available.</p><p>Harbor native allowlist restricts the agent to api.openai.com using its separate disposable controller; only that controller needs NET_ADMIN/NET_RAW. Both actual agent preflights reached the API root (HTTP 421) while GitHub, raw GitHub, Microsoft Learn and metadata IP connections failed. Both later authenticated model sessions completed. DNS and the allowed API remain residual channels; web search and remote MCP were disabled. This is not a formal network-isolation proof.</p><p>The inference key must be accessible to Codex and can be read by code in the same environment. Container isolation does not conceal it. No auth file, secret-bearing environment dump, raw agent log or submission is exported. Preflight checks and host metadata are practical evidence, not a formal container-security proof or interactive-workstation equivalence.</p><p>The separate offline verifier and protected executable checks are unchanged from successful controls. Both latest live outcomes are invalid/artifact and unmeasured despite Harbor reward_valid=true. result_extraction_succeeded describes metadata recovery only; execution_completed describes native completion only. Best-effort root cleanup failed under dropped capabilities, but entire agent containers were verified removed. No privilege was added.</p><p>Repair diagnostics use the same stock launcher, UID, ownership and pins with external networking disabled. Corrected live config selects trial_openai while preserving API endpoint/authentication, OpenAI headers, WebSocket capability, model, effort and matched arms. The same runtime config function serves current and absent.</p><h2>Execution and supporting artifacts</h2><ul><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41956647063">Recovery build preflight</a> — Failed before Harbor started: snapshot 503/504 responses and a 600-second image-build timeout. Failure record retained. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41956647063/artifacts/13383608340">Build failure</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41956647063/artifacts/13384480020">Image unavailable</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958131429">First native control</a> — Oracle exit 126: script lacked executable permission. Verifier invalid/artifact remains unmeasured. Default sandbox helper was missing; legacy policy rejected. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958131429/artifacts/13383049571">Native invalid result</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958131429/artifacts/13383782957">Sandbox errors</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130">Final native controls and sandbox checks</a> — Good passes and weak fails as expected. Overall workflow failed because both sandbox probes failed. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130/artifacts/13384044283">Known-good pass</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130/artifacts/13383659806">Known-weak fail</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130/artifacts/13384059131">Sandbox blocker</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41964780671">External preflight identity failure</a> — No credentialed task was scheduled. Host inspection selected the network-sharing container by hostname; corrected to the Compose main service and pinned agent image. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41964780671/artifacts/13387311896">Preflight failure</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41965390294">First credentialed launch</a> — Both external preflights passed. Current failed installation; absent skipped. Exception RuntimeError, no native agent execution timing. All evidence retained. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41965390294/artifacts/13387531677">Preflight metadata</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41965390294/artifacts/13387536636">Current attempt 1</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41965390294/artifacts/13387397744">Absent staging only</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41966399157">Focused version-check correction and final launch</a> — Both exact CLI pins pass. Current launch raises NonZeroAgentExitCodeError; invalid artifact grade, unknown usage; absent skipped. No further scheduling. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41966399157/artifacts/13388085910">External boundary checkpoint</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41966399157/artifacts/13386909710">Current attempt 2</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41966399157/artifacts/13387243701">Absent staging only</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42106956278">Credential-free reproduction: build interruption</a> — Pinned snapshot Packages index HTTP 503; Harbor not started; build error retained in Actions logs; no artifact created before failure.</li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42108206579">Credential-free stock launch and provider verification</a> — Historical config rejected; corrected HTTP/SSE probes reach refusal endpoints. Ten behavioral checks pass. Overall workflow failure is deliberate negative-probe status. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42108206579/artifacts/13452044517">Sanitized diagnostic evidence</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42108206579/artifacts/13452743308">Historical failure checkpoint</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42110435228">Repaired live smoke pair, attempts 3 and 4</a> — Both real Codex sessions completed and metadata extraction passed. Both independent verifier outcomes invalid/artifact; zero valid task-grade denominators. Workflow success is not valid evaluation. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42110435228/artifacts/13454161608">Matched external-boundary checkpoint</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42110435228/artifacts/13454361517">Current attempt 3 sanitized evidence</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42110435228/artifacts/13454096587">Absent attempt 4 sanitized evidence</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42115972887">First credential-free handoff diagnostic</a> — Pinned snapshot HTTP 503 stopped image builds before controls or CLI startup. Failure report retained.</li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42117106768">Credential-free artifact handoff and Codex 0.166.0 qualification</a> — Three deterministic handoff controls and offline startup checks; no inference. This artifact contains the single consolidated report.</li></ul><h2>History</h2><p>Original run 41952213509 explicitly received a runner shutdown signal. Cause remains unknown; exit 143 alone does not identify a Harbor timeout/crash. No original native grade survived. Its prior report is preserved as history below; the prior recommendation is superseded and does not show that the existing stack is better. The prior recovery report at 29f7765 is retained under history, including its zero-spend record and now-superseded native-sandbox requirement. The known-good and weak native observations were not rerun or rescored. The repaired pair ran c5a430a; f61201a was earlier packaging, while failed run 41966399157 executed 11bf0db. User later authorized the remaining two smoke attempts with unknown costs. Their successful process completion does not supersede the invalid-artifact observations.</p><h2>Maintenance and remaining evidence</h2><p>The unchanged oracle controls prove a narrow grading distinction: both pass the reference; only the good suite detects 2/2 defects. Both live sessions completed, but invalid/artifact outcomes are excluded. A successful workflow or numeric zero reward cannot establish a valid comparison.</p><p>The root cause is reproduced with the retained historical config through the same pinned stock launcher: Codex rejects reserved model_providers.openai before authentication. The original run&#x27;s stderr was not retained, so the recovered reproduction is the causal evidence. trial_openai preserves endpoint/authentication/model/effort; actual runtime probes verified one HTTP POST on 503 and one silent stream ending after 60.2 seconds. WebSocket probing/fallback remains outside that no-retry observation.</p><p>Nineteen focused tests pass locally; eighteen ran on the executed live head. The new custom_tool_call fixture failed before the collector correction and passes after it. These completed live rollouts were not republished or reprocessed; activation and total tool usage remain unknown. No production full-suite or repeated oracle qualification was run.</p><p>Custom maintenance remains fixed staging/projection/reporting, a small live runner, pinned installation/ownership subclass, native-log sanitizer/checkpoint handler, diagnostic-only refusal fixture and verifier, signed snapshot transport helper, and a branch-only workflow. Two private Harbor methods remain overridden for home ownership and config upload. No upstream patch, added private hook or new execution layer was introduced. Provider defaults, native log/event schemas, task checksum deprecation and pinned egress sidecar still require compatibility review.</p><p>The compressed signed snapshot index selection fixed transport without changing package/image pins or signature/hash validation. The disposable external boundary remained unprivileged with dropped capabilities, no-new-privileges, default seccomp, bounded CPU/RAM/PIDs, no host resources, API-only egress and separate offline verification. Root best-effort secret deletion can fail under these capabilities; verified container disposal is the actual cleanup boundary.</p><p>Existing task requirements, references, seeded defects, grader, PowerShell runner, runtime installer and target skill are unchanged. Valid output handoff, activation, natural skill selection, skill benefit, revision improvement and lower maintenance have not been established by this pair. Another skill still requires representative tasks, executable graders and controls.</p><p>Production components removed: none. APM, static checks, production evaluation, recurring workflows and Pages are untouched. Adoption is not justified by launch success alone.</p><p>Smallest next step: diagnose the submitted-artifact boundary with credential-free checks and bounded artifact-status metadata before authorizing any further model attempt. Retain native artifact-manifest status and non-content tool/completion classifications to distinguish no output, output rejection and transport failure. Do not repeat the full qualification campaign or expand the architecture. All recovery attempts are consumed.</p><p>This pass reuses normal Harbor collection/upload and the existing grader. Native collection manifests plus safe pre-collection/post-upload metadata distinguish missing output from transport/admission failures. A confirmed missing deliverable is a task-completion failure, even when correctness and mutation denominators remain unavailable. Historical metadata is insufficient for that classification.</p><p>The new comparison profile deliberately changes Codex CLI, model and reasoning effort. No production runtime or skill was changed. No additional private Harbor hooks, transport system, model-based judge or paid attempt was introduced.</p><h2>Primary references</h2><ul><li><a href="https://github.com/harbor-framework/harbor/releases/tag/v0.25.0">harbor release</a></li><li><a href="https://docs.harborframework.com/tasks/separate-verifier">separate verifier</a></li><li><a href="https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/agents/installed/codex.py#L2072">codex launcher</a></li><li><a href="https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/core/src/rollout_budget.rs">budget accounting</a></li><li><a href="https://developers.openai.com/api/docs/models/gpt-5.6-sol">pricing</a></li><li><a href="https://docs.harborframework.com/jobs/error-classification">harbor failure policy</a></li><li><a href="https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/linux-sandbox/src/linux_run_main.rs">codex native sandbox</a></li><li><a href="https://packages.debian.org/trixie/bubblewrap">debian bubblewrap</a></li><li><a href="https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/environments/docker/docker.py">network policy</a></li><li><a href="https://developers.openai.com/api/docs/guides/prompt-caching">prompt caching</a></li><li><a href="https://learn.chatgpt.com/docs/config-file/config-reference">config reference</a></li><li><a href="https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/config/src/config_toml.rs#L900">pinned codex config validation</a></li><li><a href="https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/model-provider-info/src/lib.rs#L609">pinned provider merging</a></li><li><a href="https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/agents/installed/codex.py#L1319">harbor codex cost estimation</a></li><li><a href="https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/trial/artifact_handler.py#L27">harbor artifact path</a></li><li><a href="https://github.com/openai/codex/releases/tag/rust-v0.166.0">codex selected release</a></li><li><a href="https://developers.openai.com/api/docs/models/gpt-6.1-sol">future model pricing</a></li></ul><details><summary>Complete machine-readable evidence</summary><pre>{
   &quot;schema_version&quot;: 3,
   &quot;campaign&quot;: &quot;direct-harbor-20261104&quot;,
-  &quot;state&quot;: &quot;launch_repaired_live_sessions_complete_artifacts_ungradeable&quot;,
-  &quot;decision&quot;: &quot;A specific blocker remains: recover valid submitted-artifact evidence before another comparison. The launch defect is corrected and credential-free provider checks passed. Both authorized live sessions completed, but neither produced a valid independent task grade. Stop scheduling; no adoption or skill-effectiveness conclusion is supported.&quot;,
-  &quot;summary&quot;: &quot;Codex 0.155.1 rejects reserved model_providers.openai before authentication; the supported trial_openai alias fixes startup. Stock Harbor/Codex reached real inference in both arms. Current and absent deployments matched except the three target-skill files. Both verifiers returned invalid/artifact, not measured incorrect answers. Four recovery slots are consumed; historical and cumulative charges remain unknown.&quot;,
+  &quot;state&quot;: &quot;handoff_qualified_historical_cause_unresolved&quot;,
+  &quot;decision&quot;: &quot;The controlled handoff works, but the historical agent-output failure remains unresolved. The upgraded runtime passed credential-free startup/configuration checks. Consider a separately authorized new-profile allocation; no inference is scheduled.&quot;,
+  &quot;summary&quot;: &quot;Three deterministic producers exercise the original agent UID/workspace through Harbor collection and independent verification. These are not Codex task executions. GPT-6.1 Sol/High is configured for a new comparison profile and has not been evaluated. Historical paid attempts, ungradeable outcomes, controls and spending uncertainty are unchanged.&quot;,
   &quot;source_commit&quot;: &quot;cc0819f5dafc05610dd8c3293ce2f52744c66f1a&quot;,
   &quot;reviewed_trial_commit&quot;: &quot;f61201a730746921abd17d8f8366dfd1505ad6f8&quot;,
   &quot;executed_commit&quot;: &quot;c5a430ac15b4fac0eb6a29b1ac46ad4e7e06ca3e&quot;,
@@ -415,7 +415,7 @@
     &quot;reserve_usd&quot;: 16,
     &quot;pair_preflight_estimate_usd&quot;: 2.64,
     &quot;scheduling_stopped&quot;: true,
-    &quot;stop_reason&quot;: &quot;All four recovery slots consumed; both live artifact outcomes ungradeable.&quot;,
+    &quot;stop_reason&quot;: &quot;This pass is credential-free; four recovery slots already consumed. A new live allocation is not authorized.&quot;,
     &quot;conservative_input_usd_per_million&quot;: 20,
     &quot;conservative_output_usd_per_million&quot;: 30,
     &quot;unknown_cost_accepted_for_testing&quot;: true
@@ -1064,6 +1064,16 @@
           &quot;url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42110435228/artifacts/13454096587&quot;
         }
       ]
+    },
+    {
+      &quot;url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42115972887&quot;,
+      &quot;label&quot;: &quot;First credential-free handoff diagnostic&quot;,
+      &quot;summary&quot;: &quot;Pinned snapshot HTTP 503 stopped image builds before controls or CLI startup. Failure report retained.&quot;
+    },
+    {
+      &quot;url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42117106768&quot;,
+      &quot;label&quot;: &quot;Credential-free artifact handoff and Codex 0.166.0 qualification&quot;,
+      &quot;summary&quot;: &quot;Three deterministic handoff controls and offline startup checks; no inference. This artifact contains the single consolidated report.&quot;
     }
   ],
   &quot;local_validation&quot;: {
@@ -1089,16 +1099,19 @@
     &quot;The compressed signed snapshot index selection fixed transport without changing package/image pins or signature/hash validation. The disposable external boundary remained unprivileged with dropped capabilities, no-new-privileges, default seccomp, bounded CPU/RAM/PIDs, no host resources, API-only egress and separate offline verification. Root best-effort secret deletion can fail under these capabilities; verified container disposal is the actual cleanup boundary.&quot;,
     &quot;Existing task requirements, references, seeded defects, grader, PowerShell runner, runtime installer and target skill are unchanged. Valid output handoff, activation, natural skill selection, skill benefit, revision improvement and lower maintenance have not been established by this pair. Another skill still requires representative tasks, executable graders and controls.&quot;,
     &quot;Production components removed: none. APM, static checks, production evaluation, recurring workflows and Pages are untouched. Adoption is not justified by launch success alone.&quot;,
-    &quot;Smallest next step: diagnose the submitted-artifact boundary with credential-free checks and bounded artifact-status metadata before authorizing any further model attempt. Retain native artifact-manifest status and non-content tool/completion classifications to distinguish no output, output rejection and transport failure. Do not repeat the full qualification campaign or expand the architecture. All recovery attempts are consumed.&quot;
+    &quot;Smallest next step: diagnose the submitted-artifact boundary with credential-free checks and bounded artifact-status metadata before authorizing any further model attempt. Retain native artifact-manifest status and non-content tool/completion classifications to distinguish no output, output rejection and transport failure. Do not repeat the full qualification campaign or expand the architecture. All recovery attempts are consumed.&quot;,
+    &quot;This pass reuses normal Harbor collection/upload and the existing grader. Native collection manifests plus safe pre-collection/post-upload metadata distinguish missing output from transport/admission failures. A confirmed missing deliverable is a task-completion failure, even when correctness and mutation denominators remain unavailable. Historical metadata is insufficient for that classification.&quot;,
+    &quot;The new comparison profile deliberately changes Codex CLI, model and reasoning effort. No production runtime or skill was changed. No additional private Harbor hooks, transport system, model-based judge or paid attempt was introduced.&quot;
   ],
   &quot;coverage_gaps&quot;: [
-    &quot;No valid live task grade or reference/mutation result&quot;,
     &quot;Cause of absent/rejected/untransferred output is unresolved from retained metadata&quot;,
     &quot;Activation and complete tool-use evidence unavailable for live pair&quot;,
     &quot;No attributable provider invoice or cumulative campaign spending&quot;,
     &quot;No revision, reserved confirmation case, repeated comparison or skill-effectiveness conclusion&quot;,
     &quot;No new unsupported/adversarial submission qualification&quot;,
-    &quot;No interactive-workstation or native Codex approval equivalence&quot;
+    &quot;No interactive-workstation or native Codex approval equivalence&quot;,
+    &quot;No valid historical live grade; new controls do not rescore the historical pair&quot;,
+    &quot;New CLI/model/effort has not been evaluated; comparisons cannot attribute historical differences solely to the skill&quot;
   ],
   &quot;contamination&quot;: &quot;Public prompts, grading details and answers may be known to models; the author inspected them. No case is blinded. Runtime agent inputs omit repository history, grader/reference/mutant files; external GitHub access and remote tools were blocked, and absent target-directory scans were empty. This reduces runtime access but cannot rule out memorization or every covert channel.&quot;,
   &quot;publication_note&quot;: &quot;Automatic review rejected copying raw oracle logs/submissions into the report. They remain retained locally and in existing Actions artifacts. Only reviewed result metadata, counts, hashes and sandbox diagnostics are published here.&quot;,
@@ -1117,7 +1130,9 @@
     &quot;pinned_codex_config_validation&quot;: &quot;https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/config/src/config_toml.rs#L900&quot;,
     &quot;pinned_provider_merging&quot;: &quot;https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/model-provider-info/src/lib.rs#L609&quot;,
     &quot;harbor_codex_cost_estimation&quot;: &quot;https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/agents/installed/codex.py#L1319&quot;,
-    &quot;harbor_artifact_path&quot;: &quot;https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/trial/artifact_handler.py#L27&quot;
+    &quot;harbor_artifact_path&quot;: &quot;https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/trial/artifact_handler.py#L27&quot;,
+    &quot;codex_selected_release&quot;: &quot;https://github.com/openai/codex/releases/tag/rust-v0.166.0&quot;,
+    &quot;future_model_pricing&quot;: &quot;https://developers.openai.com/api/docs/models/gpt-6.1-sol&quot;
   },
   &quot;live_pair_operationally_valid&quot;: false,
   &quot;live_evidence&quot;: &quot;live-evidence.json&quot;,
@@ -1200,5 +1215,415 @@
     &quot;harbor_native_pricing_estimate&quot;: 0.23077225,
     &quot;conservative_reserve_estimate&quot;: 1.95759,
     &quot;provider_observed_charge&quot;: null
+  },
+  &quot;handoff_pass&quot;: {
+    &quot;evidence&quot;: &quot;handoff-evidence.json&quot;,
+    &quot;controls&quot;: {
+      &quot;good&quot;: {
+        &quot;kind&quot;: &quot;deterministic_handoff_control&quot;,
+        &quot;control&quot;: &quot;good&quot;,
+        &quot;paid_attempt&quot;: false,
+        &quot;codex_task_execution&quot;: false,
+        &quot;passed&quot;: true,
+        &quot;commit&quot;: &quot;6e0fdb899b62c46ad1a190be7a66c01219358849&quot;,
+        &quot;native_result&quot;: {
+          &quot;task&quot;: &quot;pester-002-good&quot;,
+          &quot;outcome&quot;: {
+            &quot;classification&quot;: &quot;passed&quot;,
+            &quot;code&quot;: &quot;evaluated&quot;,
+            &quot;reference_pass&quot;: 1,
+            &quot;mutants_detected&quot;: 2,
+            &quot;mutants_executed&quot;: 2,
+            &quot;tests_executed&quot;: 3,
+            &quot;pester_version&quot;: &quot;6.2.0&quot;,
+            &quot;powershell_version&quot;: &quot;7.6.9&quot;
+          },
+          &quot;failure_cause&quot;: null,
+          &quot;exceptions&quot;: [],
+          &quot;harbor_reward_valid&quot;: true,
+          &quot;measured&quot;: true,
+          &quot;native_agent_exit_code&quot;: null,
+          &quot;native_rewards&quot;: {
+            &quot;overall&quot;: 1.0,
+            &quot;pester_reference_pass&quot;: 1.0,
+            &quot;pester_mutation_detection&quot;: 1.0,
+            &quot;pester_test_quality&quot;: 1.0
+          },
+          &quot;tokens&quot;: {
+            &quot;input_including_cache&quot;: null,
+            &quot;cached_input&quot;: null,
+            &quot;output&quot;: null
+          },
+          &quot;cost_usd&quot;: null,
+          &quot;timing&quot;: {
+            &quot;agent_execution&quot;: {
+              &quot;started_at&quot;: &quot;2026-11-05T21:58:48.825172Z&quot;,
+              &quot;finished_at&quot;: &quot;2026-11-05T21:58:49.096893Z&quot;
+            },
+            &quot;verifier&quot;: {
+              &quot;started_at&quot;: &quot;2026-11-05T21:58:59.862796Z&quot;,
+              &quot;finished_at&quot;: &quot;2026-11-05T21:59:19.961694Z&quot;
+            }
+          },
+          &quot;native_result&quot;: &quot;jobs/good/pester-002-good__d6nBLYn/result.json&quot;
+        },
+        &quot;harbor_returncode&quot;: 0,
+        &quot;task_checksum&quot;: &quot;566ae2846b3131bd563cccd2282429ede4f1603d5b7b23526d85a1b5c69077ed&quot;,
+        &quot;native_collection_manifest&quot;: [
+          {
+            &quot;source&quot;: &quot;/logs/artifacts&quot;,
+            &quot;destination&quot;: &quot;artifacts/logs/artifacts&quot;,
+            &quot;type&quot;: &quot;directory&quot;,
+            &quot;status&quot;: &quot;ok&quot;,
+            &quot;service&quot;: null,
+            &quot;exclude&quot;: []
+          },
+          {
+            &quot;source&quot;: &quot;/workspace/output/Subject.Tests.ps1&quot;,
+            &quot;destination&quot;: &quot;artifacts/workspace/output/Subject.Tests.ps1&quot;,
+            &quot;type&quot;: &quot;file&quot;,
+            &quot;status&quot;: &quot;ok&quot;,
+            &quot;service&quot;: null,
+            &quot;exclude&quot;: []
+          }
+        ],
+        &quot;agent_observation&quot;: {
+          &quot;artifact&quot;: {
+            &quot;exists&quot;: true,
+            &quot;type&quot;: &quot;file&quot;,
+            &quot;size&quot;: 493,
+            &quot;uid&quot;: 1000,
+            &quot;gid&quot;: 1000,
+            &quot;mode&quot;: &quot;0o644&quot;,
+            &quot;sha256&quot;: &quot;8784023e56e7757644ae38797e7fc6cfedfda289a25d0a98283b34d0f40b090a&quot;,
+            &quot;links&quot;: 1
+          },
+          &quot;observer_uid&quot;: 1000,
+          &quot;observer_gid&quot;: 1000,
+          &quot;cwd&quot;: &quot;/workspace&quot;
+        },
+        &quot;host_artifact&quot;: {
+          &quot;exists&quot;: true,
+          &quot;type&quot;: &quot;file&quot;,
+          &quot;size&quot;: 493,
+          &quot;uid&quot;: 1001,
+          &quot;gid&quot;: 1001,
+          &quot;mode&quot;: &quot;0o644&quot;,
+          &quot;sha256&quot;: &quot;8784023e56e7757644ae38797e7fc6cfedfda289a25d0a98283b34d0f40b090a&quot;,
+          &quot;links&quot;: 1
+        },
+        &quot;verifier_observation&quot;: {
+          &quot;artifact&quot;: {
+            &quot;exists&quot;: true,
+            &quot;type&quot;: &quot;file&quot;,
+            &quot;size&quot;: 493,
+            &quot;uid&quot;: 1001,
+            &quot;gid&quot;: 1001,
+            &quot;mode&quot;: &quot;0o644&quot;,
+            &quot;sha256&quot;: &quot;8784023e56e7757644ae38797e7fc6cfedfda289a25d0a98283b34d0f40b090a&quot;,
+            &quot;links&quot;: 1
+          },
+          &quot;observer_uid&quot;: 0,
+          &quot;observer_gid&quot;: 0,
+          &quot;cwd&quot;: &quot;/workspace&quot;
+        },
+        &quot;classification&quot;: {
+          &quot;classification&quot;: &quot;graded_passed&quot;,
+          &quot;task_completion_measured&quot;: true,
+          &quot;task_completed&quot;: true,
+          &quot;correctness_measured&quot;: true
+        },
+        &quot;upload_status&quot;: &quot;hash_matched&quot;
+      },
+      &quot;missing&quot;: {
+        &quot;kind&quot;: &quot;deterministic_handoff_control&quot;,
+        &quot;control&quot;: &quot;missing&quot;,
+        &quot;paid_attempt&quot;: false,
+        &quot;codex_task_execution&quot;: false,
+        &quot;passed&quot;: true,
+        &quot;commit&quot;: &quot;6e0fdb899b62c46ad1a190be7a66c01219358849&quot;,
+        &quot;native_result&quot;: {
+          &quot;task&quot;: &quot;pester-002-missing&quot;,
+          &quot;outcome&quot;: {
+            &quot;classification&quot;: &quot;invalid&quot;,
+            &quot;code&quot;: &quot;artifact&quot;,
+            &quot;admission_reason&quot;: &quot;missing&quot;
+          },
+          &quot;failure_cause&quot;: null,
+          &quot;exceptions&quot;: [],
+          &quot;harbor_reward_valid&quot;: true,
+          &quot;measured&quot;: false,
+          &quot;native_agent_exit_code&quot;: null,
+          &quot;native_rewards&quot;: {
+            &quot;overall&quot;: 0.0
+          },
+          &quot;tokens&quot;: {
+            &quot;input_including_cache&quot;: null,
+            &quot;cached_input&quot;: null,
+            &quot;output&quot;: null
+          },
+          &quot;cost_usd&quot;: null,
+          &quot;timing&quot;: {
+            &quot;agent_execution&quot;: {
+              &quot;started_at&quot;: &quot;2026-11-05T21:59:31.556454Z&quot;,
+              &quot;finished_at&quot;: &quot;2026-11-05T21:59:31.824611Z&quot;
+            },
+            &quot;verifier&quot;: {
+              &quot;started_at&quot;: &quot;2026-11-05T21:59:42.620108Z&quot;,
+              &quot;finished_at&quot;: &quot;2026-11-05T21:59:56.523636Z&quot;
+            }
+          },
+          &quot;native_result&quot;: &quot;jobs/missing/pester-002-missing__jeJEhKu/result.json&quot;
+        },
+        &quot;harbor_returncode&quot;: 0,
+        &quot;task_checksum&quot;: &quot;fe95cb7ebc13108988072376f8273612259458ea50595095ad5eca4d8f00e84f&quot;,
+        &quot;native_collection_manifest&quot;: [
+          {
+            &quot;source&quot;: &quot;/logs/artifacts&quot;,
+            &quot;destination&quot;: &quot;artifacts/logs/artifacts&quot;,
+            &quot;type&quot;: &quot;directory&quot;,
+            &quot;status&quot;: &quot;ok&quot;,
+            &quot;service&quot;: null,
+            &quot;exclude&quot;: []
+          },
+          {
+            &quot;source&quot;: &quot;/workspace/output/Subject.Tests.ps1&quot;,
+            &quot;destination&quot;: &quot;artifacts/workspace/output/Subject.Tests.ps1&quot;,
+            &quot;type&quot;: &quot;file&quot;,
+            &quot;status&quot;: &quot;failed&quot;,
+            &quot;service&quot;: null,
+            &quot;exclude&quot;: []
+          }
+        ],
+        &quot;agent_observation&quot;: {
+          &quot;artifact&quot;: {
+            &quot;exists&quot;: false,
+            &quot;type&quot;: null,
+            &quot;size&quot;: null,
+            &quot;uid&quot;: null,
+            &quot;gid&quot;: null,
+            &quot;mode&quot;: null,
+            &quot;sha256&quot;: null,
+            &quot;observation&quot;: &quot;missing&quot;
+          },
+          &quot;observer_uid&quot;: 1000,
+          &quot;observer_gid&quot;: 1000,
+          &quot;cwd&quot;: &quot;/workspace&quot;
+        },
+        &quot;host_artifact&quot;: {
+          &quot;exists&quot;: false,
+          &quot;type&quot;: null,
+          &quot;size&quot;: null,
+          &quot;uid&quot;: null,
+          &quot;gid&quot;: null,
+          &quot;mode&quot;: null,
+          &quot;sha256&quot;: null,
+          &quot;observation&quot;: &quot;missing&quot;
+        },
+        &quot;verifier_observation&quot;: {
+          &quot;artifact&quot;: {
+            &quot;exists&quot;: false,
+            &quot;type&quot;: null,
+            &quot;size&quot;: null,
+            &quot;uid&quot;: null,
+            &quot;gid&quot;: null,
+            &quot;mode&quot;: null,
+            &quot;sha256&quot;: null,
+            &quot;observation&quot;: &quot;missing&quot;
+          },
+          &quot;observer_uid&quot;: 0,
+          &quot;observer_gid&quot;: 0,
+          &quot;cwd&quot;: &quot;/workspace&quot;
+        },
+        &quot;classification&quot;: {
+          &quot;classification&quot;: &quot;missing_deliverable&quot;,
+          &quot;task_completion_measured&quot;: true,
+          &quot;task_completed&quot;: false,
+          &quot;correctness_measured&quot;: false
+        },
+        &quot;upload_status&quot;: &quot;no_source&quot;
+      },
+      &quot;rejected&quot;: {
+        &quot;kind&quot;: &quot;deterministic_handoff_control&quot;,
+        &quot;control&quot;: &quot;rejected&quot;,
+        &quot;paid_attempt&quot;: false,
+        &quot;codex_task_execution&quot;: false,
+        &quot;passed&quot;: true,
+        &quot;commit&quot;: &quot;6e0fdb899b62c46ad1a190be7a66c01219358849&quot;,
+        &quot;native_result&quot;: {
+          &quot;task&quot;: &quot;pester-002-rejected&quot;,
+          &quot;outcome&quot;: {
+            &quot;classification&quot;: &quot;invalid&quot;,
+            &quot;code&quot;: &quot;artifact&quot;,
+            &quot;admission_reason&quot;: &quot;invalid_utf8&quot;
+          },
+          &quot;failure_cause&quot;: null,
+          &quot;exceptions&quot;: [],
+          &quot;harbor_reward_valid&quot;: true,
+          &quot;measured&quot;: false,
+          &quot;native_agent_exit_code&quot;: null,
+          &quot;native_rewards&quot;: {
+            &quot;overall&quot;: 0.0
+          },
+          &quot;tokens&quot;: {
+            &quot;input_including_cache&quot;: null,
+            &quot;cached_input&quot;: null,
+            &quot;output&quot;: null
+          },
+          &quot;cost_usd&quot;: null,
+          &quot;timing&quot;: {
+            &quot;agent_execution&quot;: {
+              &quot;started_at&quot;: &quot;2026-11-05T22:00:08.279547Z&quot;,
+              &quot;finished_at&quot;: &quot;2026-11-05T22:00:08.573938Z&quot;
+            },
+            &quot;verifier&quot;: {
+              &quot;started_at&quot;: &quot;2026-11-05T22:00:19.351145Z&quot;,
+              &quot;finished_at&quot;: &quot;2026-11-05T22:00:33.390718Z&quot;
+            }
+          },
+          &quot;native_result&quot;: &quot;jobs/rejected/pester-002-rejected__H9yZfyh/result.json&quot;
+        },
+        &quot;harbor_returncode&quot;: 0,
+        &quot;task_checksum&quot;: &quot;34fa56f8957d45b7c591ca1c68c3489ac0f52d47b41ae9685a1e286fd9c98c2c&quot;,
+        &quot;native_collection_manifest&quot;: [
+          {
+            &quot;source&quot;: &quot;/logs/artifacts&quot;,
+            &quot;destination&quot;: &quot;artifacts/logs/artifacts&quot;,
+            &quot;type&quot;: &quot;directory&quot;,
+            &quot;status&quot;: &quot;ok&quot;,
+            &quot;service&quot;: null,
+            &quot;exclude&quot;: []
+          },
+          {
+            &quot;source&quot;: &quot;/workspace/output/Subject.Tests.ps1&quot;,
+            &quot;destination&quot;: &quot;artifacts/workspace/output/Subject.Tests.ps1&quot;,
+            &quot;type&quot;: &quot;file&quot;,
+            &quot;status&quot;: &quot;ok&quot;,
+            &quot;service&quot;: null,
+            &quot;exclude&quot;: []
+          }
+        ],
+        &quot;agent_observation&quot;: {
+          &quot;artifact&quot;: {
+            &quot;exists&quot;: true,
+            &quot;type&quot;: &quot;file&quot;,
+            &quot;size&quot;: 3,
+            &quot;uid&quot;: 1000,
+            &quot;gid&quot;: 1000,
+            &quot;mode&quot;: &quot;0o644&quot;,
+            &quot;sha256&quot;: &quot;b632bfa9c60bc17f7fd78dba311fd3f5dfa66cb8c017a4278e2bae28d668844d&quot;,
+            &quot;links&quot;: 1
+          },
+          &quot;observer_uid&quot;: 1000,
+          &quot;observer_gid&quot;: 1000,
+          &quot;cwd&quot;: &quot;/workspace&quot;
+        },
+        &quot;host_artifact&quot;: {
+          &quot;exists&quot;: true,
+          &quot;type&quot;: &quot;file&quot;,
+          &quot;size&quot;: 3,
+          &quot;uid&quot;: 1001,
+          &quot;gid&quot;: 1001,
+          &quot;mode&quot;: &quot;0o644&quot;,
+          &quot;sha256&quot;: &quot;b632bfa9c60bc17f7fd78dba311fd3f5dfa66cb8c017a4278e2bae28d668844d&quot;,
+          &quot;links&quot;: 1
+        },
+        &quot;verifier_observation&quot;: {
+          &quot;artifact&quot;: {
+            &quot;exists&quot;: true,
+            &quot;type&quot;: &quot;file&quot;,
+            &quot;size&quot;: 3,
+            &quot;uid&quot;: 1001,
+            &quot;gid&quot;: 1001,
+            &quot;mode&quot;: &quot;0o644&quot;,
+            &quot;sha256&quot;: &quot;b632bfa9c60bc17f7fd78dba311fd3f5dfa66cb8c017a4278e2bae28d668844d&quot;,
+            &quot;links&quot;: 1
+          },
+          &quot;observer_uid&quot;: 0,
+          &quot;observer_gid&quot;: 0,
+          &quot;cwd&quot;: &quot;/workspace&quot;
+        },
+        &quot;classification&quot;: {
+          &quot;classification&quot;: &quot;rejected_output&quot;,
+          &quot;task_completion_measured&quot;: true,
+          &quot;task_completed&quot;: false,
+          &quot;correctness_measured&quot;: false
+        },
+        &quot;upload_status&quot;: &quot;hash_matched&quot;
+      }
+    },
+    &quot;handoff_qualified&quot;: true,
+    &quot;runtime_qualified&quot;: true,
+    &quot;profile&quot;: &quot;codex-0.166.0_gpt-6.1-sol_high&quot;,
+    &quot;summary&quot;: &quot;Controlled handoff works; historical output failure remains unresolved.&quot;,
+    &quot;notes&quot;: [
+      &quot;Observed runtime: Codex 0.166.0 strict configuration load exited 0 with API-only login. Both probes sent one POST to the loopback Responses endpoint; prompt, output path, GPT-6.1 Sol, High effort and sentinel API authentication matched. HTTP 503 was not retried; idle streaming ended after 60.206 seconds without reconnect. Prompt comparison uses the stripped frozen instruction. Budget configuration was accepted; enforcement under inference is untested.&quot;,
+      &quot;APT cache bypass was added after HTTP 503; subsequent build passed with unchanged signed snapshot/package pins. The option is not proven to have caused recovery&quot;,
+      &quot;Trial-only supported collection hook and pre-grader metadata probe; no transport replacement or new private Harbor override&quot;,
+      &quot;Shared grader adds ArtifactError/read_candidate admission reasons; acceptance rules, classification invalid/artifact, numeric rewards and mutation criteria unchanged&quot;,
+      &quot;Canonical Codex package installed intact, including exec server, code-mode host, ripgrep and resources; external isolation unchanged&quot;,
+      &quot;One shared future model/effort profile; original live evidence remains attached to Codex 0.155.1/gpt-5.6-sol/medium&quot;,
+      &quot;Bounded rollout metadata retains event/tool counts, integer command exits and completion shape without commands, outputs or final-message content&quot;,
+      &quot;Successful controls cannot establish the historical cause&quot;,
+      &quot;No new actual agent task, skill activation or model access is established&quot;,
+      &quot;Custom provider alias does not receive Codex built-in-only internal metadata, which is not configurable; budget source falls back to weighted non-cached input/output when provider units are absent&quot;,
+      &quot;Runtime configuration loading and HTTP/SSE refusal checks do not exercise successful inference or end-to-end budget exhaustion&quot;,
+      &quot;Pinned Harbor/LiteLLM has no gpt-6.1-sol pricing entry; native cost must remain unknown. Future conservative estimates use official long-context/12h cache-write assumptions, not provider bills&quot;,
+      &quot;Code-mode and executor companions are shipped, but agent tool execution under the new model has not occurred&quot;,
+      &quot;Stock Harbor root cleanup returned permission denied under dropped capabilities in both probes; original refusal failures and cleanup errors are separately retained. Full container disposal remains required; no added private cleanup hook&quot;,
+      &quot;Only the current arm was started with the upgraded CLI in this pass. Future arms use one shared configuration; historical three-file deployment differences remain historical evidence&quot;
+    ]
+  },
+  &quot;future_runtime_profile&quot;: {
+    &quot;id&quot;: &quot;codex-0.166.0_gpt-6.1-sol_high&quot;,
+    &quot;codex_version&quot;: &quot;0.166.0&quot;,
+    &quot;model&quot;: &quot;gpt-6.1-sol&quot;,
+    &quot;reasoning_effort&quot;: &quot;high&quot;,
+    &quot;release&quot;: &quot;https://github.com/openai/codex/releases/tag/rust-v0.166.0&quot;,
+    &quot;verified_at&quot;: &quot;2026-11-05&quot;,
+    &quot;archive_url&quot;: &quot;https://github.com/openai/codex/releases/download/rust-v0.166.0/codex-package-x86_64-unknown-linux-musl.tar.gz&quot;,
+    &quot;archive_sha256&quot;: &quot;1d44b28bc4ac9937d7d3532264baa68a507ce364956a0d4ebb856f331cdee254&quot;,
+    &quot;package_layout&quot;: {
+      &quot;entrypoint&quot;: &quot;bin/codex&quot;,
+      &quot;execServer&quot;: &quot;bin/codex-exec-server&quot;,
+      &quot;resourcesDir&quot;: &quot;codex-resources&quot;,
+      &quot;pathDir&quot;: &quot;codex-path&quot;
+    },
+    &quot;historical_profile&quot;: {
+      &quot;codex_version&quot;: &quot;0.155.1&quot;,
+      &quot;model&quot;: &quot;gpt-5.6-sol&quot;,
+      &quot;reasoning_effort&quot;: &quot;medium&quot;,
+      &quot;executed_commit&quot;: &quot;c5a430ac15b4fac0eb6a29b1ac46ad4e7e06ca3e&quot;
+    },
+    &quot;paid_execution_enabled&quot;: false,
+    &quot;pricing&quot;: {
+      &quot;source&quot;: &quot;https://developers.openai.com/api/docs/models/gpt-6.1-sol&quot;,
+      &quot;pricing_source&quot;: &quot;https://developers.openai.com/api/docs/pricing&quot;,
+      &quot;per_million_standard_usd&quot;: {
+        &quot;uncached_input&quot;: 2,
+        &quot;cached_input&quot;: 0.1,
+        &quot;cache_write_30m&quot;: 2.5,
+        &quot;cache_write_12h&quot;: 5,
+        &quot;output&quot;: 10
+      },
+      &quot;long_context_threshold&quot;: 272000,
+      &quot;long_context_input_multiplier&quot;: 2,
+      &quot;long_context_output_multiplier&quot;: 1.5,
+      &quot;conservative_all_input_per_million&quot;: 10,
+      &quot;conservative_output_per_million&quot;: 15,
+      &quot;note&quot;: &quot;No charge observed. Conservative future estimate applies long-context 12h cache-write rate to all input. Per-call categories/context needed for standard estimates; missing categories stay unknown.&quot;,
+      &quot;harbor_native_pricing_entry_available&quot;: false
+    },
+    &quot;reviewed_source_sha256&quot;: {
+      &quot;codex-rs__protocol__src__models.rs&quot;: &quot;753498bc730ba21ded710d9aa2b2f9163e6bbe4eaa18f1c25d998c36138a54f7&quot;,
+      &quot;codex-rs__protocol__src__protocol.rs&quot;: &quot;35d4a01a35c1771e7ae24d3c55964c2d6ecfe880a91539c1045f75cac0c8e356&quot;,
+      &quot;codex-rs__core__config.schema.json&quot;: &quot;211bec2282459fcd70e4905af948721177b6ec7a03e0df84cd8b7c131006a6ca&quot;,
+      &quot;scripts__install__install.sh&quot;: &quot;44ac252c1b9a68c02bdf0de8e1c6cbfde36fc1afa8684624962eae7d4c461e70&quot;,
+      &quot;scripts__build_codex_package.py&quot;: &quot;7a5b7ba90604944831dd25ad89ccba46b4c40f44ec6aeec67a6d058a0c837ad2&quot;,
+      &quot;codex-rs__core__src__rollout_budget.rs&quot;: &quot;223a573c35088799879688d0aea54f86bdd4420017b95861596a073ac3678380&quot;,
+      &quot;codex-rs__config__src__config_toml.rs&quot;: &quot;e8f6b45b73eaca1a89be9524bb02bf069e9715e3aeba270e87285d941405c877&quot;,
+      &quot;codex-rs__model-provider-info__src__lib.rs&quot;: &quot;ea822c232e47fc88251cf20060da91ca0c1195b2d2853c5b3fa4bfcdd4cc0184&quot;
+    },
+    &quot;budget_semantics&quot;: &quot;0.166.0 accepts enforce_limit=true. Source charges provider budget units when available, otherwise weighted non-cached input plus output. Token budget is not a dollar meter; enforcement under inference remains untested.&quot;
   }
 }</pre></details></html>
