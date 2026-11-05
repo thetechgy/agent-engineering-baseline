@@ -266,10 +266,10 @@ def live_attempt(root,variant):
         row['exceptions']=[sanitized_exception(e) for e in row['exceptions']]
         row.pop('expected',None);row.pop('matches',None);record['projection']=[row]
         from handoff import collect
-        record['handoff']=collect(native,row)
         details=usage_and_activation(native);record['usage_and_activation']=details
         record['rollout_present']=bool(list((native/'agent').glob('**/rollout-*.jsonl')))
         record['execution_completed']=details['completion_event'] and row['failure_cause'] is None
+        record['handoff']=collect(native,row,completed=record['execution_completed'])
         record['usage_complete']=record['execution_completed'] and details['total_usage'] is not None
         if details['total_usage']:
             usage=details['total_usage'];record['usage_estimate_usd']=trial.conservative_usage_cost({'input_including_cache':usage.get('input_tokens'),'cached_input':usage.get('cached_input_tokens'),'output':usage.get('output_tokens')},input_rate=PROFILE['pricing']['conservative_all_input_per_million'],output_rate=PROFILE['pricing']['conservative_output_per_million'])

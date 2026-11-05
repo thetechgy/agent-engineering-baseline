@@ -47,7 +47,7 @@ def prepare(root):
         runtime_profile='historical 0.155.1 installed, never invoked by these producers')
     trial.write(root/'public/manifest.json',manifest);trial.write(root/'task.json',{'path':str(task)})
 
-def collect(native, row):
+def collect(native, row, *, completed=True):
     entries=json.loads((native/'artifacts/manifest.json').read_text())
     entry=next((x for x in entries if x['source']==OUTPUT),{})
     producer_path=native/'artifacts/logs/artifacts/agent-artifact.json'
@@ -56,7 +56,7 @@ def collect(native, row):
     verifier=json.loads(transfer_path.read_text()) if transfer_path.is_file() else {}
     host=observe(native/'artifacts'/OUTPUT.lstrip('/'))
     result={'native_collection_manifest':entries,'agent_observation':producer,'host_artifact':host,'verifier_observation':verifier,
-        'classification':classify(producer.get('artifact',{}),entry,host,verifier.get('artifact',{}),row['outcome'],environment_ok=row['failure_cause'] is None,completed=row['failure_cause'] is None),
+        'classification':classify(producer.get('artifact',{}),entry,host,verifier.get('artifact',{}),row['outcome'] if row['measured'] or row['outcome'].get('classification') not in ('passed','failed') else {},environment_ok=row['failure_cause'] is None,completed=completed),
         'upload_status':'hash_matched' if host.get('sha256') and host['sha256']==verifier.get('artifact',{}).get('sha256') else 'no_source' if host.get('exists') is False and verifier.get('artifact',{}).get('exists') is False else 'unconfirmed'}
     return result
 

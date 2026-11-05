@@ -26,18 +26,22 @@ def observe(path):
 def classify(agent,collection,host,verifier,outcome,*,environment_ok,completed):
     """Keep task completion, transport, admission and mutation denominators distinct."""
     result={'classification':'missing_evidence','task_completion_measured':False,'task_completed':None,'correctness_measured':False}
+    transferred=(collection.get('status')=='ok' and host.get('sha256') is not None and host.get('sha256')==verifier.get('sha256'))
+    # The caller supplies completed, Harbor-valid grades independently of agent status.
+    if transferred and outcome.get('classification') in ('passed','failed'):
+        return dict(result,classification='graded_'+outcome['classification'],task_completion_measured=True,task_completed=True,correctness_measured=True)
+    if outcome.get('classification')=='unsupported':
+        return dict(result,classification='unsupported_submission')
     if not environment_ok or not completed:return result
     if agent.get('exists') is False and host.get('exists') is False and verifier.get('exists') is False and outcome.get('admission_reason')=='missing':
         return dict(result,classification='missing_deliverable',task_completion_measured=True,task_completed=False)
-    if agent.get('exists') is True and (collection.get('status')!='ok' or host.get('exists') is not True):
+    if agent.get('exists') is True and (collection.get('status') in ('failed','skipped') or (collection.get('status')=='ok' and host.get('exists') is False)):
         return dict(result,classification='collection_failure')
     if collection.get('status')=='ok' and host.get('exists') is True:
         if verifier.get('exists') is not True or (host.get('sha256') and host['sha256']!=verifier.get('sha256')):
             return dict(result,classification='transfer_failure')
         if outcome.get('classification')=='invalid' and outcome.get('admission_reason') not in (None,'missing'):
             return dict(result,classification='rejected_output',task_completion_measured=True,task_completed=False)
-        if outcome.get('classification') in ('passed','failed'):
-            return dict(result,classification='graded_'+outcome['classification'],task_completion_measured=True,task_completed=True,correctness_measured=True)
     return result
 
 if __name__=='__main__':

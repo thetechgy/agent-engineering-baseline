@@ -52,7 +52,7 @@ def stage(root, variant="current", *, historical_runtime=False):
                 text = text.replace('ripgrep=14.1.1-1+b4', 'ripgrep=14.1.1-1+b4 bubblewrap=0.12.0-1~deb13u1')
             # The immutable signed snapshot's compressed index is available even
             # when the by-hash/plain route returns 503. Apt still verifies hashes.
-            text = text.replace('apt-get update --error-on=any', 'apt-get update --error-on=any -o Acquire::By-Hash=false -o Acquire::CompressionTypes::Order::=xz')
+            text = text.replace('apt-get update --error-on=any', 'apt-get update --error-on=any -o Acquire::By-Hash=false -o Acquire::CompressionTypes::Order::=xz -o Acquire::https::No-Cache=true')
             install = re.search(r'apt-get install -y --no-install-recommends [^&]+', text).group().strip()
             plan = install.replace('apt-get install', 'apt-get --print-uris -o Acquire::ForceHash=sha256 install')
             text = text.replace(install, plan + ' > /tmp/apt-uris && python3 /tmp/prefetch-apt.py && '

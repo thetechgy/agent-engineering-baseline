@@ -26,6 +26,7 @@ class HandoffTests(unittest.TestCase):
         self.assertEqual(classify(present,{'status':'failed'},missing,missing,outcome,environment_ok=True,completed=True)['classification'],'collection_failure')
         self.assertEqual(classify(present,{'status':'ok'},present,missing,outcome,environment_ok=True,completed=True)['classification'],'transfer_failure')
         self.assertEqual(classify({}, {}, missing, missing,outcome,environment_ok=True,completed=True)['classification'],'missing_evidence')
+        self.assertEqual(classify(present,{},missing,missing,outcome,environment_ok=True,completed=True)['classification'],'missing_evidence')
         self.assertEqual(classify(missing,{},missing,missing,outcome,environment_ok=False,completed=True)['classification'],'missing_evidence')
     def test_rejected_vs_graded_and_unknown_hash(self):
         p={'exists':True,'sha256':'same'}
@@ -34,6 +35,8 @@ class HandoffTests(unittest.TestCase):
         for status in ('passed','failed'):
             r=classify(p,{'status':'ok'},p,p,{'classification':status},environment_ok=True,completed=True)
             self.assertEqual(r['classification'],'graded_'+status);self.assertTrue(r['correctness_measured'])
+            self.assertTrue(classify(p,{'status':'ok'},p,p,{'classification':status},environment_ok=False,completed=False)['correctness_measured'])
+        self.assertEqual(classify(p,{'status':'ok'},p,p,{'classification':'unsupported'},environment_ok=True,completed=True)['classification'],'unsupported_submission')
     def test_custom_events_are_bounded_and_never_retain_contents(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);(root/'agent').mkdir()

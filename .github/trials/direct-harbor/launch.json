@@ -81,5 +81,7 @@
   "diagnostic_actions_runs_used": 2,
   "live_pair_operationally_valid": false,
   "handoff_diagnostic_run_limit": 2,
-  "handoff_diagnostic_runs_reserved": 1
+  "handoff_diagnostic_runs_reserved": 2,
+  "handoff_first_run": 42115972887,
+  "handoff_first_run_outcome": "image_build_failed_before_controls_snapshot_index_http_503"
 }

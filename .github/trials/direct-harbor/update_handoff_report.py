@@ -14,6 +14,7 @@ def main(handoff,runtime,out):
     handoff_ok=all(r and r.get('passed') for r in controls.values())
     runtime_ok=bool(verification and verification.get('passed'))
     evidence={'kind':'credential_free_handoff_and_runtime_qualification','commit':os.environ.get('GITHUB_SHA'),'run_id':os.environ.get('GITHUB_RUN_ID'),
+        'prior_diagnostic_run':{'run_id':42115972887,'commit':'ac5739807a54674365ae559954a78efa850ab5a7','classification':'environment_build_failure','cause':'Pinned Debian security snapshot index returned HTTP 503. Both builds stopped before controls or CLI probes; partial report and runtime metadata were retained.','correction':'APT supported Acquire::https::No-Cache=true; signed snapshot and package hashes remain unchanged.'},
         'controls':controls,'handoff_qualified':handoff_ok,'runtime_qualified':runtime_ok,'runtime_profile':profile,
         'native_preflight_manifest':read(handoff/'public/manifest.json'),'runtime_verification':verification,'runtime_results':runtime_results,
         'paid_attempts_added':0,'model_inference_occurred':False,'historical_cause_resolved':False,
@@ -25,7 +26,8 @@ def main(handoff,runtime,out):
             'unchanged admission criteria reject missing/nonregular/linked/oversized/non-UTF-8 candidates; new fixed admission_reason differentiates those failures',
             'only admitted candidates reach protected Pester reference/mutant checks; execution status, task-completion failures and grading denominators remain separate',
             'native process cleanup and container disposal follow collection/verification; post-agent metadata is checkpointed before job cleanup'],
-        'changes':['Trial-only supported collection hook and pre-grader metadata probe; no transport replacement or new private Harbor override',
+        'changes':['APT cache bypass addresses an observed HTTP 503 build failure without changing signed snapshot/package pins',
+            'Trial-only supported collection hook and pre-grader metadata probe; no transport replacement or new private Harbor override',
             'Shared grader adds ArtifactError/read_candidate admission reasons; acceptance rules, classification invalid/artifact, numeric rewards and mutation criteria unchanged',
             'Canonical Codex package installed intact, including exec server, code-mode host, ripgrep and resources; external isolation unchanged',
             'One shared future model/effort profile; original live evidence remains attached to Codex 0.155.1/gpt-5.6-sol/medium',
