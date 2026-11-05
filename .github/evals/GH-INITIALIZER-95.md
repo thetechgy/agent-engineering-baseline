@@ -281,3 +281,7 @@ flakiness without making failed or missing native trials successful.
 Preparation checkpoints and native diagnostic artifacts include the workflow run
 attempt in their names, preserving failed infrastructure evidence across explicit
 reruns without overwriting prior artifacts.
+
+The preparation launcher forwards the identical admitted Compose path in both
+`DOCKER_CONFIG` and `COMPOSE_PLUGIN_ROOT`. An owning-runtime test exercises this
+forwarding through the entry point's strict plugin admission and isolated home.

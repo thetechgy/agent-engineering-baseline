@@ -71,6 +71,12 @@ def native_compose_config(project):
     return str(root)
 
 
+def preparation_environment(env, compose_config, output):
+    """Forward the same verified operator Compose identity to both admission paths."""
+    return {**env, 'DOCKER_CONFIG': compose_config, 'COMPOSE_PLUGIN_ROOT': compose_config,
+            'RUNNER_TEMP': str(output), 'PATH': str(Path(sys.executable).parent) + os.pathsep + env['PATH']}
+
+
 def run_native(command, *, env, log, timeout=2400):
     """Allow bounded teardown before forcibly ending a hung no-inference child."""
     with subprocess.Popen(command, env=env, stdout=log, stderr=subprocess.STDOUT) as process:
@@ -231,8 +237,7 @@ def main():
     preparations = (["gh", "pester"] if args.adoption else
                     [suite for suite, selected in (("gh", args.prepare_gh), ("pester", args.prepare_pester)) if selected])
     for suite in preparations if controls_ready else []:
-        preparation_env = {**env, 'DOCKER_CONFIG': compose_config, 'RUNNER_TEMP': str(output),
-                           'PATH': str(Path(sys.executable).parent) + os.pathsep + env['PATH']}
+        preparation_env = preparation_environment(env, compose_config, output)
         launcher = ('import sys; sys.path[:0] = sys.argv[1:3]; '
                     'from prepare_candidate_images import main; main(sys.argv[3], sys.argv[4], sys.argv[5] or None, int(sys.argv[6]) or None)')
         with (output / (suite + '-preparation.log')).open('w') as log:

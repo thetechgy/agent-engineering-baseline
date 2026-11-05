@@ -1,6 +1,7 @@
 """Pinned owning-runtime package preparation; mocked lifecycle, real staging."""
 
 import asyncio
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -81,3 +82,30 @@ class ImagePreparationTests(unittest.TestCase):
             env.stop.assert_awaited_once_with(delete=True)
             env.setup.assert_not_awaited()
         self.assertTrue(all(a['teardown'] == 'complete' for a in result['attempts']))
+
+    def test_launcher_forwards_verified_compose_identity_into_isolated_preparation(self):
+        import qualify_evaluator_candidate as harness
+        p = self.preparation
+        plugin = self.output / 'compose'
+        directory = plugin / 'cli-plugins'; directory.mkdir(parents=True)
+        binary = directory / 'docker-compose'; binary.write_bytes(b'reviewed-fixture')
+        project = self.output / 'project'
+        scripts = project / '.github/scripts'; scripts.mkdir(parents=True)
+        (scripts / 'setup-compose.sh').write_text('compose_sha256=' + hashlib.sha256(binary.read_bytes()).hexdigest() + '\n')
+        verified = []
+        validate = harness.native_compose_config
+        def admit(_project):
+            verified.append(validate(project))
+        async def inspect(root, artifact, suite, arm, shard, runtime):
+            self.assertEqual(runtime, RUNTIME)
+            self.assertEqual(os.environ['DOCKER_CONFIG'], str(plugin))
+            self.assertEqual(os.environ['COMPOSE_PLUGIN_ROOT'], str(plugin))
+            self.assertEqual(Path(os.environ['HOME']).parent, root)
+            self.assertNotIn('AGENT_REPLACEMENT_COMMAND', os.environ)
+            return {'status': 'prepared', 'teardown': 'complete'}
+        env = harness.preparation_environment({'PATH': os.environ['PATH'], 'AGENT_REPLACEMENT_COMMAND': 'untrusted'},
+                                               str(plugin), self.output)
+        with patch.dict(os.environ, env, clear=True), patch.object(harness, 'native_compose_config', side_effect=admit), \
+                patch.object(p, 'prepare', side_effect=inspect):
+            p.main(self.output / 'admission.json', runtime=RUNTIME)
+        self.assertEqual(verified, [str(plugin)])
