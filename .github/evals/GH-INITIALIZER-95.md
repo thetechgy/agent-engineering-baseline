@@ -147,7 +147,7 @@ Real-provider readiness and model effectiveness remain unverified in either case
 
 ## Current delivery evidence
 
-All 37 local candidate controls pass with no network attempts. They stage all 48
+All 40 local candidate controls pass with no network attempts. They stage all 48
 gh tasks and exercise native CLI restaging with unchanged checksums in a new
 private directory. Initial hosted controls pass,
 but native run `41902822407` fails its first with-skill task build with fixed
@@ -263,3 +263,21 @@ pass the native phase's unchanged plugin-only admission check. The preparation
 directory remains available until final task-owned cleanup. This refresh changes
 no container state, broker audit or native trial. See the [Buildx configuration
 lookup order](https://docs.docker.com/build/building/variables/#buildx_config).
+
+Retained-runtime Pester qualification uses the same explicit package-preparation
+entry point with `--runtime retained`. This selects only SkillEvaluator 0.3.0 /
+Harbor 0.13.2, under its existing SDK 2.44.0 and Pydantic 2.13.4 owning lock.
+Candidate preparation selects only 0.7.2 / 0.24.0. The current review SDK overlay
+is rejected. The retained path stages its original recipe without the candidate
+verifier override; native collection and shared/public reporting remain unchanged.
+
+Transient package retries wait 30 and then 60 seconds, record those delays, use
+fresh fully torn-down environments, and remain within the shared 1,100-second
+preparation budget. The package, task-image and native execution limits remain
+unchanged. Both preparation paths use a fresh credential-free operator home and
+retain their checkpoint before native qualification. This addresses acquisition
+flakiness without making failed or missing native trials successful.
+
+Preparation checkpoints and native diagnostic artifacts include the workflow run
+attempt in their names, preserving failed infrastructure evidence across explicit
+reruns without overwriting prior artifacts.

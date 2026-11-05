@@ -64,7 +64,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: pester-candidate-preparation
+          name: pester-candidate-preparation-${{ github.run_attempt }}
           path: |
             ${{ runner.temp }}/pester-candidate-preparation/metadata.json
             ${{ runner.temp }}/pester-candidate-preparation/result.json
@@ -91,7 +91,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: pester-candidate-diagnostics
+          name: pester-candidate-diagnostics-${{ github.run_attempt }}
           path: |
             ${{ runner.temp }}/pester-candidate-evidence/metadata.json
             ${{ runner.temp }}/pester-candidate-evidence/result.json
@@ -146,7 +146,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: gh-candidate-${{ matrix.arm }}-${{ matrix.shard }}-preparation
+          name: gh-candidate-${{ matrix.arm }}-${{ matrix.shard }}-preparation-${{ github.run_attempt }}
           path: |
             ${{ runner.temp }}/gh-candidate-preparation/metadata.json
             ${{ runner.temp }}/gh-candidate-preparation/result.json
@@ -173,7 +173,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: gh-candidate-${{ matrix.arm }}-${{ matrix.shard }}-diagnostics
+          name: gh-candidate-${{ matrix.arm }}-${{ matrix.shard }}-diagnostics-${{ github.run_attempt }}
           path: |
             ${{ runner.temp }}/gh-candidate-evidence/metadata.json
             ${{ runner.temp }}/gh-candidate-evidence/result.json

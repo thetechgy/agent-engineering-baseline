@@ -39,6 +39,7 @@ suite = unittest.defaultTestLoader.loadTestsFromNames([
     'test_evaluator_candidate.CandidateEvidenceTests',
     'test_gh_initializer.InitializerTests',
     'test_candidate_standard_grading.CandidateStandardTests',
+    'test_image_preparation.ImagePreparationTests',
 ])
 result = unittest.TextTestRunner(verbosity=2).run(suite)
 payload = dict(tests=result.testsRun, failures=len(result.failures), errors=len(result.errors),
@@ -188,7 +189,7 @@ def main():
                 'lock_sha256': hashlib.sha256(git('show', 'HEAD:uv.lock')).hexdigest(),
                 'control_sha256': {name: hashlib.sha256((project / '.github/tests' / name).read_bytes()).hexdigest()
                                    for name in ('test_grading_evidence.py', 'test_pester_evaluations.py',
-                                                'test_evaluator_candidate.py', 'test_gh_initializer.py', 'test_candidate_standard_grading.py')},
+                                                'test_evaluator_candidate.py', 'test_gh_initializer.py', 'test_candidate_standard_grading.py', 'test_image_preparation.py')},
                 'harness_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
                 'production_pins_changed': False, 'inference': False, 'diagnostic_only': True,
                 'backend_sources': {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted((project / '.github/evaluator-backends/aeb_gh_fixture').glob('*.py'))},

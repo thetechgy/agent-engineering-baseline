@@ -1,5 +1,6 @@
 """Operator package preparation; no agent setup, grading or model execution."""
 
+import argparse
 import asyncio
 import hashlib
 import importlib.metadata
@@ -9,6 +10,7 @@ import re
 from pathlib import Path
 import signal
 import subprocess
+import sys
 import tempfile
 import time
 import uuid
@@ -27,11 +29,16 @@ RUNTIME_COMMAND = (
 )
 
 
+RUNTIMES = {"candidate": {"skillevaluator": "0.7.2", "harbor": "0.24.0"},
+            "retained": {"skillevaluator": "0.3.0", "harbor": "0.13.2"}}
+
 GH_RUNTIME_COMMAND = "/usr/bin/node --version"
 
 
-def staged_task(root, suite="pester", arm=None, shard=None):
+def staged_task(root, suite="pester", arm=None, shard=None, runtime="candidate"):
     if suite == "gh":
+        if runtime != "candidate":
+            raise ValueError("Trusted gh preparation requires the candidate runtime")
         import gh_candidate
         import gh_initializer_validation as native
         import gh_evaluations as gh
@@ -46,7 +53,7 @@ def staged_task(root, suite="pester", arm=None, shard=None):
         return selected[0]
     if suite != "pester":
         raise ValueError("Unsupported preparation suite")
-    bundle, fixtures = pilot.qualification_bundle(root, candidate=True)
+    bundle, fixtures = pilot.qualification_bundle(root, candidate=runtime == "candidate")
     tasks = stage_native_harbor_tasks(bundle, root / "tasks", with_skill=True, grading_mode="custom_only")
     if len(tasks) != 26 or len(fixtures) != 26:
         raise RuntimeError("Incomplete package preparation source cohort")
@@ -64,9 +71,9 @@ def transient_snapshot_failure(message):
                     and re.search(r"\b(?:503|504)\b", line) for line in message.splitlines()))
 
 
-async def prepare(root, artifact, suite="pester", arm=None, shard=None):
+async def prepare(root, artifact, suite="pester", arm=None, shard=None, runtime="candidate"):
     status = {"schema": 1, "status": "preparing", "diagnostic_only": True, "inference": False,
-              "phase": "stage", "suite": suite, "arm": arm, "shard": shard,
+              "phase": "stage", "suite": suite, "arm": arm, "shard": shard, "runtime_name": runtime,
               "qualification_context": "cache_prepared", "attempts": [],
               "harness_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
     old_manifest = os.environ.get("AEB_GH_MANIFEST")
@@ -75,9 +82,12 @@ async def prepare(root, artifact, suite="pester", arm=None, shard=None):
     try:
         versions = {key: importlib.metadata.version(key) for key in ("skillevaluator", "harbor")}
         status["runtime"] = versions
-        if versions != {"skillevaluator": "0.7.2", "harbor": "0.24.0"}:
+        dependencies = {key: importlib.metadata.version(key) for key in ("openai", "pydantic")}
+        status["dependencies"] = dependencies
+        if (runtime not in RUNTIMES or versions != RUNTIMES[runtime] or sys.version_info[:2] != (3, 13)
+                or dependencies != {"openai": "2.44.0", "pydantic": "2.13.4"}):
             raise RuntimeError("Unqualified package preparation runtime")
-        task = staged_task(root, suite, arm, shard)
+        task = staged_task(root, suite, arm, shard, runtime)
         native = Task(task)
         status.update(task_checksum=native.checksum, environment_context=_task_environment_context_hash(task / "environment"))
         environment_type = SkillEvaluatorSecureDockerEnvironment
@@ -124,8 +134,9 @@ async def prepare(root, artifact, suite="pester", arm=None, shard=None):
                 transient = (entry["phase"] == "secure_start" and isinstance(error, RuntimeError)
                              and transient_snapshot_failure(message))
                 entry["code"] = "debian_snapshot_unavailable" if transient else "preparation_failed"
-                if transient and number < 3 and deadline - time.monotonic() > 95:
-                    entry["retry"] = True
+                delay = 30 * 2 ** (number - 1)
+                if transient and number < 3 and deadline - time.monotonic() > 90 + delay:
+                    entry.update(retry=True, retry_delay_sec=delay)
                 else:
                     status.update(status=entry["status"], error=entry["error"])
                     raise
@@ -159,7 +170,7 @@ async def prepare(root, artifact, suite="pester", arm=None, shard=None):
                             entry["initialization"] = [json.loads(line) for line in evidence.read_text().splitlines()]
                         retain()
             if entry["retry"]:
-                await asyncio.sleep(5)
+                await asyncio.sleep(entry["retry_delay_sec"])
                 continue
             status.update(status="prepared", phase="complete")
             if suite == "pester":
@@ -183,14 +194,34 @@ async def prepare(root, artifact, suite="pester", arm=None, shard=None):
     return status
 
 
-def main(artifact, suite="pester", arm=None, shard=None):
+def main(artifact, suite="pester", arm=None, shard=None, runtime="candidate"):
     artifact = Path(artifact); artifact.parent.mkdir(parents=True, exist_ok=True)
     if any(os.environ.get(key) for key in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "NVIDIA_API_KEY")):
         raise RuntimeError("Package preparation forbids provider credentials")
     def interrupted(_signum, _frame):
         raise KeyboardInterrupt
     signal.signal(signal.SIGTERM, interrupted)
-    with tempfile.TemporaryDirectory(prefix="pester-packages-", dir=os.environ.get("RUNNER_TEMP")) as temporary:
-        prepare_result = asyncio.run(prepare(Path(temporary), artifact, suite, arm, shard))
+    from qualify_evaluator_candidate import native_compose_config
+    native_compose_config(Path(__file__).resolve().parents[2])
+    with tempfile.TemporaryDirectory(prefix="evaluator-packages-", dir=os.environ.get("RUNNER_TEMP")) as temporary:
+        root = Path(temporary)
+        home = root / "empty-home"; home.mkdir(mode=0o700)
+        original = dict(os.environ)
+        clean = {key: original[key] for key in ("PATH", "TMPDIR", "RUNNER_TEMP", "DOCKER_CONFIG", "COMPOSE_PLUGIN_ROOT") if key in original}
+        clean.update(HOME=str(home), PYTHONDONTWRITEBYTECODE="1", PYTHON_DOTENV_DISABLED="1",
+                     SKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE=str(root / "private/key"))
+        try:
+            os.environ.clear(); os.environ.update(clean)
+            prepare_result = asyncio.run(prepare(root, artifact, suite, arm, shard, runtime))
+        finally:
+            os.environ.clear(); os.environ.update(original)
     if prepare_result["status"] != "prepared" or prepare_result["teardown"] != "complete":
         raise RuntimeError("Package preparation incomplete")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--runtime", choices=tuple(RUNTIMES), required=True)
+    arguments = parser.parse_args()
+    main(arguments.output, runtime=arguments.runtime)
