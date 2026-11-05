@@ -193,17 +193,29 @@ def report(output, data):
     if data.get('live_allocation'):
         allocation=data['live_allocation'];rows=allocation['rows']
         text += '<h2>New live allocation: '+esc(allocation['profile'])+'</h2><p><a href="allocation-evidence.json">Sanitized launch, deployment, handoff and usage evidence</a></p>'
-        text += table(('Arm / attempt','Session completed','Task outcome','Artifact transfer / admission','Reference / defects','Skill-file access attempts','Duration seconds'),
-            [(r['variant']+' / '+str(r['attempt']),r['session_completed'],r['outcome'],str(r['handoff'])+' / '+str(r['admission']),
-              str(r['reference_pass'])+' / '+str(r['mutants_detected'])+'/'+str(r['mutants_executed']),r['skill_file_access_attempts'],r['duration_seconds']) for r in rows])
+        labels={'graded_passed':'Graded success','graded_failed':'Graded failure','missing_deliverable':'Deliverable missing (task failure)',
+                'missing_after_budget_exhaustion':'No deliverable before token-budget exhaustion','rejected_output':'Deliverable rejected','missing_evidence':'Evidence incomplete','not_scheduled':'Not scheduled',
+                'collection_failure':'Collection failure','transfer_failure':'Transfer failure','unsupported_submission':'Unsupported submission'}
+        def agent_seconds(row):
+            from datetime import datetime
+            timing=(row.get('timing') or {}).get('agent_execution') or {}
+            if timing.get('started_at') and timing.get('finished_at'):
+                return round((datetime.fromisoformat(timing['finished_at'])-datetime.fromisoformat(timing['started_at'])).total_seconds(),3)
+            return None
+        text += table(('Arm / attempt','Session completed','Task outcome','Artifact transfer / admission','Reference / defects','Skill-file access attempts','Agent / total seconds'),
+            [(r['variant']+' / '+str(r['attempt']),r['session_completed'] if r['scheduled'] else 'Not run',labels.get(r['outcome'],r['outcome']),
+              ('Hashes matched' if r['handoff']=='hash_matched' else 'No source file' if r['handoff']=='no_source' else 'Unconfirmed')+' / '+str(r['admission'] or 'Unknown'),
+              (('Pass' if r['reference_pass']==1 else 'Fail')+' / '+str(r['mutants_detected'])+'/'+str(r['mutants_executed'])) if r['valid_grade'] else 'Not measured',
+              ', '.join(r['skill_file_access_attempts']) if r['skill_file_access_attempts'] else ('None observed' if r['skill_file_access_attempts']==[] else 'Unknown'),
+              (str(agent_seconds(r))+' / '+str(r['duration_seconds'])) if r['scheduled'] else 'Not run') for r in rows])
         text += table(('Arm','Total input','Cached input','Cache-write input','Total output','Reasoning output','Conservative USD estimate','Native pricing estimate'),
             [(r['variant'],*( (r['usage'] or {}).get(k) for k in ('input_tokens','cached_input_tokens','cache_write_input_tokens','output_tokens','reasoning_output_tokens')),r['conservative_estimate_usd'],r['native_pricing_estimate_usd']) for r in rows])
         text += '<p>'+esc(allocation['usage_note'])+'</p>'
-        for note in allocation['limits']:text += '<p>'+esc(note)+'</p>'
+        for note in allocation.get('reviewed_notes',[])+allocation['limits']:text += '<p>'+esc(note)+'</p>'
         text += '<p>Allocation closed; paid scheduling disabled. Consumed campaign slots: '+esc(allocation['closure']['reserved_slots_consumed'])+'.</p>'
     if data.get('handoff_pass'):
         handoff=data['handoff_pass']
-        text += '<h2>Credential-free artifact handoff and new runtime</h2><p>'+esc(handoff['summary'])+'</p>'
+        text += '<h2>Prior credential-free artifact handoff and runtime checks</h2><p>'+esc(handoff['summary'])+'</p>'
         text += '<p><a href="handoff-evidence.json">Native handoff metadata and runtime compatibility evidence</a></p>'
         text += table(('Deterministic control','Expected','Observed handoff','Verifier','Control matched'),
             [(kind,{'good':'Reference pass and 2/2 defects','missing':'Missing submission','rejected':'Transferred then invalid UTF-8'}[kind],

@@ -1,7 +1,7 @@
 {
-  "phase": "live-pair",
+  "phase": "report",
   "campaign": "direct-harbor-20261104",
-  "paid_attempts_used": 4,
+  "paid_attempts_used": 5,
   "paid_attempt_limit": 36,
   "recovery_live_attempt_limit": 4,
   "budget_usd": 20,
@@ -11,15 +11,12 @@
   "recovery_control_attempt": 3,
   "native_fixture_retry": 1,
   "transport_preflight_corrections": 1,
-  "state": "new_profile_two_attempt_allocation_armed",
+  "state": "sol_high_allocation_closed",
   "final_native_run": 41958553130,
   "native_grading_smoke_qualified": true,
   "native_sandbox_qualified": false,
-  "paid_attempts_reserved": 2,
-  "planned_variants": [
-    "current",
-    "absent"
-  ],
+  "paid_attempts_reserved": 0,
+  "planned_variants": [],
   "preflight_estimate_usd": 2.64,
   "native_inner_sandbox_required": false,
   "external_preflight_attempt": 2,
@@ -67,15 +64,28 @@
       "conservative_usage_estimate_usd": 0.97874,
       "native_pricing_estimate_usd": 0.1165925,
       "evidence": "Rollout/completion/usage recovered; verifier invalid/artifact; measured=false; whole agent container removed."
+    },
+    {
+      "attempt": 5,
+      "run": 42122482332,
+      "commit": "368c3866f817b6b38fcc04953e15b300d81cd5f0",
+      "variant": "current",
+      "profile": "codex-0.166.0_gpt-6.1-sol_high",
+      "status": "agent_token_budget_exhausted",
+      "inference_started": true,
+      "api_spend_usd": null,
+      "conservative_observed_usage_estimate_usd": 0.641555,
+      "cost_completeness_qualified": false,
+      "evidence": "Native CLI shared rollout token budget exhausted; missing producer/host/verifier artifact; unmeasured reference/mutants; containers removed; absent not scheduled."
     }
   ],
   "final_live_run": 42110435228,
   "api_spend_usd": null,
-  "scheduling_stopped": false,
-  "stop_reason": null,
+  "scheduling_stopped": true,
+  "stop_reason": "Current arm exhausted supplemental token budget; absent arm not reserved or launched. No further paid execution authorized.",
   "diagnostic_actions_runs_reserved": 2,
   "diagnostic_actions_run_limit": 2,
-  "paid_execution_enabled": true,
+  "paid_execution_enabled": false,
   "diagnostic_reproduction_run": 42106956278,
   "accept_unknown_cost_for_testing": true,
   "credential_free_checks_passed": true,
@@ -89,7 +99,7 @@
   "handoff_first_run_outcome": "image_build_failed_before_controls_snapshot_index_http_503",
   "allocation": {
     "id": "sol-high-smoke-20261105",
-    "state": "armed",
+    "state": "closed",
     "attempts": {
       "current": 5,
       "absent": 6
@@ -108,7 +118,17 @@
     "authorization": "Explicit user authorization for two additional paid attempts, current then absent; no retries; historical unknown billing accepted. New incomplete usage blocks the second arm.",
     "estimated_attempt_reserve_usd": 2.5,
     "provider_enforced_dollar_cap": false,
-    "used": 0,
-    "api_bill_usd": null
+    "used": 1,
+    "api_bill_usd": null,
+    "consumed_attempts": [
+      5
+    ],
+    "unused_closed_attempts": [
+      6
+    ],
+    "run_id": 42122482332,
+    "executed_commit": "368c3866f817b6b38fcc04953e15b300d81cd5f0",
+    "observed_usage_conservative_estimate_usd": 0.641555,
+    "complete_incremental_cost_usd": null
   }
 }

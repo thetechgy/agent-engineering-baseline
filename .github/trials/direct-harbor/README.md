@@ -199,3 +199,21 @@ reasoning). This is not a provider-enforced cap; historical spending stays unkno
 The workflow closes its local ledger on completion/failure; branch metadata is then
 closed and returned to disabled/report-only state. No new runtime or grader qualification
 is inferred from the scheduling tests.
+
+The allocation is now closed after run
+[42122482332](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42122482332)
+at `368c3866f817b6b38fcc04953e15b300d81cd5f0`. Only campaign attempt five ran.
+Codex stopped after 10.349 seconds with `shared rollout token budget exhausted`.
+No submission existed at any observed boundary. Harbor retained its native
+`NonZeroAgentExitCodeError` / `unclassified`; the report separately identifies the
+explicit Codex budget exhaustion. Reference and mutation results are unmeasured.
+
+All six cumulative usage categories were observed, yielding a conservative estimate
+of $0.641555 for those observations. The completion-qualified usage gate stayed false
+because the session failed; it does not mean the counts are absent. Complete billing
+is unknown. The reported counters reconstruct 30,346 fallback units versus the 30,000
+limit, consistent with the terminal error. Skill-file access attempts were observed,
+but successful reads or benefit were not established. Attempt six was never reserved
+or launched. Scheduling is disabled, recovery remains 4/4, and campaign usage is 5/36.
+The specific next decision is to calibrate the supplemental token budget for this
+frozen deployment before authorizing another allocation; no such run is scheduled.

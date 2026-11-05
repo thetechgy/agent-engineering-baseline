@@ -1,9 +1,9 @@
 {
   "schema_version": 3,
   "campaign": "direct-harbor-20261104",
-  "state": "handoff_qualified_historical_cause_unresolved",
-  "decision": "The controlled handoff works, but the historical agent-output failure remains unresolved. The upgraded runtime passed credential-free startup/configuration checks. Consider a separately authorized new-profile allocation; no inference is scheduled.",
-  "summary": "Three deterministic producers exercise the original agent UID/workspace through Harbor collection and independent verification. These are not Codex task executions. GPT-6.1 Sol/High is configured for a new comparison profile and has not been evaluated. Historical paid attempts, ungradeable outcomes, controls and spending uncertainty are unchanged.",
+  "state": "live_allocation_closed",
+  "decision": "The planned live skill comparison is not yet operationally usable: the current arm exhausted its supplemental token budget before producing the deliverable. Diagnostics now establish that cause; the absent arm was not scheduled. Calibrate the execution budget before another allocation.",
+  "summary": "This separate allocation used campaign slots five and six at most. Historical recovery remains 4/4; historical live results were not rescored. No skill, task, grader acceptance criteria, dependency pin, production workflow or Pages behavior changed.",
   "source_commit": "cc0819f5dafc05610dd8c3293ce2f52744c66f1a",
   "reviewed_trial_commit": "f61201a730746921abd17d8f8366dfd1505ad6f8",
   "executed_commit": "c5a430ac15b4fac0eb6a29b1ac46ad4e7e06ca3e",
@@ -392,13 +392,13 @@
     }
   ],
   "live_note": "Attempts 1 and 2 remain historical setup/launch failures. Attempts 3 (current) and 4 (absent) completed actual Codex sessions with recovered rollouts, token usage and no native execution failure. Each offline verifier returned invalid/artifact with reward 0; Harbor reward_valid=true does not make this a measured grade. No submission hash/size was recovered at the declared canonical path. The exact missing/rejected/transfer cause is unresolved from retained metadata. Activation is unknown because the executed collector omitted custom_tool_call records; the zero function-call count is not an all-tools count. No reference or mutation checks were reached by a valid candidate. Workflow success covers completion/extraction, not correctness or a valid comparison. One attempt per arm would remain insufficient for effectiveness even with valid grades.",
-  "agent_attempts": 4,
+  "agent_attempts": 5,
   "prior_paid_attempts": 0,
   "recovery_paid_attempts": 4,
   "api_spend_usd": null,
   "estimated_cumulative_api_spend_usd": null,
   "provider_billing_observation": null,
-  "spending_note": "Four credentialed reservations consumed 4/4 recovery slots and 4/36 campaign slots: two historical failed launches plus the authorized current/absent pair. Two actual model sessions are now confirmed. Current reported 47,987 input (35,617 cached; 12,329 cache-write) and 637 output tokens; absent 47,842 input (35,525 cached; 12,276 cache-write) and 730 output. Cache counts are components, not additional input totals. Harbor native pricing estimates are $0.11417975 and $0.11659250 ($0.23077225 subtotal), not provider bills. Conservative estimates including all cached input at $20/M and output at $30/M are $0.97885 and $0.97874 ($1.95759 subtotal). Cumulative observed/estimated campaign spending remains unknown because prior usage and attributable billing are unavailable. The $2.64 pair preflight estimate was not an observed charge. User explicitly accepted unknown costs for testing. The operational $20 budget is not a guaranteed cap; a $4 scheduling threshold retained $16 nominal reserve, but unknown prior charges and in-flight usage can overshoot it. Scheduling is now disabled. Two diagnostic Actions runs added no paid attempts; no judge, inference retry or skill revision was used.",
+  "spending_note": "Historical allocation accounting (unchanged): Four credentialed reservations consumed 4/4 recovery slots and 4/36 campaign slots: two historical failed launches plus the authorized current/absent pair. Two actual model sessions are now confirmed. Current reported 47,987 input (35,617 cached; 12,329 cache-write) and 637 output tokens; absent 47,842 input (35,525 cached; 12,276 cache-write) and 730 output. Cache counts are components, not additional input totals. Harbor native pricing estimates are $0.11417975 and $0.11659250 ($0.23077225 subtotal), not provider bills. Conservative estimates including all cached input at $20/M and output at $30/M are $0.97885 and $0.97874 ($1.95759 subtotal). Cumulative observed/estimated campaign spending remains unknown because prior usage and attributable billing are unavailable. The $2.64 pair preflight estimate was not an observed charge. User explicitly accepted unknown costs for testing. The operational $20 budget is not a guaranteed cap; a $4 scheduling threshold retained $16 nominal reserve, but unknown prior charges and in-flight usage can overshoot it. Scheduling is now disabled. Two diagnostic Actions runs added no paid attempts; no judge, inference retry or skill revision was used. New allocation: 1/2 slots consumed; conservative incremental estimate USD unknown. Estimate for retained usage alone: USD 0.641555; this is not a complete or observed bill. Actual incremental bill and cumulative spending remain unknown. No new scheduling is enabled. Campaign ledger: 5/36; previous recovery remains 4/4.",
   "budget": {
     "operational_usd": 20,
     "provider_hard_cap_verified": false,
@@ -412,7 +412,7 @@
     "reserve_usd": 16,
     "pair_preflight_estimate_usd": 2.64,
     "scheduling_stopped": true,
-    "stop_reason": "This pass is credential-free; four recovery slots already consumed. A new live allocation is not authorized.",
+    "stop_reason": "New allocation closed. No additional paid execution authorized.",
     "conservative_input_usd_per_million": 20,
     "conservative_output_usd_per_million": 30,
     "unknown_cost_accepted_for_testing": true
@@ -1071,6 +1071,11 @@
       "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42117106768",
       "label": "Credential-free artifact handoff and Codex 0.166.0 qualification",
       "summary": "Three deterministic handoff controls and offline startup checks; no inference. This artifact contains the single consolidated report."
+    },
+    {
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42122482332",
+      "label": "GPT-6.1 Sol/High live allocation",
+      "summary": "One current and one absent attempt at most; checkpointed and then closed."
     }
   ],
   "local_validation": {
@@ -1622,5 +1627,131 @@
       "codex-rs__model-provider-info__src__lib.rs": "ea822c232e47fc88251cf20060da91ca0c1195b2d2853c5b3fa4bfcdd4cc0184"
     },
     "budget_semantics": "0.166.0 accepts enforce_limit=true. Source charges provider budget units when available, otherwise weighted non-cached input plus output. Token budget is not a dollar meter; enforcement under inference remains untested."
+  },
+  "live_allocation": {
+    "id": "sol-high-smoke-20261105",
+    "rows": [
+      {
+        "variant": "current",
+        "attempt": 5,
+        "scheduled": true,
+        "session_completed": false,
+        "execution_outcome": "agent_token_budget_exhausted",
+        "task_completion_measured": true,
+        "task_completed": false,
+        "outcome": "missing_after_budget_exhaustion",
+        "handoff": "no_source",
+        "admission": "missing",
+        "valid_grade": false,
+        "reference_pass": null,
+        "mutants_detected": null,
+        "mutants_executed": null,
+        "skill_file_access_attempts": [
+          "powershell-pester-6/SKILL.md",
+          "powershell-pester-6/references/compatibility-and-migration.md"
+        ],
+        "tool_calls": 3,
+        "tool_errors": {
+          "runtime_tool_error": 0,
+          "permission_denied": 0,
+          "missing_path": 0
+        },
+        "failure_cause": "unclassified",
+        "timing": {
+          "agent_execution": {
+            "started_at": "2026-11-05T22:37:25.562779Z",
+            "finished_at": "2026-11-05T22:37:35.911816Z"
+          },
+          "verifier": {
+            "started_at": "2026-11-05T22:37:46.616592Z",
+            "finished_at": "2026-11-05T22:38:00.188350Z"
+          }
+        },
+        "duration_seconds": 43.794,
+        "usage": {
+          "input_tokens": 63206,
+          "cached_input_tokens": 36025,
+          "output_tokens": 633,
+          "reasoning_output_tokens": 49,
+          "cache_write_input_tokens": 27114,
+          "total_tokens": 63839
+        },
+        "conservative_estimate_usd": 0.641555,
+        "native_pricing_estimate_usd": null,
+        "api_bill_usd": null,
+        "evidence_complete": true,
+        "containers_removed": true
+      },
+      {
+        "variant": "absent",
+        "attempt": 6,
+        "scheduled": false,
+        "session_completed": null,
+        "execution_outcome": "not_scheduled",
+        "task_completion_measured": false,
+        "task_completed": null,
+        "outcome": "not_scheduled",
+        "handoff": null,
+        "admission": null,
+        "valid_grade": false,
+        "reference_pass": null,
+        "mutants_detected": null,
+        "mutants_executed": null,
+        "skill_file_access_attempts": null,
+        "tool_calls": null,
+        "tool_errors": null,
+        "failure_cause": null,
+        "timing": null,
+        "duration_seconds": null,
+        "usage": null,
+        "conservative_estimate_usd": null,
+        "native_pricing_estimate_usd": null,
+        "api_bill_usd": null,
+        "evidence_complete": false,
+        "containers_removed": false
+      }
+    ],
+    "closure": {
+      "allocation_id": "sol-high-smoke-20261105",
+      "state": "closed",
+      "paid_execution_enabled": false,
+      "reserved_slots_consumed": [
+        5
+      ],
+      "campaign_attempts_consumed": 5,
+      "previous_recovery_consumed": 4,
+      "previous_recovery_limit": 4,
+      "incremental_api_bill_usd": null,
+      "historical_cumulative_api_bill_usd": null,
+      "note": "Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.",
+      "incremental_conservative_estimate_usd": null
+    },
+    "operationally_usable": false,
+    "profile": "codex-0.166.0_gpt-6.1-sol_high",
+    "limits": [
+      "One attempt per arm cannot establish skill effectiveness; comparisons with historical CLI/model profiles are not skill-only comparisons",
+      "File-access attempts are not successful reads, instruction following or causal skill benefit",
+      "Native cleanup permission errors are retained; whole disposable-container removal is checked independently",
+      "The API credential is available to the evaluated process. Unrelated credentials, raw transcripts, submission contents and authentication files are excluded from artifacts",
+      "Pinned native pricing may be unavailable; historical cumulative spending remains unknown; $5 is an operational budget with possible overshoot, not a provider-enforced cap"
+    ],
+    "usage_note": "CLI-reported cumulative totals are retained without summing repeated token-count events. Cached reads and writes are input subsets; reasoning is an output subset. Conservative estimate charges all input at $10/M and output at $15/M, without adding subset counts. These are estimates, not provider bills.",
+    "observed_usage_conservative_estimate_usd": 0.641555,
+    "reviewed_notes": [
+      "Codex emitted the exact terminal error shared rollout token budget exhausted. Harbor retained NonZeroAgentExitCodeError with native failure cause unclassified; this report identifies agent token-budget exhaustion without changing the native result or reward validity.",
+      "The producer, host and verifier all confirmed no submission. This is a missing deliverable at budget exhaustion, not a demonstrated collection/transfer defect. Reference correctness and mutation detection remain unmeasured.",
+      "All six cumulative CLI usage categories were retained. The conservative scheduling flag also requires normal execution completion, so it remained false; it does not mean those observations are absent or zero. Complete billing remains unverified.",
+      "Observed usage reconstructs 30346 weighted fallback units against the 30,000 limit (noncached input plus five times output), consistent with the terminal error. Provider budget units are not serialized, so the precise meter branch is unconfirmed.",
+      "The absent arm was prepared and verified but never reserved or launched. Slot six is closed unused. No retry or replacement allocation is scheduled.",
+      "No concrete skill weakness or causal skill benefit is established. The next necessary decision is to calibrate the supplemental token budget for the full frozen deployment and recognize this Codex-specific budget termination before considering another allocation."
+    ]
+  },
+  "allocation_budget": {
+    "operational_usd": 5,
+    "reserve_before_second_usd": 2.5,
+    "headroom_usd": 0.5,
+    "conservative_input_usd_per_million": 10,
+    "conservative_output_usd_per_million": 15,
+    "provider_enforced_cap": false
   }
 }
