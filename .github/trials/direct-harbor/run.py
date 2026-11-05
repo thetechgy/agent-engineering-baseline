@@ -47,6 +47,9 @@ def stage(root, variant="current"):
             shutil.copyfile(Path(__file__).with_name('prefetch-apt.py'), context / 'build/prefetch-apt.py')
             dockerfile = context / 'Dockerfile'
             text = dockerfile.read_text()
+            if context == env:
+                # The pinned standalone Codex archive has no bundled bwrap.
+                text = text.replace('ripgrep=14.1.1-1+b4', 'ripgrep=14.1.1-1+b4 bubblewrap=0.12.0-1~deb13u1')
             install = re.search(r'apt-get install -y --no-install-recommends [^&]+', text).group().strip()
             plan = install.replace('apt-get install', 'apt-get --print-uris -o Acquire::ForceHash=sha256 install')
             text = text.replace(install, plan + ' > /tmp/apt-uris && python3 /tmp/prefetch-apt.py && '
@@ -113,6 +116,8 @@ def project(jobs, expected):
             'exceptions': [e.model_dump(mode='json') for e in exceptions],
             'harbor_reward_valid': native.reward_valid, 'measured': measured,
             'matches': (outcome['classification'] == expected.get(name)) if measured else False,
+            'native_agent_exit_code': (result_path.parent / 'agent/exit-code.txt').read_text().strip()
+                if (result_path.parent / 'agent/exit-code.txt').is_file() else None,
             'native_rewards': native.verifier_result.rewards if native.verifier_result else None,
             'tokens': {'input_including_cache': n_input, 'cached_input': n_cache, 'output': n_output},
             'cost_usd': cost,
@@ -150,37 +155,44 @@ def validate_control(rows, expected, before, after, returncode):
 
 
 def report(output, data):
+    """The campaign's single report; packaging is never a qualification result."""
     write(output / 'results.json', data)
-    rows = ''.join('<tr>' + ''.join('<td>' + html.escape(str(x)) + '</td>' for x in
-                   (r['task'], r['expected'], r['outcome']['classification'], r['outcome'].get('code'), r['matches'])) + '</tr>'
-                   for r in data.get('calibration', []))
-    text = '''<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
-<title>Direct Harbor trial</title><style>body{font:16px system-ui;max-width:1100px;margin:3rem auto;padding:0 1rem;color:#172033}table{border-collapse:collapse;width:100%}th,td{border:1px solid #cbd5e1;padding:.5rem;text-align:left}pre{white-space:pre-wrap;overflow-wrap:anywhere}h1,h2{color:#174f78}</style>
-<h1>Direct Harbor trial</h1><p>Diagnostic only. Production evaluation and Pages remain unchanged.</p>
-<p><a href="results.json">Machine-readable results</a> · <a href="manifest.json">Frozen input manifests</a> · <a href="workflow-evidence.txt">Workflow evidence excerpt</a></p>'''
-    text += '<h2>Decision</h2><p>' + html.escape(data['decision']) + '</p>'
-    if data.get('live_results') is not None:
-        text += '<p><strong>0 live Codex attempts · $0 API spend · 0 native grading outcomes recovered</strong></p>'
-        text += '<p>Executed commit: <code>' + html.escape(data['executed_commit']) + '</code> · <a href="' + html.escape(data['workflow'], quote=True) + '">Failed native workflow</a></p>'
-    text += '<h2>Calibration</h2><table><tr><th>Fixture</th><th>Expected</th><th>Observed</th><th>Detail</th><th>Matches</th></tr>' + rows + '</table>'
-    text += '<h2>Live comparison</h2><p>No live inference has been launched. Skill effect, activation, revision effect, variability and comparison denominators are unavailable. No justified revision identified without discovery evidence.</p>'
-    if data.get('live_results') is not None:
-        text += '<table><tr><th>Case</th><th>Variant</th><th>Attempts</th><th>Valid denominator</th><th>Correctness / activation / improvement</th></tr>'
-        for row in data['live_results']:
-            text += '<tr><td>' + html.escape(row['case']) + '</td><td>' + html.escape(row['variant']) + '</td><td>0</td><td>0</td><td>Unmeasured</td></tr>'
-        text += '</table>'
-    if data.get('sources'):
-        text += '<h2>Primary references</h2><ul>'
-        for label, url in data['sources'].items():
-            text += '<li><a href="' + html.escape(url, quote=True) + '">' + html.escape(label.replace('_', ' ')) + '</a></li>'
-        text += '</ul>'
-    if data.get('assessment'):
-        text += '<h2>Assessment</h2>'
-        for paragraph in data['assessment']:
-            text += '<p>' + html.escape(paragraph) + '</p>'
-    if data.get('supporting_artifact'):
-        text += '<p><a href="' + html.escape(data['supporting_artifact'], quote=True) + '">Download supporting workflow artifacts</a></p>'
-    text += '<h2>Evidence and limitations</h2><pre>' + html.escape(json.dumps(data, indent=2)) + '</pre></html>'
+    def esc(value):
+        return html.escape(str(value))
+    def table(headers, rows):
+        return ('<table><thead><tr>' + ''.join('<th scope="col">'+esc(v)+'</th>' for v in headers)
+                + '</tr></thead><tbody>' + ''.join('<tr>'+''.join('<td>'+esc(v)+'</td>' for v in row)+'</tr>' for row in rows)
+                + '</tbody></table>')
+    text = '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">\n<title>Direct Harbor recovery trial</title><style>body{font:16px system-ui;max-width:1100px;margin:3rem auto;padding:0 1rem;color:#172033}table{border-collapse:collapse;width:100%;margin:1rem 0}th,td{border:1px solid #cbd5e1;padding:.5rem;text-align:left;vertical-align:top}pre{white-space:pre-wrap;overflow-wrap:anywhere}h1,h2{color:#174f78}a{color:#145f91}</style>\n<h1>Direct Harbor recovery trial</h1><p>Diagnostic only. Production evaluation and Pages remain unchanged.</p>\n<p><a href="results.json" download>Download machine-readable results</a> · <a href="manifest.json">Frozen input manifests</a> · <a href="workflow-evidence.txt">Workflow evidence excerpts</a></p>'
+    text += '<h2>Decision</h2><p>' + esc(data['decision']) + '</p>'
+    text += '<p>' + esc(data['summary']) + '</p>'
+    text += '<h2>Native credential-free controls</h2>'
+    text += table(('Case / submission', 'Expected', 'Verifier observation', 'Harbor failure cause', 'Valid measured grade'),
+                  [(r['task'], r['expected'], r['outcome']['classification'] + ': ' + str(r['outcome'].get('code', '')),
+                    r.get('failure_cause'), r.get('measured', False)) for r in data['calibration']])
+    text += '<p>' + esc(data['calibration_note']) + '</p>'
+    text += '<h2>Live Codex pair</h2>'
+    text += table(('Case', 'Variant', 'Paid attempts', 'Valid denominator', 'Correctness', 'Activation'),
+                  [(r['case'],r['variant'],r['attempts'],r['valid_denominator'],r['correctness'],r['activation']) for r in data['live_results']])
+    text += '<p>' + esc(data['live_note']) + '</p>'
+    text += '<h2>Campaign usage</h2><p>' + esc(data['spending_note']) + '</p>'
+    text += '<h2>Sandbox and deployment boundary</h2>'
+    for paragraph in data['boundary_assessment']:
+        text += '<p>' + esc(paragraph) + '</p>'
+    text += '<h2>Execution and supporting artifacts</h2><ul>'
+    for entry in data['recovery_runs']:
+        text += '<li><a href="' + html.escape(entry['url'], quote=True) + '">' + esc(entry['label']) + '</a> — ' + esc(entry['summary'])
+        for artifact in entry.get('artifacts', []):
+            text += ' · <a href="' + html.escape(artifact['url'], quote=True) + '">' + esc(artifact['name']) + '</a>'
+        text += '</li>'
+    text += '</ul><h2>History</h2><p>' + esc(data['history_note']) + '</p>'
+    text += '<h2>Maintenance and remaining evidence</h2>'
+    for paragraph in data['assessment']:
+        text += '<p>' + esc(paragraph) + '</p>'
+    text += '<h2>Primary references</h2><ul>'
+    for label, url in data['sources'].items():
+        text += '<li><a href="' + html.escape(url, quote=True) + '">' + esc(label.replace('_', ' ')) + '</a></li>'
+    text += '</ul><details><summary>Complete machine-readable evidence</summary><pre>' + esc(json.dumps(data, indent=2)) + '</pre></details></html>'
     (output / 'report.html').write_text(text)
 
 
@@ -207,6 +219,7 @@ def control(kind, root):
         style = 'classic' if kind == 'good' else 'weak'
         shutil.copyfile(ROOT / pilot.OVERLAY / 'support/qualification/pester-002' / (style + '.Tests.ps1'), solution / 'candidate')
         (solution / 'solve.sh').write_text('#!/bin/sh\nset -eu\ntest "$(id -u)" = 1000\ntest ! -e /tests\ntest ! -e /var/run/docker.sock\ncp /solution/candidate /workspace/output/Subject.Tests.ps1\n')
+        (solution / 'solve.sh').chmod(0o755)
         # Build explicitly to expose Docker progress even if the runner shuts down.
         # Both controls use the same contexts, so the second uses local layers.
         for folder, image in [('environment', 'direct-harbor-agent:recovery'), ('tests', 'direct-harbor-verifier:recovery')]:

@@ -80,6 +80,7 @@ class ProjectionTests(unittest.TestCase):
                  patch.object(trial, 'validate_control', side_effect=RuntimeError('Task input mutation')), \
                  patch.dict(trial.os.environ, {}, clear=True), patch('builtins.print'):
                 self.assertEqual(trial.control('good', output), 1)
+            self.assertEqual((output / 'tasks/pester-002-good/solution/solve.sh').stat().st_mode & 0o777, 0o755)
             saved = json.loads((output / 'control.json').read_text())
             self.assertFalse(saved['qualification_passed'])
             self.assertEqual(saved['integration_failure']['message'], 'Task input mutation')
