@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     paths:
+      - '.github/evaluator-backends/**'
       - '.github/evals/**'
       - '.github/scripts/**'
       - '.github/tests/**'
@@ -14,6 +15,7 @@ on:
       - '.agents/skills/powershell-pester-6/**'
   pull_request:
     paths:
+      - '.github/evaluator-backends/**'
       - '.github/evals/**'
       - '.github/scripts/**'
       - '.github/tests/**'
@@ -34,7 +36,7 @@ jobs:
   native-pester:
     name: Candidate Pester packaging (no inference)
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 95
     env:
       PYTHONDONTWRITEBYTECODE: '1'
     steps:
@@ -49,24 +51,37 @@ jobs:
         with:
           version: '0.13.7'
           enable-cache: false
-      - name: Acquire candidate owning lock
-        timeout-minutes: 10
+      - name: Acquire isolated candidate owning lock and backend
+        timeout-minutes: 12
+        run: bash .github/scripts/setup-skillevaluator.sh candidate
+      - name: Prepare unchanged pinned Pester image packages
+        timeout-minutes: 27
         run: |
-          set -euo pipefail
-          candidate_source="$RUNNER_TEMP/pester-candidate-source"
-          git init --quiet "$candidate_source"
-          git -C "$candidate_source" fetch --quiet --depth=1 https://github.com/NVIDIA/SkillEvaluator.git f878f99a9cd4a85dd04043feb43e5bd6a777f64b
-          git -C "$candidate_source" checkout --quiet --detach FETCH_HEAD
-          test "$(git -C "$candidate_source" rev-parse HEAD)" = f878f99a9cd4a85dd04043feb43e5bd6a777f64b
-          uv sync --project "$candidate_source" --python 3.13 --managed-python --frozen --no-dev --extra tier3
-          uv pip check --python "$candidate_source/.venv/bin/python"
-          git -C "$candidate_source" diff --exit-code
+          "$SKILL_CANDIDATE_PYTHON" .github/scripts/qualify_evaluator_candidate.py \
+            --source "$SKILL_CANDIDATE_SOURCE" \
+            --output "$RUNNER_TEMP/pester-candidate-preparation" --prepare-pester
+      - name: Retain bounded package-preparation checkpoint
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pester-candidate-preparation-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/pester-candidate-preparation/metadata.json
+            ${{ runner.temp }}/pester-candidate-preparation/result.json
+            ${{ runner.temp }}/pester-candidate-preparation/podman-fixtures.json
+            ${{ runner.temp }}/pester-candidate-preparation/pester-preparation.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Install fresh verified Compose configuration for native phase
+        run: |
+          printf 'PREPARATION_COMPOSE_PLUGIN_ROOT=%s\n' "$COMPOSE_PLUGIN_ROOT" >> "$GITHUB_ENV"
+          bash .github/scripts/setup-compose.sh
       - name: Qualify evidence controls then native Pester lifecycle
         timeout-minutes: 46
         run: |
-          "$RUNNER_TEMP/pester-candidate-source/.venv/bin/python" .github/scripts/qualify_evaluator_candidate.py \
-            --source "$RUNNER_TEMP/pester-candidate-source" \
-            --output "$RUNNER_TEMP/pester-candidate-evidence" --native-pester
+          "$SKILL_CANDIDATE_PYTHON" .github/scripts/qualify_evaluator_candidate.py \
+            --source "$SKILL_CANDIDATE_SOURCE" \
+            --output "$RUNNER_TEMP/pester-candidate-evidence" --native-pester --cache-prepared
       - name: Verify checkout integrity
         if: always()
         run: |
@@ -76,13 +91,100 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: pester-candidate-diagnostics
+          name: pester-candidate-diagnostics-${{ github.run_attempt }}
           path: |
             ${{ runner.temp }}/pester-candidate-evidence/metadata.json
             ${{ runner.temp }}/pester-candidate-evidence/result.json
+            ${{ runner.temp }}/pester-candidate-evidence/podman-fixtures.json
             ${{ runner.temp }}/pester-candidate-evidence/native-pester/
           if-no-files-found: warn
           retention-days: 14
       - name: Remove test-only Compose plugin
         if: always()
-        run: bash .github/scripts/setup-compose.sh cleanup
+        run: |
+          bash .github/scripts/setup-compose.sh cleanup
+          if [[ -n "${PREPARATION_COMPOSE_PLUGIN_ROOT:-}" ]]; then
+            COMPOSE_PLUGIN_ROOT="$PREPARATION_COMPOSE_PLUGIN_ROOT" bash .github/scripts/setup-compose.sh cleanup
+          fi
+
+  native-gh:
+    name: Candidate gh initialization (${{ matrix.arm }}, ${{ matrix.shard }}/3, no inference)
+    runs-on: ubuntu-latest
+    timeout-minutes: 95
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        arm: [with_skill, without_skill]
+        shard: [1, 2, 3]
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      GH_ARM: ${{ matrix.arm }}
+      GH_SHARD: ${{ matrix.shard }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install verified test-only Docker Compose
+        run: bash .github/scripts/setup-compose.sh
+      - name: Set up pinned uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: '0.13.7'
+          enable-cache: false
+      - name: Acquire isolated candidate owning lock and backend
+        timeout-minutes: 12
+        run: bash .github/scripts/setup-skillevaluator.sh candidate
+      - name: Prepare unchanged approved gh image packages
+        timeout-minutes: 27
+        run: |
+          "$SKILL_CANDIDATE_PYTHON" .github/scripts/qualify_evaluator_candidate.py \
+            --source "$SKILL_CANDIDATE_SOURCE" \
+            --output "$RUNNER_TEMP/gh-candidate-preparation" --prepare-gh --gh-arm "$GH_ARM" --gh-shard "$GH_SHARD"
+      - name: Retain bounded gh preparation checkpoint
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: gh-candidate-${{ matrix.arm }}-${{ matrix.shard }}-preparation-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/gh-candidate-preparation/metadata.json
+            ${{ runner.temp }}/gh-candidate-preparation/result.json
+            ${{ runner.temp }}/gh-candidate-preparation/podman-fixtures.json
+            ${{ runner.temp }}/gh-candidate-preparation/gh-preparation.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Install fresh verified Compose configuration for native phase
+        run: |
+          printf 'PREPARATION_COMPOSE_PLUGIN_ROOT=%s\n' "$COMPOSE_PLUGIN_ROOT" >> "$GITHUB_ENV"
+          bash .github/scripts/setup-compose.sh
+      - name: Qualify native gh initialization and deterministic fixtures
+        timeout-minutes: 46
+        run: |
+          "$SKILL_CANDIDATE_PYTHON" .github/scripts/qualify_evaluator_candidate.py \
+            --source "$SKILL_CANDIDATE_SOURCE" \
+            --output "$RUNNER_TEMP/gh-candidate-evidence" --native-gh --cache-prepared --gh-arm "$GH_ARM" --gh-shard "$GH_SHARD"
+      - name: Verify checkout integrity
+        if: always()
+        run: |
+          git diff --exit-code
+          test -z "$(git status --porcelain=v1 --untracked-files=all --ignored)"
+      - name: Retain bounded sanitized gh diagnostics
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: gh-candidate-${{ matrix.arm }}-${{ matrix.shard }}-diagnostics-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/gh-candidate-evidence/metadata.json
+            ${{ runner.temp }}/gh-candidate-evidence/result.json
+            ${{ runner.temp }}/gh-candidate-evidence/podman-fixtures.json
+            ${{ runner.temp }}/gh-candidate-evidence/native-gh.json
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Remove test-only Compose plugin
+        if: always()
+        run: |
+          bash .github/scripts/setup-compose.sh cleanup
+          if [[ -n "${PREPARATION_COMPOSE_PLUGIN_ROOT:-}" ]]; then
+            COMPOSE_PLUGIN_ROOT="$PREPARATION_COMPOSE_PLUGIN_ROOT" bash .github/scripts/setup-compose.sh cleanup
+          fi

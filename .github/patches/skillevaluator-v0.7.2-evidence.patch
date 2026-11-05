@@ -435,3 +435,15 @@ index 7f440aa..0a6e6f1 100644
 +        raise SystemExit(1)
      security_score = security_result["score"]
      details["security"] = security_result
+diff --git a/src/skillevaluator/tier3/harbor/runner.py b/src/skillevaluator/tier3/harbor/runner.py
+--- a/src/skillevaluator/tier3/harbor/runner.py
++++ b/src/skillevaluator/tier3/harbor/runner.py
+@@ -1329,7 +1329,7 @@
+ # releases SkillEvaluator was validated with, so trials do not change when a
+ # new CLI ships. Local mode runs the operator's installed CLI instead, and its
+ # wrappers check a minimum version for the selected model.
+-_CODEX_VERSION = PINNED_RUNTIME_VERSIONS["codex"]
++_CODEX_VERSION = "0.155.1"  # Reviewed AEB execution contract; no Codex upgrade.
+ _CLAUDE_CODE_VERSION = PINNED_RUNTIME_VERSIONS["claude-code"]
+ # Harbor 0.22's Codex agent ran with ``model_reasoning_effort=high``; later
+ # releases defer to Codex's own default. Pin the effort SkillEvaluator was
