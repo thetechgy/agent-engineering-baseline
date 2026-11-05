@@ -61,8 +61,8 @@ sys.addaudithook(offline)
 try:
     version, source, lock = sys.argv[1:]
     assert sys.version_info[:2] == (3, 13)
-    assert importlib.metadata.version('skillevaluator') == version
-    assert {key: importlib.metadata.version(key) for key in PINS[version]} == PINS[version]
+    observed = {key: importlib.metadata.version(key) for key in ('skillevaluator', *PINS[version])}
+    assert observed == {'skillevaluator': version, **PINS[version]}
     if source:
         source = Path(source).resolve(strict=True)
         sys.path.insert(0, str(source / 'src'))
@@ -87,9 +87,9 @@ try:
     inputs += [{key: 0.5 if key == selected else 1 for key in METRICS} for selected in METRICS]
     scores = [round(metrics.overall_score(row), 4) for row in inputs]
     assert not network
-    response = {'schema': 1, 'runtime': {'skillevaluator': version, **PINS[version]},
+    response = {'schema': 1, 'runtime': observed,
         'python': '.'.join(map(str, sys.version_info[:3])), 'lock_sha256': lock_digest,
-        'sources': sources, 'metrics': list(METRICS), 'definition': metrics.score_definition(),
+        'sources': sources, 'metrics': list(metrics.DEFAULT_METRICS), 'definition': metrics.score_definition(),
         'native_score_policy': getattr(metrics, 'DEFAULT_SCORE_POLICY', None), 'scores': scores,
         'network_attempts': network, 'inference': False, 'remote_judges': False}
     raw = json.dumps(response, allow_nan=False, sort_keys=True).encode()
