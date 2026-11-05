@@ -1,0 +1,13 @@
+Workflow: https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41952213509
+Commit: a644d44f490d76acfad6c0c8acb1fdaf58cf031a
+Run attempt: 1
+Conclusion: failure
+Job duration: 17m49s
+Host dependency check: 92 packages compatible
+Compose installer: success
+Qualification step started: 2026-11-05T02:00:04Z
+Last failure: 2026-11-05T02:17:38.3249324Z Process completed with exit code 143.
+Artifact upload, checkout integrity and cleanup steps: skipped
+GitHub artifacts API: total_count=0
+Cause: unknown
+Full workflow log retained locally; native log and per-trial results were not recovered.

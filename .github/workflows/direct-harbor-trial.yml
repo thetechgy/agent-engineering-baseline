@@ -9,7 +9,7 @@ concurrency:
   group: direct-harbor-trial
   cancel-in-progress: false
 jobs:
-  calibration:
+  trial:
     if: github.run_attempt == 1
     runs-on: ubuntu-24.04
     timeout-minutes: 50
@@ -20,11 +20,24 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Read fixed trial phase
+        id: phase
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          phase = json.loads(Path('.github/trials/direct-harbor/launch.json').read_text())['phase']
+          assert phase in ('calibration', 'stopped')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as stream:
+              stream.write('value=' + phase + '\n')
+          PY
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        if: steps.phase.outputs.value == 'calibration'
         with:
           version: '0.13.7'
           enable-cache: false
       - name: Acquire released Harbor with its owning lock
+        if: steps.phase.outputs.value == 'calibration'
         run: |
           set -euo pipefail
           source="$RUNNER_TEMP/harbor"
@@ -37,9 +50,16 @@ jobs:
           git -C "$source" diff --exit-code
           echo "$source/.venv/bin" >> "$GITHUB_PATH"
       - name: Install reviewed Compose
+        if: steps.phase.outputs.value == 'calibration'
         run: bash .github/scripts/setup-compose.sh
       - name: Qualify existing graders through direct Harbor
+        if: steps.phase.outputs.value == 'calibration'
         run: python .github/trials/direct-harbor/run.py "$RUNNER_TEMP/direct-harbor"
+      - name: Validate and package stopped-trial report
+        if: steps.phase.outputs.value == 'stopped'
+        run: |
+          python3 -m unittest discover -s .github/trials/direct-harbor -p test_projection.py -q
+          cp -R .github/trials/direct-harbor/results "$RUNNER_TEMP/direct-harbor"
       - name: Retain single report and credential-free diagnostics
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -49,13 +69,15 @@ jobs:
             ${{ runner.temp }}/direct-harbor/report.html
             ${{ runner.temp }}/direct-harbor/results.json
             ${{ runner.temp }}/direct-harbor/manifest.json
-            ${{ runner.temp }}/direct-harbor/harbor.log
+            ${{ runner.temp }}/direct-harbor/workflow-evidence.txt
             ${{ runner.temp }}/direct-harbor/jobs/**/exception.txt
+            ${{ runner.temp }}/direct-harbor/jobs/**/result.json
+            ${{ runner.temp }}/direct-harbor/jobs/**/skill_evaluator_reward.json
           retention-days: 30
           if-no-files-found: error
       - name: Verify checkout integrity
         if: always()
         run: git diff --exit-code
       - name: Remove test-only Compose
-        if: always()
+        if: always() && steps.phase.outputs.value == 'calibration'
         run: bash .github/scripts/setup-compose.sh cleanup

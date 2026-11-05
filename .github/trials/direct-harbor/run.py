@@ -25,7 +25,9 @@ def write(path, value):
     path.write_text(json.dumps(value, indent=2) + '\n')
 
 
-def stage(root):
+def stage(root, variant="current"):
+    if variant not in ("current", "absent"):
+        raise ValueError("Only existing skill variants may be staged before discovery")
     bundle = pilot.stage(ROOT, root / 'bundle')
     native = bundle / 'evals/harbor'
     deployed = ROOT / '.agents/skills'
@@ -36,12 +38,15 @@ def stage(root):
             continue
         env = task / 'environment'
         shutil.copytree(deployed, env / 'skills')
+        if variant == 'absent':
+            shutil.rmtree(env / 'skills' / pilot.NAME)
+        shutil.copytree(ROOT / '.codex', env / 'codex')
         shutil.copyfile(ROOT / 'AGENTS.md', env / 'AGENTS.md')
         # Copy the deployed content and supporting files, never .apm sources,
         # evaluation overlays, repository metadata, home caches or plugins.
         with (env / 'Dockerfile').open('a') as f:
             f.write('COPY input/ /workspace/input/\nCOPY skills/ /workspace/.agents/skills/\n'
-                    'COPY AGENTS.md /workspace/AGENTS.md\n'
+                    'COPY AGENTS.md /workspace/AGENTS.md\nCOPY codex/ /workspace/.codex/\n'
                     'RUN chmod -R a-w /workspace/input /workspace/.agents /workspace/AGENTS.md\n')
         config = task / 'task.toml'
         config.write_text(config.read_text().replace('skills_dir = "/workspace/skills"',
@@ -54,7 +59,8 @@ def stage(root):
         (env / 'docker-compose.yaml').write_text(
             'services:\n  main:\n    pids_limit: 256\n'
             '    cap_drop: [ALL]\n    security_opt: [no-new-privileges:true]\n')
-    return native, {'deployed_files': deployed_manifest, 'instructions_sha256': instruction_hash,
+    return native, {'variant': variant, 'deployed_files': deployed_manifest,
+                    'codex_configuration': pilot.manifest(ROOT / '.codex'), 'instructions_sha256': instruction_hash,
                     'grader_files': pilot.manifest(ROOT / pilot.OVERLAY)}
 
 
@@ -87,7 +93,13 @@ def project(jobs, expected):
         sidecar = result_path.parent / 'verifier/skill_evaluator_reward.json'
         outcome = {'classification': 'verifier_failure', 'code': 'missing_evidence'}
         if sidecar.is_file():
-            outcome = json.loads(sidecar.read_text()).get('details', {}).get('outcome', outcome)
+            carrier = json.loads(sidecar.read_text())
+            observed = carrier.get('details', {}).get('outcome', {})
+            classification = observed.get('classification')
+            if classification in ('invalid', 'unsupported', 'timeout', 'infrastructure_error'):
+                outcome = observed
+            elif classification in ('passed', 'failed') and carrier.get('evaluation_status') == 'complete':
+                outcome = observed
         error = native.get('exception_info')
         if error:
             outcome = {'classification': 'infrastructure_error',
@@ -106,10 +118,29 @@ def report(output, data):
     text = '''<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
 <title>Direct Harbor trial</title><style>body{font:16px system-ui;max-width:1100px;margin:3rem auto;padding:0 1rem;color:#172033}table{border-collapse:collapse;width:100%}th,td{border:1px solid #cbd5e1;padding:.5rem;text-align:left}pre{white-space:pre-wrap;overflow-wrap:anywhere}h1,h2{color:#174f78}</style>
 <h1>Direct Harbor trial</h1><p>Diagnostic only. Production evaluation and Pages remain unchanged.</p>
-<p><a href="results.json">Machine-readable results</a> · <a href="manifest.json">Frozen input manifests</a> · <a href="harbor.log">Credential-free execution log</a></p>'''
+<p><a href="results.json">Machine-readable results</a> · <a href="manifest.json">Frozen input manifests</a> · <a href="workflow-evidence.txt">Workflow evidence excerpt</a></p>'''
     text += '<h2>Decision</h2><p>' + html.escape(data['decision']) + '</p>'
+    if data.get('live_results') is not None:
+        text += '<p><strong>0 live Codex attempts · $0 API spend · 0 native grading outcomes recovered</strong></p>'
+        text += '<p>Executed commit: <code>' + html.escape(data['executed_commit']) + '</code> · <a href="' + html.escape(data['workflow'], quote=True) + '">Failed native workflow</a></p>'
     text += '<h2>Calibration</h2><table><tr><th>Fixture</th><th>Expected</th><th>Observed</th><th>Detail</th><th>Matches</th></tr>' + rows + '</table>'
     text += '<h2>Live comparison</h2><p>No live inference has been launched. Skill effect, activation, revision effect, variability and comparison denominators are unavailable. No justified revision identified without discovery evidence.</p>'
+    if data.get('live_results') is not None:
+        text += '<table><tr><th>Case</th><th>Variant</th><th>Attempts</th><th>Valid denominator</th><th>Correctness / activation / improvement</th></tr>'
+        for row in data['live_results']:
+            text += '<tr><td>' + html.escape(row['case']) + '</td><td>' + html.escape(row['variant']) + '</td><td>0</td><td>0</td><td>Unmeasured</td></tr>'
+        text += '</table>'
+    if data.get('sources'):
+        text += '<h2>Primary references</h2><ul>'
+        for label, url in data['sources'].items():
+            text += '<li><a href="' + html.escape(url, quote=True) + '">' + html.escape(label.replace('_', ' ')) + '</a></li>'
+        text += '</ul>'
+    if data.get('assessment'):
+        text += '<h2>Assessment</h2>'
+        for paragraph in data['assessment']:
+            text += '<p>' + html.escape(paragraph) + '</p>'
+    if data.get('supporting_artifact'):
+        text += '<p><a href="' + html.escape(data['supporting_artifact'], quote=True) + '">Download supporting workflow artifacts</a></p>'
     text += '<h2>Evidence and limitations</h2><pre>' + html.escape(json.dumps(data, indent=2)) + '</pre></html>'
     (output / 'report.html').write_text(text)
 
@@ -133,6 +164,7 @@ def main():
             'maintenance': 'Reuses Pester stage, grader, runtime installer and protected Runner unchanged. Adds one trial staging/projection script and one branch-only workflow. No framework fork.',
             'live_gate': 'Must qualify grading, preserve sandbox and bound cost before live launch. Do not interpret numeric transport rewards without terminal classification.'}
     start = time.monotonic()
+    expected = {}
     try:
         native, manifest = stage(output / 'staging')
         tasks = output / 'tasks'
@@ -158,13 +190,15 @@ def main():
                   'environment': {'type': 'docker', 'delete': True},
                   'agents': [{'name': 'oracle'}], 'datasets': [{'path': str(tasks)}]}
         write(output / 'job.json', config)
-        with (output / 'harbor.log').open('w') as log:
-            run = subprocess.run(['harbor', 'run', '--config', str(output / 'job.json')],
-                                 stdout=log, stderr=subprocess.STDOUT, timeout=2400)
+        # Credential-free native output goes directly to the retained Actions log.
+        # A killed runner must not take the only copy of diagnostics with it.
+        run = subprocess.run(['harbor', 'run', '--config', str(output / 'job.json')],
+                             stderr=subprocess.STDOUT, timeout=2400)
         data['returncode'] = run.returncode
         data['calibration'] = project(output / 'jobs', expected)
         data['expected_controls'] = len(expected)
         data['qualification_passed'] = (len(data['calibration']) == len(expected) and
+                                        {r['task'] for r in data['calibration']} == set(expected) and
                                         all(r['matches'] for r in data['calibration']) and run.returncode == 0)
         if data['qualification_passed']:
             data['decision'] = 'Grading fixtures qualified under direct Harbor; live execution remains gated.'
@@ -175,6 +209,9 @@ def main():
     except Exception as exc:
         data['failure'] = type(exc).__name__
     finally:
+        if 'calibration' not in data and expected:
+            data['calibration'] = project(output / 'jobs', expected)
+            data['expected_controls'] = len(expected)
         data['duration_seconds'] = round(time.monotonic() - start, 2)
         report(output, data)
     return 0 if data.get('qualification_passed') else 1
