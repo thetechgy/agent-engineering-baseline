@@ -163,6 +163,23 @@ class AdmissionPreflightTests(unittest.TestCase):
                 self.assertNotIn('--env', command)
                 self.assertEqual(execute.call_args_list[1].args[0][:3], ['docker', 'rm', '--force'])
 
+    def test_report_failure_cannot_leave_success_metadata_or_html(self):
+        import admission_validation
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)/'run';out=Path(directory)/'report'
+            with patch.object(admission_validation,'no_credentials'), patch.object(trial,'stage',return_value=(Path(directory),{})), \
+                 patch.object(admission_validation,'stage_admission_checks'), patch.object(admission_validation.subprocess,'run'), \
+                 patch.object(admission_validation.subprocess,'check_output',return_value='fixture-image'), \
+                 patch.object(admission_validation,'admission_preflight',return_value={'passed':True}), \
+                 patch.object(admission_validation,'control',return_value={'passed':True}), \
+                 patch.object(trial,'report',side_effect=RuntimeError('PRIVATE_REPORT_FAILURE')):
+                self.assertEqual(admission_validation.main(root,out),1)
+            evidence=json.loads((root/'public/admission-validation.json').read_text())
+            self.assertFalse(evidence['passed']);self.assertEqual(evidence['code'],'report_validation')
+            self.assertNotIn('PRIVATE_REPORT_FAILURE',json.dumps(evidence))
+            self.assertFalse((out/'report.html').exists())
+            self.assertFalse(json.loads((out/'results.json').read_text())['admission_validation']['passed'])
+
     def test_failed_cleanup_cannot_leave_a_passing_record(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(live.subprocess, 'run', side_effect=[
                 Mock(returncode=0, stdout=json.dumps({'kind':'admission_parser_checks','passed':True,'inference':False,'candidate_execution':False,'controls':[{'control':k,'passed':True} for k in ('classic','weak','unsupported_command','unexpected_runner_error')]}).encode()),

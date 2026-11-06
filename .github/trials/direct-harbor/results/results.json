@@ -1,9 +1,9 @@
 {
   "schema_version": 3,
   "campaign": "direct-harbor-20261104",
-  "state": "live_allocation_closed",
-  "decision": "Execution, configuration, artifact handoff and session accounting now yield useful live evidence, but a trustworthy skill comparison is still blocked by unsupported verifier admission. The current session completed; the absent session was not scheduled. Preserve the admission boundary and improve its specific failure diagnostics before further inference.",
-  "summary": "This fresh allocation consumed one of two authorized slots: current campaign attempt six. The verifier could not grade its supported-language admission, so absent attempt seven was closed unused. Historical attempt five and earlier controls remain unchanged. No skill effect or adoption readiness is established.",
+  "state": "credential_free_admission_diagnostics_verified",
+  "decision": "Credential-free Docker validation confirms fixed admission reasons reach the report, unexpected runner errors remain ungraded infrastructure failures, and known-good/weak grades remain unchanged. No model inference occurred. These controls do not recover the cause of historical attempt six or demonstrate skill effectiveness.",
+  "summary": "The supplied admission-diagnostics patch was reviewed and applied on the trial branch, with focused failure-path fixes. Admission predicates and existing artifact/isolation/grading checks were preserved. Paid scheduling stays disabled; the campaign ledger remains 6/36 and recovery 4/4.",
   "source_commit": "cc0819f5dafc05610dd8c3293ce2f52744c66f1a",
   "reviewed_trial_commit": "f61201a730746921abd17d8f8366dfd1505ad6f8",
   "executed_commit": "c5a430ac15b4fac0eb6a29b1ac46ad4e7e06ca3e",
@@ -1924,5 +1924,167 @@
         "No concrete skill weakness or causal skill benefit is established. The next necessary decision is to calibrate the supplemental token budget for the full frozen deployment and recognize this Codex-specific budget termination before considering another allocation."
       ]
     }
-  ]
+  ],
+  "admission_validation": {
+    "kind": "credential_free_admission_validation",
+    "inference": false,
+    "passed": true,
+    "commit": "33ddf3c4042e0330f7331b1293b6d09af9590805",
+    "run_id": "42162451618",
+    "baseline_commit": "924a1e5b4ddb56c71cd032e68a6b9dc53c5ae01b",
+    "policy_fingerprint": "03b6465e9395a6cc458daaa392de6d22fba30dd9eda10a9f355871039e8001e6",
+    "controls": [
+      {
+        "control": "good",
+        "kind": "credential_free_verifier_control",
+        "inference": false,
+        "passed": true,
+        "process_exit": 0,
+        "outcome": {
+          "classification": "passed",
+          "code": "evaluated",
+          "reference_pass": 1,
+          "mutants_detected": 2,
+          "mutants_executed": 2,
+          "tests_executed": 3,
+          "pester_version": "6.2.0",
+          "powershell_version": "7.6.9"
+        },
+        "evaluation_status": "complete",
+        "container_removed": true
+      },
+      {
+        "control": "weak",
+        "kind": "credential_free_verifier_control",
+        "inference": false,
+        "passed": true,
+        "process_exit": 0,
+        "outcome": {
+          "classification": "failed",
+          "code": "evaluated",
+          "reference_pass": 1,
+          "mutants_detected": 0,
+          "mutants_executed": 2,
+          "tests_executed": 3,
+          "pester_version": "6.2.0",
+          "powershell_version": "7.6.9"
+        },
+        "evaluation_status": "complete",
+        "container_removed": true
+      },
+      {
+        "control": "unsupported",
+        "kind": "credential_free_verifier_control",
+        "inference": false,
+        "passed": true,
+        "process_exit": 0,
+        "outcome": {
+          "classification": "unsupported",
+          "code": "admission",
+          "admission_rule": "command_not_allowed",
+          "admission_diagnostic": {
+            "column": 1,
+            "ast_kind": "CommandAst",
+            "line": 1
+          }
+        },
+        "evaluation_status": "failed",
+        "container_removed": true
+      },
+      {
+        "control": "runner_error",
+        "kind": "credential_free_verifier_control",
+        "inference": false,
+        "passed": true,
+        "process_exit": 0,
+        "outcome": {
+          "classification": "infrastructure_error",
+          "code": "admission_runner"
+        },
+        "evaluation_status": "failed",
+        "container_removed": true
+      }
+    ],
+    "image_id": "sha256:e4e1d195d0614ce96f62b3de590999eefd25df4189d0513abf0347e020f2a8b2",
+    "parser_preflight": {
+      "kind": "admission_parser_checks",
+      "extended": false,
+      "inference": false,
+      "candidate_execution": false,
+      "passed": true,
+      "controls": [
+        {
+          "control": "classic",
+          "expected": "admitted",
+          "observed": {
+            "code": "ok",
+            "status": "admitted"
+          },
+          "passed": true
+        },
+        {
+          "control": "weak",
+          "expected": "admitted",
+          "observed": {
+            "code": "ok",
+            "status": "admitted"
+          },
+          "passed": true
+        },
+        {
+          "control": "unsupported_command",
+          "expected": "unsupported",
+          "observed": {
+            "admission_diagnostic": {
+              "ast_kind": "CommandAst",
+              "line": 1,
+              "column": 1
+            },
+            "status": "unsupported",
+            "admission_rule": "command_not_allowed",
+            "code": "admission"
+          },
+          "passed": true
+        },
+        {
+          "control": "unexpected_runner_error",
+          "expected": "infrastructure_error",
+          "observed": {
+            "code": "admission_runner",
+            "status": "infrastructure_error"
+          },
+          "passed": true
+        }
+      ],
+      "input_sha256": {
+        "runner": "d8c17e7991d5fc1dec1e71c0e1e945ecec275893c2653a6ec000ac4acaa6dd60",
+        "profile": "b22226da66eb00dafd37ab5e582a20e3bb97f43d7798befbb52a07b040b99c82",
+        "classic": "8784023e56e7757644ae38797e7fc6cfedfda289a25d0a98283b34d0f40b090a",
+        "weak": "94d8dff22e3715ade171b143d118fe8939acf89e8e3014bccf35fd254cea3ca4"
+      }
+    },
+    "artifact_provenance": {
+      "id": 13477795126,
+      "sha256": "e395eaeaccf239f7abdc5bfb1d0823d57680688ed43c300387d2b7931d21d1f9",
+      "verified": true
+    }
+  },
+  "admission_diagnostics_review": {
+    "patch_sha256": "a7ad63661a4f0575e26b2fd1f7a59d6d96828fdde10780d655c1a3f914c2e46b",
+    "baseline_commit": "924a1e5b4ddb56c71cd032e68a6b9dc53c5ae01b",
+    "local_checks": "Pinned PowerShell 7.6.9 and Pester 6.2.0; native parser and trusted reference/mutation component checks passed. CI tests deliberately skip unconfigured host PowerShell and instead validate its pinned Docker runtime.",
+    "unchanged": [
+      "admission predicates",
+      "artifact acceptance",
+      "worker isolation",
+      "execution validity",
+      "grade calculation",
+      "reward emission",
+      "skills",
+      "dependency pins",
+      "task requirements",
+      "paid ledger"
+    ],
+    "classification_change": "Unexpected admission exceptions now infrastructure_error/admission_runner instead of unsupported/admission. Neither is a measured quality score."
+  }
 }

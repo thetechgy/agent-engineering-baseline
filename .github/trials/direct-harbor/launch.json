@@ -192,5 +192,7 @@
       "complete_incremental_cost_usd": null
     }
   ],
-  "admission_validation_note": "User-authorized credential-free patch validation. No allocation is reopened; no inference or secrets."
+  "admission_validation_note": "User-authorized credential-free patch validation. No allocation is reopened; no inference or secrets.",
+  "admission_validation_revision": 2,
+  "admission_validation_first_run": 42162451618
 }

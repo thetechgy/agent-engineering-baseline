@@ -331,3 +331,12 @@ provider charges remain unknown. The absent arm was prepared but not reserved/la
 This allocation is closed at 1/2; campaign consumption is 6/36 and recovery remains 4/4.
 Paid scheduling is disabled. The next justified work is credential-free admission-rule
 diagnostics without relaxing acceptance criteria, before considering more inference.
+
+Credential-free admission validation at `33ddf3c`, run
+[42162451618](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42162451618),
+passed the Docker parser preflight and all four isolated verifier controls. Fixed
+`command_not_allowed` with `CommandAst` location 1:1 and `admission_runner` reached
+the single report; good and weak grades stayed reference-pass/2-of-2 and
+reference-pass/0-of-2 respectively. Native component tests also cover the data-driven
+fixture. No historical live result was rescored, and attempt six remains unexplained.
+Paid scheduling and the closed campaign ledger are unchanged.

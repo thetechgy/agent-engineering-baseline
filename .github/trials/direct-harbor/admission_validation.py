@@ -80,12 +80,24 @@ def main(root,report):
     except Exception as exc:
         evidence['failure_type']=type(exc).__name__
     finally:
-        trial.write(root/'public/admission-validation.json',evidence)
-        shutil.copytree(Path(__file__).with_name('results'),report)
-        data=json.loads((report/'results.json').read_text());data['admission_validation']=evidence
-        trial.write(report/'admission-validation.json',evidence);trial.report(report,data)
-        html=(report/'report.html').read_text()
-        if evidence['passed']:assert 'command_not_allowed (CommandAst at 1:1)' in html and 'admission_runner' in html
+        data=None
+        try:
+            shutil.copytree(Path(__file__).with_name('results'),report)
+            data=json.loads((report/'results.json').read_text());data['admission_validation']=evidence
+            data['state']='credential_free_admission_diagnostics_verified' if evidence['passed'] else 'admission_validation_failed'
+            data['decision']=('Credential-free admission validation passed. Fixed diagnostics reach the report and known-good/weak grades are unchanged. Historical live outcomes remain unchanged; no inference occurred.' if evidence['passed'] else 'Credential-free admission validation failed. Inspect the retained diagnostic evidence; do not infer grading success.')
+            trial.report(report,data)
+            html=(report/'report.html').read_text()
+            if evidence['passed']:assert 'command_not_allowed (CommandAst at 1:1)' in html and 'admission_runner' in html
+        except Exception as exc:
+            evidence.update(passed=False,code='report_validation',failure_type=type(exc).__name__)
+            (report/'report.html').unlink(missing_ok=True)
+            if data is not None:
+                data.update(state='admission_validation_failed',decision='Report validation failed; no successful diagnostic validation is claimed.')
+                trial.write(report/'results.json',data)
+        finally:
+            trial.write(root/'public/admission-validation.json',evidence)
+            trial.write(report/'admission-validation.json',evidence)
     return 0 if evidence['passed'] else 1
 
 if __name__=='__main__':raise SystemExit(main(*(Path(x).resolve() for x in sys.argv[1:3])))
