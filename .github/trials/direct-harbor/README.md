@@ -1,6 +1,25 @@
-# Direct Harbor recovery trial
+# Direct Harbor trial
 
-## Latest bounded pair, 2026-11-06
+Read the [evaluation checkpoint](../../evals/EVALUATION-PLAN.md) before proposing
+further work. It records the recommended direction, remaining adoption evidence,
+and one next action. The recommendation is not an approved production migration.
+
+The successful [retrospective matched comparison](results/retrospective-pair.json)
+in run [42301691565](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42301691565)
+graded both unchanged retained submissions with the same corrected Boolean
+admission policy. Current passed 32 reference tests and detected 2/2 defects;
+absent passed 35 and detected 2/2. No skill advantage was observed on this case.
+This establishes a retrospective comparison, not prospectively frozen validation
+or a complete discovery, revision and regression-check cycle. No skill revision
+is justified by this result alone.
+
+Paid scheduling remains disabled; campaign consumption is 9/36. The
+[single report](results/report.html) retains the comparison and earlier failures.
+The sections below preserve historical outcomes, authorization limits and
+accounting snapshots. Their proposed follow-ups are historical, not current work
+authorization; use the checkpoint for the next action.
+
+## Historical live pair before Boolean replay, 2026-11-06
 
 The image-content reader and matching preparation passed in runs
 [42294197480](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42294197480)
