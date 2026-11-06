@@ -2,7 +2,14 @@
   "qualification": "reusable-images-20261106",
   "attempt": 2,
   "limit": 2,
-  "prepared_source": null,
+  "prepared_source": {
+    "run_id": 42270181249,
+    "commit": "0c364aec26c7af6cf0ef52b08e598f48ead9ee01",
+    "artifact_id": 13529635174,
+    "name": "prepared-images",
+    "artifact_digest": "sha256:2d95a9bb6ca91795c35148d0ab874f4f029e45e27d3749c9af7dd08eb1ecd75a",
+    "manifest_sha256": "78f0f4f58085d3383f41df1f72ff616ba83b8e35c59ea077597d1d04346516e2"
+  },
   "dependency_seed": {
     "tag": "trial-snapshot-20261103-20261106",
     "asset": "snapshot-20261103.zip",
@@ -12,11 +19,13 @@
   },
   "authorization": "Credential-free preparation only; at most two full image-build qualifications. No paid allocation or inference.",
   "dependency_source": {
-    "run_id": 42268464374,
-    "commit": "d1a574cd60996520ae2f9d3387f75cfbab376771",
-    "artifact_id": 13528935350,
+    "run_id": 42270181249,
+    "commit": "0c364aec26c7af6cf0ef52b08e598f48ead9ee01",
+    "artifact_id": 13529246548,
     "name": "snapshot-dependencies",
-    "artifact_digest": "sha256:cf3ec24134d38f300960c55f4fb38e1f7de48538b655055eeb130af97727ecb6"
+    "artifact_digest": "sha256:c777ab3dd090ecc3140cb65ea61f5e370d641876556a35378291400e1d1abd96"
   },
-  "correction": "Include stock Harbor digest-pinned Alpine kernel probe in the image archive. Restore its registry digest reference when classic Docker save/load omits RepoDigests; require unchanged retained image IDs and inventory during runtime controls."
+  "correction": "Include stock Harbor digest-pinned Alpine kernel probe in the image archive. Restore its registry digest reference when classic Docker save/load omits RepoDigests; require unchanged retained image IDs and inventory during runtime controls.",
+  "status": "qualified_no_further_builds_authorized",
+  "temporary_seed_release_removed": true
 }

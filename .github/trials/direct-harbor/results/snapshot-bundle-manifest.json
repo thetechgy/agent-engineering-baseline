@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "snapshot": "20261103T000000Z",
+  "source_commit": "471667c337846429c8508b4acd0c9a64ae1d72f7",
+  "files": {
+    "debian/dists/trixie/InRelease": {
+      "size": 140421,
+      "sha256": "0584fba32e13e0ab8285fb16c27adea1ec03a73669c18702821094fd6ca86675",
+      "url": "https://snapshot.debian.org/archive/debian/20261103T000000Z/dists/trixie/InRelease"
+    },
+    "debian/dists/trixie/main/binary-amd64/Packages.xz": {
+      "size": 9678380,
+      "sha256": "7778d3e3f303b7ddb8ce0fe7c8d57473a076c6bf2e8f241f75421d2396352498",
+      "url": "https://snapshot.debian.org/archive/debian/20261103T000000Z/dists/trixie/main/binary-amd64/Packages.xz"
+    },
+    "debian-security/dists/trixie-security/InRelease": {
+      "size": 43409,
+      "sha256": "01590ffbf20362d6138369dbf543ee42d3d8ec62589d31cfb93a085afcad4f3c",
+      "url": "https://snapshot.debian.org/archive/debian-security/20261103T000000Z/dists/trixie-security/InRelease"
+    },
+    "debian-security/dists/trixie-security/main/binary-amd64/Packages.xz": {
+      "size": 297148,
+      "sha256": "38ca814a70dea1f035fd078c08b15b9a93f23b9605f3115a7791f30e62a6bf27",
+      "url": "https://snapshot.debian.org/archive/debian-security/20261103T000000Z/dists/trixie-security/main/binary-amd64/Packages.xz"
+    }
+  }
+}

@@ -8,7 +8,7 @@ at 6/36 (earlier recovery 4/4). No evaluated-agent inference or model judge is p
 of preparation. Historical failures below remain historical evidence.
 
 `preparation.json` selects the exact four-file snapshot seed by archive and manifest
-SHA-256. The trial-only prerelease seeds already verified local files; the Actions
+SHA-256. The temporary trial-only prerelease seeded verified local files; the Actions
 `snapshot-dependencies` artifact retains them for 30 days. Builds validate every
 size/hash before APT verifies InRelease with the existing Debian keyring through
 local file sources. Missing/corrupt/incompatible bytes fail without a download
@@ -16,9 +16,8 @@ fallback. Package downloads remain independently size/hash checked; snapshot dat
 package pins, complete Codex package, Harbor and verifier acceptance are unchanged.
 
 `prepared.py` extends the existing image/task transport. `prepared-images` retains
-both agent images, the independent verifier, stock Harbor egress image and digest-pinned Alpine kernel
-probe for seven
-days. Its manifest binds source commit/run, relevant build and deployment inputs,
+both agent images, the independent verifier, stock Harbor egress image and
+digest-pinned Alpine kernel probe for seven days. Its manifest binds source commit/run, relevant build and deployment inputs,
 runtime profile, dependency manifest, image IDs and task/member hashes. Reports and
 allocation metadata do not invalidate identical experiment inputs. Reuse requires
 an explicitly selected artifact ID/digest, successful branch producer, first run
@@ -27,20 +26,39 @@ The new consumer still passes the original allocation and reservation checks.
 
 A separate GitHub-hosted `qualify` job requires all retained images to be absent,
 loads them, verifies the stock kernel-probe registry digest reference (refreshing
-that exact reference if Docker omitted it), verifies relocation and deployment, repeats existing runtime/isolation
-checks, and runs good/weak/unsupported/runner-error native grader controls. It uses
+that exact reference if Docker omitted it), verifies relocation and deployment,
+repeats existing runtime/isolation checks, and runs good/weak/unsupported/runner-error native grader controls. It uses
 stock Harbor's prebuilt path, with no new private override. Protected verifier
 fixtures remain separate from agent image content. Dependency indexes are excluded
 from the task handoff after image construction; they have their own retained bundle.
 
-Full image construction and fresh-runner qualification are pending until the new
-workflow evidence is recorded. The trial-only seed is not a production release;
-no production evaluation, Pages, or shared environment settings change.
+Run [42270181249](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42270181249)
+at `0c364ae` passed complete image construction and fresh-runner qualification.
+The first run, 42268464374 at `d1a574c`, built the trial images but omitted the stock
+kernel probe from transport; its fresh inventory check stopped before grading.
+The second and final qualification retained all five images. Good/weak controls
+matched the expected 2/2 and 0/2 outcomes; unsupported and runner-error controls,
+runtime/isolation checks, relocation, image identity and container disposal passed.
+These are infrastructure/control results, not evidence of skill effectiveness.
 
-## Authorized retained-submission smoke allocation
+The fresh Docker restore needed a registry refresh for the same pinned Alpine
+kernel-probe digest, then verified its unchanged image ID. Host tooling and GitHub
+artifact downloads also remain external dependencies. No image rebuild or snapshot
+index download occurred on the fresh runner. Images are eligible through
+2026-11-13 18:26 UTC, subject to artifact availability and unchanged experiment
+inputs. A later smoke pair still needs separate live authorization and allocation.
 
-Allocation `sol-high-retained-20261106` starts from the closed 6/36 ledger and
-permits current/7 followed by absent/8 at most. All earlier allocations and unused
+The temporary seed release/tag was removed after the Actions dependency artifact
+was successfully restored and hash checked. `preparation.json` now identifies the
+qualified image artifact and retained dependency artifact for reuse. Both allowed
+qualification attempts are complete; no further build or inference is scheduled.
+See the single report and `results/reusable-preparation.json` for artifact IDs,
+sizes, expiration, exact identities, native control results and remaining limits.
+
+## Historical retained-submission smoke allocation
+
+Allocation `sol-high-retained-20261106` started from the closed 6/36 ledger and
+permitted current/7 followed by absent/8 at most. All earlier allocations and unused
 reservations remain closed. Admission diagnostics are enabled in both arms; runtime,
 APM deployment, task, grader acceptance criteria and isolation are unchanged.
 Paid execution is disabled by default, armed for one push/run number only, and closed

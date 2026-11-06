@@ -215,6 +215,7 @@ def report(output, data):
         if q['images']:
             text += table(('Image','Identity'),q['images'].items())
         text += '<p>'+esc(q['fresh_runner_summary'])+'</p><p>'+esc(q['remaining_downloads'])+'</p>'
+        text += table(('Fresh control','Classification','Reference pass','Defects detected','Expected outcome matched'),[(c['control'],c['outcome']['classification'],c['outcome'].get('reference_pass'),c['outcome'].get('mutants_detected'),c['passed']) for c in q['controls']])
         text += '<p>Campaign consumption remains 6/36; earlier recovery remains 4/4; latest paid allocation remains closed at 0/2. Historical spending remains unknown. No model judge or evaluated-agent inference ran.</p>'
         text += '<p>Maintenance: '+esc(q['maintenance'])+'</p>'
     if data.get('preparation_failures'):
@@ -232,7 +233,7 @@ def report(output, data):
         text += '<p>Maintenance: '+esc(' '.join(recovery['maintenance']))+'</p>'
     if data.get('admission_validation'):
         validation=data['admission_validation']
-        text += '<h2>Credential-free admission diagnostic validation</h2><p>Passed: '+esc(validation['passed'])+'. No model inference. These are deterministic verifier controls, not new skill-evaluation attempts. Historical attempt six remains unexplained.</p><p><a href="admission-validation.json">Docker control evidence and input identity</a></p>'
+        text += '<h2>Historical admission diagnostic validation</h2><p>Passed: '+esc(validation['passed'])+'. No model inference. These are deterministic verifier controls, not new skill-evaluation attempts. Historical attempt six remains unexplained.</p><p><a href="admission-validation.json">Docker control evidence and input identity</a></p>'
         rows=[]
         for control in validation['controls']:
             outcome=control.get('outcome',{});reason=outcome.get('admission_rule') or outcome.get('code')
@@ -242,7 +243,7 @@ def report(output, data):
         text += table(('Control','Classification','Diagnostic reason','Reference pass','Defects detected','Expected outcome matched'),rows)
     if data.get('live_allocation'):
         allocation=data['live_allocation'];rows=allocation['rows']
-        text += '<h2>New live allocation: '+esc(allocation['profile'])+'</h2><p><a href="allocation-evidence.json">Sanitized launch, deployment, handoff and usage evidence</a></p>'
+        text += '<h2>Historical live allocation: '+esc(allocation['profile'])+'</h2><p><a href="allocation-evidence.json">Sanitized launch, deployment, handoff and usage evidence</a></p>'
         labels={'graded_passed':'Graded success','graded_failed':'Graded failure','missing_deliverable':'Deliverable missing (task failure)',
                 'missing_after_budget_exhaustion':'No deliverable before token-budget exhaustion','rejected_output':'Deliverable rejected','missing_evidence':'Evidence incomplete','not_scheduled':'Not scheduled',
                 'collection_failure':'Collection failure','transfer_failure':'Transfer failure','unsupported_submission':'Unsupported submission'}
@@ -297,13 +298,13 @@ def report(output, data):
         for paragraph in handoff['notes']:text += '<p>'+esc(paragraph)+'</p>'
     if data.get('launch_repair'):
         repair=data['launch_repair']
-        text += '<h2>Credential-free launch repair</h2><p>'+esc(repair['summary'])+'</p>'
+        text += '<h2>Historical credential-free launch repair</h2><p>'+esc(repair['summary'])+'</p>'
         text += '<p><a href="launch-repair.json">Sanitized launch diagnostics and provider checks</a></p>'
         text += table(('Probe','CLI startup','Outcome','Requests to local fixture','Stream wait seconds'),
                       [(r['probe'],r['startup'],r['outcome'],r.get('requests'),r.get('stream_wait_seconds')) for r in repair['observations']])
         for paragraph in repair['notes']:
             text += '<p>'+esc(paragraph)+'</p>'
-    text += '<h2>Native credential-free controls</h2>'
+    text += '<h2>Historical native credential-free controls</h2>'
     text += table(('Case / submission', 'Expected', 'Verifier observation', 'Reference pass', 'Defects detected', 'Harbor failure cause', 'Valid measured grade'),
                   [(r['task'], r['expected'], r['outcome']['classification'] + ': ' + str(r['outcome'].get('code', '')),
                     r['outcome'].get('reference_pass'), str(r['outcome'].get('mutants_detected')) + '/' + str(r['outcome'].get('mutants_executed')),
@@ -332,7 +333,7 @@ def report(output, data):
             text += ' · <a href="' + html.escape(artifact['url'], quote=True) + '">' + esc(artifact['name']) + '</a>'
         text += '</li>'
     text += '</ul><h2>History</h2><p>' + esc(data['history_note']) + '</p>'
-    text += '<h2>Maintenance and remaining evidence</h2>'
+    text += '<h2>Historical maintenance and remaining evidence</h2>'
     for paragraph in data['assessment']:
         text += '<p>' + esc(paragraph) + '</p>'
     text += '<h2>Primary references</h2><ul>'

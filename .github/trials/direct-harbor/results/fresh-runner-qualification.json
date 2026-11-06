@@ -1,0 +1,208 @@
+{
+  "passed": true,
+  "inference": false,
+  "image_rebuilds": 0,
+  "snapshot_index_downloads": 0,
+  "fresh_runner_initial_images_absent": true,
+  "source_identity": {
+    "repository": "thetechgy/agent-engineering-baseline",
+    "branch": "refs/heads/trial/direct-harbor",
+    "commit": "0c364aec26c7af6cf0ef52b08e598f48ead9ee01",
+    "run_id": "42270181249",
+    "run_attempt": 1,
+    "allocation_id": null
+  },
+  "consumer_identity": {
+    "repository": "thetechgy/agent-engineering-baseline",
+    "branch": "refs/heads/trial/direct-harbor",
+    "commit": "0c364aec26c7af6cf0ef52b08e598f48ead9ee01",
+    "run_id": "42270181249",
+    "run_attempt": 1,
+    "allocation_id": null
+  },
+  "images": {
+    "direct-harbor-agent:current": "sha256:de7b89b6131977fa93ecad2ad6f62431b4bba3802e5bb00ced53042de8e2d1df",
+    "direct-harbor-agent:absent": "sha256:3b8ead2a92e7d2c10be126d0831c49251f412b49c23a79208a77ffa265143bd5",
+    "direct-harbor-verifier:live": "sha256:2b1d93aa7557d2f8e3377552920e627cae9177e0af077e0fae5f2579cd4d4512",
+    "harbor-prebuilt:harbor-docker-egress-control-sidecar--9af3dc172792cee8": "sha256:b4a6a10a0ac68129a8ce63dbe85ebea217817e0f131fd523f3b4d6b7853b936d",
+    "direct-harbor-kernel-probe:0.25.0": "sha256:3cb067eab609612d81b4d82ff8ad71d73482bb3059a87b642d7e14f0ed659cde"
+  },
+  "controls": [
+    {
+      "control": "good",
+      "kind": "credential_free_verifier_control",
+      "inference": false,
+      "passed": true,
+      "process_exit": 0,
+      "outcome": {
+        "classification": "passed",
+        "code": "evaluated",
+        "reference_pass": 1,
+        "mutants_detected": 2,
+        "mutants_executed": 2,
+        "tests_executed": 3,
+        "pester_version": "6.2.0",
+        "powershell_version": "7.6.9"
+      },
+      "evaluation_status": "complete",
+      "container_removed": true
+    },
+    {
+      "control": "weak",
+      "kind": "credential_free_verifier_control",
+      "inference": false,
+      "passed": true,
+      "process_exit": 0,
+      "outcome": {
+        "classification": "failed",
+        "code": "evaluated",
+        "reference_pass": 1,
+        "mutants_detected": 0,
+        "mutants_executed": 2,
+        "tests_executed": 3,
+        "pester_version": "6.2.0",
+        "powershell_version": "7.6.9"
+      },
+      "evaluation_status": "complete",
+      "container_removed": true
+    },
+    {
+      "control": "unsupported",
+      "kind": "credential_free_verifier_control",
+      "inference": false,
+      "passed": true,
+      "process_exit": 0,
+      "outcome": {
+        "classification": "unsupported",
+        "code": "admission",
+        "admission_rule": "command_not_allowed",
+        "admission_diagnostic": {
+          "column": 1,
+          "ast_kind": "CommandAst",
+          "line": 1
+        }
+      },
+      "evaluation_status": "failed",
+      "container_removed": true
+    },
+    {
+      "control": "runner_error",
+      "kind": "credential_free_verifier_control",
+      "inference": false,
+      "passed": true,
+      "process_exit": 0,
+      "outcome": {
+        "classification": "infrastructure_error",
+        "code": "admission_runner"
+      },
+      "evaluation_status": "failed",
+      "container_removed": true
+    }
+  ],
+  "task_checksums": {
+    "current": {
+      "path": "tasks/current",
+      "checksum": "b40ceef19f765fb5bf9cc341a5b1348cc1d3ece384e11b4c83f3e5aa042fb9f7"
+    },
+    "absent": {
+      "path": "tasks/absent",
+      "checksum": "1843cbb5bd90af5aea638111514084d6c08175d05340baf4865f94088e57cfca"
+    }
+  },
+  "experiment": "cb4623031566389300061ad8db0f83c9a61b28acaa97578447bb97e7dfe1332a",
+  "kernel_probe_registry_refresh": true,
+  "image_inventory_before": [
+    "sha256:200c0f2889185e7a2d4b0960734b33c0c52e43069fb74241a52531d614216f3e",
+    "sha256:2b1d93aa7557d2f8e3377552920e627cae9177e0af077e0fae5f2579cd4d4512",
+    "sha256:3b8ead2a92e7d2c10be126d0831c49251f412b49c23a79208a77ffa265143bd5",
+    "sha256:3cb067eab609612d81b4d82ff8ad71d73482bb3059a87b642d7e14f0ed659cde",
+    "sha256:3cb067eab609612d81b4d82ff8ad71d73482bb3059a87b642d7e14f0ed659cde",
+    "sha256:4d955ee421ef7194cbef8a50bfe034a27d1e682875a6e8049023ab55bf80a8ec",
+    "sha256:a98c768e5b7637fd6304e52ead38cbb5bcc19991d338a4d22d2b1b1ce9aa2fd5",
+    "sha256:b4a6a10a0ac68129a8ce63dbe85ebea217817e0f131fd523f3b4d6b7853b936d",
+    "sha256:ceba3de0cc73ccb8d76055b6f4ff404a1f556c398b0c85038c5016f005d11bcb",
+    "sha256:de7b89b6131977fa93ecad2ad6f62431b4bba3802e5bb00ced53042de8e2d1df",
+    "sha256:eacd6ee6b337225d9d0d18d31787590fff169fc27d0021e3021049520c319453",
+    "sha256:f4aec6b5f30a94c5579d63adab17d66683d3118cbc3ac3c7aff9a5c06c6060b3"
+  ],
+  "image_inventory_after": [
+    "sha256:200c0f2889185e7a2d4b0960734b33c0c52e43069fb74241a52531d614216f3e",
+    "sha256:2b1d93aa7557d2f8e3377552920e627cae9177e0af077e0fae5f2579cd4d4512",
+    "sha256:3b8ead2a92e7d2c10be126d0831c49251f412b49c23a79208a77ffa265143bd5",
+    "sha256:3cb067eab609612d81b4d82ff8ad71d73482bb3059a87b642d7e14f0ed659cde",
+    "sha256:3cb067eab609612d81b4d82ff8ad71d73482bb3059a87b642d7e14f0ed659cde",
+    "sha256:4d955ee421ef7194cbef8a50bfe034a27d1e682875a6e8049023ab55bf80a8ec",
+    "sha256:a98c768e5b7637fd6304e52ead38cbb5bcc19991d338a4d22d2b1b1ce9aa2fd5",
+    "sha256:b4a6a10a0ac68129a8ce63dbe85ebea217817e0f131fd523f3b4d6b7853b936d",
+    "sha256:ceba3de0cc73ccb8d76055b6f4ff404a1f556c398b0c85038c5016f005d11bcb",
+    "sha256:de7b89b6131977fa93ecad2ad6f62431b4bba3802e5bb00ced53042de8e2d1df",
+    "sha256:eacd6ee6b337225d9d0d18d31787590fff169fc27d0021e3021049520c319453",
+    "sha256:f4aec6b5f30a94c5579d63adab17d66683d3118cbc3ac3c7aff9a5c06c6060b3"
+  ],
+  "image_inventory_unchanged": true,
+  "parser": {
+    "kind": "admission_parser_checks",
+    "extended": false,
+    "inference": false,
+    "candidate_execution": false,
+    "passed": true,
+    "controls": [
+      {
+        "control": "classic",
+        "expected": "admitted",
+        "observed": {
+          "code": "ok",
+          "status": "admitted"
+        },
+        "passed": true
+      },
+      {
+        "control": "weak",
+        "expected": "admitted",
+        "observed": {
+          "status": "admitted",
+          "code": "ok"
+        },
+        "passed": true
+      },
+      {
+        "control": "unsupported_command",
+        "expected": "unsupported",
+        "observed": {
+          "code": "admission",
+          "status": "unsupported",
+          "admission_diagnostic": {
+            "ast_kind": "CommandAst",
+            "line": 1,
+            "column": 1
+          },
+          "admission_rule": "command_not_allowed"
+        },
+        "passed": true
+      },
+      {
+        "control": "unexpected_runner_error",
+        "expected": "infrastructure_error",
+        "observed": {
+          "status": "infrastructure_error",
+          "code": "admission_runner"
+        },
+        "passed": true
+      }
+    ],
+    "input_sha256": {
+      "runner": "d8c17e7991d5fc1dec1e71c0e1e945ecec275893c2653a6ec000ac4acaa6dd60",
+      "profile": "b22226da66eb00dafd37ab5e582a20e3bb97f43d7798befbb52a07b040b99c82",
+      "classic": "8784023e56e7757644ae38797e7fc6cfedfda289a25d0a98283b34d0f40b090a",
+      "weak": "94d8dff22e3715ade171b143d118fe8939acf89e8e3014bccf35fd254cea3ca4"
+    }
+  },
+  "remaining_containers": {
+    "direct-harbor-agent:current": [],
+    "direct-harbor-agent:absent": [],
+    "direct-harbor-verifier:live": [],
+    "harbor-prebuilt:harbor-docker-egress-control-sidecar--9af3dc172792cee8": [],
+    "direct-harbor-kernel-probe:0.25.0": []
+  },
+  "container_disposal_verified": true
+}
