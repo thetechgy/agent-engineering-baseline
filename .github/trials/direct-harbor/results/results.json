@@ -1,9 +1,9 @@
 {
   "schema_version": 3,
   "campaign": "direct-harbor-20261104",
-  "state": "reusable_images_qualified_paid_scheduling_disabled",
-  "decision": "Reusable trial images are qualified on a fresh GitHub-hosted runner and ready for a separately authorized current/absent smoke pair while the retained artifacts remain available and unexpired. No live allocation is opened.",
-  "summary": "Two bounded infrastructure qualifications completed. The second built and retained all required images and passed fresh-runner restore, isolation, native grading controls and disposal checks. The exact signed snapshot indexes are reusable for 30 days; images for seven days. No inference or new paid reservation occurred; historical spending remains unknown.",
+  "state": "qualified_image_smoke_closed_unsupported",
+  "decision": "The smoke pair does not establish an operationally usable comparison. One current-arm session completed and its exact submission transferred reliably, but the verifier rejected an unsupported name template. The absent arm was not scheduled.",
+  "summary": "Current campaign attempt 7 completed once; the declared submission was retained and verified, then remained ungraded under block_name_template at line 23:9. Absent attempt 8 was never reserved or launched. Allocation closed at 1/2; campaign 7/36; earlier recovery 4/4. No retry, model judge, skill revision, acceptance change or historical rescoring.",
   "source_commit": "cc0819f5dafc05610dd8c3293ce2f52744c66f1a",
   "reviewed_trial_commit": "f61201a730746921abd17d8f8366dfd1505ad6f8",
   "executed_commit": "c5a430ac15b4fac0eb6a29b1ac46ad4e7e06ca3e",
@@ -392,13 +392,13 @@
     }
   ],
   "live_note": "Attempts 1 and 2 remain historical setup/launch failures. Attempts 3 (current) and 4 (absent) completed actual Codex sessions with recovered rollouts, token usage and no native execution failure. Each offline verifier returned invalid/artifact with reward 0; Harbor reward_valid=true does not make this a measured grade. No submission hash/size was recovered at the declared canonical path. The exact missing/rejected/transfer cause is unresolved from retained metadata. Activation is unknown because the executed collector omitted custom_tool_call records; the zero function-call count is not an all-tools count. No reference or mutation checks were reached by a valid candidate. Workflow success covers completion/extraction, not correctness or a valid comparison. One attempt per arm would remain insufficient for effectiveness even with valid grades.",
-  "agent_attempts": 6,
+  "agent_attempts": 7,
   "prior_paid_attempts": 0,
   "recovery_paid_attempts": 4,
   "api_spend_usd": null,
   "estimated_cumulative_api_spend_usd": null,
   "provider_billing_observation": null,
-  "spending_note": "No credentials or model calls were used in this allocation; no new usage observations or provider bill were obtained. The $5 operational allocation closed unused. Historical cumulative provider spending remains unknown; earlier usage estimates and all six historical attempts are preserved.",
+  "spending_note": "New allocation: observed terminal/session usage is 122,992 input and 2,513 output tokens, with matching category counters. Conservative incremental estimate is USD 1.267615. Reserve plus headroom would total USD 4.267615 within the USD 5 operational allowance; unsupported grading coverage, not spending or missing pricing, stopped scheduling. Native provider pricing estimate and actual incremental bill are unknown; historical cumulative spending remains unknown. Paid scheduling is disabled.",
   "budget": {
     "operational_usd": 20,
     "provider_hard_cap_verified": false,
@@ -412,10 +412,11 @@
     "reserve_usd": 16,
     "pair_preflight_estimate_usd": 2.64,
     "scheduling_stopped": true,
-    "stop_reason": "Stop after the two authorized full preparation attempts. No third build or paid launch. Pinned snapshot delivery remains unreliable from hosted Actions; unchanged complete image construction and transfer are unverified.",
+    "stop_reason": "Unsupported template coverage; allocation closed with absent reservation unused.",
     "conservative_input_usd_per_million": 20,
     "conservative_output_usd_per_million": 30,
-    "unknown_cost_accepted_for_testing": true
+    "unknown_cost_accepted_for_testing": true,
+    "scope": "Historical campaign planning values; current incremental authorization and usage are in allocation_budget and smoke_review.accounting."
   },
   "configured_runtime": {
     "codex": "0.155.1 observed in both actual agent containers and stock CLI startup",
@@ -1096,6 +1097,11 @@
       "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42238163966",
       "label": "Credential-free preparation 2/2; no live execution",
       "summary": "Fixed main Packages.xz download exhausted three transport attempts; HTTP 503: No healthy backends; Docker build exit 1"
+    },
+    {
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42274188228",
+      "label": "GPT-6.1 Sol/High, rollout budget disabled",
+      "summary": "One current and one absent attempt at most; checkpointed and then closed."
     }
   ],
   "local_validation": {
@@ -1154,7 +1160,8 @@
     "harbor_codex_cost_estimation": "https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/agents/installed/codex.py#L1319",
     "harbor_artifact_path": "https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/trial/artifact_handler.py#L27",
     "codex_selected_release": "https://github.com/openai/codex/releases/tag/rust-v0.166.0",
-    "future_model_pricing": "https://developers.openai.com/api/docs/models/gpt-6.1-sol"
+    "future_model_pricing": "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+    "pester_data_field_templates": "https://pester.dev/docs/usage/data-driven-tests#using-foreach--testcases-with-hashtable"
   },
   "live_pair_operationally_valid": false,
   "live_evidence": "live-evidence.json",
@@ -1649,42 +1656,127 @@
     "budget_semantics": "0.166.0 accepts enforce_limit=true. Source charges provider budget units when available, otherwise weighted non-cached input plus output. Token budget is not a dollar meter; enforcement under inference remains untested."
   },
   "live_allocation": {
-    "id": "sol-high-prepared-20261106",
+    "id": "sol-high-reused-20261106",
     "rows": [
       {
         "variant": "current",
         "attempt": 7,
-        "scheduled": false,
-        "reserved": false,
-        "credentialed_launch_started": false,
-        "submission_retention": null,
-        "session_completed": null,
-        "execution_outcome": "not_scheduled",
+        "scheduled": true,
+        "reserved": true,
+        "credentialed_launch_started": true,
+        "submission_retention": {
+          "status": "published_verified",
+          "source": "/workspace/output/Subject.Tests.ps1",
+          "kind": "agent_submission",
+          "identity": {
+            "allocation_id": "sol-high-reused-20261106",
+            "reservation_id": "sol-high-reused-20261106/current/7",
+            "attempt": 7,
+            "variant": "current",
+            "commit": "a753e39083d9d93fdb13906382b9b35e9902cdd4",
+            "run_id": "42274188228"
+          },
+          "source_metadata": {
+            "exists": true,
+            "type": "file",
+            "size": 3446,
+            "uid": 1001,
+            "gid": 1001,
+            "mode": "0o644",
+            "sha256": "407196e63354eb841f3d38c2d5d3daaba9aaec16aa721f75686f74e181d0bb1a",
+            "links": 1
+          },
+          "exact_bytes": true,
+          "artifact_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42274188228/artifacts/13532657965",
+          "publication_verified": true,
+          "reason": null,
+          "sha256": "407196e63354eb841f3d38c2d5d3daaba9aaec16aa721f75686f74e181d0bb1a",
+          "size": 3446,
+          "artifact_id": "13532657965"
+        },
+        "session_completed": true,
+        "execution_outcome": "completed",
         "task_completion_measured": false,
         "task_completed": null,
-        "outcome": "not_scheduled",
-        "handoff": null,
-        "admission": null,
-        "admission_diagnostic": null,
+        "outcome": "unsupported_submission",
+        "handoff": "hash_matched",
+        "admission": "block_name_template",
+        "admission_diagnostic": {
+          "ast_kind": "CommandAst",
+          "column": 9,
+          "line": 23
+        },
         "valid_grade": false,
         "reference_pass": null,
         "mutants_detected": null,
         "mutants_executed": null,
-        "skill_file_access_attempts": null,
-        "tool_calls": null,
-        "tool_errors": null,
+        "skill_file_access_attempts": [
+          "powershell-pester-6/SKILL.md",
+          "powershell-pester-6/references/compatibility-and-migration.md"
+        ],
+        "tool_calls": 4,
+        "tool_errors": {
+          "runtime_tool_error": 0,
+          "permission_denied": 0,
+          "missing_path": 0
+        },
         "failure_cause": null,
-        "timing": null,
-        "duration_seconds": null,
-        "usage": null,
-        "accounting_assessment": null,
-        "execution_assessment": null,
-        "native_terminal": null,
-        "conservative_estimate_usd": null,
+        "timing": {
+          "agent_execution": {
+            "started_at": "2026-11-06T18:57:54.142841Z",
+            "finished_at": "2026-11-06T18:58:32.369409Z"
+          },
+          "verifier": {
+            "started_at": "2026-11-06T18:58:42.996461Z",
+            "finished_at": "2026-11-06T18:58:57.199445Z"
+          }
+        },
+        "duration_seconds": 71.855,
+        "usage": {
+          "input_tokens": 122992,
+          "cached_input_tokens": 90990,
+          "output_tokens": 2513,
+          "reasoning_output_tokens": 815,
+          "cache_write_input_tokens": 31987,
+          "total_tokens": 125505
+        },
+        "accounting_assessment": {
+          "coverage": "terminal_session_observations",
+          "usable_for_scheduling": true,
+          "reasons": [],
+          "observed_usage_estimate_usd": 1.267615,
+          "billing_certainty": "unknown",
+          "provider_bill_usd": null,
+          "basis": "Native terminal plus one parseable session with usage before its terminal; successful turns also require matching CLI terminal counters. Exact budget failure is a local post-usage termination, not arbitrary tool/model text. This bounds recorded session accounting, not provider billing."
+        },
+        "execution_assessment": {
+          "outcome": "completed",
+          "interpretable": true,
+          "native_fields_unchanged": true
+        },
+        "native_terminal": [
+          {
+            "type": "thread.started"
+          },
+          {
+            "type": "turn.started"
+          },
+          {
+            "type": "turn.completed",
+            "usage": {
+              "input_tokens": 122992,
+              "cached_input_tokens": 90990,
+              "cache_write_input_tokens": 31987,
+              "output_tokens": 2513,
+              "reasoning_output_tokens": 815
+            }
+          }
+        ],
+        "conservative_estimate_usd": 1.267615,
         "native_pricing_estimate_usd": null,
         "api_bill_usd": null,
-        "evidence_complete": false,
-        "containers_removed": null
+        "evidence_complete": true,
+        "containers_removed": true
       },
       {
         "variant": "absent",
@@ -1723,20 +1815,24 @@
       }
     ],
     "closure": {
-      "allocation_id": "sol-high-prepared-20261106",
+      "allocation_id": "sol-high-reused-20261106",
       "state": "closed",
       "paid_execution_enabled": false,
-      "reserved_slots_consumed": [],
-      "campaign_attempts_consumed": 6,
+      "reserved_slots_consumed": [
+        7
+      ],
+      "campaign_attempts_consumed": 7,
       "previous_recovery_consumed": 4,
       "previous_recovery_limit": 4,
       "incremental_api_bill_usd": null,
       "historical_cumulative_api_bill_usd": null,
       "note": "Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.",
-      "reservation_ids": [],
-      "incremental_conservative_estimate_usd": null,
+      "reservation_ids": [
+        "sol-high-reused-20261106/current/7"
+      ],
+      "incremental_conservative_estimate_usd": 1.267615,
       "operational_budget_usd": 5,
-      "estimated_budget_exceeded": null
+      "estimated_budget_exceeded": false
     },
     "operationally_usable": false,
     "profile": "codex-0.166.0_gpt-6.1-sol_high_rollout-budget-disabled",
@@ -1748,12 +1844,72 @@
       "Pinned native pricing may be unavailable; historical cumulative spending remains unknown; $5 is an operational budget with possible overshoot, not a provider-enforced cap"
     ],
     "usage_note": "CLI-reported cumulative totals are retained without summing repeated token-count events. Cached reads and writes are input subsets; reasoning is an output subset. Conservative estimate charges all input at $10/M and output at $15/M, without adding subset counts. These are estimates, not provider bills.",
-    "admission_preflight": null,
-    "observed_usage_conservative_estimate_usd": null,
+    "admission_preflight": {
+      "kind": "admission_parser_checks",
+      "extended": false,
+      "inference": false,
+      "candidate_execution": false,
+      "passed": true,
+      "controls": [
+        {
+          "control": "classic",
+          "expected": "admitted",
+          "observed": {
+            "status": "admitted",
+            "code": "ok"
+          },
+          "passed": true
+        },
+        {
+          "control": "weak",
+          "expected": "admitted",
+          "observed": {
+            "status": "admitted",
+            "code": "ok"
+          },
+          "passed": true
+        },
+        {
+          "control": "unsupported_command",
+          "expected": "unsupported",
+          "observed": {
+            "admission_rule": "command_not_allowed",
+            "admission_diagnostic": {
+              "ast_kind": "CommandAst",
+              "column": 1,
+              "line": 1
+            },
+            "code": "admission",
+            "status": "unsupported"
+          },
+          "passed": true
+        },
+        {
+          "control": "unexpected_runner_error",
+          "expected": "infrastructure_error",
+          "observed": {
+            "code": "admission_runner",
+            "status": "infrastructure_error"
+          },
+          "passed": true
+        }
+      ],
+      "input_sha256": {
+        "runner": "d8c17e7991d5fc1dec1e71c0e1e945ecec275893c2653a6ec000ac4acaa6dd60",
+        "profile": "b22226da66eb00dafd37ab5e582a20e3bb97f43d7798befbb52a07b040b99c82",
+        "classic": "8784023e56e7757644ae38797e7fc6cfedfda289a25d0a98283b34d0f40b090a",
+        "weak": "94d8dff22e3715ade171b143d118fe8939acf89e8e3014bccf35fd254cea3ca4"
+      }
+    },
+    "observed_usage_conservative_estimate_usd": 1.267615,
     "reviewed_notes": [
-      "Neither arm was reserved, launched, graded or retained; all current/absent metrics remain unmeasured.",
-      "The unchanged frozen profile was planned, not evaluated. Historical controls and earlier live outcomes remain historical evidence.",
-      "Prepared images must build and pass artifact round-trip verification before normal protected-environment approval and any credentialed launch."
+      "Both arms use the fully disabled supplemental rollout-budget feature, including reminders; the CLI feature listing is checked before credentials and after Harbor uploads its effective configuration. Attempt five used a different budget profile and is historical evidence, not a matched comparison.",
+      "Execution outcome, task completion, independent correctness, session usage coverage and provider billing are assessed separately. A recognized agent failure can be interpretable without a valid correctness grade.",
+      "Historical attempt five remains a native NonZeroAgentExitCodeError / unclassified with the exact Codex budget-exhaustion event. Retained usage estimates remain available; ordered raw-session coverage was not retained, so complete accounting is not retroactively asserted.",
+      "Qualification run 42270181249 and its good 2/2, weak 0/2 controls are reused unchanged, not rerun or counted as new skill evidence. Earlier outcomes are not rescored. Campaign now 7/36; earlier recovery remains 4/4; this allocation is closed at 1/2.",
+      "The block-name template allowlist uses profile.properties plus underscore. pester-002 lists Base but omits BaseMilliseconds; its command parameters include BaseMilliseconds.",
+      "The rejected construct follows ordinary Pester data-driven syntax. This admission failure does not establish incorrect or incomplete tests; whole-suite correctness and defect detection remain unmeasured.",
+      "Before another paid pair, separately review the BaseMilliseconds template coverage/documentation mismatch. Qualify a narrow public-name correction with credential-free positive and expression-rejection tests, then replay these exact retained bytes under unchanged correctness criteria. Preserve this run as ungraded. No skill revision is supported by this evidence."
     ]
   },
   "allocation_budget": {
@@ -2164,6 +2320,114 @@
         "The artifact fixture proved unchanged bytes through upload/download and local retrieval; it does not prove retention of a new agent submission because no agent ran.",
         "Smallest next decision: verify availability of the unchanged pinned package index without credentials before considering a newly authorized allocation. No replacement call or budget carry-forward is scheduled."
       ]
+    },
+    {
+      "id": "sol-high-prepared-20261106",
+      "rows": [
+        {
+          "variant": "current",
+          "attempt": 7,
+          "scheduled": false,
+          "reserved": false,
+          "credentialed_launch_started": false,
+          "submission_retention": null,
+          "session_completed": null,
+          "execution_outcome": "not_scheduled",
+          "task_completion_measured": false,
+          "task_completed": null,
+          "outcome": "not_scheduled",
+          "handoff": null,
+          "admission": null,
+          "admission_diagnostic": null,
+          "valid_grade": false,
+          "reference_pass": null,
+          "mutants_detected": null,
+          "mutants_executed": null,
+          "skill_file_access_attempts": null,
+          "tool_calls": null,
+          "tool_errors": null,
+          "failure_cause": null,
+          "timing": null,
+          "duration_seconds": null,
+          "usage": null,
+          "accounting_assessment": null,
+          "execution_assessment": null,
+          "native_terminal": null,
+          "conservative_estimate_usd": null,
+          "native_pricing_estimate_usd": null,
+          "api_bill_usd": null,
+          "evidence_complete": false,
+          "containers_removed": null
+        },
+        {
+          "variant": "absent",
+          "attempt": 8,
+          "scheduled": false,
+          "reserved": false,
+          "credentialed_launch_started": false,
+          "submission_retention": null,
+          "session_completed": null,
+          "execution_outcome": "not_scheduled",
+          "task_completion_measured": false,
+          "task_completed": null,
+          "outcome": "not_scheduled",
+          "handoff": null,
+          "admission": null,
+          "admission_diagnostic": null,
+          "valid_grade": false,
+          "reference_pass": null,
+          "mutants_detected": null,
+          "mutants_executed": null,
+          "skill_file_access_attempts": null,
+          "tool_calls": null,
+          "tool_errors": null,
+          "failure_cause": null,
+          "timing": null,
+          "duration_seconds": null,
+          "usage": null,
+          "accounting_assessment": null,
+          "execution_assessment": null,
+          "native_terminal": null,
+          "conservative_estimate_usd": null,
+          "native_pricing_estimate_usd": null,
+          "api_bill_usd": null,
+          "evidence_complete": false,
+          "containers_removed": null
+        }
+      ],
+      "closure": {
+        "allocation_id": "sol-high-prepared-20261106",
+        "state": "closed",
+        "paid_execution_enabled": false,
+        "reserved_slots_consumed": [],
+        "campaign_attempts_consumed": 6,
+        "previous_recovery_consumed": 4,
+        "previous_recovery_limit": 4,
+        "incremental_api_bill_usd": null,
+        "historical_cumulative_api_bill_usd": null,
+        "note": "Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.",
+        "reservation_ids": [],
+        "incremental_conservative_estimate_usd": null,
+        "operational_budget_usd": 5,
+        "estimated_budget_exceeded": null
+      },
+      "operationally_usable": false,
+      "profile": "codex-0.166.0_gpt-6.1-sol_high_rollout-budget-disabled",
+      "limits": [
+        "One attempt per arm cannot establish skill effectiveness; comparisons with historical CLI/model profiles are not skill-only comparisons",
+        "File-access attempts are not successful reads, instruction following or causal skill benefit",
+        "Native cleanup permission errors are retained; whole disposable-container removal is checked independently",
+        "The API credential is available to the evaluated process. Unrelated credentials, raw transcripts and authentication files are excluded. Only the exact declared agent submission may be retained after credential/protected-content checks and download verification, for 30 days",
+        "Pinned native pricing may be unavailable; historical cumulative spending remains unknown; $5 is an operational budget with possible overshoot, not a provider-enforced cap"
+      ],
+      "usage_note": "CLI-reported cumulative totals are retained without summing repeated token-count events. Cached reads and writes are input subsets; reasoning is an output subset. Conservative estimate charges all input at $10/M and output at $15/M, without adding subset counts. These are estimates, not provider bills.",
+      "admission_preflight": null,
+      "observed_usage_conservative_estimate_usd": null,
+      "reviewed_notes": [
+        "Neither arm was reserved, launched, graded or retained; all current/absent metrics remain unmeasured.",
+        "The unchanged frozen profile was planned, not evaluated. Historical controls and earlier live outcomes remain historical evidence.",
+        "Prepared images must build and pass artifact round-trip verification before normal protected-environment approval and any credentialed launch."
+      ]
     }
   ],
   "admission_validation": {
@@ -2428,159 +2692,1428 @@
         }
       ],
       "terminal_decision": "Allocation closed unused after the pinned package index failed. No additional inference or CI build retry scheduled."
+    },
+    {
+      "runs": [
+        {
+          "run_id": 42235352779,
+          "commit": "c6cef78ec916fdf955eb20600fa642e2f6d9c91d",
+          "preparation_attempt": 1,
+          "stage": "agent_image_build",
+          "dependency": "https://snapshot.debian.org/archive/debian-security/20261103T000000Z/dists/trixie-security/main/binary-amd64/Packages",
+          "native_apt_exit": 100,
+          "http_status": 504,
+          "closure": {
+            "allocation_id": "sol-high-prepared-20261106",
+            "state": "closed",
+            "paid_execution_enabled": false,
+            "reserved_slots_consumed": [],
+            "campaign_attempts_consumed": 6,
+            "previous_recovery_consumed": 4,
+            "previous_recovery_limit": 4,
+            "incremental_api_bill_usd": null,
+            "historical_cumulative_api_bill_usd": null,
+            "note": "Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.",
+            "reservation_ids": [],
+            "incremental_conservative_estimate_usd": null,
+            "operational_budget_usd": 5,
+            "estimated_budget_exceeded": null
+          },
+          "environment_approval_submitted": false,
+          "credentialed_launches": 0,
+          "reservations": 0,
+          "classification": "prelaunch_infrastructure_failure",
+          "failure": "APT security Packages index HTTP 504; apt exit 100; Docker build exit 1",
+          "workflow_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42235352779",
+          "closure_artifact_sha256": "73abd16bac41ce840b34b74b191122b8b3a377b85f4919d7fb589b85c613d67d"
+        },
+        {
+          "run_id": 42238163966,
+          "commit": "381c458a512fe120ab20060ede7b6542b6049c94",
+          "preparation_attempt": 2,
+          "stage": "credential_free_agent_image_build",
+          "classification": "prelaunch_infrastructure_failure",
+          "failure": "Fixed main Packages.xz download exhausted three transport attempts; HTTP 503: No healthy backends; Docker build exit 1",
+          "dependency": "https://snapshot.debian.org/archive/debian/20261103T000000Z/dists/trixie/main/binary-amd64/Packages.xz",
+          "dependency_attribution": "Derived from the executed ordered cache_indexes loop, traceback at checked(base+relative), and absence of its flushed first-archive completion message. The exception itself omitted the URL.",
+          "native_http_status": 503,
+          "transport_attempts": 3,
+          "outer_docker_build_exit_status": 1,
+          "closure": {
+            "allocation_id": "sol-high-prepared-20261106",
+            "state": "closed",
+            "paid_execution_enabled": false,
+            "reserved_slots_consumed": [],
+            "campaign_attempts_consumed": 6,
+            "previous_recovery_consumed": 4,
+            "previous_recovery_limit": 4,
+            "incremental_api_bill_usd": null,
+            "historical_cumulative_api_bill_usd": null,
+            "note": "Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.",
+            "reservation_ids": [],
+            "incremental_conservative_estimate_usd": null,
+            "operational_budget_usd": 5,
+            "estimated_budget_exceeded": null
+          },
+          "reservations": 0,
+          "credentialed_launches": 0,
+          "environment_approval_submitted": false,
+          "workflow_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42238163966",
+          "job_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42238163966/job/127961265318",
+          "closure_artifact_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42238163966/artifacts/13511298813",
+          "closure_artifact_sha256": "18961500dc7ff13d044514bcbb4dd938a254334008ad391ea9aed06a94d7725c",
+          "closure_download_digest_verified": true,
+          "preparation_metadata": {
+            "stage": "building_pinned_image",
+            "paid_inference_permitted": false
+          },
+          "agent_container_started": false,
+          "verifier_container_started": false,
+          "container_disposal": "not_applicable_no_evaluated_containers_started",
+          "compose_cleanup_step": "success; not evidence of a live container-disposal probe"
+        }
+      ],
+      "terminal_decision": "Stop after the two authorized full preparation attempts. No third build or paid launch. Pinned snapshot delivery remains unreliable from hosted Actions; unchanged complete image construction and transfer are unverified.",
+      "history": [
+        {
+          "runs": [
+            {
+              "run_id": 42212722607,
+              "commit": "0bbd09b356415e6ce01ca142e3fb56b385267c61",
+              "stage": "credential_free_unit_tests",
+              "failure": "test_credential_free_diagnostics_work_after_later_closed_allocations used armed checkout instead of a closed fixture",
+              "closure": {
+                "allocation_id": "sol-high-retained-20261106",
+                "state": "closed",
+                "paid_execution_enabled": false,
+                "reserved_slots_consumed": [],
+                "campaign_attempts_consumed": 6,
+                "previous_recovery_consumed": 4,
+                "previous_recovery_limit": 4,
+                "incremental_api_bill_usd": null,
+                "historical_cumulative_api_bill_usd": null,
+                "note": "Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.",
+                "reservation_ids": [],
+                "incremental_conservative_estimate_usd": null,
+                "operational_budget_usd": 5,
+                "estimated_budget_exceeded": null
+              },
+              "credentialed_launches": 0,
+              "reservations": 0,
+              "scope": "Prelaunch CI correction only; no retry or replacement of a Codex attempt."
+            },
+            {
+              "run_id": 42213118342,
+              "commit": "eca71ef78c197b51103436f85575126a4ad48ea9",
+              "stage": "credential_free_agent_image_build",
+              "classification": "prelaunch_infrastructure_failure",
+              "command": [
+                "docker",
+                "build",
+                "--progress=plain",
+                "-t",
+                "direct-harbor-agent:current",
+                "<staged-current-environment>"
+              ],
+              "failing_build_step": "apt-get update --error-on=any against frozen Debian snapshot 20261103T000000Z",
+              "native_exit_status": 100,
+              "outer_docker_build_exit_status": 1,
+              "observed_errors": [
+                "HTTP 504 Gateway Timeout",
+                "HTTP 503 TooManyRequests first byte timeout"
+              ],
+              "package_index_url": "https://snapshot.debian.org/archive/debian/20261103T000000Z/dists/trixie/main/binary-amd64/Packages",
+              "reservations": 0,
+              "credentialed_launches": 0,
+              "evaluated_agent_container_started": false,
+              "verifier_container_started": false,
+              "container_disposal": "not_applicable_evaluated_environments_never_started",
+              "build_cleanup": "GitHub-hosted job completed; no retained Docker process inspection; do not claim a container-disposal probe passed",
+              "workflow_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342",
+              "job_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342/job/127876427762",
+              "report_artifact_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342/artifacts/13499568643",
+              "closure_artifact_sha256": "7d32a70cf6839abc78b308a56f52e4984cf2b6095a653751308affbedc375169",
+              "note": "No reservation receipt or attempt record exists; both credentialed steps were skipped. No new agent-generated submission exists. No package pin, acceptance criterion or isolation setting was changed to work around this failure."
+            }
+          ],
+          "terminal_decision": "Allocation closed unused after the pinned package index failed. No additional inference or CI build retry scheduled."
+        }
+      ]
     }
   ],
   "prepared_environment": {
-    "prepared_manifest": null,
-    "prepared_transfer": null,
-    "preapproval_download": null
-  },
-  "preparation_failures": {
-    "runs": [
-      {
-        "run_id": 42235352779,
-        "commit": "c6cef78ec916fdf955eb20600fa642e2f6d9c91d",
-        "preparation_attempt": 1,
-        "stage": "agent_image_build",
-        "dependency": "https://snapshot.debian.org/archive/debian-security/20261103T000000Z/dists/trixie-security/main/binary-amd64/Packages",
-        "native_apt_exit": 100,
-        "http_status": 504,
-        "closure": {
-          "allocation_id": "sol-high-prepared-20261106",
-          "state": "closed",
-          "paid_execution_enabled": false,
-          "reserved_slots_consumed": [],
-          "campaign_attempts_consumed": 6,
-          "previous_recovery_consumed": 4,
-          "previous_recovery_limit": 4,
-          "incremental_api_bill_usd": null,
-          "historical_cumulative_api_bill_usd": null,
-          "note": "Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.",
-          "reservation_ids": [],
-          "incremental_conservative_estimate_usd": null,
-          "operational_budget_usd": 5,
-          "estimated_budget_exceeded": null
-        },
-        "environment_approval_submitted": false,
-        "credentialed_launches": 0,
-        "reservations": 0,
-        "classification": "prelaunch_infrastructure_failure",
-        "failure": "APT security Packages index HTTP 504; apt exit 100; Docker build exit 1",
-        "workflow_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42235352779",
-        "closure_artifact_sha256": "73abd16bac41ce840b34b74b191122b8b3a377b85f4919d7fb589b85c613d67d"
-      },
-      {
-        "run_id": 42238163966,
-        "commit": "381c458a512fe120ab20060ede7b6542b6049c94",
-        "preparation_attempt": 2,
-        "stage": "credential_free_agent_image_build",
-        "classification": "prelaunch_infrastructure_failure",
-        "failure": "Fixed main Packages.xz download exhausted three transport attempts; HTTP 503: No healthy backends; Docker build exit 1",
-        "dependency": "https://snapshot.debian.org/archive/debian/20261103T000000Z/dists/trixie/main/binary-amd64/Packages.xz",
-        "dependency_attribution": "Derived from the executed ordered cache_indexes loop, traceback at checked(base+relative), and absence of its flushed first-archive completion message. The exception itself omitted the URL.",
-        "native_http_status": 503,
-        "transport_attempts": 3,
-        "outer_docker_build_exit_status": 1,
-        "closure": {
-          "allocation_id": "sol-high-prepared-20261106",
-          "state": "closed",
-          "paid_execution_enabled": false,
-          "reserved_slots_consumed": [],
-          "campaign_attempts_consumed": 6,
-          "previous_recovery_consumed": 4,
-          "previous_recovery_limit": 4,
-          "incremental_api_bill_usd": null,
-          "historical_cumulative_api_bill_usd": null,
-          "note": "Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.",
-          "reservation_ids": [],
-          "incremental_conservative_estimate_usd": null,
-          "operational_budget_usd": 5,
-          "estimated_budget_exceeded": null
-        },
-        "reservations": 0,
-        "credentialed_launches": 0,
-        "environment_approval_submitted": false,
-        "workflow_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42238163966",
-        "job_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42238163966/job/127961265318",
-        "closure_artifact_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42238163966/artifacts/13511298813",
-        "closure_artifact_sha256": "18961500dc7ff13d044514bcbb4dd938a254334008ad391ea9aed06a94d7725c",
-        "closure_download_digest_verified": true,
-        "preparation_metadata": {
-          "stage": "building_pinned_image",
-          "paid_inference_permitted": false
-        },
-        "agent_container_started": false,
-        "verifier_container_started": false,
-        "container_disposal": "not_applicable_no_evaluated_containers_started",
-        "compose_cleanup_step": "success; not evidence of a live container-disposal probe"
-      }
-    ],
-    "terminal_decision": "Stop after the two authorized full preparation attempts. No third build or paid launch. Pinned snapshot delivery remains unreliable from hosted Actions; unchanged complete image construction and transfer are unverified.",
-    "history": [
-      {
-        "runs": [
-          {
-            "run_id": 42212722607,
-            "commit": "0bbd09b356415e6ce01ca142e3fb56b385267c61",
-            "stage": "credential_free_unit_tests",
-            "failure": "test_credential_free_diagnostics_work_after_later_closed_allocations used armed checkout instead of a closed fixture",
-            "closure": {
-              "allocation_id": "sol-high-retained-20261106",
-              "state": "closed",
-              "paid_execution_enabled": false,
-              "reserved_slots_consumed": [],
-              "campaign_attempts_consumed": 6,
-              "previous_recovery_consumed": 4,
-              "previous_recovery_limit": 4,
-              "incremental_api_bill_usd": null,
-              "historical_cumulative_api_bill_usd": null,
-              "note": "Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.",
-              "reservation_ids": [],
-              "incremental_conservative_estimate_usd": null,
-              "operational_budget_usd": 5,
-              "estimated_budget_exceeded": null
-            },
-            "credentialed_launches": 0,
-            "reservations": 0,
-            "scope": "Prelaunch CI correction only; no retry or replacement of a Codex attempt."
+    "prepared_manifest": {
+      "schema": 3,
+      "kernel_probe_reference": "alpine:3.23.4@sha256:5b10f432ef3da1b8d4c7eb6c487f2f5a8f096bc91145e68878dd4a5019afde11",
+      "experiment": {
+        "sha256": "cb4623031566389300061ad8db0f83c9a61b28acaa97578447bb97e7dfe1332a",
+        "inputs": {
+          ".agents/skills/a11y/SKILL.md": {
+            "sha256": "96d578e9646cd80ff6e1bedb26069222ad37b473960f3c0cc069716484b22553",
+            "size": 27638
           },
-          {
-            "run_id": 42213118342,
-            "commit": "eca71ef78c197b51103436f85575126a4ad48ea9",
-            "stage": "credential_free_agent_image_build",
-            "classification": "prelaunch_infrastructure_failure",
-            "command": [
-              "docker",
-              "build",
-              "--progress=plain",
-              "-t",
-              "direct-harbor-agent:current",
-              "<staged-current-environment>"
-            ],
-            "failing_build_step": "apt-get update --error-on=any against frozen Debian snapshot 20261103T000000Z",
-            "native_exit_status": 100,
-            "outer_docker_build_exit_status": 1,
-            "observed_errors": [
-              "HTTP 504 Gateway Timeout",
-              "HTTP 503 TooManyRequests first byte timeout"
-            ],
-            "package_index_url": "https://snapshot.debian.org/archive/debian/20261103T000000Z/dists/trixie/main/binary-amd64/Packages",
-            "reservations": 0,
-            "credentialed_launches": 0,
-            "evaluated_agent_container_started": false,
-            "verifier_container_started": false,
-            "container_disposal": "not_applicable_evaluated_environments_never_started",
-            "build_cleanup": "GitHub-hosted job completed; no retained Docker process inspection; do not claim a container-disposal probe passed",
-            "workflow_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342",
-            "job_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342/job/127876427762",
-            "report_artifact_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342/artifacts/13499568643",
-            "closure_artifact_sha256": "7d32a70cf6839abc78b308a56f52e4984cf2b6095a653751308affbedc375169",
-            "note": "No reservation receipt or attempt record exists; both credentialed steps were skipped. No new agent-generated submission exists. No package pin, acceptance criterion or isolation setting was changed to work around this failure."
+          ".agents/skills/agent-safety/SKILL.md": {
+            "sha256": "2dc7898d11fb55a1a042d46e6e60800d0f948253c5216efa3e470e8914cc84ab",
+            "size": 4316
+          },
+          ".agents/skills/ansible/SKILL.md": {
+            "sha256": "a79531195a9bdf942b301edf1588c8814ceb976557f4f0cb79bd9aa79e59d52e",
+            "size": 5752
+          },
+          ".agents/skills/code-simplification/SKILL.md": {
+            "sha256": "e13b433345e6bf425c3625442ac1b3507b371c18d7ea3e3db822da7a7f742a29",
+            "size": 13719
+          },
+          ".agents/skills/dependabot/SKILL.md": {
+            "sha256": "2b5f3af7d8a5555d330d4d72ba9ad6140e85215d006dd9d7a92ee0dae76bbf82",
+            "size": 13605
+          },
+          ".agents/skills/dependabot/references/dependabot-yml-reference.md": {
+            "sha256": "c3b101d7e200a215211c9e23157ddfb1c051e437815b4d5a3d9bc13e504d6ed6",
+            "size": 9727
+          },
+          ".agents/skills/dependabot/references/example-configs.md": {
+            "sha256": "35375699cfbaa372b68a232a2704f88a190e1267f937e1f1921e8d83c97485ca",
+            "size": 8186
+          },
+          ".agents/skills/dependabot/references/pr-commands.md": {
+            "sha256": "471a786456c798364d13c0da554c12c712c581986b7f4a1de95d8b3638fd21cb",
+            "size": 4294
+          },
+          ".agents/skills/gh/SKILL.md": {
+            "sha256": "b40d44ef9077b34d710b4c0737fee0e72c595e0770fbbdcb339de2ba0b40e23b",
+            "size": 21232
+          },
+          ".agents/skills/git-commit/SKILL.md": {
+            "sha256": "554d1a3c6d95f15bc1170160659ecdc9a9958b64f377f3988941b672c249b13f",
+            "size": 3198
+          },
+          ".agents/skills/github-actions-hardening/SKILL.md": {
+            "sha256": "31a8e7483d978e6267941edefebbe42aaa946bb3d43c9095aa3db343d4a8ff06",
+            "size": 9852
+          },
+          ".agents/skills/github-actions-hardening/references/injection.md": {
+            "sha256": "ebd6ef8d39ba6f1cd3dc13051e6ed4163d1d2ba36518cf0f7393836a211e58ff",
+            "size": 3035
+          },
+          ".agents/skills/github-actions-hardening/references/permissions-and-tokens.md": {
+            "sha256": "7272d00b20cf99c6fcbf34346f76730907c00701aef44bb9cfb7ab3eecac336b",
+            "size": 2743
+          },
+          ".agents/skills/github-actions-hardening/references/report-format.md": {
+            "sha256": "3ecd2442e173bc001f858747873349be7c6c77050470b87ae516647908b1e86e",
+            "size": 1920
+          },
+          ".agents/skills/github-actions-hardening/references/supply-chain.md": {
+            "sha256": "f66f613dbd732ce87c1e76b88208efde8feae3ffe5a3ab405cde4ce3df66f605",
+            "size": 2938
+          },
+          ".agents/skills/github-actions-hardening/references/triggers-and-privilege.md": {
+            "sha256": "465f3f76517e9f5374a73e30f46cb47e1fe62ce9fd81f782808a3abbb2df2756",
+            "size": 3397
+          },
+          ".agents/skills/microsoft-code-reference/SKILL.md": {
+            "sha256": "19f13822dd8674ac0a24787ac15472c9137d0db5b03750ba43ee9dcdac8ddd03",
+            "size": 4203
+          },
+          ".agents/skills/msgraph/CONTRIBUTING.md": {
+            "sha256": "60dc9074eedcb06cb29845a4ab6d41866f357be6b8d810e8c84408788e2babf0",
+            "size": 3582
+          },
+          ".agents/skills/msgraph/SKILL.md": {
+            "sha256": "b4763f6ae89a4e2843ca5bfe15fddf49f5924e20054ff5d7fb7e43a2df3df67e",
+            "size": 12910
+          },
+          ".agents/skills/msgraph/references/REFERENCE.md": {
+            "sha256": "61639bb509391df6e65762355c87ef53c98f544d04e4455fd17f571c6732b5d7",
+            "size": 6549
+          },
+          ".agents/skills/msgraph/references/docs/advanced-queries.md": {
+            "sha256": "89ac64478ca6539412ce66d5f6ac2f76f3c88ff709c8bee7c81da0d79017345e",
+            "size": 22336
+          },
+          ".agents/skills/msgraph/references/docs/authentication.md": {
+            "sha256": "dae0fca55119fd89a9b719705d5263aa4705215c1de57d0bf33627d30c9d7c42",
+            "size": 8036
+          },
+          ".agents/skills/msgraph/references/docs/batching.md": {
+            "sha256": "f5132b3027554ededc2ba6b116a47187df4c408be5ddbb273ff7653352e60e3b",
+            "size": 12409
+          },
+          ".agents/skills/msgraph/references/docs/best-practices.md": {
+            "sha256": "48e18d277aa4412ac66acb084aaa8d1ba1af31fe840fdc9ff42c644ddbd8d03b",
+            "size": 13907
+          },
+          ".agents/skills/msgraph/references/docs/errors.md": {
+            "sha256": "2c297ff319457b717c4d38948444e3586960d4669ad65fc4e38f7d36138a0d8b",
+            "size": 8931
+          },
+          ".agents/skills/msgraph/references/docs/paging.md": {
+            "sha256": "f1b76a08cde517b495023098385b63fdf921eb3dc5e374b4f285e71786feb716",
+            "size": 4582
+          },
+          ".agents/skills/msgraph/references/docs/query-parameters.md": {
+            "sha256": "f20ddb64c70f3b94c224882cb57bfc1541df6b2bb74532a5e16cb83ca94b6cd3",
+            "size": 17705
+          },
+          ".agents/skills/msgraph/references/docs/throttling.md": {
+            "sha256": "cb6db141e600f3c433c80e8f21a6840b1ed83237d7c73f2b0144de37225b0a85",
+            "size": 5222
+          },
+          ".agents/skills/msgraph/scripts/run.ps1": {
+            "sha256": "208a0323c85c94c8b8f23d974a92fb37dab77c44de5638fb3e7688e00d761cbb",
+            "size": 985
+          },
+          ".agents/skills/msgraph/scripts/run.sh": {
+            "sha256": "ef3545fee5e2f2654cedf32ed543ba2e496109c1eb90ea6f915fd9bcf4abd51b",
+            "size": 1212
+          },
+          ".agents/skills/podman/EVALS.md": {
+            "sha256": "96088308ed8df85d9f369263de4ec02fefdb7f59fbccc2b4629991be7266e581",
+            "size": 1441
+          },
+          ".agents/skills/podman/MAINTENANCE.md": {
+            "sha256": "93f772d47f661cc721a211257f4a2aecabcc53ed77f0d4b16b754944128586c9",
+            "size": 4078
+          },
+          ".agents/skills/podman/SKILL.md": {
+            "sha256": "625107071889166612f64ac52920be2b9455f671e4ce1f805835f7fee14ef274",
+            "size": 12644
+          },
+          ".agents/skills/podman/evals/evals.json": {
+            "sha256": "9bc7fdebc99616983bd501006f97a0a3233cc9901da06443e49d63652de2f0c5",
+            "size": 8779
+          },
+          ".agents/skills/podman/evals/files/postgres.container": {
+            "sha256": "9da8bb708c14453616a43d2a9527484f6fa4ddc1d06c2339ddecadeeb9f54b5f",
+            "size": 655
+          },
+          ".agents/skills/podman/evals/files/vendor-compose.yaml": {
+            "sha256": "1f36c57615a4efa9bc6c1de9e7088d2dd82040cb14ec74b00c910c75f5ea26f7",
+            "size": 542
+          },
+          ".agents/skills/podman/evals/files/vendor-web/Containerfile": {
+            "sha256": "486aa74e34330bc0122d85c4f3719f3bf66c405ffe7fcd0a2969bec6d5c21a2d",
+            "size": 266
+          },
+          ".agents/skills/podman/references/compose-migration.md": {
+            "sha256": "fce55e0ec0a56608d714f273afdbdc44017d0a4ebed73b61291cd0fdebbf434a",
+            "size": 4465
+          },
+          ".agents/skills/podman/references/fedora-hosts.md": {
+            "sha256": "adb6f7a2a07f2067036354cb57bb69e694d423f20bd578e09db6a5a799859168",
+            "size": 3946
+          },
+          ".agents/skills/podman/references/quadlet-systemd.md": {
+            "sha256": "55a300354c77b6e59b5876b1b3a6b7e00f9525a21c9160fa5b3200a3a8128f23",
+            "size": 12228
+          },
+          ".agents/skills/podman/references/reverse-proxy.md": {
+            "sha256": "6a8d789b72d821e3fed320ca84325086d5a42ced25912a4b52ea760a306111ff",
+            "size": 3621
+          },
+          ".agents/skills/podman/references/rootless-networking.md": {
+            "sha256": "a5fc3f33815caa196d5f8d6cb090136bcccc88fb95dedb921c99bd0b3cf6b524",
+            "size": 7011
+          },
+          ".agents/skills/podman/references/security-storage-secrets.md": {
+            "sha256": "37e1fae3de6f4b7ae1ea3ccc2b0b84d7fd854ea2730a51f0e3b3b1bc9b2e1068",
+            "size": 8129
+          },
+          ".agents/skills/podman/references/validation.md": {
+            "sha256": "465321094bc936d8a9e187bd3b4daa1ab271b93242a2c07fe88c58db6bd4bdd5",
+            "size": 4247
+          },
+          ".agents/skills/powershell-module-engineering/SKILL.md": {
+            "sha256": "801cecfd42aeb32f3fd6083d9af08f44c8a5ca48202761533c072a10c06060c9",
+            "size": 11551
+          },
+          ".agents/skills/powershell-pester-6/SKILL.md": {
+            "sha256": "b57df2ff4072b2e25744ae2bd530b02bbb6ab83a22a0d374c73d48de4dc70887",
+            "size": 13098
+          },
+          ".agents/skills/powershell-pester-6/references/compatibility-and-migration.md": {
+            "sha256": "6d05a890eb1c53c59755f9e560c05d65467a614d36af7c812f4a32c89b47f4e9",
+            "size": 7813
+          },
+          ".agents/skills/powershell-pester-6/references/execution.md": {
+            "sha256": "3b80a98abfefdcd9a765da9a9436caa43de6a873e57253f1ecfb36e1095ea4b8",
+            "size": 6577
+          },
+          ".codex/config.toml": {
+            "sha256": "782c639a9261c6c7920ce141d84bbb207f8695ca8405091fadaa25a5051d6e05",
+            "size": 172
+          },
+          ".github/evals/powershell-pester-6/EVALS.md": {
+            "sha256": "05aab77534b4a41eacc28b61498b135e4a3fa99e6483e495bfcefb0b5545ed53",
+            "size": 11670
+          },
+          ".github/evals/powershell-pester-6/evals/config.yml": {
+            "sha256": "02433e16bc501a3e28546345741ac2d4ec1d4e3ec2bf9bb55832a1473475306b",
+            "size": 153
+          },
+          ".github/evals/powershell-pester-6/evals/evals.json": {
+            "sha256": "d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+            "size": 2245
+          },
+          ".github/evals/powershell-pester-6/evals/grader.py": {
+            "sha256": "99447ea8fe0ebb1c616de66c417c9ca06b3212721be14f2e09544d86772c99af",
+            "size": 18383
+          },
+          ".github/evals/powershell-pester-6/support/EXECUTION-PROFILE.md": {
+            "sha256": "d76e58f36664dcde45e9e86f47863578c23aa06c6d0bb5c365f04b998c49900f",
+            "size": 2244
+          },
+          ".github/evals/powershell-pester-6/support/Runner.ps1": {
+            "sha256": "d8c17e7991d5fc1dec1e71c0e1e945ecec275893c2653a6ec000ac4acaa6dd60",
+            "size": 18330
+          },
+          ".github/evals/powershell-pester-6/support/cases/pester-001/input/README.md": {
+            "sha256": "47bb79ddcfc3c037a22b03045b3faa9a080a2e61ddd41995beaccd563e8a1d43",
+            "size": 760
+          },
+          ".github/evals/powershell-pester-6/support/cases/pester-001/input/Subject.ps1": {
+            "sha256": "2a5afe13db1e6f89d691da645c7b92de9cbe3a69d1e1d147d75b9c2d1db71277",
+            "size": 167
+          },
+          ".github/evals/powershell-pester-6/support/cases/pester-001/mutants/coercion.ps1": {
+            "sha256": "0e50cbce4c9dd8c3af12de36d42288c4110b80ee3f31dda5a3f44ea858ac072b",
+            "size": 233
+          },
+          ".github/evals/powershell-pester-6/support/cases/pester-001/mutants/filter.ps1": {
+            "sha256": "4ab069c797c95d8da0d3d6d47615a0b5fcf3006399ea2b904bdc24d608158e14",
+            "size": 198
+          },
+          ".github/evals/powershell-pester-6/support/cases/pester-001/profile.json": {
+            "sha256": "6fcaf12904d917dd8100b00df0cfea17f019a51757bb6caed065aec689061e19",
+            "size": 270
+          },
+          ".github/evals/powershell-pester-6/support/cases/pester-001/reference/Subject.ps1": {
+            "sha256": "2a5afe13db1e6f89d691da645c7b92de9cbe3a69d1e1d147d75b9c2d1db71277",
+            "size": 167
+          },
+          ".github/evals/powershell-pester-6/support/cases/pester-002/input/README.md": {
+            "sha256": "f48fc923ccb7cf73e20dd17a36b6a670d85061ae0a08881ce44f363ec9162b51",
+            "size": 725
+          },
+          ".github/evals/powershell-pester-6/support/cases/pester-002/input/Subject.ps1": {
+            "sha256": "0f51c43ae61b355cadb2b5418938d5e64f060853784a36e495277f5e6ad7b101",
+            "size": 277
+          },
+          ".github/evals/powershell-pester-6/support/cases/pester-002/mutants/exponent.ps1": {
+            "sha256": "ff34ab2512b5f5064c4539a48437096d22a3a2a01023afdd862235d4714dc5c0",
+            "size": 327
+          },
+          ".github/evals/powershell-pester-6/support/cases/pester-002/mutants/swallowed.ps1": {
+            "sha256": "230dd797449ed463c5f9ebc181224634c92489c93a4f85c0d17f7bcba3a28c83",
+            "size": 282
+          },
+          ".github/evals/powershell-pester-6/support/cases/pester-002/profile.json": {
+            "sha256": "b22226da66eb00dafd37ab5e582a20e3bb97f43d7798befbb52a07b040b99c82",
+            "size": 346
+          },
+          ".github/evals/powershell-pester-6/support/cases/pester-002/reference/Subject.ps1": {
+            "sha256": "1d09abfa1a65f12e448f0bd785cc60b30071b420123030dee2fdd4e50848fba9",
+            "size": 321
+          },
+          ".github/evals/powershell-pester-6/support/cases/pester-003/input/Probe.psm1": {
+            "sha256": "75e3cdf19d09f6dfda302dc5ce33a1feb2c6310f4c03fc3b6862279b9adbee7f",
+            "size": 327
+          },
+          ".github/evals/powershell-pester-6/support/cases/pester-003/input/README.md": {
+            "sha256": "104123e33aa72e1067eb1f22bd72498993a5c76ad06afe27846f4203344429cf",
+            "size": 1073
+          },
+          ".github/evals/powershell-pester-6/support/cases/pester-003/mutants/bypass.ps1": {
+            "sha256": "b6b56e5c08d40a8edc4c6fa0e9689603c33fc575c86a3b55eacf5669e9e802f9",
+            "size": 339
+          },
+          ".github/evals/powershell-pester-6/support/cases/pester-003/mutants/target.ps1": {
+            "sha256": "7e8e5200b2469d3831388e317a7c4a9c4884776b2335b1b418dd00d3b7f3d68e",
+            "size": 383
+          },
+          ".github/evals/powershell-pester-6/support/cases/pester-003/profile.json": {
+            "sha256": "cc10827699c0a7f6308142590a862904ad9e61b903e46336a8964f43d73054e3",
+            "size": 343
+          },
+          ".github/evals/powershell-pester-6/support/cases/pester-003/reference/Subject.ps1": {
+            "sha256": "34499ba6650937a285fb7c654d4c833bf50328c3512460a4dc5bbc1a1a550453",
+            "size": 371
+          },
+          ".github/evals/powershell-pester-6/support/cases/pester-004/input/Existing.Tests.ps1": {
+            "sha256": "322195b479d439e917afe4774fe3988af1e32d8b713db45ba1a6e1ca20e177cd",
+            "size": 345
+          },
+          ".github/evals/powershell-pester-6/support/cases/pester-004/input/README.md": {
+            "sha256": "2e4250c253101facb59b4f49e0aed0b017659042a6be25416dfe6454c5a32959",
+            "size": 626
+          },
+          ".github/evals/powershell-pester-6/support/cases/pester-004/input/Subject.ps1": {
+            "sha256": "e2ce7f590d85a49c24005829e380e269a32fa939dcc73bbf9ce009522b70cbc5",
+            "size": 99
+          },
+          ".github/evals/powershell-pester-6/support/cases/pester-004/mutants/above.ps1": {
+            "sha256": "34ba94f2a830241f421b5f6964e089ccc6160b9764d304d4b3ca6834b49d4f37",
+            "size": 150
+          },
+          ".github/evals/powershell-pester-6/support/cases/pester-004/mutants/highest.ps1": {
+            "sha256": "b7077db138544a86a0f730a8f2fb47f61ff74ca662106cbb5df837afd7636ddf",
+            "size": 152
+          },
+          ".github/evals/powershell-pester-6/support/cases/pester-004/mutants/lowest.ps1": {
+            "sha256": "6e93e32817d5f5af2212fcb5b3cf91d7f5f570b382c7246ed274d1c90d913a9d",
+            "size": 151
+          },
+          ".github/evals/powershell-pester-6/support/cases/pester-004/mutants/zero.ps1": {
+            "sha256": "fe7513605f8a52ebec61abf9c3be14aac3010e8a6d314c7488d7c7fc80b33260",
+            "size": 149
+          },
+          ".github/evals/powershell-pester-6/support/cases/pester-004/profile.json": {
+            "sha256": "0f4dd7272eb67e67aed1ece1e03cb4eef60c48712df8e87e9b189b51f55bf43a",
+            "size": 306
+          },
+          ".github/evals/powershell-pester-6/support/cases/pester-004/reference/Subject.ps1": {
+            "sha256": "6d31ab77b5e387d6c9ddea1c75b8e4f6be84383022e979931700da94cfc9fdbc",
+            "size": 143
+          },
+          ".github/evals/powershell-pester-6/support/cases/pester-005/input/README.md": {
+            "sha256": "7c38fe72daa5a2cc6cff23af5e3c8f345789010014f9ef94d42e386c04ea297d",
+            "size": 264
+          },
+          ".github/evals/powershell-pester-6/support/cases/pester-005/input/unittest.txt": {
+            "sha256": "16bb7d0243698e035cf8e6e93f7fe252da353f7f71e7503128a3e20d6af40233",
+            "size": 386
+          },
+          ".github/evals/powershell-pester-6/support/cases/pester-005/profile.json": {
+            "sha256": "a1122cac076e058a1aab540a191684bc86dad0a779a7baad256ad5d154d774b6",
+            "size": 271
+          },
+          ".github/evals/powershell-pester-6/support/cases/pester-005/reference/summary.json": {
+            "sha256": "5b6c4b049dbedbc7cb8192d1972ba4edd11b92a9fbe499e6d95ee59a0a0f022c",
+            "size": 80
+          },
+          ".github/evals/powershell-pester-6/support/install-runtime.py": {
+            "sha256": "d47f30bfff8b03ca5fba03c1307be77ab821d5fbbd10509eddb7b9fff71caa8d",
+            "size": 2431
+          },
+          ".github/evals/powershell-pester-6/support/qualification/pester-001/classic.Tests.ps1": {
+            "sha256": "9e59688c16ac411adfbbdcf1098520b0afc644494229d92d51dea7a59a24b4e0",
+            "size": 1012
+          },
+          ".github/evals/powershell-pester-6/support/qualification/pester-001/data.Tests.ps1": {
+            "sha256": "0504b5bc73006d9fdd18bfee369504948a02d6ea4fdeda8c5db9d6a5a6807776",
+            "size": 575
+          },
+          ".github/evals/powershell-pester-6/support/qualification/pester-001/standalone.Tests.ps1": {
+            "sha256": "32a47b587508c019be03284ec514c2a8fc35522c3e2cea3bdbfef8b1fce652d5",
+            "size": 730
+          },
+          ".github/evals/powershell-pester-6/support/qualification/pester-001/weak.Tests.ps1": {
+            "sha256": "a79ff3052e0b9dcb828a9266d32fdf9166eff503c03d8bf946969e8ab80a801e",
+            "size": 163
+          },
+          ".github/evals/powershell-pester-6/support/qualification/pester-002/classic.Tests.ps1": {
+            "sha256": "8784023e56e7757644ae38797e7fc6cfedfda289a25d0a98283b34d0f40b090a",
+            "size": 493
+          },
+          ".github/evals/powershell-pester-6/support/qualification/pester-002/data.Tests.ps1": {
+            "sha256": "2e065d6bad3b522a438971b28799d608f09ec4f3ce15a5a596f9171cd16ae876",
+            "size": 571
+          },
+          ".github/evals/powershell-pester-6/support/qualification/pester-002/weak.Tests.ps1": {
+            "sha256": "94d8dff22e3715ade171b143d118fe8939acf89e8e3014bccf35fd254cea3ca4",
+            "size": 166
+          },
+          ".github/evals/powershell-pester-6/support/qualification/pester-003/external.Tests.ps1": {
+            "sha256": "fcd01e950ba0f48d86ad8c3302457c751386a5412e067b36baa2a91a4613fcd9",
+            "size": 842
+          },
+          ".github/evals/powershell-pester-6/support/qualification/pester-003/module.Tests.ps1": {
+            "sha256": "2e6ea9ff009deb1d5f7e86915a91f9ad5d2ed893c69e5fa94103e5b9ddc4d3b1",
+            "size": 805
+          },
+          ".github/evals/powershell-pester-6/support/qualification/pester-003/weak.Tests.ps1": {
+            "sha256": "c4ba117b557613923ab6444d41a6e50117b4af9f0fc31a169236edef26ce6b08",
+            "size": 277
+          },
+          ".github/evals/powershell-pester-6/support/qualification/pester-004/compact.Tests.ps1": {
+            "sha256": "3ec2493c5e8cca8ddf321b8e43f5434185dbfb3ee946a6fd2a1dce5415510b5d",
+            "size": 389
+          },
+          ".github/evals/powershell-pester-6/support/qualification/pester-004/discovery.Tests.ps1": {
+            "sha256": "45e8c9be8c4cce8cfbd92859d01de9f99a2e87e71d9486f892aa92cc5a4a6f9c",
+            "size": 364
+          },
+          ".github/evals/powershell-pester-6/support/qualification/pester-004/inline.Tests.ps1": {
+            "sha256": "9fb7a9f7d1164cb1a53222e9e3af5257c4681d250a85aba25d9e622dbbd89de0",
+            "size": 344
+          },
+          ".github/evals/powershell-pester-6/support/qualification/pester-004/weak.Tests.ps1": {
+            "sha256": "ff3e3d6d2c4633556c15f8dab9bedfacdaf7294fddec360d02656c51a54c399c",
+            "size": 162
+          },
+          ".github/evals/powershell-pester-6/support/qualification/pester-005/good.json": {
+            "sha256": "c900360b112a120fb6b7359dcfc1a15150195c859ded8e89f89a1960d090e40f",
+            "size": 68
+          },
+          ".github/evals/powershell-pester-6/support/qualification/pester-005/wrong.json": {
+            "sha256": "bfc7b71f5982e2a2881a48fc5093e347f49196dbef7d008e28a03e233a74d014",
+            "size": 68
+          },
+          ".github/evals/powershell-pester-6/support/test.sh": {
+            "sha256": "6a19331893b1839ac1b8cd41d9b57b2e3ef105cd1de1f1e472ee066e34328f85",
+            "size": 147
+          },
+          "AGENTS.md": {
+            "sha256": "7b8d5aca90cd1a90d32b98d1e86ee16d82c808336e309c26853d3aab73fb4543",
+            "size": 8165
+          },
+          ".github/scripts/pester_evaluations.py": {
+            "sha256": "ad3d1b22e6b5a7416df54a23eb84e6437b2617310cc57c4de920b40d71859967",
+            "size": 7290
+          },
+          ".github/scripts/setup-compose.sh": {
+            "sha256": "83f183dfd584fb72ad2653f1ef551ae82229ea8dc344effde7f5a66146fe734e",
+            "size": 2139
+          },
+          "trial.stage": "FunctionDef(name='stage', args=arguments(args=[arg(arg='root'), arg(arg='variant')], kwonlyargs=[arg(arg='historical_runtime'), arg(arg='admission_diagnostics')], kw_defaults=[Constant(value=False), Constant(value=False)], defaults=[Constant(value='current')]), body=[If(test=Compare(left=Call(func=Name(id='type', ctx=Load()), args=[Name(id='admission_diagnostics', ctx=Load())]), ops=[IsNot()], comparators=[Name(id='bool', ctx=Load())]), body=[Raise(exc=Call(func=Name(id='ValueError', ctx=Load()), args=[Constant(value='admission_diagnostics must be a boolean')]))]), If(test=Compare(left=Name(id='variant', ctx=Load()), ops=[NotIn()], comparators=[Tuple(elts=[Constant(value='current'), Constant(value='absent')], ctx=Load())]), body=[Raise(exc=Call(func=Name(id='ValueError', ctx=Load()), args=[Constant(value='Only existing skill variants may be staged before discovery')]))]), Assign(targets=[Name(id='bundle', ctx=Store())], value=Call(func=Attribute(value=Name(id='pilot', ctx=Load()), attr='stage', ctx=Load()), args=[Name(id='ROOT', ctx=Load()), BinOp(left=Name(id='root', ctx=Load()), op=Div(), right=Constant(value='bundle'))])), Assign(targets=[Name(id='native', ctx=Store())], value=BinOp(left=Name(id='bundle', ctx=Load()), op=Div(), right=Constant(value='evals/harbor'))), Assign(targets=[Name(id='deployed', ctx=Store())], value=BinOp(left=Name(id='ROOT', ctx=Load()), op=Div(), right=Constant(value='.agents/skills'))), Assign(targets=[Name(id='deployed_manifest', ctx=Store())], value=Call(func=Attribute(value=Name(id='pilot', ctx=Load()), attr='manifest', ctx=Load()), args=[Name(id='deployed', ctx=Load())])), Assign(targets=[Name(id='instruction_hash', ctx=Store())], value=Call(func=Attribute(value=Call(func=Attribute(value=Name(id='hashlib', ctx=Load()), attr='sha256', ctx=Load()), args=[Call(func=Attribute(value=BinOp(left=Name(id='ROOT', ctx=Load()), op=Div(), right=Constant(value='AGENTS.md')), attr='read_bytes', ctx=Load()))]), attr='hexdigest', ctx=Load()))), For(target=Name(id='task', ctx=Store()), iter=Call(func=Attribute(value=Name(id='native', ctx=Load()), attr='iterdir', ctx=Load())), body=[If(test=UnaryOp(op=Not(), operand=Call(func=Attribute(value=Name(id='task', ctx=Load()), attr='is_dir', ctx=Load()))), body=[Continue()]), Assign(targets=[Name(id='env', ctx=Store())], value=BinOp(left=Name(id='task', ctx=Load()), op=Div(), right=Constant(value='environment'))), Expr(value=Call(func=Attribute(value=Name(id='shutil', ctx=Load()), attr='copytree', ctx=Load()), args=[Name(id='deployed', ctx=Load()), BinOp(left=Name(id='env', ctx=Load()), op=Div(), right=Constant(value='skills'))])), If(test=Compare(left=Name(id='variant', ctx=Load()), ops=[Eq()], comparators=[Constant(value='absent')]), body=[Expr(value=Call(func=Attribute(value=Name(id='shutil', ctx=Load()), attr='rmtree', ctx=Load()), args=[BinOp(left=BinOp(left=Name(id='env', ctx=Load()), op=Div(), right=Constant(value='skills')), op=Div(), right=Attribute(value=Name(id='pilot', ctx=Load()), attr='NAME', ctx=Load()))]))]), For(target=Name(id='context', ctx=Store()), iter=Tuple(elts=[Name(id='env', ctx=Load()), BinOp(left=Name(id='task', ctx=Load()), op=Div(), right=Constant(value='tests'))], ctx=Load()), body=[Expr(value=Call(func=Attribute(value=Name(id='shutil', ctx=Load()), attr='copyfile', ctx=Load()), args=[Call(func=Attribute(value=Call(func=Name(id='Path', ctx=Load()), args=[Name(id='__file__', ctx=Load())]), attr='with_name', ctx=Load()), args=[Constant(value='prefetch-apt.py')]), BinOp(left=Name(id='context', ctx=Load()), op=Div(), right=Constant(value='build/prefetch-apt.py'))])), Assign(targets=[Name(id='dockerfile', ctx=Store())], value=BinOp(left=Name(id='context', ctx=Load()), op=Div(), right=Constant(value='Dockerfile'))), Assign(targets=[Name(id='text', ctx=Store())], value=Call(func=Attribute(value=Name(id='dockerfile', ctx=Load()), attr='read_text', ctx=Load()))), If(test=Compare(left=Name(id='context', ctx=Load()), ops=[Eq()], comparators=[Name(id='env', ctx=Load())]), body=[Assign(targets=[Name(id='text', ctx=Store())], value=Call(func=Attribute(value=Name(id='text', ctx=Load()), attr='replace', ctx=Load()), args=[Constant(value='ripgrep=14.1.1-1+b4'), Constant(value='ripgrep=14.1.1-1+b4 bubblewrap=0.12.0-1~deb13u1')]))]), Assign(targets=[Name(id='text', ctx=Store())], value=Call(func=Attribute(value=Name(id='text', ctx=Load()), attr='replace', ctx=Load()), args=[Constant(value='apt-get update --error-on=any'), Constant(value='apt-get update --error-on=any -o Acquire::By-Hash=false -o Acquire::CompressionTypes::Order::=xz -o Acquire::https::No-Cache=true')])), Assign(targets=[Name(id='install', ctx=Store())], value=Call(func=Attribute(value=Call(func=Attribute(value=Call(func=Attribute(value=Name(id='re', ctx=Load()), attr='search', ctx=Load()), args=[Constant(value='apt-get install -y --no-install-recommends [^&]+'), Name(id='text', ctx=Load())]), attr='group', ctx=Load())), attr='strip', ctx=Load()))), Assign(targets=[Name(id='plan', ctx=Store())], value=Call(func=Attribute(value=Name(id='install', ctx=Load()), attr='replace', ctx=Load()), args=[Constant(value='apt-get install'), Constant(value='apt-get --print-uris -o Acquire::ForceHash=sha256 install')])), Assign(targets=[Name(id='text', ctx=Store())], value=Call(func=Attribute(value=Name(id='text', ctx=Load()), attr='replace', ctx=Load()), args=[Name(id='install', ctx=Load()), BinOp(left=BinOp(left=Name(id='plan', ctx=Load()), op=Add(), right=Constant(value=' > /tmp/apt-uris && python3 /tmp/prefetch-apt.py && ')), op=Add(), right=Call(func=Attribute(value=Name(id='install', ctx=Load()), attr='replace', ctx=Load()), args=[Constant(value='apt-get install'), Constant(value='apt-get --no-download install')]))])), Assign(targets=[Name(id='text', ctx=Store())], value=Call(func=Attribute(value=Name(id='text', ctx=Load()), attr='replace', ctx=Load()), args=[Constant(value='RUN rm -f /etc/apt/sources.list.d/*'), Constant(value='RUN python3 /tmp/prefetch-apt.py indexes && rm -f /etc/apt/sources.list.d/*')])), Assign(targets=[Name(id='text', ctx=Store())], value=Call(func=Attribute(value=Name(id='text', ctx=Load()), attr='replace', ctx=Load()), args=[Constant(value='apt-get '), Constant(value='apt-get -o Dir::Etc::sourcelist=/tmp/trial-snapshot.list ')])), Assign(targets=[Name(id='text', ctx=Store())], value=Call(func=Attribute(value=Name(id='text', ctx=Load()), attr='replace', ctx=Load()), args=[Constant(value='&& rm -rf /var/lib/apt/lists/*\\n'), Constant(value='&& rm -rf /var/lib/apt/lists/* /var/lib/trial-snapshot /tmp/trial-snapshot.list\\n')])), Assign(targets=[Tuple(elts=[Name(id='first', ctx=Store()), Name(id='rest', ctx=Store())], ctx=Store())], value=Call(func=Attribute(value=Name(id='text', ctx=Load()), attr='split', ctx=Load()), args=[Constant(value='\\n'), Constant(value=1)])), Expr(value=Call(func=Attribute(value=Name(id='dockerfile', ctx=Load()), attr='write_text', ctx=Load()), args=[BinOp(left=BinOp(left=Name(id='first', ctx=Load()), op=Add(), right=Constant(value='\\nCOPY build/prefetch-apt.py /tmp/prefetch-apt.py\\nCOPY build/snapshot/ /var/lib/trial-snapshot/20261103T000000Z/\\n')), op=Add(), right=Name(id='rest', ctx=Load()))]))]), Expr(value=Call(func=Attribute(value=Name(id='shutil', ctx=Load()), attr='copytree', ctx=Load()), args=[BinOp(left=Name(id='ROOT', ctx=Load()), op=Div(), right=Constant(value='.codex')), BinOp(left=Name(id='env', ctx=Load()), op=Div(), right=Constant(value='codex'))])), Expr(value=Call(func=Attribute(value=Name(id='shutil', ctx=Load()), attr='copyfile', ctx=Load()), args=[BinOp(left=Name(id='ROOT', ctx=Load()), op=Div(), right=Constant(value='AGENTS.md')), BinOp(left=Name(id='env', ctx=Load()), op=Div(), right=Constant(value='AGENTS.md'))])), With(items=[withitem(context_expr=Call(func=Attribute(value=BinOp(left=Name(id='env', ctx=Load()), op=Div(), right=Constant(value='Dockerfile')), attr='open', ctx=Load()), args=[Constant(value='a')]), optional_vars=Name(id='f', ctx=Store()))], body=[Assign(targets=[Name(id='image_tail', ctx=Store())], value=Constant(value=\"COPY input/ /workspace/input/\\nCOPY skills/ /workspace/.agents/skills/\\nCOPY AGENTS.md /workspace/AGENTS.md\\nCOPY codex/ /workspace/.codex/\\nRUN mkdir -p /outside /home/agent/.codex /installed-agent/codex-home && chown agent:agent /outside /home/agent/.codex /installed-agent/codex-home && chmod 700 /installed-agent/codex-home\\nRUN curl -fsSL https://github.com/openai/codex/releases/download/rust-v0.155.1/codex-x86_64-unknown-linux-musl.tar.gz -o /tmp/codex.tgz && echo 'a0ef8b2debc3bf747e07b1a039354de31300ac0dcc2276498ba281470b5d9115  /tmp/codex.tgz' | sha256sum -c - && tar -xzf /tmp/codex.tgz -C /usr/local/bin && mv /usr/local/bin/codex-x86_64-unknown-linux-musl /usr/local/bin/codex && rm /tmp/codex.tgz && codex --version\\nRUN chmod -R a-w /workspace/input /workspace/.agents /workspace/AGENTS.md\\n\")), If(test=UnaryOp(op=Not(), operand=Name(id='historical_runtime', ctx=Load())), body=[Assign(targets=[Name(id='profile', ctx=Store())], value=Call(func=Attribute(value=Name(id='json', ctx=Load()), attr='loads', ctx=Load()), args=[Call(func=Attribute(value=Call(func=Attribute(value=Call(func=Name(id='Path', ctx=Load()), args=[Name(id='__file__', ctx=Load())]), attr='with_name', ctx=Load()), args=[Constant(value='runtime-profile.json')]), attr='read_text', ctx=Load()))])), Assign(targets=[Name(id='begin', ctx=Store())], value=Call(func=Attribute(value=Name(id='image_tail', ctx=Load()), attr='index', ctx=Load()), args=[Constant(value='RUN curl -fsSL ')])), Assign(targets=[Name(id='finish', ctx=Store())], value=Call(func=Attribute(value=Name(id='image_tail', ctx=Load()), attr='index', ctx=Load()), args=[Constant(value='RUN chmod -R a-w '), Name(id='begin', ctx=Load())])), Assign(targets=[Name(id='image_tail', ctx=Store())], value=BinOp(left=BinOp(left=Subscript(value=Name(id='image_tail', ctx=Load()), slice=Slice(upper=Name(id='begin', ctx=Load())), ctx=Load()), op=Add(), right=BinOp(left=BinOp(left=BinOp(left=BinOp(left=Constant(value='RUN curl -fsSL '), op=Add(), right=Subscript(value=Name(id='profile', ctx=Load()), slice=Constant(value='archive_url'), ctx=Load())), op=Add(), right=Constant(value=\" -o /tmp/codex.tgz && echo '\")), op=Add(), right=Subscript(value=Name(id='profile', ctx=Load()), slice=Constant(value='archive_sha256'), ctx=Load())), op=Add(), right=Constant(value=\"  /tmp/codex.tgz' | sha256sum -c - && mkdir -p /opt/codex && tar -xzf /tmp/codex.tgz -C /opt/codex && ln -s /opt/codex/bin/codex /usr/local/bin/codex && rm /tmp/codex.tgz && codex --version\\n\"))), op=Add(), right=Subscript(value=Name(id='image_tail', ctx=Load()), slice=Slice(lower=Name(id='finish', ctx=Load())), ctx=Load())))]), Expr(value=Call(func=Attribute(value=Name(id='f', ctx=Load()), attr='write', ctx=Load()), args=[Name(id='image_tail', ctx=Load())]))]), Expr(value=Call(func=Attribute(value=Name(id='shutil', ctx=Load()), attr='copyfile', ctx=Load()), args=[Call(func=Attribute(value=Call(func=Name(id='Path', ctx=Load()), args=[Name(id='__file__', ctx=Load())]), attr='with_name', ctx=Load()), args=[Constant(value='artifact_state.py')]), BinOp(left=Name(id='env', ctx=Load()), op=Div(), right=Constant(value='artifact_state.py'))])), Expr(value=Call(func=Attribute(value=Name(id='shutil', ctx=Load()), attr='copyfile', ctx=Load()), args=[Call(func=Attribute(value=Call(func=Name(id='Path', ctx=Load()), args=[Name(id='__file__', ctx=Load())]), attr='with_name', ctx=Load()), args=[Constant(value='artifact_state.py')]), BinOp(left=Name(id='task', ctx=Load()), op=Div(), right=Constant(value='tests/artifact_state.py'))])), With(items=[withitem(context_expr=Call(func=Attribute(value=BinOp(left=Name(id='env', ctx=Load()), op=Div(), right=Constant(value='Dockerfile')), attr='open', ctx=Load()), args=[Constant(value='a')]), optional_vars=Name(id='f', ctx=Store()))], body=[Expr(value=Call(func=Attribute(value=Name(id='f', ctx=Load()), attr='write', ctx=Load()), args=[Constant(value='COPY artifact_state.py /opt/trial-artifact-state.py\\nRUN chmod 555 /opt/trial-artifact-state.py\\n')]))]), With(items=[withitem(context_expr=Call(func=Attribute(value=BinOp(left=Name(id='task', ctx=Load()), op=Div(), right=Constant(value='tests/Dockerfile')), attr='open', ctx=Load()), args=[Constant(value='a')]), optional_vars=Name(id='f', ctx=Store()))], body=[Expr(value=Call(func=Attribute(value=Name(id='f', ctx=Load()), attr='write', ctx=Load()), args=[Constant(value='COPY artifact_state.py /tests/artifact_state.py\\n')]))]), Assign(targets=[Name(id='entry', ctx=Store())], value=BinOp(left=Name(id='task', ctx=Load()), op=Div(), right=Constant(value='tests/test.sh'))), Expr(value=Call(func=Attribute(value=Name(id='entry', ctx=Load()), attr='write_text', ctx=Load()), args=[Call(func=Attribute(value=Call(func=Attribute(value=Name(id='entry', ctx=Load()), attr='read_text', ctx=Load())), attr='replace', ctx=Load()), args=[Constant(value='exec python3 -I /tests/verifier/grader.py'), Constant(value='python3 -I /tests/artifact_state.py /workspace/output/Subject.Tests.ps1 /logs/verifier/artifact-transfer.json\\nexec python3 -I /tests/verifier/grader.py')])])), Assign(targets=[Name(id='config', ctx=Store())], value=BinOp(left=Name(id='task', ctx=Load()), op=Div(), right=Constant(value='task.toml'))), Expr(value=Call(func=Attribute(value=Name(id='config', ctx=Load()), attr='write_text', ctx=Load()), args=[Call(func=Attribute(value=Call(func=Attribute(value=Name(id='config', ctx=Load()), attr='read_text', ctx=Load())), attr='replace', ctx=Load()), args=[Constant(value='skills_dir = \"/workspace/skills\"'), Constant(value='skills_dir = \"/runtime/skills\"')])])), If(test=Name(id='admission_diagnostics', ctx=Load()), body=[With(items=[withitem(context_expr=Call(func=Attribute(value=Name(id='config', ctx=Load()), attr='open', ctx=Load()), args=[Constant(value='a')]), optional_vars=Name(id='stream', ctx=Store()))], body=[Expr(value=Call(func=Attribute(value=Name(id='stream', ctx=Load()), attr='write', ctx=Load()), args=[Constant(value='\\n[verifier.env]\\nPESTER_ADMISSION_DIAGNOSTICS = \"1\"\\n')]))])]), With(items=[withitem(context_expr=Call(func=Attribute(value=Name(id='config', ctx=Load()), attr='open', ctx=Load()), args=[Constant(value='a')]), optional_vars=Name(id='f', ctx=Store()))], body=[Expr(value=Call(func=Attribute(value=Name(id='f', ctx=Load()), attr='write', ctx=Load()), args=[Constant(value='\\n[[verifier.collect]]\\ncommand = \"python3 /opt/trial-artifact-state.py /workspace/output/Subject.Tests.ps1 /logs/artifacts/agent-artifact.json\"\\nuser = \"agent\"\\ntimeout_sec = 15\\n')]))]), Expr(value=Call(func=Attribute(value=BinOp(left=Name(id='task', ctx=Load()), op=Div(), right=Constant(value='tests/docker-compose.yaml')), attr='write_text', ctx=Load()), args=[Constant(value='services:\\n  main:\\n    network_mode: none\\n    pids_limit: 256\\n    security_opt: [no-new-privileges:true]\\n')])), Expr(value=Call(func=Attribute(value=BinOp(left=Name(id='env', ctx=Load()), op=Div(), right=Constant(value='docker-compose.yaml')), attr='write_text', ctx=Load()), args=[Constant(value='services:\\n  main:\\n    pids_limit: 256\\n    cap_drop: [ALL]\\n    security_opt: [no-new-privileges:true]\\n')]))]), Return(value=Tuple(elts=[Name(id='native', ctx=Load()), Dict(keys=[Constant(value='variant'), Constant(value='deployed_files'), Constant(value='codex_configuration'), Constant(value='instructions_sha256'), Constant(value='grader_files')], values=[Name(id='variant', ctx=Load()), Name(id='deployed_manifest', ctx=Load()), Call(func=Attribute(value=Name(id='pilot', ctx=Load()), attr='manifest', ctx=Load()), args=[BinOp(left=Name(id='ROOT', ctx=Load()), op=Div(), right=Constant(value='.codex'))]), Name(id='instruction_hash', ctx=Load()), Call(func=Attribute(value=Name(id='pilot', ctx=Load()), attr='manifest', ctx=Load()), args=[BinOp(left=Name(id='ROOT', ctx=Load()), op=Div(), right=Attribute(value=Name(id='pilot', ctx=Load()), attr='OVERLAY', ctx=Load()))])])], ctx=Load()))])",
+          "live.py": "633f8a1767a31a7113a1cc486f4bbf4d3a6d7290fe9c250499ff7237cd810e0a",
+          "pinned_codex.py": "1704ff551c73737d9af12751b80b5ba916fe39f3fc9bd4eb013ce31870f21852",
+          "artifact_state.py": "552f6fa42d7f7e0c63252c2c235bbb9c6009c78ec5e604b459e6021bb08b108c",
+          "admission_checks.py": "828b51d6f7591b86959d279e1ff26c8a6710f85f78e1cc195cd39b818981efe1",
+          "prefetch-apt.py": "ed6d83e45cca33f04b611b4b70f4b0a890e16b25287f2a8717dcbed187fcdf6d",
+          "runtime-profile.json": "a475b7c972aa9ed2e8e9d435abe1078547092259386933e695ce91b3f9752e64",
+          "GH_TASK_BUILD": {
+            "base_image": "python:3.12-slim-trixie@sha256:b18b261e1b4974b4f321451ad5251ded85abb22c2b8b262da527dda1d031ab30",
+            "apt_snapshot": "20261103T000000Z",
+            "apt_packages": {
+              "git": "1:2.47.3-0+deb13u1",
+              "jq": "1.7.1-6+deb13u4",
+              "nodejs": "20.19.2+dfsg-1+deb13u3",
+              "npm": "9.2.0~ds1-3",
+              "ca-certificates": "20250419+deb13u1"
+            }
+          },
+          "harbor_commit": "fdba28fc411e47e8765420a1a063b4918fce3def",
+          "admission_diagnostics": true
+        }
+      },
+      "created_at": "2026-11-06T18:26:06.268186+00:00",
+      "expires_at": "2026-11-13T18:26:06.268197+00:00",
+      "snapshot_bundle": {
+        "manifest_sha256": "8dd8f9e713c8ae2315054e28cc5d8eb59170c3939148277a5455641dc4746e75",
+        "manifest": {
+          "schema": 1,
+          "snapshot": "20261103T000000Z",
+          "source_commit": "471667c337846429c8508b4acd0c9a64ae1d72f7",
+          "files": {
+            "debian/dists/trixie/InRelease": {
+              "size": 140421,
+              "sha256": "0584fba32e13e0ab8285fb16c27adea1ec03a73669c18702821094fd6ca86675",
+              "url": "https://snapshot.debian.org/archive/debian/20261103T000000Z/dists/trixie/InRelease"
+            },
+            "debian/dists/trixie/main/binary-amd64/Packages.xz": {
+              "size": 9678380,
+              "sha256": "7778d3e3f303b7ddb8ce0fe7c8d57473a076c6bf2e8f241f75421d2396352498",
+              "url": "https://snapshot.debian.org/archive/debian/20261103T000000Z/dists/trixie/main/binary-amd64/Packages.xz"
+            },
+            "debian-security/dists/trixie-security/InRelease": {
+              "size": 43409,
+              "sha256": "01590ffbf20362d6138369dbf543ee42d3d8ec62589d31cfb93a085afcad4f3c",
+              "url": "https://snapshot.debian.org/archive/debian-security/20261103T000000Z/dists/trixie-security/InRelease"
+            },
+            "debian-security/dists/trixie-security/main/binary-amd64/Packages.xz": {
+              "size": 297148,
+              "sha256": "38ca814a70dea1f035fd078c08b15b9a93f23b9605f3115a7791f30e62a6bf27",
+              "url": "https://snapshot.debian.org/archive/debian-security/20261103T000000Z/dists/trixie-security/main/binary-amd64/Packages.xz"
+            }
           }
-        ],
-        "terminal_decision": "Allocation closed unused after the pinned package index failed. No additional inference or CI build retry scheduled."
-      }
-    ]
+        },
+        "index_downloads": 0
+      },
+      "identity": {
+        "repository": "thetechgy/agent-engineering-baseline",
+        "branch": "refs/heads/trial/direct-harbor",
+        "commit": "0c364aec26c7af6cf0ef52b08e598f48ead9ee01",
+        "run_id": "42270181249",
+        "run_attempt": 1,
+        "allocation_id": null
+      },
+      "images": {
+        "direct-harbor-agent:current": "sha256:de7b89b6131977fa93ecad2ad6f62431b4bba3802e5bb00ced53042de8e2d1df",
+        "direct-harbor-agent:absent": "sha256:3b8ead2a92e7d2c10be126d0831c49251f412b49c23a79208a77ffa265143bd5",
+        "direct-harbor-verifier:live": "sha256:2b1d93aa7557d2f8e3377552920e627cae9177e0af077e0fae5f2579cd4d4512",
+        "harbor-prebuilt:harbor-docker-egress-control-sidecar--9af3dc172792cee8": "sha256:b4a6a10a0ac68129a8ce63dbe85ebea217817e0f131fd523f3b4d6b7853b936d",
+        "direct-harbor-kernel-probe:0.25.0": "sha256:3cb067eab609612d81b4d82ff8ad71d73482bb3059a87b642d7e14f0ed659cde"
+      },
+      "tasks": {
+        "current": {
+          "path": "tasks/current",
+          "checksum": "b40ceef19f765fb5bf9cc341a5b1348cc1d3ece384e11b4c83f3e5aa042fb9f7"
+        },
+        "absent": {
+          "path": "tasks/absent",
+          "checksum": "1843cbb5bd90af5aea638111514084d6c08175d05340baf4865f94088e57cfca"
+        }
+      },
+      "members": {
+        "public/absent/boundary.json": {
+          "sha256": "0b75757b6831765b98a183a66e7ae05d12e25f0ccc019c42b1d329154031ee79",
+          "size": 5696
+        },
+        "public/absent/budget-preflight.json": {
+          "sha256": "e58db582a08713be6d33bb589971f753c8506fc34cccd88ff6740a6aeb77f6a1",
+          "size": 204
+        },
+        "public/absent/container-policy.json": {
+          "sha256": "8e18149555fd0a38924860b0b107304deb5bc3f0e1ee30ba015341f547350ade",
+          "size": 309
+        },
+        "public/absent/installation.json": {
+          "sha256": "c8d3901b15c3775b74a4197b2d3cb7a7d25190d657c8d8a01981286d52671d52",
+          "size": 308
+        },
+        "public/absent/manifest.json": {
+          "sha256": "5dc2c69c64e1530c7691db07c229c2b168328ae40d360f8310b9873902d25922",
+          "size": 18253
+        },
+        "public/absent/preparation.json": {
+          "sha256": "235cafe076bacd1181f46e142fe299f000e37a4394829157796c476df40400cf",
+          "size": 71
+        },
+        "public/admission-preflight.json": {
+          "sha256": "9aa61e96e7c7976e89554b832e2a35aaee08b875ffbf2c064ebeb6a348563a4c",
+          "size": 1442
+        },
+        "public/comparison-manifest.json": {
+          "sha256": "de604993cd386bbcefef9f44f4cd8bf7eac7aa8ff3daccfbcd34941fad93c83a",
+          "size": 1615
+        },
+        "public/current/boundary.json": {
+          "sha256": "3e4f17e847728c4672329efa5fb761cc50ab818ab5319fc0a255c4008651c515",
+          "size": 6112
+        },
+        "public/current/budget-preflight.json": {
+          "sha256": "e58db582a08713be6d33bb589971f753c8506fc34cccd88ff6740a6aeb77f6a1",
+          "size": 204
+        },
+        "public/current/container-policy.json": {
+          "sha256": "f23eab97ff9d1573973ba31adc7b276e3ce99429ad3c415ea7c78086852f5090",
+          "size": 309
+        },
+        "public/current/installation.json": {
+          "sha256": "c8d3901b15c3775b74a4197b2d3cb7a7d25190d657c8d8a01981286d52671d52",
+          "size": 308
+        },
+        "public/current/manifest.json": {
+          "sha256": "ecd3e46727e299e89f6bb9113f35640437ae6adb0ade1dae4d5217207742c98f",
+          "size": 18614
+        },
+        "public/current/preparation.json": {
+          "sha256": "235cafe076bacd1181f46e142fe299f000e37a4394829157796c476df40400cf",
+          "size": 71
+        },
+        "public/preflight.json": {
+          "sha256": "3c4d82187d3ce24ff35b111fb00bdb4d7fa37c25a37aaa35f8792ddba837b758",
+          "size": 219
+        },
+        "public/snapshot-bundle.json": {
+          "sha256": "7d943425bb0dc55200c8efda6ff61f1f44f080c1bb19c3e8772e0bc15b3259fa",
+          "size": 1467
+        },
+        "tasks/absent/environment/AGENTS.md": {
+          "sha256": "7b8d5aca90cd1a90d32b98d1e86ee16d82c808336e309c26853d3aab73fb4543",
+          "size": 8165
+        },
+        "tasks/absent/environment/Dockerfile": {
+          "sha256": "f07d8158944228571fdb6d677384dcc9748ccedc9a4116ce1b86c4149204c4ca",
+          "size": 3251
+        },
+        "tasks/absent/environment/artifact_state.py": {
+          "sha256": "552f6fa42d7f7e0c63252c2c235bbb9c6009c78ec5e604b459e6021bb08b108c",
+          "size": 3511
+        },
+        "tasks/absent/environment/build/install-runtime.py": {
+          "sha256": "d47f30bfff8b03ca5fba03c1307be77ab821d5fbbd10509eddb7b9fff71caa8d",
+          "size": 2431
+        },
+        "tasks/absent/environment/build/prefetch-apt.py": {
+          "sha256": "ed6d83e45cca33f04b611b4b70f4b0a890e16b25287f2a8717dcbed187fcdf6d",
+          "size": 6591
+        },
+        "tasks/absent/environment/codex/config.toml": {
+          "sha256": "782c639a9261c6c7920ce141d84bbb207f8695ca8405091fadaa25a5051d6e05",
+          "size": 172
+        },
+        "tasks/absent/environment/docker-compose.yaml": {
+          "sha256": "91152eb5d05d676c1624debfc639276851528b4da9bd54f66d6e9c6b6a75768f",
+          "size": 280
+        },
+        "tasks/absent/environment/input/EXECUTION-PROFILE.md": {
+          "sha256": "d76e58f36664dcde45e9e86f47863578c23aa06c6d0bb5c365f04b998c49900f",
+          "size": 2244
+        },
+        "tasks/absent/environment/input/README.md": {
+          "sha256": "f48fc923ccb7cf73e20dd17a36b6a670d85061ae0a08881ce44f363ec9162b51",
+          "size": 725
+        },
+        "tasks/absent/environment/input/Subject.ps1": {
+          "sha256": "0f51c43ae61b355cadb2b5418938d5e64f060853784a36e495277f5e6ad7b101",
+          "size": 277
+        },
+        "tasks/absent/environment/skills/a11y/SKILL.md": {
+          "sha256": "96d578e9646cd80ff6e1bedb26069222ad37b473960f3c0cc069716484b22553",
+          "size": 27638
+        },
+        "tasks/absent/environment/skills/agent-safety/SKILL.md": {
+          "sha256": "2dc7898d11fb55a1a042d46e6e60800d0f948253c5216efa3e470e8914cc84ab",
+          "size": 4316
+        },
+        "tasks/absent/environment/skills/ansible/SKILL.md": {
+          "sha256": "a79531195a9bdf942b301edf1588c8814ceb976557f4f0cb79bd9aa79e59d52e",
+          "size": 5752
+        },
+        "tasks/absent/environment/skills/code-simplification/SKILL.md": {
+          "sha256": "e13b433345e6bf425c3625442ac1b3507b371c18d7ea3e3db822da7a7f742a29",
+          "size": 13719
+        },
+        "tasks/absent/environment/skills/dependabot/SKILL.md": {
+          "sha256": "2b5f3af7d8a5555d330d4d72ba9ad6140e85215d006dd9d7a92ee0dae76bbf82",
+          "size": 13605
+        },
+        "tasks/absent/environment/skills/dependabot/references/dependabot-yml-reference.md": {
+          "sha256": "c3b101d7e200a215211c9e23157ddfb1c051e437815b4d5a3d9bc13e504d6ed6",
+          "size": 9727
+        },
+        "tasks/absent/environment/skills/dependabot/references/example-configs.md": {
+          "sha256": "35375699cfbaa372b68a232a2704f88a190e1267f937e1f1921e8d83c97485ca",
+          "size": 8186
+        },
+        "tasks/absent/environment/skills/dependabot/references/pr-commands.md": {
+          "sha256": "471a786456c798364d13c0da554c12c712c581986b7f4a1de95d8b3638fd21cb",
+          "size": 4294
+        },
+        "tasks/absent/environment/skills/gh/SKILL.md": {
+          "sha256": "b40d44ef9077b34d710b4c0737fee0e72c595e0770fbbdcb339de2ba0b40e23b",
+          "size": 21232
+        },
+        "tasks/absent/environment/skills/git-commit/SKILL.md": {
+          "sha256": "554d1a3c6d95f15bc1170160659ecdc9a9958b64f377f3988941b672c249b13f",
+          "size": 3198
+        },
+        "tasks/absent/environment/skills/github-actions-hardening/SKILL.md": {
+          "sha256": "31a8e7483d978e6267941edefebbe42aaa946bb3d43c9095aa3db343d4a8ff06",
+          "size": 9852
+        },
+        "tasks/absent/environment/skills/github-actions-hardening/references/injection.md": {
+          "sha256": "ebd6ef8d39ba6f1cd3dc13051e6ed4163d1d2ba36518cf0f7393836a211e58ff",
+          "size": 3035
+        },
+        "tasks/absent/environment/skills/github-actions-hardening/references/permissions-and-tokens.md": {
+          "sha256": "7272d00b20cf99c6fcbf34346f76730907c00701aef44bb9cfb7ab3eecac336b",
+          "size": 2743
+        },
+        "tasks/absent/environment/skills/github-actions-hardening/references/report-format.md": {
+          "sha256": "3ecd2442e173bc001f858747873349be7c6c77050470b87ae516647908b1e86e",
+          "size": 1920
+        },
+        "tasks/absent/environment/skills/github-actions-hardening/references/supply-chain.md": {
+          "sha256": "f66f613dbd732ce87c1e76b88208efde8feae3ffe5a3ab405cde4ce3df66f605",
+          "size": 2938
+        },
+        "tasks/absent/environment/skills/github-actions-hardening/references/triggers-and-privilege.md": {
+          "sha256": "465f3f76517e9f5374a73e30f46cb47e1fe62ce9fd81f782808a3abbb2df2756",
+          "size": 3397
+        },
+        "tasks/absent/environment/skills/microsoft-code-reference/SKILL.md": {
+          "sha256": "19f13822dd8674ac0a24787ac15472c9137d0db5b03750ba43ee9dcdac8ddd03",
+          "size": 4203
+        },
+        "tasks/absent/environment/skills/msgraph/CONTRIBUTING.md": {
+          "sha256": "60dc9074eedcb06cb29845a4ab6d41866f357be6b8d810e8c84408788e2babf0",
+          "size": 3582
+        },
+        "tasks/absent/environment/skills/msgraph/SKILL.md": {
+          "sha256": "b4763f6ae89a4e2843ca5bfe15fddf49f5924e20054ff5d7fb7e43a2df3df67e",
+          "size": 12910
+        },
+        "tasks/absent/environment/skills/msgraph/references/REFERENCE.md": {
+          "sha256": "61639bb509391df6e65762355c87ef53c98f544d04e4455fd17f571c6732b5d7",
+          "size": 6549
+        },
+        "tasks/absent/environment/skills/msgraph/references/docs/advanced-queries.md": {
+          "sha256": "89ac64478ca6539412ce66d5f6ac2f76f3c88ff709c8bee7c81da0d79017345e",
+          "size": 22336
+        },
+        "tasks/absent/environment/skills/msgraph/references/docs/authentication.md": {
+          "sha256": "dae0fca55119fd89a9b719705d5263aa4705215c1de57d0bf33627d30c9d7c42",
+          "size": 8036
+        },
+        "tasks/absent/environment/skills/msgraph/references/docs/batching.md": {
+          "sha256": "f5132b3027554ededc2ba6b116a47187df4c408be5ddbb273ff7653352e60e3b",
+          "size": 12409
+        },
+        "tasks/absent/environment/skills/msgraph/references/docs/best-practices.md": {
+          "sha256": "48e18d277aa4412ac66acb084aaa8d1ba1af31fe840fdc9ff42c644ddbd8d03b",
+          "size": 13907
+        },
+        "tasks/absent/environment/skills/msgraph/references/docs/errors.md": {
+          "sha256": "2c297ff319457b717c4d38948444e3586960d4669ad65fc4e38f7d36138a0d8b",
+          "size": 8931
+        },
+        "tasks/absent/environment/skills/msgraph/references/docs/paging.md": {
+          "sha256": "f1b76a08cde517b495023098385b63fdf921eb3dc5e374b4f285e71786feb716",
+          "size": 4582
+        },
+        "tasks/absent/environment/skills/msgraph/references/docs/query-parameters.md": {
+          "sha256": "f20ddb64c70f3b94c224882cb57bfc1541df6b2bb74532a5e16cb83ca94b6cd3",
+          "size": 17705
+        },
+        "tasks/absent/environment/skills/msgraph/references/docs/throttling.md": {
+          "sha256": "cb6db141e600f3c433c80e8f21a6840b1ed83237d7c73f2b0144de37225b0a85",
+          "size": 5222
+        },
+        "tasks/absent/environment/skills/msgraph/scripts/run.ps1": {
+          "sha256": "208a0323c85c94c8b8f23d974a92fb37dab77c44de5638fb3e7688e00d761cbb",
+          "size": 985
+        },
+        "tasks/absent/environment/skills/msgraph/scripts/run.sh": {
+          "sha256": "ef3545fee5e2f2654cedf32ed543ba2e496109c1eb90ea6f915fd9bcf4abd51b",
+          "size": 1212
+        },
+        "tasks/absent/environment/skills/podman/EVALS.md": {
+          "sha256": "96088308ed8df85d9f369263de4ec02fefdb7f59fbccc2b4629991be7266e581",
+          "size": 1441
+        },
+        "tasks/absent/environment/skills/podman/MAINTENANCE.md": {
+          "sha256": "93f772d47f661cc721a211257f4a2aecabcc53ed77f0d4b16b754944128586c9",
+          "size": 4078
+        },
+        "tasks/absent/environment/skills/podman/SKILL.md": {
+          "sha256": "625107071889166612f64ac52920be2b9455f671e4ce1f805835f7fee14ef274",
+          "size": 12644
+        },
+        "tasks/absent/environment/skills/podman/evals/evals.json": {
+          "sha256": "9bc7fdebc99616983bd501006f97a0a3233cc9901da06443e49d63652de2f0c5",
+          "size": 8779
+        },
+        "tasks/absent/environment/skills/podman/evals/files/postgres.container": {
+          "sha256": "9da8bb708c14453616a43d2a9527484f6fa4ddc1d06c2339ddecadeeb9f54b5f",
+          "size": 655
+        },
+        "tasks/absent/environment/skills/podman/evals/files/vendor-compose.yaml": {
+          "sha256": "1f36c57615a4efa9bc6c1de9e7088d2dd82040cb14ec74b00c910c75f5ea26f7",
+          "size": 542
+        },
+        "tasks/absent/environment/skills/podman/evals/files/vendor-web/Containerfile": {
+          "sha256": "486aa74e34330bc0122d85c4f3719f3bf66c405ffe7fcd0a2969bec6d5c21a2d",
+          "size": 266
+        },
+        "tasks/absent/environment/skills/podman/references/compose-migration.md": {
+          "sha256": "fce55e0ec0a56608d714f273afdbdc44017d0a4ebed73b61291cd0fdebbf434a",
+          "size": 4465
+        },
+        "tasks/absent/environment/skills/podman/references/fedora-hosts.md": {
+          "sha256": "adb6f7a2a07f2067036354cb57bb69e694d423f20bd578e09db6a5a799859168",
+          "size": 3946
+        },
+        "tasks/absent/environment/skills/podman/references/quadlet-systemd.md": {
+          "sha256": "55a300354c77b6e59b5876b1b3a6b7e00f9525a21c9160fa5b3200a3a8128f23",
+          "size": 12228
+        },
+        "tasks/absent/environment/skills/podman/references/reverse-proxy.md": {
+          "sha256": "6a8d789b72d821e3fed320ca84325086d5a42ced25912a4b52ea760a306111ff",
+          "size": 3621
+        },
+        "tasks/absent/environment/skills/podman/references/rootless-networking.md": {
+          "sha256": "a5fc3f33815caa196d5f8d6cb090136bcccc88fb95dedb921c99bd0b3cf6b524",
+          "size": 7011
+        },
+        "tasks/absent/environment/skills/podman/references/security-storage-secrets.md": {
+          "sha256": "37e1fae3de6f4b7ae1ea3ccc2b0b84d7fd854ea2730a51f0e3b3b1bc9b2e1068",
+          "size": 8129
+        },
+        "tasks/absent/environment/skills/podman/references/validation.md": {
+          "sha256": "465321094bc936d8a9e187bd3b4daa1ab271b93242a2c07fe88c58db6bd4bdd5",
+          "size": 4247
+        },
+        "tasks/absent/environment/skills/powershell-module-engineering/SKILL.md": {
+          "sha256": "801cecfd42aeb32f3fd6083d9af08f44c8a5ca48202761533c072a10c06060c9",
+          "size": 11551
+        },
+        "tasks/absent/instruction.md": {
+          "sha256": "5e4db9088c8251ea628c4178f447c3a6c9e58ce5e4b2b0eec5260b9b97b2279f",
+          "size": 188
+        },
+        "tasks/absent/task.toml": {
+          "sha256": "1f23e8af065259402edd6adde927b98eb24c85fe88e4a65ce066c1ac5cd570f6",
+          "size": 782
+        },
+        "tasks/absent/tests/Dockerfile": {
+          "sha256": "f44ad923daff6bb44fc0e2b9a9b0b23705ac733a8a1cc6b298ae0662efa6ea07",
+          "size": 2650
+        },
+        "tasks/absent/tests/Runner.ps1": {
+          "sha256": "d8c17e7991d5fc1dec1e71c0e1e945ecec275893c2653a6ec000ac4acaa6dd60",
+          "size": 18330
+        },
+        "tasks/absent/tests/admission-fixtures/classic.Tests.ps1": {
+          "sha256": "8784023e56e7757644ae38797e7fc6cfedfda289a25d0a98283b34d0f40b090a",
+          "size": 493
+        },
+        "tasks/absent/tests/admission-fixtures/data.Tests.ps1": {
+          "sha256": "2e065d6bad3b522a438971b28799d608f09ec4f3ce15a5a596f9171cd16ae876",
+          "size": 571
+        },
+        "tasks/absent/tests/admission-fixtures/weak.Tests.ps1": {
+          "sha256": "94d8dff22e3715ade171b143d118fe8939acf89e8e3014bccf35fd254cea3ca4",
+          "size": 166
+        },
+        "tasks/absent/tests/admission_checks.py": {
+          "sha256": "828b51d6f7591b86959d279e1ff26c8a6710f85f78e1cc195cd39b818981efe1",
+          "size": 5666
+        },
+        "tasks/absent/tests/artifact_state.py": {
+          "sha256": "552f6fa42d7f7e0c63252c2c235bbb9c6009c78ec5e604b459e6021bb08b108c",
+          "size": 3511
+        },
+        "tasks/absent/tests/build/install-runtime.py": {
+          "sha256": "d47f30bfff8b03ca5fba03c1307be77ab821d5fbbd10509eddb7b9fff71caa8d",
+          "size": 2431
+        },
+        "tasks/absent/tests/build/prefetch-apt.py": {
+          "sha256": "ed6d83e45cca33f04b611b4b70f4b0a890e16b25287f2a8717dcbed187fcdf6d",
+          "size": 6591
+        },
+        "tasks/absent/tests/case/mutants/exponent.ps1": {
+          "sha256": "ff34ab2512b5f5064c4539a48437096d22a3a2a01023afdd862235d4714dc5c0",
+          "size": 327
+        },
+        "tasks/absent/tests/case/mutants/swallowed.ps1": {
+          "sha256": "230dd797449ed463c5f9ebc181224634c92489c93a4f85c0d17f7bcba3a28c83",
+          "size": 282
+        },
+        "tasks/absent/tests/case/profile.json": {
+          "sha256": "b22226da66eb00dafd37ab5e582a20e3bb97f43d7798befbb52a07b040b99c82",
+          "size": 346
+        },
+        "tasks/absent/tests/case/reference/Subject.ps1": {
+          "sha256": "1d09abfa1a65f12e448f0bd785cc60b30071b420123030dee2fdd4e50848fba9",
+          "size": 321
+        },
+        "tasks/absent/tests/docker-compose.yaml": {
+          "sha256": "b3e1c3b0a943577523d9d228ad846ebb9553f3f6872044bb1841d8162931fc4d",
+          "size": 104
+        },
+        "tasks/absent/tests/entry.json": {
+          "sha256": "ac0dfa971c6b684b8ee1cfba02956c274b59a1be14f64704eaf72a9a93a38fe4",
+          "size": 58
+        },
+        "tasks/absent/tests/test.sh": {
+          "sha256": "d1566af70cf60597db3534305092dfacc91f25bb03a0ce92916385806cb17c4e",
+          "size": 257
+        },
+        "tasks/absent/tests/verifier/grader.py": {
+          "sha256": "99447ea8fe0ebb1c616de66c417c9ca06b3212721be14f2e09544d86772c99af",
+          "size": 18383
+        },
+        "tasks/current/environment/AGENTS.md": {
+          "sha256": "7b8d5aca90cd1a90d32b98d1e86ee16d82c808336e309c26853d3aab73fb4543",
+          "size": 8165
+        },
+        "tasks/current/environment/Dockerfile": {
+          "sha256": "f07d8158944228571fdb6d677384dcc9748ccedc9a4116ce1b86c4149204c4ca",
+          "size": 3251
+        },
+        "tasks/current/environment/artifact_state.py": {
+          "sha256": "552f6fa42d7f7e0c63252c2c235bbb9c6009c78ec5e604b459e6021bb08b108c",
+          "size": 3511
+        },
+        "tasks/current/environment/build/install-runtime.py": {
+          "sha256": "d47f30bfff8b03ca5fba03c1307be77ab821d5fbbd10509eddb7b9fff71caa8d",
+          "size": 2431
+        },
+        "tasks/current/environment/build/prefetch-apt.py": {
+          "sha256": "ed6d83e45cca33f04b611b4b70f4b0a890e16b25287f2a8717dcbed187fcdf6d",
+          "size": 6591
+        },
+        "tasks/current/environment/codex/config.toml": {
+          "sha256": "782c639a9261c6c7920ce141d84bbb207f8695ca8405091fadaa25a5051d6e05",
+          "size": 172
+        },
+        "tasks/current/environment/docker-compose.yaml": {
+          "sha256": "91152eb5d05d676c1624debfc639276851528b4da9bd54f66d6e9c6b6a75768f",
+          "size": 280
+        },
+        "tasks/current/environment/input/EXECUTION-PROFILE.md": {
+          "sha256": "d76e58f36664dcde45e9e86f47863578c23aa06c6d0bb5c365f04b998c49900f",
+          "size": 2244
+        },
+        "tasks/current/environment/input/README.md": {
+          "sha256": "f48fc923ccb7cf73e20dd17a36b6a670d85061ae0a08881ce44f363ec9162b51",
+          "size": 725
+        },
+        "tasks/current/environment/input/Subject.ps1": {
+          "sha256": "0f51c43ae61b355cadb2b5418938d5e64f060853784a36e495277f5e6ad7b101",
+          "size": 277
+        },
+        "tasks/current/environment/skills/a11y/SKILL.md": {
+          "sha256": "96d578e9646cd80ff6e1bedb26069222ad37b473960f3c0cc069716484b22553",
+          "size": 27638
+        },
+        "tasks/current/environment/skills/agent-safety/SKILL.md": {
+          "sha256": "2dc7898d11fb55a1a042d46e6e60800d0f948253c5216efa3e470e8914cc84ab",
+          "size": 4316
+        },
+        "tasks/current/environment/skills/ansible/SKILL.md": {
+          "sha256": "a79531195a9bdf942b301edf1588c8814ceb976557f4f0cb79bd9aa79e59d52e",
+          "size": 5752
+        },
+        "tasks/current/environment/skills/code-simplification/SKILL.md": {
+          "sha256": "e13b433345e6bf425c3625442ac1b3507b371c18d7ea3e3db822da7a7f742a29",
+          "size": 13719
+        },
+        "tasks/current/environment/skills/dependabot/SKILL.md": {
+          "sha256": "2b5f3af7d8a5555d330d4d72ba9ad6140e85215d006dd9d7a92ee0dae76bbf82",
+          "size": 13605
+        },
+        "tasks/current/environment/skills/dependabot/references/dependabot-yml-reference.md": {
+          "sha256": "c3b101d7e200a215211c9e23157ddfb1c051e437815b4d5a3d9bc13e504d6ed6",
+          "size": 9727
+        },
+        "tasks/current/environment/skills/dependabot/references/example-configs.md": {
+          "sha256": "35375699cfbaa372b68a232a2704f88a190e1267f937e1f1921e8d83c97485ca",
+          "size": 8186
+        },
+        "tasks/current/environment/skills/dependabot/references/pr-commands.md": {
+          "sha256": "471a786456c798364d13c0da554c12c712c581986b7f4a1de95d8b3638fd21cb",
+          "size": 4294
+        },
+        "tasks/current/environment/skills/gh/SKILL.md": {
+          "sha256": "b40d44ef9077b34d710b4c0737fee0e72c595e0770fbbdcb339de2ba0b40e23b",
+          "size": 21232
+        },
+        "tasks/current/environment/skills/git-commit/SKILL.md": {
+          "sha256": "554d1a3c6d95f15bc1170160659ecdc9a9958b64f377f3988941b672c249b13f",
+          "size": 3198
+        },
+        "tasks/current/environment/skills/github-actions-hardening/SKILL.md": {
+          "sha256": "31a8e7483d978e6267941edefebbe42aaa946bb3d43c9095aa3db343d4a8ff06",
+          "size": 9852
+        },
+        "tasks/current/environment/skills/github-actions-hardening/references/injection.md": {
+          "sha256": "ebd6ef8d39ba6f1cd3dc13051e6ed4163d1d2ba36518cf0f7393836a211e58ff",
+          "size": 3035
+        },
+        "tasks/current/environment/skills/github-actions-hardening/references/permissions-and-tokens.md": {
+          "sha256": "7272d00b20cf99c6fcbf34346f76730907c00701aef44bb9cfb7ab3eecac336b",
+          "size": 2743
+        },
+        "tasks/current/environment/skills/github-actions-hardening/references/report-format.md": {
+          "sha256": "3ecd2442e173bc001f858747873349be7c6c77050470b87ae516647908b1e86e",
+          "size": 1920
+        },
+        "tasks/current/environment/skills/github-actions-hardening/references/supply-chain.md": {
+          "sha256": "f66f613dbd732ce87c1e76b88208efde8feae3ffe5a3ab405cde4ce3df66f605",
+          "size": 2938
+        },
+        "tasks/current/environment/skills/github-actions-hardening/references/triggers-and-privilege.md": {
+          "sha256": "465f3f76517e9f5374a73e30f46cb47e1fe62ce9fd81f782808a3abbb2df2756",
+          "size": 3397
+        },
+        "tasks/current/environment/skills/microsoft-code-reference/SKILL.md": {
+          "sha256": "19f13822dd8674ac0a24787ac15472c9137d0db5b03750ba43ee9dcdac8ddd03",
+          "size": 4203
+        },
+        "tasks/current/environment/skills/msgraph/CONTRIBUTING.md": {
+          "sha256": "60dc9074eedcb06cb29845a4ab6d41866f357be6b8d810e8c84408788e2babf0",
+          "size": 3582
+        },
+        "tasks/current/environment/skills/msgraph/SKILL.md": {
+          "sha256": "b4763f6ae89a4e2843ca5bfe15fddf49f5924e20054ff5d7fb7e43a2df3df67e",
+          "size": 12910
+        },
+        "tasks/current/environment/skills/msgraph/references/REFERENCE.md": {
+          "sha256": "61639bb509391df6e65762355c87ef53c98f544d04e4455fd17f571c6732b5d7",
+          "size": 6549
+        },
+        "tasks/current/environment/skills/msgraph/references/docs/advanced-queries.md": {
+          "sha256": "89ac64478ca6539412ce66d5f6ac2f76f3c88ff709c8bee7c81da0d79017345e",
+          "size": 22336
+        },
+        "tasks/current/environment/skills/msgraph/references/docs/authentication.md": {
+          "sha256": "dae0fca55119fd89a9b719705d5263aa4705215c1de57d0bf33627d30c9d7c42",
+          "size": 8036
+        },
+        "tasks/current/environment/skills/msgraph/references/docs/batching.md": {
+          "sha256": "f5132b3027554ededc2ba6b116a47187df4c408be5ddbb273ff7653352e60e3b",
+          "size": 12409
+        },
+        "tasks/current/environment/skills/msgraph/references/docs/best-practices.md": {
+          "sha256": "48e18d277aa4412ac66acb084aaa8d1ba1af31fe840fdc9ff42c644ddbd8d03b",
+          "size": 13907
+        },
+        "tasks/current/environment/skills/msgraph/references/docs/errors.md": {
+          "sha256": "2c297ff319457b717c4d38948444e3586960d4669ad65fc4e38f7d36138a0d8b",
+          "size": 8931
+        },
+        "tasks/current/environment/skills/msgraph/references/docs/paging.md": {
+          "sha256": "f1b76a08cde517b495023098385b63fdf921eb3dc5e374b4f285e71786feb716",
+          "size": 4582
+        },
+        "tasks/current/environment/skills/msgraph/references/docs/query-parameters.md": {
+          "sha256": "f20ddb64c70f3b94c224882cb57bfc1541df6b2bb74532a5e16cb83ca94b6cd3",
+          "size": 17705
+        },
+        "tasks/current/environment/skills/msgraph/references/docs/throttling.md": {
+          "sha256": "cb6db141e600f3c433c80e8f21a6840b1ed83237d7c73f2b0144de37225b0a85",
+          "size": 5222
+        },
+        "tasks/current/environment/skills/msgraph/scripts/run.ps1": {
+          "sha256": "208a0323c85c94c8b8f23d974a92fb37dab77c44de5638fb3e7688e00d761cbb",
+          "size": 985
+        },
+        "tasks/current/environment/skills/msgraph/scripts/run.sh": {
+          "sha256": "ef3545fee5e2f2654cedf32ed543ba2e496109c1eb90ea6f915fd9bcf4abd51b",
+          "size": 1212
+        },
+        "tasks/current/environment/skills/podman/EVALS.md": {
+          "sha256": "96088308ed8df85d9f369263de4ec02fefdb7f59fbccc2b4629991be7266e581",
+          "size": 1441
+        },
+        "tasks/current/environment/skills/podman/MAINTENANCE.md": {
+          "sha256": "93f772d47f661cc721a211257f4a2aecabcc53ed77f0d4b16b754944128586c9",
+          "size": 4078
+        },
+        "tasks/current/environment/skills/podman/SKILL.md": {
+          "sha256": "625107071889166612f64ac52920be2b9455f671e4ce1f805835f7fee14ef274",
+          "size": 12644
+        },
+        "tasks/current/environment/skills/podman/evals/evals.json": {
+          "sha256": "9bc7fdebc99616983bd501006f97a0a3233cc9901da06443e49d63652de2f0c5",
+          "size": 8779
+        },
+        "tasks/current/environment/skills/podman/evals/files/postgres.container": {
+          "sha256": "9da8bb708c14453616a43d2a9527484f6fa4ddc1d06c2339ddecadeeb9f54b5f",
+          "size": 655
+        },
+        "tasks/current/environment/skills/podman/evals/files/vendor-compose.yaml": {
+          "sha256": "1f36c57615a4efa9bc6c1de9e7088d2dd82040cb14ec74b00c910c75f5ea26f7",
+          "size": 542
+        },
+        "tasks/current/environment/skills/podman/evals/files/vendor-web/Containerfile": {
+          "sha256": "486aa74e34330bc0122d85c4f3719f3bf66c405ffe7fcd0a2969bec6d5c21a2d",
+          "size": 266
+        },
+        "tasks/current/environment/skills/podman/references/compose-migration.md": {
+          "sha256": "fce55e0ec0a56608d714f273afdbdc44017d0a4ebed73b61291cd0fdebbf434a",
+          "size": 4465
+        },
+        "tasks/current/environment/skills/podman/references/fedora-hosts.md": {
+          "sha256": "adb6f7a2a07f2067036354cb57bb69e694d423f20bd578e09db6a5a799859168",
+          "size": 3946
+        },
+        "tasks/current/environment/skills/podman/references/quadlet-systemd.md": {
+          "sha256": "55a300354c77b6e59b5876b1b3a6b7e00f9525a21c9160fa5b3200a3a8128f23",
+          "size": 12228
+        },
+        "tasks/current/environment/skills/podman/references/reverse-proxy.md": {
+          "sha256": "6a8d789b72d821e3fed320ca84325086d5a42ced25912a4b52ea760a306111ff",
+          "size": 3621
+        },
+        "tasks/current/environment/skills/podman/references/rootless-networking.md": {
+          "sha256": "a5fc3f33815caa196d5f8d6cb090136bcccc88fb95dedb921c99bd0b3cf6b524",
+          "size": 7011
+        },
+        "tasks/current/environment/skills/podman/references/security-storage-secrets.md": {
+          "sha256": "37e1fae3de6f4b7ae1ea3ccc2b0b84d7fd854ea2730a51f0e3b3b1bc9b2e1068",
+          "size": 8129
+        },
+        "tasks/current/environment/skills/podman/references/validation.md": {
+          "sha256": "465321094bc936d8a9e187bd3b4daa1ab271b93242a2c07fe88c58db6bd4bdd5",
+          "size": 4247
+        },
+        "tasks/current/environment/skills/powershell-module-engineering/SKILL.md": {
+          "sha256": "801cecfd42aeb32f3fd6083d9af08f44c8a5ca48202761533c072a10c06060c9",
+          "size": 11551
+        },
+        "tasks/current/environment/skills/powershell-pester-6/SKILL.md": {
+          "sha256": "b57df2ff4072b2e25744ae2bd530b02bbb6ab83a22a0d374c73d48de4dc70887",
+          "size": 13098
+        },
+        "tasks/current/environment/skills/powershell-pester-6/references/compatibility-and-migration.md": {
+          "sha256": "6d05a890eb1c53c59755f9e560c05d65467a614d36af7c812f4a32c89b47f4e9",
+          "size": 7813
+        },
+        "tasks/current/environment/skills/powershell-pester-6/references/execution.md": {
+          "sha256": "3b80a98abfefdcd9a765da9a9436caa43de6a873e57253f1ecfb36e1095ea4b8",
+          "size": 6577
+        },
+        "tasks/current/instruction.md": {
+          "sha256": "5e4db9088c8251ea628c4178f447c3a6c9e58ce5e4b2b0eec5260b9b97b2279f",
+          "size": 188
+        },
+        "tasks/current/task.toml": {
+          "sha256": "ab0a9fe00058a65ca6fd4aea62afc3fd1d6b8fae8d2d7db76b40aa89f6592ea0",
+          "size": 783
+        },
+        "tasks/current/tests/Dockerfile": {
+          "sha256": "f44ad923daff6bb44fc0e2b9a9b0b23705ac733a8a1cc6b298ae0662efa6ea07",
+          "size": 2650
+        },
+        "tasks/current/tests/Runner.ps1": {
+          "sha256": "d8c17e7991d5fc1dec1e71c0e1e945ecec275893c2653a6ec000ac4acaa6dd60",
+          "size": 18330
+        },
+        "tasks/current/tests/admission-fixtures/classic.Tests.ps1": {
+          "sha256": "8784023e56e7757644ae38797e7fc6cfedfda289a25d0a98283b34d0f40b090a",
+          "size": 493
+        },
+        "tasks/current/tests/admission-fixtures/data.Tests.ps1": {
+          "sha256": "2e065d6bad3b522a438971b28799d608f09ec4f3ce15a5a596f9171cd16ae876",
+          "size": 571
+        },
+        "tasks/current/tests/admission-fixtures/weak.Tests.ps1": {
+          "sha256": "94d8dff22e3715ade171b143d118fe8939acf89e8e3014bccf35fd254cea3ca4",
+          "size": 166
+        },
+        "tasks/current/tests/admission_checks.py": {
+          "sha256": "828b51d6f7591b86959d279e1ff26c8a6710f85f78e1cc195cd39b818981efe1",
+          "size": 5666
+        },
+        "tasks/current/tests/artifact_state.py": {
+          "sha256": "552f6fa42d7f7e0c63252c2c235bbb9c6009c78ec5e604b459e6021bb08b108c",
+          "size": 3511
+        },
+        "tasks/current/tests/build/install-runtime.py": {
+          "sha256": "d47f30bfff8b03ca5fba03c1307be77ab821d5fbbd10509eddb7b9fff71caa8d",
+          "size": 2431
+        },
+        "tasks/current/tests/build/prefetch-apt.py": {
+          "sha256": "ed6d83e45cca33f04b611b4b70f4b0a890e16b25287f2a8717dcbed187fcdf6d",
+          "size": 6591
+        },
+        "tasks/current/tests/case/mutants/exponent.ps1": {
+          "sha256": "ff34ab2512b5f5064c4539a48437096d22a3a2a01023afdd862235d4714dc5c0",
+          "size": 327
+        },
+        "tasks/current/tests/case/mutants/swallowed.ps1": {
+          "sha256": "230dd797449ed463c5f9ebc181224634c92489c93a4f85c0d17f7bcba3a28c83",
+          "size": 282
+        },
+        "tasks/current/tests/case/profile.json": {
+          "sha256": "b22226da66eb00dafd37ab5e582a20e3bb97f43d7798befbb52a07b040b99c82",
+          "size": 346
+        },
+        "tasks/current/tests/case/reference/Subject.ps1": {
+          "sha256": "1d09abfa1a65f12e448f0bd785cc60b30071b420123030dee2fdd4e50848fba9",
+          "size": 321
+        },
+        "tasks/current/tests/docker-compose.yaml": {
+          "sha256": "b3e1c3b0a943577523d9d228ad846ebb9553f3f6872044bb1841d8162931fc4d",
+          "size": 104
+        },
+        "tasks/current/tests/entry.json": {
+          "sha256": "ac0dfa971c6b684b8ee1cfba02956c274b59a1be14f64704eaf72a9a93a38fe4",
+          "size": 58
+        },
+        "tasks/current/tests/test.sh": {
+          "sha256": "d1566af70cf60597db3534305092dfacc91f25bb03a0ce92916385806cb17c4e",
+          "size": 257
+        },
+        "tasks/current/tests/verifier/grader.py": {
+          "sha256": "99447ea8fe0ebb1c616de66c417c9ca06b3212721be14f2e09544d86772c99af",
+          "size": 18383
+        }
+      },
+      "archives": {
+        "images.tar": {
+          "sha256": "0c6cd4f420cad83c191061525900f9f6b3d4d2302c4d0ed484fd3ddd2d4b82dc",
+          "size": 2363542528
+        },
+        "inputs.tar": {
+          "sha256": "8129448d5e07335b840577901434a49cbcb0128e1b484b3d0a7215bcd05364f0",
+          "size": 1249280
+        }
+      },
+      "credentials": false,
+      "running_containers": false,
+      "authenticated_homes": false,
+      "contents": "Prepared images and public repository task/verifier inputs only; separate from the report and agent-visible inputs."
+    },
+    "prepared_transfer": {
+      "verified": true,
+      "identity": {
+        "repository": "thetechgy/agent-engineering-baseline",
+        "branch": "refs/heads/trial/direct-harbor",
+        "commit": "a753e39083d9d93fdb13906382b9b35e9902cdd4",
+        "run_id": "42274188228",
+        "run_attempt": 1,
+        "allocation_id": "sol-high-reused-20261106"
+      },
+      "source_identity": {
+        "repository": "thetechgy/agent-engineering-baseline",
+        "branch": "refs/heads/trial/direct-harbor",
+        "commit": "0c364aec26c7af6cf0ef52b08e598f48ead9ee01",
+        "run_id": "42270181249",
+        "run_attempt": 1,
+        "allocation_id": null
+      },
+      "manifest_sha256": "78f0f4f58085d3383f41df1f72ff616ba83b8e35c59ea077597d1d04346516e2",
+      "images": {
+        "direct-harbor-agent:current": "sha256:de7b89b6131977fa93ecad2ad6f62431b4bba3802e5bb00ced53042de8e2d1df",
+        "direct-harbor-agent:absent": "sha256:3b8ead2a92e7d2c10be126d0831c49251f412b49c23a79208a77ffa265143bd5",
+        "direct-harbor-verifier:live": "sha256:2b1d93aa7557d2f8e3377552920e627cae9177e0af077e0fae5f2579cd4d4512",
+        "harbor-prebuilt:harbor-docker-egress-control-sidecar--9af3dc172792cee8": "sha256:b4a6a10a0ac68129a8ce63dbe85ebea217817e0f131fd523f3b4d6b7853b936d",
+        "direct-harbor-kernel-probe:0.25.0": "sha256:3cb067eab609612d81b4d82ff8ad71d73482bb3059a87b642d7e14f0ed659cde"
+      },
+      "task_checksums": {
+        "current": {
+          "path": "tasks/current",
+          "checksum": "b40ceef19f765fb5bf9cc341a5b1348cc1d3ece384e11b4c83f3e5aa042fb9f7"
+        },
+        "absent": {
+          "path": "tasks/absent",
+          "checksum": "1843cbb5bd90af5aea638111514084d6c08175d05340baf4865f94088e57cfca"
+        }
+      },
+      "fresh_image_load": true,
+      "snapshot_rebuild": false,
+      "root_paths_relocated": true,
+      "kernel_probe_registry_refresh": true,
+      "kernel_probe_reference": "alpine:3.23.4@sha256:5b10f432ef3da1b8d4c7eb6c487f2f5a8f096bc91145e68878dd4a5019afde11",
+      "note": "Only built images were transferred; Harbor creates fresh containers, homes and sessions."
+    },
+    "preapproval_download": {
+      "verified": true,
+      "identity": {
+        "repository": "thetechgy/agent-engineering-baseline",
+        "branch": "refs/heads/trial/direct-harbor",
+        "commit": "0c364aec26c7af6cf0ef52b08e598f48ead9ee01",
+        "run_id": "42270181249",
+        "run_attempt": 1,
+        "allocation_id": null
+      },
+      "manifest_sha256": "78f0f4f58085d3383f41df1f72ff616ba83b8e35c59ea077597d1d04346516e2",
+      "images": {
+        "direct-harbor-agent:current": "sha256:de7b89b6131977fa93ecad2ad6f62431b4bba3802e5bb00ced53042de8e2d1df",
+        "direct-harbor-agent:absent": "sha256:3b8ead2a92e7d2c10be126d0831c49251f412b49c23a79208a77ffa265143bd5",
+        "direct-harbor-verifier:live": "sha256:2b1d93aa7557d2f8e3377552920e627cae9177e0af077e0fae5f2579cd4d4512",
+        "harbor-prebuilt:harbor-docker-egress-control-sidecar--9af3dc172792cee8": "sha256:b4a6a10a0ac68129a8ce63dbe85ebea217817e0f131fd523f3b4d6b7853b936d",
+        "direct-harbor-kernel-probe:0.25.0": "sha256:3cb067eab609612d81b4d82ff8ad71d73482bb3059a87b642d7e14f0ed659cde"
+      },
+      "tasks": {
+        "current": {
+          "path": "tasks/current",
+          "checksum": "b40ceef19f765fb5bf9cc341a5b1348cc1d3ece384e11b4c83f3e5aa042fb9f7"
+        },
+        "absent": {
+          "path": "tasks/absent",
+          "checksum": "1843cbb5bd90af5aea638111514084d6c08175d05340baf4865f94088e57cfca"
+        }
+      },
+      "credential_free": true
+    }
   },
   "snapshot_recovery": {
     "prior_failed_run": 42213118342,
@@ -3287,5 +4820,585 @@
       "preparation-job-attempt-2.log": "dc0045306bdefe48f19da136360e1ae42fecaa4920713b439a232cac7a150b69",
       "fresh-job-attempt-2.log": "8714aad2e03df75ce3507c060adf0d67b9f7aec96ccb8a48d6202026eb4ba18b"
     }
-  }
+  },
+  "smoke_review": {
+    "schema": 1,
+    "allocation_id": "sol-high-reused-20261106",
+    "run": {
+      "id": 42274188228,
+      "head_sha": "a753e39083d9d93fdb13906382b9b35e9902cdd4",
+      "head_branch": "trial/direct-harbor",
+      "run_number": 34,
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "failure",
+      "event": "push",
+      "path": ".github/workflows/direct-harbor-trial.yml",
+      "html_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42274188228",
+      "created_at": "2026-11-06T18:49:33Z",
+      "updated_at": "2026-11-06T18:59:09Z"
+    },
+    "setup_commit": "ea752bcfc2bdb0fafaf61189ca28d230e6a66f37",
+    "setup_report_run": 42274095264,
+    "executed_commit": "a753e39083d9d93fdb13906382b9b35e9902cdd4",
+    "decision": "The smoke pair does not establish an operationally usable comparison. One current-arm session completed and its exact submission transferred reliably, but the verifier rejected an unsupported name template. The absent arm was not scheduled.",
+    "operationally_usable": false,
+    "evaluated_inference_attempts": 1,
+    "model_judges": 0,
+    "credentialed_retries": 0,
+    "absent_reserved": false,
+    "closure": {
+      "allocation_id": "sol-high-reused-20261106",
+      "state": "closed",
+      "paid_execution_enabled": false,
+      "reserved_slots_consumed": [
+        7
+      ],
+      "campaign_attempts_consumed": 7,
+      "previous_recovery_consumed": 4,
+      "previous_recovery_limit": 4,
+      "incremental_api_bill_usd": null,
+      "historical_cumulative_api_bill_usd": null,
+      "note": "Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.",
+      "reservation_ids": [
+        "sol-high-reused-20261106/current/7"
+      ],
+      "incremental_conservative_estimate_usd": 1.267615,
+      "operational_budget_usd": 5,
+      "estimated_budget_exceeded": false
+    },
+    "environment_approval": {
+      "kind": "automated_approval_under_explicit_user_authorization",
+      "independent_human_review": false,
+      "administrative_bypass": false,
+      "shared_protections_changed": false,
+      "run_id": 42274188228,
+      "commit": "a753e39083d9d93fdb13906382b9b35e9902cdd4",
+      "allocation_id": "sol-high-reused-20261106",
+      "prepared_job": 128086207475,
+      "prepared_job_conclusion": "success",
+      "proof": {
+        "passed": true,
+        "identity": {
+          "repository": "thetechgy/agent-engineering-baseline",
+          "branch": "refs/heads/trial/direct-harbor",
+          "commit": "a753e39083d9d93fdb13906382b9b35e9902cdd4",
+          "run_id": "42274188228",
+          "run_attempt": 1,
+          "allocation_id": "sol-high-reused-20261106"
+        },
+        "manifest_sha256": "78f0f4f58085d3383f41df1f72ff616ba83b8e35c59ea077597d1d04346516e2",
+        "inference": false,
+        "image_rebuilds": 0,
+        "snapshot_index_downloads": 0,
+        "image_inventory_unchanged": true,
+        "remaining_containers": {
+          "direct-harbor-agent:current": [],
+          "direct-harbor-agent:absent": [],
+          "direct-harbor-verifier:live": [],
+          "harbor-prebuilt:harbor-docker-egress-control-sidecar--9af3dc172792cee8": [],
+          "direct-harbor-kernel-probe:0.25.0": []
+        },
+        "container_disposal_verified": true
+      },
+      "artifacts": [
+        {
+          "id": 13532427210,
+          "name": "prepared-images",
+          "digest": "sha256:35bbaf467bbfede4409ea38404862dc32c368130b1066f660d0394250f38302e",
+          "size_in_bytes": 923818602,
+          "expires_at": "2026-11-13T18:52:59Z"
+        },
+        {
+          "id": 13532247284,
+          "name": "prepared-evidence",
+          "digest": "sha256:3d175660885a8150a1028df9aff9c77607491f8297fbd5a4e9487adcbab4adcb",
+          "size_in_bytes": 49146,
+          "expires_at": "2026-12-06T18:53:39Z"
+        }
+      ],
+      "approval_endpoint": "POST /repos/thetechgy/agent-engineering-baseline/actions/runs/42274188228/pending_deployments",
+      "submitted_at": "2026-11-06T18:55:37.756721+00:00",
+      "response": [
+        {
+          "id": 7608265468,
+          "sha": "a753e39083d9d93fdb13906382b9b35e9902cdd4",
+          "ref": "trial/direct-harbor",
+          "environment": "skill-benchmark",
+          "original_environment": "skill-benchmark"
+        }
+      ],
+      "submitted": true
+    },
+    "prepared_source": {
+      "run_id": 42270181249,
+      "commit": "0c364aec26c7af6cf0ef52b08e598f48ead9ee01",
+      "artifact_id": 13529635174,
+      "name": "prepared-images",
+      "artifact_digest": "sha256:2d95a9bb6ca91795c35148d0ab874f4f029e45e27d3749c9af7dd08eb1ecd75a",
+      "manifest_sha256": "78f0f4f58085d3383f41df1f72ff616ba83b8e35c59ea077597d1d04346516e2"
+    },
+    "manifest_sha256": "78f0f4f58085d3383f41df1f72ff616ba83b8e35c59ea077597d1d04346516e2",
+    "experiment_sha256": "cb4623031566389300061ad8db0f83c9a61b28acaa97578447bb97e7dfe1332a",
+    "preapproval_preflight": {
+      "passed": true,
+      "identity": {
+        "repository": "thetechgy/agent-engineering-baseline",
+        "branch": "refs/heads/trial/direct-harbor",
+        "commit": "a753e39083d9d93fdb13906382b9b35e9902cdd4",
+        "run_id": "42274188228",
+        "run_attempt": 1,
+        "allocation_id": "sol-high-reused-20261106"
+      },
+      "manifest_sha256": "78f0f4f58085d3383f41df1f72ff616ba83b8e35c59ea077597d1d04346516e2",
+      "inference": false,
+      "image_rebuilds": 0,
+      "snapshot_index_downloads": 0,
+      "image_inventory_unchanged": true,
+      "remaining_containers": {
+        "direct-harbor-agent:current": [],
+        "direct-harbor-agent:absent": [],
+        "direct-harbor-verifier:live": [],
+        "harbor-prebuilt:harbor-docker-egress-control-sidecar--9af3dc172792cee8": [],
+        "direct-harbor-kernel-probe:0.25.0": []
+      },
+      "container_disposal_verified": true
+    },
+    "live_preflight": {
+      "passed": true,
+      "identity": {
+        "repository": "thetechgy/agent-engineering-baseline",
+        "branch": "refs/heads/trial/direct-harbor",
+        "commit": "a753e39083d9d93fdb13906382b9b35e9902cdd4",
+        "run_id": "42274188228",
+        "run_attempt": 1,
+        "allocation_id": "sol-high-reused-20261106"
+      },
+      "manifest_sha256": "78f0f4f58085d3383f41df1f72ff616ba83b8e35c59ea077597d1d04346516e2",
+      "inference": false,
+      "image_rebuilds": 0,
+      "snapshot_index_downloads": 0,
+      "image_inventory_unchanged": true,
+      "remaining_containers": {
+        "direct-harbor-agent:current": [],
+        "direct-harbor-agent:absent": [],
+        "direct-harbor-verifier:live": [],
+        "harbor-prebuilt:harbor-docker-egress-control-sidecar--9af3dc172792cee8": [],
+        "direct-harbor-kernel-probe:0.25.0": []
+      },
+      "container_disposal_verified": true
+    },
+    "live_transfer": {
+      "verified": true,
+      "identity": {
+        "repository": "thetechgy/agent-engineering-baseline",
+        "branch": "refs/heads/trial/direct-harbor",
+        "commit": "a753e39083d9d93fdb13906382b9b35e9902cdd4",
+        "run_id": "42274188228",
+        "run_attempt": 1,
+        "allocation_id": "sol-high-reused-20261106"
+      },
+      "source_identity": {
+        "repository": "thetechgy/agent-engineering-baseline",
+        "branch": "refs/heads/trial/direct-harbor",
+        "commit": "0c364aec26c7af6cf0ef52b08e598f48ead9ee01",
+        "run_id": "42270181249",
+        "run_attempt": 1,
+        "allocation_id": null
+      },
+      "manifest_sha256": "78f0f4f58085d3383f41df1f72ff616ba83b8e35c59ea077597d1d04346516e2",
+      "images": {
+        "direct-harbor-agent:current": "sha256:de7b89b6131977fa93ecad2ad6f62431b4bba3802e5bb00ced53042de8e2d1df",
+        "direct-harbor-agent:absent": "sha256:3b8ead2a92e7d2c10be126d0831c49251f412b49c23a79208a77ffa265143bd5",
+        "direct-harbor-verifier:live": "sha256:2b1d93aa7557d2f8e3377552920e627cae9177e0af077e0fae5f2579cd4d4512",
+        "harbor-prebuilt:harbor-docker-egress-control-sidecar--9af3dc172792cee8": "sha256:b4a6a10a0ac68129a8ce63dbe85ebea217817e0f131fd523f3b4d6b7853b936d",
+        "direct-harbor-kernel-probe:0.25.0": "sha256:3cb067eab609612d81b4d82ff8ad71d73482bb3059a87b642d7e14f0ed659cde"
+      },
+      "task_checksums": {
+        "current": {
+          "path": "tasks/current",
+          "checksum": "b40ceef19f765fb5bf9cc341a5b1348cc1d3ece384e11b4c83f3e5aa042fb9f7"
+        },
+        "absent": {
+          "path": "tasks/absent",
+          "checksum": "1843cbb5bd90af5aea638111514084d6c08175d05340baf4865f94088e57cfca"
+        }
+      },
+      "fresh_image_load": true,
+      "snapshot_rebuild": false,
+      "root_paths_relocated": true,
+      "kernel_probe_registry_refresh": true,
+      "kernel_probe_reference": "alpine:3.23.4@sha256:5b10f432ef3da1b8d4c7eb6c487f2f5a8f096bc91145e68878dd4a5019afde11",
+      "note": "Only built images were transferred; Harbor creates fresh containers, homes and sessions."
+    },
+    "deployment_comparison": {
+      "matched": true,
+      "removed_target_files": [
+        "powershell-pester-6/SKILL.md",
+        "powershell-pester-6/references/compatibility-and-migration.md",
+        "powershell-pester-6/references/execution.md"
+      ],
+      "profile": "codex-0.166.0_gpt-6.1-sol_high_rollout-budget-disabled",
+      "shared_config": {
+        "mcp_servers": {
+          "microsoft-learn": {
+            "url": "https://learn.microsoft.com/api/mcp",
+            "enabled_tools": [
+              "microsoft_docs_search",
+              "microsoft_docs_fetch",
+              "microsoft_code_sample_search"
+            ],
+            "enabled": false
+          }
+        },
+        "web_search": "disabled",
+        "service_tier": "default",
+        "model_reasoning_effort": "high",
+        "forced_login_method": "api",
+        "projects": {
+          "/workspace": {
+            "trust_level": "trusted"
+          }
+        },
+        "model_provider": "trial_openai",
+        "model_providers": {
+          "trial_openai": {
+            "name": "OpenAI",
+            "base_url": "https://api.openai.com/v1",
+            "wire_api": "responses",
+            "requires_openai_auth": true,
+            "request_max_retries": 0,
+            "stream_max_retries": 0,
+            "stream_idle_timeout_ms": 60000,
+            "supports_websockets": true,
+            "supports_standalone_web_search": true,
+            "http_headers": {
+              "version": "0.166.0"
+            },
+            "env_http_headers": {
+              "OpenAI-Organization": "OPENAI_ORGANIZATION",
+              "OpenAI-Project": "OPENAI_PROJECT"
+            }
+          }
+        },
+        "features": {
+          "rollout_budget": false
+        }
+      },
+      "instructions_sha256": "7b8d5aca90cd1a90d32b98d1e86ee16d82c808336e309c26853d3aab73fb4543"
+    },
+    "runtime": {
+      "id": "codex-0.166.0_gpt-6.1-sol_high_rollout-budget-disabled",
+      "codex_version": "0.166.0",
+      "model": "gpt-6.1-sol",
+      "reasoning_effort": "high",
+      "release": "https://github.com/openai/codex/releases/tag/rust-v0.166.0",
+      "verified_at": "2026-11-05",
+      "archive_url": "https://github.com/openai/codex/releases/download/rust-v0.166.0/codex-package-x86_64-unknown-linux-musl.tar.gz",
+      "archive_sha256": "1d44b28bc4ac9937d7d3532264baa68a507ce364956a0d4ebb856f331cdee254",
+      "package_layout": {
+        "entrypoint": "bin/codex",
+        "execServer": "bin/codex-exec-server",
+        "resourcesDir": "codex-resources",
+        "pathDir": "codex-path"
+      },
+      "historical_profile": {
+        "codex_version": "0.155.1",
+        "model": "gpt-5.6-sol",
+        "reasoning_effort": "medium",
+        "executed_commit": "c5a430ac15b4fac0eb6a29b1ac46ad4e7e06ca3e"
+      },
+      "paid_execution_enabled": false,
+      "pricing": {
+        "source": "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+        "pricing_source": "https://developers.openai.com/api/docs/pricing",
+        "per_million_standard_usd": {
+          "uncached_input": 2,
+          "cached_input": 0.1,
+          "cache_write_30m": 2.5,
+          "cache_write_12h": 5,
+          "output": 10
+        },
+        "long_context_threshold": 272000,
+        "long_context_input_multiplier": 2,
+        "long_context_output_multiplier": 1.5,
+        "conservative_all_input_per_million": 10,
+        "conservative_output_per_million": 15,
+        "note": "No charge observed. Conservative future estimate applies long-context 12h cache-write rate to all input. Per-call categories/context needed for standard estimates; missing categories stay unknown.",
+        "harbor_native_pricing_entry_available": false
+      },
+      "reviewed_source_sha256": {
+        "codex-rs__protocol__src__models.rs": "753498bc730ba21ded710d9aa2b2f9163e6bbe4eaa18f1c25d998c36138a54f7",
+        "codex-rs__protocol__src__protocol.rs": "35d4a01a35c1771e7ae24d3c55964c2d6ecfe880a91539c1045f75cac0c8e356",
+        "codex-rs__core__config.schema.json": "211bec2282459fcd70e4905af948721177b6ec7a03e0df84cd8b7c131006a6ca",
+        "scripts__install__install.sh": "44ac252c1b9a68c02bdf0de8e1c6cbfde36fc1afa8684624962eae7d4c461e70",
+        "scripts__build_codex_package.py": "7a5b7ba90604944831dd25ad89ccba46b4c40f44ec6aeec67a6d058a0c837ad2",
+        "codex-rs__core__src__rollout_budget.rs": "223a573c35088799879688d0aea54f86bdd4420017b95861596a073ac3678380",
+        "codex-rs__config__src__config_toml.rs": "e8f6b45b73eaca1a89be9524bb02bf069e9715e3aeba270e87285d941405c877",
+        "codex-rs__model-provider-info__src__lib.rs": "ea822c232e47fc88251cf20060da91ca0c1195b2d2853c5b3fa4bfcdd4cc0184"
+      },
+      "budget_semantics": "Supplemental rollout_budget is false: no enforcement, limit, weights or reminders. No replacement token ceiling. 600-second agent timeout and two-attempt operational allocation remain; no provider-enforced dollar cap."
+    },
+    "current_agent_seconds": 38.227,
+    "current_total_seconds": 71.855,
+    "submission_download_verification": {
+      "verified": true,
+      "identity": {
+        "allocation_id": "sol-high-reused-20261106",
+        "reservation_id": "sol-high-reused-20261106/current/7",
+        "attempt": 7,
+        "variant": "current",
+        "commit": "a753e39083d9d93fdb13906382b9b35e9902cdd4",
+        "run_id": "42274188228"
+      },
+      "sha256": "407196e63354eb841f3d38c2d5d3daaba9aaec16aa721f75686f74e181d0bb1a",
+      "size": 3446,
+      "all_boundary_hashes_match": true,
+      "github_artifact_id": 13532657965,
+      "github_artifact_zip_digest_verified": true,
+      "artifact_expires_at": "2026-12-06T18:58:58Z"
+    },
+    "offline_diagnosis": {
+      "kind": "offline_admission_only_diagnosis",
+      "candidate_executed": false,
+      "inference": false,
+      "grading_criteria_changed": false,
+      "retained_submission_changed": false,
+      "replay": {
+        "code": "admission",
+        "admission_rule": "block_name_template",
+        "status": "unsupported",
+        "admission_diagnostic": {
+          "ast_kind": "CommandAst",
+          "column": 9,
+          "line": 23
+        },
+        "candidate_sha256": "407196e63354eb841f3d38c2d5d3daaba9aaec16aa721f75686f74e181d0bb1a"
+      },
+      "local_parser_version": "7.6.6",
+      "qualified_runner_version": "7.6.9",
+      "version_limit": "Local admission-only corroboration; exact rejection already observed in qualified 7.6.9 verifier. No runtime correctness grade inferred.",
+      "runner_sha256": "d8c17e7991d5fc1dec1e71c0e1e945ecec275893c2653a6ec000ac4acaa6dd60",
+      "profile_sha256": "b22226da66eb00dafd37ab5e582a20e3bb97f43d7798befbb52a07b040b99c82",
+      "probes": [
+        {
+          "field": "BaseMilliseconds",
+          "candidate_sha256": "7bc104f1d416ff2a07bd60e1eedd3f5117a319b2dd460609a4161b3043445d3a",
+          "result": {
+            "admission_diagnostic": {
+              "line": 1,
+              "ast_kind": "CommandAst",
+              "column": 1
+            },
+            "code": "admission",
+            "admission_rule": "block_name_template",
+            "status": "unsupported"
+          }
+        },
+        {
+          "field": "Base",
+          "candidate_sha256": "adb0995fe2d09e9018a3f44bcbee76102a270dc48ac761544272153090e7681a",
+          "result": {
+            "code": "ok",
+            "status": "admitted"
+          }
+        }
+      ],
+      "construct": "<BaseMilliseconds> in literal It names at lines 23 and 67, paired with literal -ForEach hashtable keys and the corresponding subject parameter.",
+      "cause": "The block-name template allowlist uses profile.properties plus underscore. pester-002 lists Base but omits BaseMilliseconds; its command parameters include BaseMilliseconds.",
+      "classification": "valid_pester_data_field_template_outside_grader_coverage",
+      "agent_work_assessment": "The rejected construct follows ordinary Pester data-driven syntax. This admission failure does not establish incorrect or incomplete tests; whole-suite correctness and defect detection remain unmeasured.",
+      "infrastructure_assessment": "Producer, host, verifier and retained-download hashes match. Native session completed; no native exception or runtime-tool error; container disposal confirmed. No collection or infrastructure defect explains this rejection.",
+      "agent_visible_contract": "The frozen execution profile says documented data fields but does not enumerate permitted template names. The README documents BaseMilliseconds as the command parameter.",
+      "official_reference": "https://pester.dev/docs/usage/data-driven-tests#using-foreach--testcases-with-hashtable",
+      "follow_up": "Separately review the narrow public-name coverage/documentation mismatch for BaseMilliseconds with credential-free positive and expression-rejection checks, then replay the exact retained bytes under the same correctness criteria. Do not rescore this allocation or revise the skill."
+    },
+    "skill_evidence": [
+      {
+        "variant": "current",
+        "attempted_access": [
+          "powershell-pester-6/SKILL.md",
+          "powershell-pester-6/references/compatibility-and-migration.md"
+        ],
+        "successful_reads": "unverified: collector retains attempted file paths, not correlated read results",
+        "instruction_following": "unmeasured: retained submission is not proof of which instruction caused a choice",
+        "demonstrated_benefit": "unmeasured: no valid grade or absent attempt"
+      },
+      {
+        "variant": "absent",
+        "attempted_access": null,
+        "successful_reads": "not run",
+        "instruction_following": "not run",
+        "demonstrated_benefit": "unmeasured: not reserved or launched"
+      }
+    ],
+    "artifacts": [
+      {
+        "id": 13533277286,
+        "name": "direct-harbor-trial-report",
+        "size_in_bytes": 272256,
+        "digest": "sha256:08cd2a0934508493085944ea1d9ebbaf1fee35d105a67889c4f7e4c9d6add830",
+        "expires_at": "2026-12-06T18:59:04Z",
+        "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42274188228/artifacts/13533277286"
+      },
+      {
+        "id": 13533222220,
+        "name": "live-preflight",
+        "size_in_bytes": 49145,
+        "digest": "sha256:8c774124cb3e48cdb698a052b799bb6933b71bdd3ef41ad6d5b086caf0bfc006",
+        "expires_at": "2026-12-06T18:57:43Z",
+        "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42274188228/artifacts/13533222220"
+      },
+      {
+        "id": 13533162417,
+        "name": "allocation-reused-attempt-7",
+        "size_in_bytes": 331,
+        "digest": "sha256:b2fa77baada1396d240390d22b2202dce35a699e6fa2f42044a4464f1896eaf7",
+        "expires_at": "2026-12-06T18:57:44Z",
+        "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42274188228/artifacts/13533162417"
+      },
+      {
+        "id": 13533117506,
+        "name": "live-current",
+        "size_in_bytes": 14905,
+        "digest": "sha256:4187845300ddbad3efcf0fde0c53a2cd02a7f768682d07a1947c138281a625d8",
+        "expires_at": "2026-12-06T18:59:00Z",
+        "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42274188228/artifacts/13533117506"
+      },
+      {
+        "id": 13532972524,
+        "name": "live-absent",
+        "size_in_bytes": 9921,
+        "digest": "sha256:24a5e441d892087ec194b9abad2b5a770c353f3fedbfe3a85209fc70e3e81740",
+        "expires_at": "2026-12-06T18:59:01Z",
+        "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42274188228/artifacts/13532972524"
+      },
+      {
+        "id": 13532657965,
+        "name": "submission-sol-high-reused-20261106-current",
+        "size_in_bytes": 1419,
+        "digest": "sha256:c2b46953b5b4851db0671d89918bf2a8bfe193aa78890feb10937d303fa986b7",
+        "expires_at": "2026-12-06T18:58:58Z",
+        "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42274188228/artifacts/13532657965"
+      },
+      {
+        "id": 13532427210,
+        "name": "prepared-images",
+        "size_in_bytes": 923818602,
+        "digest": "sha256:35bbaf467bbfede4409ea38404862dc32c368130b1066f660d0394250f38302e",
+        "expires_at": "2026-11-13T18:52:59Z",
+        "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42274188228/artifacts/13532427210"
+      },
+      {
+        "id": 13532303095,
+        "name": "allocation-closure",
+        "size_in_bytes": 780,
+        "digest": "sha256:cbe01fb8a711d862ca2a54ff58213f40a52d7b705220082d00bd0a78a636489f",
+        "expires_at": "2026-12-06T18:59:02Z",
+        "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42274188228/artifacts/13532303095"
+      },
+      {
+        "id": 13532247284,
+        "name": "prepared-evidence",
+        "size_in_bytes": 49146,
+        "digest": "sha256:3d175660885a8150a1028df9aff9c77607491f8297fbd5a4e9487adcbab4adcb",
+        "expires_at": "2026-12-06T18:53:39Z",
+        "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42274188228/artifacts/13532247284"
+      }
+    ],
+    "accounting": {
+      "observed_token_usage": {
+        "input_tokens": 122992,
+        "cached_input_tokens": 90990,
+        "output_tokens": 2513,
+        "reasoning_output_tokens": 815,
+        "cache_write_input_tokens": 31987,
+        "total_tokens": 125505
+      },
+      "coverage": {
+        "coverage": "terminal_session_observations",
+        "usable_for_scheduling": true,
+        "reasons": [],
+        "observed_usage_estimate_usd": 1.267615,
+        "billing_certainty": "unknown",
+        "provider_bill_usd": null,
+        "basis": "Native terminal plus one parseable session with usage before its terminal; successful turns also require matching CLI terminal counters. Exact budget failure is a local post-usage termination, not arbitrary tool/model text. This bounds recorded session accounting, not provider billing."
+      },
+      "conservative_estimate_usd": 1.267615,
+      "calculation": "122992 input * USD 10/M + 2513 output * USD 15/M. Cache reads/writes are input subsets; reasoning is an output subset.",
+      "second_arm_reserve_test_usd": 4.267615,
+      "reserve_sufficient": true,
+      "native_pricing_estimate_usd": null,
+      "actual_incremental_bill_usd": null,
+      "historical_cumulative_bill_usd": null
+    },
+    "disposal": {
+      "agent_removed": true,
+      "verifier_removed": true,
+      "preflight_all_five_image_ancestors_empty": true,
+      "native_cleanup_permission_error": "Native cleanup could not remove its authentication path and Codex home inside the disposable container; whole agent and verifier containers were independently confirmed removed.",
+      "credentials_or_authentication_artifacts_retained": false
+    },
+    "historical_evidence": "Qualification run 42270181249 and its good 2/2, weak 0/2 controls are reused unchanged, not rerun or counted as new skill evidence. Earlier outcomes are not rescored. Campaign now 7/36; earlier recovery remains 4/4; this allocation is closed at 1/2.",
+    "limits": [
+      "One attempted current case and no absent result cannot establish a comparison or skill effectiveness.",
+      "The exact submission was admitted to retention but not to native correctness grading. Reference and mutant outcomes remain unmeasured; Harbor overall reward zero is not a task-correctness score.",
+      "Skill-file access attempts do not establish successful reads, instruction following, or benefit.",
+      "Local offline replay uses PowerShell 7.6.6 for admission only; the original identical rejection was observed with qualified PowerShell 7.6.9. The candidate was not executed offline."
+    ],
+    "remaining_downloads": "Reuse still requires GitHub artifact and pinned host-tool downloads plus the digest-pinned Alpine registry reference refresh. No image rebuild, snapshot index download, dependency acquisition, or package download occurred in this live run.",
+    "maintenance": "Added one restored-runtime preflight helper, a run/commit/allocation/manifest-bound reservation prerequisite, exact producer selection in fresh allocation metadata, and report evidence. Existing native runtime checks and handoff are reused. Obsolete allocation build-attempt checks were replaced with selected-artifact binding; no framework, service, cache, skill, task, grader or qualified runtime input changed.",
+    "next_step": "Before another paid pair, separately review the BaseMilliseconds template coverage/documentation mismatch. Qualify a narrow public-name correction with credential-free positive and expression-rejection tests, then replay these exact retained bytes under unchanged correctness criteria. Preserve this run as ungraded. No skill revision is supported by this evidence.",
+    "runtime_versions": {
+      "harbor": "0.25.0",
+      "harbor_commit": "fdba28fc411e47e8765420a1a063b4918fce3def",
+      "host_python": "3.13.15",
+      "codex": "0.166.0",
+      "powershell": "7.6.9",
+      "pester": "6.2.0",
+      "model": "gpt-6.1-sol",
+      "reasoning_effort": "high",
+      "provider": "trial_openai",
+      "rollout_budget": false,
+      "reminders": false
+    },
+    "arm_inputs": {
+      "current": {
+        "task": "pester-002",
+        "declared_output": "/workspace/output/Subject.Tests.ps1",
+        "agent_image": "sha256:de7b89b6131977fa93ecad2ad6f62431b4bba3802e5bb00ced53042de8e2d1df",
+        "verifier_image": "sha256:2b1d93aa7557d2f8e3377552920e627cae9177e0af077e0fae5f2579cd4d4512",
+        "task_checksum": "b40ceef19f765fb5bf9cc341a5b1348cc1d3ece384e11b4c83f3e5aa042fb9f7",
+        "instruction_sha256": "5e4db9088c8251ea628c4178f447c3a6c9e58ce5e4b2b0eec5260b9b97b2279f",
+        "deployment_manifest_sha256": "ecd3e46727e299e89f6bb9113f35640437ae6adb0ade1dae4d5217207742c98f",
+        "skills_manifest_sha256": "542be2de491727003f6cd0b251a1da13cadede83834b14d9d08f70be5d0df28b",
+        "instructions_sha256": "7b8d5aca90cd1a90d32b98d1e86ee16d82c808336e309c26853d3aab73fb4543",
+        "runtime_preflight_passed": true,
+        "evaluated_attempt_launched": true
+      },
+      "absent": {
+        "task": "pester-002",
+        "declared_output": "/workspace/output/Subject.Tests.ps1",
+        "agent_image": "sha256:3b8ead2a92e7d2c10be126d0831c49251f412b49c23a79208a77ffa265143bd5",
+        "verifier_image": "sha256:2b1d93aa7557d2f8e3377552920e627cae9177e0af077e0fae5f2579cd4d4512",
+        "task_checksum": "1843cbb5bd90af5aea638111514084d6c08175d05340baf4865f94088e57cfca",
+        "instruction_sha256": "5e4db9088c8251ea628c4178f447c3a6c9e58ce5e4b2b0eec5260b9b97b2279f",
+        "deployment_manifest_sha256": "5dc2c69c64e1530c7691db07c229c2b168328ae40d360f8310b9873902d25922",
+        "skills_manifest_sha256": "542be2de491727003f6cd0b251a1da13cadede83834b14d9d08f70be5d0df28b",
+        "instructions_sha256": "7b8d5aca90cd1a90d32b98d1e86ee16d82c808336e309c26853d3aab73fb4543",
+        "runtime_preflight_passed": true,
+        "evaluated_attempt_launched": false
+      }
+    },
+    "local_validation": {
+      "focused_tests": 66,
+      "skipped_native_tests": 3,
+      "result": "passed",
+      "native_runtime_checks": "both variants passed on preparation and protected runners",
+      "native_grading_controls": "reused qualified producer run; not rerun",
+      "report_packaging": "pending final report-only run"
+    }
+  },
+  "latest_live_commit": "a753e39083d9d93fdb13906382b9b35e9902cdd4",
+  "latest_live_run": 42274188228
 }

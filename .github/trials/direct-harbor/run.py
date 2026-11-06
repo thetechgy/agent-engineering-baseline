@@ -202,10 +202,21 @@ def report(output, data):
     text = '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">\n<title>Direct Harbor recovery trial</title><style>body{font:16px system-ui;max-width:1100px;margin:3rem auto;padding:0 1rem;color:#172033}table{border-collapse:collapse;width:100%;margin:1rem 0}th,td{border:1px solid #cbd5e1;padding:.5rem;text-align:left;vertical-align:top}pre{white-space:pre-wrap;overflow-wrap:anywhere}h1,h2{color:#174f78}a{color:#145f91}</style>\n<h1>Direct Harbor recovery trial</h1><p>Bounded experimental trial. Production evaluation and Pages remain unchanged.</p>\n<p><a href="results.json" download>Download machine-readable results</a> · <a href="manifest.json">Frozen input manifests</a> · <a href="workflow-evidence.txt">Workflow evidence excerpts</a></p>'
     text += '<h2>Decision</h2><p>' + esc(data['decision']) + '</p>'
     text += '<p>' + esc(data['summary']) + '</p>'
+    if data.get('smoke_review'):
+        smoke=data['smoke_review'];diagnosis=smoke['offline_diagnosis']
+        text += '<h2>New qualified-image smoke result</h2><p><a href="smoke-review.json">Run, approval, images, task identities and retention evidence</a> · <a href="offline-submission-diagnosis.json">Offline submission diagnosis</a></p>'
+        text += '<p>Run <a href="'+esc(smoke['run']['html_url'])+'">'+esc(smoke['run']['id'])+'</a>; executed commit <code>'+esc(smoke['executed_commit'])+'</code>. Normal environment approval was automated under explicit user authorization, not independent human review. Shared protections were unchanged.</p>'
+        text += table(('Credentialed attempts','Campaign / recovery','Conservative estimate USD','Actual bill','Comparison usable'),[(smoke['evaluated_inference_attempts'], '7/36 / 4/4', smoke['accounting']['conservative_estimate_usd'], 'Unknown',smoke['operationally_usable'])])
+        text += '<p>Matched profile: Harbor 0.25.0 (fdba28fc411e47e8765420a1a063b4918fce3def), full Codex 0.166.0, GPT-6.1 Sol / High through trial_openai, PowerShell 7.6.9, Pester 6.2.0, pester-002. Rollout budget and reminders disabled. The absent deployment removes only the target skill’s three files.</p>'
+        text += '<p>Both credential-free restore checks passed with identical image and task identities. No image builds or snapshot downloads. The current session completed; native admission rejected the submission before correctness grading. The absent arm was neither reserved nor launched. No retries or model judges.</p>'
+        text += '<p>'+esc(diagnosis['construct'])+' '+esc(diagnosis['cause'])+'</p><p>'+esc(diagnosis['agent_work_assessment'])+'</p><p>'+esc(diagnosis['agent_visible_contract'])+'</p>'
+        text += '<p>Hashtable data keys are valid Pester template variables: <a href="https://pester.dev/docs/usage/data-driven-tests#using-foreach--testcases-with-hashtable">official Pester documentation</a>. The local parser-only replay used PowerShell 7.6.6; the original rejection was observed in the qualified 7.6.9 verifier. No submission execution or rescoring followed.</p>'
+        text += table(('Arm','Attempted skill-file access','Successful reads','Instruction following','Demonstrated benefit'),[(r['variant'],r['attempted_access'],r['successful_reads'],r['instruction_following'],r['demonstrated_benefit']) for r in smoke['skill_evidence']])
+        text += '<p>'+esc(smoke['disposal']['native_cleanup_permission_error'])+'</p><p>'+esc(smoke['remaining_downloads'])+'</p><p>Maintenance: '+esc(smoke['maintenance'])+'</p><p>Proposed next step: '+esc(smoke['next_step'])+'</p>'
     if data.get('reusable_preparation'):
         q=data['reusable_preparation']
-        text += '<h2>New reusable image qualification</h2><p>'+esc(q['decision'])+'</p><p><a href="reusable-preparation.json">New machine-readable evidence</a></p>'
-        text += table(('Status','Full build attempts','Fresh runner qualified','Ready for separately authorized smoke pair','Evaluated inference'),
+        text += '<h2>Historical reusable image qualification</h2><p>These credential-free observations precede the new live allocation. </p><p>'+esc(q['decision'])+'</p><p><a href="reusable-preparation.json">Qualification evidence</a></p>'
+        text += table(('Status','Full build attempts','Fresh runner qualified','Ready at qualification','Inference during qualification'),
             [(q['status'],str(len(q['attempts']))+'/2',q['fresh_runner_qualified'],q['ready_for_smoke_pair'],False)])
         text += table(('Run','Commit','Outcome'),[(x['run_id'],x['commit'],x['outcome']) for x in q['attempts']])
         text += '<p>Snapshot bundle manifest SHA-256: <code>'+esc(q['dependency_bundle']['manifest_sha256'])+'</code>. '+esc(q['dependency_bundle']['validation'])+'</p>'
@@ -216,7 +227,7 @@ def report(output, data):
             text += table(('Image','Identity'),q['images'].items())
         text += '<p>'+esc(q['fresh_runner_summary'])+'</p><p>'+esc(q['remaining_downloads'])+'</p>'
         text += table(('Fresh control','Classification','Reference pass','Defects detected','Expected outcome matched'),[(c['control'],c['outcome']['classification'],c['outcome'].get('reference_pass'),c['outcome'].get('mutants_detected'),c['passed']) for c in q['controls']])
-        text += '<p>Campaign consumption remains 6/36; earlier recovery remains 4/4; latest paid allocation remains closed at 0/2. Historical spending remains unknown. No model judge or evaluated-agent inference ran.</p>'
+        text += '<p>At this historical qualification, campaign consumption was 6/36, earlier recovery was 4/4, and the preceding paid allocation was closed at 0/2. Historical spending was unknown. This credential-free qualification ran no model judge or evaluated-agent inference.</p>'
         text += '<p>Maintenance: '+esc(q['maintenance'])+'</p>'
     if data.get('preparation_failures'):
         text += '<h2>Historical pre-launch failures</h2><p>No new credentialed attempt or submission. <a href="preparation-failure.json">Preparation failure evidence</a></p>'

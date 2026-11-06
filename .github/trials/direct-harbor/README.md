@@ -522,3 +522,22 @@ experiment fingerprint and frozen deployment remain identical.
 
 Any API environment approval is automated approval under the user's explicit
 authorization, not independent human review. Shared protections remain unchanged.
+
+Observed outcome: run 42274188228 at `a753e39` consumed current attempt 7 only.
+The session completed and the 3,446-byte declared submission was retained with
+matching producer/host/verifier/download SHA-256. Admission rejected
+`<BaseMilliseconds>` in the `It` name at line 23:9 (`block_name_template`).
+The exact byte replay reproduced this rejection offline without executing it.
+The profile permits `Base` templates but omits the corresponding subject parameter
+name `BaseMilliseconds`; ordinary Pester data-key syntax exceeds this grader's
+coverage. Reference correctness and defect detection remain unmeasured.
+
+The absent arm was neither reserved nor launched. Allocation closed at 1/2,
+campaign 7/36, recovery unchanged at 4/4. Conservative recorded-usage estimate:
+USD 1.267615; actual incremental and historical bills unknown. Both containers
+were removed. Normal environment approval was automated under explicit user
+authorization; shared protections did not change. No retries or model judges.
+See `results/report.html`, `results/smoke-review.json`, and
+`results/offline-submission-diagnosis.json`. The next proposed work is a separately
+reviewed, credential-free template-coverage correction; no skill revision or
+additional paid execution follows from this result.

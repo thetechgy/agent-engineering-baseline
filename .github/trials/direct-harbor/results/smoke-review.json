@@ -1,0 +1,578 @@
+{
+  "schema": 1,
+  "allocation_id": "sol-high-reused-20261106",
+  "run": {
+    "id": 42274188228,
+    "head_sha": "a753e39083d9d93fdb13906382b9b35e9902cdd4",
+    "head_branch": "trial/direct-harbor",
+    "run_number": 34,
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "failure",
+    "event": "push",
+    "path": ".github/workflows/direct-harbor-trial.yml",
+    "html_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42274188228",
+    "created_at": "2026-11-06T18:49:33Z",
+    "updated_at": "2026-11-06T18:59:09Z"
+  },
+  "setup_commit": "ea752bcfc2bdb0fafaf61189ca28d230e6a66f37",
+  "setup_report_run": 42274095264,
+  "executed_commit": "a753e39083d9d93fdb13906382b9b35e9902cdd4",
+  "decision": "The smoke pair does not establish an operationally usable comparison. One current-arm session completed and its exact submission transferred reliably, but the verifier rejected an unsupported name template. The absent arm was not scheduled.",
+  "operationally_usable": false,
+  "evaluated_inference_attempts": 1,
+  "model_judges": 0,
+  "credentialed_retries": 0,
+  "absent_reserved": false,
+  "closure": {
+    "allocation_id": "sol-high-reused-20261106",
+    "state": "closed",
+    "paid_execution_enabled": false,
+    "reserved_slots_consumed": [
+      7
+    ],
+    "campaign_attempts_consumed": 7,
+    "previous_recovery_consumed": 4,
+    "previous_recovery_limit": 4,
+    "incremental_api_bill_usd": null,
+    "historical_cumulative_api_bill_usd": null,
+    "note": "Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.",
+    "reservation_ids": [
+      "sol-high-reused-20261106/current/7"
+    ],
+    "incremental_conservative_estimate_usd": 1.267615,
+    "operational_budget_usd": 5,
+    "estimated_budget_exceeded": false
+  },
+  "environment_approval": {
+    "kind": "automated_approval_under_explicit_user_authorization",
+    "independent_human_review": false,
+    "administrative_bypass": false,
+    "shared_protections_changed": false,
+    "run_id": 42274188228,
+    "commit": "a753e39083d9d93fdb13906382b9b35e9902cdd4",
+    "allocation_id": "sol-high-reused-20261106",
+    "prepared_job": 128086207475,
+    "prepared_job_conclusion": "success",
+    "proof": {
+      "passed": true,
+      "identity": {
+        "repository": "thetechgy/agent-engineering-baseline",
+        "branch": "refs/heads/trial/direct-harbor",
+        "commit": "a753e39083d9d93fdb13906382b9b35e9902cdd4",
+        "run_id": "42274188228",
+        "run_attempt": 1,
+        "allocation_id": "sol-high-reused-20261106"
+      },
+      "manifest_sha256": "78f0f4f58085d3383f41df1f72ff616ba83b8e35c59ea077597d1d04346516e2",
+      "inference": false,
+      "image_rebuilds": 0,
+      "snapshot_index_downloads": 0,
+      "image_inventory_unchanged": true,
+      "remaining_containers": {
+        "direct-harbor-agent:current": [],
+        "direct-harbor-agent:absent": [],
+        "direct-harbor-verifier:live": [],
+        "harbor-prebuilt:harbor-docker-egress-control-sidecar--9af3dc172792cee8": [],
+        "direct-harbor-kernel-probe:0.25.0": []
+      },
+      "container_disposal_verified": true
+    },
+    "artifacts": [
+      {
+        "id": 13532427210,
+        "name": "prepared-images",
+        "digest": "sha256:35bbaf467bbfede4409ea38404862dc32c368130b1066f660d0394250f38302e",
+        "size_in_bytes": 923818602,
+        "expires_at": "2026-11-13T18:52:59Z"
+      },
+      {
+        "id": 13532247284,
+        "name": "prepared-evidence",
+        "digest": "sha256:3d175660885a8150a1028df9aff9c77607491f8297fbd5a4e9487adcbab4adcb",
+        "size_in_bytes": 49146,
+        "expires_at": "2026-12-06T18:53:39Z"
+      }
+    ],
+    "approval_endpoint": "POST /repos/thetechgy/agent-engineering-baseline/actions/runs/42274188228/pending_deployments",
+    "submitted_at": "2026-11-06T18:55:37.756721+00:00",
+    "response": [
+      {
+        "id": 7608265468,
+        "sha": "a753e39083d9d93fdb13906382b9b35e9902cdd4",
+        "ref": "trial/direct-harbor",
+        "environment": "skill-benchmark",
+        "original_environment": "skill-benchmark"
+      }
+    ],
+    "submitted": true
+  },
+  "prepared_source": {
+    "run_id": 42270181249,
+    "commit": "0c364aec26c7af6cf0ef52b08e598f48ead9ee01",
+    "artifact_id": 13529635174,
+    "name": "prepared-images",
+    "artifact_digest": "sha256:2d95a9bb6ca91795c35148d0ab874f4f029e45e27d3749c9af7dd08eb1ecd75a",
+    "manifest_sha256": "78f0f4f58085d3383f41df1f72ff616ba83b8e35c59ea077597d1d04346516e2"
+  },
+  "manifest_sha256": "78f0f4f58085d3383f41df1f72ff616ba83b8e35c59ea077597d1d04346516e2",
+  "experiment_sha256": "cb4623031566389300061ad8db0f83c9a61b28acaa97578447bb97e7dfe1332a",
+  "preapproval_preflight": {
+    "passed": true,
+    "identity": {
+      "repository": "thetechgy/agent-engineering-baseline",
+      "branch": "refs/heads/trial/direct-harbor",
+      "commit": "a753e39083d9d93fdb13906382b9b35e9902cdd4",
+      "run_id": "42274188228",
+      "run_attempt": 1,
+      "allocation_id": "sol-high-reused-20261106"
+    },
+    "manifest_sha256": "78f0f4f58085d3383f41df1f72ff616ba83b8e35c59ea077597d1d04346516e2",
+    "inference": false,
+    "image_rebuilds": 0,
+    "snapshot_index_downloads": 0,
+    "image_inventory_unchanged": true,
+    "remaining_containers": {
+      "direct-harbor-agent:current": [],
+      "direct-harbor-agent:absent": [],
+      "direct-harbor-verifier:live": [],
+      "harbor-prebuilt:harbor-docker-egress-control-sidecar--9af3dc172792cee8": [],
+      "direct-harbor-kernel-probe:0.25.0": []
+    },
+    "container_disposal_verified": true
+  },
+  "live_preflight": {
+    "passed": true,
+    "identity": {
+      "repository": "thetechgy/agent-engineering-baseline",
+      "branch": "refs/heads/trial/direct-harbor",
+      "commit": "a753e39083d9d93fdb13906382b9b35e9902cdd4",
+      "run_id": "42274188228",
+      "run_attempt": 1,
+      "allocation_id": "sol-high-reused-20261106"
+    },
+    "manifest_sha256": "78f0f4f58085d3383f41df1f72ff616ba83b8e35c59ea077597d1d04346516e2",
+    "inference": false,
+    "image_rebuilds": 0,
+    "snapshot_index_downloads": 0,
+    "image_inventory_unchanged": true,
+    "remaining_containers": {
+      "direct-harbor-agent:current": [],
+      "direct-harbor-agent:absent": [],
+      "direct-harbor-verifier:live": [],
+      "harbor-prebuilt:harbor-docker-egress-control-sidecar--9af3dc172792cee8": [],
+      "direct-harbor-kernel-probe:0.25.0": []
+    },
+    "container_disposal_verified": true
+  },
+  "live_transfer": {
+    "verified": true,
+    "identity": {
+      "repository": "thetechgy/agent-engineering-baseline",
+      "branch": "refs/heads/trial/direct-harbor",
+      "commit": "a753e39083d9d93fdb13906382b9b35e9902cdd4",
+      "run_id": "42274188228",
+      "run_attempt": 1,
+      "allocation_id": "sol-high-reused-20261106"
+    },
+    "source_identity": {
+      "repository": "thetechgy/agent-engineering-baseline",
+      "branch": "refs/heads/trial/direct-harbor",
+      "commit": "0c364aec26c7af6cf0ef52b08e598f48ead9ee01",
+      "run_id": "42270181249",
+      "run_attempt": 1,
+      "allocation_id": null
+    },
+    "manifest_sha256": "78f0f4f58085d3383f41df1f72ff616ba83b8e35c59ea077597d1d04346516e2",
+    "images": {
+      "direct-harbor-agent:current": "sha256:de7b89b6131977fa93ecad2ad6f62431b4bba3802e5bb00ced53042de8e2d1df",
+      "direct-harbor-agent:absent": "sha256:3b8ead2a92e7d2c10be126d0831c49251f412b49c23a79208a77ffa265143bd5",
+      "direct-harbor-verifier:live": "sha256:2b1d93aa7557d2f8e3377552920e627cae9177e0af077e0fae5f2579cd4d4512",
+      "harbor-prebuilt:harbor-docker-egress-control-sidecar--9af3dc172792cee8": "sha256:b4a6a10a0ac68129a8ce63dbe85ebea217817e0f131fd523f3b4d6b7853b936d",
+      "direct-harbor-kernel-probe:0.25.0": "sha256:3cb067eab609612d81b4d82ff8ad71d73482bb3059a87b642d7e14f0ed659cde"
+    },
+    "task_checksums": {
+      "current": {
+        "path": "tasks/current",
+        "checksum": "b40ceef19f765fb5bf9cc341a5b1348cc1d3ece384e11b4c83f3e5aa042fb9f7"
+      },
+      "absent": {
+        "path": "tasks/absent",
+        "checksum": "1843cbb5bd90af5aea638111514084d6c08175d05340baf4865f94088e57cfca"
+      }
+    },
+    "fresh_image_load": true,
+    "snapshot_rebuild": false,
+    "root_paths_relocated": true,
+    "kernel_probe_registry_refresh": true,
+    "kernel_probe_reference": "alpine:3.23.4@sha256:5b10f432ef3da1b8d4c7eb6c487f2f5a8f096bc91145e68878dd4a5019afde11",
+    "note": "Only built images were transferred; Harbor creates fresh containers, homes and sessions."
+  },
+  "deployment_comparison": {
+    "matched": true,
+    "removed_target_files": [
+      "powershell-pester-6/SKILL.md",
+      "powershell-pester-6/references/compatibility-and-migration.md",
+      "powershell-pester-6/references/execution.md"
+    ],
+    "profile": "codex-0.166.0_gpt-6.1-sol_high_rollout-budget-disabled",
+    "shared_config": {
+      "mcp_servers": {
+        "microsoft-learn": {
+          "url": "https://learn.microsoft.com/api/mcp",
+          "enabled_tools": [
+            "microsoft_docs_search",
+            "microsoft_docs_fetch",
+            "microsoft_code_sample_search"
+          ],
+          "enabled": false
+        }
+      },
+      "web_search": "disabled",
+      "service_tier": "default",
+      "model_reasoning_effort": "high",
+      "forced_login_method": "api",
+      "projects": {
+        "/workspace": {
+          "trust_level": "trusted"
+        }
+      },
+      "model_provider": "trial_openai",
+      "model_providers": {
+        "trial_openai": {
+          "name": "OpenAI",
+          "base_url": "https://api.openai.com/v1",
+          "wire_api": "responses",
+          "requires_openai_auth": true,
+          "request_max_retries": 0,
+          "stream_max_retries": 0,
+          "stream_idle_timeout_ms": 60000,
+          "supports_websockets": true,
+          "supports_standalone_web_search": true,
+          "http_headers": {
+            "version": "0.166.0"
+          },
+          "env_http_headers": {
+            "OpenAI-Organization": "OPENAI_ORGANIZATION",
+            "OpenAI-Project": "OPENAI_PROJECT"
+          }
+        }
+      },
+      "features": {
+        "rollout_budget": false
+      }
+    },
+    "instructions_sha256": "7b8d5aca90cd1a90d32b98d1e86ee16d82c808336e309c26853d3aab73fb4543"
+  },
+  "runtime": {
+    "id": "codex-0.166.0_gpt-6.1-sol_high_rollout-budget-disabled",
+    "codex_version": "0.166.0",
+    "model": "gpt-6.1-sol",
+    "reasoning_effort": "high",
+    "release": "https://github.com/openai/codex/releases/tag/rust-v0.166.0",
+    "verified_at": "2026-11-05",
+    "archive_url": "https://github.com/openai/codex/releases/download/rust-v0.166.0/codex-package-x86_64-unknown-linux-musl.tar.gz",
+    "archive_sha256": "1d44b28bc4ac9937d7d3532264baa68a507ce364956a0d4ebb856f331cdee254",
+    "package_layout": {
+      "entrypoint": "bin/codex",
+      "execServer": "bin/codex-exec-server",
+      "resourcesDir": "codex-resources",
+      "pathDir": "codex-path"
+    },
+    "historical_profile": {
+      "codex_version": "0.155.1",
+      "model": "gpt-5.6-sol",
+      "reasoning_effort": "medium",
+      "executed_commit": "c5a430ac15b4fac0eb6a29b1ac46ad4e7e06ca3e"
+    },
+    "paid_execution_enabled": false,
+    "pricing": {
+      "source": "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+      "pricing_source": "https://developers.openai.com/api/docs/pricing",
+      "per_million_standard_usd": {
+        "uncached_input": 2,
+        "cached_input": 0.1,
+        "cache_write_30m": 2.5,
+        "cache_write_12h": 5,
+        "output": 10
+      },
+      "long_context_threshold": 272000,
+      "long_context_input_multiplier": 2,
+      "long_context_output_multiplier": 1.5,
+      "conservative_all_input_per_million": 10,
+      "conservative_output_per_million": 15,
+      "note": "No charge observed. Conservative future estimate applies long-context 12h cache-write rate to all input. Per-call categories/context needed for standard estimates; missing categories stay unknown.",
+      "harbor_native_pricing_entry_available": false
+    },
+    "reviewed_source_sha256": {
+      "codex-rs__protocol__src__models.rs": "753498bc730ba21ded710d9aa2b2f9163e6bbe4eaa18f1c25d998c36138a54f7",
+      "codex-rs__protocol__src__protocol.rs": "35d4a01a35c1771e7ae24d3c55964c2d6ecfe880a91539c1045f75cac0c8e356",
+      "codex-rs__core__config.schema.json": "211bec2282459fcd70e4905af948721177b6ec7a03e0df84cd8b7c131006a6ca",
+      "scripts__install__install.sh": "44ac252c1b9a68c02bdf0de8e1c6cbfde36fc1afa8684624962eae7d4c461e70",
+      "scripts__build_codex_package.py": "7a5b7ba90604944831dd25ad89ccba46b4c40f44ec6aeec67a6d058a0c837ad2",
+      "codex-rs__core__src__rollout_budget.rs": "223a573c35088799879688d0aea54f86bdd4420017b95861596a073ac3678380",
+      "codex-rs__config__src__config_toml.rs": "e8f6b45b73eaca1a89be9524bb02bf069e9715e3aeba270e87285d941405c877",
+      "codex-rs__model-provider-info__src__lib.rs": "ea822c232e47fc88251cf20060da91ca0c1195b2d2853c5b3fa4bfcdd4cc0184"
+    },
+    "budget_semantics": "Supplemental rollout_budget is false: no enforcement, limit, weights or reminders. No replacement token ceiling. 600-second agent timeout and two-attempt operational allocation remain; no provider-enforced dollar cap."
+  },
+  "current_agent_seconds": 38.227,
+  "current_total_seconds": 71.855,
+  "submission_download_verification": {
+    "verified": true,
+    "identity": {
+      "allocation_id": "sol-high-reused-20261106",
+      "reservation_id": "sol-high-reused-20261106/current/7",
+      "attempt": 7,
+      "variant": "current",
+      "commit": "a753e39083d9d93fdb13906382b9b35e9902cdd4",
+      "run_id": "42274188228"
+    },
+    "sha256": "407196e63354eb841f3d38c2d5d3daaba9aaec16aa721f75686f74e181d0bb1a",
+    "size": 3446,
+    "all_boundary_hashes_match": true,
+    "github_artifact_id": 13532657965,
+    "github_artifact_zip_digest_verified": true,
+    "artifact_expires_at": "2026-12-06T18:58:58Z"
+  },
+  "offline_diagnosis": {
+    "kind": "offline_admission_only_diagnosis",
+    "candidate_executed": false,
+    "inference": false,
+    "grading_criteria_changed": false,
+    "retained_submission_changed": false,
+    "replay": {
+      "code": "admission",
+      "admission_rule": "block_name_template",
+      "status": "unsupported",
+      "admission_diagnostic": {
+        "ast_kind": "CommandAst",
+        "column": 9,
+        "line": 23
+      },
+      "candidate_sha256": "407196e63354eb841f3d38c2d5d3daaba9aaec16aa721f75686f74e181d0bb1a"
+    },
+    "local_parser_version": "7.6.6",
+    "qualified_runner_version": "7.6.9",
+    "version_limit": "Local admission-only corroboration; exact rejection already observed in qualified 7.6.9 verifier. No runtime correctness grade inferred.",
+    "runner_sha256": "d8c17e7991d5fc1dec1e71c0e1e945ecec275893c2653a6ec000ac4acaa6dd60",
+    "profile_sha256": "b22226da66eb00dafd37ab5e582a20e3bb97f43d7798befbb52a07b040b99c82",
+    "probes": [
+      {
+        "field": "BaseMilliseconds",
+        "candidate_sha256": "7bc104f1d416ff2a07bd60e1eedd3f5117a319b2dd460609a4161b3043445d3a",
+        "result": {
+          "admission_diagnostic": {
+            "line": 1,
+            "ast_kind": "CommandAst",
+            "column": 1
+          },
+          "code": "admission",
+          "admission_rule": "block_name_template",
+          "status": "unsupported"
+        }
+      },
+      {
+        "field": "Base",
+        "candidate_sha256": "adb0995fe2d09e9018a3f44bcbee76102a270dc48ac761544272153090e7681a",
+        "result": {
+          "code": "ok",
+          "status": "admitted"
+        }
+      }
+    ],
+    "construct": "<BaseMilliseconds> in literal It names at lines 23 and 67, paired with literal -ForEach hashtable keys and the corresponding subject parameter.",
+    "cause": "The block-name template allowlist uses profile.properties plus underscore. pester-002 lists Base but omits BaseMilliseconds; its command parameters include BaseMilliseconds.",
+    "classification": "valid_pester_data_field_template_outside_grader_coverage",
+    "agent_work_assessment": "The rejected construct follows ordinary Pester data-driven syntax. This admission failure does not establish incorrect or incomplete tests; whole-suite correctness and defect detection remain unmeasured.",
+    "infrastructure_assessment": "Producer, host, verifier and retained-download hashes match. Native session completed; no native exception or runtime-tool error; container disposal confirmed. No collection or infrastructure defect explains this rejection.",
+    "agent_visible_contract": "The frozen execution profile says documented data fields but does not enumerate permitted template names. The README documents BaseMilliseconds as the command parameter.",
+    "official_reference": "https://pester.dev/docs/usage/data-driven-tests#using-foreach--testcases-with-hashtable",
+    "follow_up": "Separately review the narrow public-name coverage/documentation mismatch for BaseMilliseconds with credential-free positive and expression-rejection checks, then replay the exact retained bytes under the same correctness criteria. Do not rescore this allocation or revise the skill."
+  },
+  "skill_evidence": [
+    {
+      "variant": "current",
+      "attempted_access": [
+        "powershell-pester-6/SKILL.md",
+        "powershell-pester-6/references/compatibility-and-migration.md"
+      ],
+      "successful_reads": "unverified: collector retains attempted file paths, not correlated read results",
+      "instruction_following": "unmeasured: retained submission is not proof of which instruction caused a choice",
+      "demonstrated_benefit": "unmeasured: no valid grade or absent attempt"
+    },
+    {
+      "variant": "absent",
+      "attempted_access": null,
+      "successful_reads": "not run",
+      "instruction_following": "not run",
+      "demonstrated_benefit": "unmeasured: not reserved or launched"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": 13533277286,
+      "name": "direct-harbor-trial-report",
+      "size_in_bytes": 272256,
+      "digest": "sha256:08cd2a0934508493085944ea1d9ebbaf1fee35d105a67889c4f7e4c9d6add830",
+      "expires_at": "2026-12-06T18:59:04Z",
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42274188228/artifacts/13533277286"
+    },
+    {
+      "id": 13533222220,
+      "name": "live-preflight",
+      "size_in_bytes": 49145,
+      "digest": "sha256:8c774124cb3e48cdb698a052b799bb6933b71bdd3ef41ad6d5b086caf0bfc006",
+      "expires_at": "2026-12-06T18:57:43Z",
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42274188228/artifacts/13533222220"
+    },
+    {
+      "id": 13533162417,
+      "name": "allocation-reused-attempt-7",
+      "size_in_bytes": 331,
+      "digest": "sha256:b2fa77baada1396d240390d22b2202dce35a699e6fa2f42044a4464f1896eaf7",
+      "expires_at": "2026-12-06T18:57:44Z",
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42274188228/artifacts/13533162417"
+    },
+    {
+      "id": 13533117506,
+      "name": "live-current",
+      "size_in_bytes": 14905,
+      "digest": "sha256:4187845300ddbad3efcf0fde0c53a2cd02a7f768682d07a1947c138281a625d8",
+      "expires_at": "2026-12-06T18:59:00Z",
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42274188228/artifacts/13533117506"
+    },
+    {
+      "id": 13532972524,
+      "name": "live-absent",
+      "size_in_bytes": 9921,
+      "digest": "sha256:24a5e441d892087ec194b9abad2b5a770c353f3fedbfe3a85209fc70e3e81740",
+      "expires_at": "2026-12-06T18:59:01Z",
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42274188228/artifacts/13532972524"
+    },
+    {
+      "id": 13532657965,
+      "name": "submission-sol-high-reused-20261106-current",
+      "size_in_bytes": 1419,
+      "digest": "sha256:c2b46953b5b4851db0671d89918bf2a8bfe193aa78890feb10937d303fa986b7",
+      "expires_at": "2026-12-06T18:58:58Z",
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42274188228/artifacts/13532657965"
+    },
+    {
+      "id": 13532427210,
+      "name": "prepared-images",
+      "size_in_bytes": 923818602,
+      "digest": "sha256:35bbaf467bbfede4409ea38404862dc32c368130b1066f660d0394250f38302e",
+      "expires_at": "2026-11-13T18:52:59Z",
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42274188228/artifacts/13532427210"
+    },
+    {
+      "id": 13532303095,
+      "name": "allocation-closure",
+      "size_in_bytes": 780,
+      "digest": "sha256:cbe01fb8a711d862ca2a54ff58213f40a52d7b705220082d00bd0a78a636489f",
+      "expires_at": "2026-12-06T18:59:02Z",
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42274188228/artifacts/13532303095"
+    },
+    {
+      "id": 13532247284,
+      "name": "prepared-evidence",
+      "size_in_bytes": 49146,
+      "digest": "sha256:3d175660885a8150a1028df9aff9c77607491f8297fbd5a4e9487adcbab4adcb",
+      "expires_at": "2026-12-06T18:53:39Z",
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42274188228/artifacts/13532247284"
+    }
+  ],
+  "accounting": {
+    "observed_token_usage": {
+      "input_tokens": 122992,
+      "cached_input_tokens": 90990,
+      "output_tokens": 2513,
+      "reasoning_output_tokens": 815,
+      "cache_write_input_tokens": 31987,
+      "total_tokens": 125505
+    },
+    "coverage": {
+      "coverage": "terminal_session_observations",
+      "usable_for_scheduling": true,
+      "reasons": [],
+      "observed_usage_estimate_usd": 1.267615,
+      "billing_certainty": "unknown",
+      "provider_bill_usd": null,
+      "basis": "Native terminal plus one parseable session with usage before its terminal; successful turns also require matching CLI terminal counters. Exact budget failure is a local post-usage termination, not arbitrary tool/model text. This bounds recorded session accounting, not provider billing."
+    },
+    "conservative_estimate_usd": 1.267615,
+    "calculation": "122992 input * USD 10/M + 2513 output * USD 15/M. Cache reads/writes are input subsets; reasoning is an output subset.",
+    "second_arm_reserve_test_usd": 4.267615,
+    "reserve_sufficient": true,
+    "native_pricing_estimate_usd": null,
+    "actual_incremental_bill_usd": null,
+    "historical_cumulative_bill_usd": null
+  },
+  "disposal": {
+    "agent_removed": true,
+    "verifier_removed": true,
+    "preflight_all_five_image_ancestors_empty": true,
+    "native_cleanup_permission_error": "Native cleanup could not remove its authentication path and Codex home inside the disposable container; whole agent and verifier containers were independently confirmed removed.",
+    "credentials_or_authentication_artifacts_retained": false
+  },
+  "historical_evidence": "Qualification run 42270181249 and its good 2/2, weak 0/2 controls are reused unchanged, not rerun or counted as new skill evidence. Earlier outcomes are not rescored. Campaign now 7/36; earlier recovery remains 4/4; this allocation is closed at 1/2.",
+  "limits": [
+    "One attempted current case and no absent result cannot establish a comparison or skill effectiveness.",
+    "The exact submission was admitted to retention but not to native correctness grading. Reference and mutant outcomes remain unmeasured; Harbor overall reward zero is not a task-correctness score.",
+    "Skill-file access attempts do not establish successful reads, instruction following, or benefit.",
+    "Local offline replay uses PowerShell 7.6.6 for admission only; the original identical rejection was observed with qualified PowerShell 7.6.9. The candidate was not executed offline."
+  ],
+  "remaining_downloads": "Reuse still requires GitHub artifact and pinned host-tool downloads plus the digest-pinned Alpine registry reference refresh. No image rebuild, snapshot index download, dependency acquisition, or package download occurred in this live run.",
+  "maintenance": "Added one restored-runtime preflight helper, a run/commit/allocation/manifest-bound reservation prerequisite, exact producer selection in fresh allocation metadata, and report evidence. Existing native runtime checks and handoff are reused. Obsolete allocation build-attempt checks were replaced with selected-artifact binding; no framework, service, cache, skill, task, grader or qualified runtime input changed.",
+  "next_step": "Before another paid pair, separately review the BaseMilliseconds template coverage/documentation mismatch. Qualify a narrow public-name correction with credential-free positive and expression-rejection tests, then replay these exact retained bytes under unchanged correctness criteria. Preserve this run as ungraded. No skill revision is supported by this evidence.",
+  "runtime_versions": {
+    "harbor": "0.25.0",
+    "harbor_commit": "fdba28fc411e47e8765420a1a063b4918fce3def",
+    "host_python": "3.13.15",
+    "codex": "0.166.0",
+    "powershell": "7.6.9",
+    "pester": "6.2.0",
+    "model": "gpt-6.1-sol",
+    "reasoning_effort": "high",
+    "provider": "trial_openai",
+    "rollout_budget": false,
+    "reminders": false
+  },
+  "arm_inputs": {
+    "current": {
+      "task": "pester-002",
+      "declared_output": "/workspace/output/Subject.Tests.ps1",
+      "agent_image": "sha256:de7b89b6131977fa93ecad2ad6f62431b4bba3802e5bb00ced53042de8e2d1df",
+      "verifier_image": "sha256:2b1d93aa7557d2f8e3377552920e627cae9177e0af077e0fae5f2579cd4d4512",
+      "task_checksum": "b40ceef19f765fb5bf9cc341a5b1348cc1d3ece384e11b4c83f3e5aa042fb9f7",
+      "instruction_sha256": "5e4db9088c8251ea628c4178f447c3a6c9e58ce5e4b2b0eec5260b9b97b2279f",
+      "deployment_manifest_sha256": "ecd3e46727e299e89f6bb9113f35640437ae6adb0ade1dae4d5217207742c98f",
+      "skills_manifest_sha256": "542be2de491727003f6cd0b251a1da13cadede83834b14d9d08f70be5d0df28b",
+      "instructions_sha256": "7b8d5aca90cd1a90d32b98d1e86ee16d82c808336e309c26853d3aab73fb4543",
+      "runtime_preflight_passed": true,
+      "evaluated_attempt_launched": true
+    },
+    "absent": {
+      "task": "pester-002",
+      "declared_output": "/workspace/output/Subject.Tests.ps1",
+      "agent_image": "sha256:3b8ead2a92e7d2c10be126d0831c49251f412b49c23a79208a77ffa265143bd5",
+      "verifier_image": "sha256:2b1d93aa7557d2f8e3377552920e627cae9177e0af077e0fae5f2579cd4d4512",
+      "task_checksum": "1843cbb5bd90af5aea638111514084d6c08175d05340baf4865f94088e57cfca",
+      "instruction_sha256": "5e4db9088c8251ea628c4178f447c3a6c9e58ce5e4b2b0eec5260b9b97b2279f",
+      "deployment_manifest_sha256": "5dc2c69c64e1530c7691db07c229c2b168328ae40d360f8310b9873902d25922",
+      "skills_manifest_sha256": "542be2de491727003f6cd0b251a1da13cadede83834b14d9d08f70be5d0df28b",
+      "instructions_sha256": "7b8d5aca90cd1a90d32b98d1e86ee16d82c808336e309c26853d3aab73fb4543",
+      "runtime_preflight_passed": true,
+      "evaluated_attempt_launched": false
+    }
+  },
+  "local_validation": {
+    "focused_tests": 66,
+    "skipped_native_tests": 3,
+    "result": "passed",
+    "native_runtime_checks": "both variants passed on preparation and protected runners",
+    "native_grading_controls": "reused qualified producer run; not rerun",
+    "report_packaging": "pending final report-only run"
+  }
+}

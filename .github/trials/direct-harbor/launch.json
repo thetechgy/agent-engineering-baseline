@@ -1,7 +1,7 @@
 {
-  "phase": "live-pair",
+  "phase": "report",
   "campaign": "direct-harbor-20261104",
-  "paid_attempts_used": 6,
+  "paid_attempts_used": 7,
   "paid_attempt_limit": 36,
   "recovery_live_attempt_limit": 4,
   "budget_usd": 20,
@@ -11,15 +11,12 @@
   "recovery_control_attempt": 3,
   "native_fixture_retry": 1,
   "transport_preflight_corrections": 1,
-  "state": "qualified_image_smoke_armed",
+  "state": "qualified_image_smoke_closed_unsupported",
   "final_native_run": 41958553130,
   "native_grading_smoke_qualified": true,
   "native_sandbox_qualified": false,
-  "paid_attempts_reserved": 2,
-  "planned_variants": [
-    "current",
-    "absent"
-  ],
+  "paid_attempts_reserved": 0,
+  "planned_variants": [],
   "preflight_estimate_usd": 2.64,
   "native_inner_sandbox_required": false,
   "external_preflight_attempt": 2,
@@ -96,15 +93,32 @@
       "session_coverage_adequate": true,
       "valid_grade": false,
       "evidence": "Native turn completed and terminal usage matches rollout; artifact hashes match producer/host/verifier; unsupported/admission; reference/mutants unmeasured; containers removed; absent not scheduled."
+    },
+    {
+      "attempt": 7,
+      "allocation_id": "sol-high-reused-20261106",
+      "reservation_id": "sol-high-reused-20261106/current/7",
+      "run": 42274188228,
+      "commit": "a753e39083d9d93fdb13906382b9b35e9902cdd4",
+      "variant": "current",
+      "profile": "codex-0.166.0_gpt-6.1-sol_high_rollout-budget-disabled",
+      "status": "session_completed_verifier_unsupported_template",
+      "inference_started": true,
+      "api_spend_usd": null,
+      "conservative_observed_usage_estimate_usd": 1.267615,
+      "session_coverage_adequate": true,
+      "valid_grade": false,
+      "submission_sha256": "407196e63354eb841f3d38c2d5d3daaba9aaec16aa721f75686f74e181d0bb1a",
+      "evidence": "Native session completed; exact retained submission hashes match producer, host, verifier and download. Admission block_name_template at 23:9; reference/defects unmeasured; containers removed; absent never reserved."
     }
   ],
-  "final_live_run": 42110435228,
+  "final_live_run": 42274188228,
   "api_spend_usd": null,
-  "scheduling_stopped": false,
-  "stop_reason": null,
+  "scheduling_stopped": true,
+  "stop_reason": "Current submission unsupported: block_name_template at 23:9; absent not scheduled. Allocation closed; no retries or further paid scheduling.",
   "diagnostic_actions_runs_reserved": 2,
   "diagnostic_actions_run_limit": 2,
-  "paid_execution_enabled": true,
+  "paid_execution_enabled": false,
   "diagnostic_reproduction_run": 42106956278,
   "accept_unknown_cost_for_testing": true,
   "credential_free_checks_passed": true,
@@ -128,7 +142,7 @@
     "case": "pester-002",
     "provider_enforced_dollar_cap": false,
     "id": "sol-high-reused-20261106",
-    "state": "armed",
+    "state": "closed",
     "attempts": {
       "current": 7,
       "absent": 8
@@ -137,7 +151,7 @@
       "current": "sol-high-reused-20261106/current/7",
       "absent": "sol-high-reused-20261106/absent/8"
     },
-    "used": 0,
+    "used": 1,
     "authorization": "Explicit user authorization for one fresh current/absent smoke pair using qualified retained images, at most two credentialed attempts and USD 5 conservative scheduling allowance. Normal API environment approval is automated under this authorization; no independent human review, retries, or model judges.",
     "prepared_source": {
       "run_id": 42270181249,
@@ -148,7 +162,24 @@
       "manifest_sha256": "78f0f4f58085d3383f41df1f72ff616ba83b8e35c59ea077597d1d04346516e2"
     },
     "code_commit": "ea752bcfc2bdb0fafaf61189ca28d230e6a66f37",
-    "workflow_run_number": 34
+    "workflow_run_number": 34,
+    "consumed_attempts": [
+      7
+    ],
+    "consumed_reservations": [
+      "sol-high-reused-20261106/current/7"
+    ],
+    "unused_closed_attempts": [
+      8
+    ],
+    "unused_closed_reservations": [
+      "sol-high-reused-20261106/absent/8"
+    ],
+    "run_id": 42274188228,
+    "executed_commit": "a753e39083d9d93fdb13906382b9b35e9902cdd4",
+    "observed_usage_conservative_estimate_usd": 1.267615,
+    "session_coverage_adequate": true,
+    "api_bill_usd": null
   },
   "allocation_history": [
     {

@@ -1,0 +1,55 @@
+{
+  "kind": "offline_admission_only_diagnosis",
+  "candidate_executed": false,
+  "inference": false,
+  "grading_criteria_changed": false,
+  "retained_submission_changed": false,
+  "replay": {
+    "code": "admission",
+    "admission_rule": "block_name_template",
+    "status": "unsupported",
+    "admission_diagnostic": {
+      "ast_kind": "CommandAst",
+      "column": 9,
+      "line": 23
+    },
+    "candidate_sha256": "407196e63354eb841f3d38c2d5d3daaba9aaec16aa721f75686f74e181d0bb1a"
+  },
+  "local_parser_version": "7.6.6",
+  "qualified_runner_version": "7.6.9",
+  "version_limit": "Local admission-only corroboration; exact rejection already observed in qualified 7.6.9 verifier. No runtime correctness grade inferred.",
+  "runner_sha256": "d8c17e7991d5fc1dec1e71c0e1e945ecec275893c2653a6ec000ac4acaa6dd60",
+  "profile_sha256": "b22226da66eb00dafd37ab5e582a20e3bb97f43d7798befbb52a07b040b99c82",
+  "probes": [
+    {
+      "field": "BaseMilliseconds",
+      "candidate_sha256": "7bc104f1d416ff2a07bd60e1eedd3f5117a319b2dd460609a4161b3043445d3a",
+      "result": {
+        "admission_diagnostic": {
+          "line": 1,
+          "ast_kind": "CommandAst",
+          "column": 1
+        },
+        "code": "admission",
+        "admission_rule": "block_name_template",
+        "status": "unsupported"
+      }
+    },
+    {
+      "field": "Base",
+      "candidate_sha256": "adb0995fe2d09e9018a3f44bcbee76102a270dc48ac761544272153090e7681a",
+      "result": {
+        "code": "ok",
+        "status": "admitted"
+      }
+    }
+  ],
+  "construct": "<BaseMilliseconds> in literal It names at lines 23 and 67, paired with literal -ForEach hashtable keys and the corresponding subject parameter.",
+  "cause": "The block-name template allowlist uses profile.properties plus underscore. pester-002 lists Base but omits BaseMilliseconds; its command parameters include BaseMilliseconds.",
+  "classification": "valid_pester_data_field_template_outside_grader_coverage",
+  "agent_work_assessment": "The rejected construct follows ordinary Pester data-driven syntax. This admission failure does not establish incorrect or incomplete tests; whole-suite correctness and defect detection remain unmeasured.",
+  "infrastructure_assessment": "Producer, host, verifier and retained-download hashes match. Native session completed; no native exception or runtime-tool error; container disposal confirmed. No collection or infrastructure defect explains this rejection.",
+  "agent_visible_contract": "The frozen execution profile says documented data fields but does not enumerate permitted template names. The README documents BaseMilliseconds as the command parameter.",
+  "official_reference": "https://pester.dev/docs/usage/data-driven-tests#using-foreach--testcases-with-hashtable",
+  "follow_up": "Separately review the narrow public-name coverage/documentation mismatch for BaseMilliseconds with credential-free positive and expression-rejection checks, then replay the exact retained bytes under the same correctness criteria. Do not rescore this allocation or revise the skill."
+}
