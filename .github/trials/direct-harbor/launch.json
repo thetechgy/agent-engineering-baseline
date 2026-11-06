@@ -98,37 +98,64 @@
   "handoff_first_run": 42115972887,
   "handoff_first_run_outcome": "image_build_failed_before_controls_snapshot_index_http_503",
   "allocation": {
-    "id": "sol-high-smoke-20261105",
-    "state": "closed",
+    "id": "sol-high-no-rollout-budget-20261105",
+    "state": "disabled",
     "attempts": {
-      "current": 5,
-      "absent": 6
+      "current": 6,
+      "absent": 7
+    },
+    "reservation_ids": {
+      "current": "sol-high-no-rollout-budget-20261105/current/6",
+      "absent": "sol-high-no-rollout-budget-20261105/absent/7"
     },
     "limit": 2,
-    "prior_campaign_attempts": 4,
+    "prior_campaign_attempts": 5,
     "previous_recovery_consumed": 4,
     "previous_recovery_limit": 4,
     "budget_usd": 5,
     "second_attempt_reserve_usd": 2.5,
     "headroom_usd": 0.5,
-    "workflow_run_number": 17,
-    "code_commit": "b2c382f816d50c7c270453826e658353870e47c7",
-    "profile": "codex-0.166.0_gpt-6.1-sol_high",
+    "workflow_run_number": null,
+    "code_commit": null,
+    "profile": "codex-0.166.0_gpt-6.1-sol_high_rollout-budget-disabled",
     "case": "pester-002",
-    "authorization": "Explicit user authorization for two additional paid attempts, current then absent; no retries; historical unknown billing accepted. New incomplete usage blocks the second arm.",
-    "estimated_attempt_reserve_usd": 2.5,
-    "provider_enforced_dollar_cap": false,
-    "used": 1,
-    "api_bill_usd": null,
-    "consumed_attempts": [
-      5
-    ],
-    "unused_closed_attempts": [
-      6
-    ],
-    "run_id": 42122482332,
-    "executed_commit": "368c3866f817b6b38fcc04953e15b300d81cd5f0",
-    "observed_usage_conservative_estimate_usd": 0.641555,
-    "complete_incremental_cost_usd": null
-  }
+    "authorization": "User explicitly authorized two fresh attempts with entire supplemental rollout-budget feature disabled. Prior allocation slot six remains closed unused; these reservations have distinct identities. No retries.",
+    "provider_enforced_dollar_cap": false
+  },
+  "allocation_history": [
+    {
+      "id": "sol-high-smoke-20261105",
+      "state": "closed",
+      "attempts": {
+        "current": 5,
+        "absent": 6
+      },
+      "limit": 2,
+      "prior_campaign_attempts": 4,
+      "previous_recovery_consumed": 4,
+      "previous_recovery_limit": 4,
+      "budget_usd": 5,
+      "second_attempt_reserve_usd": 2.5,
+      "headroom_usd": 0.5,
+      "workflow_run_number": 17,
+      "code_commit": "b2c382f816d50c7c270453826e658353870e47c7",
+      "profile": "codex-0.166.0_gpt-6.1-sol_high",
+      "case": "pester-002",
+      "authorization": "Explicit user authorization for two additional paid attempts, current then absent; no retries; historical unknown billing accepted. New incomplete usage blocks the second arm.",
+      "estimated_attempt_reserve_usd": 2.5,
+      "provider_enforced_dollar_cap": false,
+      "used": 1,
+      "api_bill_usd": null,
+      "consumed_attempts": [
+        5
+      ],
+      "unused_closed_attempts": [
+        6
+      ],
+      "run_id": 42122482332,
+      "executed_commit": "368c3866f817b6b38fcc04953e15b300d81cd5f0",
+      "observed_usage_conservative_estimate_usd": 0.641555,
+      "complete_incremental_cost_usd": null
+    }
+  ]
 }

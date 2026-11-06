@@ -16,6 +16,12 @@ async def check_pin(environment, version=None):
             'returncode':result.return_code, 'version':versions[0] if len(versions)==1 else None,
             'matched':result.return_code==0 and versions==[version or json.loads(__import__('pathlib').Path(__file__).with_name('runtime-profile.json').read_text())['codex_version']]}
 
+async def inspect_budget_feature(environment):
+    result=await environment.exec(command='CODEX_HOME=/installed-agent/codex-home codex features list',user='agent',timeout_sec=30)
+    matches=re.findall(r'^rollout_budget\s+.+?\s+(true|false)\s*$',result.stdout or '',re.MULTILINE)
+    assert result.return_code==0 and matches==['false'], 'Supplemental rollout-budget feature must be fully disabled'
+    return {'command':'CODEX_HOME=/installed-agent/codex-home codex features list','user':'agent','exit_status':result.return_code,'rollout_budget_enabled':False,'inference':False,'reminders_enabled':False}
+
 class PinnedCodex(Codex):
     """Stock run/exec path; only pinned installation and unprivileged ownership."""
     def __init__(self, *args, **kwargs):
@@ -71,4 +77,5 @@ class PinnedCodex(Codex):
             'CODEX_HOME=/installed-agent/codex-home codex app-server --strict-config --print-startup-config')
         parsed=next(json.loads(line) for line in loaded.stdout.splitlines() if line.startswith('{') and 'appServerVersion' in line)
         observed={'version':parsed['appServerVersion'],'allowed_login_methods':parsed['configRequirements']['requirements']['allowedLoginMethods'],'exit_status':loaded.return_code}
+        observed['budget_feature']=await inspect_budget_feature(environment)
         (Path(os.environ['TRIAL_PUBLIC_DIR'])/'configuration-load.json').write_text(json.dumps(observed,indent=2)+'\n')

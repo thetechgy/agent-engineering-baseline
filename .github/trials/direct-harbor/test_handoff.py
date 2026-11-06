@@ -47,6 +47,6 @@ class HandoffTests(unittest.TestCase):
             r=live.usage_and_activation(root);self.assertEqual(r['tool_calls'],1);self.assertEqual(r['exec_outcomes'],[{'exit_code':1,'output_retained':False}]);self.assertNotIn('SENTINEL_SECRET',json.dumps(r))
     def test_new_profile_and_paid_guard(self):
         self.assertEqual((live.MODEL,live.EFFORT,live.VERSION),('gpt-6.1-sol','high','0.166.0'))
-        self.assertTrue(live.config()['features']['rollout_budget']['enforce_limit'])
+        self.assertIs(live.config()['features']['rollout_budget'],False)
 
 if __name__=='__main__':unittest.main()

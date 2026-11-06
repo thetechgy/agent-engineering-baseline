@@ -33,7 +33,7 @@ jobs:
               active()
           else:
               assert launch['scheduling_stopped'] is True and launch['paid_execution_enabled'] is False
-          assert launch['paid_attempts_used'] in (4, 5, 6)
+          assert launch['paid_attempts_used'] in (4, 5, 6, 7)
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
               print('phase=' + phase, file=output)
           PYCODE
@@ -210,15 +210,15 @@ jobs:
           path: ${{ runner.temp }}/live-pair/public/
           retention-days: 30
           if-no-files-found: error
-      - name: Reserve campaign attempt five without credentials
+      - name: Reserve campaign attempt six without credentials
         id: reserve_current
         run: python .github/trials/direct-harbor/allocation.py reserve "$RUNNER_TEMP/live-pair" current
       - name: Durable current reservation before credentialed launch
         id: current_reservation
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: allocation-attempt-5
-          path: ${{ runner.temp }}/live-pair/public/allocation/attempt-5.json
+          name: allocation-no-budget-attempt-6
+          path: ${{ runner.temp }}/live-pair/public/allocation/attempt-6.json
           retention-days: 30
           if-no-files-found: error
       - name: Current skill - one actual Codex attempt
@@ -237,7 +237,7 @@ jobs:
           path: ${{ runner.temp }}/live-pair/public/current/
           retention-days: 30
           if-no-files-found: warn
-      - name: Gate and reserve campaign attempt six without credentials
+      - name: Gate and reserve campaign attempt seven without credentials
         id: reserve_absent
         if: steps.current.outcome == 'success' && steps.current_checkpoint.outcome == 'success'
         run: python .github/trials/direct-harbor/allocation.py reserve "$RUNNER_TEMP/live-pair" absent
@@ -246,8 +246,8 @@ jobs:
         if: steps.reserve_absent.outcome == 'success'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: allocation-attempt-6
-          path: ${{ runner.temp }}/live-pair/public/allocation/attempt-6.json
+          name: allocation-no-budget-attempt-7
+          path: ${{ runner.temp }}/live-pair/public/allocation/attempt-7.json
           retention-days: 30
           if-no-files-found: error
       - name: Absent skill - one actual Codex attempt

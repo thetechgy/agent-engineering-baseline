@@ -202,8 +202,8 @@ def report(output, data):
             if timing.get('started_at') and timing.get('finished_at'):
                 return round((datetime.fromisoformat(timing['finished_at'])-datetime.fromisoformat(timing['started_at'])).total_seconds(),3)
             return None
-        text += table(('Arm / attempt','Session completed','Task outcome','Artifact transfer / admission','Reference / defects','Skill-file access attempts','Agent / total seconds'),
-            [(r['variant']+' / '+str(r['attempt']),r['session_completed'] if r['scheduled'] else 'Not run',labels.get(r['outcome'],r['outcome']),
+        text += table(('Arm / attempt','Execution / session completed','Task outcome','Artifact transfer / admission','Reference / defects','Skill-file access attempts','Agent / total seconds'),
+            [(r['variant']+' / '+str(r['attempt']),(r['execution_outcome']+' / '+str(r['session_completed'])) if r['scheduled'] else 'Not run',labels.get(r['outcome'],r['outcome']),
               ('Hashes matched' if r['handoff']=='hash_matched' else 'No source file' if r['handoff']=='no_source' else 'Unconfirmed')+' / '+str(r['admission'] or 'Unknown'),
               (('Pass' if r['reference_pass']==1 else 'Fail')+' / '+str(r['mutants_detected'])+'/'+str(r['mutants_executed'])) if r['valid_grade'] else 'Not measured',
               ', '.join(r['skill_file_access_attempts']) if r['skill_file_access_attempts'] else ('None observed' if r['skill_file_access_attempts']==[] else 'Unknown'),
@@ -211,8 +211,12 @@ def report(output, data):
         text += table(('Arm','Total input','Cached input','Cache-write input','Total output','Reasoning output','Conservative USD estimate','Native pricing estimate'),
             [(r['variant'],*( (r['usage'] or {}).get(k) for k in ('input_tokens','cached_input_tokens','cache_write_input_tokens','output_tokens','reasoning_output_tokens')),r['conservative_estimate_usd'],r['native_pricing_estimate_usd']) for r in rows])
         text += '<p>'+esc(allocation['usage_note'])+'</p>'
+        text += table(('Arm','Accounting coverage','Billing certainty'),[(r['variant'],(r.get('accounting_assessment') or {}).get('coverage','Unknown'),'Unknown') for r in rows])
         for note in allocation.get('reviewed_notes',[])+allocation['limits']:text += '<p>'+esc(note)+'</p>'
         text += '<p>Allocation closed; paid scheduling disabled. Consumed campaign slots: '+esc(allocation['closure']['reserved_slots_consumed'])+'.</p>'
+    if data.get('live_allocation_history'):
+        text += '<h2>Earlier closed allocations</h2><p>Historical settings and outcomes are preserved; they are not matched arms of the current comparison. Full metadata remains in allocation-evidence.json.</p>'
+        text += table(('Allocation','Consumed campaign attempts','Historical outcomes','Observed usage estimate USD'),[(a['id'],a['closure']['reserved_slots_consumed'],[(r['variant'],r['execution_outcome'],r['outcome']) for r in a['rows']],a.get('observed_usage_conservative_estimate_usd')) for a in data['live_allocation_history']])
     if data.get('handoff_pass'):
         handoff=data['handoff_pass']
         text += '<h2>Prior credential-free artifact handoff and runtime checks</h2><p>'+esc(handoff['summary'])+'</p>'

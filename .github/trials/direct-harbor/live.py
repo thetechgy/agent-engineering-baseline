@@ -22,8 +22,7 @@ def config():
             'supports_websockets':True,'supports_standalone_web_search':True,
             'http_headers':{'version':VERSION},
             'env_http_headers':{'OpenAI-Organization':'OPENAI_ORGANIZATION','OpenAI-Project':'OPENAI_PROJECT'}}},
-        features={'rollout_budget': {'enabled':True, 'limit_tokens':30000, 'enforce_limit':True,
-            'reminder_at_remaining_tokens':[5000], 'sampling_token_weight':5.0, 'prefill_token_weight':1.0}})
+        features={'rollout_budget':False})
     return value
 
 def expected_files(variant):
@@ -102,7 +101,7 @@ def prepare(root, diagnostic=False):
     root.mkdir(parents=True,exist_ok=False)
     public=root/'public';public.mkdir()
     previous=json.loads((trial.ROOT/'.github/trials/direct-harbor/results/results.json').read_text())
-    assert previous['grading_smoke_qualified'] and previous['agent_attempts']==4 and previous['api_spend_usd'] is None
+    assert previous['grading_smoke_qualified'] and previous['agent_attempts']==5 and previous['api_spend_usd'] is None
     if not diagnostic:
         from allocation import active
         active()
@@ -142,6 +141,11 @@ def prepare(root, diagnostic=False):
             try:
                 await environment.start(force_build=False)
                 await runtime_check(environment,variant,output)
+                if not diagnostic:
+                    from pinned_codex import inspect_budget_feature
+                    uploaded=await environment.exec(command='umask 077; printf %s '+shlex.quote(toml.dumps(config()))+' > /installed-agent/codex-home/config.toml',user='agent',timeout_sec=30)
+                    assert uploaded.return_code==0
+                    trial.write(output/'budget-preflight.json',await inspect_budget_feature(environment))
             finally:
                 await environment.stop(delete=True)
         asyncio.run(check())
@@ -160,10 +164,12 @@ def prepare(root, diagnostic=False):
 
 def usage_and_activation(native_dir):
     totals=None;activation=set();completion=False;calls=0;event_types={};tool_names={};outcomes=[];completion_shape=None;tool_errors={'runtime_tool_error':0,'permission_denied':0,'missing_path':0}
-    for p in sorted((native_dir/'agent').glob('**/rollout-*.jsonl')):
-        for line in p.read_text().splitlines():
+    rollouts=sorted((native_dir/'agent').glob('**/rollout-*.jsonl')); malformed=0; last_token_line=None; terminal_line=None
+    for p in rollouts:
+        for index,line in enumerate(p.read_text().splitlines()):
             try:event=json.loads(line)
-            except ValueError:continue
+            except ValueError:
+                malformed+=1;continue
             payload=event.get('payload',{})
             event_type=payload.get('type')
             known={'function_call','custom_tool_call','function_call_output','custom_tool_call_output','exec_command_end','task_complete','turn_complete','token_count'}
@@ -171,6 +177,7 @@ def usage_and_activation(native_dir):
             event_types[label]=event_types.get(label,0)+1
             if event.get('type')=='event_msg' and payload.get('type')=='token_count':
                 value=(payload.get('info') or {}).get('total_token_usage')
+                if value:last_token_line=index
                 if value:totals={k:(value.get(k) if type(value.get(k)) is int and value[k]>=0 else None) for k in ('input_tokens','cached_input_tokens','output_tokens','reasoning_output_tokens','cache_write_input_tokens','total_tokens')}
             if event.get('type')=='response_item' and payload.get('type') in ('function_call','custom_tool_call'):
                 calls+=1
@@ -189,10 +196,10 @@ def usage_and_activation(native_dir):
             if event.get('type')=='event_msg' and event_type=='exec_command_end':
                 outcomes.append({'exit_code':payload.get('exit_code') if type(payload.get('exit_code')) is int else None,'output_retained':False})
             if event.get('type')=='event_msg' and event_type in ('task_complete','turn_complete'):
-                completion=True
+                completion=True;terminal_line=index
                 message=payload.get('last_agent_message')
                 completion_shape={'message_present':isinstance(message,str),'message_characters':len(message) if isinstance(message,str) else None,'content_retained':False}
-    return {'total_usage':totals,'skill_file_access_attempts':sorted(activation),'tool_calls':calls,'completion_event':completion,'event_type_counts':event_types,'tool_name_counts':tool_names,'exec_outcomes':outcomes[:100],'completion_shape':completion_shape,'tool_error_flags':tool_errors,'evidence_limit':'File-access attempts do not prove successful reads, instruction following or correctness.'}
+    return {'session_evidence':{'rollout_files':len(rollouts),'malformed_lines':malformed,'usage_before_terminal':last_token_line is not None and terminal_line is not None and last_token_line<terminal_line},'total_usage':totals,'skill_file_access_attempts':sorted(activation),'tool_calls':calls,'completion_event':completion,'event_type_counts':event_types,'tool_name_counts':tool_names,'exec_outcomes':outcomes[:100],'completion_shape':completion_shape,'tool_error_flags':tool_errors,'evidence_limit':'File-access attempts do not prove successful reads, instruction following or correctness.'}
 
 def usage_estimate(usage):
     if not isinstance(usage,dict):return None
@@ -260,7 +267,7 @@ def live_attempt(root,variant):
     assert not (root/'public/allocation/closed.json').exists(), 'Allocation already closed'
     receipt=json.loads(receipt_path(root,variant).read_text())
     assert receipt['run_id']==os.environ['GITHUB_RUN_ID'] and receipt['commit']==os.environ['GITHUB_SHA']
-    assert receipt['attempt']==ATTEMPTS[variant] and receipt['allocation_id']==ID
+    assert receipt['attempt']==ATTEMPTS[variant] and receipt['allocation_id']==ID and receipt['reservation_id']==a['reservation_ids'][variant]
     assert not os.environ.get('TRIAL_DIAGNOSTIC') and not os.environ.get('TRIAL_PROVIDER_PROBE')
     assert os.environ.get('OPENAI_API_KEY') and variant in ('current','absent')
     assert json.loads((root/'public/preflight.json').read_text())['passed']
@@ -271,7 +278,7 @@ def live_attempt(root,variant):
         assert gate(first,a)['allowed'], 'Unreliable first outcome or insufficient spending reserve'
     task=Path(json.loads((root/(variant+'-task.json')).read_text())['path'])
     manifest=json.loads((output/'manifest.json').read_text());assert Task(task).checksum==manifest['task_checksum']
-    record={'allocation_id':ID,'attempt':ATTEMPTS[variant],'variant':variant,'reserved':True,'rollout_present':False,
+    record={'allocation_id':ID,'reservation_id':receipt['reservation_id'],'attempt':ATTEMPTS[variant],'variant':variant,'reserved':True,'rollout_present':False,
             'result_extraction_succeeded':False,'execution_completed':False,'usage_estimate_usd':None,
             'projection':[],'commit':os.environ.get('GITHUB_SHA')}
     with (output/'attempt.json').open('x') as f:json.dump(record,f,indent=2)
@@ -294,13 +301,16 @@ def live_attempt(root,variant):
         from handoff import collect
         details=usage_and_activation(native);record['usage_and_activation']=details
         record['rollout_present']=bool(list((native/'agent').glob('**/rollout-*.jsonl')))
-        record['execution_completed']=details['completion_event'] and row['failure_cause'] is None
+        from accounting import terminal_events,assess
         record['usage_estimate_usd']=usage_estimate(details['total_usage'])
-        record['usage_complete']=record['execution_completed'] and record['usage_estimate_usd'] is not None
+        terminal_path=native/'agent/codex.txt'
+        record['native_terminal']=terminal_events(terminal_path.read_text()) if terminal_path.is_file() else []
+        record.update(assess(row,details,record['native_terminal'],record['usage_estimate_usd']))
+        record['execution_completed']=record['execution_assessment']['outcome']=='completed'
         record['native_pricing_estimate_usd']=row['cost_usd']
         record['api_bill_usd']=None
         trial.write(output/'attempt.json',record)
-        record['handoff']=collect(native,row,completed=record['execution_completed'])
+        record['handoff']=collect(native,row,completed=record['execution_assessment']['interpretable'],environment_ok=record['execution_assessment']['interpretable'])
         assert Task(task).checksum==manifest['task_checksum'], 'Frozen task changed'
         record['result_extraction_succeeded']=True
     except Exception as exc:

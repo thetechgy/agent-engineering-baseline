@@ -3,17 +3,20 @@ import json,math,os,subprocess
 from pathlib import Path
 
 HERE=Path(__file__).parent
-ID='sol-high-smoke-20261105'
-ATTEMPTS={'current':5,'absent':6}
+ID='sol-high-no-rollout-budget-20261105'
+PRIOR_CAMPAIGN=5
+ATTEMPTS={'current':6,'absent':7}
+RESERVATIONS={v:ID+'/'+v+'/'+str(n) for v,n in ATTEMPTS.items()}
 
 def validate(launch,env):
     a=launch.get('allocation',{})
     if launch.get('paid_execution_enabled') is not True or launch.get('scheduling_stopped') is not False:
         raise RuntimeError('Paid allocation is disabled')
     assert launch['phase']=='live-pair' and a['id']==ID and a['state']=='armed'
-    assert launch['paid_attempts_used']==4 and launch['recovery_live_attempt_limit']==4
+    assert launch['paid_attempts_used']==PRIOR_CAMPAIGN and launch['recovery_live_attempt_limit']==4
     assert launch['paid_attempt_limit']==36 and launch['paid_attempts_reserved']==2
-    assert a['attempts']==ATTEMPTS and a['limit']==2 and a['prior_campaign_attempts']==4
+    assert a['attempts']==ATTEMPTS and a['limit']==2 and a['prior_campaign_attempts']==PRIOR_CAMPAIGN
+    assert a['reservation_ids']==RESERVATIONS
     assert (a['budget_usd'],a['second_attempt_reserve_usd'],a['headroom_usd'])==(5,2.5,0.5)
     assert env.get('GITHUB_REPOSITORY')=='thetechgy/agent-engineering-baseline'
     assert env.get('GITHUB_REF')=='refs/heads/trial/direct-harbor' and env.get('GITHUB_EVENT_NAME')=='push'
@@ -36,11 +39,12 @@ def gate(record,a):
     if not record.get('result_extraction_succeeded'):reasons.append('incomplete_evidence')
     if record.get('harbor_returncode')!=0:reasons.append('native_process_failure')
     if record.get('usage_and_activation',{}).get('tool_error_flags',{}).get('runtime_tool_error',0):reasons.append('runtime_tool_error')
-    if not record.get('execution_completed'):reasons.append('execution_incomplete')
-    if not record.get('usage_complete'):reasons.append('incomplete_new_usage')
+    if not record.get('execution_assessment',{}).get('interpretable'):reasons.append('uninterpretable_execution')
+    if not record.get('accounting_assessment',{}).get('usable_for_scheduling'):reasons.append('incomplete_new_usage')
     if not record.get('agent_container_removed') or not record.get('verifier_container_removed'):reasons.append('disposal_unconfirmed')
     rows=record.get('projection',[])
-    if len(rows)!=1 or rows[0].get('failure_cause') is not None:reasons.append('native_execution_failure')
+    recognized=record.get('execution_assessment',{}).get('outcome')=='agent_token_budget_exhausted'
+    if len(rows)!=1 or (rows[0].get('failure_cause') is not None and not (recognized and rows[0].get('failure_cause')=='unclassified' and [e.get('exception_type') for e in rows[0].get('exceptions',[])]==['NonZeroAgentExitCodeError'])):reasons.append('native_execution_failure')
     classification=record.get('handoff',{}).get('classification',{}).get('classification')
     if classification not in ('graded_passed','graded_failed','missing_deliverable','rejected_output'):
         reasons.append('unreliable_or_unsupported_outcome')
@@ -62,7 +66,7 @@ def reserve(root,variant):
         decision=gate(first,a)
         (root/'public/allocation/second-arm-gate.json').write_text(json.dumps(decision,indent=2)+'\n')
         assert decision['allowed'], decision['reasons']
-    value={'allocation_id':ID,'attempt':ATTEMPTS[variant],'variant':variant,'state':'reserved_consumed_if_launch_unknown',
+    value={'allocation_id':ID,'reservation_id':RESERVATIONS[variant],'attempt':ATTEMPTS[variant],'variant':variant,'state':'reserved_consumed_if_launch_unknown',
            'commit':os.environ['GITHUB_SHA'],'run_id':os.environ['GITHUB_RUN_ID'],'run_number':os.environ['GITHUB_RUN_NUMBER']}
     path=receipt_path(root,variant);path.parent.mkdir(parents=True,exist_ok=True)
     with path.open('x') as f:json.dump(value,f,indent=2)
@@ -71,14 +75,18 @@ def reserve(root,variant):
 def close(root):
     receipts=[json.loads(p.read_text()) for p in (root/'public/allocation').glob('attempt-*.json')]
     record={'allocation_id':ID,'state':'closed','paid_execution_enabled':False,'reserved_slots_consumed':[r['attempt'] for r in receipts],
-        'campaign_attempts_consumed':4+len(receipts),'previous_recovery_consumed':4,'previous_recovery_limit':4,
+        'campaign_attempts_consumed':PRIOR_CAMPAIGN+len(receipts),'previous_recovery_consumed':4,'previous_recovery_limit':4,
         'incremental_api_bill_usd':None,'historical_cumulative_api_bill_usd':None,
         'note':'Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.'}
+    record['reservation_ids']=[r['reservation_id'] for r in receipts]
     estimates=[]
     for r in receipts:
         p=root/'public'/r['variant']/'attempt.json';d=json.loads(p.read_text()) if p.is_file() else {}
-        estimates.append(d.get('usage_estimate_usd') if d.get('usage_complete') else None)
+        estimates.append(d.get('usage_estimate_usd') if d.get('accounting_assessment',{}).get('usable_for_scheduling') else None)
     record['incremental_conservative_estimate_usd']=sum(estimates) if estimates and all(v is not None for v in estimates) else None
+    estimate=record['incremental_conservative_estimate_usd']
+    record['operational_budget_usd']=5
+    record['estimated_budget_exceeded']=estimate>5 if estimate is not None else None
     destination=root/'public/allocation/closed.json';destination.parent.mkdir(parents=True,exist_ok=True)
     destination.write_text(json.dumps(record,indent=2)+'\n')
     print(json.dumps(record))

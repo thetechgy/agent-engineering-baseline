@@ -217,3 +217,47 @@ but successful reads or benefit were not established. Attempt six was never rese
 or launched. Scheduling is disabled, recovery remains 4/4, and campaign usage is 5/36.
 The specific next decision is to calibrate the supplemental token budget for this
 frozen deployment before authorizing another allocation; no such run is scheduled.
+
+## Fresh allocation with supplemental rollout budget disabled
+
+This pass starts from `388aed6` and preserves attempt five at execution commit
+`368c386` / run 42122482332. Its exact native Codex error was `shared rollout token
+budget exhausted`; Harbor's `NonZeroAgentExitCodeError`, `unclassified` cause and
+invalid reward remain unchanged. The observed cumulative counters reconstruct 30,346
+fallback units; producer, host and verifier confirmed no deliverable. This is not
+an observed artifact-transfer failure. Historical billing remains unknown.
+
+The new allocation is `sol-high-no-rollout-budget-20261105`, with distinct current/6
+and absent/7 reservation IDs. The earlier planned slot six stays closed unused in
+`allocation_history`; no allowance is recycled. Prior recovery remains 4/4 and the
+campaign starts at five consumed attempts. The allocation permits two launches only,
+current first, no retry. One push/run number and its reviewed parent commit bind the
+allocation; reruns cannot spend. Reservations are checkpointed before credentials;
+unknown launch outcomes consume their reservation. Paid execution remains disabled
+outside that explicitly armed run and is closed afterward.
+
+`features.rollout_budget = false` removes the whole supplemental feature, including
+reminders and weights, for both arms. `codex features list` checks the resolved state
+without credentials before inference and again after Harbor's effective upload.
+Strict configuration loading remains in place. Model, effort, complete CLI package,
+600-second timeout, network/tool policy, isolation and grading are unchanged. No
+replacement token ceiling is introduced; this is a different comparison profile
+from attempt five. Previous control outcomes are reused without another campaign.
+
+Accounting no longer requires task success. The small native-event interpretation
+reads Harbor's existing `agent/codex.txt`, excluding item/model/tool contents. A
+completed native turn must match the five CLI usage categories against one parseable
+rollout, with cumulative usage preceding its session terminal. An exact native budget
+failure with that session evidence is an interpretable failure; generic nonzero exits,
+provider/environment/verifier failures or incomplete evidence block scheduling.
+Retained attempt-five metadata establishes the failure and an observed-use estimate,
+but lacks the new ordered-session observation; complete historical coverage is not
+invented. All estimates remain separate from provider bills.
+
+The $5 incremental operational budget uses the existing conservative $10/M all-input
+and $15/M output estimate. Cache reads/writes are input subsets and reasoning is an
+output subset, never extra summed tokens. Starting the absent arm requires the current
+estimate plus a $2.50 reserve and $0.50 headroom to fit $5, adequate accounting and
+handoff evidence, and verified disposal. Removing the token ceiling may increase
+usage; runtime and attempt limits do not guarantee a dollar cap. No billing proxy,
+new Harbor private override, upstream patch or generalized scheduler was added.

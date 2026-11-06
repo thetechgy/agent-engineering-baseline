@@ -1,5 +1,5 @@
 {
-  "id": "codex-0.166.0_gpt-6.1-sol_high",
+  "id": "codex-0.166.0_gpt-6.1-sol_high_rollout-budget-disabled",
   "codex_version": "0.166.0",
   "model": "gpt-6.1-sol",
   "reasoning_effort": "high",
@@ -48,5 +48,5 @@
     "codex-rs__config__src__config_toml.rs": "e8f6b45b73eaca1a89be9524bb02bf069e9715e3aeba270e87285d941405c877",
     "codex-rs__model-provider-info__src__lib.rs": "ea822c232e47fc88251cf20060da91ca0c1195b2d2853c5b3fa4bfcdd4cc0184"
   },
-  "budget_semantics": "0.166.0 accepts enforce_limit=true. Source charges provider budget units when available, otherwise weighted non-cached input plus output. Token budget is not a dollar meter; enforcement under inference remains untested."
+  "budget_semantics": "Supplemental rollout_budget is false: no enforcement, limit, weights or reminders. No replacement token ceiling. 600-second agent timeout and two-attempt operational allocation remain; no provider-enforced dollar cap."
 }
