@@ -1,8 +1,11 @@
 # Direct Harbor trial
 
 Read the [evaluation checkpoint](../../evals/EVALUATION-PLAN.md) before proposing
-further work. It records the recommended direction, remaining adoption evidence,
-and one next action. The recommendation is not an approved production migration.
+further work. Its coverage assessment provisionally recommends retaining and
+simplifying the existing SkillEvaluator approach; the earlier direct-Harbor
+preference is superseded. It records the three-runtime gap, material tradeoffs
+and one credential-free portability check that could change the recommendation.
+The recommendation is not authorization to implement or adopt either migration.
 
 The successful [retrospective matched comparison](results/retrospective-pair.json)
 in run [42301691565](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42301691565)
