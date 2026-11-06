@@ -95,3 +95,8 @@ Reviewed qualified-image smoke: run 42274188228, commit a753e39083d9d93fdb139063
 Normal environment approval was automated under explicit user authorization, not independent human review; shared protections unchanged.
 Exact submission ZIP digest and file identity independently verified after download; 407196e63354eb841f3d38c2d5d3daaba9aaec16aa721f75686f74e181d0bb1a.
 Offline admission-only diagnosis: <BaseMilliseconds> absent from template allowlist; original bytes unchanged; no offline execution or regrading.
+
+Retrospective policy v2 qualification: run 42279639435, commit b0637f4d7556d0f29d0b6ed449f8ba62535f37aa, first of at most two executions; passed.
+Original image reproduced unsupported/block_name_template at 23:9. Corrected image admitted the unchanged submission: reference_pass=1, mutants_detected=2/2, tests_executed=36, PowerShell=7.6.9, Pester=6.2.0.
+22 parser controls and five native controls passed; all replay/control containers disposed. Corrected image archive/config/layer identities verified after download.
+No model credentials, inference, judges, reservations or new paid attempts. Campaign 7/36; prior recovery 4/4; allocation remains closed. Historical attempt seven stays unsupported/unmeasured.

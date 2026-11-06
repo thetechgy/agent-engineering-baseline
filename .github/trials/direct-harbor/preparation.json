@@ -28,5 +28,16 @@
   "correction": "Include stock Harbor digest-pinned Alpine kernel probe in the image archive. Restore its registry digest reference when classic Docker save/load omits RepoDigests; require unchanged retained image IDs and inventory during runtime controls.",
   "status": "historically_qualified_experiment_superseded_by_template_policy_v2",
   "temporary_seed_release_removed": true,
-  "reuse_note": "Retained source remains valid only for its original experiment. Policy v2 changes verifier and future agent documentation; the original full bundle must fail current experiment validation. Retrospective replay validates it against the original producer checkout and builds a distinct verifier layer."
+  "reuse_note": "Retained source remains valid only for its original experiment. Policy v2 changes verifier and future agent documentation; the original full bundle must fail current experiment validation. Retrospective replay validates it against the original producer checkout and builds a distinct verifier layer.",
+  "corrected_verifier_source": {
+    "run_id": 42279639435,
+    "commit": "b0637f4d7556d0f29d0b6ed449f8ba62535f37aa",
+    "artifact_id": 13534568250,
+    "name": "corrected-template-verifier",
+    "artifact_digest": "sha256:289c0fbc601039dd45181ffc3ab6bdc8e5aea7d0ab0acae6584c8c9a2bf3df7c",
+    "manifest_sha256": "a66aeac636344fb6518ee24828514f34a7ff6029f5f1c49c9ccc6ff2432dd32b",
+    "image_id": "sha256:401c02a8fbc4f59dbf33ca7aa5961bad310d43e7742172c268e5f8705129c46d",
+    "expires_at": "2026-11-13T19:31:51Z",
+    "scope": "Qualified corrected verifier only; not a complete matched agent/task bundle."
+  }
 }

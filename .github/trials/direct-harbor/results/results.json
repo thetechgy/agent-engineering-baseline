@@ -1,9 +1,9 @@
 {
   "schema_version": 3,
   "campaign": "direct-harbor-20261104",
-  "state": "qualified_image_smoke_closed_unsupported",
-  "decision": "The smoke pair does not establish an operationally usable comparison. One current-arm session completed and its exact submission transferred reliably, but the verifier rejected an unsupported name template. The absent arm was not scheduled.",
-  "summary": "Current campaign attempt 7 completed once; the declared submission was retained and verified, then remained ungraded under block_name_template at line 23:9. Absent attempt 8 was never reserved or launched. Allocation closed at 1/2; campaign 7/36; earlier recovery 4/4. No retry, model judge, skill revision, acceptance change or historical rescoring.",
+  "state": "retrospective_template_policy_v2_qualified",
+  "decision": "The retained current-arm work now has a valid retrospective passing grade on the unchanged reference and two mutants. This establishes quality for that one submission under corrected admission coverage. The original attempt stays unsupported/unmeasured; the absent arm did not run, so skill benefit and matched comparison performance remain unmeasured.",
+  "summary": "Credential-free qualification run 42279639435 passed on its first execution. Exact retained submission SHA-256 407196e63354eb841f3d38c2d5d3daaba9aaec16aa721f75686f74e181d0bb1a: 36 tests, reference pass, 2/2 defects detected using PowerShell 7.6.9 and Pester 6.2.0. Original policy rejection reproduced separately. No new model inference, judge, reservation or paid attempt; campaign 7/36 and earlier recovery 4/4 unchanged.",
   "source_commit": "cc0819f5dafc05610dd8c3293ce2f52744c66f1a",
   "reviewed_trial_commit": "f61201a730746921abd17d8f8366dfd1505ad6f8",
   "executed_commit": "c5a430ac15b4fac0eb6a29b1ac46ad4e7e06ca3e",
@@ -412,7 +412,7 @@
     "reserve_usd": 16,
     "pair_preflight_estimate_usd": 2.64,
     "scheduling_stopped": true,
-    "stop_reason": "Unsupported template coverage; allocation closed with absent reservation unused.",
+    "stop_reason": "Credential-free retrospective qualification complete. Paid allocation remains closed; no further inference authorized.",
     "conservative_input_usd_per_million": 20,
     "conservative_output_usd_per_million": 30,
     "unknown_cost_accepted_for_testing": true,
@@ -1102,6 +1102,25 @@
       "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42274188228",
       "label": "GPT-6.1 Sol/High, rollout budget disabled",
       "summary": "One current and one absent attempt at most; checkpointed and then closed."
+    },
+    {
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42279639435",
+      "label": "Credential-free policy v2 qualification and exact retrospective replay",
+      "summary": "Original rejection reproduced; corrected reference passed and 2/2 defects detected; no inference or new attempt.",
+      "artifacts": [
+        {
+          "name": "corrected-template-verifier",
+          "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42279639435/artifacts/13534568250"
+        },
+        {
+          "name": "retrospective-evidence",
+          "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42279639435/artifacts/13534408247"
+        },
+        {
+          "name": "direct-harbor-trial-report",
+          "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42279639435/artifacts/13534003969"
+        }
+      ]
     }
   ],
   "local_validation": {
@@ -1161,7 +1180,8 @@
     "harbor_artifact_path": "https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/trial/artifact_handler.py#L27",
     "codex_selected_release": "https://github.com/openai/codex/releases/tag/rust-v0.166.0",
     "future_model_pricing": "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
-    "pester_data_field_templates": "https://pester.dev/docs/usage/data-driven-tests#using-foreach--testcases-with-hashtable"
+    "pester_data_field_templates": "https://pester.dev/docs/usage/data-driven-tests#using-foreach--testcases-with-hashtable",
+    "pester_620_name_and_data_binding": "https://github.com/pester/Pester/blob/6.2.0/src/functions/It.ps1"
   },
   "live_pair_operationally_valid": false,
   "live_evidence": "live-evidence.json",
@@ -5400,5 +5420,786 @@
     }
   },
   "latest_live_commit": "a753e39083d9d93fdb13906382b9b35e9902cdd4",
-  "latest_live_run": 42274188228
+  "latest_live_run": 42274188228,
+  "retrospective_evaluation": {
+    "kind": "retrospective_template_policy_v2",
+    "attempt": 1,
+    "limit": 2,
+    "passed": true,
+    "commit": "b0637f4d7556d0f29d0b6ed449f8ba62535f37aa",
+    "run_id": "42279639435",
+    "inference": false,
+    "model_judge": false,
+    "new_reservations": 0,
+    "campaign_attempts": 7,
+    "recovery_attempts": 4,
+    "policy_version": 2,
+    "original_attempt_commit": "a753e39083d9d93fdb13906382b9b35e9902cdd4",
+    "controls": [
+      {
+        "control": "good",
+        "kind": "credential_free_verifier_control",
+        "inference": false,
+        "passed": true,
+        "process_exit": 0,
+        "outcome": {
+          "classification": "passed",
+          "code": "evaluated",
+          "reference_pass": 1,
+          "mutants_detected": 2,
+          "mutants_executed": 2,
+          "tests_executed": 3,
+          "pester_version": "6.2.0",
+          "powershell_version": "7.6.9"
+        },
+        "evaluation_status": "complete",
+        "container_removed": true
+      },
+      {
+        "control": "weak",
+        "kind": "credential_free_verifier_control",
+        "inference": false,
+        "passed": true,
+        "process_exit": 0,
+        "outcome": {
+          "classification": "failed",
+          "code": "evaluated",
+          "reference_pass": 1,
+          "mutants_detected": 0,
+          "mutants_executed": 2,
+          "tests_executed": 3,
+          "pester_version": "6.2.0",
+          "powershell_version": "7.6.9"
+        },
+        "evaluation_status": "complete",
+        "container_removed": true
+      },
+      {
+        "control": "unsupported",
+        "kind": "credential_free_verifier_control",
+        "inference": false,
+        "passed": true,
+        "process_exit": 0,
+        "outcome": {
+          "classification": "unsupported",
+          "code": "admission",
+          "admission_rule": "command_not_allowed",
+          "admission_diagnostic": {
+            "line": 1,
+            "column": 1,
+            "ast_kind": "CommandAst"
+          }
+        },
+        "evaluation_status": "failed",
+        "container_removed": true
+      },
+      {
+        "control": "runner_error",
+        "kind": "credential_free_verifier_control",
+        "inference": false,
+        "passed": true,
+        "process_exit": 0,
+        "outcome": {
+          "classification": "infrastructure_error",
+          "code": "admission_runner"
+        },
+        "evaluation_status": "failed",
+        "container_removed": true
+      },
+      {
+        "control": "templates",
+        "kind": "credential_free_verifier_control",
+        "inference": false,
+        "passed": true,
+        "process_exit": 0,
+        "outcome": {
+          "classification": "passed",
+          "code": "evaluated",
+          "reference_pass": 1,
+          "mutants_detected": 2,
+          "mutants_executed": 2,
+          "tests_executed": 6,
+          "pester_version": "6.2.0",
+          "powershell_version": "7.6.9"
+        },
+        "evaluation_status": "complete",
+        "container_removed": true
+      }
+    ],
+    "stage": "qualified",
+    "submission": {
+      "source": {
+        "run_id": 42274188228,
+        "commit": "a753e39083d9d93fdb13906382b9b35e9902cdd4",
+        "artifact_id": 13532657965,
+        "name": "submission-sol-high-reused-20261106-current",
+        "artifact_digest": "sha256:c2b46953b5b4851db0671d89918bf2a8bfe193aa78890feb10937d303fa986b7",
+        "file_sha256": "407196e63354eb841f3d38c2d5d3daaba9aaec16aa721f75686f74e181d0bb1a",
+        "file_size": 3446,
+        "identity": {
+          "allocation_id": "sol-high-reused-20261106",
+          "reservation_id": "sol-high-reused-20261106/current/7",
+          "attempt": 7,
+          "variant": "current",
+          "commit": "a753e39083d9d93fdb13906382b9b35e9902cdd4",
+          "run_id": "42274188228"
+        }
+      },
+      "artifact": {
+        "id": 13532657965,
+        "digest": "sha256:c2b46953b5b4851db0671d89918bf2a8bfe193aa78890feb10937d303fa986b7",
+        "size_in_bytes": 1419,
+        "expires_at": "2026-12-06T18:58:58Z"
+      },
+      "download_verified": true,
+      "metadata": {
+        "kind": "agent_submission",
+        "identity": {
+          "allocation_id": "sol-high-reused-20261106",
+          "reservation_id": "sol-high-reused-20261106/current/7",
+          "attempt": 7,
+          "variant": "current",
+          "commit": "a753e39083d9d93fdb13906382b9b35e9902cdd4",
+          "run_id": "42274188228"
+        },
+        "declared_output": "/workspace/output/Subject.Tests.ps1",
+        "sha256": "407196e63354eb841f3d38c2d5d3daaba9aaec16aa721f75686f74e181d0bb1a",
+        "size": 3446,
+        "boundary_sha256": {
+          "producer": "407196e63354eb841f3d38c2d5d3daaba9aaec16aa721f75686f74e181d0bb1a",
+          "host": "407196e63354eb841f3d38c2d5d3daaba9aaec16aa721f75686f74e181d0bb1a",
+          "verifier": "407196e63354eb841f3d38c2d5d3daaba9aaec16aa721f75686f74e181d0bb1a"
+        },
+        "checks": {
+          "regular_single_link": true,
+          "credential_scan": "passed",
+          "protected_content_scan": "passed"
+        },
+        "content_policy": "Exact declared bytes only. Bounded credential and protected-content checks are not a general DLP proof."
+      }
+    },
+    "original_preparation": {
+      "source": {
+        "run_id": 42270181249,
+        "commit": "0c364aec26c7af6cf0ef52b08e598f48ead9ee01",
+        "artifact_id": 13529635174,
+        "name": "prepared-images",
+        "artifact_digest": "sha256:2d95a9bb6ca91795c35148d0ab874f4f029e45e27d3749c9af7dd08eb1ecd75a",
+        "manifest_sha256": "78f0f4f58085d3383f41df1f72ff616ba83b8e35c59ea077597d1d04346516e2"
+      },
+      "artifact": {
+        "id": 13529635174,
+        "digest": "sha256:2d95a9bb6ca91795c35148d0ab874f4f029e45e27d3749c9af7dd08eb1ecd75a",
+        "size_in_bytes": 923818602,
+        "expires_at": "2026-11-13T18:26:07Z"
+      },
+      "verified_against_original_checkout": true,
+      "original_experiment_sha256": "cb4623031566389300061ad8db0f83c9a61b28acaa97578447bb97e7dfe1332a"
+    },
+    "original_image_id": "sha256:2b1d93aa7557d2f8e3377552920e627cae9177e0af077e0fae5f2579cd4d4512",
+    "policy_inputs": {
+      ".github/evals/powershell-pester-6/support/Runner.ps1": {
+        "original": "d8c17e7991d5fc1dec1e71c0e1e945ecec275893c2653a6ec000ac4acaa6dd60",
+        "corrected": "cb124e537956d21da50a7db5f87277e3f9865784616dcb20a01906bcbfea18e7"
+      },
+      ".github/evals/powershell-pester-6/support/cases/pester-001/profile.json": {
+        "original": "6fcaf12904d917dd8100b00df0cfea17f019a51757bb6caed065aec689061e19",
+        "corrected": "828740ffe8bbf54f01f83f401231fac5543950c9865d2e25ebda6bd0c1970510"
+      },
+      ".github/evals/powershell-pester-6/support/cases/pester-002/profile.json": {
+        "original": "b22226da66eb00dafd37ab5e582a20e3bb97f43d7798befbb52a07b040b99c82",
+        "corrected": "949a6decad403c03ba11e25c28426427950f9b60dae609a6e13ee8cf18b3dcc3"
+      },
+      ".github/evals/powershell-pester-6/support/cases/pester-003/profile.json": {
+        "original": "cc10827699c0a7f6308142590a862904ad9e61b903e46336a8964f43d73054e3",
+        "corrected": "8cff817e0645111f34aad5469305c6d25bc521017d2ee139ecdbaa936e437c15"
+      },
+      ".github/evals/powershell-pester-6/support/cases/pester-004/profile.json": {
+        "original": "0f4dd7272eb67e67aed1ece1e03cb4eef60c48712df8e87e9b189b51f55bf43a",
+        "corrected": "f8d026dce5eff811a17afc6d6dafd3215fc16fd0c7ed897f68d6aa1bb9dcc042"
+      }
+    },
+    "unchanged_correctness_inputs": {
+      ".github/evals/powershell-pester-6/evals/grader.py": "99447ea8fe0ebb1c616de66c417c9ca06b3212721be14f2e09544d86772c99af",
+      ".github/evals/powershell-pester-6/support/test.sh": "6a19331893b1839ac1b8cd41d9b57b2e3ef105cd1de1f1e472ee066e34328f85",
+      ".github/evals/powershell-pester-6/support/cases/pester-004/mutants/zero.ps1": "fe7513605f8a52ebec61abf9c3be14aac3010e8a6d314c7488d7c7fc80b33260",
+      ".github/evals/powershell-pester-6/support/cases/pester-004/mutants/highest.ps1": "b7077db138544a86a0f730a8f2fb47f61ff74ca662106cbb5df837afd7636ddf",
+      ".github/evals/powershell-pester-6/support/cases/pester-004/mutants/above.ps1": "34ba94f2a830241f421b5f6964e089ccc6160b9764d304d4b3ca6834b49d4f37",
+      ".github/evals/powershell-pester-6/support/cases/pester-004/mutants/lowest.ps1": "6e93e32817d5f5af2212fcb5b3cf91d7f5f570b382c7246ed274d1c90d913a9d",
+      ".github/evals/powershell-pester-6/support/cases/pester-004/reference/Subject.ps1": "6d31ab77b5e387d6c9ddea1c75b8e4f6be84383022e979931700da94cfc9fdbc",
+      ".github/evals/powershell-pester-6/support/cases/pester-004/input/Subject.ps1": "e2ce7f590d85a49c24005829e380e269a32fa939dcc73bbf9ce009522b70cbc5",
+      ".github/evals/powershell-pester-6/support/cases/pester-004/input/Existing.Tests.ps1": "322195b479d439e917afe4774fe3988af1e32d8b713db45ba1a6e1ca20e177cd",
+      ".github/evals/powershell-pester-6/support/cases/pester-001/mutants/coercion.ps1": "0e50cbce4c9dd8c3af12de36d42288c4110b80ee3f31dda5a3f44ea858ac072b",
+      ".github/evals/powershell-pester-6/support/cases/pester-001/mutants/filter.ps1": "4ab069c797c95d8da0d3d6d47615a0b5fcf3006399ea2b904bdc24d608158e14",
+      ".github/evals/powershell-pester-6/support/cases/pester-001/reference/Subject.ps1": "2a5afe13db1e6f89d691da645c7b92de9cbe3a69d1e1d147d75b9c2d1db71277",
+      ".github/evals/powershell-pester-6/support/cases/pester-001/input/Subject.ps1": "2a5afe13db1e6f89d691da645c7b92de9cbe3a69d1e1d147d75b9c2d1db71277",
+      ".github/evals/powershell-pester-6/support/cases/pester-003/mutants/target.ps1": "7e8e5200b2469d3831388e317a7c4a9c4884776b2335b1b418dd00d3b7f3d68e",
+      ".github/evals/powershell-pester-6/support/cases/pester-003/mutants/bypass.ps1": "b6b56e5c08d40a8edc4c6fa0e9689603c33fc575c86a3b55eacf5669e9e802f9",
+      ".github/evals/powershell-pester-6/support/cases/pester-003/reference/Subject.ps1": "34499ba6650937a285fb7c654d4c833bf50328c3512460a4dc5bbc1a1a550453",
+      ".github/evals/powershell-pester-6/support/cases/pester-002/mutants/exponent.ps1": "ff34ab2512b5f5064c4539a48437096d22a3a2a01023afdd862235d4714dc5c0",
+      ".github/evals/powershell-pester-6/support/cases/pester-002/mutants/swallowed.ps1": "230dd797449ed463c5f9ebc181224634c92489c93a4f85c0d17f7bcba3a28c83",
+      ".github/evals/powershell-pester-6/support/cases/pester-002/reference/Subject.ps1": "1d09abfa1a65f12e448f0bd785cc60b30071b420123030dee2fdd4e50848fba9",
+      ".github/evals/powershell-pester-6/support/cases/pester-002/input/Subject.ps1": "0f51c43ae61b355cadb2b5418938d5e64f060853784a36e495277f5e6ad7b101",
+      ".github/evals/powershell-pester-6/support/cases/pester-005/reference/summary.json": "5b6c4b049dbedbc7cb8192d1972ba4edd11b92a9fbe499e6d95ee59a0a0f022c"
+    },
+    "original_replay": {
+      "image": "direct-harbor-verifier:live",
+      "image_id": "sha256:2b1d93aa7557d2f8e3377552920e627cae9177e0af077e0fae5f2579cd4d4512",
+      "submission_sha256": "407196e63354eb841f3d38c2d5d3daaba9aaec16aa721f75686f74e181d0bb1a",
+      "inference": false,
+      "complete": true,
+      "boundary": {
+        "network": "none",
+        "host_mounts": false,
+        "no_new_privileges": true,
+        "cpus": 2,
+        "memory_mb": 2048,
+        "pids": 256,
+        "worker_uid": 53001,
+        "worker_checks": "unchanged grader requires immutable inputs, dropped privileges/capabilities and inaccessible protected verifier files"
+      },
+      "process_exit": 0,
+      "submission_unchanged": true,
+      "outcome": {
+        "classification": "unsupported",
+        "code": "admission",
+        "admission_rule": "block_name_template",
+        "admission_diagnostic": {
+          "line": 23,
+          "ast_kind": "CommandAst",
+          "column": 9
+        }
+      },
+      "evaluation_status": "failed",
+      "container_removed": true
+    },
+    "corrected_image_id": "sha256:401c02a8fbc4f59dbf33ca7aa5961bad310d43e7742172c268e5f8705129c46d",
+    "corrected_experiment": "211ed664e248f4fa3e2d9078bb81ad1c3d6957ab370f2e29caab877459e087ff",
+    "parser_controls": {
+      "kind": "template_policy_v2_contract_checks",
+      "candidate_execution": false,
+      "inference": false,
+      "passed": true,
+      "controls": [
+        {
+          "control": "pester-001_public_fields",
+          "case": "pester-001",
+          "expected_status": "admitted",
+          "expected_rule": null,
+          "observed": {
+            "status": "admitted",
+            "code": "ok"
+          },
+          "passed": true
+        },
+        {
+          "control": "pester-002_public_fields",
+          "case": "pester-002",
+          "expected_status": "admitted",
+          "expected_rule": null,
+          "observed": {
+            "code": "ok",
+            "status": "admitted"
+          },
+          "passed": true
+        },
+        {
+          "control": "pester-003_public_fields",
+          "case": "pester-003",
+          "expected_status": "admitted",
+          "expected_rule": null,
+          "observed": {
+            "status": "admitted",
+            "code": "ok"
+          },
+          "passed": true
+        },
+        {
+          "control": "pester-004_public_fields",
+          "case": "pester-004",
+          "expected_status": "admitted",
+          "expected_rule": null,
+          "observed": {
+            "code": "ok",
+            "status": "admitted"
+          },
+          "passed": true
+        },
+        {
+          "control": "positional_foreach",
+          "case": "pester-002",
+          "expected_status": "admitted",
+          "expected_rule": null,
+          "observed": {
+            "status": "admitted",
+            "code": "ok"
+          },
+          "passed": true
+        },
+        {
+          "control": "named_testcases",
+          "case": "pester-002",
+          "expected_status": "admitted",
+          "expected_rule": null,
+          "observed": {
+            "status": "admitted",
+            "code": "ok"
+          },
+          "passed": true
+        },
+        {
+          "control": "named_colon",
+          "case": "pester-002",
+          "expected_status": "admitted",
+          "expected_rule": null,
+          "observed": {
+            "status": "admitted",
+            "code": "ok"
+          },
+          "passed": true
+        },
+        {
+          "control": "current_item",
+          "case": "pester-002",
+          "expected_status": "admitted",
+          "expected_rule": null,
+          "observed": {
+            "code": "ok",
+            "status": "admitted"
+          },
+          "passed": true
+        },
+        {
+          "control": "legacy_member",
+          "case": "pester-002",
+          "expected_status": "admitted",
+          "expected_rule": null,
+          "observed": {
+            "code": "ok",
+            "status": "admitted"
+          },
+          "passed": true
+        },
+        {
+          "control": "native_contract_fixture",
+          "case": "pester-002",
+          "expected_status": "admitted",
+          "expected_rule": null,
+          "observed": {
+            "code": "ok",
+            "status": "admitted"
+          },
+          "passed": true
+        },
+        {
+          "control": "arithmetic",
+          "case": "pester-002",
+          "expected_status": "unsupported",
+          "expected_rule": "block_name_template",
+          "observed": {
+            "admission_diagnostic": {
+              "ast_kind": "CommandAst",
+              "line": 1,
+              "column": 1
+            },
+            "admission_rule": "block_name_template",
+            "code": "admission",
+            "status": "unsupported"
+          },
+          "passed": true
+        },
+        {
+          "control": "subexpression",
+          "case": "pester-002",
+          "expected_status": "unsupported",
+          "expected_rule": "block_name_template",
+          "observed": {
+            "admission_rule": "block_name_template",
+            "code": "admission",
+            "admission_diagnostic": {
+              "column": 1,
+              "line": 1,
+              "ast_kind": "CommandAst"
+            },
+            "status": "unsupported"
+          },
+          "passed": true
+        },
+        {
+          "control": "method",
+          "case": "pester-002",
+          "expected_status": "unsupported",
+          "expected_rule": "block_name_template",
+          "observed": {
+            "status": "unsupported",
+            "admission_rule": "block_name_template",
+            "admission_diagnostic": {
+              "ast_kind": "CommandAst",
+              "line": 1,
+              "column": 1
+            },
+            "code": "admission"
+          },
+          "passed": true
+        },
+        {
+          "control": "template_member",
+          "case": "pester-002",
+          "expected_status": "unsupported",
+          "expected_rule": "block_name_template",
+          "observed": {
+            "admission_diagnostic": {
+              "column": 1,
+              "ast_kind": "CommandAst",
+              "line": 1
+            },
+            "code": "admission",
+            "status": "unsupported",
+            "admission_rule": "block_name_template"
+          },
+          "passed": true
+        },
+        {
+          "control": "unknown_field",
+          "case": "pester-002",
+          "expected_status": "unsupported",
+          "expected_rule": "block_name_template",
+          "observed": {
+            "admission_diagnostic": {
+              "column": 1,
+              "ast_kind": "CommandAst",
+              "line": 1
+            },
+            "status": "unsupported",
+            "code": "admission",
+            "admission_rule": "block_name_template"
+          },
+          "passed": true
+        },
+        {
+          "control": "reserved",
+          "case": "pester-002",
+          "expected_status": "unsupported",
+          "expected_rule": "block_name_template",
+          "observed": {
+            "code": "admission",
+            "admission_diagnostic": {
+              "line": 1,
+              "ast_kind": "CommandAst",
+              "column": 1
+            },
+            "status": "unsupported",
+            "admission_rule": "block_name_template"
+          },
+          "passed": true
+        },
+        {
+          "control": "reserved_case",
+          "case": "pester-002",
+          "expected_status": "unsupported",
+          "expected_rule": "block_name_template",
+          "observed": {
+            "code": "admission",
+            "admission_diagnostic": {
+              "column": 1,
+              "ast_kind": "CommandAst",
+              "line": 1
+            },
+            "admission_rule": "block_name_template",
+            "status": "unsupported"
+          },
+          "passed": true
+        },
+        {
+          "control": "internal",
+          "case": "pester-002",
+          "expected_status": "unsupported",
+          "expected_rule": "block_name_template",
+          "observed": {
+            "admission_rule": "block_name_template",
+            "admission_diagnostic": {
+              "ast_kind": "CommandAst",
+              "line": 1,
+              "column": 1
+            },
+            "code": "admission",
+            "status": "unsupported"
+          },
+          "passed": true
+        },
+        {
+          "control": "script_root",
+          "case": "pester-002",
+          "expected_status": "unsupported",
+          "expected_rule": "block_name_template",
+          "observed": {
+            "admission_rule": "block_name_template",
+            "admission_diagnostic": {
+              "line": 1,
+              "ast_kind": "CommandAst",
+              "column": 1
+            },
+            "status": "unsupported",
+            "code": "admission"
+          },
+          "passed": true
+        },
+        {
+          "control": "scoped",
+          "case": "pester-002",
+          "expected_status": "unsupported",
+          "expected_rule": "block_name_template",
+          "observed": {
+            "status": "unsupported",
+            "code": "admission",
+            "admission_rule": "block_name_template",
+            "admission_diagnostic": {
+              "column": 1,
+              "line": 1,
+              "ast_kind": "CommandAst"
+            }
+          },
+          "passed": true
+        },
+        {
+          "control": "new_field_not_member",
+          "case": "pester-002",
+          "expected_status": "unsupported",
+          "expected_rule": "member_access",
+          "observed": {
+            "admission_rule": "member_access",
+            "admission_diagnostic": {
+              "line": 1,
+              "ast_kind": "MemberExpressionAst",
+              "column": 1
+            },
+            "code": "admission",
+            "status": "unsupported"
+          },
+          "passed": true
+        },
+        {
+          "control": "endpoint_not_member",
+          "case": "pester-001",
+          "expected_status": "unsupported",
+          "expected_rule": "member_access",
+          "observed": {
+            "admission_rule": "member_access",
+            "code": "admission",
+            "status": "unsupported",
+            "admission_diagnostic": {
+              "line": 1,
+              "ast_kind": "MemberExpressionAst",
+              "column": 1
+            }
+          },
+          "passed": true
+        }
+      ],
+      "container_removed": true
+    },
+    "corrected_replay": {
+      "image": "direct-harbor-verifier:templates-v2",
+      "image_id": "sha256:401c02a8fbc4f59dbf33ca7aa5961bad310d43e7742172c268e5f8705129c46d",
+      "submission_sha256": "407196e63354eb841f3d38c2d5d3daaba9aaec16aa721f75686f74e181d0bb1a",
+      "inference": false,
+      "complete": true,
+      "boundary": {
+        "network": "none",
+        "host_mounts": false,
+        "no_new_privileges": true,
+        "cpus": 2,
+        "memory_mb": 2048,
+        "pids": 256,
+        "worker_uid": 53001,
+        "worker_checks": "unchanged grader requires immutable inputs, dropped privileges/capabilities and inaccessible protected verifier files"
+      },
+      "process_exit": 0,
+      "submission_unchanged": true,
+      "outcome": {
+        "classification": "passed",
+        "code": "evaluated",
+        "reference_pass": 1,
+        "mutants_detected": 2,
+        "mutants_executed": 2,
+        "tests_executed": 36,
+        "pester_version": "6.2.0",
+        "powershell_version": "7.6.9"
+      },
+      "evaluation_status": "complete",
+      "container_removed": true
+    },
+    "remaining_containers": {
+      "direct-harbor-verifier:live": [],
+      "direct-harbor-verifier:templates-v2": []
+    },
+    "container_disposal_verified": true,
+    "image_archive": {
+      "sha256": "fd0fea7c7687939d8dbc31880f6b2ff3f583a39dc41afd3c57dc21e3d0f45bf9",
+      "size": 680421888,
+      "retention_days": 7
+    },
+    "build_inputs": {
+      "Dockerfile": {
+        "sha256": "813662e977dc22368419fdeb47901d3d41f354b702ce89575dcd98da9dde49ee",
+        "size": 272
+      },
+      "Runner.ps1": {
+        "sha256": "cb124e537956d21da50a7db5f87277e3f9865784616dcb20a01906bcbfea18e7",
+        "size": 18894
+      },
+      "profile.json": {
+        "sha256": "949a6decad403c03ba11e25c28426427950f9b60dae609a6e13ee8cf18b3dcc3",
+        "size": 512
+      },
+      "profiles/pester-001/profile.json": {
+        "sha256": "828740ffe8bbf54f01f83f401231fac5543950c9865d2e25ebda6bd0c1970510",
+        "size": 481
+      },
+      "profiles/pester-002/profile.json": {
+        "sha256": "949a6decad403c03ba11e25c28426427950f9b60dae609a6e13ee8cf18b3dcc3",
+        "size": 512
+      },
+      "profiles/pester-003/profile.json": {
+        "sha256": "8cff817e0645111f34aad5469305c6d25bc521017d2ee139ecdbaa936e437c15",
+        "size": 471
+      },
+      "profiles/pester-004/profile.json": {
+        "sha256": "f8d026dce5eff811a17afc6d6dafd3215fc16fd0c7ed897f68d6aa1bb9dcc042",
+        "size": 433
+      },
+      "template_checks.py": {
+        "sha256": "e5b3a00d0178066a0844326db5d933d069214b9fc77c1d652c9d4a02fc068ae0",
+        "size": 3602
+      },
+      "templates.Tests.ps1": {
+        "sha256": "49267d7dc96640f78fc2ff078c81873e877ae632af7d1be82a38a1fe6d7bd97c",
+        "size": 1196
+      }
+    },
+    "future_input_change": {
+      "execution_profile_sha256": "49eeaae2d540f936080db395f86f501a2bbeeda5254824a1d37d5bb23a1498b2",
+      "old_agent_documentation_retained_for_attempt_seven": true,
+      "prior_full_image_bundle_compatible_with_corrected_experiment": false,
+      "future_pair_requires_matching_agent_documentation_and_task_preparation": true
+    },
+    "qualification_runs": [
+      {
+        "attempt": 1,
+        "id": 42279639435,
+        "commit": "b0637f4d7556d0f29d0b6ed449f8ba62535f37aa",
+        "conclusion": "success",
+        "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42279639435",
+        "job_id": 128105004271
+      }
+    ],
+    "artifacts": [
+      {
+        "id": 13534568250,
+        "name": "corrected-template-verifier",
+        "size_in_bytes": 258110697,
+        "digest": "sha256:289c0fbc601039dd45181ffc3ab6bdc8e5aea7d0ab0acae6584c8c9a2bf3df7c",
+        "expires_at": "2026-11-13T19:31:51Z",
+        "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42279639435/artifacts/13534568250"
+      },
+      {
+        "id": 13534408247,
+        "name": "retrospective-evidence",
+        "size_in_bytes": 12233,
+        "digest": "sha256:753594d03ee313cc550993d65137745ba2df8e72e914435aa2ef6dea6984b05d",
+        "expires_at": "2026-12-06T19:31:49Z",
+        "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42279639435/artifacts/13534408247"
+      },
+      {
+        "id": 13534003969,
+        "name": "direct-harbor-trial-report",
+        "size_in_bytes": 315415,
+        "digest": "sha256:3a1070ddd8cea125c073d7495eed311bb4748fd932b692eeb4e5875cfe80858e",
+        "expires_at": "2026-12-06T19:31:58Z",
+        "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42279639435/artifacts/13534003969"
+      }
+    ],
+    "retained_image_download_verification": {
+      "source": {
+        "run_id": 42279639435,
+        "commit": "b0637f4d7556d0f29d0b6ed449f8ba62535f37aa",
+        "artifact_id": 13534568250,
+        "name": "corrected-template-verifier",
+        "artifact_digest": "sha256:289c0fbc601039dd45181ffc3ab6bdc8e5aea7d0ab0acae6584c8c9a2bf3df7c"
+      },
+      "zip_digest_verified": true,
+      "tar_sha256": "fd0fea7c7687939d8dbc31880f6b2ff3f583a39dc41afd3c57dc21e3d0f45bf9",
+      "manifest_matches_qualified_evidence": true,
+      "image_config_identity_verified": "sha256:401c02a8fbc4f59dbf33ca7aa5961bad310d43e7742172c268e5f8705129c46d",
+      "original_image_id": "sha256:2b1d93aa7557d2f8e3377552920e627cae9177e0af077e0fae5f2579cd4d4512",
+      "all_original_layers_reused": true,
+      "original_layers": 18,
+      "added_layers": 5,
+      "artifact_expires_at": "2026-11-13T19:31:51Z",
+      "manifest_sha256": "a66aeac636344fb6518ee24828514f34a7ff6029f5f1c49c9ccc6ff2432dd32b",
+      "local_image_load_or_candidate_execution": false
+    },
+    "policy_change": {
+      "kind": "admission_policy_coverage_change",
+      "version": 2,
+      "member_access_changed": false,
+      "new_template_fields": {
+        "pester-001": [
+          "Endpoint"
+        ],
+        "pester-002": [
+          "BaseMilliseconds"
+        ],
+        "pester-003": [],
+        "pester-004": []
+      },
+      "legacy_fields_retained": true,
+      "summary_case": "pester-005 is JSON-only; no Pester template policy applies",
+      "documentation": "Execution profile v2 explicitly enumerates case-specific template names; attempt seven received v1.",
+      "validation": "All 22 contract parser controls passed on the pinned verifier; native six-test fixture exercised case variations, positional/named/colon Name, ForEach/TestCases, legacy and documented parameter fields. Expressions, reserved/internal/scoped identifiers and new member access remain rejected."
+    },
+    "behavioral_basis": {
+      "official_documentation": "https://pester.dev/docs/usage/data-driven-tests",
+      "pinned_implementation": "https://github.com/pester/Pester/blob/6.2.0/src/functions/It.ps1",
+      "justification": "Pester 6.2.0 binds Name positionally or by name, aliases TestCases to ForEach, and makes literal data keys available as variables/template values. Public task contracts declare Endpoint and BaseMilliseconds. The explicit bounded allowlists add these names while preserving the original member-access and expression restrictions."
+    },
+    "original_outcome_preserved": true,
+    "correctness_criteria_unchanged": true,
+    "submission_bytes_unchanged": true,
+    "local_validation": {
+      "trial_suite": {
+        "tests": 69,
+        "skipped": 3,
+        "result": "passed"
+      },
+      "shared_real_parser_suite": {
+        "tests": 4,
+        "result": "passed"
+      },
+      "full_shared_wrapper_suite": {
+        "tests": 25,
+        "errors": 13,
+        "skipped": 6,
+        "result": "unavailable_dependency",
+        "reason": "SkillEvaluator is absent from the direct-Harbor environment. Native direct verifier coverage passed; no evaluator dependency was installed or promoted."
+      },
+      "original_and_corrected_local_replay": {
+        "admission_only": true,
+        "powershell": "7.6.6",
+        "old_rule": "block_name_template",
+        "new_status": "admitted",
+        "candidate_execution": false
+      }
+    },
+    "ready_for_separately_authorized_comparison": {
+      "corrected_pester_002_evaluator_qualified": true,
+      "complete_matched_image_bundle_ready": false,
+      "reason": "A future pair must prepare matching agent-visible v2 documentation and task manifests with the corrected verifier. The prior bundle intentionally fails current experiment validation. No additional model run is authorized."
+    },
+    "remaining_coverage": "The documented bounded syntax remains deliberately narrower than arbitrary Pester/PowerShell. No additional unsupported feature or infrastructure blocker was observed for this exact retained submission.",
+    "remaining_downloads": "Original dependencies were reused through all 18 verified base image layers; only five COPY layers were added. No APT/package/snapshot downloads or model requests occurred. GitHub artifact and pinned Harbor/host-tool downloads were still required.",
+    "maintenance": "One explicit template_fields list per PowerShell case, a six-line profile guard and one selection change in the runner, versioned agent documentation, independent contract checks, and a bounded retrospective entry point reusing existing artifact and control helpers. The obsolete coupling to member properties was removed. No service, framework, interpreter, Harbor override or skill revision was added.",
+    "interpretation": "The retained current-arm work now has a valid retrospective passing grade on the unchanged reference and two mutants. This establishes quality for that one submission under corrected admission coverage. The original attempt stays unsupported/unmeasured; the absent arm did not run, so skill benefit and matched comparison performance remain unmeasured.",
+    "source_scope": "Original attempt a753e39; correction and native qualification b0637f4. Reporting-only commits may follow without changing qualified grader or experiment content."
+  }
 }

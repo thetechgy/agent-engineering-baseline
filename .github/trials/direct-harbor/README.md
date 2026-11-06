@@ -577,3 +577,25 @@ Behavioral basis: official Pester data-driven test documentation and pinned
 Pester 6.2.0 `src/functions/It.ps1` (Name is positional/named; TestCases aliases
 ForEach; hashtable keys are test variables and template names). Native controls
 exercise these contracts rather than inferring correctness from parser success.
+
+Observed qualification: commit `b0637f4`, run 42279639435, execution 1/2, passed.
+The original verifier reproduced `block_name_template` at 23:9. The unchanged
+attempt-seven submission then received a valid separate retrospective grade:
+36 tests, reference passed, 2/2 defects detected, PowerShell 7.6.9 / Pester 6.2.0.
+All 22 parser controls and five native controls passed; verifier containers were
+removed. Known-good remained 2/2 and weak remained 0/2; unsupported and injected
+runner-error inputs remained ungraded with their expected classifications.
+
+The corrected image is `direct-harbor-verifier:templates-v2`, identity
+`sha256:401c02a8fbc4f59dbf33ca7aa5961bad310d43e7742172c268e5f8705129c46d`,
+retained in artifact 13534568250 through 2026-11-13 19:31:51 UTC. Independent
+download verification matched its ZIP, archive, manifest and configuration
+identities, with all 18 original filesystem layers reused and five COPY layers
+added. See `results/retrospective-evaluation.json` and the single HTML report.
+
+The corrected evaluator is qualified for the bounded pester-002 case. A complete
+future matched bundle still needs agent documentation/task preparation matching
+policy v2. No prior image qualification or original agent outcome was relabeled.
+The original attempt-seven result remains unsupported/unmeasured; skill benefit
+is unmeasured because the absent arm did not run. No new inference, judge,
+reservation or paid attempt occurred. Campaign remains 7/36, recovery 4/4.

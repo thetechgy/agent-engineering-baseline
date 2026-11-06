@@ -29,5 +29,9 @@
       "commit": "a753e39083d9d93fdb13906382b9b35e9902cdd4",
       "run_id": "42274188228"
     }
-  }
+  },
+  "status": "qualified_no_further_qualification_scheduled",
+  "executions_used": 1,
+  "qualification_run": 42279639435,
+  "qualified_commit": "b0637f4d7556d0f29d0b6ed449f8ba62535f37aa"
 }
