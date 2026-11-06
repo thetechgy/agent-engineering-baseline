@@ -31,10 +31,10 @@
         }
       ],
       "owner": "Maintainer review",
-      "hold": "Retain the qualified runtime until coordinated lock, compatibility patch, grader and execution-evidence qualification passes. See draft PR #109; newer releases alone do not establish admission.",
+      "hold": "Production and historical replay remain 0.3.0. Draft PR #119 installs the opt-in 0.8.0 replacement; see .github/evals/EVALUATION-PLAN.md and evaluator-candidate.json. Harbor 0.24.0 and LiteLLM <1.94.0.dev0 are upstream constraints, not claims that all dependencies are current.",
       "group": "evaluation-runtime compatibility group",
       "tag_prefix": "v",
-      "validation": "Qualify the evaluation runtime as a group: frozen locks, compatibility patch, CLI/preflight, graders, scoring, evidence/schema consumers, redaction, and historical comparison policy. Preserve historical tooling and use a new policy identity when inputs change. No independent SDK upgrade.",
+      "validation": "Keep production freshness visible while qualifying the isolated replacement. Candidate locks, producer/scoring identities, fixture collection and consolidated reporting are versioned separately. Next independent group: SkillSpector and scanner owning environments through existing update-baseline and dependency-freshness automation; no paid benchmark prerequisite.",
       "modified": true,
       "package": {
         "ecosystem": "pip",

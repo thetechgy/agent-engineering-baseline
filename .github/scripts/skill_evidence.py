@@ -23,6 +23,7 @@ from types import SimpleNamespace
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import skill_reports as reports
+import evaluator_profiles as profiles
 
 ROOT = Path(__file__).resolve().parents[2]
 JSON_LIMIT = 8 * 1024 * 1024
@@ -1299,7 +1300,15 @@ def policy_fields(value):
 
 
 def validate_policy(value, *, custom_only=False):
-    closed(value, ('id', 'published_id', 'provenance', 'patch_digest', 'fields', 'metric_set', 'judge', 'attempts'))
+    require(type(value) is dict, 'Invalid policy')
+    require(type(value.get('fields')) is dict, 'Invalid policy fields')
+    candidate = value['fields'].get('evaluator_revision') == profiles.CANDIDATE['revision']
+    closed(value, ('id', 'published_id', 'provenance', 'patch_digest', 'fields', 'metric_set', 'judge', 'attempts') + (('producer_profile', 'scoring_policy') if candidate else ()))
+    if candidate:
+        require(value['judge']['enabled'] is False, 'Offline candidate judging must remain unavailable')
+        require(value['producer_profile'] == profiles.CANDIDATE['id'] and value['scoring_policy'] == ('custom-overall-v1' if custom_only else profiles.CANDIDATE['scoring']), 'Unsupported candidate scoring profile')
+        require(value['fields']['harbor'] == profiles.CANDIDATE['harbor'] and value['fields']['python'] == profiles.CANDIDATE['python'], 'Contradictory candidate policy')
+        require(value['patch_digest'] == 'sha256:' + profiles.CANDIDATE['patch_sha256'], 'Candidate patch identity mismatch')
     optional(value['id'], sha); optional(value['published_id'], token); enum(value['provenance'], PROVENANCE)
     optional(value['patch_digest'], sha); optional(value['metric_set'], lambda v: enum(v, ('custom-only',) if custom_only else ('skill-evaluator-default-v2',)))
     fields = value['fields']; closed(fields, POLICY_FIELDS)
@@ -1319,7 +1328,7 @@ def validate_policy(value, *, custom_only=False):
         else:
             token(val)
     if fields['evaluator_revision'] is not None:
-        require(fields['evaluator_revision'] == reports.POLICY['evaluator_revision'], 'Unsupported native evaluator')
+        profiles.by_revision(fields['evaluator_revision'])
     judge = value['judge']; closed(judge, ('model', 'provider', 'enabled'))
     optional(judge['model'], token); optional(judge['provider'], token); optional(judge['enabled'], boolean)
     closed(value['attempts'], ('mode', 'maximum', 'stop_on_pass', 'pass_threshold'))
@@ -1336,6 +1345,8 @@ def validate_policy(value, *, custom_only=False):
     if fields['stop_on_pass'] is not None and value['attempts']['stop_on_pass'] is not None:
         require(fields['stop_on_pass'] == value['attempts']['stop_on_pass'], 'Stop-on-pass policy mismatch')
     canonical = {key: value[key] for key in ('fields', 'patch_digest', 'metric_set', 'judge', 'attempts')}
+    if candidate:
+        canonical.update({key: value[key] for key in ('producer_profile', 'scoring_policy')})
     require(value['id'] == (identity(canonical) if value['provenance'] != 'unknown' else None), 'Policy identity mismatch')
 
 
@@ -1343,6 +1354,8 @@ def make_policy(fields=None, patch=None, metric_set=None, judge=None, attempts=N
     value = {'fields': policy_fields(fields or {}), 'patch_digest': patch, 'metric_set': metric_set,
              'judge': judge or {'model': None, 'provider': None, 'enabled': None},
              'attempts': attempts or {'mode': 'unknown', 'maximum': None, 'stop_on_pass': None, 'pass_threshold': None}}
+    if value['fields']['evaluator_revision'] == profiles.CANDIDATE['revision']:
+        value.update(producer_profile=profiles.CANDIDATE['id'], scoring_policy='custom-overall-v1' if metric_set == 'custom-only' else profiles.CANDIDATE['scoring'])
     return {**value, 'id': identity(value) if provenance != 'unknown' else None,
             'provenance': provenance, 'published_id': published}
 
@@ -1489,7 +1502,19 @@ def validate_evidence(data, *, public=False, _observed_at=None):
     seen = set(); native_ids = set(); observation_ids = set()
     for obs in data['observations']:
         obs_fields = OBSERVATION_FIELDS
+        if 'producer_profile' in data['policy']: obs_fields += ('raw_scores', 'raw_deterministic_scores')
         closed(obs, obs_fields if public else obs_fields + ('native_id', 'native_trial', 'native_task'))
+        if 'raw_scores' in obs:
+            closed(obs['raw_scores'], SCORE_FIELDS)
+            for val in obs['raw_scores'].values(): optional(val, number)
+            closed(obs['raw_deterministic_scores'], GATE_FIELDS)
+            for val in obs['raw_deterministic_scores'].values(): optional(val, number)
+            require(obs['score'] is None and obs['rubric_pass'] is None and
+                    all(obs['scores'][k] is None for k in ('accuracy', 'goal_accuracy', 'behavior_check', 'overall')),
+                    'Offline candidate cannot acquire judged quality')
+            if obs['raw_deterministic_scores']['evidence'] == 0:
+                require(all(v is None for v in obs['deterministic_scores'].values()) and obs['scores']['security'] is None,
+                        'Missing candidate evidence became a measurement')
         sha(obs['id']); enum(obs['arm'], ('with_skill', 'without_skill')); require(obs['case_id'] in ids, 'Unknown case')
         optional(obs['attempt'], lambda v: count(v, 100)); require(obs['attempt'] is None or obs['attempt'] >= 1, 'Invalid attempt index')
         if obs['attempt'] is None:
@@ -1905,6 +1930,9 @@ def project(data, *, static_bundle=None, behavioral_bundle=None):
     out['observations'] = [{key: copy.deepcopy(obs[key]) for key in
         OBSERVATION_FIELDS}
         for obs in data['observations']]
+    if 'producer_profile' in data['policy']:
+        for original, obs in zip(data['observations'], out['observations']):
+            for key in ('raw_scores', 'raw_deterministic_scores'): obs[key] = copy.deepcopy(original[key])
     if data['schema_version'] == 2:
         out['custom'] = copy.deepcopy(data['custom'])
         for original, obs in zip(data['observations'], out['observations']): obs['custom'] = copy.deepcopy(original['custom'])
@@ -1966,10 +1994,7 @@ def select_run(root, name, selected, *, entries=None, directory_identities=None)
 
 def validate_runtime_versions(versions):
     require(type(versions) is dict, 'Native versions object required')
-    if versions.get('skillevaluator') is not None:
-        require(versions['skillevaluator'] == '0.3.0', 'Unsupported native evaluator')
-    if versions.get('evaluator_revision') is not None:
-        require(versions['evaluator_revision'] == reports.POLICY['evaluator_revision'], 'Unsupported native evaluator')
+    return profiles.runtime(versions, owning=True)
 
 
 def native_error_count(record):
@@ -2104,7 +2129,7 @@ def validate_summary_rollups(payload, cases, ids, maximum, stop_on_pass):
         match(payload, 'avg_attempts_used', round(attempts_used / total, 4) if total else 0.0)
 
 
-def reconcile_native_arm(agent, arm, summary, observations, details):
+def reconcile_native_arm(agent, arm, summary, observations, details, *, candidate=False):
     """Bind retained arm summaries and report metrics to logical trial scores."""
     from skillevaluator.tier3.harbor.metrics import DEFAULT_METRICS, average_metrics, dimension_scores, overall_score
     from skillevaluator.tier3.harbor.collector import _average_overall
@@ -2163,7 +2188,10 @@ def reconcile_native_arm(agent, arm, summary, observations, details):
             require(value == means[key], 'Native arm/trial metric disagreement')
         if summary.get('overall_score') is not None:
             number(summary['overall_score'])
-            require(summary['overall_score'] == _average_overall(rewards), 'Native arm/trial metric disagreement')
+            require(summary['overall_score'] == _average_overall(rewards) or
+                    candidate and
+                    abs(summary['overall_score'] - _average_overall(rewards)) <= 0.000100000001,
+                    'Native arm/trial metric disagreement')
     return complete
 
 
@@ -2194,7 +2222,7 @@ def reconcile_policy(fields, versions, config, agent, attempt_policy):
     """Reject supplied identities that contradict known runtime/configuration values."""
     fields = policy_fields(fields)
     if fields['evaluator_revision'] is not None:
-        require(fields['evaluator_revision'] == reports.POLICY['evaluator_revision'], 'Unsupported native evaluator')
+        profiles.by_revision(fields['evaluator_revision'])
     harbor = config.get('harbor', {})
     observations = {key: [versions.get(key)] for key in
                     ('evaluator_revision', 'harbor', 'docker_compose', 'python')}
@@ -2313,23 +2341,30 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
         ref(root / 'versions.json')
     if any(versions.get(key) is None for key in ('skillevaluator', 'evaluator_revision')):
         limitations.add('metadata_missing')
+    producer = profiles.runtime(versions)
+    expected_scoring = producer['scoring']
+    if result.get('score_policy') is not None:
+        require(result['score_policy'] == expected_scoring, 'Contradictory native scoring identity')
     arm_summaries = {}
     for arm in ('with_skill', 'without_skill'):
         summary_path = run / 'codex' / arm.replace('_', '-') / 'summary.json'
         if summary_path in scanned_entries:
             summary = read_member(summary_path)
             require(type(summary) is dict, 'Invalid native summary')
+            if summary.get('score_policy') is not None:
+                require(summary['score_policy'] == expected_scoring, 'Contradictory native scoring identity')
             arm_summaries[arm] = summary
     snapshot_path = run / 'dataset_snapshot.json'
     if snapshot_path in scanned_entries:
         snapshot = read_member(snapshot_path, native_snapshot=True)
         require(type(snapshot) is dict, 'Native snapshot object required')
         require(type(snapshot.get('dataset')) is list and len(snapshot['dataset']) <= MAX_CASES, 'Snapshot case limit')
-        require(snapshot.get('evaluator_version') == '0.3.0', 'Invalid native snapshot')
+        producer = profiles.runtime(versions)
+        require(snapshot.get('evaluator_version') == producer['version'], 'Invalid native snapshot')
         # Match load_dataset_snapshot's pinned canonical checks on this buffer,
         # preserving its byte/node bounds without reopening the input member.
         expected = native_reports.build_dataset_snapshot(
-            [entry for entry in snapshot['dataset'] if type(entry) is dict], evaluator_version='0.3.0')
+            [entry for entry in snapshot['dataset'] if type(entry) is dict], evaluator_version=producer['version'])
         require(all(snapshot.get(key) == value for key, value in expected.items()), 'Invalid native snapshot')
         ids = sorted(case_ids([validate_case_id(e['id']) for e in snapshot['dataset']]))
         require(result.get('dataset_digest') == snapshot['dataset_digest']
@@ -2543,6 +2578,8 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
                 reward = read_member(reward_path) if reward_path in scanned_entries else None
                 if reward is not None:
                     require(type(reward) is dict, 'Reward object required')
+                    if reward.get('score_policy') is not None:
+                        require(reward['score_policy'] == expected_scoring, 'Contradictory native scoring identity')
                     require(reward.get('agent') is None or reward['agent'] == 'codex', 'Reward identity mismatch')
                     if reward.get('model') is not None:
                         token(reward['model']); models.add(reward['model'])
@@ -2612,7 +2649,7 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
         require(details != 'complete' or not lookup, 'Unmatched summary attempts')
         if orphan_rewards[arm] or missing_rubric_details:
             details = 'partial' if observed else 'unavailable'
-        if not reconcile_native_arm(agent, arm, summary, observed, details):
+        if not reconcile_native_arm(agent, arm, summary, observed, details, candidate=versions.get('skillevaluator') == profiles.CANDIDATE['version']):
             limitations.add('coverage_missing')
         if details != 'complete':
             limitations.add('case_details_missing')
@@ -2659,6 +2696,25 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
     budget.verify_repository()
     verify_directory_states(directory_states, directory_identities)
     verify_file_states(file_states, directory_identities, directory_states)
+    if 'producer_profile' in policy:
+        for obs in data['observations']:
+            obs['raw_scores'] = copy.deepcopy(obs['scores'])
+            obs['raw_deterministic_scores'] = copy.deepcopy(obs['deterministic_scores'])
+            if obs['raw_deterministic_scores']['evidence'] == 0:
+                obs['deterministic_scores'] = dict.fromkeys(GATE_FIELDS)
+                obs['deterministic_gate'] = None
+                for k in ('security', 'skill_execution', 'skill_efficiency'): obs['scores'][k] = None
+        if judge.get('enabled') is False:
+            for obs in data['observations']:
+                for key in ('accuracy', 'goal_accuracy', 'behavior_check', 'overall'): obs['scores'][key] = None
+                obs['score'] = obs['rubric_pass'] = None
+            data['metrics'] = []
+            for arm in data['arms']:
+                arm['coverage']['scored_attempts'] = 0
+                arm['coverage']['unscored_attempts'] = arm['coverage']['recorded_attempts']
+                arm['rubric'].update(passed_cases=None, total_cases=None)
+            data['availability']['status'] = 'incomplete'
+            data['availability']['reasons'] = sorted(set(data['availability']['reasons']) | {'coverage_missing'})
     validate_evidence(data, _observed_at=observed_at)
     guards = (input_guard(directory_identities, directory_states, file_states, budget),)
     return _CapturedRecord(data, guards) if extract else _BehavioralEvidence(data, behavioral_claim_identity(data), input_guards=guards)
@@ -3213,6 +3269,11 @@ def capture_custom_tasks(workspace, name, tasks, arm, *, purpose='benchmark'):
         grader = read_bytes(overlay / 'evals/grader.py')
         if name == 'gh':
             grader = read_bytes(overlay / 'evals/files/fixture.py').decode().rsplit('\nif __name__ ==', 1)[0].encode() + b'\n' + grader
+        if name == 'gh':
+            from importlib.metadata import version
+            if version('skillevaluator') == profiles.CANDIDATE['version']:
+                from gh_candidate import grader_source
+                grader = grader_source(grader)
         require(captured['tests/verifier/grader.py' if shared_pester else 'tests/grader.py'] == grader, 'Unapproved staged grader')
         if shared_pester:
             require(captured['tests/test.sh'] == read_bytes(overlay / 'support/test.sh'), 'Staged verifier entry drift')
@@ -3314,7 +3375,11 @@ def restore_captured_numeric_fields(values, excerpts, arm, native_id, case):
     """Use a typed original field only for the pinned redaction placeholder."""
     output = copy.deepcopy(values)
     for native, row in excerpts.get((arm, native_id), {}).items():
-        require(row['case_id'] == case and native in output, 'Numeric extract trial mismatch')
+        require(row['case_id'] == case, 'Numeric extract trial mismatch')
+        if native not in output:
+            from importlib.metadata import version
+            require(version('skillevaluator') == profiles.CANDIDATE['version'], 'Numeric extract trial mismatch')
+            output[native] = '<redacted>'
         require(output[native] == '<redacted>' or type(output[native]) in (int, float) and output[native] == row['value'],
                 'Numeric extract contradicts retained carrier')
         output[native] = row['value']
@@ -3340,8 +3405,9 @@ def custom_staged_inputs(tasks, purpose):
 def custom_capture(workspace, name, bundle, task_rows, *, purpose, attempts, agent, execution_policy, numeric_excerpts=()):
     """Prospective capture used by shared collection and credential-free qualification."""
     from importlib.metadata import version
-    require(version('skillevaluator') == '0.3.0' and version('harbor') == reports.POLICY['harbor']
-            and sys.version_info[:2] == (3, 13), 'Unsupported capture runtime')
+    producer = profiles.CANDIDATE if version('skillevaluator') == profiles.CANDIDATE['version'] else profiles.by_revision(profiles.HISTORICAL_REVISION)
+    require(version('skillevaluator') == producer['version'] and version('harbor') == producer['harbor']
+            and '.'.join(map(str,sys.version_info[:3])).startswith(producer['python']), 'Unsupported capture runtime')
     profile, definitions, contract = custom_contract(name, workspace)
     enum(purpose, ('benchmark', 'oracle_qualification'))
     expected = profile['qualification_cases'] if purpose == 'oracle_qualification' else {case: case for case in profile['cases']}
@@ -3356,20 +3422,27 @@ def custom_capture(workspace, name, bundle, task_rows, *, purpose, attempts, age
         require(sorted(row['case_id'] for row in rows) == ids, 'Incomplete staged custom arms')
     inv = inventory(workspace)
     src = next(row['source'] for row in inv['skills'] if row['source']['skill_id'] == name)
-    return {'schema_version': 1, 'skill': name, 'contract_digest': contract, 'purpose': purpose,
+    capture = {'schema_version': 1, 'skill': name, 'contract_digest': contract, 'purpose': purpose,
             'source': src, 'inputs': custom_source_manifest(workspace, name),
             'authored_digest': digest_bytes(read_bytes(workspace / '.github/evals' / name / 'evals/evals.json')),
             'prepared_dataset_digest': identity(prepared),
             'case_ids': ids, 'tasks': sorted(task_rows, key=lambda row: (row['arm'], row['case_id'])),
             'attempts': attempts, 'agent': agent, 'execution_policy': execution_policy, 'numeric_excerpts': list(numeric_excerpts),
-            'evaluator_revision': reports.POLICY['evaluator_revision'], 'evaluator_version': '0.3.0',
+            'evaluator_revision': producer['revision'], 'evaluator_version': producer['version'],
             'harbor_version': version('harbor'), 'python_version': '.'.join(map(str, sys.version_info[:3])), 'runtime': profile['runtime']}
+
+    if producer is profiles.CANDIDATE:
+        capture['producer'] = profiles.candidate_versions()
+        profiles.runtime(capture['producer'], owning=True)
+    return capture
 
 
 def validate_custom_capture(capture, name, workspace, *, captured_state=None):
+    require(type(capture) is dict, 'Invalid custom capture')
     closed(capture, ('schema_version', 'skill', 'contract_digest', 'purpose', 'source', 'inputs',
         'authored_digest', 'prepared_dataset_digest', 'case_ids', 'tasks', 'attempts', 'agent', 'execution_policy', 'numeric_excerpts',
-        'evaluator_revision', 'evaluator_version', 'harbor_version', 'python_version', 'runtime'))
+        'evaluator_revision', 'evaluator_version', 'harbor_version', 'python_version', 'runtime') +
+        (('producer',) if capture.get('evaluator_revision') == profiles.CANDIDATE['revision'] else ()))
     if captured_state is not None:
         directories, states, members, budget = captured_state
         for source_root in (workspace / '.github/evals' / name, workspace / '.apm/skills' / name
@@ -3387,9 +3460,13 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None):
     require(all(profile[key] == value for key, value in identities.items()), 'Unregistered grader, fixture or runtime version')
     require(capture['authored_digest'] == profile['dataset_digest'] == digest_bytes(read_bytes(workspace / '.github/evals' / name / 'evals/evals.json')),
             'Authored dataset drift')
-    require(type(capture['python_version']) is str and bool(re.fullmatch(r'3\.13\.[0-9]+', capture['python_version'])), 'Unsupported capture Python')
-    require(capture['evaluator_revision'] == reports.POLICY['evaluator_revision']
-            and capture['evaluator_version'] == '0.3.0' and capture['harbor_version'] == reports.POLICY['harbor']
+    producer = profiles.by_revision(capture['evaluator_revision'])
+    if producer is profiles.CANDIDATE:
+        require(capture['producer'] == profiles.candidate_versions(), 'Contradictory custom producer identity')
+        profiles.runtime(capture['producer'], owning=True)
+    require(type(capture['python_version']) is str and (capture['python_version'] == producer['python'] if producer is profiles.CANDIDATE else
+            bool(re.fullmatch(r'3\.13\.[0-9]+', capture['python_version']))), 'Unsupported capture Python')
+    require(capture['evaluator_version'] == producer['version'] and capture['harbor_version'] == producer['harbor']
             and capture['runtime'] == profile['runtime'], 'Custom runtime identity mismatch')
     enum(capture['purpose'], ('benchmark', 'oracle_qualification')); validate_source(capture['source'])
     count(capture['attempts'], 100); require(capture['attempts'] > 0, 'Zero planned attempts')
@@ -3431,6 +3508,9 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None):
         overlay = workspace / '.github/evals' / name
         grader = read_bytes(overlay / 'evals/grader.py')
         if name == 'gh': grader = read_bytes(overlay / 'evals/files/fixture.py').decode().rsplit('\nif __name__ ==', 1)[0].encode() + b'\n' + grader
+        if name == 'gh' and producer is profiles.CANDIDATE:
+            from gh_candidate import grader_source
+            grader = grader_source(grader)
         shared_pester = profile['id'] == 'pester-pilot-v3'
         require(task['members'].get('tests/verifier/grader.py' if shared_pester else 'tests/grader.py') == digest_bytes(grader), 'Staged grader drift')
         if shared_pester:
@@ -3565,7 +3645,8 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
             environment=capture['execution_policy']['environment'], workspace_mode='isolated', task_source='native_harbor',
             model=config.get('provider', {}).get('model'), provider=config.get('provider', {}).get('name'))
         policy = make_policy(fields,
-            digest_bytes(read_bytes(workspace / reports.PATCH)), 'custom-only',
+            ('sha256:' + profiles.CANDIDATE['patch_sha256'] if capture['evaluator_revision'] == profiles.CANDIDATE['revision'] else
+             digest_bytes(read_bytes(workspace / reports.PATCH))), 'custom-only',
             {'model': None, 'provider': None, 'enabled': False},
             {'mode': 'unknown' if capture['purpose'] == 'oracle_qualification' else 'confirmation',
              'maximum': capture['attempts'], 'stop_on_pass': False, 'pass_threshold': None}, 'runtime_recorded')
@@ -3716,6 +3797,9 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
                 'scores': dict.fromkeys(SCORE_FIELDS), 'rubric_pass': None, 'deterministic_gate': None,
                 'deterministic_scores': dict.fromkeys(GATE_FIELDS), 'references': obs_refs}
             require(observation is not None, 'Missing standard observation')
+            if not standard and capture['evaluator_revision'] == profiles.CANDIDATE['revision']:
+                observation['raw_scores'] = {key: raw.get(key) for key in SCORE_FIELDS}
+                observation['raw_deterministic_scores'] = dict.fromkeys(GATE_FIELDS)
             observation['custom'] = {'outcome': outcome, 'measurements': custom_measurements(definitions,
                 profile['cases'][mapping[case_id]], outcome, values, detail, obs_refs),
                 'usage': custom_usage(trial), 'references': obs_refs}
@@ -3761,7 +3845,14 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
         for value in native_custom.values(): number(value)
         computed_custom[arm] = expected_custom if native['execution_status'] == 'succeeded' else {}
         if details_complete:
-            require(native_custom == computed_custom[arm], 'Native custom average contradiction')
+            if capture['evaluator_version'] == profiles.CANDIDATE['version']:
+                from skillevaluator.utils.redaction import is_sensitive_key
+                # 0.8 omits sensitive names, rather than retaining a redacted marker.
+                # Every restored per-trial value was validated against captured native bytes above.
+                expected_visible = {k: v for k, v in computed_custom[arm].items() if not is_sensitive_key(k)}
+                require(native_custom == expected_visible, 'Native custom average contradiction')
+            else:
+                require(native_custom == computed_custom[arm], 'Native custom average contradiction')
             field = 'custom_' + arm
             if field in agent: require(agent[field] == native_custom, 'Native custom arm carrier contradiction')
     if 'custom_lift' in agent and all(arm['coverage']['case_details'] == 'complete' for arm in (arms or data['arms'])):
@@ -3769,6 +3860,9 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
         paired_complete = all(conditions[arm]['execution_status'] == 'succeeded' for arm in conditions)
         expected_lift = _compute_custom_lift(computed_custom['with_skill'], computed_custom['without_skill'],
             original_rewards['with_skill'], original_rewards['without_skill'], include_overall=profile['grading'] == 'custom_only') if paired_complete else {}
+        if capture['evaluator_version'] == profiles.CANDIDATE['version']:
+            from skillevaluator.utils.redaction import is_sensitive_key
+            expected_lift = {k: v for k, v in expected_lift.items() if not is_sensitive_key(k)}
         require(agent['custom_lift'] == expected_lift, 'Native custom lift contradiction')
     data['custom']['agent_version'] = next(iter(agent_versions)) if agent_versions else None
     if arms: data['arms'] = arms
@@ -3781,6 +3875,19 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
     data['availability'] = {'status': 'incomplete' if limitations else 'complete',
                             'reasons': sorted(limitations), 'provenance': 'runtime_recorded'}
     data['references'] = sorted(refs, key=lambda row: row['id'])
+    if 'producer_profile' in data['policy'] and not standard:
+        for obs in data['observations']:
+            obs.setdefault('raw_scores', dict.fromkeys(SCORE_FIELDS))
+            obs.setdefault('raw_deterministic_scores', dict.fromkeys(GATE_FIELDS))
+    if 'producer_profile' in data['policy'] and standard:
+        for obs in data['observations']:
+            if obs['raw_deterministic_scores']['evidence'] == 0:
+                obs['custom']['outcome'] = 'unknown'
+                for m in obs['custom']['measurements']:
+                    if m['applicability'] == 'applicable':
+                        m.update(status='unavailable', value=None, numerator=None, denominator=None, reason='unknown')
+                data['availability']['status'] = 'incomplete'
+                data['availability']['reasons'] = sorted(set(data['availability']['reasons']) | {'execution_incomplete'})
     guard = input_guard(directories, states, members, budget); guard()
     validate_evidence(data)
     return _BehavioralEvidence(data, behavioral_claim_identity(data), input_guards=(guard, *record_guards(standard or {})))
@@ -3867,7 +3974,10 @@ def validate_custom_evidence(data, *, public=False, _observed_at=None):
     require(type(data['observations']) is list and len(data['observations']) <= MAX_TRIALS, 'Custom observation limit')
     seen = set(); native_seen = set(); observation_ids = set()
     for obs in data['observations']:
-        closed(obs, OBSERVATION_FIELDS + ('custom',) + (() if public else ('native_id', 'native_trial', 'native_task')))
+        closed(obs, OBSERVATION_FIELDS + ('custom',) + (('raw_scores', 'raw_deterministic_scores') if 'producer_profile' in data['policy'] else ()) + (() if public else ('native_id', 'native_trial', 'native_task')))
+        if 'producer_profile' in data['policy']:
+            closed(obs['raw_scores'], SCORE_FIELDS); closed(obs['raw_deterministic_scores'], GATE_FIELDS)
+            for val in (*obs['raw_scores'].values(), *obs['raw_deterministic_scores'].values()): optional(val, number)
         sha(obs['id']); enum(obs['arm'], ('with_skill', 'without_skill'))
         require(obs['case_id'] in ids and obs['id'] not in observation_ids, 'Custom observation identity')
         observation_ids.add(obs['id'])
@@ -3944,6 +4054,8 @@ def validate_custom_evidence(data, *, public=False, _observed_at=None):
         coverage = arm['coverage']; closed(coverage, ('expected_cases', 'expected_attempts', 'recorded_attempts', 'scored_attempts', 'unscored_attempts', 'case_details'))
         rows = [obs for obs in data['observations'] if obs['arm'] == arm['name']]
         measured = sum(obs['custom']['outcome'] in CUSTOM_MEASURED for obs in rows)
+        if 'producer_profile' in data['policy'] and profile['grading'] == 'default_plus_custom':
+            measured = sum(obs['score'] is not None for obs in rows)
         require(coverage['expected_cases'] == len(ids) and coverage['expected_attempts'] == len(ids) * maximum
                 and len(rows) <= coverage['recorded_attempts'] <= coverage['expected_attempts']
                 and measured <= coverage['scored_attempts'] <= coverage['recorded_attempts']

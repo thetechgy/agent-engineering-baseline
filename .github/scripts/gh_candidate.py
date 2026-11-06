@@ -16,10 +16,16 @@ def stage(workspace, destination, selected=None):
             raise ValueError("Unreviewed gh task initialization recipe")
         config.write_text(text.removesuffix(expected))
     grader = bundle / "evals/grader.py"
+    grader.write_bytes(grader_source(grader.read_bytes()))
+    return bundle
+
+
+def grader_source(source):
+    """The sole reviewed candidate verifier import-path transformation."""
     old = 'native_path = Path(os.environ.get("HARBOR_TESTS_DIR", "/tests")) / "eval.py"'
     new = ('native_path = Path(os.environ.get("HARBOR_TESTS_DIR", "/tests")) / "skill_evaluator/eval.py"\n'
            '    import sys\n    sys.path.insert(0, str(native_path.parent))')
-    if grader.read_text().count(old) != 1:
+    text = source.decode()
+    if text.count(old) != 1:
         raise ValueError("Unreviewed gh native verifier loading contract")
-    grader.write_text(grader.read_text().replace(old, new))
-    return bundle
+    return text.replace(old, new).encode()

@@ -1,29 +1,7 @@
 name: Candidate Pester packaging
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/evaluator-backends/**'
-      - '.github/evals/**'
-      - '.github/scripts/**'
-      - '.github/tests/**'
-      - '.github/patches/**'
-      - '.github/requirements/**'
-      - '.github/workflows/**'
-      - '.apm/skills/powershell-pester-6/**'
-      - '.agents/skills/powershell-pester-6/**'
-  pull_request:
-    paths:
-      - '.github/evaluator-backends/**'
-      - '.github/evals/**'
-      - '.github/scripts/**'
-      - '.github/tests/**'
-      - '.github/patches/**'
-      - '.github/requirements/**'
-      - '.github/workflows/**'
-      - '.apm/skills/powershell-pester-6/**'
-      - '.agents/skills/powershell-pester-6/**'
+  workflow_dispatch:
 
 permissions:
   contents: read

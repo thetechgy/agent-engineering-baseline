@@ -478,6 +478,7 @@ def record_support(rid, record):
                 'rubric_pass': obs['rubric_pass'], 'deterministic_gate': obs['deterministic_gate']}) +
             disclosure('Native component scores and gate details', {
                 'observation_id': obs['id'], 'scores': obs['scores'], 'deterministic_scores': obs['deterministic_scores'],
+                **({k: obs[k] for k in ('raw_scores', 'raw_deterministic_scores')} if 'raw_scores' in obs else {}),
                 **({'custom': obs['custom']} if 'custom' in obs else {})},
                 target=anchor('components', rid, obs['id'])) + refs])
     if observations:
@@ -559,6 +560,14 @@ def behavioral(run, records):
         '<p>Limitations: ' + limitations(run['availability']) + '</p>',
         '<details><summary>Run identity and evaluated source</summary>' + disclosure('Exact record identity', rid) + '<p>Evaluated source: ' + text(run['source']['owner']) + ' · ' + code(run['source']['repository']) +
         ' · revision ' + code(run['source']['revision']) + '.</p></details>']
+    if 'producer_profile' in record['policy']:
+        parts.append('<p class="safety"><strong>Synthetic candidate qualification; excluded from production history.</strong> '
+            'Producer: ' + code(record['policy']['producer_profile']) + '; scoring policy: ' + code(record['policy']['scoring_policy']) + '. '
+            'No agent or model judge was run. Judge-dependent quality and composite scores are unavailable. '
+            'Raw fixed judge values below test transport only. Changed weighting is not skill improvement. '
+            'Task correctness, authorization, activation and the historical combined gate have separate meanings.</p>')
+        parts.append(table('Raw upstream standard values · synthetic transport only', ('Arm', 'Case', 'Raw values', 'Interpreted quality'),
+            [[safe(ARM[o['arm']]), code(o['case_id']), code(o['raw_scores']), 'Unavailable; no judge executed'] for o in record['observations']]))
     custom_only = record.get('custom', {}).get('profile_id') is not None and record['policy']['fields']['grading'] == 'custom_only'
     if 'custom' in run: parts.append(custom_measurements(run, record))
     if run['native_metrics']:
@@ -915,6 +924,8 @@ def render_report(result, captured, *, reviews=None, pages_context=None, histori
         '</select></div></header><main id="main" tabindex="-1"><section class="overview" aria-labelledby="overview">'
         '<h2 id="overview">Evidence overview</h2>')
     skills = result['skills']
+    if any('producer_profile' in record.get('policy', {}) for record in records.values()):
+        add('<p class="safety"><strong>Synthetic candidate qualification.</strong> Fixed judge values test transport only. No model judges ran; candidate quality is unavailable. Candidate records are excluded from production history and cannot establish skill improvement.</p>')
     add(executive_summary(result, records, pages=pages_context))
     add('</section>')
     add(review_first(result, records, attached))

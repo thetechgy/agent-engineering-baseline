@@ -1,0 +1,98 @@
+name: Current evaluator report qualification
+
+on:
+  pull_request:
+    paths:
+      - '.github/scripts/**'
+      - '.github/tests/**'
+      - '.github/evals/**'
+      - '.github/locks/**'
+      - '.github/patches/**'
+      - '.github/workflows/current-evaluator.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: current-evaluator-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  report:
+    name: Candidate collection and consolidated report (no inference)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHON_DOTENV_DISABLED: '1'
+      LITELLM_LOCAL_MODEL_COST_MAP: 'True'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: '0.13.7'
+          enable-cache: false
+      - name: Install isolated historical reporting runtimes
+        run: bash .github/scripts/setup-skillevaluator.sh reporting
+      - name: Verify historical report and custom semantics
+        run: |
+          "$SKILL_REVIEW_PYTHON" -B -m unittest discover -s .github/tests -p test_skill_report.py
+          "$SKILL_REVIEW_PYTHON" -B -m unittest discover -s .github/tests -p test_custom_metrics.py
+      - name: Install the frozen opt-in replacement
+        run: bash .github/scripts/setup-skillevaluator.sh candidate-current
+      - name: Qualify collection, interpretation and reporting without inference
+        run: '"$SKILL_CURRENT_PYTHON" -B .github/scripts/qualify_current_evaluator.py --output "$RUNNER_TEMP/current-report"'
+      - name: Retain synthetic report and sanitized diagnostics
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: candidate-offline-report
+          path: |
+            ${{ runner.temp }}/current-report/report.html
+            ${{ runner.temp }}/current-report/public/
+            ${{ runner.temp }}/current-report/analysis.json
+            ${{ runner.temp }}/current-report/metadata.json
+            ${{ runner.temp }}/current-report/result.json
+            ${{ runner.temp }}/current-report/replay-controls.json
+            ${{ runner.temp }}/current-report/scoring-policy.json
+            ${{ runner.temp }}/current-report/diagnostics.txt
+          retention-days: 30
+          if-no-files-found: error
+
+  native-preparation:
+    name: Current candidate native fixture startup and cleanup (no inference)
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHON_DOTENV_DISABLED: '1'
+      LITELLM_LOCAL_MODEL_COST_MAP: 'True'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: '0.13.7'
+          enable-cache: false
+      - name: Install the frozen replacement and verified Compose
+        run: |
+          bash .github/scripts/setup-skillevaluator.sh candidate-current
+          bash .github/scripts/setup-compose.sh
+      - name: Observe one native startup attempt and teardown
+        timeout-minutes: 8
+        run: '"$SKILL_CURRENT_PYTHON" -B .github/scripts/prepare_candidate_images.py --runtime current --output "$RUNNER_TEMP/current-native-preparation.json"'
+      - name: Retain bounded startup diagnostics
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: current-native-preparation
+          path: ${{ runner.temp }}/current-native-preparation.json
+          retention-days: 30
+          if-no-files-found: error
+      - name: Remove task-owned Compose plugin
+        if: always()
+        run: bash .github/scripts/setup-compose.sh cleanup

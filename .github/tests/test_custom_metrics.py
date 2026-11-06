@@ -34,7 +34,7 @@ def write(path, value):
     path.write_bytes(evidence.encoded(value))
 
 
-def synthetic_native(root, *, complete=False):
+def synthetic_native(root, *, complete=False, candidate=False):
     from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks
     from harbor.models.task.task import Task
     bundle = pester.stage(ROOT, root / 'bundle' / NAME)
@@ -109,14 +109,17 @@ def synthetic_native(root, *, complete=False):
     return native, run
 
 
-def synthetic_gh_native(root, *, unscoreable=False):
+def synthetic_gh_native(root, *, unscoreable=False, candidate=False, candidate_metrics=None):
     """Pinned collector over synthetic default+custom rewards; no model inference."""
     import gh_evaluations as gh
     from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks
     from skillevaluator.tier3.harbor.collector import collect_harbor_results
     from skillevaluator.tier3.harbor.report_data import build_dataset_snapshot
     from skillevaluator.tier3.dataset_utils import load_dataset_entries
-    bundle = gh.stage(ROOT, root / 'bundle/gh')
+    from evaluator_profiles import CANDIDATE
+    candidate_policy = {**reports.benchmark_policy('gh'), 'evaluator_revision': CANDIDATE['revision'], 'harbor': CANDIDATE['harbor'], 'python': CANDIDATE['python']}
+    from gh_candidate import stage as candidate_stage
+    bundle = (candidate_stage if candidate else gh.stage)(ROOT, root / 'bundle/gh')
     ids = sorted(entry['id'] for entry in gh.dataset(ROOT)); rows = []; jobs = root / 'jobs'
     with patch.dict('os.environ', {'SKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE': str(root / 'key')}):
         for present in (True, False):
@@ -133,6 +136,8 @@ def synthetic_gh_native(root, *, unscoreable=False):
                 default = dict.fromkeys(('security', 'skill_execution', 'skill_efficiency', 'accuracy', 'goal_accuracy', 'behavior_check'), 1.0)
                 custom = {'gh_' + key: 1.0 for key in evidence.GATE_FIELDS}
                 if not present: custom.update(gh_activation=0.0, gh_gate=0.0)
+                if candidate_metrics is not None:
+                    custom = candidate_metrics[arm, item['case_id']]
                 numeric = {**default, 'overall': 1.0, **custom}
                 if not failed:
                     write(trial / 'verifier/reward.json', numeric)
@@ -153,12 +158,12 @@ def synthetic_gh_native(root, *, unscoreable=False):
     collected = collect_harbor_results('gh', ['codex'], run, jobs, expected_cases=len(ids), expected_case_ids=ids,
                                       expected_trials=len(ids), agent_models={'codex': {'model': reports.POLICY['model'], 'source': 'synthetic_control'}})
     config = {'grading': {'mode': 'default_plus_custom'},
-              'judge': {'model': reports.POLICY['model'], 'provider': 'openai', 'enabled': True},
+              'judge': {'model': reports.POLICY['model'], 'provider': 'openai', 'enabled': not candidate},
               'provider': {'name': 'openai', 'model': reports.POLICY['model']},
               'harbor': {'n_attempts': 1, 'n_concurrent': 2, 'timeout_multiplier': 2.0, 'stop_on_pass': False,
                          'environment': {'value': 'docker'}},
               'evaluated_source': {'repository': 'thetechgy/agent-engineering-baseline', 'commit': evidence.git_revision(ROOT)}}
-    snapshot = build_dataset_snapshot(load_dataset_entries(bundle / 'evals/evals.json'), evaluator_version='0.3.0')
+    snapshot = build_dataset_snapshot(load_dataset_entries(bundle / 'evals/evals.json'), evaluator_version='0.8.0' if candidate else '0.3.0')
     write(run / 'dataset_snapshot.json', snapshot)
     write(run / 'run_config.json', config)
     write(run / 'result.json', {**collected, 'skill_name': 'gh', 'report_status': 'incomplete' if unscoreable else 'complete', 'run_config': config,
@@ -166,8 +171,10 @@ def synthetic_gh_native(root, *, unscoreable=False):
     write(native / 'versions.json', {'python': '3.13.17', 'skillevaluator': '0.3.0', 'harbor': '0.13.2',
           'docker_compose': '5.7.0', 'evaluator_revision': reports.POLICY['evaluator_revision']})
     write(native / 'provenance.json', {'schema_version': 1, 'skill': 'gh', 'mode': 'standard',
-          'policy': reports.benchmark_policy('gh'), 'revision': evidence.git_revision(ROOT),
-          'patch_sha256': evidence.digest_bytes(evidence.read_bytes(ROOT / reports.PATCH)).removeprefix('sha256:')})
+          'policy': candidate_policy if candidate else reports.benchmark_policy('gh'), 'revision': evidence.git_revision(ROOT),
+          'patch_sha256': CANDIDATE['patch_sha256'] if candidate else evidence.digest_bytes(evidence.read_bytes(ROOT / reports.PATCH)).removeprefix('sha256:')})
+    if candidate:
+        write(native / 'versions.json', {'python': CANDIDATE['python'], 'skillevaluator': CANDIDATE['version'], 'harbor': CANDIDATE['harbor'], 'evaluator_revision': CANDIDATE['revision'], 'lock_sha256': CANDIDATE['lock_sha256'], 'patch_sha256': CANDIDATE['patch_sha256']})
     write(native / evidence.CUSTOM_CAPTURE, evidence.custom_capture(ROOT, 'gh', bundle, rows,
         purpose='benchmark', attempts=1, agent='codex', execution_policy={'environment': 'docker',
         'concurrency': 2, 'timeout_multiplier': 2.0, 'stop_on_pass': False},
