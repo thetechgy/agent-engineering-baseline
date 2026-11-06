@@ -19,7 +19,7 @@
     "artifact_digest": "sha256:c777ab3dd090ecc3140cb65ea61f5e370d641876556a35378291400e1d1abd96"
   },
   "correction": "Use a verified local image tag for Dockerfile FROM; raw sha256 config IDs are interpreted as registry names by BuildKit. The base ID is checked before and after building; all original layers must be retained.",
-  "status": "preparing_matching_v2_inputs",
+  "status": "blocked_two_preparation_attempts_exhausted",
   "temporary_seed_release_removed": true,
   "reuse_note": "Validate original bundle against its original producer; add only execution-profile documentation to agent images and reuse the exact qualified corrected verifier. New manifests bind current inputs.",
   "corrected_verifier_source": {
@@ -77,17 +77,29 @@
   },
   "workflow_run_number": 39,
   "mode": "matching",
-  "executions_used": 1,
+  "executions_used": 2,
   "attempts": [
     {
       "attempt": 1,
       "run_id": 42283214785,
       "commit": "553e9f2f59a76737540f9eb58555e932eb052a1f",
       "outcome": "preparation_failure_before_reservation",
-      "failure": "Docker tried docker.io/library/sha256:<verified config ID> and received insufficient_scope.",
+      "stage": "matching_documentation_layers_and_preflight",
       "allocation_id": "sol-high-template-v2-20261106",
       "allocation_closed": true,
       "consumed": 0
+    },
+    {
+      "attempt": 2,
+      "run_id": 42283951417,
+      "commit": "a2c9df14db60a04859f00eda4a75ba075dc75a5d",
+      "outcome": "preparation_failure_before_reservation",
+      "stage": "matching_documentation_layers_and_preflight",
+      "allocation_id": "sol-high-template-v2-matched-20261106",
+      "allocation_closed": true,
+      "consumed": 0
     }
-  ]
+  ],
+  "latest_failure_run": 42283951417,
+  "ready_for_live_pair": false
 }

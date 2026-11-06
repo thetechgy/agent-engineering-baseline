@@ -618,3 +618,18 @@ interpreted a raw config SHA in FROM as a registry image name. Its allocation
 closed unused. Attempt 2 uses a local base tag whose verified image identity is
 checked before and after the documentation-only build; no dependency or
 experiment inputs changed. A second failure stops this task without a live run.
+
+Terminal outcome: attempt 2, run 42283951417, built both documentation layers
+and passed both runtime preflights, then failed the stopped-container
+`docker cp /workspace/input` content-export check. Its captured stderr was not
+published, so the exact copy failure remains undiagnosed. No matching bundle
+was exported or qualified on a fresh runner. Both unused allocations are
+closed; no environment approval, credential injection, evaluated inference,
+judge or reservation occurred. Campaign remains 7/36 and recovery 4/4.
+
+The two-execution preparation limit is exhausted. The smallest follow-up is to
+retain bounded sanitized Docker stderr and qualify the content reader against
+read-only input directories (a bounded tar-stream reader may avoid host
+extraction permission issues). This is a proposal, not a diagnosed permission
+failure or authorization for another complete execution. See
+`results/matching-preparation.json` for the exact evidence and limits.

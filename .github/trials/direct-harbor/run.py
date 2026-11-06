@@ -202,6 +202,24 @@ def report(output, data):
     text = '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">\n<title>Direct Harbor recovery trial</title><style>body{font:16px system-ui;max-width:1100px;margin:3rem auto;padding:0 1rem;color:#172033}table{border-collapse:collapse;width:100%;margin:1rem 0}th,td{border:1px solid #cbd5e1;padding:.5rem;text-align:left;vertical-align:top}pre{white-space:pre-wrap;overflow-wrap:anywhere}h1,h2{color:#174f78}a{color:#145f91}</style>\n<h1>Direct Harbor recovery trial</h1><p>Bounded experimental trial. Production evaluation and Pages remain unchanged.</p>\n<p><a href="results.json" download>Download machine-readable results</a> · <a href="manifest.json">Frozen input manifests</a> · <a href="workflow-evidence.txt">Workflow evidence excerpts</a></p>'
     text += '<h2>Decision</h2><p>' + esc(data['decision']) + '</p>'
     text += '<p>' + esc(data['summary']) + '</p>'
+    if data.get('matching_preparation'):
+        matching=data['matching_preparation']
+        text += '<h2>Matching version-two inputs</h2><p><a href="matching-preparation.json">Preparation, restored contents, manifests and artifact evidence</a></p>'
+        text += '<p>Preparation passed: '+esc(matching['passed'])+'. Complete preparation executions: '+esc(matching['attempts_used'])+'/2. The first execution failed before reservation because Docker interpreted a raw configuration SHA as a registry image name. The correction uses a verified local base tag.</p>'
+        if matching['passed']:
+            text += table(('Image','Identity'),matching['images'].items())
+            text += '<p>Both arms receive identical version-two execution documentation, SHA-256 <code>'+esc(matching['documentation']['sha256'])+'</code>. Only the target skill’s three files differ. The corrected verifier is reused unchanged. No packages were installed and no snapshot indexes were downloaded.</p>'
+            text += '<p>Experiment SHA-256: <code>'+esc(matching['experiment_sha256'])+'</code>. Fresh-runner restore, actual file checks, native controls and disposal passed. '+esc(matching['remaining_downloads'])+'</p>'
+            text += table(('Retained artifact','Bytes','Expires UTC','SHA-256'),[(a['name'],a['size_in_bytes'],a['expires_at'],a['digest']) for a in matching['artifacts']])
+        else:
+            text += '<p>'+esc(matching['failure'])+'</p>'
+            text += table(('Arm / planned attempt','Reserved / launched / completed / graded','Runtime preflight','Reference / mutants','Submission / usage'),[(r['variant']+' / '+str(r['planned_attempt']),'False / False / False / False','Passed; credential-free','Unmeasured','None; no evaluated session') for r in matching['arms']])
+            text += table(('Built but unretained image','Identity'),matching['built_images'].items())
+            text += '<p>No complete matching image bundle was exported. Fresh-runner restore and grading were skipped. Both unused allocations closed at 0/2; campaign consumption remains 7/36, earlier recovery 4/4. No environment approval, model credential injection, evaluated inference, model judge or reservation occurred. Historical provider billing remains unknown.</p>'
+            text += '<p>Disposal evidence: '+esc(matching['disposal'])+'</p><p>Smallest next correction: '+esc(matching['smallest_follow_up'])+'</p><p>'+esc(matching['skill_benefit'])+'</p>'
+            text += table(('Preparation execution','Commit','Conclusion'),[(r['run']['id'],r['run']['head_sha'],r['run']['conclusion']) for r in matching['preparation_attempts']])
+            for a in matching['artifact_inventory']:
+                text += '<p><a href="'+esc(a['url'])+'">Run '+esc(a['run_id'])+': '+esc(a['name'])+'</a> · expires '+esc(a['expires_at'])+'</p>'
     if data.get('retrospective_evaluation'):
         retrospective=data['retrospective_evaluation']
         text += '<h2>Retrospective evaluation: template admission policy v2</h2><p><a href="retrospective-evaluation.json">Separate replay identities, native outcomes and controls</a></p>'
@@ -211,7 +229,7 @@ def report(output, data):
         text += table(('Native control','Outcome','Reference','Defects','Expected result / disposal'),[(c['control'],c.get('outcome',{}).get('classification'),c.get('outcome',{}).get('reference_pass'),c.get('outcome',{}).get('mutants_detected'),str(c['passed'])+' / '+str(c.get('container_removed'))) for c in retrospective.get('controls',[])])
         text += '<p>Qualification passed: '+esc(retrospective['passed'])+'. During this retrospective evaluation, new inference, judges, reservations and paid attempts were zero. Campaign consumption was 7/36; earlier recovery was 4/4. PowerShell 7.6.9 and Pester 6.2.0 are required by the unchanged native grader.</p>'
         if retrospective.get('failure'):text += '<p>Qualification failure: '+esc(retrospective['failure'])+'</p>'
-        text += '<p>Revised execution-profile documentation is a future experiment input. Attempt seven did not receive it. The old full image bundle is incompatible with the corrected experiment; a future matched pair needs prepared agent documentation and task manifests matching the corrected verifier. No paid run follows automatically.</p>'
+        text += '<p>Attempt seven did not receive the revised execution-profile documentation. At retrospective qualification, matching agent documentation and task manifests still required preparation; the original full image bundle was incompatible. The separately authorized matching preparation and any later pair are recorded independently.</p>'
     if data.get('smoke_review'):
         smoke=data['smoke_review'];diagnosis=smoke['offline_diagnosis']
         text += ('<h2>Historical smoke allocation</h2>' if data.get('retrospective_evaluation') else '<h2>New qualified-image smoke result</h2>')+'<p><a href="smoke-review.json">Run, approval, images, task identities and retention evidence</a> · <a href="offline-submission-diagnosis.json">Offline submission diagnosis</a></p>'

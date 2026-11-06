@@ -100,3 +100,6 @@ Retrospective policy v2 qualification: run 42279639435, commit b0637f4d7556d0f29
 Original image reproduced unsupported/block_name_template at 23:9. Corrected image admitted the unchanged submission: reference_pass=1, mutants_detected=2/2, tests_executed=36, PowerShell=7.6.9, Pester=6.2.0.
 22 parser controls and five native controls passed; all replay/control containers disposed. Corrected image archive/config/layer identities verified after download.
 No model credentials, inference, judges, reservations or new paid attempts. Campaign 7/36; prior recovery 4/4; allocation remains closed. Historical attempt seven stays unsupported/unmeasured.
+
+Matching v2 preparation: 553e9f2 / run 42283214785 failed in Docker FROM reference; a2c9df1 / run 42283951417 built current and absent COPY layers and passed runtime preflights, then failed docker cp content inspection. Both runs closed unused allocations at 0/2. No bundle export or fresh-runner qualification occurred.
+Both executions exhausted; no third preparation, environment approval, model credentials, inference, judges or reservations. Campaign 7/36, recovery 4/4 unchanged. Retrospective attempt seven remains separate.
