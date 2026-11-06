@@ -1,6 +1,7 @@
 """Independent Pester 6.2.0 semantics fixtures, not derived from either candidate."""
 import json,sys,tempfile
 from pathlib import Path
+sys.path.insert(0,str(Path(__file__).resolve().parent))
 from admission_checks import inspect
 
 # Expected results come from pinned classic BeTrueOrFalse and standalone Boolean

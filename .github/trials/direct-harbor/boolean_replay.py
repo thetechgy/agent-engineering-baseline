@@ -95,7 +95,7 @@ def main(root,report):
     assert launch['phase']=='boolean' and launch['paid_attempts_used']==9 and launch['paid_attempts_reserved']==0 and launch['allocation']['state']=='closed' and launch['paid_execution_enabled'] is False and launch['scheduling_stopped'] is True
     assert os.environ['GITHUB_REPOSITORY']==prepared.REPOSITORY and os.environ['GITHUB_REF']==prepared.BRANCH and os.environ['GITHUB_EVENT_NAME']=='push' and os.environ['GITHUB_RUN_ATTEMPT']=='1'
     root.mkdir(parents=True,exist_ok=False);ops=DockerOperations(root/'public/operations.json')
-    evidence={'kind':'retrospective_boolean_policy_v3_pair','passed':False,'commit':os.environ['GITHUB_SHA'],'run_id':os.environ['GITHUB_RUN_ID'],'window':config['window'],'policy_version':3,'inference':False,'model_judge':False,'new_reservations':0,'campaign_attempts':9,'recovery_attempts':4,'original_attempt_commit':config['original_attempt_commit'],'original_live_run':42295570341,'submissions':{},'controls':[],'replays':{},'post_output_policy_change':True,'qualification_basis':config['qualification_basis']}
+    evidence={'kind':'retrospective_boolean_policy_v3_pair','passed':False,'commit':os.environ['GITHUB_SHA'],'run_id':os.environ['GITHUB_RUN_ID'],'window':config['window'],'policy_version':3,'inference':False,'model_judge':False,'new_reservations':0,'campaign_attempts':9,'recovery_attempts':4,'original_attempt_commit':config['original_attempt_commit'],'original_live_run':42295570341,'submissions':{},'controls':[],'replays':{},'post_output_policy_change':True,'qualification_basis':config['qualification_basis'],'qualification_history':config.get('qualification_history',[])}
     try:
         evidence['stage']='download_and_verify'
         candidates={}

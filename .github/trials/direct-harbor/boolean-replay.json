@@ -93,5 +93,116 @@
     ],
     "semantics": "Classic truthiness/falsiness and standalone Boolean identity remain distinct. No assertion translation.",
     "broader_gaps": "Unlisted comparison operators, string normalization, collection combinators and aliases remain outside the explicit subset; no general PowerShell support added."
-  }
+  },
+  "qualification_history": [
+    {
+      "run": {
+        "id": 42301168254,
+        "head_sha": "65f1b8cacb616dd139d1b20c7f9b921b7538f917",
+        "head_branch": "trial/direct-harbor",
+        "run_number": 45,
+        "run_attempt": 1,
+        "status": "completed",
+        "conclusion": "failure",
+        "event": "push",
+        "path": ".github/workflows/direct-harbor-trial.yml",
+        "html_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42301168254",
+        "created_at": "2026-11-06T21:59:34Z",
+        "updated_at": "2026-11-06T22:01:10Z"
+      },
+      "artifacts": [
+        {
+          "id": 13543313785,
+          "node_id": "MDg6QXJ0aWZhY3QxMzU0MzMxMzc4NQ==",
+          "name": "retrospective-evidence",
+          "size_in_bytes": 14016,
+          "url": "https://api.github.com/repos/thetechgy/agent-engineering-baseline/actions/artifacts/13543313785",
+          "archive_download_url": "https://api.github.com/repos/thetechgy/agent-engineering-baseline/actions/artifacts/13543313785/zip",
+          "expired": false,
+          "digest": "sha256:da40ac753acbdadc8df07e9d27213ef02c2ab770da1a8921c9c6dd24e507a1ca",
+          "created_at": "2026-11-06T22:01:06Z",
+          "updated_at": "2026-11-06T22:01:06Z",
+          "expires_at": "2026-12-06T22:01:05Z",
+          "workflow_run": {
+            "id": 42301168254,
+            "repository_id": 1299967456,
+            "head_repository_id": 1299967456,
+            "head_branch": "trial/direct-harbor",
+            "head_sha": "65f1b8cacb616dd139d1b20c7f9b921b7538f917"
+          }
+        },
+        {
+          "id": 13543244135,
+          "node_id": "MDg6QXJ0aWZhY3QxMzU0MzI0NDEzNQ==",
+          "name": "direct-harbor-trial-report",
+          "size_in_bytes": 515040,
+          "url": "https://api.github.com/repos/thetechgy/agent-engineering-baseline/actions/artifacts/13543244135",
+          "archive_download_url": "https://api.github.com/repos/thetechgy/agent-engineering-baseline/actions/artifacts/13543244135/zip",
+          "expired": false,
+          "digest": "sha256:b6424797c961b781147a0764bf6a4fb924afdd45f1d40b2b4d3c7c955c8501d5",
+          "created_at": "2026-11-06T22:01:07Z",
+          "updated_at": "2026-11-06T22:01:07Z",
+          "expires_at": "2026-12-06T22:01:07Z",
+          "workflow_run": {
+            "id": 42301168254,
+            "repository_id": 1299967456,
+            "head_repository_id": 1299967456,
+            "head_branch": "trial/direct-harbor",
+            "head_sha": "65f1b8cacb616dd139d1b20c7f9b921b7538f917"
+          }
+        }
+      ],
+      "stage": "independent_admission_and_native_controls",
+      "failure": {
+        "type": "DockerFailure",
+        "message": "boolean_parser: nonzero_exit"
+      },
+      "primary_docker_failure": {
+        "stage": "boolean_parser",
+        "command": [
+          "docker",
+          "run",
+          "--name",
+          "policy-parser-c4c2310c925b46cfa67b383a4b2ddc01",
+          "--network",
+          "none",
+          "--read-only",
+          "--tmpfs",
+          "/tmp:rw,nosuid,nodev,size=128m",
+          "--cap-drop",
+          "ALL",
+          "--security-opt",
+          "no-new-privileges:true",
+          "--cpus",
+          "2",
+          "--memory",
+          "2g",
+          "--pids-limit",
+          "256",
+          "--entrypoint",
+          "python3",
+          "direct-harbor-verifier:assertions-v3",
+          "-I",
+          "-c",
+          "import runpy,sys;sys.argv=sys.argv[1:]\ntry:runpy.run_path(sys.argv[0],run_name='__main__')\nexcept SystemExit:pass",
+          "/tests/boolean_checks.py",
+          "/opt/microsoft/powershell/7/pwsh",
+          "/tests/Runner.ps1",
+          "/tests/case/profile.json"
+        ],
+        "exit_status": 1,
+        "stderr": "Traceback (most recent call last):\n  File \"<string>\", line 2, in <module>\n  File \"<frozen runpy>\", line 287, in run_path\n  File \"<frozen runpy>\", line 98, in _run_module_code\n  File \"<frozen runpy>\", line 88, in _run_code\n  File \"/tests/boolean_checks.py\", line 4, in <module>\n    from admission_checks import inspect\nModuleNotFoundError: No module named 'admission_checks'",
+        "stderr_truncated": false,
+        "failure": {
+          "type": "nonzero_exit",
+          "message": "Docker operation failed"
+        },
+        "stdout_bytes": 0
+      },
+      "cleanup_failures": [],
+      "original_absent_reproduced": true,
+      "no_corrected_candidate_replay": true,
+      "correction": "Add explicit sibling helper import path for Python isolated mode; no policy or candidate change."
+    }
+  ]
 }

@@ -708,5 +708,6 @@
     "deadline": "2026-11-06T23:20:01Z",
     "minutes": 90,
     "scope": "Credential-free Boolean admission qualification and retrospective pair replay"
-  }
+  },
+  "boolean_qualification_revision": 2
 }
