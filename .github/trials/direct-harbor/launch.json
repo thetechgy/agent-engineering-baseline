@@ -1,5 +1,5 @@
 {
-  "phase": "report",
+  "phase": "live-pair",
   "campaign": "direct-harbor-20261104",
   "paid_attempts_used": 6,
   "paid_attempt_limit": 36,
@@ -11,12 +11,15 @@
   "recovery_control_attempt": 3,
   "native_fixture_retry": 1,
   "transport_preflight_corrections": 1,
-  "state": "qualified_image_smoke_pending",
+  "state": "qualified_image_smoke_armed",
   "final_native_run": 41958553130,
   "native_grading_smoke_qualified": true,
   "native_sandbox_qualified": false,
-  "paid_attempts_reserved": 0,
-  "planned_variants": [],
+  "paid_attempts_reserved": 2,
+  "planned_variants": [
+    "current",
+    "absent"
+  ],
   "preflight_estimate_usd": 2.64,
   "native_inner_sandbox_required": false,
   "external_preflight_attempt": 2,
@@ -97,11 +100,11 @@
   ],
   "final_live_run": 42110435228,
   "api_spend_usd": null,
-  "scheduling_stopped": true,
-  "stop_reason": "Scheduling remains disabled until the exact-run metadata-only arming commit; previous allocations remain closed.",
+  "scheduling_stopped": false,
+  "stop_reason": null,
   "diagnostic_actions_runs_reserved": 2,
   "diagnostic_actions_run_limit": 2,
-  "paid_execution_enabled": false,
+  "paid_execution_enabled": true,
   "diagnostic_reproduction_run": 42106956278,
   "accept_unknown_cost_for_testing": true,
   "credential_free_checks_passed": true,
@@ -125,7 +128,7 @@
     "case": "pester-002",
     "provider_enforced_dollar_cap": false,
     "id": "sol-high-reused-20261106",
-    "state": "pending_authorized",
+    "state": "armed",
     "attempts": {
       "current": 7,
       "absent": 8
@@ -143,7 +146,9 @@
       "name": "prepared-images",
       "artifact_digest": "sha256:2d95a9bb6ca91795c35148d0ab874f4f029e45e27d3749c9af7dd08eb1ecd75a",
       "manifest_sha256": "78f0f4f58085d3383f41df1f72ff616ba83b8e35c59ea077597d1d04346516e2"
-    }
+    },
+    "code_commit": "ea752bcfc2bdb0fafaf61189ca28d230e6a66f37",
+    "workflow_run_number": 34
   },
   "allocation_history": [
     {
