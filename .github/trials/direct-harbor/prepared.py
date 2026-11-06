@@ -227,6 +227,7 @@ def reuse_preflight(root):
             'inference':False,'image_rebuilds':0,'snapshot_index_downloads':0}
     import live
     try:
+        record['contents']=verify_contents(root,root/'public/reuse-image-contents.json')
         inventory=sorted(subprocess.check_output(['docker','image','ls','--no-trunc','--quiet'],text=True).splitlines())
         for variant in ('current','absent'):
             task=Path(json.loads((root/(variant+'-task.json')).read_text())['path'])
@@ -288,6 +289,7 @@ def qualify(bundle,root,expected):
     # All retained identities must exist before Harbor's supported prebuilt path starts.
     import live,admission_validation
     try:
+        record['contents']=verify_contents(root,root/'public/fresh-image-contents.json')
         inventory=subprocess.check_output(['docker','image','ls','--no-trunc','--quiet'],text=True).splitlines()
         record['image_inventory_before']=sorted(inventory)
         for variant in ('current','absent'):
@@ -311,6 +313,103 @@ def qualify(bundle,root,expected):
         raise
     finally:write(root/'public/fresh-qualification.json',record)
 
+def context_delta(context,variant,folder,original):
+    prefix='tasks/'+variant+'/'+folder+'/'
+    before={k.removeprefix(prefix):v for k,v in original['members'].items() if k.startswith(prefix)}
+    after=files(context)
+    changed={k for k in before.keys()|after.keys() if before.get(k)!=after.get(k)}
+    expected={'input/EXECUTION-PROFILE.md'} if folder=='environment' else {'Runner.ps1','case/profile.json','admission-fixtures/templates.Tests.ps1'}
+    assert changed==expected, 'Unexpected matching-input changes: '+str(sorted(changed))
+    return sorted(changed)
+
+def refresh_image(task,variant,folder,tag,retained,root):
+    """Only the documented input delta can reuse these historical package layers."""
+    changed=context_delta(task/folder,variant,folder,retained['original'])
+    if folder=='tests':
+        assert image_id(tag)==retained['corrected']['corrected_image_id']
+    else:
+        base=retained['original']['images'][tag]
+        assert image_id(tag)==base
+        context=root/('documentation-layer-'+variant);context.mkdir()
+        shutil.copyfile(task/'environment/input/EXECUTION-PROFILE.md',context/'EXECUTION-PROFILE.md')
+        (context/'Dockerfile').write_text('FROM '+base+'\nCOPY --chmod=0444 EXECUTION-PROFILE.md /workspace/input/EXECUTION-PROFILE.md\n')
+        before=json.loads(subprocess.check_output(['docker','image','inspect',base]))[0]
+        subprocess.run(['docker','build','--network=none','--pull=false','--progress=plain','-t',tag,str(context)],check=True,timeout=180)
+        after=json.loads(subprocess.check_output(['docker','image','inspect',tag]))[0]
+        assert after['Config']==before['Config'], 'Runtime image configuration changed'
+        assert after['RootFS']['Layers'][:-1]==before['RootFS']['Layers'], 'Original image layers changed'
+    write(root/'public'/variant/(folder+'-refresh.json'),{'changed_context_files':changed,'image':tag,'image_id':image_id(tag),'package_installs':0,'snapshot_downloads':0,'verifier_reused':folder=='tests'})
+
+def verify_contents(root,destination):
+    """Read actual restored image files without executing artifacts or mounting the host."""
+    import uuid
+    record={'passed':False,'images':{},'container_disposal_verified':False}
+    scratch=root/('image-content-'+uuid.uuid4().hex);scratch.mkdir()
+    try:
+        for variant,folder,tag,container_path in [('current','environment',TAGS[0],'/workspace/input'),('absent','environment',TAGS[1],'/workspace/input'),('current','tests',TAGS[2],'/tests')]:
+            task=Path(json.loads((root/(variant+'-task.json')).read_text())['path'])
+            name='matching-content-'+uuid.uuid4().hex;copy=scratch/(variant+'-'+folder)
+            try:
+                subprocess.run(['docker','create','--name',name,'--network','none','--cap-drop','ALL','--security-opt','no-new-privileges:true',tag],check=True,capture_output=True,timeout=30)
+                subprocess.run(['docker','cp',name+':'+container_path,str(copy)],check=True,capture_output=True,timeout=30)
+                expected=files(task/folder/('input' if folder=='environment' else ''))
+                if folder=='tests':expected={k:v for k,v in expected.items() if k not in ('Dockerfile','docker-compose.yaml') and not k.startswith('build/')}
+                observed=files(copy)
+                assert all(observed.get(k)==v for k,v in expected.items()), 'Restored image content mismatch: '+tag
+                if folder=='environment':
+                    assert observed==expected
+                    assert (copy/'EXECUTION-PROFILE.md').stat().st_mode&0o222==0
+                record['images'][tag]={'id':image_id(tag),'verified_files':expected}
+            finally:
+                subprocess.run(['docker','rm','--force',name],check=True,capture_output=True,timeout=30)
+        first=record['images'][TAGS[0]]['verified_files'];second=record['images'][TAGS[1]]['verified_files']
+        assert first==second, 'Agent task/documentation inputs differ'
+        record.update(passed=True,identical_agent_inputs=True,container_disposal_verified=True)
+    finally:
+        shutil.rmtree(scratch)
+        write(destination,record)
+    return record
+
+def matching(root,sources):
+    """Bounded v1-to-v2 input refresh; reuse the qualified verifier unchanged."""
+    no_credentials();identity()
+    config=json.loads((HERE/'preparation.json').read_text())
+    assert config['mode']=='matching' and config['attempt'] in (1,2) and config['limit']==2
+    assert str(config['workflow_run_number'])==os.environ['GITHUB_RUN_NUMBER']
+    sources.mkdir(parents=True,exist_ok=False)
+    record={'passed':False,'attempt':config['attempt'],'limit':2,'identity':identity(),'inference':False,'stage':'original_bundle'}
+    try:
+        import retrospective,live
+        original,record['original']=retrospective.load_original({'prepared_source':config['base_source']},sources)
+        source=config['corrected_verifier_source'];bundle=sources/'corrected-verifier'
+        record['stage']='corrected_verifier'
+        record['corrected_artifact']=download_artifact(source,bundle,members={'manifest.json','verifier.tar'},limit=2*1024**3)
+        assert digest(bundle/'manifest.json')==source['manifest_sha256']
+        corrected=json.loads((bundle/'manifest.json').read_text())
+        assert corrected['passed'] and corrected['policy_version']==2 and corrected['commit']==source['commit'] and int(corrected['run_id'])==source['run_id']
+        assert corrected['corrected_image_id']==source['image_id']
+        assert digest(bundle/'verifier.tar')==corrected['image_archive']['sha256'] and (bundle/'verifier.tar').stat().st_size==corrected['image_archive']['size']
+        import run as trial
+        for relative,entry in corrected['policy_inputs'].items():assert digest(trial.ROOT/relative)==entry['corrected']
+        for relative,sha in corrected['unchanged_correctness_inputs'].items():assert digest(trial.ROOT/relative)==sha
+        assert digest(trial.ROOT/'.github/evals/powershell-pester-6/support/EXECUTION-PROFILE.md')==corrected['future_input_change']['execution_profile_sha256']
+        subprocess.run(['docker','image','load','--input',str(bundle/'verifier.tar')],check=True,timeout=180)
+        assert image_id(retrospective.IMAGE)==source['image_id']
+        subprocess.run(['docker','image','tag',retrospective.IMAGE,TAGS[2]],check=True)
+        # Restore the stock Harbor registry reference omitted by classic save/load.
+        if subprocess.run(['docker','image','inspect',PROBE_REFERENCE],capture_output=True).returncode:
+            subprocess.run(['docker','image','pull',PROBE_REFERENCE],check=True,timeout=120)
+        assert image_id(PROBE_REFERENCE)==original['images'][PROBE_TAG]
+        record['stage']='matching_documentation_layers_and_preflight'
+        live.prepare(root,infrastructure=True,retained={'original':original,'corrected':corrected})
+        record['contents']=verify_contents(root,root/'public/image-contents.json')
+        record.update(passed=True,stage='matched_preflight_passed',verifier_image_id=image_id(TAGS[2]),package_installs=0,snapshot_index_downloads=0)
+    except Exception as exc:
+        from diagnostics import sanitize
+        record['failure']={'type':type(exc).__name__,'message':sanitize(str(exc))}
+        raise
+    finally:write(root/'public/matching-preparation.json',record)
+
 if __name__=='__main__':
     mode=sys.argv[1]
     if mode=='export':export(Path(sys.argv[2]).resolve(),Path(sys.argv[3]).resolve())
@@ -319,6 +418,7 @@ if __name__=='__main__':
         write(Path(sys.argv[4]),{'verified':True,'identity':m['identity'],'manifest_sha256':sys.argv[3],'images':m['images'],'tasks':m['tasks'],'credential_free':True})
     elif mode=='restore':restore(Path(sys.argv[2]),Path(sys.argv[3]),sys.argv[4],Path(sys.argv[5]) if len(sys.argv)>5 else None)
     elif mode=='preflight':reuse_preflight(Path(sys.argv[2]))
+    elif mode=='matching':matching(Path(sys.argv[2]).resolve(),Path(sys.argv[3]).resolve())
     elif mode=='dependency':acquire_dependency(Path(sys.argv[2]))
     elif mode=='qualify':qualify(Path(sys.argv[2]),Path(sys.argv[3]),sys.argv[4])
     elif mode=='reuse':

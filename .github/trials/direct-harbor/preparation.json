@@ -1,15 +1,8 @@
 {
-  "qualification": "reusable-images-20261106",
-  "attempt": 2,
+  "qualification": "matching-template-v2-20261106",
+  "attempt": 1,
   "limit": 2,
-  "prepared_source": {
-    "run_id": 42270181249,
-    "commit": "0c364aec26c7af6cf0ef52b08e598f48ead9ee01",
-    "artifact_id": 13529635174,
-    "name": "prepared-images",
-    "artifact_digest": "sha256:2d95a9bb6ca91795c35148d0ab874f4f029e45e27d3749c9af7dd08eb1ecd75a",
-    "manifest_sha256": "78f0f4f58085d3383f41df1f72ff616ba83b8e35c59ea077597d1d04346516e2"
-  },
+  "prepared_source": null,
   "dependency_seed": {
     "tag": "trial-snapshot-20261103-20261106",
     "asset": "snapshot-20261103.zip",
@@ -17,7 +10,7 @@
     "archive_sha256": "03bc8a13fadf20d387fa08e8bac958069349300fab81c57174d3aa1812cdfa86",
     "manifest_sha256": "8dd8f9e713c8ae2315054e28cc5d8eb59170c3939148277a5455641dc4746e75"
   },
-  "authorization": "Credential-free preparation only; at most two full image-build qualifications. No paid allocation or inference.",
+  "authorization": "User authorized at most two matching preparation attempts and then one new current/absent pair, at most two credentialed attempts and USD 5 estimated scheduling allowance.",
   "dependency_source": {
     "run_id": 42270181249,
     "commit": "0c364aec26c7af6cf0ef52b08e598f48ead9ee01",
@@ -26,9 +19,9 @@
     "artifact_digest": "sha256:c777ab3dd090ecc3140cb65ea61f5e370d641876556a35378291400e1d1abd96"
   },
   "correction": "Include stock Harbor digest-pinned Alpine kernel probe in the image archive. Restore its registry digest reference when classic Docker save/load omits RepoDigests; require unchanged retained image IDs and inventory during runtime controls.",
-  "status": "historically_qualified_experiment_superseded_by_template_policy_v2",
+  "status": "preparing_matching_v2_inputs",
   "temporary_seed_release_removed": true,
-  "reuse_note": "Retained source remains valid only for its original experiment. Policy v2 changes verifier and future agent documentation; the original full bundle must fail current experiment validation. Retrospective replay validates it against the original producer checkout and builds a distinct verifier layer.",
+  "reuse_note": "Validate original bundle against its original producer; add only execution-profile documentation to agent images and reuse the exact qualified corrected verifier. New manifests bind current inputs.",
   "corrected_verifier_source": {
     "run_id": 42279639435,
     "commit": "b0637f4d7556d0f29d0b6ed449f8ba62535f37aa",
@@ -39,5 +32,49 @@
     "image_id": "sha256:401c02a8fbc4f59dbf33ca7aa5961bad310d43e7742172c268e5f8705129c46d",
     "expires_at": "2026-11-13T19:31:51Z",
     "scope": "Qualified corrected verifier only; not a complete matched agent/task bundle."
-  }
+  },
+  "history": [
+    {
+      "qualification": "reusable-images-20261106",
+      "attempt": 2,
+      "limit": 2,
+      "prepared_source": {
+        "run_id": 42270181249,
+        "commit": "0c364aec26c7af6cf0ef52b08e598f48ead9ee01",
+        "artifact_id": 13529635174,
+        "name": "prepared-images",
+        "artifact_digest": "sha256:2d95a9bb6ca91795c35148d0ab874f4f029e45e27d3749c9af7dd08eb1ecd75a",
+        "manifest_sha256": "78f0f4f58085d3383f41df1f72ff616ba83b8e35c59ea077597d1d04346516e2"
+      },
+      "dependency_seed": {
+        "tag": "trial-snapshot-20261103-20261106",
+        "asset": "snapshot-20261103.zip",
+        "source_commit": "471667c337846429c8508b4acd0c9a64ae1d72f7",
+        "archive_sha256": "03bc8a13fadf20d387fa08e8bac958069349300fab81c57174d3aa1812cdfa86",
+        "manifest_sha256": "8dd8f9e713c8ae2315054e28cc5d8eb59170c3939148277a5455641dc4746e75"
+      },
+      "authorization": "Credential-free preparation only; at most two full image-build qualifications. No paid allocation or inference.",
+      "dependency_source": {
+        "run_id": 42270181249,
+        "commit": "0c364aec26c7af6cf0ef52b08e598f48ead9ee01",
+        "artifact_id": 13529246548,
+        "name": "snapshot-dependencies",
+        "artifact_digest": "sha256:c777ab3dd090ecc3140cb65ea61f5e370d641876556a35378291400e1d1abd96"
+      },
+      "correction": "Include stock Harbor digest-pinned Alpine kernel probe in the image archive. Restore its registry digest reference when classic Docker save/load omits RepoDigests; require unchanged retained image IDs and inventory during runtime controls.",
+      "status": "historically_qualified_experiment_superseded_by_template_policy_v2",
+      "temporary_seed_release_removed": true,
+      "reuse_note": "Retained source remains valid only for its original experiment. Policy v2 changes verifier and future agent documentation; the original full bundle must fail current experiment validation. Retrospective replay validates it against the original producer checkout and builds a distinct verifier layer."
+    }
+  ],
+  "base_source": {
+    "run_id": 42270181249,
+    "commit": "0c364aec26c7af6cf0ef52b08e598f48ead9ee01",
+    "artifact_id": 13529635174,
+    "name": "prepared-images",
+    "artifact_digest": "sha256:2d95a9bb6ca91795c35148d0ab874f4f029e45e27d3749c9af7dd08eb1ecd75a",
+    "manifest_sha256": "78f0f4f58085d3383f41df1f72ff616ba83b8e35c59ea077597d1d04346516e2"
+  },
+  "workflow_run_number": 38,
+  "mode": "matching"
 }

@@ -172,7 +172,7 @@ def check_task(task, variant, output, root, diagnostic=False):
             await environment.stop(delete=True)
     asyncio.run(check())
 
-def prepare(root, diagnostic=False, infrastructure=False):
+def prepare(root, diagnostic=False, infrastructure=False, retained=None):
     from harbor.models.task.task import Task
     assert not os.environ.get('OPENAI_API_KEY'), 'Credential-free preparation required'
     assert importlib.metadata.version('harbor')=='0.25.0'
@@ -224,13 +224,16 @@ def prepare(root, diagnostic=False, infrastructure=False):
             if variant=='absent' and folder=='tests':
                 first_task=Path(json.loads((root/'current-task.json').read_text())['path'])
                 assert trial.pilot.manifest(first_task/'tests')==trial.pilot.manifest(task/'tests'), 'Verifier contexts differ'
+            elif retained is not None:
+                from prepared import refresh_image
+                refresh_image(task,variant,folder,tag,retained,root)
             else:
-                retained=task/folder/'build/snapshot'
-                shutil.copytree(snapshot,retained)
+                snapshot_copy=task/folder/'build/snapshot'
+                shutil.copytree(snapshot,snapshot_copy)
                 try:
                     subprocess.run(['docker','build','--progress=plain','-t',tag,str(task/folder)],check=True,timeout=600)
                 finally:
-                    shutil.rmtree(retained)
+                    shutil.rmtree(snapshot_copy)
             (cfg['environment'] if folder=='environment' else cfg['verifier']['environment'])['docker_image']=tag
         if not diagnostic and variant == 'current':
             admission_preflight('direct-harbor-verifier:live', public/'admission-preflight.json')

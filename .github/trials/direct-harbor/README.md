@@ -599,3 +599,16 @@ policy v2. No prior image qualification or original agent outcome was relabeled.
 The original attempt-seven result remains unsupported/unmeasured; skill benefit
 is unmeasured because the absent arm did not run. No new inference, judge,
 reservation or paid attempt occurred. Campaign remains 7/36, recovery 4/4.
+
+Matching policy-v2 pair (separate user authorization): preparation revalidates
+original producer inputs, reuses the exact qualified corrected verifier, and
+adds only the version-two execution document to each retained agent image.
+Every unchanged context file and original image layer must match. Actual image
+files, matched deployments and fresh containers are checked before exporting a
+new content-bound bundle. No package installation or snapshot-index download is
+needed. At most two complete matching preparation executions are permitted.
+The new `sol-high-template-v2-20261106` allocation may consume attempts 8 and 9
+only, current then absent, after preparation and normal protected-environment
+approval. It uses the established USD 5 estimate/reserve/headroom gates and
+submission checkpoints. Prior allocations remain closed, attempt seven's
+retrospective grade stays separate, and no model judge or retry is authorized.

@@ -5,11 +5,11 @@ from unittest.mock import patch
 import allocation,live
 
 A={'id':allocation.ID,'state':'armed','attempts':allocation.ATTEMPTS,'reservation_ids':allocation.RESERVATIONS,'limit':2,
-   'prior_campaign_attempts':6,'budget_usd':5,'second_attempt_reserve_usd':2.5,'headroom_usd':0.5,'workflow_run_number':17,'prepared_source':json.loads((allocation.HERE/'preparation.json').read_text())['prepared_source']}
+   'prior_campaign_attempts':7,'budget_usd':5,'second_attempt_reserve_usd':2.5,'headroom_usd':0.5,'workflow_run_number':17,'prepared_source':json.loads((allocation.HERE/'preparation.json').read_text())['prepared_source']}
 ENV={'GITHUB_REPOSITORY':'thetechgy/agent-engineering-baseline','GITHUB_REF':'refs/heads/trial/direct-harbor',
      'GITHUB_EVENT_NAME':'push','GITHUB_RUN_ATTEMPT':'1','GITHUB_RUN_NUMBER':'17','GITHUB_RUN_ID':'123','GITHUB_SHA':'fixture'}
-LAUNCH={'phase':'live-pair','paid_execution_enabled':True,'scheduling_stopped':False,'paid_attempts_used':6,
-        'paid_attempts_reserved':2,'paid_attempt_limit':36,'recovery_live_attempt_limit':4,'allocation':A,'prior_attempts':[{'attempt':i} for i in range(1,7)],'admission_diagnostics':True}
+LAUNCH={'phase':'live-pair','paid_execution_enabled':True,'scheduling_stopped':False,'paid_attempts_used':7,
+        'paid_attempts_reserved':2,'paid_attempt_limit':36,'recovery_live_attempt_limit':4,'allocation':A,'prior_attempts':[{'attempt':i} for i in range(1,8)],'admission_diagnostics':True}
 
 def usable(classification='graded_failed'):
     return {'harbor_returncode':0,'result_extraction_succeeded':True,'execution_completed':True,'execution_assessment':{'outcome':'completed','interpretable':True},'accounting_assessment':{'usable_for_scheduling':True},
@@ -18,7 +18,7 @@ def usable(classification='graded_failed'):
 
 class AllocationTests(unittest.TestCase):
     def test_explicit_allocation_and_disabled_default(self):
-        self.assertEqual(allocation.validate(LAUNCH,ENV)['attempts'],{'current':7,'absent':8})
+        self.assertEqual(allocation.validate(LAUNCH,ENV)['attempts'],{'current':8,'absent':9})
         for field,value in [('paid_execution_enabled',False),('paid_attempts_used',2),('paid_attempts_reserved',3),('recovery_live_attempt_limit',6)]:
             d=copy.deepcopy(LAUNCH);d[field]=value
             with self.assertRaises((AssertionError,RuntimeError)):allocation.validate(d,ENV)
@@ -42,6 +42,8 @@ class AllocationTests(unittest.TestCase):
         r=usable();r['projection'][0]['failure_cause']='model_provider_failed';self.assertFalse(allocation.gate(r,A)['allowed'])
     def test_reservation_survives_interruption_and_cannot_be_replayed(self):
         with tempfile.TemporaryDirectory() as temp,patch.dict(os.environ,ENV,clear=True),patch.object(allocation,'active',return_value=A):
+            if A['prepared_source'] is None:
+                self.enterContext(patch.dict(A,{'prepared_source':{'manifest_sha256':'fixture'}}))
             root=Path(temp);(root/'public/current').mkdir(parents=True)
             (root/'public/preflight.json').write_text('{"passed":true}')
             identity={'allocation_id':allocation.ID,'commit':'fixture','run_id':'123'}
@@ -54,14 +56,14 @@ class AllocationTests(unittest.TestCase):
                 (root/'public/reuse-preflight.json').write_text(json.dumps(proof))
                 with self.assertRaises(AssertionError):allocation.reserve(root,'current')
             (root/'public/reuse-preflight.json').write_text(json.dumps({'passed':True,'identity':identity,'manifest_sha256':manifest}))
-            self.assertEqual(allocation.reserve(root,'current')['attempt'],7)
+            self.assertEqual(allocation.reserve(root,'current')['attempt'],8)
             with self.assertRaises(FileExistsError):allocation.reserve(root,'current')
             with self.assertRaises(FileNotFoundError):allocation.reserve(root,'absent')
             (root/'public/current/attempt.json').write_text(json.dumps(usable('missing_deliverable')))
-            self.assertEqual(allocation.reserve(root,'absent')['attempt'],8)
+            self.assertEqual(allocation.reserve(root,'absent')['attempt'],9)
             with self.assertRaises(FileExistsError):allocation.reserve(root,'absent')
             with contextlib.redirect_stdout(io.StringIO()):allocation.close(root)
-            closed=json.loads((root/'public/allocation/closed.json').read_text());self.assertEqual(closed['campaign_attempts_consumed'],8)
+            closed=json.loads((root/'public/allocation/closed.json').read_text());self.assertEqual(closed['campaign_attempts_consumed'],9)
             self.assertEqual(len(set(closed['reservation_ids'])),2)
             with self.assertRaises(AssertionError):allocation.reserve(root,'absent')
     def test_categories_are_not_double_counted_or_missing_to_zero(self):
@@ -84,7 +86,7 @@ class AllocationTests(unittest.TestCase):
         self.assertNotIn('live.py prepare',json.dumps(job))
         self.assertIn('retention-days: 7',(live.trial.ROOT/'.github/workflows/direct-harbor-trial.yml').read_text())
         steps=job['steps'];names=[s['name'] for s in steps if 'name' in s]
-        self.assertLess(names.index('Checkpoint current attempt before absent arm'),names.index('Gate and reserve campaign attempt eight without credentials'))
+        self.assertLess(names.index('Checkpoint current attempt before absent arm'),names.index('Gate and reserve absent campaign attempt without credentials'))
         credentials=[s for s in steps if 'OPENAI_API_KEY' in s.get('env',{})]
         self.assertEqual(len(credentials),2)
         self.assertEqual([s['env']['OPENAI_API_KEY'] for s in credentials],['${{ secrets.OPENAI_API_KEY }}']*2)
