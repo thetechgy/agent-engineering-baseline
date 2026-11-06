@@ -6,14 +6,14 @@ Identify skill weaknesses, justify revisions, and verify improvements without
 regressions through actual Codex, Claude Code and GitHub Copilot CLIs in Actions.
 The trial is Codex-only. Preserve APM deployment fidelity, independent
 protected grading, explicit failure/missing-evidence states, and one reporting
-experience. No observed benefit is useful.
+experience. Finding no skill benefit is useful.
 
 **Recommendation, moderate confidence; adoption is not approved:** simplify direct
 Harbor for behavioral evaluation, retaining production until qualification.
 [Original scope][scope] replaces execution/collection, not the evaluation discipline.
 
 - **Production:** retain static checks, history and reporting. Simplifying its
-orchestration avoids migration, but retains
+  orchestration avoids migration, but retains
   SkillEvaluator staging, patched collection and score-coupled consumers.
 - **PR #119:** keep draft and paused as the compatibility-upgrade alternative.
   It removes neither behavioral wrapper nor grader maintenance; completion needs
