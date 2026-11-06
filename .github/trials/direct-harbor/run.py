@@ -59,6 +59,13 @@ def stage(root, variant="current", *, historical_runtime=False, admission_diagno
             plan = install.replace('apt-get install', 'apt-get --print-uris -o Acquire::ForceHash=sha256 install')
             text = text.replace(install, plan + ' > /tmp/apt-uris && python3 /tmp/prefetch-apt.py && '
                                 + install.replace('apt-get install', 'apt-get --no-download install'))
+            # Cache only the exact signed snapshot indexes. All apt phases use
+            # that temporary source, while the image's normal source stays frozen.
+            text = text.replace('RUN rm -f /etc/apt/sources.list.d/*',
+                                'RUN python3 /tmp/prefetch-apt.py indexes && rm -f /etc/apt/sources.list.d/*')
+            text = text.replace('apt-get ', 'apt-get -o Dir::Etc::sourcelist=/tmp/trial-snapshot.list ')
+            text = text.replace('&& rm -rf /var/lib/apt/lists/*\n',
+                                '&& rm -rf /var/lib/apt/lists/* /var/lib/trial-snapshot /tmp/trial-snapshot.list\n')
             first, rest = text.split('\n', 1)
             dockerfile.write_text(first + '\nCOPY build/prefetch-apt.py /tmp/prefetch-apt.py\n' + rest)
         shutil.copytree(ROOT / '.codex', env / 'codex')

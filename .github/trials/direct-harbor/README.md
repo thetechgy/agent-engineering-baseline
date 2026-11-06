@@ -421,3 +421,15 @@ Maintenance added is limited to `prepared.py`, focused archive/path checks and s
 artifact steps. Bundle format and the pinned Harbor egress cache tag need review if the
 pinned runtime changes. This does not add a service, registry, cache across campaigns,
 new grader, or generalized execution layer.
+
+The first preparation attempt (42235352779) recovered the main index but failed on
+security-index HTTP 504 before any reservation or approval. The second attempt uses
+the existing transport helper to cache exact dated `InRelease` and `Packages.xz`
+bytes. InRelease hashes are pinned to the recovered immutable snapshot; index and
+package hashes stay enforced. APT verifies the cached signed metadata with the same
+keyring through a temporary `file:` source; the image's normal source configuration
+is unchanged. Fetches retry transient failures at most three times with 30-second
+request timeouts and bounded backoff. No rolling repository, unsigned source or
+new package version is introduced. The exact-base unprivileged index-only check
+passed APT authentication and package-URI/hash planning; it did not install packages
+or count as a full trial-image preparation. Full image construction remains a CI gate.

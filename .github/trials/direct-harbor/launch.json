@@ -1,5 +1,5 @@
 {
-  "phase": "live-pair",
+  "phase": "report",
   "campaign": "direct-harbor-20261104",
   "paid_attempts_used": 6,
   "paid_attempt_limit": 36,
@@ -11,15 +11,12 @@
   "recovery_control_attempt": 3,
   "native_fixture_retry": 1,
   "transport_preflight_corrections": 1,
-  "state": "prepared_allocation_armed",
+  "state": "preparation_transport_correction",
   "final_native_run": 41958553130,
   "native_grading_smoke_qualified": true,
   "native_sandbox_qualified": false,
-  "paid_attempts_reserved": 2,
-  "planned_variants": [
-    "current",
-    "absent"
-  ],
+  "paid_attempts_reserved": 0,
+  "planned_variants": [],
   "preflight_estimate_usd": 2.64,
   "native_inner_sandbox_required": false,
   "external_preflight_attempt": 2,
@@ -100,11 +97,11 @@
   ],
   "final_live_run": 42110435228,
   "api_spend_usd": null,
-  "scheduling_stopped": false,
+  "scheduling_stopped": true,
   "stop_reason": null,
   "diagnostic_actions_runs_reserved": 2,
   "diagnostic_actions_run_limit": 2,
-  "paid_execution_enabled": true,
+  "paid_execution_enabled": false,
   "diagnostic_reproduction_run": 42106956278,
   "accept_unknown_cost_for_testing": true,
   "credential_free_checks_passed": true,
@@ -118,7 +115,7 @@
   "handoff_first_run_outcome": "image_build_failed_before_controls_snapshot_index_http_503",
   "allocation": {
     "id": "sol-high-prepared-20261106",
-    "state": "armed",
+    "state": "disabled",
     "attempts": {
       "current": 7,
       "absent": 8
@@ -141,7 +138,36 @@
     "authorization": "User authorized at most two fresh credentialed launches and normal API environment approval by the assistant only after exact-run credential-free preparation and transfer checks pass. No independent human review claimed.",
     "provider_enforced_dollar_cap": false,
     "preparation_attempt": 1,
-    "preparation_limit": 2
+    "preparation_limit": 2,
+    "preparation_runs": [
+      {
+        "run_id": 42235352779,
+        "commit": "c6cef78ec916fdf955eb20600fa642e2f6d9c91d",
+        "preparation_attempt": 1,
+        "stage": "agent_image_build",
+        "dependency": "https://snapshot.debian.org/archive/debian-security/20261103T000000Z/dists/trixie-security/main/binary-amd64/Packages",
+        "native_apt_exit": 100,
+        "http_status": 504,
+        "closure": {
+          "allocation_id": "sol-high-prepared-20261106",
+          "state": "closed",
+          "paid_execution_enabled": false,
+          "reserved_slots_consumed": [],
+          "campaign_attempts_consumed": 6,
+          "previous_recovery_consumed": 4,
+          "previous_recovery_limit": 4,
+          "incremental_api_bill_usd": null,
+          "historical_cumulative_api_bill_usd": null,
+          "note": "Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.",
+          "reservation_ids": [],
+          "incremental_conservative_estimate_usd": null,
+          "operational_budget_usd": 5,
+          "estimated_budget_exceeded": null
+        },
+        "environment_approval_submitted": false,
+        "credentialed_launches": 0
+      }
+    ]
   },
   "allocation_history": [
     {

@@ -1,0 +1,98 @@
+{
+  "prior_failed_run": 42213118342,
+  "preparation_runs": [
+    {
+      "run_id": 42235352779,
+      "commit": "c6cef78ec916fdf955eb20600fa642e2f6d9c91d",
+      "preparation_attempt": 1,
+      "stage": "agent_image_build",
+      "dependency": "https://snapshot.debian.org/archive/debian-security/20261103T000000Z/dists/trixie-security/main/binary-amd64/Packages",
+      "native_apt_exit": 100,
+      "http_status": 504,
+      "closure": {
+        "allocation_id": "sol-high-prepared-20261106",
+        "state": "closed",
+        "paid_execution_enabled": false,
+        "reserved_slots_consumed": [],
+        "campaign_attempts_consumed": 6,
+        "previous_recovery_consumed": 4,
+        "previous_recovery_limit": 4,
+        "incremental_api_bill_usd": null,
+        "historical_cumulative_api_bill_usd": null,
+        "note": "Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.",
+        "reservation_ids": [],
+        "incremental_conservative_estimate_usd": null,
+        "operational_budget_usd": 5,
+        "estimated_budget_exceeded": null
+      },
+      "environment_approval_submitted": false,
+      "credentialed_launches": 0
+    }
+  ],
+  "requests": [
+    {
+      "path": "InRelease",
+      "status": 200,
+      "size": 140421,
+      "sha256": "0584fba32e13e0ab8285fb16c27adea1ec03a73669c18702821094fd6ca86675",
+      "elapsed_seconds": 0.49,
+      "destination": "InRelease"
+    },
+    {
+      "path": "main/binary-amd64/Packages.xz",
+      "status": 200,
+      "size": 9678380,
+      "sha256": "7778d3e3f303b7ddb8ce0fe7c8d57473a076c6bf2e8f241f75421d2396352498",
+      "elapsed_seconds": 0.85,
+      "destination": "main_binary-amd64_Packages.xz"
+    },
+    {
+      "path": "main/binary-amd64/Packages.gz",
+      "error_type": "HTTPError",
+      "status": 504,
+      "elapsed_seconds": 10.51
+    }
+  ],
+  "security_requests": [
+    {
+      "path": "InRelease",
+      "status": 200,
+      "size": 43409,
+      "sha256": "01590ffbf20362d6138369dbf543ee42d3d8ec62589d31cfb93a085afcad4f3c",
+      "elapsed_seconds": 0.82,
+      "destination": "security_InRelease"
+    },
+    {
+      "path": "main/binary-amd64/Packages.xz",
+      "status": 200,
+      "size": 297148,
+      "sha256": "38ca814a70dea1f035fd078c08b15b9a93f23b9605f3115a7791f30e62a6bf27",
+      "elapsed_seconds": 0.54,
+      "destination": "security_main_binary-amd64_Packages.xz"
+    },
+    {
+      "path": "main/binary-amd64/Packages.gz",
+      "error_type": "HTTPError",
+      "status": 504,
+      "elapsed_seconds": 11.51
+    }
+  ],
+  "base_image": "python:3.12-slim-trixie@sha256:b18b261e1b4974b4f321451ad5251ded85abb22c2b8b262da527dda1d031ab30",
+  "index_only_probe": {
+    "passed": true,
+    "apt_update_exit": 0,
+    "package_installation": false,
+    "model_inference": false,
+    "execution_user": "1000:1000",
+    "read_only_root": true,
+    "capabilities_dropped": "ALL",
+    "no_new_privileges": true,
+    "host_mounts": false,
+    "log_sha256": "30650709996c05879fe268a700ef21ae4087a50a409d277c534386caf87e6770",
+    "known_limits": "This verifies cache acquisition and APT authentication, not full agent/verifier image construction. Two earlier local probe invocations stopped on unsupported tmpfs ownership syntax and a locked system APT state directory; the passing probe uses fresh unprivileged scratch state."
+  },
+  "diagnosis": "Main and security compressed index bytes exist and match signed-release identities. Gzip/plain delivery returned 503/504. The pinned base compression configuration did not establish a configuration defect; flaky remote delivery is the supported finding.",
+  "correction": "Existing helper caches the exact dated InRelease and Packages.xz bytes with at most three transport attempts per request. All APT build phases use a temporary file source with the existing signed-by keyring; snapshot-selected package size/SHA256 and apt --no-download stay enforced. Runtime sources, snapshot date, versions and base digest remain unchanged.",
+  "documentation": "https://manpages.debian.org/trixie/apt/apt.conf.5.en.html",
+  "full_preparation_limit": 2
+}

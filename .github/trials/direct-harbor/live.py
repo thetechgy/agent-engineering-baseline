@@ -223,6 +223,7 @@ def prepare(root, diagnostic=False):
                 await environment.stop(delete=True)
         asyncio.run(check())
         trial.write(root/(variant+'-task.json'),{'path':str(task)})
+        trial.write(output/'preparation.json',{'stage':'preflight_passed','paid_inference_permitted':False})
         print('External preflight passed: '+variant,flush=True)
     assert {k:v for k,v in expected_files('current').items() if not k.startswith(TARGET+'/')}==expected_files('absent')
     if not diagnostic:
