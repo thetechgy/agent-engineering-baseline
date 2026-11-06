@@ -1,0 +1,206 @@
+{
+  "NVIDIA/SkillEvaluator": {
+    "target": "v0.8.0",
+    "source": "https://github.com/NVIDIA/SkillEvaluator/releases/tag/v0.8.0",
+    "verified_date": "2026-11-06"
+  },
+  "harbor-framework/harbor": {
+    "target": "v0.25.0",
+    "source": "https://github.com/harbor-framework/harbor/releases/tag/v0.25.0",
+    "verified_date": "2026-11-06"
+  },
+  "openai/codex": {
+    "target": "rust-v0.167.0",
+    "source": "https://github.com/openai/codex/releases/tag/rust-v0.167.0",
+    "verified_date": "2026-11-06"
+  },
+  "anthropics/claude-code": {
+    "target": "v2.1.319",
+    "source": "https://github.com/anthropics/claude-code/releases/tag/v2.1.319",
+    "verified_date": "2026-11-06"
+  },
+  "github/copilot-cli": {
+    "target": "v1.0.107",
+    "source": "https://github.com/github/copilot-cli/releases/tag/v1.0.107",
+    "verified_date": "2026-11-06"
+  },
+  "microsoft/apm": {
+    "target": "v0.35.0",
+    "source": "https://github.com/microsoft/apm/releases/tag/v0.35.0",
+    "verified_date": "2026-11-06"
+  },
+  "cli/cli": {
+    "target": "v2.103.3",
+    "source": "https://github.com/cli/cli/releases/tag/v2.103.3",
+    "verified_date": "2026-11-06"
+  },
+  "astral-sh/uv": {
+    "target": "0.13.7",
+    "source": "https://github.com/astral-sh/uv/releases/tag/0.13.7",
+    "verified_date": "2026-11-06"
+  },
+  "docker/compose": {
+    "target": "v5.7.0",
+    "source": "https://github.com/docker/compose/releases/tag/v5.7.0",
+    "verified_date": "2026-11-06"
+  },
+  "NVIDIA/SkillSpector": {
+    "target": "v2.13.4",
+    "source": "https://github.com/NVIDIA/SkillSpector/releases/tag/v2.13.4",
+    "verified_date": "2026-11-06"
+  },
+  "gitleaks/gitleaks": {
+    "target": "v8.30.1",
+    "source": "https://github.com/gitleaks/gitleaks/releases/tag/v8.30.1",
+    "verified_date": "2026-11-06"
+  },
+  "rvben/rumdl": {
+    "target": "v0.3.2",
+    "source": "https://github.com/rvben/rumdl/releases/tag/v0.3.2",
+    "verified_date": "2026-11-06"
+  },
+  "pester/Pester": {
+    "target": "6.2.0",
+    "source": "https://github.com/pester/Pester/releases/tag/6.2.0",
+    "verified_date": "2026-11-06"
+  },
+  "PowerShell/PSScriptAnalyzer": {
+    "target": "1.25.0",
+    "source": "https://github.com/PowerShell/PSScriptAnalyzer/releases/tag/1.25.0",
+    "verified_date": "2026-11-06"
+  },
+  "PowerShell/PowerShell": {
+    "target": "v7.6.9",
+    "source": "https://github.com/PowerShell/PowerShell/releases/tag/v7.6.9",
+    "verified_date": "2026-11-06"
+  },
+  "actions/checkout": {
+    "target": "v7.0.1",
+    "source": "https://github.com/actions/checkout/releases/tag/v7.0.1",
+    "verified_date": "2026-11-06"
+  },
+  "actions/upload-artifact": {
+    "target": "v7.0.2",
+    "source": "https://github.com/actions/upload-artifact/releases/tag/v7.0.2",
+    "verified_date": "2026-11-06"
+  },
+  "actions/download-artifact": {
+    "target": "v8.0.2",
+    "source": "https://github.com/actions/download-artifact/releases/tag/v8.0.2",
+    "verified_date": "2026-11-06"
+  },
+  "astral-sh/setup-uv": {
+    "target": "v10.3.3",
+    "source": "https://github.com/astral-sh/setup-uv/releases/tag/v10.3.3",
+    "verified_date": "2026-11-06"
+  },
+  "openai": {
+    "target": "3.46.0",
+    "source": "https://pypi.org/pypi/openai/json",
+    "verified_date": "2026-11-06"
+  },
+  "pydantic": {
+    "target": "2.14.3",
+    "source": "https://pypi.org/pypi/pydantic/json",
+    "verified_date": "2026-11-06"
+  },
+  "pydantic-core": {
+    "target": "2.50.4",
+    "source": "https://pypi.org/pypi/pydantic-core/json",
+    "verified_date": "2026-11-06"
+  },
+  "litellm": {
+    "target": "1.108.2",
+    "source": "https://pypi.org/pypi/litellm/json",
+    "verified_date": "2026-11-06"
+  },
+  "mcp": {
+    "target": "2.3.0",
+    "source": "https://pypi.org/pypi/mcp/json",
+    "verified_date": "2026-11-06"
+  },
+  "semgrep": {
+    "target": "1.184.0",
+    "source": "https://pypi.org/pypi/semgrep/json",
+    "verified_date": "2026-11-06"
+  },
+  "bandit": {
+    "target": "1.9.4",
+    "source": "https://pypi.org/pypi/bandit/json",
+    "verified_date": "2026-11-06"
+  },
+  "pip-audit": {
+    "target": "2.10.1",
+    "source": "https://pypi.org/pypi/pip-audit/json",
+    "verified_date": "2026-11-06"
+  },
+  "anthropic": {
+    "target": "2.6.0",
+    "source": "https://pypi.org/pypi/anthropic/json",
+    "verified_date": "2026-11-06"
+  },
+  "SkillEvaluator-0.8.0-constraints": {
+    "source": "https://raw.githubusercontent.com/NVIDIA/SkillEvaluator/v0.8.0/pyproject.toml",
+    "python": ">=3.12,<3.15",
+    "tier3": [
+      "skillevaluator[llm]",
+      "harbor[gke]==0.24.0",
+      "mcp>=1.28.1,<2",
+      "pyjwt[crypto]>=2.13.0",
+      "oauthlib>=4.0.0",
+      "python-dotenv>=1.2.0"
+    ],
+    "llm": [
+      "anthropic>=0.83.0",
+      "boto3>=1.34.0",
+      "litellm>=1.92.0,<1.94.0.dev0",
+      "openai>=2.21.0"
+    ],
+    "verified_date": "2026-11-06"
+  },
+  "python:3.14-slim-trixie": {
+    "source": "https://hub.docker.com/v2/repositories/library/python/tags/3.14-slim-trixie",
+    "target_digest": "sha256:af8a5aa14780025dbfbcfbc81bd8a91ebd87711dd5b0f48ed71090949dd7cb1d",
+    "verified_date": "2026-11-06"
+  },
+  "alpine:latest": {
+    "source": "https://hub.docker.com/v2/repositories/library/alpine/tags/latest",
+    "target_digest": "sha256:3f4d6b32e26703c6082839234f43769d5046b3ac7c910033911d1e71d8cd630a",
+    "verified_date": "2026-11-06"
+  },
+  "actions/configure-pages": {
+    "target": "v6.0.0",
+    "source": "https://github.com/actions/configure-pages/releases/tag/v6.0.0",
+    "verified_date": "2026-11-06"
+  },
+  "actions/deploy-pages": {
+    "target": "v5.0.1",
+    "source": "https://github.com/actions/deploy-pages/releases/tag/v5.0.1",
+    "verified_date": "2026-11-06"
+  },
+  "actions/upload-pages-artifact": {
+    "target": "v5.0.0",
+    "source": "https://github.com/actions/upload-pages-artifact/releases/tag/v5.0.0",
+    "verified_date": "2026-11-06"
+  },
+  "benchmark-action/github-action-benchmark": {
+    "target": "v1.22.2",
+    "source": "https://github.com/benchmark-action/github-action-benchmark/releases/tag/v1.22.2",
+    "verified_date": "2026-11-06"
+  },
+  "Python-stable": {
+    "target": "3.15.2",
+    "source": "https://www.python.org/downloads/",
+    "verified_date": "2026-11-06"
+  },
+  "python:3.15-slim-trixie": {
+    "source": "https://hub.docker.com/v2/repositories/library/python/tags/3.15-slim-trixie",
+    "target_digest": "sha256:e97b88e416c3c01eb427b21fd8cd3ebf006e6ee38afcfcc3cae1c54ee2ab0a75",
+    "verified_date": "2026-11-06"
+  },
+  "openai-release": {
+    "target": "v3.47.0",
+    "source": "https://github.com/openai/openai-python/releases/tag/v3.47.0",
+    "verified_date": "2026-11-06"
+  }
+}

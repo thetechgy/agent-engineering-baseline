@@ -1,45 +1,46 @@
 # Evaluation direction checkpoint
 
-Reviewed 2026-11-06 against remote heads: main `7b5086b`, draft PR #119
-`1c8813b`, trial/checkpoint `c8825e2907f911562f02d8df86b59cb4c3e42f30`.
+Reviewed 2026-11-06 from verified clean local/remote trial head
+`ade42ad124299025b6915588e2e4a4777d402283`.
 
-Identify meaningful skill weaknesses, justify revisions, and verify improvements
-without regressions through actual Codex CLI, Claude Code CLI and GitHub Copilot
-CLI in Actions. Preserve APM deployment fidelity, matched comparisons, trustworthy
-independent grading, explicit missing evidence and one reporting experience.
-The current trial remains Codex-only; finding no skill benefit is useful.
+The goal remains continuous skill improvement through actual Codex, Claude Code
+and GitHub Copilot CLIs, faithful APM deployment, trustworthy matched comparisons
+and one understandable report. The trial remains Codex-only.
 
-**Provisional recommendation: retain and simplify the existing SkillEvaluator
-approach. Moderate confidence in retaining its coverage; low confidence that any
-option is yet the simplest complete three-runtime solution.** This supersedes the
-earlier preference to simplify direct Harbor. Neither migration is approved.
+**Recommendation unchanged: provisionally retain and simplify SkillEvaluator.**
+The authorized credential-free `gh-014` probe establishes narrow check portability,
+but stops at the existing report admission contract. It does not establish an
+end-to-end bridge or a maintenance advantage for direct Harbor.
 
-SkillEvaluator supplies static checks, activation/negative-case checks, trace
-security analysis, model judging and comparison summaries that the Pester trial
-does not replace. Direct
-Harbor has a concrete advantage: an actual `copilot` adapter, absent from both
-reviewed SkillEvaluator agent allowlists. Its execution layer is reusable, but
-preserving the broader evaluation coverage requires substantial integration.
-Keeping SkillEvaluator for static checks alone does not remove today's Tier 3
-installation or reporting dependencies.
+Eight synthetic current/absent controls used real fixture dispatch/receipts,
+Harbor 0.25.0 ATIF validation and unchanged reviewed/patched SkillEvaluator 0.7.2
+normalization/checks plus the existing gh grader. Correct output with an
+unauthorized POST retained task correctness and failed authorization. Unsupported
+wrappers retained unknown security; missing traces failed evidence admission.
+The generic security scan alone passed the empty trace and did not recognize the
+gh-specific unauthorized operation: case authorization and completeness checks
+remain essential. Native grader zeros on incomplete evidence are raw gate outputs,
+not measured task failures. Model judging was not invoked; composite quality is
+unavailable.
 
-The [retrospective pair][pair] passed the reference and detected 2/2 defects in
-both arms. It establishes one usable comparison, not skill benefit, feature
-parity or lower maintenance. Policy was corrected after outputs existed.
-[PR #119][pr] detects scoring differences in 56/73 vectors; native qualification
-remains incomplete. No path demonstrates a justified revision followed by matched
-improvement and regression checks, or this repository's Claude/Copilot evaluation.
+The existing projection rejects truthful 0.7.2 provenance with
+`Unsupported native evaluator`. Custom capture additionally requires 0.3.0,
+Harbor 0.13.2 and Python 3.13. No consolidated HTML, collector integration or
+rendered-state verification is claimed. Changing identity or weakening admission
+to display the probe would invalidate the result. See [probe evidence and operator
+instructions](../trials/direct-harbor/README.md#gh-014-portability-probe).
 
-**One next action, requiring separate authorization:** a credential-free `gh-014`
-case-to-report portability probe, defined below. Completion requires unchanged
-pinned checks, one generic bridge, explicit good/unsafe/unsupported/missing-evidence
-outcomes and the existing consolidated report, with no new scorer/collector fork.
-A narrow successful bridge could favor direct Harbor plus selected SkillEvaluator
-capabilities; failure favors retaining the existing layer.
+The [retrospective Pester pair][pair] still establishes no observed skill advantage.
+Live runtime compatibility, judging accuracy, general portability, skill benefit
+and lower overall maintenance remain unproven. Paid scheduling remains closed;
+production, Pages, PR #119 and scoring contracts are unchanged.
 
-Implementation, paid scheduling (9/36 consumed), skill revisions, scoring changes,
-PR #119 promotion, additional runtimes and Pages remain paused. This recommendation
-is not authorization to implement or adopt it.
+**Exactly one recommended next action:** begin dependency modernization under
+issue #95 using the sequence below. Its first prerequisite is a separately
+versioned evaluation/report admission contract with offline qualification; do not
+build another bridge against the old hardcoded identity. Current dependencies are
+an explicit end state, not an indefinite exception for SkillEvaluator's old pins.
+No dependency upgrade is performed by this probe.
 
 **Session rule:** read this checkpoint first, update it when evidence changes,
 and explain how the next action advances the goal. A blocker does not automatically
@@ -142,28 +143,83 @@ maintenance path, but its qualification and scoring transition are not complete.
 C has the clearest released launcher path to the three required CLIs, yet static
 checks alone are too small a retained subset: the current Podman/gh behavior and
 reporting contracts would otherwise lose useful checks. Retaining all of that by
-copying internals would defeat the simplification. The evidence does not settle
-whether a small reusable bridge can avoid this cost.
+copying internals would defeat the simplification. The probe confirms low-level
+check reuse but rejects the candidate at current report admission; it does not
+establish that a small complete bridge avoids this cost.
 
-**Single smallest check that could change the choice:** after separate authorization,
-perform one bounded, credential-free portability probe using existing `gh-014`
-fixture/replay inputs. Feed direct-Harbor-shaped trajectory/result artifacts through
-the pinned 0.7.2 checks with the existing reviewed evidence patch, the deterministic
-gh grader and
-the existing public projection/consolidated renderer. Exercise matched current/absent
-inputs with good, unauthorized-action, unsupported-normalization and missing-trace
-controls. Keep model judging unavailable; fixed responses, if needed to test a
-carrier, must be labeled synthetic and cannot establish judging accuracy.
+## gh-014 probe result and stopping boundary
 
-Completion means task correctness, activation, authorization/security, unavailable
-judging and provenance reach the existing report without conflation, through one
-generic bridge with **no newly copied/forked normalizer, scorer or collector**. Identify
-its required packages and public/private interfaces in this checkpoint. If that
-works narrowly, prefer reconsidering C for its Copilot route; if it requires a
-second grading/reporting stack, retain A. This deliberately tests the capability
-gap that the Pester-only comparison cannot expose, without another paid trial or
-qualification campaign. It does not qualify live Copilot, prospective skill benefit
-or production adoption; those remain later gates whichever path is selected.
+The [retained result](../trials/direct-harbor/results/gh014-result.json),
+[controls](../trials/direct-harbor/results/gh014-controls.json),
+[provenance](../trials/direct-harbor/results/gh014-provenance.json) and
+[first-execution diagnostics](../trials/direct-harbor/results/gh014-first-failures.json)
+are synthetic diagnostic evidence, excluded from history and lift. Fixture output
+was reconstructed from the existing trusted replay mechanism; no new agent session
+or APM runtime deployment was observed. Both arms share task data and dispatch;
+only current adds the explicitly synthetic target-read step. That activation
+signal establishes the check's handling, not actual instruction following.
+
+| Control, in both arms | Unchanged checks/grader observations |
+| --- | --- |
+| Good | Evidence/task/authorization = 1; current activation true, absent false. Absent gate zero reflects routing, not inferior correctness. |
+| Unauthorized POST with correct output | Evidence/task = 1, authorization/commands = 0. Generic security scanner reports no finding; per-case authorization catches the forbidden behavior. |
+| Unsupported native Codex wrapper | Normalizer supplies `unsupported_native_codex_exec_wrapper`; security is unknown, evidence gate zero. Current's preceding synthetic read remains observed; absent activation is unknown. |
+| Missing required trace | Evidence gate zero; raw grader dimensions zero, composite unavailable. Generic scanner's empty-trace pass cannot establish safety. |
+
+The actual `skill_evidence.normalize_behavioral` entry point, using a minimal
+explicitly incomplete synthetic envelope without measurements, reaches
+`validate_runtime_versions` and rejects the actual candidate identity before public
+projection and consolidated rendering.
+`custom_capture` also binds its producer runtime and registered profile. A transport
+adapter cannot truthfully satisfy those contracts. Collection/rendering were not
+continued after this prerequisite rejection; no diagnostic HTML was fabricated.
+This is a concrete contract incompatibility, not proof that a small adapter can
+never work after an independently qualified consumer migration. Stop here under
+the authorized criterion; retain the existing reporting system.
+
+Private interfaces, environments, process boundary, operator steps and cleanup
+are documented with the single entry point in the trial README. No new normalizer,
+scorer, collector, report stack, production profile or admission exception was added.
+
+## Dependency modernization sequence
+
+Latest stable targets below were verified against primary release/package/image
+metadata on **2026-11-06**, retained in
+[the target evidence](../trials/direct-harbor/results/dependency-targets.json).
+These are dated targets to recheck immediately before implementation, not new pins.
+Use `.github/dependency-freshness.json`, its existing workflow/script, Dependabot,
+the reviewed weekly APM updater, and [issue #95](https://github.com/thetechgy/agent-engineering-baseline/issues/95).
+Do not add another dependency tracker. Reconcile every manifest, hash lock, setup
+script, workflow, image and transitive inventory; the examples below are not an
+exemption for unnamed dependencies.
+
+| Order / owning boundary | Verified stable target and scope | Qualification and concrete hold exit |
+| --- | --- | --- |
+| 1. Active evaluator and evidence/report consumers | SkillEvaluator **0.8.0**, Harbor **0.25.0**, Python **3.15.2** are separate upstream targets. 0.8.0 still pins Harbor 0.24.0, Python `<3.15`, LiteLLM `<1.94.0.dev0`, MCP `<2`. Thus updating only SkillEvaluator does not meet the end state. | First define versioned producer/admission/profile identities and offline custom/standard collection, projection and rendering controls. Then qualify the owning evaluator lock and reviewed patch, trusted gh initializer and native Pester lifecycle. Resolve upstream constraints through a supporting upstream release or explicitly reviewed source/lock changes; keep unresolved target gaps explicit. Hold ends only with native lifecycle/cleanup and truthful report admission under the new profile. No model inference is needed for these fixture gates. |
+| 2. SDKs and locked transitives, by owner | OpenAI **3.47.0** (GitHub release; PyPI metadata observed **3.46.0**), Anthropic **2.6.0**, LiteLLM **1.108.2**, MCP **2.3.0**, Pydantic **2.14.3** / core **2.50.4**. Apply to each active evaluator, scanner, review and trial lock separately; refresh all other resolved transitives from each owner's inventory. | Do not force incompatible extras into one installation. Update current review overlays independently with API/schema/redaction and public-only replay checks. Evaluator lock changes must pass grading/normalization regressions and dependency consistency. SDK/MCP major versions remain temporary explicit gaps until their owner supports them or an approved compatibility change qualifies them. Confirm distribution publication/hash before installing OpenAI 3.47.0; the primary metadata sources differ. Frozen historical readers remain separate. |
+| 3. CLIs, APM, task runtimes and images | Codex **0.167.0**, Claude Code **2.1.319**, Copilot **1.0.107**, gh **2.103.3**, APM **0.35.0**, uv **0.13.7**, Compose **5.7.0**, PowerShell **7.6.9**, Pester **6.2.0**, PSScriptAnalyzer **1.25.0**. Latest Python image target `3.15-slim-trixie` and Alpine `latest` have dated digest evidence; Python 3.14 image is only an intermediate compatible target. | Use verified release archives/digests and existing APM regeneration/update path; review all source skill refs through that path. Rebuild pinned OS/package snapshots as a group, qualify Windows/Linux bootstrap, APM byte fidelity, agent setup/capture and protected verifier/cleanup controls. Recheck current Debian/Node/package inventories when rebuilding rather than retaining old snapshots silently. Claude/Copilot targets are planned, not runtime expansion in this probe. Hold ends with the affected runtime/fixture gates; actual CLI evaluation still requires separately authorized inference. |
+| 4. Scanner/lint hash locks | SkillSpector **2.13.4**, Semgrep **1.184.0**, Gitleaks **8.30.1**, Bandit **1.9.4**, pip-audit **2.10.1**, rumdl **0.3.2**. | Regenerate each owning frozen/hash lock with reviewed tooling; compare representative findings, skipped/incomplete scanners, redaction and public catalog projection. A successful installation is insufficient. Resolve holds when those scanner regressions and collection checks pass. |
+| 5. Existing Actions and publication integration | checkout **7.0.1**, upload-artifact **7.0.2**, download-artifact **8.0.2**, setup-uv **10.3.3**, configure-pages **6.0.0**, deploy-pages **5.0.1**, upload-pages-artifact **5.0.0**, github-action-benchmark **1.22.2**. | Reuse Dependabot, resolve stable releases to reviewed immutable SHAs, check runtime/runner requirements, artifact authentication/attempt/digest tests and permission boundaries. Qualify publication fixtures without publishing Pages. Hold ends on those contracts and required CI at the final revision. |
+
+The groups form one modernization phase, with group 1's admission contract as the
+specific prerequisite exposed by this probe. Uncoupled scanner/Actions work can
+proceed within that phase; newer dependencies must not be held hostage to a paid
+benchmark. Maintain a visible unresolved gap where an upstream owner pins older
+versions. A latest compatible intermediate must never be labeled fully current.
+
+Active production, opt-in candidate and direct trial environments retain distinct
+owning locks until each replacement qualifies. Historical replay environments,
+archived results and original runtime identities remain frozen and isolated for
+reproduction; modernization applies to active replacements rather than rewriting
+history. Retire historical tooling from active paths when current readers can
+reproduce the archived public outputs. Historical exceptions must name their replay
+purpose, not justify obsolete active production dependencies.
+
+Any formula/metric/profile change creates a new versioned policy and matched
+baseline. Preserve original scores and never describe a score change caused by
+new weighting, model, CLI or dependencies as skill improvement. Dependency refresh
+is the next implementation phase; adopting direct Harbor or resuming paid work is
+not part of that recommendation.
 
 ## Supporting evidence
 

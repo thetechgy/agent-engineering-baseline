@@ -1,11 +1,10 @@
 # Direct Harbor trial
 
 Read the [evaluation checkpoint](../../evals/EVALUATION-PLAN.md) before proposing
-further work. Its coverage assessment provisionally recommends retaining and
-simplifying the existing SkillEvaluator approach; the earlier direct-Harbor
-preference is superseded. It records the three-runtime gap, material tradeoffs
-and one credential-free portability check that could change the recommendation.
-The recommendation is not authorization to implement or adopt either migration.
+further work. It retains the provisional SkillEvaluator recommendation and records
+the `gh-014` probe's report-admission blocker. Dependency modernization is the next
+planned phase, beginning with a qualified versioned report-admission contract.
+The recommendation is not framework adoption authorization.
 
 The successful [retrospective matched comparison](results/retrospective-pair.json)
 in run [42301691565](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42301691565)
@@ -732,3 +731,54 @@ Current passed 32 reference tests and detected 2/2 defects; absent passed 35 and
 detected 2/2. No quality advantage was observed on this case. The first execution
 stopped at a helper import in isolated Python; the evidence-based import correction
 changed no admission policy or candidate. Both run records remain retained.
+
+## gh-014 portability probe
+
+The branch-only entry point is `gh_portability.py`. Run it with an existing pinned
+candidate Python 3.13 environment containing the qualification script's exact
+0.7.2/0.24.0 `PINS`, a local checkout containing upstream revision
+`f878f99a9cd4a85dd04043feb43e5bd6a777f64b`, and a separate existing Harbor 0.25.0
+Python environment backed by clean source `fdba28fc411e47e8765420a1a063b4918fce3def`:
+
+```bash
+"$candidate_python" -I -B .github/trials/direct-harbor/gh_portability.py \
+  --source "$candidate_source" --harbor-python "$harbor_python" \
+  --output "$HOME/worktrees/gh014-probe-evidence"
+```
+
+Output must be a new persistent directory outside the checkout. No installer,
+credential lookup, model call, judge, reservation or workflow dispatch is included.
+The parent extracts pinned release source and applies the existing reviewed patch
+without changing the supplied checkout or owning locks. A clean child environment
+runs existing gh replay/broker mechanisms; a narrow JSON subprocess boundary asks
+the separately pinned Harbor interpreter to validate ATIF. No incompatible Harbor
+versions are resolved together. The child blocks Internet connections; the fixture
+uses only its local Unix socket. Existing replay cleanup terminates/waits for the
+broker and removes temporary fixture workspaces; source/provenance/diagnostics are
+retained as evidence.
+
+Private interfaces: `gh_evaluations.module`, `dataset`, `replay_case`, `enriched`
+and the grader's `grade`; SkillEvaluator `eval_core.atif_helpers` and `checks`;
+`skill_evidence.normalize_behavioral` and its `validate_runtime_versions` guard. Harbor's Pydantic `Trajectory` model
+is the transport boundary. The replay interception replaces only the call into
+the grader, wrapping its inputs through ATIF and the reviewed normalizer; fixture
+dispatch, receipts and grading remain unchanged. Compatibility maintenance includes
+those signatures, wrapper names, ATIF observation linkage, pins and report profiles.
+No native collector or renderer integration was completed after admission rejected.
+
+[Result](results/gh014-result.json), [eight controls](results/gh014-controls.json),
+[provenance](results/gh014-provenance.json) and
+[first failure diagnostics](results/gh014-first-failures.json) are sanitized
+synthetic diagnostic evidence. Raw grader zeros remain gate outputs, never measured
+quality when evidence is missing/unsupported. Judging/composite quality remain
+unavailable. The good absent arm is task-correct despite activation/gate zero.
+The unauthorized arm is task-correct but fails authorization. Generic trace security
+alone catches neither that case-specific forbidden POST nor missing trace evidence.
+
+The unchanged public-report runtime reader rejects 0.7.2 as
+`Unsupported native evaluator`; custom capture also binds 0.3.0/0.13.2/Python 3.13.
+No HTML report exists for this probe, and no rendered classifications were verified.
+Producing one would require a separately qualified admission/profile migration;
+relabeling provenance or inventing a report is outside the probe. The result is a
+blocked complete bridge with portable low-level checks, not end-to-end success.
+The checkpoint records the dependency modernization sequence and one next action.

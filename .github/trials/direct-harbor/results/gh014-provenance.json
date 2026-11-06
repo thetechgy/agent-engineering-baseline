@@ -1,0 +1,18 @@
+{
+  "bridge_sha256": "a680ef9c007e1bd43c1f266bcd51fea70c15a4b563437acbec6c01639b330fd0",
+  "evaluator_revision": "f878f99a9cd4a85dd04043feb43e5bd6a777f64b",
+  "harbor_contract_revision": "fdba28fc411e47e8765420a1a063b4918fce3def",
+  "kind": "synthetic gh-014 diagnostic",
+  "lock_sha256": "532efd6d79caf262d5264a10c45dd100c2c038decfac7e6e965a940e915a8908",
+  "patch_sha256": "0426e79863d5988e701786c6e7e77e695924349604524c72e85819a66dfa8200",
+  "producer_revision": "ade42ad124299025b6915588e2e4a4777d402283",
+  "versions": {
+    "harbor": "0.24.0",
+    "litellm": "1.93.2",
+    "openai": "2.44.0",
+    "pydantic": "2.13.4",
+    "pydantic-core": "2.46.4",
+    "skillevaluator": "0.7.2",
+    "typing-inspection": "0.4.2"
+  }
+}

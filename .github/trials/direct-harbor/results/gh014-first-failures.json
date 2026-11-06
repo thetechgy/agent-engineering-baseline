@@ -1,0 +1,24 @@
+{
+  "executions": [
+    {
+      "ordinal": 1,
+      "code": "control_used_wrong_wrapper_name",
+      "observed": "functions.exec was an ordinary tool name; normalizer requires exec/input",
+      "fix": "use existing unsupported exec fixture form"
+    },
+    {
+      "ordinal": 2,
+      "code": "expectation_conflated_unknown_with_false",
+      "observed": "absent unsupported activation is unknown, not false",
+      "fix": "preserve native None; no check or grading changes"
+    },
+    {
+      "ordinal": 3,
+      "code": "minimal_admission_envelope_missing",
+      "observed": "full normalization reads result envelope before runtime metadata",
+      "fix": "supply explicitly incomplete synthetic envelope with no measurements; runtime rejection then verified"
+    }
+  ],
+  "raw_logs": "retained outside checkout; no raw trajectory or fixture bodies published",
+  "cleanup": "existing replay_case finally terminates and waits for each broker; TemporaryDirectory removes fixture workspaces"
+}

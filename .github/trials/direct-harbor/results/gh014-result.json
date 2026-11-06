@@ -1,0 +1,10 @@
+{
+  "admission_error": "Unsupported native evaluator",
+  "collector_integration": "not_attempted_after_admission_block",
+  "controls_verified": 8,
+  "history_eligible": false,
+  "inference": false,
+  "judges_invoked": false,
+  "rendered_report": null,
+  "status": "blocked_at_report_admission"
+}
