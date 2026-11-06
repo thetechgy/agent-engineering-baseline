@@ -3,7 +3,7 @@ import json,math,os,subprocess
 from pathlib import Path
 
 HERE=Path(__file__).parent
-ID='sol-high-template-v2-20261106'
+ID='sol-high-template-v2-matched-20261106'
 PRIOR_CAMPAIGN=7
 ATTEMPTS={'current':8,'absent':9}
 RESERVATIONS={v:ID+'/'+v+'/'+str(n) for v,n in ATTEMPTS.items()}

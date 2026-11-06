@@ -607,8 +607,14 @@ Every unchanged context file and original image layer must match. Actual image
 files, matched deployments and fresh containers are checked before exporting a
 new content-bound bundle. No package installation or snapshot-index download is
 needed. At most two complete matching preparation executions are permitted.
-The new `sol-high-template-v2-20261106` allocation may consume attempts 8 and 9
+The new `sol-high-template-v2-matched-20261106` allocation may consume attempts 8 and 9
 only, current then absent, after preparation and normal protected-environment
 approval. It uses the established USD 5 estimate/reserve/headroom gates and
 submission checkpoints. Prior allocations remain closed, attempt seven's
 retrospective grade stays separate, and no model judge or retry is authorized.
+
+Preparation attempt 1 (run 42283214785) failed before any reservation: Docker
+interpreted a raw config SHA in FROM as a registry image name. Its allocation
+closed unused. Attempt 2 uses a local base tag whose verified image identity is
+checked before and after the documentation-only build; no dependency or
+experiment inputs changed. A second failure stops this task without a live run.

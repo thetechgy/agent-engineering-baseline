@@ -330,12 +330,16 @@ def refresh_image(task,variant,folder,tag,retained,root):
     else:
         base=retained['original']['images'][tag]
         assert image_id(tag)==base
+        base_tag='direct-harbor-agent:retained-base-'+variant
+        subprocess.run(['docker','image','tag',base,base_tag],check=True)
+        assert image_id(base_tag)==base
         context=root/('documentation-layer-'+variant);context.mkdir()
         shutil.copyfile(task/'environment/input/EXECUTION-PROFILE.md',context/'EXECUTION-PROFILE.md')
-        (context/'Dockerfile').write_text('FROM '+base+'\nCOPY --chmod=0444 EXECUTION-PROFILE.md /workspace/input/EXECUTION-PROFILE.md\n')
+        (context/'Dockerfile').write_text('FROM '+base_tag+'\nCOPY --chmod=0444 EXECUTION-PROFILE.md /workspace/input/EXECUTION-PROFILE.md\n')
         before=json.loads(subprocess.check_output(['docker','image','inspect',base]))[0]
         subprocess.run(['docker','build','--network=none','--pull=false','--progress=plain','-t',tag,str(context)],check=True,timeout=180)
         after=json.loads(subprocess.check_output(['docker','image','inspect',tag]))[0]
+        assert image_id(base_tag)==base
         assert after['Config']==before['Config'], 'Runtime image configuration changed'
         assert after['RootFS']['Layers'][:-1]==before['RootFS']['Layers'], 'Original image layers changed'
     write(root/'public'/variant/(folder+'-refresh.json'),{'changed_context_files':changed,'image':tag,'image_id':image_id(tag),'package_installs':0,'snapshot_downloads':0,'verifier_reused':folder=='tests'})

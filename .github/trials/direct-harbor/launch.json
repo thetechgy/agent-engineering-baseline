@@ -11,7 +11,7 @@
   "recovery_control_attempt": 3,
   "native_fixture_retry": 1,
   "transport_preflight_corrections": 1,
-  "state": "matching_template_v2_preparation",
+  "state": "matching_template_v2_preparation_correction",
   "final_native_run": 41958553130,
   "native_grading_smoke_qualified": true,
   "native_sandbox_qualified": false,
@@ -131,7 +131,7 @@
   "handoff_first_run": 42115972887,
   "handoff_first_run_outcome": "image_build_failed_before_controls_snapshot_index_http_503",
   "allocation": {
-    "id": "sol-high-template-v2-20261106",
+    "id": "sol-high-template-v2-matched-20261106",
     "state": "preparing",
     "limit": 2,
     "prior_campaign_attempts": 7,
@@ -142,8 +142,8 @@
       "absent": 9
     },
     "reservation_ids": {
-      "current": "sol-high-template-v2-20261106/current/8",
-      "absent": "sol-high-template-v2-20261106/absent/9"
+      "current": "sol-high-template-v2-matched-20261106/current/8",
+      "absent": "sol-high-template-v2-matched-20261106/absent/9"
     },
     "used": 0,
     "budget_usd": 5,
@@ -502,11 +502,48 @@
       "observed_usage_conservative_estimate_usd": 1.267615,
       "session_coverage_adequate": true,
       "api_bill_usd": null
+    },
+    {
+      "id": "sol-high-template-v2-20261106",
+      "state": "closed",
+      "limit": 2,
+      "prior_campaign_attempts": 7,
+      "previous_recovery_consumed": 4,
+      "previous_recovery_limit": 4,
+      "attempts": {
+        "current": 8,
+        "absent": 9
+      },
+      "reservation_ids": {
+        "current": "sol-high-template-v2-20261106/current/8",
+        "absent": "sol-high-template-v2-20261106/absent/9"
+      },
+      "used": 0,
+      "budget_usd": 5,
+      "second_attempt_reserve_usd": 2.5,
+      "headroom_usd": 0.5,
+      "profile": "codex-0.166.0_gpt-6.1-sol_high_rollout-budget-disabled",
+      "case": "pester-002",
+      "provider_enforced_dollar_cap": false,
+      "authorization": "Explicit user authorization: prepare matching policy-v2 inputs and proceed to one current/absent pair if gates pass, at most two new attempts and USD 5 conservative scheduling allowance. Normal API approval is automated, not independent human review. No retries or model judges.",
+      "consumed_attempts": [],
+      "consumed_reservations": [],
+      "unused_closed_attempts": [
+        8,
+        9
+      ],
+      "unused_closed_reservations": [
+        "sol-high-template-v2-20261106/current/8",
+        "sol-high-template-v2-20261106/absent/9"
+      ],
+      "preparation_run": 42283214785,
+      "preparation_failure": "Docker FROM sha256 config identifier interpreted as registry name; no reservation or model launch."
     }
   ],
   "admission_validation_note": "User-authorized credential-free patch validation. No allocation is reopened; no inference or secrets.",
   "admission_validation_revision": 2,
   "admission_validation_first_run": 42162451618,
   "admission_diagnostics": true,
-  "infrastructure_qualification": "reusable-images-20261106-qualified"
+  "infrastructure_qualification": "reusable-images-20261106-qualified",
+  "preparation_attempt": 2
 }
