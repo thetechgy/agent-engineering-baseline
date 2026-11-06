@@ -25,9 +25,9 @@
     "artifact_digest": "sha256:c777ab3dd090ecc3140cb65ea61f5e370d641876556a35378291400e1d1abd96"
   },
   "correction": "Use a verified local image tag for Dockerfile FROM; raw sha256 config IDs are interpreted as registry names by BuildKit. The base ID is checked before and after building; all original layers must be retained.",
-  "status": "matching_v2_tar_reader_qualified",
+  "status": "historical_matching_v2_inputs_superseded_by_admission_v3",
   "temporary_seed_release_removed": true,
-  "reuse_note": "Validate original bundle against its original producer; add only execution-profile documentation to agent images and reuse the exact qualified corrected verifier. New manifests bind current inputs.",
+  "reuse_note": "The version-two complete bundle remains historically qualified and must fail current policy-v3 experiment validation. A distinct policy-v3 verifier is qualified for retrospective replay; future live use requires explicitly authorized matching agent documentation/task manifests. No images were relabeled or agent images rebuilt.",
   "corrected_verifier_source": {
     "run_id": 42279639435,
     "commit": "b0637f4d7556d0f29d0b6ed449f8ba62535f37aa",
@@ -164,7 +164,7 @@
     }
   ],
   "latest_failure_run": 42283951417,
-  "ready_for_live_pair": true,
+  "ready_for_live_pair": false,
   "preparation_window": {
     "started_at": "2026-11-06T21:03:22Z",
     "deadline": "2026-11-06T22:33:22Z",
@@ -172,5 +172,18 @@
     "scope": "Credential-free diagnosis, correction and matching preparation including CI waiting; cleanup and report preservation continue after deadline."
   },
   "reader_qualification_run": 42294197480,
-  "qualification_run": 42294384802
+  "qualification_run": 42294384802,
+  "retrospective_verifier_source": {
+    "run_id": 42301691565,
+    "commit": "ecfafe80a430d890696d1ace6b474b645d55842a",
+    "artifact_id": 13543768880,
+    "name": "corrected-assertion-verifier",
+    "artifact_digest": "sha256:81b0c5c46c450ddd4951c255f9ffd2b256d5fa2825d479e8874ed77bcf3505b9",
+    "manifest_sha256": "0790e6a573d7c4652b5ec74d40e26d7632dd6f9cf2e10ce7173226124a4b830f",
+    "image_id": "sha256:ba23a18313271edaf0826ebe799c77fa17f77278f8ddf2efa740ec3e7b8b854f",
+    "expires_at": "2026-11-13T22:06:29Z",
+    "download_digest_verified": true,
+    "archive_hash_verified": true,
+    "scope": "Retrospective policy-v3 verifier only; future live inputs require matching preparation."
+  }
 }

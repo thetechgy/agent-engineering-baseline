@@ -703,4 +703,10 @@ The historical agent documentation and live outcomes remain unchanged. The
 90-minute window is ordinary elapsed-time tracking in `boolean-replay.json`;
 no allocation is opened. Campaign consumption stays 9/36, earlier recovery 4/4,
 and all paid scheduling stays disabled. The separately labeled retrospective
-comparison will be added to the existing report after native qualification.
+comparison is recorded in `results/retrospective-pair.json` and the single report.
+Run [42301691565](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42301691565)
+passed 49 admission controls, seven native controls and both unchanged submissions.
+Current passed 32 reference tests and detected 2/2 defects; absent passed 35 and
+detected 2/2. No quality advantage was observed on this case. The first execution
+stopped at a helper import in isolated Python; the evidence-based import correction
+changed no admission policy or candidate. Both run records remain retained.
