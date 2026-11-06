@@ -1,9 +1,9 @@
 {
   "schema_version": 3,
   "campaign": "direct-harbor-20261104",
-  "state": "retained_smoke_allocation_closed_before_launch",
-  "decision": "No usable new live comparison: the pinned Debian snapshot package index returned HTTP 503/504 during agent-image preparation, before either reservation or credentialed launch. The exact-submission publication path is verified; inference remains unperformed in this pass.",
-  "summary": "Allocation sol-high-retained-20261106 closed with zero of two slots consumed; both planned identities are closed unused. Campaign remains 6/36 and original recovery 4/4. The earlier unit-test fixture defect was corrected before the image-build failure. Historical grades and unknown spending are preserved. No skill, task, grader acceptance criteria, pin, production workflow or Pages change.",
+  "state": "live_allocation_closed_preparation_failed",
+  "decision": "A pinned snapshot delivery blocker remains. Both authorized preparation attempts failed before image completion, environment approval or a paid reservation. Stop this allocation; no usable new skill comparison exists.",
+  "summary": "Preparation now precedes protected environment approval. Existing pins, task, grader, deployment and security policy are unchanged. Required full images and their artifact transfer did not complete. Campaign consumption remains 6/36; this allocation closed with 0/2 reserved or launched.",
   "source_commit": "cc0819f5dafc05610dd8c3293ce2f52744c66f1a",
   "reviewed_trial_commit": "f61201a730746921abd17d8f8366dfd1505ad6f8",
   "executed_commit": "c5a430ac15b4fac0eb6a29b1ac46ad4e7e06ca3e",
@@ -398,7 +398,7 @@
   "api_spend_usd": null,
   "estimated_cumulative_api_spend_usd": null,
   "provider_billing_observation": null,
-  "spending_note": "This pass reserved and launched zero credentialed attempts, so it produced no new model usage. No provider bill was obtained and historical cumulative spending remains unknown. The $5 operational allocation is closed unused; missing usage/pricing is not represented as an observed zero charge. Historical usage and estimates remain in allocation-evidence.json.",
+  "spending_note": "No credentials or model calls were used in this allocation; no new usage observations or provider bill were obtained. The $5 operational allocation closed unused. Historical cumulative provider spending remains unknown; earlier usage estimates and all six historical attempts are preserved.",
   "budget": {
     "operational_usd": 20,
     "provider_hard_cap_verified": false,
@@ -412,7 +412,7 @@
     "reserve_usd": 16,
     "pair_preflight_estimate_usd": 2.64,
     "scheduling_stopped": true,
-    "stop_reason": "Pinned Debian snapshot package-index HTTP 503/504 before any reservation or launch; allocation closed unused.",
+    "stop_reason": "Stop after the two authorized full preparation attempts. No third build or paid launch. Pinned snapshot delivery remains unreliable from hosted Actions; unchanged complete image construction and transfer are unverified.",
     "conservative_input_usd_per_million": 20,
     "conservative_output_usd_per_million": 30,
     "unknown_cost_accepted_for_testing": true
@@ -1086,6 +1086,16 @@
       "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342",
       "label": "GPT-6.1 Sol/High, rollout budget disabled",
       "summary": "One current and one absent attempt at most; checkpointed and then closed."
+    },
+    {
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42235352779",
+      "label": "Credential-free preparation 1/2; no live execution",
+      "summary": "APT security Packages index HTTP 504; apt exit 100; Docker build exit 1"
+    },
+    {
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42238163966",
+      "label": "Credential-free preparation 2/2; no live execution",
+      "summary": "Fixed main Packages.xz download exhausted three transport attempts; HTTP 503: No healthy backends; Docker build exit 1"
     }
   ],
   "local_validation": {
@@ -1639,7 +1649,7 @@
     "budget_semantics": "0.166.0 accepts enforce_limit=true. Source charges provider budget units when available, otherwise weighted non-cached input plus output. Token budget is not a dollar meter; enforcement under inference remains untested."
   },
   "live_allocation": {
-    "id": "sol-high-retained-20261106",
+    "id": "sol-high-prepared-20261106",
     "rows": [
       {
         "variant": "current",
@@ -1674,8 +1684,7 @@
         "native_pricing_estimate_usd": null,
         "api_bill_usd": null,
         "evidence_complete": false,
-        "containers_removed": null,
-        "container_disposal": "not_applicable_never_started"
+        "containers_removed": null
       },
       {
         "variant": "absent",
@@ -1710,12 +1719,11 @@
         "native_pricing_estimate_usd": null,
         "api_bill_usd": null,
         "evidence_complete": false,
-        "containers_removed": null,
-        "container_disposal": "not_applicable_never_started"
+        "containers_removed": null
       }
     ],
     "closure": {
-      "allocation_id": "sol-high-retained-20261106",
+      "allocation_id": "sol-high-prepared-20261106",
       "state": "closed",
       "paid_execution_enabled": false,
       "reserved_slots_consumed": [],
@@ -1728,11 +1736,7 @@
       "reservation_ids": [],
       "incremental_conservative_estimate_usd": null,
       "operational_budget_usd": 5,
-      "estimated_budget_exceeded": null,
-      "unused_closed_reservations": [
-        "sol-high-retained-20261106/current/7",
-        "sol-high-retained-20261106/absent/8"
-      ]
+      "estimated_budget_exceeded": null
     },
     "operationally_usable": false,
     "profile": "codex-0.166.0_gpt-6.1-sol_high_rollout-budget-disabled",
@@ -1747,13 +1751,9 @@
     "admission_preflight": null,
     "observed_usage_conservative_estimate_usd": null,
     "reviewed_notes": [
-      "Both arms use the fully disabled supplemental rollout-budget feature, including reminders; the CLI feature listing is checked before credentials and after Harbor uploads its effective configuration. Attempt five used a different budget profile and is historical evidence, not a matched comparison.",
-      "Execution outcome, task completion, independent correctness, session usage coverage and provider billing are assessed separately. A recognized agent failure can be interpretable without a valid correctness grade.",
-      "Historical attempt five remains a native NonZeroAgentExitCodeError / unclassified with the exact Codex budget-exhaustion event. Retained usage estimates remain available; ordered raw-session coverage was not retained, so complete accounting is not retroactively asserted.",
-      "Both planned arms are unlaunched, not failed agent tasks. No submission or new admission/correctness/mutation result exists. Prior grading controls remain valid; none were rerun.",
-      "A closed-state unit test originally read the armed checkout; it now uses explicit disabled and armed fixtures without weakening handoff.no_credentials. The corrected workflow passed all 54 component tests, with three runtime-specific skips.",
-      "The artifact fixture proved unchanged bytes through upload/download and local retrieval; it does not prove retention of a new agent submission because no agent ran.",
-      "Smallest next decision: verify availability of the unchanged pinned package index without credentials before considering a newly authorized allocation. No replacement call or budget carry-forward is scheduled."
+      "Neither arm was reserved, launched, graded or retained; all current/absent metrics remain unmeasured.",
+      "The unchanged frozen profile was planned, not evaluated. Historical controls and earlier live outcomes remain historical evidence.",
+      "Prepared images must build and pass artifact round-trip verification before normal protected-environment approval and any credentialed launch."
     ]
   },
   "allocation_budget": {
@@ -2046,6 +2046,124 @@
         "Smallest next decision: authorize a narrow credential-free admission-diagnostic improvement that retains a fixed rule identifier without submission contents or weaker acceptance criteria. Establish what the unsupported category means before allocating more inference. No broad calibration, skill revision or additional paid phase is started."
       ],
       "next_decision": "Credential-free fixed admission-rule diagnostics; preserve policy and do not schedule another paid phase."
+    },
+    {
+      "id": "sol-high-retained-20261106",
+      "rows": [
+        {
+          "variant": "current",
+          "attempt": 7,
+          "scheduled": false,
+          "reserved": false,
+          "credentialed_launch_started": false,
+          "submission_retention": null,
+          "session_completed": null,
+          "execution_outcome": "not_scheduled",
+          "task_completion_measured": false,
+          "task_completed": null,
+          "outcome": "not_scheduled",
+          "handoff": null,
+          "admission": null,
+          "admission_diagnostic": null,
+          "valid_grade": false,
+          "reference_pass": null,
+          "mutants_detected": null,
+          "mutants_executed": null,
+          "skill_file_access_attempts": null,
+          "tool_calls": null,
+          "tool_errors": null,
+          "failure_cause": null,
+          "timing": null,
+          "duration_seconds": null,
+          "usage": null,
+          "accounting_assessment": null,
+          "execution_assessment": null,
+          "native_terminal": null,
+          "conservative_estimate_usd": null,
+          "native_pricing_estimate_usd": null,
+          "api_bill_usd": null,
+          "evidence_complete": false,
+          "containers_removed": null,
+          "container_disposal": "not_applicable_never_started"
+        },
+        {
+          "variant": "absent",
+          "attempt": 8,
+          "scheduled": false,
+          "reserved": false,
+          "credentialed_launch_started": false,
+          "submission_retention": null,
+          "session_completed": null,
+          "execution_outcome": "not_scheduled",
+          "task_completion_measured": false,
+          "task_completed": null,
+          "outcome": "not_scheduled",
+          "handoff": null,
+          "admission": null,
+          "admission_diagnostic": null,
+          "valid_grade": false,
+          "reference_pass": null,
+          "mutants_detected": null,
+          "mutants_executed": null,
+          "skill_file_access_attempts": null,
+          "tool_calls": null,
+          "tool_errors": null,
+          "failure_cause": null,
+          "timing": null,
+          "duration_seconds": null,
+          "usage": null,
+          "accounting_assessment": null,
+          "execution_assessment": null,
+          "native_terminal": null,
+          "conservative_estimate_usd": null,
+          "native_pricing_estimate_usd": null,
+          "api_bill_usd": null,
+          "evidence_complete": false,
+          "containers_removed": null,
+          "container_disposal": "not_applicable_never_started"
+        }
+      ],
+      "closure": {
+        "allocation_id": "sol-high-retained-20261106",
+        "state": "closed",
+        "paid_execution_enabled": false,
+        "reserved_slots_consumed": [],
+        "campaign_attempts_consumed": 6,
+        "previous_recovery_consumed": 4,
+        "previous_recovery_limit": 4,
+        "incremental_api_bill_usd": null,
+        "historical_cumulative_api_bill_usd": null,
+        "note": "Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.",
+        "reservation_ids": [],
+        "incremental_conservative_estimate_usd": null,
+        "operational_budget_usd": 5,
+        "estimated_budget_exceeded": null,
+        "unused_closed_reservations": [
+          "sol-high-retained-20261106/current/7",
+          "sol-high-retained-20261106/absent/8"
+        ]
+      },
+      "operationally_usable": false,
+      "profile": "codex-0.166.0_gpt-6.1-sol_high_rollout-budget-disabled",
+      "limits": [
+        "One attempt per arm cannot establish skill effectiveness; comparisons with historical CLI/model profiles are not skill-only comparisons",
+        "File-access attempts are not successful reads, instruction following or causal skill benefit",
+        "Native cleanup permission errors are retained; whole disposable-container removal is checked independently",
+        "The API credential is available to the evaluated process. Unrelated credentials, raw transcripts and authentication files are excluded. Only the exact declared agent submission may be retained after credential/protected-content checks and download verification, for 30 days",
+        "Pinned native pricing may be unavailable; historical cumulative spending remains unknown; $5 is an operational budget with possible overshoot, not a provider-enforced cap"
+      ],
+      "usage_note": "CLI-reported cumulative totals are retained without summing repeated token-count events. Cached reads and writes are input subsets; reasoning is an output subset. Conservative estimate charges all input at $10/M and output at $15/M, without adding subset counts. These are estimates, not provider bills.",
+      "admission_preflight": null,
+      "observed_usage_conservative_estimate_usd": null,
+      "reviewed_notes": [
+        "Both arms use the fully disabled supplemental rollout-budget feature, including reminders; the CLI feature listing is checked before credentials and after Harbor uploads its effective configuration. Attempt five used a different budget profile and is historical evidence, not a matched comparison.",
+        "Execution outcome, task completion, independent correctness, session usage coverage and provider billing are assessed separately. A recognized agent failure can be interpretable without a valid correctness grade.",
+        "Historical attempt five remains a native NonZeroAgentExitCodeError / unclassified with the exact Codex budget-exhaustion event. Retained usage estimates remain available; ordered raw-session coverage was not retained, so complete accounting is not retroactively asserted.",
+        "Both planned arms are unlaunched, not failed agent tasks. No submission or new admission/correctness/mutation result exists. Prior grading controls remain valid; none were rerun.",
+        "A closed-state unit test originally read the armed checkout; it now uses explicit disabled and armed fixtures without weakening handoff.no_credentials. The corrected workflow passed all 54 component tests, with three runtime-specific skips.",
+        "The artifact fixture proved unchanged bytes through upload/download and local retrieval; it does not prove retention of a new agent submission because no agent ran.",
+        "Smallest next decision: verify availability of the unchanged pinned package index without credentials before considering a newly authorized allocation. No replacement call or budget carry-forward is scheduled."
+      ]
     }
   ],
   "admission_validation": {
@@ -2242,15 +2360,93 @@
     "inference": false,
     "local_download_verified": true
   },
+  "maintenance_added": [
+    "One bounded exact-deliverable publication module and focused checks",
+    "Pinned artifact upload/download steps and identity/hash verification",
+    "No new Harbor override, fork, dependency, grader policy or artifact transport"
+  ],
+  "preparation_history": [
+    {
+      "runs": [
+        {
+          "run_id": 42212722607,
+          "commit": "0bbd09b356415e6ce01ca142e3fb56b385267c61",
+          "stage": "credential_free_unit_tests",
+          "failure": "test_credential_free_diagnostics_work_after_later_closed_allocations used armed checkout instead of a closed fixture",
+          "closure": {
+            "allocation_id": "sol-high-retained-20261106",
+            "state": "closed",
+            "paid_execution_enabled": false,
+            "reserved_slots_consumed": [],
+            "campaign_attempts_consumed": 6,
+            "previous_recovery_consumed": 4,
+            "previous_recovery_limit": 4,
+            "incremental_api_bill_usd": null,
+            "historical_cumulative_api_bill_usd": null,
+            "note": "Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.",
+            "reservation_ids": [],
+            "incremental_conservative_estimate_usd": null,
+            "operational_budget_usd": 5,
+            "estimated_budget_exceeded": null
+          },
+          "credentialed_launches": 0,
+          "reservations": 0,
+          "scope": "Prelaunch CI correction only; no retry or replacement of a Codex attempt."
+        },
+        {
+          "run_id": 42213118342,
+          "commit": "eca71ef78c197b51103436f85575126a4ad48ea9",
+          "stage": "credential_free_agent_image_build",
+          "classification": "prelaunch_infrastructure_failure",
+          "command": [
+            "docker",
+            "build",
+            "--progress=plain",
+            "-t",
+            "direct-harbor-agent:current",
+            "<staged-current-environment>"
+          ],
+          "failing_build_step": "apt-get update --error-on=any against frozen Debian snapshot 20261103T000000Z",
+          "native_exit_status": 100,
+          "outer_docker_build_exit_status": 1,
+          "observed_errors": [
+            "HTTP 504 Gateway Timeout",
+            "HTTP 503 TooManyRequests first byte timeout"
+          ],
+          "package_index_url": "https://snapshot.debian.org/archive/debian/20261103T000000Z/dists/trixie/main/binary-amd64/Packages",
+          "reservations": 0,
+          "credentialed_launches": 0,
+          "evaluated_agent_container_started": false,
+          "verifier_container_started": false,
+          "container_disposal": "not_applicable_evaluated_environments_never_started",
+          "build_cleanup": "GitHub-hosted job completed; no retained Docker process inspection; do not claim a container-disposal probe passed",
+          "workflow_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342",
+          "job_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342/job/127876427762",
+          "report_artifact_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342/artifacts/13499568643",
+          "closure_artifact_sha256": "7d32a70cf6839abc78b308a56f52e4984cf2b6095a653751308affbedc375169",
+          "note": "No reservation receipt or attempt record exists; both credentialed steps were skipped. No new agent-generated submission exists. No package pin, acceptance criterion or isolation setting was changed to work around this failure."
+        }
+      ],
+      "terminal_decision": "Allocation closed unused after the pinned package index failed. No additional inference or CI build retry scheduled."
+    }
+  ],
+  "prepared_environment": {
+    "prepared_manifest": null,
+    "prepared_transfer": null,
+    "preapproval_download": null
+  },
   "preparation_failures": {
     "runs": [
       {
-        "run_id": 42212722607,
-        "commit": "0bbd09b356415e6ce01ca142e3fb56b385267c61",
-        "stage": "credential_free_unit_tests",
-        "failure": "test_credential_free_diagnostics_work_after_later_closed_allocations used armed checkout instead of a closed fixture",
+        "run_id": 42235352779,
+        "commit": "c6cef78ec916fdf955eb20600fa642e2f6d9c91d",
+        "preparation_attempt": 1,
+        "stage": "agent_image_build",
+        "dependency": "https://snapshot.debian.org/archive/debian-security/20261103T000000Z/dists/trixie-security/main/binary-amd64/Packages",
+        "native_apt_exit": 100,
+        "http_status": 504,
         "closure": {
-          "allocation_id": "sol-high-retained-20261106",
+          "allocation_id": "sol-high-prepared-20261106",
           "state": "closed",
           "paid_execution_enabled": false,
           "reserved_slots_consumed": [],
@@ -2265,49 +2461,294 @@
           "operational_budget_usd": 5,
           "estimated_budget_exceeded": null
         },
+        "environment_approval_submitted": false,
         "credentialed_launches": 0,
         "reservations": 0,
-        "scope": "Prelaunch CI correction only; no retry or replacement of a Codex attempt."
+        "classification": "prelaunch_infrastructure_failure",
+        "failure": "APT security Packages index HTTP 504; apt exit 100; Docker build exit 1",
+        "workflow_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42235352779",
+        "closure_artifact_sha256": "73abd16bac41ce840b34b74b191122b8b3a377b85f4919d7fb589b85c613d67d"
       },
       {
-        "run_id": 42213118342,
-        "commit": "eca71ef78c197b51103436f85575126a4ad48ea9",
+        "run_id": 42238163966,
+        "commit": "381c458a512fe120ab20060ede7b6542b6049c94",
+        "preparation_attempt": 2,
         "stage": "credential_free_agent_image_build",
         "classification": "prelaunch_infrastructure_failure",
-        "command": [
-          "docker",
-          "build",
-          "--progress=plain",
-          "-t",
-          "direct-harbor-agent:current",
-          "<staged-current-environment>"
-        ],
-        "failing_build_step": "apt-get update --error-on=any against frozen Debian snapshot 20261103T000000Z",
-        "native_exit_status": 100,
+        "failure": "Fixed main Packages.xz download exhausted three transport attempts; HTTP 503: No healthy backends; Docker build exit 1",
+        "dependency": "https://snapshot.debian.org/archive/debian/20261103T000000Z/dists/trixie/main/binary-amd64/Packages.xz",
+        "dependency_attribution": "Derived from the executed ordered cache_indexes loop, traceback at checked(base+relative), and absence of its flushed first-archive completion message. The exception itself omitted the URL.",
+        "native_http_status": 503,
+        "transport_attempts": 3,
         "outer_docker_build_exit_status": 1,
-        "observed_errors": [
-          "HTTP 504 Gateway Timeout",
-          "HTTP 503 TooManyRequests first byte timeout"
-        ],
-        "package_index_url": "https://snapshot.debian.org/archive/debian/20261103T000000Z/dists/trixie/main/binary-amd64/Packages",
+        "closure": {
+          "allocation_id": "sol-high-prepared-20261106",
+          "state": "closed",
+          "paid_execution_enabled": false,
+          "reserved_slots_consumed": [],
+          "campaign_attempts_consumed": 6,
+          "previous_recovery_consumed": 4,
+          "previous_recovery_limit": 4,
+          "incremental_api_bill_usd": null,
+          "historical_cumulative_api_bill_usd": null,
+          "note": "Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.",
+          "reservation_ids": [],
+          "incremental_conservative_estimate_usd": null,
+          "operational_budget_usd": 5,
+          "estimated_budget_exceeded": null
+        },
         "reservations": 0,
         "credentialed_launches": 0,
-        "evaluated_agent_container_started": false,
+        "environment_approval_submitted": false,
+        "workflow_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42238163966",
+        "job_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42238163966/job/127961265318",
+        "closure_artifact_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42238163966/artifacts/13511298813",
+        "closure_artifact_sha256": "18961500dc7ff13d044514bcbb4dd938a254334008ad391ea9aed06a94d7725c",
+        "closure_download_digest_verified": true,
+        "preparation_metadata": {
+          "stage": "building_pinned_image",
+          "paid_inference_permitted": false
+        },
+        "agent_container_started": false,
         "verifier_container_started": false,
-        "container_disposal": "not_applicable_evaluated_environments_never_started",
-        "build_cleanup": "GitHub-hosted job completed; no retained Docker process inspection; do not claim a container-disposal probe passed",
-        "workflow_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342",
-        "job_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342/job/127876427762",
-        "report_artifact_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342/artifacts/13499568643",
-        "closure_artifact_sha256": "7d32a70cf6839abc78b308a56f52e4984cf2b6095a653751308affbedc375169",
-        "note": "No reservation receipt or attempt record exists; both credentialed steps were skipped. No new agent-generated submission exists. No package pin, acceptance criterion or isolation setting was changed to work around this failure."
+        "container_disposal": "not_applicable_no_evaluated_containers_started",
+        "compose_cleanup_step": "success; not evidence of a live container-disposal probe"
       }
     ],
-    "terminal_decision": "Allocation closed unused after the pinned package index failed. No additional inference or CI build retry scheduled."
+    "terminal_decision": "Stop after the two authorized full preparation attempts. No third build or paid launch. Pinned snapshot delivery remains unreliable from hosted Actions; unchanged complete image construction and transfer are unverified.",
+    "history": [
+      {
+        "runs": [
+          {
+            "run_id": 42212722607,
+            "commit": "0bbd09b356415e6ce01ca142e3fb56b385267c61",
+            "stage": "credential_free_unit_tests",
+            "failure": "test_credential_free_diagnostics_work_after_later_closed_allocations used armed checkout instead of a closed fixture",
+            "closure": {
+              "allocation_id": "sol-high-retained-20261106",
+              "state": "closed",
+              "paid_execution_enabled": false,
+              "reserved_slots_consumed": [],
+              "campaign_attempts_consumed": 6,
+              "previous_recovery_consumed": 4,
+              "previous_recovery_limit": 4,
+              "incremental_api_bill_usd": null,
+              "historical_cumulative_api_bill_usd": null,
+              "note": "Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.",
+              "reservation_ids": [],
+              "incremental_conservative_estimate_usd": null,
+              "operational_budget_usd": 5,
+              "estimated_budget_exceeded": null
+            },
+            "credentialed_launches": 0,
+            "reservations": 0,
+            "scope": "Prelaunch CI correction only; no retry or replacement of a Codex attempt."
+          },
+          {
+            "run_id": 42213118342,
+            "commit": "eca71ef78c197b51103436f85575126a4ad48ea9",
+            "stage": "credential_free_agent_image_build",
+            "classification": "prelaunch_infrastructure_failure",
+            "command": [
+              "docker",
+              "build",
+              "--progress=plain",
+              "-t",
+              "direct-harbor-agent:current",
+              "<staged-current-environment>"
+            ],
+            "failing_build_step": "apt-get update --error-on=any against frozen Debian snapshot 20261103T000000Z",
+            "native_exit_status": 100,
+            "outer_docker_build_exit_status": 1,
+            "observed_errors": [
+              "HTTP 504 Gateway Timeout",
+              "HTTP 503 TooManyRequests first byte timeout"
+            ],
+            "package_index_url": "https://snapshot.debian.org/archive/debian/20261103T000000Z/dists/trixie/main/binary-amd64/Packages",
+            "reservations": 0,
+            "credentialed_launches": 0,
+            "evaluated_agent_container_started": false,
+            "verifier_container_started": false,
+            "container_disposal": "not_applicable_evaluated_environments_never_started",
+            "build_cleanup": "GitHub-hosted job completed; no retained Docker process inspection; do not claim a container-disposal probe passed",
+            "workflow_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342",
+            "job_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342/job/127876427762",
+            "report_artifact_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342/artifacts/13499568643",
+            "closure_artifact_sha256": "7d32a70cf6839abc78b308a56f52e4984cf2b6095a653751308affbedc375169",
+            "note": "No reservation receipt or attempt record exists; both credentialed steps were skipped. No new agent-generated submission exists. No package pin, acceptance criterion or isolation setting was changed to work around this failure."
+          }
+        ],
+        "terminal_decision": "Allocation closed unused after the pinned package index failed. No additional inference or CI build retry scheduled."
+      }
+    ]
   },
-  "maintenance_added": [
-    "One bounded exact-deliverable publication module and focused checks",
-    "Pinned artifact upload/download steps and identity/hash verification",
-    "No new Harbor override, fork, dependency, grader policy or artifact transport"
-  ]
+  "snapshot_recovery": {
+    "prior_failed_run": 42213118342,
+    "preparation_runs": [
+      {
+        "run_id": 42235352779,
+        "commit": "c6cef78ec916fdf955eb20600fa642e2f6d9c91d",
+        "preparation_attempt": 1,
+        "stage": "agent_image_build",
+        "dependency": "https://snapshot.debian.org/archive/debian-security/20261103T000000Z/dists/trixie-security/main/binary-amd64/Packages",
+        "native_apt_exit": 100,
+        "http_status": 504,
+        "closure": {
+          "allocation_id": "sol-high-prepared-20261106",
+          "state": "closed",
+          "paid_execution_enabled": false,
+          "reserved_slots_consumed": [],
+          "campaign_attempts_consumed": 6,
+          "previous_recovery_consumed": 4,
+          "previous_recovery_limit": 4,
+          "incremental_api_bill_usd": null,
+          "historical_cumulative_api_bill_usd": null,
+          "note": "Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.",
+          "reservation_ids": [],
+          "incremental_conservative_estimate_usd": null,
+          "operational_budget_usd": 5,
+          "estimated_budget_exceeded": null
+        },
+        "environment_approval_submitted": false,
+        "credentialed_launches": 0,
+        "reservations": 0,
+        "classification": "prelaunch_infrastructure_failure",
+        "failure": "APT security Packages index HTTP 504; apt exit 100; Docker build exit 1",
+        "workflow_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42235352779",
+        "closure_artifact_sha256": "73abd16bac41ce840b34b74b191122b8b3a377b85f4919d7fb589b85c613d67d"
+      },
+      {
+        "run_id": 42238163966,
+        "commit": "381c458a512fe120ab20060ede7b6542b6049c94",
+        "preparation_attempt": 2,
+        "stage": "credential_free_agent_image_build",
+        "classification": "prelaunch_infrastructure_failure",
+        "failure": "Fixed main Packages.xz download exhausted three transport attempts; HTTP 503: No healthy backends; Docker build exit 1",
+        "dependency": "https://snapshot.debian.org/archive/debian/20261103T000000Z/dists/trixie/main/binary-amd64/Packages.xz",
+        "dependency_attribution": "Derived from the executed ordered cache_indexes loop, traceback at checked(base+relative), and absence of its flushed first-archive completion message. The exception itself omitted the URL.",
+        "native_http_status": 503,
+        "transport_attempts": 3,
+        "outer_docker_build_exit_status": 1,
+        "closure": {
+          "allocation_id": "sol-high-prepared-20261106",
+          "state": "closed",
+          "paid_execution_enabled": false,
+          "reserved_slots_consumed": [],
+          "campaign_attempts_consumed": 6,
+          "previous_recovery_consumed": 4,
+          "previous_recovery_limit": 4,
+          "incremental_api_bill_usd": null,
+          "historical_cumulative_api_bill_usd": null,
+          "note": "Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.",
+          "reservation_ids": [],
+          "incremental_conservative_estimate_usd": null,
+          "operational_budget_usd": 5,
+          "estimated_budget_exceeded": null
+        },
+        "reservations": 0,
+        "credentialed_launches": 0,
+        "environment_approval_submitted": false,
+        "workflow_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42238163966",
+        "job_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42238163966/job/127961265318",
+        "closure_artifact_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42238163966/artifacts/13511298813",
+        "closure_artifact_sha256": "18961500dc7ff13d044514bcbb4dd938a254334008ad391ea9aed06a94d7725c",
+        "closure_download_digest_verified": true,
+        "preparation_metadata": {
+          "stage": "building_pinned_image",
+          "paid_inference_permitted": false
+        },
+        "agent_container_started": false,
+        "verifier_container_started": false,
+        "container_disposal": "not_applicable_no_evaluated_containers_started",
+        "compose_cleanup_step": "success; not evidence of a live container-disposal probe"
+      }
+    ],
+    "requests": [
+      {
+        "path": "InRelease",
+        "status": 200,
+        "size": 140421,
+        "sha256": "0584fba32e13e0ab8285fb16c27adea1ec03a73669c18702821094fd6ca86675",
+        "elapsed_seconds": 0.49,
+        "destination": "InRelease"
+      },
+      {
+        "path": "main/binary-amd64/Packages.xz",
+        "status": 200,
+        "size": 9678380,
+        "sha256": "7778d3e3f303b7ddb8ce0fe7c8d57473a076c6bf2e8f241f75421d2396352498",
+        "elapsed_seconds": 0.85,
+        "destination": "main_binary-amd64_Packages.xz"
+      },
+      {
+        "path": "main/binary-amd64/Packages.gz",
+        "error_type": "HTTPError",
+        "status": 504,
+        "elapsed_seconds": 10.51
+      }
+    ],
+    "security_requests": [
+      {
+        "path": "InRelease",
+        "status": 200,
+        "size": 43409,
+        "sha256": "01590ffbf20362d6138369dbf543ee42d3d8ec62589d31cfb93a085afcad4f3c",
+        "elapsed_seconds": 0.82,
+        "destination": "security_InRelease"
+      },
+      {
+        "path": "main/binary-amd64/Packages.xz",
+        "status": 200,
+        "size": 297148,
+        "sha256": "38ca814a70dea1f035fd078c08b15b9a93f23b9605f3115a7791f30e62a6bf27",
+        "elapsed_seconds": 0.54,
+        "destination": "security_main_binary-amd64_Packages.xz"
+      },
+      {
+        "path": "main/binary-amd64/Packages.gz",
+        "error_type": "HTTPError",
+        "status": 504,
+        "elapsed_seconds": 11.51
+      }
+    ],
+    "base_image": "python:3.12-slim-trixie@sha256:b18b261e1b4974b4f321451ad5251ded85abb22c2b8b262da527dda1d031ab30",
+    "index_only_probe": {
+      "passed": true,
+      "apt_update_exit": 0,
+      "package_installation": false,
+      "model_inference": false,
+      "execution_user": "1000:1000",
+      "read_only_root": true,
+      "capabilities_dropped": "ALL",
+      "no_new_privileges": true,
+      "host_mounts": false,
+      "log_sha256": "30650709996c05879fe268a700ef21ae4087a50a409d277c534386caf87e6770",
+      "known_limits": "This verifies cache acquisition and APT authentication, not full agent/verifier image construction. Two earlier local probe invocations stopped on unsupported tmpfs ownership syntax and a locked system APT state directory; the passing probe uses fresh unprivileged scratch state."
+    },
+    "diagnosis": "Main and security compressed index bytes exist and match signed-release identities. Gzip/plain delivery returned 503/504. The pinned base compression configuration did not establish a configuration defect; flaky remote delivery is the supported finding.",
+    "correction": "Existing helper caches the exact dated InRelease and Packages.xz bytes with at most three transport attempts per request. All APT build phases use a temporary file source with the existing signed-by keyring; snapshot-selected package size/SHA256 and apt --no-download stay enforced. Runtime sources, snapshot date, versions and base digest remain unchanged.",
+    "documentation": "https://manpages.debian.org/trixie/apt/apt.conf.5.en.html",
+    "full_preparation_limit": 2,
+    "full_preparation_attempts_used": 2,
+    "full_images_built": false,
+    "prepared_images_reused": false,
+    "image_transfer_qualified": false,
+    "environment_approval": {
+      "submitted": false,
+      "reason": "Both credential-free preparation jobs failed. Paid jobs were skipped; no approval requested or submitted.",
+      "authorized_method": "Normal environment API approval only after exact repository, branch, commit, run and allocation preparation checks; no administrative bypass or independent human review."
+    },
+    "local_validation": {
+      "tests_run": 61,
+      "skipped": 3,
+      "failures": 0,
+      "scope": "Pinned Harbor focused component suite; source/staging/manifest fixtures plus separately retained index-only APT probe. Not a full image build."
+    },
+    "terminal_decision": "Stop after the two authorized full preparation attempts. No third build or paid launch. Pinned snapshot delivery remains unreliable from hosted Actions; unchanged complete image construction and transfer are unverified.",
+    "maintenance": [
+      "One trial-local image/task archive helper with manifest, digest, task-checksum and runner-path validation plus four tests; no Harbor fork or new private override.",
+      "Existing APT transport helper now caches exact signed indexes with bounded retries and size/SHA256 checks; APT still verifies signatures. Three transport regression tests.",
+      "Separate credential-free preparation job and protected live job; same-run temporary image/input artifact has one-day retention. Full transfer remains unexercised because image builds failed."
+    ]
+  }
 }

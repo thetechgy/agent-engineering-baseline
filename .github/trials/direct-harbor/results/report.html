@@ -1,12 +1,12 @@
 <!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
 <title>Direct Harbor recovery trial</title><style>body{font:16px system-ui;max-width:1100px;margin:3rem auto;padding:0 1rem;color:#172033}table{border-collapse:collapse;width:100%;margin:1rem 0}th,td{border:1px solid #cbd5e1;padding:.5rem;text-align:left;vertical-align:top}pre{white-space:pre-wrap;overflow-wrap:anywhere}h1,h2{color:#174f78}a{color:#145f91}</style>
 <h1>Direct Harbor recovery trial</h1><p>Bounded experimental trial. Production evaluation and Pages remain unchanged.</p>
-<p><a href="results.json" download>Download machine-readable results</a> · <a href="manifest.json">Frozen input manifests</a> · <a href="workflow-evidence.txt">Workflow evidence excerpts</a></p><h2>Decision</h2><p>No usable new live comparison: the pinned Debian snapshot package index returned HTTP 503/504 during agent-image preparation, before either reservation or credentialed launch. The exact-submission publication path is verified; inference remains unperformed in this pass.</p><p>Allocation sol-high-retained-20261106 closed with zero of two slots consumed; both planned identities are closed unused. Campaign remains 6/36 and original recovery 4/4. The earlier unit-test fixture defect was corrected before the image-build failure. Historical grades and unknown spending are preserved. No skill, task, grader acceptance criteria, pin, production workflow or Pages change.</p><h2>Pre-launch blocker</h2><p>No new credentialed attempt or submission. <a href="preparation-failure.json">Preparation failure evidence</a></p><table><thead><tr><th scope="col">Run</th><th scope="col">Stage</th><th scope="col">Observed failure</th><th scope="col">Reservations / launches</th></tr></thead><tbody><tr><td>42212722607</td><td>credential_free_unit_tests</td><td>test_credential_free_diagnostics_work_after_later_closed_allocations used armed checkout instead of a closed fixture</td><td>0 / 0</td></tr><tr><td>42213118342</td><td>credential_free_agent_image_build</td><td>HTTP 504 Gateway Timeout, HTTP 503 TooManyRequests first byte timeout</td><td>0 / 0</td></tr></tbody></table><p>Allocation closed unused after the pinned package index failed. No additional inference or CI build retry scheduled.</p><h2>Credential-free admission diagnostic validation</h2><p>Passed: True. No model inference. These are deterministic verifier controls, not new skill-evaluation attempts. Historical attempt six remains unexplained.</p><p><a href="admission-validation.json">Docker control evidence and input identity</a></p><table><thead><tr><th scope="col">Control</th><th scope="col">Classification</th><th scope="col">Diagnostic reason</th><th scope="col">Reference pass</th><th scope="col">Defects detected</th><th scope="col">Expected outcome matched</th></tr></thead><tbody><tr><td>good</td><td>passed</td><td>evaluated</td><td>1</td><td>2</td><td>True</td></tr><tr><td>weak</td><td>failed</td><td>evaluated</td><td>1</td><td>0</td><td>True</td></tr><tr><td>unsupported</td><td>unsupported</td><td>command_not_allowed (CommandAst at 1:1)</td><td>Unknown</td><td>Unknown</td><td>True</td></tr><tr><td>runner_error</td><td>infrastructure_error</td><td>admission_runner</td><td>Unknown</td><td>Unknown</td><td>True</td></tr></tbody></table><h2>New live allocation: codex-0.166.0_gpt-6.1-sol_high_rollout-budget-disabled</h2><p><a href="allocation-evidence.json">Sanitized launch, deployment, handoff and usage evidence</a></p><table><thead><tr><th scope="col">Arm / attempt</th><th scope="col">Execution / session completed</th><th scope="col">Task outcome</th><th scope="col">Artifact transfer / admission</th><th scope="col">Reference / defects</th><th scope="col">Skill-file access attempts</th><th scope="col">Agent / total seconds</th></tr></thead><tbody><tr><td>current / 7</td><td>Not run</td><td>Not scheduled</td><td>Not attempted / Not measured</td><td>Not measured</td><td>Unknown</td><td>Not run</td></tr><tr><td>absent / 8</td><td>Not run</td><td>Not scheduled</td><td>Not attempted / Not measured</td><td>Not measured</td><td>Unknown</td><td>Not run</td></tr></tbody></table><table><thead><tr><th scope="col">Arm</th><th scope="col">Reserved / credentialed launch started / session completed</th><th scope="col">Exact submission retention</th></tr></thead><tbody><tr><td>current</td><td>False / False / None</td><td>No submission: arm not launched</td></tr><tr><td>absent</td><td>False / False / None</td><td>No submission: arm not launched</td></tr></tbody></table><p>Credential-free upload/download byte-preservation fixture passed: True. <a href="retention-validation.json">Fixture evidence</a></p><table><thead><tr><th scope="col">Arm</th><th scope="col">Total input</th><th scope="col">Cached input</th><th scope="col">Cache-write input</th><th scope="col">Total output</th><th scope="col">Reasoning output</th><th scope="col">Conservative USD estimate</th><th scope="col">Native pricing estimate</th></tr></thead><tbody><tr><td>current</td><td>Unknown</td><td>Unknown</td><td>Unknown</td><td>Unknown</td><td>Unknown</td><td>Unknown</td><td>Unknown</td></tr><tr><td>absent</td><td>Unknown</td><td>Unknown</td><td>Unknown</td><td>Unknown</td><td>Unknown</td><td>Unknown</td><td>Unknown</td></tr></tbody></table><p>CLI-reported cumulative totals are retained without summing repeated token-count events. Cached reads and writes are input subsets; reasoning is an output subset. Conservative estimate charges all input at $10/M and output at $15/M, without adding subset counts. These are estimates, not provider bills.</p><table><thead><tr><th scope="col">Arm</th><th scope="col">Accounting coverage</th><th scope="col">Billing certainty</th></tr></thead><tbody><tr><td>current</td><td>Unknown</td><td>Unknown</td></tr><tr><td>absent</td><td>Unknown</td><td>Unknown</td></tr></tbody></table><p>Both arms use the fully disabled supplemental rollout-budget feature, including reminders; the CLI feature listing is checked before credentials and after Harbor uploads its effective configuration. Attempt five used a different budget profile and is historical evidence, not a matched comparison.</p><p>Execution outcome, task completion, independent correctness, session usage coverage and provider billing are assessed separately. A recognized agent failure can be interpretable without a valid correctness grade.</p><p>Historical attempt five remains a native NonZeroAgentExitCodeError / unclassified with the exact Codex budget-exhaustion event. Retained usage estimates remain available; ordered raw-session coverage was not retained, so complete accounting is not retroactively asserted.</p><p>Both planned arms are unlaunched, not failed agent tasks. No submission or new admission/correctness/mutation result exists. Prior grading controls remain valid; none were rerun.</p><p>A closed-state unit test originally read the armed checkout; it now uses explicit disabled and armed fixtures without weakening handoff.no_credentials. The corrected workflow passed all 54 component tests, with three runtime-specific skips.</p><p>The artifact fixture proved unchanged bytes through upload/download and local retrieval; it does not prove retention of a new agent submission because no agent ran.</p><p>Smallest next decision: verify availability of the unchanged pinned package index without credentials before considering a newly authorized allocation. No replacement call or budget carry-forward is scheduled.</p><p>One attempt per arm cannot establish skill effectiveness; comparisons with historical CLI/model profiles are not skill-only comparisons</p><p>File-access attempts are not successful reads, instruction following or causal skill benefit</p><p>Native cleanup permission errors are retained; whole disposable-container removal is checked independently</p><p>The API credential is available to the evaluated process. Unrelated credentials, raw transcripts and authentication files are excluded. Only the exact declared agent submission may be retained after credential/protected-content checks and download verification, for 30 days</p><p>Pinned native pricing may be unavailable; historical cumulative spending remains unknown; $5 is an operational budget with possible overshoot, not a provider-enforced cap</p><p>Allocation closed; paid scheduling disabled. Consumed campaign slots: [].</p><h2>Earlier closed allocations</h2><p>Historical settings and outcomes are preserved; they are not matched arms of the current comparison. Full metadata remains in allocation-evidence.json.</p><table><thead><tr><th scope="col">Allocation</th><th scope="col">Consumed campaign attempts</th><th scope="col">Historical outcomes</th><th scope="col">Observed usage estimate USD</th></tr></thead><tbody><tr><td>sol-high-smoke-20261105</td><td>[5]</td><td>[(&#x27;current&#x27;, &#x27;agent_token_budget_exhausted&#x27;, &#x27;missing_after_budget_exhaustion&#x27;), (&#x27;absent&#x27;, &#x27;not_scheduled&#x27;, &#x27;not_scheduled&#x27;)]</td><td>0.641555</td></tr><tr><td>sol-high-no-rollout-budget-20261105</td><td>[6]</td><td>[(&#x27;current&#x27;, &#x27;completed&#x27;, &#x27;unsupported_submission&#x27;), (&#x27;absent&#x27;, &#x27;not_scheduled&#x27;, &#x27;not_scheduled&#x27;)]</td><td>1.49446</td></tr></tbody></table><h2>Prior credential-free artifact handoff and runtime checks</h2><p>Controlled handoff works; historical output failure remains unresolved.</p><p><a href="handoff-evidence.json">Native handoff metadata and runtime compatibility evidence</a></p><table><thead><tr><th scope="col">Deterministic control</th><th scope="col">Expected</th><th scope="col">Observed handoff</th><th scope="col">Verifier</th><th scope="col">Control matched</th></tr></thead><tbody><tr><td>good</td><td>Reference pass and 2/2 defects</td><td>graded_passed</td><td>{&#x27;classification&#x27;: &#x27;passed&#x27;, &#x27;code&#x27;: &#x27;evaluated&#x27;, &#x27;reference_pass&#x27;: 1, &#x27;mutants_detected&#x27;: 2, &#x27;mutants_executed&#x27;: 2, &#x27;tests_executed&#x27;: 3, &#x27;pester_version&#x27;: &#x27;6.2.0&#x27;, &#x27;powershell_version&#x27;: &#x27;7.6.9&#x27;}</td><td>True</td></tr><tr><td>missing</td><td>Missing submission</td><td>missing_deliverable</td><td>{&#x27;classification&#x27;: &#x27;invalid&#x27;, &#x27;code&#x27;: &#x27;artifact&#x27;, &#x27;admission_reason&#x27;: &#x27;missing&#x27;}</td><td>True</td></tr><tr><td>rejected</td><td>Transferred then invalid UTF-8</td><td>rejected_output</td><td>{&#x27;classification&#x27;: &#x27;invalid&#x27;, &#x27;code&#x27;: &#x27;artifact&#x27;, &#x27;admission_reason&#x27;: &#x27;invalid_utf8&#x27;}</td><td>True</td></tr></tbody></table><p>Future profile: codex-0.166.0_gpt-6.1-sol_high. Model inference in this pass: none.</p><p>Observed runtime: Codex 0.166.0 strict configuration load exited 0 with API-only login. Both probes sent one POST to the loopback Responses endpoint; prompt, output path, GPT-6.1 Sol, High effort and sentinel API authentication matched. HTTP 503 was not retried; idle streaming ended after 60.206 seconds without reconnect. Prompt comparison uses the stripped frozen instruction. Budget configuration was accepted; enforcement under inference is untested.</p><p>APT cache bypass was added after HTTP 503; subsequent build passed with unchanged signed snapshot/package pins. The option is not proven to have caused recovery</p><p>Trial-only supported collection hook and pre-grader metadata probe; no transport replacement or new private Harbor override</p><p>Shared grader adds ArtifactError/read_candidate admission reasons; acceptance rules, classification invalid/artifact, numeric rewards and mutation criteria unchanged</p><p>Canonical Codex package installed intact, including exec server, code-mode host, ripgrep and resources; external isolation unchanged</p><p>One shared future model/effort profile; original live evidence remains attached to Codex 0.155.1/gpt-5.6-sol/medium</p><p>Bounded rollout metadata retains event/tool counts, integer command exits and completion shape without commands, outputs or final-message content</p><p>Successful controls cannot establish the historical cause</p><p>No new actual agent task, skill activation or model access is established</p><p>Custom provider alias does not receive Codex built-in-only internal metadata, which is not configurable; budget source falls back to weighted non-cached input/output when provider units are absent</p><p>Runtime configuration loading and HTTP/SSE refusal checks do not exercise successful inference or end-to-end budget exhaustion</p><p>Pinned Harbor/LiteLLM has no gpt-6.1-sol pricing entry; native cost must remain unknown. Future conservative estimates use official long-context/12h cache-write assumptions, not provider bills</p><p>Code-mode and executor companions are shipped, but agent tool execution under the new model has not occurred</p><p>Stock Harbor root cleanup returned permission denied under dropped capabilities in both probes; original refusal failures and cleanup errors are separately retained. Full container disposal remains required; no added private cleanup hook</p><p>Only the current arm was started with the upgraded CLI in this pass. Future arms use one shared configuration; historical three-file deployment differences remain historical evidence</p><h2>Credential-free launch repair</h2><p>Codex 0.155.1 rejects the reserved configured provider ID openai during config loading, before authentication/model inference. All preceding stock-launch setup commands succeed. This reproduces the retained historical configuration defect; the original failed-run stderr itself was unavailable.</p><p><a href="launch-repair.json">Sanitized launch diagnostics and provider checks</a></p><table><thead><tr><th scope="col">Probe</th><th scope="col">CLI startup</th><th scope="col">Outcome</th><th scope="col">Requests to local fixture</th><th scope="col">Stream wait seconds</th></tr></thead><tbody><tr><td>historical</td><td>Rejected configuration</td><td>Reserved built-in provider ID: openai</td><td>0</td><td>Unknown</td></tr><tr><td>http</td><td>Reached local Responses endpoint</td><td>HTTP 503 from loopback fixture</td><td>1</td><td>Unknown</td></tr><tr><td>idle</td><td>Reached local Responses endpoint</td><td>idle timeout waiting for SSE</td><td>1</td><td>60.2</td></tr></tbody></table><p>The diagnostic workflow intentionally reports failure for its three negative probes; the final verification step passes all ten checks. These are expected refusals, not successful model tasks. No real API credential or external inference was used.</p><p>Command-stage checkpoints preserve ownership, directory, configuration, auth, CLI startup and cleanup outcomes. Root cleanup cannot remove the agent-owned private home under dropped capabilities; the original failure remains primary. Disposable container teardown removes the environment. No capabilities were added.</p><p>The first diagnostic Actions run failed before Harbor because the signed snapshot index returned HTTP 503. The second used the available compressed index route with by-hash disabled; signed metadata and package/hash pins remain unchanged. No dependency upgrade or oracle requalification was performed.</p><p>The user later explicitly authorized paid testing with unknown cost. The next pair remains bounded to the two remaining recovery slots; historical spend remains unknown.</p><h2>Native credential-free controls</h2><table><thead><tr><th scope="col">Case / submission</th><th scope="col">Expected</th><th scope="col">Verifier observation</th><th scope="col">Reference pass</th><th scope="col">Defects detected</th><th scope="col">Harbor failure cause</th><th scope="col">Valid measured grade</th></tr></thead><tbody><tr><td>pester-002-good</td><td>passed</td><td>passed: evaluated</td><td>1</td><td>2/2</td><td>None</td><td>True</td></tr><tr><td>pester-002-weak</td><td>failed</td><td>failed: evaluated</td><td>1</td><td>0/2</td><td>None</td><td>True</td></tr></tbody></table><p>These are deterministic oracle controls, not live model evidence. Each final control has one valid observation. Both suites execute three tests and pass the reference; only the good suite detects both defects. The earlier missing-submission result remains ungradeable. Raw native carriers and submitted work are in the linked Actions artifacts and retained local evidence; this bundle contains reviewed metadata only.</p><ul><li><a href="native-outcomes.json">pester-002-good: Reviewed native metadata and verifier outcome</a></li><li><a href="native-outcomes.json">pester-002-weak: Reviewed native metadata and verifier outcome</a></li></ul><h2>Historical live Codex pair</h2><table><thead><tr><th scope="col">Case</th><th scope="col">Variant</th><th scope="col">Task execution</th><th scope="col">Valid denominator</th><th scope="col">Reference</th><th scope="col">Defects detected</th><th scope="col">Activation evidence</th></tr></thead><tbody><tr><td>pester-002</td><td>current</td><td>CLI/session completed; verifier invalid/artifact</td><td>0</td><td>Unknown</td><td>Unknown</td><td>Unknown</td></tr><tr><td>pester-002</td><td>absent</td><td>CLI/session completed; verifier invalid/artifact</td><td>0</td><td>Unknown</td><td>Unknown</td><td>Unknown</td></tr></tbody></table><p>Attempts 1 and 2 remain historical setup/launch failures. Attempts 3 (current) and 4 (absent) completed actual Codex sessions with recovered rollouts, token usage and no native execution failure. Each offline verifier returned invalid/artifact with reward 0; Harbor reward_valid=true does not make this a measured grade. No submission hash/size was recovered at the declared canonical path. The exact missing/rejected/transfer cause is unresolved from retained metadata. Activation is unknown because the executed collector omitted custom_tool_call records; the zero function-call count is not an all-tools count. No reference or mutation checks were reached by a valid candidate. Workflow success covers completion/extraction, not correctness or a valid comparison. One attempt per arm would remain insufficient for effectiveness even with valid grades.</p><p><a href="live-evidence.json">Reviewed live attempt, deployment and usage metadata</a></p><table><thead><tr><th scope="col">Variant</th><th scope="col">Input tokens (including cache)</th><th scope="col">Cached input tokens</th><th scope="col">Output tokens</th><th scope="col">Conservative USD estimate</th></tr></thead><tbody><tr><td>current</td><td>47987</td><td>35617</td><td>637</td><td>0.97885</td></tr><tr><td>absent</td><td>47842</td><td>35525</td><td>730</td><td>0.97874</td></tr></tbody></table><h2>Campaign usage</h2><p>This pass reserved and launched zero credentialed attempts, so it produced no new model usage. No provider bill was obtained and historical cumulative spending remains unknown. The $5 operational allocation is closed unused; missing usage/pricing is not represented as an observed zero charge. Historical usage and estimates remain in allocation-evidence.json.</p><h2>Sandbox and deployment boundary</h2><p>Explicit user authorization replaces only the evaluated Codex inner-sandbox requirement with the disposable hosted runner/container boundary. Stock Harbor run/exec methods are inherited without command rewriting. No implementing-agent sandbox or approval mechanism was disabled. Historical Bubblewrap/Landlock failures remain in sandbox.json and are not a current gate.</p><p>Actual containers passed UID/GID 1000, CapEff=0, NoNewPrivs=1, Seccomp=2, writable output, fresh-session/auth checks, protected-path absence and deployment hashes. Docker metadata confirms no privilege, no added agent capabilities, cap_drop=ALL, default seccomp (no unconfined override), 2 CPUs, 2 GiB RAM, 256 PIDs, no host PID/network mode and no host mounts. No Docker socket, grader source, reference implementation, mutants or unrelated credential names were available.</p><p>Harbor native allowlist restricts the agent to api.openai.com using its separate disposable controller; only that controller needs NET_ADMIN/NET_RAW. Both actual agent preflights reached the API root (HTTP 421) while GitHub, raw GitHub, Microsoft Learn and metadata IP connections failed. Both later authenticated model sessions completed. DNS and the allowed API remain residual channels; web search and remote MCP were disabled. This is not a formal network-isolation proof.</p><p>The inference key must be accessible to Codex and can be read by code in the same environment. Container isolation does not conceal it. No auth file, secret-bearing environment dump, raw agent log or submission is exported. Preflight checks and host metadata are practical evidence, not a formal container-security proof or interactive-workstation equivalence.</p><p>The separate offline verifier and protected executable checks are unchanged from successful controls. Both latest live outcomes are invalid/artifact and unmeasured despite Harbor reward_valid=true. result_extraction_succeeded describes metadata recovery only; execution_completed describes native completion only. Best-effort root cleanup failed under dropped capabilities, but entire agent containers were verified removed. No privilege was added.</p><p>Repair diagnostics use the same stock launcher, UID, ownership and pins with external networking disabled. Corrected live config selects trial_openai while preserving API endpoint/authentication, OpenAI headers, WebSocket capability, model, effort and matched arms. The same runtime config function serves current and absent.</p><h2>Execution and supporting artifacts</h2><ul><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41956647063">Recovery build preflight</a> — Failed before Harbor started: snapshot 503/504 responses and a 600-second image-build timeout. Failure record retained. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41956647063/artifacts/13383608340">Build failure</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41956647063/artifacts/13384480020">Image unavailable</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958131429">First native control</a> — Oracle exit 126: script lacked executable permission. Verifier invalid/artifact remains unmeasured. Default sandbox helper was missing; legacy policy rejected. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958131429/artifacts/13383049571">Native invalid result</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958131429/artifacts/13383782957">Sandbox errors</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130">Final native controls and sandbox checks</a> — Good passes and weak fails as expected. Overall workflow failed because both sandbox probes failed. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130/artifacts/13384044283">Known-good pass</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130/artifacts/13383659806">Known-weak fail</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130/artifacts/13384059131">Sandbox blocker</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41964780671">External preflight identity failure</a> — No credentialed task was scheduled. Host inspection selected the network-sharing container by hostname; corrected to the Compose main service and pinned agent image. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41964780671/artifacts/13387311896">Preflight failure</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41965390294">First credentialed launch</a> — Both external preflights passed. Current failed installation; absent skipped. Exception RuntimeError, no native agent execution timing. All evidence retained. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41965390294/artifacts/13387531677">Preflight metadata</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41965390294/artifacts/13387536636">Current attempt 1</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41965390294/artifacts/13387397744">Absent staging only</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41966399157">Focused version-check correction and final launch</a> — Both exact CLI pins pass. Current launch raises NonZeroAgentExitCodeError; invalid artifact grade, unknown usage; absent skipped. No further scheduling. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41966399157/artifacts/13388085910">External boundary checkpoint</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41966399157/artifacts/13386909710">Current attempt 2</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41966399157/artifacts/13387243701">Absent staging only</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42106956278">Credential-free reproduction: build interruption</a> — Pinned snapshot Packages index HTTP 503; Harbor not started; build error retained in Actions logs; no artifact created before failure.</li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42108206579">Credential-free stock launch and provider verification</a> — Historical config rejected; corrected HTTP/SSE probes reach refusal endpoints. Ten behavioral checks pass. Overall workflow failure is deliberate negative-probe status. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42108206579/artifacts/13452044517">Sanitized diagnostic evidence</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42108206579/artifacts/13452743308">Historical failure checkpoint</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42110435228">Repaired live smoke pair, attempts 3 and 4</a> — Both real Codex sessions completed and metadata extraction passed. Both independent verifier outcomes invalid/artifact; zero valid task-grade denominators. Workflow success is not valid evaluation. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42110435228/artifacts/13454161608">Matched external-boundary checkpoint</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42110435228/artifacts/13454361517">Current attempt 3 sanitized evidence</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42110435228/artifacts/13454096587">Absent attempt 4 sanitized evidence</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42115972887">First credential-free handoff diagnostic</a> — Pinned snapshot HTTP 503 stopped image builds before controls or CLI startup. Failure report retained.</li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42117106768">Credential-free artifact handoff and Codex 0.166.0 qualification</a> — Three deterministic handoff controls and offline startup checks; no inference. This artifact contains the single consolidated report.</li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42122482332">GPT-6.1 Sol/High live allocation</a> — One current and one absent attempt at most; checkpointed and then closed.</li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42157462581">GPT-6.1 Sol/High, rollout budget disabled</a> — One current and one absent attempt at most; checkpointed and then closed.</li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342">GPT-6.1 Sol/High, rollout budget disabled</a> — One current and one absent attempt at most; checkpointed and then closed.</li></ul><h2>History</h2><p>Original run 41952213509 explicitly received a runner shutdown signal. Cause remains unknown; exit 143 alone does not identify a Harbor timeout/crash. No original native grade survived. Its prior report is preserved as history below; the prior recommendation is superseded and does not show that the existing stack is better. The prior recovery report at 29f7765 is retained under history, including its zero-spend record and now-superseded native-sandbox requirement. The known-good and weak native observations were not rerun or rescored. The repaired pair ran c5a430a; f61201a was earlier packaging, while failed run 41966399157 executed 11bf0db. User later authorized the remaining two smoke attempts with unknown costs. Their successful process completion does not supersede the invalid-artifact observations.</p><h2>Maintenance and remaining evidence</h2><p>The unchanged oracle controls prove a narrow grading distinction: both pass the reference; only the good suite detects 2/2 defects. Both live sessions completed, but invalid/artifact outcomes are excluded. A successful workflow or numeric zero reward cannot establish a valid comparison.</p><p>The root cause is reproduced with the retained historical config through the same pinned stock launcher: Codex rejects reserved model_providers.openai before authentication. The original run&#x27;s stderr was not retained, so the recovered reproduction is the causal evidence. trial_openai preserves endpoint/authentication/model/effort; actual runtime probes verified one HTTP POST on 503 and one silent stream ending after 60.2 seconds. WebSocket probing/fallback remains outside that no-retry observation.</p><p>Nineteen focused tests pass locally; eighteen ran on the executed live head. The new custom_tool_call fixture failed before the collector correction and passes after it. These completed live rollouts were not republished or reprocessed; activation and total tool usage remain unknown. No production full-suite or repeated oracle qualification was run.</p><p>Custom maintenance remains fixed staging/projection/reporting, a small live runner, pinned installation/ownership subclass, native-log sanitizer/checkpoint handler, diagnostic-only refusal fixture and verifier, signed snapshot transport helper, and a branch-only workflow. Two private Harbor methods remain overridden for home ownership and config upload. No upstream patch, added private hook or new execution layer was introduced. Provider defaults, native log/event schemas, task checksum deprecation and pinned egress sidecar still require compatibility review.</p><p>The compressed signed snapshot index selection fixed transport without changing package/image pins or signature/hash validation. The disposable external boundary remained unprivileged with dropped capabilities, no-new-privileges, default seccomp, bounded CPU/RAM/PIDs, no host resources, API-only egress and separate offline verification. Root best-effort secret deletion can fail under these capabilities; verified container disposal is the actual cleanup boundary.</p><p>Existing task requirements, references, seeded defects, grader, PowerShell runner, runtime installer and target skill are unchanged. Valid output handoff, activation, natural skill selection, skill benefit, revision improvement and lower maintenance have not been established by this pair. Another skill still requires representative tasks, executable graders and controls.</p><p>Production components removed: none. APM, static checks, production evaluation, recurring workflows and Pages are untouched. Adoption is not justified by launch success alone.</p><p>Smallest next step: diagnose the submitted-artifact boundary with credential-free checks and bounded artifact-status metadata before authorizing any further model attempt. Retain native artifact-manifest status and non-content tool/completion classifications to distinguish no output, output rejection and transport failure. Do not repeat the full qualification campaign or expand the architecture. All recovery attempts are consumed.</p><p>This pass reuses normal Harbor collection/upload and the existing grader. Native collection manifests plus safe pre-collection/post-upload metadata distinguish missing output from transport/admission failures. A confirmed missing deliverable is a task-completion failure, even when correctness and mutation denominators remain unavailable. Historical metadata is insufficient for that classification.</p><p>The new comparison profile deliberately changes Codex CLI, model and reasoning effort. No production runtime or skill was changed. No additional private Harbor hooks, transport system, model-based judge or paid attempt was introduced.</p><h2>Primary references</h2><ul><li><a href="https://github.com/harbor-framework/harbor/releases/tag/v0.25.0">harbor release</a></li><li><a href="https://docs.harborframework.com/tasks/separate-verifier">separate verifier</a></li><li><a href="https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/agents/installed/codex.py#L2072">codex launcher</a></li><li><a href="https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/core/src/rollout_budget.rs">budget accounting</a></li><li><a href="https://developers.openai.com/api/docs/models/gpt-5.6-sol">pricing</a></li><li><a href="https://docs.harborframework.com/jobs/error-classification">harbor failure policy</a></li><li><a href="https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/linux-sandbox/src/linux_run_main.rs">codex native sandbox</a></li><li><a href="https://packages.debian.org/trixie/bubblewrap">debian bubblewrap</a></li><li><a href="https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/environments/docker/docker.py">network policy</a></li><li><a href="https://developers.openai.com/api/docs/guides/prompt-caching">prompt caching</a></li><li><a href="https://learn.chatgpt.com/docs/config-file/config-reference">config reference</a></li><li><a href="https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/config/src/config_toml.rs#L900">pinned codex config validation</a></li><li><a href="https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/model-provider-info/src/lib.rs#L609">pinned provider merging</a></li><li><a href="https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/agents/installed/codex.py#L1319">harbor codex cost estimation</a></li><li><a href="https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/trial/artifact_handler.py#L27">harbor artifact path</a></li><li><a href="https://github.com/openai/codex/releases/tag/rust-v0.166.0">codex selected release</a></li><li><a href="https://developers.openai.com/api/docs/models/gpt-6.1-sol">future model pricing</a></li></ul><details><summary>Complete machine-readable evidence</summary><pre>{
+<p><a href="results.json" download>Download machine-readable results</a> · <a href="manifest.json">Frozen input manifests</a> · <a href="workflow-evidence.txt">Workflow evidence excerpts</a></p><h2>Decision</h2><p>A pinned snapshot delivery blocker remains. Both authorized preparation attempts failed before image completion, environment approval or a paid reservation. Stop this allocation; no usable new skill comparison exists.</p><p>Preparation now precedes protected environment approval. Existing pins, task, grader, deployment and security policy are unchanged. Required full images and their artifact transfer did not complete. Campaign consumption remains 6/36; this allocation closed with 0/2 reserved or launched.</p><h2>Pre-launch blocker</h2><p>No new credentialed attempt or submission. <a href="preparation-failure.json">Preparation failure evidence</a></p><table><thead><tr><th scope="col">Run</th><th scope="col">Stage</th><th scope="col">Observed failure</th><th scope="col">Reservations / launches</th></tr></thead><tbody><tr><td>42235352779</td><td>agent_image_build</td><td>APT security Packages index HTTP 504; apt exit 100; Docker build exit 1</td><td>0 / 0</td></tr><tr><td>42238163966</td><td>credential_free_agent_image_build</td><td>Fixed main Packages.xz download exhausted three transport attempts; HTTP 503: No healthy backends; Docker build exit 1</td><td>0 / 0</td></tr></tbody></table><p>Stop after the two authorized full preparation attempts. No third build or paid launch. Pinned snapshot delivery remains unreliable from hosted Actions; unchanged complete image construction and transfer are unverified.</p><h2>Pinned image preparation and environment approval</h2><p><a href="snapshot-recovery.json">Requests, hashes, build failures and maintenance evidence</a></p><table><thead><tr><th scope="col">Full preparation attempts</th><th scope="col">Images built</th><th scope="col">Images reused</th><th scope="col">Transfer qualified</th><th scope="col">Environment approval submitted</th></tr></thead><tbody><tr><td>2</td><td>False</td><td>False</td><td>False</td><td>False</td></tr></tbody></table><p>Both credential-free preparation jobs failed. Paid jobs were skipped; no approval requested or submitted.</p><p>Main and security compressed index bytes exist and match signed-release identities. Gzip/plain delivery returned 503/504. The pinned base compression configuration did not establish a configuration defect; flaky remote delivery is the supported finding.</p><p>Observed local validation: 61 component tests, 3 skipped. The exact-base APT index authentication check passed; it did not build or validate the complete images.</p><p>Maintenance: One trial-local image/task archive helper with manifest, digest, task-checksum and runner-path validation plus four tests; no Harbor fork or new private override. Existing APT transport helper now caches exact signed indexes with bounded retries and size/SHA256 checks; APT still verifies signatures. Three transport regression tests. Separate credential-free preparation job and protected live job; same-run temporary image/input artifact has one-day retention. Full transfer remains unexercised because image builds failed.</p><h2>Credential-free admission diagnostic validation</h2><p>Passed: True. No model inference. These are deterministic verifier controls, not new skill-evaluation attempts. Historical attempt six remains unexplained.</p><p><a href="admission-validation.json">Docker control evidence and input identity</a></p><table><thead><tr><th scope="col">Control</th><th scope="col">Classification</th><th scope="col">Diagnostic reason</th><th scope="col">Reference pass</th><th scope="col">Defects detected</th><th scope="col">Expected outcome matched</th></tr></thead><tbody><tr><td>good</td><td>passed</td><td>evaluated</td><td>1</td><td>2</td><td>True</td></tr><tr><td>weak</td><td>failed</td><td>evaluated</td><td>1</td><td>0</td><td>True</td></tr><tr><td>unsupported</td><td>unsupported</td><td>command_not_allowed (CommandAst at 1:1)</td><td>Unknown</td><td>Unknown</td><td>True</td></tr><tr><td>runner_error</td><td>infrastructure_error</td><td>admission_runner</td><td>Unknown</td><td>Unknown</td><td>True</td></tr></tbody></table><h2>New live allocation: codex-0.166.0_gpt-6.1-sol_high_rollout-budget-disabled</h2><p><a href="allocation-evidence.json">Sanitized launch, deployment, handoff and usage evidence</a></p><table><thead><tr><th scope="col">Arm / attempt</th><th scope="col">Execution / session completed</th><th scope="col">Task outcome</th><th scope="col">Artifact transfer / admission</th><th scope="col">Reference / defects</th><th scope="col">Skill-file access attempts</th><th scope="col">Agent / total seconds</th></tr></thead><tbody><tr><td>current / 7</td><td>Not run</td><td>Not scheduled</td><td>Not attempted / Not measured</td><td>Not measured</td><td>Unknown</td><td>Not run</td></tr><tr><td>absent / 8</td><td>Not run</td><td>Not scheduled</td><td>Not attempted / Not measured</td><td>Not measured</td><td>Unknown</td><td>Not run</td></tr></tbody></table><table><thead><tr><th scope="col">Arm</th><th scope="col">Reserved / credentialed launch started / session completed</th><th scope="col">Exact submission retention</th></tr></thead><tbody><tr><td>current</td><td>False / False / None</td><td>No submission: arm not launched</td></tr><tr><td>absent</td><td>False / False / None</td><td>No submission: arm not launched</td></tr></tbody></table><p>Credential-free upload/download byte-preservation fixture passed: True. <a href="retention-validation.json">Fixture evidence</a></p><table><thead><tr><th scope="col">Arm</th><th scope="col">Total input</th><th scope="col">Cached input</th><th scope="col">Cache-write input</th><th scope="col">Total output</th><th scope="col">Reasoning output</th><th scope="col">Conservative USD estimate</th><th scope="col">Native pricing estimate</th></tr></thead><tbody><tr><td>current</td><td>Unknown</td><td>Unknown</td><td>Unknown</td><td>Unknown</td><td>Unknown</td><td>Unknown</td><td>Unknown</td></tr><tr><td>absent</td><td>Unknown</td><td>Unknown</td><td>Unknown</td><td>Unknown</td><td>Unknown</td><td>Unknown</td><td>Unknown</td></tr></tbody></table><p>CLI-reported cumulative totals are retained without summing repeated token-count events. Cached reads and writes are input subsets; reasoning is an output subset. Conservative estimate charges all input at $10/M and output at $15/M, without adding subset counts. These are estimates, not provider bills.</p><table><thead><tr><th scope="col">Arm</th><th scope="col">Accounting coverage</th><th scope="col">Billing certainty</th></tr></thead><tbody><tr><td>current</td><td>Unknown</td><td>Unknown</td></tr><tr><td>absent</td><td>Unknown</td><td>Unknown</td></tr></tbody></table><p>Neither arm was reserved, launched, graded or retained; all current/absent metrics remain unmeasured.</p><p>The unchanged frozen profile was planned, not evaluated. Historical controls and earlier live outcomes remain historical evidence.</p><p>Prepared images must build and pass artifact round-trip verification before normal protected-environment approval and any credentialed launch.</p><p>One attempt per arm cannot establish skill effectiveness; comparisons with historical CLI/model profiles are not skill-only comparisons</p><p>File-access attempts are not successful reads, instruction following or causal skill benefit</p><p>Native cleanup permission errors are retained; whole disposable-container removal is checked independently</p><p>The API credential is available to the evaluated process. Unrelated credentials, raw transcripts and authentication files are excluded. Only the exact declared agent submission may be retained after credential/protected-content checks and download verification, for 30 days</p><p>Pinned native pricing may be unavailable; historical cumulative spending remains unknown; $5 is an operational budget with possible overshoot, not a provider-enforced cap</p><p>Allocation closed; paid scheduling disabled. Consumed campaign slots: [].</p><h2>Earlier closed allocations</h2><p>Historical settings and outcomes are preserved; they are not matched arms of the current comparison. Full metadata remains in allocation-evidence.json.</p><table><thead><tr><th scope="col">Allocation</th><th scope="col">Consumed campaign attempts</th><th scope="col">Historical outcomes</th><th scope="col">Observed usage estimate USD</th></tr></thead><tbody><tr><td>sol-high-smoke-20261105</td><td>[5]</td><td>[(&#x27;current&#x27;, &#x27;agent_token_budget_exhausted&#x27;, &#x27;missing_after_budget_exhaustion&#x27;), (&#x27;absent&#x27;, &#x27;not_scheduled&#x27;, &#x27;not_scheduled&#x27;)]</td><td>0.641555</td></tr><tr><td>sol-high-no-rollout-budget-20261105</td><td>[6]</td><td>[(&#x27;current&#x27;, &#x27;completed&#x27;, &#x27;unsupported_submission&#x27;), (&#x27;absent&#x27;, &#x27;not_scheduled&#x27;, &#x27;not_scheduled&#x27;)]</td><td>1.49446</td></tr><tr><td>sol-high-retained-20261106</td><td>[]</td><td>[(&#x27;current&#x27;, &#x27;not_scheduled&#x27;, &#x27;not_scheduled&#x27;), (&#x27;absent&#x27;, &#x27;not_scheduled&#x27;, &#x27;not_scheduled&#x27;)]</td><td>Unknown</td></tr></tbody></table><h2>Prior credential-free artifact handoff and runtime checks</h2><p>Controlled handoff works; historical output failure remains unresolved.</p><p><a href="handoff-evidence.json">Native handoff metadata and runtime compatibility evidence</a></p><table><thead><tr><th scope="col">Deterministic control</th><th scope="col">Expected</th><th scope="col">Observed handoff</th><th scope="col">Verifier</th><th scope="col">Control matched</th></tr></thead><tbody><tr><td>good</td><td>Reference pass and 2/2 defects</td><td>graded_passed</td><td>{&#x27;classification&#x27;: &#x27;passed&#x27;, &#x27;code&#x27;: &#x27;evaluated&#x27;, &#x27;reference_pass&#x27;: 1, &#x27;mutants_detected&#x27;: 2, &#x27;mutants_executed&#x27;: 2, &#x27;tests_executed&#x27;: 3, &#x27;pester_version&#x27;: &#x27;6.2.0&#x27;, &#x27;powershell_version&#x27;: &#x27;7.6.9&#x27;}</td><td>True</td></tr><tr><td>missing</td><td>Missing submission</td><td>missing_deliverable</td><td>{&#x27;classification&#x27;: &#x27;invalid&#x27;, &#x27;code&#x27;: &#x27;artifact&#x27;, &#x27;admission_reason&#x27;: &#x27;missing&#x27;}</td><td>True</td></tr><tr><td>rejected</td><td>Transferred then invalid UTF-8</td><td>rejected_output</td><td>{&#x27;classification&#x27;: &#x27;invalid&#x27;, &#x27;code&#x27;: &#x27;artifact&#x27;, &#x27;admission_reason&#x27;: &#x27;invalid_utf8&#x27;}</td><td>True</td></tr></tbody></table><p>Future profile: codex-0.166.0_gpt-6.1-sol_high. Model inference in this pass: none.</p><p>Observed runtime: Codex 0.166.0 strict configuration load exited 0 with API-only login. Both probes sent one POST to the loopback Responses endpoint; prompt, output path, GPT-6.1 Sol, High effort and sentinel API authentication matched. HTTP 503 was not retried; idle streaming ended after 60.206 seconds without reconnect. Prompt comparison uses the stripped frozen instruction. Budget configuration was accepted; enforcement under inference is untested.</p><p>APT cache bypass was added after HTTP 503; subsequent build passed with unchanged signed snapshot/package pins. The option is not proven to have caused recovery</p><p>Trial-only supported collection hook and pre-grader metadata probe; no transport replacement or new private Harbor override</p><p>Shared grader adds ArtifactError/read_candidate admission reasons; acceptance rules, classification invalid/artifact, numeric rewards and mutation criteria unchanged</p><p>Canonical Codex package installed intact, including exec server, code-mode host, ripgrep and resources; external isolation unchanged</p><p>One shared future model/effort profile; original live evidence remains attached to Codex 0.155.1/gpt-5.6-sol/medium</p><p>Bounded rollout metadata retains event/tool counts, integer command exits and completion shape without commands, outputs or final-message content</p><p>Successful controls cannot establish the historical cause</p><p>No new actual agent task, skill activation or model access is established</p><p>Custom provider alias does not receive Codex built-in-only internal metadata, which is not configurable; budget source falls back to weighted non-cached input/output when provider units are absent</p><p>Runtime configuration loading and HTTP/SSE refusal checks do not exercise successful inference or end-to-end budget exhaustion</p><p>Pinned Harbor/LiteLLM has no gpt-6.1-sol pricing entry; native cost must remain unknown. Future conservative estimates use official long-context/12h cache-write assumptions, not provider bills</p><p>Code-mode and executor companions are shipped, but agent tool execution under the new model has not occurred</p><p>Stock Harbor root cleanup returned permission denied under dropped capabilities in both probes; original refusal failures and cleanup errors are separately retained. Full container disposal remains required; no added private cleanup hook</p><p>Only the current arm was started with the upgraded CLI in this pass. Future arms use one shared configuration; historical three-file deployment differences remain historical evidence</p><h2>Credential-free launch repair</h2><p>Codex 0.155.1 rejects the reserved configured provider ID openai during config loading, before authentication/model inference. All preceding stock-launch setup commands succeed. This reproduces the retained historical configuration defect; the original failed-run stderr itself was unavailable.</p><p><a href="launch-repair.json">Sanitized launch diagnostics and provider checks</a></p><table><thead><tr><th scope="col">Probe</th><th scope="col">CLI startup</th><th scope="col">Outcome</th><th scope="col">Requests to local fixture</th><th scope="col">Stream wait seconds</th></tr></thead><tbody><tr><td>historical</td><td>Rejected configuration</td><td>Reserved built-in provider ID: openai</td><td>0</td><td>Unknown</td></tr><tr><td>http</td><td>Reached local Responses endpoint</td><td>HTTP 503 from loopback fixture</td><td>1</td><td>Unknown</td></tr><tr><td>idle</td><td>Reached local Responses endpoint</td><td>idle timeout waiting for SSE</td><td>1</td><td>60.2</td></tr></tbody></table><p>The diagnostic workflow intentionally reports failure for its three negative probes; the final verification step passes all ten checks. These are expected refusals, not successful model tasks. No real API credential or external inference was used.</p><p>Command-stage checkpoints preserve ownership, directory, configuration, auth, CLI startup and cleanup outcomes. Root cleanup cannot remove the agent-owned private home under dropped capabilities; the original failure remains primary. Disposable container teardown removes the environment. No capabilities were added.</p><p>The first diagnostic Actions run failed before Harbor because the signed snapshot index returned HTTP 503. The second used the available compressed index route with by-hash disabled; signed metadata and package/hash pins remain unchanged. No dependency upgrade or oracle requalification was performed.</p><p>The user later explicitly authorized paid testing with unknown cost. The next pair remains bounded to the two remaining recovery slots; historical spend remains unknown.</p><h2>Native credential-free controls</h2><table><thead><tr><th scope="col">Case / submission</th><th scope="col">Expected</th><th scope="col">Verifier observation</th><th scope="col">Reference pass</th><th scope="col">Defects detected</th><th scope="col">Harbor failure cause</th><th scope="col">Valid measured grade</th></tr></thead><tbody><tr><td>pester-002-good</td><td>passed</td><td>passed: evaluated</td><td>1</td><td>2/2</td><td>None</td><td>True</td></tr><tr><td>pester-002-weak</td><td>failed</td><td>failed: evaluated</td><td>1</td><td>0/2</td><td>None</td><td>True</td></tr></tbody></table><p>These are deterministic oracle controls, not live model evidence. Each final control has one valid observation. Both suites execute three tests and pass the reference; only the good suite detects both defects. The earlier missing-submission result remains ungradeable. Raw native carriers and submitted work are in the linked Actions artifacts and retained local evidence; this bundle contains reviewed metadata only.</p><ul><li><a href="native-outcomes.json">pester-002-good: Reviewed native metadata and verifier outcome</a></li><li><a href="native-outcomes.json">pester-002-weak: Reviewed native metadata and verifier outcome</a></li></ul><h2>Historical live Codex pair</h2><table><thead><tr><th scope="col">Case</th><th scope="col">Variant</th><th scope="col">Task execution</th><th scope="col">Valid denominator</th><th scope="col">Reference</th><th scope="col">Defects detected</th><th scope="col">Activation evidence</th></tr></thead><tbody><tr><td>pester-002</td><td>current</td><td>CLI/session completed; verifier invalid/artifact</td><td>0</td><td>Unknown</td><td>Unknown</td><td>Unknown</td></tr><tr><td>pester-002</td><td>absent</td><td>CLI/session completed; verifier invalid/artifact</td><td>0</td><td>Unknown</td><td>Unknown</td><td>Unknown</td></tr></tbody></table><p>Attempts 1 and 2 remain historical setup/launch failures. Attempts 3 (current) and 4 (absent) completed actual Codex sessions with recovered rollouts, token usage and no native execution failure. Each offline verifier returned invalid/artifact with reward 0; Harbor reward_valid=true does not make this a measured grade. No submission hash/size was recovered at the declared canonical path. The exact missing/rejected/transfer cause is unresolved from retained metadata. Activation is unknown because the executed collector omitted custom_tool_call records; the zero function-call count is not an all-tools count. No reference or mutation checks were reached by a valid candidate. Workflow success covers completion/extraction, not correctness or a valid comparison. One attempt per arm would remain insufficient for effectiveness even with valid grades.</p><p><a href="live-evidence.json">Reviewed live attempt, deployment and usage metadata</a></p><table><thead><tr><th scope="col">Variant</th><th scope="col">Input tokens (including cache)</th><th scope="col">Cached input tokens</th><th scope="col">Output tokens</th><th scope="col">Conservative USD estimate</th></tr></thead><tbody><tr><td>current</td><td>47987</td><td>35617</td><td>637</td><td>0.97885</td></tr><tr><td>absent</td><td>47842</td><td>35525</td><td>730</td><td>0.97874</td></tr></tbody></table><h2>Campaign usage</h2><p>No credentials or model calls were used in this allocation; no new usage observations or provider bill were obtained. The $5 operational allocation closed unused. Historical cumulative provider spending remains unknown; earlier usage estimates and all six historical attempts are preserved.</p><h2>Sandbox and deployment boundary</h2><p>Explicit user authorization replaces only the evaluated Codex inner-sandbox requirement with the disposable hosted runner/container boundary. Stock Harbor run/exec methods are inherited without command rewriting. No implementing-agent sandbox or approval mechanism was disabled. Historical Bubblewrap/Landlock failures remain in sandbox.json and are not a current gate.</p><p>Actual containers passed UID/GID 1000, CapEff=0, NoNewPrivs=1, Seccomp=2, writable output, fresh-session/auth checks, protected-path absence and deployment hashes. Docker metadata confirms no privilege, no added agent capabilities, cap_drop=ALL, default seccomp (no unconfined override), 2 CPUs, 2 GiB RAM, 256 PIDs, no host PID/network mode and no host mounts. No Docker socket, grader source, reference implementation, mutants or unrelated credential names were available.</p><p>Harbor native allowlist restricts the agent to api.openai.com using its separate disposable controller; only that controller needs NET_ADMIN/NET_RAW. Both actual agent preflights reached the API root (HTTP 421) while GitHub, raw GitHub, Microsoft Learn and metadata IP connections failed. Both later authenticated model sessions completed. DNS and the allowed API remain residual channels; web search and remote MCP were disabled. This is not a formal network-isolation proof.</p><p>The inference key must be accessible to Codex and can be read by code in the same environment. Container isolation does not conceal it. No auth file, secret-bearing environment dump, raw agent log or submission is exported. Preflight checks and host metadata are practical evidence, not a formal container-security proof or interactive-workstation equivalence.</p><p>The separate offline verifier and protected executable checks are unchanged from successful controls. Both latest live outcomes are invalid/artifact and unmeasured despite Harbor reward_valid=true. result_extraction_succeeded describes metadata recovery only; execution_completed describes native completion only. Best-effort root cleanup failed under dropped capabilities, but entire agent containers were verified removed. No privilege was added.</p><p>Repair diagnostics use the same stock launcher, UID, ownership and pins with external networking disabled. Corrected live config selects trial_openai while preserving API endpoint/authentication, OpenAI headers, WebSocket capability, model, effort and matched arms. The same runtime config function serves current and absent.</p><h2>Execution and supporting artifacts</h2><ul><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41956647063">Recovery build preflight</a> — Failed before Harbor started: snapshot 503/504 responses and a 600-second image-build timeout. Failure record retained. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41956647063/artifacts/13383608340">Build failure</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41956647063/artifacts/13384480020">Image unavailable</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958131429">First native control</a> — Oracle exit 126: script lacked executable permission. Verifier invalid/artifact remains unmeasured. Default sandbox helper was missing; legacy policy rejected. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958131429/artifacts/13383049571">Native invalid result</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958131429/artifacts/13383782957">Sandbox errors</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130">Final native controls and sandbox checks</a> — Good passes and weak fails as expected. Overall workflow failed because both sandbox probes failed. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130/artifacts/13384044283">Known-good pass</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130/artifacts/13383659806">Known-weak fail</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41958553130/artifacts/13384059131">Sandbox blocker</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41964780671">External preflight identity failure</a> — No credentialed task was scheduled. Host inspection selected the network-sharing container by hostname; corrected to the Compose main service and pinned agent image. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41964780671/artifacts/13387311896">Preflight failure</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41965390294">First credentialed launch</a> — Both external preflights passed. Current failed installation; absent skipped. Exception RuntimeError, no native agent execution timing. All evidence retained. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41965390294/artifacts/13387531677">Preflight metadata</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41965390294/artifacts/13387536636">Current attempt 1</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41965390294/artifacts/13387397744">Absent staging only</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41966399157">Focused version-check correction and final launch</a> — Both exact CLI pins pass. Current launch raises NonZeroAgentExitCodeError; invalid artifact grade, unknown usage; absent skipped. No further scheduling. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41966399157/artifacts/13388085910">External boundary checkpoint</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41966399157/artifacts/13386909710">Current attempt 2</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/41966399157/artifacts/13387243701">Absent staging only</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42106956278">Credential-free reproduction: build interruption</a> — Pinned snapshot Packages index HTTP 503; Harbor not started; build error retained in Actions logs; no artifact created before failure.</li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42108206579">Credential-free stock launch and provider verification</a> — Historical config rejected; corrected HTTP/SSE probes reach refusal endpoints. Ten behavioral checks pass. Overall workflow failure is deliberate negative-probe status. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42108206579/artifacts/13452044517">Sanitized diagnostic evidence</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42108206579/artifacts/13452743308">Historical failure checkpoint</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42110435228">Repaired live smoke pair, attempts 3 and 4</a> — Both real Codex sessions completed and metadata extraction passed. Both independent verifier outcomes invalid/artifact; zero valid task-grade denominators. Workflow success is not valid evaluation. · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42110435228/artifacts/13454161608">Matched external-boundary checkpoint</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42110435228/artifacts/13454361517">Current attempt 3 sanitized evidence</a> · <a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42110435228/artifacts/13454096587">Absent attempt 4 sanitized evidence</a></li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42115972887">First credential-free handoff diagnostic</a> — Pinned snapshot HTTP 503 stopped image builds before controls or CLI startup. Failure report retained.</li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42117106768">Credential-free artifact handoff and Codex 0.166.0 qualification</a> — Three deterministic handoff controls and offline startup checks; no inference. This artifact contains the single consolidated report.</li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42122482332">GPT-6.1 Sol/High live allocation</a> — One current and one absent attempt at most; checkpointed and then closed.</li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42157462581">GPT-6.1 Sol/High, rollout budget disabled</a> — One current and one absent attempt at most; checkpointed and then closed.</li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342">GPT-6.1 Sol/High, rollout budget disabled</a> — One current and one absent attempt at most; checkpointed and then closed.</li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42235352779">Credential-free preparation 1/2; no live execution</a> — APT security Packages index HTTP 504; apt exit 100; Docker build exit 1</li><li><a href="https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42238163966">Credential-free preparation 2/2; no live execution</a> — Fixed main Packages.xz download exhausted three transport attempts; HTTP 503: No healthy backends; Docker build exit 1</li></ul><h2>History</h2><p>Original run 41952213509 explicitly received a runner shutdown signal. Cause remains unknown; exit 143 alone does not identify a Harbor timeout/crash. No original native grade survived. Its prior report is preserved as history below; the prior recommendation is superseded and does not show that the existing stack is better. The prior recovery report at 29f7765 is retained under history, including its zero-spend record and now-superseded native-sandbox requirement. The known-good and weak native observations were not rerun or rescored. The repaired pair ran c5a430a; f61201a was earlier packaging, while failed run 41966399157 executed 11bf0db. User later authorized the remaining two smoke attempts with unknown costs. Their successful process completion does not supersede the invalid-artifact observations.</p><h2>Maintenance and remaining evidence</h2><p>The unchanged oracle controls prove a narrow grading distinction: both pass the reference; only the good suite detects 2/2 defects. Both live sessions completed, but invalid/artifact outcomes are excluded. A successful workflow or numeric zero reward cannot establish a valid comparison.</p><p>The root cause is reproduced with the retained historical config through the same pinned stock launcher: Codex rejects reserved model_providers.openai before authentication. The original run&#x27;s stderr was not retained, so the recovered reproduction is the causal evidence. trial_openai preserves endpoint/authentication/model/effort; actual runtime probes verified one HTTP POST on 503 and one silent stream ending after 60.2 seconds. WebSocket probing/fallback remains outside that no-retry observation.</p><p>Nineteen focused tests pass locally; eighteen ran on the executed live head. The new custom_tool_call fixture failed before the collector correction and passes after it. These completed live rollouts were not republished or reprocessed; activation and total tool usage remain unknown. No production full-suite or repeated oracle qualification was run.</p><p>Custom maintenance remains fixed staging/projection/reporting, a small live runner, pinned installation/ownership subclass, native-log sanitizer/checkpoint handler, diagnostic-only refusal fixture and verifier, signed snapshot transport helper, and a branch-only workflow. Two private Harbor methods remain overridden for home ownership and config upload. No upstream patch, added private hook or new execution layer was introduced. Provider defaults, native log/event schemas, task checksum deprecation and pinned egress sidecar still require compatibility review.</p><p>The compressed signed snapshot index selection fixed transport without changing package/image pins or signature/hash validation. The disposable external boundary remained unprivileged with dropped capabilities, no-new-privileges, default seccomp, bounded CPU/RAM/PIDs, no host resources, API-only egress and separate offline verification. Root best-effort secret deletion can fail under these capabilities; verified container disposal is the actual cleanup boundary.</p><p>Existing task requirements, references, seeded defects, grader, PowerShell runner, runtime installer and target skill are unchanged. Valid output handoff, activation, natural skill selection, skill benefit, revision improvement and lower maintenance have not been established by this pair. Another skill still requires representative tasks, executable graders and controls.</p><p>Production components removed: none. APM, static checks, production evaluation, recurring workflows and Pages are untouched. Adoption is not justified by launch success alone.</p><p>Smallest next step: diagnose the submitted-artifact boundary with credential-free checks and bounded artifact-status metadata before authorizing any further model attempt. Retain native artifact-manifest status and non-content tool/completion classifications to distinguish no output, output rejection and transport failure. Do not repeat the full qualification campaign or expand the architecture. All recovery attempts are consumed.</p><p>This pass reuses normal Harbor collection/upload and the existing grader. Native collection manifests plus safe pre-collection/post-upload metadata distinguish missing output from transport/admission failures. A confirmed missing deliverable is a task-completion failure, even when correctness and mutation denominators remain unavailable. Historical metadata is insufficient for that classification.</p><p>The new comparison profile deliberately changes Codex CLI, model and reasoning effort. No production runtime or skill was changed. No additional private Harbor hooks, transport system, model-based judge or paid attempt was introduced.</p><h2>Primary references</h2><ul><li><a href="https://github.com/harbor-framework/harbor/releases/tag/v0.25.0">harbor release</a></li><li><a href="https://docs.harborframework.com/tasks/separate-verifier">separate verifier</a></li><li><a href="https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/agents/installed/codex.py#L2072">codex launcher</a></li><li><a href="https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/core/src/rollout_budget.rs">budget accounting</a></li><li><a href="https://developers.openai.com/api/docs/models/gpt-5.6-sol">pricing</a></li><li><a href="https://docs.harborframework.com/jobs/error-classification">harbor failure policy</a></li><li><a href="https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/linux-sandbox/src/linux_run_main.rs">codex native sandbox</a></li><li><a href="https://packages.debian.org/trixie/bubblewrap">debian bubblewrap</a></li><li><a href="https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/environments/docker/docker.py">network policy</a></li><li><a href="https://developers.openai.com/api/docs/guides/prompt-caching">prompt caching</a></li><li><a href="https://learn.chatgpt.com/docs/config-file/config-reference">config reference</a></li><li><a href="https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/config/src/config_toml.rs#L900">pinned codex config validation</a></li><li><a href="https://github.com/openai/codex/blob/rust-v0.155.1/codex-rs/model-provider-info/src/lib.rs#L609">pinned provider merging</a></li><li><a href="https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/agents/installed/codex.py#L1319">harbor codex cost estimation</a></li><li><a href="https://github.com/harbor-framework/harbor/blob/fdba28fc411e47e8765420a1a063b4918fce3def/src/harbor/trial/artifact_handler.py#L27">harbor artifact path</a></li><li><a href="https://github.com/openai/codex/releases/tag/rust-v0.166.0">codex selected release</a></li><li><a href="https://developers.openai.com/api/docs/models/gpt-6.1-sol">future model pricing</a></li></ul><details><summary>Complete machine-readable evidence</summary><pre>{
   &quot;schema_version&quot;: 3,
   &quot;campaign&quot;: &quot;direct-harbor-20261104&quot;,
-  &quot;state&quot;: &quot;retained_smoke_allocation_closed_before_launch&quot;,
-  &quot;decision&quot;: &quot;No usable new live comparison: the pinned Debian snapshot package index returned HTTP 503/504 during agent-image preparation, before either reservation or credentialed launch. The exact-submission publication path is verified; inference remains unperformed in this pass.&quot;,
-  &quot;summary&quot;: &quot;Allocation sol-high-retained-20261106 closed with zero of two slots consumed; both planned identities are closed unused. Campaign remains 6/36 and original recovery 4/4. The earlier unit-test fixture defect was corrected before the image-build failure. Historical grades and unknown spending are preserved. No skill, task, grader acceptance criteria, pin, production workflow or Pages change.&quot;,
+  &quot;state&quot;: &quot;live_allocation_closed_preparation_failed&quot;,
+  &quot;decision&quot;: &quot;A pinned snapshot delivery blocker remains. Both authorized preparation attempts failed before image completion, environment approval or a paid reservation. Stop this allocation; no usable new skill comparison exists.&quot;,
+  &quot;summary&quot;: &quot;Preparation now precedes protected environment approval. Existing pins, task, grader, deployment and security policy are unchanged. Required full images and their artifact transfer did not complete. Campaign consumption remains 6/36; this allocation closed with 0/2 reserved or launched.&quot;,
   &quot;source_commit&quot;: &quot;cc0819f5dafc05610dd8c3293ce2f52744c66f1a&quot;,
   &quot;reviewed_trial_commit&quot;: &quot;f61201a730746921abd17d8f8366dfd1505ad6f8&quot;,
   &quot;executed_commit&quot;: &quot;c5a430ac15b4fac0eb6a29b1ac46ad4e7e06ca3e&quot;,
@@ -401,7 +401,7 @@
   &quot;api_spend_usd&quot;: null,
   &quot;estimated_cumulative_api_spend_usd&quot;: null,
   &quot;provider_billing_observation&quot;: null,
-  &quot;spending_note&quot;: &quot;This pass reserved and launched zero credentialed attempts, so it produced no new model usage. No provider bill was obtained and historical cumulative spending remains unknown. The $5 operational allocation is closed unused; missing usage/pricing is not represented as an observed zero charge. Historical usage and estimates remain in allocation-evidence.json.&quot;,
+  &quot;spending_note&quot;: &quot;No credentials or model calls were used in this allocation; no new usage observations or provider bill were obtained. The $5 operational allocation closed unused. Historical cumulative provider spending remains unknown; earlier usage estimates and all six historical attempts are preserved.&quot;,
   &quot;budget&quot;: {
     &quot;operational_usd&quot;: 20,
     &quot;provider_hard_cap_verified&quot;: false,
@@ -415,7 +415,7 @@
     &quot;reserve_usd&quot;: 16,
     &quot;pair_preflight_estimate_usd&quot;: 2.64,
     &quot;scheduling_stopped&quot;: true,
-    &quot;stop_reason&quot;: &quot;Pinned Debian snapshot package-index HTTP 503/504 before any reservation or launch; allocation closed unused.&quot;,
+    &quot;stop_reason&quot;: &quot;Stop after the two authorized full preparation attempts. No third build or paid launch. Pinned snapshot delivery remains unreliable from hosted Actions; unchanged complete image construction and transfer are unverified.&quot;,
     &quot;conservative_input_usd_per_million&quot;: 20,
     &quot;conservative_output_usd_per_million&quot;: 30,
     &quot;unknown_cost_accepted_for_testing&quot;: true
@@ -1089,6 +1089,16 @@
       &quot;url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342&quot;,
       &quot;label&quot;: &quot;GPT-6.1 Sol/High, rollout budget disabled&quot;,
       &quot;summary&quot;: &quot;One current and one absent attempt at most; checkpointed and then closed.&quot;
+    },
+    {
+      &quot;url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42235352779&quot;,
+      &quot;label&quot;: &quot;Credential-free preparation 1/2; no live execution&quot;,
+      &quot;summary&quot;: &quot;APT security Packages index HTTP 504; apt exit 100; Docker build exit 1&quot;
+    },
+    {
+      &quot;url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42238163966&quot;,
+      &quot;label&quot;: &quot;Credential-free preparation 2/2; no live execution&quot;,
+      &quot;summary&quot;: &quot;Fixed main Packages.xz download exhausted three transport attempts; HTTP 503: No healthy backends; Docker build exit 1&quot;
     }
   ],
   &quot;local_validation&quot;: {
@@ -1642,7 +1652,7 @@
     &quot;budget_semantics&quot;: &quot;0.166.0 accepts enforce_limit=true. Source charges provider budget units when available, otherwise weighted non-cached input plus output. Token budget is not a dollar meter; enforcement under inference remains untested.&quot;
   },
   &quot;live_allocation&quot;: {
-    &quot;id&quot;: &quot;sol-high-retained-20261106&quot;,
+    &quot;id&quot;: &quot;sol-high-prepared-20261106&quot;,
     &quot;rows&quot;: [
       {
         &quot;variant&quot;: &quot;current&quot;,
@@ -1677,8 +1687,7 @@
         &quot;native_pricing_estimate_usd&quot;: null,
         &quot;api_bill_usd&quot;: null,
         &quot;evidence_complete&quot;: false,
-        &quot;containers_removed&quot;: null,
-        &quot;container_disposal&quot;: &quot;not_applicable_never_started&quot;
+        &quot;containers_removed&quot;: null
       },
       {
         &quot;variant&quot;: &quot;absent&quot;,
@@ -1713,12 +1722,11 @@
         &quot;native_pricing_estimate_usd&quot;: null,
         &quot;api_bill_usd&quot;: null,
         &quot;evidence_complete&quot;: false,
-        &quot;containers_removed&quot;: null,
-        &quot;container_disposal&quot;: &quot;not_applicable_never_started&quot;
+        &quot;containers_removed&quot;: null
       }
     ],
     &quot;closure&quot;: {
-      &quot;allocation_id&quot;: &quot;sol-high-retained-20261106&quot;,
+      &quot;allocation_id&quot;: &quot;sol-high-prepared-20261106&quot;,
       &quot;state&quot;: &quot;closed&quot;,
       &quot;paid_execution_enabled&quot;: false,
       &quot;reserved_slots_consumed&quot;: [],
@@ -1731,11 +1739,7 @@
       &quot;reservation_ids&quot;: [],
       &quot;incremental_conservative_estimate_usd&quot;: null,
       &quot;operational_budget_usd&quot;: 5,
-      &quot;estimated_budget_exceeded&quot;: null,
-      &quot;unused_closed_reservations&quot;: [
-        &quot;sol-high-retained-20261106/current/7&quot;,
-        &quot;sol-high-retained-20261106/absent/8&quot;
-      ]
+      &quot;estimated_budget_exceeded&quot;: null
     },
     &quot;operationally_usable&quot;: false,
     &quot;profile&quot;: &quot;codex-0.166.0_gpt-6.1-sol_high_rollout-budget-disabled&quot;,
@@ -1750,13 +1754,9 @@
     &quot;admission_preflight&quot;: null,
     &quot;observed_usage_conservative_estimate_usd&quot;: null,
     &quot;reviewed_notes&quot;: [
-      &quot;Both arms use the fully disabled supplemental rollout-budget feature, including reminders; the CLI feature listing is checked before credentials and after Harbor uploads its effective configuration. Attempt five used a different budget profile and is historical evidence, not a matched comparison.&quot;,
-      &quot;Execution outcome, task completion, independent correctness, session usage coverage and provider billing are assessed separately. A recognized agent failure can be interpretable without a valid correctness grade.&quot;,
-      &quot;Historical attempt five remains a native NonZeroAgentExitCodeError / unclassified with the exact Codex budget-exhaustion event. Retained usage estimates remain available; ordered raw-session coverage was not retained, so complete accounting is not retroactively asserted.&quot;,
-      &quot;Both planned arms are unlaunched, not failed agent tasks. No submission or new admission/correctness/mutation result exists. Prior grading controls remain valid; none were rerun.&quot;,
-      &quot;A closed-state unit test originally read the armed checkout; it now uses explicit disabled and armed fixtures without weakening handoff.no_credentials. The corrected workflow passed all 54 component tests, with three runtime-specific skips.&quot;,
-      &quot;The artifact fixture proved unchanged bytes through upload/download and local retrieval; it does not prove retention of a new agent submission because no agent ran.&quot;,
-      &quot;Smallest next decision: verify availability of the unchanged pinned package index without credentials before considering a newly authorized allocation. No replacement call or budget carry-forward is scheduled.&quot;
+      &quot;Neither arm was reserved, launched, graded or retained; all current/absent metrics remain unmeasured.&quot;,
+      &quot;The unchanged frozen profile was planned, not evaluated. Historical controls and earlier live outcomes remain historical evidence.&quot;,
+      &quot;Prepared images must build and pass artifact round-trip verification before normal protected-environment approval and any credentialed launch.&quot;
     ]
   },
   &quot;allocation_budget&quot;: {
@@ -2049,6 +2049,124 @@
         &quot;Smallest next decision: authorize a narrow credential-free admission-diagnostic improvement that retains a fixed rule identifier without submission contents or weaker acceptance criteria. Establish what the unsupported category means before allocating more inference. No broad calibration, skill revision or additional paid phase is started.&quot;
       ],
       &quot;next_decision&quot;: &quot;Credential-free fixed admission-rule diagnostics; preserve policy and do not schedule another paid phase.&quot;
+    },
+    {
+      &quot;id&quot;: &quot;sol-high-retained-20261106&quot;,
+      &quot;rows&quot;: [
+        {
+          &quot;variant&quot;: &quot;current&quot;,
+          &quot;attempt&quot;: 7,
+          &quot;scheduled&quot;: false,
+          &quot;reserved&quot;: false,
+          &quot;credentialed_launch_started&quot;: false,
+          &quot;submission_retention&quot;: null,
+          &quot;session_completed&quot;: null,
+          &quot;execution_outcome&quot;: &quot;not_scheduled&quot;,
+          &quot;task_completion_measured&quot;: false,
+          &quot;task_completed&quot;: null,
+          &quot;outcome&quot;: &quot;not_scheduled&quot;,
+          &quot;handoff&quot;: null,
+          &quot;admission&quot;: null,
+          &quot;admission_diagnostic&quot;: null,
+          &quot;valid_grade&quot;: false,
+          &quot;reference_pass&quot;: null,
+          &quot;mutants_detected&quot;: null,
+          &quot;mutants_executed&quot;: null,
+          &quot;skill_file_access_attempts&quot;: null,
+          &quot;tool_calls&quot;: null,
+          &quot;tool_errors&quot;: null,
+          &quot;failure_cause&quot;: null,
+          &quot;timing&quot;: null,
+          &quot;duration_seconds&quot;: null,
+          &quot;usage&quot;: null,
+          &quot;accounting_assessment&quot;: null,
+          &quot;execution_assessment&quot;: null,
+          &quot;native_terminal&quot;: null,
+          &quot;conservative_estimate_usd&quot;: null,
+          &quot;native_pricing_estimate_usd&quot;: null,
+          &quot;api_bill_usd&quot;: null,
+          &quot;evidence_complete&quot;: false,
+          &quot;containers_removed&quot;: null,
+          &quot;container_disposal&quot;: &quot;not_applicable_never_started&quot;
+        },
+        {
+          &quot;variant&quot;: &quot;absent&quot;,
+          &quot;attempt&quot;: 8,
+          &quot;scheduled&quot;: false,
+          &quot;reserved&quot;: false,
+          &quot;credentialed_launch_started&quot;: false,
+          &quot;submission_retention&quot;: null,
+          &quot;session_completed&quot;: null,
+          &quot;execution_outcome&quot;: &quot;not_scheduled&quot;,
+          &quot;task_completion_measured&quot;: false,
+          &quot;task_completed&quot;: null,
+          &quot;outcome&quot;: &quot;not_scheduled&quot;,
+          &quot;handoff&quot;: null,
+          &quot;admission&quot;: null,
+          &quot;admission_diagnostic&quot;: null,
+          &quot;valid_grade&quot;: false,
+          &quot;reference_pass&quot;: null,
+          &quot;mutants_detected&quot;: null,
+          &quot;mutants_executed&quot;: null,
+          &quot;skill_file_access_attempts&quot;: null,
+          &quot;tool_calls&quot;: null,
+          &quot;tool_errors&quot;: null,
+          &quot;failure_cause&quot;: null,
+          &quot;timing&quot;: null,
+          &quot;duration_seconds&quot;: null,
+          &quot;usage&quot;: null,
+          &quot;accounting_assessment&quot;: null,
+          &quot;execution_assessment&quot;: null,
+          &quot;native_terminal&quot;: null,
+          &quot;conservative_estimate_usd&quot;: null,
+          &quot;native_pricing_estimate_usd&quot;: null,
+          &quot;api_bill_usd&quot;: null,
+          &quot;evidence_complete&quot;: false,
+          &quot;containers_removed&quot;: null,
+          &quot;container_disposal&quot;: &quot;not_applicable_never_started&quot;
+        }
+      ],
+      &quot;closure&quot;: {
+        &quot;allocation_id&quot;: &quot;sol-high-retained-20261106&quot;,
+        &quot;state&quot;: &quot;closed&quot;,
+        &quot;paid_execution_enabled&quot;: false,
+        &quot;reserved_slots_consumed&quot;: [],
+        &quot;campaign_attempts_consumed&quot;: 6,
+        &quot;previous_recovery_consumed&quot;: 4,
+        &quot;previous_recovery_limit&quot;: 4,
+        &quot;incremental_api_bill_usd&quot;: null,
+        &quot;historical_cumulative_api_bill_usd&quot;: null,
+        &quot;note&quot;: &quot;Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.&quot;,
+        &quot;reservation_ids&quot;: [],
+        &quot;incremental_conservative_estimate_usd&quot;: null,
+        &quot;operational_budget_usd&quot;: 5,
+        &quot;estimated_budget_exceeded&quot;: null,
+        &quot;unused_closed_reservations&quot;: [
+          &quot;sol-high-retained-20261106/current/7&quot;,
+          &quot;sol-high-retained-20261106/absent/8&quot;
+        ]
+      },
+      &quot;operationally_usable&quot;: false,
+      &quot;profile&quot;: &quot;codex-0.166.0_gpt-6.1-sol_high_rollout-budget-disabled&quot;,
+      &quot;limits&quot;: [
+        &quot;One attempt per arm cannot establish skill effectiveness; comparisons with historical CLI/model profiles are not skill-only comparisons&quot;,
+        &quot;File-access attempts are not successful reads, instruction following or causal skill benefit&quot;,
+        &quot;Native cleanup permission errors are retained; whole disposable-container removal is checked independently&quot;,
+        &quot;The API credential is available to the evaluated process. Unrelated credentials, raw transcripts and authentication files are excluded. Only the exact declared agent submission may be retained after credential/protected-content checks and download verification, for 30 days&quot;,
+        &quot;Pinned native pricing may be unavailable; historical cumulative spending remains unknown; $5 is an operational budget with possible overshoot, not a provider-enforced cap&quot;
+      ],
+      &quot;usage_note&quot;: &quot;CLI-reported cumulative totals are retained without summing repeated token-count events. Cached reads and writes are input subsets; reasoning is an output subset. Conservative estimate charges all input at $10/M and output at $15/M, without adding subset counts. These are estimates, not provider bills.&quot;,
+      &quot;admission_preflight&quot;: null,
+      &quot;observed_usage_conservative_estimate_usd&quot;: null,
+      &quot;reviewed_notes&quot;: [
+        &quot;Both arms use the fully disabled supplemental rollout-budget feature, including reminders; the CLI feature listing is checked before credentials and after Harbor uploads its effective configuration. Attempt five used a different budget profile and is historical evidence, not a matched comparison.&quot;,
+        &quot;Execution outcome, task completion, independent correctness, session usage coverage and provider billing are assessed separately. A recognized agent failure can be interpretable without a valid correctness grade.&quot;,
+        &quot;Historical attempt five remains a native NonZeroAgentExitCodeError / unclassified with the exact Codex budget-exhaustion event. Retained usage estimates remain available; ordered raw-session coverage was not retained, so complete accounting is not retroactively asserted.&quot;,
+        &quot;Both planned arms are unlaunched, not failed agent tasks. No submission or new admission/correctness/mutation result exists. Prior grading controls remain valid; none were rerun.&quot;,
+        &quot;A closed-state unit test originally read the armed checkout; it now uses explicit disabled and armed fixtures without weakening handoff.no_credentials. The corrected workflow passed all 54 component tests, with three runtime-specific skips.&quot;,
+        &quot;The artifact fixture proved unchanged bytes through upload/download and local retrieval; it does not prove retention of a new agent submission because no agent ran.&quot;,
+        &quot;Smallest next decision: verify availability of the unchanged pinned package index without credentials before considering a newly authorized allocation. No replacement call or budget carry-forward is scheduled.&quot;
+      ]
     }
   ],
   &quot;admission_validation&quot;: {
@@ -2245,15 +2363,93 @@
     &quot;inference&quot;: false,
     &quot;local_download_verified&quot;: true
   },
+  &quot;maintenance_added&quot;: [
+    &quot;One bounded exact-deliverable publication module and focused checks&quot;,
+    &quot;Pinned artifact upload/download steps and identity/hash verification&quot;,
+    &quot;No new Harbor override, fork, dependency, grader policy or artifact transport&quot;
+  ],
+  &quot;preparation_history&quot;: [
+    {
+      &quot;runs&quot;: [
+        {
+          &quot;run_id&quot;: 42212722607,
+          &quot;commit&quot;: &quot;0bbd09b356415e6ce01ca142e3fb56b385267c61&quot;,
+          &quot;stage&quot;: &quot;credential_free_unit_tests&quot;,
+          &quot;failure&quot;: &quot;test_credential_free_diagnostics_work_after_later_closed_allocations used armed checkout instead of a closed fixture&quot;,
+          &quot;closure&quot;: {
+            &quot;allocation_id&quot;: &quot;sol-high-retained-20261106&quot;,
+            &quot;state&quot;: &quot;closed&quot;,
+            &quot;paid_execution_enabled&quot;: false,
+            &quot;reserved_slots_consumed&quot;: [],
+            &quot;campaign_attempts_consumed&quot;: 6,
+            &quot;previous_recovery_consumed&quot;: 4,
+            &quot;previous_recovery_limit&quot;: 4,
+            &quot;incremental_api_bill_usd&quot;: null,
+            &quot;historical_cumulative_api_bill_usd&quot;: null,
+            &quot;note&quot;: &quot;Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.&quot;,
+            &quot;reservation_ids&quot;: [],
+            &quot;incremental_conservative_estimate_usd&quot;: null,
+            &quot;operational_budget_usd&quot;: 5,
+            &quot;estimated_budget_exceeded&quot;: null
+          },
+          &quot;credentialed_launches&quot;: 0,
+          &quot;reservations&quot;: 0,
+          &quot;scope&quot;: &quot;Prelaunch CI correction only; no retry or replacement of a Codex attempt.&quot;
+        },
+        {
+          &quot;run_id&quot;: 42213118342,
+          &quot;commit&quot;: &quot;eca71ef78c197b51103436f85575126a4ad48ea9&quot;,
+          &quot;stage&quot;: &quot;credential_free_agent_image_build&quot;,
+          &quot;classification&quot;: &quot;prelaunch_infrastructure_failure&quot;,
+          &quot;command&quot;: [
+            &quot;docker&quot;,
+            &quot;build&quot;,
+            &quot;--progress=plain&quot;,
+            &quot;-t&quot;,
+            &quot;direct-harbor-agent:current&quot;,
+            &quot;&lt;staged-current-environment&gt;&quot;
+          ],
+          &quot;failing_build_step&quot;: &quot;apt-get update --error-on=any against frozen Debian snapshot 20261103T000000Z&quot;,
+          &quot;native_exit_status&quot;: 100,
+          &quot;outer_docker_build_exit_status&quot;: 1,
+          &quot;observed_errors&quot;: [
+            &quot;HTTP 504 Gateway Timeout&quot;,
+            &quot;HTTP 503 TooManyRequests first byte timeout&quot;
+          ],
+          &quot;package_index_url&quot;: &quot;https://snapshot.debian.org/archive/debian/20261103T000000Z/dists/trixie/main/binary-amd64/Packages&quot;,
+          &quot;reservations&quot;: 0,
+          &quot;credentialed_launches&quot;: 0,
+          &quot;evaluated_agent_container_started&quot;: false,
+          &quot;verifier_container_started&quot;: false,
+          &quot;container_disposal&quot;: &quot;not_applicable_evaluated_environments_never_started&quot;,
+          &quot;build_cleanup&quot;: &quot;GitHub-hosted job completed; no retained Docker process inspection; do not claim a container-disposal probe passed&quot;,
+          &quot;workflow_url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342&quot;,
+          &quot;job_url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342/job/127876427762&quot;,
+          &quot;report_artifact_url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342/artifacts/13499568643&quot;,
+          &quot;closure_artifact_sha256&quot;: &quot;7d32a70cf6839abc78b308a56f52e4984cf2b6095a653751308affbedc375169&quot;,
+          &quot;note&quot;: &quot;No reservation receipt or attempt record exists; both credentialed steps were skipped. No new agent-generated submission exists. No package pin, acceptance criterion or isolation setting was changed to work around this failure.&quot;
+        }
+      ],
+      &quot;terminal_decision&quot;: &quot;Allocation closed unused after the pinned package index failed. No additional inference or CI build retry scheduled.&quot;
+    }
+  ],
+  &quot;prepared_environment&quot;: {
+    &quot;prepared_manifest&quot;: null,
+    &quot;prepared_transfer&quot;: null,
+    &quot;preapproval_download&quot;: null
+  },
   &quot;preparation_failures&quot;: {
     &quot;runs&quot;: [
       {
-        &quot;run_id&quot;: 42212722607,
-        &quot;commit&quot;: &quot;0bbd09b356415e6ce01ca142e3fb56b385267c61&quot;,
-        &quot;stage&quot;: &quot;credential_free_unit_tests&quot;,
-        &quot;failure&quot;: &quot;test_credential_free_diagnostics_work_after_later_closed_allocations used armed checkout instead of a closed fixture&quot;,
+        &quot;run_id&quot;: 42235352779,
+        &quot;commit&quot;: &quot;c6cef78ec916fdf955eb20600fa642e2f6d9c91d&quot;,
+        &quot;preparation_attempt&quot;: 1,
+        &quot;stage&quot;: &quot;agent_image_build&quot;,
+        &quot;dependency&quot;: &quot;https://snapshot.debian.org/archive/debian-security/20261103T000000Z/dists/trixie-security/main/binary-amd64/Packages&quot;,
+        &quot;native_apt_exit&quot;: 100,
+        &quot;http_status&quot;: 504,
         &quot;closure&quot;: {
-          &quot;allocation_id&quot;: &quot;sol-high-retained-20261106&quot;,
+          &quot;allocation_id&quot;: &quot;sol-high-prepared-20261106&quot;,
           &quot;state&quot;: &quot;closed&quot;,
           &quot;paid_execution_enabled&quot;: false,
           &quot;reserved_slots_consumed&quot;: [],
@@ -2268,49 +2464,294 @@
           &quot;operational_budget_usd&quot;: 5,
           &quot;estimated_budget_exceeded&quot;: null
         },
+        &quot;environment_approval_submitted&quot;: false,
         &quot;credentialed_launches&quot;: 0,
         &quot;reservations&quot;: 0,
-        &quot;scope&quot;: &quot;Prelaunch CI correction only; no retry or replacement of a Codex attempt.&quot;
+        &quot;classification&quot;: &quot;prelaunch_infrastructure_failure&quot;,
+        &quot;failure&quot;: &quot;APT security Packages index HTTP 504; apt exit 100; Docker build exit 1&quot;,
+        &quot;workflow_url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42235352779&quot;,
+        &quot;closure_artifact_sha256&quot;: &quot;73abd16bac41ce840b34b74b191122b8b3a377b85f4919d7fb589b85c613d67d&quot;
       },
       {
-        &quot;run_id&quot;: 42213118342,
-        &quot;commit&quot;: &quot;eca71ef78c197b51103436f85575126a4ad48ea9&quot;,
+        &quot;run_id&quot;: 42238163966,
+        &quot;commit&quot;: &quot;381c458a512fe120ab20060ede7b6542b6049c94&quot;,
+        &quot;preparation_attempt&quot;: 2,
         &quot;stage&quot;: &quot;credential_free_agent_image_build&quot;,
         &quot;classification&quot;: &quot;prelaunch_infrastructure_failure&quot;,
-        &quot;command&quot;: [
-          &quot;docker&quot;,
-          &quot;build&quot;,
-          &quot;--progress=plain&quot;,
-          &quot;-t&quot;,
-          &quot;direct-harbor-agent:current&quot;,
-          &quot;&lt;staged-current-environment&gt;&quot;
-        ],
-        &quot;failing_build_step&quot;: &quot;apt-get update --error-on=any against frozen Debian snapshot 20261103T000000Z&quot;,
-        &quot;native_exit_status&quot;: 100,
+        &quot;failure&quot;: &quot;Fixed main Packages.xz download exhausted three transport attempts; HTTP 503: No healthy backends; Docker build exit 1&quot;,
+        &quot;dependency&quot;: &quot;https://snapshot.debian.org/archive/debian/20261103T000000Z/dists/trixie/main/binary-amd64/Packages.xz&quot;,
+        &quot;dependency_attribution&quot;: &quot;Derived from the executed ordered cache_indexes loop, traceback at checked(base+relative), and absence of its flushed first-archive completion message. The exception itself omitted the URL.&quot;,
+        &quot;native_http_status&quot;: 503,
+        &quot;transport_attempts&quot;: 3,
         &quot;outer_docker_build_exit_status&quot;: 1,
-        &quot;observed_errors&quot;: [
-          &quot;HTTP 504 Gateway Timeout&quot;,
-          &quot;HTTP 503 TooManyRequests first byte timeout&quot;
-        ],
-        &quot;package_index_url&quot;: &quot;https://snapshot.debian.org/archive/debian/20261103T000000Z/dists/trixie/main/binary-amd64/Packages&quot;,
+        &quot;closure&quot;: {
+          &quot;allocation_id&quot;: &quot;sol-high-prepared-20261106&quot;,
+          &quot;state&quot;: &quot;closed&quot;,
+          &quot;paid_execution_enabled&quot;: false,
+          &quot;reserved_slots_consumed&quot;: [],
+          &quot;campaign_attempts_consumed&quot;: 6,
+          &quot;previous_recovery_consumed&quot;: 4,
+          &quot;previous_recovery_limit&quot;: 4,
+          &quot;incremental_api_bill_usd&quot;: null,
+          &quot;historical_cumulative_api_bill_usd&quot;: null,
+          &quot;note&quot;: &quot;Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.&quot;,
+          &quot;reservation_ids&quot;: [],
+          &quot;incremental_conservative_estimate_usd&quot;: null,
+          &quot;operational_budget_usd&quot;: 5,
+          &quot;estimated_budget_exceeded&quot;: null
+        },
         &quot;reservations&quot;: 0,
         &quot;credentialed_launches&quot;: 0,
-        &quot;evaluated_agent_container_started&quot;: false,
+        &quot;environment_approval_submitted&quot;: false,
+        &quot;workflow_url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42238163966&quot;,
+        &quot;job_url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42238163966/job/127961265318&quot;,
+        &quot;closure_artifact_url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42238163966/artifacts/13511298813&quot;,
+        &quot;closure_artifact_sha256&quot;: &quot;18961500dc7ff13d044514bcbb4dd938a254334008ad391ea9aed06a94d7725c&quot;,
+        &quot;closure_download_digest_verified&quot;: true,
+        &quot;preparation_metadata&quot;: {
+          &quot;stage&quot;: &quot;building_pinned_image&quot;,
+          &quot;paid_inference_permitted&quot;: false
+        },
+        &quot;agent_container_started&quot;: false,
         &quot;verifier_container_started&quot;: false,
-        &quot;container_disposal&quot;: &quot;not_applicable_evaluated_environments_never_started&quot;,
-        &quot;build_cleanup&quot;: &quot;GitHub-hosted job completed; no retained Docker process inspection; do not claim a container-disposal probe passed&quot;,
-        &quot;workflow_url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342&quot;,
-        &quot;job_url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342/job/127876427762&quot;,
-        &quot;report_artifact_url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342/artifacts/13499568643&quot;,
-        &quot;closure_artifact_sha256&quot;: &quot;7d32a70cf6839abc78b308a56f52e4984cf2b6095a653751308affbedc375169&quot;,
-        &quot;note&quot;: &quot;No reservation receipt or attempt record exists; both credentialed steps were skipped. No new agent-generated submission exists. No package pin, acceptance criterion or isolation setting was changed to work around this failure.&quot;
+        &quot;container_disposal&quot;: &quot;not_applicable_no_evaluated_containers_started&quot;,
+        &quot;compose_cleanup_step&quot;: &quot;success; not evidence of a live container-disposal probe&quot;
       }
     ],
-    &quot;terminal_decision&quot;: &quot;Allocation closed unused after the pinned package index failed. No additional inference or CI build retry scheduled.&quot;
+    &quot;terminal_decision&quot;: &quot;Stop after the two authorized full preparation attempts. No third build or paid launch. Pinned snapshot delivery remains unreliable from hosted Actions; unchanged complete image construction and transfer are unverified.&quot;,
+    &quot;history&quot;: [
+      {
+        &quot;runs&quot;: [
+          {
+            &quot;run_id&quot;: 42212722607,
+            &quot;commit&quot;: &quot;0bbd09b356415e6ce01ca142e3fb56b385267c61&quot;,
+            &quot;stage&quot;: &quot;credential_free_unit_tests&quot;,
+            &quot;failure&quot;: &quot;test_credential_free_diagnostics_work_after_later_closed_allocations used armed checkout instead of a closed fixture&quot;,
+            &quot;closure&quot;: {
+              &quot;allocation_id&quot;: &quot;sol-high-retained-20261106&quot;,
+              &quot;state&quot;: &quot;closed&quot;,
+              &quot;paid_execution_enabled&quot;: false,
+              &quot;reserved_slots_consumed&quot;: [],
+              &quot;campaign_attempts_consumed&quot;: 6,
+              &quot;previous_recovery_consumed&quot;: 4,
+              &quot;previous_recovery_limit&quot;: 4,
+              &quot;incremental_api_bill_usd&quot;: null,
+              &quot;historical_cumulative_api_bill_usd&quot;: null,
+              &quot;note&quot;: &quot;Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.&quot;,
+              &quot;reservation_ids&quot;: [],
+              &quot;incremental_conservative_estimate_usd&quot;: null,
+              &quot;operational_budget_usd&quot;: 5,
+              &quot;estimated_budget_exceeded&quot;: null
+            },
+            &quot;credentialed_launches&quot;: 0,
+            &quot;reservations&quot;: 0,
+            &quot;scope&quot;: &quot;Prelaunch CI correction only; no retry or replacement of a Codex attempt.&quot;
+          },
+          {
+            &quot;run_id&quot;: 42213118342,
+            &quot;commit&quot;: &quot;eca71ef78c197b51103436f85575126a4ad48ea9&quot;,
+            &quot;stage&quot;: &quot;credential_free_agent_image_build&quot;,
+            &quot;classification&quot;: &quot;prelaunch_infrastructure_failure&quot;,
+            &quot;command&quot;: [
+              &quot;docker&quot;,
+              &quot;build&quot;,
+              &quot;--progress=plain&quot;,
+              &quot;-t&quot;,
+              &quot;direct-harbor-agent:current&quot;,
+              &quot;&lt;staged-current-environment&gt;&quot;
+            ],
+            &quot;failing_build_step&quot;: &quot;apt-get update --error-on=any against frozen Debian snapshot 20261103T000000Z&quot;,
+            &quot;native_exit_status&quot;: 100,
+            &quot;outer_docker_build_exit_status&quot;: 1,
+            &quot;observed_errors&quot;: [
+              &quot;HTTP 504 Gateway Timeout&quot;,
+              &quot;HTTP 503 TooManyRequests first byte timeout&quot;
+            ],
+            &quot;package_index_url&quot;: &quot;https://snapshot.debian.org/archive/debian/20261103T000000Z/dists/trixie/main/binary-amd64/Packages&quot;,
+            &quot;reservations&quot;: 0,
+            &quot;credentialed_launches&quot;: 0,
+            &quot;evaluated_agent_container_started&quot;: false,
+            &quot;verifier_container_started&quot;: false,
+            &quot;container_disposal&quot;: &quot;not_applicable_evaluated_environments_never_started&quot;,
+            &quot;build_cleanup&quot;: &quot;GitHub-hosted job completed; no retained Docker process inspection; do not claim a container-disposal probe passed&quot;,
+            &quot;workflow_url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342&quot;,
+            &quot;job_url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342/job/127876427762&quot;,
+            &quot;report_artifact_url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342/artifacts/13499568643&quot;,
+            &quot;closure_artifact_sha256&quot;: &quot;7d32a70cf6839abc78b308a56f52e4984cf2b6095a653751308affbedc375169&quot;,
+            &quot;note&quot;: &quot;No reservation receipt or attempt record exists; both credentialed steps were skipped. No new agent-generated submission exists. No package pin, acceptance criterion or isolation setting was changed to work around this failure.&quot;
+          }
+        ],
+        &quot;terminal_decision&quot;: &quot;Allocation closed unused after the pinned package index failed. No additional inference or CI build retry scheduled.&quot;
+      }
+    ]
   },
-  &quot;maintenance_added&quot;: [
-    &quot;One bounded exact-deliverable publication module and focused checks&quot;,
-    &quot;Pinned artifact upload/download steps and identity/hash verification&quot;,
-    &quot;No new Harbor override, fork, dependency, grader policy or artifact transport&quot;
-  ]
+  &quot;snapshot_recovery&quot;: {
+    &quot;prior_failed_run&quot;: 42213118342,
+    &quot;preparation_runs&quot;: [
+      {
+        &quot;run_id&quot;: 42235352779,
+        &quot;commit&quot;: &quot;c6cef78ec916fdf955eb20600fa642e2f6d9c91d&quot;,
+        &quot;preparation_attempt&quot;: 1,
+        &quot;stage&quot;: &quot;agent_image_build&quot;,
+        &quot;dependency&quot;: &quot;https://snapshot.debian.org/archive/debian-security/20261103T000000Z/dists/trixie-security/main/binary-amd64/Packages&quot;,
+        &quot;native_apt_exit&quot;: 100,
+        &quot;http_status&quot;: 504,
+        &quot;closure&quot;: {
+          &quot;allocation_id&quot;: &quot;sol-high-prepared-20261106&quot;,
+          &quot;state&quot;: &quot;closed&quot;,
+          &quot;paid_execution_enabled&quot;: false,
+          &quot;reserved_slots_consumed&quot;: [],
+          &quot;campaign_attempts_consumed&quot;: 6,
+          &quot;previous_recovery_consumed&quot;: 4,
+          &quot;previous_recovery_limit&quot;: 4,
+          &quot;incremental_api_bill_usd&quot;: null,
+          &quot;historical_cumulative_api_bill_usd&quot;: null,
+          &quot;note&quot;: &quot;Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.&quot;,
+          &quot;reservation_ids&quot;: [],
+          &quot;incremental_conservative_estimate_usd&quot;: null,
+          &quot;operational_budget_usd&quot;: 5,
+          &quot;estimated_budget_exceeded&quot;: null
+        },
+        &quot;environment_approval_submitted&quot;: false,
+        &quot;credentialed_launches&quot;: 0,
+        &quot;reservations&quot;: 0,
+        &quot;classification&quot;: &quot;prelaunch_infrastructure_failure&quot;,
+        &quot;failure&quot;: &quot;APT security Packages index HTTP 504; apt exit 100; Docker build exit 1&quot;,
+        &quot;workflow_url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42235352779&quot;,
+        &quot;closure_artifact_sha256&quot;: &quot;73abd16bac41ce840b34b74b191122b8b3a377b85f4919d7fb589b85c613d67d&quot;
+      },
+      {
+        &quot;run_id&quot;: 42238163966,
+        &quot;commit&quot;: &quot;381c458a512fe120ab20060ede7b6542b6049c94&quot;,
+        &quot;preparation_attempt&quot;: 2,
+        &quot;stage&quot;: &quot;credential_free_agent_image_build&quot;,
+        &quot;classification&quot;: &quot;prelaunch_infrastructure_failure&quot;,
+        &quot;failure&quot;: &quot;Fixed main Packages.xz download exhausted three transport attempts; HTTP 503: No healthy backends; Docker build exit 1&quot;,
+        &quot;dependency&quot;: &quot;https://snapshot.debian.org/archive/debian/20261103T000000Z/dists/trixie/main/binary-amd64/Packages.xz&quot;,
+        &quot;dependency_attribution&quot;: &quot;Derived from the executed ordered cache_indexes loop, traceback at checked(base+relative), and absence of its flushed first-archive completion message. The exception itself omitted the URL.&quot;,
+        &quot;native_http_status&quot;: 503,
+        &quot;transport_attempts&quot;: 3,
+        &quot;outer_docker_build_exit_status&quot;: 1,
+        &quot;closure&quot;: {
+          &quot;allocation_id&quot;: &quot;sol-high-prepared-20261106&quot;,
+          &quot;state&quot;: &quot;closed&quot;,
+          &quot;paid_execution_enabled&quot;: false,
+          &quot;reserved_slots_consumed&quot;: [],
+          &quot;campaign_attempts_consumed&quot;: 6,
+          &quot;previous_recovery_consumed&quot;: 4,
+          &quot;previous_recovery_limit&quot;: 4,
+          &quot;incremental_api_bill_usd&quot;: null,
+          &quot;historical_cumulative_api_bill_usd&quot;: null,
+          &quot;note&quot;: &quot;Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.&quot;,
+          &quot;reservation_ids&quot;: [],
+          &quot;incremental_conservative_estimate_usd&quot;: null,
+          &quot;operational_budget_usd&quot;: 5,
+          &quot;estimated_budget_exceeded&quot;: null
+        },
+        &quot;reservations&quot;: 0,
+        &quot;credentialed_launches&quot;: 0,
+        &quot;environment_approval_submitted&quot;: false,
+        &quot;workflow_url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42238163966&quot;,
+        &quot;job_url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42238163966/job/127961265318&quot;,
+        &quot;closure_artifact_url&quot;: &quot;https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42238163966/artifacts/13511298813&quot;,
+        &quot;closure_artifact_sha256&quot;: &quot;18961500dc7ff13d044514bcbb4dd938a254334008ad391ea9aed06a94d7725c&quot;,
+        &quot;closure_download_digest_verified&quot;: true,
+        &quot;preparation_metadata&quot;: {
+          &quot;stage&quot;: &quot;building_pinned_image&quot;,
+          &quot;paid_inference_permitted&quot;: false
+        },
+        &quot;agent_container_started&quot;: false,
+        &quot;verifier_container_started&quot;: false,
+        &quot;container_disposal&quot;: &quot;not_applicable_no_evaluated_containers_started&quot;,
+        &quot;compose_cleanup_step&quot;: &quot;success; not evidence of a live container-disposal probe&quot;
+      }
+    ],
+    &quot;requests&quot;: [
+      {
+        &quot;path&quot;: &quot;InRelease&quot;,
+        &quot;status&quot;: 200,
+        &quot;size&quot;: 140421,
+        &quot;sha256&quot;: &quot;0584fba32e13e0ab8285fb16c27adea1ec03a73669c18702821094fd6ca86675&quot;,
+        &quot;elapsed_seconds&quot;: 0.49,
+        &quot;destination&quot;: &quot;InRelease&quot;
+      },
+      {
+        &quot;path&quot;: &quot;main/binary-amd64/Packages.xz&quot;,
+        &quot;status&quot;: 200,
+        &quot;size&quot;: 9678380,
+        &quot;sha256&quot;: &quot;7778d3e3f303b7ddb8ce0fe7c8d57473a076c6bf2e8f241f75421d2396352498&quot;,
+        &quot;elapsed_seconds&quot;: 0.85,
+        &quot;destination&quot;: &quot;main_binary-amd64_Packages.xz&quot;
+      },
+      {
+        &quot;path&quot;: &quot;main/binary-amd64/Packages.gz&quot;,
+        &quot;error_type&quot;: &quot;HTTPError&quot;,
+        &quot;status&quot;: 504,
+        &quot;elapsed_seconds&quot;: 10.51
+      }
+    ],
+    &quot;security_requests&quot;: [
+      {
+        &quot;path&quot;: &quot;InRelease&quot;,
+        &quot;status&quot;: 200,
+        &quot;size&quot;: 43409,
+        &quot;sha256&quot;: &quot;01590ffbf20362d6138369dbf543ee42d3d8ec62589d31cfb93a085afcad4f3c&quot;,
+        &quot;elapsed_seconds&quot;: 0.82,
+        &quot;destination&quot;: &quot;security_InRelease&quot;
+      },
+      {
+        &quot;path&quot;: &quot;main/binary-amd64/Packages.xz&quot;,
+        &quot;status&quot;: 200,
+        &quot;size&quot;: 297148,
+        &quot;sha256&quot;: &quot;38ca814a70dea1f035fd078c08b15b9a93f23b9605f3115a7791f30e62a6bf27&quot;,
+        &quot;elapsed_seconds&quot;: 0.54,
+        &quot;destination&quot;: &quot;security_main_binary-amd64_Packages.xz&quot;
+      },
+      {
+        &quot;path&quot;: &quot;main/binary-amd64/Packages.gz&quot;,
+        &quot;error_type&quot;: &quot;HTTPError&quot;,
+        &quot;status&quot;: 504,
+        &quot;elapsed_seconds&quot;: 11.51
+      }
+    ],
+    &quot;base_image&quot;: &quot;python:3.12-slim-trixie@sha256:b18b261e1b4974b4f321451ad5251ded85abb22c2b8b262da527dda1d031ab30&quot;,
+    &quot;index_only_probe&quot;: {
+      &quot;passed&quot;: true,
+      &quot;apt_update_exit&quot;: 0,
+      &quot;package_installation&quot;: false,
+      &quot;model_inference&quot;: false,
+      &quot;execution_user&quot;: &quot;1000:1000&quot;,
+      &quot;read_only_root&quot;: true,
+      &quot;capabilities_dropped&quot;: &quot;ALL&quot;,
+      &quot;no_new_privileges&quot;: true,
+      &quot;host_mounts&quot;: false,
+      &quot;log_sha256&quot;: &quot;30650709996c05879fe268a700ef21ae4087a50a409d277c534386caf87e6770&quot;,
+      &quot;known_limits&quot;: &quot;This verifies cache acquisition and APT authentication, not full agent/verifier image construction. Two earlier local probe invocations stopped on unsupported tmpfs ownership syntax and a locked system APT state directory; the passing probe uses fresh unprivileged scratch state.&quot;
+    },
+    &quot;diagnosis&quot;: &quot;Main and security compressed index bytes exist and match signed-release identities. Gzip/plain delivery returned 503/504. The pinned base compression configuration did not establish a configuration defect; flaky remote delivery is the supported finding.&quot;,
+    &quot;correction&quot;: &quot;Existing helper caches the exact dated InRelease and Packages.xz bytes with at most three transport attempts per request. All APT build phases use a temporary file source with the existing signed-by keyring; snapshot-selected package size/SHA256 and apt --no-download stay enforced. Runtime sources, snapshot date, versions and base digest remain unchanged.&quot;,
+    &quot;documentation&quot;: &quot;https://manpages.debian.org/trixie/apt/apt.conf.5.en.html&quot;,
+    &quot;full_preparation_limit&quot;: 2,
+    &quot;full_preparation_attempts_used&quot;: 2,
+    &quot;full_images_built&quot;: false,
+    &quot;prepared_images_reused&quot;: false,
+    &quot;image_transfer_qualified&quot;: false,
+    &quot;environment_approval&quot;: {
+      &quot;submitted&quot;: false,
+      &quot;reason&quot;: &quot;Both credential-free preparation jobs failed. Paid jobs were skipped; no approval requested or submitted.&quot;,
+      &quot;authorized_method&quot;: &quot;Normal environment API approval only after exact repository, branch, commit, run and allocation preparation checks; no administrative bypass or independent human review.&quot;
+    },
+    &quot;local_validation&quot;: {
+      &quot;tests_run&quot;: 61,
+      &quot;skipped&quot;: 3,
+      &quot;failures&quot;: 0,
+      &quot;scope&quot;: &quot;Pinned Harbor focused component suite; source/staging/manifest fixtures plus separately retained index-only APT probe. Not a full image build.&quot;
+    },
+    &quot;terminal_decision&quot;: &quot;Stop after the two authorized full preparation attempts. No third build or paid launch. Pinned snapshot delivery remains unreliable from hosted Actions; unchanged complete image construction and transfer are unverified.&quot;,
+    &quot;maintenance&quot;: [
+      &quot;One trial-local image/task archive helper with manifest, digest, task-checksum and runner-path validation plus four tests; no Harbor fork or new private override.&quot;,
+      &quot;Existing APT transport helper now caches exact signed indexes with bounded retries and size/SHA256 checks; APT still verifies signatures. Three transport regression tests.&quot;,
+      &quot;Separate credential-free preparation job and protected live job; same-run temporary image/input artifact has one-day retention. Full transfer remains unexercised because image builds failed.&quot;
+    ]
+  }
 }</pre></details></html>

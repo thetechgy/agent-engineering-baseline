@@ -433,3 +433,17 @@ request timeouts and bounded backoff. No rolling repository, unsigned source or
 new package version is introduced. The exact-base unprivileged index-only check
 passed APT authentication and package-URI/hash planning; it did not install packages
 or count as a full trial-image preparation. Full image construction remains a CI gate.
+
+
+The second and final authorized preparation (42238163966, commit 381c458) failed
+at the first compressed-index download with HTTP 503 after all three bounded
+transport attempts. Both preparation closures were downloaded and digest-checked;
+neither reserved or launched an agent. Required agent/verifier image construction
+and the new image transfer remain unverified. No environment approval was submitted.
+Allocation `sol-high-prepared-20261106` is closed at 0/2; campaign consumption is
+still 6/36. Paid scheduling is disabled and no third build is authorized in this
+pass. The final report packaging run exercises no image build or model inference.
+The next bounded action would be to qualify a durable cache of the same signed,
+hash-verified snapshot bytes, then demonstrate complete credential-free image
+construction before considering any fresh paid allocation. The successful local
+index check does not establish that package installation or image reuse works.

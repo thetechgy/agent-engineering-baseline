@@ -207,6 +207,14 @@ def report(output, data):
         text += table(('Run','Stage','Observed failure','Reservations / launches'),
             [(r['run_id'],r['stage'],r.get('failure') or ', '.join(r.get('observed_errors',[])),str(r['reservations'])+' / '+str(r['credentialed_launches'])) for r in data['preparation_failures']['runs']])
         text += '<p>'+esc(data['preparation_failures']['terminal_decision'])+'</p>'
+    if data.get('snapshot_recovery'):
+        recovery=data['snapshot_recovery']
+        text += '<h2>Pinned image preparation and environment approval</h2><p><a href="snapshot-recovery.json">Requests, hashes, build failures and maintenance evidence</a></p>'
+        text += table(('Full preparation attempts','Images built','Images reused','Transfer qualified','Environment approval submitted'),
+            [(recovery['full_preparation_attempts_used'],recovery['full_images_built'],recovery['prepared_images_reused'],recovery['image_transfer_qualified'],recovery['environment_approval']['submitted'])])
+        text += '<p>'+esc(recovery['environment_approval']['reason'])+'</p><p>'+esc(recovery['diagnosis'])+'</p>'
+        text += '<p>Observed local validation: '+esc(recovery['local_validation']['tests_run'])+' component tests, '+esc(recovery['local_validation']['skipped'])+' skipped. The exact-base APT index authentication check passed; it did not build or validate the complete images.</p>'
+        text += '<p>Maintenance: '+esc(' '.join(recovery['maintenance']))+'</p>'
     if data.get('admission_validation'):
         validation=data['admission_validation']
         text += '<h2>Credential-free admission diagnostic validation</h2><p>Passed: '+esc(validation['passed'])+'. No model inference. These are deterministic verifier controls, not new skill-evaluation attempts. Historical attempt six remains unexplained.</p><p><a href="admission-validation.json">Docker control evidence and input identity</a></p>'
