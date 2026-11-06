@@ -633,3 +633,16 @@ read-only input directories (a bounded tar-stream reader may avoid host
 extraction permission issues). This is a proposal, not a diagnosed permission
 failure or authorization for another complete execution. See
 `results/matching-preparation.json` for the exact evidence and limits.
+
+New authorization supersedes the prior two-preparation limit: the credential-free
+window is 2026-11-06 21:03:22–22:33:22 UTC, including CI waiting. Ordinary elapsed
+time checks and existing job timeouts enforce it. Cleanup/reporting continue
+after expiry. Paid replay/reservation protections are unchanged.
+
+Reader qualification run 42294197480 passed before full preparation. The old
+directory-copy approach failed on the representative read-only Docker fixture
+with permission denied; bounded tar-stream inspection passed without filesystem
+extraction. Missing paths, missing/changed bytes, writable metadata, unsafe
+archive entries, and injected cleanup failures were covered. Exact historical
+stderr remains unknown. Docker diagnostics now retain operation, command, exit,
+bounded sanitized stderr and independent cleanup failures unconditionally.

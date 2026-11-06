@@ -18,7 +18,7 @@
     "artifact_digest": "sha256:c777ab3dd090ecc3140cb65ea61f5e370d641876556a35378291400e1d1abd96"
   },
   "correction": "Use a verified local image tag for Dockerfile FROM; raw sha256 config IDs are interpreted as registry names by BuildKit. The base ID is checked before and after building; all original layers must be retained.",
-  "status": "qualifying_content_reader",
+  "status": "matching_with_qualified_tar_reader",
   "temporary_seed_release_removed": true,
   "reuse_note": "Validate original bundle against its original producer; add only execution-profile documentation to agent images and reuse the exact qualified corrected verifier. New manifests bind current inputs.",
   "corrected_verifier_source": {
@@ -145,7 +145,7 @@
     "artifact_digest": "sha256:2d95a9bb6ca91795c35148d0ab874f4f029e45e27d3749c9af7dd08eb1ecd75a",
     "manifest_sha256": "78f0f4f58085d3383f41df1f72ff616ba83b8e35c59ea077597d1d04346516e2"
   },
-  "workflow_run_number": 41,
+  "workflow_run_number": 42,
   "mode": "matching",
   "executions_used": 0,
   "attempts": [],
@@ -156,5 +156,6 @@
     "deadline": "2026-11-06T22:33:22Z",
     "minutes": 90,
     "scope": "Credential-free diagnosis, correction and matching preparation including CI waiting; cleanup and report preservation continue after deadline."
-  }
+  },
+  "reader_qualification_run": 42294197480
 }

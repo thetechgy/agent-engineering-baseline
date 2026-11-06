@@ -1,0 +1,177 @@
+{
+  "passed": true,
+  "inference": false,
+  "controls": [
+    {
+      "control": "readonly_success",
+      "expected_outcome_matched": true,
+      "container_removed": true,
+      "primary_failure": null,
+      "cleanup_failures": []
+    },
+    {
+      "control": "missing_source",
+      "expected_outcome_matched": true,
+      "container_removed": true,
+      "primary_failure": {
+        "stage": "content_tar_export",
+        "command": [
+          "docker",
+          "cp",
+          "image-content-b5f69fa7a7b34bedb595968f6c928e00:/fixture/missing",
+          "-"
+        ],
+        "exit_status": 1,
+        "stderr": "Error response from daemon: Could not find the file /fixture/missing in container image-content-b5f69fa7a7b34bedb595968f6c928e00",
+        "stderr_truncated": false,
+        "failure": {
+          "type": "nonzero_exit",
+          "message": "Docker operation failed"
+        },
+        "stdout_bytes": 0
+      },
+      "cleanup_failures": []
+    },
+    {
+      "control": "missing_content",
+      "expected_outcome_matched": true,
+      "container_removed": true,
+      "primary_failure": {
+        "stage": "content_validation",
+        "type": "ValueError",
+        "message": "content_members_mismatch"
+      },
+      "cleanup_failures": []
+    },
+    {
+      "control": "changed_content",
+      "expected_outcome_matched": true,
+      "container_removed": true,
+      "primary_failure": {
+        "stage": "content_validation",
+        "type": "ValueError",
+        "message": "content_identity_mismatch: README.md"
+      },
+      "cleanup_failures": []
+    },
+    {
+      "control": "primary_and_cleanup_failure",
+      "expected_outcome_matched": true,
+      "container_removed": true,
+      "primary_failure": {
+        "stage": "content_tar_export",
+        "command": [
+          "docker",
+          "cp",
+          "image-content-5443e2c87f414214934630a19a033c8c:/fixture/missing",
+          "-"
+        ],
+        "exit_status": 1,
+        "stderr": "Error response from daemon: Could not find the file /fixture/missing in container image-content-5443e2c87f414214934630a19a033c8c",
+        "stderr_truncated": false,
+        "failure": {
+          "type": "nonzero_exit",
+          "message": "Docker operation failed"
+        },
+        "stdout_bytes": 0
+      },
+      "cleanup_failures": [
+        {
+          "stage": "injected_cleanup",
+          "command": [
+            "docker",
+            "rm",
+            "--intentionally-invalid-option",
+            "image-content-5443e2c87f414214934630a19a033c8c"
+          ],
+          "exit_status": 125,
+          "stderr": "unknown flag: --intentionally-invalid-option\n\nUsage:  docker rm [OPTIONS] CONTAINER [CONTAINER...]\n\nRun 'docker rm --help' for more information",
+          "stderr_truncated": false,
+          "failure": {
+            "type": "nonzero_exit",
+            "message": "Docker operation failed"
+          },
+          "stdout_bytes": 0
+        }
+      ]
+    },
+    {
+      "control": "traversal",
+      "expected_outcome_matched": true
+    },
+    {
+      "control": "symlink",
+      "expected_outcome_matched": true
+    },
+    {
+      "control": "writable",
+      "expected_outcome_matched": true
+    }
+  ],
+  "fixture_removed": true,
+  "legacy_directory_copy": "failed; bounded Docker diagnostic retained; historical cause still cannot be proven",
+  "remaining_containers": [],
+  "reader_sha256": "e3cf3acf31d9d6ea08d4aea3e6266752a2a2b8a489b3c869dcc727f3b726b1f3",
+  "qualification_commit": "079250ee56f75fe28a53fd9ac1ed096b7665b40b",
+  "qualification_run": 42294197480,
+  "run": {
+    "id": 42294197480,
+    "head_sha": "079250ee56f75fe28a53fd9ac1ed096b7665b40b",
+    "head_branch": "trial/direct-harbor",
+    "run_number": 41,
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "event": "push",
+    "path": ".github/workflows/direct-harbor-trial.yml",
+    "html_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42294197480",
+    "created_at": "2026-11-06T21:08:10Z",
+    "updated_at": "2026-11-06T21:08:31Z"
+  },
+  "artifacts": [
+    {
+      "id": 13540568390,
+      "node_id": "MDg6QXJ0aWZhY3QxMzU0MDU2ODM5MA==",
+      "name": "reader-evidence",
+      "size_in_bytes": 7652,
+      "url": "https://api.github.com/repos/thetechgy/agent-engineering-baseline/actions/artifacts/13540568390",
+      "archive_download_url": "https://api.github.com/repos/thetechgy/agent-engineering-baseline/actions/artifacts/13540568390/zip",
+      "expired": false,
+      "digest": "sha256:264dcc7326b28ff6817bd04e412b7fa1e8c4e919fe504281b24661f841f3de2d",
+      "created_at": "2026-11-06T21:08:28Z",
+      "updated_at": "2026-11-06T21:08:28Z",
+      "expires_at": "2026-12-06T21:08:27Z",
+      "workflow_run": {
+        "id": 42294197480,
+        "repository_id": 1299967456,
+        "head_repository_id": 1299967456,
+        "head_branch": "trial/direct-harbor",
+        "head_sha": "079250ee56f75fe28a53fd9ac1ed096b7665b40b"
+      }
+    }
+  ],
+  "artifact_download_digest_verified": true,
+  "focused_suite": {
+    "tests": 72,
+    "skipped": 3,
+    "passed": true
+  },
+  "legacy_docker_diagnostic": {
+    "stage": "legacy_directory_copy",
+    "command": [
+      "docker",
+      "cp",
+      "reader-legacy-cfa5748e3dfe4e0fbab45803fd35b28b:/fixture/input",
+      "/home/runner/work/_temp/content-reader/legacy-copy"
+    ],
+    "exit_status": 1,
+    "stderr": "open /home/runner/work/_temp/content-reader/legacy-copy/README.md: permission denied",
+    "stderr_truncated": false,
+    "failure": {
+      "type": "nonzero_exit",
+      "message": "Docker operation failed"
+    },
+    "stdout_bytes": 0
+  },
+  "historical_failure": "The representative read-only fixture reproduced a permission-denied directory-copy failure. The exact historical stderr was lost; this does not retroactively prove its cause."
+}
