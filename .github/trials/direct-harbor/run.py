@@ -202,10 +202,20 @@ def report(output, data):
     text = '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">\n<title>Direct Harbor recovery trial</title><style>body{font:16px system-ui;max-width:1100px;margin:3rem auto;padding:0 1rem;color:#172033}table{border-collapse:collapse;width:100%;margin:1rem 0}th,td{border:1px solid #cbd5e1;padding:.5rem;text-align:left;vertical-align:top}pre{white-space:pre-wrap;overflow-wrap:anywhere}h1,h2{color:#174f78}a{color:#145f91}</style>\n<h1>Direct Harbor recovery trial</h1><p>Bounded experimental trial. Production evaluation and Pages remain unchanged.</p>\n<p><a href="results.json" download>Download machine-readable results</a> · <a href="manifest.json">Frozen input manifests</a> · <a href="workflow-evidence.txt">Workflow evidence excerpts</a></p>'
     text += '<h2>Decision</h2><p>' + esc(data['decision']) + '</p>'
     text += '<p>' + esc(data['summary']) + '</p>'
+    if data.get('reader_qualification'):
+        reader=data['reader_qualification']
+        text += '<h2>Image-content reader qualification</h2><p><a href="reader-qualification.json">Real Docker controls and retained diagnostics</a></p>'
+        text += '<p>The representative directory-copy probe failed with permission denied while writing a file beneath a read-only directory. The historical run’s stderr was lost, so its precise cause remains unconfirmed. Bounded tar-stream inspection passed without extracting directory permissions onto the host.</p>'
+        text += table(('Reader control','Expected outcome matched','Container removed'),[(c['control'],c['expected_outcome_matched'],c.get('container_removed','Archive-only check')) for c in reader['controls']])
+        text += '<p>Docker commands retain stage, exit status, bounded sanitized stderr, timeouts and launch errors. Cleanup errors remain separate from the primary failure. All real fixture containers and the fixture image were removed; no model credentials or inference were used.</p>'
     if data.get('matching_preparation'):
         matching=data['matching_preparation']
         text += '<h2>Matching version-two inputs</h2><p><a href="matching-preparation.json">Preparation, restored contents, manifests and artifact evidence</a></p>'
-        text += '<p>Preparation passed: '+esc(matching['passed'])+'. Complete preparation executions: '+esc(matching['attempts_used'])+'/2. The first execution failed before reservation because Docker interpreted a raw configuration SHA as a registry image name. The correction uses a verified local base tag.</p>'
+        if matching.get('preparation_window'):
+            text += '<p>Preparation passed: '+esc(matching['passed'])+'. Complete matching preparation executions in this authorization: '+esc(matching['attempts_used'])+'. Credential-free window: '+esc(matching['preparation_window']['started_at'])+' to '+esc(matching['preparation_window']['deadline'])+'. Historical failed executions remain in the machine-readable history.</p>'
+        else:
+            text += '<p>Historical preparation passed: '+esc(matching['passed'])+'. Complete preparation executions under the earlier authorization: '+esc(matching['attempts_used'])+'/2. Its unused allocations closed before any inference.</p>'
+
         if matching['passed']:
             text += table(('Image','Identity'),matching['images'].items())
             text += '<p>Both arms receive identical version-two execution documentation, SHA-256 <code>'+esc(matching['documentation']['sha256'])+'</code>. Only the target skill’s three files differ. The corrected verifier is reused unchanged. No packages were installed and no snapshot indexes were downloaded.</p>'

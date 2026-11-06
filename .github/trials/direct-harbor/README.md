@@ -646,3 +646,14 @@ extraction. Missing paths, missing/changed bytes, writable metadata, unsafe
 archive entries, and injected cleanup failures were covered. Exact historical
 stderr remains unknown. Docker diagnostics now retain operation, command, exit,
 bounded sanitized stderr and independent cleanup failures unconditionally.
+
+Matching preparation run 42294384802 (76e96f8) passed within the new window.
+The retained bundle is artifact 13540659024, manifest SHA-256
+ca89dbda8fce7dbd9f89e662a8bd84ec5543c325965645dac133a96b564e2aea.
+A separate fresh runner verified exact image/task/content identities, runtime
+isolation, expected native controls and disposal without image rebuilding.
+Both arms have identical version-two documentation and differ only in the
+target skill’s three files. The qualified corrected verifier was reused
+unchanged. The new sol-high-v2-qualified-20261106 allocation is distinct from
+every closed allocation and is limited to attempts 8 and 9, USD 5 estimated
+spending with the established reserve/headroom, and normal exact-run approval.

@@ -1,7 +1,14 @@
 {
   "qualification": "matching-v2-reader-20261106",
   "attempt": 1,
-  "prepared_source": null,
+  "prepared_source": {
+    "run_id": 42294384802,
+    "commit": "76e96f8e3a9ca55eba120747b5bd9ab86d26d86a",
+    "artifact_id": 13540659024,
+    "name": "prepared-images",
+    "artifact_digest": "sha256:d8ccdb3b9d4e65b7a486da05c8511e37800554c326d81cc54c0728723b78aee5",
+    "manifest_sha256": "ca89dbda8fce7dbd9f89e662a8bd84ec5543c325965645dac133a96b564e2aea"
+  },
   "dependency_seed": {
     "tag": "trial-snapshot-20261103-20261106",
     "asset": "snapshot-20261103.zip",
@@ -18,7 +25,7 @@
     "artifact_digest": "sha256:c777ab3dd090ecc3140cb65ea61f5e370d641876556a35378291400e1d1abd96"
   },
   "correction": "Use a verified local image tag for Dockerfile FROM; raw sha256 config IDs are interpreted as registry names by BuildKit. The base ID is checked before and after building; all original layers must be retained.",
-  "status": "matching_with_qualified_tar_reader",
+  "status": "matching_v2_tar_reader_qualified",
   "temporary_seed_release_removed": true,
   "reuse_note": "Validate original bundle against its original producer; add only execution-profile documentation to agent images and reuse the exact qualified corrected verifier. New manifests bind current inputs.",
   "corrected_verifier_source": {
@@ -147,15 +154,23 @@
   },
   "workflow_run_number": 42,
   "mode": "matching",
-  "executions_used": 0,
-  "attempts": [],
+  "executions_used": 1,
+  "attempts": [
+    {
+      "attempt": 1,
+      "run_id": 42294384802,
+      "commit": "76e96f8e3a9ca55eba120747b5bd9ab86d26d86a",
+      "outcome": "qualified"
+    }
+  ],
   "latest_failure_run": 42283951417,
-  "ready_for_live_pair": false,
+  "ready_for_live_pair": true,
   "preparation_window": {
     "started_at": "2026-11-06T21:03:22Z",
     "deadline": "2026-11-06T22:33:22Z",
     "minutes": 90,
     "scope": "Credential-free diagnosis, correction and matching preparation including CI waiting; cleanup and report preservation continue after deadline."
   },
-  "reader_qualification_run": 42294197480
+  "reader_qualification_run": 42294197480,
+  "qualification_run": 42294384802
 }
