@@ -344,7 +344,7 @@ def live_attempt(root,variant):
         assert gate(first,a)['allowed'], 'Unreliable first outcome or insufficient spending reserve'
     task=Path(json.loads((root/(variant+'-task.json')).read_text())['path'])
     manifest=json.loads((output/'manifest.json').read_text());assert Task(task).checksum==manifest['task_checksum']
-    record={'allocation_id':ID,'reservation_id':receipt['reservation_id'],'attempt':ATTEMPTS[variant],'variant':variant,'reserved':True,'rollout_present':False,
+    record={'allocation_id':ID,'reservation_id':receipt['reservation_id'],'attempt':ATTEMPTS[variant],'variant':variant,'reserved':True,'credentialed_launch_started':False,'rollout_present':False,
             'result_extraction_succeeded':False,'execution_completed':False,'usage_estimate_usd':None,
             'projection':[],'commit':os.environ.get('GITHUB_SHA')}
     with (output/'attempt.json').open('x') as f:json.dump(record,f,indent=2)
@@ -357,6 +357,8 @@ def live_attempt(root,variant):
     env=os.environ.copy();env.update(PYTHONPATH=str(Path(__file__).parent),TRIAL_VARIANT=variant,TRIAL_PUBLIC_DIR=str(output))
     started=time.monotonic()
     try:
+        record['credentialed_launch_started']=True
+        trial.write(output/'attempt.json',record)
         with (root/(variant+'-private.log')).open('w') as log:
             completed=subprocess.run(['harbor','run','--config',str(root/(variant+'-job.json'))],env=env,stdout=log,stderr=subprocess.STDOUT,timeout=1000)
         record['harbor_returncode']=completed.returncode
@@ -377,6 +379,12 @@ def live_attempt(root,variant):
         record['api_bill_usd']=None
         trial.write(output/'attempt.json',record)
         record['handoff']=collect(native,row,completed=record['execution_assessment']['interpretable'],environment_ok=record['execution_assessment']['interpretable'])
+        from retention import stage,protected_contents,OUTPUT
+        identity={k:receipt[k] for k in ('allocation_id','reservation_id','attempt','variant','commit','run_id')}
+        record['submission_retention']=stage(native/'artifacts'/OUTPUT.lstrip('/'),root/'submissions'/variant,identity,
+            secrets=[os.environ.get(k,'') for k in ('OPENAI_API_KEY','CODEX_API_KEY','GITHUB_TOKEN','GH_TOKEN','ACTIONS_RUNTIME_TOKEN')],
+            protected=protected_contents(),observations={'producer':record['handoff']['agent_observation'].get('artifact',{}),'host':record['handoff']['host_artifact'],'verifier':record['handoff']['verifier_observation'].get('artifact',{})})
+        trial.write(output/'attempt.json',record)
         assert Task(task).checksum==manifest['task_checksum'], 'Frozen task changed'
         record['result_extraction_succeeded']=True
     except Exception as exc:
@@ -396,11 +404,14 @@ def live_attempt(root,variant):
                 record[label+'_container_removed']=None
                 record['disposal_exception']=sanitize(str(exc),(os.environ.get('OPENAI_API_KEY',''),))
                 record['result_extraction_succeeded']=False
-        record['second_arm_gate']=gate(record,a)
+        record['second_arm_gate']=gate(record,a,require_publication=False)
         record['duration_seconds']=round(time.monotonic()-started,3);trial.write(output/'attempt.json',record)
+        if os.environ.get('GITHUB_OUTPUT'):
+            with open(os.environ['GITHUB_OUTPUT'],'a') as f:
+                print('retention_ready='+str(record.get('submission_retention',{}).get('status')=='ready').lower(),file=f)
         print(json.dumps({k:record.get(k) for k in ('attempt','variant','rollout_present','execution_completed','result_extraction_succeeded','usage_estimate_usd','second_arm_gate')}),flush=True)
     if variant=='current':return 0 if record['second_arm_gate']['allowed'] else 1
-    completed_gate=gate(record,{**a,'second_attempt_reserve_usd':0,'headroom_usd':0})
+    completed_gate=gate(record,{**a,'second_attempt_reserve_usd':0,'headroom_usd':0},require_publication=False)
     return 0 if completed_gate['allowed'] else 1
 
 if __name__=='__main__':

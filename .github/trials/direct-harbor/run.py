@@ -229,6 +229,16 @@ def report(output, data):
               (('Pass' if r['reference_pass']==1 else 'Fail')+' / '+str(r['mutants_detected'])+'/'+str(r['mutants_executed'])) if r['valid_grade'] else 'Not measured',
               ', '.join(r['skill_file_access_attempts']) if r['skill_file_access_attempts'] else ('None observed' if r['skill_file_access_attempts']==[] else 'Unknown'),
               (str(agent_seconds(r))+' / '+str(r['duration_seconds'])) if r['scheduled'] else 'Not run') for r in rows])
+        text += table(('Arm','Reserved / credentialed launch started / session completed','Exact submission retention'),
+            [(r['variant'],str(r.get('reserved'))+' / '+str(r.get('credentialed_launch_started'))+' / '+str(r['session_completed']),
+              (r.get('submission_retention') or {}).get('status','No retained evidence')) for r in rows])
+        for r in rows:
+            retained=r.get('submission_retention') or {}
+            url=retained.get('artifact_url') or ''
+            if retained.get('publication_verified') and __import__('re').fullmatch(r'https://github.com/thetechgy/agent-engineering-baseline/actions/runs/[0-9]+/artifacts/[0-9]+',url):
+                text += '<p><a href="'+esc(url)+'">Download exact '+esc(r['variant'])+' submission (30-day artifact)</a> · SHA-256 '+esc(retained.get('sha256'))+'</p>'
+        if data.get('retention_validation'):
+            text += '<p>Credential-free upload/download byte-preservation fixture passed: '+esc(data['retention_validation'].get('publication_verified'))+'. <a href="retention-validation.json">Fixture evidence</a></p>'
         text += table(('Arm','Total input','Cached input','Cache-write input','Total output','Reasoning output','Conservative USD estimate','Native pricing estimate'),
             [(r['variant'],*( (r['usage'] or {}).get(k) for k in ('input_tokens','cached_input_tokens','cache_write_input_tokens','output_tokens','reasoning_output_tokens')),r['conservative_estimate_usd'],r['native_pricing_estimate_usd']) for r in rows])
         text += '<p>'+esc(allocation['usage_note'])+'</p>'

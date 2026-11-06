@@ -1,5 +1,5 @@
 {
-  "phase": "admission",
+  "phase": "retention",
   "campaign": "direct-harbor-20261104",
   "paid_attempts_used": 6,
   "paid_attempt_limit": 36,
@@ -11,7 +11,7 @@
   "recovery_control_attempt": 3,
   "native_fixture_retry": 1,
   "transport_preflight_corrections": 1,
-  "state": "no_rollout_budget_allocation_closed",
+  "state": "retention_preparation_paid_disabled",
   "final_native_run": 41958553130,
   "native_grading_smoke_qualified": true,
   "native_sandbox_qualified": false,
@@ -98,7 +98,7 @@
   "final_live_run": 42110435228,
   "api_spend_usd": null,
   "scheduling_stopped": true,
-  "stop_reason": "Current session completed with matched artifact hashes and adequate usage; verifier returned unsupported/admission. Absent reservation seven closed unused. No further paid phase authorized.",
+  "stop_reason": "Credential-free retention validation must pass before this new allocation is armed.",
   "diagnostic_actions_runs_reserved": 2,
   "diagnostic_actions_run_limit": 2,
   "paid_execution_enabled": false,
@@ -114,47 +114,29 @@
   "handoff_first_run": 42115972887,
   "handoff_first_run_outcome": "image_build_failed_before_controls_snapshot_index_http_503",
   "allocation": {
-    "id": "sol-high-no-rollout-budget-20261105",
-    "state": "closed",
+    "id": "sol-high-retained-20261106",
+    "state": "disabled",
     "attempts": {
-      "current": 6,
-      "absent": 7
+      "current": 7,
+      "absent": 8
     },
     "reservation_ids": {
-      "current": "sol-high-no-rollout-budget-20261105/current/6",
-      "absent": "sol-high-no-rollout-budget-20261105/absent/7"
+      "current": "sol-high-retained-20261106/current/7",
+      "absent": "sol-high-retained-20261106/absent/8"
     },
     "limit": 2,
-    "prior_campaign_attempts": 5,
+    "prior_campaign_attempts": 6,
     "previous_recovery_consumed": 4,
     "previous_recovery_limit": 4,
     "budget_usd": 5,
     "second_attempt_reserve_usd": 2.5,
     "headroom_usd": 0.5,
-    "workflow_run_number": 19,
-    "code_commit": "5fca54a089edf122bf94537f4e350bf272aa9837",
+    "workflow_run_number": null,
+    "code_commit": null,
     "profile": "codex-0.166.0_gpt-6.1-sol_high_rollout-budget-disabled",
     "case": "pester-002",
-    "authorization": "User explicitly authorized two fresh attempts with entire supplemental rollout-budget feature disabled. Prior allocation slot six remains closed unused; these reservations have distinct identities. No retries.",
-    "provider_enforced_dollar_cap": false,
-    "used": 1,
-    "consumed_attempts": [
-      6
-    ],
-    "consumed_reservations": [
-      "sol-high-no-rollout-budget-20261105/current/6"
-    ],
-    "unused_closed_attempts": [
-      7
-    ],
-    "unused_closed_reservations": [
-      "sol-high-no-rollout-budget-20261105/absent/7"
-    ],
-    "run_id": 42157462581,
-    "executed_commit": "47635e39fd6f29161522d14b34617827255b8637",
-    "observed_usage_conservative_estimate_usd": 1.49446,
-    "session_coverage_adequate": true,
-    "api_bill_usd": null
+    "authorization": "User authorized at most two fresh attempts and exact declared submission retention after credential/protected-evidence checks. No retries; all previous allocations remain closed.",
+    "provider_enforced_dollar_cap": false
   },
   "allocation_history": [
     {
@@ -190,9 +172,53 @@
       "executed_commit": "368c3866f817b6b38fcc04953e15b300d81cd5f0",
       "observed_usage_conservative_estimate_usd": 0.641555,
       "complete_incremental_cost_usd": null
+    },
+    {
+      "id": "sol-high-no-rollout-budget-20261105",
+      "state": "closed",
+      "attempts": {
+        "current": 6,
+        "absent": 7
+      },
+      "reservation_ids": {
+        "current": "sol-high-no-rollout-budget-20261105/current/6",
+        "absent": "sol-high-no-rollout-budget-20261105/absent/7"
+      },
+      "limit": 2,
+      "prior_campaign_attempts": 5,
+      "previous_recovery_consumed": 4,
+      "previous_recovery_limit": 4,
+      "budget_usd": 5,
+      "second_attempt_reserve_usd": 2.5,
+      "headroom_usd": 0.5,
+      "workflow_run_number": 19,
+      "code_commit": "5fca54a089edf122bf94537f4e350bf272aa9837",
+      "profile": "codex-0.166.0_gpt-6.1-sol_high_rollout-budget-disabled",
+      "case": "pester-002",
+      "authorization": "User explicitly authorized two fresh attempts with entire supplemental rollout-budget feature disabled. Prior allocation slot six remains closed unused; these reservations have distinct identities. No retries.",
+      "provider_enforced_dollar_cap": false,
+      "used": 1,
+      "consumed_attempts": [
+        6
+      ],
+      "consumed_reservations": [
+        "sol-high-no-rollout-budget-20261105/current/6"
+      ],
+      "unused_closed_attempts": [
+        7
+      ],
+      "unused_closed_reservations": [
+        "sol-high-no-rollout-budget-20261105/absent/7"
+      ],
+      "run_id": 42157462581,
+      "executed_commit": "47635e39fd6f29161522d14b34617827255b8637",
+      "observed_usage_conservative_estimate_usd": 1.49446,
+      "session_coverage_adequate": true,
+      "api_bill_usd": null
     }
   ],
   "admission_validation_note": "User-authorized credential-free patch validation. No allocation is reopened; no inference or secrets.",
   "admission_validation_revision": 2,
-  "admission_validation_first_run": 42162451618
+  "admission_validation_first_run": 42162451618,
+  "admission_diagnostics": true
 }

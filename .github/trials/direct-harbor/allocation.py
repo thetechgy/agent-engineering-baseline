@@ -3,9 +3,9 @@ import json,math,os,subprocess
 from pathlib import Path
 
 HERE=Path(__file__).parent
-ID='sol-high-no-rollout-budget-20261105'
-PRIOR_CAMPAIGN=5
-ATTEMPTS={'current':6,'absent':7}
+ID='sol-high-retained-20261106'
+PRIOR_CAMPAIGN=6
+ATTEMPTS={'current':7,'absent':8}
 RESERVATIONS={v:ID+'/'+v+'/'+str(n) for v,n in ATTEMPTS.items()}
 
 def validate(launch,env):
@@ -17,6 +17,8 @@ def validate(launch,env):
     assert launch['paid_attempt_limit']==36 and launch['paid_attempts_reserved']==2
     assert a['attempts']==ATTEMPTS and a['limit']==2 and a['prior_campaign_attempts']==PRIOR_CAMPAIGN
     assert a['reservation_ids']==RESERVATIONS
+    assert [r['attempt'] for r in launch['prior_attempts']]==list(range(1,PRIOR_CAMPAIGN+1))
+    assert launch.get('admission_diagnostics') is True
     assert (a['budget_usd'],a['second_attempt_reserve_usd'],a['headroom_usd'])==(5,2.5,0.5)
     assert env.get('GITHUB_REPOSITORY')=='thetechgy/agent-engineering-baseline'
     assert env.get('GITHUB_REF')=='refs/heads/trial/direct-harbor' and env.get('GITHUB_EVENT_NAME')=='push'
@@ -33,7 +35,7 @@ def active():
     assert subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()==os.environ['GITHUB_SHA']
     return a
 
-def gate(record,a):
+def gate(record,a,*,require_publication=True):
     """Correctness is not a gate; trustworthy evidence and available reserve are."""
     reasons=[]
     if not record.get('result_extraction_succeeded'):reasons.append('incomplete_evidence')
@@ -48,6 +50,10 @@ def gate(record,a):
     classification=record.get('handoff',{}).get('classification',{}).get('classification')
     if classification not in ('graded_passed','graded_failed','missing_deliverable','rejected_output'):
         reasons.append('unreliable_or_unsupported_outcome')
+    retention=record.get('submission_retention',{})
+    allowed_retention=('published_verified','missing') if require_publication else ('ready','published_verified','missing')
+    if retention.get('status') not in allowed_retention:reasons.append('submission_retention_unverified')
+    if retention.get('status')=='missing' and classification!='missing_deliverable':reasons.append('missing_retention_evidence')
     cost=record.get('usage_estimate_usd')
     if type(cost) not in (float,int) or not math.isfinite(cost) or cost<0:reasons.append('unknown_new_cost_estimate')
     elif cost+a['second_attempt_reserve_usd']+a['headroom_usd']>a['budget_usd']:reasons.append('insufficient_spending_reserve')
