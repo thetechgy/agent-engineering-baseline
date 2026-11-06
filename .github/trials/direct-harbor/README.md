@@ -502,3 +502,23 @@ The next bounded action would be to qualify a durable cache of the same signed,
 hash-verified snapshot bytes, then demonstrate complete credential-free image
 construction before considering any fresh paid allocation. The successful local
 index check does not establish that package installation or image reuse works.
+
+## Qualified-image smoke allocation (2026-11-06)
+
+`sol-high-reused-20261106` is a new two-slot allocation using producer run
+42270181249 and exact prepared artifact 13529635174. Prior allocations remain
+closed. The operational allowance is USD 5; the absent reservation requires the
+existing USD 2.50 reserve plus USD 0.50 headroom and reliable current-arm evidence.
+Correctness failure alone does not stop the second arm. No retries or model judges.
+
+Preparation downloads and validates that exact artifact, loads all five images,
+relocates immutable tasks, and runs the existing credential-free runtime checks
+before normal environment approval. The live job repeats these checks before any
+reservation or secret injection. No image build or snapshot-index fallback is
+allowed. Native grading controls reuse the successful qualification evidence.
+The new preflight receipt is bound to this consumer run, commit, allocation and
+manifest. Only allocation/workflow/report plumbing changes; the qualified
+experiment fingerprint and frozen deployment remain identical.
+
+Any API environment approval is automated approval under the user's explicit
+authorization, not independent human review. Shared protections remain unchanged.

@@ -19,6 +19,7 @@ def main(root,out):
         'deployment_comparison':read(public/'comparison-manifest.json'),
         'prepared_manifest':read(public/'prepared-manifest.json'),'prepared_transfer':read(public/'prepared-transfer.json'),
         'preapproval_download':read(public/'prepared-download.json'),
+        'reuse_preflight':read(public/'reuse-preflight.json'),
         'second_arm_gate':read(public/'allocation/second-arm-gate.json'),
         'reservations':[read(p) for p in sorted((public/'allocation').glob('attempt-*.json'))],
         'budget_usd':5,'reserve_usd':2.5,'headroom_usd':0.5,'actual_billing_usd':None,

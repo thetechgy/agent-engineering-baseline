@@ -243,7 +243,7 @@ def report(output, data):
         text += table(('Control','Classification','Diagnostic reason','Reference pass','Defects detected','Expected outcome matched'),rows)
     if data.get('live_allocation'):
         allocation=data['live_allocation'];rows=allocation['rows']
-        text += '<h2>Historical live allocation: '+esc(allocation['profile'])+'</h2><p><a href="allocation-evidence.json">Sanitized launch, deployment, handoff and usage evidence</a></p>'
+        text += '<h2>Latest live allocation: '+esc(allocation['profile'])+'</h2><p><a href="allocation-evidence.json">Sanitized launch, deployment, handoff and usage evidence</a></p>'
         labels={'graded_passed':'Graded success','graded_failed':'Graded failure','missing_deliverable':'Deliverable missing (task failure)',
                 'missing_after_budget_exhaustion':'No deliverable before token-budget exhaustion','rejected_output':'Deliverable rejected','missing_evidence':'Evidence incomplete','not_scheduled':'Not scheduled',
                 'collection_failure':'Collection failure','transfer_failure':'Transfer failure','unsupported_submission':'Unsupported submission'}

@@ -218,6 +218,33 @@ def restore(bundle,root,expected,proof_path=None):
         'root_paths_relocated':True,'kernel_probe_registry_refresh':refreshed,'kernel_probe_reference':PROBE_REFERENCE,'note':'Only built images were transferred; Harbor creates fresh containers, homes and sessions.'})
     print('Prepared image IDs, archive hashes, task checksums and relocated paths verified; no rebuild.')
 
+def reuse_preflight(root):
+    """Check the restored runtime before approval/reservation; reuse native qualification."""
+    no_credentials();consumer=identity()
+    transfer=json.loads((root/'public/prepared-transfer.json').read_text())
+    assert transfer['verified'] and transfer['identity']==consumer
+    record={'passed':False,'identity':consumer,'manifest_sha256':transfer['manifest_sha256'],
+            'inference':False,'image_rebuilds':0,'snapshot_index_downloads':0}
+    import live
+    try:
+        inventory=sorted(subprocess.check_output(['docker','image','ls','--no-trunc','--quiet'],text=True).splitlines())
+        for variant in ('current','absent'):
+            task=Path(json.loads((root/(variant+'-task.json')).read_text())['path'])
+            live.check_task(task,variant,root/'public/reuse'/variant,root)
+        assert inventory==sorted(subprocess.check_output(['docker','image','ls','--no-trunc','--quiet'],text=True).splitlines()), 'Unexpected image creation or pull'
+        assert {tag:image_id(tag) for tag in transfer['images']}==transfer['images']
+        record['image_inventory_unchanged']=True
+        record['remaining_containers']={tag:subprocess.check_output(['docker','ps','--all','--filter','ancestor='+tag,'--quiet'],text=True).splitlines() for tag in transfer['images']}
+        assert not any(record['remaining_containers'].values()), 'Preflight disposal unconfirmed'
+        record['container_disposal_verified']=True
+        record['passed']=True
+    except Exception as exc:
+        from diagnostics import sanitize
+        record['failure']={'type':type(exc).__name__,'message':sanitize(str(exc))}
+        raise
+    finally:write(root/'public/reuse-preflight.json',record)
+
+
 def acquire_dependency(root):
     no_credentials();identity()
     config=json.loads((HERE/'preparation.json').read_text());seed=config['dependency_seed']
@@ -291,6 +318,7 @@ if __name__=='__main__':
         no_credentials();m=verify(Path(sys.argv[2]),sys.argv[3],producer_identity())
         write(Path(sys.argv[4]),{'verified':True,'identity':m['identity'],'manifest_sha256':sys.argv[3],'images':m['images'],'tasks':m['tasks'],'credential_free':True})
     elif mode=='restore':restore(Path(sys.argv[2]),Path(sys.argv[3]),sys.argv[4],Path(sys.argv[5]) if len(sys.argv)>5 else None)
+    elif mode=='preflight':reuse_preflight(Path(sys.argv[2]))
     elif mode=='dependency':acquire_dependency(Path(sys.argv[2]))
     elif mode=='qualify':qualify(Path(sys.argv[2]),Path(sys.argv[3]),sys.argv[4])
     elif mode=='reuse':

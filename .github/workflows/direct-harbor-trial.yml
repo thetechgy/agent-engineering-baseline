@@ -316,6 +316,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python .github/trials/direct-harbor/prepared.py reuse "$RUNNER_TEMP/prepared-bundle"
+      - name: Restore and check qualified images before environment approval
+        if: needs.phase.outputs.phase == 'live-pair'
+        timeout-minutes: 8
+        env:
+          PREPARED_MANIFEST_SHA256: ${{ steps.reuse.outputs.manifest_sha256 }}
+        run: |
+          python -u .github/trials/direct-harbor/prepared.py restore "$RUNNER_TEMP/prepared-bundle" "$RUNNER_TEMP/preparation" "$PREPARED_MANIFEST_SHA256"
+          python -u .github/trials/direct-harbor/prepared.py preflight "$RUNNER_TEMP/preparation"
       - name: Build both pinned agent images and the independent verifier
         id: preflight
         if: needs.phase.outputs.phase == 'preparation'
@@ -478,6 +486,9 @@ jobs:
         env:
           PREPARED_MANIFEST_SHA256: ${{ needs.prepare.outputs.manifest_sha256 }}
         run: python -u .github/trials/direct-harbor/prepared.py restore "$RUNNER_TEMP/prepared-download" "$RUNNER_TEMP/live-pair" "$PREPARED_MANIFEST_SHA256" "$RUNNER_TEMP/preparation-evidence/prepared-download.json"
+      - name: Check restored runtime before any reservation or credential injection
+        timeout-minutes: 4
+        run: python -u .github/trials/direct-harbor/prepared.py preflight "$RUNNER_TEMP/live-pair"
       - name: Checkpoint prepared image and task identity before inference
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -492,7 +503,7 @@ jobs:
         id: current_reservation
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: allocation-prepared-attempt-7
+          name: allocation-reused-attempt-7
           path: ${{ runner.temp }}/live-pair/public/allocation/attempt-7.json
           retention-days: 30
           if-no-files-found: error
@@ -508,7 +519,7 @@ jobs:
         if: always() && steps.current.outputs.retention_ready == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: submission-sol-high-prepared-20261106-current
+          name: submission-sol-high-reused-20261106-current
           path: ${{ runner.temp }}/live-pair/submissions/current/
           retention-days: 30
           if-no-files-found: error
@@ -517,7 +528,7 @@ jobs:
         if: always() && steps.current_submission.outcome == 'success'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: submission-sol-high-prepared-20261106-current
+          name: submission-sol-high-reused-20261106-current
           path: ${{ runner.temp }}/submission-download/current/
       - name: Bind retained current artifact to its reservation and hashes
         id: current_publication
@@ -543,7 +554,7 @@ jobs:
         if: steps.reserve_absent.outcome == 'success'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: allocation-prepared-attempt-8
+          name: allocation-reused-attempt-8
           path: ${{ runner.temp }}/live-pair/public/allocation/attempt-8.json
           retention-days: 30
           if-no-files-found: error
@@ -559,7 +570,7 @@ jobs:
         if: always() && steps.absent.outputs.retention_ready == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: submission-sol-high-prepared-20261106-absent
+          name: submission-sol-high-reused-20261106-absent
           path: ${{ runner.temp }}/live-pair/submissions/absent/
           retention-days: 30
           if-no-files-found: error
@@ -568,7 +579,7 @@ jobs:
         if: always() && steps.absent_submission.outcome == 'success'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: submission-sol-high-prepared-20261106-absent
+          name: submission-sol-high-reused-20261106-absent
           path: ${{ runner.temp }}/submission-download/absent/
       - name: Bind retained absent artifact to its reservation and hashes
         id: absent_publication

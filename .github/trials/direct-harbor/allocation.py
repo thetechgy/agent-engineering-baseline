@@ -3,7 +3,7 @@ import json,math,os,subprocess
 from pathlib import Path
 
 HERE=Path(__file__).parent
-ID='sol-high-prepared-20261106'
+ID='sol-high-reused-20261106'
 PRIOR_CAMPAIGN=6
 ATTEMPTS={'current':7,'absent':8}
 RESERVATIONS={v:ID+'/'+v+'/'+str(n) for v,n in ATTEMPTS.items()}
@@ -17,7 +17,7 @@ def validate(launch,env):
     assert launch['paid_attempt_limit']==36 and launch['paid_attempts_reserved']==2
     assert a['attempts']==ATTEMPTS and a['limit']==2 and a['prior_campaign_attempts']==PRIOR_CAMPAIGN
     assert a['reservation_ids']==RESERVATIONS
-    assert a['preparation_limit']==2 and a['preparation_attempt'] in (1,2)
+    assert a['prepared_source']==json.loads((HERE/'preparation.json').read_text())['prepared_source']
     assert [r['attempt'] for r in launch['prior_attempts']]==list(range(1,PRIOR_CAMPAIGN+1))
     assert launch.get('admission_diagnostics') is True
     assert (a['budget_usd'],a['second_attempt_reserve_usd'],a['headroom_usd'])==(5,2.5,0.5)
@@ -70,6 +70,9 @@ def reserve(root,variant):
     transfer=json.loads((root/'public/prepared-transfer.json').read_text())
     assert transfer['verified'] and transfer['identity']['allocation_id']==ID
     assert transfer['identity']['commit']==os.environ['GITHUB_SHA'] and transfer['identity']['run_id']==os.environ['GITHUB_RUN_ID']
+    proof=json.loads((root/'public/reuse-preflight.json').read_text())
+    assert proof['passed'] and proof['identity']==transfer['identity'], 'Fresh credential-free preflight required'
+    assert proof['manifest_sha256']==a['prepared_source']['manifest_sha256']==transfer['manifest_sha256']
     assert not (root/'public/allocation/closed.json').exists(), 'Allocation already closed'
     if variant=='absent':
         first=json.loads((root/'public/current/attempt.json').read_text())

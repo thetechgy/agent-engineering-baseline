@@ -11,7 +11,7 @@
   "recovery_control_attempt": 3,
   "native_fixture_retry": 1,
   "transport_preflight_corrections": 1,
-  "state": "prepared_allocation_closed_preparation_failed",
+  "state": "qualified_image_smoke_pending",
   "final_native_run": 41958553130,
   "native_grading_smoke_qualified": true,
   "native_sandbox_qualified": false,
@@ -98,7 +98,7 @@
   "final_live_run": 42110435228,
   "api_spend_usd": null,
   "scheduling_stopped": true,
-  "stop_reason": "Stop after the two authorized full preparation attempts. No third build or paid launch. Pinned snapshot delivery remains unreliable from hosted Actions; unchanged complete image construction and transfer are unverified.",
+  "stop_reason": "Scheduling remains disabled until the exact-run metadata-only arming commit; previous allocations remain closed.",
   "diagnostic_actions_runs_reserved": 2,
   "diagnostic_actions_run_limit": 2,
   "paid_execution_enabled": false,
@@ -114,16 +114,6 @@
   "handoff_first_run": 42115972887,
   "handoff_first_run_outcome": "image_build_failed_before_controls_snapshot_index_http_503",
   "allocation": {
-    "id": "sol-high-prepared-20261106",
-    "state": "closed",
-    "attempts": {
-      "current": 7,
-      "absent": 8
-    },
-    "reservation_ids": {
-      "current": "sol-high-prepared-20261106/current/7",
-      "absent": "sol-high-prepared-20261106/absent/8"
-    },
     "limit": 2,
     "prior_campaign_attempts": 6,
     "previous_recovery_consumed": 4,
@@ -131,108 +121,29 @@
     "budget_usd": 5,
     "second_attempt_reserve_usd": 2.5,
     "headroom_usd": 0.5,
-    "workflow_run_number": 28,
-    "code_commit": "bdc7640655fd25ebf992ea93b9a88768fbcd61ea",
     "profile": "codex-0.166.0_gpt-6.1-sol_high_rollout-budget-disabled",
     "case": "pester-002",
-    "authorization": "User authorized at most two fresh credentialed launches and normal API environment approval by the assistant only after exact-run credential-free preparation and transfer checks pass. No independent human review claimed.",
     "provider_enforced_dollar_cap": false,
-    "preparation_attempt": 2,
-    "preparation_limit": 2,
-    "preparation_runs": [
-      {
-        "run_id": 42235352779,
-        "commit": "c6cef78ec916fdf955eb20600fa642e2f6d9c91d",
-        "preparation_attempt": 1,
-        "stage": "agent_image_build",
-        "dependency": "https://snapshot.debian.org/archive/debian-security/20261103T000000Z/dists/trixie-security/main/binary-amd64/Packages",
-        "native_apt_exit": 100,
-        "http_status": 504,
-        "closure": {
-          "allocation_id": "sol-high-prepared-20261106",
-          "state": "closed",
-          "paid_execution_enabled": false,
-          "reserved_slots_consumed": [],
-          "campaign_attempts_consumed": 6,
-          "previous_recovery_consumed": 4,
-          "previous_recovery_limit": 4,
-          "incremental_api_bill_usd": null,
-          "historical_cumulative_api_bill_usd": null,
-          "note": "Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.",
-          "reservation_ids": [],
-          "incremental_conservative_estimate_usd": null,
-          "operational_budget_usd": 5,
-          "estimated_budget_exceeded": null
-        },
-        "environment_approval_submitted": false,
-        "credentialed_launches": 0,
-        "reservations": 0,
-        "classification": "prelaunch_infrastructure_failure",
-        "failure": "APT security Packages index HTTP 504; apt exit 100; Docker build exit 1",
-        "workflow_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42235352779",
-        "closure_artifact_sha256": "73abd16bac41ce840b34b74b191122b8b3a377b85f4919d7fb589b85c613d67d"
-      },
-      {
-        "run_id": 42238163966,
-        "commit": "381c458a512fe120ab20060ede7b6542b6049c94",
-        "preparation_attempt": 2,
-        "stage": "credential_free_agent_image_build",
-        "classification": "prelaunch_infrastructure_failure",
-        "failure": "Fixed main Packages.xz download exhausted three transport attempts; HTTP 503: No healthy backends; Docker build exit 1",
-        "dependency": "https://snapshot.debian.org/archive/debian/20261103T000000Z/dists/trixie/main/binary-amd64/Packages.xz",
-        "dependency_attribution": "Derived from the executed ordered cache_indexes loop, traceback at checked(base+relative), and absence of its flushed first-archive completion message. The exception itself omitted the URL.",
-        "native_http_status": 503,
-        "transport_attempts": 3,
-        "outer_docker_build_exit_status": 1,
-        "closure": {
-          "allocation_id": "sol-high-prepared-20261106",
-          "state": "closed",
-          "paid_execution_enabled": false,
-          "reserved_slots_consumed": [],
-          "campaign_attempts_consumed": 6,
-          "previous_recovery_consumed": 4,
-          "previous_recovery_limit": 4,
-          "incremental_api_bill_usd": null,
-          "historical_cumulative_api_bill_usd": null,
-          "note": "Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.",
-          "reservation_ids": [],
-          "incremental_conservative_estimate_usd": null,
-          "operational_budget_usd": 5,
-          "estimated_budget_exceeded": null
-        },
-        "reservations": 0,
-        "credentialed_launches": 0,
-        "environment_approval_submitted": false,
-        "workflow_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42238163966",
-        "job_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42238163966/job/127961265318",
-        "closure_artifact_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42238163966/artifacts/13511298813",
-        "closure_artifact_sha256": "18961500dc7ff13d044514bcbb4dd938a254334008ad391ea9aed06a94d7725c",
-        "closure_download_digest_verified": true,
-        "preparation_metadata": {
-          "stage": "building_pinned_image",
-          "paid_inference_permitted": false
-        },
-        "agent_container_started": false,
-        "verifier_container_started": false,
-        "container_disposal": "not_applicable_no_evaluated_containers_started",
-        "compose_cleanup_step": "success; not evidence of a live container-disposal probe"
-      }
-    ],
+    "id": "sol-high-reused-20261106",
+    "state": "pending_authorized",
+    "attempts": {
+      "current": 7,
+      "absent": 8
+    },
+    "reservation_ids": {
+      "current": "sol-high-reused-20261106/current/7",
+      "absent": "sol-high-reused-20261106/absent/8"
+    },
     "used": 0,
-    "consumed_attempts": [],
-    "consumed_reservations": [],
-    "unused_closed_attempts": [
-      7,
-      8
-    ],
-    "unused_closed_reservations": [
-      "sol-high-prepared-20261106/current/7",
-      "sol-high-prepared-20261106/absent/8"
-    ],
-    "preparation_attempts_used": 2,
-    "executed_commit": "381c458a512fe120ab20060ede7b6542b6049c94",
-    "run_id": 42238163966,
-    "api_bill_usd": null
+    "authorization": "Explicit user authorization for one fresh current/absent smoke pair using qualified retained images, at most two credentialed attempts and USD 5 conservative scheduling allowance. Normal API environment approval is automated under this authorization; no independent human review, retries, or model judges.",
+    "prepared_source": {
+      "run_id": 42270181249,
+      "commit": "0c364aec26c7af6cf0ef52b08e598f48ead9ee01",
+      "artifact_id": 13529635174,
+      "name": "prepared-images",
+      "artifact_digest": "sha256:2d95a9bb6ca91795c35148d0ab874f4f029e45e27d3749c9af7dd08eb1ecd75a",
+      "manifest_sha256": "78f0f4f58085d3383f41df1f72ff616ba83b8e35c59ea077597d1d04346516e2"
+    }
   },
   "allocation_history": [
     {
@@ -409,6 +320,127 @@
       ],
       "run_id": 42213118342,
       "executed_commit": "eca71ef78c197b51103436f85575126a4ad48ea9",
+      "api_bill_usd": null
+    },
+    {
+      "id": "sol-high-prepared-20261106",
+      "state": "closed",
+      "attempts": {
+        "current": 7,
+        "absent": 8
+      },
+      "reservation_ids": {
+        "current": "sol-high-prepared-20261106/current/7",
+        "absent": "sol-high-prepared-20261106/absent/8"
+      },
+      "limit": 2,
+      "prior_campaign_attempts": 6,
+      "previous_recovery_consumed": 4,
+      "previous_recovery_limit": 4,
+      "budget_usd": 5,
+      "second_attempt_reserve_usd": 2.5,
+      "headroom_usd": 0.5,
+      "workflow_run_number": 28,
+      "code_commit": "bdc7640655fd25ebf992ea93b9a88768fbcd61ea",
+      "profile": "codex-0.166.0_gpt-6.1-sol_high_rollout-budget-disabled",
+      "case": "pester-002",
+      "authorization": "User authorized at most two fresh credentialed launches and normal API environment approval by the assistant only after exact-run credential-free preparation and transfer checks pass. No independent human review claimed.",
+      "provider_enforced_dollar_cap": false,
+      "preparation_attempt": 2,
+      "preparation_limit": 2,
+      "preparation_runs": [
+        {
+          "run_id": 42235352779,
+          "commit": "c6cef78ec916fdf955eb20600fa642e2f6d9c91d",
+          "preparation_attempt": 1,
+          "stage": "agent_image_build",
+          "dependency": "https://snapshot.debian.org/archive/debian-security/20261103T000000Z/dists/trixie-security/main/binary-amd64/Packages",
+          "native_apt_exit": 100,
+          "http_status": 504,
+          "closure": {
+            "allocation_id": "sol-high-prepared-20261106",
+            "state": "closed",
+            "paid_execution_enabled": false,
+            "reserved_slots_consumed": [],
+            "campaign_attempts_consumed": 6,
+            "previous_recovery_consumed": 4,
+            "previous_recovery_limit": 4,
+            "incremental_api_bill_usd": null,
+            "historical_cumulative_api_bill_usd": null,
+            "note": "Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.",
+            "reservation_ids": [],
+            "incremental_conservative_estimate_usd": null,
+            "operational_budget_usd": 5,
+            "estimated_budget_exceeded": null
+          },
+          "environment_approval_submitted": false,
+          "credentialed_launches": 0,
+          "reservations": 0,
+          "classification": "prelaunch_infrastructure_failure",
+          "failure": "APT security Packages index HTTP 504; apt exit 100; Docker build exit 1",
+          "workflow_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42235352779",
+          "closure_artifact_sha256": "73abd16bac41ce840b34b74b191122b8b3a377b85f4919d7fb589b85c613d67d"
+        },
+        {
+          "run_id": 42238163966,
+          "commit": "381c458a512fe120ab20060ede7b6542b6049c94",
+          "preparation_attempt": 2,
+          "stage": "credential_free_agent_image_build",
+          "classification": "prelaunch_infrastructure_failure",
+          "failure": "Fixed main Packages.xz download exhausted three transport attempts; HTTP 503: No healthy backends; Docker build exit 1",
+          "dependency": "https://snapshot.debian.org/archive/debian/20261103T000000Z/dists/trixie/main/binary-amd64/Packages.xz",
+          "dependency_attribution": "Derived from the executed ordered cache_indexes loop, traceback at checked(base+relative), and absence of its flushed first-archive completion message. The exception itself omitted the URL.",
+          "native_http_status": 503,
+          "transport_attempts": 3,
+          "outer_docker_build_exit_status": 1,
+          "closure": {
+            "allocation_id": "sol-high-prepared-20261106",
+            "state": "closed",
+            "paid_execution_enabled": false,
+            "reserved_slots_consumed": [],
+            "campaign_attempts_consumed": 6,
+            "previous_recovery_consumed": 4,
+            "previous_recovery_limit": 4,
+            "incremental_api_bill_usd": null,
+            "historical_cumulative_api_bill_usd": null,
+            "note": "Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.",
+            "reservation_ids": [],
+            "incremental_conservative_estimate_usd": null,
+            "operational_budget_usd": 5,
+            "estimated_budget_exceeded": null
+          },
+          "reservations": 0,
+          "credentialed_launches": 0,
+          "environment_approval_submitted": false,
+          "workflow_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42238163966",
+          "job_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42238163966/job/127961265318",
+          "closure_artifact_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42238163966/artifacts/13511298813",
+          "closure_artifact_sha256": "18961500dc7ff13d044514bcbb4dd938a254334008ad391ea9aed06a94d7725c",
+          "closure_download_digest_verified": true,
+          "preparation_metadata": {
+            "stage": "building_pinned_image",
+            "paid_inference_permitted": false
+          },
+          "agent_container_started": false,
+          "verifier_container_started": false,
+          "container_disposal": "not_applicable_no_evaluated_containers_started",
+          "compose_cleanup_step": "success; not evidence of a live container-disposal probe"
+        }
+      ],
+      "used": 0,
+      "consumed_attempts": [],
+      "consumed_reservations": [],
+      "unused_closed_attempts": [
+        7,
+        8
+      ],
+      "unused_closed_reservations": [
+        "sol-high-prepared-20261106/current/7",
+        "sol-high-prepared-20261106/absent/8"
+      ],
+      "preparation_attempts_used": 2,
+      "executed_commit": "381c458a512fe120ab20060ede7b6542b6049c94",
+      "run_id": 42238163966,
       "api_bill_usd": null
     }
   ],
