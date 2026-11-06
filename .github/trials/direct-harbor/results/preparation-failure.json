@@ -1,0 +1,25 @@
+{
+  "run_id": 42212722607,
+  "commit": "0bbd09b356415e6ce01ca142e3fb56b385267c61",
+  "stage": "credential_free_unit_tests",
+  "failure": "test_credential_free_diagnostics_work_after_later_closed_allocations used armed checkout instead of a closed fixture",
+  "closure": {
+    "allocation_id": "sol-high-retained-20261106",
+    "state": "closed",
+    "paid_execution_enabled": false,
+    "reserved_slots_consumed": [],
+    "campaign_attempts_consumed": 6,
+    "previous_recovery_consumed": 4,
+    "previous_recovery_limit": 4,
+    "incremental_api_bill_usd": null,
+    "historical_cumulative_api_bill_usd": null,
+    "note": "Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.",
+    "reservation_ids": [],
+    "incremental_conservative_estimate_usd": null,
+    "operational_budget_usd": 5,
+    "estimated_budget_exceeded": null
+  },
+  "credentialed_launches": 0,
+  "reservations": 0,
+  "scope": "Prelaunch CI correction only; no retry or replacement of a Codex attempt."
+}

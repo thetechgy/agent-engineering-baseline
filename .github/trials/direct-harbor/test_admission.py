@@ -119,8 +119,13 @@ class AdmissionEvidenceTests(unittest.TestCase):
 class AdmissionPreflightTests(unittest.TestCase):
     def test_credential_free_diagnostics_work_after_later_closed_allocations(self):
         import handoff
-        with patch.dict(os.environ, {}, clear=True):
+        closed = {'paid_execution_enabled': False, 'scheduling_stopped': True}
+        with patch.dict(os.environ, {}, clear=True), patch.object(handoff.Path, 'read_text', return_value=json.dumps(closed)):
             handoff.no_credentials()
+        armed = {'paid_execution_enabled': True, 'scheduling_stopped': False}
+        with patch.dict(os.environ, {}, clear=True), patch.object(handoff.Path, 'read_text', return_value=json.dumps(armed)):
+            with self.assertRaises(AssertionError):
+                handoff.no_credentials()
         with patch.dict(os.environ, {'OPENAI_API_KEY': 'sentinel'}, clear=True):
             with self.assertRaisesRegex(AssertionError, 'Credential-free'):
                 handoff.no_credentials()

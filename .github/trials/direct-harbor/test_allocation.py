@@ -1,5 +1,5 @@
 """Focused synthetic allocation checks: never inject a credential or launch an agent."""
-import copy,json,os,tempfile,unittest
+import contextlib,copy,io,json,os,tempfile,unittest
 from pathlib import Path
 from unittest.mock import patch
 import allocation,live
@@ -50,7 +50,7 @@ class AllocationTests(unittest.TestCase):
             (root/'public/current/attempt.json').write_text(json.dumps(usable('missing_deliverable')))
             self.assertEqual(allocation.reserve(root,'absent')['attempt'],8)
             with self.assertRaises(FileExistsError):allocation.reserve(root,'absent')
-            allocation.close(root)
+            with contextlib.redirect_stdout(io.StringIO()):allocation.close(root)
             closed=json.loads((root/'public/allocation/closed.json').read_text());self.assertEqual(closed['campaign_attempts_consumed'],8)
             self.assertEqual(len(set(closed['reservation_ids'])),2)
             with self.assertRaises(AssertionError):allocation.reserve(root,'absent')
