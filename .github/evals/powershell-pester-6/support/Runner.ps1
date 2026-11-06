@@ -9,7 +9,8 @@ param(
 )
 
 # PESTER_VERIFIER_ONLY_RUNNER_3CB8
-# Admission policy v2: template fields are distinct from member-access properties.
+# Admission policy v3: classic Boolean operators and standalone error-message coverage.
+# Template permissions remain separate from unchanged member-access permissions.
 # This fixed runner is verifier-owned. Candidate statements are never evaluated
 # by admission. A separate unprivileged process executes the admitted file.
 # Fixed identifiers are always emitted; source text and values are never emitted.
@@ -100,7 +101,7 @@ try {
             'TestDrive', 'TestRegistry', 'PSDebugContext', 'MaximumHistoryCount'
         )
         $__peTemplateFields = @($__pePolicy.template_fields)
-        if ($__pePolicy.admission_policy_version -ne 2 -or $__peTemplateFields.Count -eq 0) { throw 'template_profile' }
+        if ($__pePolicy.admission_policy_version -ne 3 -or $__peTemplateFields.Count -eq 0) { throw 'template_profile' }
         foreach ($__peField in $__peTemplateFields) {
             if ($__peField -isnot [string] -or $__peField -notmatch '^[A-Za-z][A-Za-z0-9_]*$' -or
                 $__peReserved -contains $__peField -or $__peField -eq 'PSScriptRoot' -or $__peField -match '^__') { throw 'template_profile' }
@@ -113,6 +114,7 @@ try {
         )
         $__peAssertParameters = @(
             'Be', 'BeExactly', 'BeOfType', 'HaveCount', 'Contain', 'Not', 'Throw', 'Invoke',
+            'BeTrue', 'BeFalse', 'ExceptionMessage',
             'ActualValue', 'ExpectedValue', 'ExceptionType', 'ErrorId', 'ExpectedMessage',
             'Because', 'Times', 'Exactly', 'Scope', 'ParameterFilter', 'ModuleName', 'CommandName',
             'Expected', 'Actual', 'Count', 'Type', 'CaseSensitive'

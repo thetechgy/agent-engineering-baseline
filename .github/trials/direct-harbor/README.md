@@ -683,3 +683,24 @@ target skill’s three files. The qualified corrected verifier was reused
 unchanged. The new sol-high-v2-qualified-20261106 allocation is distinct from
 every closed allocation and is limited to attempts 8 and 9, USD 5 estimated
 spending with the established reserve/headroom, and normal exact-run approval.
+
+## Credential-free Boolean assertion replay
+
+`boolean_replay.py` reuses the qualified version-two verifier archive and builds
+only a new verifier layer. Policy v3 admits classic `BeTrue`/`BeFalse` with the
+existing `Not` option, plus standalone `ExceptionMessage`. The explicit assertion
+subset is documented in `EXECUTION-PROFILE.md`; no assertion is translated.
+Independent controls distinguish classic truthiness from standalone Boolean
+identity, real assertion failures from admission/infrastructure errors, and retain
+failure-suppression rejection. Reference, mutants, thresholds and isolation remain
+unchanged. A verifier-only observer records the unchanged grader's individual
+worker results; it does not replace classification or scoring.
+
+The original absent rejection is reproduced first. Both exact retained submissions
+are then graded by the same corrected verifier after controls pass. This is a
+post-output admission-policy correction, not prospectively frozen validation.
+The historical agent documentation and live outcomes remain unchanged. The
+90-minute window is ordinary elapsed-time tracking in `boolean-replay.json`;
+no allocation is opened. Campaign consumption stays 9/36, earlier recovery 4/4,
+and all paid scheduling stays disabled. The separately labeled retrospective
+comparison will be added to the existing report after native qualification.

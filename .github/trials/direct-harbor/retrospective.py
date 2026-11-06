@@ -43,38 +43,45 @@ def load_original(config,root):
     assert {tag:prepared.image_id(tag) for tag in manifest['images']}==manifest['images']
     return manifest,{'source':source,'artifact':{k:metadata[k] for k in ('id','digest','size_in_bytes','expires_at')},'verified_against_original_checkout':True,'original_experiment_sha256':manifest['experiment']['sha256']}
 
-def grade(image,candidate,root,label):
-    """Candidate execution occurs only behind the unchanged grader worker boundary."""
+def grade(image,candidate,root,label,*,trace=False):
+    """Unchanged isolated grader, with optional verifier-only native-count observation."""
+    from image_contents import DockerOperations
+    from diagnostics import sanitize
     name='retrospective-'+uuid.uuid4().hex;output=root/'public'/label;output.mkdir(parents=True)
     record={'image':image,'image_id':prepared.image_id(image),'submission_sha256':digest(candidate),'inference':False,'complete':False}
+    ops=DockerOperations(output/'docker.json');created=False
     try:
-        call(['docker','create','--name',name,'--network','none','--security-opt','no-new-privileges:true',
+        entry=['python3','-I','/tests/trace_verifier.py'] if trace else ['/bin/bash','/tests/test.sh']
+        ops.run('verifier_create',['docker','create','--name',name,'--network','none','--security-opt','no-new-privileges:true',
               '--cpus','2','--memory','2g','--pids-limit','256','--env','PESTER_ADMISSION_DIAGNOSTICS=1',
-              '--entrypoint','/bin/bash',image,'/tests/test.sh'],capture_output=True)
-        inspect=json.loads(subprocess.check_output(['docker','inspect',name]))[0]
+              '--entrypoint',entry[0],image,*entry[1:]])
+        created=True
+        inspect=json.loads(ops.run('verifier_inspect',['docker','inspect',name]))[0]
         assert inspect['HostConfig']['NetworkMode']=='none' and not inspect['Mounts'] and not inspect['HostConfig']['Privileged']
         record['boundary']={'network':'none','host_mounts':False,'no_new_privileges':True,'cpus':2,'memory_mb':2048,'pids':256,
                             'worker_uid':53001,'worker_checks':'unchanged grader requires immutable inputs, dropped privileges/capabilities and inaccessible protected verifier files'}
-        call(['docker','cp',str(candidate),name+':/workspace/output/Subject.Tests.ps1'])
-        process=subprocess.run(['docker','start','--attach',name],capture_output=True,timeout=260)
-        record['process_exit']=process.returncode
-        for filename in ('skill_evaluator_reward.json','reward.json'):
-            call(['docker','cp',name+':/logs/verifier/'+filename,str(output/filename)],capture_output=True)
-        # Verify the executed candidate after collection without publishing another copy.
+        ops.run('candidate_copy',['docker','cp',str(candidate),name+':/workspace/output/Subject.Tests.ps1'])
+        ops.run('verifier_execute',['docker','start','--attach',name],timeout=260)
+        record['process_exit']=0
+        for filename in ('skill_evaluator_reward.json','reward.json',*(['native-runs.json'] if trace else [])):
+            ops.run('result_copy',['docker','cp',name+':/logs/verifier/'+filename,str(output/filename)])
         returned=root/(label+'-returned.ps1')
-        call(['docker','cp',name+':/workspace/output/Subject.Tests.ps1',str(returned)],capture_output=True)
+        ops.run('candidate_return',['docker','cp',name+':/workspace/output/Subject.Tests.ps1',str(returned)])
         assert digest(returned)==record['submission_sha256']==digest(candidate)
         returned.unlink();record['submission_unchanged']=True
         sidecar=read(output/'skill_evaluator_reward.json')
         record.update(outcome=sidecar['details']['outcome'],evaluation_status=sidecar['evaluation_status'])
-        assert process.returncode==0
+        if trace:record['native_runs']=read(output/'native-runs.json')
         record['complete']=True
     except Exception as exc:
-        record['failure_type']=type(exc).__name__
+        record['failure']={'type':type(exc).__name__,'message':sanitize(str(exc))}
     finally:
-        removal=subprocess.run(['docker','rm','--force',name],capture_output=True,timeout=30)
-        record['container_removed']=removal.returncode==0 or b'No such container' in removal.stderr
-        record['complete']=record['complete'] and record['container_removed']
+        record['container_removed']=not created
+        if created:
+            try:ops.run('verifier_remove',['docker','rm','--force',name],cleanup=True);record['container_removed']=True
+            except Exception:pass
+        record['cleanup_failures']=ops.data['cleanup_failures']
+        record['complete']=record['complete'] and record['container_removed'] and not record['cleanup_failures']
         trial.write(output/'replay.json',record)
     return record
 

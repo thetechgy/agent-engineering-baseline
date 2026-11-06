@@ -1,0 +1,97 @@
+{
+  "original_attempt_commit": "65cefa23ba44ef1de11bba1c470c03f0dddbadcd",
+  "prepared_source": {
+    "run_id": 42279639435,
+    "commit": "b0637f4d7556d0f29d0b6ed449f8ba62535f37aa",
+    "artifact_id": 13534568250,
+    "name": "corrected-template-verifier",
+    "artifact_digest": "sha256:289c0fbc601039dd45181ffc3ab6bdc8e5aea7d0ab0acae6584c8c9a2bf3df7c",
+    "manifest_sha256": "a66aeac636344fb6518ee24828514f34a7ff6029f5f1c49c9ccc6ff2432dd32b",
+    "image_id": "sha256:401c02a8fbc4f59dbf33ca7aa5961bad310d43e7742172c268e5f8705129c46d",
+    "expires_at": "2026-11-13T19:31:51Z",
+    "scope": "Qualified corrected verifier only; not a complete matched agent/task bundle."
+  },
+  "window": {
+    "started_at": "2026-11-06T21:50:01Z",
+    "deadline": "2026-11-06T23:20:01Z",
+    "minutes": 90,
+    "scope": "Credential-free Boolean admission qualification and retrospective pair replay"
+  },
+  "submissions": {
+    "current": {
+      "run_id": 42295570341,
+      "commit": "65cefa23ba44ef1de11bba1c470c03f0dddbadcd",
+      "artifact_id": 13541154231,
+      "name": "submission-sol-high-v2-qualified-20261106-current",
+      "artifact_digest": "sha256:8aa441bcccd8800e36aa17b9a6ac4e9ef0a6f4667e1f28c9800e6d5ba2814863",
+      "file_sha256": "1d9cecef3bc9aaf631bc6bf6f80c8f0cf22fd06daee4f607ea0d7da7c1d6b529",
+      "file_size": 3113,
+      "identity": {
+        "allocation_id": "sol-high-v2-qualified-20261106",
+        "reservation_id": "sol-high-v2-qualified-20261106/current/8",
+        "attempt": 8,
+        "variant": "current",
+        "commit": "65cefa23ba44ef1de11bba1c470c03f0dddbadcd",
+        "run_id": "42295570341"
+      }
+    },
+    "absent": {
+      "run_id": 42295570341,
+      "commit": "65cefa23ba44ef1de11bba1c470c03f0dddbadcd",
+      "artifact_id": 13542521450,
+      "name": "submission-sol-high-v2-qualified-20261106-absent",
+      "artifact_digest": "sha256:0522fa5d86d50ebcb9503ec99fb9a85b1437da5e77fdadd3f7eb850157b73bf7",
+      "file_sha256": "8916aa6e420418f2868237975b0a57a58af0a5120b954fc1179a18555b910822",
+      "file_size": 3470,
+      "identity": {
+        "allocation_id": "sol-high-v2-qualified-20261106",
+        "reservation_id": "sol-high-v2-qualified-20261106/absent/9",
+        "attempt": 9,
+        "variant": "absent",
+        "commit": "65cefa23ba44ef1de11bba1c470c03f0dddbadcd",
+        "run_id": "42295570341"
+      }
+    }
+  },
+  "qualification_basis": {
+    "pinned_pester_sources": [
+      {
+        "path": "src/functions/assertions/BeTrueOrFalse.ps1",
+        "url": "https://github.com/pester/Pester/blob/6.2.0/src/functions/assertions/BeTrueOrFalse.ps1",
+        "git_blob": "1da9131a4a4aba84cdb4323850a15740b52e9a9e",
+        "sha256": "28f43d98caaa42e5427fff6de7115326885e451c3c3db6fc270bb776b4a026dc"
+      },
+      {
+        "path": "src/functions/assert/Boolean/Should-BeTrue.ps1",
+        "url": "https://github.com/pester/Pester/blob/6.2.0/src/functions/assert/Boolean/Should-BeTrue.ps1",
+        "git_blob": "5fa5c93cbe4e637721f15727291ac31474b25904",
+        "sha256": "0a6f11b6e5fed065ac85c4e7d173273c71149421ed8a3b9cf3b47723a566cfe1"
+      },
+      {
+        "path": "src/functions/assert/Boolean/Should-BeFalse.ps1",
+        "url": "https://github.com/pester/Pester/blob/6.2.0/src/functions/assert/Boolean/Should-BeFalse.ps1",
+        "git_blob": "f0dc901eacb3a07169addefdb23b2d49e9a4cf62",
+        "sha256": "f7371af506f4442a14a9508e8768b637d318a885e5191bd294e6ce1e8089936b"
+      },
+      {
+        "path": "src/functions/assert/Exception/Should-Throw.ps1",
+        "url": "https://github.com/pester/Pester/blob/6.2.0/src/functions/assert/Exception/Should-Throw.ps1",
+        "git_blob": "02e80c5b33b0b9e98bdab6b2a3e7e83621309b50",
+        "sha256": "5b174e6881c3c7241b53ac1457c7241bff4f22bf38356167a0a8a7a5fb24b812"
+      }
+    ],
+    "public_docs": [
+      "https://pester.dev/docs/assertions/should-command",
+      "https://pester.dev/docs/commands/Should-BeTrue",
+      "https://pester.dev/docs/commands/Should-BeFalse",
+      "https://pester.dev/docs/commands/Should-Throw"
+    ],
+    "policy_delta": [
+      "Classic BeTrue",
+      "Classic BeFalse",
+      "Standalone ExceptionMessage"
+    ],
+    "semantics": "Classic truthiness/falsiness and standalone Boolean identity remain distinct. No assertion translation.",
+    "broader_gaps": "Unlisted comparison operators, string normalization, collection combinators and aliases remain outside the explicit subset; no general PowerShell support added."
+  }
+}

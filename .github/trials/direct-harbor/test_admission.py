@@ -42,6 +42,10 @@ class AdmissionEvidenceTests(unittest.TestCase):
         # template allowlist/validation change; native contract tests cover that change.
         normalized=re.sub(r'        \$__peTemplateFields =.*?(?=        \$__peBlocks =)', '', normalized, flags=re.S)
         normalized=normalized.replace("foreach ($__peField in $__peTemplateFields + @('_'))", "foreach ($__peField in @($__pePolicy.properties) + @('_'))")
+        # Policy v3 adds only these independently qualified assertion parameters.
+        addition = "            'BeTrue', 'BeFalse', 'ExceptionMessage',\n"
+        self.assertEqual(normalized.count(addition), 1)
+        normalized = normalized.replace(addition, '')
         self.assertEqual(hashlib.sha256(normalized.encode()).hexdigest(),
             '03b6465e9395a6cc458daaa392de6d22fba30dd9eda10a9f355871039e8001e6')
 

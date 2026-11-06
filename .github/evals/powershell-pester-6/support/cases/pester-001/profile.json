@@ -16,7 +16,7 @@
   "dependencies": [],
   "module": null,
   "minimum_tests": 1,
-  "admission_policy_version": 2,
+  "admission_policy_version": 3,
   "template_fields": [
     "Port",
     "Enabled",

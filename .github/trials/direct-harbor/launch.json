@@ -1,5 +1,5 @@
 {
-  "phase": "report",
+  "phase": "boolean",
   "campaign": "direct-harbor-20261104",
   "paid_attempts_used": 9,
   "paid_attempt_limit": 36,
@@ -701,5 +701,12 @@
   "admission_validation_first_run": 42162451618,
   "admission_diagnostics": true,
   "infrastructure_qualification": "reusable-images-20261106-qualified",
-  "preparation_attempt": 2
+  "preparation_attempt": 2,
+  "boolean_qualification": "credential_free_policy_v3_pair_replay",
+  "boolean_window": {
+    "started_at": "2026-11-06T21:50:01Z",
+    "deadline": "2026-11-06T23:20:01Z",
+    "minutes": 90,
+    "scope": "Credential-free Boolean admission qualification and retrospective pair replay"
+  }
 }

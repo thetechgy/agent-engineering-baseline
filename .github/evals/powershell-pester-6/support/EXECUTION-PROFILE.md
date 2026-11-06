@@ -1,4 +1,4 @@
-# Bounded execution profile, version 2
+# Bounded execution profile, version 3
 
 This is a limited evaluation profile, not a sandbox for arbitrary PowerShell.
 The verifier separately enforces container, user, filesystem, network, and
@@ -50,3 +50,38 @@ Do not replace the subject, Pester commands, runner, or provided project files.
 Write the single requested test file; the runner ignores agent-written reports.
 The Python report-summary control accepts only the requested JSON data and
 does not execute PowerShell or submitted code.
+
+## Assertion subset
+
+Admission policy v3 adds classic `Should -BeTrue` / `Should -BeFalse` and the
+standalone `Should-Throw -ExceptionMessage` parameter. It does not rewrite
+assertions or change their Pester 6.2.0 behavior. Classic Boolean assertions test
+truthiness/falsiness (`1` / `0` can pass); standalone `Should-BeTrue` and
+`Should-BeFalse` require the corresponding Boolean value. Classic `-Not` negates
+the chosen operator. Standalone Boolean commands have no `-Not` switch; choose
+the opposite command. Deliberately wrong assertions must remain failed tests.
+
+The supported classic operators are `Be`, `BeExactly`, `BeOfType`, `HaveCount`,
+`Contain`, `BeTrue`, `BeFalse`, `Throw`, and the case-restricted `Invoke`.
+Classic `Not`, `Because`, `ActualValue`, `ExpectedValue`, `ExpectedMessage`,
+`ErrorId`, and the invocation options below are admitted where Pester accepts them.
+
+Supported standalone forms are:
+
+| Commands | Admitted named options, where applicable |
+| --- | --- |
+| `Should-Be`, `Should-NotBe`, `Should-BeString` | `Actual`, `Expected`, `Because`; string `CaseSensitive` |
+| `Should-BeCollection` | `Actual`, `Expected`, `Count`, `Because` |
+| `Should-HaveType` | `Actual`, `Expected`, `Because` |
+| `Should-BeTrue`, `Should-BeFalse`, `Should-BeNull`, `Should-NotBeNull` | `Actual`, `Because` |
+| `Should-Throw` | `Actual`, `ExceptionType`, `ExceptionMessage`, `Because` |
+| `Should-Invoke`, `Should-NotInvoke` | `CommandName`, `ModuleName`, `Times`, `Exactly`, `Scope`, `ParameterFilter`, `Because`, where Pester supports them and the case permits the dependency |
+
+Pipeline and positional arguments are supported. Parameter admission is a bounded
+shared vocabulary, not a replacement for Pester's parameter binding; invalid
+combinations still fail. Other Pester operators and options (including string
+normalization, additional collection combinators and assertion aliases) are outside
+this declared subset. Common parameters, including `ErrorAction`, `ErrorVariable`,
+and their abbreviations, remain rejected, as do changes to Pester configuration or
+error preferences. Assertion syntax is not permission to invoke arbitrary commands,
+access unsafe members, modify protected inputs, or suppress failures.

@@ -21,7 +21,7 @@ class TemplatePolicyTests(unittest.TestCase):
         for case,members in original.items():
             profile=json.loads((SUPPORT/'cases'/case/'profile.json').read_text())
             self.assertEqual(profile['properties'],members)
-            self.assertEqual(profile['admission_policy_version'],2)
+            self.assertEqual(profile['admission_policy_version'],3)
             self.assertEqual(profile['template_fields'],template_checks.FIELDS[case])
 
 class RetrospectiveBoundaryTests(unittest.TestCase):

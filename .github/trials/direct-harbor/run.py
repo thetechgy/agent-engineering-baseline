@@ -202,9 +202,26 @@ def report(output, data):
     text = '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">\n<title>Direct Harbor recovery trial</title><style>body{font:16px system-ui;max-width:1100px;margin:3rem auto;padding:0 1rem;color:#172033}table{border-collapse:collapse;width:100%;margin:1rem 0}th,td{border:1px solid #cbd5e1;padding:.5rem;text-align:left;vertical-align:top}pre{white-space:pre-wrap;overflow-wrap:anywhere}h1,h2{color:#174f78}a{color:#145f91}</style>\n<h1>Direct Harbor recovery trial</h1><p>Bounded experimental trial. Production evaluation and Pages remain unchanged.</p>\n<p><a href="results.json" download>Download machine-readable results</a> · <a href="manifest.json">Frozen input manifests</a> · <a href="workflow-evidence.txt">Workflow evidence excerpts</a></p>'
     text += '<h2>Decision</h2><p>' + esc(data['decision']) + '</p>'
     text += '<p>' + esc(data['summary']) + '</p>'
+    if data.get('retrospective_pair'):
+        replay=data['retrospective_pair']
+        text += '<h2>Retrospective comparison: assertion admission policy v3</h2><p><a href="retrospective-pair.json">Replay identities, individual variant outcomes and controls</a></p>'
+        text += '<p>Qualification passed: '+esc(replay['passed'])+'. This evaluator correction followed inspection of the outputs. It is not a prospectively frozen validation. Both submissions and historical agent-facing documentation remain unchanged; only the retrospective admission policy differs.</p>'
+        text += '<p>Policy v3 admits classic Boolean BeTrue/BeFalse with existing Not and standalone ExceptionMessage. Classic truthiness/falsiness remains distinct from standalone Boolean identity. Reference, mutants, scoring, worker isolation and failure-suppressing parameter restrictions are unchanged.</p>'
+        text += table(('Arm','Submission SHA-256','Admission','Reference / defects / tests','Container removed'),[(arm,replay.get('submissions',{}).get(arm,{}).get('source',{}).get('file_sha256'),row.get('native_runs',{}).get('admission',{}).get('status'),str(row.get('outcome',{}).get('reference_pass'))+' / '+str(row.get('outcome',{}).get('mutants_detected'))+'/'+str(row.get('outcome',{}).get('mutants_executed'))+' / '+str(row.get('outcome',{}).get('tests_executed')),row.get('container_removed')) for arm,row in replay.get('replays',{}).items()])
+        variant_rows=[]
+        for arm,row in replay.get('replays',{}).items():
+            for variant in row.get('native_runs',{}).get('runs',[]):
+                result=variant['result'];variant_rows.append((arm,variant['variant'],result.get('status'),result.get('total'),result.get('passed'),result.get('failed'),result.get('assertion_failures')))
+        text += table(('Arm','Reference / mutant','Status','Tests','Passed','Failed','Assertion failures'),variant_rows)
+        text += table(('Control','Expected outcome matched','Native observation'),[(c.get('control'),c.get('passed'),c.get('outcome')) for c in replay.get('controls',[])])
+        text += '<p>Original verifier: '+esc(replay.get('base',{}).get('source',{}).get('image_id'))+'. Corrected verifier: '+esc(replay.get('corrected',{}).get('image_id'))+'. The original absent-arm rejection was replayed separately before the correction. Only a verifier layer was rebuilt; no agent image or dependencies were rebuilt.</p>'
+        if replay.get('failure'):text += '<p>Remaining failure: '+esc(replay['failure'])+'</p>'
+        if replay.get('conclusion'):text += '<p>'+esc(replay['conclusion'])+'</p>'
+        if replay.get('next_step'):text += '<p>Next proposed step: '+esc(replay['next_step'])+'</p>'
+        text += '<p>No evaluated model request, model judge, reservation or new paid attempt occurred. Campaign consumption remains 9/36 and earlier recovery 4/4; allocation closed and scheduling disabled. File-access attempts do not establish successful skill reads or causal benefit.</p>'
     if data.get('pair_review'):
         pair=data['pair_review'];arms=pair['rows']
-        text += '<h2>Current / absent pair with version-two inputs</h2><p><a href="pair-review.json">Reviewed identities, usage and retained artifacts</a> · <a href="offline-pair-diagnosis.json">Absent submission diagnosis</a></p>'
+        text += '<h2>Original live pair with version-two inputs</h2><p><a href="pair-review.json">Reviewed identities, usage and retained artifacts</a> · <a href="offline-pair-diagnosis.json">Absent submission diagnosis</a></p>'
         text += '<p>Run <a href="'+esc(pair['run']['html_url'])+'">'+esc(pair['run']['id'])+'</a>; executed commit <code>'+esc(pair['executed_commit'])+'</code>. Normal environment approval was automated under explicit user authorization, not independent human review. Shared protections were unchanged.</p>'
         def grade_label(row):
             grade=row['admission']

@@ -15,7 +15,7 @@
   "minimum_tests": 1,
   "protected_marker": "PESTER_VERIFIER_ONLY_PESTER_004",
   "subject": "Subject.ps1",
-  "admission_policy_version": 2,
+  "admission_policy_version": 3,
   "template_fields": [
     "Count",
     "Length",
