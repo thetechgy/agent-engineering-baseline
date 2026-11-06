@@ -1,5 +1,5 @@
 {
-  "phase": "report",
+  "phase": "preparation",
   "campaign": "direct-harbor-20261104",
   "paid_attempts_used": 6,
   "paid_attempt_limit": 36,
@@ -415,5 +415,6 @@
   "admission_validation_note": "User-authorized credential-free patch validation. No allocation is reopened; no inference or secrets.",
   "admission_validation_revision": 2,
   "admission_validation_first_run": 42162451618,
-  "admission_diagnostics": true
+  "admission_diagnostics": true,
+  "infrastructure_qualification": "reusable-images-20261106-attempt-1"
 }

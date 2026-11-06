@@ -1,5 +1,5 @@
 """Transport regression checks; signed APT verification is exercised in CI builds."""
-import importlib.util,io,tempfile,unittest,urllib.error
+import hashlib,importlib.util,io,json,tempfile,unittest,urllib.error
 from pathlib import Path
 from unittest.mock import patch
 spec=importlib.util.spec_from_file_location('snapshot_transport',Path(__file__).with_name('prefetch-apt.py'))
@@ -23,6 +23,33 @@ class SnapshotTransportTests(unittest.TestCase):
         with patch.object(m,'download',return_value=b'wrong') as get:
             with self.assertRaises(ValueError):m.checked('fixture',5,'0'*64)
             self.assertEqual(get.call_count,1)
+    def test_local_bundle_missing_corrupt_and_incompatible_fail_without_network(self):
+        payload=b'pinned synthetic index fixture'
+        indexes={name:(len(payload),hashlib.sha256(payload).hexdigest(),entry[2]) for name,entry in m.INDEXES.items()}
+        with tempfile.TemporaryDirectory() as temp,patch.object(m,'INDEXES',indexes),patch.object(m,'download',side_effect=AssertionError('network forbidden')):
+            root=Path(temp);retained=root/'retained';retained.mkdir()
+            for _,_,name in indexes.values():(retained/name).write_bytes(payload)
+            bundle=root/'bundle';m.seed_bundle(retained,bundle,'a'*40)
+            m.cache_indexes(bundle,root/'sources.list')
+            first=bundle/next(iter(indexes));first.write_bytes(b'corrupt')
+            with self.assertRaisesRegex(ValueError,'snapshot_bundle_corrupt'):m.cache_indexes(bundle,root/'sources.list')
+            first.unlink()
+            with self.assertRaisesRegex(ValueError,'missing_or_extra'):m.validate_bundle(bundle)
+            first.write_bytes(payload)
+            manifest=bundle/'manifest.json';data=json.loads(manifest.read_text());data['snapshot']='other';manifest.write_text(json.dumps(data))
+            with self.assertRaisesRegex(ValueError,'incompatible'):m.validate_bundle(bundle)
+            manifest.unlink()
+            with self.assertRaisesRegex(ValueError,'snapshot_bundle_missing'):m.validate_bundle(bundle)
+
+    def test_acquisition_keeps_completed_file_when_later_file_fails(self):
+        payload=b'checked fixture';names=list(m.INDEXES)
+        indexes={name:(len(payload),hashlib.sha256(payload).hexdigest(),entry[2]) for name,entry in m.INDEXES.items()}
+        with tempfile.TemporaryDirectory() as temp,patch.object(m,'INDEXES',indexes),patch.object(m,'checked',side_effect=[payload,TimeoutError('fixture')]):
+            root=Path(temp)/'bundle'
+            with self.assertRaises(TimeoutError):m.seed_bundle(None,root,'a'*40)
+            self.assertEqual((root/names[0]).read_bytes(),payload)
+            self.assertFalse((root/'manifest.json').exists())
+
     def test_staging_retains_signatures_pins_and_runtime_source(self):
         import run as trial
         with tempfile.TemporaryDirectory() as temp:

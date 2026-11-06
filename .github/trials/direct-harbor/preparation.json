@@ -1,0 +1,14 @@
+{
+  "qualification": "reusable-images-20261106",
+  "attempt": 1,
+  "limit": 2,
+  "prepared_source": null,
+  "dependency_seed": {
+    "tag": "trial-snapshot-20261103-20261106",
+    "asset": "snapshot-20261103.zip",
+    "source_commit": "471667c337846429c8508b4acd0c9a64ae1d72f7",
+    "archive_sha256": "03bc8a13fadf20d387fa08e8bac958069349300fab81c57174d3aa1812cdfa86",
+    "manifest_sha256": "8dd8f9e713c8ae2315054e28cc5d8eb59170c3939148277a5455641dc4746e75"
+  },
+  "authorization": "Credential-free preparation only; at most two full image-build qualifications. No paid allocation or inference."
+}

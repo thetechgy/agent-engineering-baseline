@@ -10,7 +10,7 @@ def bundle(root,unsafe=False):
     data=b'unchanged UTF8 task bytes\r\n';name='../escape' if unsafe else 'tasks/current/instruction.md'
     with tarfile.open(root/'inputs.tar','w') as archive:
         info=tarfile.TarInfo(name);info.size=len(data);archive.addfile(info,io.BytesIO(data))
-    manifest={'identity':WHO,'images':{k:'sha256:'+'1'*64 for k in prepared.TAGS+['harbor-prebuilt:harbor-docker-egress-control-sidecar--fixture']},
+    manifest={'schema':2,'experiment':prepared.experiment(),'expires_at':(prepared.datetime.now(prepared.timezone.utc)+prepared.timedelta(days=7)).isoformat(),'identity':WHO,'images':{k:'sha256:'+'1'*64 for k in prepared.TAGS+['harbor-prebuilt:harbor-docker-egress-control-sidecar--fixture']},
         'credentials':False,'running_containers':False,'authenticated_homes':False,
         'members':{name:{'sha256':hashlib.sha256(data).hexdigest(),'size':len(data)}},
         'archives':{k:{'sha256':prepared.digest(root/k),'size':(root/k).stat().st_size} for k in ('images.tar','inputs.tar')}}
@@ -29,6 +29,26 @@ class PreparedTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp)/'bundle';sha=bundle(root,True)
             with self.assertRaises(AssertionError):prepared.verify(root,sha,WHO)
+    def test_changed_experiment_and_expired_images_are_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)/'bundle';sha=bundle(root)
+            with patch.object(prepared,'experiment',return_value={'changed':True}):
+                with self.assertRaisesRegex(AssertionError,'experiment inputs changed'):prepared.verify(root,sha,WHO)
+            value=json.loads((root/'manifest.json').read_text());value['expires_at']='2020-01-01T00:00:00+00:00'
+            prepared.write(root/'manifest.json',value)
+            with self.assertRaisesRegex(AssertionError,'expired'):prepared.verify(root,prepared.digest(root/'manifest.json'),WHO)
+
+    def test_report_and_allocation_metadata_do_not_change_experiment(self):
+        original=prepared.experiment()
+        read=Path.read_text
+        def changed(path,*args,**kwargs):
+            value=read(path,*args,**kwargs)
+            if path.name=='launch.json':
+                data=json.loads(value);data['allocation']={'id':'new-unarmed-allocation'};data['phase']='report'
+                return json.dumps(data)
+            return value
+        with patch.object(Path,'read_text',changed):self.assertEqual(original,prepared.experiment())
+
     def test_paths_relocate_without_changing_native_task_checksum(self):
         import shutil
         import run as trial

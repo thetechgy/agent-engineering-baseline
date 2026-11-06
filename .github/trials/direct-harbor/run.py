@@ -67,7 +67,7 @@ def stage(root, variant="current", *, historical_runtime=False, admission_diagno
             text = text.replace('&& rm -rf /var/lib/apt/lists/*\n',
                                 '&& rm -rf /var/lib/apt/lists/* /var/lib/trial-snapshot /tmp/trial-snapshot.list\n')
             first, rest = text.split('\n', 1)
-            dockerfile.write_text(first + '\nCOPY build/prefetch-apt.py /tmp/prefetch-apt.py\n' + rest)
+            dockerfile.write_text(first + '\nCOPY build/prefetch-apt.py /tmp/prefetch-apt.py\nCOPY build/snapshot/ /var/lib/trial-snapshot/20261103T000000Z/\n' + rest)
         shutil.copytree(ROOT / '.codex', env / 'codex')
         shutil.copyfile(ROOT / 'AGENTS.md', env / 'AGENTS.md')
         # Copy the deployed content and supporting files, never .apm sources,

@@ -73,7 +73,7 @@ class AllocationTests(unittest.TestCase):
         self.assertIn('prepare',job['needs'])
         self.assertIn('prepared.py restore',json.dumps(job))
         self.assertNotIn('live.py prepare',json.dumps(job))
-        self.assertIn('retention-days: 1',(live.trial.ROOT/'.github/workflows/direct-harbor-trial.yml').read_text())
+        self.assertIn('retention-days: 7',(live.trial.ROOT/'.github/workflows/direct-harbor-trial.yml').read_text())
         steps=job['steps'];names=[s['name'] for s in steps if 'name' in s]
         self.assertLess(names.index('Checkpoint current attempt before absent arm'),names.index('Gate and reserve campaign attempt eight without credentials'))
         credentials=[s for s in steps if 'OPENAI_API_KEY' in s.get('env',{})]

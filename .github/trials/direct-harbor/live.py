@@ -151,23 +151,49 @@ def admission_preflight(image, destination):
     return result
 
 
-def prepare(root, diagnostic=False):
+def check_task(task, variant, output, root, diagnostic=False):
     from harbor.models.task.task import Task
     from harbor.models.trial.paths import TrialPaths
     from harbor.environments.docker.docker import DockerEnvironment
+    async def check():
+        t=Task(task)
+        environment=DockerEnvironment(environment_dir=t.paths.environment_dir,environment_name='pester-002',
+            session_id='live-preflight-'+variant,trial_paths=TrialPaths(root/('preflight-'+variant)),
+            task_env_config=t.config.environment,network_policy=t.config.environment.resolve_baseline())
+        try:
+            await environment.start(force_build=False)
+            await runtime_check(environment,variant,output)
+            if not diagnostic:
+                from pinned_codex import inspect_budget_feature
+                uploaded=await environment.exec(command='umask 077; printf %s '+shlex.quote(toml.dumps(config()))+' > /installed-agent/codex-home/config.toml',user='agent',timeout_sec=30)
+                assert uploaded.return_code==0
+                trial.write(output/'budget-preflight.json',await inspect_budget_feature(environment))
+        finally:
+            await environment.stop(delete=True)
+    asyncio.run(check())
+
+def prepare(root, diagnostic=False, infrastructure=False):
+    from harbor.models.task.task import Task
     assert not os.environ.get('OPENAI_API_KEY'), 'Credential-free preparation required'
     assert importlib.metadata.version('harbor')=='0.25.0'
     root.mkdir(parents=True,exist_ok=False)
     public=root/'public';public.mkdir()
     previous=json.loads((trial.ROOT/'.github/trials/direct-harbor/results/results.json').read_text())
     allocation = None
-    if not diagnostic:
+    if infrastructure:
+        from handoff import no_credentials
+        no_credentials()
+    if not diagnostic and not infrastructure:
         from allocation import active
         allocation = active()
         retention_proof=json.loads(Path(__file__).with_name("results").joinpath("retention-validation.json").read_text())
         assert retention_proof["publication_verified"] and retention_proof["local_download_verified"]
         assert retention_proof["paid_attempt"] is False and retention_proof["inference"] is False
     validate_prior_results(previous, allocation)
+    from prepared import snapshot_module
+    snapshot = Path(os.environ['TRIAL_SNAPSHOT_BUNDLE'])
+    snapshot_module().validate_bundle(snapshot)
+    trial.write(public/'snapshot-bundle.json', {'manifest_sha256': hashlib.sha256((snapshot/'manifest.json').read_bytes()).hexdigest(), 'manifest': snapshot_module().validate_bundle(snapshot), 'index_downloads': 0})
     launch = json.loads(Path(__file__).with_name('launch.json').read_text())
     admission_diagnostics = launch.get('admission_diagnostics', False)
     for variant in (('current',) if diagnostic else ('current','absent')):
@@ -199,29 +225,19 @@ def prepare(root, diagnostic=False):
                 first_task=Path(json.loads((root/'current-task.json').read_text())['path'])
                 assert trial.pilot.manifest(first_task/'tests')==trial.pilot.manifest(task/'tests'), 'Verifier contexts differ'
             else:
-                subprocess.run(['docker','build','--progress=plain','-t',tag,str(task/folder)],check=True,timeout=600)
+                retained=task/folder/'build/snapshot'
+                shutil.copytree(snapshot,retained)
+                try:
+                    subprocess.run(['docker','build','--progress=plain','-t',tag,str(task/folder)],check=True,timeout=600)
+                finally:
+                    shutil.rmtree(retained)
             (cfg['environment'] if folder=='environment' else cfg['verifier']['environment'])['docker_image']=tag
         if not diagnostic and variant == 'current':
             admission_preflight('direct-harbor-verifier:live', public/'admission-preflight.json')
         (task/'task.toml').write_text(toml.dumps(cfg))
         manifest.update(task_checksum=Task(task).checksum,effective_skills=expected_files(variant),effective_codex_config=config())
         trial.write(output/'manifest.json',manifest)
-        async def check():
-            t=Task(task)
-            environment=DockerEnvironment(environment_dir=t.paths.environment_dir,environment_name='pester-002',
-                session_id='live-preflight-'+variant,trial_paths=TrialPaths(root/('preflight-'+variant)),
-                task_env_config=t.config.environment,network_policy=t.config.environment.resolve_baseline())
-            try:
-                await environment.start(force_build=False)
-                await runtime_check(environment,variant,output)
-                if not diagnostic:
-                    from pinned_codex import inspect_budget_feature
-                    uploaded=await environment.exec(command='umask 077; printf %s '+shlex.quote(toml.dumps(config()))+' > /installed-agent/codex-home/config.toml',user='agent',timeout_sec=30)
-                    assert uploaded.return_code==0
-                    trial.write(output/'budget-preflight.json',await inspect_budget_feature(environment))
-            finally:
-                await environment.stop(delete=True)
-        asyncio.run(check())
+        check_task(task, variant, output, root, diagnostic)
         trial.write(root/(variant+'-task.json'),{'path':str(task)})
         trial.write(output/'preparation.json',{'stage':'preflight_passed','paid_inference_permitted':False})
         print('External preflight passed: '+variant,flush=True)
@@ -234,7 +250,7 @@ def prepare(root, diagnostic=False):
         assert len(removed)==3 and all(k.startswith(TARGET+'/') for k in removed)
         trial.write(public/'comparison-manifest.json',{'matched':True,'removed_target_files':removed,
             'profile':PROFILE['id'],'shared_config':config(),'instructions_sha256':current['instructions_sha256']})
-    trial.write(public/'preflight.json',{'passed':True,'commit':os.environ.get('GITHUB_SHA'),'paid_inference_permitted':False,'live_eligible_after_approval':not diagnostic,'network_mode':'none' if diagnostic else 'allowlist','remote_tools_disabled':True})
+    trial.write(public/'preflight.json',{'passed':True,'commit':os.environ.get('GITHUB_SHA'),'paid_inference_permitted':False,'live_eligible_after_approval':not (diagnostic or infrastructure),'network_mode':'none' if diagnostic else 'allowlist','remote_tools_disabled':True})
 
 def usage_and_activation(native_dir):
     totals=None;activation=set();completion=False;calls=0;event_types={};tool_names={};outcomes=[];completion_shape=None;tool_errors={'runtime_tool_error':0,'permission_denied':0,'missing_path':0}
@@ -431,6 +447,11 @@ if __name__=='__main__':
             trial.write(root/'public/preparation-failure.json',{'type':type(exc).__name__,'message':sanitize(str(exc)),'paid_inference_permitted':False})
             raise
     elif mode=='diagnostic':raise SystemExit(diagnostic(root,sys.argv[3]))
-    elif mode=='prepare':prepare(root)
+    elif mode in ('prepare','infrastructure-prepare'):
+        try:prepare(root,infrastructure=mode=='infrastructure-prepare')
+        except Exception as exc:
+            from diagnostics import sanitize
+            trial.write(root/'public/preparation-failure.json',{'stage':'image_preparation','type':type(exc).__name__,'message':sanitize(str(exc)),'paid_inference_permitted':False})
+            raise
     elif mode in ('current','absent'):raise SystemExit(live_attempt(root,mode))
     else:raise ValueError('Unknown trial mode')
