@@ -71,7 +71,11 @@ carriers, negative identity/integrity checks and the existing HTML report. Peste
 carriers test reporting, not executable-submission quality. Mocked lifecycle controls
 establish wiring only. The separate native preparation job observes one startup
 attempt and cleanup; a failed build is an infrastructure result, not a quality zero.
-No blind preparation retry is selected for the new profile.
+No blind preparation retry is selected for the new profile. Initial upgrade CI
+successfully built the pinned fixture, observed PowerShell 7.6.9 / Pester 6.2.0,
+and verified teardown on its first attempt. This is package startup evidence,
+not execution of the complete native grading cohort. Final-revision CI and the
+downloadable report are linked from PR #119.
 
 Validation results and report artifacts are recorded in PR #119. Native agent lifecycle,
 complete native Pester/gh cohorts, provider compatibility, judging accuracy and skill

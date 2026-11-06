@@ -77,3 +77,13 @@ rather than upstream's 0.161.0 default. Trusted initialization is an installed
 operator backend, not another upstream lifecycle patch. The candidate patch is
 not used by production evaluation. See
 [the candidate contract, reproduction and remaining adoption gates](../evals/EVALUATOR-CANDIDATE-95.md).
+
+## Current evaluator replacement
+
+`skillevaluator-v0.8.0-evidence.patch` applies only to released revision
+`8149356e4476a1497fb334727f13f699c6fa6ba5`. The current opt-in setup uses it
+with a separate compatible lock; production and historical patches are unchanged.
+Pristine 0.8.0 failed the retained evidence controls, so these corrections remain
+necessary. The port adjusts one hunk to upstream's changed surrounding code.
+It does not change upstream scoring. See the [active checkpoint](../evals/EVALUATION-PLAN.md)
+for qualification, dependency constraints and adoption limits.

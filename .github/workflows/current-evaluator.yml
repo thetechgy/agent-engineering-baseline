@@ -41,6 +41,10 @@ jobs:
         run: |
           "$SKILL_REVIEW_PYTHON" -B -m unittest discover -s .github/tests -p test_skill_report.py
           "$SKILL_REVIEW_PYTHON" -B -m unittest discover -s .github/tests -p test_custom_metrics.py
+          PYTHONPATH=.github/scripts:.github/tests "$SKILL_REVIEW_PYTHON" -B -m unittest \
+            test_skill_evidence.EvidenceTests.test_compatible_python_precision_and_historical_policy \
+            test_skill_evidence.EvidenceTests.test_policy_runtime_contradictions \
+            test_skill_evidence.EvidenceTests.test_missing_runtime_metadata_and_attempt_fallback
       - name: Install the frozen opt-in replacement
         run: bash .github/scripts/setup-skillevaluator.sh candidate-current
       - name: Qualify collection, interpretation and reporting without inference

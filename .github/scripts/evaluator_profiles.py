@@ -27,6 +27,10 @@ def runtime(versions, *, owning=False):
         revision = HISTORICAL_REVISION
     profile = by_revision(revision)
     for key, expected in (('skillevaluator', profile['version']), ('harbor', profile['harbor'])):
+        # Historical admission reconciles recorded Harbor metadata with its policy.
+        # It did not require every retained report to use the current replay lock.
+        if key == 'harbor' and profile is not CANDIDATE:
+            continue
         if versions.get(key) is not None and versions[key] != expected:
             raise ValueError('Contradictory producer identity')
     if profile is CANDIDATE:

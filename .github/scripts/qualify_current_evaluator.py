@@ -168,6 +168,10 @@ def worker(output):
     evidence.validate_public(historical)
     assert {m['name']:m['value'] for m in historical['metrics']} == evidence.REVIEWED_METRIC_VALUES
     records.append(historical)
+    candidate = next(r for r in records if r['source']['skill_id'] == 'podman' and 'producer_profile' in r['policy'])
+    classification, reasons = analysis.classify(historical, candidate,
+        analysis.condition_identity(historical), analysis.condition_identity(candidate))
+    assert classification == 'incompatible_or_unknown' and any('evaluator_revision' in reason for reason in reasons)
     result_analysis = render(records, output)
     for skill in result_analysis['skills']:
         for comparison in skill.get('comparisons', []):
