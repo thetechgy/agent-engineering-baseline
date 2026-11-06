@@ -11,7 +11,7 @@
   "recovery_control_attempt": 3,
   "native_fixture_retry": 1,
   "transport_preflight_corrections": 1,
-  "state": "retained_smoke_allocation_closed_before_launch",
+  "state": "prepared_allocation_implementation_paid_disabled",
   "final_native_run": 41958553130,
   "native_grading_smoke_qualified": true,
   "native_sandbox_qualified": false,
@@ -98,7 +98,7 @@
   "final_live_run": 42110435228,
   "api_spend_usd": null,
   "scheduling_stopped": true,
-  "stop_reason": "Pinned Debian snapshot HTTP 503/504 blocked image build before reservation; allocation closed unused; no retry authorized by this closure.",
+  "stop_reason": "Preparation before protected approval; no launch armed yet.",
   "diagnostic_actions_runs_reserved": 2,
   "diagnostic_actions_run_limit": 2,
   "paid_execution_enabled": false,
@@ -106,7 +106,7 @@
   "accept_unknown_cost_for_testing": true,
   "credential_free_checks_passed": true,
   "diagnostic_verification_run": 42108206579,
-  "authorization_note": "Explicit latest user authorization: at most two new attempts; exact declared submission retention; $5 incremental operational budget; prior billing unknown accepted; no retries.",
+  "authorization_note": "User authorized at most two fresh credentialed launches and normal API environment approval by the assistant only after exact-run credential-free preparation and transfer checks pass. No independent human review claimed.",
   "diagnostic_actions_runs_used": 2,
   "live_pair_operationally_valid": false,
   "handoff_diagnostic_run_limit": 2,
@@ -114,15 +114,15 @@
   "handoff_first_run": 42115972887,
   "handoff_first_run_outcome": "image_build_failed_before_controls_snapshot_index_http_503",
   "allocation": {
-    "id": "sol-high-retained-20261106",
-    "state": "closed",
+    "id": "sol-high-prepared-20261106",
+    "state": "disabled",
     "attempts": {
       "current": 7,
       "absent": 8
     },
     "reservation_ids": {
-      "current": "sol-high-retained-20261106/current/7",
-      "absent": "sol-high-retained-20261106/absent/8"
+      "current": "sol-high-prepared-20261106/current/7",
+      "absent": "sol-high-prepared-20261106/absent/8"
     },
     "limit": 2,
     "prior_campaign_attempts": 6,
@@ -131,86 +131,14 @@
     "budget_usd": 5,
     "second_attempt_reserve_usd": 2.5,
     "headroom_usd": 0.5,
-    "workflow_run_number": 25,
-    "code_commit": "8a1d7c8939548e84c4b79d48bc3ecf839afc2e21",
+    "workflow_run_number": null,
+    "code_commit": null,
     "profile": "codex-0.166.0_gpt-6.1-sol_high_rollout-budget-disabled",
     "case": "pester-002",
-    "authorization": "User authorized at most two fresh attempts and exact declared submission retention after credential/protected-evidence checks. No retries; all previous allocations remain closed.",
+    "authorization": "User authorized at most two fresh credentialed launches and normal API environment approval by the assistant only after exact-run credential-free preparation and transfer checks pass. No independent human review claimed.",
     "provider_enforced_dollar_cap": false,
-    "preparation_runs": [
-      {
-        "run_id": 42212722607,
-        "commit": "0bbd09b356415e6ce01ca142e3fb56b385267c61",
-        "stage": "credential_free_unit_tests",
-        "failure": "test_credential_free_diagnostics_work_after_later_closed_allocations used armed checkout instead of a closed fixture",
-        "closure": {
-          "allocation_id": "sol-high-retained-20261106",
-          "state": "closed",
-          "paid_execution_enabled": false,
-          "reserved_slots_consumed": [],
-          "campaign_attempts_consumed": 6,
-          "previous_recovery_consumed": 4,
-          "previous_recovery_limit": 4,
-          "incremental_api_bill_usd": null,
-          "historical_cumulative_api_bill_usd": null,
-          "note": "Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.",
-          "reservation_ids": [],
-          "incremental_conservative_estimate_usd": null,
-          "operational_budget_usd": 5,
-          "estimated_budget_exceeded": null
-        },
-        "credentialed_launches": 0,
-        "reservations": 0,
-        "scope": "Prelaunch CI correction only; no retry or replacement of a Codex attempt."
-      },
-      {
-        "run_id": 42213118342,
-        "commit": "eca71ef78c197b51103436f85575126a4ad48ea9",
-        "stage": "credential_free_agent_image_build",
-        "classification": "prelaunch_infrastructure_failure",
-        "command": [
-          "docker",
-          "build",
-          "--progress=plain",
-          "-t",
-          "direct-harbor-agent:current",
-          "<staged-current-environment>"
-        ],
-        "failing_build_step": "apt-get update --error-on=any against frozen Debian snapshot 20261103T000000Z",
-        "native_exit_status": 100,
-        "outer_docker_build_exit_status": 1,
-        "observed_errors": [
-          "HTTP 504 Gateway Timeout",
-          "HTTP 503 TooManyRequests first byte timeout"
-        ],
-        "package_index_url": "https://snapshot.debian.org/archive/debian/20261103T000000Z/dists/trixie/main/binary-amd64/Packages",
-        "reservations": 0,
-        "credentialed_launches": 0,
-        "evaluated_agent_container_started": false,
-        "verifier_container_started": false,
-        "container_disposal": "not_applicable_evaluated_environments_never_started",
-        "build_cleanup": "GitHub-hosted job completed; no retained Docker process inspection; do not claim a container-disposal probe passed",
-        "workflow_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342",
-        "job_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342/job/127876427762",
-        "report_artifact_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342/artifacts/13499568643",
-        "closure_artifact_sha256": "7d32a70cf6839abc78b308a56f52e4984cf2b6095a653751308affbedc375169",
-        "note": "No reservation receipt or attempt record exists; both credentialed steps were skipped. No new agent-generated submission exists. No package pin, acceptance criterion or isolation setting was changed to work around this failure."
-      }
-    ],
-    "used": 0,
-    "consumed_attempts": [],
-    "consumed_reservations": [],
-    "unused_closed_attempts": [
-      7,
-      8
-    ],
-    "unused_closed_reservations": [
-      "sol-high-retained-20261106/current/7",
-      "sol-high-retained-20261106/absent/8"
-    ],
-    "run_id": 42213118342,
-    "executed_commit": "eca71ef78c197b51103436f85575126a4ad48ea9",
-    "api_bill_usd": null
+    "preparation_attempt": 1,
+    "preparation_limit": 2
   },
   "allocation_history": [
     {
@@ -288,6 +216,105 @@
       "executed_commit": "47635e39fd6f29161522d14b34617827255b8637",
       "observed_usage_conservative_estimate_usd": 1.49446,
       "session_coverage_adequate": true,
+      "api_bill_usd": null
+    },
+    {
+      "id": "sol-high-retained-20261106",
+      "state": "closed",
+      "attempts": {
+        "current": 7,
+        "absent": 8
+      },
+      "reservation_ids": {
+        "current": "sol-high-retained-20261106/current/7",
+        "absent": "sol-high-retained-20261106/absent/8"
+      },
+      "limit": 2,
+      "prior_campaign_attempts": 6,
+      "previous_recovery_consumed": 4,
+      "previous_recovery_limit": 4,
+      "budget_usd": 5,
+      "second_attempt_reserve_usd": 2.5,
+      "headroom_usd": 0.5,
+      "workflow_run_number": 25,
+      "code_commit": "8a1d7c8939548e84c4b79d48bc3ecf839afc2e21",
+      "profile": "codex-0.166.0_gpt-6.1-sol_high_rollout-budget-disabled",
+      "case": "pester-002",
+      "authorization": "User authorized at most two fresh attempts and exact declared submission retention after credential/protected-evidence checks. No retries; all previous allocations remain closed.",
+      "provider_enforced_dollar_cap": false,
+      "preparation_runs": [
+        {
+          "run_id": 42212722607,
+          "commit": "0bbd09b356415e6ce01ca142e3fb56b385267c61",
+          "stage": "credential_free_unit_tests",
+          "failure": "test_credential_free_diagnostics_work_after_later_closed_allocations used armed checkout instead of a closed fixture",
+          "closure": {
+            "allocation_id": "sol-high-retained-20261106",
+            "state": "closed",
+            "paid_execution_enabled": false,
+            "reserved_slots_consumed": [],
+            "campaign_attempts_consumed": 6,
+            "previous_recovery_consumed": 4,
+            "previous_recovery_limit": 4,
+            "incremental_api_bill_usd": null,
+            "historical_cumulative_api_bill_usd": null,
+            "note": "Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.",
+            "reservation_ids": [],
+            "incremental_conservative_estimate_usd": null,
+            "operational_budget_usd": 5,
+            "estimated_budget_exceeded": null
+          },
+          "credentialed_launches": 0,
+          "reservations": 0,
+          "scope": "Prelaunch CI correction only; no retry or replacement of a Codex attempt."
+        },
+        {
+          "run_id": 42213118342,
+          "commit": "eca71ef78c197b51103436f85575126a4ad48ea9",
+          "stage": "credential_free_agent_image_build",
+          "classification": "prelaunch_infrastructure_failure",
+          "command": [
+            "docker",
+            "build",
+            "--progress=plain",
+            "-t",
+            "direct-harbor-agent:current",
+            "<staged-current-environment>"
+          ],
+          "failing_build_step": "apt-get update --error-on=any against frozen Debian snapshot 20261103T000000Z",
+          "native_exit_status": 100,
+          "outer_docker_build_exit_status": 1,
+          "observed_errors": [
+            "HTTP 504 Gateway Timeout",
+            "HTTP 503 TooManyRequests first byte timeout"
+          ],
+          "package_index_url": "https://snapshot.debian.org/archive/debian/20261103T000000Z/dists/trixie/main/binary-amd64/Packages",
+          "reservations": 0,
+          "credentialed_launches": 0,
+          "evaluated_agent_container_started": false,
+          "verifier_container_started": false,
+          "container_disposal": "not_applicable_evaluated_environments_never_started",
+          "build_cleanup": "GitHub-hosted job completed; no retained Docker process inspection; do not claim a container-disposal probe passed",
+          "workflow_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342",
+          "job_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342/job/127876427762",
+          "report_artifact_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342/artifacts/13499568643",
+          "closure_artifact_sha256": "7d32a70cf6839abc78b308a56f52e4984cf2b6095a653751308affbedc375169",
+          "note": "No reservation receipt or attempt record exists; both credentialed steps were skipped. No new agent-generated submission exists. No package pin, acceptance criterion or isolation setting was changed to work around this failure."
+        }
+      ],
+      "used": 0,
+      "consumed_attempts": [],
+      "consumed_reservations": [],
+      "unused_closed_attempts": [
+        7,
+        8
+      ],
+      "unused_closed_reservations": [
+        "sol-high-retained-20261106/current/7",
+        "sol-high-retained-20261106/absent/8"
+      ],
+      "run_id": 42213118342,
+      "executed_commit": "eca71ef78c197b51103436f85575126a4ad48ea9",
       "api_bill_usd": null
     }
   ],

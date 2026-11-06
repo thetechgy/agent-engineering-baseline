@@ -1,4 +1,4 @@
-"""Fixed direct-Harbor smoke pair. Raw agent work and logs are never published."""
+"""Fixed smoke pair; only the authorized declared deliverable may be published."""
 import asyncio, hashlib, importlib.metadata, json, os, shlex, shutil, subprocess, sys, time, uuid
 from pathlib import Path
 import toml
@@ -195,7 +195,11 @@ def prepare(root, diagnostic=False):
         if diagnostic:compose.write_text(compose.read_text().replace('    user: "1000:1000"', '    user: "1000:1000"\n    network_mode: none'))
         trial.write(output/'preparation.json',{'stage':'building_pinned_image','paid_inference_permitted':False})
         for folder,tag in ([('environment','direct-harbor-agent:'+variant)] + ([] if diagnostic else [('tests','direct-harbor-verifier:live')])):
-            subprocess.run(['docker','build','--progress=plain','-t',tag,str(task/folder)],check=True,timeout=600)
+            if variant=='absent' and folder=='tests':
+                first_task=Path(json.loads((root/'current-task.json').read_text())['path'])
+                assert trial.pilot.manifest(first_task/'tests')==trial.pilot.manifest(task/'tests'), 'Verifier contexts differ'
+            else:
+                subprocess.run(['docker','build','--progress=plain','-t',tag,str(task/folder)],check=True,timeout=600)
             (cfg['environment'] if folder=='environment' else cfg['verifier']['environment'])['docker_image']=tag
         if not diagnostic and variant == 'current':
             admission_preflight('direct-harbor-verifier:live', public/'admission-preflight.json')
@@ -229,7 +233,7 @@ def prepare(root, diagnostic=False):
         assert len(removed)==3 and all(k.startswith(TARGET+'/') for k in removed)
         trial.write(public/'comparison-manifest.json',{'matched':True,'removed_target_files':removed,
             'profile':PROFILE['id'],'shared_config':config(),'instructions_sha256':current['instructions_sha256']})
-    trial.write(public/'preflight.json',{'passed':True,'commit':os.environ.get('GITHUB_SHA'),'paid_inference_permitted':not diagnostic,'network_mode':'none' if diagnostic else 'allowlist','remote_tools_disabled':True})
+    trial.write(public/'preflight.json',{'passed':True,'commit':os.environ.get('GITHUB_SHA'),'paid_inference_permitted':False,'live_eligible_after_approval':not diagnostic,'network_mode':'none' if diagnostic else 'allowlist','remote_tools_disabled':True})
 
 def usage_and_activation(native_dir):
     totals=None;activation=set();completion=False;calls=0;event_types={};tool_names={};outcomes=[];completion_shape=None;tool_errors={'runtime_tool_error':0,'permission_denied':0,'missing_path':0}

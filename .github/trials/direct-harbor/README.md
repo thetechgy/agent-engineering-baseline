@@ -385,3 +385,39 @@ a Harbor agent failure or evidence against the skill. No acceptance criteria or
 package pins were changed, and no further build or inference retry was scheduled.
 The next decision is a credential-free availability check of the same pinned package
 index before authorizing any new allocation; this pass does not establish adoption readiness.
+
+## Preparation before scoped environment approval
+
+The fresh `sol-high-prepared-20261106` allocation starts from six consumed campaign
+slots; its current/7 and absent/8 identities are new. Previous allocations and
+unused reservations remain closed. At most two full preparation attempts and two
+credentialed launches are authorized; model retries remain disabled.
+
+`prepare` has no protected environment or API credential. It builds the unchanged
+pinned agent images and one identical verifier image, runs the existing preflight,
+and exports only `docker save` images plus immutable pester-002 task inputs and
+credential-free metadata. It uploads, downloads, hashes, loads, and relocates this
+bundle before the `live` job can request environment approval. The temporary image
+artifact expires after one day. Verifier code/fixtures in that explicitly authorized
+transport stay separate from agent image inputs and from the report.
+
+The protected job loads the same image IDs and verifies archive/member hashes,
+native task checksums and repository/branch/commit/run/allocation identity before
+reserving a slot. It never reruns snapshot-dependent image builds. Fresh containers,
+homes and sessions are created from built images, not from saved runtime containers.
+The pinned Harbor content-addressed egress image is included for cache reuse; there
+is no new Harbor private override. The existing snapshot date, package versions,
+signed metadata, SHA-256 checks, base image digest and bounded APT retries are unchanged.
+Public GET diagnostics recovered the compressed index and matched its release-listed
+hash; this alone is not accepted as successful preparation.
+
+The user explicitly authorized the assistant to submit the normal GitHub environment
+approval through the API only for the exact allocation run, after preparation and
+transfer checks succeed. This is automated approval under user authorization, not an
+independent human review. No reviewer settings, administrative bypass or environment
+permissions are changed. Actual approval metadata is recorded after submission.
+
+Maintenance added is limited to `prepared.py`, focused archive/path checks and same-run
+artifact steps. Bundle format and the pinned Harbor egress cache tag need review if the
+pinned runtime changes. This does not add a service, registry, cache across campaigns,
+new grader, or generalized execution layer.

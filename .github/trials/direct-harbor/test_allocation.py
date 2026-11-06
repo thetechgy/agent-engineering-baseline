@@ -5,7 +5,7 @@ from unittest.mock import patch
 import allocation,live
 
 A={'id':allocation.ID,'state':'armed','attempts':allocation.ATTEMPTS,'reservation_ids':allocation.RESERVATIONS,'limit':2,
-   'prior_campaign_attempts':6,'budget_usd':5,'second_attempt_reserve_usd':2.5,'headroom_usd':0.5,'workflow_run_number':17}
+   'prior_campaign_attempts':6,'budget_usd':5,'second_attempt_reserve_usd':2.5,'headroom_usd':0.5,'workflow_run_number':17,'preparation_limit':2,'preparation_attempt':1}
 ENV={'GITHUB_REPOSITORY':'thetechgy/agent-engineering-baseline','GITHUB_REF':'refs/heads/trial/direct-harbor',
      'GITHUB_EVENT_NAME':'push','GITHUB_RUN_ATTEMPT':'1','GITHUB_RUN_NUMBER':'17','GITHUB_RUN_ID':'123','GITHUB_SHA':'fixture'}
 LAUNCH={'phase':'live-pair','paid_execution_enabled':True,'scheduling_stopped':False,'paid_attempts_used':6,
@@ -44,6 +44,7 @@ class AllocationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp,patch.dict(os.environ,ENV,clear=True),patch.object(allocation,'active',return_value=A):
             root=Path(temp);(root/'public/current').mkdir(parents=True)
             (root/'public/preflight.json').write_text('{"passed":true}')
+            (root/'public/prepared-transfer.json').write_text(json.dumps({'verified':True,'identity':{'allocation_id':allocation.ID,'commit':'fixture','run_id':'123'}}))
             self.assertEqual(allocation.reserve(root,'current')['attempt'],7)
             with self.assertRaises(FileExistsError):allocation.reserve(root,'current')
             with self.assertRaises(FileNotFoundError):allocation.reserve(root,'absent')
@@ -66,6 +67,13 @@ class AllocationTests(unittest.TestCase):
         workflow=yaml.safe_load((live.trial.ROOT/'.github/workflows/direct-harbor-trial.yml').read_text())
         job=workflow['jobs']['live'];self.assertEqual(job['environment'],'skill-benchmark')
         self.assertIn('github.run_attempt == 1',job['if']);self.assertFalse(workflow['concurrency']['cancel-in-progress'])
+        prep=workflow['jobs']['prepare']
+        self.assertNotIn('environment',prep)
+        self.assertNotIn('secrets.',json.dumps(prep))
+        self.assertIn('prepare',job['needs'])
+        self.assertIn('prepared.py restore',json.dumps(job))
+        self.assertNotIn('live.py prepare',json.dumps(job))
+        self.assertIn('retention-days: 1',(live.trial.ROOT/'.github/workflows/direct-harbor-trial.yml').read_text())
         steps=job['steps'];names=[s['name'] for s in steps if 'name' in s]
         self.assertLess(names.index('Checkpoint current attempt before absent arm'),names.index('Gate and reserve campaign attempt eight without credentials'))
         credentials=[s for s in steps if 'OPENAI_API_KEY' in s.get('env',{})]

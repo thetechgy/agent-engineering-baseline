@@ -17,6 +17,8 @@ def main(root,out):
     evidence={'allocation_id':ID,'commit':os.environ.get('GITHUB_SHA'),'run_id':os.environ.get('GITHUB_RUN_ID'),
         'profile':read(Path(__file__).with_name('runtime-profile.json')),'closure':closure,'arms':arms,
         'deployment_comparison':read(public/'comparison-manifest.json'),
+        'prepared_manifest':read(public/'prepared-manifest.json'),'prepared_transfer':read(public/'prepared-transfer.json'),
+        'preapproval_download':read(public/'prepared-download.json'),
         'second_arm_gate':read(public/'allocation/second-arm-gate.json'),
         'reservations':[read(p) for p in sorted((public/'allocation').glob('attempt-*.json'))],
         'budget_usd':5,'reserve_usd':2.5,'headroom_usd':0.5,'actual_billing_usd':None,
@@ -57,6 +59,9 @@ def main(root,out):
             'containers_removed':(r.get('agent_container_removed') is True and r.get('verifier_container_removed') is True) if r else None})
     usable=all(r['scheduled'] and (r.get('execution_assessment') or {}).get('interpretable') and (r.get('accounting_assessment') or {}).get('usable_for_scheduling') and r['evidence_complete'] and r['containers_removed'] and (r.get('submission_retention') or {}).get('status') in ('published_verified','missing') and
         r['outcome'] in ('graded_passed','graded_failed','missing_deliverable','rejected_output') for r in rows)
+    if data.get('preparation_failures'):
+        data.setdefault('preparation_history',[]).append(data.pop('preparation_failures'))
+    data['prepared_environment']={k:evidence[k] for k in ('prepared_manifest','prepared_transfer','preapproval_download')}
     data['live_allocation']={'id':ID,'rows':rows,'closure':closure,'operationally_usable':usable,'profile':evidence['profile']['id'],'limits':evidence['limits'],'usage_note':evidence['usage_note']}
     evidence['admission_preflight'] = read(public/'admission-preflight.json')
     data['live_allocation']['admission_preflight'] = evidence['admission_preflight']
