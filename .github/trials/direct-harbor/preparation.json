@@ -1,7 +1,6 @@
 {
-  "qualification": "matching-template-v2-20261106",
-  "attempt": 2,
-  "limit": 2,
+  "qualification": "matching-v2-reader-20261106",
+  "attempt": 1,
   "prepared_source": null,
   "dependency_seed": {
     "tag": "trial-snapshot-20261103-20261106",
@@ -10,7 +9,7 @@
     "archive_sha256": "03bc8a13fadf20d387fa08e8bac958069349300fab81c57174d3aa1812cdfa86",
     "manifest_sha256": "8dd8f9e713c8ae2315054e28cc5d8eb59170c3939148277a5455641dc4746e75"
   },
-  "authorization": "User authorized at most two matching preparation attempts and then one new current/absent pair, at most two credentialed attempts and USD 5 estimated scheduling allowance.",
+  "authorization": "Explicit user authorization supersedes the prior two-preparation limit with a 90-minute elapsed window, then at most two new Codex attempts and USD 5 estimate allowance if matching preparation succeeds.",
   "dependency_source": {
     "run_id": 42270181249,
     "commit": "0c364aec26c7af6cf0ef52b08e598f48ead9ee01",
@@ -19,7 +18,7 @@
     "artifact_digest": "sha256:c777ab3dd090ecc3140cb65ea61f5e370d641876556a35378291400e1d1abd96"
   },
   "correction": "Use a verified local image tag for Dockerfile FROM; raw sha256 config IDs are interpreted as registry names by BuildKit. The base ID is checked before and after building; all original layers must be retained.",
-  "status": "blocked_two_preparation_attempts_exhausted",
+  "status": "qualifying_content_reader",
   "temporary_seed_release_removed": true,
   "reuse_note": "Validate original bundle against its original producer; add only execution-profile documentation to agent images and reuse the exact qualified corrected verifier. New manifests bind current inputs.",
   "corrected_verifier_source": {
@@ -65,6 +64,77 @@
       "status": "historically_qualified_experiment_superseded_by_template_policy_v2",
       "temporary_seed_release_removed": true,
       "reuse_note": "Retained source remains valid only for its original experiment. Policy v2 changes verifier and future agent documentation; the original full bundle must fail current experiment validation. Retrospective replay validates it against the original producer checkout and builds a distinct verifier layer."
+    },
+    {
+      "qualification": "matching-template-v2-20261106",
+      "attempt": 2,
+      "limit": 2,
+      "prepared_source": null,
+      "dependency_seed": {
+        "tag": "trial-snapshot-20261103-20261106",
+        "asset": "snapshot-20261103.zip",
+        "source_commit": "471667c337846429c8508b4acd0c9a64ae1d72f7",
+        "archive_sha256": "03bc8a13fadf20d387fa08e8bac958069349300fab81c57174d3aa1812cdfa86",
+        "manifest_sha256": "8dd8f9e713c8ae2315054e28cc5d8eb59170c3939148277a5455641dc4746e75"
+      },
+      "authorization": "User authorized at most two matching preparation attempts and then one new current/absent pair, at most two credentialed attempts and USD 5 estimated scheduling allowance.",
+      "dependency_source": {
+        "run_id": 42270181249,
+        "commit": "0c364aec26c7af6cf0ef52b08e598f48ead9ee01",
+        "artifact_id": 13529246548,
+        "name": "snapshot-dependencies",
+        "artifact_digest": "sha256:c777ab3dd090ecc3140cb65ea61f5e370d641876556a35378291400e1d1abd96"
+      },
+      "correction": "Use a verified local image tag for Dockerfile FROM; raw sha256 config IDs are interpreted as registry names by BuildKit. The base ID is checked before and after building; all original layers must be retained.",
+      "status": "blocked_two_preparation_attempts_exhausted",
+      "temporary_seed_release_removed": true,
+      "reuse_note": "Validate original bundle against its original producer; add only execution-profile documentation to agent images and reuse the exact qualified corrected verifier. New manifests bind current inputs.",
+      "corrected_verifier_source": {
+        "run_id": 42279639435,
+        "commit": "b0637f4d7556d0f29d0b6ed449f8ba62535f37aa",
+        "artifact_id": 13534568250,
+        "name": "corrected-template-verifier",
+        "artifact_digest": "sha256:289c0fbc601039dd45181ffc3ab6bdc8e5aea7d0ab0acae6584c8c9a2bf3df7c",
+        "manifest_sha256": "a66aeac636344fb6518ee24828514f34a7ff6029f5f1c49c9ccc6ff2432dd32b",
+        "image_id": "sha256:401c02a8fbc4f59dbf33ca7aa5961bad310d43e7742172c268e5f8705129c46d",
+        "expires_at": "2026-11-13T19:31:51Z",
+        "scope": "Qualified corrected verifier only; not a complete matched agent/task bundle."
+      },
+      "base_source": {
+        "run_id": 42270181249,
+        "commit": "0c364aec26c7af6cf0ef52b08e598f48ead9ee01",
+        "artifact_id": 13529635174,
+        "name": "prepared-images",
+        "artifact_digest": "sha256:2d95a9bb6ca91795c35148d0ab874f4f029e45e27d3749c9af7dd08eb1ecd75a",
+        "manifest_sha256": "78f0f4f58085d3383f41df1f72ff616ba83b8e35c59ea077597d1d04346516e2"
+      },
+      "workflow_run_number": 39,
+      "mode": "matching",
+      "executions_used": 2,
+      "attempts": [
+        {
+          "attempt": 1,
+          "run_id": 42283214785,
+          "commit": "553e9f2f59a76737540f9eb58555e932eb052a1f",
+          "outcome": "preparation_failure_before_reservation",
+          "stage": "matching_documentation_layers_and_preflight",
+          "allocation_id": "sol-high-template-v2-20261106",
+          "allocation_closed": true,
+          "consumed": 0
+        },
+        {
+          "attempt": 2,
+          "run_id": 42283951417,
+          "commit": "a2c9df14db60a04859f00eda4a75ba075dc75a5d",
+          "outcome": "preparation_failure_before_reservation",
+          "stage": "matching_documentation_layers_and_preflight",
+          "allocation_id": "sol-high-template-v2-matched-20261106",
+          "allocation_closed": true,
+          "consumed": 0
+        }
+      ],
+      "latest_failure_run": 42283951417,
+      "ready_for_live_pair": false
     }
   ],
   "base_source": {
@@ -75,31 +145,16 @@
     "artifact_digest": "sha256:2d95a9bb6ca91795c35148d0ab874f4f029e45e27d3749c9af7dd08eb1ecd75a",
     "manifest_sha256": "78f0f4f58085d3383f41df1f72ff616ba83b8e35c59ea077597d1d04346516e2"
   },
-  "workflow_run_number": 39,
+  "workflow_run_number": 41,
   "mode": "matching",
-  "executions_used": 2,
-  "attempts": [
-    {
-      "attempt": 1,
-      "run_id": 42283214785,
-      "commit": "553e9f2f59a76737540f9eb58555e932eb052a1f",
-      "outcome": "preparation_failure_before_reservation",
-      "stage": "matching_documentation_layers_and_preflight",
-      "allocation_id": "sol-high-template-v2-20261106",
-      "allocation_closed": true,
-      "consumed": 0
-    },
-    {
-      "attempt": 2,
-      "run_id": 42283951417,
-      "commit": "a2c9df14db60a04859f00eda4a75ba075dc75a5d",
-      "outcome": "preparation_failure_before_reservation",
-      "stage": "matching_documentation_layers_and_preflight",
-      "allocation_id": "sol-high-template-v2-matched-20261106",
-      "allocation_closed": true,
-      "consumed": 0
-    }
-  ],
+  "executions_used": 0,
+  "attempts": [],
   "latest_failure_run": 42283951417,
-  "ready_for_live_pair": false
+  "ready_for_live_pair": false,
+  "preparation_window": {
+    "started_at": "2026-11-06T21:03:22Z",
+    "deadline": "2026-11-06T22:33:22Z",
+    "minutes": 90,
+    "scope": "Credential-free diagnosis, correction and matching preparation including CI waiting; cleanup and report preservation continue after deadline."
+  }
 }

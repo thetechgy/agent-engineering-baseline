@@ -26,7 +26,7 @@ jobs:
           import json, os, sys
           sys.path.insert(0, '.github/trials/direct-harbor')
           phase = json.load(open('.github/trials/direct-harbor/launch.json'))['phase']
-          assert phase in ('handoff', 'report', 'live-pair', 'admission', 'retention', 'preparation', 'retrospective')
+          assert phase in ('handoff', 'report', 'live-pair', 'admission', 'retention', 'preparation', 'retrospective', 'reader')
           launch = json.load(open('.github/trials/direct-harbor/launch.json'))
           if phase == 'live-pair':
               from allocation import active
@@ -35,12 +35,41 @@ jobs:
               assert launch['scheduling_stopped'] is True and launch['paid_execution_enabled'] is False
           if phase == 'preparation':
               preparation = json.load(open('.github/trials/direct-harbor/preparation.json'))
-              assert preparation['limit'] == 2 and preparation['attempt'] in (1, 2)
+              from prepared import preparation_window
+              preparation_window()
               assert preparation['prepared_source'] is None
           assert launch['paid_attempts_used'] in (4, 5, 6, 7, 8, 9)
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
               print('phase=' + phase, file=output)
           PYCODE
+  reader:
+    name: Credential-free real Docker content reader
+    needs: phase
+    if: needs.phase.outputs.phase == 'reader' && github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify the preparation window
+        run: python3 -c "import sys; sys.path.insert(0,'.github/trials/direct-harbor'); from prepared import preparation_window; preparation_window()"
+      - name: Focused bounded-reader checks
+        run: python3 -m unittest discover -s .github/trials/direct-harbor -p test_image_contents.py -v
+      - name: Real Docker read-only content and failure controls
+        run: python3 -u .github/trials/direct-harbor/qualify_reader.py "$RUNNER_TEMP/content-reader"
+      - name: Preserve reader outcomes and unconditional Docker diagnostics
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: reader-evidence
+          path: ${{ runner.temp }}/content-reader/public/
+          retention-days: 30
+          if-no-files-found: error
+      - if: always()
+        run: git diff --exit-code
   handoff:
     needs: phase
     if: needs.phase.outputs.phase == 'handoff'

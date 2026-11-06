@@ -324,6 +324,8 @@ def context_delta(context,variant,folder,original):
 
 def refresh_image(task,variant,folder,tag,retained,root):
     """Only the documented input delta can reuse these historical package layers."""
+    from image_contents import DockerOperations
+    ops=DockerOperations(root/'public'/variant/(folder+'-docker.json'))
     changed=context_delta(task/folder,variant,folder,retained['original'])
     if folder=='tests':
         assert image_id(tag)==retained['corrected']['corrected_image_id']
@@ -331,57 +333,59 @@ def refresh_image(task,variant,folder,tag,retained,root):
         base=retained['original']['images'][tag]
         assert image_id(tag)==base
         base_tag='direct-harbor-agent:retained-base-'+variant
-        subprocess.run(['docker','image','tag',base,base_tag],check=True)
+        ops.run('base_tag',['docker','image','tag',base,base_tag])
         assert image_id(base_tag)==base
         context=root/('documentation-layer-'+variant);context.mkdir()
         shutil.copyfile(task/'environment/input/EXECUTION-PROFILE.md',context/'EXECUTION-PROFILE.md')
         (context/'Dockerfile').write_text('FROM '+base_tag+'\nCOPY --chmod=0444 EXECUTION-PROFILE.md /workspace/input/EXECUTION-PROFILE.md\n')
-        before=json.loads(subprocess.check_output(['docker','image','inspect',base]))[0]
-        subprocess.run(['docker','build','--network=none','--pull=false','--progress=plain','-t',tag,str(context)],check=True,timeout=180)
-        after=json.loads(subprocess.check_output(['docker','image','inspect',tag]))[0]
+        before=json.loads(ops.run('base_inspect',['docker','image','inspect',base]))[0]
+        ops.run('documentation_layer_build',['docker','build','--network=none','--pull=false','--progress=plain','-t',tag,str(context)],timeout=180)
+        after=json.loads(ops.run('refreshed_image_inspect',['docker','image','inspect',tag]))[0]
         assert image_id(base_tag)==base
         assert after['Config']==before['Config'], 'Runtime image configuration changed'
         assert after['RootFS']['Layers'][:-1]==before['RootFS']['Layers'], 'Original image layers changed'
     write(root/'public'/variant/(folder+'-refresh.json'),{'changed_context_files':changed,'image':tag,'image_id':image_id(tag),'package_installs':0,'snapshot_downloads':0,'verifier_reused':folder=='tests'})
 
 def verify_contents(root,destination):
-    """Read actual restored image files without executing artifacts or mounting the host."""
-    import uuid
-    record={'passed':False,'images':{},'container_disposal_verified':False}
-    scratch=root/('image-content-'+uuid.uuid4().hex);scratch.mkdir()
+    """Inspect bounded tar streams; never restore container directory permissions."""
+    from image_contents import inspect_image
+    record={'passed':False,'images':{},'container_disposal_verified':False,'filesystem_extraction':False}
     try:
         for variant,folder,tag,container_path in [('current','environment',TAGS[0],'/workspace/input'),('absent','environment',TAGS[1],'/workspace/input'),('current','tests',TAGS[2],'/tests')]:
             task=Path(json.loads((root/(variant+'-task.json')).read_text())['path'])
-            name='matching-content-'+uuid.uuid4().hex;copy=scratch/(variant+'-'+folder)
-            try:
-                subprocess.run(['docker','create','--name',name,'--network','none','--cap-drop','ALL','--security-opt','no-new-privileges:true',tag],check=True,capture_output=True,timeout=30)
-                subprocess.run(['docker','cp',name+':'+container_path,str(copy)],check=True,capture_output=True,timeout=30)
-                expected=files(task/folder/('input' if folder=='environment' else ''))
-                if folder=='tests':expected={k:v for k,v in expected.items() if k not in ('Dockerfile','docker-compose.yaml') and not k.startswith('build/')}
-                observed=files(copy)
-                assert all(observed.get(k)==v for k,v in expected.items()), 'Restored image content mismatch: '+tag
-                if folder=='environment':
-                    assert observed==expected
-                    assert (copy/'EXECUTION-PROFILE.md').stat().st_mode&0o222==0
-                record['images'][tag]={'id':image_id(tag),'verified_files':expected}
-            finally:
-                subprocess.run(['docker','rm','--force',name],check=True,capture_output=True,timeout=30)
-        first=record['images'][TAGS[0]]['verified_files'];second=record['images'][TAGS[1]]['verified_files']
-        assert first==second, 'Agent task/documentation inputs differ'
+            expected=files(task/folder/('input' if folder=='environment' else ''))
+            if folder=='tests':expected={k:v for k,v in expected.items() if k not in ('Dockerfile','docker-compose.yaml') and not k.startswith('build/')}
+            proof=inspect_image(tag,container_path,expected,destination.with_name(destination.stem+'-'+variant+'-'+folder+'.json'),exact=folder=='environment',readonly=folder=='environment')
+            record['images'][tag]={'id':image_id(tag),**proof['content'],'container_removed':proof['container_removed']}
+        assert record['images'][TAGS[0]]['verified_files']==record['images'][TAGS[1]]['verified_files'], 'Agent task/documentation inputs differ'
         record.update(passed=True,identical_agent_inputs=True,container_disposal_verified=True)
-    finally:
-        shutil.rmtree(scratch)
-        write(destination,record)
+    except Exception as exc:
+        from diagnostics import sanitize
+        record['failure']={'type':type(exc).__name__,'message':sanitize(str(exc))}
+        raise
+    finally:write(destination,record)
     return record
+
+def preparation_window():
+    config=json.loads((HERE/'preparation.json').read_text())
+    window=config['preparation_window']
+    start=datetime.fromisoformat(window['started_at'].replace('Z','+00:00'))
+    end=datetime.fromisoformat(window['deadline'].replace('Z','+00:00'))
+    assert end-start==timedelta(minutes=90)
+    assert start<=datetime.now(timezone.utc)<end, 'Credential-free preparation window expired'
+    return window
 
 def matching(root,sources):
     """Bounded v1-to-v2 input refresh; reuse the qualified verifier unchanged."""
     no_credentials();identity()
     config=json.loads((HERE/'preparation.json').read_text())
-    assert config['mode']=='matching' and config['attempt'] in (1,2) and config['limit']==2
+    assert config['mode']=='matching'
+    window=preparation_window()
+    qualification=json.loads((HERE/'results/reader-qualification.json').read_text())
+    assert qualification['passed'] and qualification['reader_sha256']==digest(HERE/'image_contents.py'), 'Qualify this reader before complete preparation'
     assert str(config['workflow_run_number'])==os.environ['GITHUB_RUN_NUMBER']
     sources.mkdir(parents=True,exist_ok=False)
-    record={'passed':False,'attempt':config['attempt'],'limit':2,'identity':identity(),'inference':False,'stage':'original_bundle'}
+    record={'passed':False,'attempt':config['attempt'],'preparation_window':window,'identity':identity(),'inference':False,'stage':'original_bundle'}
     try:
         import retrospective,live
         original,record['original']=retrospective.load_original({'prepared_source':config['base_source']},sources)
