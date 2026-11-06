@@ -1,5 +1,5 @@
 {
-  "phase": "report",
+  "phase": "retrospective",
   "campaign": "direct-harbor-20261104",
   "paid_attempts_used": 7,
   "paid_attempt_limit": 36,
@@ -11,7 +11,7 @@
   "recovery_control_attempt": 3,
   "native_fixture_retry": 1,
   "transport_preflight_corrections": 1,
-  "state": "qualified_image_smoke_closed_unsupported",
+  "state": "credential_free_template_policy_v2_qualification",
   "final_native_run": 41958553130,
   "native_grading_smoke_qualified": true,
   "native_sandbox_qualified": false,

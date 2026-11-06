@@ -18,7 +18,7 @@ Path('/logs/verifier').mkdir(parents=True,exist_ok=True)
 if kind=='unsupported':
  Path('/workspace/output/Subject.Tests.ps1').write_text("Write-Output 'DIAGNOSTIC_CONTENT_MUST_NOT_LEAK'")
 else:
- shutil.copyfile('/tests/admission-fixtures/'+('weak' if kind=='weak' else 'classic')+'.Tests.ps1','/workspace/output/Subject.Tests.ps1')
+ shutil.copyfile('/tests/admission-fixtures/'+('weak' if kind=='weak' else 'templates' if kind=='templates' else 'classic')+'.Tests.ps1','/workspace/output/Subject.Tests.ps1')
 if kind=='runner_error':
  p=Path('/tests/Runner.ps1');s=p.read_text();marker='        $__peNodes = @('
  assert s.count(marker)==1
@@ -37,10 +37,11 @@ os.execv('/bin/bash',['bash','/tests/test.sh'])
         sidecar=json.loads((output/'skill_evaluator_reward.json').read_text());observed=sidecar['details']['outcome']
         record.update(outcome=observed,evaluation_status=sidecar['evaluation_status'])
         assert completed.returncode==0
-        if kind in ('good','weak'):
-            assert observed['classification']==('passed' if kind=='good' else 'failed')
+        if kind in ('good','weak','templates'):
+            assert observed['classification']==('failed' if kind=='weak' else 'passed')
             assert observed['reference_pass']==1 and observed['mutants_executed']==2
-            assert observed['mutants_detected']==(2 if kind=='good' else 0)
+            assert observed['mutants_detected']==(0 if kind=='weak' else 2)
+            if kind=='templates':assert observed['tests_executed']==6
         elif kind=='unsupported':
             assert observed['classification']=='unsupported' and observed['admission_rule']=='command_not_allowed'
             assert observed['admission_diagnostic']=={'ast_kind':'CommandAst','line':1,'column':1}

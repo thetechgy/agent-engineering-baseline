@@ -1,4 +1,4 @@
-# Bounded execution profile, version 1
+# Bounded execution profile, version 2
 
 This is a limited evaluation profile, not a sandbox for arbitrary PowerShell.
 The verifier separately enforces container, user, filesystem, network, and
@@ -23,7 +23,25 @@ as new functions, arbitrary imports, methods/reflection, dynamic invocation,
 environment/provider access, framework configuration, filesystem writes, and
 other process/network commands are unsupported. Assertions cannot use common
 parameters to suppress their failures. Pester name templates accept only the
-documented data fields; arbitrary embedded expressions are unsupported.
+case-specific data fields below, case-insensitively; arbitrary embedded expressions
+are unsupported. These names may come from literal `-ForEach` / `-TestCases`
+hashtables or supported discovery data. Template permission does not grant
+object member access. Member access remains restricted to the original subject
+properties and collection/fixture fields.
+
+| Case | Permitted template names (also `<_>` for the current data item) |
+| --- | --- |
+| pester-001 / Get-ActivePort | Port, Enabled, Count, Length, Name, Expected, Items, Endpoint |
+| pester-002 / Get-RetryDelay | Count, Length, Name, Attempt, Base, Expected, BaseMilliseconds |
+| pester-003 / Get-EndpointStatus | Count, Length, Name, Target, Healthy |
+| pester-004 / Test-PortAllowed | Count, Length, Name, Port, Expected |
+
+`Base` remains a supported data-key alias; `BaseMilliseconds` matches the public
+parameter name. `Endpoint` likewise matches the public pester-001 parameter.
+Other field names, scoped/reserved/internal identifiers, property expressions,
+method calls, and arithmetic inside `<...>` are unsupported. The pester-005
+report-summary case accepts JSON only; Pester templates do not apply.
+
 Names must be literal strings in the first argument or first `-Name` argument;
 computed/interpolated names and splatting are unsupported because Pester later
 evaluates name templates. This restriction does not prescribe assertion style.

@@ -541,3 +541,39 @@ See `results/report.html`, `results/smoke-review.json`, and
 `results/offline-submission-diagnosis.json`. The next proposed work is a separately
 reviewed, credential-free template-coverage correction; no skill revision or
 additional paid execution follows from this result.
+
+## Credential-free template policy v2 qualification
+
+This is an admission-policy coverage change, not just a diagnostic fix. Explicit
+`template_fields` now govern literal Pester name placeholders separately from
+member-access `properties`. The four PowerShell cases retain every existing
+field; pester-001 adds the public `Endpoint` name and pester-002 adds the public
+`BaseMilliseconds` name. Cases three and four have no terminology mismatch.
+Member access, arbitrary-expression rejection, correctness fixtures, scoring,
+worker isolation, and the target skill remain unchanged. The execution profile
+is version 2 and enumerates the bounded names. This changes future agent input;
+attempt seven received the original documentation.
+
+`retrospective.py` authenticates and hash-checks the original image artifact
+against a checkout of its producer commit, then loads it without rebuilding.
+It authenticates the attempt-seven submission artifact, preserves the exact
+bytes, and reproduces the original rejection in the old verifier. A distinct
+verifier image copies only corrected policy and independent test fixtures over
+the original image. No APT, package, snapshot index or model request is needed.
+The original full bundle is incompatible with the corrected experiment and
+cannot be silently reused for a future pair. Future matched preparation must
+include the revised agent-visible documentation and corrected verifier.
+
+Qualification uses the existing isolated grader entry point for known-good,
+weak, unsupported, injected-error and literal-template controls, then replays
+the unchanged submission. Host probes parse only; candidate execution remains
+inside the network-disabled verifier with its unprivileged protected worker.
+At most two complete qualification runs are permitted by this authorization;
+`retrospective.json` binds each to one workflow run number and reruns cannot
+launch this job. Paid scheduling stays disabled with campaign 7/36, recovery
+4/4, and the prior allocation closed. No model credential or judge is used.
+
+Behavioral basis: official Pester data-driven test documentation and pinned
+Pester 6.2.0 `src/functions/It.ps1` (Name is positional/named; TestCases aliases
+ForEach; hashtable keys are test variables and template names). Native controls
+exercise these contracts rather than inferring correctness from parser success.

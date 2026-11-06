@@ -26,6 +26,7 @@
     "artifact_digest": "sha256:c777ab3dd090ecc3140cb65ea61f5e370d641876556a35378291400e1d1abd96"
   },
   "correction": "Include stock Harbor digest-pinned Alpine kernel probe in the image archive. Restore its registry digest reference when classic Docker save/load omits RepoDigests; require unchanged retained image IDs and inventory during runtime controls.",
-  "status": "qualified_no_further_builds_authorized",
-  "temporary_seed_release_removed": true
+  "status": "historically_qualified_experiment_superseded_by_template_policy_v2",
+  "temporary_seed_release_removed": true,
+  "reuse_note": "Retained source remains valid only for its original experiment. Policy v2 changes verifier and future agent documentation; the original full bundle must fail current experiment validation. Retrospective replay validates it against the original producer checkout and builds a distinct verifier layer."
 }

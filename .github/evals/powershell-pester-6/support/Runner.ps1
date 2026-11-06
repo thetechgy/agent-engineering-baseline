@@ -9,6 +9,7 @@ param(
 )
 
 # PESTER_VERIFIER_ONLY_RUNNER_3CB8
+# Admission policy v2: template fields are distinct from member-access properties.
 # This fixed runner is verifier-owned. Candidate statements are never evaluated
 # by admission. A separate unprivileged process executes the admitted file.
 # Fixed identifiers are always emitted; source text and values are never emitted.
@@ -98,6 +99,12 @@ try {
             'MyInvocation', 'PSCmdlet', 'PSCommandPath', 'PROFILE', 'PID', 'LASTEXITCODE',
             'TestDrive', 'TestRegistry', 'PSDebugContext', 'MaximumHistoryCount'
         )
+        $__peTemplateFields = @($__pePolicy.template_fields)
+        if ($__pePolicy.admission_policy_version -ne 2 -or $__peTemplateFields.Count -eq 0) { throw 'template_profile' }
+        foreach ($__peField in $__peTemplateFields) {
+            if ($__peField -isnot [string] -or $__peField -notmatch '^[A-Za-z][A-Za-z0-9_]*$' -or
+                $__peReserved -contains $__peField -or $__peField -eq 'PSScriptRoot' -or $__peField -match '^__') { throw 'template_profile' }
+        }
         $__peBlocks = @('Describe', 'Context', 'It', 'BeforeDiscovery', 'BeforeAll', 'BeforeEach', 'AfterAll', 'AfterEach')
         $__peAssertions = @(
             'Should', 'Should-Be', 'Should-NotBe', 'Should-BeString', 'Should-BeCollection',
@@ -203,7 +210,7 @@ try {
                     foreach ($__peElement in @($__peNameNode)) {
                         if ($__peElement.GetType().Name -in @('StringConstantExpressionAst', 'ExpandableStringExpressionAst')) {
                             $__peText = $__peElement.Value
-                            foreach ($__peField in @($__pePolicy.properties) + @('_')) {
+                            foreach ($__peField in $__peTemplateFields + @('_')) {
                                 $__peText = [regex]::Replace($__peText, '<' + [regex]::Escape($__peField) + '>', '', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
                             }
                             if ($__peText.Contains('<') -or $__peText.Contains('>')) { __peReject 'block_name_template' $__peNode }

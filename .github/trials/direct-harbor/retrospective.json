@@ -1,0 +1,33 @@
+{
+  "qualification": "template-policy-v2-attempt-seven",
+  "attempt": 1,
+  "limit": 2,
+  "workflow_run_number": 36,
+  "original_attempt_commit": "a753e39083d9d93fdb13906382b9b35e9902cdd4",
+  "paid_execution_enabled": false,
+  "prepared_source": {
+    "run_id": 42270181249,
+    "commit": "0c364aec26c7af6cf0ef52b08e598f48ead9ee01",
+    "artifact_id": 13529635174,
+    "name": "prepared-images",
+    "artifact_digest": "sha256:2d95a9bb6ca91795c35148d0ab874f4f029e45e27d3749c9af7dd08eb1ecd75a",
+    "manifest_sha256": "78f0f4f58085d3383f41df1f72ff616ba83b8e35c59ea077597d1d04346516e2"
+  },
+  "submission": {
+    "run_id": 42274188228,
+    "commit": "a753e39083d9d93fdb13906382b9b35e9902cdd4",
+    "artifact_id": 13532657965,
+    "name": "submission-sol-high-reused-20261106-current",
+    "artifact_digest": "sha256:c2b46953b5b4851db0671d89918bf2a8bfe193aa78890feb10937d303fa986b7",
+    "file_sha256": "407196e63354eb841f3d38c2d5d3daaba9aaec16aa721f75686f74e181d0bb1a",
+    "file_size": 3446,
+    "identity": {
+      "allocation_id": "sol-high-reused-20261106",
+      "reservation_id": "sol-high-reused-20261106/current/7",
+      "attempt": 7,
+      "variant": "current",
+      "commit": "a753e39083d9d93fdb13906382b9b35e9902cdd4",
+      "run_id": "42274188228"
+    }
+  }
+}

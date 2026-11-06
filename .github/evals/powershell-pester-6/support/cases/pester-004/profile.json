@@ -14,5 +14,13 @@
   "module": null,
   "minimum_tests": 1,
   "protected_marker": "PESTER_VERIFIER_ONLY_PESTER_004",
-  "subject": "Subject.ps1"
+  "subject": "Subject.ps1",
+  "admission_policy_version": 2,
+  "template_fields": [
+    "Count",
+    "Length",
+    "Name",
+    "Port",
+    "Expected"
+  ]
 }
