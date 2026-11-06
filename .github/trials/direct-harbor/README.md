@@ -261,3 +261,14 @@ estimate plus a $2.50 reserve and $0.50 headroom to fit $5, adequate accounting 
 handoff evidence, and verified disposal. Removing the token ceiling may increase
 usage; runtime and attempt limits do not guarantee a dollar cap. No billing proxy,
 new Harbor private override, upstream patch or generalized scheduler was added.
+
+Run [42157462581](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42157462581)
+executed `47635e3`. Attempt six completed in 42.508 agent seconds, produced a 3,372-byte
+file with matching producer/host/verifier hashes, and yielded matching CLI/session usage.
+The unchanged verifier returned `unsupported/admission`; reference and mutants did not
+run. Its specific AST/policy reason was not retained, so no agent correctness failure
+or skill weakness is inferred. The conservative observed-use estimate is $1.49446;
+provider charges remain unknown. The absent arm was prepared but not reserved/launched.
+This allocation is closed at 1/2; campaign consumption is 6/36 and recovery remains 4/4.
+Paid scheduling is disabled. The next justified work is credential-free admission-rule
+diagnostics without relaxing acceptance criteria, before considering more inference.

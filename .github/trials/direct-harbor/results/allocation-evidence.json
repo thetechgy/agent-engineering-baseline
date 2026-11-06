@@ -1,9 +1,9 @@
 {
-  "allocation_id": "sol-high-smoke-20261105",
-  "commit": "368c3866f817b6b38fcc04953e15b300d81cd5f0",
-  "run_id": "42122482332",
+  "allocation_id": "sol-high-no-rollout-budget-20261105",
+  "commit": "47635e39fd6f29161522d14b34617827255b8637",
+  "run_id": "42157462581",
   "profile": {
-    "id": "codex-0.166.0_gpt-6.1-sol_high",
+    "id": "codex-0.166.0_gpt-6.1-sol_high_rollout-budget-disabled",
     "codex_version": "0.166.0",
     "model": "gpt-6.1-sol",
     "reasoning_effort": "high",
@@ -52,106 +52,109 @@
       "codex-rs__config__src__config_toml.rs": "e8f6b45b73eaca1a89be9524bb02bf069e9715e3aeba270e87285d941405c877",
       "codex-rs__model-provider-info__src__lib.rs": "ea822c232e47fc88251cf20060da91ca0c1195b2d2853c5b3fa4bfcdd4cc0184"
     },
-    "budget_semantics": "0.166.0 accepts enforce_limit=true. Source charges provider budget units when available, otherwise weighted non-cached input plus output. Token budget is not a dollar meter; enforcement under inference remains untested."
+    "budget_semantics": "Supplemental rollout_budget is false: no enforcement, limit, weights or reminders. No replacement token ceiling. 600-second agent timeout and two-attempt operational allocation remain; no provider-enforced dollar cap."
   },
   "closure": {
-    "allocation_id": "sol-high-smoke-20261105",
+    "allocation_id": "sol-high-no-rollout-budget-20261105",
     "state": "closed",
     "paid_execution_enabled": false,
     "reserved_slots_consumed": [
-      5
+      6
     ],
-    "campaign_attempts_consumed": 5,
+    "campaign_attempts_consumed": 6,
     "previous_recovery_consumed": 4,
     "previous_recovery_limit": 4,
     "incremental_api_bill_usd": null,
     "historical_cumulative_api_bill_usd": null,
     "note": "Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.",
-    "incremental_conservative_estimate_usd": null
+    "reservation_ids": [
+      "sol-high-no-rollout-budget-20261105/current/6"
+    ],
+    "incremental_conservative_estimate_usd": 1.49446,
+    "operational_budget_usd": 5,
+    "estimated_budget_exceeded": false
   },
   "arms": {
     "current": {
       "attempt": {
-        "allocation_id": "sol-high-smoke-20261105",
-        "attempt": 5,
+        "allocation_id": "sol-high-no-rollout-budget-20261105",
+        "reservation_id": "sol-high-no-rollout-budget-20261105/current/6",
+        "attempt": 6,
         "variant": "current",
         "reserved": true,
         "rollout_present": true,
         "result_extraction_succeeded": true,
-        "execution_completed": false,
-        "usage_estimate_usd": 0.641555,
+        "execution_completed": true,
+        "usage_estimate_usd": 1.49446,
         "projection": [
           {
             "task": "pester-002",
             "outcome": {
-              "classification": "invalid",
-              "code": "artifact",
-              "admission_reason": "missing"
+              "classification": "unsupported",
+              "code": "admission"
             },
-            "failure_cause": "unclassified",
-            "exceptions": [
-              {
-                "exception_type": "NonZeroAgentExitCodeError",
-                "exception_message": "Command failed (exit 1): if [ -s ~/.nvm/nvm.sh ]; then . ~/.nvm/nvm.sh; fi; CODEX_API_KEY= codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --model gpt-6.1-sol --json --enable unified_exec -c model_reasoning_effort=high -c web_search=disabled -- <TASK_PROMPT> 2>&1 </dev/null | tee /logs/agent/codex.txt\nstdout: Reading additional input from stdin...\n{\"type\":\"error\",\"message\":\"shared rollout token budget exhausted\"}\n{\"type\":\"turn.failed\",\"error\":{\"message\":\"shared rollout token budget exhausted\"}}\nstderr: None",
-                "occurred_at": "2026-11-05T22:37:35.913593Z"
-              }
-            ],
-            "harbor_reward_valid": false,
+            "failure_cause": null,
+            "exceptions": [],
+            "harbor_reward_valid": true,
             "measured": false,
             "native_agent_exit_code": null,
             "native_rewards": {
               "overall": 0.0
             },
             "tokens": {
-              "input_including_cache": 63206,
-              "cached_input": 36025,
-              "output": 633
+              "input_including_cache": 145477,
+              "cached_input": 115362,
+              "output": 2646
             },
             "cost_usd": null,
             "timing": {
               "agent_execution": {
-                "started_at": "2026-11-05T22:37:25.562779Z",
-                "finished_at": "2026-11-05T22:37:35.911816Z"
+                "started_at": "2026-11-06T03:39:24.846023Z",
+                "finished_at": "2026-11-06T03:40:07.353773Z"
               },
               "verifier": {
-                "started_at": "2026-11-05T22:37:46.616592Z",
-                "finished_at": "2026-11-05T22:38:00.188350Z"
+                "started_at": "2026-11-06T03:40:18.034733Z",
+                "finished_at": "2026-11-06T03:40:32.281049Z"
               }
             },
-            "native_result": "jobs/current/pester-002__iaUDNGu/result.json"
+            "native_result": "jobs/current/pester-002__SjtVufW/result.json"
           }
         ],
-        "commit": "368c3866f817b6b38fcc04953e15b300d81cd5f0",
+        "commit": "47635e39fd6f29161522d14b34617827255b8637",
         "harbor_returncode": 0,
         "usage_and_activation": {
+          "session_evidence": {
+            "rollout_files": 1,
+            "malformed_lines": 0,
+            "usage_before_terminal": true
+          },
           "total_usage": {
-            "input_tokens": 63206,
-            "cached_input_tokens": 36025,
-            "output_tokens": 633,
-            "reasoning_output_tokens": 49,
-            "cache_write_input_tokens": 27114,
-            "total_tokens": 63839
+            "input_tokens": 145477,
+            "cached_input_tokens": 115362,
+            "output_tokens": 2646,
+            "reasoning_output_tokens": 936,
+            "cache_write_input_tokens": 30097,
+            "total_tokens": 148123
           },
           "skill_file_access_attempts": [
-            "powershell-pester-6/SKILL.md",
-            "powershell-pester-6/references/compatibility-and-migration.md"
+            "powershell-pester-6/SKILL.md"
           ],
-          "tool_calls": 3,
+          "tool_calls": 5,
           "completion_event": true,
           "event_type_counts": {
-            "other": 29,
-            "custom_tool_call": 3,
-            "custom_tool_call_output": 3,
-            "token_count": 3,
+            "other": 42,
+            "custom_tool_call": 5,
+            "custom_tool_call_output": 5,
+            "token_count": 6,
             "task_complete": 1
           },
           "tool_name_counts": {
-            "other": 3
+            "other": 5
           },
           "exec_outcomes": [],
           "completion_shape": {
-            "message_present": false,
-            "message_characters": null,
+            "message_present": true,
+            "message_characters": 238,
             "content_retained": false
           },
           "tool_error_flags": {
@@ -161,7 +164,38 @@
           },
           "evidence_limit": "File-access attempts do not prove successful reads, instruction following or correctness."
         },
-        "usage_complete": false,
+        "native_terminal": [
+          {
+            "type": "thread.started"
+          },
+          {
+            "type": "turn.started"
+          },
+          {
+            "type": "turn.completed",
+            "usage": {
+              "input_tokens": 145477,
+              "cached_input_tokens": 115362,
+              "cache_write_input_tokens": 30097,
+              "output_tokens": 2646,
+              "reasoning_output_tokens": 936
+            }
+          }
+        ],
+        "execution_assessment": {
+          "outcome": "completed",
+          "interpretable": true,
+          "native_fields_unchanged": true
+        },
+        "accounting_assessment": {
+          "coverage": "terminal_session_observations",
+          "usable_for_scheduling": true,
+          "reasons": [],
+          "observed_usage_estimate_usd": 1.49446,
+          "billing_certainty": "unknown",
+          "provider_bill_usd": null,
+          "basis": "Native terminal plus one parseable session with usage before its terminal; successful turns also require matching CLI terminal counters. Exact budget failure is a local post-usage termination, not arbitrary tool/model text. This bounds recorded session accounting, not provider billing."
+        },
         "native_pricing_estimate_usd": null,
         "api_bill_usd": null,
         "handoff": {
@@ -178,75 +212,72 @@
               "source": "/workspace/output/Subject.Tests.ps1",
               "destination": "artifacts/workspace/output/Subject.Tests.ps1",
               "type": "file",
-              "status": "failed",
+              "status": "ok",
               "service": null,
               "exclude": []
             }
           ],
           "agent_observation": {
             "artifact": {
-              "exists": false,
-              "type": null,
-              "size": null,
-              "uid": null,
-              "gid": null,
-              "mode": null,
-              "sha256": null,
-              "observation": "missing"
+              "exists": true,
+              "type": "file",
+              "size": 3372,
+              "uid": 1000,
+              "gid": 1000,
+              "mode": "0o644",
+              "sha256": "f7ac66471845696e149977a9d3a33b6302864d53b370fadc7f60e6a914829ccf",
+              "links": 1
             },
             "observer_uid": 1000,
             "observer_gid": 1000,
             "cwd": "/workspace"
           },
           "host_artifact": {
-            "exists": false,
-            "type": null,
-            "size": null,
-            "uid": null,
-            "gid": null,
-            "mode": null,
-            "sha256": null,
-            "observation": "missing"
+            "exists": true,
+            "type": "file",
+            "size": 3372,
+            "uid": 1001,
+            "gid": 1001,
+            "mode": "0o644",
+            "sha256": "f7ac66471845696e149977a9d3a33b6302864d53b370fadc7f60e6a914829ccf",
+            "links": 1
           },
           "verifier_observation": {
             "artifact": {
-              "exists": false,
-              "type": null,
-              "size": null,
-              "uid": null,
-              "gid": null,
-              "mode": null,
-              "sha256": null,
-              "observation": "missing"
+              "exists": true,
+              "type": "file",
+              "size": 3372,
+              "uid": 1001,
+              "gid": 1001,
+              "mode": "0o644",
+              "sha256": "f7ac66471845696e149977a9d3a33b6302864d53b370fadc7f60e6a914829ccf",
+              "links": 1
             },
             "observer_uid": 0,
             "observer_gid": 0,
             "cwd": "/workspace"
           },
           "classification": {
-            "classification": "missing_evidence",
+            "classification": "unsupported_submission",
             "task_completion_measured": false,
             "task_completed": null,
             "correctness_measured": false
           },
-          "upload_status": "no_source"
+          "upload_status": "hash_matched"
         },
         "agent_container_removed": true,
         "verifier_container_removed": true,
         "second_arm_gate": {
           "allowed": false,
           "reasons": [
-            "execution_incomplete",
-            "incomplete_new_usage",
-            "native_execution_failure",
             "unreliable_or_unsupported_outcome"
           ],
-          "conservative_spend_usd": 0.641555,
+          "conservative_spend_usd": 1.49446,
           "second_attempt_reserve_usd": 2.5,
           "headroom_usd": 0.5,
           "budget_usd": 5
         },
-        "duration_seconds": 43.794
+        "duration_seconds": 76.428
       },
       "manifest": {
         "variant": "current",
@@ -455,16 +486,7 @@
             }
           },
           "features": {
-            "rollout_budget": {
-              "enabled": true,
-              "limit_tokens": 30000,
-              "enforce_limit": true,
-              "reminder_at_remaining_tokens": [
-                5000
-              ],
-              "sampling_token_weight": 5.0,
-              "prefill_token_weight": 1.0
-            }
+            "rollout_budget": false
           }
         }
       },
@@ -539,7 +561,7 @@
         "seccomp_filter": true,
         "workspace_writable": true,
         "fresh_session": true,
-        "image": "sha256:0063327df02d6a2d9b5822d9207505b2b0fd2f3c8d331faa56f2f8dfd55b918b",
+        "image": "sha256:ba080454b7857bfac7f0369b54a5b3ec558efbafcac33e7fc7a0bdb78a93adb9",
         "mount_destinations": [],
         "resources": {
           "cpus": 2,
@@ -577,7 +599,7 @@
         "PidsLimit": 256,
         "Memory": 2147483648,
         "NanoCpus": 2000000000,
-        "NetworkMode": "container:89dc78d3065332f78ed5421ff84e04dd109b00f692eb9662c5fb24b153806cea",
+        "NetworkMode": "container:f8e7b190a48917ebb7e295057be607071894017009159b6388c4f4913e83cc0e",
         "PidMode": "",
         "SecurityOpt": [
           "no-new-privileges:true"
@@ -626,16 +648,7 @@
           }
         },
         "features": {
-          "rollout_budget": {
-            "enabled": true,
-            "limit_tokens": 30000,
-            "enforce_limit": true,
-            "reminder_at_remaining_tokens": [
-              5000
-            ],
-            "sampling_token_weight": 5.0,
-            "prefill_token_weight": 1.0
-          }
+          "rollout_budget": false
         }
       },
       "configuration-load": {
@@ -643,7 +656,23 @@
         "allowed_login_methods": [
           "api"
         ],
-        "exit_status": 0
+        "exit_status": 0,
+        "budget_feature": {
+          "command": "CODEX_HOME=/installed-agent/codex-home codex features list",
+          "user": "agent",
+          "exit_status": 0,
+          "rollout_budget_enabled": false,
+          "inference": false,
+          "reminders_enabled": false
+        }
+      },
+      "budget-preflight": {
+        "command": "CODEX_HOME=/installed-agent/codex-home codex features list",
+        "user": "agent",
+        "exit_status": 0,
+        "rollout_budget_enabled": false,
+        "inference": false,
+        "reminders_enabled": false
       },
       "launch-diagnostics": {
         "commands": [
@@ -702,8 +731,8 @@
             "command": "if [ -s ~/.nvm/nvm.sh ]; then . ~/.nvm/nvm.sh; fi; CODEX_API_KEY= codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --model gpt-6.1-sol --json --enable unified_exec -c model_reasoning_effort=high -c web_search=disabled -- <TASK_PROMPT> 2>&1 </dev/null | tee /logs/agent/codex.txt",
             "user": "agent (task default)",
             "cwd": "/workspace (task workdir)",
-            "exit_status": 1,
-            "stdout": "Reading additional input from stdin...\n{\"type\":\"thread.started\",\"thread_id\":\"01a1addc-1c9b-79e1-97ba-2207b71e2012\"}\n<NON_HARNESS_OUTPUT_OMITTED>\n{\"type\":\"error\",\"message\":\"shared rollout token budget exhausted\"}\n{\"type\":\"turn.failed\",\"error\":{\"message\":\"shared rollout token budget exhausted\"}}",
+            "exit_status": 0,
+            "stdout": "Reading additional input from stdin...\n{\"type\":\"thread.started\",\"thread_id\":\"01a1aef0-9779-78e3-a80f-316a8f501aa9\"}\n{\"type\":\"turn.started\"}\n<NON_HARNESS_OUTPUT_OMITTED>",
             "stderr": "None",
             "stream_note": "Harbor Docker merges stderr into stdout"
           },
@@ -728,16 +757,7 @@
             "stream_note": "Harbor Docker merges stderr into stdout"
           }
         ],
-        "primary_failure": {
-          "stage": "cli_startup",
-          "command": "if [ -s ~/.nvm/nvm.sh ]; then . ~/.nvm/nvm.sh; fi; CODEX_API_KEY= codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --model gpt-6.1-sol --json --enable unified_exec -c model_reasoning_effort=high -c web_search=disabled -- <TASK_PROMPT> 2>&1 </dev/null | tee /logs/agent/codex.txt",
-          "user": "agent (task default)",
-          "cwd": "/workspace (task workdir)",
-          "exit_status": 1,
-          "stdout": "Reading additional input from stdin...\n{\"type\":\"thread.started\",\"thread_id\":\"01a1addc-1c9b-79e1-97ba-2207b71e2012\"}\n<NON_HARNESS_OUTPUT_OMITTED>\n{\"type\":\"error\",\"message\":\"shared rollout token budget exhausted\"}\n{\"type\":\"turn.failed\",\"error\":{\"message\":\"shared rollout token budget exhausted\"}}",
-          "stderr": "None",
-          "stream_note": "Harbor Docker merges stderr into stdout"
-        },
+        "primary_failure": null,
         "cleanup_failures": [
           {
             "stage": "cleanup",
@@ -958,16 +978,7 @@
             }
           },
           "features": {
-            "rollout_budget": {
-              "enabled": true,
-              "limit_tokens": 30000,
-              "enforce_limit": true,
-              "reminder_at_remaining_tokens": [
-                5000
-              ],
-              "sampling_token_weight": 5.0,
-              "prefill_token_weight": 1.0
-            }
+            "rollout_budget": false
           }
         }
       },
@@ -1037,7 +1048,7 @@
         "seccomp_filter": true,
         "workspace_writable": true,
         "fresh_session": true,
-        "image": "sha256:515c665351b037807d27a225ed14b3f1a575080885bc451786401a01d158ad5b",
+        "image": "sha256:16c77cabb72db8753427c4ad4271e587dcca6b22a5ef038b604788d538653dc3",
         "mount_destinations": [],
         "resources": {
           "cpus": 2,
@@ -1065,7 +1076,7 @@
         "PidsLimit": 256,
         "Memory": 2147483648,
         "NanoCpus": 2000000000,
-        "NetworkMode": "container:51fb14972c0ab5011d14e8ebb9ef8d1767139f8ab42c0085a57b1d24ee5ffe8f",
+        "NetworkMode": "container:0255a5a418c7be819344ecda9cf606cbeaa06027ba9935b642f09ce0b6d8a8b2",
         "PidMode": "",
         "SecurityOpt": [
           "no-new-privileges:true"
@@ -1073,6 +1084,14 @@
       },
       "effective-config": null,
       "configuration-load": null,
+      "budget-preflight": {
+        "command": "CODEX_HOME=/installed-agent/codex-home codex features list",
+        "user": "agent",
+        "exit_status": 0,
+        "rollout_budget_enabled": false,
+        "inference": false,
+        "reminders_enabled": false
+      },
       "launch-diagnostics": null
     }
   },
@@ -1083,7 +1102,7 @@
       "powershell-pester-6/references/compatibility-and-migration.md",
       "powershell-pester-6/references/execution.md"
     ],
-    "profile": "codex-0.166.0_gpt-6.1-sol_high",
+    "profile": "codex-0.166.0_gpt-6.1-sol_high_rollout-budget-disabled",
     "shared_config": {
       "mcp_servers": {
         "microsoft-learn": {
@@ -1127,16 +1146,7 @@
         }
       },
       "features": {
-        "rollout_budget": {
-          "enabled": true,
-          "limit_tokens": 30000,
-          "enforce_limit": true,
-          "reminder_at_remaining_tokens": [
-            5000
-          ],
-          "sampling_token_weight": 5.0,
-          "prefill_token_weight": 1.0
-        }
+        "rollout_budget": false
       }
     },
     "instructions_sha256": "7b8d5aca90cd1a90d32b98d1e86ee16d82c808336e309c26853d3aab73fb4543"
@@ -1144,13 +1154,14 @@
   "second_arm_gate": null,
   "reservations": [
     {
-      "allocation_id": "sol-high-smoke-20261105",
-      "attempt": 5,
+      "allocation_id": "sol-high-no-rollout-budget-20261105",
+      "reservation_id": "sol-high-no-rollout-budget-20261105/current/6",
+      "attempt": 6,
       "variant": "current",
       "state": "reserved_consumed_if_launch_unknown",
-      "commit": "368c3866f817b6b38fcc04953e15b300d81cd5f0",
-      "run_id": "42122482332",
-      "run_number": "17"
+      "commit": "47635e39fd6f29161522d14b34617827255b8637",
+      "run_id": "42157462581",
+      "run_number": "19"
     }
   ],
   "budget_usd": 5,
@@ -1165,25 +1176,1214 @@
     "The API credential is available to the evaluated process. Unrelated credentials, raw transcripts, submission contents and authentication files are excluded from artifacts",
     "Pinned native pricing may be unavailable; historical cumulative spending remains unknown; $5 is an operational budget with possible overshoot, not a provider-enforced cap"
   ],
-  "reviewed_execution_classification": {
-    "outcome": "agent_token_budget_exhausted",
-    "basis": "Native CLI turn.failed event",
-    "native_failure_cause_unchanged": true,
-    "weighted_fallback_units_from_usage": 30346,
-    "notes": [
-      "Codex emitted the exact terminal error shared rollout token budget exhausted. Harbor retained NonZeroAgentExitCodeError with native failure cause unclassified; this report identifies agent token-budget exhaustion without changing the native result or reward validity.",
-      "The producer, host and verifier all confirmed no submission. This is a missing deliverable at budget exhaustion, not a demonstrated collection/transfer defect. Reference correctness and mutation detection remain unmeasured.",
-      "All six cumulative CLI usage categories were retained. The conservative scheduling flag also requires normal execution completion, so it remained false; it does not mean those observations are absent or zero. Complete billing remains unverified.",
-      "Observed usage reconstructs 30346 weighted fallback units against the 30,000 limit (noncached input plus five times output), consistent with the terminal error. Provider budget units are not serialized, so the precise meter branch is unconfirmed.",
-      "The absent arm was prepared and verified but never reserved or launched. Slot six is closed unused. No retry or replacement allocation is scheduled.",
-      "No concrete skill weakness or causal skill benefit is established. The next necessary decision is to calibrate the supplemental token budget for the full frozen deployment and recognize this Codex-specific budget termination before considering another allocation."
-    ]
+  "allocation_history": [
+    {
+      "allocation_id": "sol-high-smoke-20261105",
+      "commit": "368c3866f817b6b38fcc04953e15b300d81cd5f0",
+      "run_id": "42122482332",
+      "profile": {
+        "id": "codex-0.166.0_gpt-6.1-sol_high",
+        "codex_version": "0.166.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "release": "https://github.com/openai/codex/releases/tag/rust-v0.166.0",
+        "verified_at": "2026-11-05",
+        "archive_url": "https://github.com/openai/codex/releases/download/rust-v0.166.0/codex-package-x86_64-unknown-linux-musl.tar.gz",
+        "archive_sha256": "1d44b28bc4ac9937d7d3532264baa68a507ce364956a0d4ebb856f331cdee254",
+        "package_layout": {
+          "entrypoint": "bin/codex",
+          "execServer": "bin/codex-exec-server",
+          "resourcesDir": "codex-resources",
+          "pathDir": "codex-path"
+        },
+        "historical_profile": {
+          "codex_version": "0.155.1",
+          "model": "gpt-5.6-sol",
+          "reasoning_effort": "medium",
+          "executed_commit": "c5a430ac15b4fac0eb6a29b1ac46ad4e7e06ca3e"
+        },
+        "paid_execution_enabled": false,
+        "pricing": {
+          "source": "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+          "pricing_source": "https://developers.openai.com/api/docs/pricing",
+          "per_million_standard_usd": {
+            "uncached_input": 2,
+            "cached_input": 0.1,
+            "cache_write_30m": 2.5,
+            "cache_write_12h": 5,
+            "output": 10
+          },
+          "long_context_threshold": 272000,
+          "long_context_input_multiplier": 2,
+          "long_context_output_multiplier": 1.5,
+          "conservative_all_input_per_million": 10,
+          "conservative_output_per_million": 15,
+          "note": "No charge observed. Conservative future estimate applies long-context 12h cache-write rate to all input. Per-call categories/context needed for standard estimates; missing categories stay unknown.",
+          "harbor_native_pricing_entry_available": false
+        },
+        "reviewed_source_sha256": {
+          "codex-rs__protocol__src__models.rs": "753498bc730ba21ded710d9aa2b2f9163e6bbe4eaa18f1c25d998c36138a54f7",
+          "codex-rs__protocol__src__protocol.rs": "35d4a01a35c1771e7ae24d3c55964c2d6ecfe880a91539c1045f75cac0c8e356",
+          "codex-rs__core__config.schema.json": "211bec2282459fcd70e4905af948721177b6ec7a03e0df84cd8b7c131006a6ca",
+          "scripts__install__install.sh": "44ac252c1b9a68c02bdf0de8e1c6cbfde36fc1afa8684624962eae7d4c461e70",
+          "scripts__build_codex_package.py": "7a5b7ba90604944831dd25ad89ccba46b4c40f44ec6aeec67a6d058a0c837ad2",
+          "codex-rs__core__src__rollout_budget.rs": "223a573c35088799879688d0aea54f86bdd4420017b95861596a073ac3678380",
+          "codex-rs__config__src__config_toml.rs": "e8f6b45b73eaca1a89be9524bb02bf069e9715e3aeba270e87285d941405c877",
+          "codex-rs__model-provider-info__src__lib.rs": "ea822c232e47fc88251cf20060da91ca0c1195b2d2853c5b3fa4bfcdd4cc0184"
+        },
+        "budget_semantics": "0.166.0 accepts enforce_limit=true. Source charges provider budget units when available, otherwise weighted non-cached input plus output. Token budget is not a dollar meter; enforcement under inference remains untested."
+      },
+      "closure": {
+        "allocation_id": "sol-high-smoke-20261105",
+        "state": "closed",
+        "paid_execution_enabled": false,
+        "reserved_slots_consumed": [
+          5
+        ],
+        "campaign_attempts_consumed": 5,
+        "previous_recovery_consumed": 4,
+        "previous_recovery_limit": 4,
+        "incremental_api_bill_usd": null,
+        "historical_cumulative_api_bill_usd": null,
+        "note": "Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.",
+        "incremental_conservative_estimate_usd": null
+      },
+      "arms": {
+        "current": {
+          "attempt": {
+            "allocation_id": "sol-high-smoke-20261105",
+            "attempt": 5,
+            "variant": "current",
+            "reserved": true,
+            "rollout_present": true,
+            "result_extraction_succeeded": true,
+            "execution_completed": false,
+            "usage_estimate_usd": 0.641555,
+            "projection": [
+              {
+                "task": "pester-002",
+                "outcome": {
+                  "classification": "invalid",
+                  "code": "artifact",
+                  "admission_reason": "missing"
+                },
+                "failure_cause": "unclassified",
+                "exceptions": [
+                  {
+                    "exception_type": "NonZeroAgentExitCodeError",
+                    "exception_message": "Command failed (exit 1): if [ -s ~/.nvm/nvm.sh ]; then . ~/.nvm/nvm.sh; fi; CODEX_API_KEY= codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --model gpt-6.1-sol --json --enable unified_exec -c model_reasoning_effort=high -c web_search=disabled -- <TASK_PROMPT> 2>&1 </dev/null | tee /logs/agent/codex.txt\nstdout: Reading additional input from stdin...\n{\"type\":\"error\",\"message\":\"shared rollout token budget exhausted\"}\n{\"type\":\"turn.failed\",\"error\":{\"message\":\"shared rollout token budget exhausted\"}}\nstderr: None",
+                    "occurred_at": "2026-11-05T22:37:35.913593Z"
+                  }
+                ],
+                "harbor_reward_valid": false,
+                "measured": false,
+                "native_agent_exit_code": null,
+                "native_rewards": {
+                  "overall": 0.0
+                },
+                "tokens": {
+                  "input_including_cache": 63206,
+                  "cached_input": 36025,
+                  "output": 633
+                },
+                "cost_usd": null,
+                "timing": {
+                  "agent_execution": {
+                    "started_at": "2026-11-05T22:37:25.562779Z",
+                    "finished_at": "2026-11-05T22:37:35.911816Z"
+                  },
+                  "verifier": {
+                    "started_at": "2026-11-05T22:37:46.616592Z",
+                    "finished_at": "2026-11-05T22:38:00.188350Z"
+                  }
+                },
+                "native_result": "jobs/current/pester-002__iaUDNGu/result.json"
+              }
+            ],
+            "commit": "368c3866f817b6b38fcc04953e15b300d81cd5f0",
+            "harbor_returncode": 0,
+            "usage_and_activation": {
+              "total_usage": {
+                "input_tokens": 63206,
+                "cached_input_tokens": 36025,
+                "output_tokens": 633,
+                "reasoning_output_tokens": 49,
+                "cache_write_input_tokens": 27114,
+                "total_tokens": 63839
+              },
+              "skill_file_access_attempts": [
+                "powershell-pester-6/SKILL.md",
+                "powershell-pester-6/references/compatibility-and-migration.md"
+              ],
+              "tool_calls": 3,
+              "completion_event": true,
+              "event_type_counts": {
+                "other": 29,
+                "custom_tool_call": 3,
+                "custom_tool_call_output": 3,
+                "token_count": 3,
+                "task_complete": 1
+              },
+              "tool_name_counts": {
+                "other": 3
+              },
+              "exec_outcomes": [],
+              "completion_shape": {
+                "message_present": false,
+                "message_characters": null,
+                "content_retained": false
+              },
+              "tool_error_flags": {
+                "runtime_tool_error": 0,
+                "permission_denied": 0,
+                "missing_path": 0
+              },
+              "evidence_limit": "File-access attempts do not prove successful reads, instruction following or correctness."
+            },
+            "usage_complete": false,
+            "native_pricing_estimate_usd": null,
+            "api_bill_usd": null,
+            "handoff": {
+              "native_collection_manifest": [
+                {
+                  "source": "/logs/artifacts",
+                  "destination": "artifacts/logs/artifacts",
+                  "type": "directory",
+                  "status": "ok",
+                  "service": null,
+                  "exclude": []
+                },
+                {
+                  "source": "/workspace/output/Subject.Tests.ps1",
+                  "destination": "artifacts/workspace/output/Subject.Tests.ps1",
+                  "type": "file",
+                  "status": "failed",
+                  "service": null,
+                  "exclude": []
+                }
+              ],
+              "agent_observation": {
+                "artifact": {
+                  "exists": false,
+                  "type": null,
+                  "size": null,
+                  "uid": null,
+                  "gid": null,
+                  "mode": null,
+                  "sha256": null,
+                  "observation": "missing"
+                },
+                "observer_uid": 1000,
+                "observer_gid": 1000,
+                "cwd": "/workspace"
+              },
+              "host_artifact": {
+                "exists": false,
+                "type": null,
+                "size": null,
+                "uid": null,
+                "gid": null,
+                "mode": null,
+                "sha256": null,
+                "observation": "missing"
+              },
+              "verifier_observation": {
+                "artifact": {
+                  "exists": false,
+                  "type": null,
+                  "size": null,
+                  "uid": null,
+                  "gid": null,
+                  "mode": null,
+                  "sha256": null,
+                  "observation": "missing"
+                },
+                "observer_uid": 0,
+                "observer_gid": 0,
+                "cwd": "/workspace"
+              },
+              "classification": {
+                "classification": "missing_evidence",
+                "task_completion_measured": false,
+                "task_completed": null,
+                "correctness_measured": false
+              },
+              "upload_status": "no_source"
+            },
+            "agent_container_removed": true,
+            "verifier_container_removed": true,
+            "second_arm_gate": {
+              "allowed": false,
+              "reasons": [
+                "execution_incomplete",
+                "incomplete_new_usage",
+                "native_execution_failure",
+                "unreliable_or_unsupported_outcome"
+              ],
+              "conservative_spend_usd": 0.641555,
+              "second_attempt_reserve_usd": 2.5,
+              "headroom_usd": 0.5,
+              "budget_usd": 5
+            },
+            "duration_seconds": 43.794
+          },
+          "manifest": {
+            "variant": "current",
+            "deployed_files": {
+              "dependabot/SKILL.md": "2b5f3af7d8a5555d330d4d72ba9ad6140e85215d006dd9d7a92ee0dae76bbf82",
+              "dependabot/references/pr-commands.md": "471a786456c798364d13c0da554c12c712c581986b7f4a1de95d8b3638fd21cb",
+              "dependabot/references/example-configs.md": "35375699cfbaa372b68a232a2704f88a190e1267f937e1f1921e8d83c97485ca",
+              "dependabot/references/dependabot-yml-reference.md": "c3b101d7e200a215211c9e23157ddfb1c051e437815b4d5a3d9bc13e504d6ed6",
+              "powershell-module-engineering/SKILL.md": "801cecfd42aeb32f3fd6083d9af08f44c8a5ca48202761533c072a10c06060c9",
+              "git-commit/SKILL.md": "554d1a3c6d95f15bc1170160659ecdc9a9958b64f377f3988941b672c249b13f",
+              "github-actions-hardening/SKILL.md": "31a8e7483d978e6267941edefebbe42aaa946bb3d43c9095aa3db343d4a8ff06",
+              "github-actions-hardening/references/permissions-and-tokens.md": "7272d00b20cf99c6fcbf34346f76730907c00701aef44bb9cfb7ab3eecac336b",
+              "github-actions-hardening/references/supply-chain.md": "f66f613dbd732ce87c1e76b88208efde8feae3ffe5a3ab405cde4ce3df66f605",
+              "github-actions-hardening/references/triggers-and-privilege.md": "465f3f76517e9f5374a73e30f46cb47e1fe62ce9fd81f782808a3abbb2df2756",
+              "github-actions-hardening/references/injection.md": "ebd6ef8d39ba6f1cd3dc13051e6ed4163d1d2ba36518cf0f7393836a211e58ff",
+              "github-actions-hardening/references/report-format.md": "3ecd2442e173bc001f858747873349be7c6c77050470b87ae516647908b1e86e",
+              "microsoft-code-reference/SKILL.md": "19f13822dd8674ac0a24787ac15472c9137d0db5b03750ba43ee9dcdac8ddd03",
+              "ansible/SKILL.md": "a79531195a9bdf942b301edf1588c8814ceb976557f4f0cb79bd9aa79e59d52e",
+              "msgraph/SKILL.md": "b4763f6ae89a4e2843ca5bfe15fddf49f5924e20054ff5d7fb7e43a2df3df67e",
+              "msgraph/CONTRIBUTING.md": "60dc9074eedcb06cb29845a4ab6d41866f357be6b8d810e8c84408788e2babf0",
+              "msgraph/scripts/run.ps1": "208a0323c85c94c8b8f23d974a92fb37dab77c44de5638fb3e7688e00d761cbb",
+              "msgraph/scripts/run.sh": "ef3545fee5e2f2654cedf32ed543ba2e496109c1eb90ea6f915fd9bcf4abd51b",
+              "msgraph/references/REFERENCE.md": "61639bb509391df6e65762355c87ef53c98f544d04e4455fd17f571c6732b5d7",
+              "msgraph/references/docs/errors.md": "2c297ff319457b717c4d38948444e3586960d4669ad65fc4e38f7d36138a0d8b",
+              "msgraph/references/docs/query-parameters.md": "f20ddb64c70f3b94c224882cb57bfc1541df6b2bb74532a5e16cb83ca94b6cd3",
+              "msgraph/references/docs/batching.md": "f5132b3027554ededc2ba6b116a47187df4c408be5ddbb273ff7653352e60e3b",
+              "msgraph/references/docs/authentication.md": "dae0fca55119fd89a9b719705d5263aa4705215c1de57d0bf33627d30c9d7c42",
+              "msgraph/references/docs/throttling.md": "cb6db141e600f3c433c80e8f21a6840b1ed83237d7c73f2b0144de37225b0a85",
+              "msgraph/references/docs/paging.md": "f1b76a08cde517b495023098385b63fdf921eb3dc5e374b4f285e71786feb716",
+              "msgraph/references/docs/advanced-queries.md": "89ac64478ca6539412ce66d5f6ac2f76f3c88ff709c8bee7c81da0d79017345e",
+              "msgraph/references/docs/best-practices.md": "48e18d277aa4412ac66acb084aaa8d1ba1af31fe840fdc9ff42c644ddbd8d03b",
+              "agent-safety/SKILL.md": "2dc7898d11fb55a1a042d46e6e60800d0f948253c5216efa3e470e8914cc84ab",
+              "code-simplification/SKILL.md": "e13b433345e6bf425c3625442ac1b3507b371c18d7ea3e3db822da7a7f742a29",
+              "podman/EVALS.md": "96088308ed8df85d9f369263de4ec02fefdb7f59fbccc2b4629991be7266e581",
+              "podman/SKILL.md": "625107071889166612f64ac52920be2b9455f671e4ce1f805835f7fee14ef274",
+              "podman/MAINTENANCE.md": "93f772d47f661cc721a211257f4a2aecabcc53ed77f0d4b16b754944128586c9",
+              "podman/references/reverse-proxy.md": "6a8d789b72d821e3fed320ca84325086d5a42ced25912a4b52ea760a306111ff",
+              "podman/references/quadlet-systemd.md": "55a300354c77b6e59b5876b1b3a6b7e00f9525a21c9160fa5b3200a3a8128f23",
+              "podman/references/compose-migration.md": "fce55e0ec0a56608d714f273afdbdc44017d0a4ebed73b61291cd0fdebbf434a",
+              "podman/references/rootless-networking.md": "a5fc3f33815caa196d5f8d6cb090136bcccc88fb95dedb921c99bd0b3cf6b524",
+              "podman/references/security-storage-secrets.md": "37e1fae3de6f4b7ae1ea3ccc2b0b84d7fd854ea2730a51f0e3b3b1bc9b2e1068",
+              "podman/references/validation.md": "465321094bc936d8a9e187bd3b4daa1ab271b93242a2c07fe88c58db6bd4bdd5",
+              "podman/references/fedora-hosts.md": "adb6f7a2a07f2067036354cb57bb69e694d423f20bd578e09db6a5a799859168",
+              "podman/evals/evals.json": "9bc7fdebc99616983bd501006f97a0a3233cc9901da06443e49d63652de2f0c5",
+              "podman/evals/files/postgres.container": "9da8bb708c14453616a43d2a9527484f6fa4ddc1d06c2339ddecadeeb9f54b5f",
+              "podman/evals/files/vendor-compose.yaml": "1f36c57615a4efa9bc6c1de9e7088d2dd82040cb14ec74b00c910c75f5ea26f7",
+              "podman/evals/files/vendor-web/Containerfile": "486aa74e34330bc0122d85c4f3719f3bf66c405ffe7fcd0a2969bec6d5c21a2d",
+              "a11y/SKILL.md": "96d578e9646cd80ff6e1bedb26069222ad37b473960f3c0cc069716484b22553",
+              "powershell-pester-6/SKILL.md": "b57df2ff4072b2e25744ae2bd530b02bbb6ab83a22a0d374c73d48de4dc70887",
+              "powershell-pester-6/references/compatibility-and-migration.md": "6d05a890eb1c53c59755f9e560c05d65467a614d36af7c812f4a32c89b47f4e9",
+              "powershell-pester-6/references/execution.md": "3b80a98abfefdcd9a765da9a9436caa43de6a873e57253f1ecfb36e1095ea4b8",
+              "gh/SKILL.md": "b40d44ef9077b34d710b4c0737fee0e72c595e0770fbbdcb339de2ba0b40e23b"
+            },
+            "codex_configuration": {
+              "config.toml": "782c639a9261c6c7920ce141d84bbb207f8695ca8405091fadaa25a5051d6e05"
+            },
+            "instructions_sha256": "7b8d5aca90cd1a90d32b98d1e86ee16d82c808336e309c26853d3aab73fb4543",
+            "grader_files": {
+              "EVALS.md": "05aab77534b4a41eacc28b61498b135e4a3fa99e6483e495bfcefb0b5545ed53",
+              "support/install-runtime.py": "d47f30bfff8b03ca5fba03c1307be77ab821d5fbbd10509eddb7b9fff71caa8d",
+              "support/EXECUTION-PROFILE.md": "d76e58f36664dcde45e9e86f47863578c23aa06c6d0bb5c365f04b998c49900f",
+              "support/Runner.ps1": "34502718d4ee8776d4ed2d38dedfee393a204e859e2eb904bdb48b9496810f52",
+              "support/test.sh": "6a19331893b1839ac1b8cd41d9b57b2e3ef105cd1de1f1e472ee066e34328f85",
+              "support/cases/pester-004/profile.json": "0f4dd7272eb67e67aed1ece1e03cb4eef60c48712df8e87e9b189b51f55bf43a",
+              "support/cases/pester-004/input/Subject.ps1": "e2ce7f590d85a49c24005829e380e269a32fa939dcc73bbf9ce009522b70cbc5",
+              "support/cases/pester-004/input/README.md": "2e4250c253101facb59b4f49e0aed0b017659042a6be25416dfe6454c5a32959",
+              "support/cases/pester-004/input/Existing.Tests.ps1": "322195b479d439e917afe4774fe3988af1e32d8b713db45ba1a6e1ca20e177cd",
+              "support/cases/pester-004/reference/Subject.ps1": "6d31ab77b5e387d6c9ddea1c75b8e4f6be84383022e979931700da94cfc9fdbc",
+              "support/cases/pester-004/mutants/zero.ps1": "fe7513605f8a52ebec61abf9c3be14aac3010e8a6d314c7488d7c7fc80b33260",
+              "support/cases/pester-004/mutants/highest.ps1": "b7077db138544a86a0f730a8f2fb47f61ff74ca662106cbb5df837afd7636ddf",
+              "support/cases/pester-004/mutants/above.ps1": "34ba94f2a830241f421b5f6964e089ccc6160b9764d304d4b3ca6834b49d4f37",
+              "support/cases/pester-004/mutants/lowest.ps1": "6e93e32817d5f5af2212fcb5b3cf91d7f5f570b382c7246ed274d1c90d913a9d",
+              "support/cases/pester-001/profile.json": "6fcaf12904d917dd8100b00df0cfea17f019a51757bb6caed065aec689061e19",
+              "support/cases/pester-001/input/Subject.ps1": "2a5afe13db1e6f89d691da645c7b92de9cbe3a69d1e1d147d75b9c2d1db71277",
+              "support/cases/pester-001/input/README.md": "47bb79ddcfc3c037a22b03045b3faa9a080a2e61ddd41995beaccd563e8a1d43",
+              "support/cases/pester-001/reference/Subject.ps1": "2a5afe13db1e6f89d691da645c7b92de9cbe3a69d1e1d147d75b9c2d1db71277",
+              "support/cases/pester-001/mutants/coercion.ps1": "0e50cbce4c9dd8c3af12de36d42288c4110b80ee3f31dda5a3f44ea858ac072b",
+              "support/cases/pester-001/mutants/filter.ps1": "4ab069c797c95d8da0d3d6d47615a0b5fcf3006399ea2b904bdc24d608158e14",
+              "support/cases/pester-003/profile.json": "cc10827699c0a7f6308142590a862904ad9e61b903e46336a8964f43d73054e3",
+              "support/cases/pester-003/input/Probe.psm1": "75e3cdf19d09f6dfda302dc5ce33a1feb2c6310f4c03fc3b6862279b9adbee7f",
+              "support/cases/pester-003/input/README.md": "104123e33aa72e1067eb1f22bd72498993a5c76ad06afe27846f4203344429cf",
+              "support/cases/pester-003/reference/Subject.ps1": "34499ba6650937a285fb7c654d4c833bf50328c3512460a4dc5bbc1a1a550453",
+              "support/cases/pester-003/mutants/target.ps1": "7e8e5200b2469d3831388e317a7c4a9c4884776b2335b1b418dd00d3b7f3d68e",
+              "support/cases/pester-003/mutants/bypass.ps1": "b6b56e5c08d40a8edc4c6fa0e9689603c33fc575c86a3b55eacf5669e9e802f9",
+              "support/cases/pester-002/profile.json": "b22226da66eb00dafd37ab5e582a20e3bb97f43d7798befbb52a07b040b99c82",
+              "support/cases/pester-002/input/Subject.ps1": "0f51c43ae61b355cadb2b5418938d5e64f060853784a36e495277f5e6ad7b101",
+              "support/cases/pester-002/input/README.md": "f48fc923ccb7cf73e20dd17a36b6a670d85061ae0a08881ce44f363ec9162b51",
+              "support/cases/pester-002/reference/Subject.ps1": "1d09abfa1a65f12e448f0bd785cc60b30071b420123030dee2fdd4e50848fba9",
+              "support/cases/pester-002/mutants/exponent.ps1": "ff34ab2512b5f5064c4539a48437096d22a3a2a01023afdd862235d4714dc5c0",
+              "support/cases/pester-002/mutants/swallowed.ps1": "230dd797449ed463c5f9ebc181224634c92489c93a4f85c0d17f7bcba3a28c83",
+              "support/cases/pester-005/profile.json": "a1122cac076e058a1aab540a191684bc86dad0a779a7baad256ad5d154d774b6",
+              "support/cases/pester-005/input/unittest.txt": "16bb7d0243698e035cf8e6e93f7fe252da353f7f71e7503128a3e20d6af40233",
+              "support/cases/pester-005/input/README.md": "7c38fe72daa5a2cc6cff23af5e3c8f345789010014f9ef94d42e386c04ea297d",
+              "support/cases/pester-005/reference/summary.json": "5b6c4b049dbedbc7cb8192d1972ba4edd11b92a9fbe499e6d95ee59a0a0f022c",
+              "support/qualification/pester-004/inline.Tests.ps1": "9fb7a9f7d1164cb1a53222e9e3af5257c4681d250a85aba25d9e622dbbd89de0",
+              "support/qualification/pester-004/discovery.Tests.ps1": "45e8c9be8c4cce8cfbd92859d01de9f99a2e87e71d9486f892aa92cc5a4a6f9c",
+              "support/qualification/pester-004/weak.Tests.ps1": "ff3e3d6d2c4633556c15f8dab9bedfacdaf7294fddec360d02656c51a54c399c",
+              "support/qualification/pester-004/compact.Tests.ps1": "3ec2493c5e8cca8ddf321b8e43f5434185dbfb3ee946a6fd2a1dce5415510b5d",
+              "support/qualification/pester-001/standalone.Tests.ps1": "32a47b587508c019be03284ec514c2a8fc35522c3e2cea3bdbfef8b1fce652d5",
+              "support/qualification/pester-001/weak.Tests.ps1": "a79ff3052e0b9dcb828a9266d32fdf9166eff503c03d8bf946969e8ab80a801e",
+              "support/qualification/pester-001/classic.Tests.ps1": "9e59688c16ac411adfbbdcf1098520b0afc644494229d92d51dea7a59a24b4e0",
+              "support/qualification/pester-001/data.Tests.ps1": "0504b5bc73006d9fdd18bfee369504948a02d6ea4fdeda8c5db9d6a5a6807776",
+              "support/qualification/pester-003/module.Tests.ps1": "2e6ea9ff009deb1d5f7e86915a91f9ad5d2ed893c69e5fa94103e5b9ddc4d3b1",
+              "support/qualification/pester-003/external.Tests.ps1": "fcd01e950ba0f48d86ad8c3302457c751386a5412e067b36baa2a91a4613fcd9",
+              "support/qualification/pester-003/weak.Tests.ps1": "c4ba117b557613923ab6444d41a6e50117b4af9f0fc31a169236edef26ce6b08",
+              "support/qualification/pester-002/weak.Tests.ps1": "94d8dff22e3715ade171b143d118fe8939acf89e8e3014bccf35fd254cea3ca4",
+              "support/qualification/pester-002/classic.Tests.ps1": "8784023e56e7757644ae38797e7fc6cfedfda289a25d0a98283b34d0f40b090a",
+              "support/qualification/pester-002/data.Tests.ps1": "2e065d6bad3b522a438971b28799d608f09ec4f3ce15a5a596f9171cd16ae876",
+              "support/qualification/pester-005/good.json": "c900360b112a120fb6b7359dcfc1a15150195c859ded8e89f89a1960d090e40f",
+              "support/qualification/pester-005/wrong.json": "bfc7b71f5982e2a2881a48fc5093e347f49196dbef7d008e28a03e233a74d014",
+              "evals/evals.json": "d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+              "evals/config.yml": "02433e16bc501a3e28546345741ac2d4ec1d4e3ec2bf9bb55832a1473475306b",
+              "evals/grader.py": "84103238eeccb485a77033557e6649e758f9cd62b4d75ea2913f3e482cc6f7ca"
+            },
+            "task_checksum": "fca5dfedc31a7d27e86e9702bcf613a16cefd897cd50cba6432da79567a05202",
+            "effective_skills": {
+              "dependabot/SKILL.md": "2b5f3af7d8a5555d330d4d72ba9ad6140e85215d006dd9d7a92ee0dae76bbf82",
+              "dependabot/references/pr-commands.md": "471a786456c798364d13c0da554c12c712c581986b7f4a1de95d8b3638fd21cb",
+              "dependabot/references/example-configs.md": "35375699cfbaa372b68a232a2704f88a190e1267f937e1f1921e8d83c97485ca",
+              "dependabot/references/dependabot-yml-reference.md": "c3b101d7e200a215211c9e23157ddfb1c051e437815b4d5a3d9bc13e504d6ed6",
+              "powershell-module-engineering/SKILL.md": "801cecfd42aeb32f3fd6083d9af08f44c8a5ca48202761533c072a10c06060c9",
+              "git-commit/SKILL.md": "554d1a3c6d95f15bc1170160659ecdc9a9958b64f377f3988941b672c249b13f",
+              "github-actions-hardening/SKILL.md": "31a8e7483d978e6267941edefebbe42aaa946bb3d43c9095aa3db343d4a8ff06",
+              "github-actions-hardening/references/permissions-and-tokens.md": "7272d00b20cf99c6fcbf34346f76730907c00701aef44bb9cfb7ab3eecac336b",
+              "github-actions-hardening/references/supply-chain.md": "f66f613dbd732ce87c1e76b88208efde8feae3ffe5a3ab405cde4ce3df66f605",
+              "github-actions-hardening/references/triggers-and-privilege.md": "465f3f76517e9f5374a73e30f46cb47e1fe62ce9fd81f782808a3abbb2df2756",
+              "github-actions-hardening/references/injection.md": "ebd6ef8d39ba6f1cd3dc13051e6ed4163d1d2ba36518cf0f7393836a211e58ff",
+              "github-actions-hardening/references/report-format.md": "3ecd2442e173bc001f858747873349be7c6c77050470b87ae516647908b1e86e",
+              "microsoft-code-reference/SKILL.md": "19f13822dd8674ac0a24787ac15472c9137d0db5b03750ba43ee9dcdac8ddd03",
+              "ansible/SKILL.md": "a79531195a9bdf942b301edf1588c8814ceb976557f4f0cb79bd9aa79e59d52e",
+              "msgraph/SKILL.md": "b4763f6ae89a4e2843ca5bfe15fddf49f5924e20054ff5d7fb7e43a2df3df67e",
+              "msgraph/CONTRIBUTING.md": "60dc9074eedcb06cb29845a4ab6d41866f357be6b8d810e8c84408788e2babf0",
+              "msgraph/scripts/run.ps1": "208a0323c85c94c8b8f23d974a92fb37dab77c44de5638fb3e7688e00d761cbb",
+              "msgraph/scripts/run.sh": "ef3545fee5e2f2654cedf32ed543ba2e496109c1eb90ea6f915fd9bcf4abd51b",
+              "msgraph/references/REFERENCE.md": "61639bb509391df6e65762355c87ef53c98f544d04e4455fd17f571c6732b5d7",
+              "msgraph/references/docs/errors.md": "2c297ff319457b717c4d38948444e3586960d4669ad65fc4e38f7d36138a0d8b",
+              "msgraph/references/docs/query-parameters.md": "f20ddb64c70f3b94c224882cb57bfc1541df6b2bb74532a5e16cb83ca94b6cd3",
+              "msgraph/references/docs/batching.md": "f5132b3027554ededc2ba6b116a47187df4c408be5ddbb273ff7653352e60e3b",
+              "msgraph/references/docs/authentication.md": "dae0fca55119fd89a9b719705d5263aa4705215c1de57d0bf33627d30c9d7c42",
+              "msgraph/references/docs/throttling.md": "cb6db141e600f3c433c80e8f21a6840b1ed83237d7c73f2b0144de37225b0a85",
+              "msgraph/references/docs/paging.md": "f1b76a08cde517b495023098385b63fdf921eb3dc5e374b4f285e71786feb716",
+              "msgraph/references/docs/advanced-queries.md": "89ac64478ca6539412ce66d5f6ac2f76f3c88ff709c8bee7c81da0d79017345e",
+              "msgraph/references/docs/best-practices.md": "48e18d277aa4412ac66acb084aaa8d1ba1af31fe840fdc9ff42c644ddbd8d03b",
+              "agent-safety/SKILL.md": "2dc7898d11fb55a1a042d46e6e60800d0f948253c5216efa3e470e8914cc84ab",
+              "code-simplification/SKILL.md": "e13b433345e6bf425c3625442ac1b3507b371c18d7ea3e3db822da7a7f742a29",
+              "podman/EVALS.md": "96088308ed8df85d9f369263de4ec02fefdb7f59fbccc2b4629991be7266e581",
+              "podman/SKILL.md": "625107071889166612f64ac52920be2b9455f671e4ce1f805835f7fee14ef274",
+              "podman/MAINTENANCE.md": "93f772d47f661cc721a211257f4a2aecabcc53ed77f0d4b16b754944128586c9",
+              "podman/references/reverse-proxy.md": "6a8d789b72d821e3fed320ca84325086d5a42ced25912a4b52ea760a306111ff",
+              "podman/references/quadlet-systemd.md": "55a300354c77b6e59b5876b1b3a6b7e00f9525a21c9160fa5b3200a3a8128f23",
+              "podman/references/compose-migration.md": "fce55e0ec0a56608d714f273afdbdc44017d0a4ebed73b61291cd0fdebbf434a",
+              "podman/references/rootless-networking.md": "a5fc3f33815caa196d5f8d6cb090136bcccc88fb95dedb921c99bd0b3cf6b524",
+              "podman/references/security-storage-secrets.md": "37e1fae3de6f4b7ae1ea3ccc2b0b84d7fd854ea2730a51f0e3b3b1bc9b2e1068",
+              "podman/references/validation.md": "465321094bc936d8a9e187bd3b4daa1ab271b93242a2c07fe88c58db6bd4bdd5",
+              "podman/references/fedora-hosts.md": "adb6f7a2a07f2067036354cb57bb69e694d423f20bd578e09db6a5a799859168",
+              "podman/evals/evals.json": "9bc7fdebc99616983bd501006f97a0a3233cc9901da06443e49d63652de2f0c5",
+              "podman/evals/files/postgres.container": "9da8bb708c14453616a43d2a9527484f6fa4ddc1d06c2339ddecadeeb9f54b5f",
+              "podman/evals/files/vendor-compose.yaml": "1f36c57615a4efa9bc6c1de9e7088d2dd82040cb14ec74b00c910c75f5ea26f7",
+              "podman/evals/files/vendor-web/Containerfile": "486aa74e34330bc0122d85c4f3719f3bf66c405ffe7fcd0a2969bec6d5c21a2d",
+              "a11y/SKILL.md": "96d578e9646cd80ff6e1bedb26069222ad37b473960f3c0cc069716484b22553",
+              "powershell-pester-6/SKILL.md": "b57df2ff4072b2e25744ae2bd530b02bbb6ab83a22a0d374c73d48de4dc70887",
+              "powershell-pester-6/references/compatibility-and-migration.md": "6d05a890eb1c53c59755f9e560c05d65467a614d36af7c812f4a32c89b47f4e9",
+              "powershell-pester-6/references/execution.md": "3b80a98abfefdcd9a765da9a9436caa43de6a873e57253f1ecfb36e1095ea4b8",
+              "gh/SKILL.md": "b40d44ef9077b34d710b4c0737fee0e72c595e0770fbbdcb339de2ba0b40e23b"
+            },
+            "effective_codex_config": {
+              "mcp_servers": {
+                "microsoft-learn": {
+                  "url": "https://learn.microsoft.com/api/mcp",
+                  "enabled_tools": [
+                    "microsoft_docs_search",
+                    "microsoft_docs_fetch",
+                    "microsoft_code_sample_search"
+                  ],
+                  "enabled": false
+                }
+              },
+              "web_search": "disabled",
+              "service_tier": "default",
+              "model_reasoning_effort": "high",
+              "forced_login_method": "api",
+              "projects": {
+                "/workspace": {
+                  "trust_level": "trusted"
+                }
+              },
+              "model_provider": "trial_openai",
+              "model_providers": {
+                "trial_openai": {
+                  "name": "OpenAI",
+                  "base_url": "https://api.openai.com/v1",
+                  "wire_api": "responses",
+                  "requires_openai_auth": true,
+                  "request_max_retries": 0,
+                  "stream_max_retries": 0,
+                  "stream_idle_timeout_ms": 60000,
+                  "supports_websockets": true,
+                  "supports_standalone_web_search": true,
+                  "http_headers": {
+                    "version": "0.166.0"
+                  },
+                  "env_http_headers": {
+                    "OpenAI-Organization": "OPENAI_ORGANIZATION",
+                    "OpenAI-Project": "OPENAI_PROJECT"
+                  }
+                }
+              },
+              "features": {
+                "rollout_budget": {
+                  "enabled": true,
+                  "limit_tokens": 30000,
+                  "enforce_limit": true,
+                  "reminder_at_remaining_tokens": [
+                    5000
+                  ],
+                  "sampling_token_weight": 5.0,
+                  "prefill_token_weight": 1.0
+                }
+              }
+            }
+          },
+          "boundary": {
+            "skills": {
+              "gh/SKILL.md": "b40d44ef9077b34d710b4c0737fee0e72c595e0770fbbdcb339de2ba0b40e23b",
+              "powershell-pester-6/SKILL.md": "b57df2ff4072b2e25744ae2bd530b02bbb6ab83a22a0d374c73d48de4dc70887",
+              "a11y/SKILL.md": "96d578e9646cd80ff6e1bedb26069222ad37b473960f3c0cc069716484b22553",
+              "podman/EVALS.md": "96088308ed8df85d9f369263de4ec02fefdb7f59fbccc2b4629991be7266e581",
+              "podman/SKILL.md": "625107071889166612f64ac52920be2b9455f671e4ce1f805835f7fee14ef274",
+              "podman/MAINTENANCE.md": "93f772d47f661cc721a211257f4a2aecabcc53ed77f0d4b16b754944128586c9",
+              "code-simplification/SKILL.md": "e13b433345e6bf425c3625442ac1b3507b371c18d7ea3e3db822da7a7f742a29",
+              "agent-safety/SKILL.md": "2dc7898d11fb55a1a042d46e6e60800d0f948253c5216efa3e470e8914cc84ab",
+              "msgraph/SKILL.md": "b4763f6ae89a4e2843ca5bfe15fddf49f5924e20054ff5d7fb7e43a2df3df67e",
+              "msgraph/CONTRIBUTING.md": "60dc9074eedcb06cb29845a4ab6d41866f357be6b8d810e8c84408788e2babf0",
+              "ansible/SKILL.md": "a79531195a9bdf942b301edf1588c8814ceb976557f4f0cb79bd9aa79e59d52e",
+              "microsoft-code-reference/SKILL.md": "19f13822dd8674ac0a24787ac15472c9137d0db5b03750ba43ee9dcdac8ddd03",
+              "github-actions-hardening/SKILL.md": "31a8e7483d978e6267941edefebbe42aaa946bb3d43c9095aa3db343d4a8ff06",
+              "git-commit/SKILL.md": "554d1a3c6d95f15bc1170160659ecdc9a9958b64f377f3988941b672c249b13f",
+              "powershell-module-engineering/SKILL.md": "801cecfd42aeb32f3fd6083d9af08f44c8a5ca48202761533c072a10c06060c9",
+              "dependabot/SKILL.md": "2b5f3af7d8a5555d330d4d72ba9ad6140e85215d006dd9d7a92ee0dae76bbf82",
+              "powershell-pester-6/references/compatibility-and-migration.md": "6d05a890eb1c53c59755f9e560c05d65467a614d36af7c812f4a32c89b47f4e9",
+              "powershell-pester-6/references/execution.md": "3b80a98abfefdcd9a765da9a9436caa43de6a873e57253f1ecfb36e1095ea4b8",
+              "podman/evals/evals.json": "9bc7fdebc99616983bd501006f97a0a3233cc9901da06443e49d63652de2f0c5",
+              "podman/references/reverse-proxy.md": "6a8d789b72d821e3fed320ca84325086d5a42ced25912a4b52ea760a306111ff",
+              "podman/references/quadlet-systemd.md": "55a300354c77b6e59b5876b1b3a6b7e00f9525a21c9160fa5b3200a3a8128f23",
+              "podman/references/compose-migration.md": "fce55e0ec0a56608d714f273afdbdc44017d0a4ebed73b61291cd0fdebbf434a",
+              "podman/references/rootless-networking.md": "a5fc3f33815caa196d5f8d6cb090136bcccc88fb95dedb921c99bd0b3cf6b524",
+              "podman/references/security-storage-secrets.md": "37e1fae3de6f4b7ae1ea3ccc2b0b84d7fd854ea2730a51f0e3b3b1bc9b2e1068",
+              "podman/references/validation.md": "465321094bc936d8a9e187bd3b4daa1ab271b93242a2c07fe88c58db6bd4bdd5",
+              "podman/references/fedora-hosts.md": "adb6f7a2a07f2067036354cb57bb69e694d423f20bd578e09db6a5a799859168",
+              "podman/evals/files/postgres.container": "9da8bb708c14453616a43d2a9527484f6fa4ddc1d06c2339ddecadeeb9f54b5f",
+              "podman/evals/files/vendor-compose.yaml": "1f36c57615a4efa9bc6c1de9e7088d2dd82040cb14ec74b00c910c75f5ea26f7",
+              "podman/evals/files/vendor-web/Containerfile": "486aa74e34330bc0122d85c4f3719f3bf66c405ffe7fcd0a2969bec6d5c21a2d",
+              "msgraph/references/REFERENCE.md": "61639bb509391df6e65762355c87ef53c98f544d04e4455fd17f571c6732b5d7",
+              "msgraph/scripts/run.ps1": "208a0323c85c94c8b8f23d974a92fb37dab77c44de5638fb3e7688e00d761cbb",
+              "msgraph/scripts/run.sh": "ef3545fee5e2f2654cedf32ed543ba2e496109c1eb90ea6f915fd9bcf4abd51b",
+              "msgraph/references/docs/errors.md": "2c297ff319457b717c4d38948444e3586960d4669ad65fc4e38f7d36138a0d8b",
+              "msgraph/references/docs/query-parameters.md": "f20ddb64c70f3b94c224882cb57bfc1541df6b2bb74532a5e16cb83ca94b6cd3",
+              "msgraph/references/docs/batching.md": "f5132b3027554ededc2ba6b116a47187df4c408be5ddbb273ff7653352e60e3b",
+              "msgraph/references/docs/authentication.md": "dae0fca55119fd89a9b719705d5263aa4705215c1de57d0bf33627d30c9d7c42",
+              "msgraph/references/docs/throttling.md": "cb6db141e600f3c433c80e8f21a6840b1ed83237d7c73f2b0144de37225b0a85",
+              "msgraph/references/docs/paging.md": "f1b76a08cde517b495023098385b63fdf921eb3dc5e374b4f285e71786feb716",
+              "msgraph/references/docs/advanced-queries.md": "89ac64478ca6539412ce66d5f6ac2f76f3c88ff709c8bee7c81da0d79017345e",
+              "msgraph/references/docs/best-practices.md": "48e18d277aa4412ac66acb084aaa8d1ba1af31fe840fdc9ff42c644ddbd8d03b",
+              "github-actions-hardening/references/permissions-and-tokens.md": "7272d00b20cf99c6fcbf34346f76730907c00701aef44bb9cfb7ab3eecac336b",
+              "github-actions-hardening/references/supply-chain.md": "f66f613dbd732ce87c1e76b88208efde8feae3ffe5a3ab405cde4ce3df66f605",
+              "github-actions-hardening/references/triggers-and-privilege.md": "465f3f76517e9f5374a73e30f46cb47e1fe62ce9fd81f782808a3abbb2df2756",
+              "github-actions-hardening/references/injection.md": "ebd6ef8d39ba6f1cd3dc13051e6ed4163d1d2ba36518cf0f7393836a211e58ff",
+              "github-actions-hardening/references/report-format.md": "3ecd2442e173bc001f858747873349be7c6c77050470b87ae516647908b1e86e",
+              "dependabot/references/pr-commands.md": "471a786456c798364d13c0da554c12c712c581986b7f4a1de95d8b3638fd21cb",
+              "dependabot/references/example-configs.md": "35375699cfbaa372b68a232a2704f88a190e1267f937e1f1921e8d83c97485ca",
+              "dependabot/references/dependabot-yml-reference.md": "c3b101d7e200a215211c9e23157ddfb1c051e437815b4d5a3d9bc13e504d6ed6"
+            },
+            "instructions_sha256": "7b8d5aca90cd1a90d32b98d1e86ee16d82c808336e309c26853d3aab73fb4543",
+            "codex_files": {
+              "config.toml": "782c639a9261c6c7920ce141d84bbb207f8695ca8405091fadaa25a5051d6e05"
+            },
+            "target_copies": [
+              "/workspace/.agents/skills/powershell-pester-6"
+            ],
+            "network": {
+              "api.openai.com": 421,
+              "github.com": null,
+              "raw.githubusercontent.com": null,
+              "learn.microsoft.com": null,
+              "169.254.169.254": null
+            },
+            "uid": 1000,
+            "capabilities": 0,
+            "no_new_privileges": true,
+            "seccomp_filter": true,
+            "workspace_writable": true,
+            "fresh_session": true,
+            "image": "sha256:0063327df02d6a2d9b5822d9207505b2b0fd2f3c8d331faa56f2f8dfd55b918b",
+            "mount_destinations": [],
+            "resources": {
+              "cpus": 2,
+              "memory_mb": 2048,
+              "pids": 256
+            },
+            "variant": "current"
+          },
+          "installation": {
+            "stdout": "WARNING: proceeding, even though we could not create PATH aliases: Operation not permitted (os error 1)\ncodex-cli 0.166.0",
+            "stderr": "",
+            "cwd": "/workspace",
+            "command": "/usr/local/bin/codex --version",
+            "user": "agent",
+            "returncode": 0,
+            "version": "0.166.0",
+            "matched": true,
+            "package": {
+              "layoutVersion": 1,
+              "version": "0.166.0",
+              "target": "x86_64-unknown-linux-musl",
+              "variant": "codex",
+              "entrypoint": "bin/codex",
+              "execServer": "bin/codex-exec-server",
+              "resourcesDir": "codex-resources",
+              "pathDir": "codex-path"
+            }
+          },
+          "container-policy": {
+            "Privileged": false,
+            "CapDrop": [
+              "ALL"
+            ],
+            "CapAdd": null,
+            "PidsLimit": 256,
+            "Memory": 2147483648,
+            "NanoCpus": 2000000000,
+            "NetworkMode": "container:89dc78d3065332f78ed5421ff84e04dd109b00f692eb9662c5fb24b153806cea",
+            "PidMode": "",
+            "SecurityOpt": [
+              "no-new-privileges:true"
+            ]
+          },
+          "effective-config": {
+            "mcp_servers": {
+              "microsoft-learn": {
+                "url": "https://learn.microsoft.com/api/mcp",
+                "enabled_tools": [
+                  "microsoft_docs_search",
+                  "microsoft_docs_fetch",
+                  "microsoft_code_sample_search"
+                ],
+                "enabled": false
+              }
+            },
+            "web_search": "disabled",
+            "service_tier": "default",
+            "model_reasoning_effort": "high",
+            "forced_login_method": "api",
+            "projects": {
+              "/workspace": {
+                "trust_level": "trusted"
+              }
+            },
+            "model_provider": "trial_openai",
+            "model_providers": {
+              "trial_openai": {
+                "name": "OpenAI",
+                "base_url": "https://api.openai.com/v1",
+                "wire_api": "responses",
+                "requires_openai_auth": true,
+                "request_max_retries": 0,
+                "stream_max_retries": 0,
+                "stream_idle_timeout_ms": 60000,
+                "supports_websockets": true,
+                "supports_standalone_web_search": true,
+                "http_headers": {
+                  "version": "0.166.0"
+                },
+                "env_http_headers": {
+                  "OpenAI-Organization": "OPENAI_ORGANIZATION",
+                  "OpenAI-Project": "OPENAI_PROJECT"
+                }
+              }
+            },
+            "features": {
+              "rollout_budget": {
+                "enabled": true,
+                "limit_tokens": 30000,
+                "enforce_limit": true,
+                "reminder_at_remaining_tokens": [
+                  5000
+                ],
+                "sampling_token_weight": 5.0,
+                "prefill_token_weight": 1.0
+              }
+            }
+          },
+          "configuration-load": {
+            "version": "0.166.0",
+            "allowed_login_methods": [
+              "api"
+            ],
+            "exit_status": 0
+          },
+          "launch-diagnostics": {
+            "commands": [
+              {
+                "stage": "ownership_check",
+                "command": "test \"$(id -u)\" = 1000 && test \"$(id -g)\" = 1000 && test \"$(stat -c %u /installed-agent/codex-home)\" = 1000 && test \"$(stat -c %a /installed-agent/codex-home)\" = 700",
+                "user": "agent (task default)",
+                "cwd": "/workspace (task workdir)",
+                "exit_status": 0,
+                "stdout": "None",
+                "stderr": "None",
+                "stream_note": "Harbor Docker merges stderr into stdout"
+              },
+              {
+                "stage": "directory_setup",
+                "command": "mkdir -p \"$CODEX_HOME\" /tmp/codex-secrets /logs/agent",
+                "user": "agent (task default)",
+                "cwd": "/workspace (task workdir)",
+                "exit_status": 0,
+                "stdout": "None",
+                "stderr": "None",
+                "stream_note": "Harbor Docker merges stderr into stdout"
+              },
+              {
+                "stage": "configuration_upload",
+                "command": "umask 077; printf %s <CONFIG_TOML> > /installed-agent/codex-home/config.toml",
+                "user": "agent (task default)",
+                "cwd": "/workspace (task workdir)",
+                "exit_status": 0,
+                "stdout": "None",
+                "stderr": "None",
+                "stream_note": "Harbor Docker merges stderr into stdout"
+              },
+              {
+                "stage": "configuration_load",
+                "command": "CODEX_HOME=/installed-agent/codex-home codex app-server --strict-config --print-startup-config",
+                "user": "agent (task default)",
+                "cwd": "/workspace (task workdir)",
+                "exit_status": 0,
+                "stdout": "{\"appServerVersion\":\"0.166.0\",\"configRequirements\":{\"supportsIndependentSpeedModes\":true,\"requirements\":{\"modelProvider\":null,\"modelProviders\":null,\"allowedLoginMethods\":[\"api\"],\"cliAuthCredentialsStore\":null,\"chatgptBaseUrl\":null,\"additionalDeveloperInstructions\":null,\"allowedApprovalPolicies\":null,\"allowedApprovalsReviewers\":null,\"allowedSandboxModes\":null,\"allowedWindowsSandboxImplementations\":null,\"allowedPermissionProfiles\":null,\"defaultPermissions\":null,\"allowedWebSearchModes\":null,\"allowManagedHooksOnly\":null,\"allowBrowserAndComputerUse\":null,\"allowAppshots\":null,\"allowRemoteControl\":null,\"computerUse\":null,\"browserUse\":null,\"inAppBrowser\":null,\"featureRequirements\":null,\"hooks\":null,\"enforceResidency\":null,\"network\":null,\"application\":null,\"autoReview\":null,\"models\":null,\"sqliteHome\":null,\"logDir\":null,\"modelCatalogJson\":null,\"checkForUpdateOnStartup\":null,\"allowLoginShell\":null,\"feedback\":null,\"otel\":null}}}",
+                "stderr": "None",
+                "stream_note": "Harbor Docker merges stderr into stdout"
+              },
+              {
+                "stage": "authentication_setup",
+                "command": "cat >/tmp/codex-secrets/auth.json <<EOF\n<AUTH_JSON_REDACTED>\nEOF\nln -sf /tmp/codex-secrets/auth.json \"$CODEX_HOME/auth.json\"\n\nmkdir -p $HOME/.agents/skills && cp -r /runtime/skills/* $HOME/.agents/skills/ 2>/dev/null || true",
+                "user": "agent (task default)",
+                "cwd": "/workspace (task workdir)",
+                "exit_status": 0,
+                "stdout": "None",
+                "stderr": "None",
+                "stream_note": "Harbor Docker merges stderr into stdout"
+              },
+              {
+                "stage": "cli_startup",
+                "command": "if [ -s ~/.nvm/nvm.sh ]; then . ~/.nvm/nvm.sh; fi; CODEX_API_KEY= codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --model gpt-6.1-sol --json --enable unified_exec -c model_reasoning_effort=high -c web_search=disabled -- <TASK_PROMPT> 2>&1 </dev/null | tee /logs/agent/codex.txt",
+                "user": "agent (task default)",
+                "cwd": "/workspace (task workdir)",
+                "exit_status": 1,
+                "stdout": "Reading additional input from stdin...\n{\"type\":\"thread.started\",\"thread_id\":\"01a1addc-1c9b-79e1-97ba-2207b71e2012\"}\n<NON_HARNESS_OUTPUT_OMITTED>\n{\"type\":\"error\",\"message\":\"shared rollout token budget exhausted\"}\n{\"type\":\"turn.failed\",\"error\":{\"message\":\"shared rollout token budget exhausted\"}}",
+                "stderr": "None",
+                "stream_note": "Harbor Docker merges stderr into stdout"
+              },
+              {
+                "stage": "cleanup",
+                "command": "mkdir -p /logs/agent\nif [ -d \"$CODEX_HOME/sessions\" ]; then\n  rm -rf /logs/agent/sessions\n  cp -R \"$CODEX_HOME/sessions\" /logs/agent/sessions\nfi",
+                "user": "agent (task default)",
+                "cwd": "/workspace (task workdir)",
+                "exit_status": 0,
+                "stdout": "None",
+                "stderr": "None",
+                "stream_note": "Harbor Docker merges stderr into stdout"
+              },
+              {
+                "stage": "cleanup",
+                "command": "rm -rf /tmp/codex-secrets /installed-agent/codex-home",
+                "user": "root",
+                "cwd": "/workspace (task workdir)",
+                "exit_status": 1,
+                "stdout": "rm: cannot remove '/tmp/codex-secrets/auth.json': Permission denied\nrm: cannot remove '/installed-agent/codex-home': Permission denied",
+                "stderr": "None",
+                "stream_note": "Harbor Docker merges stderr into stdout"
+              }
+            ],
+            "primary_failure": {
+              "stage": "cli_startup",
+              "command": "if [ -s ~/.nvm/nvm.sh ]; then . ~/.nvm/nvm.sh; fi; CODEX_API_KEY= codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --model gpt-6.1-sol --json --enable unified_exec -c model_reasoning_effort=high -c web_search=disabled -- <TASK_PROMPT> 2>&1 </dev/null | tee /logs/agent/codex.txt",
+              "user": "agent (task default)",
+              "cwd": "/workspace (task workdir)",
+              "exit_status": 1,
+              "stdout": "Reading additional input from stdin...\n{\"type\":\"thread.started\",\"thread_id\":\"01a1addc-1c9b-79e1-97ba-2207b71e2012\"}\n<NON_HARNESS_OUTPUT_OMITTED>\n{\"type\":\"error\",\"message\":\"shared rollout token budget exhausted\"}\n{\"type\":\"turn.failed\",\"error\":{\"message\":\"shared rollout token budget exhausted\"}}",
+              "stderr": "None",
+              "stream_note": "Harbor Docker merges stderr into stdout"
+            },
+            "cleanup_failures": [
+              {
+                "stage": "cleanup",
+                "command": "rm -rf /tmp/codex-secrets /installed-agent/codex-home",
+                "user": "root",
+                "cwd": "/workspace (task workdir)",
+                "exit_status": 1,
+                "stdout": "rm: cannot remove '/tmp/codex-secrets/auth.json': Permission denied\nrm: cannot remove '/installed-agent/codex-home': Permission denied",
+                "stderr": "None",
+                "stream_note": "Harbor Docker merges stderr into stdout"
+              }
+            ]
+          }
+        },
+        "absent": {
+          "attempt": null,
+          "manifest": {
+            "variant": "absent",
+            "deployed_files": {
+              "dependabot/SKILL.md": "2b5f3af7d8a5555d330d4d72ba9ad6140e85215d006dd9d7a92ee0dae76bbf82",
+              "dependabot/references/pr-commands.md": "471a786456c798364d13c0da554c12c712c581986b7f4a1de95d8b3638fd21cb",
+              "dependabot/references/example-configs.md": "35375699cfbaa372b68a232a2704f88a190e1267f937e1f1921e8d83c97485ca",
+              "dependabot/references/dependabot-yml-reference.md": "c3b101d7e200a215211c9e23157ddfb1c051e437815b4d5a3d9bc13e504d6ed6",
+              "powershell-module-engineering/SKILL.md": "801cecfd42aeb32f3fd6083d9af08f44c8a5ca48202761533c072a10c06060c9",
+              "git-commit/SKILL.md": "554d1a3c6d95f15bc1170160659ecdc9a9958b64f377f3988941b672c249b13f",
+              "github-actions-hardening/SKILL.md": "31a8e7483d978e6267941edefebbe42aaa946bb3d43c9095aa3db343d4a8ff06",
+              "github-actions-hardening/references/permissions-and-tokens.md": "7272d00b20cf99c6fcbf34346f76730907c00701aef44bb9cfb7ab3eecac336b",
+              "github-actions-hardening/references/supply-chain.md": "f66f613dbd732ce87c1e76b88208efde8feae3ffe5a3ab405cde4ce3df66f605",
+              "github-actions-hardening/references/triggers-and-privilege.md": "465f3f76517e9f5374a73e30f46cb47e1fe62ce9fd81f782808a3abbb2df2756",
+              "github-actions-hardening/references/injection.md": "ebd6ef8d39ba6f1cd3dc13051e6ed4163d1d2ba36518cf0f7393836a211e58ff",
+              "github-actions-hardening/references/report-format.md": "3ecd2442e173bc001f858747873349be7c6c77050470b87ae516647908b1e86e",
+              "microsoft-code-reference/SKILL.md": "19f13822dd8674ac0a24787ac15472c9137d0db5b03750ba43ee9dcdac8ddd03",
+              "ansible/SKILL.md": "a79531195a9bdf942b301edf1588c8814ceb976557f4f0cb79bd9aa79e59d52e",
+              "msgraph/SKILL.md": "b4763f6ae89a4e2843ca5bfe15fddf49f5924e20054ff5d7fb7e43a2df3df67e",
+              "msgraph/CONTRIBUTING.md": "60dc9074eedcb06cb29845a4ab6d41866f357be6b8d810e8c84408788e2babf0",
+              "msgraph/scripts/run.ps1": "208a0323c85c94c8b8f23d974a92fb37dab77c44de5638fb3e7688e00d761cbb",
+              "msgraph/scripts/run.sh": "ef3545fee5e2f2654cedf32ed543ba2e496109c1eb90ea6f915fd9bcf4abd51b",
+              "msgraph/references/REFERENCE.md": "61639bb509391df6e65762355c87ef53c98f544d04e4455fd17f571c6732b5d7",
+              "msgraph/references/docs/errors.md": "2c297ff319457b717c4d38948444e3586960d4669ad65fc4e38f7d36138a0d8b",
+              "msgraph/references/docs/query-parameters.md": "f20ddb64c70f3b94c224882cb57bfc1541df6b2bb74532a5e16cb83ca94b6cd3",
+              "msgraph/references/docs/batching.md": "f5132b3027554ededc2ba6b116a47187df4c408be5ddbb273ff7653352e60e3b",
+              "msgraph/references/docs/authentication.md": "dae0fca55119fd89a9b719705d5263aa4705215c1de57d0bf33627d30c9d7c42",
+              "msgraph/references/docs/throttling.md": "cb6db141e600f3c433c80e8f21a6840b1ed83237d7c73f2b0144de37225b0a85",
+              "msgraph/references/docs/paging.md": "f1b76a08cde517b495023098385b63fdf921eb3dc5e374b4f285e71786feb716",
+              "msgraph/references/docs/advanced-queries.md": "89ac64478ca6539412ce66d5f6ac2f76f3c88ff709c8bee7c81da0d79017345e",
+              "msgraph/references/docs/best-practices.md": "48e18d277aa4412ac66acb084aaa8d1ba1af31fe840fdc9ff42c644ddbd8d03b",
+              "agent-safety/SKILL.md": "2dc7898d11fb55a1a042d46e6e60800d0f948253c5216efa3e470e8914cc84ab",
+              "code-simplification/SKILL.md": "e13b433345e6bf425c3625442ac1b3507b371c18d7ea3e3db822da7a7f742a29",
+              "podman/EVALS.md": "96088308ed8df85d9f369263de4ec02fefdb7f59fbccc2b4629991be7266e581",
+              "podman/SKILL.md": "625107071889166612f64ac52920be2b9455f671e4ce1f805835f7fee14ef274",
+              "podman/MAINTENANCE.md": "93f772d47f661cc721a211257f4a2aecabcc53ed77f0d4b16b754944128586c9",
+              "podman/references/reverse-proxy.md": "6a8d789b72d821e3fed320ca84325086d5a42ced25912a4b52ea760a306111ff",
+              "podman/references/quadlet-systemd.md": "55a300354c77b6e59b5876b1b3a6b7e00f9525a21c9160fa5b3200a3a8128f23",
+              "podman/references/compose-migration.md": "fce55e0ec0a56608d714f273afdbdc44017d0a4ebed73b61291cd0fdebbf434a",
+              "podman/references/rootless-networking.md": "a5fc3f33815caa196d5f8d6cb090136bcccc88fb95dedb921c99bd0b3cf6b524",
+              "podman/references/security-storage-secrets.md": "37e1fae3de6f4b7ae1ea3ccc2b0b84d7fd854ea2730a51f0e3b3b1bc9b2e1068",
+              "podman/references/validation.md": "465321094bc936d8a9e187bd3b4daa1ab271b93242a2c07fe88c58db6bd4bdd5",
+              "podman/references/fedora-hosts.md": "adb6f7a2a07f2067036354cb57bb69e694d423f20bd578e09db6a5a799859168",
+              "podman/evals/evals.json": "9bc7fdebc99616983bd501006f97a0a3233cc9901da06443e49d63652de2f0c5",
+              "podman/evals/files/postgres.container": "9da8bb708c14453616a43d2a9527484f6fa4ddc1d06c2339ddecadeeb9f54b5f",
+              "podman/evals/files/vendor-compose.yaml": "1f36c57615a4efa9bc6c1de9e7088d2dd82040cb14ec74b00c910c75f5ea26f7",
+              "podman/evals/files/vendor-web/Containerfile": "486aa74e34330bc0122d85c4f3719f3bf66c405ffe7fcd0a2969bec6d5c21a2d",
+              "a11y/SKILL.md": "96d578e9646cd80ff6e1bedb26069222ad37b473960f3c0cc069716484b22553",
+              "powershell-pester-6/SKILL.md": "b57df2ff4072b2e25744ae2bd530b02bbb6ab83a22a0d374c73d48de4dc70887",
+              "powershell-pester-6/references/compatibility-and-migration.md": "6d05a890eb1c53c59755f9e560c05d65467a614d36af7c812f4a32c89b47f4e9",
+              "powershell-pester-6/references/execution.md": "3b80a98abfefdcd9a765da9a9436caa43de6a873e57253f1ecfb36e1095ea4b8",
+              "gh/SKILL.md": "b40d44ef9077b34d710b4c0737fee0e72c595e0770fbbdcb339de2ba0b40e23b"
+            },
+            "codex_configuration": {
+              "config.toml": "782c639a9261c6c7920ce141d84bbb207f8695ca8405091fadaa25a5051d6e05"
+            },
+            "instructions_sha256": "7b8d5aca90cd1a90d32b98d1e86ee16d82c808336e309c26853d3aab73fb4543",
+            "grader_files": {
+              "EVALS.md": "05aab77534b4a41eacc28b61498b135e4a3fa99e6483e495bfcefb0b5545ed53",
+              "support/install-runtime.py": "d47f30bfff8b03ca5fba03c1307be77ab821d5fbbd10509eddb7b9fff71caa8d",
+              "support/EXECUTION-PROFILE.md": "d76e58f36664dcde45e9e86f47863578c23aa06c6d0bb5c365f04b998c49900f",
+              "support/Runner.ps1": "34502718d4ee8776d4ed2d38dedfee393a204e859e2eb904bdb48b9496810f52",
+              "support/test.sh": "6a19331893b1839ac1b8cd41d9b57b2e3ef105cd1de1f1e472ee066e34328f85",
+              "support/cases/pester-004/profile.json": "0f4dd7272eb67e67aed1ece1e03cb4eef60c48712df8e87e9b189b51f55bf43a",
+              "support/cases/pester-004/input/Subject.ps1": "e2ce7f590d85a49c24005829e380e269a32fa939dcc73bbf9ce009522b70cbc5",
+              "support/cases/pester-004/input/README.md": "2e4250c253101facb59b4f49e0aed0b017659042a6be25416dfe6454c5a32959",
+              "support/cases/pester-004/input/Existing.Tests.ps1": "322195b479d439e917afe4774fe3988af1e32d8b713db45ba1a6e1ca20e177cd",
+              "support/cases/pester-004/reference/Subject.ps1": "6d31ab77b5e387d6c9ddea1c75b8e4f6be84383022e979931700da94cfc9fdbc",
+              "support/cases/pester-004/mutants/zero.ps1": "fe7513605f8a52ebec61abf9c3be14aac3010e8a6d314c7488d7c7fc80b33260",
+              "support/cases/pester-004/mutants/highest.ps1": "b7077db138544a86a0f730a8f2fb47f61ff74ca662106cbb5df837afd7636ddf",
+              "support/cases/pester-004/mutants/above.ps1": "34ba94f2a830241f421b5f6964e089ccc6160b9764d304d4b3ca6834b49d4f37",
+              "support/cases/pester-004/mutants/lowest.ps1": "6e93e32817d5f5af2212fcb5b3cf91d7f5f570b382c7246ed274d1c90d913a9d",
+              "support/cases/pester-001/profile.json": "6fcaf12904d917dd8100b00df0cfea17f019a51757bb6caed065aec689061e19",
+              "support/cases/pester-001/input/Subject.ps1": "2a5afe13db1e6f89d691da645c7b92de9cbe3a69d1e1d147d75b9c2d1db71277",
+              "support/cases/pester-001/input/README.md": "47bb79ddcfc3c037a22b03045b3faa9a080a2e61ddd41995beaccd563e8a1d43",
+              "support/cases/pester-001/reference/Subject.ps1": "2a5afe13db1e6f89d691da645c7b92de9cbe3a69d1e1d147d75b9c2d1db71277",
+              "support/cases/pester-001/mutants/coercion.ps1": "0e50cbce4c9dd8c3af12de36d42288c4110b80ee3f31dda5a3f44ea858ac072b",
+              "support/cases/pester-001/mutants/filter.ps1": "4ab069c797c95d8da0d3d6d47615a0b5fcf3006399ea2b904bdc24d608158e14",
+              "support/cases/pester-003/profile.json": "cc10827699c0a7f6308142590a862904ad9e61b903e46336a8964f43d73054e3",
+              "support/cases/pester-003/input/Probe.psm1": "75e3cdf19d09f6dfda302dc5ce33a1feb2c6310f4c03fc3b6862279b9adbee7f",
+              "support/cases/pester-003/input/README.md": "104123e33aa72e1067eb1f22bd72498993a5c76ad06afe27846f4203344429cf",
+              "support/cases/pester-003/reference/Subject.ps1": "34499ba6650937a285fb7c654d4c833bf50328c3512460a4dc5bbc1a1a550453",
+              "support/cases/pester-003/mutants/target.ps1": "7e8e5200b2469d3831388e317a7c4a9c4884776b2335b1b418dd00d3b7f3d68e",
+              "support/cases/pester-003/mutants/bypass.ps1": "b6b56e5c08d40a8edc4c6fa0e9689603c33fc575c86a3b55eacf5669e9e802f9",
+              "support/cases/pester-002/profile.json": "b22226da66eb00dafd37ab5e582a20e3bb97f43d7798befbb52a07b040b99c82",
+              "support/cases/pester-002/input/Subject.ps1": "0f51c43ae61b355cadb2b5418938d5e64f060853784a36e495277f5e6ad7b101",
+              "support/cases/pester-002/input/README.md": "f48fc923ccb7cf73e20dd17a36b6a670d85061ae0a08881ce44f363ec9162b51",
+              "support/cases/pester-002/reference/Subject.ps1": "1d09abfa1a65f12e448f0bd785cc60b30071b420123030dee2fdd4e50848fba9",
+              "support/cases/pester-002/mutants/exponent.ps1": "ff34ab2512b5f5064c4539a48437096d22a3a2a01023afdd862235d4714dc5c0",
+              "support/cases/pester-002/mutants/swallowed.ps1": "230dd797449ed463c5f9ebc181224634c92489c93a4f85c0d17f7bcba3a28c83",
+              "support/cases/pester-005/profile.json": "a1122cac076e058a1aab540a191684bc86dad0a779a7baad256ad5d154d774b6",
+              "support/cases/pester-005/input/unittest.txt": "16bb7d0243698e035cf8e6e93f7fe252da353f7f71e7503128a3e20d6af40233",
+              "support/cases/pester-005/input/README.md": "7c38fe72daa5a2cc6cff23af5e3c8f345789010014f9ef94d42e386c04ea297d",
+              "support/cases/pester-005/reference/summary.json": "5b6c4b049dbedbc7cb8192d1972ba4edd11b92a9fbe499e6d95ee59a0a0f022c",
+              "support/qualification/pester-004/inline.Tests.ps1": "9fb7a9f7d1164cb1a53222e9e3af5257c4681d250a85aba25d9e622dbbd89de0",
+              "support/qualification/pester-004/discovery.Tests.ps1": "45e8c9be8c4cce8cfbd92859d01de9f99a2e87e71d9486f892aa92cc5a4a6f9c",
+              "support/qualification/pester-004/weak.Tests.ps1": "ff3e3d6d2c4633556c15f8dab9bedfacdaf7294fddec360d02656c51a54c399c",
+              "support/qualification/pester-004/compact.Tests.ps1": "3ec2493c5e8cca8ddf321b8e43f5434185dbfb3ee946a6fd2a1dce5415510b5d",
+              "support/qualification/pester-001/standalone.Tests.ps1": "32a47b587508c019be03284ec514c2a8fc35522c3e2cea3bdbfef8b1fce652d5",
+              "support/qualification/pester-001/weak.Tests.ps1": "a79ff3052e0b9dcb828a9266d32fdf9166eff503c03d8bf946969e8ab80a801e",
+              "support/qualification/pester-001/classic.Tests.ps1": "9e59688c16ac411adfbbdcf1098520b0afc644494229d92d51dea7a59a24b4e0",
+              "support/qualification/pester-001/data.Tests.ps1": "0504b5bc73006d9fdd18bfee369504948a02d6ea4fdeda8c5db9d6a5a6807776",
+              "support/qualification/pester-003/module.Tests.ps1": "2e6ea9ff009deb1d5f7e86915a91f9ad5d2ed893c69e5fa94103e5b9ddc4d3b1",
+              "support/qualification/pester-003/external.Tests.ps1": "fcd01e950ba0f48d86ad8c3302457c751386a5412e067b36baa2a91a4613fcd9",
+              "support/qualification/pester-003/weak.Tests.ps1": "c4ba117b557613923ab6444d41a6e50117b4af9f0fc31a169236edef26ce6b08",
+              "support/qualification/pester-002/weak.Tests.ps1": "94d8dff22e3715ade171b143d118fe8939acf89e8e3014bccf35fd254cea3ca4",
+              "support/qualification/pester-002/classic.Tests.ps1": "8784023e56e7757644ae38797e7fc6cfedfda289a25d0a98283b34d0f40b090a",
+              "support/qualification/pester-002/data.Tests.ps1": "2e065d6bad3b522a438971b28799d608f09ec4f3ce15a5a596f9171cd16ae876",
+              "support/qualification/pester-005/good.json": "c900360b112a120fb6b7359dcfc1a15150195c859ded8e89f89a1960d090e40f",
+              "support/qualification/pester-005/wrong.json": "bfc7b71f5982e2a2881a48fc5093e347f49196dbef7d008e28a03e233a74d014",
+              "evals/evals.json": "d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+              "evals/config.yml": "02433e16bc501a3e28546345741ac2d4ec1d4e3ec2bf9bb55832a1473475306b",
+              "evals/grader.py": "84103238eeccb485a77033557e6649e758f9cd62b4d75ea2913f3e482cc6f7ca"
+            },
+            "task_checksum": "470b994308dcaa429b5941c41f45ec932bf3ef2161d4206219f4eb045df9acd9",
+            "effective_skills": {
+              "dependabot/SKILL.md": "2b5f3af7d8a5555d330d4d72ba9ad6140e85215d006dd9d7a92ee0dae76bbf82",
+              "dependabot/references/pr-commands.md": "471a786456c798364d13c0da554c12c712c581986b7f4a1de95d8b3638fd21cb",
+              "dependabot/references/example-configs.md": "35375699cfbaa372b68a232a2704f88a190e1267f937e1f1921e8d83c97485ca",
+              "dependabot/references/dependabot-yml-reference.md": "c3b101d7e200a215211c9e23157ddfb1c051e437815b4d5a3d9bc13e504d6ed6",
+              "powershell-module-engineering/SKILL.md": "801cecfd42aeb32f3fd6083d9af08f44c8a5ca48202761533c072a10c06060c9",
+              "git-commit/SKILL.md": "554d1a3c6d95f15bc1170160659ecdc9a9958b64f377f3988941b672c249b13f",
+              "github-actions-hardening/SKILL.md": "31a8e7483d978e6267941edefebbe42aaa946bb3d43c9095aa3db343d4a8ff06",
+              "github-actions-hardening/references/permissions-and-tokens.md": "7272d00b20cf99c6fcbf34346f76730907c00701aef44bb9cfb7ab3eecac336b",
+              "github-actions-hardening/references/supply-chain.md": "f66f613dbd732ce87c1e76b88208efde8feae3ffe5a3ab405cde4ce3df66f605",
+              "github-actions-hardening/references/triggers-and-privilege.md": "465f3f76517e9f5374a73e30f46cb47e1fe62ce9fd81f782808a3abbb2df2756",
+              "github-actions-hardening/references/injection.md": "ebd6ef8d39ba6f1cd3dc13051e6ed4163d1d2ba36518cf0f7393836a211e58ff",
+              "github-actions-hardening/references/report-format.md": "3ecd2442e173bc001f858747873349be7c6c77050470b87ae516647908b1e86e",
+              "microsoft-code-reference/SKILL.md": "19f13822dd8674ac0a24787ac15472c9137d0db5b03750ba43ee9dcdac8ddd03",
+              "ansible/SKILL.md": "a79531195a9bdf942b301edf1588c8814ceb976557f4f0cb79bd9aa79e59d52e",
+              "msgraph/SKILL.md": "b4763f6ae89a4e2843ca5bfe15fddf49f5924e20054ff5d7fb7e43a2df3df67e",
+              "msgraph/CONTRIBUTING.md": "60dc9074eedcb06cb29845a4ab6d41866f357be6b8d810e8c84408788e2babf0",
+              "msgraph/scripts/run.ps1": "208a0323c85c94c8b8f23d974a92fb37dab77c44de5638fb3e7688e00d761cbb",
+              "msgraph/scripts/run.sh": "ef3545fee5e2f2654cedf32ed543ba2e496109c1eb90ea6f915fd9bcf4abd51b",
+              "msgraph/references/REFERENCE.md": "61639bb509391df6e65762355c87ef53c98f544d04e4455fd17f571c6732b5d7",
+              "msgraph/references/docs/errors.md": "2c297ff319457b717c4d38948444e3586960d4669ad65fc4e38f7d36138a0d8b",
+              "msgraph/references/docs/query-parameters.md": "f20ddb64c70f3b94c224882cb57bfc1541df6b2bb74532a5e16cb83ca94b6cd3",
+              "msgraph/references/docs/batching.md": "f5132b3027554ededc2ba6b116a47187df4c408be5ddbb273ff7653352e60e3b",
+              "msgraph/references/docs/authentication.md": "dae0fca55119fd89a9b719705d5263aa4705215c1de57d0bf33627d30c9d7c42",
+              "msgraph/references/docs/throttling.md": "cb6db141e600f3c433c80e8f21a6840b1ed83237d7c73f2b0144de37225b0a85",
+              "msgraph/references/docs/paging.md": "f1b76a08cde517b495023098385b63fdf921eb3dc5e374b4f285e71786feb716",
+              "msgraph/references/docs/advanced-queries.md": "89ac64478ca6539412ce66d5f6ac2f76f3c88ff709c8bee7c81da0d79017345e",
+              "msgraph/references/docs/best-practices.md": "48e18d277aa4412ac66acb084aaa8d1ba1af31fe840fdc9ff42c644ddbd8d03b",
+              "agent-safety/SKILL.md": "2dc7898d11fb55a1a042d46e6e60800d0f948253c5216efa3e470e8914cc84ab",
+              "code-simplification/SKILL.md": "e13b433345e6bf425c3625442ac1b3507b371c18d7ea3e3db822da7a7f742a29",
+              "podman/EVALS.md": "96088308ed8df85d9f369263de4ec02fefdb7f59fbccc2b4629991be7266e581",
+              "podman/SKILL.md": "625107071889166612f64ac52920be2b9455f671e4ce1f805835f7fee14ef274",
+              "podman/MAINTENANCE.md": "93f772d47f661cc721a211257f4a2aecabcc53ed77f0d4b16b754944128586c9",
+              "podman/references/reverse-proxy.md": "6a8d789b72d821e3fed320ca84325086d5a42ced25912a4b52ea760a306111ff",
+              "podman/references/quadlet-systemd.md": "55a300354c77b6e59b5876b1b3a6b7e00f9525a21c9160fa5b3200a3a8128f23",
+              "podman/references/compose-migration.md": "fce55e0ec0a56608d714f273afdbdc44017d0a4ebed73b61291cd0fdebbf434a",
+              "podman/references/rootless-networking.md": "a5fc3f33815caa196d5f8d6cb090136bcccc88fb95dedb921c99bd0b3cf6b524",
+              "podman/references/security-storage-secrets.md": "37e1fae3de6f4b7ae1ea3ccc2b0b84d7fd854ea2730a51f0e3b3b1bc9b2e1068",
+              "podman/references/validation.md": "465321094bc936d8a9e187bd3b4daa1ab271b93242a2c07fe88c58db6bd4bdd5",
+              "podman/references/fedora-hosts.md": "adb6f7a2a07f2067036354cb57bb69e694d423f20bd578e09db6a5a799859168",
+              "podman/evals/evals.json": "9bc7fdebc99616983bd501006f97a0a3233cc9901da06443e49d63652de2f0c5",
+              "podman/evals/files/postgres.container": "9da8bb708c14453616a43d2a9527484f6fa4ddc1d06c2339ddecadeeb9f54b5f",
+              "podman/evals/files/vendor-compose.yaml": "1f36c57615a4efa9bc6c1de9e7088d2dd82040cb14ec74b00c910c75f5ea26f7",
+              "podman/evals/files/vendor-web/Containerfile": "486aa74e34330bc0122d85c4f3719f3bf66c405ffe7fcd0a2969bec6d5c21a2d",
+              "a11y/SKILL.md": "96d578e9646cd80ff6e1bedb26069222ad37b473960f3c0cc069716484b22553",
+              "gh/SKILL.md": "b40d44ef9077b34d710b4c0737fee0e72c595e0770fbbdcb339de2ba0b40e23b"
+            },
+            "effective_codex_config": {
+              "mcp_servers": {
+                "microsoft-learn": {
+                  "url": "https://learn.microsoft.com/api/mcp",
+                  "enabled_tools": [
+                    "microsoft_docs_search",
+                    "microsoft_docs_fetch",
+                    "microsoft_code_sample_search"
+                  ],
+                  "enabled": false
+                }
+              },
+              "web_search": "disabled",
+              "service_tier": "default",
+              "model_reasoning_effort": "high",
+              "forced_login_method": "api",
+              "projects": {
+                "/workspace": {
+                  "trust_level": "trusted"
+                }
+              },
+              "model_provider": "trial_openai",
+              "model_providers": {
+                "trial_openai": {
+                  "name": "OpenAI",
+                  "base_url": "https://api.openai.com/v1",
+                  "wire_api": "responses",
+                  "requires_openai_auth": true,
+                  "request_max_retries": 0,
+                  "stream_max_retries": 0,
+                  "stream_idle_timeout_ms": 60000,
+                  "supports_websockets": true,
+                  "supports_standalone_web_search": true,
+                  "http_headers": {
+                    "version": "0.166.0"
+                  },
+                  "env_http_headers": {
+                    "OpenAI-Organization": "OPENAI_ORGANIZATION",
+                    "OpenAI-Project": "OPENAI_PROJECT"
+                  }
+                }
+              },
+              "features": {
+                "rollout_budget": {
+                  "enabled": true,
+                  "limit_tokens": 30000,
+                  "enforce_limit": true,
+                  "reminder_at_remaining_tokens": [
+                    5000
+                  ],
+                  "sampling_token_weight": 5.0,
+                  "prefill_token_weight": 1.0
+                }
+              }
+            }
+          },
+          "boundary": {
+            "skills": {
+              "gh/SKILL.md": "b40d44ef9077b34d710b4c0737fee0e72c595e0770fbbdcb339de2ba0b40e23b",
+              "a11y/SKILL.md": "96d578e9646cd80ff6e1bedb26069222ad37b473960f3c0cc069716484b22553",
+              "podman/EVALS.md": "96088308ed8df85d9f369263de4ec02fefdb7f59fbccc2b4629991be7266e581",
+              "podman/SKILL.md": "625107071889166612f64ac52920be2b9455f671e4ce1f805835f7fee14ef274",
+              "podman/MAINTENANCE.md": "93f772d47f661cc721a211257f4a2aecabcc53ed77f0d4b16b754944128586c9",
+              "code-simplification/SKILL.md": "e13b433345e6bf425c3625442ac1b3507b371c18d7ea3e3db822da7a7f742a29",
+              "agent-safety/SKILL.md": "2dc7898d11fb55a1a042d46e6e60800d0f948253c5216efa3e470e8914cc84ab",
+              "msgraph/SKILL.md": "b4763f6ae89a4e2843ca5bfe15fddf49f5924e20054ff5d7fb7e43a2df3df67e",
+              "msgraph/CONTRIBUTING.md": "60dc9074eedcb06cb29845a4ab6d41866f357be6b8d810e8c84408788e2babf0",
+              "ansible/SKILL.md": "a79531195a9bdf942b301edf1588c8814ceb976557f4f0cb79bd9aa79e59d52e",
+              "microsoft-code-reference/SKILL.md": "19f13822dd8674ac0a24787ac15472c9137d0db5b03750ba43ee9dcdac8ddd03",
+              "github-actions-hardening/SKILL.md": "31a8e7483d978e6267941edefebbe42aaa946bb3d43c9095aa3db343d4a8ff06",
+              "git-commit/SKILL.md": "554d1a3c6d95f15bc1170160659ecdc9a9958b64f377f3988941b672c249b13f",
+              "powershell-module-engineering/SKILL.md": "801cecfd42aeb32f3fd6083d9af08f44c8a5ca48202761533c072a10c06060c9",
+              "dependabot/SKILL.md": "2b5f3af7d8a5555d330d4d72ba9ad6140e85215d006dd9d7a92ee0dae76bbf82",
+              "podman/evals/evals.json": "9bc7fdebc99616983bd501006f97a0a3233cc9901da06443e49d63652de2f0c5",
+              "podman/references/reverse-proxy.md": "6a8d789b72d821e3fed320ca84325086d5a42ced25912a4b52ea760a306111ff",
+              "podman/references/quadlet-systemd.md": "55a300354c77b6e59b5876b1b3a6b7e00f9525a21c9160fa5b3200a3a8128f23",
+              "podman/references/compose-migration.md": "fce55e0ec0a56608d714f273afdbdc44017d0a4ebed73b61291cd0fdebbf434a",
+              "podman/references/rootless-networking.md": "a5fc3f33815caa196d5f8d6cb090136bcccc88fb95dedb921c99bd0b3cf6b524",
+              "podman/references/security-storage-secrets.md": "37e1fae3de6f4b7ae1ea3ccc2b0b84d7fd854ea2730a51f0e3b3b1bc9b2e1068",
+              "podman/references/validation.md": "465321094bc936d8a9e187bd3b4daa1ab271b93242a2c07fe88c58db6bd4bdd5",
+              "podman/references/fedora-hosts.md": "adb6f7a2a07f2067036354cb57bb69e694d423f20bd578e09db6a5a799859168",
+              "podman/evals/files/postgres.container": "9da8bb708c14453616a43d2a9527484f6fa4ddc1d06c2339ddecadeeb9f54b5f",
+              "podman/evals/files/vendor-compose.yaml": "1f36c57615a4efa9bc6c1de9e7088d2dd82040cb14ec74b00c910c75f5ea26f7",
+              "podman/evals/files/vendor-web/Containerfile": "486aa74e34330bc0122d85c4f3719f3bf66c405ffe7fcd0a2969bec6d5c21a2d",
+              "msgraph/references/REFERENCE.md": "61639bb509391df6e65762355c87ef53c98f544d04e4455fd17f571c6732b5d7",
+              "msgraph/scripts/run.ps1": "208a0323c85c94c8b8f23d974a92fb37dab77c44de5638fb3e7688e00d761cbb",
+              "msgraph/scripts/run.sh": "ef3545fee5e2f2654cedf32ed543ba2e496109c1eb90ea6f915fd9bcf4abd51b",
+              "msgraph/references/docs/errors.md": "2c297ff319457b717c4d38948444e3586960d4669ad65fc4e38f7d36138a0d8b",
+              "msgraph/references/docs/query-parameters.md": "f20ddb64c70f3b94c224882cb57bfc1541df6b2bb74532a5e16cb83ca94b6cd3",
+              "msgraph/references/docs/batching.md": "f5132b3027554ededc2ba6b116a47187df4c408be5ddbb273ff7653352e60e3b",
+              "msgraph/references/docs/authentication.md": "dae0fca55119fd89a9b719705d5263aa4705215c1de57d0bf33627d30c9d7c42",
+              "msgraph/references/docs/throttling.md": "cb6db141e600f3c433c80e8f21a6840b1ed83237d7c73f2b0144de37225b0a85",
+              "msgraph/references/docs/paging.md": "f1b76a08cde517b495023098385b63fdf921eb3dc5e374b4f285e71786feb716",
+              "msgraph/references/docs/advanced-queries.md": "89ac64478ca6539412ce66d5f6ac2f76f3c88ff709c8bee7c81da0d79017345e",
+              "msgraph/references/docs/best-practices.md": "48e18d277aa4412ac66acb084aaa8d1ba1af31fe840fdc9ff42c644ddbd8d03b",
+              "github-actions-hardening/references/permissions-and-tokens.md": "7272d00b20cf99c6fcbf34346f76730907c00701aef44bb9cfb7ab3eecac336b",
+              "github-actions-hardening/references/supply-chain.md": "f66f613dbd732ce87c1e76b88208efde8feae3ffe5a3ab405cde4ce3df66f605",
+              "github-actions-hardening/references/triggers-and-privilege.md": "465f3f76517e9f5374a73e30f46cb47e1fe62ce9fd81f782808a3abbb2df2756",
+              "github-actions-hardening/references/injection.md": "ebd6ef8d39ba6f1cd3dc13051e6ed4163d1d2ba36518cf0f7393836a211e58ff",
+              "github-actions-hardening/references/report-format.md": "3ecd2442e173bc001f858747873349be7c6c77050470b87ae516647908b1e86e",
+              "dependabot/references/pr-commands.md": "471a786456c798364d13c0da554c12c712c581986b7f4a1de95d8b3638fd21cb",
+              "dependabot/references/example-configs.md": "35375699cfbaa372b68a232a2704f88a190e1267f937e1f1921e8d83c97485ca",
+              "dependabot/references/dependabot-yml-reference.md": "c3b101d7e200a215211c9e23157ddfb1c051e437815b4d5a3d9bc13e504d6ed6"
+            },
+            "instructions_sha256": "7b8d5aca90cd1a90d32b98d1e86ee16d82c808336e309c26853d3aab73fb4543",
+            "codex_files": {
+              "config.toml": "782c639a9261c6c7920ce141d84bbb207f8695ca8405091fadaa25a5051d6e05"
+            },
+            "target_copies": [],
+            "network": {
+              "api.openai.com": 421,
+              "github.com": null,
+              "raw.githubusercontent.com": null,
+              "learn.microsoft.com": null,
+              "169.254.169.254": null
+            },
+            "uid": 1000,
+            "capabilities": 0,
+            "no_new_privileges": true,
+            "seccomp_filter": true,
+            "workspace_writable": true,
+            "fresh_session": true,
+            "image": "sha256:515c665351b037807d27a225ed14b3f1a575080885bc451786401a01d158ad5b",
+            "mount_destinations": [],
+            "resources": {
+              "cpus": 2,
+              "memory_mb": 2048,
+              "pids": 256
+            },
+            "variant": "absent"
+          },
+          "installation": {
+            "stdout": "WARNING: proceeding, even though we could not create PATH aliases: Operation not permitted (os error 1)\ncodex-cli 0.166.0",
+            "stderr": "",
+            "cwd": "/workspace",
+            "command": "/usr/local/bin/codex --version",
+            "user": "agent",
+            "returncode": 0,
+            "version": "0.166.0",
+            "matched": true
+          },
+          "container-policy": {
+            "Privileged": false,
+            "CapDrop": [
+              "ALL"
+            ],
+            "CapAdd": null,
+            "PidsLimit": 256,
+            "Memory": 2147483648,
+            "NanoCpus": 2000000000,
+            "NetworkMode": "container:51fb14972c0ab5011d14e8ebb9ef8d1767139f8ab42c0085a57b1d24ee5ffe8f",
+            "PidMode": "",
+            "SecurityOpt": [
+              "no-new-privileges:true"
+            ]
+          },
+          "effective-config": null,
+          "configuration-load": null,
+          "launch-diagnostics": null
+        }
+      },
+      "deployment_comparison": {
+        "matched": true,
+        "removed_target_files": [
+          "powershell-pester-6/SKILL.md",
+          "powershell-pester-6/references/compatibility-and-migration.md",
+          "powershell-pester-6/references/execution.md"
+        ],
+        "profile": "codex-0.166.0_gpt-6.1-sol_high",
+        "shared_config": {
+          "mcp_servers": {
+            "microsoft-learn": {
+              "url": "https://learn.microsoft.com/api/mcp",
+              "enabled_tools": [
+                "microsoft_docs_search",
+                "microsoft_docs_fetch",
+                "microsoft_code_sample_search"
+              ],
+              "enabled": false
+            }
+          },
+          "web_search": "disabled",
+          "service_tier": "default",
+          "model_reasoning_effort": "high",
+          "forced_login_method": "api",
+          "projects": {
+            "/workspace": {
+              "trust_level": "trusted"
+            }
+          },
+          "model_provider": "trial_openai",
+          "model_providers": {
+            "trial_openai": {
+              "name": "OpenAI",
+              "base_url": "https://api.openai.com/v1",
+              "wire_api": "responses",
+              "requires_openai_auth": true,
+              "request_max_retries": 0,
+              "stream_max_retries": 0,
+              "stream_idle_timeout_ms": 60000,
+              "supports_websockets": true,
+              "supports_standalone_web_search": true,
+              "http_headers": {
+                "version": "0.166.0"
+              },
+              "env_http_headers": {
+                "OpenAI-Organization": "OPENAI_ORGANIZATION",
+                "OpenAI-Project": "OPENAI_PROJECT"
+              }
+            }
+          },
+          "features": {
+            "rollout_budget": {
+              "enabled": true,
+              "limit_tokens": 30000,
+              "enforce_limit": true,
+              "reminder_at_remaining_tokens": [
+                5000
+              ],
+              "sampling_token_weight": 5.0,
+              "prefill_token_weight": 1.0
+            }
+          }
+        },
+        "instructions_sha256": "7b8d5aca90cd1a90d32b98d1e86ee16d82c808336e309c26853d3aab73fb4543"
+      },
+      "second_arm_gate": null,
+      "reservations": [
+        {
+          "allocation_id": "sol-high-smoke-20261105",
+          "attempt": 5,
+          "variant": "current",
+          "state": "reserved_consumed_if_launch_unknown",
+          "commit": "368c3866f817b6b38fcc04953e15b300d81cd5f0",
+          "run_id": "42122482332",
+          "run_number": "17"
+        }
+      ],
+      "budget_usd": 5,
+      "reserve_usd": 2.5,
+      "headroom_usd": 0.5,
+      "actual_billing_usd": null,
+      "usage_note": "CLI-reported cumulative totals are retained without summing repeated token-count events. Cached reads and writes are input subsets; reasoning is an output subset. Conservative estimate charges all input at $10/M and output at $15/M, without adding subset counts. These are estimates, not provider bills.",
+      "limits": [
+        "One attempt per arm cannot establish skill effectiveness; comparisons with historical CLI/model profiles are not skill-only comparisons",
+        "File-access attempts are not successful reads, instruction following or causal skill benefit",
+        "Native cleanup permission errors are retained; whole disposable-container removal is checked independently",
+        "The API credential is available to the evaluated process. Unrelated credentials, raw transcripts, submission contents and authentication files are excluded from artifacts",
+        "Pinned native pricing may be unavailable; historical cumulative spending remains unknown; $5 is an operational budget with possible overshoot, not a provider-enforced cap"
+      ],
+      "reviewed_execution_classification": {
+        "outcome": "agent_token_budget_exhausted",
+        "basis": "Native CLI turn.failed event",
+        "native_failure_cause_unchanged": true,
+        "weighted_fallback_units_from_usage": 30346,
+        "notes": [
+          "Codex emitted the exact terminal error shared rollout token budget exhausted. Harbor retained NonZeroAgentExitCodeError with native failure cause unclassified; this report identifies agent token-budget exhaustion without changing the native result or reward validity.",
+          "The producer, host and verifier all confirmed no submission. This is a missing deliverable at budget exhaustion, not a demonstrated collection/transfer defect. Reference correctness and mutation detection remain unmeasured.",
+          "All six cumulative CLI usage categories were retained. The conservative scheduling flag also requires normal execution completion, so it remained false; it does not mean those observations are absent or zero. Complete billing remains unverified.",
+          "Observed usage reconstructs 30346 weighted fallback units against the 30,000 limit (noncached input plus five times output), consistent with the terminal error. Provider budget units are not serialized, so the precise meter branch is unconfirmed.",
+          "The absent arm was prepared and verified but never reserved or launched. Slot six is closed unused. No retry or replacement allocation is scheduled.",
+          "No concrete skill weakness or causal skill benefit is established. The next necessary decision is to calibrate the supplemental token budget for the full frozen deployment and recognize this Codex-specific budget termination before considering another allocation."
+        ]
+      },
+      "reviewed_artifact_provenance": {
+        "run_id": 42122482332,
+        "executed_commit": "368c3866f817b6b38fcc04953e15b300d81cd5f0",
+        "artifact_id": 13459128008,
+        "sha256": "4d6e9e841ccfb32bb90348da6813c4484923ab750bc03db86af608befcb6e59e",
+        "archive_and_extracted_bytes_verified": true
+      }
+    }
+  ],
+  "artifact_provenance": {
+    "run_id": 42157462581,
+    "executed_commit": "47635e39fd6f29161522d14b34617827255b8637",
+    "artifact_id": 13475830612,
+    "archive_sha256": "b8b3c00b8c2469d2628fb21ed7900d5bfb0b77ba27372426bebbd5a65048182b",
+    "verified": true,
+    "note": "Reviewed metadata from the exact execution artifact. Packaging and reviewed interpretation do not change native outcomes."
   },
-  "reviewed_artifact_provenance": {
-    "run_id": 42122482332,
-    "executed_commit": "368c3866f817b6b38fcc04953e15b300d81cd5f0",
-    "artifact_id": 13459128008,
-    "sha256": "4d6e9e841ccfb32bb90348da6813c4484923ab750bc03db86af608befcb6e59e",
-    "archive_and_extracted_bytes_verified": true
-  }
+  "reviewed_notes": [
+    "Attempt six completed normally in 42.508 seconds of agent execution. Its 3,372-byte file was present at the producer, collected by Harbor, and uploaded unchanged to the verifier: SHA256 f7ac66471845696e149977a9d3a33b6302864d53b370fadc7f60e6a914829ccf at all three boundaries. No artifact-transfer failure is demonstrated.",
+    "The unchanged offline verifier returned unsupported/admission before reference or mutant execution. Harbor reward validity is true, but its numeric zero is not a measured correctness score. Task correctness and mutation detection remain unavailable; unsupported work is an explicit coverage gap, not an agent correctness failure.",
+    "The exact admission rule cannot be recovered from retained evidence. Runner.ps1 intentionally maps multiple AST/policy checks to unsupported/admission and suppresses exception details; raw submissions and rollouts were not published. No specific syntax, skill weakness or grader defect is inferred.",
+    "Both prepared deployments passed the external boundary and feature-state checks; the absent arm had zero target-skill directory copies and differed only by the three target files. The current runtime also confirmed rollout_budget=false after Harbor uploaded its effective configuration. The absent Codex session was never launched.",
+    "The CLI terminal usage matches all five corresponding rollout categories. One complete parseable session retained usage before its terminal; accounting is adequate for the scheduling estimate independently of task admission. Conservative estimate: USD 1.49446. Plus USD 2.50 reserve and USD 0.50 headroom = USD 4.49446, below the USD 5 operational budget. The second arm stopped for unsupported grading coverage, not usage or spending reserve.",
+    "One target SKILL.md access attempt was observed among five custom tool calls. The retained evidence does not establish a successful read, instruction following or causal benefit. No concrete skill weakness is demonstrated.",
+    "Native cleanup retained a permission-denied exit under dropped capabilities; the full agent and verifier containers were independently confirmed removed. No isolation settings were weakened.",
+    "Allocation closed after reservation six only. Reservation seven is closed unused; no retry or replacement is authorized. Campaign consumption is 6/36 and the original recovery allocation remains 4/4. Provider billing and historical cumulative spending remain unknown.",
+    "Smallest next decision: authorize a narrow credential-free admission-diagnostic improvement that retains a fixed rule identifier without submission contents or weaker acceptance criteria. Establish what the unsupported category means before allocating more inference. No broad calibration, skill revision or additional paid phase is started."
+  ]
 }
