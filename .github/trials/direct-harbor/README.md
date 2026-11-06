@@ -1,5 +1,31 @@
 # Direct Harbor recovery trial
 
+## Authorized retained-submission smoke allocation
+
+Allocation `sol-high-retained-20261106` starts from the closed 6/36 ledger and
+permits current/7 followed by absent/8 at most. All earlier allocations and unused
+reservations remain closed. Admission diagnostics are enabled in both arms; runtime,
+APM deployment, task, grader acceptance criteria and isolation are unchanged.
+Paid execution is disabled by default, armed for one push/run number only, and closed
+on terminal paths. The $5 operational budget retains the $2.50 second-arm reserve
+and $0.50 headroom; historical billing remains unknown.
+
+The user explicitly authorized retaining only the exact agent-generated
+`/workspace/output/Subject.Tests.ps1` for 30 days. `retention.py` checks bounded regular
+single-link files, known credential values/patterns and protected fixture content.
+It never executes the file and never edits its bytes. A blocked file has a fixed
+reason and metadata only. These bounded checks are not a general DLP proof.
+Approved files and identity/hash metadata are uploaded as separate evidence attachments,
+downloaded, then verified against the staged bytes and reservation before the second
+arm can be reserved. No oracle answers, raw rollouts, authentication files or environment
+dumps are retained. Missing or failed publication cannot masquerade as recoverable evidence.
+
+The credential-free fixture run 42212438394 verified this upload/download path,
+including CRLF byte preservation. It is publication-path evidence, not a new handoff,
+security, grading or model qualification. See `results/retention-validation.json`.
+Maintenance added: one small publication module, focused tests and pinned artifact
+upload/download steps; no additional Harbor private override, dependency or transport.
+
 ## Admission diagnostics and preflight
 
 The branch-only `admission` Actions phase builds only the pinned verifier image.
@@ -55,7 +81,7 @@ and trusted reference/mutation component checks. Without those variables, native
 component tests explicitly skip; the mandatory live preflight still requires its
 image's PowerShell. No new dependency or Harbor private override is introduced.
 
-Raw submissions remain excluded from published artifacts. Hashes and rule IDs
+Before the explicit retention authorization above, raw submissions were excluded. Hashes and rule IDs
 cannot reconstruct a discarded file; replay requires a retained copy. These
 diagnostics do not retroactively explain attempt six or establish skill benefit.
 
@@ -74,8 +100,8 @@ remaining paid smoke attempts despite unknown costs. Both sessions completed in 
 four recovery slots are consumed; scheduling is disabled. This is launch evidence,
 not a valid task comparison. The broader comparison is not authorized here.
 Only reviewed metadata is published; previously rejected raw oracle content is not
-repackaged. Raw agent transcripts, submissions, authentication files and environment
-dumps are excluded from the live artifacts.
+repackaged. Historical raw submissions were excluded. Raw agent transcripts, authentication files and environment
+dumps remain excluded; the later declared-deliverable exception is described above.
 
 ## Credential-free handoff and runtime pass
 

@@ -164,6 +164,9 @@ def prepare(root, diagnostic=False):
     if not diagnostic:
         from allocation import active
         allocation = active()
+        retention_proof=json.loads(Path(__file__).with_name("results").joinpath("retention-validation.json").read_text())
+        assert retention_proof["publication_verified"] and retention_proof["local_download_verified"]
+        assert retention_proof["paid_attempt"] is False and retention_proof["inference"] is False
     validate_prior_results(previous, allocation)
     launch = json.loads(Path(__file__).with_name('launch.json').read_text())
     admission_diagnostics = launch.get('admission_diagnostics', False)

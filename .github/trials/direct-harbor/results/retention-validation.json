@@ -1,0 +1,32 @@
+{
+  "status": "published_verified",
+  "source": "/workspace/output/Subject.Tests.ps1",
+  "kind": "credential_free_retention_fixture",
+  "identity": {
+    "allocation_id": "credential-free-retention",
+    "reservation_id": "none",
+    "attempt": null,
+    "variant": "fixture",
+    "commit": "4ed36cad4a67a0fe6ae176f2288dee3c8d531652",
+    "run_id": "42212438394"
+  },
+  "source_metadata": {
+    "exists": true,
+    "type": "file",
+    "size": 82,
+    "uid": 1001,
+    "gid": 1001,
+    "mode": "0o644",
+    "sha256": "f2ce38bd148bad55bf47a649202a66c3f8d75da7e5e153490f78f6c096e7aa69",
+    "links": 1
+  },
+  "exact_bytes": true,
+  "artifact_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42212438394/artifacts/13499572178",
+  "publication_verified": true,
+  "reason": null,
+  "sha256": "f2ce38bd148bad55bf47a649202a66c3f8d75da7e5e153490f78f6c096e7aa69",
+  "size": 82,
+  "paid_attempt": false,
+  "inference": false,
+  "local_download_verified": true
+}
