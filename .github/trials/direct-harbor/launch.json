@@ -1,7 +1,7 @@
 {
-  "phase": "live-pair",
+  "phase": "report",
   "campaign": "direct-harbor-20261104",
-  "paid_attempts_used": 7,
+  "paid_attempts_used": 9,
   "paid_attempt_limit": 36,
   "recovery_live_attempt_limit": 4,
   "budget_usd": 20,
@@ -11,11 +11,11 @@
   "recovery_control_attempt": 3,
   "native_fixture_retry": 1,
   "transport_preflight_corrections": 1,
-  "state": "qualified_v2_pair_armed",
+  "state": "qualified_v2_pair_closed_unsupported_absent",
   "final_native_run": 41958553130,
   "native_grading_smoke_qualified": true,
   "native_sandbox_qualified": false,
-  "paid_attempts_reserved": 2,
+  "paid_attempts_reserved": 0,
   "planned_variants": [
     "current",
     "absent"
@@ -113,15 +113,69 @@
       "valid_grade": false,
       "submission_sha256": "407196e63354eb841f3d38c2d5d3daaba9aaec16aa721f75686f74e181d0bb1a",
       "evidence": "Native session completed; exact retained submission hashes match producer, host, verifier and download. Admission block_name_template at 23:9; reference/defects unmeasured; containers removed; absent never reserved."
+    },
+    {
+      "attempt": 8,
+      "allocation_id": "sol-high-v2-qualified-20261106",
+      "reservation_id": "sol-high-v2-qualified-20261106/current/8",
+      "run": 42295570341,
+      "commit": "65cefa23ba44ef1de11bba1c470c03f0dddbadcd",
+      "variant": "current",
+      "profile": "codex-0.166.0_gpt-6.1-sol_high_rollout-budget-disabled",
+      "status": "session_completed_graded_passed",
+      "inference_started": true,
+      "api_spend_usd": null,
+      "conservative_observed_usage_estimate_usd": 1.455135,
+      "session_coverage_adequate": true,
+      "valid_grade": true,
+      "submission_sha256": "1d9cecef3bc9aaf631bc6bf6f80c8f0cf22fd06daee4f607ea0d7da7c1d6b529",
+      "outcome": {
+        "classification": "passed",
+        "code": "evaluated",
+        "reference_pass": 1,
+        "mutants_detected": 2,
+        "mutants_executed": 2,
+        "tests_executed": 32,
+        "pester_version": "6.2.0",
+        "powershell_version": "7.6.9"
+      },
+      "evidence": "Producer, host, verifier and retained download hashes match; complete native session observations; agent and verifier containers removed."
+    },
+    {
+      "attempt": 9,
+      "allocation_id": "sol-high-v2-qualified-20261106",
+      "reservation_id": "sol-high-v2-qualified-20261106/absent/9",
+      "run": 42295570341,
+      "commit": "65cefa23ba44ef1de11bba1c470c03f0dddbadcd",
+      "variant": "absent",
+      "profile": "codex-0.166.0_gpt-6.1-sol_high_rollout-budget-disabled",
+      "status": "session_completed_verifier_unsupported_assertion_parameter",
+      "inference_started": true,
+      "api_spend_usd": null,
+      "conservative_observed_usage_estimate_usd": 1.074605,
+      "session_coverage_adequate": true,
+      "valid_grade": false,
+      "submission_sha256": "8916aa6e420418f2868237975b0a57a58af0a5120b954fc1179a18555b910822",
+      "outcome": {
+        "classification": "unsupported",
+        "code": "admission",
+        "admission_rule": "assertion_parameter",
+        "admission_diagnostic": {
+          "line": 70,
+          "column": 33,
+          "ast_kind": "CommandAst"
+        }
+      },
+      "evidence": "Producer, host, verifier and retained download hashes match; complete native session observations; agent and verifier containers removed."
     }
   ],
-  "final_live_run": 42274188228,
+  "final_live_run": 42295570341,
   "api_spend_usd": null,
-  "scheduling_stopped": false,
-  "stop_reason": null,
+  "scheduling_stopped": true,
+  "stop_reason": "Authorized pair consumed both slots; absent unsupported assertion_parameter at 70:33; no more inference.",
   "diagnostic_actions_runs_reserved": 2,
   "diagnostic_actions_run_limit": 2,
-  "paid_execution_enabled": true,
+  "paid_execution_enabled": false,
   "diagnostic_reproduction_run": 42106956278,
   "accept_unknown_cost_for_testing": true,
   "credential_free_checks_passed": true,
@@ -135,7 +189,7 @@
   "handoff_first_run_outcome": "image_build_failed_before_controls_snapshot_index_http_503",
   "allocation": {
     "id": "sol-high-v2-qualified-20261106",
-    "state": "armed",
+    "state": "closed",
     "attempts": {
       "current": 8,
       "absent": 9
@@ -145,7 +199,7 @@
       "absent": "sol-high-v2-qualified-20261106/absent/9"
     },
     "limit": 2,
-    "used": 0,
+    "used": 2,
     "prior_campaign_attempts": 7,
     "previous_recovery_consumed": 4,
     "previous_recovery_limit": 4,
@@ -165,7 +219,44 @@
       "artifact_digest": "sha256:d8ccdb3b9d4e65b7a486da05c8511e37800554c326d81cc54c0728723b78aee5",
       "manifest_sha256": "ca89dbda8fce7dbd9f89e662a8bd84ec5543c325965645dac133a96b564e2aea"
     },
-    "authorization": "Explicit current user authorization: after successful matching preparation within the 90-minute window, run current then absent once, at most two credentialed attempts and USD 5 estimated operational allowance. Normal API environment approval is automated under this authorization, not independent human review. No retry, replacement attempt or model judge."
+    "authorization": "Explicit current user authorization: after successful matching preparation within the 90-minute window, run current then absent once, at most two credentialed attempts and USD 5 estimated operational allowance. Normal API environment approval is automated under this authorization, not independent human review. No retry, replacement attempt or model judge.",
+    "consumed_attempts": [
+      8,
+      9
+    ],
+    "consumed_reservations": [
+      "sol-high-v2-qualified-20261106/current/8",
+      "sol-high-v2-qualified-20261106/absent/9"
+    ],
+    "unused_closed_attempts": [],
+    "unused_closed_reservations": [],
+    "run_id": 42295570341,
+    "executed_commit": "65cefa23ba44ef1de11bba1c470c03f0dddbadcd",
+    "observed_usage_conservative_estimate_usd": 2.52974,
+    "session_coverage_adequate": true,
+    "api_bill_usd": null,
+    "closure": {
+      "allocation_id": "sol-high-v2-qualified-20261106",
+      "state": "closed",
+      "paid_execution_enabled": false,
+      "reserved_slots_consumed": [
+        9,
+        8
+      ],
+      "campaign_attempts_consumed": 9,
+      "previous_recovery_consumed": 4,
+      "previous_recovery_limit": 4,
+      "incremental_api_bill_usd": null,
+      "historical_cumulative_api_bill_usd": null,
+      "note": "Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.",
+      "reservation_ids": [
+        "sol-high-v2-qualified-20261106/absent/9",
+        "sol-high-v2-qualified-20261106/current/8"
+      ],
+      "incremental_conservative_estimate_usd": 2.5297400000000003,
+      "operational_budget_usd": 5,
+      "estimated_budget_exceeded": false
+    }
   },
   "allocation_history": [
     {

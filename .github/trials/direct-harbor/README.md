@@ -1,5 +1,31 @@
 # Direct Harbor recovery trial
 
+## Latest bounded pair, 2026-11-06
+
+The image-content reader and matching preparation passed in runs
+[42294197480](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42294197480)
+and [42294384802](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42294384802).
+The new bundle was restored and verified again before the authorized live pair
+[42295570341](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42295570341).
+Current attempt eight passed the reference and detected 2/2 defects (32 tests).
+Absent attempt nine completed, but `Should -BeTrue` was rejected as
+`unsupported/assertion_parameter` at 70:33 before correctness grading.
+Pinned Pester supports that operator; the trial assertion allowlist omits it.
+The exact submissions are retained and download/hash verified. No evaluator or
+submission was changed during the pair, and no retry or judge ran.
+
+The pair is not an operationally usable correctness comparison. Absent quality
+and skill benefit remain unmeasured. The next proposed work is an independently
+qualified Boolean assertion-admission correction and credential-free replay of
+both unchanged retained files, under separate authorization. Paid scheduling is
+disabled, the allocation closed at 2/2, campaign consumption is 9/36 and earlier
+recovery remains 4/4. The conservative incremental estimate is $2.529740;
+actual incremental and historical provider bills remain unknown.
+See [pair evidence](results/pair-review.json),
+[offline diagnosis](results/offline-pair-diagnosis.json), and the
+[single HTML report](results/report.html). Historical sections below retain their
+original authorization limits and accounting snapshots.
+
 ## Reusable image qualification, 2026-11-06
 
 The separately authorized infrastructure pass permits at most two complete image

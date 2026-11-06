@@ -1,0 +1,40 @@
+{
+  "kind": "offline_static_coverage_diagnosis",
+  "attempt": 9,
+  "submission_sha256": "8916aa6e420418f2868237975b0a57a58af0a5120b954fc1179a18555b910822",
+  "original_live_outcome": {
+    "classification": "unsupported",
+    "code": "admission",
+    "admission_rule": "assertion_parameter",
+    "admission_diagnostic": {
+      "line": 70,
+      "column": 33,
+      "ast_kind": "CommandAst"
+    }
+  },
+  "construct": "$caughtOutOfRange | Should -BeTrue",
+  "location": {
+    "line": 70,
+    "column": 33
+  },
+  "cause": "Runner.ps1 admits classic Should and standalone Should-BeTrue, but its shared assertion-parameter allowlist omits BeTrue. The agent-facing profile describes classic Should support without enumerating this exclusion.",
+  "classification": "Valid Pester assertion outside the grader admission coverage; correctness remains unmeasured.",
+  "evidence": {
+    "runner_sha256": "cb124e537956d21da50a7db5f87277e3f9865784616dcb20a01906bcbfea18e7",
+    "execution_profile_sha256": "49eeaae2d540f936080db395f86f501a2bbeeda5254824a1d37d5bb23a1498b2",
+    "pester_version": "6.2.0",
+    "official_source_url": "https://github.com/pester/Pester/blob/6.2.0/src/functions/assertions/BeTrueOrFalse.ps1",
+    "official_source_sha256": "28f43d98caaa42e5427fff6de7115326885e451c3c3db6fc270bb776b4a026dc",
+    "official_source_git_blob": "1da9131a4a4aba84cdb4323850a15740b52e9a9e",
+    "registration_lines": [
+      89,
+      96
+    ],
+    "official_docs_url": "https://pester.dev/docs/assertions/should-command",
+    "official_docs_fact": "Pester v6 supports classic Should -BeTrue alongside standalone Should-BeTrue."
+  },
+  "scope_limit": "No submission execution, alteration, patched-policy replay or correctness inference during offline inspection. Other unsupported constructs or incorrect assertions may remain.",
+  "collection_or_infrastructure_failure": false,
+  "candidate_correctness": "Unmeasured; valid syntax does not establish passing tests",
+  "next_step": "Separately authorize a small Boolean assertion-admission coverage correction, qualify it against independent pinned Pester controls while retaining common-parameter rejection, and replay both unchanged retained submissions in the same corrected isolated verifier. Preserve these original live outcomes. No new model launch or skill revision is justified before that evidence."
+}
