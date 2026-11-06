@@ -1,5 +1,5 @@
 {
-  "phase": "live-pair",
+  "phase": "report",
   "campaign": "direct-harbor-20261104",
   "paid_attempts_used": 6,
   "paid_attempt_limit": 36,
@@ -11,15 +11,12 @@
   "recovery_control_attempt": 3,
   "native_fixture_retry": 1,
   "transport_preflight_corrections": 1,
-  "state": "retained_smoke_allocation_armed",
+  "state": "retained_smoke_allocation_closed_before_launch",
   "final_native_run": 41958553130,
   "native_grading_smoke_qualified": true,
   "native_sandbox_qualified": false,
-  "paid_attempts_reserved": 2,
-  "planned_variants": [
-    "current",
-    "absent"
-  ],
+  "paid_attempts_reserved": 0,
+  "planned_variants": [],
   "preflight_estimate_usd": 2.64,
   "native_inner_sandbox_required": false,
   "external_preflight_attempt": 2,
@@ -100,11 +97,11 @@
   ],
   "final_live_run": 42110435228,
   "api_spend_usd": null,
-  "scheduling_stopped": false,
-  "stop_reason": null,
+  "scheduling_stopped": true,
+  "stop_reason": "Pinned Debian snapshot HTTP 503/504 blocked image build before reservation; allocation closed unused; no retry authorized by this closure.",
   "diagnostic_actions_runs_reserved": 2,
   "diagnostic_actions_run_limit": 2,
-  "paid_execution_enabled": true,
+  "paid_execution_enabled": false,
   "diagnostic_reproduction_run": 42106956278,
   "accept_unknown_cost_for_testing": true,
   "credential_free_checks_passed": true,
@@ -118,7 +115,7 @@
   "handoff_first_run_outcome": "image_build_failed_before_controls_snapshot_index_http_503",
   "allocation": {
     "id": "sol-high-retained-20261106",
-    "state": "armed",
+    "state": "closed",
     "attempts": {
       "current": 7,
       "absent": 8
@@ -165,8 +162,55 @@
         "credentialed_launches": 0,
         "reservations": 0,
         "scope": "Prelaunch CI correction only; no retry or replacement of a Codex attempt."
+      },
+      {
+        "run_id": 42213118342,
+        "commit": "eca71ef78c197b51103436f85575126a4ad48ea9",
+        "stage": "credential_free_agent_image_build",
+        "classification": "prelaunch_infrastructure_failure",
+        "command": [
+          "docker",
+          "build",
+          "--progress=plain",
+          "-t",
+          "direct-harbor-agent:current",
+          "<staged-current-environment>"
+        ],
+        "failing_build_step": "apt-get update --error-on=any against frozen Debian snapshot 20261103T000000Z",
+        "native_exit_status": 100,
+        "outer_docker_build_exit_status": 1,
+        "observed_errors": [
+          "HTTP 504 Gateway Timeout",
+          "HTTP 503 TooManyRequests first byte timeout"
+        ],
+        "package_index_url": "https://snapshot.debian.org/archive/debian/20261103T000000Z/dists/trixie/main/binary-amd64/Packages",
+        "reservations": 0,
+        "credentialed_launches": 0,
+        "evaluated_agent_container_started": false,
+        "verifier_container_started": false,
+        "container_disposal": "not_applicable_evaluated_environments_never_started",
+        "build_cleanup": "GitHub-hosted job completed; no retained Docker process inspection; do not claim a container-disposal probe passed",
+        "workflow_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342",
+        "job_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342/job/127876427762",
+        "report_artifact_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342/artifacts/13499568643",
+        "closure_artifact_sha256": "7d32a70cf6839abc78b308a56f52e4984cf2b6095a653751308affbedc375169",
+        "note": "No reservation receipt or attempt record exists; both credentialed steps were skipped. No new agent-generated submission exists. No package pin, acceptance criterion or isolation setting was changed to work around this failure."
       }
-    ]
+    ],
+    "used": 0,
+    "consumed_attempts": [],
+    "consumed_reservations": [],
+    "unused_closed_attempts": [
+      7,
+      8
+    ],
+    "unused_closed_reservations": [
+      "sol-high-retained-20261106/current/7",
+      "sol-high-retained-20261106/absent/8"
+    ],
+    "run_id": 42213118342,
+    "executed_commit": "eca71ef78c197b51103436f85575126a4ad48ea9",
+    "api_bill_usd": null
   },
   "allocation_history": [
     {

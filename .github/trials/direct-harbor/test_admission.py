@@ -69,7 +69,9 @@ class AdmissionEvidenceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             evidence = json.loads((Path(__file__).parent/'results/allocation-evidence.json').read_text())
-            current = copy.deepcopy(evidence['arms']['current']['attempt'])
+            histories = [evidence, *reversed(evidence.get('allocation_history', []))]
+            current = copy.deepcopy(next(item['arms']['current']['attempt'] for item in histories
+                                         if item['arms']['current']['attempt'] is not None))
             g = grader()
             status, details = g.admission_result({'status': 'unsupported', 'code': 'admission',
                 'admission_rule': 'command_not_allowed',
@@ -88,6 +90,7 @@ class AdmissionEvidenceTests(unittest.TestCase):
             trial.write(native/'result.json', result.model_dump(mode='json'))
             current['projection'] = trial.project(root/'jobs', {})
             trial.write(root/'public/current/attempt.json', current)
+            trial.write(root/'public/allocation/attempt-fixture.json', {'variant': 'current'})
             trial.write(root/'public/allocation/closed.json', evidence['closure'])
             trial.write(root/'public/admission-preflight.json', {'passed': True, 'kind': 'admission_parser_checks'})
             with patch('builtins.print'):

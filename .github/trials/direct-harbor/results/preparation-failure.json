@@ -1,25 +1,63 @@
 {
-  "run_id": 42212722607,
-  "commit": "0bbd09b356415e6ce01ca142e3fb56b385267c61",
-  "stage": "credential_free_unit_tests",
-  "failure": "test_credential_free_diagnostics_work_after_later_closed_allocations used armed checkout instead of a closed fixture",
-  "closure": {
-    "allocation_id": "sol-high-retained-20261106",
-    "state": "closed",
-    "paid_execution_enabled": false,
-    "reserved_slots_consumed": [],
-    "campaign_attempts_consumed": 6,
-    "previous_recovery_consumed": 4,
-    "previous_recovery_limit": 4,
-    "incremental_api_bill_usd": null,
-    "historical_cumulative_api_bill_usd": null,
-    "note": "Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.",
-    "reservation_ids": [],
-    "incremental_conservative_estimate_usd": null,
-    "operational_budget_usd": 5,
-    "estimated_budget_exceeded": null
-  },
-  "credentialed_launches": 0,
-  "reservations": 0,
-  "scope": "Prelaunch CI correction only; no retry or replacement of a Codex attempt."
+  "runs": [
+    {
+      "run_id": 42212722607,
+      "commit": "0bbd09b356415e6ce01ca142e3fb56b385267c61",
+      "stage": "credential_free_unit_tests",
+      "failure": "test_credential_free_diagnostics_work_after_later_closed_allocations used armed checkout instead of a closed fixture",
+      "closure": {
+        "allocation_id": "sol-high-retained-20261106",
+        "state": "closed",
+        "paid_execution_enabled": false,
+        "reserved_slots_consumed": [],
+        "campaign_attempts_consumed": 6,
+        "previous_recovery_consumed": 4,
+        "previous_recovery_limit": 4,
+        "incremental_api_bill_usd": null,
+        "historical_cumulative_api_bill_usd": null,
+        "note": "Reservations conservatively consume slots if credentialed launch evidence is lost. No receipt means that arm was not scheduled.",
+        "reservation_ids": [],
+        "incremental_conservative_estimate_usd": null,
+        "operational_budget_usd": 5,
+        "estimated_budget_exceeded": null
+      },
+      "credentialed_launches": 0,
+      "reservations": 0,
+      "scope": "Prelaunch CI correction only; no retry or replacement of a Codex attempt."
+    },
+    {
+      "run_id": 42213118342,
+      "commit": "eca71ef78c197b51103436f85575126a4ad48ea9",
+      "stage": "credential_free_agent_image_build",
+      "classification": "prelaunch_infrastructure_failure",
+      "command": [
+        "docker",
+        "build",
+        "--progress=plain",
+        "-t",
+        "direct-harbor-agent:current",
+        "<staged-current-environment>"
+      ],
+      "failing_build_step": "apt-get update --error-on=any against frozen Debian snapshot 20261103T000000Z",
+      "native_exit_status": 100,
+      "outer_docker_build_exit_status": 1,
+      "observed_errors": [
+        "HTTP 504 Gateway Timeout",
+        "HTTP 503 TooManyRequests first byte timeout"
+      ],
+      "package_index_url": "https://snapshot.debian.org/archive/debian/20261103T000000Z/dists/trixie/main/binary-amd64/Packages",
+      "reservations": 0,
+      "credentialed_launches": 0,
+      "evaluated_agent_container_started": false,
+      "verifier_container_started": false,
+      "container_disposal": "not_applicable_evaluated_environments_never_started",
+      "build_cleanup": "GitHub-hosted job completed; no retained Docker process inspection; do not claim a container-disposal probe passed",
+      "workflow_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342",
+      "job_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342/job/127876427762",
+      "report_artifact_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42213118342/artifacts/13499568643",
+      "closure_artifact_sha256": "7d32a70cf6839abc78b308a56f52e4984cf2b6095a653751308affbedc375169",
+      "note": "No reservation receipt or attempt record exists; both credentialed steps were skipped. No new agent-generated submission exists. No package pin, acceptance criterion or isolation setting was changed to work around this failure."
+    }
+  ],
+  "terminal_decision": "Allocation closed unused after the pinned package index failed. No additional inference or CI build retry scheduled."
 }

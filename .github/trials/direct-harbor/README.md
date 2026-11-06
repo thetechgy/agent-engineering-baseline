@@ -366,3 +366,22 @@ the single report; good and weak grades stayed reference-pass/2-of-2 and
 reference-pass/0-of-2 respectively. Native component tests also cover the data-driven
 fixture. No historical live result was rescored, and attempt six remains unexplained.
 Paid scheduling and the closed campaign ledger are unchanged.
+
+## Retained-submission pass closure
+
+The byte-retention fixture passed in run 42212438394. Prelaunch run 42212722607
+then exposed a test that read the armed checkout instead of a disabled fixture;
+that test was corrected without weakening the runtime guard. Corrected run
+42213118342 passed the 54 component checks (three native-runtime skips), but the
+current agent-image build failed on the unchanged Debian snapshot package index
+with HTTP 503/504 (`apt-get` exit 100, Docker build exit 1).
+
+Neither reservation nor credentialed launch occurred. Allocation
+`sol-high-retained-20261106` is closed at 0/2, both planned reservation identities
+are closed unused, and the campaign remains 6/36. Paid scheduling is disabled.
+No new submission, grade, skill-access observation or model usage exists. Historical
+spending is still unknown. The failed preparation is infrastructure evidence, not
+a Harbor agent failure or evidence against the skill. No acceptance criteria or
+package pins were changed, and no further build or inference retry was scheduled.
+The next decision is a credential-free availability check of the same pinned package
+index before authorizing any new allocation; this pass does not establish adoption readiness.

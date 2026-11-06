@@ -54,7 +54,7 @@ def main(root,out):
             'execution_assessment':r.get('execution_assessment'),'native_terminal':r.get('native_terminal'),'conservative_estimate_usd':r.get('usage_estimate_usd'),
             'native_pricing_estimate_usd':r.get('native_pricing_estimate_usd'),'api_bill_usd':None,
             'evidence_complete':r.get('result_extraction_succeeded',False),
-            'containers_removed':r.get('agent_container_removed') is True and r.get('verifier_container_removed') is True})
+            'containers_removed':(r.get('agent_container_removed') is True and r.get('verifier_container_removed') is True) if r else None})
     usable=all(r['scheduled'] and (r.get('execution_assessment') or {}).get('interpretable') and (r.get('accounting_assessment') or {}).get('usable_for_scheduling') and r['evidence_complete'] and r['containers_removed'] and (r.get('submission_retention') or {}).get('status') in ('published_verified','missing') and
         r['outcome'] in ('graded_passed','graded_failed','missing_deliverable','rejected_output') for r in rows)
     data['live_allocation']={'id':ID,'rows':rows,'closure':closure,'operationally_usable':usable,'profile':evidence['profile']['id'],'limits':evidence['limits'],'usage_note':evidence['usage_note']}

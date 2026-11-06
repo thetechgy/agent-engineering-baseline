@@ -195,6 +195,11 @@ def report(output, data):
     text = '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">\n<title>Direct Harbor recovery trial</title><style>body{font:16px system-ui;max-width:1100px;margin:3rem auto;padding:0 1rem;color:#172033}table{border-collapse:collapse;width:100%;margin:1rem 0}th,td{border:1px solid #cbd5e1;padding:.5rem;text-align:left;vertical-align:top}pre{white-space:pre-wrap;overflow-wrap:anywhere}h1,h2{color:#174f78}a{color:#145f91}</style>\n<h1>Direct Harbor recovery trial</h1><p>Bounded experimental trial. Production evaluation and Pages remain unchanged.</p>\n<p><a href="results.json" download>Download machine-readable results</a> · <a href="manifest.json">Frozen input manifests</a> · <a href="workflow-evidence.txt">Workflow evidence excerpts</a></p>'
     text += '<h2>Decision</h2><p>' + esc(data['decision']) + '</p>'
     text += '<p>' + esc(data['summary']) + '</p>'
+    if data.get('preparation_failures'):
+        text += '<h2>Pre-launch blocker</h2><p>No new credentialed attempt or submission. <a href="preparation-failure.json">Preparation failure evidence</a></p>'
+        text += table(('Run','Stage','Observed failure','Reservations / launches'),
+            [(r['run_id'],r['stage'],r.get('failure') or ', '.join(r.get('observed_errors',[])),str(r['reservations'])+' / '+str(r['credentialed_launches'])) for r in data['preparation_failures']['runs']])
+        text += '<p>'+esc(data['preparation_failures']['terminal_decision'])+'</p>'
     if data.get('admission_validation'):
         validation=data['admission_validation']
         text += '<h2>Credential-free admission diagnostic validation</h2><p>Passed: '+esc(validation['passed'])+'. No model inference. These are deterministic verifier controls, not new skill-evaluation attempts. Historical attempt six remains unexplained.</p><p><a href="admission-validation.json">Docker control evidence and input identity</a></p>'
@@ -225,13 +230,13 @@ def report(output, data):
             return label
         text += table(('Arm / attempt','Execution / session completed','Task outcome','Artifact transfer / admission','Reference / defects','Skill-file access attempts','Agent / total seconds'),
             [(r['variant']+' / '+str(r['attempt']),(r['execution_outcome']+' / '+str(r['session_completed'])) if r['scheduled'] else 'Not run',labels.get(r['outcome'],r['outcome']),
-              ('Hashes matched' if r['handoff']=='hash_matched' else 'No source file' if r['handoff']=='no_source' else 'Unconfirmed')+' / '+admission_label(r),
+              (('Hashes matched' if r['handoff']=='hash_matched' else 'No source file' if r['handoff']=='no_source' else 'Unconfirmed')+' / '+admission_label(r)) if r['scheduled'] else 'Not attempted / Not measured',
               (('Pass' if r['reference_pass']==1 else 'Fail')+' / '+str(r['mutants_detected'])+'/'+str(r['mutants_executed'])) if r['valid_grade'] else 'Not measured',
               ', '.join(r['skill_file_access_attempts']) if r['skill_file_access_attempts'] else ('None observed' if r['skill_file_access_attempts']==[] else 'Unknown'),
               (str(agent_seconds(r))+' / '+str(r['duration_seconds'])) if r['scheduled'] else 'Not run') for r in rows])
         text += table(('Arm','Reserved / credentialed launch started / session completed','Exact submission retention'),
             [(r['variant'],str(r.get('reserved'))+' / '+str(r.get('credentialed_launch_started'))+' / '+str(r['session_completed']),
-              (r.get('submission_retention') or {}).get('status','No retained evidence')) for r in rows])
+              (r.get('submission_retention') or {}).get('status','No retained evidence') if r['scheduled'] else 'No submission: arm not launched') for r in rows])
         for r in rows:
             retained=r.get('submission_retention') or {}
             url=retained.get('artifact_url') or ''
