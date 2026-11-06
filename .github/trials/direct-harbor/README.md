@@ -1,5 +1,64 @@
 # Direct Harbor recovery trial
 
+## Admission diagnostics and preflight
+
+The branch-only `admission` Actions phase builds only the pinned verifier image.
+It runs the parser preflight and four fresh, offline Docker verifier controls:
+good, weak, unsupported command, and an injected runner error. The last control
+modifies a disposable container copy only. No API secret or protected paid environment
+is used. The single report keeps these controls separate from live outcomes and
+preserves the closed 6/36 campaign ledger. Local component tests require explicitly
+selected pinned PowerShell/Pester paths; an arbitrary host runtime is not used.
+
+
+Admission failures now always include a fixed `admission_rule`, such as
+`command_not_allowed`, `block_name_template`, or `type_not_allowed`. This survives
+the grader sidecar, native projection, allocation JSON, and the single HTML report.
+An unexpected exception in admission instead reports
+`infrastructure_error/admission_runner`. Neither outcome becomes measured quality.
+Acceptance predicates, reference/mutation grading, and historical results are unchanged.
+
+Before credentials are supplied, live preparation runs four cheap parser controls
+in the built verifier image: classic and weak suites are admitted, an unsupported
+command is identified, and an injected runner error is classified separately.
+Failure, timeout, invalid protocol, or unresolved cleanup prevents preflight success
+and is checkpointed to `public/admission-preflight.json`. The controls invoke the
+actual pinned PowerShell parser; they do not execute submitted code, invoke Codex,
+or qualify container isolation or mutation grading. Their files stay under the
+verifier-owned `/tests` tree, outside the agent image and worker access.
+
+Detailed diagnostics are optional. Set `admission_diagnostics: true` in an
+otherwise authorized launch configuration to include AST kind and line/column.
+Both arms receive the same verifier-only setting. This flag does not authorize
+inference, reopen an allocation, change scheduling gates, or expose source text.
+Leave it absent/false for concise default reasons.
+
+For a broader credential-free check using the pinned local PowerShell runtime:
+
+```bash
+python .github/trials/direct-harbor/admission_checks.py \
+  --pwsh /path/to/pinned/pwsh \
+  --runner .github/evals/powershell-pester-6/support/Runner.ps1 \
+  --profile .github/evals/powershell-pester-6/support/cases/pester-002/profile.json \
+  --fixtures .github/evals/powershell-pester-6/support/qualification/pester-002 \
+  --extended
+```
+
+To diagnose an existing file without another model call, replace `--fixtures …
+--extended` with `--candidate /path/to/Subject.Tests.ps1 --details`. Replay parses
+only; it never executes the submission. A rejection returns nonzero and structured
+metadata. Missing executables, timeouts, and invalid output do not pass.
+
+Run focused tests with `PESTER_TEST_PWSH` set to the pinned executable and
+`PESTER_TEST_MANIFEST` set to the pinned Pester manifest to include native parser
+and trusted reference/mutation component checks. Without those variables, native
+component tests explicitly skip; the mandatory live preflight still requires its
+image's PowerShell. No new dependency or Harbor private override is introduced.
+
+Raw submissions remain excluded from published artifacts. Hashes and rule IDs
+cannot reconstruct a discarded file; replay requires a retained copy. These
+diagnostics do not retroactively explain attempt six or establish skill benefit.
+
 This branch-only trial preserves production SkillEvaluator 0.3.0 / Harbor 0.13.2,
 APM deployment, static checks, historical scores and Pages. Source commit:
 `cc0819f5dafc05610dd8c3293ce2f52744c66f1a`. The earlier launch-repair pass started from reviewed trial

@@ -1,5 +1,5 @@
 """Fixed direct-Harbor smoke pair. Raw agent work and logs are never published."""
-import asyncio, hashlib, importlib.metadata, json, os, shlex, shutil, subprocess, sys, time
+import asyncio, hashlib, importlib.metadata, json, os, shlex, shutil, subprocess, sys, time, uuid
 from pathlib import Path
 import toml
 import run as trial
@@ -92,6 +92,65 @@ print(json.dumps({'skills':manifest('/workspace/.agents/skills'),'instructions_s
     trial.write(output/'boundary.json',observed)
     return observed
 
+def validate_prior_results(previous, allocation=None):
+    if previous.get('grading_smoke_qualified') is not True:
+        raise RuntimeError('Independent grading controls are not qualified')
+    if allocation is not None and previous.get('agent_attempts') != allocation['prior_campaign_attempts']:
+        raise RuntimeError('Report and authorized allocation disagree on prior campaign attempts')
+
+
+def stage_admission_checks(task):
+    shutil.copyfile(Path(__file__).with_name('admission_checks.py'), task/'tests/admission_checks.py')
+    shutil.copytree(trial.ROOT/trial.pilot.OVERLAY/'support/qualification/pester-002', task/'tests/admission-fixtures')
+    with (task/'tests/Dockerfile').open('a') as build:
+        build.write('COPY admission_checks.py /tests/admission_checks.py\nCOPY admission-fixtures/ /tests/admission-fixtures/\n')
+
+
+def admission_preflight(image, destination):
+    """Small real-parser controls in the built verifier, before any credentialed step."""
+    assert not any(os.environ.get(k) for k in ('OPENAI_API_KEY','CODEX_API_KEY','CODEX_AUTH_JSON_PATH','CODEX_FORCE_AUTH_JSON')), 'Credential-free admission preflight required'
+    name = 'pester-admission-' + uuid.uuid4().hex
+    result = {'kind': 'admission_parser_checks', 'passed': False, 'code': 'probe_incomplete',
+              'inference': False, 'candidate_execution': False}
+    try:
+        process = subprocess.run([
+            'docker', 'run', '--rm', '--name', name, '--network', 'none',
+            '--read-only', '--tmpfs', '/tmp:rw,nosuid,nodev,size=128m',
+            '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges:true',
+            '--cpus', '2', '--memory', '2g', '--pids-limit', '256',
+            '--entrypoint', 'python3', image, '-I', '/tests/admission_checks.py',
+            '--runner', '/tests/Runner.ps1', '--profile', '/tests/case/profile.json',
+            '--fixtures', '/tests/admission-fixtures'], capture_output=True, timeout=120)
+        observed = json.loads(process.stdout) if len(process.stdout) <= 32768 else None
+        if (type(observed) is not dict or observed.get('kind') != 'admission_parser_checks'
+                or observed.get('inference') is not False or observed.get('candidate_execution') is not False
+                or type(observed.get('passed')) is not bool
+                or type(observed.get('controls')) is not list or len(observed['controls']) != 4
+                or any(type(c) is not dict for c in observed['controls'])
+                or [c.get('control') for c in observed.get('controls',[]) if isinstance(c,dict)] !=
+                    ['classic','weak','unsupported_command','unexpected_runner_error']
+                or any(type(c.get('passed')) is not bool for c in observed['controls'])
+                or observed['passed'] != all(c['passed'] for c in observed['controls'])):
+            raise ValueError('probe protocol')
+        result = observed
+        if process.returncode or result.get('passed') is not True:
+            result = dict(result, passed=False, code='probe_failed')
+    except (OSError, ValueError, subprocess.TimeoutExpired):
+        result = dict(result, passed=False, code='probe_execution')
+    finally:
+        # Named disposable container only; no host mounts or API credentials.
+        try:
+            removed = subprocess.run(['docker', 'rm', '--force', name], capture_output=True, timeout=20)
+            if removed.returncode and b'No such container' not in removed.stderr:
+                result = dict(result, passed=False, code='probe_cleanup')
+        except (OSError, subprocess.TimeoutExpired):
+            result = dict(result, passed=False, code='probe_cleanup')
+        trial.write(destination, result)
+    if result.get('passed') is not True:
+        raise RuntimeError('Credential-free admission preflight failed; inspect admission-preflight.json')
+    return result
+
+
 def prepare(root, diagnostic=False):
     from harbor.models.task.task import Task
     from harbor.models.trial.paths import TrialPaths
@@ -101,14 +160,19 @@ def prepare(root, diagnostic=False):
     root.mkdir(parents=True,exist_ok=False)
     public=root/'public';public.mkdir()
     previous=json.loads((trial.ROOT/'.github/trials/direct-harbor/results/results.json').read_text())
-    assert previous['grading_smoke_qualified'] and previous['agent_attempts']==5 and previous['api_spend_usd'] is None
+    allocation = None
     if not diagnostic:
         from allocation import active
-        active()
+        allocation = active()
+    validate_prior_results(previous, allocation)
+    launch = json.loads(Path(__file__).with_name('launch.json').read_text())
+    admission_diagnostics = launch.get('admission_diagnostics', False)
     for variant in (('current',) if diagnostic else ('current','absent')):
         output=public/variant;output.mkdir()
-        native,manifest=trial.stage(root/variant,variant)
+        native,manifest=trial.stage(root/variant,variant,admission_diagnostics=admission_diagnostics)
         task=native/'pester-002';cfg=toml.load(task/'task.toml')
+        if not diagnostic:
+            stage_admission_checks(task)
         if diagnostic:
             shutil.copyfile(Path(__file__).with_name('refusal_fixture.py'),task/'environment/refusal_fixture.py')
             shutil.copyfile(task/'instruction.md',task/'environment/task-instruction.txt')
@@ -130,6 +194,8 @@ def prepare(root, diagnostic=False):
         for folder,tag in ([('environment','direct-harbor-agent:'+variant)] + ([] if diagnostic else [('tests','direct-harbor-verifier:live')])):
             subprocess.run(['docker','build','--progress=plain','-t',tag,str(task/folder)],check=True,timeout=600)
             (cfg['environment'] if folder=='environment' else cfg['verifier']['environment'])['docker_image']=tag
+        if not diagnostic and variant == 'current':
+            admission_preflight('direct-harbor-verifier:live', public/'admission-preflight.json')
         (task/'task.toml').write_text(toml.dumps(cfg))
         manifest.update(task_checksum=Task(task).checksum,effective_skills=expected_files(variant),effective_codex_config=config())
         trial.write(output/'manifest.json',manifest)

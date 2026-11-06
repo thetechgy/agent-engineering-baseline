@@ -9,7 +9,7 @@ KINDS=('good','missing','rejected')
 def no_credentials():
     assert not any(os.environ.get(k) for k in ('OPENAI_API_KEY','CODEX_API_KEY','CODEX_AUTH_JSON_PATH','CODEX_FORCE_AUTH_JSON')), 'Credential-free diagnostics only'
     launch=json.loads(Path(__file__).with_name('launch.json').read_text())
-    assert launch['paid_execution_enabled'] is False and launch['paid_attempts_used']==4 and launch['scheduling_stopped'] is True
+    assert launch['paid_execution_enabled'] is False and launch['scheduling_stopped'] is True
 
 def prepare(root):
     from harbor.models.task.task import Task

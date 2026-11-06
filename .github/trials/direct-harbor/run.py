@@ -26,7 +26,9 @@ def write(path, value):
     path.write_text(json.dumps(value, indent=2) + '\n')
 
 
-def stage(root, variant="current", *, historical_runtime=False):
+def stage(root, variant="current", *, historical_runtime=False, admission_diagnostics=False):
+    if type(admission_diagnostics) is not bool:
+        raise ValueError('admission_diagnostics must be a boolean')
     if variant not in ("current", "absent"):
         raise ValueError("Only existing skill variants may be staged before discovery")
     bundle = pilot.stage(ROOT, root / 'bundle')
@@ -93,6 +95,9 @@ def stage(root, variant="current", *, historical_runtime=False):
         config = task / 'task.toml'
         config.write_text(config.read_text().replace('skills_dir = "/workspace/skills"',
                                                     'skills_dir = "/runtime/skills"'))
+        if admission_diagnostics:
+            with config.open('a') as stream:
+                stream.write('\n[verifier.env]\nPESTER_ADMISSION_DIAGNOSTICS = "1"\n')
         with config.open('a') as f:
             f.write('\n[[verifier.collect]]\ncommand = "python3 /opt/trial-artifact-state.py /workspace/output/Subject.Tests.ps1 /logs/artifacts/agent-artifact.json"\nuser = "agent"\ntimeout_sec = 15\n')
         # Supported task-local Compose override: the existing verifier checks
@@ -190,6 +195,16 @@ def report(output, data):
     text = '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">\n<title>Direct Harbor recovery trial</title><style>body{font:16px system-ui;max-width:1100px;margin:3rem auto;padding:0 1rem;color:#172033}table{border-collapse:collapse;width:100%;margin:1rem 0}th,td{border:1px solid #cbd5e1;padding:.5rem;text-align:left;vertical-align:top}pre{white-space:pre-wrap;overflow-wrap:anywhere}h1,h2{color:#174f78}a{color:#145f91}</style>\n<h1>Direct Harbor recovery trial</h1><p>Bounded experimental trial. Production evaluation and Pages remain unchanged.</p>\n<p><a href="results.json" download>Download machine-readable results</a> · <a href="manifest.json">Frozen input manifests</a> · <a href="workflow-evidence.txt">Workflow evidence excerpts</a></p>'
     text += '<h2>Decision</h2><p>' + esc(data['decision']) + '</p>'
     text += '<p>' + esc(data['summary']) + '</p>'
+    if data.get('admission_validation'):
+        validation=data['admission_validation']
+        text += '<h2>Credential-free admission diagnostic validation</h2><p>Passed: '+esc(validation['passed'])+'. No model inference. These are deterministic verifier controls, not new skill-evaluation attempts. Historical attempt six remains unexplained.</p><p><a href="admission-validation.json">Docker control evidence and input identity</a></p>'
+        rows=[]
+        for control in validation['controls']:
+            outcome=control.get('outcome',{});reason=outcome.get('admission_rule') or outcome.get('code')
+            diagnostic=outcome.get('admission_diagnostic')
+            if diagnostic:reason += ' ('+diagnostic['ast_kind']+' at '+str(diagnostic['line'])+':'+str(diagnostic['column'])+')'
+            rows.append((control['control'],outcome.get('classification'),reason,outcome.get('reference_pass'),outcome.get('mutants_detected'),control['passed']))
+        text += table(('Control','Classification','Diagnostic reason','Reference pass','Defects detected','Expected outcome matched'),rows)
     if data.get('live_allocation'):
         allocation=data['live_allocation'];rows=allocation['rows']
         text += '<h2>New live allocation: '+esc(allocation['profile'])+'</h2><p><a href="allocation-evidence.json">Sanitized launch, deployment, handoff and usage evidence</a></p>'
@@ -202,15 +217,24 @@ def report(output, data):
             if timing.get('started_at') and timing.get('finished_at'):
                 return round((datetime.fromisoformat(timing['finished_at'])-datetime.fromisoformat(timing['started_at'])).total_seconds(),3)
             return None
+        def admission_label(row):
+            label = str(row.get('admission') or 'Unknown')
+            diagnostic = row.get('admission_diagnostic') or {}
+            if diagnostic:
+                label += ' (' + str(diagnostic.get('ast_kind')) + ' at ' + str(diagnostic.get('line')) + ':' + str(diagnostic.get('column')) + ')'
+            return label
         text += table(('Arm / attempt','Execution / session completed','Task outcome','Artifact transfer / admission','Reference / defects','Skill-file access attempts','Agent / total seconds'),
             [(r['variant']+' / '+str(r['attempt']),(r['execution_outcome']+' / '+str(r['session_completed'])) if r['scheduled'] else 'Not run',labels.get(r['outcome'],r['outcome']),
-              ('Hashes matched' if r['handoff']=='hash_matched' else 'No source file' if r['handoff']=='no_source' else 'Unconfirmed')+' / '+str(r['admission'] or 'Unknown'),
+              ('Hashes matched' if r['handoff']=='hash_matched' else 'No source file' if r['handoff']=='no_source' else 'Unconfirmed')+' / '+admission_label(r),
               (('Pass' if r['reference_pass']==1 else 'Fail')+' / '+str(r['mutants_detected'])+'/'+str(r['mutants_executed'])) if r['valid_grade'] else 'Not measured',
               ', '.join(r['skill_file_access_attempts']) if r['skill_file_access_attempts'] else ('None observed' if r['skill_file_access_attempts']==[] else 'Unknown'),
               (str(agent_seconds(r))+' / '+str(r['duration_seconds'])) if r['scheduled'] else 'Not run') for r in rows])
         text += table(('Arm','Total input','Cached input','Cache-write input','Total output','Reasoning output','Conservative USD estimate','Native pricing estimate'),
             [(r['variant'],*( (r['usage'] or {}).get(k) for k in ('input_tokens','cached_input_tokens','cache_write_input_tokens','output_tokens','reasoning_output_tokens')),r['conservative_estimate_usd'],r['native_pricing_estimate_usd']) for r in rows])
         text += '<p>'+esc(allocation['usage_note'])+'</p>'
+        if allocation.get('admission_preflight'):
+            checks = allocation['admission_preflight']
+            text += '<p>Credential-free admission checks: '+esc('passed' if checks.get('passed') else 'failed')+'. These check parsing and diagnostic classification; they do not establish task correctness or skill effectiveness.</p>'
         text += table(('Arm','Accounting coverage','Billing certainty'),[(r['variant'],(r.get('accounting_assessment') or {}).get('coverage','Unknown'),'Unknown') for r in rows])
         for note in allocation.get('reviewed_notes',[])+allocation['limits']:text += '<p>'+esc(note)+'</p>'
         text += '<p>Allocation closed; paid scheduling disabled. Consumed campaign slots: '+esc(allocation['closure']['reserved_slots_consumed'])+'.</p>'

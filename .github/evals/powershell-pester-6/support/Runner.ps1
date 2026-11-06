@@ -4,18 +4,32 @@ param(
     [string] $Workspace = '/workspace',
     [string] $PesterManifest = '/opt/pester/Modules/Pester/6.2.0/Pester.psd1',
     [switch] $AdmissionOnly,
-    [switch] $RequireIsolation
+    [switch] $RequireIsolation,
+    [switch] $DiagnosticDetails
 )
 
 # PESTER_VERIFIER_ONLY_RUNNER_3CB8
 # This fixed runner is verifier-owned. Candidate statements are never evaluated
 # by admission. A separate unprivileged process executes the admitted file.
+# Fixed identifiers are always emitted; source text and values are never emitted.
+# Optional locations are parser metadata, not candidate-controlled diagnostics.
+function __peReject([string] $Rule, $Node) {
+    $script:__peResult = @{ status = 'unsupported'; code = 'admission'; admission_rule = $Rule }
+    if ($DiagnosticDetails -and $null -ne $Node) {
+        $script:__peResult.admission_diagnostic = @{
+            ast_kind = $Node.GetType().Name
+            line = $Node.Extent.StartLineNumber
+            column = $Node.Extent.StartColumnNumber
+        }
+    }
+    throw 'admission_rejected'
+}
 function __peArgument($command, $name, [switch] $positional) {
     $selected = $null
     for ($i = 1; $i -lt $command.CommandElements.Count; $i++) {
         $element = $command.CommandElements[$i]
         if ($element -is [System.Management.Automation.Language.CommandParameterAst] -and $element.ParameterName -eq $name) {
-            if ($null -ne $selected) { throw 'admission' }
+            if ($null -ne $selected) { __peReject 'duplicate_argument' $element }
             $selected = if ($null -ne $element.Argument) { $element.Argument } else { $command.CommandElements[$i + 1] }
         }
     }
@@ -63,9 +77,9 @@ try {
         $__peResult = @{ status = 'invalid'; code = 'parse' }
     }
     else {
-        $__peResult = @{ status = 'unsupported'; code = 'admission' }
+        $__peResult = @{ status = 'infrastructure_error'; code = 'admission_runner' }
         $__peNodes = @($__peAst.FindAll({ param($n) $true }, $true))
-        if ($__peNodes.Count -gt 5000 -or $null -ne $__peAst.ScriptRequirements) { throw 'admission' }
+        if ($__peNodes.Count -gt 5000 -or $null -ne $__peAst.ScriptRequirements) { __peReject 'node_limit_or_requirements' $__peAst }
         $__peKinds = @(
             'ScriptBlockAst', 'NamedBlockAst', 'StatementBlockAst', 'PipelineAst',
             'CommandAst', 'CommandExpressionAst', 'CommandParameterAst',
@@ -98,67 +112,67 @@ try {
         )
         foreach ($__peNode in $__peNodes) {
             $__peKind = $__peNode.GetType().Name
-            if ($__peKinds -notcontains $__peKind) { throw 'admission' }
-            if ($__peKind -eq 'PipelineAst' -and $__peNode.Background) { throw 'admission' }
+            if ($__peKinds -notcontains $__peKind) { __peReject 'ast_kind' $__peNode }
+            if ($__peKind -eq 'PipelineAst' -and $__peNode.Background) { __peReject 'background_pipeline' $__peNode }
             if ($__peKind -eq 'VariableExpressionAst') {
                 $__peName = $__peNode.VariablePath.UserPath
-                if ($__peNode.Splatted -or $__peName -match '^(global|env|function|variable|alias):' -or $__peName -match '^__') { throw 'admission' }
+                if ($__peNode.Splatted -or $__peName -match '^(global|env|function|variable|alias):' -or $__peName -match '^__') { __peReject 'variable_scope_or_splat' $__peNode }
                 $__peName = $__peName -replace '^(script|local|private):', ''
-                if ($__peName -notmatch '^[A-Za-z_][A-Za-z0-9_]*$' -or $__peReserved -contains $__peName -or $__peName -match '^__') { throw 'admission' }
-                if ($__peName -eq 'PSScriptRoot' -and $__peNode.Parent.GetType().Name -in @('AssignmentStatementAst', 'ParameterAst', 'ForEachStatementAst')) { throw 'admission' }
+                if ($__peName -notmatch '^[A-Za-z_][A-Za-z0-9_]*$' -or $__peReserved -contains $__peName -or $__peName -match '^__') { __peReject 'variable_name' $__peNode }
+                if ($__peName -eq 'PSScriptRoot' -and $__peNode.Parent.GetType().Name -in @('AssignmentStatementAst', 'ParameterAst', 'ForEachStatementAst')) { __peReject 'script_root_assignment' $__peNode }
             }
             if ($__peKind -eq 'HashtableAst') {
                 foreach ($__pePair in $__peNode.KeyValuePairs) {
-                    if ($__pePair.Item1 -isnot [System.Management.Automation.Language.StringConstantExpressionAst]) { throw 'admission' }
+                    if ($__pePair.Item1 -isnot [System.Management.Automation.Language.StringConstantExpressionAst]) { __peReject 'hashtable_key_literal' $__peNode }
                     $__peName = $__pePair.Item1.Value
-                    if ($__peName -notmatch '^[A-Za-z][A-Za-z0-9_]*$' -or $__peReserved -contains $__peName -or $__peName -eq 'PSScriptRoot' -or $__peName -match '^__') { throw 'admission' }
+                    if ($__peName -notmatch '^[A-Za-z][A-Za-z0-9_]*$' -or $__peReserved -contains $__peName -or $__peName -eq 'PSScriptRoot' -or $__peName -match '^__') { __peReject 'hashtable_key_name' $__peNode }
                 }
             }
-            if ($__peKind -eq 'AssignmentStatementAst' -and $__peNode.Left -isnot [System.Management.Automation.Language.VariableExpressionAst]) { throw 'admission' }
+            if ($__peKind -eq 'AssignmentStatementAst' -and $__peNode.Left -isnot [System.Management.Automation.Language.VariableExpressionAst]) { __peReject 'assignment_target' $__peNode }
             if ($__peKind -eq 'MemberExpressionAst') {
                 if ($__peNode.Static -or $__peNode.Member -isnot [System.Management.Automation.Language.StringConstantExpressionAst] -or
-                    $__pePolicy.properties -notcontains $__peNode.Member.Value) { throw 'admission' }
+                    $__pePolicy.properties -notcontains $__peNode.Member.Value) { __peReject 'member_access' $__peNode }
             }
             if ($__peKind -in @('TypeConstraintAst', 'TypeExpressionAst')) {
-                if ($__peNode.TypeName.FullName -notin @('int', 'int32', 'bool', 'string', 'object', 'object[]', 'pscustomobject', 'hashtable', 'System.ArgumentException', 'System.ArgumentOutOfRangeException')) { throw 'admission' }
+                if ($__peNode.TypeName.FullName -notin @('int', 'int32', 'bool', 'string', 'object', 'object[]', 'pscustomobject', 'hashtable', 'System.ArgumentException', 'System.ArgumentOutOfRangeException')) { __peReject 'type_not_allowed' $__peNode }
             }
-            if ($__peKind -eq 'UnaryExpressionAst' -and $__peNode.TokenKind -notin @('Not', 'Exclaim', 'Minus', 'Plus', 'Comma')) { throw 'admission' }
+            if ($__peKind -eq 'UnaryExpressionAst' -and $__peNode.TokenKind -notin @('Not', 'Exclaim', 'Minus', 'Plus', 'Comma')) { __peReject 'unary_operator' $__peNode }
             if ($__peKind -eq 'CommandAst') {
                 if ($__peNode.InvocationOperator -eq 'Dot') {
                     $__pePath = $__peNode.CommandElements[0]
-                    if ($__pePath.GetType().Name -notin @('StringConstantExpressionAst', 'ExpandableStringExpressionAst')) { throw 'admission' }
+                    if ($__pePath.GetType().Name -notin @('StringConstantExpressionAst', 'ExpandableStringExpressionAst')) { __peReject 'dot_source_literal' $__peNode }
                     $__peLiteral = $__pePath.Value.Replace('$PSScriptRoot', "$Workspace/output")
-                    if ([System.IO.Path]::GetFullPath($__peLiteral) -ne "$Workspace/input/$__peSubject" -or $__peNode.CommandElements.Count -ne 1) { throw 'admission' }
+                    if ([System.IO.Path]::GetFullPath($__peLiteral) -ne "$Workspace/input/$__peSubject" -or $__peNode.CommandElements.Count -ne 1) { __peReject 'dot_source_path_or_arguments' $__peNode }
                     continue
                 }
-                if ($__peNode.InvocationOperator -ne 'Unknown') { throw 'admission' }
+                if ($__peNode.InvocationOperator -ne 'Unknown') { __peReject 'invocation_operator' $__peNode }
                 $__peCommand = $__peNode.GetCommandName()
-                if ($null -eq $__peCommand) { throw 'admission' }
+                if ($null -eq $__peCommand) { __peReject 'dynamic_command' $__peNode }
                 if ($__peCommand.StartsWith('Pester\', [System.StringComparison]::OrdinalIgnoreCase)) { $__peCommand = $__peCommand.Substring(7) }
                 $__peModuleCommands = if ($__pePolicy.module) { @('Import-Module', 'InModuleScope', 'Mock') } else { @() }
-                if ($__peCommand -notin @($__peBlocks + $__peAssertions + @('Out-Null', $__pePolicy.command) + $__peModuleCommands)) { throw 'admission' }
+                if ($__peCommand -notin @($__peBlocks + $__peAssertions + @('Out-Null', $__pePolicy.command) + $__peModuleCommands)) { __peReject 'command_not_allowed' $__peNode }
                 foreach ($__peElement in $__peNode.CommandElements) {
                     if ($__peElement -is [System.Management.Automation.Language.CommandParameterAst]) {
                         if ($__peCommand -eq 'Out-Null' -or
-                            ($__peCommand -eq $__pePolicy.command -and $__pePolicy.parameters -notcontains $__peElement.ParameterName)) { throw 'admission' }
-                        if ($__peAssertions -contains $__peCommand -and $__peAssertParameters -notcontains $__peElement.ParameterName) { throw 'admission' }
-                        if ($__peBlocks -contains $__peCommand -and $__peElement.ParameterName -notin @('Name', 'ForEach', 'TestCases', 'Test', 'Tag', 'Skip')) { throw 'admission' }
-                        if ($__peCommand -eq 'Import-Module' -and $__peElement.ParameterName -notin @('Name', 'Force')) { throw 'admission' }
-                        if ($__peCommand -eq 'InModuleScope' -and $__peElement.ParameterName -notin @('ModuleName', 'ScriptBlock')) { throw 'admission' }
-                        if ($__peCommand -eq 'Mock' -and $__peElement.ParameterName -notin @('CommandName', 'MockWith', 'ModuleName', 'ParameterFilter')) { throw 'admission' }
+                            ($__peCommand -eq $__pePolicy.command -and $__pePolicy.parameters -notcontains $__peElement.ParameterName)) { __peReject 'command_parameter' $__peNode }
+                        if ($__peAssertions -contains $__peCommand -and $__peAssertParameters -notcontains $__peElement.ParameterName) { __peReject 'assertion_parameter' $__peNode }
+                        if ($__peBlocks -contains $__peCommand -and $__peElement.ParameterName -notin @('Name', 'ForEach', 'TestCases', 'Test', 'Tag', 'Skip')) { __peReject 'block_parameter' $__peNode }
+                        if ($__peCommand -eq 'Import-Module' -and $__peElement.ParameterName -notin @('Name', 'Force')) { __peReject 'import_parameter' $__peNode }
+                        if ($__peCommand -eq 'InModuleScope' -and $__peElement.ParameterName -notin @('ModuleName', 'ScriptBlock')) { __peReject 'module_scope_parameter' $__peNode }
+                        if ($__peCommand -eq 'Mock' -and $__peElement.ParameterName -notin @('CommandName', 'MockWith', 'ModuleName', 'ParameterFilter')) { __peReject 'mock_parameter' $__peNode }
                     }
                 }
                 if ($__peCommand -eq 'Import-Module') {
                     $__peArgument = __peArgument $__peNode 'Name' -Positional
                     if ($__peArgument -isnot [System.Management.Automation.Language.StringConstantExpressionAst] -and
-                        $__peArgument -isnot [System.Management.Automation.Language.ExpandableStringExpressionAst]) { throw 'admission' }
+                        $__peArgument -isnot [System.Management.Automation.Language.ExpandableStringExpressionAst]) { __peReject 'import_literal' $__peNode }
                     $__peLiteral = $__peArgument.Value.Replace('$PSScriptRoot', "$Workspace/output")
-                    if ([System.IO.Path]::GetFullPath($__peLiteral) -ne "$Workspace/input/$__peSubject") { throw 'admission' }
+                    if ([System.IO.Path]::GetFullPath($__peLiteral) -ne "$Workspace/input/$__peSubject") { __peReject 'import_path' $__peNode }
                 }
                 if ($__peCommand -eq 'InModuleScope') {
                     $__peArgument = __peArgument $__peNode 'ModuleName' -Positional
                     if ($__peArgument -isnot [System.Management.Automation.Language.StringConstantExpressionAst] -or
-                        $__peArgument.Value -ne $__pePolicy.module) { throw 'admission' }
+                        $__peArgument.Value -ne $__pePolicy.module) { __peReject 'module_scope_target' $__peNode }
                 }
                 $__peInvoke = $__peCommand -eq 'Should' -and @($__peNode.CommandElements | Where-Object {
                     $_ -is [System.Management.Automation.Language.CommandParameterAst] -and $_.ParameterName -eq 'Invoke'
@@ -166,10 +180,10 @@ try {
                 if ($__peCommand -in @('Mock', 'Should-Invoke', 'Should-NotInvoke') -or $__peInvoke) {
                     $__peArgument = __peArgument $__peNode 'CommandName' -Positional:(-not $__peInvoke)
                     if ($__peArgument -isnot [System.Management.Automation.Language.StringConstantExpressionAst] -or
-                        $__pePolicy.dependencies -notcontains $__peArgument.Value) { throw 'admission' }
+                        $__pePolicy.dependencies -notcontains $__peArgument.Value) { __peReject 'mock_target' $__peNode }
                     $__peArgument = __peArgument $__peNode 'ModuleName'
                     if ($null -ne $__peArgument -and ($__peArgument -isnot [System.Management.Automation.Language.StringConstantExpressionAst] -or
-                        $__peArgument.Value -ne $__pePolicy.module)) { throw 'admission' }
+                        $__peArgument.Value -ne $__pePolicy.module)) { __peReject 'mock_module' $__peNode }
                 }
                 if ($__peCommand -in @('Describe', 'Context', 'It')) {
                     # Pester evaluates <...> templates after PowerShell parsing.
@@ -179,20 +193,20 @@ try {
                         $_ -is [System.Management.Automation.Language.CommandParameterAst] -and $_.ParameterName -eq 'Name'
                     })
                     if ($__peNameNode -is [System.Management.Automation.Language.CommandParameterAst]) {
-                        if ($__peNameNode.ParameterName -ne 'Name' -or $__peNamedNames.Count -ne 1) { throw 'admission' }
+                        if ($__peNameNode.ParameterName -ne 'Name' -or $__peNamedNames.Count -ne 1) { __peReject 'block_name_position' $__peNode }
                         $__peNameNode = if ($null -ne $__peNameNode.Argument) { $__peNameNode.Argument } else { $__peNode.CommandElements[2] }
                     }
-                    elseif ($__peNamedNames.Count) { throw 'admission' }
+                    elseif ($__peNamedNames.Count) { __peReject 'block_name_duplicate' $__peNode }
                     # Computed/interpolated names and splats can hide Pester's
                     # second-stage expression execution from the original AST.
-                    if ($__peNameNode -isnot [System.Management.Automation.Language.StringConstantExpressionAst]) { throw 'admission' }
+                    if ($__peNameNode -isnot [System.Management.Automation.Language.StringConstantExpressionAst]) { __peReject 'block_name_literal' $__peNode }
                     foreach ($__peElement in @($__peNameNode)) {
                         if ($__peElement.GetType().Name -in @('StringConstantExpressionAst', 'ExpandableStringExpressionAst')) {
                             $__peText = $__peElement.Value
                             foreach ($__peField in @($__pePolicy.properties) + @('_')) {
                                 $__peText = [regex]::Replace($__peText, '<' + [regex]::Escape($__peField) + '>', '', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
                             }
-                            if ($__peText.Contains('<') -or $__peText.Contains('>')) { throw 'admission' }
+                            if ($__peText.Contains('<') -or $__peText.Contains('>')) { __peReject 'block_name_template' $__peNode }
                         }
                     }
                 }
@@ -228,6 +242,8 @@ try {
     }
 }
 catch {
+    # Only __peReject sets unsupported. Unexpected admission errors retain the
+    # infrastructure_error default instead of masquerading as policy rejection.
     # Never render exception messages, script extents, stack traces, candidate
     # values, or Pester failure text into Harbor logs or retained rewards.
 }

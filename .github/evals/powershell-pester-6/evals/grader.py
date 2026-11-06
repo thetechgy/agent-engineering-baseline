@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import resource
+import re
 import signal
 import stat
 import subprocess
@@ -22,6 +23,67 @@ LIMIT = 64 * 1024
 FILE_BYTES = 64 * 1024 * 1024
 OUTPUT_BYTES = 1024 * 1024
 UNSCORED = {'invalid', 'unsupported', 'timeout', 'infrastructure_error'}
+ADMISSION_RULES = frozenset({
+    'duplicate_argument',
+    'node_limit_or_requirements',
+    'ast_kind',
+    'background_pipeline',
+    'variable_scope_or_splat',
+    'variable_name',
+    'script_root_assignment',
+    'hashtable_key_literal',
+    'hashtable_key_name',
+    'assignment_target',
+    'member_access',
+    'type_not_allowed',
+    'unary_operator',
+    'dot_source_literal',
+    'dot_source_path_or_arguments',
+    'invocation_operator',
+    'dynamic_command',
+    'command_not_allowed',
+    'command_parameter',
+    'assertion_parameter',
+    'block_parameter',
+    'import_parameter',
+    'module_scope_parameter',
+    'mock_parameter',
+    'import_literal',
+    'import_path',
+    'module_scope_target',
+    'mock_target',
+    'mock_module',
+    'block_name_position',
+    'block_name_duplicate',
+    'block_name_literal',
+    'block_name_template',
+})
+
+
+def admission_result(result):
+    """Forward only bounded runner-owned diagnostics; never exception/source text."""
+    status = result.get('status')
+    code = result.get('code')
+    if status not in UNSCORED or type(code) is not str or not re.fullmatch(r'[a-z_]{1,64}', code):
+        return 'infrastructure_error', {'code': 'admission_protocol'}
+    details = {'code': code}
+    if status == 'unsupported':
+        rule = result.get('admission_rule')
+        if type(rule) is not str or rule not in ADMISSION_RULES:
+            return 'infrastructure_error', {'code': 'admission_protocol'}
+        details['admission_rule'] = rule
+        diagnostic = result.get('admission_diagnostic')
+        if diagnostic is not None:
+            if (type(diagnostic) is not dict or set(diagnostic) != {'ast_kind', 'line', 'column'}
+                    or type(diagnostic['ast_kind']) is not str
+                    or not re.fullmatch(r'[A-Za-z]{1,64}Ast', diagnostic['ast_kind'])
+                    or any(type(diagnostic[k]) is not int or not 1 <= diagnostic[k] <= LIMIT + 1
+                           for k in ('line', 'column'))):
+                return 'infrastructure_error', {'code': 'admission_protocol'}
+            details['admission_diagnostic'] = diagnostic
+    if type(result.get('process_exit')) is int:
+        details['process_exit'] = result['process_exit']
+    return status, details
 
 
 class IsolationError(RuntimeError):
@@ -130,6 +192,8 @@ def invoke(candidate, profile, *, admission=False):
             '-Profile', str(profile), '-RequireIsolation']
     if admission:
         argv.append('-AdmissionOnly')
+        if os.environ.get('PESTER_ADMISSION_DIAGNOSTICS') == '1':
+            argv.append('-DiagnosticDetails')
     with tempfile.TemporaryDirectory(prefix='pester-worker-', dir='/tmp') as temporary:
         scratch = Path(temporary)
         scratch.chmod(0o700)
@@ -254,10 +318,7 @@ def grade(tests):
     prepare(runtime / 'profile.json', regular_bytes(tests / 'case/profile.json'))
     admission = invoke(output, runtime / 'profile.json', admission=True)
     if admission.get('status') != 'admitted':
-        details = {'code': admission.get('code', 'admission')}
-        if type(admission.get('process_exit')) is int:
-            details['process_exit'] = admission['process_exit']
-        return admission.get('status', 'infrastructure_error'), details
+        return admission_result(admission)
     variants = [tests / 'case/reference/Subject.ps1', *sorted((tests / 'case/mutants').glob('*.ps1'))]
     if not 2 <= len(variants) <= MAX_VARIANTS:
         raise RuntimeError('variants')

@@ -41,7 +41,8 @@ def main(root,out):
             'scheduled':bool(r),'session_completed':r.get('execution_completed'),'execution_outcome':execution,
             'task_completion_measured':c.get('task_completion_measured',False),'task_completed':c.get('task_completed'),
             'outcome':c.get('classification','not_scheduled' if not r else 'missing_evidence'),
-            'handoff':handoff.get('upload_status'),'admission':observed.get('admission_reason') or observed.get('code'),
+            'handoff':handoff.get('upload_status'),'admission':observed.get('admission_rule') or observed.get('admission_reason') or observed.get('code'),
+            'admission_diagnostic':observed.get('admission_diagnostic'),
             'valid_grade':native.get('measured',False),'reference_pass':observed.get('reference_pass') if native.get('measured') else None,
             'mutants_detected':observed.get('mutants_detected') if native.get('measured') else None,
             'mutants_executed':observed.get('mutants_executed') if native.get('measured') else None,
@@ -56,6 +57,9 @@ def main(root,out):
     usable=all(r['scheduled'] and (r.get('execution_assessment') or {}).get('interpretable') and (r.get('accounting_assessment') or {}).get('usable_for_scheduling') and r['evidence_complete'] and r['containers_removed'] and
         r['outcome'] in ('graded_passed','graded_failed','missing_deliverable','rejected_output') for r in rows)
     data['live_allocation']={'id':ID,'rows':rows,'closure':closure,'operationally_usable':usable,'profile':evidence['profile']['id'],'limits':evidence['limits'],'usage_note':evidence['usage_note']}
+    evidence['admission_preflight'] = read(public/'admission-preflight.json')
+    data['live_allocation']['admission_preflight'] = evidence['admission_preflight']
+    trial.write(out/'allocation-evidence.json', evidence)
     observed_estimates=[r['conservative_estimate_usd'] for r in rows if r['conservative_estimate_usd'] is not None]
     data['live_allocation']['observed_usage_conservative_estimate_usd']=sum(observed_estimates) if observed_estimates else None
     data['live_allocation']['reviewed_notes']=[

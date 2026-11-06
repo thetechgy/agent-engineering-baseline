@@ -1,5 +1,5 @@
 {
-  "phase": "report",
+  "phase": "admission",
   "campaign": "direct-harbor-20261104",
   "paid_attempts_used": 6,
   "paid_attempt_limit": 36,
@@ -191,5 +191,6 @@
       "observed_usage_conservative_estimate_usd": 0.641555,
       "complete_incremental_cost_usd": null
     }
-  ]
+  ],
+  "admission_validation_note": "User-authorized credential-free patch validation. No allocation is reopened; no inference or secrets."
 }
