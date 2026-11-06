@@ -1,6 +1,6 @@
 {
   "qualification": "reusable-images-20261106",
-  "attempt": 1,
+  "attempt": 2,
   "limit": 2,
   "prepared_source": null,
   "dependency_seed": {
@@ -10,5 +10,13 @@
     "archive_sha256": "03bc8a13fadf20d387fa08e8bac958069349300fab81c57174d3aa1812cdfa86",
     "manifest_sha256": "8dd8f9e713c8ae2315054e28cc5d8eb59170c3939148277a5455641dc4746e75"
   },
-  "authorization": "Credential-free preparation only; at most two full image-build qualifications. No paid allocation or inference."
+  "authorization": "Credential-free preparation only; at most two full image-build qualifications. No paid allocation or inference.",
+  "dependency_source": {
+    "run_id": 42268464374,
+    "commit": "d1a574cd60996520ae2f9d3387f75cfbab376771",
+    "artifact_id": 13528935350,
+    "name": "snapshot-dependencies",
+    "artifact_digest": "sha256:cf3ec24134d38f300960c55f4fb38e1f7de48538b655055eeb130af97727ecb6"
+  },
+  "correction": "Include stock Harbor digest-pinned Alpine kernel probe in the image archive. Restore its registry digest reference when classic Docker save/load omits RepoDigests; require unchanged retained image IDs and inventory during runtime controls."
 }

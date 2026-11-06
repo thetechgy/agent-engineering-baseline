@@ -9,6 +9,8 @@ from pathlib import Path
 import allocation
 
 TAGS=['direct-harbor-agent:current','direct-harbor-agent:absent','direct-harbor-verifier:live']
+PROBE_REFERENCE='alpine:3.23.4@sha256:5b10f432ef3da1b8d4c7eb6c487f2f5a8f096bc91145e68878dd4a5019afde11'
+PROBE_TAG='direct-harbor-kernel-probe:0.25.0'
 FILES={'images.tar','inputs.tar','manifest.json'}
 
 def write(path,value):
@@ -59,13 +61,14 @@ def experiment():
 def api(path):
     return json.loads(subprocess.check_output(['gh','api','repos/'+REPOSITORY+'/'+path],text=True))
 
-def admit_source(source):
+def admit_source(source, *, require_success=True):
     """Check producer provenance before downloading or loading anything from another run."""
     run=api('actions/runs/'+str(source['run_id']))
     assert run['repository']['full_name']==REPOSITORY and run['head_repository']['full_name']==REPOSITORY
     assert run['head_branch']=='trial/direct-harbor' and run['event']=='push' and run['run_attempt']==1
     assert run['path']=='.github/workflows/direct-harbor-trial.yml' and run['head_sha']==source['commit']
-    assert run['status']=='completed' and run['conclusion']=='success'
+    assert run['status']=='completed'
+    if require_success:assert run['conclusion']=='success'
     subprocess.run(['git','merge-base','--is-ancestor',source['commit'],'HEAD'],check=True)
     artifact=api('actions/artifacts/'+str(source['artifact_id']))
     assert artifact['workflow_run']['id']==source['run_id'] and artifact['workflow_run']['head_sha']==source['commit']
@@ -74,17 +77,17 @@ def admit_source(source):
     assert datetime.fromisoformat(artifact['expires_at'].replace('Z','+00:00'))>datetime.now(timezone.utc)
     return artifact
 
-def download_artifact(source,bundle):
-    metadata=admit_source(source)
-    assert 0<metadata['size_in_bytes']<=16*1024**3
+def download_artifact(source,bundle, *, members=FILES, limit=20*1024**3, require_success=True):
+    metadata=admit_source(source,require_success=require_success)
+    assert 0<metadata['size_in_bytes']<=limit
     archive=bundle.with_suffix('.zip');bundle.mkdir(parents=True,exist_ok=False)
     with archive.open('wb') as stream:
         subprocess.run(['gh','api','repos/'+REPOSITORY+'/actions/artifacts/'+str(source['artifact_id'])+'/zip'],stdout=stream,check=True,timeout=600)
     assert digest(archive)=='%s'%source['artifact_digest'].removeprefix('sha256:'), 'Artifact transport digest mismatch'
     with zipfile.ZipFile(archive) as zipped:
         entries=zipped.infolist()
-        assert {e.filename for e in entries}==FILES and len(entries)==3
-        assert sum(e.file_size for e in entries)<=20*1024**3
+        assert {e.filename for e in entries}==members and len(entries)==len(members)
+        assert sum(e.file_size for e in entries)<=limit
         for entry in entries:
             with zipped.open(entry) as src,(bundle/entry.filename).open('wb') as dst:shutil.copyfileobj(src,dst)
     archive.unlink()
@@ -122,7 +125,11 @@ def export(root,bundle):
     tags=subprocess.check_output(['docker','image','ls','--format','{{.Repository}}:{{.Tag}}'],text=True).splitlines()
     sidecars=[t for t in tags if t.startswith('harbor-prebuilt:harbor-docker-egress-control-sidecar-')]
     assert len(sidecars)==1, 'Expected the pinned Harbor content-addressed egress image'
-    images={tag:image_id(tag) for tag in TAGS+sidecars}
+    # Stock Harbor has already used this digest-pinned auxiliary during preflight.
+    probe_id=image_id(PROBE_REFERENCE)
+    subprocess.run(['docker','image','tag',PROBE_REFERENCE,PROBE_TAG],check=True)
+    assert image_id(PROBE_TAG)==probe_id
+    images={tag:image_id(tag) for tag in TAGS+sidecars+[PROBE_TAG]}
     payload=bundle.parent/'prepared-inputs';payload.mkdir(exist_ok=False)
     tasks={}
     from harbor.models.task.task import Task
@@ -142,7 +149,7 @@ def export(root,bundle):
     with tarfile.open(bundle/'inputs.tar','w') as archive:
         for name in members:archive.add(payload/name,arcname=name,recursive=False)
     subprocess.run(['docker','image','save','--output',str(bundle/'images.tar'),*images],check=True,timeout=240)
-    manifest={'schema':2,'experiment':experiment(),'created_at':datetime.now(timezone.utc).isoformat(),'expires_at':(datetime.now(timezone.utc)+timedelta(days=7)).isoformat(),'snapshot_bundle':json.loads((root/'public/snapshot-bundle.json').read_text()),'identity':who,'images':images,'tasks':tasks,'members':members,
+    manifest={'schema':3,'kernel_probe_reference':PROBE_REFERENCE,'experiment':experiment(),'created_at':datetime.now(timezone.utc).isoformat(),'expires_at':(datetime.now(timezone.utc)+timedelta(days=7)).isoformat(),'snapshot_bundle':json.loads((root/'public/snapshot-bundle.json').read_text()),'identity':who,'images':images,'tasks':tasks,'members':members,
         'archives':{name:{'sha256':digest(bundle/name),'size':(bundle/name).stat().st_size} for name in ('images.tar','inputs.tar')},
         'credentials':False,'running_containers':False,'authenticated_homes':False,
         'contents':'Prepared images and public repository task/verifier inputs only; separate from the report and agent-visible inputs.'}
@@ -160,10 +167,10 @@ def verify(bundle,expected,who):
     assert digest(bundle/'manifest.json')==expected, 'Preparation manifest digest mismatch'
     manifest=json.loads((bundle/'manifest.json').read_text())
     assert manifest['identity']==who, 'Wrong repository, branch, commit, run or allocation'
-    assert manifest['schema']==2 and manifest['experiment']==experiment(), 'Prepared experiment inputs changed'
+    assert manifest['schema']==3 and manifest['kernel_probe_reference']==PROBE_REFERENCE and manifest['experiment']==experiment(), 'Prepared experiment inputs changed'
     assert datetime.fromisoformat(manifest['expires_at'])>datetime.now(timezone.utc), 'Prepared images expired'
     assert all(manifest[k] is False for k in ('credentials','running_containers','authenticated_homes'))
-    assert all(k in manifest['images'] for k in TAGS) and len(manifest['images'])==4
+    assert all(k in manifest['images'] for k in TAGS+[PROBE_TAG]) and len(manifest['images'])==5
     for name,entry in manifest['archives'].items():
         assert name in ('images.tar','inputs.tar')
         assert 0<entry['size']<=16*1024**3
@@ -187,6 +194,12 @@ def restore(bundle,root,expected,proof_path=None):
     no_credentials();consumer=identity();manifest=verify(bundle,expected,producer_identity());root.mkdir(parents=True,exist_ok=False)
     subprocess.run(['docker','image','load','--input',str(bundle/'images.tar')],check=True,timeout=240)
     assert {tag:image_id(tag) for tag in manifest['images']}==manifest['images'], 'Loaded image identity mismatch'
+    # Classic Docker archives omit RepoDigests. Re-establish only the stock pinned
+    # reference, never a moving tag; downloaded layers (if any) remain digest checked.
+    probe=subprocess.run(['docker','image','inspect',PROBE_REFERENCE],capture_output=True)
+    refreshed=probe.returncode!=0
+    if refreshed:subprocess.run(['docker','image','pull',PROBE_REFERENCE],check=True,timeout=120)
+    assert image_id(PROBE_REFERENCE)==manifest['images'][PROBE_TAG], 'Kernel probe identity mismatch'
     with tarfile.open(bundle/'inputs.tar') as archive:archive.extractall(root,filter='data')
     assert files(root)==manifest['members']
     from harbor.models.task.task import Task
@@ -202,14 +215,20 @@ def restore(bundle,root,expected,proof_path=None):
     write(root/'public/prepared-manifest.json',manifest)
     write(root/'public/prepared-transfer.json',{'verified':True,'identity':consumer,'source_identity':manifest['identity'],'manifest_sha256':expected,
         'images':manifest['images'],'task_checksums':manifest['tasks'],'fresh_image_load':True,'snapshot_rebuild':False,
-        'root_paths_relocated':True,'note':'Only built images were transferred; Harbor creates fresh containers, homes and sessions.'})
+        'root_paths_relocated':True,'kernel_probe_registry_refresh':refreshed,'kernel_probe_reference':PROBE_REFERENCE,'note':'Only built images were transferred; Harbor creates fresh containers, homes and sessions.'})
     print('Prepared image IDs, archive hashes, task checksums and relocated paths verified; no rebuild.')
 
 def acquire_dependency(root):
     no_credentials();identity()
     config=json.loads((HERE/'preparation.json').read_text());seed=config['dependency_seed']
-    root.mkdir(parents=True,exist_ok=False)
-    subprocess.run(['gh','release','download',seed['tag'],'--repo',REPOSITORY,'--pattern',seed['asset'],'--dir',str(root)],check=True,timeout=120)
+    source=config.get('dependency_source')
+    if source:
+        assert source['name']=='snapshot-dependencies'
+        # Exact pinned bytes remain usable even if a later image build failed.
+        download_artifact(source,root,members={seed['asset']},limit=12*1024**2,require_success=False)
+    else:
+        root.mkdir(parents=True,exist_ok=False)
+        subprocess.run(['gh','release','download',seed['tag'],'--repo',REPOSITORY,'--pattern',seed['asset'],'--dir',str(root)],check=True,timeout=120)
     archive=root/seed['asset']
     assert archive.stat().st_size<12*1024**2 and digest(archive)==seed['archive_sha256'], 'snapshot_seed_transport_digest'
     target=root/'indexes';target.mkdir()
@@ -236,23 +255,27 @@ def qualify(bundle,root,expected):
     record={'passed':False,'inference':False,'image_rebuilds':0,'snapshot_index_downloads':0,
             'fresh_runner_initial_images_absent':True,'source_identity':manifest['identity'],
             'consumer_identity':identity(),'images':manifest['images'],'controls':[],
-            'task_checksums':manifest['tasks'],'experiment':manifest['experiment']['sha256']}
+            'task_checksums':manifest['tasks'],'experiment':manifest['experiment']['sha256'],
+            'kernel_probe_registry_refresh':json.loads((root/'public/prepared-transfer.json').read_text())['kernel_probe_registry_refresh']}
     # Harbor's unmodified start(force_build=False) uses the already-loaded sidecar.
-    # All four identities must exist before Harbor's supported prebuilt path starts.
+    # All retained identities must exist before Harbor's supported prebuilt path starts.
     import live,admission_validation
     try:
         inventory=subprocess.check_output(['docker','image','ls','--no-trunc','--quiet'],text=True).splitlines()
+        record['image_inventory_before']=sorted(inventory)
         for variant in ('current','absent'):
             task=Path(json.loads((root/(variant+'-task.json')).read_text())['path'])
             live.check_task(task,variant,root/'public/fresh'/variant,root)
-        assert sorted(inventory)==sorted(subprocess.check_output(['docker','image','ls','--no-trunc','--quiet'],text=True).splitlines()), 'Unexpected image creation or pull'
+        record['image_inventory_after']=sorted(subprocess.check_output(['docker','image','ls','--no-trunc','--quiet'],text=True).splitlines())
+        assert sorted(inventory)==record['image_inventory_after'], 'Unexpected image creation or pull'
         record['image_inventory_unchanged']=True
         record['parser']=live.admission_preflight(TAGS[2],root/'public/fresh/admission-preflight.json')
         admission_validation.IMAGE=TAGS[2]
         record['controls']=[admission_validation.control(root/'fresh-controls',kind) for kind in ('good','weak','unsupported','runner_error')]
         assert all(c['passed'] for c in record['controls'])
         assert {tag:image_id(tag) for tag in manifest['images']}==manifest['images']
-        record['container_disposal_verified']=not subprocess.check_output(['docker','ps','--all','--filter','label=com.docker.compose.service=main','--quiet'],text=True).strip()
+        record['remaining_containers']={tag:subprocess.check_output(['docker','ps','--all','--filter','ancestor='+tag,'--quiet'],text=True).splitlines() for tag in manifest['images']}
+        record['container_disposal_verified']=not any(record['remaining_containers'].values())
         assert record['container_disposal_verified']
         record['passed']=True
     except Exception as exc:

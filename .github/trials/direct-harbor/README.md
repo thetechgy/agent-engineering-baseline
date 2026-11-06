@@ -1,3 +1,5 @@
+# Direct Harbor recovery trial
+
 ## Reusable image qualification, 2026-11-06
 
 The separately authorized infrastructure pass permits at most two complete image
@@ -14,7 +16,8 @@ fallback. Package downloads remain independently size/hash checked; snapshot dat
 package pins, complete Codex package, Harbor and verifier acceptance are unchanged.
 
 `prepared.py` extends the existing image/task transport. `prepared-images` retains
-both agent images, the independent verifier and stock Harbor egress image for seven
+both agent images, the independent verifier, stock Harbor egress image and digest-pinned Alpine kernel
+probe for seven
 days. Its manifest binds source commit/run, relevant build and deployment inputs,
 runtime profile, dependency manifest, image IDs and task/member hashes. Reports and
 allocation metadata do not invalidate identical experiment inputs. Reuse requires
@@ -23,7 +26,8 @@ attempt, ancestor source commit, unexpired content and matching experiment input
 The new consumer still passes the original allocation and reservation checks.
 
 A separate GitHub-hosted `qualify` job requires all retained images to be absent,
-loads them, verifies relocation and deployment, repeats existing runtime/isolation
+loads them, verifies the stock kernel-probe registry digest reference (refreshing
+that exact reference if Docker omitted it), verifies relocation and deployment, repeats existing runtime/isolation
 checks, and runs good/weak/unsupported/runner-error native grader controls. It uses
 stock Harbor's prebuilt path, with no new private override. Protected verifier
 fixtures remain separate from agent image content. Dependency indexes are excluded
@@ -32,8 +36,6 @@ from the task handoff after image construction; they have their own retained bun
 Full image construction and fresh-runner qualification are pending until the new
 workflow evidence is recorded. The trial-only seed is not a production release;
 no production evaluation, Pages, or shared environment settings change.
-
-# Direct Harbor recovery trial
 
 ## Authorized retained-submission smoke allocation
 

@@ -202,14 +202,29 @@ def report(output, data):
     text = '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">\n<title>Direct Harbor recovery trial</title><style>body{font:16px system-ui;max-width:1100px;margin:3rem auto;padding:0 1rem;color:#172033}table{border-collapse:collapse;width:100%;margin:1rem 0}th,td{border:1px solid #cbd5e1;padding:.5rem;text-align:left;vertical-align:top}pre{white-space:pre-wrap;overflow-wrap:anywhere}h1,h2{color:#174f78}a{color:#145f91}</style>\n<h1>Direct Harbor recovery trial</h1><p>Bounded experimental trial. Production evaluation and Pages remain unchanged.</p>\n<p><a href="results.json" download>Download machine-readable results</a> · <a href="manifest.json">Frozen input manifests</a> · <a href="workflow-evidence.txt">Workflow evidence excerpts</a></p>'
     text += '<h2>Decision</h2><p>' + esc(data['decision']) + '</p>'
     text += '<p>' + esc(data['summary']) + '</p>'
+    if data.get('reusable_preparation'):
+        q=data['reusable_preparation']
+        text += '<h2>New reusable image qualification</h2><p>'+esc(q['decision'])+'</p><p><a href="reusable-preparation.json">New machine-readable evidence</a></p>'
+        text += table(('Status','Full build attempts','Fresh runner qualified','Ready for separately authorized smoke pair','Evaluated inference'),
+            [(q['status'],str(len(q['attempts']))+'/2',q['fresh_runner_qualified'],q['ready_for_smoke_pair'],False)])
+        text += table(('Run','Commit','Outcome'),[(x['run_id'],x['commit'],x['outcome']) for x in q['attempts']])
+        text += '<p>Snapshot bundle manifest SHA-256: <code>'+esc(q['dependency_bundle']['manifest_sha256'])+'</code>. '+esc(q['dependency_bundle']['validation'])+'</p>'
+        text += table(('Retained artifact','Bytes','Expires UTC','SHA-256'),[(x['name'],x['size_in_bytes'],x['expires_at'],x['digest']) for x in q['artifacts']])
+        for artifact in q['artifacts']:
+            text += '<p><a href="'+html.escape(artifact['url'],quote=True)+'">'+esc(artifact['name'])+'</a></p>'
+        if q['images']:
+            text += table(('Image','Identity'),q['images'].items())
+        text += '<p>'+esc(q['fresh_runner_summary'])+'</p><p>'+esc(q['remaining_downloads'])+'</p>'
+        text += '<p>Campaign consumption remains 6/36; earlier recovery remains 4/4; latest paid allocation remains closed at 0/2. Historical spending remains unknown. No model judge or evaluated-agent inference ran.</p>'
+        text += '<p>Maintenance: '+esc(q['maintenance'])+'</p>'
     if data.get('preparation_failures'):
-        text += '<h2>Pre-launch blocker</h2><p>No new credentialed attempt or submission. <a href="preparation-failure.json">Preparation failure evidence</a></p>'
+        text += '<h2>Historical pre-launch failures</h2><p>No new credentialed attempt or submission. <a href="preparation-failure.json">Preparation failure evidence</a></p>'
         text += table(('Run','Stage','Observed failure','Reservations / launches'),
             [(r['run_id'],r['stage'],r.get('failure') or ', '.join(r.get('observed_errors',[])),str(r['reservations'])+' / '+str(r['credentialed_launches'])) for r in data['preparation_failures']['runs']])
         text += '<p>'+esc(data['preparation_failures']['terminal_decision'])+'</p>'
     if data.get('snapshot_recovery'):
         recovery=data['snapshot_recovery']
-        text += '<h2>Pinned image preparation and environment approval</h2><p><a href="snapshot-recovery.json">Requests, hashes, build failures and maintenance evidence</a></p>'
+        text += '<h2>Historical snapshot recovery and preparation attempts</h2><p><a href="snapshot-recovery.json">Requests, hashes, build failures and maintenance evidence</a></p>'
         text += table(('Full preparation attempts','Images built','Images reused','Transfer qualified','Environment approval submitted'),
             [(recovery['full_preparation_attempts_used'],recovery['full_images_built'],recovery['prepared_images_reused'],recovery['image_transfer_qualified'],recovery['environment_approval']['submitted'])])
         text += '<p>'+esc(recovery['environment_approval']['reason'])+'</p><p>'+esc(recovery['diagnosis'])+'</p>'
