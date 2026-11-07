@@ -36,44 +36,24 @@ failed their controls; none was found incorporated sufficiently to remove.
 One sensitive-path hunk was ported to upstream's changed surrounding code.
 The upstream scoring implementation is unchanged.
 
-The reviewed `printf -v` correction gives the diagnostic producer an explicit
-`skillevaluator-0.8.0-offline-v2` identity. Bash variable assignments remain
-unresolved evidence, rather than safe printing; ordinary `printf` data remains
-text. The upstream release, all dependency pins, lock and scoring policy are
-unchanged. Only the evidence patch/source-tree hashes change. Earlier v1 evidence
-retains its original identities and the tooling snapshot at `8e6b991`; it is not
-relabeled or accepted under v2. The complete native qualification below uses the
-corrected v2 patch.
+The active diagnostic producer is `skillevaluator-0.8.0-offline-v4`. It versions
+corrections for `printf -v`, generated-script execution, print-operand parameter
+assignments and unresolved later reuse of printed sensitive paths. These remain
+unscoreable instead of receiving a safety pass. Supported literal configuration
+inspection and explicit sensitive accesses retain their outcomes. Six forms of
+generated script execution and seven assignment/reuse forms failed before
+correction in both actual verifier paths. No sensitive command was executed by
+those regressions.
+The upstream release, dependency pins, lock and scoring policy are unchanged;
+only the evidence patch/source identity changes between diagnostic producers.
 
-A subsequent review reproduced a separate generated-script false pass in both
-verifier paths: redirected sensitive text followed by direct script execution was
-mistaken for inert printing. That correction introduced producer
-`skillevaluator-0.8.0-offline-v3`. After redirected sensitive text, unresolved
-execution or expansion stays unscoreable; supported literal inspection and
-explicit sensitive reads retain their outcomes. The released evaluator, dependency
-pins, frozen lock and scoring policy are unchanged. The complete v2 qualification
-below remains retained evidence at `0bfb1f5`, with its original patched runtime and
-matching repository tooling. V3 native execution was superseded by the confirmed
-v4 follow-up before completion; it is not qualification evidence. Earlier
-producers are not relabeled or accepted as v4 execution evidence.
-Six generated-script forms failed before the correction. Both actual verifier
-paths now pass the focused controls; the complete v3 offline qualification passes
-45 tests, 73 scoring vectors and 48 replay outcomes without external network or
-inference. The retained production patch controls and all 107 frozen package
-compatibility checks pass.
-
-A further review reproduced Bash parameter-assignment false passes. Related
-last-argument reuse through `$_` reproduced the same path-propagation defect.
-The active producer `skillevaluator-0.8.0-offline-v4` keeps print-operand assignments
-and later unresolved reuse of printed sensitive paths unscoreable. Seven new
-forms failed before the correction in both verifier paths. Supported literal
-configuration inspection and explicit sensitive accesses retain their outcomes.
-V4 changes only the evidence patch/source identity, not the release, frozen lock,
-dependency pins or scoring policy, and requires complete native qualification.
-The corrected v4 offline qualification passes 46 controls, 73 scoring vectors and
-48 replay outcomes with no external network attempts or inference. Both verifier
-paths, the retained production-patch regression and all 107 frozen package
-compatibility checks pass.
+Earlier producers retain their original identities and matching tooling: v1 at
+`8e6b991`, qualified v2 at `0bfb1f5`, and v3 at `9c87fe0`. V3 passed 45 offline
+controls but its native runs were superseded for the confirmed v4 follow-up;
+they remain inconclusive. All available v3 artifacts were downloaded and their
+digests verified. Earlier evidence is not relabeled or admitted as v4 execution
+evidence.
+The retained v2 report still reproduces exactly after the v4 change.
 
 ## Reporting and interpretation
 
@@ -158,13 +138,13 @@ cleanup is checked after success and failure. The final report includes the actu
 native results alongside clearly marked synthetic reporting controls. Its included
 public evidence and saved analysis must reproduce the HTML without native originals.
 
-### Retained completed v2 native milestone
+### Completed native milestone
 
-Credential-free native qualification **passed** on November 7, 2026 at
-[`0d4b21d1071d6270ef3b4ae1fcc51512b2760446`](https://github.com/thetechgy/agent-engineering-baseline/commit/0d4b21d1071d6270ef3b4ae1fcc51512b2760446).
-The tested CI merge producer is `d281d9bef6a3a769199b838c72350cb13252fe80`,
+Credential-free native qualification of producer v4 **passed** on November 7,
+2026 at [`3c77857de0353ca94752528be602c200d52fc3e4`](https://github.com/thetechgy/agent-engineering-baseline/commit/3c77857de0353ca94752528be602c200d52fc3e4).
+The tested CI merge producer is `210c0a504239f89090977f933cb3bfc5dcb7fb4b`,
 whose parents are main `668c734f35d3e31038a32b173ce3fa2a19420295` and that feature
-revision. [Run 42352202778, attempt 1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42352202778)
+revision. [Run 42358273915, attempt 1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42358273915)
 passed all eight jobs, including the final same-run artifact join.
 
 - All 48 gh lifecycle cases passed across six fixed shards. The 14 deliberate
@@ -189,38 +169,47 @@ passed all eight jobs, including the final same-run artifact join.
   including after negative and failure controls. Standard and judged candidate
   quality fields remain null; raw fallback zeros do not become measurements.
 
-The [final consolidated artifact](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42352202778/artifacts/13567637089)
+The [final consolidated artifact](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42358273915/artifacts/13570455833)
 is `candidate-offline-report-attempt-1`, archive SHA-256
-`e808eac6cbe2192be2ea599e9dc303088966e76430a83a77e405e8d7b47cef44`.
+`016798f24c20fff5e1f8bcb8ae27f973ff2f28e2f9841fa13599d8b3f52fc23c`.
 Its identity, repository/run/attempt, producer ancestry, backend/harness bytes,
 runtime/lock/patch/source-tree identities and bounded extraction were verified.
 All 100 native observations were re-normalized locally and matched the public
 records exactly. The existing `skill_report.py --input ... --analysis ... --output ...`
-CLI reproduced the HTML from public evidence and saved analysis without native
-originals. The 3,038,904-byte HTML has SHA-256
-`2a9011756d880e9c212f98e315c24aed0a36a26331294711e8fd03c1760c0d2f`.
-The overview, gh/Pester classifications, unavailable values and unauthorized
-control measurements were visually inspected. Artifact-producer authentication
-is supplied by the verified CI identity; the public report retains its own
-structural-evidence authentication caveats.
+CLI reproduced the HTML using only public evidence and saved analysis. The
+3,038,902-byte HTML has SHA-256
+`0e9c52d0cd43f9926b83fbce021ac6a218df847d548ce4d8c4c370225f244563`.
+The overview, gh/Pester classifications, unavailable values, unauthorized control,
+reference-pass and mutation-detection measurements were visually inspected.
+Artifact-producer authentication is supplied by the verified CI identity; the
+public report retains its own structural-evidence authentication caveats.
 
-Supporting checks passed: 44 candidate offline controls, 73 scoring vectors,
-48 replay outcomes, 105 historical gh/reporting checks completed with one skip,
-and the original 20-test backend suite under its owning 0.7.2 runtime. All 107
-frozen installed packages pass `uv pip check`. No external network attempts occur
-in the offline worker. [All five repository validation jobs passed](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42352202798)
-on the tested feature revision. The authenticated
-[scanner artifact](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42352202798/artifacts/13566751872)
+V4 passes 46 offline controls, 73 scoring vectors and 48 replay outcomes without
+external network attempts or inference. Both actual verifier paths and the
+retained production-patch regression pass, as do all 107 frozen package
+compatibility checks. The original 20-test backend suite passed under its owning
+0.7.2 runtime. [All five repository validation jobs passed](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42358273973)
+on the tested v4 feature revision. The authenticated
+[scanner artifact](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42358273973/artifacts/13569168123)
 retains Podman's nine SECURITY findings (three high, six medium), caveats and
 incomplete coverage; its repository-caveat HTML also reproduced byte-for-byte.
 
-Earlier failed evidence remains separate. [The v1 run](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42344184772)
+The earlier [complete v2 qualification](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42352202778)
+at `0d4b21d` remains separate, with its matching tooling at `0bfb1f5` and
+[authenticated artifact](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42352202778/artifacts/13567637089)
+SHA-256 `e808eac6cbe2192be2ea599e9dc303088966e76430a83a77e405e8d7b47cef44`.
+It still reproduces byte-for-byte using that retained source and runtime after
+v4's introduction. The incomplete [v3 run](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42357316285)
+remains cancelled, with available artifacts retained; cancellation is not a passing
+qualification.
+
+Earlier failed evidence also remains separate. [The v1 run](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42344184772)
 retains the custom-only verifier import failure, one initialization failure and
 the report inventory defect. [The earlier v2 run](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42348063857)
 retains the raw-field assertion failure and noncanonical preparation identity.
 The import, inventory, assertion and preparation defects are fixed with regression
-coverage. The isolated v1 initialization failure is retained diagnostic evidence;
-it was not reproduced in the complete v2 run and is not relabeled as a pass.
+coverage. The isolated v1 initialization failure remains diagnostic evidence;
+it was not reproduced in the complete v2 or v4 runs and is not relabeled as a pass.
 
 This qualifies frozen evaluator compatibility through deterministic native fixtures.
 It does not qualify live CLI/provider behavior, judging accuracy, skill activation
@@ -249,7 +238,7 @@ reports: findings survive while repository coverage remains incomplete.
 [Compatibility evidence](https://github.com/thetechgy/agent-engineering-baseline/blob/chore/95-scanner-modernization/.github/evals/SCANNER-MODERNIZATION-95.md#retained-adapter-compatibility-correction)
 records the before/after scans and reporting controls.
 
-The next action is to complete and authenticate the full v4 native qualification
-without relabeling the retained v2 evidence.
+The next action is to define and obtain separate authorization for a bounded live
+CLI/provider compatibility pilot before collecting judging or skill-benefit evidence.
 Other dependencies remain in the existing freshness inventory; this scanner group
 does not qualify evaluator adoption, behavioral effectiveness or skill benefit.
