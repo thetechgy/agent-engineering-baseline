@@ -30,6 +30,19 @@ def grader_source(source, *, fixture=False):
         raise ValueError("Unreviewed gh native verifier loading contract")
     text = text.replace(old, new)
     if fixture:
+        # Custom-only images omit judge dependencies. Use the same staged pure
+        # APIs exported by eval.py without importing its HTTP/judge stack.
+        old_loader = new + '\n    spec = importlib.util.spec_from_file_location("native_eval", native_path)\n    native = importlib.util.module_from_spec(spec)\n    spec.loader.exec_module(native)'
+        new_loader = '''native_path = Path(os.environ.get("HARBOR_TESTS_DIR", "/tests")) / "skill_evaluator"
+    import sys
+    sys.path.insert(0, str(native_path))
+    from atif_helpers import extract_tool_calls_as_dicts, get_agent_text
+    from checks import check_activation, check_negative_case
+    native = SimpleNamespace(extract_tool_calls_as_dicts=extract_tool_calls_as_dicts,
+        get_agent_text=get_agent_text, check_activation=check_activation, check_negative_case=check_negative_case)'''
+        if text.count(old_loader) != 1:
+            raise ValueError('Unreviewed gh fixture normalizer contract')
+        text = text.replace(old_loader, new_loader)
         # Fixture-only custom scoring preserves the existing deterministic gate.
         # No standard metric or judge is produced by this verifier entry point.
         old = '    target.write_text(json.dumps(reward) + "\\n")'

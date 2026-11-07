@@ -252,7 +252,7 @@ def native_cohorts(output, *, lifecycle=True):
     success = all(row['status'] == 'complete' for row in stages.values())
     reports.write_json(output / 'native-stages.json', {'status': 'passed' if success else 'partial', 'stages': stages})
     captured = analysis.capture_inputs([output / 'public'])
-    records = list(captured.records.values())
+    records = [row for row in captured.records.values() if row['kind'] == 'behavioral']
     admitted = {}
     for name, directory in (('gh', output / 'native-gh-oracle/native/reporting/public'),
                             ('powershell-pester-6', output / 'native-pester/reporting/public')):

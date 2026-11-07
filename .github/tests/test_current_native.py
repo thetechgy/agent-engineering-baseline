@@ -192,3 +192,84 @@ class NativeCurrentTests(unittest.TestCase):
         self.assertTrue(all(v is None for v in e.custom_usage(trial,redacted_counts=True).values()))
         trial['agent_result']['n_input_tokens']='malformed'
         with self.assertRaisesRegex(ValueError,'Invalid count'): e.custom_usage(trial,redacted_counts=True)
+
+    def test_fixture_grader_runs_with_only_staged_stdlib_helpers(self):
+        import json
+        import subprocess
+        import gh_candidate
+        from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            bundle=gh_candidate.stage(ROOT,root / 'bundle/gh',['gh-001'],fixture=True)
+            task=stage_native_harbor_tasks(bundle,root / 'tasks',with_skill=True,grading_mode='custom_only')[0]
+            trace=root / 'trajectory.json';trace.write_text('{"steps": []}')
+            environment={'PATH':os.defpath,'HARBOR_TESTS_DIR':str(task / 'tests'),
+                'HARBOR_ENTRY_JSON':str(task / 'tests/entry.json'),'HARBOR_ATIF_PATH':str(trace),
+                'HARBOR_WORKSPACE':str(root),'HARBOR_REWARD_JSON':str(root / 'reward.json'),
+                'HARBOR_REWARD_TXT':str(root / 'reward.txt')}
+            result=subprocess.run([sys.executable,'-I','-S','-B',str(task / 'tests/grader.py')],
+                env=environment,capture_output=True,text=True,timeout=30)
+            self.assertEqual(result.returncode,0,result.stderr)
+            self.assertEqual(json.loads((root / 'reward.json').read_text()),{'overall':0.0})
+            sidecar=json.loads((root / 'skill_evaluator_reward.json').read_text())
+            self.assertEqual(sidecar['details']['outcome'],{'classification':'unknown','code':'unknown'})
+            self.assertEqual(sidecar['evaluation_status'],'failed')
+            self.assertFalse(sidecar['custom_metrics'])
+
+    def test_partial_native_report_retains_behavioral_records_and_inventory(self):
+        import json
+        from unittest.mock import patch
+        import qualify_current_evaluator as q
+        import qualify_evaluator_candidate as legacy
+        import skill_analysis as analysis
+        import skill_reports as reports
+        import skill_report as report
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);(root / 'empty-home').mkdir()
+            record=reports.read_json(ROOT / '.github/tests/fixtures/skill_evidence/gh-no-model.json')
+            record['run_id']='unmeasured-control'
+            q.render([record],root)
+            reports.write_json(root / 'result.json',{'success':True,'simulated':True})
+            with patch.object(legacy,'native_compose_config'),patch.object(legacy,'run_native',return_value=1):
+                with self.assertRaisesRegex(RuntimeError,'Native cohort qualification incomplete'):
+                    q.native_cohorts(root,lifecycle=False)
+            result=reports.read_json(root / 'result.json')
+            self.assertFalse(result['success'])
+            self.assertEqual(result['native_qualification'],'partial')
+            captured=analysis.capture_inputs([root / 'public'])
+            self.assertEqual(sorted(r['kind'] for r in captured.records.values()),['behavioral','inventory'])
+            saved=reports.read_json(root / 'analysis.json')
+            analysis.validate_analysis(saved,captured)
+            self.assertEqual(report.render_report(saved,captured),(root / 'report.html').read_bytes())
+
+    def test_native_stage_diagnostics_are_bounded_and_reject_links(self):
+        import json
+        import gh_oracle_validation as oracle
+        import skill_reports as reports
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);jobs=root / 'jobs';trial=jobs / 'gh-codex-with/gh-001__control'
+            verifier=trial / 'verifier';verifier.mkdir(parents=True)
+            (verifier / 'test-stdout.txt').write_text('x'*40000+'\x1b[31m\nModuleNotFoundError: idna\n'+str(root)+'/private-input')
+            (trial / 'gh-initialization.jsonl').write_text(json.dumps({'status':'ready','broker':{'uid':0}}))
+            output=root / 'retained'
+            oracle.retain_diagnostics(jobs,output,{'gh-001'})
+            data=reports.read_json(output / 'native-command-diagnostics.json')
+            self.assertEqual(len(data['trials']),1)
+            stages=data['trials'][0]['stages'];text=stages['verifier/test-stdout.txt']['text']
+            self.assertTrue(stages['verifier/test-stdout.txt']['truncated'])
+            self.assertLessEqual(len(text),32768)
+            self.assertIn('ModuleNotFoundError: idna',text)
+            self.assertIn('<native>/private-input',text)
+            self.assertNotIn(str(root),text)
+            self.assertNotIn('\x1b',text)
+            target=root / 'link-target';target.write_text('must not be retained')
+            link=verifier / 'test-stderr.txt';link.symlink_to(target)
+            with self.assertRaisesRegex(ValueError,'Linked native command diagnostic'):
+                oracle.retain_diagnostics(jobs,output,{'gh-001'})
+            link.unlink();os.link(target,link)
+            with self.assertRaisesRegex(ValueError,'Unsafe native command diagnostic'):
+                oracle.retain_diagnostics(jobs,output,{'gh-001'})
+            self.assertNotIn('must not be retained',(output / 'native-command-diagnostics.json').read_text())
+            link.unlink();(verifier / 'test-stdout.txt').write_text('PESTER_VERIFIER_ONLY_'+'synthetic')
+            with self.assertRaisesRegex(ValueError,'Protected verifier payload'):
+                oracle.retain_diagnostics(jobs,output,{'gh-001'})

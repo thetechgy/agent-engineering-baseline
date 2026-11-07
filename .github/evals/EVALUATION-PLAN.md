@@ -107,6 +107,14 @@ Pester must retain 22 passed, 14 failed, 8 invalid, 2 timeout, 2 unsupported and
 arm and checksum identities must agree. A passing qualification does not relabel
 negative outcomes, missing evidence, or aggregate execution failures.
 
+The custom-only gh verifier loads the released, staged `atif_helpers` and
+`checks` APIs directly. The full verifier template imports judge/HTTP dependencies
+that custom-only images intentionally omit; an isolated `-I -S` regression checks
+the actual grader without installed packages. The native reporting join selects
+behavioral records before rebuilding inventory, including when native evidence
+is partial. Failed verifier/oracle output and initialization records are retained
+as bounded, sanitized diagnostics; linked diagnostic inputs are rejected.
+
 The existing bounded command observer records gh build/start stages without raw
 arguments. Oracle launch stages and sanitized failure diagnostics are retained;
 cleanup is checked after success and failure. The final report includes the actual

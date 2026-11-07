@@ -5,6 +5,8 @@ import os
 from pathlib import Path
 import subprocess
 import signal
+import stat
+import re
 import tempfile
 import time
 
@@ -84,6 +86,43 @@ def prepare(root):
     manifest = write_manifest(root / 'operator', [t for tasks in arms.values() for t in tasks],
                               staged_roots=[root / 'tasks', root / 'bundle'])
     return bundle, fixtures, rows, arms, manifest
+
+
+
+def retain_diagnostics(jobs, artifact, case_ids):
+    """Keep bounded command-stage data, never producer code or private inputs."""
+    from skillevaluator.utils.redaction import redact_sensitive_text
+    rows = []
+    for arm, suffix in (('with_skill', 'with'), ('without_skill', 'without')):
+        job = jobs / ('gh-codex-' + suffix)
+        if not job.exists(): continue
+        if job.resolve() != job: raise ValueError('Linked native job diagnostics')
+        for trial in sorted(job.iterdir()):
+            case = trial.name.split('__', 1)[0]
+            if case not in case_ids: continue
+            if trial.resolve() != trial or not trial.is_dir():
+                raise ValueError('Linked native trial diagnostics')
+            if len(rows) >= 48: raise ValueError('Native diagnostic trial limit')
+            row = {'case': case, 'arm': arm, 'stages': {}}
+            for member in ('gh-initialization.jsonl', 'agent/oracle.txt',
+                           'verifier/test-stdout.txt', 'verifier/test-stderr.txt'):
+                path = trial / member
+                if not path.exists() and not path.is_symlink(): continue
+                if path.resolve() != path: raise ValueError('Linked native command diagnostic')
+                fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+                with os.fdopen(fd, 'rb') as stream:
+                    info = os.fstat(stream.fileno())
+                    if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+                        raise ValueError('Unsafe native command diagnostic')
+                    stream.seek(max(0, info.st_size - 32768))
+                    text = stream.read(32768).decode(errors='replace')
+                text = re.sub(r'\x1b\[[0-?]*[ -/]*[@-~]', '', text)
+                text = re.sub(r'[\x00-\x08\x0b-\x1f\x7f]', '', text)
+                if 'PESTER_VERIFIER_ONLY_' in text: raise ValueError('Protected verifier payload in native diagnostic')
+                text = redact_sensitive_text(text).replace(str(jobs.parent), '<native>').replace(str(ROOT), '<checkout>')
+                row['stages'][member] = {'text': text, 'truncated': info.st_size > 32768}
+            rows.append(row)
+    reports.write_json(artifact / 'native-command-diagnostics.json', {'trials': rows})
 
 
 def main(artifact):
@@ -174,4 +213,5 @@ def main(artifact):
             clean = all(set(before[k]) == set(after[k]) for k in before)
             artifact.mkdir(parents=True, exist_ok=True)
             reports.write_json(artifact / 'cleanup.json', {'complete': clean})
+            retain_diagnostics(jobs, artifact, set(fixtures))
             if not clean: raise RuntimeError('Native gh cleanup incomplete')
