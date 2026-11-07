@@ -30,6 +30,18 @@ def runner_bytes(workspace=ROOT):
     return source.encode()
 
 
+def grader_bytes(workspace=ROOT):
+    """Hash the exact admitted bytes at the verifier handoff; no grading change."""
+    source = (workspace / '.github/evals/powershell-pester-6/evals/grader.py').read_text()
+    source = source.replace('import ctypes\n', 'import ctypes\nimport hashlib\n')
+    anchor = "        candidate.decode('utf-8')"
+    assert source.count(anchor) == 1
+    source = source.replace(anchor,
+        "        Path('/logs/verifier/pilot-verified-submission.json').write_text(json.dumps({\n"
+        "            'sha256': hashlib.sha256(candidate).hexdigest(), 'bytes': len(candidate)}))\n" + anchor)
+    return source.encode()
+
+
 def configuration(base_url=None):
     """The endpoint is the only transport difference in credential-free probes."""
     return {

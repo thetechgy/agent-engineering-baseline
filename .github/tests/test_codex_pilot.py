@@ -1,5 +1,6 @@
 """Credential-free prospective contract and selection controls for the one-pair pilot."""
 import importlib.util
+import importlib.metadata
 import json
 import os
 import shutil
@@ -10,6 +11,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+CANDIDATE_RUNTIME = bool(importlib.util.find_spec('skillevaluator')) and importlib.metadata.version('skillevaluator') == '0.8.0'
 ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/'.github/scripts'))
 from codex_pilot_contract import PROFILE, configuration, runner_bytes
@@ -51,7 +53,7 @@ class PilotContracts(unittest.TestCase):
         identities=evidence.custom_input_identities(ROOT,'powershell-pester-6',purpose='cli_pilot')
         self.assertTrue(all(profile[k]==v for k,v in identities.items()))
 
-    @unittest.skipUnless(importlib.util.find_spec('skillevaluator'),'Requires qualified owning runtime')
+    @unittest.skipUnless(CANDIDATE_RUNTIME,'Requires qualified 0.8.0 owning runtime')
     def test_native_command_has_no_retry_and_exact_runtime(self):
         with tempfile.TemporaryDirectory() as d:
             cmd=pilot.command(Path(d),'with_skill')
@@ -83,7 +85,7 @@ class PilotContracts(unittest.TestCase):
                 self.assertEqual(invoke(fixed),{'status':status,'code':code})
                 if name=='boolean': self.assertEqual(invoke(original),{'status':'unsupported','code':'admission'})
 
-    @unittest.skipUnless(os.environ.get('APM_EXECUTABLE') and importlib.util.find_spec('skillevaluator'), 'Requires verified APM and owning runtime')
+    @unittest.skipUnless(os.environ.get('APM_EXECUTABLE') and CANDIDATE_RUNTIME, 'Requires verified APM and owning runtime')
     def test_actual_staging_capture_rejects_cohort_runner_and_attempt_drift(self):
         from harbor.models.task.task import Task
         with tempfile.TemporaryDirectory() as d:
@@ -104,6 +106,38 @@ class PilotContracts(unittest.TestCase):
                 capture['attempts']=1
                 capture['case_ids'].append('pester-002')
                 with self.assertRaises(ValueError): evidence.validate_custom_capture(capture,PROFILE['skill'],ROOT)
+
+    @unittest.skipUnless(CANDIDATE_RUNTIME, 'Requires qualified owning runtime')
+    def test_exec_json_usage_keeps_missing_unknown_and_rejects_invalid_counts(self):
+        from codex_pilot_agent import PilotCodex
+        from harbor.models.agent.context import AgentContext
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d); context=AgentContext(); agent=SimpleNamespace(logs_dir=root)
+            (root/'codex.txt').write_text('{"type":"turn.failed","error":{"message":"refused"}}\n')
+            PilotCodex.populate_context_post_run(agent,context)
+            self.assertIsNone(context.n_input_tokens)
+            (root/'codex.txt').write_text(json.dumps({'type':'turn.completed','usage':{
+                'input_tokens':100,'cached_input_tokens':20,'output_tokens':10}})+'\n')
+            PilotCodex.populate_context_post_run(agent,context)
+            self.assertEqual((context.n_input_tokens,context.n_cache_tokens,context.n_output_tokens),(100,20,10))
+            (root/'codex.txt').write_text(json.dumps({'type':'turn.completed','usage':{
+                'input_tokens':100,'cached_input_tokens':101,'output_tokens':10}})+'\n')
+            with self.assertRaises(ValueError): PilotCodex.populate_context_post_run(agent,context)
+
+    @unittest.skipUnless(CANDIDATE_RUNTIME, 'Requires qualified owning runtime')
+    def test_exact_submission_handoff_rejects_changed_verifier_receipt(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);trial=root/'jobs/job/trial';artifact=root/'evidence';artifact.mkdir()
+            path=trial/'artifacts/workspace/output/Subject.Tests.ps1';path.parent.mkdir(parents=True)
+            path.write_bytes(b"Describe 'proof' { It 'checks' { 1 | Should -Be 1 } }\n")
+            receipt={'sha256':pilot.sha(path),'bytes':path.stat().st_size}
+            for directory,name in (('agent','pilot-produced-submission.json'),('verifier','pilot-verified-submission.json')):
+                target=trial/directory/name;target.parent.mkdir(parents=True);target.write_text(json.dumps(receipt))
+            pilot.retain(root,artifact)
+            self.assertEqual(next((artifact/'submissions').rglob('Subject.Tests.ps1')).read_bytes(),path.read_bytes())
+            (trial/'verifier/pilot-verified-submission.json').write_text(json.dumps({**receipt,'sha256':'0'*64}))
+            with self.assertRaisesRegex(ValueError,'handoff mismatch'): pilot.retain(root,artifact)
 
     def test_wrong_allocation_rejects_before_native_setup(self):
         with patch.object(sys,'argv',['pilot','live','--output','unused','--approval','wrong']), self.assertRaises(SystemExit):

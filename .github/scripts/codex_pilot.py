@@ -10,7 +10,7 @@ import shutil
 import subprocess
 import sys
 
-from codex_pilot_contract import PROFILE as P, ROOT, runner_bytes
+from codex_pilot_contract import PROFILE as P, ROOT, runner_bytes, grader_bytes
 import evaluator_profiles as profiles
 import pester_evaluations as pester
 import skill_evidence as evidence
@@ -41,7 +41,8 @@ def deploy(root):
     apm = Path(os.environ['APM_EXECUTABLE']).resolve(strict=True)
     if re.search(r'CLI version ([0-9.]+)', subprocess.check_output([apm, '--version'], text=True)).group(1) != (ROOT / '.apm-version').read_text().strip():
         raise ValueError('APM version mismatch')
-    subprocess.run([apm, 'install', '--only', 'apm', '--target', 'codex'], cwd=project, check=True, timeout=60)
+    clean = {k:v for k,v in os.environ.items() if k not in ('OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'NVIDIA_API_KEY')}
+    subprocess.run([apm, 'install', '--only', 'apm', '--target', 'codex'], cwd=project, env=clean, check=True, timeout=60)
     deployed = project / '.agents/skills' / P['skill']
     expected = {p.relative_to(source).as_posix(): sha(p) for p in reports.regular_tree(source)
                 if p.relative_to(source).parts[0] != 'evals'}
@@ -87,6 +88,7 @@ def stage(root, *, controls=False):
             raise ValueError('Pilot selection drift')
         for task in tasks[arm]:
             (task / 'tests/Runner.ps1').write_bytes(runner_bytes())
+            (task / 'tests/verifier/grader.py').write_bytes(grader_bytes())
             (task / 'tests/docker-compose.yaml').write_text('services:\n  main:\n    network_mode: none\n')
             config = task / 'task.toml'
             config.write_text(config.read_text().replace('timeout_sec = 300.0', f'timeout_sec = {P["agent_seconds"]}.0'))
@@ -120,7 +122,7 @@ def stage(root, *, controls=False):
                 (solution / 'candidate').write_bytes(payload)
                 (solution / 'solve.sh').write_text('#!/bin/sh\nset -eu\ntest ! -e /tests\n' +
                     ('test ! -e /workspace/output/Subject.Tests.ps1\n' if control == 'missing' else
-                     'cp /solution/candidate /workspace/output/Subject.Tests.ps1\n'))
+                     'cp /solution/candidate /workspace/output/Subject.Tests.ps1\n' + producer_receipt_command() + '\n'))
         captured.extend(evidence.capture_custom_tasks(ROOT, P['skill'], tasks[arm], arm,
                         purpose='cli_pilot_control' if controls else 'cli_pilot'))
     return bundle, tasks, captured
@@ -139,6 +141,16 @@ def command(root, arm, *, controls=False):
     return cmd
 
 
+def producer_receipt_command():
+    code = ("import hashlib,json,stat; from pathlib import Path; p=Path('/workspace/output/Subject.Tests.ps1'); "
+            "s=p.lstat() if p.exists() else None; "
+            "v={'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'bytes':s.st_size} "
+            "if s and stat.S_ISREG(s.st_mode) and s.st_nlink==1 and s.st_size<=65536 else None; "
+            "Path('/logs/agent/pilot-produced-submission.json').write_text(json.dumps(v))")
+    import shlex
+    return 'python3 -c ' + shlex.quote(code)
+
+
 def retain(root, artifact):
     """Retain exact safe submissions before collection/redaction/cleanup boundaries."""
     from skillevaluator.utils.redaction import redact_sensitive_text
@@ -148,16 +160,21 @@ def retain(root, artifact):
             continue
         raw = evidence.read_bytes(path)
         relative = path.relative_to(root / 'jobs')
-        if redact_sensitive_text(raw.decode('utf-8', errors='strict')).encode() != raw:
+        decoded = raw.decode('utf-8', errors='replace')
+        if redact_sensitive_text(decoded) != decoded:
             raise ValueError('Submission requires protected retention; public upload refused')
         target = artifact / 'submissions' / relative
         target.parent.mkdir(parents=True, exist_ok=True); target.write_bytes(raw)
         if sha(path) != sha(target): raise ValueError('Submission handoff mismatch')
+        trial = next(parent.parent for parent in path.parents if parent.name == 'artifacts')
+        receipts = [reports.read_json(trial / d / n) for d,n in (('agent','pilot-produced-submission.json'), ('verifier','pilot-verified-submission.json'))]
+        if any(r != {'sha256': sha(target), 'bytes': len(raw)} for r in receipts):
+            raise ValueError('Producer/artifact/verifier handoff mismatch')
         records.append({'member': target.relative_to(artifact).as_posix(), 'sha256': sha(target), 'bytes': len(raw)})
     reports.write_json(artifact / 'submissions.json', records)
     audits = []
     for path in sorted((root / 'jobs').rglob('pilot-runtime.json')):
-        audits.append(reports.read_json(path))
+        audits.append({**reports.read_json(path), 'trial_member': path.relative_to(root / 'jobs').as_posix()})
     reports.write_json(artifact / 'runtime-audits.json', audits)
     usage = []
     for path in sorted((root / 'jobs').rglob('result.json')):
@@ -183,7 +200,7 @@ def retain(root, artifact):
                 continue
             if value.get('type') in ('item.started', 'item.completed') and value.get('item', {}).get('type') == 'command_execution':
                 from skillevaluator.utils.redaction import redact_sensitive_data
-                events.append(redact_sensitive_data(value))
+                events.append({**redact_sensitive_data(value), 'trial_member': path.relative_to(root / 'jobs').as_posix()})
     reports.write_json(artifact / 'tool-events.json', events)
     return usage
 
@@ -205,8 +222,10 @@ def collect(root, artifact, bundle, captured, *, controls=False):
         'harbor': {'n_attempts': 1, 'stop_on_pass': False}}
     if controls: config['qualification'] = {'producer': 'oracle', 'inference': False}
     reports.write_json(run / 'run_config.json', config)
+    stages = reports.read_json(artifact / 'command-stages.json')
+    status = 'complete' if len(stages) == 2 and all(s.get('returncode') == 0 for s in stages) else 'incomplete'
     reports.write_json(run / 'result.json', {**collected, 'diagnostic_only': True,
-        'skill_name': P['skill'], 'report_status': 'incomplete', 'run_config': config})
+        'skill_name': P['skill'], 'report_status': status, 'run_config': config})
     native = root / 'native'
     reports.benchmark_artifacts(ROOT, raw, P['skill'], native)
     import skill_analysis as analysis
@@ -273,9 +292,12 @@ def run(root, *, controls=False, probe=False):
             collect(root, artifact, bundle, captured, controls=controls)
             collected = True
         else:
-            probes = [reports.read_json(p) for p in (root / 'jobs').rglob('probe.json')]
+            probes = [{**reports.read_json(p), 'trial_member': p.relative_to(root / 'jobs').as_posix()} for p in sorted((root / 'jobs').rglob('probe.json'))]
             if len(probes) != 2 or any(p['model'] != P['model'] or p['reasoning']['effort'] != 'high' or p['requests'] != 2 for p in probes):
                 raise ValueError('Actual CLI request contract mismatch')
+            frozen_prompt = next(e['prompt'] for e in pester.dataset(ROOT) if e['id'] == P['case'])
+            if any(frozen_prompt not in json.dumps(p['input']) for p in probes):
+                raise ValueError('Post-upload actual task prompt mismatch')
             reports.write_json(artifact / 'refusal-probes.json', probes)
             events = reports.read_json(artifact / 'tool-events.json')
             completed = [e['item'] for e in events if e['type'] == 'item.completed']

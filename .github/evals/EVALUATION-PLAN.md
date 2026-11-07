@@ -245,7 +245,6 @@ CLI/provider compatibility pilot before collecting judging or skill-benefit evid
 Other dependencies remain in the existing freshness inventory; this scanner group
 does not qualify evaluator adoption, behavioral effectiveness or skill benefit.
 
-
 ## Live CLI compatibility pilot
 
 Preparation started November 7, 2026 from verified main `07e3ea5bb19818af61582062f47df7996f0218f9`.
@@ -345,3 +344,32 @@ and reporting, with each arm's execution, task correctness, mutation detection,
 authorization, access evidence and usage reported separately. Positive skill
 advantage is not required. One matched pair cannot establish general effectiveness.
 Production promotion remains out of scope.
+
+### First hosted preparation observation
+
+[Run 42387012263](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42387012263)
+at `3069447` built both complete images and verified both uploaded configurations,
+the frozen prompt, model/High request, skill presence/absence and cleanup. Both
+stub-supplied shell calls failed before execution: Bubblewrap could not create a
+namespace under the existing Docker policy. This is a preparation failure, not
+provider or skill-quality evidence. The authenticated retained artifact
+`codex-pilot-preparation-1` has archive SHA-256
+`6284f4dbdce4660ebc5beaddfc2cfed05c35dbebbf5ce9849340457722bae3f4`.
+No key or inference was involved.
+
+[Official sandbox guidance](https://learn.chatgpt.com/docs/permissions)
+confirms that hosts blocking the required Bubblewrap operations cannot run these
+policies; legacy Landlock cannot provide all required isolation. The pilot does
+not disable the CLI sandbox, grant capabilities, relax seccomp/AppArmor or select
+a weaker backend. Readiness remains blocked until an existing compatible executor
+can be used within the authorized protections. Independent native grading and
+reporting controls continue even when the CLI probe fails; the failed preparation
+still prevents the protected live job from launching. No paid approval is requested
+while this prerequisite is unresolved.
+
+The retained reporting-runtime regressions passed all 28 custom-metric checks.
+Local Pester validation passed 24 checks and reproduced one worker-startup exit
+137 under resource limits on unchanged main. Hosted runtime evidence remains
+separate. The initial full-validation failure was a checkpoint Markdown blank-line
+defect, corrected prospectively. Superseded validation/native runs were cancelled
+for the follow-up revision; they remain inconclusive.

@@ -108,6 +108,8 @@ class PilotCodex(Codex):
         finally:
             # Keep exact native events before removing the runtime home/credentials.
             try:
+                from codex_pilot import producer_receipt_command
+                await self.exec_as_agent(environment, command=producer_receipt_command())
                 await self.exec_as_agent(environment, command=(
                     f'if [ -d {HOME}/sessions ]; then cp -R {HOME}/sessions {logs}/sessions; fi; '
                     f'if [ -f {HOME}/stub.pid ]; then kill "$(cat {HOME}/stub.pid)"; fi; '

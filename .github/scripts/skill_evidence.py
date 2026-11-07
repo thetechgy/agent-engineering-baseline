@@ -3302,8 +3302,9 @@ def custom_source_manifest(workspace, name, *, purpose=None):
 def custom_input_identities(workspace, name, inputs=None, *, purpose=None):
     inputs = custom_source_manifest(workspace, name, purpose=purpose) if inputs is None else inputs
     if purpose in ('cli_pilot', 'cli_pilot_control'):
-        from codex_pilot_contract import runner_bytes
-        inputs = [dict(row, digest=digest_bytes(runner_bytes(workspace))) if row['member'] == 'support/Runner.ps1' else row for row in inputs]
+        from codex_pilot_contract import runner_bytes, grader_bytes
+        replacements = {'support/Runner.ps1': digest_bytes(runner_bytes(workspace)), 'evals/grader.py': digest_bytes(grader_bytes(workspace))}
+        inputs = [dict(row, digest=replacements[row['member']]) if row['member'] in replacements else row for row in inputs]
     grader = [row for row in inputs if row['member'] in ('evals/grader.py', 'support/Runner.ps1', 'support/test.sh', 'evals/files/fixture.py')]
     fixture = [row for row in inputs if row['member'].startswith(('support/cases/', 'evals/files/'))
                or row['member'] == 'support/EXECUTION-PROFILE.md']
@@ -3356,6 +3357,9 @@ def capture_custom_tasks(workspace, name, tasks, arm, *, purpose='benchmark'):
             require(actual_skill == expected_skill, 'Staged target skill drift')
         overlay = workspace / '.github/evals' / name
         grader = read_bytes(overlay / 'evals/grader.py')
+        if profile['id'] == 'pester-cli-pilot-v1':
+            from codex_pilot_contract import grader_bytes
+            grader = grader_bytes(workspace)
         if name == 'gh':
             grader = read_bytes(overlay / 'evals/files/fixture.py').decode().rsplit('\nif __name__ ==', 1)[0].encode() + b'\n' + grader
         if name == 'gh':
@@ -3606,6 +3610,9 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None):
         require(task['task_checksum'] == custom_task_checksum(task['members']), 'Staged checksum mismatch')
         overlay = workspace / '.github/evals' / name
         grader = read_bytes(overlay / 'evals/grader.py')
+        if profile['id'] == 'pester-cli-pilot-v1':
+            from codex_pilot_contract import grader_bytes
+            grader = grader_bytes(workspace)
         if name == 'gh': grader = read_bytes(overlay / 'evals/files/fixture.py').decode().rsplit('\nif __name__ ==', 1)[0].encode() + b'\n' + grader
         if name == 'gh' and producer is profiles.CANDIDATE:
             from gh_candidate import grader_source

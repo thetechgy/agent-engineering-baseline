@@ -46,11 +46,13 @@ jobs:
           printf '%s  %s\n' 3bbf75e83de6b58aed28f2cf6e33ad423ec31fd4700a1457b94be557ea5a7c6e "$RUNNER_TEMP/codex.tar.gz" | sha256sum --check --strict
           echo "PILOT_CODEX_ARCHIVE=$RUNNER_TEMP/codex.tar.gz" >> "$GITHUB_ENV"
       - name: Focused contracts on the intended owning runtime
+        id: contracts
         run: '"$SKILL_CURRENT_PYTHON" -B -m unittest discover -s .github/tests -p test_codex_pilot.py -v'
       - name: Complete image builds and real post-upload CLI refusal probes
         timeout-minutes: 20
         run: '"$SKILL_CURRENT_PYTHON" -B .github/scripts/codex_pilot.py probe --output "$RUNNER_TEMP/pilot-probe"'
       - name: Candidate grading through consolidated report with positive and negative controls
+        if: always() && steps.contracts.outcome == 'success'
         timeout-minutes: 25
         run: '"$SKILL_CURRENT_PYTHON" -B .github/scripts/codex_pilot.py controls --output "$RUNNER_TEMP/pilot-controls"'
       - name: Verify checkout integrity
