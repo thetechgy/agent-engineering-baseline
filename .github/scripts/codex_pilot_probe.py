@@ -12,6 +12,8 @@ from pathlib import Path
 import socket
 import subprocess
 import struct
+import sys
+import time
 
 
 def rejected_write(path):
@@ -22,6 +24,31 @@ def rejected_write(path):
         return True
     return False
 
+
+
+def network_probe():
+    network = []
+    for url in ('https://api.openai.com/v1/models', 'https://example.com/', 'https://1.1.1.1/'):
+        p = subprocess.run(['curl', '--noproxy', '*', '--silent', '--show-error', '--max-time', '15',
+                            '--output', '/dev/null', '--write-out', '%{http_code}', url], capture_output=True, text=True)
+        row = {'url': url, 'returncode': p.returncode, 'http_code': p.stdout, 'error': p.stderr[:512]}
+        if 'api.openai.com' in url:
+            assert p.returncode == 0 and p.stdout in ('401', '403'), row
+        else:
+            assert p.returncode in (35, 52, 56, 97) and p.stdout == '000', row
+        network.append(row)
+    return network
+
+# This child is launched by the actual CLI's tool command and survives its
+# completion. The trusted stop observer releases it after Harbor has left the
+# agent phase and completed separate verification; it has no network listener.
+if sys.argv[1:] == ['--late-network']:
+    for _ in range(2400):
+        if Path('/tmp/pilot-after-agent').exists():
+            Path('/logs/agent/late-policy.json').write_text(json.dumps({'network': network_probe()}))
+            sys.exit(0)
+        time.sleep(.25)
+    sys.exit(1)
 
 result = {}
 status = dict(line.split(':', 1) for line in Path('/proc/self/status').read_text().splitlines() if ':' in line)
@@ -71,17 +98,7 @@ result['network_namespace_denied'] = True
 result['setuid_denied'] = True
 # Verify actual allowed route with no auth headers, then representative prohibited
 # hostname and literal IP. Curl's generic timeout is explicitly inconclusive.
-network = []
-for url in ('https://api.openai.com/v1/models', 'https://example.com/', 'https://1.1.1.1/'):
-    p = subprocess.run(['curl', '--noproxy', '*', '--silent', '--show-error', '--max-time', '15',
-                        '--output', '/dev/null', '--write-out', '%{http_code}', url], capture_output=True, text=True)
-    row = {'url': url, 'returncode': p.returncode, 'http_code': p.stdout, 'error': p.stderr[:512]}
-    if 'api.openai.com' in url:
-        assert p.returncode == 0 and p.stdout in ('401', '403'), row
-    else:
-        assert p.returncode in (35, 52, 56, 97) and p.stdout == '000', row
-    network.append(row)
-result['network'] = network
+result['network'] = network_probe()
 # Demonstrate the exposure explicitly without disclosing even the sentinel.
 result['child_can_read_sentinel'] = os.environ.get('OPENAI_API_KEY') == 'pilot-not-a-credential'
 assert result['child_can_read_sentinel']
@@ -91,3 +108,5 @@ Path('/home/agent/pilot-writable').write_text('container-owned')
 Path('/logs/agent/pilot-writable').write_text('agent-owned')
 result['home_and_logs_writable'] = True
 print('PILOT_BOUNDARY ' + json.dumps(result, sort_keys=True), flush=True)
+
+subprocess.Popen([sys.executable, __file__, '--late-network'], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)

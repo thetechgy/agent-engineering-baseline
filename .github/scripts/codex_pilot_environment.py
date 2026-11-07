@@ -5,6 +5,10 @@ inherited. The two compatibility changes use container-local logs (Harbor's
 non-mounted collector) and stdin environment delivery as the target user, avoiding
 CAP_CHOWN. Private transport helpers are pinned by the pilot input manifest.
 """
+import json
+import os
+from pathlib import Path
+
 from skillevaluator.tier3.harbor.secure_docker_environment import (
     SkillEvaluatorSecureDockerEnvironment, _host_handoff_environment,
     _render_environment_script, _eligible_secret_values,
@@ -49,3 +53,29 @@ class PilotEnvironment(SkillEvaluatorSecureDockerEnvironment):
             stdin_data=(_render_environment_script(merged) + '\n' + command + '\n').encode(),
             additional_secret_values=secrets, exact_secret_values=secrets,
             on_output=self._output_callback(), stop_main_on_interrupt=True)
+
+    async def stop(self, delete):
+        if not self._pilot_agent:
+            return await super().stop(delete)
+        # Observe the real post-phase policy immediately before inherited disposal.
+        # Cleanup runs even if the observation or delayed child probe fails.
+        try:
+            from codex_pilot_boundary import observe
+            final = await observe(self)
+            if os.environ.get('AEB_PILOT_PROBE') == '1' and os.environ.get('AEB_PILOT_SCENARIO', 'success') == 'success':
+                result = await self.exec(user='agent', timeout_sec=60, command=(
+                    'touch /tmp/pilot-after-agent; '
+                    'for i in $(seq 1 55); do '
+                    'if test -f /logs/agent/late-policy.json; then cat /logs/agent/late-policy.json; exit 0; fi; '
+                    'sleep 1; done; exit 1'))
+                if result.return_code:
+                    raise ValueError('Post-agent CLI child network observation unavailable')
+                late = json.loads(result.stdout)
+                rows = late.get('network', [])
+                if len(rows) != 3 or rows[0]['http_code'] != '401' or any(v['returncode'] not in (35, 52, 56, 97) for v in rows[1:]):
+                    raise ValueError('Post-agent CLI child policy enforcement failed')
+                final['late_cli_child'] = late
+            target = Path(self.trial_paths.trial_dir) / 'operator/pilot-final-policy.json'
+            target.write_text(json.dumps(final, indent=2) + '\n')
+        finally:
+            await super().stop(delete)

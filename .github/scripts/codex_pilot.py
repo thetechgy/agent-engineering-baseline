@@ -92,7 +92,8 @@ def stage(root, *, controls=False, probe=False):
             (task / 'tests/docker-compose.yaml').write_text('services:\n  main:\n    network_mode: none\n')
             config = task / 'task.toml'
             config.write_text(config.read_text().replace('timeout_sec = 300.0', f'timeout_sec = {P["agent_seconds"]}.0')
-                .replace('[agent]\n', '[agent]\nnetwork_mode = \"allowlist\"\nallowed_hosts = [\"api.openai.com\"]\n' if not controls else '[agent]\n'))
+                .replace('[agent]\n', '[agent]\nnetwork_mode = \"allowlist\"\nallowed_hosts = [\"api.openai.com\"]\n' if not controls else '[agent]\n')
+                .replace('network_mode = \"public\"', 'network_mode = \"allowlist\"\nallowed_hosts = [\"api.openai.com\"]' if not controls else 'network_mode = \"public\"'))
             if not controls:
                 (task / 'environment/docker-compose.yaml').write_text(
                     'services:\n  main:\n    cap_drop: [ALL]\n    security_opt: [no-new-privileges:true]\n    pids_limit: 256\n')
@@ -190,6 +191,7 @@ def retain(root, artifact):
         audits.append({**reports.read_json(path), 'trial_member': path.relative_to(root / 'jobs').as_posix()})
     reports.write_json(artifact / 'runtime-audits.json', audits)
     reports.write_json(artifact / 'docker-observations.json', [reports.read_json(p) for p in sorted((root / 'jobs').rglob('docker-observation.json'))])
+    reports.write_json(artifact / 'final-policy-audits.json', [reports.read_json(p) for p in sorted((root / 'jobs').rglob('pilot-final-policy.json'))])
     usage = []
     for path in sorted((root / 'jobs').rglob('result.json')):
         value = reports.read_json(path)
@@ -327,6 +329,10 @@ def run(root, *, controls=False, probe=False):
             events = reports.read_json(artifact / 'tool-events.json')
             completed = [e['item'] for e in events if e['type'] == 'item.completed']
             audits = reports.read_json(artifact / 'runtime-audits.json')
+            final_policies = reports.read_json(artifact / 'final-policy-audits.json')
+            initial = {a['boundary_before']['agent_id']: a['boundary_before']['policy_sha256'] for a in audits}
+            if len(final_policies) != 2 or any(initial.get(p['agent_id']) != p['policy_sha256'] for p in final_policies):
+                raise ValueError('Post-agent policy was not retained through disposal')
             if len(audits) != 2 or any(a['cleanup'] != 'complete' for a in audits):
                 raise ValueError('CLI cleanup audit incomplete')
             if scenario == 'success':
@@ -336,6 +342,8 @@ def run(root, *, controls=False, probe=False):
                     raise ValueError('CLI or policy changed')
                 if len(reports.read_json(artifact / 'submissions.json')) != 2:
                     raise ValueError('CLI submission handoff incomplete')
+                if any(len(p.get('late_cli_child', {}).get('network', [])) != 3 for p in final_policies):
+                    raise ValueError('Post-agent real CLI child probe missing')
                 boundary_probes = []
                 for event in completed:
                     lines = event['aggregated_output'].splitlines()

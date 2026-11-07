@@ -30,5 +30,5 @@
     "bin/codex-exec-server": "43376b1af843ffc71726a35d53b6e2241cbe1e8c9e8ec758402460295eec2107",
     "codex-resources/bwrap": "77360cb751ccedc5971391444ac86a8a33c15b04d6b4a6fe45f5d25496e62c4c"
   },
-  "execution_policy": "docker-external-openai-v2"
+  "execution_policy": "docker-external-openai-v3"
 }

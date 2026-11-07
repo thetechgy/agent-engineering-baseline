@@ -8,6 +8,7 @@ import subprocess
 from pathlib import Path
 import sys
 import tempfile
+import tomllib
 import unittest
 from unittest.mock import AsyncMock, patch
 
@@ -95,6 +96,13 @@ class PilotContracts(unittest.TestCase):
                 bundle,tasks,rows=pilot.stage(target,controls=controls)
                 purpose='cli_pilot_control' if controls else 'cli_pilot'
                 self.assertEqual(len(rows),14 if controls else 2)
+                if not controls:
+                    for arm_tasks in tasks.values():
+                        config = tomllib.loads((arm_tasks[0] / 'task.toml').read_text())
+                        for phase in ('environment', 'agent'):
+                            self.assertEqual(config[phase]['network_mode'], 'allowlist')
+                            self.assertEqual(config[phase]['allowed_hosts'], ['api.openai.com'])
+                        self.assertEqual(config['verifier']['environment']['network_mode'], 'no-network')
                 capture=evidence.custom_capture(ROOT,PROFILE['skill'],bundle,rows,purpose=purpose,
                     attempts=1,agent='oracle' if controls else 'codex',execution_policy={
                     'environment':'docker','concurrency':2,'timeout_multiplier':1.0,'stop_on_pass':False})
@@ -162,6 +170,18 @@ class PilotContracts(unittest.TestCase):
             self.assertEqual(parent.call_args.kwargs['mounts'], [verifier])
             with self.assertRaisesRegex(ValueError, 'Unexpected pilot mount'):
                 PilotEnvironment(mounts=[{'target': '/host'}])
+
+    @unittest.skipUnless(CANDIDATE_RUNTIME, 'Requires qualified owning runtime')
+    def test_failed_final_policy_observation_still_disposes_the_container(self):
+        import asyncio
+        from codex_pilot_environment import PilotEnvironment, SkillEvaluatorSecureDockerEnvironment
+        agent = object.__new__(PilotEnvironment)
+        agent._pilot_agent = True
+        cleanup = AsyncMock()
+        with patch('codex_pilot_boundary.observe', new=AsyncMock(side_effect=ValueError('unavailable'))), patch.object(SkillEvaluatorSecureDockerEnvironment, 'stop', new=cleanup):
+            with self.assertRaisesRegex(ValueError, 'unavailable'):
+                asyncio.run(agent.stop(True))
+        cleanup.assert_awaited_once_with(True)
 
     @unittest.skipUnless(CANDIDATE_RUNTIME, 'Requires qualified owning runtime')
     def test_secret_delivery_uses_stdin_target_user_and_cancellation_cleanup(self):

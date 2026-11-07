@@ -541,7 +541,7 @@ def custom_measurements(run, record):
                 text(measurement['reason']), link('observation', (rid, obs['id']), 'Trial and evidence')])
     parts.append('<details><summary>All custom measurements and scoring bases</summary>' + table('Recorded custom measurements',
         ('Case', 'Arm', 'Attempt', 'Grader outcome', 'Metric', 'Applicability', 'Value', 'Numerator / denominator', 'Limitation', 'Evidence'), rows) + '</details>')
-    if record['custom']['profile_id'] in ('pester-cli-pilot-v1', 'pester-cli-pilot-external-v2'):
+    if record['custom']['profile_id'] in ('pester-cli-pilot-v1', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3'):
         parts.append(table('Pilot admission diagnostics', ('Case', 'Arm', 'Outcome', 'Admission reason'),
             [[code(obs['case_id']), safe(ARM[obs['arm']]), text(obs['custom']['outcome']),
               code(obs['custom'].get('admission_reason'))] for obs in record['observations']]))
@@ -950,7 +950,7 @@ def render_report(result, captured, *, reviews=None, pages_context=None, histori
     if any('producer_profile' in record.get('policy', {}) and not analysis.pilot_record(record) for record in records.values()):
         add('<p class="safety"><strong>Synthetic candidate qualification.</strong> Fixed judge values test transport only. No model judges ran; candidate quality is unavailable. Candidate records are excluded from production history and cannot establish skill improvement.</p>')
     if any(analysis.pilot_record(record) for record in records.values()):
-        add('<p class="safety"><strong>Opt-in CLI compatibility evidence.</strong> Native grading controls and live CLI observations retain separate purposes. No model judging or history publication is enabled; one pair cannot establish general skill effectiveness.</p>')
+        add('<p class="safety"><strong>Opt-in CLI compatibility evidence.</strong> Native grading controls and CLI observations retain separate purposes. No model judging or history publication is enabled; one pair cannot establish general skill effectiveness.</p>')
     add(executive_summary(result, records, pages=pages_context))
     add('</section>')
     add(review_first(result, records, attached))

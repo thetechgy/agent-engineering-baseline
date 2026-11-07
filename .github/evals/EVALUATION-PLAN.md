@@ -262,7 +262,7 @@ bytes are compared with that deployment. The absent arm removes only that target
 skill. Graders, reference answers, mutants and oracle solutions remain outside
 the live agent environment. Existing contamination and verifier isolation checks
 remain enforced. The agent has two CPUs, 2048 MiB, 256 PIDs and 600 seconds. The prospective
-`docker-external-openai-v2` policy uses unprivileged Docker execution with all
+`docker-external-openai-v3` policy uses unprivileged Docker execution with all
 agent capabilities dropped, no-new-privileges and default seccomp. Harbor's stock
 agent-phase allowlist permits `api.openai.com`; the CLI uses the documented
 `danger-full-access` container pattern with approval policy `never`. Inner
@@ -431,11 +431,14 @@ only. The implementing session's safeguards are unchanged. Original inner-sandbo
 failures above remain evidence under `codex-pester-001-pilot-v1` and
 `pester-cli-pilot-v1`; they are not relabeled as external-profile success.
 
-The new `pester-cli-pilot-external-v2` reporting identity retains the same grading
+The new `pester-cli-pilot-external-v3` reporting identity retains the same grading
 criteria and frozen CLI/model/runtime. Harbor 0.24.0's
 [released phase policies](https://github.com/harbor-framework/harbor/blob/v0.24.0/docs-mintlify/tasks/network-policies.mdx)
-provide public credential-free installation followed by a stock OpenAI allowlist
-before agent execution. Trusted operator inspection must confirm Docker controls,
+provide the same OpenAI allowlist at container creation and during the agent
+phase. Public downloads occur only during credential-free image preparation;
+agent setup uses the baked, hash-verified CLI. Keeping the baseline restricted
+prevents Harbor from restoring public networking after `agent.run()` returns.
+Trusted operator inspection must confirm Docker controls,
 controller separation and active rules before the first credential-bearing exec.
 Only the controller has its stock NET_ADMIN/NET_RAW capabilities. The agent has
 no host mounts, Docker socket, host namespaces or repository credential. A narrow
@@ -479,3 +482,22 @@ has now completed successfully at `e63c18b`, including all eight jobs and its fi
 same-run report join. That is separate deterministic native qualification, not
 external-profile or live-provider evidence. The proposed two-attempt $10 allocation
 remains unapproved and must not be dispatched.
+
+The earlier external candidate `docker-external-openai-v2` passed its phase-local
+probes in [run 42410130528](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42410130528)
+at `47a37fd`, with artifact 13589438155, archive SHA-256
+`07423f577fc10e3c9d8c8c7c8d44aea023202cdd0973432810826fd1e0fa7916`.
+Its report reproduced exactly and all fourteen grading controls had their expected
+outcomes. Further lifecycle review identified that Harbor restores the task's
+public baseline after the agent phase; an agent-created background process could
+regain public networking before disposal. That artifact remains phase-local
+evidence, not qualification of the final lifecycle boundary. No real credential
+or inference was involved. Its registered profile and archived bytes are preserved.
+
+Version three applies the stock allowlist as the container baseline as well as
+the agent policy. A child launched by the actual CLI waits until after Harbor's
+agent phase and independent grading, then repeats allowed/prohibited connectivity
+probes before disposal. Trusted operator snapshots verify the final active policy.
+Missing delayed-child evidence fails qualification, and inherited disposal still
+runs if that observation fails. The final run must retain both arms' delayed
+observations in addition to the original success/failure/SIGINT controls.
