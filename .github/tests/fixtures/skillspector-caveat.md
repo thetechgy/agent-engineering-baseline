@@ -3,10 +3,14 @@
 `skillspector-caveat-response.json` is an actual SkillSpector 2.13.4 response
 from released source `54824463814a0be01360792523ec7245a69190fc`, using the
 scanner lock retained in this repository. Its input is the adjacent
-`skillspector-caveat/SKILL.md`. Run from this directory:
+`skillspector-caveat/SKILL.md.txt` (unchanged scanner input bytes, stored as data
+so documentation lint does not interpret its deliberate control payload).
+Run from this directory:
 
 ```sh
-skillspector scan skillspector-caveat --format json --no-llm
+fixture_dir=$(mktemp -d)
+cp skillspector-caveat/SKILL.md.txt "$fixture_dir/SKILL.md"
+skillspector scan "$fixture_dir" --format json --no-llm
 ```
 
 This is a synthetic input, not an actual repository skill scan. The producer

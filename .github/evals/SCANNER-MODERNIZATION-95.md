@@ -257,7 +257,7 @@ The active ruleset requires Full validation (PowerShell 7 and Bash) and Pester
 and analyzer (latest stable PowerShell). CI contracts, advisory quality and
 Pester feasibility provide the other Validate checks and correction evidence. The separately triggered evaluator
 candidate workflow is ancillary to scanner qualification and does not qualify
-#119's frozen candidate.
+PR #119's frozen candidate.
 
 The repository owns maintenance of this narrow patch against retained 0.3.0.
 Remove it only when an authorized evaluator replacement natively validates the
