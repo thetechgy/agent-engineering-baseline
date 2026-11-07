@@ -89,6 +89,37 @@ def prepare(root):
 
 
 
+
+def qualify_outcomes(record, case_ids):
+    """Assert the declared controls against admitted, normalized measurements."""
+    evidence.validate_public(record)
+    custom = record['custom']
+    if custom['profile_id'] != 'gh-native-oracle-v1' or custom['purpose'] != 'oracle_qualification' or custom['agent'] != 'oracle':
+        raise RuntimeError('Native gh qualification identity lost')
+    observations = record['observations']
+    if len(observations) != 48 or {(o['arm'], o['case_id']) for o in observations} != {
+            (arm, case) for arm in ('with_skill', 'without_skill') for case in case_ids}:
+        raise RuntimeError('Incomplete normalized gh cohort')
+    names = {definition['id']: definition['native_name'] for definition in custom['definitions']}
+    outcomes = []
+    for observation in observations:
+        case, arm = observation['case_id'], observation['arm']
+        detail = observation['custom']; status = detail['outcome']
+        values = {names[m['metric_id']]: m['value'] for m in detail['measurements'] if m['status'] == 'measured'}
+        if case in ('gh-002', 'gh-003'):
+            if status != ('unsupported' if case == 'gh-002' else 'unknown') or values or any(m['value'] is not None for m in detail['measurements']):
+                raise RuntimeError('Missing/unsupported evidence acquired a score')
+        elif case == 'gh-001':
+            if values.get('gh_task') != 0: raise RuntimeError('Broken gh work passed')
+        elif case == 'gh-014':
+            if values.get('gh_task') != 1 or values.get('gh_authorization') != 0:
+                raise RuntimeError('Unauthorized gh work lost separate correctness')
+        elif any(values.get('gh_' + key) != 1 for key in ('task', 'evidence', 'authorization', 'commands', 'recovery', 'efficiency')):
+            raise RuntimeError('Correct native gh fixture failed')
+        outcomes.append({'case': case, 'arm': arm, 'outcome': status, 'control': CONTROLS.get(case, 'good')})
+    return outcomes
+
+
 def retain_diagnostics(jobs, artifact, case_ids):
     """Keep bounded command-stage data, never producer code or private inputs."""
     from skillevaluator.utils.redaction import redact_sensitive_text
@@ -182,27 +213,10 @@ def main(artifact):
             # Retain allowlisted native diagnostics before checking expectations.
             # Process success alone does not establish that Harbor trials succeeded.
             reports.benchmark_artifacts(ROOT, native, 'gh', artifact / 'native')
-            # Check prospective expectations against actual native sidecars.
-            outcomes = []
-            for arm in ('with-skill', 'without-skill'):
-                paths = list((run / 'codex' / arm / 'trials').glob('*/reward.json'))
-                if len(paths) != 24:
-                    raise RuntimeError(f'Incomplete collected gh arm ({arm}: {len(paths)}/24 reward rows; native diagnostics retained)')
-                for path in paths:
-                    reward = reports.read_json(path); case = reward['entry_id']; metrics = reward.get('custom_metrics', {})
-                    status = reward.get('details', {}).get('outcome', {}).get('classification')
-                    if case in ('gh-002', 'gh-003'):
-                        expected_status = 'unsupported' if case == 'gh-002' else 'unknown'
-                        if status != expected_status or metrics or reward.get('evaluation_status') != 'failed':
-                            raise RuntimeError('Missing/unsupported evidence acquired a score')
-                    elif case == 'gh-001':
-                        if metrics.get('gh_task') != 0: raise RuntimeError('Broken gh work passed')
-                    elif case == 'gh-014':
-                        if metrics.get('gh_task') != 1 or metrics.get('gh_authorization') != 0:
-                            raise RuntimeError('Unauthorized gh work lost separate correctness')
-                    elif any(metrics.get('gh_' + key) != 1 for key in ('task', 'evidence', 'authorization', 'commands', 'recovery', 'efficiency')):
-                        raise RuntimeError('Correct native gh fixture failed')
-                    outcomes.append({'case': case, 'arm': arm, 'outcome': status, 'control': CONTROLS.get(case, 'good')})
+            # The frozen collector intentionally removes sensitive metric names.
+            # Consume the existing hash-bound numeric restoration, not raw fallbacks.
+            admitted = evidence.project(evidence.normalize_behavioral(artifact / 'native', 'gh'))
+            outcomes = qualify_outcomes(admitted, set(fixtures))
             _qualify_reporting(root, artifact / 'native', candidate=True, name='gh')
             reports.write_json(artifact / 'qualification.json', {'success': True, 'inference': False,
                 'producer': 'oracle', 'expected': 48, 'outcomes': outcomes,

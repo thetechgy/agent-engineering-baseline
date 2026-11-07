@@ -158,6 +158,9 @@ class NativeCurrentTests(unittest.TestCase):
             self.assertEqual(reports.read_json(sanitized / e.CUSTOM_CAPTURE)['tasks'], rows)
             public=e.project(e.normalize_behavioral(sanitized,'gh'))
             e.validate_public(public)
+            raw=reports.read_json(run / 'codex/with-skill/trials/gh-014__attempt1/reward.json')
+            self.assertNotIn('gh_authorization',raw['custom_metrics'])
+            self.assertEqual(len(oracle.qualify_outcomes(public,set(fixtures))),48)
             from pester_container_validation import _qualify_reporting
             _qualify_reporting(root, sanitized, candidate=True, name='gh')
             self.assertTrue((sanitized / 'reporting/consolidated.html').is_file())
@@ -273,3 +276,27 @@ class NativeCurrentTests(unittest.TestCase):
             link.unlink();(verifier / 'test-stdout.txt').write_text('PESTER_VERIFIER_ONLY_'+'synthetic')
             with self.assertRaisesRegex(ValueError,'Protected verifier payload'):
                 oracle.retain_diagnostics(jobs,output,{'gh-001'})
+
+    def test_oracle_read_metadata_is_independent_of_directory_enumeration(self):
+        from unittest.mock import patch
+        import gh_evaluations as gh
+        import gh_candidate
+        import skill_evidence as e
+        import skill_reports as reports
+        original=reports.regular_tree
+        competing=ROOT / '.agents/skills/github-actions-hardening'
+        variants=[]
+        for reverse in (False,True):
+            def enumerated(path,**kwargs):
+                files=original(path,**kwargs)
+                return sorted(files,reverse=reverse) if path==competing else files
+            with tempfile.TemporaryDirectory() as directory,patch.object(reports,'regular_tree',side_effect=enumerated):
+                root=Path(directory)
+                bundle=gh_candidate.stage(ROOT,root / 'candidate/gh',['gh-001'],fixture=True)
+                entries=reports.read_json(bundle / 'evals/evals.json')['evals']
+                self.assertEqual(entries,e.custom_prepared_entries(ROOT,'gh',['gh-001'],'oracle_qualification'))
+                variants.append(entries)
+                legacy=gh_candidate.stage(ROOT,root / 'retained/gh',['gh-001'])
+                self.assertEqual(reports.read_json(legacy / 'evals/evals.json')['evals'],
+                    [gh.enriched(gh.dataset(ROOT,['gh-001'])[0],ROOT)])
+        self.assertEqual(variants[0],variants[1])

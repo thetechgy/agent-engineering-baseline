@@ -107,6 +107,11 @@ Pester must retain 22 passed, 14 failed, 8 invalid, 2 timeout, 2 unsupported and
 arm and checksum identities must agree. A passing qualification does not relabel
 negative outcomes, missing evidence, or aggregate execution failures.
 
+The oracle gh recipe canonically orders allowed-read metadata so its preparation
+hash reproduces across filesystem enumeration orders. Production and retained
+recipes are unchanged. Prospective outcome checks consume the existing normalized,
+hash-bound numeric measurements; raw producer-redacted fields remain unchanged.
+
 The custom-only gh verifier loads the released, staged `atif_helpers` and
 `checks` APIs directly. The full verifier template imports judge/HTTP dependencies
 that custom-only images intentionally omit; an isolated `-I -S` regression checks

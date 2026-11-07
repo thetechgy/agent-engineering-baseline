@@ -17,6 +17,11 @@ def stage(workspace, destination, selected=None, *, fixture=False):
         config.write_text(text.removesuffix(expected))
     grader = bundle / "evals/grader.py"
     grader.write_bytes(grader_source(grader.read_bytes(), fixture=fixture))
+    if fixture:
+        dataset = gh.reports.read_json(bundle / 'evals/evals.json')
+        for entry in dataset['evals']:
+            entry['contract']['allowed_reads'] = sorted(entry['contract']['allowed_reads'])
+        gh.reports.write_json(bundle / 'evals/evals.json', dataset)
     return bundle
 
 

@@ -3387,6 +3387,8 @@ def custom_prepared_entries(workspace, name, ids, purpose):
         if name == 'gh':
             import gh_evaluations as gh
             entry = gh.enriched(entry, workspace)
+            if profile['id'] == 'gh-native-oracle-v1':
+                entry['contract']['allowed_reads'] = sorted(entry['contract']['allowed_reads'])
         entry['id'] = case
         rows.append(entry)
     return rows
