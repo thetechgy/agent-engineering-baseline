@@ -1,6 +1,7 @@
 """Trusted operator observations, outside the evaluated container's filesystem."""
 import hashlib
 import json
+from pathlib import Path
 import subprocess
 
 SIDECAR = 'harbor-docker-egress-control-sidecar'
@@ -19,6 +20,16 @@ async def observe(environment):
             raise ValueError('Missing dedicated Docker service')
         ids[service] = identifier
     main, controller = [json.loads(docker('inspect', ids[s]))[0] for s in ('main', SIDECAR)]
+    # Retain only bounded containment fields before any fail-closed check.
+    fields = ('CapDrop', 'CapAdd', 'SecurityOpt', 'Memory', 'NanoCpus', 'PidsLimit',
+              'Privileged', 'NetworkMode', 'PidMode', 'IpcMode')
+    snapshot = {role: {'user': obj['Config']['User'],
+                      'controls': {key: obj['HostConfig'].get(key) for key in fields},
+                      'mount_count': len(obj['Mounts'])}
+                for role, obj in (('agent', main), ('controller', controller))}
+    target = Path(environment.trial_paths.trial_dir) / 'operator/docker-observation.json'
+    target.parent.mkdir(exist_ok=True)
+    target.write_text(json.dumps(snapshot, indent=2) + '\n')
     for obj in (main, controller):
         h = obj['HostConfig']
         if (h['Privileged'] or h['PidMode'] == 'host' or h['IpcMode'] == 'host'
@@ -33,7 +44,7 @@ async def observe(environment):
             or h['Memory'] != 2048 * 1024**2 or h['NanoCpus'] != 2 * 10**9 or h['PidsLimit'] != 256
             or h['NetworkMode'] != 'container:' + ids[SIDECAR]):
         raise ValueError('Agent containment drift')
-    if set(controller['HostConfig'].get('CapAdd') or []) != {'NET_ADMIN', 'NET_RAW'}:
+    if {c.removeprefix('CAP_') for c in controller['HostConfig'].get('CapAdd') or []} != {'NET_ADMIN', 'NET_RAW'}:
         raise ValueError('Stock controller capabilities drift')
     if any('OPENAI_API_KEY=' in e for e in controller['Config']['Env']):
         raise ValueError('Controller credential exposure')

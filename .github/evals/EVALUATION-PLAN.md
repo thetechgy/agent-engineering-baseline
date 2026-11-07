@@ -302,7 +302,7 @@ credential-free oracle controls, independently of the live Codex records.
 `codex-pilot.yml` prepares without any model credential. It builds the complete
 images, installs and runs the real CLI, verifies the actual post-upload config,
 prompt hash, working directory, output and model/provider request, exercises a
-stub-supplied sandboxed command, then receives a loopback-only refusal. This is
+stub-supplied command in the external Docker boundary, then a simulated completion. This is
 not provider authentication or inference. Both arm probes and the grading controls
 must pass before the protected job becomes eligible. Native task checksums are
 checked across launch; exact safe submissions and hashes, specific reasons,

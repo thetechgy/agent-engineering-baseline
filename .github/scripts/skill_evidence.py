@@ -3839,10 +3839,13 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
                 token(version); agent_versions.add(version)
                 require(len(agent_versions) == 1 and (actual_agent != 'codex' or version == (profile['runtime'].get('codex') if capture['purpose'] in ('cli_pilot', 'cli_pilot_probe') else reports.POLICY['codex'])), 'Agent version drift')
             trial_config = trial.get('config') or {}
-            require(actual_agent == capture['agent'] and (trial_config.get('agent', {}).get('name') == actual_agent or (capture['purpose'] in ('cli_pilot', 'cli_pilot_probe') and trial_config.get('agent', {}).get('import_path') == 'codex_pilot_agent:PilotCodex'))
+            expected_agent = 'codex_pilot_agent:PilotCodex' if capture['purpose'] in ('cli_pilot', 'cli_pilot_probe') else actual_agent
+            configured_agent = trial_config.get('agent', {})
+            require(actual_agent == capture['agent'] and expected_agent in (configured_agent.get('name'), configured_agent.get('import_path'))
                     and trial_config.get('timeout_multiplier') == capture['execution_policy']['timeout_multiplier']
                     and trial_config.get('environment', {}).get('import_path') ==
                     ('aeb_gh_fixture.backend:TrustedGhEnvironment' if profile['id'] == 'gh-native-oracle-v1' else
+                     'codex_pilot_environment:PilotEnvironment' if profile['id'] == 'pester-cli-pilot-external-v2' and capture['purpose'] in ('cli_pilot', 'cli_pilot_probe') else
                      'skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment'),
                     'Native producer or runtime identity mismatch')
             matched = lookup.pop(trial_name, None)

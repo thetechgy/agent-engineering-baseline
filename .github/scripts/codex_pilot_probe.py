@@ -38,6 +38,12 @@ inputs = {p.relative_to('/workspace/input').as_posix(): hashlib.sha256(p.read_by
 assert inputs and all(rejected_write(p) for p in Path('/workspace/input').rglob('*') if p.is_file())
 assert rejected_write('/workspace/input/injected')
 result['immutable_inputs'] = inputs
+result['skill_files'] = {}
+for base in ('/workspace/skills/powershell-pester-6', '/home/agent/.agents/skills/powershell-pester-6'):
+    result['skill_files'][base] = {p.relative_to(base).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
+                                  for p in sorted(Path(base).rglob('*')) if p.is_file()}
+assert len({json.dumps(v, sort_keys=True) for v in result['skill_files'].values()}) == 1
+
 # These are real privilege operations, not missing-executable tests.
 libc = ctypes.CDLL(None, use_errno=True)
 assert libc.unshare(0x40000000) == -1 and ctypes.get_errno() == 1  # CLONE_NEWNET

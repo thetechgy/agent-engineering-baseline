@@ -1913,7 +1913,7 @@
       "skill_id": "powershell-pester-6",
       "grader_digest": "sha256:3a4e95475e26f66443772c9550a48683022ba5ddcfe229aa9b4d1f9ee8df7cd5",
       "fixture_digest": "sha256:9dd6c53ce8090ff3790ff2274d8067775a5605def5cc80479bf2c85ef6330060",
-      "runtime_digest": "sha256:8b6c089c256c756495197b07f1d74324bfa14ec199fa90beb8cf588df9c45aac",
+      "runtime_digest": "sha256:b8f32ca754cef6044669167b25381c22cda4a2c08cba0311aabd71777d34ee6f",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0"
     }
   },

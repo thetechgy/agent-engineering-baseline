@@ -189,6 +189,7 @@ def retain(root, artifact):
     for path in sorted((root / 'jobs').rglob('pilot-runtime.json')):
         audits.append({**reports.read_json(path), 'trial_member': path.relative_to(root / 'jobs').as_posix()})
     reports.write_json(artifact / 'runtime-audits.json', audits)
+    reports.write_json(artifact / 'docker-observations.json', [reports.read_json(p) for p in sorted((root / 'jobs').rglob('docker-observation.json'))])
     usage = []
     for path in sorted((root / 'jobs').rglob('result.json')):
         value = reports.read_json(path)
@@ -205,7 +206,7 @@ def retain(root, artifact):
             prefill, sample = (2, 1.5) if i > 272000 else (1, 1)
             cost = (((i-c)*2+c*.1)*prefill+o*10*sample)/1_000_000
         usage.append({'trial': value['trial_name'], **counts, 'estimated_usd': cost,
-                      'billing': 'provider-reported tokens; estimate, not invoice'})
+                      'billing': 'stub protocol; no model usage or billing' if os.environ.get('AEB_PILOT_PROBE') == '1' else 'provider-reported tokens; estimate, not invoice'})
     reports.write_json(artifact / 'usage.json', usage)
     events = []
     for path in sorted((root / 'jobs').rglob('codex.txt')):
@@ -343,7 +344,15 @@ def run(root, *, controls=False, probe=False):
                     expected = pester.manifest(tasks['with_skill'][0] / 'environment/input')
                     if value.get('immutable_inputs') != expected:
                         raise ValueError('CLI did not read the frozen task inputs')
+                    # Exact deployed supporting bytes in both registration locations;
+                    # the other arm must contain no target skill files.
+                    manifests = list(value.get('skill_files', {}).values())
+                    expected_skill = reports.read_json(artifact / 'workspace-profile.json')['target_manifest']
+                    if len(manifests) != 2 or not (all(m == expected_skill for m in manifests) or all(m == {} for m in manifests)):
+                        raise ValueError('Actual CLI skill/supporting file exposure mismatch')
                     boundary_probes.append(value)
+                if sorted(bool(p['skill_files']['/workspace/skills/powershell-pester-6']) for p in boundary_probes) != [False, True]:
+                    raise ValueError('Actual CLI arm skill difference missing')
                 reports.write_json(artifact / 'boundary-probes.json', boundary_probes)
                 if sorted(a['skill_deployed'] for a in audits) != [False, True] or len({a['config_sha256'] for a in audits}) != 1 or len({a['prompt_sha256'] for a in audits}) != 1:
                     raise ValueError('Matched runtime/deployment contract incomplete')
@@ -368,9 +377,32 @@ def run(root, *, controls=False, probe=False):
         'inference': not (controls or probe), 'controls': controls, 'probe': probe, 'complete': True})
 
 
+def consolidated(root):
+    """One existing-renderer report for CLI qualification and native controls."""
+    import skill_analysis as analysis
+    import skill_report as report
+    inputs = [root.parent / name / 'evidence/public' for name in ('pilot-probe', 'pilot-controls')]
+    inputs = [path for path in inputs if path.is_dir()]
+    if not inputs:
+        raise ValueError('No qualified public reporting inputs')
+    value = analysis.validate_analysis(None, analysis.capture_inputs(inputs))
+    reports.write_json(root / 'evidence/analysis/analysis.json', value)
+    report.generate(inputs, root / 'evidence/analysis/analysis.json', root / 'evidence/consolidated')
+    required = [root.parent / 'pilot-probe/evidence/readiness.json',
+                root.parent / 'pilot-controls/evidence/readiness.json']
+    required += [root.parent / 'pilot-probe' / name / 'evidence/readiness.json'
+                 for name in ('command-failure', 'interruption')]
+    reports.write_json(root / 'evidence/qualification.json', {
+        'execution_policy': P['execution_policy'], 'inference': False,
+        'complete': all(path.is_file() and reports.read_json(path).get('complete') is True for path in required),
+        'limitations': ['sentinel and non-forwarding stub, not provider authentication',
+                        'agent credential and own-log exposure', 'DNS, ICMP and permitted-provider channels',
+                        'deterministic fixture grade, not skill-effectiveness evidence']})
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=('controls','probe','live'))
+    parser.add_argument('action', choices=('controls','probe','live','report'))
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--approval', default='')
     args=parser.parse_args()
@@ -379,6 +411,9 @@ def main():
         if args.approval != 'pilot-' + revision + '-usd10' or os.environ.get('GITHUB_RUN_ATTEMPT') != '1':
             parser.error('Exact-revision allocation and first workflow attempt required')
     args.output.mkdir(parents=True, exist_ok=False)
+    if args.action == 'report':
+        consolidated(args.output)
+        return
     from qualify_evaluator_candidate import native_compose_config
     native_compose_config(ROOT)
     run(args.output, controls=args.action=='controls', probe=args.action=='probe')
