@@ -312,9 +312,10 @@ No model judge, full dataset, production evaluator or history publisher is invok
 
 ### Proposed allocation and execution gate
 
-Status: implementation and credential-free preparation in progress; **no paid
-approval requested or inference authorized yet**. Exact-revision CI and complete
-hosted preparation must pass before requesting the one concrete approval.
+Status: credential-free qualification of `docker-external-openai-v3` passed at
+`e9a1a79`, as recorded below. The proposed live allocation remains unapproved.
+Final-revision required CI must pass before requesting the one concrete approval;
+no model credential, inference or model judging is authorized by qualification.
 
 Propose **$10 incremental allocation**, independent of previous unknown spending,
 for at most **two agent attempts**, one per arm, with no automatic replacements.
@@ -476,7 +477,7 @@ small evaluation against reviewed repository content, not workstation equivalenc
 or complete secret isolation. No credentials, inference, judging, paid allocation,
 production promotion or scheduling are authorized by this work.
 
-External-profile hosted execution is pending. The earlier broader qualification
+The final external-profile qualification is recorded below. The earlier broader qualification
 [42391098962](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42391098962)
 has now completed successfully at `e63c18b`, including all eight jobs and its final
 same-run report join. That is separate deterministic native qualification, not
@@ -499,5 +500,78 @@ the agent policy. A child launched by the actual CLI waits until after Harbor's
 agent phase and independent grading, then repeats allowed/prohibited connectivity
 probes before disposal. Trusted operator snapshots verify the final active policy.
 Missing delayed-child evidence fails qualification, and inherited disposal still
-runs if that observation fails. The final run must retain both arms' delayed
+runs if that observation fails. The final run retains both arms' delayed
 observations in addition to the original success/failure/SIGINT controls.
+
+### Qualified lifecycle profile, November 7
+
+Credential-free qualification **passed** at
+[`e9a1a7932adcf4972070405df90241991fe287e7`](https://github.com/thetechgy/agent-engineering-baseline/commit/e9a1a7932adcf4972070405df90241991fe287e7)
+in [run 42412296410, attempt 1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42412296410).
+The tested merge producer is `deeaa677a68f4822e05b1facf7851cd7e837d2a1`, with that
+feature revision as a verified parent. The successful repository/workflow/run,
+first attempt, source ancestry and archive digest were authenticated before bounded
+extraction. No artifact executable was run.
+
+The [preparation artifact and single consolidated report](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42412296410/artifacts/13590556735)
+retain 186 members. Archive SHA-256 is
+`6f333854aa7d439d18c5beb6fc881de175c8ca246cb378dde282e1e635b8bd4c`.
+The report reproduces byte-for-byte from the included public evidence and saved
+analysis, with HTML SHA-256
+`f0f8694fd6187d1b32eb1dabf8cec0cb966ef91518066c1521d85972b5b3ce4f`.
+It combines both real CLI probe outcomes with the fourteen independent grading
+controls, under distinct credential-free purposes. These are fixture measurements,
+not model-generated task quality, autonomous skill activation or skill benefit.
+
+- Both frozen CLI arms executed the stub-directed command successfully, read the
+  legitimate immutable input hashes, and wrote the requested deliverable. The
+  current arm read the exact APM-deployed target skill and supporting files in
+  both registration locations; the absent arm read no target files. Post-upload
+  configuration, prompt, Sol/High requests and deployment manifests matched.
+- Both 1,012-byte CLI submissions retain producer/collected/verifier SHA-256
+  `9e59688c16ac411adfbbdcf1098520b0afc644494229d92d51dea7a59a24b4e0`.
+  Each passed the reference and detected 2/2 mutants under PowerShell 7.6.9 and
+  Pester 6.2.0. The twelve other submissions also retained exact receipt matches.
+  The fourteen controls retained four passed, four failed, two invalid and four
+  unsupported outcomes, including the original specific admission reasons.
+- Trusted Docker observations and actual CLI commands verified UID 1000, zero
+  effective/added agent capabilities, all capabilities dropped, no-new-privileges,
+  default seccomp, two CPUs, 2 GiB and 256 PIDs. No explicit host mounts, Docker
+  socket or host namespaces were present. Protected grader/reference material,
+  controller files and unrelated host paths were unavailable. Actual setuid,
+  network-namespace, controller-mark and nftables mutation attempts were denied.
+- During the agent phase and again from the CLI-spawned child after independent
+  grading, unauthenticated OpenAI connectivity returned HTTP 401. Operator
+  positive controls reached example.com (200) and 1.1.1.1 (301); both CLI targets
+  were rejected with TLS EOF, not generic timeouts. Initial, post-command and
+  pre-disposal policy hashes matched, with only api.openai.com allowlisted.
+- Both arms were disposed after success, deliberate command failure and SIGINT
+  interruption. Container, network and volume inventories returned to their
+  initial state; runtime homes were removed. Final policy observations survived
+  all six CLI cases. Checkout integrity and all thirteen focused contracts passed.
+
+All twenty-eight historical custom-metric regressions pass under their owning
+retained runtime. The historical v4 report still reproduces exactly with SHA-256
+`0e9c52d0cd43f9926b83fbce021ac6a218df847d548ce4d8c4c370225f244563`.
+All earlier metric definitions, profiles, active production selectors, grading
+criteria, skill bytes, runtime pins and historical artifacts remain unchanged.
+Required checks on the final documentation revision are tracked on the draft PR;
+only this checkpoint changes after the qualified execution revision.
+
+Residual exposure requires explicit acceptance before the proposed live pair.
+The probe demonstrates that child code can read the sentinel credential and write
+its own configuration, home and logs. An eventual real key has the same exposure.
+Stock hostname/SNI rules do not constrain provider URL paths, methods or payloads.
+Task code could make provider calls outside CLI-reported usage or alter its own
+usage/events; the two harness attempts and reported-usage stop do not enforce a
+provider spend cap. DNS, ICMP, local namespace traffic and permitted-provider
+communication remain channels. Retention/redaction is bounded, not general DLP.
+The separate offline verifier protects the reference, mutants and exact submitted
+bytes; it does not authenticate all agent activity or establish secret isolation,
+exfiltration prevention, workstation equivalence or a security proof.
+
+The paid job was skipped. No model credential was retrieved or injected, no
+inference or judge ran, and the two-attempt $10 proposal remains unapproved.
+Approval must name the exact final feature commit, this authenticated preparation
+and these limitations. A later approved workflow still repeats credential-free
+preparation before its protected live job; a failed prerequisite prevents launch.
