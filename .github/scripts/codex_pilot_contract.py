@@ -47,8 +47,7 @@ def configuration(base_url=None):
     return {
         'model': PROFILE['model'], 'model_provider': 'pilot',
         'model_reasoning_effort': PROFILE['reasoning_effort'],
-        'approval_policy': 'never', 'sandbox_mode': 'workspace-write',
-        'sandbox_workspace_write': {'network_access': False},
+        'approval_policy': 'never', 'sandbox_mode': 'danger-full-access',
         'web_search': 'disabled', 'check_for_update_on_startup': False,
         'features': {'multi_agent': False, 'code_mode': True, 'code_mode_host': True},
         'model_providers': {'pilot': {
@@ -62,5 +61,7 @@ def configuration(base_url=None):
 
 def pilot_inputs(workspace=ROOT):
     paths = ['.github/evals/codex-pilot.json', '.github/scripts/codex_pilot_contract.py',
-             '.github/scripts/codex_pilot_agent.py', '.github/scripts/codex_pilot.py', '.github/scripts/codex_pilot_stub.py']
+             '.github/scripts/codex_pilot_agent.py', '.github/scripts/codex_pilot.py', '.github/scripts/codex_pilot_stub.py',
+             '.github/scripts/codex_pilot_environment.py', '.github/scripts/codex_pilot_boundary.py',
+             '.github/scripts/codex_pilot_probe.py']
     return [{'member': 'pilot/' + p, 'digest': 'sha256:' + hashlib.sha256((workspace / p).read_bytes()).hexdigest()} for p in paths]

@@ -61,8 +61,9 @@ def coverage_label(skill):
     purposes = {run['custom']['purpose'] for run in skill['behavioral_results'] if 'custom' in run}
     labels = {'cli_pilot': 'Bounded live CLI compatibility pilot',
               'cli_pilot_control': 'Credential-free pilot grading controls',
+              'cli_pilot_probe': 'Credential-free real CLI isolation qualification',
               'oracle_qualification': 'Oracle qualification', 'benchmark': 'Model-backed custom evidence'}
-    if purposes & {'cli_pilot', 'cli_pilot_control'}:
+    if purposes & {'cli_pilot', 'cli_pilot_control', 'cli_pilot_probe'}:
         return ' · '.join(labels[purpose] for purpose in sorted(purposes))
     if any('producer_profile' in run['policy'] for run in skill['behavioral_results']):
         return 'Includes synthetic candidate qualification; candidate quality unavailable'
@@ -244,7 +245,7 @@ class ValidatedRecords:
 
 
 def pilot_record(record):
-    return record.get('custom', {}).get('profile_id') == 'pester-cli-pilot-v1' and record['custom']['purpose'] in ('cli_pilot', 'cli_pilot_control')
+    return record.get('custom', {}).get('profile_id') in ('pester-cli-pilot-v1', 'pester-cli-pilot-external-v2') and record['custom']['purpose'] in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe')
 
 
 def measured(record):

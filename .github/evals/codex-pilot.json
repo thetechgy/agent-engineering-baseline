@@ -29,5 +29,6 @@
     "bin/codex-code-mode-host": "83f3e174c2da2f1ca8655cce686e302509640d34c0f4407c1155056f64536e0f",
     "bin/codex-exec-server": "43376b1af843ffc71726a35d53b6e2241cbe1e8c9e8ec758402460295eec2107",
     "codex-resources/bwrap": "77360cb751ccedc5971391444ac86a8a33c15b04d6b4a6fe45f5d25496e62c4c"
-  }
+  },
+  "execution_policy": "docker-external-openai-v2"
 }

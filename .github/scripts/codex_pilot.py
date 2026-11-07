@@ -28,7 +28,7 @@ def sha(path):
 
 def resources():
     return {key: sorted(subprocess.check_output(cmd, text=True, timeout=15).split()) for key, cmd in (
-        ('containers', ['docker', 'ps', '-aq']), ('networks', ['docker', 'network', 'ls', '-q']))}
+        ('containers', ['docker', 'ps', '-aq']), ('networks', ['docker', 'network', 'ls', '-q']), ('volumes', ['docker', 'volume', 'ls', '-q']))}
 
 
 def deploy(root):
@@ -56,7 +56,7 @@ def deploy(root):
     return deployed
 
 
-def stage(root, *, controls=False):
+def stage(root, *, controls=False, probe=False):
     from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks
     deployed = deploy(root)
     bundle = pester.stage(ROOT, root / 'bundle' / P['skill'])
@@ -91,7 +91,13 @@ def stage(root, *, controls=False):
             (task / 'tests/verifier/grader.py').write_bytes(grader_bytes())
             (task / 'tests/docker-compose.yaml').write_text('services:\n  main:\n    network_mode: none\n')
             config = task / 'task.toml'
-            config.write_text(config.read_text().replace('timeout_sec = 300.0', f'timeout_sec = {P["agent_seconds"]}.0'))
+            config.write_text(config.read_text().replace('timeout_sec = 300.0', f'timeout_sec = {P["agent_seconds"]}.0')
+                .replace('[agent]\n', '[agent]\nnetwork_mode = \"allowlist\"\nallowed_hosts = [\"api.openai.com\"]\n' if not controls else '[agent]\n'))
+            if not controls:
+                (task / 'environment/docker-compose.yaml').write_text(
+                    'services:\n  main:\n    cap_drop: [ALL]\n    security_opt: [no-new-privileges:true]\n    pids_limit: 256\n')
+                for name in ('codex_pilot_stub.py', 'codex_pilot_probe.py'):
+                    shutil.copyfile(ROOT / '.github/scripts' / name, task / 'environment/build' / name)
             skill = task / 'environment/skills' / P['skill']
             if present:
                 if pester.manifest(skill) != pester.manifest(deployed):
@@ -108,7 +114,13 @@ def stage(root, *, controls=False):
                         f"echo '{P['cli_archive_sha256']}  /opt/codex.tar.gz' | sha256sum -c --strict && "
                         'tar -xzf /opt/codex.tar.gz -C /opt/codex && '
                         f"echo '{P['cli_executable_sha256']}  /opt/codex/bin/codex' | sha256sum -c --strict && "
-                        'rm /opt/codex.tar.gz\n')
+                        'rm /opt/codex.tar.gz\n'
+                        'COPY build/codex_pilot_stub.py build/codex_pilot_probe.py /opt/pilot/\n'
+                        'RUN mkdir -p /logs/agent /logs/artifacts /installed-agent && chmod 777 /logs/agent /logs/artifacts && '
+                        'chmod -R a-w /workspace/input /opt/codex /opt/pilot && '
+                        'chmod 755 /home/agent && mkdir -p /home/agent/.codex-pilot && '
+                        'chown agent:agent /home/agent/.codex-pilot && chmod 700 /home/agent/.codex-pilot\n'
+                        'USER agent\n')
             else:
                 control = task.name.removeprefix(case + '-')
                 fixtures = ROOT / pester.OVERLAY / 'support/qualification' / case
@@ -124,7 +136,7 @@ def stage(root, *, controls=False):
                     ('test ! -e /workspace/output/Subject.Tests.ps1\n' if control == 'missing' else
                      'cp /solution/candidate /workspace/output/Subject.Tests.ps1\n' + producer_receipt_command() + '\n'))
         captured.extend(evidence.capture_custom_tasks(ROOT, P['skill'], tasks[arm], arm,
-                        purpose='cli_pilot_control' if controls else 'cli_pilot'))
+                        purpose='cli_pilot_control' if controls else 'cli_pilot_probe' if probe else 'cli_pilot'))
     return bundle, tasks, captured
 
 
@@ -137,6 +149,7 @@ def command(root, arm, *, controls=False):
     if not controls:
         index = next(i for i, value in enumerate(cmd) if value.startswith('version='))
         cmd[index] = 'version=' + json.dumps(P['cli'])
+        cmd[cmd.index('--env') + 1] = 'codex_pilot_environment:PilotEnvironment'
     cmd += ['--max-retries', '0']
     return cmd
 
@@ -208,14 +221,14 @@ def retain(root, artifact):
     return usage
 
 
-def collect(root, artifact, bundle, captured, *, controls=False):
+def collect(root, artifact, bundle, captured, *, controls=False, probe=False):
     from skillevaluator.tier3.harbor.collector import collect_harbor_results
     ids = sorted({row['case_id'] for row in captured})
     raw = root / 'raw'; run = raw / 'results' / P['skill'] / ('pilot-controls' if controls else 'live-pilot')
     collected = collect_harbor_results(P['skill'], ['codex'], run, root / 'jobs',
         expected_cases=len(ids), expected_case_ids=ids, expected_trials=len(ids),
         agent_models={'codex': {'model': 'credential-free-oracle' if controls else P['model'], 'source': P['id']}})
-    purpose = 'cli_pilot_control' if controls else 'cli_pilot'
+    purpose = 'cli_pilot_control' if controls else 'cli_pilot_probe' if probe else 'cli_pilot'
     capture = evidence.custom_capture(ROOT, P['skill'], bundle, captured, purpose=purpose, attempts=1,
         agent='oracle' if controls else 'codex', execution_policy={'environment': 'docker',
         'concurrency': 2, 'timeout_multiplier': 1.0, 'stop_on_pass': False})
@@ -223,7 +236,7 @@ def collect(root, artifact, bundle, captured, *, controls=False):
     config = {'grading': {'mode': 'custom_only'}, 'judge': {'enabled': False},
         'provider': {'name': 'fixture' if controls else 'openai', 'model': 'credential-free-oracle' if controls else P['model']},
         'harbor': {'n_attempts': 1, 'stop_on_pass': False}}
-    if controls: config['qualification'] = {'producer': 'oracle', 'inference': False}
+    if controls or probe: config['qualification'] = {'producer': 'cli_probe' if probe else 'oracle', 'inference': False}
     reports.write_json(run / 'run_config.json', config)
     stages = reports.read_json(artifact / 'command-stages.json')
     status = 'complete' if len(stages) == 2 and all(s.get('returncode') == 0 for s in stages) else 'incomplete'
@@ -263,13 +276,13 @@ def run(root, *, controls=False, probe=False):
         if any(os.environ.get(k) for k in ('OPENAI_API_KEY','ANTHROPIC_API_KEY','NVIDIA_API_KEY')):
             raise ValueError('Credential-free preparation received credentials')
     before = resources(); stages = []; collected = False
-    bundle, tasks, captured = stage(root, controls=controls)
+    bundle, tasks, captured = stage(root, controls=controls, probe=probe)
     reports.write_json(artifact / 'staging.json', captured)
     shutil.copyfile(root / 'workspace-profile.json', artifact / 'workspace-profile.json')
     if probe: os.environ['AEB_PILOT_PROBE'] = '1'
     try:
         for arm in ARMS:
-            stage_record = {'arm': arm, 'stage': 'native_control' if controls else 'refusal_probe' if probe else 'live_cli', 'status': 'running'}
+            stage_record = {'arm': arm, 'stage': 'native_control' if controls else 'external_cli_probe' if probe else 'live_cli', 'status': 'running'}
             stages.append(stage_record); reports.write_json(artifact / 'command-stages.json', stages)
             environment = {k:v for k,v in os.environ.items() if not k.startswith(('CODEX_', 'ANTHROPIC_', 'NVIDIA_', 'SKILL_EVAL_'))}
             environment.update(PYTHONPATH=str(ROOT / '.github/scripts'), PYTHON_DOTENV_DISABLED='1', HARBOR_TELEMETRY='0')
@@ -298,21 +311,48 @@ def run(root, *, controls=False, probe=False):
                     raise RuntimeError('Usage unavailable; remaining allocation cannot be verified')
                 if sum(row['estimated_usd'] for row in usage) >= P['stop_estimate_usd']:
                     raise RuntimeError('Spending stop threshold reached; remaining arm not launched')
-        if not probe:
-            collect(root, artifact, bundle, captured, controls=controls)
+        scenario = os.environ.get('AEB_PILOT_SCENARIO', 'success')
+        if not probe or scenario == 'success':
+            collect(root, artifact, bundle, captured, controls=controls, probe=probe)
             collected = True
-        else:
+        if probe:
             probes = [{**reports.read_json(p), 'trial_member': p.relative_to(root / 'jobs').as_posix()} for p in sorted((root / 'jobs').rglob('probe.json'))]
-            if len(probes) != 2 or any(p['model'] != P['model'] or p['reasoning']['effort'] != 'high' or p['requests'] != 2 for p in probes):
+            if len(probes) != 2 or any(p['model'] != P['model'] or p['reasoning']['effort'] != 'high' or p['requests'] != (1 if scenario == 'interruption' else 2) for p in probes):
                 raise ValueError('Actual CLI request contract mismatch')
             frozen_prompt = next(e['prompt'] for e in pester.dataset(ROOT) if e['id'] == P['case'])
             if any(frozen_prompt not in json.dumps(p['input']) for p in probes):
                 raise ValueError('Post-upload actual task prompt mismatch')
-            reports.write_json(artifact / 'refusal-probes.json', probes)
+            reports.write_json(artifact / 'cli-probes.json', probes)
             events = reports.read_json(artifact / 'tool-events.json')
             completed = [e['item'] for e in events if e['type'] == 'item.completed']
-            if len(completed) != 2 or any(e.get('exit_code') != 0 or 'pilot-tool-event' not in e.get('aggregated_output', '') for e in completed):
-                raise ValueError('Real sandboxed CLI tool-event collection incomplete')
+            audits = reports.read_json(artifact / 'runtime-audits.json')
+            if len(audits) != 2 or any(a['cleanup'] != 'complete' for a in audits):
+                raise ValueError('CLI cleanup audit incomplete')
+            if scenario == 'success':
+                if len(completed) != 2 or any(e.get('exit_code') != 0 or 'PILOT_BOUNDARY ' not in e.get('aggregated_output', '') for e in completed):
+                    raise ValueError('Real externally contained CLI boundary probes incomplete')
+                if any(a.get('returncode') != 0 or a.get('boundary_before', {}).get('policy_sha256') != a.get('boundary_after', {}).get('policy_sha256') for a in audits):
+                    raise ValueError('CLI or policy changed')
+                if len(reports.read_json(artifact / 'submissions.json')) != 2:
+                    raise ValueError('CLI submission handoff incomplete')
+                boundary_probes = []
+                for event in completed:
+                    lines = event['aggregated_output'].splitlines()
+                    line = next((v for v in lines if v.startswith('PILOT_BOUNDARY ')), None)
+                    value = json.loads(line.removeprefix('PILOT_BOUNDARY '))
+                    expected = pester.manifest(tasks['with_skill'][0] / 'environment/input')
+                    if value.get('immutable_inputs') != expected:
+                        raise ValueError('CLI did not read the frozen task inputs')
+                    boundary_probes.append(value)
+                reports.write_json(artifact / 'boundary-probes.json', boundary_probes)
+                if sorted(a['skill_deployed'] for a in audits) != [False, True] or len({a['config_sha256'] for a in audits}) != 1 or len({a['prompt_sha256'] for a in audits}) != 1:
+                    raise ValueError('Matched runtime/deployment contract incomplete')
+
+            elif scenario == 'command-failure':
+                if len(completed) != 2 or any(e.get('exit_code') != 23 for e in completed) or any(a.get('returncode') != 1 for a in audits):
+                    raise ValueError('Command-failure control missing')
+            elif any(a.get('returncode') != 124 for a in audits):
+                raise ValueError('Interruption control missing')
     finally:
         if not probe and stages and not collected:
             try:
@@ -342,6 +382,12 @@ def main():
     from qualify_evaluator_candidate import native_compose_config
     native_compose_config(ROOT)
     run(args.output, controls=args.action=='controls', probe=args.action=='probe')
+    if args.action == 'probe':
+        for scenario in ('command-failure', 'interruption'):
+            os.environ['AEB_PILOT_SCENARIO'] = scenario
+            target = args.output / scenario; target.mkdir()
+            run(target, probe=True)
+            shutil.copytree(target / 'evidence', args.output / 'evidence/cleanup-cases' / scenario)
 
 
 if __name__ == '__main__':

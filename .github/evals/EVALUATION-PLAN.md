@@ -261,9 +261,13 @@ current skill and all its supporting files; the native registration and staged
 bytes are compared with that deployment. The absent arm removes only that target
 skill. Graders, reference answers, mutants and oracle solutions remain outside
 the live agent environment. Existing contamination and verifier isolation checks
-remain enforced. The agent has two CPUs, 2048 MiB, 600 seconds, workspace-write
-sandboxing, no command network access, no MCP, no web search and no subagents.
-The evaluator's reviewed secure Docker and separate offline verifier remain in use.
+remain enforced. The agent has two CPUs, 2048 MiB, 256 PIDs and 600 seconds. The prospective
+`docker-external-openai-v2` policy uses unprivileged Docker execution with all
+agent capabilities dropped, no-new-privileges and default seccomp. Harbor's stock
+agent-phase allowlist permits `api.openai.com`; the CLI uses the documented
+`danger-full-access` container pattern with approval policy `never`. Inner
+filesystem and command-network enforcement are absent. No MCP, web search or
+subagents are enabled. The independent offline verifier remains separate.
 
 [The frozen runtime](codex-pilot.json) selects official stable Codex **0.167.0**,
 the latest stable release when preparation began. The complete official package
@@ -417,3 +421,61 @@ Its CLI readiness probe remains expected to fail at the unchanged Bubblewrap
 namespace boundary. Required final-revision checks and their terminal outcomes
 are tracked in the draft PR. No paid approval is requested while that prerequisite
 is unresolved; both paid arms are unlaunched and no model key has been retrieved.
+
+### External Docker boundary qualification (active, credential-free)
+
+The November 7 continuation explicitly authorizes the documented
+[externally contained Codex pattern](https://learn.chatgpt.com/docs/agent-approvals-security).
+It supersedes the original inner-sandbox requirement for the evaluated container
+only. The implementing session's safeguards are unchanged. Original inner-sandbox
+failures above remain evidence under `codex-pester-001-pilot-v1` and
+`pester-cli-pilot-v1`; they are not relabeled as external-profile success.
+
+The new `pester-cli-pilot-external-v2` reporting identity retains the same grading
+criteria and frozen CLI/model/runtime. Harbor 0.24.0's
+[released phase policies](https://github.com/harbor-framework/harbor/blob/v0.24.0/docs-mintlify/tasks/network-policies.mdx)
+provide public credential-free installation followed by a stock OpenAI allowlist
+before agent execution. Trusted operator inspection must confirm Docker controls,
+controller separation and active rules before the first credential-bearing exec.
+Only the controller has its stock NET_ADMIN/NET_RAW capabilities. The agent has
+no host mounts, Docker socket, host namespaces or repository credential. A narrow
+pilot environment adapter selects Harbor's non-mounted log collector and delivers
+environment values over stdin as the task user, avoiding CAP_CHOWN. The independent
+verifier keeps its existing transport and offline configuration. These private
+transport hooks are pinned maintenance obligations, not a framework fork.
+
+The actual CLI's non-forwarding stub directs a command that reads immutable task
+inputs, exercises allowed and denied network routes, attempts real privilege
+operations and writes a public known-good fixture. Its exact bytes must match the
+producer, collected artifact and independent verifier receipts. Both arms must
+complete. Additional real CLI cases exercise command failure and SIGINT interruption,
+with container/network/volume inventories checked after disposal. Host positive
+controls and non-timeout proxy rejections are required; missing evidence is
+inconclusive. Probe records have a separate credential-free purpose in the existing
+consolidated renderer and cannot be interpreted as skill effectiveness.
+
+Agent code can read an eventual model credential from its process environment and
+can modify its own configuration, home and command logs. It can write its home,
+output, container temporary directories and agent logs, rather than only paths
+allowed by the former workspace sandbox. Root-owned task inputs, CLI and policy
+files remain immutable to UID 1000. Protected reference/mutant data exists only in
+the independent verifier. The agent cannot write operator observations or verifier
+logs, which are no longer mounted into its container. Its own events and receipts
+remain producer-reported; the independent grade and verifier hash protect the
+bounded submission handoff, not a general trustworthy activity transcript.
+
+Stock Harbor networking retains DNS, ICMP and local-network-namespace channels,
+and permitted-provider communication. Hostname/SNI allowlisting is not complete
+exfiltration prevention, endpoint authentication or a security proof. An eventual
+key is exposed to reviewed task code inside the agent container; own-log tampering
+and provider-mediated contamination remain possible. This is qualification for a
+small evaluation against reviewed repository content, not workstation equivalence
+or complete secret isolation. No credentials, inference, judging, paid allocation,
+production promotion or scheduling are authorized by this work.
+
+External-profile hosted execution is pending. The earlier broader qualification
+[42391098962](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42391098962)
+has now completed successfully at `e63c18b`, including all eight jobs and its final
+same-run report join. That is separate deterministic native qualification, not
+external-profile or live-provider evidence. The proposed two-attempt $10 allocation
+remains unapproved and must not be dispatched.

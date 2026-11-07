@@ -9,7 +9,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 CANDIDATE_RUNTIME = bool(importlib.util.find_spec('skillevaluator')) and importlib.metadata.version('skillevaluator') == '0.8.0'
 ROOT=Path(__file__).resolve().parents[2]
@@ -20,11 +20,11 @@ import skill_evidence as evidence
 
 
 class PilotContracts(unittest.TestCase):
-    def test_config_keeps_sandbox_model_provider_and_disables_retries(self):
+    def test_external_config_preserves_model_provider_and_disables_retries(self):
         c=configuration()
         self.assertEqual((c['model'],c['model_reasoning_effort']),('gpt-6.1-sol','high'))
-        self.assertEqual(c['sandbox_mode'],'workspace-write')
-        self.assertFalse(c['sandbox_workspace_write']['network_access'])
+        self.assertEqual(c['sandbox_mode'],'danger-full-access')
+        self.assertNotIn('sandbox_workspace_write',c)
         self.assertEqual(c['model_providers']['pilot']['base_url'],'https://api.openai.com/v1')
         self.assertEqual(c['model_providers']['pilot']['request_max_retries'],0)
         self.assertNotIn('rollout_budget',c['features'])
@@ -148,6 +148,26 @@ class PilotContracts(unittest.TestCase):
             public['custom']['purpose']='cli_pilot'
             with self.assertRaisesRegex(ValueError,'Pilot profile/purpose mismatch'):
                 evidence.validate_custom_evidence(public,public=True)
+
+    @unittest.skipUnless(CANDIDATE_RUNTIME, 'Requires qualified owning runtime')
+    def test_secret_delivery_uses_stdin_target_user_and_cancellation_cleanup(self):
+        import asyncio
+        from codex_pilot_environment import PilotEnvironment
+        agent = object.__new__(PilotEnvironment)
+        agent._pilot_agent = True
+        agent._resolve_user = lambda value: value
+        agent._merge_env = lambda value: value
+        agent._output_callback = lambda: None
+        agent._run_docker_compose_command = AsyncMock(return_value='result')
+        value = asyncio.run(agent.exec('printf done', cwd='/workspace',
+            env={'OPENAI_API_KEY': 'pilot-not-a-credential'}, user='agent'))
+        self.assertEqual(value, 'result')
+        args, kwargs = agent._run_docker_compose_command.call_args
+        self.assertNotIn('pilot-not-a-credential', repr(args))
+        self.assertIn(b'pilot-not-a-credential', kwargs['stdin_data'])
+        self.assertEqual(args[0], ['exec', '-T', '-w', '/workspace', '-u', 'agent', 'main', 'sh', '-s'])
+        self.assertTrue(kwargs['stop_main_on_interrupt'])
+        self.assertIn('pilot-not-a-credential', kwargs['exact_secret_values'])
 
     def test_wrong_allocation_rejects_before_native_setup(self):
         with patch.object(sys,'argv',['pilot','live','--output','unused','--approval','wrong']), self.assertRaises(SystemExit):
