@@ -689,7 +689,6 @@ The earlier descriptor mismatch remains unresolved. No replacement live allocati
 credential retrieval, inference, judge, recurring execution, production change or
 merge is authorized. The old paid approval is not carried forward.
 
-
 ### Review follow-up: remove the baked qualification answer
 
 [Review comment 4504139755](https://github.com/thetechgy/agent-engineering-baseline/pull/121#discussion_r4504139755)
