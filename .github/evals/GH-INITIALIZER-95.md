@@ -119,6 +119,40 @@ are excluded. Qualification records cannot enter benchmark history.
 
 ## Adoption and rollback
 
+This section records the historical 0.7.2 exact-score plan. Its unchanged-scoring
+requirement is superseded by the separately versioned policy in the
+[active upgrade checkpoint](EVALUATION-PLAN.md). The historical diagnostic and
+results below remain unchanged; they are not the current adoption criteria.
+
+Standard scoring is a blocking compatibility boundary. The frozen 0.3.0 producer
+averages six metrics; 0.7.2 averages five dimensions. The same six metric values
+can therefore produce different overall scores and lift. The approved delivery
+requires unchanged scoring, so the candidate cannot be promoted under this plan.
+No producer pins, scoring implementation, historical profiles or measurements
+are changed to accommodate the difference.
+
+`--scoring-compatibility` runs 73 controlled vectors under the two exact frozen
+owning runtimes, with no inference or remote judges. It covers all 64 binary
+vectors and nine fractional vectors. The current candidate differs on 56. With
+all metrics equal to one except `skill_execution = 0`, the rounded overall score
+changes from 0.8333 to 0.8000; with `goal_accuracy = 0`, it changes from 0.8333 to
+0.9000. These are compatibility fixtures, not benchmark measurements.
+
+The gate requires the original evaluator interpreter in
+`SKILL_LEGACY_REVIEW_PYTHON`; the current review SDK overlay is rejected. It
+verifies exact runtime versions, owning lock hashes and scorer, constants and
+verifier source hashes. Missing, mismatched or failed probes remain unqualified.
+The candidate CLI/configuration path has no selector for producing the original
+six-metric mean. Historical score-policy readers do not provide that producer
+control. Preserving the old formula would require additional upstream support or
+a separately reviewed implementation outside the approved compatibility patch.
+
+`--adoption` includes this comparison and adds `standard_scoring_compatibility`
+to its blockers unless it passes. Existing independent native gates remain in
+place. The dedicated CI check verifies the gate's expected refusal; a passing
+control check does not establish adoption readiness. Production promotion and the
+remaining migration stay gated.
+
 `--adoption` runs the available native gates and requires the retained evaluator
 interpreter in `SKILL_LEGACY_REVIEW_PYTHON` for the second Pester qualification;
 the current review SDK overlay is rejected. Once offline controls pass, the native

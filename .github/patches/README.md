@@ -77,3 +77,22 @@ rather than upstream's 0.161.0 default. Trusted initialization is an installed
 operator backend, not another upstream lifecycle patch. The candidate patch is
 not used by production evaluation. See
 [the candidate contract, reproduction and remaining adoption gates](../evals/EVALUATOR-CANDIDATE-95.md).
+
+## Current evaluator replacement
+
+`skillevaluator-v0.8.0-evidence.patch` applies only to released revision
+`8149356e4476a1497fb334727f13f699c6fa6ba5`. The current opt-in setup uses it
+with a separate compatible lock; production and historical patches are unchanged.
+Pristine 0.8.0 failed the retained evidence controls, so these corrections remain
+necessary. The port adjusts one hunk to upstream's changed surrounding code.
+Bash `printf -v` assignments remain unresolved path evidence in the current
+patch; ordinary printed text remains distinct from access. The diagnostic
+producer identity and source hashes version this correction.
+The v3 producer also keeps generated-script execution unresolved after redirected
+sensitive text. Literal configuration inspection and explicit sensitive accesses
+retain their outcomes. Qualified v2 artifacts require their retained tooling at
+`0bfb1f5`; they are not relabeled under later producers.
+V4 also keeps print-operand parameter assignments and unresolved later reuse of
+printed sensitive paths unscoreable, including Bash last-argument expansion.
+It does not change upstream scoring. See the [active checkpoint](../evals/EVALUATION-PLAN.md)
+for qualification, dependency constraints and adoption limits.

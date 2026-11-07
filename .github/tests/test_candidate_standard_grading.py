@@ -94,6 +94,25 @@ class CandidateStandardTests(unittest.TestCase):
             reports.write_json(output / "run_config.json", {"grading": {"mode": "default"}, "judge": {"enabled": False}})
             render_agent_eval_html_report(skill, output, use_llm_judge=False)
             self.assertTrue(list(output.rglob("*.html")))
+            if destination := os.environ.get("AEB_CURRENT_NATIVE"):
+                from skillevaluator.tier3.harbor.report_data import build_dataset_snapshot
+                from evaluator_profiles import CANDIDATE
+                native_root = Path(destination)
+                run = native_root / "results/podman/offline-transport"
+                shutil.copytree(output, run)
+                snapshot = build_dataset_snapshot(json.loads((skill / 'evals/evals.json').read_text())['evals'], evaluator_version='0.8.0')
+                result = json.loads((run / 'result.json').read_text())
+                result.update(dataset_digest=snapshot['dataset_digest'], dataset_summary=snapshot['dataset_summary'])
+                reports.write_json(run / 'result.json', result)
+                reports.write_json(run / 'dataset_snapshot.json', snapshot)
+                reports.write_json(run / 'attempt_policy.json', {'max_attempts': 1, 'stop_on_pass': False, 'pass_threshold': 0.5})
+                policy = {**reports.POLICY, 'evaluator_revision': CANDIDATE['revision'], 'harbor': CANDIDATE['harbor'],
+                          'python': CANDIDATE['python'], 'model': 'controlled-fixture'}
+                reports.write_json(native_root / 'versions.json', {'skillevaluator': CANDIDATE['version'],
+                    'evaluator_revision': CANDIDATE['revision'], 'harbor': CANDIDATE['harbor'], 'python': CANDIDATE['python'],
+                    'lock_sha256': CANDIDATE['lock_sha256'], 'patch_sha256': CANDIDATE['patch_sha256']})
+                reports.write_json(native_root / 'provenance.json', {'schema_version': 1, 'skill': 'podman',
+                    'mode': 'standard', 'policy': policy, 'patch_sha256': CANDIDATE['patch_sha256']})
             recovered = root / "recovered"
             run = recovered / "results/podman/qualification"
             shutil.copytree(jobs, run / "_harbor-jobs")

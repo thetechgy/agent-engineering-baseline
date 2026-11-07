@@ -58,6 +58,8 @@ FINDING_LABELS = {
 
 
 def coverage_label(skill):
+    if any('producer_profile' in run['policy'] for run in skill['behavioral_results']):
+        return 'Includes synthetic candidate qualification; candidate quality unavailable'
     purposes = {run['custom']['purpose'] for run in skill['behavioral_results'] if 'custom' in run}
     if purposes:
         return ' · '.join(('Oracle qualification' if purpose == 'oracle_qualification' else 'Model-backed custom evidence')
@@ -238,6 +240,8 @@ class ValidatedRecords:
 
 
 def measured(record):
+    if 'producer_profile' in record.get('policy', {}):
+        return False  # This qualified profile is offline transport only.
     return record['kind'] == 'behavioral' and bool(record['metrics'] or record['observations'] or
         any((arm['coverage']['recorded_attempts'] or 0) > 0 for arm in record['arms']))
 

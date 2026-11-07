@@ -1,29 +1,7 @@
 name: Candidate Pester packaging
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/evaluator-backends/**'
-      - '.github/evals/**'
-      - '.github/scripts/**'
-      - '.github/tests/**'
-      - '.github/patches/**'
-      - '.github/requirements/**'
-      - '.github/workflows/**'
-      - '.apm/skills/powershell-pester-6/**'
-      - '.agents/skills/powershell-pester-6/**'
-  pull_request:
-    paths:
-      - '.github/evaluator-backends/**'
-      - '.github/evals/**'
-      - '.github/scripts/**'
-      - '.github/tests/**'
-      - '.github/patches/**'
-      - '.github/requirements/**'
-      - '.github/workflows/**'
-      - '.apm/skills/powershell-pester-6/**'
-      - '.agents/skills/powershell-pester-6/**'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -33,6 +11,86 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == '1' }}
 
 jobs:
+  scoring-controls:
+    name: Score-preservation controls (no inference; adoption blocked)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up pinned uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: '0.13.7'
+          enable-cache: false
+      - name: Acquire both isolated frozen owning runtimes
+        timeout-minutes: 12
+        run: |
+          bash .github/scripts/setup-skillevaluator.sh benchmark
+          bash .github/scripts/setup-skillevaluator.sh candidate
+      - name: Demonstrate the native scoring blocker without inference
+        timeout-minutes: 5
+        run: |
+          status=0
+          "$SKILL_CANDIDATE_PYTHON" .github/scripts/qualify_evaluator_candidate.py \
+            --source "$SKILL_CANDIDATE_SOURCE" \
+            --output "$RUNNER_TEMP/score-preservation" --scoring-compatibility || status=$?
+          # This check verifies the gate's refusal; it does not qualify adoption.
+          test "$status" -eq 1
+          "$SKILL_CANDIDATE_PYTHON" -I -B - <<'PYVERIFY'
+          import json, os
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP']) / 'score-preservation'
+          records = {}
+          for name in ('metadata.json', 'result.json', 'scoring-compatibility.json'):
+              path = root / name
+              assert path.is_file() and not path.is_symlink() and path.stat().st_size <= 128 * 1024
+              records[name] = json.loads(path.read_bytes())
+          metadata = records['metadata.json']
+          controls = records['result.json']
+          scores = records['scoring-compatibility.json']
+          assert metadata['project_revision'] == os.environ['GITHUB_SHA']
+          assert metadata['returncode'] == 1 and metadata['production_pins_changed'] is False
+          assert metadata['patched'] is True and metadata['scoring_compatibility'] == scores
+          assert controls['success'] is True and controls['network_attempts'] == []
+          assert controls['failures'] == controls['errors'] == controls['skipped'] == 0
+          assert metadata['podman_standard_fixtures']['success'] is True
+          assert scores['status'] == 'incompatible' and scores['code'] == 'standard_score_policy_changed'
+          assert scores['fixture_only'] is True and scores['inference'] is False and scores['remote_judges'] is False
+          assert scores['vectors'] == 73 and len(scores['differences']) == 56
+          for zero, expected in (('skill_execution', 0.8), ('goal_accuracy', 0.9)):
+              row = next(row for row in scores['differences'] if row['metrics'] == {
+                  key: int(key != zero) for key in scores['probes']['retained']['metrics']})
+              assert row['retained'] == 0.8333 and row['candidate'] == expected
+          print('Gate verified: native standard scoring differs; evaluator adoption remains blocked. No inference executed.')
+          PYVERIFY
+      - name: Verify scoring-gate rejection controls under both owning runtimes
+        timeout-minutes: 2
+        env:
+          SCORE_CANDIDATE_SOURCE: ${{ runner.temp }}/score-preservation/source
+          SCORE_CANDIDATE_LOCK: ${{ env.SKILL_CANDIDATE_SOURCE }}/uv.lock
+        run: '"$SKILL_REVIEW_PYTHON" -B -m unittest discover -s .github/tests -p test_evaluator_scoring_compatibility.py -v'
+      - name: Verify checkout integrity
+        if: always()
+        run: |
+          git diff --exit-code
+          test -z "$(git status --porcelain=v1 --untracked-files=all --ignored)"
+      - name: Retain bounded scoring diagnostics
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: score-preservation-blocker-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/score-preservation/metadata.json
+            ${{ runner.temp }}/score-preservation/result.json
+            ${{ runner.temp }}/score-preservation/scoring-compatibility.json
+          if-no-files-found: error
+          retention-days: 14
+
   native-pester:
     name: Candidate Pester packaging (no inference)
     runs-on: ubuntu-latest

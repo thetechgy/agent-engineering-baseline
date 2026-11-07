@@ -110,6 +110,7 @@ def main():
     parser.add_argument('--native-gh', action='store_true', help='Qualify all 24 gh cases in both arms using the trusted backend, without inference')
     parser.add_argument('--gh-arm', choices=('with_skill', 'without_skill'), help='Bound native gh qualification to one arm; adoption requires both')
     parser.add_argument('--gh-shard', type=int, choices=(1, 2, 3), help='One fixed eight-case shard of --gh-arm; all three are required')
+    parser.add_argument('--scoring-compatibility', action='store_true', help='Compare fixed standard score vectors under both frozen owning runtimes; never run inference')
     parser.add_argument('--adoption', action='store_true', help='Run available native gates and report every remaining adoption blocker; never promote implicitly')
     parser.add_argument('--cache-prepared', action='store_true', help='Label native fixtures following a separately retained operator preparation; changes no runtime behavior')
     parser.add_argument('--prepare-gh', action='store_true', help='Prepare the unchanged approved gh image through its trusted backend, without agent setup')
@@ -125,7 +126,9 @@ def main():
     if args.adoption and args.gh_arm:
         parser.error('Adoption requires both native gh arms')
     if args.adoption:
-        args.native_gh = args.native_pester = True
+        args.native_gh = args.native_pester = args.scoring_compatibility = True
+    if args.scoring_compatibility and args.unpatched:
+        parser.error('Scoring qualification requires the reviewed candidate patch')
     if (args.native_pester or args.native_gh or args.prepare_gh or args.prepare_pester) and args.unpatched:
         parser.error('Native qualification requires the reviewed evidence patch')
     project = Path(__file__).resolve().parents[2]
@@ -234,6 +237,19 @@ def main():
         metadata['returncode'] = returncode = returncode or 2
         (output / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
     controls_ready = returncode == 0
+    if args.scoring_compatibility:
+        sys.path.insert(0, str(project / '.github/scripts'))
+        import evaluator_scoring_compatibility as scoring
+        scoring_result = scoring.qualify(sys.executable, snapshot, source / 'uv.lock',
+            os.environ.get('SKILL_LEGACY_REVIEW_PYTHON'))
+        metadata['scoring_compatibility'] = scoring_result
+        metadata['scoring_harness_sha256'] = hashlib.sha256(Path(scoring.__file__).read_bytes()).hexdigest()
+        metadata['scoring_controls_sha256'] = hashlib.sha256((project / '.github/tests/test_evaluator_scoring_compatibility.py').read_bytes()).hexdigest()
+        metadata['project_revision'] = subprocess.check_output(['git', '-C', str(project), 'rev-parse', 'HEAD'], text=True).strip()
+        (output / 'scoring-compatibility.json').write_text(json.dumps(scoring_result, indent=2, allow_nan=False) + '\n')
+        if scoring_result['status'] != 'compatible':
+            metadata['returncode'] = returncode = returncode or 1
+        (output / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
     preparations = (["gh", "pester"] if args.adoption else
                     [suite for suite, selected in (("gh", args.prepare_gh), ("pester", args.prepare_pester)) if selected])
     for suite in preparations if controls_ready else []:
@@ -309,6 +325,8 @@ def main():
         blockers = [
                     'dual_runtime_reporting_and_public_replay', 'historical_original_tooling_replay',
                     'new_profiles_provenance_and_publisher_admission', 'upstream_differential_selection']
+        if metadata.get('scoring_compatibility', {}).get('status') != 'compatible':
+            blockers.append('standard_scoring_compatibility')
         if not fixture_ok:
             blockers.append('podman_standard_collection_recovery')
         if not metadata.get('native_gh', {}).get('success'):

@@ -47,6 +47,18 @@ class CandidateHarnessTests(unittest.TestCase):
             self.assertIn('candidate', result.stderr.lower())
             self.assertFalse(output.exists())
 
+    def test_adoption_cannot_skip_scoring_preservation_with_an_unpatched_source(self):
+        project = Path(__file__).resolve().parents[2]
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary) / 'must-not-be-created'
+            result = subprocess.run([sys.executable, '-I', '-B',
+                str(project / '.github/scripts/qualify_evaluator_candidate.py'),
+                '--source', str(project), '--output', str(output), '--adoption', '--unpatched'],
+                env={'PATH': os.environ['PATH']}, capture_output=True, text=True, timeout=15)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn('Scoring qualification requires the reviewed candidate patch', result.stderr)
+            self.assertFalse(output.exists())
+
 
 @unittest.skipUnless(os.environ.get('CANDIDATE_EVIDENCE_CHILD') == '1', 'opt-in candidate qualification only')
 class CandidateEvidenceTests(unittest.TestCase):

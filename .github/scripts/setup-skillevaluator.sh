@@ -4,7 +4,7 @@ set -euo pipefail
 umask 077
 
 kind=${1:?usage: setup-skillevaluator.sh quality|benchmark|reporting|candidate}
-case "$kind" in quality|benchmark|reporting|candidate) ;; *) exit 2 ;; esac
+case "$kind" in quality|benchmark|reporting|candidate|candidate-current) ;; *) exit 2 ;; esac
 : "${RUNNER_TEMP:?}" "${GITHUB_WORKSPACE:?}" "${GITHUB_ENV:?}" "${GITHUB_PATH:?}"
 repository_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)
 tool_root="$RUNNER_TEMP/skill-evaluation-tools"
@@ -18,6 +18,26 @@ export UV_CACHE_DIR="$tool_root/uv-cache"
 export UV_PYTHON_INSTALL_DIR="$tool_root/python"
 export XDG_CACHE_HOME="$tool_root/cache"
 export XDG_STATE_HOME="$tool_root/state"
+
+# Current opt-in replacement. Historical recipes below retain their original bytes.
+if [ "$kind" = candidate-current ]; then
+  current_root="$RUNNER_TEMP/current-evaluator"
+  git init --quiet "$current_root"
+  git -C "$current_root" fetch --quiet --depth=1 https://github.com/NVIDIA/SkillEvaluator.git 8149356e4476a1497fb334727f13f699c6fa6ba5
+  git -C "$current_root" checkout --quiet --detach FETCH_HEAD
+  test "$(git -C "$current_root" rev-parse HEAD)" = 8149356e4476a1497fb334727f13f699c6fa6ba5
+  cp "$repository_root/.github/locks/evaluator-candidate.lock" "$current_root/uv.lock"
+  printf '%s  %s\n' 4873fe654fa944e9806709ae8730a44936eca91d257645710c4524acc7964c5e "$current_root/uv.lock" | sha256sum --check --strict
+  git -C "$current_root" apply --check "$repository_root/.github/patches/skillevaluator-v0.8.0-evidence.patch"
+  git -C "$current_root" apply "$repository_root/.github/patches/skillevaluator-v0.8.0-evidence.patch"
+  uv sync --project "$current_root" --python 3.14.10 --managed-python --frozen --no-dev --extra tier3
+  "$current_root/.venv/bin/python" "$repository_root/.github/evaluator-backends/build_wheel.py" "$current_root/backend-wheel"
+  uv pip install --python "$current_root/.venv/bin/python" --no-deps --no-index --link-mode copy --require-hashes --only-binary :all: \
+    --requirement "$current_root/backend-wheel/requirements.txt"
+  uv pip check --python "$current_root/.venv/bin/python"
+  printf 'SKILL_CURRENT_PYTHON=%s/.venv/bin/python\nSKILL_CURRENT_SOURCE=%s\n' "$current_root" "$current_root" >> "$GITHUB_ENV"
+  exit 0
+fi
 
 # Qualification owns a separate pristine source/lock and installed local wheel.
 # Production and both historical/current review environments retain their pins.

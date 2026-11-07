@@ -56,6 +56,14 @@ class EvidenceTests(unittest.TestCase):
         clock = patch.object(evidence, 'utc_now', return_value=datetime(2026, 10, 10, tzinfo=timezone.utc))
         clock.start(); self.addCleanup(clock.stop)
 
+    def copy_cli_modules(self, scripts, *extra):
+        """Copy the complete authored CLI dependency layout, without bytecode."""
+        for name in ('skill_evidence.py', 'skill_reports.py', 'evaluator_profiles.py', *extra):
+            shutil.copyfile(REPO / '.github/scripts' / name, scripts / name)
+        config = scripts.parent / 'evals/evaluator-candidate.json'
+        config.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(REPO / '.github/evals/evaluator-candidate.json', config)
+
     def native(self):
         target = self.root / 'native'
         shutil.copytree(FIXTURES / 'podman-native', target)
@@ -250,8 +258,7 @@ class EvidenceTests(unittest.TestCase):
     def test_yaml_alias_graph_has_bounded_depth_work(self):
         checkout = self.root / 'checkout'; self.local(checkout, 'alpha')
         scripts = checkout / '.github/scripts'; scripts.mkdir(parents=True)
-        for name in ('skill_evidence.py', 'skill_reports.py'):
-            shutil.copyfile(REPO / '.github/scripts' / name, scripts / name)
+        self.copy_cli_modules(scripts)
         lock = checkout / 'apm.lock.yaml'
         text = 'dependencies: []\ndeployments: []\na0: &a0 [0]\n'
         text += ''.join(f'a{i}: &a{i} [*a{i-1}, *a{i-1}]\n' for i in range(1, 31))
@@ -561,8 +568,7 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual(evidence.encoded(evidence.inventory(root)), evidence.encoded(baseline))
         with path.open('ab') as stream: stream.write(b'x')
         scripts = root / '.github/scripts'; scripts.mkdir(parents=True)
-        for name in ('skill_evidence.py', 'skill_reports.py'):
-            shutil.copyfile(REPO / '.github/scripts' / name, scripts / name)
+        self.copy_cli_modules(scripts)
         before = self.snapshot(root); output = self.root / 'inventory-rejected'
         cli = subprocess.run([sys.executable, str(scripts / 'skill_evidence.py'), 'inventory',
                               '--output', str(output)], capture_output=True, text=True)
@@ -2667,8 +2673,7 @@ class EvidenceTests(unittest.TestCase):
         checkout = self.root / 'checkout'
         authored = self.local(checkout, 'alpha')
         scripts = checkout / '.github/scripts'; scripts.mkdir(parents=True)
-        for name in ('skill_evidence.py', 'skill_reports.py'):
-            shutil.copyfile(REPO / '.github/scripts' / name, scripts / name)
+        self.copy_cli_modules(scripts)
         for front in ('name: alpha\ndescription: [', 'name: alpha\ndescription: "unterminated'):
             with self.subTest(front=front):
                 (authored / 'SKILL.md').write_text('---\n' + front + '\n---\n')
@@ -4758,8 +4763,7 @@ class EvidenceTests(unittest.TestCase):
 
     def test_standalone_cli_disables_repository_bytecode_writes(self):
         checkout = self.repo(); scripts = checkout / '.github/scripts'; scripts.mkdir(parents=True)
-        for name in ('skill_evidence.py', 'skill_reports.py', 'gh_evaluations.py'):
-            shutil.copyfile(REPO / '.github/scripts' / name, scripts / name)
+        self.copy_cli_modules(scripts, 'gh_evaluations.py')
         inputs = checkout / 'fixtures'; shutil.copytree(FIXTURES, inputs)
         commands = [['inventory'], ['normalize', '--kind', 'behavioral', '--skill', 'podman',
                     '--input', str(inputs / 'podman-native')], ['normalize', '--kind', 'static',

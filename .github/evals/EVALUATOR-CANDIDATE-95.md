@@ -1,5 +1,10 @@
 # Issue #95 evaluator compatibility port
 
+> Historical 0.7.2 port and exact-score diagnostic. The active replacement and
+> policy-specific qualification are tracked in [the issue #95 checkpoint](EVALUATION-PLAN.md).
+> Numerical equality with the historical policy is no longer required.
+> Production remains on its reviewed runtime. Fixtures are not model measurements.
+
 This is an opt-in grading and collector port for SkillEvaluator 0.7.2 at
 `f878f99a9cd4a85dd04043feb43e5bd6a777f64b`, with its owning Harbor 0.24.0 lock.
 It does not select this runtime for production. Setup, workflows, Codex pins,

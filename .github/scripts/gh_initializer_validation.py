@@ -22,6 +22,11 @@ from harbor.models.trial.paths import TrialPaths
 from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks
 
 
+STARTUP_FAULTS = {"gh-001": "dead_broker", "gh-002": "foreign_socket_owner", "gh-003": "missing_identity",
+                  "gh-004": "changed_private_input", "gh-005": "timeout", "gh-006-changed-head": "cancellation",
+                  "gh-007": "missing_manifest"}
+
+
 def docker(*args, timeout=30):
     return subprocess.check_output(["docker", *args], text=True, timeout=timeout)
 
@@ -60,7 +65,12 @@ async def qualify(root, artifact, arm=None, shard=None):
         entry = json.loads((task / "tests/entry.json").read_text())
         present = entry["has_skill"]
         name = "aeb-gh-qualification-" + uuid.uuid4().hex[:16]
-        environment = TrustedGhEnvironment(environment_dir=task / "environment", environment_name=name,
+        command_stages = {}
+        environment_type = TrustedGhEnvironment
+        if isinstance(environment_type, type) and importlib.metadata.version('skillevaluator') == '0.8.0':
+            from prepare_candidate_images import observed_environment
+            environment_type = observed_environment(environment_type, command_stages)
+        environment = environment_type(environment_dir=task / "environment", environment_name=name,
             session_id=name, trial_paths=paths, task_env_config=native.config.environment, mounts=[],
             network_policy=native.config.environment.resolve_baseline())
         environment.default_user = "agent"
@@ -170,9 +180,7 @@ async def qualify(root, artifact, arm=None, shard=None):
                 raise RuntimeError("Native grader accepted fabricated receipt")
             if audit != await checked("sha256sum /opt/gh-eval/state/audit.jsonl"):
                 raise RuntimeError("Negative grading changed append-only audit")
-            fault = {"gh-001": "dead_broker", "gh-002": "foreign_socket_owner", "gh-003": "missing_identity",
-                     "gh-004": "changed_private_input", "gh-005": "timeout", "gh-006-changed-head": "cancellation",
-                     "gh-007": "missing_manifest"}.get(task.name)
+            fault = STARTUP_FAULTS.get(task.name)
             fault_result = None
             if fault:
                 if fault == "dead_broker":
@@ -257,7 +265,9 @@ async def qualify(root, artifact, arm=None, shard=None):
                     "selection": {"arm": arm, "shard": shard, "shards": 3 if shard else 1},
                     "runtime": {key: importlib.metadata.version(key) for key in ("skillevaluator", "harbor")},
                     "harness_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-                    "failure": failure, "setup_only": setup_only,
+                    "producer_revision": subprocess.check_output(["git", "-C", str(gh.ROOT), "rev-parse", "HEAD"], text=True).strip(),
+                    "workflow_run": os.environ.get("GITHUB_RUN_ID"), "workflow_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
+                    "failure": failure, "setup_only": setup_only, "command_stages": command_stages,
                     "initialization": [json.loads(line) for line in paths.trial_dir.joinpath("gh-initialization.jsonl").read_text().splitlines()]
                         if paths.trial_dir.joinpath("gh-initialization.jsonl").exists() else []}, indent=2) + "\n")
             # Persist current infrastructure evidence before cleanup can hang or
@@ -297,8 +307,11 @@ def main(artifact, arm=None, shard=None):
     artifact.write_text(json.dumps({"success": False, "inference": False, "diagnostic_only": True, "completed": []}) + "\n")
     if any(os.environ.get(key) for key in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "NVIDIA_API_KEY")):
         raise RuntimeError("Qualification forbids provider credentials")
-    if (importlib.metadata.version("skillevaluator"), importlib.metadata.version("harbor")) != ("0.7.2", "0.24.0"):
-        raise RuntimeError("Incorrect gh qualification runtime")
+    from aeb_gh_fixture.backend import require_runtime
+    require_runtime()
+    if importlib.metadata.version('skillevaluator') == '0.8.0':
+        from evaluator_profiles import runtime, candidate_versions
+        runtime(candidate_versions(), owning=True)
     if docker("compose", "version", "--short").strip() != gh.reports.POLICY["docker_compose"]:
         raise RuntimeError("Incorrect Compose runtime")
     def interrupted(signum, frame):

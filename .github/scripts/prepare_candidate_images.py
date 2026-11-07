@@ -30,7 +30,9 @@ RUNTIME_COMMAND = (
 )
 
 
-RUNTIMES = {"candidate": {"skillevaluator": "0.7.2", "harbor": "0.24.0"},
+from evaluator_profiles import CANDIDATE
+
+RUNTIMES = {"current": {"skillevaluator": CANDIDATE['version'], "harbor": CANDIDATE['harbor']}, "candidate": {"skillevaluator": "0.7.2", "harbor": "0.24.0"},
             "retained": {"skillevaluator": "0.3.0", "harbor": "0.13.2"}}
 
 BUILD_ATTEMPT_SECONDS = 300
@@ -58,7 +60,7 @@ def staged_task(root, suite="pester", arm=None, shard=None, runtime="candidate")
         return selected[0]
     if suite != "pester":
         raise ValueError("Unsupported preparation suite")
-    bundle, fixtures = pilot.qualification_bundle(root, candidate=runtime == "candidate")
+    bundle, fixtures = pilot.qualification_bundle(root, candidate=runtime in ("candidate", "current"))
     tasks = stage_native_harbor_tasks(bundle, root / "tasks", with_skill=True, grading_mode="custom_only")
     if len(tasks) != 26 or len(fixtures) != 26:
         raise RuntimeError("Incomplete package preparation source cohort")
@@ -170,8 +172,10 @@ async def prepare(root, artifact, suite="pester", arm=None, shard=None, runtime=
         status["runtime"] = versions
         dependencies = {key: importlib.metadata.version(key) for key in ("openai", "pydantic")}
         status["dependencies"] = dependencies
-        if (runtime not in RUNTIMES or versions != RUNTIMES[runtime] or sys.version_info[:2] != (3, 13)
-                or dependencies != {"openai": "2.44.0", "pydantic": "2.13.4"}):
+        expected_python = (3, 14) if runtime == "current" else (3, 13)
+        expected_dependencies = {key: CANDIDATE['dependencies'][key] for key in ('openai', 'pydantic')} if runtime == "current" else {"openai": "2.44.0", "pydantic": "2.13.4"}
+        if (runtime not in RUNTIMES or versions != RUNTIMES[runtime] or sys.version_info[:2] != expected_python
+                or dependencies != expected_dependencies):
             raise RuntimeError("Unqualified package preparation runtime")
         task = staged_task(root, suite, arm, shard, runtime)
         native = Task(task)
@@ -186,7 +190,8 @@ async def prepare(root, artifact, suite="pester", arm=None, shard=None, runtime=
             os.environ["AEB_GH_MANIFEST"] = str(manifest)
             command, expected = GH_RUNTIME_COMMAND, ["v20.19.2"]
         deadline = time.monotonic() + 1100
-        for number in range(1, 4):
+        maximum_attempts = 1 if runtime == "current" else 3
+        for number in range(1, maximum_attempts + 1):
             paths = TrialPaths(root / ("trial-" + str(number))); paths.mkdir()
             name = "aeb-image-packages-" + uuid.uuid4().hex[:16]
             entry = {"attempt": number, "status": "preparing", "phase": "secure_start", "retry": False}
@@ -225,7 +230,7 @@ async def prepare(root, artifact, suite="pester", arm=None, shard=None, runtime=
                 entry["code"] = ("debian_snapshot_unavailable" if transient else
                                  "build_timeout" if build_timeout else "preparation_failed")
                 delay = 30 * 2 ** (number - 1)
-                if (transient or build_timeout) and number < 3 and deadline - time.monotonic() > 90 + delay:
+                if (transient or build_timeout) and number < maximum_attempts and deadline - time.monotonic() > 90 + delay:
                     entry.update(retry=True, retry_delay_sec=delay)
                 else:
                     status.update(status=entry["status"], error=entry["error"])

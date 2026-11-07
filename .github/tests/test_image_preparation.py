@@ -17,7 +17,7 @@ RUNTIME = os.environ.get('IMAGE_PREPARATION_RUNTIME',
                          'candidate' if os.environ.get('CANDIDATE_EVIDENCE_CHILD') == '1' else '')
 
 
-@unittest.skipUnless(RUNTIME in ('candidate', 'retained'), 'explicit owning-runtime qualification only')
+@unittest.skipUnless(RUNTIME in ('candidate', 'retained', 'current'), 'explicit owning-runtime qualification only')
 class ImagePreparationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

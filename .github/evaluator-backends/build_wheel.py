@@ -15,7 +15,7 @@ def build(destination):
     metadata = "aeb_gh_fixture-1.0.0.dist-info"
     contents = {"aeb_gh_fixture/" + p.name: p.read_bytes() for p in sorted((root / "aeb_gh_fixture").glob("*.py"))}
     contents.update({
-        metadata + "/METADATA": b"Metadata-Version: 2.1\nName: aeb-gh-fixture\nVersion: 1.0.0\nRequires-Python: >=3.13,<3.14\n",
+        metadata + "/METADATA": b"Metadata-Version: 2.1\nName: aeb-gh-fixture\nVersion: 1.0.0\nRequires-Python: >=3.13,<3.15\n",
         metadata + "/WHEEL": b"Wheel-Version: 1.0\nGenerator: aeb-stdlib-1\nRoot-Is-Purelib: true\nTag: py3-none-any\n",
         metadata + "/entry_points.txt": b"[skillevaluator.env_modes]\naeb-gh-fixture = aeb_gh_fixture:backend_spec\n",
     })
