@@ -139,6 +139,16 @@ class PilotContracts(unittest.TestCase):
             (trial/'verifier/pilot-verified-submission.json').write_text(json.dumps({**receipt,'sha256':'0'*64}))
             with self.assertRaisesRegex(ValueError,'handoff mismatch'): pilot.retain(root,artifact)
 
+    @unittest.skipUnless(importlib.util.find_spec('skillevaluator'), 'Requires pinned evidence runtime')
+    def test_historical_public_record_cannot_claim_pilot_identity(self):
+        from test_custom_metrics import synthetic_native
+        with tempfile.TemporaryDirectory() as d:
+            native,_=synthetic_native(Path(d),complete=True)
+            public=json.loads(evidence.encoded(evidence.project(evidence.normalize_behavioral(native,PROFILE['skill']))))
+            public['custom']['purpose']='cli_pilot'
+            with self.assertRaisesRegex(ValueError,'Pilot profile/purpose mismatch'):
+                evidence.validate_custom_evidence(public,public=True)
+
     def test_wrong_allocation_rejects_before_native_setup(self):
         with patch.object(sys,'argv',['pilot','live','--output','unused','--approval','wrong']), self.assertRaises(SystemExit):
             pilot.main()

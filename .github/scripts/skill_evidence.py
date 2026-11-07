@@ -4052,6 +4052,17 @@ def validate_custom_evidence(data, *, public=False, _observed_at=None):
             and custom['runtime'] == profile['runtime']
             and custom['assurance'] == CUSTOM_ASSURANCE, 'Unapproved custom definition or assurance')
     enum(custom['purpose'], ('benchmark', 'oracle_qualification', 'cli_pilot', 'cli_pilot_control')); token(custom['agent'])
+    pilot_profile = profile['id'] == 'pester-cli-pilot-v1'
+    require(pilot_profile == (custom['purpose'] in ('cli_pilot', 'cli_pilot_control')), 'Pilot profile/purpose mismatch')
+    if pilot_profile:
+        live = custom['purpose'] == 'cli_pilot'
+        fields = data['policy']['fields']
+        require(data['policy'].get('producer_profile') == profiles.CANDIDATE['id']
+                and data['policy']['attempts']['maximum'] == 1
+                and fields['environment'] == 'docker' and fields['concurrency'] == 2 and fields['timeout_multiplier'] == 1.0
+                and fields['model'] == (profile['runtime']['model'] if live else 'credential-free-oracle')
+                and fields['provider'] == ('openai' if live else 'fixture')
+                and (not live or custom['agent_version'] in (None, profile['runtime']['codex'])), 'Pilot public runtime mismatch')
     optional(custom['agent_version'], token)
     optional(custom['native_metric_set'], lambda v: enum(v, ('custom-only', 'skill-evaluator-default-v2')))
     if profile['grading'] == 'custom_only': require(data['policy']['metric_set'] == 'custom-only', 'Incorrect custom scoring policy')
