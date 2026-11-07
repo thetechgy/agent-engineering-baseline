@@ -160,6 +160,7 @@ class AttachmentTests(unittest.TestCase):
 
     def test_frozen_current_profile_rejects_changed_checkout_and_retains_legacy_host_dispatch(self):
         self.fixture('current-v4')
+        self.load()  # Exact retained validator bytes remain supported.
         tooling = self.spec['tooling']
         self.spec['tooling'] = None; write(self.path, self.spec)
         with self.assertRaisesRegex(ValueError, 'Unreviewed validator module'):

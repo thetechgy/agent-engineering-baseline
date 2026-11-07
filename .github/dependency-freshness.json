@@ -50,13 +50,18 @@
           "path": ".github/scripts/setup-skillevaluator.sh",
           "pattern": "^\\s*skillspector_revision=(?P<revision>[0-9a-f]{40}) # v(?P<version>\\S+)$",
           "count": 1
+        },
+        {
+          "path": ".github/locks/skillspector.lock",
+          "pattern": "^name = \"skillspector\"\\nversion = \"(?P<version>[^\"\\n]+)\"$",
+          "count": 1
         }
       ],
       "owner": "Maintainer review",
       "hold": null,
-      "group": null,
+      "group": "scanner compatibility group",
       "tag_prefix": "v",
-      "validation": "Run controlled scanner regressions, native catalog collection and public projection; compare findings and incomplete-coverage accounting, not installation alone.",
+      "validation": "Review the scanner-owned frozen lock without overrides; qualify actual clean/bad/incomplete controls, native collection, public scanner provenance and consolidated HTML. Evaluator-owned Bandit/pip-audit remain in the evaluator group.",
       "package": {
         "ecosystem": "pip",
         "name": "skillspector"

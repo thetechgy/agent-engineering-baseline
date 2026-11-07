@@ -97,8 +97,9 @@ class SkillSpectorTests(unittest.TestCase):
         self.assertTrue(native.findings)
 
     def test_failed_and_unavailable_scanners_cannot_pass(self):
-        unsupported = self.root / 'unsupported.tar'
-        unsupported.write_bytes(b'\0' * 1024)
+        unsupported = self.root / 'malformed.zip'
+        # TAR support changed in 2.13.4; malformed ZIP fails in both releases.
+        unsupported.write_bytes(b'not a zip archive')
         failed = SecurityValidator()._run_skillspector(unsupported)
         self.assertEqual(failed.status, 'incomplete')
         self.assertFalse(failed.passed)
