@@ -16,9 +16,9 @@ from skillevaluator.tier3.harbor.secure_docker_environment import (
 class PilotEnvironment(SkillEvaluatorSecureDockerEnvironment):
     def __init__(self, *args, **kwargs):
         mounts = kwargs.pop('mounts', ())
-        if any(str(m.target) not in ('/logs/agent', '/logs/verifier', '/logs/artifacts') for m in mounts):
+        if any(str(m['target']) not in ('/logs/agent', '/logs/verifier', '/logs/artifacts') for m in mounts):
             raise ValueError('Unexpected pilot mount')
-        self._pilot_agent = any(str(m.target) == '/logs/agent' for m in mounts)
+        self._pilot_agent = any(str(m['target']) == '/logs/agent' for m in mounts)
         super().__init__(*args, mounts=[] if self._pilot_agent else mounts, **kwargs)
 
     @property

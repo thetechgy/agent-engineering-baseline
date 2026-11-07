@@ -150,6 +150,20 @@ class PilotContracts(unittest.TestCase):
                 evidence.validate_custom_evidence(public,public=True)
 
     @unittest.skipUnless(CANDIDATE_RUNTIME, 'Requires qualified owning runtime')
+    def test_released_harbor_mount_shape_and_independent_verifier(self):
+        from harbor.trial.trial import _harbor_log_bind_mount, TaskOS
+        from codex_pilot_environment import PilotEnvironment, SkillEvaluatorSecureDockerEnvironment
+        mount = _harbor_log_bind_mount(source='/operator/agent', target='/logs/agent', os=TaskOS.LINUX)
+        verifier = _harbor_log_bind_mount(source='/operator/verifier', target='/logs/verifier', os=TaskOS.LINUX)
+        with patch.object(SkillEvaluatorSecureDockerEnvironment, '__init__', return_value=None) as parent:
+            PilotEnvironment(mounts=[mount, verifier])
+            self.assertEqual(parent.call_args.kwargs['mounts'], [])
+            PilotEnvironment(mounts=[verifier])
+            self.assertEqual(parent.call_args.kwargs['mounts'], [verifier])
+            with self.assertRaisesRegex(ValueError, 'Unexpected pilot mount'):
+                PilotEnvironment(mounts=[{'target': '/host'}])
+
+    @unittest.skipUnless(CANDIDATE_RUNTIME, 'Requires qualified owning runtime')
     def test_secret_delivery_uses_stdin_target_user_and_cancellation_cleanup(self):
         import asyncio
         from codex_pilot_environment import PilotEnvironment
