@@ -126,6 +126,36 @@ class PilotContracts(unittest.TestCase):
                 capture['case_ids'].append('pester-002')
                 with self.assertRaises(ValueError): evidence.validate_custom_capture(capture,PROFILE['skill'],ROOT)
 
+    @unittest.skipUnless(os.environ.get('APM_EXECUTABLE') and CANDIDATE_RUNTIME, 'Requires verified APM and owning runtime')
+    def test_live_and_probe_images_match_without_baked_qualification_solution(self):
+        import base64
+        fixture=(ROOT/'.github/evals/powershell-pester-6/support/qualification/pester-001/classic.Tests.ps1').read_bytes()
+        encoded=base64.b64encode(fixture)
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);images=[]
+            for probe in (False,True):
+                target=root/str(probe);target.mkdir()
+                _,tasks,_=pilot.stage(target,probe=probe)
+                manifests={}
+                for arm,arm_tasks in tasks.items():
+                    environment=arm_tasks[0]/'environment'
+                    for path in reports.regular_tree(environment):
+                        raw=path.read_bytes()
+                        if fixture in raw or encoded in raw:
+                            self.fail('Qualification solution leaked into agent build context: '+path.relative_to(environment).as_posix())
+                    manifests[arm]=pilot.pester.manifest(environment)
+                images.append(manifests)
+            self.assertEqual(images[0],images[1], 'Probe/live image bytes must stay identical')
+
+    def test_probe_stub_has_no_default_qualification_payload(self):
+        with tempfile.TemporaryDirectory() as d:
+            record=Path(d)/'probe.json'
+            for extra in ([],['not-valid-base64']):
+                result=subprocess.run([sys.executable,'-B',str(ROOT/'.github/scripts/codex_pilot_stub.py'),
+                    str(record),'success',*extra],capture_output=True,text=True,timeout=10)
+                self.assertNotEqual(result.returncode,0)
+                self.assertFalse(record.exists())
+
     @unittest.skipUnless(CANDIDATE_RUNTIME, 'Requires qualified owning runtime')
     def test_exec_json_usage_keeps_missing_unknown_and_rejects_invalid_counts(self):
         from codex_pilot_agent import PilotCodex

@@ -1,10 +1,18 @@
 """Loopback-only non-forwarding qualification endpoint for the real CLI; no credentials or forwarding."""
+import base64
 import hashlib
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 from pathlib import Path
 import sys
 
+# The trusted host supplies this only at credential-free probe startup. Image
+# bytes contain no qualification answer and there is no fallback payload.
+if len(sys.argv) != 4:
+    raise SystemExit('Probe fixture must be supplied at runtime')
+fixture = sys.argv[3]
+if not 0 < len(base64.b64decode(fixture, validate=True)) <= 65536:
+    raise ValueError('Invalid probe fixture size')
 record = Path(sys.argv[1])
 scenario = sys.argv[2]
 
@@ -29,7 +37,7 @@ class Refuse(BaseHTTPRequestHandler):
         record.write_text(json.dumps(value, indent=2) + '\n')
         if value['requests'] == 1:
             command = {
-                'success': "python3 /opt/pilot/codex_pilot_probe.py && printf %s QmVmb3JlQWxsIHsgLiAnL3dvcmtzcGFjZS9pbnB1dC9TdWJqZWN0LnBzMScgfQpEZXNjcmliZSAnR2V0LUFjdGl2ZVBvcnQnIHsKICAgIEl0ICdlbWl0cyBub3RoaW5nIGZvciBlbXB0eSBpbnB1dCcgewogICAgICAgIEAoR2V0LUFjdGl2ZVBvcnQgLUVuZHBvaW50IEAoKSkgfCBTaG91bGQgLUhhdmVDb3VudCAwCiAgICB9CiAgICBJdCAnZW1pdHMgYW4gaW50ZWdlciBmb3Igb25lIGVuYWJsZWQgZW5kcG9pbnQnIHsKICAgICAgICAkYWN0dWFsID0gQChHZXQtQWN0aXZlUG9ydCAtRW5kcG9pbnQgQChbcHNjdXN0b21vYmplY3RdQHsgUG9ydCA9IDQ0MzsgRW5hYmxlZCA9ICR0cnVlIH0pKQogICAgICAgICRhY3R1YWwgfCBTaG91bGQgLUhhdmVDb3VudCAxCiAgICAgICAgJGFjdHVhbFswXSB8IFNob3VsZCAtQmUgNDQzCiAgICAgICAgJGFjdHVhbFswXSB8IFNob3VsZCAtQmVPZlR5cGUgKFtpbnRdKQogICAgfQogICAgSXQgJ2ZpbHRlcnMgZGlzYWJsZWQgZW5kcG9pbnRzIGFuZCByZW1vdmVzIGR1cGxpY2F0ZXMnIHsKICAgICAgICAkYWN0dWFsID0gQChHZXQtQWN0aXZlUG9ydCAtRW5kcG9pbnQgQCgKICAgICAgICAgICAgW3BzY3VzdG9tb2JqZWN0XUB7IFBvcnQgPSA0NDM7IEVuYWJsZWQgPSAkdHJ1ZSB9CiAgICAgICAgICAgIFtwc2N1c3RvbW9iamVjdF1AeyBQb3J0ID0gODA7IEVuYWJsZWQgPSAkdHJ1ZSB9CiAgICAgICAgICAgIFtwc2N1c3RvbW9iamVjdF1AeyBQb3J0ID0gMjI7IEVuYWJsZWQgPSAkZmFsc2UgfQogICAgICAgICAgICBbcHNjdXN0b21vYmplY3RdQHsgUG9ydCA9IDgwOyBFbmFibGVkID0gJHRydWUgfQogICAgICAgICkpCiAgICAgICAgJGFjdHVhbCB8IFNob3VsZCAtSGF2ZUNvdW50IDIKICAgICAgICAkYWN0dWFsWzBdIHwgU2hvdWxkIC1CZSA4MAogICAgICAgICRhY3R1YWxbMV0gfCBTaG91bGQgLUJlIDQ0MwogICAgICAgIGZvcmVhY2ggKCRwb3J0IGluICRhY3R1YWwpIHsgJHBvcnQgfCBTaG91bGQgLUJlT2ZUeXBlIChbaW50XSkgfQogICAgfQp9Cg== | base64 -d > /workspace/output/Subject.Tests.ps1",
+                'success': f"python3 /opt/pilot/codex_pilot_probe.py && printf %s {fixture} | base64 -d > /workspace/output/Subject.Tests.ps1",
                 'command-failure': "printf pilot-command-failure; exit 23",
                 'interruption': "printf pilot-command-started; sleep 120",
             }[scenario]

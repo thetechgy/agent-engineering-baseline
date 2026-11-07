@@ -688,3 +688,31 @@ preparation are tracked on [PR #121](https://github.com/thetechgy/agent-engineer
 The earlier descriptor mismatch remains unresolved. No replacement live allocation,
 credential retrieval, inference, judge, recurring execution, production change or
 merge is authorized. The old paid approval is not carried forward.
+
+
+### Review follow-up: remove the baked qualification answer
+
+[Review comment 4504139755](https://github.com/thetechgy/agent-engineering-baseline/pull/121#discussion_r4504139755)
+identified a real contamination path: the generic stub copied into both probe and
+live images embedded the exact 1,012-byte classic qualification suite, SHA-256
+`9e59688c16ac411adfbbdcf1098520b0afc644494229d92d51dea7a59a24b4e0`.
+The previous preparation proves its recorded Docker and descriptor observations;
+it does not establish a solution-free live image. No live agent attempt used it.
+
+The stub now has no embedded or default answer. The trusted host reads the existing
+qualification fixture only in probe mode and supplies its Base64 bytes at transient
+stub startup. A live run does not read or deliver that fixture. Probe/live image
+contexts remain byte-identical, and the complete descriptor/non-descriptor
+comparison remains strict. Pins, skills, legitimate task inputs, grading, isolation,
+accounting and historical outcomes are unchanged. The changed producer is enrolled
+in its runtime digest.
+
+The native-staging regression reproduces the leak before the fix, then checks both
+arms in live and probe modes for raw or Base64 fixture bytes and identical image
+contexts. The stub also rejects missing or malformed runtime payloads. Fresh hosted
+Docker qualification is required after this correction; superseded in-progress runs
+are cancelled with available evidence retained. The linked review thread and
+[PR #121](https://github.com/thetechgy/agent-engineering-baseline/pull/121) record the
+corrected commit, exact-head checks, authenticated artifacts and report reproduction.
+The historical descriptor mismatch remains unresolved, and no paid authorization is
+carried forward.

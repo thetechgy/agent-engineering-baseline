@@ -8,7 +8,7 @@ import shlex
 import tomllib
 
 from harbor.agents.installed.codex import Codex
-from codex_pilot_contract import PROFILE, configuration
+from codex_pilot_contract import PROFILE, ROOT, configuration
 
 BINARY = '/opt/codex/bin/codex'
 HOME = '/home/agent/.codex-pilot'
@@ -109,9 +109,14 @@ class PilotCodex(Codex):
         audit_path.parent.mkdir(exist_ok=True)
         audit_path.write_text(json.dumps(audit, indent=2) + '\n')
         if probe:
+            # Keep qualification answers on the trusted host, out of all images.
+            # Only the credential-free probe receives this transient payload.
+            from skill_evidence import read_bytes
+            fixture = ROOT / '.github/evals' / PROFILE['skill'] / 'support/qualification' / PROFILE['case'] / 'classic.Tests.ps1'
+            payload = base64.b64encode(read_bytes(fixture, limit=65536)).decode()
             # Server has no network forwarding and never authenticates to a provider.
             await self.exec_as_agent(environment, command=(
-                f'python3 /opt/pilot/codex_pilot_stub.py {logs}/probe.json {scenario} '
+                f'python3 /opt/pilot/codex_pilot_stub.py {logs}/probe.json {scenario} {shlex.quote(payload)} '
                 f'>{logs}/stub.log 2>&1 & echo $! >{HOME}/stub.pid'))
         command = (f'{BINARY} exec --strict-config --sandbox danger-full-access --skip-git-repo-check '
                    f'--cd /workspace --model {PROFILE["model"]} --json '
