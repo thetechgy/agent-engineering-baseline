@@ -177,7 +177,7 @@ def _main(*, candidate=False, artifact=None):
                 if current:
                     from qualify_evaluator_candidate import run_native
                     with (root / 'native-command.log').open('w') as log:
-                        code = run_native(command, env={**os.environ, 'PYTHON_DOTENV_DISABLED': '1'}, log=log, timeout=1200)
+                        code = run_native(command, env={**os.environ, 'PYTHON_DOTENV_DISABLED': '1'}, log=log, timeout=2400)
                     text = (root / 'native-command.log').read_text(errors='replace')[-32768:]
                 else:
                     result = subprocess.run(command, capture_output=True, text=True, timeout=1200,

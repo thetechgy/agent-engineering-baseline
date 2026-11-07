@@ -22,6 +22,11 @@ from harbor.models.trial.paths import TrialPaths
 from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks
 
 
+STARTUP_FAULTS = {"gh-001": "dead_broker", "gh-002": "foreign_socket_owner", "gh-003": "missing_identity",
+                  "gh-004": "changed_private_input", "gh-005": "timeout", "gh-006-changed-head": "cancellation",
+                  "gh-007": "missing_manifest"}
+
+
 def docker(*args, timeout=30):
     return subprocess.check_output(["docker", *args], text=True, timeout=timeout)
 
@@ -175,9 +180,7 @@ async def qualify(root, artifact, arm=None, shard=None):
                 raise RuntimeError("Native grader accepted fabricated receipt")
             if audit != await checked("sha256sum /opt/gh-eval/state/audit.jsonl"):
                 raise RuntimeError("Negative grading changed append-only audit")
-            fault = {"gh-001": "dead_broker", "gh-002": "foreign_socket_owner", "gh-003": "missing_identity",
-                     "gh-004": "changed_private_input", "gh-005": "timeout", "gh-006-changed-head": "cancellation",
-                     "gh-007": "missing_manifest"}.get(task.name)
+            fault = STARTUP_FAULTS.get(task.name)
             fault_result = None
             if fault:
                 if fault == "dead_broker":
@@ -262,6 +265,8 @@ async def qualify(root, artifact, arm=None, shard=None):
                     "selection": {"arm": arm, "shard": shard, "shards": 3 if shard else 1},
                     "runtime": {key: importlib.metadata.version(key) for key in ("skillevaluator", "harbor")},
                     "harness_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+                    "producer_revision": subprocess.check_output(["git", "-C", str(gh.ROOT), "rev-parse", "HEAD"], text=True).strip(),
+                    "workflow_run": os.environ.get("GITHUB_RUN_ID"), "workflow_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
                     "failure": failure, "setup_only": setup_only, "command_stages": command_stages,
                     "initialization": [json.loads(line) for line in paths.trial_dir.joinpath("gh-initialization.jsonl").read_text().splitlines()]
                         if paths.trial_dir.joinpath("gh-initialization.jsonl").exists() else []}, indent=2) + "\n")
@@ -304,6 +309,9 @@ def main(artifact, arm=None, shard=None):
         raise RuntimeError("Qualification forbids provider credentials")
     from aeb_gh_fixture.backend import require_runtime
     require_runtime()
+    if importlib.metadata.version('skillevaluator') == '0.8.0':
+        from evaluator_profiles import runtime, candidate_versions
+        runtime(candidate_versions(), owning=True)
     if docker("compose", "version", "--short").strip() != gh.reports.POLICY["docker_compose"]:
         raise RuntimeError("Incorrect Compose runtime")
     def interrupted(signum, frame):

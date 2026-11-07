@@ -208,8 +208,11 @@ def worker(output):
         'limits': ['synthetic collection and fixture replay', 'native container lifecycle unqualified', 'native backend execution not exercised by offline mode', 'no live agent or judge']})
 
 
-def native_cohorts(output):
+def native_cohorts(output, *, lifecycle=True):
     """Existing native harnesses, then the same public analyzer and renderer."""
+    initial = reports.read_json(output / 'result.json')
+    initial.update(success=False, offline_controls_success=True, native_qualification='partial')
+    reports.write_json(output / 'result.json', initial)
     from qualify_evaluator_candidate import native_compose_config, run_native
     native_compose_config(ROOT)
     environment = {'PATH': str(Path(sys.executable).parent) + os.pathsep + os.defpath,
@@ -222,6 +225,7 @@ def native_cohorts(output):
         'gh-lifecycle': "from gh_initializer_validation import main; main(sys.argv[2])",
         'gh-oracle': "from gh_oracle_validation import main; main(sys.argv[2])",
         'pester': "from pester_container_validation import main; main(candidate='current', artifact=sys.argv[2])"}
+    if not lifecycle: commands.pop('gh-lifecycle')
     reports.write_json(output / 'native-stages.json', {'status': 'starting', 'stages': stages})
     for suite, code in commands.items():
         destination = output / ('native-' + suite)
@@ -233,7 +237,7 @@ def native_cohorts(output):
         with log_path.open('w') as log:
             try:
                 code = run_native([sys.executable, '-I', '-B', '-c', launcher,
-                    str(ROOT / '.github/scripts'), str(destination)], env=environment, log=log, timeout=2400)
+                    str(ROOT / '.github/scripts'), str(destination)], env=environment, log=log, timeout=5400)
                 stages[suite] = {'status': 'complete' if code == 0 else 'infrastructure_error' if code == 124 else 'failed', 'returncode': code}
             except subprocess.TimeoutExpired:
                 stages[suite] = {'status': 'infrastructure_error', 'code': 'native_deadline'}
@@ -247,11 +251,15 @@ def native_cohorts(output):
         reports.write_json(output / 'native-stages.json', {'status': 'running', 'stages': stages})
     success = all(row['status'] == 'complete' for row in stages.values())
     reports.write_json(output / 'native-stages.json', {'status': 'passed' if success else 'partial', 'stages': stages})
-    if not success: raise RuntimeError('Native cohort qualification incomplete; bounded diagnostics retained')
     captured = analysis.capture_inputs([output / 'public'])
     records = list(captured.records.values())
+    admitted = {}
     for name, directory in (('gh', output / 'native-gh-oracle/native/reporting/public'),
                             ('powershell-pester-6', output / 'native-pester/reporting/public')):
+        if not directory.exists():
+            admitted[name] = {'status': 'unavailable', 'reason': 'native_public_evidence_missing'}
+            success = False
+            continue
         current = analysis.capture_inputs([directory])
         native = [row for row in current.records.values() if row['kind'] == 'behavioral']
         assert len(native) == 1 and native[0]['custom']['purpose'] == 'oracle_qualification'
@@ -259,22 +267,132 @@ def native_cohorts(output):
         assert len(native[0]['observations']) == (48 if name == 'gh' else 52)
         assert native[0]['availability']['status'] == 'incomplete' and not native[0]['metrics']
         assert all(o['score'] is None for o in native[0]['observations'])
+        admitted[name] = {'status': 'validated', 'observations': len(native[0]['observations'])}
         records.extend(native)
+    reports.write_json(output / 'native-stages.json', {'status': 'passed' if success else 'partial', 'stages': stages})
     render(records, output)
     value = reports.read_json(output / 'result.json')
-    value.update(native_qualification='passed', native_gh=48, native_pester=52, gh_lifecycle=48,
+    value.update(success=success, offline_controls_success=True,
+        native_qualification=('passed' if lifecycle else 'cohorts_complete') if success else 'partial', native_evidence=admitted,
+        scope='synthetic transport controls and executed native oracle fixtures',
         limits=['native deterministic fixtures only', 'no live CLI/provider or judge qualification', 'no skill benefit measurement'])
+    if success:
+        value.update(native_gh=48, native_pester=52)
+        if lifecycle: value['gh_lifecycle'] = 48
     reports.write_json(output / 'result.json', value)
+    if not success: raise RuntimeError('Native cohort qualification incomplete; bounded diagnostics retained')
+
+
+def complete_native_lifecycle(inputs, output):
+    """Join the existing six fixed shards; consume producer artifacts as data."""
+    profiles.runtime(profiles.candidate_versions(), owning=True)
+    assert inputs.is_absolute() and inputs.resolve() == inputs
+    assert output.is_absolute() and output.resolve() == output and not output.exists()
+    assert not output.is_relative_to(ROOT) and not output.is_relative_to(inputs) and not inputs.is_relative_to(output)
+    attempt = os.environ.get('GITHUB_RUN_ATTEMPT', '1')
+    assert attempt.isdecimal() and 0 < int(attempt) <= 100
+    base = inputs / ('candidate-cohort-report-attempt-' + attempt)
+    files = reports.regular_tree(inputs)
+    assert len(files) <= 10000 and sum(p.stat().st_size for p in files) <= 128 * 1024 * 1024
+    assert base.is_dir() and not output.exists()
+    output.mkdir(parents=True, mode=0o700)
+    for source in reports.regular_tree(base):
+        target = output / source.relative_to(base)
+        target.parent.mkdir(parents=True, exist_ok=True); target.write_bytes(source.read_bytes())
+    provisional = reports.read_json(output / 'result.json')
+    reports.write_json(output / 'result.json', dict(provisional, success=False, native_qualification='partial'))
+    metadata = reports.read_json(output / 'metadata.json')
+    assert metadata['producer_revision'] == evidence.git_revision(ROOT)
+    assert metadata['workflow_attempt'] == attempt and metadata['workflow_run'] == os.environ['GITHUB_RUN_ID']
+    assert metadata['versions'] == profiles.candidate_versions()
+    assert metadata['backend_sources'] == {p.name: evidence.digest_bytes(p.read_bytes())
+        for p in sorted((ROOT / '.github/evaluator-backends/aeb_gh_fixture').glob('*.py'))}
+    helpers = ('qualify_current_evaluator.py', 'gh_initializer_validation.py', 'gh_oracle_validation.py', 'pester_container_validation.py')
+    assert metadata['harnesses'] == {name: evidence.digest_bytes((ROOT / '.github/scripts' / name).read_bytes()) for name in helpers}
+    value = provisional
+    success = (value.get('success') is True and value.get('native_qualification') == 'cohorts_complete'
+               and value.get('native_gh') == 48 and value.get('native_pester') == 52)
+    from gh_initializer_validation import STARTUP_FAULTS
+    expected = {entry['id']: entry for entry in __import__('gh_evaluations').dataset(ROOT)}
+    rows = []; selections = []; missing = []
+    harness = hashlib.sha256((ROOT / '.github/scripts/gh_initializer_validation.py').read_bytes()).hexdigest()
+    skill = hashlib.sha256((ROOT / '.agents/skills/gh/SKILL.md').read_bytes()).hexdigest()
+    initializer = hashlib.sha256((ROOT / '.github/evaluator-backends/aeb_gh_fixture/initialize.py').read_bytes()).hexdigest()
+    for arm in ('with_skill', 'without_skill'):
+        for shard in (1, 2, 3):
+            name = f'candidate-gh-{arm}-{shard}-attempt-{attempt}'
+            path = inputs / name / 'native-gh.json'
+            if not path.exists():
+                missing.append(name); success = False; continue
+            native = reports.read_json(path)
+            assert native.get('runtime') == {'skillevaluator': profiles.CANDIDATE['version'], 'harbor': profiles.CANDIDATE['harbor']}
+            assert native.get('harness_sha256') == harness
+            assert native.get('producer_revision') == metadata['producer_revision']
+            assert native.get('workflow_attempt') == attempt and native.get('workflow_run') == metadata['workflow_run']
+            assert native.get('selection') == {'arm': arm, 'shard': shard, 'shards': 3}
+            cases = set(sorted(expected)[(shard - 1) * 8:shard * 8])
+            complete = native.get('success') is True and native.get('teardown') == {'status': 'complete'}
+            observed = native.get('completed', [])
+            if not complete or len(observed) != 8:
+                success = False
+            assert len({row['case'] for row in observed}) == len(observed)
+            for row in observed:
+                assert row['case'] in cases and row['arm'] == arm and row['inference'] is False
+                init = row['initialization']
+                assert init['status'] == 'ready' and init['initializer'] == initializer
+                assert init['broker']['uid'] == 0 and init['checksum'] == row['checksum']
+                metrics = row['metrics']
+                assert all(metrics['gh_' + k] == 1 for k in ('evidence','commands','task','recovery','authorization','efficiency'))
+                assert metrics['gh_gate'] == float(arm == 'with_skill' or expected[row['case']].get('expected_skill') is None)
+                if arm == 'with_skill' and expected[row['case']].get('expected_skill'):
+                    assert row['skill_read_sha256'] == skill
+                fault = row.get('startup_fault')
+                if row['case'] in STARTUP_FAULTS:
+                    assert fault and fault['control'] == STARTUP_FAULTS[row['case']]
+                    assert fault['blocked'] and fault['measurement'] == 'unscoreable' and fault['audit'] == 'unchanged'
+                    assert fault['initialization']['status'] == ('cancelled' if fault['control'] == 'cancellation' else 'infrastructure_error')
+                else:
+                    assert fault is None
+                if row.get('setup_only'):
+                    assert row['setup_only'] == {'installed_codex': '0.155.1', 'inference': False}
+                rows.append(row)
+            selections.append({'arm': arm, 'shard': shard, 'success': complete, 'completed': len(observed)})
+            target = output / 'native-gh-lifecycle-shards' / (arm + '-' + str(shard) + '.json')
+            target.parent.mkdir(parents=True, exist_ok=True); target.write_bytes(path.read_bytes())
+    identities = {(row['case'], row['arm']) for row in rows}
+    success = success and len(rows) == 48 and identities == {(case, arm) for case in expected for arm in ('with_skill', 'without_skill')}
+    reports.write_json(output / 'native-gh-lifecycle.json', {'success': success, 'expected': 48,
+        'completed': rows, 'missing_shards': missing, 'selections': selections, 'inference': False,
+        'runtime': {'skillevaluator': profiles.CANDIDATE['version'], 'harbor': profiles.CANDIDATE['harbor']},
+        'harness_sha256': harness, 'teardown': {'status': 'complete' if success else 'inconclusive'}})
+    value.update(success=success, native_qualification='passed' if success else 'partial', gh_lifecycle=len(rows))
+    captured = analysis.capture_inputs([output / 'public'])
+    saved = reports.read_json(output / 'analysis.json')
+    analysis.validate_analysis(saved, captured)
+    native_records = [r for r in captured.records.values() if r['kind'] == 'behavioral'
+                      and r.get('custom', {}).get('purpose') == 'oracle_qualification']
+    assert len(native_records) == 2
+    assert {(r['source']['skill_id'], r['run_id'], len(r['observations'])) for r in native_records} == {
+        ('gh', 'native-oracle', 48), ('powershell-pester-6', 'qualification', 52)}
+    assert all(r['custom']['agent'] == 'oracle' and r['policy']['producer_profile'] == profiles.CANDIDATE['id'] for r in native_records)
+    assert report.render_report(saved, captured) == (output / 'report.html').read_bytes()
+    reports.write_json(output / 'result.json', value)
+    if not success: raise RuntimeError('Native qualification incomplete; shard diagnostics retained')
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--native-artifacts', type=Path, help='Join same-run fixed gh shards with the collected oracle report')
+    parser.add_argument('--cohorts-only', action='store_true', help='Workflow runs gh lifecycle through its existing fixed shards')
     parser.add_argument('--native', action='store_true', help='Run complete credential-free native cohorts after offline controls')
     parser.add_argument('--worker', action='store_true', help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.worker:
         worker(args.output); return
+    if args.cohorts_only and not args.native: parser.error('--cohorts-only requires --native')
+    if args.native_artifacts:
+        complete_native_lifecycle(args.native_artifacts.absolute(), args.output.absolute()); return
     output = args.output.absolute()
     if output.resolve() != output or output.exists() or output.is_relative_to(ROOT):
         parser.error('Use a new persistent resolved output directory outside the checkout')
@@ -316,11 +434,12 @@ for guard in e.record_guards(public): guard()
     subprocess.run([legacy, '-I', '-B', '-c', historical_code, str(ROOT), str(output)], env=env, check=True, timeout=60)
     reports.write_json(output / 'metadata.json', {'versions': versions, 'source_tree_digest': p['source_tree_digest'],
         'producer_revision': evidence.git_revision(ROOT), 'simulated': True, 'inference': False,
+        'workflow_run': os.environ.get('GITHUB_RUN_ID'), 'workflow_attempt': os.environ.get('GITHUB_RUN_ATTEMPT'),
         'backend_sources': {p.name: evidence.digest_bytes(p.read_bytes()) for p in sorted((ROOT / '.github/evaluator-backends/aeb_gh_fixture').glob('*.py'))},
         'harnesses': {p.name: evidence.digest_bytes(p.read_bytes()) for p in (Path(__file__), ROOT / '.github/scripts/gh_initializer_validation.py', ROOT / '.github/scripts/gh_oracle_validation.py', ROOT / '.github/scripts/pester_container_validation.py')}})
     with (output / 'qualification.log').open('w') as log:
         result = subprocess.run([sys.executable, '-I', '-B', str(Path(__file__).resolve()), '--worker', '--output', str(output)],
-                                env=env, stdout=log, stderr=subprocess.STDOUT, timeout=240)
+                                env=env, stdout=log, stderr=subprocess.STDOUT, timeout=360)
     diagnostic = (output / 'qualification.log').read_text(errors='replace')[-512 * 1024:]
     for path, replacement in ((ROOT, '<checkout>'), (source, '<candidate>'), (output, '<evidence>')):
         diagnostic = diagnostic.replace(str(path), replacement)
@@ -329,7 +448,7 @@ for guard in e.record_guards(public): guard()
         print(diagnostic[-12000:], file=sys.stderr)
         raise SystemExit(result.returncode)
     if args.native:
-        native_cohorts(output)
+        native_cohorts(output, lifecycle=not args.cohorts_only)
     print((output / 'result.json').read_text())
 
 

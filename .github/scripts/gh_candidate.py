@@ -40,7 +40,7 @@ def grader_source(source, *, fixture=False):
     sidecar = {'entry_id': entry['id'], 'has_skill': entry['has_skill'],
         'evaluation_status': 'complete' if measured else 'failed',
         'custom_metrics': metrics if measured else {},
-        'custom_details': {'outcome': {'classification': status, 'code': 'evaluated' if measured else status}},
+        'details': {'outcome': {'classification': status, 'code': 'evaluated' if measured else status}},
         'raw_custom_metrics': metrics, 'overall': float(status == 'passed')}
     if not measured: sidecar['evaluation_errors'] = {'evidence': status}
     target.with_name('skill_evaluator_reward.json').write_text(json.dumps(sidecar))

@@ -638,6 +638,39 @@ def capture_benchmark_custom(workspace, root, name):
     write_json(root / evidence.CUSTOM_CAPTURE, capture)
 
 
+def preserve_gh_capture_hashes(original, redacted, workspace):
+    """Restore typed staging digests, never secret-looking keys or free text."""
+    import skill_evidence as evidence
+    evidence.validate_custom_capture(original, 'gh', workspace)
+    for source, target in zip(original['tasks'], redacted['tasks']):
+        require((source['case_id'], source['arm']) == (target['case_id'], target['arm']), 'Capture identity changed during redaction')
+        for member, value in source['members'].items():
+            evidence.sha(value)
+            # Upstream treats secret_redaction.py as a secret-bearing key.
+            # Its validated SHA256 is publication-safe; a dropped key stays dropped.
+            if target['members'].get(member) == '<redacted>':
+                target['members'][member] = value
+    return redacted
+
+
+def preserve_registered_case_keys(original, redacted, case_ids):
+    """Case identifiers name reviewed tasks; redact each row's contents normally."""
+    from skillevaluator.utils.redaction import redact_sensitive_data
+    if isinstance(original, dict) and isinstance(redacted, dict):
+        for key, value in original.items():
+            target = redacted.get(key)
+            if key == 'cases' and isinstance(value, dict) and set(value) <= case_ids and isinstance(target, dict):
+                for case, row in value.items():
+                    if target.get(case) == '<redacted>' and isinstance(row, dict):
+                        target[case] = redact_sensitive_data(row)
+            else:
+                preserve_registered_case_keys(value, target, case_ids)
+    elif isinstance(original, list) and isinstance(redacted, list):
+        for source, target in zip(original, redacted):
+            preserve_registered_case_keys(source, target, case_ids)
+    return redacted
+
+
 def benchmark_artifacts(workspace, root, name, destination):
     """Stage only native report contracts, using upstream credential redaction."""
     from skillevaluator.utils.redaction import redact_sensitive_data, redact_sensitive_text
@@ -656,6 +689,13 @@ def benchmark_artifacts(workspace, root, name, destination):
         excluded_dirs={"_harbor-jobs", "_harbor-tasks"},
         excluded_links={Path("results") / name / "latest"},
     )
+    registered_cases = set()
+    if name == 'gh' and (root / 'custom-metric-capture.json').exists():
+        capture = read_json(root / 'custom-metric-capture.json')
+        if capture.get('purpose') == 'oracle_qualification' and capture.get('producer', {}).get('skillevaluator') == '0.8.0':
+            import skill_evidence as evidence
+            evidence.validate_custom_capture(capture, name, workspace)
+            registered_cases = set(capture['case_ids'])
     metadata = {"versions.json", "dataset-validation.json", "provenance.json",
                 "docker-version.json", "docker-images.jsonl", "custom-metric-capture.json"}
     if name == "gh":
@@ -703,10 +743,20 @@ def benchmark_artifacts(workspace, root, name, destination):
             value = read_json(source, limit=64 * 1024 * 1024)
             if benchmark_options(name)['diagnostic_only']:
                 require('PESTER_VERIFIER_ONLY_' not in json.dumps(value), 'Protected verifier input in diagnostic artifact')
+            original = value
             value = redact_sensitive_data(value)
+            capture = (name == 'gh' and relative.as_posix() == 'custom-metric-capture.json'
+                       and original.get('purpose') == 'oracle_qualification' and original.get('producer', {}).get('skillevaluator') == '0.8.0')
+            if capture:
+                value = preserve_gh_capture_hashes(original, value, workspace)
+            if registered_cases:
+                value = preserve_registered_case_keys(original, value, registered_cases)
             if name == "gh":
                 from gh_evaluations import redact_publication
                 value = redact_publication(value)
+            if capture:
+                import skill_evidence as evidence
+                evidence.validate_custom_capture(value, name, workspace)
             write_json(destination / relative, value)
         else:
             if name == "gh":

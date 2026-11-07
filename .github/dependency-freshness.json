@@ -34,7 +34,7 @@
       "hold": "Production and historical replay remain 0.3.0. Draft PR #119 installs the opt-in 0.8.0 replacement; see .github/evals/EVALUATION-PLAN.md and evaluator-candidate.json. Harbor 0.24.0 and LiteLLM <1.94.0.dev0 are upstream constraints, not claims that all dependencies are current.",
       "group": "evaluation-runtime compatibility group",
       "tag_prefix": "v",
-      "validation": "Keep production freshness visible while qualifying the isolated replacement. Candidate locks, producer/scoring identities, fixture collection and consolidated reporting are versioned separately. Next independent group: SkillSpector and scanner owning environments through existing update-baseline and dependency-freshness automation; no paid benchmark prerequisite.",
+      "validation": "Keep production freshness visible while qualifying the frozen replacement through the existing native cohorts and consolidated report. Fixture compatibility does not qualify live CLI/provider compatibility, judging accuracy or skill benefit. Bandit and pip-audit remain evaluator-owned gaps; Harbor 0.24.0, Python <3.15 and LiteLLM <1.94.0.dev0 remain upstream constraints. See .github/evals/EVALUATION-PLAN.md.",
       "modified": true,
       "package": {
         "ecosystem": "pip",
@@ -174,7 +174,7 @@
       "hold": null,
       "group": null,
       "tag_prefix": "v",
-      "validation": "Regenerate the reviewed hash lock with the pinned compiler; inspect resolved changes and run the affected scanner/lint contracts.",
+      "validation": "Regenerate the reviewed hash lock with the pinned compiler; inspect resolved changes and run the affected scanner/lint contracts. The exact upstream MCP 1.29.0 constraint remains an unresolved dependency gap; do not override it silently.",
       "package": {
         "ecosystem": "pip",
         "name": "semgrep"

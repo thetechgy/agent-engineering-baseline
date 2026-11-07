@@ -1,6 +1,6 @@
 # Issue #95 dependency modernization checkpoint
 
-This is the authoritative active checkpoint for the upgrade on draft [PR #119](https://github.com/thetechgy/agent-engineering-baseline/pull/119).
+This is the authoritative active checkpoint for the upgrade on [PR #119](https://github.com/thetechgy/agent-engineering-baseline/pull/119).
 The direct-Harbor assessment at `389f7222da8d425b95dad12003e1e6895500a397`
 is historical evidence, not the implementation base. Production remains unchanged.
 
@@ -73,8 +73,12 @@ fixtures honor `TMPDIR`. The new `current-evaluator.yml` workflow reproduces thi
 without model credentials, inference, judges, scheduling or Pages.
 
 The integrated qualification extends that entry point with `--native`. It runs
-all 48 existing gh startup/lifecycle cases, then 48 real Harbor oracle gh trials
-and the existing 52 native Pester oracle trials. The gh bridge is necessary because
+all 48 existing gh startup/lifecycle cases through the existing six fixed shards,
+plus 48 real Harbor oracle gh trials and the existing 52 native Pester oracle trials.
+Observed hosted image builds took about 118 seconds per case, making the original
+sequential whole-cohort deadline inadequate. The fixed shard recipe is reused with
+two concurrent lifecycle jobs; the oracle cohorts retain their native concurrency.
+Only same-run, same-attempt, exact-revision evidence can complete the final join. The gh bridge is necessary because
 the lifecycle harness alone does not produce Harbor trial records for collection.
 It uses the existing oracle, collector, public evidence writer, analyzer and renderer.
 The fixture-only `gh-native-oracle-v1` custom profile keeps the existing gate and

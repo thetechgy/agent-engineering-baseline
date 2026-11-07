@@ -21,10 +21,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  report:
-    name: Candidate native cohorts and consolidated report (no inference)
+  cohorts:
+    name: Candidate native oracle cohorts (no inference)
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 180
     env:
       PYTHONDONTWRITEBYTECODE: '1'
       PYTHON_DOTENV_DISABLED: '1'
@@ -58,12 +58,12 @@ jobs:
       - name: Install verified Compose for credential-free native execution
         run: bash .github/scripts/setup-compose.sh
       - name: Qualify collection, interpretation and reporting without inference
-        run: '"$SKILL_CURRENT_PYTHON" -B .github/scripts/qualify_current_evaluator.py --output "$RUNNER_TEMP/current-report" --native'
+        run: '"$SKILL_CURRENT_PYTHON" -B .github/scripts/qualify_current_evaluator.py --output "$RUNNER_TEMP/current-report" --native --cohorts-only'
       - name: Retain consolidated fixture report and sanitized diagnostics
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: candidate-offline-report
+          name: candidate-cohort-report-attempt-${{ github.run_attempt }}
           path: |
             ${{ runner.temp }}/current-report/report.html
             ${{ runner.temp }}/current-report/public/
@@ -85,3 +85,81 @@ jobs:
       - name: Remove task-owned Compose plugin
         if: always()
         run: bash .github/scripts/setup-compose.sh cleanup
+
+  native-gh:
+    name: Candidate gh lifecycle (${{ matrix.arm }}, ${{ matrix.shard }}/3, no inference)
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        arm: [with_skill, without_skill]
+        shard: [1, 2, 3]
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHON_DOTENV_DISABLED: '1'
+      LITELLM_LOCAL_MODEL_COST_MAP: 'True'
+      GH_ARM: ${{ matrix.arm }}
+      GH_SHARD: ${{ matrix.shard }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: '0.13.7'
+          enable-cache: false
+      - name: Install the frozen candidate and verified Compose
+        run: |
+          bash .github/scripts/setup-skillevaluator.sh candidate-current
+          bash .github/scripts/setup-compose.sh
+      - name: Run the existing fixed gh lifecycle shard
+        run: |
+          "$SKILL_CURRENT_PYTHON" -I -B -c 'import os,sys; sys.path.insert(0,".github/scripts"); from gh_initializer_validation import main; main(os.environ["RUNNER_TEMP"]+"/native-gh.json",os.environ["GH_ARM"],int(os.environ["GH_SHARD"]))'
+      - name: Retain bounded native shard evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: candidate-gh-${{ matrix.arm }}-${{ matrix.shard }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/native-gh.json
+          retention-days: 30
+          if-no-files-found: error
+      - name: Remove task-owned Compose plugin
+        if: always()
+        run: bash .github/scripts/setup-compose.sh cleanup
+
+  report:
+    name: Candidate native cohorts and consolidated report (no inference)
+    needs: [cohorts, native-gh]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHON_DOTENV_DISABLED: '1'
+      LITELLM_LOCAL_MODEL_COST_MAP: 'True'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: '0.13.7'
+          enable-cache: false
+      - name: Install the frozen report owner
+        run: bash .github/scripts/setup-skillevaluator.sh candidate-current
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: candidate-*-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/native-inputs
+      - name: Verify complete native evidence and reproduce the canonical report
+        run: '"$SKILL_CURRENT_PYTHON" -B .github/scripts/qualify_current_evaluator.py --native-artifacts "$RUNNER_TEMP/native-inputs" --output "$RUNNER_TEMP/complete-native-report"'
+      - name: Retain the consolidated report and complete bounded evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: candidate-offline-report-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/complete-native-report/
+          retention-days: 30
+          if-no-files-found: error

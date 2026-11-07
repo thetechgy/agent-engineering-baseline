@@ -3544,6 +3544,8 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None):
     require(capture['authored_digest'] == profile['dataset_digest'] == digest_bytes(read_bytes(workspace / '.github/evals' / name / 'evals/evals.json')),
             'Authored dataset drift')
     producer = profiles.by_revision(capture['evaluator_revision'])
+    if profile['id'] == 'gh-native-oracle-v1':
+        require(producer is profiles.CANDIDATE, 'Native gh oracle requires the frozen candidate')
     if producer is profiles.CANDIDATE:
         require(capture['producer'] == profiles.candidate_versions(), 'Contradictory custom producer identity')
         profiles.runtime(capture['producer'], owning=True)
@@ -3729,6 +3731,10 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
             timeout_multiplier=capture['execution_policy']['timeout_multiplier'], baseline=True, stop_on_pass=False,
             environment=capture['execution_policy']['environment'], workspace_mode='isolated', task_source='native_harbor',
             model=config.get('provider', {}).get('model'), provider=config.get('provider', {}).get('name'))
+        if profile['id'] == 'gh-native-oracle-v1':
+            gh_policy = reports.benchmark_policy('gh')
+            fields.update({key: gh_policy[key] for key in ('workspace_mode', 'upstream_revision', 'competing_revision',
+                'authorization_policy', 'fixture_boundary', 'task_build')})
         policy = make_policy(fields,
             ('sha256:' + profiles.CANDIDATE['patch_sha256'] if capture['evaluator_revision'] == profiles.CANDIDATE['revision'] else
              digest_bytes(read_bytes(workspace / reports.PATCH))), 'custom-only',
@@ -3828,7 +3834,7 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
                         'Custom-only trial contains standard judge metrics')
             if matched is not None and matched[1].get('score') is not None:
                 require(matched[1]['score'] == raw.get('overall'), 'Custom native attempt score mismatch')
-            detail = (reward or {}).get('details' if profile['id'] == 'pester-pilot-v3' else 'custom_details', {}).get('outcome', {})
+            detail = (reward or {}).get('details' if profile['id'] in ('pester-pilot-v3', 'gh-native-oracle-v1') else 'custom_details', {}).get('outcome', {})
             outcome = detail.get('classification', 'unknown') if profile['grading'] == 'custom_only' else (
                 'failed' if native_trial_failed(trial, reward) else 'passed' if (reward or {}).get('custom_metrics', {}).get('gh_gate') == 1 else 'failed')
             if profile['grading'] == 'default_plus_custom' and native_trial_failed(trial, reward): outcome = 'unknown'
@@ -3908,12 +3914,15 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
             limitations.add('coverage_missing')
         if native['execution_status'] != 'succeeded': limitations.add('execution_incomplete')
         if not standard:
-            arms.append({'name': arm, 'condition': condition(arm == 'with_skill', 'runtime_recorded', 'isolated',
+            competing = ([source('github-actions-hardening', 'upstream', 'github/awesome-copilot',
+                policy['fields']['competing_revision'], 'skills/github-actions-hardening')] if profile['id'] == 'gh-native-oracle-v1' else [])
+            arms.append({'name': arm, 'condition': condition(arm == 'with_skill', 'runtime_recorded', policy['fields']['workspace_mode'], competing,
                 instructions=identity([{key: value for key, value in row.items() if key in ('case_id', 'instruction_digest')}
                     for row in custom_staged_inputs(capture['tasks'], capture['purpose'])]),
                 build=profile['runtime_digest'], fixture=profile['fixture_digest'],
                 execution={'environment': capture['execution_policy']['environment'], 'base_image_mode': 'recorded_staging', 'task_source': 'native_harbor',
-                           'authorization_policy': None, 'fixture_boundary': 'separate-verifier-v1'}),
+                           'authorization_policy': policy['fields']['authorization_policy'],
+                           'fixture_boundary': policy['fields']['fixture_boundary'] if profile['id'] == 'gh-native-oracle-v1' else 'separate-verifier-v1'}),
                 'coverage': {'expected_cases': len(cases), 'expected_attempts': native['expected_attempts'],
                     'recorded_attempts': recorded_count, 'scored_attempts': native_scored,
                     'unscored_attempts': recorded_count - native_scored,
@@ -4018,6 +4027,13 @@ def validate_custom_evidence(data, *, public=False, _observed_at=None):
     optional(custom['native_metric_set'], lambda v: enum(v, ('custom-only', 'skill-evaluator-default-v2')))
     if profile['grading'] == 'custom_only': require(data['policy']['metric_set'] == 'custom-only', 'Incorrect custom scoring policy')
     require(custom['agent'] == ('oracle' if custom['purpose'] == 'oracle_qualification' else 'codex'), 'Custom agent mismatch')
+    if profile['id'] == 'gh-native-oracle-v1':
+        require(custom['purpose'] == 'oracle_qualification' and custom['agent'] == 'oracle'
+                and data['policy'].get('producer_profile') == profiles.CANDIDATE['id']
+                and data['policy']['fields']['environment'] == 'aeb-gh-fixture', 'Native gh oracle profile mismatch')
+        gh_policy = reports.benchmark_policy('gh')
+        require(all(data['policy']['fields'][key] == gh_policy[key] for key in ('workspace_mode', 'upstream_revision',
+                'competing_revision', 'authorization_policy', 'fixture_boundary', 'task_build')), 'Native gh staging policy mismatch')
     require(data['policy']['fields']['grading'] == profile['grading'], 'Custom grading policy mismatch')
     sha(custom['capture_digest']); sha(custom['capture_reference'])
     for key in ('grader_digest', 'fixture_digest', 'runtime_digest'):
@@ -4122,9 +4138,12 @@ def validate_custom_evidence(data, *, public=False, _observed_at=None):
             if 'negative_control_correct' in vals:
                 require(detail['outcome'] == ('passed' if vals['negative_control_correct'] else 'failed'), 'Control public contradiction')
             if 'gh_gate' in vals:
-                require(vals['gh_gate'] == float(all(v == 1 for k, v in vals.items() if k != 'gh_gate'))
-                        and vals['gh_gate'] == obs['deterministic_gate']
-                        and all(vals['gh_' + key] == obs['deterministic_scores'][key] for key in GATE_FIELDS), 'Custom gh gate drift')
+                require(vals['gh_gate'] == float(all(v == 1 for k, v in vals.items() if k != 'gh_gate')), 'Custom gh gate drift')
+                if profile['grading'] == 'custom_only':
+                    require(detail['outcome'] == ('passed' if vals['gh_gate'] else 'failed'), 'Custom gh outcome drift')
+                else:
+                    require(vals['gh_gate'] == obs['deterministic_gate']
+                            and all(vals['gh_' + key] == obs['deterministic_scores'][key] for key in GATE_FIELDS), 'Custom gh gate drift')
         closed(detail['usage'], ('n_input_tokens', 'n_cache_tokens', 'n_output_tokens', 'agent_execution_seconds', 'verifier_seconds'))
         for key, value in detail['usage'].items():
             if key.startswith('n_'): optional(value, lambda v: count(v, 10**12))

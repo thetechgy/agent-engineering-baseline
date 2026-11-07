@@ -116,7 +116,7 @@ def main(artifact):
                 from qualify_evaluator_candidate import run_native
                 with (root / 'native-command.log').open('w') as log:
                     code = run_native(command, env={**os.environ, 'AEB_GH_MANIFEST': str(manifest),
-                        'PYTHON_DOTENV_DISABLED': '1'}, log=log, timeout=1200)
+                        'PYTHON_DOTENV_DISABLED': '1'}, log=log, timeout=2400)
                 event.update(status='complete' if code == 0 else 'infrastructure_error' if code == 124 else 'failed',
                     returncode=code, elapsed_sec=round(time.monotonic() - started, 3))
                 reports.write_json(artifact / 'command-stages.json', stages)
@@ -147,9 +147,10 @@ def main(artifact):
                 if len(paths) != 24: raise RuntimeError('Incomplete collected gh arm')
                 for path in paths:
                     reward = reports.read_json(path); case = reward['entry_id']; metrics = reward.get('custom_metrics', {})
-                    status = reward.get('custom_details', {}).get('outcome', {}).get('classification')
+                    status = reward.get('details', {}).get('outcome', {}).get('classification')
                     if case in ('gh-002', 'gh-003'):
-                        if status not in ('unsupported', 'unknown') or metrics or reward.get('evaluation_status') != 'failed':
+                        expected_status = 'unsupported' if case == 'gh-002' else 'unknown'
+                        if status != expected_status or metrics or reward.get('evaluation_status') != 'failed':
                             raise RuntimeError('Missing/unsupported evidence acquired a score')
                     elif case == 'gh-001':
                         if metrics.get('gh_task') != 0: raise RuntimeError('Broken gh work passed')
