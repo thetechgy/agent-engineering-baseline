@@ -373,3 +373,13 @@ Local Pester validation passed 24 checks and reproduced one worker-startup exit
 separate. The initial full-validation failure was a checkpoint Markdown blank-line
 defect, corrected prospectively. Superseded validation/native runs were cancelled
 for the follow-up revision; they remain inconclusive.
+
+The next preparation run at `e5c4935` also retained the sandbox failure. Its
+independent grading phase stopped before launch because Docker had populated the
+operator Compose configuration after the probe. The workflow now reacquires a
+fresh hash-verified Compose configuration at that phase boundary, using the
+existing setup component. This preserves its strict admission checks.
+Producer/artifact/verifier submission receipts and fixed admission reasons are
+retained before normalization; a report error cannot remove native grading records.
+No compatible existing runner was identified by the operator. The paid gate stays
+closed; a sandbox-compatible executor is the recommended next prerequisite.
