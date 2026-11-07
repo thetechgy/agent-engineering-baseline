@@ -1,6 +1,8 @@
 # Issue #95 dependency modernization checkpoint
 
-This is the authoritative active checkpoint for the upgrade on [PR #119](https://github.com/thetechgy/agent-engineering-baseline/pull/119).
+This is the authoritative active checkpoint. The evaluator upgrade is merged through
+[PR #119](https://github.com/thetechgy/agent-engineering-baseline/pull/119); the next
+milestone is the opt-in live CLI compatibility pilot below.
 The direct-Harbor assessment at `389f7222da8d425b95dad12003e1e6895500a397`
 is historical evidence, not the implementation base. Production remains unchanged.
 
@@ -238,7 +240,180 @@ reports: findings survive while repository coverage remains incomplete.
 [Compatibility evidence](https://github.com/thetechgy/agent-engineering-baseline/blob/chore/95-scanner-modernization/.github/evals/SCANNER-MODERNIZATION-95.md#retained-adapter-compatibility-correction)
 records the before/after scans and reporting controls.
 
-The next action is to define and obtain separate authorization for a bounded live
-CLI/provider compatibility pilot before collecting judging or skill-benefit evidence.
+The next milestone is the bounded live CLI/provider compatibility pilot below.
+Judging and general skill-benefit evidence remain separate later work.
 Other dependencies remain in the existing freshness inventory; this scanner group
 does not qualify evaluator adoption, behavioral effectiveness or skill benefit.
+
+## Live CLI compatibility pilot
+
+Preparation started November 7, 2026 from verified main `07e3ea5bb19818af61582062f47df7996f0218f9`.
+This milestone uses the qualified 0.8.0 candidate and Harbor 0.24.0, without
+changing production, recurring scheduling, Pages, skills or historical results.
+The direct-Harbor trial remains historical. This section is the single active plan.
+
+The existing `pester-001` task is suitable: its small executable contract has a
+reviewed reference, two seeded mutants and positive/weak controls. The frozen
+prompt asks for `output/Subject.Tests.ps1`; it does not direct skill reading.
+The pilot selects only that case and schedules one attempt per arm. Both clean
+workspaces use the isolated local-skill profile. Pinned APM 0.35.0 deploys the
+current skill and all its supporting files; the native registration and staged
+bytes are compared with that deployment. The absent arm removes only that target
+skill. Graders, reference answers, mutants and oracle solutions remain outside
+the live agent environment. Existing contamination and verifier isolation checks
+remain enforced. The agent has two CPUs, 2048 MiB, 600 seconds, workspace-write
+sandboxing, no command network access, no MCP, no web search and no subagents.
+The evaluator's reviewed secure Docker and separate offline verifier remain in use.
+
+[The frozen runtime](codex-pilot.json) selects official stable Codex **0.167.0**,
+the latest stable release when preparation began. The complete official package
+is necessary for its Code Mode host and execution/sandbox helpers; the archive,
+main executable and helper hashes are independently retained. The released source
+is `086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a`. GPT-6.1 Sol uses
+`gpt-6.1-sol`, High reasoning, the official OpenAI Responses endpoint and standard
+service tier. [Official model documentation](https://developers.openai.com/api/docs/models/gpt-6.1-sol)
+and [configuration documentation](https://developers.openai.com/codex/config-reference)
+were checked against that released implementation. Responses Lite embeds tool
+definitions in input items. Explicit Code Mode/host configuration and the complete
+package are pilot-specific compatibility changes; the CLI still labels Code Mode
+under development. The qualified setup-only 0.155.1 profile is unchanged.
+
+The pilot adapter retains the released exec JSON protocol's actual command events
+and cumulative usage. Harbor 0.24.0's older session-file converter is not treated
+as qualification of the new durable thread store. Missing usage stays unknown.
+File-access attempts alone do not prove activation or instruction following.
+
+The prospective `pester-cli-pilot-v1` contract admits classic Boolean assertions
+`Should -BeTrue/-BeFalse`, alongside the existing standalone forms, and reports
+fixed, specific admission reasons. Template expressions, dynamic invocation,
+error-suppression parameters and other prohibited operations remain rejected.
+The original runner, fixture contract and active `pester-pilot-v3` profile remain
+unchanged. Real admission controls reproduce Boolean rejection before the change
+and admission afterward; template and prohibited-parameter controls retain rejection.
+Seven native fixture controls per arm cover known-good, deliberately weak,
+missing-output, Boolean, template, parameter and assertion-failure outcomes through
+the candidate collector and existing consolidated report. They are labeled
+credential-free oracle controls, independently of the live Codex records.
+
+`codex-pilot.yml` prepares without any model credential. It builds the complete
+images, installs and runs the real CLI, verifies the actual post-upload config,
+prompt hash, working directory, output and model/provider request, exercises a
+stub-supplied sandboxed command, then receives a loopback-only refusal. This is
+not provider authentication or inference. Both arm probes and the grading controls
+must pass before the protected job becomes eligible. Native task checksums are
+checked across launch; exact safe submissions and hashes, specific reasons,
+sanitized command-stage diagnostics, command events, usage and cleanup are retained.
+The usual public evidence, saved analysis and consolidated HTML remain the report.
+No model judge, full dataset, production evaluator or history publisher is invoked.
+
+### Proposed allocation and execution gate
+
+Status: implementation and credential-free preparation in progress; **no paid
+approval requested or inference authorized yet**. Exact-revision CI and complete
+hosted preparation must pass before requesting the one concrete approval.
+
+Propose **$10 incremental allocation**, independent of previous unknown spending,
+for at most **two agent attempts**, one per arm, with no automatic replacements.
+Expected combined usage is roughly 300,000 input and 20,000 output tokens:
+about **$0.80** at $2/M uncached input, $0.10/M cached input and $10/M output.
+This is an estimate; High reasoning and repeated context can vary substantially.
+The pilot sets no supplemental rollout-token limit. Released 0.167.0 semantics
+charge backend budget units when present, otherwise weighted noncached input and
+output after responses; they are not a guaranteed dollar cap and omit cached cost.
+
+Each attempt has the resource/time limits above. Harbor replacement retries and
+CLI HTTP/stream retries are disabled. After the first arm, unavailable reported
+usage or a cumulative estimate of $5 or more stops the remaining launch. An
+infrastructure failure, changed input identity, safety/isolation failure or
+incomplete cleanup also stops execution; a genuine task-quality failure does not.
+An unlaunched arm is recorded explicitly. No skill, task or grader changes occur
+between live arms. Original outcomes survive later retrospective regrading.
+
+These controls bound attempts and time and check reported spending between arms.
+They do **not** guarantee a dollar cap: an in-flight request can overshoot, cached
+usage has a different rate, failed requests may lack usage, and invoice/account
+billing visibility is incomplete. The protected `skill-benchmark` environment
+remains mandatory. Only the final live step receives its existing `OPENAI_API_KEY`.
+The exact action after explicit approval will be a first-attempt dispatch of
+`codex-pilot.yml` at the reviewed feature commit with allocation
+`pilot-<exact commit>-usd10`. Preparation-only dispatch leaves allocation empty.
+The approval request will name that commit and authenticated preparation artifacts.
+
+Compatibility success requires actual CLI/provider execution and usable grading
+and reporting, with each arm's execution, task correctness, mutation detection,
+authorization, access evidence and usage reported separately. Positive skill
+advantage is not required. One matched pair cannot establish general effectiveness.
+Production promotion remains out of scope.
+
+### First hosted preparation observation
+
+[Run 42387012263](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42387012263)
+at `3069447` built both complete images and verified both uploaded configurations,
+the frozen prompt, model/High request, skill presence/absence and cleanup. Both
+stub-supplied shell calls failed before execution: Bubblewrap could not create a
+namespace under the existing Docker policy. This is a preparation failure, not
+provider or skill-quality evidence. The authenticated retained artifact
+`codex-pilot-preparation-1` has archive SHA-256
+`6284f4dbdce4660ebc5beaddfc2cfed05c35dbebbf5ce9849340457722bae3f4`.
+No key or inference was involved.
+
+[Official sandbox guidance](https://learn.chatgpt.com/docs/permissions)
+confirms that hosts blocking the required Bubblewrap operations cannot run these
+policies; legacy Landlock cannot provide all required isolation. The pilot does
+not disable the CLI sandbox, grant capabilities, relax seccomp/AppArmor or select
+a weaker backend. Readiness remains blocked until an existing compatible executor
+can be used within the authorized protections. Independent native grading and
+reporting controls continue even when the CLI probe fails; the failed preparation
+still prevents the protected live job from launching. No paid approval is requested
+while this prerequisite is unresolved.
+
+The retained reporting-runtime regressions passed all 28 custom-metric checks.
+Local Pester validation passed 24 checks and reproduced one worker-startup exit
+137 under resource limits on unchanged main. Hosted runtime evidence remains
+separate. The initial full-validation failure was a checkpoint Markdown blank-line
+defect, corrected prospectively. Superseded validation/native runs were cancelled
+for the follow-up revision; they remain inconclusive.
+
+The next preparation run at `e5c4935` also retained the sandbox failure. Its
+independent grading phase stopped before launch because Docker had populated the
+operator Compose configuration after the probe. The workflow now reacquires a
+fresh hash-verified Compose configuration at that phase boundary, using the
+existing setup component. This preserves its strict admission checks.
+Producer/artifact/verifier submission receipts and fixed admission reasons are
+retained before normalization; a report error cannot remove native grading records.
+No compatible existing runner was identified by the operator. The paid gate stays
+closed; a sandbox-compatible executor is the recommended next prerequisite.
+
+### Native control and report verification
+
+[Run 42388456615](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42388456615)
+at `7296677` completed all fourteen native grading controls with the expected
+four passed, four failed, two invalid and four unsupported outcomes. Both native
+arm commands returned zero; this does not turn the negative outcomes into passes.
+The twelve actual submissions retain matching producer/artifact/verifier hashes;
+the two missing-output controls retain no invented submission. Both cleanup audits
+completed. Boolean and classic suites pass the reference and detect both mutants;
+the weak suite passes the reference but detects neither. Template and prohibited
+parameter controls retain `test_name_template` and `command_parameter`; missing
+output retains `artifact`. Oracle fixture records remain separate from live Codex
+observations, with no provider inference or judging.
+
+The authenticated artifact is
+[codex-pilot-preparation-1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42388456615/artifacts/13580463970),
+archive SHA-256 `5c0a2b17f5c5e1da445ef66145de76f41e8cbfc456000e7f0b861aebf1e2a692`.
+Its final renderer failed closed because output overlapped the saved-analysis input
+parent. Original native records, public evidence, analysis, submissions and cleanup
+survived. The output is now a sibling of a dedicated analysis directory. Recovery
+rendered the authenticated public records through the existing CLI without
+regrading or changing original outcomes. Visual review also caught inherited
+synthetic-only labels: the prospective pilot profile now identifies native
+controls or live observations and measured custom outcomes truthfully. Judged
+scores remain unavailable. The original v4 consolidated report still reproduces
+byte-for-byte with SHA-256
+`0e9c52d0cd43f9926b83fbce021ac6a218df847d548ce4d8c4c370225f244563`.
+
+The final workflow rerun must complete its independent grading/report phase.
+Its CLI readiness probe remains expected to fail at the unchanged Bubblewrap
+namespace boundary. Required final-revision checks and their terminal outcomes
+are tracked in the draft PR. No paid approval is requested while that prerequisite
+is unresolved; both paid arms are unlaunched and no model key has been retrieved.
