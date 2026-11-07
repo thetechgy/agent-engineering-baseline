@@ -6,6 +6,7 @@ import hashlib
 import importlib.metadata
 import json
 import os
+import shutil
 from pathlib import Path
 import subprocess
 import sys
@@ -146,6 +147,23 @@ def worker(output):
             try: evidence.validate_public(forged)
             except ValueError: pass
             else: raise AssertionError('Unknown report identity accepted')
+    for omitted in ('provenance', 'policy', 'versions'):
+        root = output / ('missing-' + omitted)
+        shutil.copytree(output / 'standard-native', root)
+        if omitted == 'policy':
+            value = reports.read_json(root / 'provenance.json'); value.pop('policy')
+            reports.write_json(root / 'provenance.json', value)
+        else:
+            (root / (omitted + '.json')).unlink()
+        if omitted == 'versions':
+            try: evidence.normalize_behavioral(root, 'podman')
+            except ValueError: pass
+            else: raise AssertionError('Candidate without runtime provenance accepted')
+        else:
+            value = evidence.project(evidence.normalize_behavioral(root, 'podman'))
+            assert value['policy']['producer_profile'] == profiles.CANDIDATE['id']
+            assert value['availability']['status'] == 'incomplete' and not analysis.measured(value)
+            assert not value['metrics'] and all(o['score'] is None for o in value['observations'])
     for change in ({'evaluator_revision': 'f' * 40}, {'skillevaluator': '0.3.0'}, {'lock_sha256': '0' * 64}):
         versions = reports.read_json(output / 'standard-native/versions.json'); versions.update(change)
         try: profiles.runtime(versions, owning=True)
@@ -180,7 +198,7 @@ def worker(output):
     assert not network
     reports.write_json(output / 'result.json', {'success': True, 'profile': profiles.CANDIDATE['id'],
         'inference': False, 'judges_invoked': False, 'history_eligible': False, 'simulated': True,
-        'tests': result.testsRun, 'replay_controls': len(diagnostics), 'network_attempts': network,
+        'tests': result.testsRun, 'metadata_removal_controls': 3, 'replay_controls': len(diagnostics), 'network_attempts': network,
         'report': 'report.html', 'adoption_ready': False,
         'limits': ['synthetic collection and fixture replay', 'native container lifecycle unqualified', 'trusted gh backend remains 0.7.2-only', 'no live agent or judge']})
 

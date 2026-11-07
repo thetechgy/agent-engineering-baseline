@@ -2341,7 +2341,7 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
         ref(root / 'versions.json')
     if any(versions.get(key) is None for key in ('skillevaluator', 'evaluator_revision')):
         limitations.add('metadata_missing')
-    producer = profiles.runtime(versions)
+    producer = profiles.runtime(versions, owning=True)
     expected_scoring = producer['scoring']
     if result.get('score_policy') is not None:
         require(result['score_policy'] == expected_scoring, 'Contradictory native scoring identity')
@@ -2429,7 +2429,19 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
     attempts = {'mode': provenance.get('mode', 'unknown'), 'maximum': maximum,
                 'stop_on_pass': stop_on_pass, 'pass_threshold': attempt_policy.get('pass_threshold')}
     judge = config.get('judge', {})
-    policy = make_policy(provenance.get('policy'), 'sha256:' + provenance['patch_sha256'] if provenance.get('patch_sha256') else None,
+    declared_fields = provenance.get('policy', {})
+    patch_digest = 'sha256:' + provenance['patch_sha256'] if provenance.get('patch_sha256') else None
+    if producer is profiles.CANDIDATE:
+        # Missing policy metadata cannot erase an independently captured producer.
+        # Supplied contradictions were rejected above; fill only recorded runtime facts.
+        declared_fields = dict(declared_fields)
+        for key in ('evaluator_revision', 'harbor', 'python'):
+            if declared_fields.get(key) is None: declared_fields[key] = versions[key]
+        if patch_digest is None: patch_digest = 'sha256:' + versions['patch_sha256']
+    else:
+        require(declared_fields.get('evaluator_revision') != profiles.CANDIDATE['revision'],
+                'Incomplete candidate runtime provenance')
+    policy = make_policy(declared_fields, patch_digest,
                          result.get('metric_set'), {k: judge.get(k) for k in ('model', 'provider', 'enabled')},
                          attempts, 'runtime_recorded', provenance.get('policy_id'))
     if not provenance.get('policy') or maximum is None:

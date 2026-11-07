@@ -43,7 +43,9 @@ that policy is no longer an adoption requirement. The current offline profile us
 upstream dimension-mean scoring for standard rewards and custom-overall scoring
 for custom-only rewards. Seventy-three controlled vectors check the new formula.
 Policy, producer and artifact metric-set identities are distinct. Unknown or
-contradictory identities and changed evidence remain rejected.
+contradictory identities and changed evidence remain rejected. Omitted policy
+metadata cannot erase the independently captured candidate producer: such records
+remain incomplete and unmeasured. Missing candidate runtime provenance is rejected.
 
 The existing collectors, native normalizers, guarded public writer, analyzer and
 consolidated renderer carry candidate evidence. No parallel reporting system is added.
