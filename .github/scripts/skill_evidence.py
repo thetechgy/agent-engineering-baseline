@@ -3262,8 +3262,10 @@ def custom_registry(workspace=ROOT):
     return registry
 
 
-def custom_contract(name, workspace=ROOT, *, profile_id=None):
+def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
     registry = custom_registry(workspace)
+    if profile_id is None and name == 'gh' and purpose == 'oracle_qualification':
+        profile_id = 'gh-native-oracle-v1'
     profile_id = registry['active_profiles'].get(name) if profile_id is None else profile_id
     require(profile_id in registry['profiles'], 'Unknown custom metric namespace or profile')
     registered = registry['profiles'][profile_id]
@@ -3322,7 +3324,7 @@ def custom_task_checksum(files):
 
 def capture_custom_tasks(workspace, name, tasks, arm, *, purpose='benchmark'):
     """Capture verifier-owned staging before execution; publish hashes only."""
-    profile, definitions, contract = custom_contract(name, workspace)
+    profile, definitions, contract = custom_contract(name, workspace, purpose=purpose)
     enum(arm, ('with_skill', 'without_skill'))
     rows = []
     for task in tasks:
@@ -3352,8 +3354,10 @@ def capture_custom_tasks(workspace, name, tasks, arm, *, purpose='benchmark'):
             from importlib.metadata import version
             if version('skillevaluator') == profiles.CANDIDATE['version']:
                 from gh_candidate import grader_source
-                grader = grader_source(grader)
+                grader = grader_source(grader, fixture=purpose == 'oracle_qualification')
         require(captured['tests/verifier/grader.py' if shared_pester else 'tests/grader.py'] == grader, 'Unapproved staged grader')
+        if profile['id'] == 'gh-native-oracle-v1':
+            require(captured['tests/test.sh'] == b'#!/bin/sh\nset -eu\nexec python3 -I /tests/grader.py\n', 'Unapproved fixture verifier entry')
         if shared_pester:
             require(captured['tests/test.sh'] == read_bytes(overlay / 'support/test.sh'), 'Staged verifier entry drift')
         if name == 'powershell-pester-6':
@@ -3372,7 +3376,7 @@ def capture_custom_tasks(workspace, name, tasks, arm, *, purpose='benchmark'):
 
 
 def custom_prepared_entries(workspace, name, ids, purpose):
-    profile, _, _ = custom_contract(name, workspace)
+    profile, _, _ = custom_contract(name, workspace, purpose=purpose)
     authored = read_json(workspace / '.github/evals' / name / 'evals/evals.json')
     base = {entry['id']: entry for entry in authored['evals']}
     mapping = profile['qualification_cases'] if purpose == 'oracle_qualification' else {case: case for case in base}
@@ -3388,14 +3392,14 @@ def custom_prepared_entries(workspace, name, ids, purpose):
     return rows
 
 
-def capture_custom_numeric_fields(workspace, name, original_jobs, source_root, tasks):
+def capture_custom_numeric_fields(workspace, name, original_jobs, source_root, tasks, *, purpose=None):
     """Retain only enrolled numeric fields that native key-redaction would lose.
 
     This is a producer-captured native extract, not an authentication receipt.
     Original private reports remain untouched and outside publication allowlists.
     """
     from skillevaluator.utils.redaction import is_sensitive_key
-    profile, definitions, _ = custom_contract(name, workspace)
+    profile, definitions, _ = custom_contract(name, workspace, purpose=purpose)
     enrolled = {key: definition for key, definition in definitions.items() if is_sensitive_key(key)}
     if not enrolled: return []
     directories = {}; states = {}; members = {}; budget = ReadBudget()
@@ -3487,7 +3491,7 @@ def custom_capture(workspace, name, bundle, task_rows, *, purpose, attempts, age
     producer = profiles.CANDIDATE if version('skillevaluator') == profiles.CANDIDATE['version'] else profiles.by_revision(profiles.HISTORICAL_REVISION)
     require(version('skillevaluator') == producer['version'] and version('harbor') == producer['harbor']
             and '.'.join(map(str,sys.version_info[:3])).startswith(producer['python']), 'Unsupported capture runtime')
-    profile, definitions, contract = custom_contract(name, workspace)
+    profile, definitions, contract = custom_contract(name, workspace, purpose=purpose)
     enum(purpose, ('benchmark', 'oracle_qualification'))
     expected = profile['qualification_cases'] if purpose == 'oracle_qualification' else {case: case for case in profile['cases']}
     dataset = read_json(bundle / 'evals/evals.json')
@@ -3531,7 +3535,7 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None):
         read_bytes(workspace / CUSTOM_REGISTRY, budget=budget, directory_identities=directories, directory_states=states, file_states=members)
         helper = 'pester_evaluations.py' if name == 'powershell-pester-6' else 'gh_evaluations.py'
         read_bytes(workspace / '.github/scripts' / helper, budget=budget, directory_identities=directories, directory_states=states, file_states=members)
-    profile, definitions, contract = custom_contract(name, workspace)
+    profile, definitions, contract = custom_contract(name, workspace, purpose=capture.get('purpose'))
     require(type(capture['schema_version']) is int and capture['schema_version'] == 1 and capture['skill'] == name
             and capture['contract_digest'] == contract, 'Custom contract identity mismatch')
     require(capture['inputs'] == custom_source_manifest(workspace, name), 'Approved custom input drift')
@@ -3553,7 +3557,7 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None):
     sha(capture['prepared_dataset_digest'])
     execution = capture['execution_policy']
     closed(execution, ('environment', 'concurrency', 'timeout_multiplier', 'stop_on_pass'))
-    require(execution['environment'] == 'docker' and execution['concurrency'] == reports.POLICY['concurrency']
+    require(execution['environment'] == ('aeb-gh-fixture' if name == 'gh' and capture['purpose'] == 'oracle_qualification' else 'docker') and execution['concurrency'] == reports.POLICY['concurrency']
             and execution['stop_on_pass'] is False and execution['timeout_multiplier'] ==
             (1.0 if capture['purpose'] == 'oracle_qualification' else reports.POLICY['timeout_multiplier']), 'Execution policy drift')
     ids = case_ids(capture['case_ids'])
@@ -3589,9 +3593,11 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None):
         if name == 'gh': grader = read_bytes(overlay / 'evals/files/fixture.py').decode().rsplit('\nif __name__ ==', 1)[0].encode() + b'\n' + grader
         if name == 'gh' and producer is profiles.CANDIDATE:
             from gh_candidate import grader_source
-            grader = grader_source(grader)
+            grader = grader_source(grader, fixture=capture['purpose'] == 'oracle_qualification')
         shared_pester = profile['id'] == 'pester-pilot-v3'
         require(task['members'].get('tests/verifier/grader.py' if shared_pester else 'tests/grader.py') == digest_bytes(grader), 'Staged grader drift')
+        if profile['id'] == 'gh-native-oracle-v1':
+            require(task['members'].get('tests/test.sh') == digest_bytes(b'#!/bin/sh\nset -eu\nexec python3 -I /tests/grader.py\n'), 'Unapproved fixture verifier entry')
         if shared_pester:
             expected_entry = json.dumps({'id': task['case_id'], 'grading_mode': 'custom_only'}, indent=2) + '\n'
             require(task['members'].get('tests/entry.json') == digest_bytes(expected_entry.encode())
@@ -3805,7 +3811,8 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
             require(actual_agent == capture['agent'] and trial_config.get('agent', {}).get('name') == actual_agent
                     and trial_config.get('timeout_multiplier') == capture['execution_policy']['timeout_multiplier']
                     and trial_config.get('environment', {}).get('import_path') ==
-                    'skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment',
+                    ('aeb_gh_fixture.backend:TrustedGhEnvironment' if profile['id'] == 'gh-native-oracle-v1' else
+                     'skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment'),
                     'Native producer or runtime identity mismatch')
             matched = lookup.pop(trial_name, None)
             require(matched is None or matched[0] == case_id, 'Summary case mismatch')

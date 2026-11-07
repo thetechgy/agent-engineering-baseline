@@ -91,10 +91,15 @@ def worker(output):
     sys.addaudithook(offline)
     from test_custom_metrics import synthetic_gh_native, synthetic_native
     os.environ.update(CANDIDATE_EVIDENCE_CHILD='1', GRADING_PATCH_CHILD='1',
-                      AEB_CURRENT_NATIVE=str(output / 'standard-native'), IMAGE_PREPARATION_RUNTIME='current')
+                      AEB_CURRENT_NATIVE=str(output / 'standard-native'), IMAGE_PREPARATION_RUNTIME='current', CURRENT_NATIVE_CONTROLS='1')
     suite = unittest.defaultTestLoader.loadTestsFromNames([
         'test_grading_evidence.GradingEvidenceTests', 'test_evaluator_candidate.CandidateEvidenceTests',
         'test_candidate_standard_grading.CandidateStandardTests',
+        'test_current_native.NativeCurrentTests',
+        'test_gh_initializer.InitializerTests.test_backend_runtime_pairs_and_wheel_python_metadata',
+        'test_gh_initializer.InitializerTests.test_plugin_real_dispatch_pins_codex_and_denies_task_configuration',
+        'test_gh_initializer.InitializerTests.test_start_awaits_secure_start_and_records_failures_without_agent_setup',
+        'test_gh_initializer.InitializerTests.test_repeat_verification_never_rebuilds_or_creates_a_new_broker',
         'test_gh_initializer.InitializerTests.test_fixed_native_shards_cover_all_24_cases_once_per_arm',
         'test_gh_initializer.InitializerTests.test_existing_authored_healthcheck_still_rejects_baseline',
         'test_gh_initializer.InitializerTests.test_all_24_cases_both_arms_bind_native_checksums_and_initializer',
@@ -200,12 +205,72 @@ def worker(output):
         'inference': False, 'judges_invoked': False, 'history_eligible': False, 'simulated': True,
         'tests': result.testsRun, 'metadata_removal_controls': 3, 'replay_controls': len(diagnostics), 'network_attempts': network,
         'report': 'report.html', 'adoption_ready': False,
-        'limits': ['synthetic collection and fixture replay', 'native container lifecycle unqualified', 'trusted gh backend remains 0.7.2-only', 'no live agent or judge']})
+        'limits': ['synthetic collection and fixture replay', 'native container lifecycle unqualified', 'native backend execution not exercised by offline mode', 'no live agent or judge']})
+
+
+def native_cohorts(output):
+    """Existing native harnesses, then the same public analyzer and renderer."""
+    from qualify_evaluator_candidate import native_compose_config, run_native
+    native_compose_config(ROOT)
+    environment = {'PATH': str(Path(sys.executable).parent) + os.pathsep + os.defpath,
+        'HOME': str(output / 'empty-home'), 'PYTHONDONTWRITEBYTECODE': '1',
+        'PYTHON_DOTENV_DISABLED': '1', 'LITELLM_LOCAL_MODEL_COST_MAP': 'True'}
+    for key in ('TMPDIR', 'RUNNER_TEMP', 'DOCKER_CONFIG', 'COMPOSE_PLUGIN_ROOT'):
+        if key in os.environ: environment[key] = os.environ[key]
+    stages = {}
+    commands = {
+        'gh-lifecycle': "from gh_initializer_validation import main; main(sys.argv[2])",
+        'gh-oracle': "from gh_oracle_validation import main; main(sys.argv[2])",
+        'pester': "from pester_container_validation import main; main(candidate='current', artifact=sys.argv[2])"}
+    reports.write_json(output / 'native-stages.json', {'status': 'starting', 'stages': stages})
+    for suite, code in commands.items():
+        destination = output / ('native-' + suite)
+        if suite == 'gh-lifecycle': destination = destination.with_suffix('.json')
+        launcher = "import sys; sys.path.insert(0, sys.argv[1]); " + code
+        stages[suite] = {'status': 'running'}
+        reports.write_json(output / 'native-stages.json', {'status': 'running', 'stages': stages})
+        log_path = output / (suite + '.log')
+        with log_path.open('w') as log:
+            try:
+                code = run_native([sys.executable, '-I', '-B', '-c', launcher,
+                    str(ROOT / '.github/scripts'), str(destination)], env=environment, log=log, timeout=2400)
+                stages[suite] = {'status': 'complete' if code == 0 else 'infrastructure_error' if code == 124 else 'failed', 'returncode': code}
+            except subprocess.TimeoutExpired:
+                stages[suite] = {'status': 'infrastructure_error', 'code': 'native_deadline'}
+        diagnostic = log_path.read_text(errors='replace')[-128 * 1024:]
+        from skillevaluator.utils.redaction import redact_sensitive_text
+        diagnostic = redact_sensitive_text(diagnostic)
+        for path, replacement in ((ROOT, '<checkout>'), (output, '<evidence>'),
+                (Path(os.environ.get('RUNNER_TEMP', '/nonexistent')), '<runner>')):
+            diagnostic = diagnostic.replace(str(path), replacement)
+        (output / (suite + '-diagnostics.txt')).write_text(diagnostic)
+        reports.write_json(output / 'native-stages.json', {'status': 'running', 'stages': stages})
+    success = all(row['status'] == 'complete' for row in stages.values())
+    reports.write_json(output / 'native-stages.json', {'status': 'passed' if success else 'partial', 'stages': stages})
+    if not success: raise RuntimeError('Native cohort qualification incomplete; bounded diagnostics retained')
+    captured = analysis.capture_inputs([output / 'public'])
+    records = list(captured.records.values())
+    for name, directory in (('gh', output / 'native-gh-oracle/native/reporting/public'),
+                            ('powershell-pester-6', output / 'native-pester/reporting/public')):
+        current = analysis.capture_inputs([directory])
+        native = [row for row in current.records.values() if row['kind'] == 'behavioral']
+        assert len(native) == 1 and native[0]['custom']['purpose'] == 'oracle_qualification'
+        assert native[0]['custom']['agent'] == 'oracle' and native[0]['policy']['producer_profile'] == profiles.CANDIDATE['id']
+        assert len(native[0]['observations']) == (48 if name == 'gh' else 52)
+        assert native[0]['availability']['status'] == 'incomplete' and not native[0]['metrics']
+        assert all(o['score'] is None for o in native[0]['observations'])
+        records.extend(native)
+    render(records, output)
+    value = reports.read_json(output / 'result.json')
+    value.update(native_qualification='passed', native_gh=48, native_pester=52, gh_lifecycle=48,
+        limits=['native deterministic fixtures only', 'no live CLI/provider or judge qualification', 'no skill benefit measurement'])
+    reports.write_json(output / 'result.json', value)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--native', action='store_true', help='Run complete credential-free native cohorts after offline controls')
     parser.add_argument('--worker', action='store_true', help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.worker:
@@ -246,7 +311,9 @@ for guard in e.record_guards(public): guard()
 """
     subprocess.run([legacy, '-I', '-B', '-c', historical_code, str(ROOT), str(output)], env=env, check=True, timeout=60)
     reports.write_json(output / 'metadata.json', {'versions': versions, 'source_tree_digest': p['source_tree_digest'],
-        'producer_revision': evidence.git_revision(ROOT), 'simulated': True, 'inference': False})
+        'producer_revision': evidence.git_revision(ROOT), 'simulated': True, 'inference': False,
+        'backend_sources': {p.name: evidence.digest_bytes(p.read_bytes()) for p in sorted((ROOT / '.github/evaluator-backends/aeb_gh_fixture').glob('*.py'))},
+        'harnesses': {p.name: evidence.digest_bytes(p.read_bytes()) for p in (Path(__file__), ROOT / '.github/scripts/gh_initializer_validation.py', ROOT / '.github/scripts/gh_oracle_validation.py', ROOT / '.github/scripts/pester_container_validation.py')}})
     with (output / 'qualification.log').open('w') as log:
         result = subprocess.run([sys.executable, '-I', '-B', str(Path(__file__).resolve()), '--worker', '--output', str(output)],
                                 env=env, stdout=log, stderr=subprocess.STDOUT, timeout=240)
@@ -257,6 +324,8 @@ for guard in e.record_guards(public): guard()
     if result.returncode:
         print(diagnostic[-12000:], file=sys.stderr)
         raise SystemExit(result.returncode)
+    if args.native:
+        native_cohorts(output)
     print((output / 'result.json').read_text())
 
 

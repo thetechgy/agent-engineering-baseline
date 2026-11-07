@@ -1463,6 +1463,380 @@
       "fixture_digest": "sha256:43e6c6d9c0bb082be0c8ea0bef2c8ede07a04484a6f6c61359dcaae2e0376587",
       "runtime_digest": "sha256:2d82f786ccf0c867d6827ffc65c8fdfe4b664bcfe4c187ad1df828dff126f7a4",
       "dataset_digest": "sha256:7da7fa863ddc768c34bb423b4667cfe43e8d714697c4e217e4a27d789028f598"
+    },
+    "gh-native-oracle-v1": {
+      "id": "gh-native-oracle-v1",
+      "grading": "custom_only",
+      "cases": {
+        "gh-001": {
+          "title": "GitHub CLI fixture gh-001",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-002": {
+          "title": "GitHub CLI fixture gh-002",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-003": {
+          "title": "GitHub CLI fixture gh-003",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-004": {
+          "title": "GitHub CLI fixture gh-004",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-005": {
+          "title": "GitHub CLI fixture gh-005",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-006-pending": {
+          "title": "GitHub CLI fixture gh-006-pending",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-006-changed-head": {
+          "title": "GitHub CLI fixture gh-006-changed-head",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-007": {
+          "title": "GitHub CLI fixture gh-007",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-007-relationships": {
+          "title": "GitHub CLI fixture gh-007-relationships",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-008": {
+          "title": "GitHub CLI fixture gh-008",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-008-empty": {
+          "title": "GitHub CLI fixture gh-008-empty",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-009": {
+          "title": "GitHub CLI fixture gh-009",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-010": {
+          "title": "GitHub CLI fixture gh-010",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-010-partial": {
+          "title": "GitHub CLI fixture gh-010-partial",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-011-missing": {
+          "title": "GitHub CLI fixture gh-011-missing",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-011-auth": {
+          "title": "GitHub CLI fixture gh-011-auth",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-011-permission": {
+          "title": "GitHub CLI fixture gh-011-permission",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-011-network": {
+          "title": "GitHub CLI fixture gh-011-network",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-011-rate-limit": {
+          "title": "GitHub CLI fixture gh-011-rate-limit",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-011-unavailable": {
+          "title": "GitHub CLI fixture gh-011-unavailable",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-012": {
+          "title": "GitHub CLI fixture gh-012",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-013-local": {
+          "title": "GitHub CLI fixture gh-013-local",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-013-hardening": {
+          "title": "GitHub CLI fixture gh-013-hardening",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        },
+        "gh-014": {
+          "title": "GitHub CLI fixture gh-014",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        }
+      },
+      "qualification_cases": {
+        "gh-001": "gh-001",
+        "gh-002": "gh-002",
+        "gh-003": "gh-003",
+        "gh-004": "gh-004",
+        "gh-005": "gh-005",
+        "gh-006-pending": "gh-006-pending",
+        "gh-006-changed-head": "gh-006-changed-head",
+        "gh-007": "gh-007",
+        "gh-007-relationships": "gh-007-relationships",
+        "gh-008": "gh-008",
+        "gh-008-empty": "gh-008-empty",
+        "gh-009": "gh-009",
+        "gh-010": "gh-010",
+        "gh-010-partial": "gh-010-partial",
+        "gh-011-missing": "gh-011-missing",
+        "gh-011-auth": "gh-011-auth",
+        "gh-011-permission": "gh-011-permission",
+        "gh-011-network": "gh-011-network",
+        "gh-011-rate-limit": "gh-011-rate-limit",
+        "gh-011-unavailable": "gh-011-unavailable",
+        "gh-012": "gh-012",
+        "gh-013-local": "gh-013-local",
+        "gh-013-hardening": "gh-013-hardening",
+        "gh-014": "gh-014"
+      },
+      "runtime": {},
+      "skill_id": "gh",
+      "grader_digest": "sha256:40bfba820868668d24cf375a049b6240ed399e8b6a94300ff799d8c6b7d9bcbd",
+      "fixture_digest": "sha256:43e6c6d9c0bb082be0c8ea0bef2c8ede07a04484a6f6c61359dcaae2e0376587",
+      "runtime_digest": "sha256:2d82f786ccf0c867d6827ffc65c8fdfe4b664bcfe4c187ad1df828dff126f7a4",
+      "dataset_digest": "sha256:7da7fa863ddc768c34bb423b4667cfe43e8d714697c4e217e4a27d789028f598"
     }
   },
   "active_profiles": {

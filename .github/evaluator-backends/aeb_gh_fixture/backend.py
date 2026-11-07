@@ -5,6 +5,7 @@ import importlib.metadata
 import json
 import os
 import stat
+import sys
 from pathlib import Path
 
 from skillevaluator.tier3.harbor.secure_docker_environment import SkillEvaluatorSecureDockerEnvironment
@@ -13,6 +14,15 @@ from .manifest import approve, payload_digest
 
 COMMAND = "/usr/local/bin/python3 -I /opt/aeb-gh/initialize.py"
 VERIFY_COMMAND = COMMAND + " --verify"
+
+
+def require_runtime():
+    """Only the two reviewed owning pairs; newer versions require qualification."""
+    pair = (importlib.metadata.version("skillevaluator"), importlib.metadata.version("harbor"))
+    python = tuple(sys.version_info[:3])
+    if not ((pair == ("0.7.2", "0.24.0") and python[:2] == (3, 13))
+            or (pair == ("0.8.0", "0.24.0") and python == (3, 14, 10))):
+        raise RuntimeError("Unqualified gh backend owning runtime")
 
 
 class TrustedGhEnvironment(SkillEvaluatorSecureDockerEnvironment):
@@ -35,8 +45,7 @@ class TrustedGhEnvironment(SkillEvaluatorSecureDockerEnvironment):
                     raise RuntimeError("Unsafe gh initialization evidence file")
                 stream.write(json.dumps(status, sort_keys=True) + "\n")
         try:
-            if (importlib.metadata.version("skillevaluator"), importlib.metadata.version("harbor")) != ("0.7.2", "0.24.0"):
-                raise RuntimeError("Unqualified gh backend owning runtime")
+            require_runtime()
             # Only the declared operator host variable can select the sealed manifest.
             row, manifest = approve(os.environ.get(MANIFEST_ENV, ""), self.environment_dir.parent)
             status.update(manifest=manifest, case=row["case"], arm=row["arm"], checksum=row["checksum"])

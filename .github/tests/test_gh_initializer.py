@@ -45,6 +45,31 @@ class InitializerTests(unittest.TestCase):
         self.root = Path(self.scratch.name)
         self.path = manifest.write_manifest(self.root / "operator", self.tasks, staged_roots=[self.bundle, *self.tasks])
 
+    def test_backend_runtime_pairs_and_wheel_python_metadata(self):
+        from aeb_gh_fixture import backend
+        import zipfile
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('backend_wheel', ROOT / '.github/evaluator-backends/build_wheel.py')
+        builder = importlib.util.module_from_spec(spec); spec.loader.exec_module(builder)
+        with tempfile.TemporaryDirectory() as directory:
+            wheel = builder.build(Path(directory))
+            with zipfile.ZipFile(wheel) as bundle:
+                self.assertIn(b'Requires-Python: >=3.13,<3.15', bundle.read('aeb_gh_fixture-1.0.0.dist-info/METADATA'))
+        for evaluator, harbor, python, allowed in (
+                ('0.7.2', '0.24.0', (3, 13, 17), True),
+                ('0.8.0', '0.24.0', (3, 14, 10), True),
+                ('0.8.0', '0.24.0', (3, 13, 17), False),
+                ('0.8.0', '0.24.0', (3, 14, 9), False),
+                ('0.8.0', '0.25.0', (3, 14, 10), False),
+                ('0.8.1', '0.24.0', (3, 14, 10), False),
+                ('0.3.0', '0.13.2', (3, 13, 17), False)):
+            with self.subTest(evaluator=evaluator, harbor=harbor, python=python), \
+                    patch.object(backend.importlib.metadata, 'version', side_effect=lambda key: {'skillevaluator': evaluator, 'harbor': harbor}[key]), \
+                    patch.object(backend.sys, 'version_info', python):
+                if allowed: backend.require_runtime()
+                else:
+                    with self.assertRaisesRegex(RuntimeError, 'Unqualified'): backend.require_runtime()
+
     def test_failed_start_retains_evidence_even_when_teardown_fails(self):
         import gh_initializer_validation as native
         for fault in ("none", "teardown", "teardown-timeout", "evidence"):

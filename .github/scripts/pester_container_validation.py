@@ -93,6 +93,26 @@ def qualification_bundle(root, *, candidate=False):
 
 
 def main(*, candidate=False, artifact=None):
+    """Always retain cleanup status, including failed native controls."""
+    artifact = Path(artifact) if artifact is not None else Path(os.environ['RUNNER_TEMP']) / 'pester-gate-artifacts'
+    def resources():
+        return {kind: set(subprocess.check_output(command, text=True, timeout=15).split()) for kind, command in (
+            ('containers', ['docker', 'ps', '-aq']), ('networks', ['docker', 'network', 'ls', '-q']))}
+    before = resources()
+    import signal
+    def interrupted(_signum, _frame):
+        raise KeyboardInterrupt
+    signal.signal(signal.SIGTERM, interrupted)
+    try:
+        return _main(candidate=candidate, artifact=artifact)
+    finally:
+        after = resources()
+        clean = before == after
+        reports.write_json(artifact / 'cleanup.json', {'complete': clean})
+        if not clean: raise RuntimeError('Native Pester cleanup incomplete')
+
+
+def _main(*, candidate=False, artifact=None):
     subprocess.run(['docker', 'info'], check=True, stdout=subprocess.DEVNULL, timeout=15)
     compose = subprocess.check_output(['docker', 'compose', 'version', '--short'], text=True, timeout=15).strip()
     if compose != reports.POLICY['docker_compose']:
@@ -101,9 +121,13 @@ def main(*, candidate=False, artifact=None):
         raise RuntimeError('Qualification must not receive model credentials')
     artifact = Path(artifact) if artifact is not None else Path(os.environ['RUNNER_TEMP']) / 'pester-gate-artifacts'
     from importlib.metadata import version
-    expected_runtime = ('0.7.2', '0.24.0') if candidate else ('0.3.0', '0.13.2')
+    current = candidate == 'current'
+    expected_runtime = ('0.8.0', '0.24.0') if current else ('0.7.2', '0.24.0') if candidate else ('0.3.0', '0.13.2')
     if (version('skillevaluator'), version('harbor')) != expected_runtime:
         raise RuntimeError('Qualification runtime mismatch')
+    if current:
+        from evaluator_profiles import runtime, candidate_versions
+        runtime(candidate_versions(), owning=True)
     def resources(kind):
         command = ['docker', 'ps', '--all', '--quiet'] if kind == 'containers' else ['docker', 'network', 'ls', '--quiet']
         return set(subprocess.check_output(command, text=True, timeout=15).split())
@@ -117,6 +141,7 @@ def main(*, candidate=False, artifact=None):
         staged_evidence = []
         before_inputs = evidence.custom_source_manifest(ROOT, pilot.NAME)
         native_failed = False
+        command_stages = []
         for present in (True, False):
             tasks = root / 'tasks' / str(present)
             staged_tasks = stage_native_harbor_tasks(bundle, tasks, with_skill=present, grading_mode='custom_only')
@@ -144,12 +169,24 @@ def main(*, candidate=False, artifact=None):
                 job_name=f'{pilot.NAME}-codex-{"with" if present else "without"}', jobs_dir=jobs,
                 n_attempts=1, n_concurrent=2, timeout_multiplier=1.0)
             # The native oracle supplies fixtures; no Codex/provider/judge runs.
+            stage = {'arm': 'with_skill' if present else 'without_skill', 'stage': 'native_oracle', 'status': 'running'}
+            command_stages.append(stage)
+            stage_path = artifact.with_name(artifact.name + '-command-stages.json')
+            reports.write_json(stage_path, command_stages)
             try:
                 result = subprocess.run(command, capture_output=True, text=True, timeout=1200,
                                         env={**os.environ, 'PYTHON_DOTENV_DISABLED': '1'})
                 native_failed = bool(result.returncode)
+                stage.update(status='failed' if native_failed else 'complete', returncode=result.returncode)
+                if native_failed:
+                    from skillevaluator.utils.redaction import redact_sensitive_text
+                    diagnostic = redact_sensitive_text((result.stdout + result.stderr)[-32768:])
+                    diagnostic = diagnostic.replace(str(root), '<native>').replace(str(ROOT), '<checkout>')
+                    artifact.with_name(artifact.name + '-command-diagnostics.txt').write_text(diagnostic)
             except subprocess.TimeoutExpired:
                 native_failed = True
+                stage.update(status='infrastructure_error', code='native_deadline')
+            reports.write_json(stage_path, command_stages)
             if native_failed:
                 break
         raw = root / 'raw'; run = raw / 'results' / pilot.NAME / 'qualification'
@@ -158,7 +195,7 @@ def main(*, candidate=False, artifact=None):
             agent_models={'codex': {'model': 'credential-free-oracle', 'source': 'qualification'}})
         if evidence.custom_source_manifest(ROOT, pilot.NAME) != before_inputs:
             raise RuntimeError('Approved qualification inputs changed')
-        if not native_failed and not candidate:
+        if not native_failed and (not candidate or current):
             reports.write_json(raw / evidence.CUSTOM_CAPTURE, evidence.custom_capture(ROOT, pilot.NAME, bundle, staged_evidence,
                 purpose='oracle_qualification', attempts=1, agent='oracle',
                 execution_policy={'environment': 'docker', 'concurrency': 2, 'timeout_multiplier': 1.0, 'stop_on_pass': False}))
@@ -225,16 +262,19 @@ def main(*, candidate=False, artifact=None):
         if Counter(observed) != {'passed': 22, 'failed': 14, 'invalid': 8, 'timeout': 2,
                                  'unsupported': 2, 'infrastructure_error': 4}:
             raise RuntimeError('Qualification classification population mismatch')
-        if not candidate:
-            qualify_reporting(root, artifact)
+        if not candidate or current:
+            qualify_reporting(root, artifact, candidate=current)
         if any(b'PESTER_VERIFIER_ONLY_' in p.read_bytes() for p in reports.regular_tree(artifact)):
             raise RuntimeError('Protected payload entered a derived reporting artifact')
-        print('Pester native qualification passed' + ('; candidate HTML diagnostics only' if candidate else ' with shared reporting')
+        print('Pester native qualification passed' + ('; candidate HTML diagnostics only' if candidate and not current else ' with shared reporting')
               + '; no model inference executed.', flush=True)
 
 
-def qualify_reporting(root, native):
+def qualify_reporting(root, native, *, candidate=False):
     """Keep native execution on its legacy runtime; hand reviews to their owner."""
+    if candidate:
+        _qualify_reporting(root, native, candidate=True)
+        return
     python = Path(os.environ['SKILL_REVIEW_PYTHON'])
     if not python.is_absolute() or not python.is_file():
         raise RuntimeError('Current review interpreter unavailable')
@@ -251,22 +291,25 @@ def qualify_reporting(root, native):
                     str(root), str(native)], env=environment, check=True, timeout=120)
 
 
-def _qualify_reporting(root, native):
+def _qualify_reporting(root, native, *, candidate=False, name=pilot.NAME):
     """Use the consolidated public-only consumers, then remove native originals."""
     import skill_analysis as analysis
     import skill_report as report
     import skill_review as review
 
     public = root / 'public'
-    reports.public_benchmark(ROOT, native, pilot.NAME, 'confirmation', public)
+    reports.public_benchmark(ROOT, native, name, 'confirmation', public)
     captured = analysis.capture_inputs([public])
     value = analysis.validate_analysis(None, captured)
     saved = root / 'analysis/analysis.json'
     reports.write_json(saved, value)
     rid = next(key for key, row in captured.records.items() if row['kind'] == 'behavioral')
     first = report.render_report(value, captured)
-    context = review.prepare([public], saved, pilot.NAME, rid)
-    if context.value['analysis']['behavioral_results'][0]['custom']['purpose'] != 'oracle_qualification':
+    context = None if candidate else review.prepare([public], saved, name, rid)
+    if candidate:
+        if value['behavioral_results'][0]['custom']['purpose'] != 'oracle_qualification':
+            raise RuntimeError('Oracle reporting purpose lost')
+    elif context.value['analysis']['behavioral_results'][0]['custom']['purpose'] != 'oracle_qualification':
         raise RuntimeError('Oracle reporting purpose lost')
     # Keep the already allowlisted native diagnostics in a separate retained
     # copy. These fresh consumers see public input only, with no native tree.
@@ -278,7 +321,7 @@ def _qualify_reporting(root, native):
             raise RuntimeError('Public-only analysis changed')
         if report.render_report(value, again) != first:
             raise RuntimeError('Public-only rendered report changed')
-        review.prepare([public], saved, pilot.NAME, rid)
+        if not candidate: review.prepare([public], saved, name, rid)
     finally:
         hidden.rename(native)
     output = report.generate([public], saved, root / 'consolidated')

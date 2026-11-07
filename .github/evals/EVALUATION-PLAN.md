@@ -15,8 +15,9 @@ OpenAI `>=2.21.0`, Anthropic `>=0.83.0`, and Pydantic `>=2.11.0`.
 The [candidate profile](evaluator-candidate.json) freezes Python 3.14.10,
 Harbor 0.24.0, OpenAI 2.54.0, Anthropic 2.6.0, Pydantic 2.14.3 /
 pydantic-core 2.50.4, LiteLLM 1.93.2, typing-inspection 0.4.5 and the unchanged
-locally built backend 1.0.0 for interface controls only. Its execution guard remains
-0.7.2-only; live candidate gh startup is explicitly unqualified. The [resolved lock](../locks/evaluator-candidate.lock)
+locally built backend 1.0.0. Its wheel metadata now admits Python 3.14, and its
+execution guard admits only the reviewed 0.7.2/Python 3.13 and
+0.8.0/Python 3.14.10 pairs with Harbor 0.24.0. The [resolved lock](../locks/evaluator-candidate.lock)
 was upgraded using uv 0.13.7 against the released manifest, without dependency overrides.
 Registry artifacts retain their hashes; frozen installation and `uv pip check` are required.
 The profile binds the source tree, release revision, patch and lock independently.
@@ -71,26 +72,50 @@ Use `setup-skillevaluator.sh reporting` for isolated historical runtimes and
 fixtures honor `TMPDIR`. The new `current-evaluator.yml` workflow reproduces this
 without model credentials, inference, judges, scheduling or Pages.
 
-Local evidence includes actual standard verifier/collector transport, gh fixture
-replay with receipts and collector transport, retained synthetic Pester outcome
-carriers, negative identity/integrity checks and the existing HTML report. Pester
-carriers test reporting, not executable-submission quality. Mocked lifecycle controls
-establish wiring only. The separate native preparation job observes one startup
-attempt and cleanup; a failed build is an infrastructure result, not a quality zero.
-No blind preparation retry is selected for the new profile. Initial upgrade CI
-successfully built the pinned fixture, observed PowerShell 7.6.9 / Pester 6.2.0,
-and verified teardown on its first attempt. This is package startup evidence,
-not execution of the complete native grading cohort. Final-revision CI and the
-downloadable report are linked from PR #119.
+The integrated qualification extends that entry point with `--native`. It runs
+all 48 existing gh startup/lifecycle cases, then 48 real Harbor oracle gh trials
+and the existing 52 native Pester oracle trials. The gh bridge is necessary because
+the lifecycle harness alone does not produce Harbor trial records for collection.
+It uses the existing oracle, collector, public evidence writer, analyzer and renderer.
+The fixture-only `gh-native-oracle-v1` custom profile keeps the existing gate and
+metric definitions; the active production gh profile and standard scoring are unchanged.
+Native oracle records remain separate from synthetic transport controls and are
+ineligible for skill-benefit or production-history claims.
 
-Validation results and report artifacts are recorded in PR #119. Native agent lifecycle,
-complete native Pester/gh cohorts, provider compatibility, judging accuracy and skill
-benefit remain unqualified. Candidate adoption is blocked; production defaults,
-Codex/model/task inputs and historical environments are unchanged.
+Expected outcomes are fixed before execution. In each gh arm, gh-001 uses the reviewed
+wrong-repository control; gh-002 uses an unsupported trace; gh-003 omits its trace;
+gh-014 performs a correct task plus an unauthorized fixture API action. Other cases
+use their reviewed correct commands. Broken work must fail task correctness;
+unauthorized work must retain correctness and fail authorization. Unsupported and
+missing evidence must remain unavailable. Skill absence retains its activation/gate
+consequence without turning correct task work into a correctness failure.
+Pester must retain 22 passed, 14 failed, 8 invalid, 2 timeout, 2 unsupported and
+4 infrastructure-error outcomes. Reference and seeded-mutant evidence, runtime,
+arm and checksum identities must agree. A passing qualification does not relabel
+negative outcomes, missing evidence, or aggregate execution failures.
+
+The existing bounded command observer records gh build/start stages without raw
+arguments. Oracle launch stages and sanitized failure diagnostics are retained;
+cleanup is checked after success and failure. The final report includes the actual
+native results alongside clearly marked synthetic reporting controls. Its included
+public evidence and saved analysis must reproduce the HTML without native originals.
+
+Local checks cover backend runtime rejection, actual released dispatch and staging,
+initializer ordering/failure containment, original 0.7.2 behavior and offline report
+regressions. Native execution and final-revision CI are pending in this implementation
+checkpoint; links and exact tested revisions will be recorded after artifact verification.
+No inference, judges, model credentials or production promotion are selected.
+
+Adoption still requires live CLI/provider compatibility, judging accuracy and
+skill-effectiveness evidence, plus any required new analyst-attachment profile.
+Frozen analyst profiles retain their exact historical validator snapshots. Maintain
+both backend runtime paths, the fixture-only verifier transformation, sealed staging
+and collector/public admission together when an owning runtime changes. Upstream
+Harbor, Python and LiteLLM constraints remain the dependency inventory's obligations.
 
 ## Next group
 
-The independent scanner group is implemented on draft [PR #120](https://github.com/thetechgy/agent-engineering-baseline/pull/120):
+The independent scanner group is merged through [PR #120](https://github.com/thetechgy/agent-engineering-baseline/pull/120):
 SkillSpector 2.13.4 and Semgrep 1.184.0, with controlled collection/report evidence
 and credential-free CI tracked there. Gitleaks 8.30.1 is already current. Bandit and
 pip-audit remain evaluator-owned; Semgrep's exact MCP 1.29.0 constraint remains an
@@ -100,7 +125,7 @@ reports: findings survive while repository coverage remains incomplete.
 [Compatibility evidence](https://github.com/thetechgy/agent-engineering-baseline/blob/chore/95-scanner-modernization/.github/evals/SCANNER-MODERNIZATION-95.md#retained-adapter-compatibility-correction)
 records the before/after scans and reporting controls.
 
-The next evaluator milestone remains candidate native lifecycle and complete cohort
-qualification, including resolution of the 0.7.2-only trusted gh backend guard.
+The next action is to run and authenticate the complete native candidate artifact
+on this integrated branch.
 Other dependencies remain in the existing freshness inventory; this scanner group
 does not qualify evaluator adoption, behavioral effectiveness or skill benefit.
