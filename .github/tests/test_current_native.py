@@ -152,6 +152,9 @@ class NativeCurrentTests(unittest.TestCase):
             self.assertEqual(reports.read_json(sanitized / e.CUSTOM_CAPTURE)['tasks'], rows)
             public=e.project(e.normalize_behavioral(sanitized,'gh'))
             e.validate_public(public)
+            from pester_container_validation import _qualify_reporting
+            _qualify_reporting(root, sanitized, candidate=True, name='gh')
+            self.assertTrue((sanitized / 'reporting/consolidated.html').is_file())
             self.assertEqual(len(public['observations']),48)
             self.assertEqual(public['custom']['profile_id'],'gh-native-oracle-v1')
             self.assertEqual(public['policy']['fields']['workspace_mode'],'group')

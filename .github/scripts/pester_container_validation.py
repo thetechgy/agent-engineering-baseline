@@ -313,7 +313,8 @@ def _qualify_reporting(root, native, *, candidate=False, name=pilot.NAME):
     first = report.render_report(value, captured)
     context = None if candidate else review.prepare([public], saved, name, rid)
     if candidate:
-        if value['behavioral_results'][0]['custom']['purpose'] != 'oracle_qualification':
+        behavioral = [result for skill in value['skills'] if skill['skill'] == name for result in skill['behavioral_results']]
+        if len(behavioral) != 1 or behavioral[0]['custom']['purpose'] != 'oracle_qualification':
             raise RuntimeError('Oracle reporting purpose lost')
     elif context.value['analysis']['behavioral_results'][0]['custom']['purpose'] != 'oracle_qualification':
         raise RuntimeError('Oracle reporting purpose lost')
