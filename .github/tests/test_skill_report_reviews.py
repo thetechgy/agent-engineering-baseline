@@ -158,9 +158,14 @@ class AttachmentTests(unittest.TestCase):
                 self.assertIn('not_quality_qualified', output)
                 self.assertNotIn(str(self.root), output)
 
-    def test_current_profile_uses_current_checkout_and_legacy_host_dispatch(self):
+    def test_frozen_current_profile_rejects_changed_checkout_and_retains_legacy_host_dispatch(self):
         self.fixture('current-v4')
+        tooling = self.spec['tooling']
         self.spec['tooling'] = None; write(self.path, self.spec)
+        with self.assertRaisesRegex(ValueError, 'Unreviewed validator module'):
+            self.load()
+        # The original profile remains usable with its exact retained source.
+        self.spec['tooling'] = tooling; write(self.path, self.spec)
         self.load()
         output_parent = tempfile.TemporaryDirectory(); self.addCleanup(output_parent.cleanup)
         output_root = Path(output_parent.name)

@@ -119,6 +119,11 @@ are excluded. Qualification records cannot enter benchmark history.
 
 ## Adoption and rollback
 
+This section records the historical 0.7.2 exact-score plan. Its unchanged-scoring
+requirement is superseded by the separately versioned policy in the
+[active upgrade checkpoint](EVALUATION-PLAN.md). The historical diagnostic and
+results below remain unchanged; they are not the current adoption criteria.
+
 Standard scoring is a blocking compatibility boundary. The frozen 0.3.0 producer
 averages six metrics; 0.7.2 averages five dimensions. The same six metric values
 can therefore produce different overall scores and lift. The approved delivery

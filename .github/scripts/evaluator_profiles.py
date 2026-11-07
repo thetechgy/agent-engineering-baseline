@@ -22,6 +22,8 @@ def by_revision(revision):
 
 
 def runtime(versions, *, owning=False):
+    if versions.get('skillevaluator') not in (None, '0.3.0', CANDIDATE['version']):
+        raise ValueError('Unsupported native evaluator')
     revision = versions.get('evaluator_revision')
     if revision is None and versions.get('skillevaluator') in (None, '0.3.0'):
         revision = HISTORICAL_REVISION

@@ -44,7 +44,13 @@ jobs:
           PYTHONPATH=.github/scripts:.github/tests "$SKILL_REVIEW_PYTHON" -B -m unittest \
             test_skill_evidence.EvidenceTests.test_compatible_python_precision_and_historical_policy \
             test_skill_evidence.EvidenceTests.test_policy_runtime_contradictions \
-            test_skill_evidence.EvidenceTests.test_missing_runtime_metadata_and_attempt_fallback
+            test_skill_evidence.EvidenceTests.test_missing_runtime_metadata_and_attempt_fallback \
+            test_skill_evidence.EvidenceTests.test_inventory_cli_rejects_malformed_frontmatter_without_traceback \
+            test_skill_evidence.EvidenceTests.test_inventory_cli_rejects_real_aggregate_without_allocating_output \
+            test_skill_evidence.EvidenceTests.test_normalization_optional_members_use_captured_entries \
+            test_skill_evidence.EvidenceTests.test_standalone_cli_disables_repository_bytecode_writes \
+            test_skill_evidence.EvidenceTests.test_yaml_alias_graph_has_bounded_depth_work \
+            test_skill_report_reviews.AttachmentTests.test_frozen_current_profile_rejects_changed_checkout_and_retains_legacy_host_dispatch
       - name: Install the frozen opt-in replacement
         run: bash .github/scripts/setup-skillevaluator.sh candidate-current
       - name: Qualify collection, interpretation and reporting without inference
