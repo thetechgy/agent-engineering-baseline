@@ -503,7 +503,7 @@ def custom_measurements(run, record):
         'this consumer does not recheck native directories. Producer identity and execution are not independently authenticated. '
         'Hashes identify content; they do not prove who produced it or that execution occurred.</p></details>',
         '<p>Purpose: ' + text(result['purpose']) + '; recorded agent: ' + code(result['agent']) + '; version ' + code(record['custom']['agent_version']) + '. ' +
-        ('Oracle fixture qualification is not model-backed skill-effectiveness evidence.' if result['purpose'] == 'oracle_qualification' else
+        ('Oracle fixture qualification is not model-backed skill-effectiveness evidence.' if result['purpose'] in ('oracle_qualification', 'cli_pilot_control') else
          'Within-run differences describe supplied measurements; they do not establish causality.') + '</p>']
     parts.append('<details><summary>Task definitions and applicability</summary>' + table('Tasks and applicability', ('Case', 'Task', 'Source case', 'Applicable native metrics'),
         [[code(case['case_id']), text(case['title']), code(case['source_case_id']), ', '.join(code(k) for k in case['metrics'])]
@@ -970,7 +970,7 @@ def render_report(result, captured, *, reviews=None, pages_context=None, histori
         for run in skill['behavioral_results']:
             if pages_context is not None:
                 record = records[run['record_id']]
-                purpose = ('Diagnostic oracle qualification' if record.get('custom', {}).get('purpose') == 'oracle_qualification' else
+                purpose = ('Diagnostic oracle qualification' if record.get('custom', {}).get('purpose') in ('oracle_qualification', 'cli_pilot_control') else
                            'Diagnostic confirmation' if record['policy']['attempts']['mode'] == 'confirmation' else 'Standard behavioral evidence')
                 add('<p><strong>' + purpose + '</strong></p>')
             add(behavioral(run, records))

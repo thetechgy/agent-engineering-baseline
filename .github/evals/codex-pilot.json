@@ -1,0 +1,33 @@
+{
+  "id": "codex-pester-001-pilot-v1",
+  "case": "pester-001",
+  "skill": "powershell-pester-6",
+  "cli": "0.167.0",
+  "cli_revision": "086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a",
+  "cli_archive_sha256": "3bbf75e83de6b58aed28f2cf6e33ad423ec31fd4700a1457b94be557ea5a7c6e",
+  "cli_executable_sha256": "cdcb45aaa01d0f14e298985e09465aebccd47f64ecd298aea44814af7b62bbda",
+  "model": "gpt-6.1-sol",
+  "reasoning_effort": "high",
+  "provider": "openai",
+  "base_url": "https://api.openai.com/v1",
+  "agent_seconds": 600,
+  "cpus": 2,
+  "memory_mb": 2048,
+  "attempts_per_arm": 1,
+  "allocation_usd": 10,
+  "stop_estimate_usd": 5,
+  "prices_per_million": {
+    "input": 2,
+    "cached_input": 0.1,
+    "output": 10
+  },
+  "frozen_at": "2026-11-07",
+  "release_url": "https://github.com/openai/codex/releases/tag/rust-v0.167.0",
+  "model_documentation": "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+  "configuration_documentation": "https://developers.openai.com/codex/config-reference",
+  "helper_sha256": {
+    "bin/codex-code-mode-host": "83f3e174c2da2f1ca8655cce686e302509640d34c0f4407c1155056f64536e0f",
+    "bin/codex-exec-server": "43376b1af843ffc71726a35d53b6e2241cbe1e8c9e8ec758402460295eec2107",
+    "codex-resources/bwrap": "77360cb751ccedc5971391444ac86a8a33c15b04d6b4a6fe45f5d25496e62c4c"
+  }
+}

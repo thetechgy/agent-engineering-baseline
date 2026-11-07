@@ -58,12 +58,16 @@ FINDING_LABELS = {
 
 
 def coverage_label(skill):
+    purposes = {run['custom']['purpose'] for run in skill['behavioral_results'] if 'custom' in run}
+    labels = {'cli_pilot': 'Bounded live CLI compatibility pilot',
+              'cli_pilot_control': 'Credential-free pilot grading controls',
+              'oracle_qualification': 'Oracle qualification', 'benchmark': 'Model-backed custom evidence'}
+    if purposes & {'cli_pilot', 'cli_pilot_control'}:
+        return ' · '.join(labels[purpose] for purpose in sorted(purposes))
     if any('producer_profile' in run['policy'] for run in skill['behavioral_results']):
         return 'Includes synthetic candidate qualification; candidate quality unavailable'
-    purposes = {run['custom']['purpose'] for run in skill['behavioral_results'] if 'custom' in run}
     if purposes:
-        return ' · '.join(('Oracle qualification' if purpose == 'oracle_qualification' else 'Model-backed custom evidence')
-                          for purpose in sorted(purposes))
+        return ' · '.join(labels[purpose] for purpose in sorted(purposes))
     if any(run['measured'] for run in skill['behavioral_results']):
         return 'Measured results'
     if any(config['suite'] is not None for config in skill['configurations']) or skill['behavioral_results']:
