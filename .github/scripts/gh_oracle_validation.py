@@ -140,11 +140,15 @@ def main(artifact):
                 purpose='oracle_qualification', attempts=1, agent='oracle',
                 execution_policy={'environment': 'aeb-gh-fixture', 'concurrency': 2, 'timeout_multiplier': 1.0, 'stop_on_pass': False},
                 numeric_excerpts=numeric))
+            # Retain allowlisted native diagnostics before checking expectations.
+            # Process success alone does not establish that Harbor trials succeeded.
+            reports.benchmark_artifacts(ROOT, native, 'gh', artifact / 'native')
             # Check prospective expectations against actual native sidecars.
             outcomes = []
             for arm in ('with-skill', 'without-skill'):
                 paths = list((run / 'codex' / arm / 'trials').glob('*/reward.json'))
-                if len(paths) != 24: raise RuntimeError('Incomplete collected gh arm')
+                if len(paths) != 24:
+                    raise RuntimeError(f'Incomplete collected gh arm ({arm}: {len(paths)}/24 reward rows; native diagnostics retained)')
                 for path in paths:
                     reward = reports.read_json(path); case = reward['entry_id']; metrics = reward.get('custom_metrics', {})
                     status = reward.get('details', {}).get('outcome', {}).get('classification')
@@ -160,7 +164,6 @@ def main(artifact):
                     elif any(metrics.get('gh_' + key) != 1 for key in ('task', 'evidence', 'authorization', 'commands', 'recovery', 'efficiency')):
                         raise RuntimeError('Correct native gh fixture failed')
                     outcomes.append({'case': case, 'arm': arm, 'outcome': status, 'control': CONTROLS.get(case, 'good')})
-            reports.benchmark_artifacts(ROOT, native, 'gh', artifact / 'native')
             _qualify_reporting(root, artifact / 'native', candidate=True, name='gh')
             reports.write_json(artifact / 'qualification.json', {'success': True, 'inference': False,
                 'producer': 'oracle', 'expected': 48, 'outcomes': outcomes,

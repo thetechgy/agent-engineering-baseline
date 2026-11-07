@@ -121,18 +121,24 @@ class NativeCurrentTests(unittest.TestCase):
                     case=task['case_id']; name=case+'__attempt1'; trial=job / name; names.append(name)
                     metrics={'gh_'+key:1.0 for key in e.GATE_FIELDS}
                     metrics['gh_activation']=float(present or fixtures[case].get('expected_skill') is None)
+                    if case == 'gh-001': metrics['gh_task']=0.0
+                    if case == 'gh-014': metrics['gh_authorization']=0.0
                     metrics['gh_gate']=float(all(metrics.values()))
-                    numeric={'overall':metrics['gh_gate'],**metrics}
-                    status='passed' if numeric['overall'] else 'failed'
+                    status=('unsupported' if case == 'gh-002' else 'unknown') if case in ('gh-002','gh-003') else ('passed' if metrics['gh_gate'] else 'failed')
+                    if status in ('unsupported','unknown'): metrics={}
+                    numeric={'overall':float(status=='passed'),**metrics}
                     reports.write_json(trial / 'verifier/reward.json',numeric)
                     reports.write_json(trial / 'verifier/skill_evaluator_reward.json',{'entry_id':case,
-                        'has_skill':present,'overall':numeric['overall'],'evaluation_status':'complete',
-                        'custom_metrics':metrics,'details':{'outcome':{'classification':status,'code':'evaluated'}}})
+                        'has_skill':present,'overall':numeric['overall'],
+                        'evaluation_status':'complete' if status in ('passed','failed') else 'failed',
+                        'custom_metrics':metrics,'details':{'outcome':{'classification':status,
+                            'code':'evaluated' if status in ('passed','failed') else status}}})
                     reports.write_json(trial / 'result.json',{'id':'id-'+name,'trial_name':name,'task_name':case,
                         'task_checksum':task['task_checksum'],'config':{'task':{'path':'/tasks/'+case},
                         'agent':{'name':'oracle'},'timeout_multiplier':1.0,
                         'environment':{'import_path':'aeb_gh_fixture.backend:TrustedGhEnvironment'}},
-                        'agent_info':{'name':'oracle','version':'1.0.0'},'verifier_result':{'rewards':numeric},
+                        'agent_info':{'name':'oracle','version':'1.0.0'},
+                        'agent_result':{'n_input_tokens':None,'n_cache_tokens':None,'n_output_tokens':None},'verifier_result':{'rewards':numeric},
                         'exception_info':None,'started_at':'2026-11-06T00:00:00Z','finished_at':'2026-11-06T00:00:02Z',
                         'verifier':{'started_at':'2026-11-06T00:00:01Z','finished_at':'2026-11-06T00:00:02Z'}})
                 reports.write_json(job / 'result.json',{'n_total_trials':24,'stats':{'n_trials':24,'n_errors':0,
@@ -163,13 +169,26 @@ class NativeCurrentTests(unittest.TestCase):
                 self.assertEqual(arm['condition']['execution']['fixture_boundary'],'root-broker-unprivileged-agent-v1')
                 self.assertEqual(arm['condition']['competing_skills'][0]['skill_id'],'github-actions-hardening')
             for obs in public['observations']:
+                self.assertTrue(all(obs['custom']['usage'][key] is None for key in ('n_input_tokens','n_cache_tokens','n_output_tokens')))
                 self.assertIsNone(obs['deterministic_gate'])
                 self.assertTrue(all(v is None for v in obs['deterministic_scores'].values()))
                 self.assertIsNone(obs['score'])
-                self.assertTrue(any(m['status']=='measured' for m in obs['custom']['measurements']))
+                if obs['case_id'] in ('gh-002','gh-003'):
+                    self.assertEqual(obs['custom']['outcome'], 'unsupported' if obs['case_id']=='gh-002' else 'unknown')
+                    self.assertTrue(all(m['status']=='unavailable' and m['value'] is None for m in obs['custom']['measurements']))
+                else:
+                    self.assertTrue(any(m['status']=='measured' for m in obs['custom']['measurements']))
 
             import copy
             forged=copy.deepcopy(dict(public))
             forged['observations'][0]['deterministic_gate']=1.0
             with self.assertRaisesRegex(ValueError, 'Custom-only result implies'):
                 e.validate_public(forged)
+
+    def test_redacted_usage_is_unavailable_only_for_enrolled_candidate(self):
+        import skill_evidence as e
+        trial={'agent_result':{'n_input_tokens':'<redacted>','n_cache_tokens':'<redacted>','n_output_tokens':'<redacted>'}}
+        with self.assertRaisesRegex(ValueError,'Invalid count'): e.custom_usage(trial)
+        self.assertTrue(all(v is None for v in e.custom_usage(trial,redacted_counts=True).values()))
+        trial['agent_result']['n_input_tokens']='malformed'
+        with self.assertRaisesRegex(ValueError,'Invalid count'): e.custom_usage(trial,redacted_counts=True)

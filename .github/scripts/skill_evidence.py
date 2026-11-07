@@ -3894,7 +3894,7 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
                 observation['raw_deterministic_scores'] = dict.fromkeys(GATE_FIELDS)
             observation['custom'] = {'outcome': outcome, 'measurements': custom_measurements(definitions,
                 profile['cases'][mapping[case_id]], outcome, values, detail, obs_refs),
-                'usage': custom_usage(trial), 'references': obs_refs}
+                'usage': custom_usage(trial, redacted_counts=capture['evaluator_revision'] == profiles.CANDIDATE['revision']), 'references': obs_refs}
             observations.append(observation)
         require(not lookup or len(found) < summary.get('num_trials', 0), 'Unmatched summary trial')
         # At 0.3.0 num_trials counts scoreable reward rows, not all retained
@@ -3988,9 +3988,13 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
     return _BehavioralEvidence(data, behavioral_claim_identity(data), input_guards=(guard, *record_guards(standard or {})))
 
 
-def custom_usage(trial):
+def custom_usage(trial, *, redacted_counts=False):
     context = trial.get('agent_result') or {}
     result = {key: context.get(key) for key in ('n_input_tokens', 'n_cache_tokens', 'n_output_tokens')}
+    # The frozen 0.8.0 collector redacts these keys even when their value is null.
+    # A removed count is unavailable; it cannot be reconstructed as zero.
+    if redacted_counts:
+        result = {key: None if value == '<redacted>' else value for key, value in result.items()}
     for key in ('agent_execution', 'verifier'):
         phase = trial.get(key) or {}
         start, finish = phase.get('started_at'), phase.get('finished_at')
