@@ -95,6 +95,10 @@ SkillSpector 2.13.4 and Semgrep 1.184.0, with controlled collection/report evide
 and credential-free CI tracked there. Gitleaks 8.30.1 is already current. Bandit and
 pip-audit remain evaluator-owned; Semgrep's exact MCP 1.29.0 constraint remains an
 unresolved dependency gap. The candidate implementation and pins above are unchanged.
+PR #120 also qualifies a narrow retained-adapter correction for caveated scanner
+reports: findings survive while repository coverage remains incomplete.
+[Compatibility evidence](https://github.com/thetechgy/agent-engineering-baseline/blob/chore/95-scanner-modernization/.github/evals/SCANNER-MODERNIZATION-95.md#retained-adapter-compatibility-correction)
+records the before/after scans and reporting controls.
 
 The next evaluator milestone remains candidate native lifecycle and complete cohort
 qualification, including resolution of the 0.7.2-only trusted gh backend guard.
