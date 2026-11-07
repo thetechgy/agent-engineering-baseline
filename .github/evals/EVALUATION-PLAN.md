@@ -240,8 +240,8 @@ reports: findings survive while repository coverage remains incomplete.
 [Compatibility evidence](https://github.com/thetechgy/agent-engineering-baseline/blob/chore/95-scanner-modernization/.github/evals/SCANNER-MODERNIZATION-95.md#retained-adapter-compatibility-correction)
 records the before/after scans and reporting controls.
 
-The next action is to define and obtain separate authorization for a bounded live
-CLI/provider compatibility pilot before collecting judging or skill-benefit evidence.
+The next milestone is the bounded live CLI/provider compatibility pilot below.
+Judging and general skill-benefit evidence remain separate later work.
 Other dependencies remain in the existing freshness inventory; this scanner group
 does not qualify evaluator adoption, behavioral effectiveness or skill benefit.
 
@@ -383,3 +383,37 @@ Producer/artifact/verifier submission receipts and fixed admission reasons are
 retained before normalization; a report error cannot remove native grading records.
 No compatible existing runner was identified by the operator. The paid gate stays
 closed; a sandbox-compatible executor is the recommended next prerequisite.
+
+### Native control and report verification
+
+[Run 42388456615](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42388456615)
+at `7296677` completed all fourteen native grading controls with the expected
+four passed, four failed, two invalid and four unsupported outcomes. Both native
+arm commands returned zero; this does not turn the negative outcomes into passes.
+The twelve actual submissions retain matching producer/artifact/verifier hashes;
+the two missing-output controls retain no invented submission. Both cleanup audits
+completed. Boolean and classic suites pass the reference and detect both mutants;
+the weak suite passes the reference but detects neither. Template and prohibited
+parameter controls retain `test_name_template` and `command_parameter`; missing
+output retains `artifact`. Oracle fixture records remain separate from live Codex
+observations, with no provider inference or judging.
+
+The authenticated artifact is
+[codex-pilot-preparation-1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42388456615/artifacts/13580463970),
+archive SHA-256 `5c0a2b17f5c5e1da445ef66145de76f41e8cbfc456000e7f0b861aebf1e2a692`.
+Its final renderer failed closed because output overlapped the saved-analysis input
+parent. Original native records, public evidence, analysis, submissions and cleanup
+survived. The output is now a sibling of a dedicated analysis directory. Recovery
+rendered the authenticated public records through the existing CLI without
+regrading or changing original outcomes. Visual review also caught inherited
+synthetic-only labels: the prospective pilot profile now identifies native
+controls or live observations and measured custom outcomes truthfully. Judged
+scores remain unavailable. The original v4 consolidated report still reproduces
+byte-for-byte with SHA-256
+`0e9c52d0cd43f9926b83fbce021ac6a218df847d548ce4d8c4c370225f244563`.
+
+The final workflow rerun must complete its independent grading/report phase.
+Its CLI readiness probe remains expected to fail at the unchanged Bubblewrap
+namespace boundary. Required final-revision checks and their terminal outcomes
+are tracked in the draft PR. No paid approval is requested while that prerequisite
+is unresolved; both paid arms are unlaunched and no model key has been retrieved.

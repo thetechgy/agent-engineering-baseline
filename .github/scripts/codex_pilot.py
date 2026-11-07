@@ -240,8 +240,8 @@ def collect(root, artifact, bundle, captured, *, controls=False):
     reports.public_benchmark(ROOT, native, P['skill'], 'confirmation', public)
     captured_inputs = analysis.capture_inputs([public])
     value = analysis.validate_analysis(None, captured_inputs)
-    reports.write_json(artifact / 'analysis.json', value)
-    report.generate([public], artifact / 'analysis.json', artifact / 'consolidated')
+    reports.write_json(artifact / 'analysis/analysis.json', value)
+    report.generate([public], artifact / 'analysis/analysis.json', artifact / 'consolidated')
     observations = [row for record in captured_inputs.records.values() if record['kind'] == 'behavioral' for row in record['observations']]
     reports.write_json(artifact / 'outcomes.json', observations)
     if controls:

@@ -564,7 +564,13 @@ def behavioral(run, records):
         '<p>Limitations: ' + limitations(run['availability']) + '</p>',
         '<details><summary>Run identity and evaluated source</summary>' + disclosure('Exact record identity', rid) + '<p>Evaluated source: ' + text(run['source']['owner']) + ' · ' + code(run['source']['repository']) +
         ' · revision ' + code(run['source']['revision']) + '.</p></details>']
-    if 'producer_profile' in record['policy']:
+    if analysis.pilot_record(record):
+        label = 'Live CLI compatibility pilot' if record['custom']['purpose'] == 'cli_pilot' else 'Native pilot grading controls'
+        parts.append('<p class="safety"><strong>' + label + '; excluded from production history.</strong> '
+            'Producer: ' + code(record['policy']['producer_profile']) + '. '
+            'Custom task and mutation measurements are separate from uncollected judge-dependent scores. '
+            'One matched pair does not establish general skill effectiveness.</p>')
+    elif 'producer_profile' in record['policy']:
         parts.append('<p class="safety"><strong>Synthetic candidate qualification; excluded from production history.</strong> '
             'Producer: ' + code(record['policy']['producer_profile']) + '; scoring policy: ' + code(record['policy']['scoring_policy']) + '. '
             'No agent or model judge was run. Judge-dependent quality and composite scores are unavailable. '
@@ -941,8 +947,10 @@ def render_report(result, captured, *, reviews=None, pages_context=None, histori
         '</select></div></header><main id="main" tabindex="-1"><section class="overview" aria-labelledby="overview">'
         '<h2 id="overview">Evidence overview</h2>')
     skills = result['skills']
-    if any('producer_profile' in record.get('policy', {}) for record in records.values()):
+    if any('producer_profile' in record.get('policy', {}) and not analysis.pilot_record(record) for record in records.values()):
         add('<p class="safety"><strong>Synthetic candidate qualification.</strong> Fixed judge values test transport only. No model judges ran; candidate quality is unavailable. Candidate records are excluded from production history and cannot establish skill improvement.</p>')
+    if any(analysis.pilot_record(record) for record in records.values()):
+        add('<p class="safety"><strong>Opt-in CLI compatibility evidence.</strong> Native grading controls and live CLI observations retain separate purposes. No model judging or history publication is enabled; one pair cannot establish general skill effectiveness.</p>')
     add(executive_summary(result, records, pages=pages_context))
     add('</section>')
     add(review_first(result, records, attached))

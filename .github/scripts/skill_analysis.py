@@ -243,7 +243,13 @@ class ValidatedRecords:
     guards: tuple = ()
 
 
+def pilot_record(record):
+    return record.get('custom', {}).get('profile_id') == 'pester-cli-pilot-v1' and record['custom']['purpose'] in ('cli_pilot', 'cli_pilot_control')
+
+
 def measured(record):
+    if pilot_record(record):
+        return any(m['status'] == 'measured' for obs in record['observations'] for m in obs['custom']['measurements'])
     if 'producer_profile' in record.get('policy', {}):
         return False  # This qualified profile is offline transport only.
     return record['kind'] == 'behavioral' and bool(record['metrics'] or record['observations'] or
