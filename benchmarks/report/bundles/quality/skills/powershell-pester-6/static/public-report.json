@@ -7,6 +7,15 @@
     ],
     "status": "incomplete"
   },
+  "coverage_caveats": [
+    {
+      "count": 6,
+      "producer_status": "complete_with_caveats",
+      "reason": "reference_missing",
+      "reference": "sha256:39febed7bd386aab37d3e920be54646573e561aec2bf24287241581c2e8f0b4d",
+      "scanner": "skillspector"
+    }
+  ],
   "dataset": {
     "authored_digest": null,
     "authored_provenance": "unknown",
@@ -22,7 +31,7 @@
       "check": "body_recommended_section",
       "line": null,
       "member": null,
-      "reference": "sha256:cde7e6bc6a83266f98dd80b48749b93c01cbc0e13fc458456888beecb7799dac",
+      "reference": "sha256:e8561431fca257220f5cf02e0bde085476756b3c15b10615ffe1e3cc2c123f75",
       "scanner": "SCHEMA",
       "severity": "medium"
     },
@@ -30,7 +39,7 @@
       "check": "body_recommended_section",
       "line": null,
       "member": null,
-      "reference": "sha256:76508cf3cb9b09095acfcb9bdc58707e27b40f425fcf18e633af9c0feb75344d",
+      "reference": "sha256:1a2c76f4bf6ab976e6f8d17ee47956c576ed549dd64580d742ebf9d1865bf2ed",
       "scanner": "SCHEMA",
       "severity": "medium"
     },
@@ -38,7 +47,7 @@
       "check": "author_missing",
       "line": null,
       "member": null,
-      "reference": "sha256:356229d9371e63531f31f5341d27dd23d7c9e5efd6df12cb46a15a573939a89b",
+      "reference": "sha256:473e8d85fadf2db57a1662940e03dd1eefc9b99c51a98a216f546d2ac0e6f873",
       "scanner": "SCHEMA",
       "severity": "high"
     },
@@ -46,7 +55,7 @@
       "check": "quality_correctness",
       "line": null,
       "member": null,
-      "reference": "sha256:5b6e9184ef0f2e77bd502fc8970979c5ecb7eff84ba95ad54663d97d693c40bc",
+      "reference": "sha256:20272276eade97811ad5660a37beb0811ec68a3b26984a1f621b34ff4c3ed742",
       "scanner": "QUALITY",
       "severity": "medium"
     },
@@ -54,7 +63,7 @@
       "check": "quality_correctness",
       "line": null,
       "member": null,
-      "reference": "sha256:966394bef13a89b4b71e74a1934289d47ff03d4077404cd460e26dcc13a6e6eb",
+      "reference": "sha256:d9381f3ab8353fb7419a199450876eca5615722e75d68f1664890f165bc44f5b",
       "scanner": "QUALITY",
       "severity": "medium"
     },
@@ -62,7 +71,7 @@
       "check": "quality_correctness",
       "line": null,
       "member": null,
-      "reference": "sha256:578f07619cbb1f1f69850de9a8f3efc66d4ab5a12543330810c4969d51579580",
+      "reference": "sha256:aa71deba1ca53a347eef44f2f66d5473c838ea9772727ca1ab7ae4eb9e833e9e",
       "scanner": "QUALITY",
       "severity": "medium"
     },
@@ -70,7 +79,7 @@
       "check": "quality_discoverability",
       "line": null,
       "member": null,
-      "reference": "sha256:2795dac8946af698c36d0512a8722e2a53533cdaf49a0171da2cbc57957ac955",
+      "reference": "sha256:9d2d3b88bf45e1384c99b0b8f292901220869afb0dcbe1306cd2a84fc9d2202e",
       "scanner": "QUALITY",
       "severity": "low"
     },
@@ -78,7 +87,7 @@
       "check": "quality_discoverability",
       "line": null,
       "member": null,
-      "reference": "sha256:1d78bfa2026d89b50e195e58e4b8280a90b798a3d64c31399bddbb6ea3249a77",
+      "reference": "sha256:33dfedba430dba7812e08d1b15840f3394aa009ded45e678266ebdfb04994b79",
       "scanner": "QUALITY",
       "severity": "low"
     },
@@ -86,7 +95,7 @@
       "check": "quality_reliability",
       "line": null,
       "member": null,
-      "reference": "sha256:63e56f1dacc488ba372f1da141c1b6342a08a6da1c1782effcee0138a7454f85",
+      "reference": "sha256:a81204cf3dbeedfdc26ffdafbacfe86ba95f7ca429da48ee4be6443d53fb6d2b",
       "scanner": "QUALITY",
       "severity": "low"
     },
@@ -94,7 +103,7 @@
       "check": "quality_reliability",
       "line": null,
       "member": null,
-      "reference": "sha256:a8361a9ca78e0b668d66ff41906ba60299d1046e400b8bae42920057c7337a00",
+      "reference": "sha256:90825dee6ef9f9b25371bb64cf95385ae82314f0097faf1a332dd2e3b2cc793f",
       "scanner": "QUALITY",
       "severity": "low"
     },
@@ -102,7 +111,7 @@
       "check": "quality_reliability",
       "line": null,
       "member": null,
-      "reference": "sha256:33868546a6f89b348ad4bb3f2364ec9d5290b4842c657615bf715cda9b716920",
+      "reference": "sha256:f5a7bff7ca97af740c474c67e2f9d6aa3cd7539d7258cd1ffee0419c6c4c790d",
       "scanner": "QUALITY",
       "severity": "low"
     },
@@ -110,7 +119,7 @@
       "check": "quality_efficiency",
       "line": null,
       "member": null,
-      "reference": "sha256:058e8a23d8a319131b6d6645c5c9fcb220c63f93aaf5642eaf0288a4f35f0ea2",
+      "reference": "sha256:2de3e181ff9e2414f1fe0cec237ef096a5d2244032121c49e6df6efc9e07bf99",
       "scanner": "QUALITY",
       "severity": "medium"
     }
@@ -165,8 +174,8 @@
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:75c6c978646e1bec9cd5cf669aa2a45766accf7141bdba816d06ff045b6db995",
-      "id": "sha256:bb65aa20b5d85f2846640cc15d65a41cc321574d8f8d8cd9a0d3ae4744f2cf6d",
+      "digest": "sha256:e2521f9ddd409e14aa424f6fb212e86c0362f28388cca44a3683186bd6748774",
+      "id": "sha256:b0b37ac51be1c5efde70737dc87bb3e1a22bf3403916beda54c45c2dce6c7648",
       "locator": [],
       "member": "reports/catalog-summary.json",
       "provenance": "runtime_recorded"
@@ -175,353 +184,366 @@
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:8202d5eec8f14958de0354984fcef6fb1384a98f919ae5f7f51245da7d1f8f92",
-      "id": "sha256:87f8558a3ad3bcdfd773a30fd9e03d0d1b899a50e845d95d966284df1435e0bc",
+      "digest": "sha256:ff2e237c1fee38805a6c09909ea9ede07913c5051acece37c5b20e897446ba75",
+      "id": "sha256:d44844fbbb51cf801cd590ee2f9045ff2c9f3993c1c1cdbf6dea1e622692e671",
       "locator": [],
-      "member": "reports/powershell-pester-6/skillevaluator-output-20261104092214.json",
+      "member": "reports/powershell-pester-6/skillevaluator-output-20261107041357.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:8202d5eec8f14958de0354984fcef6fb1384a98f919ae5f7f51245da7d1f8f92",
-      "id": "sha256:8c398b2f1f85b3c839bf0b99bc00b6541cf5f5222cd608e5f2f299033c6f0847",
+      "digest": "sha256:ff2e237c1fee38805a6c09909ea9ede07913c5051acece37c5b20e897446ba75",
+      "id": "sha256:7ef3acc2c803519ca9d891078a3a546d5d7df6a0f37796923a70c39e162ae6b6",
       "locator": [
         "results",
         0
       ],
-      "member": "reports/powershell-pester-6/skillevaluator-output-20261104092214.json",
+      "member": "reports/powershell-pester-6/skillevaluator-output-20261107041357.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:8202d5eec8f14958de0354984fcef6fb1384a98f919ae5f7f51245da7d1f8f92",
-      "id": "sha256:ac7357cba3765fb46dc7e441badfd10a419075b94ad87091c14dd6463aa374fe",
+      "digest": "sha256:ff2e237c1fee38805a6c09909ea9ede07913c5051acece37c5b20e897446ba75",
+      "id": "sha256:5e9f1ab4d575e11034dd1b566e3d8951f735efaaad02e14c4c9012bc477267c7",
       "locator": [
         "results",
         1
       ],
-      "member": "reports/powershell-pester-6/skillevaluator-output-20261104092214.json",
+      "member": "reports/powershell-pester-6/skillevaluator-output-20261107041357.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:8202d5eec8f14958de0354984fcef6fb1384a98f919ae5f7f51245da7d1f8f92",
-      "id": "sha256:11ac434aca590fe7df0c1dbe6cf2e9e3dbc20f96cdacbbf69c062ee8eece3b3f",
+      "digest": "sha256:ff2e237c1fee38805a6c09909ea9ede07913c5051acece37c5b20e897446ba75",
+      "id": "sha256:39febed7bd386aab37d3e920be54646573e561aec2bf24287241581c2e8f0b4d",
       "locator": [
         "results",
         2
       ],
-      "member": "reports/powershell-pester-6/skillevaluator-output-20261104092214.json",
+      "member": "reports/powershell-pester-6/skillevaluator-output-20261107041357.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:8202d5eec8f14958de0354984fcef6fb1384a98f919ae5f7f51245da7d1f8f92",
-      "id": "sha256:f28d9467136390a9fa117bc6f99463dd853006d503626a9518b2a6e58894a34c",
+      "digest": "sha256:ff2e237c1fee38805a6c09909ea9ede07913c5051acece37c5b20e897446ba75",
+      "id": "sha256:c8b7ffa0e89548f08fd1677c10b63022e0740664c0b7850c445c18bd2428594d",
       "locator": [
         "results",
         3
       ],
-      "member": "reports/powershell-pester-6/skillevaluator-output-20261104092214.json",
+      "member": "reports/powershell-pester-6/skillevaluator-output-20261107041357.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:8202d5eec8f14958de0354984fcef6fb1384a98f919ae5f7f51245da7d1f8f92",
-      "id": "sha256:7302667730efe3504849c7278510abacedd653fb650a1404adf92f1c4871615b",
+      "digest": "sha256:ff2e237c1fee38805a6c09909ea9ede07913c5051acece37c5b20e897446ba75",
+      "id": "sha256:9c46176c2473fab6c474a3511acd71f47b5a102812531f569c2716021c9176b7",
       "locator": [
         "results",
         4
       ],
-      "member": "reports/powershell-pester-6/skillevaluator-output-20261104092214.json",
+      "member": "reports/powershell-pester-6/skillevaluator-output-20261107041357.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:8202d5eec8f14958de0354984fcef6fb1384a98f919ae5f7f51245da7d1f8f92",
-      "id": "sha256:e98aea2d2c5a1881c0f8c00a7f81197d4b5910c89adae9538b55897a843f6ac6",
+      "digest": "sha256:ff2e237c1fee38805a6c09909ea9ede07913c5051acece37c5b20e897446ba75",
+      "id": "sha256:98c6a9f65ebdf1e3dbc41d2e09e80ae719a35537e8f65bb4569e96f3dac8fb53",
       "locator": [
         "results",
         5
       ],
-      "member": "reports/powershell-pester-6/skillevaluator-output-20261104092214.json",
+      "member": "reports/powershell-pester-6/skillevaluator-output-20261107041357.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:8202d5eec8f14958de0354984fcef6fb1384a98f919ae5f7f51245da7d1f8f92",
-      "id": "sha256:85b946d67c9ca8096599338b303b867f85c38fd2a450aa713fc19964450c59d7",
+      "digest": "sha256:ff2e237c1fee38805a6c09909ea9ede07913c5051acece37c5b20e897446ba75",
+      "id": "sha256:def92024b01ceabf0afb618215d0e51d7770ba56e36614e58bae7d8db35ba06b",
       "locator": [
         "results",
         6
       ],
-      "member": "reports/powershell-pester-6/skillevaluator-output-20261104092214.json",
+      "member": "reports/powershell-pester-6/skillevaluator-output-20261107041357.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:8202d5eec8f14958de0354984fcef6fb1384a98f919ae5f7f51245da7d1f8f92",
-      "id": "sha256:252c539f9f9f264aed530ed16fd12b5ef1219b34d0066706ab45f71f8a5c823c",
+      "digest": "sha256:ff2e237c1fee38805a6c09909ea9ede07913c5051acece37c5b20e897446ba75",
+      "id": "sha256:ac71a0923248750e70e9cf9b7ae7ed8c0380a557e6cc21343ba26be45e72eaff",
       "locator": [
         "results",
         7
       ],
-      "member": "reports/powershell-pester-6/skillevaluator-output-20261104092214.json",
+      "member": "reports/powershell-pester-6/skillevaluator-output-20261107041357.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:8202d5eec8f14958de0354984fcef6fb1384a98f919ae5f7f51245da7d1f8f92",
-      "id": "sha256:c7add606f57d08c4c7c16d62d32be616fbd9f5f1186257d73f04bb6b3b974be2",
+      "digest": "sha256:ff2e237c1fee38805a6c09909ea9ede07913c5051acece37c5b20e897446ba75",
+      "id": "sha256:cc14c64c51912be2077934754524608833a7e00595c903618d108a2e9d75a385",
       "locator": [
         "results",
         8
       ],
-      "member": "reports/powershell-pester-6/skillevaluator-output-20261104092214.json",
+      "member": "reports/powershell-pester-6/skillevaluator-output-20261107041357.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:8202d5eec8f14958de0354984fcef6fb1384a98f919ae5f7f51245da7d1f8f92",
-      "id": "sha256:7ec27089d608f7def3a0b23270a1129737e132a4a8d2fcc295d1b55d1da92f94",
+      "digest": "sha256:ff2e237c1fee38805a6c09909ea9ede07913c5051acece37c5b20e897446ba75",
+      "id": "sha256:971a14d1040bdcf32154d52f2402926c472e2ef1020ddbda0b670c0ca0b96bd3",
       "locator": [
         "results",
         9
       ],
-      "member": "reports/powershell-pester-6/skillevaluator-output-20261104092214.json",
+      "member": "reports/powershell-pester-6/skillevaluator-output-20261107041357.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:8202d5eec8f14958de0354984fcef6fb1384a98f919ae5f7f51245da7d1f8f92",
-      "id": "sha256:825358bd20b2c11e8c0d3914abb8c5455078751cc2bf9e97a027a51edceaef74",
+      "digest": "sha256:ff2e237c1fee38805a6c09909ea9ede07913c5051acece37c5b20e897446ba75",
+      "id": "sha256:8da805b4c54fd6f0295145a1f2fe4b01d639ca11b2de1b89517944c62dfe6149",
       "locator": [
         "results",
         10
       ],
-      "member": "reports/powershell-pester-6/skillevaluator-output-20261104092214.json",
+      "member": "reports/powershell-pester-6/skillevaluator-output-20261107041357.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:8202d5eec8f14958de0354984fcef6fb1384a98f919ae5f7f51245da7d1f8f92",
-      "id": "sha256:cde7e6bc6a83266f98dd80b48749b93c01cbc0e13fc458456888beecb7799dac",
+      "digest": "sha256:ff2e237c1fee38805a6c09909ea9ede07913c5051acece37c5b20e897446ba75",
+      "id": "sha256:e8561431fca257220f5cf02e0bde085476756b3c15b10615ffe1e3cc2c123f75",
       "locator": [
         "results",
         0,
         "findings",
         0
       ],
-      "member": "reports/powershell-pester-6/skillevaluator-output-20261104092214.json",
+      "member": "reports/powershell-pester-6/skillevaluator-output-20261107041357.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:8202d5eec8f14958de0354984fcef6fb1384a98f919ae5f7f51245da7d1f8f92",
-      "id": "sha256:76508cf3cb9b09095acfcb9bdc58707e27b40f425fcf18e633af9c0feb75344d",
+      "digest": "sha256:ff2e237c1fee38805a6c09909ea9ede07913c5051acece37c5b20e897446ba75",
+      "id": "sha256:1a2c76f4bf6ab976e6f8d17ee47956c576ed549dd64580d742ebf9d1865bf2ed",
       "locator": [
         "results",
         0,
         "findings",
         1
       ],
-      "member": "reports/powershell-pester-6/skillevaluator-output-20261104092214.json",
+      "member": "reports/powershell-pester-6/skillevaluator-output-20261107041357.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:8202d5eec8f14958de0354984fcef6fb1384a98f919ae5f7f51245da7d1f8f92",
-      "id": "sha256:356229d9371e63531f31f5341d27dd23d7c9e5efd6df12cb46a15a573939a89b",
+      "digest": "sha256:ff2e237c1fee38805a6c09909ea9ede07913c5051acece37c5b20e897446ba75",
+      "id": "sha256:473e8d85fadf2db57a1662940e03dd1eefc9b99c51a98a216f546d2ac0e6f873",
       "locator": [
         "results",
         0,
         "findings",
         2
       ],
-      "member": "reports/powershell-pester-6/skillevaluator-output-20261104092214.json",
+      "member": "reports/powershell-pester-6/skillevaluator-output-20261107041357.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:8202d5eec8f14958de0354984fcef6fb1384a98f919ae5f7f51245da7d1f8f92",
-      "id": "sha256:5b6e9184ef0f2e77bd502fc8970979c5ecb7eff84ba95ad54663d97d693c40bc",
+      "digest": "sha256:ff2e237c1fee38805a6c09909ea9ede07913c5051acece37c5b20e897446ba75",
+      "id": "sha256:20272276eade97811ad5660a37beb0811ec68a3b26984a1f621b34ff4c3ed742",
       "locator": [
         "results",
         9,
         "findings",
         0
       ],
-      "member": "reports/powershell-pester-6/skillevaluator-output-20261104092214.json",
+      "member": "reports/powershell-pester-6/skillevaluator-output-20261107041357.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:8202d5eec8f14958de0354984fcef6fb1384a98f919ae5f7f51245da7d1f8f92",
-      "id": "sha256:966394bef13a89b4b71e74a1934289d47ff03d4077404cd460e26dcc13a6e6eb",
+      "digest": "sha256:ff2e237c1fee38805a6c09909ea9ede07913c5051acece37c5b20e897446ba75",
+      "id": "sha256:d9381f3ab8353fb7419a199450876eca5615722e75d68f1664890f165bc44f5b",
       "locator": [
         "results",
         9,
         "findings",
         1
       ],
-      "member": "reports/powershell-pester-6/skillevaluator-output-20261104092214.json",
+      "member": "reports/powershell-pester-6/skillevaluator-output-20261107041357.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:8202d5eec8f14958de0354984fcef6fb1384a98f919ae5f7f51245da7d1f8f92",
-      "id": "sha256:578f07619cbb1f1f69850de9a8f3efc66d4ab5a12543330810c4969d51579580",
+      "digest": "sha256:ff2e237c1fee38805a6c09909ea9ede07913c5051acece37c5b20e897446ba75",
+      "id": "sha256:aa71deba1ca53a347eef44f2f66d5473c838ea9772727ca1ab7ae4eb9e833e9e",
       "locator": [
         "results",
         9,
         "findings",
         2
       ],
-      "member": "reports/powershell-pester-6/skillevaluator-output-20261104092214.json",
+      "member": "reports/powershell-pester-6/skillevaluator-output-20261107041357.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:8202d5eec8f14958de0354984fcef6fb1384a98f919ae5f7f51245da7d1f8f92",
-      "id": "sha256:2795dac8946af698c36d0512a8722e2a53533cdaf49a0171da2cbc57957ac955",
+      "digest": "sha256:ff2e237c1fee38805a6c09909ea9ede07913c5051acece37c5b20e897446ba75",
+      "id": "sha256:9d2d3b88bf45e1384c99b0b8f292901220869afb0dcbe1306cd2a84fc9d2202e",
       "locator": [
         "results",
         9,
         "findings",
         3
       ],
-      "member": "reports/powershell-pester-6/skillevaluator-output-20261104092214.json",
+      "member": "reports/powershell-pester-6/skillevaluator-output-20261107041357.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:8202d5eec8f14958de0354984fcef6fb1384a98f919ae5f7f51245da7d1f8f92",
-      "id": "sha256:1d78bfa2026d89b50e195e58e4b8280a90b798a3d64c31399bddbb6ea3249a77",
+      "digest": "sha256:ff2e237c1fee38805a6c09909ea9ede07913c5051acece37c5b20e897446ba75",
+      "id": "sha256:33dfedba430dba7812e08d1b15840f3394aa009ded45e678266ebdfb04994b79",
       "locator": [
         "results",
         9,
         "findings",
         4
       ],
-      "member": "reports/powershell-pester-6/skillevaluator-output-20261104092214.json",
+      "member": "reports/powershell-pester-6/skillevaluator-output-20261107041357.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:8202d5eec8f14958de0354984fcef6fb1384a98f919ae5f7f51245da7d1f8f92",
-      "id": "sha256:63e56f1dacc488ba372f1da141c1b6342a08a6da1c1782effcee0138a7454f85",
+      "digest": "sha256:ff2e237c1fee38805a6c09909ea9ede07913c5051acece37c5b20e897446ba75",
+      "id": "sha256:a81204cf3dbeedfdc26ffdafbacfe86ba95f7ca429da48ee4be6443d53fb6d2b",
       "locator": [
         "results",
         9,
         "findings",
         5
       ],
-      "member": "reports/powershell-pester-6/skillevaluator-output-20261104092214.json",
+      "member": "reports/powershell-pester-6/skillevaluator-output-20261107041357.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:8202d5eec8f14958de0354984fcef6fb1384a98f919ae5f7f51245da7d1f8f92",
-      "id": "sha256:a8361a9ca78e0b668d66ff41906ba60299d1046e400b8bae42920057c7337a00",
+      "digest": "sha256:ff2e237c1fee38805a6c09909ea9ede07913c5051acece37c5b20e897446ba75",
+      "id": "sha256:90825dee6ef9f9b25371bb64cf95385ae82314f0097faf1a332dd2e3b2cc793f",
       "locator": [
         "results",
         9,
         "findings",
         6
       ],
-      "member": "reports/powershell-pester-6/skillevaluator-output-20261104092214.json",
+      "member": "reports/powershell-pester-6/skillevaluator-output-20261107041357.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:8202d5eec8f14958de0354984fcef6fb1384a98f919ae5f7f51245da7d1f8f92",
-      "id": "sha256:33868546a6f89b348ad4bb3f2364ec9d5290b4842c657615bf715cda9b716920",
+      "digest": "sha256:ff2e237c1fee38805a6c09909ea9ede07913c5051acece37c5b20e897446ba75",
+      "id": "sha256:f5a7bff7ca97af740c474c67e2f9d6aa3cd7539d7258cd1ffee0419c6c4c790d",
       "locator": [
         "results",
         9,
         "findings",
         7
       ],
-      "member": "reports/powershell-pester-6/skillevaluator-output-20261104092214.json",
+      "member": "reports/powershell-pester-6/skillevaluator-output-20261107041357.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:8202d5eec8f14958de0354984fcef6fb1384a98f919ae5f7f51245da7d1f8f92",
-      "id": "sha256:058e8a23d8a319131b6d6645c5c9fcb220c63f93aaf5642eaf0288a4f35f0ea2",
+      "digest": "sha256:ff2e237c1fee38805a6c09909ea9ede07913c5051acece37c5b20e897446ba75",
+      "id": "sha256:2de3e181ff9e2414f1fe0cec237ef096a5d2244032121c49e6df6efc9e07bf99",
       "locator": [
         "results",
         9,
         "findings",
         8
       ],
-      "member": "reports/powershell-pester-6/skillevaluator-output-20261104092214.json",
+      "member": "reports/powershell-pester-6/skillevaluator-output-20261107041357.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:3a7a76ea008264d392fdf2772aa828fefa684d90c9b5d17b4d157bdda90e4023",
-      "id": "sha256:9eafd9a1f1c98733acce3560955422b747409614e3fe084ff7d73c90bc036a12",
+      "digest": "sha256:b821665e33c67ac500ee0648bee0d0dc26ad9f2775c541b00d7242029401a290",
+      "id": "sha256:0c15ef068eebe9890e6216a0b78f6982a12791eb9d80430d7f60117ea62716ff",
       "locator": [],
       "member": "versions.json",
       "provenance": "runtime_recorded"
     }
   ],
   "run_id": null,
+  "scanner_runtime": {
+    "adapter_patch": "sha256:09ab5d1440f355224935b9498ea3c2a68395d656997932ab525771287cb802bc",
+    "semgrep_lock": "sha256:523bff62b068c83716cfd73e461d23beb8876a9a951227a7aaaf0b7b7a37b764",
+    "skillspector_lock": "sha256:8c922f8c222c28c7e02b1dc856a2b9464fb2d768ddae944ee9f8131452bfeee9",
+    "skillspector_revision": "54824463814a0be01360792523ec7245a69190fc",
+    "versions": {
+      "bandit": "1.9.4",
+      "gitleaks": "8.30.1",
+      "pip-audit": "2.10.1",
+      "semgrep": "1.184.0",
+      "skillspector": "2.13.4"
+    }
+  },
   "scans": [
     {
       "blocking": true,
       "passed": false,
       "references": [
-        "sha256:87f8558a3ad3bcdfd773a30fd9e03d0d1b899a50e845d95d966284df1435e0bc"
+        "sha256:d44844fbbb51cf801cd590ee2f9045ff2c9f3993c1c1cdbf6dea1e622692e671"
       ],
       "scanner": "catalog-total",
       "severity_counts": {
@@ -536,7 +558,7 @@
       "blocking": true,
       "passed": false,
       "references": [
-        "sha256:8c398b2f1f85b3c839bf0b99bc00b6541cf5f5222cd608e5f2f299033c6f0847"
+        "sha256:7ef3acc2c803519ca9d891078a3a546d5d7df6a0f37796923a70c39e162ae6b6"
       ],
       "scanner": "SCHEMA",
       "severity_counts": {
@@ -551,7 +573,7 @@
       "blocking": true,
       "passed": true,
       "references": [
-        "sha256:ac7357cba3765fb46dc7e441badfd10a419075b94ad87091c14dd6463aa374fe"
+        "sha256:5e9f1ab4d575e11034dd1b566e3d8951f735efaaad02e14c4c9012bc477267c7"
       ],
       "scanner": "VERSION",
       "severity_counts": {
@@ -566,7 +588,7 @@
       "blocking": true,
       "passed": false,
       "references": [
-        "sha256:11ac434aca590fe7df0c1dbe6cf2e9e3dbc20f96cdacbbf69c062ee8eece3b3f"
+        "sha256:39febed7bd386aab37d3e920be54646573e561aec2bf24287241581c2e8f0b4d"
       ],
       "scanner": "SECURITY",
       "severity_counts": {
@@ -581,7 +603,7 @@
       "blocking": true,
       "passed": true,
       "references": [
-        "sha256:f28d9467136390a9fa117bc6f99463dd853006d503626a9518b2a6e58894a34c"
+        "sha256:c8b7ffa0e89548f08fd1677c10b63022e0740664c0b7850c445c18bd2428594d"
       ],
       "scanner": "PII",
       "severity_counts": {
@@ -596,7 +618,7 @@
       "blocking": true,
       "passed": true,
       "references": [
-        "sha256:7302667730efe3504849c7278510abacedd653fb650a1404adf92f1c4871615b"
+        "sha256:9c46176c2473fab6c474a3511acd71f47b5a102812531f569c2716021c9176b7"
       ],
       "scanner": "LICENSE",
       "severity_counts": {
@@ -611,7 +633,7 @@
       "blocking": true,
       "passed": true,
       "references": [
-        "sha256:e98aea2d2c5a1881c0f8c00a7f81197d4b5910c89adae9538b55897a843f6ac6"
+        "sha256:98c6a9f65ebdf1e3dbc41d2e09e80ae719a35537e8f65bb4569e96f3dac8fb53"
       ],
       "scanner": "CODE_RISK",
       "severity_counts": {
@@ -626,7 +648,7 @@
       "blocking": true,
       "passed": true,
       "references": [
-        "sha256:85b946d67c9ca8096599338b303b867f85c38fd2a450aa713fc19964450c59d7"
+        "sha256:def92024b01ceabf0afb618215d0e51d7770ba56e36614e58bae7d8db35ba06b"
       ],
       "scanner": "SECRETS",
       "severity_counts": {
@@ -641,7 +663,7 @@
       "blocking": true,
       "passed": true,
       "references": [
-        "sha256:252c539f9f9f264aed530ed16fd12b5ef1219b34d0066706ab45f71f8a5c823c"
+        "sha256:ac71a0923248750e70e9cf9b7ae7ed8c0380a557e6cc21343ba26be45e72eaff"
       ],
       "scanner": "HYGIENE",
       "severity_counts": {
@@ -656,7 +678,7 @@
       "blocking": true,
       "passed": true,
       "references": [
-        "sha256:c7add606f57d08c4c7c16d62d32be616fbd9f5f1186257d73f04bb6b3b974be2"
+        "sha256:cc14c64c51912be2077934754524608833a7e00595c903618d108a2e9d75a385"
       ],
       "scanner": "UNICODE",
       "severity_counts": {
@@ -671,7 +693,7 @@
       "blocking": true,
       "passed": true,
       "references": [
-        "sha256:7ec27089d608f7def3a0b23270a1129737e132a4a8d2fcc295d1b55d1da92f94"
+        "sha256:971a14d1040bdcf32154d52f2402926c472e2ef1020ddbda0b670c0ca0b96bd3"
       ],
       "scanner": "QUALITY",
       "severity_counts": {
@@ -686,7 +708,7 @@
       "blocking": true,
       "passed": true,
       "references": [
-        "sha256:825358bd20b2c11e8c0d3914abb8c5455078751cc2bf9e97a027a51edceaef74"
+        "sha256:8da805b4c54fd6f0295145a1f2fe4b01d639ca11b2de1b89517944c62dfe6149"
       ],
       "scanner": "SCRIPT_LINT",
       "severity_counts": {
@@ -701,7 +723,7 @@
       "blocking": false,
       "passed": null,
       "references": [
-        "sha256:87f8558a3ad3bcdfd773a30fd9e03d0d1b899a50e845d95d966284df1435e0bc"
+        "sha256:d44844fbbb51cf801cd590ee2f9045ff2c9f3993c1c1cdbf6dea1e622692e671"
       ],
       "scanner": "skillspector",
       "severity_counts": {
@@ -738,7 +760,7 @@
     "lineage": null,
     "owner": "local",
     "repository": "thetechgy/agent-engineering-baseline",
-    "revision": "8cea856f5fc9475d1b4d077a8fc5c303eb7e56aa",
+    "revision": "668c734f35d3e31038a32b173ce3fa2a19420295",
     "skill_id": "powershell-pester-6",
     "source_path": ".apm/skills/powershell-pester-6"
   }
