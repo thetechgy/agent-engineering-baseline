@@ -85,5 +85,8 @@ not used by production evaluation. See
 with a separate compatible lock; production and historical patches are unchanged.
 Pristine 0.8.0 failed the retained evidence controls, so these corrections remain
 necessary. The port adjusts one hunk to upstream's changed surrounding code.
+Bash `printf -v` assignments remain unresolved path evidence in the current
+patch; ordinary printed text remains distinct from access. The diagnostic
+producer identity and source hashes version this correction.
 It does not change upstream scoring. See the [active checkpoint](../evals/EVALUATION-PLAN.md)
 for qualification, dependency constraints and adoption limits.

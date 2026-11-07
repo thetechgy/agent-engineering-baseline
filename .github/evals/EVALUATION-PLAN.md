@@ -36,6 +36,15 @@ failed their controls; none was found incorporated sufficiently to remove.
 One sensitive-path hunk was ported to upstream's changed surrounding code.
 The upstream scoring implementation is unchanged.
 
+The reviewed `printf -v` correction gives the diagnostic producer an explicit
+`skillevaluator-0.8.0-offline-v2` identity. Bash variable assignments remain
+unresolved evidence, rather than safe printing; ordinary `printf` data remains
+text. The upstream release, all dependency pins, lock and scoring policy are
+unchanged. Only the evidence patch/source-tree hashes change. Earlier v1 evidence
+retains its original identities and the tooling snapshot at `8e6b991`; it is not
+relabeled or accepted under v2. Native qualification must complete with the new
+patch before v2 is qualified.
+
 ## Reporting and interpretation
 
 Historical 0.3.0 and its metric-mean scoring retain their original identities and results.

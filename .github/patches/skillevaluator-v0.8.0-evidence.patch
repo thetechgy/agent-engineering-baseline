@@ -353,10 +353,10 @@ index 358f857..23db9a3 100644
  
 diff --git a/src/skillevaluator/tier3/eval_core/sensitive_path_evidence.py b/src/skillevaluator/tier3/eval_core/sensitive_path_evidence.py
 new file mode 100644
-index 0000000..0ceb787
+index 0000000..ddb3d2e
 --- /dev/null
 +++ b/src/skillevaluator/tier3/eval_core/sensitive_path_evidence.py
-@@ -0,0 +1,137 @@
+@@ -0,0 +1,139 @@
 +"""Bounded classification of literal path evidence; never execute captured code.
 +
 +This is deliberately incomplete. Unknown syntax is not evidence of access or
@@ -482,9 +482,11 @@ index 0000000..0ceb787
 +        if executable in {"python", "python3"} and len(command) == 3 and command[1] == "-c":
 +            kind = _python_literal_use(command[2], paths)
 +        elif executable in {"printf", "echo"}:
++            # Bash printf can assign data for later interpretation or access.
++            kind = "unknown" if executable == "printf" and len(command) > 1 and command[1].startswith("-v") else "text"
 +            # Redirect destinations are actions, the printed body is data.
 +            kind = "access" if any(command[i - 1] in {">", ">>", "<"} and _sensitive(token, paths)
-+                                   for i, token in enumerate(command) if i) else "text"
++                                   for i, token in enumerate(command) if i) else kind
 +        elif executable in {"cat", "head", "tail", "nl", "stat", "ls", "curl", "wget", "podman", "docker", "mount"}:
 +            kind = "access"
 +        else:
