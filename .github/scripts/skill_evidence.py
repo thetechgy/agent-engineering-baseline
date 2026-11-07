@@ -24,6 +24,21 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import skill_reports as reports
 
+# Frozen static admission identity, not a freshness inventory. Retain this profile
+# when admitting future scanner groups. Earlier historical records omit the field.
+SCANNER_RUNTIME = {
+    "versions": {
+        "semgrep": "1.184.0",
+        "skillspector": "2.13.4",
+        "gitleaks": "8.30.1",
+        "bandit": "1.9.4",
+        "pip-audit": "2.10.1"
+    },
+    "skillspector_revision": "54824463814a0be01360792523ec7245a69190fc",
+    "skillspector_lock": "sha256:8c922f8c222c28c7e02b1dc856a2b9464fb2d768ddae944ee9f8131452bfeee9",
+    "semgrep_lock": "sha256:523bff62b068c83716cfd73e461d23beb8876a9a951227a7aaaf0b7b7a37b764"
+}
+
 ROOT = Path(__file__).resolve().parents[2]
 JSON_LIMIT = 8 * 1024 * 1024
 NORMALIZATION_LIMIT = 64 * 1024 * 1024
@@ -1448,6 +1463,10 @@ def validate_evidence(data, *, public=False, _observed_at=None):
         data = dict(data)
     fields = ('schema_version', 'kind', 'source', 'run_id', 'dataset', 'policy', 'arms', 'metrics',
               'observations', 'scans', 'findings', 'references', 'availability')
+    if 'scanner_runtime' in data:
+        require(data.get('kind') == 'static' and data['scanner_runtime'] == SCANNER_RUNTIME,
+                'Unsupported or contradictory scanner runtime')
+        fields += ('scanner_runtime',)
     closed(data, fields)
     require(type(data['schema_version']) is int and data['schema_version'] == 1, 'Evidence version')
     enum(data['kind'], ('behavioral', 'static')); validate_source(data['source']); optional(data['run_id'], token)
@@ -1767,6 +1786,7 @@ def static_claim_identity(data, blocking_defaults):
     claims = {key: copy.deepcopy(data[key]) for key in
               ('source', 'run_id', 'dataset', 'policy', 'arms', 'metrics', 'scans', 'findings', 'references')}
     if data['schema_version'] == 2: claims['custom'] = copy.deepcopy(data['custom'])
+    if 'scanner_runtime' in data: claims['scanner_runtime'] = copy.deepcopy(data['scanner_runtime'])
     claims['provenance'] = data['availability']['provenance']
     defaults = dict(blocking_defaults)
     for scan in claims['scans']:
@@ -1902,6 +1922,7 @@ def project(data, *, static_bundle=None, behavioral_bundle=None):
     # Every object is rebuilt from fixed fields. A native report is never accepted.
     out = {key: copy.deepcopy(data[key]) for key in ('schema_version', 'kind', 'source', 'run_id', 'dataset',
            'policy', 'arms', 'metrics', 'scans', 'findings', 'references', 'availability')}
+    if 'scanner_runtime' in data: out['scanner_runtime'] = copy.deepcopy(data['scanner_runtime'])
     out['observations'] = [{key: copy.deepcopy(obs[key]) for key in
         OBSERVATION_FIELDS}
         for obs in data['observations']]
@@ -1966,6 +1987,13 @@ def select_run(root, name, selected, *, entries=None, directory_identities=None)
 
 def validate_runtime_versions(versions):
     require(type(versions) is dict, 'Native versions object required')
+    if 'scanner_runtime' in versions:
+        require(versions['scanner_runtime'] == SCANNER_RUNTIME
+                and versions.get('scanners') == SCANNER_RUNTIME['versions']
+                and versions.get('skillspector_revision') == SCANNER_RUNTIME['skillspector_revision'],
+                'Unsupported or contradictory scanner provenance')
+    elif versions.get('skillspector_revision') == SCANNER_RUNTIME['skillspector_revision']:
+        require(False, 'Missing scanner runtime provenance')
     if versions.get('skillevaluator') is not None:
         require(versions['skillevaluator'] == '0.3.0', 'Unsupported native evaluator')
     if versions.get('evaluator_revision') is not None:
@@ -2845,6 +2873,7 @@ def normalize_static(root, name, workspace=ROOT):
     if root / 'versions.json' in scanned_entries:
         versions, versions_digest = read_json_and_digest(root / 'versions.json', budget=budget, directory_identities=directory_identities, directory_states=directory_states, file_states=file_states)
         validate_runtime_versions(versions)
+        if 'scanner_runtime' in versions: data['scanner_runtime'] = copy.deepcopy(versions['scanner_runtime'])
         data['policy'] = make_policy({'evaluator_revision': versions.get('evaluator_revision')}, provenance='runtime_recorded')
         data['references'].append(reference_from_digest(root, root / 'versions.json', 'skill-quality', versions_digest))
         if versions.get('fixture') == 'synthetic':

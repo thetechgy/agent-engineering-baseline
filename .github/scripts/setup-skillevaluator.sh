@@ -95,14 +95,21 @@ if [ "$kind" = quality ]; then
   uv pip sync --quiet --python "$tool_root/semgrep/bin/python" --require-hashes --only-binary :all: \
     "$repository_root/.github/requirements/semgrep.txt"
   ln -s "$tool_root/semgrep/bin/semgrep" "$tool_root/bin/semgrep"
-  skillspector_revision=38a1dfe93325d2f8bfcd4f8d0241eed706334915 # v2.13.3
+  skillspector_revision=54824463814a0be01360792523ec7245a69190fc # v2.13.4
   git init --quiet "$tool_root/skillspector"
   git -C "$tool_root/skillspector" fetch --quiet --depth=1 \
     https://github.com/NVIDIA/SkillSpector.git "$skillspector_revision"
   git -C "$tool_root/skillspector" checkout --quiet --detach FETCH_HEAD
   test "$(git -C "$tool_root/skillspector" rev-parse HEAD)" = "$skillspector_revision"
+  # Scanner-owned compatible lock; evaluator and historical environments are untouched.
+  skillspector_lock_sha256=8c922f8c222c28c7e02b1dc856a2b9464fb2d768ddae944ee9f8131452bfeee9
+  printf '%s  %s\n' "$skillspector_lock_sha256" "$repository_root/.github/locks/skillspector.lock" | sha256sum --check --strict
+  cp "$repository_root/.github/locks/skillspector.lock" "$tool_root/skillspector/uv.lock"
   uv sync --project "$tool_root/skillspector" --python 3.13 --managed-python --frozen --no-dev
-  git -C "$tool_root/skillspector" diff --exit-code -- uv.lock pyproject.toml
+  uv pip check --python "$tool_root/skillspector/.venv/bin/python"
+  uv pip check --python "$tool_root/semgrep/bin/python"
+  printf '%s  %s\n' "$skillspector_lock_sha256" "$tool_root/skillspector/uv.lock" | sha256sum --check --strict
+  git -C "$tool_root/skillspector" diff --exit-code -- pyproject.toml
   ln -s "$tool_root/skillspector/.venv/bin/skillspector" "$tool_root/bin/skillspector"
   curl --fail --location --silent --show-error --proto '=https' --proto-redir '=https' \
     --output "$tool_root/gitleaks.tar.gz" \
@@ -130,8 +137,8 @@ printf '%s\n' "$evaluator_bin" "$tool_root/bin" >> "$GITHUB_PATH"
   printf 'XDG_CACHE_HOME=%s\nXDG_STATE_HOME=%s\n' "$XDG_CACHE_HOME" "$XDG_STATE_HOME"
   printf 'SKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE=%s/provenance.key\n' "$tool_root"
 } >> "$GITHUB_ENV"
-"$evaluator_bin/python" - "$tool_root" "$kind" "${skillspector_revision:-}" <<'PY' > "$tool_root/versions.json"
-import importlib.metadata, json, platform, subprocess, sys
+"$evaluator_bin/python" - "$tool_root" "$kind" "${skillspector_revision:-}" "$repository_root" <<'PY' > "$tool_root/versions.json"
+import hashlib, importlib.metadata, json, platform, subprocess, sys
 from pathlib import Path
 root = Path(sys.argv[1])
 versions = {
@@ -150,5 +157,10 @@ if sys.argv[2] == "quality":
     versions["scanners"].update({name: importlib.metadata.version(name) for name in ("bandit", "pip-audit")})
     versions["scanners"]["gitleaks"] = subprocess.check_output([root / "bin/gitleaks", "version"], text=True).strip()
     versions["skillspector_revision"] = sys.argv[3]
+    versions["scanner_runtime"] = {
+        "versions": versions["scanners"], "skillspector_revision": sys.argv[3],
+        "skillspector_lock": "sha256:" + hashlib.sha256((root / "skillspector/uv.lock").read_bytes()).hexdigest(),
+        "semgrep_lock": "sha256:" + hashlib.sha256((Path(sys.argv[4]) / ".github/requirements/semgrep.txt").read_bytes()).hexdigest(),
+    }
 print(json.dumps(versions, indent=2))
 PY

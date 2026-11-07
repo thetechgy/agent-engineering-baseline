@@ -152,7 +152,7 @@ class FreshnessTests(unittest.TestCase):
             target = root / name
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / name, target)
-        for directory in (".github/workflows", ".github/requirements", ".github/patches", ".github/scripts"):
+        for directory in (".github/workflows", ".github/requirements", ".github/patches", ".github/scripts", ".github/locks"):
             shutil.copytree(ROOT / directory, root / directory, dirs_exist_ok=True, ignore=shutil.ignore_patterns("__pycache__"))
         return root
 

@@ -607,6 +607,13 @@ def static_result(run, records):
     parts = [f'<article class="run" id="{anchor("record", rid)}"><h3>Static checks</h3><p>Evidence ' +
         text(run['availability']['status']) + '. Static checks are not behavioral performance.</p>' + disclosure('Exact record identity', rid),
         '<p>Limitations: ' + limitations(run['availability']) + '</p>']
+    runtime = run.get('scanner_runtime')
+    if runtime:
+        parts.append('<p>Recorded scanner versions: ' + safe(', '.join(
+            name + ' ' + version for name, version in sorted(runtime['versions'].items()))) +
+            '.</p>' + disclosure('Scanner source and lock identities', runtime))
+    else:
+        parts.append('<p>Scanner versions unavailable in this historical record.</p>')
     parts.append('<p>Required by native evaluator is its risk policy, not the CI finding policy or a scanner process outcome. '
                  'Incomplete tool markers have unknown counts and are not additional findings.</p>')
     parts.append('<details><summary>All scanner outcomes and native counts</summary>' + table('Scanner outcomes — counts can include findings without public detail',
