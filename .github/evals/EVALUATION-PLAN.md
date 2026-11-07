@@ -46,7 +46,8 @@ Policy, producer and artifact metric-set identities are distinct. Unknown or
 contradictory identities and changed evidence remain rejected.
 
 The existing collectors, native normalizers, guarded public writer, analyzer and
-consolidated renderer carry candidate evidence. No parallel reporting system is added. Frozen analyst-attachment profiles retain
+consolidated renderer carry candidate evidence. No parallel reporting system is added.
+Frozen analyst-attachment profiles retain
 their original validator hashes and require matching retained tooling snapshots;
 the changed checkout is not relabeled as `current-v4`. A new analyst-review
 profile is not qualified by this phase.
