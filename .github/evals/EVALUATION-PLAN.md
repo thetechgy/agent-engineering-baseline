@@ -45,6 +45,22 @@ retains its original identities and the tooling snapshot at `8e6b991`; it is not
 relabeled or accepted under v2. The complete native qualification below uses the
 corrected v2 patch.
 
+A subsequent review reproduced a separate generated-script false pass in both
+verifier paths: redirected sensitive text followed by direct script execution was
+mistaken for inert printing. The active producer is now
+`skillevaluator-0.8.0-offline-v3`. After redirected sensitive text, unresolved
+execution or expansion stays unscoreable; supported literal inspection and
+explicit sensitive reads retain their outcomes. The released evaluator, dependency
+pins, frozen lock and scoring policy are unchanged. The complete v2 qualification
+below remains retained evidence at `0bfb1f5`, with its original patched runtime and
+matching repository tooling. V3 requires fresh complete native qualification;
+v2 is not relabeled or accepted as v3 execution evidence.
+Six generated-script forms failed before the correction. Both actual verifier
+paths now pass the focused controls; the complete v3 offline qualification passes
+45 tests, 73 scoring vectors and 48 replay outcomes without external network or
+inference. The retained production patch controls and all 107 frozen package
+compatibility checks pass.
+
 ## Reporting and interpretation
 
 Historical 0.3.0 and its metric-mean scoring retain their original identities and results.
@@ -128,7 +144,7 @@ cleanup is checked after success and failure. The final report includes the actu
 native results alongside clearly marked synthetic reporting controls. Its included
 public evidence and saved analysis must reproduce the HTML without native originals.
 
-### Completed native milestone
+### Retained completed v2 native milestone
 
 Credential-free native qualification **passed** on November 7, 2026 at
 [`0d4b21d1071d6270ef3b4ae1fcc51512b2760446`](https://github.com/thetechgy/agent-engineering-baseline/commit/0d4b21d1071d6270ef3b4ae1fcc51512b2760446).
@@ -219,7 +235,7 @@ reports: findings survive while repository coverage remains incomplete.
 [Compatibility evidence](https://github.com/thetechgy/agent-engineering-baseline/blob/chore/95-scanner-modernization/.github/evals/SCANNER-MODERNIZATION-95.md#retained-adapter-compatibility-correction)
 records the before/after scans and reporting controls.
 
-The next action is to define and obtain separate authorization for a bounded live
-CLI/provider compatibility pilot before collecting judging or skill-benefit evidence.
+The next action is to complete and authenticate the full v3 native qualification
+without relabeling the retained v2 evidence.
 Other dependencies remain in the existing freshness inventory; this scanner group
 does not qualify evaluator adoption, behavioral effectiveness or skill benefit.

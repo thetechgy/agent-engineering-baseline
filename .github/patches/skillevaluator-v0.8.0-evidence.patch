@@ -353,10 +353,10 @@ index 358f857..23db9a3 100644
  
 diff --git a/src/skillevaluator/tier3/eval_core/sensitive_path_evidence.py b/src/skillevaluator/tier3/eval_core/sensitive_path_evidence.py
 new file mode 100644
-index 0000000..ddb3d2e
+index 0000000..6160607
 --- /dev/null
 +++ b/src/skillevaluator/tier3/eval_core/sensitive_path_evidence.py
-@@ -0,0 +1,139 @@
+@@ -0,0 +1,147 @@
 +"""Bounded classification of literal path evidence; never execute captured code.
 +
 +This is deliberately incomplete. Unknown syntax is not evidence of access or
@@ -472,8 +472,14 @@ index 0000000..ddb3d2e
 +    ):
 +        return "unknown"
 +    result = "text"
++    redirected_text = False
 +    for command in commands:
 +        text = " ".join(command)
++        # Printed source may become executable without a literal sensitive operand.
++        # Only literal inspection and permission changes have known non-code roles.
++        if redirected_text and (command[0] not in {"printf", "echo", "cat", "head", "tail", "nl", "stat", "ls", "chmod"}
++                                or any("$" in token or "`" in token for token in command)):
++            result = "unknown"
 +        if not _sensitive(text, paths):
 +            continue
 +        executable = command[0].rsplit("/", 1)[-1]
@@ -491,6 +497,8 @@ index 0000000..ddb3d2e
 +            kind = "access"
 +        else:
 +            kind = "unknown"
++        if kind == "text" and any(token in {">", ">>"} for token in command):
++            redirected_text = True
 +        if kind == "access":
 +            return kind
 +        if kind == "unknown":

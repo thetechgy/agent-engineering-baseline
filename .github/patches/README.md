@@ -88,5 +88,9 @@ necessary. The port adjusts one hunk to upstream's changed surrounding code.
 Bash `printf -v` assignments remain unresolved path evidence in the current
 patch; ordinary printed text remains distinct from access. The diagnostic
 producer identity and source hashes version this correction.
+The v3 producer also keeps generated-script execution unresolved after redirected
+sensitive text. Literal configuration inspection and explicit sensitive accesses
+retain their outcomes. Qualified v2 artifacts require their retained tooling at
+`0bfb1f5`; they are not relabeled under v3.
 It does not change upstream scoring. See the [active checkpoint](../evals/EVALUATION-PLAN.md)
 for qualification, dependency constraints and adoption limits.
