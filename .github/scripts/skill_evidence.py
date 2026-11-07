@@ -3857,7 +3857,7 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
                         'Custom-only trial contains standard judge metrics')
             if matched is not None and matched[1].get('score') is not None:
                 require(matched[1]['score'] == raw.get('overall'), 'Custom native attempt score mismatch')
-            detail = (reward or {}).get('details' if profile['id'] in ('pester-pilot-v3', 'gh-native-oracle-v1') else 'custom_details', {}).get('outcome', {})
+            detail = (reward or {}).get('details' if profile['id'] in ('pester-pilot-v3', 'pester-cli-pilot-v1', 'gh-native-oracle-v1') else 'custom_details', {}).get('outcome', {})
             outcome = detail.get('classification', 'unknown') if profile['grading'] == 'custom_only' else (
                 'failed' if native_trial_failed(trial, reward) else 'passed' if (reward or {}).get('custom_metrics', {}).get('gh_gate') == 1 else 'failed')
             if profile['grading'] == 'default_plus_custom' and native_trial_failed(trial, reward): outcome = 'unknown'
@@ -3918,6 +3918,8 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
             observation['custom'] = {'outcome': outcome, 'measurements': custom_measurements(definitions,
                 profile['cases'][mapping[case_id]], outcome, values, detail, obs_refs),
                 'usage': custom_usage(trial, redacted_counts=capture['evaluator_revision'] == profiles.CANDIDATE['revision']), 'references': obs_refs}
+            if profile['id'] == 'pester-cli-pilot-v1':
+                observation['custom']['admission_reason'] = detail.get('code')
             observations.append(observation)
         require(not lookup or len(found) < summary.get('num_trials', 0), 'Unmatched summary trial')
         # At 0.3.0 num_trials counts scoreable reward rows, not all retained
@@ -4132,7 +4134,15 @@ def validate_custom_evidence(data, *, public=False, _observed_at=None):
         prefix = f"results/{data['source']['skill_id']}/{data['run_id']}/codex/{obs['arm'].replace('_', '-')}/trials/"
         require(any(refs[r]['member'].startswith(prefix) and refs[r]['member'].endswith('/result.json')
                     for r in obs['references']), 'Public custom trial reference origin')
-        detail = obs['custom']; closed(detail, ('outcome', 'measurements', 'usage', 'references'))
+        detail = obs['custom']; closed(detail, ('outcome', 'measurements', 'usage', 'references') + (('admission_reason',) if profile['id'] == 'pester-cli-pilot-v1' else ()))
+        if profile['id'] == 'pester-cli-pilot-v1':
+            optional(detail['admission_reason'], lambda v: enum(v, (
+                'artifact', 'admission', 'ast_kind', 'variable_policy', 'hashtable_policy', 'expression_policy',
+                'command_policy', 'command_parameter', 'module_policy', 'test_name_template', 'evaluated',
+                'parse', 'ok', 'runner', 'runtime', 'case_budget', 'classification', 'deadline', 'entry',
+                'incomplete', 'nonexecuting', 'output_budget', 'process_budget', 'protocol', 'verifier',
+                'worker_permission', 'worker_coreclr', 'worker_memory', 'worker_dependency', 'worker_unclassified',
+                'isolation_environment', 'isolation_network', 'isolation_seccomp', 'isolation_resources', 'isolation_mount')))
         enum(detail['outcome'], CUSTOM_OUTCOMES)
         require(type(detail['references']) is list and 0 < len(detail['references']) <= 10
                 and set(detail['references']) <= refs.keys(), 'Dangling outcome reference')

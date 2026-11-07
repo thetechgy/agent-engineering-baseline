@@ -187,7 +187,10 @@ def retain(root, artifact):
         if valid:
             i,c,o = counts.values()
             if c > i: raise ValueError('Contradictory provider usage')
-            cost = ((i-c)*2+c*.1+o*10)/1_000_000
+            # Cumulative counts cannot identify per-request long-context billing.
+            # Conservatively apply its premium once cumulative input exceeds 272K.
+            prefill, sample = (2, 1.5) if i > 272000 else (1, 1)
+            cost = (((i-c)*2+c*.1)*prefill+o*10*sample)/1_000_000
         usage.append({'trial': value['trial_name'], **counts, 'estimated_usd': cost,
                       'billing': 'provider-reported tokens; estimate, not invoice'})
     reports.write_json(artifact / 'usage.json', usage)
@@ -218,7 +221,7 @@ def collect(root, artifact, bundle, captured, *, controls=False):
         'concurrency': 2, 'timeout_multiplier': 1.0, 'stop_on_pass': False})
     reports.write_json(raw / evidence.CUSTOM_CAPTURE, capture)
     config = {'grading': {'mode': 'custom_only'}, 'judge': {'enabled': False},
-        'provider': {'name': 'openai', 'model': P['model']},
+        'provider': {'name': 'fixture' if controls else 'openai', 'model': 'credential-free-oracle' if controls else P['model']},
         'harbor': {'n_attempts': 1, 'stop_on_pass': False}}
     if controls: config['qualification'] = {'producer': 'oracle', 'inference': False}
     reports.write_json(run / 'run_config.json', config)
@@ -226,7 +229,10 @@ def collect(root, artifact, bundle, captured, *, controls=False):
     status = 'complete' if len(stages) == 2 and all(s.get('returncode') == 0 for s in stages) else 'incomplete'
     reports.write_json(run / 'result.json', {**collected, 'diagnostic_only': True,
         'skill_name': P['skill'], 'report_status': status, 'run_config': config})
-    native = root / 'native'
+    grading = [{'trial_member': p.relative_to(run).as_posix(), 'entry_id': reports.read_json(p).get('entry_id'),
+                'outcome': reports.read_json(p).get('details', {}).get('outcome', {})} for p in sorted(run.rglob('reward.json'))]
+    reports.write_json(artifact / 'grading-outcomes.json', grading)
+    native = artifact / 'native'
     reports.benchmark_artifacts(ROOT, raw, P['skill'], native)
     import skill_analysis as analysis
     import skill_report as report
