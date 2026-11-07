@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import signal
 import tempfile
 import time
 
@@ -88,6 +89,11 @@ def prepare(root):
 def main(artifact):
     from aeb_gh_fixture.backend import require_runtime
     require_runtime()
+    from evaluator_profiles import runtime, candidate_versions
+    runtime(candidate_versions(), owning=True)
+    def interrupted(_signum, _frame):
+        raise KeyboardInterrupt
+    signal.signal(signal.SIGTERM, interrupted)
     if any(os.environ.get(k) for k in ('OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'NVIDIA_API_KEY')):
         raise RuntimeError('Provider credentials forbidden')
     artifact = Path(artifact)
@@ -107,12 +113,18 @@ def main(artifact):
                 stages.append(event)
                 artifact.mkdir(parents=True, exist_ok=True)
                 reports.write_json(artifact / 'command-stages.json', stages)
-                result = subprocess.run(command, capture_output=True, text=True, timeout=1200,
-                    env={**os.environ, 'AEB_GH_MANIFEST': str(manifest), 'PYTHON_DOTENV_DISABLED': '1'})
-                event.update(status='complete' if result.returncode == 0 else 'failed', returncode=result.returncode,
-                             elapsed_sec=round(time.monotonic() - started, 3))
+                from qualify_evaluator_candidate import run_native
+                with (root / 'native-command.log').open('w') as log:
+                    code = run_native(command, env={**os.environ, 'AEB_GH_MANIFEST': str(manifest),
+                        'PYTHON_DOTENV_DISABLED': '1'}, log=log, timeout=1200)
+                event.update(status='complete' if code == 0 else 'infrastructure_error' if code == 124 else 'failed',
+                    returncode=code, elapsed_sec=round(time.monotonic() - started, 3))
                 reports.write_json(artifact / 'command-stages.json', stages)
-                if result.returncode:
+                if code:
+                    from skillevaluator.utils.redaction import redact_sensitive_text
+                    diagnostic = redact_sensitive_text((root / 'native-command.log').read_text(errors='replace')[-32768:])
+                    diagnostic = diagnostic.replace(str(root), '<native>').replace(str(ROOT), '<checkout>')
+                    (artifact / 'command-diagnostics.txt').write_text(diagnostic)
                     raise RuntimeError('Native gh oracle command failed')
             native = root / 'native'; run = native / 'results/gh/native-oracle'
             collected = collect_harbor_results('gh', ['codex'], run, jobs, expected_cases=24,

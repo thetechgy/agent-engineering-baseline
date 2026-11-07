@@ -3912,7 +3912,7 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
                 instructions=identity([{key: value for key, value in row.items() if key in ('case_id', 'instruction_digest')}
                     for row in custom_staged_inputs(capture['tasks'], capture['purpose'])]),
                 build=profile['runtime_digest'], fixture=profile['fixture_digest'],
-                execution={'environment': 'docker', 'base_image_mode': 'recorded_staging', 'task_source': 'native_harbor',
+                execution={'environment': capture['execution_policy']['environment'], 'base_image_mode': 'recorded_staging', 'task_source': 'native_harbor',
                            'authorization_policy': None, 'fixture_boundary': 'separate-verifier-v1'}),
                 'coverage': {'expected_cases': len(cases), 'expected_attempts': native['expected_attempts'],
                     'recorded_attempts': recorded_count, 'scored_attempts': native_scored,

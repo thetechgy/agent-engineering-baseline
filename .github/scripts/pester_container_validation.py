@@ -174,14 +174,20 @@ def _main(*, candidate=False, artifact=None):
             stage_path = artifact.with_name(artifact.name + '-command-stages.json')
             reports.write_json(stage_path, command_stages)
             try:
-                result = subprocess.run(command, capture_output=True, text=True, timeout=1200,
-                                        env={**os.environ, 'PYTHON_DOTENV_DISABLED': '1'})
-                native_failed = bool(result.returncode)
-                stage.update(status='failed' if native_failed else 'complete', returncode=result.returncode)
+                if current:
+                    from qualify_evaluator_candidate import run_native
+                    with (root / 'native-command.log').open('w') as log:
+                        code = run_native(command, env={**os.environ, 'PYTHON_DOTENV_DISABLED': '1'}, log=log, timeout=1200)
+                    text = (root / 'native-command.log').read_text(errors='replace')[-32768:]
+                else:
+                    result = subprocess.run(command, capture_output=True, text=True, timeout=1200,
+                                            env={**os.environ, 'PYTHON_DOTENV_DISABLED': '1'})
+                    code, text = result.returncode, (result.stdout + result.stderr)[-32768:]
+                native_failed = bool(code)
+                stage.update(status='failed' if native_failed else 'complete', returncode=code)
                 if native_failed:
                     from skillevaluator.utils.redaction import redact_sensitive_text
-                    diagnostic = redact_sensitive_text((result.stdout + result.stderr)[-32768:])
-                    diagnostic = diagnostic.replace(str(root), '<native>').replace(str(ROOT), '<checkout>')
+                    diagnostic = redact_sensitive_text(text).replace(str(root), '<native>').replace(str(ROOT), '<checkout>')
                     artifact.with_name(artifact.name + '-command-diagnostics.txt').write_text(diagnostic)
             except subprocess.TimeoutExpired:
                 native_failed = True

@@ -6,6 +6,7 @@ on:
       - '.github/scripts/**'
       - '.github/tests/**'
       - '.github/evals/**'
+      - '!.github/evals/EVALUATION-PLAN.md'
       - '.github/locks/**'
       - '.github/patches/**'
       - '.github/evaluator-backends/**'

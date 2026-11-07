@@ -279,6 +279,10 @@ def main():
     if output.resolve() != output or output.exists() or output.is_relative_to(ROOT):
         parser.error('Use a new persistent resolved output directory outside the checkout')
     p = profiles.CANDIDATE
+    import aeb_gh_fixture
+    backend = Path(aeb_gh_fixture.__file__).parent
+    authored = ROOT / '.github/evaluator-backends/aeb_gh_fixture'
+    assert {f.name: f.read_bytes() for f in backend.glob('*.py')} == {f.name: f.read_bytes() for f in authored.glob('*.py')}, 'Installed backend source differs'
     import skillevaluator
     source = Path(skillevaluator.__file__).resolve().parents[2]
     assert subprocess.check_output(['git', '-C', str(source), 'rev-parse', 'HEAD']).decode().strip() == p['revision']
