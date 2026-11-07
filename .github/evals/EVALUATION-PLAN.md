@@ -90,8 +90,13 @@ Codex/model/task inputs and historical environments are unchanged.
 
 ## Next group
 
-Exactly one recommended next action: modernize SkillSpector and its scanner owning
-environments through the existing update and freshness workflows, with controlled
-scanner and public-projection regressions. This independent group does not wait for
-paid evaluation. Scanners, CLIs, Actions, images and the remaining owning environments
-remain in the existing freshness inventory; this phase does not claim they are current.
+The independent scanner group is implemented on draft [PR #120](https://github.com/thetechgy/agent-engineering-baseline/pull/120):
+SkillSpector 2.13.4 and Semgrep 1.184.0, with controlled collection/report evidence
+and credential-free CI tracked there. Gitleaks 8.30.1 is already current. Bandit and
+pip-audit remain evaluator-owned; Semgrep's exact MCP 1.29.0 constraint remains an
+unresolved dependency gap. The candidate implementation and pins above are unchanged.
+
+The next evaluator milestone remains candidate native lifecycle and complete cohort
+qualification, including resolution of the 0.7.2-only trusted gh backend guard.
+Other dependencies remain in the existing freshness inventory; this scanner group
+does not qualify evaluator adoption, behavioral effectiveness or skill benefit.
