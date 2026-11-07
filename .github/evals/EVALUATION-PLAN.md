@@ -648,7 +648,43 @@ owning runtime and reviewed producer checkout:
 "$SKILL_CURRENT_PYTHON" -B .github/scripts/codex_pilot.py check-preparation --preparation AUTHENTICATED_ARTIFACT_ROOT --output NEW_STAGING_DIRECTORY
 ```
 
-Publication and credential-free CI/preparation are authorized. Hosted Docker
-qualification is pending at this checkpoint. No replacement live allocation,
-model credential retrieval, inference, judge, recurring execution, production
-change or merge is authorized.
+Credential-free hosted qualification passed on implementation commit
+[`bb3c7cc28fc9e2b6232805465fa92ac2e475f486`](https://github.com/thetechgy/agent-engineering-baseline/commit/bb3c7cc28fc9e2b6232805465fa92ac2e475f486)
+in [run 42423316390, attempt 1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42423316390).
+The tested merge source `96d4611abccdef51a4a4cf7ea53da2ab27690e66` has the
+implementation commit as a verified parent and the same complete source tree.
+The protected live job was skipped.
+
+The authenticated [preparation artifact 13595126695](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42423316390/artifacts/13595126695)
+retains 210 bounded files, including exact descriptors for both success probes,
+four failure/interruption CLI cases and fourteen grading controls. Archive SHA-256
+is `4305e630fa4456756b82d585c0cc453fa833308c8873868535f3ca7c5337e474`.
+The separate [consumption artifact 13594099691](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42423316390/artifacts/13594099691)
+retains six files with fresh staged descriptors and the successful comparison.
+Its archive SHA-256 is `4d69a1d51e3c1dc8830688d20735ba8f6166208cfb3e213d1a56ca0285962b50`.
+Both consumed raw descriptor hashes differ from preparation, while their complete
+parsed identities and all other task member hashes match.
+
+The actual Docker controls passed, including allowed/prohibited connectivity,
+privilege denials, final policy observations and cleanup across all six CLI cases.
+The fourteen grader controls retain the expected four passed, four failed, two
+invalid and four unsupported outcomes and exact submission handoffs. No model
+credential was available to these jobs. These are credential-free fixtures, not
+model-generated submissions or evidence of skill benefit.
+
+After authenticated bounded extraction, the downloaded data passed the same
+production `check-preparation` entry point under the exact tested checkout and
+owning runtime. Both native-to-public projections reproduced byte-for-byte.
+The existing combined HTML at `pilot-report/evidence/consolidated/report.html`
+reproduced with SHA-256 `37f3645e704e31859de503e81aeba008a81c99f1e613557b1c4a04b6c70617c8`.
+A fully recorded hosted candidate fixture with a 601-second timeout was rejected.
+The public records retain their earlier diagnostic/incomplete availability labels;
+positive control grades do not make the pilot a complete behavioral benchmark.
+
+Both ruleset-required jobs and CI contracts passed on the implementation revision.
+The broader repeat was cancelled as superseded and remains inconclusive. This
+checkpoint follow-up changes documentation only; final-revision checks and fresh
+preparation are tracked on [PR #121](https://github.com/thetechgy/agent-engineering-baseline/pull/121).
+The earlier descriptor mismatch remains unresolved. No replacement live allocation,
+credential retrieval, inference, judge, recurring execution, production change or
+merge is authorized. The old paid approval is not carried forward.
