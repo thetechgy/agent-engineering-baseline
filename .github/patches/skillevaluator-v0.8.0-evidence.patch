@@ -353,10 +353,10 @@ index 358f857..23db9a3 100644
  
 diff --git a/src/skillevaluator/tier3/eval_core/sensitive_path_evidence.py b/src/skillevaluator/tier3/eval_core/sensitive_path_evidence.py
 new file mode 100644
-index 0000000..6160607
+index 0000000..6c8ca16
 --- /dev/null
 +++ b/src/skillevaluator/tier3/eval_core/sensitive_path_evidence.py
-@@ -0,0 +1,147 @@
+@@ -0,0 +1,148 @@
 +"""Bounded classification of literal path evidence; never execute captured code.
 +
 +This is deliberately incomplete. Unknown syntax is not evidence of access or
@@ -472,12 +472,12 @@ index 0000000..6160607
 +    ):
 +        return "unknown"
 +    result = "text"
-+    redirected_text = False
++    printed_text = False
 +    for command in commands:
 +        text = " ".join(command)
-+        # Printed source may become executable without a literal sensitive operand.
++        # Printed data may become a path or code without a later literal operand.
 +        # Only literal inspection and permission changes have known non-code roles.
-+        if redirected_text and (command[0] not in {"printf", "echo", "cat", "head", "tail", "nl", "stat", "ls", "chmod"}
++        if printed_text and (command[0] not in {"printf", "echo", "cat", "head", "tail", "nl", "stat", "ls", "chmod"}
 +                                or any("$" in token or "`" in token for token in command)):
 +            result = "unknown"
 +        if not _sensitive(text, paths):
@@ -488,8 +488,9 @@ index 0000000..6160607
 +        if executable in {"python", "python3"} and len(command) == 3 and command[1] == "-c":
 +            kind = _python_literal_use(command[2], paths)
 +        elif executable in {"printf", "echo"}:
-+            # Bash printf can assign data for later interpretation or access.
-+            kind = "unknown" if executable == "printf" and len(command) > 1 and command[1].startswith("-v") else "text"
++            # Print operands can mutate shell variables for later path access.
++            kind = "unknown" if (executable == "printf" and len(command) > 1 and command[1].startswith("-v")
++                                 or re.search(r"\$\s*\{[^}]*=", text)) else "text"
 +            # Redirect destinations are actions, the printed body is data.
 +            kind = "access" if any(command[i - 1] in {">", ">>", "<"} and _sensitive(token, paths)
 +                                   for i, token in enumerate(command) if i) else kind
@@ -497,8 +498,8 @@ index 0000000..6160607
 +            kind = "access"
 +        else:
 +            kind = "unknown"
-+        if kind == "text" and any(token in {">", ">>"} for token in command):
-+            redirected_text = True
++        if kind == "text" and executable in {"printf", "echo"}:
++            printed_text = True
 +        if kind == "access":
 +            return kind
 +        if kind == "unknown":

@@ -47,18 +47,32 @@ corrected v2 patch.
 
 A subsequent review reproduced a separate generated-script false pass in both
 verifier paths: redirected sensitive text followed by direct script execution was
-mistaken for inert printing. The active producer is now
+mistaken for inert printing. That correction introduced producer
 `skillevaluator-0.8.0-offline-v3`. After redirected sensitive text, unresolved
 execution or expansion stays unscoreable; supported literal inspection and
 explicit sensitive reads retain their outcomes. The released evaluator, dependency
 pins, frozen lock and scoring policy are unchanged. The complete v2 qualification
 below remains retained evidence at `0bfb1f5`, with its original patched runtime and
-matching repository tooling. V3 requires fresh complete native qualification;
-v2 is not relabeled or accepted as v3 execution evidence.
+matching repository tooling. V3 native execution was superseded by the confirmed
+v4 follow-up before completion; it is not qualification evidence. Earlier
+producers are not relabeled or accepted as v4 execution evidence.
 Six generated-script forms failed before the correction. Both actual verifier
 paths now pass the focused controls; the complete v3 offline qualification passes
 45 tests, 73 scoring vectors and 48 replay outcomes without external network or
 inference. The retained production patch controls and all 107 frozen package
+compatibility checks pass.
+
+A further review reproduced Bash parameter-assignment false passes. Related
+last-argument reuse through `$_` reproduced the same path-propagation defect.
+The active producer `skillevaluator-0.8.0-offline-v4` keeps print-operand assignments
+and later unresolved reuse of printed sensitive paths unscoreable. Seven new
+forms failed before the correction in both verifier paths. Supported literal
+configuration inspection and explicit sensitive accesses retain their outcomes.
+V4 changes only the evidence patch/source identity, not the release, frozen lock,
+dependency pins or scoring policy, and requires complete native qualification.
+The corrected v4 offline qualification passes 46 controls, 73 scoring vectors and
+48 replay outcomes with no external network attempts or inference. Both verifier
+paths, the retained production-patch regression and all 107 frozen package
 compatibility checks pass.
 
 ## Reporting and interpretation
@@ -235,7 +249,7 @@ reports: findings survive while repository coverage remains incomplete.
 [Compatibility evidence](https://github.com/thetechgy/agent-engineering-baseline/blob/chore/95-scanner-modernization/.github/evals/SCANNER-MODERNIZATION-95.md#retained-adapter-compatibility-correction)
 records the before/after scans and reporting controls.
 
-The next action is to complete and authenticate the full v3 native qualification
+The next action is to complete and authenticate the full v4 native qualification
 without relabeling the retained v2 evidence.
 Other dependencies remain in the existing freshness inventory; this scanner group
 does not qualify evaluator adoption, behavioral effectiveness or skill benefit.

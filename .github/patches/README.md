@@ -91,6 +91,8 @@ producer identity and source hashes version this correction.
 The v3 producer also keeps generated-script execution unresolved after redirected
 sensitive text. Literal configuration inspection and explicit sensitive accesses
 retain their outcomes. Qualified v2 artifacts require their retained tooling at
-`0bfb1f5`; they are not relabeled under v3.
+`0bfb1f5`; they are not relabeled under later producers.
+V4 also keeps print-operand parameter assignments and unresolved later reuse of
+printed sensitive paths unscoreable, including Bash last-argument expansion.
 It does not change upstream scoring. See the [active checkpoint](../evals/EVALUATION-PLAN.md)
 for qualification, dependency constraints and adoption limits.

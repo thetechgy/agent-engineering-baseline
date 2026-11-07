@@ -1,12 +1,12 @@
 {
-  "id": "skillevaluator-0.8.0-offline-v3",
+  "id": "skillevaluator-0.8.0-offline-v4",
   "revision": "8149356e4476a1497fb334727f13f699c6fa6ba5",
   "version": "0.8.0",
   "python": "3.14.10",
   "harbor": "0.24.0",
   "scoring": "skill-evaluator-dimension-mean-v1",
   "lock_sha256": "4873fe654fa944e9806709ae8730a44936eca91d257645710c4524acc7964c5e",
-  "patch_sha256": "c24472e47e10272c1704dd2658a4f933a80dc087133829b64526ca7222beb6e9",
+  "patch_sha256": "d9038d18e32e805237265b3d74eb05b51ebe5fdac15976ce93f5762877efe11c",
   "dependencies": {
     "skillevaluator": "0.8.0",
     "harbor": "0.24.0",
@@ -18,5 +18,5 @@
     "typing-inspection": "0.4.5",
     "aeb-gh-fixture": "1.0.0"
   },
-  "source_tree_digest": "sha256:03b12b06dfc48b70a86b84b682b0833c461ac2c8c156ac1537a5d254c1761e40"
+  "source_tree_digest": "sha256:91d837b3d31229e2608eb4e0408bc69e426345191db3881988e3a82a768909ae"
 }
