@@ -48,12 +48,12 @@ jobs:
         run: '"$SKILL_CURRENT_PYTHON" -B .github/scripts/codex_pilot.py probe --output "$RUNNER_TEMP/pilot-probe"'
       - name: Acquire fresh verified Compose configuration for grading
         id: grading-tools
-        if: always() && steps.contracts.outcome == 'success'
+        if: always() && !cancelled() && steps.contracts.outcome == 'success'
         run: |
           echo "PREPARATION_COMPOSE_PLUGIN_ROOT=$COMPOSE_PLUGIN_ROOT" >> "$GITHUB_ENV"
           bash .github/scripts/setup-compose.sh
       - name: Candidate grading through consolidated report with positive and negative controls
-        if: always() && steps.grading-tools.outcome == 'success'
+        if: always() && !cancelled() && steps.grading-tools.outcome == 'success'
         timeout-minutes: 25
         run: '"$SKILL_CURRENT_PYTHON" -B .github/scripts/codex_pilot.py controls --output "$RUNNER_TEMP/pilot-controls"'
       - name: Verify checkout integrity
