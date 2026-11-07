@@ -42,8 +42,8 @@ unresolved evidence, rather than safe printing; ordinary `printf` data remains
 text. The upstream release, all dependency pins, lock and scoring policy are
 unchanged. Only the evidence patch/source-tree hashes change. Earlier v1 evidence
 retains its original identities and the tooling snapshot at `8e6b991`; it is not
-relabeled or accepted under v2. Native qualification must complete with the new
-patch before v2 is qualified.
+relabeled or accepted under v2. The complete native qualification below uses the
+corrected v2 patch.
 
 ## Reporting and interpretation
 
@@ -69,8 +69,10 @@ unavailable, including raw fallback zeros. Correct-but-unauthorized gh output ke
 its task result and fails authorization. Deliberately absent skills affect activation
 and the historical combined gate, not shared task correctness. Raw synthetic judge
 transport values are retained separately; judged quality and composites remain null.
-Candidate records are labeled synthetic, unmeasured and excluded from production history.
-Cross-policy comparisons do not produce improvement deltas.
+Synthetic transport controls remain labeled synthetic and unmeasured. Executed
+oracle fixtures retain their distinct purpose and per-control measurements; both
+are excluded from production history and skill-benefit claims. Cross-policy
+comparisons do not produce improvement deltas.
 
 ## Qualification and limits
 
@@ -126,17 +128,83 @@ cleanup is checked after success and failure. The final report includes the actu
 native results alongside clearly marked synthetic reporting controls. Its included
 public evidence and saved analysis must reproduce the HTML without native originals.
 
-Local checks cover backend runtime rejection, actual released dispatch and staging,
-initializer ordering/failure containment, original 0.7.2 behavior and offline report
-regressions. Native execution and final-revision CI are pending in this implementation
-checkpoint; links and exact tested revisions will be recorded after artifact verification.
-No inference, judges, model credentials or production promotion are selected.
+### Completed native milestone
+
+Credential-free native qualification **passed** on November 7, 2026 at
+[`0d4b21d1071d6270ef3b4ae1fcc51512b2760446`](https://github.com/thetechgy/agent-engineering-baseline/commit/0d4b21d1071d6270ef3b4ae1fcc51512b2760446).
+The tested CI merge producer is `d281d9bef6a3a769199b838c72350cb13252fe80`,
+whose parents are main `668c734f35d3e31038a32b173ce3fa2a19420295` and that feature
+revision. [Run 42352202778, attempt 1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42352202778)
+passed all eight jobs, including the final same-run artifact join.
+
+- All 48 gh lifecycle cases passed across six fixed shards. The 14 deliberate
+  startup-failure controls remained blocked and unscoreable, with unchanged audits;
+  cancellation and infrastructure-error classifications were retained. Secure
+  initialization, root-owned broker identity, repeated initialization, pinned
+  setup-only Codex 0.155.1, private-access denials and receipt-forgery rejection
+  were exercised. No Codex inference ran.
+- All 48 Harbor gh oracle trials reached the existing consolidated report:
+  22 passed, 22 failed, 2 unsupported and 2 unknown; 44 scoreable and 4 unavailable.
+  In both arms, wrong-repository work retained task correctness 0, and gh-014
+  retained task correctness 1 with authorization 0. Baseline gate failures remain
+  separate from task correctness. Unsupported and missing traces have no measured
+  values. The gh task container retains its independently pinned Python 3.12 base;
+  the evaluator host is Python 3.14.10.
+- All 52 native Pester controls reached that report: 22 passed, 14 failed,
+  8 invalid, 2 timeout, 2 unsupported and 4 infrastructure errors; 36 scoreable
+  and 16 unavailable. Reference execution and seeded-mutant detection, task/arm
+  checksums, PowerShell 7.6.9 and Pester 6.2.0 were checked. Aggregate execution
+  remains failed where the intentional controls require it.
+- Oracle container/network cleanup and all lifecycle shard teardown completed,
+  including after negative and failure controls. Standard and judged candidate
+  quality fields remain null; raw fallback zeros do not become measurements.
+
+The [final consolidated artifact](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42352202778/artifacts/13567637089)
+is `candidate-offline-report-attempt-1`, archive SHA-256
+`e808eac6cbe2192be2ea599e9dc303088966e76430a83a77e405e8d7b47cef44`.
+Its identity, repository/run/attempt, producer ancestry, backend/harness bytes,
+runtime/lock/patch/source-tree identities and bounded extraction were verified.
+All 100 native observations were re-normalized locally and matched the public
+records exactly. The existing `skill_report.py --input ... --analysis ... --output ...`
+CLI reproduced the HTML from public evidence and saved analysis without native
+originals. The 3,038,904-byte HTML has SHA-256
+`2a9011756d880e9c212f98e315c24aed0a36a26331294711e8fd03c1760c0d2f`.
+The overview, gh/Pester classifications, unavailable values and unauthorized
+control measurements were visually inspected. Artifact-producer authentication
+is supplied by the verified CI identity; the public report retains its own
+structural-evidence authentication caveats.
+
+Supporting checks passed: 44 candidate offline controls, 73 scoring vectors,
+48 replay outcomes, 105 historical gh/reporting checks completed with one skip,
+and the original 20-test backend suite under its owning 0.7.2 runtime. All 107
+frozen installed packages pass `uv pip check`. No external network attempts occur
+in the offline worker. [All five repository validation jobs passed](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42352202798)
+on the tested feature revision. The authenticated
+[scanner artifact](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42352202798/artifacts/13566751872)
+retains Podman's nine SECURITY findings (three high, six medium), caveats and
+incomplete coverage; its repository-caveat HTML also reproduced byte-for-byte.
+
+Earlier failed evidence remains separate. [The v1 run](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42344184772)
+retains the custom-only verifier import failure, one initialization failure and
+the report inventory defect. [The earlier v2 run](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42348063857)
+retains the raw-field assertion failure and noncanonical preparation identity.
+The import, inventory, assertion and preparation defects are fixed with regression
+coverage. The isolated v1 initialization failure is retained diagnostic evidence;
+it was not reproduced in the complete v2 run and is not relabeled as a pass.
+
+This qualifies frozen evaluator compatibility through deterministic native fixtures.
+It does not qualify live CLI/provider behavior, judging accuracy, skill activation
+by a live agent, skill benefit or adoption. No model credentials, inference, judges,
+paid evaluations, skill changes, Pages publication or production promotion ran.
 
 Adoption still requires live CLI/provider compatibility, judging accuracy and
 skill-effectiveness evidence, plus any required new analyst-attachment profile.
 Frozen analyst profiles retain their exact historical validator snapshots. Maintain
-both backend runtime paths, the fixture-only verifier transformation, sealed staging
-and collector/public admission together when an owning runtime changes. Upstream
+both backend runtime paths, the fixture-only verifier transformation and canonical
+preparation recipe, sealed staging and collector/public admission together when an
+owning runtime changes. Retain authenticated artifacts and matching source/tooling
+snapshots beyond the Actions artifact retention period; never relabel v1 or frozen
+analyst profiles under changed validators. Upstream
 Harbor, Python and LiteLLM constraints remain the dependency inventory's obligations.
 
 ## Next group
@@ -151,7 +219,7 @@ reports: findings survive while repository coverage remains incomplete.
 [Compatibility evidence](https://github.com/thetechgy/agent-engineering-baseline/blob/chore/95-scanner-modernization/.github/evals/SCANNER-MODERNIZATION-95.md#retained-adapter-compatibility-correction)
 records the before/after scans and reporting controls.
 
-The next action is to run and authenticate the complete native candidate artifact
-on this integrated branch.
+The next action is to define and obtain separate authorization for a bounded live
+CLI/provider compatibility pilot before collecting judging or skill-benefit evidence.
 Other dependencies remain in the existing freshness inventory; this scanner group
 does not qualify evaluator adoption, behavioral effectiveness or skill benefit.
