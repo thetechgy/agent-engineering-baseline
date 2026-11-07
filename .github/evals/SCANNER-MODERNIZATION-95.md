@@ -28,8 +28,9 @@ The existing managed Python 3.13 selector remains compatible and unchanged.
 
 SkillSpector's release changes bounded source and archive inspection and
 distinguishes parser boundaries, resource limits and provider failures. Its
-`complete_with_caveats` states remain conservatively incomplete in the retained
-evaluator; this phase does not weaken that admission policy. Provider recovery
+`complete_with_caveats` states were originally rejected by the retained adapter.
+The compatibility correction below parses them and retains conservative
+incomplete coverage; it does not weaken the admission policy. Provider recovery
 and model compatibility changes are outside these static controls.
 Semgrep fixes proxy-credential logging and source snippets in parser-error
 telemetry. These are relevant defense-in-depth changes; routine scans already
@@ -180,3 +181,87 @@ model credentials, paid scheduling or Pages publication is part of this phase.
 Candidate native evaluator qualification remains the next evaluator milestone:
 the 0.7.2-only trusted gh backend and incomplete 0.8.0 native cohorts still block
 adoption. Advancing another dependency group requires its own scoped work.
+
+## Retained adapter compatibility correction
+
+The original run `42324866028` did not parse four caveated reports. Its
+`analysis_completeness.status` error means format rejection, not proof of the
+producer's actual status. The authenticated native artifact contains evaluator
+reports but no retained raw SkillSpector responses. Credential-free reproduction
+with the frozen producer and unchanged skill bytes confirms
+`complete_with_caveats` for a11y, ansible, podman and powershell-pester-6.
+
+The producer's [ledger projection](https://github.com/NVIDIA/SkillSpector/blob/54824463814a0be01360792523ec7245a69190fc/src/skillspector/inspection_ledger.py),
+[coverage documentation](https://github.com/NVIDIA/SkillSpector/blob/54824463814a0be01360792523ec7245a69190fc/docs/scan-completeness.md)
+and [reference controls](https://github.com/NVIDIA/SkillSpector/blob/54824463814a0be01360792523ec7245a69190fc/tests/test_reference_destinations.py)
+require only missing-reference exceptions, successful execution, no partially or
+entirely uninspected components, completed applicable analyzer work and no
+limitations. The producer claims complete inspection of bundled content;
+references to absent content remain caveats. Its exit 0 is not a clean verdict.
+
+The [quality-only adapter patch](../patches/skillevaluator-v0.3.0-skillspector-caveats.patch)
+recognizes that released shape without rewriting scanner output. Existing
+execution, count, analyzer, finding and risk validation still runs. The new
+path additionally validates missing-reference ledger details and their source
+locations. Unknown versions/states, contradictory flags, invalid accounting,
+fatal exceptions and malformed caveat evidence cannot use it. Format recovery
+and provider behavior are unchanged and remain outside this correction.
+
+Acceptance of the format and acceptance of coverage are separate. Valid caveats
+keep Security Scan and the SkillSpector marker incomplete under repository policy.
+Validated findings and locations survive. Native diagnostic entries retain the
+caveat locations; a bounded, referenced public summary preserves the producer's
+completion claim, missing-reference count and repository interpretation through
+the existing analysis and consolidated renderer. No new dashboard is introduced.
+The patch digest distinguishes this quality runtime from the original scanner
+profile. Historical records retain that profile, their identities and results.
+All six records from the original authenticated public artifact reproject exactly.
+
+The [real producer fixture](../tests/fixtures/skillspector-caveat.md) contains P2
+at `SKILL.md:7` alongside a missing-reference caveat. The pristine 0.3.0 adapter
+rejects it before findings processing. The patched adapter preserves P2 and its
+location while retaining incomplete coverage. Forty-three synthetic metadata
+mutations exercise unknown states, contradictory flags, execution failure,
+invalid counts, analyzer accounting and malformed ledger details. Ordinary
+complete, partial and failed controls retain their meanings. Eight operational
+controls retain clean/finding behavior and exercise the supported caveat,
+parser-limited coverage, launch failure, actual timeout, malformed stdout and
+unavailable-tool paths through native collection and reporting.
+
+The repository comparison uses the pristine retained validation function from
+the pinned evaluator source for the before arm and the installed patch for the
+after arm. Both execute the actual frozen scanner and the same native CLI,
+strict dataset checks, public projection and renderer on unchanged source bytes.
+These are actual repository inputs, separate from synthetic controls.
+
+| Repository skill | Producer status | Missing-reference caveats | After correction |
+| --- | --- | ---: | --- |
+| a11y | complete_with_caveats | 3 | Incomplete; no scanner findings |
+| ansible | complete_with_caveats | 1 | Incomplete; no scanner findings |
+| podman | complete_with_caveats | 3 | Incomplete; 9 scanner findings retained, 3 high and 6 medium |
+| powershell-pester-6 | complete_with_caveats | 6 | Incomplete; no scanner findings |
+
+Podman's direct directory scan includes an additional finding in the evaluation
+JSON. The retained evaluator's existing staged input excludes that file; both
+before and after arms use its unchanged staging and emit the same nine scanner
+findings. No input, finding or scanner rule was changed to produce this result.
+Findings remain advisory observations, not established vulnerabilities.
+
+`qualify_scanners.py` now retains the new control and the repository comparison
+under the existing `scanner-controls` artifact, including sanitized scanner
+process output, native reports, public records, saved analysis, input manifests
+and `repository-caveats/report.html`. Publication guards reject removed caveats,
+changed counts and contradictory adapter provenance. Final-revision CI and
+artifact links are recorded in [PR #120](https://github.com/thetechgy/agent-engineering-baseline/pull/120).
+The active ruleset requires Full validation (PowerShell 7 and Bash) and Pester
+and analyzer (latest stable PowerShell). CI contracts, advisory quality and
+Pester feasibility provide the other Validate checks and correction evidence. The separately triggered evaluator
+candidate workflow is ancillary to scanner qualification and does not qualify
+#119's frozen candidate.
+
+The repository owns maintenance of this narrow patch against retained 0.3.0.
+Remove it only when an authorized evaluator replacement natively validates the
+same producer contract, preserves findings and caveat evidence, and passes these
+coverage, rejection, historical identity and end-to-end report controls without
+the patch. That replacement must retain the repository's coverage policy.
+Dependency pins, scoring, skills/APM references and #119's candidate are unchanged.

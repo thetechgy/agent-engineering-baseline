@@ -29,7 +29,7 @@ class ScannerRuntimeTests(unittest.TestCase):
         (self.native / 'versions.json').write_text(json.dumps(value))
 
     def test_source_lock_and_executed_versions_reject_unknown_and_contradictory_identity(self):
-        for field in ('skillspector_revision', 'skillspector_lock', 'semgrep_lock'):
+        for field in ('skillspector_revision', 'skillspector_lock', 'semgrep_lock', 'adapter_patch'):
             changed = copy.deepcopy(self.versions)
             changed['scanner_runtime'][field] = 'unknown'
             self.write_versions(changed)
@@ -66,6 +66,14 @@ class ScannerRuntimeTests(unittest.TestCase):
         self.write_versions(changed)
         with self.assertRaises(ValueError):
             evidence.write_outputs({'public-report.json': evidence.project(normalized)}, self.root / 'rejected')
+
+    def test_unpatched_scanner_profile_keeps_its_original_identity(self):
+        self.versions['scanner_runtime'] = copy.deepcopy(evidence.SCANNER_RUNTIME_UNPATCHED)
+        self.write_versions(self.versions)
+        public = evidence.project(evidence.normalize_static(self.native, 'podman'))
+        self.assertEqual(public['scanner_runtime'], evidence.SCANNER_RUNTIME_UNPATCHED)
+        self.assertNotIn('adapter_patch', public['scanner_runtime'])
+        self.assertNotIn('coverage_caveats', public)
 
     def test_historical_records_keep_their_identity_without_invented_scanner_versions(self):
         original = evidence.normalize_static(self.native, 'podman')

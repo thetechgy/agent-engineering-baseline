@@ -26,7 +26,7 @@ import skill_reports as reports
 
 # Frozen static admission identity, not a freshness inventory. Retain this profile
 # when admitting future scanner groups. Earlier historical records omit the field.
-SCANNER_RUNTIME = {
+SCANNER_RUNTIME_UNPATCHED = {
     "versions": {
         "semgrep": "1.184.0",
         "skillspector": "2.13.4",
@@ -38,6 +38,10 @@ SCANNER_RUNTIME = {
     "skillspector_lock": "sha256:8c922f8c222c28c7e02b1dc856a2b9464fb2d768ddae944ee9f8131452bfeee9",
     "semgrep_lock": "sha256:523bff62b068c83716cfd73e461d23beb8876a9a951227a7aaaf0b7b7a37b764"
 }
+
+SCANNER_RUNTIME = {**SCANNER_RUNTIME_UNPATCHED,
+                   "adapter_patch": "sha256:09ab5d1440f355224935b9498ea3c2a68395d656997932ab525771287cb802bc"}
+SCANNER_RUNTIMES = (SCANNER_RUNTIME_UNPATCHED, SCANNER_RUNTIME)
 
 ROOT = Path(__file__).resolve().parents[2]
 JSON_LIMIT = 8 * 1024 * 1024
@@ -1464,9 +1468,23 @@ def validate_evidence(data, *, public=False, _observed_at=None):
     fields = ('schema_version', 'kind', 'source', 'run_id', 'dataset', 'policy', 'arms', 'metrics',
               'observations', 'scans', 'findings', 'references', 'availability')
     if 'scanner_runtime' in data:
-        require(data.get('kind') == 'static' and data['scanner_runtime'] == SCANNER_RUNTIME,
+        require(data.get('kind') == 'static' and data['scanner_runtime'] in SCANNER_RUNTIMES,
                 'Unsupported or contradictory scanner runtime')
         fields += ('scanner_runtime',)
+    if 'coverage_caveats' in data:
+        require(data.get('kind') == 'static' and data.get('scanner_runtime') == SCANNER_RUNTIME,
+                'Caveats require the qualified adapter')
+        fields += ('coverage_caveats',)
+        caveats = data['coverage_caveats']
+        require(type(caveats) is list and 0 < len(caveats) <= 100, 'Invalid coverage caveats')
+        for item in caveats:
+            closed(item, ('scanner', 'producer_status', 'reason', 'count', 'reference'))
+            require(item['scanner'] == 'skillspector' and item['producer_status'] == 'complete_with_caveats'
+                    and item['reason'] == 'reference_missing', 'Unsupported coverage caveat')
+            count(item['count']); require(item['count'] > 0, 'Empty coverage caveat')
+            require(item['reference'] in {ref['id'] for ref in data['references']}, 'Missing caveat reference')
+            require(any(scan['scanner'] == 'skillspector' and scan['status'] == 'incomplete'
+                        for scan in data['scans']), 'Caveats cannot waive coverage policy')
     closed(data, fields)
     require(type(data['schema_version']) is int and data['schema_version'] == 1, 'Evidence version')
     enum(data['kind'], ('behavioral', 'static')); validate_source(data['source']); optional(data['run_id'], token)
@@ -1787,6 +1805,7 @@ def static_claim_identity(data, blocking_defaults):
               ('source', 'run_id', 'dataset', 'policy', 'arms', 'metrics', 'scans', 'findings', 'references')}
     if data['schema_version'] == 2: claims['custom'] = copy.deepcopy(data['custom'])
     if 'scanner_runtime' in data: claims['scanner_runtime'] = copy.deepcopy(data['scanner_runtime'])
+    if 'coverage_caveats' in data: claims['coverage_caveats'] = copy.deepcopy(data['coverage_caveats'])
     claims['provenance'] = data['availability']['provenance']
     defaults = dict(blocking_defaults)
     for scan in claims['scans']:
@@ -1923,6 +1942,7 @@ def project(data, *, static_bundle=None, behavioral_bundle=None):
     out = {key: copy.deepcopy(data[key]) for key in ('schema_version', 'kind', 'source', 'run_id', 'dataset',
            'policy', 'arms', 'metrics', 'scans', 'findings', 'references', 'availability')}
     if 'scanner_runtime' in data: out['scanner_runtime'] = copy.deepcopy(data['scanner_runtime'])
+    if 'coverage_caveats' in data: out['coverage_caveats'] = copy.deepcopy(data['coverage_caveats'])
     out['observations'] = [{key: copy.deepcopy(obs[key]) for key in
         OBSERVATION_FIELDS}
         for obs in data['observations']]
@@ -1988,7 +2008,7 @@ def select_run(root, name, selected, *, entries=None, directory_identities=None)
 def validate_runtime_versions(versions):
     require(type(versions) is dict, 'Native versions object required')
     if 'scanner_runtime' in versions:
-        require(versions['scanner_runtime'] == SCANNER_RUNTIME
+        require(versions['scanner_runtime'] in SCANNER_RUNTIMES
                 and versions.get('scanners') == SCANNER_RUNTIME['versions']
                 and versions.get('skillspector_revision') == SCANNER_RUNTIME['skillspector_revision'],
                 'Unsupported or contradictory scanner provenance')
@@ -2874,6 +2894,24 @@ def normalize_static(root, name, workspace=ROOT):
         versions, versions_digest = read_json_and_digest(root / 'versions.json', budget=budget, directory_identities=directory_identities, directory_states=directory_states, file_states=file_states)
         validate_runtime_versions(versions)
         if 'scanner_runtime' in versions: data['scanner_runtime'] = copy.deepcopy(versions['scanner_runtime'])
+        has_caveats = any(error.startswith('skillspector complete_with_caveats:')
+                          for scan in native['results'] for error in scan.get('legacy', {}).get('errors', []))
+        require(not has_caveats or versions.get('scanner_runtime') == SCANNER_RUNTIME,
+                'Missing qualified caveat adapter provenance')
+        if versions.get('scanner_runtime') == SCANNER_RUNTIME:
+            for index, scan in enumerate(native['results']):
+                for error in scan.get('legacy', {}).get('errors', []):
+                    match = re.fullmatch(
+                        r'skillspector complete_with_caveats: ([1-9][0-9]*) reference_missing caveat\(s\); '
+                        r'producer is_complete=true; repository coverage remains incomplete', error)
+                    if match:
+                        require(scan['validator'] == 'Security Scan' and scan['status'] == 'incomplete',
+                                'Contradictory caveat coverage')
+                        data.setdefault('coverage_caveats', []).append({
+                            'scanner': 'skillspector', 'producer_status': 'complete_with_caveats',
+                            'reason': 'reference_missing', 'count': int(match[1]),
+                            'reference': report_reference(('results', index))['id']})
+
         data['policy'] = make_policy({'evaluator_revision': versions.get('evaluator_revision')}, provenance='runtime_recorded')
         data['references'].append(reference_from_digest(root, root / 'versions.json', 'skill-quality', versions_digest))
         if versions.get('fixture') == 'synthetic':

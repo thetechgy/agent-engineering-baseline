@@ -1,0 +1,103 @@
+diff --git a/src/skillevaluator/validators/security.py b/src/skillevaluator/validators/security.py
+index c18215d..7a67814 100644
+--- a/src/skillevaluator/validators/security.py
++++ b/src/skillevaluator/validators/security.py
+@@ -922,6 +922,7 @@ class SecurityValidator(ValidatorBase):
+             result.add_error("skillspector reported execution_successful=false; security scan did not complete")
+             return False
+ 
++        reference_caveats = False
+         findings_after_filtering: int | None = None
+         universal_analyzer_evidence_valid = True
+         analysis_completeness = data.get("analysis_completeness")
+@@ -989,6 +990,7 @@ class SecurityValidator(ValidatorBase):
+                     completeness_status = analysis_completeness.get("status")
+                     if not isinstance(completeness_status, str) or completeness_status not in {
+                         "complete",
++                        "complete_with_caveats",
+                         "partial",
+                         "failed",
+                     }:
+@@ -1291,7 +1293,54 @@ class SecurityValidator(ValidatorBase):
+                     )
+                     return False
+ 
+-                if uses_completeness_schema and is_complete is not (completeness_status == "complete"):
++                reference_caveats = uses_completeness_schema and completeness_status == "complete_with_caveats"
++                if reference_caveats and (
++                    skillspector_version != (2, 13, 4)
++                    or not ledger_exceptions
++                    or not not_applicable_evidence_valid
++                    or any(
++                        exception.get("reason_code") != "reference_missing"
++                        or exception.get("phase") != "reference_resolution"
++                        or exception.get("outcome") != "partial"
++                        or not isinstance(exception.get("message"), str)
++                        or not exception["message"].strip()
++                        or not isinstance(exception.get("path"), str)
++                        or not exception["path"]
++                        or exception["path"].startswith(("/", "\\"))
++                        or "\\" in exception["path"]
++                        or ":" in exception["path"]
++                        or any(part in {"", ".", ".."} for part in exception["path"].split("/"))
++                        or any(ord(char) < 32 for char in exception["path"])
++                        or any(
++                            field not in exception
++                            or (exception[field] is not None
++                                and (type(exception[field]) is not int or exception[field] < 1))
++                            for field in ("start_line", "end_line")
++                        )
++                        or (exception.get("end_line") is not None
++                            and (exception.get("start_line") is None
++                                 or exception["end_line"] < exception["start_line"]))
++                        or not set(exception).issubset({
++                            "reason_code", "phase", "outcome", "message", "path",
++                            "start_line", "end_line", "fatal", "source_identity",
++                        })
++                        or not isinstance(exception.get("source_identity", ""), str)
++                        or (exception.get("source_identity")
++                            and not exception["path"].startswith(exception["source_identity"] + "/"))
++                        or exception.get("analyzers")
++                        or exception.get("error_class")
++                        for exception in ledger_exceptions
++                    )
++                ):
++                    result.add_error(
++                        "skillspector complete_with_caveats has invalid missing-reference evidence; "
++                        "security scan did not complete"
++                    )
++                    return False
++
++                if uses_completeness_schema and is_complete is not (
++                    completeness_status in {"complete", "complete_with_caveats"}
++                ):
+                     has_report_stage_truncation = any(
+                         limitation.startswith("Transitive traversal truncated: ")
+                         for limitation in limitations
+@@ -1349,7 +1398,7 @@ class SecurityValidator(ValidatorBase):
+                     if (
+                         counts["partially_inspected_files"] != 0
+                         or counts["entirely_uninspected_files"] != 0
+-                        or ledger_exceptions
++                        or (ledger_exceptions and not reference_caveats)
+                         or limitations
+                     ):
+                         result.add_error(
+@@ -1723,6 +1772,17 @@ class SecurityValidator(ValidatorBase):
+             )
+             return False
+ 
++        if reference_caveats:
++            result.add_error(
++                f"skillspector complete_with_caveats: {len(ledger_exceptions)} reference_missing "
++                "caveat(s); producer is_complete=true; repository coverage remains incomplete"
++            )
++            for exception in ledger_exceptions:
++                result.add_error("skillspector reference_missing: " + json.dumps({
++                    key: exception[key] for key in ("path", "start_line", "end_line")
++                }, sort_keys=True))
++            result.mark_scan_incomplete(stage_name)
++
+         return True
+ 
+     @staticmethod

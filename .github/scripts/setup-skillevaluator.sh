@@ -53,6 +53,14 @@ git -C "$tool_root/evaluator" fetch --quiet --depth=1 \
   https://github.com/NVIDIA/SkillEvaluator.git "$evaluator_revision"
 git -C "$tool_root/evaluator" checkout --quiet --detach FETCH_HEAD
 test "$(git -C "$tool_root/evaluator" rev-parse HEAD)" = "$evaluator_revision"
+if [ "$kind" = quality ]; then
+  # Preserve pristine adapter bytes for credential-free before/after qualification.
+  cp "$tool_root/evaluator/src/skillevaluator/validators/security.py" "$tool_root/security-original.py"
+  compatibility_patch="$repository_root/.github/patches/skillevaluator-v0.3.0-skillspector-caveats.patch"
+  printf '%s  %s\n' 09ab5d1440f355224935b9498ea3c2a68395d656997932ab525771287cb802bc "$compatibility_patch" | sha256sum --check --strict
+  git -C "$tool_root/evaluator" apply --check "$compatibility_patch"
+  git -C "$tool_root/evaluator" apply "$compatibility_patch"
+fi
 if [ "$kind" = benchmark ]; then
   patch="$repository_root/.github/patches/skillevaluator-v0.3.0-pin-codex.patch"
   git -C "$tool_root/evaluator" apply --check "$patch"
@@ -159,6 +167,7 @@ if sys.argv[2] == "quality":
     versions["skillspector_revision"] = sys.argv[3]
     versions["scanner_runtime"] = {
         "versions": versions["scanners"], "skillspector_revision": sys.argv[3],
+        "adapter_patch": "sha256:" + hashlib.sha256((Path(sys.argv[4]) / ".github/patches/skillevaluator-v0.3.0-skillspector-caveats.patch").read_bytes()).hexdigest(),
         "skillspector_lock": "sha256:" + hashlib.sha256((root / "skillspector/uv.lock").read_bytes()).hexdigest(),
         "semgrep_lock": "sha256:" + hashlib.sha256((Path(sys.argv[4]) / ".github/requirements/semgrep.txt").read_bytes()).hexdigest(),
     }

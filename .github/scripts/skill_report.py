@@ -614,6 +614,12 @@ def static_result(run, records):
             '.</p>' + disclosure('Scanner source and lock identities', runtime))
     else:
         parts.append('<p>Scanner versions unavailable in this historical record.</p>')
+    for caveat in run.get('coverage_caveats', []):
+        parts.append('<p>SkillSpector reports ' + code(caveat['producer_status']) +
+                     ' with is_complete=true and ' + text(caveat['count']) +
+                     ' missing-reference caveats (reference_missing). Repository coverage remains incomplete; '
+                     'validated findings are retained. ' +
+                     link('reference', (rid, caveat['reference']), 'Native caveat evidence') + '</p>')
     parts.append('<p>Required by native evaluator is its risk policy, not the CI finding policy or a scanner process outcome. '
                  'Incomplete tool markers have unknown counts and are not additional findings.</p>')
     parts.append('<details><summary>All scanner outcomes and native counts</summary>' + table('Scanner outcomes — counts can include findings without public detail',
