@@ -401,7 +401,7 @@ The report monitors direct tooling and the explicitly constrained Harbor, OpenAI
 and Pydantic compatibility group. It extracts pins from existing installation,
 requirements, policy and manifest files; it does not copy version literals into
 the [monitoring metadata](.github/dependency-freshness.json). Evaluator/scanner
-transitives remain governed by upstream frozen locks. Container digests, Debian
+transitives remain governed by their owning frozen locks. Container digests, Debian
 snapshots, Python/model selectors and CLI fixture contracts retain their distinct
 reproducibility boundaries; no OS package or container vulnerability scan is added.
 
@@ -541,12 +541,13 @@ with write access must select **Approve workflows to run** after reviewing the
 candidate, then require all validation checks before merging. See
 [GitHub's token-triggered workflow behavior](https://docs.github.com/en/actions/concepts/security/github_token).
 
-SkillSpector uses its upstream frozen lock; Semgrep and rumdl use reviewed hashed
-locks in [.github/requirements](.github/requirements). See the
+SkillSpector uses its scanner-owned compatible frozen lock; Semgrep and rumdl
+use reviewed hashed locks in [.github/requirements](.github/requirements). See the
 [issue #95 assessment](.github/evals/DEPENDENCY-REFRESH-95.md) and
-[follow-up qualification](.github/evals/FEASIBLE-REFRESH-95.md) for adopted updates,
+[follow-up qualification](.github/evals/FEASIBLE-REFRESH-95.md) and
+[scanner modernization evidence](.github/evals/SCANNER-MODERNIZATION-95.md) for adopted updates,
 holds and validation limits. CI rejects unverified Python
-installers and records tool versions and dependency inventories. Both locks use
+installers and records tool versions and dependency inventories. All three locks use
 uv 0.13.7. Semgrep installation requires wheels; regenerate its lock for Python
 3.13 and the Linux x86_64 / glibc 2.34 wheel floor:
 

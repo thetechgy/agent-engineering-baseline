@@ -115,7 +115,9 @@ def render_finding(item, *, exact=False):
 def static_record(record_id, record):
     return {'record_id': record_id, 'run_id': record['run_id'], 'source': compact_source(record['source']),
             'availability': copy.deepcopy(record['availability']), 'scans': copy.deepcopy(record['scans']),
-            'detailed_findings': copy.deepcopy(record['findings'])}
+            'detailed_findings': copy.deepcopy(record['findings']),
+            **({'scanner_runtime': copy.deepcopy(record['scanner_runtime'])} if 'scanner_runtime' in record else {}),
+            **({'coverage_caveats': copy.deepcopy(record['coverage_caveats'])} if 'coverage_caveats' in record else {})}
 
 
 def static_groups(runs):

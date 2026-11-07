@@ -1089,9 +1089,11 @@ class WorkflowTests(unittest.TestCase):
             for name in ("semgrep", "skillspector"):
                 (root / "dependencies" / f"{name}.json").write_text(
                     json.dumps([{"name": name, "version": "fixture-version"}]))
+            (root / 'skillspector').mkdir()
+            (root / 'skillspector/uv.lock').write_text('scanner lock fixture')
             for kind in ("quality", "benchmark"):
                 output = io.StringIO()
-                with self.subTest(kind=kind), patch.object(sys, "argv", ["-", str(root), kind, SHA]), \
+                with self.subTest(kind=kind), patch.object(sys, "argv", ["-", str(root), kind, SHA, str(REPO)]), \
                         patch.object(subprocess, "check_output", return_value="fixture-version\n"), \
                         contextlib.redirect_stdout(output):
                     exec(compile(producer, "setup-provenance", "exec"), {})
@@ -1099,6 +1101,8 @@ class WorkflowTests(unittest.TestCase):
                 if kind == "quality":
                     self.assertEqual(versions["skillspector_revision"], SHA)
                     self.assertEqual(versions["scanners"]["skillspector"], "fixture-version")
+                    self.assertEqual(versions['scanner_runtime']['skillspector_lock'],
+                                     'sha256:' + hashlib.sha256(b'scanner lock fixture').hexdigest())
                 else:
                     self.assertNotIn("skillspector_revision", versions)
 
