@@ -138,6 +138,8 @@ def stage(root, *, controls=False, probe=False):
                      'cp /solution/candidate /workspace/output/Subject.Tests.ps1\n' + producer_receipt_command() + '\n'))
         captured.extend(evidence.capture_custom_tasks(ROOT, P['skill'], tasks[arm], arm,
                         purpose='cli_pilot_control' if controls else 'cli_pilot_probe' if probe else 'cli_pilot'))
+    from codex_pilot_descriptors import retain_descriptors
+    retain_descriptors(root / 'evidence', tasks, captured)
     return bundle, tasks, captured
 
 
@@ -272,7 +274,49 @@ def collect(root, artifact, bundle, captured, *, controls=False, probe=False):
             if expected_reason and outcome['code'] != expected_reason: raise ValueError('Specific admission reason lost')
 
 
-def run(root, *, controls=False, probe=False):
+def check_preparation(reference, artifact):
+    """Consume authenticated same-revision preparation data before any live launch."""
+    from codex_pilot_descriptors import compare_descriptors, verified_configurations
+    revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
+    qualification = reference / 'pilot-report/evidence/qualification.json'
+    value = reports.read_json(qualification)
+    reports.require(value.get('complete') is True and value.get('inference') is False
+                    and value.get('execution_policy') == P['execution_policy'], 'Incomplete preparation qualification')
+    probe = reference / 'pilot-probe/evidence'
+    phases = [(probe, False), (reference / 'pilot-controls/evidence', True)]
+    phases += [(probe / 'cleanup-cases' / scenario, False) for scenario in ('command-failure', 'interruption')]
+    for directory, controls in phases:
+        ready = reports.read_json(directory / 'readiness.json')
+        clean = reports.read_json(directory / 'cleanup.json')
+        reports.require(ready.get('id') == P['id'] and ready.get('revision') == revision
+                        and ready.get('complete') is True and ready.get('inference') is False
+                        and ready.get('controls') is controls and ready.get('probe') is (not controls)
+                        and clean.get('complete') is True and clean.get('unlaunched_arms') == [],
+                        'Preparation source, readiness or cleanup mismatch')
+        configurations = verified_configurations(directory)
+        cases = {P['case'] + '-' + name for name in CONTROLS} if controls else {P['case']}
+        reports.require(set(configurations) == {(arm, case) for arm in ARMS for case in cases},
+                        'Preparation descriptor cohort mismatch')
+        if not controls:
+            compare_descriptors(probe, directory)
+    comparison = compare_descriptors(probe, artifact)
+    def members(directory):
+        return {(row['arm'], row['case_id']): {
+            'source_case_id': row['source_case_id'],
+            'members': {name: digest for name, digest in row['members'].items() if name != 'task.toml'}}
+            for row in reports.read_json(directory / 'staging.json')}
+    reports.require(members(probe) == members(artifact), 'Non-descriptor preparation inputs changed')
+    result = {**comparison, 'source_revision': revision, 'execution_policy': P['execution_policy'],
+              'other_task_members_equal': True, 'credential_free_reference': True,
+              'reference_descriptor_index_sha256': sha(probe / 'task-descriptors.json'),
+              'reference_qualification_sha256': sha(qualification)}
+    reports.write_json(artifact / 'preparation-check.json', result)
+    return result
+
+
+def run(root, *, controls=False, probe=False, preparation=None):
+    if not (controls or probe) and preparation is None:
+        raise ValueError('Authenticated preparation evidence required before live execution')
     artifact = root / 'evidence'; artifact.mkdir()
     profiles.runtime(profiles.candidate_versions(), owning=True)
     if controls or probe:
@@ -284,6 +328,8 @@ def run(root, *, controls=False, probe=False):
     shutil.copyfile(root / 'workspace-profile.json', artifact / 'workspace-profile.json')
     if probe: os.environ['AEB_PILOT_PROBE'] = '1'
     try:
+        if not (controls or probe):
+            check_preparation(preparation, artifact)
         for arm in ARMS:
             stage_record = {'arm': arm, 'stage': 'native_control' if controls else 'external_cli_probe' if probe else 'live_cli', 'status': 'running'}
             stages.append(stage_record); reports.write_json(artifact / 'command-stages.json', stages)
@@ -410,21 +456,34 @@ def consolidated(root):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=('controls','probe','live','report'))
+    parser.add_argument('action', choices=('controls','probe','live','report','check-preparation'))
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--approval', default='')
+    parser.add_argument('--preparation', type=Path, help='Authenticated preparation artifact root')
     args=parser.parse_args()
     if args.action == 'live':
         revision = subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()
         if args.approval != 'pilot-' + revision + '-usd10' or os.environ.get('GITHUB_RUN_ATTEMPT') != '1':
             parser.error('Exact-revision allocation and first workflow attempt required')
+    if args.action in ('live', 'check-preparation') and args.preparation is None:
+        parser.error('Authenticated preparation evidence required')
+    if args.action == 'check-preparation' and any(os.environ.get(k) for k in ('OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'NVIDIA_API_KEY')):
+        parser.error('Credential-free preparation check received credentials')
     args.output.mkdir(parents=True, exist_ok=False)
     if args.action == 'report':
         consolidated(args.output)
         return
+    if args.action == 'check-preparation':
+        profiles.runtime(profiles.candidate_versions(), owning=True)
+        _, _, captured = stage(args.output)
+        artifact = args.output / 'evidence'
+        reports.write_json(artifact / 'staging.json', captured)
+        shutil.copyfile(args.output / 'workspace-profile.json', artifact / 'workspace-profile.json')
+        check_preparation(args.preparation, artifact)
+        return
     from qualify_evaluator_candidate import native_compose_config
     native_compose_config(ROOT)
-    run(args.output, controls=args.action=='controls', probe=args.action=='probe')
+    run(args.output, controls=args.action=='controls', probe=args.action=='probe', preparation=args.preparation)
     if args.action == 'probe':
         for scenario in ('command-failure', 'interruption'):
             os.environ['AEB_PILOT_SCENARIO'] = scenario

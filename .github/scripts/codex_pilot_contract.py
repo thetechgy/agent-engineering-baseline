@@ -63,5 +63,5 @@ def pilot_inputs(workspace=ROOT):
     paths = ['.github/evals/codex-pilot.json', '.github/scripts/codex_pilot_contract.py',
              '.github/scripts/codex_pilot_agent.py', '.github/scripts/codex_pilot.py', '.github/scripts/codex_pilot_stub.py',
              '.github/scripts/codex_pilot_environment.py', '.github/scripts/codex_pilot_boundary.py',
-             '.github/scripts/codex_pilot_probe.py']
+             '.github/scripts/codex_pilot_probe.py', '.github/scripts/codex_pilot_descriptors.py']
     return [{'member': 'pilot/' + p, 'digest': 'sha256:' + hashlib.sha256((workspace / p).read_bytes()).hexdigest()} for p in paths]

@@ -17,6 +17,8 @@ ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/'.github/scripts'))
 from codex_pilot_contract import PROFILE, configuration, runner_bytes
 import codex_pilot as pilot
+import codex_pilot_descriptors as descriptors
+import skill_reports as reports
 import skill_evidence as evidence
 
 
@@ -94,6 +96,15 @@ class PilotContracts(unittest.TestCase):
             for controls in (False, True):
                 target=root/str(controls);target.mkdir()
                 bundle,tasks,rows=pilot.stage(target,controls=controls)
+                self.assertTrue((target/'evidence/task-descriptors.json').is_file(),
+                                'Generated task descriptors must survive the artifact boundary')
+                reports.write_json(target/'evidence/staging.json',rows)
+                retained=descriptors.verified_configurations(target/'evidence')
+                self.assertEqual(set(retained),{(r['arm'],r['case_id']) for r in rows})
+                for row in rows:
+                    retained_file=target/'evidence/task-descriptors'/row['arm']/(row['case_id']+'.toml')
+                    original=next(t for t in tasks[row['arm']] if t.name==row['case_id'])/'task.toml'
+                    self.assertEqual(retained_file.read_bytes(),original.read_bytes())
                 purpose='cli_pilot_control' if controls else 'cli_pilot'
                 self.assertEqual(len(rows),14 if controls else 2)
                 if not controls:
@@ -157,6 +168,66 @@ class PilotContracts(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'Pilot profile/purpose mismatch'):
                 evidence.validate_custom_evidence(public,public=True)
 
+
+    @unittest.skipUnless(os.environ.get('APM_EXECUTABLE') and CANDIDATE_RUNTIME, 'Requires verified APM and owning runtime')
+    def test_preparation_consumption_uses_actual_staging_and_rejects_changed_or_missing_evidence(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);reference=root/'reference';reference.mkdir()
+            revision=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()
+            for phase,controls in (('pilot-probe',False),('pilot-controls',True)):
+                target=reference/phase;target.mkdir()
+                _,_,rows=pilot.stage(target,controls=controls,probe=not controls)
+                artifact=target/'evidence'
+                reports.write_json(artifact/'staging.json',rows)
+                reports.write_json(artifact/'readiness.json',{'id':PROFILE['id'],'revision':revision,
+                    'complete':True,'inference':False,'probe':not controls,'controls':controls})
+                reports.write_json(artifact/'cleanup.json',{'complete':True,'unlaunched_arms':[]})
+            probe=reference/'pilot-probe/evidence'
+            for scenario in ('command-failure','interruption'):
+                shutil.copytree(probe,reference/scenario)
+            for scenario in ('command-failure','interruption'):
+                shutil.move(reference/scenario,probe/'cleanup-cases'/scenario)
+            qualification=reference/'pilot-report/evidence/qualification.json'
+            reports.write_json(qualification,{'complete':True,'inference':False,
+                'execution_policy':PROFILE['execution_policy']})
+            output=root/'fresh-consumption'
+            with patch.object(sys,'argv',['pilot','check-preparation','--output',str(output),
+                                          '--preparation',str(reference)]):
+                pilot.main()
+            artifact=output/'evidence'
+            result=reports.read_json(artifact/'preparation-check.json')
+            self.assertTrue(result['configurations_equal'] and result['other_task_members_equal'])
+            self.assertEqual(result['source_revision'],revision)
+            path=artifact/'task-descriptors/with_skill/pester-001.toml'
+            original=path.read_bytes()
+            changed=original.replace(b'timeout_sec = 600.0',b'timeout_sec = 601.0')
+            self.assertNotEqual(original,changed)
+            path.write_bytes(changed)
+            staged=reports.read_json(artifact/'staging.json')
+            row=next(r for r in staged if r['arm']=='with_skill')
+            row['members']['task.toml']=descriptors.raw_digest(changed)
+            row['task_checksum']=evidence.custom_task_checksum(row['members'])
+            reports.write_json(artifact/'staging.json',staged)
+            manifest=reports.read_json(artifact/'task-descriptors.json')
+            entry=next(r for r in manifest['descriptors'] if r['arm']=='with_skill')
+            entry.update(raw_sha256=descriptors.raw_digest(changed),
+                parsed_sha256=descriptors.configuration_digest(changed),task_checksum=row['task_checksum'])
+            reports.write_json(artifact/'task-descriptors.json',manifest)
+            with self.assertRaisesRegex(ValueError,'Complete parsed task configurations differ'):
+                pilot.check_preparation(reference,artifact)
+            (probe/'task-descriptors/with_skill/pester-001.toml').unlink()
+            with self.assertRaises(ValueError): pilot.check_preparation(reference,artifact)
+
+    def test_live_requires_preparation_before_any_native_setup(self):
+        with patch.object(pilot,'resources') as resources, patch.object(pilot,'stage') as stage:
+            with self.assertRaisesRegex(ValueError,'preparation evidence required'):
+                pilot.run(Path('unused'))
+            resources.assert_not_called();stage.assert_not_called()
+        with patch.dict(os.environ,{'OPENAI_API_KEY':'credential-free-negative-control'}), \
+                patch.object(sys,'argv',['pilot','check-preparation','--output','unused','--preparation','unused']), \
+                self.assertRaises(SystemExit):
+            pilot.main()
+
     @unittest.skipUnless(CANDIDATE_RUNTIME, 'Requires qualified owning runtime')
     def test_released_harbor_mount_shape_and_independent_verifier(self):
         from harbor.trial.trial import _harbor_log_bind_mount, TaskOS
@@ -206,6 +277,112 @@ class PilotContracts(unittest.TestCase):
     def test_wrong_allocation_rejects_before_native_setup(self):
         with patch.object(sys,'argv',['pilot','live','--output','unused','--approval','wrong']), self.assertRaises(SystemExit):
             pilot.main()
+
+
+class DescriptorEvidence(unittest.TestCase):
+    SAMPLE = b'''schema_version = "1.3"
+[agent]
+user = "agent"
+network_mode = "allowlist"
+allowed_hosts = ["api.openai.com"]
+timeout_sec = 600.0
+[environment]
+cpus = 2
+memory_mb = 2048
+[environment.env]
+BASH_ENV = ""
+[verifier.environment]
+network_mode = "no-network"
+[metadata]
+extra = {enabled = true, count = 1, ratio = 1.5}
+order = ["a", "b"]
+date = 2026-11-07
+time = 12:00:00
+datetime = 2026-11-07T12:00:00Z
+'''
+
+    def fixture(self, root, raw):
+        task=root/'tasks/pester-001';task.mkdir(parents=True)
+        (task/'task.toml').write_bytes(raw)
+        row={'arm':'with_skill','case_id':'pester-001','members':{'task.toml':descriptors.raw_digest(raw)}}
+        row['task_checksum']=evidence.custom_task_checksum(row['members'])
+        artifact=root/'evidence'
+        descriptors.retain_descriptors(artifact,{'with_skill':[task]},[row])
+        reports.write_json(artifact/'staging.json',[row])
+        return artifact
+
+    def test_complete_toml_identity_ignores_presentation_and_preserves_types(self):
+        reformatted=self.SAMPLE.replace(b'cpus = 2',b'cpus=0x2 # same integer').replace(
+            b'user = "agent"',b"user='agent'").replace(b'600.0',b'6e2').replace(
+            b'extra = {enabled = true, count = 1, ratio = 1.5}',
+            b'extra={ratio=1.50,count=1,enabled=true}').replace(b'12:00:00Z',b'12:00:00+00:00')
+        self.assertNotEqual(descriptors.raw_digest(self.SAMPLE),descriptors.raw_digest(reformatted))
+        self.assertEqual(descriptors.configuration_digest(self.SAMPLE),descriptors.configuration_digest(reformatted))
+        blocks=self.SAMPLE.split(b'\n[')
+        reordered=blocks[0]+b'\n'+b''.join(b'['+block+b'\n' for block in reversed(blocks[1:]))
+        self.assertEqual(descriptors.configuration_digest(self.SAMPLE),descriptors.configuration_digest(reordered))
+        for a,b in ((b'value=1',b'value=1.0'),(b'value=true',b'value=1'),
+                    (b'value=0.0',b'value=-0.0')):
+            self.assertNotEqual(descriptors.configuration_digest(a),descriptors.configuration_digest(b))
+        with self.assertRaises(ValueError): descriptors.configuration_digest(b'value=1\nvalue=2')
+
+    @unittest.skipUnless(CANDIDATE_RUNTIME,'Requires qualified retention redactor')
+    def test_compare_command_accepts_retained_formatting_only_difference(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);left=self.fixture(root/'left',self.SAMPLE)
+            right=self.fixture(root/'right',self.SAMPLE.replace(b'cpus = 2',b'cpus=0x2 # presentation only'))
+            result=subprocess.run([sys.executable,'-B',str(ROOT/'.github/scripts/codex_pilot_descriptors.py'),
+                                   str(left),str(right)],capture_output=True,text=True,timeout=20)
+            self.assertEqual(result.returncode,0,result.stderr)
+            self.assertEqual(json.loads(result.stdout),{'algorithm':descriptors.ALGORITHM,
+                'configurations_equal':True,'descriptors':1})
+
+    @unittest.skipUnless(CANDIDATE_RUNTIME,'Requires qualified retention redactor')
+    def test_complete_configuration_changes_are_rejected_with_valid_raw_evidence(self):
+        changes=((b'user = "agent"',b'user = "root"'),
+            (b'network_mode = "allowlist"',b'network_mode = "public"'),
+            (b'allowed_hosts = ["api.openai.com"]',b'allowed_hosts = ["example.com"]'),
+            (b'timeout_sec = 600.0',b'timeout_sec = 601.0'),
+            (b'cpus = 2',b'cpus = 3'),(b'memory_mb = 2048',b'memory_mb = 4096'),
+            (b'memory_mb = 2048\n',b''),
+            (b'BASH_ENV = ""',b'BASH_ENV = "/changed"'),
+            (b'network_mode = "no-network"',b'network_mode = "public"'),
+            (b'enabled = true',b'enabled = false'),(b'count = 1',b'count = 1.0'),
+            (b'ratio = 1.5',b'ratio = 1.6'),(b'order = ["a", "b"]',b'order = ["b", "a"]'),
+            (b'date = 2026-11-07',b'date = 2026-11-08'),
+            (b'time = 12:00:00',b'time = 12:00:01'),
+            (b'datetime = 2026-11-07T12:00:00Z',b'datetime = 2026-11-07T12:00:01Z'),
+            (b'[metadata]',b'[metadata]\nunknown = "new configuration field"'))
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);left=self.fixture(root/'left',self.SAMPLE)
+            for i,(old,new) in enumerate(changes):
+                with self.subTest(change=old):
+                    right=self.fixture(root/str(i),self.SAMPLE.replace(old,new))
+                    with self.assertRaisesRegex(ValueError,'Complete parsed task configurations differ'):
+                        descriptors.compare_descriptors(left,right)
+
+    @unittest.skipUnless(CANDIDATE_RUNTIME,'Requires qualified retention redactor')
+    def test_missing_tampered_and_contradictory_descriptor_evidence_is_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);artifact=self.fixture(root/'valid',self.SAMPLE)
+            path=artifact/'task-descriptors/with_skill/pester-001.toml'
+            path.write_bytes(self.SAMPLE+b'\n# unrecorded raw-byte change\n')
+            with self.assertRaisesRegex(ValueError,'Descriptor raw identity mismatch'):
+                descriptors.verified_configurations(artifact)
+            path.write_bytes(self.SAMPLE)
+            manifest=reports.read_json(artifact/'task-descriptors.json')
+            manifest['descriptors'][0]['parsed_sha256']='sha256:'+'0'*64
+            reports.write_json(artifact/'task-descriptors.json',manifest)
+            with self.assertRaisesRegex(ValueError,'Descriptor parsed identity mismatch'):
+                descriptors.verified_configurations(artifact)
+            manifest['descriptors'][0]['parsed_sha256']=descriptors.configuration_digest(self.SAMPLE)
+            reports.write_json(artifact/'task-descriptors.json',manifest)
+            descriptors.verified_configurations(artifact)
+            missing=root/'older';missing.mkdir()
+            result=subprocess.run([sys.executable,'-B',str(ROOT/'.github/scripts/codex_pilot_descriptors.py'),
+                                   str(artifact),str(missing)],capture_output=True,text=True,timeout=20)
+            self.assertEqual(result.returncode,1)
+            self.assertIn('incomplete, inconsistent, or configuration differs',result.stderr)
 
 
 if __name__=='__main__': unittest.main()

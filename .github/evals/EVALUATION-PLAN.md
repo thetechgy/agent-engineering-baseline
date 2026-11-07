@@ -575,3 +575,80 @@ inference or judge ran, and the two-attempt $10 proposal remains unapproved.
 Approval must name the exact final feature commit, this authenticated preparation
 and these limitations. A later approved workflow still repeats credential-free
 preparation before its protected live job; a failed prerequisite prevents launch.
+
+### Descriptor evidence correction; obsolete allocation cancelled
+
+The owner approved one two-attempt allocation at `a3fa547`, using preparation
+run `42413570075` and artifact `13591181861`. All checks on that revision finished
+successfully before the single dispatch, [run 42418111772](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42418111772).
+Its credential-free preparation passed and produced artifact `13592303007`, with
+archive SHA-256 `acaa506b4b4705e916cee363bb31d0fec77cb01f799ebe1afab79788cb105a34`.
+The preparation evidence was authenticated and retained before the owner-authorized
+cancellation of the obsolete held run. Run `42418111772` is cancelled; its protected
+environment was never approved. No live agent attempt, model credential injection,
+inference or judge started. The previous paid approval does not apply to changed code.
+
+Comparison with the approved preparation found different generated `task.toml`
+hashes. Neither artifact nor either completed job log retained the descriptors.
+Searching 975 retained local descriptors and reconstructing 1,024 candidates with
+the pinned staging code recovered neither exact recorded hash. Serialization
+nondeterminism was reproduced, but equivalence of the two original complete
+configurations remains unestablished. The owner declined an exception; these
+older artifacts do not acquire configuration-equivalence evidence retrospectively.
+
+The correction retains exact descriptors under `evidence/task-descriptors/`
+before execution, with an index binding their raw SHA-256 to the existing native
+staging capture. `sha256-typed-toml-v1` additionally hashes the complete parsed TOML:
+table keys are sorted, scalar types and values are retained, and array order is
+preserved. Unknown metadata fields also participate. No fields are omitted.
+The pilot producer digest includes the descriptor helper. Grader, fixture and
+dataset digests, runtime pins, isolation policy, accounting and exact native
+checksum checks across execution are unchanged.
+
+After authenticating both producer archives and their source revisions, compare
+extracted evidence directories without executing artifact contents:
+
+```sh
+"$SKILL_CURRENT_PYTHON" -B .github/scripts/codex_pilot_descriptors.py REFERENCE_EVIDENCE CANDIDATE_EVIDENCE
+```
+
+The command verifies retained bodies against both identities and the staging
+capture before comparing complete configurations. Missing descriptors, inconsistent
+evidence or changed configuration fail closed. Success establishes descriptor
+configuration equality only; all other preparation and approval gates still apply.
+
+Local credential-free validation passes all nineteen focused contracts and all
+twenty-eight historical custom-metric regressions under their respective owning
+runtimes, including the pinned saved-review dependencies. The actual pinned native
+staging path is exercised. Two hash-seed processes retain all sixteen probe/control
+descriptors through archive round trips, with different raw hashes and equal parsed
+identities. A fully recorded change from a 600-second agent timeout to 601 seconds
+is rejected by the comparison CLI. The focused controls also reject changes to
+network policy, resource limits, user, environment, verifier policy, scalar types,
+array order, dates, times and additional metadata. Docker is unavailable locally;
+container execution and hosted qualification of this correction have not run.
+The same comparison is now mandatory in the execution path. The protected job
+consumes its own successful preparation artifact by the producer job's artifact ID,
+checks fresh native staging before credential delivery, and checks the final staged
+tasks again before either live arm can launch. The gate also verifies all four
+credential-free readiness/cleanup sections, source revision, execution policy,
+expected descriptor cohorts, and exact hashes of every non-descriptor task member.
+Native checksums are recomputed from the complete captured manifests; the original
+exact checksum checks across execution remain enforced. Missing older descriptors
+cannot pass this gate.
+
+A separate credential-free consumer job downloads the successful preparation
+artifact by ID and exercises that same consumption entry point. Its operational
+artifact retains candidate descriptors and `preparation-check.json`; the existing
+consolidated report remains unchanged. The protected job requires both preparation
+and consumption to succeed. Downloaded evidence can be consumed with the pinned
+owning runtime and reviewed producer checkout:
+
+```sh
+"$SKILL_CURRENT_PYTHON" -B .github/scripts/codex_pilot.py check-preparation --preparation AUTHENTICATED_ARTIFACT_ROOT --output NEW_STAGING_DIRECTORY
+```
+
+Publication and credential-free CI/preparation are authorized. Hosted Docker
+qualification is pending at this checkpoint. No replacement live allocation,
+model credential retrieval, inference, judge, recurring execution, production
+change or merge is authorized.
