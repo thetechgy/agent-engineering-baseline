@@ -117,3 +117,5 @@ class PilotCodex(Codex):
                 audit['cleanup'] = 'complete'
             finally:
                 (self.logs_dir / 'pilot-runtime.json').write_text(json.dumps(audit, indent=2) + '\n')
+        if result.return_code != 0:
+            raise RuntimeError('Pilot Codex CLI exited unsuccessfully; original events retained')

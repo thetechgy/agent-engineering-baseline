@@ -289,7 +289,11 @@ def run(root, *, controls=False, probe=False):
             reports.write_json(artifact / 'command-stages.json', stages)
             usage = retain(root, artifact)
             if not probe and not controls:
-                if code: raise RuntimeError('Infrastructure failure; remaining arm not launched')
+                audits = reports.read_json(artifact / 'runtime-audits.json')
+                if code or len(audits) != ARMS.index(arm) + 1 or any(a.get('returncode') != 0 or a.get('cleanup') != 'complete' for a in audits):
+                    raise RuntimeError('Infrastructure failure; remaining arm not launched')
+                if resources() != before:
+                    raise RuntimeError('Arm resource cleanup incomplete; remaining arm not launched')
                 if any(row['estimated_usd'] is None for row in usage) or not usage:
                     raise RuntimeError('Usage unavailable; remaining allocation cannot be verified')
                 if sum(row['estimated_usd'] for row in usage) >= P['stop_estimate_usd']:
