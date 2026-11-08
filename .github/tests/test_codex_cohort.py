@@ -101,6 +101,28 @@ class Boundaries(unittest.TestCase):
             reports.write_json(reference/'qualification.json',{'complete':False})
             with patch.object(cohort.profiles,'runtime'), self.assertRaises(ValueError): cohort.check(reference,staging)
 
+    def test_existing_retention_keeps_cached_input_separate_and_unknown_usage_unknown(self):
+        try:
+            import importlib.metadata
+            if importlib.metadata.version('skillevaluator') != '0.8.0': self.skipTest('Owning runtime required')
+        except importlib.metadata.PackageNotFoundError: self.skipTest('Owning runtime required')
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);artifact=root/'evidence';artifact.mkdir()
+            path=root/'jobs/trial/result.json'
+            reports.write_json(path,{'trial_name':'one','agent_result':{'n_input_tokens':100000,'n_cache_tokens':20000,'n_output_tokens':30000}})
+            usage=pilot.retain(root,artifact,probe=True)
+            self.assertAlmostEqual(usage[0]['estimated_usd'],.462)
+            self.assertEqual(usage[0]['n_cache_tokens'],20000)
+            reports.write_json(path,{'trial_name':'one','agent_result':{'n_input_tokens':100000,'n_output_tokens':30000}})
+            self.assertIsNone(pilot.retain(root,artifact,probe=True)[0]['estimated_usd'])
+            reports.write_json(path,{'trial_name':'one','agent_result':{'n_input_tokens':1,'n_cache_tokens':2,'n_output_tokens':0}})
+            with self.assertRaises(ValueError): pilot.retain(root,artifact,probe=True)
+
+    def test_existing_output_claim_prevents_relaunch_without_touching_runtime(self):
+        with tempfile.TemporaryDirectory() as d, patch.object(cohort,'staged') as staging:
+            with self.assertRaises(FileExistsError): cohort.execute(Path(d),Path(d)/'missing',fixture='complete')
+            staging.assert_not_called()
+
     def test_cohort_probe_is_separate_from_live_effectiveness_in_public_reporting(self):
         import skill_analysis as analysis
         record={'custom':{'purpose':'skill_effectiveness_probe'},'policy':{}}

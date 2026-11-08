@@ -340,7 +340,7 @@ def collect(root, artifact, bundle, captured, *, controls=False, probe=False, re
     ids = sorted({row['case_id'] for row in captured})
     raw = root / 'raw'; run = raw / 'results' / P['skill'] / ('retrospective-replay' if replay is not None else 'pilot-controls' if controls else 'cli-probe' if probe else 'live-pilot')
     collected = collect_harbor_results(P['skill'], ['codex'], run, root / 'jobs',
-        expected_cases=len(ids), expected_case_ids=ids, expected_trials=len(ids)*(3 if cohort else 1),
+        expected_cases=len(ids), expected_case_ids=ids, expected_trials=None if cohort else len(ids),
         n_attempts=3 if cohort else 1, grading_mode="custom_only",
         agent_models={'codex': {'model': 'credential-free-oracle' if controls or replay is not None else P['model'], 'source': P['id']}})
     purpose = ('skill_effectiveness_control' if controls else 'skill_effectiveness') if effectiveness else 'cli_pilot_replay' if replay is not None else 'cli_pilot_control' if controls else 'cli_pilot_probe' if probe else 'cli_pilot'

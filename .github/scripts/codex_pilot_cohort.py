@@ -136,7 +136,7 @@ def accounting(rows):
 
 
 def aggregates(root):
-    """Pinned Harbor stats over exact persisted trials. Pending slots stay pending.
+    """Pinned Harbor stats over exact persisted trials. The ledger retains pending slots.
 
     This collector envelope is derived data; original per-trial evidence is intact.
     """
@@ -146,9 +146,10 @@ def aggregates(root):
     for arm in pilot.ARMS:
         job = root / 'jobs' / f'{P["skill"]}-codex-{"with" if arm == "with_skill" else "without"}'
         trials = [TrialResult.model_validate(reports.read_json(p)) for p in sorted(job.glob('*/result.json'))]
+        if not trials: continue
         value = JobResult(id=uuid.uuid5(uuid.NAMESPACE_URL, str(job)), started_at=min((t.started_at for t in trials), default=datetime.now(timezone.utc)),
-                          finished_at=max((t.finished_at for t in trials if t.finished_at), default=None), n_total_trials=6,
-                          stats=JobStats.from_trial_results(trials, n_total_trials=6), trial_results=trials)
+                          finished_at=max((t.finished_at for t in trials if t.finished_at), default=None), n_total_trials=len(trials),
+                          stats=JobStats.from_trial_results(trials, n_total_trials=len(trials)), trial_results=trials)
         reports.write_json(job / 'result.json', json.loads(value.model_dump_json()))
 
 
@@ -246,8 +247,10 @@ def execute(root, reference, *, fixture=None, approval='', receipt=None):
             if fixture: row['inference'] = False
             native = reports.read_json(trial / 'result.json')
             exception = (native.get('exception_info') or {}).get('exception_type')
-            row['agent_failure'] = exception if exception in ('AgentTimeoutError', 'RuntimeError', 'NonZeroAgentExitCodeError') else None
-            row['verifier_failure'] = exception if exception and not row['agent_failure'] else None
+            row['native_exception'] = exception
+            row['agent_failure'] = exception if exception and (exception in ('AgentTimeoutError', 'NonZeroAgentExitCodeError') or row['agent_returncode'] not in (None, 0)) else None
+            row['verifier_failure'] = exception if exception and not row['agent_failure'] and (native.get('verifier') or {}).get('started_at') else None
+            row['infrastructure_failure'] = exception if exception and not (row['agent_failure'] or row['verifier_failure']) else None
             reason = stop_reason(row, current, clean, code=code, audits=audits, grades=grades)
             if exception: reason = 'execution_infrastructure_failure' if not row['agent_failure'] or fixture in ('infrastructure','interruption') else reason
             if reason:

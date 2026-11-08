@@ -235,8 +235,8 @@ then durably records each launch before starting one native trial. Each trial ha
 one exact task and arm, its declared ordinal, an independent container/home/output
 namespace, and no Harbor job-level retry or concurrency. Checksums are checked before
 and after execution. Original trial results are preserved; the pinned Harbor
-`JobStats` builds a derived collector envelope with six planned trials per arm.
-Pending entries stay pending. The existing native admission, public records,
+`JobStats` builds a derived envelope over recorded trials, while the collector
+retains six planned trials per arm and the ledger retains every pending entry. The existing native admission, public records,
 analysis and consolidated renderer retain submissions, grades, usage, diagnostics,
 policy and cleanup evidence. There is no resume or automatic continuation mode.
 Interruption handling terminates the child with bounded teardown and attempts

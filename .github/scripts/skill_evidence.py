@@ -3910,6 +3910,9 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
             matched = lookup.pop(trial_name, None)
             require(matched is None or matched[0] == case_id, 'Summary case mismatch')
             ordinal = matched[1].get('attempt') if matched else _attempt_ordinal({'_trial_name': trial_name})
+            if ordinal is None and capture['purpose'] in ('skill_effectiveness', 'skill_effectiveness_probe'):
+                from skillevaluator.tier3.harbor.collector import _structural_attempt_ordinal
+                ordinal = _structural_attempt_ordinal(trial_name, case_id)
             if ordinal is None: limitations.add('metadata_missing')
             if reward is not None:
                 require(reward.get('trial_id') == trial_name and reward.get('entry_id') == case_id
@@ -3921,7 +3924,7 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
                         'Custom-only trial contains standard judge metrics')
             if matched is not None and matched[1].get('score') is not None:
                 require(matched[1]['score'] == raw.get('overall'), 'Custom native attempt score mismatch')
-            detail = (reward or {}).get('details' if profile['id'] in ('pester-pilot-v3', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2', 'pester-cli-pilot-retained-v3', 'pester-cli-pilot-retained-v4', 'pester-cli-pilot-retained-v5', 'pester-cli-pilot-retained-v6', 'pester-cli-pilot-v1', 'pester-effectiveness-v1', 'pester-effectiveness-v2', 'pester-effectiveness-v3', 'gh-native-oracle-v1') else 'custom_details', {}).get('outcome', {})
+            detail = (reward or {}).get('details' if profile['id'] in ('pester-pilot-v3', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2', 'pester-cli-pilot-retained-v3', 'pester-cli-pilot-retained-v4', 'pester-cli-pilot-retained-v5', 'pester-cli-pilot-retained-v6', 'pester-cli-pilot-v1', 'pester-effectiveness-v1', 'pester-effectiveness-v2', 'pester-effectiveness-v3', 'pester-effectiveness-v4', 'gh-native-oracle-v1') else 'custom_details', {}).get('outcome', {})
             outcome = detail.get('classification', 'unknown') if profile['grading'] == 'custom_only' else (
                 'failed' if native_trial_failed(trial, reward) else 'passed' if (reward or {}).get('custom_metrics', {}).get('gh_gate') == 1 else 'failed')
             if profile['grading'] == 'default_plus_custom' and native_trial_failed(trial, reward): outcome = 'unknown'
