@@ -219,7 +219,7 @@ class PilotContracts(unittest.TestCase):
                 reports.write_json(artifact/'readiness.json',{'id':PROFILE['id'],'revision':revision,
                     'complete':True,'inference':False,'probe':not controls,'controls':controls})
                 reports.write_json(artifact/'cleanup.json',{'complete':True,'unlaunched_arms':[]})
-            from codex_pilot_replay import corpus, retrospective_metadata
+            from codex_pilot_replay import corpus, retrospective_metadata, retain_originals, REPLAY_PRODUCER
             original, _, submissions, _ = corpus()
             replay=reference/'pilot-retrospective';replay.mkdir()
             _, _, rows=pilot.stage(replay,replay=retrospective_metadata(),submissions=submissions)
@@ -228,8 +228,8 @@ class PilotContracts(unittest.TestCase):
             reports.write_json(artifact/'readiness.json',{'revision':revision,'complete':True,'inference':False})
             reports.write_json(artifact/'cleanup.json',{'complete':True,'unlaunched_arms':[]})
             reports.write_json(artifact/'replay-check.json',{'complete':True,'inference':False,
-                'originals_preserved':True,'retrospective':retrospective_metadata()})
-            shutil.copytree(original,artifact/'original')
+                'originals_preserved':True,'retrospective':retrospective_metadata(),'producer':REPLAY_PRODUCER})
+            retain_originals(artifact)
             retained=[]
             for arm, raw in submissions.items():
                 member='submissions/powershell-pester-6-codex-'+('with' if arm=='with_skill' else 'without')+'/Subject.Tests.ps1'
@@ -252,6 +252,14 @@ class PilotContracts(unittest.TestCase):
             result=reports.read_json(artifact/'preparation-check.json')
             self.assertTrue(result['configurations_equal'] and result['other_task_members_equal'])
             self.assertEqual(result['source_revision'],revision)
+            proof_path=replay/'evidence/original-authentication.json'
+            proof=proof_path.read_bytes();proof_path.unlink()
+            with self.assertRaises((ValueError,OSError)): pilot.check_preparation(reference,artifact)
+            proof_path.write_bytes(proof)
+            changed=json.loads(proof);changed['source_artifact']=0
+            proof_path.write_text(json.dumps(changed))
+            with self.assertRaisesRegex(ValueError,'authentication mismatch'): pilot.check_preparation(reference,artifact)
+            proof_path.write_bytes(proof)
             original=replay/'evidence/original/with_skill/Subject.Tests.ps1'
             raw=original.read_bytes();original.write_bytes(raw+b'\n')
             with self.assertRaises(ValueError): pilot.check_preparation(reference,artifact)

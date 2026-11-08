@@ -246,7 +246,7 @@ class ValidatedRecords:
 
 
 def pilot_record(record):
-    return record.get('custom', {}).get('profile_id') in ('pester-cli-pilot-v1', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4') and record['custom']['purpose'] in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay')
+    return record.get('custom', {}).get('profile_id') in ('pester-cli-pilot-v1', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2') and record['custom']['purpose'] in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay')
 
 
 def measured(record):

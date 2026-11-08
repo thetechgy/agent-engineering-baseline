@@ -6,6 +6,8 @@ on:
       - '.github/scripts/codex_pilot*.py'
       - '.github/scripts/skill_evidence.py'
       - '.github/evals/codex-pilot.json'
+      - '.github/evals/codex-retrospective/**'
+      - '.github/tests/test_codex*.py'
       - '.github/evals/custom-metrics.json'
       - '.github/workflows/codex-pilot.yml'
   workflow_dispatch:
@@ -24,7 +26,6 @@ jobs:
       artifact-id: ${{ steps.preparation-artifact.outputs.artifact-id }}
     permissions:
       contents: read
-      actions: read # Authenticate the fixed original-run artifact, never dispatch or approve.
     runs-on: ubuntu-latest
     timeout-minutes: 65
     env:
@@ -60,23 +61,16 @@ jobs:
         if: always() && !cancelled() && steps.grading-tools.outcome == 'success'
         timeout-minutes: 25
         run: '"$SKILL_CURRENT_PYTHON" -B .github/scripts/codex_pilot.py controls --output "$RUNNER_TEMP/pilot-controls"'
-      - name: Authenticate the fixed original live artifact without model credentials
-        id: originals
-        if: always() && !cancelled() && steps.grading.outcome == 'success'
-        timeout-minutes: 5
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: '"$SKILL_CURRENT_PYTHON" -B .github/scripts/codex_pilot_replay.py fetch --output "$RUNNER_TEMP/original-live"'
       - name: Acquire fresh verified Compose configuration for replay
         id: replay-tools
-        if: always() && !cancelled() && steps.originals.outcome == 'success'
+        if: always() && !cancelled() && steps.grading.outcome == 'success'
         timeout-minutes: 5
         run: bash .github/scripts/setup-compose.sh
       - name: Replay both exact submissions through the corrected independent verifier
         id: replay
         if: always() && !cancelled() && steps.replay-tools.outcome == 'success'
         timeout-minutes: 15
-        run: '"$SKILL_CURRENT_PYTHON" -B .github/scripts/codex_pilot_replay.py replay --authenticated "$RUNNER_TEMP/original-live" --output "$RUNNER_TEMP/pilot-retrospective"'
+        run: '"$SKILL_CURRENT_PYTHON" -B .github/scripts/codex_pilot_replay.py replay --output "$RUNNER_TEMP/pilot-retrospective"'
       - name: Consolidate real CLI qualification and native grading controls
         id: report
         if: always() && !cancelled() && steps.grading-tools.outcome == 'success'

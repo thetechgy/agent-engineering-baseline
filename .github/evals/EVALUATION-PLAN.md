@@ -1,8 +1,9 @@
 # Issue #95 dependency modernization checkpoint
 
 This is the authoritative active checkpoint. The evaluator upgrade is merged through
-[PR #119](https://github.com/thetechgy/agent-engineering-baseline/pull/119); the next
-milestone is the opt-in live CLI compatibility pilot below.
+[PR #119](https://github.com/thetechgy/agent-engineering-baseline/pull/119). The live
+CLI compatibility milestone on PR #121 is complete, as recorded below. The next
+milestone is a prospectively frozen, more discriminating skill-effectiveness evaluation.
 The direct-Harbor assessment at `389f7222da8d425b95dad12003e1e6895500a397`
 is historical evidence, not the implementation base. Production remains unchanged.
 
@@ -240,8 +241,9 @@ reports: findings survive while repository coverage remains incomplete.
 [Compatibility evidence](https://github.com/thetechgy/agent-engineering-baseline/blob/chore/95-scanner-modernization/.github/evals/SCANNER-MODERNIZATION-95.md#retained-adapter-compatibility-correction)
 records the before/after scans and reporting controls.
 
-The next milestone is the bounded live CLI/provider compatibility pilot below.
-Judging and general skill-benefit evidence remain separate later work.
+The bounded live CLI/provider compatibility pilot below is complete. The next
+milestone is a prospectively frozen, more discriminating skill-effectiveness
+evaluation; judging accuracy remains a separate qualification requirement.
 Other dependencies remain in the existing freshness inventory; this scanner group
 does not qualify evaluator adoption, behavioral effectiveness or skill benefit.
 
@@ -857,3 +859,63 @@ separately from the still-unmeasured retrospective grades. The workflow now acqu
 a fresh, hash-verified Compose configuration before replay, as it already does
 between CLI probing and grading. Pins, the configuration guard and isolation are
 unchanged. Final hosted replay and consumption evidence remain recorded on this PR.
+
+### Completed compatibility and durable replay maintenance
+
+[Final hosted run 42456637840, attempt 1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42456637840)
+qualified both unchanged submissions under `pester-cli-pilot-external-v4`: both
+passed the reference and detected 2/2 seeded mutants. The original live CLI pair
+executed both arms. Compatibility qualification is complete. Original
+`unsupported/ast_kind` outcomes remain intact and unmeasured; the qualified
+retrospective results follow output inspection. No skill advantage is established.
+The current and absent arms executed ten and fifteen reference tests respectively.
+The original current-arm PATH issue was independently reproduced and corrected;
+it is separate from skill-effectiveness evidence.
+
+Routine replay now uses the reviewed corpus without downloading the expiring
+original Actions artifact. The separate
+[retained provenance receipt](codex-retrospective/42448389611-provenance-v1.json)
+preserves the original GitHub artifact metadata, selected workflow/repository
+metadata, source revision/run/attempt, archive digest and exact archive-member
+bindings for all eight retained files. It derives from the authenticated archive
+and metadata retained by run 42456637840; no historical record is rewritten.
+The corpus manifest and every original file retain their previous hashes.
+Repository review authenticates this retained snapshot; offline validation is
+**not a fresh GitHub verification** and does not assert current remote availability.
+The old artifact's recorded expiry flag is a historical snapshot.
+
+`codex_pilot_replay.py replay --output <new-directory>` performs routine native
+replay. `validate --output <new-directory>` checks and exports the required originals
+without native execution, using the owning evaluator Python environment. Both
+validate the corpus and receipt first. The new
+`codex-retained-replay-v2` evidence producer versions the retained authentication
+proof and replay readiness. The `pester-cli-pilot-retained-v2` evidence profile
+registers the changed producer input digest with the exact v4 grader, fixtures,
+metrics and runtime pins; v4 grading, retrospective metadata and historical
+producer identities remain unchanged. Producer input capture includes the new
+receipt. Preparation consumption requires the exact retained originals, receipt
+and matching v2 authentication proof. Missing or altered required evidence and
+inconsistent provenance fail validation. Routine preparation needs no Actions
+read permission or GitHub token for historical evidence.
+
+The optional `fetch --output <new-directory>` action performs a fresh GitHub
+provenance audit while the original artifact is available, verifies its digest
+and every retained member, and labels the separate proof as fresh verification.
+Its failure does not waive retained validation or prevent routine replay. It is
+outside the preparation workflow. New native artifacts retain the corpus and
+receipt instead of requiring another copy of the expiring original ZIP.
+
+Local and final hosted maintenance verification, exact final revision, retained
+artifacts and report reproduction are recorded on
+[PR #121](https://github.com/thetechgy/agent-engineering-baseline/pull/121).
+The existing consolidated report continues to juxtapose preserved original outcomes
+with output-informed retrospective results. Its diagnostic/incomplete public
+envelope and uncollected judge scores remain distinct from completed replay arms.
+No production, scoring, reference, mutant, skill, dependency or isolation change is
+part of this maintenance correction. No inference, judge, recurring evaluation,
+production-default change or merge is authorized.
+
+The next milestone is to design and prospectively freeze a more discriminating
+evaluation with cases and decision criteria capable of testing skill effectiveness.
+Another repetition of this compatibility pair would not establish skill benefit.
+Obtain separate authorization for any future inference or judging.

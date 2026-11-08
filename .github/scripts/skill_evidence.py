@@ -3265,7 +3265,7 @@ def custom_registry(workspace=ROOT):
 def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
     registry = custom_registry(workspace)
     if profile_id is None and name == 'powershell-pester-6' and purpose in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay'):
-        profile_id = 'pester-cli-pilot-external-v4'
+        profile_id = 'pester-cli-pilot-retained-v2'
     if profile_id is None and name == 'gh' and purpose == 'oracle_qualification':
         profile_id = 'gh-native-oracle-v1'
     profile_id = registry['active_profiles'].get(name) if profile_id is None else profile_id
@@ -3345,7 +3345,7 @@ def capture_custom_tasks(workspace, name, tasks, arm, *, purpose='benchmark'):
         entry = parse_json(captured['tests/entry.json'])
         case = entry['id']; token(case)
         source_case = profile['qualification_cases'].get(case) if purpose in ('oracle_qualification', 'cli_pilot_control') else case
-        shared_pester = profile['id'] in ('pester-pilot-v3', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-v1')
+        shared_pester = profile['id'] in ('pester-pilot-v3', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2', 'pester-cli-pilot-v1')
         require(source_case in profile['cases'] and entry['grading_mode'] == profile['grading']
                 and (('has_skill' not in entry and shared_pester)
                      or entry.get('has_skill') is (arm == 'with_skill')), 'Staged custom identity mismatch')
@@ -3358,7 +3358,7 @@ def capture_custom_tasks(workspace, name, tasks, arm, *, purpose='benchmark'):
             require(actual_skill == expected_skill, 'Staged target skill drift')
         overlay = workspace / '.github/evals' / name
         grader = read_bytes(overlay / 'evals/grader.py')
-        if profile['id'] in ('pester-cli-pilot-v1', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4'):
+        if profile['id'] in ('pester-cli-pilot-v1', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2'):
             from codex_pilot_contract import grader_bytes
             grader = grader_bytes(workspace)
         if name == 'gh':
@@ -3627,14 +3627,14 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None):
             require(task['members'].get('solution/candidate') == 'sha256:' + SUBMISSIONS[task['arm']], 'Replay staged candidate mismatch')
         overlay = workspace / '.github/evals' / name
         grader = read_bytes(overlay / 'evals/grader.py')
-        if profile['id'] in ('pester-cli-pilot-v1', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4'):
+        if profile['id'] in ('pester-cli-pilot-v1', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2'):
             from codex_pilot_contract import grader_bytes
             grader = grader_bytes(workspace)
         if name == 'gh': grader = read_bytes(overlay / 'evals/files/fixture.py').decode().rsplit('\nif __name__ ==', 1)[0].encode() + b'\n' + grader
         if name == 'gh' and producer is profiles.CANDIDATE:
             from gh_candidate import grader_source
             grader = grader_source(grader, fixture=capture['purpose'] == 'oracle_qualification')
-        shared_pester = profile['id'] in ('pester-pilot-v3', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-v1')
+        shared_pester = profile['id'] in ('pester-pilot-v3', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2', 'pester-cli-pilot-v1')
         require(task['members'].get('tests/verifier/grader.py' if shared_pester else 'tests/grader.py') == digest_bytes(grader), 'Staged grader drift')
         if profile['id'] == 'gh-native-oracle-v1':
             require(task['members'].get('tests/test.sh') == digest_bytes(b'#!/bin/sh\nset -eu\nexec python3 -I /tests/grader.py\n'), 'Unapproved fixture verifier entry')
@@ -3846,7 +3846,7 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
             require(path.parent.name == trial_name, 'Native trial name mismatch')
             native_id = trial.get('id'); token(native_id)
             from skillevaluator.tier3.harbor.collector import _entry_id_from_harbor_result, _canonical_case_id, _attempt_ordinal
-            if profile['id'] in ('pester-pilot-v3', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-v1'):
+            if profile['id'] in ('pester-pilot-v3', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2', 'pester-cli-pilot-v1'):
                 case_id = trial.get('task_name')
                 require(type(case_id) is str and case_id in capture['case_ids'], 'Missing native task identity')
             else:
@@ -3866,7 +3866,7 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
                     and trial_config.get('timeout_multiplier') == capture['execution_policy']['timeout_multiplier']
                     and trial_config.get('environment', {}).get('import_path') ==
                     ('aeb_gh_fixture.backend:TrustedGhEnvironment' if profile['id'] == 'gh-native-oracle-v1' else
-                     'codex_pilot_environment:PilotEnvironment' if profile['id'] in ('pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4') and capture['purpose'] in ('cli_pilot', 'cli_pilot_probe') else
+                     'codex_pilot_environment:PilotEnvironment' if profile['id'] in ('pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2') and capture['purpose'] in ('cli_pilot', 'cli_pilot_probe') else
                      'skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment'),
                     'Native producer or runtime identity mismatch')
             matched = lookup.pop(trial_name, None)
@@ -3875,7 +3875,7 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
             if ordinal is None: limitations.add('metadata_missing')
             if reward is not None:
                 require(reward.get('trial_id') == trial_name and reward.get('entry_id') == case_id
-                        and ((profile['id'] in ('pester-pilot-v3', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-v1') and 'has_skill' not in reward)
+                        and ((profile['id'] in ('pester-pilot-v3', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2', 'pester-cli-pilot-v1') and 'has_skill' not in reward)
                              or reward.get('has_skill') is (arm == 'with_skill')), 'Reward identity mismatch')
             raw = ((trial.get('verifier_result') or {}).get('rewards') or {})
             if profile['grading'] == 'custom_only':
@@ -3883,7 +3883,7 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
                         'Custom-only trial contains standard judge metrics')
             if matched is not None and matched[1].get('score') is not None:
                 require(matched[1]['score'] == raw.get('overall'), 'Custom native attempt score mismatch')
-            detail = (reward or {}).get('details' if profile['id'] in ('pester-pilot-v3', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-v1', 'gh-native-oracle-v1') else 'custom_details', {}).get('outcome', {})
+            detail = (reward or {}).get('details' if profile['id'] in ('pester-pilot-v3', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2', 'pester-cli-pilot-v1', 'gh-native-oracle-v1') else 'custom_details', {}).get('outcome', {})
             outcome = detail.get('classification', 'unknown') if profile['grading'] == 'custom_only' else (
                 'failed' if native_trial_failed(trial, reward) else 'passed' if (reward or {}).get('custom_metrics', {}).get('gh_gate') == 1 else 'failed')
             if profile['grading'] == 'default_plus_custom' and native_trial_failed(trial, reward): outcome = 'unknown'
@@ -3944,7 +3944,7 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
             observation['custom'] = {'outcome': outcome, 'measurements': custom_measurements(definitions,
                 profile['cases'][mapping[case_id]], outcome, values, detail, obs_refs),
                 'usage': custom_usage(trial, redacted_counts=capture['evaluator_revision'] == profiles.CANDIDATE['revision']), 'references': obs_refs}
-            if profile['id'] in ('pester-cli-pilot-v1', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4'):
+            if profile['id'] in ('pester-cli-pilot-v1', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2'):
                 observation['custom']['admission_reason'] = detail.get('code')
             observations.append(observation)
         require(not lookup or len(found) < summary.get('num_trials', 0), 'Unmatched summary trial')
@@ -4078,7 +4078,7 @@ def validate_custom_evidence(data, *, public=False, _observed_at=None):
             and custom['runtime'] == profile['runtime']
             and custom['assurance'] == CUSTOM_ASSURANCE, 'Unapproved custom definition or assurance')
     enum(custom['purpose'], ('benchmark', 'oracle_qualification', 'cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay')); token(custom['agent'])
-    pilot_profile = profile['id'] in ('pester-cli-pilot-v1', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4')
+    pilot_profile = profile['id'] in ('pester-cli-pilot-v1', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2')
     require(pilot_profile == (custom['purpose'] in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay')), 'Pilot profile/purpose mismatch')
     if pilot_profile:
         live = custom['purpose'] in ('cli_pilot', 'cli_pilot_probe')
@@ -4091,7 +4091,7 @@ def validate_custom_evidence(data, *, public=False, _observed_at=None):
                 and (not live or custom['agent_version'] in (None, profile['runtime']['codex'])), 'Pilot public runtime mismatch')
     if custom['purpose'] == 'cli_pilot_replay':
         from codex_pilot_replay import validate_retrospective
-        require(profile['id'] == 'pester-cli-pilot-external-v4', 'Unversioned retrospective profile')
+        require(profile['id'] in ('pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2'), 'Unversioned retrospective profile')
         validate_retrospective(custom['retrospective'])
     optional(custom['agent_version'], token)
     optional(custom['native_metric_set'], lambda v: enum(v, ('custom-only', 'skill-evaluator-default-v2')))
@@ -4175,8 +4175,8 @@ def validate_custom_evidence(data, *, public=False, _observed_at=None):
         prefix = f"results/{data['source']['skill_id']}/{data['run_id']}/codex/{obs['arm'].replace('_', '-')}/trials/"
         require(any(refs[r]['member'].startswith(prefix) and refs[r]['member'].endswith('/result.json')
                     for r in obs['references']), 'Public custom trial reference origin')
-        detail = obs['custom']; closed(detail, ('outcome', 'measurements', 'usage', 'references') + (('admission_reason',) if profile['id'] in ('pester-cli-pilot-v1', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4') else ()))
-        if profile['id'] in ('pester-cli-pilot-v1', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4'):
+        detail = obs['custom']; closed(detail, ('outcome', 'measurements', 'usage', 'references') + (('admission_reason',) if profile['id'] in ('pester-cli-pilot-v1', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2') else ()))
+        if profile['id'] in ('pester-cli-pilot-v1', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2'):
             reasons = (
                 'artifact', 'admission', 'ast_kind', 'variable_policy', 'hashtable_policy', 'expression_policy',
                 'command_policy', 'command_parameter', 'module_policy', 'test_name_template', 'evaluated',
@@ -4184,7 +4184,7 @@ def validate_custom_evidence(data, *, public=False, _observed_at=None):
                 'incomplete', 'nonexecuting', 'output_budget', 'process_budget', 'protocol', 'verifier',
                 'worker_permission', 'worker_coreclr', 'worker_memory', 'worker_dependency', 'worker_unclassified',
                 'isolation_environment', 'isolation_network', 'isolation_seccomp', 'isolation_resources', 'isolation_mount')
-            if profile['id'] == 'pester-cli-pilot-external-v4': reasons += ('unary_policy',)
+            if profile['id'] in ('pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2'): reasons += ('unary_policy',)
             optional(detail['admission_reason'], lambda v: enum(v, reasons))
         enum(detail['outcome'], CUSTOM_OUTCOMES)
         require(type(detail['references']) is list and 0 < len(detail['references']) <= 10

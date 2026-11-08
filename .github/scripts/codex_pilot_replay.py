@@ -16,6 +16,9 @@ REVISION = '633014bdbc4e9df3b37955950a6ef9efa1473547'
 ARCHIVE_SHA = '2f67c417dfad3f04f9015ff580c75eded5223240a15e4adb83a6b886c5dbec99'
 CORPUS = '.github/evals/codex-retrospective/42448389611'
 MANIFEST_SHA = '75ce871fdbd0f0f8d3f8df36e2b1659d7c65b242b23ca9b8ce0b23a0cf8507dd'
+PROVENANCE = CORPUS + '-provenance-v1.json'
+PROVENANCE_SHA = 'c6cb6a8f3b05ea59984cc6ccb5fef3dc2778e1d1e6b0f65ac02722029a91056c'
+REPLAY_PRODUCER = 'codex-retained-replay-v2'
 SUBMISSIONS = {
     'with_skill': 'd265ce3f26d8a4d3bb630927153ebc4527cd00876aed8ddec5583ec54c4a4a03',
     'without_skill': '406dac7a20ca8912bed39a2c4ad1293dc0eba405c8814ef160faef851630bce5',
@@ -80,27 +83,89 @@ def verify_original_copy(directory, workspace=ROOT):
             raise ValueError('Original evidence bytes changed')
 
 
+def validate_source(artifact, run, repository):
+    """Check source identities, independently of current remote availability."""
+    origin = artifact['workflow_run']
+    if not (artifact['id'] == ARTIFACT and artifact['name'] == 'codex-pilot-live-1'
+            and origin['id'] == run['id'] == RUN
+            and origin['head_sha'] == run['head_sha'] == REVISION
+            and origin['repository_id'] == origin['head_repository_id'] == repository['id'] == 1299967456
+            and repository['full_name'] == 'thetechgy/agent-engineering-baseline'
+            and run['run_attempt'] == 1 and run['event'] == 'workflow_dispatch'
+            and run['path'] == '.github/workflows/codex-pilot.yml'
+            and run['status'] == 'completed' and run['conclusion'] == 'success'
+            and 0 < artifact['size_in_bytes'] <= 32*1024**2
+            and artifact['digest'] == 'sha256:' + ARCHIVE_SHA):
+        raise ValueError('Original workflow artifact authentication failed')
+
+
+def retained_provenance(workspace=ROOT):
+    """Repository-reviewed authentication snapshot; never a fresh GitHub check."""
+    import skill_evidence as evidence
+    root, manifest, _, _ = corpus(workspace)
+    raw = evidence.read_bytes(workspace / PROVENANCE)
+    if hashlib.sha256(raw).hexdigest() != PROVENANCE_SHA:
+        raise ValueError('Retained provenance changed')
+    value = json.loads(raw)
+    validate_source(value['artifact'], value['run'], value['repository'])
+    expected = [{'retained_member': row['member'], 'sha256': row['sha256'], 'bytes': row['bytes']}
+                for row in manifest['files']]
+    actual = [{key: row[key] for key in ('retained_member', 'sha256', 'bytes')}
+              for row in value['archive_members']]
+    if not (value['schema_version'] == 1 and value['source'] == manifest['source']
+            and value['permanent_manifest_sha256'] == MANIFEST_SHA and actual == expected
+            and value['authentication'] == 'previously_authenticated_retained_evidence'
+            and value['fresh_github_verification'] is False):
+        raise ValueError('Inconsistent retained provenance')
+    return {'schema_version': 2, 'producer': REPLAY_PRODUCER,
+            'authentication': value['authentication'], 'fresh_github_verification': False,
+            **verify_identity(), 'retained_provenance_sha256': 'sha256:' + PROVENANCE_SHA}
+
+
+def verify_identity():
+    return {'source_run': RUN, 'source_artifact': ARTIFACT, 'archive_sha256': 'sha256:' + ARCHIVE_SHA,
+            'permanent_manifest_sha256': 'sha256:' + MANIFEST_SHA, 'submission_hashes_verified': True,
+            'original_outcomes_unchanged': True}
+
+
+def retain_originals(directory):
+    """Retain required evidence before native execution, without network or credentials."""
+    import shutil
+    import skill_reports as reports
+    proof = retained_provenance()
+    shutil.copytree(ROOT / CORPUS, directory / 'original')
+    shutil.copyfile(ROOT / PROVENANCE, directory / 'original-provenance.json')
+    reports.write_json(directory / 'original-authentication.json', proof)
+
+
+def verify_retained_originals(directory, workspace=ROOT):
+    import skill_evidence as evidence
+    verify_original_copy(directory / 'original', workspace)
+    proof = retained_provenance(workspace)
+    if (evidence.read_bytes(directory / 'original-provenance.json') != evidence.read_bytes(workspace / PROVENANCE)
+            or evidence.read_json(directory / 'original-authentication.json') != proof):
+        raise ValueError('Retained replay authentication mismatch')
+
+
 def fetch(output):
-    """Fresh GitHub authentication; the archive is data, not a program source."""
+    """Optional fresh remote audit; failure never changes the retained evidence."""
     output.mkdir(parents=True)
     prefix = 'repos/thetechgy/agent-engineering-baseline/'
     def api(path):
         return json.loads(subprocess.check_output(['gh', 'api', prefix + path], text=True))
     artifact, run = api('actions/artifacts/' + str(ARTIFACT)), api('actions/runs/' + str(RUN))
-    origin = artifact['workflow_run']
-    if not (origin['id'] == RUN and origin['head_sha'] == run['head_sha'] == REVISION
-            and origin['repository_id'] == origin['head_repository_id'] == 1299967456
-            and run['run_attempt'] == 1 and run['event'] == 'workflow_dispatch'
-            and run['path'] == '.github/workflows/codex-pilot.yml' and run['conclusion'] == 'success'
-            and not artifact['expired'] and artifact['size_in_bytes'] <= 32*1024**2
-            and artifact['digest'] == 'sha256:' + ARCHIVE_SHA):
-        raise ValueError('Original workflow artifact authentication failed')
+    validate_source(artifact, run, run['repository'])
+    if artifact['expired']:
+        raise ValueError('Original remote artifact expired; retained replay remains available')
     for name, value in (('artifact.json', artifact), ('run.json', run)):
         (output / name).write_text(json.dumps(value, indent=2) + '\n')
     archive = output / 'live.zip'
     with archive.open('xb') as stream:
         subprocess.run(['gh', 'api', prefix + 'actions/artifacts/' + str(ARTIFACT) + '/zip'], stdout=stream, check=True)
-    verify_archive(archive)
+    proof = verify_archive(archive)
+    proof.update(schema_version=2, producer=REPLAY_PRODUCER,
+                 authentication='fresh_github_verification', fresh_github_verification=True)
+    (output / 'authentication.json').write_text(json.dumps(proof, indent=2) + '\n')
 
 
 def verify_archive(archive, workspace=ROOT):
@@ -122,24 +187,12 @@ def verify_archive(archive, workspace=ROOT):
                     or item.file_size > 16*1024**2):
                 raise ValueError('Unsafe original artifact member')
             seen.add(item.filename)
-        prefix = 'pilot-live/evidence/'
-        entries = json.loads(bundle.read(prefix + 'submissions.json'))
-        if len(entries) != 2:
-            raise ValueError('Original submission cardinality mismatch')
-        for entry in entries:
-            arm = 'with_skill' if '/powershell-pester-6-codex-with/' in '/' + entry['member'] else 'without_skill'
-            raw = bundle.read(prefix + entry['member'])
-            if hashlib.sha256(raw).hexdigest() != SUBMISSIONS[arm] or raw != (root / arm / 'Subject.Tests.ps1').read_bytes():
-                raise ValueError('Original submission bytes changed')
-        comparisons = {'original-inventory.json': 'public/inventory/inventory.json', 'original-outcomes.json': 'outcomes.json',
-                       'original-grading-outcomes.json': 'grading-outcomes.json',
-                       'original-public-report.json': 'public/skills/powershell-pester-6/behavioral/live-pilot/public-report.json'}
-        for local, member in comparisons.items():
-            if (root / local).read_bytes() != bundle.read(prefix + member):
-                raise ValueError('Original outcome bytes changed')
-    return {'source_run': RUN, 'source_artifact': ARTIFACT, 'archive_sha256': 'sha256:' + ARCHIVE_SHA,
-            'permanent_manifest_sha256': 'sha256:' + MANIFEST_SHA, 'submission_hashes_verified': True,
-            'original_outcomes_unchanged': True}
+        retained_provenance(workspace)
+        receipt = evidence.read_json(workspace / PROVENANCE)
+        for row in receipt['archive_members']:
+            if evidence.read_bytes(root / row['retained_member']) != bundle.read(row['archive_member']):
+                raise ValueError('Original retained evidence bytes changed')
+    return verify_identity()
 
 
 def original_public(output):
@@ -155,17 +208,19 @@ def original_public(output):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=('fetch', 'replay'))
+    parser.add_argument('action', choices=('fetch', 'validate', 'replay'))
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--authenticated', type=Path)
     args = parser.parse_args()
     if any(os.environ.get(key) for key in ('OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'NVIDIA_API_KEY')):
         parser.error('Credential-free replay received model credentials')
     if args.action == 'fetch':
         fetch(args.output); return
-    if args.authenticated is None:
-        parser.error('Authenticated original artifact required')
-    proof = verify_archive(args.authenticated / 'live.zip')
+    retained_provenance()
+    if args.action == 'validate':
+        args.output.mkdir(parents=True)
+        retain_originals(args.output)
+        verify_retained_originals(args.output)
+        return
     import evaluator_profiles as profiles
     import codex_pilot as pilot
     import skill_reports as reports
@@ -175,13 +230,7 @@ def main():
     args.output.mkdir(parents=True)
     evidence = args.output / 'evidence'; evidence.mkdir()
     original = original_public(evidence / 'original-public')
-    reports.write_json(evidence / 'original-authentication.json', proof)
-    # Preserve originals and their source archive even when replay is incomplete.
-    import shutil
-    shutil.copytree(ROOT / CORPUS, evidence / 'original')
-    shutil.copyfile(args.authenticated / 'live.zip', evidence / 'original-live.zip')
-    for name in ('artifact.json', 'run.json'):
-        shutil.copyfile(args.authenticated / name, evidence / ('original-source-' + name))
+    retain_originals(evidence)
     _, _, submissions, _ = corpus()
     pilot.run(args.output, replay=retrospective_metadata(), submissions=submissions, original_public=original)
     outcomes = reports.read_json(evidence / 'grading-outcomes.json')
@@ -189,7 +238,7 @@ def main():
         and o['outcome'].get('mutants_executed') == 2
         and o['outcome'].get('powershell_version') == '7.6.9'
         and o['outcome'].get('pester_version') == '6.2.0' for o in outcomes)
-    reports.write_json(evidence / 'replay-check.json', {'complete': complete,
+    reports.write_json(evidence / 'replay-check.json', {'complete': complete, 'producer': REPLAY_PRODUCER,
         'retrospective': retrospective_metadata(), 'inference': False, 'originals_preserved': True})
     if not complete:
         raise ValueError('Retrospective paired grading incomplete; original and native outcomes retained')

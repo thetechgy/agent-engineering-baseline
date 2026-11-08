@@ -541,7 +541,7 @@ def custom_measurements(run, record):
                 text(measurement['reason']), link('observation', (rid, obs['id']), 'Trial and evidence')])
     parts.append('<details><summary>All custom measurements and scoring bases</summary>' + table('Recorded custom measurements',
         ('Case', 'Arm', 'Attempt', 'Grader outcome', 'Metric', 'Applicability', 'Value', 'Numerator / denominator', 'Limitation', 'Evidence'), rows) + '</details>')
-    if record['custom']['profile_id'] in ('pester-cli-pilot-v1', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4'):
+    if record['custom']['profile_id'] in ('pester-cli-pilot-v1', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2'):
         parts.append(table('Pilot admission diagnostics', ('Case', 'Arm', 'Outcome', 'Admission reason'),
             [[code(obs['case_id']), safe(ARM[obs['arm']]), text(obs['custom']['outcome']),
               code(obs['custom'].get('admission_reason'))] for obs in record['observations']]))

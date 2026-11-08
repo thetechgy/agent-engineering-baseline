@@ -395,13 +395,13 @@ def check_preparation(reference, artifact):
     ready = reports.read_json(retrospective / 'readiness.json')
     clean = reports.read_json(retrospective / 'cleanup.json')
     checked = reports.read_json(retrospective / 'replay-check.json')
-    from codex_pilot_replay import validate_retrospective, verify_original_copy, SUBMISSIONS
-    verify_original_copy(retrospective / 'original')
+    from codex_pilot_replay import validate_retrospective, verify_retained_originals, REPLAY_PRODUCER, SUBMISSIONS
+    verify_retained_originals(retrospective)
     validate_retrospective(checked.get('retrospective'))
     reports.require(ready.get('revision') == revision and ready.get('inference') is False
                     and ready.get('complete') is True and clean == {'complete': True, 'unlaunched_arms': []}
                     and checked.get('complete') is True and checked.get('inference') is False
-                    and checked.get('originals_preserved') is True, 'Incomplete retrospective qualification')
+                    and checked.get('originals_preserved') is True and checked.get('producer') == REPLAY_PRODUCER, 'Incomplete retrospective qualification')
     reports.require(set(verified_configurations(retrospective)) == {(arm, P['case']) for arm in ARMS},
                     'Retrospective descriptor cohort mismatch')
     retained = reports.read_json(retrospective / 'submissions.json')

@@ -10,6 +10,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 CANDIDATE_RUNTIME = bool(importlib.util.find_spec('skillevaluator')) and importlib.metadata.version('skillevaluator') == '0.8.0'
 ROOT = Path(__file__).resolve().parents[2]
@@ -58,6 +59,91 @@ class RetrospectiveEvidence(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             archive = Path(directory) / 'wrong.zip'; archive.write_bytes(b'not the authenticated archive')
             with self.assertRaisesRegex(ValueError, 'digest mismatch'): replay.verify_archive(archive)
+
+    def test_offline_entry_point_and_missing_or_inconsistent_provenance(self):
+        # Real validation entry point, with every network/process attempt forbidden.
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / 'validated'
+            with patch.object(sys, 'argv', ['replay', 'validate', '--output', str(output)]), \
+                    patch('socket.socket.connect', side_effect=AssertionError('Network forbidden')), \
+                    patch.object(replay.subprocess, 'check_output', side_effect=AssertionError('Historical artifact unavailable')), \
+                    patch.object(replay.subprocess, 'run', side_effect=AssertionError('Historical artifact unavailable')):
+                replay.main()
+                replay.verify_retained_originals(output)
+            proof_path = output / 'original-authentication.json'
+            proof = json.loads(proof_path.read_bytes())
+            self.assertEqual(proof['producer'], 'codex-retained-replay-v2')
+            self.assertFalse(proof['fresh_github_verification'])
+            self.assertEqual(proof['authentication'], 'previously_authenticated_retained_evidence')
+            for key, wrong in (('fresh_github_verification', True), ('source_artifact', 0),
+                               ('retained_provenance_sha256', 'sha256:' + '0'*64)):
+                proof_path.write_text(json.dumps({**proof, key: wrong}))
+                with self.subTest(key=key), self.assertRaises(ValueError): replay.verify_retained_originals(output)
+            proof_path.write_text(json.dumps(proof))
+            receipt = output / 'original-provenance.json'
+            raw = receipt.read_bytes(); receipt.write_bytes(raw + b'\n')
+            with self.assertRaises(ValueError): replay.verify_retained_originals(output)
+            receipt.unlink()
+            with self.assertRaises((ValueError, OSError)): replay.verify_retained_originals(output)
+
+    def test_required_repository_corpus_and_provenance_fail_closed(self):
+        original, _, _, _ = replay.corpus()
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            corpus = workspace / replay.CORPUS
+            shutil.copytree(original, corpus)
+            receipt = workspace / replay.PROVENANCE
+            shutil.copyfile(ROOT / replay.PROVENANCE, receipt)
+            replay.retained_provenance(workspace)
+            for target in (*evidence.safe_tree(corpus), receipt):
+                raw = target.read_bytes()
+                with self.subTest(member=target.name):
+                    target.write_bytes(raw + b'\n')
+                    with self.assertRaises((ValueError, OSError)): replay.retained_provenance(workspace)
+                    target.unlink()
+                    with self.assertRaises((ValueError, OSError)): replay.retained_provenance(workspace)
+                    target.write_bytes(raw)
+            value = json.loads(receipt.read_bytes())
+            changed = copy.deepcopy(value); changed['source']['run_attempt'] = 2
+            receipt.write_text(json.dumps(changed))
+            # Rehashing a contradictory receipt does not waive semantic consistency.
+            with patch.object(replay, 'PROVENANCE_SHA', hashlib.sha256(receipt.read_bytes()).hexdigest()):
+                with self.assertRaisesRegex(ValueError, 'Inconsistent retained provenance'):
+                    replay.retained_provenance(workspace)
+
+    def test_source_identity_and_optional_remote_audit_fail_closed(self):
+        value = evidence.read_json(ROOT / replay.PROVENANCE)
+        replay.validate_source(value['artifact'], value['run'], value['repository'])
+        fields = {'artifact': ('id', 'name', 'digest'), 'run': ('id', 'head_sha', 'run_attempt', 'event', 'path', 'conclusion'),
+                  'repository': ('id', 'full_name')}
+        for section, keys in fields.items():
+            for key in keys:
+                changed = copy.deepcopy(value); changed[section][key] = None
+                with self.subTest(section=section, key=key), self.assertRaises(ValueError):
+                    replay.validate_source(changed['artifact'], changed['run'], changed['repository'])
+        with tempfile.TemporaryDirectory() as directory:
+            expired = copy.deepcopy(value['artifact']); expired['expired'] = True
+            run = {**value['run'], 'repository': value['repository']}
+            with patch.object(replay.subprocess, 'check_output', side_effect=[json.dumps(expired), json.dumps(run)]), \
+                    patch.object(replay.subprocess, 'run', side_effect=AssertionError('Must not download')):
+                with self.assertRaisesRegex(ValueError, 'expired'): replay.fetch(Path(directory) / 'remote')
+            self.assertFalse(replay.retained_provenance()['fresh_github_verification'])
+
+    def test_new_producer_keeps_v4_grading_and_historical_profile(self):
+        registry = evidence.custom_registry(ROOT)
+        old = registry['profiles']['pester-cli-pilot-external-v4']
+        new = registry['profiles']['pester-cli-pilot-retained-v2']
+        self.assertNotEqual(old['runtime_digest'], new['runtime_digest'])
+        self.assertEqual({k: v for k, v in old.items() if k not in ('id', 'runtime_digest')},
+                         {k: v for k, v in new.items() if k not in ('id', 'runtime_digest')})
+        self.assertEqual(old['runtime_digest'], 'sha256:fbbe85cde9d88a91187ac70b045d32047a00e79622bdc741bee1c71f872e115c')
+
+    def test_workflow_preparation_has_no_remote_artifact_dependency(self):
+        workflow = (ROOT / '.github/workflows/codex-pilot.yml').read_text()
+        prepare = workflow.split('  prepare:', 1)[1].split('  consume:', 1)[0]
+        for forbidden in ('actions: read', 'GH_TOKEN', 'original-live', 'replay.py fetch', '--authenticated'):
+            self.assertNotIn(forbidden, prepare)
+        self.assertIn('codex_pilot_replay.py replay --output', prepare)
 
     def test_existing_report_juxtaposes_originals_and_posthoc_results(self):
         _, _, _, original = replay.corpus()
