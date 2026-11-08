@@ -106,7 +106,8 @@ def fetch(output):
 def verify_archive(archive, workspace=ROOT):
     """Match permanent originals to authenticated bytes without executing or extracting code."""
     import stat
-    if hashlib.sha256(archive.read_bytes()).hexdigest() != ARCHIVE_SHA:
+    import skill_evidence as evidence
+    if hashlib.sha256(evidence.read_bytes(archive, limit=32*1024**2)).hexdigest() != ARCHIVE_SHA:
         raise ValueError('Original artifact digest mismatch')
     root, manifest, _, _ = corpus(workspace)
     with zipfile.ZipFile(archive) as bundle:
@@ -143,7 +144,7 @@ def verify_archive(archive, workspace=ROOT):
 
 def original_public(output):
     """Preserve the original record in the existing public reporting layout."""
-    _, _, _, original = corpus()
+    corpus()
     folder = output / 'skills/powershell-pester-6/behavioral/live-pilot'; folder.mkdir(parents=True)
     raw = (ROOT / CORPUS / 'original-public-report.json').read_bytes()
     (folder / 'public-report.json').write_bytes(raw)

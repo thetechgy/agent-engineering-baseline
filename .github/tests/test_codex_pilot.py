@@ -252,6 +252,21 @@ class PilotContracts(unittest.TestCase):
             result=reports.read_json(artifact/'preparation-check.json')
             self.assertTrue(result['configurations_equal'] and result['other_task_members_equal'])
             self.assertEqual(result['source_revision'],revision)
+            original=replay/'evidence/original/with_skill/Subject.Tests.ps1'
+            raw=original.read_bytes();original.write_bytes(raw+b'\n')
+            with self.assertRaises(ValueError): pilot.check_preparation(reference,artifact)
+            original.write_bytes(raw)
+            submissions_index=replay/'evidence/submissions.json'
+            originals=reports.read_json(submissions_index)
+            changed=[{**r,'member':'../'+r['member']} for r in originals]
+            reports.write_json(submissions_index,changed)
+            with self.assertRaisesRegex(ValueError,'relative member'): pilot.check_preparation(reference,artifact)
+            reports.write_json(submissions_index,originals)
+            replay_check=replay/'evidence/replay-check.json'
+            checked=reports.read_json(replay_check)
+            reports.write_json(replay_check,{**checked,'complete':False})
+            with self.assertRaisesRegex(ValueError,'Incomplete retrospective'): pilot.check_preparation(reference,artifact)
+            reports.write_json(replay_check,checked)
             path=artifact/'task-descriptors/with_skill/pester-001.toml'
             original=path.read_bytes()
             changed=original.replace(b'timeout_sec = 600.0',b'timeout_sec = 601.0')

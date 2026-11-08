@@ -2005,7 +2005,7 @@
       "skill_id": "powershell-pester-6",
       "grader_digest": "sha256:7b79f1be0c3c812ff6dfb4d2cef95721504adba6fc519934ea5312278509d37e",
       "fixture_digest": "sha256:9dd6c53ce8090ff3790ff2274d8067775a5605def5cc80479bf2c85ef6330060",
-      "runtime_digest": "sha256:e4883eaec6c12b2b58e9658e6e4b91a75f4d841002b331230602c681d8bfcce6",
+      "runtime_digest": "sha256:fbbe85cde9d88a91187ac70b045d32047a00e79622bdc741bee1c71f872e115c",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0"
     }
   },

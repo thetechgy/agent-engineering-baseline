@@ -405,6 +405,9 @@ def check_preparation(reference, artifact):
     reports.require(set(verified_configurations(retrospective)) == {(arm, P['case']) for arm in ARMS},
                     'Retrospective descriptor cohort mismatch')
     retained = reports.read_json(retrospective / 'submissions.json')
+    for row in retained:
+        evidence.relative(row['member'])
+        reports.require(row['member'].startswith('submissions/'), 'Retrospective submission outside retained evidence')
     actual = {('with_skill' if '/powershell-pester-6-codex-with/' in '/' + row['member'] else 'without_skill'): row for row in retained}
     reports.require(set(actual) == set(ARMS) and len(retained) == 2, 'Retrospective submission coverage mismatch')
     for arm, row in actual.items():
