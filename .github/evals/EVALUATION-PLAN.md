@@ -838,3 +838,22 @@ actual paired grades, PATH observations, completed checks and retained report li
 are recorded on [PR #121](https://github.com/thetechgy/agent-engineering-baseline/pull/121).
 The PR remains unmerged; production, historical mismatches and closed allocations
 are unchanged. No paid authorization carries forward to this correction.
+
+Initial hosted correction qualification at `b576e6f` completed all six CLI scenarios
+and 42 expected grading controls, then stopped before either retrospective replay.
+[Run 42454385752](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42454385752)
+rejected the reused operator Compose configuration at its existing directory-shape
+guard. The exact rejected directory contents were not retained. Consumption and
+live execution were skipped; no retrospective grade or inference is claimed.
+[Artifact 13607558226](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42454385752/artifacts/13607558226)
+retains 413 files with archive SHA-256
+`db0f75fec8724196020fb555b0e106b29b092b6c95327e91aa545d96a9b8d433`.
+The controls retain 12 passed, six failed, 18 unsupported, two invalid, two timeout
+and two infrastructure-error outcomes, with cleanup complete. Both arms' PATH
+controls ran as user 1000: login-shell lookup returned 127 before the fix, while
+the absolute PowerShell 7.6.9 binary worked; afterward lookup returned
+`/usr/local/bin/pwsh` successfully. This establishes an environment/PATH problem,
+separately from the still-unmeasured retrospective grades. The workflow now acquires
+a fresh, hash-verified Compose configuration before replay, as it already does
+between CLI probing and grading. Pins, the configuration guard and isolation are
+unchanged. Final hosted replay and consumption evidence remain recorded on this PR.
