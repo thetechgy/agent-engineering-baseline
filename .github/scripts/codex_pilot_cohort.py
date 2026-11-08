@@ -4,6 +4,7 @@ There is no resume mode. An exclusive ledger claims the dispatch before launch;
 Actions authenticates preparation and rejects a second dispatch of its allocation.
 """
 import hashlib
+from decimal import Decimal
 import json
 import os
 from pathlib import Path
@@ -124,15 +125,15 @@ def stop_reason(row, usage, clean, *, code, audits, grades):
 
 def accounting(rows):
     """Each attempt contributes once; retain cached tokens as a subset of input."""
-    total = 0
+    total = Decimal('0')
     for row in rows:
         if row['state'] == 'unlaunched': continue
         usage = row.get('usage')
         reports.require(type(usage) is dict and type(usage.get('estimated_usd')) in (int, float)
                         and __import__('math').isfinite(usage['estimated_usd']) and usage['estimated_usd'] >= 0,
                         'Unknown usage; scheduling stopped')
-        total += usage['estimated_usd']
-    return total
+        total += Decimal(str(usage['estimated_usd']))
+    return float(total)
 
 
 def aggregates(root):
@@ -153,6 +154,17 @@ def aggregates(root):
         reports.write_json(job / 'result.json', json.loads(value.model_dump_json()))
 
 
+def claim_dispatch(root, receipt):
+    """A local exclusive claim complements Actions history, including same-job repeats."""
+    temporary = Path(os.environ['RUNNER_TEMP'])
+    reports.require(temporary.is_absolute() and temporary.resolve() == temporary
+                    and root == temporary / 'cohort-live' and os.environ.get('GITHUB_ACTIONS') == 'true',
+                    'Live cohort requires its fixed Actions output directory')
+    target = temporary / ('cohort-claim-' + hashlib.sha256(receipt['allocation'].encode()).hexdigest() + '.json')
+    with target.open('x') as stream:
+        json.dump(receipt, stream, indent=2); stream.write('\n'); stream.flush(); os.fsync(stream.fileno())
+
+
 def execute(root, reference, *, fixture=None, approval='', receipt=None):
     if fixture is not None:
         no_credentials(); reports.require(fixture in FIXTURE_SCENARIOS, 'Unknown fixture scenario')
@@ -161,8 +173,10 @@ def execute(root, reference, *, fixture=None, approval='', receipt=None):
         reports.require(receipt is not None, 'Authenticated dispatch receipt required')
         allocation(approval, revision(), receipt['artifact'], receipt['dispatch'])
         reports.require(receipt.get('run_id') == os.environ.get('GITHUB_RUN_ID') and receipt.get('revision') == revision()
-                        and receipt.get('allocation') == approval, 'Stale dispatch receipt')
+                        and receipt.get('allocation') == approval and receipt.get('first_dispatch') is True
+                        and receipt.get('protocol') == PROTOCOL and receipt.get('authentication') == 'github-api-producer-and-digest', 'Stale dispatch receipt')
     root.mkdir(parents=True, exist_ok=False)
+    if fixture is None: claim_dispatch(root, receipt)
     artifact = root / 'evidence'; artifact.mkdir()
     # The caller's exclusive output directory and claim survive even preflight failure.
     rows = [{**r, 'state': 'unlaunched'} for r in effect.schedule()]
@@ -313,11 +327,13 @@ def qualify(root, reference):
     for scenario in FIXTURE_SCENARIOS:
         result = execute(root / scenario, reference, fixture=scenario)
         launched = [r for r in result['entries'] if r['state'] != 'unlaunched']
-        reports.require('report_failure' not in result and result['cleanup_complete'], 'Fixture report/cleanup incomplete: ' + scenario)
+        reports.require('report_failure' not in result and 'retention_failure' not in result and result['cleanup_complete'], 'Fixture report/cleanup incomplete: ' + scenario)
         if scenario == 'complete':
             reports.require(result['state']=='completed' and len(launched)==12 and
                             [{k:r[k] for k in ('position','case','arm','trial')} for r in launched]==effect.schedule(), 'Wrong cohort order or population')
-            reports.require({r['grade']['classification'] for r in launched}=={'passed','failed'}, 'Measured task failure lost')
+            reports.require(all(r['grade']['classification']==('failed' if r['position']%3==0 else 'passed') for r in launched), 'Measured task failure lost')
+            reports.require(len(reports.read_json(root / scenario / 'evidence/submissions.json')) == 12
+                            and len(list((root / scenario / 'jobs').rglob('pilot-runtime.json'))) == 12, 'Missing evidence or extra native launches')
         else:
             # Threshold is checked immediately before the next launch.
             reports.require(len(launched)==1 and result.get('stop_reason')==expected[scenario], 'Wrong stop/extra launch: ' + scenario)

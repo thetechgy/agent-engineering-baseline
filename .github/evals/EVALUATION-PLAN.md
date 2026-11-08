@@ -962,10 +962,10 @@ Fixture qualification is not agent effectiveness evidence. The earlier two live
 submissions still establish compatibility only: both passed the retrospectively
 corrected reference and detected both mutants, with no demonstrated skill benefit.
 
-**One next action:** finish credential-free qualification of the executable cohort
-path on [PR #122](https://github.com/thetechgy/agent-engineering-baseline/pull/122),
-then review its exact qualified revision and authenticated preparation before a
-separate paid decision. The [protocol's operator command](pester-effectiveness.md#qualified-execution-path-credential-free-implementation-follow-up)
+**One next action:** review the latest successful exact-revision qualification
+receipt on [PR #122](https://github.com/thetechgy/agent-engineering-baseline/pull/122)
+before a separate paid decision. Only its final qualified revision and authenticated
+preparation may be proposed for authorization. The [protocol's operator command](pester-effectiveness.md#qualified-execution-path-credential-free-implementation-follow-up)
 uses `cohort_allocation` on the existing workflow. The old pair allocation cannot
 authorize it. The runner records twelve ordered entries before launch, selects one
 case/arm/ordinal through the pinned native trial CLI, and retains pending or stopped
@@ -997,3 +997,68 @@ APM deployment audit and public evidence/report contracts together. If live work
 reveals justified weaknesses, investigate first; obtain authorization before skill
 revision, then freeze absent/current/revised comparison with regression and unseen
 confirmation. Do not change cases or grading after future outputs to seek a win.
+
+
+### Executable cohort qualification and final-source gate
+
+The initial execution implementation is `50483e43e6cce740763a289fd4845ddf882a9753`;
+its native collection/Compose correction is
+`bb3b33666ebc179819bf8b08454cd030161f61d8`. At that exact source,
+[run 42515611936, attempt 1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42515611936)
+passed preparation, both consumption gates and the actual sequential scheduling
+path. The compatibility and cohort live jobs and cohort authorization job were
+skipped. No protected-environment approval, model credential, inference or judge
+was used.
+
+The authenticated [v4 preparation artifact 13633207644](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42515611936/artifacts/13633207644)
+has archive SHA-256
+`83ed1c9afeacb193d64bf9ec03e4c8586fc90da7e6c78166553218943d4d505d`.
+Bounded data-only extraction and exact-source native re-admission reproduced the
+public records. All seven existing-renderer HTML reports reproduced byte-for-byte.
+The complete fixture cohort retains exactly twelve submissions and native outcomes,
+the frozen order/ordinals and twelve distinct agent environments. Measured passing
+and failing work remain measured. Each threshold, unknown-usage, unsupported-grade,
+execution-failure, cleanup-failure and interruption scenario stops after one launch
+and retains eleven unlaunched entries. Unsupported and unavailable outcomes have
+no quality values. Threshold/unknown-usage/cleanup cases explicitly inject host
+observations after actual CLI/verification/disposal; their original native evidence
+is retained unchanged. These are deterministic fixtures, not effectiveness results.
+
+The separate [v4 consumption artifact 13632853812](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42515611936/artifacts/13632853812)
+passed fresh deployment and complete descriptor/member comparisons. The downloaded
+compatibility artifact `13631629322`, archive SHA-256
+`da06d9b43c15ca7b247ab9f9a96ed44ecfcca451a5da09dcc2322cdff8eb5810`,
+also passed the production consumption entry point under the exact source snapshot.
+The earlier frozen v3 grading qualification at `aa28fd0` and
+[artifact 13629333800](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42508939799/artifacts/13629333800)
+remain preserved, including all 76 declared classifications and their historical
+profile identities.
+
+The v5 follow-up fixes a reproduced binary-float threshold edge: $9 plus ten
+$0.10 observations summed just below $10. Decimal addition now schedules against
+the recorded estimates without changing token counts, rates or runtime limits.
+An exclusive local dispatch claim complements Actions history and refuses the
+same allocation even if its output directory is removed; live output is fixed to
+the protected job's directory. A longer outer job deadline accommodates the twelve
+serial attempts without changing agent/verifier limits. Markdown formatting is
+corrected. V4 evidence and all older profiles remain registered unchanged; v5 has
+its own runtime identity with identical grading, fixtures and frozen settings.
+
+Local verification passed 64 focused checks (one optional semantic check skipped)
+and 111 historical metric/report regressions in their saved owning runtime. The
+broader historical run under the candidate runtime was inconclusive and was
+repeated under that owning runtime. The first full-validation failure was a
+Markdown line-length error; the correction passes local lint. Known-superseded
+broader runs were cancelled with available failure evidence retained. Cancelled
+runs do not establish success.
+
+The final feature commit, final tested revision, qualified v5 preparation artifact,
+report hashes, completed exact-head checks and concrete operator allocation are
+recorded together in PR #122's verification receipt. This checkpoint intentionally
+retains the earlier receipts above as historical evidence. Neither v3/v4 preparation
+nor any earlier paid decision authorizes v5. The protected live preflight rejects
+a preparation/source mismatch. Only successful qualification at the final source
+revision permits proposing its exact protocol/revision/artifact/one-dispatch nonce
+for a new decision. The [single operator command](pester-effectiveness.md#qualified-execution-path-credential-free-implementation-follow-up)
+remains unapproved. Paid execution is unrun; account access and provider billing
+remain unverified.

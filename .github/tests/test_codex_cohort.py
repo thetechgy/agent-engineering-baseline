@@ -28,6 +28,19 @@ class Boundaries(unittest.TestCase):
             rows[1]['usage']['estimated_usd'] = value
             with self.assertRaises(ValueError): cohort.accounting(rows)
 
+    def test_decimal_threshold_is_not_bypassed_by_binary_float_addition(self):
+        rows=[{'state':'completed','usage':{'estimated_usd':9.0}}]+[
+            {'state':'completed','usage':{'estimated_usd':.1}} for _ in range(10)]
+        self.assertEqual(cohort.accounting(rows),10.0)
+        self.assertGreaterEqual(cohort.accounting(rows),10)
+
+    def test_same_dispatch_is_claimed_once_even_after_output_deletion(self):
+        with tempfile.TemporaryDirectory() as d, patch.dict(os.environ,RUNNER_TEMP=d,GITHUB_ACTIONS='true'):
+            root=Path(d)/'cohort-live';receipt={'allocation':'one-cohort'}
+            cohort.claim_dispatch(root,receipt)
+            with self.assertRaises(FileExistsError): cohort.claim_dispatch(root,receipt)
+            with self.assertRaises(ValueError): cohort.claim_dispatch(Path(d)/'another-output',receipt)
+
     def test_measured_failure_and_unavailable_conditions_remain_distinct(self):
         audit = [{'cleanup':'complete', 'boundary_after': {'policy_sha256':'x'}}]
         def reason(outcome, usage=0, clean=True, code=0, audits=audit):

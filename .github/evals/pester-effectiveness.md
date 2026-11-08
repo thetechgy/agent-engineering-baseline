@@ -155,7 +155,8 @@ with the included public evidence and saved analysis. Qualification observations
 are deterministic fixtures, never future agent results or production history.
 
 The artifact's `frozen-proposal.json` binds the proposed live run to the qualified
-40-character source revision. **This preparation action never launches live effectiveness execution.** The old pilot's `pilot-...-usd10` approval only permits
+40-character source revision. **This preparation action never launches live
+effectiveness execution.** The old pilot's `pilot-...-usd10` approval only permits
 its original compatibility pair and cannot authorize this new cohort. A future
 explicit authorization must name this protocol, exact qualified commit and twelve
 attempts; delivering credentials or approving an environment gate remains separate.
@@ -185,10 +186,12 @@ historical identities and retained tooling remain necessary for old reports.
 
 ## Qualified execution path (credential-free implementation follow-up)
 
-The `cohort` action executes this frozen v3 protocol. Its v4 evidence profile
-versions the changed runtime producer and reporting admission, retaining v3 grading,
+The `cohort` action executes this frozen v3 protocol. Its v4 and v5 evidence profiles
+version the changed runtime producer and reporting admission, retaining v3 grading,
 metric definitions, task inputs and every historical profile. The compatibility
-producer likewise has a new retained-v6 runtime identity. The preparation command
+producer likewise has a new retained-v6 runtime identity. V5 preserves the qualified
+v4 native evidence and records the decimal-threshold and exclusive-claim follow-up.
+Only the latest exact-source preparation may authorize future execution. The preparation command
 above remains credential-free. `qualify-cohort` runs the actual twelve-entry
 scheduler through the pinned Harbor single-trial CLI, released Codex and independent
 native verifier with non-forwarding loopback responses. Answers are supplied by
