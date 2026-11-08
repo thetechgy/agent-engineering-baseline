@@ -8,7 +8,7 @@ import shutil
 from codex_pilot_contract import ROOT, PROFILE as RUNTIME, grader_bytes as retained_grader
 from codex_pilot_iteration import runner_bytes as retained_runner_bytes
 
-PROFILE_ID = 'pester-effectiveness-v2'
+PROFILE_ID = 'pester-effectiveness-v3'
 PURPOSE = 'skill_effectiveness'
 CONTROL_PURPOSE = 'skill_effectiveness_control'
 CASES = ('pester-001', 'pester-003', 'pester-004')
@@ -39,6 +39,59 @@ def case_files(workspace, case):
 def runner_bytes(workspace=ROOT):
     """Count only the pinned Pester dependency-filter mismatch; never disclose text."""
     source = retained_runner_bytes(workspace).decode()
+    # Bind the first positional target after ordinary named arguments/switches.
+    # Literal target/module validation and the complete recursive AST walk stay in force.
+    old = """    if ($null -eq $selected -and $positional -and $command.CommandElements.Count -gt 1 -and
+        $command.CommandElements[1] -isnot [System.Management.Automation.Language.CommandParameterAst]) {
+        $selected = $command.CommandElements[1]
+    }"""
+    new = """    if ($null -eq $selected -and $positional) {
+        for ($i = 1; $i -lt $command.CommandElements.Count; $i++) {
+            $element = $command.CommandElements[$i]
+            if ($element -is [System.Management.Automation.Language.CommandParameterAst]) {
+                if ($null -eq $element.Argument -and $element.ParameterName -notin @('Force', 'Exactly', 'Verifiable', 'Invoke', 'Not')) { $i++ }
+                continue
+            }
+            $selected = $element
+            break
+        }
+    }"""
+    assert source.count(old) == 1
+    source = source.replace(old, new)
+    changes = {
+        "'Should-HaveType', 'Should-BeTrue'": "'Should-HaveType', 'Should-BeEquivalent', 'Should-BeTrue'",
+        "'Expected', 'Actual', 'Count', 'Type', 'CaseSensitive'": "'Expected', 'Actual', 'Count', 'Type', 'CaseSensitive', 'ExclusiveFilter', 'Verifiable'",
+        "@('ModuleName', 'ScriptBlock')": "@('ModuleName', 'ScriptBlock', 'Parameters')",
+        "@('CommandName', 'MockWith', 'ModuleName', 'ParameterFilter')": "@('CommandName', 'MockWith', 'ModuleName', 'ParameterFilter', 'Verifiable')",
+        "__peArgument $__peNode 'CommandName' -Positional:(-not $__peInvoke)": "__peArgument $__peNode 'CommandName' -Positional",
+    }
+    for old, new in changes.items():
+        assert source.count(old) == 1
+        source = source.replace(old, new)
+    anchor = "                        if ($__peCommand -eq 'Out-Null' -or"
+    restriction = """                        $__peInvocationAssertion = $__peCommand -eq 'Should-Invoke' -or ($__peCommand -eq 'Should' -and @($__peNode.CommandElements | Where-Object {
+                            $_ -is [System.Management.Automation.Language.CommandParameterAst] -and $_.ParameterName -eq 'Invoke'
+                        }).Count -gt 0)
+                        if ($__peElement.ParameterName -eq 'ExclusiveFilter' -and -not $__peInvocationAssertion) { throw 'admission' }
+                        if ($__peElement.ParameterName -eq 'Verifiable' -and -not ($__peInvocationAssertion -or $__peCommand -eq 'Mock')) { throw 'admission' }
+"""
+    assert source.count(anchor) == 1
+    source = source.replace(anchor, restriction + anchor)
+    old = """                    if ($__peArgument -isnot [System.Management.Automation.Language.StringConstantExpressionAst] -or
+                        $__pePolicy.dependencies -notcontains $__peArgument.Value) { throw 'admission' }"""
+    new = """                    if ($null -eq $__peArgument) {
+                        $__peProjectVerifiable = ($__peCommand -eq 'Should-Invoke' -or $__peInvoke) -and
+                            @($__peNode.CommandElements | Where-Object {
+                                $_ -is [System.Management.Automation.Language.CommandParameterAst] -and $_.ParameterName -eq 'Verifiable'
+                            }).Count -gt 0 -and
+                            $__pePolicy.module -eq 'Probe' -and $__pePolicy.dependencies.Count -eq 1 -and
+                            $__pePolicy.dependencies[0] -eq 'Test-ProbeConnection'
+                        if (-not $__peProjectVerifiable) { throw 'admission' }
+                    }
+                    elseif ($__peArgument -isnot [System.Management.Automation.Language.StringConstantExpressionAst] -or
+                        $__pePolicy.dependencies -notcontains $__peArgument.Value) { throw 'admission' }"""
+    assert source.count(old) == 1
+    source = source.replace(old, new)
     anchor = "                assertion_failures = $__peAssertionFailures"
     assert source.count(anchor) == 1
     source = source.replace(anchor, anchor + "\n                mock_failures = $__peMockFailures")
@@ -54,6 +107,11 @@ def runner_bytes(workspace=ROOT):
 """
     source = source.replace(anchor, telemetry + anchor)
     return source.encode()
+
+
+def execution_profile_bytes(workspace=ROOT):
+    original = (workspace / '.github/evals/powershell-pester-6/support/EXECUTION-PROFILE.md').read_bytes()
+    return original + b"\nProspective admission profile v3 also supports Should-BeEquivalent, ordinary named/positional argument ordering, invocation -ExclusiveFilter, approved dependency mocks marked -Verifiable, and InModuleScope Probe -Parameters with ordinary data. Commandless Should-Invoke -Verifiable is confined to the Probe case, whose mock definitions remain limited to the approved dependency. Protected variables/hashtable keys, other targets/modules, arbitrary methods, helpers and common-parameter failure suppression remain unsupported.\n"
 
 
 def grader_bytes(workspace=ROOT):
@@ -106,6 +164,28 @@ def fixtures(workspace=ROOT):
         b"Mock Test-ProbeConnection { $false } -ModuleName Probe -ParameterFilter { $Target -eq 'backup.invalid' }")
     add('pester-003', 'filtered', filtered, 'passed', [1]*5)
     add('pester-003', 'unclassified-failure', b"BeforeAll { Import-Module '/workspace/input/Probe.psm1' -Force }\nDescribe 'unclassified test error' { It 'checks' { Mock Test-ProbeConnection { param($Target) $Target -eq 'service.invalid' } -ModuleName Probe; $result = Get-EndpointStatus -Target 'service.invalid'; if (-not $result.Healthy) { throw 'unclassified' }; $result.Healthy | Should -BeTrue } }\n", 'unsupported')
+    invocation = read('pester-003', 'external')
+    invocation = invocation.replace(b"Import-Module '/workspace/input/Probe.psm1' -Force", b"Import-Module -Force '/workspace/input/Probe.psm1'")
+    invocation = invocation.replace(b'Mock Test-ProbeConnection { $true } -ModuleName Probe', b'Mock -ModuleName Probe -Verifiable Test-ProbeConnection { $true }')
+    invocation = invocation.replace(b'Mock Test-ProbeConnection { $false } -ModuleName Probe', b'Mock -ModuleName Probe -Verifiable Test-ProbeConnection { $false }')
+    invocation = invocation.replace(b'Should-Invoke Test-ProbeConnection -ModuleName Probe -Times 1 -Exactly -ParameterFilter', b'Should-Invoke -ModuleName Probe Test-ProbeConnection -Times 1 -Exactly -ExclusiveFilter')
+    invocation = invocation.replace(b"        $result.Target | Should-BeString 'service.invalid'", b"        $result | Should-BeEquivalent ([pscustomobject]@{Target='service.invalid';Healthy=$true})\n        Should-HaveType -Actual $result.Healthy -Expected ([bool])\n        Should-Invoke -Verifiable\n        $result.Target | Should-BeString 'service.invalid'")
+    add('pester-003', 'invocation-options', invocation, 'passed', [1]*5)
+    scoped = read('pester-003', 'module')
+    scoped = scoped.replace(b"InModuleScope Probe {", b"InModuleScope -Parameters @{ExpectedTarget='service.invalid'} Probe { param($ExpectedTarget)", 1)
+    scoped = scoped.replace(b"(Get-EndpointStatus -Target 'service.invalid').Healthy", b"(Get-EndpointStatus -Target $ExpectedTarget).Healthy", 1)
+    scoped = scoped.replace(b"Should -Invoke -CommandName Test-ProbeConnection", b"Should -Invoke Test-ProbeConnection")
+    # Include the returned-target contract omitted from the historical module control.
+    scoped = scoped.replace(b"            (Get-EndpointStatus -Target $ExpectedTarget).Healthy | Should -Be $true", b"            $result = Get-EndpointStatus -Target $ExpectedTarget\n            $result.Target | Should -Be $ExpectedTarget\n            $result.Healthy | Should -Be $true")
+    scoped = scoped.replace(b"            (Get-EndpointStatus -Target 'backup.invalid').Healthy | Should -Be $false", b"            $result = Get-EndpointStatus -Target 'backup.invalid'\n            $result.Target | Should -Be 'backup.invalid'\n            $result.Healthy | Should -Be $false")
+    add('pester-003', 'module-parameters', scoped, 'passed', [1]*5)
+    for name, payload in {
+        'exclusive-misuse': b"Describe x { It y { 1 | Should -Be 1 -ExclusiveFilter } }",
+        'parameters-protected': b"Describe x { It y { InModuleScope Probe -Parameters @{__peResult=1} { 1 | Should -Be 1 } } }",
+        'verifiable-target': b"Describe x { It y { Should-Invoke Get-Content -Verifiable -ModuleName Probe } }",
+    }.items():
+        add('pester-003', name, payload, 'unsupported')
+    add('pester-004', 'verifiable-scope', b"Describe x { It y { Should-Invoke -Verifiable } }", 'unsupported')
     # Each boundary omission must miss exactly that mutant, regardless of test count.
     explicit = b"BeforeAll { . '/workspace/input/Subject.ps1' }\nDescribe 'port limits' { It 'checks supplied boundaries' {\n"
     boundaries = ((0, '$false', 'zero'), (1, '$true', 'lowest'), (65535, '$true', 'highest'), (65536, '$false', 'above'))

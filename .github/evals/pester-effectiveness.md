@@ -25,7 +25,7 @@ standalone assertions, discovery data, nested inline data, runtime iteration and
 explicit boundary checks are qualified. AST restrictions and separate offline
 unprivileged verification remain intentional; they are not general PowerShell support.
 
-The prospective `pester-effectiveness-v2` grader preserves historical versions.
+The prospective `pester-effectiveness-v3` admission/grader profile preserves historical versions.
 It credits mutant detection only when the reference passes and the mutant has
 recognized assertion failures or the pinned Pester dependency-parameter mismatch,
 with no discovery/container failures. Generally broken submissions receive no
@@ -51,6 +51,19 @@ hashes and require their retained source snapshots. The error-prefix recognizer
 is a narrow runtime maintenance obligation, checked against the pinned Pester
 source and real execution. No agent output was inspected
 to choose this correction, and no skill-effectiveness inference ran.
+
+Version three adds only safe, project-scoped Pester APIs used by the frozen
+guidance: invocation `-ExclusiveFilter`, `Mock -Verifiable`, commandless
+`Should-Invoke -Verifiable` in the Probe case, `InModuleScope Probe -Parameters`,
+and `Should-BeEquivalent`. Target/module validation, protected-state restrictions,
+recursive AST checks and verifier isolation remain in force. Ordinary named and
+positional argument ordering and classic invocation assertions are accepted.
+The bounded execution-profile supplement is identical between arms. Native
+positive controls combine these forms; negative controls reject unrelated
+assertion flags, out-of-project targets, verifiable checks outside the Probe case and protected
+parameter keys. V2 metric definitions and outcomes remain unchanged; v3 has a new
+admission digest, not a new quality scale. V2's complete native qualification is
+retained separately from the final admission extension.
 
 Native qualification includes strong alternatives, substantive weak work, four
 single-boundary omissions, healthy-output-only and healthy-call-only work, real

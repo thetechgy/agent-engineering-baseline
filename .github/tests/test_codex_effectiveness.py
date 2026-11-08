@@ -83,6 +83,26 @@ class Protocol(unittest.TestCase):
                              (unavailable, {'code': 'fixture'}))
 
     @unittest.skipUnless(shutil.which('pwsh'), 'PowerShell parser required')
+    def test_guided_invocation_forms_are_versioned_and_scope_rejections_remain(self):
+        from codex_pilot_iteration import runner_bytes as legacy
+        selected = ('invocation-options', 'module-parameters', 'exclusive-misuse',
+                    'parameters-protected', 'verifiable-target', 'verifiable-scope')
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);candidate=root/'Subject.Tests.ps1';runner=root/'Runner.ps1'
+            for name in selected:
+                fixture=effect.fixtures()[('pester-004-' if name=='verifiable-scope' else 'pester-003-')+name];candidate.write_bytes(fixture['payload'])
+                outcomes=[]
+                for raw in (legacy(), effect.runner_bytes()):
+                    runner.write_bytes(raw)
+                    result=subprocess.run(['pwsh','-NoLogo','-NoProfile','-NonInteractive','-File',str(runner),
+                        '-Candidate',str(candidate),'-Profile',str(ROOT/'.github/evals/powershell-pester-6/support/cases'/fixture['case']/'profile.json'),
+                        '-AdmissionOnly'],capture_output=True,text=True,check=True,timeout=15)
+                    outcomes.append(json.loads(result.stdout)['status'])
+                with self.subTest(style=name):
+                    self.assertEqual(outcomes[1], 'admitted' if fixture['outcome']=='passed' else 'unsupported')
+                    if fixture['outcome']=='passed': self.assertEqual(outcomes[0], 'unsupported')
+
+    @unittest.skipUnless(shutil.which('pwsh'), 'PowerShell parser required')
     def test_every_fixture_has_its_declared_admission_and_restrictions_stay_closed(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

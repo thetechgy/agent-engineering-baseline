@@ -1,5 +1,5 @@
 {
-  "id": "pester-effectiveness-v2",
+  "id": "pester-effectiveness-v3",
   "base": "521a00c",
   "frozen_runtime": "codex-pilot.json",
   "primary_cases": [

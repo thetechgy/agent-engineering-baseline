@@ -939,11 +939,14 @@ The prospective grader credits mutant detection only after reference correctness
 per-defect results expose meaningful omissions. Prospective v2 accepts recognized
 assertions or the pinned Pester dependency-parameter mismatch after a passing reference,
 leaving unclassified test failures unmeasured; new metric identities preserve v1 semantics.
-A real filtered-mock positive control reproduced the v1 gap before correction. Historical profiles, original and
+A real filtered-mock positive control reproduced the v1 gap before correction.
+Prospective v3 also admits the frozen guidance's scoped invocation flags, module
+data parameters, object assertions and normal argument ordering, with positive
+and rejection controls. V2 metric semantics and qualified outcomes are preserved. Historical profiles, original and
 retrospective compatibility outcomes, production defaults and skills are preserved.
 The changed shared tooling has its own retained-pilot identity; no historical
 runtime hash is overwritten. Native and repository checks are recorded on the
-new draft PR; only a successful exact-revision artifact qualifies preparation.
+[draft PR #122](https://github.com/thetechgy/agent-engineering-baseline/pull/122); only a successful exact-revision artifact qualifies preparation.
 
 The one operator entry point (with the existing pinned tools installed) is:
 
@@ -959,7 +962,7 @@ Fixture qualification is not agent effectiveness evidence. The earlier two live
 submissions still establish compatibility only: both passed the retrospectively
 corrected reference and detected both mutants, with no demonstrated skill benefit.
 
-**One next action:** review the qualified draft PR and decide whether to authorize
+**One next action:** review [draft PR #122](https://github.com/thetechgy/agent-engineering-baseline/pull/122) and decide whether to authorize
 exactly its twelve-attempt live proposal at the artifact's qualified commit. The
 proposal estimates $6 usage, stops further launches at $10 estimated cumulative
 usage and retains $5 reserve within a $15 maximum allocation. Estimates are not
