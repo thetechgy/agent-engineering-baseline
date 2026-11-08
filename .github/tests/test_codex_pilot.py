@@ -101,6 +101,10 @@ class PilotContracts(unittest.TestCase):
                 reports.write_json(target/'evidence/staging.json',rows)
                 retained=descriptors.verified_configurations(target/'evidence')
                 self.assertEqual(set(retained),{(r['arm'],r['case_id']) for r in rows})
+                for arm_tasks in tasks.values():
+                    for task in arm_tasks:
+                        for context in ('environment', 'tests'):
+                            self.assertEqual((task/context/'build/install-runtime.py').read_bytes(), pilot.runtime_installer_bytes())
                 for row in rows:
                     retained_file=target/'evidence/task-descriptors'/row['arm']/(row['case_id']+'.toml')
                     original=next(t for t in tasks[row['arm']] if t.name==row['case_id'])/'task.toml'
@@ -307,6 +311,54 @@ class PilotContracts(unittest.TestCase):
     def test_wrong_allocation_rejects_before_native_setup(self):
         with patch.object(sys,'argv',['pilot','live','--output','unused','--approval','wrong']), self.assertRaises(SystemExit):
             pilot.main()
+
+
+class ProbeEvidence(unittest.TestCase):
+    def record(self, root, arm, **changes):
+        job = root / 'jobs' / ('powershell-pester-6-codex-with' if arm == 'with_skill' else 'powershell-pester-6-codex-without')
+        target = job / 'trial/agent/probe.json'; target.parent.mkdir(parents=True)
+        value = {'model': PROFILE['model'], 'reasoning': {'effort': 'high'}, 'requests': 2, **changes}
+        target.write_text(json.dumps(value)); return target
+
+    def test_missing_probe_preserves_available_sanitized_record_and_native_failure(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d); artifact = root / 'evidence'
+            self.record(root, 'without_skill', api_key='public-dummy-not-a-credential')
+            failure = root / 'jobs/powershell-pester-6-codex-with/trial/exception.txt'
+            failure.parent.mkdir(parents=True); failure.write_text('Runtime acquisition timeout: asset unresolved')
+            with self.assertRaisesRegex(ValueError, 'evidence incomplete'):
+                pilot.validate_probe_requests(root, artifact, 'success')
+            values = reports.read_json(artifact / 'cli-probes.json')
+            self.assertEqual(len(values), 1); self.assertEqual(values[0]['arm'], 'without_skill')
+            self.assertEqual(values[0]['api_key'], '<redacted>')
+            status = reports.read_json(artifact / 'probe-validation.json')
+            self.assertFalse(status['complete']); self.assertEqual(status['missing_arms'], ['with_skill'])
+            self.assertEqual(status['request_mismatches'], [])
+            self.assertEqual(failure.read_text(), 'Runtime acquisition timeout: asset unresolved')
+
+    def test_observed_request_mismatch_names_only_observed_fields(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d); artifact = root / 'evidence'
+            self.record(root, 'with_skill', model='different-model')
+            self.record(root, 'without_skill')
+            with self.assertRaisesRegex(ValueError, 'Observed CLI request'):
+                pilot.validate_probe_requests(root, artifact, 'success')
+            status = reports.read_json(artifact / 'probe-validation.json')
+            self.assertEqual(status['missing_arms'], [])
+            self.assertEqual(status['request_mismatches'], [{'arm': 'with_skill', 'fields': ['model']}])
+            self.assertEqual(len(reports.read_json(artifact / 'cli-probes.json')), 2)
+
+    def test_unreadable_probe_is_preserved_as_missing_evidence_not_field_mismatch(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d); artifact = root / 'evidence'
+            self.record(root, 'with_skill').write_text('incomplete JSON')
+            self.record(root, 'without_skill')
+            with self.assertRaisesRegex(ValueError, 'evidence incomplete'):
+                pilot.validate_probe_requests(root, artifact, 'success')
+            status = reports.read_json(artifact / 'probe-validation.json')
+            self.assertFalse(status['complete']); self.assertEqual(status['request_mismatches'], [])
+            values = reports.read_json(artifact / 'cli-probes.json')
+            self.assertEqual(values[0]['record_error'], 'unreadable_probe_record')
 
 
 class DescriptorEvidence(unittest.TestCase):

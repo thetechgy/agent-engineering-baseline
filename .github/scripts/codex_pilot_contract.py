@@ -59,9 +59,37 @@ def configuration(base_url=None):
     }
 
 
+def runtime_installer_bytes(workspace=ROOT):
+    """Pilot-only bounded transport; reuse frozen inputs and archive/version checks."""
+    source = (workspace / '.github/evals/powershell-pester-6/support/install-runtime.py').read_text()
+    original = """            with urlopen(url, timeout=60) as response, archive.open('xb') as output:
+                if not response.url.startswith('https://'):
+                    raise ValueError('Non-HTTPS fixture input')
+                while chunk := response.read(1024 * 1024):
+                    output.write(chunk)
+            if hashlib.file_digest(archive.open('rb'), 'sha256').hexdigest() != expected:
+                raise ValueError('Fixture input digest mismatch')"""
+    changes = {
+        'from urllib.request import urlopen\n': '',
+        'def main():': "def main(*, inputs=INPUTS, runtime=Path('/opt/microsoft/powershell/7'), module=Path('/opt/pester/Modules/Pester/6.2.0')):",
+        '    with tempfile.TemporaryDirectory() as temporary:': '    deadline = time.monotonic() + ACQUISITION_SECONDS\n    with tempfile.TemporaryDirectory() as temporary:',
+        'for url, expected, name in INPUTS:': 'for url, expected, name in inputs:',
+        original: '            acquire(url, expected, name, archive, deadline)',
+        "        runtime = Path('/opt/microsoft/powershell/7')\n": '',
+        "        module = Path('/opt/pester/Modules/Pester/6.2.0')\n": '',
+        "    main()\n": "    try:\n        main()\n    except AcquisitionError as error:\n        raise SystemExit(str(error)) from None\n",
+    }
+    for old, new in changes.items():
+        assert source.count(old) == 1
+        source = source.replace(old, new)
+    transport = (workspace / '.github/scripts/codex_pilot_acquisition.py').read_text()
+    return (transport + source).encode()
+
+
 def pilot_inputs(workspace=ROOT):
     paths = ['.github/evals/codex-pilot.json', '.github/scripts/codex_pilot_contract.py',
              '.github/scripts/codex_pilot_agent.py', '.github/scripts/codex_pilot.py', '.github/scripts/codex_pilot_stub.py',
              '.github/scripts/codex_pilot_environment.py', '.github/scripts/codex_pilot_boundary.py',
-             '.github/scripts/codex_pilot_probe.py', '.github/scripts/codex_pilot_descriptors.py']
+             '.github/scripts/codex_pilot_probe.py', '.github/scripts/codex_pilot_descriptors.py',
+             '.github/scripts/codex_pilot_acquisition.py']
     return [{'member': 'pilot/' + p, 'digest': 'sha256:' + hashlib.sha256((workspace / p).read_bytes()).hexdigest()} for p in paths]

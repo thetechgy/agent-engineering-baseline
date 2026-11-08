@@ -715,3 +715,66 @@ are cancelled with available evidence retained. The linked review thread and
 corrected commit, exact-head checks, authenticated artifacts and report reproduction.
 The historical descriptor mismatch remains unresolved, and no paid authorization is
 carried forward.
+
+### Runtime acquisition correction after the closed allocation
+
+The owner separately authorized one allocation at
+`cc3e881e917436376967b92dad3a1f2ea130f98f`.
+[Run 42436172624](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42436172624)
+ended at its own credential-free preparation gate. Consumption and live execution
+were skipped; neither live arm launched and no environment approval or model
+credential retrieval occurred. That allocation is closed, with no retry or
+replacement authorized.
+
+The authenticated [artifact 13599782074](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42436172624/artifacts/13599782074)
+retains 167 files, archive SHA-256
+`a9f1df96adba67d6d266d5efd9492413212a00362317447b046e02ec7f1f3422`.
+The original current-skill probe image failed in the runtime installer while an
+HTTPS request read timed out after a redirect, at the existing 60-second limit.
+The trace does not identify whether PowerShell or Pester was being acquired.
+That uncertainty remains. The absent-skill stub probe completed, while the missing
+current-skill probe caused the later generic request-contract error. No observed
+request-field mismatch was established. Original native failures, fixture outcomes,
+usage, submissions and cleanup records remain unchanged. The retained HTML still
+reproduces with SHA-256
+`94fd6e1cffc8e05eeb0422699bed1b5c93adc616a64258a3e37df389072eed68`.
+
+The correction is limited to the pilot-generated runtime installer. It composes
+bounded transport with the original pinned input definitions, extraction checks
+and executable version checks. The shared production installer remains byte-for-byte
+unchanged, as do the active production profile, frozen saved-review validators,
+skills, task requirements, grading, dependency pins, isolation and accounting.
+Only the pilot runtime-producer digest changes. No direct-Harbor image-transfer,
+APT-cache or allocation infrastructure is imported; no new cache or artifact reuse
+is introduced.
+
+Each archive has at most three acquisition attempts. Each attempt has a 60-second
+wall deadline; one 150-second budget covers both archives, redirects, DNS, reads,
+hashing and the two-/four-second retry backoffs. Linux build-process signal timers
+bound trickle reads as well as socket inactivity. Existing observed build and job
+deadlines are unchanged. Transient transport, incomplete-response and selected
+HTTP 408/429/500/502/503/504 failures may retry. Certificate verification, HTTPS
+redirect restrictions and SHA-256 checks remain mandatory. Integrity failures and
+permanent service errors fail explicitly. Partial files are removed before a fresh
+attempt; existing destination files are not silently reused or overwritten.
+
+`RUNTIME_ACQUISITION` diagnostics identify the asset, attempt, elapsed seconds,
+received bytes and fixed failure category. They omit URLs, signed redirect
+locations, credentials, headers and arbitrary exception text. Available sanitized
+CLI probe records are retained even when qualification fails. The separate
+`probe-validation.json` distinguishes missing/unreadable probe evidence from
+mismatches in observed request fields. The original acquisition/execution failure
+remains in the existing report bundle; missing evidence cannot grant readiness.
+
+Local validation passes 33 focused tests under the owning candidate runtime and
+28 historical metric regressions under their pinned saved-review runtime. Real
+local HTTPS fixtures exercise timeout/service recovery, retry exhaustion, shared
+wall deadlines, partial-file cleanup, checksum rejection and HTTPS/certificate
+checks. The actual generated installer extracts verified fixture archives and
+invokes its runtime check; native staging verifies the same bytes in both agent
+and verifier build contexts. These fixtures are separate from real PowerShell/
+Pester Docker qualification. Docker is unavailable locally. Final-commit hosted
+preparation, artifact consumption, report reproduction and required checks are
+recorded on [PR #121](https://github.com/thetechgy/agent-engineering-baseline/pull/121).
+No replacement live allocation, model credential, inference, judge or merge is
+authorized by this correction. Historical descriptor equivalence remains unresolved.

@@ -10,7 +10,7 @@ import shutil
 import subprocess
 import sys
 
-from codex_pilot_contract import PROFILE as P, ROOT, runner_bytes, grader_bytes
+from codex_pilot_contract import PROFILE as P, ROOT, runner_bytes, grader_bytes, runtime_installer_bytes
 import evaluator_profiles as profiles
 import pester_evaluations as pester
 import skill_evidence as evidence
@@ -87,6 +87,8 @@ def stage(root, *, controls=False, probe=False):
         if {task.name for task in tasks[arm]} != {e['id'] for e in selected}:
             raise ValueError('Pilot selection drift')
         for task in tasks[arm]:
+            for context in ('environment', 'tests'):
+                (task / context / 'build/install-runtime.py').write_bytes(runtime_installer_bytes())
             (task / 'tests/Runner.ps1').write_bytes(runner_bytes())
             (task / 'tests/verifier/grader.py').write_bytes(grader_bytes())
             (task / 'tests/docker-compose.yaml').write_text('services:\n  main:\n    network_mode: none\n')
@@ -165,6 +167,55 @@ def producer_receipt_command():
             "Path('/logs/agent/pilot-produced-submission.json').write_text(json.dumps(v))")
     import shlex
     return 'python3 -c ' + shlex.quote(code)
+
+
+def retain_probe_records(root, artifact):
+    """Preserve available credential-free requests before qualification can fail."""
+    from skillevaluator.utils.redaction import redact_sensitive_data
+    records = []
+    for arm in ARMS:
+        job = root / 'jobs' / f"{P['skill']}-codex-{'with' if arm == 'with_skill' else 'without'}"
+        for path in sorted(job.rglob('probe.json')):
+            try:
+                value = reports.read_json(path)
+                if type(value) is not dict:
+                    raise ValueError('Invalid probe record')
+            except (ValueError, OSError):
+                value = {'record_error': 'unreadable_probe_record'}
+            records.append({**redact_sensitive_data(value), 'arm': arm,
+                            'trial_member': path.relative_to(root / 'jobs').as_posix()})
+    reports.write_json(artifact / 'cli-probes.json', records)
+    return records
+
+
+def validate_probe_requests(root, artifact, scenario):
+    probes = retain_probe_records(root, artifact)
+    counts = {arm: sum(p['arm'] == arm for p in probes) for arm in ARMS}
+    missing = [arm for arm, count in counts.items() if count == 0]
+    invalid = [arm for arm, count in counts.items() if count != 1]
+    incomplete = bool(invalid or any('record_error' in p for p in probes))
+    mismatches = []
+    if not incomplete:
+        for probe in probes:
+            fields = []
+            if probe.get('model') != P['model']:
+                fields.append('model')
+            if type(probe.get('reasoning')) is not dict or probe['reasoning'].get('effort') != 'high':
+                fields.append('reasoning_effort')
+            if type(probe.get('requests')) is not int or probe['requests'] != (1 if scenario == 'interruption' else 2):
+                fields.append('request_count')
+            if fields:
+                mismatches.append({'arm': probe['arm'], 'fields': fields})
+    status = {'complete': not incomplete and not mismatches, 'expected_arms': list(ARMS),
+              'observed_counts': counts, 'missing_arms': missing,
+              'reason': 'probe_missing_or_unreadable' if incomplete else 'observed_request_mismatch' if mismatches else 'matched',
+              'request_mismatches': mismatches}
+    reports.write_json(artifact / 'probe-validation.json', status)
+    if incomplete:
+        raise ValueError('CLI probe evidence incomplete; native acquisition/execution failures retained')
+    if mismatches:
+        raise ValueError('Observed CLI request contract mismatch; probe records retained')
+    return probes
 
 
 def retain(root, artifact):
@@ -365,13 +416,10 @@ def run(root, *, controls=False, probe=False, preparation=None):
             collect(root, artifact, bundle, captured, controls=controls, probe=probe)
             collected = True
         if probe:
-            probes = [{**reports.read_json(p), 'trial_member': p.relative_to(root / 'jobs').as_posix()} for p in sorted((root / 'jobs').rglob('probe.json'))]
-            if len(probes) != 2 or any(p['model'] != P['model'] or p['reasoning']['effort'] != 'high' or p['requests'] != (1 if scenario == 'interruption' else 2) for p in probes):
-                raise ValueError('Actual CLI request contract mismatch')
+            probes = validate_probe_requests(root, artifact, scenario)
             frozen_prompt = next(e['prompt'] for e in pester.dataset(ROOT) if e['id'] == P['case'])
             if any(frozen_prompt not in json.dumps(p['input']) for p in probes):
                 raise ValueError('Post-upload actual task prompt mismatch')
-            reports.write_json(artifact / 'cli-probes.json', probes)
             events = reports.read_json(artifact / 'tool-events.json')
             completed = [e['item'] for e in events if e['type'] == 'item.completed']
             audits = reports.read_json(artifact / 'runtime-audits.json')
@@ -417,6 +465,8 @@ def run(root, *, controls=False, probe=False, preparation=None):
             elif any(a.get('returncode') != 124 for a in audits):
                 raise ValueError('Interruption control missing')
     finally:
+        if probe:
+            retain_probe_records(root, artifact)
         if not probe and stages and not collected:
             try:
                 collect(root, artifact, bundle, captured, controls=controls)
