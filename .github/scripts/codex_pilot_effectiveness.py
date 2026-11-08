@@ -6,9 +6,9 @@ import hashlib
 import shutil
 
 from codex_pilot_contract import ROOT, PROFILE as RUNTIME, grader_bytes as retained_grader
-from codex_pilot_iteration import runner_bytes
+from codex_pilot_iteration import runner_bytes as retained_runner_bytes
 
-PROFILE_ID = 'pester-effectiveness-v1'
+PROFILE_ID = 'pester-effectiveness-v2'
 PURPOSE = 'skill_effectiveness'
 CONTROL_PURPOSE = 'skill_effectiveness_control'
 CASES = ('pester-001', 'pester-003', 'pester-004')
@@ -36,6 +36,26 @@ def case_files(workspace, case):
     return files
 
 
+def runner_bytes(workspace=ROOT):
+    """Count only the pinned Pester dependency-filter mismatch; never disclose text."""
+    source = retained_runner_bytes(workspace).decode()
+    anchor = "                assertion_failures = $__peAssertionFailures"
+    assert source.count(anchor) == 1
+    source = source.replace(anchor, anchor + "\n                mock_failures = $__peMockFailures")
+    anchor = "            $__peResult = @{\n                status = 'executed';"
+    assert source.count(anchor) == 1
+    telemetry = """            $__peMockFailures = @($__peRun.Tests | Where-Object {
+                $_.Result -eq 'Failed' -and $__pePolicy.module -eq 'Probe' -and
+                @($_.ErrorRecord | Where-Object FullyQualifiedErrorId -Like '*PesterAssertionFailed*').Count -eq 0 -and
+                @($_.ErrorRecord | Where-Object {
+                    $_.Exception.Message.StartsWith("No mock for command 'Test-ProbeConnection' matched the call: none of the parameter filters matched, and there is no default mock to fall back to.", [System.StringComparison]::OrdinalIgnoreCase)
+                }).Count -gt 0
+            }).Count
+"""
+    source = source.replace(anchor, telemetry + anchor)
+    return source.encode()
+
+
 def grader_bytes(workspace=ROOT):
     source = retained_grader(workspace).decode()
     # Six variants still fit the unchanged 220-second case deadline and worker limits.
@@ -43,9 +63,15 @@ def grader_bytes(workspace=ROOT):
     source = source.replace('MAX_VARIANTS = 5', 'MAX_VARIANTS = 6')
     old = "killed = sum(m['failed'] > 0 and m['assertion_failures'] == m['failed'] for m in mutants)"
     assert source.count(old) == 1
-    source = source.replace(old, "killed = sum(reference_pass and m['failed'] > 0 and m['assertion_failures'] == m['failed'] for m in mutants)")
+    source = source.replace(old, "killed = sum(reference_pass and m['failed'] > 0 and m['assertion_failures'] + m['mock_failures'] == m['failed'] for m in mutants)")
+    source = source.replace("'failed_blocks', 'failed_containers', 'assertion_failures')", "'failed_blocks', 'failed_containers', 'assertion_failures', 'mock_failures')")
+    anchor = "    killed = sum(reference_pass"
+    source = source.replace(anchor, "    if reference_pass and any(m['failed'] > m['assertion_failures'] + m['mock_failures'] for m in mutants):\n        return 'unsupported', {'code': 'test_failure_kind'}\n" + anchor)
+    anchor = "and result['total'] >= minimum and result['total'] == result['passed'] + result['failed']"
+    assert source.count(anchor) == 1
+    source = source.replace(anchor, "and result['assertion_failures'] + result['mock_failures'] <= result['failed']\n            " + anchor)
     anchor = "        'tests_executed': reference['total'],"
-    source = source.replace(anchor, anchor + "\n        'variant_detections': [int(reference_pass and m['failed'] > 0 and m['assertion_failures'] == m['failed']) for m in mutants],")
+    source = source.replace(anchor, anchor + "\n        'variant_detections': [int(reference_pass and m['failed'] > 0 and m['assertion_failures'] + m['mock_failures'] == m['failed']) for m in mutants],\n        'variant_failure_kinds': [('assertion' if m['assertion_failures'] == m['failed'] else 'mock_parameter_mismatch') if reference_pass and m['failed'] > 0 else None for m in mutants],")
     return source.encode()
 
 
@@ -70,6 +96,16 @@ def fixtures(workspace=ROOT):
                     b"$result = Get-EndpointStatus -Target 'backup.invalid'\n            $result.Target | Should -Be 'backup.invalid'\n            $result.Healthy | Should -Be $false")
             add(case, style, payload, 'passed')
         add(case, 'weak', read(case, 'weak'), 'failed', [0] * (5 if case == 'pester-003' else 4 if case == 'pester-004' else 2))
+    # Filtered mocks may reject wrong forwarding through the original transport's
+    # test-body exception before an assertion executes. This is legitimate failure
+    # evidence when the identical suite passes the reference, not infrastructure.
+    filtered = read('pester-003', 'external')
+    filtered = filtered.replace(b'Mock Test-ProbeConnection { $true } -ModuleName Probe',
+        b"Mock Test-ProbeConnection { $true } -ModuleName Probe -ParameterFilter { $Target -eq 'service.invalid' }")
+    filtered = filtered.replace(b'Mock Test-ProbeConnection { $false } -ModuleName Probe',
+        b"Mock Test-ProbeConnection { $false } -ModuleName Probe -ParameterFilter { $Target -eq 'backup.invalid' }")
+    add('pester-003', 'filtered', filtered, 'passed', [1]*5)
+    add('pester-003', 'unclassified-failure', b"BeforeAll { Import-Module '/workspace/input/Probe.psm1' -Force }\nDescribe 'unclassified test error' { It 'checks' { Mock Test-ProbeConnection { param($Target) $Target -eq 'service.invalid' } -ModuleName Probe; $result = Get-EndpointStatus -Target 'service.invalid'; if (-not $result.Healthy) { throw 'unclassified' }; $result.Healthy | Should -BeTrue } }\n", 'unsupported')
     # Each boundary omission must miss exactly that mutant, regardless of test count.
     explicit = b"BeforeAll { . '/workspace/input/Subject.ps1' }\nDescribe 'port limits' { It 'checks supplied boundaries' {\n"
     boundaries = ((0, '$false', 'zero'), (1, '$true', 'lowest'), (65535, '$true', 'highest'), (65536, '$false', 'above'))

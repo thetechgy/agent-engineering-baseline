@@ -13,30 +13,48 @@ Pages and skills are unchanged. No previous paid allocation applies.
 
 | Case | Real task and relevant skill guidance | Observable contract and likely weakness |
 | --- | --- | --- |
-| `pester-003` | Repair the public endpoint module suite. The skill's Module Testing and Mocking sections describe matching module scope, exact calls and parameter filters. | Healthy and unhealthy results, original returned target, exactly one private transport call with the requested target. Wrong scope, output-only assertions, omitted interaction checks or incomplete Boolean coverage can miss faults. |
+| `pester-003` | Repair the public endpoint module suite. The skill's Importing Scripts and Modules and Mocking and Invocation Verification sections describe matching module scope, exact calls and parameter filters. | Healthy and unhealthy results, original returned target, exactly one private transport call with the requested target. Wrong scope, output-only assertions, omitted interaction checks or incomplete Boolean coverage can miss faults. |
 | `pester-004` | Repair the apparently green boundary suite. The skill's Discovery and Scope sections place test-tree data in `BeforeDiscovery` or inline data, with runtime setup in `BeforeAll`. | Execute checks at 0, 1, 65535 and 65536. Zero discovered cases, a regular-port-only test, or one omitted boundary misses required work. |
 | `pester-001` | Retained integer-collection task. | Compatibility/regression qualification control only; excluded from the twelve proposed primary attempts. |
 
 Prompts and public inputs are unchanged and identical between arms. Neither prompt
 invokes the skill. No points depend on syntax, quotations, verbosity or test count.
 The independent verifier accepts the existing safe language subset; unsupported
-constructs remain unmeasured. External module mocks, `InModuleScope`, classic and
+constructs remain unmeasured. External module mocks, parameter-filtered mocks, `InModuleScope`, classic and
 standalone assertions, discovery data, nested inline data, runtime iteration and
 explicit boundary checks are qualified. AST restrictions and separate offline
 unprivileged verification remain intentional; they are not general PowerShell support.
 
-The prospective `pester-effectiveness-v1` grader preserves historical versions.
+The prospective `pester-effectiveness-v2` grader preserves historical versions.
 It credits mutant detection only when the reference passes and the mutant has
-recognized assertion failures, with no discovery/container failures. This prevents
-generally broken submissions from appearing to detect defects. Each mutant's
+recognized assertion failures or the pinned Pester dependency-parameter mismatch,
+with no discovery/container failures. Generally broken submissions receive no
+mutation credit. Each mutant's
 outcome is retained. The module adds double-call, wrong-returned-target and
 unhealthy-result mutants to the two original missing-call/forwarding mutants.
 The six variants fit the unchanged 220-second case budget (30 seconds per worker,
 15-second admission); timeout remains unavailable, not a quality zero.
 
+Version two corrects a pre-live qualification gap: parameter-filtered mocks can
+legitimately reject incorrect forwarding through Pester's no-matching-mock error
+inside a test body before reaching an assertion. V1 counted only assertion
+failures and missed that rejection despite a passing reference. V2 records
+assertion versus recognized mock-parameter mismatch per defect, requires a
+passing reference and complete test execution. Skipped, nonexecuting, discovery,
+container, timeout and infrastructure results remain unmeasured. It recognizes
+only the pinned Pester 6.2.0 no-matching-mock prefix for the supplied module
+dependency. Other non-assertion mutant failures remain unsupported and unmeasured.
+Its mutation and joint-quality
+metrics have new v2 identities; reference correctness keeps its unchanged v1
+identity. V1 and cancelled tooling profiles remain registered with their original
+hashes and require their retained source snapshots. The error-prefix recognizer
+is a narrow runtime maintenance obligation, checked against the pinned Pester
+source and real execution. No agent output was inspected
+to choose this correction, and no skill-effectiveness inference ran.
+
 Native qualification includes strong alternatives, substantive weak work, four
 single-boundary omissions, healthy-output-only and healthy-call-only work, real
-assertion failure, wrong mock scope, broken discovery, missing submission,
+assertion failure, unclassified mutant failure, wrong mock scope, broken discovery, missing submission,
 unsupported reflection, CPU/wall timeout and missing runtime. The omission controls
 must pass the reference and miss exactly their corresponding off-by-one mutant.
 Module controls separately expose bypassed calls, double calls, target forwarding,

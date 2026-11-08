@@ -936,7 +936,10 @@ It uses actual APM deployment, complete matched-arm file comparisons, repeated
 clean staging, versioned independent grading, positive/weak/omission/failure
 controls, exact submission receipts, cleanup and public-only report reproduction.
 The prospective grader credits mutant detection only after reference correctness;
-per-defect results expose meaningful omissions. Historical profiles, original and
+per-defect results expose meaningful omissions. Prospective v2 accepts recognized
+assertions or the pinned Pester dependency-parameter mismatch after a passing reference,
+leaving unclassified test failures unmeasured; new metric identities preserve v1 semantics.
+A real filtered-mock positive control reproduced the v1 gap before correction. Historical profiles, original and
 retrospective compatibility outcomes, production defaults and skills are preserved.
 The changed shared tooling has its own retained-pilot identity; no historical
 runtime hash is overwritten. Native and repository checks are recorded on the

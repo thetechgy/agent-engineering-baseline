@@ -66,7 +66,7 @@ def stage(root, *, controls=False, probe=False, replay=None, submissions=None, e
                 hashlib.sha256(submissions[arm]).hexdigest() != SUBMISSIONS[arm] for arm in ARMS):
             raise ValueError('Replay mode or exact submission identity mismatch')
     from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks
-    deployed = deploy(root, profile_id='pester-effectiveness-v1' if effectiveness else None)
+    deployed = deploy(root, profile_id='pester-effectiveness-v2' if effectiveness else None)
     bundle = pester.stage(ROOT, root / 'bundle' / P['skill'])
     native = bundle / 'evals/harbor'
     if effectiveness:
@@ -107,7 +107,7 @@ def stage(root, *, controls=False, probe=False, replay=None, submissions=None, e
             for context in ('environment', 'tests'):
                 (task / context / 'build/install-runtime.py').write_bytes(runtime_installer_bytes())
             source_case = fixtures[task.name]['case'] if effectiveness and controls else task.name if effectiveness else case
-            (task / 'tests/Runner.ps1').write_bytes(runner_bytes())
+            (task / 'tests/Runner.ps1').write_bytes(effective.runner_bytes() if effectiveness else runner_bytes())
             (task / 'tests/verifier/grader.py').write_bytes(effective.grader_bytes() if effectiveness else grader_bytes())
             if effectiveness:
                 shutil.rmtree(task / 'tests/case')

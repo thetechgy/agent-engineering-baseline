@@ -16,7 +16,7 @@ sys.path.insert(0, str(ROOT / '.github/scripts'))
 import codex_pilot as pilot
 import codex_pilot_effectiveness as effect
 import skill_evidence as evidence
-from codex_pilot_iteration import runner_bytes
+from codex_pilot_effectiveness import runner_bytes
 
 CANDIDATE = importlib.util.find_spec('skillevaluator') and importlib.metadata.version('skillevaluator') == '0.8.0'
 
@@ -65,10 +65,17 @@ class Protocol(unittest.TestCase):
         def result(failed):
             return dict(status='executed', version='6.2.0', powershell_version='7.6.9', total=1,
                         passed=1-failed, failed=failed, skipped=0, not_run=0, inconclusive=0,
-                        failed_blocks=0, failed_containers=0, assertion_failures=failed)
+                        failed_blocks=0, failed_containers=0, assertion_failures=failed, mock_failures=0)
         status, detail = grader.assess(result(1), [result(1)] * 5)
         self.assertEqual((status, detail['reference_pass'], detail['mutants_detected']), ('failed', 0, 0))
         self.assertEqual(detail['variant_detections'], [0]*5)
+        runtime_failure = result(1); runtime_failure['assertion_failures'] = 0; runtime_failure['mock_failures'] = 1
+        status, detail = grader.assess(result(0), [runtime_failure])
+        self.assertEqual((status, detail['variant_failure_kinds']), ('passed', ['mock_parameter_mismatch']))
+        unknown_failure = result(1); unknown_failure['assertion_failures'] = 0
+        self.assertEqual(grader.assess(result(0), [unknown_failure]), ('unsupported', {'code':'test_failure_kind'}))
+        malformed = result(0); malformed['assertion_failures'] = 1
+        self.assertEqual(grader.assess(malformed, [result(1)])[0], 'invalid')
         status, detail = grader.assess(result(0), [result(1), result(0)])
         self.assertEqual((status, detail['mutants_detected']), ('failed', 1))
         for unavailable in ('invalid', 'unsupported', 'timeout', 'infrastructure_error'):
@@ -89,7 +96,7 @@ class Protocol(unittest.TestCase):
                     '-AdmissionOnly'], capture_output=True, text=True, timeout=15, check=True)
                 actual = json.loads(result.stdout)
                 with self.subTest(control=name):
-                    self.assertEqual(actual['status'], 'unsupported' if fixture['outcome']=='unsupported' else 'admitted')
+                    self.assertEqual(actual['status'], 'unsupported' if fixture['outcome']=='unsupported' and not name.endswith('-unclassified-failure') else 'admitted')
 
     @unittest.skipUnless(CANDIDATE and os.environ.get('APM_EXECUTABLE'), 'Pinned candidate and APM required')
     def test_actual_clean_staging_only_differs_by_target_skill_and_rejects_drift(self):
@@ -122,7 +129,7 @@ class Protocol(unittest.TestCase):
             '(Get-Module -ListAvailable Pester | Where-Object Version -EQ 6.2.0 | Select-Object -First 1).Path'], text=True).strip()
         grader = prospective_grader()
         for name, fixture in effect.fixtures().items():
-            if fixture['outcome'] not in ('passed','failed') or name.endswith('-wrong-scope'): continue
+            if (fixture['outcome'] not in ('passed','failed') and not name.endswith('-unclassified-failure')) or name.endswith('-wrong-scope'): continue
             with self.subTest(control=name), tempfile.TemporaryDirectory() as directory:
                 root=Path(directory);(root/'input').mkdir();(root/'output').mkdir()
                 candidate=root/'output/Subject.Tests.ps1'

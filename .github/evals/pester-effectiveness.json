@@ -1,5 +1,5 @@
 {
-  "id": "pester-effectiveness-v1",
+  "id": "pester-effectiveness-v2",
   "base": "521a00c",
   "frozen_runtime": "codex-pilot.json",
   "primary_cases": [
@@ -10,7 +10,7 @@
   "trials_per_arm_per_case": 3,
   "proposed_attempts": 12,
   "authorized_live_attempts": 0,
-  "primary_measure": "reference pass AND every seeded contract violation detected through assertion failures",
+  "primary_measure": "reference pass AND every seeded contract violation detected through recognized assertions or the pinned Pester dependency-parameter mismatch",
   "secondary_measures": [
     "reference correctness",
     "seeded defects detected and missed by identity"
