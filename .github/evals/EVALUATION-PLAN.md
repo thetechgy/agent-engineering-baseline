@@ -778,3 +778,63 @@ preparation, artifact consumption, report reproduction and required checks are
 recorded on [PR #121](https://github.com/thetechgy/agent-engineering-baseline/pull/121).
 No replacement live allocation, model credential, inference, judge or merge is
 authorized by this correction. Historical descriptor equivalence remains unresolved.
+
+### Completed live pair and output-informed evaluator correction
+
+The owner authorized one new allocation at
+`633014bdbc4e9df3b37955950a6ef9efa1473547`.
+[Run 42448389611](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42448389611)
+completed its own preparation, consumption and protected live pair. Both Codex
+attempts completed successfully. The independent original evaluator rejected both
+submissions as `unsupported/ast_kind`; correctness, reference pass and mutation
+detection remain unmeasured. Successful execution does not establish test quality
+or skill benefit. The current arm recorded a successful target skill read; access
+evidence does not establish instruction following. The reported CLI-token cost
+estimate was $0.211091 combined; verified invoice and CI charges remain unavailable.
+That allocation is closed. No new inference or allocation is authorized.
+
+[Original artifact 13605202225](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42448389611/artifacts/13605202225)
+was authenticated against repository, source revision, workflow attempt and archive
+SHA-256 `2f67c417dfad3f04f9015ff580c75eded5223240a15e4adb83a6b886c5dbec99`.
+The permanent [retrospective corpus](codex-retrospective/42448389611/manifest.json)
+retains exact submissions and original native/public outcomes. Current submission
+SHA-256 is `d265ce3f26d8a4d3bb630927153ebc4527cd00876aed8ddec5583ec54c4a4a03`;
+absent submission SHA-256 is
+`406dac7a20ca8912bed39a2c4ad1293dc0eba405c8814ef160faef851630bce5`.
+Neither file nor its original grade may be overwritten or relabeled as measured.
+
+Review of both complete outputs identified three admission gaps together:
+ordinary `for` loops, prefix/postfix increment/decrement of permitted variables,
+and signed `long`/`Int64` primitive casts. The documented iteration and input
+conversion contract supports these operations. The distinct
+`pester-cli-pilot-external-v4` evaluator admits them generically, retaining complete
+recursive inspection of every loop component and all existing command, scope,
+protected-variable and member/index mutation restrictions. The
+[supported subset](codex-pilot-iteration.md) states the exact bounds. Shared
+production admission, reference implementations, mutants, scoring, skills, task
+requirements, dependency pins and offline verifier isolation remain unchanged.
+
+Credential-free qualification adds independent valid/failing loop controls,
+forbidden operations in every loop component, protected/member/index write
+controls, nontermination and missing-runtime controls. Existing known-good, weak,
+missing-output and admission controls remain. The unchanged submissions are copied
+through the existing oracle handoff into the same corrected independent verifier;
+no model or judge is involved. Original and retrospective records appear beside
+each other in the existing consolidated report. This correction follows output
+inspection and is **not prospectively frozen validation**. A single pair cannot
+establish general skill effectiveness, regardless of the direction of its result.
+
+The current arm's `pwsh not found` observation is investigated separately with
+before/after login-shell controls and the absolute pinned binary. A standard-path
+symlink addresses login-shell PATH reset without changing runtime bytes. Its
+qualification is separate from retrospective grading and is not skill-weakness
+evidence. Local checks passed 39 focused staging/admission/provenance tests and
+111 historical metric, analysis and reporting regressions. Existing Pester controls
+passed 24/25 locally; the fixed trusted startup check failed with CoreCLR resource
+error 0x80070008, reproduced at unchanged `633014b` on this workstation. No limits
+were weakened. Docker is unavailable locally; native execution, report consistency,
+descriptor consumption and cleanup require hosted qualification. Final commit,
+actual paired grades, PATH observations, completed checks and retained report links
+are recorded on [PR #121](https://github.com/thetechgy/agent-engineering-baseline/pull/121).
+The PR remains unmerged; production, historical mismatches and closed allocations
+are unchanged. No paid authorization carries forward to this correction.

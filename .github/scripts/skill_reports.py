@@ -919,7 +919,7 @@ def public_benchmark(workspace, root, name, mode, destination, selected=None):
             "Selected public benchmark has no configured suite")
     data = evidence.normalize_behavioral(Path(root), name, selected, workspace, native_layout=True)
     attempts = data["policy"]["attempts"]
-    qualification = data.get('custom', {}).get('purpose') in ('oracle_qualification', 'cli_pilot', 'cli_pilot_control', 'cli_pilot_probe')
+    qualification = data.get('custom', {}).get('purpose') in ('oracle_qualification', 'cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay')
     require(qualification or attempts["mode"] in (mode, "unknown") and attempts["maximum"] in (None, MODES[mode]),
             "Public benchmark mode mismatch")
     public = evidence.project(data)

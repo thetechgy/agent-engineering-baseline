@@ -1954,6 +1954,59 @@
       "fixture_digest": "sha256:9dd6c53ce8090ff3790ff2274d8067775a5605def5cc80479bf2c85ef6330060",
       "runtime_digest": "sha256:8bc76f76dd70acfada48b71926c0b8901f5c503e14a6d0dab457606bbb5c1f52",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0"
+    },
+    "pester-cli-pilot-external-v4": {
+      "id": "pester-cli-pilot-external-v4",
+      "grading": "custom_only",
+      "cases": {
+        "pester-001": {
+          "title": "Integer collection tests",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v1",
+            "powershell-pester-6.test-quality.v1"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v1": 2
+          }
+        }
+      },
+      "qualification_cases": {
+        "pester-001-classic": "pester-001",
+        "pester-001-weak": "pester-001",
+        "pester-001-missing": "pester-001",
+        "pester-001-boolean": "pester-001",
+        "pester-001-template": "pester-001",
+        "pester-001-parameter": "pester-001",
+        "pester-001-failure": "pester-001",
+        "pester-001-loop": "pester-001",
+        "pester-001-loop-failure": "pester-001",
+        "pester-001-long": "pester-001",
+        "pester-001-loop-initializer": "pester-001",
+        "pester-001-loop-condition": "pester-001",
+        "pester-001-loop-iterator": "pester-001",
+        "pester-001-loop-body": "pester-001",
+        "pester-001-loop-protected": "pester-001",
+        "pester-001-loop-member": "pester-001",
+        "pester-001-loop-index": "pester-001",
+        "pester-001-loop-timeout": "pester-001",
+        "pester-001-missing-runtime": "pester-001",
+        "pester-001-path-before": "pester-001",
+        "pester-001-path-after": "pester-001"
+      },
+      "runtime": {
+        "powershell": "7.6.9",
+        "pester": "6.2.0",
+        "codex": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "workspace_profile": "codex-pester-001-pilot-v1"
+      },
+      "skill_id": "powershell-pester-6",
+      "grader_digest": "sha256:7b79f1be0c3c812ff6dfb4d2cef95721504adba6fc519934ea5312278509d37e",
+      "fixture_digest": "sha256:9dd6c53ce8090ff3790ff2274d8067775a5605def5cc80479bf2c85ef6330060",
+      "runtime_digest": "sha256:e4883eaec6c12b2b58e9658e6e4b91a75f4d841002b331230602c681d8bfcce6",
+      "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0"
     }
   },
   "active_profiles": {

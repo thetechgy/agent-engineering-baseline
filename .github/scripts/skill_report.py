@@ -503,7 +503,7 @@ def custom_measurements(run, record):
         'this consumer does not recheck native directories. Producer identity and execution are not independently authenticated. '
         'Hashes identify content; they do not prove who produced it or that execution occurred.</p></details>',
         '<p>Purpose: ' + text(result['purpose']) + '; recorded agent: ' + code(result['agent']) + '; version ' + code(record['custom']['agent_version']) + '. ' +
-        ('Oracle fixture qualification is not model-backed skill-effectiveness evidence.' if result['purpose'] in ('oracle_qualification', 'cli_pilot_control', 'cli_pilot_probe') else
+        ('Oracle fixture qualification is not model-backed skill-effectiveness evidence.' if result['purpose'] in ('oracle_qualification', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay') else
          'Within-run differences describe supplied measurements; they do not establish causality.') + '</p>']
     parts.append('<details><summary>Task definitions and applicability</summary>' + table('Tasks and applicability', ('Case', 'Task', 'Source case', 'Applicable native metrics'),
         [[code(case['case_id']), text(case['title']), code(case['source_case_id']), ', '.join(code(k) for k in case['metrics'])]
@@ -541,7 +541,7 @@ def custom_measurements(run, record):
                 text(measurement['reason']), link('observation', (rid, obs['id']), 'Trial and evidence')])
     parts.append('<details><summary>All custom measurements and scoring bases</summary>' + table('Recorded custom measurements',
         ('Case', 'Arm', 'Attempt', 'Grader outcome', 'Metric', 'Applicability', 'Value', 'Numerator / denominator', 'Limitation', 'Evidence'), rows) + '</details>')
-    if record['custom']['profile_id'] in ('pester-cli-pilot-v1', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3'):
+    if record['custom']['profile_id'] in ('pester-cli-pilot-v1', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4'):
         parts.append(table('Pilot admission diagnostics', ('Case', 'Arm', 'Outcome', 'Admission reason'),
             [[code(obs['case_id']), safe(ARM[obs['arm']]), text(obs['custom']['outcome']),
               code(obs['custom'].get('admission_reason'))] for obs in record['observations']]))
@@ -556,6 +556,33 @@ def custom_measurements(run, record):
     return ''.join(parts)
 
 
+
+def retrospective_outcomes(record, records):
+    meta = record['custom']['retrospective']
+    original = records[meta['original_record_id']]
+    rows = []
+    for arm in ARM:
+        before = next(o for o in original['observations'] if o['arm'] == arm)
+        after = next((o for o in record['observations'] if o['arm'] == arm), None)
+        measurements = {m['metric_id']: m for m in after['custom']['measurements']} if after else {}
+        reference = measurements.get('powershell-pester-6.reference-pass.v1', {})
+        mutation = measurements.get('powershell-pester-6.mutation-detection.v1', {})
+        rows.append([safe(ARM[arm]), code(meta['submission_digests'][arm]),
+            text(before['custom']['outcome']) + ' / ' + code(before['custom']['admission_reason']),
+            'Unmeasured', text(after['custom']['outcome']) if after else 'Missing',
+            text(reference['value']) if reference.get('status') == 'measured' else 'Unavailable',
+            text(mutation['numerator']) + ' / ' + text(mutation['denominator']) if mutation.get('status') == 'measured' else 'Unavailable'])
+    return ('<p class="safety"><strong>Retrospective correction after inspection of the outputs; not prospectively frozen validation.</strong> '
+        'The exact original submissions were replayed without model inference or judges. '
+        'Original unscoreable outcomes and unmeasured correctness/mutation values remain unchanged. '
+        'Reference, mutants, scoring and isolation were preserved. The new evaluator has a distinct version. '
+        'This is not evidence of general skill effectiveness.</p>' +
+        '<p>Original live run ' + text(meta['source_run']) + '; artifact ' + text(meta['source_artifact']) +
+        '; source revision ' + code(meta['source_revision']) + '; archive ' + code(meta['source_archive_sha256']) + '.</p>' +
+        table('Original and retrospective outcomes · unchanged submissions',
+            ('Arm', 'Submission SHA-256', 'Original outcome', 'Original quality', 'Retrospective outcome', 'Reference pass', 'Mutants detected / executed'), rows))
+
+
 def behavioral(run, records):
     rid = run['record_id']; record = records[rid]
     parts = [f'<article class="run" id="{anchor("record", rid)}"><h3>Behavioral run: ' + text(run['run_id']) + '</h3>',
@@ -565,11 +592,13 @@ def behavioral(run, records):
         '<details><summary>Run identity and evaluated source</summary>' + disclosure('Exact record identity', rid) + '<p>Evaluated source: ' + text(run['source']['owner']) + ' · ' + code(run['source']['repository']) +
         ' · revision ' + code(run['source']['revision']) + '.</p></details>']
     if analysis.pilot_record(record):
-        label = 'Live CLI compatibility pilot' if record['custom']['purpose'] == 'cli_pilot' else 'Credential-free real CLI isolation qualification' if record['custom']['purpose'] == 'cli_pilot_probe' else 'Native pilot grading controls'
+        label = 'Retrospective unchanged-submission replay' if record['custom']['purpose'] == 'cli_pilot_replay' else 'Live CLI compatibility pilot' if record['custom']['purpose'] == 'cli_pilot' else 'Credential-free real CLI isolation qualification' if record['custom']['purpose'] == 'cli_pilot_probe' else 'Native pilot grading controls'
         parts.append('<p class="safety"><strong>' + label + '; excluded from production history.</strong> '
             'Producer: ' + code(record['policy']['producer_profile']) + '. '
             'Custom task and mutation measurements are separate from uncollected judge-dependent scores. '
             'One matched pair does not establish general skill effectiveness.</p>')
+        if record['custom']['purpose'] == 'cli_pilot_replay':
+            parts.append(retrospective_outcomes(record, records))
     elif 'producer_profile' in record['policy']:
         parts.append('<p class="safety"><strong>Synthetic candidate qualification; excluded from production history.</strong> '
             'Producer: ' + code(record['policy']['producer_profile']) + '; scoring policy: ' + code(record['policy']['scoring_policy']) + '. '
@@ -982,7 +1011,7 @@ def render_report(result, captured, *, reviews=None, pages_context=None, histori
         for run in skill['behavioral_results']:
             if pages_context is not None:
                 record = records[run['record_id']]
-                purpose = ('Diagnostic oracle qualification' if record.get('custom', {}).get('purpose') in ('oracle_qualification', 'cli_pilot_control', 'cli_pilot_probe') else
+                purpose = ('Diagnostic oracle qualification' if record.get('custom', {}).get('purpose') in ('oracle_qualification', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay') else
                            'Diagnostic confirmation' if record['policy']['attempts']['mode'] == 'confirmation' else 'Standard behavioral evidence')
                 add('<p><strong>' + purpose + '</strong></p>')
             add(behavioral(run, records))

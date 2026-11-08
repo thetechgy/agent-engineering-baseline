@@ -62,8 +62,9 @@ def coverage_label(skill):
     labels = {'cli_pilot': 'Bounded live CLI compatibility pilot',
               'cli_pilot_control': 'Credential-free pilot grading controls',
               'cli_pilot_probe': 'Credential-free real CLI isolation qualification',
+              'cli_pilot_replay': 'Retrospective unchanged-submission replay after output inspection',
               'oracle_qualification': 'Oracle qualification', 'benchmark': 'Model-backed custom evidence'}
-    if purposes & {'cli_pilot', 'cli_pilot_control', 'cli_pilot_probe'}:
+    if purposes & {'cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay'}:
         return ' · '.join(labels[purpose] for purpose in sorted(purposes))
     if any('producer_profile' in run['policy'] for run in skill['behavioral_results']):
         return 'Includes synthetic candidate qualification; candidate quality unavailable'
@@ -245,7 +246,7 @@ class ValidatedRecords:
 
 
 def pilot_record(record):
-    return record.get('custom', {}).get('profile_id') in ('pester-cli-pilot-v1', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3') and record['custom']['purpose'] in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe')
+    return record.get('custom', {}).get('profile_id') in ('pester-cli-pilot-v1', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4') and record['custom']['purpose'] in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay')
 
 
 def measured(record):
@@ -284,6 +285,17 @@ def check_records(records):
                 require(key not in claims, 'Conflicting public report claims')
                 claims[key] = record_id
         evidence.reports.public_strings(record)
+    for record in records.values():
+        custom = record.get('custom', {})
+        if custom.get('purpose') == 'cli_pilot_replay':
+            original = records.get(custom['retrospective']['original_record_id'])
+            require(original is not None and original.get('custom', {}).get('purpose') == 'cli_pilot'
+                    and original['custom']['profile_id'] == 'pester-cli-pilot-external-v3'
+                    and original['custom']['capture_digest'] == custom['retrospective']['original_capture_digest'],
+                    'Retrospective source report is missing or inconsistent')
+            require(all(o['custom']['outcome'] == 'unsupported' and o['custom']['admission_reason'] == 'ast_kind'
+                        and o['score'] is None and all(m['value'] is None for m in o['custom']['measurements'])
+                        for o in original['observations']), 'Original unmeasured outcomes changed')
     require(reports <= MAX_REPORTS, 'Analysis report limit')
     require(len(names) <= MAX_SKILLS, 'Analysis skill limit')
 

@@ -10,7 +10,8 @@ import shutil
 import subprocess
 import sys
 
-from codex_pilot_contract import PROFILE as P, ROOT, runner_bytes, grader_bytes, runtime_installer_bytes
+from codex_pilot_contract import PROFILE as P, ROOT, grader_bytes, runtime_installer_bytes
+from codex_pilot_iteration import runner_bytes, PATH_LINK, CONTROLS as ITERATION_CONTROLS, control_payload
 import evaluator_profiles as profiles
 import pester_evaluations as pester
 import skill_evidence as evidence
@@ -19,7 +20,7 @@ import skill_reports as reports
 ARMS = ('with_skill', 'without_skill')
 CONTROLS = {'classic': 'passed', 'weak': 'failed', 'missing': 'invalid',
             'boolean': 'passed', 'template': 'unsupported', 'parameter': 'unsupported',
-            'failure': 'failed'}
+            'failure': 'failed', **ITERATION_CONTROLS}
 
 
 def sha(path):
@@ -56,7 +57,14 @@ def deploy(root):
     return deployed
 
 
-def stage(root, *, controls=False, probe=False):
+def stage(root, *, controls=False, probe=False, replay=None, submissions=None):
+    oracle = controls or replay is not None
+    if replay is not None:
+        from codex_pilot_replay import validate_retrospective, SUBMISSIONS
+        validate_retrospective(replay)
+        if controls or probe or set(submissions or {}) != set(ARMS) or any(
+                hashlib.sha256(submissions[arm]).hexdigest() != SUBMISSIONS[arm] for arm in ARMS):
+            raise ValueError('Replay mode or exact submission identity mismatch')
     from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks
     deployed = deploy(root)
     bundle = pester.stage(ROOT, root / 'bundle' / P['skill'])
@@ -94,9 +102,18 @@ def stage(root, *, controls=False, probe=False):
             (task / 'tests/docker-compose.yaml').write_text('services:\n  main:\n    network_mode: none\n')
             config = task / 'task.toml'
             config.write_text(config.read_text().replace('timeout_sec = 300.0', f'timeout_sec = {P["agent_seconds"]}.0')
-                .replace('[agent]\n', '[agent]\nnetwork_mode = \"allowlist\"\nallowed_hosts = [\"api.openai.com\"]\n' if not controls else '[agent]\n')
-                .replace('network_mode = \"public\"', 'network_mode = \"allowlist\"\nallowed_hosts = [\"api.openai.com\"]' if not controls else 'network_mode = \"public\"'))
-            if not controls:
+                .replace('[agent]\n', '[agent]\nnetwork_mode = \"allowlist\"\nallowed_hosts = [\"api.openai.com\"]\n' if not oracle else '[agent]\n')
+                .replace('network_mode = \"public\"', 'network_mode = \"allowlist\"\nallowed_hosts = [\"api.openai.com\"]' if not oracle else 'network_mode = \"public\"'))
+            # A standard-path alias survives login-shell PATH reset. It changes
+            # no executable bytes and is omitted only in the explicit baseline control.
+            control = task.name.removeprefix(case + '-') if controls else None
+            if control != 'path-before':
+                with (task / 'environment/Dockerfile').open('a') as dockerfile:
+                    dockerfile.write(PATH_LINK)
+            if control == 'missing-runtime':
+                with (task / 'tests/Dockerfile').open('a') as dockerfile:
+                    dockerfile.write('RUN rm -- /opt/microsoft/powershell/7/pwsh\n')
+            if not oracle:
                 (task / 'environment/docker-compose.yaml').write_text(
                     'services:\n  main:\n    cap_drop: [ALL]\n    security_opt: [no-new-privileges:true]\n    pids_limit: 256\n')
                 for name in ('codex_pilot_stub.py', 'codex_pilot_probe.py'):
@@ -107,7 +124,7 @@ def stage(root, *, controls=False, probe=False):
                     raise ValueError('Native staging differs from APM deployment')
             elif skill.exists():
                 raise ValueError('Absent-arm skill contamination')
-            if not controls:
+            if not oracle:
                 # Verified artifacts are embedded before entering the protected job.
                 with (task / 'environment/Dockerfile').open('a') as dockerfile:
                     dockerfile.write('RUN mkdir /opt/codex && curl --fail --location --silent --show-error '
@@ -125,38 +142,57 @@ def stage(root, *, controls=False, probe=False):
                         'chown agent:agent /home/agent/.codex-pilot && chmod 700 /home/agent/.codex-pilot\n'
                         'USER agent\n')
             else:
-                control = task.name.removeprefix(case + '-')
+                control = task.name.removeprefix(case + '-') if controls else 'retained-submission'
                 fixtures = ROOT / pester.OVERLAY / 'support/qualification' / case
                 good = (fixtures / 'classic.Tests.ps1').read_bytes()
                 payload = {'classic': good, 'weak': (fixtures / 'weak.Tests.ps1').read_bytes(),
                     'boolean': good + b"\nDescribe 'Boolean assertions' { It 'supports true and false' { $true | Should -BeTrue; $false | Should -BeFalse } }\n",
                     'template': b"Describe 'reject <$(1)>' { It 'checks' { 1 | Should -Be 1 } }\n",
                     'parameter': b"Describe 'reject' { It 'checks' { 1 | Should -Be 2 -ErrorAction SilentlyContinue } }\n",
-                    'failure': b"Describe 'failure' { It 'fails' { 1 | Should -Be 2 } }\n", 'missing': b''}[control]
+                    'failure': b"Describe 'failure' { It 'fails' { 1 | Should -Be 2 } }\n", 'missing': b''}
+                payload = submissions[arm] if replay is not None else payload[control] if control in payload else control_payload(control, good)
                 solution = task / 'solution'; solution.mkdir()
                 (solution / 'candidate').write_bytes(payload)
-                (solution / 'solve.sh').write_text('#!/bin/sh\nset -eu\ntest ! -e /tests\n' +
+                path_check = path_probe_command(control) if control in ('path-before', 'path-after') else ''
+                (solution / 'solve.sh').write_text('#!/bin/sh\nset -eu\ntest ! -e /tests\n' + path_check +
                     ('test ! -e /workspace/output/Subject.Tests.ps1\n' if control == 'missing' else
                      'cp /solution/candidate /workspace/output/Subject.Tests.ps1\n' + producer_receipt_command() + '\n'))
         captured.extend(evidence.capture_custom_tasks(ROOT, P['skill'], tasks[arm], arm,
-                        purpose='cli_pilot_control' if controls else 'cli_pilot_probe' if probe else 'cli_pilot'))
+                        purpose='cli_pilot_replay' if replay is not None else 'cli_pilot_control' if controls else 'cli_pilot_probe' if probe else 'cli_pilot'))
     from codex_pilot_descriptors import retain_descriptors
     retain_descriptors(root / 'evidence', tasks, captured)
     return bundle, tasks, captured
 
 
-def command(root, arm, *, controls=False):
+def command(root, arm, *, controls=False, replay=False):
+    oracle = controls or replay
     from skillevaluator.tier3.harbor.runner import build_harbor_run_command
-    cmd = build_harbor_run_command(agent='oracle' if controls else 'codex', env_mode='docker',
+    cmd = build_harbor_run_command(agent='oracle' if oracle else 'codex', env_mode='docker',
         dataset_path=root / 'tasks' / arm, job_name=f"{P['skill']}-codex-{'with' if arm == 'with_skill' else 'without'}",
         jobs_dir=root / 'jobs', n_attempts=1, n_concurrent=2, timeout_multiplier=1.0,
-        model=None if controls else P['model'], agent_import_path=None if controls else 'codex_pilot_agent:PilotCodex')
-    if not controls:
+        model=None if oracle else P['model'], agent_import_path=None if oracle else 'codex_pilot_agent:PilotCodex')
+    if not oracle:
         index = next(i for i, value in enumerate(cmd) if value.startswith('version='))
         cmd[index] = 'version=' + json.dumps(P['cli'])
         cmd[cmd.index('--env') + 1] = 'codex_pilot_environment:PilotEnvironment'
     cmd += ['--max-retries', '0']
     return cmd
+
+
+
+def path_probe_command(control):
+    # Constant commands in the actual agent login shell; no submitted code runs.
+    code = ("import json,os,subprocess; from pathlib import Path; "
+        "lookup=subprocess.run(['/bin/sh','-lc','command -v pwsh'],capture_output=True,text=True); "
+        "absolute=subprocess.run(['/opt/microsoft/powershell/7/pwsh','-NoLogo','-NoProfile','-NonInteractive','-Command','$PSVersionTable.PSVersion.ToString()'],capture_output=True,text=True); "
+        "v={'control':" + repr(control) + ", 'uid':os.geteuid(), 'login_shell_found':lookup.returncode==0, 'lookup_returncode':lookup.returncode, "
+        "'resolved_path':lookup.stdout.strip(), 'absolute_returncode':absolute.returncode, 'powershell':absolute.stdout.strip()}; "
+        "Path('/logs/agent/path-observation.json').write_text(json.dumps(v)); "
+        "assert absolute.returncode==0 and absolute.stdout.strip()=='7.6.9'; "
+        "assert (lookup.returncode==0)==" + repr(control == 'path-after') + "; "
+        "assert lookup.returncode!=0 or lookup.stdout.strip()=='/usr/local/bin/pwsh'")
+    import shlex
+    return 'python3 -c ' + shlex.quote(code) + '\n'
 
 
 def producer_receipt_command():
@@ -218,7 +254,7 @@ def validate_probe_requests(root, artifact, scenario):
     return probes
 
 
-def retain(root, artifact):
+def retain(root, artifact, *, replay=False):
     """Retain exact safe submissions before collection/redaction/cleanup boundaries."""
     from skillevaluator.utils.redaction import redact_sensitive_text
     records = []
@@ -262,7 +298,11 @@ def retain(root, artifact):
             cost = (((i-c)*2+c*.1)*prefill+o*10*sample)/1_000_000
         usage.append({'trial': value['trial_name'], **counts, 'estimated_usd': cost,
                       'billing': 'stub protocol; no model usage or billing' if os.environ.get('AEB_PILOT_PROBE') == '1' else 'provider-reported tokens; estimate, not invoice'})
+    if replay:
+        for row in usage:
+            row['billing'] = 'credential-free retained-submission replay; no model inference'
     reports.write_json(artifact / 'usage.json', usage)
+    reports.write_json(artifact / 'path-observations.json', [reports.read_json(p) for p in sorted((root / 'jobs').rglob('path-observation.json'))])
     events = []
     for path in sorted((root / 'jobs').rglob('codex.txt')):
         for line in evidence.read_bytes(path, limit=16*1024*1024).splitlines():
@@ -277,22 +317,22 @@ def retain(root, artifact):
     return usage
 
 
-def collect(root, artifact, bundle, captured, *, controls=False, probe=False):
+def collect(root, artifact, bundle, captured, *, controls=False, probe=False, replay=None, original_public=None):
     from skillevaluator.tier3.harbor.collector import collect_harbor_results
     ids = sorted({row['case_id'] for row in captured})
-    raw = root / 'raw'; run = raw / 'results' / P['skill'] / ('pilot-controls' if controls else 'live-pilot')
+    raw = root / 'raw'; run = raw / 'results' / P['skill'] / ('retrospective-replay' if replay is not None else 'pilot-controls' if controls else 'cli-probe' if probe else 'live-pilot')
     collected = collect_harbor_results(P['skill'], ['codex'], run, root / 'jobs',
         expected_cases=len(ids), expected_case_ids=ids, expected_trials=len(ids),
-        agent_models={'codex': {'model': 'credential-free-oracle' if controls else P['model'], 'source': P['id']}})
-    purpose = 'cli_pilot_control' if controls else 'cli_pilot_probe' if probe else 'cli_pilot'
+        agent_models={'codex': {'model': 'credential-free-oracle' if controls or replay is not None else P['model'], 'source': P['id']}})
+    purpose = 'cli_pilot_replay' if replay is not None else 'cli_pilot_control' if controls else 'cli_pilot_probe' if probe else 'cli_pilot'
     capture = evidence.custom_capture(ROOT, P['skill'], bundle, captured, purpose=purpose, attempts=1,
-        agent='oracle' if controls else 'codex', execution_policy={'environment': 'docker',
+        agent='oracle' if controls or replay is not None else 'codex', retrospective=replay, execution_policy={'environment': 'docker',
         'concurrency': 2, 'timeout_multiplier': 1.0, 'stop_on_pass': False})
     reports.write_json(raw / evidence.CUSTOM_CAPTURE, capture)
     config = {'grading': {'mode': 'custom_only'}, 'judge': {'enabled': False},
-        'provider': {'name': 'fixture' if controls else 'openai', 'model': 'credential-free-oracle' if controls else P['model']},
+        'provider': {'name': 'fixture' if controls or replay is not None else 'openai', 'model': 'credential-free-oracle' if controls or replay is not None else P['model']},
         'harbor': {'n_attempts': 1, 'stop_on_pass': False}}
-    if controls or probe: config['qualification'] = {'producer': 'cli_probe' if probe else 'oracle', 'inference': False}
+    if controls or probe or replay is not None: config['qualification'] = {'producer': 'retained_submission_replay' if replay is not None else 'cli_probe' if probe else 'oracle', 'inference': False}
     reports.write_json(run / 'run_config.json', config)
     stages = reports.read_json(artifact / 'command-stages.json')
     status = 'complete' if len(stages) == 2 and all(s.get('returncode') == 0 for s in stages) else 'incomplete'
@@ -307,11 +347,12 @@ def collect(root, artifact, bundle, captured, *, controls=False, probe=False):
     import skill_report as report
     public = artifact / 'public'
     reports.public_benchmark(ROOT, native, P['skill'], 'confirmation', public)
-    captured_inputs = analysis.capture_inputs([public])
+    report_inputs = [public, original_public] if replay is not None else [public]
+    captured_inputs = analysis.capture_inputs(report_inputs)
     value = analysis.validate_analysis(None, captured_inputs)
     reports.write_json(artifact / 'analysis/analysis.json', value)
-    report.generate([public], artifact / 'analysis/analysis.json', artifact / 'consolidated')
-    observations = [row for record in captured_inputs.records.values() if record['kind'] == 'behavioral' for row in record['observations']]
+    report.generate(report_inputs, artifact / 'analysis/analysis.json', artifact / 'consolidated')
+    observations = [row for record in captured_inputs.records.values() if record['kind'] == 'behavioral' and (replay is None or record['custom']['purpose'] == 'cli_pilot_replay') for row in record['observations']]
     reports.write_json(artifact / 'outcomes.json', observations)
     if controls:
         rewards = list(run.rglob('reward.json'))
@@ -350,6 +391,25 @@ def check_preparation(reference, artifact):
                         'Preparation descriptor cohort mismatch')
         if not controls:
             compare_descriptors(probe, directory)
+    retrospective = reference / 'pilot-retrospective/evidence'
+    ready = reports.read_json(retrospective / 'readiness.json')
+    clean = reports.read_json(retrospective / 'cleanup.json')
+    checked = reports.read_json(retrospective / 'replay-check.json')
+    from codex_pilot_replay import validate_retrospective, verify_original_copy, SUBMISSIONS
+    verify_original_copy(retrospective / 'original')
+    validate_retrospective(checked.get('retrospective'))
+    reports.require(ready.get('revision') == revision and ready.get('inference') is False
+                    and ready.get('complete') is True and clean == {'complete': True, 'unlaunched_arms': []}
+                    and checked.get('complete') is True and checked.get('inference') is False
+                    and checked.get('originals_preserved') is True, 'Incomplete retrospective qualification')
+    reports.require(set(verified_configurations(retrospective)) == {(arm, P['case']) for arm in ARMS},
+                    'Retrospective descriptor cohort mismatch')
+    retained = reports.read_json(retrospective / 'submissions.json')
+    actual = {('with_skill' if '/powershell-pester-6-codex-with/' in '/' + row['member'] else 'without_skill'): row for row in retained}
+    reports.require(set(actual) == set(ARMS) and len(retained) == 2, 'Retrospective submission coverage mismatch')
+    for arm, row in actual.items():
+        reports.require(row['sha256'] == SUBMISSIONS[arm] and sha(retrospective / row['member']) == row['sha256'],
+                        'Retrospective output bytes changed')
     comparison = compare_descriptors(probe, artifact)
     def members(directory):
         return {(row['arm'], row['case_id']): {
@@ -365,28 +425,28 @@ def check_preparation(reference, artifact):
     return result
 
 
-def run(root, *, controls=False, probe=False, preparation=None):
-    if not (controls or probe) and preparation is None:
+def run(root, *, controls=False, probe=False, preparation=None, replay=None, submissions=None, original_public=None):
+    if not (controls or probe or replay is not None) and preparation is None:
         raise ValueError('Authenticated preparation evidence required before live execution')
-    artifact = root / 'evidence'; artifact.mkdir()
+    artifact = root / 'evidence'; artifact.mkdir(exist_ok=replay is not None)
     profiles.runtime(profiles.candidate_versions(), owning=True)
-    if controls or probe:
+    if controls or probe or replay is not None:
         if any(os.environ.get(k) for k in ('OPENAI_API_KEY','ANTHROPIC_API_KEY','NVIDIA_API_KEY')):
             raise ValueError('Credential-free preparation received credentials')
     before = resources(); stages = []; collected = False
-    bundle, tasks, captured = stage(root, controls=controls, probe=probe)
+    bundle, tasks, captured = stage(root, controls=controls, probe=probe, replay=replay, submissions=submissions)
     reports.write_json(artifact / 'staging.json', captured)
     shutil.copyfile(root / 'workspace-profile.json', artifact / 'workspace-profile.json')
     if probe: os.environ['AEB_PILOT_PROBE'] = '1'
     try:
-        if not (controls or probe):
+        if not (controls or probe or replay is not None):
             check_preparation(preparation, artifact)
         for arm in ARMS:
-            stage_record = {'arm': arm, 'stage': 'native_control' if controls else 'external_cli_probe' if probe else 'live_cli', 'status': 'running'}
+            stage_record = {'arm': arm, 'stage': 'retained_submission_replay' if replay is not None else 'native_control' if controls else 'external_cli_probe' if probe else 'live_cli', 'status': 'running'}
             stages.append(stage_record); reports.write_json(artifact / 'command-stages.json', stages)
             environment = {k:v for k,v in os.environ.items() if not k.startswith(('CODEX_', 'ANTHROPIC_', 'NVIDIA_', 'SKILL_EVAL_'))}
             environment.update(PYTHONPATH=str(ROOT / '.github/scripts'), PYTHON_DOTENV_DISABLED='1', HARBOR_TELEMETRY='0')
-            cmd = command(root, arm, controls=controls)
+            cmd = command(root, arm, controls=controls, replay=replay is not None)
             from qualify_evaluator_candidate import run_native
             with (root / 'command.log').open('w') as log:
                 code = run_native(cmd, env=environment, log=log, timeout=1800 if controls else 1200)
@@ -400,8 +460,8 @@ def run(root, *, controls=False, probe=False, preparation=None):
             diagnostic = diagnostic.replace(str(root), '<pilot>').replace(str(ROOT), '<checkout>')
             (artifact / (arm + '-diagnostics.txt')).write_text(diagnostic)
             reports.write_json(artifact / 'command-stages.json', stages)
-            usage = retain(root, artifact)
-            if not probe and not controls:
+            usage = retain(root, artifact, replay=replay is not None)
+            if not probe and not controls and replay is None:
                 audits = reports.read_json(artifact / 'runtime-audits.json')
                 if code or len(audits) != ARMS.index(arm) + 1 or any(a.get('returncode') != 0 or a.get('cleanup') != 'complete' for a in audits):
                     raise RuntimeError('Infrastructure failure; remaining arm not launched')
@@ -411,9 +471,16 @@ def run(root, *, controls=False, probe=False, preparation=None):
                     raise RuntimeError('Usage unavailable; remaining allocation cannot be verified')
                 if sum(row['estimated_usd'] for row in usage) >= P['stop_estimate_usd']:
                     raise RuntimeError('Spending stop threshold reached; remaining arm not launched')
+        if replay is not None:
+            from codex_pilot_replay import SUBMISSIONS
+            retained = reports.read_json(artifact / 'submissions.json')
+            expected = {arm: SUBMISSIONS[arm] for arm in ARMS}
+            actual = {('with_skill' if '/powershell-pester-6-codex-with/' in '/' + r['member'] else 'without_skill'): r['sha256'] for r in retained}
+            if len(retained) != 2 or actual != expected:
+                raise ValueError('Replay output handoff differs from immutable originals')
         scenario = os.environ.get('AEB_PILOT_SCENARIO', 'success')
         if not probe or scenario == 'success':
-            collect(root, artifact, bundle, captured, controls=controls, probe=probe)
+            collect(root, artifact, bundle, captured, controls=controls, probe=probe, replay=replay, original_public=original_public)
             collected = True
         if probe:
             probes = validate_probe_requests(root, artifact, scenario)
@@ -469,7 +536,7 @@ def run(root, *, controls=False, probe=False, preparation=None):
             retain_probe_records(root, artifact)
         if not probe and stages and not collected:
             try:
-                collect(root, artifact, bundle, captured, controls=controls)
+                collect(root, artifact, bundle, captured, controls=controls, replay=replay, original_public=original_public)
             except Exception as error:
                 reports.write_json(artifact / 'collection-failure.json', {'stage': 'recovery', 'error': type(error).__name__})
         images = subprocess.check_output(['docker', 'image', 'ls', '--digests', '--no-trunc', '--format', '{{json .}}'], text=True, timeout=15)
@@ -478,7 +545,7 @@ def run(root, *, controls=False, probe=False, preparation=None):
         reports.write_json(artifact / 'cleanup.json', {'complete': clean, 'unlaunched_arms': [arm for arm in ARMS if arm not in {s['arm'] for s in stages}]})
         if not clean: raise RuntimeError('Pilot resource cleanup incomplete')
     reports.write_json(artifact / 'readiness.json', {'id': P['id'], 'revision': subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
-        'inference': not (controls or probe), 'controls': controls, 'probe': probe, 'complete': True})
+        'inference': not (controls or probe or replay is not None), 'controls': controls, 'probe': probe, 'complete': True})
 
 
 def consolidated(root):
@@ -486,6 +553,7 @@ def consolidated(root):
     import skill_analysis as analysis
     import skill_report as report
     inputs = [root.parent / name / 'evidence/public' for name in ('pilot-probe', 'pilot-controls')]
+    inputs += [root.parent / 'pilot-retrospective/evidence' / member for member in ('public', 'original-public')]
     inputs = [path for path in inputs if path.is_dir()]
     if not inputs:
         raise ValueError('No qualified public reporting inputs')
@@ -496,6 +564,7 @@ def consolidated(root):
                 root.parent / 'pilot-controls/evidence/readiness.json']
     required += [root.parent / 'pilot-probe' / name / 'evidence/readiness.json'
                  for name in ('command-failure', 'interruption')]
+    required.append(root.parent / 'pilot-retrospective/evidence/replay-check.json')
     reports.write_json(root / 'evidence/qualification.json', {
         'execution_policy': P['execution_policy'], 'inference': False,
         'complete': all(path.is_file() and reports.read_json(path).get('complete') is True for path in required),

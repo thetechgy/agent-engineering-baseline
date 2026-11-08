@@ -15,7 +15,8 @@ from unittest.mock import AsyncMock, patch
 CANDIDATE_RUNTIME = bool(importlib.util.find_spec('skillevaluator')) and importlib.metadata.version('skillevaluator') == '0.8.0'
 ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/'.github/scripts'))
-from codex_pilot_contract import PROFILE, configuration, runner_bytes
+from codex_pilot_contract import PROFILE, configuration
+from codex_pilot_iteration import runner_bytes
 import codex_pilot as pilot
 import codex_pilot_descriptors as descriptors
 import skill_reports as reports
@@ -110,7 +111,7 @@ class PilotContracts(unittest.TestCase):
                     original=next(t for t in tasks[row['arm']] if t.name==row['case_id'])/'task.toml'
                     self.assertEqual(retained_file.read_bytes(),original.read_bytes())
                 purpose='cli_pilot_control' if controls else 'cli_pilot'
-                self.assertEqual(len(rows),14 if controls else 2)
+                self.assertEqual(len(rows),2 * len(pilot.CONTROLS) if controls else 2)
                 if not controls:
                     for arm_tasks in tasks.values():
                         config = tomllib.loads((arm_tasks[0] / 'task.toml').read_text())
@@ -133,8 +134,10 @@ class PilotContracts(unittest.TestCase):
     @unittest.skipUnless(os.environ.get('APM_EXECUTABLE') and CANDIDATE_RUNTIME, 'Requires verified APM and owning runtime')
     def test_live_and_probe_images_match_without_baked_qualification_solution(self):
         import base64
-        fixture=(ROOT/'.github/evals/powershell-pester-6/support/qualification/pester-001/classic.Tests.ps1').read_bytes()
-        encoded=base64.b64encode(fixture)
+        from codex_pilot_replay import corpus
+        _, _, submissions, _ = corpus()
+        fixtures=[(ROOT/'.github/evals/powershell-pester-6/support/qualification/pester-001/classic.Tests.ps1').read_bytes(), *submissions.values()]
+        forbidden=fixtures+[base64.b64encode(raw) for raw in fixtures]
         with tempfile.TemporaryDirectory() as d:
             root=Path(d);images=[]
             for probe in (False,True):
@@ -145,7 +148,7 @@ class PilotContracts(unittest.TestCase):
                     environment=arm_tasks[0]/'environment'
                     for path in reports.regular_tree(environment):
                         raw=path.read_bytes()
-                        if fixture in raw or encoded in raw:
+                        if any(value in raw for value in forbidden):
                             self.fail('Qualification solution leaked into agent build context: '+path.relative_to(environment).as_posix())
                     manifests[arm]=pilot.pester.manifest(environment)
                 images.append(manifests)
@@ -216,6 +219,23 @@ class PilotContracts(unittest.TestCase):
                 reports.write_json(artifact/'readiness.json',{'id':PROFILE['id'],'revision':revision,
                     'complete':True,'inference':False,'probe':not controls,'controls':controls})
                 reports.write_json(artifact/'cleanup.json',{'complete':True,'unlaunched_arms':[]})
+            from codex_pilot_replay import corpus, retrospective_metadata
+            original, _, submissions, _ = corpus()
+            replay=reference/'pilot-retrospective';replay.mkdir()
+            _, _, rows=pilot.stage(replay,replay=retrospective_metadata(),submissions=submissions)
+            artifact=replay/'evidence'
+            reports.write_json(artifact/'staging.json',rows)
+            reports.write_json(artifact/'readiness.json',{'revision':revision,'complete':True,'inference':False})
+            reports.write_json(artifact/'cleanup.json',{'complete':True,'unlaunched_arms':[]})
+            reports.write_json(artifact/'replay-check.json',{'complete':True,'inference':False,
+                'originals_preserved':True,'retrospective':retrospective_metadata()})
+            shutil.copytree(original,artifact/'original')
+            retained=[]
+            for arm, raw in submissions.items():
+                member='submissions/powershell-pester-6-codex-'+('with' if arm=='with_skill' else 'without')+'/Subject.Tests.ps1'
+                path=artifact/member;path.parent.mkdir(parents=True);path.write_bytes(raw)
+                retained.append({'member':member,'sha256':pilot.sha(path)})
+            reports.write_json(artifact/'submissions.json',retained)
             probe=reference/'pilot-probe/evidence'
             for scenario in ('command-failure','interruption'):
                 shutil.copytree(probe,reference/scenario)

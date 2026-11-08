@@ -1,0 +1,240 @@
+[
+  {
+    "arm": "with_skill",
+    "attempt": null,
+    "case_id": "pester-001",
+    "custom": {
+      "admission_reason": "ast_kind",
+      "measurements": [
+        {
+          "applicability": "applicable",
+          "denominator": null,
+          "metric_id": "powershell-pester-6.mutation-detection.v1",
+          "numerator": null,
+          "reason": "unsupported",
+          "references": [
+            "sha256:f958938257f4271ba87eabce31dc060bdfe1a33c0a76d6e89bfced4e87a17ebb",
+            "sha256:6c2e9abe4cd7f3d68018012c3d5874dccc5182e55d13f84ae44d3aaaaa3cc554",
+            "sha256:cb3f6e6a75fac73234448ab81d0ab88a5b51f4df089feb4c6d199a8d60ce809b",
+            "sha256:520d303e9d814685137d4a7ef42dd45335d52eb9d4bd249712bbd977b098dfa9"
+          ],
+          "status": "unavailable",
+          "value": null
+        },
+        {
+          "applicability": "applicable",
+          "denominator": null,
+          "metric_id": "powershell-pester-6.reference-pass.v1",
+          "numerator": null,
+          "reason": "unsupported",
+          "references": [
+            "sha256:f958938257f4271ba87eabce31dc060bdfe1a33c0a76d6e89bfced4e87a17ebb",
+            "sha256:6c2e9abe4cd7f3d68018012c3d5874dccc5182e55d13f84ae44d3aaaaa3cc554",
+            "sha256:cb3f6e6a75fac73234448ab81d0ab88a5b51f4df089feb4c6d199a8d60ce809b",
+            "sha256:520d303e9d814685137d4a7ef42dd45335d52eb9d4bd249712bbd977b098dfa9"
+          ],
+          "status": "unavailable",
+          "value": null
+        },
+        {
+          "applicability": "applicable",
+          "denominator": null,
+          "metric_id": "powershell-pester-6.test-quality.v1",
+          "numerator": null,
+          "reason": "unsupported",
+          "references": [
+            "sha256:f958938257f4271ba87eabce31dc060bdfe1a33c0a76d6e89bfced4e87a17ebb",
+            "sha256:6c2e9abe4cd7f3d68018012c3d5874dccc5182e55d13f84ae44d3aaaaa3cc554",
+            "sha256:cb3f6e6a75fac73234448ab81d0ab88a5b51f4df089feb4c6d199a8d60ce809b",
+            "sha256:520d303e9d814685137d4a7ef42dd45335d52eb9d4bd249712bbd977b098dfa9"
+          ],
+          "status": "unavailable",
+          "value": null
+        }
+      ],
+      "outcome": "unsupported",
+      "references": [
+        "sha256:f958938257f4271ba87eabce31dc060bdfe1a33c0a76d6e89bfced4e87a17ebb",
+        "sha256:6c2e9abe4cd7f3d68018012c3d5874dccc5182e55d13f84ae44d3aaaaa3cc554",
+        "sha256:cb3f6e6a75fac73234448ab81d0ab88a5b51f4df089feb4c6d199a8d60ce809b",
+        "sha256:520d303e9d814685137d4a7ef42dd45335d52eb9d4bd249712bbd977b098dfa9"
+      ],
+      "usage": {
+        "agent_execution_seconds": 47.599829,
+        "n_cache_tokens": 115525,
+        "n_input_tokens": 141822,
+        "n_output_tokens": 3635,
+        "verifier_seconds": 25.706611
+      }
+    },
+    "deterministic_gate": null,
+    "deterministic_scores": {
+      "activation": null,
+      "authorization": null,
+      "commands": null,
+      "efficiency": null,
+      "evidence": null,
+      "gate": null,
+      "recovery": null,
+      "task": null
+    },
+    "id": "sha256:006dc8ce79fb89f57e27dbf671ccdc7d0165f27fd3576fbd31673a5a1a5fb44f",
+    "raw_deterministic_scores": {
+      "activation": null,
+      "authorization": null,
+      "commands": null,
+      "efficiency": null,
+      "evidence": null,
+      "gate": null,
+      "recovery": null,
+      "task": null
+    },
+    "raw_scores": {
+      "accuracy": null,
+      "behavior_check": null,
+      "custom": null,
+      "goal_accuracy": null,
+      "overall": 0.0,
+      "security": null,
+      "skill_efficiency": null,
+      "skill_execution": null
+    },
+    "references": [
+      "sha256:f958938257f4271ba87eabce31dc060bdfe1a33c0a76d6e89bfced4e87a17ebb",
+      "sha256:6c2e9abe4cd7f3d68018012c3d5874dccc5182e55d13f84ae44d3aaaaa3cc554",
+      "sha256:cb3f6e6a75fac73234448ab81d0ab88a5b51f4df089feb4c6d199a8d60ce809b",
+      "sha256:520d303e9d814685137d4a7ef42dd45335d52eb9d4bd249712bbd977b098dfa9"
+    ],
+    "rubric_pass": null,
+    "score": null,
+    "scores": {
+      "accuracy": null,
+      "behavior_check": null,
+      "custom": null,
+      "goal_accuracy": null,
+      "overall": null,
+      "security": null,
+      "skill_efficiency": null,
+      "skill_execution": null
+    }
+  },
+  {
+    "arm": "without_skill",
+    "attempt": null,
+    "case_id": "pester-001",
+    "custom": {
+      "admission_reason": "ast_kind",
+      "measurements": [
+        {
+          "applicability": "applicable",
+          "denominator": null,
+          "metric_id": "powershell-pester-6.mutation-detection.v1",
+          "numerator": null,
+          "reason": "unsupported",
+          "references": [
+            "sha256:e2c1bc6e9f6842507a31068d9bb0543710c3f194ccd86148d16c010a99721e9e",
+            "sha256:99e4e027aa1a2f917aed1508bd8e9815b470251c20daad6465806ac4ae6e86e9",
+            "sha256:cb3f6e6a75fac73234448ab81d0ab88a5b51f4df089feb4c6d199a8d60ce809b",
+            "sha256:265c65321a334bf9eef0dd938a1cd1c9e3fb146eb89562645d88b153c1310b7f"
+          ],
+          "status": "unavailable",
+          "value": null
+        },
+        {
+          "applicability": "applicable",
+          "denominator": null,
+          "metric_id": "powershell-pester-6.reference-pass.v1",
+          "numerator": null,
+          "reason": "unsupported",
+          "references": [
+            "sha256:e2c1bc6e9f6842507a31068d9bb0543710c3f194ccd86148d16c010a99721e9e",
+            "sha256:99e4e027aa1a2f917aed1508bd8e9815b470251c20daad6465806ac4ae6e86e9",
+            "sha256:cb3f6e6a75fac73234448ab81d0ab88a5b51f4df089feb4c6d199a8d60ce809b",
+            "sha256:265c65321a334bf9eef0dd938a1cd1c9e3fb146eb89562645d88b153c1310b7f"
+          ],
+          "status": "unavailable",
+          "value": null
+        },
+        {
+          "applicability": "applicable",
+          "denominator": null,
+          "metric_id": "powershell-pester-6.test-quality.v1",
+          "numerator": null,
+          "reason": "unsupported",
+          "references": [
+            "sha256:e2c1bc6e9f6842507a31068d9bb0543710c3f194ccd86148d16c010a99721e9e",
+            "sha256:99e4e027aa1a2f917aed1508bd8e9815b470251c20daad6465806ac4ae6e86e9",
+            "sha256:cb3f6e6a75fac73234448ab81d0ab88a5b51f4df089feb4c6d199a8d60ce809b",
+            "sha256:265c65321a334bf9eef0dd938a1cd1c9e3fb146eb89562645d88b153c1310b7f"
+          ],
+          "status": "unavailable",
+          "value": null
+        }
+      ],
+      "outcome": "unsupported",
+      "references": [
+        "sha256:e2c1bc6e9f6842507a31068d9bb0543710c3f194ccd86148d16c010a99721e9e",
+        "sha256:99e4e027aa1a2f917aed1508bd8e9815b470251c20daad6465806ac4ae6e86e9",
+        "sha256:cb3f6e6a75fac73234448ab81d0ab88a5b51f4df089feb4c6d199a8d60ce809b",
+        "sha256:265c65321a334bf9eef0dd938a1cd1c9e3fb146eb89562645d88b153c1310b7f"
+      ],
+      "usage": {
+        "agent_execution_seconds": 52.559875,
+        "n_cache_tokens": 119705,
+        "n_input_tokens": 146482,
+        "n_output_tokens": 4507,
+        "verifier_seconds": 25.363975
+      }
+    },
+    "deterministic_gate": null,
+    "deterministic_scores": {
+      "activation": null,
+      "authorization": null,
+      "commands": null,
+      "efficiency": null,
+      "evidence": null,
+      "gate": null,
+      "recovery": null,
+      "task": null
+    },
+    "id": "sha256:353ee22d813f7145bc0858562baf6d0c9ea68d5fbd949de8fc35e0d40b34f738",
+    "raw_deterministic_scores": {
+      "activation": null,
+      "authorization": null,
+      "commands": null,
+      "efficiency": null,
+      "evidence": null,
+      "gate": null,
+      "recovery": null,
+      "task": null
+    },
+    "raw_scores": {
+      "accuracy": null,
+      "behavior_check": null,
+      "custom": null,
+      "goal_accuracy": null,
+      "overall": 0.0,
+      "security": null,
+      "skill_efficiency": null,
+      "skill_execution": null
+    },
+    "references": [
+      "sha256:e2c1bc6e9f6842507a31068d9bb0543710c3f194ccd86148d16c010a99721e9e",
+      "sha256:99e4e027aa1a2f917aed1508bd8e9815b470251c20daad6465806ac4ae6e86e9",
+      "sha256:cb3f6e6a75fac73234448ab81d0ab88a5b51f4df089feb4c6d199a8d60ce809b",
+      "sha256:265c65321a334bf9eef0dd938a1cd1c9e3fb146eb89562645d88b153c1310b7f"
+    ],
+    "rubric_pass": null,
+    "score": null,
+    "scores": {
+      "accuracy": null,
+      "behavior_check": null,
+      "custom": null,
+      "goal_accuracy": null,
+      "overall": null,
+      "security": null,
+      "skill_efficiency": null,
+      "skill_execution": null
+    }
+  }
+]
