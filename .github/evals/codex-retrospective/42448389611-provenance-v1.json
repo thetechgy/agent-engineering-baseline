@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "authentication": "previously_authenticated_retained_evidence",
+  "fresh_github_verification": false,
+  "source": {
+    "repository": "thetechgy/agent-engineering-baseline",
+    "run_id": 42448389611,
+    "run_attempt": 1,
+    "commit": "633014bdbc4e9df3b37955950a6ef9efa1473547",
+    "artifact_id": 13605202225,
+    "archive_sha256": "2f67c417dfad3f04f9015ff580c75eded5223240a15e4adb83a6b886c5dbec99",
+    "workflow": ".github/workflows/codex-pilot.yml"
+  },
+  "permanent_manifest_sha256": "75ce871fdbd0f0f8d3f8df36e2b1659d7c65b242b23ca9b8ce0b23a0cf8507dd",
+  "artifact": {
+    "id": 13605202225,
+    "node_id": "MDg6QXJ0aWZhY3QxMzYwNTIwMjIyNQ==",
+    "name": "codex-pilot-live-1",
+    "size_in_bytes": 111593,
+    "url": "https://api.github.com/repos/thetechgy/agent-engineering-baseline/actions/artifacts/13605202225",
+    "archive_download_url": "https://api.github.com/repos/thetechgy/agent-engineering-baseline/actions/artifacts/13605202225/zip",
+    "expired": false,
+    "digest": "sha256:2f67c417dfad3f04f9015ff580c75eded5223240a15e4adb83a6b886c5dbec99",
+    "created_at": "2026-11-08T05:12:57Z",
+    "updated_at": "2026-11-08T05:12:57Z",
+    "expires_at": "2027-02-06T04:50:14Z",
+    "workflow_run": {
+      "id": 42448389611,
+      "repository_id": 1299967456,
+      "head_repository_id": 1299967456,
+      "head_branch": "feat/codex-live-pilot",
+      "head_sha": "633014bdbc4e9df3b37955950a6ef9efa1473547"
+    }
+  },
+  "run": {
+    "id": 42448389611,
+    "head_sha": "633014bdbc4e9df3b37955950a6ef9efa1473547",
+    "run_attempt": 1,
+    "event": "workflow_dispatch",
+    "path": ".github/workflows/codex-pilot.yml",
+    "conclusion": "success",
+    "status": "completed",
+    "workflow_id": 410445169,
+    "created_at": "2026-11-08T04:50:13Z",
+    "updated_at": "2026-11-08T05:13:00Z",
+    "html_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42448389611"
+  },
+  "repository": {
+    "id": 1299967456,
+    "full_name": "thetechgy/agent-engineering-baseline"
+  },
+  "archive_members": [
+    {
+      "retained_member": "original-grading-outcomes.json",
+      "archive_member": "pilot-live/evidence/grading-outcomes.json",
+      "sha256": "87e6b9862c83d64774290f663a190cae2d14d5d51261420ca854642636749835",
+      "bytes": 416
+    },
+    {
+      "retained_member": "original-inventory.json",
+      "archive_member": "pilot-live/evidence/public/inventory/inventory.json",
+      "sha256": "d22fbcf3ea69593602875c5e02296ac68ce44f6b58672daefd89b7840ff04534",
+      "bytes": 10585
+    },
+    {
+      "retained_member": "original-outcomes.json",
+      "archive_member": "pilot-live/evidence/outcomes.json",
+      "sha256": "83f9904e9d40b3877b601f2ace268111078f5b7947fbed1ede44d8a0c5722a18",
+      "bytes": 8466
+    },
+    {
+      "retained_member": "original-public-report.json",
+      "archive_member": "pilot-live/evidence/public/skills/powershell-pester-6/behavioral/live-pilot/public-report.json",
+      "sha256": "41b4c2445a763e97cc6ae418ee1f35661f0177f508aebf175afcf6a96dab517f",
+      "bytes": 21780
+    },
+    {
+      "retained_member": "with_skill/Subject.Tests.ps1",
+      "archive_member": "pilot-live/evidence/submissions/powershell-pester-6-codex-with/pester-001__PeQfps2/artifacts/workspace/output/Subject.Tests.ps1",
+      "sha256": "d265ce3f26d8a4d3bb630927153ebc4527cd00876aed8ddec5583ec54c4a4a03",
+      "bytes": 5020
+    },
+    {
+      "retained_member": "with_skill/original-reward.json",
+      "archive_member": "pilot-live/evidence/native/results/powershell-pester-6/live-pilot/codex/with-skill/trials/pester-001__PeQfps2/reward.json",
+      "sha256": "1d6cfb7cf38b1d5775d16ab3c9012ae152a11850b6b4482e2bcfa0fe73ebbde0",
+      "bytes": 497
+    },
+    {
+      "retained_member": "without_skill/Subject.Tests.ps1",
+      "archive_member": "pilot-live/evidence/submissions/powershell-pester-6-codex-without/pester-001__78k4jWk/artifacts/workspace/output/Subject.Tests.ps1",
+      "sha256": "406dac7a20ca8912bed39a2c4ad1293dc0eba405c8814ef160faef851630bce5",
+      "bytes": 7474
+    },
+    {
+      "retained_member": "without_skill/original-reward.json",
+      "archive_member": "pilot-live/evidence/native/results/powershell-pester-6/live-pilot/codex/without-skill/trials/pester-001__78k4jWk/reward.json",
+      "sha256": "6c9dcdeaf1abc2e656dfd3b94b81d2c60a6b27c84a752f5c3cf3bfead5ac3eba",
+      "bytes": 497
+    }
+  ]
+}

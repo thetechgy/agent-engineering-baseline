@@ -1,0 +1,23 @@
+{
+  "overall": 0.0,
+  "evaluation_status": "failed",
+  "evaluation_errors": {
+    "applicability": "Unscoreable pilot trial: unsupported"
+  },
+  "entry_id": "pester-001",
+  "details": {
+    "outcome": {
+      "classification": "unsupported",
+      "code": "ast_kind"
+    }
+  },
+  "custom_details": {
+    "outcome": {
+      "classification": "unsupported"
+    }
+  },
+  "trial_id": "pester-001__78k4jWk",
+  "agent": "codex",
+  "model": "gpt-6.1-sol",
+  "model_source": "codex-pester-001-pilot-v1"
+}

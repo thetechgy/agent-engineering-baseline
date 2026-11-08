@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "source": {
+    "repository": "thetechgy/agent-engineering-baseline",
+    "run_id": 42448389611,
+    "run_attempt": 1,
+    "commit": "633014bdbc4e9df3b37955950a6ef9efa1473547",
+    "artifact_id": 13605202225,
+    "archive_sha256": "2f67c417dfad3f04f9015ff580c75eded5223240a15e4adb83a6b886c5dbec99",
+    "workflow": ".github/workflows/codex-pilot.yml"
+  },
+  "original_profile_id": "pester-cli-pilot-external-v3",
+  "original_outcomes": "unsupported/ast_kind; reference, mutation and correctness unmeasured",
+  "files": [
+    {
+      "member": "original-grading-outcomes.json",
+      "bytes": 416,
+      "sha256": "87e6b9862c83d64774290f663a190cae2d14d5d51261420ca854642636749835"
+    },
+    {
+      "member": "original-inventory.json",
+      "bytes": 10585,
+      "sha256": "d22fbcf3ea69593602875c5e02296ac68ce44f6b58672daefd89b7840ff04534"
+    },
+    {
+      "member": "original-outcomes.json",
+      "bytes": 8466,
+      "sha256": "83f9904e9d40b3877b601f2ace268111078f5b7947fbed1ede44d8a0c5722a18"
+    },
+    {
+      "member": "original-public-report.json",
+      "bytes": 21780,
+      "sha256": "41b4c2445a763e97cc6ae418ee1f35661f0177f508aebf175afcf6a96dab517f"
+    },
+    {
+      "member": "with_skill/Subject.Tests.ps1",
+      "bytes": 5020,
+      "sha256": "d265ce3f26d8a4d3bb630927153ebc4527cd00876aed8ddec5583ec54c4a4a03"
+    },
+    {
+      "member": "with_skill/original-reward.json",
+      "bytes": 497,
+      "sha256": "1d6cfb7cf38b1d5775d16ab3c9012ae152a11850b6b4482e2bcfa0fe73ebbde0"
+    },
+    {
+      "member": "without_skill/Subject.Tests.ps1",
+      "bytes": 7474,
+      "sha256": "406dac7a20ca8912bed39a2c4ad1293dc0eba405c8814ef160faef851630bce5"
+    },
+    {
+      "member": "without_skill/original-reward.json",
+      "bytes": 497,
+      "sha256": "6c9dcdeaf1abc2e656dfd3b94b81d2c60a6b27c84a752f5c3cf3bfead5ac3eba"
+    }
+  ]
+}

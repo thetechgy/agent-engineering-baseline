@@ -1,0 +1,581 @@
+{
+  "arms": [
+    {
+      "condition": {
+        "build_digest": "sha256:8bc76f76dd70acfada48b71926c0b8901f5c503e14a6d0dab457606bbb5c1f52",
+        "competing_skills": [],
+        "execution": {
+          "authorization_policy": null,
+          "base_image_mode": "recorded_staging",
+          "environment": "docker",
+          "fixture_boundary": "separate-verifier-v1",
+          "task_source": "native_harbor"
+        },
+        "fixture_digest": "sha256:9dd6c53ce8090ff3790ff2274d8067775a5605def5cc80479bf2c85ef6330060",
+        "id": "sha256:3bf7a76bafff87cfea7f9665494d0835b75cbde6a2db22f7023cddcb1e63f33d",
+        "instruction_digest": "sha256:927bdea1ee48c41b4081c0b0d0766df554fd282b5a9a21dadc90f3db0bb1a161",
+        "provenance": "runtime_recorded",
+        "target_present": true,
+        "workspace_mode": "isolated"
+      },
+      "coverage": {
+        "case_details": "complete",
+        "expected_attempts": 1,
+        "expected_cases": 1,
+        "recorded_attempts": 1,
+        "scored_attempts": 0,
+        "unscored_attempts": 1
+      },
+      "execution_error_count": 3,
+      "execution_status": "failed",
+      "name": "with_skill",
+      "rubric": {
+        "passed_cases": null,
+        "threshold": null,
+        "total_cases": null
+      }
+    },
+    {
+      "condition": {
+        "build_digest": "sha256:8bc76f76dd70acfada48b71926c0b8901f5c503e14a6d0dab457606bbb5c1f52",
+        "competing_skills": [],
+        "execution": {
+          "authorization_policy": null,
+          "base_image_mode": "recorded_staging",
+          "environment": "docker",
+          "fixture_boundary": "separate-verifier-v1",
+          "task_source": "native_harbor"
+        },
+        "fixture_digest": "sha256:9dd6c53ce8090ff3790ff2274d8067775a5605def5cc80479bf2c85ef6330060",
+        "id": "sha256:0a36695758cce9e5b6af7682718a1594ce0080959f286f056e2974bfa6c0cccd",
+        "instruction_digest": "sha256:927bdea1ee48c41b4081c0b0d0766df554fd282b5a9a21dadc90f3db0bb1a161",
+        "provenance": "runtime_recorded",
+        "target_present": false,
+        "workspace_mode": "isolated"
+      },
+      "coverage": {
+        "case_details": "complete",
+        "expected_attempts": 1,
+        "expected_cases": 1,
+        "recorded_attempts": 1,
+        "scored_attempts": 0,
+        "unscored_attempts": 1
+      },
+      "execution_error_count": 3,
+      "execution_status": "failed",
+      "name": "without_skill",
+      "rubric": {
+        "passed_cases": null,
+        "threshold": null,
+        "total_cases": null
+      }
+    }
+  ],
+  "availability": {
+    "provenance": "runtime_recorded",
+    "reasons": [
+      "coverage_missing",
+      "execution_incomplete",
+      "metadata_missing"
+    ],
+    "status": "incomplete"
+  },
+  "custom": {
+    "agent": "codex",
+    "agent_version": "0.167.0",
+    "assurance": {
+      "execution_authentication": "not_established",
+      "native_consistency": "producer_reported_at_admission",
+      "producer_authentication": "not_established"
+    },
+    "capture_digest": "sha256:9a785ac5f3d2c95deb13afa2da8b5bf4e7d07dc814687dd75db05dd751a33794",
+    "capture_reference": "sha256:cb3f6e6a75fac73234448ab81d0ab88a5b51f4df089feb4c6d199a8d60ce809b",
+    "cases": [
+      {
+        "case_id": "pester-001",
+        "denominators": {
+          "pester_mutation_detection": 2
+        },
+        "metrics": [
+          "pester_reference_pass",
+          "pester_mutation_detection",
+          "pester_test_quality"
+        ],
+        "source_case_id": "pester-001",
+        "title": "Integer collection tests"
+      }
+    ],
+    "contract_digest": "sha256:59a29ef350aeb498d3ac32a07f773933a2b18670bdc63481cf057743fd1a62ff",
+    "definitions": [
+      {
+        "aggregation": "mean_of_applicable_trial_values",
+        "basis": "ratio",
+        "competency": "mutation_detection",
+        "definition": "Fraction of the configured seeded mutants rejected through recognized assertion failures. This measures only these seeded faults.",
+        "id": "powershell-pester-6.mutation-detection.v1",
+        "native_name": "pester_mutation_detection",
+        "role": "diagnostic",
+        "title": "Seeded mutation detection",
+        "unit": "fraction"
+      },
+      {
+        "aggregation": "mean_of_applicable_trial_values",
+        "basis": "binary",
+        "competency": "reference_correctness",
+        "definition": "Submitted tests execute and pass against the correct reference implementation.",
+        "id": "powershell-pester-6.reference-pass.v1",
+        "native_name": "pester_reference_pass",
+        "role": "diagnostic",
+        "title": "Reference correctness",
+        "unit": "binary_score"
+      },
+      {
+        "aggregation": "mean_of_applicable_trial_values",
+        "basis": "binary",
+        "competency": "test_quality",
+        "definition": "Reference correctness and detection of every configured seeded mutant must both hold.",
+        "id": "powershell-pester-6.test-quality.v1",
+        "native_name": "pester_test_quality",
+        "role": "diagnostic",
+        "title": "Joint test quality",
+        "unit": "binary_score"
+      }
+    ],
+    "fixture_digest": "sha256:9dd6c53ce8090ff3790ff2274d8067775a5605def5cc80479bf2c85ef6330060",
+    "grader_digest": "sha256:3a4e95475e26f66443772c9550a48683022ba5ddcfe229aa9b4d1f9ee8df7cd5",
+    "native_metric_set": "skill-evaluator-default-v2",
+    "profile_id": "pester-cli-pilot-external-v3",
+    "purpose": "cli_pilot",
+    "runtime": {
+      "codex": "0.167.0",
+      "model": "gpt-6.1-sol",
+      "pester": "6.2.0",
+      "powershell": "7.6.9",
+      "reasoning_effort": "high",
+      "workspace_profile": "codex-pester-001-pilot-v1"
+    },
+    "runtime_digest": "sha256:8bc76f76dd70acfada48b71926c0b8901f5c503e14a6d0dab457606bbb5c1f52"
+  },
+  "dataset": {
+    "authored_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+    "authored_provenance": "runtime_recorded",
+    "case_cohort_digest": "sha256:b20da4b72901e17fce17a1b9aca0cdc87d416bbafde9bfafd2bcc3a9a9a85577",
+    "case_ids": [
+      "pester-001"
+    ],
+    "owner": "overlay",
+    "staged_algorithm": "sha256-staged-task-inputs-v1",
+    "staged_digest": "sha256:6b498d81d4dd53749d84cb7eea57e29e42441490bb42de04beff7eb6950b611a",
+    "staged_provenance": "runtime_recorded"
+  },
+  "findings": [],
+  "kind": "behavioral",
+  "metrics": [],
+  "observations": [
+    {
+      "arm": "with_skill",
+      "attempt": null,
+      "case_id": "pester-001",
+      "custom": {
+        "admission_reason": "ast_kind",
+        "measurements": [
+          {
+            "applicability": "applicable",
+            "denominator": null,
+            "metric_id": "powershell-pester-6.mutation-detection.v1",
+            "numerator": null,
+            "reason": "unsupported",
+            "references": [
+              "sha256:f958938257f4271ba87eabce31dc060bdfe1a33c0a76d6e89bfced4e87a17ebb",
+              "sha256:6c2e9abe4cd7f3d68018012c3d5874dccc5182e55d13f84ae44d3aaaaa3cc554",
+              "sha256:cb3f6e6a75fac73234448ab81d0ab88a5b51f4df089feb4c6d199a8d60ce809b",
+              "sha256:520d303e9d814685137d4a7ef42dd45335d52eb9d4bd249712bbd977b098dfa9"
+            ],
+            "status": "unavailable",
+            "value": null
+          },
+          {
+            "applicability": "applicable",
+            "denominator": null,
+            "metric_id": "powershell-pester-6.reference-pass.v1",
+            "numerator": null,
+            "reason": "unsupported",
+            "references": [
+              "sha256:f958938257f4271ba87eabce31dc060bdfe1a33c0a76d6e89bfced4e87a17ebb",
+              "sha256:6c2e9abe4cd7f3d68018012c3d5874dccc5182e55d13f84ae44d3aaaaa3cc554",
+              "sha256:cb3f6e6a75fac73234448ab81d0ab88a5b51f4df089feb4c6d199a8d60ce809b",
+              "sha256:520d303e9d814685137d4a7ef42dd45335d52eb9d4bd249712bbd977b098dfa9"
+            ],
+            "status": "unavailable",
+            "value": null
+          },
+          {
+            "applicability": "applicable",
+            "denominator": null,
+            "metric_id": "powershell-pester-6.test-quality.v1",
+            "numerator": null,
+            "reason": "unsupported",
+            "references": [
+              "sha256:f958938257f4271ba87eabce31dc060bdfe1a33c0a76d6e89bfced4e87a17ebb",
+              "sha256:6c2e9abe4cd7f3d68018012c3d5874dccc5182e55d13f84ae44d3aaaaa3cc554",
+              "sha256:cb3f6e6a75fac73234448ab81d0ab88a5b51f4df089feb4c6d199a8d60ce809b",
+              "sha256:520d303e9d814685137d4a7ef42dd45335d52eb9d4bd249712bbd977b098dfa9"
+            ],
+            "status": "unavailable",
+            "value": null
+          }
+        ],
+        "outcome": "unsupported",
+        "references": [
+          "sha256:f958938257f4271ba87eabce31dc060bdfe1a33c0a76d6e89bfced4e87a17ebb",
+          "sha256:6c2e9abe4cd7f3d68018012c3d5874dccc5182e55d13f84ae44d3aaaaa3cc554",
+          "sha256:cb3f6e6a75fac73234448ab81d0ab88a5b51f4df089feb4c6d199a8d60ce809b",
+          "sha256:520d303e9d814685137d4a7ef42dd45335d52eb9d4bd249712bbd977b098dfa9"
+        ],
+        "usage": {
+          "agent_execution_seconds": 47.599829,
+          "n_cache_tokens": 115525,
+          "n_input_tokens": 141822,
+          "n_output_tokens": 3635,
+          "verifier_seconds": 25.706611
+        }
+      },
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:006dc8ce79fb89f57e27dbf671ccdc7d0165f27fd3576fbd31673a5a1a5fb44f",
+      "raw_deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "raw_scores": {
+        "accuracy": null,
+        "behavior_check": null,
+        "custom": null,
+        "goal_accuracy": null,
+        "overall": 0.0,
+        "security": null,
+        "skill_efficiency": null,
+        "skill_execution": null
+      },
+      "references": [
+        "sha256:f958938257f4271ba87eabce31dc060bdfe1a33c0a76d6e89bfced4e87a17ebb",
+        "sha256:6c2e9abe4cd7f3d68018012c3d5874dccc5182e55d13f84ae44d3aaaaa3cc554",
+        "sha256:cb3f6e6a75fac73234448ab81d0ab88a5b51f4df089feb4c6d199a8d60ce809b",
+        "sha256:520d303e9d814685137d4a7ef42dd45335d52eb9d4bd249712bbd977b098dfa9"
+      ],
+      "rubric_pass": null,
+      "score": null,
+      "scores": {
+        "accuracy": null,
+        "behavior_check": null,
+        "custom": null,
+        "goal_accuracy": null,
+        "overall": null,
+        "security": null,
+        "skill_efficiency": null,
+        "skill_execution": null
+      }
+    },
+    {
+      "arm": "without_skill",
+      "attempt": null,
+      "case_id": "pester-001",
+      "custom": {
+        "admission_reason": "ast_kind",
+        "measurements": [
+          {
+            "applicability": "applicable",
+            "denominator": null,
+            "metric_id": "powershell-pester-6.mutation-detection.v1",
+            "numerator": null,
+            "reason": "unsupported",
+            "references": [
+              "sha256:e2c1bc6e9f6842507a31068d9bb0543710c3f194ccd86148d16c010a99721e9e",
+              "sha256:99e4e027aa1a2f917aed1508bd8e9815b470251c20daad6465806ac4ae6e86e9",
+              "sha256:cb3f6e6a75fac73234448ab81d0ab88a5b51f4df089feb4c6d199a8d60ce809b",
+              "sha256:265c65321a334bf9eef0dd938a1cd1c9e3fb146eb89562645d88b153c1310b7f"
+            ],
+            "status": "unavailable",
+            "value": null
+          },
+          {
+            "applicability": "applicable",
+            "denominator": null,
+            "metric_id": "powershell-pester-6.reference-pass.v1",
+            "numerator": null,
+            "reason": "unsupported",
+            "references": [
+              "sha256:e2c1bc6e9f6842507a31068d9bb0543710c3f194ccd86148d16c010a99721e9e",
+              "sha256:99e4e027aa1a2f917aed1508bd8e9815b470251c20daad6465806ac4ae6e86e9",
+              "sha256:cb3f6e6a75fac73234448ab81d0ab88a5b51f4df089feb4c6d199a8d60ce809b",
+              "sha256:265c65321a334bf9eef0dd938a1cd1c9e3fb146eb89562645d88b153c1310b7f"
+            ],
+            "status": "unavailable",
+            "value": null
+          },
+          {
+            "applicability": "applicable",
+            "denominator": null,
+            "metric_id": "powershell-pester-6.test-quality.v1",
+            "numerator": null,
+            "reason": "unsupported",
+            "references": [
+              "sha256:e2c1bc6e9f6842507a31068d9bb0543710c3f194ccd86148d16c010a99721e9e",
+              "sha256:99e4e027aa1a2f917aed1508bd8e9815b470251c20daad6465806ac4ae6e86e9",
+              "sha256:cb3f6e6a75fac73234448ab81d0ab88a5b51f4df089feb4c6d199a8d60ce809b",
+              "sha256:265c65321a334bf9eef0dd938a1cd1c9e3fb146eb89562645d88b153c1310b7f"
+            ],
+            "status": "unavailable",
+            "value": null
+          }
+        ],
+        "outcome": "unsupported",
+        "references": [
+          "sha256:e2c1bc6e9f6842507a31068d9bb0543710c3f194ccd86148d16c010a99721e9e",
+          "sha256:99e4e027aa1a2f917aed1508bd8e9815b470251c20daad6465806ac4ae6e86e9",
+          "sha256:cb3f6e6a75fac73234448ab81d0ab88a5b51f4df089feb4c6d199a8d60ce809b",
+          "sha256:265c65321a334bf9eef0dd938a1cd1c9e3fb146eb89562645d88b153c1310b7f"
+        ],
+        "usage": {
+          "agent_execution_seconds": 52.559875,
+          "n_cache_tokens": 119705,
+          "n_input_tokens": 146482,
+          "n_output_tokens": 4507,
+          "verifier_seconds": 25.363975
+        }
+      },
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:353ee22d813f7145bc0858562baf6d0c9ea68d5fbd949de8fc35e0d40b34f738",
+      "raw_deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "raw_scores": {
+        "accuracy": null,
+        "behavior_check": null,
+        "custom": null,
+        "goal_accuracy": null,
+        "overall": 0.0,
+        "security": null,
+        "skill_efficiency": null,
+        "skill_execution": null
+      },
+      "references": [
+        "sha256:e2c1bc6e9f6842507a31068d9bb0543710c3f194ccd86148d16c010a99721e9e",
+        "sha256:99e4e027aa1a2f917aed1508bd8e9815b470251c20daad6465806ac4ae6e86e9",
+        "sha256:cb3f6e6a75fac73234448ab81d0ab88a5b51f4df089feb4c6d199a8d60ce809b",
+        "sha256:265c65321a334bf9eef0dd938a1cd1c9e3fb146eb89562645d88b153c1310b7f"
+      ],
+      "rubric_pass": null,
+      "score": null,
+      "scores": {
+        "accuracy": null,
+        "behavior_check": null,
+        "custom": null,
+        "goal_accuracy": null,
+        "overall": null,
+        "security": null,
+        "skill_efficiency": null,
+        "skill_execution": null
+      }
+    }
+  ],
+  "policy": {
+    "attempts": {
+      "maximum": 1,
+      "mode": "unknown",
+      "pass_threshold": null,
+      "stop_on_pass": false
+    },
+    "fields": {
+      "authorization_policy": null,
+      "baseline": true,
+      "codex": null,
+      "competing_revision": null,
+      "concurrency": 2,
+      "deterministic_gate": null,
+      "docker_compose": null,
+      "environment": "docker",
+      "evaluator_revision": "8149356e4476a1497fb334727f13f699c6fa6ba5",
+      "fixture_boundary": null,
+      "grading": "custom_only",
+      "harbor": "0.24.0",
+      "model": "gpt-6.1-sol",
+      "provider": "openai",
+      "python": "3.14.10",
+      "standard_attempts": null,
+      "stop_on_pass": false,
+      "task_build": null,
+      "task_source": "native_harbor",
+      "timeout_multiplier": 1.0,
+      "upstream_revision": null,
+      "workspace_mode": "isolated"
+    },
+    "id": "sha256:ba4cdddd1e42b1f12099a1a7e4df48e82fd36c19ae3be950cf36cfa10bfb26f4",
+    "judge": {
+      "enabled": false,
+      "model": null,
+      "provider": null
+    },
+    "metric_set": "custom-only",
+    "patch_digest": "sha256:d9038d18e32e805237265b3d74eb05b51ebe5fdac15976ce93f5762877efe11c",
+    "producer_profile": "skillevaluator-0.8.0-offline-v4",
+    "provenance": "runtime_recorded",
+    "published_id": null,
+    "scoring_policy": "custom-overall-v1"
+  },
+  "references": [
+    {
+      "artifact_digest": null,
+      "artifact_id": "live-pilot",
+      "availability": "available",
+      "digest": "sha256:6c9dcdeaf1abc2e656dfd3b94b81d2c60a6b27c84a752f5c3cf3bfead5ac3eba",
+      "id": "sha256:265c65321a334bf9eef0dd938a1cd1c9e3fb146eb89562645d88b153c1310b7f",
+      "locator": [],
+      "member": "results/powershell-pester-6/live-pilot/codex/without-skill/trials/pester-001__78k4jWk/reward.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "live-pilot",
+      "availability": "available",
+      "digest": "sha256:1d6cfb7cf38b1d5775d16ab3c9012ae152a11850b6b4482e2bcfa0fe73ebbde0",
+      "id": "sha256:520d303e9d814685137d4a7ef42dd45335d52eb9d4bd249712bbd977b098dfa9",
+      "locator": [],
+      "member": "results/powershell-pester-6/live-pilot/codex/with-skill/trials/pester-001__PeQfps2/reward.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "live-pilot",
+      "availability": "available",
+      "digest": "sha256:c61f4f32cebde5f60a0b06e6acf6b8afe954768c12a2d8ed501935f444c6e8b6",
+      "id": "sha256:6c2e9abe4cd7f3d68018012c3d5874dccc5182e55d13f84ae44d3aaaaa3cc554",
+      "locator": [],
+      "member": "results/powershell-pester-6/live-pilot/codex/with-skill/summary.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "live-pilot",
+      "availability": "available",
+      "digest": "sha256:4cfb922ecb3c1d48a884d3b28ff33c010f092454af4287689fb5eab74b850f65",
+      "id": "sha256:86ec917648038809b60e668b833ee4858c8fe7326175d8545a0727347698b462",
+      "locator": [],
+      "member": "results/powershell-pester-6/live-pilot/result.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "live-pilot",
+      "availability": "available",
+      "digest": "sha256:aa1cb54f4c926a5b787060650141cfd64aac2b2e76fb15029986fd4680de6474",
+      "id": "sha256:99e4e027aa1a2f917aed1508bd8e9815b470251c20daad6465806ac4ae6e86e9",
+      "locator": [],
+      "member": "results/powershell-pester-6/live-pilot/codex/without-skill/summary.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "live-pilot",
+      "availability": "available",
+      "digest": "sha256:7bc183ced0389d3808e6558afa2862c698a280a47d70a9abfce6572bbe166e37",
+      "id": "sha256:ab0396474fe79e31882382945632c46c7cf0a018407d9a40dc5a125487f38ff2",
+      "locator": [],
+      "member": "results/powershell-pester-6/live-pilot/run_config.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "live-pilot",
+      "availability": "available",
+      "digest": "sha256:9a785ac5f3d2c95deb13afa2da8b5bf4e7d07dc814687dd75db05dd751a33794",
+      "id": "sha256:cb3f6e6a75fac73234448ab81d0ab88a5b51f4df089feb4c6d199a8d60ce809b",
+      "locator": [],
+      "member": "custom-metric-capture.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "live-pilot",
+      "availability": "available",
+      "digest": "sha256:d258987cc17adbdfa283823146d21c11e5141b8f99b9034ba548c37e1bf24c66",
+      "id": "sha256:e2c1bc6e9f6842507a31068d9bb0543710c3f194ccd86148d16c010a99721e9e",
+      "locator": [],
+      "member": "results/powershell-pester-6/live-pilot/codex/without-skill/trials/pester-001__78k4jWk/result.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "live-pilot",
+      "availability": "available",
+      "digest": "sha256:ec9db671b26e20d22d9b1fbf740290f3fef0c04c88c27da22561e852361eb9c6",
+      "id": "sha256:f958938257f4271ba87eabce31dc060bdfe1a33c0a76d6e89bfced4e87a17ebb",
+      "locator": [],
+      "member": "results/powershell-pester-6/live-pilot/codex/with-skill/trials/pester-001__PeQfps2/result.json",
+      "provenance": "runtime_recorded"
+    }
+  ],
+  "run_id": "live-pilot",
+  "scans": [],
+  "schema_version": 2,
+  "source": {
+    "content": {
+      "algorithm": "sha256-relative-file-manifest-v1",
+      "digest": "sha256:d3641c5190c1b86d8e853adc8f3c68fe6376b5fdaf5c1d90c610a745102ff03e",
+      "manifest": [
+        {
+          "digest": "sha256:b57df2ff4072b2e25744ae2bd530b02bbb6ab83a22a0d374c73d48de4dc70887",
+          "member": "SKILL.md"
+        },
+        {
+          "digest": "sha256:6d05a890eb1c53c59755f9e560c05d65467a614d36af7c812f4a32c89b47f4e9",
+          "member": "references/compatibility-and-migration.md"
+        },
+        {
+          "digest": "sha256:3b80a98abfefdcd9a765da9a9436caa43de6a873e57253f1ecfb36e1095ea4b8",
+          "member": "references/execution.md"
+        }
+      ],
+      "provenance": "configured",
+      "scope": "pinned-agent-visible"
+    },
+    "lineage": null,
+    "owner": "local",
+    "repository": "thetechgy/agent-engineering-baseline",
+    "revision": "633014bdbc4e9df3b37955950a6ef9efa1473547",
+    "skill_id": "powershell-pester-6",
+    "source_path": ".apm/skills/powershell-pester-6"
+  }
+}
