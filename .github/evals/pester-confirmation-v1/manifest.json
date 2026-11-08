@@ -1,0 +1,21 @@
+{
+  "id": "pester-confirmation-v1",
+  "status": "reserved_unexecuted",
+  "exposure": "new case variant, unseen by the evaluated live cohort; public repository material, not globally secret or contamination-proof",
+  "derived_contract": "pester-004 discovery and boundary execution",
+  "must_qualify_before_confirmation": true,
+  "files": {
+    "controls/strong.Tests.ps1": "a4b3f5ea8f2ca6ba27f45a73f3a58617c741ebf39049bf82499449ee1769b94d",
+    "controls/weak.Tests.ps1": "204cf03de0e935bfdf2116864a1c435cc9e9975984f0e48f70f3d21153864362",
+    "input/Existing.Tests.ps1": "751611488a35625f1637a9f97553114ee47664f7870ea26a277903019cd87a0c",
+    "input/README.md": "a4b457627eee80ff5519c021d3feac8a045d7d44879aeff4f41faf7f0b50ac4e",
+    "input/Subject.ps1": "c96c71dfe4e419d28b8d6b3e018b25af15c395ed30f039f3144d1d37d4397e78",
+    "mutants/above.ps1": "1ecd93b0f203a6dbf0f6fbf7d86bb7fe8fc82f19679916ec80e922c2724c4784",
+    "mutants/below.ps1": "30122c8e091546af626fa22606fd745649dd028920fa9e75e1f0ea2f0d723558",
+    "mutants/first.ps1": "ead415488cca334c30ce3ef0c2c2c0ebaaff25a95bcd026fa83feaaec18a242c",
+    "mutants/last.ps1": "93716f69806a2168f006ab0a759e46f77be6eb8a68dc3c52b4d37857d45388a8",
+    "profile.json": "c50941305ad5c847cad9efcf494cf99c887f3c5bdd342b2954bc0f7d13c39995",
+    "prompt.txt": "6f433969e4c6ca81c9a0bf59304ebfacc3151441bad46154d150b8cecbc24513",
+    "reference/Subject.ps1": "c96c71dfe4e419d28b8d6b3e018b25af15c395ed30f039f3144d1d37d4397e78"
+  }
+}

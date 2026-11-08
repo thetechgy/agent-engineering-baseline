@@ -1,0 +1,36 @@
+{
+  "id": "pester-effectiveness-v1",
+  "base": "521a00c",
+  "frozen_runtime": "codex-pilot.json",
+  "primary_cases": [
+    "pester-003",
+    "pester-004"
+  ],
+  "compatibility_control": "pester-001",
+  "trials_per_arm_per_case": 3,
+  "proposed_attempts": 12,
+  "authorized_live_attempts": 0,
+  "primary_measure": "reference pass AND every seeded contract violation detected through assertion failures",
+  "secondary_measures": [
+    "reference correctness",
+    "seeded defects detected and missed by identity"
+  ],
+  "separate_observations": [
+    "skill availability and observed reads",
+    "agent execution reliability",
+    "verifier reliability",
+    "security and cleanup",
+    "tokens and phase durations",
+    "estimated cost, never invoice"
+  ],
+  "retry_policy": "No automatic retries or replacement attempts; preserve all failures and stop for infrastructure, unsupported evidence, missing usage, security or identity drift.",
+  "spending_proposal_usd": {
+    "expected": 6,
+    "stop_estimate": 10,
+    "reserve": 5,
+    "maximum_allocation": 15
+  },
+  "live_execution": "Unapproved proposal only. The effectiveness preparation action cannot run inference; the old pilot allocation does not authorize this protocol.",
+  "runtime_contract_sha256": "5472136c6532db515340e8ffdfc9aae9f70b42b27fc15bf922823a784b41e9a8",
+  "evaluator_profile_sha256": "9049293fbee7e2518a57a66ab3bfdb90d5412fd105d9115b6b6d5a951c0cd871"
+}

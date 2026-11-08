@@ -919,3 +919,54 @@ The next milestone is to design and prospectively freeze a more discriminating
 evaluation with cases and decision criteria capable of testing skill effectiveness.
 Another repetition of this compatibility pair would not establish skill benefit.
 Obtain separate authorization for any future inference or judging.
+
+## Prospective skill-effectiveness preparation (active)
+
+The next group is [the frozen Pester protocol](pester-effectiveness.md), based on
+merged main `521a00c` (PR #121). It selects `pester-003` and `pester-004` for three
+trials per arm per case: twelve proposed attempts. `pester-001` remains a
+credential-free compatibility/regression control. Both primary cases have prior
+exploratory and deterministic exposure; neither is called held out. The new
+hash-frozen scheduling-window variant is reserved outside this cohort
+and skill-revision contexts for later confirmation; it remains unexecuted and
+requires qualification before use. The protocol records its exposure limits.
+
+The preparation extends `codex_pilot.py` and the existing consolidated report.
+It uses actual APM deployment, complete matched-arm file comparisons, repeated
+clean staging, versioned independent grading, positive/weak/omission/failure
+controls, exact submission receipts, cleanup and public-only report reproduction.
+The prospective grader credits mutant detection only after reference correctness;
+per-defect results expose meaningful omissions. Historical profiles, original and
+retrospective compatibility outcomes, production defaults and skills are preserved.
+The changed shared tooling has its own retained-pilot identity; no historical
+runtime hash is overwritten. Native and repository checks are recorded on the
+new draft PR; only a successful exact-revision artifact qualifies preparation.
+
+The one operator entry point (with the existing pinned tools installed) is:
+
+```sh
+"$SKILL_CURRENT_PYTHON" -B .github/scripts/codex_pilot.py effectiveness --output "$EVIDENCE/pester-effectiveness"
+```
+
+The Codex pilot Actions workflow runs that credential-free case-to-report path.
+Its artifact includes `frozen-proposal.json`, the qualified source revision,
+complete deployment/runtime/evaluator identities, twelve-attempt counterbalanced
+order, expected controls, supporting evidence and reproduced consolidated HTML.
+Fixture qualification is not agent effectiveness evidence. The earlier two live
+submissions still establish compatibility only: both passed the retrospectively
+corrected reference and detected both mutants, with no demonstrated skill benefit.
+
+**One next action:** review the qualified draft PR and decide whether to authorize
+exactly its twelve-attempt live proposal at the artifact's qualified commit. The
+proposal estimates $6 usage, stops further launches at $10 estimated cumulative
+usage and retains $5 reserve within a $15 maximum allocation. Estimates are not
+billing or a hard provider cap. This preparation cannot launch the new live cohort;
+credentials, inference, judges and environment approval remain unauthorized. No
+previous paid allocation carries forward. Do not dispatch the historical pilot
+allocation as a substitute for this decision.
+
+Maintain the new profile hashes, fixture transformation and expected defect matrix,
+APM deployment audit and public evidence/report contracts together. If live work
+reveals justified weaknesses, investigate first; obtain authorization before skill
+revision, then freeze absent/current/revised comparison with regression and unseen
+confirmation. Do not change cases or grading after future outputs to seek a win.

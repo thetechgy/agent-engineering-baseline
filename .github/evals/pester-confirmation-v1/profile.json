@@ -1,0 +1,18 @@
+{
+  "command": "Test-WindowAllowed",
+  "parameters": [
+    "Slot"
+  ],
+  "properties": [
+    "Count",
+    "Length",
+    "Name",
+    "Slot",
+    "Expected"
+  ],
+  "dependencies": [],
+  "module": null,
+  "minimum_tests": 1,
+  "protected_marker": "PESTER_VERIFIER_ONLY_CONFIRMATION_V1",
+  "subject": "Subject.ps1"
+}

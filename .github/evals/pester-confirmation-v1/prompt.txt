@@ -1,0 +1,1 @@
+Repair the scheduling-window tests described in input/README.md so they execute every supplied boundary. Save the complete repaired suite as output/Subject.Tests.ps1.

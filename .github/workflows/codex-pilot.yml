@@ -6,6 +6,12 @@ on:
       - '.github/scripts/codex_pilot*.py'
       - '.github/scripts/skill_evidence.py'
       - '.github/evals/codex-pilot.json'
+      - '.github/evals/pester-effectiveness*'
+      - '.github/evals/pester-confirmation-v1/**'
+      - '.github/evals/powershell-pester-6/**'
+      - '.github/scripts/skill_analysis.py'
+      - '.github/scripts/skill_report.py'
+      - '.github/scripts/skill_reports.py'
       - '.github/evals/codex-retrospective/**'
       - '.github/tests/test_codex*.py'
       - '.github/evals/custom-metrics.json'
@@ -186,3 +192,50 @@ jobs:
             ${{ runner.temp }}/pilot-live-preflight/evidence/
           if-no-files-found: error
           retention-days: 90
+
+  effectiveness:
+    name: Prospective Pester preparation (no inference)
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: '0.13.7'
+          enable-cache: false
+      - name: Acquire frozen evaluator, Compose and APM
+        run: |
+          bash .github/scripts/setup-skillevaluator.sh candidate-current
+          bash .github/scripts/setup-compose.sh
+          APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
+          echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
+      - name: Check prospective contract and clean deployment
+        run: 'PYTHONPATH=.github/scripts:.github/tests "$SKILL_CURRENT_PYTHON" -B -m unittest test_codex_effectiveness -v'
+      - name: Qualify cases through independent native verifier and existing report
+        timeout-minutes: 50
+        run: '"$SKILL_CURRENT_PYTHON" -B .github/scripts/codex_pilot.py effectiveness --output "$RUNNER_TEMP/pester-effectiveness"'
+      - name: Check checkout integrity
+        if: always()
+        run: |
+          git diff --exit-code
+          test -z "$(git status --porcelain=v1 --untracked-files=all --ignored)"
+      - name: Retain prospective identities, submissions and reproduced report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pester-effectiveness-preparation-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/pester-effectiveness/evidence/
+            ${{ runner.temp }}/pester-effectiveness/controls/evidence/
+            ${{ runner.temp }}/pester-effectiveness/prospective/evidence/
+          if-no-files-found: error
+          retention-days: 90
+      - name: Remove test-only Compose configuration
+        if: always()
+        run: bash .github/scripts/setup-compose.sh cleanup

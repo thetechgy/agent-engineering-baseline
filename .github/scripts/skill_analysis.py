@@ -59,7 +59,9 @@ FINDING_LABELS = {
 
 def coverage_label(skill):
     purposes = {run['custom']['purpose'] for run in skill['behavioral_results'] if 'custom' in run}
-    labels = {'cli_pilot': 'Bounded live CLI compatibility pilot',
+    labels = {'skill_effectiveness': 'Prospective exploratory skill evaluation',
+              'skill_effectiveness_control': 'Credential-free prospective grading qualification',
+              'cli_pilot': 'Bounded live CLI compatibility pilot',
               'cli_pilot_control': 'Credential-free pilot grading controls',
               'cli_pilot_probe': 'Credential-free real CLI isolation qualification',
               'cli_pilot_replay': 'Retrospective unchanged-submission replay after output inspection',
@@ -246,7 +248,7 @@ class ValidatedRecords:
 
 
 def pilot_record(record):
-    return record.get('custom', {}).get('profile_id') in ('pester-cli-pilot-v1', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2') and record['custom']['purpose'] in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay')
+    return record.get('custom', {}).get('profile_id') in ('pester-cli-pilot-v1', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2', 'pester-cli-pilot-retained-v3', 'pester-effectiveness-v1') and record['custom']['purpose'] in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_control')
 
 
 def measured(record):
