@@ -28,6 +28,16 @@ def prospective_grader():
 
 
 class Protocol(unittest.TestCase):
+    def test_native_qualification_overview_is_distinct_from_synthetic_judge_transport(self):
+        import skill_analysis as analysis
+        record = {'custom': {'purpose': effect.CONTROL_PURPOSE},
+                  'policy': {'producer_profile': 'skillevaluator-0.8.0-offline-v4'}}
+        self.assertEqual(analysis.coverage_label({'behavioral_results':[record]}),
+                         'Credential-free prospective grading qualification')
+        record.pop('custom')
+        self.assertEqual(analysis.coverage_label({'behavioral_results':[record]}),
+                         'Includes synthetic candidate qualification; candidate quality unavailable')
+
     def test_schedule_has_twelve_unique_attempts_and_balanced_first_arms(self):
         rows = effect.schedule()
         self.assertEqual([r['position'] for r in rows], list(range(1, 13)))

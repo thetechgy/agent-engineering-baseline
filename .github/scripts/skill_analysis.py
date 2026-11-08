@@ -66,7 +66,7 @@ def coverage_label(skill):
               'cli_pilot_probe': 'Credential-free real CLI isolation qualification',
               'cli_pilot_replay': 'Retrospective unchanged-submission replay after output inspection',
               'oracle_qualification': 'Oracle qualification', 'benchmark': 'Model-backed custom evidence'}
-    if purposes & {'cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay'}:
+    if purposes & {'cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_control'}:
         return ' · '.join(labels[purpose] for purpose in sorted(purposes))
     if any('producer_profile' in run['policy'] for run in skill['behavioral_results']):
         return 'Includes synthetic candidate qualification; candidate quality unavailable'

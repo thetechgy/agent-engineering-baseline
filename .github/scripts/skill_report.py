@@ -983,7 +983,9 @@ def render_report(result, captured, *, reviews=None, pages_context=None, histori
     skills = result['skills']
     if any('producer_profile' in record.get('policy', {}) and not analysis.pilot_record(record) for record in records.values()):
         add('<p class="safety"><strong>Synthetic candidate qualification.</strong> Fixed judge values test transport only. No model judges ran; candidate quality is unavailable. Candidate records are excluded from production history and cannot establish skill improvement.</p>')
-    if any(analysis.pilot_record(record) for record in records.values()):
+    if any(record.get('custom', {}).get('purpose') == 'skill_effectiveness_control' for record in records.values()):
+        add('<p class="safety"><strong>Prospective grading qualification.</strong> Native oracle fixtures exercise frozen task contracts without model inference. These are not agent results, skill benefit or production history.</p>')
+    if any(analysis.pilot_record(record) and record['custom']['profile_id'] != 'pester-effectiveness-v1' for record in records.values()):
         add('<p class="safety"><strong>Opt-in CLI compatibility evidence.</strong> Native grading controls and CLI observations retain separate purposes. No model judging or history publication is enabled; one pair cannot establish general skill effectiveness.</p>')
     add(executive_summary(result, records, pages=pages_context))
     add('</section>')
