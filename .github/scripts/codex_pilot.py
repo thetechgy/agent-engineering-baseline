@@ -271,7 +271,7 @@ def validate_probe_requests(root, artifact, scenario):
     return probes
 
 
-def retain(root, artifact, *, replay=False, controls=False):
+def retain(root, artifact, *, replay=False, controls=False, probe=False):
     """Retain exact safe submissions before collection/redaction/cleanup boundaries."""
     from skillevaluator.utils.redaction import redact_sensitive_text
     records = []
@@ -314,7 +314,7 @@ def retain(root, artifact, *, replay=False, controls=False):
             prefill, sample = (2, 1.5) if i > 272000 else (1, 1)
             cost = (((i-c)*2+c*.1)*prefill+o*10*sample)/1_000_000
         usage.append({'trial': value['trial_name'], **counts, 'estimated_usd': cost,
-                      'billing': 'stub protocol; no model usage or billing' if os.environ.get('AEB_PILOT_PROBE') == '1' else 'provider-reported tokens; estimate, not invoice'})
+                      'billing': 'stub protocol; no model usage or billing' if probe or os.environ.get('AEB_PILOT_PROBE') == '1' else 'provider-reported tokens; estimate, not invoice'})
     if replay or controls:
         for row in usage:
             row['billing'] = ('credential-free oracle controls; no model inference or billing' if controls else
@@ -335,25 +335,27 @@ def retain(root, artifact, *, replay=False, controls=False):
     return usage
 
 
-def collect(root, artifact, bundle, captured, *, controls=False, probe=False, replay=None, original_public=None, effectiveness=False):
+def collect(root, artifact, bundle, captured, *, controls=False, probe=False, replay=None, original_public=None, effectiveness=False, cohort=False):
     from skillevaluator.tier3.harbor.collector import collect_harbor_results
     ids = sorted({row['case_id'] for row in captured})
     raw = root / 'raw'; run = raw / 'results' / P['skill'] / ('retrospective-replay' if replay is not None else 'pilot-controls' if controls else 'cli-probe' if probe else 'live-pilot')
     collected = collect_harbor_results(P['skill'], ['codex'], run, root / 'jobs',
-        expected_cases=len(ids), expected_case_ids=ids, expected_trials=len(ids),
+        expected_cases=len(ids), expected_case_ids=ids, expected_trials=len(ids)*(3 if cohort else 1),
+        n_attempts=3 if cohort else 1, grading_mode="custom_only",
         agent_models={'codex': {'model': 'credential-free-oracle' if controls or replay is not None else P['model'], 'source': P['id']}})
     purpose = ('skill_effectiveness_control' if controls else 'skill_effectiveness') if effectiveness else 'cli_pilot_replay' if replay is not None else 'cli_pilot_control' if controls else 'cli_pilot_probe' if probe else 'cli_pilot'
-    capture = evidence.custom_capture(ROOT, P['skill'], bundle, captured, purpose=purpose, attempts=1,
+    if cohort and probe: purpose = 'skill_effectiveness_probe'
+    capture = evidence.custom_capture(ROOT, P['skill'], bundle, captured, purpose=purpose, attempts=3 if cohort else 1,
         agent='oracle' if controls or replay is not None else 'codex', retrospective=replay, execution_policy={'environment': 'docker',
-        'concurrency': 2, 'timeout_multiplier': 1.0, 'stop_on_pass': False})
+        'concurrency': 1 if cohort else 2, 'timeout_multiplier': 1.0, 'stop_on_pass': False})
     reports.write_json(raw / evidence.CUSTOM_CAPTURE, capture)
     config = {'grading': {'mode': 'custom_only'}, 'judge': {'enabled': False},
         'provider': {'name': 'fixture' if controls or replay is not None else 'openai', 'model': 'credential-free-oracle' if controls or replay is not None else P['model']},
-        'harbor': {'n_attempts': 1, 'stop_on_pass': False}}
+        'harbor': {'n_attempts': 3 if cohort else 1, 'stop_on_pass': False}}
     if controls or probe or replay is not None: config['qualification'] = {'producer': 'retained_submission_replay' if replay is not None else 'cli_probe' if probe else 'oracle', 'inference': False}
     reports.write_json(run / 'run_config.json', config)
     stages = reports.read_json(artifact / 'command-stages.json')
-    status = 'complete' if len(stages) == 2 and all(s.get('returncode') == 0 for s in stages) else 'incomplete'
+    status = 'complete' if len(stages) == (12 if cohort else 2) and all(s.get('returncode') == 0 for s in stages) else 'incomplete'
     reports.write_json(run / 'result.json', {**collected, 'diagnostic_only': True,
         'skill_name': P['skill'], 'report_status': status, 'run_config': config})
     grading = [{'trial_member': p.relative_to(run).as_posix(), 'entry_id': reports.read_json(p).get('entry_id'),
@@ -609,11 +611,15 @@ def consolidated(root):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=('controls','probe','live','report','check-preparation','effectiveness'))
+    parser.add_argument('action', choices=('controls','probe','live','report','check-preparation','effectiveness','cohort','check-cohort','qualify-cohort'))
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--approval', default='')
     parser.add_argument('--preparation', type=Path, help='Authenticated preparation artifact root')
     args=parser.parse_args()
+    if args.action in ('cohort', 'check-cohort', 'qualify-cohort'):
+        from codex_pilot_cohort import entry
+        entry(args)
+        return
     if args.action == 'live':
         revision = subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()
         if args.approval != 'pilot-' + revision + '-usd10' or os.environ.get('GITHUB_RUN_ATTEMPT') != '1':

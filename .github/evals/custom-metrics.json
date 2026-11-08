@@ -2503,6 +2503,151 @@
       "fixture_digest": "sha256:9dd6c53ce8090ff3790ff2274d8067775a5605def5cc80479bf2c85ef6330060",
       "runtime_digest": "sha256:11817c1a72ed0ea89918992229070650bf0f79e7e25e4e7592871f3f9db0c143",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0"
+    },
+    "pester-effectiveness-v4": {
+      "id": "pester-effectiveness-v4",
+      "grading": "custom_only",
+      "cases": {
+        "pester-001": {
+          "title": "Integer collection tests",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v2",
+            "powershell-pester-6.test-quality.v2"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v2": 2
+          }
+        },
+        "pester-003": {
+          "title": "Module mocking and invocation assertions",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v2",
+            "powershell-pester-6.test-quality.v2"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v2": 5
+          }
+        },
+        "pester-004": {
+          "title": "Discovery and data-case repair",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v2",
+            "powershell-pester-6.test-quality.v2"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v2": 4
+          }
+        }
+      },
+      "qualification_cases": {
+        "pester-001-classic": "pester-001",
+        "pester-001-standalone": "pester-001",
+        "pester-001-data": "pester-001",
+        "pester-001-weak": "pester-001",
+        "pester-003-external": "pester-003",
+        "pester-003-module": "pester-003",
+        "pester-003-weak": "pester-003",
+        "pester-004-discovery": "pester-004",
+        "pester-004-inline": "pester-004",
+        "pester-004-compact": "pester-004",
+        "pester-004-weak": "pester-004",
+        "pester-003-filtered": "pester-003",
+        "pester-003-unclassified-failure": "pester-003",
+        "pester-003-invocation-options": "pester-003",
+        "pester-003-module-parameters": "pester-003",
+        "pester-003-exclusive-misuse": "pester-003",
+        "pester-003-parameters-protected": "pester-003",
+        "pester-003-verifiable-target": "pester-003",
+        "pester-004-verifiable-scope": "pester-004",
+        "pester-004-explicit": "pester-004",
+        "pester-004-omit-zero": "pester-004",
+        "pester-004-omit-lowest": "pester-004",
+        "pester-004-omit-highest": "pester-004",
+        "pester-004-omit-above": "pester-004",
+        "pester-003-healthy-output": "pester-003",
+        "pester-003-healthy-calls": "pester-003",
+        "pester-004-broken-discovery": "pester-004",
+        "pester-003-wrong-scope": "pester-003",
+        "pester-003-failure": "pester-003",
+        "pester-003-missing": "pester-003",
+        "pester-003-unsupported": "pester-003",
+        "pester-003-timeout": "pester-003",
+        "pester-003-missing-runtime": "pester-003",
+        "pester-004-failure": "pester-004",
+        "pester-004-missing": "pester-004",
+        "pester-004-unsupported": "pester-004",
+        "pester-004-timeout": "pester-004",
+        "pester-004-missing-runtime": "pester-004"
+      },
+      "runtime": {
+        "powershell": "7.6.9",
+        "pester": "6.2.0",
+        "codex": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "workspace_profile": "pester-effectiveness-v3"
+      },
+      "skill_id": "powershell-pester-6",
+      "grader_digest": "sha256:1a6832501870290e011ff21265d98ada82a8f9d8d86af3b17b6094fef2fd2f20",
+      "fixture_digest": "sha256:d6c81334caecda72f1b1782dd4b4502b24893679573b7ce65627db4a643943c4",
+      "runtime_digest": "sha256:3c0ddf7f97cc1597389734a75b11093c9ad640f5f1d9e3de740a8999bbad3a16",
+      "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0"
+    },
+    "pester-cli-pilot-retained-v6": {
+      "id": "pester-cli-pilot-retained-v6",
+      "grading": "custom_only",
+      "cases": {
+        "pester-001": {
+          "title": "Integer collection tests",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v1",
+            "powershell-pester-6.test-quality.v1"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v1": 2
+          }
+        }
+      },
+      "qualification_cases": {
+        "pester-001-classic": "pester-001",
+        "pester-001-weak": "pester-001",
+        "pester-001-missing": "pester-001",
+        "pester-001-boolean": "pester-001",
+        "pester-001-template": "pester-001",
+        "pester-001-parameter": "pester-001",
+        "pester-001-failure": "pester-001",
+        "pester-001-loop": "pester-001",
+        "pester-001-loop-failure": "pester-001",
+        "pester-001-long": "pester-001",
+        "pester-001-loop-initializer": "pester-001",
+        "pester-001-loop-condition": "pester-001",
+        "pester-001-loop-iterator": "pester-001",
+        "pester-001-loop-body": "pester-001",
+        "pester-001-loop-protected": "pester-001",
+        "pester-001-loop-member": "pester-001",
+        "pester-001-loop-index": "pester-001",
+        "pester-001-loop-timeout": "pester-001",
+        "pester-001-missing-runtime": "pester-001",
+        "pester-001-path-before": "pester-001",
+        "pester-001-path-after": "pester-001"
+      },
+      "runtime": {
+        "powershell": "7.6.9",
+        "pester": "6.2.0",
+        "codex": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "workspace_profile": "codex-pester-001-pilot-v1"
+      },
+      "skill_id": "powershell-pester-6",
+      "grader_digest": "sha256:7b79f1be0c3c812ff6dfb4d2cef95721504adba6fc519934ea5312278509d37e",
+      "fixture_digest": "sha256:9dd6c53ce8090ff3790ff2274d8067775a5605def5cc80479bf2c85ef6330060",
+      "runtime_digest": "sha256:56b4e8f6537ac16708db3879609f4379e6993327bec3f85082ef3d8000fc0067",
+      "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0"
     }
   },
   "active_profiles": {

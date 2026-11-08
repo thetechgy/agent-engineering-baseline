@@ -962,14 +962,35 @@ Fixture qualification is not agent effectiveness evidence. The earlier two live
 submissions still establish compatibility only: both passed the retrospectively
 corrected reference and detected both mutants, with no demonstrated skill benefit.
 
-**One next action:** review [draft PR #122](https://github.com/thetechgy/agent-engineering-baseline/pull/122) and decide whether to authorize
-exactly its twelve-attempt live proposal at the artifact's qualified commit. The
-proposal estimates $6 usage, stops further launches at $10 estimated cumulative
-usage and retains $5 reserve within a $15 maximum allocation. Estimates are not
-billing or a hard provider cap. This preparation cannot launch the new live cohort;
-credentials, inference, judges and environment approval remain unauthorized. No
-previous paid allocation carries forward. Do not dispatch the historical pilot
-allocation as a substitute for this decision.
+**One next action:** finish credential-free qualification of the executable cohort
+path on [PR #122](https://github.com/thetechgy/agent-engineering-baseline/pull/122),
+then review its exact qualified revision and authenticated preparation before a
+separate paid decision. The [protocol's operator command](pester-effectiveness.md#qualified-execution-path-credential-free-implementation-follow-up)
+uses `cohort_allocation` on the existing workflow. The old pair allocation cannot
+authorize it. The runner records twelve ordered entries before launch, selects one
+case/arm/ordinal through the pinned native trial CLI, and retains pending or stopped
+entries without automatic continuation. The existing report path now admits the
+three-trial, two-primary-case population and labels non-forwarding CLI fixtures
+separately from live agent evidence. Task/grading/runtime/model/dependency settings
+and historical identities remain frozen; new source/runtime profiles bind the
+implementation and require fresh qualification.
+
+The proposal estimates $6 usage, stops subsequent launches at $10 cumulative
+estimated usage, and retains $5 contingency within a $15 planning allocation.
+These are estimates, not provider billing or an enforced billing ceiling; an
+in-flight request can exceed the observation threshold. Contingency permits no
+extra attempts or retries. Missing accounting or operational evidence stops
+scheduling. Public OpenAI model documentation was rechecked November 8, 2026;
+the frozen model remains listed at $2/$0.10/$10 per million input/cached/output
+tokens. Account access and invoice charges remain unverified. Credentials,
+inference, judges and environment approval remain unauthorized. No prior paid
+allocation carries forward.
+
+The implementation follow-up's final feature commit, tested revision, qualified
+preparation artifact and independently downloaded report reproduction are recorded
+on PR #122. This checkpoint does not itself qualify an untested revision or grant
+paid authorization. Exact-source qualification is required after any change; use
+only the final artifact and revision recorded on that PR.
 
 Maintain the new profile hashes, fixture transformation and expected defect matrix,
 APM deployment audit and public evidence/report contracts together. If live work

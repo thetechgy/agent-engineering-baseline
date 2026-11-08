@@ -16,6 +16,7 @@ sys.path.insert(0, str(ROOT / '.github/scripts'))
 import codex_pilot as pilot
 import codex_pilot_effectiveness as effect
 import skill_evidence as evidence
+import skill_reports as reports
 from codex_pilot_effectiveness import runner_bytes
 
 CANDIDATE = importlib.util.find_spec('skillevaluator') and importlib.metadata.version('skillevaluator') == '0.8.0'
@@ -124,9 +125,13 @@ class Protocol(unittest.TestCase):
             root = Path(directory)
             bundle, tasks, captured = pilot.stage(root, effectiveness=True)
             self.assertTrue(effect.verify_arms(tasks, captured)['complete'])
-            capture = evidence.custom_capture(ROOT, 'powershell-pester-6', bundle, captured,
-                purpose=effect.PURPOSE, attempts=1, agent='codex', execution_policy={
-                    'environment':'docker', 'concurrency':2, 'timeout_multiplier':1.0, 'stop_on_pass':False})
+            dataset = reports.read_json(bundle / 'evals/evals.json')
+            dataset['evals'] = [r for r in dataset['evals'] if r['id'] in effect.PRIMARY_CASES]
+            reports.write_json(bundle / 'evals/evals.json', dataset)
+            capture = evidence.custom_capture(ROOT, 'powershell-pester-6', bundle,
+                [r for r in captured if r['case_id'] in effect.PRIMARY_CASES],
+                purpose=effect.PURPOSE, attempts=3, agent='codex', execution_policy={
+                    'environment':'docker', 'concurrency':1, 'timeout_multiplier':1.0, 'stop_on_pass':False})
             evidence.validate_custom_capture(capture, 'powershell-pester-6', ROOT)
             control_root = root / 'controls'; control_root.mkdir()
             control_bundle, _, control_capture = pilot.stage(control_root, controls=True, effectiveness=True)

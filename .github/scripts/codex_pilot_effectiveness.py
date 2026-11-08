@@ -8,7 +8,7 @@ import shutil
 from codex_pilot_contract import ROOT, PROFILE as RUNTIME, grader_bytes as retained_grader
 from codex_pilot_iteration import runner_bytes as retained_runner_bytes
 
-PROFILE_ID = 'pester-effectiveness-v3'
+PROFILE_ID = 'pester-effectiveness-v4'
 PURPOSE = 'skill_effectiveness'
 CONTROL_PURPOSE = 'skill_effectiveness_control'
 CASES = ('pester-001', 'pester-003', 'pester-004')
@@ -224,7 +224,9 @@ def schedule():
 
 
 def inputs(workspace=ROOT):
-    paths = [PROTOCOL, DOCUMENT, '.github/scripts/codex_pilot_effectiveness.py']
+    paths = [PROTOCOL, DOCUMENT, '.github/scripts/codex_pilot_effectiveness.py', '.github/scripts/codex_pilot_cohort.py',
+             '.github/scripts/codex_pilot_dispatch.py', '.github/scripts/skill_evidence.py', '.github/scripts/skill_analysis.py', '.github/scripts/skill_report.py',
+             '.github/scripts/skill_reports.py', '.github/workflows/codex-pilot.yml']
     paths += [p.relative_to(workspace).as_posix() for p in sorted((workspace / '.github/evals/pester-confirmation-v1').rglob('*')) if p.is_file()]
     return [{'member': 'pilot/' + path, 'digest': 'sha256:' + hashlib.sha256((workspace / path).read_bytes()).hexdigest()} for path in paths]
 

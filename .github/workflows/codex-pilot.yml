@@ -1,5 +1,5 @@
 name: Codex compatibility pilot
-run-name: Codex pester-001 pilot (${{ inputs.allocation == '' && 'credential-free' || 'requested allocation' }})
+run-name: ${{ inputs.cohort_allocation != '' && format('Codex cohort {0}', inputs.cohort_allocation) || 'Codex pilot credential-free preparation or compatibility allocation' }}
 on:
   pull_request:
     paths:
@@ -22,6 +22,10 @@ on:
         description: Leave empty for preparation. Approved live allocation is pilot-<exact 40-char commit>-usd10.
         type: string
         default: ''
+      cohort_allocation:
+        description: 'Empty by default. Separately approved cohort-<SHA>-pester-effectiveness-v3-prep<artifact ID>-usd15-<unique dispatch nonce>.'
+        type: string
+        default: ''
 permissions: {}
 concurrency:
   group: codex-compatibility-pilot
@@ -39,6 +43,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
@@ -111,6 +116,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
@@ -143,7 +149,7 @@ jobs:
           retention-days: 90
   live:
     needs: [prepare, consume]
-    if: github.event_name == 'workflow_dispatch' && inputs.allocation != '' && github.run_attempt == 1
+    if: github.event_name == 'workflow_dispatch' && inputs.allocation != '' && inputs.cohort_allocation == '' && github.run_attempt == 1
     environment:
       name: skill-benchmark
       deployment: false
@@ -195,15 +201,18 @@ jobs:
 
   effectiveness:
     name: Prospective Pester preparation (no inference)
+    outputs:
+      artifact-id: ${{ steps.effectiveness-artifact.outputs.artifact-id }}
     permissions:
       contents: read
     runs-on: ubuntu-latest
-    timeout-minutes: 65
+    timeout-minutes: 120
     env:
       PYTHONDONTWRITEBYTECODE: '1'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
@@ -216,16 +225,22 @@ jobs:
           APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
           echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
       - name: Check prospective contract and clean deployment
-        run: 'PYTHONPATH=.github/scripts:.github/tests "$SKILL_CURRENT_PYTHON" -B -m unittest test_codex_effectiveness -v'
+        run: 'PYTHONPATH=.github/scripts:.github/tests "$SKILL_CURRENT_PYTHON" -B -m unittest test_codex_effectiveness test_codex_cohort -v'
       - name: Qualify cases through independent native verifier and existing report
         timeout-minutes: 50
         run: '"$SKILL_CURRENT_PYTHON" -B .github/scripts/codex_pilot.py effectiveness --output "$RUNNER_TEMP/pester-effectiveness"'
+      - name: Qualify the exact cohort scheduler with real CLI and non-forwarding fixtures
+        timeout-minutes: 55
+        run: '"$SKILL_CURRENT_PYTHON" -B .github/scripts/codex_pilot.py qualify-cohort --output "$RUNNER_TEMP/cohort-qualification" --preparation "$RUNNER_TEMP/pester-effectiveness/evidence"'
+      - name: Recheck preparation after native cohort qualification
+        run: '"$SKILL_CURRENT_PYTHON" -B .github/scripts/codex_pilot.py check-cohort --output "$RUNNER_TEMP/cohort-check" --preparation "$RUNNER_TEMP/pester-effectiveness/evidence"'
       - name: Check checkout integrity
         if: always()
         run: |
           git diff --exit-code
           test -z "$(git status --porcelain=v1 --untracked-files=all --ignored)"
       - name: Retain prospective identities, submissions and reproduced report
+        id: effectiveness-artifact
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -234,8 +249,131 @@ jobs:
             ${{ runner.temp }}/pester-effectiveness/evidence/
             ${{ runner.temp }}/pester-effectiveness/controls/evidence/
             ${{ runner.temp }}/pester-effectiveness/prospective/evidence/
+            ${{ runner.temp }}/cohort-qualification/
+            ${{ runner.temp }}/cohort-check/evidence/
           if-no-files-found: error
           retention-days: 90
       - name: Remove test-only Compose configuration
         if: always()
         run: bash .github/scripts/setup-compose.sh cleanup
+
+  cohort-consume:
+    name: Consume prospective preparation (no inference)
+    needs: effectiveness
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: '0.13.7'
+          enable-cache: false
+      - name: Acquire credential-free consumption tools
+        run: |
+          bash .github/scripts/setup-skillevaluator.sh candidate-current
+          APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
+          echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          artifact-ids: ${{ needs.effectiveness.outputs.artifact-id }}
+          path: ${{ runner.temp }}/cohort-preparation
+          merge-multiple: true
+      - name: Consume exact downloaded prospective preparation
+        run: '"$SKILL_CURRENT_PYTHON" -B .github/scripts/codex_pilot.py check-cohort --output "$RUNNER_TEMP/cohort-consumed" --preparation "$RUNNER_TEMP/cohort-preparation/pester-effectiveness/evidence"'
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: pester-cohort-consumption-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/cohort-consumed/evidence/
+          if-no-files-found: error
+          retention-days: 90
+
+  cohort-preflight:
+    name: Authenticate separately approved cohort dispatch
+    needs: [prepare, consume, effectiveness, cohort-consume]
+    if: github.event_name == 'workflow_dispatch' && inputs.cohort_allocation != '' && inputs.allocation == '' && github.run_attempt == 1
+    permissions:
+      contents: read
+      actions: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      artifact-id: ${{ steps.authentication.outputs.artifact-id }}
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Authenticate previous qualified artifact and reject duplicate dispatch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COHORT_ALLOCATION: ${{ inputs.cohort_allocation }}
+        run: 'python3 -B .github/scripts/codex_pilot_dispatch.py --output "$RUNNER_TEMP/cohort-auth" --approval "$COHORT_ALLOCATION"'
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        id: authentication
+        with:
+          name: cohort-authenticated-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/cohort-auth/
+          if-no-files-found: error
+          retention-days: 90
+
+  cohort-live:
+    name: Separately approved frozen twelve-attempt cohort
+    needs: cohort-preflight
+    if: github.event_name == 'workflow_dispatch' && inputs.cohort_allocation != '' && inputs.allocation == '' && github.run_attempt == 1
+    environment:
+      name: skill-benchmark
+      deployment: false
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: '0.13.7'
+          enable-cache: false
+      - name: Prepare frozen runtime without model credentials
+        run: |
+          bash .github/scripts/setup-skillevaluator.sh candidate-current
+          bash .github/scripts/setup-compose.sh
+          APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
+          echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          artifact-ids: ${{ needs.cohort-preflight.outputs.artifact-id }}
+          path: ${{ runner.temp }}/cohort-auth
+          merge-multiple: true
+      - name: Verify all prospective identities before credential delivery
+        run: '"$SKILL_CURRENT_PYTHON" -B .github/scripts/codex_pilot.py check-cohort --output "$RUNNER_TEMP/cohort-live-preflight" --preparation "$RUNNER_TEMP/cohort-auth/downloaded/pester-effectiveness/evidence"'
+      - name: Execute the separately approved cohort once
+        timeout-minutes: 165
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          COHORT_ALLOCATION: ${{ inputs.cohort_allocation }}
+        run: '"$SKILL_CURRENT_PYTHON" -B .github/scripts/codex_pilot.py cohort --output "$RUNNER_TEMP/cohort-live" --approval "$COHORT_ALLOCATION" --preparation "$RUNNER_TEMP/cohort-auth/downloaded/pester-effectiveness/evidence"'
+      - name: Retain every entry and partial native/report/cleanup evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pester-cohort-live-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/cohort-live/evidence/
+            ${{ runner.temp }}/cohort-live-preflight/evidence/
+          if-no-files-found: error
+          retention-days: 90

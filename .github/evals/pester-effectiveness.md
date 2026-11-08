@@ -155,14 +155,13 @@ with the included public evidence and saved analysis. Qualification observations
 are deterministic fixtures, never future agent results or production history.
 
 The artifact's `frozen-proposal.json` binds the proposed live run to the qualified
-40-character source revision. **No live effectiveness execution is enabled by
-this preparation action.** The old pilot's `pilot-...-usd10` approval only permits
+40-character source revision. **This preparation action never launches live effectiveness execution.** The old pilot's `pilot-...-usd10` approval only permits
 its original compatibility pair and cannot authorize this new cohort. A future
 explicit authorization must name this protocol, exact qualified commit and twelve
 attempts; delivering credentials or approving an environment gate remains separate.
 
 Propose $6 expected usage, stop before starting another attempt once cumulative
-estimated usage reaches $10, and retain $5 reserve within a $15 maximum allocation.
+estimated usage reaches $10, and retain $5 reserve within a $15 planning allocation.
 These are planning estimates, not a token cap or actual invoice. At the checkpoint's
 frozen prices ($2/M input, $0.10/M cached input, $10/M output), 100K uncached input
 and 30K output per attempt would cost about $0.50, or $6 for twelve attempts.
@@ -183,3 +182,89 @@ Maintain the versioned fixture transformation, exact control matrix, APM byte au
 source/profile hashes, public admission and report reproduction together. Changes
 to these or the supported runtime require fresh credential-free qualification;
 historical identities and retained tooling remain necessary for old reports.
+
+## Qualified execution path (credential-free implementation follow-up)
+
+The `cohort` action executes this frozen v3 protocol. Its v4 evidence profile
+versions the changed runtime producer and reporting admission, retaining v3 grading,
+metric definitions, task inputs and every historical profile. The compatibility
+producer likewise has a new retained-v6 runtime identity. The preparation command
+above remains credential-free. `qualify-cohort` runs the actual twelve-entry
+scheduler through the pinned Harbor single-trial CLI, released Codex and independent
+native verifier with non-forwarding loopback responses. Answers are supplied by
+the trusted host at probe startup and remain outside live images and contexts.
+Fixture records use `skill_effectiveness_probe`, separate from live effectiveness.
+
+After separate authorization, the one operator entry point is the existing workflow:
+
+```sh
+gh workflow run codex-pilot.yml --repo thetechgy/agent-engineering-baseline \
+  --ref feat/pester-effectiveness \
+  -f cohort_allocation="cohort-QUALIFIED_SHA-pester-effectiveness-v3-prepARTIFACT_ID-usd15-UNIQUE_DISPATCH_NONCE"
+```
+
+Replace the uppercase fields with the exact final qualified source, authenticated
+preparation artifact ID and a unique 8–40 character alphanumeric/underscore/hyphen
+nonce named in the approval. Leave `allocation` empty. **This command is not
+currently approved.** The workflow has no default cohort allocation. Its
+credential-free jobs prepare, execute fixtures, reproduce reports and consume the
+artifact without secrets or an environment approval. A separately requested live
+cohort authenticates the previous successful preparation's repository, workflow,
+source, attempt, artifact identity and archive digest through GitHub read APIs;
+bounded extraction treats all downloaded content as data. It rejects changed code,
+old pilot allocations, workflow reruns and any later dispatch reusing the allocation.
+The first matching dispatch consumes the allocation even if it fails before a
+launch. A new dispatch or nonce requires a new decision. No persistence service is
+introduced: existing Actions run history and artifacts supply the dispatch claim.
+Unavailable or incomplete history fails closed.
+
+Only after authentication and fresh preparation checks does `cohort-live` reach
+the existing protected `skill-benchmark` environment. A further fresh identity check
+precedes the step receiving the model secret. The runner repeats identity checks
+before every launch. No credential or protected gate is used in qualification.
+The exact internal command is:
+
+```sh
+"$SKILL_CURRENT_PYTHON" -B .github/scripts/codex_pilot.py cohort \
+  --output "$RUNNER_TEMP/cohort-live" --approval "$COHORT_ALLOCATION" \
+  --preparation "$RUNNER_TEMP/cohort-auth/downloaded/pester-effectiveness/evidence"
+```
+
+The runner writes all twelve identities as `unlaunched` in `attempt-ledger.json`,
+then durably records each launch before starting one native trial. Each trial has
+one exact task and arm, its declared ordinal, an independent container/home/output
+namespace, and no Harbor job-level retry or concurrency. Checksums are checked before
+and after execution. Original trial results are preserved; the pinned Harbor
+`JobStats` builds a derived collector envelope with six planned trials per arm.
+Pending entries stay pending. The existing native admission, public records,
+analysis and consolidated renderer retain submissions, grades, usage, diagnostics,
+policy and cleanup evidence. There is no resume or automatic continuation mode.
+Interruption handling terminates the child with bounded teardown and attempts
+partial collection. A hard runner loss can prevent final upload; neither missing
+evidence nor an unfinished ledger authorizes a restart.
+
+Accounting adds each observed attempt once. Cached input is a subset of total
+input and is subtracted before uncached pricing; output is independent. The
+unchanged conservative long-context estimate remains. At or above $10 cumulative
+estimated usage, the next launch is refused. Unknown accounting also refuses the
+next launch. The $6 estimate, $5 contingency and $15 planning allocation are
+unchanged. The $15 allocation is not an enforced billing ceiling; an in-flight
+request may exceed an observation-based threshold. Contingency authorizes no extra
+attempts, replacements or retries. Provider invoices and cache-write charges
+remain outside verified accounting.
+
+On November 8, 2026, official [model documentation](https://developers.openai.com/api/docs/models/gpt-6.1-sol)
+still listed `gpt-6.1-sol` on Responses, High reasoning, and standard prices of
+$2 input, $0.10 cached input and $10 output per million tokens, with the documented
+long-context premium. This is public availability, not verification of account
+access, funding or rate limits. No authenticated provider request was made.
+
+Qualification includes a complete twelve-entry real CLI/container fixture run,
+measured passing and failing submissions, and short stopped cohorts for unsupported
+grading, command failure and interruption. Threshold crossing, unknown accounting
+and cleanup rejection also exercise real CLI/verification/disposal, followed by
+explicit host observation fault injection; the original native observations remain
+intact and labeled. Focused contracts check identity/allocation rejection and
+replay. These are operational fixture results, not skill-effectiveness results.
+Final feature commit, tested source, authenticated artifact and reproduction hashes
+are recorded in the [authoritative checkpoint](EVALUATION-PLAN.md) and PR #122.
