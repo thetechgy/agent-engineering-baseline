@@ -42,6 +42,16 @@ class ProtocolContracts(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'cannot authorize'):
             protocol.protocol(load(ROOT/'.github/evals/campaigns/boolean-contract.json'))
 
+    def test_live_bundle_preserves_original_case_without_self_copy_or_solution(self):
+        task=self.task()
+        with tempfile.TemporaryDirectory() as directory:
+            bundle=task.bundle(Path(directory),'live')
+            native=bundle/'evals/harbor'
+            self.assertEqual([p.name for p in native.iterdir() if p.is_dir()],['pester-004'])
+            self.assertFalse((native/'pester-004/solution').exists())
+            self.assertEqual((native/'pester-004/instruction.md').read_text(),task.entry()['prompt']+'\n')
+            self.assertEqual([r['id'] for r in reports.read_json(bundle/'evals/evals.json')['evals']],['pester-004'])
+
     def test_live_failure_is_measured_but_invalid_unknown_and_runtime_failures_stop(self):
         row={'cleanup':True,'returncode':0,'grading_present':True,'usage':{'estimated_usd':0},'outcome':{'classification':'passed'}}
         for outcome in ('passed','failed'):
@@ -100,6 +110,34 @@ class ProtocolContracts(unittest.TestCase):
                 protocol.claim(Path(d)/'campaign-live',receipt)
                 with self.assertRaises(FileExistsError):protocol.claim(Path(d)/'campaign-live',receipt)
                 with self.assertRaises(ValueError):protocol.claim(Path(d)/'another',receipt)
+
+    def test_fresh_consumption_accepts_only_toml_presentation_changes(self):
+        try: import dirhash
+        except ImportError: self.skipTest('Owning descriptor runtime required')
+        from codex_pilot_descriptors import retain_descriptors
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);ref=root/'reference';new=root/'new'
+            ref.mkdir();new.mkdir();task=self.task()
+            proposal={'protocol_digest':'synthetic'}
+            reports.write_json(ref/'frozen-proposal.json',proposal)
+            for destination,raw in [(ref,b'[agent]\ntimeout_sec=600.0\nuser="agent"\n'),
+                                    (new,b'[agent]\nuser="agent"\ntimeout_sec=600.0\n')]:
+                native=destination/'task';native.mkdir();(native/'task.toml').write_bytes(raw)
+                members={'task.toml':evidence.digest_bytes(raw),'instruction.md':'sha256:'+'a'*64}
+                captured=[{'arm':'with_skill','case_id':'task','members':members,'task_checksum':evidence.custom_task_checksum(members)}]
+                reports.write_json(destination/'staging.json',captured)
+                reports.write_json(destination/'deployment.json',{'same':'deployment'})
+                retain_descriptors(destination,{'with_skill':[native]},captured)
+            with patch.object(protocol,'frozen',return_value=proposal),patch.object(protocol.profiles,'runtime'):
+                self.assertTrue(protocol.check(ref,new,task,qualified=False)['configurations_equal'])
+                raw=b'[agent]\nuser="agent"\ntimeout_sec=601.0\n'
+                (new/'task/task.toml').write_bytes(raw)
+                captured=reports.read_json(new/'staging.json')
+                captured[0]['members']['task.toml']=evidence.digest_bytes(raw)
+                captured[0]['task_checksum']=evidence.custom_task_checksum(captured[0]['members'])
+                reports.write_json(new/'staging.json',captured)
+                retain_descriptors(new,{'with_skill':[new/'task']},captured)
+                with self.assertRaisesRegex(ValueError,'configurations differ'):protocol.check(ref,new,task,qualified=False)
 
     def test_preparation_metadata_rejects_untrusted_producer_and_wrong_attempt(self):
         repo={'id':42,'full_name':protocol.REPO}

@@ -80,7 +80,10 @@ def check(reference, staging, task, *, qualified=True):
         require(digest(staging / 'report-reproduction/report.html') == digest(reference / 'consolidated/report.html')
                 == digest(reference / 'reproduced/report.html'), 'Consumed public-only report reproduction failed')
     require(reports.read_json(reference / 'deployment.json') == reports.read_json(staging / 'deployment.json'), 'Deployment drift')
-    require(reports.read_json(reference / 'staging.json') == reports.read_json(staging / 'staging.json'), 'Complete staged-member drift')
+    def members(directory):
+        return {(r['arm'],r['case_id']):{k:v for k,v in r['members'].items() if k != 'task.toml'}
+                for r in reports.read_json(directory / 'staging.json')}
+    require(members(reference) == members(staging), 'Complete staged-member drift')
     result = compare_descriptors(reference, staging)
     reports.write_json(staging / 'preparation-check.json', dict(result, complete=True, revision=revision(), inference=False))
     return result

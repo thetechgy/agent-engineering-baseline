@@ -75,7 +75,8 @@ class Task:
         original = native / self.definition['source_case']
         for case, control in self.cases(mode).items():
             target = native / case
-            shutil.copytree(original, target)
+            if target != original:
+                shutil.copytree(original, target)
             config = target / 'task.toml'
             config.write_text(config.read_text().replace('entry_id = ' + json.dumps(original.name), 'entry_id = ' + json.dumps(case)))
         for path in native.iterdir():
