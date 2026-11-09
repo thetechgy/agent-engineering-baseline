@@ -287,6 +287,11 @@ def agent_config(task, mode, control, runtime, present):
             'kwargs': {'campaign_definition': task.member, 'control': control, 'present': present}}
 
 
+def submission_path(trial, output):
+    from harbor.models.task.artifacts import source_host_path
+    return source_host_path(trial / 'artifacts', '/logs/artifacts') / 'submitted' / output
+
+
 def native_observation(trial, native, present, row, rows, *, output):
     import skill_reports as reports
     audits = list(trial.rglob('pilot-runtime.json'))
@@ -304,7 +309,7 @@ def native_observation(trial, native, present, row, rows, *, output):
     require(probe.get('model') == PROFILE['model'] and probe.get('reasoning', {}).get('effort') == PROFILE['reasoning_effort']
             and probe.get('requests') == 2, 'Observed CLI model/request drift')
     from skill_evidence import read_bytes
-    submitted = read_bytes(trial / 'artifacts/submitted' / output, limit=65536)
+    submitted = read_bytes(submission_path(trial, output), limit=65536)
     receipts = list(trial.rglob('pilot-produced-submission.json'))
     require(len(receipts) == 1, 'Missing submitted artifact receipt')
     receipt = reports.read_json(receipts[0])

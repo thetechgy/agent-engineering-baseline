@@ -292,6 +292,19 @@ class NativeAdapterContracts(unittest.TestCase):
             self.assertNotEqual(run(files).returncode,0)
             self.assertEqual(outside.read_bytes(),b'preserved')
 
+    @unittest.skipUnless(__import__('importlib.util',fromlist=['find_spec']).find_spec('aeb_gh_fixture') and __import__('importlib.metadata',fromlist=['version']).version('skillevaluator') == '0.8.0', 'Owning native backend required')
+    def test_submission_location_uses_native_collector_source_path_layout(self):
+        from evaluation_codex import submission_path
+        from harbor.trial.artifact_handler import artifact_host_path
+        from harbor.models.task.config import ArtifactConfig
+        with tempfile.TemporaryDirectory() as directory:
+            trial=Path(directory)
+            native=artifact_host_path(trial/'artifacts',ArtifactConfig(source='/logs/artifacts'))/'submitted/result.json'
+            native.parent.mkdir(parents=True);native.write_bytes(b'{"native":true}')
+            old=trial/'artifacts/submitted/result.json';old.parent.mkdir();old.write_bytes(b'wrong flat layout')
+            self.assertEqual(submission_path(trial,'result.json').read_bytes(),b'{"native":true}')
+            self.assertEqual(submission_path(trial,'result.json'),native)
+
     def test_report_staging_preserves_synthetic_alternate_runtime_and_model_identities(self):
         try:
             import skillevaluator

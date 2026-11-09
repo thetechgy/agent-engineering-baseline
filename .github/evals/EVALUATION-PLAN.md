@@ -38,8 +38,11 @@ Acquisition recovered through the existing integrity-verified paths. The unchang
 native retry on `2e69289` completed gh oracle controls, but the real-CLI verifier
 could not read host-owned private helper files after Docker upload. The owning
 runtime now transports those helpers as root through its existing bounded stdin
-path; grading criteria and capabilities are unchanged. Final native qualification
-and required final-head checks remain pending. Historical grades remain intact.
+path; grading criteria and capabilities are unchanged.
+Native gh grading then passed on `e3221fb`; qualification exposed an incorrect
+flat host path for the retained JSON. The adapter now uses Harbor's existing
+source-path mapping. Final native qualification and required final-head checks
+remain pending. Historical grades remain intact.
 
 **One next action:** complete the existing native campaign and final-head checks
 for draft PR #124 before marking it ready for review.
