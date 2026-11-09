@@ -105,6 +105,8 @@ a two-path private upload transport with byte-preserving repeated initialization
 The Codex adapter bridges the pinned exec JSON protocol to Harbor ATIF using
 completed native command identities and observations. Missing observations and
 unsupported protocols have separate stop reasons; unknown events fail closed.
+Native setup failures are infrastructure outcomes in public reports, while
+missing and unsupported observations retain their separate unavailable states.
 Protocol changes require new adapter qualification. Source changes get new profile
 identities; old profiles, receipts and grades stay unchanged. The new retained
 pilot/effectiveness source identities are v7, with unchanged historical grading

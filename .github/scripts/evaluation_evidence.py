@@ -72,3 +72,8 @@ def validate_task(profile, members, case, arm):
     adapter.validate_members(members, case, arm)
     runtime = adapter_for(read_profile(ROOT / adapter.definition['runtime_profile']))
     runtime.validate_members(members, profile['campaign']['mode'])
+
+
+def native_outcome(profile, trial, outcome):
+    from evaluation_runtime import native_outcome as interpret, read_profile
+    return interpret(read_profile(ROOT / task(profile).definition['runtime_profile']), trial, outcome)

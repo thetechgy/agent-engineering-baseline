@@ -13,7 +13,7 @@ import tempfile
 from codex_pilot_agent import PilotCodex
 from codex_pilot_environment import PilotEnvironment
 from evaluation_campaign_core import require
-from evaluation_runtime import ROOT, read_profile
+from evaluation_runtime import ROOT, read_profile, failure_reason
 
 
 class MissingCodexObservation(ValueError):
@@ -91,11 +91,6 @@ def exec_trajectory(raw, adapter):
         agent=Agent(name='codex', version=adapter.profile['cli'], model_name=adapter.model_name),
         steps=steps, notes='\n'.join(notes) or None,
         extra={'source':'codex-0.167-exec-json', 'inference':False})
-
-
-def failure_reason(exception_type):
-    return {'MissingCodexObservation':'missing_native_observation',
-            'UnsupportedCodexProtocol':'unsupported_runtime_protocol'}.get(exception_type, 'execution_infrastructure_failure')
 
 
 class CampaignCodex(PilotCodex):

@@ -80,7 +80,6 @@ def collect(root, task, mode, bundle, captured, rows):
     skill = task.definition['skill']; ids = sorted(task.cases(mode)); raw = root / 'raw'
     run = raw / 'results' / skill / purpose(task, mode)
     runtime = read_profile(ROOT / task.definition['runtime_profile'])['resolved']
-    runtime = read_profile(ROOT / task.definition['runtime_profile'])['resolved']
     data = collect_harbor_results(skill, [runtime['agent']], run, root / 'jobs', expected_cases=len(ids), expected_case_ids=ids,
         expected_trials=len(ids), grading_mode='custom_only', agent_models={runtime['agent']: {'model': runtime['model'] if mode == 'probe' else 'credential-free-oracle', 'source': task.definition['runtime_profile']}})
     config = {'grading': {'mode': 'custom_only'}, 'judge': {'enabled': False},

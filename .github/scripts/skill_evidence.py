@@ -3996,6 +3996,9 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
             if outcome not in CUSTOM_MEASURED:
                 exception_type = (trial.get('exception_info') or {}).get('exception_type')
                 outcome = CUSTOM_NATIVE_EXCEPTIONS.get(exception_type, outcome)
+                if 'campaign' in profile:
+                    from evaluation_evidence import native_outcome
+                    outcome = native_outcome(profile, trial, outcome)
             enum(outcome, CUSTOM_OUTCOMES)
             measured = outcome in CUSTOM_MEASURED
             if measured:

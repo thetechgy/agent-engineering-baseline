@@ -1,10 +1,6 @@
 """Adapter-owned runtime/model validation and matched native APM deployment."""
 import hashlib
-import os
 from pathlib import Path
-import re
-import shutil
-import subprocess
 
 from evaluation_campaign_core import require
 
@@ -52,3 +48,31 @@ def source_inputs(runtime, workspace):
     import skill_evidence as e
     return pilot_inputs(workspace) + [{'member': 'runtime/evaluation_codex.py',
         'digest': e.digest_bytes(e.read_bytes(workspace / '.github/scripts/evaluation_codex.py'))}]
+
+
+_CODEX_FAILURES = {
+    'MissingCodexObservation': ('missing_native_observation', 'unknown'),
+    'UnsupportedCodexProtocol': ('unsupported_runtime_protocol', 'unsupported'),
+}
+
+
+def failure_reason(exception_type):
+    return _CODEX_FAILURES.get(exception_type, ('execution_infrastructure_failure', None))[0]
+
+
+def native_outcome(runtime, trial, outcome):
+    """Adapter-owned interpretation of retained native lifecycle failures.
+
+    A failed environment/agent setup cannot be a measured task failure. Unknown
+    execution failures stay unknown; no message matching invents a diagnosis.
+    """
+    require(runtime['profile']['adapter'] == 'codex', 'Unsupported native observation adapter')
+    exception = (trial.get('exception_info') or {}).get('exception_type')
+    if exception in _CODEX_FAILURES:
+        return _CODEX_FAILURES[exception][1]
+    if outcome in ('timeout', 'interrupted'):
+        return outcome
+    if (exception and trial.get('agent_execution') is None and trial.get('verifier') is None
+            and any(isinstance(trial.get(phase), dict) for phase in ('environment_setup', 'agent_setup'))):
+        return 'infrastructure_error'
+    return outcome

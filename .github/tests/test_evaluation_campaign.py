@@ -105,6 +105,27 @@ class CampaignContracts(unittest.TestCase):
                 task.check('unauthorized',True,{'classification':'failed'},{'gh_task':1,'gh_authorization':0})
                 with self.assertRaises(ValueError):task.check('unauthorized',True,{'classification':'failed'},{'gh_task':0,'gh_authorization':0})
 
+    def test_public_native_failure_classification_preserves_setup_missing_and_unsupported(self):
+        # Lifecycle shape retained from the actual failed pinned release download.
+        selected=runtime.read_profile(ROOT/'.github/evals/campaigns/codex-qualified.json')
+        failed={'exception_info':{'exception_type':'RuntimeError'},
+                'environment_setup':{'started_at':'2026-11-09T05:28:21Z','finished_at':'2026-11-09T05:28:26Z'},
+                'agent_setup':None,'agent_execution':None,'verifier':None}
+        task=load(ROOT/'.github/evals/campaigns/gh-read.json')
+        profile,_,_=evidence.custom_contract('gh',purpose='campaign-'+task.definition['id']+'-probe')
+        import evaluation_evidence
+        self.assertEqual(evaluation_evidence.native_outcome(profile,failed,'unknown'),'infrastructure_error')
+        for exception,expected in [('MissingCodexObservation','unknown'),('UnsupportedCodexProtocol','unsupported')]:
+            value=copy.deepcopy(failed);value['exception_info']['exception_type']=exception
+            self.assertEqual(runtime.native_outcome(selected,value,'unknown'),expected)
+        for original in ('timeout','interrupted'):
+            self.assertEqual(runtime.native_outcome(selected,failed,original),original)
+        value=copy.deepcopy(failed);value['agent_execution']={'started_at':'observed'}
+        self.assertEqual(runtime.native_outcome(selected,value,'unknown'),'unknown')
+        value['exception_info']=None
+        for original in ('passed','failed','unknown','unsupported'):
+            self.assertEqual(runtime.native_outcome(selected,value,original),original)
+
     def test_metadata_inspection_does_not_import_native_runtime_backends(self):
         import builtins
         original=builtins.__import__
