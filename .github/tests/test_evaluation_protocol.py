@@ -157,6 +157,17 @@ class ProtocolContracts(unittest.TestCase):
         selected=runtime.read_profile(ROOT/'.github/evals/campaigns/codex-authorized-v1.json')
         with self.assertRaises(ValueError):runtime.validate_codex({**selected['profile'],'inference_enabled':True})
 
+    def test_report_admission_preserves_inference_and_population_boundaries(self):
+        task=self.task()
+        config={'qualification':{'producer':'live','inference':True},'harbor':{'n_attempts':3,'stop_on_pass':False}}
+        live=campaign.purpose(task,'live');probe=campaign.purpose(task,'experiment-probe')
+        evidence.validate_custom_execution_config(live,config,3)
+        fixture={**config,'qualification':{'producer':'cli_probe','inference':False}}
+        evidence.validate_custom_execution_config(probe,fixture,3)
+        with self.assertRaisesRegex(ValueError,'Live campaign purpose mismatch'):evidence.validate_custom_execution_config(live,fixture,3)
+        with self.assertRaisesRegex(ValueError,'CLI probe purpose mismatch'):evidence.validate_custom_execution_config(probe,config,3)
+        with self.assertRaisesRegex(ValueError,'execution policy mismatch'):evidence.validate_custom_execution_config(live,config,4)
+
     def test_report_labels_prospective_live_separately_from_nonforwarding_controls(self):
         import skill_analysis as analysis
         task=self.task()

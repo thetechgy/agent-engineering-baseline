@@ -82,10 +82,11 @@ in a single approval, tied to exact source, artifact and protocol digest.
 
 Credential-free final-source qualification, downloaded-artifact consumption and
 report reproduction must complete before this can be called ready for a bounded
-live decision. The draft PR retains the concrete source/artifact/protocol receipt.
+live decision. [Draft PR #126](https://github.com/thetechgy/agent-engineering-baseline/pull/126)
+retains the concrete source/artifact/protocol receipt and current qualification state.
 
-**One next action:** qualify and review the prepared six-attempt protocol before
-a separate bounded live decision.
+**One next action:** review the final qualification receipt on PR #126 for a
+separate bounded live decision.
 No further paid inference, judges, retries or dispatches are authorized.
 Production and skills remain unchanged; the reserved confirmation variant remains
 untouched and outside this work. Sections below preserve historical checkpoints

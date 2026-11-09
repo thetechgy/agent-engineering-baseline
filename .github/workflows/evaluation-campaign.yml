@@ -59,6 +59,8 @@ jobs:
             --definition .github/evals/campaigns/gh-read.json \
             --definition .github/evals/campaigns/boolean-contract.json \
             --output "$RUNNER_TEMP/reusable-evaluation"
+      - name: Acquire fresh verified Compose configuration for the experiment phase
+        run: bash .github/scripts/setup-compose.sh
       - name: Qualify the six-slot protocol through the same execution loop
         timeout-minutes: 55
         run: |

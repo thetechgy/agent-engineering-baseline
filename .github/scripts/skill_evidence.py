@@ -3810,6 +3810,21 @@ def custom_measurements(definitions, case, outcome, native, details, references)
     return values
 
 
+def validate_custom_execution_config(purpose, config, attempts):
+    """Replay uses an oracle agent and retains its distinct producer identity."""
+    if purpose == 'cli_pilot_replay':
+        require(config.get('qualification') == {'producer': 'retained_submission_replay', 'inference': False}, 'Retrospective purpose mismatch')
+    elif oracle_purpose(purpose):
+        require(config.get('qualification') == {'producer': 'oracle', 'inference': False}, 'Oracle purpose mismatch')
+    elif purpose in ('cli_pilot_probe', 'skill_effectiveness_probe') or (campaign_purpose(purpose) and purpose.endswith('-probe')):
+        require(config.get('qualification') == {'producer': 'cli_probe', 'inference': False}, 'CLI probe purpose mismatch')
+    else:
+        if campaign_purpose(purpose) and purpose.endswith('-live'):
+            require(config.get('qualification') == {'producer':'live', 'inference':True}, 'Live campaign purpose mismatch')
+        require(config.get('harbor', {}).get('n_attempts') == attempts
+                and config.get('harbor', {}).get('stop_on_pass') is False, 'Custom execution policy mismatch')
+
+
 def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, native_layout=False):
     """Shared native admission for registered custom-only and default-plus-custom data."""
     directories = {}; states = {}; members = {}; budget = ReadBudget()
@@ -3841,15 +3856,7 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
             'Custom grading configuration mismatch')
     require(config.get('judge', {}).get('enabled') is False if profile['grading'] == 'custom_only' else True,
             'Custom-only judge must be explicitly disabled')
-    if oracle_purpose(capture['purpose']):
-        require(config.get('qualification') == {'producer': 'oracle', 'inference': False}, 'Oracle purpose mismatch')
-    elif capture['purpose'] == 'cli_pilot_replay':
-        require(config.get('qualification') == {'producer': 'retained_submission_replay', 'inference': False}, 'Retrospective purpose mismatch')
-    elif capture['purpose'] in ('cli_pilot_probe', 'skill_effectiveness_probe') or (campaign_purpose(capture['purpose']) and capture['purpose'].endswith('-probe')):
-        require(config.get('qualification') == {'producer': 'cli_probe', 'inference': False}, 'CLI probe purpose mismatch')
-    else:
-        require(config.get('harbor', {}).get('n_attempts') == capture['attempts']
-                and config.get('harbor', {}).get('stop_on_pass') is False, 'Custom execution policy mismatch')
+    validate_custom_execution_config(capture['purpose'], config, capture['attempts'])
     ref(run / 'result.json'); config_ref = ref(run / 'run_config.json')
     agent = result['agents'][custom_carrier(profile)]
     if profile['grading'] == 'custom_only':

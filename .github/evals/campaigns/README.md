@@ -177,7 +177,10 @@ revision follows automatically from any outcome.
 ### Credential-free preparation and consumption
 
 Run the existing two-definition qualification command above first. Then use the
-same campaign entry point, with a new persistent output directory:
+same campaign entry point, with a new persistent output directory. Each native
+phase needs a fresh hash-verified Compose configuration from the existing tool
+setup; the workflow acquires it between qualification and preparation. Reusing a
+Docker-written configuration fails the existing provenance guard.
 
 ```sh
 "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign.py prepare \
@@ -253,7 +256,8 @@ CI charges are separate. Reserve never buys extra attempts.
 
 Only a successful final-source qualification artifact may fill these fields:
 `QUALIFIED_SHA`, `PREPARATION_ARTIFACT_ID`, `PROTOCOL_DIGEST`, and a fresh unique
-`DISPATCH_NONCE`. The PR's verification receipt records the concrete values.
+`DISPATCH_NONCE`. [PR #126](https://github.com/thetechgy/agent-engineering-baseline/pull/126) records
+the concrete values once qualification completes.
 A future approval must identify them together. The exact future operator command
 is below; **do not run it under the current authorization**:
 
