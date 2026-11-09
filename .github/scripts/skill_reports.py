@@ -689,6 +689,14 @@ def benchmark_artifacts(workspace, root, name, destination):
         excluded_dirs={"_harbor-jobs", "_harbor-tasks"},
         excluded_links={Path("results") / name / "latest"},
     )
+    carrier = 'codex'
+    if (root / 'custom-metric-capture.json').exists():
+        import skill_evidence as evidence
+        candidate_capture = read_json(root / 'custom-metric-capture.json')
+        if evidence.campaign_purpose(candidate_capture.get('purpose')):
+            campaign_profile, _ = evidence.validate_custom_capture(candidate_capture, name, workspace)
+            carrier = evidence.custom_carrier(campaign_profile)
+            evidence.token(carrier)
     registered_cases = set()
     if name == 'gh' and (root / 'custom-metric-capture.json').exists():
         capture = read_json(root / 'custom-metric-capture.json')
@@ -700,7 +708,7 @@ def benchmark_artifacts(workspace, root, name, destination):
                 "docker-version.json", "docker-images.jsonl", "custom-metric-capture.json"}
     if name == "gh":
         metadata.update({"deterministic.json", "selection.json"})
-    # Reviewed v0.3.0 report/collector contract, restricted to this workflow's Codex agent.
+    # Preserve the historical layout; registered campaigns declare their carrier.
     root_reports = {"result.json", "run_config.json", "dataset_snapshot.json", "report.html",
                     "attempt_policy.json", "comparison.json"}
     agent_reports = {"lift.json", "custom_lift.json", "pass_at_k_lift.json",
@@ -718,11 +726,11 @@ def benchmark_artifacts(workspace, root, name, destination):
             return parts[1] in {"evaluator.json", "semgrep.json", "skillspector.json"}
         if len(parts) < 4 or parts[:2] != ("results", name):
             return False
-        # Native external layout: results/<skill>/<run>/codex/<arm>/trials/<trial>/...
+        # Native external layout: results/<skill>/<run>/<carrier>/<arm>/trials/<trial>/...
         tail = parts[3:]
         if len(tail) == 1:
             return tail[0] in root_reports
-        if tail[0] != "codex":
+        if tail[0] != carrier:
             return False
         if len(tail) == 2:
             return tail[1] in agent_reports

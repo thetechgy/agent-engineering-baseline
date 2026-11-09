@@ -149,4 +149,79 @@ class CampaignContracts(unittest.TestCase):
 
 
 
+
+class NativeAdapterContracts(unittest.TestCase):
+    @unittest.skipUnless(__import__('importlib.util',fromlist=['find_spec']).find_spec('aeb_gh_fixture') and __import__('importlib.metadata',fromlist=['version']).version('skillevaluator') == '0.8.0', 'Owning native backend required')
+    def test_initializer_transport_creates_private_owned_files_and_refuses_replacement(self):
+        import shlex
+        import stat
+        import subprocess
+        from evaluation_codex import initializer_upload_command
+        with tempfile.TemporaryDirectory() as directory:
+            target=Path(directory)/'approved.json'
+            argv=shlex.split(initializer_upload_command(b'{"fixture":"digest"}', '/opt/aeb-gh/approved.json'))
+            argv[-1]=str(target) # Existing component-probe convention: map only the container path.
+            subprocess.run(argv,check=True,capture_output=True)
+            self.assertEqual(target.read_bytes(),b'{"fixture":"digest"}')
+            self.assertEqual(stat.S_IMODE(target.stat().st_mode),0o600)
+            subprocess.run(argv,check=True,capture_output=True) # Repeated initialization preserves bytes.
+            target.write_bytes(b'changed')
+            self.assertNotEqual(subprocess.run(argv,capture_output=True).returncode,0)
+            target.unlink();outside=Path(directory)/'outside';outside.write_bytes(b'unchanged');target.symlink_to(outside)
+            self.assertNotEqual(subprocess.run(argv,capture_output=True).returncode,0)
+            self.assertEqual(outside.read_bytes(),b'unchanged')
+            with self.assertRaises(ValueError):initializer_upload_command(b'data','/workspace/output/result.json')
+
+    @unittest.skipUnless(__import__('importlib.util',fromlist=['find_spec']).find_spec('aeb_gh_fixture') and __import__('importlib.metadata',fromlist=['version']).version('skillevaluator') == '0.8.0', 'Owning native backend required')
+    def test_native_exec_bridge_keeps_completed_command_observations_and_rejects_ambiguity(self):
+        from types import SimpleNamespace
+        from evaluation_codex import exec_trajectory, failure_reason, MissingCodexObservation, UnsupportedCodexProtocol
+        self.assertEqual(failure_reason('MissingCodexObservation'),'missing_native_observation')
+        self.assertEqual(failure_reason('UnsupportedCodexProtocol'),'unsupported_runtime_protocol')
+        self.assertEqual(failure_reason('RuntimeError'),'execution_infrastructure_failure')
+        from harbor.agents.installed.codex import Codex
+        from skillevaluator.tier3.eval_core.atif_helpers import get_all_tool_calls
+        from codex_pilot_contract import PROFILE
+        adapter=SimpleNamespace(profile=PROFILE, model_name=PROFILE['model'])
+        adapter._convert_event_to_step=lambda event,index:Codex._convert_event_to_step(adapter,event,index)
+        start={'type':'item.started','item':{'id':'native1','type':'command_execution','command':"/bin/sh -lc 'gh issue list --repo example/repo'"}}
+        finish={'type':'item.completed','item':{**start['item'],'aggregated_output':'GH_FIXTURE_RECEIPT='+'a'*64+'\n','exit_code':0,'status':'completed'}}
+        events=[{'type':'thread.started','thread_id':'synthetic-native-protocol'},start,finish,{'type':'turn.completed'}]
+        def convert(values):return exec_trajectory('\n'.join(map(json.dumps,values)),adapter)
+        trajectory=convert(events).model_dump(exclude_none=True)
+        calls=get_all_tool_calls(trajectory)
+        self.assertEqual(calls[0]['fn'],'exec_command')
+        self.assertEqual(calls[0]['args'],{'command':'gh issue list --repo example/repo'})
+        self.assertEqual(calls[0]['obs'],finish['item']['aggregated_output'].lower())
+        self.assertNotIn('llm_call_count',trajectory['steps'][0])
+        self.assertNotIn('final_metrics',trajectory)
+        for values,error in [(events[:-2]+events[-1:],MissingCodexObservation),([events[0],finish,events[-1]],MissingCodexObservation),
+                             ([*events[:2],start,*events[2:]],UnsupportedCodexProtocol),
+                             ([*events[:3],finish,events[-1]],UnsupportedCodexProtocol)]:
+            with self.assertRaises(error):convert(values)
+        for changed in ['gh issue list','/bin/bash -lc gh']:
+            values=copy.deepcopy(events)
+            for index in (1,2):values[index]['item']['command']=changed
+            with self.assertRaises(UnsupportedCodexProtocol):convert(values)
+        values=copy.deepcopy(events);values[2]['item']['command']="/bin/sh -lc 'changed'"
+        with self.assertRaises(UnsupportedCodexProtocol):convert(values)
+
+    def test_report_staging_preserves_synthetic_alternate_runtime_and_model_identities(self):
+        try:
+            import skillevaluator
+        except ImportError:self.skipTest('Existing reporting runtime required')
+        for agent in ('claude-code','copilot'):
+            with tempfile.TemporaryDirectory() as directory:
+                root=Path(directory);raw=root/'raw';target=root/'retained'
+                reports.write_json(raw/evidence.CUSTOM_CAPTURE,{'purpose':'campaign-synthetic-fixture'})
+                member=Path('results/powershell-pester-6/synthetic')/agent/'with-skill/trials/fixture/result.json'
+                value={'runtime':agent,'model':'synthetic-model','provider':'synthetic-provider'}
+                reports.write_json(raw/member,value)
+                profile={'campaign':{},'runtime':{'agent':agent}}
+                with patch.object(evidence,'validate_custom_capture',return_value=(profile,{})), patch.object(reports,'benchmark_skill'), patch.object(reports,'capture_benchmark_custom'):
+                    reports.benchmark_artifacts(ROOT,raw,'powershell-pester-6',target)
+                self.assertEqual(reports.read_json(target/member),value)
+                self.assertFalse((target/'results/powershell-pester-6/synthetic/codex').exists())
+
+
 if __name__=='__main__':unittest.main()

@@ -154,13 +154,13 @@ def run(root, task, mode):
             core.require(Task(native).checksum == expected['task_checksum'], 'Task checksum drift across launch')
             if code or not row['cleanup']:
                 row['state']='failed'; return 'execution_infrastructure_failure' if code else 'cleanup_failure'
-            rewards = list(trial.glob('verifier/skill_evaluator_reward.json'))
-            if len(rewards)!=1:
-                row['state']='failed'; return 'missing_grading_evidence'
             native_result = reports.read_json(trial / 'result.json')
             row['native_exception'] = (native_result.get('exception_info') or {}).get('exception_type')
             if row['native_exception']:
-                row['state'] = 'failed'; return 'execution_infrastructure_failure'
+                row['state'] = 'failed'; return adapter.failure_reason(row['native_exception'])
+            rewards = list(trial.glob('verifier/skill_evaluator_reward.json'))
+            if len(rewards)!=1:
+                row['state']='failed'; return 'missing_grading_evidence'
             reward = reports.read_json(rewards[0]); outcome = reward.get('details',{}).get('outcome',{})
             row.update(state='completed', outcome=outcome)
             task.check(task.cases(mode)[row['case']], present, outcome, reward.get('custom_metrics',{}))

@@ -2976,7 +2976,7 @@
       "skill_id": "powershell-pester-6",
       "grader_digest": "sha256:1a6832501870290e011ff21265d98ada82a8f9d8d86af3b17b6094fef2fd2f20",
       "fixture_digest": "sha256:d6c81334caecda72f1b1782dd4b4502b24893679573b7ce65627db4a643943c4",
-      "runtime_digest": "sha256:83554a3a1cbae2d7132be520cc93bf9ef0a1d143a01ab56b10f6a817c9f750fc",
+      "runtime_digest": "sha256:82f49d52bfa83e1fc78ea976984d20eab55ab72059395246c3d64b9445e13b74",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
       "semantics": "pester-effectiveness-v6"
     },
@@ -3028,7 +3028,7 @@
       "skill_id": "powershell-pester-6",
       "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
       "fixture_digest": "sha256:99bb508cb930cf59131cc919aee2d3ecee880f729a9f382f256ac5f031e00e96",
-      "runtime_digest": "sha256:c73a7d61b9a94dca0dd3ea4a22737800258187666bcc7a03ba6d790602347fa3",
+      "runtime_digest": "sha256:e6b58d4ff37c7331486db32094af116b5dffeb0b572cd4d4de55948eb2da11ac",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
       "semantics": "pester-effectiveness-v6",
       "campaign": {
@@ -3084,7 +3084,7 @@
       "skill_id": "powershell-pester-6",
       "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
       "fixture_digest": "sha256:99bb508cb930cf59131cc919aee2d3ecee880f729a9f382f256ac5f031e00e96",
-      "runtime_digest": "sha256:c73a7d61b9a94dca0dd3ea4a22737800258187666bcc7a03ba6d790602347fa3",
+      "runtime_digest": "sha256:e6b58d4ff37c7331486db32094af116b5dffeb0b572cd4d4de55948eb2da11ac",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
       "semantics": "pester-effectiveness-v6",
       "campaign": {
@@ -3142,7 +3142,7 @@
       "skill_id": "gh",
       "grader_digest": "sha256:4b0b6a7b8d4cf15fe35182ef7dcfa1ed4a18a5aeda129bb30855ed48d2f75c2d",
       "fixture_digest": "sha256:773ab38dd187a0861ac6890c04f43f4f4f1d5007ebfe236801a72a45aefa88bf",
-      "runtime_digest": "sha256:421886c80116dc93346ca9a4a4738bf653f7359bc4941196feb13cfc3fce123e",
+      "runtime_digest": "sha256:694347925f7a2c701c1655e0df87cca13dad9c5a951258f7c51d5564d4165040",
       "dataset_digest": "sha256:7da7fa863ddc768c34bb423b4667cfe43e8d714697c4e217e4a27d789028f598",
       "semantics": "gh-native-oracle-v1",
       "campaign": {
@@ -3197,7 +3197,7 @@
       "skill_id": "gh",
       "grader_digest": "sha256:4b0b6a7b8d4cf15fe35182ef7dcfa1ed4a18a5aeda129bb30855ed48d2f75c2d",
       "fixture_digest": "sha256:773ab38dd187a0861ac6890c04f43f4f4f1d5007ebfe236801a72a45aefa88bf",
-      "runtime_digest": "sha256:421886c80116dc93346ca9a4a4738bf653f7359bc4941196feb13cfc3fce123e",
+      "runtime_digest": "sha256:694347925f7a2c701c1655e0df87cca13dad9c5a951258f7c51d5564d4165040",
       "dataset_digest": "sha256:7da7fa863ddc768c34bb423b4667cfe43e8d714697c4e217e4a27d789028f598",
       "semantics": "gh-native-oracle-v1",
       "campaign": {

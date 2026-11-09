@@ -100,7 +100,12 @@ and cohort commands remain wrappers over these implementations. There is one
 scheduler policy and one consolidated renderer to maintain.
 
 Maintain task definitions, control expectations, source/profile hashes, adapter
-contracts and the hosted qualification together. Source changes get new profile
+contracts and the hosted qualification together. The gh composition also maintains
+a two-path private upload transport with byte-preserving repeated initialization.
+The Codex adapter bridges the pinned exec JSON protocol to Harbor ATIF using
+completed native command identities and observations. Missing observations and
+unsupported protocols have separate stop reasons; unknown events fail closed.
+Protocol changes require new adapter qualification. Source changes get new profile
 identities; old profiles, receipts and grades stay unchanged. The new retained
 pilot/effectiveness source identities are v7, with unchanged historical grading
 semantics. Campaign profiles have separate oracle and CLI-probe identities. Tests

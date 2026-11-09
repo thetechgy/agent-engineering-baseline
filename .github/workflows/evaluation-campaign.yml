@@ -45,8 +45,8 @@ jobs:
       - name: Qualify both task families through native oracle and real CLI probes
         run: |
           "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign.py qualify \
-            --definition .github/evals/campaigns/boolean-contract.json \
             --definition .github/evals/campaigns/gh-read.json \
+            --definition .github/evals/campaigns/boolean-contract.json \
             --output "$RUNNER_TEMP/reusable-evaluation"
       - name: Verify checkout integrity
         if: always()

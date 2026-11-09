@@ -8,11 +8,94 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import tempfile
 
 from codex_pilot_agent import PilotCodex
 from codex_pilot_environment import PilotEnvironment
 from evaluation_campaign_core import require
 from evaluation_runtime import ROOT, read_profile
+
+
+class MissingCodexObservation(ValueError):
+    pass
+
+
+class UnsupportedCodexProtocol(ValueError):
+    pass
+
+
+def exec_trajectory(raw, adapter):
+    """Translate observed 0.167 exec events using Harbor's ATIF models.
+
+    No fixture commands, expected answers or synthetic usage enter this bridge.
+    Only the pinned native shell wrapper is unwrapped; output remains verbatim.
+    """
+    from harbor.agents.installed.codex import Agent, Trajectory
+    pending = {}; completed = set(); steps = []; notes = []
+    session = None; turns = 0
+    for line in raw.splitlines():
+        if line == 'Reading additional input from stdin...':
+            notes.append(line); continue
+        try:
+            event = json.loads(line)
+        except ValueError as error:
+            raise UnsupportedCodexProtocol('Non-JSON native observation') from error
+        if not isinstance(event, dict):
+            raise UnsupportedCodexProtocol('Invalid native event')
+        kind = event.get('type')
+        if kind == 'thread.started' and session is None and isinstance(event.get('thread_id'), str):
+            session = event['thread_id']; continue
+        if kind == 'turn.started':
+            continue
+        if kind == 'turn.completed':
+            turns += 1; continue
+        item = event.get('item', {})
+        if not isinstance(item, dict):
+            raise UnsupportedCodexProtocol('Invalid native item')
+        if kind == 'item.completed' and item.get('type') == 'error' and str(item.get('message', '')).startswith('Under-development features enabled:'):
+            notes.append(item['message']); continue
+        if kind == 'item.completed' and item.get('type') == 'agent_message' and isinstance(item.get('text'), str):
+            normalized = {'kind':'message', 'role':'assistant', 'text':item['text']}
+        elif kind in ('item.started', 'item.completed') and item.get('type') == 'command_execution':
+            identity = item.get('id'); command = item.get('command')
+            if not isinstance(identity, str) or not isinstance(command, str) or identity in completed:
+                raise UnsupportedCodexProtocol('Ambiguous native command identity')
+            if kind == 'item.started':
+                if identity in pending:
+                    raise UnsupportedCodexProtocol('Duplicate native command start')
+                pending[identity] = command; continue
+            if identity not in pending:
+                raise MissingCodexObservation('Unobserved native command start')
+            if pending.pop(identity) != command:
+                raise UnsupportedCodexProtocol('Native command identity changed')
+            if not isinstance(item.get('aggregated_output'), str) or type(item.get('exit_code')) is not int or item.get('status') not in ('completed', 'failed'):
+                raise MissingCodexObservation('Incomplete native command result')
+            try:
+                wrapper = shlex.split(command)
+            except ValueError as error:
+                raise UnsupportedCodexProtocol('Invalid native shell wrapper') from error
+            if len(wrapper) != 3 or wrapper[:2] != ['/bin/sh', '-lc']:
+                raise UnsupportedCodexProtocol('Unsupported native shell wrapper')
+            completed.add(identity)
+            normalized = {'kind':'tool_call', 'call_id':identity, 'tool_name':'exec_command',
+                'arguments':{'command':wrapper[2]}, 'output':item['aggregated_output'], 'status':item['status'],
+                'metadata':{'native_command':command, 'exit_code':item['exit_code'], 'protocol':'codex-0.167-exec-json'}}
+        else:
+            raise UnsupportedCodexProtocol('Unsupported native event: ' + str(kind) + '/' + str(item.get('type')))
+        step = adapter._convert_event_to_step(normalized, len(steps) + 1)
+        # Tool commands/messages do not establish independent model call counts.
+        steps.append(step.model_copy(update={'llm_call_count':None}))
+    if pending or turns != 1 or not session or not completed:
+        raise MissingCodexObservation('Incomplete native trajectory')
+    return Trajectory(schema_version='ATIF-v1.7', session_id=session,
+        agent=Agent(name='codex', version=adapter.profile['cli'], model_name=adapter.model_name),
+        steps=steps, notes='\n'.join(notes) or None,
+        extra={'source':'codex-0.167-exec-json', 'inference':False})
+
+
+def failure_reason(exception_type):
+    return {'MissingCodexObservation':'missing_native_observation',
+            'UnsupportedCodexProtocol':'unsupported_runtime_protocol'}.get(exception_type, 'execution_infrastructure_failure')
 
 
 class CampaignCodex(PilotCodex):
@@ -26,6 +109,24 @@ class CampaignCodex(PilotCodex):
         self.output = '/workspace/output/' + self.task.output
         require(os.environ.get('AEB_PILOT_PROBE') == '1', 'Campaign inference is disabled')
         super().__init__(*args, **kwargs)
+
+    def populate_context_post_run(self, context):
+        super().populate_context_post_run(context) # Keep qualified usage semantics.
+        from skill_evidence import read_bytes
+        if self.logs_dir.resolve() != self.logs_dir.absolute():
+            raise MissingCodexObservation('Unsafe native log directory')
+        path = self.logs_dir / 'codex.txt'
+        if not path.exists():
+            raise MissingCodexObservation('Missing native log')
+        trajectory = exec_trajectory(read_bytes(path, limit=16*1024*1024).decode(), self)
+        # Replacing the directory entry never follows a preexisting target link.
+        with tempfile.NamedTemporaryFile(mode='w', dir=self.logs_dir, delete=False) as stream:
+            temporary = Path(stream.name)
+            try:
+                stream.write(trajectory.model_dump_json(exclude_none=True)); stream.flush(); os.fsync(stream.fileno())
+                os.replace(temporary, self.logs_dir / 'trajectory.json')
+            finally:
+                temporary.unlink(missing_ok=True)
 
     def fixture_payload(self):
         return self.task.payload(self.control)
@@ -52,8 +153,37 @@ class CampaignCodex(PilotCodex):
 from aeb_gh_fixture.backend import TrustedGhEnvironment
 
 
+def initializer_upload_command(raw, target):
+    require(target in ('/opt/aeb-gh/initialize.py', '/opt/aeb-gh/approved.json') and len(raw) <= 65536,
+            'Unapproved gh initializer transport')
+    # Docker cp can retain the operator uid. Write as the existing root user
+    # instead; no capabilities, ownership changes or wider permissions are added.
+    source = r"""import base64, os, stat, sys
+raw = base64.b64decode(sys.argv[1], validate=True)
+path = sys.argv[2]
+try:
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+except FileExistsError:
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    with os.fdopen(fd, 'rb') as stream:
+        info = os.fstat(stream.fileno())
+        assert stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and info.st_uid == os.geteuid() and stat.S_IMODE(info.st_mode) == 0o600
+        assert stream.read(65537) == raw
+else:
+    with os.fdopen(fd, 'wb') as stream:
+        stream.write(raw); stream.flush(); os.fsync(stream.fileno())
+"""
+    return 'python3 -I -c ' + shlex.quote(source) + ' ' + shlex.quote(base64.b64encode(raw).decode()) + ' ' + shlex.quote(target)
+
+
 class CampaignGhEnvironment(PilotEnvironment, TrustedGhEnvironment):
-    pass
+    async def upload_file(self, source_path, target_path):
+        if target_path not in ('/opt/aeb-gh/initialize.py', '/opt/aeb-gh/approved.json'):
+            return await super().upload_file(source_path, target_path)
+        from aeb_gh_fixture.manifest import regular
+        raw = regular(Path(source_path).absolute())
+        result = await self.exec(user='root', command=initializer_upload_command(raw, target_path))
+        require(result.return_code == 0, 'Cannot transport approved gh initializer')
 
 def deploy(root, definition):
     """Native APM owns skill discovery/deployment; compare all supporting bytes."""
