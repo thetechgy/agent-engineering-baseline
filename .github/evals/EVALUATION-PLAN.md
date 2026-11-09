@@ -34,18 +34,25 @@ A real gh CLI probe executed successfully but stopped at verifier log transport;
 the corrected shared directory/trajectory transport has focused local contract
 coverage, not a passing native gh grading receipt. Both task families reach the
 existing report with reproducible HTML in explicitly synthetic plumbing controls.
-Acquisition recovered through the existing integrity-verified paths. The unchanged
-native retry on `2e69289` completed gh oracle controls, but the real-CLI verifier
-could not read host-owned private helper files after Docker upload. The owning
-runtime now transports those helpers as root through its existing bounded stdin
-path; grading criteria and capabilities are unchanged.
-Native gh grading then passed on `e3221fb`; qualification exposed an incorrect
-flat host path for the retained JSON. The adapter now uses Harbor's existing
-source-path mapping. Final native qualification and required final-head checks
-remain pending. Historical grades remain intact.
+Acquisition recovered through the existing integrity-verified paths. The native
+retry on `2e69289` completed gh oracle controls, but its real-CLI verifier could
+not read host-owned private helpers. The owning runtime now uploads those helpers
+as root through its existing bounded stdin path, retaining private permissions
+and the existing capabilities. A valid gh native grading receipt then passed on
+`e3221fb` in [run 42597439930](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42597439930).
+Qualification stopped at the observer's incorrect flat host path for the retained
+JSON. The adapter now uses Harbor's existing source-path mapping; the actual
+retained JSON matches its producer digest. Twenty-eight focused contracts pass.
 
-**One next action:** complete the existing native campaign and final-head checks
-for draft PR #124 before marking it ready for review.
+Both required checks passed on `e3221fb`. Full qualification is still incomplete:
+GitHub reported no workflow runs or check suites for the pushed correction
+`fe44420` during bounded observation. Remaining gh probes, the Boolean campaign
+and final-head checks require new receipts. No complete native two-family report
+or final-head CI success is claimed. This is missing CI evidence, not a continuing
+acquisition failure. Historical inputs and grades remain intact.
+
+**One next action:** run the existing qualification checks on the final head once
+GitHub creates its check suites.
 No further paid inference, judges, retries or dispatches are authorized.
 Production and skills remain unchanged; the reserved confirmation variant remains
 untouched and outside this work. Sections below preserve historical checkpoints

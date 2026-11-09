@@ -45,12 +45,13 @@ The absent variant retains its separate activation/gate consequence. These gh
 metrics are not converted into Pester quality or a cross-skill score.
 
 Qualification remains incomplete on [draft PR #124](https://github.com/thetechgy/agent-engineering-baseline/pull/124).
-Both task families pass synthetic collector/report plumbing controls. Earlier
-snapshots exercised Boolean oracle/probe controls, gh oracle controls and one real
-gh CLI launch. The final verifier transport correction still needs native
-qualification: the latest hosted attempts stopped on pinned tool download HTTP
-504 errors before execution. These results do not establish a completed native
-two-family report or real compatibility for another runtime/model.
+Acquisition recovered, and native gh grading passed after correcting private
+verifier helper ownership. The submission observer now uses Harbor's existing
+host-path mapping; its regression rejects the earlier flat-path assumption.
+The remaining native population and final-head checks still require receipts.
+See the [authoritative checkpoint](../EVALUATION-PLAN.md) for the current blocker.
+Synthetic plumbing controls remain distinct from native execution, and neither
+establishes real compatibility for another runtime/model.
 
 ## Boundaries and extensions
 
