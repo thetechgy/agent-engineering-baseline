@@ -50,6 +50,7 @@ class Protocol(unittest.TestCase):
 
     def test_supported_profiles_render_defects_and_admission_diagnostics(self):
         import skill_report as report
+        import skill_analysis as analysis
         run = {'record_id': 'synthetic-report', 'custom': {
             'complete_paired_population': False, 'purpose': effect.CONTROL_PURPOSE,
             'agent': 'oracle', 'metrics': [],
@@ -67,6 +68,8 @@ class Protocol(unittest.TestCase):
         for profile in dict.fromkeys(profiles):
             with self.subTest(profile=profile):
                 value['custom']['profile_id'] = profile
+                value['custom']['purpose'] = effect.CONTROL_PURPOSE
+                self.assertTrue(analysis.pilot_record(value))
                 original = copy.deepcopy(value)
                 html = report.custom_measurements(run, value)
                 self.assertIn('<caption>Pilot admission diagnostics</caption>', html)
