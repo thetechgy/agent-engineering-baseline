@@ -96,13 +96,23 @@ PR #126 now corrects the owning Codex adapter and qualifies native file-edit
 handling through the existing non-forwarding CLI path. The original unsupported
 record and exact submission are retained in a pinned corpus. A separate
 credential-free retrospective grade uses the shared campaign and frozen five-mutant
-verifier. Its native result is pending qualification; parser fixtures and local
-staging are not a grading result. No inference, judge, replacement slot or skill
-revision is part of this recovery. New source profiles preserve executed-head
-profiles and historical receipts.
+verifier. The separate retrospective result at corrected adapter revision
+`2d1dfe9` passed reference correctness and detected `above`, `highest`, `lowest`
+and `zero`, but missed `integer-result`: 4/5 defects and primary quality 0/1, a
+valid measured task failure. The unchanged 471-byte submission retains SHA-256
+`3215b6097fa3e5f592989f2b8f4523207e28ebd4893cc7d11437b19189795981`.
+[Replay artifact 13712424339](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42705785116/artifacts/13712424339)
+has archive digest `sha256:c70cc1c578775cb9c70410526d92f90fbaec67a03fecd67d6450e9454a52126f`;
+its successful isolated grading job verified cleanup and report reproduction.
+The superseded parent run is inconclusive for full qualification; final-head
+native file-edit and historical qualification are recorded on PR #126.
+Parser fixtures, real CLI probes and retrospective grading remain separate.
+No inference, judge, replacement slot or skill revision is part of this recovery.
+New source profiles preserve executed-head profiles and historical receipts.
+One current-arm retrospective grade provides no matched skill-benefit comparison.
 
-**One next action:** complete credential-free native qualification and record the
-retrospective result on PR #126 before considering any separate experiment.
+**One next action:** review PR #126's final-source qualification and recovered
+result before deciding whether to authorize a separate experiment.
 No further paid inference, judges, retries or dispatches are authorized.
 Production and skills remain unchanged; the reserved confirmation variant remains
 untouched and outside this work. Sections below preserve historical checkpoints

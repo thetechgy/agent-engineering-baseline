@@ -126,10 +126,10 @@ Native setup failures are infrastructure outcomes in public reports, while
 missing and unsupported observations retain their separate unavailable states.
 Protocol changes require new adapter qualification. Source changes get new profile
 identities; old profiles, receipts and grades stay unchanged. The new retained
-pilot source identity is v7 and the effectiveness source identity is v8, with unchanged historical grading
-semantics. Campaign profiles have separate oracle and CLI-probe identities. Tests
+pilot source identity is v8 and the effectiveness source identity is v9, with
+unchanged historical grading semantics. Campaign profiles have separate oracle and CLI-probe identities. Tests
 compare all historical registry entries and production active-profile selections
-with the merged base.
+with the executed `97124cf` registry snapshot.
 
 Remaining coupling includes the paired native collector/public schema, the
 existing supported skill inventory/metric registry, Docker/Harbor transport and
@@ -354,6 +354,14 @@ The raw trace is parsed as data. None of its recorded commands is executed.
 The native oracle copies only the exact retained submission, then the original
 frozen inputs, reference, five mutants, grading criteria and offline verifier
 perform grading. A valid failing grade is retained as a measured result.
+
+The recovered native result at corrected adapter revision `2d1dfe9` passes the
+reference and detects `above`, `highest`, `lowest` and `zero`. It misses
+`integer-result`, yielding 4/5 defect detection and primary quality 0/1: a valid
+measured failure. [Retained replay evidence](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42705785116/artifacts/13712424339)
+records unchanged submission hashes, completed cleanup and byte-identical report
+reproduction. This successful job is separate from its superseded parent run's
+inconclusive full qualification; PR #126 carries final-head CI evidence.
 
 The separate retrospective identity records the original run/slot/record/capture,
 submission and raw-trace hashes, and corrected adapter revision/digest. Original
