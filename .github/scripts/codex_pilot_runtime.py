@@ -19,7 +19,7 @@ def prepare_cli(task):
             f"echo '{P['cli_executable_sha256']}  /opt/codex/bin/codex' | sha256sum -c --strict && "
             'rm /opt/codex.tar.gz\n'
             'COPY build/codex_pilot_stub.py build/codex_pilot_probe.py /opt/pilot/\n'
-            'RUN mkdir -p /logs/agent /logs/artifacts /installed-agent && chmod 777 /logs/agent /logs/artifacts && '
+            'RUN mkdir -p /logs/agent /logs/verifier /logs/artifacts /installed-agent && chmod 777 /logs/agent /logs/artifacts && chmod 700 /logs/verifier && '
             'chmod -R a-w /workspace/input /opt/codex /opt/pilot && '
             'chmod 755 /home/agent && mkdir -p /home/agent/.codex-pilot && '
             'chown agent:agent /home/agent/.codex-pilot && chmod 700 /home/agent/.codex-pilot\n'

@@ -115,7 +115,8 @@ class CampaignContracts(unittest.TestCase):
         profile,_,_=evidence.custom_contract('gh',purpose='campaign-'+task.definition['id']+'-probe')
         import evaluation_evidence
         self.assertEqual(evaluation_evidence.native_outcome(profile,failed,'unknown'),'infrastructure_error')
-        for exception,expected in [('MissingCodexObservation','unknown'),('UnsupportedCodexProtocol','unsupported')]:
+        for exception,expected in [('MissingCodexObservation','unknown'),('UnsupportedCodexProtocol','unsupported'),
+                                   ('DownloadVerifierDirError','infrastructure_error'),('RewardFileNotFoundError','unknown')]:
             value=copy.deepcopy(failed);value['exception_info']['exception_type']=exception
             self.assertEqual(runtime.native_outcome(selected,value,'unknown'),expected)
         for original in ('timeout','interrupted'):
@@ -125,6 +126,18 @@ class CampaignContracts(unittest.TestCase):
         value['exception_info']=None
         for original in ('passed','failed','unknown','unsupported'):
             self.assertEqual(runtime.native_outcome(selected,value,original),original)
+
+    def test_submission_receipt_retains_declared_non_pester_output_without_changing_legacy_default(self):
+        import shlex,subprocess,hashlib
+        from codex_pilot import producer_receipt_command
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);(root/'logs/agent').mkdir(parents=True)
+            output=root/'result.json';raw=b'{"format":"json-control"}';output.write_bytes(raw)
+            command=producer_receipt_command(str(output),retain=True).replace('/logs/',str(root/'logs')+'/')
+            subprocess.run(shlex.split(command),check=True,capture_output=True)
+            self.assertEqual((root/'logs/artifacts/submitted/result.json').read_bytes(),raw)
+            self.assertEqual(reports.read_json(root/'logs/agent/pilot-produced-submission.json'),{'sha256':hashlib.sha256(raw).hexdigest(),'bytes':len(raw)})
+            self.assertNotIn('/logs/artifacts/submitted',producer_receipt_command())
 
     def test_metadata_inspection_does_not_import_native_runtime_backends(self):
         import builtins
@@ -226,6 +239,36 @@ class NativeAdapterContracts(unittest.TestCase):
             with self.assertRaises(UnsupportedCodexProtocol):convert(values)
         values=copy.deepcopy(events);values[2]['item']['command']="/bin/sh -lc 'changed'"
         with self.assertRaises(UnsupportedCodexProtocol):convert(values)
+
+    @unittest.skipUnless(__import__('importlib.util',fromlist=['find_spec']).find_spec('aeb_gh_fixture') and __import__('importlib.metadata',fromlist=['version']).version('skillevaluator') == '0.8.0', 'Owning native backend required')
+    def test_nonmounted_runtime_prepares_verifier_logs_and_readable_atomic_trajectory(self):
+        import stat
+        from types import SimpleNamespace
+        from codex_pilot_runtime import prepare_cli
+        from evaluation_codex import CampaignCodex
+        from codex_pilot_contract import PROFILE
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);native=root/'native';(native/'environment/build').mkdir(parents=True)
+            (native/'environment/Dockerfile').write_text('FROM pinned-fixture\n')
+            prepare_cli(native)
+            image=(native/'environment/Dockerfile').read_text()
+            for member in ('agent','verifier','artifacts'):
+                self.assertIn('/logs/'+member,image)
+            self.assertIn('chmod 700 /logs/verifier',image)
+            logs=root/'logs';logs.mkdir();outside=root/'outside';outside.write_text('preserved')
+            (logs/'trajectory.json').symlink_to(outside)
+            item={'id':'synthetic-call','type':'command_execution','command':"/bin/sh -lc 'pwd'"}
+            events=[{'type':'thread.started','thread_id':'synthetic-protocol'},
+                    {'type':'item.started','item':item},
+                    {'type':'item.completed','item':{**item,'aggregated_output':'/workspace\n','exit_code':0,'status':'completed'}},
+                    {'type':'turn.completed','usage':{'input_tokens':0,'cached_input_tokens':0,'output_tokens':0}}]
+            (logs/'codex.txt').write_text('\n'.join(map(json.dumps,events)))
+            adapter=object.__new__(CampaignCodex);adapter.logs_dir=logs;adapter.model_name=PROFILE['model'];adapter.profile=PROFILE
+            adapter.populate_context_post_run(SimpleNamespace())
+            self.assertEqual(outside.read_text(),'preserved')
+            self.assertFalse((logs/'trajectory.json').is_symlink())
+            self.assertEqual(stat.S_IMODE((logs/'trajectory.json').stat().st_mode),0o644)
+            self.assertEqual(reports.read_json(logs/'trajectory.json')['steps'][0]['observation']['results'][0]['content'],'/workspace\n')
 
     def test_report_staging_preserves_synthetic_alternate_runtime_and_model_identities(self):
         try:

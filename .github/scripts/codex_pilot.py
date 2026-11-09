@@ -193,12 +193,15 @@ def path_probe_command(control):
     return 'python3 -c ' + shlex.quote(code) + '\n'
 
 
-def producer_receipt_command(output="/workspace/output/Subject.Tests.ps1"):
+def producer_receipt_command(output="/workspace/output/Subject.Tests.ps1", *, retain=False):
     code = ("import hashlib,json,stat; from pathlib import Path; p=Path(" + repr(output) + "); "
             "s=p.lstat() if p.exists() else None; "
             "v={'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'bytes':s.st_size} "
             "if s and stat.S_ISREG(s.st_mode) and s.st_nlink==1 and s.st_size<=65536 else None; "
             "Path('/logs/agent/pilot-produced-submission.json').write_text(json.dumps(v))")
+    if retain:
+        code += ("; target=Path('/logs/artifacts/submitted'); target.mkdir(parents=True,exist_ok=True); "
+                 "(target/p.name).write_bytes(p.read_bytes()) if v else None")
     import shlex
     return 'python3 -c ' + shlex.quote(code)
 

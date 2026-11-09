@@ -102,6 +102,10 @@ scheduler policy and one consolidated renderer to maintain.
 Maintain task definitions, control expectations, source/profile hashes, adapter
 contracts and the hosted qualification together. The gh composition also maintains
 a two-path private upload transport with byte-preserving repeated initialization.
+The shared image helper owns all Harbor log directories. Non-mounted trajectory
+transport retains verifier-readable permissions without adding capabilities.
+Campaign submissions retain their declared filename and producer digest; the gh
+oracle exports its JSON through the task adapter without changing its grader.
 The Codex adapter bridges the pinned exec JSON protocol to Harbor ATIF using
 completed native command identities and observations. Missing observations and
 unsupported protocols have separate stop reasons; unknown events fail closed.

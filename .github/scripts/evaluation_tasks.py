@@ -264,7 +264,7 @@ class GhFixture(Task):
             reports.write_json(solution / 'candidate', {'expected_skill': 'gh', 'commands': self.commands(control),
                 'expected': self.entry()['contract']['expected'], 'control': control})
             (solution / 'solve.py').write_text(SOLUTION)
-            (solution / 'solve.sh').write_text('#!/bin/sh\nset -eu\nexec python3 -I /solution/solve.py\n')
+            (solution / 'solve.sh').write_text('#!/bin/sh\nset -eu\npython3 -I /solution/solve.py\nmkdir -p /logs/artifacts/submitted\ncp /workspace/output/result.json /logs/artifacts/submitted/result.json\n')
 
     def check(self, control, present, outcome, metrics):
         expected = 'unsupported' if control == 'unsupported' else 'unknown' if control == 'missing-trace' else 'passed' if control == 'good' and present else 'failed'

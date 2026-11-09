@@ -164,7 +164,7 @@ def run(root, task, mode):
             row.update(state='completed', outcome=outcome)
             task.check(task.cases(mode)[row['case']], present, outcome, reward.get('custom_metrics',{}))
             if mode=='probe':
-                adapter.native_observation(trial, native, present, row, rows)
+                adapter.native_observation(trial, native, present, row, rows, output=task.output)
             if row['usage']['estimated_usd'] is None:
                 return 'unknown_usage'
             return None

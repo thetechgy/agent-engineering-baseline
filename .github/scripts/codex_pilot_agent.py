@@ -21,6 +21,7 @@ class PilotCodex(Codex):
     profile = PROFILE
     skill = PROFILE['skill']
     output = OUTPUT
+    retain_submission = False
 
     def fixture_payload(self):
         from skill_evidence import read_bytes
@@ -151,7 +152,7 @@ class PilotCodex(Codex):
             # Keep exact native events before removing the runtime home/credentials.
             try:
                 from codex_pilot import producer_receipt_command
-                await self.exec_as_agent(environment, command=producer_receipt_command(self.output))
+                await self.exec_as_agent(environment, command=producer_receipt_command(self.output, retain=self.retain_submission))
                 await self.exec_as_agent(environment, command=(
                     f'if [ -f {HOME}/stub.pid ]; then kill "$(cat {HOME}/stub.pid)"; fi; '
                     f'rm -rf {HOME}; test ! -e {HOME}'))

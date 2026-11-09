@@ -94,6 +94,8 @@ def exec_trajectory(raw, adapter):
 
 
 class CampaignCodex(PilotCodex):
+    retain_submission = True
+
     def __init__(self, *args, campaign_definition, control, present, **kwargs):
         from evaluation_tasks import load
         self.task = load(ROOT / campaign_definition)
@@ -119,6 +121,7 @@ class CampaignCodex(PilotCodex):
             temporary = Path(stream.name)
             try:
                 stream.write(trajectory.model_dump_json(exclude_none=True)); stream.flush(); os.fsync(stream.fileno())
+                os.fchmod(stream.fileno(), 0o644) # Harbor copies logs back; the capability-dropped verifier must read them.
                 os.replace(temporary, self.logs_dir / 'trajectory.json')
             finally:
                 temporary.unlink(missing_ok=True)
@@ -231,7 +234,7 @@ def agent_config(task, mode, control, runtime, present):
             'kwargs': {'campaign_definition': task.member, 'control': control, 'present': present}}
 
 
-def native_observation(trial, native, present, row, rows):
+def native_observation(trial, native, present, row, rows, *, output):
     import skill_reports as reports
     audits = list(trial.rglob('pilot-runtime.json'))
     require(len(audits) == 1, 'Missing runtime observation')
@@ -247,6 +250,14 @@ def native_observation(trial, native, present, row, rows):
     from codex_pilot_contract import PROFILE
     require(probe.get('model') == PROFILE['model'] and probe.get('reasoning', {}).get('effort') == PROFILE['reasoning_effort']
             and probe.get('requests') == 2, 'Observed CLI model/request drift')
+    from skill_evidence import read_bytes
+    submitted = read_bytes(trial / 'artifacts/submitted' / output, limit=65536)
+    receipts = list(trial.rglob('pilot-produced-submission.json'))
+    require(len(receipts) == 1, 'Missing submitted artifact receipt')
+    receipt = reports.read_json(receipts[0])
+    require(receipt == {'sha256':hashlib.sha256(submitted).hexdigest(), 'bytes':len(submitted)},
+            'Retained submission differs from native produced artifact')
+    row['submission'] = dict(receipt, file=output)
     row['agent_id'] = audit['boundary_before']['agent_id']
     require(not any(r is not row and r.get('agent_id') == row['agent_id'] for r in rows), 'Reused agent environment')
 
@@ -278,4 +289,4 @@ def validate_members(members, mode):
 
 
 RETAINED_MEMBERS = ('pilot-runtime.json', 'pilot-final-policy.json', 'docker-observation.json',
-                    'probe.json', 'codex.txt', 'trajectory.json', 'task-boundary.json')
+                    'probe.json', 'codex.txt', 'trajectory.json', 'task-boundary.json', 'pilot-produced-submission.json')

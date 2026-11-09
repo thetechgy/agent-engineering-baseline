@@ -53,6 +53,8 @@ def source_inputs(runtime, workspace):
 _CODEX_FAILURES = {
     'MissingCodexObservation': ('missing_native_observation', 'unknown'),
     'UnsupportedCodexProtocol': ('unsupported_runtime_protocol', 'unsupported'),
+    'DownloadVerifierDirError': ('execution_infrastructure_failure', 'infrastructure_error'),
+    'RewardFileNotFoundError': ('missing_grading_evidence', 'unknown'),
 }
 
 
