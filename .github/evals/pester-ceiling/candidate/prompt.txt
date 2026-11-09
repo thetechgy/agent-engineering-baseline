@@ -1,0 +1,1 @@
+Repair input/Existing.Tests.ps1 so it really checks all four supplied port boundaries against input/Subject.ps1. Follow the project contract in input/README.md and save the complete repaired suite as output/Subject.Tests.ps1.

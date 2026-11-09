@@ -1,0 +1,65 @@
+{
+  "id": "pester-exploratory-004-boolean",
+  "purpose": "exploratory output-informed development; no historical rescoring",
+  "source_case": "pester-004",
+  "prompt": "candidate/prompt.txt",
+  "extra_mutants": {
+    "integer-result": "candidate/integer-result.ps1"
+  },
+  "controls": [
+    {
+      "id": "identity",
+      "file": ".github/evals/pester-ceiling/candidate/identity.Tests.ps1",
+      "outcome": "passed",
+      "detections": {
+        "above": 1,
+        "highest": 1,
+        "integer-result": 1,
+        "lowest": 1,
+        "zero": 1
+      }
+    },
+    {
+      "id": "typed-classic",
+      "file": ".github/evals/pester-ceiling/candidate/typed-classic.Tests.ps1",
+      "outcome": "passed",
+      "detections": {
+        "above": 1,
+        "highest": 1,
+        "integer-result": 1,
+        "lowest": 1,
+        "zero": 1
+      }
+    },
+    {
+      "id": "value-only",
+      "file": ".github/evals/powershell-pester-6/support/qualification/pester-004/inline.Tests.ps1",
+      "outcome": "failed",
+      "detections": {
+        "above": 1,
+        "highest": 1,
+        "integer-result": 0,
+        "lowest": 1,
+        "zero": 1
+      }
+    },
+    {
+      "id": "type-only",
+      "file": ".github/evals/pester-ceiling/candidate/type-only.Tests.ps1",
+      "outcome": "failed",
+      "detections": {
+        "above": 0,
+        "highest": 0,
+        "integer-result": 1,
+        "lowest": 0,
+        "zero": 0
+      }
+    },
+    {
+      "id": "broken-discovery",
+      "file": ".github/evals/powershell-pester-6/support/cases/pester-004/input/Existing.Tests.ps1",
+      "outcome": "invalid",
+      "detections": null
+    }
+  ]
+}

@@ -1,11 +1,35 @@
 # Issue #95 dependency modernization checkpoint
 
-This is the authoritative active checkpoint. The evaluator upgrade is merged through
-[PR #119](https://github.com/thetechgy/agent-engineering-baseline/pull/119). The live
-CLI compatibility milestone on PR #121 is complete, as recorded below. The next
-milestone is a prospectively frozen, more discriminating skill-effectiveness evaluation.
+This is the authoritative active checkpoint. PRs #119, #121 and
+[PR #122](https://github.com/thetechgy/agent-engineering-baseline/pull/122) are merged.
+The prospectively frozen twelve-attempt Pester cohort completed on reused cases:
+both arms passed all three trials per case, detecting 5/5 defects on `pester-003`
+and 4/4 on `pester-004`. It demonstrated no measured skill advantage. Original
+live v5 evidence remains tied to run `42529955611` and revision
+`a99992fabaa80b315f57dccf66660c382a4100ee`; later v6 reporting did not change grades.
+Estimated usage was $0.7136678, not an invoice. The paid allocation is consumed.
+
+The [bounded retained-submission analysis](PESTER-CEILING-ANALYSIS.md) recommends
+one exploratory Boolean-contract candidate: all six boundary suites accepted an
+integer-return implementation that violates the documented Boolean contract.
+All six current trials successfully read the deployed skill; this is not evidence
+of causal benefit or complete instruction following. Original grades are preserved.
+The candidate now uses the original `pester-004` prompt and unchanged Boolean
+contract, without added type-check coaching. Its declarative controls reuse the
+existing task stager, semantic test helper, grader and reward sidecars. Required
+hosted validation includes the focused controls; the exact-head validation receipt
+and review-readiness state are maintained on
+[PR #123](https://github.com/thetechgy/agent-engineering-baseline/pull/123).
+Its ability to reveal skill advantage remains unproven.
+
+**One next action:** complete the required review of PR #123 after its validation
+gates pass. Any prospective comparison needs a separate freeze and authorization.
+No further paid inference, judges, retries or dispatches are authorized.
+Production and skills remain unchanged; the reserved confirmation variant remains
+untouched and outside this analysis. Sections below preserve historical checkpoints
+and their then-current proposals; they do not grant current execution authorization.
 The direct-Harbor assessment at `389f7222da8d425b95dad12003e1e6895500a397`
-is historical evidence, not the implementation base. Production remains unchanged.
+is historical evidence, not the implementation base.
 
 ## Frozen first group
 
