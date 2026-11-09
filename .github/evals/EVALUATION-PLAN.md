@@ -19,20 +19,30 @@ contract, without added type-check coaching. Its declarative controls reuse the
 existing task stager, semantic helper, grader and reward sidecars. PR #123 is merged.
 Its ability to reveal skill advantage remains unproven.
 
-The [reusable campaign entry point](campaigns/README.md) now prepares that candidate
-and the existing `gh-014` fixture through the same scheduler and consolidated report.
-Task adapters retain their own graders, outputs and metric meanings. The runtime
-adapter owns native APM deployment, actual CLI launch, settings and observations;
-its profile preserves the qualified Codex model/provider/version and disables
-inference. Native oracle controls and non-forwarding real CLI probes have distinct
-reporting identities. Claude Code and the actual Copilot agent remain unsupported;
-synthetic identity checks do not establish CLI compatibility. Historical profiles
-and grades are preserved. The paired report bridge and current inventory/registry
-remain explicit limits. Exact-source hosted qualification and retained report
-reproduction are tracked on [draft PR #124](https://github.com/thetechgy/agent-engineering-baseline/pull/124).
+The [reusable campaign entry point](campaigns/README.md) implements shared
+scheduling, accounting, native collection and consolidated reporting for the
+Boolean candidate and existing `gh-014` fixture. Task adapters retain their own
+graders, outputs and metric meanings; the runtime adapter owns APM deployment,
+CLI launch, settings, observations and task-named submission retention. The
+qualified Codex profile is unchanged and inference remains disabled. Claude Code
+and the actual Copilot agent remain unsupported. The paired report bridge and
+current inventory/registry remain explicit limits.
 
-**One next action:** review the draft PR's exact-source two-family qualification
-receipt before proposing any prospective comparison freeze or authorization.
+Qualification is **incomplete** on [draft PR #124](https://github.com/thetechgy/agent-engineering-baseline/pull/124).
+Earlier source snapshots completed both Boolean modes and gh oracle controls.
+A real gh CLI probe executed successfully but stopped at verifier log transport;
+the corrected shared directory/trajectory transport has focused local contract
+coverage, not a passing native gh grading receipt. Both task families reach the
+existing report with reproducible HTML in explicitly synthetic plumbing controls.
+The latest implementation, `ff6a7af`, failed pinned tool acquisition with HTTP 504
+in [both hosted attempts](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42570470988/attempts/2),
+before native tasks launched. Required hosted checks also encountered repeated
+release-download HTTP 504 failures. Partial evidence and exact validator snapshots
+are retained; previous grades and identities are unchanged. No completed native
+two-family consolidated report or prospective skill effectiveness is claimed.
+
+**One next action:** rerun the draft PR's existing qualification checks once
+pinned release acquisition recovers.
 No further paid inference, judges, retries or dispatches are authorized.
 Production and skills remain unchanged; the reserved confirmation variant remains
 untouched and outside this work. Sections below preserve historical checkpoints
