@@ -112,8 +112,13 @@ class PilotCodex(Codex):
             # Keep qualification answers on the trusted host, out of all images.
             # Only the credential-free probe receives this transient payload.
             from skill_evidence import read_bytes
-            fixture = ROOT / '.github/evals' / PROFILE['skill'] / 'support/qualification' / PROFILE['case'] / 'classic.Tests.ps1'
-            payload = base64.b64encode(read_bytes(fixture, limit=65536)).decode()
+            if os.environ.get('AEB_COHORT_FIXTURE'):
+                from codex_pilot_effectiveness import fixtures
+                raw = fixtures()[os.environ['AEB_COHORT_FIXTURE']]['payload']
+            else:
+                fixture = ROOT / '.github/evals' / PROFILE['skill'] / 'support/qualification' / PROFILE['case'] / 'classic.Tests.ps1'
+                raw = read_bytes(fixture, limit=65536)
+            payload = base64.b64encode(raw).decode()
             # Server has no network forwarding and never authenticates to a provider.
             await self.exec_as_agent(environment, command=(
                 f'python3 /opt/pilot/codex_pilot_stub.py {logs}/probe.json {scenario} {shlex.quote(payload)} '

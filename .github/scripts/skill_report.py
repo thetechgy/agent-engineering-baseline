@@ -503,7 +503,7 @@ def custom_measurements(run, record):
         'this consumer does not recheck native directories. Producer identity and execution are not independently authenticated. '
         'Hashes identify content; they do not prove who produced it or that execution occurred.</p></details>',
         '<p>Purpose: ' + text(result['purpose']) + '; recorded agent: ' + code(result['agent']) + '; version ' + code(record['custom']['agent_version']) + '. ' +
-        ('Oracle fixture qualification is not model-backed skill-effectiveness evidence.' if result['purpose'] in ('oracle_qualification', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay') else
+        ('Oracle fixture qualification is not model-backed skill-effectiveness evidence.' if result['purpose'] in ('oracle_qualification', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness_control', 'skill_effectiveness_probe') else
          'Within-run differences describe supplied measurements; they do not establish causality.') + '</p>']
     parts.append('<details><summary>Task definitions and applicability</summary>' + table('Tasks and applicability', ('Case', 'Task', 'Source case', 'Applicable native metrics'),
         [[code(case['case_id']), text(case['title']), code(case['source_case_id']), ', '.join(code(k) for k in case['metrics'])]
@@ -541,10 +541,16 @@ def custom_measurements(run, record):
                 text(measurement['reason']), link('observation', (rid, obs['id']), 'Trial and evidence')])
     parts.append('<details><summary>All custom measurements and scoring bases</summary>' + table('Recorded custom measurements',
         ('Case', 'Arm', 'Attempt', 'Grader outcome', 'Metric', 'Applicability', 'Value', 'Numerator / denominator', 'Limitation', 'Evidence'), rows) + '</details>')
-    if record['custom']['profile_id'] in ('pester-cli-pilot-v1', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2'):
+    if record['custom']['profile_id'] in ('pester-cli-pilot-v1', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2', 'pester-cli-pilot-retained-v3', 'pester-cli-pilot-retained-v4', 'pester-cli-pilot-retained-v5', 'pester-cli-pilot-retained-v6', 'pester-effectiveness-v1', 'pester-effectiveness-v2', 'pester-effectiveness-v3', 'pester-effectiveness-v4', 'pester-effectiveness-v5', 'pester-effectiveness-v6'):
         parts.append(table('Pilot admission diagnostics', ('Case', 'Arm', 'Outcome', 'Admission reason'),
             [[code(obs['case_id']), safe(ARM[obs['arm']]), text(obs['custom']['outcome']),
               code(obs['custom'].get('admission_reason'))] for obs in record['observations']]))
+    if record['custom']['profile_id'] in ('pester-effectiveness-v1', 'pester-effectiveness-v2', 'pester-effectiveness-v3', 'pester-effectiveness-v4', 'pester-effectiveness-v5', 'pester-effectiveness-v6'):
+        parts.append(table('Seeded contract defects by case and arm', ('Case', 'Arm', 'Attempt', 'Defect', 'Result', 'Failure basis', 'Evidence'),
+            [[code(obs['case_id']), safe(ARM[obs['arm']]), text(obs['attempt']), code(defect['id']),
+              'Unavailable' if defect['detected'] is None else 'Detected' if defect['detected'] else 'Missed', text(defect.get('basis')),
+              link('observation', (rid, obs['id']), 'Trial and evidence')]
+             for obs in record['observations'] for defect in obs['custom']['defects']]))
     parts.append('<details><summary>Native token and phase-runtime observations</summary><p>Missing values stay unknown. '
         'Input tokens include cache tokens; phase durations are derived only from recorded start/finish times. '
         'These observations do not establish total model/judge usage.</p>' + table('Per-trial reported usage',
@@ -592,11 +598,11 @@ def behavioral(run, records):
         '<details><summary>Run identity and evaluated source</summary>' + disclosure('Exact record identity', rid) + '<p>Evaluated source: ' + text(run['source']['owner']) + ' · ' + code(run['source']['repository']) +
         ' · revision ' + code(run['source']['revision']) + '.</p></details>']
     if analysis.pilot_record(record):
-        label = 'Retrospective unchanged-submission replay' if record['custom']['purpose'] == 'cli_pilot_replay' else 'Live CLI compatibility pilot' if record['custom']['purpose'] == 'cli_pilot' else 'Credential-free real CLI isolation qualification' if record['custom']['purpose'] == 'cli_pilot_probe' else 'Native pilot grading controls'
+        label = 'Prospective exploratory cohort' if record['custom']['purpose'] == 'skill_effectiveness' else 'Credential-free cohort scheduler fixtures' if record['custom']['purpose'] == 'skill_effectiveness_probe' else 'Prospective grading qualification (oracle fixtures, no inference)' if record['custom']['purpose'] == 'skill_effectiveness_control' else 'Retrospective unchanged-submission replay' if record['custom']['purpose'] == 'cli_pilot_replay' else 'Live CLI compatibility pilot' if record['custom']['purpose'] == 'cli_pilot' else 'Credential-free real CLI isolation qualification' if record['custom']['purpose'] == 'cli_pilot_probe' else 'Native pilot grading controls'
         parts.append('<p class="safety"><strong>' + label + '; excluded from production history.</strong> '
             'Producer: ' + code(record['policy']['producer_profile']) + '. '
-            'Custom task and mutation measurements are separate from uncollected judge-dependent scores. '
-            'One matched pair does not establish general skill effectiveness.</p>')
+            'Custom task and mutation measurements are separate from uncollected judge-dependent scores. ' +
+            ('Deterministic fixtures do not establish skill benefit.</p>' if record['custom']['purpose'] in ('skill_effectiveness_control', 'skill_effectiveness_probe') else 'This exploratory population does not establish general skill effectiveness.</p>'))
         if record['custom']['purpose'] == 'cli_pilot_replay':
             parts.append(retrospective_outcomes(record, records))
     elif 'producer_profile' in record['policy']:
@@ -978,7 +984,9 @@ def render_report(result, captured, *, reviews=None, pages_context=None, histori
     skills = result['skills']
     if any('producer_profile' in record.get('policy', {}) and not analysis.pilot_record(record) for record in records.values()):
         add('<p class="safety"><strong>Synthetic candidate qualification.</strong> Fixed judge values test transport only. No model judges ran; candidate quality is unavailable. Candidate records are excluded from production history and cannot establish skill improvement.</p>')
-    if any(analysis.pilot_record(record) for record in records.values()):
+    if any(record.get('custom', {}).get('purpose') == 'skill_effectiveness_control' for record in records.values()):
+        add('<p class="safety"><strong>Prospective grading qualification.</strong> Native oracle fixtures exercise frozen task contracts without model inference. These are not agent results, skill benefit or production history.</p>')
+    if any(analysis.pilot_record(record) and record['custom']['profile_id'] not in ('pester-effectiveness-v1', 'pester-effectiveness-v2', 'pester-effectiveness-v3', 'pester-effectiveness-v4', 'pester-effectiveness-v5', 'pester-effectiveness-v6') for record in records.values()):
         add('<p class="safety"><strong>Opt-in CLI compatibility evidence.</strong> Native grading controls and CLI observations retain separate purposes. No model judging or history publication is enabled; one pair cannot establish general skill effectiveness.</p>')
     add(executive_summary(result, records, pages=pages_context))
     add('</section>')
@@ -1011,7 +1019,7 @@ def render_report(result, captured, *, reviews=None, pages_context=None, histori
         for run in skill['behavioral_results']:
             if pages_context is not None:
                 record = records[run['record_id']]
-                purpose = ('Diagnostic oracle qualification' if record.get('custom', {}).get('purpose') in ('oracle_qualification', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay') else
+                purpose = ('Prospective exploratory cohort' if record.get('custom', {}).get('purpose') == 'skill_effectiveness' else 'Diagnostic oracle qualification' if record.get('custom', {}).get('purpose') in ('oracle_qualification', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_control', 'skill_effectiveness_probe') else
                            'Diagnostic confirmation' if record['policy']['attempts']['mode'] == 'confirmation' else 'Standard behavioral evidence')
                 add('<p><strong>' + purpose + '</strong></p>')
             add(behavioral(run, records))
