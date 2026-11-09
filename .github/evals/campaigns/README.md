@@ -63,7 +63,8 @@ the same scheduler and report entry point. Do not edit installed skill bytes to
 prepare a case.
 
 For **another runtime on an existing task**, add an owning adapter module and
-register its profile validator and module in `evaluation_runtime.py`. The adapter
+register its profile validator, source-input metadata and execution module in
+`evaluation_runtime.py`. The adapter
 owns deployment/discovery, image preparation, actual agent launch configuration,
 authentication boundaries, native observations, usage and cleanup. Qualify its
 Harbor import hooks and native collector/admission identities through this same

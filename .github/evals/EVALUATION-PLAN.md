@@ -29,7 +29,7 @@ reporting identities. Claude Code and the actual Copilot agent remain unsupporte
 synthetic identity checks do not establish CLI compatibility. Historical profiles
 and grades are preserved. The paired report bridge and current inventory/registry
 remain explicit limits. Exact-source hosted qualification and retained report
-reproduction are recorded on the new draft PR.
+reproduction are tracked on [draft PR #124](https://github.com/thetechgy/agent-engineering-baseline/pull/124).
 
 **One next action:** review the draft PR's exact-source two-family qualification
 receipt before proposing any prospective comparison freeze or authorization.

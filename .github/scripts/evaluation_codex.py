@@ -151,11 +151,6 @@ def validate_members(members, mode):
         require(members.get('environment/build/' + filename) == digest, 'Unapproved staged runtime helper')
 
 
-def source_inputs(workspace):
-    from codex_pilot_contract import pilot_inputs
-    import skill_evidence as e
-    return pilot_inputs(workspace) + [{'member': 'runtime/evaluation_codex.py', 'digest': e.digest_bytes(e.read_bytes(workspace / '.github/scripts/evaluation_codex.py'))}]
-
 
 RETAINED_MEMBERS = ('pilot-runtime.json', 'pilot-final-policy.json', 'docker-observation.json',
                     'probe.json', 'codex.txt', 'trajectory.json', 'task-boundary.json')

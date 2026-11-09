@@ -42,3 +42,13 @@ def adapter_for(runtime):
     name = runtime['profile']['adapter']
     require(name in modules, 'Unsupported runtime adapter: ' + name)
     return import_module(modules[name])
+
+
+def source_inputs(runtime, workspace):
+    # Source/profile inspection works without loading native SDK transport code.
+    name = runtime['profile']['adapter']
+    require(name == 'codex', 'Unsupported runtime metadata adapter: ' + name)
+    from codex_pilot_contract import pilot_inputs
+    import skill_evidence as e
+    return pilot_inputs(workspace) + [{'member': 'runtime/evaluation_codex.py',
+        'digest': e.digest_bytes(e.read_bytes(workspace / '.github/scripts/evaluation_codex.py'))}]

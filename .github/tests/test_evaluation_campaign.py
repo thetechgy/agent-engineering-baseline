@@ -105,6 +105,18 @@ class CampaignContracts(unittest.TestCase):
                 task.check('unauthorized',True,{'classification':'failed'},{'gh_task':1,'gh_authorization':0})
                 with self.assertRaises(ValueError):task.check('unauthorized',True,{'classification':'failed'},{'gh_task':0,'gh_authorization':0})
 
+    def test_metadata_inspection_does_not_import_native_runtime_backends(self):
+        import builtins
+        original=builtins.__import__
+        def importing(name,*args,**kwargs):
+            if name.startswith(('evaluation_codex','codex_pilot_environment','aeb_gh_fixture')):
+                raise AssertionError('Metadata imported native backend: '+name)
+            return original(name,*args,**kwargs)
+        with patch('builtins.__import__',side_effect=importing), patch.object(runtime, 'adapter_for', side_effect=AssertionError('Metadata loaded execution adapter')):
+            for filename in ('boolean-contract','gh-read'):
+                task=load(ROOT/('.github/evals/campaigns/'+filename+'.json'))
+                evidence.custom_input_identities(ROOT,task.definition['skill'],purpose='campaign-'+task.definition['id']+'-oracle')
+
     def test_historical_replay_does_not_require_matched_submitted_answers(self):
         rows=[{'case_id':'case','members':{'instruction.md':'same','solution/candidate':answer}} for answer in ('left','right')]
         staged=evidence.custom_staged_inputs(rows,'cli_pilot_replay')

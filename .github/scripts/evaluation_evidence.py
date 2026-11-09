@@ -26,9 +26,8 @@ def source_manifest(workspace, name, purpose):
         '.github/scripts/evaluation_evidence.py', '.github/scripts/skill_evidence.py', '.github/scripts/skill_analysis.py',
         '.github/scripts/skill_report.py', '.github/scripts/skill_reports.py', adapter.member,
         adapter.definition['runtime_profile'], '.github/workflows/evaluation-campaign.yml']
-    from evaluation_runtime import adapter_for, read_profile
-    runtime = adapter_for(read_profile(ROOT / adapter.definition['runtime_profile']))
-    values.extend(runtime.source_inputs(workspace))
+    from evaluation_runtime import read_profile, source_inputs
+    values.extend(source_inputs(read_profile(ROOT / adapter.definition['runtime_profile']), workspace))
     values.extend({'member': 'campaign/' + member, 'digest': e.digest_bytes(e.read_bytes(workspace / member))} for member in sorted(set(files)))
     return values
 
