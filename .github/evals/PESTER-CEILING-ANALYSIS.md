@@ -114,10 +114,11 @@ container qualification, production scoring or a live model evaluation.
 The single candidate is [Boolean port-contract repair](pester-ceiling/candidate/prompt.txt).
 It reuses the existing 004 input, broken suite, execution profile, reference and four
 boundary mutants; [integer-result.ps1](pester-ceiling/candidate/integer-result.ps1)
-is its only additional implementation fault. The prompt makes the already relevant
-type contract explicit with an API-consumer rationale. It does not name the skill
-or require a specific solution. This changed prompt prevents treating a future
-comparison as another trial of the frozen cohort.
+is its only additional implementation fault. The primary prompt is byte-identical
+to the original `pester-004` task wording. Its unchanged README already states the
+Boolean contract. No added coaching names integer substitutes or asks for explicit
+type assertions. A future comparison still needs a separate prospective freeze:
+this additional mutant was devised after inspecting the original outputs.
 
 Good work must pass the reference and reject each independent boundary fault and
 the type-only fault through assertions, with real execution and no skipped/not-run,
@@ -132,21 +133,35 @@ Independent acceptance is based on behavior, not syntax or test count:
 | Type-only suite | Pass | Miss each | Reject |
 | Existing broken-discovery suite | Unavailable | Unavailable | Unavailable |
 
-All 30 control executions matched this matrix. The
-[component receipt](pester-ceiling/validation.json) includes exact input hashes,
-raw runner counters and the twelve retained-submission diagnostics. Reproduce with:
+The [initial component receipt](pester-ceiling/validation.json) preserves the first
+30 control executions and twelve retained-submission diagnostics at `7f84055`.
+Its deleted standalone validator is historical tooling, not the current entry point.
+The current [candidate definition](pester-ceiling/candidate.json) contains only the
+source task, extra mutant, control files and expected outcomes. The existing task
+stager supplies the original instruction and inputs; tests require byte equality.
+The existing semantic test helper executes the unchanged prospective runner, and
+`prospective_grader().assess` and `emit` own classification and reward sidecars.
+The broken-discovery control is `invalid`/unscoreable, with no quality metrics.
+No separate candidate runner, grading policy or report renderer is added.
+
+Reproduce the five controls (30 reference/mutant executions) with the pinned
+PowerShell 7.6.9 and Pester 6.2.0 already installed:
 
 ```sh
-python3 -B .github/evals/pester-ceiling/validate.py \
-  --pester-manifest "$PESTER_MANIFEST" --output "$EVIDENCE/boolean-controls.json"
+PESTER_EFFECTIVENESS_LOCAL_SEMANTICS=1 \
+PESTER_EFFECTIVENESS_EVIDENCE="$EVIDENCE/boolean-controls" \
+python3 -B -m unittest discover -s .github/tests -p test_pester_ceiling.py -v
 ```
 
-Use the existing Pester 6.2.0 manifest and a fresh persistent evidence filename.
-Optional `--retained-evidence` selects the authenticated artifact's evidence root.
-The validator uses the existing runner and honors `TMPDIR`; it does not stage an
-agent or register a production grader. Alternative solutions remain admissible
-subject to the existing execution profile. Container integration and prospective
-admission are not qualified by these local controls.
+The evidence directory must be new and persistent. Disposable fixtures honor
+`TMPDIR`. The existing required Linux validation job runs these checks and retains
+`pester-ceiling-components`, containing the declarative definition and standard
+reward/sidecar files. The five classifications must be two passed, two failed and
+one invalid, with each expected defect-detection vector checked independently.
+These are component qualification controls, not native agent trials or production
+history; no skill-benefit measure or public-report admission is invented. Alternative
+solutions remain admissible under the unchanged execution profile. Container
+integration and a new prospective evaluation remain outside this refinement.
 
 The skill plausibly helps because its Assertions section distinguishes Boolean
 identity from coercion and says to match assertions to contracts. Yet all current

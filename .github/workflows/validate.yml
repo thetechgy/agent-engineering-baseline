@@ -336,6 +336,23 @@ jobs:
           }
           if ($LASTEXITCODE -ne 0) { throw 'Full validation failed.' }
 
+      - name: Check exploratory Pester candidate with the existing grader
+        shell: bash
+        env:
+          PESTER_EFFECTIVENESS_LOCAL_SEMANTICS: '1'
+          PESTER_EFFECTIVENESS_EVIDENCE: ${{ runner.temp }}/pester-ceiling-components
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python3 -B -m unittest discover -s .github/tests -p test_pester_ceiling.py -v
+
+      - name: Retain exploratory Pester component evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pester-ceiling-components
+          path: ${{ runner.temp }}/pester-ceiling-components/
+          if-no-files-found: error
+          retention-days: 90
+
       - name: Require clean regeneration
         run: |
           git diff --exit-code -- . ':(exclude)apm.lock.yaml'

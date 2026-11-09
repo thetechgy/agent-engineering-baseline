@@ -14,11 +14,17 @@ one exploratory Boolean-contract candidate: all six boundary suites accepted an
 integer-return implementation that violates the documented Boolean contract.
 All six current trials successfully read the deployed skill; this is not evidence
 of causal benefit or complete instruction following. Original grades are preserved.
-The candidate's positive and weak controls passed credential-free component checks;
-its ability to reveal skill advantage remains unproven.
+The candidate now uses the original `pester-004` prompt and unchanged Boolean
+contract, without added type-check coaching. Its declarative controls reuse the
+existing task stager, semantic test helper, grader and reward sidecars. Required
+hosted validation includes the focused controls; the exact-head validation receipt
+and review-readiness state are maintained on
+[PR #123](https://github.com/thetechgy/agent-engineering-baseline/pull/123).
+Its ability to reveal skill advantage remains unproven.
 
-**One next action:** review that candidate for a separately frozen prospective
-comparison. No further paid inference, judges, retries or dispatches are authorized.
+**One next action:** complete the required review of PR #123 after its validation
+gates pass. Any prospective comparison needs a separate freeze and authorization.
+No further paid inference, judges, retries or dispatches are authorized.
 Production and skills remain unchanged; the reserved confirmation variant remains
 untouched and outside this analysis. Sections below preserve historical checkpoints
 and their then-current proposals; they do not grant current execution authorization.

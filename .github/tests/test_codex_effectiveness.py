@@ -28,6 +28,36 @@ def prospective_grader():
     return module
 
 
+def local_semantic_fixture(payload, files, manifest):
+    """Existing local component probe, shared by frozen and exploratory controls.
+
+    The production runner and grader own execution semantics. This test helper
+    only maps the reviewed workspace path and supplies verifier-owned fixtures.
+    Hosted Docker qualification remains the source of isolation evidence.
+    """
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        (root / 'input').mkdir()
+        (root / 'output').mkdir()
+        candidate = root / 'output/Subject.Tests.ps1'
+        candidate.write_bytes(payload.replace(b'/workspace', str(root).encode()))
+        runner = root / 'Runner.ps1'
+        runner.write_bytes(runner_bytes())
+        profile = root / 'profile.json'
+        profile.write_bytes(files['profile.json'])
+        subject = json.loads(files['profile.json']).get('subject', 'Subject.ps1')
+        results = []
+        variants = ['reference/Subject.ps1'] + sorted(k for k in files if k.startswith('mutants/'))
+        for variant in variants:
+            (root / 'input' / subject).write_bytes(files[variant])
+            process = subprocess.run([os.environ.get('CI_PWSH', 'pwsh'), '-NoLogo', '-NoProfile',
+                '-NonInteractive', '-File', str(runner), '-Candidate', str(candidate), '-Profile', str(profile),
+                '-Workspace', str(root), '-PesterManifest', manifest],
+                text=True, capture_output=True, check=True, timeout=35)
+            results.append(json.loads(process.stdout))
+        return results
+
+
 class Protocol(unittest.TestCase):
     def test_native_qualification_overview_is_distinct_from_synthetic_judge_transport(self):
         import skill_analysis as analysis
@@ -195,26 +225,12 @@ class Protocol(unittest.TestCase):
         grader = prospective_grader()
         for name, fixture in effect.fixtures().items():
             if (fixture['outcome'] not in ('passed','failed') and not name.endswith('-unclassified-failure')) or name.endswith('-wrong-scope'): continue
-            with self.subTest(control=name), tempfile.TemporaryDirectory() as directory:
-                root=Path(directory);(root/'input').mkdir();(root/'output').mkdir()
-                candidate=root/'output/Subject.Tests.ps1'
-                candidate.write_bytes(fixture['payload'].replace(b'/workspace', str(root).encode()))
-                runner=root/'Runner.ps1';runner.write_bytes(runner_bytes())
-                files=effect.case_files(ROOT, fixture['case'])
-                profile=root/'profile.json';profile.write_bytes(files['profile.json'])
-                subject=json.loads(files['profile.json']).get('subject','Subject.ps1')
-                results=[]
-                variants=['reference/Subject.ps1']+sorted(k for k in files if k.startswith('mutants/'))
-                for variant in variants:
-                    (root/'input'/subject).write_bytes(files[variant])
-                    process=subprocess.run(['pwsh','-NoLogo','-NoProfile','-NonInteractive','-File',str(runner),
-                        '-Candidate',str(candidate),'-Profile',str(profile),'-Workspace',str(root),'-PesterManifest',manifest],
-                        text=True,capture_output=True,check=True,timeout=35)
-                    results.append(json.loads(process.stdout))
-                status, detail=grader.assess(results[0],results[1:])
-                self.assertEqual(status,fixture['outcome'], (name,results))
+            with self.subTest(control=name):
+                results = local_semantic_fixture(fixture['payload'], effect.case_files(ROOT, fixture['case']), manifest)
+                status, detail = grader.assess(results[0], results[1:])
+                self.assertEqual(status, fixture['outcome'], (name, results))
                 if fixture['signature'] is not None:
-                    self.assertEqual(detail['variant_detections'],fixture['signature'])
+                    self.assertEqual(detail['variant_detections'], fixture['signature'])
 
 
 if __name__ == '__main__':
