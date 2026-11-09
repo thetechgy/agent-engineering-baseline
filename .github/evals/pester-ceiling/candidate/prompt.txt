@@ -1,0 +1,8 @@
+Repair the port-validation suite for an API that exposes Test-PortAllowed -Port <int>.
+It must return a Boolean: true for 1 through 65535 inclusive, false otherwise.
+Consumers distinguish JSON booleans from numbers, so 0 and 1 are not valid returns.
+Check the supplied boundaries 0, 1, 65535 and 65536, including return-type integrity.
+Use the supplied PowerShell 7.6.9 and Pester 6.2.0 project. Keep inputs unchanged
+and save the complete self-contained suite as output/Subject.Tests.ps1.
+Use input/EXECUTION-PROFILE.md for supported operations. Do not retrieve evaluator
+controls or answers. No particular assertion syntax or test count is required.
