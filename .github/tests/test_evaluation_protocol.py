@@ -157,6 +157,61 @@ class ProtocolContracts(unittest.TestCase):
         selected=runtime.read_profile(ROOT/'.github/evals/campaigns/codex-authorized-v1.json')
         with self.assertRaises(ValueError):runtime.validate_codex({**selected['profile'],'inference_enabled':True})
 
+    def test_pinned_collector_preserves_three_trial_and_stopped_denominators(self):
+        try:
+            from importlib.metadata import version
+            if version('skillevaluator') != '0.8.0': self.skipTest('Owning collector runtime required')
+        except ImportError: self.skipTest('Owning collector runtime required')
+        from datetime import datetime, timezone, timedelta
+        from harbor.models.trial.result import TrialResult
+        from harbor.models.task.task import Task
+        from skillevaluator.tier3.harbor.collector import collect_harbor_results
+        import shutil
+        task=self.task();skill=task.definition['skill']
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);native=task.bundle(root,'live')/'evals/harbor/pester-004'
+            checksum=Task(native).checksum;start=datetime.now(timezone.utc)
+            for arm in ('with','without'):
+                job=root/'jobs'/f'{skill}-codex-{arm}'
+                for ordinal in (1,2,3):
+                    name=f'campaign-pester-004-attempt{ordinal}__{arm}'
+                    passed=ordinal != 2
+                    metrics={'pester_reference_pass':1.0,'pester_mutation_detection':1.0 if passed else .8,'pester_test_quality':float(passed)}
+                    value=TrialResult.model_validate({'task_name':'pester-004','trial_name':name,'trial_uri':(job/name).as_uri(),
+                        'task_id':{'path':str(native)},'task_checksum':checksum,
+                        'config':{'task':{'path':str(native)},'trial_name':name,'trials_dir':str(job),'agent':{'name':'codex'}},
+                        'agent_info':{'name':'codex','version':'0.167.0'},'verifier_result':{'rewards':{'overall':float(passed),**metrics}},
+                        'started_at':start.isoformat(),'finished_at':(start+timedelta(seconds=2)).isoformat(),
+                        'verifier':{'started_at':(start+timedelta(seconds=1)).isoformat(),'finished_at':(start+timedelta(seconds=2)).isoformat()}})
+                    reports.write_json(job/name/'result.json',json.loads(value.model_dump_json()))
+                    reports.write_json(job/name/'verifier/skill_evaluator_reward.json',{'entry_id':'pester-004','trial_id':name,
+                        'evaluation_status':'complete','overall':float(passed),'custom_metrics':metrics,
+                        'details':{'outcome':{'classification':'passed' if passed else 'failed','code':'evaluated'}}})
+            core.aggregates(root,skill=skill,carrier='codex')
+            parameters=campaign.collection_parameters(task,'experiment-probe')
+            def collect(destination):
+                return collect_harbor_results(skill,['codex'],destination,root/'jobs',grading_mode='custom_only',**parameters)
+            wrong=collect_harbor_results(skill,['codex'],root/'wrong-one-trial-policy',root/'jobs',grading_mode='custom_only',
+                **{**parameters,'n_attempts':1})
+            self.assertNotEqual(wrong['agents']['codex']['conditions']['with_skill']['execution_status'],'succeeded')
+            value=collect(root/'complete')
+            self.assertEqual(value['attempt_policy']['max_attempts'],3)
+            for row in value['agents']['codex']['conditions'].values():
+                self.assertEqual(row['expected_attempts'],3)
+                self.assertEqual(row['scored_attempts'],3)
+                self.assertEqual(row['execution_status'],'succeeded')
+            shutil.rmtree(root/'jobs'/f'{skill}-codex-without')
+            job=root/'jobs'/f'{skill}-codex-with'
+            for ordinal in (2,3):shutil.rmtree(job/f'campaign-pester-004-attempt{ordinal}__with')
+            core.aggregates(root,skill=skill,carrier='codex')
+            partial=collect(root/'stopped')['agents']['codex']['conditions']
+            self.assertEqual(partial['with_skill']['expected_attempts'],3)
+            self.assertEqual(partial['without_skill']['expected_attempts'],3)
+            self.assertEqual(partial['with_skill']['scored_attempts'],1)
+            self.assertEqual(partial['without_skill']['scored_attempts'],0)
+            self.assertNotEqual(partial['with_skill']['execution_status'],'succeeded')
+            self.assertNotEqual(partial['without_skill']['execution_status'],'succeeded')
+
     def test_report_admission_preserves_inference_and_population_boundaries(self):
         task=self.task()
         config={'qualification':{'producer':'live','inference':True},'harbor':{'n_attempts':3,'stop_on_pass':False}}

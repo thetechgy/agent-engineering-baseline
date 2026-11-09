@@ -73,6 +73,15 @@ def stage(root, task, mode):
     return bundle, tasks, captured, extra
 
 
+def collection_parameters(task, mode):
+    ids = sorted(task.cases(mode))
+    return {'expected_cases':len(ids), 'expected_case_ids':ids,
+            # Validate recorded job totals separately from the planned per-case population.
+            'expected_trials':None if mode in ('live','experiment-probe') else len(ids),
+            'n_attempts':task.definition['trials'],
+            'stop_on_pass':False}
+
+
 def collect(root, task, mode, bundle, captured, rows):
     from skillevaluator.tier3.harbor.collector import collect_harbor_results
     from evaluation_campaign_core import aggregates
@@ -82,8 +91,8 @@ def collect(root, task, mode, bundle, captured, rows):
     skill = task.definition['skill']; ids = sorted(task.cases(mode)); raw = root / 'raw'
     run = raw / 'results' / skill / purpose(task, mode)
     runtime = read_profile(ROOT / task.definition['runtime_profile'])['resolved']
-    data = collect_harbor_results(skill, [runtime['agent']], run, root / 'jobs', expected_cases=len(ids), expected_case_ids=ids,
-        expected_trials=len(ids)*task.definition['trials'], grading_mode='custom_only', agent_models={runtime['agent']: {'model': runtime['model'] if mode in ('probe', 'experiment-probe', 'live') else 'credential-free-oracle', 'source': task.definition['runtime_profile']}})
+    data = collect_harbor_results(skill, [runtime['agent']], run, root / 'jobs', **collection_parameters(task, mode),
+        grading_mode='custom_only', agent_models={runtime['agent']: {'model': runtime['model'] if mode in ('probe', 'experiment-probe', 'live') else 'credential-free-oracle', 'source': task.definition['runtime_profile']}})
     config = {'grading': {'mode': 'custom_only'}, 'judge': {'enabled': False},
         'qualification': {'producer': 'cli_probe' if mode in ('probe', 'experiment-probe') else 'live' if mode == 'live' else 'oracle', 'inference': mode == 'live'},
         'harbor': {'n_attempts': task.definition['trials'], 'stop_on_pass': False},
