@@ -546,9 +546,10 @@ def custom_measurements(run, record):
             [[code(obs['case_id']), safe(ARM[obs['arm']]), text(obs['custom']['outcome']),
               code(obs['custom'].get('admission_reason'))] for obs in record['observations']]))
     if record['custom']['profile_id'] in ('pester-effectiveness-v1', 'pester-effectiveness-v2', 'pester-effectiveness-v3', 'pester-effectiveness-v4', 'pester-effectiveness-v5', 'pester-effectiveness-v6'):
-        parts.append(table('Seeded contract defects by case and arm', ('Case', 'Arm', 'Defect', 'Result', 'Failure basis'),
-            [[code(obs['case_id']), safe(ARM[obs['arm']]), code(defect['id']),
-              'Unavailable' if defect['detected'] is None else 'Detected' if defect['detected'] else 'Missed', text(defect.get('basis'))]
+        parts.append(table('Seeded contract defects by case and arm', ('Case', 'Arm', 'Attempt', 'Defect', 'Result', 'Failure basis', 'Evidence'),
+            [[code(obs['case_id']), safe(ARM[obs['arm']]), text(obs['attempt']), code(defect['id']),
+              'Unavailable' if defect['detected'] is None else 'Detected' if defect['detected'] else 'Missed', text(defect.get('basis')),
+              link('observation', (rid, obs['id']), 'Trial and evidence')]
              for obs in record['observations'] for defect in obs['custom']['defects']]))
     parts.append('<details><summary>Native token and phase-runtime observations</summary><p>Missing values stay unknown. '
         'Input tokens include cache tokens; phase durations are derived only from recorded start/finish times. '

@@ -57,8 +57,9 @@ class Protocol(unittest.TestCase):
             'outcomes': {arm: {kind: 0 for kind in (*evidence.CUSTOM_OUTCOMES, 'missing')}
                          for arm in ('with_skill', 'without_skill')}}}
         value = {'custom': {'agent_version': 'oracle', 'cases': [], 'definitions': []}, 'observations': []}
-        for detected, basis, outcome in ((1, 'assertion', 'passed'), (0, 'survived', 'failed'), (None, 'unavailable', 'unsupported')):
-            value['observations'].append({'case_id': 'pester-003', 'arm': 'with_skill', 'attempt': 1,
+        for attempt, (detected, basis, outcome) in enumerate(((1, 'assertion', 'passed'), (0, 'survived', 'failed'), (None, 'unavailable', 'unsupported')), 1):
+            value['observations'].append({'id': f'synthetic-observation-{attempt}',
+                'case_id': 'pester-003', 'arm': 'with_skill', 'attempt': attempt,
                 'custom': {'outcome': outcome, 'admission_reason': 'test_failure_kind', 'measurements': [],
                     'defects': [{'id': 'forwarding', 'detected': detected, 'basis': basis}],
                     'usage': {key: None for key in ('n_input_tokens', 'n_cache_tokens', 'n_output_tokens',
@@ -76,6 +77,11 @@ class Protocol(unittest.TestCase):
                 self.assertIn('test_failure_kind', html)
                 if profile.startswith('pester-effectiveness-'):
                     self.assertIn('<caption>Seeded contract defects by case and arm</caption>', html)
+                    defects = html.split('<caption>Seeded contract defects by case and arm</caption>', 1)[1].split('</table>', 1)[0]
+                    self.assertIn('>Attempt<', defects)
+                    for observation in value['observations']:
+                        self.assertIn(f'>{observation["attempt"]}<', defects)
+                        self.assertIn(report.link('observation', (run['record_id'], observation['id']), 'Trial and evidence'), defects)
                     for label in ('forwarding', '>Detected<', '>Missed<', '>Unavailable<', 'assertion', 'survived'):
                         self.assertIn(label, html)
                 else:
