@@ -382,10 +382,14 @@ file-edit controls and historical task-family qualification. No model secret,
 paid dispatch, protected live gate, judge, production or Pages publication is used.
 The concrete recovery result and exact-source receipts are recorded on
 [PR #126](https://github.com/thetechgy/agent-engineering-baseline/pull/126) and in
-the authoritative checkpoint. Native qualification at `6da19c3` stopped before
-agent/grader execution on HTTP 503 responses for frozen Debian Snapshot packages;
-one same-source credential-free retry also failed. The earlier recovered grade
-stays valid, while final-source launch compatibility remains unqualified. Resume
-qualification only with the same signed, pinned inputs once acquisition works;
-these failures do not authorize a mirror/pin change or paid execution. Any future
-experiment requires a separate decision.
+the authoritative checkpoint. After bounded availability checks and recovery of the same signed package
+sources, native qualification passed at `af4dd66` in
+[run 42713098769, attempt 2](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42713098769).
+[The native receipt](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42713098769/artifacts/13721147577)
+retains fourteen real native edit probes, stdout/stderr evidence and all fourteen
+reproducible report pairs. The same-source retained replay confirms reference
+correctness, 4/5 defects and primary quality 0/1 with unchanged bytes. Earlier
+HTTP 503 acquisition failures remain distinct failed records. No mirror, pin,
+grading, skill, isolation or adapter change was needed for this recovery. Final
+CI status and documentation-only source equivalence are recorded on PR #126.
+Any future experiment requires a separate decision.

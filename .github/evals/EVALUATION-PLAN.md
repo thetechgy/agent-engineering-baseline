@@ -92,40 +92,49 @@ the adapter's qualified subset. It stopped before grading; five slots remained
 unlaunched. Cleanup completed and estimated usage was $0.0479649, not an invoice.
 The allocation is consumed and closed. The original experiment is inconclusive.
 
-PR #126 now corrects the owning Codex adapter and qualifies native file-edit
-handling through the existing non-forwarding CLI path. The original unsupported
-record and exact submission are retained in a pinned corpus. A separate
-credential-free retrospective grade uses the shared campaign and frozen five-mutant
-verifier. The separate retrospective result at corrected adapter revision
-`2d1dfe9` passed reference correctness and detected `above`, `highest`, `lowest`
-and `zero`, but missed `integer-result`: 4/5 defects and primary quality 0/1, a
-valid measured task failure. The unchanged 471-byte submission retains SHA-256
-`3215b6097fa3e5f592989f2b8f4523207e28ebd4893cc7d11437b19189795981`.
-[Replay artifact 13712424339](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42705785116/artifacts/13712424339)
-has archive digest `sha256:c70cc1c578775cb9c70410526d92f90fbaec67a03fecd67d6450e9454a52126f`;
-its successful isolated grading job verified cleanup and report reproduction.
-The superseded parent run is inconclusive for full qualification; final-head
-native file-edit and historical qualification are recorded on PR #126.
-The real native probe at `df3fc9a` emitted four completed edits and one failed
-edit, but multiline stderr diagnostics contaminated the merged JSON capture and
-correctly stopped parsing. The owning launch now retains stdout and stderr
-separately, with diagnostic hashes linked to the normalized trajectory. Unknown
-or non-JSON event output remains rejected; final-source qualification is recorded
-on the PR. At `6da19c3`, both credential-free native jobs stopped before agent or
-grader execution when the frozen Debian Snapshot returned HTTP 503 / No healthy
-backends for `python3-minimal_3.13.5-1` and `libperl5.40_5.40.1-6+deb13u1`.
-One same-source credential-free retry also failed. These image-acquisition
-failures do not qualify the corrected launch and do not change the recovered
-grade. Pinned sources, package versions, grading and isolation remain unchanged.
-The [run and retained diagnostics](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42711693679)
-record both failures; exact-head status remains on PR #126. Parser fixtures, real
-CLI probes and retrospective grading remain separate. No inference, judge,
-replacement slot or skill revision is part of this recovery.
-New source profiles preserve executed-head profiles and historical receipts.
-One current-arm retrospective grade provides no matched skill-benefit comparison.
+PR #126's Codex file-edit correction completed credential-free native
+qualification at `af4dd66a409f1ec401d7989a51b8fc245f68a505` in
+[run 42713098769, attempt 2](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42713098769).
+The existing shared path passed both task families' 28 native trials, then the
+13 non-forwarding CLI scheduling/stop-rule launches and fresh preparation
+consumption. Fourteen native edit probes each preserved four completed edits and
+one failed edit, including add/update/delete operations, IDs, paths, status and
+available evidence. JSON stdout and stderr are retained separately and linked
+by hashes. Unknown events, malformed/incomplete evidence and declared accounting
+failures retain their intended stops. Valid task failure remains measured.
 
-**One next action:** finish PR #126's credential-free native qualification and
-review its recovered result before considering any separate experiment.
+[Native receipt and consolidated reports](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42713098769/artifacts/13721147577)
+have archive digest `sha256:5301d01f68f32415b80f152dbe39bb004d307270b55c6c53aa105bbe15e33f21`.
+Independent admission authenticated the producer and archive, checked native edit
+meaning against stdout/stderr and reproduced all fourteen report pairs byte for
+byte from retained public inputs and saved analysis. Cleanup passed. Earlier
+HTTP 503 image-acquisition failures remain failed receipts; bounded HTTPS checks
+and the successful signed APT build established recovery without changed pins,
+mirrors, hashes or isolation. No additional adapter fix was needed in this follow-up.
+
+The separate [retrospective replay](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42713098769/artifacts/13717139923)
+at the same source has archive digest
+`sha256:6625f5277d29dbd188573b36f824550732c88660b073d37f080430df501d7192`.
+It passes the reference and detects `above`, `highest`, `lowest` and `zero`, but
+misses `integer-result`: 4/5 defects, primary quality 0/1, a valid measured failure.
+Both exact 471-byte submission copies retain SHA-256
+`3215b6097fa3e5f592989f2b8f4523207e28ebd4893cc7d11437b19189795981`.
+All original corpus/public bytes remain intact; the original unsupported,
+unmeasured result and closed six-slot allocation are unchanged. Independent
+retrospective report reproduction and cleanup pass. This is one current-arm
+submission after output inspection, not evidence of skill benefit.
+
+Validate passed on the qualification source. Remaining historical/evaluator CI
+and final documentation-head validation are recorded on
+[PR #126](https://github.com/thetechgy/agent-engineering-baseline/pull/126).
+The qualified boundary is the pinned Codex/profile event subset. Arbitrary native
+events, other runtimes/models, live-provider compatibility and actual billing
+remain outside this qualification. No inference, judge, replacement slot, skill
+revision or new paid allocation is part of this work. Dependency work remains
+under issue #95.
+
+**One next action:** finish the remaining required CI, then review the qualified
+correction and recovered result in draft PR #126.
 No further paid inference, judges, retries or dispatches are authorized.
 Production and skills remain unchanged; the reserved confirmation variant remains
 untouched and outside this work. Sections below preserve historical checkpoints
