@@ -28,31 +28,31 @@ qualified Codex profile is unchanged and inference remains disabled. Claude Code
 and the actual Copilot agent remain unsupported. The paired report bridge and
 current inventory/registry remain explicit limits.
 
-Qualification is **incomplete** on [draft PR #124](https://github.com/thetechgy/agent-engineering-baseline/pull/124).
-Earlier source snapshots completed both Boolean modes and gh oracle controls.
-A real gh CLI probe executed successfully but stopped at verifier log transport;
-the corrected shared directory/trajectory transport has focused local contract
-coverage, not a passing native gh grading receipt. Both task families reach the
-existing report with reproducible HTML in explicitly synthetic plumbing controls.
-Acquisition recovered through the existing integrity-verified paths. The native
-retry on `2e69289` completed gh oracle controls, but its real-CLI verifier could
-not read host-owned private helpers. The owning runtime now uploads those helpers
-as root through its existing bounded stdin path, retaining private permissions
-and the existing capabilities. A valid gh native grading receipt then passed on
-`e3221fb` in [run 42597439930](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42597439930).
-Qualification stopped at the observer's incorrect flat host path for the retained
-JSON. The adapter now uses Harbor's existing source-path mapping; the actual
-retained JSON matches its producer digest. Twenty-eight focused contracts pass.
+Credential-free qualification completed on `3f29708` in
+[run 42599548886](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42599548886).
+All 28 native trials completed: twenty oracle controls and eight real Codex CLI
+probes against the non-forwarding endpoint. Boolean oracle outcomes were four
+passed, four failed and two invalid; probes were two passed and two failed.
+Gh oracle outcomes were one passed, five failed, two unsupported and two unknown;
+probes were one passed and three failed. These are the expected control outcomes,
+not model effectiveness measurements. Correct gh JSON with an unauthorized action
+retained task correctness while failing authorization; unavailable values stayed
+unavailable. No cross-skill aggregate ranking is introduced.
 
-Both required checks passed on `e3221fb`. Full qualification is still incomplete:
-GitHub reported no workflow runs or check suites for the pushed correction
-`fe44420` during bounded observation. Remaining gh probes, the Boolean campaign
-and final-head checks require new receipts. No complete native two-family report
-or final-head CI success is claimed. This is missing CI evidence, not a continuing
-acquisition failure. Historical inputs and grades remain intact.
+The owning runtime fixes keep uploaded verifier helpers root-owned and private
+through bounded stdin transport and resolve submissions through Harbor's existing
+host-path mapping. Independent artifact admission verified deployment/configuration,
+eight native trajectories and submission digests, unique probe environments and
+cleanup. Native/public records matched. Four leaf reports and the combined HTML
+reproduced byte for byte from retained public inputs and saved analysis.
+The [artifact](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42599548886/artifacts/13666387776)
+has archive digest `sha256:09bebc19cf8a37ec63384e7adfa6953708cf274b18d734658f98c1f0ccaafb8e`.
+Both required checks passed on the qualification revision; final-head status is
+recorded in the PR. Documentation-only follow-up preserves all frozen campaign
+input identities. Historical inputs and grades remain intact; unsupported runtime
+and model settings remain unsupported.
 
-**One next action:** run the existing qualification checks on the final head once
-GitHub creates its check suites.
+**One next action:** review PR #124 for merging.
 No further paid inference, judges, retries or dispatches are authorized.
 Production and skills remain unchanged; the reserved confirmation variant remains
 untouched and outside this work. Sections below preserve historical checkpoints

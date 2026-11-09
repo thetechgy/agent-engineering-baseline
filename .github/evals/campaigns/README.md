@@ -44,14 +44,16 @@ with an unauthorized action retains task correctness and fails authorization.
 The absent variant retains its separate activation/gate consequence. These gh
 metrics are not converted into Pester quality or a cross-skill score.
 
-Qualification remains incomplete on [draft PR #124](https://github.com/thetechgy/agent-engineering-baseline/pull/124).
-Acquisition recovered, and native gh grading passed after correcting private
-verifier helper ownership. The submission observer now uses Harbor's existing
-host-path mapping; its regression rejects the earlier flat-path assumption.
-The remaining native population and final-head checks still require receipts.
-See the [authoritative checkpoint](../EVALUATION-PLAN.md) for the current blocker.
-Synthetic plumbing controls remain distinct from native execution, and neither
-establishes real compatibility for another runtime/model.
+Both task families completed native oracle controls and real CLI probes on
+`3f29708` in [run 42599548886](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42599548886).
+Its [retained artifact](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42599548886/artifacts/13666387776)
+contains the combined report at `report/consolidated/report.html`, four leaf
+reports and their public inputs/analysis. Independent admission verified all 28
+trials and reproduced all five reports byte for byte. The
+[authoritative checkpoint](../EVALUATION-PLAN.md) records the source identity,
+control outcomes and remaining limits. Synthetic plumbing controls remain labeled
+separately. Native fixture qualification establishes neither model inference nor
+real compatibility for another runtime/model.
 
 ## Boundaries and extensions
 
