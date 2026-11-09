@@ -174,7 +174,60 @@ else:
     return 'python3 -I -c ' + shlex.quote(source) + ' ' + shlex.quote(base64.b64encode(raw).decode()) + ' ' + shlex.quote(target)
 
 
+VERIFIER_UPLOAD_SCRIPT = r"""import base64, json, os, re, stat, sys
+from pathlib import Path
+payload = sys.stdin.buffer.read(16*1024*1024 + 1)
+assert len(payload) <= 16*1024*1024
+files = json.loads(payload)
+assert isinstance(files, dict) and 0 < len(files) <= 1000
+base = Path('/tests')
+assert base.resolve() == base.absolute() and not base.is_symlink()
+base.mkdir(mode=0o700, exist_ok=True)
+base.chmod(0o700)
+assert base.stat().st_uid == os.geteuid()
+for name, encoded in files.items():
+    assert isinstance(name, str) and re.fullmatch(r'[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*', name)
+    assert not any(part in ('.', '..') for part in Path(name).parts)
+    raw = base64.b64decode(encoded, validate=True)
+    target = base / name
+    for directory in reversed(target.parent.relative_to(base).parents):
+        parent = base / directory
+        assert not parent.is_symlink()
+        parent.mkdir(mode=0o700, exist_ok=True)
+    assert not target.parent.is_symlink()
+    target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    assert target.parent.resolve() == target.parent.absolute()
+    try:
+        fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    except FileExistsError:
+        fd = os.open(target, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        with os.fdopen(fd, 'rb') as stream:
+            info = os.fstat(stream.fileno())
+            assert stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and info.st_uid == os.geteuid() and stat.S_IMODE(info.st_mode) == 0o600
+            assert stream.read(len(raw)+1) == raw
+    else:
+        with os.fdopen(fd, 'wb') as stream:
+            stream.write(raw)
+"""
+
+
 class CampaignGhEnvironment(PilotEnvironment, TrustedGhEnvironment):
+    async def upload_dir(self, source_dir, target_dir):
+        if str(target_dir) != '/tests':
+            return await super().upload_dir(source_dir, target_dir)
+        import skill_reports as reports
+        from skill_evidence import read_bytes
+        source = Path(source_dir).absolute()
+        require(source == self.environment_dir.parent / 'tests', 'Unapproved verifier source')
+        files = {p.relative_to(source).as_posix():base64.b64encode(read_bytes(p, limit=8*1024*1024)).decode()
+                 for p in reports.regular_tree(source)}
+        payload = json.dumps(files).encode()
+        require(len(payload) <= 16*1024*1024, 'Verifier transport limit')
+        result = await self._run_docker_compose_command(
+            ['exec', '-T', '-u', 'root', 'main', 'python3', '-I', '-c', VERIFIER_UPLOAD_SCRIPT],
+            check=False, stdin_data=payload, timeout_sec=30)
+        require(result.return_code == 0, 'Cannot transport private verifier files')
+
     async def upload_file(self, source_path, target_path):
         if target_path not in ('/opt/aeb-gh/initialize.py', '/opt/aeb-gh/approved.json'):
             return await super().upload_file(source_path, target_path)

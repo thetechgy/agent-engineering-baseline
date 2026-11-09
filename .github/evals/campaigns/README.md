@@ -109,7 +109,9 @@ scheduler policy and one consolidated renderer to maintain.
 
 Maintain task definitions, control expectations, source/profile hashes, adapter
 contracts and the hosted qualification together. The gh composition also maintains
-a two-path private upload transport with byte-preserving repeated initialization.
+a bounded private stdin transport for initializer payloads and verifier helpers,
+with byte-preserving repeated initialization. Verifier files are root-owned
+and private, avoiding Docker copy ownership without adding capabilities.
 The shared image helper owns all Harbor log directories. Non-mounted trajectory
 transport retains verifier-readable permissions without adding capabilities.
 Campaign submissions retain their declared filename and producer digest; the gh

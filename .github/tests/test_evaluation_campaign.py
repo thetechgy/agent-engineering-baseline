@@ -270,6 +270,28 @@ class NativeAdapterContracts(unittest.TestCase):
             self.assertEqual(stat.S_IMODE((logs/'trajectory.json').stat().st_mode),0o644)
             self.assertEqual(reports.read_json(logs/'trajectory.json')['steps'][0]['observation']['results'][0]['content'],'/workspace\n')
 
+    @unittest.skipUnless(__import__('importlib.util',fromlist=['find_spec']).find_spec('aeb_gh_fixture') and __import__('importlib.metadata',fromlist=['version']).version('skillevaluator') == '0.8.0', 'Owning native backend required')
+    def test_private_verifier_transport_owns_helpers_and_rejects_links_and_escape(self):
+        import base64, stat, subprocess
+        from evaluation_codex import VERIFIER_UPLOAD_SCRIPT
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)/'tests'
+            script=VERIFIER_UPLOAD_SCRIPT.replace("Path('/tests')",'Path('+repr(str(root))+')')
+            files={'grader.py':base64.b64encode(b'grader').decode(),
+                   'skill_evaluator/atif_helpers.py':base64.b64encode(b'helper').decode()}
+            def run(value):return subprocess.run([sys.executable,'-I','-c',script],input=json.dumps(value).encode(),capture_output=True)
+            self.assertEqual(run(files).returncode,0)
+            target=root/'skill_evaluator/atif_helpers.py'
+            self.assertEqual(target.read_bytes(),b'helper')
+            self.assertEqual(target.stat().st_uid,os.geteuid())
+            self.assertEqual(stat.S_IMODE(target.stat().st_mode),0o600)
+            self.assertEqual(stat.S_IMODE(target.parent.stat().st_mode),0o700)
+            self.assertEqual(run(files).returncode,0)
+            self.assertNotEqual(run({'../escape':files['grader.py']}).returncode,0)
+            target.unlink();outside=Path(directory)/'outside';outside.write_bytes(b'preserved');target.symlink_to(outside)
+            self.assertNotEqual(run(files).returncode,0)
+            self.assertEqual(outside.read_bytes(),b'preserved')
+
     def test_report_staging_preserves_synthetic_alternate_runtime_and_model_identities(self):
         try:
             import skillevaluator

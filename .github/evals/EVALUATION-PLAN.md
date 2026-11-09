@@ -34,15 +34,15 @@ A real gh CLI probe executed successfully but stopped at verifier log transport;
 the corrected shared directory/trajectory transport has focused local contract
 coverage, not a passing native gh grading receipt. Both task families reach the
 existing report with reproducible HTML in explicitly synthetic plumbing controls.
-The latest implementation, `ff6a7af`, failed pinned tool acquisition with HTTP 504
-in [both hosted attempts](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42570470988/attempts/2),
-before native tasks launched. Required hosted checks also encountered repeated
-release-download HTTP 504 failures. Partial evidence and exact validator snapshots
-are retained; previous grades and identities are unchanged. No completed native
-two-family consolidated report or prospective skill effectiveness is claimed.
+Acquisition recovered through the existing integrity-verified paths. The unchanged
+native retry on `2e69289` completed gh oracle controls, but the real-CLI verifier
+could not read host-owned private helper files after Docker upload. The owning
+runtime now transports those helpers as root through its existing bounded stdin
+path; grading criteria and capabilities are unchanged. Final native qualification
+and required final-head checks remain pending. Historical grades remain intact.
 
-**One next action:** rerun the draft PR's existing qualification checks once
-pinned release acquisition recovers.
+**One next action:** complete the existing native campaign and final-head checks
+for draft PR #124 before marking it ready for review.
 No further paid inference, judges, retries or dispatches are authorized.
 Production and skills remain unchanged; the reserved confirmation variant remains
 untouched and outside this work. Sections below preserve historical checkpoints
