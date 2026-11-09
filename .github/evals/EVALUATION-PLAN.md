@@ -111,13 +111,21 @@ edit, but multiline stderr diagnostics contaminated the merged JSON capture and
 correctly stopped parsing. The owning launch now retains stdout and stderr
 separately, with diagnostic hashes linked to the normalized trajectory. Unknown
 or non-JSON event output remains rejected; final-source qualification is recorded
-on the PR. Parser fixtures, real CLI probes and retrospective grading remain
-separate. No inference, judge, replacement slot or skill revision is part of this recovery.
+on the PR. At `6da19c3`, both credential-free native jobs stopped before agent or
+grader execution when the frozen Debian Snapshot returned HTTP 503 / No healthy
+backends for `python3-minimal_3.13.5-1` and `libperl5.40_5.40.1-6+deb13u1`.
+One same-source credential-free retry also failed. These image-acquisition
+failures do not qualify the corrected launch and do not change the recovered
+grade. Pinned sources, package versions, grading and isolation remain unchanged.
+The [run and retained diagnostics](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42711693679)
+record both failures; exact-head status remains on PR #126. Parser fixtures, real
+CLI probes and retrospective grading remain separate. No inference, judge,
+replacement slot or skill revision is part of this recovery.
 New source profiles preserve executed-head profiles and historical receipts.
 One current-arm retrospective grade provides no matched skill-benefit comparison.
 
-**One next action:** review PR #126's final-source qualification and recovered
-result before deciding whether to authorize a separate experiment.
+**One next action:** finish PR #126's credential-free native qualification and
+review its recovered result before considering any separate experiment.
 No further paid inference, judges, retries or dispatches are authorized.
 Production and skills remain unchanged; the reserved confirmation variant remains
 untouched and outside this work. Sections below preserve historical checkpoints

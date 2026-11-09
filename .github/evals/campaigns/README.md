@@ -382,4 +382,10 @@ file-edit controls and historical task-family qualification. No model secret,
 paid dispatch, protected live gate, judge, production or Pages publication is used.
 The concrete recovery result and exact-source receipts are recorded on
 [PR #126](https://github.com/thetechgy/agent-engineering-baseline/pull/126) and in
-the authoritative checkpoint. Any future experiment requires a separate decision.
+the authoritative checkpoint. Native qualification at `6da19c3` stopped before
+agent/grader execution on HTTP 503 responses for frozen Debian Snapshot packages;
+one same-source credential-free retry also failed. The earlier recovered grade
+stays valid, while final-source launch compatibility remains unqualified. Resume
+qualification only with the same signed, pinned inputs once acquisition works;
+these failures do not authorize a mirror/pin change or paid execution. Any future
+experiment requires a separate decision.
