@@ -1,4 +1,4 @@
-"""Task-parameterized use of the qualified Codex adapter; inference is refused."""
+"""Task-parameterized use of the qualified Codex adapter; inference requires the shared exact authorization gate."""
 import base64
 import json
 import os
@@ -90,13 +90,13 @@ def exec_trajectory(raw, adapter):
     return Trajectory(schema_version='ATIF-v1.7', session_id=session,
         agent=Agent(name='codex', version=adapter.profile['cli'], model_name=adapter.model_name),
         steps=steps, notes='\n'.join(notes) or None,
-        extra={'source':'codex-0.167-exec-json', 'inference':False})
+        extra={'source':'codex-0.167-exec-json', 'inference':getattr(adapter, 'live', False)})
 
 
 class CampaignCodex(PilotCodex):
     retain_submission = True
 
-    def __init__(self, *args, campaign_definition, control, present, **kwargs):
+    def __init__(self, *args, campaign_definition, control, present, live=False, **kwargs):
         from evaluation_tasks import load
         self.task = load(ROOT / campaign_definition)
         self.control = control
@@ -104,7 +104,13 @@ class CampaignCodex(PilotCodex):
         self.profile = read_profile(ROOT / self.task.definition['runtime_profile'])['resolved']
         self.skill = self.task.definition['skill']
         self.output = '/workspace/output/' + self.task.output
-        require(os.environ.get('AEB_PILOT_PROBE') == '1', 'Campaign inference is disabled')
+        self.live = live
+        if live:
+            from evaluation_campaign_protocol import runtime_gate
+            runtime_gate(self.task)
+            require(control is None and 'protocol' in self.task.definition, 'Live control payload refused')
+        else:
+            require(os.environ.get('AEB_PILOT_PROBE') == '1', 'Campaign inference is disabled')
         super().__init__(*args, **kwargs)
 
     def populate_context_post_run(self, context):
@@ -115,7 +121,16 @@ class CampaignCodex(PilotCodex):
         path = self.logs_dir / 'codex.txt'
         if not path.exists():
             raise MissingCodexObservation('Missing native log')
-        trajectory = exec_trajectory(read_bytes(path, limit=16*1024*1024).decode(), self)
+        raw = read_bytes(path, limit=16*1024*1024).decode()
+        fault = os.environ.get('AEB_CAMPAIGN_OBSERVATION_FIXTURE')
+        if fault:
+            require(not self.live and os.environ.get('AEB_PILOT_PROBE') == '1', 'Live observation injection refused')
+            record = {'fixture':fault, 'native_sha256':hashlib.sha256(raw.encode()).hexdigest()}
+            (self.logs_dir / 'observation-injection.json').write_text(json.dumps(record))
+            if fault == 'unsupported-runtime': raw += '\n' + json.dumps({'type':'unsupported.synthetic.control'})
+            elif fault == 'missing-evidence': raw = '\n'.join(line for line in raw.splitlines() if '"turn.completed"' not in line)
+            else: raise ValueError('Unknown observation fixture')
+        trajectory = exec_trajectory(raw, self)
         # Replacing the directory entry never follows a preexisting target link.
         with tempfile.NamedTemporaryFile(mode='w', dir=self.logs_dir, delete=False) as stream:
             temporary = Path(stream.name)
@@ -127,12 +142,16 @@ class CampaignCodex(PilotCodex):
                 temporary.unlink(missing_ok=True)
 
     def fixture_payload(self):
-        return self.task.payload(self.control)
+        require(not self.live, 'Fixture payload unavailable in live mode')
+        control = os.environ.get('AEB_CAMPAIGN_CONTROL', self.control)
+        return self.task.payload(control)
 
     def fixture_commands(self, payload):
+        control = os.environ.get('AEB_CAMPAIGN_CONTROL', self.control)
         if self.task.probe_origin == 'operator':
-            return self.task.probe_commands(self.control, payload, self.expected_present)
-        return ['python3 /opt/pilot/codex_pilot_probe.py ' + self.skill, *self.task.probe_commands(self.control, payload, self.expected_present)]
+            return self.task.probe_commands(control, payload, self.expected_present)
+        read = ['cat /home/agent/.agents/skills/' + self.skill + '/SKILL.md'] if self.expected_present else []
+        return ['python3 /opt/pilot/codex_pilot_probe.py ' + self.skill, *read, *self.task.probe_commands(control, payload, self.expected_present)]
 
     async def probe_preflight(self, environment, env):
         if self.task.probe_origin == 'operator':
@@ -267,10 +286,10 @@ def resources():
 def prepare_task(native, mode, runtime):
     config = native / 'task.toml'
     text = config.read_text().replace('timeout_sec = 300.0', f'timeout_sec = {runtime["agent_seconds"]}.0').replace('memory_mb = 4096', f'memory_mb = {runtime["memory_mb"]}')
-    if mode == 'probe':
+    if mode in ('probe', 'experiment-probe', 'live'):
         text = text.replace('network_mode = "public"', 'network_mode = "allowlist"\nallowed_hosts = ["api.openai.com"]')
     config.write_text(text)
-    if mode == 'probe':
+    if mode in ('probe', 'experiment-probe', 'live'):
         from codex_pilot_runtime import prepare_cli
         (native / 'environment/build').mkdir(exist_ok=True)
         # Reuse the already-qualified curl package version and snapshot. The gh
@@ -284,7 +303,7 @@ def agent_config(task, mode, control, runtime, present):
     if mode == 'oracle':
         return {'name': 'oracle'}
     return {'import_path': 'evaluation_codex:CampaignCodex', 'model_name': runtime['model'],
-            'kwargs': {'campaign_definition': task.member, 'control': control, 'present': present}}
+            'kwargs': {'campaign_definition': task.member, 'control': control, 'present': present, **({'live': True} if mode == 'live' else {})}}
 
 
 def submission_path(trial, output):
@@ -292,22 +311,26 @@ def submission_path(trial, output):
     return source_host_path(trial / 'artifacts', '/logs/artifacts') / 'submitted' / output
 
 
-def native_observation(trial, native, present, row, rows, *, output):
+def native_observation(trial, native, present, row, rows, *, output, live=False):
     import skill_reports as reports
     audits = list(trial.rglob('pilot-runtime.json'))
     require(len(audits) == 1, 'Missing runtime observation')
     audit = reports.read_json(audits[0]); row['runtime_observation'] = audit
     from codex_pilot_contract import configuration
     require(audit['cleanup'] == 'complete' and audit['boundary_before']['policy_sha256'] == audit['boundary_after']['policy_sha256']
-        and audit['effective_config'] == configuration('http://127.0.0.1:8765/v1')
+        and audit['effective_config'] == configuration(None if live else 'http://127.0.0.1:8765/v1')
         and audit['prompt_sha256'] == hashlib.sha256((native / 'instruction.md').read_bytes()).hexdigest()
         and audit['skill_deployed'] == present, 'Runtime identity or cleanup drift')
-    probes = list(trial.rglob('probe.json'))
-    require(len(probes) == 1, 'Missing non-forwarding request observation')
-    probe = reports.read_json(probes[0])
-    from codex_pilot_contract import PROFILE
-    require(probe.get('model') == PROFILE['model'] and probe.get('reasoning', {}).get('effort') == PROFILE['reasoning_effort']
-            and probe.get('requests') == 2, 'Observed CLI model/request drift')
+    finals = list(trial.rglob('pilot-final-policy.json'))
+    require(len(finals) == 1 and reports.read_json(finals[0])['policy_sha256'] == audit['boundary_before']['policy_sha256'],
+            'Missing final policy or identity drift')
+    if not live:
+        probes = list(trial.rglob('probe.json'))
+        require(len(probes) == 1, 'Missing non-forwarding request observation')
+        probe = reports.read_json(probes[0])
+        from codex_pilot_contract import PROFILE
+        require(probe.get('model') == PROFILE['model'] and probe.get('reasoning', {}).get('effort') == PROFILE['reasoning_effort']
+                and probe.get('requests') == 2, 'Observed CLI model/request drift')
     from skill_evidence import read_bytes
     submitted = read_bytes(submission_path(trial, output), limit=65536)
     receipts = list(trial.rglob('pilot-produced-submission.json'))
@@ -315,7 +338,10 @@ def native_observation(trial, native, present, row, rows, *, output):
     receipt = reports.read_json(receipts[0])
     require(receipt == {'sha256':hashlib.sha256(submitted).hexdigest(), 'bytes':len(submitted)},
             'Retained submission differs from native produced artifact')
+    from skillevaluator.utils.redaction import redact_sensitive_text
+    require(redact_sensitive_text(submitted.decode()) == submitted.decode(), 'Submission needs protected retention')
     row['submission'] = dict(receipt, file=output)
+    row['skill_access'] = skill_access(trial, present, native)
     row['agent_id'] = audit['boundary_before']['agent_id']
     require(not any(r is not row and r.get('agent_id') == row['agent_id'] for r in rows), 'Reused agent environment')
 
@@ -334,11 +360,11 @@ def usage(trial, mode):
                 'n_input_tokens': None, 'n_cache_tokens': None, 'n_output_tokens': None}
     if not (trial / 'result.json').exists():
         return {'estimated_usd': None, 'billing': 'missing native usage'}
-    return usage_record(reports.read_json(trial / 'result.json'), probe=True)
+    return usage_record(reports.read_json(trial / 'result.json'), probe=mode != 'live')
 
 
 def validate_members(members, mode):
-    if mode != 'probe':
+    if mode not in ('probe', 'experiment-probe', 'live'):
         return
     for filename in ('codex_pilot_stub.py', 'codex_pilot_probe.py'):
         digest = 'sha256:' + hashlib.sha256((ROOT / '.github/scripts' / filename).read_bytes()).hexdigest()
@@ -347,4 +373,38 @@ def validate_members(members, mode):
 
 
 RETAINED_MEMBERS = ('pilot-runtime.json', 'pilot-final-policy.json', 'docker-observation.json',
-                    'probe.json', 'codex.txt', 'trajectory.json', 'task-boundary.json', 'pilot-produced-submission.json')
+                    'probe.json', 'observation-injection.json', 'codex.txt', 'trajectory.json', 'task-boundary.json', 'pilot-produced-submission.json')
+
+
+def skill_access(trial, present, native):
+    """Successful full SKILL.md output is access evidence only; absence is unknown.
+
+    This conservative observation does not infer activation from command text.
+    Other read forms or truncated outputs can remain unobserved.
+    """
+    import skill_reports as reports
+    trajectories = list(trial.rglob('trajectory.json'))
+    require(len(trajectories) == 1, 'Missing native trajectory')
+    value = reports.read_json(trajectories[0])
+    skill = next((p for p in (native / 'environment/skills').glob('*/SKILL.md')), None)
+    expected = skill.read_text().strip() if present and skill else None
+    logs = list(trial.rglob('codex.txt'))
+    require(len(logs) == 1, 'Missing native access observation')
+    events = []
+    for line in logs[0].read_text().splitlines():
+        try: events.append(json.loads(line))
+        except ValueError: continue
+    observed = bool(expected and any(event.get('type') == 'item.completed'
+        and event.get('item', {}).get('type') == 'command_execution'
+        and event['item'].get('exit_code') == 0
+        and expected in event['item'].get('aggregated_output', '') for event in events))
+    return {'successful_full_read': True if observed else None, 'deployed': present,
+            'interpretation': 'access only; no task quality or benefit implied'}
+
+
+def fixture_environment(task, fixture, row):
+    control = task.fixture_control(fixture, row)
+    result = {'AEB_CAMPAIGN_CONTROL':control, 'AEB_PILOT_SCENARIO':'interruption' if fixture == 'interruption' else 'success'}
+    if fixture in ('missing-evidence', 'unsupported-runtime'):
+        result['AEB_CAMPAIGN_OBSERVATION_FIXTURE'] = fixture
+    return result

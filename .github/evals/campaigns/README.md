@@ -1,9 +1,9 @@
-# Reusable credential-free evaluation campaigns
+# Reusable evaluation campaigns
 
 Use one operator entry point with the pinned candidate evaluator, Harbor, Compose
 and APM tools already installed. Keep retained output outside the checkout in a
 persistent workspace. Disposable files follow `TMPDIR`. No credentials, inference,
-model judges or paid dispatch are accepted by this entry point.
+model judges or paid dispatch are accepted by qualification mode.
 
 ```sh
 "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign.py qualify \
@@ -100,7 +100,7 @@ absent/proposed-revision, with the same task and runtime and the proposed skill
 source selected by its definition. A revised source needs its own reviewed source
 identity and qualification before admission; this work creates no revision.
 Direct current-versus-revision pairs, arbitrary multi-arm native reports and
-live campaign authorization remain unsupported. The existing source-content
+arbitrary live campaign authorization remain unsupported. The existing source-content
 admission checks intentionally reject unregistered revision bytes.
 
 ## Maintenance and qualification limits
@@ -126,7 +126,7 @@ Native setup failures are infrastructure outcomes in public reports, while
 missing and unsupported observations retain their separate unavailable states.
 Protocol changes require new adapter qualification. Source changes get new profile
 identities; old profiles, receipts and grades stay unchanged. The new retained
-pilot/effectiveness source identities are v7, with unchanged historical grading
+pilot source identity is v7 and the effectiveness source identity is v8, with unchanged historical grading
 semantics. Campaign profiles have separate oracle and CLI-probe identities. Tests
 compare all historical registry entries and production active-profile selections
 with the merged base.
@@ -144,3 +144,148 @@ version, production default, distributed skill or historical grade is changed.
 These demonstrations qualify reuse for two task families. They do not establish
 universal runtime compatibility, prospective skill advantage, provider
 authentication, model effectiveness or actual provider billing.
+
+## Prospective Boolean comparison, disabled pending decision
+
+[boolean-effectiveness-v1.json](boolean-effectiveness-v1.json) selects the original
+Boolean task and inputs, current skill bytes and PR #123's integer-result mutant.
+Its separate [versioned protocol](boolean-effectiveness-protocol-v1.json) freezes
+six slots: current/absent, absent/current, current/absent. Each arm gets three
+independent trials. The sole deployment difference is the target skill directory,
+including its supporting files, deployed through native APM. Prompts, context,
+fixtures, model, provider and reasoning settings match. The explicit
+[codex-authorized profile](codex-authorized-v1.json) preserves the qualified Codex
+0.167.0 / `gpt-6.1-sol` / OpenAI / high tuple and its configuration unchanged.
+`inference_enabled` and `authorized_live_attempts` remain false/zero in preparation;
+only the exact authorization gate can admit the separate live mode.
+
+The primary outcome is reference-correct work detecting all five seeded defects.
+The existing report also shows reference correctness and each defect separately,
+including integer-result, valid task failures, invalid/unsupported results and
+runtime failures. Planned denominators are three attempts per arm even when a
+stop leaves slots unlaunched. Missing measurements remain unavailable. Native
+usage and elapsed time remain separate from quality. The attempt ledger records
+successful full skill output separately: a read or activation score demonstrates
+neither task quality nor benefit. Other read forms and truncated outputs can stay
+unobserved; absence of a recorded read is not proof that the skill was ignored.
+
+This is exploratory evidence on one case. Earlier outputs informed its design.
+It is a prospectively frozen follow-up, not an untouched held-out benchmark.
+A tie, absent-arm advantage or inconclusive result is legitimate. No skill
+revision follows automatically from any outcome.
+
+### Credential-free preparation and consumption
+
+Run the existing two-definition qualification command above first. Then use the
+same campaign entry point, with a new persistent output directory:
+
+```sh
+"$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign.py prepare \
+  --definition .github/evals/campaigns/boolean-effectiveness-v1.json \
+  --qualification "$EVIDENCE/qualified-campaigns" \
+  --output "$EVIDENCE/qualified-campaigns/preparation"
+
+"$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign.py check-preparation \
+  --definition .github/evals/campaigns/boolean-effectiveness-v1.json \
+  --preparation "$EVIDENCE/qualified-campaigns/preparation/evidence" \
+  --output "$EVIDENCE/fresh-consumption"
+```
+
+The existing workflow executes this sequence and consumes the downloaded artifact
+on a fresh runner. Preparation runs the actual six-slot execution loop against
+the non-forwarding endpoint. Strong and value-only submissions produce measured
+passes and failures without matching a known-good control in the experiment loop.
+The separate qualification loop still checks every known control's expectation.
+Interruption, missing/unsupported observations, invalid/unsupported grading and
+accounting stops retain five unlaunched slots without a retry or replacement.
+Missing/unsupported observation scenarios declare adapter injections after real
+CLI execution. Threshold and unknown-usage scenarios declare host accounting
+injections; their native usage, submissions and grading stay intact.
+
+The shared scheduler handles ordering and accounting. The campaign protocol
+component owns frozen preparation, data-only artifact authentication and dispatch
+claims; the existing campaign loop owns all launches and evidence collection.
+Task adapters own prompts, fixtures, controls and grading. The Codex adapter owns
+CLI behavior, authentication handoff, event parsing, access observations and usage.
+Models/settings remain explicit profiles. Existing SkillEvaluator/Harbor native
+collection and the consolidated renderer remain the only report path. New source
+identities version the changed implementation; old definitions and receipts stay
+unchanged. Dependency work remains separate under issue #95.
+
+### Stop policy and retention
+
+Before every launch, persist the slot and verify exact source, protocol, task
+checksum, preparation, environment baseline and observed cumulative usage. A
+measured task failure continues. Infrastructure failure, cleanup failure, missing
+grading or essential runtime/submission evidence, unsupported runtime protocol,
+unavailable/unsupported grading and unknown/invalid usage stop further launches.
+The protocol lists the exact reasons. Invalid submissions stay invalid, never
+become measured zeros. There is no resume or replacement command.
+
+Each attempt has a 600-second agent bound and a 1,200-second outer native launch
+bound. Existing native teardown gets 80 seconds before forced termination.
+The protected job has a 155-minute deadline, leaving room for six bounded launches,
+preparation, report collection and cleanup. Atomic fsynced ledgers plus an appended
+transition journal retain all six slots across interruption. Native outcomes,
+produced submission digests, exact safe submissions, redacted CLI observations,
+descriptors, cleanup and public report inputs are retained, including after stops.
+Fixture solutions remain trusted-host inputs; live tasks receive no solution,
+reference implementations, mutants or protected grader files.
+
+### Proposed budget and future authorization
+
+Official OpenAI [model pricing](https://developers.openai.com/api/docs/models/gpt-6.1-sol)
+was checked November 9, 2026: $2 input, $0.10 cached input and $10 output per million
+tokens at standard short-context rates. Prompts over 272K input tokens have 2x
+input/cache and 1.5x output rates. The unchanged adapter conservatively applies
+that premium when cumulative input exceeds 272K; cumulative CLI usage does not
+identify exact per-request billing, cache-write charges or service-tier charges.
+Provider authentication, account access and invoice charges remain unverified.
+
+Propose $3 estimated model usage for six attempts, using $0.50 per attempt as a
+planning allowance. The earlier twelve-attempt cohort estimated $0.7136678 total;
+that historical observation is not a forecast or invoice. Stop subsequent launches
+at $5 cumulative estimated usage, with a $3 overshoot reserve inside an $8 planning
+allocation. Slot count, no retries, runtime bounds and the scheduling threshold
+are enforced. The dollar allocation/reserve are planning estimates. An in-flight
+request can exceed the threshold and reserve; there is no enforced billing cap.
+CI charges are separate. Reserve never buys extra attempts.
+
+Only a successful final-source qualification artifact may fill these fields:
+`QUALIFIED_SHA`, `PREPARATION_ARTIFACT_ID`, `PROTOCOL_DIGEST`, and a fresh unique
+`DISPATCH_NONCE`. The PR's verification receipt records the concrete values.
+A future approval must identify them together. The exact future operator command
+is below; **do not run it under the current authorization**:
+
+```sh
+ALLOCATION="campaign-${QUALIFIED_SHA}-boolean-effectiveness-v1-prep${PREPARATION_ARTIFACT_ID}-usd8-${DISPATCH_NONCE}"
+gh workflow run evaluation-campaign.yml \
+  --repo thetechgy/agent-engineering-baseline \
+  --ref "$QUALIFIED_SHA" -f "allocation=$ALLOCATION"
+```
+
+Proposed approval wording:
+
+> Authorize exactly one dispatch of `evaluation-campaign.yml` at `QUALIFIED_SHA`,
+> consuming preparation artifact `PREPARATION_ARTIFACT_ID`, protocol
+> `boolean-effectiveness-v1` with digest `PROTOCOL_DIGEST`, and allocation
+> `ALLOCATION`. This approval covers both that dispatch and its matching
+> `skill-benchmark` protected environment gate. Permit at most six serial attempts,
+> three current and three absent, without retries, replacements or continuation.
+> Accept the $3 usage estimate, $5 scheduling threshold and $3 overshoot reserve
+> within an $8 planning allocation, understanding these are not a provider billing
+> cap. No judges, skill changes, dependency upgrades or other paid work are covered.
+
+Authentication verifies repository/workflow/source/attempt, prior successful
+preparation producer, archive digest and bounded data-only extraction. Actions
+history rejects a second dispatch of the same allocation, including after failure;
+an exclusive local claim also rejects repeated execution in one job. A workflow
+rerun is refused. The live runtime accepts only the protected workflow's receipt;
+provider/probe overrides are refused. Credentials are delivered only to its native
+attempt subprocess after fresh preparation consumption. A future approval includes
+the matching protected gate; this preparation grants neither approval.
+
+Remaining live boundaries include actual provider authentication, live event forms
+outside the qualified Codex exec subset, and billing. Unexpected events fail
+closed and retain available evidence. Non-forwarding probes establish neither
+model effectiveness nor arbitrary provider or CLI-event compatibility.

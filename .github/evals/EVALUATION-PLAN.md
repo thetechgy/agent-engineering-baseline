@@ -52,7 +52,40 @@ recorded in the PR. Documentation-only follow-up preserves all frozen campaign
 input identities. Historical inputs and grades remain intact; unsupported runtime
 and model settings remain unsupported.
 
-**One next action:** review PR #124 for merging.
+PR #124 is merged as `853b89a837fa97312d5bd86c30330efebbb7b33b`. The next
+prepared experiment uses [the shared Boolean protocol](campaigns/README.md#prospective-boolean-comparison-disabled-pending-decision):
+six serial slots, three current and three absent, with the original prompt/inputs,
+current skill bytes and integer-result mutant. Primary success requires reference
+correctness and detection of all five defects. Each defect, unavailable outcome,
+runtime failure, usage and elapsed time remains separate; skill access is recorded
+without claiming quality or benefit. The existing qualified Codex/model/provider/
+reasoning tuple is unchanged.
+
+This is a prospectively frozen, output-informed follow-up on one case. Six attempts
+provide exploratory evidence. A tie, absent-arm advantage and inconclusive result
+are legitimate outcomes; no skill revision is prescribed. Known-control
+qualification retains its expected outcomes. Live attempts grade actual work,
+continue after valid task failure and stop on declared infrastructure, evidence,
+identity or accounting failure. The shared scheduler, execution loop and existing
+consolidated report carry both modes; separate identities preserve historical
+qualification definitions and receipts. No-inference guards remain active outside
+the exact authorized protocol gate.
+
+The proposed budget is $3 usage, a $5 scheduling stop threshold and $3 overshoot
+reserve inside an $8 planning allocation. November 9 official pricing confirms the
+unchanged $2/$0.10/$10 input/cached/output rates per million tokens. Slot/runtime
+bounds and the scheduling threshold are enforced; allocation and reserve are
+estimates, not a provider billing cap. Authentication, arbitrary live event forms
+and actual billing remain unverified. Dependency work stays under issue #95.
+The operator guide specifies one future dispatch and its matching protected gate
+in a single approval, tied to exact source, artifact and protocol digest.
+
+Credential-free final-source qualification, downloaded-artifact consumption and
+report reproduction must complete before this can be called ready for a bounded
+live decision. The draft PR retains the concrete source/artifact/protocol receipt.
+
+**One next action:** qualify and review the prepared six-attempt protocol before
+a separate bounded live decision.
 No further paid inference, judges, retries or dispatches are authorized.
 Production and skills remain unchanged; the reserved confirmation variant remains
 untouched and outside this work. Sections below preserve historical checkpoints

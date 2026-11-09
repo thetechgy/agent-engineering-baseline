@@ -3302,7 +3302,7 @@ def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
     if profile_id is None and campaign_purpose(purpose):
         profile_id = purpose
     if profile_id is None and purpose in ('skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-effectiveness-v7'
+        profile_id = 'pester-effectiveness-v8'
     if profile_id is None and name == 'powershell-pester-6' and purpose in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
         profile_id = 'pester-cli-pilot-retained-v7'
     if profile_id is None and name == 'gh' and purpose == 'oracle_qualification':
@@ -3675,7 +3675,7 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None):
     closed(execution, ('environment', 'concurrency', 'timeout_multiplier', 'stop_on_pass'))
     if 'campaign' in profile:
         require(execution == {'environment': profile['campaign']['environment_mode'], 'concurrency': 1,
-                'timeout_multiplier': 1.0, 'stop_on_pass': False} and capture['attempts'] == 1, 'Campaign execution policy drift')
+                'timeout_multiplier': 1.0, 'stop_on_pass': False} and capture['attempts'] == profile['campaign'].get('trials', 1), 'Campaign execution policy drift')
     else:
         require(execution['environment'] == ('aeb-gh-fixture' if name == 'gh' and capture['purpose'] == 'oracle_qualification' else 'docker') and execution['concurrency'] == (1 if capture['purpose'] in ('skill_effectiveness', 'skill_effectiveness_probe') else reports.POLICY['concurrency'])
                 and execution['stop_on_pass'] is False and execution['timeout_multiplier'] ==
@@ -3975,7 +3975,7 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
             matched = lookup.pop(trial_name, None)
             require(matched is None or matched[0] == case_id, 'Summary case mismatch')
             ordinal = matched[1].get('attempt') if matched else _attempt_ordinal({'_trial_name': trial_name})
-            if ordinal is None and capture['purpose'] in ('skill_effectiveness', 'skill_effectiveness_probe'):
+            if ordinal is None and (capture['purpose'] in ('skill_effectiveness', 'skill_effectiveness_probe') or 'campaign' in profile):
                 from skillevaluator.tier3.harbor.collector import _structural_attempt_ordinal
                 ordinal = _structural_attempt_ordinal(trial_name, case_id)
             if ordinal is None: limitations.add('metadata_missing')

@@ -1,0 +1,24 @@
+{
+  "id": "boolean-effectiveness-v1",
+  "adapter": "boolean-contract",
+  "skill": "powershell-pester-6",
+  "source": ".apm/skills/powershell-pester-6",
+  "source_case": "pester-004",
+  "candidate": ".github/evals/pester-ceiling/candidate.json",
+  "runtime_profile": ".github/evals/campaigns/codex-authorized-v1.json",
+  "variants": [
+    {
+      "id": "current",
+      "present": true
+    },
+    {
+      "id": "absent",
+      "present": false
+    }
+  ],
+  "trials": 3,
+  "attempt_limit": 6,
+  "stop_estimate_usd": 5,
+  "authorized_live_attempts": 0,
+  "protocol": ".github/evals/campaigns/boolean-effectiveness-protocol-v1.json"
+}

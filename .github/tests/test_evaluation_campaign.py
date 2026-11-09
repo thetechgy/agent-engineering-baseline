@@ -88,7 +88,7 @@ class CampaignContracts(unittest.TestCase):
         for filename in ('boolean-contract','gh-read'):
             task=load(ROOT/('.github/evals/campaigns/'+filename+'.json'))
             for mode in ('oracle','probe'):
-                purpose='campaign-'+task.definition['id']+'-'+mode
+                purpose=__import__('evaluation_campaign').purpose(task,mode)
                 profile,definitions,_=evidence.custom_contract(task.definition['skill'],purpose=purpose)
                 identities=evidence.custom_input_identities(ROOT,task.definition['skill'],purpose=purpose)
                 self.assertTrue(all(profile[k]==v for k,v in identities.items()),(purpose,identities))
@@ -169,17 +169,17 @@ class CampaignContracts(unittest.TestCase):
         # independently exercises discovery, command observations and the grader.
 
     def test_new_profiles_preserve_every_historical_profile_byte_value(self):
-        # Canonical registry snapshot from merged base e2fabea; works in shallow
+        # Canonical registry snapshot from merged base 853b89a; works in shallow
         # CI checkouts and never follows a moving remote tracking reference.
         import hashlib
         current=reports.read_json(ROOT/evidence.CUSTOM_REGISTRY)
-        new={'pester-cli-pilot-retained-v7','pester-effectiveness-v7',
-             'campaign-boolean-contract-v1-oracle','campaign-boolean-contract-v1-probe',
-             'campaign-gh-read-v1-oracle','campaign-gh-read-v1-probe'}
+        new={'pester-effectiveness-v8', 'campaign-boolean-contract-v2-oracle', 'campaign-boolean-contract-v2-probe',
+             'campaign-gh-read-v2-oracle', 'campaign-gh-read-v2-probe',
+             'campaign-boolean-effectiveness-v1-probe', 'campaign-boolean-effectiveness-v1-live'}
         historical={k:v for k,v in current['profiles'].items() if k not in new}
         value={'profiles':historical,'active_profiles':current['active_profiles'],'metrics':current['metrics']}
         digest=hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':'),ensure_ascii=True).encode()).hexdigest()
-        self.assertEqual(digest,'8abda5c8c49436edaaf2dd6a954720145c872cc9b5d6a4fe762beb584c92a118')
+        self.assertEqual(digest,'cdd72e8a8de593cf52a5c08665e9675758d92925b93388e52e664f64b82de7dd')
 
 
 
