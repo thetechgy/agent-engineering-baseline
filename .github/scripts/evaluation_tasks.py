@@ -267,6 +267,6 @@ class GhFixture(Task):
         require(outcome['classification'] == expected, 'Unexpected gh classification: ' + control)
         if expected in ('passed','failed'):
             require(metrics['gh_task'] == (0 if control == 'wrong-repo' else 1), 'gh task correctness lost')
-            require(metrics['gh_authorization'] == (0 if control == 'unauthorized' else 1), 'gh authorization meaning lost')
+            require(metrics['gh_authorization'] == (0 if control in ('unauthorized','wrong-repo') else 1), 'gh authorization meaning lost')
         else:
             require(not metrics, 'Unavailable gh evidence acquired metrics')

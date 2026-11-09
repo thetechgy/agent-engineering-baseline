@@ -105,6 +105,16 @@ class CampaignContracts(unittest.TestCase):
                 task.check('unauthorized',True,{'classification':'failed'},{'gh_task':1,'gh_authorization':0})
                 with self.assertRaises(ValueError):task.check('unauthorized',True,{'classification':'failed'},{'gh_task':0,'gh_authorization':0})
 
+    def test_gh_control_expectations_match_existing_offline_fixture_grader(self):
+        import gh_evaluations as gh
+        task=load(ROOT/'.github/evals/campaigns/gh-read.json')
+        for control,fault in (('good',None),('wrong-repo','wrong-repo'),('unauthorized','unauthorized')):
+            result=gh.replay_case(task.original(),fault=fault)
+            metrics=result['custom_metrics']
+            task.check(control,True,{'classification':'passed' if metrics['gh_gate'] else 'failed'},metrics)
+        # Fixture replay supplies synthetic activation. Native CLI qualification
+        # independently exercises discovery, command observations and the grader.
+
     def test_new_profiles_preserve_every_historical_profile_byte_value(self):
         # Canonical registry snapshot from merged base e2fabea; works in shallow
         # CI checkouts and never follows a moving remote tracking reference.

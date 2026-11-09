@@ -142,8 +142,14 @@ def run(root, task, mode):
             env = {k:v for k,v in os.environ.items() if not re.search('TOKEN|SECRET|API_KEY|PASSWORD', k) and not k.startswith(('CODEX_','AEB_','SKILL_EVAL_'))}
             env.update(extra, PYTHONPATH=str(ROOT / '.github/scripts'), PYTHON_DOTENV_DISABLED='1', HARBOR_TELEMETRY='0')
             if mode=='probe': env['AEB_PILOT_PROBE']='1'
-            with path.with_suffix('.log').open('w') as log:
-                code = run_native([str(Path(sys.executable).parent / 'harbor'), 'trials','start','--config',str(path)], env=env, log=log, timeout=1200)
+            try:
+                with path.with_suffix('.log').open('w') as log:
+                    code = run_native([str(Path(sys.executable).parent / 'harbor'), 'trials','start','--config',str(path)], env=env, log=log, timeout=1200)
+            finally:
+                from skillevaluator.utils.redaction import redact_sensitive_text
+                diagnostic = path.with_suffix('.log').read_text(errors='replace')[-32768:]
+                (artifact / ('launch-' + str(row['position']) + '.log')).write_text(
+                    redact_sensitive_text(diagnostic).replace(str(root), '<campaign>').replace(str(ROOT), '<checkout>'))
             row.update(returncode=code, cleanup=adapter.resources()==before, usage=adapter.usage(trial, mode))
             core.require(Task(native).checksum == expected['task_checksum'], 'Task checksum drift across launch')
             if code or not row['cleanup']:
