@@ -18,15 +18,33 @@ OUTPUT = '/workspace/output/Subject.Tests.ps1'
 class PilotCodex(Codex):
     """Reuse Harbor lifecycle/trajectory conversion, with an explicit safe launch."""
 
+    profile = PROFILE
+    skill = PROFILE['skill']
+    output = OUTPUT
+    retain_submission = False
+
+    def fixture_payload(self):
+        from skill_evidence import read_bytes
+        if os.environ.get('AEB_COHORT_FIXTURE'):
+            from codex_pilot_effectiveness import fixtures
+            return fixtures()[os.environ['AEB_COHORT_FIXTURE']]['payload']
+        return read_bytes(ROOT / '.github/evals' / self.skill / 'support/qualification' / self.profile['case'] / 'classic.Tests.ps1', limit=65536)
+
+    def fixture_commands(self, payload):
+        return [f"python3 /opt/pilot/codex_pilot_probe.py && printf %s {payload} | base64 -d > {self.output}"]
+
+    async def probe_preflight(self, environment, env):
+        pass
+
     def __init__(self, *args, **kwargs):
-        kwargs['version'] = PROFILE['cli']
+        kwargs['version'] = self.profile['cli']
         super().__init__(*args, **kwargs)
 
     async def install(self, environment):
         # Complete verified installation is baked into the agent image preapproval.
         await self.exec_as_agent(environment, command=(
-            f"test \"$({BINARY} --version)\" = 'codex-cli {PROFILE['cli']}' && "
-            f"printf '%s  %s\\n' {PROFILE['cli_executable_sha256']} {BINARY} | sha256sum -c --strict"))
+            f"test \"$({BINARY} --version)\" = 'codex-cli {self.profile['cli']}' && "
+            f"printf '%s  %s\\n' {self.profile['cli_executable_sha256']} {BINARY} | sha256sum -c --strict"))
 
     async def _upload_effective_config(self, environment, config, remote_path):
         # No CAP_CHOWN: create as the task user through the secure stdin transport.
@@ -62,7 +80,7 @@ class PilotCodex(Codex):
         context.metadata = {'usage_source': 'codex-0.167-exec-json', 'billing_verified': False}
 
     async def run(self, instruction, environment, context):
-        if self.model_name != PROFILE['model']:
+        if self.model_name != self.profile['model']:
             raise ValueError('Pilot model drift')
         probe = os.environ.get('AEB_PILOT_PROBE') == '1'
         if not probe and os.environ.get('OPENAI_BASE_URL'):
@@ -93,14 +111,14 @@ class PilotCodex(Codex):
             'test "$(pwd)" = /workspace && test ! -e /tests && '
             'test ! -e /solution && test ! -e /opt/pester-runtime && '
             'test -z "$(find /workspace/skills -type d -name evals -print -quit)"'))
-        present = await environment.exec(user='agent', command='test -r "$HOME/.agents/skills/powershell-pester-6/SKILL.md"')
+        present = await environment.exec(user='agent', command=f'test -r "$HOME/.agents/skills/{self.skill}/SKILL.md"')
         if present.return_code == 0:
-            await self.exec_as_agent(environment, command='diff -qr /workspace/skills/powershell-pester-6 "$HOME/.agents/skills/powershell-pester-6"')
+            await self.exec_as_agent(environment, command=f'diff -qr /workspace/skills/{self.skill} "$HOME/.agents/skills/{self.skill}"')
         self.logs_dir.mkdir(parents=True, exist_ok=True)
-        audit = {'adapter': PROFILE['id'], 'cli': PROFILE['cli'], 'model': PROFILE['model'],
+        audit = {'adapter': self.profile['id'], 'cli': self.profile['cli'], 'model': self.profile['model'],
                  'reasoning_effort': 'high', 'provider': 'openai', 'probe': probe,
-                 'cwd': '/workspace', 'output': OUTPUT, 'sandbox': 'danger-full-access',
-                 'execution_policy': PROFILE['execution_policy'], 'scenario': scenario,
+                 'cwd': '/workspace', 'output': self.output, 'sandbox': 'danger-full-access',
+                 'execution_policy': self.profile['execution_policy'], 'scenario': scenario,
                  'boundary_before': boundary_before,
                  'config_sha256': config_hash, 'effective_config': config,
                  'prompt_sha256': hashlib.sha256(instruction.encode()).hexdigest(),
@@ -111,34 +129,30 @@ class PilotCodex(Codex):
         if probe:
             # Keep qualification answers on the trusted host, out of all images.
             # Only the credential-free probe receives this transient payload.
-            from skill_evidence import read_bytes
-            if os.environ.get('AEB_COHORT_FIXTURE'):
-                from codex_pilot_effectiveness import fixtures
-                raw = fixtures()[os.environ['AEB_COHORT_FIXTURE']]['payload']
-            else:
-                fixture = ROOT / '.github/evals' / PROFILE['skill'] / 'support/qualification' / PROFILE['case'] / 'classic.Tests.ps1'
-                raw = read_bytes(fixture, limit=65536)
+            raw = self.fixture_payload()
             payload = base64.b64encode(raw).decode()
+            commands = base64.b64encode(json.dumps(self.fixture_commands(payload)).encode()).decode()
+            await self.probe_preflight(environment, env)
             # Server has no network forwarding and never authenticates to a provider.
             await self.exec_as_agent(environment, command=(
-                f'python3 /opt/pilot/codex_pilot_stub.py {logs}/probe.json {scenario} {shlex.quote(payload)} '
+                f'python3 /opt/pilot/codex_pilot_stub.py {logs}/probe.json {scenario} {shlex.quote(payload)} {shlex.quote(commands)} '
                 f'>{logs}/stub.log 2>&1 & echo $! >{HOME}/stub.pid'))
         command = (f'{BINARY} exec --strict-config --sandbox danger-full-access --skip-git-repo-check '
-                   f'--cd /workspace --model {PROFILE["model"]} --json '
+                   f'--cd /workspace --model {self.profile["model"]} --json '
                    f'--output-last-message {logs}/last-message.txt -- {shlex.quote(instruction)} '
                    f'>{logs}/codex.txt 2>&1')
         if scenario == 'interruption':
             command = 'timeout --signal=INT --kill-after=5s 5s ' + command
         try:
             result = await environment.exec(command=command, env=env, user='agent',
-                                               timeout_sec=PROFILE['agent_seconds'])
+                                               timeout_sec=self.profile['agent_seconds'])
             audit['returncode'] = result.return_code
             audit['boundary_after'] = await observe(environment)
         finally:
             # Keep exact native events before removing the runtime home/credentials.
             try:
                 from codex_pilot import producer_receipt_command
-                await self.exec_as_agent(environment, command=producer_receipt_command())
+                await self.exec_as_agent(environment, command=producer_receipt_command(self.output, retain=self.retain_submission))
                 await self.exec_as_agent(environment, command=(
                     f'if [ -f {HOME}/stub.pid ]; then kill "$(cat {HOME}/stub.pid)"; fi; '
                     f'rm -rf {HOME}; test ! -e {HOME}'))

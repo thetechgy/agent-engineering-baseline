@@ -689,10 +689,18 @@ def benchmark_artifacts(workspace, root, name, destination):
         excluded_dirs={"_harbor-jobs", "_harbor-tasks"},
         excluded_links={Path("results") / name / "latest"},
     )
+    carrier = 'codex'
+    if (root / 'custom-metric-capture.json').exists():
+        import skill_evidence as evidence
+        candidate_capture = read_json(root / 'custom-metric-capture.json')
+        if evidence.campaign_purpose(candidate_capture.get('purpose')):
+            campaign_profile, _ = evidence.validate_custom_capture(candidate_capture, name, workspace)
+            carrier = evidence.custom_carrier(campaign_profile)
+            evidence.token(carrier)
     registered_cases = set()
     if name == 'gh' and (root / 'custom-metric-capture.json').exists():
         capture = read_json(root / 'custom-metric-capture.json')
-        if capture.get('purpose') == 'oracle_qualification' and capture.get('producer', {}).get('skillevaluator') == '0.8.0':
+        if (capture.get('purpose') == 'oracle_qualification' or str(capture.get('purpose','')).startswith('campaign-')) and capture.get('producer', {}).get('skillevaluator') == '0.8.0':
             import skill_evidence as evidence
             evidence.validate_custom_capture(capture, name, workspace)
             registered_cases = set(capture['case_ids'])
@@ -700,7 +708,7 @@ def benchmark_artifacts(workspace, root, name, destination):
                 "docker-version.json", "docker-images.jsonl", "custom-metric-capture.json"}
     if name == "gh":
         metadata.update({"deterministic.json", "selection.json"})
-    # Reviewed v0.3.0 report/collector contract, restricted to this workflow's Codex agent.
+    # Preserve the historical layout; registered campaigns declare their carrier.
     root_reports = {"result.json", "run_config.json", "dataset_snapshot.json", "report.html",
                     "attempt_policy.json", "comparison.json"}
     agent_reports = {"lift.json", "custom_lift.json", "pass_at_k_lift.json",
@@ -718,11 +726,11 @@ def benchmark_artifacts(workspace, root, name, destination):
             return parts[1] in {"evaluator.json", "semgrep.json", "skillspector.json"}
         if len(parts) < 4 or parts[:2] != ("results", name):
             return False
-        # Native external layout: results/<skill>/<run>/codex/<arm>/trials/<trial>/...
+        # Native external layout: results/<skill>/<run>/<carrier>/<arm>/trials/<trial>/...
         tail = parts[3:]
         if len(tail) == 1:
             return tail[0] in root_reports
-        if tail[0] != "codex":
+        if tail[0] != carrier:
             return False
         if len(tail) == 2:
             return tail[1] in agent_reports
@@ -746,7 +754,7 @@ def benchmark_artifacts(workspace, root, name, destination):
             original = value
             value = redact_sensitive_data(value)
             capture = (name == 'gh' and relative.as_posix() == 'custom-metric-capture.json'
-                       and original.get('purpose') == 'oracle_qualification' and original.get('producer', {}).get('skillevaluator') == '0.8.0')
+                       and (original.get('purpose') == 'oracle_qualification' or str(original.get('purpose','')).startswith('campaign-')) and original.get('producer', {}).get('skillevaluator') == '0.8.0')
             if capture:
                 value = preserve_gh_capture_hashes(original, value, workspace)
             if registered_cases:
@@ -919,7 +927,7 @@ def public_benchmark(workspace, root, name, mode, destination, selected=None):
             "Selected public benchmark has no configured suite")
     data = evidence.normalize_behavioral(Path(root), name, selected, workspace, native_layout=True)
     attempts = data["policy"]["attempts"]
-    qualification = data.get('custom', {}).get('purpose') in ('oracle_qualification', 'cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control')
+    qualification = evidence.campaign_purpose(data.get('custom', {}).get('purpose')) or data.get('custom', {}).get('purpose') in ('oracle_qualification', 'cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control')
     require(qualification or attempts["mode"] in (mode, "unknown") and attempts["maximum"] in (None, MODES[mode]),
             "Public benchmark mode mismatch")
     public = evidence.project(data)

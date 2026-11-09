@@ -130,11 +130,6 @@ def stage(root, *, controls=False, probe=False, replay=None, submissions=None, e
             if control == 'missing-runtime' or effectiveness and task.name.endswith('-missing-runtime'):
                 with (task / 'tests/Dockerfile').open('a') as dockerfile:
                     dockerfile.write('RUN rm -- /opt/microsoft/powershell/7/pwsh\n')
-            if not oracle:
-                (task / 'environment/docker-compose.yaml').write_text(
-                    'services:\n  main:\n    cap_drop: [ALL]\n    security_opt: [no-new-privileges:true]\n    pids_limit: 256\n')
-                for name in ('codex_pilot_stub.py', 'codex_pilot_probe.py'):
-                    shutil.copyfile(ROOT / '.github/scripts' / name, task / 'environment/build' / name)
             skill = task / 'environment/skills' / P['skill']
             if present:
                 if pester.manifest(skill) != pester.manifest(deployed):
@@ -142,22 +137,8 @@ def stage(root, *, controls=False, probe=False, replay=None, submissions=None, e
             elif skill.exists():
                 raise ValueError('Absent-arm skill contamination')
             if not oracle:
-                # Verified artifacts are embedded before entering the protected job.
-                with (task / 'environment/Dockerfile').open('a') as dockerfile:
-                    dockerfile.write('RUN mkdir /opt/codex && curl --fail --location --silent --show-error '
-                        '--proto "=https" --proto-redir "=https" '
-                        'https://github.com/openai/codex/releases/download/rust-v0.167.0/codex-package-x86_64-unknown-linux-musl.tar.gz '
-                        '-o /opt/codex.tar.gz && '
-                        f"echo '{P['cli_archive_sha256']}  /opt/codex.tar.gz' | sha256sum -c --strict && "
-                        'tar -xzf /opt/codex.tar.gz -C /opt/codex && '
-                        f"echo '{P['cli_executable_sha256']}  /opt/codex/bin/codex' | sha256sum -c --strict && "
-                        'rm /opt/codex.tar.gz\n'
-                        'COPY build/codex_pilot_stub.py build/codex_pilot_probe.py /opt/pilot/\n'
-                        'RUN mkdir -p /logs/agent /logs/artifacts /installed-agent && chmod 777 /logs/agent /logs/artifacts && '
-                        'chmod -R a-w /workspace/input /opt/codex /opt/pilot && '
-                        'chmod 755 /home/agent && mkdir -p /home/agent/.codex-pilot && '
-                        'chown agent:agent /home/agent/.codex-pilot && chmod 700 /home/agent/.codex-pilot\n'
-                        'USER agent\n')
+                from codex_pilot_runtime import prepare_cli
+                prepare_cli(task)
             else:
                 control = task.name.removeprefix(case + '-') if controls else 'retained-submission'
                 fixture_dir = ROOT / pester.OVERLAY / 'support/qualification' / case
@@ -212,12 +193,15 @@ def path_probe_command(control):
     return 'python3 -c ' + shlex.quote(code) + '\n'
 
 
-def producer_receipt_command():
-    code = ("import hashlib,json,stat; from pathlib import Path; p=Path('/workspace/output/Subject.Tests.ps1'); "
+def producer_receipt_command(output="/workspace/output/Subject.Tests.ps1", *, retain=False):
+    code = ("import hashlib,json,stat; from pathlib import Path; p=Path(" + repr(output) + "); "
             "s=p.lstat() if p.exists() else None; "
             "v={'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'bytes':s.st_size} "
             "if s and stat.S_ISREG(s.st_mode) and s.st_nlink==1 and s.st_size<=65536 else None; "
             "Path('/logs/agent/pilot-produced-submission.json').write_text(json.dumps(v))")
+    if retain:
+        code += ("; target=Path('/logs/artifacts/submitted'); target.mkdir(parents=True,exist_ok=True); "
+                 "(target/p.name).write_bytes(p.read_bytes()) if v else None")
     import shlex
     return 'python3 -c ' + shlex.quote(code)
 
@@ -302,19 +286,8 @@ def retain(root, artifact, *, replay=False, controls=False, probe=False):
     for path in sorted((root / 'jobs').rglob('result.json')):
         value = reports.read_json(path)
         if 'trial_name' not in value: continue
-        agent = value.get('agent_result') or {}
-        counts = {key: agent.get(key) for key in ('n_input_tokens', 'n_cache_tokens', 'n_output_tokens')}
-        valid = all(type(v) is int and v >= 0 for v in counts.values())
-        cost = None
-        if valid:
-            i,c,o = counts.values()
-            if c > i: raise ValueError('Contradictory provider usage')
-            # Cumulative counts cannot identify per-request long-context billing.
-            # Conservatively apply its premium once cumulative input exceeds 272K.
-            prefill, sample = (2, 1.5) if i > 272000 else (1, 1)
-            cost = (((i-c)*2+c*.1)*prefill+o*10*sample)/1_000_000
-        usage.append({'trial': value['trial_name'], **counts, 'estimated_usd': cost,
-                      'billing': 'stub protocol; no model usage or billing' if probe or os.environ.get('AEB_PILOT_PROBE') == '1' else 'provider-reported tokens; estimate, not invoice'})
+        from codex_pilot_runtime import usage_record
+        usage.append(usage_record(value, probe=probe))
     if replay or controls:
         for row in usage:
             row['billing'] = ('credential-free oracle controls; no model inference or billing' if controls else
@@ -368,10 +341,8 @@ def collect(root, artifact, bundle, captured, *, controls=False, probe=False, re
     public = artifact / 'public'
     reports.public_benchmark(ROOT, native, P['skill'], 'confirmation', public)
     report_inputs = [public, original_public] if replay is not None else [public]
-    captured_inputs = analysis.capture_inputs(report_inputs)
-    value = analysis.validate_analysis(None, captured_inputs)
-    reports.write_json(artifact / 'analysis/analysis.json', value)
-    report.generate(report_inputs, artifact / 'analysis/analysis.json', artifact / 'consolidated')
+    from evaluation_campaign_core import render
+    captured_inputs = render(report_inputs, artifact)
     observations = [row for record in captured_inputs.records.values() if record['kind'] == 'behavioral' and (replay is None or record['custom']['purpose'] == 'cli_pilot_replay') for row in record['observations']]
     reports.write_json(artifact / 'outcomes.json', observations)
     if controls and effectiveness:

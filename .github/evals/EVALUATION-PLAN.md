@@ -14,19 +14,48 @@ one exploratory Boolean-contract candidate: all six boundary suites accepted an
 integer-return implementation that violates the documented Boolean contract.
 All six current trials successfully read the deployed skill; this is not evidence
 of causal benefit or complete instruction following. Original grades are preserved.
-The candidate now uses the original `pester-004` prompt and unchanged Boolean
+The candidate uses the original `pester-004` prompt and unchanged Boolean
 contract, without added type-check coaching. Its declarative controls reuse the
-existing task stager, semantic test helper, grader and reward sidecars. Required
-hosted validation includes the focused controls; the exact-head validation receipt
-and review-readiness state are maintained on
-[PR #123](https://github.com/thetechgy/agent-engineering-baseline/pull/123).
+existing task stager, semantic helper, grader and reward sidecars. PR #123 is merged.
 Its ability to reveal skill advantage remains unproven.
 
-**One next action:** complete the required review of PR #123 after its validation
-gates pass. Any prospective comparison needs a separate freeze and authorization.
+The [reusable campaign entry point](campaigns/README.md) implements shared
+scheduling, accounting, native collection and consolidated reporting for the
+Boolean candidate and existing `gh-014` fixture. Task adapters retain their own
+graders, outputs and metric meanings; the runtime adapter owns APM deployment,
+CLI launch, settings, observations and task-named submission retention. The
+qualified Codex profile is unchanged and inference remains disabled. Claude Code
+and the actual Copilot agent remain unsupported. The paired report bridge and
+current inventory/registry remain explicit limits.
+
+Credential-free qualification completed on `3f29708` in
+[run 42599548886](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42599548886).
+All 28 native trials completed: twenty oracle controls and eight real Codex CLI
+probes against the non-forwarding endpoint. Boolean oracle outcomes were four
+passed, four failed and two invalid; probes were two passed and two failed.
+Gh oracle outcomes were one passed, five failed, two unsupported and two unknown;
+probes were one passed and three failed. These are the expected control outcomes,
+not model effectiveness measurements. Correct gh JSON with an unauthorized action
+retained task correctness while failing authorization; unavailable values stayed
+unavailable. No cross-skill aggregate ranking is introduced.
+
+The owning runtime fixes keep uploaded verifier helpers root-owned and private
+through bounded stdin transport and resolve submissions through Harbor's existing
+host-path mapping. Independent artifact admission verified deployment/configuration,
+eight native trajectories and submission digests, unique probe environments and
+cleanup. Native/public records matched. Four leaf reports and the combined HTML
+reproduced byte for byte from retained public inputs and saved analysis.
+The [artifact](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42599548886/artifacts/13666387776)
+has archive digest `sha256:09bebc19cf8a37ec63384e7adfa6953708cf274b18d734658f98c1f0ccaafb8e`.
+Both required checks passed on the qualification revision; final-head status is
+recorded in the PR. Documentation-only follow-up preserves all frozen campaign
+input identities. Historical inputs and grades remain intact; unsupported runtime
+and model settings remain unsupported.
+
+**One next action:** review PR #124 for merging.
 No further paid inference, judges, retries or dispatches are authorized.
 Production and skills remain unchanged; the reserved confirmation variant remains
-untouched and outside this analysis. Sections below preserve historical checkpoints
+untouched and outside this work. Sections below preserve historical checkpoints
 and their then-current proposals; they do not grant current execution authorization.
 The direct-Harbor assessment at `389f7222da8d425b95dad12003e1e6895500a397`
 is historical evidence, not the implementation base.

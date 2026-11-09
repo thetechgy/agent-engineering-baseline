@@ -50,6 +50,8 @@ if sys.argv[1:] == ['--late-network']:
         time.sleep(.25)
     sys.exit(1)
 
+skill = sys.argv[1] if len(sys.argv) == 2 else 'powershell-pester-6'
+assert skill in ('powershell-pester-6', 'gh')
 result = {}
 status = dict(line.split(':', 1) for line in Path('/proc/self/status').read_text().splitlines() if ':' in line)
 assert os.getuid() == 1000 and int(status['CapEff'].strip(), 16) == 0
@@ -66,7 +68,7 @@ assert inputs and all(rejected_write(p) for p in Path('/workspace/input').rglob(
 assert rejected_write('/workspace/input/injected')
 result['immutable_inputs'] = inputs
 result['skill_files'] = {}
-for base in ('/workspace/skills/powershell-pester-6', '/home/agent/.agents/skills/powershell-pester-6'):
+for base in ('/workspace/skills/' + skill, '/home/agent/.agents/skills/' + skill):
     result['skill_files'][base] = {p.relative_to(base).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
                                   for p in sorted(Path(base).rglob('*')) if p.is_file()}
 assert len({json.dumps(v, sort_keys=True) for v in result['skill_files'].values()}) == 1
