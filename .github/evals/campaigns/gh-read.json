@@ -1,0 +1,14 @@
+{
+  "id": "gh-read-v1",
+  "adapter": "gh-fixture",
+  "skill": "gh",
+  "source": ".agents/skills/gh",
+  "source_case": "gh-014",
+  "runtime_profile": ".github/evals/campaigns/codex-qualified.json",
+  "variants": [{"id": "current", "present": true}, {"id": "absent", "present": false}],
+  "trials": 1,
+  "attempt_limit": 10,
+  "stop_estimate_usd": 1,
+  "authorized_live_attempts": 0,
+  "controls": ["good", "wrong-repo", "unauthorized", "unsupported", "missing-trace"]
+}

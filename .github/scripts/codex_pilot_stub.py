@@ -8,11 +8,14 @@ import sys
 
 # The trusted host supplies this only at credential-free probe startup. Image
 # bytes contain no qualification answer and there is no fallback payload.
-if len(sys.argv) != 4:
+if len(sys.argv) not in (4, 5):
     raise SystemExit('Probe fixture must be supplied at runtime')
 fixture = sys.argv[3]
 if not 0 < len(base64.b64decode(fixture, validate=True)) <= 65536:
     raise ValueError('Invalid probe fixture size')
+commands = json.loads(base64.b64decode(sys.argv[4], validate=True)) if len(sys.argv) == 5 else None
+if commands is not None and (not isinstance(commands, list) or not 0 < len(commands) <= 16 or any(not isinstance(c, str) or len(c) > 131072 for c in commands)):
+    raise ValueError('Invalid probe commands')
 record = Path(sys.argv[1])
 scenario = sys.argv[2]
 
@@ -41,11 +44,13 @@ class Refuse(BaseHTTPRequestHandler):
                 'command-failure': "printf pilot-command-failure; exit 23",
                 'interruption': "printf pilot-command-started; sleep 120",
             }[scenario]
-            code = 'text(await tools.exec_command(' + json.dumps({'cmd': command, 'max_output_tokens': 4096}) + '));'
+            issued = commands if commands is not None and scenario == 'success' else [command]
             events = [
                 {'type': 'response.created', 'response': {'id': 'pilot-fixture-1'}},
-                {'type': 'response.output_item.done', 'item': {'type': 'custom_tool_call',
-                    'call_id': 'pilot-tool-1', 'name': 'exec', 'input': code}},
+                *[{'type': 'response.output_item.done', 'item': {'type': 'custom_tool_call',
+                    'call_id': 'pilot-tool-' + str(i), 'name': 'exec',
+                    'input': 'text(await tools.exec_command(' + json.dumps({'cmd': cmd, 'max_output_tokens': 4096}) + '));'}}
+                  for i, cmd in enumerate(issued)],
                 {'type': 'response.completed', 'response': {'id': 'pilot-fixture-1',
                     'usage': {'input_tokens': 0, 'output_tokens': 0, 'total_tokens': 0}}},
             ]

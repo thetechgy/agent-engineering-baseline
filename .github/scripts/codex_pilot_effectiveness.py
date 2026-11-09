@@ -8,7 +8,7 @@ import shutil
 from codex_pilot_contract import ROOT, PROFILE as RUNTIME, grader_bytes as retained_grader
 from codex_pilot_iteration import runner_bytes as retained_runner_bytes
 
-PROFILE_ID = 'pester-effectiveness-v6'
+PROFILE_ID = 'pester-effectiveness-v7'
 PURPOSE = 'skill_effectiveness'
 CONTROL_PURPOSE = 'skill_effectiveness_control'
 CASES = ('pester-001', 'pester-003', 'pester-004')
@@ -212,15 +212,9 @@ def fixtures(workspace=ROOT):
 
 def schedule():
     """Twelve sequential, clean-container attempts; balanced first arm across cases."""
-    rows = []
-    for trial in range(1, 4):
-        cases = PRIMARY_CASES if trial % 2 else tuple(reversed(PRIMARY_CASES))
-        for case in cases:
-            arms = ('with_skill', 'without_skill') if (trial + PRIMARY_CASES.index(case)) % 2 else ('without_skill', 'with_skill')
-            start = len(rows)
-            rows.extend({'position': start + offset + 1, 'case': case, 'trial': trial, 'arm': arm}
-                        for offset, arm in enumerate(arms))
-    return rows
+    from evaluation_campaign_core import schedule as shared_schedule
+    return [{**{k: v for k, v in row.items() if k != 'variant'}, 'arm': row['variant']}
+            for row in shared_schedule(PRIMARY_CASES, ('with_skill', 'without_skill'), 3)]
 
 
 def inputs(workspace=ROOT):

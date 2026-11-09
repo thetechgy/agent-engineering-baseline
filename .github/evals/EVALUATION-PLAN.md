@@ -14,19 +14,28 @@ one exploratory Boolean-contract candidate: all six boundary suites accepted an
 integer-return implementation that violates the documented Boolean contract.
 All six current trials successfully read the deployed skill; this is not evidence
 of causal benefit or complete instruction following. Original grades are preserved.
-The candidate now uses the original `pester-004` prompt and unchanged Boolean
+The candidate uses the original `pester-004` prompt and unchanged Boolean
 contract, without added type-check coaching. Its declarative controls reuse the
-existing task stager, semantic test helper, grader and reward sidecars. Required
-hosted validation includes the focused controls; the exact-head validation receipt
-and review-readiness state are maintained on
-[PR #123](https://github.com/thetechgy/agent-engineering-baseline/pull/123).
+existing task stager, semantic helper, grader and reward sidecars. PR #123 is merged.
 Its ability to reveal skill advantage remains unproven.
 
-**One next action:** complete the required review of PR #123 after its validation
-gates pass. Any prospective comparison needs a separate freeze and authorization.
+The [reusable campaign entry point](campaigns/README.md) now prepares that candidate
+and the existing `gh-014` fixture through the same scheduler and consolidated report.
+Task adapters retain their own graders, outputs and metric meanings. The runtime
+adapter owns native APM deployment, actual CLI launch, settings and observations;
+its profile preserves the qualified Codex model/provider/version and disables
+inference. Native oracle controls and non-forwarding real CLI probes have distinct
+reporting identities. Claude Code and the actual Copilot agent remain unsupported;
+synthetic identity checks do not establish CLI compatibility. Historical profiles
+and grades are preserved. The paired report bridge and current inventory/registry
+remain explicit limits. Exact-source hosted qualification and retained report
+reproduction are recorded on the new draft PR.
+
+**One next action:** review the draft PR's exact-source two-family qualification
+receipt before proposing any prospective comparison freeze or authorization.
 No further paid inference, judges, retries or dispatches are authorized.
 Production and skills remain unchanged; the reserved confirmation variant remains
-untouched and outside this analysis. Sections below preserve historical checkpoints
+untouched and outside this work. Sections below preserve historical checkpoints
 and their then-current proposals; they do not grant current execution authorization.
 The direct-Harbor assessment at `389f7222da8d425b95dad12003e1e6895500a397`
 is historical evidence, not the implementation base.

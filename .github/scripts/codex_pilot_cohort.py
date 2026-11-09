@@ -123,35 +123,12 @@ def stop_reason(row, usage, clean, *, code, audits, grades):
     return None
 
 
-def accounting(rows):
-    """Each attempt contributes once; retain cached tokens as a subset of input."""
-    total = Decimal('0')
-    for row in rows:
-        if row['state'] == 'unlaunched': continue
-        usage = row.get('usage')
-        reports.require(type(usage) is dict and type(usage.get('estimated_usd')) in (int, float)
-                        and __import__('math').isfinite(usage['estimated_usd']) and usage['estimated_usd'] >= 0,
-                        'Unknown usage; scheduling stopped')
-        total += Decimal(str(usage['estimated_usd']))
-    return float(total)
+from evaluation_campaign_core import accounting, drive
 
 
-def aggregates(root):
-    """Pinned Harbor stats over exact persisted trials. The ledger retains pending slots.
-
-    This collector envelope is derived data; original per-trial evidence is intact.
-    """
-    from harbor.models.job.result import JobResult, JobStats
-    from harbor.models.trial.result import TrialResult
-    from datetime import datetime, timezone
-    for arm in pilot.ARMS:
-        job = root / 'jobs' / f'{P["skill"]}-codex-{"with" if arm == "with_skill" else "without"}'
-        trials = [TrialResult.model_validate(reports.read_json(p)) for p in sorted(job.glob('*/result.json'))]
-        if not trials: continue
-        value = JobResult(id=uuid.uuid5(uuid.NAMESPACE_URL, str(job)), started_at=min((t.started_at for t in trials), default=datetime.now(timezone.utc)),
-                          finished_at=max((t.finished_at for t in trials if t.finished_at), default=None), n_total_trials=len(trials),
-                          stats=JobStats.from_trial_results(trials, n_total_trials=len(trials)), trial_results=trials)
-        reports.write_json(job / 'result.json', json.loads(value.model_dump_json()))
+def aggregates(root, *, skill=P['skill'], carrier='codex'):
+    from evaluation_campaign_core import aggregates as shared_aggregates
+    return shared_aggregates(root, skill=skill, carrier=carrier)
 
 
 def claim_dispatch(root, receipt):
@@ -208,10 +185,7 @@ def execute(root, reference, *, fixture=None, approval='', receipt=None):
         before = pilot.resources(); stages = []
         reports.write_json(artifact / 'command-stages.json', stages)
         ledger['state'] = 'running'; save()
-        for row in rows:
-            total = accounting(rows)
-            if total >= 10: ledger['stop_reason'] = 'estimated_usage_threshold'; break
-            if pilot.resources() != before: ledger['stop_reason'] = 'cleanup_failure'; break
+        def attempt(row, total):
             # Every launch verifies immutable source, runtime and staged task bytes.
             profiles.runtime(profiles.candidate_versions(), owning=True)
             reports.require(evidence.custom_input_identities(ROOT, P['skill'], purpose=effect.PURPOSE) ==
@@ -289,7 +263,8 @@ def execute(root, reference, *, fixture=None, approval='', receipt=None):
             reports.write_json(artifact / 'command-stages.json', stages)
             save()
             reports.require(Task(task).checksum == expected['task_checksum'], 'Task identity drift across execution')
-            if ledger.get('stop_reason'): break
+            return ledger.get('stop_reason')
+        drive(ledger, attempt, save=save, resources=pilot.resources, baseline=before, threshold=10)
         ledger['state'] = 'stopped' if ledger.get('stop_reason') else 'completed'
     except BaseException as error:
         ledger.update(state='interrupted' if isinstance(error, KeyboardInterrupt) else 'failed', failure=type(error).__name__)
