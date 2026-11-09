@@ -36,6 +36,8 @@ def load(path):
 
 
 class Task:
+    probe_origin = 'tool'
+    protected_paths = ()
     retained_members = ('test-stdout.txt', 'test-stderr.txt', 'skill_evaluator_reward.json')
     def __init__(self, definition, member):
         self.definition, self.member = definition, member
@@ -169,6 +171,8 @@ class BooleanContract(Task):
 
 
 class GhFixture(Task):
+    probe_origin = 'operator'
+    protected_paths = ('/opt/gh-eval/state/case.json', '/opt/aeb-gh/approved.json')
     retained_members = (*Task.retained_members, 'gh-initialization.jsonl')
     source_directories = ('.github/evals/gh', '.github/evaluator-backends/aeb_gh_fixture')
     source_files = ('.github/scripts/gh_evaluations.py', '.github/scripts/gh_candidate.py', '.github/scripts/gh_oracle_validation.py')

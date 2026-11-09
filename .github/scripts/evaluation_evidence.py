@@ -39,7 +39,7 @@ def identities(workspace, name, purpose, inputs=None):
     adapter = task(profile)
     members = adapter.expected_members(next(iter(adapter.cases(profile['campaign']['mode']))), 'with_skill')
     grader = {k:e.digest_bytes(v) for k,v in members.items() if k.startswith('tests/') and not k.startswith('tests/case/') and k != 'tests/entry.json'}
-    fixtures = {k:e.digest_bytes(v) for k,v in members.items() if k.startswith(('tests/case/', 'environment/input/')) or k == 'instruction.md'}
+    fixtures = {k:e.digest_bytes(v) for k,v in members.items() if k.startswith(('tests/case/', 'environment/input/', 'environment/private/')) or k == 'instruction.md'}
     return {'grader_digest': e.identity(grader), 'fixture_digest': e.identity(fixtures),
         'runtime_digest': e.identity(inputs if inputs is not None else source_manifest(workspace, name, purpose))}
 

@@ -31,13 +31,20 @@ class CampaignCodex(PilotCodex):
         return self.task.payload(self.control)
 
     def fixture_commands(self, payload):
-        if self.skill == 'gh':
+        if self.task.probe_origin == 'operator':
             return self.task.probe_commands(self.control, payload, self.expected_present)
         return ['python3 /opt/pilot/codex_pilot_probe.py ' + self.skill, *self.task.probe_commands(self.control, payload, self.expected_present)]
 
     async def probe_preflight(self, environment, env):
-        if self.skill == 'gh':
-            await self.exec_as_agent(environment, command='python3 /opt/pilot/codex_pilot_probe.py gh', env=env)
+        if self.task.probe_origin == 'operator':
+            await self.exec_as_agent(environment, command='python3 /opt/pilot/codex_pilot_probe.py ' + self.skill, env=env)
+        for path in self.task.protected_paths:
+            present = await environment.exec(user='root', command='test -f ' + shlex.quote(path))
+            denied = await environment.exec(user='agent', command='test ! -r ' + shlex.quote(path))
+            require(present.return_code == denied.return_code == 0, 'Task protected-path boundary failed')
+        if self.task.protected_paths:
+            target = self.logs_dir.parent / 'operator/task-boundary.json'
+            target.write_text(json.dumps({'origin': 'operator', 'present_and_unreadable': list(self.task.protected_paths)}))
 
 
 # Harbor public environment import hook composes the two existing lifecycle hooks:
@@ -151,4 +158,4 @@ def source_inputs(workspace):
 
 
 RETAINED_MEMBERS = ('pilot-runtime.json', 'pilot-final-policy.json', 'docker-observation.json',
-                    'probe.json', 'codex.txt', 'trajectory.json')
+                    'probe.json', 'codex.txt', 'trajectory.json', 'task-boundary.json')

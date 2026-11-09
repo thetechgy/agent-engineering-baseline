@@ -105,6 +105,13 @@ class CampaignContracts(unittest.TestCase):
                 task.check('unauthorized',True,{'classification':'failed'},{'gh_task':1,'gh_authorization':0})
                 with self.assertRaises(ValueError):task.check('unauthorized',True,{'classification':'failed'},{'gh_task':0,'gh_authorization':0})
 
+    def test_historical_replay_does_not_require_matched_submitted_answers(self):
+        rows=[{'case_id':'case','members':{'instruction.md':'same','solution/candidate':answer}} for answer in ('left','right')]
+        staged=evidence.custom_staged_inputs(rows,'cli_pilot_replay')
+        self.assertEqual(staged,[{'case_id':'case','instruction_digest':'same','agent_inputs':{}}])
+        with self.assertRaisesRegex(ValueError,'With/without task input drift'):
+            evidence.custom_staged_inputs(rows,'campaign-boolean-contract-v1-oracle')
+
     def test_gh_control_expectations_match_existing_offline_fixture_grader(self):
         import gh_evaluations as gh
         task=load(ROOT/'.github/evals/campaigns/gh-read.json')

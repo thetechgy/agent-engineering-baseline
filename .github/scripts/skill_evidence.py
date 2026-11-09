@@ -3579,7 +3579,7 @@ def custom_staged_inputs(tasks, purpose):
         value = {'case_id': task['case_id'], 'instruction_digest': members['instruction.md'],
                  'agent_inputs': {key.removeprefix('environment/input/'): digest for key, digest in members.items()
                                   if key.startswith('environment/input/')}}
-        if oracle_purpose(purpose):
+        if purpose == 'oracle_qualification' or (campaign_purpose(purpose) and purpose.endswith('-oracle')):
             require('solution/candidate' in members, 'Missing oracle candidate identity')
             value['candidate_digest'] = members['solution/candidate']
         previous = cases.setdefault(task['case_id'], value)
