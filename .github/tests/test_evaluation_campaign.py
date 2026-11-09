@@ -169,17 +169,19 @@ class CampaignContracts(unittest.TestCase):
         # independently exercises discovery, command observations and the grader.
 
     def test_new_profiles_preserve_every_historical_profile_byte_value(self):
-        # Canonical registry snapshot from merged base 853b89a; works in shallow
+        # Canonical registry snapshot from executed head 97124cf; works in shallow
         # CI checkouts and never follows a moving remote tracking reference.
         import hashlib
         current=reports.read_json(ROOT/evidence.CUSTOM_REGISTRY)
-        new={'pester-effectiveness-v8', 'campaign-boolean-contract-v2-oracle', 'campaign-boolean-contract-v2-probe',
-             'campaign-gh-read-v2-oracle', 'campaign-gh-read-v2-probe',
-             'campaign-boolean-effectiveness-v1-probe', 'campaign-boolean-effectiveness-v1-live'}
+        new={'pester-cli-pilot-retained-v8','pester-effectiveness-v9',
+             'campaign-boolean-contract-v3-oracle','campaign-boolean-contract-v3-probe',
+             'campaign-gh-read-v3-oracle','campaign-gh-read-v3-probe',
+             'campaign-boolean-effectiveness-v2-probe','campaign-boolean-effectiveness-v2-live',
+             'campaign-boolean-retained-v1-replay'}
         historical={k:v for k,v in current['profiles'].items() if k not in new}
         value={'profiles':historical,'active_profiles':current['active_profiles'],'metrics':current['metrics']}
         digest=hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':'),ensure_ascii=True).encode()).hexdigest()
-        self.assertEqual(digest,'cdd72e8a8de593cf52a5c08665e9675758d92925b93388e52e664f64b82de7dd')
+        self.assertEqual(digest,'965162706d4ecdbe4a7fb9e070e7f94fc3fff02e08e24d0e0e010edb5fd287e1')
 
 
 
@@ -263,7 +265,7 @@ class NativeAdapterContracts(unittest.TestCase):
                     {'type':'item.completed','item':{**item,'aggregated_output':'/workspace\n','exit_code':0,'status':'completed'}},
                     {'type':'turn.completed','usage':{'input_tokens':0,'cached_input_tokens':0,'output_tokens':0}}]
             (logs/'codex.txt').write_text('\n'.join(map(json.dumps,events)))
-            adapter=object.__new__(CampaignCodex);adapter.logs_dir=logs;adapter.model_name=PROFILE['model'];adapter.profile=PROFILE
+            adapter=object.__new__(CampaignCodex);adapter.logs_dir=logs;adapter.model_name=PROFILE['model'];adapter.profile=PROFILE;adapter.live=False;adapter.task=SimpleNamespace(native_file_edit_probe=False)
             adapter.populate_context_post_run(SimpleNamespace())
             self.assertEqual(outside.read_text(),'preserved')
             self.assertFalse((logs/'trajectory.json').is_symlink())

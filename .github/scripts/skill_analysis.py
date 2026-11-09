@@ -67,6 +67,8 @@ def coverage_label(skill):
               'cli_pilot_probe': 'Credential-free real CLI isolation qualification',
               'cli_pilot_replay': 'Retrospective unchanged-submission replay after output inspection',
               'oracle_qualification': 'Oracle qualification', 'benchmark': 'Model-backed custom evidence'}
+    if any(evidence.campaign_purpose(p) and evidence.replay_purpose(p) for p in purposes):
+        return 'Retrospective retained-submission grading; no new inference'
     if any(evidence.campaign_purpose(p) and p.endswith('-live') for p in purposes):
         return 'Prospective exploratory one-case skill comparison; output-informed follow-up'
     if any(evidence.campaign_purpose(p) for p in purposes):
@@ -253,7 +255,8 @@ class ValidatedRecords:
 
 
 def pilot_record(record):
-    return record.get('custom', {}).get('profile_id') in ('pester-cli-pilot-v1', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2', 'pester-cli-pilot-retained-v3', 'pester-cli-pilot-retained-v4', 'pester-cli-pilot-retained-v5', 'pester-cli-pilot-retained-v6', 'pester-cli-pilot-retained-v7', 'pester-effectiveness-v1', 'pester-effectiveness-v2', 'pester-effectiveness-v3', 'pester-effectiveness-v4', 'pester-effectiveness-v5', 'pester-effectiveness-v6', 'pester-effectiveness-v7', 'pester-effectiveness-v8') and record['custom']['purpose'] in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control')
+    if evidence.campaign_purpose(record.get('custom',{}).get('purpose')) and evidence.replay_purpose(record['custom']['purpose']): return True
+    return record.get('custom', {}).get('profile_id') in ('pester-cli-pilot-v1', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2', 'pester-cli-pilot-retained-v3', 'pester-cli-pilot-retained-v4', 'pester-cli-pilot-retained-v5', 'pester-cli-pilot-retained-v6', 'pester-cli-pilot-retained-v7', 'pester-cli-pilot-retained-v8', 'pester-effectiveness-v1', 'pester-effectiveness-v2', 'pester-effectiveness-v3', 'pester-effectiveness-v4', 'pester-effectiveness-v5', 'pester-effectiveness-v6', 'pester-effectiveness-v7', 'pester-effectiveness-v8', 'pester-effectiveness-v9') and record['custom']['purpose'] in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control')
 
 
 def measured(record):
@@ -294,6 +297,11 @@ def check_records(records):
         evidence.reports.public_strings(record)
     for record in records.values():
         custom = record.get('custom', {})
+        if evidence.campaign_purpose(custom.get('purpose')) and evidence.replay_purpose(custom.get('purpose')):
+            from codex_pilot_replay import validate_campaign_pair
+            original = records.get(custom['retrospective']['original_record_id'])
+            require(original is not None,'Retrospective campaign source report missing')
+            validate_campaign_pair(record,original)
         if custom.get('purpose') == 'cli_pilot_replay':
             original = records.get(custom['retrospective']['original_record_id'])
             require(original is not None and original.get('custom', {}).get('purpose') == 'cli_pilot'

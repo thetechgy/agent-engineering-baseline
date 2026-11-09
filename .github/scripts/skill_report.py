@@ -503,7 +503,7 @@ def custom_measurements(run, record):
         'this consumer does not recheck native directories. Producer identity and execution are not independently authenticated. '
         'Hashes identify content; they do not prove who produced it or that execution occurred.</p></details>',
         '<p>Purpose: ' + text(result['purpose']) + '; recorded agent: ' + code(result['agent']) + '; version ' + code(record['custom']['agent_version']) + '. ' +
-        ('Oracle fixture qualification is not model-backed skill-effectiveness evidence.' if evidence.campaign_purpose(result['purpose']) and not result['purpose'].endswith('-live') or result['purpose'] in ('oracle_qualification', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness_control', 'skill_effectiveness_probe') else
+        ('Retrospective grading is not a new model attempt or a completed comparison.' if evidence.campaign_purpose(result['purpose']) and evidence.replay_purpose(result['purpose']) else 'Oracle fixture qualification is not model-backed skill-effectiveness evidence.' if evidence.campaign_purpose(result['purpose']) and not result['purpose'].endswith('-live') or result['purpose'] in ('oracle_qualification', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness_control', 'skill_effectiveness_probe') else
          'Within-run differences describe supplied measurements; they do not establish causality.') + '</p>']
     if evidence.campaign_purpose(result['purpose']) and result['purpose'].endswith('-live'):
         parts.append('<p>Six planned attempts, three per arm, on one output-informed case. Prospectively frozen follow-up; not an untouched held-out benchmark. Primary outcome: reference-correct work detecting all seeded defects. Skill access is recorded separately in the attempt ledger and does not demonstrate benefit. A tie, absent-arm advantage or inconclusive result is legitimate.</p>')
@@ -571,12 +571,12 @@ def retrospective_outcomes(record, records):
     meta = record['custom']['retrospective']
     original = records[meta['original_record_id']]
     rows = []
-    for arm in ARM:
+    for arm in meta['submission_digests']:
         before = next(o for o in original['observations'] if o['arm'] == arm)
         after = next((o for o in record['observations'] if o['arm'] == arm), None)
         measurements = {m['metric_id']: m for m in after['custom']['measurements']} if after else {}
         reference = measurements.get('powershell-pester-6.reference-pass.v1', {})
-        mutation = measurements.get('powershell-pester-6.mutation-detection.v1', {})
+        mutation = measurements.get('powershell-pester-6.mutation-detection.v2', measurements.get('powershell-pester-6.mutation-detection.v1', {}))
         rows.append([safe(ARM[arm]), code(meta['submission_digests'][arm]),
             text(before['custom']['outcome']) + ' / ' + code(before['custom']['admission_reason']),
             'Unmeasured', text(after['custom']['outcome']) if after else 'Missing',
@@ -585,8 +585,10 @@ def retrospective_outcomes(record, records):
     return ('<p class="safety"><strong>Retrospective correction after inspection of the outputs; not prospectively frozen validation.</strong> '
         'The exact original submissions were replayed without model inference or judges. '
         'Original unscoreable outcomes and unmeasured correctness/mutation values remain unchanged. '
-        'Reference, mutants, scoring and isolation were preserved. The new evaluator has a distinct version. '
-        'This is not evidence of general skill effectiveness.</p>' +
+        + ('Reference, all five mutants, grading and isolation were preserved. The corrected adapter has a distinct identity. '
+         'Only the current arm was enrolled. The paired collector retains an unavailable absent-arm carrier; no absent replay was requested or executed. '
+         if evidence.campaign_purpose(record['custom']['purpose']) else 'Reference, mutants, scoring and isolation were preserved. The new evaluator has a distinct version. ')
+        + 'This is not evidence of general skill effectiveness.</p>' +
         '<p>Original live run ' + text(meta['source_run']) + '; artifact ' + text(meta['source_artifact']) +
         '; source revision ' + code(meta['source_revision']) + '; archive ' + code(meta['source_archive_sha256']) + '.</p>' +
         table('Original and retrospective outcomes · unchanged submissions',
@@ -602,12 +604,12 @@ def behavioral(run, records):
         '<details><summary>Run identity and evaluated source</summary>' + disclosure('Exact record identity', rid) + '<p>Evaluated source: ' + text(run['source']['owner']) + ' · ' + code(run['source']['repository']) +
         ' · revision ' + code(run['source']['revision']) + '.</p></details>']
     if analysis.pilot_record(record):
-        label = 'Prospective exploratory cohort' if record['custom']['purpose'] == 'skill_effectiveness' else 'Credential-free cohort scheduler fixtures' if record['custom']['purpose'] == 'skill_effectiveness_probe' else 'Prospective grading qualification (oracle fixtures, no inference)' if record['custom']['purpose'] == 'skill_effectiveness_control' else 'Retrospective unchanged-submission replay' if record['custom']['purpose'] == 'cli_pilot_replay' else 'Live CLI compatibility pilot' if record['custom']['purpose'] == 'cli_pilot' else 'Credential-free real CLI isolation qualification' if record['custom']['purpose'] == 'cli_pilot_probe' else 'Native pilot grading controls'
+        label = 'Prospective exploratory cohort' if record['custom']['purpose'] == 'skill_effectiveness' else 'Credential-free cohort scheduler fixtures' if record['custom']['purpose'] == 'skill_effectiveness_probe' else 'Prospective grading qualification (oracle fixtures, no inference)' if record['custom']['purpose'] == 'skill_effectiveness_control' else 'Retrospective unchanged-submission replay' if evidence.replay_purpose(record['custom']['purpose']) else 'Live CLI compatibility pilot' if record['custom']['purpose'] == 'cli_pilot' else 'Credential-free real CLI isolation qualification' if record['custom']['purpose'] == 'cli_pilot_probe' else 'Native pilot grading controls'
         parts.append('<p class="safety"><strong>' + label + '; excluded from production history.</strong> '
             'Producer: ' + code(record['policy']['producer_profile']) + '. '
             'Custom task and mutation measurements are separate from uncollected judge-dependent scores. ' +
             ('Deterministic fixtures do not establish skill benefit.</p>' if record['custom']['purpose'] in ('skill_effectiveness_control', 'skill_effectiveness_probe') else 'This exploratory population does not establish general skill effectiveness.</p>'))
-        if record['custom']['purpose'] == 'cli_pilot_replay':
+        if evidence.replay_purpose(record['custom']['purpose']):
             parts.append(retrospective_outcomes(record, records))
     elif 'producer_profile' in record['policy']:
         parts.append('<p class="safety"><strong>Synthetic candidate qualification; excluded from production history.</strong> '
@@ -1023,7 +1025,7 @@ def render_report(result, captured, *, reviews=None, pages_context=None, histori
         for run in skill['behavioral_results']:
             if pages_context is not None:
                 record = records[run['record_id']]
-                purpose = ('Prospective exploratory cohort' if (record.get('custom', {}).get('purpose') == 'skill_effectiveness' or evidence.campaign_purpose(record.get('custom', {}).get('purpose')) and record['custom']['purpose'].endswith('-live')) else 'Diagnostic oracle qualification' if evidence.campaign_purpose(record.get('custom', {}).get('purpose')) or record.get('custom', {}).get('purpose') in ('oracle_qualification', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_control', 'skill_effectiveness_probe') else
+                purpose = ('Retrospective retained-submission grading' if evidence.campaign_purpose(record.get('custom',{}).get('purpose')) and evidence.replay_purpose(record['custom']['purpose']) else 'Prospective exploratory cohort' if (record.get('custom', {}).get('purpose') == 'skill_effectiveness' or evidence.campaign_purpose(record.get('custom', {}).get('purpose')) and record['custom']['purpose'].endswith('-live')) else 'Diagnostic oracle qualification' if evidence.campaign_purpose(record.get('custom', {}).get('purpose')) or record.get('custom', {}).get('purpose') in ('oracle_qualification', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_control', 'skill_effectiveness_probe') else
                            'Diagnostic confirmation' if record['policy']['attempts']['mode'] == 'confirmation' else 'Standard behavioral evidence')
                 add('<p><strong>' + purpose + '</strong></p>')
             add(behavioral(run, records))

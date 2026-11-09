@@ -206,6 +206,135 @@ def original_public(output):
     return output
 
 
+# A second immutable corpus uses the same retained-data/replay/report mechanisms.
+# This is one current-arm submission, not another slot in the closed allocation.
+CAMPAIGN_CORPUS = '.github/evals/codex-retrospective/42695478931'
+CAMPAIGN_MANIFEST_SHA = 'd21f8b5d6b18e21aab9acf471646f4ce48ad400bb1a52864ddd3b049fb379f87'
+CAMPAIGN_PROVENANCE_SHA = '966e2b49b6fefaa8213b62cf763f3155f00492aa1ceb752239cb8c4aff62119c'
+
+
+def campaign_corpus(workspace=ROOT):
+    import skill_evidence as evidence
+    root = workspace / CAMPAIGN_CORPUS
+    raw = evidence.read_bytes(root / 'manifest.json')
+    if hashlib.sha256(raw).hexdigest() != CAMPAIGN_MANIFEST_SHA:
+        raise ValueError('Retained campaign manifest changed')
+    manifest = json.loads(raw)
+    expected = {row['member'] for row in manifest['files']} | {'manifest.json','provenance.json'}
+    if {p.relative_to(root).as_posix() for p in evidence.safe_tree(root)} != expected:
+        raise ValueError('Unexpected retained campaign member')
+    for row in manifest['files']:
+        evidence.relative(row['member'])
+        data = evidence.read_bytes(root / row['member'])
+        if len(data) != row['bytes'] or hashlib.sha256(data).hexdigest() != row['sha256']:
+            raise ValueError('Retained campaign bytes changed')
+    provenance = evidence.read_bytes(root / 'provenance.json')
+    if hashlib.sha256(provenance).hexdigest() != CAMPAIGN_PROVENANCE_SHA:
+        raise ValueError('Retained campaign provenance changed')
+    proof = json.loads(provenance); source = manifest['source']
+    artifact, run, job = proof['artifact'], proof['run'], proof['uploader_job']
+    origin = artifact['workflow_run']
+    if not (source['run'] == run['id'] == origin['id'] == 42695478931
+            and source['artifact'] == artifact['id'] == 13708468986
+            and source['revision'] == run['head_sha'] == origin['head_sha'] == '97124cf6b09d2acd4bda6243d0345dff06aea989'
+            and artifact['digest'] == 'sha256:' + source['archive_sha256']
+            and source['archive_sha256'] == '0d9cc2aa7125f86656224251e4c84531b5dfd72fd211c1e8b079513a27112deb'
+            and run['repository']['id'] == run['head_repository']['id'] == origin['repository_id'] == origin['head_repository_id'] == 1299967456
+            and run['path'] == source['workflow'] == '.github/workflows/evaluation-campaign.yml'
+            and run['run_attempt'] == source['attempt'] == 1 and run['event'] == source['event'] == 'workflow_dispatch'
+            and run['status'] == 'completed' and run['conclusion'] == 'failure' and artifact['name'] == 'campaign-live-1'
+            and job['conclusion'] == 'failure' and any(step['name'] == 'Retain all slots and partial native evidence after stopping'
+                and step['conclusion'] == 'success' for step in job['steps'])
+            and proof['manifest_sha256'] == CAMPAIGN_MANIFEST_SHA):
+        raise ValueError('Retained campaign producer authentication mismatch')
+    submission = evidence.read_bytes(root / 'Subject.Tests.ps1')
+    if len(submission) != 471 or hashlib.sha256(submission).hexdigest() != '3215b6097fa3e5f592989f2b8f4523207e28ebd4893cc7d11437b19189795981':
+        raise ValueError('Retained campaign submission mismatch')
+    original = evidence.read_json(root / 'original-public-report.json')
+    evidence.validate_custom_evidence(original, public=True)
+    if (evidence.identity(original) != source['original_record_id']
+            or original['custom']['capture_digest'] != source['original_capture_digest']
+            or original['custom']['purpose'] != 'campaign-boolean-effectiveness-v1-live'
+            or len(original['observations']) != 1
+            or original['observations'][0]['arm'] != 'with_skill'
+            or any(m['value'] is not None for o in original['observations'] for m in o['custom']['measurements'])
+            or any(d['detected'] is not None for o in original['observations'] for d in o['custom']['defects'])):
+        raise ValueError('Original unmeasured campaign result changed')
+    return root, manifest, original
+
+
+def campaign_retrospective(profile, *, adapter_revision=None, workspace=ROOT):
+    root, manifest, _ = campaign_corpus(workspace)
+    source = manifest['source']
+    if adapter_revision is None:
+        if subprocess.check_output(['git','status','--porcelain'],cwd=workspace,text=True).strip():
+            raise ValueError('Retrospective publication requires a clean committed adapter revision')
+        adapter_revision = subprocess.check_output(['git','rev-parse','HEAD'],cwd=workspace,text=True).strip()
+    import re
+    if not isinstance(adapter_revision,str) or re.fullmatch('[0-9a-f]{40}',adapter_revision) is None:
+        raise ValueError('Invalid corrected adapter revision')
+    return {'source_run':source['run'], 'source_artifact':source['artifact'], 'source_revision':source['revision'],
+        'source_archive_sha256':'sha256:'+source['archive_sha256'], 'source_slot':1, 'source_attempt':1,
+        'original_record_id':source['original_record_id'], 'original_capture_digest':source['original_capture_digest'],
+        'submission_digests':{'with_skill':'sha256:'+hashlib.sha256((root/'Subject.Tests.ps1').read_bytes()).hexdigest()},
+        'source_trace_sha256':'sha256:'+hashlib.sha256((root/'codex.txt').read_bytes()).hexdigest(),
+        'corrected_adapter_revision':adapter_revision, 'corrected_adapter_sha256':profile['campaign']['adapter_sha256'],
+        'after_output_inspection':True, 'new_inference':False}
+
+
+def validate_campaign_retrospective(value, profile, workspace=ROOT):
+    if not isinstance(value,dict) or value != campaign_retrospective(profile,
+            adapter_revision=value.get('corrected_adapter_revision'),workspace=workspace):
+        raise ValueError('Retrospective campaign identity mismatch')
+
+
+def campaign_payload(workspace=ROOT):
+    root, _, _ = campaign_corpus(workspace)
+    return (root/'Subject.Tests.ps1').read_bytes()
+
+
+def retain_campaign_originals(destination, task, profile):
+    import shutil
+    import skill_evidence as evidence
+    import skill_reports as reports
+    root, manifest, original = campaign_corpus()
+    staged = reports.read_json(root/'staging.json')
+    old = next(r['members'] for r in staged if r['arm']=='with_skill' and r['case_id']==task.definition['source_case'])
+    # Task inputs, reference, all five mutants, grader and verifier entry point
+    # must be the original frozen bytes, not an output-informed replacement.
+    members = task.expected_members(task.definition['source_case'],'with_skill')
+    if not all(old.get(key)==evidence.digest_bytes(value) for key,value in members.items()):
+        raise ValueError('Original task/grader drift')
+    shutil.copytree(root,destination/'original')
+    public = destination/'original-public'
+    folder = public/'skills'/task.definition['skill']/'behavioral'/original['run_id'];folder.mkdir(parents=True)
+    shutil.copyfile(root/'original-public-report.json',folder/'public-report.json')
+    (public/'inventory').mkdir();shutil.copyfile(root/'original-inventory.json',public/'inventory/inventory.json')
+    # Parse data through the owning adapter. No recorded command is executed.
+    from evaluation_codex import CampaignCodex, exec_trajectory
+    from evaluation_runtime import read_profile
+    adapter = object.__new__(CampaignCodex)
+    adapter.profile = read_profile(ROOT/task.definition['runtime_profile'])['resolved']
+    adapter.model_name = adapter.profile['model'];adapter.live=True # Source trace describes the original live turn.
+    trajectory = exec_trajectory((root/'codex.txt').read_text(),adapter)
+    reports.write_json(destination/'retrospective-trajectory.json',json.loads(trajectory.model_dump_json(exclude_none=True)))
+    meta = campaign_retrospective(profile)
+    if meta['corrected_adapter_sha256'] != evidence.digest_bytes((ROOT/'.github/scripts/evaluation_codex.py').read_bytes()):
+        raise ValueError('Corrected adapter source drift')
+    reports.write_json(destination/'trace-replay.json',{'retrospective':meta,'new_inference':False,
+        'normalized_trajectory_sha256':evidence.digest_bytes((destination/'retrospective-trajectory.json').read_bytes()),
+        'recorded_commands_executed':False,'originals_preserved':True})
+    return meta
+
+
+def validate_campaign_pair(record, original):
+    import skill_evidence as evidence
+    meta=record['custom']['retrospective'];_,manifest,expected=campaign_corpus()
+    if (original != expected or evidence.identity(original) != meta['original_record_id']
+            or set(meta['submission_digests']) != {'with_skill'}
+            or any(o['arm'] != 'with_skill' for o in record['observations'])):
+        raise ValueError('Retrospective campaign original or enrolled arm mismatch')
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=('fetch', 'validate', 'replay'))

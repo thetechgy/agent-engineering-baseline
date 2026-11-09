@@ -14,8 +14,24 @@ fixture = sys.argv[3]
 if not 0 < len(base64.b64decode(fixture, validate=True)) <= 65536:
     raise ValueError('Invalid probe fixture size')
 commands = json.loads(base64.b64decode(sys.argv[4], validate=True)) if len(sys.argv) == 5 else None
-if commands is not None and (not isinstance(commands, list) or not 0 < len(commands) <= 16 or any(not isinstance(c, str) or len(c) > 131072 for c in commands)):
-    raise ValueError('Invalid probe commands')
+if commands is not None:
+    if not isinstance(commands,list) or not 0 < len(commands) <= 16:
+        raise ValueError('Invalid probe commands')
+    for command in commands:
+        valid = isinstance(command,str) and len(command) <= 131072
+        if isinstance(command,dict):
+            valid = (set(command) == {'tool','input','expect_failure'} and command['tool']=='apply_patch'
+                     and isinstance(command['input'],str) and len(command['input']) <= 131072
+                     and type(command['expect_failure']) is bool)
+        if not valid: raise ValueError('Invalid probe operation')
+
+
+def program(command):
+    if isinstance(command,str):
+        return 'text(await tools.exec_command(' + json.dumps({'cmd':command,'max_output_tokens':4096}) + '));'
+    call = 'text(await tools.apply_patch(' + json.dumps(command['input']) + '));'
+    return 'try {' + call + '} catch (error) { text(String(error)); }' if command['expect_failure'] else call
+
 record = Path(sys.argv[1])
 scenario = sys.argv[2]
 
@@ -45,12 +61,15 @@ class Refuse(BaseHTTPRequestHandler):
                 'interruption': "printf pilot-command-started; sleep 120",
             }[scenario]
             issued = commands if commands is not None and scenario == 'success' else [command]
+            programs = [program(c) for c in issued]
+            if any(isinstance(c,dict) for c in issued):
+                programs = ['\n'.join(programs)] # Preserve native edit dependencies within one real code-mode call.
             events = [
                 {'type': 'response.created', 'response': {'id': 'pilot-fixture-1'}},
                 *[{'type': 'response.output_item.done', 'item': {'type': 'custom_tool_call',
                     'call_id': 'pilot-tool-' + str(i), 'name': 'exec',
-                    'input': 'text(await tools.exec_command(' + json.dumps({'cmd': cmd, 'max_output_tokens': 4096}) + '));'}}
-                  for i, cmd in enumerate(issued)],
+                    'input': code}}
+                  for i, code in enumerate(programs)],
                 {'type': 'response.completed', 'response': {'id': 'pilot-fixture-1',
                     'usage': {'input_tokens': 0, 'output_tokens': 0, 'total_tokens': 0}}},
             ]

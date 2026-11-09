@@ -294,3 +294,79 @@ Remaining live boundaries include actual provider authentication, live event for
 outside the qualified Codex exec subset, and billing. Unexpected events fail
 closed and retain available evidence. Non-forwarding probes establish neither
 model effectiveness nor arbitrary provider or CLI-event compatibility.
+
+## Codex 0.167 event correction and retained recovery
+
+The six-slot allocation at `97124cf` is consumed and closed. Live run
+[42695478931](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42695478931)
+launched one current-arm attempt, then stopped on `item.started/file_change`.
+No grader ran; five positions stayed unlaunched. Its original record remains
+unsupported/unmeasured. No retry, replacement or continuation is authorized.
+
+The owning adapter follows the pinned [Rust exec event definitions](https://github.com/openai/codex/blob/086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a/codex-rs/exec/src/exec_events.rs)
+and [processor](https://github.com/openai/codex/blob/086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a/codex-rs/exec/src/event_processor_with_jsonl_output.rs).
+The Rust implementation supports started/in-progress and completed file changes;
+its tests also cover completion-only records. The release's TypeScript item type
+and Rust comments describe completion-only edits and omit part of that lifecycle.
+The implementation, retained trace and native qualification determine support.
+
+| Event | Representation and boundary |
+| --- | --- |
+| Command start/update/completion | Existing `exec_command` action, native ID, exact supported shell wrapper, final aggregated observation and integer exit code; missing/changed starts remain rejected |
+| File-change start/completion, or completion-only | Native `file_change` action, ID, reported paths, add/update/delete operations and completed/failed status; no fabricated shell command, patch body, exit code or file contents |
+| Agent message / reasoning summary | Native text or summary; no invented independent model-call count |
+| Plan start/update/completion | Informational events with original items and completion flags; never an action or evidence that every item succeeded |
+| Nonfatal item/error | Retained informational warning, regardless of message prefix |
+| Stream error / turn.failed | Recognized terminal runtime failure, never a measured task failure |
+| MCP, collaboration, web-search and unknown forms | Unsupported; no enabled capability or interpretation is inferred |
+
+Commands without an observed start or integer terminal exit code remain unsupported
+or incomplete. File-change updates, extra file-change fields, mismatched paths or
+operations, duplicate IDs, incomplete lifecycles and events after a terminal turn
+remain rejected. Exec file-change payloads omit patch contents and move targets;
+the adapter cannot recover those absent details. Raw trace digest and event line
+references link every normalized action to its source. This is bounded support
+for the frozen CLI/profile, not universal event or provider compatibility.
+
+The existing Boolean CLI probes now request real code-mode `tools.apply_patch`
+operations through the non-forwarding endpoint: add the task submission, add,
+update and delete an auxiliary output, then attempt an add to the existing
+read-only input directory. Qualification requires four completed edits, one failed
+edit and all three operation kinds in actual native events. Shell file writes or
+handcrafted JSONL do not satisfy that check. The gh probes keep their original
+command transport; their grader still rejects an unapproved native file-change
+action. Parser fixtures are separate from these native observations.
+
+Retained recovery uses the existing campaign entry point, scheduler, native
+SkillEvaluator/Harbor verifier, retained-data admission and consolidated renderer:
+
+```sh
+"$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign.py replay \
+  --definition .github/evals/campaigns/boolean-retained-v1.json \
+  --output "$EVIDENCE/retained-campaign-replay"
+```
+
+The pinned corpus authenticates artifact `13708468986`, archive
+`sha256:0d9cc2aa7125f86656224251e4c84531b5dfd72fd211c1e8b079513a27112deb`,
+source revision `97124cf6b09d2acd4bda6243d0345dff06aea989` and the unchanged
+471-byte submission `sha256:3215b6097fa3e5f592989f2b8f4523207e28ebd4893cc7d11437b19189795981`.
+The raw trace is parsed as data. None of its recorded commands is executed.
+The native oracle copies only the exact retained submission, then the original
+frozen inputs, reference, five mutants, grading criteria and offline verifier
+perform grading. A valid failing grade is retained as a measured result.
+
+The separate retrospective identity records the original run/slot/record/capture,
+submission and raw-trace hashes, and corrected adapter revision/digest. Original
+public bytes stay intact beside the retrospective report. Only the current arm
+is enrolled. The paired collector retains unavailable absent-arm metadata; it
+neither launches nor invents an absent grade. The comparison table names only
+the enrolled original arm. This is not a new model attempt or completion of the
+original six-slot experiment, and cannot establish skill benefit.
+
+The existing workflow runs this one retained grade in a credential-free job,
+using the same campaign execution/reporting code. It separately runs native
+file-edit controls and historical task-family qualification. No model secret,
+paid dispatch, protected live gate, judge, production or Pages publication is used.
+The concrete recovery result and exact-source receipts are recorded on
+[PR #126](https://github.com/thetechgy/agent-engineering-baseline/pull/126) and in
+the authoritative checkpoint. Any future experiment requires a separate decision.

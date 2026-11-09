@@ -53,6 +53,7 @@ def source_inputs(runtime, workspace):
 
 
 _CODEX_FAILURES = {
+    'CodexRuntimeError': ('execution_infrastructure_failure', 'infrastructure_error'),
     'MissingCodexObservation': ('missing_native_observation', 'unknown'),
     'UnsupportedCodexProtocol': ('unsupported_runtime_protocol', 'unsupported'),
     'DownloadVerifierDirError': ('execution_infrastructure_failure', 'infrastructure_error'),

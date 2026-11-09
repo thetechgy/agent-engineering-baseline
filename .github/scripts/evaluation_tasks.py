@@ -28,7 +28,7 @@ def load(path):
             and all(__import__('re').fullmatch('[a-z0-9-]+', v['id']) and type(v['present']) is bool for v in variants), 'Invalid campaign variants')
     require(type(definition['attempt_limit']) is int and 0 < definition['attempt_limit'] <= 1000
             and type(definition['stop_estimate_usd']) in (int,float) and 0 < definition['stop_estimate_usd'] < float('inf'), 'Invalid campaign limits')
-    for key in ('source', 'candidate', 'runtime_profile', 'protocol'):
+    for key in ('source', 'candidate', 'runtime_profile', 'protocol', 'retrospective'):
         if key in definition:
             target = ROOT / definition[key]
             require(target.resolve() == target and target.is_relative_to(ROOT), 'Unsafe campaign input path')
@@ -37,6 +37,7 @@ def load(path):
 
 class Task:
     probe_origin = 'tool'
+    native_file_edit_probe = False
     protected_paths = ()
     retained_members = ('test-stdout.txt', 'test-stderr.txt', 'skill_evaluator_reward.json')
     def __init__(self, definition, member):
@@ -57,6 +58,9 @@ class Task:
         return {}
 
     def cases(self, mode):
+        if mode == 'replay':
+            require(self.definition.get('retrospective') == '.github/evals/codex-retrospective/42695478931/manifest.json','Unregistered retained source')
+            return {self.definition['source_case']:'retained'}
         if mode in ('live', 'experiment-probe'):
             require('protocol' in self.definition, 'Qualification cannot enable inference')
             return {self.definition['source_case']: None}
@@ -90,10 +94,12 @@ class Task:
     def validate_members(self, members, case, arm):
         """Compare task-owned grader, prompt and fixtures after common checksum checks."""
         control = case.removeprefix(self.definition['source_case'] + '-')
-        require(control in self.controls() or case == self.definition['source_case'] and 'protocol' in self.definition, 'Unknown task control')
+        require(control in self.controls() or case == self.definition['source_case'] and ('protocol' in self.definition or 'retrospective' in self.definition), 'Unknown task control')
         expected = self.expected_members(case, arm)
         require(all(members.get(k) == 'sha256:' + hashlib.sha256(v).hexdigest() for k,v in expected.items()),
                 'Task grader/prompt/fixture drift')
+        if 'retrospective' in self.definition:
+            require(members.get('solution/candidate') == 'sha256:' + hashlib.sha256(self.payload('retained')).hexdigest(),'Retained solution drift')
         prefix = 'environment/skills/' + self.definition['skill'] + '/'
         source = ROOT / self.definition['source']
         skill = {prefix + p.relative_to(source).as_posix(): 'sha256:' + hashlib.sha256(p.read_bytes()).hexdigest()
@@ -104,6 +110,7 @@ class Task:
 
 
 class BooleanContract(Task):
+    native_file_edit_probe = True
     source_directories = ('.github/evals/powershell-pester-6', '.github/evals/pester-ceiling/candidate')
     source_files = ('.github/scripts/pester_evaluations.py', '.github/scripts/codex_pilot_effectiveness.py', '.github/evals/pester-ceiling/candidate.json')
     output = 'Subject.Tests.ps1'
@@ -118,6 +125,10 @@ class BooleanContract(Task):
         return {row['id']: row for row in self.candidate()['controls']}
 
     def payload(self, control):
+        if control == 'retained':
+            require('retrospective' in self.definition,'Unregistered retained task')
+            from codex_pilot_replay import campaign_payload
+            return campaign_payload()
         if control == 'unsupported':
             from codex_pilot_effectiveness import fixtures
             return fixtures()['pester-004-unsupported']['payload']
@@ -179,7 +190,7 @@ class BooleanContract(Task):
         (task / 'tests/docker-compose.yaml').write_text('services:\n  main:\n    network_mode: none\n')
         with (task / 'environment/Dockerfile').open('a') as stream:
             stream.write(PATH_LINK)
-        if mode == 'oracle':
+        if mode in ('oracle','replay'):
             solution = task / 'solution'; solution.mkdir()
             (solution / 'candidate').write_bytes(self.payload(control))
             (solution / 'solve.sh').write_text('#!/bin/sh\nset -eu\ntest ! -e /tests\ncp /solution/candidate /workspace/output/' + self.output + '\n')

@@ -22,7 +22,7 @@ import skill_reports as reports
 
 
 def purpose(task, mode):
-    identity = {'boolean-contract-v1':'boolean-contract-v2', 'gh-read-v1':'gh-read-v2'}.get(task.definition['id'], task.definition['id'])
+    identity = {'boolean-contract-v1':'boolean-contract-v3', 'gh-read-v1':'gh-read-v3', 'boolean-effectiveness-v1':'boolean-effectiveness-v2'}.get(task.definition['id'], task.definition['id'])
     return 'campaign-' + identity + '-' + ('probe' if mode == 'experiment-probe' else mode)
 
 
@@ -77,7 +77,7 @@ def collection_parameters(task, mode):
     ids = sorted(task.cases(mode))
     return {'expected_cases':len(ids), 'expected_case_ids':ids,
             # Validate recorded job totals separately from the planned per-case population.
-            'expected_trials':None if mode in ('live','experiment-probe') else len(ids),
+            'expected_trials':None if mode in ('live','experiment-probe','replay') else len(ids),
             'n_attempts':task.definition['trials'],
             'stop_on_pass':False}
 
@@ -103,7 +103,7 @@ def collect(root, task, mode, bundle, captured, rows, *, fixture=None):
     data = collect_harbor_results(skill, [runtime['agent']], run, root / 'jobs', **collection_parameters(task, mode),
         grading_mode='custom_only', agent_models={runtime['agent']: {'model': runtime['model'] if mode in ('probe', 'experiment-probe', 'live') else 'credential-free-oracle', 'source': task.definition['runtime_profile']}})
     config = {'grading': {'mode': 'custom_only'}, 'judge': {'enabled': False},
-        'qualification': {'producer': 'cli_probe' if mode in ('probe', 'experiment-probe') else 'live' if mode == 'live' else 'oracle', 'inference': mode == 'live'},
+        'qualification': {'producer': 'retained_submission_replay' if mode == 'replay' else 'cli_probe' if mode in ('probe', 'experiment-probe') else 'live' if mode == 'live' else 'oracle', 'inference': mode == 'live'},
         'harbor': {'n_attempts': task.definition['trials'], 'stop_on_pass': False},
         'provider': {'name': runtime['provider'] if mode in ('probe', 'experiment-probe', 'live') else 'fixture', 'model': runtime['model'] if mode in ('probe', 'experiment-probe', 'live') else 'credential-free-oracle'}}
     reports.write_json(run / 'run_config.json', config)
@@ -112,11 +112,12 @@ def collect(root, task, mode, bundle, captured, rows, *, fixture=None):
     numeric = evidence.capture_custom_numeric_fields(ROOT, skill, root / 'jobs', root, captured, purpose=purpose(task, mode))
     reports.write_json(raw / evidence.CUSTOM_CAPTURE, evidence.custom_capture(ROOT, skill, bundle, captured,
         purpose=purpose(task, mode), attempts=task.definition['trials'], agent=runtime['agent'] if mode in ('probe', 'experiment-probe', 'live') else 'oracle',
+        retrospective=reports.read_json(root/'evidence/attempt-ledger.json').get('retrospective'),
         execution_policy={'environment': profile['campaign']['environment_mode'], 'concurrency': 1, 'timeout_multiplier': 1.0, 'stop_on_pass': False}, numeric_excerpts=numeric))
     artifact = root / 'evidence'
     reports.benchmark_artifacts(ROOT, raw, skill, artifact / 'native')
     reports.public_benchmark(ROOT, artifact / 'native', skill, 'confirmation', artifact / 'public')
-    core.render([artifact / 'public'], artifact)
+    core.render([artifact / 'public', artifact / 'original-public'] if mode == 'replay' else [artifact / 'public'], artifact)
     return artifact / 'public'
 
 
@@ -133,6 +134,11 @@ def run(root, task, mode, *, reference=None, fixture=None):
     root.mkdir(parents=True, exist_ok=False); artifact = root / 'evidence'; artifact.mkdir()
     definition = task.definition; variants = {v['id']:v for v in definition['variants']}
     rows = [{**r, 'state':'unlaunched'} for r in core.schedule(tuple(task.cases(mode)), tuple(variants), definition['trials'])]
+    replaying = mode == 'replay'
+    if replaying:
+        core.require('retrospective' in definition and definition['attempt_limit']==1,'Unqualified replay population')
+        rows = [row for row in rows if variants[row['variant']]['present']]
+        core.require(len(rows)==1,'Retained source population mismatch')
     experiment = mode in ('live', 'experiment-probe')
     authorization = None
     if experiment:
@@ -150,6 +156,10 @@ def run(root, task, mode, *, reference=None, fixture=None):
         from evaluation_campaign_protocol import digest
         ledger.update(protocol=protocol(task), authorization=authorization,
                       preparation_digest=digest(reference / 'frozen-proposal.json'))
+    if replaying:
+        from codex_pilot_replay import retain_campaign_originals
+        replay_profile,_,_ = evidence.custom_contract(definition['skill'],purpose=purpose(task,mode))
+        ledger['retrospective'] = retain_campaign_originals(artifact,task,replay_profile)
     def save():
         target = artifact / 'attempt-ledger.json'; temporary = target.with_suffix('.new')
         with temporary.open('w') as stream:
@@ -185,6 +195,7 @@ def run(root, task, mode, *, reference=None, fixture=None):
             core.require(Task(native).checksum == expected['task_checksum'], 'Task checksum drift before launch')
             trial_name = ('campaign-' + row['case'] + '-attempt' + str(row['trial']) + '__slot' + str(row['position']) if experiment
                           else row['case'] + '__campaign' + str(row['position']))
+            if replaying: trial_name = 'retained-' + row['case'] + '-attempt1__replay'
             job = root / 'jobs' / (definition['skill'] + '-' + ledger['runtime']['resolved']['agent'] + '-' + ('with' if present else 'without'))
             trial = job / trial_name
             core.require(not trial.exists(), 'Duplicate native attempt refused')
@@ -226,7 +237,12 @@ def run(root, task, mode, *, reference=None, fixture=None):
                 reason = stop_reason(row)
                 if row['native_exception'] or code or not row['grading_present'] or not row['cleanup']:
                     row['state'] = 'failed'; return reason
-                task.check(task.cases(mode)[row['case']], present, row['outcome'], reward.get('custom_metrics',{}))
+                if replaying:
+                    reason = stop_reason(row)
+                    if reason: row['state']='failed'; return reason
+                    task.validate_result(row['outcome'],(native_result.get('verifier_result') or {}).get('rewards') or {})
+                else:
+                    task.check(task.cases(mode)[row['case']], present, row['outcome'], reward.get('custom_metrics',{}))
                 # Qualification's invalid/unsupported controls remain expected outcomes.
                 if mode == 'probe':
                     adapter.native_observation(trial, native, present, row, rows, output=task.output)
@@ -277,13 +293,13 @@ def run(root, task, mode, *, reference=None, fixture=None):
     if experiment:
         return ledger
     core.require(ledger['state']=='completed' and ledger['cleanup_complete'] and 'report_failure' not in ledger, 'Campaign incomplete: ' + str(ledger.get('report_failure', ledger.get('stop_reason'))))
-    reports.write_json(artifact / 'qualification.json', {'complete':True,'inference':False,'revision':revision(), 'profile':purpose(task,mode), 'attempts':len(rows), 'report_reproduced':True})
+    reports.write_json(artifact / 'qualification.json', {'complete':True,'inference':False,'revision':revision(), 'profile':purpose(task,mode), 'attempts':len(rows), 'report_reproduced':True, **({'retrospective':True} if replaying else {})})
     return artifact / 'public'
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['qualify','prepare','check-preparation','authenticate','live'])
+    parser.add_argument('action', choices=['qualify','prepare','check-preparation','authenticate','live','replay'])
     parser.add_argument('--definition', type=Path, action='append', required=True)
     parser.add_argument('--mode', choices=['oracle','probe','all'], default='all')
     parser.add_argument('--output',type=Path,required=True)
@@ -294,6 +310,11 @@ def main():
     if args.action != 'live': no_credentials()
     root = args.output.absolute()
     core.require(root.resolve()==root and not root.exists() and not root.is_relative_to(ROOT), 'Use a new real persistent output outside checkout')
+    if args.action == 'replay':
+        from qualify_evaluator_candidate import native_compose_config
+        native_compose_config(ROOT)
+        core.require(len(args.definition)==1,'One retained source definition required')
+        return run(root,load(args.definition[0].absolute()),'replay')
     if args.action != 'qualify':
         from evaluation_campaign_protocol import entry
         core.require(len(args.definition) == 1, 'One frozen experiment definition required')

@@ -8,7 +8,7 @@ import shutil
 from codex_pilot_contract import ROOT, PROFILE as RUNTIME, grader_bytes as retained_grader
 from codex_pilot_iteration import runner_bytes as retained_runner_bytes
 
-PROFILE_ID = 'pester-effectiveness-v8'
+PROFILE_ID = 'pester-effectiveness-v9'
 PURPOSE = 'skill_effectiveness'
 CONTROL_PURPOSE = 'skill_effectiveness_control'
 CASES = ('pester-001', 'pester-003', 'pester-004')

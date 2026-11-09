@@ -85,8 +85,24 @@ report reproduction must complete before this can be called ready for a bounded
 live decision. [Draft PR #126](https://github.com/thetechgy/agent-engineering-baseline/pull/126)
 retains the concrete source/artifact/protocol receipt and current qualification state.
 
-**One next action:** review the final qualification receipt on PR #126 for a
-separate bounded live decision.
+The authorized follow-up ran once as
+[42695478931](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42695478931)
+at `97124cf`. One current-arm attempt emitted native file-change events outside
+the adapter's qualified subset. It stopped before grading; five slots remained
+unlaunched. Cleanup completed and estimated usage was $0.0479649, not an invoice.
+The allocation is consumed and closed. The original experiment is inconclusive.
+
+PR #126 now corrects the owning Codex adapter and qualifies native file-edit
+handling through the existing non-forwarding CLI path. The original unsupported
+record and exact submission are retained in a pinned corpus. A separate
+credential-free retrospective grade uses the shared campaign and frozen five-mutant
+verifier. Its native result is pending qualification; parser fixtures and local
+staging are not a grading result. No inference, judge, replacement slot or skill
+revision is part of this recovery. New source profiles preserve executed-head
+profiles and historical receipts.
+
+**One next action:** complete credential-free native qualification and record the
+retrospective result on PR #126 before considering any separate experiment.
 No further paid inference, judges, retries or dispatches are authorized.
 Production and skills remain unchanged; the reserved confirmation variant remains
 untouched and outside this work. Sections below preserve historical checkpoints

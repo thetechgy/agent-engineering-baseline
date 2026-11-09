@@ -24,73 +24,168 @@ class UnsupportedCodexProtocol(ValueError):
     pass
 
 
-def exec_trajectory(raw, adapter):
-    """Translate observed 0.167 exec events using Harbor's ATIF models.
+class CodexRuntimeError(ValueError):
+    """A recognized terminal failure, distinct from an unsupported event."""
 
-    No fixture commands, expected answers or synthetic usage enter this bridge.
-    Only the pinned native shell wrapper is unwrapped; output remains verbatim.
+
+def exec_trajectory(raw, adapter):
+    """Read pinned 0.167 exec events as data; never execute recorded actions.
+
+    File-change items contain paths/operations/status, not patch contents or
+    shell output. Completion-only edits are emitted by the released processor.
+    Every normalized action links to its exact raw trace and event line(s).
     """
     from harbor.agents.installed.codex import Agent, Trajectory
-    pending = {}; completed = set(); steps = []; notes = []
-    session = None; turns = 0
-    for line in raw.splitlines():
+    pending = {}; completed = set(); steps = []; notes = []; informational = []
+    session = None; turns = 0; actions = 0; terminal = False
+    trace = {'member':'agent/codex.txt', 'sha256':'sha256:' + hashlib.sha256(raw.encode()).hexdigest()}
+
+    def identity(item):
+        value = item.get('id')
+        if not isinstance(value, str) or not value or value in completed:
+            raise UnsupportedCodexProtocol('Ambiguous native item identity')
+        return value
+
+    def begin(item, line):
+        key = identity(item)
+        if key in pending:
+            raise UnsupportedCodexProtocol('Duplicate native item start')
+        pending[key] = {'item':item, 'lines':[line]}
+
+    def finish(item, line, *, terminal_only=False):
+        key = identity(item)
+        previous = pending.pop(key, None)
+        if previous is None and not terminal_only:
+            raise MissingCodexObservation('Unobserved native item start')
+        if previous and previous['item']['type'] != item['type']:
+            raise UnsupportedCodexProtocol('Native item type changed')
+        completed.add(key)
+        return previous, {'protocol':'codex-0.167-exec-json', 'native_item_id':key,
+            'native_item_type':item['type'], 'raw_trace':trace,
+            'raw_event_lines':[*previous['lines'],line] if previous else [line],
+            'lifecycle':'started/completed' if previous else 'completion-only'}
+
+    def changes(item):
+        value = item.get('changes')
+        if not isinstance(value, list) or any(not isinstance(c, dict) or set(c) != {'path','kind'}
+                or not isinstance(c['path'], str) or not c['path'] or '\x00' in c['path']
+                or c['kind'] not in ('add','delete','update') for c in value):
+            raise UnsupportedCodexProtocol('Invalid native file changes')
+        return sorted((c['path'],c['kind']) for c in value)
+
+    for line_number, line in enumerate(raw.splitlines(), 1):
         if line == 'Reading additional input from stdin...':
             notes.append(line); continue
-        try:
-            event = json.loads(line)
+        try: event = json.loads(line)
         except ValueError as error:
             raise UnsupportedCodexProtocol('Non-JSON native observation') from error
         if not isinstance(event, dict):
             raise UnsupportedCodexProtocol('Invalid native event')
         kind = event.get('type')
-        if kind == 'thread.started' and session is None and isinstance(event.get('thread_id'), str):
+        if terminal:
+            raise UnsupportedCodexProtocol('Native event after terminal turn')
+        if kind == 'thread.started':
+            if session is not None or not isinstance(event.get('thread_id'), str) or not event['thread_id']:
+                raise UnsupportedCodexProtocol('Ambiguous native thread')
             session = event['thread_id']; continue
         if kind == 'turn.started':
-            continue
+            informational.append({'line':line_number, 'event':event}); continue
+        if kind in ('error','turn.failed'):
+            value = event if kind == 'error' else event.get('error')
+            if not isinstance(value, dict) or not isinstance(value.get('message'), str):
+                raise UnsupportedCodexProtocol('Malformed native terminal error')
+            raise CodexRuntimeError('Codex terminal failure at raw line ' + str(line_number) + ': ' + kind)
         if kind == 'turn.completed':
-            turns += 1; continue
-        item = event.get('item', {})
+            turns += 1; terminal = True
+            informational.append({'line':line_number, 'event':event}); continue
+        item = event.get('item')
         if not isinstance(item, dict):
             raise UnsupportedCodexProtocol('Invalid native item')
-        if kind == 'item.completed' and item.get('type') == 'error' and str(item.get('message', '')).startswith('Under-development features enabled:'):
-            notes.append(item['message']); continue
-        if kind == 'item.completed' and item.get('type') == 'agent_message' and isinstance(item.get('text'), str):
-            normalized = {'kind':'message', 'role':'assistant', 'text':item['text']}
-        elif kind in ('item.started', 'item.completed') and item.get('type') == 'command_execution':
-            identity = item.get('id'); command = item.get('command')
-            if not isinstance(identity, str) or not isinstance(command, str) or identity in completed:
-                raise UnsupportedCodexProtocol('Ambiguous native command identity')
-            if kind == 'item.started':
-                if identity in pending:
-                    raise UnsupportedCodexProtocol('Duplicate native command start')
-                pending[identity] = command; continue
-            if identity not in pending:
+        item_type = item.get('type')
+        if item_type in ('agent_message','reasoning','error') and kind == 'item.completed':
+            key = identity(item)
+            if key in pending:
+                raise UnsupportedCodexProtocol('Informational item conflicts with native action')
+            field = 'message' if item_type == 'error' else 'text'
+            if not isinstance(item.get(field), str):
+                raise MissingCodexObservation('Missing native informational content')
+            completed.add(key)
+            metadata = {'native_item_id':key, 'native_item_type':item_type,
+                        'raw_trace':trace, 'raw_event_lines':[line_number]}
+            if item_type == 'error':
+                # The released schema defines item/error as non-fatal. Keep every
+                # warning, not just one recognized message prefix.
+                notes.append(item['message']); informational.append({'line':line_number, 'event':event}); continue
+            normalized = {'kind':'message', 'role':'assistant', 'text':item['text'] if item_type == 'agent_message' else '',
+                          'reasoning':item['text'] if item_type == 'reasoning' else None, 'extra':metadata}
+        elif item_type == 'todo_list' and kind in ('item.started','item.updated','item.completed'):
+            key = identity(item); values = item.get('items')
+            if not isinstance(values, list) or any(not isinstance(v, dict) or set(v) != {'text','completed'}
+                    or not isinstance(v['text'], str) or type(v['completed']) is not bool for v in values):
+                raise UnsupportedCodexProtocol('Invalid native plan')
+            if kind == 'item.started': begin(item,line_number)
+            elif kind == 'item.updated':
+                if key not in pending or pending[key]['item']['type'] != item_type:
+                    raise MissingCodexObservation('Unobserved native plan start')
+                pending[key]['lines'].append(line_number)
+            else: finish(item,line_number)
+            informational.append({'line':line_number, 'event':event}); continue
+        elif item_type == 'command_execution' and kind in ('item.started','item.updated','item.completed'):
+            key = identity(item); command = item.get('command')
+            if not isinstance(command, str):
+                raise UnsupportedCodexProtocol('Invalid native command')
+            if kind == 'item.started': begin(item,line_number); continue
+            if key not in pending:
                 raise MissingCodexObservation('Unobserved native command start')
-            if pending.pop(identity) != command:
+            if pending[key]['item'].get('command') != command:
                 raise UnsupportedCodexProtocol('Native command identity changed')
-            if not isinstance(item.get('aggregated_output'), str) or type(item.get('exit_code')) is not int or item.get('status') not in ('completed', 'failed'):
+            if kind == 'item.updated':
+                if item.get('status') != 'in_progress' or not isinstance(item.get('aggregated_output'), str) or item.get('exit_code') is not None:
+                    raise UnsupportedCodexProtocol('Invalid native command update')
+                pending[key]['lines'].append(line_number); continue
+            if not isinstance(item.get('aggregated_output'), str) or type(item.get('exit_code')) is not int or item.get('status') not in ('completed','failed'):
                 raise MissingCodexObservation('Incomplete native command result')
-            try:
-                wrapper = shlex.split(command)
+            _, metadata = finish(item,line_number)
+            try: wrapper = shlex.split(command)
             except ValueError as error:
                 raise UnsupportedCodexProtocol('Invalid native shell wrapper') from error
-            if len(wrapper) != 3 or wrapper[:2] != ['/bin/sh', '-lc']:
+            if len(wrapper) != 3 or wrapper[:2] != ['/bin/sh','-lc']:
                 raise UnsupportedCodexProtocol('Unsupported native shell wrapper')
-            completed.add(identity)
-            normalized = {'kind':'tool_call', 'call_id':identity, 'tool_name':'exec_command',
-                'arguments':{'command':wrapper[2]}, 'output':item['aggregated_output'], 'status':item['status'],
-                'metadata':{'native_command':command, 'exit_code':item['exit_code'], 'protocol':'codex-0.167-exec-json'}}
+            metadata.update(native_command=command, exit_code=item['exit_code'])
+            normalized = {'kind':'tool_call', 'call_id':key, 'tool_name':'exec_command',
+                'arguments':{'command':wrapper[2]}, 'output':item['aggregated_output'],
+                'status':item['status'], 'metadata':metadata}
+            actions += 1
+        elif item_type == 'file_change' and kind in ('item.started','item.completed'):
+            key = identity(item); operation_identity = changes(item)
+            if set(item) != {'id','type','changes','status'}:
+                raise UnsupportedCodexProtocol('Unknown native file-change fields')
+            if kind == 'item.started':
+                if item['status'] != 'in_progress':
+                    raise UnsupportedCodexProtocol('Invalid native file-change start')
+                begin(item,line_number); continue
+            if item['status'] not in ('completed','failed'):
+                raise MissingCodexObservation('Nonterminal native file change')
+            previous, metadata = finish(item,line_number,terminal_only=True)
+            if previous and changes(previous['item']) != operation_identity:
+                raise UnsupportedCodexProtocol('Native file-change identity changed')
+            # Use the native action name and native terminal payload. No shell
+            # command, patch body, exit code or fabricated success text is added.
+            normalized = {'kind':'tool_call', 'call_id':key, 'tool_name':'file_change',
+                'arguments':{'changes':item['changes']}, 'output':json.dumps(item,ensure_ascii=False,sort_keys=True),
+                'status':item['status'], 'metadata':metadata}
+            actions += 1
         else:
-            raise UnsupportedCodexProtocol('Unsupported native event: ' + str(kind) + '/' + str(item.get('type')))
-        step = adapter._convert_event_to_step(normalized, len(steps) + 1)
-        # Tool commands/messages do not establish independent model call counts.
+            raise UnsupportedCodexProtocol('Unsupported native event: ' + str(kind) + '/' + str(item_type))
+        step = adapter._convert_event_to_step(normalized, len(steps)+1)
         steps.append(step.model_copy(update={'llm_call_count':None}))
-    if pending or turns != 1 or not session or not completed:
+    if pending or turns != 1 or not session or not actions:
         raise MissingCodexObservation('Incomplete native trajectory')
     return Trajectory(schema_version='ATIF-v1.7', session_id=session,
-        agent=Agent(name='codex', version=adapter.profile['cli'], model_name=adapter.model_name),
+        agent=Agent(name='codex',version=adapter.profile['cli'],model_name=adapter.model_name),
         steps=steps, notes='\n'.join(notes) or None,
-        extra={'source':'codex-0.167-exec-json', 'inference':getattr(adapter, 'live', False)})
+        extra={'source':'codex-0.167-exec-json','inference':getattr(adapter,'live',False),
+               'raw_trace':trace,'informational_events':informational})
 
 
 class CampaignCodex(PilotCodex):
@@ -131,6 +226,22 @@ class CampaignCodex(PilotCodex):
             elif fault == 'missing-evidence': raw = '\n'.join(line for line in raw.splitlines() if '"turn.completed"' not in line)
             else: raise ValueError('Unknown observation fixture')
         trajectory = exec_trajectory(raw, self)
+        if not self.live and self.task.native_file_edit_probe:
+            edits = [step for step in trajectory.steps if step.tool_calls
+                     and step.tool_calls[0].function_name == 'file_change']
+            checks = [step for step in trajectory.steps if step.tool_calls and step.tool_calls[0].function_name=='exec_command'
+                      and step.tool_calls[0].arguments == {'command':FILE_EDIT_CHECK}]
+            require(len(checks)==1 and checks[0].extra['tool_metadata']['exit_code']==0
+                    and checks[0].observation.results[0].content.strip()=='native-file-edit-controls-ok',
+                    'Native edit failure/cleanup observation missing')
+            statuses = [step.extra['status'] for step in edits]
+            kinds = {change['kind'] for step in edits for change in step.tool_calls[0].arguments['changes']}
+            require(statuses == ['completed'] * 4 + ['failed'] and kinds == {'add','update','delete'},
+                    'Native file-edit probe did not exercise success/failure and all operations')
+            (self.logs_dir / 'native-file-edit-probe.json').write_text(json.dumps({
+                'raw_trace':trajectory.extra['raw_trace'], 'statuses':statuses, 'operations':sorted(kinds),
+                'native_item_ids':[step.tool_calls[0].tool_call_id for step in edits],
+                'inference':False, 'source':'real pinned CLI native apply_patch'},indent=2)+'\n')
         # Replacing the directory entry never follows a preexisting target link.
         with tempfile.NamedTemporaryFile(mode='w', dir=self.logs_dir, delete=False) as stream:
             temporary = Path(stream.name)
@@ -151,7 +262,10 @@ class CampaignCodex(PilotCodex):
         if self.task.probe_origin == 'operator':
             return self.task.probe_commands(control, payload, self.expected_present)
         read = ['cat /home/agent/.agents/skills/' + self.skill + '/SKILL.md'] if self.expected_present else []
-        return ['python3 /opt/pilot/codex_pilot_probe.py ' + self.skill, *read, *self.task.probe_commands(control, payload, self.expected_present)]
+        commands = ['python3 /opt/pilot/codex_pilot_probe.py ' + self.skill, *read]
+        if not self.task.native_file_edit_probe:
+            return [*commands, *self.task.probe_commands(control, payload, self.expected_present)]
+        return [*commands, *native_file_edit_operations(self.output, base64.b64decode(payload).decode())]
 
     async def probe_preflight(self, environment, env):
         if self.task.probe_origin == 'operator':
@@ -163,6 +277,25 @@ class CampaignCodex(PilotCodex):
         if self.task.protected_paths:
             target = self.logs_dir.parent / 'operator/task-boundary.json'
             target.write_text(json.dumps({'origin': 'operator', 'present_and_unreadable': list(self.task.protected_paths)}))
+
+
+FILE_EDIT_CHECK = "test ! -e /workspace/input/.native-edit-must-remain-absent && test ! -e /workspace/output/.native-edit-probe && printf '%s\\n' native-file-edit-controls-ok"
+
+
+def native_file_edit_operations(output, content):
+    """Host-only fixture instructions for real code-mode apply_patch calls.
+
+    The failed add targets the already read-only public input directory. Nothing
+    changes its permissions, and a successful protected write fails qualification.
+    """
+    def add(path, text):
+        return '*** Begin Patch\n*** Add File: ' + path + '\n' + ''.join('+'+line+'\n' for line in text.splitlines()) + '*** End Patch'
+    auxiliary = '/workspace/output/.native-edit-probe'
+    patches = [add(output,content), add(auxiliary,'before\n'),
+        '*** Begin Patch\n*** Update File: '+auxiliary+'\n@@\n-before\n+after\n*** End Patch',
+        '*** Begin Patch\n*** Delete File: '+auxiliary+'\n*** End Patch',
+        add('/workspace/input/.native-edit-must-remain-absent','must not be written\n')]
+    return [*[{'tool':'apply_patch','input':patch,'expect_failure':index == 4} for index,patch in enumerate(patches)], FILE_EDIT_CHECK]
 
 
 # Harbor public environment import hook composes the two existing lifecycle hooks:
@@ -300,7 +433,7 @@ def prepare_task(native, mode, runtime):
 
 
 def agent_config(task, mode, control, runtime, present):
-    if mode == 'oracle':
+    if mode in ('oracle','replay'):
         return {'name': 'oracle'}
     return {'import_path': 'evaluation_codex:CampaignCodex', 'model_name': runtime['model'],
             'kwargs': {'campaign_definition': task.member, 'control': control, 'present': present, **({'live': True} if mode == 'live' else {})}}
@@ -355,7 +488,7 @@ def manifest(directory):
 def usage(trial, mode):
     import skill_reports as reports
     from codex_pilot_runtime import usage_record
-    if mode == 'oracle':
+    if mode in ('oracle','replay'):
         return {'estimated_usd': 0, 'billing': 'oracle fixture; no model inference or billing',
                 'n_input_tokens': None, 'n_cache_tokens': None, 'n_output_tokens': None}
     if not (trial / 'result.json').exists():
@@ -373,7 +506,7 @@ def validate_members(members, mode):
 
 
 RETAINED_MEMBERS = ('pilot-runtime.json', 'pilot-final-policy.json', 'docker-observation.json',
-                    'probe.json', 'observation-injection.json', 'codex.txt', 'trajectory.json', 'task-boundary.json', 'pilot-produced-submission.json')
+                    'probe.json', 'native-file-edit-probe.json', 'observation-injection.json', 'codex.txt', 'trajectory.json', 'task-boundary.json', 'pilot-produced-submission.json')
 
 
 def skill_access(trial, present, native):

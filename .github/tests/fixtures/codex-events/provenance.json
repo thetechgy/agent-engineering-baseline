@@ -1,0 +1,15 @@
+{
+  "source_run": 42695478931,
+  "source_artifact": 13708468986,
+  "source_archive_sha256": "0d9cc2aa7125f86656224251e4c84531b5dfd72fd211c1e8b079513a27112deb",
+  "source_trace_sha256": "d06f680a9849eafa59e008b45150e7a9712267d2c6fcf09b3b538e94675ea956",
+  "fixture_sha256": "b1ad02ebc44d0c43b8026ccbe0b31321dbdb6a58fb297f598c53630a2544ff45",
+  "sanitized_fields": [
+    "thread_id",
+    "item.command",
+    "item.aggregated_output",
+    "item.text"
+  ],
+  "preserved": "all event/item types, ordering, IDs, file paths, operations, statuses and usage structure",
+  "purpose": "parser regression only; no commands executed and no task quality inferred"
+}

@@ -12,6 +12,10 @@ on:
       - '.github/evals/campaigns/**'
       - '.github/evals/pester-ceiling/**'
       - '.github/evals/custom-metrics.json'
+      - '.github/evals/codex-retrospective/42695478931/**'
+      - '.github/tests/test_codex_events.py'
+      - '.github/tests/test_campaign_replay.py'
+      - '.github/tests/fixtures/codex-events/**'
       - '.github/tests/test_evaluation_campaign.py'
       - '.github/tests/test_evaluation_protocol.py'
       - '.github/workflows/evaluation-campaign.yml'
@@ -52,7 +56,7 @@ jobs:
           APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
           echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
       - name: Check shared contracts
-        run: 'PYTHONPATH=.github/scripts:.github/tests "$SKILL_CURRENT_PYTHON" -B -m unittest test_evaluation_campaign test_evaluation_protocol test_codex_cohort -v'
+        run: 'PYTHONPATH=.github/scripts:.github/tests "$SKILL_CURRENT_PYTHON" -B -m unittest test_evaluation_campaign test_evaluation_protocol test_codex_cohort test_codex_events test_campaign_replay -v'
       - name: Qualify both task families through native oracle and real CLI probes
         run: |
           "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign.py qualify \
@@ -85,6 +89,46 @@ jobs:
             ${{ runner.temp }}/reusable-evaluation/preparation/scenarios/*/evidence/
             ${{ runner.temp }}/reusable-evaluation/report/
             ${{ runner.temp }}/reusable-evaluation/qualification.json
+          if-no-files-found: error
+          retention-days: 90
+
+
+  retrospective:
+    name: Grade authenticated retained submission without inference
+    if: inputs.allocation == ''
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: '0.13.7'
+          enable-cache: false
+      - name: Acquire pinned credential-free replay tools
+        run: |
+          bash .github/scripts/setup-skillevaluator.sh candidate-current
+          bash .github/scripts/setup-compose.sh
+          APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
+          echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
+      - name: Replay trace and grade exact original bytes through the shared campaign
+        timeout-minutes: 10
+        run: |
+          "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign.py replay \
+            --definition .github/evals/campaigns/boolean-retained-v1.json \
+            --output "$RUNNER_TEMP/retained-campaign-replay"
+      - name: Retain original, native replay and consolidated report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: retained-campaign-replay-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/retained-campaign-replay/evidence/
           if-no-files-found: error
           retention-days: 90
 

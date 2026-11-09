@@ -28,6 +28,9 @@ def source_manifest(workspace, name, purpose):
         adapter.definition['runtime_profile'], '.github/workflows/evaluation-campaign.yml']
     if 'protocol' in adapter.definition:
         files.append(adapter.definition['protocol'])
+    if 'retrospective' in adapter.definition:
+        folder = workspace / adapter.definition['retrospective']
+        files.extend(p.relative_to(workspace).as_posix() for p in reports.regular_tree(folder.parent))
     from evaluation_runtime import read_profile, source_inputs
     values.extend(source_inputs(read_profile(ROOT / adapter.definition['runtime_profile']), workspace))
     values.extend({'member': 'campaign/' + member, 'digest': e.digest_bytes(e.read_bytes(workspace / member))} for member in sorted(set(files)))
