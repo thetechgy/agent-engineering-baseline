@@ -106,12 +106,18 @@ class CampaignContracts(unittest.TestCase):
                 with self.assertRaises(ValueError):task.check('unauthorized',True,{'classification':'failed'},{'gh_task':0,'gh_authorization':0})
 
     def test_new_profiles_preserve_every_historical_profile_byte_value(self):
-        import subprocess
-        original=json.loads(subprocess.check_output(['git','show','origin/main:.github/evals/custom-metrics.json'],cwd=ROOT))
+        # Canonical registry snapshot from merged base e2fabea; works in shallow
+        # CI checkouts and never follows a moving remote tracking reference.
+        import hashlib
         current=reports.read_json(ROOT/evidence.CUSTOM_REGISTRY)
-        for key,value in original['profiles'].items():self.assertEqual(current['profiles'][key],value,key)
-        self.assertEqual(current['active_profiles'],original['active_profiles'])
-        self.assertEqual(current['metrics'],original['metrics'])
+        new={'pester-cli-pilot-retained-v7','pester-effectiveness-v7',
+             'campaign-boolean-contract-v1-oracle','campaign-boolean-contract-v1-probe',
+             'campaign-gh-read-v1-oracle','campaign-gh-read-v1-probe'}
+        historical={k:v for k,v in current['profiles'].items() if k not in new}
+        value={'profiles':historical,'active_profiles':current['active_profiles'],'metrics':current['metrics']}
+        digest=hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':'),ensure_ascii=True).encode()).hexdigest()
+        self.assertEqual(digest,'8abda5c8c49436edaaf2dd6a954720145c872cc9b5d6a4fe762beb584c92a118')
+
 
 
 if __name__=='__main__':unittest.main()
