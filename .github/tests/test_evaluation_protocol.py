@@ -212,6 +212,25 @@ class ProtocolContracts(unittest.TestCase):
             self.assertNotEqual(partial['with_skill']['execution_status'],'succeeded')
             self.assertNotEqual(partial['without_skill']['execution_status'],'succeeded')
 
+    def test_scenario_reports_have_distinct_claims_without_weakening_conflict_checks(self):
+        import skill_analysis as analysis
+        import test_skill_analysis as fixtures
+        task=self.task()
+        base=fixtures.synthetic()
+        def records(ids):
+            values=[dict(base,run_id=identity) for identity in ids]
+            return {evidence.identity(value):value for value in values}
+        ids=[campaign.collection_run_id(task,'experiment-probe',name) for name in protocol.SCENARIOS]
+        self.assertEqual(len(set(ids)),len(protocol.SCENARIOS))
+        analysis.check_records(records(ids))
+        # Different content claiming one skill/run must still be rejected.
+        left=dict(base,run_id=ids[0]);right=copy.deepcopy(left);right['metrics'][0]['value']=0.3
+        with self.assertRaisesRegex(ValueError,'Conflicting public report claims'):
+            analysis.check_records({evidence.identity(value):value for value in (left,right)})
+        for mode in ('oracle','probe','live'):
+            self.assertEqual(campaign.collection_run_id(task,mode),campaign.purpose(task,mode))
+        with self.assertRaises(ValueError):campaign.collection_run_id(task,'experiment-probe')
+
     def test_report_admission_preserves_inference_and_population_boundaries(self):
         task=self.task()
         config={'qualification':{'producer':'live','inference':True},'harbor':{'n_attempts':3,'stop_on_pass':False}}

@@ -82,14 +82,23 @@ def collection_parameters(task, mode):
             'stop_on_pass':False}
 
 
-def collect(root, task, mode, bundle, captured, rows):
+def collection_run_id(task, mode, fixture=None):
+    identity = purpose(task, mode)
+    if mode == 'experiment-probe':
+        from evaluation_campaign_protocol import SCENARIOS
+        core.require(fixture in SCENARIOS, 'Unknown rehearsal report identity')
+        identity += '-' + fixture
+    return identity
+
+
+def collect(root, task, mode, bundle, captured, rows, *, fixture=None):
     from skillevaluator.tier3.harbor.collector import collect_harbor_results
     from evaluation_campaign_core import aggregates
     # The pinned collector/report schema is paired. Variant labels remain explicit
     # in the frozen definition and ledger; this bridge maps presence only.
     aggregates(root, skill=task.definition['skill'], carrier=read_profile(ROOT / task.definition['runtime_profile'])['resolved']['agent'])
     skill = task.definition['skill']; ids = sorted(task.cases(mode)); raw = root / 'raw'
-    run = raw / 'results' / skill / purpose(task, mode)
+    run = raw / 'results' / skill / collection_run_id(task, mode, fixture)
     runtime = read_profile(ROOT / task.definition['runtime_profile'])['resolved']
     data = collect_harbor_results(skill, [runtime['agent']], run, root / 'jobs', **collection_parameters(task, mode),
         grading_mode='custom_only', agent_models={runtime['agent']: {'model': runtime['model'] if mode in ('probe', 'experiment-probe', 'live') else 'credential-free-oracle', 'source': task.definition['runtime_profile']}})
@@ -257,7 +266,7 @@ def run(root, task, mode, *, reference=None, fixture=None):
                         target = artifact / 'retained' / path.relative_to(root / 'jobs'); target.parent.mkdir(parents=True, exist_ok=True)
                         target.write_text(redact_sensitive_text(raw).replace(str(root), '<campaign>').replace(str(ROOT), '<checkout>'))
                 if bundle is not None:
-                    try: collect(root, task, mode, bundle, captured, rows)
+                    try: collect(root, task, mode, bundle, captured, rows, fixture=fixture)
                     except Exception as error:
                         ledger['report_failure']=type(error).__name__ + ': ' + str(error)[:500]
         finally:
