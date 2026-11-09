@@ -116,6 +116,32 @@ class ExecEvents(unittest.TestCase):
         self.assertEqual(len(step.extra['tool_metadata']['raw_event_lines']),3)
         with self.assertRaises(MissingCodexObservation):self.parse(self.stream({'type':'item.completed','item':end}))
 
+    def test_separate_diagnostics_are_retained_without_relaxing_json_event_admission(self):
+        from evaluation_codex import exec_trajectory,UnsupportedCodexProtocol
+        events=self.stream({'type':'item.completed','item':self.edit('failed')})
+        raw='\n'.join(map(json.dumps,events))
+        diagnostics='ERROR codex_core::tools::router: error=Exit code: 1\nWall time: 0 seconds\nOutput:\nFailed to write file /workspace/output/result.txt\n'
+        trajectory=exec_trajectory(raw,self.adapter,diagnostics=diagnostics)
+        self.assertEqual(trajectory.extra['diagnostic_trace'],{'member':'agent/codex-stderr.txt',
+            'sha256':'sha256:'+hashlib.sha256(diagnostics.encode()).hexdigest()})
+        self.assertEqual(trajectory.extra['raw_trace']['sha256'],'sha256:'+hashlib.sha256(raw.encode()).hexdigest())
+        self.assertEqual(len(trajectory.steps),1)
+        self.assertEqual(trajectory.steps[0].extra['status'],'failed')
+        # Mixed diagnostic text still fails. The runtime must separate the real
+        # channels rather than teaching the parser to skip arbitrary output.
+        with self.assertRaises(UnsupportedCodexProtocol):
+            exec_trajectory(raw+'\n'+diagnostics,self.adapter,diagnostics='')
+
+    def test_missing_diagnostic_stream_is_missing_essential_runtime_evidence(self):
+        import tempfile
+        from evaluation_codex import CampaignCodex,MissingCodexObservation
+        with tempfile.TemporaryDirectory() as directory:
+            adapter=object.__new__(CampaignCodex);adapter.logs_dir=Path(directory)
+            (adapter.logs_dir/'codex.txt').write_text(json.dumps({'type':'turn.completed','usage':{
+                'input_tokens':0,'cached_input_tokens':0,'output_tokens':0}})+'\n')
+            with self.assertRaisesRegex(MissingCodexObservation,'diagnostic stream'):
+                adapter.populate_context_post_run(SimpleNamespace())
+
     def test_native_file_change_cannot_bypass_gh_command_authorization(self):
         from skillevaluator.tier3.eval_core.atif_helpers import get_all_tool_calls
         from gh_evaluations import module

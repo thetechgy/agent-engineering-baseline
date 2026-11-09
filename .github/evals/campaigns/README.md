@@ -325,8 +325,13 @@ or incomplete. File-change updates, extra file-change fields, mismatched paths o
 operations, duplicate IDs, incomplete lifecycles and events after a terminal turn
 remain rejected. Exec file-change payloads omit patch contents and move targets;
 the adapter cannot recover those absent details. Raw trace digest and event line
-references link every normalized action to its source. This is bounded support
-for the frozen CLI/profile, not universal event or provider compatibility.
+references link every normalized action to its source. New launches capture JSON
+stdout in `codex.txt` and diagnostics in `codex-stderr.txt`, with both retained and
+hashed. Failed native edits can emit multiline router errors to stderr; those are
+diagnostic data, not JSON events. Unknown or non-JSON stdout still fails closed.
+The historical authenticated trace retains its original merged bytes unchanged.
+This is bounded support for the frozen CLI/profile, not universal event or
+provider compatibility.
 
 The existing Boolean CLI probes now request real code-mode `tools.apply_patch`
 operations through the non-forwarding endpoint: add the task submission, add,

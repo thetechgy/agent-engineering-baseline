@@ -244,7 +244,7 @@ class NativeAdapterContracts(unittest.TestCase):
 
     @unittest.skipUnless(__import__('importlib.util',fromlist=['find_spec']).find_spec('aeb_gh_fixture') and __import__('importlib.metadata',fromlist=['version']).version('skillevaluator') == '0.8.0', 'Owning native backend required')
     def test_nonmounted_runtime_prepares_verifier_logs_and_readable_atomic_trajectory(self):
-        import stat
+        import hashlib, stat
         from types import SimpleNamespace
         from codex_pilot_runtime import prepare_cli
         from evaluation_codex import CampaignCodex
@@ -265,12 +265,15 @@ class NativeAdapterContracts(unittest.TestCase):
                     {'type':'item.completed','item':{**item,'aggregated_output':'/workspace\n','exit_code':0,'status':'completed'}},
                     {'type':'turn.completed','usage':{'input_tokens':0,'cached_input_tokens':0,'output_tokens':0}}]
             (logs/'codex.txt').write_text('\n'.join(map(json.dumps,events)))
+            (logs/'codex-stderr.txt').write_text('synthetic retained diagnostic\n')
             adapter=object.__new__(CampaignCodex);adapter.logs_dir=logs;adapter.model_name=PROFILE['model'];adapter.profile=PROFILE;adapter.live=False;adapter.task=SimpleNamespace(native_file_edit_probe=False)
             adapter.populate_context_post_run(SimpleNamespace())
             self.assertEqual(outside.read_text(),'preserved')
             self.assertFalse((logs/'trajectory.json').is_symlink())
             self.assertEqual(stat.S_IMODE((logs/'trajectory.json').stat().st_mode),0o644)
             self.assertEqual(reports.read_json(logs/'trajectory.json')['steps'][0]['observation']['results'][0]['content'],'/workspace\n')
+            self.assertEqual(reports.read_json(logs/'trajectory.json')['extra']['diagnostic_trace']['sha256'],
+                             'sha256:'+hashlib.sha256((logs/'codex-stderr.txt').read_bytes()).hexdigest())
 
     @unittest.skipUnless(__import__('importlib.util',fromlist=['find_spec']).find_spec('aeb_gh_fixture') and __import__('importlib.metadata',fromlist=['version']).version('skillevaluator') == '0.8.0', 'Owning native backend required')
     def test_private_verifier_transport_owns_helpers_and_rejects_links_and_escape(self):

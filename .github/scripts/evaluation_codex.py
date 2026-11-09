@@ -28,7 +28,7 @@ class CodexRuntimeError(ValueError):
     """A recognized terminal failure, distinct from an unsupported event."""
 
 
-def exec_trajectory(raw, adapter):
+def exec_trajectory(raw, adapter, *, diagnostics=None):
     """Read pinned 0.167 exec events as data; never execute recorded actions.
 
     File-change items contain paths/operations/status, not patch contents or
@@ -185,7 +185,9 @@ def exec_trajectory(raw, adapter):
         agent=Agent(name='codex',version=adapter.profile['cli'],model_name=adapter.model_name),
         steps=steps, notes='\n'.join(notes) or None,
         extra={'source':'codex-0.167-exec-json','inference':getattr(adapter,'live',False),
-               'raw_trace':trace,'informational_events':informational})
+               'raw_trace':trace,'informational_events':informational,
+               **({'diagnostic_trace':{'member':'agent/codex-stderr.txt',
+                    'sha256':'sha256:'+hashlib.sha256(diagnostics.encode()).hexdigest()}} if diagnostics is not None else {})})
 
 
 class CampaignCodex(PilotCodex):
@@ -217,6 +219,10 @@ class CampaignCodex(PilotCodex):
         if not path.exists():
             raise MissingCodexObservation('Missing native log')
         raw = read_bytes(path, limit=16*1024*1024).decode()
+        diagnostic_path = self.logs_dir / 'codex-stderr.txt'
+        if not diagnostic_path.exists():
+            raise MissingCodexObservation('Missing native diagnostic stream')
+        diagnostics = read_bytes(diagnostic_path, limit=16*1024*1024).decode()
         fault = os.environ.get('AEB_CAMPAIGN_OBSERVATION_FIXTURE')
         if fault:
             require(not self.live and os.environ.get('AEB_PILOT_PROBE') == '1', 'Live observation injection refused')
@@ -225,7 +231,7 @@ class CampaignCodex(PilotCodex):
             if fault == 'unsupported-runtime': raw += '\n' + json.dumps({'type':'unsupported.synthetic.control'})
             elif fault == 'missing-evidence': raw = '\n'.join(line for line in raw.splitlines() if '"turn.completed"' not in line)
             else: raise ValueError('Unknown observation fixture')
-        trajectory = exec_trajectory(raw, self)
+        trajectory = exec_trajectory(raw, self, diagnostics=diagnostics)
         if not self.live and self.task.native_file_edit_probe:
             edits = [step for step in trajectory.steps if step.tool_calls
                      and step.tool_calls[0].function_name == 'file_change']
@@ -239,7 +245,7 @@ class CampaignCodex(PilotCodex):
             require(statuses == ['completed'] * 4 + ['failed'] and kinds == {'add','update','delete'},
                     'Native file-edit probe did not exercise success/failure and all operations')
             (self.logs_dir / 'native-file-edit-probe.json').write_text(json.dumps({
-                'raw_trace':trajectory.extra['raw_trace'], 'statuses':statuses, 'operations':sorted(kinds),
+                'raw_trace':trajectory.extra['raw_trace'], 'diagnostic_trace':trajectory.extra['diagnostic_trace'], 'statuses':statuses, 'operations':sorted(kinds),
                 'native_item_ids':[step.tool_calls[0].tool_call_id for step in edits],
                 'inference':False, 'source':'real pinned CLI native apply_patch'},indent=2)+'\n')
         # Replacing the directory entry never follows a preexisting target link.
@@ -506,7 +512,7 @@ def validate_members(members, mode):
 
 
 RETAINED_MEMBERS = ('pilot-runtime.json', 'pilot-final-policy.json', 'docker-observation.json',
-                    'probe.json', 'native-file-edit-probe.json', 'observation-injection.json', 'codex.txt', 'trajectory.json', 'task-boundary.json', 'pilot-produced-submission.json')
+                    'probe.json', 'codex-stderr.txt', 'native-file-edit-probe.json', 'observation-injection.json', 'codex.txt', 'trajectory.json', 'task-boundary.json', 'pilot-produced-submission.json')
 
 
 def skill_access(trial, present, native):

@@ -106,8 +106,13 @@ has archive digest `sha256:c70cc1c578775cb9c70410526d92f90fbaec67a03fecd67d6450e
 its successful isolated grading job verified cleanup and report reproduction.
 The superseded parent run is inconclusive for full qualification; final-head
 native file-edit and historical qualification are recorded on PR #126.
-Parser fixtures, real CLI probes and retrospective grading remain separate.
-No inference, judge, replacement slot or skill revision is part of this recovery.
+The real native probe at `df3fc9a` emitted four completed edits and one failed
+edit, but multiline stderr diagnostics contaminated the merged JSON capture and
+correctly stopped parsing. The owning launch now retains stdout and stderr
+separately, with diagnostic hashes linked to the normalized trajectory. Unknown
+or non-JSON event output remains rejected; final-source qualification is recorded
+on the PR. Parser fixtures, real CLI probes and retrospective grading remain
+separate. No inference, judge, replacement slot or skill revision is part of this recovery.
 New source profiles preserve executed-head profiles and historical receipts.
 One current-arm retrospective grade provides no matched skill-benefit comparison.
 
