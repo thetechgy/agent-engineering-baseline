@@ -48,6 +48,37 @@ class Protocol(unittest.TestCase):
             self.assertEqual({rows[offset]['arm'], rows[offset+2]['arm']}, set(pilot.ARMS))
         self.assertNotIn('pester-001', {r['case'] for r in rows})
 
+    def test_supported_profiles_render_defects_and_admission_diagnostics(self):
+        import skill_report as report
+        run = {'record_id': 'synthetic-report', 'custom': {
+            'complete_paired_population': False, 'purpose': effect.CONTROL_PURPOSE,
+            'agent': 'oracle', 'metrics': [],
+            'outcomes': {arm: {kind: 0 for kind in (*evidence.CUSTOM_OUTCOMES, 'missing')}
+                         for arm in ('with_skill', 'without_skill')}}}
+        value = {'custom': {'agent_version': 'oracle', 'cases': [], 'definitions': []}, 'observations': []}
+        for detected, basis, outcome in ((1, 'assertion', 'passed'), (0, 'survived', 'failed'), (None, 'unavailable', 'unsupported')):
+            value['observations'].append({'case_id': 'pester-003', 'arm': 'with_skill', 'attempt': 1,
+                'custom': {'outcome': outcome, 'admission_reason': 'test_failure_kind', 'measurements': [],
+                    'defects': [{'id': 'forwarding', 'detected': detected, 'basis': basis}],
+                    'usage': {key: None for key in ('n_input_tokens', 'n_cache_tokens', 'n_output_tokens',
+                                                 'agent_execution_seconds', 'verifier_seconds')}}})
+        profiles = ('pester-effectiveness-v3', 'pester-effectiveness-v4', 'pester-effectiveness-v5',
+                    effect.PROFILE_ID, 'pester-cli-pilot-retained-v6')
+        for profile in dict.fromkeys(profiles):
+            with self.subTest(profile=profile):
+                value['custom']['profile_id'] = profile
+                original = copy.deepcopy(value)
+                html = report.custom_measurements(run, value)
+                self.assertIn('<caption>Pilot admission diagnostics</caption>', html)
+                self.assertIn('test_failure_kind', html)
+                if profile.startswith('pester-effectiveness-'):
+                    self.assertIn('<caption>Seeded contract defects by case and arm</caption>', html)
+                    for label in ('forwarding', '>Detected<', '>Missed<', '>Unavailable<', 'assertion', 'survived'):
+                        self.assertIn(label, html)
+                else:
+                    self.assertNotIn('Seeded contract defects by case and arm', html)
+                self.assertEqual(value, original)
+
     def test_profile_hashes_and_historical_profiles_are_distinct(self):
         profile, _, _ = evidence.custom_contract('powershell-pester-6', ROOT, purpose=effect.PURPOSE)
         identities = evidence.custom_input_identities(ROOT, 'powershell-pester-6', purpose=effect.PURPOSE)

@@ -191,6 +191,9 @@ version the changed runtime producer and reporting admission, retaining v3 gradi
 metric definitions, task inputs and every historical profile. The compatibility
 producer likewise has a new retained-v6 runtime identity. V5 preserves the qualified
 v4 native evidence and records the decimal-threshold and exclusive-claim follow-up.
+V6 restores the retained per-defect and admission-diagnostic tables for current
+and historical effectiveness records. It changes presentation only; completed v5
+submissions, independent grades and profile identities remain unchanged.
 Only the latest exact-source preparation may authorize future execution. The preparation command
 above remains credential-free. `qualify-cohort` runs the actual twelve-entry
 scheduler through the pinned Harbor single-trial CLI, released Codex and independent
