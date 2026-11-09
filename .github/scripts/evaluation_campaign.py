@@ -108,6 +108,9 @@ def run(root, task, mode, *, reference=None, fixture=None):
     from qualify_evaluator_candidate import run_native
     from evaluation_campaign_protocol import stop_reason
     if mode != 'live': no_credentials()
+    # Hold the future key only in this parent; staging, git, Docker observations,
+    # accounting and report collection never inherit it.
+    live_key = os.environ.pop('OPENAI_API_KEY', None) if mode == 'live' else None
     profiles.runtime(profiles.candidate_versions(), owning=True)
     root.mkdir(parents=True, exist_ok=False); artifact = root / 'evidence'; artifact.mkdir()
     definition = task.definition; variants = {v['id']:v for v in definition['variants']}
@@ -180,7 +183,7 @@ def run(root, task, mode, *, reference=None, fixture=None):
             if mode == 'experiment-probe':
                 env.update(adapter.fixture_environment(task, fixture, row))
             if mode == 'live':
-                env.update(OPENAI_API_KEY=os.environ['OPENAI_API_KEY'],
+                env.update(OPENAI_API_KEY=live_key or '',
                            AEB_CAMPAIGN_APPROVAL=os.environ['AEB_CAMPAIGN_APPROVAL'],
                            AEB_CAMPAIGN_RECEIPT=os.environ['AEB_CAMPAIGN_RECEIPT'])
             started = time.monotonic()
@@ -212,7 +215,7 @@ def run(root, task, mode, *, reference=None, fixture=None):
                 return 'unknown_usage' if row['usage']['estimated_usd'] is None else None
             reason = stop_reason(row)
             if not reason:
-                try: task.validate_result(row['outcome'], reward.get('custom_metrics',{}))
+                try: task.validate_result(row['outcome'], (native_result.get('verifier_result') or {}).get('rewards') or {})
                 except (ValueError, KeyError, TypeError):
                     row['state'] = 'failed'; return 'missing_usable_evidence'
             if not reason:

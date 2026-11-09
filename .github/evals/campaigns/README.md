@@ -259,9 +259,10 @@ is below; **do not run it under the current authorization**:
 
 ```sh
 ALLOCATION="campaign-${QUALIFIED_SHA}-boolean-effectiveness-v1-prep${PREPARATION_ARTIFACT_ID}-usd8-${DISPATCH_NONCE}"
+test "$(gh api repos/thetechgy/agent-engineering-baseline/git/ref/heads/experiment/boolean-skill-effectiveness --jq .object.sha)" = "$QUALIFIED_SHA"
 gh workflow run evaluation-campaign.yml \
   --repo thetechgy/agent-engineering-baseline \
-  --ref "$QUALIFIED_SHA" -f "allocation=$ALLOCATION"
+  --ref experiment/boolean-skill-effectiveness -f "allocation=$ALLOCATION"
 ```
 
 Proposed approval wording:

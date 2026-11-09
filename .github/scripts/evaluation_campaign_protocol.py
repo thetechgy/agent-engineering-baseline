@@ -23,7 +23,8 @@ SCENARIOS = ('complete', 'interruption', 'missing-evidence', 'unsupported-runtim
 
 
 def revision():
-    return subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
+    return subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True,
+        env={k:v for k,v in os.environ.items() if not re.search('TOKEN|SECRET|API_KEY|PASSWORD',k)}).strip()
 
 
 def digest(path):
@@ -220,7 +221,8 @@ def prepare(root, task, qualification):
         if scenario=='complete':
             require(result['state']=='completed' and len(launched)==protocol(task)['attempt_slots'], 'Wrong experiment population')
             for row in launched:
-                task.check(task.fixture_control(scenario,row), row['variant'] == 'current', row['outcome'], {})
+                task.check(task.fixture_control(scenario,row),
+                           next(v['present'] for v in task.definition['variants'] if v['id'] == row['variant']), row['outcome'], {})
             require(len({r['agent_id'] for r in launched})==len(launched) and all('submission' in r for r in launched), 'Missing submissions or reused environment')
         else:
             require(len(launched)==1 and result.get('stop_reason')==expected[scenario], 'Extra launch or wrong stop: '+scenario)

@@ -133,7 +133,7 @@ class BooleanContract(Task):
                 and type(detections) is list and len(detections) == 5
                 and all(type(v) is int and v in (0,1) for v in detections)
                 and outcome.get('mutants_detected') == sum(detections)
-                and set(metrics) == {'pester_reference_pass','pester_mutation_detection','pester_test_quality'}, 'Missing usable task evidence')
+                and {'pester_reference_pass','pester_mutation_detection','pester_test_quality'} <= set(metrics), 'Missing usable task evidence')
         reference = outcome['reference_pass']
         require(metrics['pester_reference_pass'] == reference
                 and metrics['pester_mutation_detection'] == (sum(detections)/5 if reference else 0)
