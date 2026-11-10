@@ -1,5 +1,18 @@
 # Reusable evaluation campaigns
 
+The return-contract execution sequence is stopped. Earlier proposals/commands in
+this guide are historical and do not authorize another launch. See the
+[authoritative checkpoint](../EVALUATION-PLAN.md) and the
+[native deadline diagnosis and controls](../native-deadline/EVIDENCE.md).
+For operational diagnosis, inspect `pilot-lifecycle.json`, `pilot-runtime.json`,
+`pilot-observation.json`, the attempt ledger and final resource comparison together.
+`disposal_complete` proves cleanup, not task completion. An interrupted submission
+has `complete=false`; it must not be submitted for retrospective grading as a
+completed attempt. Partial fixture usage is simulated; unavailable native accounting
+must remain null. Any execution/identity/evidence/accounting failure still stops
+scheduling. The native-deadline workflow is credential-free and changes only its
+fixture deadline, leaving the production 600-second limit and frozen settings intact.
+
 Use one operator entry point with the pinned candidate evaluator, Harbor, Compose
 and APM tools already installed. Keep retained output outside the checkout in a
 persistent workspace. Disposable files follow `TMPDIR`. No credentials, inference,

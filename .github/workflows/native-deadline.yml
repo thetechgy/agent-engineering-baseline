@@ -10,6 +10,10 @@ on:
     paths:
       - '.github/scripts/codex_pilot*.py'
       - '.github/scripts/evaluation_codex.py'
+      - '.github/scripts/evaluation_campaign.py'
+      - '.github/scripts/evaluation_runtime.py'
+      - '.github/scripts/skill_evidence.py'
+      - '.github/tests/test_native_deadline.py'
       - '.github/scripts/qualify_native_deadline.py'
       - '.github/workflows/native-deadline.yml'
 permissions: {}
@@ -40,11 +44,18 @@ jobs:
           bash .github/scripts/setup-compose.sh
           APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
           echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
+      - name: Check affected contracts in the owning pinned environment
+        run: 'PYTHONPATH=.github/scripts:.github/tests "$SKILL_CURRENT_PYTHON" -B -m unittest test_native_deadline test_codex_events test_evaluation_campaign test_evaluation_protocol -q'
       - name: Qualify actual native deadlines without inference
         run: |
           args=()
           if [ "$EXPECT_BROKEN" = true ]; then args+=(--expect-broken); fi
           "$SKILL_CURRENT_PYTHON" -B .github/scripts/qualify_native_deadline.py --output "$RUNNER_TEMP/native-deadline" "${args[@]}"
+      - name: Verify checkout integrity
+        if: always()
+        run: |
+          git diff --exit-code
+          test -z "$(git status --porcelain=v1 --untracked-files=all --ignored)"
       - name: Dispose task-owned Compose configuration
         if: always()
         run: bash .github/scripts/setup-compose.sh cleanup

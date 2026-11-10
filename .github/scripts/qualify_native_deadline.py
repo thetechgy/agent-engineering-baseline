@@ -21,7 +21,9 @@ def main():
     campaign.no_credentials()
     native_compose_config(campaign.ROOT)
     original = adapter.agent_config
-    summary = {'revision': campaign.revision(), 'inference': False, 'expected_broken': args.expect_broken, 'controls': []}
+    fixture_sources = {name: hashlib.sha256((campaign.ROOT / '.github/scripts' / name).read_bytes()).hexdigest()
+                       for name in ('codex_pilot_deadline_fixture.py', 'codex_pilot_stub.py', 'qualify_native_deadline.py')}
+    summary = {'fixture_sources': fixture_sources, 'native_agent_deadline_seconds': 45, 'production_agent_seconds': 600, 'revision': campaign.revision(), 'inference': False, 'expected_broken': args.expect_broken, 'controls': []}
     for scenario in (('emitted',) if args.expect_broken else ('normal', 'emitted', 'empty', 'secondary', 'cancelled')):
         def config(task, mode, control, runtime, present):
             value = original(task, mode, control, runtime, present)
@@ -68,6 +70,10 @@ def main():
                     require('native-deadline-stderr' in diagnostics and 'fixture-redaction-sentinel' not in diagnostics, 'Diagnostic loss or redaction failure')
             require('report_failure' not in ledger, 'Partial report could not be reproduced')
             public = root / 'evidence/public'
+            record = reports.read_json(next(public.rglob('public-report.json')))
+            observations = record['observations']
+            require(len(observations) == 1 and observations[0]['custom']['outcome'] == ('interrupted' if scenario == 'cancelled' else 'timeout'), 'Reliability outcome missing')
+            require(all(m['status'] == 'unavailable' and m['value'] is None for m in observations[0]['custom']['measurements']), 'Unavailable task correctness became a grade')
             require(public.exists() and (root / 'evidence/consolidated/report.html').read_bytes() == (root / 'evidence/reproduced/report.html').read_bytes(), 'Report reproduction failed')
         if args.expect_broken:
             exception = next((root / 'evidence/native').rglob('exception.txt')).read_text()

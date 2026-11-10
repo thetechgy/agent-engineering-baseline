@@ -1,19 +1,19 @@
 """Pilot-only adaptation of the pinned secure Docker transport; no host mounts.
 
-Harbor's public import_path selects this class. Network policy and lifecycle are
-inherited. The two compatibility changes use container-local logs (Harbor's
-non-mounted collector) and stdin environment delivery as the target user, avoiding
-CAP_CHOWN. Private transport helpers are pinned by the pilot input manifest.
+Harbor's public import_path selects this class. Network policy and containment
+remain inherited. Container-local logs, stdin environment delivery as the target
+user, and bounded stopped-container retention avoid host mounts and CAP_CHOWN.
+Private lifecycle helpers are pinned by the pilot input manifest.
 """
 import asyncio
 import hashlib
 import io
 import json
+import os
 import signal
 import shutil
 import tarfile
 import time
-import os
 from pathlib import Path
 
 from skillevaluator.tier3.harbor.secure_docker_environment import (
@@ -99,7 +99,7 @@ class PilotEnvironment(SkillEvaluatorSecureDockerEnvironment):
             await asyncio.wait_for(process.wait(), 5)
             raise
         try:
-            async with asyncio.timeout(10):
+            async with asyncio.timeout(5):
                 chunks = bytearray()
                 while chunk := await process.stdout.read(65536):
                     chunks.extend(chunk)
@@ -107,7 +107,7 @@ class PilotEnvironment(SkillEvaluatorSecureDockerEnvironment):
                         raise ValueError('Evidence transfer size limit')
                 if await process.wait():
                     raise ValueError('Evidence file unavailable')
-            with tarfile.open(fileobj=io.BytesIO(chunks)) as archive:
+            with tarfile.open(fileobj=io.BytesIO(chunks), mode='r:') as archive:
                 members = archive.getmembers()
                 if len(members) != 1 or not members[0].isfile() or members[0].size > limit:
                     raise ValueError('Unsafe evidence member')
