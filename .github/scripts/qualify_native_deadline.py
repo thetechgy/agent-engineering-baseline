@@ -44,6 +44,12 @@ def main():
             require(all(r['state'] == 'unlaunched' for r in ledger['entries'][1:]), 'Operational failure did not stop scheduling')
             require(row['native_exception'] == ('NonZeroAgentExitCodeError' if args.expect_broken else 'AgentTimeoutError'), 'Primary cause changed: ' + str(row))
             require(row['usage']['estimated_usd'] is None, 'Missing complete usage became a number')
+        audit = reports.read_json(next((root / 'evidence/retained').rglob('pilot-runtime.json')))
+        witness = audit['deadline_fixture_witness']
+        require(witness and witness['events_emitted'] and witness['stderr_emitted'] and witness['submission_bytes'] == 461, 'Emission not observed before deadline')
+        require(witness['submission_sha256'] == hashlib.sha256(load(campaign.ROOT / '.github/evals/campaigns/boolean-contract.json').payload('identity')).hexdigest(), 'Emission identity mismatch')
+        require(witness['observed_elapsed_seconds'] < 45, 'Emission not observed before deadline')
+        summary['emission_witness'] = witness
         summary['controls'].append({'scenario': scenario, 'native_exception': row.get('native_exception'),
             'cleanup': ledger['cleanup_complete'], 'ledger': str(root.relative_to(args.output) / 'evidence/attempt-ledger.json')})
         reports.write_json(args.output / 'qualification.json', summary)
