@@ -17,8 +17,9 @@ numeric type predicates. Original bytes, original unmeasured result, task contra
 reference, mutants, scoring, skills, candidate and runtime pins are preserved.
 The targeted native workflow must qualify the exact retained current submission;
 parser admission is not correctness or isolation evidence. Latest-PowerShell CI
-and declared frozen-grader runtime selection are separate. The final hosted source, artifact, replay and report receipts are maintained on
-PR #131; only completed authenticated qualification supports review readiness.
+and declared frozen-grader runtime selection are separate. The final hosted source,
+artifact, replay and report receipts are maintained on PR #131. Only completed
+authenticated qualification supports review readiness.
 
 **One next action:** review the focused implementation and its authenticated native
 replay evidence once its required checks complete. No inference, judge, live gate,
