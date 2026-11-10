@@ -1,0 +1,44 @@
+{
+  "source": "a8ab2e2e03a2989863a514df2a6b357c44fbc012",
+  "renderer": ".github/scripts/skill_report.py",
+  "records": [
+    {
+      "label": "historical-development-current",
+      "run": 42844732493,
+      "artifact": 13778387919,
+      "source": "9f6929f2b2be6ad66b40cd9ab9edf68caa124aee",
+      "historical": true,
+      "correctness_estimates_excluded": false
+    },
+    {
+      "label": "historical-development-candidate-reliability",
+      "run": 42847531876,
+      "artifact": 13779353316,
+      "source": "9f6929f2b2be6ad66b40cd9ab9edf68caa124aee",
+      "historical": true,
+      "correctness_estimates_excluded": true
+    },
+    {
+      "label": "pester-return-development-candidate-v1",
+      "run": 42908510730,
+      "artifact": 13808015117,
+      "source": "a8ab2e2e03a2989863a514df2a6b357c44fbc012",
+      "historical": false,
+      "continue_allowed": true
+    },
+    {
+      "label": "pester-return-transfer-current-v3",
+      "run": 42911213479,
+      "artifact": 13806864132,
+      "source": "a8ab2e2e03a2989863a514df2a6b357c44fbc012",
+      "historical": false,
+      "continue_allowed": false
+    }
+  ],
+  "historical_baseline_pooled": false,
+  "historical_failure_excluded_from_correctness": true,
+  "native_custom_cross_run_policy_preserved": true,
+  "html_sha256": "f395a62a76cb3c3d5a2dbac01e7aa60757107fb895c84845c3976e9e1a7ad91e",
+  "analysis_sha256": "dcce64d6f99c72977ee2cca95fb65844d162b5266b2b603bc990226885e30bf4",
+  "reproduced": true
+}

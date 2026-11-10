@@ -1,5 +1,14 @@
 # Return-contract new allocation receipt
 
+**Execution update:** this exact proposal was authorized, then stopped under its
+rules at transfer/current's first unsupported grading result. Seven attempts
+launched, six were measured and eleven stayed unlaunched. Transfer/candidate was
+not dispatched. The conditional authorization is closed; do not execute the
+historical commands below to continue it. See the [execution results](EXECUTION.md).
+The immutable approved proposal remains at commit `75b55ce29c8bcec4506dd5997a7fd1be7c253a1a`.
+
+## Original proposal, retained as history
+
 Status: **ready for a new approval decision**. The linked exact-source checks
 and independent admission passed. This receipt is the sole active proposal;
 the former four-campaign authorization remains stopped and closed. No model

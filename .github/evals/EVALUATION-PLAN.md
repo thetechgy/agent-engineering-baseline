@@ -1,5 +1,37 @@
 # Issue #95 dependency modernization checkpoint
 
+The exact three-campaign allocation in receipt `75b55ce` was explicitly authorized
+and executed at `a8ab2e2e03a2989863a514df2a6b357c44fbc012`. The sequence **stopped
+under its approved rules** at transfer/current's first unsupported grading result.
+Seven new attempts launched, six were measured, one was unmeasured and eleven
+remained unlaunched. Transfer/candidate was not dispatched. No retry, replacement,
+continuation, judge, adoption, dependency/default change or merge occurred.
+
+The [execution results and consolidated report](../../docs/evaluations/return-contract-new-allocation/EXECUTION.md)
+retain exact authenticated artifacts, source/allocation/gate bindings, submission
+receipts, token accounting, report reproduction and completed cleanup.
+Development/candidate completed six measured outcomes: candidate 3/3 primary
+success, its absent arm 0/3; all reference checks passed and only the absent arm
+missed integer-result. Transfer/current's one agent completed, but the frozen
+grader returned `unsupported` / `expression_policy`; task correctness remains
+unavailable, with five positions unlaunched. Transfer/candidate's six positions
+also remain unlaunched. The allocation is closed after this stop.
+
+New estimated usage is **$0.3485231**, with complete native usage for all seven
+launches and verified cleanup. This is not a provider invoice or billing cap;
+CI costs are separate. The six earlier development/current outcomes remain a
+separate historical comparator (current and absent each 0/3), and the older
+candidate timeout remains an unmeasured reliability event. Historical total
+spending remains unknown. The development signal is positive but indirect and
+output-informed; transfer benefit/regression and candidate adoption remain
+unestablished. PR #130 remains unmerged.
+
+**One next action:** review the retained transfer/current submission against the
+task-owned expression admission policy in credential-free analysis before proposing
+another allocation. The old authorization permits no continuation after this stop.
+
+## Merged readiness checkpoint, retained as history
+
 PR #129 is merged at `a8ab2e2e03a2989863a514df2a6b357c44fbc012`, currently the
 qualified main revision. Its tree matches reviewed head
 `7ced1b365ce443780620f9b4899339546d422fe6`. Fresh native lifecycle qualification,
