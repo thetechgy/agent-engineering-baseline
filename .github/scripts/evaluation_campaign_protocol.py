@@ -9,6 +9,9 @@ import os
 from pathlib import Path
 import re
 import subprocess
+from datetime import datetime, timezone
+
+from evaluation_campaign_selection import binding, location, registration
 
 from evaluation_campaign_core import require, schedule
 from evaluation_runtime import ROOT, read_profile
@@ -121,7 +124,9 @@ def validate_receipt(receipt, approval, task):
     require(receipt == {**receipt, 'artifact': artifact, 'dispatch': nonce, 'allocation': approval,
                        'revision': revision(), 'protocol_digest': digest(ROOT / task.definition['protocol']),
                        'run_id': os.environ.get('GITHUB_RUN_ID'), 'first_dispatch': True,
-                       'authentication': 'github-api-producer-and-digest'}
+                       'authentication': 'github-api-producer-and-digest', **binding(task),
+                       'preparation_location': receipt.get('preparation_location')}
+            and receipt.get('preparation_location') in {p['location'] for p in registration(task)['producers']}
             and re.fullmatch('sha256:[0-9a-f]{64}', receipt.get('artifact_digest', '')) is not None,
             'Stale or unauthenticated campaign receipt')
 
@@ -146,7 +151,7 @@ def claim(root, receipt):
 
 
 def authenticate(output, approval, task):
-    from codex_pilot_dispatch import api, extract, REPO_ID, LIMIT
+    from codex_pilot_dispatch import api, REPO_ID
     from evaluation_campaign import no_credentials
     no_credentials()
     require(os.environ.get('GITHUB_ACTIONS') == 'true' and os.environ.get('GITHUB_REPOSITORY') == REPO, 'Reviewed Actions workflow required')
@@ -161,24 +166,33 @@ def authenticate(output, approval, task):
         if len(batch)<100: break
     else: raise ValueError('Incomplete dispatch history')
     first_dispatch(runs, approval, os.environ['GITHUB_RUN_ID'])
-    artifact=api('actions/artifacts/'+artifact_id); producer=api('actions/runs/'+str(artifact['workflow_run']['id']))
-    authenticate_metadata(artifact, producer, revision(), REPO_ID, LIMIT)
+    reference, artifact, producer, internal = acquire(output, artifact_id, task)
+    receipt={'artifact':artifact_id,'artifact_digest':artifact['digest'],'producer_run':producer['id'],'revision':revision(),
+             'protocol_digest':digest(ROOT/task.definition['protocol']),'dispatch':nonce,'run_id':os.environ['GITHUB_RUN_ID'],
+             'allocation':approval,'first_dispatch':True,'authentication':'github-api-producer-and-digest',
+             **binding(task), 'preparation_location':internal}
+    reports.write_json(reference/'dispatch-authentication.json',receipt)
+    reports.write_json(output/'artifact.json',artifact); reports.write_json(output/'producer-run.json',producer)
+    return reference
+
+
+def acquire(output, artifact_id, task):
+    """Credential-free acquisition shared by authentication and fresh inspection."""
+    from codex_pilot_dispatch import api, REPO_ID, LIMIT
+    from evaluation_campaign import no_credentials
+    no_credentials()
+    require(re.fullmatch('[1-9][0-9]*', artifact_id) is not None, 'Invalid preparation artifact ID')
+    artifact=api('actions/artifacts/'+artifact_id)
+    producer=api('actions/runs/'+str(artifact['workflow_run']['id']))
+    authenticate_metadata(artifact, producer, revision(), REPO_ID, LIMIT, task=task)
     output.mkdir(parents=True,exist_ok=False)
     archive=output/'preparation.zip'
     with archive.open('xb') as stream:
         subprocess.run(['gh','api',f'repos/{REPO}/actions/artifacts/{artifact_id}/zip'],stdout=stream,check=True,timeout=120)
-    extract(archive,output/'downloaded',artifact)
-    reference=output/'downloaded/preparation/evidence'
-    require(reports.read_json(reference/'frozen-proposal.json')==frozen(task), 'Unqualified source artifact')
-    ready=reports.read_json(reference/'preparation.json')
-    require(ready.get('complete') is True and ready.get('revision')==revision() and ready.get('inference') is False
-            and ready.get('protocol_digest')==digest(ROOT/task.definition['protocol']), 'Incomplete preparation')
-    receipt={'artifact':artifact_id,'artifact_digest':artifact['digest'],'producer_run':producer['id'],'revision':revision(),
-             'protocol_digest':digest(ROOT/task.definition['protocol']),'dispatch':nonce,'run_id':os.environ['GITHUB_RUN_ID'],
-             'allocation':approval,'first_dispatch':True,'authentication':'github-api-producer-and-digest'}
-    reports.write_json(reference/'dispatch-authentication.json',receipt)
-    reports.write_json(output/'artifact.json',artifact); reports.write_json(output/'producer-run.json',producer)
-    return reference
+    reference, internal = admit(archive, output/'downloaded', artifact, producer, task)
+    reports.write_json(output/'artifact.json',artifact)
+    reports.write_json(output/'producer-run.json',producer)
+    return reference, artifact, producer, internal
 
 
 def first_dispatch(runs, approval, run_id):
@@ -188,17 +202,48 @@ def first_dispatch(runs, approval, run_id):
     require(current.get('run_attempt')==1 and current.get('event')=='workflow_dispatch', 'Workflow replay refused')
 
 
-def authenticate_metadata(artifact, run, source, repo_id, limit):
+def authenticate_metadata(artifact, run, source, repo_id, limit, *, task=None):
     origin=artifact.get('workflow_run',{})
+    if task is not None:
+        location(task, artifact, run)
+        require(isinstance(artifact.get('expires_at'), str), 'Preparation expiration required')
     require(run.get('repository',{}).get('id')==repo_id and run['repository']['full_name']==REPO
             and run.get('head_repository',{}).get('id')==repo_id
             and origin.get('repository_id')==origin.get('head_repository_id')==repo_id
             and origin.get('id')==run.get('id') and origin.get('head_sha')==run.get('head_sha')==source
-            and run.get('path')==WORKFLOW and run.get('event') in ('pull_request','workflow_dispatch')
+            and (task is not None or run.get('path')==WORKFLOW) and run.get('event') in ('pull_request','workflow_dispatch')
             and run.get('status')=='completed' and run.get('conclusion')=='success'
-            and artifact.get('name')==f'reusable-evaluation-{run["run_attempt"]}' and artifact.get('expired') is False
+            and (task is not None or artifact.get('name')==f'reusable-evaluation-{run["run_attempt"]}') and artifact.get('expired') is False
+            and (not artifact.get('expires_at') or datetime.fromisoformat(artifact['expires_at'].replace('Z','+00:00')) > datetime.now(timezone.utc))
             and type(artifact.get('size_in_bytes')) is int and 0<artifact['size_in_bytes']<=limit
             and re.fullmatch('sha256:[0-9a-f]{64}',artifact.get('digest','')), 'Preparation producer authentication failed')
+
+
+def admit(archive, downloaded, artifact, producer, task):
+    """Same data-only archive admission for fixture qualification and live auth.
+
+    Normalize the registered subtree, including sibling scenario records, to the
+    historical consumer layout. Never discover or execute paths from an archive.
+    """
+    from codex_pilot_dispatch import extract, REPO_ID, LIMIT
+    authenticate_metadata(artifact, producer, revision(), REPO_ID, LIMIT, task=task)
+    internal = location(task, artifact, producer)
+    extract(archive, downloaded, artifact)
+    original = downloaded / internal
+    require(reports.read_json(original/'frozen-proposal.json') == frozen(task), 'Unqualified source artifact')
+    ready = reports.read_json(original/'preparation.json')
+    require(ready == {'complete':True, 'inference':False, 'revision':revision(),
+                     'protocol_digest':digest(ROOT/task.definition['protocol']), 'authorized_live_attempts':0},
+            'Incomplete preparation')
+    proof = reports.read_json(original/'scheduler-qualification.json')
+    require(proof.get('complete') is True and proof.get('inference') is False
+            and proof.get('revision') == revision()
+            and proof.get('protocol_digest') == digest(ROOT/task.definition['protocol'])
+            and set(proof.get('scenarios',{})) == set(SCENARIOS), 'Incomplete scheduler preparation')
+    if internal != 'preparation/evidence':
+        require(not (downloaded/'preparation').exists(), 'Conflicting canonical preparation')
+        original.parent.rename(downloaded/'preparation')
+    return downloaded/'preparation/evidence', internal
 
 
 def prepare(root, task, qualification):
