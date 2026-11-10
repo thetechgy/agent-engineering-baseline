@@ -12,7 +12,7 @@
       "count": 1,
       "producer_status": "complete_with_caveats",
       "reason": "reference_missing",
-      "reference": "sha256:0f6855e9c5698a84bcfbe2c01d28e490686bf40034dd72008cc5ef6d6408a677",
+      "reference": "sha256:cdf602cfa6656c44ad1b03711878c7835ba50676bc5513f8ab9ebe0f02ee8d67",
       "scanner": "skillspector"
     }
   ],
@@ -31,7 +31,7 @@
       "check": "body_recommended_section",
       "line": null,
       "member": null,
-      "reference": "sha256:b1e1b5e5ced052555eaa67908c03f57dd2255c2bd02685682de21d7b211c7139",
+      "reference": "sha256:616d3c07f4a70245e6ff0bf8bb716bbdab961fd6f3a3a8087fa4abd71ca56842",
       "scanner": "SCHEMA",
       "severity": "medium"
     },
@@ -39,7 +39,7 @@
       "check": "body_recommended_section",
       "line": null,
       "member": null,
-      "reference": "sha256:c0e2a3c0cd0e0b1bc24033e2d0f84dfa01ec6aefcb1ee5b006e8f0eed2b6b183",
+      "reference": "sha256:da882a3c6edef42d1b6ca60123c36cf3811985e4f63fa2e1eb7096cf51f08b2d",
       "scanner": "SCHEMA",
       "severity": "medium"
     },
@@ -47,7 +47,7 @@
       "check": "author_missing",
       "line": null,
       "member": null,
-      "reference": "sha256:29846ecf449d48a2e31249e11af97ab7e28d864fbf727d1109344fce9e0a6c75",
+      "reference": "sha256:a6d4b7576646e566398cdd8037a11651ddf6fb7248df76a14996d83778b4dcce",
       "scanner": "SCHEMA",
       "severity": "high"
     },
@@ -55,7 +55,7 @@
       "check": "hardcoded_secrets",
       "line": 42,
       "member": "SKILL.md",
-      "reference": "sha256:da8da0d6d1e60126c3d449d71d58c074b80fb6669d56c2b1c0f69973735967ed",
+      "reference": "sha256:8205b29c46b458694aad250d0b3a5ca6cdf4772b071b4be74f2582a811f2f786",
       "scanner": "PII",
       "severity": "critical"
     },
@@ -63,7 +63,7 @@
       "check": "quality_correctness",
       "line": null,
       "member": null,
-      "reference": "sha256:8da7b951b446d56765a6ce870d3124d011da8b6ceb34c85b32a28137b3f8b966",
+      "reference": "sha256:d65c94bae74fd6563bcf9331992259716e3fc3960730d1b56b7492f68776db7e",
       "scanner": "QUALITY",
       "severity": "low"
     },
@@ -71,7 +71,7 @@
       "check": "quality_correctness",
       "line": null,
       "member": null,
-      "reference": "sha256:8ca24b949334cc6e6c3478b653ce413671b1116dd40440b61abf2fa7e592161d",
+      "reference": "sha256:41625a9f1a752bc8e4ca15ae3937d5ce2a1b9220891bb640c2ca57521375f129",
       "scanner": "QUALITY",
       "severity": "medium"
     },
@@ -79,7 +79,7 @@
       "check": "quality_correctness",
       "line": null,
       "member": null,
-      "reference": "sha256:d81fab62cb94d8eedd61437e76cd63445bcdd2b9e0cf00ad0c5ce6b9060c1e09",
+      "reference": "sha256:f4c94008aed318512daf1eb66eb30e75b4943dc9c4b226e6a38b8ea7bc0b8c85",
       "scanner": "QUALITY",
       "severity": "medium"
     },
@@ -87,7 +87,7 @@
       "check": "quality_correctness",
       "line": null,
       "member": null,
-      "reference": "sha256:56b913e8ba5f07a96d99c51e88505bb62e004b9313bbc453bb434e7a5795a959",
+      "reference": "sha256:f56b4b61b73d179b1e8ca2de94e24f6959bca4b84ac5a23ae833b2bc899d1545",
       "scanner": "QUALITY",
       "severity": "medium"
     },
@@ -95,7 +95,7 @@
       "check": "quality_discoverability",
       "line": null,
       "member": null,
-      "reference": "sha256:bfe2f026f535be0163b4a6cb66307736360e623ecfe4dbbdaae93605c5f9160b",
+      "reference": "sha256:ce96d0e3c89ca88a577454a903dbdff98c6601b6fae326956d7f9ec0e09a1e8a",
       "scanner": "QUALITY",
       "severity": "low"
     },
@@ -103,7 +103,7 @@
       "check": "quality_discoverability",
       "line": null,
       "member": null,
-      "reference": "sha256:c57bd3ddcc26e3cb3f7e4306c6c2d7dda50e3e8c98da12ef773803483ab2296a",
+      "reference": "sha256:06092151bbd49c64ee578f2c8194c5d9c9e565a16e12bb2c3074d4288da975ba",
       "scanner": "QUALITY",
       "severity": "low"
     },
@@ -111,7 +111,7 @@
       "check": "quality_reliability",
       "line": null,
       "member": null,
-      "reference": "sha256:c05758fdc00296ed8897973c807dd8f4c00f95ea4dd088f691a8fa846b38e80c",
+      "reference": "sha256:d274a12bef8df8cf4fcc233f3dcc1f8ab8c2c59bf2632d6422d226bcf3daac1d",
       "scanner": "QUALITY",
       "severity": "low"
     },
@@ -119,7 +119,7 @@
       "check": "quality_reliability",
       "line": null,
       "member": null,
-      "reference": "sha256:d819d46fc34be009dcb2e34f38b95f6591874536ee0091f0a0794f0e377ce5ea",
+      "reference": "sha256:eeefdc36a54e2764156c410bdc6af014e2954ba177ce9a35514a7e739608b766",
       "scanner": "QUALITY",
       "severity": "low"
     },
@@ -127,7 +127,7 @@
       "check": "quality_reliability",
       "line": null,
       "member": null,
-      "reference": "sha256:8497b794e5bdecb5e337a3fc8d423a309e419cbe5be6df949258245fd4326850",
+      "reference": "sha256:577212ca8670f4d6eba53e382cef01e7540d2a5d9aec50f46668a1f5bab03bb9",
       "scanner": "QUALITY",
       "severity": "low"
     }
@@ -182,8 +182,8 @@
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:40804dfd7e229a8533c1a166b9efa2937dcd774d152d159fe5d3cee5425a7d40",
-      "id": "sha256:4ba07a0a437b1d3b9ab7ba1db1aa3f7d1dfcd4595a84c4401885948cf364d88f",
+      "digest": "sha256:0720132b5a25273e8a8296aef9111264b44c47291eaae85d1638fb145cd837bc",
+      "id": "sha256:48ee285e6f09ed3ea6a571b792e06bb560068eaef418ba2b43b2c25b1f3dee1c",
       "locator": [],
       "member": "reports/catalog-summary.json",
       "provenance": "runtime_recorded"
@@ -192,348 +192,348 @@
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:c66057108c3b2a0d5895cfd17fe34ffae7a8589cf751a9c0a681394ca75dfc08",
-      "id": "sha256:2cb5b194b666fee945fb14e05fa0e180649e4a15cdcc5ece8a5e896c2a0862e9",
+      "digest": "sha256:808146c0199a2b17d021558b75e88ef182c2182994d40cb74b2f46188e50d7ca",
+      "id": "sha256:88056ed62aa08fbb607dd72f19ab3cbd33cd42c042856fae30197665995754f0",
       "locator": [],
-      "member": "reports/ansible/skillevaluator-output-20261110142732.json",
+      "member": "reports/ansible/skillevaluator-output-20261110202337.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:c66057108c3b2a0d5895cfd17fe34ffae7a8589cf751a9c0a681394ca75dfc08",
-      "id": "sha256:3a0a8c046f76def32004ca7a930cb4a57549940b227673fc277ff54867dbc264",
+      "digest": "sha256:808146c0199a2b17d021558b75e88ef182c2182994d40cb74b2f46188e50d7ca",
+      "id": "sha256:91abb47745efc9fa153690a6014efb1ba76a3b7b248c777b3e9806f0dd7177b9",
       "locator": [
         "results",
         0
       ],
-      "member": "reports/ansible/skillevaluator-output-20261110142732.json",
+      "member": "reports/ansible/skillevaluator-output-20261110202337.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:c66057108c3b2a0d5895cfd17fe34ffae7a8589cf751a9c0a681394ca75dfc08",
-      "id": "sha256:1beb4daab7341c27e902ec0da4fb160cdd8c3160155ea76a1436292acd0265b5",
+      "digest": "sha256:808146c0199a2b17d021558b75e88ef182c2182994d40cb74b2f46188e50d7ca",
+      "id": "sha256:74a8bf1a6fcf47c60b2e165a1d070d121b16bef047ddacb2e5eb8a58528eacd0",
       "locator": [
         "results",
         1
       ],
-      "member": "reports/ansible/skillevaluator-output-20261110142732.json",
+      "member": "reports/ansible/skillevaluator-output-20261110202337.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:c66057108c3b2a0d5895cfd17fe34ffae7a8589cf751a9c0a681394ca75dfc08",
-      "id": "sha256:0f6855e9c5698a84bcfbe2c01d28e490686bf40034dd72008cc5ef6d6408a677",
+      "digest": "sha256:808146c0199a2b17d021558b75e88ef182c2182994d40cb74b2f46188e50d7ca",
+      "id": "sha256:cdf602cfa6656c44ad1b03711878c7835ba50676bc5513f8ab9ebe0f02ee8d67",
       "locator": [
         "results",
         2
       ],
-      "member": "reports/ansible/skillevaluator-output-20261110142732.json",
+      "member": "reports/ansible/skillevaluator-output-20261110202337.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:c66057108c3b2a0d5895cfd17fe34ffae7a8589cf751a9c0a681394ca75dfc08",
-      "id": "sha256:8ce4ca45cf4683dec2790228ce488db8ddab0632ac5f80f7fab00defe585fba6",
+      "digest": "sha256:808146c0199a2b17d021558b75e88ef182c2182994d40cb74b2f46188e50d7ca",
+      "id": "sha256:dcec4f8582af85e988c6ddc1456bacdaeb26f65d6416f5905260e023bde59628",
       "locator": [
         "results",
         3
       ],
-      "member": "reports/ansible/skillevaluator-output-20261110142732.json",
+      "member": "reports/ansible/skillevaluator-output-20261110202337.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:c66057108c3b2a0d5895cfd17fe34ffae7a8589cf751a9c0a681394ca75dfc08",
-      "id": "sha256:2f9a83bb3ae61377f41ccb2f3be44182031b7d0a0261740b3d43b0b9edc8fb36",
+      "digest": "sha256:808146c0199a2b17d021558b75e88ef182c2182994d40cb74b2f46188e50d7ca",
+      "id": "sha256:6287c2ac2c98c548845fcecf0614010f2fbb4f62ff0cc85ed3e77f9668d13288",
       "locator": [
         "results",
         4
       ],
-      "member": "reports/ansible/skillevaluator-output-20261110142732.json",
+      "member": "reports/ansible/skillevaluator-output-20261110202337.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:c66057108c3b2a0d5895cfd17fe34ffae7a8589cf751a9c0a681394ca75dfc08",
-      "id": "sha256:bd3c3a102f62144ef4ac106b35e1bffe15bdaf192fcf2651c672a49857dfd171",
+      "digest": "sha256:808146c0199a2b17d021558b75e88ef182c2182994d40cb74b2f46188e50d7ca",
+      "id": "sha256:aaede31c19d6567b4f32eab3ed3e534a9ff5834db5ba429b45d91a35d357b477",
       "locator": [
         "results",
         5
       ],
-      "member": "reports/ansible/skillevaluator-output-20261110142732.json",
+      "member": "reports/ansible/skillevaluator-output-20261110202337.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:c66057108c3b2a0d5895cfd17fe34ffae7a8589cf751a9c0a681394ca75dfc08",
-      "id": "sha256:94d7738b2443b669f605661c9efffb7e9d410c2b6987fbb58e8c16efc44039c9",
+      "digest": "sha256:808146c0199a2b17d021558b75e88ef182c2182994d40cb74b2f46188e50d7ca",
+      "id": "sha256:35d08100a164cf0bff818661659923dccc5ad24b10922c2dac2cc605cbba986c",
       "locator": [
         "results",
         6
       ],
-      "member": "reports/ansible/skillevaluator-output-20261110142732.json",
+      "member": "reports/ansible/skillevaluator-output-20261110202337.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:c66057108c3b2a0d5895cfd17fe34ffae7a8589cf751a9c0a681394ca75dfc08",
-      "id": "sha256:2f33c088c3cb3097f559f2aa9b2bd34723aad1013426b5343aca79f3d9c6b580",
+      "digest": "sha256:808146c0199a2b17d021558b75e88ef182c2182994d40cb74b2f46188e50d7ca",
+      "id": "sha256:10d7937377d8d824a374cc45f6281e8aa19e6d0bc355bf3d0fd7f3225e32bb03",
       "locator": [
         "results",
         7
       ],
-      "member": "reports/ansible/skillevaluator-output-20261110142732.json",
+      "member": "reports/ansible/skillevaluator-output-20261110202337.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:c66057108c3b2a0d5895cfd17fe34ffae7a8589cf751a9c0a681394ca75dfc08",
-      "id": "sha256:3a6e8eaa6bbaddda5cd7d172f18fcd2d1a905c54675e678ad5c3487906b68fbc",
+      "digest": "sha256:808146c0199a2b17d021558b75e88ef182c2182994d40cb74b2f46188e50d7ca",
+      "id": "sha256:0fab356b8c8217ed2764b6f289c8b6e119fcfd0f1c72f09562795131dfde9501",
       "locator": [
         "results",
         8
       ],
-      "member": "reports/ansible/skillevaluator-output-20261110142732.json",
+      "member": "reports/ansible/skillevaluator-output-20261110202337.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:c66057108c3b2a0d5895cfd17fe34ffae7a8589cf751a9c0a681394ca75dfc08",
-      "id": "sha256:33e9589cd6bfbb61560a69293365540670f5693bcfc9c7a5b031ad499cf56b25",
+      "digest": "sha256:808146c0199a2b17d021558b75e88ef182c2182994d40cb74b2f46188e50d7ca",
+      "id": "sha256:f5b6470cb7fe775c42b3f0a073f7c0f55f07ba5323fb1724b3bc99c97a663caa",
       "locator": [
         "results",
         9
       ],
-      "member": "reports/ansible/skillevaluator-output-20261110142732.json",
+      "member": "reports/ansible/skillevaluator-output-20261110202337.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:c66057108c3b2a0d5895cfd17fe34ffae7a8589cf751a9c0a681394ca75dfc08",
-      "id": "sha256:af23938b26251f30a9b23825cb047b8eae7f6bc3ee1c9073353ba3eb840f6819",
+      "digest": "sha256:808146c0199a2b17d021558b75e88ef182c2182994d40cb74b2f46188e50d7ca",
+      "id": "sha256:a8d9c2f2d9cfdf7838fc69e5ea14c43c2532cd92f7f8c37fe0eeaa1c69f6232a",
       "locator": [
         "results",
         10
       ],
-      "member": "reports/ansible/skillevaluator-output-20261110142732.json",
+      "member": "reports/ansible/skillevaluator-output-20261110202337.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:c66057108c3b2a0d5895cfd17fe34ffae7a8589cf751a9c0a681394ca75dfc08",
-      "id": "sha256:b1e1b5e5ced052555eaa67908c03f57dd2255c2bd02685682de21d7b211c7139",
+      "digest": "sha256:808146c0199a2b17d021558b75e88ef182c2182994d40cb74b2f46188e50d7ca",
+      "id": "sha256:616d3c07f4a70245e6ff0bf8bb716bbdab961fd6f3a3a8087fa4abd71ca56842",
       "locator": [
         "results",
         0,
         "findings",
         0
       ],
-      "member": "reports/ansible/skillevaluator-output-20261110142732.json",
+      "member": "reports/ansible/skillevaluator-output-20261110202337.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:c66057108c3b2a0d5895cfd17fe34ffae7a8589cf751a9c0a681394ca75dfc08",
-      "id": "sha256:c0e2a3c0cd0e0b1bc24033e2d0f84dfa01ec6aefcb1ee5b006e8f0eed2b6b183",
+      "digest": "sha256:808146c0199a2b17d021558b75e88ef182c2182994d40cb74b2f46188e50d7ca",
+      "id": "sha256:da882a3c6edef42d1b6ca60123c36cf3811985e4f63fa2e1eb7096cf51f08b2d",
       "locator": [
         "results",
         0,
         "findings",
         1
       ],
-      "member": "reports/ansible/skillevaluator-output-20261110142732.json",
+      "member": "reports/ansible/skillevaluator-output-20261110202337.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:c66057108c3b2a0d5895cfd17fe34ffae7a8589cf751a9c0a681394ca75dfc08",
-      "id": "sha256:29846ecf449d48a2e31249e11af97ab7e28d864fbf727d1109344fce9e0a6c75",
+      "digest": "sha256:808146c0199a2b17d021558b75e88ef182c2182994d40cb74b2f46188e50d7ca",
+      "id": "sha256:a6d4b7576646e566398cdd8037a11651ddf6fb7248df76a14996d83778b4dcce",
       "locator": [
         "results",
         0,
         "findings",
         2
       ],
-      "member": "reports/ansible/skillevaluator-output-20261110142732.json",
+      "member": "reports/ansible/skillevaluator-output-20261110202337.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:c66057108c3b2a0d5895cfd17fe34ffae7a8589cf751a9c0a681394ca75dfc08",
-      "id": "sha256:da8da0d6d1e60126c3d449d71d58c074b80fb6669d56c2b1c0f69973735967ed",
+      "digest": "sha256:808146c0199a2b17d021558b75e88ef182c2182994d40cb74b2f46188e50d7ca",
+      "id": "sha256:8205b29c46b458694aad250d0b3a5ca6cdf4772b071b4be74f2582a811f2f786",
       "locator": [
         "results",
         3,
         "findings",
         0
       ],
-      "member": "reports/ansible/skillevaluator-output-20261110142732.json",
+      "member": "reports/ansible/skillevaluator-output-20261110202337.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:c66057108c3b2a0d5895cfd17fe34ffae7a8589cf751a9c0a681394ca75dfc08",
-      "id": "sha256:8da7b951b446d56765a6ce870d3124d011da8b6ceb34c85b32a28137b3f8b966",
+      "digest": "sha256:808146c0199a2b17d021558b75e88ef182c2182994d40cb74b2f46188e50d7ca",
+      "id": "sha256:d65c94bae74fd6563bcf9331992259716e3fc3960730d1b56b7492f68776db7e",
       "locator": [
         "results",
         9,
         "findings",
         0
       ],
-      "member": "reports/ansible/skillevaluator-output-20261110142732.json",
+      "member": "reports/ansible/skillevaluator-output-20261110202337.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:c66057108c3b2a0d5895cfd17fe34ffae7a8589cf751a9c0a681394ca75dfc08",
-      "id": "sha256:8ca24b949334cc6e6c3478b653ce413671b1116dd40440b61abf2fa7e592161d",
+      "digest": "sha256:808146c0199a2b17d021558b75e88ef182c2182994d40cb74b2f46188e50d7ca",
+      "id": "sha256:41625a9f1a752bc8e4ca15ae3937d5ce2a1b9220891bb640c2ca57521375f129",
       "locator": [
         "results",
         9,
         "findings",
         1
       ],
-      "member": "reports/ansible/skillevaluator-output-20261110142732.json",
+      "member": "reports/ansible/skillevaluator-output-20261110202337.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:c66057108c3b2a0d5895cfd17fe34ffae7a8589cf751a9c0a681394ca75dfc08",
-      "id": "sha256:d81fab62cb94d8eedd61437e76cd63445bcdd2b9e0cf00ad0c5ce6b9060c1e09",
+      "digest": "sha256:808146c0199a2b17d021558b75e88ef182c2182994d40cb74b2f46188e50d7ca",
+      "id": "sha256:f4c94008aed318512daf1eb66eb30e75b4943dc9c4b226e6a38b8ea7bc0b8c85",
       "locator": [
         "results",
         9,
         "findings",
         2
       ],
-      "member": "reports/ansible/skillevaluator-output-20261110142732.json",
+      "member": "reports/ansible/skillevaluator-output-20261110202337.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:c66057108c3b2a0d5895cfd17fe34ffae7a8589cf751a9c0a681394ca75dfc08",
-      "id": "sha256:56b913e8ba5f07a96d99c51e88505bb62e004b9313bbc453bb434e7a5795a959",
+      "digest": "sha256:808146c0199a2b17d021558b75e88ef182c2182994d40cb74b2f46188e50d7ca",
+      "id": "sha256:f56b4b61b73d179b1e8ca2de94e24f6959bca4b84ac5a23ae833b2bc899d1545",
       "locator": [
         "results",
         9,
         "findings",
         3
       ],
-      "member": "reports/ansible/skillevaluator-output-20261110142732.json",
+      "member": "reports/ansible/skillevaluator-output-20261110202337.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:c66057108c3b2a0d5895cfd17fe34ffae7a8589cf751a9c0a681394ca75dfc08",
-      "id": "sha256:bfe2f026f535be0163b4a6cb66307736360e623ecfe4dbbdaae93605c5f9160b",
+      "digest": "sha256:808146c0199a2b17d021558b75e88ef182c2182994d40cb74b2f46188e50d7ca",
+      "id": "sha256:ce96d0e3c89ca88a577454a903dbdff98c6601b6fae326956d7f9ec0e09a1e8a",
       "locator": [
         "results",
         9,
         "findings",
         4
       ],
-      "member": "reports/ansible/skillevaluator-output-20261110142732.json",
+      "member": "reports/ansible/skillevaluator-output-20261110202337.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:c66057108c3b2a0d5895cfd17fe34ffae7a8589cf751a9c0a681394ca75dfc08",
-      "id": "sha256:c57bd3ddcc26e3cb3f7e4306c6c2d7dda50e3e8c98da12ef773803483ab2296a",
+      "digest": "sha256:808146c0199a2b17d021558b75e88ef182c2182994d40cb74b2f46188e50d7ca",
+      "id": "sha256:06092151bbd49c64ee578f2c8194c5d9c9e565a16e12bb2c3074d4288da975ba",
       "locator": [
         "results",
         9,
         "findings",
         5
       ],
-      "member": "reports/ansible/skillevaluator-output-20261110142732.json",
+      "member": "reports/ansible/skillevaluator-output-20261110202337.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:c66057108c3b2a0d5895cfd17fe34ffae7a8589cf751a9c0a681394ca75dfc08",
-      "id": "sha256:c05758fdc00296ed8897973c807dd8f4c00f95ea4dd088f691a8fa846b38e80c",
+      "digest": "sha256:808146c0199a2b17d021558b75e88ef182c2182994d40cb74b2f46188e50d7ca",
+      "id": "sha256:d274a12bef8df8cf4fcc233f3dcc1f8ab8c2c59bf2632d6422d226bcf3daac1d",
       "locator": [
         "results",
         9,
         "findings",
         6
       ],
-      "member": "reports/ansible/skillevaluator-output-20261110142732.json",
+      "member": "reports/ansible/skillevaluator-output-20261110202337.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:c66057108c3b2a0d5895cfd17fe34ffae7a8589cf751a9c0a681394ca75dfc08",
-      "id": "sha256:d819d46fc34be009dcb2e34f38b95f6591874536ee0091f0a0794f0e377ce5ea",
+      "digest": "sha256:808146c0199a2b17d021558b75e88ef182c2182994d40cb74b2f46188e50d7ca",
+      "id": "sha256:eeefdc36a54e2764156c410bdc6af014e2954ba177ce9a35514a7e739608b766",
       "locator": [
         "results",
         9,
         "findings",
         7
       ],
-      "member": "reports/ansible/skillevaluator-output-20261110142732.json",
+      "member": "reports/ansible/skillevaluator-output-20261110202337.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:c66057108c3b2a0d5895cfd17fe34ffae7a8589cf751a9c0a681394ca75dfc08",
-      "id": "sha256:8497b794e5bdecb5e337a3fc8d423a309e419cbe5be6df949258245fd4326850",
+      "digest": "sha256:808146c0199a2b17d021558b75e88ef182c2182994d40cb74b2f46188e50d7ca",
+      "id": "sha256:577212ca8670f4d6eba53e382cef01e7540d2a5d9aec50f46668a1f5bab03bb9",
       "locator": [
         "results",
         9,
         "findings",
         8
       ],
-      "member": "reports/ansible/skillevaluator-output-20261110142732.json",
+      "member": "reports/ansible/skillevaluator-output-20261110202337.json",
       "provenance": "runtime_recorded"
     },
     {
@@ -566,7 +566,7 @@
       "blocking": true,
       "passed": false,
       "references": [
-        "sha256:2cb5b194b666fee945fb14e05fa0e180649e4a15cdcc5ece8a5e896c2a0862e9"
+        "sha256:88056ed62aa08fbb607dd72f19ab3cbd33cd42c042856fae30197665995754f0"
       ],
       "scanner": "catalog-total",
       "severity_counts": {
@@ -581,7 +581,7 @@
       "blocking": true,
       "passed": false,
       "references": [
-        "sha256:3a0a8c046f76def32004ca7a930cb4a57549940b227673fc277ff54867dbc264"
+        "sha256:91abb47745efc9fa153690a6014efb1ba76a3b7b248c777b3e9806f0dd7177b9"
       ],
       "scanner": "SCHEMA",
       "severity_counts": {
@@ -596,7 +596,7 @@
       "blocking": true,
       "passed": true,
       "references": [
-        "sha256:1beb4daab7341c27e902ec0da4fb160cdd8c3160155ea76a1436292acd0265b5"
+        "sha256:74a8bf1a6fcf47c60b2e165a1d070d121b16bef047ddacb2e5eb8a58528eacd0"
       ],
       "scanner": "VERSION",
       "severity_counts": {
@@ -611,7 +611,7 @@
       "blocking": true,
       "passed": false,
       "references": [
-        "sha256:0f6855e9c5698a84bcfbe2c01d28e490686bf40034dd72008cc5ef6d6408a677"
+        "sha256:cdf602cfa6656c44ad1b03711878c7835ba50676bc5513f8ab9ebe0f02ee8d67"
       ],
       "scanner": "SECURITY",
       "severity_counts": {
@@ -626,7 +626,7 @@
       "blocking": true,
       "passed": false,
       "references": [
-        "sha256:8ce4ca45cf4683dec2790228ce488db8ddab0632ac5f80f7fab00defe585fba6"
+        "sha256:dcec4f8582af85e988c6ddc1456bacdaeb26f65d6416f5905260e023bde59628"
       ],
       "scanner": "PII",
       "severity_counts": {
@@ -641,7 +641,7 @@
       "blocking": true,
       "passed": true,
       "references": [
-        "sha256:2f9a83bb3ae61377f41ccb2f3be44182031b7d0a0261740b3d43b0b9edc8fb36"
+        "sha256:6287c2ac2c98c548845fcecf0614010f2fbb4f62ff0cc85ed3e77f9668d13288"
       ],
       "scanner": "LICENSE",
       "severity_counts": {
@@ -656,7 +656,7 @@
       "blocking": true,
       "passed": true,
       "references": [
-        "sha256:bd3c3a102f62144ef4ac106b35e1bffe15bdaf192fcf2651c672a49857dfd171"
+        "sha256:aaede31c19d6567b4f32eab3ed3e534a9ff5834db5ba429b45d91a35d357b477"
       ],
       "scanner": "CODE_RISK",
       "severity_counts": {
@@ -671,7 +671,7 @@
       "blocking": true,
       "passed": true,
       "references": [
-        "sha256:94d7738b2443b669f605661c9efffb7e9d410c2b6987fbb58e8c16efc44039c9"
+        "sha256:35d08100a164cf0bff818661659923dccc5ad24b10922c2dac2cc605cbba986c"
       ],
       "scanner": "SECRETS",
       "severity_counts": {
@@ -686,7 +686,7 @@
       "blocking": true,
       "passed": true,
       "references": [
-        "sha256:2f33c088c3cb3097f559f2aa9b2bd34723aad1013426b5343aca79f3d9c6b580"
+        "sha256:10d7937377d8d824a374cc45f6281e8aa19e6d0bc355bf3d0fd7f3225e32bb03"
       ],
       "scanner": "HYGIENE",
       "severity_counts": {
@@ -701,7 +701,7 @@
       "blocking": true,
       "passed": true,
       "references": [
-        "sha256:3a6e8eaa6bbaddda5cd7d172f18fcd2d1a905c54675e678ad5c3487906b68fbc"
+        "sha256:0fab356b8c8217ed2764b6f289c8b6e119fcfd0f1c72f09562795131dfde9501"
       ],
       "scanner": "UNICODE",
       "severity_counts": {
@@ -716,7 +716,7 @@
       "blocking": true,
       "passed": true,
       "references": [
-        "sha256:33e9589cd6bfbb61560a69293365540670f5693bcfc9c7a5b031ad499cf56b25"
+        "sha256:f5b6470cb7fe775c42b3f0a073f7c0f55f07ba5323fb1724b3bc99c97a663caa"
       ],
       "scanner": "QUALITY",
       "severity_counts": {
@@ -731,7 +731,7 @@
       "blocking": true,
       "passed": true,
       "references": [
-        "sha256:af23938b26251f30a9b23825cb047b8eae7f6bc3ee1c9073353ba3eb840f6819"
+        "sha256:a8d9c2f2d9cfdf7838fc69e5ea14c43c2532cd92f7f8c37fe0eeaa1c69f6232a"
       ],
       "scanner": "SCRIPT_LINT",
       "severity_counts": {
@@ -746,7 +746,7 @@
       "blocking": false,
       "passed": null,
       "references": [
-        "sha256:2cb5b194b666fee945fb14e05fa0e180649e4a15cdcc5ece8a5e896c2a0862e9"
+        "sha256:88056ed62aa08fbb607dd72f19ab3cbd33cd42c042856fae30197665995754f0"
       ],
       "scanner": "skillspector",
       "severity_counts": {
@@ -775,7 +775,7 @@
     "lineage": null,
     "owner": "local",
     "repository": "thetechgy/agent-engineering-baseline",
-    "revision": "9f6929f2b2be6ad66b40cd9ab9edf68caa124aee",
+    "revision": "a8ab2e2e03a2989863a514df2a6b357c44fbc012",
     "skill_id": "ansible",
     "source_path": ".apm/skills/ansible"
   }
