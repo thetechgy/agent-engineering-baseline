@@ -50,7 +50,7 @@ jobs:
       - name: Qualify supported and prohibited capability combinations
         run: |
           "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign.py qualify --mode oracle \
-            --definition .github/evals/campaigns/pester-admission-controls-v1.json \
+            --definition .github/evals/campaigns/pester-admission-controls-v2.json \
             --output "$RUNNER_TEMP/admission/controls"
       - name: Acquire fresh Compose configuration for exact replay
         run: bash .github/scripts/setup-compose.sh

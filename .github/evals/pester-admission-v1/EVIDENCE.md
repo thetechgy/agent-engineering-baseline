@@ -134,3 +134,19 @@ The repaired real installation also passed the exact CI `test_pester_ceiling.py`
 command: both positive suites passed, value-only/type-only suites remained distinct
 measured failures, and broken discovery remained invalid/unmeasured. All five
 controls used PowerShell 7.6.9 and Pester 6.2.0.
+
+At `353559f`, hosted frozen acquisition and all five exploratory controls passed
+with 7.6.9/6.2.0, while latest-stable Windows validation passed separately. The
+final checkout check found Python bytecode from the acquisition import. The
+frozen installer invocation now uses `-B`; the integrity guard remains intact.
+A separate control-registration audit found the new malformed control missing
+from the v1 case map. The successor `pester-admission-controls-v2` registers all
+22 controls (44 native oracle trials); v1 is retained as incomplete qualification.
+The policy, submission, grader, reference and mutants are unchanged. A focused
+contract now requires the registered and actual case populations to match.
+
+The 111 historical metric/analysis/report regressions passed in their verified
+Python 3.13.18, SkillEvaluator 0.3.0/Harbor 0.13.2 owning runtime. The initial
+wrong-runtime broad run remains inconclusive, rather than being relabeled green.
+The original four-record report also reproduced byte-for-byte with SHA-256
+`af83335d938115ab287abb54d65da41cb9fad015e386255743b77bb10fbf35b2`.

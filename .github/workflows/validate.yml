@@ -338,7 +338,7 @@ jobs:
 
       - name: Acquire declared frozen-grader runtime
         shell: bash
-        run: python3 .github/scripts/install_ci_powershell.py --runtime frozen-pester --destination "$RUNNER_TEMP/frozen-pester" --github-env "$GITHUB_ENV"
+        run: python3 -B .github/scripts/install_ci_powershell.py --runtime frozen-pester --destination "$RUNNER_TEMP/frozen-pester" --github-env "$GITHUB_ENV"
 
       - name: Check exploratory Pester candidate with the existing grader
         shell: bash

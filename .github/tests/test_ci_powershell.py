@@ -217,6 +217,7 @@ class FrozenRuntimeOwnership(unittest.TestCase):
         self.assertNotIn('--runtime frozen-pester',latest['run'])
         pinned=next(s for s in steps if s.get('name')=='Acquire declared frozen-grader runtime')
         self.assertIn('--runtime frozen-pester',pinned['run'])
+        self.assertIn('python3 -B ',pinned['run'])
         grader=next(s for s in steps if s.get('name')=='Check exploratory Pester candidate with the existing grader')
         self.assertEqual(grader['env']['CI_PWSH'],'${{ env.FROZEN_PWSH }}')
         self.assertEqual(grader['env']['PESTER_MANIFEST'],'${{ env.FROZEN_PESTER_MANIFEST }}')

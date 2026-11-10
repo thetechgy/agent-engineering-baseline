@@ -42,10 +42,11 @@ class Admission(unittest.TestCase):
         old = self.task('pester-transfer-original-v1').expected_members('pester-transfer-batch-v1', 'with_skill')
         new = self.task().expected_members('pester-transfer-batch-v1', 'with_skill')
         self.assertEqual({k for k in old if old[k] != new[k]}, {'tests/Runner.ps1', 'environment/input/EXECUTION-PROFILE.md'})
-        for name, mode in [('pester-transfer-original-v1','oracle'),('pester-transfer-retrospective-v1','replay'),('pester-admission-controls-v1','oracle')]:
+        for name, mode in [('pester-transfer-original-v1','oracle'),('pester-transfer-retrospective-v1','replay'),('pester-admission-controls-v2','oracle')]:
             task = self.task(name)
             profile, _, _ = evidence.custom_contract('powershell-pester-6', purpose=purpose(task,mode))
             self.assertTrue(all(profile[k] == v for k,v in evidence.custom_input_identities(ROOT,'powershell-pester-6',purpose=purpose(task,mode)).items()))
+            self.assertEqual(profile['qualification_cases'], {case: task.definition['source_case'] for case in task.cases(mode)})
 
     @unittest.skipUnless(shutil.which('pwsh'), 'Parser required; full isolation is hosted')
     def test_first_failure_and_concealed_type_failure_then_combined_admission(self):
@@ -69,7 +70,7 @@ class Admission(unittest.TestCase):
 
     @unittest.skipUnless(shutil.which('pwsh'), 'Parser required')
     def test_supported_combinations_and_adjacent_prohibited_forms(self):
-        task=self.task('pester-admission-controls-v1')
+        task=self.task('pester-admission-controls-v2')
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);runner=root/'Runner.ps1';runner.write_bytes(runner_bytes());candidate=root/'Subject.Tests.ps1'
             for name, control in task.controls().items():

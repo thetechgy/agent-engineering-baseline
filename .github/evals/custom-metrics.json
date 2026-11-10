@@ -11355,6 +11355,88 @@
         "trials": 1
       },
       "termination_evidence": "native-deadline-v1"
+    },
+    "campaign-pester-admission-controls-v2-lifecycle-v1-oracle": {
+      "id": "campaign-pester-admission-controls-v2-lifecycle-v1-oracle",
+      "grading": "custom_only",
+      "cases": {
+        "pester-transfer-batch-v1": {
+          "title": "Batch summary return and value contract",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v2",
+            "powershell-pester-6.test-quality.v2"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v2": 5
+          }
+        }
+      },
+      "qualification_cases": {
+        "pester-transfer-batch-v1-good": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-good-loop": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-value-only": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-overrestricted": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-invalid": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-collection-numeric": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-dynamic-member": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-static-member": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-method": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-member-write": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-index-write": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-numeric-cast": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-numeric-constructor": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-numeric-array": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-arbitrary-type": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-protected-operand": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-nested-command": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-for-hidden": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-arbitrary-member": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-diagnostic-count": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-diagnostic-types": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-malformed": "pester-transfer-batch-v1"
+      },
+      "runtime": {
+        "powershell": "7.6.9",
+        "pester": "6.2.0",
+        "codex": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "workspace_profile": "pester-effectiveness-v3",
+        "agent": "codex",
+        "cli": "0.167.0",
+        "provider": "openai",
+        "profile": ".github/evals/campaigns/codex-qualified.json",
+        "variants": [
+          {
+            "id": "current",
+            "arm": "with_skill"
+          },
+          {
+            "id": "absent",
+            "arm": "without_skill"
+          }
+        ]
+      },
+      "skill_id": "powershell-pester-6",
+      "grader_digest": "sha256:2036c1cbf604c1c6ae7372b32505b8da541a4830d1161ccfddd1f82df2616ad4",
+      "fixture_digest": "sha256:7fd910d264f98c74de1c108d604c1150c0c194630cbd1a5f8603ad3757dbfed7",
+      "runtime_digest": "sha256:ee9ba15300ac377e8abe57e7d213329f17c3ef31ce46b5dd10392c5aece9fbd7",
+      "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+      "semantics": "pester-effectiveness-v6",
+      "campaign": {
+        "definition": ".github/evals/campaigns/pester-admission-controls-v2.json",
+        "mode": "oracle",
+        "environment_import": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+        "environment_mode": "docker",
+        "agent_import": "oracle",
+        "trials": 1
+      },
+      "skill_source": {
+        "path": ".github/evals/pester-return-contract/variants/current/powershell-pester-6",
+        "digest": "sha256:d3641c5190c1b86d8e853adc8f3c68fe6376b5fdaf5c1d90c610a745102ff03e"
+      },
+      "termination_evidence": "native-deadline-v1"
     }
   },
   "active_profiles": {
