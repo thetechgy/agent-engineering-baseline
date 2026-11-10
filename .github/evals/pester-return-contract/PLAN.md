@@ -1,4 +1,4 @@
-# Declared return-contract candidate, frozen plan v2
+# Declared return-contract candidate, frozen plan v3
 
 Status: candidate and experiment prepared for review; no adoption or inference.
 Base: current main `9f81a66b343f340b681759db8c7c38a4e9e016c5`.
@@ -62,6 +62,7 @@ Transfer expectations, through the existing runner and grader:
 | Control | Reference | Defect detections | Classification |
 | --- | --- | --- | --- |
 | good | pass, five tests | all five | passed |
+| good-loop | pass, one test covering all five inputs | all five | passed |
 | value-only | pass | all except enabled-integer | failed, measured |
 | overrestricted | fail on permitted Int64 | zero credited | failed, measured |
 | invalid | no usable execution | unavailable | invalid, unmeasured |
@@ -93,10 +94,10 @@ then the descriptive difference between those paired differences, per case.
 Unequal absent results remain visible. This is not a direct randomized comparison
 between the two skills and supplies no broad effectiveness estimate.
 
-The development v1 and transfer v2 paired definitions and corresponding
+The development v1 and transfer v3 paired definitions and corresponding
 protocols freeze three trials and six serial slots per pair. Use case order
 shown above. Within each pair the existing scheduler orders present/absent,
-absent/present, present/absent. The matching development v1 and transfer v2 control definitions separately
+absent/present, present/absent. The matching development v1 and transfer v3 control definitions separately
 qualify known controls with one repetition per arm; no model outputs enter those
 runs. Qualified native components, settings and containment are reused unchanged:
 Codex 0.167.0, gpt-6.1-sol, OpenAI, high reasoning, PowerShell 7.6.9, Pester 6.2.0,
@@ -192,3 +193,17 @@ CLI fixture. A fresh runner consumes the same-run artifacts and reproduces the
 control and scheduling reports. These are control executions, not any of the
 24 proposed model attempts. No model credentials or protected environment is
 available to these jobs.
+
+## Compact-suite admission correction
+
+The original transfer profile's minimum of five executed tests rejected a valid
+single `It` loop covering all five public inputs. Executable reproduction in the
+pinned runner passes the reference and rejects all five mutants, yet the original
+minimum classifies it as nonexecuting. Transfer v3 uses the existing nonempty
+minimum of one, adds that alternate compact positive control, and passes the
+profile's actual minimum into local grading checks just as production does.
+The assertion requirements, five defect identities, reference-plus-all-defects
+quality formula, prompt, behavioral contract and 24 proposed model attempts are
+unchanged. Invalid/nonexecuting suites still remain unmeasured. No agent output
+was observed before this correction or freeze. Earlier profiles and grades are
+retained; no old receipt is relabeled as v3 qualification.

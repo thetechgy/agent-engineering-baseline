@@ -10,7 +10,7 @@ class HostedReturnContract(unittest.TestCase):
     def test_workflow_covers_both_sources_and_cases_without_live_capability(self):
         raw=(ROOT/'.github/workflows/pester-return-qualification.yml').read_text()
         workflow=yaml.safe_load(raw)
-        expected=[{'case':'development','version':'v1'},{'case':'transfer','version':'v2'}]
+        expected=[{'case':'development','version':'v1'},{'case':'transfer','version':'v3'}]
         self.assertEqual(workflow['permissions'],{})
         for job in workflow['jobs'].values():
             self.assertEqual(job['permissions'],{'contents':'read'})
@@ -32,10 +32,11 @@ class HostedReturnContract(unittest.TestCase):
         previous=base/frozen['previous']['manifest']
         self.assertEqual(hashlib.sha256(previous.read_bytes()).hexdigest(),frozen['previous']['sha256'])
         registry=json.loads((ROOT/'.github/evals/custom-metrics.json').read_text())
-        previous_profiles=json.loads((base/'history/ea26668-profile-digests.json').read_text())
-        for key,digest in previous_profiles.items():
-            raw=json.dumps(registry['profiles'][key],sort_keys=True,separators=(',',':')).encode()
-            self.assertEqual(hashlib.sha256(raw).hexdigest(),digest,key)
+        for history in (base/'history').glob('*-profile-digests.json'):
+            previous_profiles=json.loads(history.read_text())
+            for key,digest in previous_profiles.items():
+                raw=json.dumps(registry['profiles'][key],sort_keys=True,separators=(',',':')).encode()
+                self.assertEqual(hashlib.sha256(raw).hexdigest(),digest,key)
 
     def test_compose_environment_is_acquired_in_a_prior_step_for_each_preparation(self):
         workflow=yaml.safe_load((ROOT/'.github/workflows/pester-return-qualification.yml').read_text())

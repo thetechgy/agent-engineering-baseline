@@ -37,7 +37,7 @@ jobs:
           - case: development
             version: v1
           - case: transfer
-            version: v2
+            version: v3
     env:
       PYTHONDONTWRITEBYTECODE: '1'
       CASE: ${{ matrix.case }}
@@ -121,7 +121,7 @@ jobs:
           - case: development
             version: v1
           - case: transfer
-            version: v2
+            version: v3
     env:
       PYTHONDONTWRITEBYTECODE: '1'
       CASE: ${{ matrix.case }}

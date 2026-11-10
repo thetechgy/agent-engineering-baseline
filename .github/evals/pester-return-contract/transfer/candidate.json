@@ -18,6 +18,18 @@
       }
     },
     {
+      "id": "good-loop",
+      "file": ".github/evals/pester-return-contract/transfer/controls/good-loop.Tests.ps1",
+      "outcome": "passed",
+      "detections": {
+        "enabled-integer": 1,
+        "enabled-zero": 1,
+        "quantity-offset": 1,
+        "quantity-below": 1,
+        "quantity-above": 1
+      }
+    },
+    {
       "id": "value-only",
       "file": ".github/evals/pester-return-contract/transfer/controls/value-only.Tests.ps1",
       "outcome": "failed",
