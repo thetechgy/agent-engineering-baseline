@@ -1,0 +1,495 @@
+{
+  "status": "ready-for-new-approval-only",
+  "source": "a8ab2e2e03a2989863a514df2a6b357c44fbc012",
+  "dispatch_ref": "main",
+  "main_must_equal_source": true,
+  "producer_run": 42890495634,
+  "new_experiment": true,
+  "pricing_rechecked": "2026-11-10",
+  "pricing_sources": [
+    "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+    "https://developers.openai.com/api/docs/pricing"
+  ],
+  "observed_development_total_estimate_usd": 0.2705338,
+  "planning_allowance_per_attempt_usd": 0.5,
+  "paid_commands_unrun": true,
+  "inference_executed": false,
+  "real_allocation_claims": false,
+  "dispatches": [
+    {
+      "campaign": "pester-return-development-candidate-v1",
+      "definition": ".github/evals/campaigns/pester-return-development-candidate-v1.json",
+      "definition_digest": "sha256:aa6600e3227ac1f1bc582bc3a42d760e7eb7d52ee53d7488727839065fdefc2a",
+      "selection_digest": "sha256:080bd82856e6b1b4cde4370784e101ecfc7a0839480960529884dafb0947c83d",
+      "protocol": ".github/evals/campaigns/pester-return-development-candidate-v1-protocol.json",
+      "protocol_digest": "sha256:e8c049ef61a2f52e81d20d36752961fb135812a78c1ccf7c6882f2fc88adb23a",
+      "skill_source": ".github/evals/pester-return-contract/variants/candidate/powershell-pester-6",
+      "skill_digest": "sha256:8a363074264a6e0e075421cd1f9b27295fbfa81117b45a04822d146d8b825cbf",
+      "source_identities": {
+        "live": {
+          "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
+          "fixture_digest": "sha256:99bb508cb930cf59131cc919aee2d3ecee880f729a9f382f256ac5f031e00e96",
+          "runtime_digest": "sha256:a6ffe0f8d0f95c2316e7bf60f3a8b6b9da86cbf27f3131b1df45d159af19aa31"
+        },
+        "experiment-probe": {
+          "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
+          "fixture_digest": "sha256:99bb508cb930cf59131cc919aee2d3ecee880f729a9f382f256ac5f031e00e96",
+          "runtime_digest": "sha256:a6ffe0f8d0f95c2316e7bf60f3a8b6b9da86cbf27f3131b1df45d159af19aa31"
+        }
+      },
+      "runtime_profile": ".github/evals/campaigns/codex-authorized-v1.json",
+      "runtime_profile_digest": "sha256:bf5f73c25a747c34591748c46eb8c46731005f4f0dd420d0e241804addf0bbe9",
+      "runtime": {
+        "profile": {
+          "id": "codex-authorized-campaign-v1",
+          "adapter": "codex",
+          "frozen_profile": ".github/evals/codex-pilot.json",
+          "frozen_profile_sha256": "5472136c6532db515340e8ffdfc9aae9f70b42b27fc15bf922823a784b41e9a8",
+          "capabilities": [
+            "non-forwarding-cli-probe",
+            "exact-authorized-live"
+          ],
+          "inference_enabled": false
+        },
+        "resolved": {
+          "id": "codex-pester-001-pilot-v1",
+          "case": "pester-001",
+          "skill": "powershell-pester-6",
+          "cli": "0.167.0",
+          "cli_revision": "086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a",
+          "cli_archive_sha256": "3bbf75e83de6b58aed28f2cf6e33ad423ec31fd4700a1457b94be557ea5a7c6e",
+          "cli_executable_sha256": "cdcb45aaa01d0f14e298985e09465aebccd47f64ecd298aea44814af7b62bbda",
+          "model": "gpt-6.1-sol",
+          "reasoning_effort": "high",
+          "provider": "openai",
+          "base_url": "https://api.openai.com/v1",
+          "agent_seconds": 600,
+          "cpus": 2,
+          "memory_mb": 2048,
+          "attempts_per_arm": 1,
+          "allocation_usd": 10,
+          "stop_estimate_usd": 5,
+          "prices_per_million": {
+            "input": 2,
+            "cached_input": 0.1,
+            "output": 10
+          },
+          "frozen_at": "2026-11-07",
+          "release_url": "https://github.com/openai/codex/releases/tag/rust-v0.167.0",
+          "model_documentation": "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+          "configuration_documentation": "https://developers.openai.com/codex/config-reference",
+          "helper_sha256": {
+            "bin/codex-code-mode-host": "83f3e174c2da2f1ca8655cce686e302509640d34c0f4407c1155056f64536e0f",
+            "bin/codex-exec-server": "43376b1af843ffc71726a35d53b6e2241cbe1e8c9e8ec758402460295eec2107",
+            "codex-resources/bwrap": "77360cb751ccedc5971391444ac86a8a33c15b04d6b4a6fe45f5d25496e62c4c"
+          },
+          "execution_policy": "docker-external-openai-v3",
+          "agent": "codex"
+        }
+      },
+      "deployment": {
+        "apm": "0.35.0",
+        "adapter": "codex",
+        "skill": "powershell-pester-6",
+        "manifest": {
+          "SKILL.md": "f47be3cfef96d53765027068b1115f40e40e0217f0df9a647b4314d75bd14168",
+          "references/compatibility-and-migration.md": "6d05a890eb1c53c59755f9e560c05d65467a614d36af7c812f4a32c89b47f4e9",
+          "references/execution.md": "3b80a98abfefdcd9a765da9a9436caa43de6a873e57253f1ecfb36e1095ea4b8"
+        },
+        "personal_instructions": false,
+        "mcp_servers": [],
+        "mode": "isolated"
+      },
+      "configuration_algorithm": "sha256-typed-toml-v1",
+      "descriptor_manifest_digest": "sha256:3decd3f5105d74de02df0d910c1ba122637da35110fd57b9b914a3c30afe43ee",
+      "staging_manifest_digest": "sha256:1fdef37b74726975b0f16cba8e5dae0875bbcb36f91c165817b5623b47189a6d",
+      "deployment_digest": "sha256:94e887036ac8c337924bc100ba73925cb98f733e85836cdc4f20dafdf15365ab",
+      "configurations": {
+        "with_skill/pester-004": "sha256:d2906680aba1e31f4d5490599c43cdd0183a96559545952f811d6bdeb434c5c3",
+        "without_skill/pester-004": "sha256:d2906680aba1e31f4d5490599c43cdd0183a96559545952f811d6bdeb434c5c3"
+      },
+      "preparation_proposal_digest": "sha256:49fdeaa5d99029ee0e7ab51bfd610fa39b3bae2f27b87666da53f41dd99d14cc",
+      "preparation_artifact": 13803291157,
+      "artifact_digest": "sha256:926b12cd5db25cbda75e6ecfd00d6068be24b9d9d676c056b7583c5d173a2d8e",
+      "producer_run": 42890495634,
+      "registered_location": "candidate/evidence",
+      "canonical_location": "downloaded/preparation/evidence",
+      "expires_at": "2027-02-08T19:57:52Z",
+      "schedule": [
+        {
+          "position": 1,
+          "case": "pester-004",
+          "trial": 1,
+          "variant": "candidate"
+        },
+        {
+          "position": 2,
+          "case": "pester-004",
+          "trial": 1,
+          "variant": "absent"
+        },
+        {
+          "position": 3,
+          "case": "pester-004",
+          "trial": 2,
+          "variant": "absent"
+        },
+        {
+          "position": 4,
+          "case": "pester-004",
+          "trial": 2,
+          "variant": "candidate"
+        },
+        {
+          "position": 5,
+          "case": "pester-004",
+          "trial": 3,
+          "variant": "candidate"
+        },
+        {
+          "position": 6,
+          "case": "pester-004",
+          "trial": 3,
+          "variant": "absent"
+        }
+      ],
+      "nonce": "dbc01136fb03ea93d192441f",
+      "allocation": "campaign-a8ab2e2e03a2989863a514df2a6b357c44fbc012-pester-return-development-candidate-v1-prep13803291157-usd8-dbc01136fb03ea93d192441f",
+      "allocation_claimed": false,
+      "budget": {
+        "estimate_usd": 3,
+        "stop_estimate_usd": 5,
+        "overshoot_reserve_usd": 3,
+        "planning_allocation_usd": 8,
+        "billing_limit_enforced": false,
+        "pricing_verified": "2026-11-09",
+        "pricing_source": "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+        "prices_per_million": {
+          "input": 2,
+          "cached_input": 0.1,
+          "output": 10
+        }
+      },
+      "attempts": 6
+    },
+    {
+      "campaign": "pester-return-transfer-current-v3",
+      "definition": ".github/evals/campaigns/pester-return-transfer-current-v3.json",
+      "definition_digest": "sha256:91c0c76d4fc88b50517d9d39c2c55ba1086bffbb74e93463912fc5e7ee4b7a8c",
+      "selection_digest": "sha256:080bd82856e6b1b4cde4370784e101ecfc7a0839480960529884dafb0947c83d",
+      "protocol": ".github/evals/campaigns/pester-return-transfer-current-v3-protocol.json",
+      "protocol_digest": "sha256:db0219eee2fd9a802504fc15552d3bb0e56671e68c9e36062c21fb77aff01794",
+      "skill_source": ".github/evals/pester-return-contract/variants/current/powershell-pester-6",
+      "skill_digest": "sha256:d3641c5190c1b86d8e853adc8f3c68fe6376b5fdaf5c1d90c610a745102ff03e",
+      "source_identities": {
+        "live": {
+          "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
+          "fixture_digest": "sha256:6774ef2dfc06458a957404d12d4a4d111972998bba344fef94a7d057613cc577",
+          "runtime_digest": "sha256:5ec147b71196900261735aee2d7d8c70221ec1ab01345ea7c9ce2a69fe45e903"
+        },
+        "experiment-probe": {
+          "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
+          "fixture_digest": "sha256:6774ef2dfc06458a957404d12d4a4d111972998bba344fef94a7d057613cc577",
+          "runtime_digest": "sha256:5ec147b71196900261735aee2d7d8c70221ec1ab01345ea7c9ce2a69fe45e903"
+        }
+      },
+      "runtime_profile": ".github/evals/campaigns/codex-authorized-v1.json",
+      "runtime_profile_digest": "sha256:bf5f73c25a747c34591748c46eb8c46731005f4f0dd420d0e241804addf0bbe9",
+      "runtime": {
+        "profile": {
+          "id": "codex-authorized-campaign-v1",
+          "adapter": "codex",
+          "frozen_profile": ".github/evals/codex-pilot.json",
+          "frozen_profile_sha256": "5472136c6532db515340e8ffdfc9aae9f70b42b27fc15bf922823a784b41e9a8",
+          "capabilities": [
+            "non-forwarding-cli-probe",
+            "exact-authorized-live"
+          ],
+          "inference_enabled": false
+        },
+        "resolved": {
+          "id": "codex-pester-001-pilot-v1",
+          "case": "pester-001",
+          "skill": "powershell-pester-6",
+          "cli": "0.167.0",
+          "cli_revision": "086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a",
+          "cli_archive_sha256": "3bbf75e83de6b58aed28f2cf6e33ad423ec31fd4700a1457b94be557ea5a7c6e",
+          "cli_executable_sha256": "cdcb45aaa01d0f14e298985e09465aebccd47f64ecd298aea44814af7b62bbda",
+          "model": "gpt-6.1-sol",
+          "reasoning_effort": "high",
+          "provider": "openai",
+          "base_url": "https://api.openai.com/v1",
+          "agent_seconds": 600,
+          "cpus": 2,
+          "memory_mb": 2048,
+          "attempts_per_arm": 1,
+          "allocation_usd": 10,
+          "stop_estimate_usd": 5,
+          "prices_per_million": {
+            "input": 2,
+            "cached_input": 0.1,
+            "output": 10
+          },
+          "frozen_at": "2026-11-07",
+          "release_url": "https://github.com/openai/codex/releases/tag/rust-v0.167.0",
+          "model_documentation": "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+          "configuration_documentation": "https://developers.openai.com/codex/config-reference",
+          "helper_sha256": {
+            "bin/codex-code-mode-host": "83f3e174c2da2f1ca8655cce686e302509640d34c0f4407c1155056f64536e0f",
+            "bin/codex-exec-server": "43376b1af843ffc71726a35d53b6e2241cbe1e8c9e8ec758402460295eec2107",
+            "codex-resources/bwrap": "77360cb751ccedc5971391444ac86a8a33c15b04d6b4a6fe45f5d25496e62c4c"
+          },
+          "execution_policy": "docker-external-openai-v3",
+          "agent": "codex"
+        }
+      },
+      "deployment": {
+        "apm": "0.35.0",
+        "adapter": "codex",
+        "skill": "powershell-pester-6",
+        "manifest": {
+          "SKILL.md": "b57df2ff4072b2e25744ae2bd530b02bbb6ab83a22a0d374c73d48de4dc70887",
+          "references/compatibility-and-migration.md": "6d05a890eb1c53c59755f9e560c05d65467a614d36af7c812f4a32c89b47f4e9",
+          "references/execution.md": "3b80a98abfefdcd9a765da9a9436caa43de6a873e57253f1ecfb36e1095ea4b8"
+        },
+        "personal_instructions": false,
+        "mcp_servers": [],
+        "mode": "isolated"
+      },
+      "configuration_algorithm": "sha256-typed-toml-v1",
+      "descriptor_manifest_digest": "sha256:38ad9b91f56a40bbaf2061480fa3ea9969aed18ba491faba6e73eb637c505a49",
+      "staging_manifest_digest": "sha256:d2d395c5dd23571faa7c81cb0126b89c8989055de48111265a266c01cb246dda",
+      "deployment_digest": "sha256:04ee2885032a63f1bd240821900e8b518081d33740b0ae2082ee68822fe4dbd1",
+      "configurations": {
+        "with_skill/pester-transfer-batch-v1": "sha256:6d9089060e1d4ca21a2478c5b5324fc73058a9f71b634799656885c33c83e97d",
+        "without_skill/pester-transfer-batch-v1": "sha256:6d9089060e1d4ca21a2478c5b5324fc73058a9f71b634799656885c33c83e97d"
+      },
+      "preparation_proposal_digest": "sha256:601bb9e07e165e537ca171c57ec31eecf2ca2b8bf47ee7356aa8c5d3c872ab6e",
+      "preparation_artifact": 13801928552,
+      "artifact_digest": "sha256:0c380299bfcebfc2d9280f53649b72955310098a1c69f4ab54ca8cc4513c5e2a",
+      "producer_run": 42890495634,
+      "registered_location": "current/evidence",
+      "canonical_location": "downloaded/preparation/evidence",
+      "expires_at": "2027-02-08T19:57:52Z",
+      "schedule": [
+        {
+          "position": 1,
+          "case": "pester-transfer-batch-v1",
+          "trial": 1,
+          "variant": "current"
+        },
+        {
+          "position": 2,
+          "case": "pester-transfer-batch-v1",
+          "trial": 1,
+          "variant": "absent"
+        },
+        {
+          "position": 3,
+          "case": "pester-transfer-batch-v1",
+          "trial": 2,
+          "variant": "absent"
+        },
+        {
+          "position": 4,
+          "case": "pester-transfer-batch-v1",
+          "trial": 2,
+          "variant": "current"
+        },
+        {
+          "position": 5,
+          "case": "pester-transfer-batch-v1",
+          "trial": 3,
+          "variant": "current"
+        },
+        {
+          "position": 6,
+          "case": "pester-transfer-batch-v1",
+          "trial": 3,
+          "variant": "absent"
+        }
+      ],
+      "nonce": "03f46fb94a1ab042bf1ca715",
+      "allocation": "campaign-a8ab2e2e03a2989863a514df2a6b357c44fbc012-pester-return-transfer-current-v3-prep13801928552-usd8-03f46fb94a1ab042bf1ca715",
+      "allocation_claimed": false,
+      "budget": {
+        "estimate_usd": 3,
+        "stop_estimate_usd": 5,
+        "overshoot_reserve_usd": 3,
+        "planning_allocation_usd": 8,
+        "billing_limit_enforced": false,
+        "pricing_verified": "2026-11-09",
+        "pricing_source": "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+        "prices_per_million": {
+          "input": 2,
+          "cached_input": 0.1,
+          "output": 10
+        }
+      },
+      "attempts": 6
+    },
+    {
+      "campaign": "pester-return-transfer-candidate-v3",
+      "definition": ".github/evals/campaigns/pester-return-transfer-candidate-v3.json",
+      "definition_digest": "sha256:cc6a2345dd5d12f8bc7b2dfc9156986d404afb1b191dc85ca7eb041d1939fed6",
+      "selection_digest": "sha256:080bd82856e6b1b4cde4370784e101ecfc7a0839480960529884dafb0947c83d",
+      "protocol": ".github/evals/campaigns/pester-return-transfer-candidate-v3-protocol.json",
+      "protocol_digest": "sha256:042141a95ea4dcdf6360011414eb29521fd9f987d5cdd76d9691e6f6b3221498",
+      "skill_source": ".github/evals/pester-return-contract/variants/candidate/powershell-pester-6",
+      "skill_digest": "sha256:8a363074264a6e0e075421cd1f9b27295fbfa81117b45a04822d146d8b825cbf",
+      "source_identities": {
+        "live": {
+          "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
+          "fixture_digest": "sha256:6774ef2dfc06458a957404d12d4a4d111972998bba344fef94a7d057613cc577",
+          "runtime_digest": "sha256:58054ee79c0d6da3f98beb1b8e0dc990f4d1e0d8d3725dbf0115d0277c0b995d"
+        },
+        "experiment-probe": {
+          "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
+          "fixture_digest": "sha256:6774ef2dfc06458a957404d12d4a4d111972998bba344fef94a7d057613cc577",
+          "runtime_digest": "sha256:58054ee79c0d6da3f98beb1b8e0dc990f4d1e0d8d3725dbf0115d0277c0b995d"
+        }
+      },
+      "runtime_profile": ".github/evals/campaigns/codex-authorized-v1.json",
+      "runtime_profile_digest": "sha256:bf5f73c25a747c34591748c46eb8c46731005f4f0dd420d0e241804addf0bbe9",
+      "runtime": {
+        "profile": {
+          "id": "codex-authorized-campaign-v1",
+          "adapter": "codex",
+          "frozen_profile": ".github/evals/codex-pilot.json",
+          "frozen_profile_sha256": "5472136c6532db515340e8ffdfc9aae9f70b42b27fc15bf922823a784b41e9a8",
+          "capabilities": [
+            "non-forwarding-cli-probe",
+            "exact-authorized-live"
+          ],
+          "inference_enabled": false
+        },
+        "resolved": {
+          "id": "codex-pester-001-pilot-v1",
+          "case": "pester-001",
+          "skill": "powershell-pester-6",
+          "cli": "0.167.0",
+          "cli_revision": "086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a",
+          "cli_archive_sha256": "3bbf75e83de6b58aed28f2cf6e33ad423ec31fd4700a1457b94be557ea5a7c6e",
+          "cli_executable_sha256": "cdcb45aaa01d0f14e298985e09465aebccd47f64ecd298aea44814af7b62bbda",
+          "model": "gpt-6.1-sol",
+          "reasoning_effort": "high",
+          "provider": "openai",
+          "base_url": "https://api.openai.com/v1",
+          "agent_seconds": 600,
+          "cpus": 2,
+          "memory_mb": 2048,
+          "attempts_per_arm": 1,
+          "allocation_usd": 10,
+          "stop_estimate_usd": 5,
+          "prices_per_million": {
+            "input": 2,
+            "cached_input": 0.1,
+            "output": 10
+          },
+          "frozen_at": "2026-11-07",
+          "release_url": "https://github.com/openai/codex/releases/tag/rust-v0.167.0",
+          "model_documentation": "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+          "configuration_documentation": "https://developers.openai.com/codex/config-reference",
+          "helper_sha256": {
+            "bin/codex-code-mode-host": "83f3e174c2da2f1ca8655cce686e302509640d34c0f4407c1155056f64536e0f",
+            "bin/codex-exec-server": "43376b1af843ffc71726a35d53b6e2241cbe1e8c9e8ec758402460295eec2107",
+            "codex-resources/bwrap": "77360cb751ccedc5971391444ac86a8a33c15b04d6b4a6fe45f5d25496e62c4c"
+          },
+          "execution_policy": "docker-external-openai-v3",
+          "agent": "codex"
+        }
+      },
+      "deployment": {
+        "apm": "0.35.0",
+        "adapter": "codex",
+        "skill": "powershell-pester-6",
+        "manifest": {
+          "SKILL.md": "f47be3cfef96d53765027068b1115f40e40e0217f0df9a647b4314d75bd14168",
+          "references/compatibility-and-migration.md": "6d05a890eb1c53c59755f9e560c05d65467a614d36af7c812f4a32c89b47f4e9",
+          "references/execution.md": "3b80a98abfefdcd9a765da9a9436caa43de6a873e57253f1ecfb36e1095ea4b8"
+        },
+        "personal_instructions": false,
+        "mcp_servers": [],
+        "mode": "isolated"
+      },
+      "configuration_algorithm": "sha256-typed-toml-v1",
+      "descriptor_manifest_digest": "sha256:24122d107f94bc34dbd97c0c4e25619a9225afbccc17b8f85b33e27ef5896918",
+      "staging_manifest_digest": "sha256:27b7a026b585a90df7a5d309da78120c45b10879c11598c10528d197d525c15f",
+      "deployment_digest": "sha256:94e887036ac8c337924bc100ba73925cb98f733e85836cdc4f20dafdf15365ab",
+      "configurations": {
+        "with_skill/pester-transfer-batch-v1": "sha256:6d9089060e1d4ca21a2478c5b5324fc73058a9f71b634799656885c33c83e97d",
+        "without_skill/pester-transfer-batch-v1": "sha256:6d9089060e1d4ca21a2478c5b5324fc73058a9f71b634799656885c33c83e97d"
+      },
+      "preparation_proposal_digest": "sha256:a8de1b82399915efac3e54b7de8ae8a5f733b483b400e4433e11e956b7b38b24",
+      "preparation_artifact": 13801928552,
+      "artifact_digest": "sha256:0c380299bfcebfc2d9280f53649b72955310098a1c69f4ab54ca8cc4513c5e2a",
+      "producer_run": 42890495634,
+      "registered_location": "candidate/evidence",
+      "canonical_location": "downloaded/preparation/evidence",
+      "expires_at": "2027-02-08T19:57:52Z",
+      "schedule": [
+        {
+          "position": 1,
+          "case": "pester-transfer-batch-v1",
+          "trial": 1,
+          "variant": "candidate"
+        },
+        {
+          "position": 2,
+          "case": "pester-transfer-batch-v1",
+          "trial": 1,
+          "variant": "absent"
+        },
+        {
+          "position": 3,
+          "case": "pester-transfer-batch-v1",
+          "trial": 2,
+          "variant": "absent"
+        },
+        {
+          "position": 4,
+          "case": "pester-transfer-batch-v1",
+          "trial": 2,
+          "variant": "candidate"
+        },
+        {
+          "position": 5,
+          "case": "pester-transfer-batch-v1",
+          "trial": 3,
+          "variant": "candidate"
+        },
+        {
+          "position": 6,
+          "case": "pester-transfer-batch-v1",
+          "trial": 3,
+          "variant": "absent"
+        }
+      ],
+      "nonce": "f17df086307f5484f57f6080",
+      "allocation": "campaign-a8ab2e2e03a2989863a514df2a6b357c44fbc012-pester-return-transfer-candidate-v3-prep13801928552-usd8-f17df086307f5484f57f6080",
+      "allocation_claimed": false,
+      "budget": {
+        "estimate_usd": 3,
+        "stop_estimate_usd": 5,
+        "overshoot_reserve_usd": 3,
+        "planning_allocation_usd": 8,
+        "billing_limit_enforced": false,
+        "pricing_verified": "2026-11-09",
+        "pricing_source": "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+        "prices_per_million": {
+          "input": 2,
+          "cached_input": 0.1,
+          "output": 10
+        }
+      },
+      "attempts": 6
+    }
+  ],
+  "attempts": 18,
+  "estimate_usd": 9,
+  "sum_per_campaign_scheduling_thresholds_usd": 15,
+  "reserves_usd": 9,
+  "planning_allocation_usd": 24,
+  "provider_billing_cap": false,
+  "historical_baseline_reused_as_separate_descriptive_comparator": 42844732493
+}

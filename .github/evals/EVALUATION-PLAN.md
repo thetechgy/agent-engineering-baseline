@@ -1,5 +1,37 @@
 # Issue #95 dependency modernization checkpoint
 
+PR #129 is merged at `a8ab2e2e03a2989863a514df2a6b357c44fbc012`, currently the
+qualified main revision. Its tree matches reviewed head
+`7ced1b365ce443780620f9b4899339546d422fe6`. Fresh native lifecycle qualification,
+four frozen campaign preparations, independent artifact admission/report
+reproduction and four fresh shared inspections passed. The exact merge's five
+Validate jobs, including both required checks, passed. The legacy PR-head
+15-second admission timeout is independently dispositioned; failed and cancelled
+historical workflows remain distinct.
+
+The [single active receipt](../../docs/evaluations/return-contract-new-allocation/RECEIPT.md)
+proposes **18 new attempts**: development/candidate, transfer/current,
+transfer/candidate. It retains the six valid earlier development/current outcomes
+as a separate historical descriptive comparator, with effective input/deployment/
+configuration and completed-path evidence supporting reuse. It does not pool
+cohorts or relabel earlier execution. The historical candidate timeout remains a
+reliability event with unavailable correctness/usage. Historical total spending
+remains unknown; the stopped sequence and its allocations remain closed.
+
+The receipt binds qualified revision/ref, protocol and preparation identities,
+fresh unreserved allocations/nonces, unrun commands, budgets and matching future
+gates. It proposes $9 estimated usage and $24 planning allocation; each campaign
+retains its $5 scheduling threshold and $3 reserve within $8 planning allocation.
+These are not billing caps. No paid work, credential retrieval, live gate approval,
+allocation claim, skill adoption, dependency/default change or merge occurred.
+Dispatch source drift or expired evidence invalidates this proposal.
+
+**One next action:** decide whether to authorize the receipt's exact new
+18-attempt experiment and its three matching protected gates, with its checkpoints
+and stop/cleanup conditions.
+
+## PR #129 checkpoint, retained as history
+
 The return-contract sequence stopped after development/candidate's first native
 600-second deadline. Seven slots launched, six measured and seventeen unlaunched.
 Development/current and absent each retain 0/3 primary success, passing reference
