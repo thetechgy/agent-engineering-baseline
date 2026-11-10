@@ -58,6 +58,10 @@ class PilotCodex(Codex):
     def populate_context_post_run(self, context):
         # 0.167's durable store differs from Harbor 0.24's old JSONL reader.
         # The released exec JSON protocol supplies final cumulative usage.
+        interrupted = getattr(self, '_execution_interrupted', False)
+        if interrupted:
+            context.n_input_tokens = context.n_cache_tokens = context.n_output_tokens = None
+            context.metadata = {'execution_complete': False}
         path = self.logs_dir / 'codex.txt'
         if not path.is_file() or path.is_symlink() or path.stat().st_size > 16*1024*1024:
             return
@@ -67,19 +71,22 @@ class PilotCodex(Codex):
                 events.append(json.loads(line))
             except ValueError:
                 continue
-        completed = [e['usage'] for e in events if e.get('type') == 'turn.completed']
+        completed = [e.get('usage') for e in events if isinstance(e, dict) and e.get('type') == 'turn.completed']
         if len(completed) != 1:
             return  # No fallback zero for interrupted or unobserved usage.
         usage = completed[0]
         keys = ('input_tokens', 'cached_input_tokens', 'output_tokens')
-        if not all(type(usage.get(k)) is int and usage[k] >= 0 for k in keys):
-            raise ValueError('Invalid CLI usage protocol')
-        if usage['cached_input_tokens'] > usage['input_tokens']:
-            raise ValueError('Contradictory CLI usage')
+        valid = isinstance(usage, dict) and all(type(usage.get(k)) is int and usage[k] >= 0 for k in keys)
+        if not valid or usage['cached_input_tokens'] > usage['input_tokens']:
+            if interrupted:
+                context.metadata['usage_observation_failure'] = 'invalid_or_contradictory_usage'
+                return
+            raise ValueError('Invalid or contradictory CLI usage protocol')
         context.n_input_tokens = usage['input_tokens']
         context.n_cache_tokens = usage['cached_input_tokens']
         context.n_output_tokens = usage['output_tokens']
-        context.metadata = {'usage_source': 'codex-0.167-exec-json', 'billing_verified': False}
+        context.metadata = {'usage_source': 'codex-0.167-exec-json', 'billing_verified': False,
+                            **({'execution_complete': False} if interrupted else {})}
 
     async def run(self, instruction, environment, context):
         environment.retain_on_interrupt(self.output)
@@ -160,6 +167,8 @@ class PilotCodex(Codex):
             result = await environment.exec(command=command, env=env, user='agent',
                                                timeout_sec=self.profile['agent_seconds'])
             audit['returncode'] = result.return_code
+            if result.return_code != 0:
+                raise RuntimeError('Pilot Codex CLI exited unsuccessfully; original events retained')
             audit['boundary_after'] = await observe(environment)
         except BaseException as error:
             primary = error
@@ -185,9 +194,14 @@ class PilotCodex(Codex):
                 except BaseException as error:
                     audit['collection_or_cleanup_exception'] = type(error).__name__
                     if primary is None:
-                        audit_path.write_text(json.dumps(audit, indent=2) + '\n')
+                        try:
+                            audit_path.write_text(json.dumps(audit, indent=2) + '\n')
+                        except OSError as retention_error:
+                            error.add_note('Runtime audit retention also failed: ' + type(retention_error).__name__)
                         raise
-            audit_path.write_text(json.dumps(audit, indent=2) + '\n')
-        if result.return_code != 0:
-            self._execution_interrupted = True
-            raise RuntimeError('Pilot Codex CLI exited unsuccessfully; original events retained')
+            try:
+                audit_path.write_text(json.dumps(audit, indent=2) + '\n')
+            except OSError as error:
+                if primary is None:
+                    raise
+                primary.add_note('Runtime audit retention also failed: ' + type(error).__name__)

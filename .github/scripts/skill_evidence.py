@@ -4006,7 +4006,7 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
                 ordinal = _structural_attempt_ordinal(trial_name, case_id)
             if ordinal is None: limitations.add('metadata_missing')
             exception_type = (trial.get('exception_info') or {}).get('exception_type')
-            execution_terminated = ('-lifecycle-v1-' in capture['purpose']
+            execution_terminated = (profile.get('termination_evidence') == 'native-deadline-v1'
                                     and exception_type in ('AgentTimeoutError', 'CancelledError', 'KeyboardInterrupt'))
             diagnostic_reward = reward is not None and execution_terminated
             if execution_terminated:

@@ -85,7 +85,8 @@ task correctness and missing accounting stay unavailable. Actual process failure
 collection failure and cleanup failure retain separate records. No grading
 criteria change. Harbor can run its task-owned verifier after recording a native
 agent timeout. Such raw results remain diagnostic-only in the new lifecycle
-profiles and ledger; strict native failure identity/summary checks still apply,
+profiles and ledger; new profiles explicitly select `native-deadline-v1`
+termination evidence. Strict native failure identity/summary checks still apply,
 and public measurements stay unavailable. Historical profiles retain their
 previous admission behavior. New source-bound profile identities are appended; all earlier
 profile values, experiment settings, prompts, skills and pins remain unchanged.
