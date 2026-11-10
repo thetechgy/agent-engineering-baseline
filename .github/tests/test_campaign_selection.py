@@ -61,6 +61,18 @@ class SelectionContracts(unittest.TestCase):
                              [task.definition['variants'][0]['id'],'absent','absent',task.definition['variants'][0]['id'],task.definition['variants'][0]['id'],'absent'])
             self.assertIn('/'+('candidate' if '-candidate-' in identity else 'current')+'/',task.definition['source'])
 
+    def test_unsafe_registry_locations_and_inspection_outputs_are_rejected_before_acquisition(self):
+        task = selected.selected_task(CAMPAIGNS[0]); artifact,producer = self.metadata(task)
+        for member in ('/evidence', '../evidence', 'current/../evidence', 'current\\evidence', 'current//evidence'):
+            row = copy.deepcopy(selected.registration(task)); row['producers'][1]['location'] = member
+            with patch.object(selected, 'registration', return_value=row), self.assertRaises(ValueError):
+                selected.location(task, artifact, producer)
+        for output in (ROOT/'inspection', ROOT, Path(__file__).parent):
+            with patch.object(sys, 'argv', ['selection', 'inspect', '--campaign', CAMPAIGNS[0],
+                    '--artifact', '7000002', '--output', str(output)]), patch.object(protocol,'acquire') as acquire:
+                with self.assertRaises(ValueError): selected.main()
+                acquire.assert_not_called()
+
     def test_all_four_admit_both_registered_layouts_to_the_same_live_consumer_path(self):
         for identity in CAMPAIGNS:
             task=selected.selected_task(identity)

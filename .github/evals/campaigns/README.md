@@ -147,6 +147,10 @@ authentication, model effectiveness or actual provider billing.
 
 ## Prospective Boolean comparison, disabled pending decision
 
+Historical record: these Boolean allocations are closed. Commands in this
+section retain their original context; use the return-contract proposal below
+for the new four-pair experiment.
+
 [boolean-effectiveness-v1.json](boolean-effectiveness-v1.json) selects the original
 Boolean task and inputs, current skill bytes and PR #123's integer-result mutant.
 Its separate [versioned protocol](boolean-effectiveness-protocol-v1.json) freezes
@@ -462,7 +466,9 @@ checking main rather than substituting a newer source silently:
 
 ```sh
 REPO=thetechgy/agent-engineering-baseline
-QUALIFIED_SHA=$(gh api "repos/$REPO/git/ref/heads/main" --jq .object.sha)
+QUALIFIED_SHA=$(gh pr view 128 --repo "$REPO" --json mergeCommit --jq '.mergeCommit.oid')
+printf '%s\n' "$QUALIFIED_SHA" | rg -q '^[0-9a-f]{40}$'
+test "$(gh api "repos/$REPO/git/ref/heads/main" --jq .object.sha)" = "$QUALIFIED_SHA"
 printf 'Preparation source: %s\n' "$QUALIFIED_SHA"
 gh workflow run pester-return-qualification.yml --repo "$REPO" --ref main
 gh run list --repo "$REPO" --workflow pester-return-qualification.yml \
@@ -522,8 +528,9 @@ $2/$0.10/$10 per million tokens. The frozen settings need no price revision.
 The adapter's existing cumulative-input premium above 272K is a conservative
 estimate, not per-request billing reconstruction. Native usage does not identify
 cache writes or actual invoice/service-tier charges. The historical 12-attempt
-cohort estimated $0.7136678; the recent six-attempt Boolean comparison estimated
-usage is retained with its original evidence. Those reused-task observations do
+cohort estimated $0.7136678. Recomputed token observations from the recent
+[six-attempt Boolean run](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42744596001)
+estimate $0.2740062 total ($0.0409219-$0.0510054 per attempt). Those reused-task observations do
 not forecast the transfer task. $0.50 per attempt remains the planning assumption.
 
 Each pair retains $3 estimated usage, a $5 scheduling threshold, $3 overshoot
@@ -534,8 +541,20 @@ provider billing caps. CI costs are separate from model usage and these figures.
 
 ### Concrete review proposal
 
-Qualification revision, producer/artifact identities, expiration, all four protocol
-and definition digests, skill identities and fresh proposed nonces will be recorded
-here after the changed path completes qualification. Until then no paid operator
-command or combined approval is ready. Review/merge is the next decision; a future
-merge SHA needs the mechanical refresh above even after a qualified PR-head proposal.
+The single four-row [execution proposal in draft PR #128](https://github.com/thetechgy/agent-engineering-baseline/pull/128)
+records exact definition/protocol digests, present-skill identities, qualified source,
+producer run, preparation artifact/digest, registered internal and canonical
+locations, expiration, six-slot schedules, fresh proposed allocations/nonces and
+per-pair budgets. Its four exact paid dispatch commands are **unrun** and each
+checks the remote source before dispatch. Run them individually only after separate
+authorization, with the checkpoint between pairs. The proposal also supplies one
+combined future approval statement for exactly those four dispatches and matching
+`skill-benchmark` gates. It excludes retries, replacements, continuation after an
+operational stop or beyond 24 slots, judges, adoption and unrelated paid work.
+Proposed identifiers are unreserved; fixture authentication claims no paid allocation.
+
+The checkpoint remains the decision record; this guide owns the procedure and the
+PR retains exact-source evidence and commands. A pending, failed, cancelled or
+expired receipt does not qualify execution. Review/merge is the next decision.
+A future merge SHA needs the mechanical refresh above, even after a qualified
+PR-head proposal; that proposal grants no authorization for the merge revision.

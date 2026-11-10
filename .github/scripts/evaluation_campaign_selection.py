@@ -1,5 +1,6 @@
 """Reviewed campaign selection and producer/layout registration, never shell text."""
 import argparse
+import re
 from pathlib import Path
 import sys
 
@@ -36,7 +37,11 @@ def location(task, artifact, producer):
     matches = [p for p in row['producers'] if producer.get('path') == p['workflow']
                and artifact.get('name') == p['artifact'] + '-' + str(producer.get('run_attempt'))]
     require(len(matches) == 1, 'Unregistered preparation producer/layout')
-    return matches[0]['location']
+    member = matches[0]['location']
+    require(isinstance(member, str) and len(member) <= 256
+            and re.fullmatch(r'(?:[a-z0-9-]+/)+evidence', member) is not None,
+            'Unsafe registered preparation location')
+    return member
 
 
 def binding(task):
@@ -60,7 +65,9 @@ def main():
     task = selected_task(args.campaign)
     row = registration(task)
     definitions = row['controls'] if args.action == 'qualify' else [task.member]
-    action, output = args.action, args.output
+    action, output = args.action, args.output.absolute()
+    require(output.resolve() == output and not output.exists() and not output.is_relative_to(ROOT),
+            'Use a new real persistent output outside checkout')
     if action == 'inspect':
         from evaluation_campaign_protocol import acquire
         require(args.artifact is not None, 'Preparation artifact ID required')

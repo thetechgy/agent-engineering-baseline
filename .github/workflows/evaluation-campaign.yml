@@ -18,6 +18,7 @@ on:
       - '.github/tests/fixtures/codex-events/**'
       - '.github/tests/test_evaluation_campaign.py'
       - '.github/tests/test_evaluation_protocol.py'
+      - '.github/tests/test_campaign_selection.py'
       - '.github/workflows/evaluation-campaign.yml'
   workflow_dispatch:
     inputs:

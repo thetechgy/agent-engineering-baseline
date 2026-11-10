@@ -23,16 +23,27 @@ unrun commands and proposed combined approval wording. The sequence remains
 baselines stay separate; current/candidate comparison is indirect. Transfer is
 output-informed. No fixture result establishes skill improvement.
 
-Credential-free integration qualification is in progress. Exact-source native
-preparation, downloaded-archive admission, fresh-runner consumption and report
-reproduction must complete before any bounded live proposal is fully qualified.
-A PR-head receipt cannot qualify a future merge commit. After merge, refresh
-preparation mechanically with the documented existing qualification dispatch,
-then inspect its artifacts at that exact main revision. No inference, credential
-retrieval, protected gate, paid allocation, judge or merge is authorized here.
+[Draft PR #128](https://github.com/thetechgy/agent-engineering-baseline/pull/128)
+retains the exact-source qualification receipts and the concrete four-row
+execution proposal, including artifact IDs/digests/expiration, skill identities,
+schedules, proposed nonces and unrun operator commands. Local campaign and CI
+contracts pass 82 tests with one optional semantics test skipped. The interim
+`ea30d37` required checks passed; its other runs were superseded and cancelled
+for the final path-validation correction. Those cancelled runs are inconclusive.
+Final native preparation, artifact inspection, report reproduction and required
+checks must be verified against the revision named by the PR's proposal; no
+receipt is relabeled as a different source's execution.
 
-**One next action:** review the focused integration implementation PR after its
-credential-free qualification and required checks complete.
+Review/merge is the next decision. A PR-head receipt cannot qualify a future
+merge commit. After merge, refresh preparation mechanically with the documented
+existing qualification dispatch, then inspect its artifacts at that exact merge
+revision. The refresh fails if main has drifted beyond the reviewed merge.
+No inference, credential retrieval, protected gate, paid allocation, judge or
+merge is authorized here. The reserved confirmation material remains untouched.
+
+**One next action:** review [PR #128](https://github.com/thetechgy/agent-engineering-baseline/pull/128)
+and its completed credential-free receipts and bounded proposal. This checkpoint
+remains the decision record; the PR supplies its exact-revision evidence.
 
 ## PR #127 checkpoint, retained as history
 
