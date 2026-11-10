@@ -1,0 +1,115 @@
+{
+  "revision": "9f81a66b343f340b681759db8c7c38a4e9e016c5",
+  "artifact": 13730584511,
+  "archive_sha256": "e72a2dc40124dca828021143ec5acaa538e53a3c34dfb31def4314e82952ecfa",
+  "rows": [
+    {
+      "position": 1,
+      "variant": "current",
+      "submission_sha256": "3215b6097fa3e5f592989f2b8f4523207e28ebd4893cc7d11437b19189795981",
+      "reference_pass": 1,
+      "variant_detections": [
+        1,
+        1,
+        0,
+        1,
+        1
+      ],
+      "skill_access": {
+        "successful_full_read": true,
+        "deployed": true,
+        "interpretation": "access only; no task quality or benefit implied"
+      }
+    },
+    {
+      "position": 2,
+      "variant": "absent",
+      "submission_sha256": "1b5f3938836d5772590e3d1c07341569d2b711bc2bf905b080d274ee3ad02178",
+      "reference_pass": 1,
+      "variant_detections": [
+        1,
+        1,
+        0,
+        1,
+        1
+      ],
+      "skill_access": {
+        "successful_full_read": null,
+        "deployed": false,
+        "interpretation": "access only; no task quality or benefit implied"
+      }
+    },
+    {
+      "position": 3,
+      "variant": "absent",
+      "submission_sha256": "3aa730ae21e26a85695dbf98442899b1a08ef7f252772d1c23df12cb6d6e8fa0",
+      "reference_pass": 1,
+      "variant_detections": [
+        1,
+        1,
+        0,
+        1,
+        1
+      ],
+      "skill_access": {
+        "successful_full_read": null,
+        "deployed": false,
+        "interpretation": "access only; no task quality or benefit implied"
+      }
+    },
+    {
+      "position": 4,
+      "variant": "current",
+      "submission_sha256": "3215b6097fa3e5f592989f2b8f4523207e28ebd4893cc7d11437b19189795981",
+      "reference_pass": 1,
+      "variant_detections": [
+        1,
+        1,
+        0,
+        1,
+        1
+      ],
+      "skill_access": {
+        "successful_full_read": true,
+        "deployed": true,
+        "interpretation": "access only; no task quality or benefit implied"
+      }
+    },
+    {
+      "position": 5,
+      "variant": "current",
+      "submission_sha256": "3215b6097fa3e5f592989f2b8f4523207e28ebd4893cc7d11437b19189795981",
+      "reference_pass": 1,
+      "variant_detections": [
+        1,
+        1,
+        0,
+        1,
+        1
+      ],
+      "skill_access": {
+        "successful_full_read": true,
+        "deployed": true,
+        "interpretation": "access only; no task quality or benefit implied"
+      }
+    },
+    {
+      "position": 6,
+      "variant": "absent",
+      "submission_sha256": "1b5f3938836d5772590e3d1c07341569d2b711bc2bf905b080d274ee3ad02178",
+      "reference_pass": 1,
+      "variant_detections": [
+        1,
+        1,
+        0,
+        1,
+        1
+      ],
+      "skill_access": {
+        "successful_full_read": null,
+        "deployed": false,
+        "interpretation": "access only; no task quality or benefit implied"
+      }
+    }
+  ]
+}

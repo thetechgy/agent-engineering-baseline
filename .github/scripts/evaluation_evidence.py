@@ -82,3 +82,20 @@ def validate_task(profile, members, case, arm):
 def native_outcome(profile, trial, outcome):
     from evaluation_runtime import native_outcome as interpret, read_profile
     return interpret(read_profile(ROOT / task(profile).definition['runtime_profile']), trial, outcome)
+
+
+def selected_source(workspace, profile):
+    adapter = task(profile)
+    source = workspace / adapter.definition['source']
+    binding = profile.get('skill_source')
+    if binding is not None:
+        import skill_evidence as e
+        require(binding == {'path': adapter.definition['source'], 'digest': e.skill_content(source)['digest']},
+                'Unregistered campaign skill source')
+    return source
+
+
+def selected_identity(workspace, profile, original):
+    import skill_evidence as e
+    source = selected_source(workspace, profile)
+    return dict(original, source_path=source.relative_to(workspace).as_posix(), content=e.skill_content(source))

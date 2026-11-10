@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def load(path):
     definition = reports.read_json(path)
-    adapters = {'boolean-contract': BooleanContract, 'gh-fixture': GhFixture}
+    adapters = {'boolean-contract': BooleanContract, 'gh-fixture': GhFixture, 'batch-summary': BatchSummary}
     require(definition.get('adapter') in adapters, 'Unsupported task adapter')
     for key in ('id', 'skill', 'source_case'):
         require(__import__('re').fullmatch('[a-z0-9-]+', definition[key]), 'Invalid task identity')
@@ -165,7 +165,16 @@ class BooleanContract(Task):
 
     def base_bundle(self, root):
         import pester_evaluations as pester
-        return pester.stage(ROOT, root / 'bundle' / self.definition['skill'])
+        bundle = pester.stage(ROOT, root / 'bundle' / self.definition['skill'])
+        # Pester task variants keep the default source immutable.
+        source = ROOT / self.definition['source']
+        for member in reports.regular_tree(source):
+            relative = member.relative_to(source)
+            if relative.parts[0] != 'evals':
+                target = bundle / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(member, target)
+        return bundle
 
     def expected_members(self, case, arm):
         from codex_pilot_effectiveness import grader_bytes, runner_bytes, execution_profile_bytes
@@ -176,8 +185,12 @@ class BooleanContract(Task):
             'tests/entry.json': (json.dumps({'id': case, 'grading_mode': 'custom_only'}, indent=2) + '\n').encode(),
             'environment/input/EXECUTION-PROFILE.md': execution_profile_bytes()}
         result.update({'tests/case/' + k:v for k,v in self.files().items()})
-        result.update({'environment/input/' + p.name:p.read_bytes() for p in (base / 'cases' / self.definition['source_case'] / 'input').iterdir()})
+        folder = self.input_directory()
+        result.update({'environment/input/' + p.name:p.read_bytes() for p in folder.iterdir()})
         return result
+
+    def input_directory(self):
+        return ROOT / '.github/evals/powershell-pester-6/support/cases' / self.definition['source_case'] / 'input'
 
     def configure(self, task, control, mode, present):
         from codex_pilot_contract import runtime_installer_bytes
@@ -310,3 +323,41 @@ class GhFixture(Task):
             require(metrics['gh_authorization'] == (0 if control in ('unauthorized','wrong-repo') else 1), 'gh authorization meaning lost')
         else:
             require(not metrics, 'Unavailable gh evidence acquired metrics')
+
+
+class BatchSummary(BooleanContract):
+    """Object return contract with deliberately variable numeric representation."""
+    source_directories = ('.github/evals/pester-return-contract/transfer',)
+    probe_controls = ('good', 'value-only')
+
+    def fixture_control(self, scenario, row):
+        if scenario == 'invalid': return 'invalid'
+        if scenario == 'unsupported-grading': return 'unsupported'
+        return 'value-only' if row['position'] % 3 == 0 else 'good'
+
+    def entry(self):
+        return {'id': self.definition['source_case'], 'prompt': (ROOT / self.definition['candidate']).with_name('prompt.txt').read_text().rstrip(),
+                'expected_skill': self.definition['skill']}
+
+    def input_directory(self):
+        return (ROOT / self.definition['candidate']).parent / 'input'
+
+    def files(self):
+        folder = (ROOT / self.definition['candidate']).parent
+        return {p.relative_to(folder).as_posix(): p.read_bytes() for p in reports.regular_tree(folder)
+                if p.relative_to(folder).parts[0] in ('reference', 'mutants') or p.name == 'profile.json'}
+
+    def base_bundle(self, root):
+        bundle = super().base_bundle(root)
+        native = bundle / 'evals/harbor'
+        source = native / 'pester-004'
+        target = native / self.definition['source_case']
+        source.rename(target)
+        config = target / 'task.toml'
+        config.write_text(config.read_text().replace('pester-004', self.definition['source_case']))
+        return bundle
+
+    def configure(self, task, control, mode, present):
+        shutil.rmtree(task / 'environment/input')
+        (task / 'environment/input').mkdir()
+        super().configure(task, control, mode, present)

@@ -1,6 +1,39 @@
 # Issue #95 dependency modernization checkpoint
 
-This is the authoritative active checkpoint. PRs #119, #121 and
+This is the authoritative active checkpoint. The completed six-attempt
+[Boolean comparison 42744596001](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42744596001)
+at `9f81a66b343f340b681759db8c7c38a4e9e016c5` produced three valid submissions
+per arm. Every submission passed the reference and detected four of five defects,
+missing integer-result. All current attempts recorded full skill reads; access
+is not instruction following or causal benefit. Artifact `13730584511` and its
+authenticated archive digest are recorded in the [new candidate evidence](pester-return-contract/basis.json).
+The allocation is closed.
+
+One [return-contract skill candidate and frozen plan](pester-return-contract/PLAN.md)
+is prepared from that main revision. It clarifies existing coercion/type advice
+with a short generic data-driven example. Immutable current/candidate snapshots
+remain separate; neither default source nor deployment adopts the candidate.
+Pinned Pester 6.2.0 source, 51 tagged tests, 15 advice controls and literal example
+checks support the factual guidance. Pester 6.0.0 is source-reviewed only.
+The unchanged Boolean development case and an output-informed batch-summary
+transfer/regression case use existing runner/grading extension points. Four
+paired definitions propose 24 attempts (six current, six candidate, twelve absent),
+with explicit duplicated baselines and an indirect comparison. No candidate
+model output has been observed. Full native qualification of these new inputs
+remains unavailable locally; existing executed receipts do not qualify them.
+Static skill validation is incomplete on both snapshots; broader local checks
+are not all green. The evidence records focused passes and baseline-reproduced
+worker/synthetic-fixture failures without reclassifying unavailable results.
+
+**One next action:** review the candidate and frozen evaluation plan.
+No inference, judge, paid dispatch, new allocation, protected gate, dependency
+upgrade, production/default deployment, Pages change or merge is authorized.
+The reserved confirmation variant remains untouched.
+
+## Previous checkpoint, retained as history
+
+The following sections preserve earlier status and proposals, not current
+execution authorization. PRs #119, #121 and
 [PR #122](https://github.com/thetechgy/agent-engineering-baseline/pull/122) are merged.
 The prospectively frozen twelve-attempt Pester cohort completed on reused cases:
 both arms passed all three trials per case, detecting 5/5 defects on `pester-003`

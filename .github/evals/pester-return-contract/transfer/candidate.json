@@ -1,0 +1,51 @@
+{
+  "id": "pester-transfer-batch-v1",
+  "purpose": "prospectively frozen output-informed transfer and overrestriction regression; not untouched holdout",
+  "source_case": "pester-transfer-batch-v1",
+  "prompt": "prompt.txt",
+  "extra_mutants": {},
+  "controls": [
+    {
+      "id": "good",
+      "file": ".github/evals/pester-return-contract/transfer/controls/good.Tests.ps1",
+      "outcome": "passed",
+      "detections": {
+        "enabled-integer": 1,
+        "enabled-zero": 1,
+        "quantity-offset": 1,
+        "quantity-below": 1,
+        "quantity-above": 1
+      }
+    },
+    {
+      "id": "value-only",
+      "file": ".github/evals/pester-return-contract/transfer/controls/value-only.Tests.ps1",
+      "outcome": "failed",
+      "detections": {
+        "enabled-integer": 0,
+        "enabled-zero": 1,
+        "quantity-offset": 1,
+        "quantity-below": 1,
+        "quantity-above": 1
+      }
+    },
+    {
+      "id": "overrestricted",
+      "file": ".github/evals/pester-return-contract/transfer/controls/overrestricted.Tests.ps1",
+      "outcome": "failed",
+      "detections": {
+        "enabled-integer": 0,
+        "enabled-zero": 0,
+        "quantity-offset": 0,
+        "quantity-below": 0,
+        "quantity-above": 0
+      }
+    },
+    {
+      "id": "invalid",
+      "file": ".github/evals/pester-return-contract/transfer/controls/invalid.Tests.ps1",
+      "outcome": "invalid",
+      "detections": null
+    }
+  ]
+}

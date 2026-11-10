@@ -1,0 +1,29 @@
+--- current/SKILL.md
++++ candidate/SKILL.md
+@@ -122,4 +122,26 @@
+   collection assertions collect items, losing the concrete collection type. Use `-Actual` to preserve exact shape
+   or type, including singleton arrays and dictionaries.
++- Map declared return types to explicit checks as well as values, including in each data-driven case.
++  Equality can pass after coercion. Keep the actual result unconverted: a cast or typed assignment can hide a
++  contract violation. For a Boolean return, check `Should-HaveType -Actual $actual -Expected ([bool])` before
++  comparing its value. Keep boundary and behavioral assertions too.
++- Add type checks only for requirements in the public contract. `Should-HaveType` with a .NET type accepts
++  assignable types, including derived types and interface implementations. Do not require a concrete implementation
++  type when alternatives are permitted, or add a type requirement to a value-only contract.
++
++```powershell
++# Contract: Test-LabelPresent returns a Boolean indicating whether Label is nonempty.
++Describe 'label presence' {
++    It 'reports presence for <Label>' -ForEach @(
++        @{ Label = ''; Expected = $false }
++        @{ Label = 'draft'; Expected = $true }
++    ) {
++        $actual = Test-LabelPresent -Label $Label
++        Should-HaveType -Actual $actual -Expected ([bool])
++        Should-Be -Actual $actual -Expected $Expected
++    }
++}
++```
++
+ - Soft assertions (`Should.ErrorAction = 'Continue'` or `-ErrorAction Continue`) record multiple failures. Use
+   `Stop` for prerequisites where continuing would mislead.

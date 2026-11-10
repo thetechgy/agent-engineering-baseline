@@ -1,0 +1,23 @@
+{
+  "id": "pester-return-development-current-controls-v1",
+  "adapter": "boolean-contract",
+  "skill": "powershell-pester-6",
+  "source": ".github/evals/pester-return-contract/variants/current/powershell-pester-6",
+  "source_case": "pester-004",
+  "candidate": ".github/evals/pester-ceiling/candidate.json",
+  "runtime_profile": ".github/evals/campaigns/codex-qualified.json",
+  "variants": [
+    {
+      "id": "current",
+      "present": true
+    },
+    {
+      "id": "absent",
+      "present": false
+    }
+  ],
+  "trials": 1,
+  "attempt_limit": 10,
+  "stop_estimate_usd": 5,
+  "authorized_live_attempts": 0
+}

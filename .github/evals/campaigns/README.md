@@ -400,3 +400,20 @@ The [canonical report receipt](https://github.com/thetechgy/agent-engineering-ba
 and the earlier shared/historical receipts retain their actual execution revisions;
 documentation descendants are not relabeled as native execution. Any future
 experiment requires a separate decision.
+
+
+## Declared return-contract candidate (review preparation only)
+
+The [frozen candidate plan](../pester-return-contract/PLAN.md) selects immutable
+current/candidate snapshots through the existing definition `source` field and
+pins each content identity in a new profile's `skill_source` binding. The shared
+scheduler/runtime has no task assertion semantics. `batch-summary` is a task-owned
+adapter reusing the existing runner/grader. Existing profiles retain their bytes;
+source-code changes get appended successor identities, never rewritten grades.
+
+For each case, use its current and candidate `pester-return-*-controls-v1.json`
+definitions together with `qualify` for known controls (four leaf records). Prospective `pester-return-*-v1.json` definitions
+and their protocols separately freeze three repetitions per arm. Native
+qualification/preparation and artifact/report reproduction for these new sources
+remain required before any later live decision. All live counts remain zero;
+this pass requests review of the candidate and plan, not spending approval.

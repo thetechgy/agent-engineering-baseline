@@ -3316,9 +3316,9 @@ def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
     if profile_id is None and campaign_purpose(purpose):
         profile_id = purpose
     if profile_id is None and purpose in ('skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-effectiveness-v9'
+        profile_id = 'pester-effectiveness-v10'
     if profile_id is None and name == 'powershell-pester-6' and purpose in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-cli-pilot-retained-v8'
+        profile_id = 'pester-cli-pilot-retained-v9'
     if profile_id is None and name == 'gh' and purpose == 'oracle_qualification':
         profile_id = 'gh-native-oracle-v1'
     profile_id = registry['active_profiles'].get(name) if profile_id is None else profile_id
@@ -3621,6 +3621,9 @@ def custom_capture(workspace, name, bundle, task_rows, *, purpose, attempts, age
         require(sorted(row['case_id'] for row in rows) == ids, 'Incomplete staged custom arms')
     inv = inventory(workspace)
     src = next(row['source'] for row in inv['skills'] if row['source']['skill_id'] == name)
+    if 'skill_source' in profile:
+        from evaluation_evidence import selected_identity
+        src = selected_identity(workspace, profile, src)
     capture = {'schema_version': 1, 'skill': name, 'contract_digest': contract, 'purpose': purpose,
             'source': src, 'inputs': custom_source_manifest(workspace, name, purpose=purpose),
             'authored_digest': digest_bytes(read_bytes(workspace / '.github/evals' / name / 'evals/evals.json')),
@@ -3697,6 +3700,10 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None):
     prepared = custom_prepared_entries(workspace, name, ids, capture['purpose'])
     require(capture['prepared_dataset_digest'] == identity(prepared), 'Prepared dataset identity mismatch')
     source_root = workspace / ('.apm/skills' if name == 'powershell-pester-6' else '.agents/skills') / name
+    if 'skill_source' in profile:
+        from evaluation_evidence import selected_source
+        source_root = selected_source(workspace, profile)
+        require(capture['source']['source_path'] == source_root.relative_to(workspace).as_posix(), 'Campaign source path drift')
     require(capture['source']['skill_id'] == name
             and capture['source']['owner'] == ('local' if name == 'powershell-pester-6' else 'upstream')
             and (name != 'gh' or capture['source']['repository'] == 'cli/cli'
