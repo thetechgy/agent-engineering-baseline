@@ -392,4 +392,11 @@ correctness, 4/5 defects and primary quality 0/1 with unchanged bytes. Earlier
 HTTP 503 acquisition failures remain distinct failed records. No mirror, pin,
 grading, skill, isolation or adapter change was needed for this recovery. Final
 CI status and documentation-only source equivalence are recorded on PR #126.
-Any future experiment requires a separate decision.
+The evaluator's diagnostic-rerun cancellation rule was also corrected using
+Validate's existing guard, with a failing-before regression. Its complete native
+cohorts, gh shards and canonical report passed at `e196937` in
+[run 42724173254](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42724173254).
+The [canonical report receipt](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42724173254/artifacts/13724828199)
+and the earlier shared/historical receipts retain their actual execution revisions;
+documentation descendants are not relabeled as native execution. Any future
+experiment requires a separate decision.

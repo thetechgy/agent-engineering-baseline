@@ -124,8 +124,19 @@ unmeasured result and closed six-slot allocation are unchanged. Independent
 retrospective report reproduction and cleanup pass. This is one current-arm
 submission after output inspection, not evidence of skill benefit.
 
-Validate passed on the qualification source. Remaining historical/evaluator CI
-and final documentation-head validation are recorded on
+Validate and the shared/historical workflows passed on `af4dd66`. The current
+evaluator workflow passed on `e1969373c6dea03b055d7439e4f0be22083f417b` in
+[run 42724173254](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42724173254),
+including all native cohorts, six gh shards and canonical report admission.
+[Canonical report receipt 13724828199](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42724173254/artifacts/13724828199)
+has archive digest `sha256:16ff91113e52f0e8c329b13b6c4b42cd3bca7044cba27a05175d7666fa15a63b`.
+A documentation push exposed an existing concurrency rule that cancelled a needed
+evaluator diagnostic rerun. The focused CI fix adopts Validate's existing
+rerun-preservation guard; its regression rejects the historical rule and all
+fourteen CI-contract tests pass. The cancelled receipt remains inconclusive.
+All nine registered grader/fixture/runtime identities remain identical to the
+qualified native source. Documentation-only descendants reuse those native
+receipts after exact input comparison; final-head Validate status is recorded on
 [PR #126](https://github.com/thetechgy/agent-engineering-baseline/pull/126).
 The qualified boundary is the pinned Codex/profile event subset. Arbitrary native
 events, other runtimes/models, live-provider compatibility and actual billing
@@ -133,8 +144,8 @@ remain outside this qualification. No inference, judge, replacement slot, skill
 revision or new paid allocation is part of this work. Dependency work remains
 under issue #95.
 
-**One next action:** finish the remaining required CI, then review the qualified
-correction and recovered result in draft PR #126.
+**One next action:** review the qualified correction and recovered result in
+draft PR #126.
 No further paid inference, judges, retries or dispatches are authorized.
 Production and skills remain unchanged; the reserved confirmation variant remains
 untouched and outside this work. Sections below preserve historical checkpoints
