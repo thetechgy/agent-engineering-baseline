@@ -1,0 +1,18 @@
+{
+  "command": "Get-BatchSummary",
+  "parameters": [
+    "Requested"
+  ],
+  "properties": [
+    "Enabled",
+    "Quantity",
+    "Expected",
+    "ExpectedQuantity",
+    "Requested"
+  ],
+  "dependencies": [],
+  "module": null,
+  "minimum_tests": 1,
+  "protected_marker": "PESTER_VERIFIER_ONLY_RETURN_TRANSFER",
+  "subject": "Subject.ps1"
+}

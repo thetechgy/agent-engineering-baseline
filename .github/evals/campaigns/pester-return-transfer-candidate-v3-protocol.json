@@ -1,0 +1,58 @@
+{
+  "id": "pester-return-transfer-candidate-v3",
+  "definition": ".github/evals/campaigns/pester-return-transfer-candidate-v3.json",
+  "version": 1,
+  "attempt_slots": 6,
+  "trials_per_arm": 3,
+  "automatic_retries": 0,
+  "replacements": 0,
+  "concurrency": 1,
+  "primary_outcome": "reference-correct submission detecting all five seeded defects",
+  "separate_outcomes": [
+    "reference correctness",
+    "enabled-integer",
+    "enabled-zero",
+    "quantity-offset",
+    "quantity-below",
+    "quantity-above",
+    "invalid",
+    "unsupported",
+    "runtime failure",
+    "successful skill access",
+    "usage",
+    "elapsed seconds"
+  ],
+  "interpretation": "Frozen exploratory revision hypothesis; indirect paired comparison; no execution authorization.",
+  "budget": {
+    "estimate_usd": 3,
+    "stop_estimate_usd": 5,
+    "overshoot_reserve_usd": 3,
+    "planning_allocation_usd": 8,
+    "billing_limit_enforced": false,
+    "pricing_verified": "2026-11-09",
+    "pricing_source": "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+    "prices_per_million": {
+      "input": 2,
+      "cached_input": 0.1,
+      "output": 10
+    }
+  },
+  "stop_rules": [
+    "estimated_usage_threshold",
+    "unknown_usage",
+    "execution_infrastructure_failure",
+    "cleanup_failure",
+    "missing_grading_evidence",
+    "missing_usable_evidence",
+    "unsupported_grading",
+    "verifier_failure",
+    "missing_native_observation",
+    "unsupported_runtime_protocol",
+    "security_or_identity_drift"
+  ],
+  "agent_seconds": 600,
+  "launch_seconds": 1200,
+  "cleanup_grace_seconds": 80,
+  "protected_environment": "skill-benchmark",
+  "authorized_live_attempts": 0
+}

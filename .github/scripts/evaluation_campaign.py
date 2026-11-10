@@ -22,7 +22,7 @@ import skill_reports as reports
 
 
 def purpose(task, mode):
-    identity = {'boolean-contract-v1':'boolean-contract-v3', 'gh-read-v1':'gh-read-v3', 'boolean-effectiveness-v1':'boolean-effectiveness-v2'}.get(task.definition['id'], task.definition['id'])
+    identity = {'boolean-contract-v1':'boolean-contract-v4', 'gh-read-v1':'gh-read-v4', 'boolean-effectiveness-v1':'boolean-effectiveness-v3', 'boolean-retained-v1':'boolean-retained-v2'}.get(task.definition['id'], task.definition['id'])
     return 'campaign-' + identity + '-' + ('probe' if mode == 'experiment-probe' else mode)
 
 

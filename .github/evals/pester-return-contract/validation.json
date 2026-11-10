@@ -1,0 +1,262 @@
+{
+  "environment": {
+    "powershell": "7.6.9",
+    "pester": "6.2.0"
+  },
+  "advice": {
+    "passed": 15,
+    "failed": 0
+  },
+  "upstream_tagged_tests": {
+    "tag": "6.2.0",
+    "passed": 51,
+    "failed": 0
+  },
+  "literal_example": [
+    {
+      "control": "correct",
+      "Containers": 0,
+      "Failed": 0,
+      "PowerShell": "7.6.9",
+      "Pester": "6.2.0",
+      "Blocks": 0,
+      "Total": 2,
+      "Passed": 2
+    },
+    {
+      "control": "wrong-type",
+      "Pester": "6.2.0",
+      "PowerShell": "7.6.9",
+      "Passed": 0,
+      "Total": 2,
+      "Containers": 0,
+      "Failed": 2,
+      "Blocks": 0
+    },
+    {
+      "control": "wrong-values",
+      "Failed": 2,
+      "Pester": "6.2.0",
+      "PowerShell": "7.6.9",
+      "Containers": 0,
+      "Passed": 0,
+      "Total": 2,
+      "Blocks": 0
+    },
+    {
+      "control": "empty-boundary",
+      "Total": 2,
+      "Passed": 1,
+      "Blocks": 0,
+      "Pester": "6.2.0",
+      "Failed": 1,
+      "Containers": 0,
+      "PowerShell": "7.6.9"
+    },
+    {
+      "control": "nonempty-boundary",
+      "Failed": 1,
+      "PowerShell": "7.6.9",
+      "Containers": 0,
+      "Pester": "6.2.0",
+      "Passed": 1,
+      "Blocks": 0,
+      "Total": 2
+    }
+  ],
+  "transfer": [
+    {
+      "control": "good",
+      "classification": "passed",
+      "details": {
+        "code": "evaluated",
+        "reference_pass": 1,
+        "mutants_detected": 5,
+        "mutants_executed": 5,
+        "tests_executed": 5,
+        "variant_detections": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "variant_failure_kinds": [
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion"
+        ],
+        "pester_version": "6.2.0",
+        "powershell_version": "7.6.9"
+      }
+    },
+    {
+      "control": "value-only",
+      "classification": "failed",
+      "details": {
+        "code": "evaluated",
+        "reference_pass": 1,
+        "mutants_detected": 4,
+        "mutants_executed": 5,
+        "tests_executed": 5,
+        "variant_detections": [
+          0,
+          1,
+          1,
+          1,
+          1
+        ],
+        "variant_failure_kinds": [
+          null,
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion"
+        ],
+        "pester_version": "6.2.0",
+        "powershell_version": "7.6.9"
+      }
+    },
+    {
+      "control": "overrestricted",
+      "classification": "failed",
+      "details": {
+        "code": "evaluated",
+        "reference_pass": 0,
+        "mutants_detected": 0,
+        "mutants_executed": 5,
+        "tests_executed": 5,
+        "variant_detections": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "variant_failure_kinds": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "pester_version": "6.2.0",
+        "powershell_version": "7.6.9"
+      }
+    },
+    {
+      "control": "invalid",
+      "classification": "invalid",
+      "details": {
+        "code": "nonexecuting"
+      }
+    }
+  ],
+  "native_apm_staging": [
+    {
+      "definition": "pester-return-development-current-controls-v1",
+      "descriptors": 10,
+      "deployment": true,
+      "matched": true
+    },
+    {
+      "definition": "pester-return-development-candidate-controls-v1",
+      "descriptors": 10,
+      "deployment": true,
+      "matched": true
+    },
+    {
+      "definition": "pester-return-transfer-current-controls-v1",
+      "descriptors": 8,
+      "deployment": true,
+      "matched": true
+    },
+    {
+      "definition": "pester-return-transfer-candidate-controls-v1",
+      "descriptors": 8,
+      "deployment": true,
+      "matched": true
+    }
+  ],
+  "limits": [
+    "Pester 6.0.0 source review only",
+    "Windows PowerShell 5.1 not executed",
+    "native container/CLI and report reproduction not executed for new sources",
+    "no agent inference or judges"
+  ],
+  "static_skill_validation": {
+    "candidate_exit": 1,
+    "current_exit": 1,
+    "baseline_reproduced": [
+      "metadata.author missing (schema)",
+      "SkillSpector not installed (security unavailable)"
+    ],
+    "passed_checks": [
+      "version",
+      "pii",
+      "license",
+      "code-integrity",
+      "unicode",
+      "quality",
+      "lint"
+    ],
+    "interpretation": "Static validation is incomplete, not green. Unrelated metadata and tool setup are not changed."
+  },
+  "repository_checks": {
+    "campaign_contracts": {
+      "tests": 16,
+      "passed": true
+    },
+    "protocol_contracts": {
+      "tests": 13,
+      "passed": true
+    },
+    "retained_replay_contracts": {
+      "tests": 4,
+      "passed": true
+    },
+    "effectiveness_contracts": {
+      "tests": 9,
+      "skipped": 2,
+      "passed": true
+    },
+    "pester_contracts": {
+      "tests": 25,
+      "failed": 1,
+      "baseline_reproduced": "PowerShell worker start exits 137"
+    },
+    "broader_suite": "Invoked with retained candidate evaluator; not a clean pass. Includes baseline-reproduced StopIteration in synthetic custom-metric observation fixture and worker-start failure. Not all failures independently isolated; hosted checks remain separate."
+  },
+  "final_native_staging": {
+    "rows": [
+      {
+        "definition": "pester-return-development-current-controls-v1",
+        "descriptors": 10,
+        "deployment": true,
+        "matched": true
+      },
+      {
+        "definition": "pester-return-development-candidate-controls-v1",
+        "descriptors": 10,
+        "deployment": true,
+        "matched": true
+      },
+      {
+        "definition": "pester-return-transfer-current-controls-v1",
+        "descriptors": 8,
+        "deployment": true,
+        "matched": true
+      },
+      {
+        "definition": "pester-return-transfer-candidate-controls-v1",
+        "descriptors": 8,
+        "deployment": true,
+        "matched": true
+      }
+    ],
+    "historical_profiles_preserved": true,
+    "defaults_preserved": true
+  }
+}

@@ -1,6 +1,57 @@
 # Issue #95 dependency modernization checkpoint
 
-This is the authoritative active checkpoint. PRs #119, #121 and
+This is the authoritative active checkpoint. The completed six-attempt
+[Boolean comparison 42744596001](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42744596001)
+at `9f81a66b343f340b681759db8c7c38a4e9e016c5` produced three valid submissions
+per arm. Every submission passed the reference and detected four of five defects,
+missing integer-result. All current attempts recorded full skill reads; access
+is not instruction following or causal benefit. Artifact `13730584511` and its
+authenticated archive digest are recorded in the [new candidate evidence](pester-return-contract/basis.json).
+The allocation is closed.
+
+One [return-contract skill candidate and frozen plan](pester-return-contract/PLAN.md)
+is prepared from that main revision. It clarifies existing coercion/type advice
+with a short generic data-driven example. Immutable current/candidate snapshots
+remain separate; neither default source nor deployment adopts the candidate.
+Pinned Pester 6.2.0 source, 51 tagged tests, 15 advice controls and literal example
+checks support the factual guidance. Pester 6.0.0 is source-reviewed only.
+The unchanged Boolean development case and an output-informed batch-summary
+transfer/regression case use existing runner/grading extension points. Four
+paired definitions propose 24 attempts (six current, six candidate, twelve absent),
+with explicit duplicated baselines and an indirect comparison. No candidate
+model output has been observed. Credential-free native qualification of current
+and candidate on both cases completed at `2762e16d1f819e825dd958d5e98791c7799ca946` in
+[run 42758383979](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42758383979).
+The 56 known controls retained their declared 24 passed, 24 measured failed and
+eight invalid/unmeasured outcomes. All four paired preparations passed eight
+scheduling/stop scenarios each, followed by fresh-runner consumption. Independent
+artifact admission verified archive digests, exact deployment and submission
+identities, cleanup, and byte reproduction of 46 machine/HTML report pairs.
+These 108 fixture trials include no model inference and establish no skill benefit.
+
+Narrow qualification fixes corrected Markdown and the Compose environment
+handoff. Transfer v3 also admits a valid single-test loop covering all public
+inputs: only the nonempty execution minimum changes, with a positive control
+and failing-before/passing-after evidence. Public contracts, defect criteria,
+primary quality formula, 22-line candidate and 24-attempt comparison are
+unchanged. Earlier freezes/profile values remain in the audit record.
+[Native evidence and limitations](pester-return-contract/EVIDENCE.md) and the
+[machine receipt](pester-return-contract/native-qualification.json) retain the
+actual execution revision. Frozen inputs remain unchanged in documentation
+descendants; exact-revision live admission is still required for any later run.
+Static skill validation remains incomplete on both snapshots; broader local
+failures retain their baseline/owning-runtime qualifications. Pester 6.0.0 remains
+source-reviewed only. Required checks must pass on the final PR head.
+
+**One next action:** review PR #127 and its qualified candidate experiment for merging.
+No inference, judge, paid dispatch, new allocation, protected gate, dependency
+upgrade, production/default deployment, Pages change or merge is authorized.
+The reserved confirmation variant remains untouched.
+
+## Previous checkpoint, retained as history
+
+The following sections preserve earlier status and proposals, not current
+execution authorization. PRs #119, #121 and
 [PR #122](https://github.com/thetechgy/agent-engineering-baseline/pull/122) are merged.
 The prospectively frozen twelve-attempt Pester cohort completed on reused cases:
 both arms passed all three trials per case, detecting 5/5 defects on `pester-003`

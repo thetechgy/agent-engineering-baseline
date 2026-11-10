@@ -1,0 +1,24 @@
+{
+  "id": "pester-return-transfer-current-v2",
+  "adapter": "batch-summary",
+  "skill": "powershell-pester-6",
+  "source": ".github/evals/pester-return-contract/variants/current/powershell-pester-6",
+  "source_case": "pester-transfer-batch-v1",
+  "candidate": ".github/evals/pester-return-contract/transfer/candidate.json",
+  "runtime_profile": ".github/evals/campaigns/codex-authorized-v1.json",
+  "variants": [
+    {
+      "id": "current",
+      "present": true
+    },
+    {
+      "id": "absent",
+      "present": false
+    }
+  ],
+  "trials": 3,
+  "attempt_limit": 6,
+  "stop_estimate_usd": 5,
+  "authorized_live_attempts": 0,
+  "protocol": ".github/evals/campaigns/pester-return-transfer-current-v2-protocol.json"
+}

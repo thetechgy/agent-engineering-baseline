@@ -149,7 +149,7 @@ class CampaignContracts(unittest.TestCase):
         with patch('builtins.__import__',side_effect=importing), patch.object(runtime, 'adapter_for', side_effect=AssertionError('Metadata loaded execution adapter')):
             for filename in ('boolean-contract','gh-read'):
                 task=load(ROOT/('.github/evals/campaigns/'+filename+'.json'))
-                evidence.custom_input_identities(ROOT,task.definition['skill'],purpose='campaign-'+task.definition['id']+'-oracle')
+                evidence.custom_input_identities(ROOT,task.definition['skill'],purpose=__import__('evaluation_campaign').purpose(task,'oracle'))
 
     def test_historical_replay_does_not_require_matched_submitted_answers(self):
         rows=[{'case_id':'case','members':{'instruction.md':'same','solution/candidate':answer}} for answer in ('left','right')]
@@ -178,6 +178,8 @@ class CampaignContracts(unittest.TestCase):
              'campaign-gh-read-v3-oracle','campaign-gh-read-v3-probe',
              'campaign-boolean-effectiveness-v2-probe','campaign-boolean-effectiveness-v2-live',
              'campaign-boolean-retained-v1-replay'}
+        new.update({'campaign-gh-read-v4-probe', 'campaign-boolean-retained-v2-replay', 'campaign-boolean-contract-v4-oracle', 'pester-effectiveness-v10', 'campaign-boolean-contract-v4-probe', 'campaign-gh-read-v4-oracle', 'campaign-boolean-effectiveness-v3-probe', 'pester-cli-pilot-retained-v9', 'campaign-boolean-effectiveness-v3-live'})
+        new.update(k for k in current['profiles'] if k.startswith('campaign-pester-return-'))
         historical={k:v for k,v in current['profiles'].items() if k not in new}
         value={'profiles':historical,'active_profiles':current['active_profiles'],'metrics':current['metrics']}
         digest=hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':'),ensure_ascii=True).encode()).hexdigest()

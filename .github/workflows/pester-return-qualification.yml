@@ -1,0 +1,177 @@
+name: Pester return-contract qualification
+on:
+  pull_request:
+    paths:
+      - '.github/evals/pester-return-contract/transfer/**'
+      - '.github/evals/pester-return-contract/variants/**'
+      - '.github/evals/pester-return-contract/freeze.json'
+      - '.github/evals/pester-return-contract/PLAN.md'
+      - '.github/evals/pester-return-contract/Advice.Tests.ps1'
+      - '.github/evals/pester-return-contract/verify_example.py'
+      - '.github/evals/campaigns/pester-return-*.json'
+      - '.github/evals/custom-metrics.json'
+      - '.github/scripts/evaluation_*.py'
+      - '.github/scripts/codex_pilot*.py'
+      - '.github/scripts/skill_evidence.py'
+      - '.github/scripts/skill_analysis.py'
+      - '.github/scripts/skill_report.py'
+      - '.github/tests/test_pester_return*.py'
+      - '.github/workflows/pester-return-qualification.yml'
+  workflow_dispatch:
+permissions: {}
+concurrency:
+  group: pester-return-qualification-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  qualify:
+    name: Native return contract (${{ matrix.case }}, no inference)
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - case: development
+            version: v1
+          - case: transfer
+            version: v3
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      CASE: ${{ matrix.case }}
+      CASE_VERSION: ${{ matrix.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: '0.13.7'
+          enable-cache: false
+      - name: Acquire existing pinned credential-free tools
+        run: |
+          bash .github/scripts/setup-skillevaluator.sh candidate-current
+          bash .github/scripts/setup-compose.sh
+          APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
+          echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
+      - name: Verify frozen inputs and source admission
+        run: 'PYTHONPATH=.github/scripts:.github/tests "$SKILL_CURRENT_PYTHON" -B -m unittest test_pester_return_contract test_pester_return_qualification -v'
+      - name: Qualify both sources with native oracle and real CLI controls
+        run: |
+          "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign.py qualify \
+            --definition ".github/evals/campaigns/pester-return-$CASE-current-controls-$CASE_VERSION.json" \
+            --definition ".github/evals/campaigns/pester-return-$CASE-candidate-controls-$CASE_VERSION.json" \
+            --output "$RUNNER_TEMP/pester-return/controls"
+      - name: Acquire fresh Compose configuration for current preparation
+        run: bash .github/scripts/setup-compose.sh
+      - name: Prepare the current paired protocol without forwarding model requests
+        timeout-minutes: 55
+        run: |
+          "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign.py prepare \
+            --definition ".github/evals/campaigns/pester-return-$CASE-current-$CASE_VERSION.json" \
+            --qualification "$RUNNER_TEMP/pester-return/controls" \
+            --output "$RUNNER_TEMP/pester-return/current"
+      - name: Acquire fresh Compose configuration for candidate preparation
+        run: bash .github/scripts/setup-compose.sh
+      - name: Prepare the candidate paired protocol without forwarding model requests
+        timeout-minutes: 55
+        run: |
+          "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign.py prepare \
+            --definition ".github/evals/campaigns/pester-return-$CASE-candidate-$CASE_VERSION.json" \
+            --qualification "$RUNNER_TEMP/pester-return/controls" \
+            --output "$RUNNER_TEMP/pester-return/candidate"
+      - name: Verify checkout integrity
+        if: always()
+        run: |
+          git diff --exit-code
+          test -z "$(git status --porcelain=v1 --untracked-files=all --ignored)"
+      - name: Dispose task-owned Compose configuration
+        if: always()
+        run: bash .github/scripts/setup-compose.sh cleanup
+      - name: Retain complete or partial sanitized native evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pester-return-${{ matrix.case }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/pester-return/controls/*/*/evidence/
+            ${{ runner.temp }}/pester-return/controls/report/
+            ${{ runner.temp }}/pester-return/controls/qualification.json
+            ${{ runner.temp }}/pester-return/current/evidence/
+            ${{ runner.temp }}/pester-return/current/scenarios/*/evidence/
+            ${{ runner.temp }}/pester-return/candidate/evidence/
+            ${{ runner.temp }}/pester-return/candidate/scenarios/*/evidence/
+          if-no-files-found: error
+          retention-days: 90
+
+  consume:
+    name: Consume return-contract evidence (${{ matrix.case }})
+    needs: qualify
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - case: development
+            version: v1
+          - case: transfer
+            version: v3
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      CASE: ${{ matrix.case }}
+      CASE_VERSION: ${{ matrix.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: '0.13.7'
+          enable-cache: false
+      - name: Acquire existing pinned consumption tools
+        run: |
+          bash .github/scripts/setup-skillevaluator.sh candidate-current
+          APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
+          echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: pester-return-${{ matrix.case }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/downloaded
+      - name: Consume exact source and task preparation for both paired definitions
+        run: |
+          for variant in current candidate; do
+            "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign.py check-preparation \
+              --definition ".github/evals/campaigns/pester-return-$CASE-$variant-$CASE_VERSION.json" \
+              --preparation "$RUNNER_TEMP/downloaded/$variant/evidence" \
+              --output "$RUNNER_TEMP/consumption/$variant"
+          done
+      - name: Reproduce the consolidated control report from downloaded public records
+        run: |
+          PYTHONPATH=.github/scripts "$SKILL_CURRENT_PYTHON" -B - <<'PYREPORT'
+          import os
+          from pathlib import Path
+          from skill_report import generate
+          root = Path(os.environ['RUNNER_TEMP'])
+          controls = root / 'downloaded/controls'
+          inputs = sorted(controls.glob('*/*/evidence/public'))
+          assert len(inputs) == 4, 'Incomplete source/control report population'
+          generate(inputs, controls / 'report/analysis/analysis.json', root / 'control-reproduction')
+          assert (root / 'control-reproduction/report.html').read_bytes() == (controls / 'report/consolidated/report.html').read_bytes()
+          PYREPORT
+      - name: Retain fresh-runner consumption receipts
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pester-return-consumption-${{ matrix.case }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/consumption/*/evidence/
+            ${{ runner.temp }}/control-reproduction/
+          if-no-files-found: error
+          retention-days: 90
