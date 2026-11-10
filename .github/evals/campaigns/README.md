@@ -410,9 +410,18 @@ scheduler/runtime has no task assertion semantics. `batch-summary` is a task-own
 adapter reusing the existing runner/grader. Existing profiles retain their bytes;
 source-code changes get appended successor identities, never rewritten grades.
 
-For each case, use its current and candidate `pester-return-*-controls-v1.json`
-definitions together with `qualify` for known controls (four leaf records). Prospective `pester-return-*-v1.json` definitions
-and their protocols separately freeze three repetitions per arm. Native
-qualification/preparation and artifact/report reproduction for these new sources
-remain required before any later live decision. All live counts remain zero;
-this pass requests review of the candidate and plan, not spending approval.
+Use development v1 and transfer v3: for each case pass its current and candidate
+`pester-return-*-controls-v*.json` definitions together to `qualify` (four leaf
+records). The matching prospective definitions/protocols freeze three repetitions
+per arm. Acquire fresh verified Compose configuration in a preceding workflow
+step before each `prepare`; consume both pairs with `check-preparation` on a
+fresh runner. Earlier v1/v2 transfer identities remain historical.
+
+[Credential-free native qualification](../pester-return-contract/EVIDENCE.md#native-qualification-completed-for-review)
+completed for all four source/case combinations, including scheduling stops,
+downloaded-artifact admission, report reproduction and cleanup. Its receipt
+names the actual executed revision; documentation descendants are not relabeled
+as native runs and do not bypass exact-revision live gates. All live counts
+remain zero. The four paired comparisons propose 24 future model attempts with
+duplicated absent baselines and an indirect current/candidate comparison; this
+pass requests review, without spending approval.
