@@ -126,8 +126,18 @@ def install_frozen_pester(destination):
     from codex_pilot_contract import runtime_installer_bytes
     import types
     installer = types.ModuleType('frozen_pester_runtime')
-    exec(compile(runtime_installer_bytes(), 'frozen_pester_runtime', 'exec'), installer.__dict__)
-    if destination.exists():
+    destination = destination.absolute()
+    source = runtime_installer_bytes().decode()
+    # The existing installer accepts destination parameters, but its original
+    # final import check names the container path. Bind that check to the same
+    # selected manifest; PowerShell single-quote escaping keeps paths as data.
+    original = 'Import-Module /opt/pester/Modules/Pester/6.2.0/Pester.psd1'
+    manifest = str(destination / 'Modules/Pester/6.2.0/Pester.psd1').replace("'", "''")
+    if source.count(original) != 1:
+        raise ValueError('Frozen installer validation contract changed')
+    source = source.replace(original, "Import-Module '" + manifest + "'")
+    exec(compile(source, 'frozen_pester_runtime', 'exec'), installer.__dict__)
+    if os.path.lexists(destination):
         raise ValueError('Frozen runtime destination must not exist')
     destination.mkdir()
     installer.main(runtime=destination / 'powershell', module=destination / 'Modules/Pester/6.2.0')

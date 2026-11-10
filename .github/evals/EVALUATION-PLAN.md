@@ -10,14 +10,15 @@ verified cleanup. New estimated usage is $0.3485231; historical spending is unkn
 The [unchanged execution receipt](https://github.com/thetechgy/agent-engineering-baseline/pull/130)
 remains draft and unmerged. No allocation is reopened.
 
-The [focused credential-free correction](pester-admission-v1/EVIDENCE.md) reproduces
+The [focused credential-free correction on PR #131](https://github.com/thetechgy/agent-engineering-baseline/pull/131)
+([diagnosis](pester-admission-v1/EVIDENCE.md)) reproduces
 the admission rejection and versions literal collection-size access and bounded
 numeric type predicates. Original bytes, original unmeasured result, task contract,
 reference, mutants, scoring, skills, candidate and runtime pins are preserved.
 The targeted native workflow must qualify the exact retained current submission;
 parser admission is not correctness or isolation evidence. Latest-PowerShell CI
-and declared frozen-grader runtime selection are separate. Hosted qualification
-and final report receipts are pending; no readiness claim is made yet.
+and declared frozen-grader runtime selection are separate. The final hosted source, artifact, replay and report receipts are maintained on
+PR #131; only completed authenticated qualification supports review readiness.
 
 **One next action:** review the focused implementation and its authenticated native
 replay evidence once its required checks complete. No inference, judge, live gate,

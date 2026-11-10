@@ -4,7 +4,8 @@ on:
     paths:
       - '.github/scripts/pester_admission.py'
       - '.github/scripts/pester_transfer_replay.py'
-      - '.github/evals/pester-admission-v1/**'
+      - '.github/evals/pester-admission-v1/controls/**'
+      - '.github/evals/pester-admission-v1/controls.json'
       - '.github/evals/codex-retrospective/42911213479/**'
       - '.github/evals/campaigns/pester-admission-*.json'
       - '.github/evals/campaigns/pester-transfer-*.json'
@@ -58,6 +59,21 @@ jobs:
           "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign.py replay \
             --definition .github/evals/campaigns/pester-transfer-retrospective-v1.json \
             --output "$RUNNER_TEMP/admission/replay"
+      - name: Authenticate exact verifier handoffs
+        run: |
+          python3 -B - <<'PYHANDOFF'
+          import hashlib, json, os
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP']) / 'admission'
+          payload = Path('.github/evals/codex-retrospective/42911213479/Subject.Tests.ps1').read_bytes()
+          expected = {'bytes': len(payload), 'sha256': hashlib.sha256(payload).hexdigest()}
+          for name, count in [('original', 2), ('replay', 1)]:
+              receipts = sorted((root / name).glob('**/jobs/*/*/verifier/pilot-verified-submission.json'))
+              assert len(receipts) == count, 'Missing exact verifier handoff'
+              assert all(json.loads(p.read_text()) == expected for p in receipts), 'Verifier submission drift'
+              output = root / (name + '-verified-handoffs.json')
+              output.write_text(json.dumps({'verified_receipts': count, 'unchanged_submission': expected}, indent=2) + '\n')
+          PYHANDOFF
       - name: Verify checkout integrity
         if: always()
         run: |
@@ -77,5 +93,6 @@ jobs:
             ${{ runner.temp }}/admission/controls/**/evidence/
             ${{ runner.temp }}/admission/controls/report/
             ${{ runner.temp }}/admission/replay/evidence/
+            ${{ runner.temp }}/admission/*-verified-handoffs.json
           if-no-files-found: error
           retention-days: 90

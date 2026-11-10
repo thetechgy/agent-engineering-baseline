@@ -221,3 +221,17 @@ class FrozenRuntimeOwnership(unittest.TestCase):
         self.assertEqual(grader['env']['CI_PWSH'],'${{ env.FROZEN_PWSH }}')
         self.assertEqual(grader['env']['PESTER_MANIFEST'],'${{ env.FROZEN_PESTER_MANIFEST }}')
         self.assertNotIn('FROZEN_PWSH',next(s for s in steps if s.get('name')=='Run full validation')['run'])
+
+    def test_relocated_installer_fails_closed_on_changed_validation_contract(self):
+        with tempfile.TemporaryDirectory() as directory:
+            destination=Path(directory)/'runtime'
+            with patch('codex_pilot_contract.runtime_installer_bytes',return_value=b'def main(): pass\n'), self.assertRaisesRegex(ValueError,'validation contract changed'):
+                runtime.install_frozen_pester(destination)
+            self.assertFalse(destination.exists())
+
+    def test_relocated_installer_preserves_an_existing_destination(self):
+        with tempfile.TemporaryDirectory() as directory:
+            destination=Path(directory)/'runtime';destination.mkdir();(destination/'keep').write_text('unrelated')
+            with self.assertRaisesRegex(ValueError,'must not exist'):
+                runtime.install_frozen_pester(destination)
+            self.assertEqual((destination/'keep').read_text(),'unrelated')

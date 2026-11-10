@@ -1,0 +1,174 @@
+{
+  "parse_errors": 0,
+  "candidate_executed": false,
+  "powershell": "7.6.9",
+  "types": [
+    {
+      "kind": "TypeExpressionAst",
+      "line": 17,
+      "type": "bool",
+      "column": 31,
+      "parent": "BinaryExpressionAst",
+      "operator": "Is"
+    },
+    {
+      "kind": "TypeExpressionAst",
+      "line": 27,
+      "type": "sbyte",
+      "column": 27,
+      "parent": "BinaryExpressionAst",
+      "operator": "Is"
+    },
+    {
+      "kind": "TypeExpressionAst",
+      "line": 27,
+      "type": "byte",
+      "column": 53,
+      "parent": "BinaryExpressionAst",
+      "operator": "Is"
+    },
+    {
+      "kind": "TypeExpressionAst",
+      "line": 28,
+      "type": "short",
+      "column": 27,
+      "parent": "BinaryExpressionAst",
+      "operator": "Is"
+    },
+    {
+      "kind": "TypeExpressionAst",
+      "line": 28,
+      "type": "ushort",
+      "column": 53,
+      "parent": "BinaryExpressionAst",
+      "operator": "Is"
+    },
+    {
+      "kind": "TypeExpressionAst",
+      "line": 29,
+      "type": "int",
+      "column": 27,
+      "parent": "BinaryExpressionAst",
+      "operator": "Is"
+    },
+    {
+      "kind": "TypeExpressionAst",
+      "line": 29,
+      "type": "uint",
+      "column": 51,
+      "parent": "BinaryExpressionAst",
+      "operator": "Is"
+    },
+    {
+      "kind": "TypeExpressionAst",
+      "line": 30,
+      "type": "long",
+      "column": 27,
+      "parent": "BinaryExpressionAst",
+      "operator": "Is"
+    },
+    {
+      "kind": "TypeExpressionAst",
+      "line": 30,
+      "type": "ulong",
+      "column": 52,
+      "parent": "BinaryExpressionAst",
+      "operator": "Is"
+    },
+    {
+      "kind": "TypeExpressionAst",
+      "line": 31,
+      "type": "single",
+      "column": 27,
+      "parent": "BinaryExpressionAst",
+      "operator": "Is"
+    },
+    {
+      "kind": "TypeExpressionAst",
+      "line": 31,
+      "type": "double",
+      "column": 54,
+      "parent": "BinaryExpressionAst",
+      "operator": "Is"
+    },
+    {
+      "kind": "TypeExpressionAst",
+      "line": 32,
+      "type": "decimal",
+      "column": 27,
+      "parent": "BinaryExpressionAst",
+      "operator": "Is"
+    },
+    {
+      "kind": "TypeExpressionAst",
+      "line": 32,
+      "type": "bigint",
+      "column": 55,
+      "parent": "BinaryExpressionAst",
+      "operator": "Is"
+    }
+  ],
+  "members": [
+    {
+      "member": "Count",
+      "kind": "MemberExpressionAst",
+      "column": 9,
+      "line": 14
+    },
+    {
+      "member": "Enabled",
+      "kind": "MemberExpressionAst",
+      "column": 10,
+      "line": 17
+    },
+    {
+      "member": "Enabled",
+      "kind": "MemberExpressionAst",
+      "column": 13,
+      "line": 19
+    },
+    {
+      "member": "Enabled",
+      "kind": "MemberExpressionAst",
+      "column": 13,
+      "line": 22
+    },
+    {
+      "member": "Quantity",
+      "kind": "MemberExpressionAst",
+      "column": 21,
+      "line": 25
+    }
+  ],
+  "ast_node_count": 234,
+  "kind": "parser-only diagnosis; not execution or correctness evidence",
+  "submission_sha256": "c985298ef4fbe7a02ca8d1645fc0a07a3ed478084aafbf0489e6537748ffc0bf",
+  "original_admission": {
+    "status": "unsupported",
+    "code": "expression_policy",
+    "first_rejection": {
+      "rule": "literal instance member must be in task properties",
+      "construct": "$results.Count",
+      "line": 14
+    },
+    "concealed_rejections": [
+      "sbyte",
+      "byte",
+      "short",
+      "ushort",
+      "uint",
+      "ulong",
+      "single",
+      "double",
+      "decimal",
+      "bigint"
+    ]
+  },
+  "corrected_admission": {
+    "status": "admitted",
+    "policy": "pester-collection-numeric-v1",
+    "correctness": "unavailable until isolated replay"
+  },
+  "original_effective_runner_sha256": "bbbacc034983887ed142cee91c9b5e0d3b0856a508e4103933ddadfb4adb1ab3",
+  "original_effective_member_guard_line": 131
+}

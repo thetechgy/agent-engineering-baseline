@@ -19,17 +19,18 @@ The separate provenance receipt retains authenticated GitHub artifact/run/job
 metadata. Offline replay authenticates that reviewed snapshot, not fresh GitHub
 availability. Agent content is data; only the existing isolated verifier executes it.
 
-The effective runner composes `support/Runner.ps1`, `codex_pilot_contract`,
+The [parser-only diagnosis](diagnosis.json) records exact AST locations and the
+authenticated effective runner digest. The effective runner composes `support/Runner.ps1`, `codex_pilot_contract`,
 `codex_pilot_iteration`, then `codex_pilot_effectiveness`. Looking only at the
 base runner misses existing Int64, iteration and invocation support. Pinned
 PowerShell 7.6.9 parser admission reproduces `unsupported/expression_policy`.
 The first rejecting node is the literal instance member `$results.Count`,
-submission line 16: the task profile omits `Count`. A diagnostic runner that labels
+submission line 14: the task profile omits `Count`. A diagnostic runner that labels
 this guard confirms the member rejection. A diagnostic profile adding only Count
 then exposes the numeric type guard. These are diagnostic fixtures, not replays.
 
 The complete submission also contains rejected literal numeric type expressions
-on lines 30–35: sbyte, byte, short, ushort, uint, ulong, single, double, decimal,
+on lines 27–32: sbyte, byte, short, ushort, uint, ulong, single, double, decimal,
 and bigint. Int32 and Int64 forms are already supported by the composed runner.
 `FindAll(..., $true)` visits every node, including all branches of short-circuit
 expressions; fixing Count alone cannot make this submission gradeable. Corrected
@@ -100,9 +101,10 @@ forms. Diagnostic reductions have explicit names and never replace the submissio
 Existing missing-runtime, timeout and missing-evidence controls retain their
 unmeasured meaning; this correction does not modify their grader or classifier.
 
-Local parser and contract receipts, hosted source revision, artifact authentication,
-cleanup, exact replay grade and independent report reproduction will be recorded
-here after qualification. Until then native correctness/isolation remain pending.
+The exact hosted source, authenticated artifact, cleanup, retrospective grade and
+report reproduction receipt are maintained on [PR #131](https://github.com/thetechgy/agent-engineering-baseline/pull/131)
+and linked from the authoritative checkpoint and draft PR #130. This implementation
+record does not qualify an uncompleted native run.
 
 Local focused integration passed 46 tests, with the existing optional semantic test
 skipped. A separate trusted combined-capability fixture executed on PowerShell
@@ -116,3 +118,19 @@ Actions review found no critical, high, medium or low findings in the focused
 workflow/runtime edit. Pull-request execution is unprivileged, permissions are
 read-only, checkout credentials are disabled, actions are SHA-pinned and scripts
 receive no model secrets. The workflow has no paid gate or live dispatch step.
+
+The first hosted correction revision `139cc0c` reproduced the original unsupported
+outcome before its independent controls. Its full-validation step passed on
+PowerShell 7.7.0; the new frozen acquisition then failed because the reused
+installer's final import still named its container manifest path. Both downloaded
+archives had verified hashes. The CI-only relocation now binds that final check
+to the selected manifest with PowerShell path quoting. Real local acquisition
+passed at a quoted destination with unchanged PowerShell/Pester bytes. Existing
+campaign installers and their default container paths remain unchanged. The
+initial deadline-contract job also exposed a snapshot exclusion that omitted two
+newly appended source profiles; its original historical digest is retained.
+
+The repaired real installation also passed the exact CI `test_pester_ceiling.py`
+command: both positive suites passed, value-only/type-only suites remained distinct
+measured failures, and broken discovery remained invalid/unmeasured. All five
+controls used PowerShell 7.6.9 and Pester 6.2.0.
