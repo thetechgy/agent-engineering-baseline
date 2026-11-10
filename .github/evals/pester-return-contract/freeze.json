@@ -1,5 +1,5 @@
 {
-  "id": "pester-return-contract-v2",
+  "id": "pester-return-contract-v3",
   "base_commit": "9f81a66b343f340b681759db8c7c38a4e9e016c5",
   "historical_run": 42744596001,
   "historical_artifact": 13730584511,
@@ -81,7 +81,7 @@
     ".github/evals/campaigns/pester-return-transfer-current-v2.json": "93062fb9d226653dbf28de8fce634f8551248b23aa13b94deb584b801084f4cd",
     ".github/evals/campaigns/pester-return-transfer-candidate-controls-v2.json": "40d15eb87cdd5f9e09e48017af1fc01097ec79d3134ac1563d3c6eab323e5cbe",
     ".github/evals/campaigns/pester-return-transfer-current-v2-protocol.json": "4ab45a210e9c54de96a3bc3ffe01f6dd8656c4a4a8a23514a5cd4365974987e6",
-    ".github/workflows/pester-return-qualification.yml": "4b5faab258cad089484df771d44a11f47c1e6850ed3378993f3ce68cb02a4fa2"
+    ".github/workflows/pester-return-qualification.yml": "9bdc1115a2316fe628e3d9367da9727b351d03bd4b5300c9d3b2a6f73258359e"
   },
   "qualification_definitions": [
     ".github/evals/campaigns/pester-return-development-current-controls-v1.json",
@@ -90,8 +90,9 @@
     ".github/evals/campaigns/pester-return-transfer-candidate-controls-v2.json"
   ],
   "previous": {
-    "commit": "ea266683626dcfdf8b86884797fd2caa7564a6ba",
-    "manifest": "history/ea26668-freeze.json",
-    "sha256": "adcf3c2635dcf34c73da150fcb320a1a0ea5148b303a129c132ff04bfaec1cf6"
-  }
+    "commit": "3cb767787bd589cd7c23a8515d4c8b3d0a77d407",
+    "manifest": "history/3cb7677-freeze.json",
+    "sha256": "e4b09ee4699b7f57157ee23c85d93c94c56e8667c65d9752e9331f06253de86a"
+  },
+  "revision_purpose": "Qualification recipe only: acquire fresh Compose in a prior Actions step. Frozen experiment design v2, task/profile identities and skill snapshots unchanged."
 }

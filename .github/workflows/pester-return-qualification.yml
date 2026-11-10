@@ -65,16 +65,24 @@ jobs:
             --definition ".github/evals/campaigns/pester-return-$CASE-current-controls-$CASE_VERSION.json" \
             --definition ".github/evals/campaigns/pester-return-$CASE-candidate-controls-$CASE_VERSION.json" \
             --output "$RUNNER_TEMP/pester-return/controls"
-      - name: Prepare both paired protocols without forwarding model requests
-        timeout-minutes: 110
+      - name: Acquire fresh Compose configuration for current preparation
+        run: bash .github/scripts/setup-compose.sh
+      - name: Prepare the current paired protocol without forwarding model requests
+        timeout-minutes: 55
         run: |
-          for variant in current candidate; do
-            bash .github/scripts/setup-compose.sh
-            "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign.py prepare \
-              --definition ".github/evals/campaigns/pester-return-$CASE-$variant-$CASE_VERSION.json" \
-              --qualification "$RUNNER_TEMP/pester-return/controls" \
-              --output "$RUNNER_TEMP/pester-return/$variant"
-          done
+          "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign.py prepare \
+            --definition ".github/evals/campaigns/pester-return-$CASE-current-$CASE_VERSION.json" \
+            --qualification "$RUNNER_TEMP/pester-return/controls" \
+            --output "$RUNNER_TEMP/pester-return/current"
+      - name: Acquire fresh Compose configuration for candidate preparation
+        run: bash .github/scripts/setup-compose.sh
+      - name: Prepare the candidate paired protocol without forwarding model requests
+        timeout-minutes: 55
+        run: |
+          "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign.py prepare \
+            --definition ".github/evals/campaigns/pester-return-$CASE-candidate-$CASE_VERSION.json" \
+            --qualification "$RUNNER_TEMP/pester-return/controls" \
+            --output "$RUNNER_TEMP/pester-return/candidate"
       - name: Verify checkout integrity
         if: always()
         run: |

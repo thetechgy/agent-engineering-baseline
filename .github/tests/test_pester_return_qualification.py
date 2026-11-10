@@ -36,3 +36,12 @@ class HostedReturnContract(unittest.TestCase):
         for key,digest in previous_profiles.items():
             raw=json.dumps(registry['profiles'][key],sort_keys=True,separators=(',',':')).encode()
             self.assertEqual(hashlib.sha256(raw).hexdigest(),digest,key)
+
+    def test_compose_environment_is_acquired_in_a_prior_step_for_each_preparation(self):
+        workflow=yaml.safe_load((ROOT/'.github/workflows/pester-return-qualification.yml').read_text())
+        steps=workflow['jobs']['qualify']['steps']
+        prepares=[i for i,step in enumerate(steps) if '.py prepare ' in step.get('run','')]
+        self.assertEqual(len(prepares),2,'Each paired protocol needs its own fresh environment handoff')
+        for index in prepares:
+            self.assertNotIn('setup-compose.sh',steps[index]['run'],'GITHUB_ENV changes apply only to later steps')
+            self.assertIn('setup-compose.sh',steps[index-1].get('run',''))
