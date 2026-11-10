@@ -88,7 +88,7 @@ class CampaignContracts(unittest.TestCase):
         for filename in ('boolean-contract','gh-read'):
             task=load(ROOT/('.github/evals/campaigns/'+filename+'.json'))
             for mode in ('oracle','probe'):
-                purpose='campaign-'+task.definition['id']+'-'+mode
+                purpose=__import__('evaluation_campaign').purpose(task,mode)
                 profile,definitions,_=evidence.custom_contract(task.definition['skill'],purpose=purpose)
                 identities=evidence.custom_input_identities(ROOT,task.definition['skill'],purpose=purpose)
                 self.assertTrue(all(profile[k]==v for k,v in identities.items()),(purpose,identities))
@@ -169,17 +169,19 @@ class CampaignContracts(unittest.TestCase):
         # independently exercises discovery, command observations and the grader.
 
     def test_new_profiles_preserve_every_historical_profile_byte_value(self):
-        # Canonical registry snapshot from merged base e2fabea; works in shallow
+        # Canonical registry snapshot from executed head 97124cf; works in shallow
         # CI checkouts and never follows a moving remote tracking reference.
         import hashlib
         current=reports.read_json(ROOT/evidence.CUSTOM_REGISTRY)
-        new={'pester-cli-pilot-retained-v7','pester-effectiveness-v7',
-             'campaign-boolean-contract-v1-oracle','campaign-boolean-contract-v1-probe',
-             'campaign-gh-read-v1-oracle','campaign-gh-read-v1-probe'}
+        new={'pester-cli-pilot-retained-v8','pester-effectiveness-v9',
+             'campaign-boolean-contract-v3-oracle','campaign-boolean-contract-v3-probe',
+             'campaign-gh-read-v3-oracle','campaign-gh-read-v3-probe',
+             'campaign-boolean-effectiveness-v2-probe','campaign-boolean-effectiveness-v2-live',
+             'campaign-boolean-retained-v1-replay'}
         historical={k:v for k,v in current['profiles'].items() if k not in new}
         value={'profiles':historical,'active_profiles':current['active_profiles'],'metrics':current['metrics']}
         digest=hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':'),ensure_ascii=True).encode()).hexdigest()
-        self.assertEqual(digest,'8abda5c8c49436edaaf2dd6a954720145c872cc9b5d6a4fe762beb584c92a118')
+        self.assertEqual(digest,'965162706d4ecdbe4a7fb9e070e7f94fc3fff02e08e24d0e0e010edb5fd287e1')
 
 
 
@@ -242,7 +244,7 @@ class NativeAdapterContracts(unittest.TestCase):
 
     @unittest.skipUnless(__import__('importlib.util',fromlist=['find_spec']).find_spec('aeb_gh_fixture') and __import__('importlib.metadata',fromlist=['version']).version('skillevaluator') == '0.8.0', 'Owning native backend required')
     def test_nonmounted_runtime_prepares_verifier_logs_and_readable_atomic_trajectory(self):
-        import stat
+        import hashlib, stat
         from types import SimpleNamespace
         from codex_pilot_runtime import prepare_cli
         from evaluation_codex import CampaignCodex
@@ -263,12 +265,15 @@ class NativeAdapterContracts(unittest.TestCase):
                     {'type':'item.completed','item':{**item,'aggregated_output':'/workspace\n','exit_code':0,'status':'completed'}},
                     {'type':'turn.completed','usage':{'input_tokens':0,'cached_input_tokens':0,'output_tokens':0}}]
             (logs/'codex.txt').write_text('\n'.join(map(json.dumps,events)))
-            adapter=object.__new__(CampaignCodex);adapter.logs_dir=logs;adapter.model_name=PROFILE['model'];adapter.profile=PROFILE
+            (logs/'codex-stderr.txt').write_text('synthetic retained diagnostic\n')
+            adapter=object.__new__(CampaignCodex);adapter.logs_dir=logs;adapter.model_name=PROFILE['model'];adapter.profile=PROFILE;adapter.live=False;adapter.task=SimpleNamespace(native_file_edit_probe=False)
             adapter.populate_context_post_run(SimpleNamespace())
             self.assertEqual(outside.read_text(),'preserved')
             self.assertFalse((logs/'trajectory.json').is_symlink())
             self.assertEqual(stat.S_IMODE((logs/'trajectory.json').stat().st_mode),0o644)
             self.assertEqual(reports.read_json(logs/'trajectory.json')['steps'][0]['observation']['results'][0]['content'],'/workspace\n')
+            self.assertEqual(reports.read_json(logs/'trajectory.json')['extra']['diagnostic_trace']['sha256'],
+                             'sha256:'+hashlib.sha256((logs/'codex-stderr.txt').read_bytes()).hexdigest())
 
     @unittest.skipUnless(__import__('importlib.util',fromlist=['find_spec']).find_spec('aeb_gh_fixture') and __import__('importlib.metadata',fromlist=['version']).version('skillevaluator') == '0.8.0', 'Owning native backend required')
     def test_private_verifier_transport_owns_helpers_and_rejects_links_and_escape(self):

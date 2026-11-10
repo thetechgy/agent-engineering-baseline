@@ -140,7 +140,7 @@ class PilotCodex(Codex):
         command = (f'{BINARY} exec --strict-config --sandbox danger-full-access --skip-git-repo-check '
                    f'--cd /workspace --model {self.profile["model"]} --json '
                    f'--output-last-message {logs}/last-message.txt -- {shlex.quote(instruction)} '
-                   f'>{logs}/codex.txt 2>&1')
+                   f'>{logs}/codex.txt 2>{logs}/codex-stderr.txt')
         if scenario == 'interruption':
             command = 'timeout --signal=INT --kill-after=5s 5s ' + command
         try:

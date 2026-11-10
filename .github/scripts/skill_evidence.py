@@ -3266,6 +3266,20 @@ def campaign_purpose(value):
     return type(value) is str and value.startswith('campaign-')
 
 
+
+def replay_purpose(value):
+    return value == 'cli_pilot_replay' or (campaign_purpose(value) and value.endswith('-replay'))
+
+
+def validate_replay_metadata(value, profile, purpose, workspace=ROOT):
+    if purpose == 'cli_pilot_replay':
+        from codex_pilot_replay import validate_retrospective
+        validate_retrospective(value)
+    else:
+        from codex_pilot_replay import validate_campaign_retrospective
+        validate_campaign_retrospective(value,profile,workspace)
+
+
 def profile_family(profile):
     return profile.get('semantics', profile['id'])
 
@@ -3278,7 +3292,7 @@ def validate_custom_purpose(value):
 
 
 def oracle_purpose(value):
-    return value in ('oracle_qualification', 'cli_pilot_control', 'cli_pilot_replay', 'skill_effectiveness_control') or (campaign_purpose(value) and value.endswith('-oracle'))
+    return value in ('oracle_qualification', 'cli_pilot_control', 'cli_pilot_replay', 'skill_effectiveness_control') or (campaign_purpose(value) and value.endswith(('-oracle','-replay')))
 
 
 def custom_agent(profile, purpose):
@@ -3302,9 +3316,9 @@ def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
     if profile_id is None and campaign_purpose(purpose):
         profile_id = purpose
     if profile_id is None and purpose in ('skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-effectiveness-v7'
+        profile_id = 'pester-effectiveness-v9'
     if profile_id is None and name == 'powershell-pester-6' and purpose in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-cli-pilot-retained-v7'
+        profile_id = 'pester-cli-pilot-retained-v8'
     if profile_id is None and name == 'gh' and purpose == 'oracle_qualification':
         profile_id = 'gh-native-oracle-v1'
     profile_id = registry['active_profiles'].get(name) if profile_id is None else profile_id
@@ -3579,7 +3593,7 @@ def custom_staged_inputs(tasks, purpose):
         value = {'case_id': task['case_id'], 'instruction_digest': members['instruction.md'],
                  'agent_inputs': {key.removeprefix('environment/input/'): digest for key, digest in members.items()
                                   if key.startswith('environment/input/')}}
-        if purpose == 'oracle_qualification' or (campaign_purpose(purpose) and purpose.endswith('-oracle')):
+        if purpose == 'oracle_qualification' or (campaign_purpose(purpose) and purpose.endswith(('-oracle','-replay'))):
             require('solution/candidate' in members, 'Missing oracle candidate identity')
             value['candidate_digest'] = members['solution/candidate']
         previous = cases.setdefault(task['case_id'], value)
@@ -3616,9 +3630,8 @@ def custom_capture(workspace, name, bundle, task_rows, *, purpose, attempts, age
             'evaluator_revision': producer['revision'], 'evaluator_version': producer['version'],
             'harbor_version': version('harbor'), 'python_version': '.'.join(map(str, sys.version_info[:3])), 'runtime': profile['runtime']}
 
-    if purpose == 'cli_pilot_replay':
-        from codex_pilot_replay import validate_retrospective
-        validate_retrospective(retrospective)
+    if replay_purpose(purpose):
+        validate_replay_metadata(retrospective,profile,purpose,workspace)
         capture['retrospective'] = copy.deepcopy(retrospective)
     else:
         require(retrospective is None, 'Unexpected retrospective metadata')
@@ -3634,7 +3647,7 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None):
         'authored_digest', 'prepared_dataset_digest', 'case_ids', 'tasks', 'attempts', 'agent', 'execution_policy', 'numeric_excerpts',
         'evaluator_revision', 'evaluator_version', 'harbor_version', 'python_version', 'runtime') +
         (('producer',) if capture.get('evaluator_revision') == profiles.CANDIDATE['revision'] else ()) +
-        (('retrospective',) if capture.get('purpose') == 'cli_pilot_replay' else ()))
+        (('retrospective',) if replay_purpose(capture.get('purpose')) else ()))
     if captured_state is not None:
         directories, states, members, budget = captured_state
         for source_root in (workspace / '.github/evals' / name, workspace / '.apm/skills' / name
@@ -3663,9 +3676,8 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None):
     require(capture['evaluator_version'] == producer['version'] and capture['harbor_version'] == producer['harbor']
             and capture['runtime'] == profile['runtime'], 'Custom runtime identity mismatch')
     validate_custom_purpose(capture['purpose']); validate_source(capture['source'])
-    if capture['purpose'] == 'cli_pilot_replay':
-        from codex_pilot_replay import validate_retrospective
-        validate_retrospective(capture['retrospective'])
+    if replay_purpose(capture['purpose']):
+        validate_replay_metadata(capture['retrospective'],profile,capture['purpose'],workspace)
     count(capture['attempts'], 100); require(capture['attempts'] > 0, 'Zero planned attempts')
     if capture['purpose'] in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
         require(name == 'powershell-pester-6' and producer is profiles.CANDIDATE and capture['attempts'] == (3 if capture['purpose'] in ('skill_effectiveness', 'skill_effectiveness_probe') else 1), 'Pilot runtime or attempts drift')
@@ -3675,7 +3687,7 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None):
     closed(execution, ('environment', 'concurrency', 'timeout_multiplier', 'stop_on_pass'))
     if 'campaign' in profile:
         require(execution == {'environment': profile['campaign']['environment_mode'], 'concurrency': 1,
-                'timeout_multiplier': 1.0, 'stop_on_pass': False} and capture['attempts'] == 1, 'Campaign execution policy drift')
+                'timeout_multiplier': 1.0, 'stop_on_pass': False} and capture['attempts'] == profile['campaign'].get('trials', 1), 'Campaign execution policy drift')
     else:
         require(execution['environment'] == ('aeb-gh-fixture' if name == 'gh' and capture['purpose'] == 'oracle_qualification' else 'docker') and execution['concurrency'] == (1 if capture['purpose'] in ('skill_effectiveness', 'skill_effectiveness_probe') else reports.POLICY['concurrency'])
                 and execution['stop_on_pass'] is False and execution['timeout_multiplier'] ==
@@ -3810,6 +3822,21 @@ def custom_measurements(definitions, case, outcome, native, details, references)
     return values
 
 
+def validate_custom_execution_config(purpose, config, attempts):
+    """Replay uses an oracle agent and retains its distinct producer identity."""
+    if replay_purpose(purpose):
+        require(config.get('qualification') == {'producer': 'retained_submission_replay', 'inference': False}, 'Retrospective purpose mismatch')
+    elif oracle_purpose(purpose):
+        require(config.get('qualification') == {'producer': 'oracle', 'inference': False}, 'Oracle purpose mismatch')
+    elif purpose in ('cli_pilot_probe', 'skill_effectiveness_probe') or (campaign_purpose(purpose) and purpose.endswith('-probe')):
+        require(config.get('qualification') == {'producer': 'cli_probe', 'inference': False}, 'CLI probe purpose mismatch')
+    else:
+        if campaign_purpose(purpose) and purpose.endswith('-live'):
+            require(config.get('qualification') == {'producer':'live', 'inference':True}, 'Live campaign purpose mismatch')
+        require(config.get('harbor', {}).get('n_attempts') == attempts
+                and config.get('harbor', {}).get('stop_on_pass') is False, 'Custom execution policy mismatch')
+
+
 def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, native_layout=False):
     """Shared native admission for registered custom-only and default-plus-custom data."""
     directories = {}; states = {}; members = {}; budget = ReadBudget()
@@ -3841,15 +3868,7 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
             'Custom grading configuration mismatch')
     require(config.get('judge', {}).get('enabled') is False if profile['grading'] == 'custom_only' else True,
             'Custom-only judge must be explicitly disabled')
-    if oracle_purpose(capture['purpose']):
-        require(config.get('qualification') == {'producer': 'oracle', 'inference': False}, 'Oracle purpose mismatch')
-    elif capture['purpose'] == 'cli_pilot_replay':
-        require(config.get('qualification') == {'producer': 'retained_submission_replay', 'inference': False}, 'Retrospective purpose mismatch')
-    elif capture['purpose'] in ('cli_pilot_probe', 'skill_effectiveness_probe') or (campaign_purpose(capture['purpose']) and capture['purpose'].endswith('-probe')):
-        require(config.get('qualification') == {'producer': 'cli_probe', 'inference': False}, 'CLI probe purpose mismatch')
-    else:
-        require(config.get('harbor', {}).get('n_attempts') == capture['attempts']
-                and config.get('harbor', {}).get('stop_on_pass') is False, 'Custom execution policy mismatch')
+    validate_custom_execution_config(capture['purpose'], config, capture['attempts'])
     ref(run / 'result.json'); config_ref = ref(run / 'run_config.json')
     agent = result['agents'][custom_carrier(profile)]
     if profile['grading'] == 'custom_only':
@@ -3897,7 +3916,7 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
         'runtime': capture['runtime'], 'native_metric_set': result.get('metric_set'), 'capture_digest': captured[root / CUSTOM_CAPTURE][1],
         'capture_reference': capture_ref, **{key: profile[key] for key in ('grader_digest', 'fixture_digest', 'runtime_digest')},
         'assurance': copy.deepcopy(CUSTOM_ASSURANCE)}
-    if capture['purpose'] == 'cli_pilot_replay':
+    if replay_purpose(capture['purpose']):
         data['custom']['retrospective'] = copy.deepcopy(capture['retrospective'])
     old = {(obs['arm'], obs['native_trial']): obs for obs in data['observations']}
     original_rewards = {'with_skill': [], 'without_skill': []}
@@ -3975,7 +3994,7 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
             matched = lookup.pop(trial_name, None)
             require(matched is None or matched[0] == case_id, 'Summary case mismatch')
             ordinal = matched[1].get('attempt') if matched else _attempt_ordinal({'_trial_name': trial_name})
-            if ordinal is None and capture['purpose'] in ('skill_effectiveness', 'skill_effectiveness_probe'):
+            if ordinal is None and (capture['purpose'] in ('skill_effectiveness', 'skill_effectiveness_probe') or 'campaign' in profile):
                 from skillevaluator.tier3.harbor.collector import _structural_attempt_ordinal
                 ordinal = _structural_attempt_ordinal(trial_name, case_id)
             if ordinal is None: limitations.add('metadata_missing')
@@ -4198,7 +4217,7 @@ def validate_custom_evidence(data, *, public=False, _observed_at=None):
     profile, definitions, contract = custom_contract(data['source']['skill_id'], profile_id=data['custom']['profile_id'])
     custom = data['custom']
     closed(custom, ('profile_id', 'contract_digest', 'definitions', 'cases', 'purpose', 'agent', 'runtime',
-                   'native_metric_set', 'capture_digest', 'capture_reference', 'agent_version', 'grader_digest', 'fixture_digest', 'runtime_digest', 'assurance') + (('retrospective',) if custom.get('purpose') == 'cli_pilot_replay' else ()))
+                   'native_metric_set', 'capture_digest', 'capture_reference', 'agent_version', 'grader_digest', 'fixture_digest', 'runtime_digest', 'assurance') + (('retrospective',) if replay_purpose(custom.get('purpose')) else ()))
     require(custom['profile_id'] == profile['id'] and custom['contract_digest'] == contract
             and custom['definitions'] == [{'native_name': key, **definition} for key, definition in sorted(definitions.items())]
             and custom['runtime'] == profile['runtime']
@@ -4221,6 +4240,8 @@ def validate_custom_evidence(data, *, public=False, _observed_at=None):
                 and fields['model'] == (profile['runtime']['model'] if live else 'credential-free-oracle')
                 and fields['provider'] == ('openai' if live else 'fixture')
                 and (not live or custom['agent_version'] in (None, profile['runtime']['codex'])), 'Pilot public runtime mismatch')
+    if campaign_purpose(custom['purpose']) and replay_purpose(custom['purpose']):
+        validate_replay_metadata(custom['retrospective'],profile,custom['purpose'])
     if custom['purpose'] == 'cli_pilot_replay':
         from codex_pilot_replay import validate_retrospective
         require(profile_family(profile) in ('pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2', 'pester-cli-pilot-retained-v3', 'pester-cli-pilot-retained-v4', 'pester-cli-pilot-retained-v5', 'pester-cli-pilot-retained-v6', 'pester-effectiveness-v1', 'pester-effectiveness-v2', 'pester-effectiveness-v3', 'pester-effectiveness-v4', 'pester-effectiveness-v5', 'pester-effectiveness-v6'), 'Unversioned retrospective profile')

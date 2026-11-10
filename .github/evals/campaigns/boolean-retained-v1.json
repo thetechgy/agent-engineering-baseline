@@ -1,0 +1,24 @@
+{
+  "id": "boolean-retained-v1",
+  "adapter": "boolean-contract",
+  "skill": "powershell-pester-6",
+  "source": ".apm/skills/powershell-pester-6",
+  "source_case": "pester-004",
+  "candidate": ".github/evals/pester-ceiling/candidate.json",
+  "runtime_profile": ".github/evals/campaigns/codex-qualified.json",
+  "variants": [
+    {
+      "id": "current",
+      "present": true
+    },
+    {
+      "id": "absent",
+      "present": false
+    }
+  ],
+  "trials": 1,
+  "attempt_limit": 1,
+  "stop_estimate_usd": 1,
+  "authorized_live_attempts": 0,
+  "retrospective": ".github/evals/codex-retrospective/42695478931/manifest.json"
+}

@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "source": {
+    "run": 42695478931,
+    "artifact": 13708468986,
+    "revision": "97124cf6b09d2acd4bda6243d0345dff06aea989",
+    "archive_sha256": "0d9cc2aa7125f86656224251e4c84531b5dfd72fd211c1e8b079513a27112deb",
+    "workflow": ".github/workflows/evaluation-campaign.yml",
+    "attempt": 1,
+    "event": "workflow_dispatch",
+    "repository_id": 1299967456,
+    "arm": "with_skill",
+    "slot": 1,
+    "trial": 1,
+    "case": "pester-004",
+    "original_record_id": "sha256:49985a85ca805fe80202aaca542ecd04a5ccbcd07ffb098b723b5ca9ff776246",
+    "original_capture_digest": "sha256:02b455d37fc9a899bda400d38e59caadec0fc2c49dcb4781c18e4c4560227728"
+  },
+  "files": [
+    {
+      "member": "Subject.Tests.ps1",
+      "archive_member": "campaign-live/evidence/retained/powershell-pester-6-codex-with/campaign-pester-004-attempt1__slot1/artifacts/logs/artifacts/submitted/Subject.Tests.ps1",
+      "sha256": "3215b6097fa3e5f592989f2b8f4523207e28ebd4893cc7d11437b19189795981",
+      "bytes": 471
+    },
+    {
+      "member": "codex.txt",
+      "archive_member": "campaign-live/evidence/retained/powershell-pester-6-codex-with/campaign-pester-004-attempt1__slot1/agent/codex.txt",
+      "sha256": "d06f680a9849eafa59e008b45150e7a9712267d2c6fcf09b3b538e94675ea956",
+      "bytes": 24720
+    },
+    {
+      "member": "produced-submission.json",
+      "archive_member": "campaign-live/evidence/retained/powershell-pester-6-codex-with/campaign-pester-004-attempt1__slot1/agent/pilot-produced-submission.json",
+      "sha256": "c4bee380afef87230389435331cbae77e622087f15f6090f1e1cfcaa4fda190c",
+      "bytes": 92
+    },
+    {
+      "member": "original-public-report.json",
+      "archive_member": "campaign-live/evidence/public/skills/powershell-pester-6/behavioral/campaign-boolean-effectiveness-v1-live/public-report.json",
+      "sha256": "6d158d1dd2463e7f4c3df4461f7122488877ddfcb2ac574641035f7c265cf39f",
+      "bytes": 17029
+    },
+    {
+      "member": "original-inventory.json",
+      "archive_member": "campaign-live/evidence/public/inventory/inventory.json",
+      "sha256": "ee45f9db6dccdbb3c8be321f6500492c460a7de90e9c744dca9b78d503f76c17",
+      "bytes": 10585
+    },
+    {
+      "member": "staging.json",
+      "archive_member": "campaign-live/evidence/staging.json",
+      "sha256": "6b46ed820800358bdcde17153916442df52931734c7bec145c56d36bcbce11f5",
+      "bytes": 6446
+    },
+    {
+      "member": "attempt-ledger.json",
+      "archive_member": "campaign-live/evidence/attempt-ledger.json",
+      "sha256": "e7ef8581637564d69076197ebcba4e99301c8dc0e4c7f6ed40af52f00e5c057e",
+      "bytes": 7139
+    }
+  ]
+}

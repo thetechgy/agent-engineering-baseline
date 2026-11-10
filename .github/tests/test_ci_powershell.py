@@ -178,6 +178,19 @@ class CIPowerShellTests(unittest.TestCase):
         self.assertEqual(workflow["jobs"]["linux"]["name"], "Full validation (PowerShell 7 and Bash)")
         self.assertEqual(workflow["jobs"]["windows-powershell"]["name"], "Pester and analyzer (latest stable PowerShell)")
 
+    def test_evaluator_concurrency_preserves_diagnostic_reruns(self):
+        import yaml
+        workflow = yaml.safe_load((ROOT / ".github/workflows/current-evaluator.yml").read_text())
+        self.assertEqual(workflow["concurrency"], {
+            "group": "current-evaluator-${{ github.event_name == 'pull_request' && github.run_attempt == '1' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}",
+            "cancel-in-progress": "${{ github.event_name == 'pull_request' && github.run_attempt == '1' }}",
+        })
+        # Match the existing Validate policy: only initial PR runs supersede;
+        # manual runs and diagnostic reruns use their durable run identity.
+        validation = yaml.safe_load((ROOT / ".github/workflows/validate.yml").read_text())
+        self.assertEqual(workflow["concurrency"]["cancel-in-progress"],
+                         validation["concurrency"]["cancel-in-progress"])
+
     def test_all_validation_installers_and_consumers_use_the_shared_exact_version_contract(self):
         import yaml
         for name in ("validate", "update-baseline"):

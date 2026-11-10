@@ -52,7 +52,100 @@ recorded in the PR. Documentation-only follow-up preserves all frozen campaign
 input identities. Historical inputs and grades remain intact; unsupported runtime
 and model settings remain unsupported.
 
-**One next action:** review PR #124 for merging.
+PR #124 is merged as `853b89a837fa97312d5bd86c30330efebbb7b33b`. The next
+prepared experiment uses [the shared Boolean protocol](campaigns/README.md#prospective-boolean-comparison-disabled-pending-decision):
+six serial slots, three current and three absent, with the original prompt/inputs,
+current skill bytes and integer-result mutant. Primary success requires reference
+correctness and detection of all five defects. Each defect, unavailable outcome,
+runtime failure, usage and elapsed time remains separate; skill access is recorded
+without claiming quality or benefit. The existing qualified Codex/model/provider/
+reasoning tuple is unchanged.
+
+This is a prospectively frozen, output-informed follow-up on one case. Six attempts
+provide exploratory evidence. A tie, absent-arm advantage and inconclusive result
+are legitimate outcomes; no skill revision is prescribed. Known-control
+qualification retains its expected outcomes. Live attempts grade actual work,
+continue after valid task failure and stop on declared infrastructure, evidence,
+identity or accounting failure. The shared scheduler, execution loop and existing
+consolidated report carry both modes; separate identities preserve historical
+qualification definitions and receipts. No-inference guards remain active outside
+the exact authorized protocol gate.
+
+The proposed budget is $3 usage, a $5 scheduling stop threshold and $3 overshoot
+reserve inside an $8 planning allocation. November 9 official pricing confirms the
+unchanged $2/$0.10/$10 input/cached/output rates per million tokens. Slot/runtime
+bounds and the scheduling threshold are enforced; allocation and reserve are
+estimates, not a provider billing cap. Authentication, arbitrary live event forms
+and actual billing remain unverified. Dependency work stays under issue #95.
+The operator guide specifies one future dispatch and its matching protected gate
+in a single approval, tied to exact source, artifact and protocol digest.
+
+Credential-free final-source qualification, downloaded-artifact consumption and
+report reproduction must complete before this can be called ready for a bounded
+live decision. [Draft PR #126](https://github.com/thetechgy/agent-engineering-baseline/pull/126)
+retains the concrete source/artifact/protocol receipt and current qualification state.
+
+The authorized follow-up ran once as
+[42695478931](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42695478931)
+at `97124cf`. One current-arm attempt emitted native file-change events outside
+the adapter's qualified subset. It stopped before grading; five slots remained
+unlaunched. Cleanup completed and estimated usage was $0.0479649, not an invoice.
+The allocation is consumed and closed. The original experiment is inconclusive.
+
+PR #126's Codex file-edit correction completed credential-free native
+qualification at `af4dd66a409f1ec401d7989a51b8fc245f68a505` in
+[run 42713098769, attempt 2](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42713098769).
+The existing shared path passed both task families' 28 native trials, then the
+13 non-forwarding CLI scheduling/stop-rule launches and fresh preparation
+consumption. Fourteen native edit probes each preserved four completed edits and
+one failed edit, including add/update/delete operations, IDs, paths, status and
+available evidence. JSON stdout and stderr are retained separately and linked
+by hashes. Unknown events, malformed/incomplete evidence and declared accounting
+failures retain their intended stops. Valid task failure remains measured.
+
+[Native receipt and consolidated reports](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42713098769/artifacts/13721147577)
+have archive digest `sha256:5301d01f68f32415b80f152dbe39bb004d307270b55c6c53aa105bbe15e33f21`.
+Independent admission authenticated the producer and archive, checked native edit
+meaning against stdout/stderr and reproduced all fourteen report pairs byte for
+byte from retained public inputs and saved analysis. Cleanup passed. Earlier
+HTTP 503 image-acquisition failures remain failed receipts; bounded HTTPS checks
+and the successful signed APT build established recovery without changed pins,
+mirrors, hashes or isolation. No additional adapter fix was needed in this follow-up.
+
+The separate [retrospective replay](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42713098769/artifacts/13717139923)
+at the same source has archive digest
+`sha256:6625f5277d29dbd188573b36f824550732c88660b073d37f080430df501d7192`.
+It passes the reference and detects `above`, `highest`, `lowest` and `zero`, but
+misses `integer-result`: 4/5 defects, primary quality 0/1, a valid measured failure.
+Both exact 471-byte submission copies retain SHA-256
+`3215b6097fa3e5f592989f2b8f4523207e28ebd4893cc7d11437b19189795981`.
+All original corpus/public bytes remain intact; the original unsupported,
+unmeasured result and closed six-slot allocation are unchanged. Independent
+retrospective report reproduction and cleanup pass. This is one current-arm
+submission after output inspection, not evidence of skill benefit.
+
+Validate and the shared/historical workflows passed on `af4dd66`. The current
+evaluator workflow passed on `e1969373c6dea03b055d7439e4f0be22083f417b` in
+[run 42724173254](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42724173254),
+including all native cohorts, six gh shards and canonical report admission.
+[Canonical report receipt 13724828199](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42724173254/artifacts/13724828199)
+has archive digest `sha256:16ff91113e52f0e8c329b13b6c4b42cd3bca7044cba27a05175d7666fa15a63b`.
+A documentation push exposed an existing concurrency rule that cancelled a needed
+evaluator diagnostic rerun. The focused CI fix adopts Validate's existing
+rerun-preservation guard; its regression rejects the historical rule and all
+fourteen CI-contract tests pass. The cancelled receipt remains inconclusive.
+All nine registered grader/fixture/runtime identities remain identical to the
+qualified native source. Documentation-only descendants reuse those native
+receipts after exact input comparison; final-head Validate status is recorded on
+[PR #126](https://github.com/thetechgy/agent-engineering-baseline/pull/126).
+The qualified boundary is the pinned Codex/profile event subset. Arbitrary native
+events, other runtimes/models, live-provider compatibility and actual billing
+remain outside this qualification. No inference, judge, replacement slot, skill
+revision or new paid allocation is part of this work. Dependency work remains
+under issue #95.
+
+**One next action:** review the qualified correction and recovered result in
+draft PR #126.
 No further paid inference, judges, retries or dispatches are authorized.
 Production and skills remain unchanged; the reserved confirmation variant remains
 untouched and outside this work. Sections below preserve historical checkpoints

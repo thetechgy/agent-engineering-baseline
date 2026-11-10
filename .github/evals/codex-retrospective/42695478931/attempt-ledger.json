@@ -1,0 +1,216 @@
+{
+  "definition": {
+    "id": "boolean-effectiveness-v1",
+    "adapter": "boolean-contract",
+    "skill": "powershell-pester-6",
+    "source": ".apm/skills/powershell-pester-6",
+    "source_case": "pester-004",
+    "candidate": ".github/evals/pester-ceiling/candidate.json",
+    "runtime_profile": ".github/evals/campaigns/codex-authorized-v1.json",
+    "variants": [
+      {
+        "id": "current",
+        "present": true
+      },
+      {
+        "id": "absent",
+        "present": false
+      }
+    ],
+    "trials": 3,
+    "attempt_limit": 6,
+    "stop_estimate_usd": 5,
+    "authorized_live_attempts": 0,
+    "protocol": ".github/evals/campaigns/boolean-effectiveness-protocol-v1.json"
+  },
+  "runtime": {
+    "profile": {
+      "id": "codex-authorized-campaign-v1",
+      "adapter": "codex",
+      "frozen_profile": ".github/evals/codex-pilot.json",
+      "frozen_profile_sha256": "5472136c6532db515340e8ffdfc9aae9f70b42b27fc15bf922823a784b41e9a8",
+      "capabilities": [
+        "non-forwarding-cli-probe",
+        "exact-authorized-live"
+      ],
+      "inference_enabled": false
+    },
+    "resolved": {
+      "id": "codex-pester-001-pilot-v1",
+      "case": "pester-001",
+      "skill": "powershell-pester-6",
+      "cli": "0.167.0",
+      "cli_revision": "086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a",
+      "cli_archive_sha256": "3bbf75e83de6b58aed28f2cf6e33ad423ec31fd4700a1457b94be557ea5a7c6e",
+      "cli_executable_sha256": "cdcb45aaa01d0f14e298985e09465aebccd47f64ecd298aea44814af7b62bbda",
+      "model": "gpt-6.1-sol",
+      "reasoning_effort": "high",
+      "provider": "openai",
+      "base_url": "https://api.openai.com/v1",
+      "agent_seconds": 600,
+      "cpus": 2,
+      "memory_mb": 2048,
+      "attempts_per_arm": 1,
+      "allocation_usd": 10,
+      "stop_estimate_usd": 5,
+      "prices_per_million": {
+        "input": 2,
+        "cached_input": 0.1,
+        "output": 10
+      },
+      "frozen_at": "2026-11-07",
+      "release_url": "https://github.com/openai/codex/releases/tag/rust-v0.167.0",
+      "model_documentation": "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+      "configuration_documentation": "https://developers.openai.com/codex/config-reference",
+      "helper_sha256": {
+        "bin/codex-code-mode-host": "83f3e174c2da2f1ca8655cce686e302509640d34c0f4407c1155056f64536e0f",
+        "bin/codex-exec-server": "43376b1af843ffc71726a35d53b6e2241cbe1e8c9e8ec758402460295eec2107",
+        "codex-resources/bwrap": "77360cb751ccedc5971391444ac86a8a33c15b04d6b4a6fe45f5d25496e62c4c"
+      },
+      "execution_policy": "docker-external-openai-v3",
+      "agent": "codex"
+    }
+  },
+  "revision": "97124cf6b09d2acd4bda6243d0345dff06aea989",
+  "mode": "live",
+  "inference": true,
+  "fixture": null,
+  "entries": [
+    {
+      "position": 1,
+      "case": "pester-004",
+      "trial": 1,
+      "variant": "current",
+      "state": "failed",
+      "estimated_usd_before": 0.0,
+      "config_sha256": "88829a3e2e04b264b9b12be2bf020976d4c28e62ad46d0762dcbaeabfca9172b",
+      "task_checksum": "fa037287a5d70c2677f04f71d7f3857f2e43d9b4339f97e7b53e224ae6a2068b",
+      "native_trial": "jobs/powershell-pester-6-codex-with/campaign-pester-004-attempt1__slot1",
+      "returncode": 0,
+      "cleanup": true,
+      "usage": {
+        "trial": "campaign-pester-004-attempt1__slot1",
+        "n_input_tokens": 73874,
+        "n_cache_tokens": 56849,
+        "n_output_tokens": 823,
+        "estimated_usd": 0.047964900000000005,
+        "billing": "provider-reported tokens; estimate, not invoice"
+      },
+      "elapsed_seconds": 135.901,
+      "native_exception": "UnsupportedCodexProtocol",
+      "grading_present": false,
+      "outcome": {}
+    },
+    {
+      "position": 2,
+      "case": "pester-004",
+      "trial": 1,
+      "variant": "absent",
+      "state": "unlaunched"
+    },
+    {
+      "position": 3,
+      "case": "pester-004",
+      "trial": 2,
+      "variant": "absent",
+      "state": "unlaunched"
+    },
+    {
+      "position": 4,
+      "case": "pester-004",
+      "trial": 2,
+      "variant": "current",
+      "state": "unlaunched"
+    },
+    {
+      "position": 5,
+      "case": "pester-004",
+      "trial": 3,
+      "variant": "current",
+      "state": "unlaunched"
+    },
+    {
+      "position": 6,
+      "case": "pester-004",
+      "trial": 3,
+      "variant": "absent",
+      "state": "unlaunched"
+    }
+  ],
+  "state": "stopped",
+  "authorized_live_attempts": 6,
+  "protocol": {
+    "id": "boolean-effectiveness-v1",
+    "definition": ".github/evals/campaigns/boolean-effectiveness-v1.json",
+    "version": 1,
+    "attempt_slots": 6,
+    "trials_per_arm": 3,
+    "automatic_retries": 0,
+    "replacements": 0,
+    "concurrency": 1,
+    "primary_outcome": "reference-correct submission detecting all five seeded defects",
+    "separate_outcomes": [
+      "reference correctness",
+      "integer-result",
+      "above",
+      "highest",
+      "lowest",
+      "zero",
+      "valid task failure",
+      "invalid",
+      "unsupported",
+      "runtime failure",
+      "successful skill access",
+      "usage",
+      "elapsed seconds"
+    ],
+    "interpretation": "Exploratory evidence on one output-informed case; prospectively frozen follow-up, not an untouched held-out benchmark. Tie, absent-arm advantage and inconclusive are legitimate outcomes. No skill revision is prescribed.",
+    "budget": {
+      "estimate_usd": 3,
+      "stop_estimate_usd": 5,
+      "overshoot_reserve_usd": 3,
+      "planning_allocation_usd": 8,
+      "billing_limit_enforced": false,
+      "pricing_verified": "2026-11-09",
+      "pricing_source": "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+      "prices_per_million": {
+        "input": 2,
+        "cached_input": 0.1,
+        "output": 10
+      }
+    },
+    "stop_rules": [
+      "estimated_usage_threshold",
+      "unknown_usage",
+      "execution_infrastructure_failure",
+      "cleanup_failure",
+      "missing_grading_evidence",
+      "missing_usable_evidence",
+      "unsupported_grading",
+      "verifier_failure",
+      "missing_native_observation",
+      "unsupported_runtime_protocol",
+      "security_or_identity_drift"
+    ],
+    "agent_seconds": 600,
+    "launch_seconds": 1200,
+    "cleanup_grace_seconds": 80,
+    "protected_environment": "skill-benchmark",
+    "authorized_live_attempts": 0
+  },
+  "authorization": {
+    "artifact": "13706087420",
+    "artifact_digest": "sha256:0a66cbac771c1d876b235b4af87bebca64431257f5927bcaf8db1561b65d5378",
+    "producer_run": 42682195380,
+    "revision": "97124cf6b09d2acd4bda6243d0345dff06aea989",
+    "protocol_digest": "sha256:3f111bf18e0987aa5d5e1c8a3e3645dca1c07e50d02bd033147b58d8b4e0f223",
+    "dispatch": "boolean-20261109-01",
+    "run_id": "42695478931",
+    "allocation": "campaign-97124cf6b09d2acd4bda6243d0345dff06aea989-boolean-effectiveness-v1-prep13706087420-usd8-boolean-20261109-01",
+    "first_dispatch": true,
+    "authentication": "github-api-producer-and-digest"
+  },
+  "preparation_digest": "sha256:41d25dd73ff6a18549802def8146f1c00fd105279e1c6f18b2ca568c8773da8d",
+  "stop_reason": "unsupported_runtime_protocol",
+  "cleanup_complete": true
+}

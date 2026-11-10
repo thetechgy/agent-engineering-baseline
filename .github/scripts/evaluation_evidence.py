@@ -23,9 +23,14 @@ def source_manifest(workspace, name, purpose):
     values = adapter.source_inputs(workspace)
     files = ['.github/scripts/evaluation_campaign.py', '.github/scripts/evaluation_campaign_core.py',
         '.github/scripts/evaluation_runtime.py', '.github/scripts/evaluation_tasks.py',
-        '.github/scripts/evaluation_evidence.py', '.github/scripts/skill_evidence.py', '.github/scripts/skill_analysis.py',
+        '.github/scripts/evaluation_evidence.py', '.github/scripts/evaluation_campaign_protocol.py', '.github/scripts/codex_pilot_dispatch.py', '.github/scripts/skill_evidence.py', '.github/scripts/skill_analysis.py',
         '.github/scripts/skill_report.py', '.github/scripts/skill_reports.py', adapter.member,
         adapter.definition['runtime_profile'], '.github/workflows/evaluation-campaign.yml']
+    if 'protocol' in adapter.definition:
+        files.append(adapter.definition['protocol'])
+    if 'retrospective' in adapter.definition:
+        folder = workspace / adapter.definition['retrospective']
+        files.extend(p.relative_to(workspace).as_posix() for p in reports.regular_tree(folder.parent))
     from evaluation_runtime import read_profile, source_inputs
     values.extend(source_inputs(read_profile(ROOT / adapter.definition['runtime_profile']), workspace))
     values.extend({'member': 'campaign/' + member, 'digest': e.digest_bytes(e.read_bytes(workspace / member))} for member in sorted(set(files)))
@@ -59,10 +64,10 @@ def capture_tasks(workspace, profile, tasks, arm):
 def validate_policy(profile, fields, attempts, agent_version):
     from evaluation_runtime import read_profile
     runtime = read_profile(ROOT / task(profile).definition['runtime_profile'])['resolved']
-    probe = profile['campaign']['mode'] == 'probe'
+    probe = profile['campaign']['mode'] in ('probe', 'experiment-probe', 'live')
     expected = {'environment': profile['campaign']['environment_mode'], 'concurrency': 1, 'timeout_multiplier': 1.0,
         'model': runtime['model'] if probe else 'credential-free-oracle', 'provider': runtime['provider'] if probe else 'fixture'}
-    require(attempts == 1 and all(fields[k] == v for k,v in expected.items()), 'Campaign public execution policy drift')
+    require(attempts == profile['campaign'].get('trials', 1) and all(fields[k] == v for k,v in expected.items()), 'Campaign public execution policy drift')
     require(not probe or agent_version in (None, runtime['cli']), 'Campaign CLI version drift')
 
 

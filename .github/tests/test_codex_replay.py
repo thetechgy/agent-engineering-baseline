@@ -22,6 +22,15 @@ import skill_report as report
 
 
 class RetrospectiveEvidence(unittest.TestCase):
+    def test_replay_producer_is_distinct_from_its_oracle_execution_agent(self):
+        config={'qualification':{'producer':'retained_submission_replay','inference':False}}
+        self.assertTrue(evidence.oracle_purpose('cli_pilot_replay'))
+        evidence.validate_custom_execution_config('cli_pilot_replay',config,1)
+        with self.assertRaisesRegex(ValueError,'Retrospective purpose mismatch'):
+            evidence.validate_custom_execution_config('cli_pilot_replay',{'qualification':{'producer':'oracle','inference':False}},1)
+        with self.assertRaisesRegex(ValueError,'Oracle purpose mismatch'):
+            evidence.validate_custom_execution_config('cli_pilot_control',config,1)
+
     def test_originals_keep_exact_hashes_and_unmeasured_outcomes(self):
         root, _, submissions, original = replay.corpus()
         self.assertEqual(len(original['observations']), 2)

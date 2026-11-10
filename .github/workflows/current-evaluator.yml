@@ -16,9 +16,10 @@ on:
 permissions:
   contents: read
 
+# Preserve diagnostic reruns when a later documentation update starts PR CI.
 concurrency:
-  group: current-evaluator-${{ github.event.pull_request.number || github.run_id }}
-  cancel-in-progress: true
+  group: current-evaluator-${{ github.event_name == 'pull_request' && github.run_attempt == '1' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == '1' }}
 
 jobs:
   cohorts:

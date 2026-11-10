@@ -1,4 +1,5 @@
 name: Reusable evaluation qualification
+run-name: ${{ inputs.allocation != '' && format('Evaluation campaign {0}', inputs.allocation) || 'Credential-free reusable campaign preparation' }}
 on:
   pull_request:
     paths:
@@ -11,24 +12,38 @@ on:
       - '.github/evals/campaigns/**'
       - '.github/evals/pester-ceiling/**'
       - '.github/evals/custom-metrics.json'
+      - '.github/evals/codex-retrospective/42695478931/**'
+      - '.github/tests/test_codex_events.py'
+      - '.github/tests/test_campaign_replay.py'
+      - '.github/tests/fixtures/codex-events/**'
       - '.github/tests/test_evaluation_campaign.py'
+      - '.github/tests/test_evaluation_protocol.py'
       - '.github/workflows/evaluation-campaign.yml'
+  workflow_dispatch:
+    inputs:
+      allocation:
+        description: 'Empty for credential-free preparation. Future approval: campaign-<SHA>-boolean-effectiveness-v1-prep<ID>-usd8-<nonce>.'
+        type: string
+        default: ''
 permissions: {}
 concurrency:
   group: reusable-evaluation-${{ github.ref }}
   cancel-in-progress: false
 jobs:
   qualify:
+    if: inputs.allocation == ''
+    outputs:
+      artifact-id: ${{ steps.preparation-artifact.outputs.artifact-id }}
     permissions:
       contents: read
     runs-on: ubuntu-latest
-    timeout-minutes: 65
+    timeout-minutes: 100
     env:
       PYTHONDONTWRITEBYTECODE: '1'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
@@ -41,26 +56,212 @@ jobs:
           APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
           echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
       - name: Check shared contracts
-        run: 'PYTHONPATH=.github/scripts:.github/tests "$SKILL_CURRENT_PYTHON" -B -m unittest test_evaluation_campaign test_codex_cohort -v'
+        run: 'PYTHONPATH=.github/scripts:.github/tests "$SKILL_CURRENT_PYTHON" -B -m unittest test_evaluation_campaign test_evaluation_protocol test_codex_cohort test_codex_events test_campaign_replay -v'
       - name: Qualify both task families through native oracle and real CLI probes
         run: |
           "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign.py qualify \
             --definition .github/evals/campaigns/gh-read.json \
             --definition .github/evals/campaigns/boolean-contract.json \
             --output "$RUNNER_TEMP/reusable-evaluation"
+      - name: Acquire fresh verified Compose configuration for the experiment phase
+        run: bash .github/scripts/setup-compose.sh
+      - name: Qualify the six-slot protocol through the same execution loop
+        timeout-minutes: 55
+        run: |
+          "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign.py prepare \
+            --definition .github/evals/campaigns/boolean-effectiveness-v1.json \
+            --qualification "$RUNNER_TEMP/reusable-evaluation" \
+            --output "$RUNNER_TEMP/reusable-evaluation/preparation"
       - name: Verify checkout integrity
         if: always()
         run: |
           git diff --exit-code
           test -z "$(git status --porcelain=v1 --untracked-files=all --ignored)"
       - name: Retain partial or complete qualification evidence
+        id: preparation-artifact
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: reusable-evaluation-${{ github.run_attempt }}
           path: |
             ${{ runner.temp }}/reusable-evaluation/*/*/evidence/
+            ${{ runner.temp }}/reusable-evaluation/preparation/evidence/
+            ${{ runner.temp }}/reusable-evaluation/preparation/scenarios/*/evidence/
             ${{ runner.temp }}/reusable-evaluation/report/
             ${{ runner.temp }}/reusable-evaluation/qualification.json
+          if-no-files-found: error
+          retention-days: 90
+
+
+  retrospective:
+    name: Grade authenticated retained submission without inference
+    if: inputs.allocation == ''
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: '0.13.7'
+          enable-cache: false
+      - name: Acquire pinned credential-free replay tools
+        run: |
+          bash .github/scripts/setup-skillevaluator.sh candidate-current
+          bash .github/scripts/setup-compose.sh
+          APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
+          echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
+      - name: Replay trace and grade exact original bytes through the shared campaign
+        timeout-minutes: 10
+        run: |
+          "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign.py replay \
+            --definition .github/evals/campaigns/boolean-retained-v1.json \
+            --output "$RUNNER_TEMP/retained-campaign-replay"
+      - name: Retain original, native replay and consolidated report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: retained-campaign-replay-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/retained-campaign-replay/evidence/
+          if-no-files-found: error
+          retention-days: 90
+
+  consume:
+    name: Consume exact experiment preparation without credentials
+    needs: qualify
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: '0.13.7'
+          enable-cache: false
+      - name: Acquire frozen credential-free consumption tools
+        run: |
+          bash .github/scripts/setup-skillevaluator.sh candidate-current
+          APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
+          echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          artifact-ids: ${{ needs.qualify.outputs.artifact-id }}
+          path: ${{ runner.temp }}/preparation
+          merge-multiple: true
+      - name: Compare all fresh task members, descriptors and deployed skill support
+        run: |
+          "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign.py check-preparation \
+            --definition .github/evals/campaigns/boolean-effectiveness-v1.json \
+            --preparation "$RUNNER_TEMP/preparation/preparation/evidence" \
+            --output "$RUNNER_TEMP/campaign-consumption"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: campaign-consumption-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/campaign-consumption/evidence/
+          if-no-files-found: error
+          retention-days: 90
+
+  authenticate:
+    name: Authenticate a future separately approved dispatch
+    if: github.event_name == 'workflow_dispatch' && inputs.allocation != '' && github.run_attempt == 1
+    permissions:
+      contents: read
+      actions: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      artifact-id: ${{ steps.authentication.outputs.artifact-id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Authenticate exact-source preparation and claim first dispatch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CAMPAIGN_APPROVAL: ${{ inputs.allocation }}
+        run: |
+          python3 -B .github/scripts/evaluation_campaign.py authenticate \
+            --definition .github/evals/campaigns/boolean-effectiveness-v1.json \
+            --approval "$CAMPAIGN_APPROVAL" --output "$RUNNER_TEMP/campaign-auth"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        id: authentication
+        with:
+          name: campaign-authenticated-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/campaign-auth/
+          if-no-files-found: error
+          retention-days: 90
+
+  live:
+    name: Future approved six-attempt Boolean comparison
+    needs: authenticate
+    if: github.event_name == 'workflow_dispatch' && inputs.allocation != '' && github.run_attempt == 1
+    environment:
+      name: skill-benchmark
+      deployment: false
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 155
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: '0.13.7'
+          enable-cache: false
+      - name: Prepare pinned tools without model credentials
+        run: |
+          bash .github/scripts/setup-skillevaluator.sh candidate-current
+          bash .github/scripts/setup-compose.sh
+          APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
+          echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          artifact-ids: ${{ needs.authenticate.outputs.artifact-id }}
+          path: ${{ runner.temp }}/campaign-auth
+          merge-multiple: true
+      - name: Consume exact-source preparation before credential delivery
+        run: |
+          "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign.py check-preparation \
+            --definition .github/evals/campaigns/boolean-effectiveness-v1.json \
+            --preparation "$RUNNER_TEMP/campaign-auth/downloaded/preparation/evidence" \
+            --output "$RUNNER_TEMP/campaign-live-preflight"
+      - name: Execute only the separately approved six slots
+        timeout-minutes: 140
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AEB_CAMPAIGN_APPROVAL: ${{ inputs.allocation }}
+        run: |
+          export AEB_CAMPAIGN_RECEIPT="$RUNNER_TEMP/campaign-auth/downloaded/preparation/evidence/dispatch-authentication.json"
+          "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign.py live \
+            --definition .github/evals/campaigns/boolean-effectiveness-v1.json \
+            --preparation "$RUNNER_TEMP/campaign-auth/downloaded/preparation/evidence" \
+            --approval "$AEB_CAMPAIGN_APPROVAL" --output "$RUNNER_TEMP/campaign-live"
+      - name: Retain all slots and partial native evidence after stopping
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: campaign-live-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/campaign-live/evidence/
+            ${{ runner.temp }}/campaign-live-preflight/evidence/
           if-no-files-found: error
           retention-days: 90
