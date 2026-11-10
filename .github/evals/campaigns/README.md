@@ -147,6 +147,10 @@ authentication, model effectiveness or actual provider billing.
 
 ## Prospective Boolean comparison, disabled pending decision
 
+Historical record: these Boolean allocations are closed. Commands in this
+section retain their original context; use the return-contract proposal below
+for the new four-pair experiment.
+
 [boolean-effectiveness-v1.json](boolean-effectiveness-v1.json) selects the original
 Boolean task and inputs, current skill bytes and PR #123's integer-result mutant.
 Its separate [versioned protocol](boolean-effectiveness-protocol-v1.json) freezes
@@ -425,3 +429,132 @@ as native runs and do not bypass exact-revision live gates. All live counts
 remain zero. The four paired comparisons propose 24 future model attempts with
 duplicated absent baselines and an indirect current/candidate comparison; this
 pass requests review, without spending approval.
+
+## Return-contract integration and execution proposal
+
+The merged return-contract experiment uses the existing reusable live workflow,
+with a `campaign` choice from [selections.json](selections.json). Every preparation,
+authentication, consumption and live command resolves that reviewed identity.
+Inputs pass through environment variables and argument arrays. They cannot select
+arbitrary files or shell programs. The default remains the historical Boolean
+selection; return-contract commands must always specify their exact selection.
+
+The registry admits the shared workflow's `preparation/evidence` and the existing
+return-contract producer's `current/evidence` or `candidate/evidence`, with the
+matching case artifact name. Admission authenticates repository, workflow, exact
+revision, successful producer attempt, artifact name, expiration, size and digest
+before bounded extraction. It validates the frozen proposal and complete scheduler
+receipt, then moves the selected subtree (including sibling scenarios) to
+`downloaded/preparation/evidence`. That canonical location is used by both the
+fresh preflight and live receipt. Full fresh staging/deployment/descriptor and
+public HTML reproduction checks remain mandatory before credentials are delivered.
+An allocation binds the source, selected protocol, artifact ID and nonce; its
+receipt also binds definition and selection digests and the original internal
+location. First-dispatch history and exclusive claims reject reuse and reruns.
+
+Executable integration changes require new preparation. Appended `selection-v1`
+profiles retain all earlier profiles and grades. PR #127's released Pester evidence,
+22-line candidate, controls and frozen task inputs are reused only where unchanged;
+its old native receipts are never relabeled as this source's execution.
+
+### Qualification and merge refresh
+
+The existing return-contract qualification workflow prepares all four definitions
+without credentials. First verify that no suitable run already exists for the
+exact intended source. After review and merge, refresh with this existing command,
+checking main rather than substituting a newer source silently:
+
+```sh
+REPO=thetechgy/agent-engineering-baseline
+QUALIFIED_SHA=$(gh pr view 128 --repo "$REPO" --json mergeCommit --jq '.mergeCommit.oid') &&
+printf '%s\n' "$QUALIFIED_SHA" | rg -q '^[0-9a-f]{40}$' &&
+test "$(gh api "repos/$REPO/git/ref/heads/main" --jq .object.sha)" = "$QUALIFIED_SHA" &&
+printf 'Preparation source: %s\n' "$QUALIFIED_SHA" &&
+gh workflow run pester-return-qualification.yml --repo "$REPO" --ref main &&
+gh run list --repo "$REPO" --workflow pester-return-qualification.yml \
+  --commit "$QUALIFIED_SHA" --limit 5
+```
+
+Verify the completed producer's actual head equals `QUALIFIED_SHA`; refuse drift.
+Obtain both artifact IDs from that successful producer. On the same exact source,
+run four **credential-free** inspections of the existing artifacts through the
+reusable workflow, one selection per inspection:
+
+```sh
+test "$(gh api "repos/$REPO/git/ref/heads/main" --jq .object.sha)" = "$QUALIFIED_SHA" &&
+gh workflow run evaluation-campaign.yml --repo "$REPO" --ref main \
+  -f campaign=pester-return-development-current-v1 -f "preparation_artifact=$DEVELOPMENT_ARTIFACT"
+# Repeat with development-candidate-v1 and the same development artifact;
+# then transfer-current-v3 and transfer-candidate-v3 with TRANSFER_ARTIFACT.
+```
+
+`preparation_artifact` is accepted only by credential-free inspection; both live
+jobs require it to be empty. Inspection authenticates and consumes through the
+same acquisition/admission/check code as live, but never creates or reserves an
+allocation. It has no protected environment or model secret. It reproduces the
+selected aggregate HTML from retained public inputs and saves admission, staging
+and reproduction evidence on a fresh runner. Download and independently verify
+archives and essential machine/HTML records before proposing paid execution.
+A source-changing correction needs fresh exact-revision preparation, not a relabel.
+
+### Pair checkpoints and budget
+
+Use the frozen order: development current, development candidate, transfer current,
+transfer candidate. Each six-slot schedule is present/absent, absent/present,
+present/absent, with three repetitions per arm. Retain each pair's own absent
+baseline and all per-defect outcomes. Transfer is output-informed, not an untouched
+holdout. No candidate adoption follows from qualification or an exploratory result.
+
+Before starting the next dispatch, the operator must verify that the prior pair
+completed with six measured outcomes, including legitimate task failures; essential
+submissions, grading, native observations, accounting, reports and cleanup must be
+present and consistent. Review cumulative observed usage against the approved
+planning assumptions. An operational stop, missing evidence, unknown usage or
+failed cleanup ends the sequence pending a new decision. A fresh pair must never
+bypass that stop. No automatic four-pair launcher is provided.
+
+Machine enforcement covers exact selection/source/artifact/receipt, six serial
+slots per dispatch, no retries or replacements, 600-second agent bounds,
+1200-second launch bounds, job timeouts, identity/evidence/cleanup/accounting stops
+and the $5 estimated-usage scheduling threshold per pair. A valid measured task
+failure permits the next slot. Cross-pair order, evidence/usage review and stopping
+the entire sequence are operator-enforced. The four $5 thresholds sum to $20 but
+do not form an enforced global ceiling.
+
+Official OpenAI [model pricing](https://developers.openai.com/api/docs/models/gpt-6.1-sol)
+and [pricing](https://developers.openai.com/api/docs/pricing) were rechecked
+November 10, 2026: standard short-context input/cached-input/output remain
+$2/$0.10/$10 per million tokens. The frozen settings need no price revision.
+The adapter's existing cumulative-input premium above 272K is a conservative
+estimate, not per-request billing reconstruction. Native usage does not identify
+cache writes or actual invoice/service-tier charges. The historical 12-attempt
+cohort estimated $0.7136678. Recomputed token observations from the recent
+[six-attempt Boolean run](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42744596001)
+estimate $0.2740062 total ($0.0409219-$0.0510054 per attempt). Those reused-task observations do
+not forecast the transfer task. $0.50 per attempt remains the planning assumption.
+
+Each pair retains $3 estimated usage, a $5 scheduling threshold, $3 overshoot
+reserve and $8 planning allocation. Across four pairs this is **$12 estimated
+usage and $32 planning allocation**. Reserve is $12 total and buys no extra slots.
+In-flight work may exceed thresholds and reserves. Planning allocations are not
+provider billing caps. CI costs are separate from model usage and these figures.
+
+### Concrete review proposal
+
+The single four-row [execution proposal in draft PR #128](https://github.com/thetechgy/agent-engineering-baseline/pull/128)
+records exact definition/protocol digests, present-skill identities, qualified source,
+producer run, preparation artifact/digest, registered internal and canonical
+locations, expiration, six-slot schedules, fresh proposed allocations/nonces and
+per-pair budgets. Its four exact paid dispatch commands are **unrun** and each
+checks the remote source before dispatch. Run them individually only after separate
+authorization, with the checkpoint between pairs. The proposal also supplies one
+combined future approval statement for exactly those four dispatches and matching
+`skill-benchmark` gates. It excludes retries, replacements, continuation after an
+operational stop or beyond 24 slots, judges, adoption and unrelated paid work.
+Proposed identifiers are unreserved; fixture authentication claims no paid allocation.
+
+The checkpoint remains the decision record; this guide owns the procedure and the
+PR retains exact-source evidence and commands. A pending, failed, cancelled or
+expired receipt does not qualify execution. Review/merge is the next decision.
+A future merge SHA needs the mechanical refresh above, even after a qualified
+PR-head proposal; that proposal grants no authorization for the merge revision.

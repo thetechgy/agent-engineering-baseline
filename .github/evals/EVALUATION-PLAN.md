@@ -1,5 +1,52 @@
 # Issue #95 dependency modernization checkpoint
 
+PR #127 is merged at `331e0f94b98927a1db776a39b9b16bf500929134`.
+The return-contract candidate remains undeployed and its benefit unproven.
+The [frozen plan](pester-return-contract/PLAN.md), earlier
+[native evidence](pester-return-contract/EVIDENCE.md) and receipt retain their
+actual source revisions and grades. Prior allocations remain closed.
+
+A focused integration change adds reviewed campaign selection to the existing
+reusable workflow. Selection binds the definition, protocol, exact source,
+preparation producer, archive, registered internal location and allocation.
+The authentication path normalizes the selected preparation subtree for the
+existing consumer; source/layout drift fails before credential delivery.
+The same acquisition and fresh staging path has a credential-free inspection
+mode with no allocation claim or protected environment. Historical profile
+values remain intact; new executable identities use appended `selection-v1`
+profiles. Task semantics, skills, model/runtime settings and budgets are unchanged.
+
+The [operator guide](campaigns/README.md#return-contract-integration-and-execution-proposal)
+records qualification, the four six-slot dispatches, pair checkpoints, budget,
+unrun commands and proposed combined approval wording. The sequence remains
+24 attempts: six current, six candidate and twelve absent. Duplicated absent
+baselines stay separate; current/candidate comparison is indirect. Transfer is
+output-informed. No fixture result establishes skill improvement.
+
+[Draft PR #128](https://github.com/thetechgy/agent-engineering-baseline/pull/128)
+retains the exact-source qualification receipts and the concrete four-row
+execution proposal, including artifact IDs/digests/expiration, skill identities,
+schedules, proposed nonces and unrun operator commands. Local campaign and CI
+contracts pass 82 tests with one optional semantics test skipped. The interim
+`ea30d37` required checks passed; its other runs were superseded and cancelled
+for the final path-validation correction. Those cancelled runs are inconclusive.
+Final native preparation, artifact inspection, report reproduction and required
+checks must be verified against the revision named by the PR's proposal; no
+receipt is relabeled as a different source's execution.
+
+Review/merge is the next decision. A PR-head receipt cannot qualify a future
+merge commit. After merge, refresh preparation mechanically with the documented
+existing qualification dispatch, then inspect its artifacts at that exact merge
+revision. The refresh fails if main has drifted beyond the reviewed merge.
+No inference, credential retrieval, protected gate, paid allocation, judge or
+merge is authorized here. The reserved confirmation material remains untouched.
+
+**One next action:** review [PR #128](https://github.com/thetechgy/agent-engineering-baseline/pull/128)
+and its completed credential-free receipts and bounded proposal. This checkpoint
+remains the decision record; the PR supplies its exact-revision evidence.
+
+## PR #127 checkpoint, retained as history
+
 This is the authoritative active checkpoint. The completed six-attempt
 [Boolean comparison 42744596001](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42744596001)
 at `9f81a66b343f340b681759db8c7c38a4e9e016c5` produced three valid submissions

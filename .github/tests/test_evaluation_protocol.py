@@ -98,7 +98,7 @@ class ProtocolContracts(unittest.TestCase):
         with patch.object(protocol,'revision',return_value=source),patch.dict(os.environ,env):
             receipt={'artifact':'123','dispatch':'one_dispatch','allocation':approval,'revision':source,
                      'protocol_digest':protocol.digest(ROOT/task.definition['protocol']),'run_id':'10','first_dispatch':True,
-                     'authentication':'github-api-producer-and-digest','artifact_digest':'sha256:'+'b'*64}
+                     'authentication':'github-api-producer-and-digest',**__import__('evaluation_campaign_selection').binding(task),'preparation_location':'preparation/evidence','artifact_digest':'sha256:'+'b'*64}
             protocol.validate_receipt(receipt,approval,task)
             for key,value in [('revision','b'*40),('artifact','124'),('protocol_digest','wrong'),('run_id','11'),('first_dispatch',False)]:
                 with self.assertRaises(ValueError):protocol.validate_receipt({**receipt,key:value},approval,task)
