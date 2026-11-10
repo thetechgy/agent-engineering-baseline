@@ -53,6 +53,8 @@ def source_inputs(runtime, workspace):
 
 
 _CODEX_FAILURES = {
+    'AgentTimeoutError': ('agent_timeout', 'timeout'),
+    'CancelledError': ('execution_cancelled', 'interrupted'),
     'CodexRuntimeError': ('execution_infrastructure_failure', 'infrastructure_error'),
     'MissingCodexObservation': ('missing_native_observation', 'unknown'),
     'UnsupportedCodexProtocol': ('unsupported_runtime_protocol', 'unsupported'),

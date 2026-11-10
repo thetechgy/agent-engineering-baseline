@@ -1,5 +1,7 @@
 """Pilot-only Harbor Codex adapter. External Docker isolation; the released CLI inner sandbox is disabled."""
+import asyncio
 import base64
+import time
 import hashlib
 import json
 import os
@@ -80,6 +82,15 @@ class PilotCodex(Codex):
         context.metadata = {'usage_source': 'codex-0.167-exec-json', 'billing_verified': False}
 
     async def run(self, instruction, environment, context):
+        environment.retain_on_interrupt(self.output)
+        environment._stage('agent_started')
+        try:
+            return await self._run_codex(instruction, environment, context)
+        except BaseException:
+            self._execution_interrupted = True
+            raise
+
+    async def _run_codex(self, instruction, environment, context):
         if self.model_name != self.profile['model']:
             raise ValueError('Pilot model drift')
         probe = os.environ.get('AEB_PILOT_PROBE') == '1'
@@ -143,21 +154,40 @@ class PilotCodex(Codex):
                    f'>{logs}/codex.txt 2>{logs}/codex-stderr.txt')
         if scenario == 'interruption':
             command = 'timeout --signal=INT --kill-after=5s 5s ' + command
+        primary = None
+        started = time.monotonic()
         try:
             result = await environment.exec(command=command, env=env, user='agent',
                                                timeout_sec=self.profile['agent_seconds'])
             audit['returncode'] = result.return_code
             audit['boundary_after'] = await observe(environment)
+        except BaseException as error:
+            primary = error
+            self._execution_interrupted = True
+            audit['execution_exception'] = type(error).__name__
+            raise
         finally:
-            # Keep exact native events before removing the runtime home/credentials.
-            try:
-                from codex_pilot import producer_receipt_command
-                await self.exec_as_agent(environment, command=producer_receipt_command(self.output, retain=self.retain_submission))
-                await self.exec_as_agent(environment, command=(
-                    f'if [ -f {HOME}/stub.pid ]; then kill "$(cat {HOME}/stub.pid)"; fi; '
-                    f'rm -rf {HOME}; test ! -e {HOME}'))
-                audit['cleanup'] = 'complete'
-            finally:
-                audit_path.write_text(json.dumps(audit, indent=2) + '\n')
+            audit['execution_elapsed_seconds'] = round(time.monotonic() - started, 3)
+            # A contained workload cannot exec a receipt or scrub command. Its
+            # remaining runtime home is removed by final container disposal.
+            if environment._pilot_interrupted:
+                audit['cleanup'] = 'pending_container_disposal'
+            else:
+                try:
+                    from codex_pilot import producer_receipt_command
+                    async with asyncio.timeout(30):
+                        await self.exec_as_agent(environment, command=producer_receipt_command(self.output, retain=self.retain_submission))
+                    async with asyncio.timeout(30):
+                        await self.exec_as_agent(environment, command=(
+                            f'if [ -f {HOME}/stub.pid ]; then kill "$(cat {HOME}/stub.pid)"; fi; '
+                            f'rm -rf {HOME}; test ! -e {HOME}'))
+                    audit['cleanup'] = 'complete'
+                except BaseException as error:
+                    audit['collection_or_cleanup_exception'] = type(error).__name__
+                    if primary is None:
+                        audit_path.write_text(json.dumps(audit, indent=2) + '\n')
+                        raise
+            audit_path.write_text(json.dumps(audit, indent=2) + '\n')
         if result.return_code != 0:
+            self._execution_interrupted = True
             raise RuntimeError('Pilot Codex CLI exited unsuccessfully; original events retained')

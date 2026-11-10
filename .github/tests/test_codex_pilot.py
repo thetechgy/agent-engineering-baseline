@@ -325,6 +325,8 @@ class PilotContracts(unittest.TestCase):
         from codex_pilot_environment import PilotEnvironment, SkillEvaluatorSecureDockerEnvironment
         agent = object.__new__(PilotEnvironment)
         agent._pilot_agent = True
+        agent._pilot_interrupted = False
+        agent._pilot_secrets = set()
         cleanup = AsyncMock()
         with patch('codex_pilot_boundary.observe', new=AsyncMock(side_effect=ValueError('unavailable'))), patch.object(SkillEvaluatorSecureDockerEnvironment, 'stop', new=cleanup):
             with self.assertRaisesRegex(ValueError, 'unavailable'):
@@ -337,6 +339,8 @@ class PilotContracts(unittest.TestCase):
         from codex_pilot_environment import PilotEnvironment
         agent = object.__new__(PilotEnvironment)
         agent._pilot_agent = True
+        agent._pilot_interrupted = False
+        agent._pilot_secrets = set()
         agent._resolve_user = lambda value: value
         agent._merge_env = lambda value: value
         agent._output_callback = lambda: None

@@ -1,4 +1,5 @@
 """Credential-free controls only; never selected by production agent configuration."""
+import asyncio
 import os
 from evaluation_codex import CampaignCodex
 
@@ -15,7 +16,11 @@ class DeadlineCodex(CampaignCodex):
         if self.deadline_fixture == 'secondary':
             # A real failed stopped-container copy, not an exception substituted for execution.
             environment._deadline_copy_fault = True
-        return await super().run(instruction, environment, context)
+        handle = asyncio.get_running_loop().call_later(45, asyncio.current_task().cancel) if self.deadline_fixture == 'cancelled' else None
+        try:
+            return await super().run(instruction, environment, context)
+        finally:
+            if handle: handle.cancel()
 
     def fixture_commands(self, payload):
         return [f"printf %s {payload} | base64 -d > {self.output}; "

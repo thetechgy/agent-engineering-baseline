@@ -39,5 +39,7 @@ def usage_record(value, *, probe=False):
         # Conservatively apply its premium once cumulative input exceeds 272K.
         prefill, sample = (2, 1.5) if i > 272000 else (1, 1)
         cost = (((i-c)*2+c*.1)*prefill+o*10*sample)/1_000_000
-    return {'trial': value['trial_name'], **counts, 'estimated_usd': cost,
+    complete = (agent.get('metadata') or {}).get('execution_complete', True)
+    return {'trial': value['trial_name'], 'completeness': 'complete_turn' if valid and complete else 'partial' if valid else 'unavailable',
+            'provenance': 'codex-0.167-exec-json' if valid else None, **counts, 'estimated_usd': cost,
             'billing': 'stub protocol; no model usage or billing' if probe or os.environ.get('AEB_PILOT_PROBE') == '1' else 'provider-reported tokens; estimate, not invoice'}

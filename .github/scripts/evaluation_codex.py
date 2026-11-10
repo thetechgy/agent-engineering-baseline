@@ -211,6 +211,24 @@ class CampaignCodex(PilotCodex):
         super().__init__(*args, **kwargs)
 
     def populate_context_post_run(self, context):
+        if getattr(self, '_execution_interrupted', False):
+            # Partial observations remain data. They cannot replace native
+            # termination or manufacture a completed trajectory/grade/account.
+            failure = None
+            try:
+                super().populate_context_post_run(context)
+                from skill_evidence import read_bytes
+                exec_trajectory(read_bytes(self.logs_dir / 'codex.txt', limit=16*1024*1024).decode(), self)
+            except Exception as error:
+                failure = type(error).__name__
+            context.metadata = {**(context.metadata or {}), 'execution_complete': False,
+                                'observation_failure': failure}
+            target = self.logs_dir.parent / 'operator/pilot-observation.json'
+            target.write_text(json.dumps(context.metadata) + '\n')
+            return
+        return self._populate_completed_context(context)
+
+    def _populate_completed_context(self, context):
         super().populate_context_post_run(context) # Keep qualified usage semantics.
         from skill_evidence import read_bytes
         if self.logs_dir.resolve() != self.logs_dir.absolute():
@@ -511,7 +529,7 @@ def validate_members(members, mode):
 
 
 
-RETAINED_MEMBERS = ('pilot-runtime.json', 'pilot-final-policy.json', 'docker-observation.json',
+RETAINED_MEMBERS = ('pilot-lifecycle.json', 'pilot-observation.json', 'interrupted-submission.json', 'pilot-runtime.json', 'pilot-final-policy.json', 'docker-observation.json',
                     'probe.json', 'codex-stderr.txt', 'native-file-edit-probe.json', 'observation-injection.json', 'codex.txt', 'trajectory.json', 'task-boundary.json', 'pilot-produced-submission.json')
 
 

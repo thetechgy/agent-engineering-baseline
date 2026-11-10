@@ -54,6 +54,9 @@ class Refuse(BaseHTTPRequestHandler):
                  'input': body.get('input'), 'tools': [t.get('name', t.get('type')) for t in body.get('tools', [])],
                  'service_tier': body.get('service_tier'), 'stream': body.get('stream'),
                  'requests': (json.loads(record.read_text())['requests'] if record.exists() else 0) + 1}
+        if scenario == 'native-deadline':
+            value['simulated_response_usage'] = {'input_tokens': 7, 'output_tokens': 3, 'complete': False,
+                'provenance': 'non-forwarding fixture response; not provider usage or complete CLI accounting'}
         record.write_text(json.dumps(value, indent=2) + '\n')
         if scenario == 'native-empty' or scenario == 'native-deadline' and value['requests'] > 1:
             time.sleep(120)  # Non-forwarding fixture: expire the native agent deadline.

@@ -15,7 +15,7 @@ async def observe(environment):
     ids = {}
     for service in ('main', SIDECAR):
         result = await environment._run_docker_compose_command(['ps', '-q', service])
-        identifier = result.stdout.strip()
+        identifier = (result.stdout or '').strip()
         if result.return_code or len(identifier) != 64 or any(c not in '0123456789abcdef' for c in identifier):
             raise ValueError('Missing dedicated Docker service')
         ids[service] = identifier
