@@ -466,11 +466,11 @@ checking main rather than substituting a newer source silently:
 
 ```sh
 REPO=thetechgy/agent-engineering-baseline
-QUALIFIED_SHA=$(gh pr view 128 --repo "$REPO" --json mergeCommit --jq '.mergeCommit.oid')
-printf '%s\n' "$QUALIFIED_SHA" | rg -q '^[0-9a-f]{40}$'
-test "$(gh api "repos/$REPO/git/ref/heads/main" --jq .object.sha)" = "$QUALIFIED_SHA"
-printf 'Preparation source: %s\n' "$QUALIFIED_SHA"
-gh workflow run pester-return-qualification.yml --repo "$REPO" --ref main
+QUALIFIED_SHA=$(gh pr view 128 --repo "$REPO" --json mergeCommit --jq '.mergeCommit.oid') &&
+printf '%s\n' "$QUALIFIED_SHA" | rg -q '^[0-9a-f]{40}$' &&
+test "$(gh api "repos/$REPO/git/ref/heads/main" --jq .object.sha)" = "$QUALIFIED_SHA" &&
+printf 'Preparation source: %s\n' "$QUALIFIED_SHA" &&
+gh workflow run pester-return-qualification.yml --repo "$REPO" --ref main &&
 gh run list --repo "$REPO" --workflow pester-return-qualification.yml \
   --commit "$QUALIFIED_SHA" --limit 5
 ```
@@ -481,7 +481,7 @@ run four **credential-free** inspections of the existing artifacts through the
 reusable workflow, one selection per inspection:
 
 ```sh
-test "$(gh api "repos/$REPO/git/ref/heads/main" --jq .object.sha)" = "$QUALIFIED_SHA"
+test "$(gh api "repos/$REPO/git/ref/heads/main" --jq .object.sha)" = "$QUALIFIED_SHA" &&
 gh workflow run evaluation-campaign.yml --repo "$REPO" --ref main \
   -f campaign=pester-return-development-current-v1 -f "preparation_artifact=$DEVELOPMENT_ARTIFACT"
 # Repeat with development-candidate-v1 and the same development artifact;
