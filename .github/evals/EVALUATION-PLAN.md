@@ -14,7 +14,8 @@ pinned CLI and a non-forwarding fixture. The correction preserves the terminatio
 cause and bounded available diagnostics from a confirmed-stopped container before
 deletion. Historical failures and six valid outcomes remain unchanged; no cause
 for the candidate's original stall or skill-effectiveness conclusion is established.
-Qualification is in progress; this checkpoint grants no live execution permission.
+The PR records final-source credential-free checks, authenticated artifacts and
+report reproduction. This checkpoint grants no live execution permission.
 
 **One next action:** review the focused lifecycle/evidence correction on PR #129
 once its credential-free checks and retained report reproduction are verified.

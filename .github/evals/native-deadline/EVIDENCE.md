@@ -71,7 +71,8 @@ or establish which fixture bytes existed before deletion.
 pinned stop/kill/state-confirmation facility with removal deferred, copies only
 three allowlisted log files and one bounded submission from the **stopped**
 container, and lets Harbor perform final deletion. No agent command or workload
-restart occurs for collection. Docker transfer clients have time and byte bounds;
+restart occurs for collection. Docker transfer clients have time and byte bounds, reserving five seconds of
+the inherited shared cleanup deadline for the transport reaper;
 tar members are validated without filesystem extraction. Runtime homes are never
 copied. Existing redaction plus exact delivered-secret redaction apply to logs;
 a submission requiring redaction is withheld rather than rewritten. Available
@@ -103,8 +104,10 @@ and HTML renderer. It covers normal measured pass/fail controls, emitted-evidenc
 timeout, timeout without useful evidence, a genuine failed diagnostic copy and
 direct native task cancellation. All fixture usage is simulated, not provider
 usage or billing. Complete CLI accounting remains unavailable for interrupted turns.
-Hosted execution, downloaded-artifact admission and report-reproduction results
-are recorded below when verified. Earlier candidate and four-pair preparation
+Final-source hosted execution, authenticated artifact digests, independent
+downloaded-artifact admission and report reproduction are recorded on
+[PR #129](https://github.com/thetechgy/agent-engineering-baseline/pull/129).
+The review status there is conditional on those checks completing. Earlier candidate and four-pair preparation
 receipts remain historical and are not relabeled as execution of this correction.
 
 The intermediate corrected run

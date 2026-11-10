@@ -83,7 +83,7 @@ class PilotEnvironment(SkillEvaluatorSecureDockerEnvironment):
         except OSError:
             pass  # Diagnostic storage must never prevent containment/disposal.
 
-    async def _copy_stopped_file(self, container, source, limit):
+    async def _copy_stopped_file(self, container, source, limit, timeout_sec):
         """Bound a single Docker cp tar in memory; never extract untrusted paths."""
         creation = asyncio.create_task(asyncio.create_subprocess_exec(
             shutil.which('docker'), 'cp', '--', container + ':' + source, '-',
@@ -99,7 +99,7 @@ class PilotEnvironment(SkillEvaluatorSecureDockerEnvironment):
             await asyncio.wait_for(process.wait(), 5)
             raise
         try:
-            async with asyncio.timeout(5):
+            async with asyncio.timeout(timeout_sec):
                 chunks = bytearray()
                 while chunk := await process.stdout.read(65536):
                     chunks.extend(chunk)
@@ -137,7 +137,7 @@ class PilotEnvironment(SkillEvaluatorSecureDockerEnvironment):
             return
         # A failed copy must not escape into native cancellation or skip disposal.
         from skillevaluator.utils.redaction import redact_sensitive_text
-        from skillevaluator.tier3.harbor.secure_docker_environment import _redact
+        from skillevaluator.tier3.harbor.secure_docker_environment import _redact, _bounded_cleanup_timeout
         base = Path(self.trial_paths.trial_dir)
         files = [(name, '/logs/agent/' + name, 16*1024*1024) for name in ('codex.txt', 'codex-stderr.txt', 'probe.json')]
         files.append(('submission', self._pilot_evidence, 65536))
@@ -145,7 +145,12 @@ class PilotEnvironment(SkillEvaluatorSecureDockerEnvironment):
             try:
                 if getattr(self, '_deadline_copy_fault', False) and name == 'codex-stderr.txt':
                     source = '/logs/agent/deliberately-absent-diagnostic'
-                raw = await self._copy_stopped_file(snapshot.all_identities[0], source, limit)
+                # Leave five seconds of the inherited shared deadline to reap
+                # the interrupted transport after optional evidence collection.
+                remaining = min(5, _bounded_cleanup_timeout(30) - 5)
+                if remaining <= 0:
+                    raise TimeoutError('Evidence retention budget exhausted')
+                raw = await self._copy_stopped_file(snapshot.all_identities[0], source, limit, remaining)
                 clean = _redact(redact_sensitive_text(raw.decode(errors='replace')), self._pilot_secrets, include_short=True)
                 if name == 'submission':
                     receipt = {'sha256': hashlib.sha256(raw).hexdigest(), 'bytes': len(raw),
