@@ -24,7 +24,8 @@ def main():
     fixture_sources = {name: hashlib.sha256((campaign.ROOT / '.github/scripts' / name).read_bytes()).hexdigest()
                        for name in ('codex_pilot_deadline_fixture.py', 'codex_pilot_stub.py', 'qualify_native_deadline.py')}
     summary = {'fixture_sources': fixture_sources, 'native_agent_deadline_seconds': 45, 'production_agent_seconds': 600, 'revision': campaign.revision(), 'inference': False, 'expected_broken': args.expect_broken, 'controls': []}
-    for scenario in (('emitted',) if args.expect_broken else ('normal', 'emitted', 'empty', 'secondary', 'cancelled')):
+    for scenario in (('emitted',) if args.expect_broken else ('empty', 'emitted', 'secondary', 'cancelled', 'normal')):
+        print('Native lifecycle control: ' + scenario, flush=True)
         def config(task, mode, control, runtime, present):
             value = original(task, mode, control, runtime, present)
             if scenario != 'normal':

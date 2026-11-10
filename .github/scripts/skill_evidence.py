@@ -4005,6 +4005,17 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
                 from skillevaluator.tier3.harbor.collector import _structural_attempt_ordinal
                 ordinal = _structural_attempt_ordinal(trial_name, case_id)
             if ordinal is None: limitations.add('metadata_missing')
+            exception_type = (trial.get('exception_info') or {}).get('exception_type')
+            execution_terminated = ('-lifecycle-v1-' in capture['purpose']
+                                    and exception_type in ('AgentTimeoutError', 'CancelledError', 'KeyboardInterrupt'))
+            diagnostic_reward = reward is not None and execution_terminated
+            if execution_terminated:
+                # Harbor may verify an interrupted/missing file. Such a sidecar
+                # is retained as data, never admitted as this attempt's grade.
+                explicit_unscored_names.add(trial_name)
+                if reward is not None and reward.get('trial_id') != trial_name:
+                    limitations.add('metadata_missing')
+                reward = None
             if reward is not None:
                 require(reward.get('trial_id') == trial_name and reward.get('entry_id') == case_id
                         and ((profile_family(profile) in ('pester-pilot-v3', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2', 'pester-cli-pilot-retained-v3', 'pester-cli-pilot-retained-v4', 'pester-cli-pilot-retained-v5', 'pester-cli-pilot-retained-v6', 'pester-cli-pilot-v1', 'pester-effectiveness-v1', 'pester-effectiveness-v2', 'pester-effectiveness-v3', 'pester-effectiveness-v4', 'pester-effectiveness-v5', 'pester-effectiveness-v6') and 'has_skill' not in reward)
@@ -4019,9 +4030,6 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
             outcome = detail.get('classification', 'unknown') if profile['grading'] == 'custom_only' else (
                 'failed' if native_trial_failed(trial, reward) else 'passed' if (reward or {}).get('custom_metrics', {}).get('gh_gate') == 1 else 'failed')
             if profile['grading'] == 'default_plus_custom' and native_trial_failed(trial, reward): outcome = 'unknown'
-            exception_type = (trial.get('exception_info') or {}).get('exception_type')
-            execution_terminated = ('-lifecycle-v1-' in capture['purpose']
-                                    and exception_type in ('AgentTimeoutError', 'CancelledError', 'KeyboardInterrupt'))
             if execution_terminated:
                 outcome = CUSTOM_NATIVE_EXCEPTIONS[exception_type]
             if outcome not in CUSTOM_MEASURED:
@@ -4057,8 +4065,8 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
                 limitations.add('execution_incomplete')
                 if reward is not None:
                     explicit_unscored_names.add(trial_name)
-                    require(execution_terminated or (reward.get('evaluation_status') in ('failed', 'error') and not reward.get('custom_metrics')
-                            and not (set(raw) & set(definitions))),
+                    require(reward.get('evaluation_status') in ('failed', 'error') and not reward.get('custom_metrics')
+                            and not (set(raw) & set(definitions)),
                             'Unscoreable trial acquired measurements')
             values = (reward or {}).get('custom_metrics', {})
             values = restore_captured_numeric_fields(values, numeric_excerpts, arm, native_id, case_id)
@@ -4069,7 +4077,7 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
                 require(key in definitions and raw_values[key] == value,
                         'Native custom value contradiction')
             obs_refs = [ref(path), summary_ref, capture_ref]
-            if reward is not None: obs_refs.append(ref(reward_path))
+            if reward is not None or diagnostic_reward: obs_refs.append(ref(reward_path))
             observation = copy.deepcopy(old.get((arm, trial_name))) if standard else {
                 'id': observation_id(run.name, arm, case_id, native_id, trial_name, ordinal),
                 'arm': arm, 'case_id': case_id, 'attempt': ordinal, 'native_id': native_id,
