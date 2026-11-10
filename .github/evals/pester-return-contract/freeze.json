@@ -81,7 +81,7 @@
     ".github/evals/campaigns/pester-return-transfer-current-v2.json": "93062fb9d226653dbf28de8fce634f8551248b23aa13b94deb584b801084f4cd",
     ".github/evals/campaigns/pester-return-transfer-candidate-controls-v2.json": "40d15eb87cdd5f9e09e48017af1fc01097ec79d3134ac1563d3c6eab323e5cbe",
     ".github/evals/campaigns/pester-return-transfer-current-v2-protocol.json": "4ab45a210e9c54de96a3bc3ffe01f6dd8656c4a4a8a23514a5cd4365974987e6",
-    ".github/workflows/pester-return-qualification.yml": "00fac477f0aecf757a2a942d5928e084807a4dbcba3d97f1f14a4eadc45d35e2"
+    ".github/workflows/pester-return-qualification.yml": "4b5faab258cad089484df771d44a11f47c1e6850ed3378993f3ce68cb02a4fa2"
   },
   "qualification_definitions": [
     ".github/evals/campaigns/pester-return-development-current-controls-v1.json",

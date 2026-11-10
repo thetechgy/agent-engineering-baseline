@@ -2,7 +2,12 @@ name: Pester return-contract qualification
 on:
   pull_request:
     paths:
-      - '.github/evals/pester-return-contract/**'
+      - '.github/evals/pester-return-contract/transfer/**'
+      - '.github/evals/pester-return-contract/variants/**'
+      - '.github/evals/pester-return-contract/freeze.json'
+      - '.github/evals/pester-return-contract/PLAN.md'
+      - '.github/evals/pester-return-contract/Advice.Tests.ps1'
+      - '.github/evals/pester-return-contract/verify_example.py'
       - '.github/evals/campaigns/pester-return-*.json'
       - '.github/evals/custom-metrics.json'
       - '.github/scripts/evaluation_*.py'
