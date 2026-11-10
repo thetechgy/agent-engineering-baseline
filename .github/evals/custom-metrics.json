@@ -8456,7 +8456,7 @@
         "environment_mode": "docker",
         "agent_import": "oracle",
         "trials": 1,
-        "adapter_sha256": "sha256:f7ff9a453e3c8bb118330693d962a506a503507ae14b899690d0ece1e18e9046"
+        "adapter_sha256": "sha256:3d66b3fc2e772349144f5e6729d4b2e9ca81581b586474525106614681a8e7dd"
       }
     },
     "campaign-pester-return-development-current-controls-v1-lifecycle-v1-oracle": {
