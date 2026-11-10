@@ -3316,9 +3316,9 @@ def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
     if profile_id is None and campaign_purpose(purpose):
         profile_id = purpose
     if profile_id is None and purpose in ('skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-effectiveness-v10'
+        profile_id = 'pester-effectiveness-v11'
     if profile_id is None and name == 'powershell-pester-6' and purpose in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-cli-pilot-retained-v9'
+        profile_id = 'pester-cli-pilot-retained-v10'
     if profile_id is None and name == 'gh' and purpose == 'oracle_qualification':
         profile_id = 'gh-native-oracle-v1'
     profile_id = registry['active_profiles'].get(name) if profile_id is None else profile_id
@@ -4005,6 +4005,17 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
                 from skillevaluator.tier3.harbor.collector import _structural_attempt_ordinal
                 ordinal = _structural_attempt_ordinal(trial_name, case_id)
             if ordinal is None: limitations.add('metadata_missing')
+            exception_type = (trial.get('exception_info') or {}).get('exception_type')
+            execution_terminated = (profile.get('termination_evidence') == 'native-deadline-v1'
+                                    and exception_type in ('AgentTimeoutError', 'CancelledError', 'KeyboardInterrupt'))
+            diagnostic_reward = reward is not None and execution_terminated
+            if execution_terminated:
+                # Harbor may verify an interrupted/missing file. Such a sidecar
+                # is retained as data, never admitted as this attempt's grade.
+                explicit_unscored_names.add(trial_name)
+                if reward is not None and reward.get('trial_id') != trial_name:
+                    limitations.add('metadata_missing')
+                reward = None
             if reward is not None:
                 require(reward.get('trial_id') == trial_name and reward.get('entry_id') == case_id
                         and ((profile_family(profile) in ('pester-pilot-v3', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2', 'pester-cli-pilot-retained-v3', 'pester-cli-pilot-retained-v4', 'pester-cli-pilot-retained-v5', 'pester-cli-pilot-retained-v6', 'pester-cli-pilot-v1', 'pester-effectiveness-v1', 'pester-effectiveness-v2', 'pester-effectiveness-v3', 'pester-effectiveness-v4', 'pester-effectiveness-v5', 'pester-effectiveness-v6') and 'has_skill' not in reward)
@@ -4019,8 +4030,9 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
             outcome = detail.get('classification', 'unknown') if profile['grading'] == 'custom_only' else (
                 'failed' if native_trial_failed(trial, reward) else 'passed' if (reward or {}).get('custom_metrics', {}).get('gh_gate') == 1 else 'failed')
             if profile['grading'] == 'default_plus_custom' and native_trial_failed(trial, reward): outcome = 'unknown'
+            if execution_terminated:
+                outcome = CUSTOM_NATIVE_EXCEPTIONS[exception_type]
             if outcome not in CUSTOM_MEASURED:
-                exception_type = (trial.get('exception_info') or {}).get('exception_type')
                 outcome = CUSTOM_NATIVE_EXCEPTIONS.get(exception_type, outcome)
                 if 'campaign' in profile:
                     from evaluation_evidence import native_outcome
@@ -4065,7 +4077,7 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
                 require(key in definitions and raw_values[key] == value,
                         'Native custom value contradiction')
             obs_refs = [ref(path), summary_ref, capture_ref]
-            if reward is not None: obs_refs.append(ref(reward_path))
+            if reward is not None or diagnostic_reward: obs_refs.append(ref(reward_path))
             observation = copy.deepcopy(old.get((arm, trial_name))) if standard else {
                 'id': observation_id(run.name, arm, case_id, native_id, trial_name, ordinal),
                 'arm': arm, 'case_id': case_id, 'attempt': ordinal, 'native_id': native_id,
@@ -4077,10 +4089,10 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
                 observation['raw_scores'] = {key: raw.get(key) for key in SCORE_FIELDS}
                 observation['raw_deterministic_scores'] = dict.fromkeys(GATE_FIELDS)
             observation['custom'] = {'outcome': outcome, 'measurements': custom_measurements(definitions,
-                profile['cases'][mapping[case_id]], outcome, values, detail, obs_refs),
+                profile['cases'][mapping[case_id]], outcome, {} if execution_terminated else values, detail, obs_refs),
                 'usage': custom_usage(trial, redacted_counts=capture['evaluator_revision'] == profiles.CANDIDATE['revision']), 'references': obs_refs}
             if profile_family(profile) in ('pester-cli-pilot-v1', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2', 'pester-cli-pilot-retained-v3', 'pester-cli-pilot-retained-v4', 'pester-cli-pilot-retained-v5', 'pester-cli-pilot-retained-v6', 'pester-effectiveness-v1', 'pester-effectiveness-v2', 'pester-effectiveness-v3', 'pester-effectiveness-v4', 'pester-effectiveness-v5', 'pester-effectiveness-v6'):
-                observation['custom']['admission_reason'] = detail.get('code')
+                observation['custom']['admission_reason'] = None if execution_terminated else detail.get('code')
             if profile_family(profile) in ('pester-effectiveness-v1', 'pester-effectiveness-v2', 'pester-effectiveness-v3', 'pester-effectiveness-v4', 'pester-effectiveness-v5', 'pester-effectiveness-v6'):
                 from codex_pilot_effectiveness import case_files
                 names = sorted(Path(member).stem for member in custom_defect_files(profile, workspace, mapping[case_id]) if member.startswith('mutants/'))

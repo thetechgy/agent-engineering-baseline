@@ -179,7 +179,8 @@ class CampaignContracts(unittest.TestCase):
              'campaign-boolean-effectiveness-v2-probe','campaign-boolean-effectiveness-v2-live',
              'campaign-boolean-retained-v1-replay'}
         new.update({'campaign-gh-read-v4-probe', 'campaign-boolean-retained-v2-replay', 'campaign-boolean-contract-v4-oracle', 'pester-effectiveness-v10', 'campaign-boolean-contract-v4-probe', 'campaign-gh-read-v4-oracle', 'campaign-boolean-effectiveness-v3-probe', 'pester-cli-pilot-retained-v9', 'campaign-boolean-effectiveness-v3-live'})
-        new.update(k for k in current['profiles'] if k.startswith('campaign-pester-return-') or '-selection-v1-' in k)
+        new.update(k for k in current['profiles'] if k.startswith('campaign-pester-return-') or '-selection-v1-' in k or '-lifecycle-v1-' in k)
+        new.update({'pester-cli-pilot-retained-v10', 'pester-effectiveness-v11'})
         historical={k:v for k,v in current['profiles'].items() if k not in new}
         value={'profiles':historical,'active_profiles':current['active_profiles'],'metrics':current['metrics']}
         digest=hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':'),ensure_ascii=True).encode()).hexdigest()

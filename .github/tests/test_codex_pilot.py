@@ -180,6 +180,20 @@ class PilotContracts(unittest.TestCase):
             (root/'codex.txt').write_text(json.dumps({'type':'turn.completed','usage':{
                 'input_tokens':100,'cached_input_tokens':101,'output_tokens':10}})+'\n')
             with self.assertRaises(ValueError): PilotCodex.populate_context_post_run(agent,context)
+            agent._execution_interrupted = True
+            PilotCodex.populate_context_post_run(agent,context)
+            self.assertIsNone(context.n_input_tokens)
+            self.assertFalse(context.metadata['execution_complete'])
+            self.assertIn('usage_observation_failure', context.metadata)
+            (root/'codex.txt').write_text(json.dumps({'type':'turn.completed','usage':{
+                'input_tokens':100,'cached_input_tokens':20,'output_tokens':10}})+'\n')
+            PilotCodex.populate_context_post_run(agent,context)
+            from codex_pilot_runtime import usage_record
+            partial = usage_record({'trial_name':'interrupted-after-turn','agent_result':context.model_dump()},probe=True)
+            self.assertEqual(partial['completeness'],'partial')
+            self.assertIsNone(partial['estimated_usd'])
+            self.assertGreater(partial['observed_estimated_usd'],0)
+
 
     @unittest.skipUnless(CANDIDATE_RUNTIME, 'Requires qualified owning runtime')
     def test_exact_submission_handoff_rejects_changed_verifier_receipt(self):
@@ -325,6 +339,8 @@ class PilotContracts(unittest.TestCase):
         from codex_pilot_environment import PilotEnvironment, SkillEvaluatorSecureDockerEnvironment
         agent = object.__new__(PilotEnvironment)
         agent._pilot_agent = True
+        agent._pilot_interrupted = False
+        agent._pilot_secrets = set()
         cleanup = AsyncMock()
         with patch('codex_pilot_boundary.observe', new=AsyncMock(side_effect=ValueError('unavailable'))), patch.object(SkillEvaluatorSecureDockerEnvironment, 'stop', new=cleanup):
             with self.assertRaisesRegex(ValueError, 'unavailable'):
@@ -337,6 +353,8 @@ class PilotContracts(unittest.TestCase):
         from codex_pilot_environment import PilotEnvironment
         agent = object.__new__(PilotEnvironment)
         agent._pilot_agent = True
+        agent._pilot_interrupted = False
+        agent._pilot_secrets = set()
         agent._resolve_user = lambda value: value
         agent._merge_env = lambda value: value
         agent._output_callback = lambda: None

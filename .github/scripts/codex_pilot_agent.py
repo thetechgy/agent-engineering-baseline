@@ -1,5 +1,7 @@
 """Pilot-only Harbor Codex adapter. External Docker isolation; the released CLI inner sandbox is disabled."""
+import asyncio
 import base64
+import time
 import hashlib
 import json
 import os
@@ -56,6 +58,10 @@ class PilotCodex(Codex):
     def populate_context_post_run(self, context):
         # 0.167's durable store differs from Harbor 0.24's old JSONL reader.
         # The released exec JSON protocol supplies final cumulative usage.
+        interrupted = getattr(self, '_execution_interrupted', False)
+        if interrupted:
+            context.n_input_tokens = context.n_cache_tokens = context.n_output_tokens = None
+            context.metadata = {'execution_complete': False}
         path = self.logs_dir / 'codex.txt'
         if not path.is_file() or path.is_symlink() or path.stat().st_size > 16*1024*1024:
             return
@@ -65,21 +71,33 @@ class PilotCodex(Codex):
                 events.append(json.loads(line))
             except ValueError:
                 continue
-        completed = [e['usage'] for e in events if e.get('type') == 'turn.completed']
+        completed = [e.get('usage') for e in events if isinstance(e, dict) and e.get('type') == 'turn.completed']
         if len(completed) != 1:
             return  # No fallback zero for interrupted or unobserved usage.
         usage = completed[0]
         keys = ('input_tokens', 'cached_input_tokens', 'output_tokens')
-        if not all(type(usage.get(k)) is int and usage[k] >= 0 for k in keys):
-            raise ValueError('Invalid CLI usage protocol')
-        if usage['cached_input_tokens'] > usage['input_tokens']:
-            raise ValueError('Contradictory CLI usage')
+        valid = isinstance(usage, dict) and all(type(usage.get(k)) is int and usage[k] >= 0 for k in keys)
+        if not valid or usage['cached_input_tokens'] > usage['input_tokens']:
+            if interrupted:
+                context.metadata['usage_observation_failure'] = 'invalid_or_contradictory_usage'
+                return
+            raise ValueError('Invalid or contradictory CLI usage protocol')
         context.n_input_tokens = usage['input_tokens']
         context.n_cache_tokens = usage['cached_input_tokens']
         context.n_output_tokens = usage['output_tokens']
-        context.metadata = {'usage_source': 'codex-0.167-exec-json', 'billing_verified': False}
+        context.metadata = {'usage_source': 'codex-0.167-exec-json', 'billing_verified': False,
+                            **({'execution_complete': False} if interrupted else {})}
 
     async def run(self, instruction, environment, context):
+        environment.retain_on_interrupt(self.output)
+        environment._stage('agent_started')
+        try:
+            return await self._run_codex(instruction, environment, context)
+        except BaseException:
+            self._execution_interrupted = True
+            raise
+
+    async def _run_codex(self, instruction, environment, context):
         if self.model_name != self.profile['model']:
             raise ValueError('Pilot model drift')
         probe = os.environ.get('AEB_PILOT_PROBE') == '1'
@@ -143,21 +161,47 @@ class PilotCodex(Codex):
                    f'>{logs}/codex.txt 2>{logs}/codex-stderr.txt')
         if scenario == 'interruption':
             command = 'timeout --signal=INT --kill-after=5s 5s ' + command
+        primary = None
+        started = time.monotonic()
         try:
             result = await environment.exec(command=command, env=env, user='agent',
                                                timeout_sec=self.profile['agent_seconds'])
             audit['returncode'] = result.return_code
+            if result.return_code != 0:
+                raise RuntimeError('Pilot Codex CLI exited unsuccessfully; original events retained')
             audit['boundary_after'] = await observe(environment)
+        except BaseException as error:
+            primary = error
+            self._execution_interrupted = True
+            audit['execution_exception'] = type(error).__name__
+            raise
         finally:
-            # Keep exact native events before removing the runtime home/credentials.
+            audit['execution_elapsed_seconds'] = round(time.monotonic() - started, 3)
+            # A contained workload cannot exec a receipt or scrub command. Its
+            # remaining runtime home is removed by final container disposal.
+            if environment._pilot_interrupted:
+                audit['cleanup'] = 'pending_container_disposal'
+            else:
+                try:
+                    from codex_pilot import producer_receipt_command
+                    async with asyncio.timeout(30):
+                        await self.exec_as_agent(environment, command=producer_receipt_command(self.output, retain=self.retain_submission))
+                    async with asyncio.timeout(30):
+                        await self.exec_as_agent(environment, command=(
+                            f'if [ -f {HOME}/stub.pid ]; then kill "$(cat {HOME}/stub.pid)"; fi; '
+                            f'rm -rf {HOME}; test ! -e {HOME}'))
+                    audit['cleanup'] = 'complete'
+                except BaseException as error:
+                    audit['collection_or_cleanup_exception'] = type(error).__name__
+                    if primary is None:
+                        try:
+                            audit_path.write_text(json.dumps(audit, indent=2) + '\n')
+                        except OSError as retention_error:
+                            error.add_note('Runtime audit retention also failed: ' + type(retention_error).__name__)
+                        raise
             try:
-                from codex_pilot import producer_receipt_command
-                await self.exec_as_agent(environment, command=producer_receipt_command(self.output, retain=self.retain_submission))
-                await self.exec_as_agent(environment, command=(
-                    f'if [ -f {HOME}/stub.pid ]; then kill "$(cat {HOME}/stub.pid)"; fi; '
-                    f'rm -rf {HOME}; test ! -e {HOME}'))
-                audit['cleanup'] = 'complete'
-            finally:
                 audit_path.write_text(json.dumps(audit, indent=2) + '\n')
-        if result.return_code != 0:
-            raise RuntimeError('Pilot Codex CLI exited unsuccessfully; original events retained')
+            except OSError as error:
+                if primary is None:
+                    raise
+                primary.add_note('Runtime audit retention also failed: ' + type(error).__name__)

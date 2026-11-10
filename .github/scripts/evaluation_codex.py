@@ -193,7 +193,7 @@ def exec_trajectory(raw, adapter, *, diagnostics=None):
 class CampaignCodex(PilotCodex):
     retain_submission = True
 
-    def __init__(self, *args, campaign_definition, control, present, live=False, **kwargs):
+    def __init__(self, *args, campaign_definition, control, present, live=False, deadline_fixture=None, **kwargs):
         from evaluation_tasks import load
         self.task = load(ROOT / campaign_definition)
         self.control = control
@@ -202,6 +202,10 @@ class CampaignCodex(PilotCodex):
         self.skill = self.task.definition['skill']
         self.output = '/workspace/output/' + self.task.output
         self.live = live
+        if deadline_fixture is not None:
+            require(not live and os.environ.get('AEB_PILOT_PROBE') == '1'
+                    and deadline_fixture in ('emitted', 'empty', 'secondary', 'cancelled'), 'Live deadline fixture refused')
+        self.deadline_fixture = deadline_fixture
         if live:
             from evaluation_campaign_protocol import runtime_gate
             runtime_gate(self.task)
@@ -210,7 +214,31 @@ class CampaignCodex(PilotCodex):
             require(os.environ.get('AEB_PILOT_PROBE') == '1', 'Campaign inference is disabled')
         super().__init__(*args, **kwargs)
 
+    async def run(self, instruction, environment, context):
+        if self.deadline_fixture:
+            from codex_pilot_deadline_fixture import run
+            return await run(self, instruction, environment, context, super().run)
+        return await super().run(instruction, environment, context)
+
     def populate_context_post_run(self, context):
+        if getattr(self, '_execution_interrupted', False):
+            # Partial observations remain data. They cannot replace native
+            # termination or manufacture a completed trajectory/grade/account.
+            failure = None
+            try:
+                super().populate_context_post_run(context)
+                from skill_evidence import read_bytes
+                exec_trajectory(read_bytes(self.logs_dir / 'codex.txt', limit=16*1024*1024).decode(), self)
+            except Exception as error:
+                failure = type(error).__name__
+            context.metadata = {**(context.metadata or {}), 'execution_complete': False,
+                                'observation_failure': failure}
+            target = self.logs_dir.parent / 'operator/pilot-observation.json'
+            target.write_text(json.dumps(context.metadata) + '\n')
+            return
+        return self._populate_completed_context(context)
+
+    def _populate_completed_context(self, context):
         super().populate_context_post_run(context) # Keep qualified usage semantics.
         from skill_evidence import read_bytes
         if self.logs_dir.resolve() != self.logs_dir.absolute():
@@ -264,6 +292,9 @@ class CampaignCodex(PilotCodex):
         return self.task.payload(control)
 
     def fixture_commands(self, payload):
+        if self.deadline_fixture:
+            from codex_pilot_deadline_fixture import commands
+            return commands(self.output, payload)
         control = os.environ.get('AEB_CAMPAIGN_CONTROL', self.control)
         if self.task.probe_origin == 'operator':
             return self.task.probe_commands(control, payload, self.expected_present)
@@ -511,7 +542,7 @@ def validate_members(members, mode):
 
 
 
-RETAINED_MEMBERS = ('pilot-runtime.json', 'pilot-final-policy.json', 'docker-observation.json',
+RETAINED_MEMBERS = ('pilot-lifecycle.json', 'pilot-observation.json', 'interrupted-submission.json', 'pilot-runtime.json', 'pilot-final-policy.json', 'docker-observation.json',
                     'probe.json', 'codex-stderr.txt', 'native-file-edit-probe.json', 'observation-injection.json', 'codex.txt', 'trajectory.json', 'task-boundary.json', 'pilot-produced-submission.json')
 
 

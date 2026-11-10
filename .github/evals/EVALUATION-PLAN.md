@@ -1,5 +1,27 @@
 # Issue #95 dependency modernization checkpoint
 
+The return-contract sequence stopped after development/candidate's first native
+600-second deadline. Seven slots launched, six measured and seventeen unlaunched.
+Development/current and absent each retain 0/3 primary success, passing reference
+and missing integer-result; their estimated usage is $0.2705338. Candidate usage
+and total spending remain unknown. Both transfer pairs are undispatched. No retry,
+continuation, replacement, inference, judge, paid gate or new allocation is authorized.
+
+[PR #129](https://github.com/thetechgy/agent-engineering-baseline/pull/129) fixes the
+native timeout evidence lifecycle. The [separate diagnosis and qualification](native-deadline/EVIDENCE.md)
+authenticate the original artifact and reproduce native deadline expiry with the
+pinned CLI and a non-forwarding fixture. The correction preserves the termination
+cause and bounded available diagnostics from a confirmed-stopped container before
+deletion. Historical failures and six valid outcomes remain unchanged; no cause
+for the candidate's original stall or skill-effectiveness conclusion is established.
+The PR records final-source credential-free checks, authenticated artifacts and
+report reproduction. This checkpoint grants no live execution permission.
+
+**One next action:** review the focused lifecycle/evidence correction on PR #129
+once its credential-free checks and retained report reproduction are verified.
+
+## PR #128 checkpoint, retained as history
+
 PR #127 is merged at `331e0f94b98927a1db776a39b9b16bf500929134`.
 The return-contract candidate remains undeployed and its benefit unproven.
 The [frozen plan](pester-return-contract/PLAN.md), earlier

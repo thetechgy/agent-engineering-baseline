@@ -89,7 +89,7 @@ def runtime_installer_bytes(workspace=ROOT):
 def pilot_inputs(workspace=ROOT):
     paths = ['.github/scripts/evaluation_campaign_core.py', '.github/scripts/codex_pilot_runtime.py', '.github/evals/codex-pilot.json', '.github/scripts/codex_pilot_contract.py',
              '.github/scripts/codex_pilot_agent.py', '.github/scripts/codex_pilot.py', '.github/scripts/codex_pilot_stub.py',
-             '.github/scripts/codex_pilot_environment.py', '.github/scripts/codex_pilot_boundary.py',
+             '.github/scripts/codex_pilot_deadline_fixture.py', '.github/scripts/codex_pilot_environment.py', '.github/scripts/codex_pilot_boundary.py',
              '.github/scripts/codex_pilot_probe.py', '.github/scripts/codex_pilot_descriptors.py',
              '.github/scripts/codex_pilot_acquisition.py', '.github/scripts/codex_pilot_iteration.py',
              '.github/scripts/codex_pilot_replay.py', '.github/evals/codex-pilot-iteration.md',

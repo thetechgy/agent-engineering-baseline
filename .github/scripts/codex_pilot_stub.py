@@ -5,6 +5,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 from pathlib import Path
 import sys
+import time
 
 # The trusted host supplies this only at credential-free probe startup. Image
 # bytes contain no qualification answer and there is no fallback payload.
@@ -53,14 +54,20 @@ class Refuse(BaseHTTPRequestHandler):
                  'input': body.get('input'), 'tools': [t.get('name', t.get('type')) for t in body.get('tools', [])],
                  'service_tier': body.get('service_tier'), 'stream': body.get('stream'),
                  'requests': (json.loads(record.read_text())['requests'] if record.exists() else 0) + 1}
+        if scenario == 'native-deadline':
+            value['simulated_response_usage'] = {'input_tokens': 7, 'output_tokens': 3, 'complete': False,
+                'provenance': 'non-forwarding fixture response; not provider usage or complete CLI accounting'}
         record.write_text(json.dumps(value, indent=2) + '\n')
+        if scenario == 'native-empty' or scenario == 'native-deadline' and value['requests'] > 1:
+            time.sleep(120)  # Non-forwarding fixture: expire the native agent deadline.
+            return
         if value['requests'] == 1:
             command = {
                 'success': f"python3 /opt/pilot/codex_pilot_probe.py && printf %s {fixture} | base64 -d > /workspace/output/Subject.Tests.ps1",
                 'command-failure': "printf pilot-command-failure; exit 23",
                 'interruption': "printf pilot-command-started; sleep 120",
-            }[scenario]
-            issued = commands if commands is not None and scenario == 'success' else [command]
+            }.get(scenario, ':')
+            issued = commands if commands is not None and scenario in ('success', 'native-deadline') else [command]
             programs = [program(c) for c in issued]
             if any(isinstance(c,dict) for c in issued):
                 programs = ['\n'.join(programs)] # Preserve native edit dependencies within one real code-mode call.
@@ -71,7 +78,7 @@ class Refuse(BaseHTTPRequestHandler):
                     'input': code}}
                   for i, code in enumerate(programs)],
                 {'type': 'response.completed', 'response': {'id': 'pilot-fixture-1',
-                    'usage': {'input_tokens': 0, 'output_tokens': 0, 'total_tokens': 0}}},
+                    'usage': {'input_tokens': 7 if scenario == 'native-deadline' else 0, 'output_tokens': 3 if scenario == 'native-deadline' else 0, 'total_tokens': 10 if scenario == 'native-deadline' else 0}}},
             ]
             payload = ''.join('event: '+event['type']+'\ndata: '+json.dumps(event)+'\n\n' for event in events).encode()
             self.send_response(200)

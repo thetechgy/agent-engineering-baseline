@@ -23,7 +23,7 @@ import skill_reports as reports
 
 def purpose(task, mode):
     identity = {'boolean-contract-v1':'boolean-contract-v4', 'gh-read-v1':'gh-read-v4', 'boolean-effectiveness-v1':'boolean-effectiveness-v3', 'boolean-retained-v1':'boolean-retained-v2'}.get(task.definition['id'], task.definition['id'])
-    return 'campaign-' + identity + '-selection-v1-' + ('probe' if mode == 'experiment-probe' else mode)
+    return 'campaign-' + identity + '-lifecycle-v1-' + ('probe' if mode == 'experiment-probe' else mode)
 
 
 def revision():
@@ -233,6 +233,10 @@ def run(root, task, mode, *, reference=None, fixture=None):
             row['grading_present'] = len(rewards) == 1
             reward = reports.read_json(rewards[0]) if row['grading_present'] else {}
             row.update(state='completed', outcome=reward.get('details',{}).get('outcome',{}))
+            if row['native_exception'] in evidence.CUSTOM_NATIVE_EXCEPTIONS:
+                row['execution_outcome'] = evidence.CUSTOM_NATIVE_EXCEPTIONS[row['native_exception']]
+                row['diagnostic_verifier_outcome'] = row['outcome']
+                row['outcome'] = {}  # An interrupted file is not completed task work.
             if not experiment:
                 reason = stop_reason(row)
                 if row['native_exception'] or code or not row['grading_present'] or not row['cleanup']:
@@ -277,10 +281,16 @@ def run(root, task, mode, *, reference=None, fixture=None):
             if (root / 'jobs').exists():
                 from skillevaluator.utils.redaction import redact_sensitive_text
                 for path in sorted((root / 'jobs').rglob('*')):
-                    if path.is_file() and not path.is_symlink() and (path.name in (*adapter.RETAINED_MEMBERS, *task.retained_members) or path.name==task.output and 'artifacts' in path.parts):
+                    if path.is_file() and not path.is_symlink() and (path.name in (*adapter.RETAINED_MEMBERS, *task.retained_members) or path.name==task.output and ('artifacts' in path.parts or 'interrupted-submission' in path.parts)):
                         raw = evidence.read_bytes(path, limit=16*1024*1024).decode(errors='replace')
                         target = artifact / 'retained' / path.relative_to(root / 'jobs'); target.parent.mkdir(parents=True, exist_ok=True)
-                        target.write_text(redact_sensitive_text(raw).replace(str(root), '<campaign>').replace(str(ROOT), '<checkout>'))
+                        sanitized = redact_sensitive_text(raw).replace(str(root), '<campaign>').replace(str(ROOT), '<checkout>')
+                        if 'interrupted-submission' in path.parts:
+                            exact = evidence.read_bytes(path, limit=65536)
+                            core.require(sanitized.encode() == exact, 'Submission requires protected retention')
+                            target.write_bytes(exact)
+                        else:
+                            target.write_text(sanitized)
                 if bundle is not None:
                     try: collect(root, task, mode, bundle, captured, rows, fixture=fixture)
                     except Exception as error:
