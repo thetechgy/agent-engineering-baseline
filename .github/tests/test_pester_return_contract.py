@@ -30,10 +30,11 @@ class ReturnContract(unittest.TestCase):
             if path.name != 'SKILL.md': self.assertEqual(path.read_bytes(), (candidate / path.relative_to(current)).read_bytes())
         for case in ('development', 'transfer'):
             definitions=[]
+            version='v2' if case=='transfer' else 'v1'
             for variant in ('current', 'candidate'):
-                task=load(ROOT / ('.github/evals/campaigns/pester-return-'+case+'-'+variant+'-v1.json'))
+                task=load(ROOT / ('.github/evals/campaigns/pester-return-'+case+'-'+variant+'-'+version+'.json'))
                 definitions.append(task.definition)
-                controls=load(ROOT / ('.github/evals/campaigns/pester-return-'+case+'-'+variant+'-controls-v1.json'))
+                controls=load(ROOT / ('.github/evals/campaigns/pester-return-'+case+'-'+variant+'-controls-'+version+'.json'))
                 for mode in ('oracle','probe'):
                     selected=purpose(controls,mode)
                     profile,_,_=evidence.custom_contract('powershell-pester-6',purpose=selected)
@@ -45,7 +46,7 @@ class ReturnContract(unittest.TestCase):
             self.assertEqual(definitions[0]['runtime_profile'],definitions[1]['runtime_profile'])
             self.assertEqual(definitions[0]['trials'],3)
         self.assertEqual(frozen['proposed_attempts'],24)
-        transfer=load(ROOT/'.github/evals/campaigns/pester-return-transfer-candidate-controls-v1.json')
+        transfer=load(ROOT/'.github/evals/campaigns/pester-return-transfer-candidate-controls-v2.json')
         for scenario in ('completed','task-failure','invalid'):
             for position in range(1,7):
                 self.assertIn(transfer.fixture_control(scenario,{'position':position}),transfer.controls())
@@ -73,7 +74,7 @@ class ReturnContract(unittest.TestCase):
         manifest=subprocess.check_output([os.environ.get('CI_PWSH','pwsh'),'-NoProfile','-Command',
             '(Get-Module -ListAvailable Pester | Where-Object Version -EQ 6.2.0 | Select-Object -First 1).Path'],text=True).strip()
         self.assertTrue(manifest)
-        task=load(ROOT/'.github/evals/campaigns/pester-return-transfer-candidate-v1.json')
+        task=load(ROOT/'.github/evals/campaigns/pester-return-transfer-candidate-v2.json')
         grader=prospective_grader();rows=[]
         for control in task.controls():
             result=local_semantic_fixture(task.payload(control),task.files(),manifest)

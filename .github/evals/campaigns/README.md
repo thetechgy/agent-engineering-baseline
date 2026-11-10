@@ -401,7 +401,6 @@ and the earlier shared/historical receipts retain their actual execution revisio
 documentation descendants are not relabeled as native execution. Any future
 experiment requires a separate decision.
 
-
 ## Declared return-contract candidate (review preparation only)
 
 The [frozen candidate plan](../pester-return-contract/PLAN.md) selects immutable

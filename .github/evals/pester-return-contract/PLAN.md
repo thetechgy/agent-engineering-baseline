@@ -1,4 +1,4 @@
-# Declared return-contract candidate, frozen plan v1
+# Declared return-contract candidate, frozen plan v2
 
 Status: candidate and experiment prepared for review; no adoption or inference.
 Base: current main `9f81a66b343f340b681759db8c7c38a4e9e016c5`.
@@ -93,10 +93,10 @@ then the descriptive difference between those paired differences, per case.
 Unequal absent results remain visible. This is not a direct randomized comparison
 between the two skills and supplies no broad effectiveness estimate.
 
-The four `campaigns/pester-return-*-v1.json` definitions and corresponding
+The development v1 and transfer v2 paired definitions and corresponding
 protocols freeze three trials and six serial slots per pair. Use case order
 shown above. Within each pair the existing scheduler orders present/absent,
-absent/present, present/absent. The `*-controls-v1.json` definitions separately
+absent/present, present/absent. The matching development v1 and transfer v2 control definitions separately
 qualify known controls with one repetition per arm; no model outputs enter those
 runs. Qualified native components, settings and containment are reused unchanged:
 Codex 0.167.0, gpt-6.1-sol, OpenAI, high reasoning, PowerShell 7.6.9, Pester 6.2.0,
@@ -136,7 +136,7 @@ establish broad effectiveness or a causal explanation of the historical miss.
 
 ## Credential-free operation and remaining limits
 
-Reuse `evaluation_campaign.py qualify`, for each case with its current and candidate `*-controls-v1.json`
+Reuse `evaluation_campaign.py qualify`, for each case with its current and candidate `*-controls-v*.json`
 definitions together (two definitions, four oracle/probe leaf records), a new
 persistent output directory, and the existing
 pinned tool/Compose environment. It reuses APM/native deployment checks, independent
@@ -172,3 +172,23 @@ A later live decision would require complete exact-source credential-free native
 preparation and separate authorization; this pass requests none.
 
 One next action: review the candidate and frozen evaluation plan.
+
+## Qualification revision audit
+
+Revision v2 adds only a level-one heading to the transfer input README for MD041
+and removes a duplicate blank line in the campaign operator guide for MD012.
+The transfer prompt, public behavioral contract, controls, reference, mutants,
+scoring, skill snapshots and 24-attempt comparison design are unchanged. The
+heading changes task bytes, so transfer definitions/protocols/profiles have new
+v2 identities. [The original freeze](history/ea26668-freeze.json) and
+[all earlier profile digests](history/ea26668-profile-digests.json) preserve the
+reviewed v1 state at `ea266683626dcfdf8b86884797fd2caa7564a6ba`. Old receipts do not
+qualify v2 inputs. No model output was observed before either freeze.
+
+Credential-free hosted qualification uses the existing campaign `qualify`,
+`prepare` and `check-preparation` commands in a case matrix. Each case qualifies
+both skill sources, then prepares both paired protocols using the non-forwarding
+CLI fixture. A fresh runner consumes the same-run artifacts and reproduces the
+control and scheduling reports. These are control executions, not any of the
+24 proposed model attempts. No model credentials or protected environment is
+available to these jobs.

@@ -1,3 +1,5 @@
+# Batch summary testing contract
+
 Write a self-contained Pester suite for Get-BatchSummary -Requested <int> in input/Subject.ps1.
 It returns one object with Enabled (Boolean, true exactly when Requested is positive) and Quantity
 (the requested quantity clamped to the inclusive range 0 through 8). Quantity is a numeric value;
