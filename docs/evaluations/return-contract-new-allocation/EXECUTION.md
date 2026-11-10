@@ -98,8 +98,12 @@ analysis](execution/analysis/analysis.json), [original public inputs](execution/
 receipt](execution/report-receipt.json) and [execution receipt](execution/results.json) form the portable report
 package. The HTML uses the existing renderer and comparison policy; custom cross-run comparisons remain deferred
 and cohorts remain separate. Independent reproduction of the four-record consolidated report matched SHA-256
-`f395a62a76cb3c3d5a2dbac01e7aa60757107fb895c84845c3976e9e1a7ad91e`. Open the HTML from a local
-checkout/download; GitHub displays it as source.
+`af83335d938115ab287abb54d65da41cb9fad015e386255743b77bb10fbf35b2`. Open the HTML from a local
+checkout/download; GitHub displays it as source. The public inputs use the existing flat-bundle format, with unchanged
+original JSON bytes and record identities. This avoids Windows checkout path limits. The first result-publication
+CI run failed at Windows checkout before tests on the longer nested paths and was superseded; that failure is
+a publication packaging defect, separate from native execution. Flat-bundle admission and report reproduction
+passed without changing the reporting implementation or outcomes.
 
 | New native artifact | Digest / expiration / essential internal location |
 | --- | --- |

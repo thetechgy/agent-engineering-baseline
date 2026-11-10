@@ -723,7 +723,8 @@
         "artifact": 13778387919,
         "source": "9f6929f2b2be6ad66b40cd9ab9edf68caa124aee",
         "historical": true,
-        "correctness_estimates_excluded": false
+        "correctness_estimates_excluded": false,
+        "public_input": "data/historical-development-current"
       },
       {
         "label": "historical-development-candidate-reliability",
@@ -731,7 +732,8 @@
         "artifact": 13779353316,
         "source": "9f6929f2b2be6ad66b40cd9ab9edf68caa124aee",
         "historical": true,
-        "correctness_estimates_excluded": true
+        "correctness_estimates_excluded": true,
+        "public_input": "data/historical-development-candidate-reliability"
       },
       {
         "label": "pester-return-development-candidate-v1",
@@ -739,7 +741,8 @@
         "artifact": 13808015117,
         "source": "a8ab2e2e03a2989863a514df2a6b357c44fbc012",
         "historical": false,
-        "continue_allowed": true
+        "continue_allowed": true,
+        "public_input": "data/pester-return-development-candidate-v1"
       },
       {
         "label": "pester-return-transfer-current-v3",
@@ -747,15 +750,18 @@
         "artifact": 13806864132,
         "source": "a8ab2e2e03a2989863a514df2a6b357c44fbc012",
         "historical": false,
-        "continue_allowed": false
+        "continue_allowed": false,
+        "public_input": "data/pester-return-transfer-current-v3"
       }
     ],
     "historical_baseline_pooled": false,
     "historical_failure_excluded_from_correctness": true,
     "native_custom_cross_run_policy_preserved": true,
-    "html_sha256": "f395a62a76cb3c3d5a2dbac01e7aa60757107fb895c84845c3976e9e1a7ad91e",
-    "analysis_sha256": "dcce64d6f99c72977ee2cca95fb65844d162b5266b2b603bc990226885e30bf4",
-    "reproduced": true
+    "html_sha256": "af83335d938115ab287abb54d65da41cb9fad015e386255743b77bb10fbf35b2",
+    "analysis_sha256": "f18f89c2fa667d48cfcf91efdded99c6f576f859c408d789eba89629d6cb149c",
+    "reproduced": true,
+    "public_bundle_layout": "flat",
+    "original_public_bytes_preserved": true
   },
   "recommended_next_action": "Review the retained transfer/current submission against the task-owned expression admission policy in credential-free analysis before proposing another allocation.",
   "prohibited_actions_performed": {
