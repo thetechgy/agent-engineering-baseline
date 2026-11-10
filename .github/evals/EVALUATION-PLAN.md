@@ -1,5 +1,30 @@
 # Issue #95 dependency modernization checkpoint
 
+The latest authorized return-contract allocation is stopped and closed. Development/
+candidate run 42908510730 completed six measured outcomes: candidate 3/3, its
+matched absent arm 0/3. All references passed; absent missed integer-result.
+Transfer/current run 42911213479 launched one session and returned unsupported/
+expression_policy; correctness remains unavailable. Transfer/candidate never ran;
+eleven slots remain unlaunched. All seven launches have native accounting and
+verified cleanup. New estimated usage is $0.3485231; historical spending is unknown.
+The [unchanged execution receipt](https://github.com/thetechgy/agent-engineering-baseline/pull/130)
+remains draft and unmerged. No allocation is reopened.
+
+The [focused credential-free correction](pester-admission-v1/EVIDENCE.md) reproduces
+the admission rejection and versions literal collection-size access and bounded
+numeric type predicates. Original bytes, original unmeasured result, task contract,
+reference, mutants, scoring, skills, candidate and runtime pins are preserved.
+The targeted native workflow must qualify the exact retained current submission;
+parser admission is not correctness or isolation evidence. Latest-PowerShell CI
+and declared frozen-grader runtime selection are separate. Hosted qualification
+and final report receipts are pending; no readiness claim is made yet.
+
+**One next action:** review the focused implementation and its authenticated native
+replay evidence once its required checks complete. No inference, judge, live gate,
+continuation, adoption, production-default change or merge is authorized.
+
+## PR #129 checkpoint, retained as history
+
 The return-contract sequence stopped after development/candidate's first native
 600-second deadline. Seven slots launched, six measured and seventeen unlaunched.
 Development/current and absent each retain 0/3 primary success, passing reference

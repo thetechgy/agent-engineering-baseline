@@ -1,0 +1,135 @@
+{
+  "artifact": {
+    "id": 13806864132,
+    "node_id": "MDg6QXJ0aWZhY3QxMzgwNjg2NDEzMg==",
+    "name": "campaign-live-1",
+    "size_in_bytes": 281012,
+    "url": "https://api.github.com/repos/thetechgy/agent-engineering-baseline/actions/artifacts/13806864132",
+    "archive_download_url": "https://api.github.com/repos/thetechgy/agent-engineering-baseline/actions/artifacts/13806864132/zip",
+    "expired": false,
+    "digest": "sha256:2e314b9efc6acac1a393c6f87faa665506e4e1678296e6c34c1ebe79c1a7be86",
+    "created_at": "2026-11-10T22:10:38Z",
+    "updated_at": "2026-11-10T22:10:38Z",
+    "expires_at": "2027-02-08T22:05:16Z",
+    "workflow_run": {
+      "id": 42911213479,
+      "repository_id": 1299967456,
+      "head_repository_id": 1299967456,
+      "head_branch": "main",
+      "head_sha": "a8ab2e2e03a2989863a514df2a6b357c44fbc012"
+    }
+  },
+  "run": {
+    "id": 42911213479,
+    "head_sha": "a8ab2e2e03a2989863a514df2a6b357c44fbc012",
+    "path": ".github/workflows/evaluation-campaign.yml",
+    "run_attempt": 1,
+    "event": "workflow_dispatch",
+    "status": "completed",
+    "conclusion": "failure",
+    "repository": {
+      "id": 1299967456,
+      "full_name": "thetechgy/agent-engineering-baseline"
+    },
+    "head_repository": {
+      "id": 1299967456,
+      "full_name": "thetechgy/agent-engineering-baseline"
+    }
+  },
+  "uploader_job": {
+    "id": 130162209340,
+    "name": "Future approved six-attempt selected comparison",
+    "conclusion": "failure",
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1,
+        "started_at": "2026-11-10T22:06:20Z",
+        "completed_at": "2026-11-10T22:06:22Z"
+      },
+      {
+        "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2,
+        "started_at": "2026-11-10T22:06:22Z",
+        "completed_at": "2026-11-10T22:06:24Z"
+      },
+      {
+        "name": "Run astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3,
+        "started_at": "2026-11-10T22:06:24Z",
+        "completed_at": "2026-11-10T22:06:26Z"
+      },
+      {
+        "name": "Prepare pinned tools without model credentials",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4,
+        "started_at": "2026-11-10T22:06:26Z",
+        "completed_at": "2026-11-10T22:06:34Z"
+      },
+      {
+        "name": "Run actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5,
+        "started_at": "2026-11-10T22:06:34Z",
+        "completed_at": "2026-11-10T22:06:36Z"
+      },
+      {
+        "name": "Consume exact-source preparation before credential delivery",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6,
+        "started_at": "2026-11-10T22:06:36Z",
+        "completed_at": "2026-11-10T22:06:41Z"
+      },
+      {
+        "name": "Execute only the separately approved six slots",
+        "status": "completed",
+        "conclusion": "failure",
+        "number": 7,
+        "started_at": "2026-11-10T22:06:41Z",
+        "completed_at": "2026-11-10T22:10:36Z"
+      },
+      {
+        "name": "Retain all slots and partial native evidence after stopping",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8,
+        "started_at": "2026-11-10T22:10:36Z",
+        "completed_at": "2026-11-10T22:10:38Z"
+      },
+      {
+        "name": "Post Run astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 15,
+        "started_at": "2026-11-10T22:10:38Z",
+        "completed_at": "2026-11-10T22:10:38Z"
+      },
+      {
+        "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 16,
+        "started_at": "2026-11-10T22:10:38Z",
+        "completed_at": "2026-11-10T22:10:39Z"
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 17,
+        "started_at": "2026-11-10T22:10:39Z",
+        "completed_at": "2026-11-10T22:10:39Z"
+      }
+    ]
+  },
+  "manifest_sha256": "b1670e566c4cd8742d8d820136ca33e2cba808d46f16ea6edf053b0ccb6d8441"
+}

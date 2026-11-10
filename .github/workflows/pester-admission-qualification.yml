@@ -1,0 +1,81 @@
+name: Pester admission qualification
+on:
+  pull_request:
+    paths:
+      - '.github/scripts/pester_admission.py'
+      - '.github/scripts/pester_transfer_replay.py'
+      - '.github/evals/pester-admission-v1/**'
+      - '.github/evals/codex-retrospective/42911213479/**'
+      - '.github/evals/campaigns/pester-admission-*.json'
+      - '.github/evals/campaigns/pester-transfer-*.json'
+      - '.github/tests/test_pester_admission.py'
+      - '.github/workflows/pester-admission-qualification.yml'
+  workflow_dispatch:
+permissions: {}
+concurrency:
+  group: pester-admission-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  qualify:
+    name: Pinned admission and retained replay (no inference)
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    permissions:
+      contents: read
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: '0.13.7'
+          enable-cache: false
+      - name: Acquire existing pinned credential-free tools
+        run: |
+          bash .github/scripts/setup-skillevaluator.sh candidate-current
+          bash .github/scripts/setup-compose.sh
+          APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
+          echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
+      - name: Reproduce original unsupported outcome with exact bytes
+        run: |
+          "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign.py qualify --mode oracle \
+            --definition .github/evals/campaigns/pester-transfer-original-v1.json \
+            --output "$RUNNER_TEMP/admission/original"
+      - name: Acquire fresh Compose configuration for controls
+        run: bash .github/scripts/setup-compose.sh
+      - name: Qualify supported and prohibited capability combinations
+        run: |
+          "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign.py qualify --mode oracle \
+            --definition .github/evals/campaigns/pester-admission-controls-v1.json \
+            --output "$RUNNER_TEMP/admission/controls"
+      - name: Acquire fresh Compose configuration for exact replay
+        run: bash .github/scripts/setup-compose.sh
+      - name: Replay exact retained submission after output inspection
+        run: |
+          "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign.py replay \
+            --definition .github/evals/campaigns/pester-transfer-retrospective-v1.json \
+            --output "$RUNNER_TEMP/admission/replay"
+      - name: Verify checkout integrity
+        if: always()
+        run: |
+          git diff --exit-code
+          test -z "$(git status --porcelain=v1 --untracked-files=all --ignored)"
+      - name: Dispose task-owned Compose configuration
+        if: always()
+        run: bash .github/scripts/setup-compose.sh cleanup
+      - name: Retain sanitized native evidence and existing consolidated reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pester-admission-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/admission/original/**/evidence/
+            ${{ runner.temp }}/admission/original/report/
+            ${{ runner.temp }}/admission/controls/**/evidence/
+            ${{ runner.temp }}/admission/controls/report/
+            ${{ runner.temp }}/admission/replay/evidence/
+          if-no-files-found: error
+          retention-days: 90

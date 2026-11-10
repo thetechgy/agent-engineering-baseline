@@ -1,5 +1,5 @@
 {
-  "id": "pester-return-contract-v4",
+  "id": "pester-return-contract-v5-source-maintenance",
   "base_commit": "9f81a66b343f340b681759db8c7c38a4e9e016c5",
   "historical_run": 42744596001,
   "historical_artifact": 13730584511,
@@ -74,7 +74,7 @@
     ".github/evals/powershell-pester-6/support/cases/pester-004/reference/Subject.ps1": "6d31ab77b5e387d6c9ddea1c75b8e4f6be84383022e979931700da94cfc9fdbc",
     ".github/evals/powershell-pester-6/support/qualification/pester-004/inline.Tests.ps1": "9fb7a9f7d1164cb1a53222e9e3af5257c4681d250a85aba25d9e622dbbd89de0",
     ".github/scripts/codex_pilot_effectiveness.py": "7d13240a07448f1eedbb63b6daa23b531d2488e1ac626101cfc1400300fba3fe",
-    ".github/scripts/evaluation_tasks.py": "06235137efdaacab09ae1cda36a5736e3c09b428e74567fb04ddfc875c63b43f",
+    ".github/scripts/evaluation_tasks.py": "97cef0788cd0b41430207e91a28e6d2ef56aa1242ed635fb331a18ae31ffc280",
     ".github/evals/campaigns/pester-return-transfer-candidate-v2-protocol.json": "95b3778cdc59d4dcc05958ff24f2e8df23978061a5c93ba9b47ee113c29841d1",
     ".github/evals/campaigns/pester-return-transfer-candidate-v2.json": "967462b131ba4d4c464d4d6ebd5811db2ff05405e1d817409c89e7c4e3d2b332",
     ".github/evals/campaigns/pester-return-transfer-current-controls-v2.json": "11297dcd764a416b3878200604fd26f2b21c4a96fc7e78abfa84d56aa2caba97",
@@ -97,9 +97,9 @@
     ".github/evals/campaigns/pester-return-transfer-candidate-controls-v3.json"
   ],
   "previous": {
-    "commit": "351230330ca21057ad7f0e2351acddc720a240fb",
-    "manifest": "history/3512303-freeze.json",
-    "sha256": "6521f52397c13e070637a1517a4579daa4a17851af2a7572ad8ea4c8db6cf638"
+    "commit": "a8ab2e2e03a2989863a514df2a6b357c44fbc012",
+    "manifest": "history/a8ab2e2-freeze.json",
+    "sha256": "cb2ee196b0d24b6c8f8cfd4afd992482c66489211c0c04f909abe28ad6055c56"
   },
-  "revision_purpose": "Admit a contract-correct compact suite; preserve the skill, public prompt, primary quality formula and 24-attempt design. Transfer definitions/profiles v3; plan v3."
+  "revision_purpose": "Credential-free source maintenance only. Preserve historical task/grading/skill/settings; successor admission applies only to separately registered pester-admission and pester-transfer definitions. No live authorization."
 }

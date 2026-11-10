@@ -121,13 +121,35 @@ def install(destination, system):
     return destination / executable.name, version
 
 
+def install_frozen_pester(destination):
+    # Reuse the campaign's reviewed, hash-verified acquisition and version checks.
+    from codex_pilot_contract import runtime_installer_bytes
+    import types
+    installer = types.ModuleType('frozen_pester_runtime')
+    exec(compile(runtime_installer_bytes(), 'frozen_pester_runtime', 'exec'), installer.__dict__)
+    if destination.exists():
+        raise ValueError('Frozen runtime destination must not exist')
+    destination.mkdir()
+    installer.main(runtime=destination / 'powershell', module=destination / 'Modules/Pester/6.2.0')
+    return destination / 'powershell/pwsh', destination / 'Modules/Pester/6.2.0/Pester.psd1'
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--destination", required=True, type=Path)
     parser.add_argument("--github-env", required=True, type=Path)
+    parser.add_argument('--runtime', choices=('latest', 'frozen-pester'), default='latest')
     args = parser.parse_args()
     if any(character in str(args.destination) for character in "\r\n"):
         parser.error("Destination must fit on one environment-file line")
+    if args.runtime == 'frozen-pester':
+        if platform.system() != 'Linux':
+            parser.error('Frozen Pester runtime requires Linux')
+        executable, manifest = install_frozen_pester(args.destination)
+        with args.github_env.open('a', encoding='utf-8') as output:
+            output.write(f'FROZEN_PWSH={executable}\nFROZEN_PESTER_MANIFEST={manifest}\n')
+        print('Verified frozen grader runtime: PowerShell 7.6.9, Pester 6.2.0')
+        return
     executable, version = install(args.destination, platform.system())
     with args.github_env.open("a", encoding="utf-8") as output:
         output.write(f"CI_PWSH={executable}\n")

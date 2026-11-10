@@ -336,9 +336,15 @@ jobs:
           }
           if ($LASTEXITCODE -ne 0) { throw 'Full validation failed.' }
 
+      - name: Acquire declared frozen-grader runtime
+        shell: bash
+        run: python3 .github/scripts/install_ci_powershell.py --runtime frozen-pester --destination "$RUNNER_TEMP/frozen-pester" --github-env "$GITHUB_ENV"
+
       - name: Check exploratory Pester candidate with the existing grader
         shell: bash
         env:
+          CI_PWSH: ${{ env.FROZEN_PWSH }}
+          PESTER_MANIFEST: ${{ env.FROZEN_PESTER_MANIFEST }}
           PESTER_EFFECTIVENESS_LOCAL_SEMANTICS: '1'
           PESTER_EFFECTIVENESS_EVIDENCE: ${{ runner.temp }}/pester-ceiling-components
           PYTHONDONTWRITEBYTECODE: '1'

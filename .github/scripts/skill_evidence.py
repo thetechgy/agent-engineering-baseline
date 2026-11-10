@@ -3316,9 +3316,9 @@ def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
     if profile_id is None and campaign_purpose(purpose):
         profile_id = purpose
     if profile_id is None and purpose in ('skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-effectiveness-v11'
+        profile_id = 'pester-effectiveness-v12'
     if profile_id is None and name == 'powershell-pester-6' and purpose in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-cli-pilot-retained-v10'
+        profile_id = 'pester-cli-pilot-retained-v11'
     if profile_id is None and name == 'gh' and purpose == 'oracle_qualification':
         profile_id = 'gh-native-oracle-v1'
     profile_id = registry['active_profiles'].get(name) if profile_id is None else profile_id
