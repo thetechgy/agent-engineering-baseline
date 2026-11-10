@@ -82,7 +82,11 @@ containment. Codex interpretation records incomplete trajectory/usage gaps
 separately. Native timeout/cancellation mappings remain reliability outcomes;
 task correctness and missing accounting stay unavailable. Actual process failure,
 collection failure and cleanup failure retain separate records. No grading
-criteria change. New source-bound profile identities are appended; all earlier
+criteria change. Harbor can run its task-owned verifier after recording a native
+agent timeout. Such raw results remain diagnostic-only in the new lifecycle
+profiles and ledger; strict native failure identity/summary checks still apply,
+and public measurements stay unavailable. Historical profiles retain their
+previous admission behavior. New source-bound profile identities are appended; all earlier
 profile values, experiment settings, prompts, skills and pins remain unchanged.
 
 The unavoidable private-hook maintenance is the override of
@@ -102,3 +106,16 @@ usage or billing. Complete CLI accounting remains unavailable for interrupted tu
 Hosted execution, downloaded-artifact admission and report-reproduction results
 are recorded below when verified. Earlier candidate and four-pair preparation
 receipts remain historical and are not relabeled as execution of this correction.
+
+The intermediate corrected run
+[42863539519](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42863539519)
+retained `AgentTimeoutError`, 2510 bytes of native events, 88 bytes of stderr,
+63975 bytes of fixture request/usage evidence and the exact 461-byte incomplete
+submission, then completed disposal. Its downloaded artifact
+[13787276463](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42863539519/artifacts/13787276463)
+has verified SHA-256 `d68ebe99174b0a601654669bacd3f81be2d5f7fa9a5721704306e4da483ab330`.
+It remains a failed qualification: the fixture subclass violated the registered
+agent-import identity. The control now uses the actual `CampaignCodex` class
+through guarded credential-free fixture arguments; admission is not weakened.
+The same evidence exposed Harbor's post-timeout verifier execution, addressed
+by explicit shared diagnostic-only handling rather than task-grader changes.

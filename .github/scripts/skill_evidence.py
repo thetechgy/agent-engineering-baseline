@@ -4019,8 +4019,12 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
             outcome = detail.get('classification', 'unknown') if profile['grading'] == 'custom_only' else (
                 'failed' if native_trial_failed(trial, reward) else 'passed' if (reward or {}).get('custom_metrics', {}).get('gh_gate') == 1 else 'failed')
             if profile['grading'] == 'default_plus_custom' and native_trial_failed(trial, reward): outcome = 'unknown'
+            exception_type = (trial.get('exception_info') or {}).get('exception_type')
+            execution_terminated = ('-lifecycle-v1-' in capture['purpose']
+                                    and exception_type in ('AgentTimeoutError', 'CancelledError', 'KeyboardInterrupt'))
+            if execution_terminated:
+                outcome = CUSTOM_NATIVE_EXCEPTIONS[exception_type]
             if outcome not in CUSTOM_MEASURED:
-                exception_type = (trial.get('exception_info') or {}).get('exception_type')
                 outcome = CUSTOM_NATIVE_EXCEPTIONS.get(exception_type, outcome)
                 if 'campaign' in profile:
                     from evaluation_evidence import native_outcome
@@ -4053,8 +4057,8 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
                 limitations.add('execution_incomplete')
                 if reward is not None:
                     explicit_unscored_names.add(trial_name)
-                    require(reward.get('evaluation_status') in ('failed', 'error') and not reward.get('custom_metrics')
-                            and not (set(raw) & set(definitions)),
+                    require(execution_terminated or (reward.get('evaluation_status') in ('failed', 'error') and not reward.get('custom_metrics')
+                            and not (set(raw) & set(definitions))),
                             'Unscoreable trial acquired measurements')
             values = (reward or {}).get('custom_metrics', {})
             values = restore_captured_numeric_fields(values, numeric_excerpts, arm, native_id, case_id)
@@ -4077,10 +4081,10 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
                 observation['raw_scores'] = {key: raw.get(key) for key in SCORE_FIELDS}
                 observation['raw_deterministic_scores'] = dict.fromkeys(GATE_FIELDS)
             observation['custom'] = {'outcome': outcome, 'measurements': custom_measurements(definitions,
-                profile['cases'][mapping[case_id]], outcome, values, detail, obs_refs),
+                profile['cases'][mapping[case_id]], outcome, {} if execution_terminated else values, detail, obs_refs),
                 'usage': custom_usage(trial, redacted_counts=capture['evaluator_revision'] == profiles.CANDIDATE['revision']), 'references': obs_refs}
             if profile_family(profile) in ('pester-cli-pilot-v1', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2', 'pester-cli-pilot-retained-v3', 'pester-cli-pilot-retained-v4', 'pester-cli-pilot-retained-v5', 'pester-cli-pilot-retained-v6', 'pester-effectiveness-v1', 'pester-effectiveness-v2', 'pester-effectiveness-v3', 'pester-effectiveness-v4', 'pester-effectiveness-v5', 'pester-effectiveness-v6'):
-                observation['custom']['admission_reason'] = detail.get('code')
+                observation['custom']['admission_reason'] = None if execution_terminated else detail.get('code')
             if profile_family(profile) in ('pester-effectiveness-v1', 'pester-effectiveness-v2', 'pester-effectiveness-v3', 'pester-effectiveness-v4', 'pester-effectiveness-v5', 'pester-effectiveness-v6'):
                 from codex_pilot_effectiveness import case_files
                 names = sorted(Path(member).stem for member in custom_defect_files(profile, workspace, mapping[case_id]) if member.startswith('mutants/'))

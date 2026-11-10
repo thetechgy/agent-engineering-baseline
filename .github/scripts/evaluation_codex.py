@@ -193,7 +193,7 @@ def exec_trajectory(raw, adapter, *, diagnostics=None):
 class CampaignCodex(PilotCodex):
     retain_submission = True
 
-    def __init__(self, *args, campaign_definition, control, present, live=False, **kwargs):
+    def __init__(self, *args, campaign_definition, control, present, live=False, deadline_fixture=None, **kwargs):
         from evaluation_tasks import load
         self.task = load(ROOT / campaign_definition)
         self.control = control
@@ -202,6 +202,10 @@ class CampaignCodex(PilotCodex):
         self.skill = self.task.definition['skill']
         self.output = '/workspace/output/' + self.task.output
         self.live = live
+        if deadline_fixture is not None:
+            require(not live and os.environ.get('AEB_PILOT_PROBE') == '1'
+                    and deadline_fixture in ('emitted', 'empty', 'secondary', 'cancelled'), 'Live deadline fixture refused')
+        self.deadline_fixture = deadline_fixture
         if live:
             from evaluation_campaign_protocol import runtime_gate
             runtime_gate(self.task)
@@ -209,6 +213,12 @@ class CampaignCodex(PilotCodex):
         else:
             require(os.environ.get('AEB_PILOT_PROBE') == '1', 'Campaign inference is disabled')
         super().__init__(*args, **kwargs)
+
+    async def run(self, instruction, environment, context):
+        if self.deadline_fixture:
+            from codex_pilot_deadline_fixture import run
+            return await run(self, instruction, environment, context, super().run)
+        return await super().run(instruction, environment, context)
 
     def populate_context_post_run(self, context):
         if getattr(self, '_execution_interrupted', False):
@@ -282,6 +292,9 @@ class CampaignCodex(PilotCodex):
         return self.task.payload(control)
 
     def fixture_commands(self, payload):
+        if self.deadline_fixture:
+            from codex_pilot_deadline_fixture import commands
+            return commands(self.output, payload)
         control = os.environ.get('AEB_CAMPAIGN_CONTROL', self.control)
         if self.task.probe_origin == 'operator':
             return self.task.probe_commands(control, payload, self.expected_present)

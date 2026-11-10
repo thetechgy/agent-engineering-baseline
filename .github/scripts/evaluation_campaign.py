@@ -233,6 +233,10 @@ def run(root, task, mode, *, reference=None, fixture=None):
             row['grading_present'] = len(rewards) == 1
             reward = reports.read_json(rewards[0]) if row['grading_present'] else {}
             row.update(state='completed', outcome=reward.get('details',{}).get('outcome',{}))
+            if row['native_exception'] in evidence.CUSTOM_NATIVE_EXCEPTIONS:
+                row['execution_outcome'] = evidence.CUSTOM_NATIVE_EXCEPTIONS[row['native_exception']]
+                row['diagnostic_verifier_outcome'] = row['outcome']
+                row['outcome'] = {}  # An interrupted file is not completed task work.
             if not experiment:
                 reason = stop_reason(row)
                 if row['native_exception'] or code or not row['grading_present'] or not row['cleanup']:

@@ -28,7 +28,7 @@ def main():
         def config(task, mode, control, runtime, present):
             value = original(task, mode, control, runtime, present)
             if scenario != 'normal':
-                value.update(import_path='codex_pilot_deadline_fixture:DeadlineCodex', override_timeout_sec=90 if scenario == 'cancelled' else 45)
+                value.update(override_timeout_sec=90 if scenario == 'cancelled' else 45)
                 value['kwargs']['deadline_fixture'] = scenario
             return value
         adapter.agent_config = config
