@@ -33,6 +33,19 @@ separate admission behavior retains its qualification. The existing fresh-source
 preparation and live gates remain intact. Broader pending CI must be assessed
 before merge; no PR has been merged and no live-readiness claim is made.
 
+The original CLI preparation and fresh consumption also passed in compatibility
+workflow 42937277898. Its separate cohort `infrastructure` control failed an
+expected-stop-label assertion: a missing post-command observation caused the
+existing identity guard to replace `execution_infrastructure_failure` with
+`security_or_identity_drift`. One fixture launch, eleven unlaunched positions,
+unknown/null quality and complete cleanup are retained. Exact classification
+statement replay on main, reviewed and final sources gives the same result;
+this is not a native baseline rerun. The receipt documents this separate existing
+classification/expectation inconsistency. The guard is unchanged, the workflow
+remains failed, and full/future-live cohort readiness remains unqualified. It
+does not invalidate the focused admission and observation correction. CI is not
+all green; review this limit before merge.
+
 All paid allocations remain closed. Seven paid launches, six measured development
 outcomes and one unmeasured transfer/current outcome remain historical results;
 transfer/candidate did not run and eleven positions remain unlaunched. No model
@@ -41,7 +54,7 @@ candidate adoption, dependency upgrade, production-default change or merge
 occurred. The diagnostic records are separate from experiment accounting.
 
 **One next action:** review PR #131 at `33d9535` against its authenticated receipts
-and the terminal results of its remaining CI. Keep PR #130 draft and unmerged.
+the separate cohort-qualification limit and terminal remaining CI. Keep PR #130 draft and unmerged.
 
 ## Previous admission checkpoint, retained as history
 

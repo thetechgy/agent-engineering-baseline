@@ -6,7 +6,7 @@ sources passed the fresh matched control. The owner has chosen to stop pursuing
 a DNS-specific fix for now. This is an unreproduced historical DNS failure, not
 proof of transience or a relabeled passing run. PR #131 remains unmerged and its
 review status is unchanged. PR #130 remains draft and unmerged. All paid
-allocations remain closed. Remaining broader CI must be assessed before merge.
+allocations remain closed. The separate failed cohort qualification and any remaining CI must be assessed before merge.
 
 ## Historical sequence
 
@@ -153,6 +153,40 @@ The [CI status receipt](final-checks.json) records exact-head successes and any
 broader pending qualification separately. Cancelled superseded runs are
 inconclusive and never substitute for final-head checks.
 
+## Separate broader cohort-qualification failure
+
+[Compatibility workflow 42937277898](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42937277898)
+passed its original CLI preparation and fresh-consumption jobs. Its separate
+[cohort scheduler qualification job](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42937277898/job/130250342944)
+failed a deliberate `infrastructure` control. This is not a recurring DNS failure.
+[Artifact 13822715004](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42937277898/artifacts/13822715004)
+was authenticated as SHA-256
+`f1d2ae882ec231bc423f74cd38a4b7baa8851942aabfb20c8f99bb12f22eced9`.
+
+The real CLI deliberately exited 1; the adapter raised its existing RuntimeError
+before recording `boundary_after`. The scheduler first selected
+`execution_infrastructure_failure`, then its existing identity guard selected
+`security_or_identity_drift` because the post-command observation was absent.
+The qualification expected the former label. Exactly one fixture attempt launched,
+eleven stayed unlaunched, cleanup completed, and the single public observation
+remained unknown with every quality value unavailable. There was no extra launch,
+passing policy result, numeric fallback grade or inference.
+
+The [classification audit](cohort-stop-audit.json) executes the exact production
+classification statements from main `a8ab2e2`, reviewed `22b36d5` and final
+`33d9535` over authenticated native inputs. All three select the same later label;
+the source is byte-identical. This is source-level replay, not a native baseline
+rerun or a passing cohort qualification. The changed collector runs afterward
+and does not cause this stop-label selection. The stricter identity guard and
+qualification's expected label are not changed to force green CI.
+
+This separate existing classification/expectation inconsistency does not weaken
+the admission or observation safeguards delivered here. The original failing CLI
+preparation path now passes; the focused native and admission receipts remain
+valid. It is nonblocking for review of this focused correction, while full cohort
+readiness and any future live cohort remain unqualified until their qualification
+contract is reconciled. The failed workflow stays failed. CI is not all green.
+
 ## Historical normalization and report reproduction
 
 The [historical normalization receipt](historical-normalization-receipt.json)
@@ -210,7 +244,7 @@ lifecycle and admission receipts are authenticated; the status snapshot separate
 identifies broader CI still in progress. Review those terminal results before any
 merge. Neither PR has been merged, and no review-status transition was performed.
 
-**One next action:** review PR #131 at `33d9535` against these receipts and the
-terminal results of its remaining CI. Keep PR #130 draft and unmerged. No model
+**One next action:** review PR #131 at `33d9535` against these receipts, the
+separate cohort-qualification limit and terminal remaining CI. Keep PR #130 draft and unmerged. No model
 credentials, inference, paid gate, retry/replacement, allocation reopening,
 candidate adoption, dependency upgrade or production-default change is authorized.

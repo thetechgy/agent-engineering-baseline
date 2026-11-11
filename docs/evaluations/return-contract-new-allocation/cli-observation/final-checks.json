@@ -1,5 +1,5 @@
 {
-  "recorded_at": "2026-11-11T02:10:32.876207+00:00",
+  "recorded_at": "2026-11-11T02:26:25.685418+00:00",
   "source": "33d953536e95bc81178e726fb3fed95a80566c7d",
   "base": "a8ab2e2e03a2989863a514df2a6b357c44fbc012",
   "required_checks": [
@@ -27,15 +27,6 @@
       "workflowName": "Validate"
     },
     {
-      "conclusion": "",
-      "databaseId": 42937277781,
-      "event": "pull_request",
-      "headSha": "33d953536e95bc81178e726fb3fed95a80566c7d",
-      "status": "in_progress",
-      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42937277781",
-      "workflowName": "Pester return-contract qualification"
-    },
-    {
       "conclusion": "success",
       "databaseId": 42937277850,
       "event": "pull_request",
@@ -43,15 +34,6 @@
       "status": "completed",
       "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42937277850",
       "workflowName": "Native deadline evidence"
-    },
-    {
-      "conclusion": "",
-      "databaseId": 42937277898,
-      "event": "pull_request",
-      "headSha": "33d953536e95bc81178e726fb3fed95a80566c7d",
-      "status": "in_progress",
-      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42937277898",
-      "workflowName": "Codex compatibility pilot"
     },
     {
       "conclusion": "success",
@@ -81,6 +63,24 @@
       "workflowName": "Current evaluator report qualification"
     },
     {
+      "conclusion": "failure",
+      "databaseId": 42937277898,
+      "event": "pull_request",
+      "headSha": "33d953536e95bc81178e726fb3fed95a80566c7d",
+      "status": "completed",
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42937277898",
+      "workflowName": "Codex compatibility pilot"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 42937277781,
+      "event": "pull_request",
+      "headSha": "33d953536e95bc81178e726fb3fed95a80566c7d",
+      "status": "completed",
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42937277781",
+      "workflowName": "Pester return-contract qualification"
+    },
+    {
       "conclusion": "success",
       "databaseId": 42937270892,
       "event": "workflow_dispatch",
@@ -90,6 +90,6 @@
       "workflowName": "Native deadline evidence"
     }
   ],
-  "all_ci_complete": false,
+  "all_ci_complete": true,
   "all_ci_successful": false
 }
