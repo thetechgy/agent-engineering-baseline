@@ -1,6 +1,6 @@
 # Issue #95 dependency modernization checkpoint
 
-**Keep PR #131 unmerged.** Its focused diagnostic correction is at
+**PR #131 is ready for review toward merging the focused correction.** Its implementation is at
 [`33d9535`](https://github.com/thetechgy/agent-engineering-baseline/commit/33d953536e95bc81178e726fb3fed95a80566c7d).
 The [complete CLI-observation receipt](../../docs/evaluations/return-contract-new-allocation/cli-observation/REPORT.md)
 records authenticated historical/native artifacts, source identities, exact-head
@@ -22,13 +22,16 @@ detects 5/5 mutants; the original unmeasured outcome and experiment reports rema
 unchanged. Broader CI state is recorded separately in the receipt and is not
 implied green by these successes.
 
-The DNS-specific historical failure has not been reproduced under matched
-baseline conditions. Historical resolver state is unavailable; the original
-westus2 worker differs from the fresh centralus comparison. The controlled
-missing-child case validates failure propagation, not historical DNS behavior.
-No pre-existence, harmlessness, admission regression or live-readiness conclusion
-is established for that historical DNS failure. Required CI alone does not close
-this merge decision.
+The DNS-specific historical failure did not reproduce in the matched fresh
+baseline/head control. Historical resolver state is unavailable; the original
+westus2 worker differs from the fresh centralus comparison. No evidence establishes
+a persistent DNS defect. The owner has directed that DNS-specific investigation
+stop for now. This does not prove transience or relabel the historical failure.
+It is nonblocking for focused code review because missing actual observations
+still block readiness, identities and policy violations remain rejected, and the
+separate admission behavior retains its qualification. The existing fresh-source
+preparation and live gates remain intact. Broader pending CI must be assessed
+before merge; no PR has been merged and no live-readiness claim is made.
 
 All paid allocations remain closed. Seven paid launches, six measured development
 outcomes and one unmeasured transfer/current outcome remain historical results;
@@ -37,9 +40,8 @@ credentials, inference, paid gate, retry/replacement, allocation reopening,
 candidate adoption, dependency upgrade, production-default change or merge
 occurred. The diagnostic records are separate from experiment accounting.
 
-**One next action:** capture bounded resolver/route diagnostics from the actual
-CLI child in a credential-free matched control that reproduces the historical
-DNS failure, then reassess #131's merge disposition.
+**One next action:** review PR #131 at `33d9535` against its authenticated receipts
+and the terminal results of its remaining CI. Keep PR #130 draft and unmerged.
 
 ## Previous admission checkpoint, retained as history
 

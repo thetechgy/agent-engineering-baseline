@@ -1,10 +1,12 @@
 # CLI observation diagnosis and disposition
 
-**Recommendation: keep PR #131 unmerged.** The reporting defects are corrected
-and qualified, but the DNS-specific historical failure has not been reproduced
-under matched baseline conditions. Its regression/pre-existence disposition
-remains unresolved. PR #131's review status is unchanged as requested. PR #130
-remains draft and unmerged. All paid allocations remain closed.
+**Recommendation: ready for review toward merging the focused correction.**
+There is no evidence that the historical DNS failure was persistent; both frozen
+sources passed the fresh matched control. The owner has chosen to stop pursuing
+a DNS-specific fix for now. This is an unreproduced historical DNS failure, not
+proof of transience or a relabeled passing run. PR #131 remains unmerged and its
+review status is unchanged. PR #130 remains draft and unmerged. All paid
+allocations remain closed. Remaining broader CI must be assessed before merge.
 
 ## Historical sequence
 
@@ -186,15 +188,29 @@ No producer artifact is executed.
 
 ## Remaining decision
 
-The code correction is qualified within the stated native/fixture scopes.
-The DNS-specific historical failure still lacks a matched native baseline
-reproduction. Passing required checks, calling the job legacy, and unchanged
-component source do not close that gap. Keep #131 unmerged; do not mark it ready
-on the strength of these checks. Its existing review status is left unchanged
-under the user's explicit instruction. Keep #130 draft and unmerged.
+The focused correction is qualified within the stated native and fixture scopes.
+The historical DNS-specific failure did not reproduce in the fresh matched
+baseline/head control, and no evidence establishes a persistent defect. The owner
+has directed that DNS-specific investigation stop for now. No DNS-policy,
+resolver, production timeout or dependency change is warranted by this evidence.
+The underlying reason for the old lookup failure remains unknown.
 
-**One next action:** capture bounded resolver/route diagnostics from the actual
-CLI child in a credential-free matched control that reproduces the historical
-DNS failure, then reassess the merge disposition. No model credentials, inference,
-paid gate, retry of a model attempt, allocation reopening, candidate adoption,
-dependency upgrade, production-default change or merge is authorized here.
+This is nonblocking for review of the focused code because the opt-in admission
+and frozen-grader behavior retain their independent qualification, while the
+observation safeguard remains enforced. A missing actual CLI-child observation
+still prevents readiness and keeps quality unavailable. Wrong identity and
+policy-violation controls are rejected. The reporting change preserves the
+failure instead of weakening a guard, manufacturing an observation or assigning
+an ID. Merging this code would not waive the existing fresh preparation,
+source/identity, isolation, cleanup or separately authorized live gates.
+
+This disposition is not live-provider qualification or an inference authorization.
+The original failed run remains failed. All required/Validate, focused native,
+lifecycle and admission receipts are authenticated; the status snapshot separately
+identifies broader CI still in progress. Review those terminal results before any
+merge. Neither PR has been merged, and no review-status transition was performed.
+
+**One next action:** review PR #131 at `33d9535` against these receipts and the
+terminal results of its remaining CI. Keep PR #130 draft and unmerged. No model
+credentials, inference, paid gate, retry/replacement, allocation reopening,
+candidate adoption, dependency upgrade or production-default change is authorized.

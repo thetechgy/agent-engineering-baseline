@@ -1,5 +1,5 @@
 {
-  "recorded_at": "2026-11-11T02:07:30.710822+00:00",
+  "recorded_at": "2026-11-11T02:10:32.876207+00:00",
   "source": "33d953536e95bc81178e726fb3fed95a80566c7d",
   "base": "a8ab2e2e03a2989863a514df2a6b357c44fbc012",
   "required_checks": [
@@ -54,15 +54,6 @@
       "workflowName": "Codex compatibility pilot"
     },
     {
-      "conclusion": "",
-      "databaseId": 42937277771,
-      "event": "pull_request",
-      "headSha": "33d953536e95bc81178e726fb3fed95a80566c7d",
-      "status": "in_progress",
-      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42937277771",
-      "workflowName": "Current evaluator report qualification"
-    },
-    {
       "conclusion": "success",
       "databaseId": 42937278031,
       "event": "pull_request",
@@ -79,6 +70,15 @@
       "status": "completed",
       "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42937277805",
       "workflowName": "Reusable evaluation qualification"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 42937277771,
+      "event": "pull_request",
+      "headSha": "33d953536e95bc81178e726fb3fed95a80566c7d",
+      "status": "completed",
+      "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42937277771",
+      "workflowName": "Current evaluator report qualification"
     },
     {
       "conclusion": "success",
