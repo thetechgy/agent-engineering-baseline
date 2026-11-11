@@ -120,6 +120,12 @@ jobs:
         run: |
           PYTHONPATH=.github/scripts:.github/tests "$SKILL_CURRENT_PYTHON" -B -m unittest test_cli_observation test_codex_pilot test_codex_iteration test_codex_replay test_native_deadline test_evaluation_campaign test_evaluation_protocol test_pester_admission -q
           "$SKILL_CURRENT_PYTHON" -B .github/scripts/qualify_cli_observation.py --source "$GITHUB_WORKSPACE" --output "$RUNNER_TEMP/cli-observation/final" --require-complete
+      - name: Acquire fresh verified Compose configuration for missing child
+        if: ${{ inputs.observation_final }}
+        run: bash .github/scripts/setup-compose.sh
+      - name: Missing actual CLI-child observation blocks readiness and preserves primary failure
+        if: ${{ inputs.observation_final }}
+        run: '"$SKILL_CURRENT_PYTHON" -B .github/scripts/qualify_cli_observation.py --source "$GITHUB_WORKSPACE" --output "$RUNNER_TEMP/cli-observation/final-missing-child" --missing-child-control'
       - name: Verify checkout integrity
         if: always()
         run: git diff --exit-code

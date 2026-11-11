@@ -33,6 +33,12 @@ class PilotCodex(Codex):
         return read_bytes(ROOT / '.github/evals' / self.skill / 'support/qualification' / self.profile['case'] / 'classic.Tests.ps1', limit=65536)
 
     def fixture_commands(self, payload):
+        if os.environ.get('AEB_PILOT_MISSING_CHILD_CONTROL') == '1':
+            # Credential-free qualification only: fail the real CLI child before
+            # it can launch its delayed observation. No network result is faked.
+            if os.environ.get('AEB_PILOT_PROBE') != '1':
+                raise ValueError('Missing-child control requires non-forwarding probe')
+            return ['python3 /opt/pilot/codex_pilot_probe.py invalid-qualification-control']
         return [f"python3 /opt/pilot/codex_pilot_probe.py && printf %s {payload} | base64 -d > {self.output}"]
 
     async def probe_preflight(self, environment, env):

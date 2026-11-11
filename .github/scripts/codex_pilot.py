@@ -370,6 +370,22 @@ def collect(root, artifact, bundle, captured, *, controls=False, probe=False, re
             if expected_reason and outcome['code'] != expected_reason: raise ValueError('Specific admission reason lost')
 
 
+def probe_command_failure(artifact):
+    """A fixture's completed CLI turn does not supersede a failed tool command."""
+    events = reports.read_json(artifact / 'tool-events.json')
+    failed = [event for event in events if event.get('type') == 'item.completed'
+              and event.get('item', {}).get('type') == 'command_execution'
+              and event['item'].get('exit_code') not in (None, 0)]
+    if not failed:
+        return None
+    reports.write_json(artifact / 'primary-failure.json', {
+        'stage': 'cli_child_boundary_command', 'evidence': 'tool-events.json',
+        'commands': [{'id': event['item']['id'], 'exit_code': event['item']['exit_code'],
+                      'trial_member': event['trial_member']} for event in failed],
+        'secondary_evidence': 'native/', 'readiness': False})
+    return RuntimeError('CLI child boundary command failed; primary and native diagnostics retained')
+
+
 def check_preparation(reference, artifact):
     """Consume authenticated same-revision preparation data before any live launch."""
     from codex_pilot_descriptors import compare_descriptors, verified_configurations
@@ -486,9 +502,20 @@ def run(root, *, controls=False, probe=False, preparation=None, replay=None, sub
             if len(retained) != 2 or actual != expected:
                 raise ValueError('Replay output handoff differs from immutable originals')
         scenario = os.environ.get('AEB_PILOT_SCENARIO', 'success')
+        primary_probe_failure = probe_command_failure(artifact) if probe and scenario == 'success' else None
         if not probe or scenario == 'success':
-            collect(root, artifact, bundle, captured, controls=controls, probe=probe, replay=replay, original_public=original_public, effectiveness=effectiveness)
-            collected = True
+            try:
+                collect(root, artifact, bundle, captured, controls=controls, probe=probe, replay=replay, original_public=original_public, effectiveness=effectiveness)
+                collected = True
+            except Exception as error:
+                if primary_probe_failure is not None:
+                    reports.write_json(artifact / 'collection-failure.json', {
+                        'stage': 'secondary_collection', 'error': type(error).__name__,
+                        'primary_evidence': 'primary-failure.json'})
+                    raise primary_probe_failure from error
+                raise
+        if primary_probe_failure is not None:
+            raise primary_probe_failure
         if probe:
             probes = validate_probe_requests(root, artifact, scenario)
             frozen_prompt = next(e['prompt'] for e in pester.dataset(ROOT) if e['id'] == P['case'])

@@ -53,7 +53,12 @@ A diagnostic cannot contain details, metrics, a score or a passing raw reward.
 It yields `unknown` with null/unavailable quality. A reward that claims the wrong
 trial ID still reaches the unchanged rejecting guard. Missing failure evidence
 and contradictory identities fail closed. Existing deadline-specific behavior
-is preserved. This change improves failure reporting; it does not repair DNS or
+is preserved. The CLI qualification adapter also records failed boundary commands as primary,
+with the original trial member and exit status. Native shutdown and any collection
+failures remain separate evidence; a completed fixture turn cannot supersede a
+failed tool command.
+
+This change improves failure reporting; it does not repair DNS or
 create a missing post-agent observation, readiness, model usage or task success.
 
 The [source-maintenance receipt](source-maintenance.json) records appended source
@@ -71,6 +76,12 @@ Compose, fixture and isolation. Each receives fresh verified Compose client
 state. Qualification uses the existing two-arm native probe; no network probe,
 resolver, policy, timeout, fixture command or model setting is replaced.
 A separate final-head mode fails if readiness or verified disposal is unavailable.
+It also runs an explicit missing-child control: the actual pinned CLI invokes the
+existing probe with an invalid qualification argument, failing before its delayed
+child launches. No network result is fabricated. Both arms must remain unknown,
+with null quality, a primary command failure, no readiness receipt and completed
+disposal. This is a controlled failure-propagation qualification, not a reproduction
+of the historical DNS state.
 Uploads retain only the existing allowlisted evidence and source receipts.
 
 The first diagnostic run, [42933660759](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42933660759),

@@ -48,6 +48,22 @@ class DiagnosticContract(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     evidence.validate_unscored_diagnostic(*values, 'pester-002', 'with_skill')
 
+    def test_real_retained_command_status_is_primary_even_when_turn_completed(self):
+        import codex_pilot as pilot
+        from skill_reports import write_json
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            completed = {'type': 'item.completed', 'trial_member': 'job/trial/agent/codex.txt', 'item': {'id': 'item_1',
+                         'type': 'command_execution', 'exit_code': 1}}
+            write_json(root / 'tool-events.json', [completed, {'type': 'turn.completed'}])
+            self.assertIsInstance(pilot.probe_command_failure(root), RuntimeError)
+            failure = json.loads((root / 'primary-failure.json').read_text())
+            self.assertEqual(failure['commands'], [{'id': 'item_1', 'exit_code': 1, 'trial_member': 'job/trial/agent/codex.txt'}])
+            self.assertFalse(failure['readiness'])
+            completed['item']['exit_code'] = 0
+            write_json(root / 'tool-events.json', [completed])
+            self.assertIsNone(pilot.probe_command_failure(root))
+
     def test_native_normalization_preserves_unavailability_and_rejects_mutation(self):
         from test_custom_metrics import synthetic_native, write
         with tempfile.TemporaryDirectory() as directory:
