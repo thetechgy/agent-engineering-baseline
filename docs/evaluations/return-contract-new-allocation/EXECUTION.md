@@ -126,3 +126,9 @@ expression admission policy in credential-free analysis before proposing another
 
 No additional paid dispatch, gate, retry, replacement, continuation, judge, adoption, dependency/default change
 or merge is authorized by this closed sequence.
+
+## Subsequent credential-free correction
+
+The original execution and grades above remain unchanged. The separate
+[output-informed correction and retrospective replay](admission/REPLAY.md) on PR #131
+does not reopen this allocation or establish candidate benefit.

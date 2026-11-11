@@ -1,5 +1,37 @@
 # Issue #95 dependency modernization checkpoint
 
+[PR #131](https://github.com/thetechgy/agent-engineering-baseline/pull/131) qualified the exact retained
+transfer/current submission without inference at `22b36d53e9ac7e329ef8c56dc9bdcefb468ca9df`.
+The [retrospective receipt and report](../../docs/evaluations/return-contract-new-allocation/admission/REPLAY.md)
+record reference result 1 and 5/5 detected defects under versioned admission.
+The original unsupported/expression_policy result remains permanently unmeasured.
+This follows output inspection of one current arm; transfer benefit, candidate
+regression safety and adoption readiness remain unestablished. Development results
+are unchanged. PR #130 remains draft and unmerged.
+
+The correction addresses Count at line 14 and subsequent numeric type predicates.
+Recursive AST inspection, protected-content restrictions and external isolation
+remain intact. The receipt binds original/corrected evaluator identities, exact
+verifier handoffs, all mutant findings, authenticated artifact, disposal and
+byte-identical report reproduction. Frozen CI explicitly uses PowerShell 7.6.9
+and Pester 6.2.0; latest-stable compatibility remains separate. Both required checks
+and all Validate jobs passed at the implementation head. Broader check disposition
+is on PR #131. No task, scoring, skill/candidate or dependency pin changed.
+A separate legacy CLI probe failed its unchanged post-agent network-observation
+guard and remains unmeasured. Broader preparation/live-CLI readiness is not
+established; the focused isolated replay and required checks passed independently.
+
+The paid allocation remains stopped and closed: seven launches, six measured
+original outcomes, one unmeasured original outcome and eleven positions unlaunched.
+Transfer/candidate never ran. All seven paid launches have accounting and verified
+cleanup. New paid estimated usage remains $0.3485231; historical spending is unknown.
+No inference, judge, paid gate, allocation reopening or model retry occurred.
+
+**One next action:** review PR #131 and its authenticated retrospective evidence.
+No continuation, adoption, dependency/default change or merge is authorized.
+
+## Execution checkpoint, retained as history
+
 The exact three-campaign allocation in receipt `75b55ce` was explicitly authorized
 and executed at `a8ab2e2e03a2989863a514df2a6b357c44fbc012`. The sequence **stopped
 under its approved rules** at transfer/current's first unsupported grading result.
