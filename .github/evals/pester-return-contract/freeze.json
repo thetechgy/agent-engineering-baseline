@@ -1,5 +1,5 @@
 {
-  "id": "pester-return-contract-v5-source-maintenance",
+  "id": "pester-return-contract-v6-diagnostic-source-maintenance",
   "base_commit": "9f81a66b343f340b681759db8c7c38a4e9e016c5",
   "historical_run": 42744596001,
   "historical_artifact": 13730584511,
@@ -97,9 +97,9 @@
     ".github/evals/campaigns/pester-return-transfer-candidate-controls-v3.json"
   ],
   "previous": {
-    "commit": "a8ab2e2e03a2989863a514df2a6b357c44fbc012",
-    "manifest": "history/a8ab2e2-freeze.json",
-    "sha256": "cb2ee196b0d24b6c8f8cfd4afd992482c66489211c0c04f909abe28ad6055c56"
+    "commit": "22b36d53e9ac7e329ef8c56dc9bdcefb468ca9df",
+    "manifest": "history/22b36d5-freeze.json",
+    "sha256": "070ce3edda46d098ba099a0ea80cd6fad103eae9373e1f4c2205cfaba02aa049"
   },
-  "revision_purpose": "Credential-free source maintenance only. Preserve historical task/grading/skill/settings; successor admission applies only to separately registered pester-admission and pester-transfer definitions. No live authorization."
+  "revision_purpose": "Credential-free diagnostic consumer source maintenance only. Historical registry values, tasks, skills, settings and closed allocations remain unchanged. No live authorization."
 }

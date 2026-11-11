@@ -14,6 +14,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--source', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--require-complete', action='store_true')
     args = parser.parse_args()
     if any(os.environ.get(k) for k in ('OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'NVIDIA_API_KEY')):
         raise ValueError('Credential-free qualification required')
@@ -47,6 +48,8 @@ def main():
         raise ValueError('Native run did not reach cleanup evidence')
     if json.loads((args.output / 'native/evidence/cleanup.json').read_text())['complete'] is not True:
         raise ValueError('Native resources not disposed')
+    if args.require_complete and not identity['complete']:
+        raise ValueError('CLI observation readiness unavailable: ' + identity['message'])
 
 
 if __name__ == '__main__':

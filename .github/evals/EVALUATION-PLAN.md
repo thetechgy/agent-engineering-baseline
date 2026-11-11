@@ -21,8 +21,10 @@ and declared frozen-grader runtime selection are separate. The final hosted sour
 artifact, replay and report receipts are maintained on PR #131. Only completed
 authenticated qualification supports review readiness.
 
-**One next action:** review the focused implementation and its authenticated native
-replay evidence once its required checks complete. No inference, judge, live gate,
+**One next action:** finish the [CLI-observation disposition](cli-observation-v1/EVIDENCE.md)
+and review the authenticated final-head receipts before recommending merge.
+The authoritative completed receipt and status links are maintained on PR #130;
+its historical experiment reports remain unchanged. No inference, judge, live gate,
 continuation, adoption, production-default change or merge is authorized.
 
 ## PR #129 checkpoint, retained as history

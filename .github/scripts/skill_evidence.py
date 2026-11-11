@@ -3222,6 +3222,40 @@ CUSTOM_ASSURANCE = {'native_consistency': 'producer_reported_at_admission',
                     'execution_authentication': 'not_established'}
 
 
+def validate_unscored_diagnostic(reward, failure, trial, case_id, arm):
+    """Bind a collector diagnostic to native failure evidence without grading it.
+
+    The pinned collector omits trial_id only on its failed-judge projection.
+    That projection is diagnostic data, not a reward with a missing identity.
+    Never infer or insert a trial_id, and reject all measurement-bearing forms.
+    """
+    allowed = {'metric_set', 'evaluation_status', 'entry_id', 'evaluation_errors',
+               'agent', 'variant', 'model', 'model_source'}
+    exception = trial.get('exception_info') or {}
+    require(set(reward) <= allowed and reward.get('evaluation_status') == 'failed'
+            and reward.get('metric_set') == 'skill-evaluator-default-v2'
+            and reward.get('entry_id') == case_id
+            and reward.get('agent') == (trial.get('agent_info') or {}).get('name')
+            and reward.get('variant') == arm, 'Invalid unscored diagnostic')
+    require(failure.get('status') == 'unscored'
+            and failure.get('trial') == failure.get('trial_name') == trial['trial_name']
+            and failure.get('task_name') == trial['task_name']
+            and all(failure.get(k) == reward.get(k) for k in
+                    ('agent', 'variant', 'model', 'model_source', 'evaluation_status', 'evaluation_errors')),
+            'Unscored diagnostic failure identity mismatch')
+    agent = trial.get('agent_info') or {}
+    native_model = (agent.get('model_info') or {}).get('name') or agent.get('model_name')
+    require(reward.get('model') is None or reward['model'] == native_model,
+            'Unscored diagnostic model mismatch')
+    error = failure.get('error') or {}
+    require(exception and error.get('type') == exception.get('exception_type')
+            and error.get('message') == exception.get('exception_message')
+            and error.get('occurred_at') == exception.get('occurred_at'),
+            'Unscored diagnostic native failure mismatch')
+    raw = ((trial.get('verifier_result') or {}).get('rewards') or {})
+    require(raw == {} or raw == {'overall': 0.0}, 'Unscored diagnostic acquired measurements')
+
+
 def validate_custom_error_ledger(summary, condition, arm):
     """Require an exact raw or pinned-loader ledger, never just equal counts."""
     enum(arm, ('with_skill', 'without_skill'))
@@ -4009,6 +4043,16 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
             execution_terminated = (profile.get('termination_evidence') == 'native-deadline-v1'
                                     and exception_type in ('AgentTimeoutError', 'CancelledError', 'KeyboardInterrupt'))
             diagnostic_reward = reward is not None and execution_terminated
+            diagnostic_failure_path = None
+            if (reward is not None and not execution_terminated
+                    and reward.get('evaluation_status') == 'failed' and 'trial_id' not in reward):
+                diagnostic_failure_path = path.with_name('failure.json')
+                require(diagnostic_failure_path in entries and trial_name in failure_names,
+                        'Unscored diagnostic lacks native failure identity')
+                validate_unscored_diagnostic(reward, read(diagnostic_failure_path), trial, case_id, arm)
+                explicit_unscored_names.add(trial_name)
+                diagnostic_reward = True
+                reward = None  # Retained only as referenced diagnostic data; never a grade.
             if execution_terminated:
                 # Harbor may verify an interrupted/missing file. Such a sidecar
                 # is retained as data, never admitted as this attempt's grade.
@@ -4078,6 +4122,7 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
                         'Native custom value contradiction')
             obs_refs = [ref(path), summary_ref, capture_ref]
             if reward is not None or diagnostic_reward: obs_refs.append(ref(reward_path))
+            if diagnostic_failure_path is not None: obs_refs.append(ref(diagnostic_failure_path))
             observation = copy.deepcopy(old.get((arm, trial_name))) if standard else {
                 'id': observation_id(run.name, arm, case_id, native_id, trial_name, ordinal),
                 'arm': arm, 'case_id': case_id, 'attempt': ordinal, 'native_id': native_id,

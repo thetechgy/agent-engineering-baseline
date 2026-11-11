@@ -6,6 +6,10 @@ on:
         type: boolean
         default: false
         description: Compare baseline and reviewed CLI observation without inference
+      observation_final:
+        type: boolean
+        default: false
+        description: Qualify only the final head after the matched comparison
       expect_broken:
         type: boolean
         default: false
@@ -100,14 +104,22 @@ jobs:
           APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
           echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
       - name: Compare unchanged base and reviewed head on the same runner
+        if: ${{ !inputs.observation_final }}
         run: |
           git worktree add --detach "$RUNNER_TEMP/observation-base" a8ab2e2e03a2989863a514df2a6b357c44fbc012
           git worktree add --detach "$RUNNER_TEMP/observation-reviewed" 22b36d53e9ac7e329ef8c56dc9bdcefb468ca9df
           "$SKILL_CURRENT_PYTHON" -B .github/scripts/qualify_cli_observation.py --source "$RUNNER_TEMP/observation-base" --output "$RUNNER_TEMP/cli-observation/base"
       - name: Acquire fresh verified Compose configuration for reviewed head
+        if: ${{ !inputs.observation_final }}
         run: bash .github/scripts/setup-compose.sh
       - name: Run unchanged reviewed head on the same runner
+        if: ${{ !inputs.observation_final }}
         run: '"$SKILL_CURRENT_PYTHON" -B .github/scripts/qualify_cli_observation.py --source "$RUNNER_TEMP/observation-reviewed" --output "$RUNNER_TEMP/cli-observation/reviewed"'
+      - name: Qualify final-head CLI observation and affected contracts
+        if: ${{ inputs.observation_final }}
+        run: |
+          PYTHONPATH=.github/scripts:.github/tests "$SKILL_CURRENT_PYTHON" -B -m unittest test_cli_observation test_codex_pilot test_codex_iteration test_codex_replay test_native_deadline test_evaluation_campaign test_evaluation_protocol test_pester_admission -q
+          "$SKILL_CURRENT_PYTHON" -B .github/scripts/qualify_cli_observation.py --source "$GITHUB_WORKSPACE" --output "$RUNNER_TEMP/cli-observation/final" --require-complete
       - name: Verify checkout integrity
         if: always()
         run: git diff --exit-code
