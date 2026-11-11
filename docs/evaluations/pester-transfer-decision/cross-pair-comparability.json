@@ -1,0 +1,111 @@
+{
+  "source": "040b11486ad3b7245e81fb6591f9d8dd78c32154",
+  "actual_preparations_compared": true,
+  "runtime_model_settings_equal": true,
+  "evaluator_equal": true,
+  "grader_fixture_digests_equal": true,
+  "budgets_criteria_equal": true,
+  "preserved_indirect_comparison": true,
+  "runtime_digest_difference": "Expected: binds each distinct campaign definition and selected skill source, not a runtime setting difference.",
+  "staging": [
+    {
+      "location": "evidence",
+      "descriptors": {
+        "algorithm": "sha256-typed-toml-v1",
+        "configurations_equal": true,
+        "descriptors": 2
+      },
+      "all_non_skill_non_descriptor_members_equal": true,
+      "absent_has_no_target_skill": true,
+      "present_differs_only_in_exact_skill_file": true
+    },
+    {
+      "location": "scenarios/complete/evidence",
+      "descriptors": {
+        "algorithm": "sha256-typed-toml-v1",
+        "configurations_equal": true,
+        "descriptors": 2
+      },
+      "all_non_skill_non_descriptor_members_equal": true,
+      "absent_has_no_target_skill": true,
+      "present_differs_only_in_exact_skill_file": true
+    },
+    {
+      "location": "scenarios/interruption/evidence",
+      "descriptors": {
+        "algorithm": "sha256-typed-toml-v1",
+        "configurations_equal": true,
+        "descriptors": 2
+      },
+      "all_non_skill_non_descriptor_members_equal": true,
+      "absent_has_no_target_skill": true,
+      "present_differs_only_in_exact_skill_file": true
+    },
+    {
+      "location": "scenarios/missing-evidence/evidence",
+      "descriptors": {
+        "algorithm": "sha256-typed-toml-v1",
+        "configurations_equal": true,
+        "descriptors": 2
+      },
+      "all_non_skill_non_descriptor_members_equal": true,
+      "absent_has_no_target_skill": true,
+      "present_differs_only_in_exact_skill_file": true
+    },
+    {
+      "location": "scenarios/unsupported-runtime/evidence",
+      "descriptors": {
+        "algorithm": "sha256-typed-toml-v1",
+        "configurations_equal": true,
+        "descriptors": 2
+      },
+      "all_non_skill_non_descriptor_members_equal": true,
+      "absent_has_no_target_skill": true,
+      "present_differs_only_in_exact_skill_file": true
+    },
+    {
+      "location": "scenarios/invalid/evidence",
+      "descriptors": {
+        "algorithm": "sha256-typed-toml-v1",
+        "configurations_equal": true,
+        "descriptors": 2
+      },
+      "all_non_skill_non_descriptor_members_equal": true,
+      "absent_has_no_target_skill": true,
+      "present_differs_only_in_exact_skill_file": true
+    },
+    {
+      "location": "scenarios/unsupported-grading/evidence",
+      "descriptors": {
+        "algorithm": "sha256-typed-toml-v1",
+        "configurations_equal": true,
+        "descriptors": 2
+      },
+      "all_non_skill_non_descriptor_members_equal": true,
+      "absent_has_no_target_skill": true,
+      "present_differs_only_in_exact_skill_file": true
+    },
+    {
+      "location": "scenarios/threshold/evidence",
+      "descriptors": {
+        "algorithm": "sha256-typed-toml-v1",
+        "configurations_equal": true,
+        "descriptors": 2
+      },
+      "all_non_skill_non_descriptor_members_equal": true,
+      "absent_has_no_target_skill": true,
+      "present_differs_only_in_exact_skill_file": true
+    },
+    {
+      "location": "scenarios/unknown-usage/evidence",
+      "descriptors": {
+        "algorithm": "sha256-typed-toml-v1",
+        "configurations_equal": true,
+        "descriptors": 2
+      },
+      "all_non_skill_non_descriptor_members_equal": true,
+      "absent_has_no_target_skill": true,
+      "present_differs_only_in_exact_skill_file": true
+    }
+  ]
+}

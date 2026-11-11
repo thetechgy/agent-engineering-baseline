@@ -1,0 +1,97 @@
+{
+  "source": "0f1e87e119e99f23409fa44db7c731f948e6def3",
+  "pr": 130,
+  "fresh_github_tree_verified": true,
+  "original_files_verified": [
+    {
+      "member": "docs/evaluations/return-contract-new-allocation/execution/analysis/analysis.json",
+      "git_blob": "9d091a7ccdfa2d2903b6fd0a954bb48eae006c6d",
+      "sha256": "f18f89c2fa667d48cfcf91efdded99c6f576f859c408d789eba89629d6cb149c"
+    },
+    {
+      "member": "docs/evaluations/return-contract-new-allocation/execution/consolidated/report.html",
+      "git_blob": "2450073da6b5f7fa522dab1eeac652dc394f4ca9",
+      "sha256": "af83335d938115ab287abb54d65da41cb9fad015e386255743b77bb10fbf35b2"
+    },
+    {
+      "member": "docs/evaluations/return-contract-new-allocation/execution/data/historical-development-candidate-reliability/inventory.json",
+      "git_blob": "9063c621826c95a1ee373b2155b74f56f2913d21",
+      "sha256": "3af9187af7a28892f99fe7f3ffcb82c90d02d558f2edef5ac383296f11ba2a1d"
+    },
+    {
+      "member": "docs/evaluations/return-contract-new-allocation/execution/data/historical-development-candidate-reliability/public-report.json",
+      "git_blob": "d318a7f99f9e1106ceb84d6b0771a16c709f19f4",
+      "sha256": "3cda5752455d3d940d78b80113e339850f6dfaca8f86343fdfec60e1211a9ebf"
+    },
+    {
+      "member": "docs/evaluations/return-contract-new-allocation/execution/data/historical-development-current/inventory.json",
+      "git_blob": "9063c621826c95a1ee373b2155b74f56f2913d21",
+      "sha256": "3af9187af7a28892f99fe7f3ffcb82c90d02d558f2edef5ac383296f11ba2a1d"
+    },
+    {
+      "member": "docs/evaluations/return-contract-new-allocation/execution/data/historical-development-current/public-report.json",
+      "git_blob": "22930bc3150171aeb567b599abe1757a72640eb9",
+      "sha256": "9e0bade6600d1df22c29b37f9c25227438d1cb6ac26b1169e49d13200ebe41c5"
+    },
+    {
+      "member": "docs/evaluations/return-contract-new-allocation/execution/data/pester-return-development-candidate-v1/inventory.json",
+      "git_blob": "14d4a28224cedfc7ce4eff003896c0d1c5bc2051",
+      "sha256": "dd87966208881d5480d895734f35f607702fc9738f92ef0bccca398cf29d10fa"
+    },
+    {
+      "member": "docs/evaluations/return-contract-new-allocation/execution/data/pester-return-development-candidate-v1/public-report.json",
+      "git_blob": "15b08cb1c7b3d9134c7e4e26d8a72065c327fb78",
+      "sha256": "157943b8f2cb975b0b1fa6648798ad850d17e988a84e3daeb5808068262eca13"
+    },
+    {
+      "member": "docs/evaluations/return-contract-new-allocation/execution/data/pester-return-transfer-current-v3/inventory.json",
+      "git_blob": "14d4a28224cedfc7ce4eff003896c0d1c5bc2051",
+      "sha256": "dd87966208881d5480d895734f35f607702fc9738f92ef0bccca398cf29d10fa"
+    },
+    {
+      "member": "docs/evaluations/return-contract-new-allocation/execution/data/pester-return-transfer-current-v3/public-report.json",
+      "git_blob": "e85d0c6025fe2a018be8b2ba9b2922c4919628fd",
+      "sha256": "fd9c3c5babe2301a2456dd9c91c12d704ad7629517329cb745ac6fa0a5a23f64"
+    },
+    {
+      "member": "docs/evaluations/return-contract-new-allocation/execution/report-receipt.json",
+      "git_blob": "9a07e21de26b14f50ee2cd2845e00b1de8f333b3",
+      "sha256": "d8d0465e6a17ed612e24d28764f9d4f2b0e87f2e8c3c9558863eaffecc8cd152"
+    },
+    {
+      "member": "docs/evaluations/return-contract-new-allocation/execution/results.json",
+      "git_blob": "c572b2c074aab122faee0565e2fe465f976fd2ef",
+      "sha256": "bffef63b9deb4029e2ddb480aea236b19a52074331243d9662c5aeae168fcb10"
+    },
+    {
+      "member": "docs/evaluations/return-contract-new-allocation/admission/REPLAY.md",
+      "git_blob": "5b19fe5f3439ddae3e4bb8cb3e6ae9821c31a14b",
+      "sha256": "c664930e8e79247b6c39644cd86a6f6875b3af20250e4b8c9621bce141189041"
+    },
+    {
+      "member": "docs/evaluations/return-contract-new-allocation/admission/analysis/analysis.json",
+      "git_blob": "9666337ca8451c4751e7e5ad2509dd78bac0029d",
+      "sha256": "49c548a93a0ecad2c316ddf1f15a0776e8a0e8fd08c10fe37605484cb8343f89"
+    },
+    {
+      "member": "docs/evaluations/return-contract-new-allocation/admission/consolidated/report.html",
+      "git_blob": "d357870edb5da0427fb6ee4752bbc9cc43d6d8aa",
+      "sha256": "a694626c12edaf9cd908d9a6a88e4c9499e9bd77afbb5c20b6d95f6532ee89c0"
+    },
+    {
+      "member": "docs/evaluations/return-contract-new-allocation/admission/data/inventory.json",
+      "git_blob": "639fbed8b957688c4d08ef796dc6a48bfa7ccb39",
+      "sha256": "888aeb7f40c8f9e5fcdb3d279cf993f1972f1ee7d9e40c4c1268fb7a76b53d4a"
+    },
+    {
+      "member": "docs/evaluations/return-contract-new-allocation/admission/data/public-report.json",
+      "git_blob": "ecd38495eaca691fa3eb70bf138ffed547d9edab",
+      "sha256": "60eacc23060c64d60d0f870c6e08ac87eaee0169a13a0feb95cb2531bf3834d4"
+    },
+    {
+      "member": "docs/evaluations/return-contract-new-allocation/admission/qualification.json",
+      "git_blob": "d2a4448790e85704cb54f5eeb4e5f0710e132a3e",
+      "sha256": "2d625bf23c42fae99862cdaa5df10ccc22ded0e377c48d3dcc3e4fa99c3eb144"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "RECEIPT.md": "0b5986b1a3334cf843c2240c71bb8f5a9797d47ff2a00ee3f1c5e0487efd2b4b",
+  "candidate-inspection-audit.json": "ad2e54a5ebe2f8e3855b9e9ed44548b3db22372d3cc4708f1994c69350c8e02b",
+  "candidate-preparation-audit.json": "8fc0d4b1b67cf62831896f3f1b2d0378713971bd599beae2101b7266529c8564",
+  "cost-estimate.json": "65c32f346ab13361dcc9d3e983e0cdb6d269ae9f7888da1295a989d7a47603e3",
+  "cross-pair-comparability.json": "647a091dc5fb57010cea65b7a4a1fb4b65f01298bd78fbba18c2b2f3e18d914d",
+  "current-inspection-audit.json": "8137a16434111b9760cfe1d7441a1812b3cc2fe297708173db9d8a06dc4ef865",
+  "current-preparation-audit.json": "397973a9a062fe2d3504d5c66e68a4c75b07b5d5b627a3e653b4ff03472c8374",
+  "historical-publication-provenance.json": "72313a9a565a8816786400f5dca206b8ca4fa0c5faabac87cf9a8e395a1e6192",
+  "historical-report-reproduction.json": "bd8a1a9c12b3bdd852b4c7109302fb3271d3ec3a17574fc5bc751eed323d7f04",
+  "proposal.json": "d53c2a59878227d479cd3ed3bde513ee12296aed5970a7d870a0a4f3bd0e4a7f",
+  "source-audit.json": "9379a6fc901c28c961425178275ac3d724952825ab0b5fa62e567a7e7a0f2d06",
+  "source-trees.json": "281958955619353e9dbfda7da0a05ceb379fed0369e6cc1cd5a6c0bd6b947b38"
+}

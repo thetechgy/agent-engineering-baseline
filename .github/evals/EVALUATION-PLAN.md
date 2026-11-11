@@ -1,4 +1,28 @@
-# Issue #95 dependency modernization checkpoint
+# Pester return-contract skill decision checkpoint
+
+Credential-free readiness for two fresh transfer pairs is complete at execution
+source `040b11486ad3b7245e81fb6591f9d8dd78c32154`; all paid allocations remain
+closed. The [authoritative readiness receipt](../../docs/evaluations/pester-transfer-decision/RECEIPT.md)
+and [exact proposal](../../docs/evaluations/pester-transfer-decision/proposal.json)
+bind source, preparation, inspections, budgets, twelve slots and criteria frozen
+before new model outputs. Documentation publication does not move the execution
+ref or qualify a new revision.
+
+PR #131 merged as `f1867ba`; its separately failed older cohort control has a
+retained disposition. The selected shared six-slot path has fresh exact-source
+qualification. Historical development/current, development/candidate, original
+unsupported transfer/current and diagnostic replay remain separate; #130's
+reports are unchanged. Transfer/candidate has not run. No inference, model
+credential, allocation claim, paid dispatch or protected gate has been authorized.
+
+**One next action:** approve or decline the receipt's one combined proposal for
+current-versus-absent, then candidate-versus-its-own-absent, with the mandatory
+checkpoint between campaigns. A passing transfer tie may support the exact tested
+clarification; this small sample cannot establish statistical non-inferiority or
+broad effectiveness. Keep all PRs unmerged and production inactive. After the skill
+decision, dependency modernization under #95 is the next planned work item.
+
+## Earlier checkpoints, retained as history
 
 The latest authorized return-contract allocation is stopped and closed. Development/
 candidate run 42908510730 completed six measured outcomes: candidate 3/3, its

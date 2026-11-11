@@ -1,0 +1,213 @@
+{
+  "pricing_verified": "2026-11-11",
+  "sources": [
+    "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+    "https://developers.openai.com/api/docs/pricing"
+  ],
+  "rates_per_million": {
+    "input": 2,
+    "cached_input": 0.1,
+    "output": 10
+  },
+  "observations": [
+    {
+      "run": 42908510730,
+      "position": 1,
+      "variant": "candidate",
+      "usage": {
+        "trial": "campaign-pester-004-attempt1__slot1",
+        "completeness": "complete_turn",
+        "provenance": "codex-0.167-exec-json",
+        "n_input_tokens": 91475,
+        "n_cache_tokens": 74316,
+        "n_output_tokens": 947,
+        "estimated_usd": 0.0512196,
+        "billing": "provider-reported tokens; estimate, not invoice"
+      },
+      "recomputed_usd": 0.0512196,
+      "ledger_sha256": "ebe561d3b7b252ba558521f48779b8025457ecd593782af9e9d83c8ccd6d0b9b"
+    },
+    {
+      "run": 42908510730,
+      "position": 2,
+      "variant": "absent",
+      "usage": {
+        "trial": "campaign-pester-004-attempt1__slot2",
+        "completeness": "complete_turn",
+        "provenance": "codex-0.167-exec-json",
+        "n_input_tokens": 60312,
+        "n_cache_tokens": 46570,
+        "n_output_tokens": 830,
+        "estimated_usd": 0.040441,
+        "billing": "provider-reported tokens; estimate, not invoice"
+      },
+      "recomputed_usd": 0.040441,
+      "ledger_sha256": "ebe561d3b7b252ba558521f48779b8025457ecd593782af9e9d83c8ccd6d0b9b"
+    },
+    {
+      "run": 42908510730,
+      "position": 3,
+      "variant": "absent",
+      "usage": {
+        "trial": "campaign-pester-004-attempt2__slot3",
+        "completeness": "complete_turn",
+        "provenance": "codex-0.167-exec-json",
+        "n_input_tokens": 59562,
+        "n_cache_tokens": 46297,
+        "n_output_tokens": 830,
+        "estimated_usd": 0.0394597,
+        "billing": "provider-reported tokens; estimate, not invoice"
+      },
+      "recomputed_usd": 0.0394597,
+      "ledger_sha256": "ebe561d3b7b252ba558521f48779b8025457ecd593782af9e9d83c8ccd6d0b9b"
+    },
+    {
+      "run": 42908510730,
+      "position": 4,
+      "variant": "candidate",
+      "usage": {
+        "trial": "campaign-pester-004-attempt2__slot4",
+        "completeness": "complete_turn",
+        "provenance": "codex-0.167-exec-json",
+        "n_input_tokens": 75269,
+        "n_cache_tokens": 58049,
+        "n_output_tokens": 890,
+        "estimated_usd": 0.0491449,
+        "billing": "provider-reported tokens; estimate, not invoice"
+      },
+      "recomputed_usd": 0.0491449,
+      "ledger_sha256": "ebe561d3b7b252ba558521f48779b8025457ecd593782af9e9d83c8ccd6d0b9b"
+    },
+    {
+      "run": 42908510730,
+      "position": 5,
+      "variant": "candidate",
+      "usage": {
+        "trial": "campaign-pester-004-attempt3__slot5",
+        "completeness": "complete_turn",
+        "provenance": "codex-0.167-exec-json",
+        "n_input_tokens": 75635,
+        "n_cache_tokens": 58303,
+        "n_output_tokens": 989,
+        "estimated_usd": 0.0503843,
+        "billing": "provider-reported tokens; estimate, not invoice"
+      },
+      "recomputed_usd": 0.0503843,
+      "ledger_sha256": "ebe561d3b7b252ba558521f48779b8025457ecd593782af9e9d83c8ccd6d0b9b"
+    },
+    {
+      "run": 42908510730,
+      "position": 6,
+      "variant": "absent",
+      "usage": {
+        "trial": "campaign-pester-004-attempt3__slot6",
+        "completeness": "complete_turn",
+        "provenance": "codex-0.167-exec-json",
+        "n_input_tokens": 59665,
+        "n_cache_tokens": 46634,
+        "n_output_tokens": 874,
+        "estimated_usd": 0.039465400000000005,
+        "billing": "provider-reported tokens; estimate, not invoice"
+      },
+      "recomputed_usd": 0.0394654,
+      "ledger_sha256": "ebe561d3b7b252ba558521f48779b8025457ecd593782af9e9d83c8ccd6d0b9b"
+    },
+    {
+      "run": 42911213479,
+      "position": 1,
+      "variant": "current",
+      "usage": {
+        "trial": "campaign-pester-transfer-batch-v1-attempt1__slot1",
+        "completeness": "complete_turn",
+        "provenance": "codex-0.167-exec-json",
+        "n_input_tokens": 131004,
+        "n_cache_tokens": 111842,
+        "n_output_tokens": 2890,
+        "estimated_usd": 0.0784082,
+        "billing": "provider-reported tokens; estimate, not invoice"
+      },
+      "recomputed_usd": 0.0784082,
+      "ledger_sha256": "644b8143c2e1121199779d5b496b7e48bdca6dcd0e08b95d8811886f5574641f"
+    }
+  ],
+  "observed_total_usd": 0.3485231,
+  "planning_estimate_per_attempt_usd": 0.5,
+  "planning_estimate_each_campaign_usd": 3,
+  "planning_estimate_total_usd": 6,
+  "each_campaign": {
+    "stop_estimate_usd": 5,
+    "overshoot_reserve_usd": 3,
+    "planning_allocation_usd": 8
+  },
+  "planning_total_usd": 16,
+  "limitations": [
+    "provider-reported cumulative tokens; not invoice",
+    "cache writes and actual invoice/service tier unavailable",
+    "cumulative input premium is conservative, not request-level billing reconstruction",
+    "one transfer observation and development observations are not a reliable transfer-cost forecast",
+    "in-flight usage may exceed scheduling threshold; no provider billing cap; CI separate"
+  ],
+  "additional_separate_historical_comparator": {
+    "run": 42844732493,
+    "public_record_sha256": "9e0bade6600d1df22c29b37f9c25227438d1cb6ac26b1169e49d13200ebe41c5",
+    "rows": [
+      {
+        "arm": "with_skill",
+        "tokens": {
+          "n_input_tokens": 74032,
+          "n_cache_tokens": 56812,
+          "n_output_tokens": 1027
+        },
+        "recomputed_usd": 0.0503912
+      },
+      {
+        "arm": "with_skill",
+        "tokens": {
+          "n_input_tokens": 75129,
+          "n_cache_tokens": 57974,
+          "n_output_tokens": 915
+        },
+        "recomputed_usd": 0.0492574
+      },
+      {
+        "arm": "with_skill",
+        "tokens": {
+          "n_input_tokens": 72943,
+          "n_cache_tokens": 56368,
+          "n_output_tokens": 901
+        },
+        "recomputed_usd": 0.0477968
+      },
+      {
+        "arm": "without_skill",
+        "tokens": {
+          "n_input_tokens": 61216,
+          "n_cache_tokens": 47644,
+          "n_output_tokens": 889
+        },
+        "recomputed_usd": 0.0407984
+      },
+      {
+        "arm": "without_skill",
+        "tokens": {
+          "n_input_tokens": 60368,
+          "n_cache_tokens": 46762,
+          "n_output_tokens": 948
+        },
+        "recomputed_usd": 0.0413682
+      },
+      {
+        "arm": "without_skill",
+        "tokens": {
+          "n_input_tokens": 60359,
+          "n_cache_tokens": 46798,
+          "n_output_tokens": 912
+        },
+        "recomputed_usd": 0.0409218
+      }
+    ],
+    "recomputed_total_usd": 0.2705338,
+    "not_pooled_for_effectiveness": true
+  },
+  "complete_historical_spending_unknown": true
+}
