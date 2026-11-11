@@ -6,7 +6,8 @@ sources passed the fresh matched control. The owner has chosen to stop pursuing
 a DNS-specific fix for now. This is an unreproduced historical DNS failure, not
 proof of transience or a relabeled passing run. PR #131 remains unmerged and its
 review status is unchanged. PR #130 remains draft and unmerged. All paid
-allocations remain closed. The separate failed cohort qualification and any remaining CI must be assessed before merge.
+allocations remain closed. All final-head CI is terminal. The separate failed cohort qualification must be
+assessed before merge.
 
 ## Historical sequence
 
@@ -150,7 +151,7 @@ graders, fixtures and semantics. Protected skills, candidate/task content,
 dependency locks, settings, production limits and isolation policy are unchanged.
 The [workflow review](WORKFLOW-REVIEW.md) covers the explicit credential-free mode.
 The [CI status receipt](final-checks.json) records exact-head successes and any
-broader pending qualification separately. Cancelled superseded runs are
+the separate failed cohort qualification explicitly. Cancelled superseded runs are
 inconclusive and never substitute for final-head checks.
 
 ## Separate broader cohort-qualification failure
@@ -241,10 +242,10 @@ source/identity, isolation, cleanup or separately authorized live gates.
 This disposition is not live-provider qualification or an inference authorization.
 The original failed run remains failed. All required/Validate, focused native,
 lifecycle and admission receipts are authenticated; the status snapshot separately
-identifies broader CI still in progress. Review those terminal results before any
-merge. Neither PR has been merged, and no review-status transition was performed.
+identifies the separate failed cohort qualification. All final-head CI is terminal;
+CI is not all green. Review that limit before any merge. Neither PR has been merged, and no review-status transition was performed.
 
 **One next action:** review PR #131 at `33d9535` against these receipts, the
-separate cohort-qualification limit and terminal remaining CI. Keep PR #130 draft and unmerged. No model
-credentials, inference, paid gate, retry/replacement, allocation reopening,
+separate cohort-qualification limit and terminal CI results. Keep PR #130 draft
+and unmerged. No model credentials, inference, paid gate, retry/replacement, allocation reopening,
 candidate adoption, dependency upgrade or production-default change is authorized.

@@ -30,8 +30,8 @@ stop for now. This does not prove transience or relabel the historical failure.
 It is nonblocking for focused code review because missing actual observations
 still block readiness, identities and policy violations remain rejected, and the
 separate admission behavior retains its qualification. The existing fresh-source
-preparation and live gates remain intact. Broader pending CI must be assessed
-before merge; no PR has been merged and no live-readiness claim is made.
+preparation and live gates remain intact. All final-head CI is terminal; the
+separate failed cohort qualification below must be assessed before merge; no PR has been merged and no live-readiness claim is made.
 
 The original CLI preparation and fresh consumption also passed in compatibility
 workflow 42937277898. Its separate cohort `infrastructure` control failed an
@@ -53,8 +53,8 @@ credentials, inference, paid gate, retry/replacement, allocation reopening,
 candidate adoption, dependency upgrade, production-default change or merge
 occurred. The diagnostic records are separate from experiment accounting.
 
-**One next action:** review PR #131 at `33d9535` against its authenticated receipts
-the separate cohort-qualification limit and terminal remaining CI. Keep PR #130 draft and unmerged.
+**One next action:** review PR #131 at `33d9535` against its authenticated receipts,
+including the separate cohort-qualification limit and terminal CI results. Keep PR #130 draft and unmerged.
 
 ## Previous admission checkpoint, retained as history
 
