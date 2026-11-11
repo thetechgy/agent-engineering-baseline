@@ -2,6 +2,14 @@ name: Native deadline evidence
 on:
   workflow_dispatch:
     inputs:
+      cli_observation:
+        type: boolean
+        default: false
+        description: Compare baseline and reviewed CLI observation without inference
+      observation_final:
+        type: boolean
+        default: false
+        description: Qualify only the final head after the matched comparison
       expect_broken:
         type: boolean
         default: false
@@ -22,6 +30,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   qualify:
+    if: ${{ !inputs.cli_observation }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     permissions:
@@ -67,5 +76,69 @@ jobs:
           path: |
             ${{ runner.temp }}/native-deadline/*/evidence/
             ${{ runner.temp }}/native-deadline/qualification.json
+          if-no-files-found: error
+          retention-days: 90
+
+  cli-observation:
+    if: ${{ inputs.cli_observation }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: read
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: '0.13.7'
+          enable-cache: false
+      - name: Acquire existing pinned tools without model credentials
+        run: |
+          bash .github/scripts/setup-skillevaluator.sh candidate-current
+          bash .github/scripts/setup-compose.sh
+          APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
+          echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
+      - name: Compare unchanged base and reviewed head on the same runner
+        if: ${{ !inputs.observation_final }}
+        run: |
+          git worktree add --detach "$RUNNER_TEMP/observation-base" a8ab2e2e03a2989863a514df2a6b357c44fbc012
+          git worktree add --detach "$RUNNER_TEMP/observation-reviewed" 22b36d53e9ac7e329ef8c56dc9bdcefb468ca9df
+          "$SKILL_CURRENT_PYTHON" -B .github/scripts/qualify_cli_observation.py --source "$RUNNER_TEMP/observation-base" --output "$RUNNER_TEMP/cli-observation/base"
+      - name: Acquire fresh verified Compose configuration for reviewed head
+        if: ${{ !inputs.observation_final }}
+        run: bash .github/scripts/setup-compose.sh
+      - name: Run unchanged reviewed head on the same runner
+        if: ${{ !inputs.observation_final }}
+        run: '"$SKILL_CURRENT_PYTHON" -B .github/scripts/qualify_cli_observation.py --source "$RUNNER_TEMP/observation-reviewed" --output "$RUNNER_TEMP/cli-observation/reviewed"'
+      - name: Qualify final-head CLI observation and affected contracts
+        if: ${{ inputs.observation_final }}
+        run: |
+          PYTHONPATH=.github/scripts:.github/tests "$SKILL_CURRENT_PYTHON" -B -m unittest test_cli_observation test_codex_pilot test_codex_iteration test_codex_replay test_native_deadline test_evaluation_campaign test_evaluation_protocol test_pester_admission -q
+          "$SKILL_CURRENT_PYTHON" -B .github/scripts/qualify_cli_observation.py --source "$GITHUB_WORKSPACE" --output "$RUNNER_TEMP/cli-observation/final" --require-complete
+      - name: Acquire fresh verified Compose configuration for missing child
+        if: ${{ inputs.observation_final }}
+        run: bash .github/scripts/setup-compose.sh
+      - name: Missing actual CLI-child observation blocks readiness and preserves primary failure
+        if: ${{ inputs.observation_final }}
+        run: '"$SKILL_CURRENT_PYTHON" -B .github/scripts/qualify_cli_observation.py --source "$GITHUB_WORKSPACE" --output "$RUNNER_TEMP/cli-observation/final-missing-child" --missing-child-control'
+      - name: Verify checkout integrity
+        if: always()
+        run: git diff --exit-code
+      - name: Dispose task-owned Compose configuration
+        if: always()
+        run: bash .github/scripts/setup-compose.sh cleanup
+      - name: Retain sanitized diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: cli-observation-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/cli-observation/*/native/evidence/
+            ${{ runner.temp }}/cli-observation/*/qualification.json
           if-no-files-found: error
           retention-days: 90

@@ -23,7 +23,8 @@ import skill_reports as reports
 
 def purpose(task, mode):
     identity = {'boolean-contract-v1':'boolean-contract-v4', 'gh-read-v1':'gh-read-v4', 'boolean-effectiveness-v1':'boolean-effectiveness-v3', 'boolean-retained-v1':'boolean-retained-v2'}.get(task.definition['id'], task.definition['id'])
-    return 'campaign-' + identity + '-lifecycle-v1-' + ('probe' if mode == 'experiment-probe' else mode)
+    source_version = '-lifecycle-v1-source-v4-'
+    return 'campaign-' + identity + source_version + ('probe' if mode == 'experiment-probe' else mode)
 
 
 def revision():

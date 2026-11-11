@@ -213,11 +213,26 @@ CAMPAIGN_MANIFEST_SHA = 'd21f8b5d6b18e21aab9acf471646f4ce48ad400bb1a52864ddd3b04
 CAMPAIGN_PROVENANCE_SHA = '966e2b49b6fefaa8213b62cf763f3155f00492aa1ceb752239cb8c4aff62119c'
 
 
-def campaign_corpus(workspace=ROOT):
+def campaign_corpus(workspace=ROOT, *, definition=None, profile=None):
+    selected = (definition or {}).get('retrospective', CAMPAIGN_CORPUS + '/manifest.json')
+    if profile is not None:
+        from evaluation_evidence import task
+        selected = task(profile).definition['retrospective']
+    binding = dict(root=CAMPAIGN_CORPUS, manifest=CAMPAIGN_MANIFEST_SHA,
+        provenance=CAMPAIGN_PROVENANCE_SHA, run=42695478931, artifact=13708468986,
+        revision='97124cf6b09d2acd4bda6243d0345dff06aea989',
+        archive='0d9cc2aa7125f86656224251e4c84531b5dfd72fd211c1e8b079513a27112deb',
+        size=471, submission='3215b6097fa3e5f592989f2b8f4523207e28ebd4893cc7d11437b19189795981',
+        purpose='campaign-boolean-effectiveness-v1-live')
+    if selected == '.github/evals/codex-retrospective/42911213479/manifest.json':
+        from pester_transfer_replay import BINDING
+        binding = BINDING
+    elif selected != CAMPAIGN_CORPUS + '/manifest.json':
+        raise ValueError('Unregistered retained source')
     import skill_evidence as evidence
-    root = workspace / CAMPAIGN_CORPUS
+    root = workspace / binding['root']
     raw = evidence.read_bytes(root / 'manifest.json')
-    if hashlib.sha256(raw).hexdigest() != CAMPAIGN_MANIFEST_SHA:
+    if hashlib.sha256(raw).hexdigest() != binding['manifest']:
         raise ValueError('Retained campaign manifest changed')
     manifest = json.loads(raw)
     expected = {row['member'] for row in manifest['files']} | {'manifest.json','provenance.json'}
@@ -229,32 +244,32 @@ def campaign_corpus(workspace=ROOT):
         if len(data) != row['bytes'] or hashlib.sha256(data).hexdigest() != row['sha256']:
             raise ValueError('Retained campaign bytes changed')
     provenance = evidence.read_bytes(root / 'provenance.json')
-    if hashlib.sha256(provenance).hexdigest() != CAMPAIGN_PROVENANCE_SHA:
+    if hashlib.sha256(provenance).hexdigest() != binding['provenance']:
         raise ValueError('Retained campaign provenance changed')
     proof = json.loads(provenance); source = manifest['source']
     artifact, run, job = proof['artifact'], proof['run'], proof['uploader_job']
     origin = artifact['workflow_run']
-    if not (source['run'] == run['id'] == origin['id'] == 42695478931
-            and source['artifact'] == artifact['id'] == 13708468986
-            and source['revision'] == run['head_sha'] == origin['head_sha'] == '97124cf6b09d2acd4bda6243d0345dff06aea989'
+    if not (source['run'] == run['id'] == origin['id'] == binding['run']
+            and source['artifact'] == artifact['id'] == binding['artifact']
+            and source['revision'] == run['head_sha'] == origin['head_sha'] == binding['revision']
             and artifact['digest'] == 'sha256:' + source['archive_sha256']
-            and source['archive_sha256'] == '0d9cc2aa7125f86656224251e4c84531b5dfd72fd211c1e8b079513a27112deb'
+            and source['archive_sha256'] == binding['archive']
             and run['repository']['id'] == run['head_repository']['id'] == origin['repository_id'] == origin['head_repository_id'] == 1299967456
             and run['path'] == source['workflow'] == '.github/workflows/evaluation-campaign.yml'
             and run['run_attempt'] == source['attempt'] == 1 and run['event'] == source['event'] == 'workflow_dispatch'
             and run['status'] == 'completed' and run['conclusion'] == 'failure' and artifact['name'] == 'campaign-live-1'
             and job['conclusion'] == 'failure' and any(step['name'] == 'Retain all slots and partial native evidence after stopping'
                 and step['conclusion'] == 'success' for step in job['steps'])
-            and proof['manifest_sha256'] == CAMPAIGN_MANIFEST_SHA):
+            and proof['manifest_sha256'] == binding['manifest']):
         raise ValueError('Retained campaign producer authentication mismatch')
     submission = evidence.read_bytes(root / 'Subject.Tests.ps1')
-    if len(submission) != 471 or hashlib.sha256(submission).hexdigest() != '3215b6097fa3e5f592989f2b8f4523207e28ebd4893cc7d11437b19189795981':
+    if len(submission) != binding['size'] or hashlib.sha256(submission).hexdigest() != binding['submission']:
         raise ValueError('Retained campaign submission mismatch')
     original = evidence.read_json(root / 'original-public-report.json')
     evidence.validate_custom_evidence(original, public=True)
     if (evidence.identity(original) != source['original_record_id']
             or original['custom']['capture_digest'] != source['original_capture_digest']
-            or original['custom']['purpose'] != 'campaign-boolean-effectiveness-v1-live'
+            or original['custom']['purpose'] != binding['purpose']
             or len(original['observations']) != 1
             or original['observations'][0]['arm'] != 'with_skill'
             or any(m['value'] is not None for o in original['observations'] for m in o['custom']['measurements'])
@@ -264,7 +279,7 @@ def campaign_corpus(workspace=ROOT):
 
 
 def campaign_retrospective(profile, *, adapter_revision=None, workspace=ROOT):
-    root, manifest, _ = campaign_corpus(workspace)
+    root, manifest, _ = campaign_corpus(workspace, profile=profile)
     source = manifest['source']
     if adapter_revision is None:
         if subprocess.check_output(['git','status','--porcelain'],cwd=workspace,text=True).strip():
@@ -288,8 +303,8 @@ def validate_campaign_retrospective(value, profile, workspace=ROOT):
         raise ValueError('Retrospective campaign identity mismatch')
 
 
-def campaign_payload(workspace=ROOT):
-    root, _, _ = campaign_corpus(workspace)
+def campaign_payload(workspace=ROOT, *, definition=None):
+    root, _, _ = campaign_corpus(workspace, definition=definition)
     return (root/'Subject.Tests.ps1').read_bytes()
 
 
@@ -297,13 +312,14 @@ def retain_campaign_originals(destination, task, profile):
     import shutil
     import skill_evidence as evidence
     import skill_reports as reports
-    root, manifest, original = campaign_corpus()
+    root, manifest, original = campaign_corpus(definition=task.definition)
     staged = reports.read_json(root/'staging.json')
     old = next(r['members'] for r in staged if r['arm']=='with_skill' and r['case_id']==task.definition['source_case'])
     # Task inputs, reference, all five mutants, grader and verifier entry point
     # must be the original frozen bytes, not an output-informed replacement.
     members = task.expected_members(task.definition['source_case'],'with_skill')
-    if not all(old.get(key)==evidence.digest_bytes(value) for key,value in members.items()):
+    allowed = task.replay_changes(old)
+    if not all(old.get(key)==evidence.digest_bytes(value) for key,value in members.items() if key not in allowed):
         raise ValueError('Original task/grader drift')
     shutil.copytree(root,destination/'original')
     public = destination/'original-public'
@@ -329,7 +345,9 @@ def retain_campaign_originals(destination, task, profile):
 
 def validate_campaign_pair(record, original):
     import skill_evidence as evidence
-    meta=record['custom']['retrospective'];_,manifest,expected=campaign_corpus()
+    meta = record['custom']['retrospective']
+    profile, _, _ = evidence.custom_contract('powershell-pester-6', purpose=record['custom']['purpose'])
+    _, manifest, expected = campaign_corpus(profile=profile)
     if (original != expected or evidence.identity(original) != meta['original_record_id']
             or set(meta['submission_digests']) != {'with_skill'}
             or any(o['arm'] != 'with_skill' for o in record['observations'])):

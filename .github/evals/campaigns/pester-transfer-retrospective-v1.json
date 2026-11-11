@@ -1,0 +1,25 @@
+{
+  "id": "pester-transfer-retrospective-v1",
+  "adapter": "batch-summary",
+  "skill": "powershell-pester-6",
+  "source": ".github/evals/pester-return-contract/variants/current/powershell-pester-6",
+  "source_case": "pester-transfer-batch-v1",
+  "candidate": ".github/evals/pester-return-contract/transfer/candidate.json",
+  "runtime_profile": ".github/evals/campaigns/codex-qualified.json",
+  "variants": [
+    {
+      "id": "current",
+      "present": true
+    },
+    {
+      "id": "absent",
+      "present": false
+    }
+  ],
+  "trials": 1,
+  "attempt_limit": 1,
+  "stop_estimate_usd": 5,
+  "authorized_live_attempts": 0,
+  "admission_policy": "pester-collection-numeric-v1",
+  "retrospective": ".github/evals/codex-retrospective/42911213479/manifest.json"
+}

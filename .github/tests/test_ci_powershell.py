@@ -208,3 +208,31 @@ class CIPowerShellTests(unittest.TestCase):
                     if "./scripts/Invoke-Validation.ps1" in source:
                         for module, variable in (("Pester", "PESTER_VERSION"), ("PSScriptAnalyzer", "PSSCRIPTANALYZER_VERSION")):
                             self.assertIn(f"Import-CIValidationModule -Name {module} -RequiredVersion $env:{variable}", source)
+
+class FrozenRuntimeOwnership(unittest.TestCase):
+    def test_only_frozen_grader_step_selects_pinned_runtime(self):
+        import yaml
+        steps=yaml.safe_load((ROOT/'.github/workflows/validate.yml').read_text())['jobs']['linux']['steps']
+        latest=next(s for s in steps if s.get('name')=='Acquire latest stable PowerShell')
+        self.assertNotIn('--runtime frozen-pester',latest['run'])
+        pinned=next(s for s in steps if s.get('name')=='Acquire declared frozen-grader runtime')
+        self.assertIn('--runtime frozen-pester',pinned['run'])
+        self.assertIn('python3 -B ',pinned['run'])
+        grader=next(s for s in steps if s.get('name')=='Check exploratory Pester candidate with the existing grader')
+        self.assertEqual(grader['env']['CI_PWSH'],'${{ env.FROZEN_PWSH }}')
+        self.assertEqual(grader['env']['PESTER_MANIFEST'],'${{ env.FROZEN_PESTER_MANIFEST }}')
+        self.assertNotIn('FROZEN_PWSH',next(s for s in steps if s.get('name')=='Run full validation')['run'])
+
+    def test_relocated_installer_fails_closed_on_changed_validation_contract(self):
+        with tempfile.TemporaryDirectory() as directory:
+            destination=Path(directory)/'runtime'
+            with patch('codex_pilot_contract.runtime_installer_bytes',return_value=b'def main(): pass\n'), self.assertRaisesRegex(ValueError,'validation contract changed'):
+                runtime.install_frozen_pester(destination)
+            self.assertFalse(destination.exists())
+
+    def test_relocated_installer_preserves_an_existing_destination(self):
+        with tempfile.TemporaryDirectory() as directory:
+            destination=Path(directory)/'runtime';destination.mkdir();(destination/'keep').write_text('unrelated')
+            with self.assertRaisesRegex(ValueError,'must not exist'):
+                runtime.install_frozen_pester(destination)
+            self.assertEqual((destination/'keep').read_text(),'unrelated')

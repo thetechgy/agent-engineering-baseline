@@ -1,0 +1,224 @@
+{
+  "definition": {
+    "id": "pester-return-transfer-current-v3",
+    "adapter": "batch-summary",
+    "skill": "powershell-pester-6",
+    "source": ".github/evals/pester-return-contract/variants/current/powershell-pester-6",
+    "source_case": "pester-transfer-batch-v1",
+    "candidate": ".github/evals/pester-return-contract/transfer/candidate.json",
+    "runtime_profile": ".github/evals/campaigns/codex-authorized-v1.json",
+    "variants": [
+      {
+        "id": "current",
+        "present": true
+      },
+      {
+        "id": "absent",
+        "present": false
+      }
+    ],
+    "trials": 3,
+    "attempt_limit": 6,
+    "stop_estimate_usd": 5,
+    "authorized_live_attempts": 0,
+    "protocol": ".github/evals/campaigns/pester-return-transfer-current-v3-protocol.json"
+  },
+  "runtime": {
+    "profile": {
+      "id": "codex-authorized-campaign-v1",
+      "adapter": "codex",
+      "frozen_profile": ".github/evals/codex-pilot.json",
+      "frozen_profile_sha256": "5472136c6532db515340e8ffdfc9aae9f70b42b27fc15bf922823a784b41e9a8",
+      "capabilities": [
+        "non-forwarding-cli-probe",
+        "exact-authorized-live"
+      ],
+      "inference_enabled": false
+    },
+    "resolved": {
+      "id": "codex-pester-001-pilot-v1",
+      "case": "pester-001",
+      "skill": "powershell-pester-6",
+      "cli": "0.167.0",
+      "cli_revision": "086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a",
+      "cli_archive_sha256": "3bbf75e83de6b58aed28f2cf6e33ad423ec31fd4700a1457b94be557ea5a7c6e",
+      "cli_executable_sha256": "cdcb45aaa01d0f14e298985e09465aebccd47f64ecd298aea44814af7b62bbda",
+      "model": "gpt-6.1-sol",
+      "reasoning_effort": "high",
+      "provider": "openai",
+      "base_url": "https://api.openai.com/v1",
+      "agent_seconds": 600,
+      "cpus": 2,
+      "memory_mb": 2048,
+      "attempts_per_arm": 1,
+      "allocation_usd": 10,
+      "stop_estimate_usd": 5,
+      "prices_per_million": {
+        "input": 2,
+        "cached_input": 0.1,
+        "output": 10
+      },
+      "frozen_at": "2026-11-07",
+      "release_url": "https://github.com/openai/codex/releases/tag/rust-v0.167.0",
+      "model_documentation": "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+      "configuration_documentation": "https://developers.openai.com/codex/config-reference",
+      "helper_sha256": {
+        "bin/codex-code-mode-host": "83f3e174c2da2f1ca8655cce686e302509640d34c0f4407c1155056f64536e0f",
+        "bin/codex-exec-server": "43376b1af843ffc71726a35d53b6e2241cbe1e8c9e8ec758402460295eec2107",
+        "codex-resources/bwrap": "77360cb751ccedc5971391444ac86a8a33c15b04d6b4a6fe45f5d25496e62c4c"
+      },
+      "execution_policy": "docker-external-openai-v3",
+      "agent": "codex"
+    }
+  },
+  "revision": "a8ab2e2e03a2989863a514df2a6b357c44fbc012",
+  "mode": "live",
+  "inference": true,
+  "fixture": null,
+  "entries": [
+    {
+      "position": 1,
+      "case": "pester-transfer-batch-v1",
+      "trial": 1,
+      "variant": "current",
+      "state": "failed",
+      "estimated_usd_before": 0.0,
+      "config_sha256": "9bdd186df0edfe39077e16ef63dbed1766c023af9d5de4b1809e486d5027ff7b",
+      "task_checksum": "3e4937cc9a26de626e3a730e3df3d75f12f33c9df9c525c111c2cb58d0835539",
+      "native_trial": "jobs/powershell-pester-6-codex-with/campaign-pester-transfer-batch-v1-attempt1__slot1",
+      "returncode": 0,
+      "cleanup": true,
+      "usage": {
+        "trial": "campaign-pester-transfer-batch-v1-attempt1__slot1",
+        "completeness": "complete_turn",
+        "provenance": "codex-0.167-exec-json",
+        "n_input_tokens": 131004,
+        "n_cache_tokens": 111842,
+        "n_output_tokens": 2890,
+        "estimated_usd": 0.0784082,
+        "billing": "provider-reported tokens; estimate, not invoice"
+      },
+      "elapsed_seconds": 229.237,
+      "native_exception": null,
+      "grading_present": true,
+      "outcome": {
+        "classification": "unsupported",
+        "code": "expression_policy"
+      }
+    },
+    {
+      "position": 2,
+      "case": "pester-transfer-batch-v1",
+      "trial": 1,
+      "variant": "absent",
+      "state": "unlaunched"
+    },
+    {
+      "position": 3,
+      "case": "pester-transfer-batch-v1",
+      "trial": 2,
+      "variant": "absent",
+      "state": "unlaunched"
+    },
+    {
+      "position": 4,
+      "case": "pester-transfer-batch-v1",
+      "trial": 2,
+      "variant": "current",
+      "state": "unlaunched"
+    },
+    {
+      "position": 5,
+      "case": "pester-transfer-batch-v1",
+      "trial": 3,
+      "variant": "current",
+      "state": "unlaunched"
+    },
+    {
+      "position": 6,
+      "case": "pester-transfer-batch-v1",
+      "trial": 3,
+      "variant": "absent",
+      "state": "unlaunched"
+    }
+  ],
+  "state": "stopped",
+  "authorized_live_attempts": 6,
+  "protocol": {
+    "id": "pester-return-transfer-current-v3",
+    "definition": ".github/evals/campaigns/pester-return-transfer-current-v3.json",
+    "version": 1,
+    "attempt_slots": 6,
+    "trials_per_arm": 3,
+    "automatic_retries": 0,
+    "replacements": 0,
+    "concurrency": 1,
+    "primary_outcome": "reference-correct submission detecting all five seeded defects",
+    "separate_outcomes": [
+      "reference correctness",
+      "enabled-integer",
+      "enabled-zero",
+      "quantity-offset",
+      "quantity-below",
+      "quantity-above",
+      "invalid",
+      "unsupported",
+      "runtime failure",
+      "successful skill access",
+      "usage",
+      "elapsed seconds"
+    ],
+    "interpretation": "Frozen exploratory revision hypothesis; indirect paired comparison; no execution authorization.",
+    "budget": {
+      "estimate_usd": 3,
+      "stop_estimate_usd": 5,
+      "overshoot_reserve_usd": 3,
+      "planning_allocation_usd": 8,
+      "billing_limit_enforced": false,
+      "pricing_verified": "2026-11-09",
+      "pricing_source": "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+      "prices_per_million": {
+        "input": 2,
+        "cached_input": 0.1,
+        "output": 10
+      }
+    },
+    "stop_rules": [
+      "estimated_usage_threshold",
+      "unknown_usage",
+      "execution_infrastructure_failure",
+      "cleanup_failure",
+      "missing_grading_evidence",
+      "missing_usable_evidence",
+      "unsupported_grading",
+      "verifier_failure",
+      "missing_native_observation",
+      "unsupported_runtime_protocol",
+      "security_or_identity_drift"
+    ],
+    "agent_seconds": 600,
+    "launch_seconds": 1200,
+    "cleanup_grace_seconds": 80,
+    "protected_environment": "skill-benchmark",
+    "authorized_live_attempts": 0
+  },
+  "authorization": {
+    "artifact": "13801928552",
+    "artifact_digest": "sha256:0c380299bfcebfc2d9280f53649b72955310098a1c69f4ab54ca8cc4513c5e2a",
+    "producer_run": 42890495634,
+    "revision": "a8ab2e2e03a2989863a514df2a6b357c44fbc012",
+    "protocol_digest": "sha256:db0219eee2fd9a802504fc15552d3bb0e56671e68c9e36062c21fb77aff01794",
+    "dispatch": "03f46fb94a1ab042bf1ca715",
+    "run_id": "42911213479",
+    "allocation": "campaign-a8ab2e2e03a2989863a514df2a6b357c44fbc012-pester-return-transfer-current-v3-prep13801928552-usd8-03f46fb94a1ab042bf1ca715",
+    "first_dispatch": true,
+    "authentication": "github-api-producer-and-digest",
+    "definition": ".github/evals/campaigns/pester-return-transfer-current-v3.json",
+    "definition_digest": "sha256:91c0c76d4fc88b50517d9d39c2c55ba1086bffbb74e93463912fc5e7ee4b7a8c",
+    "selection_digest": "sha256:080bd82856e6b1b4cde4370784e101ecfc7a0839480960529884dafb0947c83d",
+    "preparation_location": "current/evidence"
+  },
+  "preparation_digest": "sha256:601bb9e07e165e537ca171c57ec31eecf2ca2b8bf47ee7356aa8c5d3c872ab6e",
+  "stop_reason": "unsupported_grading",
+  "cleanup_complete": true
+}

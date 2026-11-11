@@ -51,6 +51,9 @@ class Task:
                          if p.name not in ('audit.json','validation.json'))
         return [{'member': 'task/' + path, 'digest': e.digest_bytes(e.read_bytes(workspace / path))} for path in sorted(set(paths))]
 
+    def replay_changes(self, original):
+        return set()
+
     def staging_options(self, bundle):
         return {}
 
@@ -59,7 +62,8 @@ class Task:
 
     def cases(self, mode):
         if mode == 'replay':
-            require(self.definition.get('retrospective') == '.github/evals/codex-retrospective/42695478931/manifest.json','Unregistered retained source')
+            from codex_pilot_replay import campaign_corpus
+            campaign_corpus(definition=self.definition)
             return {self.definition['source_case']:'retained'}
         if mode in ('live', 'experiment-probe'):
             require('protocol' in self.definition, 'Qualification cannot enable inference')
@@ -118,17 +122,43 @@ class BooleanContract(Task):
     probe_controls = ('identity', 'value-only')
     environment = 'codex_pilot_environment:PilotEnvironment'
 
+    def source_inputs(self, workspace):
+        values = super().source_inputs(workspace)
+        paths = []
+        if self.definition.get('admission_policy') or self.definition.get('retrospective') == '.github/evals/codex-retrospective/42911213479/manifest.json':
+            paths.extend(('.github/scripts/pester_admission.py', '.github/scripts/pester_transfer_replay.py'))
+        if self.definition.get('admission_policy'):
+            paths.append('.github/evals/pester-admission-v1/controls.json')
+            paths.extend(p.relative_to(workspace).as_posix() for p in reports.regular_tree(workspace / '.github/evals/pester-admission-v1/controls'))
+        import skill_evidence as e
+        return values + [{'member': 'task/' + p, 'digest': e.digest_bytes(e.read_bytes(workspace / p))} for p in sorted(paths)]
+
+    def replay_changes(self, original):
+        if not self.definition.get('admission_policy'):
+            return set()
+        from pester_admission import POLICY
+        from codex_pilot_effectiveness import runner_bytes, execution_profile_bytes
+        import skill_evidence as e
+        require(self.definition['admission_policy'] == POLICY, 'Unknown retrospective admission correction')
+        require(original['tests/Runner.ps1'] == e.digest_bytes(runner_bytes()) and
+                original['environment/input/EXECUTION-PROFILE.md'] == e.digest_bytes(execution_profile_bytes()),
+                'Original Pester admission source drift')
+        return {'tests/Runner.ps1', 'environment/input/EXECUTION-PROFILE.md'}
+
     def candidate(self):
         return reports.read_json(ROOT / self.definition['candidate'])
 
     def controls(self):
+        if self.definition.get('original_reproduction'):
+            require('retrospective' in self.definition, 'Original reproduction requires retained provenance')
+            return {'retained': {'outcome': 'unsupported', 'detections': None}}
         return {row['id']: row for row in self.candidate()['controls']}
 
     def payload(self, control):
         if control == 'retained':
             require('retrospective' in self.definition,'Unregistered retained task')
             from codex_pilot_replay import campaign_payload
-            return campaign_payload()
+            return campaign_payload(definition=self.definition)
         if control == 'unsupported':
             from codex_pilot_effectiveness import fixtures
             return fixtures()['pester-004-unsupported']['payload']
@@ -184,6 +214,11 @@ class BooleanContract(Task):
             'tests/test.sh': (base / 'test.sh').read_bytes(),
             'tests/entry.json': (json.dumps({'id': case, 'grading_mode': 'custom_only'}, indent=2) + '\n').encode(),
             'environment/input/EXECUTION-PROFILE.md': execution_profile_bytes()}
+        if self.definition.get('admission_policy'):
+            from pester_admission import POLICY, runner_bytes, execution_profile_bytes
+            require(self.definition['admission_policy'] == POLICY, 'Unknown Pester admission policy')
+            result['tests/Runner.ps1'] = runner_bytes()
+            result['environment/input/EXECUTION-PROFILE.md'] = execution_profile_bytes()
         result.update({'tests/case/' + k:v for k,v in self.files().items()})
         folder = self.input_directory()
         result.update({'environment/input/' + p.name:p.read_bytes() for p in folder.iterdir()})
@@ -329,6 +364,12 @@ class BatchSummary(BooleanContract):
     """Object return contract with deliberately variable numeric representation."""
     source_directories = ('.github/evals/pester-return-contract/transfer',)
     probe_controls = ('good', 'value-only')
+
+    def controls(self):
+        controls = super().controls()
+        if self.definition.get('admission_policy'):
+            controls.update({row['id']: row for row in reports.read_json(ROOT / '.github/evals/pester-admission-v1/controls.json')})
+        return controls
 
     def fixture_control(self, scenario, row):
         if scenario == 'invalid': return 'invalid'

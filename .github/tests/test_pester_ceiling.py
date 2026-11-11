@@ -26,7 +26,7 @@ class Candidate(unittest.TestCase):
                          'Optional pinned local Pester semantic check')
     def test_exploratory_controls_use_existing_grader_and_reward_sidecars(self):
         self.assertFalse(any(os.environ.get(k) for k in ('OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'NVIDIA_API_KEY')))
-        manifest = subprocess.check_output([os.environ.get('CI_PWSH', 'pwsh'), '-NoLogo', '-NoProfile', '-Command',
+        manifest = os.environ.get('PESTER_MANIFEST') or subprocess.check_output([os.environ.get('CI_PWSH', 'pwsh'), '-NoLogo', '-NoProfile', '-Command',
             '(Get-Module -ListAvailable Pester | Where-Object Version -EQ 6.2.0 | Select-Object -First 1).Path'],
             text=True).strip()
         self.assertTrue(manifest, 'Pinned Pester 6.2.0 required')

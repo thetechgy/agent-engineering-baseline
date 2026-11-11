@@ -1,0 +1,122 @@
+[
+  {
+    "id": "collection-numeric",
+    "file": ".github/evals/pester-admission-v1/controls/collection-numeric.Tests.ps1",
+    "outcome": "passed",
+    "detections": {
+      "enabled-integer": 1,
+      "enabled-zero": 1,
+      "quantity-offset": 1,
+      "quantity-below": 1,
+      "quantity-above": 1
+    }
+  },
+  {
+    "id": "dynamic-member",
+    "file": ".github/evals/pester-admission-v1/controls/dynamic-member.Tests.ps1",
+    "outcome": "unsupported",
+    "detections": null
+  },
+  {
+    "id": "static-member",
+    "file": ".github/evals/pester-admission-v1/controls/static-member.Tests.ps1",
+    "outcome": "unsupported",
+    "detections": null
+  },
+  {
+    "id": "method",
+    "file": ".github/evals/pester-admission-v1/controls/method.Tests.ps1",
+    "outcome": "unsupported",
+    "detections": null
+  },
+  {
+    "id": "member-write",
+    "file": ".github/evals/pester-admission-v1/controls/member-write.Tests.ps1",
+    "outcome": "unsupported",
+    "detections": null
+  },
+  {
+    "id": "index-write",
+    "file": ".github/evals/pester-admission-v1/controls/index-write.Tests.ps1",
+    "outcome": "unsupported",
+    "detections": null
+  },
+  {
+    "id": "numeric-cast",
+    "file": ".github/evals/pester-admission-v1/controls/numeric-cast.Tests.ps1",
+    "outcome": "unsupported",
+    "detections": null
+  },
+  {
+    "id": "numeric-constructor",
+    "file": ".github/evals/pester-admission-v1/controls/numeric-constructor.Tests.ps1",
+    "outcome": "unsupported",
+    "detections": null
+  },
+  {
+    "id": "numeric-array",
+    "file": ".github/evals/pester-admission-v1/controls/numeric-array.Tests.ps1",
+    "outcome": "unsupported",
+    "detections": null
+  },
+  {
+    "id": "arbitrary-type",
+    "file": ".github/evals/pester-admission-v1/controls/arbitrary-type.Tests.ps1",
+    "outcome": "unsupported",
+    "detections": null
+  },
+  {
+    "id": "protected-operand",
+    "file": ".github/evals/pester-admission-v1/controls/protected-operand.Tests.ps1",
+    "outcome": "unsupported",
+    "detections": null
+  },
+  {
+    "id": "nested-command",
+    "file": ".github/evals/pester-admission-v1/controls/nested-command.Tests.ps1",
+    "outcome": "unsupported",
+    "detections": null
+  },
+  {
+    "id": "for-hidden",
+    "file": ".github/evals/pester-admission-v1/controls/for-hidden.Tests.ps1",
+    "outcome": "unsupported",
+    "detections": null
+  },
+  {
+    "id": "arbitrary-member",
+    "file": ".github/evals/pester-admission-v1/controls/arbitrary-member.Tests.ps1",
+    "outcome": "unsupported",
+    "detections": null
+  },
+  {
+    "id": "diagnostic-count",
+    "file": ".github/evals/pester-admission-v1/controls/diagnostic-count.Tests.ps1",
+    "outcome": "failed",
+    "detections": {
+      "enabled-integer": 0,
+      "enabled-zero": 0,
+      "quantity-offset": 0,
+      "quantity-below": 0,
+      "quantity-above": 0
+    }
+  },
+  {
+    "id": "diagnostic-types",
+    "file": ".github/evals/pester-admission-v1/controls/diagnostic-types.Tests.ps1",
+    "outcome": "failed",
+    "detections": {
+      "enabled-integer": 0,
+      "enabled-zero": 0,
+      "quantity-offset": 0,
+      "quantity-below": 0,
+      "quantity-above": 0
+    }
+  },
+  {
+    "id": "malformed",
+    "file": ".github/evals/pester-admission-v1/controls/malformed.Tests.ps1",
+    "outcome": "invalid",
+    "detections": null
+  }
+]
