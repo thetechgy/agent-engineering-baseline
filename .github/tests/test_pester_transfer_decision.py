@@ -33,7 +33,7 @@ class TransferDecision(unittest.TestCase):
     def test_successors_change_only_registered_admission_and_keep_two_matched_pairs(self):
         shared = []
         for variant in ('current', 'candidate'):
-            task = selected_task('pester-return-transfer-' + variant + '-v4')
+            task = selected_task('pester-return-transfer-' + variant + '-v5')
             proposal = frozen(task)
             self.assertEqual([r['variant'] for r in proposal['schedule']],
                              [variant, 'absent', 'absent', variant, variant, 'absent'])
@@ -42,12 +42,12 @@ class TransferDecision(unittest.TestCase):
             self.assertEqual(proposal['protocol']['budget']['overshoot_reserve_usd'], 3)
             criteria = proposal['protocol']['decision_criteria']
             self.assertEqual(criteria['sha256'], hashlib.sha256((ROOT / criteria['path']).read_bytes()).hexdigest())
-            old = reports.read_json(ROOT / task.member.replace('-v4.json', '-v3.json'))
+            old = reports.read_json(ROOT / task.member.replace('-v5.json', '-v3.json'))
             changed = {k for k in task.definition if task.definition[k] != old.get(k)}
-            self.assertEqual(changed, {'id', 'protocol', 'admission_policy'})
+            self.assertEqual(changed, {'id', 'protocol', 'admission_policy', 'control_set'})
             self.assertEqual(task.definition['admission_policy'], 'pester-collection-numeric-v1')
             from evaluation_tasks import load
-            previous = load(ROOT / task.member.replace('-v4.json', '-v3.json'))
+            previous = load(ROOT / task.member.replace('-v5.json', '-v3.json'))
             before = previous.expected_members(task.definition['source_case'], 'with_skill')
             after = task.expected_members(task.definition['source_case'], 'with_skill')
             self.assertEqual({k for k in after if after[k] != before[k]},
@@ -58,11 +58,26 @@ class TransferDecision(unittest.TestCase):
             shared.append(after)
         self.assertEqual(shared[0], shared[1])
 
+    def test_control_population_uses_contract_cases_with_the_qualified_policy(self):
+        from evaluation_tasks import load
+        for variant in ('current', 'candidate'):
+            previous = load(ROOT / ('.github/evals/campaigns/pester-return-transfer-' + variant + '-controls-v4.json'))
+            self.assertGreater(len(previous.cases('oracle')) * 2, previous.definition['attempt_limit'])
+            selected = load(ROOT / ('.github/evals/campaigns/pester-return-transfer-' + variant + '-controls-v5.json'))
+            self.assertEqual(len(selected.cases('oracle')) * 2, selected.definition['attempt_limit'])
+            self.assertEqual(set(selected.controls()), {'good', 'good-loop', 'value-only', 'overrestricted', 'invalid'})
+            for mode in ('oracle', 'probe'):
+                profile, _, _ = evidence.custom_contract(selected.definition['skill'], purpose=purpose(selected, mode))
+                self.assertEqual(profile['qualification_cases'], {case:selected.definition['source_case'] for case in selected.cases(mode)})
+            selected.definition['control_set'] = 'unreviewed'
+            with self.assertRaisesRegex(ValueError, 'Unknown batch control set'):
+                selected.controls()
+
     @unittest.skipUnless(os.environ.get('APM_EXECUTABLE'), 'Pinned APM required for native deployment')
     def test_production_staging_keeps_exact_current_candidate_and_absent_deployments(self):
         shared = []
         for variant in ('current', 'candidate'):
-            task = selected_task('pester-return-transfer-' + variant + '-v4')
+            task = selected_task('pester-return-transfer-' + variant + '-v5')
             with tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 _, _, captured, _ = stage(root, task, 'live')

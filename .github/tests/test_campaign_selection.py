@@ -19,7 +19,7 @@ from codex_pilot_dispatch import REPO_ID, LIMIT
 import skill_reports as reports
 
 CAMPAIGNS = [f'pester-return-{case}-{variant}-{version}'
-             for case,version in [('development','v1'),('transfer','v3'),('transfer','v4')]
+             for case,version in [('development','v1'),('transfer','v3'),('transfer','v4'),('transfer','v5')]
              for variant in ('current','candidate')]
 
 

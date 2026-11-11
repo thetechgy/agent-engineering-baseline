@@ -1,14 +1,14 @@
 {
-  "id": "pester-transfer-decision-v1",
+  "id": "pester-transfer-decision-v2-control-selection",
   "base_commit": "f1867ba581cbabc72da60843645d0bd7e91938f6",
   "proposed_attempts": 12,
   "trials_per_arm": 3,
   "campaigns": [
-    "pester-return-transfer-current-v4",
-    "pester-return-transfer-candidate-v4"
+    "pester-return-transfer-current-v5",
+    "pester-return-transfer-candidate-v5"
   ],
   "authorized_live_attempts": 0,
-  "historical_profiles": "history/f1867ba-profile-digests.json",
+  "historical_profiles": "history/120d286-profile-digests.json",
   "files": {
     ".github/evals/campaigns/pester-return-transfer-candidate-controls-v4.json": "9a49cb24b1b23a2669f51ee2eee11c03cd1bac56b0fc2c80dc1df8c15055a589",
     ".github/evals/campaigns/pester-return-transfer-candidate-v4-protocol.json": "194dbdd7f7fdf277dedf2d712990ffe6278a7be7cc763633b80bfd68e9f50ece",
@@ -16,7 +16,7 @@
     ".github/evals/campaigns/pester-return-transfer-current-controls-v4.json": "8b545ecc5a2b9a20ef05021b47ca7e3e6361f3cb85ae7143d5f3e652ea9065c4",
     ".github/evals/campaigns/pester-return-transfer-current-v4-protocol.json": "e4da090b95b9a36792f064d726734832af8523e9aa961a9807fb6e912a9d9da9",
     ".github/evals/campaigns/pester-return-transfer-current-v4.json": "4e31604f47043d1677a8a591740e869d7cd369a47ee0a421cb0951a18f9e5554",
-    ".github/evals/campaigns/selections.json": "f1caecc1b46fe7c761e0f12667d77b740ebd6971fc2af1542d672572d49d9e74",
+    ".github/evals/campaigns/selections.json": "7f15077b2962003925600f76df0cd5a628a91e277cba6d32bc9e26b65574575f",
     ".github/evals/pester-return-contract/transfer/candidate.json": "907a12e83f00a08c56a6f73f9b275a8ded1478d30c551a918016e620fb346581",
     ".github/evals/pester-return-contract/transfer/controls/good-loop.Tests.ps1": "fba014f2e9488f54b04722eb96d5489d2bb71bd3ef028f5702cb00e30eb9d6a5",
     ".github/evals/pester-return-contract/transfer/controls/good.Tests.ps1": "547d32b9c7ced3b19031f98e650f4c88dd7140606323b43670371a05511810ef",
@@ -40,12 +40,24 @@
     ".github/evals/pester-return-contract/variants/current/powershell-pester-6/references/compatibility-and-migration.md": "6d05a890eb1c53c59755f9e560c05d65467a614d36af7c812f4a32c89b47f4e9",
     ".github/evals/pester-return-contract/variants/current/powershell-pester-6/references/execution.md": "3b80a98abfefdcd9a765da9a9436caa43de6a873e57253f1ecfb36e1095ea4b8",
     ".github/evals/pester-transfer-decision/DECISION.md": "b5fc9d7fc68129374aa485129561c7d096693e4333d732dbab77abdef535e392",
-    ".github/scripts/evaluation_campaign.py": "68ff4f754c216c3d431b24a26a5ffcd61dec18aa06eedb052ace6b24a178c838",
-    ".github/workflows/evaluation-campaign.yml": "306a32952bffdf85f2d3769218cb5392360631fb3aa5e72331ca0d0c55305085"
+    ".github/scripts/evaluation_campaign.py": "0b93b8be3cc0ce6c0a6f82d3e0ed02453525c36418ba42502f989ae79f217d69",
+    ".github/workflows/evaluation-campaign.yml": "11e09c4a28e12d5d5a43597feb63a30acc3744ebabbb547506573184aa2cea5f",
+    ".github/evals/campaigns/pester-return-transfer-current-v5.json": "a3cad0f7a0a6f09fa0c9cff1f7bc7debd4aec42ff79605a8f8018fa8a275743e",
+    ".github/evals/campaigns/pester-return-transfer-current-v5-protocol.json": "f8b5e4674af5b3dd3a14e62c26fab0def4b0b6215a103ccdb4b06fc72626c207",
+    ".github/evals/campaigns/pester-return-transfer-candidate-v5.json": "9d6f80fe24f341453ef79ed351aed97565fef2106888f7836ef8b47727a1d11e",
+    ".github/evals/campaigns/pester-return-transfer-candidate-controls-v5.json": "76d18dcf7c81ffbdbca5c42f9dbfb648e719af931bd3a12b552f37143387524b",
+    ".github/evals/campaigns/pester-return-transfer-current-controls-v5.json": "e78e094b769b636bfc16be85479c0f1fbe44daf25b79e60150bd8e019cd5f6d2",
+    ".github/evals/campaigns/pester-return-transfer-candidate-v5-protocol.json": "c981ccb66e74856152de03eb93cc00408c40ac59f32d4bb18cc8ccb70dd9064c",
+    ".github/scripts/evaluation_tasks.py": "ead7cfa799ac4539461abb7bab5190afb08171daf6254a4191dc8624ccf8c6c2"
   },
   "limits": [
     "separate matched absent baselines; indirect comparison",
     "no inference or allocation claim",
     "evidence publication is not execution qualification"
-  ]
+  ],
+  "previous": {
+    "commit": "120d286ea15a480ceb3d075385adcd7d8191ad92",
+    "manifest": "history/120d286-freeze.json",
+    "sha256": "803629b11534562c58827f46fb53e85e5aec72a973947142e9db057a0722ec3e"
+  }
 }

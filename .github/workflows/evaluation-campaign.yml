@@ -34,6 +34,8 @@ on:
           - pester-return-transfer-candidate-v3
           - pester-return-transfer-current-v4
           - pester-return-transfer-candidate-v4
+          - pester-return-transfer-current-v5
+          - pester-return-transfer-candidate-v5
       preparation_artifact:
         description: 'Credential-free fresh admission of an existing preparation artifact ID; allocation must be empty.'
         type: string
