@@ -103,9 +103,11 @@ jobs:
         run: |
           git worktree add --detach "$RUNNER_TEMP/observation-base" a8ab2e2e03a2989863a514df2a6b357c44fbc012
           git worktree add --detach "$RUNNER_TEMP/observation-reviewed" 22b36d53e9ac7e329ef8c56dc9bdcefb468ca9df
-          for source in base reviewed; do
-            "$SKILL_CURRENT_PYTHON" -B .github/scripts/qualify_cli_observation.py --source "$RUNNER_TEMP/observation-$source" --output "$RUNNER_TEMP/cli-observation/$source"
-          done
+          "$SKILL_CURRENT_PYTHON" -B .github/scripts/qualify_cli_observation.py --source "$RUNNER_TEMP/observation-base" --output "$RUNNER_TEMP/cli-observation/base"
+      - name: Acquire fresh verified Compose configuration for reviewed head
+        run: bash .github/scripts/setup-compose.sh
+      - name: Run unchanged reviewed head on the same runner
+        run: '"$SKILL_CURRENT_PYTHON" -B .github/scripts/qualify_cli_observation.py --source "$RUNNER_TEMP/observation-reviewed" --output "$RUNNER_TEMP/cli-observation/reviewed"'
       - name: Verify checkout integrity
         if: always()
         run: git diff --exit-code
@@ -117,6 +119,8 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: cli-observation-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/cli-observation/
+          path: |
+            ${{ runner.temp }}/cli-observation/*/native/evidence/
+            ${{ runner.temp }}/cli-observation/*/qualification.json
           if-no-files-found: error
           retention-days: 90
