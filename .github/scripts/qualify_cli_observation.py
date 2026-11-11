@@ -51,6 +51,7 @@ def main():
     context = docker.DockerEnvironment._EGRESS_CONTROL_SIDECAR_CONTEXT_PATH
     identity['sidecar_sources'] = {str(p.relative_to(context)): hashlib.sha256(p.read_bytes()).hexdigest()
         for p in sorted(context.rglob('*')) if p.is_file()}
+    (args.output / 'native').mkdir()
     try:
         pilot.run(args.output / 'native', probe=True)
         identity['complete'] = True
