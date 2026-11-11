@@ -1,0 +1,68 @@
+{
+  "source": "33d953536e95bc81178e726fb3fed95a80566c7d",
+  "run": 42937277850,
+  "artifact": 13820320273,
+  "archive_digest": "sha256:955f341a649e4cf998be76e9de81a14a0acea380e3ca4b2a4d248e6e574fc0fd",
+  "native_agent_deadline_seconds": 45,
+  "production_agent_seconds": 600,
+  "controls": [
+    {
+      "scenario": "empty",
+      "native_exception": "AgentTimeoutError",
+      "cleanup": true,
+      "ledger": "empty/evidence/attempt-ledger.json"
+    },
+    {
+      "scenario": "emitted",
+      "native_exception": "AgentTimeoutError",
+      "cleanup": true,
+      "ledger": "emitted/evidence/attempt-ledger.json"
+    },
+    {
+      "scenario": "secondary",
+      "native_exception": "AgentTimeoutError",
+      "cleanup": true,
+      "ledger": "secondary/evidence/attempt-ledger.json"
+    },
+    {
+      "scenario": "cancelled",
+      "native_exception": "CancelledError",
+      "cleanup": true,
+      "ledger": "cancelled/evidence/attempt-ledger.json"
+    },
+    {
+      "scenario": "normal",
+      "native_exception": null,
+      "cleanup": true,
+      "ledger": "normal/evidence/attempt-ledger.json"
+    }
+  ],
+  "reports": [
+    {
+      "scenario": "cancelled",
+      "machine_and_html_reproduced": true,
+      "cleanup_complete": true
+    },
+    {
+      "scenario": "emitted",
+      "machine_and_html_reproduced": true,
+      "cleanup_complete": true
+    },
+    {
+      "scenario": "empty",
+      "machine_and_html_reproduced": true,
+      "cleanup_complete": true
+    },
+    {
+      "scenario": "normal",
+      "machine_and_html_reproduced": true,
+      "cleanup_complete": true
+    },
+    {
+      "scenario": "secondary",
+      "machine_and_html_reproduced": true,
+      "cleanup_complete": true
+    }
+  ],
+  "inference": false
+}

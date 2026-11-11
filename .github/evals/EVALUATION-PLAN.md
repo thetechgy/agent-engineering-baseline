@@ -1,5 +1,52 @@
 # Issue #95 dependency modernization checkpoint
 
+**Keep PR #131 unmerged.** Its focused diagnostic correction is at
+[`33d9535`](https://github.com/thetechgy/agent-engineering-baseline/commit/33d953536e95bc81178e726fb3fed95a80566c7d).
+The [complete CLI-observation receipt](../../docs/evaluations/return-contract-new-allocation/cli-observation/REPORT.md)
+records authenticated historical/native artifacts, source identities, exact-head
+qualification, reproduced reports and remaining limits. PR #131's review status
+is unchanged as requested; PR #130 remains draft and unmerged.
+
+The original CLI tool commands failed DNS resolution before launching their
+delayed observer. The later missing-observation and reward-identity exceptions
+were consequences. Shared reporting now binds unscored diagnostic projections to
+native failure evidence without fabricating IDs or measurements. CLI qualification
+retains the failed command as primary and secondary failures separately.
+
+The unchanged base `a8ab2e2` and reviewed head `22b36d5` both passed the same native
+control on one fresh runner. The final implementation passed 86 hosted contracts,
+positive and missing-child native controls, five native lifecycle controls, all
+Validate jobs and the admission replay. Their relevant artifacts and reports were
+independently authenticated/reproduced. The replay still passes the reference and
+detects 5/5 mutants; the original unmeasured outcome and experiment reports remain
+unchanged. Broader CI state is recorded separately in the receipt and is not
+implied green by these successes.
+
+The DNS-specific historical failure has not been reproduced under matched
+baseline conditions. Historical resolver state is unavailable; the original
+westus2 worker differs from the fresh centralus comparison. The controlled
+missing-child case validates failure propagation, not historical DNS behavior.
+No pre-existence, harmlessness, admission regression or live-readiness conclusion
+is established for that historical DNS failure. Required CI alone does not close
+this merge decision.
+
+All paid allocations remain closed. Seven paid launches, six measured development
+outcomes and one unmeasured transfer/current outcome remain historical results;
+transfer/candidate did not run and eleven positions remain unlaunched. No model
+credentials, inference, paid gate, retry/replacement, allocation reopening,
+candidate adoption, dependency upgrade, production-default change or merge
+occurred. The diagnostic records are separate from experiment accounting.
+
+**One next action:** capture bounded resolver/route diagnostics from the actual
+CLI child in a credential-free matched control that reproduces the historical
+DNS failure, then reassess #131's merge disposition.
+
+## Previous admission checkpoint, retained as history
+
+The following checkpoint belongs to source `66d5b089747626b16ffc7d8142ac54c1652822dd`;
+its historical execution and report receipts remain unchanged.
+
+
 [PR #131](https://github.com/thetechgy/agent-engineering-baseline/pull/131) qualified the exact retained
 transfer/current submission without inference at `22b36d53e9ac7e329ef8c56dc9bdcefb468ca9df`.
 The [retrospective receipt and report](../../docs/evaluations/return-contract-new-allocation/admission/REPLAY.md)
