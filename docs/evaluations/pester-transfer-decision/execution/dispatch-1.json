@@ -1,0 +1,9 @@
+{
+  "run": 43322537842,
+  "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43322537842",
+  "campaign": "pester-return-transfer-current-v5",
+  "allocation": "campaign-040b11486ad3b7245e81fb6591f9d8dd78c32154-pester-return-transfer-current-v5-prep13827541130-usd8-306310d742101e77",
+  "source": "040b11486ad3b7245e81fb6591f9d8dd78c32154",
+  "dispatch_ref": "prep/pester-transfer-decision",
+  "authorization": "pester-transfer-decision-040b114-v1"
+}

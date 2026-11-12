@@ -1,0 +1,29 @@
+{
+  "source": "040b11486ad3b7245e81fb6591f9d8dd78c32154",
+  "publication": "ee96eece78775016e913a69b5009256383ae9f51",
+  "proposal_id": "pester-transfer-decision-040b114-v1",
+  "proposal_digest": "d53c2a59878227d479cd3ed3bde513ee12296aed5970a7d870a0a4f3bd0e4a7f",
+  "time": "2026-11-12T22:40:56.850984+00:00",
+  "rows": [
+    {
+      "campaign": "pester-return-transfer-current-v5",
+      "allocation": "campaign-040b11486ad3b7245e81fb6591f9d8dd78c32154-pester-return-transfer-current-v5-prep13827541130-usd8-306310d742101e77",
+      "preparation_artifact": 13827541130,
+      "preparation_digest": "sha256:362c314a332bd72d7583e26aecaea1e8d8c93945ef809022573eb86df4b81c58",
+      "expires_at": "2027-02-09T03:11:59Z",
+      "protocol_digest": "sha256:f8b5e4674af5b3dd3a14e62c26fab0def4b0b6215a103ccdb4b06fc72626c207",
+      "history_matches": []
+    },
+    {
+      "campaign": "pester-return-transfer-candidate-v5",
+      "allocation": "campaign-040b11486ad3b7245e81fb6591f9d8dd78c32154-pester-return-transfer-candidate-v5-prep13827444152-usd8-49c5edbc3a28e903",
+      "preparation_artifact": 13827444152,
+      "preparation_digest": "sha256:2da2a82b89f54971e279a6790b247dbc523a1d3559ae1465fdceac36b6b5be2a",
+      "expires_at": "2027-02-09T03:32:50Z",
+      "protocol_digest": "sha256:c981ccb66e74856152de03eb93cc00408c40ac59f32d4bb18cc8ccb70dd9064c",
+      "history_matches": []
+    }
+  ],
+  "authorization": "User explicitly authorized both exact dispatches and matching gates on 2026-11-12; sequence/checkpoints/limits unchanged.",
+  "pricing": "Official model page rechecked; frozen $2/$0.10/$10 input/cached/output rates unchanged. No billing cap claimed."
+}

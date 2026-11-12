@@ -1,0 +1,48 @@
+{
+  "proposal": "pester-transfer-decision-040b114-v1",
+  "source": "040b11486ad3b7245e81fb6591f9d8dd78c32154",
+  "dispatch_ref": "prep/pester-transfer-decision",
+  "time": "2026-11-12T22:59:24.008433+00:00",
+  "recommendation": "defer",
+  "reason": "Current checkpoint stopped at slot4 unsupported/test_name_template; candidate never ran. Completed matched transfer evidence for both skills and their absent baselines is missing.",
+  "authorized_slots": 12,
+  "launched": 4,
+  "measured": 3,
+  "unsupported_unmeasured": 1,
+  "unlaunched_current_pair": 2,
+  "unlaunched_candidate_pair": 6,
+  "estimated_usage_usd": 0.2374108,
+  "usage_scope": "all four new launches; producer tokens, estimate not invoice; historical spending unknown; CI separate",
+  "cleanup_complete": true,
+  "historical_and_original_grades_unchanged": true,
+  "history": [
+    {
+      "campaign": "pester-return-transfer-current-v5",
+      "allocation": "campaign-040b11486ad3b7245e81fb6591f9d8dd78c32154-pester-return-transfer-current-v5-prep13827541130-usd8-306310d742101e77",
+      "matches": [
+        {
+          "id": 43322537842,
+          "attempt": 1,
+          "source": "040b11486ad3b7245e81fb6591f9d8dd78c32154",
+          "status": "completed",
+          "conclusion": "failure"
+        }
+      ],
+      "disposition": "closed after mandatory stop"
+    },
+    {
+      "campaign": "pester-return-transfer-candidate-v5",
+      "allocation": "campaign-040b11486ad3b7245e81fb6591f9d8dd78c32154-pester-return-transfer-candidate-v5-prep13827444152-usd8-49c5edbc3a28e903",
+      "matches": [],
+      "disposition": "never dispatched or claimed; retired by mandatory sequence stop"
+    }
+  ],
+  "adoption_pr": "not prepared; frozen adoption condition unmet",
+  "production_activation": false,
+  "merges": false,
+  "retries": 0,
+  "replacements": 0,
+  "judges": false,
+  "extra_paid_work": false,
+  "next": "Dependency modernization under issue #95 remains next; clarification stays deferred. Any future skill experiment needs its own qualified identity and explicit authorization."
+}

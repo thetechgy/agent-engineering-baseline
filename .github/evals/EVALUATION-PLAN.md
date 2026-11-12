@@ -1,5 +1,31 @@
 # Pester return-contract skill decision checkpoint
 
+**Defer the exact 22-line clarification.** The explicitly approved
+`pester-transfer-decision-040b114-v1` sequence stopped during current campaign
+[43322537842](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43322537842)
+at exact source `040b11486ad3b7245e81fb6591f9d8dd78c32154`. Three submissions
+were measured: current 1/1 and its own absent 2/2 passed reference and all five
+mutants. Current's second submission was unsupported (`test_name_template`);
+its remaining two slots and all six candidate-pair slots were never launched.
+The mandatory checkpoint failed, so candidate was not dispatched or gate-approved.
+All four launches have known usage ($0.2374108 estimated), retained evidence,
+verified report reproduction and completed cleanup. No retry, replacement, judge
+or extra paid work occurred; the sequence is closed and cannot be resumed.
+
+The [authoritative execution receipt](../../docs/evaluations/pester-transfer-decision/execution/EXECUTION.md)
+and [consolidated report](../../docs/evaluations/pester-transfer-decision/execution/consolidated/report.html)
+retain the original grades and distinct historical/diagnostic cohorts. Development/
+candidate's 3/3 versus its own absent 0/3 remains encouraging. It cannot substitute
+for missing matched transfer evidence or establish candidate non-regression.
+PR #130 reports and the immutable [approved readiness receipt](../../docs/evaluations/pester-transfer-decision/RECEIPT.md)
+remain unchanged. No adoption PR, production activation or merge was performed.
+
+**One next action:** dependency modernization under issue #95, with this skill
+clarification deferred. Further transfer testing requires a separate decision,
+qualified identity and explicit paid authorization.
+
+## Pre-execution readiness checkpoint, retained as history
+
 Credential-free readiness for two fresh transfer pairs is complete at execution
 source `040b11486ad3b7245e81fb6591f9d8dd78c32154`; all paid allocations remain
 closed. The [authoritative readiness receipt](../../docs/evaluations/pester-transfer-decision/RECEIPT.md)
