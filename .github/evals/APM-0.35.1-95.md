@@ -44,3 +44,20 @@ installation or an independently overridden setuptools version.
 The historical locks and qualification evidence remain unchanged. No evaluator
 promotion, inference, paid judge, protected gate, deployment or merge is part
 of this refresh.
+
+## Source-policy compatibility
+
+Initial final-head CI rejected the refreshed hardening source revision before
+native execution: the gh policy still required 61fa1fa while APM's reviewed lock
+resolved 30a0d74. All deployed hardening file hashes are identical to main.
+The active policy now records the actual reviewed source revision; ownership
+and full deployed-file verification remain required. Historical public policy
+fingerprints retain their original revisions. Pester reporting's new v14 source
+identity binds these shared helper changes without changing any older profile,
+grading, task input, runtime pin, candidate or experiment result.
+The failed run 43330324946 and available validation diagnostics remain retained.
+Superseded validation is inconclusive; only final-head replacement checks count.
+
+Campaign source-v5 identities bind the changed shared reporting files; all prior
+entries, frozen definitions, candidate content and expected grades remain unchanged.
+No closed experiment, model setting or allocation is updated.
