@@ -47,6 +47,12 @@ def frozen_tooling(test, tooling, profile):
             registry = tooling / '.github/evals/custom-metrics.json'
             registry.parent.mkdir()
             registry.write_bytes(asset)
+        for member, digest in attachments.SUPPORT_FILES.get(profile, {}).items():
+            data = archive.read(digest + Path(member).suffix)
+            test.assertEqual(evidence.digest_bytes(data), 'sha256:' + digest)
+            target = tooling / member
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(data)
     return scripts
 
 
@@ -151,6 +157,8 @@ class AttachmentTests(unittest.TestCase):
                 implementation = [[name, 'sha256:' + digest] for name, digest in zip(attachments.MODULES, hashes)]
                 if profile in attachments.REGISTRY_DIGESTS:
                     implementation.append(['custom-metrics.json', 'sha256:' + attachments.REGISTRY_DIGESTS[profile]])
+                implementation.extend([Path(member).name, 'sha256:' + digest]
+                    for member, digest in attachments.SUPPORT_FILES.get(profile, {}).items())
                 self.assertEqual(item['report']['provenance']['implementation_digest'], evidence.identity(implementation))
                 self.assertEqual(item['record_id'], self.spec['record_id'])
                 output = report.render_report(self.result, self.captured, reviews=validated).decode()

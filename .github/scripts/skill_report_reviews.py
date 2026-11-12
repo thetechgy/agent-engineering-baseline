@@ -83,6 +83,18 @@ PROFILES['current-v4'] = ('35c04044b7c53fccebb4eff61a42e9352450065d', (
 ))
 REGISTRY_DIGESTS['current-v4'] = 'b046df671258f9579513efc33249f90ba4a3fef29acb316380db4d5d714b2f95'
 
+# Pydantic 2.14.3; previous profiles and their environments remain frozen.
+PROFILES['current-v5'] = ('0a65c5521e5e0b8721c3de44d7a2519aaf231db4', (
+    '123c9008a0c1aafec5b5295a64cae2423c917bdf18b0303520d912283ddc93ee',
+    '11e3372992824dbeca35990b03ec2e0e683837141f4c15e9e522df0a4cd71a6f',
+    '0ef65109ee32b43556ea250d787624384ee032e8e4b7467f7165211826c04f74',
+    'e6467d38ad0b44f03083dcbc2dc7ac4b6a331c69402bbbd350259217441a4655',
+))
+REGISTRY_DIGESTS['current-v5'] = '2fd9a36b07679c80138122a9290492e87a994030126f5f0d907f2a99d12aea3c'
+
+# Exact supporting code/data required by the newer validator modules.
+SUPPORT_FILES = {'current-v5': {'.github/scripts/evaluator_profiles.py': '4343ef13d8ee21e6abda83942a3b1a0a5f25f5d35671f5932d5d34c22346b9d9', '.github/evals/evaluator-candidate.json': '9049293fbee7e2518a57a66ab3bfdb90d5412fd105d9115b6b6d5a951c0cd871'}}
+
 # Profile selection never accepts executable identities from attachment data.
 # Only setup/operator configuration supplies the two reviewed environments.
 def validator_runtime(profile):
@@ -262,7 +274,7 @@ def assessment(spec, parent, capture, report, review):
     return value
 
 
-def run_validator(request, modules, capture, roots, registry, profile):
+def run_validator(request, modules, capture, roots, registry, profile, assets=None):
     executable, expected = validator_runtime(profile)
     guards = (capture.guard(),)
     temporary = evidence.write_outputs({}, input_paths=roots, input_guards=guards)
@@ -272,7 +284,7 @@ def run_validator(request, modules, capture, roots, registry, profile):
                                          input_guards=guards, rendered=modules)
         if registry is not None:
             evidence.write_outputs({}, temporary / '.github' / 'evals', input_paths=roots,
-                                   input_guards=guards, rendered={'custom-metrics.json': registry})
+                                   input_guards=guards, rendered={'custom-metrics.json': registry, **(assets or {})})
         try:
             response = subprocess.run([executable, '-I', '-B', '-c', RUNNER, str(scripts),
                                        evidence.encoded(expected).decode()],
@@ -348,6 +360,14 @@ def load(paths, captured):
             data = capture.read(tooling / '.github' / 'scripts' / name)
             require(evidence.digest_bytes(data) == 'sha256:' + digest, 'Unreviewed validator module')
             modules[name] = data
+        assets = {}
+        for member, digest in SUPPORT_FILES.get(spec['profile'], {}).items():
+            data = capture.read(tooling / member, limit=LIMIT)
+            require(evidence.digest_bytes(data) == 'sha256:' + digest, 'Unreviewed validator supporting file')
+            if member.startswith('.github/scripts/'):
+                modules[Path(member).name] = data
+            else:
+                assets[Path(member).name] = data
         registry = None
         if spec['profile'] in REGISTRY_DIGESTS:
             registry = capture.read(tooling / '.github/evals/custom-metrics.json', limit=LIMIT)
@@ -363,7 +383,7 @@ def load(paths, captured):
         require(len({row['provenance']['assessment_digest'] for row in assessments}) == len(assessments), 'Duplicate assessment document')
         require(len(capture.members) + len(capture.states) <= analysis.MAX_ENTRIES, 'Attachment entry limit')
         require(len(evidence.encoded(request)) <= LIMIT, 'Validator request limit')
-        result = run_validator(request, modules, capture, tuple((*roots, *capture.roots)), registry, spec['profile'])
+        result = run_validator(request, modules, capture, tuple((*roots, *capture.roots)), registry, spec['profile'], assets)
         require(result['review_digest'] == spec['review_digest'] and result['markdown_digest'] == spec['markdown_digest'],
                 'Validated report capture mismatch')
         require(evidence.encoded(result['report']) == evidence.encoded(evidence.parse_json(raw, limit=LIMIT)), 'Validated report changed')
