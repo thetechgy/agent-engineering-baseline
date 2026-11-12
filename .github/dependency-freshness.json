@@ -392,7 +392,7 @@
         }
       ],
       "owner": "Maintainer review",
-      "hold": "The current review overlay and historical attachment validators have separate pinned environments. Pydantic 2.14.3 is compatible; its focused review-runtime update must preserve old validator dispatch and add a reviewed profile.",
+      "hold": "Active reviews use stable Pydantic 2.14.3 in the reviewed overlay. Frozen current-v3/v4 attachments retain 2.14.2 and older profiles retain 2.13.4; those historical validators are intentionally not upgraded.",
       "group": "review-runtime compatibility group",
       "tag_prefix": "v",
       "validation": "Qualify the review lock overlay, current API/schema and redaction contracts, exact historical validators through their retained runtime, and a new reviewed attachment profile. Evaluator/Harbor/Codex upgrades are separate qualifications.",
