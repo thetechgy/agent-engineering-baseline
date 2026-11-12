@@ -367,7 +367,9 @@ class BatchSummary(BooleanContract):
 
     def controls(self):
         controls = super().controls()
-        if self.definition.get('admission_policy'):
+        control_set = self.definition.get('control_set')
+        require(control_set in (None, 'transfer-contract-v1'), 'Unknown batch control set')
+        if self.definition.get('admission_policy') and control_set is None:
             controls.update({row['id']: row for row in reports.read_json(ROOT / '.github/evals/pester-admission-v1/controls.json')})
         return controls
 

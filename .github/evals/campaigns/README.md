@@ -1,5 +1,8 @@
 # Reusable evaluation campaigns
 
+For the current two-pair transfer decision, use the [authoritative readiness receipt](../../../docs/evaluations/pester-transfer-decision/RECEIPT.md).
+The historical commands below do not authorize a new allocation or inference.
+
 The return-contract execution sequence is stopped. Earlier proposals/commands in
 this guide are historical and do not authorize another launch. See the
 [authoritative checkpoint](../EVALUATION-PLAN.md) and the

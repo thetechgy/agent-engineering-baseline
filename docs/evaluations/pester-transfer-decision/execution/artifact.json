@@ -1,0 +1,20 @@
+{
+  "id": 13991762820,
+  "node_id": "MDg6QXJ0aWZhY3QxMzk5MTc2MjgyMA==",
+  "name": "campaign-live-1",
+  "size_in_bytes": 408661,
+  "url": "https://api.github.com/repos/thetechgy/agent-engineering-baseline/actions/artifacts/13991762820",
+  "archive_download_url": "https://api.github.com/repos/thetechgy/agent-engineering-baseline/actions/artifacts/13991762820/zip",
+  "expired": false,
+  "digest": "sha256:95d857db2a35e48e15e40175ec7ab937a62874faf5a6978a50bc77ab96b5b77d",
+  "created_at": "2026-11-12T22:55:32Z",
+  "updated_at": "2026-11-12T22:55:32Z",
+  "expires_at": "2027-02-10T22:43:38Z",
+  "workflow_run": {
+    "id": 43322537842,
+    "repository_id": 1299967456,
+    "head_repository_id": 1299967456,
+    "head_branch": "prep/pester-transfer-decision",
+    "head_sha": "040b11486ad3b7245e81fb6591f9d8dd78c32154"
+  }
+}

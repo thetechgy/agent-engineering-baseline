@@ -1,0 +1,37 @@
+{
+  "method": "retained outcome plus frozen composed-runner source inspection; no execution, regrade or retrospective score",
+  "submission": {
+    "position": 4,
+    "sha256": "bc18e373251007b3420a1b946803096d6fb2988bc60889bb99ed4a11cb464fc8",
+    "bytes": 1682,
+    "copies_identical": true,
+    "measured": false,
+    "grade_unchanged": true
+  },
+  "title": "It 'returns one summary with Enabled <ExpectedEnabled> and Quantity <ExpectedQuantity> for Requested <Requested>' -ForEach @(",
+  "template_fields": [
+    "ExpectedEnabled",
+    "ExpectedQuantity",
+    "Requested"
+  ],
+  "policy_properties": [
+    "Enabled",
+    "Quantity",
+    "Expected",
+    "ExpectedQuantity",
+    "Requested",
+    "_"
+  ],
+  "unadmitted_fields": [
+    "ExpectedEnabled"
+  ],
+  "original_outcome": {
+    "classification": "unsupported",
+    "code": "test_name_template"
+  },
+  "source": "040b11486ad3b7245e81fb6591f9d8dd78c32154",
+  "guard": ".github/evals/powershell-pester-6/support/Runner.ps1:174",
+  "reason_label": ".github/scripts/codex_pilot_contract.py:26",
+  "policy": ".github/evals/pester-return-contract/transfer/profile.json",
+  "conclusion": "ExpectedEnabled is a local datarow key but is absent from the frozen public-template field allowlist. The guard rejects its test-name template before reference/mutant execution. This does not establish submission correctness or a candidate regression."
+}

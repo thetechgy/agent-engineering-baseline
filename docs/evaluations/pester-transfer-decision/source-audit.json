@@ -1,0 +1,296 @@
+{
+  "source": "040b11486ad3b7245e81fb6591f9d8dd78c32154",
+  "merge_commit": "f1867ba581cbabc72da60843645d0bd7e91938f6",
+  "reviewed_head": "33d953536e95bc81178e726fb3fed95a80566c7d",
+  "merge_and_reviewed_tree": "edbcb7bf69afb55593ecc917946cee03519d8d3c",
+  "source_verified_from_github": true,
+  "candidate_additional_lines": 22,
+  "installed_skill_unchanged": true,
+  "campaigns": [
+    {
+      "campaign": "pester-return-transfer-current-v5",
+      "definition": ".github/evals/campaigns/pester-return-transfer-current-v5.json",
+      "definition_digest": "sha256:a3cad0f7a0a6f09fa0c9cff1f7bc7debd4aec42ff79605a8f8018fa8a275743e",
+      "protocol": ".github/evals/campaigns/pester-return-transfer-current-v5-protocol.json",
+      "protocol_digest": "sha256:f8b5e4674af5b3dd3a14e62c26fab0def4b0b6215a103ccdb4b06fc72626c207",
+      "source": ".github/evals/pester-return-contract/variants/current/powershell-pester-6",
+      "skill_content": {
+        "digest": "sha256:d3641c5190c1b86d8e853adc8f3c68fe6376b5fdaf5c1d90c610a745102ff03e",
+        "algorithm": "sha256-relative-file-manifest-v1",
+        "scope": "pinned-agent-visible",
+        "provenance": "configured",
+        "manifest": [
+          {
+            "member": "SKILL.md",
+            "digest": "sha256:b57df2ff4072b2e25744ae2bd530b02bbb6ab83a22a0d374c73d48de4dc70887"
+          },
+          {
+            "member": "references/compatibility-and-migration.md",
+            "digest": "sha256:6d05a890eb1c53c59755f9e560c05d65467a614d36af7c812f4a32c89b47f4e9"
+          },
+          {
+            "member": "references/execution.md",
+            "digest": "sha256:3b80a98abfefdcd9a765da9a9436caa43de6a873e57253f1ecfb36e1095ea4b8"
+          }
+        ]
+      },
+      "schedule": [
+        {
+          "position": 1,
+          "case": "pester-transfer-batch-v1",
+          "trial": 1,
+          "variant": "current"
+        },
+        {
+          "position": 2,
+          "case": "pester-transfer-batch-v1",
+          "trial": 1,
+          "variant": "absent"
+        },
+        {
+          "position": 3,
+          "case": "pester-transfer-batch-v1",
+          "trial": 2,
+          "variant": "absent"
+        },
+        {
+          "position": 4,
+          "case": "pester-transfer-batch-v1",
+          "trial": 2,
+          "variant": "current"
+        },
+        {
+          "position": 5,
+          "case": "pester-transfer-batch-v1",
+          "trial": 3,
+          "variant": "current"
+        },
+        {
+          "position": 6,
+          "case": "pester-transfer-batch-v1",
+          "trial": 3,
+          "variant": "absent"
+        }
+      ],
+      "source_identities": {
+        "live": {
+          "grader_digest": "sha256:2036c1cbf604c1c6ae7372b32505b8da541a4830d1161ccfddd1f82df2616ad4",
+          "fixture_digest": "sha256:7fd910d264f98c74de1c108d604c1150c0c194630cbd1a5f8603ad3757dbfed7",
+          "runtime_digest": "sha256:1263c60994e9e477d45095591c3ff96c4cfa8865b41ba78001e31a03ce94c154"
+        },
+        "experiment-probe": {
+          "grader_digest": "sha256:2036c1cbf604c1c6ae7372b32505b8da541a4830d1161ccfddd1f82df2616ad4",
+          "fixture_digest": "sha256:7fd910d264f98c74de1c108d604c1150c0c194630cbd1a5f8603ad3757dbfed7",
+          "runtime_digest": "sha256:1263c60994e9e477d45095591c3ff96c4cfa8865b41ba78001e31a03ce94c154"
+        }
+      },
+      "admission_policy": "pester-collection-numeric-v1",
+      "control_set": "transfer-contract-v1",
+      "runtime": {
+        "profile": {
+          "id": "codex-authorized-campaign-v1",
+          "adapter": "codex",
+          "frozen_profile": ".github/evals/codex-pilot.json",
+          "frozen_profile_sha256": "5472136c6532db515340e8ffdfc9aae9f70b42b27fc15bf922823a784b41e9a8",
+          "capabilities": [
+            "non-forwarding-cli-probe",
+            "exact-authorized-live"
+          ],
+          "inference_enabled": false
+        },
+        "resolved": {
+          "id": "codex-pester-001-pilot-v1",
+          "case": "pester-001",
+          "skill": "powershell-pester-6",
+          "cli": "0.167.0",
+          "cli_revision": "086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a",
+          "cli_archive_sha256": "3bbf75e83de6b58aed28f2cf6e33ad423ec31fd4700a1457b94be557ea5a7c6e",
+          "cli_executable_sha256": "cdcb45aaa01d0f14e298985e09465aebccd47f64ecd298aea44814af7b62bbda",
+          "model": "gpt-6.1-sol",
+          "reasoning_effort": "high",
+          "provider": "openai",
+          "base_url": "https://api.openai.com/v1",
+          "agent_seconds": 600,
+          "cpus": 2,
+          "memory_mb": 2048,
+          "attempts_per_arm": 1,
+          "allocation_usd": 10,
+          "stop_estimate_usd": 5,
+          "prices_per_million": {
+            "input": 2,
+            "cached_input": 0.1,
+            "output": 10
+          },
+          "frozen_at": "2026-11-07",
+          "release_url": "https://github.com/openai/codex/releases/tag/rust-v0.167.0",
+          "model_documentation": "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+          "configuration_documentation": "https://developers.openai.com/codex/config-reference",
+          "helper_sha256": {
+            "bin/codex-code-mode-host": "83f3e174c2da2f1ca8655cce686e302509640d34c0f4407c1155056f64536e0f",
+            "bin/codex-exec-server": "43376b1af843ffc71726a35d53b6e2241cbe1e8c9e8ec758402460295eec2107",
+            "codex-resources/bwrap": "77360cb751ccedc5971391444ac86a8a33c15b04d6b4a6fe45f5d25496e62c4c"
+          },
+          "execution_policy": "docker-external-openai-v3",
+          "agent": "codex"
+        }
+      },
+      "criteria": {
+        "path": ".github/evals/pester-transfer-decision/DECISION.md",
+        "sha256": "b5fc9d7fc68129374aa485129561c7d096693e4333d732dbab77abdef535e392"
+      }
+    },
+    {
+      "campaign": "pester-return-transfer-candidate-v5",
+      "definition": ".github/evals/campaigns/pester-return-transfer-candidate-v5.json",
+      "definition_digest": "sha256:9d6f80fe24f341453ef79ed351aed97565fef2106888f7836ef8b47727a1d11e",
+      "protocol": ".github/evals/campaigns/pester-return-transfer-candidate-v5-protocol.json",
+      "protocol_digest": "sha256:c981ccb66e74856152de03eb93cc00408c40ac59f32d4bb18cc8ccb70dd9064c",
+      "source": ".github/evals/pester-return-contract/variants/candidate/powershell-pester-6",
+      "skill_content": {
+        "digest": "sha256:8a363074264a6e0e075421cd1f9b27295fbfa81117b45a04822d146d8b825cbf",
+        "algorithm": "sha256-relative-file-manifest-v1",
+        "scope": "pinned-agent-visible",
+        "provenance": "configured",
+        "manifest": [
+          {
+            "member": "SKILL.md",
+            "digest": "sha256:f47be3cfef96d53765027068b1115f40e40e0217f0df9a647b4314d75bd14168"
+          },
+          {
+            "member": "references/compatibility-and-migration.md",
+            "digest": "sha256:6d05a890eb1c53c59755f9e560c05d65467a614d36af7c812f4a32c89b47f4e9"
+          },
+          {
+            "member": "references/execution.md",
+            "digest": "sha256:3b80a98abfefdcd9a765da9a9436caa43de6a873e57253f1ecfb36e1095ea4b8"
+          }
+        ]
+      },
+      "schedule": [
+        {
+          "position": 1,
+          "case": "pester-transfer-batch-v1",
+          "trial": 1,
+          "variant": "candidate"
+        },
+        {
+          "position": 2,
+          "case": "pester-transfer-batch-v1",
+          "trial": 1,
+          "variant": "absent"
+        },
+        {
+          "position": 3,
+          "case": "pester-transfer-batch-v1",
+          "trial": 2,
+          "variant": "absent"
+        },
+        {
+          "position": 4,
+          "case": "pester-transfer-batch-v1",
+          "trial": 2,
+          "variant": "candidate"
+        },
+        {
+          "position": 5,
+          "case": "pester-transfer-batch-v1",
+          "trial": 3,
+          "variant": "candidate"
+        },
+        {
+          "position": 6,
+          "case": "pester-transfer-batch-v1",
+          "trial": 3,
+          "variant": "absent"
+        }
+      ],
+      "source_identities": {
+        "live": {
+          "grader_digest": "sha256:2036c1cbf604c1c6ae7372b32505b8da541a4830d1161ccfddd1f82df2616ad4",
+          "fixture_digest": "sha256:7fd910d264f98c74de1c108d604c1150c0c194630cbd1a5f8603ad3757dbfed7",
+          "runtime_digest": "sha256:2cdcee4e921d51aaf0354de3b45960823cbe35066e413912778efc5d672428ab"
+        },
+        "experiment-probe": {
+          "grader_digest": "sha256:2036c1cbf604c1c6ae7372b32505b8da541a4830d1161ccfddd1f82df2616ad4",
+          "fixture_digest": "sha256:7fd910d264f98c74de1c108d604c1150c0c194630cbd1a5f8603ad3757dbfed7",
+          "runtime_digest": "sha256:2cdcee4e921d51aaf0354de3b45960823cbe35066e413912778efc5d672428ab"
+        }
+      },
+      "admission_policy": "pester-collection-numeric-v1",
+      "control_set": "transfer-contract-v1",
+      "runtime": {
+        "profile": {
+          "id": "codex-authorized-campaign-v1",
+          "adapter": "codex",
+          "frozen_profile": ".github/evals/codex-pilot.json",
+          "frozen_profile_sha256": "5472136c6532db515340e8ffdfc9aae9f70b42b27fc15bf922823a784b41e9a8",
+          "capabilities": [
+            "non-forwarding-cli-probe",
+            "exact-authorized-live"
+          ],
+          "inference_enabled": false
+        },
+        "resolved": {
+          "id": "codex-pester-001-pilot-v1",
+          "case": "pester-001",
+          "skill": "powershell-pester-6",
+          "cli": "0.167.0",
+          "cli_revision": "086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a",
+          "cli_archive_sha256": "3bbf75e83de6b58aed28f2cf6e33ad423ec31fd4700a1457b94be557ea5a7c6e",
+          "cli_executable_sha256": "cdcb45aaa01d0f14e298985e09465aebccd47f64ecd298aea44814af7b62bbda",
+          "model": "gpt-6.1-sol",
+          "reasoning_effort": "high",
+          "provider": "openai",
+          "base_url": "https://api.openai.com/v1",
+          "agent_seconds": 600,
+          "cpus": 2,
+          "memory_mb": 2048,
+          "attempts_per_arm": 1,
+          "allocation_usd": 10,
+          "stop_estimate_usd": 5,
+          "prices_per_million": {
+            "input": 2,
+            "cached_input": 0.1,
+            "output": 10
+          },
+          "frozen_at": "2026-11-07",
+          "release_url": "https://github.com/openai/codex/releases/tag/rust-v0.167.0",
+          "model_documentation": "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+          "configuration_documentation": "https://developers.openai.com/codex/config-reference",
+          "helper_sha256": {
+            "bin/codex-code-mode-host": "83f3e174c2da2f1ca8655cce686e302509640d34c0f4407c1155056f64536e0f",
+            "bin/codex-exec-server": "43376b1af843ffc71726a35d53b6e2241cbe1e8c9e8ec758402460295eec2107",
+            "codex-resources/bwrap": "77360cb751ccedc5971391444ac86a8a33c15b04d6b4a6fe45f5d25496e62c4c"
+          },
+          "execution_policy": "docker-external-openai-v3",
+          "agent": "codex"
+        }
+      },
+      "criteria": {
+        "path": ".github/evals/pester-transfer-decision/DECISION.md",
+        "sha256": "b5fc9d7fc68129374aa485129561c7d096693e4333d732dbab77abdef535e392"
+      }
+    }
+  ],
+  "prior_allocations_closed": true,
+  "new_allocation_claimed": false,
+  "inference": false,
+  "local_contracts": {
+    "ran": 77,
+    "skipped": 1,
+    "passed": true
+  },
+  "pr131_disposition": {
+    "validate": 42937279877,
+    "admission": 42937278031,
+    "native_lifecycle": 42937277850,
+    "shared_campaign": 42937277805,
+    "native_observation": 42937270892,
+    "failed_cohort": 42937277898,
+    "reason": "Older separate twelve-slot scheduler control expected execution_infrastructure_failure; existing missing-boundary identity guard selected security_or_identity_drift. One fixture launch, eleven unlaunched, cleanup complete, all quality unavailable. Original failure retained. Not the selected shared six-slot execution path; fresh source-specific transfer preparation remains mandatory."
+  },
+  "superseded_preparations": [
+    42950478348,
+    42950510781
+  ]
+}

@@ -19,12 +19,12 @@ from codex_pilot_dispatch import REPO_ID, LIMIT
 import skill_reports as reports
 
 CAMPAIGNS = [f'pester-return-{case}-{variant}-{version}'
-             for case,version in [('development','v1'),('transfer','v3')]
+             for case,version in [('development','v1'),('transfer','v3'),('transfer','v4'),('transfer','v5')]
              for variant in ('current','candidate')]
 
 
 class SelectionContracts(unittest.TestCase):
-    def metadata(self, task, producer_index=1):
+    def metadata(self, task, producer_index=0):
         producer = selected.registration(task)['producers'][producer_index]
         repo = {'id': REPO_ID, 'full_name': protocol.REPO}
         run = {'id':7000001, 'repository':repo, 'head_repository':repo, 'head_sha':protocol.revision(),
@@ -35,7 +35,7 @@ class SelectionContracts(unittest.TestCase):
                     'expires_at':(datetime.now(timezone.utc)+timedelta(days=1)).isoformat()}
         return artifact, run
 
-    def archive(self, root, task, *, mutate=None, producer_index=1):
+    def archive(self, root, task, *, mutate=None, producer_index=0):
         artifact,run = self.metadata(task,producer_index)
         internal = selected.location(task,artifact,run)
         proposal = copy.deepcopy(protocol.frozen(task))
@@ -64,7 +64,7 @@ class SelectionContracts(unittest.TestCase):
     def test_unsafe_registry_locations_and_inspection_outputs_are_rejected_before_acquisition(self):
         task = selected.selected_task(CAMPAIGNS[0]); artifact,producer = self.metadata(task)
         for member in ('/evidence', '../evidence', 'current/../evidence', 'current\\evidence', 'current//evidence'):
-            row = copy.deepcopy(selected.registration(task)); row['producers'][1]['location'] = member
+            row = copy.deepcopy(selected.registration(task)); row['producers'][0]['location'] = member
             with patch.object(selected, 'registration', return_value=row), self.assertRaises(ValueError):
                 selected.location(task, artifact, producer)
         for output in (ROOT/'inspection', ROOT, Path(__file__).parent):
@@ -76,7 +76,7 @@ class SelectionContracts(unittest.TestCase):
     def test_all_four_admit_both_registered_layouts_to_the_same_live_consumer_path(self):
         for identity in CAMPAIGNS:
             task=selected.selected_task(identity)
-            for index in (0,1):
+            for index in range(len(selected.registration(task)['producers'])):
                 with self.subTest(identity=identity,producer=index), tempfile.TemporaryDirectory() as d:
                     root=Path(d);archive,artifact,run=self.archive(root,task,producer_index=index)
                     ref,internal=protocol.admit(archive,root/'downloaded',artifact,run,task)

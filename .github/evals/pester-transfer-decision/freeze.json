@@ -1,0 +1,63 @@
+{
+  "id": "pester-transfer-decision-v2-control-selection",
+  "base_commit": "f1867ba581cbabc72da60843645d0bd7e91938f6",
+  "proposed_attempts": 12,
+  "trials_per_arm": 3,
+  "campaigns": [
+    "pester-return-transfer-current-v5",
+    "pester-return-transfer-candidate-v5"
+  ],
+  "authorized_live_attempts": 0,
+  "historical_profiles": "history/120d286-profile-digests.json",
+  "files": {
+    ".github/evals/campaigns/pester-return-transfer-candidate-controls-v4.json": "9a49cb24b1b23a2669f51ee2eee11c03cd1bac56b0fc2c80dc1df8c15055a589",
+    ".github/evals/campaigns/pester-return-transfer-candidate-v4-protocol.json": "194dbdd7f7fdf277dedf2d712990ffe6278a7be7cc763633b80bfd68e9f50ece",
+    ".github/evals/campaigns/pester-return-transfer-candidate-v4.json": "c4528a2ca47e2eff3f81b72b4235b38da9882b79773535012597af1ccc289f54",
+    ".github/evals/campaigns/pester-return-transfer-current-controls-v4.json": "8b545ecc5a2b9a20ef05021b47ca7e3e6361f3cb85ae7143d5f3e652ea9065c4",
+    ".github/evals/campaigns/pester-return-transfer-current-v4-protocol.json": "e4da090b95b9a36792f064d726734832af8523e9aa961a9807fb6e912a9d9da9",
+    ".github/evals/campaigns/pester-return-transfer-current-v4.json": "4e31604f47043d1677a8a591740e869d7cd369a47ee0a421cb0951a18f9e5554",
+    ".github/evals/campaigns/selections.json": "7f15077b2962003925600f76df0cd5a628a91e277cba6d32bc9e26b65574575f",
+    ".github/evals/pester-return-contract/transfer/candidate.json": "907a12e83f00a08c56a6f73f9b275a8ded1478d30c551a918016e620fb346581",
+    ".github/evals/pester-return-contract/transfer/controls/good-loop.Tests.ps1": "fba014f2e9488f54b04722eb96d5489d2bb71bd3ef028f5702cb00e30eb9d6a5",
+    ".github/evals/pester-return-contract/transfer/controls/good.Tests.ps1": "547d32b9c7ced3b19031f98e650f4c88dd7140606323b43670371a05511810ef",
+    ".github/evals/pester-return-contract/transfer/controls/invalid.Tests.ps1": "158c4b55777c98fd5969894034121d6979191d6f1176f013e382dcbf0f8e16ef",
+    ".github/evals/pester-return-contract/transfer/controls/overrestricted.Tests.ps1": "880e9d8dff8a87aa4f944f57af632b175f2aaeebbcf34d32ca3d9477b3092c4e",
+    ".github/evals/pester-return-contract/transfer/controls/value-only.Tests.ps1": "60788959831ebe2daf6ac985139670960823dbc6b3b6cea9dd754c02cc570370",
+    ".github/evals/pester-return-contract/transfer/input/README.md": "a81b3299a6090f80ddabcfacdd8094d0e724a17a61943e7cfc667ef4f4209702",
+    ".github/evals/pester-return-contract/transfer/input/Subject.ps1": "6e4bd489ef16eddee84adb4291820a657a9181fa2696a8c85ec05845c5654be8",
+    ".github/evals/pester-return-contract/transfer/mutants/enabled-integer.ps1": "18388662ee77e38b6e3669136905999419eec9fec9bd4740955612b8ba8ecbe7",
+    ".github/evals/pester-return-contract/transfer/mutants/enabled-zero.ps1": "d14303c856281a6e3d3167c0d1ea2047fd6cbf72b48a11f8c333795b19f12501",
+    ".github/evals/pester-return-contract/transfer/mutants/quantity-above.ps1": "9d7ef475a9b1174b196c6cf9c8a4d1b10c4eee167d2baefd80e849d5867eb5c5",
+    ".github/evals/pester-return-contract/transfer/mutants/quantity-below.ps1": "3a57997bd1efb82b9d3313342e0e57162b9e800e0a2bb134c1989c8e827ccced",
+    ".github/evals/pester-return-contract/transfer/mutants/quantity-offset.ps1": "01f0d7c53bcbe58b824f6e22862633a60a3c62876fb8e96d40a561d8b37af961",
+    ".github/evals/pester-return-contract/transfer/profile.json": "b7f1a6937ad4622665528a3057448c177488ae417d9d36c631442b70d6e0fbc1",
+    ".github/evals/pester-return-contract/transfer/prompt.txt": "01d19f14c9281d4cf4904d080d84872b417d27778e7ae578ce3c5c422034390c",
+    ".github/evals/pester-return-contract/transfer/reference/Subject.ps1": "6e4bd489ef16eddee84adb4291820a657a9181fa2696a8c85ec05845c5654be8",
+    ".github/evals/pester-return-contract/variants/candidate/powershell-pester-6/SKILL.md": "f47be3cfef96d53765027068b1115f40e40e0217f0df9a647b4314d75bd14168",
+    ".github/evals/pester-return-contract/variants/candidate/powershell-pester-6/references/compatibility-and-migration.md": "6d05a890eb1c53c59755f9e560c05d65467a614d36af7c812f4a32c89b47f4e9",
+    ".github/evals/pester-return-contract/variants/candidate/powershell-pester-6/references/execution.md": "3b80a98abfefdcd9a765da9a9436caa43de6a873e57253f1ecfb36e1095ea4b8",
+    ".github/evals/pester-return-contract/variants/current/powershell-pester-6/SKILL.md": "b57df2ff4072b2e25744ae2bd530b02bbb6ab83a22a0d374c73d48de4dc70887",
+    ".github/evals/pester-return-contract/variants/current/powershell-pester-6/references/compatibility-and-migration.md": "6d05a890eb1c53c59755f9e560c05d65467a614d36af7c812f4a32c89b47f4e9",
+    ".github/evals/pester-return-contract/variants/current/powershell-pester-6/references/execution.md": "3b80a98abfefdcd9a765da9a9436caa43de6a873e57253f1ecfb36e1095ea4b8",
+    ".github/evals/pester-transfer-decision/DECISION.md": "b5fc9d7fc68129374aa485129561c7d096693e4333d732dbab77abdef535e392",
+    ".github/scripts/evaluation_campaign.py": "0b93b8be3cc0ce6c0a6f82d3e0ed02453525c36418ba42502f989ae79f217d69",
+    ".github/workflows/evaluation-campaign.yml": "11e09c4a28e12d5d5a43597feb63a30acc3744ebabbb547506573184aa2cea5f",
+    ".github/evals/campaigns/pester-return-transfer-current-v5.json": "a3cad0f7a0a6f09fa0c9cff1f7bc7debd4aec42ff79605a8f8018fa8a275743e",
+    ".github/evals/campaigns/pester-return-transfer-current-v5-protocol.json": "f8b5e4674af5b3dd3a14e62c26fab0def4b0b6215a103ccdb4b06fc72626c207",
+    ".github/evals/campaigns/pester-return-transfer-candidate-v5.json": "9d6f80fe24f341453ef79ed351aed97565fef2106888f7836ef8b47727a1d11e",
+    ".github/evals/campaigns/pester-return-transfer-candidate-controls-v5.json": "76d18dcf7c81ffbdbca5c42f9dbfb648e719af931bd3a12b552f37143387524b",
+    ".github/evals/campaigns/pester-return-transfer-current-controls-v5.json": "e78e094b769b636bfc16be85479c0f1fbe44daf25b79e60150bd8e019cd5f6d2",
+    ".github/evals/campaigns/pester-return-transfer-candidate-v5-protocol.json": "c981ccb66e74856152de03eb93cc00408c40ac59f32d4bb18cc8ccb70dd9064c",
+    ".github/scripts/evaluation_tasks.py": "ead7cfa799ac4539461abb7bab5190afb08171daf6254a4191dc8624ccf8c6c2"
+  },
+  "limits": [
+    "separate matched absent baselines; indirect comparison",
+    "no inference or allocation claim",
+    "evidence publication is not execution qualification"
+  ],
+  "previous": {
+    "commit": "120d286ea15a480ceb3d075385adcd7d8191ad92",
+    "manifest": "history/120d286-freeze.json",
+    "sha256": "803629b11534562c58827f46fb53e85e5aec72a973947142e9db057a0722ec3e"
+  }
+}

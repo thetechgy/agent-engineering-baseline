@@ -1,0 +1,8 @@
+{
+  "machine_analysis_reproduced": true,
+  "publication_html_reproduced": true,
+  "sha256": "79861dce94a3c43229d9bb25cbd7762ffabf5b6619c86c528f8266105a9915e9",
+  "original_packet_unchanged": true,
+  "launched_runtime_boundaries_verified": 4,
+  "no_candidate_dispatch": true
+}

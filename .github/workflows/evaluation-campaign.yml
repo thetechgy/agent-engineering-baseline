@@ -32,6 +32,10 @@ on:
           - pester-return-development-candidate-v1
           - pester-return-transfer-current-v3
           - pester-return-transfer-candidate-v3
+          - pester-return-transfer-current-v4
+          - pester-return-transfer-candidate-v4
+          - pester-return-transfer-current-v5
+          - pester-return-transfer-candidate-v5
       preparation_artifact:
         description: 'Credential-free fresh admission of an existing preparation artifact ID; allocation must be empty.'
         type: string
@@ -73,7 +77,7 @@ jobs:
           APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
           echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
       - name: Check shared contracts
-        run: 'PYTHONPATH=.github/scripts:.github/tests "$SKILL_CURRENT_PYTHON" -B -m unittest test_evaluation_campaign test_evaluation_protocol test_campaign_selection test_codex_cohort test_codex_events test_campaign_replay -v'
+        run: 'PYTHONPATH=.github/scripts:.github/tests "$SKILL_CURRENT_PYTHON" -B -m unittest test_evaluation_campaign test_evaluation_protocol test_campaign_selection test_pester_transfer_decision test_codex_cohort test_codex_events test_campaign_replay -v'
       - name: Qualify both task families through native oracle and real CLI probes
         run: |
           "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign_selection.py qualify \

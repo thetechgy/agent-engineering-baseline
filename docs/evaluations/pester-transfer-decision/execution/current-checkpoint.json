@@ -1,0 +1,282 @@
+{
+  "passed": false,
+  "source": "040b11486ad3b7245e81fb6591f9d8dd78c32154",
+  "campaign": "pester-return-transfer-current-v5",
+  "run": 43322537842,
+  "allocation": "campaign-040b11486ad3b7245e81fb6591f9d8dd78c32154-pester-return-transfer-current-v5-prep13827541130-usd8-306310d742101e77",
+  "artifact": 13991762820,
+  "artifact_digest": "sha256:95d857db2a35e48e15e40175ec7ab937a62874faf5a6978a50bc77ab96b5b77d",
+  "expires_at": "2027-02-10T22:43:38Z",
+  "evidence_location": "campaign-live/evidence",
+  "time": "2026-11-12T22:57:51.067134+00:00",
+  "ledger_state": "stopped",
+  "stop_reason": "unsupported_grading",
+  "report_failure": null,
+  "cleanup_complete": true,
+  "known_estimated_usd": 0.2374108,
+  "reports": [
+    {
+      "location": "campaign-live/evidence",
+      "machine_sha256": "02fd9ca0b3ff685c7ba87edf2fba06388210ff9f93921407c856378e75d5ccec",
+      "html_sha256": "7f8d81719ff72ddf6becbe12b9962c6256022c5aeece7ea01b4ee6b9cacdd6fc"
+    }
+  ],
+  "entries": [
+    {
+      "position": 1,
+      "trial": 1,
+      "variant": "current",
+      "state": "completed",
+      "outcome": {
+        "classification": "passed",
+        "code": "evaluated",
+        "reference_pass": 1,
+        "mutants_detected": 5,
+        "mutants_executed": 5,
+        "tests_executed": 5,
+        "variant_detections": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "variant_failure_kinds": [
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion"
+        ],
+        "pester_version": "6.2.0",
+        "powershell_version": "7.6.9"
+      },
+      "submission": {
+        "sha256": "ea03d5cc42658c8fd36d657a32845bf9839c6f32d185169c6cbfe8678bfcf9a9",
+        "bytes": 1578,
+        "file": "Subject.Tests.ps1"
+      },
+      "skill_access": {
+        "successful_full_read": true,
+        "deployed": true,
+        "interpretation": "access only; no task quality or benefit implied"
+      },
+      "usage": {
+        "trial": "campaign-pester-transfer-batch-v1-attempt1__slot1",
+        "completeness": "complete_turn",
+        "provenance": "codex-0.167-exec-json",
+        "n_input_tokens": 93366,
+        "n_cache_tokens": 75049,
+        "n_output_tokens": 2370,
+        "estimated_usd": 0.0678389,
+        "billing": "provider-reported tokens; estimate, not invoice"
+      },
+      "elapsed_seconds": 281.255,
+      "native_exception": null,
+      "cleanup": true
+    },
+    {
+      "position": 2,
+      "trial": 1,
+      "variant": "absent",
+      "state": "completed",
+      "outcome": {
+        "classification": "passed",
+        "code": "evaluated",
+        "reference_pass": 1,
+        "mutants_detected": 5,
+        "mutants_executed": 5,
+        "tests_executed": 5,
+        "variant_detections": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "variant_failure_kinds": [
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion"
+        ],
+        "pester_version": "6.2.0",
+        "powershell_version": "7.6.9"
+      },
+      "submission": {
+        "sha256": "d1f64abf55b012f6eb96063a9d78c5ba22e55c6b97a4611d1960921dd34dee81",
+        "bytes": 1582,
+        "file": "Subject.Tests.ps1"
+      },
+      "skill_access": {
+        "successful_full_read": null,
+        "deployed": false,
+        "interpretation": "access only; no task quality or benefit implied"
+      },
+      "usage": {
+        "trial": "campaign-pester-transfer-batch-v1-attempt1__slot2",
+        "completeness": "complete_turn",
+        "provenance": "codex-0.167-exec-json",
+        "n_input_tokens": 76989,
+        "n_cache_tokens": 61983,
+        "n_output_tokens": 1762,
+        "estimated_usd": 0.053830300000000005,
+        "billing": "provider-reported tokens; estimate, not invoice"
+      },
+      "elapsed_seconds": 147.743,
+      "native_exception": null,
+      "cleanup": true
+    },
+    {
+      "position": 3,
+      "trial": 2,
+      "variant": "absent",
+      "state": "completed",
+      "outcome": {
+        "classification": "passed",
+        "code": "evaluated",
+        "reference_pass": 1,
+        "mutants_detected": 5,
+        "mutants_executed": 5,
+        "tests_executed": 5,
+        "variant_detections": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "variant_failure_kinds": [
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion"
+        ],
+        "pester_version": "6.2.0",
+        "powershell_version": "7.6.9"
+      },
+      "submission": {
+        "sha256": "6cff3e117ac9c7aafa5f5a6e1c8e76d796cfab97609ac21eaa9e56e8a628fb4d",
+        "bytes": 1486,
+        "file": "Subject.Tests.ps1"
+      },
+      "skill_access": {
+        "successful_full_read": null,
+        "deployed": false,
+        "interpretation": "access only; no task quality or benefit implied"
+      },
+      "usage": {
+        "trial": "campaign-pester-transfer-batch-v1-attempt2__slot3",
+        "completeness": "complete_turn",
+        "provenance": "codex-0.167-exec-json",
+        "n_input_tokens": 77851,
+        "n_cache_tokens": 62804,
+        "n_output_tokens": 1635,
+        "estimated_usd": 0.052724400000000005,
+        "billing": "provider-reported tokens; estimate, not invoice"
+      },
+      "elapsed_seconds": 108.685,
+      "native_exception": null,
+      "cleanup": true
+    },
+    {
+      "position": 4,
+      "trial": 2,
+      "variant": "current",
+      "state": "failed",
+      "outcome": {
+        "classification": "unsupported",
+        "code": "test_name_template"
+      },
+      "submission": null,
+      "skill_access": null,
+      "usage": {
+        "trial": "campaign-pester-transfer-batch-v1-attempt2__slot4",
+        "completeness": "complete_turn",
+        "provenance": "codex-0.167-exec-json",
+        "n_input_tokens": 78858,
+        "n_cache_tokens": 60452,
+        "n_output_tokens": 2016,
+        "estimated_usd": 0.0630172,
+        "billing": "provider-reported tokens; estimate, not invoice"
+      },
+      "elapsed_seconds": 99.898,
+      "native_exception": null,
+      "cleanup": true
+    },
+    {
+      "position": 5,
+      "trial": 3,
+      "variant": "current",
+      "state": "unlaunched",
+      "outcome": null,
+      "usage": null
+    },
+    {
+      "position": 6,
+      "trial": 3,
+      "variant": "absent",
+      "state": "unlaunched",
+      "outcome": null,
+      "usage": null
+    }
+  ],
+  "supporting_submission_receipts": [
+    {
+      "position": 1,
+      "sha256": "ea03d5cc42658c8fd36d657a32845bf9839c6f32d185169c6cbfe8678bfcf9a9",
+      "bytes": 1578,
+      "copies_identical": true,
+      "measured": true,
+      "grade_unchanged": true
+    },
+    {
+      "position": 2,
+      "sha256": "d1f64abf55b012f6eb96063a9d78c5ba22e55c6b97a4611d1960921dd34dee81",
+      "bytes": 1582,
+      "copies_identical": true,
+      "measured": true,
+      "grade_unchanged": true
+    },
+    {
+      "position": 3,
+      "sha256": "6cff3e117ac9c7aafa5f5a6e1c8e76d796cfab97609ac21eaa9e56e8a628fb4d",
+      "bytes": 1486,
+      "copies_identical": true,
+      "measured": true,
+      "grade_unchanged": true
+    },
+    {
+      "position": 4,
+      "sha256": "bc18e373251007b3420a1b946803096d6fb2988bc60889bb99ed4a11cb464fc8",
+      "bytes": 1682,
+      "copies_identical": true,
+      "measured": false,
+      "grade_unchanged": true
+    }
+  ],
+  "unlaunched_positions": [
+    5,
+    6
+  ],
+  "issues": [
+    "workflow not successful",
+    "campaign incomplete/stop/report failure",
+    "slot 4: not complete measured task work",
+    "slot 4: unusable grade Missing usable task evidence"
+  ],
+  "launched_evidence_integrity_verified": true,
+  "launched": 4,
+  "measured": 3,
+  "unavailable": 1,
+  "known_usage_for_all_launches": true,
+  "launched_isolation_verified": true,
+  "report_reproduced": true,
+  "native_to_public_reproduced": true,
+  "unsupported_positions": [
+    4
+  ],
+  "checkpoint_disposition": "failed; candidate forbidden by frozen sequence; no retry/replacement"
+}

@@ -1,0 +1,1 @@
+{"evaluation_status": "failed", "entry_id": "pester-transfer-batch-v1", "details": {"outcome": {"classification": "unsupported", "code": "test_name_template"}}, "evaluation_errors": {"applicability": "Unscoreable pilot trial: unsupported"}}

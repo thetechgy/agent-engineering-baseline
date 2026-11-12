@@ -1,0 +1,55 @@
+{
+  "source": "040b11486ad3b7245e81fb6591f9d8dd78c32154",
+  "proposal": "pester-transfer-decision-040b114-v1",
+  "population_rule": "Historical, diagnostic replay and fresh matched pairs retain separate identities. No historical/replay results enter new population; absent arms are separate. Current versus candidate remains indirect.",
+  "inputs": [
+    {
+      "input": "historical-development-candidate-reliability",
+      "cohort": "historical-original",
+      "files": {
+        "inventory.json": "3af9187af7a28892f99fe7f3ffcb82c90d02d558f2edef5ac383296f11ba2a1d",
+        "public-report.json": "3cda5752455d3d940d78b80113e339850f6dfaca8f86343fdfec60e1211a9ebf"
+      }
+    },
+    {
+      "input": "historical-development-current",
+      "cohort": "historical-original",
+      "files": {
+        "inventory.json": "3af9187af7a28892f99fe7f3ffcb82c90d02d558f2edef5ac383296f11ba2a1d",
+        "public-report.json": "9e0bade6600d1df22c29b37f9c25227438d1cb6ac26b1169e49d13200ebe41c5"
+      }
+    },
+    {
+      "input": "pester-return-development-candidate-v1",
+      "cohort": "historical-original",
+      "files": {
+        "inventory.json": "dd87966208881d5480d895734f35f607702fc9738f92ef0bccca398cf29d10fa",
+        "public-report.json": "157943b8f2cb975b0b1fa6648798ad850d17e988a84e3daeb5808068262eca13"
+      }
+    },
+    {
+      "input": "pester-return-transfer-current-v3",
+      "cohort": "historical-original",
+      "files": {
+        "inventory.json": "dd87966208881d5480d895734f35f607702fc9738f92ef0bccca398cf29d10fa",
+        "public-report.json": "fd9c3c5babe2301a2456dd9c91c12d704ad7629517329cb745ac6fa0a5a23f64"
+      }
+    },
+    {
+      "input": "diagnostic-retrospective-current",
+      "cohort": "retrospective-diagnostic",
+      "files": {
+        "inventory.json": "888aeb7f40c8f9e5fcdb3d279cf993f1972f1ee7d9e40c4c1268fb7a76b53d4a",
+        "public-report.json": "60eacc23060c64d60d0f870c6e08ac87eaee0169a13a0feb95cb2531bf3834d4"
+      }
+    },
+    {
+      "input": "current-transfer-v5",
+      "cohort": "fresh-approved",
+      "files": {
+        "inventory/inventory.json": "dfb81e7ad1f774aed9610e040e27c485293840d0facd9bc7fe26a707ff025e4d",
+        "skills/powershell-pester-6/behavioral/campaign-pester-return-transfer-current-v5-lifecycle-v1-source-v6-live/public-report.json": "f73c1a7b06e31f7f071001b62dea6086082c484dce9490a010c4436cb174c5d0"
+      }
+    }
+  ]
+}

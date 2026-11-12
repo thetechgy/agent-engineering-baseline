@@ -1,0 +1,683 @@
+{
+  "definition": {
+    "id": "pester-return-transfer-current-v5",
+    "adapter": "batch-summary",
+    "skill": "powershell-pester-6",
+    "source": ".github/evals/pester-return-contract/variants/current/powershell-pester-6",
+    "source_case": "pester-transfer-batch-v1",
+    "candidate": ".github/evals/pester-return-contract/transfer/candidate.json",
+    "runtime_profile": ".github/evals/campaigns/codex-authorized-v1.json",
+    "variants": [
+      {
+        "id": "current",
+        "present": true
+      },
+      {
+        "id": "absent",
+        "present": false
+      }
+    ],
+    "trials": 3,
+    "attempt_limit": 6,
+    "stop_estimate_usd": 5,
+    "authorized_live_attempts": 0,
+    "protocol": ".github/evals/campaigns/pester-return-transfer-current-v5-protocol.json",
+    "admission_policy": "pester-collection-numeric-v1",
+    "control_set": "transfer-contract-v1"
+  },
+  "runtime": {
+    "profile": {
+      "id": "codex-authorized-campaign-v1",
+      "adapter": "codex",
+      "frozen_profile": ".github/evals/codex-pilot.json",
+      "frozen_profile_sha256": "5472136c6532db515340e8ffdfc9aae9f70b42b27fc15bf922823a784b41e9a8",
+      "capabilities": [
+        "non-forwarding-cli-probe",
+        "exact-authorized-live"
+      ],
+      "inference_enabled": false
+    },
+    "resolved": {
+      "id": "codex-pester-001-pilot-v1",
+      "case": "pester-001",
+      "skill": "powershell-pester-6",
+      "cli": "0.167.0",
+      "cli_revision": "086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a",
+      "cli_archive_sha256": "3bbf75e83de6b58aed28f2cf6e33ad423ec31fd4700a1457b94be557ea5a7c6e",
+      "cli_executable_sha256": "cdcb45aaa01d0f14e298985e09465aebccd47f64ecd298aea44814af7b62bbda",
+      "model": "gpt-6.1-sol",
+      "reasoning_effort": "high",
+      "provider": "openai",
+      "base_url": "https://api.openai.com/v1",
+      "agent_seconds": 600,
+      "cpus": 2,
+      "memory_mb": 2048,
+      "attempts_per_arm": 1,
+      "allocation_usd": 10,
+      "stop_estimate_usd": 5,
+      "prices_per_million": {
+        "input": 2,
+        "cached_input": 0.1,
+        "output": 10
+      },
+      "frozen_at": "2026-11-07",
+      "release_url": "https://github.com/openai/codex/releases/tag/rust-v0.167.0",
+      "model_documentation": "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+      "configuration_documentation": "https://developers.openai.com/codex/config-reference",
+      "helper_sha256": {
+        "bin/codex-code-mode-host": "83f3e174c2da2f1ca8655cce686e302509640d34c0f4407c1155056f64536e0f",
+        "bin/codex-exec-server": "43376b1af843ffc71726a35d53b6e2241cbe1e8c9e8ec758402460295eec2107",
+        "codex-resources/bwrap": "77360cb751ccedc5971391444ac86a8a33c15b04d6b4a6fe45f5d25496e62c4c"
+      },
+      "execution_policy": "docker-external-openai-v3",
+      "agent": "codex"
+    }
+  },
+  "revision": "040b11486ad3b7245e81fb6591f9d8dd78c32154",
+  "mode": "live",
+  "inference": true,
+  "fixture": null,
+  "entries": [
+    {
+      "position": 1,
+      "case": "pester-transfer-batch-v1",
+      "trial": 1,
+      "variant": "current",
+      "state": "completed",
+      "estimated_usd_before": 0.0,
+      "config_sha256": "654feeb93935b1b3d34e8d8e1661fbfe0cad712adb5537a23fe6d8b8fc6501e0",
+      "task_checksum": "be47d527e5a4ce90f5f2ae5811c6b5951f800e32b5262373c29ed59a0121fcb0",
+      "native_trial": "jobs/powershell-pester-6-codex-with/campaign-pester-transfer-batch-v1-attempt1__slot1",
+      "returncode": 0,
+      "cleanup": true,
+      "usage": {
+        "trial": "campaign-pester-transfer-batch-v1-attempt1__slot1",
+        "completeness": "complete_turn",
+        "provenance": "codex-0.167-exec-json",
+        "n_input_tokens": 93366,
+        "n_cache_tokens": 75049,
+        "n_output_tokens": 2370,
+        "estimated_usd": 0.0678389,
+        "billing": "provider-reported tokens; estimate, not invoice"
+      },
+      "elapsed_seconds": 281.255,
+      "native_exception": null,
+      "grading_present": true,
+      "outcome": {
+        "classification": "passed",
+        "code": "evaluated",
+        "reference_pass": 1,
+        "mutants_detected": 5,
+        "mutants_executed": 5,
+        "tests_executed": 5,
+        "variant_detections": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "variant_failure_kinds": [
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion"
+        ],
+        "pester_version": "6.2.0",
+        "powershell_version": "7.6.9"
+      },
+      "runtime_observation": {
+        "adapter": "codex-pester-001-pilot-v1",
+        "cli": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "provider": "openai",
+        "probe": false,
+        "cwd": "/workspace",
+        "output": "/workspace/output/Subject.Tests.ps1",
+        "sandbox": "danger-full-access",
+        "execution_policy": "docker-external-openai-v3",
+        "scenario": "live",
+        "boundary_before": {
+          "agent_id": "bb3d1988e0c60024942351d6aea9efcde3dbaa81d4cbddf084bdb89a3bee9288",
+          "controller_id": "b33b606e21c5e6e262d5a9b9875183f268cc11c043e28a33677971d1978e372f",
+          "agent_image": "sha256:d7a3b23a4dbc4ff65ecd52c246c048a4b45a777af81ed295a4fd641bb427e4a3",
+          "controller_image": "sha256:a52a6b5a5c9b1335c65e252090b2219976f0f4444d039cf0589245945ed520fa",
+          "agent_cap_drop": [
+            "ALL"
+          ],
+          "agent_cap_add": null,
+          "security_opt": [
+            "no-new-privileges:true"
+          ],
+          "memory": 2147483648,
+          "nano_cpus": 2000000000,
+          "pids_limit": 256,
+          "mounts": [],
+          "controller_cap_add": [
+            "CAP_NET_ADMIN",
+            "CAP_NET_RAW"
+          ],
+          "network_namespace_shared_only": true,
+          "controller_has_model_key": false,
+          "policy": "mode: controlled egress\nallowlist: /opt/egress-sidecar/allowlist.txt\n     1\tapi.openai.com",
+          "rules": "table inet gost_egress {\n\tchain output {\n\t\ttype nat hook output priority dstnat; policy accept;\n\t\tmeta mark 0x0001bf52 return\n\t\tfib daddr type local return\n\t\tip daddr 127.0.0.11 udp dport 53 return\n\t\tip daddr 127.0.0.11 tcp dport 53 return\n\t\tmeta l4proto tcp redirect to :12345\n\t}\n\n\tchain egress {\n\t\ttype filter hook output priority filter; policy accept;\n\t\tmeta mark 0x0001bf52 accept\n\t\tfib daddr type local accept\n\t\tip daddr 127.0.0.11 udp dport 53 accept\n\t\tip daddr 127.0.0.11 tcp dport 53 accept\n\t\tip protocol icmp accept\n\t\tip6 nexthdr ipv6-icmp accept\n\t\tmeta l4proto != tcp reject\n\t}\n}",
+          "policy_sha256": "df5179f5214e470bb1c23c5524002af6a04c4633010f016f4799c96fa671f76e"
+        },
+        "config_sha256": "ea4863a74ff1800a5b73aece9884bb301ea03dba702604a86bb4fe11ebdbe18f",
+        "effective_config": {
+          "model": "gpt-6.1-sol",
+          "model_provider": "pilot",
+          "model_reasoning_effort": "high",
+          "approval_policy": "never",
+          "sandbox_mode": "danger-full-access",
+          "web_search": "disabled",
+          "check_for_update_on_startup": false,
+          "features": {
+            "multi_agent": false,
+            "code_mode": true,
+            "code_mode_host": true
+          },
+          "model_providers": {
+            "pilot": {
+              "name": "OpenAI pilot",
+              "base_url": "https://api.openai.com/v1",
+              "env_key": "OPENAI_API_KEY",
+              "wire_api": "responses",
+              "request_max_retries": 0,
+              "stream_max_retries": 0,
+              "stream_idle_timeout_ms": 60000,
+              "supports_websockets": false
+            }
+          }
+        },
+        "prompt_sha256": "01d19f14c9281d4cf4904d080d84872b417d27778e7ae578ce3c5c422034390c",
+        "skill_deployed": true,
+        "cleanup": "complete",
+        "returncode": 0,
+        "boundary_after": {
+          "agent_id": "bb3d1988e0c60024942351d6aea9efcde3dbaa81d4cbddf084bdb89a3bee9288",
+          "controller_id": "b33b606e21c5e6e262d5a9b9875183f268cc11c043e28a33677971d1978e372f",
+          "agent_image": "sha256:d7a3b23a4dbc4ff65ecd52c246c048a4b45a777af81ed295a4fd641bb427e4a3",
+          "controller_image": "sha256:a52a6b5a5c9b1335c65e252090b2219976f0f4444d039cf0589245945ed520fa",
+          "agent_cap_drop": [
+            "ALL"
+          ],
+          "agent_cap_add": null,
+          "security_opt": [
+            "no-new-privileges:true"
+          ],
+          "memory": 2147483648,
+          "nano_cpus": 2000000000,
+          "pids_limit": 256,
+          "mounts": [],
+          "controller_cap_add": [
+            "CAP_NET_ADMIN",
+            "CAP_NET_RAW"
+          ],
+          "network_namespace_shared_only": true,
+          "controller_has_model_key": false,
+          "policy": "mode: controlled egress\nallowlist: /opt/egress-sidecar/allowlist.txt\n     1\tapi.openai.com",
+          "rules": "table inet gost_egress {\n\tchain output {\n\t\ttype nat hook output priority dstnat; policy accept;\n\t\tmeta mark 0x0001bf52 return\n\t\tfib daddr type local return\n\t\tip daddr 127.0.0.11 udp dport 53 return\n\t\tip daddr 127.0.0.11 tcp dport 53 return\n\t\tmeta l4proto tcp redirect to :12345\n\t}\n\n\tchain egress {\n\t\ttype filter hook output priority filter; policy accept;\n\t\tmeta mark 0x0001bf52 accept\n\t\tfib daddr type local accept\n\t\tip daddr 127.0.0.11 udp dport 53 accept\n\t\tip daddr 127.0.0.11 tcp dport 53 accept\n\t\tip protocol icmp accept\n\t\tip6 nexthdr ipv6-icmp accept\n\t\tmeta l4proto != tcp reject\n\t}\n}",
+          "policy_sha256": "df5179f5214e470bb1c23c5524002af6a04c4633010f016f4799c96fa671f76e"
+        },
+        "execution_elapsed_seconds": 50.949
+      },
+      "submission": {
+        "sha256": "ea03d5cc42658c8fd36d657a32845bf9839c6f32d185169c6cbfe8678bfcf9a9",
+        "bytes": 1578,
+        "file": "Subject.Tests.ps1"
+      },
+      "skill_access": {
+        "successful_full_read": true,
+        "deployed": true,
+        "interpretation": "access only; no task quality or benefit implied"
+      },
+      "agent_id": "bb3d1988e0c60024942351d6aea9efcde3dbaa81d4cbddf084bdb89a3bee9288"
+    },
+    {
+      "position": 2,
+      "case": "pester-transfer-batch-v1",
+      "trial": 1,
+      "variant": "absent",
+      "state": "completed",
+      "estimated_usd_before": 0.0678389,
+      "config_sha256": "5baf5671c9104ea9671e0d11ad3caf13530be5490efef0b73123d7401cd011c9",
+      "task_checksum": "da16d9aef5c804b62b89a5245b8c020c8411a98e272116be4fd1191e1872287f",
+      "native_trial": "jobs/powershell-pester-6-codex-without/campaign-pester-transfer-batch-v1-attempt1__slot2",
+      "returncode": 0,
+      "cleanup": true,
+      "usage": {
+        "trial": "campaign-pester-transfer-batch-v1-attempt1__slot2",
+        "completeness": "complete_turn",
+        "provenance": "codex-0.167-exec-json",
+        "n_input_tokens": 76989,
+        "n_cache_tokens": 61983,
+        "n_output_tokens": 1762,
+        "estimated_usd": 0.053830300000000005,
+        "billing": "provider-reported tokens; estimate, not invoice"
+      },
+      "elapsed_seconds": 147.743,
+      "native_exception": null,
+      "grading_present": true,
+      "outcome": {
+        "classification": "passed",
+        "code": "evaluated",
+        "reference_pass": 1,
+        "mutants_detected": 5,
+        "mutants_executed": 5,
+        "tests_executed": 5,
+        "variant_detections": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "variant_failure_kinds": [
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion"
+        ],
+        "pester_version": "6.2.0",
+        "powershell_version": "7.6.9"
+      },
+      "runtime_observation": {
+        "adapter": "codex-pester-001-pilot-v1",
+        "cli": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "provider": "openai",
+        "probe": false,
+        "cwd": "/workspace",
+        "output": "/workspace/output/Subject.Tests.ps1",
+        "sandbox": "danger-full-access",
+        "execution_policy": "docker-external-openai-v3",
+        "scenario": "live",
+        "boundary_before": {
+          "agent_id": "39efbd0ce0695eb0d4ddaf92494bcc15659bdcae298babccade05344d4bb2d5e",
+          "controller_id": "32f5fccff4ea08b31c6c45b440cba232cc3820acd4178d7fbcb4237b6c678424",
+          "agent_image": "sha256:dd8e11408f41161d0880d95a7bedcf6e029d319aa8c1a08c32aedd94a8a59fa6",
+          "controller_image": "sha256:a52a6b5a5c9b1335c65e252090b2219976f0f4444d039cf0589245945ed520fa",
+          "agent_cap_drop": [
+            "ALL"
+          ],
+          "agent_cap_add": null,
+          "security_opt": [
+            "no-new-privileges:true"
+          ],
+          "memory": 2147483648,
+          "nano_cpus": 2000000000,
+          "pids_limit": 256,
+          "mounts": [],
+          "controller_cap_add": [
+            "CAP_NET_ADMIN",
+            "CAP_NET_RAW"
+          ],
+          "network_namespace_shared_only": true,
+          "controller_has_model_key": false,
+          "policy": "mode: controlled egress\nallowlist: /opt/egress-sidecar/allowlist.txt\n     1\tapi.openai.com",
+          "rules": "table inet gost_egress {\n\tchain output {\n\t\ttype nat hook output priority dstnat; policy accept;\n\t\tmeta mark 0x0001bf52 return\n\t\tfib daddr type local return\n\t\tip daddr 127.0.0.11 udp dport 53 return\n\t\tip daddr 127.0.0.11 tcp dport 53 return\n\t\tmeta l4proto tcp redirect to :12345\n\t}\n\n\tchain egress {\n\t\ttype filter hook output priority filter; policy accept;\n\t\tmeta mark 0x0001bf52 accept\n\t\tfib daddr type local accept\n\t\tip daddr 127.0.0.11 udp dport 53 accept\n\t\tip daddr 127.0.0.11 tcp dport 53 accept\n\t\tip protocol icmp accept\n\t\tip6 nexthdr ipv6-icmp accept\n\t\tmeta l4proto != tcp reject\n\t}\n}",
+          "policy_sha256": "df5179f5214e470bb1c23c5524002af6a04c4633010f016f4799c96fa671f76e"
+        },
+        "config_sha256": "ea4863a74ff1800a5b73aece9884bb301ea03dba702604a86bb4fe11ebdbe18f",
+        "effective_config": {
+          "model": "gpt-6.1-sol",
+          "model_provider": "pilot",
+          "model_reasoning_effort": "high",
+          "approval_policy": "never",
+          "sandbox_mode": "danger-full-access",
+          "web_search": "disabled",
+          "check_for_update_on_startup": false,
+          "features": {
+            "multi_agent": false,
+            "code_mode": true,
+            "code_mode_host": true
+          },
+          "model_providers": {
+            "pilot": {
+              "name": "OpenAI pilot",
+              "base_url": "https://api.openai.com/v1",
+              "env_key": "OPENAI_API_KEY",
+              "wire_api": "responses",
+              "request_max_retries": 0,
+              "stream_max_retries": 0,
+              "stream_idle_timeout_ms": 60000,
+              "supports_websockets": false
+            }
+          }
+        },
+        "prompt_sha256": "01d19f14c9281d4cf4904d080d84872b417d27778e7ae578ce3c5c422034390c",
+        "skill_deployed": false,
+        "cleanup": "complete",
+        "returncode": 0,
+        "boundary_after": {
+          "agent_id": "39efbd0ce0695eb0d4ddaf92494bcc15659bdcae298babccade05344d4bb2d5e",
+          "controller_id": "32f5fccff4ea08b31c6c45b440cba232cc3820acd4178d7fbcb4237b6c678424",
+          "agent_image": "sha256:dd8e11408f41161d0880d95a7bedcf6e029d319aa8c1a08c32aedd94a8a59fa6",
+          "controller_image": "sha256:a52a6b5a5c9b1335c65e252090b2219976f0f4444d039cf0589245945ed520fa",
+          "agent_cap_drop": [
+            "ALL"
+          ],
+          "agent_cap_add": null,
+          "security_opt": [
+            "no-new-privileges:true"
+          ],
+          "memory": 2147483648,
+          "nano_cpus": 2000000000,
+          "pids_limit": 256,
+          "mounts": [],
+          "controller_cap_add": [
+            "CAP_NET_ADMIN",
+            "CAP_NET_RAW"
+          ],
+          "network_namespace_shared_only": true,
+          "controller_has_model_key": false,
+          "policy": "mode: controlled egress\nallowlist: /opt/egress-sidecar/allowlist.txt\n     1\tapi.openai.com",
+          "rules": "table inet gost_egress {\n\tchain output {\n\t\ttype nat hook output priority dstnat; policy accept;\n\t\tmeta mark 0x0001bf52 return\n\t\tfib daddr type local return\n\t\tip daddr 127.0.0.11 udp dport 53 return\n\t\tip daddr 127.0.0.11 tcp dport 53 return\n\t\tmeta l4proto tcp redirect to :12345\n\t}\n\n\tchain egress {\n\t\ttype filter hook output priority filter; policy accept;\n\t\tmeta mark 0x0001bf52 accept\n\t\tfib daddr type local accept\n\t\tip daddr 127.0.0.11 udp dport 53 accept\n\t\tip daddr 127.0.0.11 tcp dport 53 accept\n\t\tip protocol icmp accept\n\t\tip6 nexthdr ipv6-icmp accept\n\t\tmeta l4proto != tcp reject\n\t}\n}",
+          "policy_sha256": "df5179f5214e470bb1c23c5524002af6a04c4633010f016f4799c96fa671f76e"
+        },
+        "execution_elapsed_seconds": 39.976
+      },
+      "submission": {
+        "sha256": "d1f64abf55b012f6eb96063a9d78c5ba22e55c6b97a4611d1960921dd34dee81",
+        "bytes": 1582,
+        "file": "Subject.Tests.ps1"
+      },
+      "skill_access": {
+        "successful_full_read": null,
+        "deployed": false,
+        "interpretation": "access only; no task quality or benefit implied"
+      },
+      "agent_id": "39efbd0ce0695eb0d4ddaf92494bcc15659bdcae298babccade05344d4bb2d5e"
+    },
+    {
+      "position": 3,
+      "case": "pester-transfer-batch-v1",
+      "trial": 2,
+      "variant": "absent",
+      "state": "completed",
+      "estimated_usd_before": 0.1216692,
+      "config_sha256": "36517005fa47b8aacf6016536ec445c526116c7032394fecfd184f4d0d8452ff",
+      "task_checksum": "da16d9aef5c804b62b89a5245b8c020c8411a98e272116be4fd1191e1872287f",
+      "native_trial": "jobs/powershell-pester-6-codex-without/campaign-pester-transfer-batch-v1-attempt2__slot3",
+      "returncode": 0,
+      "cleanup": true,
+      "usage": {
+        "trial": "campaign-pester-transfer-batch-v1-attempt2__slot3",
+        "completeness": "complete_turn",
+        "provenance": "codex-0.167-exec-json",
+        "n_input_tokens": 77851,
+        "n_cache_tokens": 62804,
+        "n_output_tokens": 1635,
+        "estimated_usd": 0.052724400000000005,
+        "billing": "provider-reported tokens; estimate, not invoice"
+      },
+      "elapsed_seconds": 108.685,
+      "native_exception": null,
+      "grading_present": true,
+      "outcome": {
+        "classification": "passed",
+        "code": "evaluated",
+        "reference_pass": 1,
+        "mutants_detected": 5,
+        "mutants_executed": 5,
+        "tests_executed": 5,
+        "variant_detections": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "variant_failure_kinds": [
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion"
+        ],
+        "pester_version": "6.2.0",
+        "powershell_version": "7.6.9"
+      },
+      "runtime_observation": {
+        "adapter": "codex-pester-001-pilot-v1",
+        "cli": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "provider": "openai",
+        "probe": false,
+        "cwd": "/workspace",
+        "output": "/workspace/output/Subject.Tests.ps1",
+        "sandbox": "danger-full-access",
+        "execution_policy": "docker-external-openai-v3",
+        "scenario": "live",
+        "boundary_before": {
+          "agent_id": "e4da91cee81c071db54224d40b2c127141314c5987fa43213c4c8ac632f8a455",
+          "controller_id": "a539470a682ba188c9971b571be0fdf58002a1739b7ae36515fba8c8449abdad",
+          "agent_image": "sha256:071223661c55e7a01da0d19744323b44b371352dbc6e81b64d8b63b49912eb4d",
+          "controller_image": "sha256:a52a6b5a5c9b1335c65e252090b2219976f0f4444d039cf0589245945ed520fa",
+          "agent_cap_drop": [
+            "ALL"
+          ],
+          "agent_cap_add": null,
+          "security_opt": [
+            "no-new-privileges:true"
+          ],
+          "memory": 2147483648,
+          "nano_cpus": 2000000000,
+          "pids_limit": 256,
+          "mounts": [],
+          "controller_cap_add": [
+            "CAP_NET_ADMIN",
+            "CAP_NET_RAW"
+          ],
+          "network_namespace_shared_only": true,
+          "controller_has_model_key": false,
+          "policy": "mode: controlled egress\nallowlist: /opt/egress-sidecar/allowlist.txt\n     1\tapi.openai.com",
+          "rules": "table inet gost_egress {\n\tchain output {\n\t\ttype nat hook output priority dstnat; policy accept;\n\t\tmeta mark 0x0001bf52 return\n\t\tfib daddr type local return\n\t\tip daddr 127.0.0.11 udp dport 53 return\n\t\tip daddr 127.0.0.11 tcp dport 53 return\n\t\tmeta l4proto tcp redirect to :12345\n\t}\n\n\tchain egress {\n\t\ttype filter hook output priority filter; policy accept;\n\t\tmeta mark 0x0001bf52 accept\n\t\tfib daddr type local accept\n\t\tip daddr 127.0.0.11 udp dport 53 accept\n\t\tip daddr 127.0.0.11 tcp dport 53 accept\n\t\tip protocol icmp accept\n\t\tip6 nexthdr ipv6-icmp accept\n\t\tmeta l4proto != tcp reject\n\t}\n}",
+          "policy_sha256": "df5179f5214e470bb1c23c5524002af6a04c4633010f016f4799c96fa671f76e"
+        },
+        "config_sha256": "ea4863a74ff1800a5b73aece9884bb301ea03dba702604a86bb4fe11ebdbe18f",
+        "effective_config": {
+          "model": "gpt-6.1-sol",
+          "model_provider": "pilot",
+          "model_reasoning_effort": "high",
+          "approval_policy": "never",
+          "sandbox_mode": "danger-full-access",
+          "web_search": "disabled",
+          "check_for_update_on_startup": false,
+          "features": {
+            "multi_agent": false,
+            "code_mode": true,
+            "code_mode_host": true
+          },
+          "model_providers": {
+            "pilot": {
+              "name": "OpenAI pilot",
+              "base_url": "https://api.openai.com/v1",
+              "env_key": "OPENAI_API_KEY",
+              "wire_api": "responses",
+              "request_max_retries": 0,
+              "stream_max_retries": 0,
+              "stream_idle_timeout_ms": 60000,
+              "supports_websockets": false
+            }
+          }
+        },
+        "prompt_sha256": "01d19f14c9281d4cf4904d080d84872b417d27778e7ae578ce3c5c422034390c",
+        "skill_deployed": false,
+        "cleanup": "complete",
+        "returncode": 0,
+        "boundary_after": {
+          "agent_id": "e4da91cee81c071db54224d40b2c127141314c5987fa43213c4c8ac632f8a455",
+          "controller_id": "a539470a682ba188c9971b571be0fdf58002a1739b7ae36515fba8c8449abdad",
+          "agent_image": "sha256:071223661c55e7a01da0d19744323b44b371352dbc6e81b64d8b63b49912eb4d",
+          "controller_image": "sha256:a52a6b5a5c9b1335c65e252090b2219976f0f4444d039cf0589245945ed520fa",
+          "agent_cap_drop": [
+            "ALL"
+          ],
+          "agent_cap_add": null,
+          "security_opt": [
+            "no-new-privileges:true"
+          ],
+          "memory": 2147483648,
+          "nano_cpus": 2000000000,
+          "pids_limit": 256,
+          "mounts": [],
+          "controller_cap_add": [
+            "CAP_NET_ADMIN",
+            "CAP_NET_RAW"
+          ],
+          "network_namespace_shared_only": true,
+          "controller_has_model_key": false,
+          "policy": "mode: controlled egress\nallowlist: /opt/egress-sidecar/allowlist.txt\n     1\tapi.openai.com",
+          "rules": "table inet gost_egress {\n\tchain output {\n\t\ttype nat hook output priority dstnat; policy accept;\n\t\tmeta mark 0x0001bf52 return\n\t\tfib daddr type local return\n\t\tip daddr 127.0.0.11 udp dport 53 return\n\t\tip daddr 127.0.0.11 tcp dport 53 return\n\t\tmeta l4proto tcp redirect to :12345\n\t}\n\n\tchain egress {\n\t\ttype filter hook output priority filter; policy accept;\n\t\tmeta mark 0x0001bf52 accept\n\t\tfib daddr type local accept\n\t\tip daddr 127.0.0.11 udp dport 53 accept\n\t\tip daddr 127.0.0.11 tcp dport 53 accept\n\t\tip protocol icmp accept\n\t\tip6 nexthdr ipv6-icmp accept\n\t\tmeta l4proto != tcp reject\n\t}\n}",
+          "policy_sha256": "df5179f5214e470bb1c23c5524002af6a04c4633010f016f4799c96fa671f76e"
+        },
+        "execution_elapsed_seconds": 34.445
+      },
+      "submission": {
+        "sha256": "6cff3e117ac9c7aafa5f5a6e1c8e76d796cfab97609ac21eaa9e56e8a628fb4d",
+        "bytes": 1486,
+        "file": "Subject.Tests.ps1"
+      },
+      "skill_access": {
+        "successful_full_read": null,
+        "deployed": false,
+        "interpretation": "access only; no task quality or benefit implied"
+      },
+      "agent_id": "e4da91cee81c071db54224d40b2c127141314c5987fa43213c4c8ac632f8a455"
+    },
+    {
+      "position": 4,
+      "case": "pester-transfer-batch-v1",
+      "trial": 2,
+      "variant": "current",
+      "state": "failed",
+      "estimated_usd_before": 0.1743936,
+      "config_sha256": "e6cd02ff7eb914936e03925b89d4e605a3e7e9d7b70d76daeec7aba87e35ade9",
+      "task_checksum": "be47d527e5a4ce90f5f2ae5811c6b5951f800e32b5262373c29ed59a0121fcb0",
+      "native_trial": "jobs/powershell-pester-6-codex-with/campaign-pester-transfer-batch-v1-attempt2__slot4",
+      "returncode": 0,
+      "cleanup": true,
+      "usage": {
+        "trial": "campaign-pester-transfer-batch-v1-attempt2__slot4",
+        "completeness": "complete_turn",
+        "provenance": "codex-0.167-exec-json",
+        "n_input_tokens": 78858,
+        "n_cache_tokens": 60452,
+        "n_output_tokens": 2016,
+        "estimated_usd": 0.0630172,
+        "billing": "provider-reported tokens; estimate, not invoice"
+      },
+      "elapsed_seconds": 99.898,
+      "native_exception": null,
+      "grading_present": true,
+      "outcome": {
+        "classification": "unsupported",
+        "code": "test_name_template"
+      }
+    },
+    {
+      "position": 5,
+      "case": "pester-transfer-batch-v1",
+      "trial": 3,
+      "variant": "current",
+      "state": "unlaunched"
+    },
+    {
+      "position": 6,
+      "case": "pester-transfer-batch-v1",
+      "trial": 3,
+      "variant": "absent",
+      "state": "unlaunched"
+    }
+  ],
+  "state": "stopped",
+  "authorized_live_attempts": 6,
+  "protocol": {
+    "id": "pester-return-transfer-current-v5",
+    "definition": ".github/evals/campaigns/pester-return-transfer-current-v5.json",
+    "version": 1,
+    "attempt_slots": 6,
+    "trials_per_arm": 3,
+    "automatic_retries": 0,
+    "replacements": 0,
+    "concurrency": 1,
+    "primary_outcome": "reference-correct submission detecting all five seeded defects",
+    "separate_outcomes": [
+      "reference correctness",
+      "enabled-integer",
+      "enabled-zero",
+      "quantity-offset",
+      "quantity-below",
+      "quantity-above",
+      "invalid",
+      "unsupported",
+      "runtime failure",
+      "successful skill access",
+      "usage",
+      "elapsed seconds"
+    ],
+    "interpretation": "Fresh transfer decision pair; indirect current/candidate comparison through separate absent baselines. No execution authorization.",
+    "budget": {
+      "estimate_usd": 3,
+      "stop_estimate_usd": 5,
+      "overshoot_reserve_usd": 3,
+      "planning_allocation_usd": 8,
+      "billing_limit_enforced": false,
+      "pricing_verified": "2026-11-11",
+      "pricing_source": "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+      "prices_per_million": {
+        "input": 2,
+        "cached_input": 0.1,
+        "output": 10
+      }
+    },
+    "stop_rules": [
+      "estimated_usage_threshold",
+      "unknown_usage",
+      "execution_infrastructure_failure",
+      "cleanup_failure",
+      "missing_grading_evidence",
+      "missing_usable_evidence",
+      "unsupported_grading",
+      "verifier_failure",
+      "missing_native_observation",
+      "unsupported_runtime_protocol",
+      "security_or_identity_drift"
+    ],
+    "agent_seconds": 600,
+    "launch_seconds": 1200,
+    "cleanup_grace_seconds": 80,
+    "protected_environment": "skill-benchmark",
+    "authorized_live_attempts": 0,
+    "decision_criteria": {
+      "path": ".github/evals/pester-transfer-decision/DECISION.md",
+      "sha256": "b5fc9d7fc68129374aa485129561c7d096693e4333d732dbab77abdef535e392"
+    }
+  },
+  "authorization": {
+    "artifact": "13827541130",
+    "artifact_digest": "sha256:362c314a332bd72d7583e26aecaea1e8d8c93945ef809022573eb86df4b81c58",
+    "producer_run": 42951131266,
+    "revision": "040b11486ad3b7245e81fb6591f9d8dd78c32154",
+    "protocol_digest": "sha256:f8b5e4674af5b3dd3a14e62c26fab0def4b0b6215a103ccdb4b06fc72626c207",
+    "dispatch": "306310d742101e77",
+    "run_id": "43322537842",
+    "allocation": "campaign-040b11486ad3b7245e81fb6591f9d8dd78c32154-pester-return-transfer-current-v5-prep13827541130-usd8-306310d742101e77",
+    "first_dispatch": true,
+    "authentication": "github-api-producer-and-digest",
+    "definition": ".github/evals/campaigns/pester-return-transfer-current-v5.json",
+    "definition_digest": "sha256:a3cad0f7a0a6f09fa0c9cff1f7bc7debd4aec42ff79605a8f8018fa8a275743e",
+    "selection_digest": "sha256:7f15077b2962003925600f76df0cd5a628a91e277cba6d32bc9e26b65574575f",
+    "preparation_location": "preparation/evidence"
+  },
+  "preparation_digest": "sha256:06e93ca93369f97194b2b17d0701c625f9099a4615ea73675ba287d1bc6c6af0",
+  "stop_reason": "unsupported_grading",
+  "cleanup_complete": true
+}

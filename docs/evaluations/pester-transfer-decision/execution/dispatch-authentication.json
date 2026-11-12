@@ -1,0 +1,16 @@
+{
+  "artifact": "13827541130",
+  "artifact_digest": "sha256:362c314a332bd72d7583e26aecaea1e8d8c93945ef809022573eb86df4b81c58",
+  "producer_run": 42951131266,
+  "revision": "040b11486ad3b7245e81fb6591f9d8dd78c32154",
+  "protocol_digest": "sha256:f8b5e4674af5b3dd3a14e62c26fab0def4b0b6215a103ccdb4b06fc72626c207",
+  "dispatch": "306310d742101e77",
+  "run_id": "43322537842",
+  "allocation": "campaign-040b11486ad3b7245e81fb6591f9d8dd78c32154-pester-return-transfer-current-v5-prep13827541130-usd8-306310d742101e77",
+  "first_dispatch": true,
+  "authentication": "github-api-producer-and-digest",
+  "definition": ".github/evals/campaigns/pester-return-transfer-current-v5.json",
+  "definition_digest": "sha256:a3cad0f7a0a6f09fa0c9cff1f7bc7debd4aec42ff79605a8f8018fa8a275743e",
+  "selection_digest": "sha256:7f15077b2962003925600f76df0cd5a628a91e277cba6d32bc9e26b65574575f",
+  "preparation_location": "preparation/evidence"
+}

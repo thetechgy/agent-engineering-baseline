@@ -1,0 +1,13 @@
+{
+  "run": 43322537842,
+  "campaign": "pester-return-transfer-current-v5",
+  "allocation": "campaign-040b11486ad3b7245e81fb6591f9d8dd78c32154-pester-return-transfer-current-v5-prep13827541130-usd8-306310d742101e77",
+  "source": "040b11486ad3b7245e81fb6591f9d8dd78c32154",
+  "environment": "skill-benchmark",
+  "environment_id": 22271667910,
+  "authenticated_artifact": 13990937441,
+  "authenticated_digest": "sha256:4ca7499b5c47f79def5b8c4316db0348db60bf83c09d8a9e4f5752e10d6deaac",
+  "preparation": 13827541130,
+  "approved": true,
+  "time": "2026-11-12T22:44:19.434336+00:00"
+}

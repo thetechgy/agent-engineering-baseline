@@ -1,0 +1,29 @@
+{
+  "source": "040b11486ad3b7245e81fb6591f9d8dd78c32154",
+  "campaign": "pester-return-transfer-current-v5",
+  "run": 42957056157,
+  "artifact": 13827376927,
+  "archive_digest": "sha256:672491d007fe79696753da1835b3ac6a7ee97fe35ead3164a1a3f40805203210",
+  "expires_at": "2027-02-09T04:06:33Z",
+  "preparation_run": 42951131266,
+  "preparation_artifact": 13827541130,
+  "preparation_digest": "sha256:362c314a332bd72d7583e26aecaea1e8d8c93945ef809022573eb86df4b81c58",
+  "inspection": {
+    "campaign": "pester-return-transfer-current-v5",
+    "definition": ".github/evals/campaigns/pester-return-transfer-current-v5.json",
+    "definition_digest": "sha256:a3cad0f7a0a6f09fa0c9cff1f7bc7debd4aec42ff79605a8f8018fa8a275743e",
+    "selection_digest": "sha256:7f15077b2962003925600f76df0cd5a628a91e277cba6d32bc9e26b65574575f",
+    "revision": "040b11486ad3b7245e81fb6591f9d8dd78c32154",
+    "artifact": 13827541130,
+    "artifact_digest": "sha256:362c314a332bd72d7583e26aecaea1e8d8c93945ef809022573eb86df4b81c58",
+    "producer_run": 42951131266,
+    "preparation_location": "preparation/evidence",
+    "expires_at": "2027-02-09T03:11:59Z",
+    "inference": false
+  },
+  "complete_descriptors_members_deployment_verified": true,
+  "report_reproduced": true,
+  "report_sha256": "1d7dd9298f8012fbe5711f8d9f06304035d815c8e786b97575dcd21497f32425",
+  "inference": false,
+  "allocation_claimed": false
+}
