@@ -410,18 +410,13 @@
           "path": ".apm-version",
           "pattern": "^(?P<version>\\S+)$",
           "count": 1
-        },
-        {
-          "path": "apm.lock.yaml",
-          "pattern": "^apm_version: (?P<version>\\S+)$",
-          "count": 1
         }
       ],
       "owner": "Weekly reviewed APM updater",
       "hold": null,
       "group": null,
       "tag_prefix": "v",
-      "validation": "Use the existing reviewed weekly updater; review release changes, replacement hashes, regeneration and Windows/Linux bootstrap evidence."
+      "validation": "Use the reviewed weekly updater; verify release/archive/executable hashes, regeneration and Windows/Linux bootstrap evidence. apm.lock.yaml apm_version records the generator CLI, not the active bootstrap pin: the updater intentionally uses the previously reviewed CLI."
     },
     {
       "id": "git-commit",
