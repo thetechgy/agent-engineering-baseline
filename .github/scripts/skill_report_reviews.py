@@ -19,7 +19,8 @@ require = evidence.require
 LIMIT = 1024 * 1024
 REPLY_LIMIT = 16 * LIMIT
 MAX_ASSESSMENTS = 8
-PINS = {'openai': '2.54.0', 'pydantic': '2.14.2', 'skillevaluator': '0.3.0'}
+PINS = {'openai': '2.54.0', 'pydantic': '2.14.3', 'skillevaluator': '0.3.0'}
+PREVIOUS_PINS = {'openai': '2.54.0', 'pydantic': '2.14.2', 'skillevaluator': '0.3.0'}
 LEGACY_PINS = {'openai': '2.44.0', 'pydantic': '2.13.4', 'skillevaluator': '0.3.0'}
 MODULES = ('skill_review.py', 'skill_analysis.py', 'skill_evidence.py', 'skill_reports.py')
 # Reviewed source bytes, not commands or report-supplied executable identities.
@@ -86,11 +87,13 @@ REGISTRY_DIGESTS['current-v4'] = 'b046df671258f9579513efc33249f90ba4a3fef29acb31
 # Only setup/operator configuration supplies the two reviewed environments.
 def validator_runtime(profile):
     require(profile in PROFILES, 'Unsupported validator profile')
-    expected = PINS if profile in ('current-v3', 'current-v4') else LEGACY_PINS
+    previous = profile in ('current-v3', 'current-v4')
+    expected = PINS if profile == 'current-v5' else PREVIOUS_PINS if previous else LEGACY_PINS
     installed = {name: importlib.metadata.version(name) for name in PINS}
     if installed == expected:
         return sys.executable, expected
-    variable = 'SKILL_REVIEW_PYTHON' if profile in ('current-v3', 'current-v4') else 'SKILL_LEGACY_REVIEW_PYTHON'
+    variable = ('SKILL_REVIEW_PYTHON' if profile == 'current-v5' else
+                'SKILL_PREVIOUS_REVIEW_PYTHON' if previous else 'SKILL_LEGACY_REVIEW_PYTHON')
     executable = Path(os.environ.get(variable, ''))
     require(executable.is_absolute() and executable.is_file(), 'Pinned validator runtime unavailable')
     return str(executable), expected
@@ -297,7 +300,7 @@ def load(paths, captured):
         versions = {k: importlib.metadata.version(k) for k in PINS}
     except importlib.metadata.PackageNotFoundError:
         raise ValueError('Pinned validator environment required') from None
-    require(sys.version_info[:2] == (3, 13) and versions in (PINS, LEGACY_PINS), 'Pinned validator environment required')
+    require(sys.version_info[:2] == (3, 13) and versions in (PINS, PREVIOUS_PINS, LEGACY_PINS), 'Pinned validator environment required')
     import skill_review as review  # Optional dependency, never needed by a base report.
     capture = review.Capture()
     items = []; roots = []; original_records = []; seen = set()

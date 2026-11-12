@@ -28,7 +28,8 @@ FIXTURE = Path(__file__).parent / 'fixtures/skill_report_reviews/historical-modu
 def frozen_tooling(test, tooling, profile):
     """Restore the exact retained validator and data named by a profile."""
     scripts = tooling / '.github/scripts'; scripts.mkdir(parents=True)
-    archive_path = (FIXTURE.with_name('pester-packaging-modules.zip') if profile == 'current-v4' else
+    archive_path = (FIXTURE.with_name('review-runtime-v2-modules.zip') if profile == 'current-v5' else
+                    FIXTURE.with_name('pester-packaging-modules.zip') if profile == 'current-v4' else
                     FIXTURE.with_name('review-runtime-modules.zip') if profile == 'current-v3' else FIXTURE)
     with zipfile.ZipFile(archive_path) as archive:
         for name, expected in zip(attachments.MODULES, attachments.PROFILES[profile][1]):
@@ -177,7 +178,7 @@ class AttachmentTests(unittest.TestCase):
         child = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
         self.assertEqual(child.returncode, 0, child.stderr.decode())
         self.assertTrue((output_root / 'legacy-host/report.html').is_file())
-        with patch.dict(os.environ, {'SKILL_REVIEW_PYTHON': os.environ['SKILL_LEGACY_REVIEW_PYTHON']}):
+        with patch.dict(os.environ, {'SKILL_PREVIOUS_REVIEW_PYTHON': os.environ['SKILL_LEGACY_REVIEW_PYTHON']}):
             command[-1] = str(output_root / 'rejected')
             child = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
         self.assertEqual(child.returncode, 1)
