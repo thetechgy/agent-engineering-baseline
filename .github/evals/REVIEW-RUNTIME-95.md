@@ -8,7 +8,10 @@ Upstream SDK 3.50.0 is outside that environment's constraint. No override is use
 The new `current-v5` attachment profile uses the new review interpreter.
 Frozen `current-v3` and `current-v4` profiles still use their exact 2.14.2
 review environment via `SKILL_PREVIOUS_REVIEW_PYTHON`; older profiles retain
-`SKILL_LEGACY_REVIEW_PYTHON`. Source hashes, original fixture archives, saved
+`SKILL_LEGACY_REVIEW_PYTHON`. The new profile also binds evaluator_profiles.py and evaluator-candidate.json,
+which the current evidence modules import. Exact supporting bytes are staged
+with the validator and included in implementation provenance. Source hashes,
+original fixture archives, saved
 reports and grades remain unchanged. The original lock overlay is retained as
 `skillevaluator-v0.3.0-review-runtime-v1.patch`; the current overlay is regenerated
 against the same released manifest, changing only these three installed versions.

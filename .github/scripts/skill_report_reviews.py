@@ -84,8 +84,8 @@ PROFILES['current-v4'] = ('35c04044b7c53fccebb4eff61a42e9352450065d', (
 REGISTRY_DIGESTS['current-v4'] = 'b046df671258f9579513efc33249f90ba4a3fef29acb316380db4d5d714b2f95'
 
 # Pydantic 2.14.3; previous profiles and their environments remain frozen.
-PROFILES['current-v5'] = ('0a65c5521e5e0b8721c3de44d7a2519aaf231db4', (
-    '123c9008a0c1aafec5b5295a64cae2423c917bdf18b0303520d912283ddc93ee',
+PROFILES['current-v5'] = ('8aae87b806f884f760575a69d1a01a16ad03ceea', (
+    'b1b20e52192475bd758fd1d5dba1f95bf9911da9c963c13ccf650fe165e043e5',
     '11e3372992824dbeca35990b03ec2e0e683837141f4c15e9e522df0a4cd71a6f',
     '0ef65109ee32b43556ea250d787624384ee032e8e4b7467f7165211826c04f74',
     'e6467d38ad0b44f03083dcbc2dc7ac4b6a331c69402bbbd350259217441a4655',

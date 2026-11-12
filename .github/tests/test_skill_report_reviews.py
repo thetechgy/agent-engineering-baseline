@@ -192,6 +192,30 @@ class AttachmentTests(unittest.TestCase):
         self.assertEqual(child.returncode, 1)
         self.assertFalse((output_root / 'rejected').exists())
 
+    def test_new_profile_requires_exact_supporting_code_and_data(self):
+        self.fixture('current-v5')
+        for member in attachments.SUPPORT_FILES['current-v5']:
+            path = Path(self.spec['tooling']) / member
+            original = path.read_bytes()
+            path.write_bytes(original + b' ')
+            with self.subTest(member=member), self.assertRaisesRegex(ValueError, 'supporting file'):
+                self.load()
+            path.write_bytes(original)
+        self.load()
+
+    def test_new_profile_rejects_previous_dependency_environment(self):
+        self.fixture('current-v5')
+        temporary = tempfile.TemporaryDirectory(); self.addCleanup(temporary.cleanup)
+        output = Path(temporary.name) / 'rejected'
+        command = [os.environ['SKILL_LEGACY_REVIEW_PYTHON'], '-B',
+                   str(evidence.ROOT / '.github/scripts/skill_report.py'),
+                   '--input', self.spec['inputs'][0], '--analysis', self.spec['analysis'],
+                   '--analyst-review', str(self.path), '--output', str(output)]
+        with patch.dict(os.environ, {'SKILL_REVIEW_PYTHON': os.environ['SKILL_PREVIOUS_REVIEW_PYTHON']}):
+            child = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
+        self.assertEqual(child.returncode, 1)
+        self.assertFalse(output.exists())
+
     def test_custom_profile_requires_exact_retained_metric_registry(self):
         self.fixture('custom-metrics-v2')
         self.load()
