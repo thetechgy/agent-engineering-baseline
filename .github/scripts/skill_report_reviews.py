@@ -84,13 +84,13 @@ PROFILES['current-v4'] = ('35c04044b7c53fccebb4eff61a42e9352450065d', (
 REGISTRY_DIGESTS['current-v4'] = 'b046df671258f9579513efc33249f90ba4a3fef29acb316380db4d5d714b2f95'
 
 # Pydantic 2.14.3; previous profiles and their environments remain frozen.
-PROFILES['current-v5'] = ('8aae87b806f884f760575a69d1a01a16ad03ceea', (
+PROFILES['current-v5'] = ('488085d51ae1263c95c14d15dcbd58663d6d293d', (
     'b1b20e52192475bd758fd1d5dba1f95bf9911da9c963c13ccf650fe165e043e5',
     '11e3372992824dbeca35990b03ec2e0e683837141f4c15e9e522df0a4cd71a6f',
-    '0ef65109ee32b43556ea250d787624384ee032e8e4b7467f7165211826c04f74',
-    'e6467d38ad0b44f03083dcbc2dc7ac4b6a331c69402bbbd350259217441a4655',
+    '44f1275e0e0086be42bfbe221258e0170ff8fd2a63be567815c1d2695f9a16ee',
+    '91361cde84bcfd74484e07535f1bb252880d4eb9ab412b6d6cd1fe94e8b08f16',
 ))
-REGISTRY_DIGESTS['current-v5'] = '2fd9a36b07679c80138122a9290492e87a994030126f5f0d907f2a99d12aea3c'
+REGISTRY_DIGESTS['current-v5'] = '4fb8cd3f8455428b5eaeb92fb3b77873f917b6fc78f8d84ee45f473948f87871'
 
 # Exact supporting code/data required by the newer validator modules.
 SUPPORT_FILES = {'current-v5': {'.github/scripts/evaluator_profiles.py': '4343ef13d8ee21e6abda83942a3b1a0a5f25f5d35671f5932d5d34c22346b9d9', '.github/evals/evaluator-candidate.json': '9049293fbee7e2518a57a66ab3bfdb90d5412fd105d9115b6b6d5a951c0cd871'}}
