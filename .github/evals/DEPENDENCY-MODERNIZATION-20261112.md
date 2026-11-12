@@ -21,11 +21,14 @@ Targets were checked against released primary metadata:
 | --- | --- | --- | --- |
 | Shared setup/compiler in 11 workflows | uv 0.13.7 | 0.13.8 | Official Linux archive digest; production frozen installs and hash-lock compilation |
 | Linux validation and APM updater lint | rumdl 0.3.2 | 0.3.4 | Regenerated wheel hashes, clean install and repository lint |
-| Validate/skill-quality code-risk scanning | Semgrep 1.184.0 | 1.185.0 | Same 67 installed packages; only Semgrep changes; native scanner controls and reporting |
+| Validate/skill-quality code-risk scanning | Semgrep 1.184.0 | 1.185.0 | 67 installed packages; Semgrep and three compatible transitive updates; native scanner controls and reporting |
 | Independent SkillSpector SDK lock | OpenAI 3.46.0, Anthropic 2.6.0 | OpenAI 3.50.0, Anthropic 2.8.0 | Released scanner 2.13.4 unchanged; frozen sync, dependency check, clean/bad/incomplete controls |
 | Bootstrap and generated deployment, draft PR #125 | APM 0.35.0 | 0.35.1 | Existing updater run 43328758922; native candidate checks on final PR revision |
 | Review runtime, separate draft PR | Pydantic 2.14.2/core 2.50.2/inspection 0.4.4 | 2.14.3/2.50.4/0.4.5 | New attachment profile; exact old review/legacy runtimes retained |
 | Operator Compose, separate draft PR | 5.7.0 | 5.7.1 | Official executable hash; setup/cleanup and native retained/opt-in Harbor checks |
+
+The Semgrep lock also advances bracex 3.2.1 to 3.2.2, markdown-it-py 4.2.0
+to 4.3.0 and sse-starlette 3.6.0 to 3.7.0 through a fresh resolution.
 
 The scanner universal lock changes 25 package versions relative to the previous
 scanner-owned lock; it still resolves 166 packages. The clean Linux scanner install
@@ -46,7 +49,10 @@ remain independently admitted for historical evidence.
 
 The APM refresh adds v14 for its shared source-policy update. The new
 `pester-effectiveness-v15` identity binds changed shared reporting/tooling
-bytes while keeping v13 and every earlier registry value unchanged. Its grader,
+bytes while keeping v13 and every earlier registry value unchanged.
+Campaign source-v6 profiles record the same shared maintenance. No earlier
+source-v5 or experiment identity is rewritten.
+Its grader,
 fixtures, cases, metrics, runtime/model selectors and candidate skill bytes are
 unchanged. It grants no experiment continuation or adoption. The changed checkout
 cannot consume an old preparation as if its source identity were unchanged.

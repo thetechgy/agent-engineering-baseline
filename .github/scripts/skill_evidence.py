@@ -45,7 +45,7 @@ SCANNER_RUNTIME_PREVIOUS = {**SCANNER_RUNTIME_UNPATCHED,
 SCANNER_RUNTIME = {**SCANNER_RUNTIME_PREVIOUS,
                    "versions": {**SCANNER_RUNTIME_PREVIOUS["versions"], "semgrep": "1.185.0"},
                    "skillspector_lock": "sha256:3352c462434ed1d906069b710bfba8b352c255139a0c5718f4edb6ad4051be2b",
-                   "semgrep_lock": "sha256:a69cbb392cac553fa1bc627bccc6329930b1bb30c1456b4897a3d60c7cf835ee"}
+                   "semgrep_lock": "sha256:d0c13313fb643f578a8116375078d344bfcf74748380ca88acd6e0d7d467c520"}
 SCANNER_RUNTIME_CURRENT_UNPATCHED = {key: value for key, value in SCANNER_RUNTIME.items()
                                      if key != "adapter_patch"}
 SCANNER_RUNTIMES = (SCANNER_RUNTIME_UNPATCHED, SCANNER_RUNTIME_PREVIOUS,
