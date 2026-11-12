@@ -1,5 +1,33 @@
 # Issue #95 dependency modernization checkpoint
 
+Dependency modernization is the current work item. The
+[November 12 consumer inventory and implementation receipt](DEPENDENCY-MODERNIZATION-20261112.md)
+records active production, opt-in, review/scanner, frozen and ambient dependencies,
+implemented compatible updates, security applicability and precise exit conditions.
+Focused draft PRs and final-head checks are linked from
+[issue #95](https://github.com/thetechgy/agent-engineering-baseline/issues/95).
+The existing APM refresh reuses [PR #125](https://github.com/thetechgy/agent-engineering-baseline/pull/125).
+No merge or production evaluator promotion is authorized.
+
+[PR #132](https://github.com/thetechgy/agent-engineering-baseline/pull/132)
+records the deferred Pester clarification: transfer stopped at
+unsupported/test_name_template and candidate transfer behavior remains unmeasured.
+Development evidence remains useful. PRs #130 and #132, historical evidence,
+frozen experiments and candidate content are unchanged; no experiment resumes.
+Template admission, workflow-trigger/concurrency cleanup and further agent-runtime
+integrations remain in their existing tracking and are outside this pass.
+
+The 0.8.0 implementation in merged PR #119 remains opt-in. Active workflows still
+execute SkillEvaluator 0.3.0/Harbor 0.13.2; the older versions are not
+historical-only. Ordinary latest-stable PowerShell validation remains separate
+from frozen PowerShell/Pester evaluation environments and model/reasoning selectors.
+
+**One next action:** review the completed compatible dependency PRs and their
+exact-head validation; retain the documented constrained groups until their
+specific support or adoption conditions are met.
+
+## PR #130 and #131 checkpoint, retained as history
+
 The latest authorized return-contract allocation is stopped and closed. Development/
 candidate run 42908510730 completed six measured outcomes: candidate 3/3, its
 matched absent arm 0/3. All references passed; absent missed integer-result.
@@ -524,7 +552,7 @@ snapshots beyond the Actions artifact retention period; never relabel v1 or froz
 analyst profiles under changed validators. Upstream
 Harbor, Python and LiteLLM constraints remain the dependency inventory's obligations.
 
-## Next group
+## Completed scanner group and historical next milestone
 
 The independent scanner group is merged through [PR #120](https://github.com/thetechgy/agent-engineering-baseline/pull/120):
 SkillSpector 2.13.4 and Semgrep 1.184.0, with controlled collection/report evidence

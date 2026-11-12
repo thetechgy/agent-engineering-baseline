@@ -547,8 +547,8 @@ use reviewed hashed locks in [.github/requirements](.github/requirements). See t
 [follow-up qualification](.github/evals/FEASIBLE-REFRESH-95.md) and
 [scanner modernization evidence](.github/evals/SCANNER-MODERNIZATION-95.md) for adopted updates,
 holds and validation limits. CI rejects unverified Python
-installers and records tool versions and dependency inventories. All three locks use
-uv 0.13.7. Semgrep installation requires wheels; regenerate its lock for Python
+installers and records tool versions and dependency inventories. The requirements locks use
+uv 0.13.8. Semgrep installation requires wheels; regenerate its lock for Python
 3.13 and the Linux x86_64 / glibc 2.34 wheel floor:
 
 ```bash
@@ -572,7 +572,7 @@ separate evidence; a PyPI patch can precede a public GitHub tag. See the
 [Semgrep 1.182.1 assessment](.github/evals/SEMGREP-1.182.1.md) for artifact
 verification, scanner comparisons, and residual MCP dependency risk.
 
-Evaluation setup pins uv 0.13.7 and retains the managed Python 3.13 selector.
+Evaluation setup pins uv 0.13.8 and retains the managed Python 3.13 selector.
 Fresh installations select a managed Python 3.13 patch release; the exact interpreter version
 is recorded in `versions.json`. Historical evaluation records retain their original
 runtime identities, including Python 3.13.15; they are not rebaselined by this update.

@@ -13,7 +13,7 @@ case "$(realpath -m "$tool_root")/" in
 esac
 mkdir -p "$tool_root/bin" "$tool_root/dependencies"
 chmod 700 "$tool_root"
-test "$(uv --version | awk '{print $2}')" = '0.13.7'
+test "$(uv --version | awk '{print $2}')" = '0.13.8'
 export UV_CACHE_DIR="$tool_root/uv-cache"
 export UV_PYTHON_INSTALL_DIR="$tool_root/python"
 export XDG_CACHE_HOME="$tool_root/cache"
@@ -130,7 +130,7 @@ if [ "$kind" = quality ]; then
   git -C "$tool_root/skillspector" checkout --quiet --detach FETCH_HEAD
   test "$(git -C "$tool_root/skillspector" rev-parse HEAD)" = "$skillspector_revision"
   # Scanner-owned compatible lock; evaluator and historical environments are untouched.
-  skillspector_lock_sha256=8c922f8c222c28c7e02b1dc856a2b9464fb2d768ddae944ee9f8131452bfeee9
+  skillspector_lock_sha256=3352c462434ed1d906069b710bfba8b352c255139a0c5718f4edb6ad4051be2b
   printf '%s  %s\n' "$skillspector_lock_sha256" "$repository_root/.github/locks/skillspector.lock" | sha256sum --check --strict
   cp "$repository_root/.github/locks/skillspector.lock" "$tool_root/skillspector/uv.lock"
   uv sync --project "$tool_root/skillspector" --python 3.13 --managed-python --frozen --no-dev

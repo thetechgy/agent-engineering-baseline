@@ -271,6 +271,44 @@ def inventory(root):
                         [{"path": ".github/scripts/skill_reports.py", "line": line}]))
         if keys:
             rows[-1]["sources"].append({"path": fixture_path, "line": fixture_source.count("\n", 0, matches[0].start()) + 1})
+    # Existing informational rows expose independently owned environments. These
+    # are source identities, not a second release/advisory polling mechanism.
+    for id, label, path, note in (
+        ("candidate-environment", "Opt-in evaluator (not production adoption)",
+         ".github/evals/evaluator-candidate.json",
+         "Merged opt-in path; frozen qualification and experiment inputs remain unchanged. "
+         "Harbor/Python/LiteLLM bounds come from the released evaluator manifest. "
+         "SDK and other transitive freshness is not polled independently here."),
+        ("pilot-environment", "Frozen CLI pilot and campaign selectors",
+         ".github/evals/codex-pilot.json",
+         "Frozen Codex/model/reasoning selectors, not a production default or freshness approval. "
+         "PRs #130 and #132 remain separate; transfer stopped at unsupported/test_name_template. "
+         "Do not resume or repair admission in dependency maintenance."),
+        ("scanner-environment", "Independent SkillSpector SDK environment",
+         ".github/locks/skillspector.lock",
+         "Active quality scans use this independently owned lock, not the evaluator SDK. "
+         "Unselected dev/optional packages in the universal lock are not installed scanner counts. "
+         "No individual transitive or OS advisory monitoring is claimed."),
+    ):
+        try:
+            source = read(root, path)
+            if id == "scanner-environment":
+                packages = tomllib.loads(source)["package"]
+                value = {p["name"]: p["version"] for p in packages if p["name"] in
+                         ("skillspector", "openai", "anthropic", "pydantic", "langchain-openai", "mcp")}
+            else:
+                profile = json.loads(source)
+                keys = ("version", "python", "dependencies") if id == "candidate-environment" else (
+                    "cli", "model", "reasoning_effort", "execution_policy")
+                value = {key: profile[key] for key in keys}
+            rows.append(row(dict(id=id, label=label, owner="Maintainer environment qualification",
+                                 hold=note, group="Independent runtime profiles", validation=note),
+                            {"version": None, "revision": None, "value": json.dumps(value, sort_keys=True)},
+                            [{"path": path, "line": 1}]))
+        except (DiscoveryError, ValueError, KeyError, TypeError) as error:
+            rows.append(row(dict(id=id, label=label, owner="Maintainer environment qualification"),
+                            {"version": None, "revision": None, "value": "Unknown"}, [],
+                            [str(error) if isinstance(error, DiscoveryError) else "invalid_environment_profile"]))
     # Configuration declares routine version coverage, not the independent security setting.
     dependabot = read(root, ".github/dependabot.yml")
     mechanisms = {"dependabot_routine_ecosystems": sorted(re.findall(r"package-ecosystem:\s*([a-z-]+)", dependabot)),

@@ -69,11 +69,20 @@ class ScannerRuntimeTests(unittest.TestCase):
 
     def test_unpatched_scanner_profile_keeps_its_original_identity(self):
         self.versions['scanner_runtime'] = copy.deepcopy(evidence.SCANNER_RUNTIME_UNPATCHED)
+        self.versions['scanners'] = copy.deepcopy(evidence.SCANNER_RUNTIME_UNPATCHED['versions'])
         self.write_versions(self.versions)
         public = evidence.project(evidence.normalize_static(self.native, 'podman'))
         self.assertEqual(public['scanner_runtime'], evidence.SCANNER_RUNTIME_UNPATCHED)
         self.assertNotIn('adapter_patch', public['scanner_runtime'])
         self.assertNotIn('coverage_caveats', public)
+
+    def test_previous_scanner_lock_remains_admitted_without_relabeling(self):
+        self.versions['scanner_runtime'] = copy.deepcopy(evidence.SCANNER_RUNTIME_PREVIOUS)
+        self.versions['scanners'] = copy.deepcopy(evidence.SCANNER_RUNTIME_PREVIOUS['versions'])
+        self.write_versions(self.versions)
+        public = evidence.project(evidence.normalize_static(self.native, 'podman'))
+        self.assertEqual(public['scanner_runtime'], evidence.SCANNER_RUNTIME_PREVIOUS)
+        self.assertNotEqual(public['scanner_runtime'], evidence.SCANNER_RUNTIME)
 
     def test_historical_records_keep_their_identity_without_invented_scanner_versions(self):
         original = evidence.normalize_static(self.native, 'podman')

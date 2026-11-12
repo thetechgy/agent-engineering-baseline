@@ -148,7 +148,8 @@ class FreshnessTests(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         root = Path(temporary.name)
-        for name in (fresh.CONFIG, "apm.yml", "apm.lock.yaml", ".apm-version", ".github/dependabot.yml"):
+        for name in (fresh.CONFIG, "apm.yml", "apm.lock.yaml", ".apm-version", ".github/dependabot.yml",
+                     ".github/evals/evaluator-candidate.json", ".github/evals/codex-pilot.json"):
             target = root / name
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / name, target)
@@ -168,6 +169,17 @@ class FreshnessTests(unittest.TestCase):
                              "evaluation-runtime compatibility group" if id == "harbor" else "review-runtime compatibility group")
             self.assertTrue(row["policy"]["hold"])
 
+    def test_independent_environments_are_visible_without_production_adoption(self):
+        _, rows, _ = fresh.inventory(ROOT)
+        by_id = {row['id']: row for row in rows}
+        self.assertEqual(by_id['skillevaluator']['pin']['version'], '0.3.0')
+        candidate = json.loads(by_id['candidate-environment']['pin']['value'])
+        self.assertEqual(candidate['version'], '0.8.0')
+        self.assertEqual(candidate['dependencies']['harbor'], '0.24.0')
+        scanner = json.loads(by_id['scanner-environment']['pin']['value'])
+        self.assertEqual(scanner['openai'], '3.50.0')
+        self.assertIn('not production adoption', by_id['candidate-environment']['label'])
+
     def test_review_lock_overlay_disagreement_remains_visible(self):
         root = self.scratch()
         overlay = root / '.github/patches/skillevaluator-v0.3.0-review-runtime.patch'
@@ -181,7 +193,8 @@ class FreshnessTests(unittest.TestCase):
         definition = next(item for item in fresh.load_config(ROOT) if item["id"] == "uv")
         pin, sources = fresh.extract(ROOT, definition)
         self.assertEqual({source["path"] for source in sources}, {
-            ".github/workflows/validate.yml", ".github/workflows/benchmark-skills.yml",
+            *(p.relative_to(ROOT).as_posix() for p in (ROOT / '.github/workflows').glob('*.yml')
+              if 'uses: astral-sh/setup-uv@' in p.read_text()),
             ".github/scripts/setup-skillevaluator.sh",
         })
         for selector in definition["sources"]:
