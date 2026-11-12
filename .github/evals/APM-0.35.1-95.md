@@ -61,3 +61,12 @@ Superseded validation is inconclusive; only final-head replacement checks count.
 Campaign source-v5 identities bind the changed shared reporting files; all prior
 entries, frozen definitions, candidate content and expected grades remain unchanged.
 No closed experiment, model setting or allocation is updated.
+
+## Generator provenance and the executing CLI
+
+The updater intentionally generates with reviewed CLI 0.35.0 while proposing
+bootstrap CLI 0.35.1. The generated lock's `apm_version` therefore remains 0.35.0;
+it records the writer, not another active executable pin. Freshness now reads
+`.apm-version` for the bootstrap CLI and documents this distinction. A regression
+control keeps older generator metadata from overriding the actual executing pin.
+The generated lock metadata is not hand edited to make the inventory agree.
