@@ -169,7 +169,7 @@ def synthetic_gh_native(root, *, unscoreable=False, candidate=False, candidate_m
     write(run / 'result.json', {**collected, 'skill_name': 'gh', 'report_status': 'incomplete' if unscoreable else 'complete', 'run_config': config,
         'dataset_digest': snapshot['dataset_digest'], 'dataset_summary': snapshot['dataset_summary']})
     write(native / 'versions.json', {'python': '3.13.17', 'skillevaluator': '0.3.0', 'harbor': '0.13.2',
-          'docker_compose': '5.7.0', 'evaluator_revision': reports.POLICY['evaluator_revision']})
+          'docker_compose': reports.POLICY['docker_compose'], 'evaluator_revision': reports.POLICY['evaluator_revision']})
     write(native / 'provenance.json', {'schema_version': 1, 'skill': 'gh', 'mode': 'standard',
           'policy': candidate_policy if candidate else reports.benchmark_policy('gh'), 'revision': evidence.git_revision(ROOT),
           'patch_sha256': CANDIDATE['patch_sha256'] if candidate else evidence.digest_bytes(evidence.read_bytes(ROOT / reports.PATCH)).removeprefix('sha256:')})

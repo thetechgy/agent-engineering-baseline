@@ -1547,7 +1547,7 @@ class EvidenceTests(unittest.TestCase):
         root = self.native()
         with patch.dict(evidence.reports.POLICY, {'docker_compose': '5.0.2'}):
             before = evidence.project(evidence.normalize_behavioral(root, 'podman'))
-        self.assertEqual(evidence.reports.POLICY['docker_compose'], '5.7.0')
+        self.assertEqual(evidence.reports.POLICY['docker_compose'], '5.7.1')
         after = evidence.project(evidence.normalize_behavioral(root, 'podman'))
         self.assertEqual(after, before)
         self.assertEqual(after['policy']['fields']['docker_compose'], '5.0.2')

@@ -202,7 +202,7 @@ class NativeStagingTests(unittest.TestCase):
             reports.write_json(run / 'result.json', {'report_status': 'complete', 'skill_name': pilot.NAME,
                                'run_config': config, 'dataset_summary': {'total_tasks': len(case_ids)}, 'agents': {'codex': agent}})
             reports.write_json(root / 'versions.json', {'python': '3.13.17', 'skillevaluator': '0.3.0',
-                               'harbor': '0.13.2', 'docker_compose': '5.7.0'})
+                               'harbor': '0.13.2', 'docker_compose': reports.POLICY['docker_compose']})
             # These are explicitly synthetic report-policy inputs, not execution
             # evidence. Native execution/collection is qualified separately.
             with patch.object(EvaluationService, 'discover_latest_results', return_value=run), \

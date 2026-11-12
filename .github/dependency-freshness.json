@@ -193,10 +193,10 @@
         }
       ],
       "owner": "Maintainer review",
-      "hold": "Retain the reviewed Compose version until native Docker/Harbor container qualification passes for the candidate.",
+      "hold": null,
       "group": null,
       "tag_prefix": "v",
-      "validation": "Qualify the evaluation runtime as a group: frozen locks, compatibility patch, CLI/preflight, graders, scoring, evidence/schema consumers, redaction, and historical comparison policy. Preserve historical tooling and use a new policy identity when inputs change. No independent SDK upgrade."
+      "validation": "Qualify the reviewed Linux executable hash and plugin setup/cleanup, then the active retained and opt-in Harbor native boundaries. Preserve recorded historical Compose policies; operator Compose is separate from frozen agent/PowerShell/Pester/model profiles."
     },
     {
       "id": "semgrep",

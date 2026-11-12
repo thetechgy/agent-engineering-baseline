@@ -492,7 +492,7 @@ HTTP response. Main producers and diagnostic reruns are retained; only initial
 validation runs for the same PR supersede one another.
 
 GitHub Actions are pinned to commit SHAs; Python dependencies use hashed or frozen
-locks. Both evaluation workflows install Compose 5.7.0 through the shared
+locks. Both evaluation workflows install Compose 5.7.1 through the shared
 [checksum-first helper](.github/scripts/setup-compose.sh), verifying reviewed
 release bytes before execution in an isolated temporary Docker CLI configuration.
 Its always-run cleanup removes only that installation. Historical evidence keeps
