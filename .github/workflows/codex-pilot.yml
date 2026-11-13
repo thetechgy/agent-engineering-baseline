@@ -1,21 +1,7 @@
 name: Codex compatibility pilot
 run-name: ${{ inputs.cohort_allocation != '' && format('Codex cohort {0}', inputs.cohort_allocation) || 'Codex pilot credential-free preparation or compatibility allocation' }}
 on:
-  pull_request:
-    paths:
-      - '.github/scripts/codex_pilot*.py'
-      - '.github/scripts/skill_evidence.py'
-      - '.github/evals/codex-pilot.json'
-      - '.github/evals/pester-effectiveness*'
-      - '.github/evals/pester-confirmation-v1/**'
-      - '.github/evals/powershell-pester-6/**'
-      - '.github/scripts/skill_analysis.py'
-      - '.github/scripts/skill_report.py'
-      - '.github/scripts/skill_reports.py'
-      - '.github/evals/codex-retrospective/**'
-      - '.github/tests/test_codex*.py'
-      - '.github/evals/custom-metrics.json'
-      - '.github/workflows/codex-pilot.yml'
+  workflow_call:
   workflow_dispatch:
     inputs:
       allocation:
@@ -28,8 +14,8 @@ on:
         default: ''
 permissions: {}
 concurrency:
-  group: codex-compatibility-pilot
-  cancel-in-progress: false
+  group: codex-compatibility-pilot-${{ github.event_name == 'pull_request' && (github.run_attempt == '1' && format('pr-{0}', github.event.pull_request.number) || github.run_id) || ((inputs.allocation != '' || inputs.cohort_allocation != '') && 'protected-live' || github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == '1' }}
 jobs:
   prepare:
     outputs:

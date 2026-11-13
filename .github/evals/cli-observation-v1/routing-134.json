@@ -1,0 +1,274 @@
+{
+  "schema": 1,
+  "kind": "sanitized-retained-data-inspection",
+  "producer": {
+    "repository": "thetechgy/agent-engineering-baseline",
+    "run": 43367014799,
+    "attempt": 1,
+    "event": "pull_request",
+    "workflow": ".github/workflows/validate.yml",
+    "job": 131693882453,
+    "head": "5e2955eb01d353f8f2834b8fcdd52244e9d08543",
+    "artifact": 14011909368,
+    "archive_sha256": "5a944ef36de82b34e2dedd18d065e7bf8edea522b65545e4cde142c96e9ec667"
+  },
+  "observed": {
+    "cli_tool_exit_code": 1,
+    "curl_exit_code": 6,
+    "http_code": "000",
+    "curl_error": "Could not resolve host: api.openai.com",
+    "late_child_launch_reached": false,
+    "submission_handoff_reached": false,
+    "outer_cli_exit_code": 0,
+    "boundary_after_present": true,
+    "stable_boundary_fields": [
+      "agent_id",
+      "controller_id",
+      "policy_sha256",
+      "agent_image",
+      "controller_image"
+    ],
+    "post_agent_exception": "Post-agent CLI child network observation unavailable",
+    "final_policy_receipts": 0,
+    "launched": 1,
+    "unlaunched": 11,
+    "stop_reason": "security_or_identity_drift",
+    "cleanup_complete": true,
+    "inference": false
+  },
+  "limits": [
+    "DNS failure cause unavailable",
+    "No child network observation was produced",
+    "No proof of safe egress or policy violation",
+    "No attribution to routing from identical source bytes alone"
+  ],
+  "inputs": {
+    ".github/scripts/codex_pilot.py": {
+      "e40cc0c995025d448fd7b163df3b6f32b7ea569e": "43235f9a37f47902ea08c59e89167879339648df7cf23c0cecb34e0a48b6c3bb",
+      "5e2955eb01d353f8f2834b8fcdd52244e9d08543": "43235f9a37f47902ea08c59e89167879339648df7cf23c0cecb34e0a48b6c3bb"
+    },
+    ".github/scripts/codex_pilot_agent.py": {
+      "e40cc0c995025d448fd7b163df3b6f32b7ea569e": "46cc1365cb62f31c207e334213ecfbb4491a418e67a74bd1e7c7f50e3d8c3312",
+      "5e2955eb01d353f8f2834b8fcdd52244e9d08543": "46cc1365cb62f31c207e334213ecfbb4491a418e67a74bd1e7c7f50e3d8c3312"
+    },
+    ".github/scripts/codex_pilot_probe.py": {
+      "e40cc0c995025d448fd7b163df3b6f32b7ea569e": "f0cd087da233a97633b5bd0092b3014ee57e08321bfbc4450ef174d023e2cc2e",
+      "5e2955eb01d353f8f2834b8fcdd52244e9d08543": "f0cd087da233a97633b5bd0092b3014ee57e08321bfbc4450ef174d023e2cc2e"
+    },
+    ".github/scripts/codex_pilot_environment.py": {
+      "e40cc0c995025d448fd7b163df3b6f32b7ea569e": "2b300f36f9673dc4fb01a9b6e760045218be441d2e9316c79c5c025deda7839c",
+      "5e2955eb01d353f8f2834b8fcdd52244e9d08543": "2b300f36f9673dc4fb01a9b6e760045218be441d2e9316c79c5c025deda7839c"
+    },
+    ".github/scripts/codex_pilot_boundary.py": {
+      "e40cc0c995025d448fd7b163df3b6f32b7ea569e": "05cd6785621a9b8e098f3e642229487db1cfe99eb765ab91d5f873be53185597",
+      "5e2955eb01d353f8f2834b8fcdd52244e9d08543": "05cd6785621a9b8e098f3e642229487db1cfe99eb765ab91d5f873be53185597"
+    },
+    ".github/scripts/codex_pilot_runtime.py": {
+      "e40cc0c995025d448fd7b163df3b6f32b7ea569e": "e27984dad62cce1c5321c79600b43af4bfbcf2a6960f2a33208793854c792439",
+      "5e2955eb01d353f8f2834b8fcdd52244e9d08543": "e27984dad62cce1c5321c79600b43af4bfbcf2a6960f2a33208793854c792439"
+    },
+    ".github/scripts/codex_pilot_cohort.py": {
+      "e40cc0c995025d448fd7b163df3b6f32b7ea569e": "efe289f707ad298f20d416a99a08814fe8591b0c34a851c17eb8a8efabb79e4e",
+      "5e2955eb01d353f8f2834b8fcdd52244e9d08543": "efe289f707ad298f20d416a99a08814fe8591b0c34a851c17eb8a8efabb79e4e"
+    },
+    ".github/scripts/codex_pilot_stub.py": {
+      "e40cc0c995025d448fd7b163df3b6f32b7ea569e": "8757248c031b6ca15adbdf6f1db89d089721add9abd2ff209f9b2eb715317b1b",
+      "5e2955eb01d353f8f2834b8fcdd52244e9d08543": "8757248c031b6ca15adbdf6f1db89d089721add9abd2ff209f9b2eb715317b1b"
+    },
+    ".github/scripts/qualify_cli_observation.py": {
+      "e40cc0c995025d448fd7b163df3b6f32b7ea569e": "98dadb6eee49b1cd5f8dd75d0829f5dcb4abe8daed2a6b3155627bda1ba5d64a",
+      "5e2955eb01d353f8f2834b8fcdd52244e9d08543": "98dadb6eee49b1cd5f8dd75d0829f5dcb4abe8daed2a6b3155627bda1ba5d64a"
+    },
+    ".github/scripts/setup-skillevaluator.sh": {
+      "e40cc0c995025d448fd7b163df3b6f32b7ea569e": "b9a84b8c5aba47a23480431e51af4ad2f9f48ebc1d41342b000a84e9693a8d5d",
+      "5e2955eb01d353f8f2834b8fcdd52244e9d08543": "b9a84b8c5aba47a23480431e51af4ad2f9f48ebc1d41342b000a84e9693a8d5d"
+    },
+    ".github/scripts/setup-compose.sh": {
+      "e40cc0c995025d448fd7b163df3b6f32b7ea569e": "c5ac1cf478db911a2acc63e16a95f8a736bb104804b6ec6098cb27d7d5dad804",
+      "5e2955eb01d353f8f2834b8fcdd52244e9d08543": "c5ac1cf478db911a2acc63e16a95f8a736bb104804b6ec6098cb27d7d5dad804"
+    },
+    ".github/evals/codex-pilot.json": {
+      "e40cc0c995025d448fd7b163df3b6f32b7ea569e": "5472136c6532db515340e8ffdfc9aae9f70b42b27fc15bf922823a784b41e9a8",
+      "5e2955eb01d353f8f2834b8fcdd52244e9d08543": "5472136c6532db515340e8ffdfc9aae9f70b42b27fc15bf922823a784b41e9a8"
+    },
+    ".github/locks/evaluator-candidate.lock": {
+      "e40cc0c995025d448fd7b163df3b6f32b7ea569e": "4873fe654fa944e9806709ae8730a44936eca91d257645710c4524acc7964c5e",
+      "5e2955eb01d353f8f2834b8fcdd52244e9d08543": "4873fe654fa944e9806709ae8730a44936eca91d257645710c4524acc7964c5e"
+    }
+  },
+  "comparison": {
+    "run": 43444879139,
+    "wrapper_revision": "7a3270eee3001aa263f22672ed6706c1700b33dc",
+    "route": "native-deadline.yml workflow_dispatch -> cli-observation-comparison.yml workflow_call",
+    "conclusion": "both passed; original failure not reproduced; image comparability incomplete",
+    "fully_image_matched": false,
+    "sources": {
+      "baseline": {
+        "artifact_id": 14047703233,
+        "archive_sha256": "e1a19d5dcbc25c4a69ca6a55c3d7582fb6b19fb1ac2ec5d96e2ff132b7edf5a6",
+        "qualification": {
+          "revision": "e40cc0c995025d448fd7b163df3b6f32b7ea569e",
+          "python": "3.14.10 (main, Oct 26 2026, 14:09:22) [Clang 23.1.3 ]",
+          "packages": {
+            "harbor": "0.24.0",
+            "skillevaluator": "0.8.0"
+          },
+          "inference": false,
+          "instrumentation": "none; unchanged existing native probe",
+          "runner_image": {
+            "ImageOS": "ubuntu26",
+            "ImageVersion": "20261111.196.1"
+          },
+          "sources": {
+            "codex_pilot.py": "43235f9a37f47902ea08c59e89167879339648df7cf23c0cecb34e0a48b6c3bb",
+            "codex_pilot_agent.py": "46cc1365cb62f31c207e334213ecfbb4491a418e67a74bd1e7c7f50e3d8c3312",
+            "codex_pilot_environment.py": "2b300f36f9673dc4fb01a9b6e760045218be441d2e9316c79c5c025deda7839c",
+            "codex_pilot_probe.py": "f0cd087da233a97633b5bd0092b3014ee57e08321bfbc4450ef174d023e2cc2e",
+            "skill_evidence.py": "44f1275e0e0086be42bfbe221258e0170ff8fd2a63be567815c1d2695f9a16ee"
+          },
+          "docker_version": "29.4.2",
+          "compose_version": "5.7.1",
+          "sidecar_sources": {
+            "Dockerfile": "a2385dd6b3eee6e04c49b467df84ed2a273fd402a9cdd404a64fb535e9b26ff7",
+            "allowlist.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bin/network-policy": "ff1cacfb95e17cda3668f389176ae54e5e4139cff12ee54b4d745722ad0ff0b2",
+            "entrypoint.sh": "2e225ed745eb5976f93afd52d91c844b954b5f6f45373fb70c4c509e36d1e069",
+            "gost.yaml": "78c18e58efbc7c8e226cb311e2a4cf3863d5a2f3e54b3bf15a0ea4b885345290"
+          },
+          "complete": true
+        },
+        "config_sha256": "377574a5d9191fc4ba48fb99c585d06117198164dfb9eb3860c917da5d7b7297",
+        "policy_sha256": "df5179f5214e470bb1c23c5524002af6a04c4633010f016f4799c96fa671f76e",
+        "images": [
+          {
+            "agent": "sha256:5187d3a71b4b41a7628de02c2bee87c9db05c978d72df1d8c0af3210ecc2aea7",
+            "controller": "sha256:2e3186dd94bc9273023e42ab63af7f95433a8cba980e54f386dbdf5593a3d2e9"
+          },
+          {
+            "agent": "sha256:715f81dfe683f9884018b7d5c4704bd28e3705098fd44a698e87221b2b2268e5",
+            "controller": "sha256:2e3186dd94bc9273023e42ab63af7f95433a8cba980e54f386dbdf5593a3d2e9"
+          }
+        ],
+        "late_child_observations": 2,
+        "late_network_results": [
+          [
+            {
+              "returncode": 0,
+              "http_code": "401"
+            },
+            {
+              "returncode": 35,
+              "http_code": "000"
+            },
+            {
+              "returncode": 35,
+              "http_code": "000"
+            }
+          ],
+          [
+            {
+              "returncode": 0,
+              "http_code": "401"
+            },
+            {
+              "returncode": 35,
+              "http_code": "000"
+            },
+            {
+              "returncode": 35,
+              "http_code": "000"
+            }
+          ]
+        ],
+        "cleanup": {
+          "complete": true,
+          "unlaunched_arms": []
+        },
+        "staging_sha256": "266ea93f71028efe23928cf0144281991aa54ac0114e8b8fc6699ec33d5e1f84"
+      },
+      "reviewed": {
+        "artifact_id": 14047274826,
+        "archive_sha256": "8bc3acf22dc78fb0cc584039e2900ba20eb40706d256a091909e0294310e8d66",
+        "qualification": {
+          "revision": "5e2955eb01d353f8f2834b8fcdd52244e9d08543",
+          "python": "3.14.10 (main, Oct 26 2026, 14:09:22) [Clang 23.1.3 ]",
+          "packages": {
+            "harbor": "0.24.0",
+            "skillevaluator": "0.8.0"
+          },
+          "inference": false,
+          "instrumentation": "none; unchanged existing native probe",
+          "runner_image": {
+            "ImageOS": "ubuntu26",
+            "ImageVersion": "20261101.186.1"
+          },
+          "sources": {
+            "codex_pilot.py": "43235f9a37f47902ea08c59e89167879339648df7cf23c0cecb34e0a48b6c3bb",
+            "codex_pilot_agent.py": "46cc1365cb62f31c207e334213ecfbb4491a418e67a74bd1e7c7f50e3d8c3312",
+            "codex_pilot_environment.py": "2b300f36f9673dc4fb01a9b6e760045218be441d2e9316c79c5c025deda7839c",
+            "codex_pilot_probe.py": "f0cd087da233a97633b5bd0092b3014ee57e08321bfbc4450ef174d023e2cc2e",
+            "skill_evidence.py": "3c9b653232838cf2e596e837ac9f8a61cb2f2fa6ad22ffbfcfde483a2189521b"
+          },
+          "docker_version": "29.4.2",
+          "compose_version": "5.7.1",
+          "sidecar_sources": {
+            "Dockerfile": "a2385dd6b3eee6e04c49b467df84ed2a273fd402a9cdd404a64fb535e9b26ff7",
+            "allowlist.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bin/network-policy": "ff1cacfb95e17cda3668f389176ae54e5e4139cff12ee54b4d745722ad0ff0b2",
+            "entrypoint.sh": "2e225ed745eb5976f93afd52d91c844b954b5f6f45373fb70c4c509e36d1e069",
+            "gost.yaml": "78c18e58efbc7c8e226cb311e2a4cf3863d5a2f3e54b3bf15a0ea4b885345290"
+          },
+          "complete": true
+        },
+        "config_sha256": "377574a5d9191fc4ba48fb99c585d06117198164dfb9eb3860c917da5d7b7297",
+        "policy_sha256": "df5179f5214e470bb1c23c5524002af6a04c4633010f016f4799c96fa671f76e",
+        "images": [
+          {
+            "agent": "sha256:3d466adcd2dcd9480d4d23611c607a5dcf54b4bdfccdc6dcce5382df5ef15ced",
+            "controller": "sha256:af5e77a43328f50a299679cd3c841531efd8dbc323aeacad0d0a5e778639ed37"
+          },
+          {
+            "agent": "sha256:555f9e2a159edcddcc4a50f46dd11050c8a58060069e1ff0f37fd4efc573b0a1",
+            "controller": "sha256:af5e77a43328f50a299679cd3c841531efd8dbc323aeacad0d0a5e778639ed37"
+          }
+        ],
+        "late_child_observations": 2,
+        "late_network_results": [
+          [
+            {
+              "returncode": 0,
+              "http_code": "401"
+            },
+            {
+              "returncode": 35,
+              "http_code": "000"
+            },
+            {
+              "returncode": 35,
+              "http_code": "000"
+            }
+          ],
+          [
+            {
+              "returncode": 0,
+              "http_code": "401"
+            },
+            {
+              "returncode": 35,
+              "http_code": "000"
+            },
+            {
+              "returncode": 35,
+              "http_code": "000"
+            }
+          ]
+        ],
+        "cleanup": {
+          "complete": true,
+          "unlaunched_arms": []
+        },
+        "staging_sha256": "0d5f22786b30f994e7838150dc07e8f7b853c8bea8681a12ae45a455da11b8af"
+      }
+    }
+  }
+}

@@ -191,6 +191,39 @@ class CIPowerShellTests(unittest.TestCase):
         self.assertEqual(workflow["concurrency"]["cancel-in-progress"],
                          validation["concurrency"]["cancel-in-progress"])
 
+    def test_selected_jobs_feed_an_always_running_gate_without_privileged_calls(self):
+        import yaml
+        workflow = yaml.safe_load((ROOT / '.github/workflows/validate.yml').read_text())
+        jobs = workflow['jobs']
+        gate = jobs['validation']
+        self.assertEqual(gate['if'], 'always()')
+        self.assertEqual(set(gate['needs']), set(jobs) - {'validation'})
+        self.assertEqual(jobs['plan']['steps'][0]['with']['fetch-depth'], 0)
+        self.assertNotIn('needs', jobs['linux'])
+        self.assertNotIn('if', jobs['linux'])
+        self.assertNotIn('if', jobs['windows-powershell'])
+        for job in jobs.values():
+            if 'uses' in job:
+                self.assertNotIn('secrets', job)
+                self.assertIn("github.event_name == 'pull_request'", job['if'])
+                called = yaml.safe_load((ROOT / job['uses'][2:]).read_text())
+                triggers = called.get('on', called.get(True))
+                self.assertIn('workflow_call', triggers)
+                self.assertIn('workflow_dispatch', triggers)
+                self.assertNotIn('pull_request', triggers)
+        pilot_call = jobs['codex-pilot']
+        self.assertNotIn('runs-on', pilot_call)
+        pilot = yaml.safe_load((ROOT / '.github/workflows/codex-pilot.yml').read_text())
+        for name, job in pilot['jobs'].items():
+            if job['permissions'].get('actions'):
+                self.assertIn("github.event_name == 'workflow_dispatch'", job['if'])
+                self.assertIn('github.run_attempt == 1', job['if'])
+            elif name in ('prepare', 'consume', 'effectiveness', 'cohort-consume'):
+                self.assertEqual(job['permissions'], {'contents': 'read'})
+        for name in ('evaluation-campaign', 'pester-return-qualification'):
+            called = yaml.safe_load((ROOT / f'.github/workflows/{name}.yml').read_text())
+            self.assertEqual(set(called.get('on', called.get(True))), {'workflow_dispatch'})
+
     def test_all_validation_installers_and_consumers_use_the_shared_exact_version_contract(self):
         import yaml
         for name in ("validate", "update-baseline"):
@@ -198,7 +231,7 @@ class CIPowerShellTests(unittest.TestCase):
             self.assertEqual(workflow["env"]["PESTER_VERSION"], "6.2.0")
             self.assertEqual(workflow["env"]["PSSCRIPTANALYZER_VERSION"], "1.25.0")
             for job in workflow["jobs"].values():
-                for step in job["steps"]:
+                for step in job.get("steps", []):
                     source = step.get("run", "")
                     self.assertNotIn("Install-Module ", source)
                     if step.get("name") == "Install validation tools":

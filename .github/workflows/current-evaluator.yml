@@ -1,16 +1,7 @@
 name: Current evaluator report qualification
 
 on:
-  pull_request:
-    paths:
-      - '.github/scripts/**'
-      - '.github/tests/**'
-      - '.github/evals/**'
-      - '!.github/evals/EVALUATION-PLAN.md'
-      - '.github/locks/**'
-      - '.github/patches/**'
-      - '.github/evaluator-backends/**'
-      - '.github/workflows/current-evaluator.yml'
+  workflow_call:
   workflow_dispatch:
 
 permissions:

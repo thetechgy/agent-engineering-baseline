@@ -1,5 +1,5 @@
 {
-  "id": "pester-return-contract-v7-primary-failure-source-maintenance",
+  "id": "pester-return-contract-v8-explicit-preparation-routing",
   "base_commit": "9f81a66b343f340b681759db8c7c38a4e9e016c5",
   "historical_run": 42744596001,
   "historical_artifact": 13730584511,
@@ -81,7 +81,7 @@
     ".github/evals/campaigns/pester-return-transfer-current-v2.json": "93062fb9d226653dbf28de8fce634f8551248b23aa13b94deb584b801084f4cd",
     ".github/evals/campaigns/pester-return-transfer-candidate-controls-v2.json": "40d15eb87cdd5f9e09e48017af1fc01097ec79d3134ac1563d3c6eab323e5cbe",
     ".github/evals/campaigns/pester-return-transfer-current-v2-protocol.json": "4ab45a210e9c54de96a3bc3ffe01f6dd8656c4a4a8a23514a5cd4365974987e6",
-    ".github/workflows/pester-return-qualification.yml": "2078943a7ee5330caab85187ec7b3bbcbfe92489cdf4dc046d302c1b1319b0b0",
+    ".github/workflows/pester-return-qualification.yml": "549a7e100d7a125f6a818d5828faf1979fce1f0f09f6971a86c08397e8200e4e",
     ".github/evals/campaigns/pester-return-transfer-current-v3-protocol.json": "db0219eee2fd9a802504fc15552d3bb0e56671e68c9e36062c21fb77aff01794",
     ".github/evals/campaigns/pester-return-transfer-candidate-v3-protocol.json": "042141a95ea4dcdf6360011414eb29521fd9f987d5cdd76d9691e6f6b3221498",
     ".github/evals/campaigns/pester-return-transfer-candidate-v3.json": "cc6a2345dd5d12f8bc7b2dfc9156986d404afb1b191dc85ca7eb041d1939fed6",
@@ -97,9 +97,9 @@
     ".github/evals/campaigns/pester-return-transfer-candidate-controls-v3.json"
   ],
   "previous": {
-    "commit": "943405391a06d3f73dba5d3ac48ac801809f3da3",
-    "manifest": "history/9434053-freeze.json",
-    "sha256": "dd828674a3a00f8e49bd32045c4d4146b646c41f937dacdec3c94db5b3c3821f"
+    "commit": "e40cc0c995025d448fd7b163df3b6f32b7ea569e",
+    "manifest": "history/e40cc0c-freeze.json",
+    "sha256": "479435fd724e4e7d11ada61901b4f5e42b41001456c8c9940076bd1e36610e2d"
   },
-  "revision_purpose": "Credential-free diagnostic consumer source maintenance only. Historical registry values, tasks, skills, settings and closed allocations remain unchanged. No live authorization."
+  "revision_purpose": "Routing only: full return-contract preparation is explicit workflow_dispatch. Native jobs, all frozen task/grading/model/skill inputs, historical identities and closed allocations are unchanged. No live authorization."
 }

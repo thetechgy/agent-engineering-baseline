@@ -18,7 +18,32 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == '1' }}
 
 jobs:
+  plan:
+    name: Select credential-free validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      contracts: ${{ steps.impact.outputs.contracts }}
+      quality: ${{ steps.impact.outputs.quality }}
+      pester: ${{ steps.impact.outputs.pester }}
+      evaluator: ${{ steps.impact.outputs.evaluator }}
+      deadline: ${{ steps.impact.outputs.deadline }}
+      admission: ${{ steps.impact.outputs.admission }}
+      legacy: ${{ steps.impact.outputs.legacy }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify selection and failure propagation controls
+        run: python3 -B -m unittest discover -s .github/tests -p test_ci_routing.py -v
+      - name: Select from the complete Git comparison
+        id: impact
+        run: python3 -B .github/scripts/ci_routing.py plan
+
   pester-eval-feasibility:
+    needs: plan
+    if: needs.plan.outputs.pester == 'true'
     name: Pester evaluation feasibility (no inference)
     permissions:
       contents: read
@@ -97,6 +122,8 @@ jobs:
           fi
 
   ci-contracts:
+    needs: plan
+    if: needs.plan.outputs.contracts == 'true'
     name: CI contracts (no inference)
     permissions:
       contents: read
@@ -141,7 +168,8 @@ jobs:
 
   skill-quality:
     name: Skill quality (advisory findings)
-    needs: ci-contracts
+    needs: plan
+    if: needs.plan.outputs.quality == 'true'
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -429,3 +457,43 @@ jobs:
           if ($executables.Count -ne 1) { throw 'Expected exactly one reviewed CLI generation.' }
           python tests/bootstrap_lifecycle.py --apm $executables[0].FullName
           if ($LASTEXITCODE -ne 0) { throw 'Native scoped lifecycle validation failed.' }
+
+  current-evaluator:
+    needs: plan
+    if: github.event_name == 'pull_request' && needs.plan.outputs.evaluator == 'true'
+    uses: ./.github/workflows/current-evaluator.yml
+
+  native-deadline:
+    needs: plan
+    if: github.event_name == 'pull_request' && needs.plan.outputs.deadline == 'true'
+    uses: ./.github/workflows/native-deadline.yml
+
+  pester-admission:
+    needs: plan
+    if: github.event_name == 'pull_request' && needs.plan.outputs.admission == 'true'
+    uses: ./.github/workflows/pester-admission-qualification.yml
+
+  codex-pilot:
+    # GitHub validates the dispatch-only preflight's read scope even on PR calls.
+    # This call has no runner/token; all runnable PR child jobs stay contents: read.
+    permissions:
+      contents: read
+      actions: read
+    needs: plan
+    if: github.event_name == 'pull_request' && needs.plan.outputs.legacy == 'true'
+    uses: ./.github/workflows/codex-pilot.yml
+
+  validation:
+    name: Selected validation results
+    if: always()
+    needs: [plan, ci-contracts, linux, windows-powershell, skill-quality, pester-eval-feasibility, current-evaluator, native-deadline, pester-admission, codex-pilot]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Require every selected check to succeed
+        env:
+          CI_NEEDS: ${{ toJSON(needs) }}
+        run: python3 -B .github/scripts/ci_routing.py gate

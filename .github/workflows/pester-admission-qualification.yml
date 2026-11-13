@@ -1,21 +1,11 @@
 name: Pester admission qualification
 on:
-  pull_request:
-    paths:
-      - '.github/scripts/pester_admission.py'
-      - '.github/scripts/pester_transfer_replay.py'
-      - '.github/evals/pester-admission-v1/controls/**'
-      - '.github/evals/pester-admission-v1/controls.json'
-      - '.github/evals/codex-retrospective/42911213479/**'
-      - '.github/evals/campaigns/pester-admission-*.json'
-      - '.github/evals/campaigns/pester-transfer-*.json'
-      - '.github/tests/test_pester_admission.py'
-      - '.github/workflows/pester-admission-qualification.yml'
+  workflow_call:
   workflow_dispatch:
 permissions: {}
 concurrency:
-  group: pester-admission-${{ github.ref }}
-  cancel-in-progress: false
+  group: pester-admission-${{ github.event_name == 'pull_request' && github.run_attempt == '1' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == '1' }}
 jobs:
   qualify:
     name: Pinned admission and retained replay (no inference)

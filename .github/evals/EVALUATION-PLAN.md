@@ -1,32 +1,84 @@
-# Issue #95 dependency modernization checkpoint
+# Issue #95 CI routing checkpoint
 
-Dependency modernization is the current work item. The
-[November 12 consumer inventory and implementation receipt](DEPENDENCY-MODERNIZATION-20261112.md)
-records active production, opt-in, review/scanner, frozen and ambient dependencies,
-implemented compatible updates, security applicability and precise exit conditions.
-The APM update is merged in [PR #125](https://github.com/thetechgy/agent-engineering-baseline/pull/125).
-The remaining updates are in draft [PR #133](https://github.com/thetechgy/agent-engineering-baseline/pull/133),
-updated against current main after that merge.
-Final-head checks and remaining constraints are also tracked in
-[issue #95](https://github.com/thetechgy/agent-engineering-baseline/issues/95).
-No merge of PR #133 or production evaluator promotion is authorized.
+Compatible dependency updates are merged: [PR #125](https://github.com/thetechgy/agent-engineering-baseline/pull/125)
+at `e09e67da4d4be8d54d84d2b8ae64e067c9da5ba9` and
+[PR #133](https://github.com/thetechgy/agent-engineering-baseline/pull/133)
+at current main `e40cc0c995025d448fd7b163df3b6f32b7ea569e`.
+The [consumer inventory](DEPENDENCY-MODERNIZATION-20261112.md) retains the
+qualification evidence and remaining holds. Production still uses SkillEvaluator
+0.3.0/Harbor 0.13.2; opt-in 0.8.0 implementation is not adoption. SDK/framework,
+Codex, fixture image/snapshot, Semgrep MCP/OpenTelemetry constraints and the
+git-commit skill hold remain. No dependency is upgraded by this routing change.
+
+The [workflow graph, selection contract and operator commands](CI-ROUTING.md)
+record the 13 current-main definitions, five retained experiment-branch definitions
+and four GitHub-owned workflow registrations. Routine PRs keep both complete required platform checks,
+one conservative Git change plan and an always-running result gate. Expensive
+maintained checks use existing workflows without changing their job definitions;
+full experiment preparation and historical campaign replay become explicit.
+Main's five original artifact producers and downstream production/publication
+behavior remain intact. Schedules and disabled streams are unchanged.
+The existing freshness workflow regenerated #95 from merged main in
+[run 43357529214](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43357529214).
+
+The older Codex/Pester scheduler remains failed: missing post-command audit leads
+to `security_or_identity_drift`, while its control expects
+`execution_infrastructure_failure`. It remains selected for relevant inputs and
+fails the new gate; no assertion, guard or historical outcome is changed.
+Its repair is a separate work item. Routing-only successor profiles/freeze retain
+all historical identities, task/grading/model settings and candidate bytes.
+Local focused contracts pass. The broader local suite retains a worker-startup
+failure (exit `-6`) also reproduced on unchanged main; worker limits and the
+assertion remain intact. Hosted final-source evidence and limitations are
+maintained on [draft PR #134](https://github.com/thetechgy/agent-engineering-baseline/pull/134).
 
 [PR #132](https://github.com/thetechgy/agent-engineering-baseline/pull/132)
-records the deferred Pester clarification: transfer stopped at
-unsupported/test_name_template and candidate transfer behavior remains unmeasured.
-Development evidence remains useful. PRs #130 and #132, historical evidence,
-frozen experiments and candidate content are unchanged; no experiment resumes.
-Template admission, workflow-trigger/concurrency cleanup and further agent-runtime
-integrations remain in their existing tracking and are outside this pass.
+retains the deferred Pester clarification. Development evidence remains useful;
+candidate transfer remains unmeasured after unsupported/test_name_template.
+PRs #130/#132, frozen evidence, skills and closed allocations remain unchanged.
+Paid evaluations, judges, adoption and live gates remain paused. No Pages,
+protection-rule change, merge or new experiment is authorized here.
 
-The 0.8.0 implementation in merged PR #119 remains opt-in. Active workflows still
-execute SkillEvaluator 0.3.0/Harbor 0.13.2; the older versions are not
-historical-only. Ordinary latest-stable PowerShell validation remains separate
-from frozen PowerShell/Pester evaluation environments and model/reasoning selectors.
+## PR #134 review-readiness follow-up
 
-**One next action:** review the completed compatible dependency PRs and their
-exact-head validation; retain the documented constrained groups until their
-specific support or adoption conditions are met.
+The [authenticated follow-up](cli-observation-v1/routing-134.md) confirms the
+remaining pilot failure in completed run `43446918858` at `f90196b` is the
+historical deliberate-command-failure defect. The complete reusable-route fixture
+passed all twelve scheduled trials, actual child observations, submission handoffs
+and cleanup. Threshold, unknown-usage and unsupported controls stopped correctly.
+The infrastructure command exited 23; the outer CLI exited 1 and raised before
+`boundary_after`. Exactly one slot launched, eleven remained unlaunched, and
+cleanup completed. The identity guard changed the stop label to
+`security_or_identity_drift`, causing the expected infrastructure-label assertion
+to fail. There was no extra launch. Authenticated historical run `42937277898`
+has the same causal sequence. Source replay agrees at historical, base and head;
+this is not a new native baseline execution. The scheduler remains failed and
+unqualified, with its guard, assertion and separate repair tracking preserved.
+
+The same run's contracts failure exposed the diagnostic workflow's omitted uv
+consumer. The maintained freshness source now registers its single uv `0.13.8`
+pin under current CI; frozen return-contract uv `0.13.7` remains separate.
+The existing test failed before correction. All 82 owning freshness/routing/
+workflow/profile checks pass afterward, including omission and conflicting-pin
+rejection. No runtime, fixture, dependency version, skill or historical evidence
+changed; the original native receipt retains its original source identity.
+
+The previous DNS cause remains unknown, but the actual reusable pilot route now
+has a successful complete-cohort receipt followed by an independently confirmed
+known negative-control defect. This supports reviewing routing separately from
+pilot readiness; it does not establish DNS reliability. No further broad comparison
+or experiment was launched. The earlier hold/proposed comparison is superseded.
+
+Recommendation: proceed with routing review after final-head validation confirms
+the inventory correction and no new regression. The [PR's final disposition and
+terminal CI receipts](https://github.com/thetechgy/agent-engineering-baseline/pull/134)
+name the exact final commit and checks without documentation-only CI restarts.
+The selected aggregate must remain failed when the known pilot fails. It is
+visible but non-required by protection; required-platform success is distinct
+from all selected validation passing. Protection rules remain unchanged.
+
+**One next action:** review PR #134's routing and inventory correction with the
+known pilot qualification limit explicit, using the final receipts on the PR.
 
 ## PR #130 and #131 checkpoint, retained as history
 

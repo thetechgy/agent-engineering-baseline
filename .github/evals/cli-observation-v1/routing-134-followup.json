@@ -1,0 +1,117 @@
+{
+  "kind": "authenticated-data-inspection-and-source-replay",
+  "native_baseline_rerun": false,
+  "receipts": {
+    "current": {
+      "run": 43446918858,
+      "attempt": 1,
+      "revision": "f90196b05139146cb85d2522d4bda188c2f1fa12",
+      "artifact": 14054421752,
+      "archive_sha256": "b4a900de5d983f16d13b967fd97b2178974e23111b02ade616ad481e8c608924",
+      "complete": {
+        "launched": 12,
+        "expected_order": true,
+        "child_observations": 12,
+        "matched_handoffs": 12,
+        "expected_passed": 8,
+        "expected_failed": 4,
+        "cleanup_complete": true
+      },
+      "infrastructure": {
+        "command": "/bin/sh -lc 'printf pilot-command-failure; exit 23'",
+        "command_exit": 23,
+        "cli_exit": 1,
+        "exception": "RuntimeError",
+        "message": "Pilot Codex CLI exited unsuccessfully; original events retained",
+        "boundary_after": false,
+        "final_operator_policy": true,
+        "late_child_observation": false,
+        "late_child_required_by_scenario": false,
+        "launched": 1,
+        "unlaunched": 11,
+        "stop_reason": "security_or_identity_drift",
+        "cleanup_complete": true,
+        "assertion_failure": "stop classification; launch count is correct"
+      }
+    },
+    "historical": {
+      "run": 42937277898,
+      "attempt": 1,
+      "revision": "33d953536e95bc81178e726fb3fed95a80566c7d",
+      "artifact": 13822715004,
+      "archive_sha256": "f1d2ae882ec231bc423f74cd38a4b7baa8851942aabfb20c8f99bb12f22eced9",
+      "complete": {
+        "launched": 12,
+        "expected_order": true,
+        "child_observations": 12,
+        "matched_handoffs": 12,
+        "expected_passed": 8,
+        "expected_failed": 4,
+        "cleanup_complete": true
+      },
+      "infrastructure": {
+        "command": "/bin/sh -lc 'printf pilot-command-failure; exit 23'",
+        "command_exit": 23,
+        "cli_exit": 1,
+        "exception": "RuntimeError",
+        "message": "Pilot Codex CLI exited unsuccessfully; original events retained",
+        "boundary_after": false,
+        "final_operator_policy": true,
+        "late_child_observation": false,
+        "late_child_required_by_scenario": false,
+        "launched": 1,
+        "unlaunched": 11,
+        "stop_reason": "security_or_identity_drift",
+        "cleanup_complete": true,
+        "assertion_failure": "stop classification; launch count is correct"
+      }
+    }
+  },
+  "source_replay": {
+    "33d953536e95bc81178e726fb3fed95a80566c7d": {
+      "cohort_sha256": "efe289f707ad298f20d416a99a08814fe8591b0c34a851c17eb8a8efabb79e4e",
+      "receipts": {
+        "current": {
+          "initial_stop": "execution_infrastructure_failure",
+          "final_stop": "security_or_identity_drift",
+          "only_failing_predicate": "before/after policy comparison: boundary_after absent"
+        },
+        "historical": {
+          "initial_stop": "execution_infrastructure_failure",
+          "final_stop": "security_or_identity_drift",
+          "only_failing_predicate": "before/after policy comparison: boundary_after absent"
+        }
+      }
+    },
+    "e40cc0c995025d448fd7b163df3b6f32b7ea569e": {
+      "cohort_sha256": "efe289f707ad298f20d416a99a08814fe8591b0c34a851c17eb8a8efabb79e4e",
+      "receipts": {
+        "current": {
+          "initial_stop": "execution_infrastructure_failure",
+          "final_stop": "security_or_identity_drift",
+          "only_failing_predicate": "before/after policy comparison: boundary_after absent"
+        },
+        "historical": {
+          "initial_stop": "execution_infrastructure_failure",
+          "final_stop": "security_or_identity_drift",
+          "only_failing_predicate": "before/after policy comparison: boundary_after absent"
+        }
+      }
+    },
+    "f90196b05139146cb85d2522d4bda188c2f1fa12": {
+      "cohort_sha256": "efe289f707ad298f20d416a99a08814fe8591b0c34a851c17eb8a8efabb79e4e",
+      "receipts": {
+        "current": {
+          "initial_stop": "execution_infrastructure_failure",
+          "final_stop": "security_or_identity_drift",
+          "only_failing_predicate": "before/after policy comparison: boundary_after absent"
+        },
+        "historical": {
+          "initial_stop": "execution_infrastructure_failure",
+          "final_stop": "security_or_identity_drift",
+          "only_failing_predicate": "before/after policy comparison: boundary_after absent"
+        }
+      }
+    }
+  }
+}
