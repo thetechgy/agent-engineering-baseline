@@ -26,7 +26,9 @@ to `security_or_identity_drift`, while its control expects
 fails the new gate; no assertion, guard or historical outcome is changed.
 Its repair is a separate work item. Routing-only successor profiles/freeze retain
 all historical identities, task/grading/model settings and candidate bytes.
-Local focused contracts pass; hosted final-source evidence and limitations are
+Local focused contracts pass. The broader local suite retains a worker-startup
+failure (exit `-6`) also reproduced on unchanged main; worker limits and the
+assertion remain intact. Hosted final-source evidence and limitations are
 maintained on [draft PR #134](https://github.com/thetechgy/agent-engineering-baseline/pull/134).
 
 [PR #132](https://github.com/thetechgy/agent-engineering-baseline/pull/132)

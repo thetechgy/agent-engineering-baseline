@@ -168,7 +168,11 @@ Local routing, gate, workflow, profile, frozen-input and affected report/campaig
 contracts pass under the retained runtime. Optional semantic/native-runtime checks
 remain explicitly skipped locally. Hosted final-revision status and any failures
 are recorded on the draft PR; this document does not turn skipped or historical
-checks into new execution evidence.
+checks into new execution evidence. The broader local suite retains a separate
+trusted-PowerShell worker-startup failure (exit `-6`), reproduced against unchanged
+main under the same worker limits. The worker source/test are unchanged; neither
+the limits nor assertion is relaxed. This local baseline failure is separate from
+the legacy scheduler limitation and from hosted runtime qualification.
 
 ## Operator commands
 

@@ -1178,7 +1178,9 @@ class WorkflowTests(unittest.TestCase):
         for filename in ("benchmark-skills.yml", "validate.yml"):
             data = yaml.safe_load((REPO / ".github/workflows" / filename).read_text())
             for job in data["jobs"].values():
-                for step in job["steps"]:
+                # Reusable jobs are checked by workflow-call contracts; action
+                # steps in every runnable job retain these pin/checkout checks.
+                for step in job.get("steps", []):
                     if "uses" in step:
                         self.assertRegex(step["uses"], r"@[0-9a-f]{40}$")
                     if step.get("uses", "").startswith("actions/checkout@"):
