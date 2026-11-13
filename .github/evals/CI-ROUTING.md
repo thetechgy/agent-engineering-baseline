@@ -8,7 +8,11 @@ Security review of the routing change:
 
 The changed paths retain read-only PR execution, SHA-pinned actions,
 `persist-credentials: false` and credential-free preparation. Reusable calls
-receive no inherited secrets. No privileged PR trigger or new token scope is added.
+receive no inherited secrets. No privileged PR trigger or runnable-job token scope
+is added. The pilot call declares an `actions: read` ceiling because GitHub checks
+its existing dispatch-only authentication job even when that job cannot run for a
+PR. The call itself has no runner/token; each runnable PR child still declares
+only `contents: read`. The planner remains `contents: read`.
 This is a review of execution boundaries, not a new vulnerability scan.
 
 ## Execution graph and disposition

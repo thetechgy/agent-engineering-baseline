@@ -474,6 +474,11 @@ jobs:
     uses: ./.github/workflows/pester-admission-qualification.yml
 
   codex-pilot:
+    # GitHub validates the dispatch-only preflight's read scope even on PR calls.
+    # This call has no runner/token; all runnable PR child jobs stay contents: read.
+    permissions:
+      contents: read
+      actions: read
     needs: plan
     if: github.event_name == 'pull_request' && needs.plan.outputs.legacy == 'true'
     uses: ./.github/workflows/codex-pilot.yml

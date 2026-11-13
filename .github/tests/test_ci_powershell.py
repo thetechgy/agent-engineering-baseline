@@ -211,6 +211,15 @@ class CIPowerShellTests(unittest.TestCase):
                 self.assertIn('workflow_call', triggers)
                 self.assertIn('workflow_dispatch', triggers)
                 self.assertNotIn('pull_request', triggers)
+        pilot_call = jobs['codex-pilot']
+        self.assertNotIn('runs-on', pilot_call)
+        pilot = yaml.safe_load((ROOT / '.github/workflows/codex-pilot.yml').read_text())
+        for name, job in pilot['jobs'].items():
+            if job['permissions'].get('actions'):
+                self.assertIn("github.event_name == 'workflow_dispatch'", job['if'])
+                self.assertIn('github.run_attempt == 1', job['if'])
+            elif name in ('prepare', 'consume', 'effectiveness', 'cohort-consume'):
+                self.assertEqual(job['permissions'], {'contents': 'read'})
         for name in ('evaluation-campaign', 'pester-return-qualification'):
             called = yaml.safe_load((ROOT / f'.github/workflows/{name}.yml').read_text())
             self.assertEqual(set(called.get('on', called.get(True))), {'workflow_dispatch'})
