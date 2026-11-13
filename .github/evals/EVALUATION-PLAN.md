@@ -4,12 +4,12 @@ Dependency modernization is the current work item. The
 [November 12 consumer inventory and implementation receipt](DEPENDENCY-MODERNIZATION-20261112.md)
 records active production, opt-in, review/scanner, frozen and ambient dependencies,
 implemented compatible updates, security applicability and precise exit conditions.
-The updates are published in draft [PR #125](https://github.com/thetechgy/agent-engineering-baseline/pull/125)
-and dependent [PR #133](https://github.com/thetechgy/agent-engineering-baseline/pull/133).
+The APM update is merged in [PR #125](https://github.com/thetechgy/agent-engineering-baseline/pull/125).
+The remaining updates are in draft [PR #133](https://github.com/thetechgy/agent-engineering-baseline/pull/133),
+updated against current main after that merge.
 Final-head checks and remaining constraints are also tracked in
 [issue #95](https://github.com/thetechgy/agent-engineering-baseline/issues/95).
-The existing APM refresh reuses [PR #125](https://github.com/thetechgy/agent-engineering-baseline/pull/125).
-No merge or production evaluator promotion is authorized.
+No merge of PR #133 or production evaluator promotion is authorized.
 
 [PR #132](https://github.com/thetechgy/agent-engineering-baseline/pull/132)
 records the deferred Pester clarification: transfer stopped at

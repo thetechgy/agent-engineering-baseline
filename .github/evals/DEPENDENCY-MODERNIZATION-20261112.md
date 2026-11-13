@@ -23,7 +23,7 @@ Targets were checked against released primary metadata:
 | Linux validation and APM updater lint | rumdl 0.3.2 | 0.3.4 | Regenerated wheel hashes, clean install and repository lint |
 | Validate/skill-quality code-risk scanning | Semgrep 1.184.0 | 1.185.0 | 67 installed packages; Semgrep and three compatible transitive updates; native scanner controls and reporting |
 | Independent SkillSpector SDK lock | OpenAI 3.46.0, Anthropic 2.6.0 | OpenAI 3.50.0, Anthropic 2.8.0 | Released scanner 2.13.4 unchanged; frozen sync, dependency check, clean/bad/incomplete controls |
-| Bootstrap and generated deployment, draft PR #125 | APM 0.35.0 | 0.35.1 | Existing updater run 43328758922; native candidate checks on final PR revision |
+| Bootstrap and generated deployment, merged PR #125 | APM 0.35.0 | 0.35.1 | Existing updater run 43328758922; native candidate checks on final PR revision |
 | Review runtime, separate commit | Pydantic 2.14.2/core 2.50.2/inspection 0.4.4 | 2.14.3/2.50.4/0.4.5 | New attachment profile; exact old review/legacy runtimes retained |
 | Operator Compose, separate commit | 5.7.0 | 5.7.1 | Official executable hash; setup/cleanup and native retained/opt-in Harbor checks |
 
@@ -33,10 +33,10 @@ to 4.3.0 and sse-starlette 3.6.0 to 3.7.0 through a fresh resolution.
 The scanner universal lock changes 25 package versions relative to the previous
 scanner-owned lock; it still resolves 166 packages. The clean Linux scanner install
 selects 68 packages. Neither number is an aggregate dependency freshness score.
-The APM draft is the prerequisite. The combined runtime draft keeps tooling/
-scanners, Compose and review changes in separate commits, then qualifies their
-shared identities together. This avoids repeating the same native matrix for
-several overlapping runtime PRs without changing workflow triggers.
+The APM prerequisite is merged in PR #125. The combined runtime draft now targets
+main and keeps tooling/scanners, Compose and review changes in separate commits,
+then qualifies their shared identities together. This avoids repeating the same
+native matrix for several overlapping runtime PRs without changing workflow triggers.
 
 uv 0.13.8 changes the Python 3.14.10 build from 20261026 to 20261110 despite
 the identical version number. Candidate setup therefore verifies and uses the
