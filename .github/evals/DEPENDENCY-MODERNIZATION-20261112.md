@@ -155,8 +155,8 @@ cleanup and further agent-runtime integrations remain separate work items.
 ## Verification receipt
 
 Final local qualification uses the unchanged combined executable inputs:
-119 focused contracts passed (six explicitly unsupported native-runtime checks
-skipped), including the earlier 48-test inventory set; the final expanded
+119 focused contracts passed (five owning-backend checks and the frozen
+gh 2.102.0 help check skipped), including the earlier 48-test inventory set; the final expanded
 inventory set separately passed 49 tests. These overlapping counts are not added.
 All 125 offline SDK/schema/redaction tests and all 33 attachment/profile tests
 passed under their owning current/previous/legacy interpreters.
