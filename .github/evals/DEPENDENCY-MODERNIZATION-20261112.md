@@ -142,8 +142,8 @@ pilot environments. It makes no comprehensive transitive or OS advisory claim.
 
 SkillSpector 2.13.4, Gitleaks 8.30.1, Bandit 1.9.4, pip-audit 2.10.1, Pester
 6.2.0 and PSScriptAnalyzer 1.25.0 match current primary release/package metadata.
-The released gh skill baseline is current at 2.103.3; captured CLI help 2.102.0
-remains a distinct historical contract. Ambient Docker/BuildKit, Node, shellcheck,
+The released gh 2.104.0 skill bytes are identical to the qualified 2.103.3
+baseline; captured CLI help 2.102.0 remains a distinct historical contract. Ambient Docker/BuildKit, Node, shellcheck,
 git, tar, PowerShell bootstrap and hosted-runner tools are runner-owned; their
 installed versions are not inferred from a documentation pin or this inventory.
 Ordinary CI acquires latest stable PowerShell, currently 7.7.0. Frozen evaluation
