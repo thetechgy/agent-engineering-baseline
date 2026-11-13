@@ -123,6 +123,30 @@ def stop_reason(row, usage, clean, *, code, audits, grades):
     return None
 
 
+def boundary_stop(audits, finals):
+    """Missing/malformed trusted observations are gaps, not observed drift.
+
+    All three observations must identify the same dedicated containers, images
+    and policy. A failed task never exempts this independent admission check.
+    """
+    if len(audits) != 1 or len(finals) != 1 or not isinstance(audits[0], dict):
+        return 'missing_security_evidence'
+    observations = [audits[0].get('boundary_before'), audits[0].get('boundary_after'), finals[0]]
+    fields = ('agent_id', 'controller_id', 'agent_image', 'controller_image', 'policy_sha256')
+    for observation in observations:
+        if not isinstance(observation, dict):
+            return 'missing_security_evidence'
+        for field in fields:
+            value = observation.get(field)
+            if field.endswith('_image') and isinstance(value, str):
+                value = value.removeprefix('sha256:')
+            if not isinstance(value, str) or re.fullmatch(r'[0-9a-f]{64}', value) is None:
+                return 'missing_security_evidence'
+    if any(any(value[field] != observations[0][field] for field in fields) for value in observations[1:]):
+        return 'security_or_identity_drift'
+    return None
+
+
 from evaluation_campaign_core import accounting, drive
 
 
@@ -240,25 +264,32 @@ def execute(root, reference, *, fixture=None, approval='', receipt=None):
             row['verifier_failure'] = exception if exception and not row['agent_failure'] and (native.get('verifier') or {}).get('started_at') else None
             row['infrastructure_failure'] = exception if exception and not (row['agent_failure'] or row['verifier_failure']) else None
             reason = stop_reason(row, current, clean, code=code, audits=audits, grades=grades)
-            if exception: reason = 'execution_infrastructure_failure' if not row['agent_failure'] or fixture in ('infrastructure','interruption') else reason
+            if exception and reason != 'cleanup_failure': reason = 'execution_infrastructure_failure' if not row['agent_failure'] or fixture in ('infrastructure','interruption') else reason
             if reason:
                 row['state'] = 'interrupted' if fixture == 'interruption' else 'failed'
                 ledger['stop_reason'] = reason
-            # Policy, prompt, skill and complete configuration must agree with the
-            # frozen launch. Absence or drift is a security/identity stop.
-            if audits:
+            # Keep the operational cause even when independent security admission
+            # also stops the cohort. Missing evidence must never imply observed drift.
+            row['execution_stop_reason'] = reason
+            finals = [reports.read_json(p) for p in trial.rglob('pilot-final-policy.json')]
+            security = boundary_stop(audits, finals)
+            if len(audits) == 1 and isinstance(audits[0], dict):
                 audit = audits[0]
-                finals = [reports.read_json(p) for p in trial.rglob('pilot-final-policy.json')]
-                agent_id = audit.get('boundary_before', {}).get('agent_id')
+                row['secondary_failures'] = {key: audit[key] for key in (
+                    'boundary_observation_exception', 'boundary_observation_unavailable',
+                    'collection_or_cleanup_exception') if key in audit}
+                before_audit = audit.get('boundary_before')
+                agent_id = before_audit.get('agent_id') if isinstance(before_audit, dict) else None
                 row['agent_id'] = agent_id
-                if not agent_id or any(previous is not row and previous.get('agent_id')==agent_id for previous in rows):
-                    ledger['stop_reason'] = 'environment_reuse'; row['state'] = 'failed'
+                if agent_id and any(previous is not row and previous.get('agent_id')==agent_id for previous in rows):
+                    security = 'environment_reuse'
                 expected_config = configuration('http://127.0.0.1:8765/v1' if fixture else None)
-                if (len(finals) != 1 or finals[0].get('policy_sha256') != audit.get('boundary_before',{}).get('policy_sha256')
-                    or audit.get('prompt_sha256') != hashlib.sha256((task / 'instruction.md').read_bytes()).hexdigest()
-                    or audit.get('effective_config') != expected_config or audit.get('skill_deployed') != (row['arm']=='with_skill')
-                    or audit.get('boundary_before',{}).get('policy_sha256') != audit.get('boundary_after',{}).get('policy_sha256')):
-                    ledger['stop_reason'] = 'security_or_identity_drift'; row['state'] = 'failed'
+                if (audit.get('prompt_sha256') != hashlib.sha256((task / 'instruction.md').read_bytes()).hexdigest()
+                    or audit.get('effective_config') != expected_config or audit.get('skill_deployed') != (row['arm']=='with_skill')):
+                    security = 'security_or_identity_drift'
+            if security:
+                row['security_failure'] = security
+                ledger['stop_reason'] = security; row['state'] = 'failed'
             stages.append({'arm': row['arm'], 'case': row['case'], 'trial': row['trial'], 'returncode': code, 'status': row['state']})
             reports.write_json(artifact / 'command-stages.json', stages)
             save()
@@ -312,6 +343,18 @@ def qualify(root, reference):
         else:
             # Threshold is checked immediately before the next launch.
             reports.require(len(launched)==1 and result.get('stop_reason')==expected[scenario], 'Wrong stop/extra launch: ' + scenario)
+        if scenario in ('infrastructure', 'interruption'):
+            evidence_root = root / scenario / 'evidence'
+            audits = reports.read_json(evidence_root / 'runtime-audits.json')
+            finals = reports.read_json(evidence_root / 'final-policy-audits.json')
+            reports.require(boundary_stop(audits, finals) is None, 'Failure-path independent audit incomplete')
+            reports.require(launched[0]['native_exception'] == 'RuntimeError'
+                            and audits[0]['returncode'] != 0 and audits[0]['execution_exception'] == 'RuntimeError'
+                            and launched[0]['execution_stop_reason'] == expected[scenario], 'Primary execution failure lost')
+            public = list((evidence_root / 'public').rglob('public-report.json'))
+            observations = [o for path in public for o in reports.read_json(path).get('observations', [])]
+            reports.require(len(observations) == 1 and all(m['status'] == 'unavailable' and m['value'] is None
+                            for m in observations[0]['custom']['measurements']), 'Failed execution became task quality')
         results[scenario] = {'state': result['state'], 'launched': len(launched), 'stop_reason': result.get('stop_reason')}
     value = {'complete': True, 'inference': False, 'protocol': PROTOCOL, 'revision': revision(), 'scenarios': results,
              'limits': ['non-forwarding fixtures, not provider authentication or effectiveness',

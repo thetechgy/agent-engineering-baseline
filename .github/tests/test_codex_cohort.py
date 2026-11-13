@@ -55,6 +55,23 @@ class Boundaries(unittest.TestCase):
         self.assertEqual(reason('passed', clean=False), 'cleanup_failure')
         self.assertEqual(reason('passed', code=124), 'execution_infrastructure_failure')
 
+    def test_missing_malformed_or_wrong_boundary_never_admits_a_failed_task(self):
+        boundary = {key: 'a' * 64 for key in (
+            'agent_id', 'controller_id', 'agent_image', 'controller_image', 'policy_sha256')}
+        audit = {'boundary_before': copy.deepcopy(boundary), 'boundary_after': copy.deepcopy(boundary)}
+        self.assertIsNone(cohort.boundary_stop([audit], [boundary]))
+        for audits, finals in (([], [boundary]), ([audit, audit], [boundary]), ([audit], []), ([audit], [boundary, boundary])):
+            self.assertEqual(cohort.boundary_stop(audits, finals), 'missing_security_evidence')
+        for field in ('boundary_before', 'boundary_after'):
+            for bad in (None, {}, [], {'policy_sha256': 'x'}):
+                value = copy.deepcopy(audit); value[field] = bad
+                self.assertEqual(cohort.boundary_stop([value], [boundary]), 'missing_security_evidence')
+        for field in boundary:
+            for member in ('boundary_after', 'final'):
+                value = copy.deepcopy(audit); final = copy.deepcopy(boundary)
+                (value[member] if member != 'final' else final)[field] = 'b' * 64
+                self.assertEqual(cohort.boundary_stop([value], [final]), 'security_or_identity_drift')
+
     def test_exact_allocation_rejects_old_pair_stale_code_and_workflow_rerun(self):
         source = 'a'*40; artifact='123'; nonce='one_dispatch'
         expected=f'cohort-{source}-{cohort.PROTOCOL}-prep{artifact}-usd15-{nonce}'

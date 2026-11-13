@@ -1,4 +1,61 @@
-# Issue #95 CI routing checkpoint
+# Codex/Pester failure-path audit checkpoint
+
+Verified main is `7696b50a3d2c30758d6a25a15c085a8d0b3008b0` (merged PR #134).
+This focused correction collects the trusted post-command boundary after a
+nonzero CLI exit, before submission collection, runtime-home scrubbing and the
+Harbor phase transition. The initiating execution error remains primary.
+Observation, collection and disposal failures remain separately visible in the
+runtime audit, exception notes and lifecycle record. Collection uses bounded
+handling; native containment is never restarted to obtain an audit. If a command
+never starts or containment prevents observation, absent evidence stays absent.
+
+The owning adapter is shared by the legacy pilot and campaign Codex consumers.
+The environment still disposes resources after observation failure and preserves
+that failure if disposal also fails. Cohort admission requires matching dedicated
+agent/controller IDs, image identities and policy hashes across the before,
+after and final observations. Missing or malformed observations stop as
+`missing_security_evidence`; observed mismatch stops as
+`security_or_identity_drift`. The ledger retains the execution stop and secondary
+failures alongside any security stop. Cleanup failure remains a scheduling stop.
+No failed execution becomes a successful agent task or a quality measurement.
+
+The authenticated before receipt is [Validate 43476103384](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43476103384),
+at `77b8e8fbca1a2602ca99e2c4c07bb2b7c0d1ac84`, attempt 1,
+[artifact 14065618994](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43476103384/artifacts/14065618994),
+archive SHA-256 `c0e84f25bfbefdaeaba71d12275f704cd06e0be3ce4f0b4a45194373c0e4b8f0`.
+Fresh bounded data-only inspection verifies twelve complete-fixture launches,
+twelve real child observations and exact submission handoffs, eight expected
+passes/four measured failures and cleanup. The deliberate control retains tool
+exit 23, CLI exit 1 and `RuntimeError`, one launch/eleven unlaunched slots,
+unavailable quality and cleanup, but no `boundary_after`; its classification is
+replaced by drift. This receipt and earlier failures remain unchanged. No new
+native baseline or DNS comparison is run.
+
+The local regression fails against verified main on the missing after-audit.
+The final owning-runtime local run executed 111 tests: 104 passed and seven
+environment-dependent controls skipped. Focused controls cover completion, nonzero exit, command and
+observation timeout/cancellation, contained workloads, independent observation
+failure, simultaneous cleanup failure, malformed/missing/wrong-environment
+observations, policy drift and unavailable report quality. This host has no
+Docker executable; native qualification belongs to the normal selected reusable
+Actions route. Final exact-head receipts and disposition are maintained on the
+delivery draft PR and [existing tracking issue #95](https://github.com/thetechgy/agent-engineering-baseline/issues/95).
+Scheduler readiness requires all seven native cohort controls, including cleanup
+and interruption previously unreached, the aggregate gate and both required
+platform checks to pass. Local controls alone do not establish that readiness.
+
+Only new source identities are appended: pilot retained v13, effectiveness v17
+and campaign source v8. All 302 earlier profiles, the existing return freeze,
+receipts, submissions, grades, task/model/grader settings and skills remain
+unchanged. Unchanged components reuse their authenticated historical evidence;
+changed shared consumers receive current native validation through normal CI.
+Full historical migration and experiment-preparation matrices are not repeated.
+
+**One next action:** review the focused draft PR using its final native and
+exact-head CI receipts. Paid evaluations, judges, allocations, adoption and the
+deferred skill clarification remain paused. PRs #130/#132 are unchanged.
+
+## PR #134 routing checkpoint, retained as history
 
 Compatible dependency updates are merged: [PR #125](https://github.com/thetechgy/agent-engineering-baseline/pull/125)
 at `e09e67da4d4be8d54d84d2b8ae64e067c9da5ba9` and
