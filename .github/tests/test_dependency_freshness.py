@@ -168,6 +168,16 @@ class FreshnessTests(unittest.TestCase):
                              "evaluation-runtime compatibility group" if id == "harbor" else "review-runtime compatibility group")
             self.assertTrue(row["policy"]["hold"])
 
+    def test_apm_generator_version_does_not_override_active_bootstrap_pin(self):
+        root = self.scratch()
+        lock = root / 'apm.lock.yaml'
+        import re
+        lock.write_text(re.sub(r'^apm_version: .+$', 'apm_version: 0.1.0', lock.read_text(), flags=re.M))
+        definition = next(d for d in fresh.load_config(root) if d['id'] == 'apm')
+        pin, sources = fresh.extract(root, definition)
+        self.assertEqual(pin['version'], (root / '.apm-version').read_text().strip())
+        self.assertEqual({s['path'] for s in sources}, {'.apm-version'})
+
     def test_review_lock_overlay_disagreement_remains_visible(self):
         root = self.scratch()
         overlay = root / '.github/patches/skillevaluator-v0.3.0-review-runtime.patch'
