@@ -337,7 +337,7 @@
     },
     {
       "id": "openai",
-      "label": "OpenAI SDK",
+      "label": "OpenAI SDK (current reviews)",
       "repo": "openai/openai-python",
       "sources": [
         {
@@ -370,7 +370,7 @@
     },
     {
       "id": "pydantic",
-      "label": "Pydantic",
+      "label": "Pydantic (current reviews)",
       "repo": "pydantic/pydantic",
       "sources": [
         {

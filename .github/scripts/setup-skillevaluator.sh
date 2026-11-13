@@ -19,9 +19,21 @@ export UV_PYTHON_INSTALL_DIR="$tool_root/python"
 export XDG_CACHE_HOME="$tool_root/cache"
 export XDG_STATE_HOME="$tool_root/state"
 
+# uv's managed-build catalog can change without changing a Python version.
+# Preserve the reviewed 0.13.7 download identities for frozen evaluator recipes.
+if [ "$kind" = candidate ] || [ "$kind" = candidate-current ]; then
+  frozen_python_catalog="$tool_root/frozen-python-downloads.json"
+  curl --fail --location --silent --show-error --proto '=https' --proto-redir '=https' \
+    --output "$frozen_python_catalog" \
+    https://raw.githubusercontent.com/astral-sh/uv/316c827e058c16b71d5c507a20729c2995a7bcce/crates/uv-python-managed/download-metadata.json
+  printf '%s  %s\n' 81372e1cbff3dd87a786674ef00e01b3743638e3d8e58117d73e32a8e11eae05 "$frozen_python_catalog" | sha256sum --check --strict
+  export UV_PYTHON_DOWNLOADS_JSON_URL="$frozen_python_catalog"
+fi
+
 # Current opt-in replacement. Historical recipes below retain their original bytes.
 if [ "$kind" = candidate-current ]; then
   current_root="$RUNNER_TEMP/current-evaluator"
+  export UV_PYTHON_INSTALL_DIR="$current_root/python"
   git init --quiet "$current_root"
   git -C "$current_root" fetch --quiet --depth=1 https://github.com/NVIDIA/SkillEvaluator.git 8149356e4476a1497fb334727f13f699c6fa6ba5
   git -C "$current_root" checkout --quiet --detach FETCH_HEAD
@@ -44,6 +56,7 @@ fi
 if [ "$kind" = candidate ]; then
   candidate_revision=f878f99a9cd4a85dd04043feb43e5bd6a777f64b # v0.7.2
   candidate_root="$RUNNER_TEMP/candidate-evaluation-tools"
+  export UV_PYTHON_INSTALL_DIR="$candidate_root/python"
   git init --quiet "$candidate_root/evaluator"
   git -C "$candidate_root/evaluator" fetch --quiet --depth=1 \
     https://github.com/NVIDIA/SkillEvaluator.git "$candidate_revision"

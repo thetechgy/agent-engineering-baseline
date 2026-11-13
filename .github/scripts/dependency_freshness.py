@@ -271,6 +271,27 @@ def inventory(root):
                         [{"path": ".github/scripts/skill_reports.py", "line": line}]))
         if keys:
             rows[-1]["sources"].append({"path": fixture_path, "line": fixture_source.count("\n", 0, matches[0].start()) + 1})
+    # The original upstream evaluator environment still has active consumers;
+    # these same SDK/model pins also select its historical validator runtime.
+    try:
+        retained, retained_line = literal(read(root, ".github/scripts/skill_report_reviews.py"), "LEGACY_PINS")
+        policy, policy_line = literal(read(root, ".github/scripts/skill_reports.py"), "POLICY")
+        retained = {**retained, "harbor": policy["harbor"], "python": policy["python"]}
+        note = ("Active evaluator/native setup still uses the original released 0.3.0 lock; "
+                "this is not historical-only. Current private reviews have a separate overlay. "
+                "A refreshed production lock needs a distinct compatibility identity and native/request/"
+                "grading qualification; never relabel historical validators or infer adoption from an opt-in path.")
+        rows.append(row(dict(id="production-environment", label="Active retained evaluator SDK environment",
+                             owner="Maintainer environment qualification", hold=note,
+                             group="Independent runtime profiles", validation=note),
+                        {"version": None, "revision": None, "value": json.dumps(retained, sort_keys=True)},
+                        [{"path": ".github/scripts/skill_report_reviews.py", "line": retained_line},
+                         {"path": ".github/scripts/skill_reports.py", "line": policy_line}]))
+    except (DiscoveryError, ValueError, KeyError, TypeError) as error:
+        rows.append(row(dict(id="production-environment", label="Active retained evaluator SDK environment",
+                             owner="Maintainer environment qualification"),
+                        {"version": None, "revision": None, "value": "Unknown"}, [],
+                        [str(error) if isinstance(error, DiscoveryError) else "invalid_environment_profile"]))
     # Existing informational rows expose independently owned environments. These
     # are source identities, not a second release/advisory polling mechanism.
     for id, label, path, note in (

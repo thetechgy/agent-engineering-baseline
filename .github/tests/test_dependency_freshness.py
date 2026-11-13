@@ -173,6 +173,8 @@ class FreshnessTests(unittest.TestCase):
         _, rows, _ = fresh.inventory(ROOT)
         by_id = {row['id']: row for row in rows}
         self.assertEqual(by_id['skillevaluator']['pin']['version'], '0.3.0')
+        production = json.loads(by_id['production-environment']['pin']['value'])
+        self.assertEqual((production['openai'], production['pydantic']), ('2.44.0', '2.13.4'))
         candidate = json.loads(by_id['candidate-environment']['pin']['value'])
         self.assertEqual(candidate['version'], '0.8.0')
         self.assertEqual(candidate['dependencies']['harbor'], '0.24.0')
@@ -189,6 +191,16 @@ class FreshnessTests(unittest.TestCase):
         pin, sources = fresh.extract(root, definition)
         self.assertEqual(pin['version'], (root / '.apm-version').read_text().strip())
         self.assertEqual({s['path'] for s in sources}, {'.apm-version'})
+
+    def test_missing_retained_environment_identity_preserves_partial_inventory(self):
+        root = self.scratch()
+        source = root / '.github/scripts/skill_report_reviews.py'
+        source.write_text(source.read_text().replace('LEGACY_PINS =', 'RENAMED_LEGACY_PINS ='))
+        _, rows, _ = fresh.inventory(root)
+        by_id = {row['id']: row for row in rows}
+        self.assertEqual(by_id['production-environment']['errors'], ['missing_or_duplicate_pin'])
+        self.assertIsNotNone(by_id['openai']['pin']['version'])
+        self.assertFalse(by_id['candidate-environment']['errors'])
 
     def test_review_lock_overlay_disagreement_remains_visible(self):
         root = self.scratch()
