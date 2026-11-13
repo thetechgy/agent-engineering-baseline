@@ -572,7 +572,9 @@ separate evidence; a PyPI patch can precede a public GitHub tag. See the
 [Semgrep 1.182.1 assessment](.github/evals/SEMGREP-1.182.1.md) for artifact
 verification, scanner comparisons, and residual MCP dependency risk.
 
-Evaluation setup pins uv 0.13.8 and retains the managed Python 3.13 selector.
+Current evaluation setup pins uv 0.13.8; the immutable return-contract workflow
+retains reviewed uv 0.13.7. Both frozen recipes retain their verified interpreter
+download identities. Current setup retains the managed Python 3.13 selector.
 Fresh installations select a managed Python 3.13 patch release; the exact interpreter version
 is recorded in `versions.json`. Historical evaluation records retain their original
 runtime identities, including Python 3.13.15; they are not rebaselined by this update.

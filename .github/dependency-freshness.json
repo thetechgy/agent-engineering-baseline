@@ -96,7 +96,7 @@
     },
     {
       "id": "uv",
-      "label": "uv",
+      "label": "uv (current CI and compiler)",
       "repo": "astral-sh/uv",
       "sources": [
         {
@@ -140,11 +140,6 @@
           "count": 3
         },
         {
-          "path": ".github/workflows/pester-return-qualification.yml",
-          "pattern": "uses: astral-sh/setup-uv@[^\\n]+\\n(?:[^\\n]*\\n){0,5}?\\s+version: \\'(?P<version>[^\\']+)\\'",
-          "count": 2
-        },
-        {
           "path": ".github/workflows/publish-skill-report.yml",
           "pattern": "uses: astral-sh/setup-uv@[^\\n]+\\n(?:[^\\n]*\\n){0,5}?\\s+version: \\'(?P<version>[^\\']+)\\'",
           "count": 1
@@ -164,7 +159,7 @@
       "hold": null,
       "group": null,
       "tag_prefix": "",
-      "validation": "Review security fixes, lock/compiler behavior and managed Python changes; validate both frozen evaluator/scanner installs and hash-lock reproduction in a separate focused PR.",
+      "validation": "Qualify current frozen/hash-lock installs and compiler behavior. The immutable return-contract workflow separately retains uv 0.13.7; it appears in runtime selectors and is not a contradictory current-compiler pin.",
       "package": {
         "ecosystem": "pip",
         "name": "uv"

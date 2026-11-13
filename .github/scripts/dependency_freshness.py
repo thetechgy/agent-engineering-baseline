@@ -254,7 +254,7 @@ def inventory(root):
         ("task-build", "Container and Debian snapshot", "GH_TASK_BUILD", None,
          "Intentional reproducibility constraints; review image, signed snapshot and direct package pins together. No OS package monitoring or image vulnerability scanning here."),
         ("runtime-selectors", "Evaluation runtime and fixture selectors", "POLICY", ("python", "model", "provider"),
-         "Evaluation policy selectors and captured gh fixture contract, not installed CLI/Python patch versions or a model-release freshness assessment."),
+         "Evaluation selectors, frozen return-contract uv and captured gh help, not installed CLI/Python patch versions or a model-release freshness assessment. The frozen workflow is an active immutable consumer, not historical-only."),
     ):
         value, line = literal(read(root, ".github/scripts/skill_reports.py"), symbol)
         if keys:
@@ -265,12 +265,20 @@ def inventory(root):
             require(len(matches) == 1, "missing_or_duplicate_fixture_contract")
             stable(matches[0][1])
             value["gh_cli_fixture_contract"] = matches[0][1]
+            frozen_uv = read(root, ".github/workflows/pester-return-qualification.yml")
+            versions = re.findall(r"(?m)^          version: '([0-9.]+)'$", frozen_uv)
+            require(len(versions) == 2 and len(set(versions)) == 1, "contradictory_frozen_uv_pins")
+            stable(versions[0])
+            value["frozen_return_qualification_uv"] = versions[0]
+
         item = dict(id=id, label=label, owner="Maintainer evaluation qualification", hold=note,
                     group="Evaluation reproducibility", validation=note)
         rows.append(row(item, {"version": None, "revision": None, "value": json.dumps(value, sort_keys=True)},
                         [{"path": ".github/scripts/skill_reports.py", "line": line}]))
         if keys:
             rows[-1]["sources"].append({"path": fixture_path, "line": fixture_source.count("\n", 0, matches[0].start()) + 1})
+            rows[-1]["sources"].append({"path": ".github/workflows/pester-return-qualification.yml",
+                                        "line": frozen_uv[:frozen_uv.index("version:")].count("\n") + 1})
     # The original upstream evaluator environment still has active consumers;
     # these same SDK/model pins also select its historical validator runtime.
     try:

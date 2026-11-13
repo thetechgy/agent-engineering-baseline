@@ -19,7 +19,7 @@ Targets were checked against released primary metadata:
 
 | Group and active consumers | Previous | Update | Qualification |
 | --- | --- | --- | --- |
-| Shared setup/compiler in 11 workflows | uv 0.13.7 | 0.13.8 | Official Linux archive digest; production frozen installs and hash-lock compilation |
+| Current setup/compiler in 10 workflows | uv 0.13.7 | 0.13.8 | Official Linux archive digest; production frozen installs and hash-lock compilation |
 | Linux validation and APM updater lint | rumdl 0.3.2 | 0.3.4 | Regenerated wheel hashes, clean install and repository lint |
 | Validate/skill-quality code-risk scanning | Semgrep 1.184.0 | 1.185.0 | 67 installed packages; Semgrep and three compatible transitive updates; native scanner controls and reporting |
 | Independent SkillSpector SDK lock | OpenAI 3.46.0, Anthropic 2.6.0 | OpenAI 3.50.0, Anthropic 2.8.0 | Released scanner 2.13.4 unchanged; frozen sync, dependency check, clean/bad/incomplete controls |
@@ -48,6 +48,13 @@ Ordinary current setup uses the new catalog. Frozen task recipes, package lock,
 model settings and interpreter download identity remain distinct from ordinary
 tooling updates. The [uv setting](https://docs.astral.sh/uv/reference/environment/#uv_python_downloads_json_url)
 is a metadata override, not a hash or sandbox bypass.
+
+The immutable return-contract qualification workflow itself remains byte-for-byte
+unchanged at uv 0.13.7. The initial broad uv edit failed its frozen-input hash
+assertion before execution; restoring that workflow corrects the regression
+without changing the freeze or assertion. Setup accepts that reviewed compiler
+only for candidate-current; current CI/compiler consumers require 0.13.8.
+The held active frozen consumer is visible in the existing runtime-selector row.
 
 The compiler does not rewrite the evaluator's upstream locks or the frozen
 candidate lock. Fresh ordinary Python 3.13 installations record their actual patch

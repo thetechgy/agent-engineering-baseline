@@ -216,7 +216,8 @@ class FreshnessTests(unittest.TestCase):
         pin, sources = fresh.extract(ROOT, definition)
         self.assertEqual({source["path"] for source in sources}, {
             *(p.relative_to(ROOT).as_posix() for p in (ROOT / '.github/workflows').glob('*.yml')
-              if 'uses: astral-sh/setup-uv@' in p.read_text()),
+              if 'uses: astral-sh/setup-uv@' in p.read_text()
+              and p.name != 'pester-return-qualification.yml'),
             ".github/scripts/setup-skillevaluator.sh",
         })
         for selector in definition["sources"]:
