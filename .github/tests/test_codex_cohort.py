@@ -109,49 +109,6 @@ class Boundaries(unittest.TestCase):
                 self.assertEqual(value['agent']['kwargs'],{'version':'0.167.0','reasoning_effort':'high'})
             self.assertEqual(len(set(paths)),12)
 
-    @unittest.skipUnless(os.environ.get('APM_EXECUTABLE') and __import__('shutil').which('docker'), 'Native Docker/APM diagnostic')
-    def test_native_interleaved_verifier_inputs_and_rewards(self):
-        import importlib.metadata
-        if importlib.metadata.version('skillevaluator') != '0.8.0': self.skipTest('Owning pinned runtime required')
-        import subprocess
-        from qualify_evaluator_candidate import run_native, native_compose_config
-        native_compose_config(ROOT)
-        cohort.no_credentials()
-        root = Path(os.environ['RUNNER_TEMP']) / 'cohort-qualification'
-        root.mkdir(exist_ok=False)
-        _, tasks, _ = cohort.staged(root)
-        baseline = pilot.resources()
-        # A case switch, repeat, reverse switch and present-arm control. These
-        # are existing non-forwarding fixtures through the actual pinned CLI.
-        sequence = [('pester-003', 'without_skill'), ('pester-004', 'without_skill'),
-                    ('pester-003', 'without_skill'), ('pester-004', 'with_skill')]
-        for position, (case, arm) in enumerate(sequence, 1):
-            row = {'position': position, 'trial': position, 'case': case, 'arm': arm}
-            task = next(t for t in tasks[arm] if t.name == case)
-            target, trial = cohort.launch_config(root, row, task)
-            config = reports.read_json(target)
-            config['environment']['import_path'] = 'verifier_identity_observation:ObservedVerifierEnvironment'
-            reports.write_json(target, config)
-            environment = {k:v for k,v in os.environ.items() if not k.startswith(('CODEX_', 'ANTHROPIC_', 'NVIDIA_', 'SKILL_EVAL_', 'AEB_')) and k not in ('GH_TOKEN','GITHUB_TOKEN','OPENAI_BASE_URL')}
-            environment.update(PYTHONPATH=str(ROOT/'.github/scripts')+os.pathsep+str(ROOT/'.github/tests'),
-                PYTHON_DOTENV_DISABLED='1', HARBOR_TELEMETRY='0', AEB_PILOT_PROBE='1',
-                AEB_COHORT_FIXTURE=case+('-external' if case=='pester-003' else '-explicit'), AEB_PILOT_SCENARIO='success')
-            with (root / 'launches' / f'{position:02}.log').open('w') as log:
-                code = run_native([str(Path(sys.executable).parent/'harbor'),'trials','start','--config',str(target)], env=environment,log=log,timeout=1200)
-            self.assertEqual(pilot.resources(), baseline, 'Diagnostic cleanup failed; stop')
-            self.assertEqual(code, 0)
-            observations = [json.loads(line) for line in (trial/'operator/verifier-identity.jsonl').read_text().splitlines()]
-            expected = json.loads((task/'tests/entry.json').read_text())
-            reward = reports.read_json(trial/'verifier/skill_evaluator_reward.json')
-            print(json.dumps({'source_revision':cohort.revision(),'position':position,'case':case,'arm':arm,'expected_entry':expected,
-                'reward_entry':reward.get('entry_id'),'observed':observations}), flush=True)
-            for observation in observations:
-                self.assertEqual(observation['before']['observation']['files']['/tests/entry.json']['json'], expected)
-                self.assertEqual(observation['after']['observation']['files']['/tests/entry.json']['json'], expected)
-            self.assertEqual(reward['entry_id'], expected['id'])
-        # Keep the native evidence outside the fresh full-cohort output claim.
-        root.rename(Path(os.environ['RUNNER_TEMP']) / 'verifier-identity-diagnostic')
-
     def test_archive_rejects_wrong_digest_and_path_traversal(self):
         import hashlib
         with tempfile.TemporaryDirectory() as d:

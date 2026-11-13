@@ -180,7 +180,31 @@ class PilotEnvironment(SkillEvaluatorSecureDockerEnvironment):
 
     async def stop(self, delete):
         if not self._pilot_agent:
-            return await super().stop(delete)
+            # Preserve live verifier bytes after grading, before mounted output
+            # ownership/disposal. Never substitute host staging for this receipt.
+            primary = None
+            target = Path(self.trial_paths.trial_dir) / 'operator/pilot-verifier-observation.json'
+            try:
+                target.parent.mkdir(exist_ok=True)
+                from codex_pilot_boundary import observe_verifier
+                async with asyncio.timeout(30):
+                    observation = await observe_verifier(self)
+                target.write_text(json.dumps(observation, indent=2) + '\n')
+            except BaseException as error:
+                primary = error
+                try:
+                    target.write_text(json.dumps({'observation_exception': type(error).__name__}) + '\n')
+                except OSError:
+                    error.add_note('Verifier observation retention also failed')
+                raise
+            finally:
+                try:
+                    await super().stop(delete)
+                except BaseException as error:
+                    if primary is None:
+                        raise
+                    primary.add_note('Verifier disposal also failed: ' + type(error).__name__)
+            return
         if self._pilot_interrupted:
             try:
                 self._stage('disposal_started')

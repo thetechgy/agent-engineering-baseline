@@ -1,4 +1,38 @@
-# Codex/Pester failure-path audit checkpoint
+# PR #135 verifier case-identity investigation
+
+The active scope is the raw verifier case mismatch on PR #135 at `f903197`.
+Authenticated run `43490661263`, attempt 1, artifact `14072781224`, archive
+SHA-256 `13aaa49d55268aab81b702284d8a1f9aec1cf3b80447545a3752ae2b9081ca47`
+retains incorrect raw reward entry IDs in absent-arm slots 3, 7 and 11. The
+normalizer's rejection remains unchanged. A fresh comparison against PR #134's
+artifact `14065618994` confirms all 76 staged verifier members are byte-identical;
+that older cohort has no raw identity mismatches. Collector-only replay of the
+older cohort leaves all 278 raw trial files unchanged and preserves correct IDs.
+Neither observation establishes which bytes the failed verifier actually read.
+
+A short diagnostic at `74b71fd`, run `43513274711`, passed the sequence absent
+003, absent 004, repeated absent 003 and present 004 with live input/output
+observations. It did not reproduce the defect and is not a correction receipt.
+The following step rejected the Compose configuration consumed by this diagnostic;
+that run was retained and cancelled before its known replacement. It is
+inconclusive. The intrusive short harness is retired. The current diagnostic
+records bounded live verifier input/output hashes and container/image/mount
+identities after grading and before disposal, through the existing environment
+lifecycle. It does not pre-read, repair or substitute verifier inputs. Collection
+failure still disposes the environment and preserves primary/secondary errors.
+
+The original prepared-cohort path must now determine whether its live input bytes,
+reward creation, mounted output or later collection is the first incorrect
+boundary. Final causal findings, correction and native/CI receipts will be recorded
+on [PR #135](https://github.com/thetechgy/agent-engineering-baseline/pull/135).
+All 331 existing profiles are preserved; source-v9, pilot retained v14 and
+effectiveness v18 identify only the added runtime observation. Task/fixture/grader
+bytes and grading criteria are unchanged. No historical rewards are repaired.
+
+**One next action:** complete the boundary trace and supported correction, then
+qualify the full existing scheduler. Paid evaluations and experiments remain paused.
+
+## Failure-path audit checkpoint, retained as history
 
 Verified main is `7696b50a3d2c30758d6a25a15c085a8d0b3008b0` (merged PR #134).
 This focused correction collects the trusted post-command boundary after a

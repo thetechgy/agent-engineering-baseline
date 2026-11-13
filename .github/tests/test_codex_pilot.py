@@ -366,6 +366,24 @@ class PilotContracts(unittest.TestCase):
         self.assertEqual([s[0] for s in stages], ['final_observation_failed', 'disposal_started', 'cleanup_failed'])
 
     @unittest.skipUnless(CANDIDATE_RUNTIME, 'Requires qualified owning runtime')
+    def test_verifier_observation_failure_preserves_disposal_and_secondary_error(self):
+        import asyncio
+        from types import SimpleNamespace
+        from codex_pilot_environment import PilotEnvironment, SkillEvaluatorSecureDockerEnvironment
+        with tempfile.TemporaryDirectory() as directory:
+            environment = object.__new__(PilotEnvironment)
+            environment._pilot_agent = False
+            environment.trial_paths = SimpleNamespace(trial_dir=Path(directory))
+            primary = ValueError('observation unavailable')
+            disposal = AsyncMock(side_effect=RuntimeError('disposal failed'))
+            with patch('codex_pilot_boundary.observe_verifier', new=AsyncMock(side_effect=primary)), patch.object(SkillEvaluatorSecureDockerEnvironment, 'stop', new=disposal):
+                with self.assertRaises(ValueError) as caught: asyncio.run(environment.stop(True))
+            self.assertIs(caught.exception, primary)
+            disposal.assert_awaited_once_with(True)
+            self.assertIn('RuntimeError', str(primary.__notes__))
+            self.assertEqual(json.loads((Path(directory)/'operator/pilot-verifier-observation.json').read_text()), {'observation_exception':'ValueError'})
+
+    @unittest.skipUnless(CANDIDATE_RUNTIME, 'Requires qualified owning runtime')
     def test_post_command_audit_failure_precedence_and_collection(self):
         import asyncio
         from types import SimpleNamespace
