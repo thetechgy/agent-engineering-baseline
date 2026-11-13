@@ -1,26 +1,9 @@
 name: Pester return-contract qualification
 on:
-  pull_request:
-    paths:
-      - '.github/evals/pester-return-contract/transfer/**'
-      - '.github/evals/pester-return-contract/variants/**'
-      - '.github/evals/pester-return-contract/freeze.json'
-      - '.github/evals/pester-return-contract/PLAN.md'
-      - '.github/evals/pester-return-contract/Advice.Tests.ps1'
-      - '.github/evals/pester-return-contract/verify_example.py'
-      - '.github/evals/campaigns/pester-return-*.json'
-      - '.github/evals/custom-metrics.json'
-      - '.github/scripts/evaluation_*.py'
-      - '.github/scripts/codex_pilot*.py'
-      - '.github/scripts/skill_evidence.py'
-      - '.github/scripts/skill_analysis.py'
-      - '.github/scripts/skill_report.py'
-      - '.github/tests/test_pester_return*.py'
-      - '.github/workflows/pester-return-qualification.yml'
   workflow_dispatch:
 permissions: {}
 concurrency:
-  group: pester-return-qualification-${{ github.ref }}
+  group: pester-return-qualification-${{ github.run_id }}
   cancel-in-progress: false
 jobs:
   qualify:

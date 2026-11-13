@@ -14,20 +14,11 @@ on:
         type: boolean
         default: false
         description: Verify the original failure before correction
-  pull_request:
-    paths:
-      - '.github/scripts/codex_pilot*.py'
-      - '.github/scripts/evaluation_codex.py'
-      - '.github/scripts/evaluation_campaign.py'
-      - '.github/scripts/evaluation_runtime.py'
-      - '.github/scripts/skill_evidence.py'
-      - '.github/tests/test_native_deadline.py'
-      - '.github/scripts/qualify_native_deadline.py'
-      - '.github/workflows/native-deadline.yml'
+  workflow_call:
 permissions: {}
 concurrency:
-  group: native-deadline-${{ github.ref }}
-  cancel-in-progress: false
+  group: native-deadline-${{ github.event_name == 'pull_request' && github.run_attempt == '1' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == '1' }}
 jobs:
   qualify:
     if: ${{ !inputs.cli_observation }}

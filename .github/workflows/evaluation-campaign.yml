@@ -1,25 +1,6 @@
 name: Reusable evaluation qualification
 run-name: ${{ inputs.allocation != '' && format('Evaluation campaign {0}', inputs.allocation) || 'Credential-free reusable campaign preparation' }}
 on:
-  pull_request:
-    paths:
-      - '.github/scripts/evaluation_*.py'
-      - '.github/scripts/codex_pilot*.py'
-      - '.github/scripts/skill_evidence.py'
-      - '.github/scripts/skill_analysis.py'
-      - '.github/scripts/skill_report.py'
-      - '.github/scripts/skill_reports.py'
-      - '.github/evals/campaigns/**'
-      - '.github/evals/pester-ceiling/**'
-      - '.github/evals/custom-metrics.json'
-      - '.github/evals/codex-retrospective/42695478931/**'
-      - '.github/tests/test_codex_events.py'
-      - '.github/tests/test_campaign_replay.py'
-      - '.github/tests/fixtures/codex-events/**'
-      - '.github/tests/test_evaluation_campaign.py'
-      - '.github/tests/test_evaluation_protocol.py'
-      - '.github/tests/test_campaign_selection.py'
-      - '.github/workflows/evaluation-campaign.yml'
   workflow_dispatch:
     inputs:
       campaign:
@@ -44,7 +25,7 @@ permissions: {}
 env:
   CAMPAIGN_ID: ${{ inputs.campaign || 'boolean-effectiveness-v1' }}
 concurrency:
-  group: reusable-evaluation-${{ github.ref }}
+  group: reusable-evaluation-${{ inputs.allocation != '' && format('live-{0}', github.ref) || format('diagnostic-{0}', github.run_id) }}
   cancel-in-progress: false
 jobs:
   qualify:

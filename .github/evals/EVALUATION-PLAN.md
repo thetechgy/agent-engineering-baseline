@@ -1,32 +1,43 @@
-# Issue #95 dependency modernization checkpoint
+# Issue #95 CI routing checkpoint
 
-Dependency modernization is the current work item. The
-[November 12 consumer inventory and implementation receipt](DEPENDENCY-MODERNIZATION-20261112.md)
-records active production, opt-in, review/scanner, frozen and ambient dependencies,
-implemented compatible updates, security applicability and precise exit conditions.
-The APM update is merged in [PR #125](https://github.com/thetechgy/agent-engineering-baseline/pull/125).
-The remaining updates are in draft [PR #133](https://github.com/thetechgy/agent-engineering-baseline/pull/133),
-updated against current main after that merge.
-Final-head checks and remaining constraints are also tracked in
-[issue #95](https://github.com/thetechgy/agent-engineering-baseline/issues/95).
-No merge of PR #133 or production evaluator promotion is authorized.
+Compatible dependency updates are merged: [PR #125](https://github.com/thetechgy/agent-engineering-baseline/pull/125)
+at `e09e67da4d4be8d54d84d2b8ae64e067c9da5ba9` and
+[PR #133](https://github.com/thetechgy/agent-engineering-baseline/pull/133)
+at current main `e40cc0c995025d448fd7b163df3b6f32b7ea569e`.
+The [consumer inventory](DEPENDENCY-MODERNIZATION-20261112.md) retains the
+qualification evidence and remaining holds. Production still uses SkillEvaluator
+0.3.0/Harbor 0.13.2; opt-in 0.8.0 implementation is not adoption. SDK/framework,
+Codex, fixture image/snapshot, Semgrep MCP/OpenTelemetry constraints and the
+git-commit skill hold remain. No dependency is upgraded by this routing change.
+
+The [workflow graph, selection contract and operator commands](CI-ROUTING.md)
+record all 13 workflows. Routine PRs keep both complete required platform checks,
+one conservative Git change plan and an always-running result gate. Expensive
+maintained checks use existing workflows without changing their job definitions;
+full experiment preparation and historical campaign replay become explicit.
+Main's five original artifact producers and downstream production/publication
+behavior remain intact. Schedules and disabled streams are unchanged.
+The existing freshness workflow regenerated #95 from merged main in
+[run 43357529214](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43357529214).
+
+The older Codex/Pester scheduler remains failed: missing post-command audit leads
+to `security_or_identity_drift`, while its control expects
+`execution_infrastructure_failure`. It remains selected for relevant inputs and
+fails the new gate; no assertion, guard or historical outcome is changed.
+Its repair is a separate work item. Routing-only successor profiles/freeze retain
+all historical identities, task/grading/model settings and candidate bytes.
+Local focused contracts pass; hosted final-source evidence and limitations are
+maintained on the routing draft PR.
 
 [PR #132](https://github.com/thetechgy/agent-engineering-baseline/pull/132)
-records the deferred Pester clarification: transfer stopped at
-unsupported/test_name_template and candidate transfer behavior remains unmeasured.
-Development evidence remains useful. PRs #130 and #132, historical evidence,
-frozen experiments and candidate content are unchanged; no experiment resumes.
-Template admission, workflow-trigger/concurrency cleanup and further agent-runtime
-integrations remain in their existing tracking and are outside this pass.
+retains the deferred Pester clarification. Development evidence remains useful;
+candidate transfer remains unmeasured after unsupported/test_name_template.
+PRs #130/#132, frozen evidence, skills and closed allocations remain unchanged.
+Paid evaluations, judges, adoption and live gates remain paused. No Pages,
+protection-rule change, merge or new experiment is authorized here.
 
-The 0.8.0 implementation in merged PR #119 remains opt-in. Active workflows still
-execute SkillEvaluator 0.3.0/Harbor 0.13.2; the older versions are not
-historical-only. Ordinary latest-stable PowerShell validation remains separate
-from frozen PowerShell/Pester evaluation environments and model/reasoning selectors.
-
-**One next action:** review the completed compatible dependency PRs and their
-exact-head validation; retain the documented constrained groups until their
-specific support or adoption conditions are met.
+**One next action:** review the focused routing draft and its final-revision
+checks, retaining the separate scheduler failure and dependency holds.
 
 ## PR #130 and #131 checkpoint, retained as history
 
