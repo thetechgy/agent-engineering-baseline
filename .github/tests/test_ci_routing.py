@@ -20,7 +20,7 @@ class SelectionTests(unittest.TestCase):
         return {k for k, v in routing.select(list(paths)).items() if v}
 
     def test_docs_keep_required_platform_jobs_but_no_native_work(self):
-        self.assertEqual(self.selected('README.md', 'docs/operator.md', '.github/evals/EVALUATION-PLAN.md'), set())
+        self.assertEqual(self.selected('docs/operator.md', 'CONTRIBUTING.md', '.github/evals/EVALUATION-PLAN.md'), set())
 
     def test_skill_support_is_not_documentation(self):
         self.assertEqual(self.selected('.apm/skills/podman/references/quadlet.md'), {'contracts', 'quality'})
@@ -55,6 +55,7 @@ class SelectionTests(unittest.TestCase):
 
     def test_monitoring_is_contract_only(self):
         self.assertEqual(self.selected('.github/scripts/dependency_freshness.py'), {'contracts'})
+        self.assertEqual(self.selected('README.md'), {'contracts'})
 
     def test_empty_or_incomplete_evidence_never_selects_nothing(self):
         self.assertTrue(all(routing.select([], complete=True).values()))

@@ -49,7 +49,10 @@ def select(paths, *, complete=True):
                 selected.update(('pester', 'evaluator', 'admission', 'legacy', 'deadline'))
             if skill == 'gh':
                 selected.add('evaluator')
-        elif path.startswith(('docs/',)) or path in ('README.md', 'CONTRIBUTING.md', 'LICENSE',
+        elif path == 'README.md':
+            # The maintained external-action allowlist contract reads this file.
+            selected.add('contracts')
+        elif path.startswith(('docs/',)) or path in ('CONTRIBUTING.md', 'LICENSE',
                 '.github/evals/EVALUATION-PLAN.md', '.github/evals/CI-ROUTING.md'):
             continue
         elif path.startswith('.github/workflows/') and parts[-1] in WORKFLOWS:

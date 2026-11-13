@@ -75,6 +75,7 @@ A known task-owned gh change selects its native/scanner consumers; Pester inputs
 select the retained/current Pester, CLI, deadline and admission consumers. Every
 skill file, including Markdown references and supporting scripts, selects scanner
 and contract validation; gh/Pester skills additionally select their native users.
+README edits also select contracts because the action allowlist test reads it.
 Known individual workflow edits select their owner, while shared Validate/selection
 edits select all. Full experiment preparation stays explicit under either policy.
 
@@ -82,7 +83,8 @@ Representative PR selections (both platform jobs, planner and gate always run):
 
 | Change | Additional selected validation |
 | --- | --- |
-| README, ordinary docs, authoritative checkpoint | None |
+| Ordinary docs, CONTRIBUTING, authoritative checkpoint | None |
+| README (input to the action allowlist contract) | Contracts |
 | `.apm/skills/podman/references/quadlet.md` | Contracts, scanner/public quality |
 | gh skill supporting file | Contracts, quality, current evaluator including six gh lifecycle shards |
 | Pester skill supporting file | Contracts, quality, retained Pester, current evaluator, deadline, admission, legacy pilot |
@@ -137,7 +139,7 @@ for contracts, making that workflow take about 28 minutes.
 
 Projected from this sample: the same broad change avoids about 184 runner minutes
 (35%) by making experiment preparation explicit, before new planner/gate overhead;
-25 executed jobs become 20 under the same legacy failure. Documentation-only PRs
+25 executed jobs become 20 under the same legacy failure. Ordinary documentation/checkpoint PRs
 move from five jobs / 58 runner minutes to four jobs / approximately nine platform
 runner minutes plus planning/gating. An unrelated skill still gets scanner quality
 and contracts, but avoids the 21.5-minute retained Pester job. Quality no longer
