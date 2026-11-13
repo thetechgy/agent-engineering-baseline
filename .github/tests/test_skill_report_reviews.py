@@ -28,7 +28,8 @@ FIXTURE = Path(__file__).parent / 'fixtures/skill_report_reviews/historical-modu
 def frozen_tooling(test, tooling, profile):
     """Restore the exact retained validator and data named by a profile."""
     scripts = tooling / '.github/scripts'; scripts.mkdir(parents=True)
-    archive_path = (FIXTURE.with_name('pester-packaging-modules.zip') if profile == 'current-v4' else
+    archive_path = (FIXTURE.with_name('review-runtime-v2-modules.zip') if profile == 'current-v5' else
+                    FIXTURE.with_name('pester-packaging-modules.zip') if profile == 'current-v4' else
                     FIXTURE.with_name('review-runtime-modules.zip') if profile == 'current-v3' else FIXTURE)
     with zipfile.ZipFile(archive_path) as archive:
         for name, expected in zip(attachments.MODULES, attachments.PROFILES[profile][1]):
@@ -46,6 +47,12 @@ def frozen_tooling(test, tooling, profile):
             registry = tooling / '.github/evals/custom-metrics.json'
             registry.parent.mkdir()
             registry.write_bytes(asset)
+        for member, digest in attachments.SUPPORT_FILES.get(profile, {}).items():
+            data = archive.read(digest + Path(member).suffix)
+            test.assertEqual(evidence.digest_bytes(data), 'sha256:' + digest)
+            target = tooling / member
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(data)
     return scripts
 
 
@@ -150,6 +157,8 @@ class AttachmentTests(unittest.TestCase):
                 implementation = [[name, 'sha256:' + digest] for name, digest in zip(attachments.MODULES, hashes)]
                 if profile in attachments.REGISTRY_DIGESTS:
                     implementation.append(['custom-metrics.json', 'sha256:' + attachments.REGISTRY_DIGESTS[profile]])
+                implementation.extend([Path(member).name, 'sha256:' + digest]
+                    for member, digest in attachments.SUPPORT_FILES.get(profile, {}).items())
                 self.assertEqual(item['report']['provenance']['implementation_digest'], evidence.identity(implementation))
                 self.assertEqual(item['record_id'], self.spec['record_id'])
                 output = report.render_report(self.result, self.captured, reviews=validated).decode()
@@ -177,11 +186,35 @@ class AttachmentTests(unittest.TestCase):
         child = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
         self.assertEqual(child.returncode, 0, child.stderr.decode())
         self.assertTrue((output_root / 'legacy-host/report.html').is_file())
-        with patch.dict(os.environ, {'SKILL_REVIEW_PYTHON': os.environ['SKILL_LEGACY_REVIEW_PYTHON']}):
+        with patch.dict(os.environ, {'SKILL_PREVIOUS_REVIEW_PYTHON': os.environ['SKILL_LEGACY_REVIEW_PYTHON']}):
             command[-1] = str(output_root / 'rejected')
             child = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
         self.assertEqual(child.returncode, 1)
         self.assertFalse((output_root / 'rejected').exists())
+
+    def test_new_profile_requires_exact_supporting_code_and_data(self):
+        self.fixture('current-v5')
+        for member in attachments.SUPPORT_FILES['current-v5']:
+            path = Path(self.spec['tooling']) / member
+            original = path.read_bytes()
+            path.write_bytes(original + b' ')
+            with self.subTest(member=member), self.assertRaisesRegex(ValueError, 'supporting file'):
+                self.load()
+            path.write_bytes(original)
+        self.load()
+
+    def test_new_profile_rejects_previous_dependency_environment(self):
+        self.fixture('current-v5')
+        temporary = tempfile.TemporaryDirectory(); self.addCleanup(temporary.cleanup)
+        output = Path(temporary.name) / 'rejected'
+        command = [os.environ['SKILL_LEGACY_REVIEW_PYTHON'], '-B',
+                   str(evidence.ROOT / '.github/scripts/skill_report.py'),
+                   '--input', self.spec['inputs'][0], '--analysis', self.spec['analysis'],
+                   '--analyst-review', str(self.path), '--output', str(output)]
+        with patch.dict(os.environ, {'SKILL_REVIEW_PYTHON': os.environ['SKILL_PREVIOUS_REVIEW_PYTHON']}):
+            child = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
+        self.assertEqual(child.returncode, 1)
+        self.assertFalse(output.exists())
 
     def test_custom_profile_requires_exact_retained_metric_registry(self):
         self.fixture('custom-metrics-v2')

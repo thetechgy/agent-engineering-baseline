@@ -1,5 +1,29 @@
 # Issue #95 review runtime update
 
+The November 12 follow-up advances active reviews to Pydantic 2.14.3,
+pydantic-core 2.50.4 and typing-inspection 0.4.5. OpenAI SDK 2.54.0 remains
+the newest compatible stable SDK: released LiteLLM 1.88.5 requires `<3.0.0`.
+Upstream SDK 3.50.0 is outside that environment's constraint. No override is used.
+
+The new `current-v5` attachment profile uses the new review interpreter.
+Frozen `current-v3` and `current-v4` profiles still use their exact 2.14.2
+review environment via `SKILL_PREVIOUS_REVIEW_PYTHON`; older profiles retain
+`SKILL_LEGACY_REVIEW_PYTHON`. The new profile also binds evaluator_profiles.py and evaluator-candidate.json,
+which the current evidence modules import. Exact supporting bytes are staged
+with the validator and included in implementation provenance. Source hashes,
+original fixture archives, saved
+reports and grades remain unchanged. The original lock overlay is retained as
+`skillevaluator-v0.3.0-review-runtime-v1.patch`; the current overlay is regenerated
+against the same released manifest, changing only these three installed versions.
+Setup verifies both overlay lock hashes and dependency consistency.
+
+Current private requests, schemas, redaction and all attachment profiles are
+qualified without credentials through the existing HTTP fixtures and report
+renderer. These controls cannot establish live provider or judge behavior.
+Final-head validation and any limitations are recorded on the follow-up PR.
+
+## Original 2.14.2 environment and qualification (historical)
+
 Current private reviews use a separate frozen environment with OpenAI SDK
 2.54.0 and Pydantic 2.14.2. The evaluator, benchmark and scanner environments
 retain their upstream locks. This update does not require the experimental

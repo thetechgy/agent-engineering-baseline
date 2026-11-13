@@ -31,10 +31,10 @@
         }
       ],
       "owner": "Maintainer review",
-      "hold": "Production and historical replay remain 0.3.0. Draft PR #119 installs the opt-in 0.8.0 replacement; see .github/evals/EVALUATION-PLAN.md and evaluator-candidate.json. Harbor 0.24.0 and LiteLLM <1.94.0.dev0 are upstream constraints, not claims that all dependencies are current.",
+      "hold": "Active Validate, skill-quality, benchmark, orchestration and reporting setup still execute 0.3.0; this is not historical-only. Merged PR #119 adds the opt-in 0.8.0 path, not production adoption. Promotion remains a separate decision; candidate 0.8.0 constrains Harbor ==0.24.0, Python <3.15 and LiteLLM <1.94.0.dev0.",
       "group": "evaluation-runtime compatibility group",
       "tag_prefix": "v",
-      "validation": "Keep production freshness visible while qualifying the frozen replacement through the existing native cohorts and consolidated report. Fixture compatibility does not qualify live CLI/provider compatibility, judging accuracy or skill benefit. Bandit and pip-audit remain evaluator-owned gaps; Harbor 0.24.0, Python <3.15 and LiteLLM <1.94.0.dev0 remain upstream constraints. See .github/evals/EVALUATION-PLAN.md.",
+      "validation": "Review the completed credential-free qualification and live CLI evidence in EVALUATION-PLAN.md before a separate production-adoption decision. Preserve historical locks, scoring and frozen experiments; do not equate merged implementation with adoption.",
       "modified": true,
       "package": {
         "ecosystem": "pip",
@@ -85,7 +85,7 @@
         }
       ],
       "owner": "Maintainer review",
-      "hold": "Retain the qualified runtime until coordinated lock, compatibility patch, grader and execution-evidence qualification passes. See draft PR #109; newer releases alone do not establish admission.",
+      "hold": "Active production benchmarks and trusted gh setup use 0.155.1. The frozen opt-in CLI pilot/campaign uses 0.167.0. PR #109 remains an unmerged investigation, not the adoption path. A production CLI refresh needs a new runtime identity and non-forwarding/native adapter qualification; preserve frozen campaign selectors.",
       "group": "evaluation-runtime compatibility group",
       "tag_prefix": "rust-v",
       "validation": "Qualify the evaluation runtime as a group: frozen locks, compatibility patch, CLI/preflight, graders, scoring, evidence/schema consumers, redaction, and historical comparison policy. Preserve historical tooling and use a new policy identity when inputs change. No independent SDK upgrade.",
@@ -96,18 +96,58 @@
     },
     {
       "id": "uv",
-      "label": "uv",
+      "label": "uv (current CI and compiler)",
       "repo": "astral-sh/uv",
       "sources": [
-        {
-          "path": ".github/workflows/validate.yml",
-          "pattern": "uses: astral-sh/setup-uv@[^\\n]+\\n(?:[^\\n]*\\n){0,5}?\\s+version: \\'(?P<version>[^\\']+)\\'",
-          "count": 3
-        },
         {
           "path": ".github/workflows/benchmark-skills.yml",
           "pattern": "uses: astral-sh/setup-uv@[^\\n]+\\n(?:[^\\n]*\\n){0,5}?\\s+version: \\'(?P<version>[^\\']+)\\'",
           "count": 1
+        },
+        {
+          "path": ".github/workflows/codex-pilot.yml",
+          "pattern": "uses: astral-sh/setup-uv@[^\\n]+\\n(?:[^\\n]*\\n){0,5}?\\s+version: \\'(?P<version>[^\\']+)\\'",
+          "count": 6
+        },
+        {
+          "path": ".github/workflows/current-evaluator.yml",
+          "pattern": "uses: astral-sh/setup-uv@[^\\n]+\\n(?:[^\\n]*\\n){0,5}?\\s+version: \\'(?P<version>[^\\']+)\\'",
+          "count": 3
+        },
+        {
+          "path": ".github/workflows/evaluation-campaign.yml",
+          "pattern": "uses: astral-sh/setup-uv@[^\\n]+\\n(?:[^\\n]*\\n){0,5}?\\s+version: \\'(?P<version>[^\\']+)\\'",
+          "count": 5
+        },
+        {
+          "path": ".github/workflows/native-deadline.yml",
+          "pattern": "uses: astral-sh/setup-uv@[^\\n]+\\n(?:[^\\n]*\\n){0,5}?\\s+version: \\'(?P<version>[^\\']+)\\'",
+          "count": 2
+        },
+        {
+          "path": ".github/workflows/orchestrate-skill-evaluations.yml",
+          "pattern": "uses: astral-sh/setup-uv@[^\\n]+\\n(?:[^\\n]*\\n){0,5}?\\s+version: \\'(?P<version>[^\\']+)\\'",
+          "count": 1
+        },
+        {
+          "path": ".github/workflows/pester-admission-qualification.yml",
+          "pattern": "uses: astral-sh/setup-uv@[^\\n]+\\n(?:[^\\n]*\\n){0,5}?\\s+version: \\'(?P<version>[^\\']+)\\'",
+          "count": 1
+        },
+        {
+          "path": ".github/workflows/pester-candidate.yml",
+          "pattern": "uses: astral-sh/setup-uv@[^\\n]+\\n(?:[^\\n]*\\n){0,5}?\\s+version: \\'(?P<version>[^\\']+)\\'",
+          "count": 3
+        },
+        {
+          "path": ".github/workflows/publish-skill-report.yml",
+          "pattern": "uses: astral-sh/setup-uv@[^\\n]+\\n(?:[^\\n]*\\n){0,5}?\\s+version: \\'(?P<version>[^\\']+)\\'",
+          "count": 1
+        },
+        {
+          "path": ".github/workflows/validate.yml",
+          "pattern": "uses: astral-sh/setup-uv@[^\\n]+\\n(?:[^\\n]*\\n){0,5}?\\s+version: \\'(?P<version>[^\\']+)\\'",
+          "count": 3
         },
         {
           "path": ".github/scripts/setup-skillevaluator.sh",
@@ -119,7 +159,7 @@
       "hold": null,
       "group": null,
       "tag_prefix": "",
-      "validation": "Review security fixes, lock/compiler behavior and managed Python changes; validate both frozen evaluator/scanner installs and hash-lock reproduction in a separate focused PR.",
+      "validation": "Qualify current frozen/hash-lock installs and compiler behavior. The immutable return-contract workflow separately retains uv 0.13.7; it appears in runtime selectors and is not a contradictory current-compiler pin.",
       "package": {
         "ecosystem": "pip",
         "name": "uv"
@@ -148,10 +188,10 @@
         }
       ],
       "owner": "Maintainer review",
-      "hold": "Retain the reviewed Compose version until native Docker/Harbor container qualification passes for the candidate.",
+      "hold": null,
       "group": null,
       "tag_prefix": "v",
-      "validation": "Qualify the evaluation runtime as a group: frozen locks, compatibility patch, CLI/preflight, graders, scoring, evidence/schema consumers, redaction, and historical comparison policy. Preserve historical tooling and use a new policy identity when inputs change. No independent SDK upgrade."
+      "validation": "Qualify the reviewed Linux executable hash and plugin setup/cleanup, then the active retained and opt-in Harbor native boundaries. Preserve recorded historical Compose policies; operator Compose is separate from frozen agent/PowerShell/Pester/model profiles."
     },
     {
       "id": "semgrep",
@@ -174,7 +214,7 @@
       "hold": null,
       "group": null,
       "tag_prefix": "v",
-      "validation": "Regenerate the reviewed hash lock with the pinned compiler; inspect resolved changes and run the affected scanner/lint contracts. The exact upstream MCP 1.29.0 constraint remains an unresolved dependency gap; do not override it silently.",
+      "validation": "Regenerate the reviewed wheel-only hash lock with the pinned compiler; qualify clean, bad, failed and missing scanner evidence and consolidated reporting. Released Semgrep still requires MCP ==1.29.0, while the independent SkillSpector lock admits MCP <2; do not override either constraint.",
       "package": {
         "ecosystem": "pip",
         "name": "semgrep"
@@ -280,7 +320,7 @@
         }
       ],
       "owner": "Maintainer review",
-      "hold": "Qualified evaluation environment; review and update with its owning evaluator lock and compatibility assertions.",
+      "hold": "Active 0.3.0 workflows require Harbor ==0.13.2 in their released manifest. The opt-in 0.8.0 path separately requires ==0.24.0; upstream 0.25.0 is outside both constraints. Exit: an upstream-compatible evaluator release plus a separately approved production-adoption decision and native qualification.",
       "group": "evaluation-runtime compatibility group",
       "tag_prefix": "v",
       "validation": "Qualify the evaluation runtime as a group: frozen locks, compatibility patch, CLI/preflight, graders, scoring, evidence/schema consumers, redaction, and historical comparison policy. Preserve historical tooling and use a new policy identity when inputs change. No independent SDK upgrade.",
@@ -292,7 +332,7 @@
     },
     {
       "id": "openai",
-      "label": "OpenAI SDK",
+      "label": "OpenAI SDK (current reviews)",
       "repo": "openai/openai-python",
       "sources": [
         {
@@ -314,7 +354,7 @@
         }
       ],
       "owner": "Maintainer review",
-      "hold": "Current reviews use a reviewed lock overlay; frozen historical validators and evaluator/scanner locks retain their original environments.",
+      "hold": "Active review lock uses the latest compatible 2.x release: LiteLLM 1.88.5 requires OpenAI <3.0.0. The frozen candidate uses LiteLLM 1.93.2 with the same bound; the independent SkillSpector scanner uses 3.x. Exit: a supported evaluator/LiteLLM group or a separately qualified minimal review environment, not an SDK override.",
       "group": "review-runtime compatibility group",
       "tag_prefix": "v",
       "validation": "Qualify the review lock overlay, current API/schema and redaction contracts, exact historical validators through their retained runtime, and a new reviewed attachment profile. Evaluator/Harbor/Codex upgrades are separate qualifications.",
@@ -325,7 +365,7 @@
     },
     {
       "id": "pydantic",
-      "label": "Pydantic",
+      "label": "Pydantic (current reviews)",
       "repo": "pydantic/pydantic",
       "sources": [
         {
@@ -347,7 +387,7 @@
         }
       ],
       "owner": "Maintainer review",
-      "hold": "Current reviews use a reviewed lock overlay; frozen historical validators and evaluator/scanner locks retain their original environments.",
+      "hold": "Active reviews use stable Pydantic 2.14.3 in the reviewed overlay. Frozen current-v3/v4 attachments retain 2.14.2 and older profiles retain 2.13.4; those historical validators are intentionally not upgraded.",
       "group": "review-runtime compatibility group",
       "tag_prefix": "v",
       "validation": "Qualify the review lock overlay, current API/schema and redaction contracts, exact historical validators through their retained runtime, and a new reviewed attachment profile. Evaluator/Harbor/Codex upgrades are separate qualifications.",

@@ -16714,6 +16714,1778 @@
         "digest": "sha256:d3641c5190c1b86d8e853adc8f3c68fe6376b5fdaf5c1d90c610a745102ff03e"
       },
       "termination_evidence": "native-deadline-v1"
+    },
+    "pester-effectiveness-v15": {
+      "id": "pester-effectiveness-v15",
+      "grading": "custom_only",
+      "cases": {
+        "pester-001": {
+          "title": "Integer collection tests",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v2",
+            "powershell-pester-6.test-quality.v2"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v2": 2
+          }
+        },
+        "pester-003": {
+          "title": "Module mocking and invocation assertions",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v2",
+            "powershell-pester-6.test-quality.v2"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v2": 5
+          }
+        },
+        "pester-004": {
+          "title": "Discovery and data-case repair",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v2",
+            "powershell-pester-6.test-quality.v2"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v2": 4
+          }
+        }
+      },
+      "qualification_cases": {
+        "pester-001-classic": "pester-001",
+        "pester-001-standalone": "pester-001",
+        "pester-001-data": "pester-001",
+        "pester-001-weak": "pester-001",
+        "pester-003-external": "pester-003",
+        "pester-003-module": "pester-003",
+        "pester-003-weak": "pester-003",
+        "pester-004-discovery": "pester-004",
+        "pester-004-inline": "pester-004",
+        "pester-004-compact": "pester-004",
+        "pester-004-weak": "pester-004",
+        "pester-003-filtered": "pester-003",
+        "pester-003-unclassified-failure": "pester-003",
+        "pester-003-invocation-options": "pester-003",
+        "pester-003-module-parameters": "pester-003",
+        "pester-003-exclusive-misuse": "pester-003",
+        "pester-003-parameters-protected": "pester-003",
+        "pester-003-verifiable-target": "pester-003",
+        "pester-004-verifiable-scope": "pester-004",
+        "pester-004-explicit": "pester-004",
+        "pester-004-omit-zero": "pester-004",
+        "pester-004-omit-lowest": "pester-004",
+        "pester-004-omit-highest": "pester-004",
+        "pester-004-omit-above": "pester-004",
+        "pester-003-healthy-output": "pester-003",
+        "pester-003-healthy-calls": "pester-003",
+        "pester-004-broken-discovery": "pester-004",
+        "pester-003-wrong-scope": "pester-003",
+        "pester-003-failure": "pester-003",
+        "pester-003-missing": "pester-003",
+        "pester-003-unsupported": "pester-003",
+        "pester-003-timeout": "pester-003",
+        "pester-003-missing-runtime": "pester-003",
+        "pester-004-failure": "pester-004",
+        "pester-004-missing": "pester-004",
+        "pester-004-unsupported": "pester-004",
+        "pester-004-timeout": "pester-004",
+        "pester-004-missing-runtime": "pester-004"
+      },
+      "runtime": {
+        "powershell": "7.6.9",
+        "pester": "6.2.0",
+        "codex": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "workspace_profile": "pester-effectiveness-v3"
+      },
+      "skill_id": "powershell-pester-6",
+      "grader_digest": "sha256:1a6832501870290e011ff21265d98ada82a8f9d8d86af3b17b6094fef2fd2f20",
+      "fixture_digest": "sha256:d6c81334caecda72f1b1782dd4b4502b24893679573b7ce65627db4a643943c4",
+      "runtime_digest": "sha256:67cac961583a613e60f57ca6a47a88a9a497f64dfd9059c79a5ac5b2a4c52ad9",
+      "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+      "semantics": "pester-effectiveness-v6",
+      "termination_evidence": "native-deadline-v1"
+    },
+    "campaign-pester-admission-controls-v1-lifecycle-v1-source-v6-oracle": {
+      "id": "campaign-pester-admission-controls-v1-lifecycle-v1-source-v6-oracle",
+      "grading": "custom_only",
+      "cases": {
+        "pester-transfer-batch-v1": {
+          "title": "Batch summary return and value contract",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v2",
+            "powershell-pester-6.test-quality.v2"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v2": 5
+          }
+        }
+      },
+      "qualification_cases": {
+        "pester-transfer-batch-v1-good": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-good-loop": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-value-only": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-overrestricted": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-invalid": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-collection-numeric": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-dynamic-member": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-static-member": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-method": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-member-write": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-index-write": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-numeric-cast": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-numeric-constructor": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-numeric-array": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-arbitrary-type": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-protected-operand": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-nested-command": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-for-hidden": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-arbitrary-member": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-diagnostic-count": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-diagnostic-types": "pester-transfer-batch-v1"
+      },
+      "runtime": {
+        "powershell": "7.6.9",
+        "pester": "6.2.0",
+        "codex": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "workspace_profile": "pester-effectiveness-v3",
+        "agent": "codex",
+        "cli": "0.167.0",
+        "provider": "openai",
+        "profile": ".github/evals/campaigns/codex-qualified.json",
+        "variants": [
+          {
+            "id": "current",
+            "arm": "with_skill"
+          },
+          {
+            "id": "absent",
+            "arm": "without_skill"
+          }
+        ]
+      },
+      "skill_id": "powershell-pester-6",
+      "grader_digest": "sha256:2036c1cbf604c1c6ae7372b32505b8da541a4830d1161ccfddd1f82df2616ad4",
+      "fixture_digest": "sha256:7fd910d264f98c74de1c108d604c1150c0c194630cbd1a5f8603ad3757dbfed7",
+      "runtime_digest": "sha256:83e232da3fcd2a69bc80ce2d5b8878deb2c7e8374139cea4adb33b16b59255ec",
+      "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+      "semantics": "pester-effectiveness-v6",
+      "campaign": {
+        "definition": ".github/evals/campaigns/pester-admission-controls-v1.json",
+        "mode": "oracle",
+        "environment_import": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+        "environment_mode": "docker",
+        "agent_import": "oracle",
+        "trials": 1
+      },
+      "skill_source": {
+        "path": ".github/evals/pester-return-contract/variants/current/powershell-pester-6",
+        "digest": "sha256:d3641c5190c1b86d8e853adc8f3c68fe6376b5fdaf5c1d90c610a745102ff03e"
+      },
+      "termination_evidence": "native-deadline-v1"
+    },
+    "campaign-pester-transfer-retrospective-v1-lifecycle-v1-source-v6-replay": {
+      "id": "campaign-pester-transfer-retrospective-v1-lifecycle-v1-source-v6-replay",
+      "grading": "custom_only",
+      "cases": {
+        "pester-transfer-batch-v1": {
+          "title": "Batch summary return and value contract",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v2",
+            "powershell-pester-6.test-quality.v2"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v2": 5
+          }
+        }
+      },
+      "qualification_cases": {
+        "pester-transfer-batch-v1": "pester-transfer-batch-v1"
+      },
+      "runtime": {
+        "powershell": "7.6.9",
+        "pester": "6.2.0",
+        "codex": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "workspace_profile": "pester-effectiveness-v3",
+        "agent": "codex",
+        "cli": "0.167.0",
+        "provider": "openai",
+        "profile": ".github/evals/campaigns/codex-qualified.json",
+        "variants": [
+          {
+            "id": "current",
+            "arm": "with_skill"
+          },
+          {
+            "id": "absent",
+            "arm": "without_skill"
+          }
+        ]
+      },
+      "skill_id": "powershell-pester-6",
+      "grader_digest": "sha256:2036c1cbf604c1c6ae7372b32505b8da541a4830d1161ccfddd1f82df2616ad4",
+      "fixture_digest": "sha256:7fd910d264f98c74de1c108d604c1150c0c194630cbd1a5f8603ad3757dbfed7",
+      "runtime_digest": "sha256:89afba8eec5596e1d542c03b21c23e748246dfa0c59a64461ee9f20bfdd0adb6",
+      "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+      "semantics": "pester-effectiveness-v6",
+      "campaign": {
+        "definition": ".github/evals/campaigns/pester-transfer-retrospective-v1.json",
+        "mode": "replay",
+        "environment_import": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+        "environment_mode": "docker",
+        "agent_import": "oracle",
+        "trials": 1,
+        "adapter_sha256": "sha256:3d66b3fc2e772349144f5e6729d4b2e9ca81581b586474525106614681a8e7dd"
+      },
+      "termination_evidence": "native-deadline-v1"
+    },
+    "campaign-boolean-contract-v4-lifecycle-v1-source-v6-oracle": {
+      "id": "campaign-boolean-contract-v4-lifecycle-v1-source-v6-oracle",
+      "grading": "custom_only",
+      "cases": {
+        "pester-004": {
+          "title": "Discovery and data-case repair",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v2",
+            "powershell-pester-6.test-quality.v2"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v2": 5
+          }
+        }
+      },
+      "qualification_cases": {
+        "pester-004-identity": "pester-004",
+        "pester-004-typed-classic": "pester-004",
+        "pester-004-value-only": "pester-004",
+        "pester-004-type-only": "pester-004",
+        "pester-004-broken-discovery": "pester-004"
+      },
+      "runtime": {
+        "powershell": "7.6.9",
+        "pester": "6.2.0",
+        "codex": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "workspace_profile": "pester-effectiveness-v3",
+        "agent": "codex",
+        "cli": "0.167.0",
+        "provider": "openai",
+        "profile": ".github/evals/campaigns/codex-qualified.json",
+        "variants": [
+          {
+            "id": "current",
+            "arm": "with_skill"
+          },
+          {
+            "id": "absent",
+            "arm": "without_skill"
+          }
+        ]
+      },
+      "skill_id": "powershell-pester-6",
+      "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
+      "fixture_digest": "sha256:99bb508cb930cf59131cc919aee2d3ecee880f729a9f382f256ac5f031e00e96",
+      "runtime_digest": "sha256:eda9f0b89c02e96426e2e16a50543c118f66378e437af741536328827e1cfe6b",
+      "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+      "semantics": "pester-effectiveness-v6",
+      "campaign": {
+        "definition": ".github/evals/campaigns/boolean-contract.json",
+        "mode": "oracle",
+        "environment_import": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+        "environment_mode": "docker",
+        "agent_import": "oracle"
+      },
+      "termination_evidence": "native-deadline-v1"
+    },
+    "campaign-boolean-contract-v4-lifecycle-v1-source-v6-probe": {
+      "id": "campaign-boolean-contract-v4-lifecycle-v1-source-v6-probe",
+      "grading": "custom_only",
+      "cases": {
+        "pester-004": {
+          "title": "Discovery and data-case repair",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v2",
+            "powershell-pester-6.test-quality.v2"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v2": 5
+          }
+        }
+      },
+      "qualification_cases": {
+        "pester-004-identity": "pester-004",
+        "pester-004-value-only": "pester-004"
+      },
+      "runtime": {
+        "powershell": "7.6.9",
+        "pester": "6.2.0",
+        "codex": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "workspace_profile": "pester-effectiveness-v3",
+        "agent": "codex",
+        "cli": "0.167.0",
+        "provider": "openai",
+        "profile": ".github/evals/campaigns/codex-qualified.json",
+        "variants": [
+          {
+            "id": "current",
+            "arm": "with_skill"
+          },
+          {
+            "id": "absent",
+            "arm": "without_skill"
+          }
+        ]
+      },
+      "skill_id": "powershell-pester-6",
+      "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
+      "fixture_digest": "sha256:99bb508cb930cf59131cc919aee2d3ecee880f729a9f382f256ac5f031e00e96",
+      "runtime_digest": "sha256:eda9f0b89c02e96426e2e16a50543c118f66378e437af741536328827e1cfe6b",
+      "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+      "semantics": "pester-effectiveness-v6",
+      "campaign": {
+        "definition": ".github/evals/campaigns/boolean-contract.json",
+        "mode": "probe",
+        "environment_import": "codex_pilot_environment:PilotEnvironment",
+        "environment_mode": "docker",
+        "agent_import": "evaluation_codex:CampaignCodex"
+      },
+      "termination_evidence": "native-deadline-v1"
+    },
+    "campaign-gh-read-v4-lifecycle-v1-source-v6-oracle": {
+      "id": "campaign-gh-read-v4-lifecycle-v1-source-v6-oracle",
+      "grading": "custom_only",
+      "cases": {
+        "gh-014": {
+          "title": "GitHub CLI fixture gh-014",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        }
+      },
+      "qualification_cases": {
+        "gh-014-good": "gh-014",
+        "gh-014-wrong-repo": "gh-014",
+        "gh-014-unauthorized": "gh-014",
+        "gh-014-unsupported": "gh-014",
+        "gh-014-missing-trace": "gh-014"
+      },
+      "runtime": {
+        "agent": "codex",
+        "cli": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "provider": "openai",
+        "reasoning_effort": "high",
+        "profile": ".github/evals/campaigns/codex-qualified.json",
+        "variants": [
+          {
+            "id": "current",
+            "arm": "with_skill"
+          },
+          {
+            "id": "absent",
+            "arm": "without_skill"
+          }
+        ]
+      },
+      "skill_id": "gh",
+      "grader_digest": "sha256:4b0b6a7b8d4cf15fe35182ef7dcfa1ed4a18a5aeda129bb30855ed48d2f75c2d",
+      "fixture_digest": "sha256:773ab38dd187a0861ac6890c04f43f4f4f1d5007ebfe236801a72a45aefa88bf",
+      "runtime_digest": "sha256:9a880e72bb9701c684499222d6af515f9fec9243a58de26da15b982481796222",
+      "dataset_digest": "sha256:7da7fa863ddc768c34bb423b4667cfe43e8d714697c4e217e4a27d789028f598",
+      "semantics": "gh-native-oracle-v1",
+      "campaign": {
+        "definition": ".github/evals/campaigns/gh-read.json",
+        "mode": "oracle",
+        "environment_import": "aeb_gh_fixture.backend:TrustedGhEnvironment",
+        "environment_mode": "aeb-gh-fixture",
+        "agent_import": "oracle"
+      },
+      "termination_evidence": "native-deadline-v1"
+    },
+    "campaign-gh-read-v4-lifecycle-v1-source-v6-probe": {
+      "id": "campaign-gh-read-v4-lifecycle-v1-source-v6-probe",
+      "grading": "custom_only",
+      "cases": {
+        "gh-014": {
+          "title": "GitHub CLI fixture gh-014",
+          "metrics": [
+            "gh.evidence.v1",
+            "gh.activation.v1",
+            "gh.commands.v1",
+            "gh.task.v1",
+            "gh.recovery.v1",
+            "gh.authorization.v1",
+            "gh.efficiency.v1",
+            "gh.gate.v1"
+          ],
+          "denominators": {}
+        }
+      },
+      "qualification_cases": {
+        "gh-014-good": "gh-014",
+        "gh-014-unauthorized": "gh-014"
+      },
+      "runtime": {
+        "agent": "codex",
+        "cli": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "provider": "openai",
+        "reasoning_effort": "high",
+        "profile": ".github/evals/campaigns/codex-qualified.json",
+        "variants": [
+          {
+            "id": "current",
+            "arm": "with_skill"
+          },
+          {
+            "id": "absent",
+            "arm": "without_skill"
+          }
+        ]
+      },
+      "skill_id": "gh",
+      "grader_digest": "sha256:4b0b6a7b8d4cf15fe35182ef7dcfa1ed4a18a5aeda129bb30855ed48d2f75c2d",
+      "fixture_digest": "sha256:773ab38dd187a0861ac6890c04f43f4f4f1d5007ebfe236801a72a45aefa88bf",
+      "runtime_digest": "sha256:9a880e72bb9701c684499222d6af515f9fec9243a58de26da15b982481796222",
+      "dataset_digest": "sha256:7da7fa863ddc768c34bb423b4667cfe43e8d714697c4e217e4a27d789028f598",
+      "semantics": "gh-native-oracle-v1",
+      "campaign": {
+        "definition": ".github/evals/campaigns/gh-read.json",
+        "mode": "probe",
+        "environment_import": "evaluation_codex:CampaignGhEnvironment",
+        "environment_mode": "aeb-gh-fixture",
+        "agent_import": "evaluation_codex:CampaignCodex"
+      },
+      "termination_evidence": "native-deadline-v1"
+    },
+    "campaign-boolean-effectiveness-v3-lifecycle-v1-source-v6-probe": {
+      "id": "campaign-boolean-effectiveness-v3-lifecycle-v1-source-v6-probe",
+      "grading": "custom_only",
+      "cases": {
+        "pester-004": {
+          "title": "Discovery and data-case repair",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v2",
+            "powershell-pester-6.test-quality.v2"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v2": 5
+          }
+        }
+      },
+      "qualification_cases": {
+        "pester-004": "pester-004"
+      },
+      "runtime": {
+        "powershell": "7.6.9",
+        "pester": "6.2.0",
+        "codex": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "workspace_profile": "pester-effectiveness-v3",
+        "agent": "codex",
+        "cli": "0.167.0",
+        "provider": "openai",
+        "profile": ".github/evals/campaigns/codex-authorized-v1.json",
+        "variants": [
+          {
+            "id": "current",
+            "arm": "with_skill"
+          },
+          {
+            "id": "absent",
+            "arm": "without_skill"
+          }
+        ]
+      },
+      "skill_id": "powershell-pester-6",
+      "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
+      "fixture_digest": "sha256:99bb508cb930cf59131cc919aee2d3ecee880f729a9f382f256ac5f031e00e96",
+      "runtime_digest": "sha256:a6aae5bfc828ca4458be392256f8917f60d091dfc5b9d5e506a73c7519fcce6e",
+      "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+      "semantics": "pester-effectiveness-v6",
+      "campaign": {
+        "definition": ".github/evals/campaigns/boolean-effectiveness-v1.json",
+        "mode": "experiment-probe",
+        "environment_import": "codex_pilot_environment:PilotEnvironment",
+        "environment_mode": "docker",
+        "agent_import": "evaluation_codex:CampaignCodex",
+        "trials": 3
+      },
+      "termination_evidence": "native-deadline-v1"
+    },
+    "campaign-boolean-effectiveness-v3-lifecycle-v1-source-v6-live": {
+      "id": "campaign-boolean-effectiveness-v3-lifecycle-v1-source-v6-live",
+      "grading": "custom_only",
+      "cases": {
+        "pester-004": {
+          "title": "Discovery and data-case repair",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v2",
+            "powershell-pester-6.test-quality.v2"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v2": 5
+          }
+        }
+      },
+      "qualification_cases": {
+        "pester-004": "pester-004"
+      },
+      "runtime": {
+        "powershell": "7.6.9",
+        "pester": "6.2.0",
+        "codex": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "workspace_profile": "pester-effectiveness-v3",
+        "agent": "codex",
+        "cli": "0.167.0",
+        "provider": "openai",
+        "profile": ".github/evals/campaigns/codex-authorized-v1.json",
+        "variants": [
+          {
+            "id": "current",
+            "arm": "with_skill"
+          },
+          {
+            "id": "absent",
+            "arm": "without_skill"
+          }
+        ]
+      },
+      "skill_id": "powershell-pester-6",
+      "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
+      "fixture_digest": "sha256:99bb508cb930cf59131cc919aee2d3ecee880f729a9f382f256ac5f031e00e96",
+      "runtime_digest": "sha256:a6aae5bfc828ca4458be392256f8917f60d091dfc5b9d5e506a73c7519fcce6e",
+      "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+      "semantics": "pester-effectiveness-v6",
+      "campaign": {
+        "definition": ".github/evals/campaigns/boolean-effectiveness-v1.json",
+        "mode": "live",
+        "environment_import": "codex_pilot_environment:PilotEnvironment",
+        "environment_mode": "docker",
+        "agent_import": "evaluation_codex:CampaignCodex",
+        "trials": 3
+      },
+      "termination_evidence": "native-deadline-v1"
+    },
+    "campaign-boolean-retained-v2-lifecycle-v1-source-v6-replay": {
+      "id": "campaign-boolean-retained-v2-lifecycle-v1-source-v6-replay",
+      "grading": "custom_only",
+      "cases": {
+        "pester-004": {
+          "title": "Discovery and data-case repair",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v2",
+            "powershell-pester-6.test-quality.v2"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v2": 5
+          }
+        }
+      },
+      "qualification_cases": {
+        "pester-004": "pester-004"
+      },
+      "runtime": {
+        "powershell": "7.6.9",
+        "pester": "6.2.0",
+        "codex": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "workspace_profile": "pester-effectiveness-v3",
+        "agent": "codex",
+        "cli": "0.167.0",
+        "provider": "openai",
+        "profile": ".github/evals/campaigns/codex-qualified.json",
+        "variants": [
+          {
+            "id": "current",
+            "arm": "with_skill"
+          },
+          {
+            "id": "absent",
+            "arm": "without_skill"
+          }
+        ]
+      },
+      "skill_id": "powershell-pester-6",
+      "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
+      "fixture_digest": "sha256:99bb508cb930cf59131cc919aee2d3ecee880f729a9f382f256ac5f031e00e96",
+      "runtime_digest": "sha256:3ee05345855de62c901332ab7f587a99c678277a990cb389e4d89af8a8563241",
+      "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+      "semantics": "pester-effectiveness-v6",
+      "campaign": {
+        "definition": ".github/evals/campaigns/boolean-retained-v1.json",
+        "mode": "replay",
+        "environment_import": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+        "environment_mode": "docker",
+        "agent_import": "oracle",
+        "trials": 1,
+        "adapter_sha256": "sha256:3d66b3fc2e772349144f5e6729d4b2e9ca81581b586474525106614681a8e7dd"
+      },
+      "termination_evidence": "native-deadline-v1"
+    },
+    "campaign-pester-return-development-current-controls-v1-lifecycle-v1-source-v6-oracle": {
+      "id": "campaign-pester-return-development-current-controls-v1-lifecycle-v1-source-v6-oracle",
+      "grading": "custom_only",
+      "cases": {
+        "pester-004": {
+          "title": "Discovery and data-case repair",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v2",
+            "powershell-pester-6.test-quality.v2"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v2": 5
+          }
+        }
+      },
+      "qualification_cases": {
+        "pester-004-identity": "pester-004",
+        "pester-004-typed-classic": "pester-004",
+        "pester-004-value-only": "pester-004",
+        "pester-004-type-only": "pester-004",
+        "pester-004-broken-discovery": "pester-004"
+      },
+      "runtime": {
+        "powershell": "7.6.9",
+        "pester": "6.2.0",
+        "codex": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "workspace_profile": "pester-effectiveness-v3",
+        "agent": "codex",
+        "cli": "0.167.0",
+        "provider": "openai",
+        "profile": ".github/evals/campaigns/codex-qualified.json",
+        "variants": [
+          {
+            "id": "current",
+            "arm": "with_skill"
+          },
+          {
+            "id": "absent",
+            "arm": "without_skill"
+          }
+        ]
+      },
+      "skill_id": "powershell-pester-6",
+      "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
+      "fixture_digest": "sha256:99bb508cb930cf59131cc919aee2d3ecee880f729a9f382f256ac5f031e00e96",
+      "runtime_digest": "sha256:1e4228b2f08524717e7163c12ed09c93c7475c3a8264c52aeb05670b5468a692",
+      "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+      "semantics": "pester-effectiveness-v6",
+      "campaign": {
+        "definition": ".github/evals/campaigns/pester-return-development-current-controls-v1.json",
+        "mode": "oracle",
+        "environment_import": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+        "environment_mode": "docker",
+        "agent_import": "oracle",
+        "trials": 1
+      },
+      "skill_source": {
+        "path": ".github/evals/pester-return-contract/variants/current/powershell-pester-6",
+        "digest": "sha256:d3641c5190c1b86d8e853adc8f3c68fe6376b5fdaf5c1d90c610a745102ff03e"
+      },
+      "termination_evidence": "native-deadline-v1"
+    },
+    "campaign-pester-return-development-current-controls-v1-lifecycle-v1-source-v6-probe": {
+      "id": "campaign-pester-return-development-current-controls-v1-lifecycle-v1-source-v6-probe",
+      "grading": "custom_only",
+      "cases": {
+        "pester-004": {
+          "title": "Discovery and data-case repair",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v2",
+            "powershell-pester-6.test-quality.v2"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v2": 5
+          }
+        }
+      },
+      "qualification_cases": {
+        "pester-004-identity": "pester-004",
+        "pester-004-value-only": "pester-004"
+      },
+      "runtime": {
+        "powershell": "7.6.9",
+        "pester": "6.2.0",
+        "codex": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "workspace_profile": "pester-effectiveness-v3",
+        "agent": "codex",
+        "cli": "0.167.0",
+        "provider": "openai",
+        "profile": ".github/evals/campaigns/codex-qualified.json",
+        "variants": [
+          {
+            "id": "current",
+            "arm": "with_skill"
+          },
+          {
+            "id": "absent",
+            "arm": "without_skill"
+          }
+        ]
+      },
+      "skill_id": "powershell-pester-6",
+      "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
+      "fixture_digest": "sha256:99bb508cb930cf59131cc919aee2d3ecee880f729a9f382f256ac5f031e00e96",
+      "runtime_digest": "sha256:1e4228b2f08524717e7163c12ed09c93c7475c3a8264c52aeb05670b5468a692",
+      "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+      "semantics": "pester-effectiveness-v6",
+      "campaign": {
+        "definition": ".github/evals/campaigns/pester-return-development-current-controls-v1.json",
+        "mode": "probe",
+        "environment_import": "codex_pilot_environment:PilotEnvironment",
+        "environment_mode": "docker",
+        "agent_import": "evaluation_codex:CampaignCodex",
+        "trials": 1
+      },
+      "skill_source": {
+        "path": ".github/evals/pester-return-contract/variants/current/powershell-pester-6",
+        "digest": "sha256:d3641c5190c1b86d8e853adc8f3c68fe6376b5fdaf5c1d90c610a745102ff03e"
+      },
+      "termination_evidence": "native-deadline-v1"
+    },
+    "campaign-pester-return-development-current-v1-lifecycle-v1-source-v6-probe": {
+      "id": "campaign-pester-return-development-current-v1-lifecycle-v1-source-v6-probe",
+      "grading": "custom_only",
+      "cases": {
+        "pester-004": {
+          "title": "Discovery and data-case repair",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v2",
+            "powershell-pester-6.test-quality.v2"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v2": 5
+          }
+        }
+      },
+      "qualification_cases": {
+        "pester-004": "pester-004"
+      },
+      "runtime": {
+        "powershell": "7.6.9",
+        "pester": "6.2.0",
+        "codex": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "workspace_profile": "pester-effectiveness-v3",
+        "agent": "codex",
+        "cli": "0.167.0",
+        "provider": "openai",
+        "profile": ".github/evals/campaigns/codex-authorized-v1.json",
+        "variants": [
+          {
+            "id": "current",
+            "arm": "with_skill"
+          },
+          {
+            "id": "absent",
+            "arm": "without_skill"
+          }
+        ]
+      },
+      "skill_id": "powershell-pester-6",
+      "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
+      "fixture_digest": "sha256:99bb508cb930cf59131cc919aee2d3ecee880f729a9f382f256ac5f031e00e96",
+      "runtime_digest": "sha256:589bb219f406046a80b593118cbe4e1ad837fb8759d882da1a23b2cd2fa61277",
+      "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+      "semantics": "pester-effectiveness-v6",
+      "campaign": {
+        "definition": ".github/evals/campaigns/pester-return-development-current-v1.json",
+        "mode": "experiment-probe",
+        "environment_import": "codex_pilot_environment:PilotEnvironment",
+        "environment_mode": "docker",
+        "agent_import": "evaluation_codex:CampaignCodex",
+        "trials": 3
+      },
+      "skill_source": {
+        "path": ".github/evals/pester-return-contract/variants/current/powershell-pester-6",
+        "digest": "sha256:d3641c5190c1b86d8e853adc8f3c68fe6376b5fdaf5c1d90c610a745102ff03e"
+      },
+      "termination_evidence": "native-deadline-v1"
+    },
+    "campaign-pester-return-development-current-v1-lifecycle-v1-source-v6-live": {
+      "id": "campaign-pester-return-development-current-v1-lifecycle-v1-source-v6-live",
+      "grading": "custom_only",
+      "cases": {
+        "pester-004": {
+          "title": "Discovery and data-case repair",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v2",
+            "powershell-pester-6.test-quality.v2"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v2": 5
+          }
+        }
+      },
+      "qualification_cases": {
+        "pester-004": "pester-004"
+      },
+      "runtime": {
+        "powershell": "7.6.9",
+        "pester": "6.2.0",
+        "codex": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "workspace_profile": "pester-effectiveness-v3",
+        "agent": "codex",
+        "cli": "0.167.0",
+        "provider": "openai",
+        "profile": ".github/evals/campaigns/codex-authorized-v1.json",
+        "variants": [
+          {
+            "id": "current",
+            "arm": "with_skill"
+          },
+          {
+            "id": "absent",
+            "arm": "without_skill"
+          }
+        ]
+      },
+      "skill_id": "powershell-pester-6",
+      "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
+      "fixture_digest": "sha256:99bb508cb930cf59131cc919aee2d3ecee880f729a9f382f256ac5f031e00e96",
+      "runtime_digest": "sha256:589bb219f406046a80b593118cbe4e1ad837fb8759d882da1a23b2cd2fa61277",
+      "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+      "semantics": "pester-effectiveness-v6",
+      "campaign": {
+        "definition": ".github/evals/campaigns/pester-return-development-current-v1.json",
+        "mode": "live",
+        "environment_import": "codex_pilot_environment:PilotEnvironment",
+        "environment_mode": "docker",
+        "agent_import": "evaluation_codex:CampaignCodex",
+        "trials": 3
+      },
+      "skill_source": {
+        "path": ".github/evals/pester-return-contract/variants/current/powershell-pester-6",
+        "digest": "sha256:d3641c5190c1b86d8e853adc8f3c68fe6376b5fdaf5c1d90c610a745102ff03e"
+      },
+      "termination_evidence": "native-deadline-v1"
+    },
+    "campaign-pester-return-development-candidate-controls-v1-lifecycle-v1-source-v6-oracle": {
+      "id": "campaign-pester-return-development-candidate-controls-v1-lifecycle-v1-source-v6-oracle",
+      "grading": "custom_only",
+      "cases": {
+        "pester-004": {
+          "title": "Discovery and data-case repair",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v2",
+            "powershell-pester-6.test-quality.v2"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v2": 5
+          }
+        }
+      },
+      "qualification_cases": {
+        "pester-004-identity": "pester-004",
+        "pester-004-typed-classic": "pester-004",
+        "pester-004-value-only": "pester-004",
+        "pester-004-type-only": "pester-004",
+        "pester-004-broken-discovery": "pester-004"
+      },
+      "runtime": {
+        "powershell": "7.6.9",
+        "pester": "6.2.0",
+        "codex": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "workspace_profile": "pester-effectiveness-v3",
+        "agent": "codex",
+        "cli": "0.167.0",
+        "provider": "openai",
+        "profile": ".github/evals/campaigns/codex-qualified.json",
+        "variants": [
+          {
+            "id": "candidate",
+            "arm": "with_skill"
+          },
+          {
+            "id": "absent",
+            "arm": "without_skill"
+          }
+        ]
+      },
+      "skill_id": "powershell-pester-6",
+      "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
+      "fixture_digest": "sha256:99bb508cb930cf59131cc919aee2d3ecee880f729a9f382f256ac5f031e00e96",
+      "runtime_digest": "sha256:5a9a24d7ea0b61ddfe2807a2d15a429fb60a14b8d2c8c2e260ea14e78dac0f4b",
+      "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+      "semantics": "pester-effectiveness-v6",
+      "campaign": {
+        "definition": ".github/evals/campaigns/pester-return-development-candidate-controls-v1.json",
+        "mode": "oracle",
+        "environment_import": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+        "environment_mode": "docker",
+        "agent_import": "oracle",
+        "trials": 1
+      },
+      "skill_source": {
+        "path": ".github/evals/pester-return-contract/variants/candidate/powershell-pester-6",
+        "digest": "sha256:8a363074264a6e0e075421cd1f9b27295fbfa81117b45a04822d146d8b825cbf"
+      },
+      "termination_evidence": "native-deadline-v1"
+    },
+    "campaign-pester-return-development-candidate-controls-v1-lifecycle-v1-source-v6-probe": {
+      "id": "campaign-pester-return-development-candidate-controls-v1-lifecycle-v1-source-v6-probe",
+      "grading": "custom_only",
+      "cases": {
+        "pester-004": {
+          "title": "Discovery and data-case repair",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v2",
+            "powershell-pester-6.test-quality.v2"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v2": 5
+          }
+        }
+      },
+      "qualification_cases": {
+        "pester-004-identity": "pester-004",
+        "pester-004-value-only": "pester-004"
+      },
+      "runtime": {
+        "powershell": "7.6.9",
+        "pester": "6.2.0",
+        "codex": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "workspace_profile": "pester-effectiveness-v3",
+        "agent": "codex",
+        "cli": "0.167.0",
+        "provider": "openai",
+        "profile": ".github/evals/campaigns/codex-qualified.json",
+        "variants": [
+          {
+            "id": "candidate",
+            "arm": "with_skill"
+          },
+          {
+            "id": "absent",
+            "arm": "without_skill"
+          }
+        ]
+      },
+      "skill_id": "powershell-pester-6",
+      "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
+      "fixture_digest": "sha256:99bb508cb930cf59131cc919aee2d3ecee880f729a9f382f256ac5f031e00e96",
+      "runtime_digest": "sha256:5a9a24d7ea0b61ddfe2807a2d15a429fb60a14b8d2c8c2e260ea14e78dac0f4b",
+      "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+      "semantics": "pester-effectiveness-v6",
+      "campaign": {
+        "definition": ".github/evals/campaigns/pester-return-development-candidate-controls-v1.json",
+        "mode": "probe",
+        "environment_import": "codex_pilot_environment:PilotEnvironment",
+        "environment_mode": "docker",
+        "agent_import": "evaluation_codex:CampaignCodex",
+        "trials": 1
+      },
+      "skill_source": {
+        "path": ".github/evals/pester-return-contract/variants/candidate/powershell-pester-6",
+        "digest": "sha256:8a363074264a6e0e075421cd1f9b27295fbfa81117b45a04822d146d8b825cbf"
+      },
+      "termination_evidence": "native-deadline-v1"
+    },
+    "campaign-pester-return-development-candidate-v1-lifecycle-v1-source-v6-probe": {
+      "id": "campaign-pester-return-development-candidate-v1-lifecycle-v1-source-v6-probe",
+      "grading": "custom_only",
+      "cases": {
+        "pester-004": {
+          "title": "Discovery and data-case repair",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v2",
+            "powershell-pester-6.test-quality.v2"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v2": 5
+          }
+        }
+      },
+      "qualification_cases": {
+        "pester-004": "pester-004"
+      },
+      "runtime": {
+        "powershell": "7.6.9",
+        "pester": "6.2.0",
+        "codex": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "workspace_profile": "pester-effectiveness-v3",
+        "agent": "codex",
+        "cli": "0.167.0",
+        "provider": "openai",
+        "profile": ".github/evals/campaigns/codex-authorized-v1.json",
+        "variants": [
+          {
+            "id": "candidate",
+            "arm": "with_skill"
+          },
+          {
+            "id": "absent",
+            "arm": "without_skill"
+          }
+        ]
+      },
+      "skill_id": "powershell-pester-6",
+      "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
+      "fixture_digest": "sha256:99bb508cb930cf59131cc919aee2d3ecee880f729a9f382f256ac5f031e00e96",
+      "runtime_digest": "sha256:e53290ee456e61640c1016f36f22a4c72dc1faa45f3130ca6214bb6847413d74",
+      "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+      "semantics": "pester-effectiveness-v6",
+      "campaign": {
+        "definition": ".github/evals/campaigns/pester-return-development-candidate-v1.json",
+        "mode": "experiment-probe",
+        "environment_import": "codex_pilot_environment:PilotEnvironment",
+        "environment_mode": "docker",
+        "agent_import": "evaluation_codex:CampaignCodex",
+        "trials": 3
+      },
+      "skill_source": {
+        "path": ".github/evals/pester-return-contract/variants/candidate/powershell-pester-6",
+        "digest": "sha256:8a363074264a6e0e075421cd1f9b27295fbfa81117b45a04822d146d8b825cbf"
+      },
+      "termination_evidence": "native-deadline-v1"
+    },
+    "campaign-pester-return-development-candidate-v1-lifecycle-v1-source-v6-live": {
+      "id": "campaign-pester-return-development-candidate-v1-lifecycle-v1-source-v6-live",
+      "grading": "custom_only",
+      "cases": {
+        "pester-004": {
+          "title": "Discovery and data-case repair",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v2",
+            "powershell-pester-6.test-quality.v2"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v2": 5
+          }
+        }
+      },
+      "qualification_cases": {
+        "pester-004": "pester-004"
+      },
+      "runtime": {
+        "powershell": "7.6.9",
+        "pester": "6.2.0",
+        "codex": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "workspace_profile": "pester-effectiveness-v3",
+        "agent": "codex",
+        "cli": "0.167.0",
+        "provider": "openai",
+        "profile": ".github/evals/campaigns/codex-authorized-v1.json",
+        "variants": [
+          {
+            "id": "candidate",
+            "arm": "with_skill"
+          },
+          {
+            "id": "absent",
+            "arm": "without_skill"
+          }
+        ]
+      },
+      "skill_id": "powershell-pester-6",
+      "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
+      "fixture_digest": "sha256:99bb508cb930cf59131cc919aee2d3ecee880f729a9f382f256ac5f031e00e96",
+      "runtime_digest": "sha256:e53290ee456e61640c1016f36f22a4c72dc1faa45f3130ca6214bb6847413d74",
+      "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+      "semantics": "pester-effectiveness-v6",
+      "campaign": {
+        "definition": ".github/evals/campaigns/pester-return-development-candidate-v1.json",
+        "mode": "live",
+        "environment_import": "codex_pilot_environment:PilotEnvironment",
+        "environment_mode": "docker",
+        "agent_import": "evaluation_codex:CampaignCodex",
+        "trials": 3
+      },
+      "skill_source": {
+        "path": ".github/evals/pester-return-contract/variants/candidate/powershell-pester-6",
+        "digest": "sha256:8a363074264a6e0e075421cd1f9b27295fbfa81117b45a04822d146d8b825cbf"
+      },
+      "termination_evidence": "native-deadline-v1"
+    },
+    "campaign-pester-return-transfer-current-controls-v3-lifecycle-v1-source-v6-oracle": {
+      "id": "campaign-pester-return-transfer-current-controls-v3-lifecycle-v1-source-v6-oracle",
+      "grading": "custom_only",
+      "cases": {
+        "pester-transfer-batch-v1": {
+          "title": "Batch summary return and value contract",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v2",
+            "powershell-pester-6.test-quality.v2"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v2": 5
+          }
+        }
+      },
+      "qualification_cases": {
+        "pester-transfer-batch-v1-good": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-good-loop": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-value-only": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-overrestricted": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-invalid": "pester-transfer-batch-v1"
+      },
+      "runtime": {
+        "powershell": "7.6.9",
+        "pester": "6.2.0",
+        "codex": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "workspace_profile": "pester-effectiveness-v3",
+        "agent": "codex",
+        "cli": "0.167.0",
+        "provider": "openai",
+        "profile": ".github/evals/campaigns/codex-qualified.json",
+        "variants": [
+          {
+            "id": "current",
+            "arm": "with_skill"
+          },
+          {
+            "id": "absent",
+            "arm": "without_skill"
+          }
+        ]
+      },
+      "skill_id": "powershell-pester-6",
+      "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
+      "fixture_digest": "sha256:6774ef2dfc06458a957404d12d4a4d111972998bba344fef94a7d057613cc577",
+      "runtime_digest": "sha256:d4ce3809a012e73c124f39e6327789b93f553d9d1cd446d35deff6974b0b470d",
+      "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+      "semantics": "pester-effectiveness-v6",
+      "campaign": {
+        "definition": ".github/evals/campaigns/pester-return-transfer-current-controls-v3.json",
+        "mode": "oracle",
+        "environment_import": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+        "environment_mode": "docker",
+        "agent_import": "oracle",
+        "trials": 1
+      },
+      "skill_source": {
+        "path": ".github/evals/pester-return-contract/variants/current/powershell-pester-6",
+        "digest": "sha256:d3641c5190c1b86d8e853adc8f3c68fe6376b5fdaf5c1d90c610a745102ff03e"
+      },
+      "termination_evidence": "native-deadline-v1"
+    },
+    "campaign-pester-return-transfer-current-controls-v3-lifecycle-v1-source-v6-probe": {
+      "id": "campaign-pester-return-transfer-current-controls-v3-lifecycle-v1-source-v6-probe",
+      "grading": "custom_only",
+      "cases": {
+        "pester-transfer-batch-v1": {
+          "title": "Batch summary return and value contract",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v2",
+            "powershell-pester-6.test-quality.v2"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v2": 5
+          }
+        }
+      },
+      "qualification_cases": {
+        "pester-transfer-batch-v1-good": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-value-only": "pester-transfer-batch-v1"
+      },
+      "runtime": {
+        "powershell": "7.6.9",
+        "pester": "6.2.0",
+        "codex": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "workspace_profile": "pester-effectiveness-v3",
+        "agent": "codex",
+        "cli": "0.167.0",
+        "provider": "openai",
+        "profile": ".github/evals/campaigns/codex-qualified.json",
+        "variants": [
+          {
+            "id": "current",
+            "arm": "with_skill"
+          },
+          {
+            "id": "absent",
+            "arm": "without_skill"
+          }
+        ]
+      },
+      "skill_id": "powershell-pester-6",
+      "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
+      "fixture_digest": "sha256:6774ef2dfc06458a957404d12d4a4d111972998bba344fef94a7d057613cc577",
+      "runtime_digest": "sha256:d4ce3809a012e73c124f39e6327789b93f553d9d1cd446d35deff6974b0b470d",
+      "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+      "semantics": "pester-effectiveness-v6",
+      "campaign": {
+        "definition": ".github/evals/campaigns/pester-return-transfer-current-controls-v3.json",
+        "mode": "probe",
+        "environment_import": "codex_pilot_environment:PilotEnvironment",
+        "environment_mode": "docker",
+        "agent_import": "evaluation_codex:CampaignCodex",
+        "trials": 1
+      },
+      "skill_source": {
+        "path": ".github/evals/pester-return-contract/variants/current/powershell-pester-6",
+        "digest": "sha256:d3641c5190c1b86d8e853adc8f3c68fe6376b5fdaf5c1d90c610a745102ff03e"
+      },
+      "termination_evidence": "native-deadline-v1"
+    },
+    "campaign-pester-return-transfer-current-v3-lifecycle-v1-source-v6-probe": {
+      "id": "campaign-pester-return-transfer-current-v3-lifecycle-v1-source-v6-probe",
+      "grading": "custom_only",
+      "cases": {
+        "pester-transfer-batch-v1": {
+          "title": "Batch summary return and value contract",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v2",
+            "powershell-pester-6.test-quality.v2"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v2": 5
+          }
+        }
+      },
+      "qualification_cases": {
+        "pester-transfer-batch-v1": "pester-transfer-batch-v1"
+      },
+      "runtime": {
+        "powershell": "7.6.9",
+        "pester": "6.2.0",
+        "codex": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "workspace_profile": "pester-effectiveness-v3",
+        "agent": "codex",
+        "cli": "0.167.0",
+        "provider": "openai",
+        "profile": ".github/evals/campaigns/codex-authorized-v1.json",
+        "variants": [
+          {
+            "id": "current",
+            "arm": "with_skill"
+          },
+          {
+            "id": "absent",
+            "arm": "without_skill"
+          }
+        ]
+      },
+      "skill_id": "powershell-pester-6",
+      "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
+      "fixture_digest": "sha256:6774ef2dfc06458a957404d12d4a4d111972998bba344fef94a7d057613cc577",
+      "runtime_digest": "sha256:e37fea33f089d675a1227146e2e792b18fc7146cbd143581d4cec23a9de13057",
+      "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+      "semantics": "pester-effectiveness-v6",
+      "campaign": {
+        "definition": ".github/evals/campaigns/pester-return-transfer-current-v3.json",
+        "mode": "experiment-probe",
+        "environment_import": "codex_pilot_environment:PilotEnvironment",
+        "environment_mode": "docker",
+        "agent_import": "evaluation_codex:CampaignCodex",
+        "trials": 3
+      },
+      "skill_source": {
+        "path": ".github/evals/pester-return-contract/variants/current/powershell-pester-6",
+        "digest": "sha256:d3641c5190c1b86d8e853adc8f3c68fe6376b5fdaf5c1d90c610a745102ff03e"
+      },
+      "termination_evidence": "native-deadline-v1"
+    },
+    "campaign-pester-return-transfer-current-v3-lifecycle-v1-source-v6-live": {
+      "id": "campaign-pester-return-transfer-current-v3-lifecycle-v1-source-v6-live",
+      "grading": "custom_only",
+      "cases": {
+        "pester-transfer-batch-v1": {
+          "title": "Batch summary return and value contract",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v2",
+            "powershell-pester-6.test-quality.v2"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v2": 5
+          }
+        }
+      },
+      "qualification_cases": {
+        "pester-transfer-batch-v1": "pester-transfer-batch-v1"
+      },
+      "runtime": {
+        "powershell": "7.6.9",
+        "pester": "6.2.0",
+        "codex": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "workspace_profile": "pester-effectiveness-v3",
+        "agent": "codex",
+        "cli": "0.167.0",
+        "provider": "openai",
+        "profile": ".github/evals/campaigns/codex-authorized-v1.json",
+        "variants": [
+          {
+            "id": "current",
+            "arm": "with_skill"
+          },
+          {
+            "id": "absent",
+            "arm": "without_skill"
+          }
+        ]
+      },
+      "skill_id": "powershell-pester-6",
+      "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
+      "fixture_digest": "sha256:6774ef2dfc06458a957404d12d4a4d111972998bba344fef94a7d057613cc577",
+      "runtime_digest": "sha256:e37fea33f089d675a1227146e2e792b18fc7146cbd143581d4cec23a9de13057",
+      "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+      "semantics": "pester-effectiveness-v6",
+      "campaign": {
+        "definition": ".github/evals/campaigns/pester-return-transfer-current-v3.json",
+        "mode": "live",
+        "environment_import": "codex_pilot_environment:PilotEnvironment",
+        "environment_mode": "docker",
+        "agent_import": "evaluation_codex:CampaignCodex",
+        "trials": 3
+      },
+      "skill_source": {
+        "path": ".github/evals/pester-return-contract/variants/current/powershell-pester-6",
+        "digest": "sha256:d3641c5190c1b86d8e853adc8f3c68fe6376b5fdaf5c1d90c610a745102ff03e"
+      },
+      "termination_evidence": "native-deadline-v1"
+    },
+    "campaign-pester-return-transfer-candidate-controls-v3-lifecycle-v1-source-v6-oracle": {
+      "id": "campaign-pester-return-transfer-candidate-controls-v3-lifecycle-v1-source-v6-oracle",
+      "grading": "custom_only",
+      "cases": {
+        "pester-transfer-batch-v1": {
+          "title": "Batch summary return and value contract",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v2",
+            "powershell-pester-6.test-quality.v2"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v2": 5
+          }
+        }
+      },
+      "qualification_cases": {
+        "pester-transfer-batch-v1-good": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-good-loop": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-value-only": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-overrestricted": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-invalid": "pester-transfer-batch-v1"
+      },
+      "runtime": {
+        "powershell": "7.6.9",
+        "pester": "6.2.0",
+        "codex": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "workspace_profile": "pester-effectiveness-v3",
+        "agent": "codex",
+        "cli": "0.167.0",
+        "provider": "openai",
+        "profile": ".github/evals/campaigns/codex-qualified.json",
+        "variants": [
+          {
+            "id": "candidate",
+            "arm": "with_skill"
+          },
+          {
+            "id": "absent",
+            "arm": "without_skill"
+          }
+        ]
+      },
+      "skill_id": "powershell-pester-6",
+      "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
+      "fixture_digest": "sha256:6774ef2dfc06458a957404d12d4a4d111972998bba344fef94a7d057613cc577",
+      "runtime_digest": "sha256:4492b4c70ad09fe8e5665f56197c83f56a3bb4ab1398595225ec02dc1cbca810",
+      "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+      "semantics": "pester-effectiveness-v6",
+      "campaign": {
+        "definition": ".github/evals/campaigns/pester-return-transfer-candidate-controls-v3.json",
+        "mode": "oracle",
+        "environment_import": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+        "environment_mode": "docker",
+        "agent_import": "oracle",
+        "trials": 1
+      },
+      "skill_source": {
+        "path": ".github/evals/pester-return-contract/variants/candidate/powershell-pester-6",
+        "digest": "sha256:8a363074264a6e0e075421cd1f9b27295fbfa81117b45a04822d146d8b825cbf"
+      },
+      "termination_evidence": "native-deadline-v1"
+    },
+    "campaign-pester-return-transfer-candidate-controls-v3-lifecycle-v1-source-v6-probe": {
+      "id": "campaign-pester-return-transfer-candidate-controls-v3-lifecycle-v1-source-v6-probe",
+      "grading": "custom_only",
+      "cases": {
+        "pester-transfer-batch-v1": {
+          "title": "Batch summary return and value contract",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v2",
+            "powershell-pester-6.test-quality.v2"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v2": 5
+          }
+        }
+      },
+      "qualification_cases": {
+        "pester-transfer-batch-v1-good": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-value-only": "pester-transfer-batch-v1"
+      },
+      "runtime": {
+        "powershell": "7.6.9",
+        "pester": "6.2.0",
+        "codex": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "workspace_profile": "pester-effectiveness-v3",
+        "agent": "codex",
+        "cli": "0.167.0",
+        "provider": "openai",
+        "profile": ".github/evals/campaigns/codex-qualified.json",
+        "variants": [
+          {
+            "id": "candidate",
+            "arm": "with_skill"
+          },
+          {
+            "id": "absent",
+            "arm": "without_skill"
+          }
+        ]
+      },
+      "skill_id": "powershell-pester-6",
+      "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
+      "fixture_digest": "sha256:6774ef2dfc06458a957404d12d4a4d111972998bba344fef94a7d057613cc577",
+      "runtime_digest": "sha256:4492b4c70ad09fe8e5665f56197c83f56a3bb4ab1398595225ec02dc1cbca810",
+      "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+      "semantics": "pester-effectiveness-v6",
+      "campaign": {
+        "definition": ".github/evals/campaigns/pester-return-transfer-candidate-controls-v3.json",
+        "mode": "probe",
+        "environment_import": "codex_pilot_environment:PilotEnvironment",
+        "environment_mode": "docker",
+        "agent_import": "evaluation_codex:CampaignCodex",
+        "trials": 1
+      },
+      "skill_source": {
+        "path": ".github/evals/pester-return-contract/variants/candidate/powershell-pester-6",
+        "digest": "sha256:8a363074264a6e0e075421cd1f9b27295fbfa81117b45a04822d146d8b825cbf"
+      },
+      "termination_evidence": "native-deadline-v1"
+    },
+    "campaign-pester-return-transfer-candidate-v3-lifecycle-v1-source-v6-probe": {
+      "id": "campaign-pester-return-transfer-candidate-v3-lifecycle-v1-source-v6-probe",
+      "grading": "custom_only",
+      "cases": {
+        "pester-transfer-batch-v1": {
+          "title": "Batch summary return and value contract",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v2",
+            "powershell-pester-6.test-quality.v2"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v2": 5
+          }
+        }
+      },
+      "qualification_cases": {
+        "pester-transfer-batch-v1": "pester-transfer-batch-v1"
+      },
+      "runtime": {
+        "powershell": "7.6.9",
+        "pester": "6.2.0",
+        "codex": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "workspace_profile": "pester-effectiveness-v3",
+        "agent": "codex",
+        "cli": "0.167.0",
+        "provider": "openai",
+        "profile": ".github/evals/campaigns/codex-authorized-v1.json",
+        "variants": [
+          {
+            "id": "candidate",
+            "arm": "with_skill"
+          },
+          {
+            "id": "absent",
+            "arm": "without_skill"
+          }
+        ]
+      },
+      "skill_id": "powershell-pester-6",
+      "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
+      "fixture_digest": "sha256:6774ef2dfc06458a957404d12d4a4d111972998bba344fef94a7d057613cc577",
+      "runtime_digest": "sha256:b2bd4ce5466337f716ffc08c2a62f3776b46190e2bbcd5a4b387f7ecb4b81307",
+      "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+      "semantics": "pester-effectiveness-v6",
+      "campaign": {
+        "definition": ".github/evals/campaigns/pester-return-transfer-candidate-v3.json",
+        "mode": "experiment-probe",
+        "environment_import": "codex_pilot_environment:PilotEnvironment",
+        "environment_mode": "docker",
+        "agent_import": "evaluation_codex:CampaignCodex",
+        "trials": 3
+      },
+      "skill_source": {
+        "path": ".github/evals/pester-return-contract/variants/candidate/powershell-pester-6",
+        "digest": "sha256:8a363074264a6e0e075421cd1f9b27295fbfa81117b45a04822d146d8b825cbf"
+      },
+      "termination_evidence": "native-deadline-v1"
+    },
+    "campaign-pester-return-transfer-candidate-v3-lifecycle-v1-source-v6-live": {
+      "id": "campaign-pester-return-transfer-candidate-v3-lifecycle-v1-source-v6-live",
+      "grading": "custom_only",
+      "cases": {
+        "pester-transfer-batch-v1": {
+          "title": "Batch summary return and value contract",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v2",
+            "powershell-pester-6.test-quality.v2"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v2": 5
+          }
+        }
+      },
+      "qualification_cases": {
+        "pester-transfer-batch-v1": "pester-transfer-batch-v1"
+      },
+      "runtime": {
+        "powershell": "7.6.9",
+        "pester": "6.2.0",
+        "codex": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "workspace_profile": "pester-effectiveness-v3",
+        "agent": "codex",
+        "cli": "0.167.0",
+        "provider": "openai",
+        "profile": ".github/evals/campaigns/codex-authorized-v1.json",
+        "variants": [
+          {
+            "id": "candidate",
+            "arm": "with_skill"
+          },
+          {
+            "id": "absent",
+            "arm": "without_skill"
+          }
+        ]
+      },
+      "skill_id": "powershell-pester-6",
+      "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
+      "fixture_digest": "sha256:6774ef2dfc06458a957404d12d4a4d111972998bba344fef94a7d057613cc577",
+      "runtime_digest": "sha256:b2bd4ce5466337f716ffc08c2a62f3776b46190e2bbcd5a4b387f7ecb4b81307",
+      "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+      "semantics": "pester-effectiveness-v6",
+      "campaign": {
+        "definition": ".github/evals/campaigns/pester-return-transfer-candidate-v3.json",
+        "mode": "live",
+        "environment_import": "codex_pilot_environment:PilotEnvironment",
+        "environment_mode": "docker",
+        "agent_import": "evaluation_codex:CampaignCodex",
+        "trials": 3
+      },
+      "skill_source": {
+        "path": ".github/evals/pester-return-contract/variants/candidate/powershell-pester-6",
+        "digest": "sha256:8a363074264a6e0e075421cd1f9b27295fbfa81117b45a04822d146d8b825cbf"
+      },
+      "termination_evidence": "native-deadline-v1"
+    },
+    "campaign-pester-transfer-original-v1-lifecycle-v1-source-v6-oracle": {
+      "id": "campaign-pester-transfer-original-v1-lifecycle-v1-source-v6-oracle",
+      "grading": "custom_only",
+      "cases": {
+        "pester-transfer-batch-v1": {
+          "title": "Batch summary return and value contract",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v2",
+            "powershell-pester-6.test-quality.v2"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v2": 5
+          }
+        }
+      },
+      "qualification_cases": {
+        "pester-transfer-batch-v1-retained": "pester-transfer-batch-v1"
+      },
+      "runtime": {
+        "powershell": "7.6.9",
+        "pester": "6.2.0",
+        "codex": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "workspace_profile": "pester-effectiveness-v3",
+        "agent": "codex",
+        "cli": "0.167.0",
+        "provider": "openai",
+        "profile": ".github/evals/campaigns/codex-qualified.json",
+        "variants": [
+          {
+            "id": "current",
+            "arm": "with_skill"
+          },
+          {
+            "id": "absent",
+            "arm": "without_skill"
+          }
+        ]
+      },
+      "skill_id": "powershell-pester-6",
+      "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
+      "fixture_digest": "sha256:6774ef2dfc06458a957404d12d4a4d111972998bba344fef94a7d057613cc577",
+      "runtime_digest": "sha256:5ef81ddb38256154c45924ee593796a37c833c624851701276e97d30d1c050a4",
+      "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+      "semantics": "pester-effectiveness-v6",
+      "campaign": {
+        "definition": ".github/evals/campaigns/pester-transfer-original-v1.json",
+        "mode": "oracle",
+        "environment_import": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+        "environment_mode": "docker",
+        "agent_import": "oracle",
+        "trials": 1
+      },
+      "termination_evidence": "native-deadline-v1"
+    },
+    "campaign-pester-admission-controls-v2-lifecycle-v1-source-v6-oracle": {
+      "id": "campaign-pester-admission-controls-v2-lifecycle-v1-source-v6-oracle",
+      "grading": "custom_only",
+      "cases": {
+        "pester-transfer-batch-v1": {
+          "title": "Batch summary return and value contract",
+          "metrics": [
+            "powershell-pester-6.reference-pass.v1",
+            "powershell-pester-6.mutation-detection.v2",
+            "powershell-pester-6.test-quality.v2"
+          ],
+          "denominators": {
+            "powershell-pester-6.mutation-detection.v2": 5
+          }
+        }
+      },
+      "qualification_cases": {
+        "pester-transfer-batch-v1-good": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-good-loop": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-value-only": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-overrestricted": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-invalid": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-collection-numeric": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-dynamic-member": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-static-member": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-method": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-member-write": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-index-write": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-numeric-cast": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-numeric-constructor": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-numeric-array": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-arbitrary-type": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-protected-operand": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-nested-command": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-for-hidden": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-arbitrary-member": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-diagnostic-count": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-diagnostic-types": "pester-transfer-batch-v1",
+        "pester-transfer-batch-v1-malformed": "pester-transfer-batch-v1"
+      },
+      "runtime": {
+        "powershell": "7.6.9",
+        "pester": "6.2.0",
+        "codex": "0.167.0",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "workspace_profile": "pester-effectiveness-v3",
+        "agent": "codex",
+        "cli": "0.167.0",
+        "provider": "openai",
+        "profile": ".github/evals/campaigns/codex-qualified.json",
+        "variants": [
+          {
+            "id": "current",
+            "arm": "with_skill"
+          },
+          {
+            "id": "absent",
+            "arm": "without_skill"
+          }
+        ]
+      },
+      "skill_id": "powershell-pester-6",
+      "grader_digest": "sha256:2036c1cbf604c1c6ae7372b32505b8da541a4830d1161ccfddd1f82df2616ad4",
+      "fixture_digest": "sha256:7fd910d264f98c74de1c108d604c1150c0c194630cbd1a5f8603ad3757dbfed7",
+      "runtime_digest": "sha256:303a39d262986b604d5fac0d3c4882b1334fbe772c67e9cee4ab62773f0c0e4c",
+      "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
+      "semantics": "pester-effectiveness-v6",
+      "campaign": {
+        "definition": ".github/evals/campaigns/pester-admission-controls-v2.json",
+        "mode": "oracle",
+        "environment_import": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+        "environment_mode": "docker",
+        "agent_import": "oracle",
+        "trials": 1
+      },
+      "skill_source": {
+        "path": ".github/evals/pester-return-contract/variants/current/powershell-pester-6",
+        "digest": "sha256:d3641c5190c1b86d8e853adc8f3c68fe6376b5fdaf5c1d90c610a745102ff03e"
+      },
+      "termination_evidence": "native-deadline-v1"
     }
   },
   "active_profiles": {

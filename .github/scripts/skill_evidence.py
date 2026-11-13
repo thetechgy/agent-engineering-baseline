@@ -40,9 +40,17 @@ SCANNER_RUNTIME_UNPATCHED = {
     "semgrep_lock": "sha256:523bff62b068c83716cfd73e461d23beb8876a9a951227a7aaaf0b7b7a37b764"
 }
 
-SCANNER_RUNTIME = {**SCANNER_RUNTIME_UNPATCHED,
+SCANNER_RUNTIME_PREVIOUS = {**SCANNER_RUNTIME_UNPATCHED,
                    "adapter_patch": "sha256:09ab5d1440f355224935b9498ea3c2a68395d656997932ab525771287cb802bc"}
-SCANNER_RUNTIMES = (SCANNER_RUNTIME_UNPATCHED, SCANNER_RUNTIME)
+SCANNER_RUNTIME = {**SCANNER_RUNTIME_PREVIOUS,
+                   "versions": {**SCANNER_RUNTIME_PREVIOUS["versions"], "semgrep": "1.185.0"},
+                   "skillspector_lock": "sha256:3352c462434ed1d906069b710bfba8b352c255139a0c5718f4edb6ad4051be2b",
+                   "semgrep_lock": "sha256:d0c13313fb643f578a8116375078d344bfcf74748380ca88acd6e0d7d467c520"}
+SCANNER_RUNTIME_CURRENT_UNPATCHED = {key: value for key, value in SCANNER_RUNTIME.items()
+                                     if key != "adapter_patch"}
+SCANNER_RUNTIMES = (SCANNER_RUNTIME_UNPATCHED, SCANNER_RUNTIME_PREVIOUS,
+                    SCANNER_RUNTIME_CURRENT_UNPATCHED, SCANNER_RUNTIME)
+CAVEAT_SCANNER_RUNTIMES = (SCANNER_RUNTIME_PREVIOUS, SCANNER_RUNTIME)
 
 ROOT = Path(__file__).resolve().parents[2]
 JSON_LIMIT = 8 * 1024 * 1024
@@ -1485,7 +1493,7 @@ def validate_evidence(data, *, public=False, _observed_at=None):
                 'Unsupported or contradictory scanner runtime')
         fields += ('scanner_runtime',)
     if 'coverage_caveats' in data:
-        require(data.get('kind') == 'static' and data.get('scanner_runtime') == SCANNER_RUNTIME,
+        require(data.get('kind') == 'static' and data.get('scanner_runtime') in CAVEAT_SCANNER_RUNTIMES,
                 'Caveats require the qualified adapter')
         fields += ('coverage_caveats',)
         caveats = data['coverage_caveats']
@@ -2037,8 +2045,8 @@ def validate_runtime_versions(versions):
     require(type(versions) is dict, 'Native versions object required')
     if 'scanner_runtime' in versions:
         require(versions['scanner_runtime'] in SCANNER_RUNTIMES
-                and versions.get('scanners') == SCANNER_RUNTIME['versions']
-                and versions.get('skillspector_revision') == SCANNER_RUNTIME['skillspector_revision'],
+                and versions.get('scanners') == versions['scanner_runtime']['versions']
+                and versions.get('skillspector_revision') == versions['scanner_runtime']['skillspector_revision'],
                 'Unsupported or contradictory scanner provenance')
     elif versions.get('skillspector_revision') == SCANNER_RUNTIME['skillspector_revision']:
         require(False, 'Missing scanner runtime provenance')
@@ -2964,9 +2972,9 @@ def normalize_static(root, name, workspace=ROOT):
         if 'scanner_runtime' in versions: data['scanner_runtime'] = copy.deepcopy(versions['scanner_runtime'])
         has_caveats = any(error.startswith('skillspector complete_with_caveats:')
                           for scan in native['results'] for error in scan.get('legacy', {}).get('errors', []))
-        require(not has_caveats or versions.get('scanner_runtime') == SCANNER_RUNTIME,
+        require(not has_caveats or versions.get('scanner_runtime') in CAVEAT_SCANNER_RUNTIMES,
                 'Missing qualified caveat adapter provenance')
-        if versions.get('scanner_runtime') == SCANNER_RUNTIME:
+        if versions.get('scanner_runtime') in CAVEAT_SCANNER_RUNTIMES:
             for index, scan in enumerate(native['results']):
                 for error in scan.get('legacy', {}).get('errors', []):
                     match = re.fullmatch(
@@ -3350,7 +3358,7 @@ def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
     if profile_id is None and campaign_purpose(purpose):
         profile_id = purpose
     if profile_id is None and purpose in ('skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-effectiveness-v14'
+        profile_id = 'pester-effectiveness-v15'
     if profile_id is None and name == 'powershell-pester-6' and purpose in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
         profile_id = 'pester-cli-pilot-retained-v12'
     if profile_id is None and name == 'gh' and purpose == 'oracle_qualification':

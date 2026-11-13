@@ -148,7 +148,8 @@ class FreshnessTests(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         root = Path(temporary.name)
-        for name in (fresh.CONFIG, "apm.yml", "apm.lock.yaml", ".apm-version", ".github/dependabot.yml"):
+        for name in (fresh.CONFIG, "apm.yml", "apm.lock.yaml", ".apm-version", ".github/dependabot.yml",
+                     ".github/evals/evaluator-candidate.json", ".github/evals/codex-pilot.json"):
             target = root / name
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / name, target)
@@ -168,6 +169,19 @@ class FreshnessTests(unittest.TestCase):
                              "evaluation-runtime compatibility group" if id == "harbor" else "review-runtime compatibility group")
             self.assertTrue(row["policy"]["hold"])
 
+    def test_independent_environments_are_visible_without_production_adoption(self):
+        _, rows, _ = fresh.inventory(ROOT)
+        by_id = {row['id']: row for row in rows}
+        self.assertEqual(by_id['skillevaluator']['pin']['version'], '0.3.0')
+        production = json.loads(by_id['production-environment']['pin']['value'])
+        self.assertEqual((production['openai'], production['pydantic']), ('2.44.0', '2.13.4'))
+        candidate = json.loads(by_id['candidate-environment']['pin']['value'])
+        self.assertEqual(candidate['version'], '0.8.0')
+        self.assertEqual(candidate['dependencies']['harbor'], '0.24.0')
+        scanner = json.loads(by_id['scanner-environment']['pin']['value'])
+        self.assertEqual(scanner['openai'], '3.50.0')
+        self.assertIn('not production adoption', by_id['candidate-environment']['label'])
+
     def test_apm_generator_version_does_not_override_active_bootstrap_pin(self):
         root = self.scratch()
         lock = root / 'apm.lock.yaml'
@@ -177,6 +191,16 @@ class FreshnessTests(unittest.TestCase):
         pin, sources = fresh.extract(root, definition)
         self.assertEqual(pin['version'], (root / '.apm-version').read_text().strip())
         self.assertEqual({s['path'] for s in sources}, {'.apm-version'})
+
+    def test_missing_retained_environment_identity_preserves_partial_inventory(self):
+        root = self.scratch()
+        source = root / '.github/scripts/skill_report_reviews.py'
+        source.write_text(source.read_text().replace('LEGACY_PINS =', 'RENAMED_LEGACY_PINS ='))
+        _, rows, _ = fresh.inventory(root)
+        by_id = {row['id']: row for row in rows}
+        self.assertEqual(by_id['production-environment']['errors'], ['missing_or_duplicate_pin'])
+        self.assertIsNotNone(by_id['openai']['pin']['version'])
+        self.assertFalse(by_id['candidate-environment']['errors'])
 
     def test_review_lock_overlay_disagreement_remains_visible(self):
         root = self.scratch()
@@ -191,7 +215,9 @@ class FreshnessTests(unittest.TestCase):
         definition = next(item for item in fresh.load_config(ROOT) if item["id"] == "uv")
         pin, sources = fresh.extract(ROOT, definition)
         self.assertEqual({source["path"] for source in sources}, {
-            ".github/workflows/validate.yml", ".github/workflows/benchmark-skills.yml",
+            *(p.relative_to(ROOT).as_posix() for p in (ROOT / '.github/workflows').glob('*.yml')
+              if 'uses: astral-sh/setup-uv@' in p.read_text()
+              and p.name != 'pester-return-qualification.yml'),
             ".github/scripts/setup-skillevaluator.sh",
         })
         for selector in definition["sources"]:

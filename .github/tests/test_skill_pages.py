@@ -510,14 +510,14 @@ class PagesTests(unittest.TestCase):
         uv = """import os,pathlib,sys,shlex
 args=sys.argv[1:]
 with open(os.environ['CALL_LOG'],'a') as f: f.write('uv '+ ' '.join(args)+'\\n')
-if args==['--version']: print('uv 0.13.7')
+if args==['--version']: print('uv 0.13.8')
 elif args[0]=='sync':
  root=pathlib.Path(args[args.index('--project')+1])/'.venv/bin'; root.mkdir(parents=True)
  (root/'python').write_text('#!/bin/sh\\nexec '+shlex.quote(sys.executable)+' \"$@\"\\n'); (root/'python').chmod(0o700)
  (root/'skillevaluator').write_text('#!/bin/sh\\n[ "$#" -eq 1 ] && [ "$1" = --version ] || exit 1\\necho skillevaluator-0.3.0\\n'); (root/'skillevaluator').chmod(0o700)
 elif args[:2]==['pip','list']: print('[]')
 elif args[:2]==['pip','check']:
- assert args[2:]==['--python',str(pathlib.Path(os.environ['RUNNER_TEMP'])/'skill-evaluation-tools/review/.venv/bin/python')]
+ assert args[2:] in [['--python',str(pathlib.Path(os.environ['RUNNER_TEMP'])/('skill-evaluation-tools/'+name+'/.venv/bin/python'))] for name in ('review','review-previous')]
 else: raise SystemExit('Unexpected reporting setup dependency operation')
 """
         git = """import os,pathlib,sys,subprocess,shutil
@@ -529,8 +529,10 @@ if 'worktree' in args:
  target=pathlib.Path(args[-2]); target.mkdir(parents=True)
  shutil.copyfile(os.environ['BASE_LOCK'],target/'uv.lock')
 if 'apply' in args:
- assert args[:2]==['-C',str(pathlib.Path(os.environ['RUNNER_TEMP'])/'skill-evaluation-tools/review')], 'Reporting must not patch evaluator execution'
- assert args[2:] in (['apply','--check',os.environ['REVIEW_PATCH']], ['apply',os.environ['REVIEW_PATCH']]), 'Only the reviewed dependency lock patch is allowed'
+ allowed={str(pathlib.Path(os.environ['RUNNER_TEMP'])/('skill-evaluation-tools/'+name)):os.environ[key] for name,key in [('review','REVIEW_PATCH'),('review-previous','PREVIOUS_REVIEW_PATCH')]}
+ assert args[0]=='-C' and args[1] in allowed, 'Reporting must not patch evaluator execution'
+ patch=allowed[args[1]]
+ assert args[2:] in (['apply','--check',patch], ['apply',patch]), 'Only the matching reviewed dependency lock patch is allowed'
  subprocess.run([os.environ['REAL_GIT'],*args],check=True)
 """
         for name, source in [('uv', uv), ('git', git), *[(name, "raise SystemExit('Forbidden reporting operation')") for name in ('curl', 'docker', 'semgrep', 'skillspector')]]:
@@ -540,7 +542,8 @@ if 'apply' in args:
             'GITHUB_ENV': str(self.root / 'env'), 'GITHUB_PATH': str(self.root / 'path'),
             'REAL_GIT': shutil.which('git'),
             'BASE_LOCK': str(Path(os.environ['SKILL_LEGACY_REVIEW_PYTHON']).parents[2] / 'uv.lock'),
-            'REVIEW_PATCH': str(ROOT / '.github/patches/skillevaluator-v0.3.0-review-runtime.patch')}
+            'REVIEW_PATCH': str(ROOT / '.github/patches/skillevaluator-v0.3.0-review-runtime.patch'),
+            'PREVIOUS_REVIEW_PATCH': str(ROOT / '.github/patches/skillevaluator-v0.3.0-review-runtime-v1.patch')}
         run = subprocess.run(['bash', str(ROOT / '.github/scripts/setup-skillevaluator.sh'), 'reporting'], env=environment,
                              capture_output=True, text=True, timeout=30)
         self.assertEqual(run.returncode, 0, run.stderr)
@@ -549,9 +552,11 @@ if 'apply' in args:
         self.assertNotIn('semgrep', calls); self.assertNotIn('skillspector', calls); self.assertNotIn('benchmark', calls)
         self.assertNotIn('pin-codex.patch', calls)
         self.assertIn(environment['REVIEW_PATCH'], calls)
+        self.assertIn(environment['PREVIOUS_REVIEW_PATCH'], calls)
         self.assertIn('pip check --python', calls)
         self.assertIn('SKILL_REVIEW_PYTHON=', (self.root / 'env').read_text())
         self.assertIn('SKILL_LEGACY_REVIEW_PYTHON=', (self.root / 'env').read_text())
+        self.assertIn('SKILL_PREVIOUS_REVIEW_PYTHON=', (self.root / 'env').read_text())
         self.assertIn('--frozen --no-dev --extra security --extra tier3', calls)
 
     def test_workflow_permissions_queue_and_trusted_checkout(self):

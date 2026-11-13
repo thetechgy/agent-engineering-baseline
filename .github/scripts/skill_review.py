@@ -28,7 +28,7 @@ require = evidence.require
 METHOD = "grounded-skill-review/2"
 PRIVATE_SCHEMA = 2
 ENDPOINT = "https://api.openai.com/v1"
-PINS = {"openai": "2.54.0", "pydantic": "2.14.2", "skillevaluator": "0.3.0"}
+PINS = {"openai": "2.54.0", "pydantic": "2.14.3", "skillevaluator": "0.3.0"}
 CONTEXT_LIMIT = 8 * 1024 * 1024
 REPORT_LIMIT = 1024 * 1024
 MAX_SUPPORT = 128
@@ -1137,7 +1137,9 @@ def prepare(inputs, saved_analysis, skill, record_id, source=None, support=None,
         "implementation_digest": evidence.identity([
             [path.name, evidence.digest_bytes(capture.read(path))]
             for path in (Path(__file__), Path(analysis.__file__), Path(evidence.__file__), Path(evidence.reports.__file__),
-                         evidence.ROOT / evidence.CUSTOM_REGISTRY)
+                         evidence.ROOT / evidence.CUSTOM_REGISTRY,
+                         evidence.ROOT / '.github/scripts/evaluator_profiles.py',
+                         evidence.ROOT / '.github/evals/evaluator-candidate.json')
         ]),
     }
     screen_context(value)

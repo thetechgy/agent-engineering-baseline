@@ -19,7 +19,8 @@ require = evidence.require
 LIMIT = 1024 * 1024
 REPLY_LIMIT = 16 * LIMIT
 MAX_ASSESSMENTS = 8
-PINS = {'openai': '2.54.0', 'pydantic': '2.14.2', 'skillevaluator': '0.3.0'}
+PINS = {'openai': '2.54.0', 'pydantic': '2.14.3', 'skillevaluator': '0.3.0'}
+PREVIOUS_PINS = {'openai': '2.54.0', 'pydantic': '2.14.2', 'skillevaluator': '0.3.0'}
 LEGACY_PINS = {'openai': '2.44.0', 'pydantic': '2.13.4', 'skillevaluator': '0.3.0'}
 MODULES = ('skill_review.py', 'skill_analysis.py', 'skill_evidence.py', 'skill_reports.py')
 # Reviewed source bytes, not commands or report-supplied executable identities.
@@ -82,15 +83,29 @@ PROFILES['current-v4'] = ('35c04044b7c53fccebb4eff61a42e9352450065d', (
 ))
 REGISTRY_DIGESTS['current-v4'] = 'b046df671258f9579513efc33249f90ba4a3fef29acb316380db4d5d714b2f95'
 
+# Pydantic 2.14.3; previous profiles and their environments remain frozen.
+PROFILES['current-v5'] = ('488085d51ae1263c95c14d15dcbd58663d6d293d', (
+    'b1b20e52192475bd758fd1d5dba1f95bf9911da9c963c13ccf650fe165e043e5',
+    '11e3372992824dbeca35990b03ec2e0e683837141f4c15e9e522df0a4cd71a6f',
+    '44f1275e0e0086be42bfbe221258e0170ff8fd2a63be567815c1d2695f9a16ee',
+    '91361cde84bcfd74484e07535f1bb252880d4eb9ab412b6d6cd1fe94e8b08f16',
+))
+REGISTRY_DIGESTS['current-v5'] = '4fb8cd3f8455428b5eaeb92fb3b77873f917b6fc78f8d84ee45f473948f87871'
+
+# Exact supporting code/data required by the newer validator modules.
+SUPPORT_FILES = {'current-v5': {'.github/scripts/evaluator_profiles.py': '4343ef13d8ee21e6abda83942a3b1a0a5f25f5d35671f5932d5d34c22346b9d9', '.github/evals/evaluator-candidate.json': '9049293fbee7e2518a57a66ab3bfdb90d5412fd105d9115b6b6d5a951c0cd871'}}
+
 # Profile selection never accepts executable identities from attachment data.
 # Only setup/operator configuration supplies the two reviewed environments.
 def validator_runtime(profile):
     require(profile in PROFILES, 'Unsupported validator profile')
-    expected = PINS if profile in ('current-v3', 'current-v4') else LEGACY_PINS
+    previous = profile in ('current-v3', 'current-v4')
+    expected = PINS if profile == 'current-v5' else PREVIOUS_PINS if previous else LEGACY_PINS
     installed = {name: importlib.metadata.version(name) for name in PINS}
     if installed == expected:
         return sys.executable, expected
-    variable = 'SKILL_REVIEW_PYTHON' if profile in ('current-v3', 'current-v4') else 'SKILL_LEGACY_REVIEW_PYTHON'
+    variable = ('SKILL_REVIEW_PYTHON' if profile == 'current-v5' else
+                'SKILL_PREVIOUS_REVIEW_PYTHON' if previous else 'SKILL_LEGACY_REVIEW_PYTHON')
     executable = Path(os.environ.get(variable, ''))
     require(executable.is_absolute() and executable.is_file(), 'Pinned validator runtime unavailable')
     return str(executable), expected
@@ -259,7 +274,7 @@ def assessment(spec, parent, capture, report, review):
     return value
 
 
-def run_validator(request, modules, capture, roots, registry, profile):
+def run_validator(request, modules, capture, roots, registry, profile, assets=None):
     executable, expected = validator_runtime(profile)
     guards = (capture.guard(),)
     temporary = evidence.write_outputs({}, input_paths=roots, input_guards=guards)
@@ -269,7 +284,7 @@ def run_validator(request, modules, capture, roots, registry, profile):
                                          input_guards=guards, rendered=modules)
         if registry is not None:
             evidence.write_outputs({}, temporary / '.github' / 'evals', input_paths=roots,
-                                   input_guards=guards, rendered={'custom-metrics.json': registry})
+                                   input_guards=guards, rendered={'custom-metrics.json': registry, **(assets or {})})
         try:
             response = subprocess.run([executable, '-I', '-B', '-c', RUNNER, str(scripts),
                                        evidence.encoded(expected).decode()],
@@ -297,7 +312,7 @@ def load(paths, captured):
         versions = {k: importlib.metadata.version(k) for k in PINS}
     except importlib.metadata.PackageNotFoundError:
         raise ValueError('Pinned validator environment required') from None
-    require(sys.version_info[:2] == (3, 13) and versions in (PINS, LEGACY_PINS), 'Pinned validator environment required')
+    require(sys.version_info[:2] == (3, 13) and versions in (PINS, PREVIOUS_PINS, LEGACY_PINS), 'Pinned validator environment required')
     import skill_review as review  # Optional dependency, never needed by a base report.
     capture = review.Capture()
     items = []; roots = []; original_records = []; seen = set()
@@ -345,6 +360,14 @@ def load(paths, captured):
             data = capture.read(tooling / '.github' / 'scripts' / name)
             require(evidence.digest_bytes(data) == 'sha256:' + digest, 'Unreviewed validator module')
             modules[name] = data
+        assets = {}
+        for member, digest in SUPPORT_FILES.get(spec['profile'], {}).items():
+            data = capture.read(tooling / member, limit=LIMIT)
+            require(evidence.digest_bytes(data) == 'sha256:' + digest, 'Unreviewed validator supporting file')
+            if member.startswith('.github/scripts/'):
+                modules[Path(member).name] = data
+            else:
+                assets[Path(member).name] = data
         registry = None
         if spec['profile'] in REGISTRY_DIGESTS:
             registry = capture.read(tooling / '.github/evals/custom-metrics.json', limit=LIMIT)
@@ -360,7 +383,7 @@ def load(paths, captured):
         require(len({row['provenance']['assessment_digest'] for row in assessments}) == len(assessments), 'Duplicate assessment document')
         require(len(capture.members) + len(capture.states) <= analysis.MAX_ENTRIES, 'Attachment entry limit')
         require(len(evidence.encoded(request)) <= LIMIT, 'Validator request limit')
-        result = run_validator(request, modules, capture, tuple((*roots, *capture.roots)), registry, spec['profile'])
+        result = run_validator(request, modules, capture, tuple((*roots, *capture.roots)), registry, spec['profile'], assets)
         require(result['review_digest'] == spec['review_digest'] and result['markdown_digest'] == spec['markdown_digest'],
                 'Validated report capture mismatch')
         require(evidence.encoded(result['report']) == evidence.encoded(evidence.parse_json(raw, limit=LIMIT)), 'Validated report changed')

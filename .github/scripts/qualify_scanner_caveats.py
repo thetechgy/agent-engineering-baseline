@@ -63,7 +63,7 @@ def qualify(output, tools, workspace):
         capture = destination / 'process'
         native.mkdir(parents=True); capture.mkdir()
         identity = copy.deepcopy(versions)
-        if mode == 'before': identity['scanner_runtime'] = evidence.SCANNER_RUNTIME_UNPATCHED
+        if mode == 'before': identity['scanner_runtime'] = evidence.SCANNER_RUNTIME_CURRENT_UNPATCHED
         (native / 'versions.json').write_bytes(evidence.encoded(identity))
         with tempfile.TemporaryDirectory(prefix='scanner-caveats-') as temporary:
             env = dict(environment, HOME=temporary, XDG_CACHE_HOME=temporary, XDG_STATE_HOME=temporary,
@@ -126,7 +126,7 @@ def qualify(output, tools, workspace):
                     changed = copy.deepcopy(dict(captured_record))
                     if mutation == 'omit': changed.pop('coverage_caveats')
                     elif mutation == 'count': changed['coverage_caveats'][0]['count'] += 1
-                    else: changed['scanner_runtime'] = evidence.SCANNER_RUNTIME_UNPATCHED
+                    else: changed['scanner_runtime'] = evidence.SCANNER_RUNTIME_CURRENT_UNPATCHED
                     try:
                         evidence.project(changed, static_bundle=native)
                     except ValueError:

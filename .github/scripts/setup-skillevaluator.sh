@@ -13,15 +13,33 @@ case "$(realpath -m "$tool_root")/" in
 esac
 mkdir -p "$tool_root/bin" "$tool_root/dependencies"
 chmod 700 "$tool_root"
-test "$(uv --version | awk '{print $2}')" = '0.13.7'
+# The immutable return-contract workflow retains its original reviewed uv.
+# Both supported compilers consume the same verified frozen Python catalog.
+if [ "$kind" = candidate-current ] && [ "$(uv --version | awk '{print $2}')" = '0.13.7' ]; then
+  :
+else
+test "$(uv --version | awk '{print $2}')" = '0.13.8'
+fi
 export UV_CACHE_DIR="$tool_root/uv-cache"
 export UV_PYTHON_INSTALL_DIR="$tool_root/python"
 export XDG_CACHE_HOME="$tool_root/cache"
 export XDG_STATE_HOME="$tool_root/state"
 
+# uv's managed-build catalog can change without changing a Python version.
+# Preserve the reviewed 0.13.7 download identities for frozen evaluator recipes.
+if [ "$kind" = candidate ] || [ "$kind" = candidate-current ]; then
+  frozen_python_catalog="$tool_root/frozen-python-downloads.json"
+  curl --fail --location --silent --show-error --proto '=https' --proto-redir '=https' \
+    --output "$frozen_python_catalog" \
+    https://raw.githubusercontent.com/astral-sh/uv/316c827e058c16b71d5c507a20729c2995a7bcce/crates/uv-python-managed/download-metadata.json
+  printf '%s  %s\n' 81372e1cbff3dd87a786674ef00e01b3743638e3d8e58117d73e32a8e11eae05 "$frozen_python_catalog" | sha256sum --check --strict
+  export UV_PYTHON_DOWNLOADS_JSON_URL="$frozen_python_catalog"
+fi
+
 # Current opt-in replacement. Historical recipes below retain their original bytes.
 if [ "$kind" = candidate-current ]; then
   current_root="$RUNNER_TEMP/current-evaluator"
+  export UV_PYTHON_INSTALL_DIR="$current_root/python"
   git init --quiet "$current_root"
   git -C "$current_root" fetch --quiet --depth=1 https://github.com/NVIDIA/SkillEvaluator.git 8149356e4476a1497fb334727f13f699c6fa6ba5
   git -C "$current_root" checkout --quiet --detach FETCH_HEAD
@@ -44,6 +62,7 @@ fi
 if [ "$kind" = candidate ]; then
   candidate_revision=f878f99a9cd4a85dd04043feb43e5bd6a777f64b # v0.7.2
   candidate_root="$RUNNER_TEMP/candidate-evaluation-tools"
+  export UV_PYTHON_INSTALL_DIR="$candidate_root/python"
   git init --quiet "$candidate_root/evaluator"
   git -C "$candidate_root/evaluator" fetch --quiet --depth=1 \
     https://github.com/NVIDIA/SkillEvaluator.git "$candidate_revision"
@@ -99,7 +118,7 @@ git -C "$tool_root/evaluator" worktree add --quiet --detach "$tool_root/review" 
 review_patch="$repository_root/.github/patches/skillevaluator-v0.3.0-review-runtime.patch"
 git -C "$tool_root/review" apply --check "$review_patch"
 git -C "$tool_root/review" apply "$review_patch"
-review_lock_sha256=99e40a0c414b500dba410fe1e6e687f48e4c10209397997732392ffd472520c4
+review_lock_sha256=029846ad359472e0f2bf2df96de430f5aca0fcf2c242949ceab8289013a532ec
 printf '%s  %s\n' "$review_lock_sha256" "$tool_root/review/uv.lock" | sha256sum --check --strict
 git -C "$tool_root/review" diff --exit-code -- pyproject.toml
 uv sync --project "$tool_root/review" --python 3.13 --managed-python \
@@ -110,12 +129,23 @@ printf '%s  %s\n' "$review_lock_sha256" "$tool_root/review/uv.lock" | sha256sum 
 uv pip list --python "$review_bin/python" --format json > "$tool_root/dependencies/review.json"
 "$review_bin/python" - <<'PYREVIEW' > "$tool_root/review-versions.json"
 import importlib.metadata, json, sys
-expected = {'openai': '2.54.0', 'pydantic': '2.14.2', 'pydantic-core': '2.50.2',
-            'typing-inspection': '0.4.4', 'skillevaluator': '0.3.0', 'harbor': '0.13.2'}
+expected = {'openai': '2.54.0', 'pydantic': '2.14.3', 'pydantic-core': '2.50.4',
+            'typing-inspection': '0.4.5', 'skillevaluator': '0.3.0', 'harbor': '0.13.2'}
 actual = {name: importlib.metadata.version(name) for name in expected}
 assert sys.version_info[:2] == (3, 13) and actual == expected
 print(json.dumps(actual, indent=2))
 PYREVIEW
+
+# Frozen current-v3/v4 attachments keep their original review dependency set.
+git -C "$tool_root/evaluator" worktree add --quiet --detach "$tool_root/review-previous" "$evaluator_revision"
+git -C "$tool_root/review-previous" apply --check "$repository_root/.github/patches/skillevaluator-v0.3.0-review-runtime-v1.patch"
+git -C "$tool_root/review-previous" apply "$repository_root/.github/patches/skillevaluator-v0.3.0-review-runtime-v1.patch"
+previous_review_lock_sha256=99e40a0c414b500dba410fe1e6e687f48e4c10209397997732392ffd472520c4
+printf '%s  %s\n' "$previous_review_lock_sha256" "$tool_root/review-previous/uv.lock" | sha256sum --check --strict
+uv sync --project "$tool_root/review-previous" --python 3.13 --managed-python \
+  --frozen --no-dev --extra security --extra tier3
+uv pip check --python "$tool_root/review-previous/.venv/bin/python"
+printf '%s  %s\n' "$previous_review_lock_sha256" "$tool_root/review-previous/uv.lock" | sha256sum --check --strict
 
 if [ "$kind" = quality ]; then
   # Every Semgrep artifact must match a reviewed hash; nothing is resolved at run time.
@@ -130,7 +160,7 @@ if [ "$kind" = quality ]; then
   git -C "$tool_root/skillspector" checkout --quiet --detach FETCH_HEAD
   test "$(git -C "$tool_root/skillspector" rev-parse HEAD)" = "$skillspector_revision"
   # Scanner-owned compatible lock; evaluator and historical environments are untouched.
-  skillspector_lock_sha256=8c922f8c222c28c7e02b1dc856a2b9464fb2d768ddae944ee9f8131452bfeee9
+  skillspector_lock_sha256=3352c462434ed1d906069b710bfba8b352c255139a0c5718f4edb6ad4051be2b
   printf '%s  %s\n' "$skillspector_lock_sha256" "$repository_root/.github/locks/skillspector.lock" | sha256sum --check --strict
   cp "$repository_root/.github/locks/skillspector.lock" "$tool_root/skillspector/uv.lock"
   uv sync --project "$tool_root/skillspector" --python 3.13 --managed-python --frozen --no-dev
@@ -161,6 +191,7 @@ printf '%s\n' "$evaluator_bin" "$tool_root/bin" >> "$GITHUB_PATH"
   printf 'SKILL_EVALUATION_KIND=%s\n' "$kind"
   printf 'SKILL_EVALUATOR_PYTHON=%s/python\n' "$evaluator_bin"
   printf 'SKILL_LEGACY_REVIEW_PYTHON=%s/python\n' "$evaluator_bin"
+  printf 'SKILL_PREVIOUS_REVIEW_PYTHON=%s/review-previous/.venv/bin/python\n' "$tool_root"
   printf 'SKILL_REVIEW_PYTHON=%s/python\n' "$review_bin"
   printf 'XDG_CACHE_HOME=%s\nXDG_STATE_HOME=%s\n' "$XDG_CACHE_HOME" "$XDG_STATE_HOME"
   printf 'SKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE=%s/provenance.key\n' "$tool_root"

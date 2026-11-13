@@ -1045,7 +1045,7 @@ class WorkflowTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             tools = root / 'bin'; tools.mkdir()
-            uv = tools / 'uv'; uv.write_text('#!/bin/sh\nprintf "uv 0.13.7\\n"\n'); uv.chmod(0o755)
+            uv = tools / 'uv'; uv.write_text('#!/bin/sh\nprintf "uv 0.13.8\\n"\n'); uv.chmod(0o755)
             for layout in ('flat', 'trusted', 'external'):
                 workspace = root / layout / 'workspace'; workspace.mkdir(parents=True)
                 checkout = (workspace if layout == 'flat' else workspace / 'trusted checkout'
