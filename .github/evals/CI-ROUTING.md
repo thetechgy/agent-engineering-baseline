@@ -200,6 +200,20 @@ main under the same worker limits. The worker source/test are unchanged; neither
 the limits nor assertion is relaxed. This local baseline failure is separate from
 the legacy scheduler limitation and from hosted runtime qualification.
 
+## PR #134 child-observation hold
+
+The [focused investigation](cli-observation-v1/routing-134.md) identifies an earlier
+DNS failure in the actual CLI tool command in final routing run `43367014799`.
+The delayed child never launched; `boundary_after` exists, but final child-network
+evidence does not. This differs from the older deliberate failing-command defect.
+The resolver cause and routing contribution remain unresolved, so #134 stays draft.
+The diagnostic envelope adds a manual `routing_observation=true` mode to
+`native-deadline.yml`, calling `cli-observation-comparison.yml` for fixed historical
+base/head sources. It has no automatic trigger, secret inheritance, live gate or
+production runtime change. Its existing native probe does not reproduce the full
+failed cohort's warm state or PR caller graph. Required platform success does not
+override the selected pilot failure; the aggregate check remains non-required.
+
 ## Operator commands
 
 Use the existing manual preparation paths when their coverage is needed:
