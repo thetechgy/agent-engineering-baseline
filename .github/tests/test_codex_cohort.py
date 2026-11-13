@@ -109,6 +109,74 @@ class Boundaries(unittest.TestCase):
                 self.assertEqual(value['agent']['kwargs'],{'version':'0.167.0','reasoning_effort':'high'})
             self.assertEqual(len(set(paths)),12)
 
+    @unittest.skipUnless(os.environ.get('APM_EXECUTABLE') and __import__('shutil').which('docker'), 'Native Docker/APM metadata transport')
+    def test_native_equal_metadata_case_switches_bind_actual_verifier_inputs(self):
+        import hashlib
+        import importlib.metadata
+        import shutil
+        if importlib.metadata.version('skillevaluator') != '0.8.0': self.skipTest('Owning pinned runtime required')
+        from qualify_evaluator_candidate import run_native, native_compose_config
+        from harbor.models.task.task import Task
+        cohort.no_credentials()
+        reviewed = Path(native_compose_config(ROOT))
+        root = Path(os.environ['RUNNER_TEMP']) / 'verifier-metadata-diagnostic'
+        root.mkdir(exist_ok=False)
+        # Own a separate copy of the already-verified plugin. Docker may create
+        # client state; the following preparation still needs its fresh config.
+        config_root = root / 'compose'; (config_root / 'cli-plugins').mkdir(parents=True)
+        plugin = config_root / 'cli-plugins/docker-compose'
+        shutil.copyfile(reviewed / 'cli-plugins/docker-compose', plugin); plugin.chmod(0o755)
+        with patch.dict(os.environ, DOCKER_CONFIG=str(config_root), COMPOSE_PLUGIN_ROOT=str(config_root)):
+            native_compose_config(ROOT)
+            _, tasks, captured = cohort.staged(root)
+            expected = {(r['arm'], r['case_id']): r for r in captured}
+            stamp = 1_700_000_000_000_000_000
+            for arm, arm_tasks in tasks.items():
+                for task in arm_tasks:
+                    os.utime(task / 'tests/entry.json', ns=(stamp, stamp))
+                    self.assertEqual(Task(task).checksum, expected[arm, task.name]['task_checksum'])
+            baseline = pilot.resources()
+            sequence = [('pester-003', 'without_skill'), ('pester-004', 'without_skill'),
+                        ('pester-003', 'without_skill'), ('pester-004', 'with_skill')]
+            for position, (case, arm) in enumerate(sequence, 1):
+                row = {'position': position, 'trial': position, 'case': case, 'arm': arm}
+                task = next(t for t in tasks[arm] if t.name == case)
+                target, trial = cohort.launch_config(root, row, task)
+                config = reports.read_json(target)
+                config['trial_name'] = config['trial_name'].replace('cohort-', 'metadata-', 1)
+                trial = trial.parent / config['trial_name']; reports.write_json(target, config)
+                environment = {k:v for k,v in os.environ.items() if not k.startswith(('CODEX_', 'ANTHROPIC_', 'NVIDIA_', 'SKILL_EVAL_', 'AEB_'))
+                               and k not in ('GH_TOKEN', 'GITHUB_TOKEN', 'OPENAI_BASE_URL')}
+                environment.update(PYTHONPATH=str(ROOT / '.github/scripts'), PYTHON_DOTENV_DISABLED='1', HARBOR_TELEMETRY='0',
+                    AEB_PILOT_PROBE='1', AEB_COHORT_FIXTURE=case + ('-external' if case == 'pester-003' else '-explicit'),
+                    AEB_PILOT_SCENARIO='success')
+                with (root / 'launches' / f'{position:02}.log').open('w') as log:
+                    code = run_native([str(Path(sys.executable).parent / 'harbor'), 'trials', 'start', '--config', str(target)],
+                                      env=environment, log=log, timeout=1200)
+                clean = pilot.resources() == baseline
+                self.assertTrue(clean, 'Metadata diagnostic cleanup failed; stop')
+                self.assertEqual(code, 0)
+                observation = reports.read_json(trial / 'operator/pilot-verifier-observation.json')
+                expected_files = {'/' + k: v.removeprefix('sha256:') for k,v in expected[arm, case]['members'].items()
+                                  if k.startswith(('tests/case/', 'tests/verifier/')) or k in ('tests/entry.json', 'tests/test.sh', 'tests/Runner.ps1')}
+                actual_files = {k:v['sha256'] for k,v in observation['observation']['files'].items() if k.startswith('/tests/')}
+                reward = reports.read_json(trial / 'verifier/skill_evaluator_reward.json')
+                entry = task / 'tests/entry.json'
+                native = reports.read_json(trial / 'result.json')
+                print(json.dumps({'source_revision': cohort.revision(), 'position': position, 'case': case, 'arm': arm,
+                    'host_entry': {'sha256': hashlib.sha256(entry.read_bytes()).hexdigest(), 'bytes': entry.stat().st_size,
+                                   'mtime_ns': entry.stat().st_mtime_ns, 'json': reports.read_json(entry)},
+                    'trial': {k: native[k] for k in ('id', 'trial_name', 'task_name', 'task_checksum')},
+                    'produced_submission': reports.read_json(trial / 'agent/pilot-produced-submission.json'),
+                    'verified_submission': reports.read_json(trial / 'verifier/pilot-verified-submission.json'),
+                    'verifier_dockerfile_sha256': pilot.sha(task / 'tests/Dockerfile'),
+                    'expected_files': expected_files, 'verifier': observation, 'reward_entry': reward.get('entry_id'),
+                    'cleanup_complete': clean}), flush=True)
+                # Compare all actual protected inputs, not just the result number
+                # or a correct host-side case file. Stop immediately on mismatch.
+                self.assertEqual(actual_files, expected_files)
+                self.assertEqual(reward['entry_id'], case)
+
     def test_archive_rejects_wrong_digest_and_path_traversal(self):
         import hashlib
         with tempfile.TemporaryDirectory() as d:

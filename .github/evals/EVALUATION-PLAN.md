@@ -10,6 +10,18 @@ that older cohort has no raw identity mismatches. Collector-only replay of the
 older cohort leaves all 278 raw trial files unchanged and preserves correct IDs.
 Neither observation establishes which bytes the failed verifier actually read.
 
+The read-only observation head `7cf0bd8` passed the normal selected Validate
+run `43516424426`, including all seven scheduler controls, the aggregate gate and
+both required platforms. Authenticated artifact `14083218930`, archive SHA-256
+`7f7fd9897578338b69e5b7d1ed400f2f9cc594b829aef5a2f1e4188fac6e6f67`,
+contains twelve correct raw identities and matching live protected input hashes,
+with exact handoffs and cleanup. This proves integrated failure-path behavior;
+it does not explain or correct the intermittent identity defect. A short native
+regression now holds case-metadata sizes and timestamps equal across the original
+separate case/arm contexts, testing the specific incremental-transfer hypothesis.
+It retains live input/output identities in the job log and owns a separate
+verified Compose configuration. Grading bytes and criteria remain unchanged.
+
 A short diagnostic at `74b71fd`, run `43513274711`, passed the sequence absent
 003, absent 004, repeated absent 003 and present 004 with live input/output
 observations. It did not reproduce the defect and is not a correction receipt.
