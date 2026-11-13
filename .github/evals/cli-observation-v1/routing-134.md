@@ -1,4 +1,103 @@
-# PR #134 child-network observation investigation
+# PR #134 inventory and scheduler follow-up
+
+Recommendation: proceed with routing review after final-head validation confirms
+the inventory correction, retaining the failed/unqualified legacy pilot. The
+[PR disposition and terminal CI receipts](https://github.com/thetechgy/agent-engineering-baseline/pull/134)
+record the final commit without documentation-only CI restarts. No additional
+comparison or experiment is needed by the evidence below.
+
+## Completed reusable-route evidence
+
+[Validate 43446918858](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43446918858)
+completed at `f90196b05139146cb85d2522d4bda188c2f1fa12`, attempt 1: 17 jobs
+succeeded, three failed and six skipped. Both required platforms passed.
+[Contracts 131958771080](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43446918858/job/131958771080)
+failed only the uv inventory reconciliation assertion. The other failures were
+[prospective pilot 131958771736](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43446918858/job/131958771736)
+and its correctly rejecting aggregate gate.
+
+Artifact `14054421752` belongs to that run, attempt, source and repository. Its
+original ZIP matches GitHub SHA-256
+`b4a900de5d983f16d13b967fd97b2178974e23111b02ade616ad481e8c608924`.
+Bounded data-only extraction checked 3,031 members and 18,027,440 expanded bytes.
+The [sanitized audit](routing-134-followup.json) records the new receipt alongside
+historical artifact `13822715004`, reauthenticated to run `42937277898`, attempt 1,
+source `33d953536e95bc81178e726fb3fed95a80566c7d`; its archive digest remains
+`f1d2ae882ec231bc423f74cd38a4b7baa8851942aabfb20c8f99bb12f22eced9`.
+Both originals remain unchanged; no artifact code was executed.
+
+The new complete fixture passed all twelve slots in the exact expected order.
+All twelve retained valid actual CLI-child observations, matching before/after/
+final agent and controller identities and policy hashes, and byte-identical
+producer/retained-submission/verifier handoffs. Expected grading was eight passed
+and four measured failed; all cleanup checks passed. Threshold, unknown-usage
+and unsupported controls then stopped correctly with one launch each.
+
+The infrastructure control issued `printf pilot-command-failure; exit 23` through
+the actual CLI. The tool exited 23; the fixture's subsequent deliberate HTTP 400
+made the CLI exit 1. `PilotCodex` raised `RuntimeError` before `boundary_after`.
+A final operator policy observation exists and agrees with the initial policy.
+No delayed-child observation exists: this command does not launch that child,
+and the stop hook requires it only for the success scenario. This is distinct
+from a missing required success-scenario observation.
+
+Exactly one infrastructure slot launched, eleven remained unlaunched, and cleanup
+completed. Native primary failure was `Pilot Codex CLI exited unsuccessfully;
+original events retained`. There was no collection/retention failure. The initial
+stop classifier chose `execution_infrastructure_failure`; the independent identity
+guard then rejected the absent before/after policy evidence and replaced it with
+`security_or_identity_drift`. The assertion expected the former label. Its launch
+count condition passed. The later cleanup/interruption scenarios did not run.
+
+The historical native artifact has this same complete-cohort evidence and same
+infrastructure causal sequence, including tool/CLI exits, missing `boundary_after`,
+final operator policy, one launch, eleven unlaunched slots and completed cleanup.
+Adapter, environment, fixture-server and scheduler bytes are identical at that
+historical revision, PR base `e40cc0c995025d448fd7b163df3b6f32b7ea569e` and
+reviewed head `f90196b05139146cb85d2522d4bda188c2f1fa12`. Replaying the production
+classifier and identity predicate against both authenticated receipts at all three
+sources reproduces the same classification replacement; only the missing
+`boundary_after` comparison fails. This is source replay plus historical/current
+native evidence, **not a new native baseline run**.
+
+The remaining failure is therefore the documented existing scheduler defect.
+The actual reusable pilot route progressed beyond the earlier DNS failure and
+passed its complete fixture, so that earlier incomplete comparison is no longer
+the only route evidence. This does not explain the old DNS event, establish DNS
+reliability or rule out every environmental routing effect. The original failure
+and comparison limitations below remain historical evidence. No blanket rerun,
+DNS correction, scheduler repair, guard change or expectation relaxation follows.
+
+## Inventory correction and review boundary
+
+The new diagnostic workflow installs uv `0.13.8` through its pinned setup action.
+Its one version selector is now registered under the maintained current-CI uv
+entry in `.github/dependency-freshness.json`, owned by maintainer review. The
+separate intentionally frozen return-contract uv `0.13.7` consumer is unchanged.
+No dependency version or generated issue text changed.
+
+The existing 49-test freshness suite reproduced the omission before correction.
+Afterward, all 82 freshness/routing/workflow/profile controls passed. Re-omitting
+the new entry still fails completeness; the existing test mutates each registered
+consumer, including this one, and rejects contradictory versions. No test or
+inventory assertion was weakened. Markdown lint and whitespace checks pass.
+
+Only inventory metadata and investigation documentation change in this follow-up;
+all pilot executable inputs remain those of the authenticated `f90196b` run.
+That evidence is reused under its original source, never relabeled as final-head
+execution. Final normal CI is recorded on the PR. Selected failures, cancellations,
+missing results and skipped selected jobs still fail the aggregate gate. It is
+visible but non-required; both platform checks alone cannot establish all selected
+validation passed. The known pilot remains failed/unqualified and selected for
+relevant changes. Its failure-path audit/classification repair remains separate.
+
+**One next action:** review PR #134's routing and inventory correction with the
+known pilot qualification limit explicit, using the final receipts on the PR.
+
+## Earlier child-network investigation, retained as history
+
+The earlier hold and proposed comparison below are superseded by the completed
+reusable-route evidence above. Original failures and limitations remain unchanged.
 
 Disposition: **hold #134 as draft**. The immediate failure is established, but
 its DNS cause and any contribution from the changed invocation context remain

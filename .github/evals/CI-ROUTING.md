@@ -200,19 +200,24 @@ main under the same worker limits. The worker source/test are unchanged; neither
 the limits nor assertion is relaxed. This local baseline failure is separate from
 the legacy scheduler limitation and from hosted runtime qualification.
 
-## PR #134 child-observation hold
+## PR #134 observation follow-up
 
-The [focused investigation](cli-observation-v1/routing-134.md) identifies an earlier
-DNS failure in the actual CLI tool command in final routing run `43367014799`.
-The delayed child never launched; `boundary_after` exists, but final child-network
-evidence does not. This differs from the older deliberate failing-command defect.
-The resolver cause and routing contribution remain unresolved, so #134 stays draft.
-The diagnostic envelope adds a manual `routing_observation=true` mode to
-`native-deadline.yml`, calling `cli-observation-comparison.yml` for fixed historical
-base/head sources. It has no automatic trigger, secret inheritance, live gate or
-production runtime change. Its existing native probe does not reproduce the full
-failed cohort's warm state or PR caller graph. Required platform success does not
-override the selected pilot failure; the aggregate check remains non-required.
+The [authenticated follow-up](cli-observation-v1/routing-134.md) records the
+complete reusable-route cohort in run `43446918858`: twelve expected launches,
+valid child observations, matching handoffs and complete cleanup. The subsequent
+infrastructure failure matches the historical deliberate-command defect: tool
+exit 23, CLI exit 1, absent `boundary_after`, one launch, eleven unlaunched slots,
+completed cleanup and incorrect final stop classification. The scheduler remains
+failed/unqualified; its identity guard, assertion and separate tracking are intact.
+This supports reviewing routing separately from that known qualification defect.
+It does not explain or erase the preceding DNS failure.
+
+The manual `routing_observation=true` mode and reusable diagnostic worker remain
+explicit-only. Their uv `0.13.8` consumer is registered in the maintained freshness
+inventory; the frozen uv consumer stays separate. No additional comparison was
+launched. The PR carries final-head terminal receipts and disposition. The
+aggregate continues rejecting selected failure and remains non-required by
+branch protection; platform success is not all-selected success.
 
 ## Operator commands
 

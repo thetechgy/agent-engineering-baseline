@@ -39,42 +39,46 @@ PRs #130/#132, frozen evidence, skills and closed allocations remain unchanged.
 Paid evaluations, judges, adoption and live gates remain paused. No Pages,
 protection-rule change, merge or new experiment is authorized here.
 
-## PR #134 child-network investigation
+## PR #134 review-readiness follow-up
 
-**Hold #134 as draft.** The [focused evidence](cli-observation-v1/routing-134.md)
-authenticates run `43367014799`, job `131693882453` and artifact `14011909368`
-at reviewed head `5e2955eb01d353f8f2834b8fcdd52244e9d08543`, against base
-`e40cc0c995025d448fd7b163df3b6f32b7ea569e`. The actual CLI tool command failed
-DNS resolution for `api.openai.com` (curl 6) before launching its delayed child
-or writing the submission. Outer CLI success explains the present `boundary_after`;
-it does not supply the missing child observation. The stop hook then rejected
-missing evidence, the scheduler stopped, and the population assertion failed
-later. One unscored launch, eleven unlaunched slots and complete cleanup remain.
-This is distinct from the retained intentional-command-failure defect.
+The [authenticated follow-up](cli-observation-v1/routing-134.md) confirms the
+remaining pilot failure in completed run `43446918858` at `f90196b` is the
+historical deliberate-command-failure defect. The complete reusable-route fixture
+passed all twelve scheduled trials, actual child observations, submission handoffs
+and cleanup. Threshold, unknown-usage and unsupported controls stopped correctly.
+The infrastructure command exited 23; the outer CLI exited 1 and raised before
+`boundary_after`. Exactly one slot launched, eleven remained unlaunched, and
+cleanup completed. The identity guard changed the stop label to
+`security_or_identity_drift`, causing the expected infrastructure-label assertion
+to fail. There was no extra launch. Authenticated historical run `42937277898`
+has the same causal sequence. Source replay agrees at historical, base and head;
+this is not a new native baseline execution. The scheduler remains failed and
+unqualified, with its guard, assertion and separate repair tracking preserved.
 
-The immediate failure is established; the resolver cause and routing contribution
-are not. Identical probe/adapter/job bytes alone cannot establish pre-existence
-or harmlessness. The manual reusable-call comparison uses untouched historical
-base/head checkouts under diagnostic wrapper `7a3270eee3001aa263f22672ed6706c1700b33dc`.
-[Comparison 43444879139](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43444879139)
-passed both sources and all four child observations, with complete cleanup.
-It did not reproduce the failure. Different hosted runner-image revisions and
-rebuilt container IDs prevent calling it fully image-matched; the focused evidence
-retains actual identities and these limits. It is not execution of the historical caller graph or a repeat
-of full cohort preparation. No runtime correction is justified by the evidence.
+The same run's contracts failure exposed the diagnostic workflow's omitted uv
+consumer. The maintained freshness source now registers its single uv `0.13.8`
+pin under current CI; frozen return-contract uv `0.13.7` remains separate.
+The existing test failed before correction. All 82 owning freshness/routing/
+workflow/profile checks pass afterward, including omission and conflicting-pin
+rejection. No runtime, fixture, dependency version, skill or historical evidence
+changed; the original native receipt retains its original source identity.
 
-Forty focused local controls pass, including selected failure, cancellation and
-missing-result rejection. The original selected gate failed correctly. Only the
-two platform checks are required by protection; `Selected validation results` is
-visible but not required. Intermediate Validate `43444889332` was superseded and
-cancelled; it is inconclusive. The PR records the final documentation revision
-and exact-head CI status after its normal run. Required-platform success alone
-does not qualify the selected pilot. No inference, credential retrieval, dependency,
-skill, allocation, historical-result or protection change is included.
+The previous DNS cause remains unknown, but the actual reusable pilot route now
+has a successful complete-cohort receipt followed by an independently confirmed
+known negative-control defect. This supports reviewing routing separately from
+pilot readiness; it does not establish DNS reliability. No further broad comparison
+or experiment was launched. The earlier hold/proposed comparison is superseded.
 
-**One next action:** run one instrumented, same-image baseline/head comparison
-of the existing cohort through the reusable route, retaining resolver and
-child-launch evidence, before reconsidering PR #134 review readiness.
+Recommendation: proceed with routing review after final-head validation confirms
+the inventory correction and no new regression. The [PR's final disposition and
+terminal CI receipts](https://github.com/thetechgy/agent-engineering-baseline/pull/134)
+name the exact final commit and checks without documentation-only CI restarts.
+The selected aggregate must remain failed when the known pilot fails. It is
+visible but non-required by protection; required-platform success is distinct
+from all selected validation passing. Protection rules remain unchanged.
+
+**One next action:** review PR #134's routing and inventory correction with the
+known pilot qualification limit explicit, using the final receipts on the PR.
 
 ## PR #130 and #131 checkpoint, retained as history
 
