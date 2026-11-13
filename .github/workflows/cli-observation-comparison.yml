@@ -1,0 +1,61 @@
+name: CLI observation matched comparison
+on:
+  workflow_call:
+permissions: {}
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        include:
+          - source: e40cc0c995025d448fd7b163df3b6f32b7ea569e
+            label: baseline
+          - source: 5e2955eb01d353f8f2834b8fcdd52244e9d08543
+            label: reviewed
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      OBSERVATION_SOURCE: ${{ matrix.source }}
+      OBSERVATION_LABEL: ${{ matrix.label }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ matrix.source }}
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: '0.13.8'
+          enable-cache: false
+      - name: Acquire unchanged pinned tools without model credentials
+        run: |
+          test "$(git rev-parse HEAD)" = "$OBSERVATION_SOURCE"
+          bash .github/scripts/setup-skillevaluator.sh candidate-current
+          bash .github/scripts/setup-compose.sh
+          APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
+          echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
+      - name: Exercise the actual CLI child using the unchanged source probe
+        run: |
+          "$SKILL_CURRENT_PYTHON" -B .github/scripts/qualify_cli_observation.py --source "$GITHUB_WORKSPACE" --output "$RUNNER_TEMP/observation" --require-complete
+      - name: Verify unchanged executable inputs
+        if: always()
+        run: |
+          test "$(git rev-parse HEAD)" = "$OBSERVATION_SOURCE"
+          git diff --exit-code
+          test -z "$(git status --porcelain=v1 --untracked-files=all --ignored)"
+      - name: Dispose task-owned Compose configuration
+        if: always()
+        run: bash .github/scripts/setup-compose.sh cleanup
+      - name: Retain existing sanitized native evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: observation-${{ matrix.label }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/observation/native/evidence/
+            ${{ runner.temp }}/observation/qualification.json
+          if-no-files-found: error
+          retention-days: 90
