@@ -133,7 +133,9 @@ class Boundaries(unittest.TestCase):
             stamp = 1_700_000_000_000_000_000
             for arm, arm_tasks in tasks.items():
                 for task in arm_tasks:
-                    os.utime(task / 'tests/entry.json', ns=(stamp, stamp))
+                    # Include copied metadata too: fresh mtimes must not be the fix.
+                    for metadata in (task / 'tests').rglob('*.json'):
+                        os.utime(metadata, ns=(stamp, stamp))
                     self.assertEqual(Task(task).checksum, expected[arm, task.name]['task_checksum'])
             baseline = pilot.resources()
             sequence = [('pester-003', 'without_skill'), ('pester-004', 'without_skill'),
@@ -169,6 +171,8 @@ class Boundaries(unittest.TestCase):
                     'trial': {k: native[k] for k in ('id', 'trial_name', 'task_name', 'task_checksum')},
                     'produced_submission': reports.read_json(trial / 'agent/pilot-produced-submission.json'),
                     'verified_submission': reports.read_json(trial / 'verifier/pilot-verified-submission.json'),
+                    'host_metadata_files': {p.relative_to(task).as_posix(): {'sha256': pilot.sha(p),
+                        'bytes': p.stat().st_size, 'mtime_ns': p.stat().st_mtime_ns} for p in (task / 'tests').rglob('*.json')},
                     'verifier_dockerfile_sha256': pilot.sha(task / 'tests/Dockerfile'),
                     'expected_files': expected_files, 'verifier': observation, 'reward_entry': reward.get('entry_id'),
                     'cleanup_complete': clean}), flush=True)

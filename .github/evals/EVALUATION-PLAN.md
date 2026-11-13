@@ -1,4 +1,70 @@
-# PR #135 verifier case-identity investigation
+# PR #135 verifier metadata transport correction
+
+The case-identity blocker is a build-context transport defect. A focused native
+reproduction at `4d9247a265d2f70700c048400a8af5a0616f791d`,
+[run 43525527396, job 132230273392](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43525527396/job/132230273392),
+uses the pinned CLI and unchanged non-forwarding fixtures. It gives the original
+separate case contexts equal-size, equal-timestamp metadata while preserving every
+task checksum. The first absent-arm `pester-003` launch is correct. The next
+`pester-004` task and host metadata are correct, but the independent verifier image
+contains case 003's `entry.json`: expected SHA-256
+`8d3d75f770ea53f86137b7c1b2a9968f98da281c1775cbf69904dda5cf8d4215`,
+observed `640477c07a950da25952db0d297bcc977c6f8776fbebdfc6e7a1e86fbec6164e`.
+Every other protected input matches case 004. Its raw verifier reward identifies
+case 003, matching the stale live metadata. Both output mounts belong to their
+actual trials, cleanup completes, and no third launch occurs after the mismatch.
+The failed job and sanitized live observations were retained before cancelling
+the superseded remaining validation. That run is inconclusive overall.
+
+The first incorrect boundary is staged metadata entering the verifier image,
+before reward creation. This is not a task-selection, submission-transfer,
+collector or normalizer relabelling defect. The unchanged grader reads the stale
+file and accurately emits its value; `Reward identity mismatch` correctly rejects
+it. PR #134's authenticated passing cohort has the same 76 staged verifier bytes.
+The successful-command audit/collection order is unchanged by the lifecycle fix,
+and the reproducer uses ordinary successful commands. This exposes an existing
+metadata-transfer weakness while qualifying the separate failure-path correction.
+
+The pilot's final image producer now copies the exact staged metadata through a
+SHA-256-addressed source filename to the existing `/tests/entry.json` destination.
+Different metadata no longer shares a COPY source pathname, even when sizes and
+timestamps match. The change applies to every staged case and arm. It never
+reconstructs an ID from a case name, changes grader inputs semantically, repairs
+a reward or relaxes admission. The regression compares every live protected input
+and holds all JSON metadata timestamps equal, including the addressed source.
+Interleaving, repetition and both arms still use the existing native CLI route.
+
+All 360 prior profiles are preserved. Pilot retained v15, effectiveness v19 and
+campaign source v10 append only the changed source IDs/runtime digests; grader,
+fixture, task criteria, skill and model values remain unchanged. The three rejected
+original #135 rewards stay rejected. Other historical receipts retain their
+original identity evidence and limits; no older live image is retrospectively
+claimed observed or regraded.
+
+The read-only observation head `7cf0bd8` independently completed all seven scheduler
+controls, exact live input/handoff checks for twelve trials, the selected aggregate
+and both required platforms in [run 43516424426](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43516424426).
+Artifact `14083218930` has archive SHA-256
+`7f7fd9897578338b69e5b7d1ed400f2f9cc594b829aef5a2f1e4188fac6e6f67`.
+Infrastructure retains tool exit 23, CLI exit 1 and primary `RuntimeError`, matching
+independent before/after/final audits, one launch/eleven unlaunched slots,
+unavailable quality and cleanup. Interruption retains CLI exit 124 and the same
+conservative stop. This verifies the lifecycle correction, not the new metadata
+producer. The new producer must pass the equal-metadata regression and full native
+qualification on its own final head. Exact final receipts and readiness are
+maintained on [draft PR #135](https://github.com/thetechgy/agent-engineering-baseline/pull/135)
+without documentation-only CI restarts.
+
+Local owning-runtime lifecycle, staging, scheduler, identity and append-only
+provenance controls pass. This workstation has no Docker executable; native
+before/after proof belongs to the maintained selected Actions route. No workflow,
+routing, protection, dependency or grading requirement changes. Paid evaluations,
+judges, allocations, adoption and the deferred skill clarification remain paused;
+PRs #130/#132, freezes, original submissions and historical grades are unchanged.
+
+**One next action:** review PR #135 using its final native and exact-head CI receipts.
+
+## Earlier case-identity investigation, retained as history
 
 The active scope is the raw verifier case mismatch on PR #135 at `f903197`.
 Authenticated run `43490661263`, attempt 1, artifact `14072781224`, archive
