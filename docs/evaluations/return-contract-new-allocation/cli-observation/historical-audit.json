@@ -1,0 +1,64 @@
+{
+  "archive_sha256": "225993dc9f6b1d98198dc52c80588495553729674f7e3a69d16211954ce20348",
+  "run": 42923193201,
+  "attempt": 1,
+  "artifact": 13813573476,
+  "head": "22b36d53e9ac7e329ef8c56dc9bdcefb468ca9df",
+  "trials": [
+    {
+      "trial": "pester-001__uTRwupx",
+      "native_id": "dcbe09a9-6930-4c6e-ab53-aacea548f33f",
+      "command_exit_codes": [
+        1
+      ],
+      "dns_failure_in_cli_output": true,
+      "native_exception": {
+        "exception_type": "ValueError",
+        "exception_message": "Post-agent CLI child network observation unavailable",
+        "occurred_at": "2026-11-10T23:31:11.296495Z"
+      },
+      "surrogate_trial_id": null,
+      "cli_completed": true,
+      "retained_files": {
+        "reward.json": "9abbdbe4a35f5235a54ba5fc76465233ef40e3d156b47463c0b6bf2167c8bf84",
+        "result.json": "3ac682621a60465ca2fe716604980f8e80fac76f8c20fb84ebdcb1d9a01d2b10",
+        "config.json": "53b59496d42eab3a7db2717d46dc574c2062a4fdd9aa9d883823788e3e8fc669",
+        "failure.json": "16372956a9d741093e28de5a59a39f93af9eea5d25d71649ae95b5f7b9f69d4c",
+        "trial.log": "fbf4448c8e10c5cd3c76d266daa749f8d62d2c5e914dca4ae53ff50c068a0d7f",
+        "codex.txt": "f105dafea2058e2fd7952358d6847f7d7f055d25482d815cb53fc026fb4a9234",
+        "exception.txt": "47ebfddddf7b10d4afe70d5927cfa25459a72ad2422ca42db20079928a3bd213",
+        "artifact_manifest.json": "a4145f8da142fd9c72569d687b3221b3e58613ca7ebeaaa00a2cc5a94ca3c72c"
+      }
+    },
+    {
+      "trial": "pester-001__Ef6DBWH",
+      "native_id": "664ee155-6b3d-49cc-a701-1ed0677bfa4f",
+      "command_exit_codes": [
+        1
+      ],
+      "dns_failure_in_cli_output": true,
+      "native_exception": {
+        "exception_type": "ValueError",
+        "exception_message": "Post-agent CLI child network observation unavailable",
+        "occurred_at": "2026-11-10T23:33:46.625739Z"
+      },
+      "surrogate_trial_id": null,
+      "cli_completed": true,
+      "retained_files": {
+        "reward.json": "6ae2cf76d5b0ca886ed155ffdbdda9e8bf6fc8f818598a648dd8819b8906297a",
+        "result.json": "984ff3d8fe4235680f4b195644ec6978083665e3d7a90a44a32f2a83d53c407d",
+        "config.json": "6755894df5d413e87c85b3e662cd6421f2c43bd0ea4b544a9b1cc2cefe30116c",
+        "failure.json": "66c226e89e843a5c9dcb0a0653e503e40208ddb93b6e1bdc0b6dcdcf1da58ecb",
+        "trial.log": "b161a641c49d5fcfc84ad52247e1fc01a4da7aa4a927e4bad7c8be227191a605",
+        "codex.txt": "c06b7b52f0b92db109dc33c18ee7046cb877ef491ade250c84d8de0fcc0bbb93",
+        "exception.txt": "47ebfddddf7b10d4afe70d5927cfa25459a72ad2422ca42db20079928a3bd213",
+        "artifact_manifest.json": "a4145f8da142fd9c72569d687b3221b3e58613ca7ebeaaa00a2cc5a94ca3c72c"
+      }
+    }
+  ],
+  "final_policy_count": 0,
+  "cleanup": {
+    "complete": true,
+    "unlaunched_arms": []
+  }
+}

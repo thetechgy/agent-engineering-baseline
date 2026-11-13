@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "kind": "credential-free CLI observation diagnosis; not paid experiment outcomes",
+  "implementation_source": "33d953536e95bc81178e726fb3fed95a80566c7d",
+  "historical_producer_source": "22b36d53e9ac7e329ef8c56dc9bdcefb468ca9df",
+  "historical_normalizer_source": "943405391a06d3f73dba5d3ac48ac801809f3da3",
+  "public_renderer_source": "33d953536e95bc81178e726fb3fed95a80566c7d",
+  "all_original_experiment_reports_unchanged": true,
+  "new_model_attempts": 0,
+  "files": {
+    "REPORT.md": "4d6793513ead4d9c61ea2763513ac7331bc36fa26732aba760160dc8738c9dd1",
+    "WORKFLOW-REVIEW.md": "8d0b725bb8705efcd943e66d8e2f2e0b13c1231968242c40563ade8725a92e55",
+    "cohort-stop-audit.json": "5ccb6a527546d7159c4b8d4c9fcb8a86eaed4213907564d7549574132a1934f5",
+    "existing-report-reproduction.json": "dbba999289da767bce1d3cc8dea9f3cf7ba976f212496204bb1e627868357398",
+    "final-admission-audit.json": "59d63bf1b5ea240c0865c0fe74181a75aaa7f72b1e3fd599e41d1145d89fce57",
+    "final-checks.json": "dfe55428d4cc89ae3aa0c8a2230e11cfc971417ee4c9f010d746c053c127697d",
+    "final-deadline-audit.json": "8840bf9dd525a46ed10d48e986bdb1946be29cd33a8999342a26d1c5b32cb856",
+    "final-frozen-runtime-audit.json": "ed76683b06727c51c7d81d610dbe36d9fa13fe0c034aac2eafadda7fb5648dc8",
+    "final-native-audit.json": "321253e6994062f3ac4a3de5bb19c09b52c7a79ae290bdf1e0e4b8df3b9ecfd5",
+    "historical-audit.json": "0d035846f37ee10d3a61edd0534e39624f4ccbf6b63ee986c874b67982696ef0",
+    "historical-diagnostic/analysis/analysis.json": "9b3fc473e3216b33ea4b38d1677220f8aec79c31ea878d27851392a96f22dce6",
+    "historical-diagnostic/consolidated/report.html": "f469229559d5a215435378f4727ad0fa1ae372798487fa62804a9eed20a0600c",
+    "historical-diagnostic/public/inventory/inventory.json": "c67f1bae84a46403098619d07f4e49e4a88377de69240786089af13b1b592b79",
+    "historical-diagnostic/public/skills/powershell-pester-6/behavioral/cli-probe/public-report.json": "711395cdc5331e556ef59117b67ed3765ca431cb8e92d5a3f7e84c8234862f79",
+    "historical-normalization-receipt.json": "a9d8db9135e55d7cc7bfc8234a43cd73641b261e280147c0d38f943f8185dd52",
+    "historical-primary-failure.json": "675f4df70d2a86eb6bef03d3c531657fd247a28f10c3b1189e89e23d4fffcb76",
+    "matched-audit.json": "6801f475f930f39560ea3dfef2138d3290af20947a9bdc3315f3ec6f02ae9ec6",
+    "preservation-audit.json": "3f785f28c2a0218f559a413d66f41ce4beb175887d8ef8c90ef44533dc369db9",
+    "primary-secondary-audit.json": "326dd7a045cce0e906c065bb6abf72ee0fce7facd3fc4465b00ab962ec2e4e9e",
+    "retained-guard-audit.json": "207aea592886fe21e24bec183750df8d2da7bd3879f862e7392b0c7bb7c4461b"
+  },
+  "disposition": "Historical DNS failure unreproduced; no evidence of persistence; owner stopped DNS-specific pursuit. Focused correction ready for review; broader CI and live gates remain separate."
+}

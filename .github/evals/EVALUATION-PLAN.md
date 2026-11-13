@@ -111,6 +111,164 @@ continuation, adoption, production-default change or merge is authorized.
 
 ## PR #129 checkpoint, retained as history
 
+**PR #131 is ready for review toward merging the focused correction.** Its implementation is at
+[`33d9535`](https://github.com/thetechgy/agent-engineering-baseline/commit/33d953536e95bc81178e726fb3fed95a80566c7d).
+The [complete CLI-observation receipt](../../docs/evaluations/return-contract-new-allocation/cli-observation/REPORT.md)
+records authenticated historical/native artifacts, source identities, exact-head
+qualification, reproduced reports and remaining limits. PR #131's review status
+is unchanged as requested; PR #130 remains draft and unmerged.
+
+The original CLI tool commands failed DNS resolution before launching their
+delayed observer. The later missing-observation and reward-identity exceptions
+were consequences. Shared reporting now binds unscored diagnostic projections to
+native failure evidence without fabricating IDs or measurements. CLI qualification
+retains the failed command as primary and secondary failures separately.
+
+The unchanged base `a8ab2e2` and reviewed head `22b36d5` both passed the same native
+control on one fresh runner. The final implementation passed 86 hosted contracts,
+positive and missing-child native controls, five native lifecycle controls, all
+Validate jobs and the admission replay. Their relevant artifacts and reports were
+independently authenticated/reproduced. The replay still passes the reference and
+detects 5/5 mutants; the original unmeasured outcome and experiment reports remain
+unchanged. Broader CI state is recorded separately in the receipt and is not
+implied green by these successes.
+
+The DNS-specific historical failure did not reproduce in the matched fresh
+baseline/head control. Historical resolver state is unavailable; the original
+westus2 worker differs from the fresh centralus comparison. No evidence establishes
+a persistent DNS defect. The owner has directed that DNS-specific investigation
+stop for now. This does not prove transience or relabel the historical failure.
+It is nonblocking for focused code review because missing actual observations
+still block readiness, identities and policy violations remain rejected, and the
+separate admission behavior retains its qualification. The existing fresh-source
+preparation and live gates remain intact. All final-head CI is terminal; the
+separate failed cohort qualification below must be assessed before merge; no PR has been merged and no live-readiness claim is made.
+
+The original CLI preparation and fresh consumption also passed in compatibility
+workflow 42937277898. Its separate cohort `infrastructure` control failed an
+expected-stop-label assertion: a missing post-command observation caused the
+existing identity guard to replace `execution_infrastructure_failure` with
+`security_or_identity_drift`. One fixture launch, eleven unlaunched positions,
+unknown/null quality and complete cleanup are retained. Exact classification
+statement replay on main, reviewed and final sources gives the same result;
+this is not a native baseline rerun. The receipt documents this separate existing
+classification/expectation inconsistency. The guard is unchanged, the workflow
+remains failed, and full/future-live cohort readiness remains unqualified. It
+does not invalidate the focused admission and observation correction. CI is not
+all green; review this limit before merge.
+
+All paid allocations remain closed. Seven paid launches, six measured development
+outcomes and one unmeasured transfer/current outcome remain historical results;
+transfer/candidate did not run and eleven positions remain unlaunched. No model
+credentials, inference, paid gate, retry/replacement, allocation reopening,
+candidate adoption, dependency upgrade, production-default change or merge
+occurred. The diagnostic records are separate from experiment accounting.
+
+**One next action:** review PR #131 at `33d9535` against its authenticated receipts,
+including the separate cohort-qualification limit and terminal CI results. Keep PR #130 draft and unmerged.
+
+## Previous admission checkpoint, retained as history
+
+The following checkpoint belongs to source `66d5b089747626b16ffc7d8142ac54c1652822dd`;
+its historical execution and report receipts remain unchanged.
+
+
+[PR #131](https://github.com/thetechgy/agent-engineering-baseline/pull/131) qualified the exact retained
+transfer/current submission without inference at `22b36d53e9ac7e329ef8c56dc9bdcefb468ca9df`.
+The [retrospective receipt and report](../../docs/evaluations/return-contract-new-allocation/admission/REPLAY.md)
+record reference result 1 and 5/5 detected defects under versioned admission.
+The original unsupported/expression_policy result remains permanently unmeasured.
+This follows output inspection of one current arm; transfer benefit, candidate
+regression safety and adoption readiness remain unestablished. Development results
+are unchanged. PR #130 remains draft and unmerged.
+
+The correction addresses Count at line 14 and subsequent numeric type predicates.
+Recursive AST inspection, protected-content restrictions and external isolation
+remain intact. The receipt binds original/corrected evaluator identities, exact
+verifier handoffs, all mutant findings, authenticated artifact, disposal and
+byte-identical report reproduction. Frozen CI explicitly uses PowerShell 7.6.9
+and Pester 6.2.0; latest-stable compatibility remains separate. Both required checks
+and all Validate jobs passed at the implementation head. Broader check disposition
+is on PR #131. No task, scoring, skill/candidate or dependency pin changed.
+A separate legacy CLI probe failed its unchanged post-agent network-observation
+guard and remains unmeasured. Broader preparation/live-CLI readiness is not
+established; the focused isolated replay and required checks passed independently.
+
+The paid allocation remains stopped and closed: seven launches, six measured
+original outcomes, one unmeasured original outcome and eleven positions unlaunched.
+Transfer/candidate never ran. All seven paid launches have accounting and verified
+cleanup. New paid estimated usage remains $0.3485231; historical spending is unknown.
+No inference, judge, paid gate, allocation reopening or model retry occurred.
+
+**One next action:** review PR #131 and its authenticated retrospective evidence.
+No continuation, adoption, dependency/default change or merge is authorized.
+
+## Execution checkpoint, retained as history
+
+The exact three-campaign allocation in receipt `75b55ce` was explicitly authorized
+and executed at `a8ab2e2e03a2989863a514df2a6b357c44fbc012`. The sequence **stopped
+under its approved rules** at transfer/current's first unsupported grading result.
+Seven new attempts launched, six were measured, one was unmeasured and eleven
+remained unlaunched. Transfer/candidate was not dispatched. No retry, replacement,
+continuation, judge, adoption, dependency/default change or merge occurred.
+
+The [execution results and consolidated report](../../docs/evaluations/return-contract-new-allocation/EXECUTION.md)
+retain exact authenticated artifacts, source/allocation/gate bindings, submission
+receipts, token accounting, report reproduction and completed cleanup.
+Development/candidate completed six measured outcomes: candidate 3/3 primary
+success, its absent arm 0/3; all reference checks passed and only the absent arm
+missed integer-result. Transfer/current's one agent completed, but the frozen
+grader returned `unsupported` / `expression_policy`; task correctness remains
+unavailable, with five positions unlaunched. Transfer/candidate's six positions
+also remain unlaunched. The allocation is closed after this stop.
+
+New estimated usage is **$0.3485231**, with complete native usage for all seven
+launches and verified cleanup. This is not a provider invoice or billing cap;
+CI costs are separate. The six earlier development/current outcomes remain a
+separate historical comparator (current and absent each 0/3), and the older
+candidate timeout remains an unmeasured reliability event. Historical total
+spending remains unknown. The development signal is positive but indirect and
+output-informed; transfer benefit/regression and candidate adoption remain
+unestablished. PR #130 remains unmerged.
+
+**One next action:** review the retained transfer/current submission against the
+task-owned expression admission policy in credential-free analysis before proposing
+another allocation. The old authorization permits no continuation after this stop.
+
+## Merged readiness checkpoint, retained as history
+
+PR #129 is merged at `a8ab2e2e03a2989863a514df2a6b357c44fbc012`, currently the
+qualified main revision. Its tree matches reviewed head
+`7ced1b365ce443780620f9b4899339546d422fe6`. Fresh native lifecycle qualification,
+four frozen campaign preparations, independent artifact admission/report
+reproduction and four fresh shared inspections passed. The exact merge's five
+Validate jobs, including both required checks, passed. The legacy PR-head
+15-second admission timeout is independently dispositioned; failed and cancelled
+historical workflows remain distinct.
+
+The [single active receipt](../../docs/evaluations/return-contract-new-allocation/RECEIPT.md)
+proposes **18 new attempts**: development/candidate, transfer/current,
+transfer/candidate. It retains the six valid earlier development/current outcomes
+as a separate historical descriptive comparator, with effective input/deployment/
+configuration and completed-path evidence supporting reuse. It does not pool
+cohorts or relabel earlier execution. The historical candidate timeout remains a
+reliability event with unavailable correctness/usage. Historical total spending
+remains unknown; the stopped sequence and its allocations remain closed.
+
+The receipt binds qualified revision/ref, protocol and preparation identities,
+fresh unreserved allocations/nonces, unrun commands, budgets and matching future
+gates. It proposes $9 estimated usage and $24 planning allocation; each campaign
+retains its $5 scheduling threshold and $3 reserve within $8 planning allocation.
+These are not billing caps. No paid work, credential retrieval, live gate approval,
+allocation claim, skill adoption, dependency/default change or merge occurred.
+Dispatch source drift or expired evidence invalidates this proposal.
+
+**One next action:** decide whether to authorize the receipt's exact new
+18-attempt experiment and its three matching protected gates, with its checkpoints
+and stop/cleanup conditions.
+
+## PR #129 checkpoint, retained as history
+
 The return-contract sequence stopped after development/candidate's first native
 600-second deadline. Seven slots launched, six measured and seventeen unlaunched.
 Development/current and absent each retain 0/3 primary success, passing reference

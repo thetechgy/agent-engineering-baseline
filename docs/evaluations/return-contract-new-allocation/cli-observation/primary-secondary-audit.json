@@ -1,0 +1,13 @@
+{
+  "source": "33d953536e95bc81178e726fb3fed95a80566c7d",
+  "fixture_artifact": 13813573476,
+  "fixture_digest": "sha256:225993dc9f6b1d98198dc52c80588495553729674f7e3a69d16211954ce20348",
+  "primary": "CLI child boundary command failed",
+  "secondary": "injected ValueError from collection",
+  "exception_chain_preserved": true,
+  "readiness": false,
+  "limits": [
+    "Transport and collection failure are replayed/injected; no new CLI/Docker execution or runtime cleanup evidence here.",
+    "Native execution and disposal are qualified separately."
+  ]
+}

@@ -1,0 +1,1301 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src &#x27;none&#x27;; base-uri &#x27;none&#x27;; object-src &#x27;none&#x27;; form-action &#x27;none&#x27;; connect-src &#x27;none&#x27;; img-src &#x27;none&#x27;; font-src &#x27;none&#x27;; style-src &#x27;sha256-nnQEt/O8HiCtoMZTHueA+nRnMYVK2fHsgjSX9TZ2D+s=&#x27;; script-src &#x27;sha256-MeDNPX1e5+ogQMsZ6b4KVQHuZGkgzsqemknom0jJnOA=&#x27;"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Private skill evaluation report</title><style>:root{color-scheme:light;--bg:#f4f6f8;--surface:#fff;--text:#192b3a;
+--muted:#455c6b;--line:#788995;--accent:#005a87;--alert:#963511}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){color-scheme:dark;
+--bg:#111c26;--surface:#192b38;--text:#edf3f7;--muted:#bccbd6;
+--line:#8293a0;--accent:#8ad6ff;--alert:#ffb591}}
+:root[data-theme=dark]{color-scheme:dark;--bg:#111c26;--surface:#192b38;
+--text:#edf3f7;--muted:#bccbd6;--line:#8293a0;--accent:#8ad6ff;--alert:#ffb591}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);
+font:1rem/1.6 system-ui,sans-serif;overflow-wrap:anywhere}
+header,main,footer{max-width:76rem;margin:auto;padding:1.5rem}
+header{padding-top:1.5rem;padding-bottom:0}h1{font-size:clamp(1.8rem,4vw,2.5rem);line-height:1.15;margin:.4rem 0}
+h2{font-size:1.65rem;line-height:1.3}h3{font-size:1.25rem}
+p{max-width:78ch;margin:.75rem 0}a{color:var(--accent);text-underline-offset:.18em}
+a:focus-visible,summary:focus-visible,select:focus-visible,[tabindex]:focus-visible{
+outline:3px solid var(--accent);outline-offset:4px}
+.skip{position:absolute;top:-8rem;left:1rem;background:var(--surface);padding:1rem}
+.skip:focus{top:1rem}.eyebrow{color:var(--muted);letter-spacing:.1em;font-size:.8rem}
+.muted,caption{color:var(--muted)}.notice{border-left:4px solid var(--accent);padding-left:1rem}
+.safety{border-left:4px solid var(--alert);padding:.5rem 1rem;background:var(--bg)}
+.safety p{margin:.3rem 0}.safety strong{color:var(--alert)}
+.lead{font-size:1.1rem}.finding{border-top:1px solid var(--line);padding:.75rem 0}
+.finding p{margin:.4rem 0}.assessment{margin:.75rem 0}
+.finding h4{margin:.25rem 0 .5rem}
+:target{scroll-margin-top:1rem}summary code{font-weight:400}
+.overview{background:var(--surface);
+border:1px solid var(--line);border-radius:.6rem;padding:1.5rem;margin-bottom:2rem}
+section.skill{border-top:2px solid var(--line);padding:1rem 0;margin:1.5rem 0}
+.status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,16rem),1fr));gap:1rem;margin-top:1rem}
+.status-grid>div{background:var(--bg);padding:1rem;border-radius:.3rem}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+h2{margin-top:2rem}h4{font-size:1.05rem}.overview h2{margin-top:0}
+.assessment{border:1px solid var(--line);border-radius:.3rem;padding:1rem;min-width:0}
+.badge{display:inline-block;border:1px solid currentColor;
+border-radius:.25rem;padding:.15rem .5rem;font-size:.85rem}
+nav ul{display:flex;flex-wrap:wrap;gap:.5rem 1.5rem;padding:0;list-style:none}
+nav a,summary,select{min-height:2rem}nav a{display:inline-block;padding:.3rem 0}
+details{border-top:1px solid var(--line);padding:.75rem 0}summary{cursor:pointer;font-weight:600}
+pre,code{font-family:ui-monospace,monospace;font-size:.85em}pre{white-space:pre-wrap;
+overflow-wrap:anywhere;background:var(--bg);padding:1rem;border-radius:.3rem}
+.table-scroll{max-width:100%;overflow-x:auto;margin:1rem 0}
+table{border-collapse:collapse;width:100%;font-size:.95rem}caption{text-align:left;margin-bottom:.5rem}
+table.wide{min-width:48rem}
+th,td{padding:.7rem;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+thead th{background:var(--bg)}tbody th{font-weight:600}td p{margin:0}
+.priorities{padding-left:1.5rem}.priorities>li{padding:.5rem 0}
+.run{border-top:2px solid var(--line);margin-top:1.5rem;padding-top:.5rem}
+label{display:inline-block;margin-right:.5rem}select{font:inherit;background:var(--surface);
+color:var(--text);border:1px solid var(--line);padding:.4rem}
+@media(max-width:40rem){header,main,footer{padding:1rem}section.skill,.overview{padding:1rem}}
+@media print{:root,:root[data-theme=dark],:root:not([data-theme=light]){color-scheme:light;
+--bg:#f4f6f8;--surface:#fff;--text:#192b3a;--muted:#455c6b;--line:#788995;--accent:#005a87;--alert:#963511}
+body{background:white;color:var(--text)}details{break-inside:auto}
+details::details-content{display:block;content-visibility:visible}pre{white-space:pre-wrap}
+table.wide{min-width:0}th,td{padding:.3rem}
+header,main,footer{max-width:none}.theme,.skip{display:none}.table-scroll{overflow:visible}}</style></head><body><a class="skip" href="#main">Skip to report</a><header><p class="eyebrow">PRIVATE · OFFLINE</p><h1>Skill evaluation report</h1><div class="theme" id="theme-control" hidden><label for="theme">Appearance</label><select id="theme"><option value="system">System default</option><option value="light">Light</option><option value="dark">Dark</option></select></div></header><main id="main" tabindex="-1"><section class="overview" aria-labelledby="overview"><h2 id="overview">Evidence overview</h2><p class="safety"><strong>Synthetic candidate qualification.</strong> Fixed judge values test transport only. No model judges ran; candidate quality is unavailable. Candidate records are excluded from production history and cannot establish skill improvement.</p><p class="lead">Supplied evidence only. 7 skills represented; <strong>0 with measured results</strong>. 2 configured without supplied results; 4 without a configured behavioral suite.</p><div class="safety"><p><strong>Safety evidence is incomplete</strong></p><p>Mandatory gates · Among recorded observations: 0 failed · 0 passed · 0 unknown</p><p>No recorded gate outcomes supplied. Missing execution coverage is excluded from these counts. Unknown or unmeasured gates are not passing outcomes. Zero recorded failures does not establish safety.</p></div><div class="status-grid"><div><strong>Static findings · advisory</strong><p>Not supplied</p></div><div><strong>Investigation records</strong><p>13 records; 0 mandatory outcomes to inspect</p></div></div><p class="notice">Security-analysis coverage is incomplete or unavailable.</p><nav aria-label="Report sections"><ul><li><a href="#important-findings">Review first</a></li><li><a href="#coverage">Skills and coverage</a></li><li><a href="#provenance">Source details</a></li></ul></nav></section><section aria-labelledby="important-findings"><h2 id="important-findings">Review first</h2><p>Native required-check failures describe evaluator policy; they are not CI blockers. Grader judgments do not verify execution. A grader failure is not automatically an instruction defect.</p><h3>Deterministic investigations</h3><p>13 investigation records; showing 5. <a href="#all-findings">Complete list and evidence</a>.</p><ol class="priorities"><li><strong>Unavailable deterministic evaluation</strong><p>powershell-pester-6; cases pester-001; recorded outcome: unknown.</p><p>Evidence limit: reported unscoreable outcome.</p><p>Next: Inspect both arms of the case, including attempts and grader evidence. <a href="#finding-bbddc2336588c11f72a4cd211b85bef65c7ebd7a2aa232d93662299463ca4bf9">powershell-pester-6 · case pester-001 · finding evidence</a>.</p></li><li><strong>Unavailable deterministic evaluation</strong><p>powershell-pester-6; cases pester-001; recorded outcome: unknown.</p><p>Evidence limit: reported unscoreable outcome.</p><p>Next: Inspect both arms of the case, including attempts and grader evidence. <a href="#finding-fd6b72a0333fa6c7844b9f173241bcb178c9fa34cd8e5af35ae0eda6c2600582">powershell-pester-6 · case pester-001 · finding evidence</a>.</p></li><li><strong>Incomplete execution evidence</strong><p>powershell-pester-6.</p><p>Evidence limit: numeric coverage incomplete.</p><p>Next: Complete missing execution evidence, then regenerate public evidence. <a href="#finding-7698bd75729ba6935c18d16e91886d7fcffe82c25142e1a48c2240a7b5a152f1">powershell-pester-6 · finding evidence</a>.</p></li><li><strong>Comparison unavailable or limited</strong><p>ansible.</p><p>Evidence limit: supplied inputs only.</p><p>Next: Supply exactly two intended measured runs per skill to the existing analyzer. <a href="#finding-8ea8ba7546dd3c41e4fb6ca828bf8fc3fd1f5a266045b37c0f83437a2da66490">ansible · finding evidence</a>.</p></li><li><strong>Comparison unavailable or limited</strong><p>powershell-pester-6.</p><p>Evidence limit: supplied inputs only.</p><p>Next: Supply exactly two intended measured runs per skill to the existing analyzer. <a href="#finding-81060f7a0ebc0ee2f4344431040f55444e27c8f38a8f24fa9189f64e70e4771a">powershell-pester-6 · finding evidence</a>.</p></li></ol><p>8 additional investigation records in the complete list.</p><h3 id="static-quality">Static quality and coverage · native evaluator judgments</h3><p>Scanner severity does not establish a confirmed vulnerability, instruction defect or need to change a skill. Findings remain advisory in quality CI.</p><p class="notice"><strong>Security-analysis coverage is incomplete or unavailable.</strong> Retained findings still require investigation.</p><p>0 static records supplied: 0 passed · 0 failed · 0 incomplete · 0 unavailable native assessments.</p><p>All evaluator findings: totals withheld; no single snapshot per skill is established.</p><p>SECURITY subset (not additional findings): totals withheld; no single snapshot per skill is established.</p><p>SECURITY coverage: 0 incomplete · 0 skipped · 0 unavailable · 0 with no incompleteness reported.</p><p>Static evidence not supplied for: <a href="#skill-e3b8f966349d79ca898a82da7ba7ac88efb9e9e5169fce83ccfe095bd79aace3">a11y</a>, <a href="#skill-e056cab989ec04ea408034ba21c125e166116ca8bed3293e1957f55585b3c3d7">agent-safety</a>, <a href="#skill-8021104edf4cb3e5fc672537a1d5099a436c72de57ff01a495afda7193982bc9">ansible</a>, <a href="#skill-498d50e3586644511ce90f213af5f42aefcf784d31bbbde0b41689ae70e1b395">gh</a>, <a href="#skill-be0135ab881b921885dceb54d91e7602eff112886755efc2d442230fda054404">podman</a>, <a href="#skill-e5627d8c8afdbe5278ac7993cced93168ab741bedc83fd7efe6ecfda7640019f">powershell-module-engineering</a>, <a href="#skill-58730996c6f9dbfa01206b54366f1fb027beced4ef275ae4633f2aeb82056b60">powershell-pester-6</a>. Imported skills without an evaluation overlay may be outside the supplied inventory.</p><h4>Significant static flags · applicability unresolved</h4><p>No detailed critical/high flags supplied. Native counts and evidence gaps remain authoritative.</p><p>Groups count retained finding records, not raw scanner occurrence spans. Every individual finding remains in the per-skill evidence. No false-positive classification or historical novelty is inferred.</p><details><summary>Static evidence interpretation and limits</summary><p>SECURITY denotes this pipeline's SkillSpector integration; other validators retain separate attribution. Native required checks describe evaluator policy, not the CI finding policy or a scanner process outcome. Partial scans may retain valid findings. Zero findings and no incompleteness reported do not prove exhaustive inspection or behavioral benefit. Detailed SkillSpector coverage reasons and separate process outcomes are not retained by this native-report path.</p></details><details id="all-findings"><summary>All deterministic investigations · 13 records</summary><ol class="priorities"><li id="finding-bbddc2336588c11f72a4cd211b85bef65c7ebd7a2aa232d93662299463ca4bf9"><strong>Unavailable deterministic evaluation</strong> <span class="badge">Investigation</span><p>powershell-pester-6 · Case: <code>pester-001</code></p><p>Evidence limit: reported unscoreable outcome.</p><p>Next: Inspect both arms of the case, including attempts and grader evidence.</p><details><summary>Finding evidence and uncertainty</summary><p>Scope: <code>pester-001</code></p><details><summary>Exact deterministic finding and next-step code</summary><pre>{
+  &quot;case_ids&quot;: [
+    &quot;pester-001&quot;
+  ],
+  &quot;id&quot;: &quot;sha256:370c35323fd0d24e637dcc99119ff6fb225f591567bc20d5a313ecd40c3f39f9&quot;,
+  &quot;importance&quot;: &quot;investigate&quot;,
+  &quot;kind&quot;: &quot;custom_unavailable&quot;,
+  &quot;next_step&quot;: &quot;inspect_original_case_evidence&quot;,
+  &quot;observation_ids&quot;: [
+    &quot;sha256:ea4c63586dcfe0ece71c4061ad815c90c4e1b307fa5f9fb8360f0a3f1a47684e&quot;
+  ],
+  &quot;observed&quot;: {
+    &quot;classification&quot;: &quot;unknown&quot;
+  },
+  &quot;record_ids&quot;: [
+    &quot;sha256:e2b4e2c6e3abc2953e14427403efba055fcf8bf79a7860100bf7191960b16e8a&quot;
+  ],
+  &quot;reference_ids&quot;: [
+    &quot;sha256:3302d952b0ee92305ff0bf57ce05249283e8ef011408b88d59556e12a6fb4204&quot;,
+    &quot;sha256:37afc0f29f2f0e976afc0b603b0a3f5ab08a0ee69996e71aec2e1514eac7a3df&quot;,
+    &quot;sha256:9b026107e4c2693b984357e4c6e64594e8c533c2870c6b1d68aca57abed7427c&quot;,
+    &quot;sha256:9f235a263ef0f111576251ae3ce2dfa96121c47f274e36b27ab3b8d7e44600c4&quot;,
+    &quot;sha256:b443641984d005499e057317d59aca6f3360d9a9012ff09044de5e56cdefb471&quot;
+  ],
+  &quot;skill&quot;: &quot;powershell-pester-6&quot;,
+  &quot;uncertainty&quot;: &quot;reported_unscoreable_outcome&quot;
+}</pre></details><ul><li><a href="#record-9af5de97d038581be3cc26e7b93141aac7e2f94005a82e93eb243ded3eda4456">powershell-pester-6 · case pester-001 · record sha256:e2b4e2c6e3ab…</a></li><li><a href="#observation-b57e43f06972c1c4a054ca5ff301a1cd9a4c7c47cf61ee6291c6ebcd64bfc45c">powershell-pester-6 · case pester-001 · Without skill observation sha256:ea4c63586dcf…</a></li><li><a href="#reference-2cdb51cb61327a73b68f0de721d0bcd21935cf050fefec7950e38498316ee665">powershell-pester-6 · case pester-001 · reference sha256:3302d952b0ee…</a></li><li><a href="#reference-b0bd4d1dd48bb2683593b067de6a821cf137eda5404c1877b453411cdf9bf64c">powershell-pester-6 · case pester-001 · reference sha256:37afc0f29f2f…</a></li><li><a href="#reference-60d85d166fe39945b24ce4438d01742f59ac83a33a4e5a36d3b8d97ab0d65a32">powershell-pester-6 · case pester-001 · reference sha256:9b026107e4c2…</a></li><li><a href="#reference-a02eda9b44e5a1dc18c0c889a1a4c9d5ab9dc1d795a897539c5f80bec8fc9e6b">powershell-pester-6 · case pester-001 · reference sha256:9f235a263ef0…</a></li><li><a href="#reference-154b62ca328759de94e65497681fae92f4275862034616a891d0188f28ee7d44">powershell-pester-6 · case pester-001 · reference sha256:b443641984d0…</a></li></ul></details></li><li id="finding-fd6b72a0333fa6c7844b9f173241bcb178c9fa34cd8e5af35ae0eda6c2600582"><strong>Unavailable deterministic evaluation</strong> <span class="badge">Investigation</span><p>powershell-pester-6 · Case: <code>pester-001</code></p><p>Evidence limit: reported unscoreable outcome.</p><p>Next: Inspect both arms of the case, including attempts and grader evidence.</p><details><summary>Finding evidence and uncertainty</summary><p>Scope: <code>pester-001</code></p><details><summary>Exact deterministic finding and next-step code</summary><pre>{
+  &quot;case_ids&quot;: [
+    &quot;pester-001&quot;
+  ],
+  &quot;id&quot;: &quot;sha256:8614f25839204eece533c9eb6353cba1653af2e775d9206342561023a718ebc8&quot;,
+  &quot;importance&quot;: &quot;investigate&quot;,
+  &quot;kind&quot;: &quot;custom_unavailable&quot;,
+  &quot;next_step&quot;: &quot;inspect_original_case_evidence&quot;,
+  &quot;observation_ids&quot;: [
+    &quot;sha256:efcf1ade7b45e31f34a0378c82784d232f0538f7e6f07796fd51335a28763425&quot;
+  ],
+  &quot;observed&quot;: {
+    &quot;classification&quot;: &quot;unknown&quot;
+  },
+  &quot;record_ids&quot;: [
+    &quot;sha256:e2b4e2c6e3abc2953e14427403efba055fcf8bf79a7860100bf7191960b16e8a&quot;
+  ],
+  &quot;reference_ids&quot;: [
+    &quot;sha256:007317657d10babb2d03dd28058d89beabb73f06af6937518a8f29e9c11ed74c&quot;,
+    &quot;sha256:11b06ef8aed66316234d0cea74446a91b5d7150f68c4f2e6095688249691ddfd&quot;,
+    &quot;sha256:78a500ed6a2c3222c434d2f9a9b63730e8d6016f84162e8e99290842125f9a60&quot;,
+    &quot;sha256:9b026107e4c2693b984357e4c6e64594e8c533c2870c6b1d68aca57abed7427c&quot;,
+    &quot;sha256:c09807811e4fb40f23a0d6e3da61ca063b70328ddf8cb8584dcbc2988f403e60&quot;
+  ],
+  &quot;skill&quot;: &quot;powershell-pester-6&quot;,
+  &quot;uncertainty&quot;: &quot;reported_unscoreable_outcome&quot;
+}</pre></details><ul><li><a href="#record-9af5de97d038581be3cc26e7b93141aac7e2f94005a82e93eb243ded3eda4456">powershell-pester-6 · case pester-001 · record sha256:e2b4e2c6e3ab…</a></li><li><a href="#observation-60511c43c9340ffaff12c2f1a7736d0d0db1adf5c21e61070baa4a5bfe30e16c">powershell-pester-6 · case pester-001 · With skill observation sha256:efcf1ade7b45…</a></li><li><a href="#reference-83ddc794735a276077fb6e7375d3031696cc3aaa09980380838cf7552aa81175">powershell-pester-6 · case pester-001 · reference sha256:007317657d10…</a></li><li><a href="#reference-5d5d7748323d1e56dec090ea82b7c88e9c5087d9632de1c9fd1cca1303f4e52e">powershell-pester-6 · case pester-001 · reference sha256:11b06ef8aed6…</a></li><li><a href="#reference-38a064909dd1b5fbd359507f57808ce16c1fe5d26a6c5444f18dc0ebcd27933e">powershell-pester-6 · case pester-001 · reference sha256:78a500ed6a2c…</a></li><li><a href="#reference-60d85d166fe39945b24ce4438d01742f59ac83a33a4e5a36d3b8d97ab0d65a32">powershell-pester-6 · case pester-001 · reference sha256:9b026107e4c2…</a></li><li><a href="#reference-c2cc752cc948b1656691e720e9551843d31cb0a4238bb9b203ff827f9d1df326">powershell-pester-6 · case pester-001 · reference sha256:c09807811e4f…</a></li></ul></details></li><li id="finding-7698bd75729ba6935c18d16e91886d7fcffe82c25142e1a48c2240a7b5a152f1"><strong>Incomplete execution evidence</strong> <span class="badge">Investigation</span><p>powershell-pester-6 · </p><p>Evidence limit: numeric coverage incomplete.</p><p>Next: Complete missing execution evidence, then regenerate public evidence.</p><details><summary>Finding evidence and uncertainty</summary><p>Scope: Run or configuration scope</p><details><summary>Exact deterministic finding and next-step code</summary><pre>{
+  &quot;case_ids&quot;: [],
+  &quot;id&quot;: &quot;sha256:e13c3b4fe1b869867b92752d45d1fdc77fa287636b4a82f2f45e100025112001&quot;,
+  &quot;importance&quot;: &quot;investigate&quot;,
+  &quot;kind&quot;: &quot;incomplete_execution&quot;,
+  &quot;next_step&quot;: &quot;complete_execution_and_reproject&quot;,
+  &quot;observation_ids&quot;: [],
+  &quot;observed&quot;: {
+    &quot;arms&quot;: [
+      {
+        &quot;coverage&quot;: {
+          &quot;case_details&quot;: &quot;complete&quot;,
+          &quot;expected_attempts&quot;: 1,
+          &quot;expected_cases&quot;: 1,
+          &quot;recorded_attempts&quot;: 1,
+          &quot;scored_attempts&quot;: 0,
+          &quot;unscored_attempts&quot;: 1
+        },
+        &quot;execution_status&quot;: &quot;failed&quot;,
+        &quot;name&quot;: &quot;with_skill&quot;
+      },
+      {
+        &quot;coverage&quot;: {
+          &quot;case_details&quot;: &quot;complete&quot;,
+          &quot;expected_attempts&quot;: 1,
+          &quot;expected_cases&quot;: 1,
+          &quot;recorded_attempts&quot;: 1,
+          &quot;scored_attempts&quot;: 0,
+          &quot;unscored_attempts&quot;: 1
+        },
+        &quot;execution_status&quot;: &quot;failed&quot;,
+        &quot;name&quot;: &quot;without_skill&quot;
+      }
+    ]
+  },
+  &quot;record_ids&quot;: [
+    &quot;sha256:e2b4e2c6e3abc2953e14427403efba055fcf8bf79a7860100bf7191960b16e8a&quot;
+  ],
+  &quot;reference_ids&quot;: [],
+  &quot;skill&quot;: &quot;powershell-pester-6&quot;,
+  &quot;uncertainty&quot;: &quot;numeric_coverage_incomplete&quot;
+}</pre></details><ul><li><a href="#record-9af5de97d038581be3cc26e7b93141aac7e2f94005a82e93eb243ded3eda4456">powershell-pester-6 · record sha256:e2b4e2c6e3ab…</a></li></ul></details></li><li id="finding-8ea8ba7546dd3c41e4fb6ca828bf8fc3fd1f5a266045b37c0f83437a2da66490"><strong>Comparison unavailable or limited</strong> <span class="badge">Evidence gap</span><p>ansible · </p><p>Evidence limit: supplied inputs only.</p><p>Next: Supply exactly two intended measured runs per skill to the existing analyzer.</p><details><summary>Finding evidence and uncertainty</summary><p>Scope: Run or configuration scope</p><details><summary>Exact deterministic finding and next-step code</summary><pre>{
+  &quot;case_ids&quot;: [],
+  &quot;id&quot;: &quot;sha256:398417ecb803888ada9531afc92046408757a471f50c12af1beb81312e8e9188&quot;,
+  &quot;importance&quot;: &quot;context&quot;,
+  &quot;kind&quot;: &quot;comparison_limitation&quot;,
+  &quot;next_step&quot;: &quot;supply_two_intended_runs&quot;,
+  &quot;observation_ids&quot;: [],
+  &quot;observed&quot;: {
+    &quot;measured_runs&quot;: 0,
+    &quot;status&quot;: &quot;insufficient_run_evidence&quot;
+  },
+  &quot;record_ids&quot;: [],
+  &quot;reference_ids&quot;: [],
+  &quot;skill&quot;: &quot;ansible&quot;,
+  &quot;uncertainty&quot;: &quot;supplied_inputs_only&quot;
+}</pre></details><p>No record-level support links for this invocation limit.</p></details></li><li id="finding-81060f7a0ebc0ee2f4344431040f55444e27c8f38a8f24fa9189f64e70e4771a"><strong>Comparison unavailable or limited</strong> <span class="badge">Evidence gap</span><p>powershell-pester-6 · </p><p>Evidence limit: supplied inputs only.</p><p>Next: Supply exactly two intended measured runs per skill to the existing analyzer.</p><details><summary>Finding evidence and uncertainty</summary><p>Scope: Run or configuration scope</p><details><summary>Exact deterministic finding and next-step code</summary><pre>{
+  &quot;case_ids&quot;: [],
+  &quot;id&quot;: &quot;sha256:3aa992acbb0afbb88cb43ff2ba12db5fd998c5c86c6c5c88002cb0dcb5a3fe50&quot;,
+  &quot;importance&quot;: &quot;context&quot;,
+  &quot;kind&quot;: &quot;comparison_limitation&quot;,
+  &quot;next_step&quot;: &quot;supply_two_intended_runs&quot;,
+  &quot;observation_ids&quot;: [],
+  &quot;observed&quot;: {
+    &quot;measured_runs&quot;: 0,
+    &quot;status&quot;: &quot;insufficient_run_evidence&quot;
+  },
+  &quot;record_ids&quot;: [],
+  &quot;reference_ids&quot;: [],
+  &quot;skill&quot;: &quot;powershell-pester-6&quot;,
+  &quot;uncertainty&quot;: &quot;supplied_inputs_only&quot;
+}</pre></details><p>No record-level support links for this invocation limit.</p></details></li><li id="finding-2e8aab91c26838a6cf17641f19fdbe1736b9b88ec3e2953206efa6949176f9f7"><strong>Comparison unavailable or limited</strong> <span class="badge">Evidence gap</span><p>powershell-module-engineering · </p><p>Evidence limit: supplied inputs only.</p><p>Next: Supply exactly two intended measured runs per skill to the existing analyzer.</p><details><summary>Finding evidence and uncertainty</summary><p>Scope: Run or configuration scope</p><details><summary>Exact deterministic finding and next-step code</summary><pre>{
+  &quot;case_ids&quot;: [],
+  &quot;id&quot;: &quot;sha256:3e2c97cd642d958f260e7b473cf78bab14ca1c91a0477ddffa462d6f9e352177&quot;,
+  &quot;importance&quot;: &quot;context&quot;,
+  &quot;kind&quot;: &quot;comparison_limitation&quot;,
+  &quot;next_step&quot;: &quot;supply_two_intended_runs&quot;,
+  &quot;observation_ids&quot;: [],
+  &quot;observed&quot;: {
+    &quot;measured_runs&quot;: 0,
+    &quot;status&quot;: &quot;insufficient_run_evidence&quot;
+  },
+  &quot;record_ids&quot;: [],
+  &quot;reference_ids&quot;: [],
+  &quot;skill&quot;: &quot;powershell-module-engineering&quot;,
+  &quot;uncertainty&quot;: &quot;supplied_inputs_only&quot;
+}</pre></details><p>No record-level support links for this invocation limit.</p></details></li><li id="finding-bd128bfcbd9b6eaf25854c89f754ad1868791d189759bda1d941b855dce4ca05"><strong>Comparison unavailable or limited</strong> <span class="badge">Evidence gap</span><p>podman · </p><p>Evidence limit: supplied inputs only.</p><p>Next: Supply exactly two intended measured runs per skill to the existing analyzer.</p><details><summary>Finding evidence and uncertainty</summary><p>Scope: Run or configuration scope</p><details><summary>Exact deterministic finding and next-step code</summary><pre>{
+  &quot;case_ids&quot;: [],
+  &quot;id&quot;: &quot;sha256:ab61adbc5cdf85b56b6204ce0a67e03d5e4549c30b04147a830832075799a493&quot;,
+  &quot;importance&quot;: &quot;context&quot;,
+  &quot;kind&quot;: &quot;comparison_limitation&quot;,
+  &quot;next_step&quot;: &quot;supply_two_intended_runs&quot;,
+  &quot;observation_ids&quot;: [],
+  &quot;observed&quot;: {
+    &quot;measured_runs&quot;: 0,
+    &quot;status&quot;: &quot;insufficient_run_evidence&quot;
+  },
+  &quot;record_ids&quot;: [],
+  &quot;reference_ids&quot;: [],
+  &quot;skill&quot;: &quot;podman&quot;,
+  &quot;uncertainty&quot;: &quot;supplied_inputs_only&quot;
+}</pre></details><p>No record-level support links for this invocation limit.</p></details></li><li id="finding-5fdd046152bd41f13b363c7d4e6cfda012009e0082acb0439b89044dd6e44e9e"><strong>Comparison unavailable or limited</strong> <span class="badge">Evidence gap</span><p>agent-safety · </p><p>Evidence limit: supplied inputs only.</p><p>Next: Supply exactly two intended measured runs per skill to the existing analyzer.</p><details><summary>Finding evidence and uncertainty</summary><p>Scope: Run or configuration scope</p><details><summary>Exact deterministic finding and next-step code</summary><pre>{
+  &quot;case_ids&quot;: [],
+  &quot;id&quot;: &quot;sha256:e42ade78703aca314eb7db0ef62aad26f0f439dc5dfb9889dab3e0a5ad26f7fa&quot;,
+  &quot;importance&quot;: &quot;context&quot;,
+  &quot;kind&quot;: &quot;comparison_limitation&quot;,
+  &quot;next_step&quot;: &quot;supply_two_intended_runs&quot;,
+  &quot;observation_ids&quot;: [],
+  &quot;observed&quot;: {
+    &quot;measured_runs&quot;: 0,
+    &quot;status&quot;: &quot;insufficient_run_evidence&quot;
+  },
+  &quot;record_ids&quot;: [],
+  &quot;reference_ids&quot;: [],
+  &quot;skill&quot;: &quot;agent-safety&quot;,
+  &quot;uncertainty&quot;: &quot;supplied_inputs_only&quot;
+}</pre></details><p>No record-level support links for this invocation limit.</p></details></li><li id="finding-af910c4694c8af4a1e32accc6deb61424395a76c8bfc62c0b05081e9b591e6da"><strong>Comparison unavailable or limited</strong> <span class="badge">Evidence gap</span><p>gh · </p><p>Evidence limit: supplied inputs only.</p><p>Next: Supply exactly two intended measured runs per skill to the existing analyzer.</p><details><summary>Finding evidence and uncertainty</summary><p>Scope: Run or configuration scope</p><details><summary>Exact deterministic finding and next-step code</summary><pre>{
+  &quot;case_ids&quot;: [],
+  &quot;id&quot;: &quot;sha256:f332b758010427e152d3f8bc1cc62d3c12a3ee1ed153676545b3bedccf94e356&quot;,
+  &quot;importance&quot;: &quot;context&quot;,
+  &quot;kind&quot;: &quot;comparison_limitation&quot;,
+  &quot;next_step&quot;: &quot;supply_two_intended_runs&quot;,
+  &quot;observation_ids&quot;: [],
+  &quot;observed&quot;: {
+    &quot;measured_runs&quot;: 0,
+    &quot;status&quot;: &quot;insufficient_run_evidence&quot;
+  },
+  &quot;record_ids&quot;: [],
+  &quot;reference_ids&quot;: [],
+  &quot;skill&quot;: &quot;gh&quot;,
+  &quot;uncertainty&quot;: &quot;supplied_inputs_only&quot;
+}</pre></details><p>No record-level support links for this invocation limit.</p></details></li><li id="finding-37242fa12f2d8f26e1a815542e2127ad0b740efde2fa5b646810b184432b9d5e"><strong>Comparison unavailable or limited</strong> <span class="badge">Evidence gap</span><p>a11y · </p><p>Evidence limit: supplied inputs only.</p><p>Next: Supply exactly two intended measured runs per skill to the existing analyzer.</p><details><summary>Finding evidence and uncertainty</summary><p>Scope: Run or configuration scope</p><details><summary>Exact deterministic finding and next-step code</summary><pre>{
+  &quot;case_ids&quot;: [],
+  &quot;id&quot;: &quot;sha256:f928d052c6c42850bdb1fa6d992f54c3b8af0e38f2b57c6ae37027fbb6e9fc0e&quot;,
+  &quot;importance&quot;: &quot;context&quot;,
+  &quot;kind&quot;: &quot;comparison_limitation&quot;,
+  &quot;next_step&quot;: &quot;supply_two_intended_runs&quot;,
+  &quot;observation_ids&quot;: [],
+  &quot;observed&quot;: {
+    &quot;measured_runs&quot;: 0,
+    &quot;status&quot;: &quot;insufficient_run_evidence&quot;
+  },
+  &quot;record_ids&quot;: [],
+  &quot;reference_ids&quot;: [],
+  &quot;skill&quot;: &quot;a11y&quot;,
+  &quot;uncertainty&quot;: &quot;supplied_inputs_only&quot;
+}</pre></details><p>No record-level support links for this invocation limit.</p></details></li><li id="finding-c8cfb02b7ef299cf47f47aa6e017bfb801d9c9d3c3c9effc1eca1f3b3f6536f4"><strong>Configured suite without measurement</strong> <span class="badge">Evidence gap</span><p>powershell-pester-6 · </p><p>Evidence limit: no measurement in supplied inputs.</p><p>Next: Supply a validated model-backed public report when an evaluation is authorized.</p><details><summary>Finding evidence and uncertainty</summary><p>Scope: Run or configuration scope</p><details><summary>Exact deterministic finding and next-step code</summary><pre>{
+  &quot;case_ids&quot;: [],
+  &quot;id&quot;: &quot;sha256:337c9754385aaccf39000bc8023dcfad63b82ceadd00f8a53f1086f1e10c2af9&quot;,
+  &quot;importance&quot;: &quot;context&quot;,
+  &quot;kind&quot;: &quot;configured_unmeasured&quot;,
+  &quot;next_step&quot;: &quot;supply_model_backed_public_report&quot;,
+  &quot;observation_ids&quot;: [],
+  &quot;observed&quot;: {
+    &quot;configured_case_counts&quot;: [
+      5
+    ]
+  },
+  &quot;record_ids&quot;: [
+    &quot;sha256:b25798a88f51e896920e1383db618f88b2383dc4024994739605303a1a7451e3&quot;
+  ],
+  &quot;reference_ids&quot;: [],
+  &quot;skill&quot;: &quot;powershell-pester-6&quot;,
+  &quot;uncertainty&quot;: &quot;no_measurement_in_supplied_inputs&quot;
+}</pre></details><ul><li><a href="#record-503cde573013fcf3d9eb3895f57f8d6dd02f1af918f825235c81d8669e9a4354">powershell-pester-6 · record sha256:b25798a88f51…</a></li></ul></details></li><li id="finding-9fb4039b40f092acbb7d4c1d048d222b11331a4bd23a018641d78408b3a797be"><strong>Configured suite without measurement</strong> <span class="badge">Evidence gap</span><p>podman · </p><p>Evidence limit: no measurement in supplied inputs.</p><p>Next: Supply a validated model-backed public report when an evaluation is authorized.</p><details><summary>Finding evidence and uncertainty</summary><p>Scope: Run or configuration scope</p><details><summary>Exact deterministic finding and next-step code</summary><pre>{
+  &quot;case_ids&quot;: [],
+  &quot;id&quot;: &quot;sha256:4f78485e56e03cb438a20328b6232130c2f8439297b4e2f6e401a6cd9e8ce2c3&quot;,
+  &quot;importance&quot;: &quot;context&quot;,
+  &quot;kind&quot;: &quot;configured_unmeasured&quot;,
+  &quot;next_step&quot;: &quot;supply_model_backed_public_report&quot;,
+  &quot;observation_ids&quot;: [],
+  &quot;observed&quot;: {
+    &quot;configured_case_counts&quot;: [
+      10
+    ]
+  },
+  &quot;record_ids&quot;: [
+    &quot;sha256:b25798a88f51e896920e1383db618f88b2383dc4024994739605303a1a7451e3&quot;
+  ],
+  &quot;reference_ids&quot;: [],
+  &quot;skill&quot;: &quot;podman&quot;,
+  &quot;uncertainty&quot;: &quot;no_measurement_in_supplied_inputs&quot;
+}</pre></details><ul><li><a href="#record-503cde573013fcf3d9eb3895f57f8d6dd02f1af918f825235c81d8669e9a4354">podman · record sha256:b25798a88f51…</a></li></ul></details></li><li id="finding-e57591a25fbcb723bb513de5361f23f8b202d2a247831a87bfb34ecab7055900"><strong>Configured suite without measurement</strong> <span class="badge">Evidence gap</span><p>gh · </p><p>Evidence limit: no measurement in supplied inputs.</p><p>Next: Supply a validated model-backed public report when an evaluation is authorized.</p><details><summary>Finding evidence and uncertainty</summary><p>Scope: Run or configuration scope</p><details><summary>Exact deterministic finding and next-step code</summary><pre>{
+  &quot;case_ids&quot;: [],
+  &quot;id&quot;: &quot;sha256:5d3727b0242dfd4c5e1749841dff6c32a1cf0ded3715096196e3d7146e302f10&quot;,
+  &quot;importance&quot;: &quot;context&quot;,
+  &quot;kind&quot;: &quot;configured_unmeasured&quot;,
+  &quot;next_step&quot;: &quot;supply_model_backed_public_report&quot;,
+  &quot;observation_ids&quot;: [],
+  &quot;observed&quot;: {
+    &quot;configured_case_counts&quot;: [
+      24
+    ]
+  },
+  &quot;record_ids&quot;: [
+    &quot;sha256:b25798a88f51e896920e1383db618f88b2383dc4024994739605303a1a7451e3&quot;
+  ],
+  &quot;reference_ids&quot;: [],
+  &quot;skill&quot;: &quot;gh&quot;,
+  &quot;uncertainty&quot;: &quot;no_measurement_in_supplied_inputs&quot;
+}</pre></details><ul><li><a href="#record-503cde573013fcf3d9eb3895f57f8d6dd02f1af918f825235c81d8669e9a4354">gh · record sha256:b25798a88f51…</a></li></ul></details></li></ol></details><details><summary>Evidence gaps and comparison limits</summary><p>Missing measurements, unknown gates, omitted runs, original support availability, actual runtime behavior, production effectiveness and portability limit interpretation. Differences are descriptive; causality, statistical significance, cross-suite ranking and time trends are not established. Static scans and configuration do not measure behavioral benefit.</p></details><p>No analyst reports or independent assessments supplied. Use the deterministic next steps.</p></section><section aria-labelledby="coverage"><h2 id="coverage">Skills and coverage</h2><p>Evaluation groups (arms) compare recorded outputs with and without skill. Coverage is not a quality rating.</p><div class="table-scroll" role="region" aria-label="Coverage in supplied evidence" tabindex="0"><table class="wide"><caption>Coverage in supplied evidence</caption><thead><tr><th scope="col">Skill</th><th scope="col">Behavioral evidence</th><th scope="col">Configured coverage</th><th scope="col">Static evidence</th></tr></thead><tbody><tr><th scope="row"><a href="#skill-e3b8f966349d79ca898a82da7ba7ac88efb9e9e5169fce83ccfe095bd79aace3">a11y</a></th><td>No configured suite</td><td>No behavioral suite configured</td><td>Not supplied; no clean-scan claim</td></tr><tr><th scope="row"><a href="#skill-e056cab989ec04ea408034ba21c125e166116ca8bed3293e1957f55585b3c3d7">agent-safety</a></th><td>No configured suite</td><td>No behavioral suite configured</td><td>Not supplied; no clean-scan claim</td></tr><tr><th scope="row"><a href="#skill-8021104edf4cb3e5fc672537a1d5099a436c72de57ff01a495afda7193982bc9">ansible</a></th><td>No configured suite</td><td>No behavioral suite configured</td><td>Not supplied; no clean-scan claim</td></tr><tr><th scope="row"><a href="#skill-498d50e3586644511ce90f213af5f42aefcf784d31bbbde0b41689ae70e1b395">gh</a></th><td>Configured; results not supplied</td><td>24 configured cases per arm</td><td>Not supplied; no clean-scan claim</td></tr><tr><th scope="row"><a href="#skill-be0135ab881b921885dceb54d91e7602eff112886755efc2d442230fda054404">podman</a></th><td>Configured; results not supplied</td><td>10 configured cases per arm</td><td>Not supplied; no clean-scan claim</td></tr><tr><th scope="row"><a href="#skill-e5627d8c8afdbe5278ac7993cced93168ab741bedc83fd7efe6ecfda7640019f">powershell-module-engineering</a></th><td>No configured suite</td><td>No behavioral suite configured</td><td>Not supplied; no clean-scan claim</td></tr><tr><th scope="row"><a href="#skill-58730996c6f9dbfa01206b54366f1fb027beced4ef275ae4633f2aeb82056b60">powershell-pester-6</a></th><td>Credential-free real CLI isolation qualification</td><td>5 configured cases per arm</td><td>Not supplied; no clean-scan claim</td></tr></tbody></table></div></section><details><summary>How to read the measures</summary><p>Evaluator-reported (native) metrics use the evaluator's original score units. Skill Lift is its with-minus-without difference. Grading criteria (rubric) and mandatory checks (gates) record separate outcomes. Effectiveness, Correctness and Discoverability are with-skill rubric dimensions; corresponding without-skill headline dimensions are not supplied by this public contract. Values are preserved, not recomputed from rounded case scores. Case deltas use descriptive arm means only where all planned attempts are scored. A positive delta is higher, a negative delta is lower; neither explains why. Mandatory gates are separate from rubric passes. Unknown counts, scores and gates stay unknown.</p></details><section class="skill" id="skill-e3b8f966349d79ca898a82da7ba7ac88efb9e9e5169fce83ccfe095bd79aace3"><h2>a11y</h2><p>No configured suite</p><details class="skill-results"><summary>Results and supporting evidence</summary><p class="notice"><strong>Unmeasured.</strong> No supplied model-backed measurement. Configuration and offline fixture replay do not establish skill benefit or harm.</p><p>Inventory snapshot: No behavioral suite configured. Source owner: local.</p><details><summary>Configuration identity and source snapshot</summary><pre>{
+  &quot;behavioral_status&quot;: &quot;not_configured&quot;,
+  &quot;id&quot;: &quot;sha256:811227e255d6cf12749fa036c858588c9ab4bd020ef6fba5798f1f5109a2705f&quot;,
+  &quot;inventory_record_ids&quot;: [
+    &quot;sha256:b25798a88f51e896920e1383db618f88b2383dc4024994739605303a1a7451e3&quot;
+  ],
+  &quot;source&quot;: {
+    &quot;content_digest&quot;: &quot;sha256:bd38520667287390ab5b35bf3a81033b1a1d0eae7f0545ec907410ba39ad1216&quot;,
+    &quot;content_provenance&quot;: &quot;configured&quot;,
+    &quot;lineage&quot;: null,
+    &quot;owner&quot;: &quot;local&quot;,
+    &quot;repository&quot;: &quot;thetechgy/agent-engineering-baseline&quot;,
+    &quot;revision&quot;: &quot;943405391a06d3f73dba5d3ac48ac801809f3da3&quot;,
+    &quot;skill_id&quot;: &quot;a11y&quot;,
+    &quot;source_path&quot;: &quot;.apm/skills/a11y&quot;
+  },
+  &quot;suite&quot;: null
+}</pre></details><p>Static scan evidence not supplied for this skill; no clean-scan claim is made.</p><details><summary>Cross-run comparison status and evidence</summary><h3>Cross-run comparisons</h3><p>Fewer than two measured runs supplied; cross-run comparison is unavailable.</p><p>Left and right follow semantic record identity order, not time. No chronology or trend is established. Direct compatibility means recorded conditions match; it does not establish causality, significance or repeatability.</p></details></details></section><section class="skill" id="skill-e056cab989ec04ea408034ba21c125e166116ca8bed3293e1957f55585b3c3d7"><h2>agent-safety</h2><p>No configured suite</p><details class="skill-results"><summary>Results and supporting evidence</summary><p class="notice"><strong>Unmeasured.</strong> No supplied model-backed measurement. Configuration and offline fixture replay do not establish skill benefit or harm.</p><p>Inventory snapshot: No behavioral suite configured. Source owner: local.</p><details><summary>Configuration identity and source snapshot</summary><pre>{
+  &quot;behavioral_status&quot;: &quot;not_configured&quot;,
+  &quot;id&quot;: &quot;sha256:9095e4d786a5973daacf4f4ceef3f9ec678b9517ac506acb3681b5ec83dd9dd3&quot;,
+  &quot;inventory_record_ids&quot;: [
+    &quot;sha256:b25798a88f51e896920e1383db618f88b2383dc4024994739605303a1a7451e3&quot;
+  ],
+  &quot;source&quot;: {
+    &quot;content_digest&quot;: &quot;sha256:8a0486315d9e6462604e467c28c733640142865f5cf2ef7cba769c3cdb014719&quot;,
+    &quot;content_provenance&quot;: &quot;configured&quot;,
+    &quot;lineage&quot;: null,
+    &quot;owner&quot;: &quot;local&quot;,
+    &quot;repository&quot;: &quot;thetechgy/agent-engineering-baseline&quot;,
+    &quot;revision&quot;: &quot;943405391a06d3f73dba5d3ac48ac801809f3da3&quot;,
+    &quot;skill_id&quot;: &quot;agent-safety&quot;,
+    &quot;source_path&quot;: &quot;.apm/skills/agent-safety&quot;
+  },
+  &quot;suite&quot;: null
+}</pre></details><p>Static scan evidence not supplied for this skill; no clean-scan claim is made.</p><details><summary>Cross-run comparison status and evidence</summary><h3>Cross-run comparisons</h3><p>Fewer than two measured runs supplied; cross-run comparison is unavailable.</p><p>Left and right follow semantic record identity order, not time. No chronology or trend is established. Direct compatibility means recorded conditions match; it does not establish causality, significance or repeatability.</p></details></details></section><section class="skill" id="skill-8021104edf4cb3e5fc672537a1d5099a436c72de57ff01a495afda7193982bc9"><h2>ansible</h2><p>No configured suite</p><details class="skill-results"><summary>Results and supporting evidence</summary><p class="notice"><strong>Unmeasured.</strong> No supplied model-backed measurement. Configuration and offline fixture replay do not establish skill benefit or harm.</p><p>Inventory snapshot: No behavioral suite configured. Source owner: local.</p><details><summary>Configuration identity and source snapshot</summary><pre>{
+  &quot;behavioral_status&quot;: &quot;not_configured&quot;,
+  &quot;id&quot;: &quot;sha256:a5b0517367cf4d30824e018f7ba824d6a094b7a17d04960d1fdcbec1388b3da9&quot;,
+  &quot;inventory_record_ids&quot;: [
+    &quot;sha256:b25798a88f51e896920e1383db618f88b2383dc4024994739605303a1a7451e3&quot;
+  ],
+  &quot;source&quot;: {
+    &quot;content_digest&quot;: &quot;sha256:080622eb297ce99914bd08fbada178bed0eeb162a223017b8e6bb6b9a389eca8&quot;,
+    &quot;content_provenance&quot;: &quot;configured&quot;,
+    &quot;lineage&quot;: null,
+    &quot;owner&quot;: &quot;local&quot;,
+    &quot;repository&quot;: &quot;thetechgy/agent-engineering-baseline&quot;,
+    &quot;revision&quot;: &quot;943405391a06d3f73dba5d3ac48ac801809f3da3&quot;,
+    &quot;skill_id&quot;: &quot;ansible&quot;,
+    &quot;source_path&quot;: &quot;.apm/skills/ansible&quot;
+  },
+  &quot;suite&quot;: null
+}</pre></details><p>Static scan evidence not supplied for this skill; no clean-scan claim is made.</p><details><summary>Cross-run comparison status and evidence</summary><h3>Cross-run comparisons</h3><p>Fewer than two measured runs supplied; cross-run comparison is unavailable.</p><p>Left and right follow semantic record identity order, not time. No chronology or trend is established. Direct compatibility means recorded conditions match; it does not establish causality, significance or repeatability.</p></details></details></section><section class="skill" id="skill-498d50e3586644511ce90f213af5f42aefcf784d31bbbde0b41689ae70e1b395"><h2>gh</h2><p>Configured; results not supplied</p><details class="skill-results"><summary>Results and supporting evidence</summary><p class="notice"><strong>Unmeasured.</strong> No supplied model-backed measurement. Configuration and offline fixture replay do not establish skill benefit or harm.</p><p>Inventory snapshot: 24 configured cases per arm. Source owner: upstream.</p><details><summary>Configuration identity and source snapshot</summary><pre>{
+  &quot;behavioral_status&quot;: &quot;configured&quot;,
+  &quot;id&quot;: &quot;sha256:fc495111b78f648b0524445c6c31b4d581d872438c5748cafcedc588279fd7c7&quot;,
+  &quot;inventory_record_ids&quot;: [
+    &quot;sha256:b25798a88f51e896920e1383db618f88b2383dc4024994739605303a1a7451e3&quot;
+  ],
+  &quot;source&quot;: {
+    &quot;content_digest&quot;: &quot;sha256:970856caac10c66e1225eb35134f3e7ccccc625f87ff779e5ba45705616fd479&quot;,
+    &quot;content_provenance&quot;: &quot;configured&quot;,
+    &quot;lineage&quot;: null,
+    &quot;owner&quot;: &quot;upstream&quot;,
+    &quot;repository&quot;: &quot;cli/cli&quot;,
+    &quot;revision&quot;: &quot;63837fb778d6a39f02be0ce76ff89f2bc8d74bdc&quot;,
+    &quot;skill_id&quot;: &quot;gh&quot;,
+    &quot;source_path&quot;: &quot;skills/gh&quot;
+  },
+  &quot;suite&quot;: {
+    &quot;authored_digest&quot;: &quot;sha256:7da7fa863ddc768c34bb423b4667cfe43e8d714697c4e217e4a27d789028f598&quot;,
+    &quot;case_count&quot;: 24,
+    &quot;owner&quot;: &quot;overlay&quot;,
+    &quot;path&quot;: &quot;.github/evals/gh/evals/evals.json&quot;,
+    &quot;status&quot;: &quot;configured&quot;
+  }
+}</pre></details><p>Static scan evidence not supplied for this skill; no clean-scan claim is made.</p><details><summary>Cross-run comparison status and evidence</summary><h3>Cross-run comparisons</h3><p>Fewer than two measured runs supplied; cross-run comparison is unavailable.</p><p>Left and right follow semantic record identity order, not time. No chronology or trend is established. Direct compatibility means recorded conditions match; it does not establish causality, significance or repeatability.</p></details></details></section><section class="skill" id="skill-be0135ab881b921885dceb54d91e7602eff112886755efc2d442230fda054404"><h2>podman</h2><p>Configured; results not supplied</p><details class="skill-results"><summary>Results and supporting evidence</summary><p class="notice"><strong>Unmeasured.</strong> No supplied model-backed measurement. Configuration and offline fixture replay do not establish skill benefit or harm.</p><p>Inventory snapshot: 10 configured cases per arm. Source owner: local.</p><details><summary>Configuration identity and source snapshot</summary><pre>{
+  &quot;behavioral_status&quot;: &quot;configured&quot;,
+  &quot;id&quot;: &quot;sha256:f0f254244d0d6077474982a44ccb2258d152fc18c4c9a857598800b31e65a661&quot;,
+  &quot;inventory_record_ids&quot;: [
+    &quot;sha256:b25798a88f51e896920e1383db618f88b2383dc4024994739605303a1a7451e3&quot;
+  ],
+  &quot;source&quot;: {
+    &quot;content_digest&quot;: &quot;sha256:506e78b501906831944d7c6559091c898de9476d42347c56381c950d0099d07d&quot;,
+    &quot;content_provenance&quot;: &quot;configured&quot;,
+    &quot;lineage&quot;: null,
+    &quot;owner&quot;: &quot;local&quot;,
+    &quot;repository&quot;: &quot;thetechgy/agent-engineering-baseline&quot;,
+    &quot;revision&quot;: &quot;943405391a06d3f73dba5d3ac48ac801809f3da3&quot;,
+    &quot;skill_id&quot;: &quot;podman&quot;,
+    &quot;source_path&quot;: &quot;.apm/skills/podman&quot;
+  },
+  &quot;suite&quot;: {
+    &quot;authored_digest&quot;: &quot;sha256:9bc7fdebc99616983bd501006f97a0a3233cc9901da06443e49d63652de2f0c5&quot;,
+    &quot;case_count&quot;: 10,
+    &quot;owner&quot;: &quot;local&quot;,
+    &quot;path&quot;: &quot;.apm/skills/podman/evals/evals.json&quot;,
+    &quot;status&quot;: &quot;configured&quot;
+  }
+}</pre></details><p>Static scan evidence not supplied for this skill; no clean-scan claim is made.</p><details><summary>Cross-run comparison status and evidence</summary><h3>Cross-run comparisons</h3><p>Fewer than two measured runs supplied; cross-run comparison is unavailable.</p><p>Left and right follow semantic record identity order, not time. No chronology or trend is established. Direct compatibility means recorded conditions match; it does not establish causality, significance or repeatability.</p></details></details></section><section class="skill" id="skill-e5627d8c8afdbe5278ac7993cced93168ab741bedc83fd7efe6ecfda7640019f"><h2>powershell-module-engineering</h2><p>No configured suite</p><details class="skill-results"><summary>Results and supporting evidence</summary><p class="notice"><strong>Unmeasured.</strong> No supplied model-backed measurement. Configuration and offline fixture replay do not establish skill benefit or harm.</p><p>Inventory snapshot: No behavioral suite configured. Source owner: local.</p><details><summary>Configuration identity and source snapshot</summary><pre>{
+  &quot;behavioral_status&quot;: &quot;not_configured&quot;,
+  &quot;id&quot;: &quot;sha256:630df215902b8e770cf63ce3afddf9c11ccf232d5b56a63c604271495c246207&quot;,
+  &quot;inventory_record_ids&quot;: [
+    &quot;sha256:b25798a88f51e896920e1383db618f88b2383dc4024994739605303a1a7451e3&quot;
+  ],
+  &quot;source&quot;: {
+    &quot;content_digest&quot;: &quot;sha256:18dab091e9e3b9817af70ce3d968d84939e96ebc8917f8f400ac6a7416905d66&quot;,
+    &quot;content_provenance&quot;: &quot;configured&quot;,
+    &quot;lineage&quot;: null,
+    &quot;owner&quot;: &quot;local&quot;,
+    &quot;repository&quot;: &quot;thetechgy/agent-engineering-baseline&quot;,
+    &quot;revision&quot;: &quot;943405391a06d3f73dba5d3ac48ac801809f3da3&quot;,
+    &quot;skill_id&quot;: &quot;powershell-module-engineering&quot;,
+    &quot;source_path&quot;: &quot;.apm/skills/powershell-module-engineering&quot;
+  },
+  &quot;suite&quot;: null
+}</pre></details><p>Static scan evidence not supplied for this skill; no clean-scan claim is made.</p><details><summary>Cross-run comparison status and evidence</summary><h3>Cross-run comparisons</h3><p>Fewer than two measured runs supplied; cross-run comparison is unavailable.</p><p>Left and right follow semantic record identity order, not time. No chronology or trend is established. Direct compatibility means recorded conditions match; it does not establish causality, significance or repeatability.</p></details></details></section><section class="skill" id="skill-58730996c6f9dbfa01206b54366f1fb027beced4ef275ae4633f2aeb82056b60"><h2>powershell-pester-6</h2><p>Credential-free real CLI isolation qualification</p><details class="skill-results"><summary>Results and supporting evidence</summary><p class="notice"><strong>Unmeasured.</strong> No supplied model-backed measurement. Configuration and offline fixture replay do not establish skill benefit or harm.</p><p>Inventory snapshot: 5 configured cases per arm. Source owner: local.</p><details><summary>Configuration identity and source snapshot</summary><pre>{
+  &quot;behavioral_status&quot;: &quot;configured&quot;,
+  &quot;id&quot;: &quot;sha256:6f82bcfdd4948f302f16a18ad3f0774f079f4508c01e6188887af74af1542a11&quot;,
+  &quot;inventory_record_ids&quot;: [
+    &quot;sha256:b25798a88f51e896920e1383db618f88b2383dc4024994739605303a1a7451e3&quot;
+  ],
+  &quot;source&quot;: {
+    &quot;content_digest&quot;: &quot;sha256:d3641c5190c1b86d8e853adc8f3c68fe6376b5fdaf5c1d90c610a745102ff03e&quot;,
+    &quot;content_provenance&quot;: &quot;configured&quot;,
+    &quot;lineage&quot;: null,
+    &quot;owner&quot;: &quot;local&quot;,
+    &quot;repository&quot;: &quot;thetechgy/agent-engineering-baseline&quot;,
+    &quot;revision&quot;: &quot;943405391a06d3f73dba5d3ac48ac801809f3da3&quot;,
+    &quot;skill_id&quot;: &quot;powershell-pester-6&quot;,
+    &quot;source_path&quot;: &quot;.apm/skills/powershell-pester-6&quot;
+  },
+  &quot;suite&quot;: {
+    &quot;authored_digest&quot;: &quot;sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0&quot;,
+    &quot;case_count&quot;: 5,
+    &quot;owner&quot;: &quot;overlay&quot;,
+    &quot;path&quot;: &quot;.github/evals/powershell-pester-6/evals/evals.json&quot;,
+    &quot;status&quot;: &quot;configured&quot;
+  }
+}</pre></details><article class="run" id="record-9af5de97d038581be3cc26e7b93141aac7e2f94005a82e93eb243ded3eda4456"><h3>Behavioral run: cli-probe</h3><p>Evidence: <strong>incomplete</strong>. Measurement: <strong>Unmeasured</strong>.</p><p>Limitations: Numeric coverage is incomplete (<code>coverage_missing</code>); Execution evidence is incomplete (<code>execution_incomplete</code>); Required identity or attempt metadata is missing (<code>metadata_missing</code>)</p><details><summary>Run identity and evaluated source</summary><details><summary>Exact record identity</summary><pre>&quot;sha256:e2b4e2c6e3abc2953e14427403efba055fcf8bf79a7860100bf7191960b16e8a&quot;</pre></details><p>Evaluated source: local · <code>thetechgy/agent-engineering-baseline</code> · revision <code>22b36d53e9ac7e329ef8c56dc9bdcefb468ca9df</code>.</p></details><p class="safety"><strong>Synthetic candidate qualification; excluded from production history.</strong> Producer: <code>skillevaluator-0.8.0-offline-v4</code>; scoring policy: <code>custom-overall-v1</code>. No agent or model judge was run. Judge-dependent quality and composite scores are unavailable. Raw fixed judge values below test transport only. Changed weighting is not skill improvement. Task correctness, authorization, activation and the historical combined gate have separate meanings.</p><div class="table-scroll" role="region" aria-label="Raw upstream standard values · synthetic transport only" tabindex="0"><table class="wide"><caption>Raw upstream standard values · synthetic transport only</caption><thead><tr><th scope="col">Arm</th><th scope="col">Case</th><th scope="col">Raw values</th><th scope="col">Interpreted quality</th></tr></thead><tbody><tr><th scope="row">With skill</th><td><code>pester-001</code></td><td><code>{&#x27;accuracy&#x27;: None, &#x27;behavior_check&#x27;: None, &#x27;custom&#x27;: None, &#x27;goal_accuracy&#x27;: None, &#x27;overall&#x27;: 0.0, &#x27;security&#x27;: None, &#x27;skill_efficiency&#x27;: None, &#x27;skill_execution&#x27;: None}</code></td><td>Unavailable; no judge executed</td></tr><tr><th scope="row">Without skill</th><td><code>pester-001</code></td><td><code>{&#x27;accuracy&#x27;: None, &#x27;behavior_check&#x27;: None, &#x27;custom&#x27;: None, &#x27;goal_accuracy&#x27;: None, &#x27;overall&#x27;: 0.0, &#x27;security&#x27;: None, &#x27;skill_efficiency&#x27;: None, &#x27;skill_execution&#x27;: None}</code></td><td>Unavailable; no judge executed</td></tr></tbody></table></div><h4>Skill-specific deterministic measurements</h4><p>Reported custom measurements; paired population incomplete.</p><details><summary>Reported evidence and authentication limits</summary><p><strong>Structurally validated reported evidence.</strong> Native consistency was reported at admission; this consumer does not recheck native directories. Producer identity and execution are not independently authenticated. Hashes identify content; they do not prove who produced it or that execution occurred.</p></details><p>Purpose: cli_pilot_probe; recorded agent: <code>codex</code>; version <code>0.167.0</code>. Oracle fixture qualification is not model-backed skill-effectiveness evidence.</p><details><summary>Task definitions and applicability</summary><div class="table-scroll" role="region" aria-label="Tasks and applicability" tabindex="0"><table class="wide"><caption>Tasks and applicability</caption><thead><tr><th scope="col">Case</th><th scope="col">Task</th><th scope="col">Source case</th><th scope="col">Applicable native metrics</th></tr></thead><tbody><tr><th scope="row"><code>pester-001</code></th><td>Integer collection tests</td><td><code>pester-001</code></td><td><code>pester_reference_pass</code>, <code>pester_mutation_detection</code>, <code>pester_test_quality</code></td></tr></tbody></table></div></details><div class="table-scroll" role="region" aria-label="Reported custom-grader classifications · failures and unavailability stay distinct" tabindex="0"><table><caption>Reported custom-grader classifications · failures and unavailability stay distinct</caption><thead><tr><th scope="col">Outcome</th><th scope="col">With skill</th><th scope="col">Without skill</th></tr></thead><tbody><tr><th scope="row">passed</th><td class="num">0</td><td class="num">0</td></tr><tr><th scope="row">failed</th><td class="num">0</td><td class="num">0</td></tr><tr><th scope="row">invalid</th><td class="num">0</td><td class="num">0</td></tr><tr><th scope="row">unsupported</th><td class="num">0</td><td class="num">0</td></tr><tr><th scope="row">timeout</th><td class="num">0</td><td class="num">0</td></tr><tr><th scope="row">infrastructure_error</th><td class="num">0</td><td class="num">0</td></tr><tr><th scope="row">interrupted</th><td class="num">0</td><td class="num">0</td></tr><tr><th scope="row">unknown</th><td class="num">1</td><td class="num">1</td></tr><tr><th scope="row">missing</th><td class="num">0</td><td class="num">0</td></tr></tbody></table></div><h4>Seeded mutation detection</h4><div class="table-scroll" role="region" aria-label="Measured values · powershell-pester-6.mutation-detection.v1" tabindex="0"><table class="wide"><caption>Measured values · powershell-pester-6.mutation-detection.v1</caption><thead><tr><th scope="col">Metric</th><th scope="col">With skill mean</th><th scope="col">Without skill mean</th><th scope="col">With minus without</th></tr></thead><tbody><tr><th scope="row">Seeded mutation detection</th><td>Unavailable</td><td>Unavailable</td><td>Unavailable</td></tr></tbody></table></div><p>incomplete_required_population. Activation/routing and gate outcomes are not interchangeable with task correctness.</p><details><summary>Metric definition, applicability and scoring basis</summary><p>Fraction of the configured seeded mutants rejected through recognized assertion failures. This measures only these seeded faults.</p><p>Metric <code>powershell-pester-6.mutation-detection.v1</code>; competency <code>mutation_detection</code>; unit <code>fraction</code>. Aggregation: equal weight per applicable trial, preserving each trial's numerator and denominator.</p><div class="table-scroll" role="region" aria-label="Applicability and complete-population comparison · powershell-pester-6.mutation-detection.v1" tabindex="0"><table><caption>Applicability and complete-population comparison · powershell-pester-6.mutation-detection.v1</caption><thead><tr><th scope="col">Coverage</th><th scope="col">With skill</th><th scope="col">Without skill</th></tr></thead><tbody><tr><th scope="row">Expected applicable</th><td class="num">1</td><td class="num">1</td></tr><tr><th scope="row">Measured</th><td class="num">0</td><td class="num">0</td></tr><tr><th scope="row">Unavailable / missing</th><td class="num">1</td><td class="num">1</td></tr><tr><th scope="row">Recorded nonapplicable</th><td class="num">0</td><td class="num">0</td></tr></tbody></table></div></details><h4>Reference correctness</h4><div class="table-scroll" role="region" aria-label="Measured values · powershell-pester-6.reference-pass.v1" tabindex="0"><table class="wide"><caption>Measured values · powershell-pester-6.reference-pass.v1</caption><thead><tr><th scope="col">Metric</th><th scope="col">With skill mean</th><th scope="col">Without skill mean</th><th scope="col">With minus without</th></tr></thead><tbody><tr><th scope="row">Reference correctness</th><td>Unavailable</td><td>Unavailable</td><td>Unavailable</td></tr></tbody></table></div><p>incomplete_required_population. Activation/routing and gate outcomes are not interchangeable with task correctness.</p><details><summary>Metric definition, applicability and scoring basis</summary><p>Submitted tests execute and pass against the correct reference implementation.</p><p>Metric <code>powershell-pester-6.reference-pass.v1</code>; competency <code>reference_correctness</code>; unit <code>binary_score</code>. Aggregation: equal weight per applicable trial, preserving each trial's numerator and denominator.</p><div class="table-scroll" role="region" aria-label="Applicability and complete-population comparison · powershell-pester-6.reference-pass.v1" tabindex="0"><table><caption>Applicability and complete-population comparison · powershell-pester-6.reference-pass.v1</caption><thead><tr><th scope="col">Coverage</th><th scope="col">With skill</th><th scope="col">Without skill</th></tr></thead><tbody><tr><th scope="row">Expected applicable</th><td class="num">1</td><td class="num">1</td></tr><tr><th scope="row">Measured</th><td class="num">0</td><td class="num">0</td></tr><tr><th scope="row">Unavailable / missing</th><td class="num">1</td><td class="num">1</td></tr><tr><th scope="row">Recorded nonapplicable</th><td class="num">0</td><td class="num">0</td></tr></tbody></table></div></details><h4>Joint test quality</h4><div class="table-scroll" role="region" aria-label="Measured values · powershell-pester-6.test-quality.v1" tabindex="0"><table class="wide"><caption>Measured values · powershell-pester-6.test-quality.v1</caption><thead><tr><th scope="col">Metric</th><th scope="col">With skill mean</th><th scope="col">Without skill mean</th><th scope="col">With minus without</th></tr></thead><tbody><tr><th scope="row">Joint test quality</th><td>Unavailable</td><td>Unavailable</td><td>Unavailable</td></tr></tbody></table></div><p>incomplete_required_population. Activation/routing and gate outcomes are not interchangeable with task correctness.</p><details><summary>Metric definition, applicability and scoring basis</summary><p>Reference correctness and detection of every configured seeded mutant must both hold.</p><p>Metric <code>powershell-pester-6.test-quality.v1</code>; competency <code>test_quality</code>; unit <code>binary_score</code>. Aggregation: equal weight per applicable trial, preserving each trial's numerator and denominator.</p><div class="table-scroll" role="region" aria-label="Applicability and complete-population comparison · powershell-pester-6.test-quality.v1" tabindex="0"><table><caption>Applicability and complete-population comparison · powershell-pester-6.test-quality.v1</caption><thead><tr><th scope="col">Coverage</th><th scope="col">With skill</th><th scope="col">Without skill</th></tr></thead><tbody><tr><th scope="row">Expected applicable</th><td class="num">1</td><td class="num">1</td></tr><tr><th scope="row">Measured</th><td class="num">0</td><td class="num">0</td></tr><tr><th scope="row">Unavailable / missing</th><td class="num">1</td><td class="num">1</td></tr><tr><th scope="row">Recorded nonapplicable</th><td class="num">0</td><td class="num">0</td></tr></tbody></table></div></details><details><summary>All custom measurements and scoring bases</summary><div class="table-scroll" role="region" aria-label="Recorded custom measurements" tabindex="0"><table class="wide"><caption>Recorded custom measurements</caption><thead><tr><th scope="col">Case</th><th scope="col">Arm</th><th scope="col">Attempt</th><th scope="col">Grader outcome</th><th scope="col">Metric</th><th scope="col">Applicability</th><th scope="col">Value</th><th scope="col">Numerator / denominator</th><th scope="col">Limitation</th><th scope="col">Evidence</th></tr></thead><tbody><tr><th scope="row"><code>pester-001</code></th><td>With skill</td><td>Unknown / not supplied</td><td>unknown</td><td><code>powershell-pester-6.mutation-detection.v1</code></td><td>applicable</td><td>Unavailable</td><td>Unknown / not supplied / Unknown / not supplied</td><td>unknown</td><td><a href="#observation-60511c43c9340ffaff12c2f1a7736d0d0db1adf5c21e61070baa4a5bfe30e16c">Trial and evidence</a></td></tr><tr><th scope="row"><code>pester-001</code></th><td>With skill</td><td>Unknown / not supplied</td><td>unknown</td><td><code>powershell-pester-6.reference-pass.v1</code></td><td>applicable</td><td>Unavailable</td><td>Unknown / not supplied / Unknown / not supplied</td><td>unknown</td><td><a href="#observation-60511c43c9340ffaff12c2f1a7736d0d0db1adf5c21e61070baa4a5bfe30e16c">Trial and evidence</a></td></tr><tr><th scope="row"><code>pester-001</code></th><td>With skill</td><td>Unknown / not supplied</td><td>unknown</td><td><code>powershell-pester-6.test-quality.v1</code></td><td>applicable</td><td>Unavailable</td><td>Unknown / not supplied / Unknown / not supplied</td><td>unknown</td><td><a href="#observation-60511c43c9340ffaff12c2f1a7736d0d0db1adf5c21e61070baa4a5bfe30e16c">Trial and evidence</a></td></tr><tr><th scope="row"><code>pester-001</code></th><td>Without skill</td><td>Unknown / not supplied</td><td>unknown</td><td><code>powershell-pester-6.mutation-detection.v1</code></td><td>applicable</td><td>Unavailable</td><td>Unknown / not supplied / Unknown / not supplied</td><td>unknown</td><td><a href="#observation-b57e43f06972c1c4a054ca5ff301a1cd9a4c7c47cf61ee6291c6ebcd64bfc45c">Trial and evidence</a></td></tr><tr><th scope="row"><code>pester-001</code></th><td>Without skill</td><td>Unknown / not supplied</td><td>unknown</td><td><code>powershell-pester-6.reference-pass.v1</code></td><td>applicable</td><td>Unavailable</td><td>Unknown / not supplied / Unknown / not supplied</td><td>unknown</td><td><a href="#observation-b57e43f06972c1c4a054ca5ff301a1cd9a4c7c47cf61ee6291c6ebcd64bfc45c">Trial and evidence</a></td></tr><tr><th scope="row"><code>pester-001</code></th><td>Without skill</td><td>Unknown / not supplied</td><td>unknown</td><td><code>powershell-pester-6.test-quality.v1</code></td><td>applicable</td><td>Unavailable</td><td>Unknown / not supplied / Unknown / not supplied</td><td>unknown</td><td><a href="#observation-b57e43f06972c1c4a054ca5ff301a1cd9a4c7c47cf61ee6291c6ebcd64bfc45c">Trial and evidence</a></td></tr></tbody></table></div></details><details><summary>Native token and phase-runtime observations</summary><p>Missing values stay unknown. Input tokens include cache tokens; phase durations are derived only from recorded start/finish times. These observations do not establish total model/judge usage.</p><div class="table-scroll" role="region" aria-label="Per-trial reported usage" tabindex="0"><table class="wide"><caption>Per-trial reported usage</caption><thead><tr><th scope="col">Case / arm</th><th scope="col">Input tokens</th><th scope="col">Cache tokens</th><th scope="col">Output tokens</th><th scope="col">Agent seconds</th><th scope="col">Verifier seconds</th></tr></thead><tbody><tr><th scope="row"><code>pester-001</code> / With skill</th><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">7.491276</td><td class="num">24.973124</td></tr><tr><th scope="row"><code>pester-001</code> / Without skill</th><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">7.464014</td><td class="num">24.638947</td></tr></tbody></table></div></details><p>Custom cross-run numeric comparisons and custom-metric history publication are disabled. Incomplete required populations retain trial measurements but no aggregate comparison.</p><p>Standard judge metrics were not collected in custom-only mode.</p><div class="table-scroll" role="region" aria-label="Measured coverage by arm — unknown counts are not zero" tabindex="0"><table class="wide"><caption>Measured coverage by arm — unknown counts are not zero</caption><thead><tr><th scope="col">Arm</th><th scope="col">Execution</th><th scope="col">Cases expected</th><th scope="col">Attempts expected</th><th scope="col">Recorded</th><th scope="col">Scored</th><th scope="col">Unscored</th></tr></thead><tbody><tr><th scope="row">With skill</th><td>failed</td><td class="num">1</td><td class="num">1</td><td class="num">1</td><td class="num">0</td><td class="num">1</td></tr><tr><th scope="row">Without skill</th><td>failed</td><td class="num">1</td><td class="num">1</td><td class="num">1</td><td class="num">0</td><td class="num">1</td></tr></tbody></table></div><p>0 trials with evaluated custom outcomes; 2 retained trials without scoreable custom outcomes. Standard rubric dimensions were not collected. Applicable populations and comparison limits appear per metric above.</p><details><summary>Source, policy, observations and original support</summary><details><summary>Source identity and content manifest</summary><pre>{
+  &quot;content&quot;: {
+    &quot;algorithm&quot;: &quot;sha256-relative-file-manifest-v1&quot;,
+    &quot;digest&quot;: &quot;sha256:d3641c5190c1b86d8e853adc8f3c68fe6376b5fdaf5c1d90c610a745102ff03e&quot;,
+    &quot;manifest&quot;: [
+      {
+        &quot;digest&quot;: &quot;sha256:b57df2ff4072b2e25744ae2bd530b02bbb6ab83a22a0d374c73d48de4dc70887&quot;,
+        &quot;member&quot;: &quot;SKILL.md&quot;
+      },
+      {
+        &quot;digest&quot;: &quot;sha256:6d05a890eb1c53c59755f9e560c05d65467a614d36af7c812f4a32c89b47f4e9&quot;,
+        &quot;member&quot;: &quot;references/compatibility-and-migration.md&quot;
+      },
+      {
+        &quot;digest&quot;: &quot;sha256:3b80a98abfefdcd9a765da9a9436caa43de6a873e57253f1ecfb36e1095ea4b8&quot;,
+        &quot;member&quot;: &quot;references/execution.md&quot;
+      }
+    ],
+    &quot;provenance&quot;: &quot;configured&quot;,
+    &quot;scope&quot;: &quot;pinned-agent-visible&quot;
+  },
+  &quot;lineage&quot;: null,
+  &quot;owner&quot;: &quot;local&quot;,
+  &quot;repository&quot;: &quot;thetechgy/agent-engineering-baseline&quot;,
+  &quot;revision&quot;: &quot;22b36d53e9ac7e329ef8c56dc9bdcefb468ca9df&quot;,
+  &quot;skill_id&quot;: &quot;powershell-pester-6&quot;,
+  &quot;source_path&quot;: &quot;.apm/skills/powershell-pester-6&quot;
+}</pre></details><details><summary>Record scope and availability</summary><pre>{
+  &quot;availability&quot;: {
+    &quot;provenance&quot;: &quot;runtime_recorded&quot;,
+    &quot;reasons&quot;: [
+      &quot;coverage_missing&quot;,
+      &quot;execution_incomplete&quot;,
+      &quot;metadata_missing&quot;
+    ],
+    &quot;status&quot;: &quot;incomplete&quot;
+  },
+  &quot;kind&quot;: &quot;behavioral&quot;,
+  &quot;run_id&quot;: &quot;cli-probe&quot;
+}</pre></details><details><summary>Dataset identity</summary><pre>{
+  &quot;authored_digest&quot;: &quot;sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0&quot;,
+  &quot;authored_provenance&quot;: &quot;runtime_recorded&quot;,
+  &quot;case_cohort_digest&quot;: &quot;sha256:b20da4b72901e17fce17a1b9aca0cdc87d416bbafde9bfafd2bcc3a9a9a85577&quot;,
+  &quot;case_ids&quot;: [
+    &quot;pester-001&quot;
+  ],
+  &quot;owner&quot;: &quot;overlay&quot;,
+  &quot;staged_algorithm&quot;: &quot;sha256-staged-task-inputs-v1&quot;,
+  &quot;staged_digest&quot;: &quot;sha256:6b498d81d4dd53749d84cb7eea57e29e42441490bb42de04beff7eb6950b611a&quot;,
+  &quot;staged_provenance&quot;: &quot;runtime_recorded&quot;
+}</pre></details><details><summary>Policy identity</summary><pre>{
+  &quot;attempts&quot;: {
+    &quot;maximum&quot;: 1,
+    &quot;mode&quot;: &quot;unknown&quot;,
+    &quot;pass_threshold&quot;: null,
+    &quot;stop_on_pass&quot;: false
+  },
+  &quot;fields&quot;: {
+    &quot;authorization_policy&quot;: null,
+    &quot;baseline&quot;: true,
+    &quot;codex&quot;: null,
+    &quot;competing_revision&quot;: null,
+    &quot;concurrency&quot;: 2,
+    &quot;deterministic_gate&quot;: null,
+    &quot;docker_compose&quot;: null,
+    &quot;environment&quot;: &quot;docker&quot;,
+    &quot;evaluator_revision&quot;: &quot;8149356e4476a1497fb334727f13f699c6fa6ba5&quot;,
+    &quot;fixture_boundary&quot;: null,
+    &quot;grading&quot;: &quot;custom_only&quot;,
+    &quot;harbor&quot;: &quot;0.24.0&quot;,
+    &quot;model&quot;: &quot;gpt-6.1-sol&quot;,
+    &quot;provider&quot;: &quot;openai&quot;,
+    &quot;python&quot;: &quot;3.14.10&quot;,
+    &quot;standard_attempts&quot;: null,
+    &quot;stop_on_pass&quot;: false,
+    &quot;task_build&quot;: null,
+    &quot;task_source&quot;: &quot;native_harbor&quot;,
+    &quot;timeout_multiplier&quot;: 1.0,
+    &quot;upstream_revision&quot;: null,
+    &quot;workspace_mode&quot;: &quot;isolated&quot;
+  },
+  &quot;id&quot;: &quot;sha256:ba4cdddd1e42b1f12099a1a7e4df48e82fd36c19ae3be950cf36cfa10bfb26f4&quot;,
+  &quot;judge&quot;: {
+    &quot;enabled&quot;: false,
+    &quot;model&quot;: null,
+    &quot;provider&quot;: null
+  },
+  &quot;metric_set&quot;: &quot;custom-only&quot;,
+  &quot;patch_digest&quot;: &quot;sha256:d9038d18e32e805237265b3d74eb05b51ebe5fdac15976ce93f5762877efe11c&quot;,
+  &quot;producer_profile&quot;: &quot;skillevaluator-0.8.0-offline-v4&quot;,
+  &quot;provenance&quot;: &quot;runtime_recorded&quot;,
+  &quot;published_id&quot;: null,
+  &quot;scoring_policy&quot;: &quot;custom-overall-v1&quot;
+}</pre></details><details><summary>Arm conditions and coverage</summary><pre>[
+  {
+    &quot;condition&quot;: {
+      &quot;build_digest&quot;: &quot;sha256:1ba2cd0aae65a5c60fcfe6403936925e8f2890356e16d7715f6966850b224484&quot;,
+      &quot;competing_skills&quot;: [],
+      &quot;execution&quot;: {
+        &quot;authorization_policy&quot;: null,
+        &quot;base_image_mode&quot;: &quot;recorded_staging&quot;,
+        &quot;environment&quot;: &quot;docker&quot;,
+        &quot;fixture_boundary&quot;: &quot;separate-verifier-v1&quot;,
+        &quot;task_source&quot;: &quot;native_harbor&quot;
+      },
+      &quot;fixture_digest&quot;: &quot;sha256:9dd6c53ce8090ff3790ff2274d8067775a5605def5cc80479bf2c85ef6330060&quot;,
+      &quot;id&quot;: &quot;sha256:4a48f2326cf6bd3dbeb82e2a7a8d21f2c04e711ac8f0f57a51c17f3abfb44e34&quot;,
+      &quot;instruction_digest&quot;: &quot;sha256:927bdea1ee48c41b4081c0b0d0766df554fd282b5a9a21dadc90f3db0bb1a161&quot;,
+      &quot;provenance&quot;: &quot;runtime_recorded&quot;,
+      &quot;target_present&quot;: true,
+      &quot;workspace_mode&quot;: &quot;isolated&quot;
+    },
+    &quot;coverage&quot;: {
+      &quot;case_details&quot;: &quot;complete&quot;,
+      &quot;expected_attempts&quot;: 1,
+      &quot;expected_cases&quot;: 1,
+      &quot;recorded_attempts&quot;: 1,
+      &quot;scored_attempts&quot;: 0,
+      &quot;unscored_attempts&quot;: 1
+    },
+    &quot;execution_error_count&quot;: 4,
+    &quot;execution_status&quot;: &quot;failed&quot;,
+    &quot;name&quot;: &quot;with_skill&quot;,
+    &quot;rubric&quot;: {
+      &quot;passed_cases&quot;: null,
+      &quot;threshold&quot;: null,
+      &quot;total_cases&quot;: null
+    }
+  },
+  {
+    &quot;condition&quot;: {
+      &quot;build_digest&quot;: &quot;sha256:1ba2cd0aae65a5c60fcfe6403936925e8f2890356e16d7715f6966850b224484&quot;,
+      &quot;competing_skills&quot;: [],
+      &quot;execution&quot;: {
+        &quot;authorization_policy&quot;: null,
+        &quot;base_image_mode&quot;: &quot;recorded_staging&quot;,
+        &quot;environment&quot;: &quot;docker&quot;,
+        &quot;fixture_boundary&quot;: &quot;separate-verifier-v1&quot;,
+        &quot;task_source&quot;: &quot;native_harbor&quot;
+      },
+      &quot;fixture_digest&quot;: &quot;sha256:9dd6c53ce8090ff3790ff2274d8067775a5605def5cc80479bf2c85ef6330060&quot;,
+      &quot;id&quot;: &quot;sha256:5841485b9bf88daa6a0c4a1c22baf6a91a589f53b17cb7a763e0ff41df3bed7e&quot;,
+      &quot;instruction_digest&quot;: &quot;sha256:927bdea1ee48c41b4081c0b0d0766df554fd282b5a9a21dadc90f3db0bb1a161&quot;,
+      &quot;provenance&quot;: &quot;runtime_recorded&quot;,
+      &quot;target_present&quot;: false,
+      &quot;workspace_mode&quot;: &quot;isolated&quot;
+    },
+    &quot;coverage&quot;: {
+      &quot;case_details&quot;: &quot;complete&quot;,
+      &quot;expected_attempts&quot;: 1,
+      &quot;expected_cases&quot;: 1,
+      &quot;recorded_attempts&quot;: 1,
+      &quot;scored_attempts&quot;: 0,
+      &quot;unscored_attempts&quot;: 1
+    },
+    &quot;execution_error_count&quot;: 4,
+    &quot;execution_status&quot;: &quot;failed&quot;,
+    &quot;name&quot;: &quot;without_skill&quot;,
+    &quot;rubric&quot;: {
+      &quot;passed_cases&quot;: null,
+      &quot;threshold&quot;: null,
+      &quot;total_cases&quot;: null
+    }
+  }
+]</pre></details><div class="table-scroll" role="region" aria-label="Observation identities and recorded outcomes" tabindex="0"><table class="wide"><caption>Observation identities and recorded outcomes</caption><thead><tr><th scope="col">Observation</th><th scope="col">Arm</th><th scope="col">Case</th><th scope="col">Attempt</th><th scope="col">Overall score</th><th scope="col">Rubric pass</th><th scope="col">Mandatory gate</th><th scope="col">Components and references</th></tr></thead><tbody><tr><th scope="row"><span id="observation-60511c43c9340ffaff12c2f1a7736d0d0db1adf5c21e61070baa4a5bfe30e16c"><code>sha256:efcf1ade7b45…</code></span></th><td>With skill</td><td><code>pester-001</code></td><td>Unknown / not supplied</td><td>Unknown / not supplied</td><td>Unknown</td><td>Unknown</td><td><details><summary>Exact observation outcomes</summary><pre>{
+  &quot;deterministic_gate&quot;: null,
+  &quot;rubric_pass&quot;: null
+}</pre></details><details><summary>Native component scores and gate details</summary><pre id="components-60511c43c9340ffaff12c2f1a7736d0d0db1adf5c21e61070baa4a5bfe30e16c">{
+  &quot;custom&quot;: {
+    &quot;admission_reason&quot;: null,
+    &quot;measurements&quot;: [
+      {
+        &quot;applicability&quot;: &quot;applicable&quot;,
+        &quot;denominator&quot;: null,
+        &quot;metric_id&quot;: &quot;powershell-pester-6.mutation-detection.v1&quot;,
+        &quot;numerator&quot;: null,
+        &quot;reason&quot;: &quot;unknown&quot;,
+        &quot;references&quot;: [
+          &quot;sha256:11b06ef8aed66316234d0cea74446a91b5d7150f68c4f2e6095688249691ddfd&quot;,
+          &quot;sha256:78a500ed6a2c3222c434d2f9a9b63730e8d6016f84162e8e99290842125f9a60&quot;,
+          &quot;sha256:9b026107e4c2693b984357e4c6e64594e8c533c2870c6b1d68aca57abed7427c&quot;,
+          &quot;sha256:007317657d10babb2d03dd28058d89beabb73f06af6937518a8f29e9c11ed74c&quot;,
+          &quot;sha256:c09807811e4fb40f23a0d6e3da61ca063b70328ddf8cb8584dcbc2988f403e60&quot;
+        ],
+        &quot;status&quot;: &quot;unavailable&quot;,
+        &quot;value&quot;: null
+      },
+      {
+        &quot;applicability&quot;: &quot;applicable&quot;,
+        &quot;denominator&quot;: null,
+        &quot;metric_id&quot;: &quot;powershell-pester-6.reference-pass.v1&quot;,
+        &quot;numerator&quot;: null,
+        &quot;reason&quot;: &quot;unknown&quot;,
+        &quot;references&quot;: [
+          &quot;sha256:11b06ef8aed66316234d0cea74446a91b5d7150f68c4f2e6095688249691ddfd&quot;,
+          &quot;sha256:78a500ed6a2c3222c434d2f9a9b63730e8d6016f84162e8e99290842125f9a60&quot;,
+          &quot;sha256:9b026107e4c2693b984357e4c6e64594e8c533c2870c6b1d68aca57abed7427c&quot;,
+          &quot;sha256:007317657d10babb2d03dd28058d89beabb73f06af6937518a8f29e9c11ed74c&quot;,
+          &quot;sha256:c09807811e4fb40f23a0d6e3da61ca063b70328ddf8cb8584dcbc2988f403e60&quot;
+        ],
+        &quot;status&quot;: &quot;unavailable&quot;,
+        &quot;value&quot;: null
+      },
+      {
+        &quot;applicability&quot;: &quot;applicable&quot;,
+        &quot;denominator&quot;: null,
+        &quot;metric_id&quot;: &quot;powershell-pester-6.test-quality.v1&quot;,
+        &quot;numerator&quot;: null,
+        &quot;reason&quot;: &quot;unknown&quot;,
+        &quot;references&quot;: [
+          &quot;sha256:11b06ef8aed66316234d0cea74446a91b5d7150f68c4f2e6095688249691ddfd&quot;,
+          &quot;sha256:78a500ed6a2c3222c434d2f9a9b63730e8d6016f84162e8e99290842125f9a60&quot;,
+          &quot;sha256:9b026107e4c2693b984357e4c6e64594e8c533c2870c6b1d68aca57abed7427c&quot;,
+          &quot;sha256:007317657d10babb2d03dd28058d89beabb73f06af6937518a8f29e9c11ed74c&quot;,
+          &quot;sha256:c09807811e4fb40f23a0d6e3da61ca063b70328ddf8cb8584dcbc2988f403e60&quot;
+        ],
+        &quot;status&quot;: &quot;unavailable&quot;,
+        &quot;value&quot;: null
+      }
+    ],
+    &quot;outcome&quot;: &quot;unknown&quot;,
+    &quot;references&quot;: [
+      &quot;sha256:11b06ef8aed66316234d0cea74446a91b5d7150f68c4f2e6095688249691ddfd&quot;,
+      &quot;sha256:78a500ed6a2c3222c434d2f9a9b63730e8d6016f84162e8e99290842125f9a60&quot;,
+      &quot;sha256:9b026107e4c2693b984357e4c6e64594e8c533c2870c6b1d68aca57abed7427c&quot;,
+      &quot;sha256:007317657d10babb2d03dd28058d89beabb73f06af6937518a8f29e9c11ed74c&quot;,
+      &quot;sha256:c09807811e4fb40f23a0d6e3da61ca063b70328ddf8cb8584dcbc2988f403e60&quot;
+    ],
+    &quot;usage&quot;: {
+      &quot;agent_execution_seconds&quot;: 7.491276,
+      &quot;n_cache_tokens&quot;: 0,
+      &quot;n_input_tokens&quot;: 0,
+      &quot;n_output_tokens&quot;: 0,
+      &quot;verifier_seconds&quot;: 24.973124
+    }
+  },
+  &quot;deterministic_scores&quot;: {
+    &quot;activation&quot;: null,
+    &quot;authorization&quot;: null,
+    &quot;commands&quot;: null,
+    &quot;efficiency&quot;: null,
+    &quot;evidence&quot;: null,
+    &quot;gate&quot;: null,
+    &quot;recovery&quot;: null,
+    &quot;task&quot;: null
+  },
+  &quot;observation_id&quot;: &quot;sha256:efcf1ade7b45e31f34a0378c82784d232f0538f7e6f07796fd51335a28763425&quot;,
+  &quot;raw_deterministic_scores&quot;: {
+    &quot;activation&quot;: null,
+    &quot;authorization&quot;: null,
+    &quot;commands&quot;: null,
+    &quot;efficiency&quot;: null,
+    &quot;evidence&quot;: null,
+    &quot;gate&quot;: null,
+    &quot;recovery&quot;: null,
+    &quot;task&quot;: null
+  },
+  &quot;raw_scores&quot;: {
+    &quot;accuracy&quot;: null,
+    &quot;behavior_check&quot;: null,
+    &quot;custom&quot;: null,
+    &quot;goal_accuracy&quot;: null,
+    &quot;overall&quot;: 0.0,
+    &quot;security&quot;: null,
+    &quot;skill_efficiency&quot;: null,
+    &quot;skill_execution&quot;: null
+  },
+  &quot;scores&quot;: {
+    &quot;accuracy&quot;: null,
+    &quot;behavior_check&quot;: null,
+    &quot;custom&quot;: null,
+    &quot;goal_accuracy&quot;: null,
+    &quot;overall&quot;: null,
+    &quot;security&quot;: null,
+    &quot;skill_efficiency&quot;: null,
+    &quot;skill_execution&quot;: null
+  }
+}</pre></details><a href="#reference-5d5d7748323d1e56dec090ea82b7c88e9c5087d9632de1c9fd1cca1303f4e52e">powershell-pester-6 · case pester-001 · reference sha256:11b06ef8aed6…</a><br><a href="#reference-38a064909dd1b5fbd359507f57808ce16c1fe5d26a6c5444f18dc0ebcd27933e">powershell-pester-6 · case pester-001 · reference sha256:78a500ed6a2c…</a><br><a href="#reference-60d85d166fe39945b24ce4438d01742f59ac83a33a4e5a36d3b8d97ab0d65a32">powershell-pester-6 · case pester-001 · reference sha256:9b026107e4c2…</a><br><a href="#reference-83ddc794735a276077fb6e7375d3031696cc3aaa09980380838cf7552aa81175">powershell-pester-6 · case pester-001 · reference sha256:007317657d10…</a><br><a href="#reference-c2cc752cc948b1656691e720e9551843d31cb0a4238bb9b203ff827f9d1df326">powershell-pester-6 · case pester-001 · reference sha256:c09807811e4f…</a></td></tr><tr><th scope="row"><span id="observation-b57e43f06972c1c4a054ca5ff301a1cd9a4c7c47cf61ee6291c6ebcd64bfc45c"><code>sha256:ea4c63586dcf…</code></span></th><td>Without skill</td><td><code>pester-001</code></td><td>Unknown / not supplied</td><td>Unknown / not supplied</td><td>Unknown</td><td>Unknown</td><td><details><summary>Exact observation outcomes</summary><pre>{
+  &quot;deterministic_gate&quot;: null,
+  &quot;rubric_pass&quot;: null
+}</pre></details><details><summary>Native component scores and gate details</summary><pre id="components-b57e43f06972c1c4a054ca5ff301a1cd9a4c7c47cf61ee6291c6ebcd64bfc45c">{
+  &quot;custom&quot;: {
+    &quot;admission_reason&quot;: null,
+    &quot;measurements&quot;: [
+      {
+        &quot;applicability&quot;: &quot;applicable&quot;,
+        &quot;denominator&quot;: null,
+        &quot;metric_id&quot;: &quot;powershell-pester-6.mutation-detection.v1&quot;,
+        &quot;numerator&quot;: null,
+        &quot;reason&quot;: &quot;unknown&quot;,
+        &quot;references&quot;: [
+          &quot;sha256:b443641984d005499e057317d59aca6f3360d9a9012ff09044de5e56cdefb471&quot;,
+          &quot;sha256:3302d952b0ee92305ff0bf57ce05249283e8ef011408b88d59556e12a6fb4204&quot;,
+          &quot;sha256:9b026107e4c2693b984357e4c6e64594e8c533c2870c6b1d68aca57abed7427c&quot;,
+          &quot;sha256:37afc0f29f2f0e976afc0b603b0a3f5ab08a0ee69996e71aec2e1514eac7a3df&quot;,
+          &quot;sha256:9f235a263ef0f111576251ae3ce2dfa96121c47f274e36b27ab3b8d7e44600c4&quot;
+        ],
+        &quot;status&quot;: &quot;unavailable&quot;,
+        &quot;value&quot;: null
+      },
+      {
+        &quot;applicability&quot;: &quot;applicable&quot;,
+        &quot;denominator&quot;: null,
+        &quot;metric_id&quot;: &quot;powershell-pester-6.reference-pass.v1&quot;,
+        &quot;numerator&quot;: null,
+        &quot;reason&quot;: &quot;unknown&quot;,
+        &quot;references&quot;: [
+          &quot;sha256:b443641984d005499e057317d59aca6f3360d9a9012ff09044de5e56cdefb471&quot;,
+          &quot;sha256:3302d952b0ee92305ff0bf57ce05249283e8ef011408b88d59556e12a6fb4204&quot;,
+          &quot;sha256:9b026107e4c2693b984357e4c6e64594e8c533c2870c6b1d68aca57abed7427c&quot;,
+          &quot;sha256:37afc0f29f2f0e976afc0b603b0a3f5ab08a0ee69996e71aec2e1514eac7a3df&quot;,
+          &quot;sha256:9f235a263ef0f111576251ae3ce2dfa96121c47f274e36b27ab3b8d7e44600c4&quot;
+        ],
+        &quot;status&quot;: &quot;unavailable&quot;,
+        &quot;value&quot;: null
+      },
+      {
+        &quot;applicability&quot;: &quot;applicable&quot;,
+        &quot;denominator&quot;: null,
+        &quot;metric_id&quot;: &quot;powershell-pester-6.test-quality.v1&quot;,
+        &quot;numerator&quot;: null,
+        &quot;reason&quot;: &quot;unknown&quot;,
+        &quot;references&quot;: [
+          &quot;sha256:b443641984d005499e057317d59aca6f3360d9a9012ff09044de5e56cdefb471&quot;,
+          &quot;sha256:3302d952b0ee92305ff0bf57ce05249283e8ef011408b88d59556e12a6fb4204&quot;,
+          &quot;sha256:9b026107e4c2693b984357e4c6e64594e8c533c2870c6b1d68aca57abed7427c&quot;,
+          &quot;sha256:37afc0f29f2f0e976afc0b603b0a3f5ab08a0ee69996e71aec2e1514eac7a3df&quot;,
+          &quot;sha256:9f235a263ef0f111576251ae3ce2dfa96121c47f274e36b27ab3b8d7e44600c4&quot;
+        ],
+        &quot;status&quot;: &quot;unavailable&quot;,
+        &quot;value&quot;: null
+      }
+    ],
+    &quot;outcome&quot;: &quot;unknown&quot;,
+    &quot;references&quot;: [
+      &quot;sha256:b443641984d005499e057317d59aca6f3360d9a9012ff09044de5e56cdefb471&quot;,
+      &quot;sha256:3302d952b0ee92305ff0bf57ce05249283e8ef011408b88d59556e12a6fb4204&quot;,
+      &quot;sha256:9b026107e4c2693b984357e4c6e64594e8c533c2870c6b1d68aca57abed7427c&quot;,
+      &quot;sha256:37afc0f29f2f0e976afc0b603b0a3f5ab08a0ee69996e71aec2e1514eac7a3df&quot;,
+      &quot;sha256:9f235a263ef0f111576251ae3ce2dfa96121c47f274e36b27ab3b8d7e44600c4&quot;
+    ],
+    &quot;usage&quot;: {
+      &quot;agent_execution_seconds&quot;: 7.464014,
+      &quot;n_cache_tokens&quot;: 0,
+      &quot;n_input_tokens&quot;: 0,
+      &quot;n_output_tokens&quot;: 0,
+      &quot;verifier_seconds&quot;: 24.638947
+    }
+  },
+  &quot;deterministic_scores&quot;: {
+    &quot;activation&quot;: null,
+    &quot;authorization&quot;: null,
+    &quot;commands&quot;: null,
+    &quot;efficiency&quot;: null,
+    &quot;evidence&quot;: null,
+    &quot;gate&quot;: null,
+    &quot;recovery&quot;: null,
+    &quot;task&quot;: null
+  },
+  &quot;observation_id&quot;: &quot;sha256:ea4c63586dcfe0ece71c4061ad815c90c4e1b307fa5f9fb8360f0a3f1a47684e&quot;,
+  &quot;raw_deterministic_scores&quot;: {
+    &quot;activation&quot;: null,
+    &quot;authorization&quot;: null,
+    &quot;commands&quot;: null,
+    &quot;efficiency&quot;: null,
+    &quot;evidence&quot;: null,
+    &quot;gate&quot;: null,
+    &quot;recovery&quot;: null,
+    &quot;task&quot;: null
+  },
+  &quot;raw_scores&quot;: {
+    &quot;accuracy&quot;: null,
+    &quot;behavior_check&quot;: null,
+    &quot;custom&quot;: null,
+    &quot;goal_accuracy&quot;: null,
+    &quot;overall&quot;: 0.0,
+    &quot;security&quot;: null,
+    &quot;skill_efficiency&quot;: null,
+    &quot;skill_execution&quot;: null
+  },
+  &quot;scores&quot;: {
+    &quot;accuracy&quot;: null,
+    &quot;behavior_check&quot;: null,
+    &quot;custom&quot;: null,
+    &quot;goal_accuracy&quot;: null,
+    &quot;overall&quot;: null,
+    &quot;security&quot;: null,
+    &quot;skill_efficiency&quot;: null,
+    &quot;skill_execution&quot;: null
+  }
+}</pre></details><a href="#reference-154b62ca328759de94e65497681fae92f4275862034616a891d0188f28ee7d44">powershell-pester-6 · case pester-001 · reference sha256:b443641984d0…</a><br><a href="#reference-2cdb51cb61327a73b68f0de721d0bcd21935cf050fefec7950e38498316ee665">powershell-pester-6 · case pester-001 · reference sha256:3302d952b0ee…</a><br><a href="#reference-60d85d166fe39945b24ce4438d01742f59ac83a33a4e5a36d3b8d97ab0d65a32">powershell-pester-6 · case pester-001 · reference sha256:9b026107e4c2…</a><br><a href="#reference-b0bd4d1dd48bb2683593b067de6a821cf137eda5404c1877b453411cdf9bf64c">powershell-pester-6 · case pester-001 · reference sha256:37afc0f29f2f…</a><br><a href="#reference-a02eda9b44e5a1dc18c0c889a1a4c9d5ab9dc1d795a897539c5f80bec8fc9e6b">powershell-pester-6 · case pester-001 · reference sha256:9f235a263ef0…</a></td></tr></tbody></table></div><p>Reference availability is recorded public availability, not verification of local possession. Members and locators are inert identifiers; this report never retrieves or opens them.</p><div class="table-scroll" role="region" aria-label="Original support references" tabindex="0"><table class="wide"><caption>Original support references</caption><thead><tr><th scope="col">Reference identity</th><th scope="col">Availability</th><th scope="col">Original member</th><th scope="col">Provenance</th></tr></thead><tbody><tr><th scope="row"><span id="reference-83ddc794735a276077fb6e7375d3031696cc3aaa09980380838cf7552aa81175"><code>sha256:007317657d10…</code></span></th><td>available</td><td><code>results/powershell-pester-6/cli-probe/codex/with-skill/trials/pester-001__uTRwupx/reward.json</code></td><td><details><summary>Artifact, digest, locator and provenance</summary><pre>{
+  &quot;artifact_digest&quot;: null,
+  &quot;artifact_id&quot;: &quot;cli-probe&quot;,
+  &quot;availability&quot;: &quot;available&quot;,
+  &quot;digest&quot;: &quot;sha256:9abbdbe4a35f5235a54ba5fc76465233ef40e3d156b47463c0b6bf2167c8bf84&quot;,
+  &quot;id&quot;: &quot;sha256:007317657d10babb2d03dd28058d89beabb73f06af6937518a8f29e9c11ed74c&quot;,
+  &quot;locator&quot;: [],
+  &quot;member&quot;: &quot;results/powershell-pester-6/cli-probe/codex/with-skill/trials/pester-001__uTRwupx/reward.json&quot;,
+  &quot;provenance&quot;: &quot;runtime_recorded&quot;
+}</pre></details></td></tr><tr><th scope="row"><span id="reference-5d5d7748323d1e56dec090ea82b7c88e9c5087d9632de1c9fd1cca1303f4e52e"><code>sha256:11b06ef8aed6…</code></span></th><td>available</td><td><code>results/powershell-pester-6/cli-probe/codex/with-skill/trials/pester-001__uTRwupx/result.json</code></td><td><details><summary>Artifact, digest, locator and provenance</summary><pre>{
+  &quot;artifact_digest&quot;: null,
+  &quot;artifact_id&quot;: &quot;cli-probe&quot;,
+  &quot;availability&quot;: &quot;available&quot;,
+  &quot;digest&quot;: &quot;sha256:3ac682621a60465ca2fe716604980f8e80fac76f8c20fb84ebdcb1d9a01d2b10&quot;,
+  &quot;id&quot;: &quot;sha256:11b06ef8aed66316234d0cea74446a91b5d7150f68c4f2e6095688249691ddfd&quot;,
+  &quot;locator&quot;: [],
+  &quot;member&quot;: &quot;results/powershell-pester-6/cli-probe/codex/with-skill/trials/pester-001__uTRwupx/result.json&quot;,
+  &quot;provenance&quot;: &quot;runtime_recorded&quot;
+}</pre></details></td></tr><tr><th scope="row"><span id="reference-1f6003ad87de8b87198e920351105256da28c8b1683edc5e8fa9151c525e9c95"><code>sha256:23be428765e8…</code></span></th><td>available</td><td><code>results/powershell-pester-6/cli-probe/run_config.json</code></td><td><details><summary>Artifact, digest, locator and provenance</summary><pre>{
+  &quot;artifact_digest&quot;: null,
+  &quot;artifact_id&quot;: &quot;cli-probe&quot;,
+  &quot;availability&quot;: &quot;available&quot;,
+  &quot;digest&quot;: &quot;sha256:88b505d6d00a890e240014bdb2ff39e5cff7fbad4f261e7cb837c51c33a772aa&quot;,
+  &quot;id&quot;: &quot;sha256:23be428765e8ab6b5c786095737937b66ae3626db4694e31898897af7e284bf6&quot;,
+  &quot;locator&quot;: [],
+  &quot;member&quot;: &quot;results/powershell-pester-6/cli-probe/run_config.json&quot;,
+  &quot;provenance&quot;: &quot;runtime_recorded&quot;
+}</pre></details></td></tr><tr><th scope="row"><span id="reference-2cdb51cb61327a73b68f0de721d0bcd21935cf050fefec7950e38498316ee665"><code>sha256:3302d952b0ee…</code></span></th><td>available</td><td><code>results/powershell-pester-6/cli-probe/codex/without-skill/summary.json</code></td><td><details><summary>Artifact, digest, locator and provenance</summary><pre>{
+  &quot;artifact_digest&quot;: null,
+  &quot;artifact_id&quot;: &quot;cli-probe&quot;,
+  &quot;availability&quot;: &quot;available&quot;,
+  &quot;digest&quot;: &quot;sha256:274f4f093da896a0c3894be97699d7b6dd8ea7a4991d59c1dd30832fa24ee46e&quot;,
+  &quot;id&quot;: &quot;sha256:3302d952b0ee92305ff0bf57ce05249283e8ef011408b88d59556e12a6fb4204&quot;,
+  &quot;locator&quot;: [],
+  &quot;member&quot;: &quot;results/powershell-pester-6/cli-probe/codex/without-skill/summary.json&quot;,
+  &quot;provenance&quot;: &quot;runtime_recorded&quot;
+}</pre></details></td></tr><tr><th scope="row"><span id="reference-b0bd4d1dd48bb2683593b067de6a821cf137eda5404c1877b453411cdf9bf64c"><code>sha256:37afc0f29f2f…</code></span></th><td>available</td><td><code>results/powershell-pester-6/cli-probe/codex/without-skill/trials/pester-001__Ef6DBWH/reward.json</code></td><td><details><summary>Artifact, digest, locator and provenance</summary><pre>{
+  &quot;artifact_digest&quot;: null,
+  &quot;artifact_id&quot;: &quot;cli-probe&quot;,
+  &quot;availability&quot;: &quot;available&quot;,
+  &quot;digest&quot;: &quot;sha256:6ae2cf76d5b0ca886ed155ffdbdda9e8bf6fc8f818598a648dd8819b8906297a&quot;,
+  &quot;id&quot;: &quot;sha256:37afc0f29f2f0e976afc0b603b0a3f5ab08a0ee69996e71aec2e1514eac7a3df&quot;,
+  &quot;locator&quot;: [],
+  &quot;member&quot;: &quot;results/powershell-pester-6/cli-probe/codex/without-skill/trials/pester-001__Ef6DBWH/reward.json&quot;,
+  &quot;provenance&quot;: &quot;runtime_recorded&quot;
+}</pre></details></td></tr><tr><th scope="row"><span id="reference-38a064909dd1b5fbd359507f57808ce16c1fe5d26a6c5444f18dc0ebcd27933e"><code>sha256:78a500ed6a2c…</code></span></th><td>available</td><td><code>results/powershell-pester-6/cli-probe/codex/with-skill/summary.json</code></td><td><details><summary>Artifact, digest, locator and provenance</summary><pre>{
+  &quot;artifact_digest&quot;: null,
+  &quot;artifact_id&quot;: &quot;cli-probe&quot;,
+  &quot;availability&quot;: &quot;available&quot;,
+  &quot;digest&quot;: &quot;sha256:5cd5a7749c360b4960f436645ff4563198f02b3beb34935d6c90be30f15de472&quot;,
+  &quot;id&quot;: &quot;sha256:78a500ed6a2c3222c434d2f9a9b63730e8d6016f84162e8e99290842125f9a60&quot;,
+  &quot;locator&quot;: [],
+  &quot;member&quot;: &quot;results/powershell-pester-6/cli-probe/codex/with-skill/summary.json&quot;,
+  &quot;provenance&quot;: &quot;runtime_recorded&quot;
+}</pre></details></td></tr><tr><th scope="row"><span id="reference-60d85d166fe39945b24ce4438d01742f59ac83a33a4e5a36d3b8d97ab0d65a32"><code>sha256:9b026107e4c2…</code></span></th><td>available</td><td><code>custom-metric-capture.json</code></td><td><details><summary>Artifact, digest, locator and provenance</summary><pre>{
+  &quot;artifact_digest&quot;: null,
+  &quot;artifact_id&quot;: &quot;cli-probe&quot;,
+  &quot;availability&quot;: &quot;available&quot;,
+  &quot;digest&quot;: &quot;sha256:143f30078326984a32c86ceaae5d1b78726596710e8602221f0a03ff2d95431a&quot;,
+  &quot;id&quot;: &quot;sha256:9b026107e4c2693b984357e4c6e64594e8c533c2870c6b1d68aca57abed7427c&quot;,
+  &quot;locator&quot;: [],
+  &quot;member&quot;: &quot;custom-metric-capture.json&quot;,
+  &quot;provenance&quot;: &quot;runtime_recorded&quot;
+}</pre></details></td></tr><tr><th scope="row"><span id="reference-a02eda9b44e5a1dc18c0c889a1a4c9d5ab9dc1d795a897539c5f80bec8fc9e6b"><code>sha256:9f235a263ef0…</code></span></th><td>available</td><td><code>results/powershell-pester-6/cli-probe/codex/without-skill/trials/pester-001__Ef6DBWH/failure.json</code></td><td><details><summary>Artifact, digest, locator and provenance</summary><pre>{
+  &quot;artifact_digest&quot;: null,
+  &quot;artifact_id&quot;: &quot;cli-probe&quot;,
+  &quot;availability&quot;: &quot;available&quot;,
+  &quot;digest&quot;: &quot;sha256:66c226e89e843a5c9dcb0a0653e503e40208ddb93b6e1bdc0b6dcdcf1da58ecb&quot;,
+  &quot;id&quot;: &quot;sha256:9f235a263ef0f111576251ae3ce2dfa96121c47f274e36b27ab3b8d7e44600c4&quot;,
+  &quot;locator&quot;: [],
+  &quot;member&quot;: &quot;results/powershell-pester-6/cli-probe/codex/without-skill/trials/pester-001__Ef6DBWH/failure.json&quot;,
+  &quot;provenance&quot;: &quot;runtime_recorded&quot;
+}</pre></details></td></tr><tr><th scope="row"><span id="reference-154b62ca328759de94e65497681fae92f4275862034616a891d0188f28ee7d44"><code>sha256:b443641984d0…</code></span></th><td>available</td><td><code>results/powershell-pester-6/cli-probe/codex/without-skill/trials/pester-001__Ef6DBWH/result.json</code></td><td><details><summary>Artifact, digest, locator and provenance</summary><pre>{
+  &quot;artifact_digest&quot;: null,
+  &quot;artifact_id&quot;: &quot;cli-probe&quot;,
+  &quot;availability&quot;: &quot;available&quot;,
+  &quot;digest&quot;: &quot;sha256:984ff3d8fe4235680f4b195644ec6978083665e3d7a90a44a32f2a83d53c407d&quot;,
+  &quot;id&quot;: &quot;sha256:b443641984d005499e057317d59aca6f3360d9a9012ff09044de5e56cdefb471&quot;,
+  &quot;locator&quot;: [],
+  &quot;member&quot;: &quot;results/powershell-pester-6/cli-probe/codex/without-skill/trials/pester-001__Ef6DBWH/result.json&quot;,
+  &quot;provenance&quot;: &quot;runtime_recorded&quot;
+}</pre></details></td></tr><tr><th scope="row"><span id="reference-c2cc752cc948b1656691e720e9551843d31cb0a4238bb9b203ff827f9d1df326"><code>sha256:c09807811e4f…</code></span></th><td>available</td><td><code>results/powershell-pester-6/cli-probe/codex/with-skill/trials/pester-001__uTRwupx/failure.json</code></td><td><details><summary>Artifact, digest, locator and provenance</summary><pre>{
+  &quot;artifact_digest&quot;: null,
+  &quot;artifact_id&quot;: &quot;cli-probe&quot;,
+  &quot;availability&quot;: &quot;available&quot;,
+  &quot;digest&quot;: &quot;sha256:16372956a9d741093e28de5a59a39f93af9eea5d25d71649ae95b5f7b9f69d4c&quot;,
+  &quot;id&quot;: &quot;sha256:c09807811e4fb40f23a0d6e3da61ca063b70328ddf8cb8584dcbc2988f403e60&quot;,
+  &quot;locator&quot;: [],
+  &quot;member&quot;: &quot;results/powershell-pester-6/cli-probe/codex/with-skill/trials/pester-001__uTRwupx/failure.json&quot;,
+  &quot;provenance&quot;: &quot;runtime_recorded&quot;
+}</pre></details></td></tr><tr><th scope="row"><span id="reference-d00a4e624ec479519688b42b1b38a510f4b093a068f0f74cc2e85e222c38c557"><code>sha256:f27bcad440d7…</code></span></th><td>available</td><td><code>results/powershell-pester-6/cli-probe/result.json</code></td><td><details><summary>Artifact, digest, locator and provenance</summary><pre>{
+  &quot;artifact_digest&quot;: null,
+  &quot;artifact_id&quot;: &quot;cli-probe&quot;,
+  &quot;availability&quot;: &quot;available&quot;,
+  &quot;digest&quot;: &quot;sha256:88beee9e31ffdefb6246317fee85dc9837693082aab26c2fac854bd09acec788&quot;,
+  &quot;id&quot;: &quot;sha256:f27bcad440d790f7487b1cddba625bb55939a7a00fcfe2b8a41362fd245a5efa&quot;,
+  &quot;locator&quot;: [],
+  &quot;member&quot;: &quot;results/powershell-pester-6/cli-probe/result.json&quot;,
+  &quot;provenance&quot;: &quot;runtime_recorded&quot;
+}</pre></details></td></tr></tbody></table></div></details></article><p>Static scan evidence not supplied for this skill; no clean-scan claim is made.</p><details><summary>Cross-run comparison status and evidence</summary><h3>Cross-run comparisons</h3><p>Fewer than two measured runs supplied; cross-run comparison is unavailable.</p><p>Left and right follow semantic record identity order, not time. No chronology or trend is established. Direct compatibility means recorded conditions match; it does not establish causality, significance or repeatability.</p></details></details></section><section id="provenance"><h2>Source details</h2><details><summary>Report provenance and validation boundaries</summary><p>Presentation method <code>private-offline-skill-report/2</code>; analysis method <code>bounded-descriptive-skill-analysis/2</code>; public schemas 1/2 and analysis schema 2. Analysis semantic digest <code>sha256:d4d03b5000560bd8a17088d38dea942abf4a937fdd1e38e04533a0fefa7225f2</code>.</p><p>Saved analysis was independently rebuilt against captured public originals before rendering. Canonical record identities preserve semantic content; raw-byte digests preserve the exact supplied files. These bindings do not attest remote execution. No local input paths, generation timestamp, prompts or private trajectories are embedded. Link identities are shortened for readability; exact identities remain in the evidence disclosures. Inventory snapshots and evaluated sources retain separate identities; current configuration does not rewrite historical runs.</p></details><details id="record-503cde573013fcf3d9eb3895f57f8d6dd02f1af918f825235c81d8669e9a4354"><summary>Inventory record sha256:b25798a88f51…</summary><details><summary>Validated inventory</summary><pre>{
+  &quot;kind&quot;: &quot;inventory&quot;,
+  &quot;schema_version&quot;: 1,
+  &quot;skills&quot;: [
+    {
+      &quot;behavioral_status&quot;: &quot;not_configured&quot;,
+      &quot;deployment&quot;: null,
+      &quot;measurement&quot;: {
+        &quot;reasons&quot;: [
+          &quot;results_not_supplied&quot;
+        ],
+        &quot;status&quot;: &quot;unavailable&quot;
+      },
+      &quot;source&quot;: {
+        &quot;content&quot;: {
+          &quot;algorithm&quot;: &quot;sha256-relative-file-manifest-v1&quot;,
+          &quot;digest&quot;: &quot;sha256:bd38520667287390ab5b35bf3a81033b1a1d0eae7f0545ec907410ba39ad1216&quot;,
+          &quot;manifest&quot;: [
+            {
+              &quot;digest&quot;: &quot;sha256:96d578e9646cd80ff6e1bedb26069222ad37b473960f3c0cc069716484b22553&quot;,
+              &quot;member&quot;: &quot;SKILL.md&quot;
+            }
+          ],
+          &quot;provenance&quot;: &quot;configured&quot;,
+          &quot;scope&quot;: &quot;pinned-agent-visible&quot;
+        },
+        &quot;lineage&quot;: null,
+        &quot;owner&quot;: &quot;local&quot;,
+        &quot;repository&quot;: &quot;thetechgy/agent-engineering-baseline&quot;,
+        &quot;revision&quot;: &quot;943405391a06d3f73dba5d3ac48ac801809f3da3&quot;,
+        &quot;skill_id&quot;: &quot;a11y&quot;,
+        &quot;source_path&quot;: &quot;.apm/skills/a11y&quot;
+      },
+      &quot;suite&quot;: null
+    },
+    {
+      &quot;behavioral_status&quot;: &quot;not_configured&quot;,
+      &quot;deployment&quot;: null,
+      &quot;measurement&quot;: {
+        &quot;reasons&quot;: [
+          &quot;results_not_supplied&quot;
+        ],
+        &quot;status&quot;: &quot;unavailable&quot;
+      },
+      &quot;source&quot;: {
+        &quot;content&quot;: {
+          &quot;algorithm&quot;: &quot;sha256-relative-file-manifest-v1&quot;,
+          &quot;digest&quot;: &quot;sha256:8a0486315d9e6462604e467c28c733640142865f5cf2ef7cba769c3cdb014719&quot;,
+          &quot;manifest&quot;: [
+            {
+              &quot;digest&quot;: &quot;sha256:2dc7898d11fb55a1a042d46e6e60800d0f948253c5216efa3e470e8914cc84ab&quot;,
+              &quot;member&quot;: &quot;SKILL.md&quot;
+            }
+          ],
+          &quot;provenance&quot;: &quot;configured&quot;,
+          &quot;scope&quot;: &quot;pinned-agent-visible&quot;
+        },
+        &quot;lineage&quot;: null,
+        &quot;owner&quot;: &quot;local&quot;,
+        &quot;repository&quot;: &quot;thetechgy/agent-engineering-baseline&quot;,
+        &quot;revision&quot;: &quot;943405391a06d3f73dba5d3ac48ac801809f3da3&quot;,
+        &quot;skill_id&quot;: &quot;agent-safety&quot;,
+        &quot;source_path&quot;: &quot;.apm/skills/agent-safety&quot;
+      },
+      &quot;suite&quot;: null
+    },
+    {
+      &quot;behavioral_status&quot;: &quot;not_configured&quot;,
+      &quot;deployment&quot;: null,
+      &quot;measurement&quot;: {
+        &quot;reasons&quot;: [
+          &quot;results_not_supplied&quot;
+        ],
+        &quot;status&quot;: &quot;unavailable&quot;
+      },
+      &quot;source&quot;: {
+        &quot;content&quot;: {
+          &quot;algorithm&quot;: &quot;sha256-relative-file-manifest-v1&quot;,
+          &quot;digest&quot;: &quot;sha256:080622eb297ce99914bd08fbada178bed0eeb162a223017b8e6bb6b9a389eca8&quot;,
+          &quot;manifest&quot;: [
+            {
+              &quot;digest&quot;: &quot;sha256:a79531195a9bdf942b301edf1588c8814ceb976557f4f0cb79bd9aa79e59d52e&quot;,
+              &quot;member&quot;: &quot;SKILL.md&quot;
+            }
+          ],
+          &quot;provenance&quot;: &quot;configured&quot;,
+          &quot;scope&quot;: &quot;pinned-agent-visible&quot;
+        },
+        &quot;lineage&quot;: null,
+        &quot;owner&quot;: &quot;local&quot;,
+        &quot;repository&quot;: &quot;thetechgy/agent-engineering-baseline&quot;,
+        &quot;revision&quot;: &quot;943405391a06d3f73dba5d3ac48ac801809f3da3&quot;,
+        &quot;skill_id&quot;: &quot;ansible&quot;,
+        &quot;source_path&quot;: &quot;.apm/skills/ansible&quot;
+      },
+      &quot;suite&quot;: null
+    },
+    {
+      &quot;behavioral_status&quot;: &quot;configured&quot;,
+      &quot;deployment&quot;: &quot;.agents/skills/gh&quot;,
+      &quot;measurement&quot;: {
+        &quot;reasons&quot;: [
+          &quot;results_not_supplied&quot;
+        ],
+        &quot;status&quot;: &quot;unavailable&quot;
+      },
+      &quot;source&quot;: {
+        &quot;content&quot;: {
+          &quot;algorithm&quot;: &quot;sha256-relative-file-manifest-v1&quot;,
+          &quot;digest&quot;: &quot;sha256:970856caac10c66e1225eb35134f3e7ccccc625f87ff779e5ba45705616fd479&quot;,
+          &quot;manifest&quot;: [
+            {
+              &quot;digest&quot;: &quot;sha256:b40d44ef9077b34d710b4c0737fee0e72c595e0770fbbdcb339de2ba0b40e23b&quot;,
+              &quot;member&quot;: &quot;SKILL.md&quot;
+            }
+          ],
+          &quot;provenance&quot;: &quot;configured&quot;,
+          &quot;scope&quot;: &quot;pinned-agent-visible&quot;
+        },
+        &quot;lineage&quot;: null,
+        &quot;owner&quot;: &quot;upstream&quot;,
+        &quot;repository&quot;: &quot;cli/cli&quot;,
+        &quot;revision&quot;: &quot;63837fb778d6a39f02be0ce76ff89f2bc8d74bdc&quot;,
+        &quot;skill_id&quot;: &quot;gh&quot;,
+        &quot;source_path&quot;: &quot;skills/gh&quot;
+      },
+      &quot;suite&quot;: {
+        &quot;authored_digest&quot;: &quot;sha256:7da7fa863ddc768c34bb423b4667cfe43e8d714697c4e217e4a27d789028f598&quot;,
+        &quot;case_ids&quot;: [
+          &quot;gh-001&quot;,
+          &quot;gh-002&quot;,
+          &quot;gh-003&quot;,
+          &quot;gh-004&quot;,
+          &quot;gh-005&quot;,
+          &quot;gh-006-changed-head&quot;,
+          &quot;gh-006-pending&quot;,
+          &quot;gh-007&quot;,
+          &quot;gh-007-relationships&quot;,
+          &quot;gh-008&quot;,
+          &quot;gh-008-empty&quot;,
+          &quot;gh-009&quot;,
+          &quot;gh-010&quot;,
+          &quot;gh-010-partial&quot;,
+          &quot;gh-011-auth&quot;,
+          &quot;gh-011-missing&quot;,
+          &quot;gh-011-network&quot;,
+          &quot;gh-011-permission&quot;,
+          &quot;gh-011-rate-limit&quot;,
+          &quot;gh-011-unavailable&quot;,
+          &quot;gh-012&quot;,
+          &quot;gh-013-hardening&quot;,
+          &quot;gh-013-local&quot;,
+          &quot;gh-014&quot;
+        ],
+        &quot;owner&quot;: &quot;overlay&quot;,
+        &quot;path&quot;: &quot;.github/evals/gh/evals/evals.json&quot;,
+        &quot;status&quot;: &quot;configured&quot;
+      }
+    },
+    {
+      &quot;behavioral_status&quot;: &quot;configured&quot;,
+      &quot;deployment&quot;: null,
+      &quot;measurement&quot;: {
+        &quot;reasons&quot;: [
+          &quot;results_not_supplied&quot;
+        ],
+        &quot;status&quot;: &quot;unavailable&quot;
+      },
+      &quot;source&quot;: {
+        &quot;content&quot;: {
+          &quot;algorithm&quot;: &quot;sha256-relative-file-manifest-v1&quot;,
+          &quot;digest&quot;: &quot;sha256:506e78b501906831944d7c6559091c898de9476d42347c56381c950d0099d07d&quot;,
+          &quot;manifest&quot;: [
+            {
+              &quot;digest&quot;: &quot;sha256:96088308ed8df85d9f369263de4ec02fefdb7f59fbccc2b4629991be7266e581&quot;,
+              &quot;member&quot;: &quot;EVALS.md&quot;
+            },
+            {
+              &quot;digest&quot;: &quot;sha256:93f772d47f661cc721a211257f4a2aecabcc53ed77f0d4b16b754944128586c9&quot;,
+              &quot;member&quot;: &quot;MAINTENANCE.md&quot;
+            },
+            {
+              &quot;digest&quot;: &quot;sha256:625107071889166612f64ac52920be2b9455f671e4ce1f805835f7fee14ef274&quot;,
+              &quot;member&quot;: &quot;SKILL.md&quot;
+            },
+            {
+              &quot;digest&quot;: &quot;sha256:fce55e0ec0a56608d714f273afdbdc44017d0a4ebed73b61291cd0fdebbf434a&quot;,
+              &quot;member&quot;: &quot;references/compose-migration.md&quot;
+            },
+            {
+              &quot;digest&quot;: &quot;sha256:adb6f7a2a07f2067036354cb57bb69e694d423f20bd578e09db6a5a799859168&quot;,
+              &quot;member&quot;: &quot;references/fedora-hosts.md&quot;
+            },
+            {
+              &quot;digest&quot;: &quot;sha256:55a300354c77b6e59b5876b1b3a6b7e00f9525a21c9160fa5b3200a3a8128f23&quot;,
+              &quot;member&quot;: &quot;references/quadlet-systemd.md&quot;
+            },
+            {
+              &quot;digest&quot;: &quot;sha256:6a8d789b72d821e3fed320ca84325086d5a42ced25912a4b52ea760a306111ff&quot;,
+              &quot;member&quot;: &quot;references/reverse-proxy.md&quot;
+            },
+            {
+              &quot;digest&quot;: &quot;sha256:a5fc3f33815caa196d5f8d6cb090136bcccc88fb95dedb921c99bd0b3cf6b524&quot;,
+              &quot;member&quot;: &quot;references/rootless-networking.md&quot;
+            },
+            {
+              &quot;digest&quot;: &quot;sha256:37e1fae3de6f4b7ae1ea3ccc2b0b84d7fd854ea2730a51f0e3b3b1bc9b2e1068&quot;,
+              &quot;member&quot;: &quot;references/security-storage-secrets.md&quot;
+            },
+            {
+              &quot;digest&quot;: &quot;sha256:465321094bc936d8a9e187bd3b4daa1ab271b93242a2c07fe88c58db6bd4bdd5&quot;,
+              &quot;member&quot;: &quot;references/validation.md&quot;
+            }
+          ],
+          &quot;provenance&quot;: &quot;configured&quot;,
+          &quot;scope&quot;: &quot;pinned-agent-visible&quot;
+        },
+        &quot;lineage&quot;: null,
+        &quot;owner&quot;: &quot;local&quot;,
+        &quot;repository&quot;: &quot;thetechgy/agent-engineering-baseline&quot;,
+        &quot;revision&quot;: &quot;943405391a06d3f73dba5d3ac48ac801809f3da3&quot;,
+        &quot;skill_id&quot;: &quot;podman&quot;,
+        &quot;source_path&quot;: &quot;.apm/skills/podman&quot;
+      },
+      &quot;suite&quot;: {
+        &quot;authored_digest&quot;: &quot;sha256:9bc7fdebc99616983bd501006f97a0a3233cc9901da06443e49d63652de2f0c5&quot;,
+        &quot;case_ids&quot;: [
+          &quot;1&quot;,
+          &quot;10&quot;,
+          &quot;2&quot;,
+          &quot;3&quot;,
+          &quot;4&quot;,
+          &quot;5&quot;,
+          &quot;6&quot;,
+          &quot;7&quot;,
+          &quot;8&quot;,
+          &quot;9&quot;
+        ],
+        &quot;owner&quot;: &quot;local&quot;,
+        &quot;path&quot;: &quot;.apm/skills/podman/evals/evals.json&quot;,
+        &quot;status&quot;: &quot;configured&quot;
+      }
+    },
+    {
+      &quot;behavioral_status&quot;: &quot;not_configured&quot;,
+      &quot;deployment&quot;: null,
+      &quot;measurement&quot;: {
+        &quot;reasons&quot;: [
+          &quot;results_not_supplied&quot;
+        ],
+        &quot;status&quot;: &quot;unavailable&quot;
+      },
+      &quot;source&quot;: {
+        &quot;content&quot;: {
+          &quot;algorithm&quot;: &quot;sha256-relative-file-manifest-v1&quot;,
+          &quot;digest&quot;: &quot;sha256:18dab091e9e3b9817af70ce3d968d84939e96ebc8917f8f400ac6a7416905d66&quot;,
+          &quot;manifest&quot;: [
+            {
+              &quot;digest&quot;: &quot;sha256:801cecfd42aeb32f3fd6083d9af08f44c8a5ca48202761533c072a10c06060c9&quot;,
+              &quot;member&quot;: &quot;SKILL.md&quot;
+            }
+          ],
+          &quot;provenance&quot;: &quot;configured&quot;,
+          &quot;scope&quot;: &quot;pinned-agent-visible&quot;
+        },
+        &quot;lineage&quot;: null,
+        &quot;owner&quot;: &quot;local&quot;,
+        &quot;repository&quot;: &quot;thetechgy/agent-engineering-baseline&quot;,
+        &quot;revision&quot;: &quot;943405391a06d3f73dba5d3ac48ac801809f3da3&quot;,
+        &quot;skill_id&quot;: &quot;powershell-module-engineering&quot;,
+        &quot;source_path&quot;: &quot;.apm/skills/powershell-module-engineering&quot;
+      },
+      &quot;suite&quot;: null
+    },
+    {
+      &quot;behavioral_status&quot;: &quot;configured&quot;,
+      &quot;deployment&quot;: null,
+      &quot;measurement&quot;: {
+        &quot;reasons&quot;: [
+          &quot;results_not_supplied&quot;
+        ],
+        &quot;status&quot;: &quot;unavailable&quot;
+      },
+      &quot;source&quot;: {
+        &quot;content&quot;: {
+          &quot;algorithm&quot;: &quot;sha256-relative-file-manifest-v1&quot;,
+          &quot;digest&quot;: &quot;sha256:d3641c5190c1b86d8e853adc8f3c68fe6376b5fdaf5c1d90c610a745102ff03e&quot;,
+          &quot;manifest&quot;: [
+            {
+              &quot;digest&quot;: &quot;sha256:b57df2ff4072b2e25744ae2bd530b02bbb6ab83a22a0d374c73d48de4dc70887&quot;,
+              &quot;member&quot;: &quot;SKILL.md&quot;
+            },
+            {
+              &quot;digest&quot;: &quot;sha256:6d05a890eb1c53c59755f9e560c05d65467a614d36af7c812f4a32c89b47f4e9&quot;,
+              &quot;member&quot;: &quot;references/compatibility-and-migration.md&quot;
+            },
+            {
+              &quot;digest&quot;: &quot;sha256:3b80a98abfefdcd9a765da9a9436caa43de6a873e57253f1ecfb36e1095ea4b8&quot;,
+              &quot;member&quot;: &quot;references/execution.md&quot;
+            }
+          ],
+          &quot;provenance&quot;: &quot;configured&quot;,
+          &quot;scope&quot;: &quot;pinned-agent-visible&quot;
+        },
+        &quot;lineage&quot;: null,
+        &quot;owner&quot;: &quot;local&quot;,
+        &quot;repository&quot;: &quot;thetechgy/agent-engineering-baseline&quot;,
+        &quot;revision&quot;: &quot;943405391a06d3f73dba5d3ac48ac801809f3da3&quot;,
+        &quot;skill_id&quot;: &quot;powershell-pester-6&quot;,
+        &quot;source_path&quot;: &quot;.apm/skills/powershell-pester-6&quot;
+      },
+      &quot;suite&quot;: {
+        &quot;authored_digest&quot;: &quot;sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0&quot;,
+        &quot;case_ids&quot;: [
+          &quot;pester-001&quot;,
+          &quot;pester-002&quot;,
+          &quot;pester-003&quot;,
+          &quot;pester-004&quot;,
+          &quot;pester-005&quot;
+        ],
+        &quot;owner&quot;: &quot;overlay&quot;,
+        &quot;path&quot;: &quot;.github/evals/powershell-pester-6/evals/evals.json&quot;,
+        &quot;status&quot;: &quot;configured&quot;
+      }
+    }
+  ]
+}</pre></details></details><details><summary>Input manifests, raw digests and record identities</summary><pre>[
+  {
+    &quot;id&quot;: &quot;sha256:29de03bbdc873c496a0633f7dc19d5d44903566222bc65fff1e5a37b872ab320&quot;,
+    &quot;members&quot;: [
+      {
+        &quot;member&quot;: &quot;inventory/inventory.json&quot;,
+        &quot;raw_digest&quot;: &quot;sha256:c67f1bae84a46403098619d07f4e49e4a88377de69240786089af13b1b592b79&quot;,
+        &quot;record_id&quot;: &quot;sha256:b25798a88f51e896920e1383db618f88b2383dc4024994739605303a1a7451e3&quot;
+      },
+      {
+        &quot;member&quot;: &quot;skills/powershell-pester-6/behavioral/cli-probe/public-report.json&quot;,
+        &quot;raw_digest&quot;: &quot;sha256:711395cdc5331e556ef59117b67ed3765ca431cb8e92d5a3f7e84c8234862f79&quot;,
+        &quot;record_id&quot;: &quot;sha256:e2b4e2c6e3abc2953e14427403efba055fcf8bf79a7860100bf7191960b16e8a&quot;
+      }
+    ]
+  }
+]</pre></details><details><summary>Analyzer comparison scope</summary><pre>{
+  &quot;eligible_pairs&quot;: 0,
+  &quot;limitations&quot;: [
+    &quot;supplied_inputs_only&quot;,
+    &quot;no_chronology&quot;,
+    &quot;no_causal_or_statistical_claims&quot;
+  ],
+  &quot;maximum_pairs&quot;: 16,
+  &quot;performed_pairs&quot;: 0
+}</pre></details><details><summary>Exact qualification status</summary><pre>{
+  &quot;quality_qualification&quot;: &quot;not_quality_qualified&quot;
+}</pre></details><details><summary>Model-generated recommendations and assessment boundaries</summary><p>0 independently validated analyst reports attached. All deterministic investigation priorities above remain fixed descriptions of existing findings and next-step codes. Analyst qualification: Not quality qualified. Automated publication is ineligible. Supplied AI or human assessments are separately attributed opinions; structural validation, rubric arithmetic and self-declared approval do not establish authenticated human review or authorize action.</p><p>Keep this file private. It requires no server, external assets, analytics or network requests. Appearance follows the system unless changed for this open document. All evidence is readable without JavaScript; expand disclosures for detailed support.</p></details></section></main><footer>Private evidence report · supplied inputs only</footer><script>const control = document.getElementById('theme');
+document.getElementById('theme-control').hidden = false;
+control.addEventListener('change', () => {
+  if (control.value === 'system') document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.setAttribute('data-theme', control.value);
+});
+// Reveal nested evidence before following a link; native fragment navigation
+// remains available without JavaScript (Chromium also reveals closed details).
+document.addEventListener('click', event => {
+  const a = event.target.closest('a[href^="#"]');
+  const target = a && document.getElementById(a.hash.slice(1));
+  if (!target) return;
+  for (let parent = target.parentElement; parent; parent = parent.parentElement) {
+    if (parent.tagName === 'DETAILS') parent.open = true;
+  }
+});</script></body></html>
