@@ -20,8 +20,11 @@ This is a review of execution boundaries, not a new vulnerability scan.
 Audited from main `e40cc0c995025d448fd7b163df3b6f32b7ea569e` after merges
 [#125](https://github.com/thetechgy/agent-engineering-baseline/pull/125) and
 [#133](https://github.com/thetechgy/agent-engineering-baseline/pull/133).
-All 13 workflows, their job conditions, matrices, dependencies, artifacts,
-permissions, secrets, environments and concurrency were inspected.
+All 13 current-main definitions and five retained experiment-branch definitions
+were inspected for triggers, conditions, matrices, dependencies, artifacts,
+permissions, secrets, environments and concurrency. GitHub's registry also lists
+four provider-owned workflows. Registration alone does not establish their
+triggering policy; those implementation details are not repository YAML.
 
 | Workflow | Purpose and unique coverage | Before triggers | After / disposition |
 | --- | --- | --- | --- |
@@ -38,8 +41,29 @@ permissions, secrets, environments and concurrency were inspected.
 | Publish skill report | Authenticate producers/data, prepare sealed candidate, isolated commit, exact-commit Pages deployment | Validate/Benchmark completed on main; recovery repository_dispatch | Unchanged. Successful trusted main push/dispatch producers only, or existing recovery path. No PR artifact execution; `github-pages` environment retained. Not dispatched here. |
 | Update APM baseline | Hash-reviewed acquisition, reviewed regeneration, allowlisted patch, isolated PR publisher | Monday 09:17 UTC; manual | Unchanged. Read-only generator; separate contents/PR writer only after validated change. No dependency update dispatched here. |
 | Dependency freshness | Public dependency/advisory discovery; bounded complete/partial data; single issue publisher | Daily 13:43 UTC; manual | Unchanged. Separate issue writer cannot erase discovery failure. Used on merged main to regenerate #95 from the maintained source. |
+| Direct Harbor trial (retained branch) | Historical phase-routed reader, admission/replay, image preparation/restore, retention and protected live-pair machinery | Push `trial/direct-harbor`, only `launch.json` | Unchanged, absent main. Retained branch is at report phase, scheduling stopped and paid execution disabled. Allocation remains closed; no branch push or dispatch here. |
+| Experimental Code Mode evidence (retained branch) | Stock CLI controls, conditional observation build, bounded diagnostic export | Push `experiment/code-mode-evidence-166`; investigation/workflow paths, excluding results and Markdown | Unchanged, absent main. Explicit experiment branch only; no inference secret in workflow. Not resumed. |
+| Experimental Direct Mode qualification (retained branch) | Paired CLI/deterministic oracle, Compose and bounded evidence export | Push `experiment/direct-mode-qualification`; investigation/workflow paths | Unchanged, absent main. Frozen experiment bootstrap/exporter and pins retained; not resumed. |
+| Experimental evaluation architecture (retained branch) | Critical synthetic architecture gates and bounded export | Push `experiment/skill-evaluation-architecture`; investigation/workflow paths | Unchanged, absent main. Dedicated branch and non-cancelling group retained; not resumed. |
+| Experimental native qualification (retained branch) | Native boundary bootstrap, export validation and Compose cleanup | Push `experiment/native-codex-qualification`; investigation/workflow paths | Unchanged, absent main. Dedicated branch; bounded artifact and cleanup steps retained; not resumed. |
+| Copilot (GitHub-owned) | Registered pull-request reviewer provider | Provider policy, not exposed by workflow inventory | Unchanged. No review requested here; no inference dispatch or provider-setting change. |
+| Dependabot Updates (GitHub-owned) | Provider update automation | Reviewed weekly Actions/pip configuration plus provider policy | Unchanged. No update dispatch or dependency refresh in this work. |
+| Dependency Graph (GitHub-owned) | Provider dependency graph processing | Observed `dynamic` run at merged-main revision; full policy is provider-owned | Unchanged. Observed run 43355111237 took 62 seconds wall time; excluded from the seven-PR-run timing sample. |
+| pages-build-deployment (GitHub-owned) | Registered Pages provider entry | Provider implementation; repository Pages build mode is `workflow` | Unchanged. Trusted publishing still uses the existing publisher/deploy-pages chain. No Pages build or deployment requested here. |
 
-No `pull_request_target` or merge-queue trigger exists. Accessible active rulesets
+The five retained definitions exist only on their dedicated branches, at inspected
+heads `0ef70cb` (trial), `bf40abe` (Code Mode), `2719f15` (Direct Mode),
+`691db4e` (architecture) and `5d9e5f0` (native qualification). All have read-only
+workflow tokens and no cancellation-in-progress. The trial alone has its existing
+protected `skill-benchmark` live job, after exact allocation/image preflight and
+before step-scoped credential delivery. Its report phase/closed flags were read,
+not changed. The experimental workflows invoke their investigation bootstrap and
+bounded exporter scripts; their artifacts are not inputs to routine main CI.
+Their Actions registrations remain active; this work does not disable or revive
+those branches. Provider scheduling/permissions outside repository YAML remain
+an explicit audit limit and are left unchanged.
+
+No repository-defined `pull_request_target` or merge-queue trigger exists. Accessible active rulesets
 have no merge-queue rule. They require the Actions checks
 `Full validation (PowerShell 7 and Bash)` and
 `Pester and analyzer (latest stable PowerShell)`, with strict current-revision

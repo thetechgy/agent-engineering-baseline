@@ -11,7 +11,8 @@ Codex, fixture image/snapshot, Semgrep MCP/OpenTelemetry constraints and the
 git-commit skill hold remain. No dependency is upgraded by this routing change.
 
 The [workflow graph, selection contract and operator commands](CI-ROUTING.md)
-record all 13 workflows. Routine PRs keep both complete required platform checks,
+record the 13 current-main definitions, five retained experiment-branch definitions
+and four GitHub-owned workflow registrations. Routine PRs keep both complete required platform checks,
 one conservative Git change plan and an always-running result gate. Expensive
 maintained checks use existing workflows without changing their job definitions;
 full experiment preparation and historical campaign replay become explicit.
