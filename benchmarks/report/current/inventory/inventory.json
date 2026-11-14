@@ -27,7 +27,7 @@
         "lineage": null,
         "owner": "local",
         "repository": "thetechgy/agent-engineering-baseline",
-        "revision": "d02d485fa58598aa3f3ce91799a6976746643afd",
+        "revision": "379f44988fc6bb5499bd1d4f3e1b1f6a8eef74bd",
         "skill_id": "a11y",
         "source_path": ".apm/skills/a11y"
       },
@@ -58,7 +58,7 @@
         "lineage": null,
         "owner": "local",
         "repository": "thetechgy/agent-engineering-baseline",
-        "revision": "d02d485fa58598aa3f3ce91799a6976746643afd",
+        "revision": "379f44988fc6bb5499bd1d4f3e1b1f6a8eef74bd",
         "skill_id": "agent-safety",
         "source_path": ".apm/skills/agent-safety"
       },
@@ -89,7 +89,7 @@
         "lineage": null,
         "owner": "local",
         "repository": "thetechgy/agent-engineering-baseline",
-        "revision": "d02d485fa58598aa3f3ce91799a6976746643afd",
+        "revision": "379f44988fc6bb5499bd1d4f3e1b1f6a8eef74bd",
         "skill_id": "ansible",
         "source_path": ".apm/skills/ansible"
       },
@@ -218,7 +218,7 @@
         "lineage": null,
         "owner": "local",
         "repository": "thetechgy/agent-engineering-baseline",
-        "revision": "d02d485fa58598aa3f3ce91799a6976746643afd",
+        "revision": "379f44988fc6bb5499bd1d4f3e1b1f6a8eef74bd",
         "skill_id": "podman",
         "source_path": ".apm/skills/podman"
       },
@@ -266,7 +266,7 @@
         "lineage": null,
         "owner": "local",
         "repository": "thetechgy/agent-engineering-baseline",
-        "revision": "d02d485fa58598aa3f3ce91799a6976746643afd",
+        "revision": "379f44988fc6bb5499bd1d4f3e1b1f6a8eef74bd",
         "skill_id": "powershell-module-engineering",
         "source_path": ".apm/skills/powershell-module-engineering"
       },
@@ -305,7 +305,7 @@
         "lineage": null,
         "owner": "local",
         "repository": "thetechgy/agent-engineering-baseline",
-        "revision": "d02d485fa58598aa3f3ce91799a6976746643afd",
+        "revision": "379f44988fc6bb5499bd1d4f3e1b1f6a8eef74bd",
         "skill_id": "powershell-pester-6",
         "source_path": ".apm/skills/powershell-pester-6"
       },
