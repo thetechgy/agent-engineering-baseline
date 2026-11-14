@@ -62,6 +62,21 @@ class Release090Contracts(unittest.TestCase):
                 native.main(Path(directory) / 'native.json', 'with_skill', 1)
             compose.assert_called_once_with('compose', 'version', '--short')
 
+    @unittest.skipUnless(importlib.util.find_spec('aeb_gh_fixture'), 'Requires the candidate owning backend')
+    def test_native_gh_oracle_entry_point_selects_actual_owning_profile(self):
+        import os
+        import gh_oracle_validation as native
+        class ReachedPrepare(RuntimeError):
+            pass
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {}), \
+                patch.object(native.signal, 'signal'), \
+                patch.object(native, 'prepare', side_effect=ReachedPrepare) as prepare:
+            for key in ('OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'NVIDIA_API_KEY'):
+                os.environ.pop(key, None)
+            with self.assertRaises(ReachedPrepare):
+                native.main(Path(directory) / 'native')
+            prepare.assert_called_once()
+
     def test_retained_backend_wheel_bytes_and_new_wheel_reproducibility(self):
         import importlib.util
         spec = importlib.util.spec_from_file_location('wheel_builder', ROOT / '.github/evaluator-backends/build_wheel.py')
