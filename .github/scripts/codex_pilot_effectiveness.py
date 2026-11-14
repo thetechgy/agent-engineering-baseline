@@ -219,7 +219,7 @@ def schedule():
 
 def inputs(workspace=ROOT):
     paths = [PROTOCOL, DOCUMENT, '.github/scripts/codex_pilot_effectiveness.py', '.github/scripts/codex_pilot_cohort.py',
-             '.github/scripts/codex_pilot_dispatch.py', '.github/scripts/skill_evidence.py', '.github/scripts/unscored_security.py', '.github/scripts/skill_analysis.py', '.github/scripts/skill_report.py',
+             '.github/scripts/codex_pilot_dispatch.py', '.github/scripts/skill_evidence.py', '.github/scripts/skill_analysis.py', '.github/scripts/skill_report.py',
              '.github/scripts/skill_reports.py', '.github/workflows/codex-pilot.yml']
     paths += [p.relative_to(workspace).as_posix() for p in sorted((workspace / '.github/evals/pester-confirmation-v1').rglob('*')) if p.is_file()]
     return [{'member': 'pilot/' + path, 'digest': 'sha256:' + hashlib.sha256((workspace / path).read_bytes()).hexdigest()} for path in paths]

@@ -3502,6 +3502,8 @@ def custom_source_manifest(workspace, name, *, purpose=None):
         if purpose in ('skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
             from codex_pilot_effectiveness import inputs
             values.extend(inputs(workspace))
+            values.append({'member': 'producer/unscored_security.py',
+                           'digest': digest_bytes(read_bytes(workspace / '.github/scripts/unscored_security.py'))})
     input_guard(directories, states, members)()
     return values
 

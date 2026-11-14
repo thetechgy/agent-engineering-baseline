@@ -42,7 +42,7 @@
       "public_known_findings": 1,
       "quality": null,
       "secret_absent": true,
-      "html_sha256": "sha256:491390d5c8188882f7a0748ec66515ca04a142ee8c2945a463cce1dcbfc0a13f",
+      "html_sha256": "sha256:cc0b0fa633edae8a6b61e3a4bccc438df138f335fd6cdfb22da14ae15e5da5be",
       "producer": "skillevaluator-0.9.0-offline-v3",
       "diagnostic_version": "aeb-unscored-security-v1"
     },
@@ -55,7 +55,7 @@
       "public_known_findings": 1,
       "quality": null,
       "secret_absent": true,
-      "html_sha256": "sha256:2a52e240d8791737dc503e25b07a50c486d14b60e41afca28fe3afe7bf9c9dd8",
+      "html_sha256": "sha256:6569f2cd0d5a82c2560e28184908975bbb764f301b11235d582e49b0fd8948bd",
       "producer": "skillevaluator-0.9.0-offline-v3",
       "diagnostic_version": "aeb-unscored-security-v1"
     },
@@ -68,7 +68,7 @@
       "public_known_findings": 1,
       "quality": null,
       "secret_absent": true,
-      "html_sha256": "sha256:e2f6ee7b3f4c3d8d2c2b0e3508a09b74aa5674e320917eab506652b72e80b295",
+      "html_sha256": "sha256:95dcb573dcde227de5dfc412b546a2c1729f67333bdd0839d4f3ddbbaa72ce44",
       "producer": "skillevaluator-0.9.0-offline-v3",
       "diagnostic_version": "aeb-unscored-security-v1"
     },
@@ -81,7 +81,7 @@
       "public_known_findings": 0,
       "quality": null,
       "secret_absent": true,
-      "html_sha256": "sha256:8d5ddcf77f155ac6aac17bef3f2d33f90d212449ea1b6bacbab9953dc920212a",
+      "html_sha256": "sha256:265bea71652d92221211919881551079ac6a015f4d10962992577a71a461fe2c",
       "producer": "skillevaluator-0.9.0-offline-v3",
       "diagnostic_version": "aeb-unscored-security-v1"
     }
@@ -154,6 +154,11 @@
     "cli_fixture_followup": {
       "run": 9,
       "passed": 9
+    },
+    "frozen_source_followup": {
+      "run": 2,
+      "passed": 2,
+      "all_73_frozen_file_hashes_match": true
     }
   },
   "source_identity": {
@@ -172,11 +177,13 @@
     "pages.log": "67ee703eafd3c93e60d0b0bf7304d847f5bb1d3552df5a387d020bad650ec608",
     "orchestration.log": "1e141740073c8729dbe8fbd58cdb0cc421c7b729302a423e1db5dd4ad94a0796",
     "setup-final.log": "8d97d32721d3e1d415a5769f89fe4d3ff943ad47a261650e66412b2e8fa5f186",
-    "cli-fixture-followup.log": "5b3f06ec22e0a63270e780f23a3204802fdd9cfba0e380875cca65387910f218"
+    "cli-fixture-followup.log": "5b3f06ec22e0a63270e780f23a3204802fdd9cfba0e380875cca65387910f218",
+    "frozen-safe-qualified.log": "0576e827413764c84153259048723d830babcea57f3451cbf116636e572aa5fe",
+    "frozen-inputs-followup.log": "cf5626125050e640a77da92fdc566bad2d191ecdacd905a9697e2634170f09af"
   },
   "authored_source_sha256": {
     ".github/scripts/unscored_security.py": "e1a5fb9e605197e08091beea90473b13c2395a4b2646c3e7913194090a7d465c",
-    ".github/scripts/skill_evidence.py": "36993e5bb4d1e2ca762824e5cfbb1aa7b68ae5a47bb8fef1bb2048ce1c885fc0",
+    ".github/scripts/skill_evidence.py": "1cd53f6d34e7a7dd0fe9a96a0bf3a3a149038a177b6ad3db6f614225ad5bf00f",
     ".github/scripts/evaluator_profiles.py": "36fda1c5ea26557aa281720fe1622ecd5804b9800904556a06bbecd53a3590c4",
     ".github/scripts/skill_report.py": "85ed34cfdb54cc403a3845bd7153ef2c6ceab2a570b857bc59986b895c833884",
     ".github/tests/unscored_security_controls.py": "646213498953d8fa995c9bb2fb706cc7f7b61c533fe0ae0f1ef88e0a51f57f60",
@@ -199,5 +206,19 @@
       "cause": "duplicate top-level heading in the updated checkpoint",
       "log_sha256": "a5947f6229348bb5fbf1000e635d9d76251013fa9da0c3b9113f5062c961377a"
     }
+  },
+  "additional_superseded_ci": {
+    "head": "64c2577ccb4185e85815ec3e57ab47865bd358b7",
+    "run": 43644136806,
+    "failed_job": 132598053631,
+    "conclusion": "cancelled; inconclusive overall",
+    "contracts": {
+      "run": 1082,
+      "passed": 975,
+      "skipped": 106,
+      "failed": 1
+    },
+    "cause": "frozen helper was changed by a provenance input-list addition; restore exact bytes and perform bookkeeping in shared admission",
+    "failure_log_sha256": "bcf4b5f0bc64ba1964eadbe8f0cb39ada816dac56bc28df26ddba957e04fb31e"
   }
 }

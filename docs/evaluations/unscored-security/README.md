@@ -93,6 +93,15 @@ was retained and is inconclusive overall. Its required validation also caught a
 duplicate top-level checkpoint heading, corrected in the same follow-up. Production implementation, producer
 identity and review owners are unchanged by this fixture correction.
 
+The next full contracts run had 975 passes, 106 skips and one failure: the new
+helper's provenance input-list entry had changed a file frozen by the return-contract
+experiment. That file is restored byte for byte; the input-list entry now belongs
+to shared admission code. All 73 frozen-file hashes and both selected frozen/source
+controls pass, and all 15 focused repair/identity controls pass again. The freeze,
+task criteria and experiments were not refreshed. Run `43644136806` was cancelled
+after retaining the failure and completed repair-report artifact; it is inconclusive
+overall. Final-revision CI remains authoritative.
+
 The active reproduction reads actual trajectory/entry files in a fresh verifier
 process whose audit hook refuses network and child processes, then uses the real
 collector. Four controls reach artifact sanitization, public JSON and consolidated
