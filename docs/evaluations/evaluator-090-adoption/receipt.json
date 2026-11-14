@@ -340,6 +340,15 @@
     },
     "reuse": "Unchanged native implementations, locks, task definitions, graders and backend. This PR uses normal selected CI for changed consumers."
   },
+  "selector_correction": {
+    "checks": 53,
+    "passed": 53,
+    "log_sha256": "37803dfb43121ce32c96f2fa7cf6e991be115653a391795f4334cd0dcf6434e6",
+    "superseded_run": 43612595728,
+    "failed_job": 132500692101,
+    "failure_log_sha256": "c49195f733545e48b542ddca3fc5a95ae8747fdcd0d22a4e0833da412c9b8061",
+    "run_disposition": "Cancelled for known source-selector follow-up; inconclusive overall"
+  },
   "source_identity": {
     "base_profiles": 417,
     "base_registry_sha256": "8219c6585b322af40cce84b07905edcd3b027fb1a9c55b4a6c3277d4bbc3ba4d",
@@ -350,6 +359,7 @@
     ".github/scripts/skill_reports.py": "6df7e1937ca6ab333d722b3a219d1b1d2ab38ec1ee0c73c6cd1439d647a6474e",
     ".github/scripts/qualify_scanners.py": "4a0de0f8733354a8dabea7ed8454f61b0660240d3582a1a93cad5893def1514d",
     ".github/scripts/qualify_scanner_caveats.py": "634d62057a196587c21cf077a1c74da788e6977983686c1cc06ab5475a04d27f",
+    ".github/scripts/evaluation_campaign.py": "fb4f0a0919389ff359b34f51bf77284807cbbd6674d291d4e47e28239f42ff76",
     ".github/tests/test_evaluator_adoption.py": "fad4202da9e2342f5e433f35d52ab117abb79db924e584a6b6b9b7c2abd4e6e6",
     ".github/tests/test_skill_pages.py": "7c07c423c43c3bb910dab2aac27f8b386af59a8a0706b07b28459373a647b3e8",
     ".github/workflows/current-evaluator.yml": "7aaec57165b4cd71a919f25d0d8fa2cfca37aafd98267101b89b96df33341318"
