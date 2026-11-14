@@ -63,6 +63,27 @@ class AdoptionTests(unittest.TestCase):
             self.assertTrue(any(row['scanner'] == 'SECURITY' and row['status'] == 'failed' for row in public['scans']))
             self.assertTrue(any(row['scanner'] == 'skillspector' and row['status'] == 'incomplete' for row in public['scans']))
             self.assertTrue(any(row['check'] == 'known_violation' for row in public['findings']))
+            # Hand current public evidence to the existing publisher, then rebuild
+            # with the retained host. Neither build normalizes or rescores records.
+            import skill_pages as pages
+            from test_skill_pages import bundle, prov
+            site = Path(directory) / 'site'
+            revision = pages.git(ROOT, 'rev-parse', 'HEAD')
+            public['source'].update(repository=pages.REPOSITORY, revision=revision)
+            bundle(site / 'report/current', extra=('scanner-control',))
+            state = {'schema_version': 1, 'slots': {}, 'current': {'revision': revision,
+                     'digest': pages.digest((site / 'report/current/inventory/inventory.json').read_bytes())}}
+            pages.write(site, 'report/publication.json', pages.encoded(state))
+            pages.admit(site, state, 'quality', prov(revision),
+                        bundle(Path(directory) / 'public', [public]), ROOT)
+            pages.write(site, 'report/publication.json', pages.encoded(state))
+            pages.build(site)
+            before = pages.tree(site)
+            legacy = os.environ['SKILL_EVALUATOR_PYTHON']
+            run = subprocess.run([legacy, '-B', str(ROOT / '.github/scripts/skill_pages.py'),
+                                  'build', '--site', str(site)], capture_output=True, text=True, timeout=60)
+            self.assertEqual(run.returncode, 0, run.stderr)
+            self.assertEqual(before, pages.tree(site))
             changed = copy.deepcopy(dict(captured)); changed['findings'] = []
             with self.assertRaises(ValueError): evidence.project(changed)
             forged = copy.deepcopy(dict(public))
@@ -157,6 +178,9 @@ main()
         self.assertNotIn('target_skill_used_before', findings[0])
 
     def test_held_consumers_refuse_candidate_before_execution(self):
+        import skill_evidence as evidence
+        with self.assertRaisesRegex(ValueError, 'producer owning runtime'):
+            evidence.normalize_behavioral(ROOT / '.github/tests/fixtures/skill_evidence/podman-native', 'podman')
         import evaluator_profiles as profiles
         import skill_reports as reports
         import skill_review
