@@ -10,12 +10,26 @@ import sys
 import zipfile
 
 
-def build(destination):
+def package_files(*, candidate_next=False):
     root = Path(__file__).resolve().parent
-    metadata = "aeb_gh_fixture-1.0.0.dist-info"
-    contents = {"aeb_gh_fixture/" + p.name: p.read_bytes() for p in sorted((root / "aeb_gh_fixture").glob("*.py"))}
+    files = {p.name: p.read_bytes() for p in sorted((root / "aeb_gh_fixture").glob("*.py"))}
+    if candidate_next:
+        backend = files["backend.py"].decode()
+        start = backend.index("def require_runtime():")
+        end = backend.index("\n\nclass TrustedGhEnvironment", start)
+        predicate = (root / "candidate-090/require_runtime.py").read_text()
+        files["backend.py"] = (backend[:start] + predicate + backend[end:]).encode()
+        assert files["__init__.py"].count(b'VERSION = "1.0.0"') == 1
+        files["__init__.py"] = files["__init__.py"].replace(b'VERSION = "1.0.0"', b'VERSION = "1.1.0"')
+    return files
+
+
+def build(destination, *, candidate_next=False):
+    version = "1.1.0" if candidate_next else "1.0.0"
+    metadata = f"aeb_gh_fixture-{version}.dist-info"
+    contents = {"aeb_gh_fixture/" + name: raw for name, raw in package_files(candidate_next=candidate_next).items()}
     contents.update({
-        metadata + "/METADATA": b"Metadata-Version: 2.1\nName: aeb-gh-fixture\nVersion: 1.0.0\nRequires-Python: >=3.13,<3.15\n",
+        metadata + "/METADATA": (f"Metadata-Version: 2.1\nName: aeb-gh-fixture\nVersion: {version}\nRequires-Python: >=3.13,<3.15\n").encode(),
         metadata + "/WHEEL": b"Wheel-Version: 1.0\nGenerator: aeb-stdlib-1\nRoot-Is-Purelib: true\nTag: py3-none-any\n",
         metadata + "/entry_points.txt": b"[skillevaluator.env_modes]\naeb-gh-fixture = aeb_gh_fixture:backend_spec\n",
     })
@@ -26,7 +40,7 @@ def build(destination):
     writer.writerow([metadata + "/RECORD", "", ""])
     contents[metadata + "/RECORD"] = record.getvalue().encode()
     destination.mkdir(parents=True, exist_ok=True)
-    wheel = destination / "aeb_gh_fixture-1.0.0-py3-none-any.whl"
+    wheel = destination / f"aeb_gh_fixture-{version}-py3-none-any.whl"
     with zipfile.ZipFile(wheel, "x", compression=zipfile.ZIP_STORED) as bundle:
         for name, raw in sorted(contents.items()):
             info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
@@ -38,4 +52,6 @@ def build(destination):
 
 
 if __name__ == "__main__":
-    print(build(Path(sys.argv[1])))
+    if len(sys.argv) not in (2, 3) or len(sys.argv) == 3 and sys.argv[2] != '--candidate-next':
+        raise SystemExit('usage: build_wheel.py DESTINATION [--candidate-next]')
+    print(build(Path(sys.argv[1]), candidate_next=len(sys.argv) == 3))

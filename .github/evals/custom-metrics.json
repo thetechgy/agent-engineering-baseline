@@ -26043,7 +26043,7 @@
       "skill_id": "gh",
       "grader_digest": "sha256:4b0b6a7b8d4cf15fe35182ef7dcfa1ed4a18a5aeda129bb30855ed48d2f75c2d",
       "fixture_digest": "sha256:773ab38dd187a0861ac6890c04f43f4f4f1d5007ebfe236801a72a45aefa88bf",
-      "runtime_digest": "sha256:77755266f58f9897c8106fcd4c631be573bceb14bd62bfe8902ffccdf669d709",
+      "runtime_digest": "sha256:ecc4904d502250c4763c021c3fc616aca9f7f791d34c1324d9dab429b332f0ed",
       "dataset_digest": "sha256:7da7fa863ddc768c34bb423b4667cfe43e8d714697c4e217e4a27d789028f598",
       "semantics": "gh-native-oracle-v1",
       "campaign": {
@@ -26099,7 +26099,7 @@
       "skill_id": "gh",
       "grader_digest": "sha256:4b0b6a7b8d4cf15fe35182ef7dcfa1ed4a18a5aeda129bb30855ed48d2f75c2d",
       "fixture_digest": "sha256:773ab38dd187a0861ac6890c04f43f4f4f1d5007ebfe236801a72a45aefa88bf",
-      "runtime_digest": "sha256:77755266f58f9897c8106fcd4c631be573bceb14bd62bfe8902ffccdf669d709",
+      "runtime_digest": "sha256:ecc4904d502250c4763c021c3fc616aca9f7f791d34c1324d9dab429b332f0ed",
       "dataset_digest": "sha256:7da7fa863ddc768c34bb423b4667cfe43e8d714697c4e217e4a27d789028f598",
       "semantics": "gh-native-oracle-v1",
       "campaign": {

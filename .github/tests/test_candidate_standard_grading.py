@@ -96,7 +96,7 @@ class CandidateStandardTests(unittest.TestCase):
             self.assertTrue(list(output.rglob("*.html")))
             if destination := os.environ.get("AEB_CURRENT_NATIVE"):
                 from skillevaluator.tier3.harbor.report_data import build_dataset_snapshot
-                from evaluator_profiles import owning_candidate
+                from evaluator_profiles import owning_candidate, candidate_versions
                 CANDIDATE = owning_candidate()
                 native_root = Path(destination)
                 run = native_root / "results/podman/offline-transport"
@@ -109,9 +109,7 @@ class CandidateStandardTests(unittest.TestCase):
                 reports.write_json(run / 'attempt_policy.json', {'max_attempts': 1, 'stop_on_pass': False, 'pass_threshold': 0.5})
                 policy = {**reports.POLICY, 'evaluator_revision': CANDIDATE['revision'], 'harbor': CANDIDATE['harbor'],
                           'python': CANDIDATE['python'], 'model': 'controlled-fixture'}
-                reports.write_json(native_root / 'versions.json', {'skillevaluator': CANDIDATE['version'],
-                    'evaluator_revision': CANDIDATE['revision'], 'harbor': CANDIDATE['harbor'], 'python': CANDIDATE['python'],
-                    'lock_sha256': CANDIDATE['lock_sha256'], 'patch_sha256': CANDIDATE['patch_sha256']})
+                reports.write_json(native_root / 'versions.json', candidate_versions(CANDIDATE))
                 reports.write_json(native_root / 'provenance.json', {'schema_version': 1, 'skill': 'podman',
                     'mode': 'standard', 'policy': policy, 'patch_sha256': CANDIDATE['patch_sha256']})
             recovered = root / "recovered"

@@ -4,6 +4,7 @@ import argparse
 import copy
 import hashlib
 import importlib.metadata
+import importlib.util
 import json
 import os
 import shutil
@@ -20,6 +21,13 @@ import skill_evidence as evidence
 import skill_analysis as analysis
 import skill_report as report
 import skill_reports as reports
+
+
+
+def backend_sources():
+    spec = importlib.util.spec_from_file_location('aeb_backend_wheel', ROOT / '.github/evaluator-backends/build_wheel.py')
+    builder = importlib.util.module_from_spec(spec); spec.loader.exec_module(builder)
+    return builder.package_files(candidate_next=profiles.owning_candidate()['version'] == '0.9.0')
 
 
 def replay_controls():
@@ -97,6 +105,7 @@ def worker(output):
         'test_candidate_standard_grading.CandidateStandardTests',
         'test_current_native.NativeCurrentTests',
         'test_evaluator_090.Release090Contracts.test_native_gh_entry_point_selects_actual_owning_profile',
+        'test_evaluator_090.Release090Contracts.test_retained_backend_wheel_bytes_and_new_wheel_reproducibility',
         'test_codex_pilot.PilotContracts.test_post_command_audit_failure_precedence_and_collection',
         'test_codex_pilot.PilotContracts.test_secret_delivery_uses_stdin_target_user_and_cancellation_cleanup',
         'test_codex_pilot.PilotContracts.test_final_observation_and_disposal_failures_keep_the_first_cause',
@@ -310,8 +319,7 @@ def complete_native_lifecycle(inputs, output):
     assert metadata['producer_revision'] == evidence.git_revision(ROOT)
     assert metadata['workflow_attempt'] == attempt and metadata['workflow_run'] == os.environ['GITHUB_RUN_ID']
     assert metadata['versions'] == profiles.candidate_versions(profiles.owning_candidate())
-    assert metadata['backend_sources'] == {p.name: evidence.digest_bytes(p.read_bytes())
-        for p in sorted((ROOT / '.github/evaluator-backends/aeb_gh_fixture').glob('*.py'))}
+    assert metadata['backend_sources'] == {name: evidence.digest_bytes(raw) for name, raw in backend_sources().items()}
     helpers = ('qualify_current_evaluator.py', 'gh_initializer_validation.py', 'gh_oracle_validation.py', 'pester_container_validation.py')
     assert metadata['harnesses'] == {name: evidence.digest_bytes((ROOT / '.github/scripts' / name).read_bytes()) for name in helpers}
     value = provisional
@@ -404,14 +412,13 @@ def main():
     p = profiles.owning_candidate()
     import aeb_gh_fixture
     backend = Path(aeb_gh_fixture.__file__).parent
-    authored = ROOT / '.github/evaluator-backends/aeb_gh_fixture'
-    assert {f.name: f.read_bytes() for f in backend.glob('*.py')} == {f.name: f.read_bytes() for f in authored.glob('*.py')}, 'Installed backend source differs'
+    assert {f.name: f.read_bytes() for f in backend.glob('*.py')} == backend_sources(), 'Installed backend source differs'
     import skillevaluator
     source = Path(skillevaluator.__file__).resolve().parents[2]
     assert subprocess.check_output(['git', '-C', str(source), 'rev-parse', 'HEAD']).decode().strip() == p['revision']
     assert hashlib.sha256((source / 'uv.lock').read_bytes()).hexdigest() == p['lock_sha256']
-    versions = {'skillevaluator': p['version'], 'evaluator_revision': p['revision'], 'harbor': p['harbor'],
-                'python': '.'.join(map(str, sys.version_info[:3])), 'lock_sha256': p['lock_sha256'], 'patch_sha256': p['patch_sha256']}
+    versions = profiles.candidate_versions(p)
+    versions['python'] = '.'.join(map(str, sys.version_info[:3]))
     profiles.runtime(versions, owning=True)
     # Bind the entire installed package tree, including newly ported helpers.
     files = {f.relative_to(source / 'src').as_posix(): hashlib.sha256(f.read_bytes()).hexdigest()
@@ -440,7 +447,7 @@ for guard in e.record_guards(public): guard()
     reports.write_json(output / 'metadata.json', {'versions': versions, 'source_tree_digest': p['source_tree_digest'],
         'producer_revision': evidence.git_revision(ROOT), 'simulated': True, 'inference': False,
         'workflow_run': os.environ.get('GITHUB_RUN_ID'), 'workflow_attempt': os.environ.get('GITHUB_RUN_ATTEMPT'),
-        'backend_sources': {p.name: evidence.digest_bytes(p.read_bytes()) for p in sorted((ROOT / '.github/evaluator-backends/aeb_gh_fixture').glob('*.py'))},
+        'backend_sources': {name: evidence.digest_bytes(raw) for name, raw in backend_sources().items()},
         'harnesses': {p.name: evidence.digest_bytes(p.read_bytes()) for p in (Path(__file__), ROOT / '.github/scripts/gh_initializer_validation.py', ROOT / '.github/scripts/gh_oracle_validation.py', ROOT / '.github/scripts/pester_container_validation.py')}})
     with (output / 'qualification.log').open('w') as log:
         result = subprocess.run([sys.executable, '-I', '-B', str(Path(__file__).resolve()), '--worker', '--output', str(output)],

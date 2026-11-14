@@ -54,13 +54,18 @@ Tier 3 verdict. The evaluator revision and producer/policy identity keep these
 results incompatible with older producers. Fixed numeric-vector checks establish
 aggregation only; they do not establish judge equivalence or judge accuracy.
 
+The selected fixture owner is Linux/Python 3.14.10; other upstream Python/OS
+combinations are not exercised by this receipt.
+
 Released adapter code supports actual Codex and Claude Code CLIs, with added
 Codex inline/batched event parsing and existing provider-specific routing.
 Upstream runtime pins are Codex 0.161.0 and Claude Code 2.1.292; this candidate
 retains the repository's reviewed Codex 0.155.1 dispatch pin. Harbor 0.25.0 contains
 a Copilot adapter, but SkillEvaluator's supported/experimental agent allowlists
 still exclude `copilot`. API/model availability does not add repository CLI support.
-The shared campaign runtime remains Codex-only; no new CLI runtime is implemented.
+Harbor 0.25.0 also changes Codex model/authentication resolution; these fixtures
+do not qualify live authentication or provider routing. The shared campaign
+runtime remains Codex-only and retained on 0.8.0; no new CLI runtime is implemented.
 
 ## Patch and hook disposition
 
@@ -79,11 +84,20 @@ is reviewed individually rather than applying the 0.8 patch wholesale:
   parsing passes the existing syntax controls without them. Keep observation
   linkage in the released record-aware iterator, which supersedes the old iterator.
 - Keep the trusted gh initializer: released secure startup does not initialize
-  the repository-owned sealed fixture broker. Add only the exact new owning pair.
+  the repository-owned sealed fixture broker. Its separate 1.1.0 wheel admits only the exact new owning pair. The retained
+  1.0.0 wheel remains byte-identical (SHA-256 `3d577d926bc0b64703d376cf1d39e4cddeca7336b51051585d205543f9a3f89b`).
 - Reuse #135's byte-addressed metadata COPY helper in the changed Pester native
   consumer. Keep reward case/trial/arm checks and independent failure audits.
 
-All earlier patch files and the 0.8 lock/profile remain unchanged. The original
+The 0.3 review SDK overlays remain attached to their original review owners;
+the new candidate uses its own resolved group. The 0.3 scanner caveat patch stays
+in production quality setup; the candidate's Tier 3 scope neither ports that
+scanner integration nor claims upstream replacement. The 0.7.2 evidence patch
+continues serving its manual qualifier. All earlier patch files and the 0.8
+lock/profile remain unchanged. The final 0.9 profile is `offline-v2`: it requires
+the 1.1.0 backend version and wheel/source hashes in captured provenance. Earlier
+in-flight 0.9 fixture records lack that provenance and remain rejected, with their
+original files retained; no historical record is silently relabeled. The original
 389 custom profiles are preserved; 27 campaign successors and one effectiveness
 source-only successor identify
 changed shared admission code. Graders, fixtures, runtime/model selection and

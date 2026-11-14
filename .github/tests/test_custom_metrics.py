@@ -116,7 +116,7 @@ def synthetic_gh_native(root, *, unscoreable=False, candidate=False, candidate_m
     from skillevaluator.tier3.harbor.collector import collect_harbor_results
     from skillevaluator.tier3.harbor.report_data import build_dataset_snapshot
     from skillevaluator.tier3.dataset_utils import load_dataset_entries
-    from evaluator_profiles import owning_candidate, CANDIDATE
+    from evaluator_profiles import owning_candidate, candidate_versions, CANDIDATE
     if candidate:
         CANDIDATE = owning_candidate()
     candidate_policy = {**reports.benchmark_policy('gh'), 'evaluator_revision': CANDIDATE['revision'], 'harbor': CANDIDATE['harbor'], 'python': CANDIDATE['python']}
@@ -176,7 +176,7 @@ def synthetic_gh_native(root, *, unscoreable=False, candidate=False, candidate_m
           'policy': candidate_policy if candidate else reports.benchmark_policy('gh'), 'revision': evidence.git_revision(ROOT),
           'patch_sha256': CANDIDATE['patch_sha256'] if candidate else evidence.digest_bytes(evidence.read_bytes(ROOT / reports.PATCH)).removeprefix('sha256:')})
     if candidate:
-        write(native / 'versions.json', {'python': CANDIDATE['python'], 'skillevaluator': CANDIDATE['version'], 'harbor': CANDIDATE['harbor'], 'evaluator_revision': CANDIDATE['revision'], 'lock_sha256': CANDIDATE['lock_sha256'], 'patch_sha256': CANDIDATE['patch_sha256']})
+        write(native / 'versions.json', candidate_versions(CANDIDATE))
     write(native / evidence.CUSTOM_CAPTURE, evidence.custom_capture(ROOT, 'gh', bundle, rows,
         purpose='benchmark', attempts=1, agent='codex', execution_policy={'environment': 'docker',
         'concurrency': 2, 'timeout_multiplier': 2.0, 'stop_on_pass': False},

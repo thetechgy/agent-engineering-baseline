@@ -50,7 +50,8 @@ if [ "$kind" = candidate-next ]; then
   git -C "$current_root" apply --check "$repository_root/.github/patches/skillevaluator-v0.9.0-evidence.patch"
   git -C "$current_root" apply "$repository_root/.github/patches/skillevaluator-v0.9.0-evidence.patch"
   uv sync --project "$current_root" --python 3.14.10 --managed-python --frozen --no-dev --extra tier3
-  "$current_root/.venv/bin/python" "$repository_root/.github/evaluator-backends/build_wheel.py" "$current_root/backend-wheel"
+  "$current_root/.venv/bin/python" "$repository_root/.github/evaluator-backends/build_wheel.py" "$current_root/backend-wheel" --candidate-next
+  printf '%s  %s\n' 070237e238326d49a63f348d405533d01bdc58c68295aea206095aee80ac5149 "$current_root/backend-wheel/aeb_gh_fixture-1.1.0-py3-none-any.whl" | sha256sum --check --strict
   uv pip install --python "$current_root/.venv/bin/python" --no-deps --no-index --link-mode copy --require-hashes --only-binary :all: \
     --requirement "$current_root/backend-wheel/requirements.txt"
   uv pip check --python "$current_root/.venv/bin/python"

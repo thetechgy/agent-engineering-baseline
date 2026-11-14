@@ -61,3 +61,16 @@ class Release090Contracts(unittest.TestCase):
             with self.assertRaises(ReachedCompose):
                 native.main(Path(directory) / 'native.json', 'with_skill', 1)
             compose.assert_called_once_with('compose', 'version', '--short')
+
+    def test_retained_backend_wheel_bytes_and_new_wheel_reproducibility(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('wheel_builder', ROOT / '.github/evaluator-backends/build_wheel.py')
+        builder = importlib.util.module_from_spec(spec); spec.loader.exec_module(builder)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            retained = builder.build(root / 'retained').read_bytes()
+            candidate = builder.build(root / 'candidate', candidate_next=True).read_bytes()
+            repeat = builder.build(root / 'repeat', candidate_next=True).read_bytes()
+            self.assertEqual(hashlib.sha256(retained).hexdigest(), '3d577d926bc0b64703d376cf1d39e4cddeca7336b51051585d205543f9a3f89b')
+            self.assertEqual(hashlib.sha256(candidate).hexdigest(), profiles.NEXT['backend_wheel_sha256'])
+            self.assertEqual(candidate, repeat)
