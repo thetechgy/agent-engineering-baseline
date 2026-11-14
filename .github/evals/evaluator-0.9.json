@@ -1,0 +1,37 @@
+{
+  "id": "skillevaluator-0.9.0-offline-v2",
+  "revision": "b78d14618a694dec84bc9601468f8f711df5cab3",
+  "version": "0.9.0",
+  "python": "3.14.10",
+  "harbor": "0.25.0",
+  "scoring": "skill-evaluator-dimension-mean-v1",
+  "lock_sha256": "05dd72bfd0bac5399ac19232ea847929e2b21df4a7ef2d2c65eefc4f72484dda",
+  "patch_sha256": "c0dbeb490ba0a9ebefc9c173e6951fb3cc62143250eaf672db0ad8dd01de5d34",
+  "dependencies": {
+    "skillevaluator": "0.9.0",
+    "harbor": "0.25.0",
+    "openai": "2.54.0",
+    "anthropic": "2.8.0",
+    "pydantic": "2.14.3",
+    "pydantic-core": "2.50.4",
+    "litellm": "1.93.2",
+    "typing-inspection": "0.4.5",
+    "mcp": "1.30.0",
+    "aeb-gh-fixture": "1.1.0"
+  },
+  "source_tree_digest": "sha256:b3c3da95e35db4ec263cb25b83e0b9bbc9f33be556c41751e4a0059fb8867515",
+  "published_artifacts": [
+    {
+      "filename": "skillevaluator-0.9.0-py3-none-any.whl",
+      "sha256": "2812a2d03f66f1e7bf46312971f18fba7d8097c6bafa24b9e8e75176cbabdbe5",
+      "url": "https://files.pythonhosted.org/packages/30/34/df7ef63cc7a726ca22513062ecaa4b1f155965b24505233ce21d035efc24/skillevaluator-0.9.0-py3-none-any.whl"
+    },
+    {
+      "filename": "skillevaluator-0.9.0.tar.gz",
+      "sha256": "8342bb3ab0915a2723542bc889896ca535ed2677b602196a88325ad78a1388cc",
+      "url": "https://files.pythonhosted.org/packages/53/ec/dbadd6840cc1b6363df78947b2031b0e417b4a173c7a62dc9c1e34519e80/skillevaluator-0.9.0.tar.gz"
+    }
+  ],
+  "backend_wheel_sha256": "070237e238326d49a63f348d405533d01bdc58c68295aea206095aee80ac5149",
+  "backend_source_digest": "sha256:3e79836ee10bdb1d690f50384077cde9ef5eaf09cd4d470076eae459a0937fa8"
+}

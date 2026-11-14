@@ -12,7 +12,7 @@ import tomllib
 import unittest
 from unittest.mock import AsyncMock, patch
 
-CANDIDATE_RUNTIME = bool(importlib.util.find_spec('skillevaluator')) and importlib.metadata.version('skillevaluator') == '0.8.0'
+CANDIDATE_RUNTIME = bool(importlib.util.find_spec('skillevaluator')) and importlib.metadata.version('skillevaluator') in ('0.8.0', '0.9.0')
 ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/'.github/scripts'))
 from codex_pilot_contract import PROFILE, configuration

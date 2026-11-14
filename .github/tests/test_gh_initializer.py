@@ -58,11 +58,16 @@ class InitializerTests(unittest.TestCase):
         for evaluator, harbor, python, allowed in (
                 ('0.7.2', '0.24.0', (3, 13, 17), True),
                 ('0.8.0', '0.24.0', (3, 14, 10), True),
+                ('0.9.0', '0.25.0', (3, 14, 10), True),
+                ('0.9.0', '0.24.0', (3, 14, 10), False),
+                ('0.9.0', '0.25.0', (3, 13, 17), False),
                 ('0.8.0', '0.24.0', (3, 13, 17), False),
                 ('0.8.0', '0.24.0', (3, 14, 9), False),
                 ('0.8.0', '0.25.0', (3, 14, 10), False),
                 ('0.8.1', '0.24.0', (3, 14, 10), False),
                 ('0.3.0', '0.13.2', (3, 13, 17), False)):
+            from aeb_gh_fixture import VERSION
+            allowed = (evaluator, harbor, python) == ('0.9.0', '0.25.0', (3, 14, 10)) if VERSION == '1.1.0' else allowed and evaluator != '0.9.0'
             with self.subTest(evaluator=evaluator, harbor=harbor, python=python), \
                     patch.object(backend.importlib.metadata, 'version', side_effect=lambda key: {'skillevaluator': evaluator, 'harbor': harbor}[key]), \
                     patch.object(backend.sys, 'version_info', python):

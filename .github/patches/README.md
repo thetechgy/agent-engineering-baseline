@@ -96,3 +96,12 @@ V4 also keeps print-operand parameter assignments and unresolved later reuse of
 printed sensitive paths unscoreable, including Bash last-argument expansion.
 It does not change upstream scoring. See the [active checkpoint](../evals/EVALUATION-PLAN.md)
 for qualification, dependency constraints and adoption limits.
+
+## Opt-in SkillEvaluator 0.9.0
+
+`skillevaluator-v0.9.0-evidence.patch` applies only to released revision
+`b78d14618a694dec84bc9601468f8f711df5cab3`. `candidate-next` verifies its digest
+and uses a distinct lock/profile. It preserves the released extended event grammar
+and path matcher, while retaining required evidence, outcome, offline verifier and
+Codex-pin behavior. Two legacy syntax allowances are superseded. Earlier patches
+remain historical inputs. See [the compatibility result](../evals/EVALUATOR-090-95.md).

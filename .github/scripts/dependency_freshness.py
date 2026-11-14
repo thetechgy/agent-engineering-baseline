@@ -308,6 +308,11 @@ def inventory(root):
          "Merged opt-in path; frozen qualification and experiment inputs remain unchanged. "
          "Harbor/Python/LiteLLM bounds come from the released evaluator manifest. "
          "SDK and other transitive freshness is not polled independently here."),
+        ("candidate-next-environment", "Opt-in 0.9.0 evaluator (not production adoption)",
+         ".github/evals/evaluator-0.9.json",
+         "Separate released candidate; retained 0.8.0 and frozen experiments are unchanged. "
+         "Harbor 0.25.0 is supported; Python <3.15 and LiteLLM <1.94 still constrain this group. "
+         "Credential-free compatibility does not establish provider or skill benefit."),
         ("pilot-environment", "Frozen CLI pilot and campaign selectors",
          ".github/evals/codex-pilot.json",
          "Frozen Codex/model/reasoning selectors, not a production default or freshness approval. "
@@ -327,7 +332,7 @@ def inventory(root):
                          ("skillspector", "openai", "anthropic", "pydantic", "langchain-openai", "mcp")}
             else:
                 profile = json.loads(source)
-                keys = ("version", "python", "dependencies") if id == "candidate-environment" else (
+                keys = ("version", "python", "dependencies") if id in ("candidate-environment", "candidate-next-environment") else (
                     "cli", "model", "reasoning_effort", "execution_policy")
                 value = {key: profile[key] for key in keys}
             rows.append(row(dict(id=id, label=label, owner="Maintainer environment qualification",

@@ -67,7 +67,7 @@ async def qualify(root, artifact, arm=None, shard=None):
         name = "aeb-gh-qualification-" + uuid.uuid4().hex[:16]
         command_stages = {}
         environment_type = TrustedGhEnvironment
-        if isinstance(environment_type, type) and importlib.metadata.version('skillevaluator') == '0.8.0':
+        if isinstance(environment_type, type) and importlib.metadata.version('skillevaluator') in ('0.8.0', '0.9.0'):
             from prepare_candidate_images import observed_environment
             environment_type = observed_environment(environment_type, command_stages)
         environment = environment_type(environment_dir=task / "environment", environment_name=name,
@@ -309,9 +309,9 @@ def main(artifact, arm=None, shard=None):
         raise RuntimeError("Qualification forbids provider credentials")
     from aeb_gh_fixture.backend import require_runtime
     require_runtime()
-    if importlib.metadata.version('skillevaluator') == '0.8.0':
-        from evaluator_profiles import runtime, candidate_versions
-        runtime(candidate_versions(), owning=True)
+    if importlib.metadata.version('skillevaluator') in ('0.8.0', '0.9.0'):
+        from evaluator_profiles import runtime, candidate_versions, owning_candidate
+        runtime(candidate_versions(owning_candidate()), owning=True)
     if docker("compose", "version", "--short").strip() != gh.reports.POLICY["docker_compose"]:
         raise RuntimeError("Incorrect Compose runtime")
     def interrupted(signum, frame):

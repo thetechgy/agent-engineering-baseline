@@ -149,7 +149,7 @@ class FreshnessTests(unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         root = Path(temporary.name)
         for name in (fresh.CONFIG, "apm.yml", "apm.lock.yaml", ".apm-version", ".github/dependabot.yml",
-                     ".github/evals/evaluator-candidate.json", ".github/evals/codex-pilot.json"):
+                     ".github/evals/evaluator-candidate.json", ".github/evals/evaluator-0.9.json", ".github/evals/codex-pilot.json"):
             target = root / name
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / name, target)

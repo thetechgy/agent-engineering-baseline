@@ -4,7 +4,7 @@ set -euo pipefail
 umask 077
 
 kind=${1:?usage: setup-skillevaluator.sh quality|benchmark|reporting|candidate}
-case "$kind" in quality|benchmark|reporting|candidate|candidate-current) ;; *) exit 2 ;; esac
+case "$kind" in quality|benchmark|reporting|candidate|candidate-current|candidate-next) ;; *) exit 2 ;; esac
 : "${RUNNER_TEMP:?}" "${GITHUB_WORKSPACE:?}" "${GITHUB_ENV:?}" "${GITHUB_PATH:?}"
 repository_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)
 tool_root="$RUNNER_TEMP/skill-evaluation-tools"
@@ -37,6 +37,29 @@ if [ "$kind" = candidate ] || [ "$kind" = candidate-current ]; then
 fi
 
 # Current opt-in replacement. Historical recipes below retain their original bytes.
+if [ "$kind" = candidate-next ]; then
+  current_root="$RUNNER_TEMP/next-evaluator"
+  export UV_PYTHON_INSTALL_DIR="$current_root/python"
+  git init --quiet "$current_root"
+  git -C "$current_root" fetch --quiet --depth=1 https://github.com/NVIDIA/SkillEvaluator.git b78d14618a694dec84bc9601468f8f711df5cab3
+  git -C "$current_root" checkout --quiet --detach FETCH_HEAD
+  test "$(git -C "$current_root" rev-parse HEAD)" = b78d14618a694dec84bc9601468f8f711df5cab3
+  cp "$repository_root/.github/locks/evaluator-0.9.lock" "$current_root/uv.lock"
+  printf '%s  %s\n' 05dd72bfd0bac5399ac19232ea847929e2b21df4a7ef2d2c65eefc4f72484dda "$current_root/uv.lock" | sha256sum --check --strict
+  printf '%s  %s\n' c0dbeb490ba0a9ebefc9c173e6951fb3cc62143250eaf672db0ad8dd01de5d34 "$repository_root/.github/patches/skillevaluator-v0.9.0-evidence.patch" | sha256sum --check --strict
+  git -C "$current_root" apply --check "$repository_root/.github/patches/skillevaluator-v0.9.0-evidence.patch"
+  git -C "$current_root" apply "$repository_root/.github/patches/skillevaluator-v0.9.0-evidence.patch"
+  uv sync --project "$current_root" --python 3.14.10 --managed-python --frozen --no-dev --extra tier3
+  "$current_root/.venv/bin/python" "$repository_root/.github/evaluator-backends/build_wheel.py" "$current_root/backend-wheel" --candidate-next
+  printf '%s  %s\n' 070237e238326d49a63f348d405533d01bdc58c68295aea206095aee80ac5149 "$current_root/backend-wheel/aeb_gh_fixture-1.1.0-py3-none-any.whl" | sha256sum --check --strict
+  uv pip install --python "$current_root/.venv/bin/python" --no-deps --no-index --link-mode copy --require-hashes --only-binary :all: \
+    --requirement "$current_root/backend-wheel/requirements.txt"
+  uv pip check --python "$current_root/.venv/bin/python"
+  printf 'SKILL_NEXT_PYTHON=%s/.venv/bin/python\nSKILL_NEXT_SOURCE=%s\nSKILL_QUALIFICATION_PYTHON=%s/.venv/bin/python\n' "$current_root" "$current_root" "$current_root" >> "$GITHUB_ENV"
+  exit 0
+fi
+
+# Current opt-in replacement. Historical recipes below retain their original bytes.
 if [ "$kind" = candidate-current ]; then
   current_root="$RUNNER_TEMP/current-evaluator"
   export UV_PYTHON_INSTALL_DIR="$current_root/python"
@@ -53,7 +76,7 @@ if [ "$kind" = candidate-current ]; then
   uv pip install --python "$current_root/.venv/bin/python" --no-deps --no-index --link-mode copy --require-hashes --only-binary :all: \
     --requirement "$current_root/backend-wheel/requirements.txt"
   uv pip check --python "$current_root/.venv/bin/python"
-  printf 'SKILL_CURRENT_PYTHON=%s/.venv/bin/python\nSKILL_CURRENT_SOURCE=%s\n' "$current_root" "$current_root" >> "$GITHUB_ENV"
+  printf 'SKILL_CURRENT_PYTHON=%s/.venv/bin/python\nSKILL_CURRENT_SOURCE=%s\nSKILL_QUALIFICATION_PYTHON=%s/.venv/bin/python\n' "$current_root" "$current_root" "$current_root" >> "$GITHUB_ENV"
   exit 0
 fi
 

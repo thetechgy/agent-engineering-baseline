@@ -122,12 +122,13 @@ def _main(*, candidate=False, artifact=None):
     artifact = Path(artifact) if artifact is not None else Path(os.environ['RUNNER_TEMP']) / 'pester-gate-artifacts'
     from importlib.metadata import version
     current = candidate == 'current'
-    expected_runtime = ('0.8.0', '0.24.0') if current else ('0.7.2', '0.24.0') if candidate else ('0.3.0', '0.13.2')
+    from evaluator_profiles import owning_candidate
+    expected_runtime = (owning_candidate()['version'], owning_candidate()['harbor']) if current else ('0.7.2', '0.24.0') if candidate else ('0.3.0', '0.13.2')
     if (version('skillevaluator'), version('harbor')) != expected_runtime:
         raise RuntimeError('Qualification runtime mismatch')
     if current:
         from evaluator_profiles import runtime, candidate_versions
-        runtime(candidate_versions(), owning=True)
+        runtime(candidate_versions(owning_candidate()), owning=True)
     def resources(kind):
         command = ['docker', 'ps', '--all', '--quiet'] if kind == 'containers' else ['docker', 'network', 'ls', '--quiet']
         return set(subprocess.check_output(command, text=True, timeout=15).split())
@@ -148,6 +149,10 @@ def _main(*, candidate=False, artifact=None):
             if len(staged_tasks) != len(fixtures):
                 raise RuntimeError('Native staging coverage mismatch')
             for task in staged_tasks:
+                if current and version('skillevaluator') == '0.9.0':
+                    # Reuse #135's transport correction before any verifier image build.
+                    from codex_pilot import bind_verifier_metadata
+                    bind_verifier_metadata(task)
                 fixture = fixtures[task.name]
                 solution = task / 'solution'; solution.mkdir()
                 (solution / 'candidate').write_bytes(fixture['candidate'])
