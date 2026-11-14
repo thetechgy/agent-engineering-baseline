@@ -96,6 +96,7 @@ def worker(output):
         'test_grading_evidence.GradingEvidenceTests', 'test_evaluator_candidate.CandidateEvidenceTests',
         'test_candidate_standard_grading.CandidateStandardTests',
         'test_current_native.NativeCurrentTests',
+        'test_evaluator_090.Release090Contracts.test_native_gh_entry_point_selects_actual_owning_profile',
         'test_codex_pilot.PilotContracts.test_post_command_audit_failure_precedence_and_collection',
         'test_codex_pilot.PilotContracts.test_secret_delivery_uses_stdin_target_user_and_cancellation_cleanup',
         'test_codex_pilot.PilotContracts.test_final_observation_and_disposal_failures_keep_the_first_cause',

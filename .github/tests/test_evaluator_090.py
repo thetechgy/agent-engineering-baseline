@@ -1,6 +1,9 @@
 """Release-specific compatibility and historical identity boundaries; no inference."""
 import copy
 import hashlib
+import importlib.util
+import tempfile
+from unittest.mock import patch
 import json
 from pathlib import Path
 import sys
@@ -48,3 +51,13 @@ class Release090Contracts(unittest.TestCase):
             del old['profiles'][key]
         digest = hashlib.sha256(json.dumps(old, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
         self.assertEqual(digest, 'aaca89849f7fddc587d20b312e155dfb2710b65a3b6b299b02cc01eaaf7e7316')
+
+    @unittest.skipUnless(importlib.util.find_spec('aeb_gh_fixture'), 'Requires the candidate owning backend')
+    def test_native_gh_entry_point_selects_actual_owning_profile(self):
+        import gh_initializer_validation as native
+        class ReachedCompose(RuntimeError):
+            pass
+        with tempfile.TemporaryDirectory() as directory, patch.object(native, 'docker', side_effect=ReachedCompose) as compose:
+            with self.assertRaises(ReachedCompose):
+                native.main(Path(directory) / 'native.json', 'with_skill', 1)
+            compose.assert_called_once_with('compose', 'version', '--short')

@@ -12,8 +12,8 @@ exact source/package/lock identities, changed grading and advisory CI semantics,
 individual patch/hook disposition and credential-free limits. Source and offline
 controls support removal of two small syntax workarounds; shared orchestration,
 task grading, CLI isolation, authenticated admission and reporting remain necessary.
-The focused draft PR description is the authoritative final exact-head CI and
-native artifact receipt. Pending or failed native evidence is not a qualification.
+The [draft PR #136 description](https://github.com/thetechgy/agent-engineering-baseline/pull/136)
+is the authoritative final exact-head CI and native artifact receipt. Pending or failed native evidence is not a qualification.
 
 **One current next action:** review that draft's compatibility result and final
 selected CI/native receipts for later adoption consideration. Do not merge or

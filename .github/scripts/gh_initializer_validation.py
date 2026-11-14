@@ -310,8 +310,8 @@ def main(artifact, arm=None, shard=None):
     from aeb_gh_fixture.backend import require_runtime
     require_runtime()
     if importlib.metadata.version('skillevaluator') in ('0.8.0', '0.9.0'):
-        from evaluator_profiles import runtime, candidate_versions
-        runtime(candidate_versions(), owning=True)
+        from evaluator_profiles import runtime, candidate_versions, owning_candidate
+        runtime(candidate_versions(owning_candidate()), owning=True)
     if docker("compose", "version", "--short").strip() != gh.reports.POLICY["docker_compose"]:
         raise RuntimeError("Incorrect Compose runtime")
     def interrupted(signum, frame):
