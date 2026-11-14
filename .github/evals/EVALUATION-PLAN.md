@@ -1,4 +1,27 @@
-# PR #135 verifier metadata transport correction
+# SkillEvaluator 0.9.0 opt-in compatibility checkpoint
+
+Verified base is `9912a905614ed4d49ff780ae39687e9e6cc2b7cc`, the merged
+[PR #135](https://github.com/thetechgy/agent-engineering-baseline/pull/135).
+The next issue #95 step is the separately pinned `candidate-next` environment:
+SkillEvaluator 0.9.0 / Harbor 0.25.0, using the existing qualification/report path.
+Production 0.3.0 and retained 0.8.0 defaults, frozen inputs and historical grades
+remain intact. Paid experiments and the deferred Pester clarification remain paused.
+
+The [compatibility result](EVALUATOR-090-95.md) records consumer ownership,
+exact source/package/lock identities, changed grading and advisory CI semantics,
+individual patch/hook disposition and credential-free limits. Source and offline
+controls support removal of two small syntax workarounds; shared orchestration,
+task grading, CLI isolation, authenticated admission and reporting remain necessary.
+The focused draft PR description is the authoritative final exact-head CI and
+native artifact receipt. Pending or failed native evidence is not a qualification.
+
+**One current next action:** review that draft's compatibility result and final
+selected CI/native receipts for later adoption consideration. Do not merge or
+change production defaults as part of this work.
+
+## PR #135 checkpoint, retained as history
+
+### PR #135 verifier metadata transport correction
 
 The case-identity blocker is a build-context transport defect. A focused native
 reproduction at `4d9247a265d2f70700c048400a8af5a0616f791d`,

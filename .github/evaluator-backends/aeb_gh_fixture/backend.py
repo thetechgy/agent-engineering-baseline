@@ -17,11 +17,12 @@ VERIFY_COMMAND = COMMAND + " --verify"
 
 
 def require_runtime():
-    """Only the two reviewed owning pairs; newer versions require qualification."""
+    """Only the reviewed owning pairs; newer versions require qualification."""
     pair = (importlib.metadata.version("skillevaluator"), importlib.metadata.version("harbor"))
     python = tuple(sys.version_info[:3])
     if not ((pair == ("0.7.2", "0.24.0") and python[:2] == (3, 13))
-            or (pair == ("0.8.0", "0.24.0") and python == (3, 14, 10))):
+            or (pair == ("0.8.0", "0.24.0") and python == (3, 14, 10))
+            or (pair == ("0.9.0", "0.25.0") and python == (3, 14, 10))):
         raise RuntimeError("Unqualified gh backend owning runtime")
 
 

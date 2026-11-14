@@ -96,11 +96,12 @@ class CandidateStandardTests(unittest.TestCase):
             self.assertTrue(list(output.rglob("*.html")))
             if destination := os.environ.get("AEB_CURRENT_NATIVE"):
                 from skillevaluator.tier3.harbor.report_data import build_dataset_snapshot
-                from evaluator_profiles import CANDIDATE
+                from evaluator_profiles import owning_candidate
+                CANDIDATE = owning_candidate()
                 native_root = Path(destination)
                 run = native_root / "results/podman/offline-transport"
                 shutil.copytree(output, run)
-                snapshot = build_dataset_snapshot(json.loads((skill / 'evals/evals.json').read_text())['evals'], evaluator_version='0.8.0')
+                snapshot = build_dataset_snapshot(json.loads((skill / 'evals/evals.json').read_text())['evals'], evaluator_version=CANDIDATE['version'])
                 result = json.loads((run / 'result.json').read_text())
                 result.update(dataset_digest=snapshot['dataset_digest'], dataset_summary=snapshot['dataset_summary'])
                 reports.write_json(run / 'result.json', result)

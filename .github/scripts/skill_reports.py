@@ -700,7 +700,7 @@ def benchmark_artifacts(workspace, root, name, destination):
     registered_cases = set()
     if name == 'gh' and (root / 'custom-metric-capture.json').exists():
         capture = read_json(root / 'custom-metric-capture.json')
-        if (capture.get('purpose') == 'oracle_qualification' or str(capture.get('purpose','')).startswith('campaign-')) and capture.get('producer', {}).get('skillevaluator') == '0.8.0':
+        if (capture.get('purpose') == 'oracle_qualification' or str(capture.get('purpose','')).startswith('campaign-')) and capture.get('producer', {}).get('skillevaluator') in ('0.8.0', '0.9.0'):
             import skill_evidence as evidence
             evidence.validate_custom_capture(capture, name, workspace)
             registered_cases = set(capture['case_ids'])
@@ -754,7 +754,7 @@ def benchmark_artifacts(workspace, root, name, destination):
             original = value
             value = redact_sensitive_data(value)
             capture = (name == 'gh' and relative.as_posix() == 'custom-metric-capture.json'
-                       and (original.get('purpose') == 'oracle_qualification' or str(original.get('purpose','')).startswith('campaign-')) and original.get('producer', {}).get('skillevaluator') == '0.8.0')
+                       and (original.get('purpose') == 'oracle_qualification' or str(original.get('purpose','')).startswith('campaign-')) and original.get('producer', {}).get('skillevaluator') in ('0.8.0', '0.9.0'))
             if capture:
                 value = preserve_gh_capture_hashes(original, value, workspace)
             if registered_cases:

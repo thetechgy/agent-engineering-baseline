@@ -30,7 +30,11 @@ RUNTIME_COMMAND = (
 )
 
 
-from evaluator_profiles import CANDIDATE
+from evaluator_profiles import CANDIDATE, owning_candidate
+try:
+    CANDIDATE = owning_candidate()
+except ValueError:
+    pass
 
 RUNTIMES = {"current": {"skillevaluator": CANDIDATE['version'], "harbor": CANDIDATE['harbor']}, "candidate": {"skillevaluator": "0.7.2", "harbor": "0.24.0"},
             "retained": {"skillevaluator": "0.3.0", "harbor": "0.13.2"}}

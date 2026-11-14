@@ -116,7 +116,9 @@ def synthetic_gh_native(root, *, unscoreable=False, candidate=False, candidate_m
     from skillevaluator.tier3.harbor.collector import collect_harbor_results
     from skillevaluator.tier3.harbor.report_data import build_dataset_snapshot
     from skillevaluator.tier3.dataset_utils import load_dataset_entries
-    from evaluator_profiles import CANDIDATE
+    from evaluator_profiles import owning_candidate, CANDIDATE
+    if candidate:
+        CANDIDATE = owning_candidate()
     candidate_policy = {**reports.benchmark_policy('gh'), 'evaluator_revision': CANDIDATE['revision'], 'harbor': CANDIDATE['harbor'], 'python': CANDIDATE['python']}
     from gh_candidate import stage as candidate_stage
     bundle = (candidate_stage if candidate else gh.stage)(ROOT, root / 'bundle/gh')
@@ -163,7 +165,7 @@ def synthetic_gh_native(root, *, unscoreable=False, candidate=False, candidate_m
               'harbor': {'n_attempts': 1, 'n_concurrent': 2, 'timeout_multiplier': 2.0, 'stop_on_pass': False,
                          'environment': {'value': 'docker'}},
               'evaluated_source': {'repository': 'thetechgy/agent-engineering-baseline', 'commit': evidence.git_revision(ROOT)}}
-    snapshot = build_dataset_snapshot(load_dataset_entries(bundle / 'evals/evals.json'), evaluator_version='0.8.0' if candidate else '0.3.0')
+    snapshot = build_dataset_snapshot(load_dataset_entries(bundle / 'evals/evals.json'), evaluator_version=CANDIDATE['version'] if candidate else '0.3.0')
     write(run / 'dataset_snapshot.json', snapshot)
     write(run / 'run_config.json', config)
     write(run / 'result.json', {**collected, 'skill_name': 'gh', 'report_status': 'incomplete' if unscoreable else 'complete', 'run_config': config,

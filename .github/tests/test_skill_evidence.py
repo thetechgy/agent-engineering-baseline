@@ -63,6 +63,7 @@ class EvidenceTests(unittest.TestCase):
         config = scripts.parent / 'evals/evaluator-candidate.json'
         config.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(REPO / '.github/evals/evaluator-candidate.json', config)
+        shutil.copyfile(REPO / '.github/evals/evaluator-0.9.json', config.with_name('evaluator-0.9.json'))
 
     def native(self):
         target = self.root / 'native'

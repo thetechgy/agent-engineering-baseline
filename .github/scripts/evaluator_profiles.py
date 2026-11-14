@@ -9,6 +9,34 @@ from pathlib import Path
 import sys
 
 CANDIDATE = json.loads((Path(__file__).resolve().parents[1] / 'evals/evaluator-candidate.json').read_text())
+NEXT = json.loads((Path(__file__).resolve().parents[1] / 'evals/evaluator-0.9.json').read_text())
+CANDIDATES = (CANDIDATE, NEXT)
+
+
+def candidate_revision(revision):
+    return next((p for p in CANDIDATES if p['revision'] == revision), None)
+
+
+def is_candidate(profile):
+    return any(profile is p for p in CANDIDATES)
+
+
+def by_version(version):
+    if version in (None, '0.3.0'):
+        return by_revision(HISTORICAL_REVISION)
+    for profile in CANDIDATES:
+        if profile['version'] == version:
+            return profile
+    raise ValueError('Unsupported native evaluator')
+
+
+def owning_candidate():
+    profile = by_version(importlib.metadata.version('skillevaluator'))
+    if not is_candidate(profile):
+        raise ValueError('Opt-in candidate owning runtime required')
+    return profile
+
+
 HISTORICAL_REVISION = 'ac0a04905100acdafc6c95829311a9739c340ff6'
 
 
@@ -16,14 +44,13 @@ def by_revision(revision):
     if revision == HISTORICAL_REVISION:
         return {'revision': revision, 'version': '0.3.0', 'harbor': '0.13.2', 'python': '3.13',
                 'scoring': 'skill-evaluator-metric-mean-v1'}
-    if revision == CANDIDATE['revision']:
-        return CANDIDATE
+    if candidate := candidate_revision(revision):
+        return candidate
     raise ValueError('Unsupported native evaluator')
 
 
 def runtime(versions, *, owning=False):
-    if versions.get('skillevaluator') not in (None, '0.3.0', CANDIDATE['version']):
-        raise ValueError('Unsupported native evaluator')
+    by_version(versions.get('skillevaluator'))
     revision = versions.get('evaluator_revision')
     if revision is None and versions.get('skillevaluator') in (None, '0.3.0'):
         revision = HISTORICAL_REVISION
@@ -31,11 +58,11 @@ def runtime(versions, *, owning=False):
     for key, expected in (('skillevaluator', profile['version']), ('harbor', profile['harbor'])):
         # Historical admission reconciles recorded Harbor metadata with its policy.
         # It did not require every retained report to use the current replay lock.
-        if key == 'harbor' and profile is not CANDIDATE:
+        if key == 'harbor' and not is_candidate(profile):
             continue
         if versions.get(key) is not None and versions[key] != expected:
             raise ValueError('Contradictory producer identity')
-    if profile is CANDIDATE:
+    if is_candidate(profile):
         expected = {'skillevaluator': profile['version'], 'evaluator_revision': profile['revision'],
                     'harbor': profile['harbor'], 'python': profile['python'],
                     'lock_sha256': profile['lock_sha256'], 'patch_sha256': profile['patch_sha256']}
@@ -44,10 +71,10 @@ def runtime(versions, *, owning=False):
     if owning:
         if importlib.metadata.version('skillevaluator') != profile['version']:
             raise ValueError('Use the producer owning runtime for native normalization')
-        if profile is CANDIDATE and ('.'.join(map(str,sys.version_info[:3])) != profile['python'] or
+        if is_candidate(profile) and ('.'.join(map(str,sys.version_info[:3])) != profile['python'] or
                 any(importlib.metadata.version(k) != v for k,v in profile['dependencies'].items())):
             raise ValueError('Candidate owning dependencies differ')
-        if profile is CANDIDATE:
+        if is_candidate(profile):
             import skillevaluator
             package = Path(skillevaluator.__file__).resolve().parent
             source = package.parents[1]
@@ -61,7 +88,9 @@ def runtime(versions, *, owning=False):
     return profile
 
 
-def candidate_versions():
-    p = CANDIDATE
+def candidate_versions(profile=None):
+    p = CANDIDATE if profile is None else profile
+    if not is_candidate(p):
+        raise ValueError('Unsupported candidate profile')
     return {'skillevaluator': p['version'], 'evaluator_revision': p['revision'], 'harbor': p['harbor'],
             'python': p['python'], 'lock_sha256': p['lock_sha256'], 'patch_sha256': p['patch_sha256']}
