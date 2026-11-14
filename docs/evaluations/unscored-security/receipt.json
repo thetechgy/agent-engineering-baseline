@@ -150,7 +150,11 @@
       "run": 34,
       "passed": 34
     },
-    "redundant_local_evidence_suite": "interrupted; inconclusive; normal selected CI owns the full suite"
+    "redundant_local_evidence_suite": "interrupted; inconclusive; normal selected CI owns the full suite",
+    "cli_fixture_followup": {
+      "run": 9,
+      "passed": 9
+    }
   },
   "source_identity": {
     "base_profiles": 445,
@@ -167,7 +171,8 @@
     "qualified.log": "a28d3c8d03b777472282647edbc52b72cc3d75b84e3d00e19bcfba2b51ef8cb1",
     "pages.log": "67ee703eafd3c93e60d0b0bf7304d847f5bb1d3552df5a387d020bad650ec608",
     "orchestration.log": "1e141740073c8729dbe8fbd58cdb0cc421c7b729302a423e1db5dd4ad94a0796",
-    "setup-final.log": "8d97d32721d3e1d415a5769f89fe4d3ff943ad47a261650e66412b2e8fa5f186"
+    "setup-final.log": "8d97d32721d3e1d415a5769f89fe4d3ff943ad47a261650e66412b2e8fa5f186",
+    "cli-fixture-followup.log": "5b3f06ec22e0a63270e780f23a3204802fdd9cfba0e380875cca65387910f218"
   },
   "authored_source_sha256": {
     ".github/scripts/unscored_security.py": "e1a5fb9e605197e08091beea90473b13c2395a4b2646c3e7913194090a7d465c",
@@ -175,10 +180,24 @@
     ".github/scripts/evaluator_profiles.py": "36fda1c5ea26557aa281720fe1622ecd5804b9800904556a06bbecd53a3590c4",
     ".github/scripts/skill_report.py": "85ed34cfdb54cc403a3845bd7153ef2c6ceab2a570b857bc59986b895c833884",
     ".github/tests/unscored_security_controls.py": "646213498953d8fa995c9bb2fb706cc7f7b61c533fe0ae0f1ef88e0a51f57f60",
-    ".github/tests/test_unscored_security.py": "9e865943e9f34c1c3dee9a31653d960e0e82bd90b2a8f2ef14f938d7bed4d9f2"
+    ".github/tests/test_unscored_security.py": "9e865943e9f34c1c3dee9a31653d960e0e82bd90b2a8f2ef14f938d7bed4d9f2",
+    ".github/tests/test_skill_evidence.py": "ee335c9af2c5f6c0e449a5458cf36171029d565f36ea9815e57511fdeb87dcf7"
   },
   "installed_source_changes": [
     "tier3/harbor/collector.py",
     "tier3/unscored_security.py"
-  ]
+  ],
+  "superseded_ci": {
+    "head": "0bbda0269358af8b023f4f9cbcc5a64d62af2538",
+    "run": 43642881242,
+    "failed_job": 132594161256,
+    "conclusion": "cancelled; inconclusive overall",
+    "cause": "isolated CLI fixture omitted newly required module and retained profile; fixed by copying both",
+    "failure_log_sha256": "5d15d532bf0d93489d3b5e45dec4042d714bebb71e3f0e0fd933a72bf7267ed0",
+    "additional_failure": {
+      "job": 132594112447,
+      "cause": "duplicate top-level heading in the updated checkpoint",
+      "log_sha256": "a5947f6229348bb5fbf1000e635d9d76251013fa9da0c3b9113f5062c961377a"
+    }
+  }
 }

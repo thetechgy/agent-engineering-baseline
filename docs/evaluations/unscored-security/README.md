@@ -85,6 +85,14 @@ local evidence suite was interrupted and is inconclusive; normal selected CI own
 the complete contract suite. The authenticated historical scanner report also
 reproduced byte for byte (`d745c7b25dcacc6e1629f0a0747ca0349412be455c2dd07b4ced1968ac0be759`).
 
+The first hosted run stopped in the historical CLI controls because their isolated
+copy list omitted the new shared module and retained profile. Both are now copied;
+all nine affected controls pass on the exact existing review/validator owners.
+Run `43642881242` was cancelled for this known follow-up after its failed job log
+was retained and is inconclusive overall. Its required validation also caught a
+duplicate top-level checkpoint heading, corrected in the same follow-up. Production implementation, producer
+identity and review owners are unchanged by this fixture correction.
+
 The active reproduction reads actual trajectory/entry files in a fresh verifier
 process whose audit hook refuses network and child processes, then uses the real
 collector. Four controls reach artifact sanitization, public JSON and consolidated

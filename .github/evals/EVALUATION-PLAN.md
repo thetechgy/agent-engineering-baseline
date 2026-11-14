@@ -24,7 +24,7 @@ or performed here. Frozen experiments remain closed and deferred.
 
 **One current next action:** review this focused repair and its final-revision CI.
 
-# PR #138 data-only host switch, retained as history
+## PR #138 data-only host switch, retained as history
 
 **Prepared for adoption, pending merge.** This branch switches only publisher
 `prepare` and orchestration `plan` / `dispatch` to existing `candidate-next`
