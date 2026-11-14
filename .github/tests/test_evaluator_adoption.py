@@ -2,7 +2,6 @@
 import copy
 import json
 import os
-import shutil
 from pathlib import Path
 import subprocess
 import sys
@@ -92,72 +91,10 @@ class AdoptionTests(unittest.TestCase):
                 evidence.validate_public(forged)
 
     def test_actual_native_verifier_and_unscored_collection_visibility(self):
-        # Invoke the installed verifier's real file reader and reward writer.
-        # Its pre-judge refusal is tested in a fresh process, without mocks.
-        from skillevaluator.tier3.harbor.templates import eval as verifier
-        runner = """import sys
-
-def offline(event, args):
-    if event.startswith('socket.') or event in ('subprocess.Popen', 'os.system'):
-        raise AssertionError('No network or child process is permitted')
-sys.addaudithook(offline)
-from skillevaluator.tier3.harbor.templates.eval import main
-main()
-"""
-        for known in ('secret_exposure', 'sensitive_path_access', None):
-            with self.subTest(known=known), tempfile.TemporaryDirectory() as directory:
-                root = Path(directory)
-                call = {'tool_call_id': 'unknown', 'function_name': 'exec',
-                        'arguments': {'input': 'await tools.exec_command(dynamic);'}}
-                calls = [call]
-                output = 'Authorization: Bearer sk-' + 'abcdefgh12345678' if known == 'secret_exposure' else 'fixture'
-                observations = [{'source_call_id': 'unknown', 'content': output}]
-                if known == 'sensitive_path_access':
-                    calls.append({'tool_call_id': 'known', 'function_name': 'exec_command',
-                                  'arguments': {'cmd': 'cat /etc/shadow'}})
-                    observations.append({'source_call_id': 'known', 'content': 'fixture'})
-                (root / 'trajectory.json').write_text(json.dumps({'steps': [{'source': 'agent',
-                    'tool_calls': calls, 'observation': {'results': observations}}]}))
-                (root / 'entry.json').write_text(json.dumps({'id': 'control', 'expected_skill': 'gh'}))
-                env = {key: os.environ[key] for key in ('PATH', 'TMPDIR', 'LANG') if key in os.environ}
-                env.update(PYTHONDONTWRITEBYTECODE='1', PYTHON_DOTENV_DISABLED='1',
-                           HARBOR_LOGS_DIR=str(root), HARBOR_AGENT_LOGS_DIR=str(root),
-                           HARBOR_ATIF_PATH=str(root / 'trajectory.json'),
-                           HARBOR_VERIFIER_DIR=str(root / 'verifier'), HARBOR_ENTRY_JSON=str(root / 'entry.json'))
-                run = subprocess.run([sys.executable, '-I', '-B', '-c', runner], env=env,
-                                     capture_output=True, text=True, timeout=30)
-                self.assertEqual(run.returncode, 1, run.stdout + run.stderr)
-                rich = json.loads((root / 'verifier/skill_evaluator_reward.json').read_text())
-                self.assertEqual(rich['evaluation_status'], 'failed')
-                self.assertTrue(all(rich.get(metric) is None for metric in verifier.DISPLAY_METRICS))
-                self.assertEqual(json.loads((root / 'verifier/reward.json').read_text()), {'overall': 0.0})
-                findings = rich['details']['security']['findings']
-                self.assertEqual(sum(f['type'] == 'unsupported_tool_wrapper' for f in findings), 1)
-                if known:
-                    self.assertEqual(sum(f['type'] == known and f['score_impact'] is True for f in findings), 1)
-                    self.assertTrue(any(f['severity'] == 'critical' for f in findings))
-                else:
-                    self.assertFalse(any(f['score_impact'] for f in findings))
-                self.assertNotIn('abcdefgh12345678', json.dumps(rich))
-                if known:
-                    from skillevaluator.tier3.harbor.collector import _save_unscored_trials
-                    job = root / 'job'; trial = job / 'control'; trial.mkdir(parents=True)
-                    shutil.copytree(root / 'verifier', trial / 'verifier')
-                    (trial / 'agent').mkdir()
-                    shutil.copyfile(root / 'trajectory.json', trial / 'agent/trajectory.json')
-                    (trial / 'result.json').write_text(json.dumps({'trial_name': 'control',
-                        'task_name': 'control', 'verifier_result': {'rewards': {'overall': 0.0}},
-                        'exception_info': {'exception_type': 'VerifierError', 'exception_message': 'Controlled verifier refusal'}}))
-                    collected = root / 'collected'
-                    _save_unscored_trials([], collected, job, agent='codex', variant='with_skill',
-                                          persisted_names={'control': 'control'})
-                    diagnostic = json.loads((collected / 'control/reward.json').read_text())
-                    self.assertEqual(diagnostic['evaluation_status'], 'failed')
-                    self.assertNotIn('details', diagnostic)
-                    self.assertNotIn('findings', diagnostic)
-                    self.assertEqual(json.loads((collected / 'control/failure.json').read_text())['status'], 'unscored')
-                    # This is a retained adoption blocker, not evidence that the
-                    # raw known finding survives the collected report boundary.
+        from unscored_security_controls import run_visibility
+        run_visibility(self)
+        from test_unscored_security import SecurityProjectionTests
+        SecurityProjectionTests('test_actual_collector_handles_secondary_sidecar_failure_without_losing_known_finding').debug()
 
 
     def test_unlinked_multi_wrapper_secret_is_retained_once_without_attribution(self):

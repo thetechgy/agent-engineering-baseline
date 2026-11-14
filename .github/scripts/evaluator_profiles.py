@@ -10,11 +10,14 @@ import sys
 
 CANDIDATE = json.loads((Path(__file__).resolve().parents[1] / 'evals/evaluator-candidate.json').read_text())
 NEXT = json.loads((Path(__file__).resolve().parents[1] / 'evals/evaluator-0.9.json').read_text())
-CANDIDATES = (CANDIDATE, NEXT)
+RETAINED_NEXT = json.loads((Path(__file__).resolve().parents[1] / 'evals/evaluator-0.9-offline-v2.json').read_text())
+CANDIDATES = (CANDIDATE, NEXT, RETAINED_NEXT)
 
 
-def candidate_revision(revision):
-    return next((p for p in CANDIDATES if p['revision'] == revision), None)
+def candidate_revision(revision, *, producer_id=None, patch=None):
+    return next((p for p in CANDIDATES if p['revision'] == revision
+                 and (producer_id is None or p['id'] == producer_id)
+                 and (patch is None or patch == 'sha256:' + p['patch_sha256'])), None)
 
 
 def is_candidate(profile):
@@ -55,6 +58,11 @@ def runtime(versions, *, owning=False):
     if revision is None and versions.get('skillevaluator') in (None, '0.3.0'):
         revision = HISTORICAL_REVISION
     profile = by_revision(revision)
+    if is_candidate(profile):
+        profile = next((p for p in CANDIDATES if p['revision'] == revision
+                        and p['patch_sha256'] == versions.get('patch_sha256')), None)
+        if profile is None:
+            raise ValueError('Incomplete or contradictory candidate provenance')
     for key, expected in (('skillevaluator', profile['version']), ('harbor', profile['harbor'])):
         # Historical admission reconciles recorded Harbor metadata with its policy.
         # It did not require every retained report to use the current replay lock.

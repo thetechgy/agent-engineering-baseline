@@ -1,4 +1,30 @@
-# Data-only SkillEvaluator 0.9.0 host switch checkpoint
+# Unscored security-finding repair checkpoint
+
+**Implemented and credential-free locally qualified; pending PR review and
+merge.** PR #138 merged as `3fa44f7cf92dc0523ad0ecd959b584190da06f02`.
+Main was verified at that merge with no intervening changes. Publisher preparation
+and both orchestration hosts already use pinned 0.9.0; static quality, benchmarks,
+private reviews and historical replay retain their existing owners.
+
+This repair preserves bounded known verifier findings through unscored collection,
+sanitation, public evidence and consolidated HTML while quality stays unavailable.
+The successor is `skillevaluator-0.9.0-offline-v3`, diagnostic contract
+`aeb-unscored-security-v1`. Offline-v2's patch, profile, interpretation and replay
+route remain preserved. See the [repair receipt](../../docs/evaluations/unscored-security/README.md)
+for boundaries, before/after evidence, replay and rollback. The PR description
+records the final executable revision and terminal selected CI, separately from
+local fixtures. A fixture pass is not a successful agent task.
+
+Podman strict-dataset compatibility, versioned benchmark/recovery/history admission
+and live-provider qualification remain separate adoption blockers. All 83
+historical upstream assertion failures retain their existing dispositions. No
+inference, judge, credentials, allocation, live gate, real benchmark, Pages
+publication, merge, skill/dataset/grading change or consumer switch is authorized
+or performed here. Frozen experiments remain closed and deferred.
+
+**One current next action:** review this focused repair and its final-revision CI.
+
+# PR #138 data-only host switch, retained as history
 
 **Prepared for adoption, pending merge.** This branch switches only publisher
 `prepare` and orchestration `plan` / `dispatch` to existing `candidate-next`

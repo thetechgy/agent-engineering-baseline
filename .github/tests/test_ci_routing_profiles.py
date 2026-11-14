@@ -14,7 +14,7 @@ import skill_evidence as evidence
 class RoutingProfiles(unittest.TestCase):
     def test_append_only_source_profiles_change_only_id_and_runtime_digest(self):
         registry = json.loads((ROOT / '.github/evals/custom-metrics.json').read_text())
-        registry['profiles'] = {k:v for k,v in registry['profiles'].items() if '-source-v11-' not in k and '-source-v12-' not in k and k not in ('pester-effectiveness-v20', 'pester-effectiveness-v21')}
+        registry['profiles'] = {k:v for k,v in registry['profiles'].items() if '-source-v11-' not in k and '-source-v12-' not in k and '-source-v13-' not in k and k not in ('pester-effectiveness-v20', 'pester-effectiveness-v21', 'pester-effectiveness-v22')}
         original = copy.deepcopy(registry)
         added = [k for k in registry['profiles'] if ('-source-v8-' in k or '-source-v9-' in k or '-source-v10-' in k) or k in ('pester-effectiveness-v17', 'pester-cli-pilot-retained-v13', 'pester-effectiveness-v18', 'pester-cli-pilot-retained-v14', 'pester-effectiveness-v19', 'pester-cli-pilot-retained-v15')]
         for key in added: del original['profiles'][key]
@@ -32,7 +32,7 @@ class RoutingProfiles(unittest.TestCase):
 
     def test_failure_audit_successors_preserve_all_prior_profiles(self):
         registry = json.loads((ROOT / '.github/evals/custom-metrics.json').read_text())
-        registry['profiles'] = {k:v for k,v in registry['profiles'].items() if '-source-v11-' not in k and '-source-v12-' not in k and k not in ('pester-effectiveness-v20', 'pester-effectiveness-v21')}
+        registry['profiles'] = {k:v for k,v in registry['profiles'].items() if '-source-v11-' not in k and '-source-v12-' not in k and '-source-v13-' not in k and k not in ('pester-effectiveness-v20', 'pester-effectiveness-v21', 'pester-effectiveness-v22')}
         for key in [k for k in registry['profiles'] if '-source-v9-' in k or '-source-v10-' in k or k in ('pester-effectiveness-v18', 'pester-cli-pilot-retained-v14', 'pester-effectiveness-v19', 'pester-cli-pilot-retained-v15')]: del registry['profiles'][key]
         added = [k for k in registry['profiles'] if '-source-v8-' in k or k in ('pester-effectiveness-v17', 'pester-cli-pilot-retained-v13')]
         self.assertEqual(len(added), 29)
@@ -49,7 +49,7 @@ class RoutingProfiles(unittest.TestCase):
 
     def test_verifier_observation_profiles_preserve_all_prior_profiles(self):
         registry = json.loads((ROOT / '.github/evals/custom-metrics.json').read_text())
-        registry['profiles'] = {k:v for k,v in registry['profiles'].items() if '-source-v11-' not in k and '-source-v12-' not in k and k not in ('pester-effectiveness-v20', 'pester-effectiveness-v21')}
+        registry['profiles'] = {k:v for k,v in registry['profiles'].items() if '-source-v11-' not in k and '-source-v12-' not in k and '-source-v13-' not in k and k not in ('pester-effectiveness-v20', 'pester-effectiveness-v21', 'pester-effectiveness-v22')}
         for key in [k for k in registry['profiles'] if '-source-v10-' in k or k in ('pester-effectiveness-v19', 'pester-cli-pilot-retained-v15')]: del registry['profiles'][key]
         added = [k for k in registry['profiles'] if '-source-v9-' in k or k in ('pester-effectiveness-v18', 'pester-cli-pilot-retained-v14')]
         self.assertEqual(len(added), 29)
@@ -66,7 +66,7 @@ class RoutingProfiles(unittest.TestCase):
 
     def test_metadata_transport_profiles_preserve_all_prior_profiles(self):
         registry = json.loads((ROOT / '.github/evals/custom-metrics.json').read_text())
-        registry['profiles'] = {k:v for k,v in registry['profiles'].items() if '-source-v11-' not in k and '-source-v12-' not in k and k not in ('pester-effectiveness-v20', 'pester-effectiveness-v21')}
+        registry['profiles'] = {k:v for k,v in registry['profiles'].items() if '-source-v11-' not in k and '-source-v12-' not in k and '-source-v13-' not in k and k not in ('pester-effectiveness-v20', 'pester-effectiveness-v21', 'pester-effectiveness-v22')}
         added = [k for k in registry['profiles'] if '-source-v10-' in k or k in ('pester-effectiveness-v19', 'pester-cli-pilot-retained-v15')]
         self.assertEqual(len(added), 29)
         for key in added:
