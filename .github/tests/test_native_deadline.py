@@ -40,6 +40,6 @@ class DeadlineEvidence(unittest.TestCase):
         registry = json.loads((ROOT / '.github/evals/custom-metrics.json').read_text())
         registry['profiles'] = {k:v for k,v in registry['profiles'].items()
             if '-lifecycle-v1-' not in k and k not in ('pester-cli-pilot-retained-v10', 'pester-effectiveness-v11',
-                'pester-cli-pilot-retained-v11', 'pester-effectiveness-v12', 'pester-cli-pilot-retained-v12', 'pester-effectiveness-v13', 'pester-effectiveness-v14', 'pester-effectiveness-v15', 'pester-effectiveness-v16')}
+                'pester-cli-pilot-retained-v11', 'pester-effectiveness-v12', 'pester-cli-pilot-retained-v12', 'pester-effectiveness-v13', 'pester-effectiveness-v14', 'pester-effectiveness-v15', 'pester-effectiveness-v16', 'pester-effectiveness-v17', 'pester-cli-pilot-retained-v13', 'pester-effectiveness-v18', 'pester-cli-pilot-retained-v14', 'pester-effectiveness-v19', 'pester-cli-pilot-retained-v15')}
         digest = hashlib.sha256(json.dumps(registry, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
         self.assertEqual(digest, 'e29fd6c9b62dc9018d2afa74e33deb3e8a894507e25b9487a391a7618225fee5')

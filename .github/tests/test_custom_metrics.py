@@ -544,6 +544,31 @@ class CustomMetricTests(unittest.TestCase):
                     capture = evidence.read_json(target / evidence.CUSTOM_CAPTURE); capture['tasks'].reverse(); write(target / evidence.CUSTOM_CAPTURE, capture)
                 with self.assertRaises((ValueError, KeyError)): evidence.normalize_behavioral(target, NAME)
 
+    def test_matching_grades_do_not_admit_stale_swapped_or_other_arm_rewards(self):
+        for arm in ('with_skill', 'without_skill'):
+            for change in ('case', 'trial', 'swapped', 'arm'):
+                with self.subTest(arm=arm, change=change):
+                    target = self.root / (arm + '-' + change)
+                    shutil.copytree(self.base / 'True/native', target)
+                    run = target / 'results' / NAME / 'synthetic-control/codex'
+                    trials = run / arm.replace('_', '-') / 'trials'
+                    path = trials / 'pester-001__attempt1/reward.json'
+                    reward = evidence.read_json(path)
+                    original_metrics = reward['custom_metrics']
+                    if change == 'case':
+                        reward['entry_id'] = 'pester-003'
+                    elif change == 'trial':
+                        reward['trial_id'] = 'pester-001__attempt2'
+                    elif change == 'swapped':
+                        reward = evidence.read_json(trials / 'pester-003__attempt1/reward.json')
+                    else:
+                        other = 'without-skill' if arm == 'with_skill' else 'with-skill'
+                        reward = evidence.read_json(run / other / 'trials/pester-001__attempt1/reward.json')
+                    self.assertEqual(reward['custom_metrics'], original_metrics)
+                    write(path, reward)
+                    with self.assertRaisesRegex(ValueError, 'Reward identity mismatch'):
+                        evidence.normalize_behavioral(target, NAME)
+
     def test_reordered_directory_enumeration_does_not_reassign_attempts(self):
         native, run = self.native(True)
         original = evidence.project(evidence.normalize_behavioral(native, NAME))

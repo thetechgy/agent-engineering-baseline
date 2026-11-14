@@ -180,7 +180,31 @@ class PilotEnvironment(SkillEvaluatorSecureDockerEnvironment):
 
     async def stop(self, delete):
         if not self._pilot_agent:
-            return await super().stop(delete)
+            # Preserve live verifier bytes after grading, before mounted output
+            # ownership/disposal. Never substitute host staging for this receipt.
+            primary = None
+            target = Path(self.trial_paths.trial_dir) / 'operator/pilot-verifier-observation.json'
+            try:
+                target.parent.mkdir(exist_ok=True)
+                from codex_pilot_boundary import observe_verifier
+                async with asyncio.timeout(30):
+                    observation = await observe_verifier(self)
+                target.write_text(json.dumps(observation, indent=2) + '\n')
+            except BaseException as error:
+                primary = error
+                try:
+                    target.write_text(json.dumps({'observation_exception': type(error).__name__}) + '\n')
+                except OSError:
+                    error.add_note('Verifier observation retention also failed')
+                raise
+            finally:
+                try:
+                    await super().stop(delete)
+                except BaseException as error:
+                    if primary is None:
+                        raise
+                    primary.add_note('Verifier disposal also failed: ' + type(error).__name__)
+            return
         if self._pilot_interrupted:
             try:
                 self._stage('disposal_started')
@@ -193,9 +217,11 @@ class PilotEnvironment(SkillEvaluatorSecureDockerEnvironment):
             return
         # Observe the real post-phase policy immediately before inherited disposal.
         # Cleanup runs even if the observation or delayed child probe fails.
+        primary = None
         try:
             from codex_pilot_boundary import observe
-            final = await observe(self)
+            async with asyncio.timeout(30):
+                final = await observe(self)
             if os.environ.get('AEB_PILOT_PROBE') == '1' and os.environ.get('AEB_PILOT_SCENARIO', 'success') == 'success':
                 result = await self.exec(user='agent', timeout_sec=60, command=(
                     'touch /tmp/pilot-after-agent; '
@@ -211,5 +237,18 @@ class PilotEnvironment(SkillEvaluatorSecureDockerEnvironment):
                 final['late_cli_child'] = late
             target = Path(self.trial_paths.trial_dir) / 'operator/pilot-final-policy.json'
             target.write_text(json.dumps(final, indent=2) + '\n')
+        except BaseException as error:
+            primary = error
+            self._stage('final_observation_failed', error=type(error).__name__)
+            raise
         finally:
-            await super().stop(delete)
+            self._stage('disposal_started')
+            try:
+                async with asyncio.timeout(60):
+                    await super().stop(delete)
+                self._stage('disposal_complete')
+            except BaseException as error:
+                self._stage('cleanup_failed', error=type(error).__name__)
+                if primary is None:
+                    raise
+                primary.add_note('Disposal also failed: ' + type(error).__name__)

@@ -57,6 +57,25 @@ def deploy(root, *, profile_id=None):
     return deployed
 
 
+def bind_verifier_metadata(task):
+    """Address staged metadata by its bytes, not a reusable COPY pathname.
+
+    Build-context transfer can reuse equal-size/equal-mtime entry.json bytes
+    from another case. A distinct content name binds COPY to the staged input;
+    the grader still reads the unchanged bytes at its existing /tests path.
+    """
+    tests = task / 'tests'
+    metadata = evidence.read_bytes(tests / 'entry.json', limit=65536)
+    member = 'build/entry-' + hashlib.sha256(metadata).hexdigest() + '.json'
+    dockerfile = tests / 'Dockerfile'
+    source = evidence.read_bytes(dockerfile, limit=65536).decode()
+    anchor = 'COPY test.sh entry.json Runner.ps1 /tests/\n'
+    reports.require(source.count(anchor) == 1, 'Unrecognized verifier metadata COPY contract')
+    with (tests / member).open('xb') as stream:
+        stream.write(metadata)
+    dockerfile.write_text(source.replace(anchor, 'COPY test.sh Runner.ps1 /tests/\nCOPY ' + member + ' /tests/entry.json\n'))
+
+
 def stage(root, *, controls=False, probe=False, replay=None, submissions=None, effectiveness=False):
     oracle = controls or replay is not None
     if replay is not None:
@@ -106,6 +125,7 @@ def stage(root, *, controls=False, probe=False, replay=None, submissions=None, e
         for task in tasks[arm]:
             for context in ('environment', 'tests'):
                 (task / context / 'build/install-runtime.py').write_bytes(runtime_installer_bytes())
+            bind_verifier_metadata(task)
             source_case = fixtures[task.name]['case'] if effectiveness and controls else task.name if effectiveness else case
             (task / 'tests/Runner.ps1').write_bytes(effective.runner_bytes() if effectiveness else runner_bytes())
             (task / 'tests/verifier/grader.py').write_bytes(effective.grader_bytes() if effectiveness else grader_bytes())

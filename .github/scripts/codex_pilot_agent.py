@@ -175,7 +175,6 @@ class PilotCodex(Codex):
             audit['returncode'] = result.return_code
             if result.return_code != 0:
                 raise RuntimeError('Pilot Codex CLI exited unsuccessfully; original events retained')
-            audit['boundary_after'] = await observe(environment)
         except BaseException as error:
             primary = error
             self._execution_interrupted = True
@@ -183,6 +182,22 @@ class PilotCodex(Codex):
             raise
         finally:
             audit['execution_elapsed_seconds'] = round(time.monotonic() - started, 3)
+            failure = primary
+            # Observe after any completed command, including a nonzero CLI exit,
+            # before collecting/scrubbing or Harbor's phase transition. Native
+            # cancellation contains the workload first; never restart it for an audit.
+            if environment._pilot_interrupted:
+                audit['boundary_observation_unavailable'] = 'workload_contained'
+            else:
+                try:
+                    async with asyncio.timeout(30):
+                        audit['boundary_after'] = await observe(environment)
+                except BaseException as error:
+                    audit['boundary_observation_exception'] = type(error).__name__
+                    if failure is None:
+                        failure = error
+                    else:
+                        failure.add_note('Post-command boundary observation failed: ' + type(error).__name__)
             # A contained workload cannot exec a receipt or scrub command. Its
             # remaining runtime home is removed by final container disposal.
             if environment._pilot_interrupted:
@@ -199,15 +214,16 @@ class PilotCodex(Codex):
                     audit['cleanup'] = 'complete'
                 except BaseException as error:
                     audit['collection_or_cleanup_exception'] = type(error).__name__
-                    if primary is None:
-                        try:
-                            audit_path.write_text(json.dumps(audit, indent=2) + '\n')
-                        except OSError as retention_error:
-                            error.add_note('Runtime audit retention also failed: ' + type(retention_error).__name__)
-                        raise
+                    if failure is None:
+                        failure = error
+                    else:
+                        failure.add_note('Collection or cleanup also failed: ' + type(error).__name__)
             try:
                 audit_path.write_text(json.dumps(audit, indent=2) + '\n')
             except OSError as error:
-                if primary is None:
-                    raise
-                primary.add_note('Runtime audit retention also failed: ' + type(error).__name__)
+                if failure is None:
+                    failure = error
+                else:
+                    failure.add_note('Runtime audit retention also failed: ' + type(error).__name__)
+            if primary is None and failure is not None:
+                raise failure

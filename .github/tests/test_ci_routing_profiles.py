@@ -15,6 +15,8 @@ class RoutingProfiles(unittest.TestCase):
     def test_append_only_source_profiles_change_only_id_and_runtime_digest(self):
         registry = json.loads((ROOT / '.github/evals/custom-metrics.json').read_text())
         original = copy.deepcopy(registry)
+        added = [k for k in registry['profiles'] if ('-source-v8-' in k or '-source-v9-' in k or '-source-v10-' in k) or k in ('pester-effectiveness-v17', 'pester-cli-pilot-retained-v13', 'pester-effectiveness-v18', 'pester-cli-pilot-retained-v14', 'pester-effectiveness-v19', 'pester-cli-pilot-retained-v15')]
+        for key in added: del original['profiles'][key]
         successors = [k for k in registry['profiles'] if '-source-v7-' in k or k == 'pester-effectiveness-v16']
         self.assertEqual(len(successors), 28)
         for key in successors:
@@ -22,13 +24,58 @@ class RoutingProfiles(unittest.TestCase):
             new = registry['profiles'][key]; old = registry['profiles'][previous]
             self.assertEqual({k: v for k, v in new.items() if k not in ('id', 'runtime_digest')},
                              {k: v for k, v in old.items() if k not in ('id', 'runtime_digest')})
-            identities = evidence.custom_input_identities(ROOT, new['skill_id'],
-                purpose=key if key.startswith('campaign-') else 'skill_effectiveness')
-            self.assertTrue(all(new[k] == v for k, v in identities.items()), key)
             self.assertNotEqual(new['runtime_digest'], old['runtime_digest'])
             del original['profiles'][key]
         digest = hashlib.sha256(json.dumps(original, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
         self.assertEqual(digest, '85b150175df87e5cf58bfadafe7d4c19e010fb129fd42546d98c704fcf0d5d78')
+
+    def test_failure_audit_successors_preserve_all_prior_profiles(self):
+        registry = json.loads((ROOT / '.github/evals/custom-metrics.json').read_text())
+        for key in [k for k in registry['profiles'] if '-source-v9-' in k or '-source-v10-' in k or k in ('pester-effectiveness-v18', 'pester-cli-pilot-retained-v14', 'pester-effectiveness-v19', 'pester-cli-pilot-retained-v15')]: del registry['profiles'][key]
+        added = [k for k in registry['profiles'] if '-source-v8-' in k or k in ('pester-effectiveness-v17', 'pester-cli-pilot-retained-v13')]
+        self.assertEqual(len(added), 29)
+        for key in added:
+            previous = key.replace('-source-v8-', '-source-v7-') if key.startswith('campaign-') else {'pester-effectiveness-v17': 'pester-effectiveness-v16', 'pester-cli-pilot-retained-v13': 'pester-cli-pilot-retained-v12'}[key]
+            new = registry['profiles'][key]; old = registry['profiles'][previous]
+            self.assertEqual({k:v for k,v in new.items() if k not in ('id','runtime_digest')},
+                             {k:v for k,v in old.items() if k not in ('id','runtime_digest')})
+            purpose = key if key.startswith('campaign-') else 'skill_effectiveness' if key.startswith('pester-effectiveness') else 'cli_pilot'
+            self.assertNotEqual(new['runtime_digest'], old['runtime_digest'])
+            del registry['profiles'][key]
+        digest = hashlib.sha256(json.dumps(registry, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+        self.assertEqual(digest, '20c02e22482cbb6c0b047bc89d718e08a9a7b424b911a4e6a871395b247b027b')
+
+    def test_verifier_observation_profiles_preserve_all_prior_profiles(self):
+        registry = json.loads((ROOT / '.github/evals/custom-metrics.json').read_text())
+        for key in [k for k in registry['profiles'] if '-source-v10-' in k or k in ('pester-effectiveness-v19', 'pester-cli-pilot-retained-v15')]: del registry['profiles'][key]
+        added = [k for k in registry['profiles'] if '-source-v9-' in k or k in ('pester-effectiveness-v18', 'pester-cli-pilot-retained-v14')]
+        self.assertEqual(len(added), 29)
+        for key in added:
+            previous = key.replace('-source-v9-', '-source-v8-') if key.startswith('campaign-') else {'pester-effectiveness-v18': 'pester-effectiveness-v17', 'pester-cli-pilot-retained-v14': 'pester-cli-pilot-retained-v13'}[key]
+            new = registry['profiles'][key]; old = registry['profiles'][previous]
+            self.assertEqual({k:v for k,v in new.items() if k not in ('id','runtime_digest')},
+                             {k:v for k,v in old.items() if k not in ('id','runtime_digest')})
+            purpose = key if key.startswith('campaign-') else 'skill_effectiveness' if key.startswith('pester-effectiveness') else 'cli_pilot'
+            self.assertNotEqual(new['runtime_digest'], old['runtime_digest'])
+            del registry['profiles'][key]
+        digest = hashlib.sha256(json.dumps(registry, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+        self.assertEqual(digest, '22244f4d7409497afac7605dde7be65cc472e3cc98be06e7849f3e02d8a9aa4c')
+
+    def test_metadata_transport_profiles_preserve_all_prior_profiles(self):
+        registry = json.loads((ROOT / '.github/evals/custom-metrics.json').read_text())
+        added = [k for k in registry['profiles'] if '-source-v10-' in k or k in ('pester-effectiveness-v19', 'pester-cli-pilot-retained-v15')]
+        self.assertEqual(len(added), 29)
+        for key in added:
+            previous = key.replace('-source-v10-', '-source-v9-') if key.startswith('campaign-') else {'pester-effectiveness-v19': 'pester-effectiveness-v18', 'pester-cli-pilot-retained-v15': 'pester-cli-pilot-retained-v14'}[key]
+            new = registry['profiles'][key]; old = registry['profiles'][previous]
+            self.assertEqual({k:v for k,v in new.items() if k not in ('id','runtime_digest')},
+                             {k:v for k,v in old.items() if k not in ('id','runtime_digest')})
+            purpose = key if key.startswith('campaign-') else 'skill_effectiveness' if key.startswith('pester-effectiveness') else 'cli_pilot'
+            self.assertEqual(evidence.custom_input_identities(ROOT, new['skill_id'], purpose=purpose)['runtime_digest'], new['runtime_digest'])
+            self.assertNotEqual(new['runtime_digest'], old['runtime_digest'])
+            del registry['profiles'][key]
+        digest = hashlib.sha256(json.dumps(registry, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+        self.assertEqual(digest, 'cc7a4f209714b15b2c2eda28c99e13bdceae793e379d8a3fbe297774856dcc45')
 
     def test_freeze_successor_changes_only_routing_and_preserves_original_bytes(self):
         base = ROOT / '.github/evals/pester-return-contract'

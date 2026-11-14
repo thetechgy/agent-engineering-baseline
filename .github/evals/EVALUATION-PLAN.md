@@ -1,4 +1,173 @@
-# Issue #95 CI routing checkpoint
+# PR #135 verifier metadata transport correction
+
+The case-identity blocker is a build-context transport defect. A focused native
+reproduction at `4d9247a265d2f70700c048400a8af5a0616f791d`,
+[run 43525527396, job 132230273392](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43525527396/job/132230273392),
+uses the pinned CLI and unchanged non-forwarding fixtures. It gives the original
+separate case contexts equal-size, equal-timestamp metadata while preserving every
+task checksum. The first absent-arm `pester-003` launch is correct. The next
+`pester-004` task and host metadata are correct, but the independent verifier image
+contains case 003's `entry.json`: expected SHA-256
+`8d3d75f770ea53f86137b7c1b2a9968f98da281c1775cbf69904dda5cf8d4215`,
+observed `640477c07a950da25952db0d297bcc977c6f8776fbebdfc6e7a1e86fbec6164e`.
+Every other protected input matches case 004. Its raw verifier reward identifies
+case 003, matching the stale live metadata. Both output mounts belong to their
+actual trials, cleanup completes, and no third launch occurs after the mismatch.
+The failed job and sanitized live observations were retained before cancelling
+the superseded remaining validation. That run is inconclusive overall.
+
+The first incorrect boundary is staged metadata entering the verifier image,
+before reward creation. This is not a task-selection, submission-transfer,
+collector or normalizer relabelling defect. The unchanged grader reads the stale
+file and accurately emits its value; `Reward identity mismatch` correctly rejects
+it. PR #134's authenticated passing cohort has the same 76 staged verifier bytes.
+The successful-command audit/collection order is unchanged by the lifecycle fix,
+and the reproducer uses ordinary successful commands. This exposes an existing
+metadata-transfer weakness while qualifying the separate failure-path correction.
+
+The pilot's final image producer now copies the exact staged metadata through a
+SHA-256-addressed source filename to the existing `/tests/entry.json` destination.
+Different metadata no longer shares a COPY source pathname, even when sizes and
+timestamps match. The change applies to every staged case and arm. It never
+reconstructs an ID from a case name, changes grader inputs semantically, repairs
+a reward or relaxes admission. The regression compares every live protected input
+and holds all JSON metadata timestamps equal, including the addressed source.
+Interleaving, repetition and both arms still use the existing native CLI route.
+
+All 360 prior profiles are preserved. Pilot retained v15, effectiveness v19 and
+campaign source v10 append only the changed source IDs/runtime digests; grader,
+fixture, task criteria, skill and model values remain unchanged. The three rejected
+original #135 rewards stay rejected. Other historical receipts retain their
+original identity evidence and limits; no older live image is retrospectively
+claimed observed or regraded.
+
+The read-only observation head `7cf0bd8` independently completed all seven scheduler
+controls, exact live input/handoff checks for twelve trials, the selected aggregate
+and both required platforms in [run 43516424426](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43516424426).
+Artifact `14083218930` has archive SHA-256
+`7f7fd9897578338b69e5b7d1ed400f2f9cc594b829aef5a2f1e4188fac6e6f67`.
+Infrastructure retains tool exit 23, CLI exit 1 and primary `RuntimeError`, matching
+independent before/after/final audits, one launch/eleven unlaunched slots,
+unavailable quality and cleanup. Interruption retains CLI exit 124 and the same
+conservative stop. This verifies the lifecycle correction, not the new metadata
+producer. The new producer must pass the equal-metadata regression and full native
+qualification on its own final head. Exact final receipts and readiness are
+maintained on [draft PR #135](https://github.com/thetechgy/agent-engineering-baseline/pull/135)
+without documentation-only CI restarts.
+
+Local owning-runtime lifecycle, staging, scheduler, identity and append-only
+provenance controls pass. This workstation has no Docker executable; native
+before/after proof belongs to the maintained selected Actions route. No workflow,
+routing, protection, dependency or grading requirement changes. Paid evaluations,
+judges, allocations, adoption and the deferred skill clarification remain paused;
+PRs #130/#132, freezes, original submissions and historical grades are unchanged.
+
+**One next action:** review PR #135 using its final native and exact-head CI receipts.
+
+## Earlier case-identity investigation, retained as history
+
+The active scope is the raw verifier case mismatch on PR #135 at `f903197`.
+Authenticated run `43490661263`, attempt 1, artifact `14072781224`, archive
+SHA-256 `13aaa49d55268aab81b702284d8a1f9aec1cf3b80447545a3752ae2b9081ca47`
+retains incorrect raw reward entry IDs in absent-arm slots 3, 7 and 11. The
+normalizer's rejection remains unchanged. A fresh comparison against PR #134's
+artifact `14065618994` confirms all 76 staged verifier members are byte-identical;
+that older cohort has no raw identity mismatches. Collector-only replay of the
+older cohort leaves all 278 raw trial files unchanged and preserves correct IDs.
+Neither observation establishes which bytes the failed verifier actually read.
+
+The read-only observation head `7cf0bd8` passed the normal selected Validate
+run `43516424426`, including all seven scheduler controls, the aggregate gate and
+both required platforms. Authenticated artifact `14083218930`, archive SHA-256
+`7f7fd9897578338b69e5b7d1ed400f2f9cc594b829aef5a2f1e4188fac6e6f67`,
+contains twelve correct raw identities and matching live protected input hashes,
+with exact handoffs and cleanup. This proves integrated failure-path behavior;
+it does not explain or correct the intermittent identity defect. A short native
+regression now holds case-metadata sizes and timestamps equal across the original
+separate case/arm contexts, testing the specific incremental-transfer hypothesis.
+It retains live input/output identities in the job log and owns a separate
+verified Compose configuration. Grading bytes and criteria remain unchanged.
+
+A short diagnostic at `74b71fd`, run `43513274711`, passed the sequence absent
+003, absent 004, repeated absent 003 and present 004 with live input/output
+observations. It did not reproduce the defect and is not a correction receipt.
+The following step rejected the Compose configuration consumed by this diagnostic;
+that run was retained and cancelled before its known replacement. It is
+inconclusive. The intrusive short harness is retired. The current diagnostic
+records bounded live verifier input/output hashes and container/image/mount
+identities after grading and before disposal, through the existing environment
+lifecycle. It does not pre-read, repair or substitute verifier inputs. Collection
+failure still disposes the environment and preserves primary/secondary errors.
+
+The original prepared-cohort path must now determine whether its live input bytes,
+reward creation, mounted output or later collection is the first incorrect
+boundary. Final causal findings, correction and native/CI receipts will be recorded
+on [PR #135](https://github.com/thetechgy/agent-engineering-baseline/pull/135).
+All 331 existing profiles are preserved; source-v9, pilot retained v14 and
+effectiveness v18 identify only the added runtime observation. Task/fixture/grader
+bytes and grading criteria are unchanged. No historical rewards are repaired.
+
+**One next action:** complete the boundary trace and supported correction, then
+qualify the full existing scheduler. Paid evaluations and experiments remain paused.
+
+## Failure-path audit checkpoint, retained as history
+
+Verified main is `7696b50a3d2c30758d6a25a15c085a8d0b3008b0` (merged PR #134).
+This focused correction collects the trusted post-command boundary after a
+nonzero CLI exit, before submission collection, runtime-home scrubbing and the
+Harbor phase transition. The initiating execution error remains primary.
+Observation, collection and disposal failures remain separately visible in the
+runtime audit, exception notes and lifecycle record. Collection uses bounded
+handling; native containment is never restarted to obtain an audit. If a command
+never starts or containment prevents observation, absent evidence stays absent.
+
+The owning adapter is shared by the legacy pilot and campaign Codex consumers.
+The environment still disposes resources after observation failure and preserves
+that failure if disposal also fails. Cohort admission requires matching dedicated
+agent/controller IDs, image identities and policy hashes across the before,
+after and final observations. Missing or malformed observations stop as
+`missing_security_evidence`; observed mismatch stops as
+`security_or_identity_drift`. The ledger retains the execution stop and secondary
+failures alongside any security stop. Cleanup failure remains a scheduling stop.
+No failed execution becomes a successful agent task or a quality measurement.
+
+The authenticated before receipt is [Validate 43476103384](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43476103384),
+at `77b8e8fbca1a2602ca99e2c4c07bb2b7c0d1ac84`, attempt 1,
+[artifact 14065618994](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43476103384/artifacts/14065618994),
+archive SHA-256 `c0e84f25bfbefdaeaba71d12275f704cd06e0be3ce4f0b4a45194373c0e4b8f0`.
+Fresh bounded data-only inspection verifies twelve complete-fixture launches,
+twelve real child observations and exact submission handoffs, eight expected
+passes/four measured failures and cleanup. The deliberate control retains tool
+exit 23, CLI exit 1 and `RuntimeError`, one launch/eleven unlaunched slots,
+unavailable quality and cleanup, but no `boundary_after`; its classification is
+replaced by drift. This receipt and earlier failures remain unchanged. No new
+native baseline or DNS comparison is run.
+
+The local regression fails against verified main on the missing after-audit.
+The final owning-runtime local run executed 111 tests: 104 passed and seven
+environment-dependent controls skipped. Focused controls cover completion, nonzero exit, command and
+observation timeout/cancellation, contained workloads, independent observation
+failure, simultaneous cleanup failure, malformed/missing/wrong-environment
+observations, policy drift and unavailable report quality. This host has no
+Docker executable; native qualification belongs to the normal selected reusable
+Actions route. Final exact-head receipts and disposition are maintained on the
+delivery draft PR and [existing tracking issue #95](https://github.com/thetechgy/agent-engineering-baseline/issues/95).
+Scheduler readiness requires all seven native cohort controls, including cleanup
+and interruption previously unreached, the aggregate gate and both required
+platform checks to pass. Local controls alone do not establish that readiness.
+
+Only new source identities are appended: pilot retained v13, effectiveness v17
+and campaign source v8. All 302 earlier profiles, the existing return freeze,
+receipts, submissions, grades, task/model/grader settings and skills remain
+unchanged. Unchanged components reuse their authenticated historical evidence;
+changed shared consumers receive current native validation through normal CI.
+Full historical migration and experiment-preparation matrices are not repeated.
+
+**One next action:** review the focused draft PR using its final native and
+exact-head CI receipts. Paid evaluations, judges, allocations, adoption and the
+deferred skill clarification remain paused. PRs #130/#132 are unchanged.
+
+## PR #134 routing checkpoint, retained as history
 
 Compatible dependency updates are merged: [PR #125](https://github.com/thetechgy/agent-engineering-baseline/pull/125)
 at `e09e67da4d4be8d54d84d2b8ae64e067c9da5ba9` and

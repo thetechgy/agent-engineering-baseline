@@ -341,11 +341,136 @@ class PilotContracts(unittest.TestCase):
         agent._pilot_agent = True
         agent._pilot_interrupted = False
         agent._pilot_secrets = set()
+        agent._stage = lambda *args, **kwargs: None
         cleanup = AsyncMock()
         with patch('codex_pilot_boundary.observe', new=AsyncMock(side_effect=ValueError('unavailable'))), patch.object(SkillEvaluatorSecureDockerEnvironment, 'stop', new=cleanup):
             with self.assertRaisesRegex(ValueError, 'unavailable'):
                 asyncio.run(agent.stop(True))
         cleanup.assert_awaited_once_with(True)
+
+    @unittest.skipUnless(CANDIDATE_RUNTIME, 'Requires qualified owning runtime')
+    def test_final_observation_and_disposal_failures_keep_the_first_cause(self):
+        import asyncio
+        from codex_pilot_environment import PilotEnvironment, SkillEvaluatorSecureDockerEnvironment
+        agent = object.__new__(PilotEnvironment)
+        agent._pilot_agent = True; agent._pilot_interrupted = False
+        stages = []
+        agent._stage = lambda stage, **values: stages.append((stage, values))
+        primary = ValueError('observation unavailable')
+        with patch('codex_pilot_boundary.observe', new=AsyncMock(side_effect=primary)), patch.object(
+                SkillEvaluatorSecureDockerEnvironment, 'stop', new=AsyncMock(side_effect=RuntimeError('disposal unavailable'))):
+            with self.assertRaises(ValueError) as caught:
+                asyncio.run(agent.stop(True))
+        self.assertIs(caught.exception, primary)
+        self.assertIn('RuntimeError', str(primary.__notes__))
+        self.assertEqual([s[0] for s in stages], ['final_observation_failed', 'disposal_started', 'cleanup_failed'])
+
+    @unittest.skipUnless(CANDIDATE_RUNTIME, 'Requires qualified owning runtime')
+    def test_verifier_observation_failure_preserves_disposal_and_secondary_error(self):
+        import asyncio
+        from types import SimpleNamespace
+        from codex_pilot_environment import PilotEnvironment, SkillEvaluatorSecureDockerEnvironment
+        with tempfile.TemporaryDirectory() as directory:
+            environment = object.__new__(PilotEnvironment)
+            environment._pilot_agent = False
+            environment.trial_paths = SimpleNamespace(trial_dir=Path(directory))
+            primary = ValueError('observation unavailable')
+            disposal = AsyncMock(side_effect=RuntimeError('disposal failed'))
+            with patch('codex_pilot_boundary.observe_verifier', new=AsyncMock(side_effect=primary)), patch.object(SkillEvaluatorSecureDockerEnvironment, 'stop', new=disposal):
+                with self.assertRaises(ValueError) as caught: asyncio.run(environment.stop(True))
+            self.assertIs(caught.exception, primary)
+            disposal.assert_awaited_once_with(True)
+            self.assertIn('RuntimeError', str(primary.__notes__))
+            self.assertEqual(json.loads((Path(directory)/'operator/pilot-verifier-observation.json').read_text()), {'observation_exception':'ValueError'})
+
+    @unittest.skipUnless(CANDIDATE_RUNTIME, 'Requires qualified owning runtime')
+    def test_post_command_audit_failure_precedence_and_collection(self):
+        import asyncio
+        from types import SimpleNamespace
+        from codex_pilot_agent import PilotCodex
+
+        async def exercise(code=0, observation_error=None, cleanup_error=None, interrupted=False):
+            with tempfile.TemporaryDirectory() as d:
+                agent = object.__new__(PilotCodex)
+                agent.model_name = PROFILE['model']; agent.profile = PROFILE
+                agent.logs_dir = Path(d) / 'agent'; agent.environment_logs_dir = Path('/logs/agent')
+                agent._build_register_skills_command = lambda: None
+                agent._upload_effective_config = AsyncMock()
+                config = configuration('http://127.0.0.1:8765/v1')
+                agent.fixture_payload = lambda: b'fixture'; agent.fixture_commands = lambda payload: []
+                environment = SimpleNamespace(_pilot_interrupted=interrupted)
+                order = []
+                async def command(**kwargs):
+                    order.append('command')
+                    if isinstance(code, BaseException):
+                        raise code
+                    return SimpleNamespace(return_code=code)
+                environment.exec = AsyncMock(side_effect=command)
+                async def exec_agent(environment, command, **kwargs):
+                    if command.startswith('cat '):
+                        import toml
+                        return SimpleNamespace(stdout=toml.dumps(config))
+                    if command.startswith('test -r '):
+                        return SimpleNamespace(return_code=1)
+                    if 'stub.pid' in command and command.startswith('if '):
+                        order.append('cleanup')
+                        if cleanup_error: raise cleanup_error
+                    return SimpleNamespace(return_code=0)
+                agent.exec_as_agent = exec_agent
+                # Skill presence uses the environment transport before CLI launch.
+                async def transport(**kwargs):
+                    if kwargs['command'].startswith('test -r '):
+                        return SimpleNamespace(return_code=1)
+                    return await command(**kwargs)
+                environment.exec.side_effect = transport
+                observations = 0
+                async def observe(environment):
+                    nonlocal observations
+                    observations += 1; order.append('observation')
+                    if observations == 2 and observation_error: raise observation_error
+                    return {'agent_id': 'a' * 64, 'policy_sha256': 'b' * 64}
+                caught = None
+                with patch.dict(os.environ, AEB_PILOT_PROBE='1'), patch('codex_pilot_boundary.observe', side_effect=observe), patch(
+                        'codex_pilot_boundary.connectivity_baseline', return_value=[]):
+                    try: await agent._run_codex('fixture instruction', environment, SimpleNamespace())
+                    except BaseException as error: caught = error
+                audit = json.loads((Path(d) / 'operator/pilot-runtime.json').read_text())
+                return caught, audit, order
+
+        error, audit, order = asyncio.run(exercise(code=1))
+        self.assertIsInstance(error, RuntimeError)
+        self.assertEqual(audit['returncode'], 1)
+        self.assertEqual(audit['execution_exception'], 'RuntimeError')
+        self.assertIn('boundary_after', audit); self.assertEqual(audit['cleanup'], 'complete')
+        self.assertEqual(order, ['observation', 'command', 'observation', 'cleanup'])
+        error, audit, _ = asyncio.run(exercise())
+        self.assertIsNone(error); self.assertIn('boundary_after', audit)
+        for code in (0, 1, TimeoutError('deadline'), asyncio.CancelledError()):
+            with self.subTest(code=type(code).__name__ if isinstance(code, BaseException) else code):
+                observation = ValueError('unavailable'); cleanup = OSError('cleanup unavailable')
+                error, audit, _ = asyncio.run(exercise(code=code, observation_error=observation, cleanup_error=cleanup))
+                if isinstance(code, BaseException): self.assertIs(error, code)
+                if code == 0: self.assertIs(error, observation)
+                if code == 1: self.assertIsInstance(error, RuntimeError)
+                self.assertNotIn('boundary_after', audit)
+                self.assertEqual(audit['boundary_observation_exception'], 'ValueError')
+                self.assertEqual(audit['collection_or_cleanup_exception'], 'OSError')
+                self.assertIn('OSError', str(error.__notes__))
+        for observation in (asyncio.CancelledError(), TimeoutError('audit deadline')):
+            for code in (0, 1):
+                error, audit, order = asyncio.run(exercise(code=code, observation_error=observation))
+                if code == 0: self.assertIs(error, observation)
+                else: self.assertIsInstance(error, RuntimeError)
+                self.assertEqual(audit['boundary_observation_exception'], type(observation).__name__)
+                self.assertEqual(audit['cleanup'], 'complete')
+                self.assertNotIn('boundary_after', audit)
+        cancellation = asyncio.CancelledError()
+        error, audit, order = asyncio.run(exercise(code=cancellation, interrupted=True))
+        self.assertIs(error, cancellation)
+        self.assertNotIn('boundary_after', audit)
+        self.assertEqual(audit['boundary_observation_unavailable'], 'workload_contained')
+        self.assertEqual(audit['cleanup'], 'pending_container_disposal')
+        self.assertEqual(order, ['observation', 'command'])
 
     @unittest.skipUnless(CANDIDATE_RUNTIME, 'Requires qualified owning runtime')
     def test_secret_delivery_uses_stdin_target_user_and_cancellation_cleanup(self):

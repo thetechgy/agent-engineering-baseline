@@ -73,3 +73,37 @@ def connectivity_baseline():
             raise ValueError('Prohibited destination positive control unavailable')
         records.append({'url': url, 'returncode': p.returncode, 'http_code': p.stdout})
     return records
+
+
+async def observe_verifier(environment):
+    """Read the completed verifier's inputs/output before its disposal.
+
+    This observation runs after grading, so it cannot repair or pre-read a stale
+    input. Hashes and case metadata are data; the operator never executes inputs.
+    """
+    result = await environment._run_docker_compose_command(['ps', '-q', 'main'])
+    identifier = (result.stdout or '').strip()
+    if result.return_code or len(identifier) != 64 or any(c not in '0123456789abcdef' for c in identifier):
+        raise ValueError('Missing dedicated verifier container')
+    inspected = json.loads(docker('inspect', identifier))[0]
+    code = """import hashlib,json,os
+from pathlib import Path
+files={};total=0
+for base in ('/tests','/logs/verifier'):
+ for p in sorted(Path(base).rglob('*')):
+  if p.is_file() and not p.is_symlink():
+   size=p.stat().st_size
+   if size>1048576: raise ValueError('Verifier observation member budget')
+   total+=size
+   if len(files)>=256 or total>8388608: raise ValueError('Verifier observation budget')
+   raw=p.read_bytes()
+   files[str(p)]={'sha256':hashlib.sha256(raw).hexdigest(),'bytes':len(raw)}
+   if p.name in ('entry.json','skill_evaluator_reward.json','custom_reward.json'):
+    files[str(p)]['json']=json.loads(raw)
+print(json.dumps({'cwd':os.getcwd(),'uid':os.getuid(),'tests_env':os.environ.get('HARBOR_TESTS_DIR'),'files':files}))"""
+    observation = json.loads(docker('exec', '-u', 'root', identifier, 'python3', '-c', code))
+    return {'container_id': identifier, 'image_id': inspected['Image'],
+            'mounts': [{'destination': m['Destination'],
+                        'source_sha256': hashlib.sha256(m['Source'].encode()).hexdigest(),
+                        'source_is_current_trial': Path(m['Source']).is_relative_to(environment.trial_paths.trial_dir)}
+                       for m in inspected['Mounts']], 'observation': observation}
