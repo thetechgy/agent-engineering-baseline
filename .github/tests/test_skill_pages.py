@@ -108,7 +108,20 @@ class FixtureAPI:
 class PagesTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.historical = evidence.project(evidence.normalize_behavioral(fixtures.FIXTURES / 'podman-native', 'podman'))
+        import importlib.metadata
+        if importlib.metadata.version('skillevaluator') == '0.3.0':
+            cls.historical = evidence.project(evidence.normalize_behavioral(fixtures.FIXTURES / 'podman-native', 'podman'))
+        else:
+            # Normalize historical native data under its original owner; exercise
+            # publication preparation and rebuilding under the selected host.
+            python = Path(os.environ.get('SKILL_EVALUATOR_PYTHON', ''))
+            if not python.is_absolute() or not python.is_file():
+                raise ValueError('Historical native fixture requires its owning interpreter')
+            command = 'import sys,json; from pathlib import Path; sys.path.insert(0,sys.argv[1]); import skill_evidence as e; print(json.dumps(e.project(e.normalize_behavioral(Path(sys.argv[2]),"podman"))))'
+            result = subprocess.run([str(python), '-I', '-B', '-c', command, str(ROOT / '.github/scripts'),
+                                     str(fixtures.FIXTURES / 'podman-native')],
+                                    capture_output=True, text=True, check=True, timeout=60)
+            cls.historical = json.loads(result.stdout)
 
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix='pages-test-'); self.addCleanup(self.temp.cleanup)

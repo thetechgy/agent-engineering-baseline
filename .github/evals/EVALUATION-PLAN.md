@@ -1,23 +1,48 @@
-# SkillEvaluator 0.9.0 opt-in compatibility checkpoint
+# SkillEvaluator 0.9.0 adoption decision checkpoint
 
-Verified base is `9912a905614ed4d49ff780ae39687e9e6cc2b7cc`, the merged
-[PR #135](https://github.com/thetechgy/agent-engineering-baseline/pull/135).
-The next issue #95 step is the separately pinned `candidate-next` environment:
-SkillEvaluator 0.9.0 / Harbor 0.25.0, using the existing qualification/report path.
-Production 0.3.0 and retained 0.8.0 defaults, frozen inputs and historical grades
-remain intact. Paid experiments and the deferred Pester clarification remain paused.
+**Decision prepared:** adopt 0.9.0 for the data-only consolidated report/publisher
+preparation and orchestration hosts together; hold complete static quality and
+live benchmarks. Production selectors, schedules, protected gates, Pages and
+frozen experiments are unchanged by this assessment.
 
-The [compatibility result](EVALUATOR-090-95.md) records consumer ownership,
-exact source/package/lock identities, changed grading and advisory CI semantics,
-individual patch/hook disposition and credential-free limits. Source and offline
-controls support removal of two small syntax workarounds; shared orchestration,
-task grading, CLI isolation, authenticated admission and reporting remain necessary.
-The [draft PR #136 description](https://github.com/thetechgy/agent-engineering-baseline/pull/136)
-is the authoritative final exact-head CI and native artifact receipt. Pending or failed native evidence is not a qualification.
+Verified main is `d02d485fa58598aa3f3ce91799a6976746643afd`, the merged
+[PR #136](https://github.com/thetechgy/agent-engineering-baseline/pull/136), with no
+intervening changes at assessment start. Its passing source
+`1cab475c635012731f7bba6825c00b398b39f5bc` and native receipts remain evidence for
+unchanged 0.9 fixtures, provenance and reporting.
 
-**One current next action:** review that draft's compatibility result and final
-selected CI/native receipts for later adoption consideration. Do not merge or
-change production defaults as part of this work.
+The [adoption assessment](EVALUATOR-090-95.md) traces each active, manual, opt-in
+and historical consumer. It closes the 0.9 static failure/coverage status and
+producer-policy projection gaps. Actual native controls retain known violations
+alongside unsupported evidence, but a further collector probe confirms that
+unscored diagnostics drop those findings. That visibility gap must be closed
+under a successor producer identity before live adoption. All 83 upstream assertion differences remain
+red upstream assertions, reconciled by cause rather than declared passing.
+
+The static hold is concrete: released strict validation rejects unchanged Podman
+entry 8 because its expected output grades skill use. The retained check stays
+failed; valid static findings still render. Correcting that task expectation
+requires separate scope and no inference. Live benchmarks also retain their
+original policy/admission owner and unqualified 0.9 provider route. Original
+private review and native replay interpreters remain necessary.
+
+The draft PR description carries exact delivered-commit CI and artifact receipts.
+Passing assessment checks do not qualify the held static consumer, provider
+routing, judge accuracy or skill effectiveness. All prior paid allocations remain
+closed; the Pester clarification and PR #130/#132 experiments remain deferred.
+
+**One current next action:** review and authorize the specific data-only
+reporting/orchestration host switch in the assessment. Do not change production
+defaults or execute paid work as part of this PR.
+
+## PR #136 opt-in qualification, retained as history
+
+PR #136 merged the separately pinned `candidate-next` 0.9.0 / Harbor 0.25.0
+profile. [Validate 43549113107](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43549113107)
+passed both required checks, the selected aggregate and native/report consumers
+at its final source. Production 0.3.0, retained 0.8.0 and historical evidence were
+preserved. Two syntax allowances were omitted only from the new profile. The
+merged PR description contains authenticated artifact identities and hashes.
 
 ## PR #135 checkpoint, retained as history
 

@@ -48,9 +48,12 @@ SCANNER_RUNTIME = {**SCANNER_RUNTIME_PREVIOUS,
                    "semgrep_lock": "sha256:d0c13313fb643f578a8116375078d344bfcf74748380ca88acd6e0d7d467c520"}
 SCANNER_RUNTIME_CURRENT_UNPATCHED = {key: value for key, value in SCANNER_RUNTIME.items()
                                      if key != "adapter_patch"}
-SCANNER_RUNTIMES = (SCANNER_RUNTIME_UNPATCHED, SCANNER_RUNTIME_PREVIOUS,
+# Same scanner executables/locks, released 0.9 adapter instead of the 0.3 patch.
+SCANNER_RUNTIME_NEXT = {**SCANNER_RUNTIME_CURRENT_UNPATCHED,
+                        "evaluator_revision": profiles.NEXT['revision']}
+SCANNER_RUNTIMES = (SCANNER_RUNTIME_NEXT, SCANNER_RUNTIME_UNPATCHED, SCANNER_RUNTIME_PREVIOUS,
                     SCANNER_RUNTIME_CURRENT_UNPATCHED, SCANNER_RUNTIME)
-CAVEAT_SCANNER_RUNTIMES = (SCANNER_RUNTIME_PREVIOUS, SCANNER_RUNTIME)
+CAVEAT_SCANNER_RUNTIMES = (SCANNER_RUNTIME_PREVIOUS, SCANNER_RUNTIME, SCANNER_RUNTIME_NEXT)
 
 ROOT = Path(__file__).resolve().parents[2]
 JSON_LIMIT = 8 * 1024 * 1024
@@ -1491,6 +1494,9 @@ def validate_evidence(data, *, public=False, _observed_at=None):
     if 'scanner_runtime' in data:
         require(data.get('kind') == 'static' and data['scanner_runtime'] in SCANNER_RUNTIMES,
                 'Unsupported or contradictory scanner runtime')
+        require((data['scanner_runtime'] == SCANNER_RUNTIME_NEXT) ==
+                (data['policy']['fields']['evaluator_revision'] == profiles.NEXT['revision']),
+                'Scanner adapter and public producer differ')
         fields += ('scanner_runtime',)
     if 'coverage_caveats' in data:
         require(data.get('kind') == 'static' and data.get('scanner_runtime') in CAVEAT_SCANNER_RUNTIMES,
@@ -1824,8 +1830,13 @@ def validate_evidence(data, *, public=False, _observed_at=None):
             finding_indices[scanner] += 1
         require(aggregate['passed'] == all(scan['passed'] is True or not scan.get('blocking', True)
                                          for scan in validators), 'Static aggregate gate contradiction')
-        expected = ('incomplete' if any(scan['status'] == 'incomplete' for scan in validators)
-                    else 'passed' if aggregate['passed'] else 'failed')
+        if data['policy']['fields']['evaluator_revision'] == profiles.NEXT['revision']:
+            failing = [scan for scan in validators if scan.get('blocking', True) and scan['passed'] is not True]
+            expected = ('passed' if not failing else 'incomplete'
+                        if all(scan['status'] == 'incomplete' for scan in failing) else 'failed')
+        else:
+            expected = ('incomplete' if any(scan['status'] == 'incomplete' for scan in validators)
+                        else 'passed' if aggregate['passed'] else 'failed')
         require(aggregate['status'] == expected, 'Static aggregate status contradiction')
     depth(data, 12 if public else 32)
     if public:
@@ -2050,7 +2061,11 @@ def validate_runtime_versions(versions):
                 'Unsupported or contradictory scanner provenance')
     elif versions.get('skillspector_revision') == SCANNER_RUNTIME['skillspector_revision']:
         require(False, 'Missing scanner runtime provenance')
-    return profiles.runtime(versions, owning=True)
+    profile = profiles.runtime(versions, owning=True)
+    if 'scanner_runtime' in versions:
+        require((versions['scanner_runtime'] == SCANNER_RUNTIME_NEXT) == (profile is profiles.NEXT),
+                'Scanner adapter and evaluator owner differ')
+    return profile
 
 
 def native_error_count(record):
@@ -2873,8 +2888,17 @@ def normalize_static(root, name, workspace=ROOT):
     require(type(native['incomplete_scans']) is list and len(native['incomplete_scans']) <= 100, 'Scanner limit')
     for scanner in native['incomplete_scans']:
         token(scanner)
-    expected = 'incomplete' if native['incomplete_scans'] else 'passed' if row['passed'] else 'failed'
-    require(native['overall_status'] == expected and native['total_validators'] == len(native['results']) > 0, 'Static status contradiction')
+    released = native.get('version') == '0.9.0'
+    if released:
+        require(root / 'versions.json' in scanned_entries, 'Missing static producer provenance')
+        producer = read_json_and_digest(root / 'versions.json', budget=budget, directory_identities=directory_identities, directory_states=directory_states, file_states=file_states)[0]
+        require(validate_runtime_versions(producer) is profiles.NEXT, 'Static producer version mismatch')
+        from skillevaluator.reporting.base import passes_required_gate
+        released_gates = [passes_required_gate(result) for result in reports.released_static_results(native)]
+    else:
+        expected = 'incomplete' if native['incomplete_scans'] else 'passed' if row['passed'] else 'failed'
+        require(native['overall_status'] == expected, 'Static status contradiction')
+    require(native['total_validators'] == len(native['results']) > 0, 'Static status contradiction')
     severity = native['severity_counts']; closed(severity, ('critical', 'high', 'medium', 'low'))
     for val in severity.values():
         count(val)
@@ -2888,8 +2912,14 @@ def normalize_static(root, name, workspace=ROOT):
         for scanner in extra_scanners:
             token(scanner)
         require(set(extra_scanners) <= set(native['incomplete_scans']), 'Inconsistent incomplete scanner identity')
-    blocking = [static_required_gate(scan, blocking_only=True) for scan in native['results']]
-    gates = [scan['passed'] or not required for scan, required in zip(native['results'], blocking)]
+    # The released rehydrator validates status precedence, gate failures and
+    # finding severity together. It is used only for its exact owning producer.
+    if released:
+        blocking = [scan.get('gating', {}).get('blocking', True) for scan in native['results']]
+        gates = released_gates
+    else:
+        blocking = [static_required_gate(scan, blocking_only=True) for scan in native['results']]
+        gates = [scan['passed'] or not required for scan, required in zip(native['results'], blocking)]
     require(native['overall_passed'] == all(gates),
             'Static required gate contradiction')
     detailed = dict.fromkeys(severity, 0)
@@ -2968,7 +2998,8 @@ def normalize_static(root, name, workspace=ROOT):
                             'reasons': sorted(limitations), 'provenance': 'runtime_recorded'}
     if root / 'versions.json' in scanned_entries:
         versions, versions_digest = read_json_and_digest(root / 'versions.json', budget=budget, directory_identities=directory_identities, directory_states=directory_states, file_states=file_states)
-        validate_runtime_versions(versions)
+        producer = validate_runtime_versions(versions)
+        require(native.get('version', producer['version']) == producer['version'], 'Static producer version mismatch')
         if 'scanner_runtime' in versions: data['scanner_runtime'] = copy.deepcopy(versions['scanner_runtime'])
         has_caveats = any(error.startswith('skillspector complete_with_caveats:')
                           for scan in native['results'] for error in scan.get('legacy', {}).get('errors', []))
@@ -2980,6 +3011,21 @@ def normalize_static(root, name, workspace=ROOT):
                     match = re.fullmatch(
                         r'skillspector complete_with_caveats: ([1-9][0-9]*) reference_missing caveat\(s\); '
                         r'producer is_complete=true; repository coverage remains incomplete', error)
+                    if versions.get('scanner_runtime') == SCANNER_RUNTIME_NEXT:
+                        # The released adapter names up to three missing-reference
+                        # rows, followed by the exact remaining count. Retain that
+                        # producer claim without promoting incomplete coverage.
+                        if (error.startswith("skillspector JSON field 'analysis_completeness' reports caveats that SkillEvaluator does not accept (status 'complete_with_caveats'): ")
+                                and error.endswith('Missing references require a standalone target with complete, matching reference and scan evidence. See https://docs.nvidia.com/skills/skillevaluator/tier1-validation.')):
+                            shown = error.count('[reference_resolution; reference_missing]')
+                            remaining = re.search(r'; and ([1-9][0-9]*) more; security scan did not complete', error)
+                            require(1 <= shown <= 3, 'Invalid released caveat diagnostic')
+                            caveats = shown + (int(remaining[1]) if remaining else 0)
+                            require('skillspector' in scan['incomplete_scans'], 'Caveat coverage missing')
+                            data.setdefault('coverage_caveats', []).append({
+                                'scanner': 'skillspector', 'producer_status': 'complete_with_caveats',
+                                'reason': 'reference_missing', 'count': caveats,
+                                'reference': report_reference(('results', index))['id']})
                     if match:
                         require(scan['validator'] == 'Security Scan' and scan['status'] == 'incomplete',
                                 'Contradictory caveat coverage')
@@ -2988,7 +3034,13 @@ def normalize_static(root, name, workspace=ROOT):
                             'reason': 'reference_missing', 'count': int(match[1]),
                             'reference': report_reference(('results', index))['id']})
 
-        data['policy'] = make_policy({'evaluator_revision': versions.get('evaluator_revision')}, provenance='runtime_recorded')
+        if released:
+            data['policy'] = make_policy(
+                {key: versions[key] for key in ('evaluator_revision', 'harbor', 'python')},
+                patch='sha256:' + producer['patch_sha256'],
+                judge={'model': None, 'provider': None, 'enabled': False}, provenance='runtime_recorded')
+        else:
+            data['policy'] = make_policy({'evaluator_revision': versions.get('evaluator_revision')}, provenance='runtime_recorded')
         data['references'].append(reference_from_digest(root, root / 'versions.json', 'skill-quality', versions_digest))
         if versions.get('fixture') == 'synthetic':
             data['availability']['provenance'] = 'synthetic'
@@ -3358,7 +3410,7 @@ def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
     if profile_id is None and campaign_purpose(purpose):
         profile_id = purpose
     if profile_id is None and purpose in ('skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-effectiveness-v20'
+        profile_id = 'pester-effectiveness-v21'
     if profile_id is None and name == 'powershell-pester-6' and purpose in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
         profile_id = 'pester-cli-pilot-retained-v15'
     if profile_id is None and name == 'gh' and purpose == 'oracle_qualification':

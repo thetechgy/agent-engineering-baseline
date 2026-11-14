@@ -125,7 +125,14 @@ def run(output, tools):
                 assert any(f['line_number'] and f['file_path'] for f in secrets['findings'])
                 assert not raw['incomplete_scans'], raw
             else:
-                assert security['status'] == 'incomplete' and 'skillspector' in raw['incomplete_scans'], raw
+                assert 'skillspector' in security['incomplete_scans'] and 'skillspector' in raw['incomplete_scans'], raw
+                if versions['skillevaluator'] == '0.9.0':
+                    # A confirmed finding outranks incompleteness in this release.
+                    # Validate both axes with the released rehydrator.
+                    reports.released_static_results(raw)
+                    assert security['status'] == ('failed' if mode == 'caveat' else 'incomplete'), raw
+                else:
+                    assert security['status'] == 'incomplete', raw
                 if mode == 'caveat':
                     assert any(f['check_name'].endswith('(P2)') and f['line_number'] for f in security['findings'])
                 if mode == 'partial':
@@ -203,9 +210,34 @@ def run(output, tools):
     return outcomes
 
 
+def next_tools(tools, destination):
+    """Reuse qualified scanner executables with the exact candidate evaluator."""
+    import evaluator_profiles as profiles
+    profile = profiles.owning_candidate()
+    assert profile is profiles.NEXT
+    profiles.runtime(profiles.candidate_versions(profile), owning=True)
+    versions = evidence.read_json(tools / 'versions.json')
+    assert versions['scanner_runtime'] == evidence.SCANNER_RUNTIME
+    destination.mkdir(parents=True, exist_ok=False)
+    (destination / 'bin').mkdir()
+    for name in ('skillspector', 'semgrep', 'gitleaks', 'bandit', 'pip-audit'):
+        source = (tools / ('evaluator/.venv/bin' if name in ('bandit', 'pip-audit') else 'bin') / name).resolve(strict=True)
+        assert source.is_file() and os.access(source, os.X_OK)
+        (destination / 'bin' / name).symlink_to(source)
+    write(destination / 'versions.json', {
+        **profiles.candidate_versions(profile), 'scanners': versions['scanners'],
+        'skillspector_revision': versions['skillspector_revision'],
+        'scanner_runtime': evidence.SCANNER_RUNTIME_NEXT})
+    return destination
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', required=True, type=Path)
     parser.add_argument('--tools', required=True, type=Path)
+    parser.add_argument('--evaluator-next', action='store_true', help='Use the 0.9 owner with existing qualified scanners')
     args = parser.parse_args()
-    run(args.output.resolve(), args.tools.resolve())
+    tools = args.tools.resolve()
+    if args.evaluator_next:
+        tools = next_tools(tools, args.output.resolve().with_name(args.output.name + '-tools'))
+    run(args.output.resolve(), tools)
