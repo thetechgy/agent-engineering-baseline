@@ -63,6 +63,7 @@ class EvidenceTests(unittest.TestCase):
         config = scripts.parent / 'evals/evaluator-candidate.json'
         config.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(REPO / '.github/evals/evaluator-candidate.json', config)
+        shutil.copyfile(REPO / '.github/evals/evaluator-0.9.json', config.with_name('evaluator-0.9.json'))
 
     def native(self):
         target = self.root / 'native'
@@ -3120,7 +3121,7 @@ class EvidenceTests(unittest.TestCase):
                 shutil.copytree(FIXTURES / ('podman-native' if kind == 'behavioral' else 'static-synthetic'), root)
                 if kind == 'behavioral': (root / 'extract-manifest.json').unlink()
                 versions = root / 'versions.json'; data = evidence.read_json(versions)
-                data['skillevaluator'] = '0.9.0'; write(versions, data)
+                data['skillevaluator'] = '999.0.0'; write(versions, data)
                 exists = Path.exists; hidden = []
                 def absent(path):
                     if path == versions: hidden.append(True); return False

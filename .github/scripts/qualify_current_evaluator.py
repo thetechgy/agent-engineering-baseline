@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Frozen candidate collection-to-report controls. No inference; no history publication."""
+"""Opt-in candidate collection-to-report controls. No inference; no history publication."""
 import argparse
 import copy
 import hashlib
 import importlib.metadata
+import importlib.util
 import json
 import os
 import shutil
@@ -20,6 +21,13 @@ import skill_evidence as evidence
 import skill_analysis as analysis
 import skill_report as report
 import skill_reports as reports
+
+
+
+def backend_sources():
+    spec = importlib.util.spec_from_file_location('aeb_backend_wheel', ROOT / '.github/evaluator-backends/build_wheel.py')
+    builder = importlib.util.module_from_spec(spec); spec.loader.exec_module(builder)
+    return builder.package_files(candidate_next=profiles.owning_candidate()['version'] == '0.9.0')
 
 
 def replay_controls():
@@ -96,6 +104,12 @@ def worker(output):
         'test_grading_evidence.GradingEvidenceTests', 'test_evaluator_candidate.CandidateEvidenceTests',
         'test_candidate_standard_grading.CandidateStandardTests',
         'test_current_native.NativeCurrentTests',
+        'test_evaluator_090.Release090Contracts.test_native_gh_entry_point_selects_actual_owning_profile',
+        'test_evaluator_090.Release090Contracts.test_retained_backend_wheel_bytes_and_new_wheel_reproducibility',
+        'test_codex_pilot.PilotContracts.test_post_command_audit_failure_precedence_and_collection',
+        'test_codex_pilot.PilotContracts.test_secret_delivery_uses_stdin_target_user_and_cancellation_cleanup',
+        'test_codex_pilot.PilotContracts.test_final_observation_and_disposal_failures_keep_the_first_cause',
+        'test_custom_metrics.CustomMetricTests.test_matching_grades_do_not_admit_stale_swapped_or_other_arm_rewards',
         'test_gh_initializer.InitializerTests.test_backend_runtime_pairs_and_wheel_python_metadata',
         'test_gh_initializer.InitializerTests.test_plugin_real_dispatch_pins_codex_and_denies_task_configuration',
         'test_gh_initializer.InitializerTests.test_start_awaits_secure_start_and_records_failures_without_agent_setup',
@@ -120,9 +134,9 @@ def worker(output):
     for row in vectors():
         expected = round((row['security'] + row['skill_execution'] + row['skill_efficiency'] + row['accuracy'] +
                          (row['goal_accuracy'] + row['behavior_check']) / 2) / 5, 4)
-        assert round(overall_score({**row, 'score_policy': profiles.CANDIDATE['scoring']}), 4) == expected
+        assert round(overall_score({**row, 'score_policy': profiles.owning_candidate()['scoring']}), 4) == expected
         assert overall_score({**row, 'score_policy': 'unknown-policy'}) is None
-    reports.write_json(output / 'scoring-policy.json', {'policy': profiles.CANDIDATE['scoring'],
+    reports.write_json(output / 'scoring-policy.json', {'policy': profiles.owning_candidate()['scoring'],
         'vectors': len(vectors()), 'synthetic': True, 'quality_measurement': False})
     metrics, diagnostics = replay_controls()
     reports.write_json(output / 'replay-controls.json', diagnostics)
@@ -166,7 +180,7 @@ def worker(output):
             else: raise AssertionError('Candidate without runtime provenance accepted')
         else:
             value = evidence.project(evidence.normalize_behavioral(root, 'podman'))
-            assert value['policy']['producer_profile'] == profiles.CANDIDATE['id']
+            assert value['policy']['producer_profile'] == profiles.owning_candidate()['id']
             assert value['availability']['status'] == 'incomplete' and not analysis.measured(value)
             assert not value['metrics'] and all(o['score'] is None for o in value['observations'])
     for change in ({'evaluator_revision': 'f' * 40}, {'skillevaluator': '0.3.0'}, {'lock_sha256': '0' * 64}):
@@ -201,7 +215,7 @@ def worker(output):
             assert comparison['classification'] != 'directly_comparable'
             assert all(m['right_minus_left'] is None for m in comparison['native_metrics'])
     assert not network
-    reports.write_json(output / 'result.json', {'success': True, 'profile': profiles.CANDIDATE['id'],
+    reports.write_json(output / 'result.json', {'success': True, 'profile': profiles.owning_candidate()['id'],
         'inference': False, 'judges_invoked': False, 'history_eligible': False, 'simulated': True,
         'tests': result.testsRun, 'metadata_removal_controls': 3, 'replay_controls': len(diagnostics), 'network_attempts': network,
         'report': 'report.html', 'adoption_ready': False,
@@ -263,7 +277,7 @@ def native_cohorts(output, *, lifecycle=True):
         current = analysis.capture_inputs([directory])
         native = [row for row in current.records.values() if row['kind'] == 'behavioral']
         assert len(native) == 1 and native[0]['custom']['purpose'] == 'oracle_qualification'
-        assert native[0]['custom']['agent'] == 'oracle' and native[0]['policy']['producer_profile'] == profiles.CANDIDATE['id']
+        assert native[0]['custom']['agent'] == 'oracle' and native[0]['policy']['producer_profile'] == profiles.owning_candidate()['id']
         assert len(native[0]['observations']) == (48 if name == 'gh' else 52)
         assert native[0]['availability']['status'] == 'incomplete' and not native[0]['metrics']
         assert all(o['score'] is None for o in native[0]['observations'])
@@ -285,7 +299,7 @@ def native_cohorts(output, *, lifecycle=True):
 
 def complete_native_lifecycle(inputs, output):
     """Join the existing six fixed shards; consume producer artifacts as data."""
-    profiles.runtime(profiles.candidate_versions(), owning=True)
+    profiles.runtime(profiles.candidate_versions(profiles.owning_candidate()), owning=True)
     assert inputs.is_absolute() and inputs.resolve() == inputs
     assert output.is_absolute() and output.resolve() == output and not output.exists()
     assert not output.is_relative_to(ROOT) and not output.is_relative_to(inputs) and not inputs.is_relative_to(output)
@@ -304,9 +318,8 @@ def complete_native_lifecycle(inputs, output):
     metadata = reports.read_json(output / 'metadata.json')
     assert metadata['producer_revision'] == evidence.git_revision(ROOT)
     assert metadata['workflow_attempt'] == attempt and metadata['workflow_run'] == os.environ['GITHUB_RUN_ID']
-    assert metadata['versions'] == profiles.candidate_versions()
-    assert metadata['backend_sources'] == {p.name: evidence.digest_bytes(p.read_bytes())
-        for p in sorted((ROOT / '.github/evaluator-backends/aeb_gh_fixture').glob('*.py'))}
+    assert metadata['versions'] == profiles.candidate_versions(profiles.owning_candidate())
+    assert metadata['backend_sources'] == {name: evidence.digest_bytes(raw) for name, raw in backend_sources().items()}
     helpers = ('qualify_current_evaluator.py', 'gh_initializer_validation.py', 'gh_oracle_validation.py', 'pester_container_validation.py')
     assert metadata['harnesses'] == {name: evidence.digest_bytes((ROOT / '.github/scripts' / name).read_bytes()) for name in helpers}
     value = provisional
@@ -325,7 +338,7 @@ def complete_native_lifecycle(inputs, output):
             if not path.exists():
                 missing.append(name); success = False; continue
             native = reports.read_json(path)
-            assert native.get('runtime') == {'skillevaluator': profiles.CANDIDATE['version'], 'harbor': profiles.CANDIDATE['harbor']}
+            assert native.get('runtime') == {'skillevaluator': profiles.owning_candidate()['version'], 'harbor': profiles.owning_candidate()['harbor']}
             assert native.get('harness_sha256') == harness
             assert native.get('producer_revision') == metadata['producer_revision']
             assert native.get('workflow_attempt') == attempt and native.get('workflow_run') == metadata['workflow_run']
@@ -363,7 +376,7 @@ def complete_native_lifecycle(inputs, output):
     success = success and len(rows) == 48 and identities == {(case, arm) for case in expected for arm in ('with_skill', 'without_skill')}
     reports.write_json(output / 'native-gh-lifecycle.json', {'success': success, 'expected': 48,
         'completed': rows, 'missing_shards': missing, 'selections': selections, 'inference': False,
-        'runtime': {'skillevaluator': profiles.CANDIDATE['version'], 'harbor': profiles.CANDIDATE['harbor']},
+        'runtime': {'skillevaluator': profiles.owning_candidate()['version'], 'harbor': profiles.owning_candidate()['harbor']},
         'harness_sha256': harness, 'teardown': {'status': 'complete' if success else 'inconclusive'}})
     value.update(success=success, native_qualification='passed' if success else 'partial', gh_lifecycle=len(rows))
     captured = analysis.capture_inputs([output / 'public'])
@@ -374,7 +387,7 @@ def complete_native_lifecycle(inputs, output):
     assert len(native_records) == 2
     assert {(r['source']['skill_id'], r['run_id'], len(r['observations'])) for r in native_records} == {
         ('gh', 'native-oracle', 48), ('powershell-pester-6', 'qualification', 52)}
-    assert all(r['custom']['agent'] == 'oracle' and r['policy']['producer_profile'] == profiles.CANDIDATE['id'] for r in native_records)
+    assert all(r['custom']['agent'] == 'oracle' and r['policy']['producer_profile'] == profiles.owning_candidate()['id'] for r in native_records)
     assert report.render_report(saved, captured) == (output / 'report.html').read_bytes()
     reports.write_json(output / 'result.json', value)
     if not success: raise RuntimeError('Native qualification incomplete; shard diagnostics retained')
@@ -396,17 +409,16 @@ def main():
     output = args.output.absolute()
     if output.resolve() != output or output.exists() or output.is_relative_to(ROOT):
         parser.error('Use a new persistent resolved output directory outside the checkout')
-    p = profiles.CANDIDATE
+    p = profiles.owning_candidate()
     import aeb_gh_fixture
     backend = Path(aeb_gh_fixture.__file__).parent
-    authored = ROOT / '.github/evaluator-backends/aeb_gh_fixture'
-    assert {f.name: f.read_bytes() for f in backend.glob('*.py')} == {f.name: f.read_bytes() for f in authored.glob('*.py')}, 'Installed backend source differs'
+    assert {f.name: f.read_bytes() for f in backend.glob('*.py')} == backend_sources(), 'Installed backend source differs'
     import skillevaluator
     source = Path(skillevaluator.__file__).resolve().parents[2]
     assert subprocess.check_output(['git', '-C', str(source), 'rev-parse', 'HEAD']).decode().strip() == p['revision']
     assert hashlib.sha256((source / 'uv.lock').read_bytes()).hexdigest() == p['lock_sha256']
-    versions = {'skillevaluator': p['version'], 'evaluator_revision': p['revision'], 'harbor': p['harbor'],
-                'python': '.'.join(map(str, sys.version_info[:3])), 'lock_sha256': p['lock_sha256'], 'patch_sha256': p['patch_sha256']}
+    versions = profiles.candidate_versions(p)
+    versions['python'] = '.'.join(map(str, sys.version_info[:3]))
     profiles.runtime(versions, owning=True)
     # Bind the entire installed package tree, including newly ported helpers.
     files = {f.relative_to(source / 'src').as_posix(): hashlib.sha256(f.read_bytes()).hexdigest()
@@ -435,7 +447,7 @@ for guard in e.record_guards(public): guard()
     reports.write_json(output / 'metadata.json', {'versions': versions, 'source_tree_digest': p['source_tree_digest'],
         'producer_revision': evidence.git_revision(ROOT), 'simulated': True, 'inference': False,
         'workflow_run': os.environ.get('GITHUB_RUN_ID'), 'workflow_attempt': os.environ.get('GITHUB_RUN_ATTEMPT'),
-        'backend_sources': {p.name: evidence.digest_bytes(p.read_bytes()) for p in sorted((ROOT / '.github/evaluator-backends/aeb_gh_fixture').glob('*.py'))},
+        'backend_sources': {name: evidence.digest_bytes(raw) for name, raw in backend_sources().items()},
         'harnesses': {p.name: evidence.digest_bytes(p.read_bytes()) for p in (Path(__file__), ROOT / '.github/scripts/gh_initializer_validation.py', ROOT / '.github/scripts/gh_oracle_validation.py', ROOT / '.github/scripts/pester_container_validation.py')}})
     with (output / 'qualification.log').open('w') as log:
         result = subprocess.run([sys.executable, '-I', '-B', str(Path(__file__).resolve()), '--worker', '--output', str(output)],

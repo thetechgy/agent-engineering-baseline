@@ -462,6 +462,8 @@ jobs:
     needs: plan
     if: github.event_name == 'pull_request' && needs.plan.outputs.evaluator == 'true'
     uses: ./.github/workflows/current-evaluator.yml
+    with:
+      candidate-next: true
 
   native-deadline:
     needs: plan

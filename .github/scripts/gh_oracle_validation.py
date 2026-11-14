@@ -159,8 +159,9 @@ def retain_diagnostics(jobs, artifact, case_ids):
 def main(artifact):
     from aeb_gh_fixture.backend import require_runtime
     require_runtime()
-    from evaluator_profiles import runtime, candidate_versions
-    runtime(candidate_versions(), owning=True)
+    from evaluator_profiles import runtime, candidate_versions, owning_candidate
+    versions = candidate_versions(owning_candidate())
+    runtime(versions, owning=True)
     def interrupted(_signum, _frame):
         raise KeyboardInterrupt
     signal.signal(signal.SIGTERM, interrupted)
@@ -220,7 +221,7 @@ def main(artifact):
             _qualify_reporting(root, artifact / 'native', candidate=True, name='gh')
             reports.write_json(artifact / 'qualification.json', {'success': True, 'inference': False,
                 'producer': 'oracle', 'expected': 48, 'outcomes': outcomes,
-                'versions': __import__('evaluator_profiles').candidate_versions()})
+                'versions': versions})
         finally:
             after = {kind: subprocess.check_output(command, text=True).split() for kind, command in (
                 ('containers', ['docker', 'ps', '-aq']), ('networks', ['docker', 'network', 'ls', '-q']))}
