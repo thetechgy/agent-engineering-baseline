@@ -1,0 +1,36 @@
+{
+  "base": "379f44988fc6bb5499bd1d4f3e1b1f6a8eef74bd",
+  "status": "prepared for adoption",
+  "profile": "skillevaluator-0.9.0-offline-v2",
+  "checks": {
+    "pages": {
+      "passed": 21,
+      "skipped": 1
+    },
+    "orchestration": {
+      "passed": 34
+    },
+    "current_boundaries": {
+      "passed": 2
+    },
+    "workflow_contracts": {
+      "passed": 53
+    },
+    "identity": {
+      "passed": 6
+    }
+  },
+  "log_sha256": {
+    "setup.log": "c614e1c00218aadf4eac4be9f0c8ff6d7af57f832051c4360835a3d3525b3d73",
+    "dependencies.json": "847da8301bbd7e6ea68f77a8a60a305c91e5eca946f10e40cdef9bf3691fc3cf",
+    "pages.log": "cfa5ef6d248d23584c79307e2aa9beb0ec42d75276e36796faabb7fba115c219",
+    "orchestration.log": "1b03aaae66325e10568244c66920900dffbdae8e14983a05467be7c60305c0d6",
+    "current-boundaries.log": "3fb75ac216ce5e92ae0911a45b7be8a1070ea5925778981f174bcc329012d28c",
+    "host-contracts.log": "9870abaaf21e2288e4c8908497abbedd123504ffac48e3a766c14f10ff5e24cd",
+    "identity.log": "fab16559ebef32cfcc1a1967c445217c4969520201e4c7919a4091fc33b96e16"
+  },
+  "hosted_receipt": "Final executable revision and terminal selected CI in PR description",
+  "no_inference": true,
+  "no_real_dispatch": true,
+  "rollback": "Identical public site bytes; historical candidate seal preserved; no rescoring"
+}

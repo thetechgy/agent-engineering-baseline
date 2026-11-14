@@ -526,6 +526,13 @@ class WorkflowAndUsageTests(unittest.TestCase):
         self.assertEqual(set(triggers), {'workflow_run', 'schedule', 'workflow_dispatch'})
         self.assertEqual(triggers['schedule'], [{'cron': '37 10 * * 2'}])
         self.assertNotIn('OPENAI_API_KEY', json.dumps(workflow))
+        for name in ('plan', 'dispatch'):
+            steps = workflow['jobs'][name]['steps']
+            setup = next(s for s in steps if 'setup-skillevaluator.sh' in s.get('run', ''))
+            self.assertEqual(setup['run'], 'bash .github/scripts/setup-skillevaluator.sh candidate-next')
+            command = next(s['run'] for s in steps if 'skill_orchestration.py' in s.get('run', ''))
+            self.assertIn('"$SKILL_NEXT_PYTHON"', command)
+            self.assertNotIn('SKILL_EVALUATOR_PYTHON', command)
         self.assertEqual(workflow['jobs']['plan']['permissions'], {'contents': 'read', 'actions': 'read'})
         self.assertEqual(workflow['jobs']['dispatch']['permissions'], {'contents': 'read', 'actions': 'write'})
         benchmark = yaml.safe_load((ROOT / orchestration.BENCHMARK).read_text())

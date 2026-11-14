@@ -961,10 +961,11 @@ published metrics, and `gh-pages` remain unchanged by the public artifact handof
 reads data only: no history lookup, “latest” selection, network, inference,
 graders, scanners, subprocesses, skill edits, or publication. Public schema v1,
 native scoring, APM artifacts, workflows, artifact handoff, and history publishing
-remain unchanged. Use the existing pinned evaluator Python; no dependency is added.
+remain unchanged. For data-only analysis use the existing `candidate-next` setup
+and `SKILL_NEXT_PYTHON` (SkillEvaluator 0.9.0); no dependency is added.
 
 ```bash
-"$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_analysis.py \
+"$SKILL_NEXT_PYTHON" .github/scripts/skill_analysis.py \
   --input /tmp/public-quality \
   --input /tmp/public-benchmark \
   --output /tmp/new-analysis
@@ -1219,18 +1220,27 @@ saved analysis use bounded, strict, no-follow reads. Duplicate JSON keys, corrup
 or stale analysis, contradictory identities, extra public fields and unsafe
 inputs reject before output. Input state guards run again at publication.
 
-From the checkout, using the existing pinned evaluator Python environment:
+From the checkout, run `bash .github/scripts/setup-skillevaluator.sh candidate-next`
+with the setup environment variables described by that script, then load its
+`GITHUB_ENV` exports. Use `SKILL_NEXT_PYTHON` for base public analysis/rendering.
+Keep native normalization on each record's original evaluator interpreter
+(`SKILL_EVALUATOR_PYTHON` for 0.3, `SKILL_CURRENT_PYTHON` for retained 0.8).
+Private `--analyst-review` attachments require their original validator/review
+profile and interpreter; the 0.9 data host does not authorize those paths.
+The `reporting` setup still installs the original 0.3 and review owners.
+
+Data-only public rendering:
 
 ```bash
 report_parent="$(mktemp -d /tmp/skill-report.XXXXXXXX)"
 
 # Use previously obtained public bundles, not native diagnostic directories.
-"$SKILL_EVALUATOR_PYTHON" -B .github/scripts/skill_analysis.py \
+"$SKILL_NEXT_PYTHON" -B .github/scripts/skill_analysis.py \
   --input /tmp/skill-public-quality \
   --input /tmp/skill-public-benchmark \
   --output "$report_parent/analysis"
 
-"$SKILL_EVALUATOR_PYTHON" -B .github/scripts/skill_report.py \
+"$SKILL_NEXT_PYTHON" -B .github/scripts/skill_report.py \
   --input /tmp/skill-public-quality \
   --input /tmp/skill-public-benchmark \
   --analysis "$report_parent/analysis/analysis.json" \
@@ -1399,10 +1409,10 @@ for sample in podman static gh; do
   cp "$demo_parent/inventory/inventory.json" "$demo_parent/$sample/inventory.json"
   cp "$demo_parent/normalized-$sample/public-report.json" "$demo_parent/$sample/public-report.json"
 done
-"$SKILL_EVALUATOR_PYTHON" -B .github/scripts/skill_analysis.py \
+"$SKILL_NEXT_PYTHON" -B .github/scripts/skill_analysis.py \
   --input "$demo_parent/podman" --input "$demo_parent/static" \
   --input "$demo_parent/gh" --output "$demo_parent/analysis"
-"$SKILL_EVALUATOR_PYTHON" -B .github/scripts/skill_report.py \
+"$SKILL_NEXT_PYTHON" -B .github/scripts/skill_report.py \
   --input "$demo_parent/podman" --input "$demo_parent/static" \
   --input "$demo_parent/gh" --analysis "$demo_parent/analysis/analysis.json" \
   --output "$demo_parent/html"
@@ -1474,7 +1484,9 @@ not establish that it passed.
 
 ### Optional private analyst attachments
 
-Add `--analyst-review /tmp/private-attachments/podman.json` to the report command;
+Select the attachment's original review/validator interpreter instead of
+`SKILL_NEXT_PYTHON` before adding
+`--analyst-review /tmp/private-attachments/podman.json` to the report command;
 repeat for another selected record. There is at most **one analyst report per
 record**, with up to eight separately supplied independent assessments of that
 exact report. No-attachment generation keeps the existing public-evidence

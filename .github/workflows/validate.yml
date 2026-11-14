@@ -160,6 +160,17 @@ jobs:
           "$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_evaluations.py stage gh "$RUNNER_TEMP/gh-eval-bundle/gh"
           skillevaluator tier3 validate "$RUNNER_TEMP/gh-eval-bundle/gh" --strict --json
 
+      - name: Install pinned SkillEvaluator 0.9.0 data-only host
+        run: bash .github/scripts/setup-skillevaluator.sh candidate-next
+
+      - name: Qualify data-only publisher and orchestration with retained rollback
+        env:
+          EVALUATOR_ADOPTION_CONTROLS: '1'
+        run: |
+          "$SKILL_NEXT_PYTHON" -m unittest discover -s .github/tests -p test_skill_pages.py -v
+          "$SKILL_NEXT_PYTHON" -m unittest discover -s .github/tests -p test_skill_orchestration.py -v
+          PYTHONPATH=.github/tests "$SKILL_NEXT_PYTHON" -m unittest -v test_evaluator_adoption.AdoptionTests.test_released_status_keeps_confirmed_failure_and_missing_coverage test_evaluator_adoption.AdoptionTests.test_held_consumers_refuse_candidate_before_execution
+
       - name: Verify contract tests left the checkout unchanged
         if: always()
         run: |

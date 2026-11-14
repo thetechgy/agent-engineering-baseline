@@ -64,9 +64,9 @@ jobs:
           version: '0.13.8'
           enable-cache: false
 
-      - name: Install pinned reporting dependencies without scanners or Compose
+      - name: Install pinned SkillEvaluator 0.9.0 data-only host
         working-directory: trusted
-        run: bash .github/scripts/setup-skillevaluator.sh reporting
+        run: bash .github/scripts/setup-skillevaluator.sh candidate-next
 
       - name: Authenticate producers and build complete candidate without write permissions
         id: preparation
@@ -75,7 +75,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RETAINED: ${{ github.workspace }}/retained
         run: |
-          "$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_pages.py prepare \
+          "$SKILL_NEXT_PYTHON" .github/scripts/skill_pages.py prepare \
             --workspace "$PWD" --retained "$RETAINED" --output "$RUNNER_TEMP/skill-pages-candidate"
 
       - name: Seal generated handoff

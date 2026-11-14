@@ -431,6 +431,12 @@ class PagesTests(unittest.TestCase):
         self.assertEqual(run.returncode, 0, run.stderr)
         self.assertEqual(before, pages.tree(output / 'benchmarks'))
         self.assertEqual(seal, pages.verify_candidate(output))
+        # Roll back only the data host: preserve every public byte and its seal.
+        legacy = os.environ.get('SKILL_EVALUATOR_PYTHON', sys.executable)
+        run = subprocess.run([legacy, *command[1:]], capture_output=True, text=True)
+        self.assertEqual(run.returncode, 0, run.stderr)
+        self.assertEqual(before, pages.tree(output / 'benchmarks'))
+        self.assertEqual(seal, pages.verify_candidate(output))
 
     def test_pages_excludes_analyst_attachments(self):
         captured = analysis.capture_inputs([self.site / 'report/current'])
@@ -581,6 +587,11 @@ if 'apply' in args:
         self.assertEqual(workflow['permissions'], {})
         jobs = workflow['jobs']
         self.assertEqual(jobs['prepare']['permissions'], {'contents': 'read', 'actions': 'read'})
+        setup = next(s for s in jobs['prepare']['steps'] if 'setup-skillevaluator.sh' in s.get('run', ''))
+        self.assertEqual(setup['run'], 'bash .github/scripts/setup-skillevaluator.sh candidate-next')
+        command = next(s['run'] for s in jobs['prepare']['steps'] if s.get('id') == 'preparation')
+        self.assertIn('"$SKILL_NEXT_PYTHON" .github/scripts/skill_pages.py prepare', command)
+        self.assertNotIn('SKILL_EVALUATOR_PYTHON', command)
         self.assertEqual(jobs['commit']['permissions'], {'contents': 'write'})
         self.assertEqual(jobs['deploy']['permissions'], {'contents': 'read', 'pages': 'write', 'id-token': 'write'})
         benchmark = yaml.safe_load((ROOT / '.github/workflows/benchmark-skills.yml').read_text())

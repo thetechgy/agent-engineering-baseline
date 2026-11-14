@@ -1,4 +1,29 @@
-# SkillEvaluator 0.9.0 adoption decision checkpoint
+# Data-only SkillEvaluator 0.9.0 host switch checkpoint
+
+**Prepared for adoption, pending merge.** This branch switches only publisher
+`prepare` and orchestration `plan` / `dispatch` to existing `candidate-next`
+setup and `SKILL_NEXT_PYTHON`. Operator base analysis/rendering of validated
+public bundles uses the same interpreter. Production main remains at the merged
+PR #137 assessment until this PR merges; no workflow was manually activated.
+
+Verified base: `379f44988fc6bb5499bd1d4f3e1b1f6a8eef74bd` (#137), with no
+intervening main changes at implementation start. See the
+[host migration receipt](../../docs/evaluations/evaluator-090-hosts.md) for changed
+consumers, qualification and rollback. The PR description carries the final
+executable revision and terminal selected CI receipts.
+
+Static quality, benchmark execution, private reviews/attachments and historical
+native replay keep their existing owners. Collector finding retention, Podman
+strict-dataset compatibility and live-provider qualification remain separate
+blockers. The 0.7.2 qualifier remains. Paid streams are disabled, all prior
+allocations closed, and Pester clarification and frozen experiments deferred.
+
+**One current next action:** review this focused host migration PR. No merge or
+production activation is authorized by this implementation task.
+
+## PR #137 assessment, retained as history
+
+### SkillEvaluator 0.9.0 adoption decision checkpoint
 
 **Decision prepared:** adopt 0.9.0 for the data-only consolidated report/publisher
 preparation and orchestration hosts together; hold complete static quality and

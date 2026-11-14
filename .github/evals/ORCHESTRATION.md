@@ -2,8 +2,11 @@
 
 The **Plan skill evaluations** workflow assesses evaluation demand after main
 validation completes, every Tuesday at 10:37 UTC, and on manual dispatch from main.
-Planning uses the pinned reporting dependencies without models, judges, provider
-preflight, scanners, or Docker. Successful validation of the exact current main
+Planning and dispatch use the existing pinned `candidate-next` 0.9.0 host and
+`SKILL_NEXT_PYTHON` for public data. They perform no model, judge, provider
+preflight, scanner or Docker execution. The installed profile includes Tier 3
+dependencies; their presence does not authorize execution. Benchmark execution
+retains its original 0.3.0 owner. Successful validation of the exact current main
 revision is required before an automatic benchmark request.
 
 Automatic dispatch ships **disabled** for both Podman and gh. This change does not
