@@ -1,0 +1,129 @@
+{
+  "upstream_revision": "b78d14618a694dec84bc9601468f8f711df5cab3",
+  "profile": "skillevaluator-0.9.0-offline-v2",
+  "retained_suite": {
+    "total": 697,
+    "passed": 614,
+    "failed": 83,
+    "log_sha256": "e0e79a00212bdf01e7926e018dd4d1f301fd72caab834948440bd4dcee75e2fd"
+  },
+  "upstream_failures_remain_failures": true,
+  "causes": [
+    {
+      "cause": "unsupported_evidence_verdict",
+      "count": 71,
+      "disposition": "intentional_repository_evidence_policy",
+      "nodes": [
+        "tests/tier3/test_codex_tool_call_normalization.py::test_unsupported_codex_wrapper_is_not_a_clean_security_result[extract_tool_calls_as_dicts0]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_unsupported_codex_wrapper_is_not_a_clean_security_result[extract_tool_calls_as_dicts1]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_template_unsupported_codex_wrapper_is_not_a_clean_security_result",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[computed-member-shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[computed-member-standalone-template]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[optional-computed-member-shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[optional-computed-member-standalone-template]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[comment-separated-computed-member-shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[comment-separated-computed-member-standalone-template]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[parenthesized-computed-member-shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[parenthesized-computed-member-standalone-template]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[global-optional-computed-member-shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[global-optional-computed-member-standalone-template]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[comment-before-direct-member-shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[comment-before-direct-member-standalone-template]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[comment-after-direct-member-shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[comment-after-direct-member-standalone-template]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[comment-before-direct-call-shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[comment-before-direct-call-standalone-template]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[optional-direct-member-shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[optional-direct-member-standalone-template]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[optional-direct-call-shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[optional-direct-call-standalone-template]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[parenthesized-direct-member-shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[parenthesized-direct-member-standalone-template]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[parenthesized-optional-direct-member-shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[parenthesized-optional-direct-member-standalone-template]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[parenthesized-direct-call-shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[parenthesized-direct-call-standalone-template]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[global-computed-tools-object-shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[global-computed-tools-object-standalone-template]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[escaped-tools-identifier-shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[escaped-tools-identifier-standalone-template]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[escaped-method-identifier-shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[escaped-method-identifier-standalone-template]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[cr-line-comment-separated-member-shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[cr-line-comment-separated-member-standalone-template]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[parenthesized-global-computed-tools-shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[parenthesized-global-computed-tools-standalone-template]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[parenthesized-global-direct-tools-shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[parenthesized-global-direct-tools-standalone-template]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[multiply-parenthesized-global-tools-shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_dynamic_computed_codex_tool_member_fails_closed[multiply-parenthesized-global-tools-standalone-template]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_indirect_codex_tool_reference_fails_closed[aliased-method-shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_indirect_codex_tool_reference_fails_closed[aliased-method-standalone-template]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_indirect_codex_tool_reference_fails_closed[destructured-method-shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_indirect_codex_tool_reference_fails_closed[destructured-method-standalone-template]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_indirect_codex_tool_reference_fails_closed[aliased-tools-object-shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_indirect_codex_tool_reference_fails_closed[aliased-tools-object-standalone-template]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_indirect_codex_tool_reference_fails_closed[comment-separated-member-after-url-string-shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_indirect_codex_tool_reference_fails_closed[comment-separated-member-after-url-string-standalone-template]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_indirect_codex_tool_reference_fails_closed[comment-separated-member-after-template-url-shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_indirect_codex_tool_reference_fails_closed[comment-separated-member-after-template-url-standalone-template]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_indirect_codex_tool_reference_fails_closed[comment-separated-member-after-regex-quote-shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_indirect_codex_tool_reference_fails_closed[comment-separated-member-after-regex-quote-standalone-template]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_indirect_codex_tool_reference_fails_closed[assigned-tools-object-shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_indirect_codex_tool_reference_fails_closed[assigned-tools-object-standalone-template]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_indirect_codex_tool_reference_fails_closed[destructuring-assignment-shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_indirect_codex_tool_reference_fails_closed[destructuring-assignment-standalone-template]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_indirect_codex_tool_reference_fails_closed[ternary-tools-alias-shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_indirect_codex_tool_reference_fails_closed[ternary-tools-alias-standalone-template]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_extended_codex_dynamic_inline_is_not_a_clean_security_result[extract_tool_calls_as_dicts0]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_extended_codex_dynamic_inline_is_not_a_clean_security_result[extract_tool_calls_as_dicts1]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_pragma_line_ended_by_a_javascript_line_terminator_fails_closed[inline-U+2028-extract_tool_calls_as_dicts0]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_pragma_line_ended_by_a_javascript_line_terminator_fails_closed[inline-U+2028-extract_tool_calls_as_dicts1]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_pragma_line_ended_by_a_javascript_line_terminator_fails_closed[inline-U+2029-extract_tool_calls_as_dicts0]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_pragma_line_ended_by_a_javascript_line_terminator_fails_closed[inline-U+2029-extract_tool_calls_as_dicts1]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_pragma_line_ended_by_a_javascript_line_terminator_fails_closed[const-U+2028-extract_tool_calls_as_dicts0]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_pragma_line_ended_by_a_javascript_line_terminator_fails_closed[const-U+2028-extract_tool_calls_as_dicts1]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_pragma_line_ended_by_a_javascript_line_terminator_fails_closed[const-U+2029-extract_tool_calls_as_dicts0]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_pragma_line_ended_by_a_javascript_line_terminator_fails_closed[const-U+2029-extract_tool_calls_as_dicts1]"
+      ]
+    },
+    {
+      "cause": "malformed_wrapper_metadata",
+      "count": 2,
+      "disposition": "intentional_repository_evidence_policy",
+      "nodes": [
+        "tests/tier3/test_codex_tool_call_normalization.py::test_non_codex_exec_call_without_wrapper_input_is_unchanged[extract_tool_calls_as_dicts0]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_non_codex_exec_call_without_wrapper_input_is_unchanged[extract_tool_calls_as_dicts1]"
+      ]
+    },
+    {
+      "cause": "known_finding_with_unsupported_wrapper",
+      "count": 4,
+      "disposition": "intentional_verdict_policy_with_confirmed_collector_visibility_gap",
+      "nodes": [
+        "tests/tier3/test_codex_tool_call_normalization.py::test_unsupported_codex_wrapper_still_scans_its_outer_observation_for_secrets[shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_unsupported_codex_wrapper_still_scans_its_outer_observation_for_secrets[standalone-template]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_untrusted_normalizer_metadata_cannot_suppress_outer_secret_scanning[shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_untrusted_normalizer_metadata_cannot_suppress_outer_secret_scanning[standalone-template]"
+      ]
+    },
+    {
+      "cause": "unlinked_observation_attribution",
+      "count": 6,
+      "disposition": "intentional_repository_evidence_policy",
+      "nodes": [
+        "tests/tier3/test_codex_tool_call_normalization.py::test_unscoped_multi_wrapper_observation_is_not_duplicated_for_atomic_calls[mapped-with-call-ids-shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_unscoped_multi_wrapper_observation_is_not_duplicated_for_atomic_calls[mapped-with-call-ids-standalone-template]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_unscoped_multi_wrapper_observation_is_not_duplicated_for_atomic_calls[mapped-without-call-ids-shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_unscoped_multi_wrapper_observation_is_not_duplicated_for_atomic_calls[mapped-without-call-ids-standalone-template]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_unscoped_multi_wrapper_observation_is_not_duplicated_for_atomic_calls[mapped-with-empty-call-ids-shared]",
+        "tests/tier3/test_codex_tool_call_normalization.py::test_unscoped_multi_wrapper_observation_is_not_duplicated_for_atomic_calls[mapped-with-empty-call-ids-standalone-template]"
+      ]
+    }
+  ],
+  "supporting_controls": ".github/tests/test_evaluator_adoption.py",
+  "limits": [
+    "Representative contract controls do not make these upstream assertions pass.",
+    "No live provider or judge qualification."
+  ]
+}

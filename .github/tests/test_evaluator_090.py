@@ -39,18 +39,18 @@ class Release090Contracts(unittest.TestCase):
     def test_source_successors_preserve_every_historical_registry_entry(self):
         registry = evidence.custom_registry(ROOT)
         old = copy.deepcopy(registry)
-        added = [key for key in registry['profiles'] if '-source-v11-' in key]
+        added = [key for key in registry['profiles'] if '-source-v12-' in key]
         self.assertEqual(len(added), 27)
-        added.append('pester-effectiveness-v20')
+        added.append('pester-effectiveness-v21')
         for key in added:
             new = registry['profiles'][key]
-            previous = registry['profiles'][key.replace('-source-v11-', '-source-v10-') if key.startswith('campaign-') else 'pester-effectiveness-v19']
+            previous = registry['profiles'][key.replace('-source-v12-', '-source-v11-') if key.startswith('campaign-') else 'pester-effectiveness-v20']
             self.assertEqual({k:v for k,v in new.items() if k not in ('id', 'runtime_digest')},
                              {k:v for k,v in previous.items() if k not in ('id', 'runtime_digest')})
             self.assertEqual(evidence.custom_input_identities(ROOT, new['skill_id'], purpose=key if key.startswith('campaign-') else 'skill_effectiveness')['runtime_digest'], new['runtime_digest'])
             del old['profiles'][key]
         digest = hashlib.sha256(json.dumps(old, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
-        self.assertEqual(digest, 'aaca89849f7fddc587d20b312e155dfb2710b65a3b6b299b02cc01eaaf7e7316')
+        self.assertEqual(digest, '8219c6585b322af40cce84b07905edcd3b027fb1a9c55b4a6c3277d4bbc3ba4d')
 
     @unittest.skipUnless(importlib.util.find_spec('aeb_gh_fixture'), 'Requires the candidate owning backend')
     def test_native_gh_entry_point_selects_actual_owning_profile(self):

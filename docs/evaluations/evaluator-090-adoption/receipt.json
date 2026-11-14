@@ -1,0 +1,370 @@
+{
+  "base_commit": "d02d485fa58598aa3f3ce91799a6976746643afd",
+  "base_tree": "57d62e53ded7a771fb7749471d5ed00de9ba85f3",
+  "production_selectors_changed": false,
+  "inference": false,
+  "judges": false,
+  "paid_allocations_created": false,
+  "local_evidence": "Pre-commit working tree; authored source hashes below bind the tested implementation. Final exact-head hosted status belongs to the draft PR description.",
+  "candidate_profile": {
+    "id": "skillevaluator-0.9.0-offline-v2",
+    "revision": "b78d14618a694dec84bc9601468f8f711df5cab3",
+    "version": "0.9.0",
+    "python": "3.14.10",
+    "harbor": "0.25.0",
+    "scoring": "skill-evaluator-dimension-mean-v1",
+    "lock_sha256": "05dd72bfd0bac5399ac19232ea847929e2b21df4a7ef2d2c65eefc4f72484dda",
+    "patch_sha256": "c0dbeb490ba0a9ebefc9c173e6951fb3cc62143250eaf672db0ad8dd01de5d34",
+    "dependencies": {
+      "skillevaluator": "0.9.0",
+      "harbor": "0.25.0",
+      "openai": "2.54.0",
+      "anthropic": "2.8.0",
+      "pydantic": "2.14.3",
+      "pydantic-core": "2.50.4",
+      "litellm": "1.93.2",
+      "typing-inspection": "0.4.5",
+      "mcp": "1.30.0",
+      "aeb-gh-fixture": "1.1.0"
+    },
+    "source_tree_digest": "sha256:b3c3da95e35db4ec263cb25b83e0b9bbc9f33be556c41751e4a0059fb8867515",
+    "published_artifacts": [
+      {
+        "filename": "skillevaluator-0.9.0-py3-none-any.whl",
+        "sha256": "2812a2d03f66f1e7bf46312971f18fba7d8097c6bafa24b9e8e75176cbabdbe5",
+        "url": "https://files.pythonhosted.org/packages/30/34/df7ef63cc7a726ca22513062ecaa4b1f155965b24505233ce21d035efc24/skillevaluator-0.9.0-py3-none-any.whl"
+      },
+      {
+        "filename": "skillevaluator-0.9.0.tar.gz",
+        "sha256": "8342bb3ab0915a2723542bc889896ca535ed2677b602196a88325ad78a1388cc",
+        "url": "https://files.pythonhosted.org/packages/53/ec/dbadd6840cc1b6363df78947b2031b0e417b4a173c7a62dc9c1e34519e80/skillevaluator-0.9.0.tar.gz"
+      }
+    ],
+    "backend_wheel_sha256": "070237e238326d49a63f348d405533d01bdc58c68295aea206095aee80ac5149",
+    "backend_source_digest": "sha256:3e79836ee10bdb1d690f50384077cde9ef5eaf09cd4d470076eae459a0937fa8"
+  },
+  "checks": {
+    "native_verifier_and_projection": {
+      "tests": 5,
+      "passed": 5,
+      "log_sha256": "e39bb4c0a4d93229b269c40b05b500871ff72e10edd8ed8526751e596623ff29"
+    },
+    "orchestration": {
+      "tests": 34,
+      "passed": 34,
+      "log_sha256": "cec19e4471475c64ba322370bfb5515954eceb3ed6894aa4066fd15491902b95",
+      "api": "local synthetic Actions state; no remote dispatch"
+    },
+    "publisher": {
+      "tests": 22,
+      "passed": 21,
+      "skipped": 1,
+      "skip": "Python 3.13 reporting-setup contract remains on original owner",
+      "log_sha256": "9d960397c591849da808ffe5884f07b1ac42744c6967a1a4024363d37e3ac400",
+      "publication": "local disposable remotes, prepare/build/seal; no Pages write"
+    },
+    "offline_080_retention": {
+      "success": true,
+      "profile": "skillevaluator-0.8.0-offline-v4",
+      "inference": false,
+      "judges_invoked": false,
+      "history_eligible": false,
+      "simulated": true,
+      "tests": 52,
+      "metadata_removal_controls": 3,
+      "replay_controls": 48,
+      "network_attempts": [],
+      "report": "report.html",
+      "adoption_ready": false,
+      "limits": [
+        "synthetic collection and fixture replay",
+        "native container lifecycle unqualified",
+        "native backend execution not exercised by offline mode",
+        "no live agent or judge"
+      ]
+    },
+    "final_static_revalidation": {
+      "records": 6,
+      "reproduced_report_sha256": "3cb7326a51f0c8f30c65bc394ae81fa579e35736bb45330a6a5d3661a1447497"
+    },
+    "collection_visibility": {
+      "status": "blocked",
+      "raw_verifier": "known security finding retained and redacted",
+      "persisted_unscored_diagnostic": "security details/findings omitted by _failed_judge_diagnostic via _save_unscored_trials",
+      "newly_introduced_by_090": "not established",
+      "closure": "successor producer identity; bounded diagnostic preservation and repository admission together; no inference needed"
+    },
+    "offline_090": {
+      "success": true,
+      "profile": "skillevaluator-0.9.0-offline-v2",
+      "inference": false,
+      "judges_invoked": false,
+      "history_eligible": false,
+      "simulated": true,
+      "tests": 52,
+      "metadata_removal_controls": 3,
+      "replay_controls": 48,
+      "network_attempts": [],
+      "report": "report.html",
+      "adoption_ready": false,
+      "limits": [
+        "synthetic collection and fixture replay",
+        "native container lifecycle unqualified",
+        "native backend execution not exercised by offline mode",
+        "no live agent or judge"
+      ]
+    },
+    "native_scanner_controls": {
+      "synthetic": true,
+      "outcomes": {
+        "bad": {
+          "security": "failed",
+          "code": "failed",
+          "secrets": "failed",
+          "incomplete_scans": [],
+          "finding_counts_by_scanner": {
+            "CODE_RISK": 4,
+            "PII": 1,
+            "QUALITY": 13,
+            "SCHEMA": 4,
+            "SCRIPT_LINT": 3,
+            "SECRETS": 1,
+            "SECURITY": 6
+          }
+        },
+        "caveat": {
+          "security": "failed",
+          "code": "passed",
+          "secrets": "passed",
+          "incomplete_scans": [
+            "skillspector"
+          ],
+          "finding_counts_by_scanner": {
+            "QUALITY": 13,
+            "SCHEMA": 4,
+            "SCRIPT_LINT": 2,
+            "SECURITY": 2
+          }
+        },
+        "clean": {
+          "security": "passed",
+          "code": "passed",
+          "secrets": "passed",
+          "incomplete_scans": [],
+          "finding_counts_by_scanner": {
+            "QUALITY": 13,
+            "SCHEMA": 4,
+            "SCRIPT_LINT": 2
+          }
+        },
+        "launch": {
+          "security": "incomplete",
+          "code": "passed",
+          "secrets": "passed",
+          "incomplete_scans": [
+            "skillspector"
+          ],
+          "finding_counts_by_scanner": {
+            "QUALITY": 13,
+            "SCHEMA": 4,
+            "SCRIPT_LINT": 2
+          }
+        },
+        "malformed": {
+          "security": "incomplete",
+          "code": "passed",
+          "secrets": "passed",
+          "incomplete_scans": [
+            "skillspector"
+          ],
+          "finding_counts_by_scanner": {
+            "QUALITY": 13,
+            "SCHEMA": 4,
+            "SCRIPT_LINT": 2
+          }
+        },
+        "partial": {
+          "security": "incomplete",
+          "code": "passed",
+          "secrets": "passed",
+          "incomplete_scans": [
+            "skillspector"
+          ],
+          "finding_counts_by_scanner": {
+            "QUALITY": 13,
+            "SCHEMA": 4,
+            "SCRIPT_LINT": 3,
+            "SECURITY": 1
+          }
+        },
+        "timeout": {
+          "security": "incomplete",
+          "code": "passed",
+          "secrets": "passed",
+          "incomplete_scans": [
+            "skillspector"
+          ],
+          "finding_counts_by_scanner": {
+            "QUALITY": 13,
+            "SCHEMA": 4,
+            "SCRIPT_LINT": 2
+          }
+        },
+        "unavailable": {
+          "security": "incomplete",
+          "code": "passed",
+          "secrets": "passed",
+          "incomplete_scans": [
+            "skillspector"
+          ],
+          "finding_counts_by_scanner": {
+            "QUALITY": 13,
+            "SCHEMA": 4,
+            "SCRIPT_LINT": 2
+          }
+        }
+      },
+      "controls_sha256": "0146f8809b575b6c91885a5ddfc51836b6d64a58b2bb223259c2f244beb28e4f"
+    },
+    "actual_repository_static": {
+      "skills": 6,
+      "findings": 90,
+      "security_findings": 13,
+      "missing_reference_caveats": {
+        "a11y": 3,
+        "ansible": 1,
+        "podman": 3,
+        "powershell-pester-6": 6
+      },
+      "incomplete_scanners": {
+        "a11y": [
+          "SECURITY",
+          "skillspector"
+        ],
+        "agent-safety": [],
+        "ansible": [
+          "SECURITY",
+          "skillspector"
+        ],
+        "podman": [
+          "skillspector"
+        ],
+        "powershell-module-engineering": [],
+        "powershell-pester-6": [
+          "SECURITY",
+          "skillspector"
+        ]
+      },
+      "every_scanner_issue_retained": true,
+      "normalized_claim_mutations_rejected": [
+        "caveat omission",
+        "changed count",
+        "wrong scanner profile"
+      ],
+      "strict_dataset_gate": {
+        "adoption_ready": false,
+        "datasets": {
+          "podman": {
+            "checks": [
+              {
+                "message": "Dataset found (8779 bytes).",
+                "path": "evals/evals.json",
+                "status": "ok"
+              },
+              {
+                "message": "Dataset has 10 entries.",
+                "path": "evals.json",
+                "status": "ok"
+              },
+              {
+                "message": "expected_output grades skill use ('podman skill'), which the no-skill baseline is also graded on. Keep it about the task outcome; skill_execution scores skill use separately.",
+                "path": "entry 8",
+                "status": "warning"
+              },
+              {
+                "message": "Dataset size: sufficient \u2014 10 cases (policy needs 10), 1 negative case (needs 1) (policy dataset-sufficiency-v1)",
+                "path": "Dataset size",
+                "status": "ok"
+              },
+              {
+                "message": "Shared pool of test data, configs, and sample documents that eval entries can stage into /workspace/input/ inside containers.",
+                "path": "evals/files/",
+                "status": "ok"
+              },
+              {
+                "coverage": {
+                  "case_count": 10,
+                  "cases_with_expected_behaviors": 10,
+                  "cases_with_expected_outcome": 10,
+                  "gaps": [],
+                  "negative_cases": 1,
+                  "positive_cases": 9,
+                  "starter": false,
+                  "unlabeled_trigger_cases": 0
+                },
+                "message": "Dataset coverage: 10 cases; 9 positive, 1 negative/non-trigger, 0 unlabeled trigger.\nExpected outcome: 10/10; assertions/expected behaviors: 10/10.",
+                "path": "evals/evals.json#coverage",
+                "status": "ok"
+              }
+            ],
+            "exit": 1
+          }
+        },
+        "failures": [
+          "- podman: Strict eval dataset validation failed; inspect dataset reports and collection steps."
+        ],
+        "status": "failed"
+      },
+      "report_sha256": "3cb7326a51f0c8f30c65bc394ae81fa579e35736bb45330a6a5d3661a1447497",
+      "comparison_sha256": "b93dafdf15864f3a197feb1dc348b353b280629ed288965af59381a791158484"
+    }
+  },
+  "retained_136": {
+    "source": "1cab475c635012731f7bba6825c00b398b39f5bc",
+    "run": 43549113107,
+    "attempt": 1,
+    "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43549113107",
+    "native_artifact": {
+      "id": 14097212753,
+      "sha256": "d355ee656376e46f02a6a6c5b2330901736ced19f58c76b1f5a5e10e4cb48826"
+    },
+    "cohort_artifact": {
+      "id": 14096674974,
+      "sha256": "39d6cb423548ecff5bc10d82516c9d7bef90e825340a19dd4c250cd0940b28ad"
+    },
+    "native_observations": {
+      "pester": 52,
+      "gh": 48,
+      "gh_lifecycle_shards": 6,
+      "startup_faults": 14
+    },
+    "reuse": "Unchanged native implementations, locks, task definitions, graders and backend. This PR uses normal selected CI for changed consumers."
+  },
+  "source_identity": {
+    "base_profiles": 417,
+    "base_registry_sha256": "8219c6585b322af40cce84b07905edcd3b027fb1a9c55b4a6c3277d4bbc3ba4d",
+    "source_only_successors": 28
+  },
+  "authored_source_sha256": {
+    ".github/scripts/skill_evidence.py": "1b69d44380e25ee22c5088709e0a849f5f3c6a7b3b1136191b08272f7fde0d1d",
+    ".github/scripts/skill_reports.py": "6df7e1937ca6ab333d722b3a219d1b1d2ab38ec1ee0c73c6cd1439d647a6474e",
+    ".github/scripts/qualify_scanners.py": "4a0de0f8733354a8dabea7ed8454f61b0660240d3582a1a93cad5893def1514d",
+    ".github/scripts/qualify_scanner_caveats.py": "634d62057a196587c21cf077a1c74da788e6977983686c1cc06ab5475a04d27f",
+    ".github/tests/test_evaluator_adoption.py": "fad4202da9e2342f5e433f35d52ab117abb79db924e584a6b6b9b7c2abd4e6e6",
+    ".github/tests/test_skill_pages.py": "7c07c423c43c3bb910dab2aac27f8b386af59a8a0706b07b28459373a647b3e8",
+    ".github/workflows/current-evaluator.yml": "7aaec57165b4cd71a919f25d0d8fa2cfca37aafd98267101b89b96df33341318"
+  },
+  "decision": {
+    "adopt": [
+      "data-only consolidated report and publisher preparation host",
+      "data-only orchestration planner/dispatcher host"
+    ],
+    "hold": [
+      "complete static quality: unchanged Podman entry 8 fails released strict dataset validation",
+      "retained production regression, live benchmark, private review/attachments and native historical replay owners"
+    ],
+    "retire_proposal": [
+      "0.7.2-only manual pester-candidate workflow and active candidate setup branch after review; preserve historical sources and receipts"
+    ]
+  }
+}

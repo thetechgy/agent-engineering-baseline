@@ -3,8 +3,10 @@
 import copy
 from contextlib import redirect_stdout
 import io
+import importlib.metadata
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -57,7 +59,8 @@ def qualify(output, tools, workspace):
     roots = []
     inputs = {name: {p.relative_to(workspace / '.apm/skills' / name).as_posix(): evidence.digest_bytes(p.read_bytes())
                      for p in sorted((workspace / '.apm/skills' / name).rglob('*')) if p.is_file()} for name in NAMES}
-    for mode in ('before', 'after'):
+    released = versions['skillevaluator'] == '0.9.0'
+    for mode in (('after',) if released else ('before', 'after')):
         destination = output / mode
         native = destination / 'native'
         capture = destination / 'process'
@@ -99,7 +102,23 @@ def qualify(output, tools, workspace):
         summary = io.StringIO()
         try:
             with redirect_stdout(summary):
-                reports.catalog_report(workspace, native)
+                try:
+                    reports.catalog_report(workspace, native)
+                except ValueError:
+                    # An adoption assessment retains an actual dataset refusal.
+                    # It cannot turn scanner findings into a complete catalog gate.
+                    if not released:
+                        raise
+                    failures = [line for line in summary.getvalue().splitlines() if line.startswith('- ')]
+                    if not failures or not all(re.fullmatch(
+                            r'- [a-z0-9-]+: Strict eval dataset validation failed; inspect dataset reports and collection steps\.', line)
+                            for line in failures):
+                        raise
+                    datasets = {path.stem: {
+                        'exit': int(path.with_suffix('.exit').read_text()),
+                        'checks': evidence.read_json(path)} for path in (native / 'datasets').glob('*.json')}
+                    (output / 'collection-gate.json').write_bytes(evidence.encoded({
+                        'status': 'failed', 'adoption_ready': False, 'failures': failures, 'datasets': datasets}))
                 reports.public_quality(workspace, native, destination / 'public')
         finally:
             (destination / 'collection-summary.md').write_text(summary.getvalue())
@@ -118,7 +137,8 @@ def qualify(output, tools, workspace):
                 'coverage': data['analysis_completeness'],
                 'findings': sorted((issue['id'], issue['severity'], evidence.identity(issue['location']))
                                    for issue in data['issues'])}
-            assert scan['status'] == 'incomplete'
+            assert 'skillspector' in scan['incomplete_scans']
+            assert scan['status'] == ('failed' if released and (scan['summary']['critical_count'] or scan['summary']['high_count']) else 'incomplete')
             public = evidence.read_json(destination / 'public/skills' / name / 'static/public-report.json')
             if mode == 'after':
                 captured_record = evidence.normalize_static(native, name, workspace=workspace)
@@ -149,7 +169,8 @@ def qualify(output, tools, workspace):
         roots.append(destination / 'public')
     assert inputs == {name: {p.relative_to(workspace / '.apm/skills' / name).as_posix(): evidence.digest_bytes(p.read_bytes())
                             for p in sorted((workspace / '.apm/skills' / name).rglob('*')) if p.is_file()} for name in NAMES}
-    assert producer_claims['before'] == producer_claims['after'], 'Producer claims changed on unchanged inputs'
+    if not released:
+        assert producer_claims['before'] == producer_claims['after'], 'Producer claims changed on unchanged inputs'
     captured = analysis.capture_inputs(roots)
     result = analysis.validate_analysis(None, captured)
     (output / 'analysis.json').write_bytes(evidence.encoded(result))
@@ -168,6 +189,17 @@ def contracts(tools):
     from skillevaluator.validators.base import ValidationResult
     from skillevaluator.validators.security import SecurityValidator
     fixture = evidence.read_json(evidence.ROOT / '.github/tests/fixtures/skillspector-caveat-response.json')
+    if importlib.metadata.version('skillevaluator') == '0.9.0':
+        result = ValidationResult()
+        assert SecurityValidator._validate_skillspector_report(fixture, 0, False, 'skillspector', result)
+        SecurityValidator()._process_skillspector_cli_result(fixture, result)
+        assert result.is_incomplete and any(f.check_name.endswith('(P2)') for f in result.findings)
+        for field, value in (('status', 'unknown'), ('execution_successful', False), ('coverage_percent', 99)):
+            changed = copy.deepcopy(fixture); changed['analysis_completeness'][field] = value
+            invalid = ValidationResult()
+            assert not SecurityValidator._validate_skillspector_report(changed, 0, False, 'skillspector', invalid)
+        return {'seed': 'retained SkillSpector 2.13.4 response', 'owner': 'released 0.9.0 adapter',
+                'known_finding_retained': True, 'coverage': 'incomplete', 'negative_mutations': 3}
     original = types.ModuleType('original_security')
     exec(compile((tools / 'security-original.py').read_bytes(), '<retained-security>', 'exec'), original.__dict__)
     assert evidence.digest_bytes((tools / 'security-original.py').read_bytes()) == 'sha256:919ff88315310e64a7e9d623f22ca5d19fb3dbea809255957fc9ecab53098345'

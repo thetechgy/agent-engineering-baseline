@@ -202,6 +202,16 @@ def benchmark_policy(name):
             "competing_revision": "30a0d7465b14b05e05949d6588b99f7af0c537b4"} if name == "gh" else POLICY
 
 
+def released_static_results(payload):
+    """Validate the released 0.9 static contract in its exact owning runtime."""
+    import importlib.metadata
+    require(payload.get('version') == '0.9.0'
+            and importlib.metadata.version('skillevaluator') == '0.9.0',
+            'Static report requires its 0.9.0 owning runtime')
+    from skillevaluator.reporting.retained import retained_results
+    return retained_results(payload, allowed_tiers={1})
+
+
 def catalog_report(workspace, root):
     """Only ordinary, fully reported native findings may be advisory."""
     names = catalog_preflight(workspace)
@@ -239,9 +249,12 @@ def catalog_report(workspace, root):
             require(isinstance(report["incomplete_scans"], list), "Missing evidence status")
             require(all(isinstance(name, str) and name for name in report["incomplete_scans"]),
                     "Invalid incomplete scanner names")
-            expected_status = "incomplete" if report["incomplete_scans"] else (
-                "passed" if report["overall_passed"] else "failed")
-            require(status == expected_status, "Inconsistent native status/pass/evidence")
+            if report.get("version") == "0.9.0":
+                released_static_results(report)
+            else:
+                expected_status = "incomplete" if report["incomplete_scans"] else (
+                    "passed" if report["overall_passed"] else "failed")
+                require(status == expected_status, "Inconsistent native status/pass/evidence")
             counts = [report["severity_counts"][severity] for severity in ("critical", "high", "medium", "low")]
             require(all(type(count) is int and count >= 0 for count in counts), "Invalid finding counts")
             for suffix in (".md", ".html"):
