@@ -22,10 +22,11 @@ def interpret(reward, trial, threshold):
     errors = reward.get('evaluation_errors') or {}
     require(type(errors) is dict, 'Invalid evaluation errors')
     unsupported = bool({'evidence', 'execution_evidence'} & errors.keys())
-    runtime_failed = (missing_reward or trial.get('exception_info') is not None) and not failed
+    runtime_failed = trial.get('exception_info') is not None and not failed
     # A failed judge/unsupported diagnostic's transport zero is never a score.
-    available = not failed and not runtime_failed
-    retained = diagnostic_observations(reward, trial) if failed else {}
+    available = not failed and not runtime_failed and not missing_reward
+    retained = (diagnostic_observations(reward, trial) if failed else
+                incomplete_observations(trial) if missing_reward and trial.get('exception_info') is None else {})
     values = {}
     skipped = []
     for name in metrics.DEFAULT_METRICS:
@@ -46,6 +47,7 @@ def interpret(reward, trial, threshold):
         quality = dict.fromkeys(('overall', 'passed', 'correct_answer', 'security_clean', 'required_failure'))
     dimensions = metrics.dimension_scores({k:v['value'] for k,v in values.items() if v['status'] == 'observed'}, skipped)
     return {'outcome': 'unsupported' if unsupported else 'judgment_unavailable' if failed else
+            'collection_incomplete' if missing_reward and trial.get('exception_info') is None else
             'runtime_failure' if runtime_failed else 'passed' if quality['passed'] is True else
             'failed' if quality['passed'] is False else 'judgment_unavailable',
             'metrics': values, 'dimensions': {name: {'status': 'observed', 'value': row['score']}
@@ -53,6 +55,25 @@ def interpret(reward, trial, threshold):
                 {'status': 'not_applicable' if metrics.dimension_is_not_applicable(name, skipped) else 'unavailable', 'value': None}
                 for name in PROFILE['dimensions']},
             'quality': quality}
+
+
+def incomplete_observations(trial):
+    """Retain terminal trial metrics suppressed by a nonterminal Harbor job.
+
+    The collector withholds rich rewards and arm aggregates for an incomplete
+    job. TrialResult still carries completed verifier observations. Those values
+    are diagnostic observations only: without the rich reward, applicability,
+    overall quality and the required-check verdict remain unavailable.
+    """
+    from skill_reports import require
+    from skillevaluator.tier3.harbor.metrics import score_value, DEFAULT_METRICS
+    if trial.get('finished_at') is None or trial.get('exception_info') is not None:
+        return {}
+    raw = (trial.get('verifier_result') or {}).get('rewards') or {}
+    require(type(raw) is dict and set(raw) <= set(DEFAULT_METRICS) | {'overall'}
+            and all(score_value(v) is not None for v in raw.values()),
+            'Invalid incomplete native observations')
+    return {k:v for k,v in raw.items() if k in DEFAULT_METRICS}
 
 
 def diagnostic_observations(reward, trial):

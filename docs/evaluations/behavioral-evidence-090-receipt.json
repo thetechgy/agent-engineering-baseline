@@ -15,7 +15,7 @@
     "tests": 1091
   },
   "control_tests": {
-    "log_sha256": "8afe64edc27492820cd9b3491bdb9af440884cf1b6df6b567c0896b552b19aba",
+    "log_sha256": "7dc045a857c3a28ee1c1c3e60584fa61000ac204d6979ea98cdebc4c60c7f895",
     "passed": 8,
     "run": 8
   },
@@ -69,6 +69,14 @@
   },
   "profile": "behavioral-090-offline-v1",
   "qualification": "credential_free_local_fixture",
+  "recovery_observation_control": {
+    "absent_trials": 1,
+    "arm_aggregate": "unavailable",
+    "completed_observed_trials": 9,
+    "failing_before_log_sha256": "0a6c10f91822eebd16889eaa0f3512a95453e58e93d26d44a9ed2797cce583cd",
+    "history_eligible": false,
+    "overall_and_verdict": "unavailable"
+  },
   "report_reproduction": [
     {
       "byte_identical": true,
@@ -77,7 +85,7 @@
     },
     {
       "byte_identical": true,
-      "html_sha256": "948a80d74d4b763c71ece9dbfbc5857468624a196eefefef5b68f4854ae0bf92",
+      "html_sha256": "8f2d1c76f25f17725fb2fc3ed5dc4aa057bd44533c13cc4b33e9bc48c7703867",
       "report": "new-behavioral"
     }
   ],
@@ -88,8 +96,8 @@
   },
   "sources": {
     ".github/evals/benchmark-090.json": "sha256:0b7ffbbfc34010f20ca375c069e5eab5a90c96acde6ea4dabfc1f09762b6f81f",
-    ".github/scripts/benchmark_evidence.py": "sha256:3d4b29212f93605719211f3d00855e869a4ef5baabe69616f001cd757ccce38d",
-    ".github/scripts/evaluator_090.py": "sha256:9eede3ebb20c8117c7b2c983826d83de96d1de6d44ce83161eb51d1daf882f6d",
+    ".github/scripts/benchmark_evidence.py": "sha256:e0bb0e62c556c1bb05cc5c4975284bf6e36ea109319129d44db920d6ca816f1e",
+    ".github/scripts/evaluator_090.py": "sha256:8ce6f3c78cb3faf066c002b1322be2342ad6a982bdc5b021128a31abf4d91a0c",
     ".github/scripts/evaluator_profiles.py": "sha256:44aac6e85399a776dc8e3b24d93f3b9baa7b1da65f3ab2d1e61de86b4bdf17b6",
     ".github/scripts/qualify_benchmark_evidence.py": "sha256:6a09acf6f31a0fb91102ca09f748f75106a8486b3523d6b64bc6046a10ba41a8",
     ".github/scripts/skill_analysis.py": "sha256:7de08e9d556bc58640bc5192e8646395bd8493af5c6e34f3439f7755a24f0fc9",
@@ -113,6 +121,15 @@
     "head": "44d09457765fc74a020e2e225ffe117ea0be5a14",
     "reason": "Batch complete partial-judge observation retention and its rejection controls",
     "run": 43690552846
+  },
+  "superseded_recovery_ci": {
+    "conclusion": "cancelled_inconclusive",
+    "head": "3311f934bbc8559f1de0c3f376c6d1d7e34dfcb0",
+    "hosted_artifact": "digest_and_producer_verified_before_correction",
+    "reason": "Completed trial metrics lost from interrupted-arm projection",
+    "required_platform_checks": "passed_on_superseded_head",
+    "run": 43691251968,
+    "shared_contracts": "passed_on_superseded_head"
   },
   "versions": {
     "backend_source_digest": "sha256:3e79836ee10bdb1d690f50384077cde9ef5eaf09cd4d470076eae459a0937fa8",

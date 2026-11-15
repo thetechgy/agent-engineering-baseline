@@ -105,6 +105,27 @@ class NativeTests(unittest.TestCase):
         self.assertEqual(len([o for o in record['observations'] if o['arm']=='without_skill']),10)
         self.assertIn('recovered',benchmark.history_admission(record)['reasons'])
 
+        # A failed arm must not erase completed native observations, nor acquire
+        # a verdict, N/A interpretation or aggregate from its missing rich reward.
+        partial = self.rows('interrupted','2')[0]
+        self.assertEqual(partial['outcome'],'collection_incomplete')
+        self.assertEqual(partial['metrics']['accuracy'],{'status':'observed','value':0.0})
+        self.assertEqual(partial['metrics']['security'],{'status':'observed','value':1.0})
+        self.assertIsNone(partial['quality']['overall'])
+        self.assertIsNone(partial['quality']['passed'])
+        self.assertEqual(pop['with_skill']['correctness']['observed'],9)
+        self.assertEqual(pop['with_skill']['correctness']['unavailable'],0)
+        self.assertFalse(record['benchmark']['native_dimensions']['with_skill'])
+        self.assertEqual(self.rows('interrupted','8')[0]['metrics']['skill_efficiency'],
+                         {'status':'unavailable','value':None})
+        from evaluator_090 import incomplete_observations
+        trial = reports.read_json(self.root / 'interrupted/sanitized/results/podman/interrupted/codex/with-skill/trials/skillevaluator-2__attempt001/result.json')
+        for key,value in (('overall',False),('security',float('nan')),('unknown_metric',1.0)):
+            changed = copy.deepcopy(trial);changed['verifier_result']['rewards'][key]=value
+            with self.subTest(key=key), self.assertRaises(ValueError): incomplete_observations(changed)
+        for changes in ({'finished_at':None},{'exception_info':{'exception_type':'AgentExecutionError'}}):
+            self.assertFalse(incomplete_observations({**trial,**changes}))
+
     def test_history_and_mixed_policy_comparisons_refuse_fixture_promotion(self):
         import skill_analysis as analysis
         import skill_history as history

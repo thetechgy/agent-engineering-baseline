@@ -80,7 +80,7 @@ def validate(value, data):
                  (('security_evidence',) if 'security_evidence' in row else ()))
         e.require(row['observation_id'] in ids and row['observation_id'] not in seen, 'Behavioral observation mismatch')
         seen.add(row['observation_id'])
-        e.enum(row['outcome'], ('passed', 'failed', 'unsupported', 'judgment_unavailable', 'runtime_failure'))
+        e.enum(row['outcome'], ('passed', 'failed', 'unsupported', 'judgment_unavailable', 'runtime_failure', 'collection_incomplete'))
         for container, names in ((row['metrics'], metrics), (row['dimensions'], p['dimensions'])):
             e.closed(container, names)
             for name, item in container.items():
@@ -97,7 +97,7 @@ def validate(value, data):
         e.optional(q['required_failure'], lambda v:e.enum(v, ('wrong_answer', 'security')))
         e.require((q['overall'] is not None) == (q['passed'] is not None), 'Unavailable verdict became negative')
         e.require(row['outcome'] == ('passed' if q['passed'] else 'failed') if q['passed'] is not None
-                  else row['outcome'] in ('unsupported', 'judgment_unavailable', 'runtime_failure'), 'Verdict contradiction')
+                  else row['outcome'] in ('unsupported', 'judgment_unavailable', 'runtime_failure', 'collection_incomplete'), 'Verdict contradiction')
         if 'security_evidence' in row:
             e.unscored_security.validate_security(row['security_evidence'])
             original = observations[row['observation_id']]

@@ -118,8 +118,8 @@ unchanged. Profile metadata cannot select live judging or production eligibility
 The [sanitized local receipt](behavioral-evidence-090-receipt.json) records the
 fixture route, source identities, history exclusions and retained report reproduction.
 The rendered HTML content was inspected for outcome labels, N/A/missing populations
-and known findings. Browser access was unavailable, so no browser visual acceptance
-is claimed.
+and known findings. Final hosted artifact authentication, report reproduction and
+scoped presentation checks are recorded separately in the PR.
 
 Normal change-selected Validate runs the qualifier inside its existing contracts
 job after existing candidate-next setup. It uploads only public reports, saved
@@ -140,6 +140,15 @@ passing an unnecessary `evidence_profile=None` keyword. The caller now preserves
 its original argument contract unless the new profile is requested. That control
 and five source/frozen-contract controls pass after correction. The native
 behavioral controls also pass again, including the added partial-judge rejection control. Final selected CI remains authoritative.
+
+The population-table inspection found a recovery gap after the first hosted
+artifact was downloaded: a nonterminal job makes the released collector withhold
+rich rewards for completed trials as well as arm aggregates. The versioned
+interpreter now retains finite, bounded metric values from terminal, exception-free
+native `TrialResult` records as diagnostic observations. It labels them
+`collection_incomplete`; it does not reconstruct rich rewards, infer N/A from
+absence, assign overall quality/verdicts or complete an interrupted arm. The
+failing-before control and final hosted reproduction are recorded in the PR.
 
 ## Comparison, history and rollback
 
