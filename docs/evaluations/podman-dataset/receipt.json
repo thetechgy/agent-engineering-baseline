@@ -301,5 +301,12 @@
       }
     }
   ],
-  "scanner_controls_sha256": "626aba218411571825a6d11a012f3f43e86947ccc0cc4874430f5ee3bfa8df02"
+  "scanner_controls_sha256": "626aba218411571825a6d11a012f3f43e86947ccc0cc4874430f5ee3bfa8df02",
+  "deployment_ledger": {
+    "generator": "pinned APM 0.35.1 install --trust-bin; no update/refresh",
+    "changed": "current dataset deployment content_hash and local_deployed_file_hashes plus generated_at",
+    "dependencies_changed": false,
+    "superseded_linux_job": 132673186071,
+    "superseded_failure": "Frozen install preserved original local ledger hash; content-integrity audit rejected revised dataset. Missing component upload was downstream."
+  }
 }

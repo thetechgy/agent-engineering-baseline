@@ -42,7 +42,12 @@ skill files. The first attempt against the fresh Git checkout refused missing
 local ownership receipts; its log and the original deployment were preserved.
 The clean deployment succeeded. Only the authored and deployed dataset differ
 within skill content, byte-identically. `SKILL.md`, supporting guidance, other
-cases/skills, pins, lock and generated instructions remain unchanged.
+cases/skills, dependency pins and generated instructions remain unchanged. Pinned `apm install
+--trust-bin` (without update/refresh) regenerates the current local deployment
+ledger: only the two dataset hash entries and generation timestamp change in
+`apm.lock.yaml`. Frozen install alone retained the old local hash; hosted audit
+caught that drift. The regenerated ledger is then checked through the full isolated
+frozen regeneration/audit entry point. Historical lock bytes remain in Git.
 
 [Receipt](receipt.json) records both byte hashes and the unchanged pinned runtime.
 Future native evaluations retain the existing authored digest, staged snapshot
