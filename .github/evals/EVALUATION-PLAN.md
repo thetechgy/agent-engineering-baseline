@@ -32,7 +32,7 @@ and fresh-runner receipts, then decide separately on its bounded pilot proposal.
 
 ## PR #142 offline integration, retained as history
 
-# Behavioral evidence 0.9.0 integration checkpoint
+### Behavioral evidence 0.9.0 integration checkpoint
 
 **Implemented for review; offline qualification only.** Starting main is verified
 at `66c3f92a40b0f00bb461286596a2016a6a39108a`, the completed merge of #141.

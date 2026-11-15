@@ -49,7 +49,8 @@ class Refuse(BaseHTTPRequestHandler):
         raw = self.rfile.read(size)
         body = json.loads(raw)
         # Save only nonsensitive frozen-request observations; discard auth headers.
-        value = {'request_keys': sorted(body), 'tool_definitions': body.get('tools'), 'path': self.path, 'model': body.get('model'), 'reasoning': body.get('reasoning'),
+        value = {'authorization_matches_sentinel': self.headers.get('Authorization') == 'Bearer pilot-not-a-credential',
+                 'request_keys': sorted(body), 'tool_definitions': body.get('tools'), 'path': self.path, 'model': body.get('model'), 'reasoning': body.get('reasoning'),
                  'input_sha256': hashlib.sha256(json.dumps(body.get('input'), sort_keys=True).encode()).hexdigest(),
                  'input': body.get('input'), 'tools': [t.get('name', t.get('type')) for t in body.get('tools', [])],
                  'service_tier': body.get('service_tier'), 'stream': body.get('stream'),

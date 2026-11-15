@@ -64,6 +64,10 @@ class ProtocolContracts(unittest.TestCase):
                                  ('grading_present',False,'missing_grading_evidence'),('native_exception','MissingCodexObservation','missing_native_observation'),
                                  ('native_exception','UnsupportedCodexProtocol','unsupported_runtime_protocol')]:
             self.assertEqual(protocol.stop_reason({**row,key:value}),reason)
+        self.assertEqual(protocol.stop_reason({**row, 'returncode':1, 'native_exception':'CancelledError',
+                                              'grading_present':False}), 'execution_cancelled')
+        self.assertEqual(protocol.stop_reason({**row, 'returncode':1, 'native_exception':'UnrecognizedFailure'}),
+                         'execution_infrastructure_failure')
         for cost in (None,True,-1,float('nan'),float('inf')):
             self.assertEqual(protocol.stop_reason({**row,'usage':{'estimated_usd':cost}}),'unknown_usage')
         # Known-control qualification still refuses an unexpected failing strong suite.

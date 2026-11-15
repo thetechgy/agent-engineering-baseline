@@ -30,7 +30,7 @@ grader. No Pester runner, skill change or second campaign framework is introduce
 | --- | --- |
 | Agent executable | Official Codex **0.155.1**, absolute `/opt/codex/bin/codex`; reviewed package, binary and required helper hashes in `codex-execution-090.json`; version/hash checked again at launch |
 | Agent model | **gpt-5.6-sol**, **high** reasoning; production's unified-exec feature; no CLI/model upgrade |
-| Agent authentication | Only `OPENAI_API_KEY`; dummy sentinel in preparation; future protected environment delivery through existing stdin transport as uid 1000 |
+| Agent authentication | Only `OPENAI_API_KEY`; request receipt records only a boolean sentinel-header match, never the header/value; future protected environment delivery through existing stdin transport as uid 1000 |
 | Agent provider | Explicit OpenAI-compatible custom provider, Responses wire format; `https://api.openai.com/v1` for a future approved run; loopback-only non-forwarding responder in preparation |
 | Agent retries/settings | Request retries 0, stream retries 0, idle timeout 60000 ms; web search disabled; no multi-agent work; no real key, ambient login or auth.json is supplied to preparation |
 | Verifier | Native verifier after the agent phase, original gh deterministic contract and root-protected broker receipts; same restricted container, no judge credential; two verifier runs for the proposed pair |
@@ -38,12 +38,23 @@ grader. No Pester runner, skill change or second campaign framework is introduce
 | Events/usage | Actual `codex exec --json` stdout/stderr; native command lifecycle → existing ATIF adapter → released collector → current public JSON/analysis/HTML. Missing usage stays unknown; observed stub usage is not billable provider usage |
 | Termination | Native runtime errors, timed-out/interrupted work, unavailable grading and legitimate measured task failures remain separate; first failure and partial evidence are retained |
 
-The separate released standard-judge route remains held: the pinned verifier's
-`call_llm`/structured metric helpers resolve their own provider, model, endpoint,
-credential and retry policy. #142 qualifies their offline interpretation with
-simulated replies. This custom-only pilot cannot qualify that live judge route,
-its request accounting or judge accuracy, and does not present simulated values as
-real judgments. Future standard/default-plus-custom execution needs separate
+The released standard-judge route is separate from the agent CLI. In the pinned
+`src/skillevaluator/tier3/harbor/runner.py`, `_judge_model_config` returns only
+`enabled: false` for `custom_only`; both judge environment builders return empty
+mappings. In `harbor/templates/eval.py`, the enabled route selects explicit model,
+`LLM_JUDGE_MODEL`, `SKILL_EVAL_JUDGE_MODEL`, `SKILL_EVAL_LLM_MODEL`, then provider
+default, with medium judge reasoning. `_call_judge_model` dispatches by provider;
+its OpenAI-compatible path selects `SKILL_EVAL_LLM_API_KEY` then `OPENAI_API_KEY`,
+and `SKILL_EVAL_LLM_BASE_URL` then `OPENAI_BASE_URL`, otherwise the official chat
+endpoint. It sends chat-completions requests, independently of the CLI's Responses
+route. Native strict/legacy retry, schema fallback and per-judge deadline policies
+remain upstream-owned; their model-call/attempt evidence is collected by the
+released collector. None is invoked by this selected grading mode.
+
+#142 qualifies offline judge interpretation with simulated replies. This
+custom-only pilot cannot qualify the live standard-judge route, its request
+accounting or judge accuracy, and does not present simulated values as real
+judgments. Future standard/default-plus-custom execution needs separate
 credential-free request controls and an explicitly costed authorization.
 
 The `gh` executable here is the fixture-backed **GitHub task CLI**, not GitHub
@@ -82,7 +93,12 @@ scrubs the runtime home, observes post-command/post-phase policy (the permitted 
 for surviving children in a future live run), retains permitted
 files before disposal and removes the container and children. Stopped-container
 retention handles native interruption without restarting the workload. This is not
-protection against a compromised host or container runtime.
+protection against a compromised host or container runtime. Events and usage remain
+producer-reported: agent code can alter its writable logs or issue permitted
+provider calls outside CLI accounting. Stock DNS, ICMP and local namespace channels
+remain; hostname/SNI rules do not constrain provider paths, methods or payloads.
+Retention/redaction is bounded. Any eventual live approval must explicitly accept
+these exposures; the reported-usage threshold does not enforce a provider spend cap.
 
 The selected preparation runs current/absent controls, a complete pair, CLI
 interruption and the existing 45-second native cancellation fixture (with stopped-

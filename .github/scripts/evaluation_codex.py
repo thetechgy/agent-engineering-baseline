@@ -527,6 +527,9 @@ def native_observation(trial, native, present, row, rows, *, output, live=False,
         from codex_pilot_contract import PROFILE
         require(probe.get('model') == selected['model'] and probe.get('reasoning', {}).get('effort') == selected['reasoning_effort']
                 and probe.get('requests') == 2, 'Observed CLI model/request drift')
+        if selected['cli'] == '0.155.1':
+            require(probe.get('authorization_matches_sentinel') is True and probe.get('path') == '/v1/responses',
+                    'Observed CLI credential source or endpoint drift')
     from skill_evidence import read_bytes
     submitted = read_bytes(submission_path(trial, output), limit=65536)
     receipts = list(trial.rglob('pilot-produced-submission.json'))
@@ -636,6 +639,7 @@ def provider_failure_observation(root, scenario, runtime):
     require(len(requests) == len(audits) == len(logs) == 1, 'Missing actual provider failure evidence')
     observed = reports.read_json(requests[0]); audit = reports.read_json(audits[0])
     require(observed['requests'] == 1 and observed['path'] == '/v1/responses'
+            and observed.get('authorization_matches_sentinel') is True
             and observed['model'] == runtime['model'] and observed['reasoning']['effort'] == runtime['reasoning_effort'],
             'Provider failure retried or routed differently')
     require(audit['scenario'] == scenario and audit['cleanup'] == 'complete' and audit.get('returncode', 0) != 0

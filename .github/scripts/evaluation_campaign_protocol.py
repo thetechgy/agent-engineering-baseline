@@ -106,10 +106,11 @@ def check(reference, staging, task, *, qualified=True):
 
 def stop_reason(row):
     if not row.get('cleanup'): return 'cleanup_failure'
-    if row.get('returncode'): return 'execution_infrastructure_failure'
+    # A retained native diagnosis is more specific than Harbor's nonzero exit.
     if row.get('native_exception'):
         from evaluation_runtime import failure_reason
         return failure_reason(row['native_exception'])
+    if row.get('returncode'): return 'execution_infrastructure_failure'
     if not row.get('grading_present'): return 'missing_grading_evidence'
     classification = row.get('outcome', {}).get('classification')
     if classification == 'unsupported': return 'unsupported_grading'
