@@ -51,7 +51,7 @@ route. Native strict/legacy retry, schema fallback and per-judge deadline polici
 remain upstream-owned; their model-call/attempt evidence is collected by the
 released collector. None is invoked by this selected grading mode.
 
-#142 qualifies offline judge interpretation with simulated replies. This
+PR #142 qualifies offline judge interpretation with simulated replies. This
 custom-only pilot cannot qualify the live standard-judge route, its request
 accounting or judge accuracy, and does not present simulated values as real
 judgments. Future standard/default-plus-custom execution needs separate
