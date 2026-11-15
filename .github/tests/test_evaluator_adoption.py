@@ -146,9 +146,13 @@ class AdoptionTests(unittest.TestCase):
 
     def test_podman_outcome_revision_preserves_negative_case_and_rejection(self):
         import shutil
-        original = subprocess.check_output(['git', 'show',
-            'a50f693df6f024a6b8063b41e1b6dc2ac40e3f7a:.apm/skills/podman/evals/evals.json'], cwd=ROOT)
+        import hashlib
+        receipt = json.loads((ROOT / 'docs/evaluations/podman-dataset/receipt.json').read_text())
         current = (ROOT / '.apm/skills/podman/evals/evals.json').read_bytes()
+        original = current.replace(receipt['revised_expected_output'].encode(),
+                                   receipt['original_expected_output'].encode(), 1)
+        self.assertEqual(hashlib.sha256(original).hexdigest(), receipt['original_sha256'])
+        self.assertEqual(hashlib.sha256(current).hexdigest(), receipt['revised_sha256'])
         before, after = json.loads(original), json.loads(current)
         old_case = next(row for row in before['evals'] if row['id'] == 8)
         new_case = next(row for row in after['evals'] if row['id'] == 8)
