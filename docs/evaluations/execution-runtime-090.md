@@ -1,5 +1,11 @@
 # Opt-in 0.9.0 execution preparation
 
+**November 15 execution update:** the separately authorized
+[single pilot stopped before Codex launch](gh-runtime-090-v1/execution/EXECUTION.md).
+The allocation is closed, including the unlaunched absent-skill slot. PR #143 remains
+unmerged. The original preparation contract and UNRUN/UNAPPROVED proposal below
+are retained as pre-execution history; they grant no continuation or replacement.
+
 Starting main was verified at `15caaedb82edf5d9e0253394ed99e3135cd7be93`,
 the completed merge of #142. This change prepares `gh-runtime-090-v1` through
 `evaluation-campaign.yml`. The default selection and production Benchmark remain

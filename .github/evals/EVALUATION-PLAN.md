@@ -1,4 +1,42 @@
-# Behavioral runtime 0.9.0 execution preparation checkpoint
+# Behavioral runtime 0.9.0 stopped pilot checkpoint
+
+**Stopped; allocation closed.** The separately authorized single diagnostic
+[run 43762601398, attempt 1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43762601398)
+executed source `b3e190d143e2cbc7b44938d4d01b690dc9f67c10` from PR #143. Its
+current-skill gh-014 slot failed during Harbor agent construction, before Codex
+launched: the live guard rejected the trusted task's `AEB_GH_MANIFEST` variable.
+The absent-skill slot remained unlaunched. No task grading, submission, model
+judgment or usage record was produced. The failure is infrastructure evidence,
+not a skill comparison or a measured task failure.
+
+Exactly one allocation-bound dispatch and only its matching `skill-benchmark`
+gate were approved under the explicit user authorization. The allocation closed
+at 2026-11-15T21:22:28.064144Z, including its unused second slot. No retry,
+replacement, continuation or runtime fix occurred. Estimated usage and actual
+billing remain unknown; the $2 estimate/$6 planning envelope was not a billing cap.
+Cleanup returned to the resource baseline, with no agent container initialized.
+The stopped zero-observation report reproduces byte for byte. Its empty-arm
+`failed` aggregates do not override the ledger's explicit unlaunched second slot.
+
+See the [execution receipt, artifact identities and concrete reproduction](../../docs/evaluations/gh-runtime-090-v1/execution/EXECUTION.md).
+The original preparation and its credential-free CLI controls remain distinct
+from this stopped live path. Live provider/CLI compatibility, useful task behavior,
+verifier operation in live execution, judge accuracy and skill benefit remain
+unproven. [PR #143](https://github.com/thetechgy/agent-engineering-baseline/pull/143)
+remains unmerged. Report-only updates after closure do not change the original
+execution identity or qualify a later revision.
+
+Production Benchmark remains 0.3.0 / Harbor 0.13.2. No production history append,
+Pages publication, recurring paid work or allocation reopening occurred. Pester
+clarification and skill adoption remain deferred.
+
+**One current next action:** authorize a separate credential-free fix and
+requalification of trusted task-manifest handling in the live guard. A future paid
+pilot requires a new exact-revision preparation and authorization.
+
+## PR #143 execution preparation, retained as history
+
+### Behavioral runtime 0.9.0 execution preparation checkpoint
 
 **Implemented for review; no paid pilot authorized.** Current main was verified
 at `15caaedb82edf5d9e0253394ed99e3135cd7be93`, the completed merge of #142.
