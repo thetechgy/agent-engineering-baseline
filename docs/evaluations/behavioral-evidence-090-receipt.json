@@ -15,9 +15,9 @@
     "tests": 1091
   },
   "control_tests": {
-    "log_sha256": "1a7417ff88bc58daa597cea2549c88c87f01cbafa67af0a8d0543eced4904fb4",
-    "passed": 7,
-    "run": 7
+    "log_sha256": "8afe64edc27492820cd9b3491bdb9af440884cf1b6df6b567c0896b552b19aba",
+    "passed": 8,
+    "run": 8
   },
   "historical_archive_sha256": "11b1608bbc6520e8e905df612851ce72aca0951c6d4edee496f36d02b18c8ee7",
   "history": {
@@ -72,13 +72,13 @@
   "report_reproduction": [
     {
       "byte_identical": true,
-      "html_sha256": "a68113ed9e150f79ce9c2e9aa4602d76f20aa531752b897347a876f83f2aa33e",
-      "report": "new-behavioral"
+      "html_sha256": "aca81d5cddbaf0194f5468bc7bb2970f4b3927be480133287c928cc1af0582f2",
+      "report": "retained-static"
     },
     {
       "byte_identical": true,
-      "html_sha256": "aca81d5cddbaf0194f5468bc7bb2970f4b3927be480133287c928cc1af0582f2",
-      "report": "retained-static"
+      "html_sha256": "948a80d74d4b763c71ece9dbfbc5857468624a196eefefef5b68f4854ae0bf92",
+      "report": "new-behavioral"
     }
   ],
   "source_profiles": {
@@ -89,9 +89,9 @@
   "sources": {
     ".github/evals/benchmark-090.json": "sha256:0b7ffbbfc34010f20ca375c069e5eab5a90c96acde6ea4dabfc1f09762b6f81f",
     ".github/scripts/benchmark_evidence.py": "sha256:3d4b29212f93605719211f3d00855e869a4ef5baabe69616f001cd757ccce38d",
-    ".github/scripts/evaluator_090.py": "sha256:1c286aad30692660b6edd303cd6b32994a5ec22d601179fed430caa656123d5b",
+    ".github/scripts/evaluator_090.py": "sha256:9eede3ebb20c8117c7b2c983826d83de96d1de6d44ce83161eb51d1daf882f6d",
     ".github/scripts/evaluator_profiles.py": "sha256:44aac6e85399a776dc8e3b24d93f3b9baa7b1da65f3ab2d1e61de86b4bdf17b6",
-    ".github/scripts/qualify_benchmark_evidence.py": "sha256:5ba143552bbf78b1a461e96dec1e1224b231c84b0871659581b96f80958bc9e3",
+    ".github/scripts/qualify_benchmark_evidence.py": "sha256:6a09acf6f31a0fb91102ca09f748f75106a8486b3523d6b64bc6046a10ba41a8",
     ".github/scripts/skill_analysis.py": "sha256:7de08e9d556bc58640bc5192e8646395bd8493af5c6e34f3439f7755a24f0fc9",
     ".github/scripts/skill_evidence.py": "sha256:2733d5c35725fd2417026e214779ffeff0fcf84bc102acd46bf834041680a125",
     ".github/scripts/skill_history.py": "sha256:bd59b596e64a695b6ba6fccaa90de97b30c0c37295933fa54a71a50040a9f3a9",
@@ -107,6 +107,12 @@
     "required_platform_checks": "passed_on_superseded_head",
     "run": 43689241906,
     "static_quality": "passed_on_superseded_head"
+  },
+  "superseded_partial_judge_ci": {
+    "conclusion": "cancelled_inconclusive",
+    "head": "44d09457765fc74a020e2e225ffe117ea0be5a14",
+    "reason": "Batch complete partial-judge observation retention and its rejection controls",
+    "run": 43690552846
   },
   "versions": {
     "backend_source_digest": "sha256:3e79836ee10bdb1d690f50384077cde9ef5eaf09cd4d470076eae459a0937fa8",

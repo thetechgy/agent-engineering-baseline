@@ -71,10 +71,10 @@ The first released negative fixture was rejected by the existing threshold-only
 summary validator. The focused policy now validates that verdict with the released
 `attempt_verdict`, preserving the old validator for old evidence. The qualifier
 also exposed the existing unscored diagnostic's narrower transport assumption:
-when only judges fail, the released verifier can retain deterministic security,
-execution and efficiency values alongside an overall transport zero. The new
-policy admits only those bounded native observations under explicit judge-error
-keys. It does not turn transport zero into quality or change the historical
+when a judge fails, the released verifier can retain deterministic observations
+and valid values from other judges alongside an overall transport zero. The new
+policy admits only bounded native values whose metric is not named by an explicit
+judge-error key. It does not turn transport zero into quality or change the historical
 unscored diagnostic interpretation. Unsupported execution remains unscored;
 known findings survive independently through offline-v3's existing contract.
 
@@ -87,7 +87,8 @@ Use existing setup kind `candidate-next`, then its absolute `SKILL_NEXT_PYTHON`:
 ```
 
 The destination must be new and outside the checkout. The qualifier starts a child
-with an allowlisted environment, no model credentials, dotenv disabled and a
+with an allowlisted environment, empty home, task-owned provenance key, no model
+credentials, dotenv disabled and a
 network audit guard. It generates real released Harbor tasks, reads trajectory and
 entry files with the released verifier, instantiates native `TrialResult` and
 `JobResult` models, and calls `collect_harbor_results`. Only judge responses are
@@ -95,7 +96,7 @@ simulated. There is no agent, inference, real judge or provider dispatch.
 
 The complete fixture includes positive and measured negative outcomes, independent
 correctness/security outcomes, baseline N/A and negative-case N/A. The unavailable
-fixture retains a valid deterministic observation after judge failure, unsupported
+fixture retains valid deterministic and other-judge observations after one judge fails, unsupported
 wrapper evidence with a known secret finding, and a primary agent runtime failure.
 Recovery removes a trial from both physical and embedded native carriers and marks
 the native job nonterminal. The recovered report retains cancellation, nine trial
@@ -137,8 +138,8 @@ pinned scanners and overlapped source changes. Its failures are not a passing or
 final-revision result. Diagnosis found one actionable legacy CLI dispatch regression:
 passing an unnecessary `evidence_profile=None` keyword. The caller now preserves
 its original argument contract unless the new profile is requested. That control
-and five source/frozen-contract controls pass after correction. The seven native
-behavioral controls also pass again. Final selected CI remains authoritative.
+and five source/frozen-contract controls pass after correction. The native
+behavioral controls also pass again, including the added partial-judge rejection control. Final selected CI remains authoritative.
 
 ## Comparison, history and rollback
 

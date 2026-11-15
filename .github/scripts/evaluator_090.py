@@ -56,23 +56,24 @@ def interpret(reward, trial, threshold):
 
 
 def diagnostic_observations(reward, trial):
-    """The released verifier keeps deterministic scores when only judges fail.
+    """The released verifier keeps other valid scores when a judge fails.
 
     Its overall zero remains transport data. Unsupported evidence has no scores.
     This extension does not change the historical unscored diagnostic contract.
     """
     from skill_reports import require
-    from skillevaluator.tier3.harbor.metrics import score_value
+    from skillevaluator.tier3.harbor.metrics import score_value, DEFAULT_METRICS
     raw = (trial.get('verifier_result') or {}).get('rewards') or {}
     errors = reward.get('evaluation_errors') or {}
     require(type(raw) is dict and type(errors) is dict, 'Invalid native diagnostic values')
     if not raw or set(raw) == {'overall'} and type(raw['overall']) in (int, float) and raw['overall'] == 0.0:
         return {}
-    deterministic = {'security', 'skill_execution', 'skill_efficiency'}
+    observed = set(raw) - {'overall'}
     require(bool(errors) and set(errors) <= {'accuracy', 'goal_accuracy', 'behavior_check'}
-            and set(raw) <= deterministic | {'overall'} and raw.get('overall') == 0.0
+            and observed <= set(DEFAULT_METRICS) and not observed.intersection(errors)
+            and raw.get('overall') == 0.0
             and all(score_value(v) is not None for v in raw.values()), 'Unscored diagnostic acquired measurements')
-    return {k:v for k,v in raw.items() if k in deterministic}
+    return {k:v for k,v in raw.items() if k != 'overall'}
 
 def validate_native_aggregates(agent, rows, ids):
     """Reconcile complete arm aggregates with the released N/A-aware helpers."""

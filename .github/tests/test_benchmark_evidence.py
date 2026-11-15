@@ -65,7 +65,9 @@ class NativeTests(unittest.TestCase):
         self.assertEqual(unavailable['outcome'],'judgment_unavailable')
         self.assertIsNone(unavailable['quality']['passed'])
         self.assertEqual(unavailable['metrics']['security'], {'status':'observed','value':1.0})
-        self.assertEqual(unavailable['dimensions']['correctness'], {'status':'unavailable','value':None})
+        self.assertEqual(unavailable['dimensions']['correctness'], {'status':'observed','value':1.0})
+        self.assertEqual(unavailable['metrics']['goal_accuracy'], {'status':'unavailable','value':None})
+        self.assertEqual(unavailable['dimensions']['effectiveness'], {'status':'unavailable','value':None})
         unsupported = self.rows('unavailable','5')[0]
         self.assertEqual(unsupported['outcome'],'unsupported')
         self.assertIsNone(unsupported['quality']['overall'])
@@ -75,6 +77,17 @@ class NativeTests(unittest.TestCase):
         self.assertEqual(self.rows('unavailable','1')[0]['outcome'],'passed')
         self.assertEqual(self.rows('unavailable','6')[0]['outcome'],'runtime_failure')
         self.assertIsNone(self.rows('unavailable','6')[0]['quality']['passed'])
+
+    def test_failed_judge_and_transport_values_cannot_acquire_measurements(self):
+        from evaluator_090 import diagnostic_observations
+        path = self.root / 'unavailable/sanitized/results/podman/unavailable/codex/with-skill/trials/skillevaluator-4__attempt001'
+        reward = reports.read_json(path / 'reward.json'); trial = reports.read_json(path / 'result.json')
+        self.assertEqual(diagnostic_observations(reward,trial)['accuracy'],1.0)
+        for key,value in (('goal_accuracy',0.0), ('overall',False), ('unknown_metric',1.0)):
+            changed = copy.deepcopy(trial); changed['verifier_result']['rewards'][key] = value
+            with self.subTest(key=key), self.assertRaises(ValueError): diagnostic_observations(reward,changed)
+        unsupported = copy.deepcopy(reward); unsupported['evaluation_errors'] = {'execution_evidence':'unsupported'}
+        with self.assertRaises(ValueError): diagnostic_observations(unsupported,trial)
 
     def test_recovery_keeps_primary_outcome_absence_and_unaffected_baseline(self):
         record = self.records['interrupted']

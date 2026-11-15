@@ -60,10 +60,11 @@ def fixture(output, scenario):
             unavailable = scenario == 'unavailable' and case == '4'
             paths = {'ATIF_PATH': trace, 'ENTRY_PATH': task / 'tests/entry.json', 'REWARD_JSON': target / 'reward.json',
                 'REWARD_TXT': target / 'reward.txt', 'SKILL_EVALUATOR_REWARD_JSON': target / 'skill_evaluator_reward.json'}
-            response = {'score': None, 'error': 'Simulated judgment unavailable'} if unavailable else {'score': score, 'reason': 'Simulated judge fixture'}
+            response = {'score': score, 'reason': 'Simulated judge fixture'}
+            goal_response = {'score': None, 'error': 'Simulated judgment unavailable'} if unavailable else response
             with patch.multiple(verifier, **paths), patch.dict(os.environ, {'HARBOR_ATIF_PATH':str(trace)}), \
                     patch.object(verifier, 'judge_accuracy', return_value=response), \
-                    patch.object(verifier, 'judge_goal_accuracy', return_value=response), \
+                    patch.object(verifier, 'judge_goal_accuracy', return_value=goal_response), \
                     patch.object(verifier, 'judge_behavior_check', return_value=response):
                 try:
                     verifier.main()
@@ -178,8 +179,11 @@ def main():
     reports.require(output.resolve() == output and not output.is_relative_to(ROOT) and not output.exists(),
                     'Fresh external qualification destination required')
     output.mkdir(parents=True)
+    home = output / 'empty-home'; home.mkdir()
     env = {k:os.environ[k] for k in ('PATH', 'TMPDIR', 'LANG') if k in os.environ}
-    env.update(PYTHONDONTWRITEBYTECODE='1', PYTHON_DOTENV_DISABLED='1', LITELLM_LOCAL_MODEL_COST_MAP='True')
+    env.update(PYTHONDONTWRITEBYTECODE='1', PYTHON_DOTENV_DISABLED='1', LITELLM_LOCAL_MODEL_COST_MAP='True',
+        HOME=str(home), USERPROFILE=str(home), XDG_CACHE_HOME=str(output / 'cache'),
+        XDG_STATE_HOME=str(output / 'state'), SKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE=str(output / 'fixture-provenance.key'))
     subprocess.run([sys.executable, '-B', str(Path(__file__).resolve()), '--worker', '--output', str(output)],
                    env=env, check=True, timeout=300)
 
