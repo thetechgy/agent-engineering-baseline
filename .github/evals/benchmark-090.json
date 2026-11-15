@@ -1,0 +1,31 @@
+{
+  "id": "behavioral-090-offline-v1",
+  "producer": "skillevaluator-0.9.0-offline-v3",
+  "scoring": "skill-evaluator-dimension-mean-v1",
+  "metric_set": "skill-evaluator-default-v2",
+  "origin": "credential_free_fixture",
+  "judgments": [
+    "simulated",
+    "unavailable"
+  ],
+  "production_history": false,
+  "dimensions": {
+    "security": {
+      "security": 1.0
+    },
+    "correctness": {
+      "accuracy": 1.0
+    },
+    "discoverability": {
+      "skill_execution": 1.0
+    },
+    "effectiveness": {
+      "goal_accuracy": 0.5,
+      "behavior_check": 0.5
+    },
+    "efficiency": {
+      "skill_efficiency": 1.0
+    }
+  },
+  "grading": "default"
+}

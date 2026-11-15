@@ -285,7 +285,7 @@ def inventory(root):
         retained, retained_line = literal(read(root, ".github/scripts/skill_report_reviews.py"), "LEGACY_PINS")
         policy, policy_line = literal(read(root, ".github/scripts/skill_reports.py"), "POLICY")
         retained = {**retained, "harbor": policy["harbor"], "python": policy["python"]}
-        note = ("Active evaluator/native setup still uses the original released 0.3.0 lock; "
+        note = ("Benchmark execution, contracts/native gh and native replay still use the original released 0.3.0 lock; "
                 "this is not historical-only. Current private reviews have a separate overlay. "
                 "A refreshed production lock needs a distinct compatibility identity and native/request/"
                 "grading qualification; never relabel historical validators or infer adoption from an opt-in path.")
@@ -308,9 +308,9 @@ def inventory(root):
          "Merged opt-in path; frozen qualification and experiment inputs remain unchanged. "
          "Harbor/Python/LiteLLM bounds come from the released evaluator manifest. "
          "SDK and other transitive freshness is not polled independently here."),
-        ("candidate-next-environment", "SkillEvaluator 0.9.0 data hosts and proposed static owner",
+        ("candidate-next-environment", "SkillEvaluator 0.9.0 static quality, data hosts and offline behavioral evidence",
          ".github/evals/evaluator-0.9.json",
-         "Data-only reporting/orchestration adopted in #138. Static quality would move upon merge of the focused migration; "
+         "Data-only reporting/orchestration adopted in #138; complete static quality adopted in #141. The focused behavioral evidence path is offline qualification only; "
          "benchmarks/reviews/native replay retain their owners. Retained 0.8.0 and frozen experiments are unchanged. "
          "Harbor 0.25.0 is supported; Python <3.15 and LiteLLM <1.94 still constrain this group. "
          "Credential-free compatibility does not establish provider or skill benefit."),

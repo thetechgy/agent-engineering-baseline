@@ -384,13 +384,32 @@ def validate_benchmark_versions(versions):
             "Installed evaluator/runtime version mismatch")
 
 
-def recover_benchmark(workspace, root, name, mode, outcome):
+def recover_benchmark(workspace, root, name, mode, outcome, *, evidence_profile=None):
     """Collect retained trials with the pinned native collector; never certify a run."""
     from skillevaluator.tier3.case_ids import validate_case_ids
     from skillevaluator.tier3.dataset_utils import load_dataset_entries
     from skillevaluator.tier3.harbor.collector import collect_harbor_results
     from skillevaluator.tier3.results_location import run_directory_sort_key
 
+    profile_metadata = None
+    retained_provenance = {}
+    primary_outcome = outcome
+    if evidence_profile is not None:
+        import benchmark_evidence
+        import evaluator_profiles
+        p = benchmark_evidence.profile(evidence_profile)
+        evaluator_profiles.runtime(read_json(root / 'versions.json'), owning=True)
+        require(evaluator_profiles.runtime(read_json(root / 'versions.json')) is evaluator_profiles.NEXT,
+                'Recovery producer mismatch')
+        original = read_json(root / 'provenance.json')
+        profile_metadata = original['benchmark']
+        require(original.get('schema_version') == 1 and original.get('skill') == name
+                and original.get('mode') == mode, 'Recovery evidence identity mismatch')
+        retained_provenance = {key:original[key] for key in
+            ('skill', 'mode', 'revision', 'policy', 'patch_sha256', 'dataset_digest') if key in original}
+        primary_outcome = original.get('evaluation_outcome', outcome)
+        require(primary_outcome in {'success','failure','cancelled','skipped'}, 'Invalid primary outcome')
+        require(benchmark_evidence.metadata(profile_metadata) is p, 'Recovery policy mismatch')
     skill = benchmark_skill(workspace, name, root)
     require(outcome in {"success", "failure", "cancelled", "skipped"}, "Invalid evaluation outcome")
     root = root.absolute()
@@ -404,8 +423,10 @@ def recover_benchmark(workspace, root, name, mode, outcome):
 
     # This existing allowlisted metadata file also covers interruptions before a run exists.
     write_json(root / "provenance.json", {
-        "schema_version": 1, "status": "incomplete", "evaluation_outcome": outcome,
+        **retained_provenance,
+        "schema_version": 1, "status": "incomplete", "evaluation_outcome": primary_outcome,
         "diagnostic_only": True,
+        **({"benchmark": profile_metadata} if profile_metadata is not None else {}),
     })
     summary([f"## {name}: incomplete benchmark", "",
              f"Evaluation outcome: {outcome}. Recovered diagnostics cannot enter benchmark history."])
@@ -995,6 +1016,13 @@ def main():
     public.add_argument("mode", choices=MODES)
     public.add_argument("destination", type=Path)
     public.add_argument("--run")
+    qualified = commands.add_parser('benchmark-evidence')
+    qualified.add_argument('root', type=Path)
+    qualified.add_argument('skill')
+    qualified.add_argument('mode', choices=MODES)
+    qualified.add_argument('destination', type=Path)
+    qualified.add_argument('--run')
+    recover.add_argument('--evidence-profile', choices=('behavioral-090-offline-v1',))
     args = parser.parse_args()
     workspace = Path(os.environ["GITHUB_WORKSPACE"]).resolve()
     if args.command in {"public-quality", "public-benchmark"}:
@@ -1030,10 +1058,14 @@ def main():
             summary(["Native infrastructure contracts failed: catalog, exit, native report or dataset evidence is missing or invalid. "
                      "Inspect collection steps and the skill-quality artifact. Findings are unresolved; a richer summary cannot override this failure."])
             return 1
+    elif args.command == 'benchmark-evidence':
+        import benchmark_evidence
+        benchmark_evidence.report(workspace, args.root, args.skill, args.mode, args.destination, args.run)
     elif args.command == "benchmark":
         benchmark_report(workspace, args.root, args.skill, args.mode, args.destination)
     elif args.command == "recover":
-        recover_benchmark(workspace, args.root, args.skill, args.mode, args.outcome)
+        recover_benchmark(workspace, args.root, args.skill, args.mode, args.outcome,
+                          **({'evidence_profile': args.evidence_profile} if args.evidence_profile else {}))
     elif args.command == "artifacts":
         benchmark_artifacts(workspace, args.root, args.skill, args.destination)
     else:

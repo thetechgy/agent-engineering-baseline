@@ -28,6 +28,8 @@ def empty(at):
 def observation(record, slot, provenance, at, execution=None):
     """Caller must first authenticate producer and validate the original public bundle."""
     evidence.validate_public(record)
+    evidence.require(not slot.startswith('standard--') or ('benchmark' not in record and 'producer_profile' not in record['policy']),
+                     'Offline behavioral evidence cannot enter production history')
     core = {key: copy.deepcopy(record[key]) for key in FIELDS}
     # Reference IDs remain provenance locators, not claims of retained possession.
     category = 'quality' if slot == 'quality' else 'standard' if slot.startswith('standard--') else 'diagnostic'
@@ -67,6 +69,8 @@ def validate(value):
         b = item['execution']['completed_at']
         evidence.require(a is None or b is None or timestamp(a) <= timestamp(b), 'History execution order')
         r=item['record']; evidence.closed(r, FIELDS)
+        evidence.require(expected != 'standard' or 'producer_profile' not in r['policy'],
+                         'Offline behavioral evidence cannot enter production history')
         evidence.validate_source(r['source']); evidence.validate_policy(r['policy'], custom_only=r['policy']['fields']['grading']=='custom_only')
         evidence.enum(r['kind'], ('static','behavioral')); evidence.boolean(item['numeric_complete'])
         evidence.require(type(r['schema_version']) is int and r['schema_version'] in (1,2), 'History source schema')

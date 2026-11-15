@@ -264,6 +264,7 @@ def bundle_claims(captured, slot, prov):
         else:
             purpose, name = slot.split('--', 1)
             require(record['kind'] == 'behavioral' and record['source']['skill_id'] == name, 'Behavioral slot mismatch')
+            require(purpose != 'standard' or ('benchmark' not in record and 'producer_profile' not in record['policy']), 'Offline behavioral evidence cannot enter production history')
             mode = record['policy']['attempts']['mode']
             if purpose != 'oracle':
                 require(mode == ('standard' if purpose == 'standard' else 'confirmation'), 'Behavioral purpose mismatch')

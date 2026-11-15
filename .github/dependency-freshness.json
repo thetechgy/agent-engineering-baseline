@@ -3,7 +3,7 @@
   "dependencies": [
     {
       "id": "skillevaluator",
-      "label": "SkillEvaluator",
+      "label": "SkillEvaluator (benchmark/review/replay owner)",
       "repo": "NVIDIA/SkillEvaluator",
       "sources": [
         {
@@ -31,10 +31,10 @@
         }
       ],
       "owner": "Maintainer review",
-      "hold": "Data-only reporting/orchestration already adopted pinned 0.9.0 in #138; #139 finding retention and #140 strict-dataset correction are merged. This focused PR would migrate complete static quality to offline-v3 upon merge, preserving known findings and incomplete coverage. Contracts/native gh, benchmarks/recovery/history, private reviews and exact historical replay retain their owners. Frozen 0.8 experiments remain closed; manual 0.7.2 qualifier remains active. No claim that all evaluator dependencies are current. See EVALUATOR-090-95.md and docs/evaluations/static-quality-090.md.",
+      "hold": "Data-only reporting/orchestration adopted pinned 0.9.0 in #138 and complete static quality in merged #141. Offline-v3 finding retention and strict-dataset correction are merged. The focused behavioral-090-offline-v1 path qualifies native collection/recovery, evidence admission, public reporting and simulated history refusal; it does not switch production execution. Benchmarks, contracts/native gh, private reviews and exact historical replay retain their original owners. Frozen 0.8 experiments remain closed; manual 0.7.2 qualification remains maintained. See EVALUATOR-090-95.md and docs/evaluations/behavioral-evidence-090.md.",
       "group": "evaluation-runtime compatibility group",
       "tag_prefix": "v",
-      "validation": "Review actual static entry-point qualification, same-input finding/status/coverage/provenance comparison, report reproduction, tested rollback and final selected CI. Preserve benchmark/review/history owners and historical locks/grades; no live-provider or skill-benefit claim.",
+      "validation": "Review the versioned offline evidence contract, released semantics, native failure and missingness controls, retained reproduction and final selected CI. Live provider routing, judge accuracy and skill benefit require separate evidence and authorization.",
       "modified": true,
       "package": {
         "ecosystem": "pip",
@@ -314,7 +314,7 @@
     },
     {
       "id": "harbor",
-      "label": "Harbor",
+      "label": "Harbor (benchmark/review/replay owner)",
       "repo": "harbor-framework/harbor",
       "sources": [
         {
@@ -325,7 +325,7 @@
         }
       ],
       "owner": "Maintainer review",
-      "hold": "Benchmarks, contracts/native gh and review/replay 0.3.0 owners still require Harbor 0.13.2. Maintained frozen 0.8.0 controls require 0.24.0. Data-only hosts already use the pinned 0.9.0 group with Harbor 0.25.0; this PR would also migrate static quality upon merge. Other owners require separate policy/provider or validator qualification; no forced override or historical rescore.",
+      "hold": "Benchmark execution, contracts/native gh and review/replay 0.3.0 owners retain Harbor 0.13.2. Maintained frozen 0.8 controls require 0.24.0. Data-only hosts and complete static quality already use pinned 0.9.0 / Harbor 0.25.0; the explicit behavioral evidence qualifier uses that same existing group. Production behavioral execution and live provider routing remain held. No forced override or historical rescore.",
       "group": "evaluation-runtime compatibility group",
       "tag_prefix": "v",
       "validation": "Qualify the evaluation runtime as a group: frozen locks, compatibility patch, CLI/preflight, graders, scoring, evidence/schema consumers, redaction, and historical comparison policy. Preserve historical tooling and use a new policy identity when inputs change. No independent SDK upgrade.",

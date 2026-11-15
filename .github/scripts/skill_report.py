@@ -617,6 +617,10 @@ def behavioral(run, records):
             ('Deterministic fixtures do not establish skill benefit.</p>' if record['custom']['purpose'] in ('skill_effectiveness_control', 'skill_effectiveness_probe') else 'This exploratory population does not establish general skill effectiveness.</p>'))
         if evidence.replay_purpose(record['custom']['purpose']):
             parts.append(retrospective_outcomes(record, records))
+    elif 'benchmark' in record:
+        parts.append('<p class="safety"><strong>Versioned offline behavioral qualification; excluded from production history.</strong> '
+            'Released native collection and interpretation are exercised with fixture tasks and simulated judgments. '
+            'This is not measured skill benefit or live-provider qualification.</p>')
     elif 'producer_profile' in record['policy']:
         parts.append('<p class="safety"><strong>Synthetic candidate qualification; excluded from production history.</strong> '
             'Producer: ' + code(record['policy']['producer_profile']) + '; scoring policy: ' + code(record['policy']['scoring_policy']) + '. '
@@ -625,6 +629,20 @@ def behavioral(run, records):
             'Task correctness, authorization, activation and the historical combined gate have separate meanings.</p>')
         parts.append(table('Raw upstream standard values · synthetic transport only', ('Arm', 'Case', 'Raw values', 'Interpreted quality'),
             [[safe(ARM[o['arm']]), code(o['case_id']), code(o['raw_scores']), 'Unavailable; no judge executed'] for o in record['observations']]))
+    if 'benchmark' in record:
+        contract = record['benchmark']
+        parts.append('<h4>Versioned behavioral evidence</h4><p>Policy ' + code(contract['profile']) +
+            '; judgments: ' + text(contract['judgments']) + '. Credential-free fixture observations; '
+            'excluded from production history. Native task failure, unavailable judgment and runtime failure remain separate.</p>')
+        parts.append(table('Released outcomes · simulated judgments', ('Arm', 'Case', 'Outcome', 'Overall', 'Correct answer', 'Security clean', 'Support'),
+            [[safe(ARM[o['arm']]), code(o['case_id']), text(row['outcome']), text(row['quality']['overall']),
+              text(row['quality']['correct_answer']), text(row['quality']['security_clean']),
+              disclosure('Metric values, dimensions and applicability', row)]
+             for row in contract['observations'] for o in record['observations'] if o['id'] == row['observation_id']]))
+        parts.append(table('Dimension populations · absent evidence remains absent',
+            ('Arm', 'Dimension', 'Native arm score', 'Observed', 'N/A', 'Unavailable', 'Absent', 'Expected'),
+            [[safe(ARM[arm]), text(name), text(contract['native_dimensions'][arm].get(name)), *[text(counts[k]) for k in ('observed','not_applicable','unavailable','absent','expected')]]
+             for arm, dimensions in contract['populations'].items() for name, counts in dimensions.items()]))
     custom_only = record.get('custom', {}).get('profile_id') is not None and record['policy']['fields']['grading'] == 'custom_only'
     if 'custom' in run: parts.append(custom_measurements(run, record))
     if run['native_metrics']:

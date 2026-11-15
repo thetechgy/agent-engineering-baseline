@@ -1,0 +1,146 @@
+{
+  "broad_local_diagnostic": {
+    "causes": [
+      "Old review dependency profile",
+      "Missing pinned scanner stack",
+      "Source/input mutation during development",
+      "PowerShell worker startup limit",
+      "Legacy recovery keyword compatibility defect corrected"
+    ],
+    "disposition": "failed_and_not_final_revision_validation",
+    "errors": 175,
+    "failures": 17,
+    "log_sha256": "bc348d552c747938b89b5dc5590d96a2f8e661b641800afd4d0b7ae772046cbd",
+    "skips": 113,
+    "tests": 1091
+  },
+  "control_tests": {
+    "log_sha256": "7dc045a857c3a28ee1c1c3e60584fa61000ac204d6979ea98cdebc4c60c7f895",
+    "passed": 8,
+    "run": 8
+  },
+  "historical_archive_sha256": "11b1608bbc6520e8e905df612851ce72aca0951c6d4edee496f36d02b18c8ee7",
+  "history": {
+    "complete": {
+      "eligible": false,
+      "reasons": [
+        "offline_policy_not_enabled_for_production",
+        "credential_free_fixture",
+        "simulated_judgments",
+        "incomplete",
+        "identity_missing"
+      ],
+      "series": "sha256:62ec053e5b824a0f9ec15343544bff4bfc793367aab24bdd0a7bcb3499ebb837"
+    },
+    "interrupted": {
+      "eligible": false,
+      "reasons": [
+        "offline_policy_not_enabled_for_production",
+        "credential_free_fixture",
+        "simulated_judgments",
+        "recovered",
+        "incomplete",
+        "identity_missing"
+      ],
+      "series": "sha256:62ec053e5b824a0f9ec15343544bff4bfc793367aab24bdd0a7bcb3499ebb837"
+    },
+    "unavailable": {
+      "eligible": false,
+      "reasons": [
+        "offline_policy_not_enabled_for_production",
+        "credential_free_fixture",
+        "simulated_judgments",
+        "incomplete",
+        "identity_missing"
+      ],
+      "series": "sha256:62ec053e5b824a0f9ec15343544bff4bfc793367aab24bdd0a7bcb3499ebb837"
+    }
+  },
+  "hosted_validation": "recorded_in_draft_pr",
+  "inference": false,
+  "judges": "simulated",
+  "network_attempts": [],
+  "original_historical_reproduction": {
+    "byte_identical": true,
+    "host": "0.3.0",
+    "input_producer": "0.9.0",
+    "native_renormalization": false,
+    "report_sha256": "d745c7b25dcacc6e1629f0a0747ca0349412be455c2dd07b4ced1968ac0be759"
+  },
+  "profile": "behavioral-090-offline-v1",
+  "qualification": "credential_free_local_fixture",
+  "recovery_observation_control": {
+    "absent_trials": 1,
+    "arm_aggregate": "unavailable",
+    "completed_observed_trials": 9,
+    "failing_before_log_sha256": "0a6c10f91822eebd16889eaa0f3512a95453e58e93d26d44a9ed2797cce583cd",
+    "history_eligible": false,
+    "overall_and_verdict": "unavailable"
+  },
+  "report_reproduction": [
+    {
+      "byte_identical": true,
+      "html_sha256": "aca81d5cddbaf0194f5468bc7bb2970f4b3927be480133287c928cc1af0582f2",
+      "report": "retained-static"
+    },
+    {
+      "byte_identical": true,
+      "html_sha256": "8f2d1c76f25f17725fb2fc3ed5dc4aa057bd44533c13cc4b33e9bc48c7703867",
+      "report": "new-behavioral"
+    }
+  ],
+  "source_profiles": {
+    "preserved": 501,
+    "prior_registry_sha256": "bae53793d3e47a1d48e3e3ae4e9c3c4a80930f000ff0a26c816fcf0dc5399003",
+    "source_only_successors": 28
+  },
+  "sources": {
+    ".github/evals/benchmark-090.json": "sha256:0b7ffbbfc34010f20ca375c069e5eab5a90c96acde6ea4dabfc1f09762b6f81f",
+    ".github/scripts/benchmark_evidence.py": "sha256:e0bb0e62c556c1bb05cc5c4975284bf6e36ea109319129d44db920d6ca816f1e",
+    ".github/scripts/evaluator_090.py": "sha256:8ce6f3c78cb3faf066c002b1322be2342ad6a982bdc5b021128a31abf4d91a0c",
+    ".github/scripts/evaluator_profiles.py": "sha256:44aac6e85399a776dc8e3b24d93f3b9baa7b1da65f3ab2d1e61de86b4bdf17b6",
+    ".github/scripts/qualify_benchmark_evidence.py": "sha256:6a09acf6f31a0fb91102ca09f748f75106a8486b3523d6b64bc6046a10ba41a8",
+    ".github/scripts/skill_analysis.py": "sha256:7de08e9d556bc58640bc5192e8646395bd8493af5c6e34f3439f7755a24f0fc9",
+    ".github/scripts/skill_evidence.py": "sha256:2733d5c35725fd2417026e214779ffeff0fcf84bc102acd46bf834041680a125",
+    ".github/scripts/skill_history.py": "sha256:bd59b596e64a695b6ba6fccaa90de97b30c0c37295933fa54a71a50040a9f3a9",
+    ".github/scripts/skill_pages.py": "sha256:ab84dde636ace5e0f26923321bbeff3e9b4c81aa3c3e79ad57c3104fe5e63dce",
+    ".github/scripts/skill_report.py": "sha256:1ecaab4b3e9a73ab84f77cc3eeb9c48cf283c192f421921cd76f866093ada78c",
+    ".github/scripts/skill_reports.py": "sha256:889b84c37220c317f8eb97008f272fa082d7b09e70bba9f409ef4a85e8f1fa4b"
+  },
+  "starting_main": "66c3f92a40b0f00bb461286596a2016a6a39108a",
+  "superseded_ci": {
+    "conclusion": "cancelled_inconclusive",
+    "head": "c85634e58d24e21e6077e930ec230f9f660abfbb",
+    "reason": "Known legacy recovery CLI keyword compatibility correction",
+    "required_platform_checks": "passed_on_superseded_head",
+    "run": 43689241906,
+    "static_quality": "passed_on_superseded_head"
+  },
+  "superseded_partial_judge_ci": {
+    "conclusion": "cancelled_inconclusive",
+    "head": "44d09457765fc74a020e2e225ffe117ea0be5a14",
+    "reason": "Batch complete partial-judge observation retention and its rejection controls",
+    "run": 43690552846
+  },
+  "superseded_recovery_ci": {
+    "conclusion": "cancelled_inconclusive",
+    "head": "3311f934bbc8559f1de0c3f376c6d1d7e34dfcb0",
+    "hosted_artifact": "digest_and_producer_verified_before_correction",
+    "reason": "Completed trial metrics lost from interrupted-arm projection",
+    "required_platform_checks": "passed_on_superseded_head",
+    "run": 43691251968,
+    "shared_contracts": "passed_on_superseded_head"
+  },
+  "versions": {
+    "backend_source_digest": "sha256:3e79836ee10bdb1d690f50384077cde9ef5eaf09cd4d470076eae459a0937fa8",
+    "backend_version": "1.1.0",
+    "backend_wheel_sha256": "070237e238326d49a63f348d405533d01bdc58c68295aea206095aee80ac5149",
+    "evaluator_revision": "b78d14618a694dec84bc9601468f8f711df5cab3",
+    "harbor": "0.25.0",
+    "lock_sha256": "05dd72bfd0bac5399ac19232ea847929e2b21df4a7ef2d2c65eefc4f72484dda",
+    "patch_sha256": "ca00768c1c2b054573743707473ed98964ed6bf910ad8bfac5accfd683860da4",
+    "python": "3.14.10",
+    "skillevaluator": "0.9.0"
+  },
+  "visual_browser_check": "unavailable_browser_host"
+}

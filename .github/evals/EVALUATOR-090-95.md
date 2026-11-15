@@ -1,21 +1,24 @@
 # SkillEvaluator 0.9.0 consumer ownership, issue #95
 
-Current migration is implemented for review from main
-`18357c54e6d9266c979c915ca11dc8449196d7f9` (#140). Production static quality still
-uses 0.3.0 until this PR merges. [Static migration evidence and rollback](../../docs/evaluations/static-quality-090.md)
-trace the changed consumer through the actual Validate entry point.
+Current main is verified at #141 merge
+`66c3f92a40b0f00bb461286596a2016a6a39108a`. Complete static quality and data-only
+reporting/orchestration already use pinned 0.9.0. This focused change qualifies a
+versioned offline behavioral evidence contract; production execution remains held.
+See [behavioral evidence and rollback](../../docs/evaluations/behavioral-evidence-090.md)
+and the preserved [static receipt](../../docs/evaluations/static-quality-090.md).
 
-| Consumer | Already merged owner | Owner upon this PR's merge / remaining constraint |
+| Consumer | Current owner | Constraint |
 | --- | --- | --- |
-| Data-only publisher prepare, base analysis/HTML, orchestration plan/dispatch | 0.9.0 since #138 | Remains 0.9.0; no Pages publication or paid dispatch authorized here |
-| Complete Validate static quality | 0.3.0 `quality` | 0.9.0 offline-v3 `quality-next`; existing frozen scanners; strict admission and projection remain required |
-| Contracts, retained scanner adapter, native gh validation | 0.3.0 `quality`, exact review overlays | Remains 0.3.0; native gh moves once to contracts, preserving native runtime and Compose cleanup |
-| Benchmark execution/recovery/history admission | 0.3.0 / Harbor 0.13.2, Codex 0.155.1 | Held: versioned 0.9 benchmark/recovery/history policy and actual provider routing unqualified; #139 closed finding retention only |
-| Private reviews and analyst attachments | Exact retained 0.3 review profiles/overlays | Held: no successor 0.9 validator/request profile; original SDK/source/registry identities remain required |
-| Native history/replay | Exact original producer and interpreter | Retained for immutable evidence; data-only rendering can use 0.9 without renormalizing or rescoring |
-| Maintained frozen pilot/campaign/admission | 0.8.0 / Harbor 0.24.0 | Existing owners remain active for their defined controls; closed experiments stay closed |
-| Manual Pester qualifier | 0.7.2 | Still maintained, not historical-only; retirement remains a separate decision |
-| Offline-v2 0.9 patch/profile, older scanner and review overlays | Original exact identities | Historical replay only where no active caller remains; never relabel as offline-v3 |
+| Data-only publisher prepare, base analysis/HTML, orchestration | 0.9.0 since #138 | No Pages publication or paid dispatch authorized here |
+| Complete Validate static quality | 0.9.0 offline-v3 `quality-next` since #141 | Existing scanners, strict admission and projection remain required |
+| Offline behavioral evidence qualification | 0.9.0 offline-v3, `behavioral-090-offline-v1` | Explicit fixture judgments; versioned recovery/reporting/history refusal; no live adoption |
+| Production benchmark execution | 0.3.0 / Harbor 0.13.2, Codex 0.155.1 | Execution-policy selection and actual provider routing remain unqualified |
+| Contracts, retained scanner adapter, native gh | 0.3.0 `quality`, exact review overlays | Existing native/task owners remain unchanged |
+| Private reviews and analyst attachments | Exact retained 0.3 review profiles/overlays | No successor validator/request profile |
+| Native history/replay | Exact original producer and interpreter | Immutable evidence; data-only rendering does not renormalize/rescore |
+| Maintained frozen pilot/campaign/admission | 0.8.0 / Harbor 0.24.0 | Closed experiments stay closed; original replay owners retained |
+| Manual Pester qualifier | 0.7.2 | Still maintained; retirement remains separate |
+| Offline-v2 and older overlays | Original exact identities | Historical replay where no active caller remains; never relabel |
 
 The same evaluator revision/version can have different patch identities.
 `evaluator-0.9.json` remains offline-v3, lock/patch/backend/source unchanged. Native
