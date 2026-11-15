@@ -1,4 +1,48 @@
-# Behavioral runtime 0.9.0 stopped pilot checkpoint
+# Behavioral runtime 0.9.0 launch-construction correction checkpoint
+
+The focused correction in [PR #143](https://github.com/thetechgy/agent-engineering-baseline/pull/143)
+keeps parent rejection of ambient overrides and child authorization guards while
+accepting only task-owned metadata verified against the private operator manifest,
+trusted staged task population and selected arm. A protected TrialConfig context
+binds the manifest seal; the shared launch builder verifies it before key attachment.
+This fixes the trusted `AEB_GH_MANIFEST` rejection without a global allowlist or
+runtime/protection change. See the [trust-boundary and qualification receipt](../../docs/evaluations/gh-runtime-090-v1/launch-correction.md).
+
+The retained failing-before reproduction reaches the actual live Harbor/Codex
+constructor for both arms. Credential-free preparation now runs that same live
+launch builder and real agent initialization, stops before environment creation,
+and exercises the actual manifest startup consumer under a test-only stop before
+container start. Missing/substituted/tampered/wrongly bound metadata, unknown/probe/
+control/provider overrides and invalid authority must reject. Fresh consumption
+validates the retained proof and repeats the boundary on fresh staging. No actual
+model credentials, allocation claim, inference or model judge are used.
+
+New scheduler-backed reporting distinguishes unlaunched slots, infrastructure
+launch failures and measured task failures while retaining native grades, counts
+and collection status. The focused stopped-before-launch report regression retains
+zero observations and reproduces its output. The original published stopped report
+still reproduces unchanged, SHA-256
+`5acc463c73bf87fc50b741c6d7a94528b4d63bbc19f1caddf6feba8cceebc04f`.
+
+Final executable revision, terminal selected CI (including both required platforms
+and selected-results gate), hosted preparation, fresh consumption and artifact/digest
+receipts are maintained in PR #143. A failed, pending or source-mismatched receipt
+is not qualification. Report-only or later merge revisions are not implicitly covered.
+
+**The old allocation remains closed**, including its unused absent-skill slot.
+Stopped run 43762601398 and its b3e190d execution identity, evidence, original report
+and closure are preserved below. No new paid authority, nonce or reservation is
+created; no protected gate is approved. Live provider/CLI compatibility, actual task
+success, standard judge accuracy and skill improvement remain unproven. Production
+defaults, paid-stream settings, fixtures/grading and held runtime/model values remain
+unchanged. PR #143 remains unmerged; Pester clarification and skill adoption remain deferred.
+
+**One current next action:** review the qualified correction and exact-revision
+receipts in PR #143.
+
+## Stopped pilot checkpoint, retained as history
+
+### Behavioral runtime 0.9.0 stopped pilot checkpoint
 
 **Stopped; allocation closed.** The separately authorized single diagnostic
 [run 43762601398, attempt 1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43762601398)

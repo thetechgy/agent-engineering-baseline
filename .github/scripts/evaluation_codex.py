@@ -200,6 +200,7 @@ if getattr(PilotCodex, 'options_model', None) is not None:
         control: str | None = None
         present: bool = False
         live: bool = False
+        launch_context: dict | None = None
         deadline_fixture: Literal['emitted', 'empty', 'secondary', 'cancelled'] | None = None
 
 
@@ -208,7 +209,7 @@ class CampaignCodex(PilotCodex):
         options_model = CampaignCodexOptions
     retain_submission = True
 
-    def __init__(self, *args, campaign_definition, control, present, live=False, deadline_fixture=None, **kwargs):
+    def __init__(self, *args, campaign_definition, control, present, live=False, deadline_fixture=None, launch_context=None, **kwargs):
         from evaluation_tasks import load
         self.task = load(ROOT / campaign_definition)
         self.control = control
@@ -223,9 +224,15 @@ class CampaignCodex(PilotCodex):
         self.deadline_fixture = deadline_fixture
         if live:
             from evaluation_campaign_protocol import runtime_gate
-            runtime_gate(self.task)
             require(control is None and 'protocol' in self.task.definition, 'Live control payload refused')
+            runtime_gate(self.task, child=True, launch_context=launch_context, present=present)
+            root = Path(os.environ['RUNNER_TEMP']) / 'campaign-live'
+            logs = Path(kwargs['logs_dir'])
+            require(logs.resolve() == logs and logs.parents[2] == root / 'jobs'
+                    and logs.parents[1].name == self.skill + '-codex-' + ('with' if present else 'without'),
+                    'Live agent logs outside selected campaign deployment')
         else:
+            require(launch_context is None, 'Probe received live task metadata')
             require(os.environ.get('AEB_PILOT_PROBE') == '1', 'Campaign inference is disabled')
         super().__init__(*args, **kwargs)
 
@@ -485,7 +492,7 @@ def prepare_task(native, mode, runtime):
         prepare_cli(native, runtime)
 
 
-def agent_config(task, mode, control, runtime, present, *, deadline_fixture=None):
+def agent_config(task, mode, control, runtime, present, *, deadline_fixture=None, launch_context=None):
     if mode in ('oracle','replay'):
         return {'name': 'oracle'}
     if deadline_fixture is not None:
@@ -495,7 +502,7 @@ def agent_config(task, mode, control, runtime, present, *, deadline_fixture=None
             **({'override_timeout_sec': 90} if deadline_fixture is not None else {}),
             'kwargs': {'campaign_definition': task.member, 'control': control, 'present': present,
                        **({'deadline_fixture': deadline_fixture} if deadline_fixture is not None else {}),
-                       **({'live': True} if mode == 'live' else {})}}
+                       **({'live': True, 'launch_context': launch_context} if mode == 'live' else {})}}
 
 
 def submission_path(trial, output):

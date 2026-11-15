@@ -81,6 +81,8 @@ def check(reference, staging, task, *, qualified=True):
         ready = reports.read_json(reference / 'preparation.json')
         require(ready == {'complete': True, 'inference': False, 'revision': revision(),
                           'protocol_digest': expected['protocol_digest'], 'authorized_live_attempts': 0}, 'Unqualified preparation')
+        from evaluation_launch_qualification import validate as validate_launch
+        validate_launch(reports.read_json(reference / 'live-launch-qualification.json'), task)
         proof = reports.read_json(reference / 'scheduler-qualification.json')
         require(proof.get('complete') is True and proof.get('revision') == revision()
                 and proof.get('protocol_digest') == expected['protocol_digest'] and proof.get('inference') is False
@@ -144,11 +146,11 @@ def validate_receipt(receipt, approval, task):
             'Stale or unauthenticated campaign receipt')
 
 
-def runtime_gate(task):
+def runtime_gate(task, *, child=False, launch_context=None, present=None):
     require(os.environ.get('GITHUB_ACTIONS') == 'true' and os.environ.get('GITHUB_REPOSITORY') == REPO
             and os.environ.get('GITHUB_JOB') == 'live'
             and not os.environ.get('OPENAI_BASE_URL')
-            and not any(k.startswith('AEB_') and k not in ('AEB_CAMPAIGN_APPROVAL', 'AEB_CAMPAIGN_RECEIPT') for k in os.environ),
+            and not any(k.startswith(('CODEX_', 'SKILL_EVAL_')) for k in os.environ),
             'Live runtime requires protected workflow; overrides refused')
     expires = protocol(task).get('authorization_expires_at')
     if expires is not None:
@@ -156,6 +158,15 @@ def runtime_gate(task):
                 'Diagnostic pilot proposal expired; requalification required')
     receipt = reports.read_json(Path(os.environ['AEB_CAMPAIGN_RECEIPT']))
     validate_receipt(receipt, os.environ['AEB_CAMPAIGN_APPROVAL'], task)
+    metadata = {}
+    if child:
+        root = Path(os.environ['RUNNER_TEMP']) / 'campaign-live'
+        metadata = task.validate_launch_context(root, launch_context, present, os.environ)
+    else:
+        require(launch_context is None and present is None, 'Parent received child launch context')
+    require(not any(k.startswith('AEB_') and k not in
+                    {'AEB_CAMPAIGN_APPROVAL', 'AEB_CAMPAIGN_RECEIPT', *metadata} for k in os.environ),
+            'Live runtime requires protected workflow; overrides refused')
     return receipt
 
 
@@ -274,6 +285,7 @@ def prepare(root, task, qualification):
     root.mkdir(parents=True,exist_ok=False); retained=root/'evidence'; retained.mkdir()
     reports.write_json(retained/'frozen-proposal.json',frozen(task))
     stage(root, task, 'live') # Preparation only: no inference path is invoked.
+    qualify_launch(root, task)
     reports.write_json(retained/'control-qualification.json',ready)
     expected={'interruption':'execution_infrastructure_failure', 'missing-evidence':'missing_native_observation',
               'unsupported-runtime':'unsupported_runtime_protocol', 'invalid':'missing_usable_evidence',
@@ -314,6 +326,13 @@ def prepare(root, task, qualification):
         'protocol_digest':digest(ROOT/task.definition['protocol']),'authorized_live_attempts':0})
 
 
+def qualify_launch(root, task):
+    from evaluation_launch_qualification import qualify
+    proof = qualify(root / 'launch-construction', task, root / 'evidence')
+    reports.write_json(root / 'evidence/live-launch-qualification.json', proof)
+    return proof
+
+
 def entry(args, task, root):
     from evaluation_campaign import stage, run, no_credentials
     if args.action=='authenticate':
@@ -321,7 +340,9 @@ def entry(args, task, root):
     if args.action=='check-preparation':
         no_credentials(); require(args.preparation is not None,'Preparation required')
         root.mkdir(parents=True,exist_ok=False); stage(root,task,'live')
-        return check(args.preparation,root/'evidence',task)
+        result = check(args.preparation, root/'evidence', task)
+        qualify_launch(root, task)
+        return result
     from qualify_evaluator_candidate import native_compose_config
     if args.action == 'live': runtime_gate(task)
     held = {k:os.environ.pop(k) for k in ('OPENAI_API_KEY','ANTHROPIC_API_KEY','NVIDIA_API_KEY') if k in os.environ}

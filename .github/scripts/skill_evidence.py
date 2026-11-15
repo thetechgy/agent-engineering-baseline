@@ -3498,9 +3498,9 @@ def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
     if profile_id is None and campaign_purpose(purpose):
         profile_id = purpose
     if profile_id is None and purpose in ('skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-effectiveness-v25'
+        profile_id = 'pester-effectiveness-v26'
     if profile_id is None and name == 'powershell-pester-6' and purpose in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-cli-pilot-retained-v16'
+        profile_id = 'pester-cli-pilot-retained-v17'
     if profile_id is None and name == 'gh' and purpose == 'oracle_qualification':
         profile_id = 'gh-native-oracle-v1'
     profile_id = registry['active_profiles'].get(name) if profile_id is None else profile_id
@@ -3789,7 +3789,7 @@ def custom_staged_inputs(tasks, purpose):
     return [cases[key] for key in sorted(cases)]
 
 
-def custom_capture(workspace, name, bundle, task_rows, *, purpose, attempts, agent, execution_policy, numeric_excerpts=(), retrospective=None):
+def custom_capture(workspace, name, bundle, task_rows, *, purpose, attempts, agent, execution_policy, numeric_excerpts=(), retrospective=None, scheduler_digest=None):
     """Prospective capture used by shared collection and credential-free qualification."""
     from importlib.metadata import version
     producer = profiles.by_version(version('skillevaluator'))
@@ -3821,6 +3821,10 @@ def custom_capture(workspace, name, bundle, task_rows, *, purpose, attempts, age
             'evaluator_revision': producer['revision'], 'evaluator_version': producer['version'],
             'harbor_version': version('harbor'), 'python_version': '.'.join(map(str, sys.version_info[:3])), 'runtime': profile['runtime']}
 
+    if profile.get('campaign', {}).get('scheduler'):
+        sha(scheduler_digest); capture['scheduler_digest'] = scheduler_digest
+    else:
+        require(scheduler_digest is None, 'Unexpected scheduler witness')
     if replay_purpose(purpose):
         validate_replay_metadata(retrospective,profile,purpose,workspace)
         capture['retrospective'] = copy.deepcopy(retrospective)
@@ -3838,7 +3842,8 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None):
         'authored_digest', 'prepared_dataset_digest', 'case_ids', 'tasks', 'attempts', 'agent', 'execution_policy', 'numeric_excerpts',
         'evaluator_revision', 'evaluator_version', 'harbor_version', 'python_version', 'runtime') +
         (('producer',) if profiles.candidate_revision(capture.get('evaluator_revision')) else ()) +
-        (('retrospective',) if replay_purpose(capture.get('purpose')) else ()))
+        (('retrospective',) if replay_purpose(capture.get('purpose')) else ()) +
+        (('scheduler_digest',) if 'scheduler_digest' in capture else ()))
     if captured_state is not None:
         directories, states, members, budget = captured_state
         for source_root in (workspace / '.github/evals' / name, workspace / '.apm/skills' / name
@@ -3849,6 +3854,9 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None):
         helper = 'pester_evaluations.py' if name == 'powershell-pester-6' else 'gh_evaluations.py'
         read_bytes(workspace / '.github/scripts' / helper, budget=budget, directory_identities=directories, directory_states=states, file_states=members)
     profile, definitions, contract = custom_contract(name, workspace, purpose=capture.get('purpose'))
+    require(bool(profile.get('campaign', {}).get('scheduler')) == ('scheduler_digest' in capture),
+            'Missing or unexpected scheduler capture')
+    if 'scheduler_digest' in capture: sha(capture['scheduler_digest'])
     require(type(capture['schema_version']) is int and capture['schema_version'] == 1 and capture['skill'] == name
             and capture['contract_digest'] == contract, 'Custom contract identity mismatch')
     require(capture['inputs'] == custom_source_manifest(workspace, name, purpose=capture['purpose']), 'Approved custom input drift')
@@ -4062,6 +4070,15 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
         return value['id']
     capture = read(root / CUSTOM_CAPTURE)
     profile, definitions = validate_custom_capture(capture, name, workspace, captured_state=(directories, states, members, budget))
+    scheduler = None
+    if 'scheduler_digest' in capture:
+        import campaign_scheduler_evidence as scheduler_evidence
+        from evaluation_evidence import task as campaign_task
+        scheduler = read(root / scheduler_evidence.MEMBER)
+        require(captured[root / scheduler_evidence.MEMBER][1] == capture['scheduler_digest'], 'Scheduler witness digest mismatch')
+        require(scheduler['mode'] == profile['campaign']['mode'], 'Scheduler/profile origin mismatch')
+        scheduler_evidence.validate(scheduler, campaign_task(profile), staged=capture['tasks'])
+        scheduler_ref = ref(root / scheduler_evidence.MEMBER)
     numeric_excerpts = custom_numeric_excerpts(capture, definitions)
     capture_ref = ref(root / CUSTOM_CAPTURE)
     result = read(run / 'result.json'); config = read(run / 'run_config.json')
@@ -4119,6 +4136,8 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
         'runtime': capture['runtime'], 'native_metric_set': result.get('metric_set'), 'capture_digest': captured[root / CUSTOM_CAPTURE][1],
         'capture_reference': capture_ref, **{key: profile[key] for key in ('grader_digest', 'fixture_digest', 'runtime_digest')},
         'assurance': copy.deepcopy(CUSTOM_ASSURANCE)}
+    if scheduler is not None:
+        data['custom']['scheduler'] = {'reference': scheduler_ref, 'witness': copy.deepcopy(scheduler)}
     if replay_purpose(capture['purpose']):
         data['custom']['retrospective'] = copy.deepcopy(capture['retrospective'])
     old = {(obs['arm'], obs['native_trial']): obs for obs in data['observations']}
@@ -4452,7 +4471,17 @@ def validate_custom_evidence(data, *, public=False, _observed_at=None):
     profile, definitions, contract = custom_contract(data['source']['skill_id'], profile_id=data['custom']['profile_id'])
     custom = data['custom']
     closed(custom, ('profile_id', 'contract_digest', 'definitions', 'cases', 'purpose', 'agent', 'runtime',
-                   'native_metric_set', 'capture_digest', 'capture_reference', 'agent_version', 'grader_digest', 'fixture_digest', 'runtime_digest', 'assurance') + (('retrospective',) if replay_purpose(custom.get('purpose')) else ()))
+                   'native_metric_set', 'capture_digest', 'capture_reference', 'agent_version', 'grader_digest', 'fixture_digest', 'runtime_digest', 'assurance') + (('retrospective',) if replay_purpose(custom.get('purpose')) else ()) +
+        (('scheduler',) if 'scheduler' in custom else ()))
+    require(bool(profile.get('campaign', {}).get('scheduler')) == ('scheduler' in custom), 'Scheduler evidence policy mismatch')
+    if 'scheduler' in custom:
+        import campaign_scheduler_evidence as scheduler_evidence
+        from evaluation_evidence import task as campaign_task
+        value = custom['scheduler']; closed(value, ('reference', 'witness'))
+        require(any(r['id'] == value['reference'] and r['member'] == scheduler_evidence.MEMBER for r in data['references']),
+                'Missing scheduler witness reference')
+        require(value['witness']['mode'] == profile['campaign']['mode'], 'Scheduler/profile origin mismatch')
+        scheduler_evidence.validate(value['witness'], campaign_task(profile), observations=data['observations'])
     require(custom['profile_id'] == profile['id'] and custom['contract_digest'] == contract
             and custom['definitions'] == [{'native_name': key, **definition} for key, definition in sorted(definitions.items())]
             and custom['runtime'] == profile['runtime']

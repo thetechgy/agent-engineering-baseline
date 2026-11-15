@@ -255,4 +255,62 @@ class ProtocolContracts(unittest.TestCase):
         self.assertIn('Credential-free',analysis.coverage_label({'behavioral_results':[probe]}))
 
 
-if __name__=='__main__':unittest.main()
+
+
+class LaunchConstructionContracts(unittest.TestCase):
+    @unittest.skipUnless(__import__('importlib.util', fromlist=['find_spec']).find_spec('aeb_gh_fixture'), 'Owning backend required')
+    def test_actual_live_constructor_and_consumer_before_workload(self):
+        from importlib.metadata import version
+        if version('skillevaluator') != '0.9.0' or not os.environ.get('APM_EXECUTABLE'):
+            self.skipTest('Pinned 0.9 owner and APM required; also exercised by hosted preparation')
+        from evaluation_launch_qualification import qualify
+        from evaluation_campaign_selection import selected_task
+        task = selected_task('gh-runtime-090-v1')
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); campaign.stage(root, task, 'live')
+            result = qualify(root/'construction', task, root/'evidence')
+            self.assertTrue(result['complete'])
+            self.assertEqual({r['variant'] for r in result['records'] if r.get('case') == 'valid'}, {'current', 'absent'})
+            self.assertTrue(all(r['result'] == 'rejected' for r in result['records'] if r['case'] != 'valid'))
+            self.assertFalse(result['allocation_claimed'])
+            self.assertEqual(result['provider_requests'], 0)
+
+    @unittest.skipUnless(__import__('importlib.util', fromlist=['find_spec']).find_spec('aeb_gh_fixture'), 'Owning backend required')
+    def test_stopped_before_launch_report_uses_scheduler_without_inventing_observations(self):
+        from importlib.metadata import version
+        if version('skillevaluator') != '0.9.0' or not os.environ.get('APM_EXECUTABLE'):
+            self.skipTest('Pinned 0.9 owner and APM required')
+        import campaign_scheduler_evidence as scheduler
+        from evaluation_campaign_selection import selected_task
+        task = selected_task('gh-runtime-090-v1')
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory); bundle,tasks,captured,_=campaign.stage(root,task,'experiment-probe')
+            rows=[{**r,'state':'unlaunched'} for r in core.schedule(tuple(task.cases('live')),('current','absent'),1)]
+            rows[0].update(state='failed',returncode=1,grading_present=False,native_exception=None,
+                config_sha256='a'*64,task_checksum=next(t['task_checksum'] for t in captured if t['arm']=='with_skill'))
+            ledger={'entries':rows,'state':'stopped','stop_reason':'execution_infrastructure_failure',
+                    'mode':'experiment-probe','inference':False,'authorization':None,'revision':protocol.revision()}
+            (root/'jobs/gh-codex-with/constructor-failed').mkdir(parents=True)
+            reports.write_json(root/'evidence/attempt-ledger.json',ledger)
+            public=campaign.collect(root,task,'experiment-probe',bundle,captured,rows,fixture='interruption')
+            record=json.loads(next(public.rglob('public-report.json')).read_text())
+            self.assertEqual(record['observations'],[])
+            self.assertEqual([a['coverage']['recorded_attempts'] for a in record['arms']],[0,0])
+            witness=record['custom']['scheduler']['witness']
+            self.assertEqual(scheduler.arm_label(witness,'with_skill'),'launch attempted; infrastructure failed')
+            self.assertEqual(scheduler.arm_label(witness,'without_skill'),'unlaunched')
+            html=(root/'evidence/consolidated/report.html').read_text()
+            self.assertIn('unlaunched',html);self.assertIn('launch attempted; infrastructure failed',html)
+            self.assertEqual((root/'evidence/consolidated/report.html').read_bytes(),(root/'evidence/reproduced/report.html').read_bytes())
+            wrong=copy.deepcopy(witness);wrong['entries'][1]['returncode']=1
+            with self.assertRaisesRegex(ValueError,'Unlaunched slot'):scheduler.validate(wrong,task,observations=[])
+            wrong=copy.deepcopy(witness);wrong['entries'][0].update(state='completed',returncode=0,grading_present=True,classification='failed')
+            with self.assertRaisesRegex(ValueError,'invent measured'):scheduler.validate(wrong,task,observations=[])
+            obs=[{'arm':'with_skill','case_id':'gh-014','attempt':1,'custom':{'outcome':'failed'}}]
+            scheduler.validate(wrong,task,observations=obs)
+            self.assertEqual(scheduler.arm_label(wrong,'with_skill'),'measured task failed')
+            with self.assertRaisesRegex(ValueError,'contradicts scheduler'):
+                scheduler.validate(witness,task,observations=[{'arm':'without_skill','case_id':'gh-014','attempt':1,'custom':{'outcome':'failed'}}])
+
+
+if __name__ == "__main__": unittest.main()

@@ -23,7 +23,7 @@ import skill_reports as reports
 
 def purpose(task, mode):
     identity = {'boolean-contract-v1':'boolean-contract-v4', 'gh-read-v1':'gh-read-v4', 'boolean-effectiveness-v1':'boolean-effectiveness-v3', 'boolean-retained-v1':'boolean-retained-v2'}.get(task.definition['id'], task.definition['id'])
-    source_version = '-lifecycle-v1-source-v16-'
+    source_version = '-lifecycle-v1-source-v17-'
     return 'campaign-' + identity + source_version + ('probe' if mode == 'experiment-probe' else mode)
 
 
@@ -111,8 +111,15 @@ def collect(root, task, mode, bundle, captured, rows, *, fixture=None):
     reports.write_json(run / 'result.json', {**data, 'skill_name': skill, 'report_status': 'complete' if all(r['state']=='completed' for r in rows) else 'incomplete', 'diagnostic_only': True, 'run_config': config})
     profile, _, _ = evidence.custom_contract(skill, purpose=purpose(task, mode))
     numeric = evidence.capture_custom_numeric_fields(ROOT, skill, root / 'jobs', root, captured, purpose=purpose(task, mode))
+    scheduler_digest = None
+    if profile.get('campaign', {}).get('scheduler'):
+        import campaign_scheduler_evidence as scheduler
+        snapshot = scheduler.capture(task, reports.read_json(root/'evidence/attempt-ledger.json'), captured)
+        scheduler.validate(snapshot, task, staged=captured)
+        reports.write_json(raw / scheduler.MEMBER, snapshot)
+        scheduler_digest = evidence.digest_bytes(evidence.read_bytes(raw / scheduler.MEMBER))
     reports.write_json(raw / evidence.CUSTOM_CAPTURE, evidence.custom_capture(ROOT, skill, bundle, captured,
-        purpose=purpose(task, mode), attempts=task.definition['trials'], agent=runtime['agent'] if mode in ('probe', 'experiment-probe', 'live') else 'oracle',
+        purpose=purpose(task, mode), scheduler_digest=scheduler_digest, attempts=task.definition['trials'], agent=runtime['agent'] if mode in ('probe', 'experiment-probe', 'live') else 'oracle',
         retrospective=reports.read_json(root/'evidence/attempt-ledger.json').get('retrospective'),
         execution_policy={'environment': profile['campaign']['environment_mode'], 'concurrency': 1, 'timeout_multiplier': 1.0, 'stop_on_pass': False}, numeric_excerpts=numeric))
     artifact = root / 'evidence'
@@ -122,8 +129,42 @@ def collect(root, task, mode, bundle, captured, rows, *, fixture=None):
     return artifact / 'public'
 
 
-def run(root, task, mode, *, reference=None, fixture=None):
+def construct_launch(root, task, mode, native, present, trial_name, job, extra, *, control=None, fixture=None, row=None, live_key=None):
+    """One production command/configuration path, also used by no-workload qualification.
+
+    Validate parent authorization and task-owned metadata before attaching a key.
+    The host-only context travels in TrialConfig; ambient variables cannot supply it.
+    """
     from harbor.models.trial.config import TrialConfig
+    selected = read_profile(ROOT / task.definition['runtime_profile'])
+    adapter = runtime_adapter.adapter_for(selected)
+    context = None
+    if mode == 'live':
+        from evaluation_campaign_protocol import runtime_gate
+        runtime_gate(task)  # Still rejects ambient task metadata and all probe flags.
+        core.require(root == Path(os.environ['RUNNER_TEMP']) / 'campaign-live', 'Fixed live launch root required')
+        context = task.launch_context(root, native, present, extra)
+        core.require(extra == task.validate_launch_context(root, context, present, extra), 'Unverified task-owned environment')
+    profile, _, _ = evidence.custom_contract(task.definition['skill'], purpose=purpose(task, mode))
+    config = TrialConfig.model_validate({'task': {'path': str(native)}, 'trial_name': trial_name, 'trials_dir': str(job),
+        'agent': adapter.agent_config(task, mode, control, selected['resolved'], present,
+            launch_context=context, **({'deadline_fixture': 'cancelled'} if fixture == 'native-cancellation' else {})),
+        'environment': {'import_path': profile['campaign']['environment_import']}, 'timeout_multiplier': 1.0})
+    env = {k:v for k,v in os.environ.items() if not re.search('TOKEN|SECRET|API_KEY|PASSWORD', k)
+           and not k.startswith(('CODEX_', 'AEB_', 'SKILL_EVAL_'))}
+    env.update(extra, PYTHONPATH=str(ROOT / '.github/scripts'), PYTHON_DOTENV_DISABLED='1', HARBOR_TELEMETRY='0')
+    if mode in ('probe', 'experiment-probe'):
+        env['AEB_PILOT_PROBE'] = '1'
+    if mode == 'experiment-probe':
+        env.update(adapter.fixture_environment(task, fixture, row))
+    if mode == 'live':
+        # Last operation: no rejected metadata/authentication can receive the key.
+        env.update(OPENAI_API_KEY=live_key or '', AEB_CAMPAIGN_APPROVAL=os.environ['AEB_CAMPAIGN_APPROVAL'],
+                   AEB_CAMPAIGN_RECEIPT=os.environ['AEB_CAMPAIGN_RECEIPT'])
+    return config, env
+
+
+def run(root, task, mode, *, reference=None, fixture=None):
     from harbor.models.task.task import Task
     from qualify_evaluator_candidate import run_native
     from evaluation_campaign_protocol import stop_reason
@@ -186,7 +227,6 @@ def run(root, task, mode, *, reference=None, fixture=None):
                 from evaluation_campaign_protocol import check
                 check(reference, artifact, task, qualified=mode == 'live')
         finally: os.environ.update(held)
-        profile, _, _ = evidence.custom_contract(definition['skill'], purpose=purpose(task, mode))
         def attempt(row, total):
             if experiment:
                 from evaluation_campaign_protocol import frozen
@@ -201,23 +241,11 @@ def run(root, task, mode, *, reference=None, fixture=None):
             job = root / 'jobs' / (definition['skill'] + '-' + ledger['runtime']['resolved']['agent'] + '-' + ('with' if present else 'without'))
             trial = job / trial_name
             core.require(not trial.exists(), 'Duplicate native attempt refused')
-            config = TrialConfig.model_validate({'task': {'path':str(native)}, 'trial_name':trial_name, 'trials_dir':str(job),
-                'agent': adapter.agent_config(task, mode, task.cases(mode)[row['case']], ledger['runtime']['resolved'], present,
-                    **({'deadline_fixture': 'cancelled'} if fixture == 'native-cancellation' else {})),
-                'environment':{'import_path':profile['campaign']['environment_import']}, 'timeout_multiplier':1.0})
+            config, env = construct_launch(root, task, mode, native, present, trial_name, job, extra,
+                control=task.cases(mode)[row['case']], fixture=fixture, row=row, live_key=live_key)
             path = root / 'launches' / (str(row['position']) + '.json')
             reports.write_json(path, json.loads(config.model_dump_json()))
             row.update(config_sha256=hashlib.sha256(path.read_bytes()).hexdigest(), task_checksum=Task(native).checksum, native_trial=trial.relative_to(root).as_posix()); save()
-            env = {k:v for k,v in os.environ.items() if not re.search('TOKEN|SECRET|API_KEY|PASSWORD', k) and not k.startswith(('CODEX_','AEB_','SKILL_EVAL_'))}
-            env.update(extra, PYTHONPATH=str(ROOT / '.github/scripts'), PYTHON_DOTENV_DISABLED='1', HARBOR_TELEMETRY='0')
-            if mode in ('probe', 'experiment-probe'):
-                env['AEB_PILOT_PROBE']='1'
-            if mode == 'experiment-probe':
-                env.update(adapter.fixture_environment(task, fixture, row))
-            if mode == 'live':
-                env.update(OPENAI_API_KEY=live_key or '',
-                           AEB_CAMPAIGN_APPROVAL=os.environ['AEB_CAMPAIGN_APPROVAL'],
-                           AEB_CAMPAIGN_RECEIPT=os.environ['AEB_CAMPAIGN_RECEIPT'])
             started = time.monotonic()
             try:
                 with path.with_suffix('.log').open('w') as log:

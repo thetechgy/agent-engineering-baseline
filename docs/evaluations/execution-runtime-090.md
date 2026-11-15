@@ -1,5 +1,10 @@
 # Opt-in 0.9.0 execution preparation
 
+**Launch-construction correction:** [trusted task metadata and scheduler reporting](gh-runtime-090-v1/launch-correction.md)
+now have a credential-free live-agent initialization regression in preparation and
+fresh consumption. The original stopped run and closed allocation remain preserved.
+Final exact-revision receipts are maintained in PR #143; no new paid authority is granted.
+
 **November 15 execution update:** the separately authorized
 [single pilot stopped before Codex launch](gh-runtime-090-v1/execution/EXECUTION.md).
 The allocation is closed, including the unlaunched absent-skill slot. PR #143 remains

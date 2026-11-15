@@ -739,7 +739,7 @@ def benchmark_artifacts(workspace, root, name, destination):
             evidence.validate_custom_capture(capture, name, workspace)
             registered_cases = set(capture['case_ids'])
     metadata = {"versions.json", "dataset-validation.json", "provenance.json",
-                "docker-version.json", "docker-images.jsonl", "custom-metric-capture.json"}
+                "docker-version.json", "docker-images.jsonl", "custom-metric-capture.json", "campaign-scheduler.json"}
     if name == "gh":
         metadata.update({"deterministic.json", "selection.json"})
     # Preserve the historical layout; registered campaigns declare their carrier.

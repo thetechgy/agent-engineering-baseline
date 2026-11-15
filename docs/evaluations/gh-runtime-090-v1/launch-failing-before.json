@@ -1,0 +1,27 @@
+{
+  "revision": "3bc9cbf89c9e8538ea5df48d22e2d85e4a5a957c",
+  "inference": false,
+  "test_only_authorization": true,
+  "allocation_claimed": false,
+  "agent_containers": 0,
+  "provider_requests": 0,
+  "composed_task_environment_names": [
+    "AEB_GH_MANIFEST"
+  ],
+  "records": [
+    {
+      "variant": "current",
+      "constructor": "harbor.trial.trial.Trial.create -> CampaignCodex.__init__",
+      "result": "rejected",
+      "primary_failure": "Live runtime requires protected workflow; overrides refused",
+      "task_checksum": "7fbc51b56718935739d03050d9c350863cebc8e19e9c2e4738e5223de4e6d178"
+    },
+    {
+      "variant": "absent",
+      "constructor": "harbor.trial.trial.Trial.create -> CampaignCodex.__init__",
+      "result": "rejected",
+      "primary_failure": "Live runtime requires protected workflow; overrides refused",
+      "task_checksum": "d540b5474efebb210f4043db41dd1a2321fcb964e099f5d2b83639585cb78bcc"
+    }
+  ]
+}

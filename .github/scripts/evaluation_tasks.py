@@ -60,6 +60,14 @@ class Task:
     def operator_environment(self, root, tasks):
         return {}
 
+    def launch_context(self, root, native, present, environment):
+        require(not environment, 'Unexpected task-owned launch metadata')
+        return None
+
+    def validate_launch_context(self, root, context, present, environment):
+        require(context is None, 'Unexpected task-owned launch context')
+        return {}
+
     def cases(self, mode):
         if mode == 'replay':
             from codex_pilot_replay import campaign_corpus
@@ -272,6 +280,45 @@ class GhFixture(Task):
         from aeb_gh_fixture.manifest import write_manifest
         return {'AEB_GH_MANIFEST': str(write_manifest(root / 'operator', [p for group in tasks.values() for p in group.values()],
             staged_roots=[root / 'tasks', root / 'bundle']))}
+
+    def launch_context(self, root, native, present, environment):
+        from aeb_gh_fixture import MANIFEST_ENV
+        require(set(environment) == {MANIFEST_ENV}, 'Unexpected gh launch metadata')
+        path = Path(environment[MANIFEST_ENV])
+        match = __import__('re').fullmatch('manifest-([0-9a-f]{64})[.]json', path.name)
+        require(path.parent == root / 'operator' and match is not None, 'Gh metadata outside private operator directory')
+        context = {'task': str(native), 'manifest_digest': match.group(1)}
+        self.validate_launch_context(root, context, present, environment)
+        return context
+
+    def validate_launch_context(self, root, context, present, environment):
+        from aeb_gh_fixture import MANIFEST_ENV
+        from aeb_gh_fixture.manifest import approve, load_manifest
+        require(type(context) is dict and set(context) == {'task', 'manifest_digest'}
+                and type(present) is bool, 'Missing or invalid gh launch context')
+        seal = context['manifest_digest']
+        require(type(seal) is str and __import__('re').fullmatch('[0-9a-f]{64}', seal), 'Invalid gh manifest identity')
+        variants = [v['id'] for v in self.definition['variants'] if v['present'] == present]
+        require(len(variants) == 1, 'Ambiguous gh deployment')
+        native = root / 'tasks' / variants[0] / self.definition['source_case']
+        manifest = root / 'operator' / ('manifest-' + seal + '.json')
+        require(root.is_absolute() and root.resolve() == root and context['task'] == str(native)
+                and environment.get(MANIFEST_ENV) == str(manifest), 'Wrongly located or bound gh launch metadata')
+        data, actual_seal = load_manifest(manifest)
+        row, _ = approve(manifest, native)
+        staged = reports.read_json(root / 'evidence/staging.json')
+        expected = {r['case_id'] + '__' + r['arm']: r for r in staged}
+        require(len(expected) == len(staged) and set(expected) == set(data['tasks'])
+                == {case + '__' + arm for case in self.cases('live') for arm in ('with_skill', 'without_skill')},
+                'Gh manifest staging population mismatch')
+        for key, captured in expected.items():
+            approved = data['tasks'][key]
+            require(approved['checksum'] == captured['task_checksum']
+                    and approved['members'] == {k:v.removeprefix('sha256:') for k,v in captured['members'].items()},
+                    'Gh manifest differs from trusted staged capture')
+        require(actual_seal == seal and row['arm'] == ('with_skill' if present else 'without_skill'),
+                'Gh manifest identity or deployment mismatch')
+        return {MANIFEST_ENV: str(manifest)}
 
     def controls(self):
         return dict.fromkeys(self.definition['controls'])
