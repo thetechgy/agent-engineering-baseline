@@ -1,5 +1,14 @@
 # SkillEvaluator 0.9.0 production-adoption assessment, issue #95
 
+Current status: #138 merged the data-only reporting/orchestration host switch as
+`3fa44f7cf92dc0523ad0ecd959b584190da06f02`. The
+[unscored finding-retention repair](../../docs/evaluations/unscored-security/README.md)
+has passed credential-free local qualification under offline-v3, pending review
+and merge. Final-revision CI is recorded in the repair PR. Offline-v2 and the original blocked receipt below
+remain historical evidence. The assessment below records #137's decision state;
+static quality, live benchmarks, private review and historical replay remain held
+on their existing owners.
+
 **Recommend adopting 0.9.0 for data-only consolidated reporting and orchestration
 planning/dispatch together. Hold the complete static-quality and live benchmark
 consumers.** The static hold is a reproduced strict-dataset incompatibility, not

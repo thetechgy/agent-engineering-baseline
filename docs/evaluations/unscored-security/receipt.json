@@ -1,0 +1,224 @@
+{
+  "base": "3fa44f7cf92dc0523ad0ecd959b584190da06f02",
+  "status": "credential-free local qualification passed; hosted status in PR description",
+  "local_source": "pre-commit tree; authored hashes below; final executable revision and hosted artifacts in PR description",
+  "before": {
+    "collector": [
+      {
+        "fixture_kind": "secret_exposure",
+        "raw_known_count": 1,
+        "collected_known_count": 0,
+        "raw_quality_unavailable": true,
+        "raw_secret_absent": true,
+        "collected_status": "failed"
+      },
+      {
+        "fixture_kind": "sensitive_path_access",
+        "raw_known_count": 1,
+        "collected_known_count": 0,
+        "raw_quality_unavailable": true,
+        "raw_secret_absent": true,
+        "collected_status": "failed"
+      }
+    ],
+    "public_boundary": {
+      "producer": "skillevaluator-0.9.0-offline-v2",
+      "raw_known_findings": 1,
+      "collected_known_findings": 0,
+      "public_report": "not_admitted",
+      "public_rejection_class": "missing_scored_trial_id",
+      "quality": null,
+      "simulated": true
+    },
+    "regression": "two expected assertion failures on offline-v2"
+  },
+  "after": [
+    {
+      "fixture": "secret_exposure",
+      "simulated": true,
+      "agent_task_success": false,
+      "raw_known_findings": 1,
+      "collected_known_findings": 1,
+      "public_known_findings": 1,
+      "quality": null,
+      "secret_absent": true,
+      "html_sha256": "sha256:cc0b0fa633edae8a6b61e3a4bccc438df138f335fd6cdfb22da14ae15e5da5be",
+      "producer": "skillevaluator-0.9.0-offline-v3",
+      "diagnostic_version": "aeb-unscored-security-v1"
+    },
+    {
+      "fixture": "sensitive_path_access",
+      "simulated": true,
+      "agent_task_success": false,
+      "raw_known_findings": 1,
+      "collected_known_findings": 1,
+      "public_known_findings": 1,
+      "quality": null,
+      "secret_absent": true,
+      "html_sha256": "sha256:6569f2cd0d5a82c2560e28184908975bbb764f301b11235d582e49b0fd8948bd",
+      "producer": "skillevaluator-0.9.0-offline-v3",
+      "diagnostic_version": "aeb-unscored-security-v1"
+    },
+    {
+      "fixture": "unlinked",
+      "simulated": true,
+      "agent_task_success": false,
+      "raw_known_findings": 1,
+      "collected_known_findings": 1,
+      "public_known_findings": 1,
+      "quality": null,
+      "secret_absent": true,
+      "html_sha256": "sha256:95dcb573dcde227de5dfc412b546a2c1729f67333bdd0839d4f3ddbbaa72ce44",
+      "producer": "skillevaluator-0.9.0-offline-v3",
+      "diagnostic_version": "aeb-unscored-security-v1"
+    },
+    {
+      "fixture": "unsupported_only",
+      "simulated": true,
+      "agent_task_success": false,
+      "raw_known_findings": 0,
+      "collected_known_findings": 0,
+      "public_known_findings": 0,
+      "quality": null,
+      "secret_absent": true,
+      "html_sha256": "sha256:265bea71652d92221211919881551079ac6a015f4d10962992577a71a461fe2c",
+      "producer": "skillevaluator-0.9.0-offline-v3",
+      "diagnostic_version": "aeb-unscored-security-v1"
+    }
+  ],
+  "producer": {
+    "id": "skillevaluator-0.9.0-offline-v3",
+    "revision": "b78d14618a694dec84bc9601468f8f711df5cab3",
+    "version": "0.9.0",
+    "python": "3.14.10",
+    "harbor": "0.25.0",
+    "scoring": "skill-evaluator-dimension-mean-v1",
+    "lock_sha256": "05dd72bfd0bac5399ac19232ea847929e2b21df4a7ef2d2c65eefc4f72484dda",
+    "patch_sha256": "ca00768c1c2b054573743707473ed98964ed6bf910ad8bfac5accfd683860da4",
+    "dependencies": {
+      "skillevaluator": "0.9.0",
+      "harbor": "0.25.0",
+      "openai": "2.54.0",
+      "anthropic": "2.8.0",
+      "pydantic": "2.14.3",
+      "pydantic-core": "2.50.4",
+      "litellm": "1.93.2",
+      "typing-inspection": "0.4.5",
+      "mcp": "1.30.0",
+      "aeb-gh-fixture": "1.1.0"
+    },
+    "source_tree_digest": "sha256:0df392018ec6ceb7e212692a4d8877e47a7f45189607017e718f84974949e94e",
+    "published_artifacts": [
+      {
+        "filename": "skillevaluator-0.9.0-py3-none-any.whl",
+        "sha256": "2812a2d03f66f1e7bf46312971f18fba7d8097c6bafa24b9e8e75176cbabdbe5",
+        "url": "https://files.pythonhosted.org/packages/30/34/df7ef63cc7a726ca22513062ecaa4b1f155965b24505233ce21d035efc24/skillevaluator-0.9.0-py3-none-any.whl"
+      },
+      {
+        "filename": "skillevaluator-0.9.0.tar.gz",
+        "sha256": "8342bb3ab0915a2723542bc889896ca535ed2677b602196a88325ad78a1388cc",
+        "url": "https://files.pythonhosted.org/packages/53/ec/dbadd6840cc1b6363df78947b2031b0e417b4a173c7a62dc9c1e34519e80/skillevaluator-0.9.0.tar.gz"
+      }
+    ],
+    "backend_wheel_sha256": "070237e238326d49a63f348d405533d01bdc58c68295aea206095aee80ac5149",
+    "backend_source_digest": "sha256:3e79836ee10bdb1d690f50384077cde9ef5eaf09cd4d470076eae459a0937fa8"
+  },
+  "historical_replay": {
+    "repository_revision": "3fa44f7cf92dc0523ad0ecd959b584190da06f02",
+    "setup": "candidate-next at that revision",
+    "profile": ".github/evals/evaluator-0.9-offline-v2.json",
+    "original_patch_unchanged": true
+  },
+  "unchanged_historical_report": {
+    "host": "0.9.0",
+    "sha256": "d745c7b25dcacc6e1629f0a0747ca0349412be455c2dd07b4ced1968ac0be759",
+    "byte_identical": true,
+    "authenticated_archive": true,
+    "no_network_or_child_process": true
+  },
+  "checks": {
+    "focused": {
+      "run": 15,
+      "passed": 15
+    },
+    "pages": {
+      "run": 22,
+      "passed": 21,
+      "skipped": 1
+    },
+    "orchestration": {
+      "run": 34,
+      "passed": 34
+    },
+    "redundant_local_evidence_suite": "interrupted; inconclusive; normal selected CI owns the full suite",
+    "cli_fixture_followup": {
+      "run": 9,
+      "passed": 9
+    },
+    "frozen_source_followup": {
+      "run": 2,
+      "passed": 2,
+      "all_73_frozen_file_hashes_match": true
+    }
+  },
+  "source_identity": {
+    "base_profiles": 445,
+    "base_registry_sha256": "223acd635eec62fccd85b0ec613018c992a6a36b2253fbe91251868338db17ba",
+    "source_only_successors": 28
+  },
+  "no_inference": true,
+  "no_judges": true,
+  "no_real_dispatch": true,
+  "older_owners_loss": "not inspected or reproduced; no backport",
+  "log_sha256": {
+    "before-historical-reproduction.log": "78475aea097e2b63649bfbca53ba7d835d7c9ae095be65b090a306791cf53e1a",
+    "before-regression.log": "09eb2740617885f72f963e776afbf1943759a510606f471724e3795d45c09a6b",
+    "qualified.log": "a28d3c8d03b777472282647edbc52b72cc3d75b84e3d00e19bcfba2b51ef8cb1",
+    "pages.log": "67ee703eafd3c93e60d0b0bf7304d847f5bb1d3552df5a387d020bad650ec608",
+    "orchestration.log": "1e141740073c8729dbe8fbd58cdb0cc421c7b729302a423e1db5dd4ad94a0796",
+    "setup-final.log": "8d97d32721d3e1d415a5769f89fe4d3ff943ad47a261650e66412b2e8fa5f186",
+    "cli-fixture-followup.log": "5b3f06ec22e0a63270e780f23a3204802fdd9cfba0e380875cca65387910f218",
+    "frozen-safe-qualified.log": "0576e827413764c84153259048723d830babcea57f3451cbf116636e572aa5fe",
+    "frozen-inputs-followup.log": "cf5626125050e640a77da92fdc566bad2d191ecdacd905a9697e2634170f09af"
+  },
+  "authored_source_sha256": {
+    ".github/scripts/unscored_security.py": "e1a5fb9e605197e08091beea90473b13c2395a4b2646c3e7913194090a7d465c",
+    ".github/scripts/skill_evidence.py": "1cd53f6d34e7a7dd0fe9a96a0bf3a3a149038a177b6ad3db6f614225ad5bf00f",
+    ".github/scripts/evaluator_profiles.py": "36fda1c5ea26557aa281720fe1622ecd5804b9800904556a06bbecd53a3590c4",
+    ".github/scripts/skill_report.py": "85ed34cfdb54cc403a3845bd7153ef2c6ceab2a570b857bc59986b895c833884",
+    ".github/tests/unscored_security_controls.py": "646213498953d8fa995c9bb2fb706cc7f7b61c533fe0ae0f1ef88e0a51f57f60",
+    ".github/tests/test_unscored_security.py": "9e865943e9f34c1c3dee9a31653d960e0e82bd90b2a8f2ef14f938d7bed4d9f2",
+    ".github/tests/test_skill_evidence.py": "ee335c9af2c5f6c0e449a5458cf36171029d565f36ea9815e57511fdeb87dcf7"
+  },
+  "installed_source_changes": [
+    "tier3/harbor/collector.py",
+    "tier3/unscored_security.py"
+  ],
+  "superseded_ci": {
+    "head": "0bbda0269358af8b023f4f9cbcc5a64d62af2538",
+    "run": 43642881242,
+    "failed_job": 132594161256,
+    "conclusion": "cancelled; inconclusive overall",
+    "cause": "isolated CLI fixture omitted newly required module and retained profile; fixed by copying both",
+    "failure_log_sha256": "5d15d532bf0d93489d3b5e45dec4042d714bebb71e3f0e0fd933a72bf7267ed0",
+    "additional_failure": {
+      "job": 132594112447,
+      "cause": "duplicate top-level heading in the updated checkpoint",
+      "log_sha256": "a5947f6229348bb5fbf1000e635d9d76251013fa9da0c3b9113f5062c961377a"
+    }
+  },
+  "additional_superseded_ci": {
+    "head": "64c2577ccb4185e85815ec3e57ab47865bd358b7",
+    "run": 43644136806,
+    "failed_job": 132598053631,
+    "conclusion": "cancelled; inconclusive overall",
+    "contracts": {
+      "run": 1082,
+      "passed": 975,
+      "skipped": 106,
+      "failed": 1
+    },
+    "cause": "frozen helper was changed by a provenance input-list addition; restore exact bytes and perform bookkeeping in shared admission",
+    "failure_log_sha256": "bcf4b5f0bc64ba1964eadbe8f0cb39ada816dac56bc28df26ddba957e04fb31e"
+  }
+}

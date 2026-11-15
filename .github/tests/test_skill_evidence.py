@@ -58,12 +58,13 @@ class EvidenceTests(unittest.TestCase):
 
     def copy_cli_modules(self, scripts, *extra):
         """Copy the complete authored CLI dependency layout, without bytecode."""
-        for name in ('skill_evidence.py', 'skill_reports.py', 'evaluator_profiles.py', *extra):
+        for name in ('skill_evidence.py', 'skill_reports.py', 'evaluator_profiles.py', 'unscored_security.py', *extra):
             shutil.copyfile(REPO / '.github/scripts' / name, scripts / name)
         config = scripts.parent / 'evals/evaluator-candidate.json'
         config.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(REPO / '.github/evals/evaluator-candidate.json', config)
-        shutil.copyfile(REPO / '.github/evals/evaluator-0.9.json', config.with_name('evaluator-0.9.json'))
+        for name in ('evaluator-0.9.json', 'evaluator-0.9-offline-v2.json'):
+            shutil.copyfile(REPO / '.github/evals' / name, config.with_name(name))
 
     def native(self):
         target = self.root / 'native'

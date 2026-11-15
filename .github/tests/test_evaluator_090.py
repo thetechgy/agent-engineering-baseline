@@ -31,7 +31,7 @@ class Release090Contracts(unittest.TestCase):
 
     def test_lock_and_patch_match_the_admitted_source_identity(self):
         for member, field in (('.github/locks/evaluator-0.9.lock', 'lock_sha256'),
-                              ('.github/patches/skillevaluator-v0.9.0-evidence.patch', 'patch_sha256')):
+                              ('.github/patches/skillevaluator-v0.9.0-evidence-v3.patch', 'patch_sha256')):
             self.assertEqual(hashlib.sha256((ROOT / member).read_bytes()).hexdigest(), profiles.NEXT[field])
         self.assertEqual(profiles.NEXT['revision'], 'b78d14618a694dec84bc9601468f8f711df5cab3')
         self.assertEqual((profiles.CANDIDATE['version'], profiles.CANDIDATE['harbor']), ('0.8.0', '0.24.0'))
@@ -39,18 +39,18 @@ class Release090Contracts(unittest.TestCase):
     def test_source_successors_preserve_every_historical_registry_entry(self):
         registry = evidence.custom_registry(ROOT)
         old = copy.deepcopy(registry)
-        added = [key for key in registry['profiles'] if '-source-v12-' in key]
+        added = [key for key in registry['profiles'] if '-source-v13-' in key]
         self.assertEqual(len(added), 27)
-        added.append('pester-effectiveness-v21')
+        added.append('pester-effectiveness-v22')
         for key in added:
             new = registry['profiles'][key]
-            previous = registry['profiles'][key.replace('-source-v12-', '-source-v11-') if key.startswith('campaign-') else 'pester-effectiveness-v20']
+            previous = registry['profiles'][key.replace('-source-v13-', '-source-v12-') if key.startswith('campaign-') else 'pester-effectiveness-v21']
             self.assertEqual({k:v for k,v in new.items() if k not in ('id', 'runtime_digest')},
                              {k:v for k,v in previous.items() if k not in ('id', 'runtime_digest')})
             self.assertEqual(evidence.custom_input_identities(ROOT, new['skill_id'], purpose=key if key.startswith('campaign-') else 'skill_effectiveness')['runtime_digest'], new['runtime_digest'])
             del old['profiles'][key]
         digest = hashlib.sha256(json.dumps(old, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
-        self.assertEqual(digest, '8219c6585b322af40cce84b07905edcd3b027fb1a9c55b4a6c3277d4bbc3ba4d')
+        self.assertEqual(digest, '223acd635eec62fccd85b0ec613018c992a6a36b2253fbe91251868338db17ba')
 
     @unittest.skipUnless(importlib.util.find_spec('aeb_gh_fixture'), 'Requires the candidate owning backend')
     def test_native_gh_entry_point_selects_actual_owning_profile(self):
@@ -89,3 +89,18 @@ class Release090Contracts(unittest.TestCase):
             self.assertEqual(hashlib.sha256(retained).hexdigest(), '3d577d926bc0b64703d376cf1d39e4cddeca7336b51051585d205543f9a3f89b')
             self.assertEqual(hashlib.sha256(candidate).hexdigest(), profiles.NEXT['backend_wheel_sha256'])
             self.assertEqual(candidate, repeat)
+
+    def test_same_package_version_does_not_alias_retained_producer(self):
+        old = profiles.RETAINED_NEXT
+        self.assertEqual(old['id'], 'skillevaluator-0.9.0-offline-v2')
+        self.assertIs(profiles.runtime(profiles.candidate_versions(old)), old)
+        self.assertEqual(hashlib.sha256((ROOT / '.github/patches/skillevaluator-v0.9.0-evidence.patch').read_bytes()).hexdigest(), old['patch_sha256'])
+        self.assertNotEqual(profiles.NEXT['patch_sha256'], old['patch_sha256'])
+        self.assertNotEqual(profiles.NEXT['source_tree_digest'], old['source_tree_digest'])
+        self.assertEqual(old['dependencies'], profiles.NEXT['dependencies'])
+        forged = profiles.candidate_versions(old); forged['patch_sha256'] = '0' * 64
+        with self.assertRaises(ValueError): profiles.runtime(forged)
+        old_policy = evidence.make_policy({'evaluator_revision': old['revision'], 'python': old['python'], 'harbor': old['harbor']},
+            'sha256:' + old['patch_sha256'], judge={'model': None, 'provider': None, 'enabled': False}, provenance='runtime_recorded')
+        self.assertEqual(old_policy['producer_profile'], old['id'])
+        evidence.validate_policy(old_policy)

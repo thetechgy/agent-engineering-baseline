@@ -24,6 +24,7 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import skill_reports as reports
 import evaluator_profiles as profiles
+import unscored_security
 
 # Frozen static admission identity, not a freshness inventory. Retain this profile
 # when admitting future scanner groups. Earlier historical records omit the field.
@@ -1332,7 +1333,10 @@ def policy_fields(value):
 def validate_policy(value, *, custom_only=False):
     require(type(value) is dict, 'Invalid policy')
     require(type(value.get('fields')) is dict, 'Invalid policy fields')
-    candidate = profiles.candidate_revision(value['fields'].get('evaluator_revision'))
+    candidate = profiles.candidate_revision(value['fields'].get('evaluator_revision'),
+        producer_id=value.get('producer_profile'), patch=value.get('patch_digest'))
+    require(candidate is not None or profiles.candidate_revision(value['fields'].get('evaluator_revision')) is None,
+            'Unsupported candidate producer identity')
     closed(value, ('id', 'published_id', 'provenance', 'patch_digest', 'fields', 'metric_set', 'judge', 'attempts') + (('producer_profile', 'scoring_policy') if candidate else ()))
     if candidate:
         require(value['judge']['enabled'] is False, 'Offline candidate judging must remain unavailable')
@@ -1384,7 +1388,7 @@ def make_policy(fields=None, patch=None, metric_set=None, judge=None, attempts=N
     value = {'fields': policy_fields(fields or {}), 'patch_digest': patch, 'metric_set': metric_set,
              'judge': judge or {'model': None, 'provider': None, 'enabled': None},
              'attempts': attempts or {'mode': 'unknown', 'maximum': None, 'stop_on_pass': None, 'pass_threshold': None}}
-    if candidate := profiles.candidate_revision(value['fields']['evaluator_revision']):
+    if candidate := profiles.candidate_revision(value['fields']['evaluator_revision'], patch=patch):
         value.update(producer_profile=candidate['id'], scoring_policy='custom-overall-v1' if metric_set == 'custom-only' else candidate['scoring'])
     return {**value, 'id': identity(value) if provenance != 'unknown' else None,
             'provenance': provenance, 'published_id': published}
@@ -1483,6 +1487,28 @@ def behavioral_identity_missing(data):
                data['policy']['attempts']['maximum']))
 
 
+def security_observation_fields(obs, data, references):
+    if 'security_evidence' not in obs:
+        return ()
+    require(data['policy'].get('producer_profile') == profiles.NEXT['id'],
+            'Unversioned security diagnostic')
+    unscored_security.validate_security(obs['security_evidence'])
+    reports.public_strings(obs['security_evidence'])
+    require(obs['score'] is None and obs['rubric_pass'] is None
+            and all(v is None for v in obs['scores'].values())
+            and all(v is None for v in obs['deterministic_scores'].values())
+            and all(v is None for v in obs.get('raw_scores', {}).values())
+            and all(v is None for v in obs.get('raw_deterministic_scores', {}).values()),
+            'Unscored security diagnostic acquired measurements')
+    result_parents = {ref['member'].rsplit('/', 1)[0] for ref in references
+                      if ref['id'] in obs['references'] and ref['member'].endswith('/result.json')}
+    require(any(ref['id'] in obs['references'] and ref['locator'] == ['details', 'security']
+                and ref['member'].endswith('/reward.json')
+                and ref['member'].rsplit('/', 1)[0] in result_parents
+                for ref in references), 'Security diagnostic lacks supporting reference')
+    return ('security_evidence',)
+
+
 def validate_evidence(data, *, public=False, _observed_at=None):
     if isinstance(data, dict) and data.get('schema_version') == 2:
         return validate_custom_evidence(data, public=public, _observed_at=_observed_at)
@@ -1552,7 +1578,7 @@ def validate_evidence(data, *, public=False, _observed_at=None):
     require(type(data['observations']) is list and len(data['observations']) <= MAX_TRIALS, 'Trial limit exceeded')
     seen = set(); native_ids = set(); observation_ids = set()
     for obs in data['observations']:
-        obs_fields = OBSERVATION_FIELDS
+        obs_fields = OBSERVATION_FIELDS + security_observation_fields(obs, data, references)
         if 'producer_profile' in data['policy']: obs_fields += ('raw_scores', 'raw_deterministic_scores')
         closed(obs, obs_fields if public else obs_fields + ('native_id', 'native_trial', 'native_task'))
         if 'raw_scores' in obs:
@@ -1615,9 +1641,13 @@ def validate_evidence(data, *, public=False, _observed_at=None):
                         'Observation reference origin mismatch')
                 tail = parts[5:]
                 trial_result = tail == ['trials', obs['native_trial'], 'result.json']
+                diagnostic_ref = ('security_evidence' in obs and
+                    (tail == ['trials', obs['native_trial'], 'failure.json'] and ref['locator'] == []
+                     or tail == ['trials', obs['native_trial'], 'reward.json']
+                        and ref['locator'] == ['details', 'security']))
                 require(trial_result and ref['locator'] in ([], ['verifier_result'], ['verifier_result', 'rewards'])
                         or tail in (['trials', obs['native_trial'], 'reward.json'], ['summary.json'])
-                        and ref['locator'] == [], 'Observation reference origin mismatch')
+                        and ref['locator'] == [] or diagnostic_ref, 'Observation reference origin mismatch')
                 trial_result_found |= trial_result
             require(trial_result_found, 'Observation reference origin mismatch')
     require(type(data['arms']) is list and len(data['arms']) <= 2, 'Invalid arms')
@@ -1988,7 +2018,7 @@ def project(data, *, static_bundle=None, behavioral_bundle=None):
     if 'scanner_runtime' in data: out['scanner_runtime'] = copy.deepcopy(data['scanner_runtime'])
     if 'coverage_caveats' in data: out['coverage_caveats'] = copy.deepcopy(data['coverage_caveats'])
     out['observations'] = [{key: copy.deepcopy(obs[key]) for key in
-        OBSERVATION_FIELDS}
+        OBSERVATION_FIELDS + (('security_evidence',) if 'security_evidence' in obs else ())}
         for obs in data['observations']]
     if 'producer_profile' in data['policy']:
         for original, obs in zip(data['observations'], out['observations']):
@@ -2681,9 +2711,18 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
                 attempt = {'attempt': None, 'score': None, 'passed': None, **matched[1]} if matched else {'attempt': _attempt_ordinal({'_trial_name': trial}), 'score': None, 'passed': None}
                 if attempt['attempt'] is None:
                     limitations.add('metadata_missing')
+                diagnostic = None
+                if producer is profiles.NEXT and reward is not None and reward.get('evaluation_status') == 'failed' and 'trial_id' not in reward:
+                    failure_path = path.with_name('failure.json')
+                    require(failure_path in scanned_entries, 'Unscored diagnostic lacks native failure identity')
+                    validate_unscored_diagnostic(reward, read_member(failure_path), trial_result, case, arm, producer)
+                    diagnostic = reward
+                    reward = None
                 if reward is not None:
                     require(reward['trial_id'] == trial and reward['has_skill'] == (arm == 'with_skill'), 'Reward trial/arm mismatch')
                 verifier = (trial_result.get('verifier_result') or {}).get('rewards') or {}
+                if diagnostic is not None:
+                    verifier = {}  # Native transport zero is not a task-quality measurement.
                 overall = verifier.get('overall')
                 if _custom_admission and matched is None and not native_cases and native_condition.get('execution_status') == 'failed':
                     # The pinned collector suppresses pass_at_k for failed arms.
@@ -2716,14 +2755,20 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
                     if type(trial_result['verifier_result']) is dict and 'rewards' in trial_result['verifier_result']:
                         locator += ('rewards',)
                 obs_refs = [ref(path, locator), summary_ref]
-                if reward is not None:
+                if reward is not None or diagnostic is not None:
                     obs_refs.append(ref(reward_path))
+                if diagnostic is not None:
+                    obs_refs.append(ref(failure_path))
+                    if producer is profiles.NEXT:
+                        obs_refs.append(ref(reward_path, ('details', 'security')))
                 obs = {'id': observation_id(run.name, arm, case, native_id, trial, attempt['attempt']),
                        'arm': arm, 'case_id': case, 'attempt': attempt['attempt'], 'native_id': native_id,
                        'native_trial': trial, 'native_task': trial_result['task_name'], 'score': overall,
                        'scores': scores, 'rubric_pass': attempt.get('passed'),
                        'deterministic_gate': deterministic.get('gh_gate'),
                        'deterministic_scores': {k: deterministic.get('gh_' + k) for k in GATE_FIELDS}, 'references': obs_refs}
+                if diagnostic is not None and producer is profiles.NEXT:
+                    obs['security_evidence'] = copy.deepcopy(diagnostic['details']['security'])
                 observed.append(obs)
         cardinality = agent.get('num_trials_with' if arm == 'with_skill' else 'num_trials_without')
         if cardinality is not None:
@@ -3282,7 +3327,7 @@ CUSTOM_ASSURANCE = {'native_consistency': 'producer_reported_at_admission',
                     'execution_authentication': 'not_established'}
 
 
-def validate_unscored_diagnostic(reward, failure, trial, case_id, arm):
+def validate_unscored_diagnostic(reward, failure, trial, case_id, arm, producer=None, *, collector_agent=None):
     """Bind a collector diagnostic to native failure evidence without grading it.
 
     The pinned collector omits trial_id only on its failed-judge projection.
@@ -3291,11 +3336,20 @@ def validate_unscored_diagnostic(reward, failure, trial, case_id, arm):
     """
     allowed = {'metric_set', 'evaluation_status', 'entry_id', 'evaluation_errors',
                'agent', 'variant', 'model', 'model_source'}
+    current = producer is profiles.NEXT
+    if current:
+        allowed |= {'diagnostic_version', 'diagnostic_trial', 'details'}
+        require(reward.get('diagnostic_version') == unscored_security.VERSION
+                and reward.get('diagnostic_trial') == trial['trial_name'], 'Unscored diagnostic contract mismatch')
+        closed(reward.get('details'), ('security',))
+        unscored_security.validate_security(reward['details']['security'])
+        reports.public_strings(reward['details']['security'])
     exception = trial.get('exception_info') or {}
     require(set(reward) <= allowed and reward.get('evaluation_status') == 'failed'
             and reward.get('metric_set') == 'skill-evaluator-default-v2'
             and reward.get('entry_id') == case_id
-            and reward.get('agent') == (trial.get('agent_info') or {}).get('name')
+            and reward.get('agent') == (collector_agent if current and collector_agent is not None else
+                                         (trial.get('agent_info') or {}).get('name'))
             and reward.get('variant') == arm, 'Invalid unscored diagnostic')
     require(failure.get('status') == 'unscored'
             and failure.get('trial') == failure.get('trial_name') == trial['trial_name']
@@ -3410,7 +3464,7 @@ def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
     if profile_id is None and campaign_purpose(purpose):
         profile_id = purpose
     if profile_id is None and purpose in ('skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-effectiveness-v21'
+        profile_id = 'pester-effectiveness-v22'
     if profile_id is None and name == 'powershell-pester-6' and purpose in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
         profile_id = 'pester-cli-pilot-retained-v15'
     if profile_id is None and name == 'gh' and purpose == 'oracle_qualification':
@@ -3448,6 +3502,8 @@ def custom_source_manifest(workspace, name, *, purpose=None):
         if purpose in ('skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
             from codex_pilot_effectiveness import inputs
             values.extend(inputs(workspace))
+            values.append({'member': 'producer/unscored_security.py',
+                           'digest': digest_bytes(read_bytes(workspace / '.github/scripts/unscored_security.py'))})
     input_guard(directories, states, members)()
     return values
 
@@ -4107,6 +4163,7 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
             exception_type = (trial.get('exception_info') or {}).get('exception_type')
             execution_terminated = (profile.get('termination_evidence') == 'native-deadline-v1'
                                     and exception_type in ('AgentTimeoutError', 'CancelledError', 'KeyboardInterrupt'))
+            diagnostic_security = None
             diagnostic_reward = reward is not None and execution_terminated
             diagnostic_failure_path = None
             if (reward is not None and not execution_terminated
@@ -4114,7 +4171,11 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
                 diagnostic_failure_path = path.with_name('failure.json')
                 require(diagnostic_failure_path in entries and trial_name in failure_names,
                         'Unscored diagnostic lacks native failure identity')
-                validate_unscored_diagnostic(reward, read(diagnostic_failure_path), trial, case_id, arm)
+                validate_unscored_diagnostic(reward, read(diagnostic_failure_path), trial, case_id, arm,
+                    profiles.runtime(capture['producer']) if 'producer' in capture else None,
+                    collector_agent=custom_carrier(profile))
+                if capture.get('producer', {}).get('patch_sha256') == profiles.NEXT['patch_sha256']:
+                    diagnostic_security = copy.deepcopy(reward['details']['security'])
                 explicit_unscored_names.add(trial_name)
                 diagnostic_reward = True
                 reward = None  # Retained only as referenced diagnostic data; never a grade.
@@ -4188,6 +4249,7 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
             obs_refs = [ref(path), summary_ref, capture_ref]
             if reward is not None or diagnostic_reward: obs_refs.append(ref(reward_path))
             if diagnostic_failure_path is not None: obs_refs.append(ref(diagnostic_failure_path))
+            if diagnostic_security is not None: obs_refs.append(ref(reward_path, ('details', 'security')))
             observation = copy.deepcopy(old.get((arm, trial_name))) if standard else {
                 'id': observation_id(run.name, arm, case_id, native_id, trial_name, ordinal),
                 'arm': arm, 'case_id': case_id, 'attempt': ordinal, 'native_id': native_id,
@@ -4195,8 +4257,11 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
                 'scores': dict.fromkeys(SCORE_FIELDS), 'rubric_pass': None, 'deterministic_gate': None,
                 'deterministic_scores': dict.fromkeys(GATE_FIELDS), 'references': obs_refs}
             require(observation is not None, 'Missing standard observation')
+            if diagnostic_security is not None:
+                observation['security_evidence'] = diagnostic_security
             if not standard and profiles.candidate_revision(capture['evaluator_revision']):
-                observation['raw_scores'] = {key: raw.get(key) for key in SCORE_FIELDS}
+                observation['raw_scores'] = (dict.fromkeys(SCORE_FIELDS) if diagnostic_security is not None
+                                             else {key: raw.get(key) for key in SCORE_FIELDS})
                 observation['raw_deterministic_scores'] = dict.fromkeys(GATE_FIELDS)
             observation['custom'] = {'outcome': outcome, 'measurements': custom_measurements(definitions,
                 profile['cases'][mapping[case_id]], outcome, {} if execution_terminated else values, detail, obs_refs),
@@ -4428,7 +4493,7 @@ def validate_custom_evidence(data, *, public=False, _observed_at=None):
     require(type(data['observations']) is list and len(data['observations']) <= MAX_TRIALS, 'Custom observation limit')
     seen = set(); native_seen = set(); observation_ids = set()
     for obs in data['observations']:
-        closed(obs, OBSERVATION_FIELDS + ('custom',) + (('raw_scores', 'raw_deterministic_scores') if 'producer_profile' in data['policy'] else ()) + (() if public else ('native_id', 'native_trial', 'native_task')))
+        closed(obs, OBSERVATION_FIELDS + security_observation_fields(obs, data, data['references']) + ('custom',) + (('raw_scores', 'raw_deterministic_scores') if 'producer_profile' in data['policy'] else ()) + (() if public else ('native_id', 'native_trial', 'native_task')))
         if 'producer_profile' in data['policy']:
             closed(obs['raw_scores'], SCORE_FIELDS); closed(obs['raw_deterministic_scores'], GATE_FIELDS)
             for val in (*obs['raw_scores'].values(), *obs['raw_deterministic_scores'].values()): optional(val, number)

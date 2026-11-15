@@ -46,9 +46,9 @@ if [ "$kind" = candidate-next ]; then
   test "$(git -C "$current_root" rev-parse HEAD)" = b78d14618a694dec84bc9601468f8f711df5cab3
   cp "$repository_root/.github/locks/evaluator-0.9.lock" "$current_root/uv.lock"
   printf '%s  %s\n' 05dd72bfd0bac5399ac19232ea847929e2b21df4a7ef2d2c65eefc4f72484dda "$current_root/uv.lock" | sha256sum --check --strict
-  printf '%s  %s\n' c0dbeb490ba0a9ebefc9c173e6951fb3cc62143250eaf672db0ad8dd01de5d34 "$repository_root/.github/patches/skillevaluator-v0.9.0-evidence.patch" | sha256sum --check --strict
-  git -C "$current_root" apply --check "$repository_root/.github/patches/skillevaluator-v0.9.0-evidence.patch"
-  git -C "$current_root" apply "$repository_root/.github/patches/skillevaluator-v0.9.0-evidence.patch"
+  printf '%s  %s\n' ca00768c1c2b054573743707473ed98964ed6bf910ad8bfac5accfd683860da4 "$repository_root/.github/patches/skillevaluator-v0.9.0-evidence-v3.patch" | sha256sum --check --strict
+  git -C "$current_root" apply --check "$repository_root/.github/patches/skillevaluator-v0.9.0-evidence-v3.patch"
+  git -C "$current_root" apply "$repository_root/.github/patches/skillevaluator-v0.9.0-evidence-v3.patch"
   uv sync --project "$current_root" --python 3.14.10 --managed-python --frozen --no-dev --extra tier3
   "$current_root/.venv/bin/python" "$repository_root/.github/evaluator-backends/build_wheel.py" "$current_root/backend-wheel" --candidate-next
   printf '%s  %s\n' 070237e238326d49a63f348d405533d01bdc58c68295aea206095aee80ac5149 "$current_root/backend-wheel/aeb_gh_fixture-1.1.0-py3-none-any.whl" | sha256sum --check --strict

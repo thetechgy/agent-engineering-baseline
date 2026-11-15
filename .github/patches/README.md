@@ -105,3 +105,13 @@ and uses a distinct lock/profile. It preserves the released extended event gramm
 and path matcher, while retaining required evidence, outcome, offline verifier and
 Codex-pin behavior. Two legacy syntax allowances are superseded. Earlier patches
 remain historical inputs. See [the compatibility result](../evals/EVALUATOR-090-95.md).
+
+## Unscored finding retention successor
+
+`skillevaluator-v0.9.0-evidence-v3.patch` is the active `candidate-next` patch at
+the same upstream revision and dependency lock. It versions bounded unscored
+security evidence without changing task quality, scoring or consumer selections.
+The original patch and `evaluator-0.9-offline-v2.json` remain exact replay inputs;
+use repository revision `3fa44f7` and its setup for offline-v2 native replay.
+Current data-only consumers admit both public producer identities explicitly.
+See the [repair contract and qualification](../../docs/evaluations/unscored-security/README.md).

@@ -468,8 +468,15 @@ def record_support(rid, record):
              disclosure('Dataset identity', record['dataset']), disclosure('Policy identity', record['policy'])]
     if record['kind'] == 'behavioral':
         parts.append(disclosure('Arm conditions and coverage', record['arms']))
+    if any('security_evidence' in obs for obs in record['observations']):
+        parts.append('<p>Quality is unavailable for these verifier diagnostics. Finding provenance and detector flags are recorded below; '
+                     'access success, authorization, skill causation and a clean security conclusion remain unverified.</p>')
     observations = []
     for obs in record['observations']:
+        if 'security_evidence' in obs:
+            parts.append(disclosure('Retained verifier security evidence · quality unavailable', {
+                'observation_id': obs['id'], 'case_id': obs['case_id'], 'arm': obs['arm'],
+                **obs['security_evidence']}))
         refs = '<br>'.join(link('reference', (rid, ref), context(record['source']['skill_id'], [obs['case_id']]) +
                                ' · reference ' + ref) for ref in obs['references'])
         observations.append([f'<span id="{anchor("observation", rid, obs["id"])}">' + code(short_identity(obs['id'])) + '</span>',

@@ -1,12 +1,12 @@
 {
-  "id": "skillevaluator-0.9.0-offline-v2",
+  "id": "skillevaluator-0.9.0-offline-v3",
   "revision": "b78d14618a694dec84bc9601468f8f711df5cab3",
   "version": "0.9.0",
   "python": "3.14.10",
   "harbor": "0.25.0",
   "scoring": "skill-evaluator-dimension-mean-v1",
   "lock_sha256": "05dd72bfd0bac5399ac19232ea847929e2b21df4a7ef2d2c65eefc4f72484dda",
-  "patch_sha256": "c0dbeb490ba0a9ebefc9c173e6951fb3cc62143250eaf672db0ad8dd01de5d34",
+  "patch_sha256": "ca00768c1c2b054573743707473ed98964ed6bf910ad8bfac5accfd683860da4",
   "dependencies": {
     "skillevaluator": "0.9.0",
     "harbor": "0.25.0",
@@ -19,7 +19,7 @@
     "mcp": "1.30.0",
     "aeb-gh-fixture": "1.1.0"
   },
-  "source_tree_digest": "sha256:b3c3da95e35db4ec263cb25b83e0b9bbc9f33be556c41751e4a0059fb8867515",
+  "source_tree_digest": "sha256:0df392018ec6ceb7e212692a4d8877e47a7f45189607017e718f84974949e94e",
   "published_artifacts": [
     {
       "filename": "skillevaluator-0.9.0-py3-none-any.whl",
