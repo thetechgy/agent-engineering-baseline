@@ -31,10 +31,10 @@
         }
       ],
       "owner": "Maintainer review",
-      "hold": "Data-only reporting/orchestration adopted pinned 0.9.0 in #138; #139 merged unscored finding retention. Podman entry 8 outcome correction qualifies the full credential-free 0.9.0 static catalog with known findings and incomplete coverage retained. Complete static-quality migration requires a separate implementation decision. Production static quality, benchmarks, private review and historical replay retain their owners; benchmark/recovery/history policy and live-provider qualification remain separate blockers. See EVALUATION-PLAN.md and docs/evaluations/podman-dataset/README.md.",
+      "hold": "Data-only reporting/orchestration already adopted pinned 0.9.0 in #138; #139 finding retention and #140 strict-dataset correction are merged. This focused PR would migrate complete static quality to offline-v3 upon merge, preserving known findings and incomplete coverage. Contracts/native gh, benchmarks/recovery/history, private reviews and exact historical replay retain their owners. Frozen 0.8 experiments remain closed; manual 0.7.2 qualifier remains active. No claim that all evaluator dependencies are current. See EVALUATOR-090-95.md and docs/evaluations/static-quality-090.md.",
       "group": "evaluation-runtime compatibility group",
       "tag_prefix": "v",
-      "validation": "Review the completed credential-free qualification and live CLI evidence in EVALUATION-PLAN.md before a separate production-adoption decision. Preserve historical locks, scoring and frozen experiments; do not equate merged implementation with adoption.",
+      "validation": "Review actual static entry-point qualification, same-input finding/status/coverage/provenance comparison, report reproduction, tested rollback and final selected CI. Preserve benchmark/review/history owners and historical locks/grades; no live-provider or skill-benefit claim.",
       "modified": true,
       "package": {
         "ecosystem": "pip",
@@ -47,7 +47,7 @@
       "repo": "NVIDIA/SkillSpector",
       "sources": [
         {
-          "path": ".github/scripts/setup-skillevaluator.sh",
+          "path": ".github/scripts/setup-skill-scanners.sh",
           "pattern": "^\\s*skillspector_revision=(?P<revision>[0-9a-f]{40}) # v(?P<version>\\S+)$",
           "count": 1
         },
@@ -301,7 +301,7 @@
       "repo": "gitleaks/gitleaks",
       "sources": [
         {
-          "path": ".github/scripts/setup-skillevaluator.sh",
+          "path": ".github/scripts/setup-skill-scanners.sh",
           "pattern": "https://github.com/gitleaks/gitleaks/releases/download/v(?P<version>[^/]+)/gitleaks_(?P=version)_linux_x64.tar.gz",
           "count": 1
         }
@@ -325,7 +325,7 @@
         }
       ],
       "owner": "Maintainer review",
-      "hold": "Active 0.3.0 workflows require Harbor ==0.13.2 in their released manifest. The opt-in 0.8.0 path separately requires ==0.24.0; upstream 0.25.0 is outside both constraints. Exit: an upstream-compatible evaluator release plus a separately approved production-adoption decision and native qualification.",
+      "hold": "Benchmarks, contracts/native gh and review/replay 0.3.0 owners still require Harbor 0.13.2. Maintained frozen 0.8.0 controls require 0.24.0. Data-only hosts already use the pinned 0.9.0 group with Harbor 0.25.0; this PR would also migrate static quality upon merge. Other owners require separate policy/provider or validator qualification; no forced override or historical rescore.",
       "group": "evaluation-runtime compatibility group",
       "tag_prefix": "v",
       "validation": "Qualify the evaluation runtime as a group: frozen locks, compatibility patch, CLI/preflight, graders, scoring, evidence/schema consumers, redaction, and historical comparison policy. Preserve historical tooling and use a new policy identity when inputs change. No independent SDK upgrade.",

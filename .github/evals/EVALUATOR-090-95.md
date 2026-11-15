@@ -1,14 +1,36 @@
-# SkillEvaluator 0.9.0 production-adoption assessment, issue #95
+# SkillEvaluator 0.9.0 consumer ownership, issue #95
 
-Current status: #138 merged data-only host adoption and #139 merged unscored
-finding retention as `a50f693df6f024a6b8063b41e1b6dc2ac40e3f7a`. The subsequent
-[Podman dataset correction](../../docs/evaluations/podman-dataset/README.md)
-qualifies strict admission and the complete credential-free 0.9.0 static catalog,
-retaining scanner findings and incomplete coverage. Static migration is ready for
-a separate implementation decision after final selected CI; no production selector
-changes here. The assessment below retains #137's historical decision state,
-including its failed original strict receipt. Benchmark policy/provider and
-private review/replay ownership remain separate.
+Current migration is implemented for review from main
+`18357c54e6d9266c979c915ca11dc8449196d7f9` (#140). Production static quality still
+uses 0.3.0 until this PR merges. [Static migration evidence and rollback](../../docs/evaluations/static-quality-090.md)
+trace the changed consumer through the actual Validate entry point.
+
+| Consumer | Already merged owner | Owner upon this PR's merge / remaining constraint |
+| --- | --- | --- |
+| Data-only publisher prepare, base analysis/HTML, orchestration plan/dispatch | 0.9.0 since #138 | Remains 0.9.0; no Pages publication or paid dispatch authorized here |
+| Complete Validate static quality | 0.3.0 `quality` | 0.9.0 offline-v3 `quality-next`; existing frozen scanners; strict admission and projection remain required |
+| Contracts, retained scanner adapter, native gh validation | 0.3.0 `quality`, exact review overlays | Remains 0.3.0; native gh moves once to contracts, preserving native runtime and Compose cleanup |
+| Benchmark execution/recovery/history admission | 0.3.0 / Harbor 0.13.2, Codex 0.155.1 | Held: versioned 0.9 benchmark/recovery/history policy and actual provider routing unqualified; #139 closed finding retention only |
+| Private reviews and analyst attachments | Exact retained 0.3 review profiles/overlays | Held: no successor 0.9 validator/request profile; original SDK/source/registry identities remain required |
+| Native history/replay | Exact original producer and interpreter | Retained for immutable evidence; data-only rendering can use 0.9 without renormalizing or rescoring |
+| Maintained frozen pilot/campaign/admission | 0.8.0 / Harbor 0.24.0 | Existing owners remain active for their defined controls; closed experiments stay closed |
+| Manual Pester qualifier | 0.7.2 | Still maintained, not historical-only; retirement remains a separate decision |
+| Offline-v2 0.9 patch/profile, older scanner and review overlays | Original exact identities | Historical replay only where no active caller remains; never relabel as offline-v3 |
+
+The same evaluator revision/version can have different patch identities.
+`evaluator-0.9.json` remains offline-v3, lock/patch/backend/source unchanged. Native
+normalization checks the exact profile and owning interpreter; public data retains
+the producer identity. The active static owner adds only the already locked
+`security` extra for Bandit/pip-audit. Semgrep and SkillSpector retain Python 3.13
+and their independent locks. No declaration that every dependency is current is
+made.
+
+## PR #137 assessment, retained as history
+
+The assessment below describes its original decision and failed strict dataset.
+PR #138 merged data-only hosts, #139 closed unscored finding visibility and #140
+closed strict Podman admission. Their receipts are preserved. Earlier future-tense
+holds below are historical; the current table above governs this migration.
 
 **Recommend adopting 0.9.0 for data-only consolidated reporting and orchestration
 planning/dispatch together. Hold the complete static-quality and live benchmark

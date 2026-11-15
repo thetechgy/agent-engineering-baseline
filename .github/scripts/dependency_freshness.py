@@ -308,9 +308,10 @@ def inventory(root):
          "Merged opt-in path; frozen qualification and experiment inputs remain unchanged. "
          "Harbor/Python/LiteLLM bounds come from the released evaluator manifest. "
          "SDK and other transitive freshness is not polled independently here."),
-        ("candidate-next-environment", "Opt-in 0.9.0 evaluator (not production adoption)",
+        ("candidate-next-environment", "SkillEvaluator 0.9.0 data hosts and proposed static owner",
          ".github/evals/evaluator-0.9.json",
-         "Separate released candidate; retained 0.8.0 and frozen experiments are unchanged. "
+         "Data-only reporting/orchestration adopted in #138. Static quality would move upon merge of the focused migration; "
+         "benchmarks/reviews/native replay retain their owners. Retained 0.8.0 and frozen experiments are unchanged. "
          "Harbor 0.25.0 is supported; Python <3.15 and LiteLLM <1.94 still constrain this group. "
          "Credential-free compatibility does not establish provider or skill benefit."),
         ("pilot-environment", "Frozen CLI pilot and campaign selectors",

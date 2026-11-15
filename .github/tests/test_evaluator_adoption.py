@@ -77,6 +77,11 @@ class AdoptionTests(unittest.TestCase):
                         bundle(Path(directory) / 'public', [public]), ROOT)
             pages.write(site, 'report/publication.json', pages.encoded(state))
             pages.build(site)
+            html = (site / 'index.html').read_text()
+            self.assertNotIn('Synthetic candidate qualification.', html)
+            self.assertIn('SECURITY coverage: 1 incomplete', html)
+            self.assertIn('0 with no incompleteness reported', html)
+            self.assertIn('known_violation', html)
             before = pages.tree(site)
             legacy = os.environ['SKILL_EVALUATOR_PYTHON']
             run = subprocess.run([legacy, '-B', str(ROOT / '.github/scripts/skill_pages.py'),
