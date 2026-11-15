@@ -31,7 +31,7 @@
         }
       ],
       "owner": "Maintainer review",
-      "hold": "Active Validate, skill-quality, benchmark, orchestration and reporting setup still execute 0.3.0; this is not historical-only. Merged PR #119 adds the opt-in 0.8.0 path, not production adoption. Promotion remains a separate decision; candidate 0.8.0 constrains Harbor ==0.24.0, Python <3.15 and LiteLLM <1.94.0.dev0.",
+      "hold": "Data-only reporting/orchestration adopted pinned 0.9.0 in #138; #139 merged unscored finding retention. Podman entry 8 outcome correction qualifies the full credential-free 0.9.0 static catalog with known findings and incomplete coverage retained. Complete static-quality migration requires a separate implementation decision. Production static quality, benchmarks, private review and historical replay retain their owners; benchmark/recovery/history policy and live-provider qualification remain separate blockers. See EVALUATION-PLAN.md and docs/evaluations/podman-dataset/README.md.",
       "group": "evaluation-runtime compatibility group",
       "tag_prefix": "v",
       "validation": "Review the completed credential-free qualification and live CLI evidence in EVALUATION-PLAN.md before a separate production-adoption decision. Preserve historical locks, scoring and frozen experiments; do not equate merged implementation with adoption.",

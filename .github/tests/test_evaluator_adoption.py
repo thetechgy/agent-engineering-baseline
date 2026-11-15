@@ -130,18 +130,46 @@ class AdoptionTests(unittest.TestCase):
             skill_report_reviews.load([Path('not-opened.json')], None)
 
     @unittest.skipUnless(os.environ.get('EVALUATOR_ADOPTION_SCAN_OUTPUT'), 'requires retained native scanner assessment')
-    def test_repository_dataset_blocker_remains_failed_with_findings_visible(self):
+    def test_repository_dataset_revision_admitted_with_findings_visible(self):
         root = Path(os.environ['EVALUATOR_ADOPTION_SCAN_OUTPUT']) / 'repository-caveats'
-        gate = json.loads((root / 'collection-gate.json').read_text())
-        self.assertEqual(gate['status'], 'failed')
-        self.assertIs(gate['adoption_ready'], False)
-        self.assertEqual(list(gate['datasets']), ['podman'])
-        dataset = gate['datasets']['podman']
-        self.assertEqual(dataset['exit'], 1)
-        failed = [row for row in dataset['checks'] if row['status'] != 'ok']
-        self.assertEqual(len(failed), 1)
-        self.assertEqual((failed[0]['path'], failed[0]['status']), ('entry 8', 'warning'))
-        self.assertIn("expected_output grades skill use ('podman skill')", failed[0]['message'])
+        self.assertFalse((root / 'collection-gate.json').exists())
+        datasets = root / 'after/native/datasets'
+        expected = {p.parents[1].name for p in (ROOT / '.apm/skills').glob('*/evals/evals.json')}
+        self.assertEqual({p.stem for p in datasets.glob('*.json')}, expected)
+        for name in expected:
+            self.assertEqual((datasets / (name + '.exit')).read_text().strip(), '0', name)
+            self.assertTrue(all(row['status'] == 'ok' for row in json.loads(
+                (datasets / (name + '.json')).read_text())), name)
         html = (root / 'report.html').read_text()
         for marker in ('reference_missing', 'complete_with_caveats', 'RA1'):
             self.assertIn(marker, html)
+
+    def test_podman_outcome_revision_preserves_negative_case_and_rejection(self):
+        import shutil
+        original = subprocess.check_output(['git', 'show',
+            'a50f693df6f024a6b8063b41e1b6dc2ac40e3f7a:.apm/skills/podman/evals/evals.json'], cwd=ROOT)
+        current = (ROOT / '.apm/skills/podman/evals/evals.json').read_bytes()
+        before, after = json.loads(original), json.loads(current)
+        old_case = next(row for row in before['evals'] if row['id'] == 8)
+        new_case = next(row for row in after['evals'] if row['id'] == 8)
+        old_case['expected_output'] = new_case['expected_output']
+        self.assertEqual(before, after)
+        self.assertIsNone(new_case['expected_skill'])
+        self.assertIs(new_case['should_trigger'], False)
+        self.assertEqual(current, (ROOT / '.agents/skills/podman/evals/evals.json').read_bytes())
+        with tempfile.TemporaryDirectory() as directory:
+            skill = Path(directory) / 'podman'
+            shutil.copytree(ROOT / '.apm/skills/podman', skill)
+            for data, code in ((original, 1), (current, 0)):
+                (skill / 'evals/evals.json').write_bytes(data)
+                result = subprocess.run([sys.executable, '-B', '-c',
+                    'from skillevaluator.cli import cli; cli()', 'tier3', 'validate',
+                    str(skill), '--strict', '--json'], capture_output=True, text=True, timeout=60)
+                self.assertEqual(result.returncode, code, result.stderr)
+                warnings = [row for row in json.loads(result.stdout) if row['status'] != 'ok']
+                if code:
+                    self.assertEqual(len(warnings), 1)
+                    self.assertEqual(warnings[0]['path'], 'entry 8')
+                    self.assertIn("expected_output grades skill use ('podman skill')", warnings[0]['message'])
+                else:
+                    self.assertEqual(warnings, [])

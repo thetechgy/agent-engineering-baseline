@@ -97,7 +97,7 @@
       "expected_skill": null,
       "should_trigger": false,
       "prompt": "Review this Docker Swarm stack and tune Docker daemon.json.",
-      "expected_output": "The Podman skill does not dominate a Docker-only request unless the user explicitly asks to migrate it to Podman.",
+      "expected_output": "A response scoped to Docker Swarm stack review and Docker daemon.json tuning, without unsolicited migration to Podman or Quadlet or application of Podman-specific networking or systemd assumptions.",
       "assertions": [
         "Does not redirect the request into Podman or Quadlet work",
         "Does not apply Podman-specific networking or systemd assumptions to Docker Swarm"

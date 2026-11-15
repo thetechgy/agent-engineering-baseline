@@ -1,13 +1,14 @@
 # SkillEvaluator 0.9.0 production-adoption assessment, issue #95
 
-Current status: #138 merged the data-only reporting/orchestration host switch as
-`3fa44f7cf92dc0523ad0ecd959b584190da06f02`. The
-[unscored finding-retention repair](../../docs/evaluations/unscored-security/README.md)
-has passed credential-free local qualification under offline-v3, pending review
-and merge. Final-revision CI is recorded in the repair PR. Offline-v2 and the original blocked receipt below
-remain historical evidence. The assessment below records #137's decision state;
-static quality, live benchmarks, private review and historical replay remain held
-on their existing owners.
+Current status: #138 merged data-only host adoption and #139 merged unscored
+finding retention as `a50f693df6f024a6b8063b41e1b6dc2ac40e3f7a`. The subsequent
+[Podman dataset correction](../../docs/evaluations/podman-dataset/README.md)
+qualifies strict admission and the complete credential-free 0.9.0 static catalog,
+retaining scanner findings and incomplete coverage. Static migration is ready for
+a separate implementation decision after final selected CI; no production selector
+changes here. The assessment below retains #137's historical decision state,
+including its failed original strict receipt. Benchmark policy/provider and
+private review/replay ownership remain separate.
 
 **Recommend adopting 0.9.0 for data-only consolidated reporting and orchestration
 planning/dispatch together. Hold the complete static-quality and live benchmark

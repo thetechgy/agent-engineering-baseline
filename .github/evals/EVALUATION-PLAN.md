@@ -1,4 +1,37 @@
-# Unscored security-finding repair checkpoint
+# Podman static-dataset correction checkpoint
+
+**Dataset corrected and complete credential-free 0.9.0 static catalog qualified;
+focused PR pending review.** Main was verified at PR #139's merge
+`a50f693df6f024a6b8063b41e1b6dc2ac40e3f7a`, with no intervening changes.
+PR #139 closed bounded unscored finding retention under offline-v3. #138's data-only
+reporting/orchestration hosts already use pinned 0.9.0.
+
+This task changes only Podman entry 8's outcome criterion and its APM-deployed
+copy, retaining the Docker-only negative-selection case and every other field.
+The [dataset receipt](../../docs/evaluations/podman-dataset/README.md) records
+before/after strict validation, dataset identities, manual criterion review,
+all-catalog scanner findings/coverage, provenance and report reproduction.
+Original #137 rejection evidence, snapshots, grades and replay remain intact.
+
+Strict admission now passes for every dataset in the actual six-skill static
+catalog. Known scanner failures, missing-reference caveats and incomplete coverage
+remain visible; successful collection does not mean clean skills. This establishes
+dataset admissibility and credential-free collection/report compatibility, not
+judge accuracy or skill effectiveness. The PR description records final executable
+revision, selected CI and artifact receipts.
+
+Static-quality migration to 0.9.0 is ready for a separate implementation decision,
+subject to final selected CI. Production static/benchmark owners, benchmark/recovery/
+history policy, provider qualification, private review/replay, Pester clarification
+and closed experiments remain separate and unchanged. No inference, judges,
+credentials, allocation, benchmark dispatch, Pages publication or merge occurred.
+
+**One current next action:** review this correction and decide separately whether
+to migrate the complete static-quality consumer to pinned 0.9.0.
+
+## PR #139 unscored finding repair, retained as history
+
+## Unscored security-finding repair checkpoint
 
 **Implemented and credential-free locally qualified; pending PR review and
 merge.** PR #138 merged as `3fa44f7cf92dc0523ad0ecd959b584190da06f02`.
