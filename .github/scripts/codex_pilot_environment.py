@@ -40,7 +40,9 @@ class PilotEnvironment(SkillEvaluatorSecureDockerEnvironment):
         if self._pilot_agent and 'auto_mounts' in kwargs:
             if kwargs.get('auto_mounting'):
                 raise ValueError('Pilot automatic host mounts refused')
-            kwargs['auto_mounts'] = []
+            # These are container output directories when automatic binding is off.
+            # Keep them so Harbor creates the paths before oracle/verifier execution.
+            kwargs['auto_mounting'] = False
         super().__init__(*args, mounts=[] if self._pilot_agent else mounts, **kwargs)
 
     @property

@@ -304,7 +304,7 @@ def run(root, task, mode, *, reference=None, fixture=None):
             for sig, handler in old.items(): signal.signal(sig,handler)
     if experiment:
         return ledger
-    core.require(ledger['state']=='completed' and ledger['cleanup_complete'] and 'report_failure' not in ledger, 'Campaign incomplete: ' + str(ledger.get('report_failure', ledger.get('stop_reason'))))
+    core.require(ledger['state']=='completed' and ledger['cleanup_complete'] and 'report_failure' not in ledger, 'Campaign incomplete: ' + str(ledger.get('stop_reason')) + ('; report: ' + ledger['report_failure'] if 'report_failure' in ledger else ''))
     reports.write_json(artifact / 'qualification.json', {'complete':True,'inference':False,'revision':revision(), 'profile':purpose(task,mode), 'attempts':len(rows), 'report_reproduced':True, **({'retrospective':True} if replaying else {})})
     return artifact / 'public'
 

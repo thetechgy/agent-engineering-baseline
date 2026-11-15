@@ -395,7 +395,8 @@ class Execution090Contracts(unittest.TestCase):
             agent = PilotEnvironment(mounts=None, auto_mounts=[{'target':'/logs/agent'}])
             self.assertTrue(agent._pilot_agent)
             self.assertEqual(parent.call_args.kwargs['mounts'], [])
-            self.assertEqual(parent.call_args.kwargs['auto_mounts'], [])
+            self.assertEqual(parent.call_args.kwargs['auto_mounts'], [{'target':'/logs/agent'}])
+            self.assertIs(parent.call_args.kwargs['auto_mounting'], False)
             with self.assertRaisesRegex(ValueError, 'Unexpected pilot mount'):
                 PilotEnvironment(auto_mounts=[{'target':'/host'}])
             with self.assertRaisesRegex(ValueError, 'automatic host mounts refused'):

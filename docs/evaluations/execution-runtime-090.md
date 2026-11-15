@@ -33,7 +33,7 @@ grader. No Pester runner, skill change or second campaign framework is introduce
 | Agent authentication | Only `OPENAI_API_KEY`; dummy sentinel in preparation; future protected environment delivery through existing stdin transport as uid 1000 |
 | Agent provider | Explicit OpenAI-compatible custom provider, Responses wire format; `https://api.openai.com/v1` for a future approved run; loopback-only non-forwarding responder in preparation |
 | Agent retries/settings | Request retries 0, stream retries 0, idle timeout 60000 ms; web search disabled; no multi-agent work; no real key, ambient login or auth.json is supplied to preparation |
-| Verifier | Separate native verifier, original gh deterministic contract and protected broker receipts; network disabled; two verifier runs for the proposed pair |
+| Verifier | Native verifier after the agent phase, original gh deterministic contract and root-protected broker receipts; same restricted container, no judge credential; two verifier runs for the proposed pair |
 | Model judge | **Disabled by `custom_only`**, no selected judge model/provider/endpoint, no judge credential, **zero model-judge requests**. The verifier does not silently become an LLM judge |
 | Events/usage | Actual `codex exec --json` stdout/stderr; native command lifecycle → existing ATIF adapter → released collector → current public JSON/analysis/HTML. Missing usage stays unknown; observed stub usage is not billable provider usage |
 | Termination | Native runtime errors, timed-out/interrupted work, unavailable grading and legitimate measured task failures remain separate; first failure and partial evidence are retained |
@@ -74,8 +74,12 @@ independently of TOML formatting.
 Exposure remains: agent children can read their inherited credential and the
 container's writable Codex configuration. External egress confines destinations,
 not every request to the permitted provider. Therefore a future real key is exposed
-to the agent and its subprocesses during the agent phase. The existing lifecycle
-scrubs the runtime home, observes post-command/post-phase policy, retains permitted
+to the agent and its subprocesses until container disposal, including any surviving child after the CLI exits. The
+existing gh task uses a trusted root verifier in that container after the agent
+phase; it does not provide a separate verifier container. Protected broker state
+and tests stay unreadable to uid 1000. The existing lifecycle
+scrubs the runtime home, observes post-command/post-phase policy (the permitted provider remains reachable
+for surviving children in a future live run), retains permitted
 files before disposal and removes the container and children. Stopped-container
 retention handles native interruption without restarting the workload. This is not
 protection against a compromised host or container runtime.
