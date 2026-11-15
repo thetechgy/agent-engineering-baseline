@@ -294,7 +294,7 @@ def static_quality(skills):
     parts = ['<h3 id="static-quality">Static quality and coverage · native evaluator judgments</h3>',
              '<p>Scanner severity does not establish a confirmed vulnerability, instruction defect or need to change a skill. '
              'Findings remain advisory in quality CI.</p>']
-    if not runs or any(not any(s['scanner'] == 'SECURITY' and s['status'] in ('passed', 'failed') for s in run['scans']) for run in runs):
+    if not runs or any(analysis.security_coverage_status(run) not in ('passed', 'failed') for run in runs):
         parts.append('<p class="notice"><strong>Security-analysis coverage is incomplete or unavailable.</strong> '
                      'Retained findings still require investigation.</p>')
     parts.extend('<p>' + safe(line) + '</p>' for line in analysis.static_overview(runs))
@@ -392,8 +392,7 @@ def executive_summary(result, records, *, pages=None):
     parts.append('<div class="status-grid"><div><strong>Static findings · advisory</strong><p>' + safe(static_status) +
         '</p></div><div><strong>Investigation records</strong><p>' + count(len(findings), 'record') +
         '; ' + text(sum(f['importance'] == 'mandatory' for f in findings)) + ' mandatory outcomes to inspect</p></div></div>')
-    if not static_runs or any(not any(scan['scanner'] == 'SECURITY' and scan['status'] in ('passed', 'failed')
-                                      for scan in run['scans']) for run in static_runs):
+    if not static_runs or any(analysis.security_coverage_status(run) not in ('passed', 'failed') for run in static_runs):
         parts.append('<p class="notice">Security-analysis coverage is incomplete or unavailable.</p>')
     parts.append('<nav aria-label="Report sections"><ul><li><a href="#important-findings">Review first</a></li>'
         '<li><a href="#coverage">Skills and coverage</a></li><li><a href="#provenance">Source details</a></li></ul></nav>')
@@ -995,7 +994,8 @@ def render_report(result, captured, *, reviews=None, pages_context=None, histori
         '</select></div></header><main id="main" tabindex="-1"><section class="overview" aria-labelledby="overview">'
         '<h2 id="overview">Evidence overview</h2>')
     skills = result['skills']
-    if any('producer_profile' in record.get('policy', {}) and not analysis.pilot_record(record) for record in records.values()):
+    if any(record.get('kind') == 'behavioral' and 'producer_profile' in record.get('policy', {})
+           and not analysis.pilot_record(record) for record in records.values()):
         add('<p class="safety"><strong>Synthetic candidate qualification.</strong> Fixed judge values test transport only. No model judges ran; candidate quality is unavailable. Candidate records are excluded from production history and cannot establish skill improvement.</p>')
     if any(record.get('custom', {}).get('purpose') == 'skill_effectiveness_control' for record in records.values()):
         add('<p class="safety"><strong>Prospective grading qualification.</strong> Native oracle fixtures exercise frozen task contracts without model inference. These are not agent results, skill benefit or production history.</p>')

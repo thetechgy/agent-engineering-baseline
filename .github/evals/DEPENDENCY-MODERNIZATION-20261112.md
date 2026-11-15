@@ -1,5 +1,16 @@
 # Issue #95: November 12 dependency modernization
 
+Current owner update: #138 merged 0.9.0 data-only reporting/orchestration; #139
+and #140 closed unscored finding retention and strict static-dataset admission.
+The focused static migration would move the complete static consumer to the same
+pinned 0.9.0 offline-v3 owner upon merge. Contracts/native gh, benchmarks,
+reviews/attachments and exact native replay retain their old owners. Maintained
+0.8 controls and the manual 0.7.2 qualifier are not historical-only. See the
+[current ownership table](EVALUATOR-090-95.md) and
+[static receipt/rollback](../../docs/evaluations/static-quality-090.md).
+The dated inventory below remains historical; it is not a current aggregate
+freshness verdict.
+
 This pass starts from verified main `f1867ba`. Versions below identify consumers,
 not a count of distinct packages across environments. A package in a universal
 lock may be unselected by `--no-dev`; installed inventories are retained separately.

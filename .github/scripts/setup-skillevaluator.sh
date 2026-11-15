@@ -3,8 +3,8 @@
 set -euo pipefail
 umask 077
 
-kind=${1:?usage: setup-skillevaluator.sh quality|benchmark|reporting|candidate}
-case "$kind" in quality|benchmark|reporting|candidate|candidate-current|candidate-next) ;; *) exit 2 ;; esac
+kind=${1:?usage: setup-skillevaluator.sh quality|quality-next|benchmark|reporting|candidate|candidate-current|candidate-next}
+case "$kind" in quality-next|quality|benchmark|reporting|candidate|candidate-current|candidate-next) ;; *) exit 2 ;; esac
 : "${RUNNER_TEMP:?}" "${GITHUB_WORKSPACE:?}" "${GITHUB_ENV:?}" "${GITHUB_PATH:?}"
 repository_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)
 tool_root="$RUNNER_TEMP/skill-evaluation-tools"
@@ -37,7 +37,7 @@ if [ "$kind" = candidate ] || [ "$kind" = candidate-current ]; then
 fi
 
 # Current opt-in replacement. Historical recipes below retain their original bytes.
-if [ "$kind" = candidate-next ]; then
+if [ "$kind" = candidate-next ] || [ "$kind" = quality-next ]; then
   current_root="$RUNNER_TEMP/next-evaluator"
   export UV_PYTHON_INSTALL_DIR="$current_root/python"
   git init --quiet "$current_root"
@@ -49,13 +49,47 @@ if [ "$kind" = candidate-next ]; then
   printf '%s  %s\n' ca00768c1c2b054573743707473ed98964ed6bf910ad8bfac5accfd683860da4 "$repository_root/.github/patches/skillevaluator-v0.9.0-evidence-v3.patch" | sha256sum --check --strict
   git -C "$current_root" apply --check "$repository_root/.github/patches/skillevaluator-v0.9.0-evidence-v3.patch"
   git -C "$current_root" apply "$repository_root/.github/patches/skillevaluator-v0.9.0-evidence-v3.patch"
-  uv sync --project "$current_root" --python 3.14.10 --managed-python --frozen --no-dev --extra tier3
+  extras=(--extra tier3)
+  if [ "$kind" = quality-next ]; then extras+=(--extra security); fi
+  uv sync --project "$current_root" --python 3.14.10 --managed-python --frozen --no-dev "${extras[@]}"
   "$current_root/.venv/bin/python" "$repository_root/.github/evaluator-backends/build_wheel.py" "$current_root/backend-wheel" --candidate-next
   printf '%s  %s\n' 070237e238326d49a63f348d405533d01bdc58c68295aea206095aee80ac5149 "$current_root/backend-wheel/aeb_gh_fixture-1.1.0-py3-none-any.whl" | sha256sum --check --strict
   uv pip install --python "$current_root/.venv/bin/python" --no-deps --no-index --link-mode copy --require-hashes --only-binary :all: \
     --requirement "$current_root/backend-wheel/requirements.txt"
   uv pip check --python "$current_root/.venv/bin/python"
   printf 'SKILL_NEXT_PYTHON=%s/.venv/bin/python\nSKILL_NEXT_SOURCE=%s\nSKILL_QUALIFICATION_PYTHON=%s/.venv/bin/python\n' "$current_root" "$current_root" "$current_root" >> "$GITHUB_ENV"
+  if [ "$kind" = quality-next ]; then
+    # No 0.3 evaluator or private review overlay is needed by static quality.
+    # shellcheck source-path=SCRIPTDIR
+    # shellcheck source=setup-skill-scanners.sh
+    source "$repository_root/.github/scripts/setup-skill-scanners.sh"
+    install_skill_scanners "$tool_root" "$current_root/.venv/bin" "$repository_root"
+    uv pip list --python "$current_root/.venv/bin/python" --format json > "$tool_root/dependencies/evaluator.json"
+    "$current_root/.venv/bin/python" -B - "$repository_root" "$tool_root" <<'PYSTATIC' > "$tool_root/versions.json"
+import json, subprocess, sys
+from pathlib import Path
+sys.path.insert(0, str(Path(sys.argv[1]) / '.github/scripts'))
+import evaluator_profiles as profiles
+import skill_evidence as evidence
+root = Path(sys.argv[2])
+versions = dict(profiles.candidate_versions(profiles.NEXT),
+                scanners=evidence.SCANNER_RUNTIME_NEXT['versions'],
+                skillspector_revision=evidence.SCANNER_RUNTIME_NEXT['skillspector_revision'],
+                scanner_runtime=evidence.SCANNER_RUNTIME_NEXT)
+for name in ('semgrep', 'skillspector', 'bandit', 'pip-audit'):
+    owner = 'evaluator' if name in ('bandit', 'pip-audit') else name
+    actual = next(p['version'] for p in json.loads((root / 'dependencies' / (owner + '.json')).read_text()) if p['name'] == name)
+    assert actual == versions['scanners'][name], (name, actual)
+assert subprocess.check_output([root / 'bin/gitleaks', 'version'], text=True).strip() == versions['scanners']['gitleaks']
+assert evidence.digest_bytes((root / 'skillspector/uv.lock').read_bytes()) == versions['scanner_runtime']['skillspector_lock']
+assert evidence.digest_bytes((Path(sys.argv[1]) / '.github/requirements/semgrep.txt').read_bytes()) == versions['scanner_runtime']['semgrep_lock']
+evidence.validate_runtime_versions(versions)
+print(json.dumps(versions, indent=2))
+PYSTATIC
+    printf 'SKILL_QUALITY_PYTHON=%s/.venv/bin/python\nSKILL_QUALITY_TOOLS=%s\n' "$current_root" "$tool_root" >> "$GITHUB_ENV"
+    printf 'XDG_CACHE_HOME=%s\nXDG_STATE_HOME=%s\nSKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE=%s/static-quality-provenance.key\n' \
+      "$XDG_CACHE_HOME" "$XDG_STATE_HOME" "$RUNNER_TEMP" >> "$GITHUB_ENV"
+  fi
   exit 0
 fi
 
@@ -171,41 +205,10 @@ uv pip check --python "$tool_root/review-previous/.venv/bin/python"
 printf '%s  %s\n' "$previous_review_lock_sha256" "$tool_root/review-previous/uv.lock" | sha256sum --check --strict
 
 if [ "$kind" = quality ]; then
-  # Every Semgrep artifact must match a reviewed hash; nothing is resolved at run time.
-  uv venv --quiet --python 3.13 --managed-python "$tool_root/semgrep"
-  uv pip sync --quiet --python "$tool_root/semgrep/bin/python" --require-hashes --only-binary :all: \
-    "$repository_root/.github/requirements/semgrep.txt"
-  ln -s "$tool_root/semgrep/bin/semgrep" "$tool_root/bin/semgrep"
-  skillspector_revision=54824463814a0be01360792523ec7245a69190fc # v2.13.4
-  git init --quiet "$tool_root/skillspector"
-  git -C "$tool_root/skillspector" fetch --quiet --depth=1 \
-    https://github.com/NVIDIA/SkillSpector.git "$skillspector_revision"
-  git -C "$tool_root/skillspector" checkout --quiet --detach FETCH_HEAD
-  test "$(git -C "$tool_root/skillspector" rev-parse HEAD)" = "$skillspector_revision"
-  # Scanner-owned compatible lock; evaluator and historical environments are untouched.
-  skillspector_lock_sha256=3352c462434ed1d906069b710bfba8b352c255139a0c5718f4edb6ad4051be2b
-  printf '%s  %s\n' "$skillspector_lock_sha256" "$repository_root/.github/locks/skillspector.lock" | sha256sum --check --strict
-  cp "$repository_root/.github/locks/skillspector.lock" "$tool_root/skillspector/uv.lock"
-  uv sync --project "$tool_root/skillspector" --python 3.13 --managed-python --frozen --no-dev
-  uv pip check --python "$tool_root/skillspector/.venv/bin/python"
-  uv pip check --python "$tool_root/semgrep/bin/python"
-  printf '%s  %s\n' "$skillspector_lock_sha256" "$tool_root/skillspector/uv.lock" | sha256sum --check --strict
-  git -C "$tool_root/skillspector" diff --exit-code -- pyproject.toml
-  ln -s "$tool_root/skillspector/.venv/bin/skillspector" "$tool_root/bin/skillspector"
-  curl --fail --location --silent --show-error --proto '=https' --proto-redir '=https' \
-    --output "$tool_root/gitleaks.tar.gz" \
-    https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
-  # Official v8.30.1 release checksum; reviewed alongside the release asset.
-  printf '%s  %s\n' 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb \
-    "$tool_root/gitleaks.tar.gz" | sha256sum --check --strict
-  tar -xzf "$tool_root/gitleaks.tar.gz" -C "$tool_root/bin" gitleaks
-  "$tool_root/bin/semgrep" --version
-  "$tool_root/bin/skillspector" --version
-  "$tool_root/bin/gitleaks" version
-  "$evaluator_bin/bandit" --version
-  "$evaluator_bin/pip-audit" --version
-  uv pip list --python "$tool_root/semgrep/bin/python" --format json > "$tool_root/dependencies/semgrep.json"
-  uv pip list --python "$tool_root/skillspector/.venv/bin/python" --format json > "$tool_root/dependencies/skillspector.json"
+  # shellcheck source-path=SCRIPTDIR
+  # shellcheck source=setup-skill-scanners.sh
+  source "$repository_root/.github/scripts/setup-skill-scanners.sh"
+  install_skill_scanners "$tool_root" "$evaluator_bin" "$repository_root"
 fi
 uv pip list --python "$evaluator_bin/python" --format json > "$tool_root/dependencies/evaluator.json"
 

@@ -1021,7 +1021,7 @@ class WorkflowTests(unittest.TestCase):
         # Both locks are consumed by the commands the policy below verifies.
         sources = list(_command_sources())
         self.assertIn('"$repository_root/.github/requirements/semgrep.txt"',
-                      next(text for source, text in sources if source == "setup-skillevaluator.sh"))
+                      next(text for source, text in sources if source == "setup-skill-scanners.sh"))
         self.assertEqual(
             sum("--requirement .github/requirements/rumdl.txt" in text for _, text in sources), 2)
         matched = 0
@@ -1144,7 +1144,7 @@ class WorkflowTests(unittest.TestCase):
         self.assertIn(reports.POLICY["docker_compose"], verification["run"])
         for file in ("validate.yml", "benchmark-skills.yml"):
             candidate = yaml.safe_load((REPO / ".github/workflows" / file).read_text())
-            job = candidate["jobs"]["skill-quality" if file == "validate.yml" else "evaluate"]
+            job = candidate["jobs"]["ci-contracts" if file == "validate.yml" else "evaluate"]
             installs = [step for step in job["steps"] if step.get("run") == "bash .github/scripts/setup-compose.sh"]
             cleanups = [step for step in job["steps"] if step.get("run") == "bash .github/scripts/setup-compose.sh cleanup"]
             self.assertEqual(len(installs), 1)

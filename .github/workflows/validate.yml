@@ -153,12 +153,22 @@ jobs:
 
       - name: Test CI contracts without inference
         run: |
-          shellcheck .github/scripts/setup-skillevaluator.sh .github/scripts/setup-compose.sh
+          shellcheck .github/scripts/setup-skillevaluator.sh .github/scripts/setup-skill-scanners.sh .github/scripts/collect-static-quality.sh .github/scripts/setup-compose.sh
           "$SKILL_REVIEW_PYTHON" -m unittest discover -s .github/tests -v
           "$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_evaluations.py validate gh
           "$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_evaluations.py replay gh
           "$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_evaluations.py stage gh "$RUNNER_TEMP/gh-eval-bundle/gh"
           skillevaluator tier3 validate "$RUNNER_TEMP/gh-eval-bundle/gh" --strict --json
+
+      - name: Install verified test-only Docker Compose
+        run: bash .github/scripts/setup-compose.sh
+
+      - name: Validate native gh Docker boundary without inference or credentials
+        run: '"$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_container_validation.py'
+
+      - name: Remove test-only Compose plugin
+        if: always()
+        run: bash .github/scripts/setup-compose.sh cleanup
 
       - name: Install pinned SkillEvaluator 0.9.0 data-only host
         run: bash .github/scripts/setup-skillevaluator.sh candidate-next
@@ -204,22 +214,13 @@ jobs:
           version: '0.13.8'
           enable-cache: false
 
-      - name: Install evaluator and security scanners with Python 3.13
-        run: bash .github/scripts/setup-skillevaluator.sh quality
-
-      - name: Install verified test-only Docker Compose
-        run: bash .github/scripts/setup-compose.sh
-
-      - name: Validate native gh Docker boundary without inference or credentials
-        run: '"$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_container_validation.py'
-
-      - name: Remove test-only Compose plugin
-        if: always()
-        run: bash .github/scripts/setup-compose.sh cleanup
+      - name: Install pinned static evaluator 0.9.0 and security scanners
+        run: bash .github/scripts/setup-skillevaluator.sh quality-next
 
       - name: Qualify scanner controls and consolidated reporting without credentials
         run: |
-          "$SKILL_EVALUATOR_PYTHON" .github/scripts/qualify_scanners.py \
+          "$SKILL_QUALITY_PYTHON" -B -m unittest discover -s .github/tests -p test_static_quality.py -v
+          "$SKILL_QUALITY_PYTHON" .github/scripts/qualify_scanners.py \
             --tools "$RUNNER_TEMP/skill-evaluation-tools" --output "$RUNNER_TEMP/scanner-controls"
 
       - name: Retain scanner controls and report
@@ -234,46 +235,19 @@ jobs:
       - name: Collect native skill and dataset reports
         env:
           SKILLEVALUATOR_RESULTS_DIR: ${{ runner.temp }}/skill-quality/results
-        run: |
-          set -euo pipefail
-          report_root="$RUNNER_TEMP/skill-quality"
-          mkdir -p "$report_root/reports" "$report_root/datasets"
-          cp "$RUNNER_TEMP/skill-evaluation-tools/versions.json" "$report_root/versions.json"
-          cp -r "$RUNNER_TEMP/skill-evaluation-tools/dependencies" "$report_root/dependencies"
-          cd "$report_root"
-          status=0
-          skillevaluator validate "$GITHUB_WORKSPACE/.apm/skills" \
-            --external --tiers 1 --no-llm --no-dedup --continue-on-failure \
-            --evaluated-source-repository "$GITHUB_REPOSITORY" \
-            --evaluated-source-revision "$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)" \
-            -r json,markdown,html -o "$report_root/reports" || status=$?
-          printf '%s\n' "$status" > "$report_root/catalog.exit"
-          for dataset in "$GITHUB_WORKSPACE"/.apm/skills/*/evals/evals.json; do
-            if [ -L "$dataset" ]; then
-              echo '::error::Linked evaluation dataset is not allowed.'
-              exit 1
-            fi
-            [ -f "$dataset" ] || continue
-            skill_dir="$(dirname "$(dirname "$dataset")")"
-            skill="$(basename "$skill_dir")"
-            status=0
-            skillevaluator tier3 validate "$skill_dir" --strict --json \
-              > "$report_root/datasets/$skill.json" \
-              2> "$report_root/datasets/$skill.stderr" || status=$?
-            printf '%s\n' "$status" > "$report_root/datasets/$skill.exit"
-          done
+        run: bash .github/scripts/collect-static-quality.sh
 
       - name: Enforce native collection and dataset contracts
         id: native-quality
         if: always()
-        run: python3 .github/scripts/skill_reports.py catalog "$RUNNER_TEMP/skill-quality"
+        run: '"$SKILL_QUALITY_PYTHON" .github/scripts/skill_reports.py catalog "$RUNNER_TEMP/skill-quality"'
 
       - name: Generate validated public quality evidence and findings summary
         id: public-quality
-        if: always() && env.SKILL_EVALUATOR_PYTHON != ''
+        if: always() && env.SKILL_QUALITY_PYTHON != ''
         timeout-minutes: 3
         run: |
-          "$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_reports.py public-quality \
+          "$SKILL_QUALITY_PYTHON" .github/scripts/skill_reports.py public-quality \
             "$RUNNER_TEMP/skill-quality" "$RUNNER_TEMP/skill-public-quality"
 
       - name: Report quality summary availability

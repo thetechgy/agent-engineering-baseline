@@ -1,0 +1,413 @@
+{
+  "baseline_findings": 89,
+  "baseline_security_findings": 12,
+  "checks": {
+    "freshness_contracts": 49,
+    "frozen_python_setup": 1,
+    "new_report_integration_and_source_identity_controls": 13,
+    "next_routing_identity_and_strict_controls": 11,
+    "retained_evaluation_contracts": 53,
+    "routing_contracts": 13,
+    "scanner_controls": 8
+  },
+  "comparison": {
+    "a11y": {
+      "qualified140": {
+        "coverage_equal": true,
+        "headline": {
+          "next": "failed",
+          "prior": "failed"
+        },
+        "native_content_comparison_sha256": "55656f4e3a4bcf17aff5fb5fd6f34845cd8414c2d5025836ed7fdb085c31b9c6",
+        "public_added": [],
+        "public_findings_equal": true,
+        "public_removed": [],
+        "source_content_equal": true
+      },
+      "rollback": {
+        "coverage_equal": true,
+        "headline": {
+          "next": "failed",
+          "prior": "incomplete"
+        },
+        "native_content_comparison_sha256": "50803ed2cad9298a3597e25156173c3b7fe9e8bb093b0876a61bc4c1820be844",
+        "public_added": [
+          {
+            "check": "quality_efficiency",
+            "line": null,
+            "member": null,
+            "scanner": "QUALITY",
+            "severity": "medium"
+          }
+        ],
+        "public_findings_equal": false,
+        "public_removed": [
+          {
+            "check": "quality_efficiency",
+            "line": null,
+            "member": null,
+            "scanner": "QUALITY",
+            "severity": "high"
+          }
+        ],
+        "source_content_equal": true
+      }
+    },
+    "agent-safety": {
+      "qualified140": {
+        "coverage_equal": true,
+        "headline": {
+          "next": "failed",
+          "prior": "failed"
+        },
+        "native_content_comparison_sha256": "55656f4e3a4bcf17aff5fb5fd6f34845cd8414c2d5025836ed7fdb085c31b9c6",
+        "public_added": [],
+        "public_findings_equal": true,
+        "public_removed": [],
+        "source_content_equal": true
+      },
+      "rollback": {
+        "coverage_equal": true,
+        "headline": {
+          "next": "failed",
+          "prior": "failed"
+        },
+        "native_content_comparison_sha256": "d1061a98d05927ced4d251f9360b04dd68854ab9074d02cc848d918db7521ef2",
+        "public_added": [],
+        "public_findings_equal": true,
+        "public_removed": [],
+        "source_content_equal": true
+      }
+    },
+    "ansible": {
+      "qualified140": {
+        "coverage_equal": true,
+        "headline": {
+          "next": "failed",
+          "prior": "failed"
+        },
+        "native_content_comparison_sha256": "55656f4e3a4bcf17aff5fb5fd6f34845cd8414c2d5025836ed7fdb085c31b9c6",
+        "public_added": [],
+        "public_findings_equal": true,
+        "public_removed": [],
+        "source_content_equal": true
+      },
+      "rollback": {
+        "coverage_equal": true,
+        "headline": {
+          "next": "failed",
+          "prior": "incomplete"
+        },
+        "native_content_comparison_sha256": "bf3fbed39de8ba1bfa8426a2240bcff77a3f75613f39f86c897eba34661c0363",
+        "public_added": [],
+        "public_findings_equal": true,
+        "public_removed": [],
+        "source_content_equal": true
+      }
+    },
+    "podman": {
+      "qualified140": {
+        "coverage_equal": true,
+        "headline": {
+          "next": "failed",
+          "prior": "failed"
+        },
+        "native_content_comparison_sha256": "55656f4e3a4bcf17aff5fb5fd6f34845cd8414c2d5025836ed7fdb085c31b9c6",
+        "public_added": [],
+        "public_findings_equal": true,
+        "public_removed": [],
+        "source_content_equal": true
+      },
+      "rollback": {
+        "coverage_equal": true,
+        "headline": {
+          "next": "failed",
+          "prior": "incomplete"
+        },
+        "native_content_comparison_sha256": "c023bbb22cb8433b2f25f1dd14557120b7c7df7ff76241331345b1dfddaa0afc",
+        "public_added": [
+          {
+            "check": "PE5",
+            "line": 84,
+            "member": "evals/evals.json",
+            "scanner": "SECURITY",
+            "severity": "high"
+          }
+        ],
+        "public_findings_equal": false,
+        "public_removed": [],
+        "source_content_equal": true
+      }
+    },
+    "powershell-module-engineering": {
+      "qualified140": {
+        "coverage_equal": true,
+        "headline": {
+          "next": "failed",
+          "prior": "failed"
+        },
+        "native_content_comparison_sha256": "55656f4e3a4bcf17aff5fb5fd6f34845cd8414c2d5025836ed7fdb085c31b9c6",
+        "public_added": [],
+        "public_findings_equal": true,
+        "public_removed": [],
+        "source_content_equal": true
+      },
+      "rollback": {
+        "coverage_equal": true,
+        "headline": {
+          "next": "failed",
+          "prior": "failed"
+        },
+        "native_content_comparison_sha256": "6ffa9df795cab0581365cfc822cf8d4569f9699fae31e4c31772823c82b7783d",
+        "public_added": [],
+        "public_findings_equal": true,
+        "public_removed": [],
+        "source_content_equal": true
+      }
+    },
+    "powershell-pester-6": {
+      "qualified140": {
+        "coverage_equal": true,
+        "headline": {
+          "next": "failed",
+          "prior": "failed"
+        },
+        "native_content_comparison_sha256": "55656f4e3a4bcf17aff5fb5fd6f34845cd8414c2d5025836ed7fdb085c31b9c6",
+        "public_added": [],
+        "public_findings_equal": true,
+        "public_removed": [],
+        "source_content_equal": true
+      },
+      "rollback": {
+        "coverage_equal": true,
+        "headline": {
+          "next": "failed",
+          "prior": "incomplete"
+        },
+        "native_content_comparison_sha256": "6ffa9df795cab0581365cfc822cf8d4569f9699fae31e4c31772823c82b7783d",
+        "public_added": [],
+        "public_findings_equal": true,
+        "public_removed": [],
+        "source_content_equal": true
+      }
+    }
+  },
+  "limitations": [
+    "Credential-free static integration only; no agent task/judge accuracy/skill benefit evidence",
+    "Local scripts use starting source revision with unchanged skill inputs; final revision is independently checked in normal selected CI",
+    "Earlier live-file edit attempt inconclusive; subsequent warning-prefixed strict JSON rejected before correction",
+    "New reporting code corrects presentation; exact historical HTML replay uses the preserved original renderer"
+  ],
+  "native_catalog_exit": 1,
+  "production_migrated": false,
+  "profile": "skillevaluator-0.9.0-offline-v3",
+  "redaction": {
+    "public_paths_and_synthetic_secret_absent": true
+  },
+  "released_differences": [
+    "0.9 scans evals/.evals for SkillSpector: one additional Podman PE5 at evals/evals.json:84",
+    "a11y estimated-token recommendation remains a finding; released severity high to medium and clearer estimate wording",
+    "external is a released alias for default schema profile; same author_missing findings retained",
+    "0.9 adds SkillSpector artifact/file-role/applicability metadata and PII evidence hashes",
+    "0.9 redacts the native ansible matched-secret example; public identity/location/severity preserved"
+  ],
+  "rendering": {
+    "current_and_retained_host_equal": true,
+    "historical_archive_sha256": "11b1608bbc6520e8e905df612851ce72aca0951c6d4edee496f36d02b18c8ee7",
+    "historical_artifact": 14121501501,
+    "historical_original_renderer_sha256": "d745c7b25dcacc6e1629f0a0747ca0349412be455c2dd07b4ced1968ac0be759",
+    "historical_run": 43613113982,
+    "quality_measured": false,
+    "security_coverage_incomplete": 4,
+    "static_only_not_labeled_synthetic": true
+  },
+  "report_sha256": "bb0967038c04ed5f23c1f95521b6e4804bbfaf3668dbdc5b306d28bf806c4d98",
+  "scanner_controls": {
+    "bad": {
+      "code": "failed",
+      "findings": 32,
+      "incomplete_scans": [],
+      "secrets": "failed",
+      "security": "failed"
+    },
+    "caveat": {
+      "code": "passed",
+      "findings": 21,
+      "incomplete_scans": [
+        "skillspector"
+      ],
+      "secrets": "passed",
+      "security": "failed"
+    },
+    "clean": {
+      "code": "passed",
+      "findings": 19,
+      "incomplete_scans": [],
+      "secrets": "passed",
+      "security": "passed"
+    },
+    "launch": {
+      "code": "passed",
+      "findings": 19,
+      "incomplete_scans": [
+        "skillspector"
+      ],
+      "secrets": "passed",
+      "security": "incomplete"
+    },
+    "malformed": {
+      "code": "passed",
+      "findings": 19,
+      "incomplete_scans": [
+        "skillspector"
+      ],
+      "secrets": "passed",
+      "security": "incomplete"
+    },
+    "partial": {
+      "code": "passed",
+      "findings": 21,
+      "incomplete_scans": [
+        "skillspector"
+      ],
+      "secrets": "passed",
+      "security": "incomplete"
+    },
+    "timeout": {
+      "code": "passed",
+      "findings": 19,
+      "incomplete_scans": [
+        "skillspector"
+      ],
+      "secrets": "passed",
+      "security": "incomplete"
+    },
+    "unavailable": {
+      "code": "passed",
+      "findings": 19,
+      "incomplete_scans": [
+        "skillspector"
+      ],
+      "secrets": "passed",
+      "security": "incomplete"
+    }
+  },
+  "security_findings": 13,
+  "skills": {
+    "a11y": {
+      "coverage_caveats": [
+        {
+          "count": 3,
+          "producer_status": "complete_with_caveats",
+          "reason": "reference_missing",
+          "scanner": "skillspector"
+        }
+      ],
+      "findings": 14,
+      "incomplete_scans": [
+        "skillspector"
+      ],
+      "public_sha256": "125f7a23da1d8abd0db5de883ee8ca16b18bb17424157ad852e56e770fbefda6",
+      "security": 0,
+      "status": "failed"
+    },
+    "agent-safety": {
+      "coverage_caveats": [],
+      "findings": 14,
+      "incomplete_scans": [],
+      "public_sha256": "916b13a2e9545b19525382f2aa3177f705db7a123a6b2e114894f62ba1ff0356",
+      "security": 3,
+      "status": "failed"
+    },
+    "ansible": {
+      "coverage_caveats": [
+        {
+          "count": 1,
+          "producer_status": "complete_with_caveats",
+          "reason": "reference_missing",
+          "scanner": "skillspector"
+        }
+      ],
+      "findings": 13,
+      "incomplete_scans": [
+        "skillspector"
+      ],
+      "public_sha256": "967eefbdd5553fccf9bd16d8011bc90eedd3e6a997c5ec1b57e86f84587213c4",
+      "security": 0,
+      "status": "failed"
+    },
+    "podman": {
+      "coverage_caveats": [
+        {
+          "count": 3,
+          "producer_status": "complete_with_caveats",
+          "reason": "reference_missing",
+          "scanner": "skillspector"
+        }
+      ],
+      "findings": 25,
+      "incomplete_scans": [
+        "skillspector"
+      ],
+      "public_sha256": "9babb34c49cff1c6030f28bdbf2552faa3bcd4db299cabfa5a37a627da1d43e9",
+      "security": 10,
+      "status": "failed"
+    },
+    "powershell-module-engineering": {
+      "coverage_caveats": [],
+      "findings": 12,
+      "incomplete_scans": [],
+      "public_sha256": "2b899b048eb368c1485b309add80a7a735f0b0577b22fe823c117f160cfe9bec",
+      "security": 0,
+      "status": "failed"
+    },
+    "powershell-pester-6": {
+      "coverage_caveats": [
+        {
+          "count": 6,
+          "producer_status": "complete_with_caveats",
+          "reason": "reference_missing",
+          "scanner": "skillspector"
+        }
+      ],
+      "findings": 12,
+      "incomplete_scans": [
+        "skillspector"
+      ],
+      "public_sha256": "86ce54a9bfa7f2b1079c7cbee184eaad76fdebf152d0ec779d1741a13bd60b09",
+      "security": 0,
+      "status": "failed"
+    }
+  },
+  "source_inputs": {
+    "a11y": "sha256:bd38520667287390ab5b35bf3a81033b1a1d0eae7f0545ec907410ba39ad1216",
+    "agent-safety": "sha256:8a0486315d9e6462604e467c28c733640142865f5cf2ef7cba769c3cdb014719",
+    "ansible": "sha256:080622eb297ce99914bd08fbada178bed0eeb162a223017b8e6bb6b9a389eca8",
+    "podman": "sha256:506e78b501906831944d7c6559091c898de9476d42347c56381c950d0099d07d",
+    "powershell-module-engineering": "sha256:18dab091e9e3b9817af70ce3d968d84939e96ebc8917f8f400ac6a7416905d66",
+    "powershell-pester-6": "sha256:d3641c5190c1b86d8e853adc8f3c68fe6376b5fdaf5c1d90c610a745102ff03e"
+  },
+  "source_profiles": {
+    "new_source_only_profiles": 28,
+    "preserved_profiles": 473,
+    "prior_registry_sha256": "e2873a06e0ab623f5e84cde1b51bf7387f04563ca2a941cce5a5944cd9e58e11"
+  },
+  "starting_main": "18357c54e6d9266c979c915ca11dc8449196d7f9",
+  "status": "credential_free_local_qualification_passed",
+  "strict": {
+    "podman": 0
+  },
+  "total_findings": 90,
+  "superseded_ci": {
+    "run": 43678334235,
+    "head": "5d74a5b85140bb55bd8879c809d28a2e64881b0a",
+    "contract_tests": 1085,
+    "passed": 977,
+    "skipped": 107,
+    "failed": 1,
+    "failure": "Stale inline workflow provenance assertion after extraction into the production helper",
+    "failed_job": 132703321227,
+    "failed_log_sha256": "ecd22da51868c1c65f7dfcdfa095dc64825843cfee86ebf34d68e1426eb27d51",
+    "disposition": "cancelled for known follow-up; inconclusive overall; static artifacts retained"
+  }
+}

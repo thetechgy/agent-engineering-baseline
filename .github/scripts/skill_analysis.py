@@ -186,6 +186,14 @@ def static_guidance(scanner, check):
     }.get(scanner, 'Inspect the original evaluator finding and source context before deciding whether a change is warranted.')
 
 
+def security_coverage_status(run):
+    """A confirmed SECURITY finding does not complete its scanner coverage."""
+    if any(scan['scanner'] in ('skillspector', 'skillspector-llm')
+           and scan['status'] == 'incomplete' for scan in run['scans']):
+        return 'incomplete'
+    return next((scan['status'] for scan in run['scans'] if scan['scanner'] == 'SECURITY'), 'unavailable')
+
+
 def static_overview(runs):
     states = [next((s['status'] for s in run['scans'] if s['scanner'] == 'catalog-total'), 'unavailable') for run in runs]
     lines = [f"{len(runs)} static records supplied: " + ' · '.join(
@@ -201,7 +209,7 @@ def static_overview(runs):
         lines.append('Structured detail records: ' + ' · '.join(f'{detail[level]} {level}' for level in SEVERITIES) +
                      ('. Native totals are unavailable; details do not establish total findings.' if any(value is None for value in totals.values()) else
                       '. Some native findings have no structured public detail; inspect the original reports.'))
-    security = [next((s['status'] for s in run['scans'] if s['scanner'] == 'SECURITY'), 'unavailable') for run in runs]
+    security = [security_coverage_status(run) for run in runs]
     lines.append('SECURITY coverage: ' + ' · '.join((
         f"{security.count('incomplete')} incomplete", f"{security.count('skipped')} skipped",
         f"{security.count('unavailable')} unavailable",
@@ -216,7 +224,7 @@ def render_static_summary(runs, *, heading='Static quality and coverage'):
              'Scanner severity is not confirmed engineering significance. Findings remain advisory in quality CI.', '',
              *[part for line in static_overview(runs) for part in (line, '')],
              '#### Significant evaluator flags · applicability unresolved', '']
-    if not runs or any(not any(s['scanner'] == 'SECURITY' and s['status'] in ('passed', 'failed') for s in run['scans']) for run in runs):
+    if not runs or any(security_coverage_status(run) not in ('passed', 'failed') for run in runs):
         lines[2:2] = ['**Security-analysis coverage is incomplete or unavailable.**', '']
     groups = static_groups(runs)
     if not groups:

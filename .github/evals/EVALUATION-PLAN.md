@@ -1,4 +1,42 @@
-# Podman static-dataset correction checkpoint
+# Static-quality 0.9.0 migration checkpoint
+
+**Implemented for review; production changes only upon merge.** Starting main
+was verified at PR #140 merge `18357c54e6d9266c979c915ca11dc8449196d7f9`, with no
+intervening changes. #138 already migrated data-only publisher preparation and
+orchestration. #139 preserved unscored findings under offline-v3; #140 qualified
+the corrected strict dataset. Those merged receipts retain their original meaning.
+
+This change selects the existing pinned 0.9.0 offline-v3 owner for the complete
+Validate static consumer: scanner controls, catalog scanning, strict datasets,
+collection, owning-runtime normalization, public projection, summaries and artifacts.
+The shared scanner installer retains its reviewed sources/locks. The static job
+installs no retained evaluator or private review overlay. Contracts, retained
+scanner-adapter qualification and native gh keep `quality` / 0.3.0; the single
+native gh check moves to the existing contracts job with its Compose cleanup.
+CI selection and required platform/selected-result gates are unchanged.
+
+The [migration receipt](../../docs/evaluations/static-quality-090.md) records
+same-input comparison, findings/coverage, native public JSON/HTML reproduction,
+redaction, failure controls and tested rollback. Final-revision CI and artifact
+links are recorded in [PR #141](https://github.com/thetechgy/agent-engineering-baseline/pull/141). Confirmed findings and incomplete coverage
+remain evidence; collection success implies neither clean skills nor successful
+agent work, judge accuracy or skill benefit.
+
+Benchmarks/recovery/history admission, private reviews/attachments, native
+historical replay, frozen 0.8 experiments and the manual 0.7.2 qualifier retain
+their owners. Paid streams remain disabled and allocations closed; Pester work
+remains deferred. No skill instructions, dataset criteria, historical grades,
+evaluator profiles/locks, permissions, protected gates or Pages publication change.
+The report fixes independent coverage counting and static-only labeling; 28
+source-only successors identify changed shared code while all 473 prior profiles
+and frozen selections remain intact.
+
+**One current next action:** review the focused static migration and its final
+selected CI receipts. Do not merge as part of this task.
+
+## PR #140 dataset correction, retained as history
+
+## Podman static-dataset correction checkpoint
 
 **Dataset corrected and complete credential-free 0.9.0 static catalog qualified;
 focused PR pending review.** Main was verified at PR #139's merge
