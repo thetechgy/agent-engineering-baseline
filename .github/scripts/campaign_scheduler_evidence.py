@@ -13,16 +13,19 @@ import skill_reports as reports
 MEMBER = 'campaign-scheduler.json'
 POLICY = 'campaign-scheduler-v1'
 FIELDS = ('position', 'case', 'trial', 'variant', 'arm', 'state', 'returncode', 'grading_present',
-          'classification', 'native_exception', 'config_digest', 'task_checksum')
+          'classification', 'native_exception', 'config_digest', 'task_checksum', 'execution_outcome')
 
 
 def state(row):
     if row['state'] == 'unlaunched': return 'unlaunched'
+    if row.get('execution_outcome') in ('interrupted', 'timeout'): return row['execution_outcome']
     if row['state'] == 'interrupted': return 'interrupted'
-    if row['native_exception'] or row['returncode'] not in (None, 0) or row['state'] == 'failed':
-        return 'launch_infrastructure_failed'
-    if row['state'] == 'completed' and row['grading_present'] is True and row['classification'] in ('passed', 'failed'):
+    if row['native_exception'] or row['returncode'] not in (None, 0): return 'launch_infrastructure_failed'
+    # Accounting/cleanup scheduling stops cannot erase independently measured work.
+    if row['grading_present'] is True and row['classification'] in ('passed', 'failed'):
         return 'measured_task_' + row['classification']
+    if row['grading_present'] is True and row['classification'] == 'unsupported': return 'launched_unscored'
+    if row['state'] == 'failed': return 'launch_infrastructure_failed'
     return 'launched_unscored'
 
 
@@ -44,7 +47,7 @@ def capture(task, ledger, staged):
             'returncode': row.get('returncode'), 'grading_present': row.get('grading_present'),
             'classification': row.get('outcome', {}).get('classification'), 'native_exception': row.get('native_exception'),
             'config_digest': 'sha256:' + row['config_sha256'] if row.get('config_sha256') else None,
-            'task_checksum': row.get('task_checksum')})
+            'task_checksum': row.get('task_checksum'), 'execution_outcome': row.get('execution_outcome')})
     return {'schema': 1, 'campaign': task.definition['id'], 'revision': ledger['revision'],
         'definition_digest': digest(ROOT / task.member), 'mode': mode, 'inference': mode == 'live',
         'dispatch': (None if ledger['authorization'] is None else
@@ -102,6 +105,8 @@ def validate(value, task, *, staged=None, observations=None):
         require(row['returncode'] is None or type(row['returncode']) is int, 'Invalid launch return code')
         e.optional(row['grading_present'], e.boolean)
         e.optional(row['classification'], lambda x:e.enum(x, ('passed', 'failed', 'unsupported', 'timeout', 'infrastructure_error')))
+        e.optional(row['execution_outcome'], lambda x:e.enum(x, ('timeout', 'interrupted')))
+        require(row['execution_outcome'] == e.CUSTOM_NATIVE_EXCEPTIONS.get(row['native_exception']), 'Scheduler termination contradiction')
         e.optional(row['native_exception'], e.token); e.optional(row['config_digest'], e.sha)
         require(row['task_checksum'] is None or re.fullmatch('[0-9a-f]{64}', row['task_checksum']), 'Invalid scheduler task identity')
         if staged is not None and row['task_checksum'] is not None:
@@ -123,6 +128,7 @@ def arm_label(value, arm):
     if labels == {'unlaunched'}: return 'unlaunched'
     if 'launch_infrastructure_failed' in labels: return 'launch attempted; infrastructure failed'
     if 'interrupted' in labels: return 'interrupted'
+    if 'timeout' in labels: return 'timed out'
     if 'measured_task_failed' in labels: return 'measured task failed'
     if labels == {'measured_task_passed'}: return 'measured task passed'
     return 'partially launched / unscored'

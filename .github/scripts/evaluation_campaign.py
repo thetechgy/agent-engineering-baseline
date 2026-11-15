@@ -148,7 +148,8 @@ def construct_launch(root, task, mode, native, present, trial_name, job, extra, 
     profile, _, _ = evidence.custom_contract(task.definition['skill'], purpose=purpose(task, mode))
     config = TrialConfig.model_validate({'task': {'path': str(native)}, 'trial_name': trial_name, 'trials_dir': str(job),
         'agent': adapter.agent_config(task, mode, control, selected['resolved'], present,
-            launch_context=context, **({'deadline_fixture': 'cancelled'} if fixture == 'native-cancellation' else {})),
+            **({'launch_context': context} if mode == 'live' else {}),
+            **({'deadline_fixture': 'cancelled'} if fixture == 'native-cancellation' else {})),
         'environment': {'import_path': profile['campaign']['environment_import']}, 'timeout_multiplier': 1.0})
     env = {k:v for k,v in os.environ.items() if not re.search('TOKEN|SECRET|API_KEY|PASSWORD', k)
            and not k.startswith(('CODEX_', 'AEB_', 'SKILL_EVAL_'))}

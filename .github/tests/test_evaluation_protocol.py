@@ -309,6 +309,18 @@ class LaunchConstructionContracts(unittest.TestCase):
             obs=[{'arm':'with_skill','case_id':'gh-014','attempt':1,'custom':{'outcome':'failed'}}]
             scheduler.validate(wrong,task,observations=obs)
             self.assertEqual(scheduler.arm_label(wrong,'with_skill'),'measured task failed')
+            wrong['entries'][0]['state']='failed'  # Unknown usage stops scheduling after a real grade.
+            scheduler.validate(wrong,task,observations=obs)
+            self.assertEqual(scheduler.arm_label(wrong,'with_skill'),'measured task failed')
+            interrupted=copy.deepcopy(witness)
+            interrupted['entries'][0].update(native_exception='CancelledError',execution_outcome='interrupted')
+            scheduler.validate(interrupted,task,observations=[])
+            self.assertEqual(scheduler.arm_label(interrupted,'with_skill'),'interrupted')
+            timed=copy.deepcopy(interrupted)
+            timed['entries'][0].update(native_exception='AgentTimeoutError',execution_outcome='timeout')
+            scheduler.validate(timed,task,observations=[])
+            self.assertEqual(scheduler.arm_label(timed,'with_skill'),'timed out')
+
             with self.assertRaisesRegex(ValueError,'contradicts scheduler'):
                 scheduler.validate(witness,task,observations=[{'arm':'without_skill','case_id':'gh-014','attempt':1,'custom':{'outcome':'failed'}}])
 

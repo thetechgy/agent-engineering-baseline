@@ -37,6 +37,21 @@ class CampaignContracts(unittest.TestCase):
         for args in [((),('x','y'),1),(('x',),('y','y'),1),(('x',),('a','b'),True)]:
             with self.assertRaises(ValueError):core.schedule(*args)
 
+    @unittest.skipUnless(OWNING, 'Owning Harbor configuration runtime required')
+    def test_shared_probe_builder_preserves_existing_five_argument_adapter_wrappers(self):
+        import evaluation_campaign as campaign
+        import evaluation_codex as adapter
+        task=load(ROOT/'.github/evals/campaigns/boolean-contract.json')
+        original=adapter.agent_config
+        # The native deadline qualifier wraps this exact existing interface.
+        def existing_wrapper(task, mode, control, runtime, present):
+            return original(task,mode,control,runtime,present)
+        with tempfile.TemporaryDirectory() as directory, patch.object(adapter,'agent_config',existing_wrapper):
+            root=Path(directory)
+            config,env=campaign.construct_launch(root,task,'probe',root/'task',True,'fixture',root/'jobs/fixture',{},control='identity')
+            self.assertEqual(config.agent.kwargs['control'],'identity')
+            self.assertEqual(env['AEB_PILOT_PROBE'],'1')
+
     def test_durable_scheduler_keeps_partial_states_and_stops_without_replacement(self):
         def scenario(reason=None, error=None, cost=0, baseline=()):
             rows=[{**r,'state':'unlaunched'} for r in core.schedule(('x',),('left','right'),1)]

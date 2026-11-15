@@ -97,7 +97,8 @@ validation alone does not authenticate a producer.
 The report displays scheduler execution separately from unchanged native collection
 status. An explicitly unlaunched scheduler slot is shown as **unlaunched**; a failed
 launch is **launch attempted; infrastructure failed**. A **measured task failed**
-label requires matching native measured evidence. Native observations, grades and
+label requires matching native measured evidence. Accounting/cleanup scheduling
+stops do not erase measured work; recorded timeout/interruption outcomes stay distinct. Native observations, grades and
 execution/coverage counts are never overwritten or manufactured. Missing files alone
 cannot establish nonexecution, and a contradictory native observation is refused.
 
