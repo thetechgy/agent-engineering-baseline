@@ -48,7 +48,12 @@ class Release090Contracts(unittest.TestCase):
                            'pester-effectiveness-v24' if key == 'pester-effectiveness-v25' else 'pester-cli-pilot-retained-v15')
             if predecessor in registry['profiles']:
                 previous = registry['profiles'][predecessor]
-                self.assertEqual({k:v for k,v in new.items() if k not in ('id', 'runtime_digest')},
+                normalized = copy.deepcopy(new)
+                if 'adapter_sha256' in new.get('campaign', {}):
+                    self.assertEqual(new['campaign']['adapter_sha256'],
+                        evidence.digest_bytes((ROOT / '.github/scripts/evaluation_codex.py').read_bytes()))
+                    normalized['campaign']['adapter_sha256'] = previous['campaign']['adapter_sha256']
+                self.assertEqual({k:v for k,v in normalized.items() if k not in ('id', 'runtime_digest')},
                                  {k:v for k,v in previous.items() if k not in ('id', 'runtime_digest')})
             purpose = key if key.startswith('campaign-') else 'skill_effectiveness' if key.startswith('pester-effectiveness') else 'cli_pilot'
             self.assertEqual(evidence.custom_input_identities(ROOT, new['skill_id'], purpose=purpose)['runtime_digest'], new['runtime_digest'])

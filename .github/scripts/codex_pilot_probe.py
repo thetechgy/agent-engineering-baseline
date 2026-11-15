@@ -39,8 +39,9 @@ def network_probe():
         network.append(row)
     return network
 
-# This child is launched by the actual CLI's tool command and survives its
-# completion. The trusted stop observer releases it after Harbor has left the
+# Task-owned controls launch this from either the CLI tool or the operator
+# preflight (gh keeps broker traces separate). It outlives the launching
+# command. The trusted stop observer releases it after Harbor has left the
 # agent phase and completed separate verification; it has no network listener.
 if sys.argv[1:] == ['--late-network']:
     for _ in range(2400):

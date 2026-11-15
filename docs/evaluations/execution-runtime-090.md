@@ -106,7 +106,11 @@ container retention and a 90-second outer guard), existing explicit missing/unsu
 and actual responder refusal/malformed-response/timeout controls. Injection
 controls remain declared injections; they do not establish arbitrary event support.
 Native oracle controls cover known-good, deliberately failing and unavailable
-grading. #142 continues to qualify offline default judgment/recovery semantics.
+grading. For gh, privilege/network and delayed-child controls originate from
+the operator under the same uid/container boundary, keeping broker traces separate
+from task actions. Interruption and native cancellation separately exercise actual
+CLI tool children. These controls do not establish arbitrary post-exit behavior.
+PR #142 continues to qualify offline default judgment/recovery semantics.
 
 Image contexts and dependency identities remain shared and content addressed;
 normal Docker reuse is retained. New CLI acquisition is bounded and hash checked;
