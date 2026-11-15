@@ -113,3 +113,11 @@ def candidate_versions(profile=None):
         value.update(backend_version=p['dependencies']['aeb-gh-fixture'],
                      backend_source_digest=p['backend_source_digest'], backend_wheel_sha256=p['backend_wheel_sha256'])
     return value
+
+
+def benchmark_profile(identifier):
+    """Explicit offline evidence lookup, independent of execution selection."""
+    from evaluator_090 import PROFILE
+    if identifier != PROFILE['id']:
+        raise ValueError('Unsupported behavioral evidence profile')
+    return PROFILE

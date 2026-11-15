@@ -598,6 +598,9 @@ def condition_identity(record):
                  'judge.enabled': policy['judge']['enabled']}
     if policy['judge']['enabled'] is not False:
         essential.update({'judge.' + key: policy['judge'][key] for key in ('model', 'provider')})
+    if 'benchmark' in record:
+        from benchmark_evidence import comparison_identity
+        essential['behavioral_evidence'] = comparison_identity(record)
     supplementary = {'dataset.owner': record['dataset']['owner']}
     default_fields = set(evidence.reports.POLICY) - {'evaluator_revision', 'grading', 'model', 'provider'}
     supplementary.update({'policy.' + key: fields[key] for key in sorted(default_fields)})

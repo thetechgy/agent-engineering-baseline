@@ -1,0 +1,100 @@
+{
+  "control_tests": {
+    "log_sha256": "accf16d93ed1b7bb2b8320c068530f07f5e666c5d29050adc228d73ee898f2ef",
+    "passed": 7,
+    "run": 7
+  },
+  "historical_archive_sha256": "11b1608bbc6520e8e905df612851ce72aca0951c6d4edee496f36d02b18c8ee7",
+  "history": {
+    "complete": {
+      "eligible": false,
+      "reasons": [
+        "offline_policy_not_enabled_for_production",
+        "credential_free_fixture",
+        "simulated_judgments",
+        "incomplete",
+        "identity_missing"
+      ],
+      "series": "sha256:62ec053e5b824a0f9ec15343544bff4bfc793367aab24bdd0a7bcb3499ebb837"
+    },
+    "interrupted": {
+      "eligible": false,
+      "reasons": [
+        "offline_policy_not_enabled_for_production",
+        "credential_free_fixture",
+        "simulated_judgments",
+        "recovered",
+        "incomplete",
+        "identity_missing"
+      ],
+      "series": "sha256:62ec053e5b824a0f9ec15343544bff4bfc793367aab24bdd0a7bcb3499ebb837"
+    },
+    "unavailable": {
+      "eligible": false,
+      "reasons": [
+        "offline_policy_not_enabled_for_production",
+        "credential_free_fixture",
+        "simulated_judgments",
+        "incomplete",
+        "identity_missing"
+      ],
+      "series": "sha256:62ec053e5b824a0f9ec15343544bff4bfc793367aab24bdd0a7bcb3499ebb837"
+    }
+  },
+  "hosted_validation": "recorded_in_draft_pr",
+  "inference": false,
+  "judges": "simulated",
+  "network_attempts": [],
+  "original_historical_reproduction": {
+    "byte_identical": true,
+    "host": "0.3.0",
+    "input_producer": "0.9.0",
+    "native_renormalization": false,
+    "report_sha256": "d745c7b25dcacc6e1629f0a0747ca0349412be455c2dd07b4ced1968ac0be759"
+  },
+  "profile": "behavioral-090-offline-v1",
+  "qualification": "credential_free_local_fixture",
+  "report_reproduction": [
+    {
+      "byte_identical": true,
+      "html_sha256": "a68113ed9e150f79ce9c2e9aa4602d76f20aa531752b897347a876f83f2aa33e",
+      "report": "new-behavioral"
+    },
+    {
+      "byte_identical": true,
+      "html_sha256": "aca81d5cddbaf0194f5468bc7bb2970f4b3927be480133287c928cc1af0582f2",
+      "report": "retained-static"
+    }
+  ],
+  "source_profiles": {
+    "preserved": 501,
+    "prior_registry_sha256": "bae53793d3e47a1d48e3e3ae4e9c3c4a80930f000ff0a26c816fcf0dc5399003",
+    "source_only_successors": 28
+  },
+  "sources": {
+    ".github/evals/benchmark-090.json": "sha256:0b7ffbbfc34010f20ca375c069e5eab5a90c96acde6ea4dabfc1f09762b6f81f",
+    ".github/scripts/benchmark_evidence.py": "sha256:3d4b29212f93605719211f3d00855e869a4ef5baabe69616f001cd757ccce38d",
+    ".github/scripts/evaluator_090.py": "sha256:1c286aad30692660b6edd303cd6b32994a5ec22d601179fed430caa656123d5b",
+    ".github/scripts/evaluator_profiles.py": "sha256:44aac6e85399a776dc8e3b24d93f3b9baa7b1da65f3ab2d1e61de86b4bdf17b6",
+    ".github/scripts/qualify_benchmark_evidence.py": "sha256:5ba143552bbf78b1a461e96dec1e1224b231c84b0871659581b96f80958bc9e3",
+    ".github/scripts/skill_analysis.py": "sha256:7de08e9d556bc58640bc5192e8646395bd8493af5c6e34f3439f7755a24f0fc9",
+    ".github/scripts/skill_evidence.py": "sha256:2733d5c35725fd2417026e214779ffeff0fcf84bc102acd46bf834041680a125",
+    ".github/scripts/skill_history.py": "sha256:bd59b596e64a695b6ba6fccaa90de97b30c0c37295933fa54a71a50040a9f3a9",
+    ".github/scripts/skill_pages.py": "sha256:ab84dde636ace5e0f26923321bbeff3e9b4c81aa3c3e79ad57c3104fe5e63dce",
+    ".github/scripts/skill_report.py": "sha256:1ecaab4b3e9a73ab84f77cc3eeb9c48cf283c192f421921cd76f866093ada78c",
+    ".github/scripts/skill_reports.py": "sha256:1d38e520871c074c2d4e8a152e5305d0aa1b827de59e47a8fbfddd537cda950c"
+  },
+  "starting_main": "66c3f92a40b0f00bb461286596a2016a6a39108a",
+  "versions": {
+    "backend_source_digest": "sha256:3e79836ee10bdb1d690f50384077cde9ef5eaf09cd4d470076eae459a0937fa8",
+    "backend_version": "1.1.0",
+    "backend_wheel_sha256": "070237e238326d49a63f348d405533d01bdc58c68295aea206095aee80ac5149",
+    "evaluator_revision": "b78d14618a694dec84bc9601468f8f711df5cab3",
+    "harbor": "0.25.0",
+    "lock_sha256": "05dd72bfd0bac5399ac19232ea847929e2b21df4a7ef2d2c65eefc4f72484dda",
+    "patch_sha256": "ca00768c1c2b054573743707473ed98964ed6bf910ad8bfac5accfd683860da4",
+    "python": "3.14.10",
+    "skillevaluator": "0.9.0"
+  },
+  "visual_browser_check": "unavailable_browser_host"
+}

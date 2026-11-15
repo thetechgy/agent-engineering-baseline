@@ -1538,6 +1538,10 @@ def validate_evidence(data, *, public=False, _observed_at=None):
             require(item['reference'] in {ref['id'] for ref in data['references']}, 'Missing caveat reference')
             require(any(scan['scanner'] == 'skillspector' and scan['status'] == 'incomplete'
                         for scan in data['scans']), 'Caveats cannot waive coverage policy')
+    if 'benchmark' in data:
+        import benchmark_evidence
+        benchmark_evidence.validate(data['benchmark'], data)
+        fields += ('benchmark',)
     closed(data, fields)
     require(type(data['schema_version']) is int and data['schema_version'] == 1, 'Evidence version')
     enum(data['kind'], ('behavioral', 'static')); validate_source(data['source']); optional(data['run_id'], token)
@@ -1945,6 +1949,7 @@ class _StaticEvidence(_CapturedRecord):
 def behavioral_claim_identity(data):
     claims = {key: copy.deepcopy(data[key]) for key in
               ('source', 'run_id', 'dataset', 'policy', 'arms', 'observations', 'metrics', 'references')}
+    if 'benchmark' in data: claims['benchmark'] = copy.deepcopy(data['benchmark'])
     if data['schema_version'] == 2: claims['custom'] = copy.deepcopy(data['custom'])
     claims['provenance'] = data['availability']['provenance']
     for obs in claims['observations']:
@@ -2015,6 +2020,7 @@ def project(data, *, static_bundle=None, behavioral_bundle=None):
     # Every object is rebuilt from fixed fields. A native report is never accepted.
     out = {key: copy.deepcopy(data[key]) for key in ('schema_version', 'kind', 'source', 'run_id', 'dataset',
            'policy', 'arms', 'metrics', 'scans', 'findings', 'references', 'availability')}
+    if 'benchmark' in data: out['benchmark'] = copy.deepcopy(data['benchmark'])
     if 'scanner_runtime' in data: out['scanner_runtime'] = copy.deepcopy(data['scanner_runtime'])
     if 'coverage_caveats' in data: out['coverage_caveats'] = copy.deepcopy(data['coverage_caveats'])
     out['observations'] = [{key: copy.deepcopy(obs[key]) for key in
@@ -2161,7 +2167,7 @@ def validate_native_metrics(agent):
     return complete
 
 
-def validate_summary_rollups(payload, cases, ids, maximum, stop_on_pass):
+def validate_summary_rollups(payload, cases, ids, maximum, stop_on_pass, *, versioned=False):
     """Reconcile retained collector rollups without collecting filesystem data."""
     def match(record, key, expected):
         if key in record:
@@ -2183,7 +2189,7 @@ def validate_summary_rollups(payload, cases, ids, maximum, stop_on_pass):
     optional(threshold, number)
     for row in cases.values():
         attempts = row.get('attempts', [])
-        if threshold is not None:
+        if threshold is not None and not versioned:
             for attempt in attempts:
                 if attempt.get('score') is not None and attempt.get('passed') is not None:
                     match(attempt, 'passed', attempt['score'] >= threshold)
@@ -2422,6 +2428,10 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
     has_provenance = provenance_path in scanned_entries
     provenance = read_member(provenance_path) if has_provenance else {}
     require(type(provenance) is dict, 'Native provenance object required')
+    benchmark_meta = provenance.get('benchmark')
+    if benchmark_meta is not None:
+        import benchmark_evidence
+        benchmark_evidence.metadata(benchmark_meta)
     recovery = provenance.get('status') == 'incomplete'
     if recovery:
         require(result['report_status'] == 'incomplete' or result.get('diagnostic_only') is True,
@@ -2443,6 +2453,8 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
     if any(versions.get(key) is None for key in ('skillevaluator', 'evaluator_revision')):
         limitations.add('metadata_missing')
     producer = profiles.runtime(versions, owning=True)
+    if benchmark_meta is not None:
+        require(producer is profiles.NEXT, 'Versioned benchmark requires offline-v3')
     expected_scoring = producer['scoring']
     if result.get('score_policy') is not None:
         require(result['score_policy'] == expected_scoring, 'Contradictory native scoring identity')
@@ -2570,7 +2582,9 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
             for carrier in (result, agent):
                 if key in carrier:
                     require(type(carrier[key]) is int and carrier[key] == sum(values), 'Conflicting aggregate coverage')
-    if all(k in agent for k in ('lift', 'dimensions_with_skill')):
+    if benchmark_meta is not None:
+        pass  # Versioned native aggregates are checked against captured rewards below.
+    elif all(k in agent for k in ('lift', 'dimensions_with_skill')):
         complete_metrics = validate_native_metrics(agent)
         if not complete_metrics: limitations.add('coverage_missing')
         try:
@@ -2606,6 +2620,7 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
             require(value == 'skill-evaluator-default-v2', 'Native metric-set identity mismatch')
             metric_sets.add(value)
     summary_attempts = 0
+    benchmark_rows = []
     for arm in ('with_skill', 'without_skill'):
         arm_dir = run / 'codex' / arm.replace('_', '-')
         native_condition = agent['conditions'][arm]
@@ -2632,13 +2647,19 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
         for key in ('execution_status', 'expected_attempts', 'scored_attempts'):
             require(summary[key] == native_condition[key], 'Conflicting native coverage')
         condition_errors = native_error_count(native_condition)
-        if _custom_admission:
+        if _custom_admission or benchmark_meta is not None:
             validate_custom_error_ledger(summary, native_condition, arm)
         else:
             require(summary_error_count(summary) == condition_errors, 'Conflicting native error count')
         recorded = summary.get('num_trials'); scored = native_condition.get('scored_attempts')
         optional(recorded, count); optional(scored, count)
         native_recorded = recorded
+        if benchmark_meta is not None:
+            failures = summary.get('trial_failures', [])
+            names = {row.get('trial') for row in failures}
+            require(None not in names and len(names) == len(failures), 'Invalid benchmark failure population')
+            scored_names = {a.get('trial') for c in (summary.get('pass_at_k') or {}).get('cases', {}).values() for a in c.get('attempts', [])}
+            recorded = max(recorded + len(names - scored_names), len(trials_by_arm[arm]))
         if _custom_admission:
             # Native 0.3 counts scoreable rewards in num_trials. The registered
             # v2 boundary independently binds unique failed trial identities.
@@ -2679,7 +2700,7 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
                 require(expected is None or len(lookup) < expected, 'Summary attempt limit')
                 require(trial not in lookup, 'Duplicate summary trial')
                 lookup[trial] = (case, attempt)
-        validate_summary_rollups(pass_data, native_cases, ids, maximum, stop_on_pass)
+        validate_summary_rollups(pass_data, native_cases, ids, maximum, stop_on_pass, versioned=benchmark_meta is not None)
         observed = []; missing_rubric_details = False
         if trials_by_arm[arm]:
             for path in trials_by_arm[arm]:
@@ -2715,16 +2736,17 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
                 if producer is profiles.NEXT and reward is not None and reward.get('evaluation_status') == 'failed' and 'trial_id' not in reward:
                     failure_path = path.with_name('failure.json')
                     require(failure_path in scanned_entries, 'Unscored diagnostic lacks native failure identity')
-                    validate_unscored_diagnostic(reward, read_member(failure_path), trial_result, case, arm, producer)
+                    validate_unscored_diagnostic(reward, read_member(failure_path), trial_result, case, arm, producer, versioned=benchmark_meta is not None)
                     diagnostic = reward
                     reward = None
                 if reward is not None:
                     require(reward['trial_id'] == trial and reward['has_skill'] == (arm == 'with_skill'), 'Reward trial/arm mismatch')
                 verifier = (trial_result.get('verifier_result') or {}).get('rewards') or {}
-                if diagnostic is not None:
+                if diagnostic is not None or (benchmark_meta is not None and reward is None
+                        and native_condition.get('execution_status') != 'succeeded'):
                     verifier = {}  # Native transport zero is not a task-quality measurement.
                 overall = verifier.get('overall')
-                if _custom_admission and matched is None and not native_cases and native_condition.get('execution_status') == 'failed':
+                if (_custom_admission or benchmark_meta is not None) and matched is None and not native_cases and native_condition.get('execution_status') == 'failed':
                     # The pinned collector suppresses pass_at_k for failed arms.
                     # Retain actual trial scores; do not invent rubric outcomes.
                     missing_rubric_details |= overall is not None
@@ -2770,6 +2792,8 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
                 if diagnostic is not None and producer is profiles.NEXT:
                     obs['security_evidence'] = copy.deepcopy(diagnostic['details']['security'])
                 observed.append(obs)
+                if benchmark_meta is not None:
+                    benchmark_rows.append((copy.deepcopy(obs), diagnostic or reward, trial_result))
         cardinality = agent.get('num_trials_with' if arm == 'with_skill' else 'num_trials_without')
         if cardinality is not None:
             require(type(cardinality) is int and cardinality == native_recorded, 'Conflicting aggregate trial count')
@@ -2777,7 +2801,7 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
         require(details != 'complete' or not lookup, 'Unmatched summary attempts')
         if orphan_rewards[arm] or missing_rubric_details:
             details = 'partial' if observed else 'unavailable'
-        if not reconcile_native_arm(agent, arm, summary, observed, details, candidate=profiles.is_candidate(profiles.by_version(versions.get('skillevaluator')))):
+        if benchmark_meta is None and not reconcile_native_arm(agent, arm, summary, observed, details, candidate=profiles.is_candidate(profiles.by_version(versions.get('skillevaluator')))):
             limitations.add('coverage_missing')
         if details != 'complete':
             limitations.add('case_details_missing')
@@ -2843,6 +2867,11 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
                 arm['rubric'].update(passed_cases=None, total_cases=None)
             data['availability']['status'] = 'incomplete'
             data['availability']['reasons'] = sorted(set(data['availability']['reasons']) | {'coverage_missing'})
+    if benchmark_meta is not None:
+        import benchmark_evidence
+        from evaluator_090 import validate_native_aggregates
+        aggregates = validate_native_aggregates(agent, benchmark_rows, ids)
+        data['benchmark'] = benchmark_evidence.capture(benchmark_meta, data, benchmark_rows, result['report_status'], recovery, aggregates)
     validate_evidence(data, _observed_at=observed_at)
     guards = (input_guard(directory_identities, directory_states, file_states, budget),)
     return _CapturedRecord(data, guards) if extract else _BehavioralEvidence(data, behavioral_claim_identity(data), input_guards=guards)
@@ -3327,7 +3356,7 @@ CUSTOM_ASSURANCE = {'native_consistency': 'producer_reported_at_admission',
                     'execution_authentication': 'not_established'}
 
 
-def validate_unscored_diagnostic(reward, failure, trial, case_id, arm, producer=None, *, collector_agent=None):
+def validate_unscored_diagnostic(reward, failure, trial, case_id, arm, producer=None, *, collector_agent=None, versioned=False):
     """Bind a collector diagnostic to native failure evidence without grading it.
 
     The pinned collector omits trial_id only on its failed-judge projection.
@@ -3367,7 +3396,12 @@ def validate_unscored_diagnostic(reward, failure, trial, case_id, arm, producer=
             and error.get('occurred_at') == exception.get('occurred_at'),
             'Unscored diagnostic native failure mismatch')
     raw = ((trial.get('verifier_result') or {}).get('rewards') or {})
-    require(raw == {} or raw == {'overall': 0.0}, 'Unscored diagnostic acquired measurements')
+    if versioned:
+        require(current, 'Versioned diagnostic requires offline-v3')
+        from evaluator_090 import diagnostic_observations
+        diagnostic_observations(reward, trial)  # Explicit judge failure can retain deterministic observations.
+    else:
+        require(raw == {} or raw == {'overall': 0.0}, 'Unscored diagnostic acquired measurements')
 
 
 def validate_custom_error_ledger(summary, condition, arm):
@@ -3464,7 +3498,7 @@ def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
     if profile_id is None and campaign_purpose(purpose):
         profile_id = purpose
     if profile_id is None and purpose in ('skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-effectiveness-v23'
+        profile_id = 'pester-effectiveness-v24'
     if profile_id is None and name == 'powershell-pester-6' and purpose in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
         profile_id = 'pester-cli-pilot-retained-v15'
     if profile_id is None and name == 'gh' and purpose == 'oracle_qualification':
@@ -3504,6 +3538,10 @@ def custom_source_manifest(workspace, name, *, purpose=None):
             values.extend(inputs(workspace))
             values.append({'member': 'producer/unscored_security.py',
                            'digest': digest_bytes(read_bytes(workspace / '.github/scripts/unscored_security.py'))})
+            for member in ('scripts/benchmark_evidence.py',
+                           'scripts/evaluator_090.py', 'scripts/evaluator_profiles.py', 'evals/benchmark-090.json'):
+                values.append({'member': 'producer/' + member,
+                               'digest': digest_bytes(read_bytes(workspace / '.github' / member))})
     input_guard(directories, states, members)()
     return values
 

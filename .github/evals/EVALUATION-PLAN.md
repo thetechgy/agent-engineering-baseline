@@ -1,4 +1,38 @@
-# Static-quality 0.9.0 migration checkpoint
+# Behavioral evidence 0.9.0 integration checkpoint
+
+**Implemented for review; offline qualification only.** Starting main is verified
+at `66c3f92a40b0f00bb461286596a2016a6a39108a`, the completed merge of #141.
+Complete static quality now uses pinned 0.9.0 offline-v3; #138's data-only reporting
+and orchestration hosts also remain on 0.9.0. #139 finding retention and #140 strict
+dataset correction are completed merges. The earlier review checkpoints below
+retain their historical tense and receipts.
+
+The focused `behavioral-090-offline-v1` contract connects the already pinned native
+verifier/collector, interrupted recovery, admission, redaction, public JSON,
+consolidated HTML and simulated history refusal. Runtime-specific interpretation
+uses released 0.9 dimension, N/A and required-check verdict helpers. Shared code
+owns admission, comparisons and reporting; task definitions retain correctness and
+custom grading. Legacy 0.3 interpretation and every old profile remain preserved.
+See [contract, evidence and rollback](../../docs/evaluations/behavioral-evidence-090.md).
+
+Fixture judgments are explicitly simulated, unavailable judgments stay unavailable,
+known findings survive and recovered/incomplete/synthetic records remain excluded
+from production history. Final-revision CI, artifact digests and report reproduction
+belong to the focused draft PR. This removes an offline repository integration
+blocker; it establishes neither provider compatibility, judge accuracy nor skill
+improvement. No live or paid evaluation is authorized by this checkpoint.
+
+Production benchmark execution remains 0.3.0 / Harbor 0.13.2 with held CLI/model
+settings. Protected gates, schedules, paid streams, closed allocations, original
+history, frozen 0.8 experiments, replay owners and deferred Pester clarification
+remain unchanged. Private review migration remains separate.
+
+**One current next action:** review the focused behavioral evidence draft PR and
+its final-revision validation artifacts.
+
+## PR #141 static migration, retained as history
+
+## Static-quality 0.9.0 migration checkpoint
 
 **Implemented for review; production changes only upon merge.** Starting main
 was verified at PR #140 merge `18357c54e6d9266c979c915ca11dc8449196d7f9`, with no

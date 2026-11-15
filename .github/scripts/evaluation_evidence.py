@@ -24,7 +24,9 @@ def source_manifest(workspace, name, purpose):
     files = ['.github/scripts/evaluation_campaign_selection.py', '.github/evals/campaigns/selections.json', '.github/scripts/evaluation_campaign.py', '.github/scripts/evaluation_campaign_core.py',
         '.github/scripts/evaluation_runtime.py', '.github/scripts/evaluation_tasks.py',
         '.github/scripts/evaluation_evidence.py', '.github/scripts/evaluation_campaign_protocol.py', '.github/scripts/codex_pilot_dispatch.py', '.github/scripts/skill_evidence.py', '.github/scripts/unscored_security.py', '.github/scripts/skill_analysis.py',
-        '.github/scripts/skill_report.py', '.github/scripts/skill_reports.py', adapter.member,
+        '.github/scripts/skill_report.py', '.github/scripts/skill_reports.py',
+        '.github/scripts/benchmark_evidence.py', '.github/scripts/evaluator_090.py',
+        '.github/scripts/evaluator_profiles.py', '.github/evals/benchmark-090.json', adapter.member,
         adapter.definition['runtime_profile'], '.github/workflows/evaluation-campaign.yml']
     if 'protocol' in adapter.definition:
         files.append(adapter.definition['protocol'])
