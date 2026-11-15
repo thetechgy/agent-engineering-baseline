@@ -397,5 +397,17 @@
   "strict": {
     "podman": 0
   },
-  "total_findings": 90
+  "total_findings": 90,
+  "superseded_ci": {
+    "run": 43678334235,
+    "head": "5d74a5b85140bb55bd8879c809d28a2e64881b0a",
+    "contract_tests": 1085,
+    "passed": 977,
+    "skipped": 107,
+    "failed": 1,
+    "failure": "Stale inline workflow provenance assertion after extraction into the production helper",
+    "failed_job": 132703321227,
+    "failed_log_sha256": "ecd22da51868c1c65f7dfcdfa095dc64825843cfee86ebf34d68e1426eb27d51",
+    "disposition": "cancelled for known follow-up; inconclusive overall; static artifacts retained"
+  }
 }

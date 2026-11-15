@@ -5,7 +5,7 @@ Implemented for review from verified main `18357c54e6d9266c979c915ca11dc8449196d
 upon merge. #138's data-only hosts, #139's offline-v3 unscored finding retention
 and #140's dataset correction are already merged. Their original receipts remain
 intact. Final executable revision, selected CI and authenticated hosted artifact
-links belong to the draft PR description.
+links belong to [PR #141](https://github.com/thetechgy/agent-engineering-baseline/pull/141).
 
 ## Consumer and ownership
 
@@ -120,6 +120,19 @@ rendering intentionally corrects presentation and remains reproducible under bot
 hosts. The original #137 report reproduces as
 `d745c7b25dcacc6e1629f0a0747ca0349412be455c2dd07b4ced1968ac0be759`.
 
+## Superseded hosted validation
+
+Run `43678334235` on `5d74a5b` passed both required platform checks, static quality,
+Pester feasibility, native deadlines and one completed gh lifecycle shard. Contracts
+ran 1,085 tests: 977 passed, 107 skipped and one failed. The failure was the old
+inline-workflow provenance assertion after extraction into the production helper.
+The corrected test follows that exact helper and retains both provenance flag
+checks. No collection, provenance or upload contract is relaxed. The failed log
+SHA-256 is `ecd22da51868c1c65f7dfcdfa095dc64825843cfee86ebf34d68e1426eb27d51`.
+Available static artifacts and successful report reproduction are retained. The
+run was cancelled for the known follow-up and is inconclusive overall. The PR
+records terminal final-revision replacement CI separately.
+
 ## Remaining owners and rollback
 
 Benchmarks, recovery/history admission and live routing stay with 0.3.0 / Harbor
@@ -131,8 +144,8 @@ older scanner identities and superseded review profiles remain historical replay
 pins where they have no current caller. No wholesale tooling retirement or claim
 that all dependencies are current is made.
 
-For production rollback, revert the focused migration commit to restore the
-prior static job and setup/interpreter selections. Preserve all native/public
+For production rollback, revert this PR as a unit (or its commits in reverse
+order) to restore the prior static job and setup/interpreter selections. Preserve all native/public
 artifacts, original producer/policy identities, seals and historical grades.
 Never relabel new 0.9 evidence as 0.3 or rewrite it during rollback.
 

@@ -18,7 +18,7 @@ CI selection and required platform/selected-result gates are unchanged.
 The [migration receipt](../../docs/evaluations/static-quality-090.md) records
 same-input comparison, findings/coverage, native public JSON/HTML reproduction,
 redaction, failure controls and tested rollback. Final-revision CI and artifact
-links are recorded in the draft PR. Confirmed findings and incomplete coverage
+links are recorded in [PR #141](https://github.com/thetechgy/agent-engineering-baseline/pull/141). Confirmed findings and incomplete coverage
 remain evidence; collection success implies neither clean skills nor successful
 agent work, judge accuracy or skill benefit.
 
