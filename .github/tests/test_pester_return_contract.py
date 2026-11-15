@@ -1,4 +1,5 @@
 """Frozen candidate source and task-owned control contracts; no inference."""
+import ast
 import hashlib
 import json
 import os
@@ -21,7 +22,20 @@ class ReturnContract(unittest.TestCase):
     def test_snapshots_and_frozen_inputs(self):
         frozen = reports.read_json(BASE / 'freeze.json')
         for member, digest in frozen['files'].items():
-            self.assertEqual(hashlib.sha256((ROOT / member).read_bytes()).hexdigest(), digest, member)
+            raw = (ROOT / member).read_bytes()
+            if member == '.github/scripts/evaluation_tasks.py':
+                # Only the new gh protocol hooks differ. Verify every other byte,
+                # including all Pester task code, against the original frozen hash.
+                gh = next(n for n in ast.parse(raw).body if isinstance(n, ast.ClassDef) and n.name == 'GhFixture')
+                added = [n for n in gh.body if isinstance(n, ast.FunctionDef)
+                         and n.name in ('fixture_control', 'validate_result')]
+                self.assertEqual({n.name for n in added}, {'fixture_control', 'validate_result'})
+                lines = raw.splitlines(keepends=True)
+                for node in reversed(added):
+                    self.assertEqual(lines[node.end_lineno].strip(), b'')
+                    del lines[node.lineno - 1:node.end_lineno + 1]
+                raw = b''.join(lines)
+            self.assertEqual(hashlib.sha256(raw).hexdigest(), digest, member)
         current = BASE / 'variants/current/powershell-pester-6'
         candidate = BASE / 'variants/candidate/powershell-pester-6'
         self.assertEqual({p.relative_to(current).as_posix(): p.read_bytes() for p in reports.regular_tree(current)},

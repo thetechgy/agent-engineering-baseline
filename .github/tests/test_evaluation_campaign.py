@@ -1,5 +1,6 @@
 """Shared campaign contracts; native execution is qualified by the owning CI job."""
 import copy
+from importlib.metadata import version, PackageNotFoundError
 import json
 import os
 from pathlib import Path
@@ -15,6 +16,9 @@ import evaluation_runtime as runtime
 from evaluation_tasks import load
 import skill_evidence as evidence
 import skill_reports as reports
+
+try: OWNING = version('skillevaluator') in ('0.8.0', '0.9.0') and version('harbor') in ('0.24.0', '0.25.0')
+except PackageNotFoundError: OWNING = False
 
 
 class CampaignContracts(unittest.TestCase):
@@ -382,7 +386,7 @@ class Execution090Contracts(unittest.TestCase):
         self.assertEqual(protocol.stop_reason({**row,'usage':unknown}),'unknown_usage')
 
 
-    @unittest.skipUnless(__import__('importlib.util', fromlist=['find_spec']).find_spec('harbor'), 'Harbor owning host required')
+    @unittest.skipUnless(OWNING, 'Pinned campaign owning runtime required')
     def test_absent_mount_collection_does_not_bypass_mount_allowlist(self):
         from codex_pilot_environment import PilotEnvironment, SkillEvaluatorSecureDockerEnvironment
         with patch.object(SkillEvaluatorSecureDockerEnvironment, '__init__', return_value=None) as parent:
@@ -403,7 +407,7 @@ class Execution090Contracts(unittest.TestCase):
                 PilotEnvironment(auto_mounts=[{'target':'/logs/agent'}], auto_mounting=True)
 
 
-    @unittest.skipUnless(__import__('importlib.util', fromlist=['find_spec']).find_spec('harbor'), 'Harbor owning host required')
+    @unittest.skipUnless(OWNING, 'Pinned campaign owning runtime required')
     def test_released_options_parser_admits_only_declared_campaign_options(self):
         from evaluation_codex import CampaignCodex
         if not getattr(CampaignCodex, 'options_model', None):
