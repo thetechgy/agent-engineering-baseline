@@ -11,7 +11,7 @@ from types import SimpleNamespace
 
 ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/'.github/scripts'))
-try: OWNING=version('harbor')=='0.24.0'
+try: OWNING=version('harbor') in ('0.24.0', '0.25.0')
 except PackageNotFoundError: OWNING=False
 
 

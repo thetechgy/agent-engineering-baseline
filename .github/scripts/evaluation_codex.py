@@ -190,7 +190,22 @@ def exec_trajectory(raw, adapter, *, diagnostics=None):
                     'sha256':'sha256:'+hashlib.sha256(diagnostics.encode()).hexdigest()}} if diagnostics is not None else {})})
 
 
+CampaignCodexOptions = None
+if getattr(PilotCodex, 'options_model', None) is not None:
+    from typing import Literal
+
+    class CampaignCodexOptions(PilotCodex.options_model):
+        """Harbor 0.25 validates adapter kwargs before constructing the agent."""
+        campaign_definition: str | None = None
+        control: str | None = None
+        present: bool = False
+        live: bool = False
+        deadline_fixture: Literal['emitted', 'empty', 'secondary', 'cancelled'] | None = None
+
+
 class CampaignCodex(PilotCodex):
+    if CampaignCodexOptions is not None:
+        options_model = CampaignCodexOptions
     retain_submission = True
 
     def __init__(self, *args, campaign_definition, control, present, live=False, deadline_fixture=None, **kwargs):
@@ -470,11 +485,17 @@ def prepare_task(native, mode, runtime):
         prepare_cli(native, runtime)
 
 
-def agent_config(task, mode, control, runtime, present):
+def agent_config(task, mode, control, runtime, present, *, deadline_fixture=None):
     if mode in ('oracle','replay'):
         return {'name': 'oracle'}
+    if deadline_fixture is not None:
+        require(mode == 'experiment-probe' and runtime['id'] == 'codex-090-diagnostic-v1'
+                and deadline_fixture == 'cancelled', 'Unqualified deadline override')
     return {'import_path': 'evaluation_codex:CampaignCodex', 'model_name': runtime['model'],
-            'kwargs': {'campaign_definition': task.member, 'control': control, 'present': present, **({'live': True} if mode == 'live' else {})}}
+            **({'override_timeout_sec': 90} if deadline_fixture is not None else {}),
+            'kwargs': {'campaign_definition': task.member, 'control': control, 'present': present,
+                       **({'deadline_fixture': deadline_fixture} if deadline_fixture is not None else {}),
+                       **({'live': True} if mode == 'live' else {})}}
 
 
 def submission_path(trial, output):
@@ -595,8 +616,8 @@ def compare_probe_descriptors(reference, staging):
         member = f'task-descriptors/{arm}/{case}.toml'
         raw = read_bytes(staging / member, limit=65536)
         parsed = __import__('tomllib').loads(raw.decode())
-        require(parsed['agent']['allowed_hosts'] == ['localhost.invalid']
-                and parsed['agent']['network_mode'] == 'allowlist', 'Probe must deny provider egress')
+        require(parsed['environment']['allowed_hosts'] == ['localhost.invalid']
+                and parsed['environment']['network_mode'] == 'allowlist', 'Probe must deny provider egress')
         require(raw.count(b'allowed_hosts = ["localhost.invalid"]') == 1, 'Unexpected probe policy format')
         normalized = raw.replace(b'allowed_hosts = ["localhost.invalid"]', b'allowed_hosts = ["api.openai.com"]')
         require(configuration_digest(normalized) == left[arm, case], 'Probe changed more than provider egress')
@@ -626,3 +647,30 @@ def provider_failure_observation(root, scenario, runtime):
     return {'requests': 1, 'model': observed['model'], 'reasoning_effort': observed['reasoning']['effort'],
             'cli_events_sha256': 'sha256:' + hashlib.sha256(raw).hexdigest(),
             'cli_returncode': audit['returncode'], 'cleanup': 'complete'}
+
+
+def cancellation_observation(root, output_name, expected):
+    """Observe the existing native-cancellation fixture under the selected owner."""
+    import skill_reports as reports
+    from skill_evidence import read_bytes
+    retained = root / 'evidence/retained'
+    lifecycle = list(retained.rglob('pilot-lifecycle.json'))
+    copies = list(retained.rglob('interrupted-submission.json'))
+    require(len(lifecycle) == len(copies) == 1, 'Missing cancellation retention evidence')
+    stages = [r['stage'] for r in reports.read_json(lifecycle[0])['stages']]
+    require('workload_stopped' in stages and 'evidence_retained' in stages
+            and stages[-1] == 'disposal_complete', 'Cancellation disposal incomplete')
+    receipt = reports.read_json(copies[0])
+    raw = read_bytes(copies[0].parent / 'interrupted-submission' / output_name, limit=65536)
+    require(raw == expected and receipt['sha256'] == hashlib.sha256(raw).hexdigest()
+            and receipt['complete'] is False and receipt['source'] == 'stopped-container', 'Partial submission identity drift')
+    ledger = reports.read_json(root/'evidence/attempt-ledger.json')
+    row = ledger['entries'][0]
+    require(row['native_exception'] == 'CancelledError' and row['usage']['estimated_usd'] is None
+            and ledger['cleanup_complete'], 'Cancellation primary failure or unknown usage changed')
+    logs = list(retained.rglob('codex.txt'))
+    require(len(logs) == 1 and b'native-deadline-evidence' in read_bytes(logs[0])
+            and b'turn.completed' not in read_bytes(logs[0]), 'Native cancellation events incomplete')
+    return {'primary': 'CancelledError', 'submission_sha256': receipt['sha256'],
+            'submission_complete': False, 'usage': 'unavailable', 'cleanup': 'complete',
+            'fixture': 'existing 45-second native cancellation; 90-second outer guard'}

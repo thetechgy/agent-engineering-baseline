@@ -39,18 +39,22 @@ class Release090Contracts(unittest.TestCase):
     def test_source_successors_preserve_every_historical_registry_entry(self):
         registry = evidence.custom_registry(ROOT)
         old = copy.deepcopy(registry)
-        added = [key for key in registry['profiles'] if '-source-v15-' in key]
-        self.assertEqual(len(added), 27)
-        added.append('pester-effectiveness-v24')
+        added = [key for key in registry['profiles'] if '-source-v16-' in key]
+        self.assertEqual(len(added), 31)  # 27 source successors plus four new execution identities.
+        added.extend(('pester-effectiveness-v25', 'pester-cli-pilot-retained-v16'))
         for key in added:
             new = registry['profiles'][key]
-            previous = registry['profiles'][key.replace('-source-v15-', '-source-v14-') if key.startswith('campaign-') else 'pester-effectiveness-v23']
-            self.assertEqual({k:v for k,v in new.items() if k not in ('id', 'runtime_digest')},
-                             {k:v for k,v in previous.items() if k not in ('id', 'runtime_digest')})
-            self.assertEqual(evidence.custom_input_identities(ROOT, new['skill_id'], purpose=key if key.startswith('campaign-') else 'skill_effectiveness')['runtime_digest'], new['runtime_digest'])
+            predecessor = (key.replace('-source-v16-', '-source-v15-') if key.startswith('campaign-') else
+                           'pester-effectiveness-v24' if key == 'pester-effectiveness-v25' else 'pester-cli-pilot-retained-v15')
+            if predecessor in registry['profiles']:
+                previous = registry['profiles'][predecessor]
+                self.assertEqual({k:v for k,v in new.items() if k not in ('id', 'runtime_digest')},
+                                 {k:v for k,v in previous.items() if k not in ('id', 'runtime_digest')})
+            purpose = key if key.startswith('campaign-') else 'skill_effectiveness' if key.startswith('pester-effectiveness') else 'cli_pilot'
+            self.assertEqual(evidence.custom_input_identities(ROOT, new['skill_id'], purpose=purpose)['runtime_digest'], new['runtime_digest'])
             del old['profiles'][key]
         digest = hashlib.sha256(json.dumps(old, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
-        self.assertEqual(digest, 'bae53793d3e47a1d48e3e3ae4e9c3c4a80930f000ff0a26c816fcf0dc5399003')
+        self.assertEqual(digest, '2cf4bd918d8b329e93c7cecd14cd8ed2e8c14b6aba79b31f2fbd9c5f07ad1c24')  # Complete verified #142 merge registry, 529 profiles.
 
     @unittest.skipUnless(importlib.util.find_spec('aeb_gh_fixture'), 'Requires the candidate owning backend')
     def test_native_gh_entry_point_selects_actual_owning_profile(self):

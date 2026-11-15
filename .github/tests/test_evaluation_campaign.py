@@ -401,3 +401,15 @@ class Execution090Contracts(unittest.TestCase):
                 PilotEnvironment(auto_mounts=[{'target':'/host'}])
             with self.assertRaisesRegex(ValueError, 'automatic host mounts refused'):
                 PilotEnvironment(auto_mounts=[{'target':'/logs/agent'}], auto_mounting=True)
+
+
+    @unittest.skipUnless(__import__('importlib.util', fromlist=['find_spec']).find_spec('harbor'), 'Harbor owning host required')
+    def test_released_options_parser_admits_only_declared_campaign_options(self):
+        from evaluation_codex import CampaignCodex
+        if not getattr(CampaignCodex, 'options_model', None):
+            self.skipTest('Retained Harbor uses constructor kwargs')
+        value = CampaignCodex.parse_options({'campaign_definition': '.github/evals/campaigns/gh-read-090.json',
+            'control': 'good', 'present': True, 'live': False})
+        self.assertTrue(value.present)
+        with self.assertRaisesRegex(ValueError, 'Unknown option'):
+            CampaignCodex.parse_options({'unreviewed_campaign_option': True})

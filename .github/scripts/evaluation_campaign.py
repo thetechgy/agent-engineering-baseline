@@ -202,7 +202,8 @@ def run(root, task, mode, *, reference=None, fixture=None):
             trial = job / trial_name
             core.require(not trial.exists(), 'Duplicate native attempt refused')
             config = TrialConfig.model_validate({'task': {'path':str(native)}, 'trial_name':trial_name, 'trials_dir':str(job),
-                'agent': adapter.agent_config(task, mode, task.cases(mode)[row['case']], ledger['runtime']['resolved'], present),
+                'agent': adapter.agent_config(task, mode, task.cases(mode)[row['case']], ledger['runtime']['resolved'], present,
+                    **({'deadline_fixture': 'cancelled'} if fixture == 'native-cancellation' else {})),
                 'environment':{'import_path':profile['campaign']['environment_import']}, 'timeout_multiplier':1.0})
             path = root / 'launches' / (str(row['position']) + '.json')
             reports.write_json(path, json.loads(config.model_dump_json()))

@@ -84,8 +84,9 @@ files before disposal and removes the container and children. Stopped-container
 retention handles native interruption without restarting the workload. This is not
 protection against a compromised host or container runtime.
 
-The selected preparation runs current/absent controls, a complete pair, native
-interruption, existing explicit missing/unsupported observation and usage controls,
+The selected preparation runs current/absent controls, a complete pair, CLI
+interruption and the existing 45-second native cancellation fixture (with stopped-
+container retention and a 90-second outer guard), existing explicit missing/unsupported observation and usage controls,
 and actual responder refusal/malformed-response/timeout controls. Injection
 controls remain declared injections; they do not establish arbitrary event support.
 Native oracle controls cover known-good, deliberately failing and unavailable
@@ -103,7 +104,9 @@ are never executed.
 One existing read-only `gh-014` case; one current-skill attempt and one absent-skill
 attempt; original prompt/grader/fixture and identical held runtime/model settings;
 clean environments; concurrency 1; no retries, replacements, continuation or skill
-changes. The frozen protocol is `gh-runtime-090-v1-protocol.json`. Outcomes are
+changes. The frozen protocol is `gh-runtime-090-v1-protocol.json`. The original custom gate
+includes skill activation, so an absent-skill gate failure is expected; independent
+`gh_task` and `gh_authorization` observations remain separate from that gate. Outcomes are
 diagnostic and excluded from production benchmark history. A measured task failure
 is a valid compatibility observation. Neither preparation nor a future pair
 establishes skill improvement.
@@ -122,6 +125,8 @@ proposed planning allocation $6. Those figures buy no extra slots and are **not 
 provider billing cap**. Long-context premiums and unknown usage prevent exact
 invoice reconstruction; the existing conservative premium remains in accounting.
 CI hosting/storage costs are separate. Recheck pricing before authorization.
+This proposal expires **2026-11-18 00:00 UTC**, enforced before live credential
+handoff to a child, or earlier if the preparation artifact expires or source drifts.
 
 The native agent deadline is 600 seconds; each shared launch is bounded at 1200
 seconds and existing cleanup grace remains bounded. The workflow limits the future

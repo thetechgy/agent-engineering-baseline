@@ -28,7 +28,7 @@ SCENARIOS = ('complete', 'interruption', 'missing-evidence', 'unsupported-runtim
 def scenarios(task):
     if task.definition['id'] == 'gh-runtime-090-v1':
         return ('complete', 'interruption', 'missing-evidence', 'unsupported-runtime',
-                'threshold', 'unknown-usage', 'provider-refusal', 'malformed-response', 'provider-timeout')
+                'threshold', 'unknown-usage', 'native-cancellation', 'provider-refusal', 'malformed-response', 'provider-timeout')
     return SCENARIOS
 
 
@@ -149,6 +149,10 @@ def runtime_gate(task):
             and not os.environ.get('OPENAI_BASE_URL')
             and not any(k.startswith('AEB_') and k not in ('AEB_CAMPAIGN_APPROVAL', 'AEB_CAMPAIGN_RECEIPT') for k in os.environ),
             'Live runtime requires protected workflow; overrides refused')
+    expires = protocol(task).get('authorization_expires_at')
+    if expires is not None:
+        require(datetime.now(timezone.utc) < datetime.fromisoformat(expires.replace('Z', '+00:00')),
+                'Diagnostic pilot proposal expired; requalification required')
     receipt = reports.read_json(Path(os.environ['AEB_CAMPAIGN_RECEIPT']))
     validate_receipt(receipt, os.environ['AEB_CAMPAIGN_APPROVAL'], task)
     return receipt
@@ -273,7 +277,8 @@ def prepare(root, task, qualification):
     expected={'interruption':'execution_infrastructure_failure', 'missing-evidence':'missing_native_observation',
               'unsupported-runtime':'unsupported_runtime_protocol', 'invalid':'missing_usable_evidence',
               'unsupported-grading':'unsupported_grading', 'threshold':'estimated_usage_threshold','unknown-usage':'unknown_usage', 'provider-refusal':'execution_infrastructure_failure',
-              'malformed-response':'execution_infrastructure_failure', 'provider-timeout':'execution_infrastructure_failure'}
+              'malformed-response':'execution_infrastructure_failure', 'provider-timeout':'execution_infrastructure_failure',
+              'native-cancellation':'execution_cancelled'}
     summaries={}; inputs=[]
     for scenario in scenarios(task):
         result=run(root/'scenarios'/scenario,task,'experiment-probe',reference=retained,fixture=scenario)
@@ -288,6 +293,10 @@ def prepare(root, task, qualification):
         else:
             require(len(launched)==1 and result.get('stop_reason')==expected[scenario], 'Extra launch or wrong stop: '+scenario)
         summaries[scenario]={'state':result['state'],'launched':len(launched),'stop_reason':result.get('stop_reason')}
+        if scenario == 'native-cancellation':
+            from evaluation_codex import cancellation_observation
+            summaries[scenario]['cancellation'] = cancellation_observation(root/'scenarios'/scenario,
+                task.output, task.payload(task.fixture_control(scenario, launched[0])))
         if scenario in ('provider-refusal', 'malformed-response', 'provider-timeout'):
             from evaluation_codex import provider_failure_observation
             summaries[scenario]['provider'] = provider_failure_observation(root/'scenarios'/scenario, scenario,

@@ -17,8 +17,8 @@ Local matched APM/native staging and focused contracts are preparation evidence.
 Final-revision hosted preparation, fresh-runner consumption and normal selected
 CI determine readiness. [Draft PR #143](https://github.com/thetechgy/agent-engineering-baseline/pull/143)
 retains their terminal results, exact revision, artifacts and proposed command.
-A pending, failed, cancelled or expired receipt does not qualify execution. Live authentication/routing, real provider
-usage, standard model-judge compatibility/accuracy and skill improvement remain
+A pending, failed, cancelled or expired receipt does not qualify execution.
+Live authentication/routing, real provider usage, standard model-judge compatibility/accuracy and skill improvement remain
 unproven. No allocation is claimed or reopened.
 
 Production Benchmark remains 0.3.0 / Harbor 0.13.2. The 0.9 offline fixture,

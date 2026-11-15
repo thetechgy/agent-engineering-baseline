@@ -58,5 +58,6 @@
     "model_judge_calls": 0,
     "judgments": "deterministic; no model judgments",
     "production_history": false
-  }
+  },
+  "authorization_expires_at": "2026-11-18T00:00:00Z"
 }
