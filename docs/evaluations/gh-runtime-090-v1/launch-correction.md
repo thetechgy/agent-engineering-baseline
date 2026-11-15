@@ -121,6 +121,14 @@ meaning. The new scheduler extension is required only by the new registered sour
 profiles; all 562 prior profiles remain unchanged. Thirty-three source successors
 bind the changed shared code, retaining fixtures, grading and runtime settings.
 
+The [review reproduction](unknown-grade-failing-before.json) also executes the actual
+generated gh grader with an empty trace. It emits `unknown` and the scheduler stops
+with `missing_usable_evidence`; this initially failed scheduler admission with
+`Invalid enum`. Scheduler evidence now reuses the existing admitted custom outcome
+vocabulary, retaining every nonmeasured grade as unscored. Its regression follows
+the generated grade through collection, public admission and reproduced HTML, with
+no invented observations or scores. The original stopped report remains unchanged.
+
 ## Validation, limits and rollback
 
 Local related contracts, the actual live-construction regression and original report

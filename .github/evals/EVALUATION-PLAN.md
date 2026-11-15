@@ -20,7 +20,9 @@ model credentials, allocation claim, inference or model judge are used.
 New scheduler-backed reporting distinguishes unlaunched slots, infrastructure
 launch failures and measured task failures while retaining native grades, counts
 and collection status. The focused stopped-before-launch report regression retains
-zero observations and reproduces its output. The original published stopped report
+zero observations and reproduces its output. Valid `unknown` grader outcomes now remain
+unscored and preserve the `missing_usable_evidence` stop through public reporting;
+a regression executes the actual generated gh grader before collection. The original published stopped report
 still reproduces unchanged, SHA-256
 `5acc463c73bf87fc50b741c6d7a94528b4d63bbc19f1caddf6feba8cceebc04f`.
 

@@ -324,5 +324,54 @@ class LaunchConstructionContracts(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'contradicts scheduler'):
                 scheduler.validate(witness,task,observations=[{'arm':'without_skill','case_id':'gh-014','attempt':1,'custom':{'outcome':'failed'}}])
 
+    @unittest.skipUnless(__import__('importlib.util', fromlist=['find_spec']).find_spec('aeb_gh_fixture'), 'Owning backend required')
+    def test_unknown_gh_grade_retains_unscored_report_and_stop(self):
+        from importlib.metadata import version
+        if version('skillevaluator') != '0.9.0' or not os.environ.get('APM_EXECUTABLE'):
+            self.skipTest('Pinned 0.9 owner and APM required')
+        import subprocess
+        import campaign_scheduler_evidence as scheduler
+        from evaluation_campaign_selection import selected_task
+        task=selected_task('gh-runtime-090-v1')
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);bundle,tasks,captured,_=campaign.stage(root,task,'experiment-probe')
+            native=tasks['current']['gh-014']
+            trial=root/'jobs/gh-codex-with/unknown-grader-control'
+            (trial/'agent').mkdir(parents=True);(trial/'verifier').mkdir()
+            trajectory=trial/'agent/trajectory.json';reports.write_json(trajectory,{'steps':[]})
+            # Execute the actual generated deterministic grader with no trace or
+            # provider credentials; no agent or model is run by this fixture.
+            env={'PATH':os.environ['PATH'],'HARBOR_TESTS_DIR':str(native/'tests'),
+                 'HARBOR_ENTRY_JSON':str(native/'tests/entry.json'),'HARBOR_ATIF_PATH':str(trajectory),
+                 'HARBOR_WORKSPACE':str(root),'HARBOR_REWARD_JSON':str(trial/'verifier/reward.json'),
+                 'HARBOR_REWARD_TXT':str(trial/'verifier/reward.txt')}
+            process=subprocess.run([sys.executable,'-I','-B',str(native/'tests/grader.py')],env=env,capture_output=True,text=True,timeout=30)
+            self.assertEqual(process.returncode,0,process.stderr)
+            reward=reports.read_json(trial/'verifier/skill_evaluator_reward.json')
+            self.assertEqual(reward['details']['outcome']['classification'],'unknown')
+            self.assertEqual(reward['custom_metrics'],{})
+            rows=[{**r,'state':'unlaunched'} for r in core.schedule(('gh-014',),('current','absent'),1)]
+            rows[0].update(state='failed',returncode=0,grading_present=True,native_exception=None,
+                task_checksum=next(t['task_checksum'] for t in captured if t['arm']=='with_skill'),
+                outcome=reward['details']['outcome'],cleanup=True)
+            self.assertEqual(protocol.stop_reason(rows[0]),'missing_usable_evidence')
+            ledger={'entries':rows,'state':'stopped','stop_reason':'missing_usable_evidence',
+                'mode':'experiment-probe','inference':False,'authorization':None,'revision':protocol.revision()}
+            reports.write_json(root/'evidence/attempt-ledger.json',ledger)
+            public=campaign.collect(root,task,'experiment-probe',bundle,captured,rows,fixture='missing-evidence')
+            record=reports.read_json(next(public.rglob('public-report.json')))
+            witness=record['custom']['scheduler']['witness']
+            self.assertEqual(witness['stop_reason'],'missing_usable_evidence')
+            self.assertEqual(witness['entries'][0]['classification'],'unknown')
+            self.assertEqual(scheduler.state(witness['entries'][0]),'launched_unscored')
+            self.assertEqual(scheduler.arm_label(witness,'without_skill'),'unlaunched')
+            self.assertFalse(record['observations'])
+            self.assertTrue(all(a['coverage']['scored_attempts']==0 for a in record['arms']))
+            html=root/'evidence/consolidated/report.html'
+            self.assertIn('partially launched / unscored',html.read_text())
+            self.assertEqual(html.read_bytes(),(root/'evidence/reproduced/report.html').read_bytes())
+            wrong=copy.deepcopy(witness);wrong['entries'][0]['classification']='not-a-grader-outcome'
+            with self.assertRaises(ValueError):scheduler.validate(wrong,task,observations=[])
+
 
 if __name__ == "__main__": unittest.main()

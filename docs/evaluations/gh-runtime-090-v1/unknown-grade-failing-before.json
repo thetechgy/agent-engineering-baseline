@@ -1,0 +1,11 @@
+{
+  "revision": "f5a49d8957c4db15c0dcf0ea03ff4c0afd18f6de",
+  "generated_grader_outcome": {
+    "classification": "unknown",
+    "code": "unknown"
+  },
+  "stop_reason": "missing_usable_evidence",
+  "scheduler_failure": "Invalid enum",
+  "inference": false,
+  "allocation_claimed": false
+}

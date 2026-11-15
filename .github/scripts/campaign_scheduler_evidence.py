@@ -24,7 +24,7 @@ def state(row):
     # Accounting/cleanup scheduling stops cannot erase independently measured work.
     if row['grading_present'] is True and row['classification'] in ('passed', 'failed'):
         return 'measured_task_' + row['classification']
-    if row['grading_present'] is True and row['classification'] == 'unsupported': return 'launched_unscored'
+    if row['grading_present'] is True and row['classification'] is not None: return 'launched_unscored'
     if row['state'] == 'failed': return 'launch_infrastructure_failed'
     return 'launched_unscored'
 
@@ -104,7 +104,7 @@ def validate(value, task, *, staged=None, observations=None):
         e.enum(row['state'], ('unlaunched', 'launching', 'completed', 'failed', 'interrupted'))
         require(row['returncode'] is None or type(row['returncode']) is int, 'Invalid launch return code')
         e.optional(row['grading_present'], e.boolean)
-        e.optional(row['classification'], lambda x:e.enum(x, ('passed', 'failed', 'unsupported', 'timeout', 'infrastructure_error')))
+        e.optional(row['classification'], lambda x:e.enum(x, e.CUSTOM_OUTCOMES))
         e.optional(row['execution_outcome'], lambda x:e.enum(x, ('timeout', 'interrupted')))
         require(row['execution_outcome'] == e.CUSTOM_NATIVE_EXCEPTIONS.get(row['native_exception']), 'Scheduler termination contradiction')
         e.optional(row['native_exception'], e.token); e.optional(row['config_digest'], e.sha)
