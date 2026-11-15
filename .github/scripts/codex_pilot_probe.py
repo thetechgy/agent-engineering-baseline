@@ -32,7 +32,7 @@ def network_probe():
         p = subprocess.run(['curl', '--noproxy', '*', '--silent', '--show-error', '--max-time', '15',
                             '--output', '/dev/null', '--write-out', '%{http_code}', url], capture_output=True, text=True)
         row = {'url': url, 'returncode': p.returncode, 'http_code': p.stdout, 'error': p.stderr[:512]}
-        if 'api.openai.com' in url:
+        if 'api.openai.com' in url and os.environ.get('AEB_PILOT_DENY_PROVIDER') != '1':
             assert p.returncode == 0 and p.stdout in ('401', '403'), row
         else:
             assert p.returncode in (35, 52, 56, 97) and p.stdout == '000', row

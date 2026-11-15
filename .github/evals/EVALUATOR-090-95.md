@@ -1,9 +1,11 @@
 # SkillEvaluator 0.9.0 consumer ownership, issue #95
 
-Current main is verified at #141 merge
-`66c3f92a40b0f00bb461286596a2016a6a39108a`. Complete static quality and data-only
-reporting/orchestration already use pinned 0.9.0. This focused change qualifies a
-versioned offline behavioral evidence contract; production execution remains held.
+Current main is verified at #142 merge
+`15caaedb82edf5d9e0253394ed99e3135cd7be93`. Complete static quality and data-only
+reporting/orchestration already use pinned 0.9.0. The offline behavioral evidence contract is merged. The explicit gh-runtime-090-v1
+execution preparation is separate and awaits final hosted receipts; production
+execution and live provider compatibility remain held. See the
+[execution preparation](../../docs/evaluations/execution-runtime-090.md).
 See [behavioral evidence and rollback](../../docs/evaluations/behavioral-evidence-090.md)
 and the preserved [static receipt](../../docs/evaluations/static-quality-090.md).
 

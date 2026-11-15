@@ -42,16 +42,18 @@ def grader_bytes(workspace=ROOT):
     return source.encode()
 
 
-def configuration(base_url=None):
+def configuration(base_url=None, *, runtime=None):
     """The endpoint is the only transport difference in credential-free probes."""
+    selected = PROFILE if runtime is None else runtime
     return {
-        'model': PROFILE['model'], 'model_provider': 'pilot',
-        'model_reasoning_effort': PROFILE['reasoning_effort'],
+        'model': selected['model'], 'model_provider': 'pilot',
+        'model_reasoning_effort': selected['reasoning_effort'],
         'approval_policy': 'never', 'sandbox_mode': 'danger-full-access',
         'web_search': 'disabled', 'check_for_update_on_startup': False,
-        'features': {'multi_agent': False, 'code_mode': True, 'code_mode_host': True},
+        'features': ({'multi_agent': False, 'unified_exec': True} if selected['cli'] == '0.155.1'
+                     else {'multi_agent': False, 'code_mode': True, 'code_mode_host': True}),
         'model_providers': {'pilot': {
-            'name': 'OpenAI pilot', 'base_url': base_url or PROFILE['base_url'],
+            'name': 'OpenAI pilot', 'base_url': base_url or selected['base_url'],
             'env_key': 'OPENAI_API_KEY', 'wire_api': 'responses',
             'request_max_retries': 0, 'stream_max_retries': 0,
             'stream_idle_timeout_ms': 60000, 'supports_websockets': False,

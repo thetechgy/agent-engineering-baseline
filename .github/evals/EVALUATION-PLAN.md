@@ -1,3 +1,36 @@
+# Behavioral runtime 0.9.0 execution preparation checkpoint
+
+**Preparation in progress; no paid pilot authorized.** Current main was verified
+at `15caaedb82edf5d9e0253394ed99e3135cd7be93`, the completed merge of #142.
+Static quality and data-only reporting/orchestration already use 0.9.0. #142's
+versioned behavioral collection/recovery/interpretation/reporting and history
+refusal are merged offline qualification; its simulated judgments do not establish
+live compatibility.
+
+The explicit `gh-runtime-090-v1` selection prepares pinned 0.9.0 / Harbor 0.25.0
+through the existing shared campaign. It preserves production's Codex 0.155.1,
+gpt-5.6-sol and high reasoning. The prospective diagnostic pair uses existing
+read-only gh-014 and custom-only deterministic grading: two agent attempts, two
+verifier runs, zero model-judge calls. See the [execution contract and proposal](../../docs/evaluations/execution-runtime-090.md).
+
+Local matched APM/native staging and focused contracts are preparation evidence.
+Final-revision hosted preparation, fresh-runner consumption and normal selected
+CI must pass before this can be called pilot-ready. Exact receipts, revision and
+proposal belong to the focused draft PR. Live authentication/routing, real provider
+usage, standard model-judge compatibility/accuracy and skill improvement remain
+unproven. No allocation is claimed or reopened.
+
+Production Benchmark remains 0.3.0 / Harbor 0.13.2. The 0.9 offline fixture,
+historical profiles/grades and frozen 0.8 experiments retain their identities.
+Pester clarification and skill adoption remain deferred; no history append,
+protected gate approval, Pages publication, paid dispatch or recurring paid work
+is authorized.
+
+**One current next action:** complete and review exact-revision credential-free
+hosted preparation and fresh-runner receipts before a pilot decision.
+
+## PR #142 offline integration, retained as history
+
 # Behavioral evidence 0.9.0 integration checkpoint
 
 **Implemented for review; offline qualification only.** Starting main is verified

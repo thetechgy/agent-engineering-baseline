@@ -457,7 +457,8 @@ def prepare_task(native, mode, runtime):
     config = native / 'task.toml'
     text = config.read_text().replace('timeout_sec = 300.0', f'timeout_sec = {runtime["agent_seconds"]}.0').replace('memory_mb = 4096', f'memory_mb = {runtime["memory_mb"]}')
     if mode in ('probe', 'experiment-probe', 'live'):
-        text = text.replace('network_mode = "public"', 'network_mode = "allowlist"\nallowed_hosts = ["api.openai.com"]')
+        host = 'localhost.invalid' if runtime['id'] == 'codex-090-diagnostic-v1' and mode != 'live' else 'api.openai.com'
+        text = text.replace('network_mode = "public"', 'network_mode = "allowlist"\nallowed_hosts = ["' + host + '"]')
     config.write_text(text)
     if mode in ('probe', 'experiment-probe', 'live'):
         from codex_pilot_runtime import prepare_cli
@@ -466,7 +467,7 @@ def prepare_task(native, mode, runtime):
         # fixture image has no curl; the Pester image already satisfies this pin.
         with (native / 'environment/Dockerfile').open('a') as stream:
             stream.write('RUN command -v curl >/dev/null || (apt-get update --error-on=any -o Acquire::Retries=3 -o Acquire::https::Timeout=30 && apt-get install -y --no-install-recommends curl=8.14.1-2+deb13u7 && rm -rf /var/lib/apt/lists/*)\n')
-        prepare_cli(native)
+        prepare_cli(native, runtime)
 
 
 def agent_config(task, mode, control, runtime, present):
@@ -481,14 +482,18 @@ def submission_path(trial, output):
     return source_host_path(trial / 'artifacts', '/logs/artifacts') / 'submitted' / output
 
 
-def native_observation(trial, native, present, row, rows, *, output, live=False):
+def native_observation(trial, native, present, row, rows, *, output, live=False, runtime=None):
     import skill_reports as reports
     audits = list(trial.rglob('pilot-runtime.json'))
     require(len(audits) == 1, 'Missing runtime observation')
     audit = reports.read_json(audits[0]); row['runtime_observation'] = audit
     from codex_pilot_contract import configuration
-    require(audit['cleanup'] == 'complete' and audit['boundary_before']['policy_sha256'] == audit['boundary_after']['policy_sha256']
-        and audit['effective_config'] == configuration(None if live else 'http://127.0.0.1:8765/v1')
+    from codex_pilot_contract import PROFILE
+    selected = PROFILE if runtime is None else runtime
+    require(audit['adapter'] == selected['id'] and audit['cli'] == selected['cli']
+        and audit['model'] == selected['model'] and audit['reasoning_effort'] == selected['reasoning_effort']
+        and audit['cleanup'] == 'complete' and audit['boundary_before']['policy_sha256'] == audit['boundary_after']['policy_sha256']
+        and audit['effective_config'] == configuration(None if live else 'http://127.0.0.1:8765/v1', runtime=selected)
         and audit['prompt_sha256'] == hashlib.sha256((native / 'instruction.md').read_bytes()).hexdigest()
         and audit['skill_deployed'] == present, 'Runtime identity or cleanup drift')
     finals = list(trial.rglob('pilot-final-policy.json'))
@@ -499,7 +504,7 @@ def native_observation(trial, native, present, row, rows, *, output, live=False)
         require(len(probes) == 1, 'Missing non-forwarding request observation')
         probe = reports.read_json(probes[0])
         from codex_pilot_contract import PROFILE
-        require(probe.get('model') == PROFILE['model'] and probe.get('reasoning', {}).get('effort') == PROFILE['reasoning_effort']
+        require(probe.get('model') == selected['model'] and probe.get('reasoning', {}).get('effort') == selected['reasoning_effort']
                 and probe.get('requests') == 2, 'Observed CLI model/request drift')
     from skill_evidence import read_bytes
     submitted = read_bytes(submission_path(trial, output), limit=65536)
@@ -522,7 +527,7 @@ def manifest(directory):
             for p in reports.regular_tree(directory)}
 
 
-def usage(trial, mode):
+def usage(trial, mode, runtime=None):
     import skill_reports as reports
     from codex_pilot_runtime import usage_record
     if mode in ('oracle','replay'):
@@ -530,7 +535,7 @@ def usage(trial, mode):
                 'n_input_tokens': None, 'n_cache_tokens': None, 'n_output_tokens': None}
     if not (trial / 'result.json').exists():
         return {'estimated_usd': None, 'billing': 'missing native usage'}
-    return usage_record(reports.read_json(trial / 'result.json'), probe=mode != 'live')
+    return usage_record(reports.read_json(trial / 'result.json'), probe=mode != 'live', runtime=runtime)
 
 
 def validate_members(members, mode):
@@ -574,7 +579,26 @@ def skill_access(trial, present, native):
 
 def fixture_environment(task, fixture, row):
     control = task.fixture_control(fixture, row)
-    result = {'AEB_CAMPAIGN_CONTROL':control, 'AEB_PILOT_SCENARIO':'interruption' if fixture == 'interruption' else 'success'}
+    result = {'AEB_CAMPAIGN_CONTROL':control, 'AEB_PILOT_SCENARIO':fixture if fixture in ('interruption', 'provider-refusal', 'malformed-response', 'provider-timeout') else 'success'}
     if fixture in ('missing-evidence', 'unsupported-runtime'):
         result['AEB_CAMPAIGN_OBSERVATION_FIXTURE'] = fixture
     return result
+
+
+def compare_probe_descriptors(reference, staging):
+    """Verify both full descriptors, then allow only the closed probe egress change."""
+    from codex_pilot_descriptors import verified_configurations, configuration_digest, ALGORITHM
+    from skill_evidence import read_bytes
+    left, right = verified_configurations(reference), verified_configurations(staging)
+    require(left.keys() == right.keys(), 'Probe descriptor population drift')
+    for arm, case in left:
+        member = f'task-descriptors/{arm}/{case}.toml'
+        raw = read_bytes(staging / member, limit=65536)
+        parsed = __import__('tomllib').loads(raw.decode())
+        require(parsed['agent']['allowed_hosts'] == ['localhost.invalid']
+                and parsed['agent']['network_mode'] == 'allowlist', 'Probe must deny provider egress')
+        require(raw.count(b'allowed_hosts = ["localhost.invalid"]') == 1, 'Unexpected probe policy format')
+        normalized = raw.replace(b'allowed_hosts = ["localhost.invalid"]', b'allowed_hosts = ["api.openai.com"]')
+        require(configuration_digest(normalized) == left[arm, case], 'Probe changed more than provider egress')
+    return {'algorithm': ALGORITHM, 'descriptors': len(left),
+            'transport_difference': 'provider egress denied by localhost.invalid allowlist; all other configuration equal'}

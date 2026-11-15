@@ -1,0 +1,11 @@
+{
+  "id": "codex-090-diagnostic-v1",
+  "adapter": "codex",
+  "frozen_profile": ".github/evals/codex-execution-090.json",
+  "frozen_profile_sha256": "044a8d6c16870d40f193f1879b826d9eb6139c8f1c38b57d7e16f8acee72011d",
+  "capabilities": [
+    "non-forwarding-cli-probe",
+    "exact-authorized-live"
+  ],
+  "inference_enabled": false
+}

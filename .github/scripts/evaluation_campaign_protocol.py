@@ -25,6 +25,13 @@ SCENARIOS = ('complete', 'interruption', 'missing-evidence', 'unsupported-runtim
              'invalid', 'unsupported-grading', 'threshold', 'unknown-usage')
 
 
+def scenarios(task):
+    if task.definition['id'] == 'gh-runtime-090-v1':
+        return ('complete', 'interruption', 'missing-evidence', 'unsupported-runtime',
+                'threshold', 'unknown-usage', 'provider-refusal', 'malformed-response', 'provider-timeout')
+    return SCENARIOS
+
+
 def revision():
     return subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True,
         env={k:v for k,v in os.environ.items() if not re.search('TOKEN|SECRET|API_KEY|PASSWORD',k)}).strip()
@@ -56,7 +63,7 @@ def frozen(task):
     from evaluation_campaign import purpose
     return {'revision': revision(), 'protocol': protocol(task), 'protocol_digest': digest(ROOT / task.definition['protocol']),
             'definition': task.definition, 'runtime': read_profile(ROOT / task.definition['runtime_profile']),
-            'evaluator': profiles.CANDIDATE, 'authorized_live_attempts': 0,
+            'evaluator': __import__('evaluation_runtime').evaluator(read_profile(ROOT / task.definition['runtime_profile'])), 'authorized_live_attempts': 0,
             'schedule': schedule(tuple(task.cases('live')), tuple(v['id'] for v in task.definition['variants']), task.definition['trials']),
             'source_identities': {mode: evidence.custom_input_identities(ROOT, task.definition['skill'], purpose=purpose(task, mode))
                                   for mode in ('live', 'experiment-probe')}}
@@ -65,7 +72,8 @@ def frozen(task):
 def check(reference, staging, task, *, qualified=True):
     """Exact fresh staging comparison, before any credential handoff."""
     from codex_pilot_descriptors import compare_descriptors
-    profiles.runtime(profiles.candidate_versions(), owning=True)
+    profiles.runtime(profiles.candidate_versions(__import__('evaluation_runtime').evaluator(
+        read_profile(ROOT / task.definition['runtime_profile']))), owning=True)
     expected = frozen(task)
     proposal = reports.read_json(reference / 'frozen-proposal.json')
     require(proposal == expected, 'Preparation/source/protocol/runtime drift')
@@ -76,9 +84,9 @@ def check(reference, staging, task, *, qualified=True):
         proof = reports.read_json(reference / 'scheduler-qualification.json')
         require(proof.get('complete') is True and proof.get('revision') == revision()
                 and proof.get('protocol_digest') == expected['protocol_digest'] and proof.get('inference') is False
-                and set(proof.get('scenarios',{})) == set(SCENARIOS), 'Unqualified scheduler')
+                and set(proof.get('scenarios',{})) == set(scenarios(task)), 'Unqualified scheduler')
         from skill_report import generate
-        inputs = [reference.parent / 'scenarios' / name / 'evidence/public' for name in SCENARIOS]
+        inputs = [reference.parent / 'scenarios' / name / 'evidence/public' for name in scenarios(task)]
         generate(inputs, reference / 'analysis/analysis.json', staging / 'report-reproduction')
         require(digest(staging / 'report-reproduction/report.html') == digest(reference / 'consolidated/report.html')
                 == digest(reference / 'reproduced/report.html'), 'Consumed public-only report reproduction failed')
@@ -87,7 +95,11 @@ def check(reference, staging, task, *, qualified=True):
         return {(r['arm'],r['case_id']):{k:v for k,v in r['members'].items() if k != 'task.toml'}
                 for r in reports.read_json(directory / 'staging.json')}
     require(members(reference) == members(staging), 'Complete staged-member drift')
-    result = compare_descriptors(reference, staging)
+    if not qualified and read_profile(ROOT / task.definition['runtime_profile'])['profile']['id'] == 'codex-090-diagnostic-v1':
+        from evaluation_codex import compare_probe_descriptors
+        result = compare_probe_descriptors(reference, staging)
+    else:
+        result = compare_descriptors(reference, staging)
     reports.write_json(staging / 'preparation-check.json', dict(result, complete=True, revision=revision(), inference=False))
     return result
 
@@ -239,7 +251,7 @@ def admit(archive, downloaded, artifact, producer, task):
     require(proof.get('complete') is True and proof.get('inference') is False
             and proof.get('revision') == revision()
             and proof.get('protocol_digest') == digest(ROOT/task.definition['protocol'])
-            and set(proof.get('scenarios',{})) == set(SCENARIOS), 'Incomplete scheduler preparation')
+            and set(proof.get('scenarios',{})) == set(scenarios(task)), 'Incomplete scheduler preparation')
     if internal != 'preparation/evidence':
         require(not (downloaded/'preparation').exists(), 'Conflicting canonical preparation')
         original.parent.rename(downloaded/'preparation')
@@ -253,16 +265,17 @@ def prepare(root, task, qualification):
     require(qualification is not None, 'Native control qualification required')
     ready=reports.read_json(qualification/'qualification.json')
     require(ready.get('complete') is True and ready.get('inference') is False and ready.get('revision')==revision()
-            and ready.get('records')==4, 'Both native task families must qualify at this revision')
+            and ready.get('records')==2 * len(registration(task)['controls']), 'Registered native controls must qualify at this revision')
     root.mkdir(parents=True,exist_ok=False); retained=root/'evidence'; retained.mkdir()
     reports.write_json(retained/'frozen-proposal.json',frozen(task))
     stage(root, task, 'live') # Preparation only: no inference path is invoked.
     reports.write_json(retained/'control-qualification.json',ready)
     expected={'interruption':'execution_infrastructure_failure', 'missing-evidence':'missing_native_observation',
               'unsupported-runtime':'unsupported_runtime_protocol', 'invalid':'missing_usable_evidence',
-              'unsupported-grading':'unsupported_grading', 'threshold':'estimated_usage_threshold','unknown-usage':'unknown_usage'}
+              'unsupported-grading':'unsupported_grading', 'threshold':'estimated_usage_threshold','unknown-usage':'unknown_usage', 'provider-refusal':'execution_infrastructure_failure',
+              'malformed-response':'execution_infrastructure_failure', 'provider-timeout':'execution_infrastructure_failure'}
     summaries={}; inputs=[]
-    for scenario in SCENARIOS:
+    for scenario in scenarios(task):
         result=run(root/'scenarios'/scenario,task,'experiment-probe',reference=retained,fixture=scenario)
         launched=[r for r in result['entries'] if r['state']!='unlaunched']
         require(result['cleanup_complete'] and 'report_failure' not in result, 'Scenario cleanup/report incomplete: '+scenario)
@@ -270,7 +283,7 @@ def prepare(root, task, qualification):
             require(result['state']=='completed' and len(launched)==protocol(task)['attempt_slots'], 'Wrong experiment population')
             for row in launched:
                 task.check(task.fixture_control(scenario,row),
-                           next(v['present'] for v in task.definition['variants'] if v['id'] == row['variant']), row['outcome'], {})
+                           next(v['present'] for v in task.definition['variants'] if v['id'] == row['variant']), row['outcome'], row.get('custom_metrics', {}))
             require(len({r['agent_id'] for r in launched})==len(launched) and all('submission' in r for r in launched), 'Missing submissions or reused environment')
         else:
             require(len(launched)==1 and result.get('stop_reason')==expected[scenario], 'Extra launch or wrong stop: '+scenario)

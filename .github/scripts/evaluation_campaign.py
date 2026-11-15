@@ -23,7 +23,7 @@ import skill_reports as reports
 
 def purpose(task, mode):
     identity = {'boolean-contract-v1':'boolean-contract-v4', 'gh-read-v1':'gh-read-v4', 'boolean-effectiveness-v1':'boolean-effectiveness-v3', 'boolean-retained-v1':'boolean-retained-v2'}.get(task.definition['id'], task.definition['id'])
-    source_version = '-lifecycle-v1-source-v15-'
+    source_version = '-lifecycle-v1-source-v16-'
     return 'campaign-' + identity + source_version + ('probe' if mode == 'experiment-probe' else mode)
 
 
@@ -86,8 +86,8 @@ def collection_parameters(task, mode):
 def collection_run_id(task, mode, fixture=None):
     identity = purpose(task, mode)
     if mode == 'experiment-probe':
-        from evaluation_campaign_protocol import SCENARIOS
-        core.require(fixture in SCENARIOS, 'Unknown rehearsal report identity')
+        from evaluation_campaign_protocol import scenarios
+        core.require(fixture in scenarios(task), 'Unknown rehearsal report identity')
         identity += '-' + fixture
     return identity
 
@@ -131,7 +131,8 @@ def run(root, task, mode, *, reference=None, fixture=None):
     # Hold the future key only in this parent; staging, git, Docker observations,
     # accounting and report collection never inherit it.
     live_key = os.environ.pop('OPENAI_API_KEY', None) if mode == 'live' else None
-    profiles.runtime(profiles.candidate_versions(), owning=True)
+    selected = read_profile(ROOT / task.definition['runtime_profile'])
+    profiles.runtime(profiles.candidate_versions(runtime_adapter.evaluator(selected)), owning=True)
     root.mkdir(parents=True, exist_ok=False); artifact = root / 'evidence'; artifact.mkdir()
     definition = task.definition; variants = {v['id']:v for v in definition['variants']}
     rows = [{**r, 'state':'unlaunched'} for r in core.schedule(tuple(task.cases(mode)), tuple(variants), definition['trials'])]
@@ -148,7 +149,7 @@ def run(root, task, mode, *, reference=None, fixture=None):
         core.require(len(rows) == protocol(task)['attempt_slots'] and reference is not None, 'Unqualified experiment population')
         if mode == 'live':
             authorization = runtime_gate(task); claim(root, authorization)
-        else: core.require(fixture in __import__('evaluation_campaign_protocol').SCENARIOS, 'Unknown fixture')
+        else: core.require(fixture in __import__('evaluation_campaign_protocol').scenarios(task), 'Unknown fixture')
     else:
         core.require(len(rows) <= definition['attempt_limit'] and definition['trials'] == 1 and 'protocol' not in definition, 'Unqualified campaign population')
     ledger = {'definition': definition, 'runtime': read_profile(ROOT / definition['runtime_profile']), 'revision': revision(),
@@ -225,7 +226,7 @@ def run(root, task, mode, *, reference=None, fixture=None):
                 diagnostic = path.with_suffix('.log').read_text(errors='replace')[-32768:]
                 (artifact / ('launch-' + str(row['position']) + '.log')).write_text(
                     redact_sensitive_text(diagnostic).replace(str(root), '<campaign>').replace(str(ROOT), '<checkout>'))
-            row.update(returncode=code, cleanup=adapter.resources()==before, usage=adapter.usage(trial, mode),
+            row.update(returncode=code, cleanup=adapter.resources()==before, usage=adapter.usage(trial, mode, runtime=ledger['runtime']['resolved']),
                        elapsed_seconds=round(time.monotonic()-started, 3))
             core.require(Task(native).checksum == expected['task_checksum'], 'Task checksum drift across launch')
             native_result = reports.read_json(trial / 'result.json') if (trial / 'result.json').exists() else {}
@@ -233,7 +234,7 @@ def run(root, task, mode, *, reference=None, fixture=None):
             rewards = list(trial.glob('verifier/skill_evaluator_reward.json'))
             row['grading_present'] = len(rewards) == 1
             reward = reports.read_json(rewards[0]) if row['grading_present'] else {}
-            row.update(state='completed', outcome=reward.get('details',{}).get('outcome',{}))
+            row.update(state='completed', outcome=reward.get('details',{}).get('outcome',{}), custom_metrics=reward.get('custom_metrics', {}))
             if row['native_exception'] in evidence.CUSTOM_NATIVE_EXCEPTIONS:
                 row['execution_outcome'] = evidence.CUSTOM_NATIVE_EXCEPTIONS[row['native_exception']]
                 row['diagnostic_verifier_outcome'] = row['outcome']
@@ -250,7 +251,7 @@ def run(root, task, mode, *, reference=None, fixture=None):
                     task.check(task.cases(mode)[row['case']], present, row['outcome'], reward.get('custom_metrics',{}))
                 # Qualification's invalid/unsupported controls remain expected outcomes.
                 if mode == 'probe':
-                    adapter.native_observation(trial, native, present, row, rows, output=task.output)
+                    adapter.native_observation(trial, native, present, row, rows, output=task.output, runtime=ledger['runtime']['resolved'])
                 return 'unknown_usage' if row['usage']['estimated_usd'] is None else None
             reason = stop_reason(row)
             if not reason:
@@ -259,7 +260,7 @@ def run(root, task, mode, *, reference=None, fixture=None):
                     row['state'] = 'failed'; return 'missing_usable_evidence'
             if not reason:
                 try:
-                    adapter.native_observation(trial, native, present, row, rows, output=task.output, live=mode == 'live')
+                    adapter.native_observation(trial, native, present, row, rows, output=task.output, live=mode == 'live', runtime=ledger['runtime']['resolved'])
                 except (ValueError, OSError, KeyError):
                     row['state'] = 'failed'; return 'security_or_identity_drift'
             # Explicit host accounting observations exercise scheduling stop rules.

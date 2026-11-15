@@ -3,7 +3,8 @@ import shutil
 from codex_pilot_contract import ROOT, PROFILE as P
 
 
-def prepare_cli(task):
+def prepare_cli(task, runtime=None):
+    selected = P if runtime is None else runtime
     (task / 'environment/docker-compose.yaml').write_text(
         'services:\n  main:\n    cap_drop: [ALL]\n    security_opt: [no-new-privileges:true]\n    pids_limit: 256\n')
     for name in ('codex_pilot_stub.py', 'codex_pilot_probe.py'):
@@ -12,11 +13,14 @@ def prepare_cli(task):
     with (task / 'environment/Dockerfile').open('a') as dockerfile:
         dockerfile.write('RUN mkdir /opt/codex && curl --fail --location --silent --show-error '
             '--proto "=https" --proto-redir "=https" '
-            'https://github.com/openai/codex/releases/download/rust-v0.167.0/codex-package-x86_64-unknown-linux-musl.tar.gz '
+            + ('--connect-timeout 10 --max-time 180 --retry 1 --retry-max-time 190 ' if selected['cli'] == '0.155.1' else '') +
+            f'https://github.com/openai/codex/releases/download/rust-v{selected["cli"]}/codex-package-x86_64-unknown-linux-musl.tar.gz '
             '-o /opt/codex.tar.gz && '
-            f"echo '{P['cli_archive_sha256']}  /opt/codex.tar.gz' | sha256sum -c --strict && "
+            f"echo '{selected['cli_archive_sha256']}  /opt/codex.tar.gz' | sha256sum -c --strict && "
             'tar -xzf /opt/codex.tar.gz -C /opt/codex && '
-            f"echo '{P['cli_executable_sha256']}  /opt/codex/bin/codex' | sha256sum -c --strict && "
+            f"echo '{selected['cli_executable_sha256']}  /opt/codex/bin/codex' | sha256sum -c --strict && "
+            + ''.join(f"echo '{digest}  /opt/codex/{member}' | sha256sum -c --strict && "
+                    for member, digest in (selected['helper_sha256'].items() if selected['cli'] == '0.155.1' else ())) +
             'rm /opt/codex.tar.gz\n'
             'COPY build/codex_pilot_stub.py build/codex_pilot_probe.py /opt/pilot/\n'
             'RUN mkdir -p /logs/agent /logs/verifier /logs/artifacts /installed-agent && chmod 777 /logs/agent /logs/artifacts && chmod 700 /logs/verifier && '
@@ -26,8 +30,10 @@ def prepare_cli(task):
             'USER agent\n')
 
 
-def usage_record(value, *, probe=False):
+def usage_record(value, *, probe=False, runtime=None):
     import os
+    selected = P if runtime is None else runtime
+    prices = selected['prices_per_million']
     agent = value.get('agent_result') or {}
     counts = {key: agent.get(key) for key in ('n_input_tokens', 'n_cache_tokens', 'n_output_tokens')}
     valid = all(type(v) is int and v >= 0 for v in counts.values())
@@ -38,9 +44,9 @@ def usage_record(value, *, probe=False):
         # Cumulative counts cannot identify per-request long-context billing.
         # Conservatively apply its premium once cumulative input exceeds 272K.
         prefill, sample = (2, 1.5) if i > 272000 else (1, 1)
-        cost = (((i-c)*2+c*.1)*prefill+o*10*sample)/1_000_000
+        cost = (((i-c)*prices['input']+c*prices['cached_input'])*prefill+o*prices['output']*sample)/1_000_000
     complete = (agent.get('metadata') or {}).get('execution_complete', True)
     return {'trial': value['trial_name'], 'completeness': 'complete_turn' if valid and complete else 'partial' if valid else 'unavailable',
-            'provenance': 'codex-0.167-exec-json' if valid else None, **counts, 'estimated_usd': cost if complete else None,
+            'provenance': ('codex-0.155.1-exec-json' if selected['cli'] == '0.155.1' else 'codex-0.167-exec-json') if valid else None, **counts, 'estimated_usd': cost if complete else None,
             **({'observed_estimated_usd': cost} if not complete else {}),
             'billing': 'stub protocol; no model usage or billing' if probe or os.environ.get('AEB_PILOT_PROBE') == '1' else 'provider-reported tokens; estimate, not invoice'}

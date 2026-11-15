@@ -289,6 +289,13 @@ class GhFixture(Task):
     def payload(self, control):
         return json.dumps(self.entry()['contract']['expected']).encode()
 
+    def fixture_control(self, scenario, row):
+        return {'invalid': 'missing-trace', 'unsupported-grading': 'unsupported'}.get(scenario, 'good')
+
+    def validate_result(self, outcome, metrics):
+        require(outcome.get('classification') in ('passed', 'failed') and outcome.get('code') == 'evaluated'
+                and set(('gh_task', 'gh_authorization', 'gh_gate')) <= metrics.keys(), 'Missing usable gh evidence')
+
     def commands(self, control):
         commands = copy.deepcopy(self.original()['contract']['good_commands'])
         if control == 'wrong-repo':

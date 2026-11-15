@@ -51,7 +51,8 @@ async def observe(environment):
     show = docker('exec', ids[SIDECAR], 'network-policy', 'show')
     rules = docker('exec', ids[SIDECAR], 'network-policy', 'rules')
     allow = docker('exec', ids[SIDECAR], 'cat', '/opt/egress-sidecar/allowlist.txt')
-    if allow != 'api.openai.com' or 'mode: controlled egress' not in show or 'table inet gost_egress' not in rules:
+    expected_host = 'localhost.invalid' if getattr(environment, '_deny_provider', False) else 'api.openai.com'
+    if allow != expected_host or 'mode: controlled egress' not in show or 'table inet gost_egress' not in rules:
         raise ValueError('Required external policy inactive')
     return {'agent_id': ids['main'], 'controller_id': ids[SIDECAR],
             'agent_image': main['Image'], 'controller_image': controller['Image'],

@@ -9,6 +9,7 @@ on:
         default: boolean-effectiveness-v1
         options:
           - boolean-effectiveness-v1
+          - gh-runtime-090-v1
           - pester-return-development-current-v1
           - pester-return-development-candidate-v1
           - pester-return-transfer-current-v3
@@ -18,12 +19,13 @@ on:
         type: string
         default: ''
       allocation:
-        description: 'Empty for credential-free preparation. Future approval: campaign-<SHA>-<campaign>-prep<ID>-usd8-<nonce>.'
+        description: 'Empty for credential-free preparation. Future approval: campaign-<SHA>-<campaign>-prep<ID>-usd<reviewed budget>-<nonce>.'
         type: string
         default: ''
 permissions: {}
 env:
   CAMPAIGN_ID: ${{ inputs.campaign || 'boolean-effectiveness-v1' }}
+  CAMPAIGN_SETUP: ${{ inputs.campaign == 'gh-runtime-090-v1' && 'candidate-next' || 'candidate-current' }}
 concurrency:
   group: reusable-evaluation-${{ inputs.allocation != '' && format('live-{0}', github.ref) || format('diagnostic-{0}', github.run_id) }}
   cancel-in-progress: false
@@ -49,20 +51,23 @@ jobs:
           enable-cache: false
       - name: Acquire pinned credential-free tools
         run: |
-          bash .github/scripts/setup-skillevaluator.sh candidate-current
+          bash .github/scripts/setup-skillevaluator.sh "$CAMPAIGN_SETUP"
+          if [ "$CAMPAIGN_SETUP" = candidate-next ]; then
+            echo "SKILL_CURRENT_PYTHON=$RUNNER_TEMP/next-evaluator/.venv/bin/python" >> "$GITHUB_ENV"
+          fi
           bash .github/scripts/setup-compose.sh
           APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
           echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
       - name: Check shared contracts
         run: 'PYTHONPATH=.github/scripts:.github/tests "$SKILL_CURRENT_PYTHON" -B -m unittest test_evaluation_campaign test_evaluation_protocol test_campaign_selection test_codex_cohort test_codex_events test_campaign_replay -v'
-      - name: Qualify both task families through native oracle and real CLI probes
+      - name: Qualify registered task controls through native oracle and real CLI probes
         run: |
           "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign_selection.py qualify \
             --campaign "$CAMPAIGN_ID" \
             --output "$RUNNER_TEMP/reusable-evaluation"
       - name: Acquire fresh verified Compose configuration for the experiment phase
         run: bash .github/scripts/setup-compose.sh
-      - name: Qualify the six-slot protocol through the same execution loop
+      - name: Qualify the selected protocol through the same execution loop
         timeout-minutes: 55
         run: |
           "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign_selection.py prepare \
@@ -92,7 +97,7 @@ jobs:
 
   retrospective:
     name: Grade authenticated retained submission without inference
-    if: inputs.allocation == '' && inputs.preparation_artifact == ''
+    if: inputs.allocation == '' && inputs.preparation_artifact == '' && inputs.campaign != 'gh-runtime-090-v1'
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -110,7 +115,10 @@ jobs:
           enable-cache: false
       - name: Acquire pinned credential-free replay tools
         run: |
-          bash .github/scripts/setup-skillevaluator.sh candidate-current
+          bash .github/scripts/setup-skillevaluator.sh "$CAMPAIGN_SETUP"
+          if [ "$CAMPAIGN_SETUP" = candidate-next ]; then
+            echo "SKILL_CURRENT_PYTHON=$RUNNER_TEMP/next-evaluator/.venv/bin/python" >> "$GITHUB_ENV"
+          fi
           bash .github/scripts/setup-compose.sh
           APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
           echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
@@ -149,7 +157,10 @@ jobs:
           enable-cache: false
       - name: Acquire frozen credential-free consumption tools
         run: |
-          bash .github/scripts/setup-skillevaluator.sh candidate-current
+          bash .github/scripts/setup-skillevaluator.sh "$CAMPAIGN_SETUP"
+          if [ "$CAMPAIGN_SETUP" = candidate-next ]; then
+            echo "SKILL_CURRENT_PYTHON=$RUNNER_TEMP/next-evaluator/.venv/bin/python" >> "$GITHUB_ENV"
+          fi
           APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
           echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -192,7 +203,10 @@ jobs:
           enable-cache: false
       - name: Acquire frozen credential-free consumption tools
         run: |
-          bash .github/scripts/setup-skillevaluator.sh candidate-current
+          bash .github/scripts/setup-skillevaluator.sh "$CAMPAIGN_SETUP"
+          if [ "$CAMPAIGN_SETUP" = candidate-next ]; then
+            echo "SKILL_CURRENT_PYTHON=$RUNNER_TEMP/next-evaluator/.venv/bin/python" >> "$GITHUB_ENV"
+          fi
           APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
           echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
       - name: Admit exact producer and archive then compare fresh staging and reports
@@ -257,7 +271,7 @@ jobs:
     permissions:
       contents: read
     runs-on: ubuntu-latest
-    timeout-minutes: 155
+    timeout-minutes: ${{ inputs.campaign == 'gh-runtime-090-v1' && 65 || 155 }}
     env:
       PYTHONDONTWRITEBYTECODE: '1'
     steps:
@@ -271,7 +285,10 @@ jobs:
           enable-cache: false
       - name: Prepare pinned tools without model credentials
         run: |
-          bash .github/scripts/setup-skillevaluator.sh candidate-current
+          bash .github/scripts/setup-skillevaluator.sh "$CAMPAIGN_SETUP"
+          if [ "$CAMPAIGN_SETUP" = candidate-next ]; then
+            echo "SKILL_CURRENT_PYTHON=$RUNNER_TEMP/next-evaluator/.venv/bin/python" >> "$GITHUB_ENV"
+          fi
           bash .github/scripts/setup-compose.sh
           APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
           echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
@@ -286,8 +303,8 @@ jobs:
             --campaign "$CAMPAIGN_ID" \
             --preparation "$RUNNER_TEMP/campaign-auth/downloaded/preparation/evidence" \
             --output "$RUNNER_TEMP/campaign-live-preflight"
-      - name: Execute only the separately approved six slots
-        timeout-minutes: 140
+      - name: Execute only the separately approved slots
+        timeout-minutes: ${{ inputs.campaign == 'gh-runtime-090-v1' && 45 || 140 }}
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           AEB_CAMPAIGN_APPROVAL: ${{ inputs.allocation }}

@@ -91,7 +91,7 @@ class PilotCodex(Codex):
         context.n_input_tokens = usage['input_tokens']
         context.n_cache_tokens = usage['cached_input_tokens']
         context.n_output_tokens = usage['output_tokens']
-        context.metadata = {'usage_source': 'codex-0.167-exec-json', 'billing_verified': False,
+        context.metadata = {'usage_source': ('codex-0.155.1-exec-json' if self.profile['cli'] == '0.155.1' else 'codex-0.167-exec-json'), 'billing_verified': False,
                             **({'execution_complete': False} if interrupted else {})}
 
     async def run(self, instruction, environment, context):
@@ -109,6 +109,7 @@ class PilotCodex(Codex):
         probe = os.environ.get('AEB_PILOT_PROBE') == '1'
         if not probe and os.environ.get('OPENAI_BASE_URL'):
             raise ValueError('Pilot provider override refused')
+        environment._deny_provider = probe and self.profile['id'] == 'codex-090-diagnostic-v1'
         from codex_pilot_boundary import observe, connectivity_baseline
         # Harbor has already applied the agent phase policy. Verify it outside the
         # container before the first exec that could carry a future real key.
@@ -117,8 +118,10 @@ class PilotCodex(Codex):
             boundary_before['operator_positive_controls'] = connectivity_baseline()
         scenario = os.environ.get('AEB_PILOT_SCENARIO', 'success') if probe else 'live'
         logs = self.environment_logs_dir.as_posix()
-        config = configuration('http://127.0.0.1:8765/v1' if probe else None)
+        config = configuration('http://127.0.0.1:8765/v1' if probe else None, runtime=self.profile)
         env = {'CODEX_HOME': HOME, 'OPENAI_API_KEY': 'pilot-not-a-credential' if probe else self.model_connection.api_key or ''}
+        if environment._deny_provider:
+            env['AEB_PILOT_DENY_PROVIDER'] = '1'
         if not env['OPENAI_API_KEY']:
             raise ValueError('Protected provider key missing')
         await self.exec_as_agent(environment, command=f'mkdir -p {HOME} {logs}', env=env)
@@ -140,7 +143,7 @@ class PilotCodex(Codex):
             await self.exec_as_agent(environment, command=f'diff -qr /workspace/skills/{self.skill} "$HOME/.agents/skills/{self.skill}"')
         self.logs_dir.mkdir(parents=True, exist_ok=True)
         audit = {'adapter': self.profile['id'], 'cli': self.profile['cli'], 'model': self.profile['model'],
-                 'reasoning_effort': 'high', 'provider': 'openai', 'probe': probe,
+                 'reasoning_effort': self.profile['reasoning_effort'], 'provider': self.profile['provider'], 'probe': probe,
                  'cwd': '/workspace', 'output': self.output, 'sandbox': 'danger-full-access',
                  'execution_policy': self.profile['execution_policy'], 'scenario': scenario,
                  'boundary_before': boundary_before,
@@ -165,7 +168,7 @@ class PilotCodex(Codex):
                    f'--cd /workspace --model {self.profile["model"]} --json '
                    f'--output-last-message {logs}/last-message.txt -- {shlex.quote(instruction)} '
                    f'>{logs}/codex.txt 2>{logs}/codex-stderr.txt')
-        if scenario == 'interruption':
+        if scenario in ('interruption', 'provider-timeout'):
             command = 'timeout --signal=INT --kill-after=5s 5s ' + command
         primary = None
         started = time.monotonic()

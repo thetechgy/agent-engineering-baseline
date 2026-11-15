@@ -23,15 +23,23 @@ def validate_codex(value):
     from codex_pilot_contract import PROFILE
     require(set(value) == {'id', 'adapter', 'frozen_profile', 'frozen_profile_sha256', 'capabilities', 'inference_enabled'},
             'Unsupported Codex profile settings')
-    require(value['frozen_profile'] == '.github/evals/codex-pilot.json' and
+    expected = ('.github/evals/codex-execution-090.json' if value['id'] == 'codex-090-diagnostic-v1'
+                else '.github/evals/codex-pilot.json')
+    require(value['frozen_profile'] == expected and
             value['frozen_profile_sha256'] == hashlib.sha256((ROOT / value['frozen_profile']).read_bytes()).hexdigest(),
             'Qualified Codex profile drift')
-    capabilities = (['non-forwarding-cli-probe', 'exact-authorized-live'] if value['id'] == 'codex-authorized-campaign-v1'
+    capabilities = (['non-forwarding-cli-probe', 'exact-authorized-live'] if value['id'] in ('codex-authorized-campaign-v1', 'codex-090-diagnostic-v1')
                     else ['oracle', 'non-forwarding-cli-probe'])
     require(value['inference_enabled'] is False and value['capabilities'] == capabilities,
             'Unsupported Codex capabilities or inference setting')
-    return dict(PROFILE, agent='codex')
+    selected = reports.read_json(ROOT / expected) if expected.endswith('codex-execution-090.json') else PROFILE
+    return dict(selected, agent='codex')
 
+
+
+def evaluator(runtime):
+    import evaluator_profiles as profiles
+    return profiles.NEXT if runtime['profile']['id'] == 'codex-090-diagnostic-v1' else profiles.CANDIDATE
 
 
 def adapter_for(runtime):
@@ -48,7 +56,11 @@ def source_inputs(runtime, workspace):
     require(name == 'codex', 'Unsupported runtime metadata adapter: ' + name)
     from codex_pilot_contract import pilot_inputs
     import skill_evidence as e
-    return pilot_inputs(workspace) + [{'member': 'runtime/evaluation_codex.py',
+    extra = []
+    if runtime['profile']['id'] == 'codex-090-diagnostic-v1':
+        extra = [{'member': 'runtime/codex-execution-090.json',
+                  'digest': e.digest_bytes(e.read_bytes(workspace / '.github/evals/codex-execution-090.json'))}]
+    return extra + pilot_inputs(workspace) + [{'member': 'runtime/evaluation_codex.py',
         'digest': e.digest_bytes(e.read_bytes(workspace / '.github/scripts/evaluation_codex.py'))}]
 
 

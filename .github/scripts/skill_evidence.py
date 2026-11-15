@@ -3498,9 +3498,9 @@ def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
     if profile_id is None and campaign_purpose(purpose):
         profile_id = purpose
     if profile_id is None and purpose in ('skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-effectiveness-v24'
+        profile_id = 'pester-effectiveness-v25'
     if profile_id is None and name == 'powershell-pester-6' and purpose in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-cli-pilot-retained-v15'
+        profile_id = 'pester-cli-pilot-retained-v16'
     if profile_id is None and name == 'gh' and purpose == 'oracle_qualification':
         profile_id = 'gh-native-oracle-v1'
     profile_id = registry['active_profiles'].get(name) if profile_id is None else profile_id
@@ -3860,9 +3860,12 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None):
     if profile_family(profile) == 'gh-native-oracle-v1':
         require(profiles.is_candidate(producer), 'Native gh oracle requires a qualified candidate')
     if 'campaign' in profile:
-        require(producer is profiles.CANDIDATE, 'Campaign requires the frozen candidate')
+        from evaluation_evidence import task as campaign_task
+        from evaluation_runtime import evaluator, read_profile
+        require(producer is evaluator(read_profile(ROOT / campaign_task(profile).definition['runtime_profile'])),
+                'Campaign requires the selected owning evaluator')
     if producer is profiles.NEXT:
-        require(capture['purpose'] in ('benchmark', 'oracle_qualification') and capture['agent'] in ('oracle', 'codex'),
+        require((capture['purpose'] in ('benchmark', 'oracle_qualification') or 'campaign' in profile) and capture['agent'] in ('oracle', 'codex'),
                 'New candidate is credential-free qualification only')
     if profiles.is_candidate(producer):
         require(capture['producer'] == profiles.candidate_versions(producer), 'Contradictory custom producer identity')
@@ -4461,7 +4464,10 @@ def validate_custom_evidence(data, *, public=False, _observed_at=None):
             'Effectiveness profile/purpose mismatch')
     if 'campaign' in profile:
         from evaluation_evidence import validate_policy as validate_campaign_policy
-        require(custom['purpose'] == profile['id'] and data['policy'].get('producer_profile') == profiles.CANDIDATE['id'], 'Campaign purpose/profile mismatch')
+        from evaluation_runtime import evaluator, read_profile
+        from evaluation_evidence import task as campaign_task
+        producer = evaluator(read_profile(ROOT / campaign_task(profile).definition['runtime_profile']))
+        require(custom['purpose'] == profile['id'] and data['policy'].get('producer_profile') == producer['id'], 'Campaign purpose/profile mismatch')
         validate_campaign_policy(profile, data['policy']['fields'], data['policy']['attempts']['maximum'], custom['agent_version'])
     if pilot_profile:
         live = custom['purpose'] in ('cli_pilot', 'cli_pilot_probe', 'skill_effectiveness', 'skill_effectiveness_probe')

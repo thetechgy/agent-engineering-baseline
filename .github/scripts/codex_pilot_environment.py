@@ -232,7 +232,9 @@ class PilotEnvironment(SkillEvaluatorSecureDockerEnvironment):
                     raise ValueError('Post-agent CLI child network observation unavailable')
                 late = json.loads(result.stdout)
                 rows = late.get('network', [])
-                if len(rows) != 3 or rows[0]['http_code'] != '401' or any(v['returncode'] not in (35, 52, 56, 97) for v in rows[1:]):
+                if (len(rows) != 3 or
+                    (rows[0]['returncode'] not in (35, 52, 56, 97) if getattr(self, '_deny_provider', False) else rows[0]['http_code'] != '401')
+                    or any(v['returncode'] not in (35, 52, 56, 97) for v in rows[1:])):
                     raise ValueError('Post-agent CLI child policy enforcement failed')
                 final['late_cli_child'] = late
             target = Path(self.trial_paths.trial_dir) / 'operator/pilot-final-policy.json'
