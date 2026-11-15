@@ -6,7 +6,7 @@ the completed merge of #142. This change prepares `gh-runtime-090-v1` through
 0.3.0 / Harbor 0.13.2. All paid allocations remain closed. No preparation receipt
 is live-provider evidence or an authorization.
 
-The final draft PR records the executable revision, selected CI, hosted preparation
+[Draft PR #143](https://github.com/thetechgy/agent-engineering-baseline/pull/143) records the executable revision, selected CI, hosted preparation
 and fresh-runner consumption receipts. Until those pass, this is not pilot-ready.
 The immutable `behavioral-090-offline-v1` profile and #142 receipts are retained;
 its simulated default judgments are not relabeled as live judgments.
@@ -57,7 +57,10 @@ dropped, no-new-privileges, stock seccomp, bounded CPU/memory/PIDs, no host moun
 no Docker socket or protected verifier/solution access. The stock egress controller
 has its separate network capabilities and never receives the model key. The CLI's
 inner sandbox setting remains the existing externally isolated launch policy.
-No mount, seccomp, namespace or approval protection is relaxed to launch this CLI.
+Harbor 0.25 separates automatic output paths from explicit mounts. The adapter
+handles both fields, keeps agent outputs container-local and refuses automatic
+host mounting. No mount, seccomp, namespace or approval protection is relaxed to
+launch this CLI.
 
 In probes the actual provider is denied: the controller allows only
 `localhost.invalid`. The responder binds loopback and has no forwarding code.

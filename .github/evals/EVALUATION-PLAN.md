@@ -1,6 +1,6 @@
 # Behavioral runtime 0.9.0 execution preparation checkpoint
 
-**Preparation in progress; no paid pilot authorized.** Current main was verified
+**Implemented for review; no paid pilot authorized.** Current main was verified
 at `15caaedb82edf5d9e0253394ed99e3135cd7be93`, the completed merge of #142.
 Static quality and data-only reporting/orchestration already use 0.9.0. #142's
 versioned behavioral collection/recovery/interpretation/reporting and history
@@ -15,8 +15,9 @@ verifier runs, zero model-judge calls. See the [execution contract and proposal]
 
 Local matched APM/native staging and focused contracts are preparation evidence.
 Final-revision hosted preparation, fresh-runner consumption and normal selected
-CI must pass before this can be called pilot-ready. Exact receipts, revision and
-proposal belong to the focused draft PR. Live authentication/routing, real provider
+CI determine readiness. [Draft PR #143](https://github.com/thetechgy/agent-engineering-baseline/pull/143)
+retains their terminal results, exact revision, artifacts and proposed command.
+A pending, failed, cancelled or expired receipt does not qualify execution. Live authentication/routing, real provider
 usage, standard model-judge compatibility/accuracy and skill improvement remain
 unproven. No allocation is claimed or reopened.
 
@@ -26,8 +27,8 @@ Pester clarification and skill adoption remain deferred; no history append,
 protected gate approval, Pages publication, paid dispatch or recurring paid work
 is authorized.
 
-**One current next action:** complete and review exact-revision credential-free
-hosted preparation and fresh-runner receipts before a pilot decision.
+**One current next action:** review draft #143 and its exact-revision preparation
+and fresh-runner receipts, then decide separately on its bounded pilot proposal.
 
 ## PR #142 offline integration, retained as history
 

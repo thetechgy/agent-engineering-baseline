@@ -262,7 +262,7 @@ jobs:
           retention-days: 90
 
   live:
-    name: Future approved six-attempt selected comparison
+    name: Future approved selected comparison
     needs: authenticate
     if: github.event_name == 'workflow_dispatch' && inputs.allocation != '' && inputs.preparation_artifact == '' && github.run_attempt == 1
     environment:

@@ -288,6 +288,10 @@ def prepare(root, task, qualification):
         else:
             require(len(launched)==1 and result.get('stop_reason')==expected[scenario], 'Extra launch or wrong stop: '+scenario)
         summaries[scenario]={'state':result['state'],'launched':len(launched),'stop_reason':result.get('stop_reason')}
+        if scenario in ('provider-refusal', 'malformed-response', 'provider-timeout'):
+            from evaluation_codex import provider_failure_observation
+            summaries[scenario]['provider'] = provider_failure_observation(root/'scenarios'/scenario, scenario,
+                read_profile(ROOT / task.definition['runtime_profile'])['resolved'])
         inputs.append(root/'scenarios'/scenario/'evidence/public')
     from evaluation_campaign_core import render
     render(inputs, retained)

@@ -602,3 +602,27 @@ def compare_probe_descriptors(reference, staging):
         require(configuration_digest(normalized) == left[arm, case], 'Probe changed more than provider egress')
     return {'algorithm': ALGORITHM, 'descriptors': len(left),
             'transport_difference': 'provider egress denied by localhost.invalid allowlist; all other configuration equal'}
+
+
+def provider_failure_observation(root, scenario, runtime):
+    """Bind negative controls to an actual CLI request, not a generic launch error."""
+    import skill_reports as reports
+    from codex_pilot_contract import configuration
+    from skill_evidence import read_bytes
+    requests = list((root / 'jobs').rglob('probe.json'))
+    audits = list((root / 'jobs').rglob('pilot-runtime.json'))
+    logs = list((root / 'jobs').rglob('codex.txt'))
+    require(len(requests) == len(audits) == len(logs) == 1, 'Missing actual provider failure evidence')
+    observed = reports.read_json(requests[0]); audit = reports.read_json(audits[0])
+    require(observed['requests'] == 1 and observed['path'] == '/v1/responses'
+            and observed['model'] == runtime['model'] and observed['reasoning']['effort'] == runtime['reasoning_effort'],
+            'Provider failure retried or routed differently')
+    require(audit['scenario'] == scenario and audit['cleanup'] == 'complete' and audit.get('returncode', 0) != 0
+            and audit['effective_config'] == configuration('http://127.0.0.1:8765/v1', runtime=runtime)
+            and audit['boundary_before']['policy_sha256'] == audit['boundary_after']['policy_sha256'],
+            'Provider failure boundary or identity drift')
+    raw = read_bytes(logs[0], limit=16*1024*1024)
+    require(raw, 'Missing authentic CLI events')
+    return {'requests': 1, 'model': observed['model'], 'reasoning_effort': observed['reasoning']['effort'],
+            'cli_events_sha256': 'sha256:' + hashlib.sha256(raw).hexdigest(),
+            'cli_returncode': audit['returncode'], 'cleanup': 'complete'}

@@ -380,3 +380,23 @@ class Execution090Contracts(unittest.TestCase):
              'outcome':{'classification':'failed'},'usage':observed}
         self.assertIsNone(protocol.stop_reason(row))
         self.assertEqual(protocol.stop_reason({**row,'usage':unknown}),'unknown_usage')
+
+
+    @unittest.skipUnless(__import__('importlib.util', fromlist=['find_spec']).find_spec('harbor'), 'Harbor owning host required')
+    def test_absent_mount_collection_does_not_bypass_mount_allowlist(self):
+        from codex_pilot_environment import PilotEnvironment, SkillEvaluatorSecureDockerEnvironment
+        with patch.object(SkillEvaluatorSecureDockerEnvironment, '__init__', return_value=None) as parent:
+            PilotEnvironment(mounts=None)
+            self.assertEqual(parent.call_args.kwargs['mounts'], ())
+            with self.assertRaisesRegex(ValueError, 'Unexpected pilot mount'):
+                PilotEnvironment(mounts=[{'target':'/host'}])
+            self.assertEqual(parent.call_count, 1)
+
+            agent = PilotEnvironment(mounts=None, auto_mounts=[{'target':'/logs/agent'}])
+            self.assertTrue(agent._pilot_agent)
+            self.assertEqual(parent.call_args.kwargs['mounts'], [])
+            self.assertEqual(parent.call_args.kwargs['auto_mounts'], [])
+            with self.assertRaisesRegex(ValueError, 'Unexpected pilot mount'):
+                PilotEnvironment(auto_mounts=[{'target':'/host'}])
+            with self.assertRaisesRegex(ValueError, 'automatic host mounts refused'):
+                PilotEnvironment(auto_mounts=[{'target':'/logs/agent'}], auto_mounting=True)
