@@ -1064,7 +1064,8 @@ def main():
     elif args.command == "benchmark":
         benchmark_report(workspace, args.root, args.skill, args.mode, args.destination)
     elif args.command == "recover":
-        recover_benchmark(workspace, args.root, args.skill, args.mode, args.outcome, evidence_profile=args.evidence_profile)
+        recover_benchmark(workspace, args.root, args.skill, args.mode, args.outcome,
+                          **({'evidence_profile': args.evidence_profile} if args.evidence_profile else {}))
     elif args.command == "artifacts":
         benchmark_artifacts(workspace, args.root, args.skill, args.destination)
     else:

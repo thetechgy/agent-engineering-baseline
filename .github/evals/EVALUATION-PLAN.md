@@ -27,8 +27,8 @@ settings. Protected gates, schedules, paid streams, closed allocations, original
 history, frozen 0.8 experiments, replay owners and deferred Pester clarification
 remain unchanged. Private review migration remains separate.
 
-**One current next action:** review the focused behavioral evidence draft PR and
-its final-revision validation artifacts.
+**One current next action:** review [draft PR #142](https://github.com/thetechgy/agent-engineering-baseline/pull/142)
+and its final-revision validation artifacts.
 
 ## PR #141 static migration, retained as history
 

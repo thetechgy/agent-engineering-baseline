@@ -1,6 +1,21 @@
 {
+  "broad_local_diagnostic": {
+    "causes": [
+      "Old review dependency profile",
+      "Missing pinned scanner stack",
+      "Source/input mutation during development",
+      "PowerShell worker startup limit",
+      "Legacy recovery keyword compatibility defect corrected"
+    ],
+    "disposition": "failed_and_not_final_revision_validation",
+    "errors": 175,
+    "failures": 17,
+    "log_sha256": "bc348d552c747938b89b5dc5590d96a2f8e661b641800afd4d0b7ae772046cbd",
+    "skips": 113,
+    "tests": 1091
+  },
   "control_tests": {
-    "log_sha256": "accf16d93ed1b7bb2b8320c068530f07f5e666c5d29050adc228d73ee898f2ef",
+    "log_sha256": "1a7417ff88bc58daa597cea2549c88c87f01cbafa67af0a8d0543eced4904fb4",
     "passed": 7,
     "run": 7
   },
@@ -82,9 +97,17 @@
     ".github/scripts/skill_history.py": "sha256:bd59b596e64a695b6ba6fccaa90de97b30c0c37295933fa54a71a50040a9f3a9",
     ".github/scripts/skill_pages.py": "sha256:ab84dde636ace5e0f26923321bbeff3e9b4c81aa3c3e79ad57c3104fe5e63dce",
     ".github/scripts/skill_report.py": "sha256:1ecaab4b3e9a73ab84f77cc3eeb9c48cf283c192f421921cd76f866093ada78c",
-    ".github/scripts/skill_reports.py": "sha256:1d38e520871c074c2d4e8a152e5305d0aa1b827de59e47a8fbfddd537cda950c"
+    ".github/scripts/skill_reports.py": "sha256:889b84c37220c317f8eb97008f272fa082d7b09e70bba9f409ef4a85e8f1fa4b"
   },
   "starting_main": "66c3f92a40b0f00bb461286596a2016a6a39108a",
+  "superseded_ci": {
+    "conclusion": "cancelled_inconclusive",
+    "head": "c85634e58d24e21e6077e930ec230f9f660abfbb",
+    "reason": "Known legacy recovery CLI keyword compatibility correction",
+    "required_platform_checks": "passed_on_superseded_head",
+    "run": 43689241906,
+    "static_quality": "passed_on_superseded_head"
+  },
   "versions": {
     "backend_source_digest": "sha256:3e79836ee10bdb1d690f50384077cde9ef5eaf09cd4d470076eae459a0937fa8",
     "backend_version": "1.1.0",

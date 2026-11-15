@@ -129,6 +129,17 @@ Existing selected native gh and Pester routes continue to exercise their own
 custom grading contracts. Unchanged #136/#139/#141 qualification evidence remains
 applicable to unchanged runtime, scanner and finding-retention components.
 
+The first hosted run, [43689241906](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43689241906),
+was cancelled for a known follow-up and is inconclusive overall. Its two required
+platform checks and static quality passed; available artifacts and logs are retained.
+The earlier broad local diagnostic used an older review SDK environment, omitted
+pinned scanners and overlapped source changes. Its failures are not a passing or
+final-revision result. Diagnosis found one actionable legacy CLI dispatch regression:
+passing an unnecessary `evidence_profile=None` keyword. The caller now preserves
+its original argument contract unless the new profile is requested. That control
+and five source/frozen-contract controls pass after correction. The seven native
+behavioral controls also pass again. Final selected CI remains authoritative.
+
 ## Comparison, history and rollback
 
 Comparison identities include task/dataset/cohort, runtime/model/settings,
