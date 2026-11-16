@@ -1,4 +1,35 @@
-# Task-permission successor smoke preparation
+# Task-permission successor stopped pilot
+
+**Stopped before launch; allocation closed.** The single authorized
+[dispatch 43908693565/A1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43908693565)
+ran the authentication entry at `3bafc85e1a4fd650bc62d3aa3ed66aa429c1bfaf`.
+The bare authentication-job interpreter could not import `skillevaluator` while
+reconstructing the successor's trusted task-member identity. The job failed before
+an authentication receipt, protected gate, provider credential delivery or agent
+launch. No gate approval, retry, replacement or continuation occurred.
+
+Both current/absent slots remain unlaunched and are permanently closed. There are
+no task grades, activation/access observations, native cleanup witnesses or live
+report to reproduce. Estimated workload usage is $0 because no provider requests
+launched; invoice reconciliation remains unknown and CI costs are separate.
+See the [stopped execution and closure receipt](../../docs/evaluations/task-permission-v2/execution-20261116-01/EXECUTION.md).
+
+Required CI `43893545608/A1`, preparation `43893646228/A1` / artifact `14240872750`
+and inspection `43901736414/A1` passed at that source and retain their recorded
+scope. They did not cover the bare authentication-job dependency boundary. This
+failure withdraws readiness of the complete dispatch path without relabeling the
+successful credential-free controls or changing historical grades. The narrower
+gh-007 startup cause remains unknown. The prior proposal is consumed/closed and
+cannot authorize another dispatch; later report-only revisions are not executed
+or automatically qualified. All previous allocations remain closed.
+
+**One current next action:** remediate and credential-free qualify the actual
+allocation-bound authentication entry before preparing any fresh exact-revision
+paid proposal; do not retry this allocation.
+
+## PR #147 preparation checkpoint, retained as history
+
+### Task-permission successor smoke preparation
 
 **Preparation only; paid execution unauthorized.** PR #145 merged as
 `82cdde086fe4d7fad84f21acc614df2adeca1767`. Its 34 oracle controls and four

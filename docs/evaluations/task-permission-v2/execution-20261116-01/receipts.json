@@ -1,0 +1,293 @@
+{
+  "run_id": 43908693565,
+  "run_attempt": 1,
+  "execution_revision": "3bafc85e1a4fd650bc62d3aa3ed66aa429c1bfaf",
+  "dispatch_ref": "prep/task-permission-v2-smoke",
+  "workflow": ".github/workflows/evaluation-campaign.yml",
+  "campaign": "gh-task-permission-v2",
+  "protocol_digest": "sha256:97749b699d1f64684ece5a5ab6fc31fb106528e03acb03eaa50686513b2f2876",
+  "definition": ".github/evals/campaigns/gh-task-permission-v2-live.json",
+  "definition_digest": "sha256:61e36ec1b35c5b1f5ed68011dcc0cf2fdd49619bb6ac164eed1aab5d5558316a",
+  "selection_digest": "sha256:966e1bec41adbe5da09436ba09b362a535b91c7d03121d817a6bf03c9d091efe",
+  "allocation": "campaign-3bafc85e1a4fd650bc62d3aa3ed66aa429c1bfaf-gh-task-permission-v2-prep14240872750-usd6-permission_v2_ci_9e91e2754559",
+  "nonce": "permission_v2_ci_9e91e2754559",
+  "authorization_expires_at": "2026-11-20T23:59:59Z",
+  "allocation_status": "closed",
+  "single_dispatch_authorization_consumed": true,
+  "preparation": {
+    "revision": "3bafc85e1a4fd650bc62d3aa3ed66aa429c1bfaf",
+    "producer_run": 43893646228,
+    "producer_attempt": 1,
+    "artifact": 14240872750,
+    "artifact_digest": "sha256:8e1eaf090128ddb524c13495ad60f09a62b7136a426c5270eba2f72a1b03b7ba",
+    "registered_subtree": "preparation/evidence",
+    "artifact_expires_at": "2027-02-14T15:11:09Z",
+    "frozen_proposal_digest": "sha256:9f7340860bfcfb1a2941deae9856cb3014c40341e9cb69f0eb9ff85a4c6ada91",
+    "frozen_member_digests": {
+      "deployment.json": "sha256:7d753029a8180f7a3e88c4714b5f4e889d4849c1568c59481783d1c4714a779a",
+      "staging.json": "sha256:c3643e390e11aae18e8f1d1bd002e6505f4dfd4bf69e1958070a0a42a32061f1",
+      "task-descriptors.json": "sha256:3a3d5c5ba8103ed4cd7822b9183c4510eccf31e943ecee80edfa125ce59e27f5",
+      "live-launch-qualification.json": "sha256:18c1807dfe6d0e9d37d5078a317efcc68100ebddd259b28d16f830d5632277a9",
+      "control-qualification.json": "sha256:2e7b7c3d2a6617db8f9294e8632f8e6a60a2cced337599a574816ca254d57e00",
+      "scheduler-qualification.json": "sha256:1bbdba76a71c997167892b183f466b54692154ce03641520bc099f5dcefb6bb8",
+      "preparation.json": "sha256:b691353ccb76c9b099beab8f50e1436a2783d6cefdd384d2c2c4c6360e5e1e4b"
+    },
+    "ci": 43893545608,
+    "ci_successful_jobs": 21,
+    "ci_intentionally_skipped_jobs": 6,
+    "automatic_fresh_consumption": true,
+    "authenticated_fresh_inspection": 43901736414,
+    "qualification_scope": "Held evaluator owner preparation, inspection and constructor/scheduler controls; actual bare authentication-job interpreter was not covered",
+    "broad_qualification_repeated": false
+  },
+  "preflight": {
+    "checked_at": "2026-11-16T16:30:33.796191+00:00",
+    "ref_resolved_to_authorized_revision": true,
+    "producer_digest_layout_and_frozen_identities_match": true,
+    "allocation_nonce_previously_unused": true,
+    "prior_repository_dispatches_examined": 94,
+    "pricing": {
+      "checked_at": "2026-11-16T16:32:38.145766+00:00",
+      "source": "https://developers.openai.com/api/docs/models/gpt-5.6-sol",
+      "input_per_million": 4,
+      "cached_input_per_million": 0.4,
+      "output_per_million": 20,
+      "promotional_end": "2026-11-30",
+      "long_context_and_cache_write_adjustments_remain_accepted": true
+    }
+  },
+  "terminal_workflow": {
+    "status": "completed",
+    "conclusion": "failure",
+    "jobs": [
+      {
+        "id": 133444417505,
+        "name": "Authenticate a future separately approved dispatch",
+        "status": "completed",
+        "conclusion": "failure"
+      },
+      {
+        "id": 133444420106,
+        "name": "Inspect selected artifact on a fresh runner without credentials",
+        "status": "completed",
+        "conclusion": "skipped"
+      },
+      {
+        "id": 133444420187,
+        "name": "Grade authenticated retained submission without inference",
+        "status": "completed",
+        "conclusion": "skipped"
+      },
+      {
+        "id": 133444420566,
+        "name": "qualify",
+        "status": "completed",
+        "conclusion": "skipped"
+      },
+      {
+        "id": 133444421667,
+        "name": "Consume exact experiment preparation without credentials",
+        "status": "completed",
+        "conclusion": "skipped"
+      },
+      {
+        "id": 133444571477,
+        "name": "Future approved selected comparison",
+        "status": "completed",
+        "conclusion": "skipped"
+      }
+    ],
+    "matching_dispatches": 1,
+    "pending_gates": 0,
+    "workflow_artifacts": [],
+    "gate_approval_attempted": false
+  },
+  "primary_failure": {
+    "phase": "allocation-bound authentication / frozen task identity reconstruction",
+    "job_id": 133444417505,
+    "exception": "ModuleNotFoundError",
+    "message": "No module named 'skillevaluator'",
+    "call_path": [
+      "evaluation_campaign_selection.main",
+      "evaluation_campaign_protocol.authenticate",
+      "evaluation_campaign_protocol.acquire",
+      "evaluation_campaign_protocol.admit",
+      "evaluation_campaign_protocol.frozen",
+      "skill_evidence.custom_input_identities",
+      "evaluation_evidence.identities",
+      "gh_permission_task.expected_members",
+      "gh_permission_task.verifier_entry"
+    ],
+    "cause": "Bare python3 authentication job has no evaluator setup; task identity reconstruction imports skillevaluator.tier3.dataset_utils.normalize_dataset_entries",
+    "authentication_log_sha256": "sha256:23c6ea6cc6d4dcdabf8b551ec5b5cd27a476dd8b0f8bdbe6ba967026efe02c99",
+    "secondary_failures": [],
+    "source_or_artifact_mismatch_demonstrated": false
+  },
+  "authentication_receipt": null,
+  "exclusive_live_claim_created": false,
+  "protected_credential_delivery_reached": false,
+  "intended_runtime": {
+    "profile": {
+      "id": "codex-090-diagnostic-v1",
+      "adapter": "codex",
+      "frozen_profile": ".github/evals/codex-execution-090.json",
+      "frozen_profile_sha256": "044a8d6c16870d40f193f1879b826d9eb6139c8f1c38b57d7e16f8acee72011d",
+      "capabilities": [
+        "non-forwarding-cli-probe",
+        "exact-authorized-live"
+      ],
+      "inference_enabled": false
+    },
+    "resolved": {
+      "id": "codex-090-diagnostic-v1",
+      "case": "gh-014",
+      "skill": "gh",
+      "cli": "0.155.1",
+      "cli_revision": "rust-v0.155.1",
+      "cli_archive_sha256": "a65b895c6ac1a73629bbe4b864640c86133e94a43b4d67b3103044e1a306d5a2",
+      "cli_executable_sha256": "0753dfe1d8b87a52436deb13eb1c549661ef4c84fee2c5aa688385eebeccb761",
+      "model": "gpt-5.6-sol",
+      "reasoning_effort": "high",
+      "provider": "openai",
+      "base_url": "https://api.openai.com/v1",
+      "agent_seconds": 600,
+      "cpus": 2,
+      "memory_mb": 2048,
+      "attempts_per_arm": 1,
+      "prices_per_million": {
+        "input": 4,
+        "cached_input": 0.4,
+        "output": 20
+      },
+      "frozen_at": "2026-11-15",
+      "release_url": "https://github.com/openai/codex/releases/tag/rust-v0.155.1",
+      "model_documentation": "https://developers.openai.com/api/docs/models/gpt-5.6-sol",
+      "configuration_documentation": "https://developers.openai.com/codex/config-reference",
+      "helper_sha256": {
+        "bin/codex-code-mode-host": "210ab8ebaebf4bc1421d9e30339c858354ca35fa91e2f87f4c6204e5382f8a63",
+        "codex-resources/bwrap": "77360cb751ccedc5971391444ac86a8a33c15b04d6b4a6fe45f5d25496e62c4c"
+      },
+      "execution_policy": "docker-external-openai-090-v1",
+      "agent": "codex"
+    }
+  },
+  "intended_evaluator": {
+    "id": "skillevaluator-0.9.0-offline-v3",
+    "revision": "b78d14618a694dec84bc9601468f8f711df5cab3",
+    "version": "0.9.0",
+    "python": "3.14.10",
+    "harbor": "0.25.0",
+    "scoring": "skill-evaluator-dimension-mean-v1",
+    "lock_sha256": "05dd72bfd0bac5399ac19232ea847929e2b21df4a7ef2d2c65eefc4f72484dda",
+    "patch_sha256": "ca00768c1c2b054573743707473ed98964ed6bf910ad8bfac5accfd683860da4",
+    "dependencies": {
+      "skillevaluator": "0.9.0",
+      "harbor": "0.25.0",
+      "openai": "2.54.0",
+      "anthropic": "2.8.0",
+      "pydantic": "2.14.3",
+      "pydantic-core": "2.50.4",
+      "litellm": "1.93.2",
+      "typing-inspection": "0.4.5",
+      "mcp": "1.30.0",
+      "aeb-gh-fixture": "1.1.0"
+    },
+    "source_tree_digest": "sha256:0df392018ec6ceb7e212692a4d8877e47a7f45189607017e718f84974949e94e",
+    "published_artifacts": [
+      {
+        "filename": "skillevaluator-0.9.0-py3-none-any.whl",
+        "sha256": "2812a2d03f66f1e7bf46312971f18fba7d8097c6bafa24b9e8e75176cbabdbe5",
+        "url": "https://files.pythonhosted.org/packages/30/34/df7ef63cc7a726ca22513062ecaa4b1f155965b24505233ce21d035efc24/skillevaluator-0.9.0-py3-none-any.whl"
+      },
+      {
+        "filename": "skillevaluator-0.9.0.tar.gz",
+        "sha256": "8342bb3ab0915a2723542bc889896ca535ed2677b602196a88325ad78a1388cc",
+        "url": "https://files.pythonhosted.org/packages/53/ec/dbadd6840cc1b6363df78947b2031b0e417b4a173c7a62dc9c1e34519e80/skillevaluator-0.9.0.tar.gz"
+      }
+    ],
+    "backend_wheel_sha256": "070237e238326d49a63f348d405533d01bdc58c68295aea206095aee80ac5149",
+    "backend_source_digest": "sha256:3e79836ee10bdb1d690f50384077cde9ef5eaf09cd4d470076eae459a0937fa8"
+  },
+  "intended_source_identities": {
+    "live": {
+      "grader_digest": "sha256:b5bc7155d8f9bffa47a32c39004032e7159cc0e1d417b4e4d12e90774f72d5a0",
+      "fixture_digest": "sha256:12938483fda731f7b7710ff7a6ae5eac6f1be0a9eb3a5ba6b5e6a5eb4da03994",
+      "runtime_digest": "sha256:c4ebc142f7d58abf49161568a40a1b2cb46b28d5bda6d62bfb3add53c0e1dcac"
+    },
+    "experiment-probe": {
+      "grader_digest": "sha256:b5bc7155d8f9bffa47a32c39004032e7159cc0e1d417b4e4d12e90774f72d5a0",
+      "fixture_digest": "sha256:12938483fda731f7b7710ff7a6ae5eac6f1be0a9eb3a5ba6b5e6a5eb4da03994",
+      "runtime_digest": "sha256:c4ebc142f7d58abf49161568a40a1b2cb46b28d5bda6d62bfb3add53c0e1dcac"
+    }
+  },
+  "intended_schedule": [
+    {
+      "position": 1,
+      "case": "gh-014",
+      "trial": 1,
+      "variant": "current"
+    },
+    {
+      "position": 2,
+      "case": "gh-014",
+      "trial": 1,
+      "variant": "absent"
+    }
+  ],
+  "slots": [
+    {
+      "position": 1,
+      "variant": "current",
+      "case": "gh-014",
+      "execution": "unlaunched",
+      "correctness": null,
+      "authorization": null,
+      "activation": null,
+      "target_access": "not observed; deployment staging not reached",
+      "submission": null,
+      "native_events": null,
+      "grade": null,
+      "usage": null,
+      "estimated_workload_usd": 0,
+      "estimated_workload_basis": "unlaunched; no provider requests"
+    },
+    {
+      "position": 2,
+      "variant": "absent",
+      "case": "gh-014",
+      "execution": "unlaunched",
+      "correctness": null,
+      "authorization": null,
+      "activation": null,
+      "target_access": "not observed; deployment staging not reached",
+      "submission": null,
+      "native_events": null,
+      "grade": null,
+      "usage": null,
+      "estimated_workload_usd": 0,
+      "estimated_workload_basis": "unlaunched; no provider requests"
+    }
+  ],
+  "agent_attempts": 0,
+  "deterministic_verifier_runs": 0,
+  "model_judge_calls": 0,
+  "launched_slots": 0,
+  "unlaunched_slots": 2,
+  "estimated_workload_usd": 0,
+  "actual_billing": "unknown; not invoice reconciliation",
+  "ci_costs": "separate",
+  "workload_cleanup": {
+    "required": false,
+    "native_receipt": null,
+    "resource_baseline_receipt": null,
+    "basis": "Live job skipped before workload creation; no container baseline was independently measured"
+  },
+  "report_verification": {
+    "live_report_produced": false,
+    "live_report_reproduced": false,
+    "reason": "No live job, attempt ledger, submissions, native grades or execution artifact; no consolidated live report exists to reproduce",
+    "previous_preparation_report_reproduction": "Unchanged source-bound evidence only; not a substitute for live reporting"
+  },
+  "closure_file": "allocation-closure.json",
+  "closure_file_sha256": "sha256:7d1affc6fe923308bb4ec24bc7e9a63f61cc4f73de831e6ab99a181e8f5fe08f"
+}
