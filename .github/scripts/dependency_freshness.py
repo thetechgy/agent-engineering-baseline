@@ -314,6 +314,12 @@ def inventory(root):
          "benchmarks/reviews/native replay retain their owners. Retained 0.8.0 and frozen experiments are unchanged. "
          "Harbor 0.25.0 is supported; Python <3.15 and LiteLLM <1.94 still constrain this group. "
          "Credential-free compatibility does not establish provider or skill benefit."),
+        ("execution-next-environment", "Opt-in 0.9.0 behavioral execution preparation",
+         ".github/evals/codex-execution-090.json",
+         "Explicit gh-runtime-090-v1 selection holds production Codex 0.155.1 / gpt-5.6-sol / high. "
+         "Uses existing pinned SkillEvaluator 0.9.0 / Harbor 0.25.0 with custom-only deterministic grading. "
+         "Preparation is credential-free; live provider behavior remains untested. Default benchmarks stay 0.3.0. "
+         "No paid allocation is opened; standard model judging, Pester clarification and skill adoption remain deferred."),
         ("pilot-environment", "Frozen CLI pilot and campaign selectors",
          ".github/evals/codex-pilot.json",
          "Frozen Codex/model/reasoning selectors, not a production default or freshness approval. "

@@ -41,6 +41,8 @@ class RetainedCampaign(unittest.TestCase):
         profile,_,_=evidence.custom_contract(task.definition['skill'],purpose=purpose)
         self.assertTrue(evidence.oracle_purpose(purpose))
         meta=replay.campaign_retrospective(profile,adapter_revision='a'*40)
+        self.assertEqual(meta['corrected_adapter_sha256'],
+            evidence.digest_bytes((ROOT/'.github/scripts/evaluation_codex.py').read_bytes()))
         self.assertEqual(set(meta['submission_digests']),{'with_skill'})
         self.assertIs(meta['new_inference'],False)
         replay.validate_campaign_retrospective(meta,profile)

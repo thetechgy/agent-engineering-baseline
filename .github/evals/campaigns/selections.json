@@ -90,6 +90,19 @@
           "location": "candidate/evidence"
         }
       ]
+    },
+    "gh-runtime-090-v1": {
+      "definition": ".github/evals/campaigns/gh-runtime-090-v1.json",
+      "controls": [
+        ".github/evals/campaigns/gh-read-090.json"
+      ],
+      "producers": [
+        {
+          "workflow": ".github/workflows/evaluation-campaign.yml",
+          "artifact": "reusable-evaluation",
+          "location": "preparation/evidence"
+        }
+      ]
     }
   }
 }

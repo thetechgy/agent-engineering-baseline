@@ -169,7 +169,7 @@ class PilotContracts(unittest.TestCase):
         from harbor.models.agent.context import AgentContext
         from types import SimpleNamespace
         with tempfile.TemporaryDirectory() as d:
-            root=Path(d); context=AgentContext(); agent=SimpleNamespace(logs_dir=root)
+            root=Path(d); context=AgentContext(); agent=SimpleNamespace(profile=PROFILE,logs_dir=root)
             (root/'codex.txt').write_text('{"type":"turn.failed","error":{"message":"refused"}}\n')
             PilotCodex.populate_context_post_run(agent,context)
             self.assertIsNone(context.n_input_tokens)

@@ -1,4 +1,168 @@
-# Behavioral evidence 0.9.0 integration checkpoint
+# Behavioral runtime 0.9.0 completed compatibility pilot checkpoint
+
+**Completed; allocation closed.** The single authorized
+[run 43781947803/A1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43781947803)
+executed `a8dd7fb20d54284c6a488e228b4430661501ffef` from PR #143. The corrected
+trusted-manifest/live-constructor path reached both actual Codex/OpenAI attempts.
+Current then absent completed serially, with exact submissions, two deterministic
+verifier runs, zero model-judge requests, complete usage and completed disposal.
+Both native task outcomes are measured failures: independent correctness 1/1,
+task authorization 0/0, activation 1/0 and gate 0/0. These are not infrastructure
+failures or unlaunched arms, and they do not establish skill advantage.
+
+Current native events contain a successful full skill read whose 21,232 bytes
+match the frozen source/deployment exactly. The retained convenience field remains
+unknown; this independent byte observation is recorded separately. The absent
+skill was not deployed and has no observed native full read. Original observations,
+grades, counts and task policy remain unchanged.
+
+Reported token estimates total **$0.2724272**, below the $2 plan and $3 scheduling
+threshold. Actual provider billing and earlier unknown spending remain unknown;
+the $3 reserve/$6 envelope is not a billing cap. Both agent/controller resources
+returned to baseline. The allocation closed at **2026-11-16T00:56:18.651645Z**, with
+two launched slots, zero unlaunched slots and no continuation/replacement authority.
+The previous allocation and its unused slot remain permanently closed.
+
+See the [execution, artifact and closure receipt](../../docs/evaluations/gh-runtime-090-v1/execution-guard-20261116-01/EXECUTION.md).
+Authenticated live artifact `14188559673`, archive SHA-256
+`1ee8019d90778c21dd763e10e607703ce5d877107fc0b6510981aca45c52f8cf`, retains
+native events, grades, submissions, scheduler states and disposal evidence. The
+existing public report independently reproduces byte for byte, SHA-256
+`11850c54747f195255fc3dedaf62f0e2a6cf06c6434dfa7d519d5eb6636b1bb0`.
+
+This is bounded live compatibility evidence for the execution SHA. Report-only
+changes follow closure and do not qualify their later documentation SHA. PR #143
+remains unmerged; [its maintained receipt](https://github.com/thetechgy/agent-engineering-baseline/pull/143)
+records the report-only revision and checks. No broad qualification was manually
+repeated, and no runtime/model/task/skill/dependency or isolation setting changed.
+Production remains 0.3.0 / Harbor 0.13.2; Pages/history and recurring paid work remain
+unchanged. Grading/judge accuracy, standard judges, wider compatibility, billing
+and skill improvement remain unproven. Pester clarification/adoption stay deferred.
+
+**One current next action:** merge review of PR #143 and its bounded compatibility
+receipts.
+
+## Credential-free correction checkpoint, retained as history
+
+### Behavioral runtime 0.9.0 launch-construction correction checkpoint
+
+The focused correction in [PR #143](https://github.com/thetechgy/agent-engineering-baseline/pull/143)
+keeps parent rejection of ambient overrides and child authorization guards while
+accepting only task-owned metadata verified against the private operator manifest,
+trusted staged task population and selected arm. A protected TrialConfig context
+binds the manifest seal; the shared launch builder verifies it before key attachment.
+This fixes the trusted `AEB_GH_MANIFEST` rejection without a global allowlist or
+runtime/protection change. See the [trust-boundary and qualification receipt](../../docs/evaluations/gh-runtime-090-v1/launch-correction.md).
+
+The retained failing-before reproduction reaches the actual live Harbor/Codex
+constructor for both arms. Credential-free preparation now runs that same live
+launch builder and real agent initialization, stops before environment creation,
+and exercises the actual manifest startup consumer under a test-only stop before
+container start. Missing/substituted/tampered/wrongly bound metadata, unknown/probe/
+control/provider overrides and invalid authority must reject. Fresh consumption
+validates the retained proof and repeats the boundary on fresh staging. No actual
+model credentials, allocation claim, inference or model judge are used.
+
+New scheduler-backed reporting distinguishes unlaunched slots, infrastructure
+launch failures and measured task failures while retaining native grades, counts
+and collection status. The focused stopped-before-launch report regression retains
+zero observations and reproduces its output. Valid `unknown` grader outcomes now remain
+unscored and preserve the `missing_usable_evidence` stop through public reporting;
+a regression executes the actual generated gh grader before collection. The original published stopped report
+still reproduces unchanged, SHA-256
+`5acc463c73bf87fc50b741c6d7a94528b4d63bbc19f1caddf6feba8cceebc04f`.
+
+Final executable revision, terminal selected CI (including both required platforms
+and selected-results gate), hosted preparation, fresh consumption and artifact/digest
+receipts are maintained in PR #143. A failed, pending or source-mismatched receipt
+is not qualification. Report-only or later merge revisions are not implicitly covered.
+
+**The old allocation remains closed**, including its unused absent-skill slot.
+Stopped run 43762601398 and its b3e190d execution identity, evidence, original report
+and closure are preserved below. No new paid authority, nonce or reservation is
+created; no protected gate is approved. Live provider/CLI compatibility, actual task
+success, standard judge accuracy and skill improvement remain unproven. Production
+defaults, paid-stream settings, fixtures/grading and held runtime/model values remain
+unchanged. PR #143 remains unmerged; Pester clarification and skill adoption remain deferred.
+
+**One current next action:** review the qualified correction and exact-revision
+receipts in PR #143.
+
+## Stopped pilot checkpoint, retained as history
+
+### Behavioral runtime 0.9.0 stopped pilot checkpoint
+
+**Stopped; allocation closed.** The separately authorized single diagnostic
+[run 43762601398, attempt 1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43762601398)
+executed source `b3e190d143e2cbc7b44938d4d01b690dc9f67c10` from PR #143. Its
+current-skill gh-014 slot failed during Harbor agent construction, before Codex
+launched: the live guard rejected the trusted task's `AEB_GH_MANIFEST` variable.
+The absent-skill slot remained unlaunched. No task grading, submission, model
+judgment or usage record was produced. The failure is infrastructure evidence,
+not a skill comparison or a measured task failure.
+
+Exactly one allocation-bound dispatch and only its matching `skill-benchmark`
+gate were approved under the explicit user authorization. The allocation closed
+at 2026-11-15T21:22:28.064144Z, including its unused second slot. No retry,
+replacement, continuation or runtime fix occurred. Estimated usage and actual
+billing remain unknown; the $2 estimate/$6 planning envelope was not a billing cap.
+Cleanup returned to the resource baseline, with no agent container initialized.
+The stopped zero-observation report reproduces byte for byte. Its empty-arm
+`failed` aggregates do not override the ledger's explicit unlaunched second slot.
+
+See the [execution receipt, artifact identities and concrete reproduction](../../docs/evaluations/gh-runtime-090-v1/execution/EXECUTION.md).
+The original preparation and its credential-free CLI controls remain distinct
+from this stopped live path. Live provider/CLI compatibility, useful task behavior,
+verifier operation in live execution, judge accuracy and skill benefit remain
+unproven. [PR #143](https://github.com/thetechgy/agent-engineering-baseline/pull/143)
+remains unmerged. Report-only updates after closure do not change the original
+execution identity or qualify a later revision.
+
+Production Benchmark remains 0.3.0 / Harbor 0.13.2. No production history append,
+Pages publication, recurring paid work or allocation reopening occurred. Pester
+clarification and skill adoption remain deferred.
+
+**One current next action:** authorize a separate credential-free fix and
+requalification of trusted task-manifest handling in the live guard. A future paid
+pilot requires a new exact-revision preparation and authorization.
+
+## PR #143 execution preparation, retained as history
+
+### Behavioral runtime 0.9.0 execution preparation checkpoint
+
+**Implemented for review; no paid pilot authorized.** Current main was verified
+at `15caaedb82edf5d9e0253394ed99e3135cd7be93`, the completed merge of #142.
+Static quality and data-only reporting/orchestration already use 0.9.0. #142's
+versioned behavioral collection/recovery/interpretation/reporting and history
+refusal are merged offline qualification; its simulated judgments do not establish
+live compatibility.
+
+The explicit `gh-runtime-090-v1` selection prepares pinned 0.9.0 / Harbor 0.25.0
+through the existing shared campaign. It preserves production's Codex 0.155.1,
+gpt-5.6-sol and high reasoning. The prospective diagnostic pair uses existing
+read-only gh-014 and custom-only deterministic grading: two agent attempts, two
+verifier runs, zero model-judge calls. See the [execution contract and proposal](../../docs/evaluations/execution-runtime-090.md).
+
+Local matched APM/native staging and focused contracts are preparation evidence.
+Final-revision hosted preparation, fresh-runner consumption and normal selected
+CI determine readiness. [Draft PR #143](https://github.com/thetechgy/agent-engineering-baseline/pull/143)
+retains their terminal results, exact revision, artifacts and proposed command.
+A pending, failed, cancelled or expired receipt does not qualify execution.
+Live authentication/routing, real provider usage, standard model-judge compatibility/accuracy and skill improvement remain
+unproven. No allocation is claimed or reopened.
+
+Production Benchmark remains 0.3.0 / Harbor 0.13.2. The 0.9 offline fixture,
+historical profiles/grades and frozen 0.8 experiments retain their identities.
+Pester clarification and skill adoption remain deferred; no history append,
+protected gate approval, Pages publication, paid dispatch or recurring paid work
+is authorized.
+
+**One current next action:** review draft #143 and its exact-revision preparation
+and fresh-runner receipts, then decide separately on its bounded pilot proposal.
+
+## PR #142 offline integration, retained as history
+
+### Behavioral evidence 0.9.0 integration checkpoint
 
 **Implemented for review; offline qualification only.** Starting main is verified
 at `66c3f92a40b0f00bb461286596a2016a6a39108a`, the completed merge of #141.

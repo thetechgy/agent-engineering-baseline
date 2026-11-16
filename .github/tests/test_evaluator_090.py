@@ -39,18 +39,27 @@ class Release090Contracts(unittest.TestCase):
     def test_source_successors_preserve_every_historical_registry_entry(self):
         registry = evidence.custom_registry(ROOT)
         old = copy.deepcopy(registry)
-        added = [key for key in registry['profiles'] if '-source-v15-' in key]
-        self.assertEqual(len(added), 27)
-        added.append('pester-effectiveness-v24')
+        added = [key for key in registry['profiles'] if '-source-v17-' in key]
+        self.assertEqual(len(added), 31)
+        added.extend(('pester-effectiveness-v26', 'pester-cli-pilot-retained-v17'))
         for key in added:
             new = registry['profiles'][key]
-            previous = registry['profiles'][key.replace('-source-v15-', '-source-v14-') if key.startswith('campaign-') else 'pester-effectiveness-v23']
-            self.assertEqual({k:v for k,v in new.items() if k not in ('id', 'runtime_digest')},
+            predecessor = (key.replace('-source-v17-', '-source-v16-') if key.startswith('campaign-') else
+                           'pester-effectiveness-v25' if key == 'pester-effectiveness-v26' else 'pester-cli-pilot-retained-v16')
+            previous = registry['profiles'][predecessor]
+            normalized = copy.deepcopy(new)
+            if 'adapter_sha256' in new.get('campaign', {}):
+                self.assertEqual(new['campaign']['adapter_sha256'], evidence.digest_bytes((ROOT / '.github/scripts/evaluation_codex.py').read_bytes()))
+                normalized['campaign']['adapter_sha256'] = previous['campaign']['adapter_sha256']
+            if new.get('campaign', {}).get('mode') in ('live', 'experiment-probe'):
+                self.assertEqual(normalized['campaign'].pop('scheduler'), 'campaign-scheduler-v1')
+            self.assertEqual({k:v for k,v in normalized.items() if k not in ('id', 'runtime_digest')},
                              {k:v for k,v in previous.items() if k not in ('id', 'runtime_digest')})
-            self.assertEqual(evidence.custom_input_identities(ROOT, new['skill_id'], purpose=key if key.startswith('campaign-') else 'skill_effectiveness')['runtime_digest'], new['runtime_digest'])
+            purpose = key if key.startswith('campaign-') else 'skill_effectiveness' if key.startswith('pester-effectiveness') else 'cli_pilot'
+            self.assertEqual(evidence.custom_input_identities(ROOT, new['skill_id'], purpose=purpose)['runtime_digest'], new['runtime_digest'])
             del old['profiles'][key]
         digest = hashlib.sha256(json.dumps(old, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
-        self.assertEqual(digest, 'bae53793d3e47a1d48e3e3ae4e9c3c4a80930f000ff0a26c816fcf0dc5399003')
+        self.assertEqual(digest, '9f6da16a495515bded95fe199d2996c5a09ea5712a19786f47b71c50b7c703ed')  # Complete stopped-report revision, 562 profiles.
 
     @unittest.skipUnless(importlib.util.find_spec('aeb_gh_fixture'), 'Requires the candidate owning backend')
     def test_native_gh_entry_point_selects_actual_owning_profile(self):

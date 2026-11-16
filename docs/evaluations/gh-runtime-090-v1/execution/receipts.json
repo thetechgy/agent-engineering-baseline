@@ -1,0 +1,234 @@
+{
+  "kind": "stopped-diagnostic-execution-receipt-v1",
+  "execution_revision": "b3e190d143e2cbc7b44938d4d01b690dc9f67c10",
+  "execution_branch": "feat/evaluator-090-execution",
+  "campaign": "gh-runtime-090-v1",
+  "run": {
+    "id": 43762601398,
+    "attempt": 1,
+    "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43762601398",
+    "status": "completed",
+    "conclusion": "failure"
+  },
+  "allocation": "campaign-b3e190d143e2cbc7b44938d4d01b690dc9f67c10-gh-runtime-090-v1-prep14174835478-usd6-diag090_20261115",
+  "authentication": {
+    "artifact": "14174835478",
+    "artifact_digest": "sha256:9c0e5fbcb307176b8d48e473e931a68412c9aac4701e1bb9b172915de9e65ade",
+    "producer_run": 43743655750,
+    "revision": "b3e190d143e2cbc7b44938d4d01b690dc9f67c10",
+    "protocol_digest": "sha256:70023325dd91baa31ca369ed2f7aff914e78127f28311ef12cb6d4b2129215fd",
+    "dispatch": "diag090_20261115",
+    "run_id": "43762601398",
+    "allocation": "campaign-b3e190d143e2cbc7b44938d4d01b690dc9f67c10-gh-runtime-090-v1-prep14174835478-usd6-diag090_20261115",
+    "first_dispatch": true,
+    "authentication": "github-api-producer-and-digest",
+    "definition": ".github/evals/campaigns/gh-runtime-090-v1.json",
+    "definition_digest": "sha256:7c3b7c25da2ea4e03b00f1814e11cf9ea7802d5a2b37c2936011044d4b937071",
+    "selection_digest": "sha256:7b501d2d9713e91f9fcadc647e8d6191dfee5299bd264a323cf3be37cd7c0688",
+    "preparation_location": "preparation/evidence"
+  },
+  "protected_environment": {
+    "id": 22271667910,
+    "name": "skill-benchmark",
+    "matching_approvals": 1
+  },
+  "preparation": {
+    "run": 43743655750,
+    "attempt": 1,
+    "artifact": 14174835478,
+    "archive_sha256": "sha256:9c0e5fbcb307176b8d48e473e931a68412c9aac4701e1bb9b172915de9e65ade",
+    "expires_at": "2027-02-13T17:53:43Z",
+    "fresh_api_inspection_run": 43746221979,
+    "inspection_attempt": 1
+  },
+  "terminal_artifacts": [
+    {
+      "id": 14181315252,
+      "name": "campaign-live-1",
+      "size_in_bytes": 265357,
+      "digest": "sha256:77a6f1e36b9ccf2b6d99f0c620a4624db48b64b8347c483c962dad30a854bd74",
+      "expires_at": "2027-02-13T21:14:48Z"
+    },
+    {
+      "id": 14180168774,
+      "name": "campaign-authenticated-1",
+      "size_in_bytes": 4171128,
+      "digest": "sha256:8be611538aa72c5d94f3d005ff26d044639bdf583337df60e6139ae3cf52a047",
+      "expires_at": "2027-02-13T21:14:48Z"
+    }
+  ],
+  "runtime": {
+    "profile": {
+      "id": "codex-090-diagnostic-v1",
+      "adapter": "codex",
+      "frozen_profile": ".github/evals/codex-execution-090.json",
+      "frozen_profile_sha256": "044a8d6c16870d40f193f1879b826d9eb6139c8f1c38b57d7e16f8acee72011d",
+      "capabilities": [
+        "non-forwarding-cli-probe",
+        "exact-authorized-live"
+      ],
+      "inference_enabled": false
+    },
+    "resolved": {
+      "id": "codex-090-diagnostic-v1",
+      "case": "gh-014",
+      "skill": "gh",
+      "cli": "0.155.1",
+      "cli_revision": "rust-v0.155.1",
+      "cli_archive_sha256": "a65b895c6ac1a73629bbe4b864640c86133e94a43b4d67b3103044e1a306d5a2",
+      "cli_executable_sha256": "0753dfe1d8b87a52436deb13eb1c549661ef4c84fee2c5aa688385eebeccb761",
+      "model": "gpt-5.6-sol",
+      "reasoning_effort": "high",
+      "provider": "openai",
+      "base_url": "https://api.openai.com/v1",
+      "agent_seconds": 600,
+      "cpus": 2,
+      "memory_mb": 2048,
+      "attempts_per_arm": 1,
+      "prices_per_million": {
+        "input": 4,
+        "cached_input": 0.4,
+        "output": 20
+      },
+      "frozen_at": "2026-11-15",
+      "release_url": "https://github.com/openai/codex/releases/tag/rust-v0.155.1",
+      "model_documentation": "https://developers.openai.com/api/docs/models/gpt-5.6-sol",
+      "configuration_documentation": "https://developers.openai.com/codex/config-reference",
+      "helper_sha256": {
+        "bin/codex-code-mode-host": "210ab8ebaebf4bc1421d9e30339c858354ca35fa91e2f87f4c6204e5382f8a63",
+        "codex-resources/bwrap": "77360cb751ccedc5971391444ac86a8a33c15b04d6b4a6fe45f5d25496e62c4c"
+      },
+      "execution_policy": "docker-external-openai-090-v1",
+      "agent": "codex"
+    }
+  },
+  "deployment": {
+    "apm": "0.35.1",
+    "adapter": "codex",
+    "skill": "gh",
+    "manifest": {
+      "SKILL.md": "b40d44ef9077b34d710b4c0737fee0e72c595e0770fbbdcb339de2ba0b40e23b"
+    },
+    "personal_instructions": false,
+    "mcp_servers": [],
+    "mode": "isolated"
+  },
+  "task_descriptors": {
+    "algorithm": "sha256-typed-toml-v1",
+    "descriptors": [
+      {
+        "arm": "with_skill",
+        "case_id": "gh-014",
+        "member": "task-descriptors/with_skill/gh-014.toml",
+        "raw_sha256": "sha256:379b2f8496db125abd88fe465aade00ba00f30130413457c3dbc86acca39456c",
+        "parsed_sha256": "sha256:8a66b9df17bcdb5b510295aea4467d761a1b3d13989951b14eca7315248b557c",
+        "task_checksum": "10ced5d006a3fbbc2fc2feca5e9bee997ae9ab36e57a3f3d054f2d4dd70c2e6d"
+      },
+      {
+        "arm": "without_skill",
+        "case_id": "gh-014",
+        "member": "task-descriptors/without_skill/gh-014.toml",
+        "raw_sha256": "sha256:379b2f8496db125abd88fe465aade00ba00f30130413457c3dbc86acca39456c",
+        "parsed_sha256": "sha256:8a66b9df17bcdb5b510295aea4467d761a1b3d13989951b14eca7315248b557c",
+        "task_checksum": "03a5ccd861f8747d620259dcc5078de464f1d58c7940ec42dd5ed5b921bf2680"
+      }
+    ]
+  },
+  "attempt_entries": [
+    {
+      "position": 1,
+      "case": "gh-014",
+      "trial": 1,
+      "variant": "current",
+      "state": "failed",
+      "estimated_usd_before": 0.0,
+      "config_sha256": "444e10c7b8ce2fb30d190f9cc079d9a5c215ec904e1f758dab20736c4da89b18",
+      "task_checksum": "10ced5d006a3fbbc2fc2feca5e9bee997ae9ab36e57a3f3d054f2d4dd70c2e6d",
+      "native_trial": "jobs/gh-codex-with/campaign-gh-014-attempt1__slot1",
+      "returncode": 1,
+      "cleanup": true,
+      "usage": {
+        "estimated_usd": null,
+        "billing": "missing native usage"
+      },
+      "elapsed_seconds": 7.999,
+      "native_exception": null,
+      "grading_present": false,
+      "outcome": {},
+      "custom_metrics": {}
+    },
+    {
+      "position": 2,
+      "case": "gh-014",
+      "trial": 1,
+      "variant": "absent",
+      "state": "unlaunched"
+    }
+  ],
+  "stop_reason": "execution_infrastructure_failure",
+  "primary_failure": "ValueError: Live runtime requires protected workflow; overrides refused",
+  "guard_reproduction": {
+    "execution_revision": "b3e190d143e2cbc7b44938d4d01b690dc9f67c10",
+    "method": "existing runtime_gate function; fixture environment and retained authentication receipt only",
+    "added_task_owned_variable": "AEB_GH_MANIFEST",
+    "with_manifest": "Live runtime requires protected workflow; overrides refused",
+    "without_manifest": "receipt validation succeeds",
+    "agent_initialized": false,
+    "model_credentials_supplied": false,
+    "model_requests": 0,
+    "allocation_claimed_by_reproduction": false
+  },
+  "verification": {
+    "verified_at": "2026-11-15T21:30:36.597871+00:00",
+    "run_id": 43762601398,
+    "run_attempt": 1,
+    "execution_revision": "b3e190d143e2cbc7b44938d4d01b690dc9f67c10",
+    "matching_dispatches": 1,
+    "matching_gate_approvals": 1,
+    "pending_gates": 0,
+    "pr_open_unmerged": true,
+    "deployment_equal": true,
+    "non_descriptor_task_members_equal": true,
+    "descriptor_comparison": {
+      "algorithm": "sha256-typed-toml-v1",
+      "configurations_equal": true,
+      "descriptors": 2
+    },
+    "raw_descriptor_difference": "TOML environment key order only; no parsed value differs",
+    "allocation_status": "closed"
+  },
+  "report": {
+    "execution_revision": "b3e190d143e2cbc7b44938d4d01b690dc9f67c10",
+    "stopped_report_sha256": "sha256:5acc463c73bf87fc50b741c6d7a94528b4d63bbc19f1caddf6feba8cceebc04f",
+    "stopped_reports_identical": true,
+    "public_admission": "passed",
+    "public_record_id": "sha256:6ab640696af7d50bd83f094341fcc9351059afaefa6ce8efa5c315d2d6623671",
+    "public_record_sha256": "sha256:5c189c539e0c9d62fb28a159dc8d39ab8e6da433c46f4320ee8786ee0383069c",
+    "frozen_preparation_report_sha256": "sha256:adb9ef05eb48eb000ef7d45be8ca1ad996af61ddd323556d1daedbb5683b2f81"
+  },
+  "cleanup": {
+    "complete": true,
+    "unlaunched_positions": [
+      2
+    ]
+  },
+  "observed_work": {
+    "codex_cli_launches": 0,
+    "deterministic_verifier_runs": 0,
+    "model_judge_requests": 0,
+    "native_observations": 0,
+    "submissions": 0
+  },
+  "accounting": {
+    "planning_estimate_usd": 2,
+    "scheduling_threshold_usd": 3,
+    "overshoot_reserve_usd": 3,
+    "planning_envelope_usd": 6,
+    "estimated_usage_usd": null,
+    "actual_billing": "unknown; no invoice reconciliation",
+    "provider_billing_cap": false,
+    "ci_costs": "separate"
+  },
+  "production_history": false,
+  "continuation_authorized": false
+}

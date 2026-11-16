@@ -49,7 +49,8 @@ class Refuse(BaseHTTPRequestHandler):
         raw = self.rfile.read(size)
         body = json.loads(raw)
         # Save only nonsensitive frozen-request observations; discard auth headers.
-        value = {'request_keys': sorted(body), 'tool_definitions': body.get('tools'), 'path': self.path, 'model': body.get('model'), 'reasoning': body.get('reasoning'),
+        value = {'authorization_matches_sentinel': self.headers.get('Authorization') == 'Bearer pilot-not-a-credential',
+                 'request_keys': sorted(body), 'tool_definitions': body.get('tools'), 'path': self.path, 'model': body.get('model'), 'reasoning': body.get('reasoning'),
                  'input_sha256': hashlib.sha256(json.dumps(body.get('input'), sort_keys=True).encode()).hexdigest(),
                  'input': body.get('input'), 'tools': [t.get('name', t.get('type')) for t in body.get('tools', [])],
                  'service_tier': body.get('service_tier'), 'stream': body.get('stream'),
@@ -58,6 +59,18 @@ class Refuse(BaseHTTPRequestHandler):
             value['simulated_response_usage'] = {'input_tokens': 7, 'output_tokens': 3, 'complete': False,
                 'provenance': 'non-forwarding fixture response; not provider usage or complete CLI accounting'}
         record.write_text(json.dumps(value, indent=2) + '\n')
+        if scenario == 'provider-timeout':
+            time.sleep(120)
+            return
+        if scenario in ('provider-refusal', 'malformed-response'):
+            payload = (json.dumps({'error': {'message': 'Controlled refusal', 'type': 'invalid_request_error'}}).encode()
+                       if scenario == 'provider-refusal' else b'event: response.completed\ndata: deliberately-malformed\n\n')
+            self.send_response(403 if scenario == 'provider-refusal' else 200)
+            self.send_header('Content-Type', 'application/json' if scenario == 'provider-refusal' else 'text/event-stream')
+            self.send_header('Content-Length', str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+            return
         if scenario == 'native-empty' or scenario == 'native-deadline' and value['requests'] > 1:
             time.sleep(120)  # Non-forwarding fixture: expire the native agent deadline.
             return
@@ -73,9 +86,11 @@ class Refuse(BaseHTTPRequestHandler):
                 programs = ['\n'.join(programs)] # Preserve native edit dependencies within one real code-mode call.
             events = [
                 {'type': 'response.created', 'response': {'id': 'pilot-fixture-1'}},
-                *[{'type': 'response.output_item.done', 'item': {'type': 'custom_tool_call',
-                    'call_id': 'pilot-tool-' + str(i), 'name': 'exec',
-                    'input': code}}
+                *[{'type': 'response.output_item.done', 'item':
+                    ({'type': 'function_call', 'call_id': 'pilot-tool-' + str(i), 'name': 'exec_command',
+                      'arguments': json.dumps({'cmd': issued[i], 'max_output_tokens': 4096})}
+                     if any(t.get('name') == 'exec_command' for t in body.get('tools', [])) else
+                     {'type': 'custom_tool_call', 'call_id': 'pilot-tool-' + str(i), 'name': 'exec', 'input': code})}
                   for i, code in enumerate(programs)],
                 {'type': 'response.completed', 'response': {'id': 'pilot-fixture-1',
                     'usage': {'input_tokens': 7 if scenario == 'native-deadline' else 0, 'output_tokens': 3 if scenario == 'native-deadline' else 0, 'total_tokens': 10 if scenario == 'native-deadline' else 0}}},

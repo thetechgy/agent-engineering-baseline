@@ -1,4 +1,5 @@
 """Frozen candidate source and task-owned control contracts; no inference."""
+import ast
 import hashlib
 import json
 import os
@@ -21,7 +22,27 @@ class ReturnContract(unittest.TestCase):
     def test_snapshots_and_frozen_inputs(self):
         frozen = reports.read_json(BASE / 'freeze.json')
         for member, digest in frozen['files'].items():
-            self.assertEqual(hashlib.sha256((ROOT / member).read_bytes()).hexdigest(), digest, member)
+            raw = (ROOT / member).read_bytes()
+            if member == '.github/scripts/evaluation_tasks.py':
+                # Project out only additive metadata interfaces and gh hooks.
+                # Every other byte, including all frozen Pester task code, must
+                # still match the original manifest. New hook bytes are bound by
+                # the source-successor profiles and their launch regressions.
+                classes = {n.name:n for n in ast.parse(raw).body if isinstance(n, ast.ClassDef)}
+                added = []
+                for owner, names in {
+                    'Task': {'launch_context', 'validate_launch_context'},
+                    'GhFixture': {'fixture_control', 'validate_result', 'launch_context', 'validate_launch_context'},
+                }.items():
+                    nodes = [n for n in classes[owner].body if isinstance(n, ast.FunctionDef) and n.name in names]
+                    self.assertEqual({n.name for n in nodes}, names)
+                    added.extend(nodes)
+                lines = raw.splitlines(keepends=True)
+                for node in sorted(added, key=lambda n:n.lineno, reverse=True):
+                    self.assertEqual(lines[node.end_lineno].strip(), b'')
+                    del lines[node.lineno - 1:node.end_lineno + 1]
+                raw = b''.join(lines)
+            self.assertEqual(hashlib.sha256(raw).hexdigest(), digest, member)
         current = BASE / 'variants/current/powershell-pester-6'
         candidate = BASE / 'variants/candidate/powershell-pester-6'
         self.assertEqual({p.relative_to(current).as_posix(): p.read_bytes() for p in reports.regular_tree(current)},
@@ -34,6 +55,14 @@ class ReturnContract(unittest.TestCase):
             for variant in ('current', 'candidate'):
                 task=load(ROOT / ('.github/evals/campaigns/pester-return-'+case+'-'+variant+'-'+version+'.json'))
                 definitions.append(task.definition)
+                # The generic hooks add validation, not task metadata or a new
+                # Pester execution policy. Both frozen arms retain empty metadata.
+                for present in (True, False):
+                    self.assertIsNone(task.launch_context(ROOT, ROOT/'unused', present, {}))
+                    self.assertEqual(task.validate_launch_context(ROOT, None, present, {}), {})
+                    with self.assertRaises(ValueError):task.launch_context(ROOT, ROOT/'unused', present, {'AEB_UNREVIEWED':'1'})
+                    with self.assertRaises(ValueError):task.validate_launch_context(ROOT, {'unreviewed':True}, present, {})
+
                 controls=load(ROOT / ('.github/evals/campaigns/pester-return-'+case+'-'+variant+'-controls-'+version+'.json'))
                 for mode in ('oracle','probe'):
                     selected=purpose(controls,mode)

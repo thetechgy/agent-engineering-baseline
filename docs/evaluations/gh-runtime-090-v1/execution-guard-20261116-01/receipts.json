@@ -1,0 +1,428 @@
+{
+  "run_id": 43781947803,
+  "run_attempt": 1,
+  "execution_revision": "a8dd7fb20d54284c6a488e228b4430661501ffef",
+  "dispatch_ref": "feat/evaluator-090-execution",
+  "workflow": ".github/workflows/evaluation-campaign.yml",
+  "campaign": "gh-runtime-090-v1",
+  "protocol_digest": "sha256:70023325dd91baa31ca369ed2f7aff914e78127f28311ef12cb6d4b2129215fd",
+  "allocation": "campaign-a8dd7fb20d54284c6a488e228b4430661501ffef-gh-runtime-090-v1-prep14187010942-usd6-diag090_guard_20261116_01",
+  "nonce": "diag090_guard_20261116_01",
+  "authorization_expires_at": "2026-11-18T00:00:00Z",
+  "allocation_status": "closed",
+  "preparation": {
+    "ready": true,
+    "revision": "a8dd7fb20d54284c6a488e228b4430661501ffef",
+    "campaign": "gh-runtime-090-v1",
+    "artifact": 14187010942,
+    "artifact_digest": "sha256:b48e87239f1884f1936f220a61d792d8fd3a82bf083fa15a800229ff108bb0a3",
+    "producer_run": 43774746427,
+    "producer_attempt": 1,
+    "registered_subtree": "preparation/evidence",
+    "artifact_expires_at": "2027-02-13T23:25:47Z",
+    "authorization_expires_at": "2026-11-18T00:00:00Z",
+    "live_construction_records": 31,
+    "ci": 43774637200,
+    "fresh_consumption": true,
+    "authenticated_inspection": 43777378320,
+    "report_sha256": "sha256:507681cc92c22475ad1d570cccf7242b16d7cfae92016611cf8e750c43730e08",
+    "pricing": {
+      "input": 4,
+      "cached_input": 0.4,
+      "output": 20,
+      "official_source": "https://developers.openai.com/api/docs/models/gpt-5.6-sol",
+      "verified_date": "2026-11-16",
+      "long_context_and_cache_writes": "unchanged documented adjustments"
+    },
+    "broad_qualification_repeated": false
+  },
+  "authenticated_dispatch": {
+    "artifact": "14187010942",
+    "artifact_digest": "sha256:b48e87239f1884f1936f220a61d792d8fd3a82bf083fa15a800229ff108bb0a3",
+    "producer_run": 43774746427,
+    "revision": "a8dd7fb20d54284c6a488e228b4430661501ffef",
+    "protocol_digest": "sha256:70023325dd91baa31ca369ed2f7aff914e78127f28311ef12cb6d4b2129215fd",
+    "dispatch": "diag090_guard_20261116_01",
+    "run_id": "43781947803",
+    "allocation": "campaign-a8dd7fb20d54284c6a488e228b4430661501ffef-gh-runtime-090-v1-prep14187010942-usd6-diag090_guard_20261116_01",
+    "first_dispatch": true,
+    "authentication": "github-api-producer-and-digest",
+    "definition": ".github/evals/campaigns/gh-runtime-090-v1.json",
+    "definition_digest": "sha256:7c3b7c25da2ea4e03b00f1814e11cf9ea7802d5a2b37c2936011044d4b937071",
+    "selection_digest": "sha256:7b501d2d9713e91f9fcadc647e8d6191dfee5299bd264a323cf3be37cd7c0688",
+    "preparation_location": "preparation/evidence"
+  },
+  "artifacts": [
+    {
+      "id": 14188559673,
+      "name": "campaign-live-1",
+      "size_in_bytes": 361061,
+      "digest": "sha256:1ee8019d90778c21dd763e10e607703ce5d877107fc0b6510981aca45c52f8cf",
+      "expires_at": "2027-02-14T00:42:19Z"
+    },
+    {
+      "id": 14187923843,
+      "name": "campaign-authenticated-1",
+      "size_in_bytes": 4232609,
+      "digest": "sha256:37664061d5ea34db096f4e8d5eadcc447c74ec6640164a2f8ef4074dc2ee37d3",
+      "expires_at": "2027-02-14T00:42:19Z"
+    }
+  ],
+  "runtime": {
+    "profile": {
+      "id": "codex-090-diagnostic-v1",
+      "adapter": "codex",
+      "frozen_profile": ".github/evals/codex-execution-090.json",
+      "frozen_profile_sha256": "044a8d6c16870d40f193f1879b826d9eb6139c8f1c38b57d7e16f8acee72011d",
+      "capabilities": [
+        "non-forwarding-cli-probe",
+        "exact-authorized-live"
+      ],
+      "inference_enabled": false
+    },
+    "resolved": {
+      "id": "codex-090-diagnostic-v1",
+      "case": "gh-014",
+      "skill": "gh",
+      "cli": "0.155.1",
+      "cli_revision": "rust-v0.155.1",
+      "cli_archive_sha256": "a65b895c6ac1a73629bbe4b864640c86133e94a43b4d67b3103044e1a306d5a2",
+      "cli_executable_sha256": "0753dfe1d8b87a52436deb13eb1c549661ef4c84fee2c5aa688385eebeccb761",
+      "model": "gpt-5.6-sol",
+      "reasoning_effort": "high",
+      "provider": "openai",
+      "base_url": "https://api.openai.com/v1",
+      "agent_seconds": 600,
+      "cpus": 2,
+      "memory_mb": 2048,
+      "attempts_per_arm": 1,
+      "prices_per_million": {
+        "input": 4,
+        "cached_input": 0.4,
+        "output": 20
+      },
+      "frozen_at": "2026-11-15",
+      "release_url": "https://github.com/openai/codex/releases/tag/rust-v0.155.1",
+      "model_documentation": "https://developers.openai.com/api/docs/models/gpt-5.6-sol",
+      "configuration_documentation": "https://developers.openai.com/codex/config-reference",
+      "helper_sha256": {
+        "bin/codex-code-mode-host": "210ab8ebaebf4bc1421d9e30339c858354ca35fa91e2f87f4c6204e5382f8a63",
+        "codex-resources/bwrap": "77360cb751ccedc5971391444ac86a8a33c15b04d6b4a6fe45f5d25496e62c4c"
+      },
+      "execution_policy": "docker-external-openai-090-v1",
+      "agent": "codex"
+    }
+  },
+  "effective_configuration": {
+    "model": "gpt-5.6-sol",
+    "model_provider": "pilot",
+    "model_reasoning_effort": "high",
+    "approval_policy": "never",
+    "sandbox_mode": "danger-full-access",
+    "web_search": "disabled",
+    "check_for_update_on_startup": false,
+    "features": {
+      "multi_agent": false,
+      "unified_exec": true
+    },
+    "model_providers": {
+      "pilot": {
+        "name": "OpenAI pilot",
+        "base_url": "https://api.openai.com/v1",
+        "env_key": "OPENAI_API_KEY",
+        "wire_api": "responses",
+        "request_max_retries": 0,
+        "stream_max_retries": 0,
+        "stream_idle_timeout_ms": 60000,
+        "supports_websockets": false
+      }
+    }
+  },
+  "deployment": {
+    "apm": "0.35.1",
+    "adapter": "codex",
+    "skill": "gh",
+    "manifest": {
+      "SKILL.md": "b40d44ef9077b34d710b4c0737fee0e72c595e0770fbbdcb339de2ba0b40e23b"
+    },
+    "personal_instructions": false,
+    "mcp_servers": [],
+    "mode": "isolated"
+  },
+  "task_descriptors": {
+    "algorithm": "sha256-typed-toml-v1",
+    "descriptors": [
+      {
+        "arm": "with_skill",
+        "case_id": "gh-014",
+        "member": "task-descriptors/with_skill/gh-014.toml",
+        "raw_sha256": "sha256:2a5080688e83e9c1773dfc7b211c0c8776f88e261adf6ec75b9ec8ff9d468c02",
+        "parsed_sha256": "sha256:8a66b9df17bcdb5b510295aea4467d761a1b3d13989951b14eca7315248b557c",
+        "task_checksum": "e3d843dae5eac8f58a9532a8259f16c364d327abdd31a205d8647cef37eb1064"
+      },
+      {
+        "arm": "without_skill",
+        "case_id": "gh-014",
+        "member": "task-descriptors/without_skill/gh-014.toml",
+        "raw_sha256": "sha256:2a5080688e83e9c1773dfc7b211c0c8776f88e261adf6ec75b9ec8ff9d468c02",
+        "parsed_sha256": "sha256:8a66b9df17bcdb5b510295aea4467d761a1b3d13989951b14eca7315248b557c",
+        "task_checksum": "53e51627675ada03d2adf0cc40d37fb3b259e40b6cd0e53cef9063af0aa9c7be"
+      }
+    ]
+  },
+  "attempt_entries": [
+    {
+      "position": 1,
+      "case": "gh-014",
+      "trial": 1,
+      "variant": "current",
+      "state": "completed",
+      "estimated_usd_before": 0.0,
+      "config_sha256": "e0a37ef1888323c92944840c7e78086f09c7f7fddd74950c05dcd0ea17c7e341",
+      "task_checksum": "e3d843dae5eac8f58a9532a8259f16c364d327abdd31a205d8647cef37eb1064",
+      "native_trial": "jobs/gh-codex-with/campaign-gh-014-attempt1__slot1",
+      "returncode": 0,
+      "cleanup": true,
+      "usage": {
+        "trial": "campaign-gh-014-attempt1__slot1",
+        "completeness": "complete_turn",
+        "provenance": "codex-0.155.1-exec-json",
+        "n_input_tokens": 88333,
+        "n_cache_tokens": 72182,
+        "n_output_tokens": 968,
+        "estimated_usd": 0.1128368,
+        "billing": "provider-reported tokens; estimate, not invoice"
+      },
+      "elapsed_seconds": 116.351,
+      "native_exception": null,
+      "grading_present": true,
+      "outcome": {
+        "classification": "failed",
+        "code": "evaluated"
+      },
+      "custom_metrics": {
+        "gh_evidence": 1.0,
+        "gh_activation": 1.0,
+        "gh_commands": 1.0,
+        "gh_task": 1.0,
+        "gh_recovery": 1.0,
+        "gh_authorization": 0.0,
+        "gh_efficiency": 1.0,
+        "gh_gate": 0.0
+      },
+      "submission": {
+        "sha256": "32d74b2c3f287c2ea5832150700be3b958f553e2852a2f2a0c17e1ddfb08f5de",
+        "bytes": 58,
+        "file": "result.json"
+      },
+      "skill_access": {
+        "successful_full_read": null,
+        "deployed": true,
+        "interpretation": "access only; no task quality or benefit implied"
+      },
+      "agent_id": "6d705ab14398d4fe1e5143dd5869d9165bf7bd1768fd2ba08c2f3c63259e6099"
+    },
+    {
+      "position": 2,
+      "case": "gh-014",
+      "trial": 1,
+      "variant": "absent",
+      "state": "completed",
+      "estimated_usd_before": 0.1128368,
+      "config_sha256": "a515771e40aaefc88256ac21d5ef065456b89a650f5b30d07251f9262c8c6d13",
+      "task_checksum": "53e51627675ada03d2adf0cc40d37fb3b259e40b6cd0e53cef9063af0aa9c7be",
+      "native_trial": "jobs/gh-codex-without/campaign-gh-014-attempt1__slot2",
+      "returncode": 0,
+      "cleanup": true,
+      "usage": {
+        "trial": "campaign-gh-014-attempt1__slot2",
+        "completeness": "complete_turn",
+        "provenance": "codex-0.155.1-exec-json",
+        "n_input_tokens": 190244,
+        "n_cache_tokens": 178046,
+        "n_output_tokens": 1979,
+        "estimated_usd": 0.15959040000000002,
+        "billing": "provider-reported tokens; estimate, not invoice"
+      },
+      "elapsed_seconds": 103.761,
+      "native_exception": null,
+      "grading_present": true,
+      "outcome": {
+        "classification": "failed",
+        "code": "evaluated"
+      },
+      "custom_metrics": {
+        "gh_evidence": 1.0,
+        "gh_activation": 0.0,
+        "gh_commands": 0.0,
+        "gh_task": 1.0,
+        "gh_recovery": 0.0,
+        "gh_authorization": 0.0,
+        "gh_efficiency": 1.0,
+        "gh_gate": 0.0
+      },
+      "submission": {
+        "sha256": "32d74b2c3f287c2ea5832150700be3b958f553e2852a2f2a0c17e1ddfb08f5de",
+        "bytes": 58,
+        "file": "result.json"
+      },
+      "skill_access": {
+        "successful_full_read": null,
+        "deployed": false,
+        "interpretation": "access only; no task quality or benefit implied"
+      },
+      "agent_id": "22fc06d4099bd3adb79d99b75b71e9f326a91f149825bcf195a8bf21a4ba5d8c"
+    }
+  ],
+  "verification": {
+    "verified_at": "2026-11-16T00:56:18.651498+00:00",
+    "run_id": 43781947803,
+    "attempt": 1,
+    "execution_revision": "a8dd7fb20d54284c6a488e228b4430661501ffef",
+    "matching_dispatches": 1,
+    "matching_gate_approvals": 1,
+    "pending_gates": 0,
+    "launched": 2,
+    "unlaunched": 0,
+    "arms": [
+      {
+        "variant": "current",
+        "position": 1,
+        "event_count": 16,
+        "cli_turns_completed": 1,
+        "native_task_checksum": "e3d843dae5eac8f58a9532a8259f16c364d327abdd31a205d8647cef37eb1064",
+        "manifest_seal": "44ab88dee7b03342e50efccd5a17bff26d5df2ab8e0472e914a078115d9efbb6",
+        "cli_trace_sha256": "sha256:22296f90133077a0a224a602b059592c41d778a913770a6700806821500967c9",
+        "trajectory_sha256": "sha256:11cc3109448feae2cffbd1a8573dbb37a7ae5cea9e4fe515b47cf86d58e35686",
+        "native_grade_sha256": "sha256:3fb50d8b15c08f5546b4ee8d3ead46546a203befcd28876bcd650f38915200c1",
+        "submission": {
+          "sha256": "32d74b2c3f287c2ea5832150700be3b958f553e2852a2f2a0c17e1ddfb08f5de",
+          "bytes": 58,
+          "file": "result.json"
+        },
+        "usage": {
+          "trial": "campaign-gh-014-attempt1__slot1",
+          "completeness": "complete_turn",
+          "provenance": "codex-0.155.1-exec-json",
+          "n_input_tokens": 88333,
+          "n_cache_tokens": 72182,
+          "n_output_tokens": 968,
+          "estimated_usd": 0.1128368,
+          "billing": "provider-reported tokens; estimate, not invoice"
+        },
+        "recomputed_estimate_usd": 0.1128368,
+        "disposal_complete": true,
+        "task_correctness": 1,
+        "task_authorization": 0,
+        "activation": 1.0,
+        "gate": 0,
+        "skill_access": {
+          "successful_full_read": null,
+          "deployed": true,
+          "interpretation": "access only; no task quality or benefit implied"
+        }
+      },
+      {
+        "variant": "absent",
+        "position": 2,
+        "event_count": 41,
+        "cli_turns_completed": 1,
+        "native_task_checksum": "53e51627675ada03d2adf0cc40d37fb3b259e40b6cd0e53cef9063af0aa9c7be",
+        "manifest_seal": "44ab88dee7b03342e50efccd5a17bff26d5df2ab8e0472e914a078115d9efbb6",
+        "cli_trace_sha256": "sha256:bac6107d9cd11871ec3c2aee0253eb3f76bf6639d1af888961727a6e39708337",
+        "trajectory_sha256": "sha256:3b0153039bdcfd992fe8ed22217e4388a19310dc04baf411f26f5a6d02370aae",
+        "native_grade_sha256": "sha256:a80ea0d9bc9ae57be42dc01aa7da870270065bee79cd5b7d26d240e8f920f0f6",
+        "submission": {
+          "sha256": "32d74b2c3f287c2ea5832150700be3b958f553e2852a2f2a0c17e1ddfb08f5de",
+          "bytes": 58,
+          "file": "result.json"
+        },
+        "usage": {
+          "trial": "campaign-gh-014-attempt1__slot2",
+          "completeness": "complete_turn",
+          "provenance": "codex-0.155.1-exec-json",
+          "n_input_tokens": 190244,
+          "n_cache_tokens": 178046,
+          "n_output_tokens": 1979,
+          "estimated_usd": 0.15959040000000002,
+          "billing": "provider-reported tokens; estimate, not invoice"
+        },
+        "recomputed_estimate_usd": 0.1595904,
+        "disposal_complete": true,
+        "task_correctness": 1,
+        "task_authorization": 0,
+        "activation": 0.0,
+        "gate": 0,
+        "skill_access": {
+          "successful_full_read": null,
+          "deployed": false,
+          "interpretation": "access only; no task quality or benefit implied"
+        }
+      }
+    ],
+    "estimated_usage_usd": 0.2724272,
+    "actual_billing": "unknown; no invoice reconciliation; earlier unknown spending remains unknown",
+    "report_sha256": "sha256:11850c54747f195255fc3dedaf62f0e2a6cf06c6434dfa7d519d5eb6636b1bb0",
+    "public_report_sha256": "sha256:bda2fe5b1d812619e918c3c07f1122db564248031d1d61aff1408f110e037374",
+    "public_admission": "passed",
+    "report_reproduced": true,
+    "cleanup_complete": true,
+    "native_grades_unchanged": true,
+    "model_judge_requests": 0,
+    "deterministic_verifier_runs": 2,
+    "deployment_equal": true,
+    "full_typed_descriptors_equal": true,
+    "non_descriptor_task_members_equal": true
+  },
+  "skill_access_supplemental_observation": [
+    {
+      "variant": "current",
+      "ledger_skill_access": {
+        "successful_full_read": null,
+        "deployed": true,
+        "interpretation": "access only; no task quality or benefit implied"
+      },
+      "raw_read_events": [
+        {
+          "command": "/bin/sh -lc 'cat /home/agent/.agents/skills/gh/SKILL.md'",
+          "exit_code": 0,
+          "output_bytes": 21232,
+          "expected_bytes": 21232,
+          "raw_output_sha256": "b40d44ef9077b34d710b4c0737fee0e72c595e0770fbbdcb339de2ba0b40e23b",
+          "source_sha256": "b40d44ef9077b34d710b4c0737fee0e72c595e0770fbbdcb339de2ba0b40e23b",
+          "exact_bytes_equal": true,
+          "full_source_text_present": true
+        }
+      ]
+    },
+    {
+      "variant": "absent",
+      "ledger_skill_access": {
+        "successful_full_read": null,
+        "deployed": false,
+        "interpretation": "access only; no task quality or benefit implied"
+      },
+      "raw_read_events": []
+    }
+  ],
+  "accounting": {
+    "planning_estimate_usd": 2,
+    "scheduling_threshold_usd": 3,
+    "overshoot_reserve_usd": 3,
+    "planning_envelope_usd": 6,
+    "estimated_usage_usd": 0.2724272,
+    "actual_billing": "unknown; no invoice reconciliation; historical unknown spending remains unknown",
+    "provider_request_count": "not independently observed; multiple provider requests per agent attempt permitted",
+    "provider_billing_cap": false,
+    "ci_costs": "separate"
+  },
+  "cleanup": {
+    "complete": true,
+    "unlaunched_positions": []
+  },
+  "production_history": false,
+  "model_judge_requests": 0,
+  "deterministic_verifier_runs": 2,
+  "continuation_authorized": false,
+  "report_only_update": "Recorded after allocation closure; execution identity stays a8dd7fb20d54284c6a488e228b4430661501ffef. Later documentation revisions do not qualify execution."
+}

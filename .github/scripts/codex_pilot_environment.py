@@ -26,14 +26,23 @@ from skillevaluator.tier3.harbor.secure_docker_environment import (
 
 class PilotEnvironment(SkillEvaluatorSecureDockerEnvironment):
     def __init__(self, *args, **kwargs):
-        mounts = kwargs.pop('mounts', ())
-        if any(str(m['target']) not in ('/logs/agent', '/logs/verifier', '/logs/artifacts') for m in mounts):
+        mounts = kwargs.pop('mounts', ()) or ()
+        # Harbor 0.25 separates explicit mounts from automatic output paths.
+        auto_mounts = kwargs.get('auto_mounts') or ()
+        outputs = (*mounts, *auto_mounts)
+        if any(str(m['target']) not in ('/logs/agent', '/logs/verifier', '/logs/artifacts') for m in outputs):
             raise ValueError('Unexpected pilot mount')
         self._pilot_interrupted = False
         self._pilot_evidence = None
         self._pilot_secrets = set()
         self._pilot_stages = []
-        self._pilot_agent = any(str(m['target']) == '/logs/agent' for m in mounts)
+        self._pilot_agent = any(str(m['target']) == '/logs/agent' for m in outputs)
+        if self._pilot_agent and 'auto_mounts' in kwargs:
+            if kwargs.get('auto_mounting'):
+                raise ValueError('Pilot automatic host mounts refused')
+            # These are container output directories when automatic binding is off.
+            # Keep them so Harbor creates the paths before oracle/verifier execution.
+            kwargs['auto_mounting'] = False
         super().__init__(*args, mounts=[] if self._pilot_agent else mounts, **kwargs)
 
     @property
@@ -232,7 +241,9 @@ class PilotEnvironment(SkillEvaluatorSecureDockerEnvironment):
                     raise ValueError('Post-agent CLI child network observation unavailable')
                 late = json.loads(result.stdout)
                 rows = late.get('network', [])
-                if len(rows) != 3 or rows[0]['http_code'] != '401' or any(v['returncode'] not in (35, 52, 56, 97) for v in rows[1:]):
+                if (len(rows) != 3 or
+                    (rows[0]['returncode'] not in (35, 52, 56, 97) if getattr(self, '_deny_provider', False) else rows[0]['http_code'] != '401')
+                    or any(v['returncode'] not in (35, 52, 56, 97) for v in rows[1:])):
                     raise ValueError('Post-agent CLI child policy enforcement failed')
                 final['late_cli_child'] = late
             target = Path(self.trial_paths.trial_dir) / 'operator/pilot-final-policy.json'

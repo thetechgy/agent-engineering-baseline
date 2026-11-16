@@ -1,5 +1,6 @@
 """Shared campaign contracts; native execution is qualified by the owning CI job."""
 import copy
+from importlib.metadata import version, PackageNotFoundError
 import json
 import os
 from pathlib import Path
@@ -15,6 +16,9 @@ import evaluation_runtime as runtime
 from evaluation_tasks import load
 import skill_evidence as evidence
 import skill_reports as reports
+
+try: OWNING = version('skillevaluator') in ('0.8.0', '0.9.0') and version('harbor') in ('0.24.0', '0.25.0')
+except PackageNotFoundError: OWNING = False
 
 
 class CampaignContracts(unittest.TestCase):
@@ -32,6 +36,21 @@ class CampaignContracts(unittest.TestCase):
             ('pester-003','with_skill'),('pester-003','without_skill'),('pester-004','without_skill'),('pester-004','with_skill')])
         for args in [((),('x','y'),1),(('x',),('y','y'),1),(('x',),('a','b'),True)]:
             with self.assertRaises(ValueError):core.schedule(*args)
+
+    @unittest.skipUnless(OWNING, 'Owning Harbor configuration runtime required')
+    def test_shared_probe_builder_preserves_existing_five_argument_adapter_wrappers(self):
+        import evaluation_campaign as campaign
+        import evaluation_codex as adapter
+        task=load(ROOT/'.github/evals/campaigns/boolean-contract.json')
+        original=adapter.agent_config
+        # The native deadline qualifier wraps this exact existing interface.
+        def existing_wrapper(task, mode, control, runtime, present):
+            return original(task,mode,control,runtime,present)
+        with tempfile.TemporaryDirectory() as directory, patch.object(adapter,'agent_config',existing_wrapper):
+            root=Path(directory)
+            config,env=campaign.construct_launch(root,task,'probe',root/'task',True,'fixture',root/'jobs/fixture',{},control='identity')
+            self.assertEqual(config.agent.kwargs['control'],'identity')
+            self.assertEqual(env['AEB_PILOT_PROBE'],'1')
 
     def test_durable_scheduler_keeps_partial_states_and_stops_without_replacement(self):
         def scenario(reason=None, error=None, cost=0, baseline=()):
@@ -181,7 +200,7 @@ class CampaignContracts(unittest.TestCase):
         new.update({'campaign-gh-read-v4-probe', 'campaign-boolean-retained-v2-replay', 'campaign-boolean-contract-v4-oracle', 'pester-effectiveness-v10', 'campaign-boolean-contract-v4-probe', 'campaign-gh-read-v4-oracle', 'campaign-boolean-effectiveness-v3-probe', 'pester-cli-pilot-retained-v9', 'campaign-boolean-effectiveness-v3-live'})
         new.update(k for k in current['profiles'] if k.startswith('campaign-pester-return-') or '-selection-v1-' in k or '-lifecycle-v1-' in k)
         new.update({'pester-cli-pilot-retained-v10', 'pester-effectiveness-v11',
-                    'pester-cli-pilot-retained-v11', 'pester-effectiveness-v12', 'pester-cli-pilot-retained-v12', 'pester-effectiveness-v13', 'pester-effectiveness-v14', 'pester-effectiveness-v15', 'pester-effectiveness-v16', 'pester-effectiveness-v17', 'pester-cli-pilot-retained-v13', 'pester-effectiveness-v18', 'pester-cli-pilot-retained-v14', 'pester-effectiveness-v19', 'pester-cli-pilot-retained-v15', 'pester-effectiveness-v20', 'pester-effectiveness-v21', 'pester-effectiveness-v22', 'pester-effectiveness-v23', 'pester-effectiveness-v24'})
+                    'pester-cli-pilot-retained-v11', 'pester-effectiveness-v12', 'pester-cli-pilot-retained-v12', 'pester-effectiveness-v13', 'pester-effectiveness-v14', 'pester-effectiveness-v15', 'pester-effectiveness-v16', 'pester-effectiveness-v17', 'pester-cli-pilot-retained-v13', 'pester-effectiveness-v18', 'pester-cli-pilot-retained-v14', 'pester-effectiveness-v19', 'pester-cli-pilot-retained-v15', 'pester-effectiveness-v20', 'pester-effectiveness-v21', 'pester-effectiveness-v22', 'pester-effectiveness-v23', 'pester-effectiveness-v24', 'pester-effectiveness-v25', 'pester-cli-pilot-retained-v16', 'pester-effectiveness-v26', 'pester-cli-pilot-retained-v17'})
         historical={k:v for k,v in current['profiles'].items() if k not in new}
         value={'profiles':historical,'active_profiles':current['active_profiles'],'metrics':current['metrics']}
         digest=hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':'),ensure_ascii=True).encode()).hexdigest()
@@ -333,3 +352,83 @@ class NativeAdapterContracts(unittest.TestCase):
 
 
 if __name__=='__main__':unittest.main()
+
+
+class Execution090Contracts(unittest.TestCase):
+    def test_explicit_next_owner_preserves_production_tuple_and_frozen_profiles(self):
+        import evaluator_profiles as profiles
+        from codex_pilot_contract import configuration, PROFILE
+        task=load(ROOT/'.github/evals/campaigns/gh-runtime-090-v1.json')
+        selected=runtime.read_profile(ROOT/task.definition['runtime_profile'])
+        self.assertIs(runtime.evaluator(selected),profiles.NEXT)
+        self.assertEqual((selected['resolved']['cli'],selected['resolved']['model'],selected['resolved']['reasoning_effort']),
+                         ('0.155.1','gpt-5.6-sol','high'))
+        effective=configuration(runtime=selected['resolved'])
+        self.assertEqual(effective['features'],{'multi_agent':False,'unified_exec':True})
+        provider=effective['model_providers']['pilot']
+        self.assertEqual((provider['base_url'],provider['env_key'],provider['wire_api']),
+                         ('https://api.openai.com/v1','OPENAI_API_KEY','responses'))
+        self.assertEqual((provider['request_max_retries'],provider['stream_max_retries']),(0,0))
+        self.assertEqual(effective['model'],selected['resolved']['model'])
+        self.assertEqual(PROFILE['cli'],'0.167.0')
+        legacy=runtime.read_profile(ROOT/'.github/evals/campaigns/codex-qualified.json')
+        self.assertIs(runtime.evaluator(legacy),profiles.CANDIDATE)
+        self.assertEqual(legacy['resolved']['model'],'gpt-6.1-sol')
+        wrong={**selected['profile'],'frozen_profile':'.github/evals/codex-pilot.json'}
+        with self.assertRaises(ValueError):runtime.validate_codex(wrong)
+
+    def test_two_attempt_protocol_has_no_hidden_judge_calls_and_keeps_usage_unknown(self):
+        import evaluation_campaign_protocol as protocol
+        from codex_pilot_runtime import usage_record
+        task=load(ROOT/'.github/evals/campaigns/gh-runtime-090-v1.json')
+        selected=runtime.read_profile(ROOT/task.definition['runtime_profile'])['resolved']
+        contract=protocol.protocol(task)
+        self.assertEqual((contract['attempt_slots'],contract['trials_per_arm'],contract['automatic_retries'],contract['replacements']),
+                         (2,1,0,0))
+        self.assertEqual(contract['grading']['verifier_runs'],2)
+        self.assertEqual(contract['grading']['model_judge_calls'],0)
+        self.assertFalse(contract['grading']['production_history'])
+        unknown=usage_record({'trial_name':'fixture'},runtime=selected)
+        self.assertIsNone(unknown['estimated_usd'])
+        observed=usage_record({'trial_name':'fixture','agent_result':{
+            'n_input_tokens':1000,'n_cache_tokens':500,'n_output_tokens':100}},probe=True,runtime=selected)
+        self.assertAlmostEqual(observed['estimated_usd'],0.0042)
+        self.assertEqual(observed['provenance'],'codex-0.155.1-exec-json')
+        self.assertIn('no model usage',observed['billing'])
+        row={'cleanup':True,'returncode':0,'grading_present':True,
+             'outcome':{'classification':'failed'},'usage':observed}
+        self.assertIsNone(protocol.stop_reason(row))
+        self.assertEqual(protocol.stop_reason({**row,'usage':unknown}),'unknown_usage')
+
+
+    @unittest.skipUnless(OWNING, 'Pinned campaign owning runtime required')
+    def test_absent_mount_collection_does_not_bypass_mount_allowlist(self):
+        from codex_pilot_environment import PilotEnvironment, SkillEvaluatorSecureDockerEnvironment
+        with patch.object(SkillEvaluatorSecureDockerEnvironment, '__init__', return_value=None) as parent:
+            PilotEnvironment(mounts=None)
+            self.assertEqual(parent.call_args.kwargs['mounts'], ())
+            with self.assertRaisesRegex(ValueError, 'Unexpected pilot mount'):
+                PilotEnvironment(mounts=[{'target':'/host'}])
+            self.assertEqual(parent.call_count, 1)
+
+            agent = PilotEnvironment(mounts=None, auto_mounts=[{'target':'/logs/agent'}])
+            self.assertTrue(agent._pilot_agent)
+            self.assertEqual(parent.call_args.kwargs['mounts'], [])
+            self.assertEqual(parent.call_args.kwargs['auto_mounts'], [{'target':'/logs/agent'}])
+            self.assertIs(parent.call_args.kwargs['auto_mounting'], False)
+            with self.assertRaisesRegex(ValueError, 'Unexpected pilot mount'):
+                PilotEnvironment(auto_mounts=[{'target':'/host'}])
+            with self.assertRaisesRegex(ValueError, 'automatic host mounts refused'):
+                PilotEnvironment(auto_mounts=[{'target':'/logs/agent'}], auto_mounting=True)
+
+
+    @unittest.skipUnless(OWNING, 'Pinned campaign owning runtime required')
+    def test_released_options_parser_admits_only_declared_campaign_options(self):
+        from evaluation_codex import CampaignCodex
+        if not getattr(CampaignCodex, 'options_model', None):
+            self.skipTest('Retained Harbor uses constructor kwargs')
+        value = CampaignCodex.parse_options({'campaign_definition': '.github/evals/campaigns/gh-read-090.json',
+            'control': 'good', 'present': True, 'live': False})
+        self.assertTrue(value.present)
+        with self.assertRaisesRegex(ValueError, 'Unknown option'):
+            CampaignCodex.parse_options({'unreviewed_campaign_option': True})

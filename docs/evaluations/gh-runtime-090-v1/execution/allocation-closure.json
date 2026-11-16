@@ -1,0 +1,26 @@
+{
+  "allocation": "campaign-b3e190d143e2cbc7b44938d4d01b690dc9f67c10-gh-runtime-090-v1-prep14174835478-usd6-diag090_20261115",
+  "status": "closed",
+  "closed_at": "2026-11-15T21:22:28.064144+00:00",
+  "run_id": 43762601398,
+  "run_attempt": 1,
+  "execution_revision": "b3e190d143e2cbc7b44938d4d01b690dc9f67c10",
+  "reason": "execution_infrastructure_failure",
+  "primary_failure": "ValueError: Live runtime requires protected workflow; overrides refused",
+  "failure_phase": "Harbor agent construction before Codex CLI launch",
+  "scheduled_slots": 2,
+  "attempted_slots": [
+    1
+  ],
+  "unused_slots_permanently_closed": [
+    2
+  ],
+  "retry_allowed": false,
+  "replacement_allowed": false,
+  "continuation_allowed": false,
+  "usage_estimate_usd": null,
+  "actual_billing": "unknown; no invoice reconciliation",
+  "cleanup_complete": true,
+  "evidence_artifact": 14181315252,
+  "evidence_archive_sha256": "sha256:77a6f1e36b9ccf2b6d99f0c620a4624db48b64b8347c483c962dad30a854bd74"
+}

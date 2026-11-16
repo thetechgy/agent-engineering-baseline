@@ -1,9 +1,11 @@
 # SkillEvaluator 0.9.0 consumer ownership, issue #95
 
-Current main is verified at #141 merge
-`66c3f92a40b0f00bb461286596a2016a6a39108a`. Complete static quality and data-only
-reporting/orchestration already use pinned 0.9.0. This focused change qualifies a
-versioned offline behavioral evidence contract; production execution remains held.
+Current main is verified at #142 merge
+`15caaedb82edf5d9e0253394ed99e3135cd7be93`. Complete static quality and data-only
+reporting/orchestration already use pinned 0.9.0. The offline behavioral evidence contract is merged. The explicit gh-runtime-090-v1
+execution preparation is separate; final hosted receipts are recorded in #143. Production
+execution and live provider compatibility remain held. See the
+[execution preparation](../../docs/evaluations/execution-runtime-090.md).
 See [behavioral evidence and rollback](../../docs/evaluations/behavioral-evidence-090.md)
 and the preserved [static receipt](../../docs/evaluations/static-quality-090.md).
 
@@ -12,6 +14,7 @@ and the preserved [static receipt](../../docs/evaluations/static-quality-090.md)
 | Data-only publisher prepare, base analysis/HTML, orchestration | 0.9.0 since #138 | No Pages publication or paid dispatch authorized here |
 | Complete Validate static quality | 0.9.0 offline-v3 `quality-next` since #141 | Existing scanners, strict admission and projection remain required |
 | Offline behavioral evidence qualification | 0.9.0 offline-v3, `behavioral-090-offline-v1` | Explicit fixture judgments; versioned recovery/reporting/history refusal; no live adoption |
+| Opt-in gh-runtime-090-v1 execution preparation | 0.9.0 / Harbor 0.25.0, Codex 0.155.1 / gpt-5.6-sol / high | Diagnostic custom-only path; final hosted receipts in #143; no live routing or model-judge qualification |
 | Production benchmark execution | 0.3.0 / Harbor 0.13.2, Codex 0.155.1 | Execution-policy selection and actual provider routing remain unqualified |
 | Contracts, retained scanner adapter, native gh | 0.3.0 `quality`, exact review overlays | Existing native/task owners remain unchanged |
 | Private reviews and analyst attachments | Exact retained 0.3 review profiles/overlays | No successor validator/request profile |

@@ -190,10 +190,26 @@ def exec_trajectory(raw, adapter, *, diagnostics=None):
                     'sha256':'sha256:'+hashlib.sha256(diagnostics.encode()).hexdigest()}} if diagnostics is not None else {})})
 
 
+CampaignCodexOptions = None
+if getattr(PilotCodex, 'options_model', None) is not None:
+    from typing import Literal
+
+    class CampaignCodexOptions(PilotCodex.options_model):
+        """Harbor 0.25 validates adapter kwargs before constructing the agent."""
+        campaign_definition: str | None = None
+        control: str | None = None
+        present: bool = False
+        live: bool = False
+        launch_context: dict | None = None
+        deadline_fixture: Literal['emitted', 'empty', 'secondary', 'cancelled'] | None = None
+
+
 class CampaignCodex(PilotCodex):
+    if CampaignCodexOptions is not None:
+        options_model = CampaignCodexOptions
     retain_submission = True
 
-    def __init__(self, *args, campaign_definition, control, present, live=False, deadline_fixture=None, **kwargs):
+    def __init__(self, *args, campaign_definition, control, present, live=False, deadline_fixture=None, launch_context=None, **kwargs):
         from evaluation_tasks import load
         self.task = load(ROOT / campaign_definition)
         self.control = control
@@ -208,9 +224,15 @@ class CampaignCodex(PilotCodex):
         self.deadline_fixture = deadline_fixture
         if live:
             from evaluation_campaign_protocol import runtime_gate
-            runtime_gate(self.task)
             require(control is None and 'protocol' in self.task.definition, 'Live control payload refused')
+            runtime_gate(self.task, child=True, launch_context=launch_context, present=present)
+            root = Path(os.environ['RUNNER_TEMP']) / 'campaign-live'
+            logs = Path(kwargs['logs_dir'])
+            require(logs.resolve() == logs and logs.parents[2] == root / 'jobs'
+                    and logs.parents[1].name == self.skill + '-codex-' + ('with' if present else 'without'),
+                    'Live agent logs outside selected campaign deployment')
         else:
+            require(launch_context is None, 'Probe received live task metadata')
             require(os.environ.get('AEB_PILOT_PROBE') == '1', 'Campaign inference is disabled')
         super().__init__(*args, **kwargs)
 
@@ -457,7 +479,8 @@ def prepare_task(native, mode, runtime):
     config = native / 'task.toml'
     text = config.read_text().replace('timeout_sec = 300.0', f'timeout_sec = {runtime["agent_seconds"]}.0').replace('memory_mb = 4096', f'memory_mb = {runtime["memory_mb"]}')
     if mode in ('probe', 'experiment-probe', 'live'):
-        text = text.replace('network_mode = "public"', 'network_mode = "allowlist"\nallowed_hosts = ["api.openai.com"]')
+        host = 'localhost.invalid' if runtime['id'] == 'codex-090-diagnostic-v1' and mode != 'live' else 'api.openai.com'
+        text = text.replace('network_mode = "public"', 'network_mode = "allowlist"\nallowed_hosts = ["' + host + '"]')
     config.write_text(text)
     if mode in ('probe', 'experiment-probe', 'live'):
         from codex_pilot_runtime import prepare_cli
@@ -466,14 +489,20 @@ def prepare_task(native, mode, runtime):
         # fixture image has no curl; the Pester image already satisfies this pin.
         with (native / 'environment/Dockerfile').open('a') as stream:
             stream.write('RUN command -v curl >/dev/null || (apt-get update --error-on=any -o Acquire::Retries=3 -o Acquire::https::Timeout=30 && apt-get install -y --no-install-recommends curl=8.14.1-2+deb13u7 && rm -rf /var/lib/apt/lists/*)\n')
-        prepare_cli(native)
+        prepare_cli(native, runtime)
 
 
-def agent_config(task, mode, control, runtime, present):
+def agent_config(task, mode, control, runtime, present, *, deadline_fixture=None, launch_context=None):
     if mode in ('oracle','replay'):
         return {'name': 'oracle'}
+    if deadline_fixture is not None:
+        require(mode == 'experiment-probe' and runtime['id'] == 'codex-090-diagnostic-v1'
+                and deadline_fixture == 'cancelled', 'Unqualified deadline override')
     return {'import_path': 'evaluation_codex:CampaignCodex', 'model_name': runtime['model'],
-            'kwargs': {'campaign_definition': task.member, 'control': control, 'present': present, **({'live': True} if mode == 'live' else {})}}
+            **({'override_timeout_sec': 90} if deadline_fixture is not None else {}),
+            'kwargs': {'campaign_definition': task.member, 'control': control, 'present': present,
+                       **({'deadline_fixture': deadline_fixture} if deadline_fixture is not None else {}),
+                       **({'live': True, 'launch_context': launch_context} if mode == 'live' else {})}}
 
 
 def submission_path(trial, output):
@@ -481,14 +510,18 @@ def submission_path(trial, output):
     return source_host_path(trial / 'artifacts', '/logs/artifacts') / 'submitted' / output
 
 
-def native_observation(trial, native, present, row, rows, *, output, live=False):
+def native_observation(trial, native, present, row, rows, *, output, live=False, runtime=None):
     import skill_reports as reports
     audits = list(trial.rglob('pilot-runtime.json'))
     require(len(audits) == 1, 'Missing runtime observation')
     audit = reports.read_json(audits[0]); row['runtime_observation'] = audit
     from codex_pilot_contract import configuration
-    require(audit['cleanup'] == 'complete' and audit['boundary_before']['policy_sha256'] == audit['boundary_after']['policy_sha256']
-        and audit['effective_config'] == configuration(None if live else 'http://127.0.0.1:8765/v1')
+    from codex_pilot_contract import PROFILE
+    selected = PROFILE if runtime is None else runtime
+    require(audit['adapter'] == selected['id'] and audit['cli'] == selected['cli']
+        and audit['model'] == selected['model'] and audit['reasoning_effort'] == selected['reasoning_effort']
+        and audit['cleanup'] == 'complete' and audit['boundary_before']['policy_sha256'] == audit['boundary_after']['policy_sha256']
+        and audit['effective_config'] == configuration(None if live else 'http://127.0.0.1:8765/v1', runtime=selected)
         and audit['prompt_sha256'] == hashlib.sha256((native / 'instruction.md').read_bytes()).hexdigest()
         and audit['skill_deployed'] == present, 'Runtime identity or cleanup drift')
     finals = list(trial.rglob('pilot-final-policy.json'))
@@ -499,8 +532,11 @@ def native_observation(trial, native, present, row, rows, *, output, live=False)
         require(len(probes) == 1, 'Missing non-forwarding request observation')
         probe = reports.read_json(probes[0])
         from codex_pilot_contract import PROFILE
-        require(probe.get('model') == PROFILE['model'] and probe.get('reasoning', {}).get('effort') == PROFILE['reasoning_effort']
+        require(probe.get('model') == selected['model'] and probe.get('reasoning', {}).get('effort') == selected['reasoning_effort']
                 and probe.get('requests') == 2, 'Observed CLI model/request drift')
+        if selected['cli'] == '0.155.1':
+            require(probe.get('authorization_matches_sentinel') is True and probe.get('path') == '/v1/responses',
+                    'Observed CLI credential source or endpoint drift')
     from skill_evidence import read_bytes
     submitted = read_bytes(submission_path(trial, output), limit=65536)
     receipts = list(trial.rglob('pilot-produced-submission.json'))
@@ -522,7 +558,7 @@ def manifest(directory):
             for p in reports.regular_tree(directory)}
 
 
-def usage(trial, mode):
+def usage(trial, mode, runtime=None):
     import skill_reports as reports
     from codex_pilot_runtime import usage_record
     if mode in ('oracle','replay'):
@@ -530,7 +566,7 @@ def usage(trial, mode):
                 'n_input_tokens': None, 'n_cache_tokens': None, 'n_output_tokens': None}
     if not (trial / 'result.json').exists():
         return {'estimated_usd': None, 'billing': 'missing native usage'}
-    return usage_record(reports.read_json(trial / 'result.json'), probe=mode != 'live')
+    return usage_record(reports.read_json(trial / 'result.json'), probe=mode != 'live', runtime=runtime)
 
 
 def validate_members(members, mode):
@@ -574,7 +610,78 @@ def skill_access(trial, present, native):
 
 def fixture_environment(task, fixture, row):
     control = task.fixture_control(fixture, row)
-    result = {'AEB_CAMPAIGN_CONTROL':control, 'AEB_PILOT_SCENARIO':'interruption' if fixture == 'interruption' else 'success'}
+    result = {'AEB_CAMPAIGN_CONTROL':control, 'AEB_PILOT_SCENARIO':fixture if fixture in ('interruption', 'provider-refusal', 'malformed-response', 'provider-timeout') else 'success'}
     if fixture in ('missing-evidence', 'unsupported-runtime'):
         result['AEB_CAMPAIGN_OBSERVATION_FIXTURE'] = fixture
     return result
+
+
+def compare_probe_descriptors(reference, staging):
+    """Verify both full descriptors, then allow only the closed probe egress change."""
+    from codex_pilot_descriptors import verified_configurations, configuration_digest, ALGORITHM
+    from skill_evidence import read_bytes
+    left, right = verified_configurations(reference), verified_configurations(staging)
+    require(left.keys() == right.keys(), 'Probe descriptor population drift')
+    for arm, case in left:
+        member = f'task-descriptors/{arm}/{case}.toml'
+        raw = read_bytes(staging / member, limit=65536)
+        parsed = __import__('tomllib').loads(raw.decode())
+        require(parsed['environment']['allowed_hosts'] == ['localhost.invalid']
+                and parsed['environment']['network_mode'] == 'allowlist', 'Probe must deny provider egress')
+        require(raw.count(b'allowed_hosts = ["localhost.invalid"]') == 1, 'Unexpected probe policy format')
+        normalized = raw.replace(b'allowed_hosts = ["localhost.invalid"]', b'allowed_hosts = ["api.openai.com"]')
+        require(configuration_digest(normalized) == left[arm, case], 'Probe changed more than provider egress')
+    return {'algorithm': ALGORITHM, 'descriptors': len(left),
+            'transport_difference': 'provider egress denied by localhost.invalid allowlist; all other configuration equal'}
+
+
+def provider_failure_observation(root, scenario, runtime):
+    """Bind negative controls to an actual CLI request, not a generic launch error."""
+    import skill_reports as reports
+    from codex_pilot_contract import configuration
+    from skill_evidence import read_bytes
+    requests = list((root / 'jobs').rglob('probe.json'))
+    audits = list((root / 'jobs').rglob('pilot-runtime.json'))
+    logs = list((root / 'jobs').rglob('codex.txt'))
+    require(len(requests) == len(audits) == len(logs) == 1, 'Missing actual provider failure evidence')
+    observed = reports.read_json(requests[0]); audit = reports.read_json(audits[0])
+    require(observed['requests'] == 1 and observed['path'] == '/v1/responses'
+            and observed.get('authorization_matches_sentinel') is True
+            and observed['model'] == runtime['model'] and observed['reasoning']['effort'] == runtime['reasoning_effort'],
+            'Provider failure retried or routed differently')
+    require(audit['scenario'] == scenario and audit['cleanup'] == 'complete' and audit.get('returncode', 0) != 0
+            and audit['effective_config'] == configuration('http://127.0.0.1:8765/v1', runtime=runtime)
+            and audit['boundary_before']['policy_sha256'] == audit['boundary_after']['policy_sha256'],
+            'Provider failure boundary or identity drift')
+    raw = read_bytes(logs[0], limit=16*1024*1024)
+    require(raw, 'Missing authentic CLI events')
+    return {'requests': 1, 'model': observed['model'], 'reasoning_effort': observed['reasoning']['effort'],
+            'cli_events_sha256': 'sha256:' + hashlib.sha256(raw).hexdigest(),
+            'cli_returncode': audit['returncode'], 'cleanup': 'complete'}
+
+
+def cancellation_observation(root, output_name, expected):
+    """Observe the existing native-cancellation fixture under the selected owner."""
+    import skill_reports as reports
+    from skill_evidence import read_bytes
+    retained = root / 'evidence/retained'
+    lifecycle = list(retained.rglob('pilot-lifecycle.json'))
+    copies = list(retained.rglob('interrupted-submission.json'))
+    require(len(lifecycle) == len(copies) == 1, 'Missing cancellation retention evidence')
+    stages = [r['stage'] for r in reports.read_json(lifecycle[0])['stages']]
+    require('workload_stopped' in stages and 'evidence_retained' in stages
+            and stages[-1] == 'disposal_complete', 'Cancellation disposal incomplete')
+    receipt = reports.read_json(copies[0])
+    raw = read_bytes(copies[0].parent / 'interrupted-submission' / output_name, limit=65536)
+    require(raw == expected and receipt['sha256'] == hashlib.sha256(raw).hexdigest()
+            and receipt['complete'] is False and receipt['source'] == 'stopped-container', 'Partial submission identity drift')
+    ledger = reports.read_json(root/'evidence/attempt-ledger.json')
+    row = ledger['entries'][0]
+    require(row['native_exception'] == 'CancelledError' and row['usage']['estimated_usd'] is None
+            and ledger['cleanup_complete'], 'Cancellation primary failure or unknown usage changed')
+    logs = list(retained.rglob('codex.txt'))
+    require(len(logs) == 1 and b'native-deadline-evidence' in read_bytes(logs[0])
+            and b'turn.completed' not in read_bytes(logs[0]), 'Native cancellation events incomplete')
+    return {'primary': 'CancelledError', 'submission_sha256': receipt['sha256'],
+            'submission_complete': False, 'usage': 'unavailable', 'cleanup': 'complete',
+            'fixture': 'existing 45-second native cancellation; 90-second outer guard'}

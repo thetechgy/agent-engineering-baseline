@@ -652,9 +652,17 @@ def behavioral(run, records):
     else:
         parts.append('<p>Standard judge metrics were not collected in custom-only mode.</p>' if custom_only else
                      '<p>Native metrics unavailable; no performance value is inferred.</p>')
+    scheduler = record.get('custom', {}).get('scheduler')
+    if scheduler:
+        from campaign_scheduler_evidence import arm_label
+        parts.append('<p>Scheduler execution comes from the captured durable schedule. Native collection status remains unchanged; '
+                     'an empty arm can have failed collection while remaining unlaunched. A launch attempt does not establish CLI execution. '
+                     'Native observations, grades and recorded counts are unchanged.</p>')
     parts.append(table('Measured coverage by arm — unknown counts are not zero',
-        ('Arm', 'Execution', 'Cases expected', 'Attempts expected', 'Recorded', 'Scored', 'Unscored') + (() if custom_only else ('Rubric cases passed / total',)),
-        [[safe(ARM[a['name']]), text(a['execution_status']), text(a['coverage']['expected_cases']),
+        ('Arm',) + (('Scheduler execution', 'Native collection') if scheduler else ('Execution',)) +
+        ('Cases expected', 'Attempts expected', 'Recorded', 'Scored', 'Unscored') + (() if custom_only else ('Rubric cases passed / total',)),
+        [[safe(ARM[a['name']])] + ([text(arm_label(scheduler['witness'], a['name']))] if scheduler else []) +
+         [text(a['execution_status']), text(a['coverage']['expected_cases']),
           text(a['coverage']['expected_attempts']), text(a['coverage']['recorded_attempts']),
           text(a['coverage']['scored_attempts']), text(a['coverage']['unscored_attempts'])] +
           ([] if custom_only else [text(a['rubric']['passed_cases']) + ' / ' + text(a['rubric']['total_cases'])]) for a in run['arms']]))
