@@ -37,6 +37,16 @@ use a separate artifact so the preparation upload keeps its registered subtree.
 The queued `43916527767/A1` CI was cancelled for this known replacement. Failed
 and interrupted work remain retained, not readiness evidence.
 
+The `54b56d4` shared CI job in `43917823990/A1` completed 1,130 tests in
+1,221.975 seconds with five failures and 129 skips. All failures were historical
+registry projections whose filters stopped at source-v20 and included the new
+v21/v22 successors in old snapshots. Their expected historical hashes are retained;
+the filters now exclude those new families, with an additional complete 698-profile
+baseline guard. Container validation and later publisher/behavioral checks never
+started. Remaining CI and preparation `43917819082/A1` were cancelled for the known
+replacement; passed authentication proof `14251081798` remains evidence for
+`54b56d4` only. Final exact-source preparation must be refreshed again.
+
 Any fresh proposal retains the same two-attempt scope and $2 estimate, $3 scheduling
 threshold/$3 reserve/$6 planning allocation, not a billing cap. Its new validity
 window ends `2026-11-23T23:59:59Z`; this does not extend the old authority. New

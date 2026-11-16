@@ -1,5 +1,7 @@
 """Actual authentication CLI coverage is mandatory in hosted preparation."""
 import copy
+import hashlib
+import json
 from importlib.metadata import version, PackageNotFoundError
 import os
 from pathlib import Path
@@ -41,6 +43,21 @@ class AuthenticationContracts(unittest.TestCase):
                 qualification.validate({**valid, key:value}, task)
         for key in valid:
             with self.assertRaises(ValueError): qualification.validate({k:v for k,v in valid.items() if k != key}, task)
+
+    def test_source_successors_preserve_complete_pre_repair_registry(self):
+        registry=json.loads((ROOT/'.github/evals/custom-metrics.json').read_text())
+        added=[k for k in registry['profiles'] if '-source-v21-' in k or '-source-v22-' in k]
+        self.assertEqual(len(added), 70)
+        for key in added:
+            previous=key.replace('-source-v22-', '-source-v21-') if '-source-v22-' in key else key.replace('-source-v21-', '-source-v20-')
+            new=registry['profiles'][key];old=registry['profiles'][previous]
+            self.assertEqual({k:v for k,v in new.items() if k not in ('id','runtime_digest')},
+                             {k:v for k,v in old.items() if k not in ('id','runtime_digest')})
+            self.assertNotEqual(new['runtime_digest'],old['runtime_digest'])
+        for key in added: del registry['profiles'][key]
+        self.assertEqual(len(registry['profiles']),698)
+        digest=hashlib.sha256(json.dumps(registry,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+        self.assertEqual(digest, 'c94b40da0620cac5cd123fad4015eb0e60486e629ed6bb9210de02d895d095ce')
 
     def test_expired_authority_is_rejected_before_github_io(self):
         from datetime import datetime, timezone

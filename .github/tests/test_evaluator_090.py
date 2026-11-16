@@ -40,7 +40,7 @@ class Release090Contracts(unittest.TestCase):
         registry = evidence.custom_registry(ROOT)
         # These successors preserve this stopped source-v17 population unchanged.
         registry['profiles'] = {k:v for k,v in registry['profiles'].items()
-            if '-source-v18-' not in k and '-source-v19-' not in k and '-source-v20-' not in k and k not in ('pester-effectiveness-v27', 'pester-effectiveness-v28')}
+            if '-source-v18-' not in k and '-source-v19-' not in k and '-source-v20-' not in k and '-source-v21-' not in k and '-source-v22-' not in k and k not in ('pester-effectiveness-v27', 'pester-effectiveness-v28')}
         registry['metrics'].pop('gh.authorization.v2')
         old = copy.deepcopy(registry)
         added = [key for key in registry['profiles'] if '-source-v17-' in key]

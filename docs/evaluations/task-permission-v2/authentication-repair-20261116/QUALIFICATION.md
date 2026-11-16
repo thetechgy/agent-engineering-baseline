@@ -87,6 +87,18 @@ proof diagnostics upload separately, preserving the registered preparation archi
 root; a focused workflow regression enforces that layout. Queued CI `43916527767`
 was cancelled as superseded and remains inconclusive.
 
+The `54b56d4` shared CI job completed 1,130 tests in 1,221.975 seconds with five
+historical registry-projection failures and 129 skips. Its explicit exclusion lists
+stopped at source-v20, incorrectly including appended v21/v22 profiles in old
+snapshot digests. The same focused projection tests reproduce this locally before
+and pass after extending the lists; every original expected hash stays unchanged.
+An additional whole-baseline hash guard binds all 698 pre-repair profiles and all
+15 metrics, and both new families must change only ID/runtime identity. The
+remaining shared validation steps never started. Its remaining CI and preparation
+were cancelled as superseded; the successful 19-case proof artifact `14251081798`
+remains bound to that source only. Fresh exact-source preparation is required after
+this test-only correction; shared executable/source-v22 inputs remain unchanged.
+
 ## Proposal boundary
 
 Any refreshed proposal remains current then absent on existing successor gh-014,
