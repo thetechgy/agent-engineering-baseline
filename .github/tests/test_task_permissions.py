@@ -71,6 +71,8 @@ class ResourceControls(unittest.TestCase):
                 root = Path(d); native = root / 'native'; logs = root / 'logs'; logs.mkdir()
                 selected = {name: {'SKILL.md': b'same complete content'} for name in order}
                 resources = inventory('other-guide', True, selected, {}, native_skills='/srv/discovery/manuals')
+                for name in order: (native / 'environment/skills' / name).mkdir(parents=True)
+                if order[0] == 'other-guide': resources['files'].reverse()
                 for row in resources['files']:
                     path = native / row['source']; path.parent.mkdir(parents=True, exist_ok=True); path.write_bytes(b'same complete content')
                 (native / 'tests').mkdir(); entry = native / 'tests/entry.json'
@@ -128,6 +130,25 @@ class TaskPermissionControls(unittest.TestCase):
                     self.assertEqual(self.verdict(contract, [call(command)], root)['status'], 'denied', command)
                 self.assertEqual(self.verdict(contract, [call('cat /home/agent/.agents/skills/gh/SKILL.md')], root)['status'], 'permitted' if present else 'denied')
 
+    def test_same_grader_accepts_unrelated_identifier_and_layout(self):
+        selected = {'arithmetic-guide': {'SKILL.md': b'guide', 'references/help.txt': b'support'},
+                    'neighbor': {'SKILL.md': b'neighbor'}}
+        resources = inventory('arithmetic-guide', True, selected, {}, native_skills='/srv/discovery/manuals')
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            for row in resources['files']:
+                value = row['path']
+                path = root / value[len('/workspace/'):] if value.startswith('/workspace/') else root / '.resource-mirror' / value.lstrip('/')
+                path.parent.mkdir(parents=True, exist_ok=True)
+                name = Path(row['source']).relative_to('environment/skills/' + row['skill']).as_posix()
+                path.write_bytes(selected[row['skill']][name])
+            contract = {**self.owner.entry()['contract'], 'resources': resources}
+            for command in ('cat /srv/discovery/manuals/arithmetic-guide/SKILL.md',
+                            'cat /srv/discovery/manuals/arithmetic-guide/references/help.txt',
+                            'cat /srv/discovery/manuals/neighbor/SKILL.md'):
+                self.assertEqual(self.verdict(contract, [call(command)], root)['status'], 'permitted')
+            self.assertEqual(self.verdict(contract, [call('cat /srv/discovery/manuals/unlisted/SKILL.md')], root)['status'], 'denied')
+
     def test_protected_entry_is_bound_to_declared_resources(self):
         for present in (True, False):
             arm = 'with_skill' if present else 'without_skill'
@@ -157,6 +178,17 @@ class TaskPermissionControls(unittest.TestCase):
                 value = self.verdict(contract, [call('cat input/README.txt')], root)
                 self.assertEqual(value['status'], 'unknown' if kind == 'content' else 'denied')
 
+    def test_unread_missing_or_altered_deployment_cannot_pass(self):
+        for kind in ('missing', 'changed', 'linked'):
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as d:
+                root = Path(d); contract = self.workspace(root)
+                target = root / '.resource-mirror/home/agent/.agents/skills/gh/SKILL.md'
+                if kind == 'missing': target.unlink()
+                elif kind == 'changed': target.write_text('different')
+                else:
+                    target.rename(target.with_suffix('.original')); target.symlink_to('SKILL.original')
+                self.assertEqual(self.verdict(contract, [call('pwd')], root)['status'], 'unknown')
+
     def test_missing_ambiguous_unbound_and_unsupported_stay_distinct(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d); contract = self.workspace(root)
@@ -164,7 +196,7 @@ class TaskPermissionControls(unittest.TestCase):
             value = call('pwd'); value['normalization_status'] = 'unsupported_native_codex_exec_wrapper'
             self.assertEqual(self.verdict(contract, [value], root)['status'], 'unknown')
             self.assertEqual(self.verdict(contract, [call('gh --help')], root)['status'], 'unknown')
-            for command in ('find skills', 'cat $(pwd)/input/README.txt', 'pwd; cat /etc/passwd'):
+            for command in ('find skills', 'cat $(pwd)/input/README.txt', 'pwd; cat /etc/passwd', 'cat --help', 'cat -n input/README.txt'):
                 self.assertEqual(self.verdict(contract, [call(command)], root)['status'], 'unsupported')
             self.assertEqual(self.verdict(contract, [call('find skills'),call('cat /etc/passwd')], root)['status'], 'denied')
 

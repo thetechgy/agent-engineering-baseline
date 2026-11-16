@@ -38,3 +38,19 @@ Both arms now receive identical permission instructions (target reads explicitly
 conditional on deployment) and identical oracle payloads. The per-arm trusted
 resource inventory alone varies with deployment. The existing report's matched
 input contract stays intact. No infrastructure exception is changed to a pass.
+
+The intermediate `3136fa9` hosted run was cancelled after final review added a
+complete post-run inventory check and separated unsupported cat flags from
+prohibited reads. It is inconclusive and cannot qualify the final source. Its
+partial artifact is retained separately. The frozen control expectations did not
+change. Whole-inventory drift without a proven prohibition is unknown; complete
+call evidence still preserves a known denial if another copy drifted.
+
+Local focused checks now cover physical staging/inventory order, another skill
+identifier and `/srv/discovery/manuals` through the same grader/resource interface.
+That demonstrates interface reuse, not qualification of another runtime. The
+retained report suite completed 112 checks: 107 passed and five rejected the
+local review dependency pins. The same version-guard rejection reproduces on
+unchanged main; no guard or installed dependency was modified. The initial 0.9
+host's historical-owner rejection and these pin rejections remain failed local
+attempts. Required hosted checks use their configured owning environments.

@@ -112,3 +112,19 @@ def trace_observations_complete(trajectory):
                 or not isinstance(result.get('content'), str)): return False
             observed.append(result['source_call_id'])
     return bool(issued) and len(set(issued)) == len(issued) and sorted(issued) == sorted(observed)
+
+
+def resource_integrity(inventory, locate):
+    """Check the bounded provisioned inventory through the caller's trusted layout.
+
+    A post-run snapshot is not proof about unobserved earlier filesystem changes.
+    """
+    validate_inventory(inventory)
+    result = {}
+    for row in inventory['files']:
+        try: raw = regular_bytes(locate(row['path']))
+        except ValueError: result[row['path']] = 'unsafe'
+        except OSError: result[row['path']] = 'missing'
+        else:
+            result[row['path']] = 'matched' if hashlib.sha256(raw).hexdigest() == row['sha256'] else 'mismatch'
+    return result

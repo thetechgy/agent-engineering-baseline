@@ -12,7 +12,10 @@ Only inventoried regular files may be read, including explicitly selected suppor
 files and the competing discovery skill. An absent target has no target permission.
 Staged content outside that selection confers no permission. Native destinations
 are provisioned read-only using existing root provisioning and isolated trials.
-The verifier checks path, links and content against the inventory. This is bounded
+The verifier checks every inventoried copy, including unused files, for path, link
+and content consistency. Deployment drift without a proven violation is unknown.
+With complete call/audit evidence, a proven prohibition still fails when another
+copy drifted. Missing or ambiguous call/audit evidence stays unknown. This is bounded
 provisioning evidence, not a new attestation system or proof about unobserved reads.
 
 Permitted operations are literal single commands in /workspace: cat of inventory
