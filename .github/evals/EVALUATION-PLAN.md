@@ -52,6 +52,16 @@ caught a checkpoint heading-level error, now corrected and checked with the
 hash-locked rumdl 0.3.4. Its remaining validation and preparation `43886208394/A1`
 were cancelled as superseded; partial results are retained, not qualification.
 
+The `2ea1bb5` shared suite finished 1,126 tests in 1,191.683 seconds before
+failing 32 assertions/seven errors in dependency-freshness controls (128 skips).
+The added diagnostic job introduced a fourth pinned-uv consumer while its exact
+inventory still declared three; other freshness failures cascaded from that
+missing inventory. The declaration now counts all four unchanged `0.13.8` uses.
+The same 49-test offline suite reproduces the failure before and passes after;
+missing/duplicate/contradictory-pin rejection remains enforced. Its remaining CI
+and preparation are superseded and retained; final-source qualification must be
+refreshed again. No dependency version or source-binding rule was changed.
+
 The budget proposal remains $2 estimated usage, a $3 scheduling threshold and $3
 reserve within a $6 planning allocation; none is a provider billing cap and CI costs
 are separate. Fresh allocation/nonce and an exact combined dispatch/matching-gate
