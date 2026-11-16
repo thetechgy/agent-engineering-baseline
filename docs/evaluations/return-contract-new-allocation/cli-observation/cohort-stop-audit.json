@@ -1,0 +1,38 @@
+{
+  "source": "33d953536e95bc81178e726fb3fed95a80566c7d",
+  "run": 42937277898,
+  "artifact": 13822715004,
+  "archive_digest": "sha256:f1d2ae882ec231bc423f74cd38a4b7baa8851942aabfb20c8f99bb12f22eced9",
+  "native_control": "deliberate infrastructure/command-failure fixture; no DNS failure",
+  "observed_stop": "security_or_identity_drift",
+  "launched": 1,
+  "unlaunched": 11,
+  "cleanup_complete": true,
+  "all_quality_unavailable": true,
+  "source_replays": [
+    {
+      "revision": "a8ab2e2e03a2989863a514df2a6b357c44fbc012",
+      "cohort_source_sha256": "efe289f707ad298f20d416a99a08814fe8591b0c34a851c17eb8a8efabb79e4e",
+      "primary_stop": "execution_infrastructure_failure",
+      "later_stop": "security_or_identity_drift"
+    },
+    {
+      "revision": "22b36d53e9ac7e329ef8c56dc9bdcefb468ca9df",
+      "cohort_source_sha256": "efe289f707ad298f20d416a99a08814fe8591b0c34a851c17eb8a8efabb79e4e",
+      "primary_stop": "execution_infrastructure_failure",
+      "later_stop": "security_or_identity_drift"
+    },
+    {
+      "revision": "33d953536e95bc81178e726fb3fed95a80566c7d",
+      "cohort_source_sha256": "efe289f707ad298f20d416a99a08814fe8591b0c34a851c17eb8a8efabb79e4e",
+      "primary_stop": "execution_infrastructure_failure",
+      "later_stop": "security_or_identity_drift"
+    }
+  ],
+  "limits": [
+    "Source-level classification replay against authenticated native inputs, not a native baseline rerun.",
+    "Original cohort workflow remains failed; full cohort readiness is not qualified."
+  ],
+  "unknown_observations": 1,
+  "public_quality_verified": true
+}

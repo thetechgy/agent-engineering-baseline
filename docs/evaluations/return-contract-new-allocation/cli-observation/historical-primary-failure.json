@@ -1,0 +1,18 @@
+{
+  "stage": "cli_child_boundary_command",
+  "evidence": "tool-events.json",
+  "commands": [
+    {
+      "id": "item_1",
+      "exit_code": 1,
+      "trial_member": "powershell-pester-6-codex-with/pester-001__uTRwupx/agent/codex.txt"
+    },
+    {
+      "id": "item_1",
+      "exit_code": 1,
+      "trial_member": "powershell-pester-6-codex-without/pester-001__Ef6DBWH/agent/codex.txt"
+    }
+  ],
+  "secondary_evidence": "native/",
+  "readiness": false
+}

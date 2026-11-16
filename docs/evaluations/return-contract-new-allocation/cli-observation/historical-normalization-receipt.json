@@ -1,0 +1,16 @@
+{
+  "original_producer_source": "22b36d53e9ac7e329ef8c56dc9bdcefb468ca9df",
+  "normalization_source": "943405391a06d3f73dba5d3ac48ac801809f3da3",
+  "public_renderer_source": "33d953536e95bc81178e726fb3fed95a80566c7d",
+  "original_archive_sha256": "225993dc9f6b1d98198dc52c80588495553729674f7e3a69d16211954ce20348",
+  "report_sha256": "f469229559d5a215435378f4727ad0fa1ae372798487fa62804a9eed20a0600c",
+  "unknown_attempts": 2,
+  "all_quality_unavailable": true,
+  "final_public_render_reproduced": true,
+  "historical_failure_reclassified": false,
+  "limits": [
+    "Reporting-only qualification of the historical diagnostic projection; not complete CI or new native execution at 9434053.",
+    "Final 33d9535 raw admission retains its distinct rejecting runtime identity.",
+    "Earlier exploratory local normalization used an uncommitted working state; this clean frozen-source receipt supersedes that unpublished output."
+  ]
+}

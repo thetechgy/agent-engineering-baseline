@@ -1,0 +1,32 @@
+{
+  "source": "33d953536e95bc81178e726fb3fed95a80566c7d",
+  "fixture_run": 42937270892,
+  "fixture_artifact": 13819268862,
+  "fixture_archive_digest": "sha256:00c567bbf6fa02d9e6d93f4697d085fa5e93234994a0e950094ef6f6f3b26817",
+  "kind": "production guard faults over authenticated retained fixture",
+  "limits": [
+    "No new CLI execution or Docker lifecycle in these offline controls.",
+    "Native positive/missing-child controls independently establish actual execution and disposal."
+  ],
+  "controls": [
+    {
+      "fault": "wrong-container",
+      "entry_point": "codex_pilot.run",
+      "rejected": "Post-agent policy was not retained through disposal",
+      "readiness": false
+    },
+    {
+      "fault": "changed-policy",
+      "entry_point": "codex_pilot.run",
+      "rejected": "Post-agent policy was not retained through disposal",
+      "readiness": false
+    },
+    {
+      "fault": "prohibited destination returned 200 with curl exit 0",
+      "entry_point": "PilotEnvironment.stop",
+      "rejected": "Post-agent CLI child policy enforcement failed",
+      "disposal_callback_invoked": true,
+      "runtime_disposal_established_here": false
+    }
+  ]
+}
