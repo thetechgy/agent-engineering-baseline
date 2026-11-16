@@ -5,6 +5,7 @@ provisioning/evidence validation, not a sandbox or filesystem attestation servic
 """
 import hashlib
 import json
+import os
 from pathlib import Path, PurePosixPath
 import re
 import stat
@@ -68,13 +69,26 @@ def inventory_bytes(value):
 
 
 def regular_bytes(path):
+    """Use the existing no-follow/fd-identity pattern, with a bounded read."""
     path = Path(path)
     if path.resolve(strict=True) != path.absolute():
         raise ValueError('Resource symlink or traversal')
     info = path.lstat()
-    if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_size > 8 * 1024 * 1024:
+    limit = 8 * 1024 * 1024
+    if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_size > limit:
         raise ValueError('Resource is not a bounded single-link regular file')
-    return path.read_bytes()
+    def identity(value):
+        return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns,
+                value.st_ctime_ns, value.st_mode, value.st_nlink)
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    with os.fdopen(fd, 'rb') as stream:
+        if identity(os.fstat(stream.fileno())) != identity(info):
+            raise ValueError('Resource replaced before read')
+        raw = stream.read(limit + 1)
+        if (len(raw) > limit or identity(os.fstat(stream.fileno())) != identity(info)
+            or path.resolve(strict=True) != path.absolute() or identity(path.lstat()) != identity(info)):
+            raise ValueError('Resource changed during read')
+    return raw
 
 
 def target_bytes(native, inventory):

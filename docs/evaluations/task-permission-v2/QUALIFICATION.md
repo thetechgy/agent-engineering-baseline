@@ -54,3 +54,18 @@ local review dependency pins. The same version-guard rejection reproduces on
 unchanged main; no guard or installed dependency was modified. The initial 0.9
 host's historical-owner rejection and these pin rejections remain failed local
 attempts. Required hosted checks use their configured owning environments.
+
+The cancelled `3136fa9` artifact `14197781765` has ZIP SHA-256
+`ba96afa0844e3706c523a34991a041f66158a8c6f0663672b88f71a64735ea19`.
+Its interrupted snapshot records 23 completed oracle controls, one launching and
+ten unlaunched, with no terminal cleanup receipt. Completed rows retain their
+individual cleanup observations; global cleanup remains unavailable. No completed
+report or final-source qualification is inferred from that partial snapshot.
+
+The new resource reader uses the repository's existing no-follow, file-descriptor
+identity and bounded-read pattern. Independent controls replace a checked file
+with a symlink and with a different regular file between inspection and open;
+both reject. This is file validation, not a new attestation system. The post-run
+inventory snapshot does not prove inode ownership at every earlier read or cover
+unobserved filesystem actions. The later `0bc8169` run was also cancelled as
+superseded before replacement qualification of this final reader.

@@ -10,10 +10,11 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / '.github/scripts'))
-from evaluation_resources import inventory_bytes, target_bytes, validate_inventory, trace_observations_complete
+from evaluation_resources import inventory_bytes, target_bytes, validate_inventory, trace_observations_complete, regular_bytes
 from codex_resources import inventory
 from evaluation_tasks import load
 import gh_evaluations as gh
@@ -51,6 +52,20 @@ class ResourceControls(unittest.TestCase):
         changed = copy.deepcopy(original); changed['target']['deployed'] = False; cases.append(changed)
         for value in cases:
             with self.subTest(value=value['target']), self.assertRaises(ValueError): validate_inventory(value)
+
+    def test_reader_rejects_replacement_before_open(self):
+        for linked in (True, False):
+            with self.subTest(linked=linked), tempfile.TemporaryDirectory() as d:
+                root = Path(d); target = root / 'resource'; target.write_bytes(b'allowed')
+                protected = root / 'protected'; protected.write_bytes(b'outside permission')
+                real_open = os.open
+                def replace(path, flags):
+                    target.unlink()
+                    if linked: target.symlink_to(protected)
+                    else: target.write_bytes(b'outside permission')
+                    return real_open(path, flags)
+                with patch('evaluation_resources.os.open', side_effect=replace), self.assertRaises((ValueError, OSError)):
+                    regular_bytes(target)
 
     def test_raw_trace_requires_complete_unique_observations(self):
         value = {'steps': [{'tool_calls': [{'tool_call_id': 'a'}],
