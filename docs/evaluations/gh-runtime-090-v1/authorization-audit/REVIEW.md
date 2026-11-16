@@ -212,14 +212,15 @@ Relevant original authorization regressions and the direct replay/control matrix
 passed locally. Required/change-selected hosted check results and their exact
 revision are recorded on this draft PR. A pending, failed or cancelled check is
 not success. No unrelated broad runtime qualification was manually repeated.
-Issue #95's runtime-adoption assessment is unchanged: bounded live compatibility
-exists; grading accuracy, standard judges, billing and skill benefit remain
-unqualified. No issue update is necessary.
+Issue #95's latest comment still described the pilot as unrun and live compatibility
+as unproven. An appended update distinguishes this completed bounded compatibility
+receipt from the unresolved grading contract and standard-judge, billing and
+skill-benefit limits. Production adoption remains deferred; historical issue
+entries are preserved.
 
 Both allocations remain closed. Pester clarification stays deferred. No inference,
 model judge, provider-credential retrieval, protected approval, paid dispatch,
 production-default change, history append, Pages publication or merge occurs.
 
-**One recommended next action:** review this evidence-only PR and agree the
-prospective task/deployment permission contract before implementing a successor
-grader or considering another experiment.
+**One recommended next action:** review this evidence-only PR's diagnosis of the
+task/deployment permission contract.

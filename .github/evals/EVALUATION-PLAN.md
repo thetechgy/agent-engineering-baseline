@@ -33,12 +33,12 @@ This evidence-only work adds a bounded receipt reproducer, not a grader correcti
 or new framework. Production defaults, runtime/model/dependency pins, isolation,
 provider configuration, scheduling and paid settings remain unchanged. Both closed
 allocations stay closed; Pester clarification and skill adoption remain deferred.
-Issue #95's adoption assessment is unchanged. No history append, Pages publication,
+The #95 follow-up distinguishes completed bounded compatibility from unresolved
+grading and deferred adoption. No history append, Pages publication,
 protected approval, paid dispatch, inference/judge or merge is authorized here.
 
-**One current next action:** review the evidence-only PR and agree a prospective
-task/deployment permission contract before implementing a successor grader or
-considering another experiment.
+**One current next action:** review the evidence-only PR's diagnosis of the
+task/deployment permission contract.
 
 ## Completed compatibility pilot checkpoint, retained as history
 
