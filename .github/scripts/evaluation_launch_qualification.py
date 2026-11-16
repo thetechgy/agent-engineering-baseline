@@ -146,7 +146,7 @@ def qualify(output, task, reference):
             'Launch qualification deployment drift')
     rev = protocol.revision(); nonce = 'fixture_launch_boundary'
     allocation = f'campaign-{rev}-{task.definition["id"]}-prep7000002-usd{protocol.protocol(task)["budget"]["planning_allocation_usd"]}-{nonce}'
-    receipt = {'artifact': '7000002', 'dispatch': nonce, 'allocation': allocation, 'revision': rev,
+    receipt = {'producer_run': 7000001, 'artifact': '7000002', 'dispatch': nonce, 'allocation': allocation, 'revision': rev,
         'protocol_digest': protocol.digest(ROOT / task.definition['protocol']), 'run_id': '7000003',
         'first_dispatch': True, 'authentication': 'github-api-producer-and-digest', **binding(task),
         'preparation_location': registration(task)['producers'][0]['location'], 'artifact_digest': 'sha256:' + 'a'*64}

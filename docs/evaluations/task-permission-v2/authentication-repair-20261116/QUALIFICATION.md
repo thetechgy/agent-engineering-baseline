@@ -62,8 +62,9 @@ proof. A failed qualification retains partial cases with `complete: false` and
 cannot create `preparation.json` readiness. This adds a readiness invariant to the
 existing campaign; it adds no runner, workflow framework or report format.
 
-Source-v21 profiles append new shared-runtime identities while preserving all 698
-prior profiles and all 15 metric definitions. Task instructions, grading criteria,
+Source-v22 profiles append new shared-runtime identities while preserving all 733
+prior profiles (including the intermediate source-v21 identities) and all 15 metric
+definitions. Task instructions, grading criteria,
 resource inventories, target access, skills and held runtime/model versions remain
 unchanged. Independent correctness, task authorization, activation and operational
 failure keep their separate meanings. Historical gh-007 diagnosis is not reopened.
@@ -76,6 +77,15 @@ consumption and authenticated fresh inspection are published together in the
 No older artifact is relabeled as qualification of the repaired source. Failed,
 interrupted and superseded attempts retain their actual states. Existing component
 receipts are reused only for unchanged source/input identities.
+
+Intermediate hosted preparation `43916530291/A1` passed setup and all 19 actual
+CLI cases at `f0e8cee`, then correctly rejected two constructor-control receipt
+fixtures missing the newly required producer field. Their fixtures now supply the
+existing field; the validator is preserved. Native oracle/scheduler work never
+started in that failed attempt. Its diagnostics remain retained. Authentication
+proof diagnostics upload separately, preserving the registered preparation archive
+root; a focused workflow regression enforces that layout. Queued CI `43916527767`
+was cancelled as superseded and remains inconclusive.
 
 ## Proposal boundary
 

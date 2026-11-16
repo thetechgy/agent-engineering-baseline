@@ -25,8 +25,17 @@ authentication proof, revision-bound preparation, authenticated consumption and 
 blocker or fresh UNRUN proposal after executable freeze. It governs readiness; this
 checkpoint alone does not assert successful hosted qualification. A later documentation or merge revision is not automatically
 qualified. Historical profiles, grades, stopped receipts and all closed allocations
-remain unchanged; new source-v21 profiles bind the changed shared implementation.
+remain unchanged; new source-v22 profiles bind the changed shared implementation.
 Task/grader/resource semantics and held versions are unchanged.
+
+Intermediate `f0e8cee` preparation `43916530291/A1` passed pinned setup and
+all 19 real authentication CLI cases, then failed two constructor controls because
+their isolated receipt fixture omitted the now-required producer field. Native
+oracle/scheduler work never started. The fixture now supplies that existing field;
+the stricter validator remains unchanged. Authentication proof diagnostics also
+use a separate artifact so the preparation upload keeps its registered subtree.
+The queued `43916527767/A1` CI was cancelled for this known replacement. Failed
+and interrupted work remain retained, not readiness evidence.
 
 Any fresh proposal retains the same two-attempt scope and $2 estimate, $3 scheduling
 threshold/$3 reserve/$6 planning allocation, not a billing cap. Its new validity
