@@ -72,8 +72,8 @@ still reproduce unchanged under the new consumers. Fresh native control outcomes
 and metrics also agree across the reporting correction; originals were not
 rewritten or regraded.
 
-The expanded focused local suite completed 97 tests: 85 passed and 12 owning-runtime
-checks were skipped. Final
+The expanded focused local suite completed 100 tests: 87 passed and 13 owning-runtime
+or optional checks were skipped. Final
 required/change-selected CI is tracked against the receipt commit on
 [draft #145](https://github.com/thetechgy/agent-engineering-baseline/pull/145);
 the PR and #95 status carry its exact revision and terminal result. Superseded
@@ -178,3 +178,16 @@ fixture or report identities, so it does not require another native matrix.
 The failed log is retained; the known-superseded validation run was cancelled.
 Unfinished jobs are inconclusive. Final exact-head CI is recorded on draft #145
 and in the #95 status without treating this interrupted run as passed.
+
+[Replacement validation 43811766334](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43811766334)
+at `931180b67f6ff57c6c8722150338c1e9f963da04` completed 1,114 shared contract tests:
+992 passed, 121 were skipped and one frozen-byte projection failed. The existing
+Pester freeze checks the shared task file after projecting out additive gh hooks;
+it also needed to project out this PR's exact gh registration and empty default
+policy method. The test-only correction retains the original manifest hash,
+checks every remaining byte and asserts both frozen Pester arms still expose no
+new public policy fields. The freeze, Pester task/skill inputs and grades remain
+unchanged. Local failing-before/passing-after evidence and the complete failed
+job log are retained. Native deadline, Pester feasibility, platform validation and
+two gh lifecycle shards passed before cancellation; the unfinished checks remain
+inconclusive. The final replacement CI must run on the corrected test head.
