@@ -23,7 +23,7 @@ import skill_reports as reports
 
 def purpose(task, mode):
     identity = {'boolean-contract-v1':'boolean-contract-v4', 'gh-read-v1':'gh-read-v4', 'boolean-effectiveness-v1':'boolean-effectiveness-v3', 'boolean-retained-v1':'boolean-retained-v2'}.get(task.definition['id'], task.definition['id'])
-    source_version = '-lifecycle-v1-source-v17-'
+    source_version = '-lifecycle-v1-source-v18-'
     return 'campaign-' + identity + source_version + ('probe' if mode == 'experiment-probe' else mode)
 
 
@@ -62,7 +62,7 @@ def stage(root, task, mode):
     for case in task.cases(mode):
         rows = [r for r in captured if r['case_id'] == case]
         prefix = 'environment/skills/' + task.definition['skill'] + '/'
-        members = [{k:v for k,v in r['members'].items() if not k.startswith(prefix) and k not in ('task.toml','tests/entry.json')} for r in rows]
+        members = [{k:v for k,v in r['members'].items() if not k.startswith(prefix) and k not in ('task.toml','tests/entry.json', *getattr(task, 'variant_members', ()))} for r in rows]
         core.require(members[0] == members[1], 'Matched variant task drift')
     reports.write_json(root / 'evidence/staging.json', captured)
     from codex_pilot_descriptors import retain_descriptors

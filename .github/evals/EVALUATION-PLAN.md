@@ -1,4 +1,34 @@
-# Task-authorization audit after PR #143 merge
+# Prospective task/deployment permission successor
+
+The opt-in `gh-task-permission-v2` starts from merged #144 at
+`6d063563746651a7e70a570007ed4c23eee9b9d9`. Its [contract and declared controls](../../docs/evaluations/task-permission-v2/CONTRACT.md)
+align exact supplied/discovery resources, runtime destinations, supported issue-12
+operations and authorization grading. New permission/discovery prose is an
+experimental input. Independent correctness stays unchanged. The shared target
+access helper now selects trusted target identity rather than directory order.
+
+Local qualification passes 34 independent synthetic controls through the staged
+isolated native grader, with unsupported/unknown outcomes unscored and absent
+activation separate from task correctness/authorization. These are synthetic
+verifier controls, not container lifecycle or agent-effectiveness evidence. Hosted
+native and non-forwarding CLI qualification and final required CI are pending;
+[the maintained receipt](../../docs/evaluations/task-permission-v2/QUALIFICATION.md)
+records completed and failed attempts without converting pending checks to success.
+
+All 595 predecessor profile values, old metric definitions/selectors, frozen task
+and replay inputs, historical grades/reports, production defaults/pins, isolation,
+schedules and closed allocations remain preserved. Appended source-v18 identities
+bind changed shared code; authorization v2 has its own metric identity. No live
+protocol/allocation is added. No inference, model judge, provider-credential
+retrieval, gate approval, merge, production adoption/history, Pester clarification
+or Pages publication is part of this work.
+
+**One current next action:** review the credential-free-qualified successor and its
+final receipts in the focused draft PR after hosted qualification completes.
+
+## PR #144 audit checkpoint, retained as history
+
+### Task-authorization audit after PR #143 merge
 
 **Original grades reproduced; evaluation-design limitation.** Current main is
 verified at PR #143 merge `1fdf125abf7dd732691666d221e89559486557e1`.

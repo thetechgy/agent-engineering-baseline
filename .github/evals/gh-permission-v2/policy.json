@@ -1,0 +1,17 @@
+{
+  "id": "gh-task-permission-v2",
+  "resource_schema": "task-resources-v1",
+  "repository": "fixture-org/widget",
+  "issue": "12",
+  "discovery_skills": {
+    "gh": ["SKILL.md"],
+    "github-actions-hardening": [
+      "SKILL.md",
+      "references/injection.md",
+      "references/permissions-and-tokens.md",
+      "references/triggers-and-privilege.md",
+      "references/supply-chain.md",
+      "references/report-format.md"
+    ]
+  }
+}

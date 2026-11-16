@@ -236,6 +236,12 @@ class CampaignCodex(PilotCodex):
             require(os.environ.get('AEB_PILOT_PROBE') == '1', 'Campaign inference is disabled')
         super().__init__(*args, **kwargs)
 
+    def _build_register_skills_command(self):
+        if self.task.definition.get('adapter') == 'gh-permission':
+            from codex_resources import registration_command
+            return registration_command(self.task.resource_contract(self.expected_present))
+        return super()._build_register_skills_command()
+
     async def run(self, instruction, environment, context):
         if self.deadline_fixture:
             from codex_pilot_deadline_fixture import run
@@ -590,19 +596,43 @@ def skill_access(trial, present, native):
     """
     import skill_reports as reports
     trajectories = list(trial.rglob('trajectory.json'))
-    require(len(trajectories) == 1, 'Missing native trajectory')
-    value = reports.read_json(trajectories[0])
-    skill = next((p for p in (native / 'environment/skills').glob('*/SKILL.md')), None)
-    expected = skill.read_text().strip() if present and skill else None
+    unknown = {'successful_full_read': None, 'deployed': present,
+               'interpretation': 'access only; no task quality or benefit implied'}
+    if len(trajectories) != 1: return unknown
+    from evaluation_resources import regular_bytes, target_bytes
+    entry = reports.read_json(native / 'tests/entry.json')
+    resources = entry.get('contract', {}).get('resources')
+    expected = None; target_paths = set()
+    try:
+        if resources is not None:
+            require(resources['target']['deployed'] is present, 'Skill deployment mismatch')
+            raw = target_bytes(native, resources)
+            target_paths = {r['path'] for r in resources['files'] if r['role'] == 'target' and Path(r['source']).name == 'SKILL.md'}
+        else:
+            # Historical native tasks still have an explicit trusted target identity.
+            target = entry.get('expected_skill')
+            require(isinstance(target, str) and re.fullmatch('[a-z0-9-]+', target), 'Missing target identity')
+            raw = regular_bytes(native / 'environment/skills' / target / 'SKILL.md') if present else None
+            target_paths = {'/workspace/skills/' + target + '/SKILL.md', '/home/agent/.agents/skills/' + target + '/SKILL.md'} if present else set()
+        expected = raw.decode().strip() if raw else None
+    except (OSError, ValueError, KeyError):
+        pass  # Missing/inconsistent target evidence stays unknown.
     logs = list(trial.rglob('codex.txt'))
-    require(len(logs) == 1, 'Missing native access observation')
+    if len(logs) != 1: return unknown
     events = []
     for line in logs[0].read_text().splitlines():
         try: events.append(json.loads(line))
         except ValueError: continue
+    def reads_target(item):
+        try:
+            tokens = shlex.split(item.get('command', ''))
+            if len(tokens) == 3 and tokens[:2] == ['/bin/sh', '-lc']: tokens = shlex.split(tokens[2])
+            return tokens[:1] == ['cat'] and any(
+                (p if p.startswith('/') else '/workspace/' + p.removeprefix('./')) in target_paths for p in tokens[1:])
+        except ValueError: return False
     observed = bool(expected and any(event.get('type') == 'item.completed'
         and event.get('item', {}).get('type') == 'command_execution'
-        and event['item'].get('exit_code') == 0
+        and event['item'].get('exit_code') == 0 and reads_target(event['item'])
         and expected in event['item'].get('aggregated_output', '') for event in events))
     return {'successful_full_read': True if observed else None, 'deployed': present,
             'interpretation': 'access only; no task quality or benefit implied'}
