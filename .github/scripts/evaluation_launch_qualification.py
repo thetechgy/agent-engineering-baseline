@@ -99,7 +99,7 @@ def worker(config_path):
             await environment.start(False)
         except StopBeforeWorkload:
             pass
-        if trial.agent.task.definition['adapter'] == 'gh-fixture':
+        if trial.agent.task.trusted_launch_metadata:
             status = json.loads((trial.paths.trial_dir / 'gh-initialization.jsonl').read_text().splitlines()[-1])
             require(status['manifest'] == config.agent.kwargs['launch_context']['manifest_digest']
                     and status['arm'] == ('with_skill' if trial.agent.expected_present else 'without_skill'),
@@ -107,6 +107,16 @@ def worker(config_path):
             identity = {'manifest_digest': status['manifest'], 'task_checksum': status['checksum']}
         else:
             identity = {}
+        if hasattr(trial.agent.task, 'resource_contract'):
+            from evaluation_resources import inventory_bytes, regular_bytes
+            import hashlib
+            resources = trial.agent.task.resource_contract(trial.agent.expected_present)
+            raw = regular_bytes(Path(config.task.path) / 'environment/resource-inventory.json')
+            require(raw == inventory_bytes(resources)
+                    and reports.read_json(Path(config.task.path) / 'tests/entry.json')['contract']['resources'] == resources,
+                    'Resource inventory did not reach staged verifier and runtime')
+            identity.update(resource_digest='sha256:' + hashlib.sha256(raw).hexdigest(),
+                registration_digest='sha256:' + hashlib.sha256(trial.agent._build_register_skills_command().encode()).hexdigest())
         return {'result': 'accepted_to_stop_boundary', 'reached': reached, **identity,
                 'cli': trial.agent.profile['cli'], 'model': trial.agent.model_name,
                 'reasoning_effort': trial.agent.profile['reasoning_effort'], 'provider': trial.agent.profile['provider'],
@@ -160,10 +170,12 @@ def qualify(output, task, reference):
         mutations = ['valid', 'unexpected-aeb', 'probe', 'control', 'provider', 'authorization', 'replay']
         if extra:
             mutations += ['missing-manifest', 'substituted-manifest', 'tampered-manifest', 'wrong-binding', 'wrong-manifest-population']
+        if hasattr(task, 'resource_contract'):
+            mutations += ['missing-inventory', 'tampered-inventory', 'wrong-inventory']
         for name in mutations:
             candidate = copy.deepcopy(config); child = dict(env)
             candidate.trial_name = name + '-' + variant['id']
-            before = None
+            before = None; inventory_before = None
             if name == 'unexpected-aeb': child['AEB_UNREVIEWED'] = '1'
             if name == 'probe': child['AEB_PILOT_PROBE'] = '1'
             if name == 'control': candidate.agent.kwargs['control'] = 'good'
@@ -194,6 +206,14 @@ def qualify(output, task, reference):
                 shutil.copyfile(substitute, target); target.chmod(0o600)
                 child['AEB_GH_MANIFEST'] = str(target)
                 candidate.agent.kwargs['launch_context']['manifest_digest'] = target.name[9:-5]
+            if name in ('missing-inventory', 'tampered-inventory', 'wrong-inventory'):
+                inventory = native / 'environment/resource-inventory.json'
+                inventory_before = inventory.read_bytes()
+                if name == 'missing-inventory': inventory.unlink()
+                elif name == 'tampered-inventory': inventory.write_bytes(inventory_before + b' ')
+                else:
+                    from evaluation_resources import inventory_bytes
+                    inventory.write_bytes(inventory_bytes(task.resource_contract(not present)))
             path = configs / (candidate.trial_name + '.json')
             reports.write_json(path, json.loads(candidate.model_dump_json()))
             try:
@@ -209,6 +229,7 @@ def qualify(output, task, reference):
                 result = json.loads(diagnostic.strip().splitlines()[-1])
             finally:
                 if before is not None: manifest.write_bytes(before)
+                if inventory_before is not None: inventory.write_bytes(inventory_before)
             require(result['result'] == ('accepted_to_stop_boundary' if name == 'valid' else 'rejected'),
                     'Wrong live construction outcome: ' + name)
             if name != 'valid': require(not result['reached'], 'Rejected launch reached workload boundary')
@@ -264,9 +285,10 @@ def validate(proof, task):
             and proof.get('deployment_equal') is True
             and proof.get('descriptor_comparison') == {'algorithm': 'sha256-typed-toml-v1', 'configurations_equal': True, 'descriptors': 2},
             'Unqualified live launch construction')
-    manifest = task.definition['adapter'] == 'gh-fixture'
+    manifest = task.trusted_launch_metadata
     cases = {'valid', 'unexpected-aeb', 'probe', 'control', 'provider', 'authorization', 'replay'}
     if manifest: cases |= {'missing-manifest', 'substituted-manifest', 'tampered-manifest', 'wrong-binding', 'wrong-manifest-population'}
+    if hasattr(task, 'resource_contract'): cases |= {'missing-inventory', 'tampered-inventory', 'wrong-inventory'}
     expected = {(v['id'], case) for v in task.definition['variants'] for case in cases}
     parents = {'unexpected-aeb', 'probe', 'provider', 'authorization'}
     if manifest: parents |= {'ambient-metadata', 'missing-manifest'}
@@ -292,6 +314,15 @@ def validate(proof, task):
             if manifest:
                 require(__import__('re').fullmatch('[0-9a-f]{64}', row.get('manifest_digest', ''))
                         and __import__('re').fullmatch('[0-9a-f]{64}', row.get('task_checksum', '')), 'Missing actual manifest consumer identity')
+            if hasattr(task, 'resource_contract'):
+                from evaluation_resources import inventory_bytes
+                from codex_resources import registration_command
+                import hashlib
+                present = next(v['present'] for v in task.definition['variants'] if v['id'] == row['variant'])
+                resources = task.resource_contract(present)
+                require(row.get('resource_digest') == 'sha256:' + hashlib.sha256(inventory_bytes(resources)).hexdigest()
+                        and row.get('registration_digest') == 'sha256:' + hashlib.sha256(registration_command(resources).encode()).hexdigest(),
+                        'Resource consumer identity missing')
         else:
             require(row.get('result') == 'rejected' and row.get('reached') == [], 'Rejected constructor reached execution')
     require(seen == expected, 'Missing launch proof cases')

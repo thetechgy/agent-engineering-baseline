@@ -52,6 +52,9 @@ class ReturnContract(unittest.TestCase):
                     "        adapters['gh-permission'] = GhPermission")
                 del lines[hooks[0].lineno - 1:hooks[0].end_lineno]
                 raw = b''.join(lines)
+                for default in (b'    trusted_launch_metadata = False\n', b'    trusted_launch_metadata = True\n'):
+                    self.assertEqual(raw.count(default), 1)
+                    raw = raw.replace(default, b'')
             self.assertEqual(hashlib.sha256(raw).hexdigest(), digest, member)
         current = BASE / 'variants/current/powershell-pester-6'
         candidate = BASE / 'variants/candidate/powershell-pester-6'

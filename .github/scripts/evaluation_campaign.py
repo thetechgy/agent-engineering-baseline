@@ -23,8 +23,8 @@ import skill_reports as reports
 
 def purpose(task, mode):
     identity = {'boolean-contract-v1':'boolean-contract-v4', 'gh-read-v1':'gh-read-v4', 'boolean-effectiveness-v1':'boolean-effectiveness-v3', 'boolean-retained-v1':'boolean-retained-v2'}.get(task.definition['id'], task.definition['id'])
-    source_version = '-lifecycle-v1-source-v19-'
-    return 'campaign-' + identity + source_version + ('probe' if mode == 'experiment-probe' else mode)
+    source_version = '-lifecycle-v1-source-v20-'
+    return 'campaign-' + identity + source_version + mode
 
 
 def revision():
@@ -293,6 +293,14 @@ def run(root, task, mode, *, reference=None, fixture=None):
                     adapter.native_observation(trial, native, present, row, rows, output=task.output, live=mode == 'live', runtime=ledger['runtime']['resolved'])
                 except (ValueError, OSError, KeyError):
                     row['state'] = 'failed'; return 'security_or_identity_drift'
+            # Declared host checkpoint controls never replace a primary native failure.
+            if not reason and fixture in ('verifier-failure', 'cleanup-failure'):
+                row['native_checkpoint'] = {k: row[k] for k in ('outcome', 'cleanup')}
+                row['observation_injection'] = fixture
+                if fixture == 'verifier-failure': reason = 'verifier_failure'
+                else:
+                    row['cleanup'] = False
+                    reason = stop_reason(row)
             # Explicit host accounting observations exercise scheduling stop rules.
             # Original native usage/grades remain unchanged and retained.
             if fixture in ('threshold', 'unknown-usage'):

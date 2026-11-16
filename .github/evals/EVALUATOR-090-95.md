@@ -1,11 +1,18 @@
 # SkillEvaluator 0.9.0 consumer ownership, issue #95
 
-Current main is verified at #142 merge
-`15caaedb82edf5d9e0253394ed99e3135cd7be93`. Complete static quality and data-only
-reporting/orchestration already use pinned 0.9.0. The offline behavioral evidence contract is merged. The explicit gh-runtime-090-v1
-execution preparation is separate; final hosted receipts are recorded in #143. Production
-execution and live provider compatibility remain held. See the
-[execution preparation](../../docs/evaluations/execution-runtime-090.md).
+Current main starts at #145 merge
+`82cdde086fe4d7fad84f21acc614df2adeca1767`. Static quality and data-only
+reporting/orchestration already use pinned 0.9.0. #143 completed a bounded live
+compatibility pair at its recorded execution SHA; #144 diagnosed its task/deployment
+permission ambiguity without replacing grades. #145 qualified the prospective
+permission successor with 34 oracle and four pinned-CLI/local-stub controls.
+
+The [successor smoke preparation](../../docs/evaluations/task-permission-v2/SMOKE.md)
+connects that contract to shared preparation, authenticated consumption and launch
+construction. Its draft PR carries final exact-source qualification/inspection
+receipts or blockers. Future model behavior under the successor is untested; paid
+execution, production adoption, standard judges, billing and skill benefit remain
+unqualified. Previous allocations remain closed.
 See [behavioral evidence and rollback](../../docs/evaluations/behavioral-evidence-090.md)
 and the preserved [static receipt](../../docs/evaluations/static-quality-090.md).
 
@@ -14,7 +21,8 @@ and the preserved [static receipt](../../docs/evaluations/static-quality-090.md)
 | Data-only publisher prepare, base analysis/HTML, orchestration | 0.9.0 since #138 | No Pages publication or paid dispatch authorized here |
 | Complete Validate static quality | 0.9.0 offline-v3 `quality-next` since #141 | Existing scanners, strict admission and projection remain required |
 | Offline behavioral evidence qualification | 0.9.0 offline-v3, `behavioral-090-offline-v1` | Explicit fixture judgments; versioned recovery/reporting/history refusal; no live adoption |
-| Opt-in gh-runtime-090-v1 execution preparation | 0.9.0 / Harbor 0.25.0, Codex 0.155.1 / gpt-5.6-sol / high | Diagnostic custom-only path; final hosted receipts in #143; no live routing or model-judge qualification |
+| Opt-in gh-runtime-090-v1 execution preparation | 0.9.0 / Harbor 0.25.0, Codex 0.155.1 / gpt-5.6-sol / high | Completed bounded live-path pair in #143; original grades and #144 diagnosis preserved; standard judges remain unqualified |
+| Opt-in gh-task-permission-v2 smoke preparation | Same held 0.9.0 / Harbor 0.25.0 / Codex/model settings | Credential-free exact-source proposal; draft PR receipts govern readiness; paid execution unauthorized |
 | Production benchmark execution | 0.3.0 / Harbor 0.13.2, Codex 0.155.1 | Execution-policy selection and actual provider routing remain unqualified |
 | Contracts, retained scanner adapter, native gh | 0.3.0 `quality`, exact review overlays | Existing native/task owners remain unchanged |
 | Private reviews and analyst attachments | Exact retained 0.3 review profiles/overlays | No successor validator/request profile |

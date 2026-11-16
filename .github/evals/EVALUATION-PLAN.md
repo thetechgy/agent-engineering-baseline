@@ -1,4 +1,40 @@
-# Prospective task/deployment permission successor
+# Task-permission successor smoke preparation
+
+**Preparation only; paid execution unauthorized.** PR #145 merged as
+`82cdde086fe4d7fad84f21acc614df2adeca1767`. Its 34 oracle controls and four
+real-CLI/local-stub probes remain the prior contract qualification; they did not
+create a live protocol or allocation. Historical diagnosis, original permission
+results and credential-free controls remain separate from future model behavior.
+
+The registered `gh-task-permission-v2` now has a proposed shared-path live protocol:
+one current then one target-absent attempt on existing successor `gh-014`, held
+0.9.0 / Harbor 0.25.0 / Codex 0.155.1 / gpt-5.6-sol / high, custom-only grading,
+at most two agents/two deterministic verifiers and zero model judges. Task inputs,
+resources and semantics remain unchanged. See the [frozen smoke preparation](../../docs/evaluations/task-permission-v2/SMOKE.md).
+
+The focused integration corrects unsuffixed live-entry construction and makes
+trusted-manifest launch qualification follow an inherited capability. Preparation
+consumption requires complete frozen source/configuration/task/deployment identities,
+real constructor/metadata-consumer qualification and the shared two-slot stop path.
+Final source, terminal required/change-selected checks, native preparation, fresh
+artifact inspection, exact retention/report reproduction and any blockers are
+recorded together on this preparation's draft PR. This checkpoint alone does not
+assert successful hosted qualification or qualify a future merge revision.
+
+The budget proposal remains $2 estimated usage, a $3 scheduling threshold and $3
+reserve within a $6 planning allocation; none is a provider billing cap and CI costs
+are separate. Fresh allocation/nonce and an exact combined dispatch/matching-gate
+approval are proposed only in the final PR receipt, unclaimed and unrun. The proposal
+expires `2026-11-20T23:59:59Z`; all previous allocations remain closed. Production
+settings, skills, pins, schedules, paid settings, Pester adoption, Pages and
+production history remain unchanged.
+
+**One current next action:** review the draft PR's exact-revision qualification
+receipt for a separate paid-execution decision; do not dispatch from this checkpoint.
+
+## PR #145 checkpoint, retained as history
+
+## Prospective task/deployment permission successor
 
 **Credential-free native qualification completed; draft review.** The opt-in
 `gh-task-permission-v2` starts from merged #144 at

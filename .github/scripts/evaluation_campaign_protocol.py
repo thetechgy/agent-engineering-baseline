@@ -26,6 +26,12 @@ SCENARIOS = ('complete', 'interruption', 'missing-evidence', 'unsupported-runtim
 
 
 def scenarios(task):
+    declared = protocol(task).get('qualification_scenarios') if 'protocol' in task.definition else None
+    if declared is not None:
+        require(type(declared) is list and len(set(declared)) == len(declared)
+                and set(SCENARIOS) - {'invalid'} <= set(declared)
+                and set(declared) <= set(SCENARIOS) | {'verifier-failure', 'cleanup-failure'}, 'Unregistered qualification scenario')
+        return tuple(declared)
     if task.definition['id'] == 'gh-runtime-090-v1':
         return ('complete', 'interruption', 'missing-evidence', 'unsupported-runtime',
                 'threshold', 'unknown-usage', 'native-cancellation', 'provider-refusal', 'malformed-response', 'provider-timeout')
@@ -291,7 +297,7 @@ def prepare(root, task, qualification):
               'unsupported-runtime':'unsupported_runtime_protocol', 'invalid':'missing_usable_evidence',
               'unsupported-grading':'unsupported_grading', 'threshold':'estimated_usage_threshold','unknown-usage':'unknown_usage', 'provider-refusal':'execution_infrastructure_failure',
               'malformed-response':'execution_infrastructure_failure', 'provider-timeout':'execution_infrastructure_failure',
-              'native-cancellation':'execution_cancelled'}
+              'native-cancellation':'execution_cancelled', 'verifier-failure':'verifier_failure', 'cleanup-failure':'cleanup_failure'}
     summaries={}; inputs=[]
     for scenario in scenarios(task):
         result=run(root/'scenarios'/scenario,task,'experiment-probe',reference=retained,fixture=scenario)
