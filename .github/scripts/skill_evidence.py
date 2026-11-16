@@ -3498,7 +3498,7 @@ def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
     if profile_id is None and campaign_purpose(purpose):
         profile_id = purpose
     if profile_id is None and purpose in ('skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-effectiveness-v26'
+        profile_id = 'pester-effectiveness-v27'
     if profile_id is None and name == 'powershell-pester-6' and purpose in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
         profile_id = 'pester-cli-pilot-retained-v17'
     if profile_id is None and name == 'gh' and purpose == 'oracle_qualification':
@@ -4118,6 +4118,9 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
             gh_policy = reports.benchmark_policy('gh')
             fields.update({key: gh_policy[key] for key in ('workspace_mode', 'upstream_revision', 'competing_revision',
                 'authorization_policy', 'fixture_boundary', 'task_build')})
+        if 'campaign' in profile:
+            from evaluation_evidence import task_policy_fields
+            fields.update(task_policy_fields(profile))
         policy = make_policy(fields,
             ('sha256:' + profiles.by_revision(capture['evaluator_revision'])['patch_sha256'] if profiles.candidate_revision(capture['evaluator_revision']) else
              digest_bytes(read_bytes(workspace / reports.PATCH))), 'custom-only',

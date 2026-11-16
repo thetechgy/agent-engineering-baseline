@@ -57,6 +57,9 @@ class Task:
     def replay_changes(self, original):
         return set()
 
+    def public_policy_fields(self):
+        return {}
+
     def staging_options(self, bundle):
         return {}
 

@@ -69,3 +69,36 @@ both reject. This is file validation, not a new attestation system. The post-run
 inventory snapshot does not prove inode ownership at every earlier read or cover
 unobserved filesystem actions. The later `0bc8169` run was also cancelled as
 superseded before replacement qualification of this final reader.
+
+[The independent replacement-race receipt](replacement-race.json) exercises the
+same inspection/open boundary in this PR's first reader and the final reader.
+Both a symlink substitution and a regular-file replacement read the substituted
+synthetic bytes before the fix and reject afterward. This is evidence about the
+new reader, not a reinterpretation of a historical agent attempt.
+[Source bindings](source-bindings.json) and [preservation checks](preservation.json)
+record the existing profile identities and unchanged historical inputs.
+
+## Completed native path and reporting-policy correction
+
+[Run 43804897469/A1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43804897469)
+at `3dcd6cb518314f79d626615664fc756c3ba9fb73` completed all 34 oracle controls
+and four non-forwarding CLI probes with expected outcomes and terminal cleanup.
+Artifact `14198454330`, ZIP SHA-256
+`b9e6e29dab9b9e6975a8b7b5c53e39101578f45e9ff1509d88ed90ca3cb20673`,
+retains the native observations. Both current CLI probes record target-specific
+full reads; both absent observations remain unknown and undeployed. All three
+existing consolidated reports reproduce byte for byte from public inputs.
+
+Artifact review exposed a remaining reporting mismatch: the top-level public
+policy inherited `per-case-allowlist-v1`, while native entries, task grading,
+custom profiles and authorization-v2 measurements used the successor contract.
+This run completes the native control path but does not qualify that misleading
+policy label. Its original records, grades, convenience fields and HTML remain
+preserved. No retained trace is regraded.
+
+A small opt-in reporting hook now takes the authorization policy from the task
+adapter, requires it during public admission and gives the successor a distinct
+public policy identity. Source-v19 profiles preserve every source-v18 profile;
+the mechanical Pester effectiveness source successor changes no grading or inputs.
+Final-source hosted qualification must verify the corrected label as well as all
+native outcomes, cleanup and report reproduction.

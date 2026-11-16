@@ -58,13 +58,16 @@ class ResourceControls(unittest.TestCase):
             with self.subTest(linked=linked), tempfile.TemporaryDirectory() as d:
                 root = Path(d); target = root / 'resource'; target.write_bytes(b'allowed')
                 protected = root / 'protected'; protected.write_bytes(b'outside permission')
-                real_open = os.open
-                def replace(path, flags):
-                    target.unlink()
-                    if linked: target.symlink_to(protected)
-                    else: target.write_bytes(b'outside permission')
-                    return real_open(path, flags)
-                with patch('evaluation_resources.os.open', side_effect=replace), self.assertRaises((ValueError, OSError)):
+                real_lstat = Path.lstat; replaced = False
+                def replace(path, *args, **kwargs):
+                    nonlocal replaced
+                    info = real_lstat(path, *args, **kwargs)
+                    if path == target and not replaced:
+                        replaced = True; target.unlink()
+                        if linked: target.symlink_to(protected)
+                        else: target.write_bytes(b'outside permission')
+                    return info
+                with patch.object(Path, 'lstat', replace), self.assertRaises((ValueError, OSError)):
                     regular_bytes(target)
 
     def test_raw_trace_requires_complete_unique_observations(self):
@@ -144,6 +147,24 @@ class TaskPermissionControls(unittest.TestCase):
                     "printf '%s\\n' '{}' > output/other.json", 'ls /home/agent', 'rm output/result.json', 'touch input/README.txt', 'python3 -c pass'):
                     self.assertEqual(self.verdict(contract, [call(command)], root)['status'], 'denied', command)
                 self.assertEqual(self.verdict(contract, [call('cat /home/agent/.agents/skills/gh/SKILL.md')], root)['status'], 'permitted' if present else 'denied')
+
+    def test_versioned_public_policy_matches_task_and_preserves_old_profiles(self):
+        from evaluation_campaign import purpose
+        from evaluation_evidence import task_policy_fields, validate_policy
+        import skill_evidence as evidence
+        import skill_reports as reports
+        new, _, _ = evidence.custom_contract('gh', purpose=purpose(self.owner, 'probe'))
+        self.assertEqual(task_policy_fields(new), {'authorization_policy': self.owner.entry()['contract']['permission_policy']})
+        old = reports.read_json(ROOT / evidence.CUSTOM_REGISTRY)['profiles'][
+            'campaign-gh-task-permission-v2-lifecycle-v1-source-v18-probe']
+        self.assertEqual(task_policy_fields(old), {})
+        fields = {'environment':'aeb-gh-fixture','concurrency':1,'timeout_multiplier':1.0,
+                  'model':'gpt-5.6-sol','provider':'openai','authorization_policy':'per-case-allowlist-v1'}
+        with self.assertRaises(ValueError): validate_policy(new, fields, 1, '0.155.1')
+        fields['authorization_policy'] = 'gh-task-permission-v2'
+        validate_policy(new, fields, 1, '0.155.1')
+        broken = copy.deepcopy(new); broken['campaign']['policy_fields']['authorization_policy'] = 'invented'
+        with self.assertRaises(ValueError): task_policy_fields(broken)
 
     def test_same_grader_accepts_unrelated_identifier_and_layout(self):
         selected = {'arithmetic-guide': {'SKILL.md': b'guide', 'references/help.txt': b'support'},

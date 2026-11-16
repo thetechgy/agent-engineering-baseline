@@ -7,6 +7,11 @@ operations and authorization grading. New permission/discovery prose is an
 experimental input. Independent correctness stays unchanged. The shared target
 access helper now selects trusted target identity rather than directory order.
 
+The executable is `3dcd6cb518314f79d626615664fc756c3ba9fb73` in
+[draft #145](https://github.com/thetechgy/agent-engineering-baseline/pull/145).
+[Credential-free native run 43804897469](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43804897469)
+is in progress; final PR validation follows its receipt commit.
+
 Local qualification passes 34 independent synthetic controls through the staged
 isolated native grader, with unsupported/unknown outcomes unscored and absent
 activation separate from task correctness/authorization. These are synthetic

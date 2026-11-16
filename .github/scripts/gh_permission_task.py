@@ -52,6 +52,9 @@ class GhPermission(GhFixture):
     probe_controls = ('good', 'unauthorized')
     variant_members = ('environment/resource-inventory.json',)
 
+    def public_policy_fields(self):
+        return {'authorization_policy': self.entry()['contract']['permission_policy']}
+
     def selections(self):
         policy = reports.read_json(POLICY / 'policy.json')
         return {skill: {name: (ROOT / '.agents/skills' / skill / name).read_bytes() for name in members}

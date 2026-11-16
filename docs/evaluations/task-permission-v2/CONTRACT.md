@@ -66,3 +66,19 @@ Independent controls are the qualification authority. Any later retained-trace
 analysis must be labeled retrospective and output-informed and cannot demonstrate
 behavior under these new instructions. Original private audit rows remain
 reconstructed and receipt-matched, not recovered.
+
+## Ownership and maintenance
+
+| Owner | Implementation and responsibility |
+| --- | --- |
+| Shared evidence | [evaluation_resources.py](../../../.github/scripts/evaluation_resources.py) validates exact inventories, bounded file reads and complete call/result links. It contains no gh skill identifier or native home path. |
+| Task adapter | [gh_permission_task.py](../../../.github/scripts/gh_permission_task.py) selects files and experimental instructions. [The task policy and grader](../../../.github/evals/gh-permission-v2/) own issue scope, command support and outcome meanings. |
+| Runtime adapter | [codex_resources.py](../../../.github/scripts/codex_resources.py) maps selected files to destinations and root provisioning. [evaluation_codex.py](../../../.github/scripts/evaluation_codex.py) owns native registration and target-specific event access. |
+| Existing reporting | Native collector, custom capture, public admission, analysis and consolidated renderer are reused. Versioned source profiles and authorization-v2 identity distinguish this policy; no renderer or history fork is added. |
+
+Maintain the explicit selected-file list, runtime mapping and control expectations
+together. Skill bytes remain upstream-owned. A change to those inputs requires
+fresh source identities and credential-free qualification. The first-directory
+selection is removed; no new schedule, dependency, sandbox, attestation service or
+runtime-support commitment is added. The alternate-layout controls qualify the
+interface only. Actual native qualification is limited to the held Codex fixture.
