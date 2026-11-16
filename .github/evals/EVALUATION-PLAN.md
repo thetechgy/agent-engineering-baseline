@@ -1,35 +1,36 @@
 # Prospective task/deployment permission successor
 
-The opt-in `gh-task-permission-v2` starts from merged #144 at
+**Credential-free native qualification completed; draft review.** The opt-in
+`gh-task-permission-v2` starts from merged #144 at
 `6d063563746651a7e70a570007ed4c23eee9b9d9`. Its [contract and declared controls](../../docs/evaluations/task-permission-v2/CONTRACT.md)
-align exact supplied/discovery resources, runtime destinations, supported issue-12
-operations and authorization grading. New permission/discovery prose is an
-experimental input. Independent correctness stays unchanged. The shared target
-access helper now selects trusted target identity rather than directory order.
+align exact supplied/discovery resources, runtime destinations, bounded issue-12
+operations and authorization grading. Permission/discovery prose is an experimental
+input; independent correctness stays unchanged. Target access selects trusted
+identity rather than staging order.
 
-The executable is `3dcd6cb518314f79d626615664fc756c3ba9fb73` in
-[draft #145](https://github.com/thetechgy/agent-engineering-baseline/pull/145).
-[Credential-free native run 43804897469](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43804897469)
-is in progress; final PR validation follows its receipt commit.
+[Run 43808603192/A1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43808603192)
+executed `501b54d5ebdd90bacbc5d920e67fb7afdda1ea9e`: all 34 oracle controls and
+four pinned-CLI/local-stub probes completed with expected outcomes and terminal
+cleanup. Unsupported/unknown outcomes stay unscored. Good work passes correctness
+and authorization in both arms; absent activation fails its gate separately.
+Both published policies identify the successor; three consolidated reports
+reproduce byte for byte. [The qualification receipt](../../docs/evaluations/task-permission-v2/QUALIFICATION.md)
+records artifact identities, local controls, failed/cancelled attempts, reporting
+correction and evidentiary limits. Native execution qualifies that executable SHA;
+the later receipt commit retains unchanged source identities. Final required CI
+belongs to the exact head of [draft #145](https://github.com/thetechgy/agent-engineering-baseline/pull/145).
 
-Local qualification passes 34 independent synthetic controls through the staged
-isolated native grader, with unsupported/unknown outcomes unscored and absent
-activation separate from task correctness/authorization. These are synthetic
-verifier controls, not container lifecycle or agent-effectiveness evidence. Hosted
-native and non-forwarding CLI qualification and final required CI are pending;
-[the maintained receipt](../../docs/evaluations/task-permission-v2/QUALIFICATION.md)
-records completed and failed attempts without converting pending checks to success.
+All 595 predecessor profiles/14 metric definitions, old selectors, frozen task and
+replay inputs, original grades/reports, production defaults/pins, isolation,
+schedules and closed allocations remain preserved. Source successors bind changed
+shared code; authorization v2 has its own metric identity. There is no new live
+protocol/allocation, inference, model judge, provider-credential retrieval, gate
+approval, merge, production adoption/history, Pester clarification or Pages
+publication. Alternate-layout controls qualify the generic interface only;
+native qualification remains limited to the held Codex fixture.
 
-All 595 predecessor profile values, old metric definitions/selectors, frozen task
-and replay inputs, historical grades/reports, production defaults/pins, isolation,
-schedules and closed allocations remain preserved. Appended source-v18 identities
-bind changed shared code; authorization v2 has its own metric identity. No live
-protocol/allocation is added. No inference, model judge, provider-credential
-retrieval, gate approval, merge, production adoption/history, Pester clarification
-or Pages publication is part of this work.
-
-**One current next action:** review the credential-free-qualified successor and its
-final receipts in the focused draft PR after hosted qualification completes.
+**One current next action:** review draft #145's successor contract and
+credential-free qualification receipts.
 
 ## PR #144 audit checkpoint, retained as history
 

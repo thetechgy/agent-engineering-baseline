@@ -1,0 +1,18 @@
+{
+  "source_run": 43804897469,
+  "reporting": "original source-v18 public records unchanged under source-v19 consumers",
+  "reports": [
+    {
+      "mode": "oracle",
+      "sha256": "22c28c4dfd6b01fa26dbf5df954eea08850b88ecf54138c61a0a6969fa6e2a1d"
+    },
+    {
+      "mode": "probe",
+      "sha256": "f1b930e05ea44e4a498cc5421d003056688a0883755a85d4173ff25f5596c0a5"
+    },
+    {
+      "mode": "combined",
+      "sha256": "770f49eab14f72d2d1a52cac36a33dd9d41f32e13c6d9e20cd273c19c1d3a14b"
+    }
+  ]
+}

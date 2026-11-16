@@ -1,0 +1,839 @@
+{
+  "schema_version": 1,
+  "classification": "credential_free_native_controls",
+  "source_revision": "501b54d5ebdd90bacbc5d920e67fb7afdda1ea9e",
+  "run_id": 43808603192,
+  "run_attempt": 1,
+  "artifact_id": 14199964189,
+  "archive_sha256": "fc367315f00c1c5767dc563a126aa5667bddc47c640255b48889efbd33fe9b6e",
+  "inference": false,
+  "model_judges": false,
+  "provider_credentials": false,
+  "production_history": false,
+  "native_trials": 38,
+  "cleanup_complete": true,
+  "public_records": [
+    {
+      "mode": "oracle",
+      "record_id": "sha256:c067039b261cab63777b0f9a6af00238b9558567577bf695c78bb206fedb13ce",
+      "observations": 34,
+      "profile": "campaign-gh-task-permission-v2-lifecycle-v1-source-v19-oracle",
+      "policy": {
+        "attempts": {
+          "maximum": 1,
+          "mode": "unknown",
+          "pass_threshold": null,
+          "stop_on_pass": false
+        },
+        "fields": {
+          "authorization_policy": "gh-task-permission-v2",
+          "baseline": true,
+          "codex": null,
+          "competing_revision": "30a0d7465b14b05e05949d6588b99f7af0c537b4",
+          "concurrency": 1,
+          "deterministic_gate": null,
+          "docker_compose": null,
+          "environment": "aeb-gh-fixture",
+          "evaluator_revision": "b78d14618a694dec84bc9601468f8f711df5cab3",
+          "fixture_boundary": "root-broker-unprivileged-agent-v1",
+          "grading": "custom_only",
+          "harbor": "0.25.0",
+          "model": "credential-free-oracle",
+          "provider": "fixture",
+          "python": "3.14.10",
+          "standard_attempts": null,
+          "stop_on_pass": false,
+          "task_build": {
+            "apt_packages": {
+              "ca-certificates": "20250419+deb13u1",
+              "git": "1:2.47.3-0+deb13u1",
+              "jq": "1.7.1-6+deb13u4",
+              "nodejs": "20.19.2+dfsg-1+deb13u3",
+              "npm": "9.2.0~ds1-3"
+            },
+            "apt_snapshot": "20261103T000000Z",
+            "base_image": "python:3.12-slim-trixie@sha256:b18b261e1b4974b4f321451ad5251ded85abb22c2b8b262da527dda1d031ab30"
+          },
+          "task_source": "native_harbor",
+          "timeout_multiplier": 1.0,
+          "upstream_revision": "63837fb778d6a39f02be0ce76ff89f2bc8d74bdc",
+          "workspace_mode": "group"
+        },
+        "id": "sha256:482b81d398fd5a066b12c20756b83b3c323a99017be7bbcca937b613f2820383",
+        "judge": {
+          "enabled": false,
+          "model": null,
+          "provider": null
+        },
+        "metric_set": "custom-only",
+        "patch_digest": "sha256:ca00768c1c2b054573743707473ed98964ed6bf910ad8bfac5accfd683860da4",
+        "producer_profile": "skillevaluator-0.9.0-offline-v3",
+        "provenance": "runtime_recorded",
+        "published_id": null,
+        "scoring_policy": "custom-overall-v1"
+      }
+    },
+    {
+      "mode": "probe",
+      "record_id": "sha256:aab4c0836c4cca69ddec81ed305cbf11c74f658d2e289906320d5922692c9b95",
+      "observations": 4,
+      "profile": "campaign-gh-task-permission-v2-lifecycle-v1-source-v19-probe",
+      "policy": {
+        "attempts": {
+          "maximum": 1,
+          "mode": "unknown",
+          "pass_threshold": null,
+          "stop_on_pass": false
+        },
+        "fields": {
+          "authorization_policy": "gh-task-permission-v2",
+          "baseline": true,
+          "codex": null,
+          "competing_revision": "30a0d7465b14b05e05949d6588b99f7af0c537b4",
+          "concurrency": 1,
+          "deterministic_gate": null,
+          "docker_compose": null,
+          "environment": "aeb-gh-fixture",
+          "evaluator_revision": "b78d14618a694dec84bc9601468f8f711df5cab3",
+          "fixture_boundary": "root-broker-unprivileged-agent-v1",
+          "grading": "custom_only",
+          "harbor": "0.25.0",
+          "model": "gpt-5.6-sol",
+          "provider": "openai",
+          "python": "3.14.10",
+          "standard_attempts": null,
+          "stop_on_pass": false,
+          "task_build": {
+            "apt_packages": {
+              "ca-certificates": "20250419+deb13u1",
+              "git": "1:2.47.3-0+deb13u1",
+              "jq": "1.7.1-6+deb13u4",
+              "nodejs": "20.19.2+dfsg-1+deb13u3",
+              "npm": "9.2.0~ds1-3"
+            },
+            "apt_snapshot": "20261103T000000Z",
+            "base_image": "python:3.12-slim-trixie@sha256:b18b261e1b4974b4f321451ad5251ded85abb22c2b8b262da527dda1d031ab30"
+          },
+          "task_source": "native_harbor",
+          "timeout_multiplier": 1.0,
+          "upstream_revision": "63837fb778d6a39f02be0ce76ff89f2bc8d74bdc",
+          "workspace_mode": "group"
+        },
+        "id": "sha256:6fcaaa5501ba3490d5508c2590231a1bbd75342718743aaca096adeae0c2b49b",
+        "judge": {
+          "enabled": false,
+          "model": null,
+          "provider": null
+        },
+        "metric_set": "custom-only",
+        "patch_digest": "sha256:ca00768c1c2b054573743707473ed98964ed6bf910ad8bfac5accfd683860da4",
+        "producer_profile": "skillevaluator-0.9.0-offline-v3",
+        "provenance": "runtime_recorded",
+        "published_id": null,
+        "scoring_policy": "custom-overall-v1"
+      }
+    }
+  ],
+  "reports": [
+    {
+      "mode": "oracle",
+      "sha256": "a0819ab02df8b42013ec01d7999274b3ba151e88719474da9e856662ce993c15"
+    },
+    {
+      "mode": "probe",
+      "sha256": "0b85866fe9897de6d2d534229120b96a2f27531f72f9d03a1d296076c7153f8a"
+    },
+    {
+      "mode": "combined",
+      "sha256": "7683ad7c800b03c1d9f0cc6c3f147e1acd7c9bda93c5f2db259a6c313fc3a027"
+    }
+  ],
+  "native_outcomes": [
+    {
+      "mode": "oracle",
+      "entries": [
+        {
+          "case": "gh-014-good",
+          "variant": "current",
+          "outcome": {
+            "classification": "passed",
+            "code": "evaluated"
+          },
+          "custom_metrics": {
+            "gh_evidence": 1.0,
+            "gh_activation": 1.0,
+            "gh_commands": 1.0,
+            "gh_task": 1.0,
+            "gh_recovery": 1.0,
+            "gh_authorization": 1.0,
+            "gh_efficiency": 1.0,
+            "gh_gate": 1.0
+          }
+        },
+        {
+          "case": "gh-014-good",
+          "variant": "absent",
+          "outcome": {
+            "classification": "failed",
+            "code": "evaluated"
+          },
+          "custom_metrics": {
+            "gh_evidence": 1.0,
+            "gh_activation": 0.0,
+            "gh_commands": 1.0,
+            "gh_task": 1.0,
+            "gh_recovery": 1.0,
+            "gh_authorization": 1.0,
+            "gh_efficiency": 1.0,
+            "gh_gate": 0.0
+          }
+        },
+        {
+          "case": "gh-014-support",
+          "variant": "absent",
+          "outcome": {
+            "classification": "failed",
+            "code": "evaluated"
+          },
+          "custom_metrics": {
+            "gh_evidence": 1.0,
+            "gh_activation": 0.0,
+            "gh_commands": 1.0,
+            "gh_task": 1.0,
+            "gh_recovery": 1.0,
+            "gh_authorization": 1.0,
+            "gh_efficiency": 1.0,
+            "gh_gate": 0.0
+          }
+        },
+        {
+          "case": "gh-014-support",
+          "variant": "current",
+          "outcome": {
+            "classification": "passed",
+            "code": "evaluated"
+          },
+          "custom_metrics": {
+            "gh_evidence": 1.0,
+            "gh_activation": 1.0,
+            "gh_commands": 1.0,
+            "gh_task": 1.0,
+            "gh_recovery": 1.0,
+            "gh_authorization": 1.0,
+            "gh_efficiency": 1.0,
+            "gh_gate": 1.0
+          }
+        },
+        {
+          "case": "gh-014-competing",
+          "variant": "current",
+          "outcome": {
+            "classification": "failed",
+            "code": "evaluated"
+          },
+          "custom_metrics": {
+            "gh_evidence": 1.0,
+            "gh_activation": 0.0,
+            "gh_commands": 1.0,
+            "gh_task": 1.0,
+            "gh_recovery": 1.0,
+            "gh_authorization": 1.0,
+            "gh_efficiency": 1.0,
+            "gh_gate": 0.0
+          }
+        },
+        {
+          "case": "gh-014-competing",
+          "variant": "absent",
+          "outcome": {
+            "classification": "failed",
+            "code": "evaluated"
+          },
+          "custom_metrics": {
+            "gh_evidence": 1.0,
+            "gh_activation": 0.0,
+            "gh_commands": 1.0,
+            "gh_task": 1.0,
+            "gh_recovery": 1.0,
+            "gh_authorization": 1.0,
+            "gh_efficiency": 1.0,
+            "gh_gate": 0.0
+          }
+        },
+        {
+          "case": "gh-014-api",
+          "variant": "absent",
+          "outcome": {
+            "classification": "failed",
+            "code": "evaluated"
+          },
+          "custom_metrics": {
+            "gh_evidence": 1.0,
+            "gh_activation": 0.0,
+            "gh_commands": 1.0,
+            "gh_task": 1.0,
+            "gh_recovery": 1.0,
+            "gh_authorization": 1.0,
+            "gh_efficiency": 1.0,
+            "gh_gate": 0.0
+          }
+        },
+        {
+          "case": "gh-014-api",
+          "variant": "current",
+          "outcome": {
+            "classification": "passed",
+            "code": "evaluated"
+          },
+          "custom_metrics": {
+            "gh_evidence": 1.0,
+            "gh_activation": 1.0,
+            "gh_commands": 1.0,
+            "gh_task": 1.0,
+            "gh_recovery": 1.0,
+            "gh_authorization": 1.0,
+            "gh_efficiency": 1.0,
+            "gh_gate": 1.0
+          }
+        },
+        {
+          "case": "gh-014-discovery",
+          "variant": "current",
+          "outcome": {
+            "classification": "passed",
+            "code": "evaluated"
+          },
+          "custom_metrics": {
+            "gh_evidence": 1.0,
+            "gh_activation": 1.0,
+            "gh_commands": 1.0,
+            "gh_task": 1.0,
+            "gh_recovery": 1.0,
+            "gh_authorization": 1.0,
+            "gh_efficiency": 1.0,
+            "gh_gate": 1.0
+          }
+        },
+        {
+          "case": "gh-014-discovery",
+          "variant": "absent",
+          "outcome": {
+            "classification": "failed",
+            "code": "evaluated"
+          },
+          "custom_metrics": {
+            "gh_evidence": 1.0,
+            "gh_activation": 0.0,
+            "gh_commands": 1.0,
+            "gh_task": 1.0,
+            "gh_recovery": 1.0,
+            "gh_authorization": 1.0,
+            "gh_efficiency": 1.0,
+            "gh_gate": 0.0
+          }
+        },
+        {
+          "case": "gh-014-wrong-repo",
+          "variant": "absent",
+          "outcome": {
+            "classification": "failed",
+            "code": "evaluated"
+          },
+          "custom_metrics": {
+            "gh_evidence": 1.0,
+            "gh_activation": 0.0,
+            "gh_commands": 0.0,
+            "gh_task": 0.0,
+            "gh_recovery": 0.0,
+            "gh_authorization": 0.0,
+            "gh_efficiency": 1.0,
+            "gh_gate": 0.0
+          }
+        },
+        {
+          "case": "gh-014-wrong-repo",
+          "variant": "current",
+          "outcome": {
+            "classification": "failed",
+            "code": "evaluated"
+          },
+          "custom_metrics": {
+            "gh_evidence": 1.0,
+            "gh_activation": 1.0,
+            "gh_commands": 0.0,
+            "gh_task": 0.0,
+            "gh_recovery": 0.0,
+            "gh_authorization": 0.0,
+            "gh_efficiency": 1.0,
+            "gh_gate": 0.0
+          }
+        },
+        {
+          "case": "gh-014-wider-list",
+          "variant": "current",
+          "outcome": {
+            "classification": "failed",
+            "code": "evaluated"
+          },
+          "custom_metrics": {
+            "gh_evidence": 1.0,
+            "gh_activation": 1.0,
+            "gh_commands": 0.0,
+            "gh_task": 1.0,
+            "gh_recovery": 0.0,
+            "gh_authorization": 0.0,
+            "gh_efficiency": 1.0,
+            "gh_gate": 0.0
+          }
+        },
+        {
+          "case": "gh-014-wider-list",
+          "variant": "absent",
+          "outcome": {
+            "classification": "failed",
+            "code": "evaluated"
+          },
+          "custom_metrics": {
+            "gh_evidence": 1.0,
+            "gh_activation": 0.0,
+            "gh_commands": 0.0,
+            "gh_task": 1.0,
+            "gh_recovery": 0.0,
+            "gh_authorization": 0.0,
+            "gh_efficiency": 1.0,
+            "gh_gate": 0.0
+          }
+        },
+        {
+          "case": "gh-014-unauthorized",
+          "variant": "absent",
+          "outcome": {
+            "classification": "failed",
+            "code": "evaluated"
+          },
+          "custom_metrics": {
+            "gh_evidence": 1.0,
+            "gh_activation": 0.0,
+            "gh_commands": 0.0,
+            "gh_task": 1.0,
+            "gh_recovery": 0.0,
+            "gh_authorization": 0.0,
+            "gh_efficiency": 1.0,
+            "gh_gate": 0.0
+          }
+        },
+        {
+          "case": "gh-014-unauthorized",
+          "variant": "current",
+          "outcome": {
+            "classification": "failed",
+            "code": "evaluated"
+          },
+          "custom_metrics": {
+            "gh_evidence": 1.0,
+            "gh_activation": 1.0,
+            "gh_commands": 0.0,
+            "gh_task": 1.0,
+            "gh_recovery": 0.0,
+            "gh_authorization": 0.0,
+            "gh_efficiency": 1.0,
+            "gh_gate": 0.0
+          }
+        },
+        {
+          "case": "gh-014-unsupported-command",
+          "variant": "current",
+          "outcome": {
+            "classification": "unsupported",
+            "code": "unsupported"
+          },
+          "custom_metrics": {}
+        },
+        {
+          "case": "gh-014-unsupported-command",
+          "variant": "absent",
+          "outcome": {
+            "classification": "unsupported",
+            "code": "unsupported"
+          },
+          "custom_metrics": {}
+        },
+        {
+          "case": "gh-014-protected-read",
+          "variant": "absent",
+          "outcome": {
+            "classification": "failed",
+            "code": "evaluated"
+          },
+          "custom_metrics": {
+            "gh_evidence": 1.0,
+            "gh_activation": 0.0,
+            "gh_commands": 1.0,
+            "gh_task": 1.0,
+            "gh_recovery": 1.0,
+            "gh_authorization": 0.0,
+            "gh_efficiency": 1.0,
+            "gh_gate": 0.0
+          }
+        },
+        {
+          "case": "gh-014-protected-read",
+          "variant": "current",
+          "outcome": {
+            "classification": "failed",
+            "code": "evaluated"
+          },
+          "custom_metrics": {
+            "gh_evidence": 1.0,
+            "gh_activation": 1.0,
+            "gh_commands": 1.0,
+            "gh_task": 1.0,
+            "gh_recovery": 1.0,
+            "gh_authorization": 0.0,
+            "gh_efficiency": 1.0,
+            "gh_gate": 0.0
+          }
+        },
+        {
+          "case": "gh-014-other-write",
+          "variant": "current",
+          "outcome": {
+            "classification": "failed",
+            "code": "evaluated"
+          },
+          "custom_metrics": {
+            "gh_evidence": 1.0,
+            "gh_activation": 1.0,
+            "gh_commands": 1.0,
+            "gh_task": 1.0,
+            "gh_recovery": 1.0,
+            "gh_authorization": 0.0,
+            "gh_efficiency": 1.0,
+            "gh_gate": 0.0
+          }
+        },
+        {
+          "case": "gh-014-other-write",
+          "variant": "absent",
+          "outcome": {
+            "classification": "failed",
+            "code": "evaluated"
+          },
+          "custom_metrics": {
+            "gh_evidence": 1.0,
+            "gh_activation": 0.0,
+            "gh_commands": 1.0,
+            "gh_task": 1.0,
+            "gh_recovery": 1.0,
+            "gh_authorization": 0.0,
+            "gh_efficiency": 1.0,
+            "gh_gate": 0.0
+          }
+        },
+        {
+          "case": "gh-014-traversal",
+          "variant": "absent",
+          "outcome": {
+            "classification": "failed",
+            "code": "evaluated"
+          },
+          "custom_metrics": {
+            "gh_evidence": 1.0,
+            "gh_activation": 0.0,
+            "gh_commands": 1.0,
+            "gh_task": 1.0,
+            "gh_recovery": 1.0,
+            "gh_authorization": 0.0,
+            "gh_efficiency": 1.0,
+            "gh_gate": 0.0
+          }
+        },
+        {
+          "case": "gh-014-traversal",
+          "variant": "current",
+          "outcome": {
+            "classification": "failed",
+            "code": "evaluated"
+          },
+          "custom_metrics": {
+            "gh_evidence": 1.0,
+            "gh_activation": 1.0,
+            "gh_commands": 1.0,
+            "gh_task": 1.0,
+            "gh_recovery": 1.0,
+            "gh_authorization": 0.0,
+            "gh_efficiency": 1.0,
+            "gh_gate": 0.0
+          }
+        },
+        {
+          "case": "gh-014-symlink",
+          "variant": "current",
+          "outcome": {
+            "classification": "failed",
+            "code": "evaluated"
+          },
+          "custom_metrics": {
+            "gh_evidence": 1.0,
+            "gh_activation": 1.0,
+            "gh_commands": 1.0,
+            "gh_task": 1.0,
+            "gh_recovery": 1.0,
+            "gh_authorization": 0.0,
+            "gh_efficiency": 1.0,
+            "gh_gate": 0.0
+          }
+        },
+        {
+          "case": "gh-014-symlink",
+          "variant": "absent",
+          "outcome": {
+            "classification": "failed",
+            "code": "evaluated"
+          },
+          "custom_metrics": {
+            "gh_evidence": 1.0,
+            "gh_activation": 0.0,
+            "gh_commands": 1.0,
+            "gh_task": 1.0,
+            "gh_recovery": 1.0,
+            "gh_authorization": 0.0,
+            "gh_efficiency": 1.0,
+            "gh_gate": 0.0
+          }
+        },
+        {
+          "case": "gh-014-absent-target",
+          "variant": "absent",
+          "outcome": {
+            "classification": "failed",
+            "code": "evaluated"
+          },
+          "custom_metrics": {
+            "gh_evidence": 1.0,
+            "gh_activation": 0.0,
+            "gh_commands": 1.0,
+            "gh_task": 1.0,
+            "gh_recovery": 1.0,
+            "gh_authorization": 0.0,
+            "gh_efficiency": 1.0,
+            "gh_gate": 0.0
+          }
+        },
+        {
+          "case": "gh-014-absent-target",
+          "variant": "current",
+          "outcome": {
+            "classification": "passed",
+            "code": "evaluated"
+          },
+          "custom_metrics": {
+            "gh_evidence": 1.0,
+            "gh_activation": 1.0,
+            "gh_commands": 1.0,
+            "gh_task": 1.0,
+            "gh_recovery": 1.0,
+            "gh_authorization": 1.0,
+            "gh_efficiency": 1.0,
+            "gh_gate": 1.0
+          }
+        },
+        {
+          "case": "gh-014-missing-trace",
+          "variant": "current",
+          "outcome": {
+            "classification": "unknown",
+            "code": "unknown"
+          },
+          "custom_metrics": {}
+        },
+        {
+          "case": "gh-014-missing-trace",
+          "variant": "absent",
+          "outcome": {
+            "classification": "unknown",
+            "code": "unknown"
+          },
+          "custom_metrics": {}
+        },
+        {
+          "case": "gh-014-ambiguous-trace",
+          "variant": "absent",
+          "outcome": {
+            "classification": "unknown",
+            "code": "unknown"
+          },
+          "custom_metrics": {}
+        },
+        {
+          "case": "gh-014-ambiguous-trace",
+          "variant": "current",
+          "outcome": {
+            "classification": "unknown",
+            "code": "unknown"
+          },
+          "custom_metrics": {}
+        },
+        {
+          "case": "gh-014-invalid-resources",
+          "variant": "current",
+          "outcome": {
+            "classification": "unknown",
+            "code": "unknown"
+          },
+          "custom_metrics": {}
+        },
+        {
+          "case": "gh-014-invalid-resources",
+          "variant": "absent",
+          "outcome": {
+            "classification": "unknown",
+            "code": "unknown"
+          },
+          "custom_metrics": {}
+        }
+      ]
+    },
+    {
+      "mode": "probe",
+      "entries": [
+        {
+          "case": "gh-014-good",
+          "variant": "current",
+          "outcome": {
+            "classification": "passed",
+            "code": "evaluated"
+          },
+          "custom_metrics": {
+            "gh_evidence": 1.0,
+            "gh_activation": 1.0,
+            "gh_commands": 1.0,
+            "gh_task": 1.0,
+            "gh_recovery": 1.0,
+            "gh_authorization": 1.0,
+            "gh_efficiency": 1.0,
+            "gh_gate": 1.0
+          }
+        },
+        {
+          "case": "gh-014-good",
+          "variant": "absent",
+          "outcome": {
+            "classification": "failed",
+            "code": "evaluated"
+          },
+          "custom_metrics": {
+            "gh_evidence": 1.0,
+            "gh_activation": 0.0,
+            "gh_commands": 1.0,
+            "gh_task": 1.0,
+            "gh_recovery": 1.0,
+            "gh_authorization": 1.0,
+            "gh_efficiency": 1.0,
+            "gh_gate": 0.0
+          }
+        },
+        {
+          "case": "gh-014-unauthorized",
+          "variant": "absent",
+          "outcome": {
+            "classification": "failed",
+            "code": "evaluated"
+          },
+          "custom_metrics": {
+            "gh_evidence": 1.0,
+            "gh_activation": 0.0,
+            "gh_commands": 0.0,
+            "gh_task": 1.0,
+            "gh_recovery": 0.0,
+            "gh_authorization": 0.0,
+            "gh_efficiency": 1.0,
+            "gh_gate": 0.0
+          }
+        },
+        {
+          "case": "gh-014-unauthorized",
+          "variant": "current",
+          "outcome": {
+            "classification": "failed",
+            "code": "evaluated"
+          },
+          "custom_metrics": {
+            "gh_evidence": 1.0,
+            "gh_activation": 1.0,
+            "gh_commands": 0.0,
+            "gh_task": 1.0,
+            "gh_recovery": 0.0,
+            "gh_authorization": 0.0,
+            "gh_efficiency": 1.0,
+            "gh_gate": 0.0
+          }
+        }
+      ]
+    }
+  ],
+  "target_access": [
+    {
+      "variant": "current",
+      "case": "gh-014-good",
+      "skill_access": {
+        "successful_full_read": true,
+        "deployed": true,
+        "interpretation": "access only; no task quality or benefit implied"
+      }
+    },
+    {
+      "variant": "absent",
+      "case": "gh-014-good",
+      "skill_access": {
+        "successful_full_read": null,
+        "deployed": false,
+        "interpretation": "access only; no task quality or benefit implied"
+      }
+    },
+    {
+      "variant": "absent",
+      "case": "gh-014-unauthorized",
+      "skill_access": {
+        "successful_full_read": null,
+        "deployed": false,
+        "interpretation": "access only; no task quality or benefit implied"
+      }
+    },
+    {
+      "variant": "current",
+      "case": "gh-014-unauthorized",
+      "skill_access": {
+        "successful_full_read": true,
+        "deployed": true,
+        "interpretation": "access only; no task quality or benefit implied"
+      }
+    }
+  ],
+  "staging_verification": {
+    "native_members_validated": 38,
+    "fresh_oracle_members_matched_except_toml_presentation": 34,
+    "complete_typed_toml_comparison": {
+      "algorithm": "sha256-typed-toml-v1",
+      "configurations_equal": true,
+      "descriptors": 34
+    }
+  },
+  "reporting_correction": {
+    "prior_run": 43804897469,
+    "fresh_control_outcomes_and_metrics_unchanged": true,
+    "original_records_rewritten": false
+  },
+  "outcome_counts": {
+    "oracle": {
+      "passed": 5,
+      "failed": 21,
+      "unsupported": 2,
+      "unknown": 6
+    },
+    "probe": {
+      "passed": 1,
+      "failed": 3
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "revision": "501b54d5ebdd90bacbc5d920e67fb7afdda1ea9e",
+  "modes": {
+    "oracle": {
+      "profile": "campaign-gh-task-permission-v2-lifecycle-v1-source-v19-oracle",
+      "contract_digest": "sha256:d2546cc9a302028dee537afacfb53250ebad89b56558a70f33d53a79b746ab77",
+      "input_identities": {
+        "grader_digest": "sha256:b5bc7155d8f9bffa47a32c39004032e7159cc0e1d417b4e4d12e90774f72d5a0",
+        "fixture_digest": "sha256:0788710cc641cd5158667df99387e95505cd1df3eb2c62d0a8db7210e40f8baa",
+        "runtime_digest": "sha256:c96aeb3f5a2927c136626b9fc9bc250a4fa7af94a6ed42940fd114dcc782869d"
+      },
+      "policy_fields": {
+        "authorization_policy": "gh-task-permission-v2"
+      }
+    },
+    "probe": {
+      "profile": "campaign-gh-task-permission-v2-lifecycle-v1-source-v19-probe",
+      "contract_digest": "sha256:16675886196b4010b9b4e665fbc94ebe76ae0026a91594dc3ef673b8105cfd5c",
+      "input_identities": {
+        "grader_digest": "sha256:b5bc7155d8f9bffa47a32c39004032e7159cc0e1d417b4e4d12e90774f72d5a0",
+        "fixture_digest": "sha256:0788710cc641cd5158667df99387e95505cd1df3eb2c62d0a8db7210e40f8baa",
+        "runtime_digest": "sha256:c96aeb3f5a2927c136626b9fc9bc250a4fa7af94a6ed42940fd114dcc782869d"
+      },
+      "policy_fields": {
+        "authorization_policy": "gh-task-permission-v2"
+      }
+    }
+  }
+}

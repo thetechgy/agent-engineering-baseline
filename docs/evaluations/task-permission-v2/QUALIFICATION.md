@@ -15,12 +15,73 @@ empty string. The successor now checks original call/result linkage and string
 content before interpreting normalized calls. The repeated matrix passes all 34
 expected outcomes. Failed attempts are retained separately, not overwritten.
 
-Hosted native oracle/CLI qualification, authenticated artifacts, cleanup, report
-reproduction and final required/change-selected CI are pending. Their final
-revision and receipts will be recorded here before delivery. No pending check is
-claimed passed. Local Docker is unavailable; the existing credential-free hosted
-route owns container qualification. Non-forwarding CLI controls use the pinned
-CLI with a local stub, not a provider or model judge.
+## Final native qualification
+
+[Run 43808603192/A1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43808603192)
+completed successfully at executable revision
+`501b54d5ebdd90bacbc5d920e67fb7afdda1ea9e`. [The native receipt](native-receipt.json)
+binds artifact `14199964189` (1,177,323 bytes), ZIP SHA-256
+`fc367315f00c1c5767dc563a126aa5667bddc47c640255b48889efbd33fe9b6e`,
+the producer repository/workflow/attempt, exact public records and all 38 outcomes.
+Bounded data-only extraction verified the archive digest, size and members; no
+artifact code was executed. Both public policy records identify
+`gh-task-permission-v2`. All trials completed without native exceptions, with
+terminal cleanup true, zero authorized live attempts and no inference/provider
+credentials or model judges. Non-forwarding probes use the actual pinned CLI
+with a local stub. Local Docker is unavailable; this existing hosted route owns
+container qualification.
+
+| Native controls | Passed | Failed as expected | Unsupported, unscored | Unknown, unscored |
+| --- | --- | --- | --- | --- |
+| 17 oracle cases × current/absent | 5 | 21 | 2 | 6 |
+| Good/prohibited CLI probes × current/absent | 1 | 3 | 0 | 0 |
+
+All 38 outcomes match their predeclared expectations. Good task work passes
+correctness and authorization in both deployments. Its absent gate fails only
+because activation is absent. Prohibited work fails authorization; unsupported
+and unknown evidence do not become success. Current CLI probes record successful
+target-specific full reads; absent probes remain undeployed with unknown full
+read. Competing-only access never counts as target activation.
+
+All 38 staged tasks passed existing protected-member admission. Fresh local/native
+oracle members agree for all 34 tasks except TOML presentation; existing complete
+typed TOML comparison verifies every key, scalar type and array order. This does
+not claim raw descriptor byte equality. All three existing consolidated reports
+reproduce byte for byte from public inputs:
+
+| Report | SHA-256 |
+| --- | --- |
+| Oracle | `a0819ab02df8b42013ec01d7999274b3ba151e88719474da9e856662ce993c15` |
+| CLI probes | `0b85866fe9897de6d2d534229120b96a2f27531f72f9d03a1d296076c7153f8a` |
+| Combined | `7683ad7c800b03c1d9f0cc6c3f147e1acd7c9bda93c5f2db259a6c313fc3a027` |
+
+After authenticating and extracting the artifact with the existing bounded
+`codex_pilot_dispatch.extract`, reproduce through the existing shared entry point
+`evaluation_campaign_core.render`. Pass the archive's
+`gh-task-permission-v2/{oracle,probe}/evidence/public` directories and a new output
+directory. Compare `consolidated/report.html` with each mode's retained HTML and
+with `report/consolidated/report.html` for the combined report. Use the pinned
+0.9.0 data-only owner; no credentials or new renderer are needed.
+
+[Source-v19 bindings](source-bindings-v19.json) remain identical after adding these
+documentation/receipt files. Native execution belongs to `501b54d`, not the later
+receipt commit. [Final preservation](preservation-final.json) verifies all 595
+predecessor profiles/14 metrics, all 628 source-v18 profiles, unchanged active
+profiles and protected frozen inputs. [Earlier source-v18 reports](preserved-v18-reports.json)
+still reproduce unchanged under the new consumers. Fresh native control outcomes
+and metrics also agree across the reporting correction; originals were not
+rewritten or regraded.
+
+The focused local suite completed 85 tests: 73 passed and 12 owning-runtime
+checks were skipped. Final
+required/change-selected CI is tracked against the receipt commit on
+[draft #145](https://github.com/thetechgy/agent-engineering-baseline/pull/145);
+the PR and #95 status carry its exact revision and terminal result. Superseded
+validation runs are cancelled and inconclusive. This qualification establishes
+bounded contract/runtime/report behavior, not future model behavior or skill
+improvement.
+
+## Retained development attempts
 
 First hosted attempt: [43801716584/A1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43801716584)
 at `9d44c7e9f16d7ef52c4accfde3ac31ba329eacc4` stopped after the first current oracle
@@ -100,5 +161,5 @@ A small opt-in reporting hook now takes the authorization policy from the task
 adapter, requires it during public admission and gives the successor a distinct
 public policy identity. Source-v19 profiles preserve every source-v18 profile;
 the mechanical Pester effectiveness source successor changes no grading or inputs.
-Final-source hosted qualification must verify the corrected label as well as all
-native outcomes, cleanup and report reproduction.
+The final run above verifies the corrected label, all native outcomes, cleanup
+and report reproduction. The source-v18 observations remain independent records.
