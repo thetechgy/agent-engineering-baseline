@@ -414,6 +414,7 @@ def startup_only(artifact, baseline):
         '.github/evals/evaluator-0.9.json', '.github/evals/codex-execution-090.json')
     if any((root_source/p).read_bytes() != (baseline/p).read_bytes() for p in unchanged):
         raise ValueError('Unmatched startup producers or pins')
+    matched_tags = []
     status = {'schema':1, 'inference':False, 'agent_setup':False, 'grading':False,
         'complete':False, 'revision':revision(root_source), 'baseline':revision(baseline),
         'versions':candidate_versions(NEXT), 'attempts':[]}
@@ -448,7 +449,10 @@ def startup_only(artifact, baseline):
                         image_id = matched['image']['image']
                         if not re.fullmatch(r'sha256:[0-9a-f]{64}',image_id):
                             raise RuntimeError('Invalid matched image identity')
-                        config = config.model_copy(update={'docker_image':image_id})
+                        tag = matched['image']['local_tag']
+                        if docker('image','inspect','--format','{{.Id}}',tag).strip()!=image_id:
+                            raise RuntimeError('Matched local image was replaced')
+                        config = config.model_copy(update={'docker_image':tag})
                         row['matched_prebuilt_image'] = image_id
                     environment = startup_observer(TrustedGhEnvironment,row['commands'])(environment_dir=task/'environment',
                         environment_name=name,session_id=name,trial_paths=paths,task_env_config=config,
@@ -458,7 +462,12 @@ def startup_only(artifact, baseline):
                         ids=docker('ps','-aq','--filter','label=com.docker.compose.project='+name).split()
                         if len(ids)!=1: raise RuntimeError('Unexpected startup container population')
                         observed=json.loads(docker('inspect','--format','{"image":{{json .Image}},"oom":{{json .State.OOMKilled}},"exit":{{json .State.ExitCode}}}',ids[0]))
+                        row['image'] = observed; save()
                         if matched and observed['image'] != matched['image']['image']: raise RuntimeError('Matched startup image drift')
+                        if not matched:
+                            tag = 'aeb-startup-match:'+uuid.uuid4().hex
+                            docker('image','tag',observed['image'],tag)
+                            matched_tags.append(tag); observed['local_tag'] = tag
                         return observed
                     def clean():
                         for args in (('ps','-aq'),('network','ls','-q')):
@@ -488,6 +497,16 @@ def startup_only(artifact, baseline):
         finally:
             if prior is None: os.environ.pop('AEB_GH_MANIFEST',None)
             else: os.environ['AEB_GH_MANIFEST']=prior
+            pending_error = __import__('sys').exc_info()[1]
+            tag_error = None
+            for tag in matched_tags:
+                try: docker('image','rm',tag)
+                except (subprocess.CalledProcessError,subprocess.TimeoutExpired) as error:
+                    tag_error = tag_error or error
+                    status['image_tag_cleanup']='failed'; status['complete']=False; save()
+            if status.get('image_tag_cleanup')!='failed':
+                status['image_tag_cleanup']='complete'; save()
+            if tag_error is not None and pending_error is None: raise tag_error
 
 
 if __name__ == "__main__":
