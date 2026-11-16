@@ -63,8 +63,8 @@ directory. Compare `consolidated/report.html` with each mode's retained HTML and
 with `report/consolidated/report.html` for the combined report. Use the pinned
 0.9.0 data-only owner; no credentials or new renderer are needed.
 
-[Source-v19 bindings](source-bindings-v19.json) remain identical after adding these
-documentation/receipt files. Native execution belongs to `501b54d`, not the later
+[Source-v19 bindings](source-bindings-v19.json) remain identical after adding the
+documentation/receipts and correcting historical snapshot tests. Native execution belongs to `501b54d`, not the later
 receipt commit. [Final preservation](preservation-final.json) verifies all 595
 predecessor profiles/14 metrics, all 628 source-v18 profiles, unchanged active
 profiles and protected frozen inputs. [Earlier source-v18 reports](preserved-v18-reports.json)
@@ -72,7 +72,7 @@ still reproduce unchanged under the new consumers. Fresh native control outcomes
 and metrics also agree across the reporting correction; originals were not
 rewritten or regraded.
 
-The focused local suite completed 85 tests: 73 passed and 12 owning-runtime
+The expanded focused local suite completed 97 tests: 85 passed and 12 owning-runtime
 checks were skipped. Final
 required/change-selected CI is tracked against the receipt commit on
 [draft #145](https://github.com/thetechgy/agent-engineering-baseline/pull/145);
@@ -163,3 +163,18 @@ public policy identity. Source-v19 profiles preserve every source-v18 profile;
 the mechanical Pester effectiveness source successor changes no grading or inputs.
 The final run above verifies the corrected label, all native outcomes, cleanup
 and report reproduction. The source-v18 observations remain independent records.
+
+## Final CI snapshot correction
+
+[Validation 43811214756](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43811214756)
+at `a17a399365bd9d85308f44e927e32f81db81e7c3` exposed an omitted historical-registry
+consumer update before native deadline execution. The older snapshot included the
+new authorization metric and source profiles; its original expected hash was not
+wrong. The correction excludes only the appended successor definitions and binds
+the stopped source-v17 adapter to its frozen digest. All original historical
+expected hashes remain unchanged. The affected 12 local registry/freeze checks
+pass after the correction. This changes tests, not executable resource, grading,
+fixture or report identities, so it does not require another native matrix.
+The failed log is retained; the known-superseded validation run was cancelled.
+Unfinished jobs are inconclusive. Final exact-head CI is recorded on draft #145
+and in the #95 status without treating this interrupted run as passed.
