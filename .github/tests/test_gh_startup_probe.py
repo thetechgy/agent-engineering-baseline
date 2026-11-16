@@ -59,6 +59,21 @@ class StartupProbe(unittest.TestCase):
         self.assertIs(raised.exception,primary)
         environment.stop.assert_awaited_once_with(delete=True)
 
+    def test_diagnostic_failure_retains_primary_and_still_cleans_environment(self):
+        from gh_initializer_validation import startup_attempt
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);path=root/'gh-initialization.jsonl'
+            async def start(force):
+                with path.open('a') as stream:stream.write(json.dumps({'status':'ready','broker':{'pid':123}})+'\n')
+            error=RuntimeError('diagnostic failed');states=[]
+            env=SimpleNamespace(start=start,stop=AsyncMock(),trial_paths=SimpleNamespace(trial_dir=root))
+            with self.assertRaises(RuntimeError) as raised:
+                asyncio.run(startup_attempt(env,inspect_image=lambda:{},cleanup_check=lambda:None,
+                    retain=lambda row:states.append(dict(row)),diagnose=AsyncMock(side_effect=error)))
+            self.assertIs(raised.exception,error)
+            self.assertEqual(states[-1]['status'],'failed');self.assertEqual(states[-1]['cleanup'],'complete')
+            env.stop.assert_awaited_once_with(delete=True)
+
     def test_repeated_startup_requires_exact_broker_identity_and_cleanup(self):
         from gh_initializer_validation import startup_attempt
         for drift in (False,True):

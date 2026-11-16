@@ -6,6 +6,7 @@ import hashlib
 import importlib.metadata
 import json
 import os
+import re
 from pathlib import Path
 import shlex
 import signal
@@ -351,7 +352,7 @@ def startup_observer(base, observations):
     return Observed
 
 
-async def startup_attempt(environment, *, inspect_image, cleanup_check, retain):
+async def startup_attempt(environment, *, inspect_image, cleanup_check, retain, diagnose=None):
     """No agent setup, command fixture, grader or reset; keep the primary exception."""
     row = {'status': 'starting', 'cleanup': 'pending'}
     primary = None; cleanup_error = None; evidence_error = None
@@ -372,6 +373,7 @@ async def startup_attempt(environment, *, inspect_image, cleanup_check, retain):
         if initial != repeated or initial.get('status') != 'ready':
             raise RuntimeError('Repeated startup identity drift')
         row.update(status='passed', repeated_identity_equal=True)
+        if diagnose is not None: row['spawn_diagnostic'] = await diagnose()
     except BaseException as error:
         primary = error
         row.update(status='failed', primary_error=type(error).__name__)
@@ -396,7 +398,6 @@ def startup_only(artifact, baseline):
     """Four clean gh-007 startups, base/head and present/absent, under the held owner."""
     from evaluator_profiles import NEXT, runtime, candidate_versions
     from skillevaluator.tier3.harbor.adapter import _task_environment_context_hash
-    import time
     root_source = gh.ROOT
     baseline = Path(baseline).absolute(); artifact = Path(artifact).absolute()
     if (baseline.resolve() != baseline or artifact.resolve() != artifact
@@ -440,8 +441,17 @@ def startup_only(artifact, baseline):
                     name = 'aeb-startup-'+uuid.uuid4().hex[:16]
                     row = {'source':label,'case':'gh-007','arm':arm,'context':context,'task_checksum':native.checksum,'commands':[]}
                     status['attempts'].append(row); save()
+                    # Build once per arm, then use that exact local immutable image for head.
+                    # The context and source/pin checks above bind this supported prebuilt selector.
+                    config = native.config.environment
+                    if matched:
+                        image_id = matched['image']['image']
+                        if not re.fullmatch(r'sha256:[0-9a-f]{64}',image_id):
+                            raise RuntimeError('Invalid matched image identity')
+                        config = config.model_copy(update={'docker_image':image_id})
+                        row['matched_prebuilt_image'] = image_id
                     environment = startup_observer(TrustedGhEnvironment,row['commands'])(environment_dir=task/'environment',
-                        environment_name=name,session_id=name,trial_paths=paths,task_env_config=native.config.environment,
+                        environment_name=name,session_id=name,trial_paths=paths,task_env_config=config,
                         mounts=[],network_policy=native.config.environment.resolve_baseline())
                     environment.default_user = 'agent'
                     def image():
@@ -459,7 +469,21 @@ def startup_only(artifact, baseline):
                         path=paths.trial_dir/'gh-initialization.jsonl'
                         if path.exists(): row['initialization_records']=[json.loads(line) for line in path.read_text().splitlines()]
                         save()
-                    asyncio.run(startup_attempt(environment,inspect_image=image,cleanup_check=clean,retain=retain))
+                    async def diagnose():
+                        probe = gh.ROOT/'.github/scripts/gh_spawn_identity_probe.py'
+                        row['diagnostic_script_sha256'] = hashlib.sha256(probe.read_bytes()).hexdigest()
+                        await environment.upload_file(probe,'/opt/aeb-gh/spawn-diagnostic.py')
+                        result = await environment.exec('/usr/local/bin/python3 -I /opt/aeb-gh/spawn-diagnostic.py',user='root',timeout_sec=30)
+                        if len(result.stdout or '')>65536: raise RuntimeError('Oversized spawn diagnostic')
+                        diagnostic = json.loads(result.stdout)
+                        row['spawn_diagnostic'] = diagnostic
+                        row['spawn_diagnostic_returncode'] = result.return_code
+                        save()
+                        if result.return_code or diagnostic.get('status')!='complete':
+                            raise RuntimeError('Spawn diagnostic failed')
+                        return diagnostic
+                    asyncio.run(startup_attempt(environment,inspect_image=image,cleanup_check=clean,retain=retain,
+                        diagnose=diagnose if label=='base' and not present else None))
             status['complete'] = True; save()
         finally:
             if prior is None: os.environ.pop('AEB_GH_MANIFEST',None)
