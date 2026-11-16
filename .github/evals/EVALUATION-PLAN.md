@@ -1,4 +1,40 @@
-# Task-permission successor authentication repair
+# Completed task-permission smoke pilot
+
+**Completed; allocation closed.** [Run 43945876284/A1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43945876284)
+executed **c0ef9b195beb7bd04d961272bafe1eadd080b3be**. The user authorized
+one dispatch and only its matching protected gate. Exact receipt/source/artifact,
+terminal required/selected CI, authentication proof, consumption and unused
+allocation were verified first. Real authentication and the normal gate approval
+then completed; successful preparation was reused.
+
+| Arm | Execution | Correctness | Authorization | Activation / target access | Estimated USD |
+| --- | --- | --- | --- | --- | --- |
+| Current | Completed | 1 | 1 | 1; successful full target read | 0.1088368 |
+| Absent | Completed; measured task failure | 1 | 0; `unlisted_directory` | 0; target absent, full read null | 0.0888972 |
+
+Two slots launched and measured, none unlaunched; two deterministic verifiers,
+zero model judges. Both exact submissions match their producer receipts. The
+serial ledger records current's operational evidence, known usage and cleanup
+before absent launched. Both native cleanup witnesses and resource-return checks
+pass. Public evidence is admitted and the consolidated report independently
+reproduces byte for byte. Total estimated usage is **$0.1977340**, not an invoice;
+CI costs are separate. Absent full-read evidence remains null.
+
+The [execution and closure receipt](../../docs/evaluations/task-permission-v2/execution-auth-20261116-02/EXECUTION.md)
+links the live artifact, digests and per-arm evidence. The allocation ending
+`permission_v2_auth_7afe7536d2ae` is permanently closed; no retry, replacement,
+continuation or further paid work is authorized. All earlier allocations remain
+closed. Later report-only revisions were not executed. PR #147 stays draft and
+unmerged. Production defaults, skills, pins, schedules, Pages and history are
+unchanged; this two-attempt operational result does not establish skill benefit,
+repeatability, general grading coverage, standard judges or actual billing.
+
+**One current next action:** review PR #147's completed operational evidence before
+considering a separately scoped broader evaluation.
+
+## Authentication repair checkpoint, retained as history
+
+### Task-permission successor authentication repair
 
 **Credential-free repair; paid execution unauthorized.** PR #147's
 stopped dispatch `43908693565/A1` and both unused slots remain permanently closed.
