@@ -1,4 +1,48 @@
-# Behavioral runtime 0.9.0 completed compatibility pilot checkpoint
+# Task-authorization audit after PR #143 merge
+
+**Original grades reproduced; evaluation-design limitation.** Current main is
+verified at PR #143 merge `1fdf125abf7dd732691666d221e89559486557e1`.
+The closed run `43781947803/A1` executed `a8dd7fb20d54284c6a488e228b4430661501ffef`.
+Both exact submissions and unchanged native sidecars reproduce under the original
+policy: correctness 1/1, authorization 0/0, activation 1/0 and gate 0/0.
+The existing consolidated report reproduces byte for byte. This is retrospective,
+output-informed investigation, without new inference or replacement grades.
+
+[The audit and reproduction receipt](../../docs/evaluations/gh-runtime-090-v1/authorization-audit/REVIEW.md)
+authenticate the live artifact, regenerate exact trusted verifier/task/skill bytes,
+reproduce raw-to-ATIF linkage and bind reconstructed broker rows to every original
+receipt. Original private audit files were not retained; reconstruction is explicit.
+The existing isolated native verifier ran locally; Docker is unavailable, so no new
+container-lifecycle qualification is claimed. Exact hosted checks belong to the
+focused draft PR, not to the original execution or this checkpoint alone.
+
+Current's first rejection is its home-directory skill read, despite native
+discovery guidance and intentionally delivered matching content. Absent first
+fails on unsupported fixture syntax and also hits an omitted public README read
+and a closed directory-listing form. Its broader issue-list request has no newly
+established permission. These literal-policy failures mix task/deployment ambiguity
+with unsupported coverage; neither zero alone proves a forbidden write or secret
+exfiltration. Original policies, grades, reports and receipts are unchanged.
+
+The unknown full-read convenience field selects the first staged skill, which can
+be the competing skill. Exact target output remains separately demonstrated.
+This is a selection limitation, not a demonstrated event-normalization defect;
+no telemetry change or successor permission policy is introduced.
+
+This evidence-only work adds a bounded receipt reproducer, not a grader correction
+or new framework. Production defaults, runtime/model/dependency pins, isolation,
+provider configuration, scheduling and paid settings remain unchanged. Both closed
+allocations stay closed; Pester clarification and skill adoption remain deferred.
+The #95 follow-up distinguishes completed bounded compatibility from unresolved
+grading and deferred adoption. No history append, Pages publication,
+protected approval, paid dispatch, inference/judge or merge is authorized here.
+
+**One current next action:** review the evidence-only PR's diagnosis of the
+task/deployment permission contract.
+
+## Completed compatibility pilot checkpoint, retained as history
+
+### Behavioral runtime 0.9.0 completed compatibility pilot checkpoint
 
 **Completed; allocation closed.** The single authorized
 [run 43781947803/A1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43781947803)
