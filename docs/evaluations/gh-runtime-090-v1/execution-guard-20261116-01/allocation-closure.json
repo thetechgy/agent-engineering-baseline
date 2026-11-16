@@ -1,0 +1,24 @@
+{
+  "allocation": "campaign-a8dd7fb20d54284c6a488e228b4430661501ffef-gh-runtime-090-v1-prep14187010942-usd6-diag090_guard_20261116_01",
+  "status": "closed",
+  "closed_at": "2026-11-16T00:56:18.651645+00:00",
+  "run_id": 43781947803,
+  "run_attempt": 1,
+  "execution_revision": "a8dd7fb20d54284c6a488e228b4430661501ffef",
+  "reason": "authorized_pair_completed",
+  "scheduled_slots": 2,
+  "attempted_slots": [
+    1,
+    2
+  ],
+  "unused_slots_permanently_closed": [],
+  "retry_allowed": false,
+  "replacement_allowed": false,
+  "continuation_allowed": false,
+  "usage_estimate_usd": 0.2724272,
+  "actual_billing": "unknown; no invoice reconciliation",
+  "cleanup_complete": true,
+  "agent_disposal_complete": true,
+  "evidence_artifact": 14188559673,
+  "evidence_archive_sha256": "sha256:1ee8019d90778c21dd763e10e607703ce5d877107fc0b6510981aca45c52f8cf"
+}

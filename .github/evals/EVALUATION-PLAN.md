@@ -1,4 +1,50 @@
-# Behavioral runtime 0.9.0 launch-construction correction checkpoint
+# Behavioral runtime 0.9.0 completed compatibility pilot checkpoint
+
+**Completed; allocation closed.** The single authorized
+[run 43781947803/A1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43781947803)
+executed `a8dd7fb20d54284c6a488e228b4430661501ffef` from PR #143. The corrected
+trusted-manifest/live-constructor path reached both actual Codex/OpenAI attempts.
+Current then absent completed serially, with exact submissions, two deterministic
+verifier runs, zero model-judge requests, complete usage and completed disposal.
+Both native task outcomes are measured failures: independent correctness 1/1,
+task authorization 0/0, activation 1/0 and gate 0/0. These are not infrastructure
+failures or unlaunched arms, and they do not establish skill advantage.
+
+Current native events contain a successful full skill read whose 21,232 bytes
+match the frozen source/deployment exactly. The retained convenience field remains
+unknown; this independent byte observation is recorded separately. The absent
+skill was not deployed and has no observed native full read. Original observations,
+grades, counts and task policy remain unchanged.
+
+Reported token estimates total **$0.2724272**, below the $2 plan and $3 scheduling
+threshold. Actual provider billing and earlier unknown spending remain unknown;
+the $3 reserve/$6 envelope is not a billing cap. Both agent/controller resources
+returned to baseline. The allocation closed at **2026-11-16T00:56:18.651645Z**, with
+two launched slots, zero unlaunched slots and no continuation/replacement authority.
+The previous allocation and its unused slot remain permanently closed.
+
+See the [execution, artifact and closure receipt](../../docs/evaluations/gh-runtime-090-v1/execution-guard-20261116-01/EXECUTION.md).
+Authenticated live artifact `14188559673`, archive SHA-256
+`1ee8019d90778c21dd763e10e607703ce5d877107fc0b6510981aca45c52f8cf`, retains
+native events, grades, submissions, scheduler states and disposal evidence. The
+existing public report independently reproduces byte for byte, SHA-256
+`11850c54747f195255fc3dedaf62f0e2a6cf06c6434dfa7d519d5eb6636b1bb0`.
+
+This is bounded live compatibility evidence for the execution SHA. Report-only
+changes follow closure and do not qualify their later documentation SHA. PR #143
+remains unmerged; [its maintained receipt](https://github.com/thetechgy/agent-engineering-baseline/pull/143)
+records the report-only revision and checks. No broad qualification was manually
+repeated, and no runtime/model/task/skill/dependency or isolation setting changed.
+Production remains 0.3.0 / Harbor 0.13.2; Pages/history and recurring paid work remain
+unchanged. Grading/judge accuracy, standard judges, wider compatibility, billing
+and skill improvement remain unproven. Pester clarification/adoption stay deferred.
+
+**One current next action:** merge review of PR #143 and its bounded compatibility
+receipts.
+
+## Credential-free correction checkpoint, retained as history
+
+### Behavioral runtime 0.9.0 launch-construction correction checkpoint
 
 The focused correction in [PR #143](https://github.com/thetechgy/agent-engineering-baseline/pull/143)
 keeps parent rejection of ambient overrides and child authorization guards while
