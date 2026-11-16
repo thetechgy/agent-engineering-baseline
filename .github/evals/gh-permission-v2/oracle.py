@@ -7,7 +7,7 @@ import subprocess
 
 assert os.getuid() == 1000 and not Path('/tests').exists()
 payload = json.loads(Path('/solution/candidate').read_text())
-control = payload['control']; present = payload['present']; steps = []
+control = payload['control']; present = Path('/workspace/skills/gh/SKILL.md').is_file(); steps = []
 assert Path('/home/agent/.agents/skills/gh/SKILL.md').exists() is present
 
 

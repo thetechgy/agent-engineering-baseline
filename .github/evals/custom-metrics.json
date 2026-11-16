@@ -38799,7 +38799,7 @@
       "skill_id": "powershell-pester-6",
       "grader_digest": "sha256:2036c1cbf604c1c6ae7372b32505b8da541a4830d1161ccfddd1f82df2616ad4",
       "fixture_digest": "sha256:7fd910d264f98c74de1c108d604c1150c0c194630cbd1a5f8603ad3757dbfed7",
-      "runtime_digest": "sha256:a99227b92c9768f01ba2971a2f73d1ae0e808d81d0b831103058ca7c70e03826",
+      "runtime_digest": "sha256:c4de9ca1ffe17de0484d96a44e18aff7dbba8760c4d56a775e2dd5d87f698e89",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
       "semantics": "pester-effectiveness-v6",
       "campaign": {
@@ -38860,7 +38860,7 @@
       "skill_id": "powershell-pester-6",
       "grader_digest": "sha256:2036c1cbf604c1c6ae7372b32505b8da541a4830d1161ccfddd1f82df2616ad4",
       "fixture_digest": "sha256:7fd910d264f98c74de1c108d604c1150c0c194630cbd1a5f8603ad3757dbfed7",
-      "runtime_digest": "sha256:ef29fdb916e72e607cc093bdaabd0a87244ad037ef2164edf2bbb7be21814565",
+      "runtime_digest": "sha256:95aafa84d444a3692ae2979674af22cefdea265b792439ec249fc9c50e158aac",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
       "semantics": "pester-effectiveness-v6",
       "campaign": {
@@ -38870,7 +38870,7 @@
         "environment_mode": "docker",
         "agent_import": "oracle",
         "trials": 1,
-        "adapter_sha256": "sha256:345e16cc62859589779d3c9a98cf0cacc44c4437149d4d43192d7c99942a99db"
+        "adapter_sha256": "sha256:9a224104cc42dae2ab702a0c9704e0a6305c97095128125ff6d9aee184877cd6"
       },
       "termination_evidence": "native-deadline-v1"
     },
@@ -38922,7 +38922,7 @@
       "skill_id": "powershell-pester-6",
       "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
       "fixture_digest": "sha256:99bb508cb930cf59131cc919aee2d3ecee880f729a9f382f256ac5f031e00e96",
-      "runtime_digest": "sha256:8da219be40046f7c29a5ccb5d8a9c9c0efb68802c794661d7b76fd660b6901ab",
+      "runtime_digest": "sha256:28d7f10ce89e13f2cfde6c982f65f6b07594d6f939114667f0ee81d08ca8283c",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
       "semantics": "pester-effectiveness-v6",
       "campaign": {
@@ -38979,7 +38979,7 @@
       "skill_id": "powershell-pester-6",
       "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
       "fixture_digest": "sha256:99bb508cb930cf59131cc919aee2d3ecee880f729a9f382f256ac5f031e00e96",
-      "runtime_digest": "sha256:8da219be40046f7c29a5ccb5d8a9c9c0efb68802c794661d7b76fd660b6901ab",
+      "runtime_digest": "sha256:28d7f10ce89e13f2cfde6c982f65f6b07594d6f939114667f0ee81d08ca8283c",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
       "semantics": "pester-effectiveness-v6",
       "campaign": {
@@ -39038,7 +39038,7 @@
       "skill_id": "gh",
       "grader_digest": "sha256:4b0b6a7b8d4cf15fe35182ef7dcfa1ed4a18a5aeda129bb30855ed48d2f75c2d",
       "fixture_digest": "sha256:773ab38dd187a0861ac6890c04f43f4f4f1d5007ebfe236801a72a45aefa88bf",
-      "runtime_digest": "sha256:1cfd39106ccca950a3891894b72f20b9df8afa6c8f5a65660fc615c5c3333135",
+      "runtime_digest": "sha256:11565b32d75457e7a86f621abdd8e9212e4cbf48b40eea9fb35d965862c35cd6",
       "dataset_digest": "sha256:7da7fa863ddc768c34bb423b4667cfe43e8d714697c4e217e4a27d789028f598",
       "semantics": "gh-native-oracle-v1",
       "campaign": {
@@ -39094,7 +39094,7 @@
       "skill_id": "gh",
       "grader_digest": "sha256:4b0b6a7b8d4cf15fe35182ef7dcfa1ed4a18a5aeda129bb30855ed48d2f75c2d",
       "fixture_digest": "sha256:773ab38dd187a0861ac6890c04f43f4f4f1d5007ebfe236801a72a45aefa88bf",
-      "runtime_digest": "sha256:1cfd39106ccca950a3891894b72f20b9df8afa6c8f5a65660fc615c5c3333135",
+      "runtime_digest": "sha256:11565b32d75457e7a86f621abdd8e9212e4cbf48b40eea9fb35d965862c35cd6",
       "dataset_digest": "sha256:7da7fa863ddc768c34bb423b4667cfe43e8d714697c4e217e4a27d789028f598",
       "semantics": "gh-native-oracle-v1",
       "campaign": {
@@ -39150,7 +39150,7 @@
       "skill_id": "powershell-pester-6",
       "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
       "fixture_digest": "sha256:99bb508cb930cf59131cc919aee2d3ecee880f729a9f382f256ac5f031e00e96",
-      "runtime_digest": "sha256:eb0d669f581da95ba85395d97b2baaae58abcb9e40db5cae032e54dd01dbca55",
+      "runtime_digest": "sha256:f59f59101594737185c08c5785ab6d6414b1ea7b4022971a8e24137235f1cabc",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
       "semantics": "pester-effectiveness-v6",
       "campaign": {
@@ -39208,7 +39208,7 @@
       "skill_id": "powershell-pester-6",
       "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
       "fixture_digest": "sha256:99bb508cb930cf59131cc919aee2d3ecee880f729a9f382f256ac5f031e00e96",
-      "runtime_digest": "sha256:eb0d669f581da95ba85395d97b2baaae58abcb9e40db5cae032e54dd01dbca55",
+      "runtime_digest": "sha256:f59f59101594737185c08c5785ab6d6414b1ea7b4022971a8e24137235f1cabc",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
       "semantics": "pester-effectiveness-v6",
       "campaign": {
@@ -39266,7 +39266,7 @@
       "skill_id": "powershell-pester-6",
       "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
       "fixture_digest": "sha256:99bb508cb930cf59131cc919aee2d3ecee880f729a9f382f256ac5f031e00e96",
-      "runtime_digest": "sha256:8459db140ad5cd9accc899b20a486f2672ff23e4637bcc72dfdae369086a7a4a",
+      "runtime_digest": "sha256:f1a1b6b1550f7a0d4afdc221d9315d3b372b49df987703920429e3d19fab8fa6",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
       "semantics": "pester-effectiveness-v6",
       "campaign": {
@@ -39276,7 +39276,7 @@
         "environment_mode": "docker",
         "agent_import": "oracle",
         "trials": 1,
-        "adapter_sha256": "sha256:345e16cc62859589779d3c9a98cf0cacc44c4437149d4d43192d7c99942a99db"
+        "adapter_sha256": "sha256:9a224104cc42dae2ab702a0c9704e0a6305c97095128125ff6d9aee184877cd6"
       },
       "termination_evidence": "native-deadline-v1"
     },
@@ -39328,7 +39328,7 @@
       "skill_id": "powershell-pester-6",
       "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
       "fixture_digest": "sha256:99bb508cb930cf59131cc919aee2d3ecee880f729a9f382f256ac5f031e00e96",
-      "runtime_digest": "sha256:ada95c34c148590c6a73f53a70afb276082f7c8c30dc317f3b0f853ff527f669",
+      "runtime_digest": "sha256:da453d4127536ea072d8452681177b46c2c2b38e089e17eb2828b91cc1e9b297",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
       "semantics": "pester-effectiveness-v6",
       "campaign": {
@@ -39390,7 +39390,7 @@
       "skill_id": "powershell-pester-6",
       "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
       "fixture_digest": "sha256:99bb508cb930cf59131cc919aee2d3ecee880f729a9f382f256ac5f031e00e96",
-      "runtime_digest": "sha256:ada95c34c148590c6a73f53a70afb276082f7c8c30dc317f3b0f853ff527f669",
+      "runtime_digest": "sha256:da453d4127536ea072d8452681177b46c2c2b38e089e17eb2828b91cc1e9b297",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
       "semantics": "pester-effectiveness-v6",
       "campaign": {
@@ -39451,7 +39451,7 @@
       "skill_id": "powershell-pester-6",
       "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
       "fixture_digest": "sha256:99bb508cb930cf59131cc919aee2d3ecee880f729a9f382f256ac5f031e00e96",
-      "runtime_digest": "sha256:8fea5df0622b1fc5b00d6befabc0598b74dec20e17e78b3078bf0ce5e4c0f268",
+      "runtime_digest": "sha256:4c55bb34896be05f86e0afe742b6704a5f728bb9a5c5988ee3a053efb154bd5c",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
       "semantics": "pester-effectiveness-v6",
       "campaign": {
@@ -39513,7 +39513,7 @@
       "skill_id": "powershell-pester-6",
       "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
       "fixture_digest": "sha256:99bb508cb930cf59131cc919aee2d3ecee880f729a9f382f256ac5f031e00e96",
-      "runtime_digest": "sha256:8fea5df0622b1fc5b00d6befabc0598b74dec20e17e78b3078bf0ce5e4c0f268",
+      "runtime_digest": "sha256:4c55bb34896be05f86e0afe742b6704a5f728bb9a5c5988ee3a053efb154bd5c",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
       "semantics": "pester-effectiveness-v6",
       "campaign": {
@@ -39579,7 +39579,7 @@
       "skill_id": "powershell-pester-6",
       "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
       "fixture_digest": "sha256:99bb508cb930cf59131cc919aee2d3ecee880f729a9f382f256ac5f031e00e96",
-      "runtime_digest": "sha256:adf26d1c8b30e9d53f4e88297587d5f98a6f3b6af55da5abbbde693f4e8abd72",
+      "runtime_digest": "sha256:5f4655803bcd8033917aa94ea5d65ddc39a8690474a1180127819ba0533a8149",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
       "semantics": "pester-effectiveness-v6",
       "campaign": {
@@ -39641,7 +39641,7 @@
       "skill_id": "powershell-pester-6",
       "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
       "fixture_digest": "sha256:99bb508cb930cf59131cc919aee2d3ecee880f729a9f382f256ac5f031e00e96",
-      "runtime_digest": "sha256:adf26d1c8b30e9d53f4e88297587d5f98a6f3b6af55da5abbbde693f4e8abd72",
+      "runtime_digest": "sha256:5f4655803bcd8033917aa94ea5d65ddc39a8690474a1180127819ba0533a8149",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
       "semantics": "pester-effectiveness-v6",
       "campaign": {
@@ -39702,7 +39702,7 @@
       "skill_id": "powershell-pester-6",
       "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
       "fixture_digest": "sha256:99bb508cb930cf59131cc919aee2d3ecee880f729a9f382f256ac5f031e00e96",
-      "runtime_digest": "sha256:6109c8f24b30ec8351964c3fe9d1049dde50c434155a786f0cc45557e1b16e9e",
+      "runtime_digest": "sha256:a0f16a286acf76b71a57fcdb9be99c2a929bf21ed28b882df5771605e0a3b4dc",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
       "semantics": "pester-effectiveness-v6",
       "campaign": {
@@ -39764,7 +39764,7 @@
       "skill_id": "powershell-pester-6",
       "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
       "fixture_digest": "sha256:99bb508cb930cf59131cc919aee2d3ecee880f729a9f382f256ac5f031e00e96",
-      "runtime_digest": "sha256:6109c8f24b30ec8351964c3fe9d1049dde50c434155a786f0cc45557e1b16e9e",
+      "runtime_digest": "sha256:a0f16a286acf76b71a57fcdb9be99c2a929bf21ed28b882df5771605e0a3b4dc",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
       "semantics": "pester-effectiveness-v6",
       "campaign": {
@@ -39830,7 +39830,7 @@
       "skill_id": "powershell-pester-6",
       "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
       "fixture_digest": "sha256:6774ef2dfc06458a957404d12d4a4d111972998bba344fef94a7d057613cc577",
-      "runtime_digest": "sha256:a043cbdbd38bce7abf781abcb2b80bb3e1303c9d7772d85fe12f1fbcef462224",
+      "runtime_digest": "sha256:f1e27490886d3cafbf9d7592c1c7702c82508eea4c085112aa53c6a5da0998c9",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
       "semantics": "pester-effectiveness-v6",
       "campaign": {
@@ -39892,7 +39892,7 @@
       "skill_id": "powershell-pester-6",
       "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
       "fixture_digest": "sha256:6774ef2dfc06458a957404d12d4a4d111972998bba344fef94a7d057613cc577",
-      "runtime_digest": "sha256:a043cbdbd38bce7abf781abcb2b80bb3e1303c9d7772d85fe12f1fbcef462224",
+      "runtime_digest": "sha256:f1e27490886d3cafbf9d7592c1c7702c82508eea4c085112aa53c6a5da0998c9",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
       "semantics": "pester-effectiveness-v6",
       "campaign": {
@@ -39953,7 +39953,7 @@
       "skill_id": "powershell-pester-6",
       "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
       "fixture_digest": "sha256:6774ef2dfc06458a957404d12d4a4d111972998bba344fef94a7d057613cc577",
-      "runtime_digest": "sha256:44d9b128445e074dd18acebb58bad6b676dea9c6870f3518c447134f2444be0e",
+      "runtime_digest": "sha256:a3f4260707d8f395bb4351a14e6376433b49fad89af067aaf779956073b9406a",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
       "semantics": "pester-effectiveness-v6",
       "campaign": {
@@ -40015,7 +40015,7 @@
       "skill_id": "powershell-pester-6",
       "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
       "fixture_digest": "sha256:6774ef2dfc06458a957404d12d4a4d111972998bba344fef94a7d057613cc577",
-      "runtime_digest": "sha256:44d9b128445e074dd18acebb58bad6b676dea9c6870f3518c447134f2444be0e",
+      "runtime_digest": "sha256:a3f4260707d8f395bb4351a14e6376433b49fad89af067aaf779956073b9406a",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
       "semantics": "pester-effectiveness-v6",
       "campaign": {
@@ -40081,7 +40081,7 @@
       "skill_id": "powershell-pester-6",
       "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
       "fixture_digest": "sha256:6774ef2dfc06458a957404d12d4a4d111972998bba344fef94a7d057613cc577",
-      "runtime_digest": "sha256:ee0e7cef9eca5f666b4abd91e4b384ea8c7d236cf297c5b01f1ad55d05beca92",
+      "runtime_digest": "sha256:d0da20fa5a5995601b27eac29ce59f40c14cacbf5cb1d634103d3345f7e80a9d",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
       "semantics": "pester-effectiveness-v6",
       "campaign": {
@@ -40143,7 +40143,7 @@
       "skill_id": "powershell-pester-6",
       "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
       "fixture_digest": "sha256:6774ef2dfc06458a957404d12d4a4d111972998bba344fef94a7d057613cc577",
-      "runtime_digest": "sha256:ee0e7cef9eca5f666b4abd91e4b384ea8c7d236cf297c5b01f1ad55d05beca92",
+      "runtime_digest": "sha256:d0da20fa5a5995601b27eac29ce59f40c14cacbf5cb1d634103d3345f7e80a9d",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
       "semantics": "pester-effectiveness-v6",
       "campaign": {
@@ -40204,7 +40204,7 @@
       "skill_id": "powershell-pester-6",
       "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
       "fixture_digest": "sha256:6774ef2dfc06458a957404d12d4a4d111972998bba344fef94a7d057613cc577",
-      "runtime_digest": "sha256:207da750e19491f78269b5f6bd733259acdc6df0f7b29cafec7a7cfc2daa9840",
+      "runtime_digest": "sha256:5f3621c813e64abd21280778ad0eec344d092daa84cbde284e54949850086f53",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
       "semantics": "pester-effectiveness-v6",
       "campaign": {
@@ -40266,7 +40266,7 @@
       "skill_id": "powershell-pester-6",
       "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
       "fixture_digest": "sha256:6774ef2dfc06458a957404d12d4a4d111972998bba344fef94a7d057613cc577",
-      "runtime_digest": "sha256:207da750e19491f78269b5f6bd733259acdc6df0f7b29cafec7a7cfc2daa9840",
+      "runtime_digest": "sha256:5f3621c813e64abd21280778ad0eec344d092daa84cbde284e54949850086f53",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
       "semantics": "pester-effectiveness-v6",
       "campaign": {
@@ -40328,7 +40328,7 @@
       "skill_id": "powershell-pester-6",
       "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
       "fixture_digest": "sha256:6774ef2dfc06458a957404d12d4a4d111972998bba344fef94a7d057613cc577",
-      "runtime_digest": "sha256:669b4ca283eb85dae384416e0aad048083a8593c66878525c2cb9a46eaea4278",
+      "runtime_digest": "sha256:c6d2362e76ae4bd2505d58a8ed353c400a0e80f69af9dd82aad4b90c2f5fc06a",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
       "semantics": "pester-effectiveness-v6",
       "campaign": {
@@ -40406,7 +40406,7 @@
       "skill_id": "powershell-pester-6",
       "grader_digest": "sha256:2036c1cbf604c1c6ae7372b32505b8da541a4830d1161ccfddd1f82df2616ad4",
       "fixture_digest": "sha256:7fd910d264f98c74de1c108d604c1150c0c194630cbd1a5f8603ad3757dbfed7",
-      "runtime_digest": "sha256:8c4f7f8a3206860806847dfad5850ac6efaf958a8936061832df6e016bdf89fb",
+      "runtime_digest": "sha256:c6e6694f64eac4cb1e650b3918a9618865cc16d063c3aacf5d31c616808366ef",
       "dataset_digest": "sha256:d88ca30e62a2eadd33424215b01bd4181ea7988e6cdfb4a209b2028397e456b0",
       "semantics": "pester-effectiveness-v6",
       "campaign": {
@@ -40470,7 +40470,7 @@
       "skill_id": "gh",
       "grader_digest": "sha256:4b0b6a7b8d4cf15fe35182ef7dcfa1ed4a18a5aeda129bb30855ed48d2f75c2d",
       "fixture_digest": "sha256:773ab38dd187a0861ac6890c04f43f4f4f1d5007ebfe236801a72a45aefa88bf",
-      "runtime_digest": "sha256:ec5da3ee0659efd48747c07500550da927d445fccdaf242cf3915151bf42a71b",
+      "runtime_digest": "sha256:a3042b3967cee5604ccff2f7017467b0ea119cb2388a1772155d0239b1b32135",
       "dataset_digest": "sha256:7da7fa863ddc768c34bb423b4667cfe43e8d714697c4e217e4a27d789028f598",
       "semantics": "gh-native-oracle-v1",
       "campaign": {
@@ -40527,7 +40527,7 @@
       "skill_id": "gh",
       "grader_digest": "sha256:4b0b6a7b8d4cf15fe35182ef7dcfa1ed4a18a5aeda129bb30855ed48d2f75c2d",
       "fixture_digest": "sha256:773ab38dd187a0861ac6890c04f43f4f4f1d5007ebfe236801a72a45aefa88bf",
-      "runtime_digest": "sha256:ec5da3ee0659efd48747c07500550da927d445fccdaf242cf3915151bf42a71b",
+      "runtime_digest": "sha256:a3042b3967cee5604ccff2f7017467b0ea119cb2388a1772155d0239b1b32135",
       "dataset_digest": "sha256:7da7fa863ddc768c34bb423b4667cfe43e8d714697c4e217e4a27d789028f598",
       "semantics": "gh-native-oracle-v1",
       "campaign": {
@@ -40583,7 +40583,7 @@
       "skill_id": "gh",
       "grader_digest": "sha256:4b0b6a7b8d4cf15fe35182ef7dcfa1ed4a18a5aeda129bb30855ed48d2f75c2d",
       "fixture_digest": "sha256:f316167af83fe0d5037fad5f6bde22df3d5d53c15fe5c86308440cec89ad5a63",
-      "runtime_digest": "sha256:aaec8ffd0d848c00248f00634600e7c1966587865fff0dae3623b6f88de8b8e7",
+      "runtime_digest": "sha256:75147d051213ced8b2324399a706bbdd7e4f8540b114925669d9eb87c1b61f0c",
       "dataset_digest": "sha256:7da7fa863ddc768c34bb423b4667cfe43e8d714697c4e217e4a27d789028f598",
       "semantics": "gh-native-oracle-v1",
       "campaign": {
@@ -40640,7 +40640,7 @@
       "skill_id": "gh",
       "grader_digest": "sha256:4b0b6a7b8d4cf15fe35182ef7dcfa1ed4a18a5aeda129bb30855ed48d2f75c2d",
       "fixture_digest": "sha256:f316167af83fe0d5037fad5f6bde22df3d5d53c15fe5c86308440cec89ad5a63",
-      "runtime_digest": "sha256:aaec8ffd0d848c00248f00634600e7c1966587865fff0dae3623b6f88de8b8e7",
+      "runtime_digest": "sha256:75147d051213ced8b2324399a706bbdd7e4f8540b114925669d9eb87c1b61f0c",
       "dataset_digest": "sha256:7da7fa863ddc768c34bb423b4667cfe43e8d714697c4e217e4a27d789028f598",
       "semantics": "gh-native-oracle-v1",
       "campaign": {
@@ -40711,15 +40711,15 @@
         ]
       },
       "skill_id": "gh",
-      "grader_digest": "sha256:38e5402fab7d62d347f87964fbd26b78c4a3995e1e462b6e23c4a9599ecdb6b5",
-      "fixture_digest": "sha256:e482df2897553dabc358968c67e350a88458ef9454db839d444a9eba4c4e5b0e",
-      "runtime_digest": "sha256:937a22b8c693c8e7e1f20e3e82c2feeeb76b8fb20a20bec0c541a61fa149c24b",
+      "grader_digest": "sha256:bb7b79adf8035a01985a7df66704ffc25be68b4187f75eab070ff69a556a0ef4",
+      "fixture_digest": "sha256:0788710cc641cd5158667df99387e95505cd1df3eb2c62d0a8db7210e40f8baa",
+      "runtime_digest": "sha256:7fdc4c7636731cfe2c3dd6881d1d3f100a4b140a7a188366c608df3143e5daa8",
       "dataset_digest": "sha256:7da7fa863ddc768c34bb423b4667cfe43e8d714697c4e217e4a27d789028f598",
       "semantics": "gh-native-oracle-v1",
       "campaign": {
         "definition": ".github/evals/campaigns/gh-task-permission-v2.json",
         "mode": "oracle",
-        "environment_import": "evaluation_codex:CampaignGhEnvironment",
+        "environment_import": "aeb_gh_fixture.backend:TrustedGhEnvironment",
         "environment_mode": "aeb-gh-fixture",
         "agent_import": "oracle",
         "trials": 1
@@ -40768,9 +40768,9 @@
         ]
       },
       "skill_id": "gh",
-      "grader_digest": "sha256:38e5402fab7d62d347f87964fbd26b78c4a3995e1e462b6e23c4a9599ecdb6b5",
-      "fixture_digest": "sha256:e482df2897553dabc358968c67e350a88458ef9454db839d444a9eba4c4e5b0e",
-      "runtime_digest": "sha256:937a22b8c693c8e7e1f20e3e82c2feeeb76b8fb20a20bec0c541a61fa149c24b",
+      "grader_digest": "sha256:bb7b79adf8035a01985a7df66704ffc25be68b4187f75eab070ff69a556a0ef4",
+      "fixture_digest": "sha256:0788710cc641cd5158667df99387e95505cd1df3eb2c62d0a8db7210e40f8baa",
+      "runtime_digest": "sha256:7fdc4c7636731cfe2c3dd6881d1d3f100a4b140a7a188366c608df3143e5daa8",
       "dataset_digest": "sha256:7da7fa863ddc768c34bb423b4667cfe43e8d714697c4e217e4a27d789028f598",
       "semantics": "gh-native-oracle-v1",
       "campaign": {

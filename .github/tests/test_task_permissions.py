@@ -79,6 +79,8 @@ class ResourceControls(unittest.TestCase):
                 for command, code, expected in (
                     ('cat /srv/discovery/manuals/neighbor/SKILL.md', 0, None),
                     ('echo same complete content', 0, None),
+                    ('cat /srv/discovery/manuals/other-guide/SKILL.md || echo forged', 0, None),
+                    ('cat /srv/discovery/manuals/other-guide/SKILL.md; echo forged', 0, None),
                     ('cat /srv/discovery/manuals/other-guide/SKILL.md', 1, None),
                     ('cat /srv/discovery/manuals/other-guide/SKILL.md', 0, True)):
                     (logs / 'codex.txt').write_text(json.dumps({'type':'item.completed','item':{
@@ -122,9 +124,24 @@ class TaskPermissionControls(unittest.TestCase):
                 for command in ('cat /etc/passwd', 'cat /tests/entry.json', 'cat /opt/gh-eval/state/case.json',
                     'cat secret.txt', 'cat /home/agent/.codex/auth.json',
                     'cat /workspace/skills/gh/../gh/SKILL.md', 'cat ../input/README.txt',
-                    "printf '%s\\n' '{}' > output/other.json", 'ls /home/agent'):
+                    "printf '%s\\n' '{}' > output/other.json", 'ls /home/agent', 'rm output/result.json', 'touch input/README.txt', 'python3 -c pass'):
                     self.assertEqual(self.verdict(contract, [call(command)], root)['status'], 'denied', command)
                 self.assertEqual(self.verdict(contract, [call('cat /home/agent/.agents/skills/gh/SKILL.md')], root)['status'], 'permitted' if present else 'denied')
+
+    def test_protected_entry_is_bound_to_declared_resources(self):
+        for present in (True, False):
+            arm = 'with_skill' if present else 'without_skill'
+            case = 'gh-014-good'
+            members = {k: 'sha256:' + hashlib.sha256(v).hexdigest()
+                       for k, v in self.owner.expected_members(case, arm).items()}
+            prefix = 'environment/skills/'
+            for skill, names in self.owner.selections().items():
+                if skill == 'gh' and not present: continue
+                members.update({prefix + skill + '/' + name: 'sha256:' + hashlib.sha256(raw).hexdigest()
+                                for name, raw in names.items()})
+            self.owner.validate_members(members, case, arm)
+            members['tests/entry.json'] = 'sha256:' + '0' * 64
+            with self.assertRaises(ValueError): self.owner.validate_members(members, case, arm)
 
     def test_symlink_parent_symlink_hardlink_and_content_mismatch(self):
         for kind in ('file-link','parent-link','hardlink','content'):
@@ -161,7 +178,8 @@ class TaskPermissionControls(unittest.TestCase):
             ['issue','view','13','--repo','fixture-org/widget','--json','title,comments'],
             ['issue','view','12','--repo','wrong/repo','--json','title,comments'],
             ['api','repos/fixture-org/widget/issues/12','-X','POST'], ['api','repos/wrong/repo/issues/12'],
-            ['api','repos/fixture-org/widget/issues/12','-f','body=mutation'] ]
+            ['api','repos/fixture-org/widget/issues/12','-f','body=mutation'],
+            ['api','repos/fixture-org/widget/issues/12','-X','POST','--unknown'] ]
         unsupported = [ ['issue','view','12','--repo','fixture-org/widget','--json','title,comments','--web'],
             ['issue','view','12','--repo','fixture-org/widget','--json','body'], ['api','graphql'] ]
         for population, verdict, routes in ((forms,'permitted',{'issue','issue-title','comments','help','version'}),

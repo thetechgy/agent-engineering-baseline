@@ -21,3 +21,20 @@ revision and receipts will be recorded here before delivery. No pending check is
 claimed passed. Local Docker is unavailable; the existing credential-free hosted
 route owns container qualification. Non-forwarding CLI controls use the pinned
 CLI with a local stub, not a provider or model judge.
+
+First hosted attempt: [43801716584/A1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43801716584)
+at `9d44c7e9f16d7ef52c4accfde3ac31ba329eacc4` stopped after the first current oracle
+trial. Its verifier sidecar passed all dimensions, but the chosen environment
+incorrectly requested a CLI egress sidecar during oracle lifecycle completion.
+The native exception makes the attempt infrastructure evidence, not completed
+qualification. Cleanup completed; the other 33 oracle slots were unlaunched.
+Artifact `14196825997`, ZIP SHA-256
+`fc6140789ed4f6ba7c42b4c4da0c136a969656f03a69eb7bf6c72b3fb95ab384`,
+retains the failed attempt. The correction uses the existing trusted oracle
+environment, reserving the CLI environment for non-forwarding probes.
+
+The same failed attempt exposed the separate report's strict matched-input check.
+Both arms now receive identical permission instructions (target reads explicitly
+conditional on deployment) and identical oracle payloads. The per-arm trusted
+resource inventory alone varies with deployment. The existing report's matched
+input contract stays intact. No infrastructure exception is changed to a pass.

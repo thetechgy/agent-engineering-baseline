@@ -10,6 +10,10 @@ def permission_scope(argv, repository='fixture-org/widget', issue='12'):
         # Clear forbidden actions remain forbidden even with an unknown flag.
         if argv[:2] in (['issue', 'list'], ['issue', 'close'], ['issue', 'comment'], ['issue', 'edit']):
             return 'denied'
+        if argv[:1] == ['api'] and any(
+            token.startswith('--method=') and token != '--method=GET'
+            or token in ('-X', '--method') and index + 1 < len(argv) and argv[index + 1] != 'GET'
+            for index, token in enumerate(argv)): return 'denied'
         return 'unsupported'
     if any(len(v) != 1 for v in opts.values()): return 'unsupported'
     if pos[:1] == ['api']:
