@@ -25,7 +25,7 @@ authentication proof, revision-bound preparation, authenticated consumption and 
 blocker or fresh UNRUN proposal after executable freeze. It governs readiness; this
 checkpoint alone does not assert successful hosted qualification. A later documentation or merge revision is not automatically
 qualified. Historical profiles, grades, stopped receipts and all closed allocations
-remain unchanged; new source-v22 profiles bind the changed shared implementation.
+remain unchanged; new source-v23 profiles bind the changed shared implementation.
 Task/grader/resource semantics and held versions are unchanged.
 
 Intermediate `f0e8cee` preparation `43916530291/A1` passed pinned setup and
@@ -46,6 +46,18 @@ baseline guard. Container validation and later publisher/behavioral checks never
 started. Remaining CI and preparation `43917819082/A1` were cancelled for the known
 replacement; passed authentication proof `14251081798` remains evidence for
 `54b56d4` only. Final exact-source preparation must be refreshed again.
+
+A focused registered legacy-adapter probe then showed that its bare metadata CLI
+legitimately succeeds without evaluator imports. The qualifier's missing-dependency
+case now executes the same mandatory owning-runtime guard used by shared setup,
+which rejects before authentication for every adapter. Positive authentication
+still uses the actual CLI and independent identity/admission/receipt path. No
+adapter-name bypass is added. The 18-test authentication/history selection passes,
+including legacy positive authentication and absent-owner startup rejection. The
+`383e1e2` full shared suite passed; its remaining CI and preparation were cancelled
+for this known qualification correction. Its 19-case artifact `14253743561` remains
+source-bound evidence only. Source-v23 profiles preserve all 768 prior entries;
+final exact-revision qualification is required again.
 
 Any fresh proposal retains the same two-attempt scope and $2 estimate, $3 scheduling
 threshold/$3 reserve/$6 planning allocation, not a billing cap. Its new validity

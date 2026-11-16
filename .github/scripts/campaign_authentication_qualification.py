@@ -85,6 +85,22 @@ runpy.run_path(sys.argv[0],run_name='__main__')
 '''
 
 
+MISSING_OWNER = """import pathlib, runpy, sys
+sys.path.insert(0, str(pathlib.Path(sys.argv[1]).parent))
+from evaluation_campaign_selection import selected_task
+from evaluation_runtime import ROOT, evaluator, read_profile
+import evaluator_profiles as profiles
+# This is the same owning guard used by setup-campaign-authentication.sh.
+# Some adapters compute metadata without evaluator imports, but the workflow's
+# mandatory setup must still reject absent owning dependencies before its CLI.
+campaign=sys.argv[sys.argv.index('--campaign')+1]
+owner=evaluator(read_profile(ROOT/selected_task(campaign).definition['runtime_profile']))
+profiles.runtime(profiles.candidate_versions(owner),owning=True)
+sys.argv=sys.argv[1:]
+runpy.run_path(sys.argv[0],run_name='__main__')
+"""
+
+
 EXPIRED = """import datetime, pathlib, runpy, sys
 sys.path.insert(0, str(pathlib.Path(sys.argv[1]).parent))
 import evaluation_campaign_protocol as protocol
@@ -101,7 +117,7 @@ ERRORS = {'wrong-source': 'Dispatch source mismatch', 'wrong-campaign': 'Exact a
           'tampered-archive': 'digest mismatch', 'task-identity': 'Unqualified source artifact',
           'expired-artifact': 'Preparation producer authentication failed', 'mismatched-authority': 'Allocation already claimed',
           'duplicate-dispatch': 'Allocation already claimed', 'replayed-dispatch': 'Exact allocation and first dispatch attempt required',
-          'incomplete-preparation': 'Incomplete preparation', 'missing-dependency': "No module named 'skillevaluator'",
+          'incomplete-preparation': 'Incomplete preparation', 'missing-dependency': 'No package metadata was found for skillevaluator',
           'receipt-write-failure': 'fixture receipt persistence failure', 'incomplete-receipt': 'Stale or unauthenticated campaign receipt',
           'missing-proof': 'Missing or linked JSON report: authentication-qualification.json',
           'incomplete-proof': 'Incomplete or stale authentication CLI qualification',
@@ -177,6 +193,8 @@ def run_case(root, task, name, *, python=None):
     if name in ('receipt-write-failure', 'incomplete-receipt'):
         bootstrap = root/'write-failure.py'; bootstrap.write_text(WRITE_FAILURE); command.append(str(bootstrap))
         env['FIXTURE_WRITE_MODE'] = name
+    if name == 'missing-dependency':
+        bootstrap = root/'missing-owner.py'; bootstrap.write_text(MISSING_OWNER); command.append(str(bootstrap))
     if name == 'expired-authority':
         bootstrap = root/'expired.py'; bootstrap.write_text(EXPIRED); command.append(str(bootstrap))
     command += [str(ROOT/'.github/scripts/evaluation_campaign_selection.py'), 'authenticate',
@@ -212,9 +230,12 @@ def run_case(root, task, name, *, python=None):
         reports.require(result.returncode != 0, 'Invalid authentication unexpectedly succeeded: ' + name)
         reports.require(not list(output.rglob('dispatch-authentication.*')), 'Failed authentication retained receipt: ' + name)
         reports.require(ERRORS[name] in result.stderr, 'Wrong rejection for ' + name + ': ' + result.stderr[-1500:])
-        failure = reports.read_json(output/'authentication-failure.json')
-        reports.require(failure.get('complete') is False and failure.get('authorization_produced') is False,
-                        'Failed authentication lacks bounded diagnostic: ' + name)
+        if name == 'missing-dependency':
+            reports.require(not output.exists(), 'Missing owner crossed the mandatory setup boundary')
+        else:
+            failure = reports.read_json(output/'authentication-failure.json')
+            reports.require(failure.get('complete') is False and failure.get('authorization_produced') is False,
+                            'Failed authentication lacks bounded diagnostic: ' + name)
     reports.require(not list(root.glob('campaign-claim-*')), 'Fixture left a live claim')
     return {'returncode': result.returncode, 'receipt_present': receipt_path.exists(),
             'stderr': result.stderr[-4000:]}

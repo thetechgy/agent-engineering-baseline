@@ -38,8 +38,9 @@ cover successful receipt generation, wrong source/campaign/protocol/producer,
 archive/task-identity tampering, expired artifact/authority, mismatched authority,
 duplicate/replayed dispatch, incomplete preparation, missing dependency, failed or
 incomplete receipt writing, missing/incomplete readiness proof and injected
-preparation authorization. Each negative case must fail for its expected reason,
-retain a bounded failure diagnostic and leave no receipt or live claim. Existing
+preparation authorization. Each negative case must fail for its expected reason and leave no receipt or live
+claim. Authentication failures retain bounded diagnostics; missing-owner setup
+rejection occurs before authentication creates any output. Existing
 metadata/layout and trust controls remain in place.
 
 Authentication now rejects expired declared authority before GitHub acquisition.
@@ -62,8 +63,8 @@ proof. A failed qualification retains partial cases with `complete: false` and
 cannot create `preparation.json` readiness. This adds a readiness invariant to the
 existing campaign; it adds no runner, workflow framework or report format.
 
-Source-v22 profiles append new shared-runtime identities while preserving all 733
-prior profiles (including the intermediate source-v21 identities) and all 15 metric
+Source-v23 profiles append new shared-runtime identities while preserving all 768
+prior profiles (including the intermediate source-v21/v22 identities) and all 15 metric
 definitions. Task instructions, grading criteria,
 resource inventories, target access, skills and held runtime/model versions remain
 unchanged. Independent correctness, task authorization, activation and operational
@@ -98,6 +99,19 @@ remaining shared validation steps never started. Its remaining CI and preparatio
 were cancelled as superseded; the successful 19-case proof artifact `14251081798`
 remains bound to that source only. Fresh exact-source preparation is required after
 this test-only correction; shared executable/source-v22 inputs remain unchanged.
+
+A focused cross-adapter probe at `383e1e2` showed that a registered legacy adapter
+can correctly authenticate metadata with bare Python because its identity builder
+does not import evaluator code. The qualifier must not invent a library requirement
+inside that adapter. Its missing-dependency case now calls the actual mandatory
+owning-runtime guard used by the shared setup before attempting the CLI. All
+registered workflow setups reject a missing owner at that boundary. The complete
+positive authentication path remains real and unchanged; no adapter-name exception
+or production bypass is introduced. A legacy positive CLI case and missing-owner
+startup rejection are included in the now-passing 18-test affected selection.
+The `383e1e2` shared full suite passed, while its remaining CI/native preparation
+was cancelled as superseded. Artifact `14253743561` remains valid only for that
+source; final revision-bound proof/preparation is refreshed after this correction.
 
 ## Proposal boundary
 

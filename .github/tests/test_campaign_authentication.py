@@ -32,6 +32,12 @@ class AuthenticationContracts(unittest.TestCase):
             self.assertEqual(set(proof['cases']), set(qualification.case_names(task)))
             self.assertFalse(proof['live_authority'])
 
+    def test_registered_metadata_only_adapter_uses_the_same_setup_guard(self):
+        task=selected_task('boolean-effectiveness-v1')
+        with tempfile.TemporaryDirectory() as directory:
+            qualification.run_case(Path(directory)/'positive', task, 'accepted')
+            qualification.run_case(Path(directory)/'missing-owner', task, 'missing-dependency')
+
     def test_readiness_rejects_missing_incomplete_wrong_source_campaign_protocol_and_owner_proofs(self):
         task = selected_task('gh-task-permission-v2')
         valid = {**qualification.expected(task), 'complete': True, 'inference': False,
@@ -46,10 +52,11 @@ class AuthenticationContracts(unittest.TestCase):
 
     def test_source_successors_preserve_complete_pre_repair_registry(self):
         registry=json.loads((ROOT/'.github/evals/custom-metrics.json').read_text())
-        added=[k for k in registry['profiles'] if '-source-v21-' in k or '-source-v22-' in k]
-        self.assertEqual(len(added), 70)
+        added=[k for k in registry['profiles'] if any(f'-source-v{v}-' in k for v in (21,22,23))]
+        self.assertEqual(len(added), 105)
         for key in added:
-            previous=key.replace('-source-v22-', '-source-v21-') if '-source-v22-' in key else key.replace('-source-v21-', '-source-v20-')
+            number=next(v for v in (21,22,23) if f'-source-v{v}-' in key)
+            previous=key.replace(f'-source-v{number}-', f'-source-v{number-1}-')
             new=registry['profiles'][key];old=registry['profiles'][previous]
             self.assertEqual({k:v for k,v in new.items() if k not in ('id','runtime_digest')},
                              {k:v for k,v in old.items() if k not in ('id','runtime_digest')})
