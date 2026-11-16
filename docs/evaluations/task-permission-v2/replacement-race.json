@@ -1,0 +1,28 @@
+{
+  "before_revision": "9d44c7e9f16d7ef52c4accfde3ac31ba329eacc4",
+  "after_revision": "3dcd6cb518314f79d626615664fc756c3ba9fb73",
+  "classification": "independent_synthetic_file_boundary",
+  "inference": false,
+  "rows": [
+    {
+      "case": "symlink",
+      "version": "before",
+      "outcome": "read_replacement"
+    },
+    {
+      "case": "symlink",
+      "version": "after",
+      "outcome": "rejected"
+    },
+    {
+      "case": "regular_replacement",
+      "version": "before",
+      "outcome": "read_replacement"
+    },
+    {
+      "case": "regular_replacement",
+      "version": "after",
+      "outcome": "rejected"
+    }
+  ]
+}

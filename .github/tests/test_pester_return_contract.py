@@ -31,7 +31,7 @@ class ReturnContract(unittest.TestCase):
                 classes = {n.name:n for n in ast.parse(raw).body if isinstance(n, ast.ClassDef)}
                 added = []
                 for owner, names in {
-                    'Task': {'launch_context', 'validate_launch_context'},
+                    'Task': {'launch_context', 'validate_launch_context', 'public_policy_fields'},
                     'GhFixture': {'fixture_control', 'validate_result', 'launch_context', 'validate_launch_context'},
                 }.items():
                     nodes = [n for n in classes[owner].body if isinstance(n, ast.FunctionDef) and n.name in names]
@@ -41,6 +41,16 @@ class ReturnContract(unittest.TestCase):
                 for node in sorted(added, key=lambda n:n.lineno, reverse=True):
                     self.assertEqual(lines[node.end_lineno].strip(), b'')
                     del lines[node.lineno - 1:node.end_lineno + 1]
+                # The new task registration is additive and cannot affect a Pester selector.
+                loader = next(n for n in ast.parse(raw).body if isinstance(n, ast.FunctionDef) and n.name == 'load')
+                hooks = [n for n in loader.body if isinstance(n, ast.If)
+                    and ast.get_source_segment(raw.decode(), n.test) == "definition.get('adapter') == 'gh-permission'"]
+                self.assertEqual(len(hooks), 1)
+                self.assertEqual(ast.get_source_segment(raw.decode(), hooks[0]),
+                    "if definition.get('adapter') == 'gh-permission':\n"
+                    "        from gh_permission_task import GhPermission\n"
+                    "        adapters['gh-permission'] = GhPermission")
+                del lines[hooks[0].lineno - 1:hooks[0].end_lineno]
                 raw = b''.join(lines)
             self.assertEqual(hashlib.sha256(raw).hexdigest(), digest, member)
         current = BASE / 'variants/current/powershell-pester-6'
@@ -55,6 +65,7 @@ class ReturnContract(unittest.TestCase):
             for variant in ('current', 'candidate'):
                 task=load(ROOT / ('.github/evals/campaigns/pester-return-'+case+'-'+variant+'-'+version+'.json'))
                 definitions.append(task.definition)
+                self.assertEqual(task.public_policy_fields(), {})
                 # The generic hooks add validation, not task metadata or a new
                 # Pester execution policy. Both frozen arms retain empty metadata.
                 for present in (True, False):

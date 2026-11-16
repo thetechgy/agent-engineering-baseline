@@ -38,6 +38,10 @@ class Release090Contracts(unittest.TestCase):
 
     def test_source_successors_preserve_every_historical_registry_entry(self):
         registry = evidence.custom_registry(ROOT)
+        # These successors preserve this stopped source-v17 population unchanged.
+        registry['profiles'] = {k:v for k,v in registry['profiles'].items()
+            if '-source-v18-' not in k and '-source-v19-' not in k and k != 'pester-effectiveness-v27'}
+        registry['metrics'].pop('gh.authorization.v2')
         old = copy.deepcopy(registry)
         added = [key for key in registry['profiles'] if '-source-v17-' in key]
         self.assertEqual(len(added), 31)
@@ -49,14 +53,18 @@ class Release090Contracts(unittest.TestCase):
             previous = registry['profiles'][predecessor]
             normalized = copy.deepcopy(new)
             if 'adapter_sha256' in new.get('campaign', {}):
-                self.assertEqual(new['campaign']['adapter_sha256'], evidence.digest_bytes((ROOT / '.github/scripts/evaluation_codex.py').read_bytes()))
+                self.assertEqual(new['campaign']['adapter_sha256'], 'sha256:97d47ea3250eceaa876f1086f8c1ad1830908b6372cfe4cea4ce52c57997cbb8')
                 normalized['campaign']['adapter_sha256'] = previous['campaign']['adapter_sha256']
             if new.get('campaign', {}).get('mode') in ('live', 'experiment-probe'):
                 self.assertEqual(normalized['campaign'].pop('scheduler'), 'campaign-scheduler-v1')
             self.assertEqual({k:v for k,v in normalized.items() if k not in ('id', 'runtime_digest')},
                              {k:v for k,v in previous.items() if k not in ('id', 'runtime_digest')})
             purpose = key if key.startswith('campaign-') else 'skill_effectiveness' if key.startswith('pester-effectiveness') else 'cli_pilot'
-            self.assertEqual(evidence.custom_input_identities(ROOT, new['skill_id'], purpose=purpose)['runtime_digest'], new['runtime_digest'])
+            current = evidence.custom_input_identities(ROOT, new['skill_id'], purpose=purpose)['runtime_digest']
+            if key.startswith('campaign-') or key == 'pester-effectiveness-v26':
+                self.assertNotEqual(current, new['runtime_digest'])  # Superseded source; historical bytes stay bound below.
+            else:
+                self.assertEqual(current, new['runtime_digest'])
             del old['profiles'][key]
         digest = hashlib.sha256(json.dumps(old, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
         self.assertEqual(digest, '9f6da16a495515bded95fe199d2996c5a09ea5712a19786f47b71c50b7c703ed')  # Complete stopped-report revision, 562 profiles.

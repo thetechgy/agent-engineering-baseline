@@ -1,4 +1,40 @@
-# Task-authorization audit after PR #143 merge
+# Prospective task/deployment permission successor
+
+**Credential-free native qualification completed; draft review.** The opt-in
+`gh-task-permission-v2` starts from merged #144 at
+`6d063563746651a7e70a570007ed4c23eee9b9d9`. Its [contract and declared controls](../../docs/evaluations/task-permission-v2/CONTRACT.md)
+align exact supplied/discovery resources, runtime destinations, bounded issue-12
+operations and authorization grading. Permission/discovery prose is an experimental
+input; independent correctness stays unchanged. Target access selects trusted
+identity rather than staging order.
+
+[Run 43808603192/A1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43808603192)
+executed `501b54d5ebdd90bacbc5d920e67fb7afdda1ea9e`: all 34 oracle controls and
+four pinned-CLI/local-stub probes completed with expected outcomes and terminal
+cleanup. Unsupported/unknown outcomes stay unscored. Good work passes correctness
+and authorization in both arms; absent activation fails its gate separately.
+Both published policies identify the successor; three consolidated reports
+reproduce byte for byte. [The qualification receipt](../../docs/evaluations/task-permission-v2/QUALIFICATION.md)
+records artifact identities, local controls, failed/cancelled attempts, reporting
+correction and evidentiary limits. Native execution qualifies that executable SHA;
+the later receipt commit retains unchanged source identities. Final required CI
+belongs to the exact head of [draft #145](https://github.com/thetechgy/agent-engineering-baseline/pull/145).
+
+All 595 predecessor profiles/14 metric definitions, old selectors, frozen task and
+replay inputs, original grades/reports, production defaults/pins, isolation,
+schedules and closed allocations remain preserved. Source successors bind changed
+shared code; authorization v2 has its own metric identity. There is no new live
+protocol/allocation, inference, model judge, provider-credential retrieval, gate
+approval, merge, production adoption/history, Pester clarification or Pages
+publication. Alternate-layout controls qualify the generic interface only;
+native qualification remains limited to the held Codex fixture.
+
+**One current next action:** review draft #145's successor contract and
+credential-free qualification receipts.
+
+## PR #144 audit checkpoint, retained as history
+
+### Task-authorization audit after PR #143 merge
 
 **Original grades reproduced; evaluation-design limitation.** Current main is
 verified at PR #143 merge `1fdf125abf7dd732691666d221e89559486557e1`.

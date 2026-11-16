@@ -10,6 +10,7 @@ on:
         options:
           - boolean-effectiveness-v1
           - gh-runtime-090-v1
+          - gh-task-permission-v2
           - pester-return-development-current-v1
           - pester-return-development-candidate-v1
           - pester-return-transfer-current-v3
@@ -25,7 +26,7 @@ on:
 permissions: {}
 env:
   CAMPAIGN_ID: ${{ inputs.campaign || 'boolean-effectiveness-v1' }}
-  CAMPAIGN_SETUP: ${{ inputs.campaign == 'gh-runtime-090-v1' && 'candidate-next' || 'candidate-current' }}
+  CAMPAIGN_SETUP: ${{ (inputs.campaign == 'gh-runtime-090-v1' || inputs.campaign == 'gh-task-permission-v2') && 'candidate-next' || 'candidate-current' }}
 concurrency:
   group: reusable-evaluation-${{ inputs.allocation != '' && format('live-{0}', github.ref) || format('diagnostic-{0}', github.run_id) }}
   cancel-in-progress: false
@@ -59,15 +60,17 @@ jobs:
           APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
           echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
       - name: Check shared contracts
-        run: 'PYTHONPATH=.github/scripts:.github/tests "$SKILL_CURRENT_PYTHON" -B -m unittest test_evaluation_campaign test_evaluation_protocol test_campaign_selection test_codex_cohort test_codex_events test_campaign_replay -v'
+        run: 'PYTHONPATH=.github/scripts:.github/tests "$SKILL_CURRENT_PYTHON" -B -m unittest test_evaluation_campaign test_evaluation_protocol test_campaign_selection test_codex_cohort test_codex_events test_campaign_replay test_task_permissions -v'
       - name: Qualify registered task controls through native oracle and real CLI probes
         run: |
           "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign_selection.py qualify \
             --campaign "$CAMPAIGN_ID" \
             --output "$RUNNER_TEMP/reusable-evaluation"
       - name: Acquire fresh verified Compose configuration for the experiment phase
+        if: inputs.campaign != 'gh-task-permission-v2'
         run: bash .github/scripts/setup-compose.sh
       - name: Qualify the selected protocol through the same execution loop
+        if: inputs.campaign != 'gh-task-permission-v2'
         timeout-minutes: 55
         run: |
           "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign_selection.py prepare \
@@ -97,7 +100,7 @@ jobs:
 
   retrospective:
     name: Grade authenticated retained submission without inference
-    if: inputs.allocation == '' && inputs.preparation_artifact == '' && inputs.campaign != 'gh-runtime-090-v1'
+    if: inputs.allocation == '' && inputs.preparation_artifact == '' && inputs.campaign != 'gh-runtime-090-v1' && inputs.campaign != 'gh-task-permission-v2'
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -140,6 +143,7 @@ jobs:
   consume:
     name: Consume exact experiment preparation without credentials
     needs: qualify
+    if: inputs.campaign != 'gh-task-permission-v2'
     permissions:
       contents: read
     runs-on: ubuntu-latest

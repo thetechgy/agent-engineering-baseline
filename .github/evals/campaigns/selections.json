@@ -103,6 +103,19 @@
           "location": "preparation/evidence"
         }
       ]
+    },
+    "gh-task-permission-v2": {
+      "definition": ".github/evals/campaigns/gh-task-permission-v2.json",
+      "controls": [
+        ".github/evals/campaigns/gh-task-permission-v2.json"
+      ],
+      "producers": [
+        {
+          "workflow": ".github/workflows/evaluation-campaign.yml",
+          "artifact": "reusable-evaluation",
+          "location": "gh-task-permission-v2/oracle/evidence"
+        }
+      ]
     }
   }
 }

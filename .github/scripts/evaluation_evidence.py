@@ -22,7 +22,7 @@ def source_manifest(workspace, name, purpose):
     # Preserve original overlay ownership; add the reviewed extension and candidate.
     values = adapter.source_inputs(workspace)
     files = ['.github/scripts/evaluation_campaign_selection.py', '.github/evals/campaigns/selections.json', '.github/scripts/evaluation_campaign.py', '.github/scripts/evaluation_campaign_core.py',
-        '.github/scripts/evaluation_runtime.py', '.github/scripts/evaluation_tasks.py',
+        '.github/scripts/evaluation_resources.py', '.github/scripts/evaluation_runtime.py', '.github/scripts/evaluation_tasks.py',
         '.github/scripts/evaluation_evidence.py', '.github/scripts/evaluation_launch_qualification.py', '.github/scripts/campaign_scheduler_evidence.py', '.github/scripts/evaluation_campaign_protocol.py', '.github/scripts/codex_pilot_dispatch.py', '.github/scripts/skill_evidence.py', '.github/scripts/unscored_security.py', '.github/scripts/skill_analysis.py',
         '.github/scripts/skill_report.py', '.github/scripts/skill_reports.py',
         '.github/scripts/benchmark_evidence.py', '.github/scripts/evaluator_090.py',
@@ -63,12 +63,22 @@ def capture_tasks(workspace, profile, tasks, arm):
     return sorted(rows, key=lambda row: row['case_id'])
 
 
+def task_policy_fields(profile):
+    """Opt-in task-owned reporting fields; old profiles keep their exact policy."""
+    fields = profile['campaign'].get('policy_fields', {})
+    require(type(fields) is dict and set(fields) <= {'authorization_policy'}, 'Unsupported task policy fields')
+    if fields:
+        require(fields == task(profile).public_policy_fields(), 'Task/public permission policy drift')
+    return fields
+
+
 def validate_policy(profile, fields, attempts, agent_version):
     from evaluation_runtime import read_profile
     runtime = read_profile(ROOT / task(profile).definition['runtime_profile'])['resolved']
     probe = profile['campaign']['mode'] in ('probe', 'experiment-probe', 'live')
     expected = {'environment': profile['campaign']['environment_mode'], 'concurrency': 1, 'timeout_multiplier': 1.0,
         'model': runtime['model'] if probe else 'credential-free-oracle', 'provider': runtime['provider'] if probe else 'fixture'}
+    expected.update(task_policy_fields(profile))
     require(attempts == profile['campaign'].get('trials', 1) and all(fields[k] == v for k,v in expected.items()), 'Campaign public execution policy drift')
     require(not probe or agent_version in (None, runtime['cli']), 'Campaign CLI version drift')
 

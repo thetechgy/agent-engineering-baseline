@@ -18,6 +18,9 @@ ROOT = Path(__file__).resolve().parents[2]
 def load(path):
     definition = reports.read_json(path)
     adapters = {'boolean-contract': BooleanContract, 'gh-fixture': GhFixture, 'batch-summary': BatchSummary}
+    if definition.get('adapter') == 'gh-permission':
+        from gh_permission_task import GhPermission
+        adapters['gh-permission'] = GhPermission
     require(definition.get('adapter') in adapters, 'Unsupported task adapter')
     for key in ('id', 'skill', 'source_case'):
         require(__import__('re').fullmatch('[a-z0-9-]+', definition[key]), 'Invalid task identity')
@@ -53,6 +56,9 @@ class Task:
 
     def replay_changes(self, original):
         return set()
+
+    def public_policy_fields(self):
+        return {}
 
     def staging_options(self, bundle):
         return {}

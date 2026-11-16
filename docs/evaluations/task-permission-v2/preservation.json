@@ -1,0 +1,15 @@
+{
+  "base_revision": "6d063563746651a7e70a570007ed4c23eee9b9d9",
+  "executable_revision": "3dcd6cb518314f79d626615664fc756c3ba9fb73",
+  "historical_profiles_preserved": 595,
+  "historical_metrics_preserved": 14,
+  "active_profiles_unchanged": true,
+  "new_profiles": 33,
+  "protected_inputs_unchanged": {
+    ".github/evals/campaigns/gh-runtime-090-v1.json": "7c3b7c25da2ea4e03b00f1814e11cf9ea7802d5a2b37c2936011044d4b937071",
+    ".github/evals/campaigns/gh-runtime-090-v1-protocol.json": "70023325dd91baa31ca369ed2f7aff914e78127f28311ef12cb6d4b2129215fd",
+    ".github/evals/codex-execution-090.json": "044a8d6c16870d40f193f1879b826d9eb6139c8f1c38b57d7e16f8acee72011d",
+    ".github/evals/codex-pilot.json": "5472136c6532db515340e8ffdfc9aae9f70b42b27fc15bf922823a784b41e9a8",
+    "apm.lock.yaml": "d9015bd06340fc7d51f757be804a8b3ef52431aa6ada1ef538feba439fc2089d"
+  }
+}
