@@ -21,6 +21,32 @@ artifact inspection, exact retention/report reproduction and any blockers are
 recorded together on this preparation's draft PR. This checkpoint alone does not
 assert successful hosted qualification or qualify a future merge revision.
 
+### PR #147 credential-free CI remediation
+
+The failed [Validate run 43858120531/A1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43858120531)
+belongs to `9ccfab0b0a3baaebd30a8bac9ef4960c3d08e9c2`. Its 1,120-test suite
+passed (122 skips, 1,260 seconds), followed by a passing 449-second container check.
+Publisher/orchestration assertions completed, but their step was interrupted at
+the 30-minute job deadline; behavioral-evidence qualification/upload never started.
+The shared job now allows 45 minutes, preserving all checks and workload deadlines.
+
+The authenticated failed cohort archive identifies absent gh-007's primary failure
+as initializer `spawn` / `RuntimeError`; consolidation/gate failures are downstream.
+The narrower rejected predicate and daemon stderr were not retained. No historical
+cause or pre-existing defect is established. The unchanged initializer, task staging
+and pins passed [matched base/head startup 43885174184/A1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43885174184):
+four clean environments, exact same image per arm, identical task checksums,
+repeated broker identity and complete resource/tag cleanup. The pinned-container
+process probe passed 128 observations, so a workstation-only race is not confirmed
+for the held container. No initializer, task, trust check or pin was changed.
+
+At this source freeze, final-head required CI and refreshed exact-source
+preparation/inspection remain pending. The PR's latest terminal receipt governs
+readiness; a passing rerun cannot recover the missing historical cause. Earlier
+successful preparation/inspection remain evidence for `9ccfab0` only, and its
+unapproved dispatch proposal is superseded. Failed diagnostic attempts and
+superseded cancelled CI remain retained and inconclusive where interrupted.
+
 The budget proposal remains $2 estimated usage, a $3 scheduling threshold and $3
 reserve within a $6 planning allocation; none is a provider billing cap and CI costs
 are separate. Fresh allocation/nonce and an exact combined dispatch/matching-gate

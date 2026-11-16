@@ -13,6 +13,11 @@ construction. Its draft PR carries final exact-source qualification/inspection
 receipts or blockers. Future model behavior under the successor is untested; paid
 execution, production adoption, standard judges, billing and skill benefit remain
 unqualified. Previous allocations remain closed.
+PR #147's credential-free CI remediation preserves that assessment. Its historical
+absent gh-007 failure is bounded to initializer spawn, with finer diagnostics
+missing; matched base/head startup now passes without changing pins or trust
+checks. Final required CI and fresh exact-source preparation/inspection are
+recorded in the PR's current terminal receipt; prior preparation is not relabeled.
 See [behavioral evidence and rollback](../../docs/evaluations/behavioral-evidence-090.md)
 and the preserved [static receipt](../../docs/evaluations/static-quality-090.md).
 

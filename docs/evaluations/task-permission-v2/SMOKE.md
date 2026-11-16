@@ -75,6 +75,21 @@ staging, launch construction, scheduler, collector, admission and report. Final
 run-specific receipts are published on the PR after freezing code/tests/protocol;
 committing them would move the qualified ref.
 
+## Maintained startup diagnostic
+
+The existing current-evaluator workflow has an opt-in `startup-only` mode for the
+held candidate-next owner. It stages only gh-007 from #145's exact base and the
+reviewed head, then starts present/absent environments without agent setup or
+grading. It requires equal producer/pin bytes, environment inputs and task
+checksums, reuses the base's locally tagged image by verified identity, verifies
+repeated broker identity and deletes containers, networks and task-owned tags.
+Only fixed initializer/verification results receive bounded sanitized stream
+retention; private task commands are not logged. Earlier failures survive cleanup
+or evidence-retention failures. A separate bounded child-process diagnostic uses
+private fixture copies and the unchanged fingerprint, without retrying a task or
+initializer. Its exact initializer digest and fixed baseline are deliberate
+maintenance constraints when a later owner is separately qualified.
+
 ## Budget and approval boundary
 
 Official [model pricing](https://developers.openai.com/api/docs/models/gpt-5.6-sol)

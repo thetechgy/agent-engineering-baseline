@@ -11,6 +11,7 @@ from pathlib import Path
 import shlex
 import signal
 import subprocess
+import sys
 import tempfile
 import uuid
 
@@ -394,6 +395,19 @@ async def startup_attempt(environment, *, inspect_image, cleanup_check, retain, 
     return row
 
 
+def cleanup_startup_images(tags, status, retain, primary):
+    """Remove only this probe's tags, preserving an earlier startup failure."""
+    failure = None
+    for tag in tags:
+        try: docker('image','rm',tag)
+        except BaseException as error: failure = failure or error
+    status['image_tag_cleanup'] = 'failed' if failure else 'complete'
+    if failure is not None: status['complete'] = False
+    try: retain()
+    except BaseException as error: failure = failure or error
+    if failure is not None and primary is None: raise failure
+
+
 def startup_only(artifact, baseline):
     """Four clean gh-007 startups, base/head and present/absent, under the held owner."""
     from evaluator_profiles import NEXT, runtime, candidate_versions
@@ -497,16 +511,7 @@ def startup_only(artifact, baseline):
         finally:
             if prior is None: os.environ.pop('AEB_GH_MANIFEST',None)
             else: os.environ['AEB_GH_MANIFEST']=prior
-            pending_error = __import__('sys').exc_info()[1]
-            tag_error = None
-            for tag in matched_tags:
-                try: docker('image','rm',tag)
-                except (subprocess.CalledProcessError,subprocess.TimeoutExpired) as error:
-                    tag_error = tag_error or error
-                    status['image_tag_cleanup']='failed'; status['complete']=False; save()
-            if status.get('image_tag_cleanup')!='failed':
-                status['image_tag_cleanup']='complete'; save()
-            if tag_error is not None and pending_error is None: raise tag_error
+            cleanup_startup_images(matched_tags,status,save,sys.exc_info()[1])
 
 
 if __name__ == "__main__":

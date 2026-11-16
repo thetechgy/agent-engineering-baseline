@@ -7,7 +7,7 @@ import sys
 import tempfile
 from types import SimpleNamespace
 import unittest
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/'.github/scripts'))
@@ -58,6 +58,24 @@ class StartupProbe(unittest.TestCase):
             asyncio.run(startup_attempt(environment,inspect_image=lambda:{},cleanup_check=lambda:None,retain=unavailable))
         self.assertIs(raised.exception,primary)
         environment.stop.assert_awaited_once_with(delete=True)
+
+    def test_local_image_cleanup_keeps_primary_and_attempts_every_owned_tag(self):
+        import gh_initializer_validation as native
+        cleanup=OSError('image cleanup failed');primary=RuntimeError('startup failed')
+        for earlier in (None,primary):
+            state={'complete':True};saved=[]
+            with patch.object(native,'docker',side_effect=[cleanup,'']) as run:
+                if earlier is None:
+                    with self.assertRaises(OSError) as raised:
+                        native.cleanup_startup_images(['one','two'],state,lambda:saved.append(dict(state)),earlier)
+                    self.assertIs(raised.exception,cleanup)
+                else:
+                    native.cleanup_startup_images(['one','two'],state,lambda:saved.append(dict(state)),earlier)
+                self.assertEqual(run.call_args_list,[unittest.mock.call('image','rm','one'),unittest.mock.call('image','rm','two')])
+            self.assertEqual(saved,[{'complete':False,'image_tag_cleanup':'failed'}])
+        def unavailable():raise OSError('evidence unavailable')
+        native.cleanup_startup_images([],{},unavailable,primary)
+        with self.assertRaises(OSError):native.cleanup_startup_images([],{},unavailable,None)
 
     def test_diagnostic_failure_retains_primary_and_still_cleans_environment(self):
         from gh_initializer_validation import startup_attempt
