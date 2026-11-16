@@ -58,6 +58,7 @@ def main():
     parser.add_argument('--output', required=True, type=Path)
     parser.add_argument('--preparation', type=Path)
     parser.add_argument('--qualification', type=Path)
+    parser.add_argument('--authentication-qualification', type=Path)
     parser.add_argument('--approval')
     parser.add_argument('--artifact')
     args = parser.parse_args()
@@ -79,9 +80,9 @@ def main():
         action, output = 'check-preparation', output/'consumption'
     argv = [sys.argv[0], action, '--output', str(output)]
     for member in definitions: argv.extend(['--definition', str(ROOT / member)])
-    for name in ('preparation', 'qualification', 'approval'):
+    for name in ('preparation', 'qualification', 'authentication_qualification', 'approval'):
         value = getattr(args, name)
-        if value is not None: argv.extend(['--' + name, str(value)])
+        if value is not None: argv.extend(['--' + name.replace('_', '-'), str(value)])
     sys.argv = argv
     return campaign_main()
 

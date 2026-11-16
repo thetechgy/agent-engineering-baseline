@@ -23,7 +23,7 @@ import skill_reports as reports
 
 def purpose(task, mode):
     identity = {'boolean-contract-v1':'boolean-contract-v4', 'gh-read-v1':'gh-read-v4', 'boolean-effectiveness-v1':'boolean-effectiveness-v3', 'boolean-retained-v1':'boolean-retained-v2'}.get(task.definition['id'], task.definition['id'])
-    source_version = '-lifecycle-v1-source-v20-'
+    source_version = '-lifecycle-v1-source-v21-'
     return 'campaign-' + identity + source_version + mode
 
 
@@ -355,6 +355,7 @@ def main():
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--preparation', type=Path)
     parser.add_argument('--qualification', type=Path)
+    parser.add_argument('--authentication-qualification', type=Path)
     parser.add_argument('--approval', default='')
     args = parser.parse_args()
     if args.action != 'live': no_credentials()

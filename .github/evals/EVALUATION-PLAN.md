@@ -1,4 +1,47 @@
-# Task-permission successor stopped pilot
+# Task-permission successor authentication repair
+
+**Credential-free repair; paid execution unauthorized.** PR #147's
+stopped dispatch `43908693565/A1` and both unused slots remain permanently closed.
+It executed `3bafc85e1a4fd650bc62d3aa3ed66aa429c1bfaf`; report-only closure commit
+`cbf5d0e59c8755c4ea4f30366bf22220932522f4` was not executed. Its queued Validate
+`43910563983/A1` was cancelled as superseded by this focused repair; it is
+inconclusive, not a passing check.
+
+The actual bare authentication command reproduces the missing `skillevaluator`
+dependency. Authentication now reuses the registered runtime's existing pinned
+owner through one setup contract shared with preparation. No normalizer is copied,
+comparison bypassed or dependency upgraded. The real CLI qualifier runs as the
+first test on preparation's fresh runner, with fixture-only GitHub IO. It exercises
+parsing, selection, identity reconstruction, archive admission, atomic receipt
+publication and downstream artifact/receipt validation without live authority.
+Preparation, authenticated admission and fresh consumption require its complete
+exact-source proof; missing/incomplete/stale proof rejects.
+
+[The repair qualification contract](../../docs/evaluations/task-permission-v2/authentication-repair-20261116/QUALIFICATION.md)
+records the affected boundaries and local reproduction. The [current repair
+receipt](https://github.com/thetechgy/agent-engineering-baseline/pull/147#issuecomment-6923566341)
+records final source, terminal required/change-selected CI, fresh hosted
+authentication proof, revision-bound preparation, authenticated consumption and any
+blocker or fresh UNRUN proposal after executable freeze. It governs readiness; this
+checkpoint alone does not assert successful hosted qualification. A later documentation or merge revision is not automatically
+qualified. Historical profiles, grades, stopped receipts and all closed allocations
+remain unchanged; new source-v21 profiles bind the changed shared implementation.
+Task/grader/resource semantics and held versions are unchanged.
+
+Any fresh proposal retains the same two-attempt scope and $2 estimate, $3 scheduling
+threshold/$3 reserve/$6 planning allocation, not a billing cap. Its new validity
+window ends `2026-11-23T23:59:59Z`; this does not extend the old authority. New
+allocation/nonce, exact preparation identities, UNRUN command and combined
+approval wording are proposed only in the final receipt, unclaimed. No inference,
+judge, provider-key retrieval, real allocation claim, paid dispatch, protected
+approval, merge or adoption is authorized here.
+
+**One current next action:** complete credential-free exact-source qualification
+and review the resulting proposal or precise blocker on draft PR #147.
+
+## Successor stopped pilot checkpoint, retained as history
+
+### Task-permission successor stopped pilot
 
 **Stopped before launch; allocation closed.** The single authorized
 [dispatch 43908693565/A1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43908693565)

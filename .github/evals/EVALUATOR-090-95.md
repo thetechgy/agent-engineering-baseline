@@ -21,6 +21,13 @@ See the [stopped execution receipt](../../docs/evaluations/task-permission-v2/ex
 Production adoption, standard judges, billing and skill benefit remain unqualified.
 The historical gh-007 initializer cause remains unknown; this run adds no evidence
 about it. No initializer, pin or trust check was changed.
+PR #147 now repairs this dependency boundary with the existing pinned owning
+setup, shared with preparation's first real-CLI qualification on a fresh runner.
+Exact-source proof is required for readiness, admission and consumption. Atomic
+receipt publication retains bounded failure diagnostics separately from valid
+authorization. Final hosted/CI/preparation receipts remain pending at source
+freeze; no earlier artifact or approval is carried forward. The fresh proposal
+is unrun and unclaimed; complete dispatch readiness is not asserted here.
 See [behavioral evidence and rollback](../../docs/evaluations/behavioral-evidence-090.md)
 and the preserved [static receipt](../../docs/evaluations/static-quality-090.md).
 
@@ -30,7 +37,7 @@ and the preserved [static receipt](../../docs/evaluations/static-quality-090.md)
 | Complete Validate static quality | 0.9.0 offline-v3 `quality-next` since #141 | Existing scanners, strict admission and projection remain required |
 | Offline behavioral evidence qualification | 0.9.0 offline-v3, `behavioral-090-offline-v1` | Explicit fixture judgments; versioned recovery/reporting/history refusal; no live adoption |
 | Opt-in gh-runtime-090-v1 execution preparation | 0.9.0 / Harbor 0.25.0, Codex 0.155.1 / gpt-5.6-sol / high | Completed bounded live-path pair in #143; original grades and #144 diagnosis preserved; standard judges remain unqualified |
-| Opt-in gh-task-permission-v2 smoke preparation | Same held 0.9.0 / Harbor 0.25.0 / Codex/model settings | Single authorized dispatch stopped at authentication before agents; allocation closed; complete dispatch path blocked |
+| Opt-in gh-task-permission-v2 smoke preparation | Same held 0.9.0 / Harbor 0.25.0 / Codex/model settings | Stopped allocation closed; pinned authentication repair and real-CLI readiness proof; final exact-source receipts govern any fresh proposal |
 | Production benchmark execution | 0.3.0 / Harbor 0.13.2, Codex 0.155.1 | Execution-policy selection and actual provider routing remain unqualified |
 | Contracts, retained scanner adapter, native gh | 0.3.0 `quality`, exact review overlays | Existing native/task owners remain unchanged |
 | Private reviews and analyst attachments | Exact retained 0.3 review profiles/overlays | No successor validator/request profile |

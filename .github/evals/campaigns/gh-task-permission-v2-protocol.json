@@ -59,7 +59,7 @@
     "judgments": "deterministic; no model judgments",
     "production_history": false
   },
-  "authorization_expires_at": "2026-11-20T23:59:59Z",
+  "authorization_expires_at": "2026-11-23T23:59:59Z",
   "qualification_scenarios": [
     "complete",
     "interruption",

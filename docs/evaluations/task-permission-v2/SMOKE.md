@@ -51,6 +51,15 @@ missing/tampered/opposite-deployment inventories and unrelated environment overr
 must reject before workload construction. No live guard is patched or bypassed by
 the production runner; test-only receipt/clock fixtures live in qualification only.
 
+Allocation-bound authentication now uses the registered runtime's existing pinned
+owner, sharing its setup contract with preparation. The actual authentication CLI
+runs with fixture-only GitHub IO as preparation's first test on a fresh runner.
+Its complete exact-source proof is mandatory in preparation, admission and fresh
+consumption. Receipt publication is atomic; incomplete authorization is rejected,
+and bounded failure diagnostics remain distinct. See the [authentication repair
+qualification](authentication-repair-20261116/QUALIFICATION.md). The stopped prior
+allocation remains closed and grants no authority to any refreshed proposal.
+
 The shared loop exercises complete, interruption, missing evidence, unsupported
 runtime, unsupported grading, usage threshold, unknown usage, verifier-failure and
 cleanup-failure scenarios. Complete deliberately starts with a measured permission
