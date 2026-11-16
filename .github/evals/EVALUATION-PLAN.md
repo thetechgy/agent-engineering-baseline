@@ -21,7 +21,7 @@ artifact inspection, exact retention/report reproduction and any blockers are
 recorded together on this preparation's draft PR. This checkpoint alone does not
 assert successful hosted qualification or qualify a future merge revision.
 
-### PR #147 credential-free CI remediation
+## PR #147 credential-free CI remediation
 
 The failed [Validate run 43858120531/A1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43858120531)
 belongs to `9ccfab0b0a3baaebd30a8bac9ef4960c3d08e9c2`. Its 1,120-test suite
@@ -46,6 +46,11 @@ readiness; a passing rerun cannot recover the missing historical cause. Earlier
 successful preparation/inspection remain evidence for `9ccfab0` only, and its
 unapproved dispatch proposal is superseded. Failed diagnostic attempts and
 superseded cancelled CI remain retained and inconclusive where interrupted.
+
+The intermediate `91a72d5` [Validate attempt 43886167994/A1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43886167994)
+caught a checkpoint heading-level error, now corrected and checked with the
+hash-locked rumdl 0.3.4. Its remaining validation and preparation `43886208394/A1`
+were cancelled as superseded; partial results are retained, not qualification.
 
 The budget proposal remains $2 estimated usage, a $3 scheduling threshold and $3
 reserve within a $6 planning allocation; none is a provider billing cap and CI costs
