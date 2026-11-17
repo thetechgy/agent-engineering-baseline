@@ -17,6 +17,9 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def load(path):
     definition = reports.read_json(path)
+    if definition.get('type') == 'judge-only':
+        from judge_calibration_inputs import load as load_judges
+        return load_judges(path, definition)
     adapters = {'boolean-contract': BooleanContract, 'gh-fixture': GhFixture, 'batch-summary': BatchSummary}
     if definition.get('adapter') == 'gh-permission':
         from gh_permission_task import GhPermission

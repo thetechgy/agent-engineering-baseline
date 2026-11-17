@@ -31,6 +31,14 @@ def registration(task):
     return row
 
 
+def owning_evaluator(task):
+    if task.definition.get('type') == 'judge-only':
+        import evaluator_profiles
+        return evaluator_profiles.ACCOUNTING
+    from evaluation_runtime import evaluator, read_profile
+    return evaluator(read_profile(ROOT / task.definition['runtime_profile']))
+
+
 def location(task, artifact, producer):
     """Only reviewed workflow/name/layout tuples; paths never come from inputs."""
     row = registration(task)
@@ -78,6 +86,10 @@ def main():
             'artifact_digest':metadata['digest'], 'producer_run':producer['id'],
             'preparation_location':internal, 'expires_at':metadata['expires_at'], 'inference':False})
         action, output = 'check-preparation', output/'consumption'
+    if task.definition.get('type') == 'judge-only':
+        from judge_calibration_campaign import entry
+        args.action, args.output = action, output
+        return entry(args, task)
     argv = [sys.argv[0], action, '--output', str(output)]
     for member in definitions: argv.extend(['--definition', str(ROOT / member)])
     for name in ('preparation', 'qualification', 'authentication_qualification', 'approval'):

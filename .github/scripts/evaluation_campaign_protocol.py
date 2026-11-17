@@ -26,6 +26,9 @@ SCENARIOS = ('complete', 'interruption', 'missing-evidence', 'unsupported-runtim
 
 
 def scenarios(task):
+    if task.definition.get('type') == 'judge-only':
+        from judge_calibration_campaign import SCENARIOS as judge_scenarios
+        return judge_scenarios
     declared = protocol(task).get('qualification_scenarios') if 'protocol' in task.definition else None
     if declared is not None:
         require(type(declared) is list and len(set(declared)) == len(declared)
@@ -48,6 +51,9 @@ def digest(path):
 
 
 def protocol(task):
+    if task.definition.get('type') == 'judge-only':
+        from judge_calibration_inputs import protocol as judge_protocol
+        return judge_protocol(task)
     require('protocol' in task.definition, 'Qualification definition cannot authorize inference')
     value = reports.read_json(ROOT / task.definition['protocol'])
     rows = schedule(tuple(task.cases('live')), tuple(v['id'] for v in task.definition['variants']), task.definition['trials'])
@@ -66,6 +72,9 @@ def protocol(task):
 
 
 def frozen(task):
+    if task.definition.get('type') == 'judge-only':
+        from judge_calibration_inputs import frozen as judge_frozen
+        return judge_frozen(task)
     from evaluation_campaign import purpose
     return {'revision': revision(), 'protocol': protocol(task), 'protocol_digest': digest(ROOT / task.definition['protocol']),
             'definition': task.definition, 'runtime': read_profile(ROOT / task.definition['runtime_profile']),
@@ -150,6 +159,11 @@ def validate_receipt(receipt, approval, task):
     required = {'artifact', 'artifact_digest', 'producer_run', 'revision', 'protocol_digest', 'dispatch',
                 'run_id', 'allocation', 'first_dispatch', 'authentication', 'definition',
                 'definition_digest', 'selection_digest', 'preparation_location'}
+    if task.definition.get('type') == 'judge-only':
+        required.add('artifact_expires_at')
+        expires = receipt.get('artifact_expires_at')
+        require(isinstance(expires, str) and datetime.fromisoformat(expires.replace('Z', '+00:00')) > datetime.now(timezone.utc),
+                'Preparation artifact expired')
     require(set(receipt) == required and type(receipt.get('producer_run')) is int and receipt['producer_run'] > 0
             and receipt == {**receipt, 'artifact': artifact, 'dispatch': nonce, 'allocation': approval,
                        'revision': revision(), 'protocol_digest': digest(ROOT / task.definition['protocol']),
@@ -217,6 +231,8 @@ def authenticate(output, approval, task):
                  'protocol_digest':digest(ROOT/task.definition['protocol']),'dispatch':nonce,'run_id':os.environ['GITHUB_RUN_ID'],
                  'allocation':approval,'first_dispatch':True,'authentication':'github-api-producer-and-digest',
                  **binding(task), 'preparation_location':internal}
+        if task.definition.get('type') == 'judge-only':
+            receipt['artifact_expires_at'] = artifact['expires_at']
         reports.write_json(output/'artifact.json',artifact); reports.write_json(output/'producer-run.json',producer)
         validate_receipt(receipt, approval, task)
         pending = reference/'dispatch-authentication.pending'
@@ -248,6 +264,7 @@ def acquire(output, artifact_id, task):
     no_credentials()
     require(re.fullmatch('[1-9][0-9]*', artifact_id) is not None, 'Invalid preparation artifact ID')
     artifact=api('actions/artifacts/'+artifact_id)
+    require(type(artifact.get('id')) is int and artifact['id'] == int(artifact_id), 'Preparation artifact identity mismatch')
     producer=api('actions/runs/'+str(artifact['workflow_run']['id']))
     authenticate_metadata(artifact, producer, revision(), REPO_ID, LIMIT, task=task)
     output.mkdir(parents=True,exist_ok=False)

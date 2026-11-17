@@ -1,6 +1,15 @@
 {
   "version": 1,
   "campaigns": {
+    "judge-calibration-090-v1": {
+      "definition": ".github/evals/campaigns/judge-calibration-090-v1.json",
+      "controls": [".github/evals/campaigns/judge-calibration-090-v1.json"],
+      "producers": [{
+        "workflow": ".github/workflows/evaluation-campaign.yml",
+        "artifact": "reusable-evaluation",
+        "location": "preparation/evidence"
+      }]
+    },
     "boolean-effectiveness-v1": {
       "definition": ".github/evals/campaigns/boolean-effectiveness-v1.json",
       "controls": [
