@@ -1,7 +1,7 @@
 # SkillEvaluator 0.9.0 consumer ownership, issue #95
 
-Current main starts at #145 merge
-`82cdde086fe4d7fad84f21acc614df2adeca1767`. Static quality and data-only
+Current main was verified at #147 merge
+`d5a04d4394c16108870f95974dd20fa51482e29a`. Static quality and data-only
 reporting/orchestration already use pinned 0.9.0. #143 completed a bounded live
 compatibility pair at its recorded execution SHA; #144 diagnosed its task/deployment
 permission ambiguity without replacing grades. #145 qualified the prospective
@@ -18,7 +18,7 @@ target read. Absent scored 1/0/0, with measured `unlisted_directory` denial;
 the target was absent and its full-read observation remains null. Two verifier
 runs and zero model judges estimated $0.1977340 total, not an invoice. Both
 slots and the allocation are permanently closed. Later report-only revisions
-were not executed; PR #147 remains draft and unmerged.
+were not executed; PR #147 merged as `d5a04d4394c16108870f95974dd20fa51482e29a`.
 
 The [completed execution receipt](../../docs/evaluations/task-permission-v2/execution-auth-20261116-02/EXECUTION.md)
 retains exact preparation/authentication/live artifacts, per-arm witnesses and the
@@ -30,8 +30,10 @@ that dependency boundary; no earlier-source artifact or previous allocation's
 approval was carried forward.
 Production adoption, wider grading coverage, repeatability, standard judges,
 billing and skill benefit remain unqualified. The historical gh-007 initializer
-cause remains unknown. One next action: review PR #147's completed operational
-evidence before considering a separately scoped broader evaluation.
+cause remains unknown. The [standard-judge qualification](judge-calibration-090/README.md) now retains
+actual local HTTP controls and a seven-item UNRUN corpus. Paid calibration is
+blocked by discarded provider usage and logical-attempt request undercount.
+One next action: review that qualification before authorizing an accounting remedy.
 See [behavioral evidence and rollback](../../docs/evaluations/behavioral-evidence-090.md)
 and the preserved [static receipt](../../docs/evaluations/static-quality-090.md).
 

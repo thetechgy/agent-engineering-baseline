@@ -77,6 +77,20 @@ jobs:
           "$RUNNER_TEMP/current-evaluator/.venv/bin/python" -B .github/scripts/qualify_current_evaluator.py --output "$RUNNER_TEMP/retained-080-controls"
       - name: Install the frozen opt-in replacement
         run: bash .github/scripts/setup-skillevaluator.sh "$CANDIDATE_SETUP_KIND"
+      - name: Qualify the standard judge HTTP contract without credentials
+        if: inputs.candidate-next
+        run: '"$SKILL_QUALIFICATION_PYTHON" -B .github/scripts/qualify_standard_judges.py qualify --output "$RUNNER_TEMP/standard-judge-090"'
+      - name: Retain local-responder diagnostics and consolidated report
+        if: inputs.candidate-next
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: standard-judge-090-attempt-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/standard-judge-090/reporting/
+            ${{ runner.temp }}/standard-judge-090/qualification.json
+            ${{ runner.temp }}/standard-judge-090/requests.json
+          retention-days: 30
+          if-no-files-found: error
       - name: Assess static blockers and qualify offline consumers
         if: inputs.candidate-next
         env:
@@ -197,6 +211,15 @@ jobs:
           path: ${{ runner.temp }}/native-inputs
       - name: Verify complete native evidence and reproduce the canonical report
         run: '"$SKILL_QUALIFICATION_PYTHON" -B .github/scripts/qualify_current_evaluator.py --native-artifacts "$RUNNER_TEMP/native-inputs" --output "$RUNNER_TEMP/complete-native-report"'
+      - name: Consume the same-run standard judge qualification on this fresh runner
+        if: inputs.candidate-next
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: standard-judge-090-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/standard-judge-090
+      - name: Reproduce the standard judge consolidated report without model access
+        if: inputs.candidate-next
+        run: '"$SKILL_QUALIFICATION_PYTHON" -B .github/scripts/qualify_standard_judges.py reproduce --output "$RUNNER_TEMP/standard-judge-090"'
       - name: Retain the consolidated report and complete bounded evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

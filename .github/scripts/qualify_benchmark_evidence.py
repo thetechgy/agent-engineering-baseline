@@ -5,6 +5,7 @@ Uses existing setup candidate-next. Fixed judge responses exercise transport and
 released verdict semantics; they never measure provider or skill effectiveness.
 """
 import argparse
+from contextlib import ExitStack
 from datetime import datetime, timezone
 import json
 import os
@@ -23,7 +24,7 @@ import skill_evidence as evidence
 import skill_reports as reports
 
 
-def fixture(output, scenario):
+def fixture(output, scenario, *, judge_context=None):
     from harbor.models.job.result import JobResult, JobStats
     from harbor.models.task.task import Task
     from harbor.models.trial.result import TrialResult, ExceptionInfo
@@ -62,10 +63,15 @@ def fixture(output, scenario):
                 'REWARD_TXT': target / 'reward.txt', 'SKILL_EVALUATOR_REWARD_JSON': target / 'skill_evaluator_reward.json'}
             response = {'score': score, 'reason': 'Simulated judge fixture'}
             goal_response = {'score': None, 'error': 'Simulated judgment unavailable'} if unavailable else response
-            with patch.multiple(verifier, **paths), patch.dict(os.environ, {'HARBOR_ATIF_PATH':str(trace)}), \
-                    patch.object(verifier, 'judge_accuracy', return_value=response), \
-                    patch.object(verifier, 'judge_goal_accuracy', return_value=goal_response), \
-                    patch.object(verifier, 'judge_behavior_check', return_value=response):
+            with ExitStack() as stack:
+                stack.enter_context(patch.multiple(verifier, **paths))
+                stack.enter_context(patch.dict(os.environ, {'HARBOR_ATIF_PATH':str(trace)}))
+                if judge_context is None:
+                    for function, reply in (('judge_accuracy', response), ('judge_goal_accuracy', goal_response),
+                                            ('judge_behavior_check', response)):
+                        stack.enter_context(patch.object(verifier, function, return_value=reply))
+                else:
+                    stack.enter_context(judge_context(verifier, case))
                 try:
                     verifier.main()
                 except SystemExit as error:
