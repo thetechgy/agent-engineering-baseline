@@ -104,10 +104,10 @@ def worker(output, task):
             launched = sum(r['state'] != 'unlaunched' for r in value['entries'])
             if scenario in ('complete', 'schema-fallback', 'retry'):
                 require(value['state'] == 'completed' and launched == 7 and actual['complete'], 'Seven-record execution failed: ' + scenario)
-                require(actual['logical_judgments'] == 21 and actual['model_attempts'] == 7
-                        and sum(j['not_applicable'] for r in value['entries'] for j in r['accounting']['judgments']) == 14,
+                require(actual['logical_judgments'] == 21 and actual['model_attempts'] == 6
+                        and sum(j['not_applicable'] for r in value['entries'] for j in r['accounting']['judgments']) == 15,
                         'Applicable/inapplicable population differs')
-                expected = 13 if scenario in ('schema-fallback', 'retry') else 7
+                expected = 11 if scenario in ('schema-fallback', 'retry') else 6
                 require(len(requests) == expected, 'Retry/schema request count differs')
                 require(value['entries'][2]['results']['behavior_check']['results'][0]['passed'] is None,
                         'Unavailable behavior became a negative verdict')

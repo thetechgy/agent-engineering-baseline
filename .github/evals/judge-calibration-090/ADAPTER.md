@@ -18,14 +18,21 @@ provider prompt. The frozen corpus and [decision rules](README.md#frozen-referen
 are unchanged.
 
 The existing scheduler drives one record at a time, with no record retries or
-replacements. Each record evaluates three dimensions: seven applicable logical
-judgments and fourteen explicit N/A dimensions across one pass. The accounting
+replacements. Each record evaluates three dimensions: six applicable logical
+judgments and fifteen explicit N/A dimensions across one pass. The accounting
 schema's `logical_judgments` still counts all 21 dimension invocations, including
-N/A; the report displays applicable judgments separately. Seven model selections
-may initiate up to fourteen physical HTTP requests: one initial request and one
+N/A; the report displays applicable judgments separately. Six model selections
+may initiate up to twelve physical HTTP requests: one initial request and one
 transport retry **or** schema downgrade per applicable judgment. The strict
 evaluator limit and the adapter's pre-transport guard both apply. No other
 provider, RAGAS route, fallback model or speculative transport is registered.
+
+Control-01's reference is checked against the frozen native gh-014 answer.
+Control-07 supplies no ground truth: all its dimensions are N/A under the released
+contract, with zero HTTP requests. The adapter does not invent a successful goal
+reference to force a model call. Its unavailable reference label remains unscored;
+this pass does not calibrate goal judging. The other five applicable judgments
+use the frozen expected behaviors directly.
 
 The guard checks known response accounting, retained completed evidence, source
 identity, request/usage/cost limits and deadline before every additional HTTP
@@ -119,8 +126,8 @@ fresh unclaimed allocation and the exact UNRUN workflow command. It belongs in
 the draft PR's final verification receipt after hosted qualification succeeds.
 No paid dispatch or protected gate is approved by this implementation request.
 
-The proposed single pass has seven records, seven applicable logical judgments,
-fourteen N/A dimensions and at most fourteen physical HTTP requests. There are no
+The proposed single pass has seven records, six applicable logical judgments,
+fifteen N/A dimensions and at most twelve physical HTTP requests. There are no
 repetitions or replacement judgments. The separately declared neutral-label/order
 experiment remains deferred and would require its own scientific reason and bounds.
 
@@ -133,8 +140,8 @@ Overlapping cache-read/write subsets make the cost estimate unavailable and stop
 scheduling. Other processing modes, account-specific charges and invoices are not
 qualified by this estimate.
 The $0.25 planning estimate assumes roughly 1,000 input and 1,500 output tokens
-per applicable judgment, rounded up. It is not a measured forecast. Fourteen
-maximum-size 32,768-token outputs alone would estimate $9.17504, plus input.
+per applicable judgment, rounded up. It is not a measured forecast. Twelve
+maximum-size 32,768-token outputs alone would estimate $7.86432, plus input.
 The proposed $2 scheduling threshold, $10 reserve and $12 planning allocation
 are not provider billing caps. Unknown error/timeout charges cannot be bounded
 by missing usage. CI cost is separate. Cached tokens are subsets and reasoning
@@ -154,5 +161,5 @@ Workflow security review: critical 0, high 0, medium 0, low 0. Existing read-onl
 permissions, SHA-pinned actions, nonpersistent checkout credentials, data-only
 artifact consumption and the unchanged protected environment are preserved.
 
-**One next action:** review the focused draft PR and its final source-bound
+**One next action:** review [draft PR #150](https://github.com/thetechgy/agent-engineering-baseline/pull/150) and its final source-bound
 qualification receipt before deciding on any separately proposed calibration.

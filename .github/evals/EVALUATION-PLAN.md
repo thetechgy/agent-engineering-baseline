@@ -6,8 +6,10 @@ implementation starts from that verified current main. The focused
 seven frozen records with the shared selection, preparation, authenticated
 artifact admission, allocation lifecycle, serial scheduler and consolidated
 renderer. There is no agent submission, arm, runtime or cleanup evidence to invent.
-The unchanged accounting owner distinguishes seven applicable logical judgments,
-fourteen inapplicable dimensions and up to fourteen physical HTTP requests.
+The unchanged accounting owner distinguishes six applicable logical judgments,
+fifteen inapplicable dimensions and up to twelve physical HTTP requests. Control-07
+has no ground truth and stays N/A; no successful goal reference is invented to
+force a model call. This pass does not calibrate goal judging.
 
 Credential-free integration uses the actual evaluator and authentication CLI,
 the existing non-forwarding responder with independent request observation, the
@@ -24,7 +26,7 @@ Fixture integration does not establish live-provider compatibility, judge accura
 billing or skill benefit. Added maintenance and removal/requalification boundaries
 are recorded in the adapter contract.
 
-**One current next action:** review the focused draft PR and its final
+**One current next action:** review [draft PR #150](https://github.com/thetechgy/agent-engineering-baseline/pull/150) and its final
 source-bound qualification receipt before any separate calibration authorization.
 
 ## PR #149 accounting correction, retained as history

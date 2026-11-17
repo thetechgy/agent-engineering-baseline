@@ -4,6 +4,7 @@ Labels and acceptance metadata remain in the corpus, outside provider inputs.
 The released evaluator owns all prompts, schemas and scoring.
 """
 from dataclasses import dataclass
+import json
 
 from evaluation_campaign_core import require
 from evaluation_runtime import ROOT
@@ -48,12 +49,24 @@ def records(task):
     rows = []
     for item, rule in zip(frozen['items'], rubric['records'], strict=True):
         require(item['id'] == rule['id'] and set(rule) == {'id', 'dimension', 'reference'}
+                and rule['dimension'] == item['judgment'].split(':')[0]
                 and rule['dimension'] in DIMENSIONS, 'Frozen applicability drift')
+        if item['id'] == 'control-01':
+            native = reports.read_json(ROOT / '.github/evals/gh/evals/evals.json')
+            expected = next(r for r in native['evals'] if r['id'] == 'gh-014')['contract']['expected']
+            require(json.loads(rule['reference']) == expected, 'Factual reference differs from frozen native answer')
+        else:
+            require(rule['reference'] is None, 'Unfrozen reference input')
         # Explicit projection: never pass item/reference/expected/ambiguity/sources.
         rows.append({'id': item['id'], 'dimension': rule['dimension'],
                      'question': item['question'], 'submission': item['submission'],
                      'reference': rule['reference'], 'expected_behavior': item['expected_behavior']})
     return rows
+
+
+def applicable(record, dimension):
+    return (dimension == record['dimension'] and
+            bool(record['expected_behavior'] if dimension == 'behavior_check' else record['reference']))
 
 
 def protocol(task):
@@ -62,8 +75,9 @@ def protocol(task):
     require(value['id'] == task.definition['id'] and value['definition'] == task.member
             and value['type'] == 'judge-only' and value['version'] == 1
             and value['authorized_live_attempts'] == 0
-            and value['attempt_slots'] == value['logical_judgments'] == len(records(task)) == 7
-            and value['inapplicable_dimensions'] == 14 and value['max_http_attempts'] == 14
+            and value['attempt_slots'] == len(records(task)) == 7
+            and value['logical_judgments'] == sum(applicable(r, r['dimension']) for r in records(task)) == 6
+            and value['inapplicable_dimensions'] == 15 and value['max_http_attempts'] == 12
             and value['concurrency'] == value['passes'] == 1
             and value['automatic_retries'] == value['replacements'] == 0
             and value['agent_runtime'] is value['agent_cleanup'] is value['variants'] is None,

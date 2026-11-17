@@ -195,12 +195,12 @@ def run(root, task, *, live=False, preparation=None, fixture=None):
         deadline_token = verifier._ACTIVE_JUDGE_DEADLINE.set(started + limits['seconds'])
         results = {dimension: {'score': None, 'status': 'not_applicable',
                               'reason': 'Frozen applicability; this dimension has no intended reference'}
-                   for dimension in inputs.DIMENSIONS if dimension != record['dimension']}
+                   for dimension in inputs.DIMENSIONS if not inputs.applicable(record, dimension)}
         try:
             if fixture:
                 fixture.before_record(verifier, row)
             for dimension in inputs.DIMENSIONS:
-                applicable = record['dimension'] == dimension
+                applicable = inputs.applicable(record, dimension)
                 if dimension == 'behavior_check':
                     args = (record['question'] + '\n' + record['submission'], record['expected_behavior'] if applicable else [])
                 else:
@@ -316,7 +316,8 @@ def render(roots, destination, task):
             'corpus': frozen['source_identities']['live'][task.definition['corpus']],
             'rubric inputs': frozen['source_identities']['live'][task.definition['rubric']],
             'request settings': json.dumps(frozen['protocol']['request'], sort_keys=True),
-            'maximum records / applicable judgments / HTTP requests': '7 / 7 / 14',
+            'maximum records / applicable judgments / HTTP requests': '7 / 6 / 12',
+            'goal availability control': 'control-07: no ground truth; N/A, zero HTTP; goal judging not calibrated',
             'scheduling threshold / reserve USD': '2 / 10',
             'CI cost': 'separate; unavailable here',
             'cost estimate': 'reported cache writes use the write rate; unreported writes conservatively price uncached input at that rate; not billing',

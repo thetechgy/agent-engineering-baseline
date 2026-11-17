@@ -31,7 +31,9 @@ class JudgeContracts(unittest.TestCase):
         self.assertNotIn('skill', self.task.definition)
         for row in frozen['inputs']:
             self.assertEqual(set(row), {'id', 'dimension', 'question', 'submission', 'reference', 'expected_behavior'})
-        self.assertEqual(frozen['protocol']['max_http_attempts'], 14)
+        self.assertEqual(frozen['protocol']['max_http_attempts'], 12)
+        self.assertFalse(inputs.applicable(frozen['inputs'][6], 'goal_accuracy'))
+        self.assertIsNone(frozen['inputs'][6]['reference'])
         self.assertFalse(frozen['protocol']['budget']['billing_limit_enforced'])
 
     def test_unsupported_provider_and_changed_owner_fail_closed(self):
@@ -56,6 +58,17 @@ class JudgeContracts(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             run_case(Path(directory) / 'closed', self.task, 'closed-allocation')
             run_case(Path(directory) / 'wrong-artifact', self.task, 'wrong-artifact')
+
+    def test_missing_reference_cannot_be_replaced_by_an_invented_success_target(self):
+        original = reports.read_json
+        for index, reference, error in ((6, 'Tests succeeded', 'Unfrozen reference input'),
+                                        (0, '{"title":"invented","untrusted_instruction":false}', 'Factual reference differs')):
+            changed = copy.deepcopy(original(ROOT / self.task.definition['rubric']))
+            changed['records'][index]['reference'] = reference
+            def read(path):
+                return changed if path == ROOT / self.task.definition['rubric'] else original(path)
+            with patch.object(reports, 'read_json', side_effect=read), self.assertRaisesRegex(ValueError, error):
+                inputs.records(self.task)
 
     def test_cost_estimate_prices_cache_writes_without_fabricating_usage(self):
         from judge_accounting import usage
@@ -104,7 +117,8 @@ class RetainedEvidence(unittest.TestCase):
         root = self.reference.parent / 'scenarios/complete/evidence'
         value = campaign.admit_run(root, self.task)
         self.assertEqual(value['state'], 'completed')
-        self.assertEqual(value['accounting_summary']['http_attempts'], 7)
+        self.assertEqual(value['accounting_summary']['http_attempts'], 6)
+        self.assertEqual(value['entries'][6]['results']['goal_accuracy']['status'], 'not_applicable')
         self.assertIsNone(value['entries'][2]['results']['behavior_check']['results'][0]['passed'])
         self.assertTrue(value['entries'][1]['results']['behavior_check']['results'][0]['passed'])
         self.assertTrue(value['entries'][4]['results']['behavior_check']['results'][0]['passed'])
