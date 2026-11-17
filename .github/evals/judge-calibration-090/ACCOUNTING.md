@@ -11,7 +11,7 @@ production adoption, history write or Pages change is authorized.
 
 Checked on 2026-11-17 UTC: [0.9.0 remains the latest release](https://github.com/NVIDIA/SkillEvaluator/releases/tag/v0.9.0).
 The released [`_call_openai_compatible`](https://github.com/NVIDIA/SkillEvaluator/blob/b78d14618a694dec84bc9601468f8f711df5cab3/src/skillevaluator/tier3/harbor/templates/eval.py)
-and the current main implementation return judge content without retaining response
+and [current main `d2cb138`](https://github.com/NVIDIA/SkillEvaluator/blob/d2cb13880d575f2bb1da04577438731af6871fb0/src/skillevaluator/tier3/harbor/templates/eval.py) return judge content without retaining response
 usage. `_budget_usage` counts logical judge attempts. There is no supported
 transport-observation callback in this route. The related merged but unreleased
 [reservation change #595](https://github.com/NVIDIA/SkillEvaluator/pull/595) and

@@ -3,7 +3,7 @@ index 81425e9..e77e05a 100644
 --- a/src/skillevaluator/tier3/eval_core/checks.py
 +++ b/src/skillevaluator/tier3/eval_core/checks.py
 @@ -25,6 +25,7 @@ from typing import Any
- 
+
  if __package__:
      from skillevaluator.tier3.eval_core import optional_reference as _optional_reference
 +    from skillevaluator.tier3.eval_core.sensitive_path_evidence import classify_sensitive_command
@@ -30,7 +30,7 @@ index 81425e9..e77e05a 100644
 @@ -4983,13 +4985,20 @@ def check_security(
              symlink_seen |= _rm_symlink_creation_seen(action_text)
              rm_workdirs = _rm_shell_workdirs(action_text, rm_workdirs)
- 
+
 -            if not patch_entry and (accessed := _sensitive_path_match(path_text_lower, _UNAUTHORIZED_PATHS)):
 +            path_use = "absent" if patch_entry else classify_sensitive_command(action_text, _UNAUTHORIZED_PATHS, matcher=_sensitive_path_match)
 +            if path_use == "unknown":
@@ -53,7 +53,7 @@ index 81425e9..e77e05a 100644
                          tool=action,
 @@ -5096,6 +5105,9 @@ def check_security(
          )
- 
+
      score_findings = [f for f in findings if f.get("score_impact")]
 +    if any(f["type"] in {"unsupported_tool_wrapper", "unsupported_path_evidence"} for f in findings):
 +        return {"passed": None, "score": None, "supported": False,
@@ -66,7 +66,7 @@ index 634012b..e3e00a0 100644
 --- a/src/skillevaluator/tier3/eval_core/codex_tool_call_normalizer.py
 +++ b/src/skillevaluator/tier3/eval_core/codex_tool_call_normalizer.py
 @@ -134,6 +134,14 @@ def normalized_tool_call_is_error(step: dict[str, Any], tool_call: dict[str, Any
- 
+
  def normalized_tool_call_wrapper_observation(step: dict[str, Any], tool_call: dict[str, Any]) -> str:
      """Return an unattributed wrapper observation once for security scanning."""
 +    if tool_call.get("_atif_missing_outer_observation"):
@@ -99,7 +99,7 @@ index 634012b..e3e00a0 100644
 +                    call = {**call, "_atif_observation_status": UNOBSERVED_INNER_CALL,
 +                            "_atif_missing_outer_observation": True}
                  yield step, {**call, "_atif_raw_tool_index": raw_index}
- 
+
  
 diff --git a/src/skillevaluator/tier3/eval_core/judge_accounting.py b/src/skillevaluator/tier3/eval_core/judge_accounting.py
 new file mode 100644
@@ -545,10 +545,10 @@ index 542f4d6..a988579 100644
 +    allow_offline_main: bool = False,
  ) -> None:
      """Reject Docker-host escape features and remove sidecar host ports.
- 
+
 @@ -3479,6 +3482,11 @@ def _validate_and_sanitize_custom_compose(
              raise ValueError(f"Custom Docker Compose service '{svc_name}' cannot use a host bind mount")
- 
+
          allowed_service_keys = _COMPOSE_MAIN_ALLOWED_KEYS if svc_name == "main" else _COMPOSE_SIDECAR_ALLOWED_KEYS
 +        # Only the native bundled-verifier boundary can grant this exception.
 +        # Literal "none" removes networking; all other main overrides retain
@@ -564,7 +564,7 @@ index 542f4d6..a988579 100644
      """Keep separate-verifier Compose models inside the verifier env boundary."""
 -    from harbor.models.task.config import TaskConfig
 +    from harbor.models.task.config import NetworkMode, TaskConfig
- 
+
      allowed_env = set(verifier_env if verifier_env is not None else runtime_env or {})
      allowed_env.update(_VERIFIER_JUDGE_CONTROL_ENV_VARS)
      config = TaskConfig.model_validate(data)
@@ -583,7 +583,7 @@ index 542f4d6..a988579 100644
 +        offline = definition.bundled_tests and definition.config.network_mode == NetworkMode.NO_NETWORK
 +        # A context reused by any other verifier policy must remain restricted.
 +        contexts[context] = contexts.get(context, True) and offline
- 
+
 -    for context in dict.fromkeys(contexts):
 +    for context, allow_offline_main in contexts.items():
          if _has_symlink_component(context, paths.task_dir):
@@ -595,7 +595,7 @@ index 542f4d6..a988579 100644
                  sanitize=sanitize,
 +                allow_offline_main=allow_offline_main,
              )
- 
+
  
 diff --git a/src/skillevaluator/tier3/harbor/collector.py b/src/skillevaluator/tier3/harbor/collector.py
 index 04dabdf..2a271d2 100644
@@ -604,7 +604,7 @@ index 04dabdf..2a271d2 100644
 @@ -28,6 +28,8 @@ from itertools import islice
  from pathlib import Path, PurePosixPath, PureWindowsPath
  from typing import Any
- 
+
 +from skillevaluator.tier3.unscored_security import VERSION as DIAGNOSTIC_VERSION, project_security, merge_security
 +from skillevaluator.evaluation.tier3_findings import sanitize_grader_text
  from skillevaluator.tier3.attempt_verdict import attempt_verdict, scored_goal_accuracy
@@ -612,7 +612,7 @@ index 04dabdf..2a271d2 100644
  from skillevaluator.tier3.eval_core.atif_helpers import extract_tool_calls_as_dicts, get_skill_tool_calls
 @@ -921,6 +923,15 @@ def _is_agent_runtime_failure_trial(trial_dir: Path) -> bool:
      return bool(_agent_runtime_failure_reason(trial_dir))
- 
+
  
 +def _unique_diagnostic_keys(pairs):
 +    value = {}
@@ -664,7 +664,7 @@ index 04dabdf..2a271d2 100644
                  break
 -        if len(errors) >= len(DEFAULT_METRICS):
 -            break
- 
+
      if not found_failure:
          return None
 @@ -1076,6 +1090,12 @@ def _failed_judge_diagnostic(trial_dir: Path) -> dict[str, Any] | None:
@@ -683,7 +683,7 @@ index 04dabdf..2a271d2 100644
 @@ -1346,6 +1366,15 @@ def _copy_trial_artifacts(
              elif record:
                  manifest["skipped"].append(record)
- 
+
 +    src = trial_dir / "verifier" / "judge_accounting.json"
 +    if src.exists() or src.is_symlink():
 +        ok, record = _write_redacted_text_copy(src, trial_out / "judge_accounting.json", source_root=trial_dir)
@@ -704,10 +704,10 @@ index 04dabdf..2a271d2 100644
 +            safe_custom_details.update(_custom_outcome_diagnosis(custom_details))
          if safe_custom_details:
              data["custom_details"] = safe_custom_details
- 
+
 @@ -4247,6 +4278,20 @@ def _overall_score(reward: dict[str, Any]) -> float | None:
      return overall_score(reward)
- 
+
  
 +def _custom_outcome_diagnosis(details: dict[str, Any]) -> dict[str, Any]:
 +    """Retain only the fixed nonnumeric pilot verdict, never arbitrary evidence.
@@ -738,7 +738,7 @@ index 04dabdf..2a271d2 100644
 @@ -5883,6 +5930,28 @@ def _annotate_security_attribution(
          if not isinstance(security, dict):
              continue
- 
+
 +        evidence_limitations = {"unsupported_tool_wrapper", "unsupported_path_evidence"}
 +        pair = [reward, *(r for r in without_rewards if _entry_id(r, expected_id_set) == entry_id)]
 +        unknown_evidence = False
@@ -792,10 +792,10 @@ index 516a14a..f63aae6 100644
      unmeasured_cost_attempts: int = 0
 +    _accounting_sessions: set[str] = field(default_factory=set, repr=False)
      _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
- 
+
      def __post_init__(self) -> None:
 @@ -192,6 +195,15 @@ class BudgetController:
- 
+
      def record_usage(self, usage: dict[str, Any] | None, *, model: str | None = None) -> None:
          with self._lock:
 +            physical = usage.get("judge_accounting") if isinstance(usage, dict) else None
@@ -828,7 +828,7 @@ index 516a14a..f63aae6 100644
 +                    elif self.max_judge_calls is not None and self.used_judge_transport_attempts >= self.max_judge_calls:
 +                        self.exhausted_limit = "judge_transport_attempts"
              self._finished += 1
- 
+
      def mark_remaining(self, attempts: list[dict[str, Any]]) -> None:
 @@ -256,6 +281,8 @@ class BudgetController:
                  "used": {
@@ -840,7 +840,7 @@ index 516a14a..f63aae6 100644
                  },
                  "status": "exhausted" if self.exhausted_limit else "ok",
 diff --git a/src/skillevaluator/tier3/harbor/runner.py b/src/skillevaluator/tier3/harbor/runner.py
-index 54440de..fc6632f 100644
+index 54440de..855c335 100644
 --- a/src/skillevaluator/tier3/harbor/runner.py
 +++ b/src/skillevaluator/tier3/harbor/runner.py
 @@ -1414,7 +1414,7 @@ _HARBOR_LAUNCH_ENV = MappingProxyType({"HARBOR_TELEMETRY": "0", "PYTHON_DOTENV_D
@@ -852,11 +852,12 @@ index 54440de..fc6632f 100644
  _CLAUDE_CODE_VERSION = PINNED_RUNTIME_VERSIONS["claude-code"]
  # Harbor would otherwise install ``opencode-ai@latest``. CI's managed local
  # bootstrap installs this same release, so every CI mode shares one pin.
-@@ -4716,6 +4716,51 @@ def _budget_usage(job_dir: Path) -> dict[str, Any]:
+@@ -4716,6 +4716,52 @@ def _budget_usage(job_dir: Path) -> dict[str, Any]:
              judge_calls += sum(1 for attempt in attempts if _counts_as_judge_call(attempt))
      if saw_judge_artifact:
          usage["judge_calls"] = judge_calls
 +    from skillevaluator.tier3.eval_core import judge_accounting
++    from skillevaluator.utils.secure_fs import SecurePathError
 +    population = []
 +    seen_trials = set()
 +    trial_dirs = set()
@@ -893,7 +894,7 @@ index 54440de..fc6632f 100644
 +                        population.append(read_accounting(path))
 +                    except (OSError, ValueError):
 +                        population.append(None)
-+    except OSError:
++    except (OSError, SecurePathError):
 +        population.append(None)
 +    if not 0 <= expected_trials <= 100000:
 +        raise ValueError("Invalid accounting population")
@@ -902,16 +903,16 @@ index 54440de..fc6632f 100644
 +    if not population:
 +        usage["judge_accounting"]["complete"] = False
      return usage
- 
+
  
 diff --git a/src/skillevaluator/tier3/harbor/templates/eval.py b/src/skillevaluator/tier3/harbor/templates/eval.py
 index 71d0b83..2df338b 100644
 --- a/src/skillevaluator/tier3/harbor/templates/eval.py
 +++ b/src/skillevaluator/tier3/harbor/templates/eval.py
 @@ -51,9 +51,15 @@ from urllib.parse import quote, unquote_to_bytes, urlparse, urlsplit
- 
+
  import idna
- 
+
 +
  _SCRIPT_TESTS_DIR = Path(__file__).resolve().parent
  if str(_SCRIPT_TESTS_DIR) not in sys.path:
@@ -926,7 +927,7 @@ index 71d0b83..2df338b 100644
  except ImportError:  # pragma: no cover -- older task bundles
 @@ -1766,6 +1772,56 @@ def _compute_bounded_retry_delay(retry_after_str, *, attempt, base_delay, max_de
      return sleep_duration
- 
+
  
 +def _openai_accounting_usage(raw):
 +    try:
@@ -1016,7 +1017,7 @@ index 71d0b83..2df338b 100644
              data=json.dumps(payload).encode(),
              headers={"Content-Type": "application/json", "Authorization": f"Bearer {_key}"},
          )
- 
+
 +        request._aeb_provider = provider
 +        request._aeb_model = model
 +        return request
@@ -1026,7 +1027,7 @@ index 71d0b83..2df338b 100644
          raw_response = _urlopen_with_schema_fallback(
 @@ -2258,6 +2311,7 @@ def _record_judge_call(provenance, requested_model, sent_model):
          )
- 
+
  
 +@_accounting.model_call
  def _call_judge_model(prompt, provider, model, max_tokens, temperature, response_schema, schema_name, provenance):
@@ -1062,7 +1063,7 @@ index 71d0b83..2df338b 100644
          _ACTIVE_JUDGE_CALLS.reset(calls_token)
      normalized = _normalize_required_judge_result(metric, result, allow_not_applicable=allow_not_applicable)
 @@ -3866,6 +3926,7 @@ def _numeric_reward_payload(result, overall):
- 
+
  
  def write_reward_outputs(result, overall):
 +    _accounting.finish()
@@ -1070,16 +1071,16 @@ index 71d0b83..2df338b 100644
      # recursively so credential text cannot rename Harbor's reward metrics.
      sanitized_result = {key: _sanitize_error_value(value) for key, value in result.items()}
 @@ -3940,6 +4001,7 @@ def _dependency_context(skill: str, *, skills_root: Path = Path("/workspace/skil
- 
+
  
  def main():
 +    _accounting.start(_verifier_output_dir() / "judge_accounting.json")
      entry = json.loads(ENTRY_PATH.read_text(encoding="utf-8"))
      traj, traj_meta = load_trajectory_with_fallback(ATIF_PATH, ATIF_PATH.parent)
- 
+
 @@ -3967,75 +4029,13 @@ def main():
      )
- 
+
      if not traj:
 -        # Without a trajectory every metric the case defines fails, but a judge
 -        # without its reference input stays N/A exactly as on the judged path,
@@ -1156,11 +1157,11 @@ index 71d0b83..2df338b 100644
          write_reward_outputs(result, 0.0)
 -        return
 +        raise SystemExit(1)
- 
+
      tool_calls = extract_tool_calls_as_dicts(traj)
      skill_tools = get_skill_tool_calls(traj)
 @@ -4057,6 +4057,17 @@ def main():
- 
+
      # ── Eval 1: security ─────────────────────────────────────────────────
      security_result = check_security(traj, tool_calls, expected_skill, acceptable_skills)
 +    uncertain = any(tc.get("observation_status") in {AMBIGUOUS_OUTER_EXEC_OBSERVATION, UNOBSERVED_INNER_CALL}
@@ -1176,7 +1177,7 @@ index 71d0b83..2df338b 100644
 +        raise SystemExit(1)
      security_score = security_result["score"]
      details["security"] = security_result
- 
+
 diff --git a/src/skillevaluator/tier3/unscored_security.py b/src/skillevaluator/tier3/unscored_security.py
 new file mode 100644
 index 0000000..3946166
