@@ -1,4 +1,25 @@
-# Completed PR #150 judge-only calibration
+# Pester clarification transfer decision
+
+Decide whether to adopt the existing 22-line `powershell-pester-6`
+return-contract clarification. The exact candidate passed 3/3 development
+cases versus 0/3 for its own absent baseline. An earlier current cohort
+measured 0/3 versus 0/3 for its own absent baseline. Those pairs provide
+separate development evidence. The later current transfer pair stopped after
+three measured passes (one current and two absent). Candidate transfer and
+regression safety remain unmeasured. [Retained transfer and closure receipt](https://github.com/thetechgy/agent-engineering-baseline/blob/5ce0454cb79f56a8880405be228ac4320be3f94f/docs/evaluations/pester-transfer-decision/execution/EXECUTION.md)
+
+Pinned Pester supports the rejected literal row-key template. The versioned
+admission correction supports bare keys common to the same block's inline
+rows. Original grades and closed allocations remain historical. The
+[frozen criteria](pester-transfer-decision/DECISION.md) require two fresh
+transfer pairs, current first, each with its own absent baseline and three
+repetitions per arm. The comparison across present arms is indirect.
+
+**Next action** — Review the draft PR's exact-revision qualification receipt.
+The receipt governs when the bounded, unrun comparison is ready for a
+separate dispatch decision.
+
+## Completed PR #150 judge-only calibration, retained as history
 
 **Useful for narrow advisory use.** The single authorized
 [run 44152839720/A1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/44152839720)

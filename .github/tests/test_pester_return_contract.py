@@ -45,6 +45,10 @@ class ReturnContract(unittest.TestCase):
                 loader = next(n for n in ast.parse(raw).body if isinstance(n, ast.FunctionDef) and n.name == 'load')
                 hooks = []
                 for condition, expected in {
+                    "definition.get('adapter') == 'batch-summary-static-templates'":
+                        "if definition.get('adapter') == 'batch-summary-static-templates':\n"
+                        "        from pester_static_templates_task import StaticTemplateBatchSummary\n"
+                        "        adapters['batch-summary-static-templates'] = StaticTemplateBatchSummary",
                     "definition.get('adapter') == 'gh-permission'":
                         "if definition.get('adapter') == 'gh-permission':\n"
                         "        from gh_permission_task import GhPermission\n"

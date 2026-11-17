@@ -16,6 +16,8 @@ on:
           - pester-return-development-candidate-v1
           - pester-return-transfer-current-v3
           - pester-return-transfer-candidate-v3
+          - pester-return-transfer-current-v6
+          - pester-return-transfer-candidate-v6
       preparation_artifact:
         description: 'Credential-free fresh admission of an existing preparation artifact ID; allocation must be empty.'
         type: string
@@ -125,7 +127,7 @@ jobs:
 
   retrospective:
     name: Grade authenticated retained submission without inference
-    if: inputs.allocation == '' && inputs.preparation_artifact == '' && inputs.campaign != 'gh-runtime-090-v1' && inputs.campaign != 'gh-task-permission-v2' && inputs.campaign != 'judge-calibration-090-v1'
+    if: inputs.allocation == '' && inputs.preparation_artifact == '' && inputs.campaign == 'boolean-effectiveness-v1'
     permissions:
       contents: read
     runs-on: ubuntu-latest
