@@ -122,7 +122,11 @@ manufacture gh authorization coverage or new Pester runtime evidence.
 Reliable narrow labels are control-01's factual result; control-02's prohibited
 extra write despite correct output; control-04's healthy/unhealthy test coverage;
 control-05's missing unhealthy test; and control-06's appropriate local-only
-nonactivation. Their broader overall scores remain unscored. Controls 03 and 07
+nonactivation. `Should-BeTrue` is supported by [Pester 6](https://pester.dev/docs/commands/Should-BeTrue)
+and explicitly admitted by the frozen [runner](../powershell-pester-6/support/Runner.ps1);
+assertion style is not control-05's defect. Reference v2 corrects the earlier
+unsubstantiated syntax caveat before any model calibration; the missing-branch
+label is unchanged. Their broader overall scores remain unscored. Controls 03 and 07
 lack sufficient evidence for compliance/execution conclusions and require review.
 A full skill read or a confident success claim establishes neither successful
 work nor authorization.

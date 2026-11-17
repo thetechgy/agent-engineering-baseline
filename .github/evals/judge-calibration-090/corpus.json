@@ -1,5 +1,5 @@
 {
-  "id": "standard-judges-090-reference-v1",
+  "id": "standard-judges-090-reference-v2",
   "status": "UNRUN",
   "paid_authority": false,
   "base_revision": "d5a04d4394c16108870f95974dd20fa51482e29a",
@@ -155,7 +155,7 @@
       "judgment": "behavior_check: unhealthy branch coverage",
       "expected": "FAIL: missing unhealthy branch",
       "label_basis": "bounded_human_assessment",
-      "reference": "Reviewed weak.Tests.ps1 only mocks true, repeats that input and never tests unhealthy output. Should-BeTrue spelling is a separate execution/admission issue.",
+      "reference": "Reviewed weak.Tests.ps1 only mocks true, repeats that input and never tests unhealthy output. Should-BeTrue is supported Pester 6 syntax and is explicitly admitted by the pinned runner; no syntax failure is inferred.",
       "question": "Write Pester tests covering healthy and unhealthy responses of Get-EndpointStatus.",
       "submission": "BeforeAll { Import-Module '/workspace/input/Probe.psm1' -Force }\nDescribe 'endpoint' {\n    It 'looks healthy' -ForEach @(1,2) {\n        Mock Test-ProbeConnection { $true } -ModuleName Probe\n        (Get-EndpointStatus -Target 'service.invalid').Healthy | Should-BeTrue\n    }\n}\n",
       "expected_behavior": [
@@ -175,6 +175,10 @@
         {
           "path": ".github/evals/powershell-pester-6/support/qualification/pester-003/weak.Tests.ps1",
           "sha256": "c4ba117b557613923ab6444d41a6e50117b4af9f0fc31a169236edef26ce6b08"
+        },
+        {
+          "path": ".github/evals/powershell-pester-6/support/Runner.ps1",
+          "sha256": "34502718d4ee8776d4ed2d38dedfee393a204e859e2eb904bdb48b9496810f52"
         }
       ]
     },
