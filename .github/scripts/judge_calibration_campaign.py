@@ -10,6 +10,8 @@ import os
 from pathlib import Path
 import signal
 import time
+import urllib.error
+import urllib.request
 
 import evaluation_campaign_core as core
 import evaluation_campaign_protocol as shared
@@ -19,7 +21,7 @@ import judge_accounting as accounting
 import judge_calibration_inputs as inputs
 import skill_reports as reports
 
-SCENARIOS = ('complete', 'schema-fallback', 'retry', 'retry-exhaustion', 'unknown-retry', 'refusal', 'malformed',
+SCENARIOS = ('complete', 'schema-fallback', 'retry', 'retry-exhaustion', 'redirect-stop', 'unknown-retry', 'refusal', 'malformed',
              'missing-usage', 'malformed-usage', 'contradictory-usage', 'timeout', 'interruption',
              'request-stop', 'usage-stop', 'cost-stop', 'cache-cost-stop', 'deadline-stop', 'retention-failure')
 
@@ -166,6 +168,11 @@ def run(root, task, *, live=False, preparation=None, fixture=None):
     original_read = verifier._accounted_read
     original_reward = verifier.SKILL_EVALUATOR_REWARD_JSON
     original_alarm = signal.getsignal(signal.SIGALRM)
+    original_redirect = urllib.request.HTTPRedirectHandler.redirect_request
+    def refuse_redirect(handler, request, response, code, message, headers, destination):
+        ledger.setdefault('stop_reason', 'unsupported_judge_redirect')
+        # Preserve the original response body for the existing accounting reader.
+        raise urllib.error.HTTPError(request.full_url, code, 'Judge redirects are unsupported', headers, response)
     def bounded_read(request, timeout):
         core.require(request.full_url == p['request']['endpoint']
                 and getattr(request, '_aeb_provider', None) == 'openai'
@@ -183,6 +190,17 @@ def run(root, task, *, live=False, preparation=None, fixture=None):
                      and 'reasoning_effort' not in payload and 'temperature' not in payload,
                      'Judge request settings drift')
         return original_read(request, min(timeout, max(0.001, limits['seconds'] - (time.monotonic() - started))))
+
+    def retained_result(value):
+        # The native collector redacts retained text. Judge-only records have no
+        # agent collector, so use the same pinned judge-evidence redactor here.
+        if isinstance(value, str):
+            return verifier._redact_judge_evidence(value)
+        if isinstance(value, dict):
+            return {verifier._redact_judge_evidence(key): retained_result(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [retained_result(item) for item in value]
+        return value
 
     def attempt(row, total):
         core.require(ledger['frozen'] == shared.frozen(task), 'Source drift before judge record')
@@ -221,6 +239,7 @@ def run(root, task, *, live=False, preparation=None, fixture=None):
             verifier._accounting._ACTIVE.reset(token)
             verifier._ACTIVE_JUDGE_EVIDENCE.reset(evidence_token)
             verifier._ACTIVE_JUDGE_DEADLINE.reset(deadline_token)
+            results = retained_result(results)
             row.update(results=results, state='completed' if not ledger.get('stop_reason') else 'failed')
             row['accounting'] = reports.read_json(record_root / 'judge_accounting.json')
             observation = accounting.summarize([row['accounting']])
@@ -246,6 +265,7 @@ def run(root, task, *, live=False, preparation=None, fixture=None):
     try:
         with configured(values):
             verifier._accounted_read = bounded_read
+            urllib.request.HTTPRedirectHandler.redirect_request = refuse_redirect
             core.drive(ledger, attempt, save=save, resources=lambda: signal.getsignal(signal.SIGALRM),
                        baseline=original_alarm, threshold=limits['cost'],
                        before_attempt=lambda row: eligible())
@@ -255,9 +275,11 @@ def run(root, task, *, live=False, preparation=None, fixture=None):
         # Keep the first failure; report/retention failures are additional evidence.
     finally:
         verifier._accounted_read = original_read
+        urllib.request.HTTPRedirectHandler.redirect_request = original_redirect
         verifier.SKILL_EVALUATOR_REWARD_JSON = original_reward
         ledger['resource_disposal'] = (signal.getsignal(signal.SIGALRM) == original_alarm
-                                      and signal.getitimer(signal.ITIMER_REAL) == (0.0, 0.0))
+                                      and signal.getitimer(signal.ITIMER_REAL) == (0.0, 0.0)
+                                      and urllib.request.HTTPRedirectHandler.redirect_request is original_redirect)
         ledger['accounting_summary'] = summary(rows)
         save()
     return ledger

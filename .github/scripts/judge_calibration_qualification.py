@@ -13,6 +13,7 @@ import sys
 import tempfile
 import threading
 import time
+import urllib.request
 
 from evaluation_campaign_core import require
 import evaluation_campaign_protocol as shared
@@ -21,12 +22,14 @@ import judge_calibration_campaign as campaign
 import judge_transport_090 as transport
 import skill_reports as reports
 
-WIRE = {'schema-fallback': 'schema_fallback', 'retry': 'transient_retry', 'retry-exhaustion': 'retry_exhausted_schema', 'unknown-retry': 'transient_retry',
+WIRE = {'schema-fallback': 'schema_fallback', 'retry': 'transient_retry', 'retry-exhaustion': 'retry_exhausted_schema',
+        'redirect-stop': 'redirect', 'unknown-retry': 'transient_retry',
         'refusal': 'refusal', 'malformed': 'wrong_shape', 'missing-usage': 'missing_usage',
         'malformed-usage': 'malformed_usage', 'contradictory-usage': 'inconsistent_usage', 'timeout': 'timeout', 'interruption': 'interrupt',
         'request-stop': 'transient_retry'}
 EXPECTED = {'unknown-retry': 'unknown_judge_accounting', 'refusal': 'judge_unavailable',
-            'retry-exhaustion': 'judge_unavailable', 'malformed-usage': 'unknown_judge_accounting',
+            'retry-exhaustion': 'judge_unavailable', 'redirect-stop': 'unsupported_judge_redirect',
+            'malformed-usage': 'unknown_judge_accounting',
             'malformed': 'judge_unavailable', 'missing-usage': 'unknown_judge_accounting',
             'contradictory-usage': 'unknown_judge_accounting', 'timeout': 'judge_unavailable',
             'interruption': 'interrupted', 'request-stop': 'judge_request_limit',
@@ -46,6 +49,18 @@ class Observer(transport.Responder):
             body['usage']['prompt_tokens_details']['cache_write_tokens'] = 15 if self.scenario == 'cache-cost-stop' else 4
             self.requests[-1].update(response=body, supplied_usage=body['usage'])
             raw = json.dumps(body).encode()
+        if getattr(self, 'echo_sentinel', False) and status == 200:
+            response = json.loads(body['choices'][0]['message']['content'])
+            response['summary'] = transport.SENTINEL
+            for result in response['results']:
+                result['reason'] = transport.SENTINEL
+                result[transport.SENTINEL] = transport.SENTINEL
+            body['choices'][0]['message']['content'] = json.dumps(response)
+            self.requests[-1]['response'] = body
+            raw = json.dumps(body).encode()
+        if self.scenario == 'redirect':
+            status = 302
+            self.requests[-1]['status'] = status
         if self.complete_errors and status != 200:
             body = json.loads(raw)
             body['usage'] = {'prompt_tokens': 19, 'completion_tokens': 7, 'total_tokens': 26}
@@ -68,8 +83,9 @@ class Fixture:
         self.observer.scenario = WIRE.get(self.name, 'cache-cost-stop' if self.name == 'cache-cost-stop' else 'valid')
         if self.name in ('complete', 'schema-fallback', 'retry') and row['position'] == 3:
             self.observer.scenario = 'unknown_behavior'
-        self.observer.complete_errors = self.name in ('schema-fallback', 'retry', 'retry-exhaustion', 'request-stop')
+        self.observer.complete_errors = self.name in ('schema-fallback', 'retry', 'retry-exhaustion', 'request-stop', 'redirect-stop')
         self.observer.metric_counts = {}
+        self.observer.echo_sentinel = self.name == 'complete' and row['position'] == 2
         if self.name == 'retention-failure':
             # Real failed sidecar replacement: persist must observe the OSError
             # and the transport guard must refuse the first HTTP request.
@@ -85,6 +101,7 @@ def worker(output, task):
     output.mkdir(parents=True, exist_ok=False)
     observer = Observer()
     baseline = {t.ident for t in threading.enumerate()}
+    original_redirect = urllib.request.HTTPRedirectHandler.redirect_request
     runs = []; summaries = {}
     with observer.boundary() as port:
         blocked = []
@@ -97,9 +114,17 @@ def worker(output, task):
         for scenario in campaign.SCENARIOS:
             first = len(observer.requests)
             root = output / 'scenarios' / scenario / 'evidence'
-            value = campaign.execute(root.parent, task, fixture=Fixture(scenario, observer))
+            try:
+                value = campaign.execute(root.parent, task, fixture=Fixture(scenario, observer))
+            except BaseException:
+                try: reports.write_json(root / 'request-observer.json', observer.requests[first:])
+                except Exception: sys.stderr.write('Observer retention failed; primary failure preserved.\n')
+                raise
+            reports.write_json(root / 'request-observer.json', observer.requests[first:])
             require((root / 'consolidated/report.html').is_file()
                     and not (root.parent / 'attempt-ledger.json').exists(), 'Live artifact layout differs')
+            require(urllib.request.HTTPRedirectHandler.redirect_request is original_redirect,
+                    'Redirect policy leaked after execution')
             requests = observer.requests[first:]
             actual = value['accounting_summary']
             require(actual['http_attempts'] == len(requests), 'Independent request observer differs: ' + scenario)
@@ -113,6 +138,9 @@ def worker(output, task):
                 require(len(requests) == expected, 'Retry/schema request count differs')
                 require(value['entries'][2]['results']['behavior_check']['results'][0]['passed'] is None,
                         'Unavailable behavior became a negative verdict')
+                if scenario == 'complete':
+                    require(transport.SENTINEL not in json.dumps(value['entries'][1]['results']),
+                            'Configured credential escaped result retention')
             else:
                 require(launched == 1 and value.get('stop_reason') == EXPECTED[scenario],
                         'Extra record or wrong primary stop: ' + scenario + ': ' + str(value.get('stop_reason')))
@@ -125,7 +153,6 @@ def worker(output, task):
                 require(not any(label in prompt for label in ('label_basis', 'UNSCORED / review required',
                     'FAIL authorization; correctness remains PASS', '"observed":', 'paid_authority', 'source_identities')),
                     'Calibration acceptance metadata entered prompt')
-            reports.write_json(root / 'request-observer.json', requests)
             summaries[scenario] = {'records_launched': launched, 'http_attempts': len(requests),
                                    'stop_reason': value.get('stop_reason'), 'accounting_complete': actual['complete']}
             runs.append(root)

@@ -84,6 +84,7 @@ def protocol(task):
             'Unsupported judge protocol')
     require(request == {'provider': 'openai', 'model': 'gpt-5.6-sol',
                 'endpoint': 'https://api.openai.com/v1/chat/completions',
+                'follow_redirects': False,
                 'retry_policy': 'strict', 'fallback_policy': 'replace', 'fallback_models': [],
                 'transport_retries': 1, 'max_requests_per_judgment': 2, 'max_completion_tokens': 32768,
                 'reasoning_effort': None, 'temperature': None, 'stream': False, 'judge_seconds': 180},

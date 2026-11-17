@@ -139,7 +139,7 @@ class RetainedEvidence(unittest.TestCase):
         paths = next(s['with']['path'] for s in workflow['jobs']['live']['steps']
                      if s.get('name') == 'Retain all slots and partial native evidence after stopping')
         self.assertIn('${{ runner.temp }}/campaign-live/evidence/', paths)
-        for scenario in ('complete', 'interruption', 'retention-failure', 'cache-cost-stop'):
+        for scenario in ('complete', 'interruption', 'retention-failure', 'cache-cost-stop', 'redirect-stop'):
             root = self.reference.parent / 'scenarios' / scenario
             self.assertFalse((root / 'attempt-ledger.json').exists())
             self.assertTrue((root / 'evidence/consolidated/report.html').is_file())
@@ -148,6 +148,16 @@ class RetainedEvidence(unittest.TestCase):
             with tempfile.TemporaryDirectory() as directory:
                 reproduced = campaign.render([root / 'evidence'], Path(directory) / 'report', self.task)
             self.assertEqual(reproduced, (root / 'evidence/consolidated/report.html').read_bytes())
+
+    def test_valid_behavior_text_is_redacted_without_changing_verdicts(self):
+        from judge_transport_090 import SENTINEL
+        root = self.reference.parent / 'scenarios/complete/evidence'
+        record = campaign.admit_run(root, self.task)['entries'][1]
+        self.assertTrue(record['results']['behavior_check']['results'][0]['passed'])
+        for path in (root / 'attempt-ledger.json', root / 'records/control-02/judgments.json',
+                     root / 'records/control-02/judge_attempts.json', root / 'consolidated/report.html',
+                     self.reference / 'consolidated/report.html'):
+            self.assertNotIn(SENTINEL, path.read_text())
 
 
 if __name__ == '__main__': unittest.main()

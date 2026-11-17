@@ -37,6 +37,8 @@ use the frozen expected behaviors directly.
 The guard checks known response accounting, retained completed evidence, source
 identity, request/usage/cost limits and deadline before every additional HTTP
 request, including retries. The scheduler checks eligibility before every record.
+HTTP redirects are explicitly unsupported and refused before any follow-up HTTP
+request. This keeps urllib's implicit redirect traffic within the declared count.
 The per-judge wall limit remains 180 seconds, request timeout at most 90 seconds;
 the serial campaign deadline is 1,260 seconds. Missing/inconsistent essential
 usage, uncertain completion, infrastructure failure or failed retention stops
@@ -56,6 +58,9 @@ Live execution and qualification use the same execution/report finish function.
 Ledgers, judgments, accounting, diagnostics and consolidated reports are written
 under the campaign's `evidence/` subtree, matching the existing live artifact
 upload. Success and stop fixtures reproduce that exact retained subtree.
+Retained result text passes through the pinned evaluator's existing credential
+redactor, including successful behavior explanations; numeric scores and verdicts
+are unchanged. A fake sentinel echo exercises that boundary without credentials.
 
 ## Actual workflow entries
 
@@ -101,11 +106,13 @@ reinstalls the same pinned owner and reproduces the report from retained data.
 
 The non-forwarding loopback responder independently counts all requests from the
 real evaluator. A fresh child has an empty home, an allowlisted environment, only
-a fixture sentinel and socket/DNS denial outside that responder. Eighteen
+a fixture sentinel and socket/DNS denial outside that responder. Nineteen
 scenarios cover seven-record completion, explicit N/A and unknown behavior,
 schema downgrade, retry/exhaustion, refusal, malformed response, missing/malformed/
 contradictory usage, actual timeout/interruption, request/usage/cost/deadline stops
-and a real failed sidecar write. Observer counts must equal ledger counts; stopped
+and a real failed sidecar write. A redirect control independently observes a
+forbidden follow-up request before the refusal guard is applied. Observer counts
+must equal ledger counts; stopped
 controls may not issue a next request or start a next record. Server/handler
 threads and required-judge alarm state must return to baseline after completion.
 
