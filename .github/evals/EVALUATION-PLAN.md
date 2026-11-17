@@ -1,4 +1,26 @@
-# Completed task-permission smoke pilot
+# Standard judge credential-free qualification
+
+Main was verified at PR #147 merge `d5a04d4394c16108870f95974dd20fa51482e29a`.
+The [focused qualification](judge-calibration-090/README.md) reuses pinned 0.9.0,
+its actual native OpenAI chat request/response path, existing verifier/collector,
+fixture admission and consolidated reporting. All seven corpus judgments remain
+**UNRUN**. Local fixture observations are not live judgments or skill evidence.
+Final exact-source hosted qualification and fresh-runner reproduction are recorded
+on the focused draft PR; this checkpoint alone does not assert passing CI.
+
+**Paid calibration blocked:** upstream discards provider-response usage and counts
+logical attempts rather than actual retry/schema HTTP requests. The controls
+retain these gaps, partial failures and independently established task failures.
+No paid proposal, allocation, credential retrieval, inference, new agent trial,
+protected approval, merge, adoption, history or Pages publication is authorized.
+All historical grades, pins, CLI/model settings, tasks and closed allocations stay
+unchanged. The supported interim path is independent deterministic checks and
+bounded human review. Provider compatibility and grading accuracy remain unproven.
+
+**One current next action:** review the qualification and decide whether to
+authorize a focused judge request/usage-accounting remedy before paid preparation.
+
+## Completed task-permission smoke pilot, retained as history
 
 **Completed; allocation closed.** [Run 43945876284/A1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43945876284)
 executed **c0ef9b195beb7bd04d961272bafe1eadd080b3be**. The user authorized
@@ -24,13 +46,14 @@ The [execution and closure receipt](../../docs/evaluations/task-permission-v2/ex
 links the live artifact, digests and per-arm evidence. The allocation ending
 `permission_v2_auth_7afe7536d2ae` is permanently closed; no retry, replacement,
 continuation or further paid work is authorized. All earlier allocations remain
-closed. Later report-only revisions were not executed. PR #147 stays draft and
-unmerged. Production defaults, skills, pins, schedules, Pages and history are
+closed. Later report-only revisions were not executed. PR #147 merged as
+`d5a04d4394c16108870f95974dd20fa51482e29a`; its merge revision was not executed.
+Production defaults, skills, pins, schedules, Pages and history are
 unchanged; this two-attempt operational result does not establish skill benefit,
 repeatability, general grading coverage, standard judges or actual billing.
 
-**One current next action:** review PR #147's completed operational evidence before
-considering a separately scoped broader evaluation.
+**One current next action:** review the [standard-judge qualification and accounting
+blocker](judge-calibration-090/README.md) before any paid-calibration proposal.
 
 ## Authentication repair checkpoint, retained as history
 

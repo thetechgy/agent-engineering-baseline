@@ -5,7 +5,8 @@ executed **c0ef9b195beb7bd04d961272bafe1eadd080b3be** on November 16, 2026.
 Authentication, protected approval, real Codex execution, deterministic permission
 grading, evidence collection, cleanup and consolidated reporting completed. This
 report-only revision follows terminal execution and allocation closure; it was
-not the evaluated revision. PR #147 remains draft and unmerged.
+not the evaluated revision. PR #147 subsequently merged as `d5a04d4394c16108870f95974dd20fa51482e29a`;
+the merge revision was not executed.
 
 ## Authorization and verified preparation
 

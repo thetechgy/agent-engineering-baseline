@@ -61,6 +61,11 @@ def select(paths, *, complete=True):
             selected.update(GH)
         elif path.startswith(('.github/evals/powershell-pester-6/', '.github/evals/pester-')):
             selected.update(PESTER)
+        elif path.startswith('.github/evals/judge-calibration-090/') or path in (
+                '.github/scripts/judge_transport_090.py', '.github/scripts/qualify_standard_judges.py',
+                '.github/scripts/qualify_benchmark_evidence.py', '.github/tests/test_standard_judges.py'):
+            # Qualification-only leaves; no production task/runtime or scoring consumer.
+            selected.update(('contracts', 'evaluator'))
         elif path.startswith('.github/scripts/qualify_scanner') or path in (
                 '.github/scripts/skill_review.py', '.github/scripts/skill_report_reviews.py',
                 '.github/scripts/skill_pages.py', '.github/scripts/skill_history.py',
