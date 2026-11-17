@@ -1490,7 +1490,7 @@ def behavioral_identity_missing(data):
 def security_observation_fields(obs, data, references):
     if 'security_evidence' not in obs:
         return ()
-    require(data['policy'].get('producer_profile') == profiles.NEXT['id'],
+    require(data['policy'].get('producer_profile') in (profiles.NEXT['id'], profiles.ACCOUNTING['id']),
             'Unversioned security diagnostic')
     unscored_security.validate_security(obs['security_evidence'])
     reports.public_strings(obs['security_evidence'])
@@ -1649,9 +1649,11 @@ def validate_evidence(data, *, public=False, _observed_at=None):
                     (tail == ['trials', obs['native_trial'], 'failure.json'] and ref['locator'] == []
                      or tail == ['trials', obs['native_trial'], 'reward.json']
                         and ref['locator'] == ['details', 'security']))
+                accounting_ref = (data['policy'].get('producer_profile') == profiles.ACCOUNTING['id']
+                    and tail == ['trials', obs['native_trial'], 'judge_accounting.json'] and ref['locator'] == [])
                 require(trial_result and ref['locator'] in ([], ['verifier_result'], ['verifier_result', 'rewards'])
                         or tail in (['trials', obs['native_trial'], 'reward.json'], ['summary.json'])
-                        and ref['locator'] == [] or diagnostic_ref, 'Observation reference origin mismatch')
+                        and ref['locator'] == [] or diagnostic_ref or accounting_ref, 'Observation reference origin mismatch')
                 trial_result_found |= trial_result
             require(trial_result_found, 'Observation reference origin mismatch')
     require(type(data['arms']) is list and len(data['arms']) <= 2, 'Invalid arms')
@@ -2454,7 +2456,7 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
         limitations.add('metadata_missing')
     producer = profiles.runtime(versions, owning=True)
     if benchmark_meta is not None:
-        require(producer is profiles.NEXT, 'Versioned benchmark requires offline-v3')
+        require(producer['id'] == profiles.benchmark_profile(benchmark_meta['profile'])['producer'], 'Versioned benchmark producer mismatch')
     expected_scoring = producer['scoring']
     if result.get('score_policy') is not None:
         require(result['score_policy'] == expected_scoring, 'Contradictory native scoring identity')
@@ -2733,7 +2735,7 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
                 if attempt['attempt'] is None:
                     limitations.add('metadata_missing')
                 diagnostic = None
-                if producer is profiles.NEXT and reward is not None and reward.get('evaluation_status') == 'failed' and 'trial_id' not in reward:
+                if producer in (profiles.NEXT, profiles.ACCOUNTING) and reward is not None and reward.get('evaluation_status') == 'failed' and 'trial_id' not in reward:
                     failure_path = path.with_name('failure.json')
                     require(failure_path in scanned_entries, 'Unscored diagnostic lacks native failure identity')
                     validate_unscored_diagnostic(reward, read_member(failure_path), trial_result, case, arm, producer, versioned=benchmark_meta is not None)
@@ -2781,7 +2783,7 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
                     obs_refs.append(ref(reward_path))
                 if diagnostic is not None:
                     obs_refs.append(ref(failure_path))
-                    if producer is profiles.NEXT:
+                    if producer in (profiles.NEXT, profiles.ACCOUNTING):
                         obs_refs.append(ref(reward_path, ('details', 'security')))
                 obs = {'id': observation_id(run.name, arm, case, native_id, trial, attempt['attempt']),
                        'arm': arm, 'case_id': case, 'attempt': attempt['attempt'], 'native_id': native_id,
@@ -2789,10 +2791,25 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
                        'scores': scores, 'rubric_pass': attempt.get('passed'),
                        'deterministic_gate': deterministic.get('gh_gate'),
                        'deterministic_scores': {k: deterministic.get('gh_' + k) for k in GATE_FIELDS}, 'references': obs_refs}
-                if diagnostic is not None and producer is profiles.NEXT:
+                if diagnostic is not None and producer in (profiles.NEXT, profiles.ACCOUNTING):
                     obs['security_evidence'] = copy.deepcopy(diagnostic['details']['security'])
                 observed.append(obs)
                 if benchmark_meta is not None:
+                    if producer is profiles.ACCOUNTING:
+                        import judge_accounting
+                        accounting_path = path.parent / 'judge_accounting.json'
+                        trial_result = copy.deepcopy(trial_result)
+                        accounting = None
+                        state = 'absent'
+                        if accounting_path in scanned_entries:
+                            try:
+                                raw_accounting = read_member(accounting_path)
+                                obs['references'].append(ref(accounting_path))
+                                accounting = judge_accounting.validate(raw_accounting)
+                                state = 'observed'
+                            except ValueError:
+                                state = 'invalid'
+                        trial_result['_judge_accounting'] = {'status': state, 'evidence': accounting}
                     benchmark_rows.append((copy.deepcopy(obs), diagnostic or reward, trial_result))
         cardinality = agent.get('num_trials_with' if arm == 'with_skill' else 'num_trials_without')
         if cardinality is not None:
@@ -3365,7 +3382,7 @@ def validate_unscored_diagnostic(reward, failure, trial, case_id, arm, producer=
     """
     allowed = {'metric_set', 'evaluation_status', 'entry_id', 'evaluation_errors',
                'agent', 'variant', 'model', 'model_source'}
-    current = producer is profiles.NEXT
+    current = producer in (profiles.NEXT, profiles.ACCOUNTING)
     if current:
         allowed |= {'diagnostic_version', 'diagnostic_trial', 'details'}
         require(reward.get('diagnostic_version') == unscored_security.VERSION
@@ -3498,7 +3515,7 @@ def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
     if profile_id is None and campaign_purpose(purpose):
         profile_id = purpose
     if profile_id is None and purpose in ('skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-effectiveness-v28'
+        profile_id = 'pester-effectiveness-v29'
     if profile_id is None and name == 'powershell-pester-6' and purpose in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
         profile_id = 'pester-cli-pilot-retained-v17'
     if profile_id is None and name == 'gh' and purpose == 'oracle_qualification':

@@ -115,3 +115,13 @@ The original patch and `evaluator-0.9-offline-v2.json` remain exact replay input
 use repository revision `3fa44f7` and its setup for offline-v2 native replay.
 Current data-only consumers admit both public producer identities explicitly.
 See the [repair contract and qualification](../../docs/evaluations/unscored-security/README.md).
+
+## Opt-in 0.9.0 judge accounting successor
+
+`skillevaluator-v0.9.0-accounting-v1.patch` preserves the offline-v3 safeguards and
+adds versioned OpenAI judge transport/usage observations, bounded collection and
+the existing budget checkpoint. `candidate-accounting` selects it explicitly;
+`candidate-next`, production and all retained owners keep their original patch.
+See [the contract and removal path](../evals/judge-calibration-090/ACCOUNTING.md).
+The shared ledger source in `.github/scripts/judge_accounting.py` must exactly
+match the module staged by this patch. No dependency refresh is included.

@@ -17,7 +17,7 @@ import skill_reports as reports
 class CorpusTests(unittest.TestCase):
     def test_qualification_leaves_select_existing_owners(self):
         import ci_routing
-        for name in (*qualification.SOURCES, '.github/evals/judge-calibration-090/corpus.json',
+        for name in (*(name for name in qualification.SOURCES if not name.endswith('/judge_accounting.py')), '.github/evals/judge-calibration-090/corpus.json',
                      '.github/tests/test_standard_judges.py'):
             selected = ci_routing.select([name])
             self.assertEqual({key for key,value in selected.items() if value}, {'contracts', 'evaluator'})

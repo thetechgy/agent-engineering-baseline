@@ -37,9 +37,13 @@ def capture(meta, data, native_rows, status, recovery, aggregates):
                       'Native released verdict disagreement')
         if 'security_evidence' in obs:
             row['security_evidence'] = copy.deepcopy(obs['security_evidence'])
+        if p.get('accounting'):
+            row['judge_accounting'] = trial['_judge_accounting']
         rows.append({'observation_id': obs['id'], **row})
     value = {**meta, 'policy_id': e.identity([p, data['policy']['id']]),
              'native_status': status, 'recovery': recovery, 'observations': rows, 'native_dimensions':aggregates}
+    if p.get('accounting'):
+        value['judge_accounting'] = accounting_summary(value, data)
     value['populations'] = populations(value, data)
     return value
 
@@ -63,7 +67,7 @@ def populations(value, data):
 def validate(value, data):
     """Closed data-only validation; the normalizer witness binds native semantics."""
     import skill_evidence as e
-    e.closed(value, ('profile', 'origin', 'judgments', 'policy_id', 'native_status', 'recovery', 'observations', 'populations', 'native_dimensions'))
+    e.closed(value, ('profile', 'origin', 'judgments', 'policy_id', 'native_status', 'recovery', 'observations', 'populations', 'native_dimensions') + (('judge_accounting',) if 'judge_accounting' in value else ()))
     p = metadata({k:value[k] for k in ('profile', 'origin', 'judgments')})
     e.require(data['kind'] == 'behavioral' and data['schema_version'] == 1
               and data['policy'].get('producer_profile') == p['producer']
@@ -77,7 +81,8 @@ def validate(value, data):
     metrics = ('security', 'skill_execution', 'skill_efficiency', 'accuracy', 'goal_accuracy', 'behavior_check')
     for row in value['observations']:
         e.closed(row, ('observation_id', 'outcome', 'metrics', 'dimensions', 'quality') +
-                 (('security_evidence',) if 'security_evidence' in row else ()))
+                 (('security_evidence',) if 'security_evidence' in row else ()) +
+                 (('judge_accounting',) if p.get('accounting') else ()))
         e.require(row['observation_id'] in ids and row['observation_id'] not in seen, 'Behavioral observation mismatch')
         seen.add(row['observation_id'])
         e.enum(row['outcome'], ('passed', 'failed', 'unsupported', 'judgment_unavailable', 'runtime_failure', 'collection_incomplete'))
@@ -108,6 +113,10 @@ def validate(value, data):
         for observed in dimensions.values(): e.number(observed)
         condition = next(a for a in data['arms'] if a['name'] == arm)
         e.require(not dimensions or condition['execution_status'] == 'succeeded', 'Failed arm acquired native aggregates')
+    if p.get('accounting'):
+        e.require(value.get('judge_accounting') == accounting_summary(value, data), 'Judge accounting totals differ')
+    else:
+        e.require('judge_accounting' not in value, 'Historical accounting meaning changed')
     e.require(value['populations'] == populations(value, data), 'Behavioral denominators differ')
     # These are fixture observations, never legacy headline quality measurements.
     e.require(not data['metrics'] and all(o['score'] is None for o in data['observations']), 'Fixture acquired production metrics')
@@ -154,3 +163,18 @@ def report(workspace, root, name, mode, destination, selected=None):
     r.public_benchmark(workspace, root, name, mode, destination / 'public', selected)
     r.write_json(destination / 'admission.json', history_admission(public))
     return public
+
+
+def accounting_summary(value, data):
+    import judge_accounting as accounting
+    import skill_evidence as e
+    population = []
+    for row in value['observations']:
+        item = row['judge_accounting']
+        e.closed(item, ('status', 'evidence'))
+        e.enum(item['status'], ('observed', 'absent', 'invalid'))
+        e.require((item['evidence'] is not None) == (item['status'] == 'observed'), 'Accounting missingness mismatch')
+        population.append(item['evidence'])
+    expected = sum(a['coverage']['expected_attempts'] or 0 for a in data['arms'])
+    e.require(expected >= len(population), 'Accounting population exceeds trials')
+    return accounting.summarize(population + [None] * (expected - len(population)))

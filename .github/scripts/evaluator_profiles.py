@@ -11,7 +11,9 @@ import sys
 CANDIDATE = json.loads((Path(__file__).resolve().parents[1] / 'evals/evaluator-candidate.json').read_text())
 NEXT = json.loads((Path(__file__).resolve().parents[1] / 'evals/evaluator-0.9.json').read_text())
 RETAINED_NEXT = json.loads((Path(__file__).resolve().parents[1] / 'evals/evaluator-0.9-offline-v2.json').read_text())
-CANDIDATES = (CANDIDATE, NEXT, RETAINED_NEXT)
+ACCOUNTING = json.loads((Path(__file__).resolve().parents[1] / 'evals/evaluator-0.9-accounting-v1.json').read_text())
+CANDIDATES = (CANDIDATE, NEXT, RETAINED_NEXT, ACCOUNTING)
+BENCHMARK_ACCOUNTING = json.loads((Path(__file__).resolve().parents[1] / 'evals/benchmark-090-accounting-v1.json').read_text())
 
 
 def candidate_revision(revision, *, producer_id=None, patch=None):
@@ -118,6 +120,8 @@ def candidate_versions(profile=None):
 def benchmark_profile(identifier):
     """Explicit offline evidence lookup, independent of execution selection."""
     from evaluator_090 import PROFILE
-    if identifier != PROFILE['id']:
-        raise ValueError('Unsupported behavioral evidence profile')
-    return PROFILE
+    if identifier == PROFILE['id']:
+        return PROFILE
+    if identifier == BENCHMARK_ACCOUNTING['id']:
+        return BENCHMARK_ACCOUNTING
+    raise ValueError('Unsupported behavioral evidence profile')

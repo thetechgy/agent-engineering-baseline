@@ -24,7 +24,7 @@ import skill_evidence as evidence
 import skill_reports as reports
 
 
-def fixture(output, scenario, *, judge_context=None):
+def fixture(output, scenario, *, judge_context=None, producer=profiles.NEXT):
     from harbor.models.job.result import JobResult, JobStats
     from harbor.models.task.task import Task
     from harbor.models.trial.result import TrialResult, ExceptionInfo
@@ -99,12 +99,12 @@ def fixture(output, scenario, *, judge_context=None):
         job_result = JobResult(id=UUID(int=1000 + int(present)), started_at=now, updated_at=now, finished_at=now,
             n_total_trials=10, stats=JobStats.from_trial_results(trials, n_total_trials=10), trial_results=trials)
         (job / 'result.json').write_text(job_result.model_dump_json(indent=2))
-    meta = {'profile':profiles.benchmark_profile('behavioral-090-offline-v1')['id'], 'origin':'credential_free_fixture', 'judgments':'simulated'}
-    reports.write_json(native / 'versions.json', profiles.candidate_versions(profiles.NEXT))
-    policy = {**reports.POLICY, 'evaluator_revision':profiles.NEXT['revision'], 'harbor':profiles.NEXT['harbor'],
-              'python':profiles.NEXT['python']}
+    meta = {'profile':('behavioral-090-accounting-v1' if producer is profiles.ACCOUNTING else 'behavioral-090-offline-v1'), 'origin':'credential_free_fixture', 'judgments':'simulated'}
+    reports.write_json(native / 'versions.json', profiles.candidate_versions(producer))
+    policy = {**reports.POLICY, 'evaluator_revision':producer['revision'], 'harbor':producer['harbor'],
+              'python':producer['python']}
     reports.write_json(native / 'provenance.json', {'schema_version':1, 'skill':'podman', 'mode':'standard',
-        'policy':policy, 'patch_sha256':profiles.NEXT['patch_sha256'], 'benchmark':meta})
+        'policy':policy, 'patch_sha256':producer['patch_sha256'], 'benchmark':meta})
     config = {'grading':{'mode':'default'}, 'judge':{'enabled':False},
               'provider':{'name':'openai', 'model':reports.POLICY['model']},
               'harbor':{'environment':{'value':'docker'}, 'n_attempts':1, 'n_concurrent':2,
@@ -132,7 +132,7 @@ def fixture(output, scenario, *, judge_context=None):
         'report_status':'complete' if scenario == 'complete' else 'incomplete',
         'diagnostic_only':True, 'run_config':config,
         'dataset_digest':snapshot['dataset_digest'], 'dataset_summary':snapshot['dataset_summary'],
-        'metric_set':'skill-evaluator-default-v2', 'score_policy':profiles.NEXT['scoring']})
+        'metric_set':'skill-evaluator-default-v2', 'score_policy':producer['scoring']})
     return native
 
 

@@ -3,8 +3,8 @@
 set -euo pipefail
 umask 077
 
-kind=${1:?usage: setup-skillevaluator.sh quality|quality-next|benchmark|reporting|candidate|candidate-current|candidate-next}
-case "$kind" in quality-next|quality|benchmark|reporting|candidate|candidate-current|candidate-next) ;; *) exit 2 ;; esac
+kind=${1:?usage: setup-skillevaluator.sh quality|quality-next|benchmark|reporting|candidate|candidate-current|candidate-next|candidate-accounting}
+case "$kind" in quality-next|quality|benchmark|reporting|candidate|candidate-current|candidate-next|candidate-accounting) ;; *) exit 2 ;; esac
 : "${RUNNER_TEMP:?}" "${GITHUB_WORKSPACE:?}" "${GITHUB_ENV:?}" "${GITHUB_PATH:?}"
 repository_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)
 tool_root="$RUNNER_TEMP/skill-evaluation-tools"
@@ -37,8 +37,15 @@ if [ "$kind" = candidate ] || [ "$kind" = candidate-current ]; then
 fi
 
 # Current opt-in replacement. Historical recipes below retain their original bytes.
-if [ "$kind" = candidate-next ] || [ "$kind" = quality-next ]; then
+if [ "$kind" = candidate-next ] || [ "$kind" = quality-next ] || [ "$kind" = candidate-accounting ]; then
+  current_patch=skillevaluator-v0.9.0-evidence-v3.patch
+  current_patch_sha=ca00768c1c2b054573743707473ed98964ed6bf910ad8bfac5accfd683860da4
+  if [ "$kind" = candidate-accounting ]; then
+    current_patch=skillevaluator-v0.9.0-accounting-v1.patch
+    current_patch_sha=8d171dff79b819bf359f07d2755e8e7876f97b7f761ab549ad4fd5484626caeb
+  fi
   current_root="$RUNNER_TEMP/next-evaluator"
+  if [ "$kind" = candidate-accounting ]; then current_root="$RUNNER_TEMP/accounting-evaluator"; fi
   export UV_PYTHON_INSTALL_DIR="$current_root/python"
   git init --quiet "$current_root"
   git -C "$current_root" fetch --quiet --depth=1 https://github.com/NVIDIA/SkillEvaluator.git b78d14618a694dec84bc9601468f8f711df5cab3
@@ -46,9 +53,9 @@ if [ "$kind" = candidate-next ] || [ "$kind" = quality-next ]; then
   test "$(git -C "$current_root" rev-parse HEAD)" = b78d14618a694dec84bc9601468f8f711df5cab3
   cp "$repository_root/.github/locks/evaluator-0.9.lock" "$current_root/uv.lock"
   printf '%s  %s\n' 05dd72bfd0bac5399ac19232ea847929e2b21df4a7ef2d2c65eefc4f72484dda "$current_root/uv.lock" | sha256sum --check --strict
-  printf '%s  %s\n' ca00768c1c2b054573743707473ed98964ed6bf910ad8bfac5accfd683860da4 "$repository_root/.github/patches/skillevaluator-v0.9.0-evidence-v3.patch" | sha256sum --check --strict
-  git -C "$current_root" apply --check "$repository_root/.github/patches/skillevaluator-v0.9.0-evidence-v3.patch"
-  git -C "$current_root" apply "$repository_root/.github/patches/skillevaluator-v0.9.0-evidence-v3.patch"
+  printf '%s  %s\n' "$current_patch_sha" "$repository_root/.github/patches/$current_patch" | sha256sum --check --strict
+  git -C "$current_root" apply --check "$repository_root/.github/patches/$current_patch"
+  git -C "$current_root" apply "$repository_root/.github/patches/$current_patch"
   extras=(--extra tier3)
   if [ "$kind" = quality-next ]; then extras+=(--extra security); fi
   uv sync --project "$current_root" --python 3.14.10 --managed-python --frozen --no-dev "${extras[@]}"
@@ -57,6 +64,10 @@ if [ "$kind" = candidate-next ] || [ "$kind" = quality-next ]; then
   uv pip install --python "$current_root/.venv/bin/python" --no-deps --no-index --link-mode copy --require-hashes --only-binary :all: \
     --requirement "$current_root/backend-wheel/requirements.txt"
   uv pip check --python "$current_root/.venv/bin/python"
+  if [ "$kind" = candidate-accounting ]; then
+    printf 'SKILL_ACCOUNTING_PYTHON=%s/.venv/bin/python\n' "$current_root" >> "$GITHUB_ENV"
+    exit 0
+  fi
   printf 'SKILL_NEXT_PYTHON=%s/.venv/bin/python\nSKILL_NEXT_SOURCE=%s\nSKILL_QUALIFICATION_PYTHON=%s/.venv/bin/python\n' "$current_root" "$current_root" "$current_root" >> "$GITHUB_ENV"
   if [ "$kind" = quality-next ]; then
     # No 0.3 evaluator or private review overlay is needed by static quality.

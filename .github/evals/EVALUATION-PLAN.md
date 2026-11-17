@@ -1,4 +1,24 @@
-# Standard judge credential-free qualification
+# Standard judge accounting correction
+
+Main was verified at PR #148 merge `319240b46952f5c0596a13b56de4f156f30b1bb6`.
+The [focused accounting successor](judge-calibration-090/ACCOUNTING.md) retains
+physical transport attempts and available OpenAI usage through native collection,
+redaction, versioned admission and consolidated reporting. The original offline-v3
+profile, source-bound receipts, seven references and decision rules are retained.
+All actual model judgments remain **UNRUN**; all prior allocations remain closed.
+
+**Remaining blocker:** the existing protected preparation/authorization mechanism
+requires agent/task variants and has no registered judge-only adapter. Fixture
+qualification cannot authorize calibration. No provider credentials, inference,
+agent trial, paid dispatch, protected approval, merge, adoption, history or Pages
+write is authorized. Exact-revision hosted and independent report receipts belong
+to the focused draft PR; this checkpoint alone does not assert passing CI.
+
+**One current next action:** review the accounting correction and decide whether
+to authorize a focused judge-only preparation/authorization adapter to the existing
+mechanism. No new campaign runner is proposed.
+
+## PR #148 standard judge qualification, retained as history
 
 Main was verified at PR #147 merge `d5a04d4394c16108870f95974dd20fa51482e29a`.
 The [focused qualification](judge-calibration-090/README.md) reuses pinned 0.9.0,
