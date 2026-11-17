@@ -6,6 +6,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT / '.github/scripts'), str(ROOT / '.github/tests')]
@@ -37,6 +38,12 @@ class AccountingTests(unittest.TestCase):
             accounting.end_attempt(a); accounting.end_judgment(j)
             accounting.finish()
 
+    def test_persistence_does_not_swallow_the_native_deadline_alarm(self):
+        with tempfile.TemporaryDirectory() as directory:
+            accounting.start(Path(directory)/'judge_accounting.json')
+            with patch.object(Path,'replace',side_effect=TimeoutError('native judge deadline')):
+                with self.assertRaises(TimeoutError): accounting.persist()
+
     def test_complete_usage_subsets_duplicate_and_budget_checkpoint(self):
         with tempfile.TemporaryDirectory() as directory:
             path, row, a, j = self.envelope(directory)
@@ -58,6 +65,17 @@ class AccountingTests(unittest.TestCase):
                 accounting.summarize([envelope, envelope])
             changed = copy.deepcopy(envelope); changed['transports'].append(copy.deepcopy(row))
             with self.assertRaises(ValueError): accounting.validate(changed)
+
+    def test_known_response_usage_survives_later_transport_cleanup_failure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path,row,a,j=self.envelope(directory)
+            accounting.received(row,200,accounting.usage({'input':19,'output':7}))
+            accounting.failed(row)
+            accounting.end_attempt(a); accounting.end_judgment(j); accounting.finish()
+            summary=accounting.summarize([reports.read_json(path)])
+            self.assertTrue(summary['complete'])
+            self.assertEqual(summary['responses_received'],1)
+            self.assertEqual(summary['known_tokens']['input'],19)
 
     def test_partial_malformed_inconsistent_and_zero_are_distinct(self):
         for tokens, status in (({}, 'missing'), ({'input':True, 'output':7}, 'malformed'),

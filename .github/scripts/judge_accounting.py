@@ -62,6 +62,8 @@ def persist():
         tmp = path.with_name(path.name + '.tmp')
         tmp.write_text(json.dumps(value, indent=2), encoding='utf-8')
         tmp.replace(path)
+    except TimeoutError:
+        raise  # Preserve the native required-judge deadline alarm.
     except OSError:
         value['retention_complete'] = False
 
@@ -160,7 +162,7 @@ def received(row, status, observation):
 
 
 def failed(row, *, response_received=False, status=None):
-    if row is not None:
+    if row is not None and row['outcome'] != 'http_response':
         row.update(outcome='completion_unknown', response_received=response_received, http_status=status)
         persist()
 

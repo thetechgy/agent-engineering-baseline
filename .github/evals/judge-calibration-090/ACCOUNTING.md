@@ -84,8 +84,10 @@ routes cannot establish complete accounting.
 
 Error-response usage requires reading the error body before retry interpretation.
 The schema-capability reader now reuses the existing cached-body helper so both
-readers see identical bytes. This adds observation/I/O work within the existing
-judge deadline; the qualified fixtures preserve requests, results, policy and
+readers see identical bytes. Accounting persistence propagates the native deadline alarm; a failing-before/
+passing-after control guards that TimeoutError is not swallowed as an OSError.
+This adds observation/I/O work within the existing judge deadline; the qualified
+fixtures preserve requests, results, policy and
 strict caps. This evidence does not prove identical timing on a live provider.
 
 ## Credential-free qualification

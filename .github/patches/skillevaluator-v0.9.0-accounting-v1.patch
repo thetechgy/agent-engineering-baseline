@@ -103,10 +103,10 @@ index 634012b..e3e00a0 100644
 
 diff --git a/src/skillevaluator/tier3/eval_core/judge_accounting.py b/src/skillevaluator/tier3/eval_core/judge_accounting.py
 new file mode 100644
-index 0000000..1e81e2c
+index 0000000..1109574
 --- /dev/null
 +++ b/src/skillevaluator/tier3/eval_core/judge_accounting.py
-@@ -0,0 +1,257 @@
+@@ -0,0 +1,259 @@
 +"""Versioned judge observations; no requests, credentials, grading or billing claims.
 +
 +The exact same stdlib-only module is staged by the opt-in evaluator patch.
@@ -171,6 +171,8 @@ index 0000000..1e81e2c
 +        tmp = path.with_name(path.name + '.tmp')
 +        tmp.write_text(json.dumps(value, indent=2), encoding='utf-8')
 +        tmp.replace(path)
++    except TimeoutError:
++        raise  # Preserve the native required-judge deadline alarm.
 +    except OSError:
 +        value['retention_complete'] = False
 +
@@ -269,7 +271,7 @@ index 0000000..1e81e2c
 +
 +
 +def failed(row, *, response_received=False, status=None):
-+    if row is not None:
++    if row is not None and row['outcome'] != 'http_response':
 +        row.update(outcome='completion_unknown', response_received=response_received, http_status=status)
 +        persist()
 +
@@ -906,7 +908,7 @@ index 54440de..855c335 100644
 
 
 diff --git a/src/skillevaluator/tier3/harbor/templates/eval.py b/src/skillevaluator/tier3/harbor/templates/eval.py
-index 71d0b83..2df338b 100644
+index 71d0b83..45fed41 100644
 --- a/src/skillevaluator/tier3/harbor/templates/eval.py
 +++ b/src/skillevaluator/tier3/harbor/templates/eval.py
 @@ -51,9 +51,15 @@ from urllib.parse import quote, unquote_to_bytes, urlparse, urlsplit
@@ -1050,19 +1052,28 @@ index 71d0b83..2df338b 100644
      reasoning effort sent, and whether a fallback model answered, so lift can
      leave out cases whose two arms were judged by different models.
      """
-+    accounting_judge = _accounting.begin_judgment(metric, _public_provider())
++    accounting_judge = None
      previous_deadline = _ACTIVE_JUDGE_DEADLINE.get()
      own_deadline = time.monotonic() + _resolve_judge_wall_time_budget()
      deadline = min(previous_deadline, own_deadline) if previous_deadline is not None else own_deadline
-@@ -3720,6 +3779,7 @@ def _call_required_judge(metric, judge, *args, allow_not_applicable=False, **kwa
+@@ -3683,6 +3742,7 @@ def _call_required_judge(metric, judge, *args, allow_not_applicable=False, **kwa
+     # interval timer also interrupts a response body that keeps trickling data
+     # inside one socket read, where urllib's idle timeout cannot help.
+     try:
++        accounting_judge = _accounting.begin_judgment(metric, _public_provider())
+         try:
+             if hasattr(signal, "setitimer") and threading.current_thread() is threading.main_thread():
+                 active_alarm, repeat_interval = signal.getitimer(signal.ITIMER_REAL)
+@@ -3720,6 +3780,8 @@ def _call_required_judge(metric, judge, *args, allow_not_applicable=False, **kwa
              }
          result = _judge_error(error, **metadata)
      finally:
-+        _accounting.end_judgment(accounting_judge, not_applicable=(locals().get("result") or {}).get("status") == "not_applicable")
++        if accounting_judge is not None:
++            _accounting.end_judgment(accounting_judge, not_applicable=(locals().get("result") or {}).get("status") == "not_applicable")
          _ACTIVE_JUDGE_DEADLINE.reset(token)
          _ACTIVE_JUDGE_CALLS.reset(calls_token)
      normalized = _normalize_required_judge_result(metric, result, allow_not_applicable=allow_not_applicable)
-@@ -3866,6 +3926,7 @@ def _numeric_reward_payload(result, overall):
+@@ -3866,6 +3928,7 @@ def _numeric_reward_payload(result, overall):
 
 
  def write_reward_outputs(result, overall):
@@ -1070,7 +1081,7 @@ index 71d0b83..2df338b 100644
      # Top-level result keys are the fixed verifier schema. Sanitize their values
      # recursively so credential text cannot rename Harbor's reward metrics.
      sanitized_result = {key: _sanitize_error_value(value) for key, value in result.items()}
-@@ -3940,6 +4001,7 @@ def _dependency_context(skill: str, *, skills_root: Path = Path("/workspace/skil
+@@ -3940,6 +4003,7 @@ def _dependency_context(skill: str, *, skills_root: Path = Path("/workspace/skil
 
 
  def main():
@@ -1078,7 +1089,7 @@ index 71d0b83..2df338b 100644
      entry = json.loads(ENTRY_PATH.read_text(encoding="utf-8"))
      traj, traj_meta = load_trajectory_with_fallback(ATIF_PATH, ATIF_PATH.parent)
 
-@@ -3967,75 +4029,13 @@ def main():
+@@ -3967,75 +4031,13 @@ def main():
      )
 
      if not traj:
@@ -1160,7 +1171,7 @@ index 71d0b83..2df338b 100644
 
      tool_calls = extract_tool_calls_as_dicts(traj)
      skill_tools = get_skill_tool_calls(traj)
-@@ -4057,6 +4057,17 @@ def main():
+@@ -4057,6 +4059,17 @@ def main():
 
      # ── Eval 1: security ─────────────────────────────────────────────────
      security_result = check_security(traj, tool_calls, expected_skill, acceptable_skills)
