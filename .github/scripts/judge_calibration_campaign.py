@@ -208,7 +208,6 @@ def run(root, task, *, live=False, preparation=None, fixture=None):
         record_root = root / 'records' / record['id']
         record_root.mkdir(parents=True)
         verifier.SKILL_EVALUATOR_REWARD_JSON = record_root / 'reward.json'
-        verifier._SCHEMA_UNSUPPORTED_TARGETS.clear()
         token = verifier._accounting.start(record_root / 'judge_accounting.json')
         attempts = []
         evidence_token = verifier._ACTIVE_JUDGE_EVIDENCE.set(attempts)

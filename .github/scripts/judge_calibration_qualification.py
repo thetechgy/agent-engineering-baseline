@@ -112,6 +112,10 @@ def worker(output, task):
                 blocked.append(event); raise RuntimeError('Qualification forbids external DNS')
         sys.addaudithook(offline)
         for scenario in campaign.SCENARIOS:
+            # Each campaign has a fresh verifier process in the workflow. Keep
+            # its native cache for the entire pass; only fixtures share imports.
+            from skillevaluator.tier3.harbor.templates import eval as verifier
+            verifier._SCHEMA_UNSUPPORTED_TARGETS.clear()
             first = len(observer.requests)
             root = output / 'scenarios' / scenario / 'evidence'
             try:
@@ -134,8 +138,12 @@ def worker(output, task):
                 require(actual['logical_judgments'] == 21 and actual['model_attempts'] == 6
                         and sum(j['not_applicable'] for r in value['entries'] for j in r['accounting']['judgments']) == 15,
                         'Applicable/inapplicable population differs')
-                expected = 11 if scenario in ('schema-fallback', 'retry') else 6
+                expected = 11 if scenario == 'retry' else 7 if scenario == 'schema-fallback' else 6
                 require(len(requests) == expected, 'Retry/schema request count differs')
+                if scenario == 'schema-fallback':
+                    require('response_format' in requests[0]['payload']
+                            and all('response_format' not in request['payload'] for request in requests[1:]),
+                            'Pinned schema-support memoization was reset between records')
                 require(value['entries'][2]['results']['behavior_check']['results'][0]['passed'] is None,
                         'Unavailable behavior became a negative verdict')
                 if scenario == 'complete':
