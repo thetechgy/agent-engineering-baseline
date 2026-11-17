@@ -57,6 +57,17 @@ class JudgeContracts(unittest.TestCase):
             run_case(Path(directory) / 'closed', self.task, 'closed-allocation')
             run_case(Path(directory) / 'wrong-artifact', self.task, 'wrong-artifact')
 
+    def test_cost_estimate_prices_cache_writes_without_fabricating_usage(self):
+        from judge_accounting import usage
+        def response(writes):
+            return {'outcome': 'http_response', 'usage': usage({'input': 19, 'output': 7,
+                'total': 26, 'cached_input': 5, 'cache_write_input': writes})}
+        for writes, expected in ((0, 0.000198), (4, 0.000202), (None, 0.000212)):
+            row = response(writes)
+            self.assertAlmostEqual(campaign.transport_estimate([row], self.task), expected)
+            self.assertEqual(row['usage']['counters']['cache_write_input'], writes)
+        self.assertIsNone(campaign.transport_estimate([response(15)], self.task))
+
     def test_frozen_historical_profiles_are_preserved(self):
         import hashlib
         value = reports.read_json(ROOT / '.github/evals/custom-metrics.json')

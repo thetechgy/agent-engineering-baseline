@@ -30,7 +30,8 @@ EXPECTED = {'unknown-retry': 'unknown_judge_accounting', 'refusal': 'judge_unava
             'malformed': 'judge_unavailable', 'missing-usage': 'unknown_judge_accounting',
             'contradictory-usage': 'unknown_judge_accounting', 'timeout': 'judge_unavailable',
             'interruption': 'interrupted', 'request-stop': 'judge_request_limit',
-            'usage-stop': 'judge_usage_limit', 'cost-stop': 'estimated_usage_threshold', 'deadline-stop': 'judge_deadline',
+            'usage-stop': 'judge_usage_limit', 'cost-stop': 'estimated_usage_threshold',
+            'cache-cost-stop': 'unknown_judge_cost', 'deadline-stop': 'judge_deadline',
             'retention-failure': 'evidence_retention_failure'}
 
 
@@ -40,6 +41,11 @@ class Observer(transport.Responder):
 
     def respond(self, payload):
         status, raw = super().respond(payload)
+        body = json.loads(raw)
+        if status == 200 and 'usage' in body:
+            body['usage']['prompt_tokens_details']['cache_write_tokens'] = 15 if self.scenario == 'cache-cost-stop' else 4
+            self.requests[-1].update(response=body, supplied_usage=body['usage'])
+            raw = json.dumps(body).encode()
         if self.complete_errors and status != 200:
             body = json.loads(raw)
             body['usage'] = {'prompt_tokens': 19, 'completion_tokens': 7, 'total_tokens': 26}
@@ -59,7 +65,7 @@ class Fixture:
                        else {'seconds': 0.3} if name == 'deadline-stop' else {})
 
     def before_record(self, verifier, row):
-        self.observer.scenario = WIRE.get(self.name, 'valid')
+        self.observer.scenario = WIRE.get(self.name, 'cache-cost-stop' if self.name == 'cache-cost-stop' else 'valid')
         if self.name in ('complete', 'schema-fallback', 'retry') and row['position'] == 3:
             self.observer.scenario = 'unknown_behavior'
         self.observer.complete_errors = self.name in ('schema-fallback', 'retry', 'retry-exhaustion', 'request-stop')

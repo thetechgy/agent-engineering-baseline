@@ -21,7 +21,7 @@ import skill_reports as reports
 
 SCENARIOS = ('complete', 'schema-fallback', 'retry', 'retry-exhaustion', 'unknown-retry', 'refusal', 'malformed',
              'missing-usage', 'malformed-usage', 'contradictory-usage', 'timeout', 'interruption',
-             'request-stop', 'usage-stop', 'cost-stop', 'deadline-stop', 'retention-failure')
+             'request-stop', 'usage-stop', 'cost-stop', 'cache-cost-stop', 'deadline-stop', 'retention-failure')
 
 
 def settings(task, key):
@@ -47,18 +47,28 @@ def configured(values):
         os.environ.clear(); os.environ.update(previous)
 
 
-def estimate(summary, task):
-    if not summary['complete']:
-        return None
-    tokens = summary['known_tokens']
+def transport_estimate(transports, task):
+    """Conservative scheduling estimate; missing cache detail stays missing."""
     prices = shared.protocol(task)['budget']['prices_per_million']
-    a, b = tokens['input'], tokens['output']
-    if a is None and summary['http_attempts'] == 0:
-        return 0.0
-    if a is None or b is None:
-        return None
-    cached = tokens['cached_input'] or 0
-    return ((a - cached) * prices['input'] + cached * prices['cached_input'] + b * prices['output']) / 1_000_000
+    total = 0.0
+    for transport in transports:
+        usage = transport['usage']
+        if transport['outcome'] != 'http_response' or usage['status'] != 'complete':
+            return None
+        tokens = usage['counters']
+        a, b = tokens['input'], tokens['output']
+        cached = tokens['cached_input'] or 0
+        writes = tokens['cache_write_input']
+        writes = a - cached if writes is None else writes
+        if cached + writes > a:
+            return None  # Read/write cache subsets cannot price the same input twice.
+        total += ((a - cached - writes) * prices['input'] + cached * prices['cached_input']
+                  + writes * prices['cache_write_input'] + b * prices['output']) / 1_000_000
+    return total
+
+
+def estimate(envelope, task):
+    return transport_estimate(envelope['transports'], task) if accounting.summarize([envelope])['complete'] else None
 
 
 def summary(rows):
@@ -141,10 +151,9 @@ def run(root, task, *, live=False, preparation=None, fixture=None):
             transports += active['transports']
         if len(transports) >= limits['http']:
             stop('judge_request_limit')
-        prices = p['budget']['prices_per_million']
-        known_cost = sum(((t['usage']['counters']['input'] - (t['usage']['counters']['cached_input'] or 0)) * prices['input']
-                         + (t['usage']['counters']['cached_input'] or 0) * prices['cached_input']
-                         + t['usage']['counters']['output'] * prices['output']) / 1_000_000 for t in transports)
+        known_cost = transport_estimate(transports, task)
+        if known_cost is None:
+            stop('unknown_judge_cost')
         if known_cost >= limits['cost']:
             stop('estimated_usage_threshold')
         if sum((t['usage']['counters']['input'] or 0) + (t['usage']['counters']['output'] or 0) for t in transports) >= limits['tokens']:
@@ -213,13 +222,15 @@ def run(root, task, *, live=False, preparation=None, fixture=None):
             row.update(results=results, state='completed' if not ledger.get('stop_reason') else 'failed')
             row['accounting'] = reports.read_json(record_root / 'judge_accounting.json')
             observation = accounting.summarize([row['accounting']])
-            row['usage'] = {'estimated_usd': estimate(observation, task)}
+            row['usage'] = {'estimated_usd': estimate(row['accounting'], task)}
             row['accounting_summary'] = observation
             reports.write_json(record_root / 'judge_attempts.json', {'attempts': attempts})
             reports.write_json(record_root / 'judgments.json', results)
             row['diagnostics_digest'] = shared.digest(record_root / 'judge_attempts.json')
         if not observation['complete']:
             ledger.setdefault('stop_reason', 'unknown_judge_accounting')
+        if row['usage']['estimated_usd'] is None:
+            ledger.setdefault('stop_reason', 'unknown_judge_cost')
         if fixture:
             fixture.after_record(row)
         return ledger.get('stop_reason')
@@ -272,7 +283,7 @@ def admit_run(root, task):
                     'Judge retained evidence drift')
             core.require(row['diagnostics_digest'] == shared.digest(root / 'records' / row['case'] / 'judge_attempts.json'),
                          'Judge diagnostics missing or changed')
-            core.require(row['usage'] == {'estimated_usd': estimate(row['accounting_summary'], task)}, 'Judge cost estimate drift')
+            core.require(row['usage'] == {'estimated_usd': estimate(native, task)}, 'Judge cost estimate drift')
     core.require(value['accounting_summary'] == summary(value['entries']), 'Judge accounting total drift')
     return value
 
@@ -308,6 +319,7 @@ def render(roots, destination, task):
             'maximum records / applicable judgments / HTTP requests': '7 / 7 / 14',
             'scheduling threshold / reserve USD': '2 / 10',
             'CI cost': 'separate; unavailable here',
+            'cost estimate': 'reported cache writes use the write rate; unreported writes conservatively price uncached input at that rate; not billing',
             'qualification timing': 'shortened judge deadline/backoff; full production-duration behavior unmeasured'
         }.items()])
     population = []; details = []

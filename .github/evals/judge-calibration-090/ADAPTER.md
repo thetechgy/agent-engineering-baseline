@@ -89,7 +89,7 @@ reinstalls the same pinned owner and reproduces the report from retained data.
 
 The non-forwarding loopback responder independently counts all requests from the
 real evaluator. A fresh child has an empty home, an allowlisted environment, only
-a fixture sentinel and socket/DNS denial outside that responder. Seventeen
+a fixture sentinel and socket/DNS denial outside that responder. Eighteen
 scenarios cover seven-record completion, explicit N/A and unknown behavior,
 schema downgrade, retry/exhaustion, refusal, malformed response, missing/malformed/
 contradictory usage, actual timeout/interruption, request/usage/cost/deadline stops
@@ -125,14 +125,20 @@ repetitions or replacement judgments. The separately declared neutral-label/orde
 experiment remains deferred and would require its own scientific reason and bounds.
 
 [Official model pricing](https://developers.openai.com/api/docs/models/gpt-5.6-sol)
-checked 2026-11-17 lists $4/M input, $0.40/M cached input and $20/M output tokens.
+checked 2026-11-17 lists $4/M input, $0.40/M cached input and $20/M output tokens,
+with cache writes at 1.25 times ordinary input ($5/M). Scheduling estimates use
+reported cache writes when present; when absent, uncached input is conservatively
+priced at the write rate. Missing cache detail stays missing in the usage ledger.
+Overlapping cache-read/write subsets make the cost estimate unavailable and stop
+scheduling. Other processing modes, account-specific charges and invoices are not
+qualified by this estimate.
 The $0.25 planning estimate assumes roughly 1,000 input and 1,500 output tokens
 per applicable judgment, rounded up. It is not a measured forecast. Fourteen
 maximum-size 32,768-token outputs alone would estimate $9.17504, plus input.
 The proposed $2 scheduling threshold, $10 reserve and $12 planning allocation
 are not provider billing caps. Unknown error/timeout charges cannot be bounded
-by missing usage. CI cost is separate. Cached tokens are subsets, reasoning output
-is already in output, and missing cache detail uses ordinary input pricing.
+by missing usage. CI cost is separate. Cached tokens are subsets and reasoning
+output is already in output; neither is added to its parent total.
 The proposal expires 2026-11-20, before the currently advertised promotional
 pricing window; pricing must be reverified if a later proposal is needed.
 
